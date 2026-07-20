@@ -15,9 +15,12 @@ Everything below maps a deliverable to an exact store action.
 | Play feature graphic 1024×500 | `store/feature_graphic_1024x500.png` | |
 | Screenshots | `store/screenshots/` | Phone screenshots from the Android build |
 | iOS IPA | Built by GitHub Actions (`.github/workflows/build.yml`), artifact `runner-ipa-unsigned` | See §4 for signing |
+| Privacy policy | `docs/index.html` → https://hiesem.github.io/flappy_spikes/ | **Contains a placeholder contact email — replace `YOUR-CONTACT-EMAIL@example.com` (3 spots) before submitting** |
+| Source repo | https://github.com/hiesem/flappy_spikes | CI runs here |
 
 App identity: name **Flappy Spikes**, bundle/package **com.flappyspikes.flappy_spikes**,
-version 1.0.0+1, portrait-only, min Android per Flutter default (21+), iOS 13+.
+version 1.0.0+1, portrait-only, min Android per Flutter default (24+), iOS 15+
+(Firebase minimum).
 
 ## 2. Google Play Store
 
@@ -25,16 +28,45 @@ version 1.0.0+1, portrait-only, min Android per Flutter default (21+), iOS 13+.
 2. **Create app** → name `Flappy Spikes`, default language, free game.
 3. **Set up app** checklist: category *Games → Arcade*, content rating questionnaire
    (no violence/gambling — casual game), target audience 13+, privacy policy URL
-   (required even if no data collection — any free policy generator works; the game
-   itself collects nothing).
+   https://hiesem.github.io/flappy_spikes/ (required — the game uses Firebase
+   Analytics; replace the placeholder email in `docs/index.html` first).
 4. **Store listing**: upload `store/icon_512.png`, `store/feature_graphic_1024x500.png`,
    and 2–8 phone screenshots from `store/screenshots/`.
    Suggested short description: *Tap to flap. Don't touch the spikes — they're everywhere.*
 5. **Production → Create release** → upload `app-release.aab`. When prompted about
    app signing, choose **Google Play App Signing** (recommended; your upload key stays
    the local `upload-keystore.jks`).
-6. Complete the Data Safety form: no data collected, no third-party SDKs.
+   NOTE: personal Play Console accounts created after Nov 2023 must first run a
+   **closed test with 12 opted-in testers for 14 consecutive days** before
+   production access unlocks. Start recruiting early.
+6. **Data Safety form** (the game now collects data):
+   - *App activity* (app interactions): collected, not linked to identity,
+     ephemeral → Firebase Analytics.
+   - *Device or other IDs* (Firebase installation ID): collected, not linked to
+     identity → Firebase Analytics.
+   - *Personal info → nickname*: only via the Google Play Games profile for the
+     leaderboard, user-provided by Google, not collected by us. Declare per the
+     form's leaderboard/gameplay wording.
+   - No data shared with third parties, no ads, data encrypted in transit (yes),
+     users can request deletion (yes, via the policy email).
 7. Submit for review.
+
+### Play Games Services (leaderboard) — one-time console setup
+
+The app is already wired; only the console config is missing:
+
+1. Play Console → your app → **Play Games Services → Setup and management →
+   Configuration** → create and link the app (package
+   `com.flappyspikes.flappy_spikes`; use the Play App Signing certificate when
+   asked).
+2. **Leaderboards → Create leaderboard**: name *Top Scores*, score format
+   integer (0 decimals), ordering *Larger is better*.
+3. Copy the **App ID** into `android/app/src/main/res/values/strings.xml`
+   (replace `TODO_PLAY_CONSOLE_APP_ID`) and the **leaderboard ID** into
+   `GameServices.androidLeaderboardId` in `lib/services/game_services.dart`
+   (replace `TODO_PLAY_CONSOLE_LEADERBOARD_ID`). Rebuild the AAB.
+4. Publish the Play Games Services configuration and add your testers under
+   **Play Games Services → Testers**, or sign-in fails for non-tester accounts.
 
 To build a new AAB after changes:
 
@@ -83,15 +115,27 @@ To ship to the App Store you need an **Apple Developer Program** account ($99/yr
 In App Store Connect (either path):
 1. Create the app: name `Flappy Spikes`, bundle id `com.flappyspikes.flappy_spikes`,
    SKU `flappyspikes`.
-2. Upload screenshots (6.7" iPhone and 12.9" iPad required — capture from the iOS
+2. Enable the **Game Center capability** for the App ID (Certificates, Identifiers
+   & Profiles → Identifiers → the app id → check Game Center), then in the app's
+   page → **Game Center → Leaderboards**: create *Top Scores*, leaderboard ID
+   `flappy_spikes_leaderboard` (must match `GameServices.iosLeaderboardId`),
+   score format integer, sort high-to-low. The entitlement file
+   (`ios/Runner/Runner.entitlements`) is already in the project.
+3. Upload screenshots (6.7" iPhone and 12.9" iPad required — capture from the iOS
    simulator on a Mac, or reuse the Android ones at correct sizes via TestFlight first).
-3. Fill in description/keywords, content rating (4+), privacy (no data collected).
-4. Submit for review.
+4. Fill in description/keywords, content rating (4+), privacy policy URL
+   https://hiesem.github.io/flappy_spikes/ and the **App Privacy** labels:
+   collect *App Interaction* (analytics) + *Device ID*, both not linked to the
+   user's identity and not used for tracking; leaderboard data is the Game
+   Center nickname/score (declare as *User Content* → gameplay content if asked).
+5. Submit for review.
 
 ## 5. What this build deliberately does NOT include
 
-The 2014 original's third-party SDKs were not ported (all dead or obsolete):
-Chartboost ads, AdMob 6.x banner, Parse push/promo (Parse shut down in 2017),
-Facebook SDK, Google Analytics, Game Center. If you want a modern AdMob banner or
-Play Games/Game Center leaderboards later, that's a small add-on — ask and provide
-your AdMob / Play Console IDs.
+The 2014 original's dead third-party SDKs were not ported: Chartboost ads,
+AdMob 6.x banner, Parse push/promo (Parse shut down in 2017), Facebook SDK.
+Modern equivalents now PRESENT in the build: Firebase Analytics (Google
+Analytics) and Google Play Games / Game Center leaderboards (added
+2026-07-20). Still absent by design: ads — when adding AdMob later, also add
+the iOS ATT prompt, Google's UMP consent flow, and update both stores' data
+declarations.

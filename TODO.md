@@ -73,7 +73,27 @@ Contract: see SPEC.md. Loop rule: a box is checked only when code exists AND
 - [x] On-device verification (20:9 emulator): edge-pinned strips pixel-checked,
       pink labels readable over pipes, full start/play/over/replay loop
 
+## Phase 9 — analytics, leaderboards & approval prep (2026-07-20)
+- [x] Packages: firebase_core, firebase_analytics, games_services 5.1.0, url_launcher
+- [x] `lib/services/game_services.dart`: Firebase Analytics events (game_start,
+      game_over, new_best, share_score) + Play Games/Game Center leaderboard
+      (submit best on game over, show native UI) — all behind a no-op-safe wrapper
+- [x] Leaderboard buttons (original gamcenter sprites at 2014 positions) on the
+      start + game-over scenes; privacy-policy link on the start scene
+- [x] Android: Play Games APP_ID manifest placeholder + strings.xml; iOS: Game
+      Center entitlement, deployment target 15.0, bundle id aligned with Android
+- [x] Privacy policy page (docs/index.html) live at
+      https://hiesem.github.io/flappy_spikes/ — placeholder contact email pending
+- [x] Repo created + pushed: https://github.com/hiesem/flappy_spikes (CI now active)
+- [x] Tests: leaderboard/privacy-link coverage; 69/69 green, analyze clean
+- [x] Emulator smoke test: buttons render, leaderboard tap no-op-safe, privacy
+      link opens the browser
+- [ ] Firebase project wiring (flutterfire configure) — needs interactive login
+- [ ] Play Console: Play Games config + leaderboard IDs into placeholders
+- [ ] App Store Connect: Game Center capability + leaderboard flappy_spikes_leaderboard
+- [ ] Replace placeholder contact email in docs/index.html
+
 ## Final gate
 - [x] `flutter analyze` clean
-- [x] `flutter test` 67/67 green
+- [x] `flutter test` 69/69 green
 - [x] Signed AAB/APK built with final code

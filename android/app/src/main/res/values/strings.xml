@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Google Play Games Services app ID from Play Console (Play Games
+         Services -> Configuration). Replace the placeholder once created;
+         see SUBMISSION.md. -->
+    <string name="games_app_id">TODO_PLAY_CONSOLE_APP_ID</string>
+</resources>

@@ -86,7 +86,7 @@ class Config {
   // Privacy policy, hosted on GitHub Pages (docs/index.html; see
   // SUBMISSION.md). Linked from the start scene and both store listings.
   static const String privacyPolicyUrl =
-      'https://killerhis.github.io/flappy_spikes/';
+      'https://hiesem.github.io/flappy_spikes/';
 
   // UI positions. The helpers take the playfield center Y (viewHeight / 2)
   // and reproduce the original 320x568 layout exactly at centerY = 284

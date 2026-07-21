@@ -4,6 +4,8 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:games_services/games_services.dart';
 
+import '../firebase_options.dart';
+
 /// Firebase Analytics + platform leaderboards (Google Play Games on Android,
 /// Game Center on iOS), wrapped so the rest of the game never touches plugin
 /// APIs directly.
@@ -32,7 +34,9 @@ class GameServices {
   /// platform game service. Any failure leaves the service a no-op.
   Future<void> initialize() async {
     try {
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
       _analytics = FirebaseAnalytics.instance;
     } catch (_) {
       _analytics = null;

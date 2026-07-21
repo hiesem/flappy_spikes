@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "512525012529",
+    "project_id": "flappy-spikes-a2b55",
+    "storage_bucket": "flappy-spikes-a2b55.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:512525012529:android:8bb85c213b543c6487cf10",
+        "android_client_info": {
+          "package_name": "com.flappyspikes.flappy_spikes"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmJG9lPUB3_kGYswCPs4DVhiWFU6SBMxE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -23,10 +23,8 @@ class GameServices {
   /// original used.
   static const String iosLeaderboardId = 'flappy_spikes_leaderboard';
 
-  /// Google Play Games leaderboard ID, assigned by Play Console when the
-  /// leaderboard is created there (see SUBMISSION.md). Placeholder until then:
-  /// Android leaderboard calls stay no-ops while this is unconfigured.
-  static const String androidLeaderboardId = 'TODO_PLAY_CONSOLE_LEADERBOARD_ID';
+  /// Google Play Games leaderboard ID (Play Console, "Top Scores").
+  static const String androidLeaderboardId = 'CgkIsZz8pvUOEAIQAA';
 
   bool get _androidConfigured => !androidLeaderboardId.startsWith('TODO');
 

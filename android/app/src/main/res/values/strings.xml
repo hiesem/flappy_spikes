@@ -3,5 +3,5 @@
     <!-- Google Play Games Services app ID from Play Console (Play Games
          Services -> Configuration). Replace the placeholder once created;
          see SUBMISSION.md. -->
-    <string name="games_app_id">TODO_PLAY_CONSOLE_APP_ID</string>
+    <string name="games_app_id">512525012529</string>
 </resources>

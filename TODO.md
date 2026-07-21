@@ -88,10 +88,14 @@ Contract: see SPEC.md. Loop rule: a box is checked only when code exists AND
 - [x] Tests: leaderboard/privacy-link coverage; 69/69 green, analyze clean
 - [x] Emulator smoke test: buttons render, leaderboard tap no-op-safe, privacy
       link opens the browser
-- [ ] Firebase project wiring (flutterfire configure) — needs interactive login
-- [ ] Play Console: Play Games config + leaderboard IDs into placeholders
-- [ ] App Store Connect: Game Center capability + leaderboard flappy_spikes_leaderboard
-- [ ] Replace placeholder contact email in docs/index.html
+- [ ] Firebase project wiring (flutterfire configure, Android only) — login done,
+      GCP project `flappy-spikes` exists; needs the Firebase console opened once
+      in the browser (403 until then), then GA4 enablement
+- [ ] Play Console: store listing + Play Games config via browser automation;
+      IDs into placeholders
+- [x] Contact email hello@duoleads.com in docs/index.html
+- [~] Apple: DEFERRED by user decision (2026-07-21) — no iOS changes until reopened
+      (still needed later: GoogleService-Info.plist, App Store Connect Game Center)
 
 ## Final gate
 - [x] `flutter analyze` clean

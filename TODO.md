@@ -91,9 +91,19 @@ Contract: see SPEC.md. Loop rule: a box is checked only when code exists AND
 - [ ] Firebase project wiring (flutterfire configure, Android only) — login done,
       GCP project `flappy-spikes` exists; needs the Firebase console opened once
       in the browser (403 until then), then GA4 enablement
-- [ ] Play Console: store listing + Play Games config via browser automation;
-      IDs into placeholders
-- [x] Contact email hello@duoleads.com in docs/index.html
+- [x] Play Console app created (Duo Leads, org account — no 12-tester rule)
+- [x] All 10 policy declarations complete (privacy URL, no ads, no sign-in
+      restrictions, IARC 3+, audience 13+, data safety w/ deletion link, no ad ID,
+      no government/financial/health features)
+- [x] PGS: project linked to Firebase cloud project, OAuth consent screen, two
+      Android OAuth clients (upload key + Play app signing), Top Scores
+      leaderboard CgkIsZz8pvUOEAIQAA, PGS app id 512525012529 — IDs in code
+- [ ] PGS: link the app-signing OAuth client as credential (dropdown resists
+      automation — user does this one click), then publish PGS + add testers
+- [ ] Store listing: default language stuck at zh-CN (flyout resists automation
+      — user switches to English US), then descriptions + graphics upload
+- [ ] Store category (Arcade) + contact email in Store settings
+- [ ] AAB upload to a testing track + review submission (user clicks)
 - [~] Apple: DEFERRED by user decision (2026-07-21) — no iOS changes until reopened
       (still needed later: GoogleService-Info.plist, App Store Connect Game Center)
 

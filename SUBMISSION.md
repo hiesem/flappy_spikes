@@ -51,22 +51,28 @@ version 1.0.0+1, portrait-only, min Android per Flutter default (24+), iOS 15+
      users can request deletion (yes, via the policy email).
 7. Submit for review.
 
-### Play Games Services (leaderboard) — one-time console setup
+### Play Games Services (leaderboard) — console state (2026-07-21)
 
-The app is already wired; only the console config is missing:
-
-1. Play Console → your app → **Play Games Services → Setup and management →
-   Configuration** → create and link the app (package
-   `com.flappyspikes.flappy_spikes`; use the Play App Signing certificate when
-   asked).
-2. **Leaderboards → Create leaderboard**: name *Top Scores*, score format
-   integer (0 decimals), ordering *Larger is better*.
-3. Copy the **App ID** into `android/app/src/main/res/values/strings.xml`
-   (replace `TODO_PLAY_CONSOLE_APP_ID`) and the **leaderboard ID** into
-   `GameServices.androidLeaderboardId` in `lib/services/game_services.dart`
-   (replace `TODO_PLAY_CONSOLE_LEADERBOARD_ID`). Rebuild the AAB.
-4. Publish the Play Games Services configuration and add your testers under
-   **Play Games Services → Testers**, or sign-in fails for non-tester accounts.
+Already done in Play Console (app id `4974493442709551492`):
+- PGS project created and linked to the Firebase cloud project (`flappy-spikes-a2b55`).
+  **PGS app ID `512525012529`** (in `android/.../res/values/strings.xml`).
+- Leaderboard **Top Scores** created, ID **`CgkIsZz8pvUOEAIQAA`** (in
+  `lib/services/game_services.dart`), integer, larger is better.
+- OAuth consent screen configured (External, testing mode) and TWO Android OAuth
+  clients created in the GCP project: `Flappy Spikes upload key` (SHA-1 of the
+  local upload keystore, for local/dev builds) and `Flappy Spikes app signing`
+  (SHA-1 of the Play App Signing cert `D3:D7:26:...:22`, shown in Play Console →
+  Add credential → Create OAuth client).
+- STILL TO DO (manual, 1 min): Play Console → Play Games services → Configuration
+  → Credentials → **Add credential** → pick `Flappy Spikes app signing` in the
+  OAuth client dropdown → Save changes. Then **Review and publish** the PGS
+  project (user clicks publish) and add testers under Play Games services →
+  Testers, or sign-in fails for non-tester accounts.
+- All 10 policy declarations are complete: privacy policy URL, ads (none),
+  sign-in details (none), content rating (IARC 3+ everywhere), target audience
+  (13-15/16-17/18+), data safety (App interactions collected, nothing shared,
+  encrypted in transit, deletion link), advertising ID (no), government (no),
+  financial (none), health (none).
 
 To build a new AAB after changes:
 

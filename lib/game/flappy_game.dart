@@ -16,22 +16,27 @@ import '../components/bird.dart';
 import '../components/debug_panel.dart';
 import '../components/gameover_panel.dart';
 import '../components/home/home_screen.dart';
+import '../components/noads_popup.dart';
 import '../components/pipe_pair.dart';
 import '../components/score_hud.dart';
 import '../components/settings_panel.dart';
+import '../components/shop/shop_screen.dart';
 import '../components/spike_strip.dart';
 import '../components/tap_catcher.dart';
 import '../components/ui/service_message.dart';
+import '../menu/free_coins_policy.dart';
 import '../menu/menu_state.dart';
 import '../menu/powerup_slot.dart';
 import '../menu/skin_catalog.dart';
 import '../menu/wallet.dart';
 import '../services/ads_service.dart';
 import '../services/game_services.dart';
+import '../services/iap_service.dart';
 import '../services/monetization.dart';
 import 'config.dart';
 import 'fade.dart';
 import 'palettes.dart';
+import 'purchases.dart';
 import 'sound.dart';
 import 'storage.dart';
 import 'tintable.dart';
@@ -49,9 +54,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     double? worldHeight,
     GameServices? services,
     Monetization? monetization,
+    DateTime Function()? clock,
     this.soundEnabled = true,
   }) : services = services ?? GameServices(),
        monetization = monetization ?? Monetization(),
+       storage = GameStorage(clock: clock),
        viewHeight = _clampViewHeight(worldHeight ?? Config.worldHeight),
        super(
         gravity: Vector2(0, Config.gravity),
@@ -78,7 +85,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// pinned to the top/bottom edges, so there are no letterbox bars.
   final double viewHeight;
 
-  final GameStorage storage = GameStorage();
+  /// Persistence; its clock (wall time unless the constructor's `clock`
+  /// overrides it, e.g. in tests) also drives the daily menu policies.
+  final GameStorage storage;
   late final SoundService sound;
 
   /// Passed to the [SoundService] created in [onLoad]. Headless tests
@@ -97,6 +106,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Coins, skins, powerup slot and popup policies; built in [onLoad] right
   /// after the storage is loaded.
   late final MenuState menu;
+
+  /// Store purchase flow: grants coins / No ads from the IAP event stream
+  /// (subscribed in [onLoad], cancelled in [onRemove]).
+  Purchases get purchases => _purchases!;
+  Purchases? _purchases;
 
   /// Called when the share button is pressed (wired up by the app shell).
   void Function(int score)? onShareScore;
@@ -144,6 +158,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   HomeScreen? _home;
   GameOverPanel? _gameOverPanel;
   SettingsPanel? _settingsPanel;
+  ShopScreen? _shop;
+  NoAdsPopup? _noAdsPopup;
+  bool _freeCoinsBusy = false;
   DebugPanel? _debugPanel;
   ServiceMessage? _message;
   bool _runStarting = false;
@@ -165,6 +182,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// The home screen while it is up (null in runs / settings).
   HomeScreen? get homeScreen => _home;
+
+  /// The Shop while it is open (null otherwise).
+  ShopScreen? get shopScreen => _shop;
+
+  /// The No-ads popup while it is up (null otherwise).
+  NoAdsPopup? get noAdsPopup => _noAdsPopup;
+
+  /// True while a free-coins rewarded ad is playing.
+  bool get freeCoinsBusy => _freeCoinsBusy;
 
   /// Current skin blend toward the stage foreground (0 in menus).
   double get skinBlend => _skinBlend;
@@ -192,6 +218,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         'source': source.analyticsName,
       }),
     );
+    _purchases = Purchases(
+      iap: monetization.iap,
+      menu: menu,
+      services: services,
+      toast: showToast,
+      onNoAdsGranted: () {
+        closeNoAdsPopup(dismissed: false);
+        refreshHome();
+      },
+    )..start();
     sound = SoundService(muted: storage.muteSound, enabled: soundEnabled);
     // Background music: persisted volume, then start the loop (everywhere —
     // menus and gameplay). Guarded/unawaited: no-ops in headless tests.
@@ -230,6 +266,19 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _setupStartScene();
     _logSlotShown();
     _applyTints();
+
+    // No-ads upsell on launch: from the day after install, max once a day,
+    // until three dismissals, never to owners (NoAdsPopupPolicy).
+    if (menu.noAdsPopup.shouldShowOnLaunch()) {
+      openNoAdsPopup('launch');
+      unawaited(menu.noAdsPopup.markShown());
+    }
+  }
+
+  @override
+  void onRemove() {
+    _purchases?.dispose();
+    super.onRemove();
   }
 
   // --- scene setup -------------------------------------------------------
@@ -399,35 +448,198 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     });
   }
 
-  // --- later work packages (minimal stubs) ---------------------------------
+  // --- Shop (PRD-1 §5.2) ---------------------------------------------------
 
-  /// Shop (coin pill "+" scrolls to the coin packs). Stub until WP5.
-  void openShop({bool scrollToCoins = false}) {
-    if (!_homeInteractive) return;
-    sound.play(Sfx.click);
-    services.track('shop_open', {'source': scrollToCoins ? 'pill' : 'tile'});
-    showToast('Coming soon');
+  /// True while [scene] is the menu screen up, with no popup / debug panel
+  /// over it and no run starting.
+  bool _sceneOnTop(MenuScene scene) {
+    if (state != GameState.start || menuScene != scene || _runStarting) {
+      return false;
+    }
+    return switch (scene) {
+      MenuScene.home => _backHandlers.isEmpty,
+      MenuScene.shop =>
+        _backHandlers.isNotEmpty && _backHandlers.last == _shopBack,
+      _ => false,
+    };
   }
 
-  /// Skins screen. Stub until WP6.
+  /// Shop tile / coin pill: fades the home screen out and the Shop in.
+  /// The pill ([scrollToCoins]) opens it at the coin packs; pressed while
+  /// already in the Shop it just scrolls there. [source] defaults to
+  /// "pill" / "tile" (`shop_open` analytics).
+  void openShop({bool scrollToCoins = false, String? source}) {
+    if (_sceneOnTop(MenuScene.shop)) {
+      if (scrollToCoins) {
+        sound.play(Sfx.click);
+        _shop?.scrollToCoins();
+      }
+      return;
+    }
+    if (!_homeInteractive || _shop != null) return;
+    sound.play(Sfx.click);
+    services.track('shop_open', {
+      'source': source ?? (scrollToCoins ? 'pill' : 'tile'),
+    });
+    menuScene = MenuScene.shop;
+    _leaveHome();
+    final shop = ShopScreen(onBack: closeShop);
+    _shop = shop;
+    world.add(shop);
+    registerTintable(shop);
+    fadeOpacity(shop, from: 0, to: 1);
+    pushBack(_shopBack);
+    if (scrollToCoins) {
+      shop.loaded.then((_) {
+        if (identical(_shop, shop)) shop.scrollToCoins(animate: false);
+      });
+    }
+  }
+
+  /// Back button / Esc in the Shop: back to the home screen (not a new
+  /// arrival: no slot roll).
+  void closeShop() {
+    final shop = _shop;
+    if (state != GameState.start || shop == null) return;
+    sound.play(Sfx.click);
+    _shop = null;
+    popBack(_shopBack);
+    menuScene = MenuScene.home;
+    shop.active = false;
+    unregisterTintable(shop);
+    fadeOpacity(shop, from: shop.opacity, to: 0, removeOnDone: true);
+    _addHome();
+    fadeOpacity(_home, from: 0, to: 1);
+  }
+
+  bool _shopBack() {
+    closeShop();
+    return true;
+  }
+
+  /// Shop free-coins row: a rewarded ad for +[FreeCoinsPolicy.reward]
+  /// coins, within the policy's cooldown / daily cap. Also offered to
+  /// No-ads owners (an opt-in ad).
+  Future<void> claimFreeCoins() async {
+    if (!_sceneOnTop(MenuScene.shop) || _freeCoinsBusy) return;
+    final policy = menu.freeCoins;
+    if (!policy.canClaim) return;
+    sound.play(Sfx.click);
+    final ads = monetization.ads;
+    if (!ads.isAvailable) {
+      showToast('No video available right now');
+      return;
+    }
+    _freeCoinsBusy = true;
+    final AdResult result;
+    try {
+      result = await ads.show(AdPlacement.shopFreeCoins);
+    } finally {
+      _freeCoinsBusy = false;
+    }
+    if (result != AdResult.completed) {
+      showToast('No video available right now');
+      return;
+    }
+    await policy.recordClaim();
+    services.track('ad_rewarded_shown', {
+      'placement': AdPlacement.shopFreeCoins.analyticsName,
+    });
+    await menu.wallet.add(FreeCoinsPolicy.reward, CoinSource.rewarded);
+    showToast('+${FreeCoinsPolicy.reward} coins');
+  }
+
+  /// A coin pack (Shop) or No ads (popup price button): starts the store
+  /// purchase; [Purchases] grants it when the store confirms.
+  Future<void> buyProduct(IapProduct product) async {
+    if (state != GameState.start) return;
+    sound.play(Sfx.click);
+    await purchases.buy(product);
+  }
+
+  /// "RESTORE PURCHASES" (Shop / Settings).
+  Future<void> restorePurchases() async {
+    if (state != GameState.start) return;
+    sound.play(Sfx.click);
+    await purchases.restore();
+  }
+
+  /// Shop featured-skin row: the Skins screen at [skinId]'s purchase
+  /// confirmation.
+  void openFeaturedSkin(String skinId) {
+    // TODO(WP6): openSkins(confirmSkinId: skinId) once the Skins screen
+    // takes it (it must also accept being opened from the Shop).
+    openSkins();
+  }
+
+  /// Skins screen. Stub until WP6 (reachable from home and the Shop).
   void openSkins() {
-    if (!_homeInteractive) return;
+    if (!_homeInteractive && !_sceneOnTop(MenuScene.shop)) return;
     sound.play(Sfx.click);
     services.track('skins_open');
     showToast('Coming soon');
   }
 
-  /// No-ads popup ([trigger]: launch / home_tile / shop_banner). Stub until
-  /// WP5.
+  // --- No-ads popup (PRD-1 §5.1) ------------------------------------------
+
+  /// Opens the No-ads popup over the home screen or the Shop. [trigger]:
+  /// launch (auto, from onLoad) / home_tile / shop_banner. Never during a
+  /// run; owners get a toast instead.
   void openNoAdsPopup(String trigger) {
-    if (!_homeInteractive) return;
-    sound.play(Sfx.click);
+    final launch = trigger == 'launch';
+    if (_noAdsPopup != null ||
+        _debugPanel != null ||
+        (!launch &&
+            !_homeInteractive &&
+            !_sceneOnTop(MenuScene.shop)) ||
+        (launch && state != GameState.start)) {
+      return;
+    }
+    if (!launch) sound.play(Sfx.click);
     if (menu.noAds) {
       showToast('Already ad-free');
       return;
     }
     services.track('noads_popup_shown', {'trigger': trigger});
-    showToast('Coming soon');
+    final popup = NoAdsPopup(
+      trigger: trigger,
+      onDismiss: () => closeNoAdsPopup(),
+      onBuy: () => buyProduct(IapProduct.noAds),
+    );
+    _noAdsPopup = popup;
+    world.add(popup);
+    fadeOpacity(popup, from: 0, to: 1, duration: Config.popupFadeDuration);
+    pushBack(_noAdsPopupBack);
+  }
+
+  /// Closes the popup. [dismissed] (×, dim, Esc) logs
+  /// `noads_popup_dismissed` and, for the launch popup, counts toward the
+  /// policy's dismissal cap; a purchase closes it with `dismissed: false`.
+  void closeNoAdsPopup({bool dismissed = true}) {
+    final popup = _noAdsPopup;
+    if (popup == null) return;
+    _noAdsPopup = null;
+    popBack(_noAdsPopupBack);
+    popup.active = false;
+    if (dismissed) {
+      sound.play(Sfx.click);
+      services.track('noads_popup_dismissed', {'trigger': popup.trigger});
+      if (popup.trigger == 'launch') {
+        unawaited(menu.noAdsPopup.markDismissed());
+      }
+    }
+    fadeOpacity(
+      popup,
+      from: popup.opacity,
+      to: 0,
+      duration: Config.popupFadeDuration,
+      removeOnDone: true,
+    );
+  }
+
+  bool _noAdsPopupBack() {
+    closeNoAdsPopup();
+    return true;
   }
 
   /// Invite tile: system share sheet with the store link (PRD-1 §3.4, no
@@ -631,6 +843,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onMusicVolume: setMusicVolume,
       onBack: closeSettings,
       onPrivacyPolicy: openPrivacyPolicy,
+      onRestorePurchases: restorePurchases,
     );
     _settingsPanel = settings;
     world.add(settings);
@@ -763,9 +976,21 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (old != null && old.parent != null) {
       old.removeFromParent();
     }
+    // Home: bare text in the gap above the tiles (as before). Over the
+    // No-ads popup: below its card; on the other menu screens (Shop,
+    // Settings) a chip above the bottom spikes; runs / game over: the 1.0
+    // bottom-centre spot.
+    final popup = _noAdsPopup != null;
+    final menuScreen =
+        state == GameState.start && menuScene != MenuScene.home;
     final message = ServiceMessage(
       message: text,
-      position: state == GameState.start
+      chip: popup || menuScreen,
+      position: popup
+          ? Config.noAdsToastPositionFor(viewHeight)
+          : menuScreen
+          ? Config.menuScreenToastPositionFor(viewHeight)
+          : state == GameState.start
           ? Config.homeToastPositionFor(viewHeight)
           : Config.serviceMessagePositionFor(viewHeight / 2),
     );
@@ -854,6 +1079,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   @override
   void update(double dt) {
     super.update(dt);
+    _purchases?.update(dt);
 
     if (_colorFadeT < 1) {
       _colorFadeT = (_colorFadeT + dt / Config.colorFadeDuration).clamp(

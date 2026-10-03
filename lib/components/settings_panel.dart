@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart';
 import '../game/config.dart';
 import '../game/flappy_game.dart';
 import '../game/tintable.dart';
+import 'home/menu_primitives.dart';
 import 'ui/fadable_text.dart';
 import 'ui/sprite_button.dart';
 import 'ui/text_button.dart';
@@ -27,6 +28,7 @@ class SettingsPanel extends PositionComponent
     required this.onMusicVolume,
     required this.onBack,
     required this.onPrivacyPolicy,
+    this.onRestorePurchases,
   }) : super(priority: 20);
 
   bool muted;
@@ -36,6 +38,10 @@ class SettingsPanel extends PositionComponent
   final void Function() onBack;
   final void Function() onPrivacyPolicy;
 
+  /// "RESTORE PURCHASES" link below the privacy link (PRD-1 §3.7); hidden
+  /// when null.
+  final void Function()? onRestorePurchases;
+
   late final FadableTextComponent _title;
   late final SpriteButton _sfxButton;
   late final FadableTextComponent _sfxLabel;
@@ -44,6 +50,10 @@ class SettingsPanel extends PositionComponent
   late final FadableTextComponent _credit;
   late final SpriteButton _backButton;
   late final TextButton _privacyLink;
+  RestoreLink? _restoreLink;
+
+  /// The restore-purchases link (tests).
+  RestoreLink? get restoreLink => _restoreLink;
   late Sprite _soundSprite;
   late Sprite _muteSprite;
 
@@ -137,6 +147,14 @@ class SettingsPanel extends PositionComponent
       _backButton,
     ]);
     add(_privacyLink);
+    final restore = onRestorePurchases;
+    if (restore != null) {
+      _restoreLink = RestoreLink(
+        center: Config.settingsRestoreLinkPositionFor(centerY),
+        onPressed: restore,
+      );
+      add(_restoreLink!);
+    }
     _apply();
   }
 
@@ -150,6 +168,7 @@ class SettingsPanel extends PositionComponent
     _credit.opacity = _opacity;
     _backButton.opacity = _opacity;
     _privacyLink.opacity = _opacity;
+    _restoreLink?.opacity = _opacity;
     _title.setColor(_tint);
     _sfxLabel.setColor(_tint);
     _credit.setColor(_tint);
@@ -198,6 +217,7 @@ class SettingsPanel extends PositionComponent
       _credit.opacity = _opacity;
       _backButton.opacity = _opacity;
       _privacyLink.opacity = _opacity;
+      _restoreLink?.opacity = _opacity;
     }
   }
 }
@@ -316,5 +336,37 @@ class _TapBlocker extends PositionComponent with TapCallbacks {
   @override
   void onTapDown(TapDownEvent event) {
     event.handled = true;
+  }
+}
+
+/// "RESTORE PURCHASES" text link (PRD-1 §3.7): fixed menu pink, 11 pt,
+/// letter-spacing .1em, like the Shop's; fires on tap-up with the menu
+/// buttons' pressed shade. Fades as one layer with the panel.
+class RestoreLink extends PositionComponent with GroupOpacity {
+  RestoreLink({required Vector2 center, required void Function() onPressed})
+    : button = MenuButton(size: linkSize, onPressed: onPressed),
+      super(
+        position: center - linkSize / 2,
+        size: linkSize,
+      );
+
+  static final Vector2 linkSize = Vector2(200, 28);
+
+  final MenuButton button;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    button.add(
+      MenuText(
+        'RESTORE PURCHASES',
+        fontSize: 11,
+        color: Config.menuPink,
+        letterSpacingEm: 0.1,
+        position: linkSize / 2,
+        anchor: Anchor.center,
+      ),
+    );
+    add(button);
   }
 }

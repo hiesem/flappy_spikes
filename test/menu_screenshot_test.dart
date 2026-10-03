@@ -108,6 +108,79 @@ void main() async {
   homeShot('home_711_shield', height: 711, slot: Powerup.shield);
   homeShot('home_568', height: 568, slot: Powerup.bigHoops);
 
+  // Shop (S1-B) at 711: mock balance; pink/blue/green owned so the
+  // featured skin is GRAPE as in the mock (its catalogue price is 200, the
+  // mock shows 300). Placeholder store prices.
+  FlameTester<FlappySpikesGame>(
+    () => createTestGame({
+      ...mockPrefs,
+      'ownedSkins': ['pink', 'blue', 'green'],
+    }, 711),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'menu screenshot: shop_711',
+    setUp: (game, tester) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, tester) async {
+      game.openShop();
+      await flushAndMount(game);
+      stepGame(game, 0.6); // home fades out, Shop fades in
+      await flushAndMount(game);
+      expect(game.shopScreen, isNotNull);
+      expect(game.homeScreen, isNull);
+      await tester.runAsync(() => capture(game, 1.5, 'shop_711'));
+      await tester.runAsync(() => capture(game, 2, 'shop_711@2x'));
+    },
+  );
+
+  // No-ads popup (P1) over the home screen at 711.
+  FlameTester<FlappySpikesGame>(
+    () => createTestGame(mockPrefs, 711),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'menu screenshot: popup_711',
+    setUp: (game, tester) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, tester) async {
+      game.openNoAdsPopup('home_tile');
+      await flushAndMount(game);
+      stepGame(game, 0.3);
+      await flushAndMount(game);
+      expect(game.noAdsPopup, isNotNull);
+      await tester.runAsync(() => capture(game, 1.5, 'popup_711'));
+      await tester.runAsync(() => capture(game, 2, 'popup_711@2x'));
+    },
+  );
+
+  // Shop at 568, scrolled to the end (restore link).
+  FlameTester<FlappySpikesGame>(
+    () => createTestGame(mockPrefs, 568),
+    gameSize: Vector2(320, 568),
+  ).testGameWidget(
+    'menu screenshot: shop_568',
+    setUp: (game, tester) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, tester) async {
+      game.openShop();
+      await flushAndMount(game);
+      stepGame(game, 0.6);
+      await flushAndMount(game);
+      await tester.runAsync(() => capture(game, 1.5, 'shop_568_top'));
+      final scroll = game.shopScreen!.scroll;
+      scroll.offset = scroll.maxOffset;
+      await tester.runAsync(() => capture(game, 1.5, 'shop_568_end'));
+    },
+  );
+
   // Game-over panel with the interim "+N" coin line (1.0 panel geometry).
   FlameTester<FlappySpikesGame>(
     () => createTestGame(mockPrefs, 711),

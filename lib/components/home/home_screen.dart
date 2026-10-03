@@ -220,19 +220,7 @@ class HomeScreen extends PositionComponent
     PositionComponent parent,
     List<PositionComponent> items, {
     required double gap,
-  }) {
-    final width =
-        items.fold<double>(0, (sum, c) => sum + c.width) +
-        gap * (items.length - 1);
-    var x = (parent.width - width) / 2;
-    for (final item in items) {
-      item
-        ..anchor = Anchor.topLeft
-        ..position = Vector2(x, (parent.height - item.height) / 2);
-      x += item.width + gap;
-    }
-    parent.addAll(items);
-  }
+  }) => layoutRow(parent, items, gap: gap);
 
   // --- state sync ------------------------------------------------------------
 

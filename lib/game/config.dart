@@ -351,6 +351,141 @@ class Config {
   /// 0 in menus and at stage 0 (identity colours, as mocked).
   static const double skinStageBlend = 0.35;
 
+  /// Height of the menus' short spike strips (spike tips 44 pt from the
+  /// edge).
+  static const double menuSpikeHeight = spikeHeight - menuSpikeInset; // 44
+
+  // --- Shared menu-screen chrome (Shop, Skins; PRD-1 §5) --------------------
+  //
+  // Coin pill top-left (as on home), back button in the gear's place, title
+  // centred at the top; the content scrolls in the band between the title
+  // and the bottom spike tips. Everything is pinned to the top.
+
+  static Vector2 menuScreenPillPositionFor(double viewHeight) =>
+      homeCoinPillPositionFor(viewHeight);
+  static Rect menuScreenBackRectFor(double viewHeight) =>
+      homeGearRectFor(viewHeight);
+  static const double menuScreenTitleTop = 104;
+  static const double menuScreenTitleFontSize = 30;
+  static const double menuScreenTitleLetterSpacing = 0.06; // em
+  // Top-centre of the title's line box.
+  static Vector2 menuScreenTitlePositionFor(double viewHeight) =>
+      Vector2(worldWidth / 2, menuScreenTitleTop);
+
+  /// Scrolling content viewport: from just below the title's line box
+  /// (104 + 30 x 1.284) to the bottom spike tips.
+  static double menuScreenContentTopFor(double viewHeight) => 143;
+  static double menuScreenContentBottomFor(double viewHeight) =>
+      viewHeight - menuSpikeHeight;
+
+  /// Toasts over a menu screen (Shop, Skins, Settings): a chip centred in
+  /// the band just above the bottom spike tips (643 at 711).
+  static Vector2 menuScreenToastPositionFor(double viewHeight) =>
+      Vector2(worldWidth / 2, viewHeight - menuSpikeHeight - 24);
+
+  /// Card behind content blocks (packs, featured row): the stage foreground
+  /// at this opacity over the background (mock `color-mix(fg 14%, bg)`).
+  static const double menuCardMix = 0.14;
+
+  // --- Shop (PRD-1 §5.2, design S1-B; content coordinates = world
+  // coordinates before scrolling, measured at 711 and top-pinned) ---------
+
+  static const double shopRowWidth = homeRightEdge - homeMargin; // 292
+  static Rect shopBannerRectFor(double viewHeight) =>
+      const Rect.fromLTWH(homeMargin, 146, shopRowWidth, 52);
+  static Rect shopFreeCoinsRectFor(double viewHeight) =>
+      const Rect.fromLTWH(homeMargin, 206, shopRowWidth, 44);
+
+  static const double shopPackWidth = 142;
+  static const double shopPackHeight = 150;
+  static const double shopPackGap = 8; // 14 + 142 + 8 = 164
+  static const double shopPackRowTop = 266;
+  static const double shopPackRowStep = 160; // 266 -> 426
+
+  /// Coin pack card [index] (0 = 500, 1 = 1,800, 2 = 5,000, 3 = 12,000), in
+  /// a 2 x 2 grid.
+  static Rect shopPackRectFor(double viewHeight, int index) => Rect.fromLTWH(
+    homeMargin + (index % 2) * (shopPackWidth + shopPackGap),
+    shopPackRowTop + (index ~/ 2) * shopPackRowStep,
+    shopPackWidth,
+    shopPackHeight,
+  );
+
+  /// Inside a pack card: the coin stack's bottom edge, the amount's line
+  /// box top and the price button height (mock flex column, 26 pt top
+  /// padding, 56 pt art box, space-between).
+  static const double shopPackArtBottom = 78;
+  static const double shopPackAmountTop = 82.875;
+  static const double shopPackPriceHeight = 38;
+  // Gold flap tag centred on the card's top edge.
+  static const double shopPackTagHeight = 24;
+  static const double shopPackTagPadX = 10;
+
+  static Rect shopFeaturedRectFor(double viewHeight) =>
+      const Rect.fromLTWH(homeMargin, 588, shopRowWidth, 56);
+
+  /// "RESTORE PURCHASES" link: top of its text line, centred.
+  static const double shopRestoreTop = 650;
+  static Vector2 shopRestorePositionFor(double viewHeight) =>
+      Vector2(worldWidth / 2, shopRestoreTop);
+
+  /// Bottom of the scrollable content (just below the restore link): fits
+  /// the 667 pt viewport at 711 without scrolling.
+  static double shopContentBottomFor(double viewHeight) => 666;
+
+  /// Content y the "+" of the coin pill scrolls to the top of the viewport:
+  /// just above the first row of packs' flap tags.
+  static double shopCoinsAnchorFor(double viewHeight) =>
+      shopPackRowTop - shopPackTagHeight / 2 - 8;
+
+  /// How long a restore may stay silent before "Nothing to restore".
+  static const double restoreTimeout = 4;
+
+  // --- No-ads popup (PRD-1 §5.1, design P1) --------------------------------
+
+  /// Card x 20 -> 300, top 190 at 711; the card stays centred on the same
+  /// band at other heights.
+  static Rect noAdsCardRectFor(double viewHeight) => Rect.fromLTWH(
+    20,
+    190 + (viewHeight - homeReferenceHeight) / 2,
+    worldWidth - 40,
+    noAdsCardHeight,
+  );
+  static const double noAdsHeaderHeight = 120;
+  static const double noAdsCloseSize = 38;
+  static const double noAdsTitleFontSize = 22;
+  static const double noAdsTitlePad = 8;
+  // 22 pt line box + 2 x 8 pt padding; the browser's line box measures
+  // 29 pt on popup_p1.png (22 x 1.284 = 28.25 rounded up).
+  static const double noAdsTitleHeight = 29 + 2 * noAdsTitlePad; // 45
+  static const double noAdsPad = 16;
+  static const double noAdsBenefitSize = 44;
+  static const double noAdsBenefitGap = 12;
+  static const double noAdsPriceGap = 18;
+  static const double noAdsPriceHeight = 54;
+  static const double noAdsCardHeight =
+      noAdsHeaderHeight +
+      noAdsTitleHeight +
+      noAdsPad +
+      2 * noAdsBenefitSize +
+      noAdsBenefitGap +
+      noAdsPriceGap +
+      noAdsPriceHeight +
+      noAdsPad; // 369
+
+  /// Toasts while the popup is up: centred below the card.
+  static Vector2 noAdsToastPositionFor(double viewHeight) => Vector2(
+    worldWidth / 2,
+    noAdsCardRectFor(viewHeight).bottom + 32,
+  );
+
+  // --- Settings -------------------------------------------------------------
+
+  /// "RESTORE PURCHASES" link below the privacy link (centre; 510 at 568),
+  /// clear of the 44 pt menu spike strip.
+  static Vector2 settingsRestoreLinkPositionFor(double centerY) =>
+      Vector2(160, 2 * centerY - 58);
+
   // Debug panel (debug builds / Linux): a column of text buttons centred on
   // the playfield.
   static const double debugRowHeight = 30;
@@ -374,6 +509,8 @@ class Config {
   static const double uiFadeDuration = 0.5;
   static const double colorFadeDuration = 0.5;
   static const double replayFadeDuration = 0.3;
+  // No-ads popup fade in / out.
+  static const double popupFadeDuration = 0.2;
   // The run's bird fading in at its spawn point after START (the home
   // screen's bird fades out with the home screen).
   static const double runBirdFadeDuration = 0.25;

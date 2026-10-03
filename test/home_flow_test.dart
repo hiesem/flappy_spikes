@@ -145,14 +145,23 @@ void main() {
     homeTest(
       'home buttons do not start a run; onScreenTap (tests/keyboard) does',
       verify: (game, spy, ads, tester) async {
-        final home = game.homeScreen!;
-        for (final tile in home.tiles) {
-          tile.onPressed();
+        // Shop / No-ads open screens over home: back out of each (a fresh
+        // home screen comes back after the Shop).
+        Future<void> pressAndBack(void Function() press) async {
+          press();
+          await flushAndMount(game);
+          expect(game.state, GameState.start);
+          while (game.handleBack()) {}
+          await flushAndMount(game);
         }
-        home.leaderboard.onPressed();
-        home.coinPill.onPressed();
-        await flushAndMount(game);
+
+        for (var i = 0; i < 4; i++) {
+          await pressAndBack(() => game.homeScreen!.tiles[i].onPressed());
+        }
+        await pressAndBack(() => game.homeScreen!.leaderboard.onPressed());
+        await pressAndBack(() => game.homeScreen!.coinPill.onPressed());
         expect(game.state, GameState.start);
+        expect(game.menuScene, MenuScene.home);
         game.onScreenTap();
         expect(game.state, GameState.playing);
       },
@@ -496,15 +505,12 @@ void main() {
     );
 
     homeTest(
-      'stubs for later screens toast "Coming soon" and log',
+      'Skins stub toasts "Coming soon"; invite logs',
       verify: (game, spy, ads, tester) async {
-        game.openShop(scrollToCoins: true);
-        expect(spy.last('shop_open'), {'source': 'pill'});
         game.openSkins();
         game.invite();
         expect(spy.names, contains('invite_tap'));
-        game.openNoAdsPopup('home_tile');
-        expect(spy.last('noads_popup_shown'), {'trigger': 'home_tile'});
+        expect(spy.names, contains('skins_open'));
         await flushAndMount(game);
         final toast = game.world.children.query<ServiceMessage>().single;
         expect(toast.message, 'Coming soon');

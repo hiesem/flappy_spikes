@@ -275,6 +275,31 @@ class MenuTag extends PositionComponent {
   void render(Canvas canvas) => canvas.drawRect(size.toRect(), _paint);
 }
 
+/// Lays [items] out left-to-right as one centred group inside [parent]
+/// (the mocks' `display:flex; justify-content:center; align-items:center;
+/// gap`), vertically centred, and adds them to [parent]. With [right] set
+/// the group's right edge sits at that x instead (`justify-content:
+/// flex-end` with padding); with [left], its left edge.
+void layoutRow(
+  PositionComponent parent,
+  List<PositionComponent> items, {
+  required double gap,
+  double? left,
+  double? right,
+}) {
+  final width =
+      items.fold<double>(0, (sum, c) => sum + c.width) +
+      gap * (items.length - 1);
+  var x = left ?? (right != null ? right - width : (parent.width - width) / 2);
+  for (final item in items) {
+    item
+      ..anchor = Anchor.topLeft
+      ..position = Vector2(x, (parent.height - item.height) / 2);
+    x += item.width + gap;
+  }
+  parent.addAll(items);
+}
+
 /// Formats a coin balance like the mocks: thousands grouped with a space
 /// ("1 250").
 String formatCoins(int value) {

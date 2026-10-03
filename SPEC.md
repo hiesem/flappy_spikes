@@ -52,6 +52,13 @@ field, preserving all gameplay geometry. Portrait only.
 > the equipped skin (tinted layer + overlay); its tint is the skin's identity
 > colour in menus and at stage 0 and lerps 35 % toward the stage foreground
 > from stage 5 (`Config.skinStageBlend`); hitbox and physics are unchanged.
+>
+> The home screen leads to the **Shop** (`lib/components/shop/`, layout in
+> `Config.shop*For`) and the **No-ads popup** (`lib/components/noads_popup.dart`,
+> `Config.noAds*`), both menu-only (stage 0, never during a run); store
+> purchases are granted by `lib/game/purchases.dart`. The popup also opens by
+> itself on launch from the day after install (max once a day, until three
+> dismissals, never to buyers). Settings gains a RESTORE PURCHASES link.
 
 ## Physics (Forge2D)
 

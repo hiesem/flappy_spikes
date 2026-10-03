@@ -1,5 +1,8 @@
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
+import 'package:flappy_spikes/components/menu_screen_chrome.dart';
+import 'package:flappy_spikes/components/noads_popup.dart';
+import 'package:flappy_spikes/components/shop/shop_screen.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/skin_catalog.dart';
 import 'package:flappy_spikes/services/game_services.dart';
@@ -10,7 +13,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// on cache hits (microtasks) instead of real async decodes.
 final kAllImages = [
   ...kHomeImages,
-  for (final skin in kSkins) ...skin.images,
+  ...kMenuScreenImages,
+  ...kShopImages,
+  ...kNoAdsPopupImages,
+  for (final skin in kSkins) ...[...skin.images, skin.preview],
 
   'bird.png',
   'bird_flap.png',

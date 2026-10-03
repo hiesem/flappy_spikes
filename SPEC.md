@@ -80,11 +80,24 @@ field, preserving all gameplay geometry. Portrait only.
   static rectangle bodies. Pair enters at x = 320 + 44, z behind bird.
 - Gap ramps with the score (difficulty curve, deviation 2026-07-19 — the original
   had a constant 105 pt): **145 pt at score 0 → 105 pt from score 25 on**, linear
-  (`Config.gapForScore`). Gap-bottom y (top edge of bottom pipe) uniform random in
-  **[202, viewHeight − 72 − gap − 40]** for the gap at spawn time (ceiling strip 72 +
-  min flyable window 130 … 40 pt clearance at the top; deviation: the original's
-  lower bound 112 could tuck the gap under the ceiling leaving an unflyable
-  40 pt window; with gap ≤ 130 the gap now never tucks under the ceiling).
+  (`Config.gapForScore`). Each pipe then adds a bounded random variance on top
+  (deviation 2026-07-22 — neighbouring pipes no longer share one gap size;
+  raised 2x from 25/10 to 50/20 later the same day on user request):
+  gap = curve + rng × variance, the variance itself tapering **50 pt at score 0 →
+  20 pt from score 25 on** on the same ramp schedule (`Config.gapVarianceForScore`,
+  `Config.gapForPipe`); the curve value stays the MINIMUM gap. The draw is capped
+  at `Config.maxGapFor(viewHeight)` = (viewHeight − 2×(72+20)) / 2 (**192 pt at
+  568**, 273 at 730) — the largest gap where both pipe stubs can still be
+  ≥ `Config.minPipeStub` (20 pt, lowered from 40 with the 2x variance so the
+  bigger gaps still fit; 20 pt still clearly shows the pipe and its cap rim).
+  Gap-bottom y (top edge of bottom pipe) uniform random in
+  **[max(202, gap + 72 + 20), viewHeight − 72 − gap − 20]** for the gap at spawn
+  time (`Config.gapBottomMinFor` / `Config.gapBottomMaxFor`): ≥ 20 pt stub at
+  BOTH ends — the raised lower bound keeps the top stub ≥ 20 pt, so a pipe is
+  always visible and never hides fully behind the ceiling spikes (deviations:
+  the original's lower bound 112 could tuck the gap under the ceiling leaving an
+  unflyable 40 pt window; the pre-variance fixed 202 could swallow a 145 pt
+  gap's top stub entirely, top stub −15 pt).
   Consecutive pipes are additionally clamped to a **±140 pt**
   vertical jump (`Config.maxGapJump`) so every transition stays flyable.
 - Score sensor: invisible, full-height rectangle, positioned **111 pt to the right of
@@ -130,6 +143,10 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
 - Start scene positions: title at (160, centerY − titleH/2 − 35); best-score label
   (160, centerY+120); games-played (160, centerY+150); both `Opificio Neue` 25 pt,
   fg color; sound toggle (`soundbutton`/`mutebutton`, 30×30) at (160, centerY).
+  DEVIATIONS (2026-07-22): the sound toggle was REPLACED by a settings gear
+  (`settings_gear.png`, same position/size) opening the new settings screen,
+  and the privacy-policy link was REMOVED from the start scene (it now lives
+  on the settings screen only).
 - Game-over scene: `gameover_title` (UI accent pink #FF4FB7, NOT stage-tinted)
   at title position; `pointsfield`
   (241.5×82) centered at (160, centerY−41) with current-score label `Opificio Neue` 45 pt
@@ -137,12 +154,33 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   caption; `replaybutton` at (160, centerY + 19.25 + 6); `sharebutton` at
   (160, centerY + 3×19.25 + 12); best/games labels same positions as start scene,
   but in the accent pink.
-- Buttons play `click.mp3`. Sound toggle only on start scene.
+- Buttons play `click.mp3`.
+- Settings screen (added 2026-07-22; `settings_panel.dart`, opened from the
+  start scene's gear, fades in like other panels): "SETTINGS" title at
+  (160, centerY−140); SOUND EFFECTS row at centerY−45 (speaker icon at x=85
+  swapping soundbutton/mutebutton + label at x=115) toggling `muteSound`;
+  MUSIC row at centerY+15 (music_note icon + 140-pt slider) setting the music
+  volume live; "Music by ElectroBaptist" credit at centerY+60; back button
+  (`back_arrow.png`) at centerY+115; privacy-policy link at the usual bottom
+  position. A full-screen invisible blocker consumes stray taps so they cannot
+  start the game behind the open panel; the start-scene bird fades with the
+  panels.
 
 ## Audio & persistence
 
 - shared_preferences keys: `bestScore` (int), `gamesPlayed` (int, ++ each game over),
-  `muteSound` (bool). When muted: no sounds.
+  `muteSound` (bool; SFX only), `musicVolume` (double 0..1, default 0.6).
+  When muted: no sound effects.
+- Sound effects (`flap/point/gameover/click.mp3`) play from preloaded
+  `AudioPool`s (`FlameAudio.createPool`, maxPlayers 3) — low latency, no
+  per-play player churn (deviation note 2026-07-22: bare `FlameAudio.play`
+  creates a new AudioPlayer per call; on the Pixel 8 that made flap sounds
+  laggy and churned CPU/audio focus).
+- Background music (added 2026-07-22): `HappyBeat_8-Bit_Retro_Game_Loop.mp3`
+  (credit: ElectroBaptist) loops everywhere — menus and gameplay — via
+  `FlameAudio.bgm` (auto pause on app background, resume on foreground).
+  Volume = `musicVolume`, adjustable on the settings screen; independent of
+  the SFX mute.
 - Share button: capture screenshot of the game + share text
   `OMG! I got N points in Flappy Spikes!` via share_plus.
 
@@ -160,12 +198,13 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
 
 ## Testing requirements
 
-- Unit: palette stage = f(score), pipe gap/y-range math (incl. the score ramp),
-  persistence round-trip, state machine transitions.
+- Unit: palette stage = f(score), pipe gap/y-range math (incl. the score ramp
+  and the gap-variance band), persistence round-trip, state machine transitions.
 - Component (flame_test): flap zeroes velocity + rises into 45–65 pt band; terminal
   fall speed ≤ 500 pt/s; world scrolls at 200 pt/s; sensor contact scores exactly
   once; pipe contact → gameover once; pipes despawn off-screen; spawn interval
-  1.5 s; spawned gap follows the score ramp; pipe sprites align with the physics
+  1.5 s; spawned gap follows the score ramp (+ variance band, both pipe stubs
+  ≥ 40 pt at 568 and 711); pipe sprites align with the physics
   gap; tall-layout geometry (strips edge-pinned, centered layout at 711 pt);
   autopilot survives past score 12 (easy-phase gate, run at 568 and 711).
 - Calibration test: flap rise height within 45–65 pt (tune constants until green).

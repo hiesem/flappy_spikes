@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Google Play Games Services app ID from Play Console (Play Games
-         Services -> Configuration). Replace the placeholder once created;
-         see SUBMISSION.md. -->
+         Services -> Configuration). Live project — do not change without a
+         matching Play Console update; see SUBMISSION.md. -->
     <string name="games_app_id">512525012529</string>
 </resources>

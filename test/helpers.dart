@@ -1,5 +1,6 @@
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/services/game_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// All sprite assets the game may load, so that component onLoads complete
@@ -21,6 +22,9 @@ const kAllImages = [
   'mutebutton.png',
   'gamcenter.png',
   'gamecenter_gameover.png',
+  'settings_gear.png',
+  'back_arrow.png',
+  'music_note.png',
 ];
 
 /// Creates a [FlappySpikesGame] with mocked SharedPreferences.
@@ -32,9 +36,15 @@ const kAllImages = [
 FlappySpikesGame createTestGame(
   [Map<String, Object> initialPrefs = const {},
   double? worldHeight,
+  GameServices? services,
 ]) {
   SharedPreferences.setMockInitialValues(initialPrefs);
-  return FlappySpikesGame(worldHeight: worldHeight);
+  // soundEnabled: false — no audioplayers platform-channel calls in tests.
+  return FlappySpikesGame(
+    worldHeight: worldHeight,
+    services: services,
+    soundEnabled: false,
+  );
 }
 
 /// Pre-decodes every sprite into the game's image cache. Call in setUp

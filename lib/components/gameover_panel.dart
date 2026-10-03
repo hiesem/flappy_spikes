@@ -101,7 +101,7 @@ class GameOverPanel extends PositionComponent {
       size: Config.gameCenterGameoverButtonSize,
       position: Config.gameCenterGameoverButtonPositionFor(centerY),
       anchor: Anchor.center,
-      onPressed: onLeaderboard,
+      onPressed: _onLeaderboardPressed,
     );
     _bestLabel = FadableTextComponent(
       text: 'Best Score: $bestScore',
@@ -162,5 +162,18 @@ class GameOverPanel extends PositionComponent {
         ColorFilter.mode(Config.uiAccent, BlendMode.modulate);
     _bestLabel.setColor(Config.uiAccent);
     _gamesLabel.setColor(Config.uiAccent);
+  }
+
+  /// Flame hit-testing ignores opacity, so without this gate a flap-tap
+  /// landing at the moment the bird dies hits the still-invisible button and
+  /// opens the Play Games flow unintentionally. (Scoped to the leaderboard
+  /// button: a stray replay/share tap is benign.)
+  static const double _minOpacityForTap = 0.9;
+
+  void _onLeaderboardPressed() {
+    if (_gameCenterButton.opacity < _minOpacityForTap) {
+      return;
+    }
+    onLeaderboard();
   }
 }

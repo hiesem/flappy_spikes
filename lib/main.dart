@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -28,9 +29,8 @@ Future<void> main() async {
   final worldHeight = 320 * screenSize.height / screenSize.width;
 
   // Analytics + leaderboards (Firebase / Play Games / Game Center). No-op
-  // when the native config isn't present; never blocks startup on failure.
+  // when the native config isn't present.
   final services = GameServices();
-  await services.initialize();
 
   final game = FlappySpikesGame(worldHeight: worldHeight, services: services);
   game.onShareScore = _shareScore;
@@ -41,6 +41,11 @@ Future<void> main() async {
       child: GameWidget(game: game),
     ),
   );
+
+  // Fire-and-forget AFTER runApp: Firebase.initializeApp has no timeout and
+  // can stall cold start on a slow/offline device. initialize() swallows its
+  // own errors; the service is a safe no-op until it lands.
+  unawaited(services.initialize());
 }
 
 Future<void> _shareScore(int score) async {

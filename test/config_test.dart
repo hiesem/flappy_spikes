@@ -75,9 +75,9 @@ void main() {
       }
     });
 
-    test('gap-bottom y range is [72 + 130, 568 - 72 - gap - 40]', () {
+    test('gap-bottom y range is [72 + 130, 568 - 72 - gap - 20]', () {
       expect(Config.gapBottomMin, 202);
-      expect(Config.gapBottomMax, 351);
+      expect(Config.gapBottomMax, 371);
       expect(
         Config.gapBottomMin,
         Config.spikeHeight + 130,
@@ -85,7 +85,10 @@ void main() {
       );
       expect(
         Config.gapBottomMax,
-        Config.worldHeight - Config.spikeHeight - Config.pipeGap - 40,
+        Config.worldHeight -
+            Config.spikeHeight -
+            Config.pipeGap -
+            Config.minPipeStub,
       );
       expect(
         Config.gapBottomMaxFor(Config.pipeGap),
@@ -94,12 +97,12 @@ void main() {
       );
       expect(
         Config.gapBottomMaxFor(Config.pipeGapStart),
-        311,
+        331,
         reason: 'the bigger start gap narrows the spawn band',
       );
       expect(
         Config.gapBottomMaxFor(Config.pipeGap, 711),
-        711 - Config.spikeHeight - Config.pipeGap - 40,
+        711 - Config.spikeHeight - Config.pipeGap - Config.minPipeStub,
         reason: 'the band scales with the playfield height',
       );
       expect(

@@ -8,9 +8,9 @@ import '../game/flappy_game.dart';
 import '../game/tintable.dart';
 
 /// A pair of pipes (bottom + top) with a score-dependent gap (145 pt at the
-/// start ramping down to 105 pt — see [Config.gapForScore]), a full-height
-/// score sensor 111 pt to the right of the pipe center, moving left at
-/// 200 pt/s.
+/// start ramping down to 105 pt, plus a bounded random variance on top —
+/// see [Config.gapForPipe]), a full-height score sensor 111 pt to the right
+/// of the pipe center, moving left at 200 pt/s.
 ///
 /// The body origin sits at screen vertical center (y = 284) so the sensor
 /// fixture can be centered on it.

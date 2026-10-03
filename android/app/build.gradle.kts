@@ -54,6 +54,8 @@ android {
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
             } else {
+                // CI artifact builds rely on this fallback; a debug-signed release build fails Play Games auth (SHA-1 mismatch).
+                project.logger.warn("key.properties not found: release build falls back to DEBUG signing (CI artifact builds only)")
                 signingConfigs.getByName("debug")
             }
         }

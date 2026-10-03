@@ -1,4 +1,12 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- The game has no ads and does not use the advertising ID. The AD_ID
+         permission is pulled into the merged manifest by the
+         play-services-ads-identifier dependency of firebase_analytics;
+         remove it so the "no advertising ID" Play declaration holds. -->
+    <uses-permission
+        android:name="com.google.android.gms.permission.AD_ID"
+        tools:node="remove" />
     <application
         android:label="Flappy Spikes"
         android:name="${applicationName}"
@@ -29,8 +37,8 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2"/>
-        <!-- Google Play Games Services app ID (Play Console, see SUBMISSION.md).
-             Placeholder until the console config exists. -->
+        <!-- Google Play Games Services app ID (Play Console). Live project
+             512525012529 — published 2026-07-31; see SUBMISSION.md. -->
         <meta-data
             android:name="com.google.android.gms.games.APP_ID"
             android:value="@string/games_app_id"/>

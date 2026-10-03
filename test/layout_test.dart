@@ -62,7 +62,7 @@ void main() {
       // unchanged.
       expect(
         Config.gapBottomMaxFor(Config.pipeGap, 711),
-        711 - Config.spikeHeight - Config.pipeGap - 40,
+        711 - Config.spikeHeight - Config.pipeGap - Config.minPipeStub,
       );
       expect(
         Config.gapBottomMaxFor(Config.pipeGap),

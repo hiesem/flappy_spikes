@@ -165,8 +165,11 @@ void main() {
         closeTo(gapBottom - gap, 1e-9),
         reason: 'top pipe bottom edge must sit at gapBottomY - gap',
       );
-      expect(top.anchor, Anchor.bottomLeft,
-          reason: 'top pipe is anchored by its bottom-left corner');
+      expect(
+        top.anchor,
+        Anchor.bottomLeft,
+        reason: 'top pipe is anchored by its bottom-left corner',
+      );
       for (final sprite in sprites) {
         expect(sprite.size.x, Config.pipeWidth);
         expect(sprite.size.y, Config.pipeHeight);
@@ -206,8 +209,11 @@ void main() {
           game.onScreenTap();
         }
       }
-      expect(bottoms.length, greaterThanOrEqualTo(4),
-          reason: 'expected several spawns, got $bottoms');
+      expect(
+        bottoms.length,
+        greaterThanOrEqualTo(4),
+        reason: 'expected several spawns, got $bottoms',
+      );
       for (var i = 1; i < bottoms.length; i++) {
         final jump = (bottoms[i] - bottoms[i - 1]).abs();
         expect(
@@ -259,26 +265,51 @@ void main() {
         fail('no pipe spawned within 2.5 s');
       }
 
+      // Since 2026-07-22 each spawn draws Config.gapForPipe: the curve value
+      // for the live score is the MINIMUM gap, with up to
+      // gapVarianceForScore of random bonus on top — so consecutive pipes no
+      // longer share one gap size and exact-equality against the curve does
+      // not apply. The ramp contract is now a band.
+      void expectFollowsRamp(double gap, int score) {
+        expect(
+          gap,
+          greaterThanOrEqualTo(Config.gapForScore(score) - 1e-9),
+          reason: 'gap $gap below the ramp minimum at score $score',
+        );
+        expect(
+          gap,
+          lessThanOrEqualTo(
+            Config.gapForScore(score) +
+                Config.gapVarianceForScore(score) +
+                1e-9,
+          ),
+          reason: 'gap $gap above curve + variance at score $score',
+        );
+      }
+
       // Score 0: the pair spawned at game start uses the generous start gap.
       final initial = game.world.children.query<PipePair>();
       expect(initial, isNotEmpty, reason: 'first pair must spawn at start');
-      expect(initial.first.gap, closeTo(Config.pipeGapStart, 1e-9));
+      expectFollowsRamp(initial.first.gap, 0);
       for (final pipe in initial) {
         pipe.removeFromParent();
       }
       game.update(0);
 
-      // Mid-ramp: the next spawn must match gapForScore of the live score.
+      // Mid-ramp: the next spawn must follow gapForScore of the live score.
+      // (The old "mid gap < pipeGapStart" check was dropped: with variance
+      // the bonus can push a mid-ramp gap past 145 — by design the curve is
+      // the minimum, not the exact value.)
       game.score = 10;
       final midGap = await nextSpawnedGap();
-      expect(midGap, closeTo(Config.gapForScore(10), 1e-9));
-      expect(midGap, lessThan(Config.pipeGapStart));
+      expectFollowsRamp(midGap, 10);
       expect(midGap, greaterThan(Config.pipeGap));
 
-      // Fully ramped: from difficultyRampScore on the gap is the final 105.
+      // Fully ramped: from difficultyRampScore on the curve is the final 105
+      // (plus the small end-of-ramp variance bonus).
       game.score = Config.difficultyRampScore + 5;
       final maxGap = await nextSpawnedGap();
-      expect(maxGap, closeTo(Config.pipeGap, 1e-9));
+      expectFollowsRamp(maxGap, Config.difficultyRampScore + 5);
     },
   );
 }

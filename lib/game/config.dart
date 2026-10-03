@@ -1,3 +1,5 @@
+import 'dart:math' show max, min;
+
 import 'package:flame/extensions.dart';
 
 /// All gameplay constants from SPEC.md, in logical points on the original
@@ -50,16 +52,26 @@ class Config {
   static const double pipeGapStart = 145; // gap at score 0 (easy onboarding)
   static const double pipeGap = 105; // final/min gap once fully ramped
   static const int difficultyRampScore = 25; // score where the gap bottoms out
+  // Random gap bonus: 50 pt at score 0 tapering to 20 pt once ramped (raised
+  // from 25/10 on user request 2026-07-22 — "at least 2x, more dynamic").
+  static const double gapVarianceStart = 50; // random gap bonus at score 0
+  static const double gapVarianceEnd = 20; // bonus once fully ramped
   static const double pipeSpawnInterval = 1.5;
   static const double pipeSpawnX = worldWidth + pipeWidth / 2; // 320 + 44
   static const double gapBottomMin = 202; // 72 + 130: every draw leaves a
   // >= 130 pt flyable window below the ceiling spikes — and from gap 130
   // down the gap can never tuck under the ceiling at all (the original's
   // 112 could leave a nearly unflyable 40 pt window)
-  static const double gapBottomMax = 351; // 568 - 72 - 105 - 40 (final gap)
+  static const double gapBottomMax = 371; // 568 - 72 - 105 - 20 (final gap)
   static const double maxGapJump = 140; // max vertical jump of the gap
   // between consecutive pipes — keeps every transition flyable
   static const double sensorOffsetX = 111; // right of pipe center
+
+  /// Minimum visible length of each pipe stub (top and bottom) for any
+  /// spawned gap: 20 pt still clearly shows the pipe and its cap rim, so "a
+  /// pipe is always visible" holds while leaving room for the 2x variance.
+  /// (Was 40 pt before the 2026-07-22 variance increase.)
+  static const double minPipeStub = 20;
 
   /// Pipe gap for a given score: [pipeGapStart] at 0, shrinking linearly to
   /// [pipeGap] once the score reaches [difficultyRampScore].
@@ -68,17 +80,53 @@ class Config {
     return pipeGapStart + (pipeGap - pipeGapStart) * t;
   }
 
+  /// Random gap variance for a given score: [gapVarianceStart] at 0,
+  /// tapering linearly to [gapVarianceEnd] once the score reaches
+  /// [difficultyRampScore] (the same ramp schedule as [gapForScore]).
+  static double gapVarianceForScore(int score) {
+    final t = score.clamp(0, difficultyRampScore) / difficultyRampScore;
+    return gapVarianceStart + (gapVarianceEnd - gapVarianceStart) * t;
+  }
+
+  /// Gap for one spawned pipe: [gapForScore] plus a random bonus of up to
+  /// [gapVarianceForScore] on top ([rng01] in [0, 1]) — the curve value
+  /// stays the MINIMUM gap — capped at [maxGapFor] so both pipe stubs stay
+  /// >= [minPipeStub].
+  static double gapForPipe(
+    int score,
+    double rng01, [
+    double viewHeight = worldHeight,
+  ]) {
+    final gap =
+        gapForScore(score) + rng01.clamp(0.0, 1.0) * gapVarianceForScore(score);
+    return min(gap, maxGapFor(viewHeight));
+  }
+
+  /// Largest gap where both pipe stubs can still be >= [minPipeStub] at a
+  /// given playfield height (192 at 568, 273 at 730).
+  static double maxGapFor(double viewHeight) =>
+      (viewHeight - 2 * (spikeHeight + minPipeStub)) / 2;
+
   /// Lowest allowed gap-bottom y (top edge of the bottom pipe) for a given
-  /// gap and playfield height: keeps 40 pt clearance between the bottom pipe
-  /// and the ground spikes.
-  static double gapBottomMaxFor(double gap, [double viewHeight = worldHeight]) =>
-      viewHeight - spikeHeight - gap - 40;
+  /// gap: [gapBottomMin], or gap + spikeHeight + [minPipeStub] when that is
+  /// higher. Guarantees the TOP pipe stub is always >= [minPipeStub] — a
+  /// pipe is always visible, never fully hidden behind the ceiling spikes.
+  static double gapBottomMinFor(double gap) =>
+      max(gapBottomMin, gap + spikeHeight + minPipeStub);
+
+  /// Highest allowed gap-bottom y (top edge of the bottom pipe) for a given
+  /// gap and playfield height: keeps [minPipeStub] clearance between the
+  /// bottom pipe and the ground spikes.
+  static double gapBottomMaxFor(
+    double gap, [
+    double viewHeight = worldHeight,
+  ]) => viewHeight - spikeHeight - gap - minPipeStub;
 
   // UI sizes.
   static final Vector2 titleSize = Vector2(274.5, 147.5);
   static final Vector2 pointsfieldSize = Vector2(241.5, 82);
   static final Vector2 buttonSize = Vector2(241.5, 38.5);
-  static final Vector2 soundButtonSize = Vector2(30, 30);
+  static final Vector2 settingsButtonSize = Vector2(30, 30);
   static final Vector2 gameCenterButtonSize = Vector2(30, 30);
   static final Vector2 gameCenterGameoverButtonSize = Vector2(60, 60);
   static final Vector2 scoreCircleSize = Vector2(183, 183);
@@ -97,7 +145,7 @@ class Config {
       Vector2(160, centerY + 120); // 404 at 284
   static Vector2 gamesLabelPositionFor(double centerY) =>
       Vector2(160, centerY + 150); // 434 at 284
-  static Vector2 soundButtonPositionFor(double centerY) =>
+  static Vector2 settingsButtonPositionFor(double centerY) =>
       Vector2(160, centerY); // screen center
   static Vector2 scoreHudPositionFor(double centerY) =>
       Vector2(160, centerY + 35); // 319 at 284
@@ -119,21 +167,28 @@ class Config {
   // ground spikes.
   static Vector2 privacyLinkPositionFor(double centerY) =>
       Vector2(160, 2 * centerY - spikeHeight - 20); // 476 at 284
+  // Transient service-failure message (ServiceMessage): bottom-center, the
+  // same free band the privacy link used before it moved into settings —
+  // visible on both the start and game-over scenes.
+  static Vector2 serviceMessagePositionFor(double centerY) =>
+      Vector2(160, 2 * centerY - spikeHeight - 20); // 476 at 284
 
   // Fixed positions at the design height (kept for tests and defaults).
   static final Vector2 titlePosition = titlePositionFor(284);
   static final Vector2 bestLabelPosition = bestLabelPositionFor(284);
   static final Vector2 gamesLabelPosition = gamesLabelPositionFor(284);
-  static final Vector2 soundButtonPosition = soundButtonPositionFor(284);
+  static final Vector2 settingsButtonPosition = settingsButtonPositionFor(284);
   static final Vector2 scoreHudPosition = scoreHudPositionFor(284);
   static final Vector2 pointsfieldPosition = pointsfieldPositionFor(284);
   static final Vector2 replayButtonPosition = replayButtonPositionFor(284);
   static final Vector2 shareButtonPosition = shareButtonPositionFor(284);
-  static final Vector2 gameCenterButtonPosition =
-      gameCenterButtonPositionFor(284);
+  static final Vector2 gameCenterButtonPosition = gameCenterButtonPositionFor(
+    284,
+  );
   static final Vector2 gameCenterGameoverButtonPosition =
       gameCenterGameoverButtonPositionFor(284);
   static final Vector2 privacyLinkPosition = privacyLinkPositionFor(284);
+  static final Vector2 serviceMessagePosition = serviceMessagePositionFor(284);
 
   // UI accent: the native pink of the button/points-field artwork. Used for
   // the game-over title and labels so they never share the pipe tint (the
@@ -153,6 +208,9 @@ class Config {
   static const double colorFadeDuration = 0.5;
   static const double replayFadeDuration = 0.3;
   static const double staggerDuration = 0.2;
+  // How long a ServiceMessage stays fully visible between its fade-in and
+  // fade-out (total lifetime: uiFadeDuration + this + uiFadeDuration).
+  static const double serviceMessageHoldDuration = 2.0;
 
   // Score HUD watermark: the circle is tinted this fraction of the way from
   // the foreground toward the background color, so pipes (full foreground

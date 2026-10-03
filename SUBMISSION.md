@@ -63,11 +63,12 @@ Already done in Play Console (app id `4974493442709551492`):
   local upload keystore, for local/dev builds) and `Flappy Spikes app signing`
   (SHA-1 of the Play App Signing cert `D3:D7:26:...:22`, shown in Play Console →
   Add credential → Create OAuth client).
-- STILL TO DO (manual, 1 min): Play Console → Play Games services → Configuration
-  → Credentials → **Add credential** → pick `Flappy Spikes app signing` in the
-  OAuth client dropdown → Save changes. Then **Review and publish** the PGS
-  project (user clicks publish) and add testers under Play Games services →
-  Testers, or sign-in fails for non-tester accounts.
+- PGS credentials: BOTH OAuth clients linked since 2026-07-22 (app signing
+  `CgkIsZz8pvUOEAIQAQ` — the "Use for new installs" credential, upload key
+  `CgkIsZz8pvUOEAIQAg`). The PGS project was **published 2026-07-31** (both
+  credentials + Top Scores leaderboard + properties live) and the OAuth
+  consent screen moved to **In production** the same day — Play Games sign-in
+  works for all players, not just testers. Testers list is now irrelevant.
 - All 10 policy declarations are complete: privacy policy URL, ads (none),
   sign-in details (none), content rating (IARC 3+ everywhere), target audience
   (13-15/16-17/18+), data safety (App interactions collected, nothing shared,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui' show Color, Paint;
 
@@ -10,9 +11,11 @@ import '../components/bird.dart';
 import '../components/gameover_panel.dart';
 import '../components/pipe_pair.dart';
 import '../components/score_hud.dart';
+import '../components/settings_panel.dart';
 import '../components/spike_strip.dart';
 import '../components/start_panel.dart';
 import '../components/tap_catcher.dart';
+import '../components/ui/service_message.dart';
 import '../services/game_services.dart';
 import 'config.dart';
 import 'fade.dart';
@@ -26,17 +29,20 @@ import 'tintable.dart';
 enum GameState { start, playing, gameOver }
 
 class FlappySpikesGame extends Forge2DGame {
-  FlappySpikesGame({double? worldHeight, GameServices? services})
-      : services = services ?? GameServices(),
-        viewHeight = _clampViewHeight(worldHeight ?? Config.worldHeight),
-        super(
-          gravity: Vector2(0, Config.gravity),
-          camera: CameraComponent.withFixedResolution(
-            width: Config.worldWidth,
-            height: _clampViewHeight(worldHeight ?? Config.worldHeight),
-          ),
-          zoom: 1,
-        ) {
+  FlappySpikesGame({
+    double? worldHeight,
+    GameServices? services,
+    this.soundEnabled = true,
+  }) : services = services ?? GameServices(),
+       viewHeight = _clampViewHeight(worldHeight ?? Config.worldHeight),
+       super(
+        gravity: Vector2(0, Config.gravity),
+        camera: CameraComponent.withFixedResolution(
+          width: Config.worldWidth,
+          height: _clampViewHeight(worldHeight ?? Config.worldHeight),
+        ),
+        zoom: 1,
+      ) {
     // The game uses 1 Forge2D world unit = 1 logical point (SPEC.md). The
     // engine's default per-step translation clamp (2.0 units, tuned for
     // meter-scale worlds) would otherwise cap every body at ~120 pt/s at
@@ -56,6 +62,12 @@ class FlappySpikesGame extends Forge2DGame {
 
   final GameStorage storage = GameStorage();
   late final SoundService sound;
+
+  /// Passed to the [SoundService] created in [onLoad]. Headless tests
+  /// construct with `soundEnabled: false` so no audioplayers platform-channel
+  /// call ever happens (the per-test `sound.enabled = false` lines predate
+  /// this and only run after [onLoad]).
+  final bool soundEnabled;
 
   /// Analytics + leaderboards. No-op unless main() initialized it.
   final GameServices services;
@@ -84,10 +96,12 @@ class FlappySpikesGame extends Forge2DGame {
   double? _lastGapBottomY;
 
   Bird? _bird;
+  _BirdOpacityAdapter? _birdAdapter;
   late ScoreHud _hud;
   late final RectangleComponent _backdrop;
   StartPanel? _startPanel;
   GameOverPanel? _gameOverPanel;
+  SettingsPanel? _settingsPanel;
 
   Color get foregroundColor => _fgColor;
   bool get isScrolling => state == GameState.playing;
@@ -105,7 +119,11 @@ class FlappySpikesGame extends Forge2DGame {
     camera.viewfinder.anchor = Anchor.topLeft;
 
     await storage.load();
-    sound = SoundService(muted: storage.muteSound);
+    sound = SoundService(muted: storage.muteSound, enabled: soundEnabled);
+    // Background music: persisted volume, then start the loop (everywhere —
+    // menus and gameplay). Guarded/unawaited: no-ops in headless tests.
+    unawaited(sound.setMusicVolume(storage.musicVolume));
+    unawaited(sound.startMusic());
 
     final palette = paletteForStage(0);
     _bgColor = palette.background;
@@ -141,12 +159,15 @@ class FlappySpikesGame extends Forge2DGame {
     state = GameState.start;
     final bird = Bird();
     _bird = bird;
+    _birdAdapter = _BirdOpacityAdapter(bird);
     world.add(bird);
+    _addStartPanel();
+  }
+
+  void _addStartPanel() {
     final panel = StartPanel(
-      muted: storage.muteSound,
-      onToggleSound: toggleSound,
+      onOpenSettings: openSettings,
       onLeaderboard: showLeaderboard,
-      onPrivacyPolicy: openPrivacyPolicy,
       bestScore: storage.bestScore,
       gamesPlayed: storage.gamesPlayed,
     );
@@ -160,7 +181,11 @@ class FlappySpikesGame extends Forge2DGame {
   void onScreenTap() {
     switch (state) {
       case GameState.start:
-        _startGame();
+        // While the settings panel is open its tap blocker consumes real
+        // taps; this guard covers any path that bypasses gesture dispatch.
+        if (_settingsPanel == null) {
+          _startGame();
+        }
       case GameState.playing:
         _bird?.flap();
       case GameState.gameOver:
@@ -208,7 +233,11 @@ class FlappySpikesGame extends Forge2DGame {
     state = GameState.gameOver;
     sound.play(Sfx.gameover);
     _bird?.die();
-    fadeOpacity(_bird == null ? null : _BirdOpacityAdapter(_bird!), from: 1, to: 0);
+    fadeOpacity(
+      _bird == null ? null : _BirdOpacityAdapter(_bird!),
+      from: 1,
+      to: 0,
+    );
 
     final previousBest = storage.bestScore;
     storage.incrementGamesPlayed();
@@ -218,8 +247,11 @@ class FlappySpikesGame extends Forge2DGame {
     services.logGameOver(score: score, bestScore: storage.bestScore);
     if (score > previousBest) {
       services.logNewBest(score);
-      services.submitBestScore(score);
     }
+    // Submit the local best after EVERY game, not just on a new best: Play
+    // Games keeps each player's highest score server-side (one entry), and
+    // this also backfills a best set before sign-in was available.
+    services.submitBestScore(storage.bestScore);
 
     final panel = GameOverPanel(
       score: score,
@@ -239,8 +271,70 @@ class FlappySpikesGame extends Forge2DGame {
   void toggleSound() {
     sound.muted = !sound.muted;
     storage.saveMuteSound(sound.muted);
-    _startPanel?.setMuted(sound.muted);
+    _settingsPanel?.setMuted(sound.muted);
     sound.play(Sfx.click); // only audible when unmuting
+  }
+
+  /// Music slider on the settings panel: applies the volume live and
+  /// persists it. Fire-and-forget (no-op-safe in headless tests).
+  void setMusicVolume(double volume) {
+    unawaited(sound.setMusicVolume(volume));
+    unawaited(storage.saveMusicVolume(volume));
+    _settingsPanel?.setMusicVolume(sound.musicVolume);
+  }
+
+  /// Gear button on the start scene: fades the start panel out and the
+  /// settings panel in. Only reachable from the start state.
+  void openSettings() {
+    if (state != GameState.start || _settingsPanel != null) {
+      return;
+    }
+    sound.play(Sfx.click);
+    final panel = _startPanel;
+    _startPanel = null;
+    if (panel != null) {
+      unregisterTintable(panel);
+      fadeOpacity(panel, from: panel.opacity, to: 0, removeOnDone: true);
+    }
+    // The hovering bird is part of the start scene and would peek out from
+    // behind the panel rows, so it fades out with it. The adapter is kept
+    // across calls so a rapid open/close replaces the fade instead of
+    // stacking a stale one (fadeOpacity keys on target identity).
+    final adapter = _birdAdapter;
+    if (adapter != null) {
+      fadeOpacity(adapter, from: adapter.opacity, to: 0);
+    }
+    final settings = SettingsPanel(
+      muted: sound.muted,
+      musicVolume: sound.musicVolume,
+      onToggleSound: toggleSound,
+      onMusicVolume: setMusicVolume,
+      onBack: closeSettings,
+      onPrivacyPolicy: openPrivacyPolicy,
+    );
+    _settingsPanel = settings;
+    world.add(settings);
+    registerTintable(settings);
+    fadeOpacity(settings, from: 0, to: 1);
+  }
+
+  /// Back button on the settings panel: fades the settings panel out and a
+  /// fresh start panel (plus the bird) back in.
+  void closeSettings() {
+    final settings = _settingsPanel;
+    if (state != GameState.start || settings == null) {
+      return;
+    }
+    sound.play(Sfx.click);
+    _settingsPanel = null;
+    unregisterTintable(settings);
+    fadeOpacity(settings, from: settings.opacity, to: 0, removeOnDone: true);
+    final adapter = _birdAdapter;
+    if (adapter != null) {
+      fadeOpacity(adapter, from: adapter.opacity, to: 1);
+    }
+    _addStartPanel();
+    fadeOpacity(_startPanel, from: 0, to: 1);
   }
 
   void replay() {
@@ -249,6 +343,7 @@ class FlappySpikesGame extends Forge2DGame {
     // Full scene reset.
     _bird?.removeFromParent();
     _bird = null;
+    _birdAdapter = null;
     for (final pipe in world.children.query<PipePair>()) {
       pipe.removeFromParent();
     }
@@ -290,7 +385,13 @@ class FlappySpikesGame extends Forge2DGame {
       priority: 1000,
     );
     world.add(overlay);
-    fadeOpacity(overlay, from: 1, to: 0, duration: Config.replayFadeDuration, removeOnDone: true);
+    fadeOpacity(
+      overlay,
+      from: 1,
+      to: 0,
+      duration: Config.replayFadeDuration,
+      removeOnDone: true,
+    );
   }
 
   void shareScore() {
@@ -300,10 +401,30 @@ class FlappySpikesGame extends Forge2DGame {
   }
 
   /// Leaderboard button (start + game-over scenes): opens the platform's
-  /// native leaderboard UI (Google Play Games / Game Center).
-  void showLeaderboard() {
+  /// native leaderboard UI (Google Play Games / Game Center). On failure a
+  /// short-lived [ServiceMessage] tells the player what happened — a failed
+  /// tap must not be indistinguishable from no tap.
+  Future<void> showLeaderboard() async {
     sound.play(Sfx.click);
-    services.showLeaderboards();
+    switch (await services.showLeaderboards()) {
+      case ShowLeaderboardResult.signInFailed:
+        _showServiceMessage('Play Games sign-in unavailable');
+      case ShowLeaderboardResult.leaderboardFailed:
+        _showServiceMessage('Leaderboard unavailable — try again');
+      case ShowLeaderboardResult.opened:
+      case ShowLeaderboardResult.unavailable:
+      case ShowLeaderboardResult.busy:
+        break; // nothing to report
+    }
+  }
+
+  void _showServiceMessage(String text) {
+    world.add(
+      ServiceMessage(
+        message: text,
+        position: Config.serviceMessagePositionFor(viewHeight / 2),
+      ),
+    );
   }
 
   /// Privacy-policy link on the start scene: opens the policy in the browser.
@@ -387,7 +508,10 @@ class FlappySpikesGame extends Forge2DGame {
     super.update(dt);
 
     if (_colorFadeT < 1) {
-      _colorFadeT = (_colorFadeT + dt / Config.colorFadeDuration).clamp(0.0, 1.0);
+      _colorFadeT = (_colorFadeT + dt / Config.colorFadeDuration).clamp(
+        0.0,
+        1.0,
+      );
       _bgColor = Color.lerp(_fadeFromBg, _targetBg, _colorFadeT)!;
       _fgColor = Color.lerp(_fadeFromFg, _targetFg, _colorFadeT)!;
       _applyTints();
@@ -404,9 +528,14 @@ class FlappySpikesGame extends Forge2DGame {
       _spawnTimer += dt;
       if (_spawnTimer >= Config.pipeSpawnInterval) {
         _spawnTimer = 0;
-        // Difficulty ramp: the gap shrinks as the score climbs.
-        final gap = Config.gapForScore(score);
-        const minY = Config.gapBottomMin;
+        // Difficulty ramp: the gap shrinks as the score climbs, plus a
+        // bounded random variance on top (the curve value is the MINIMUM
+        // gap; the draw is capped so both pipe stubs can stay >= 40 pt).
+        final gap = Config.gapForPipe(score, _random.nextDouble(), viewHeight);
+        // The spawn band keeps both pipe stubs >= 40 pt: the top stub can
+        // never hide fully behind the ceiling spikes (a pipe is always
+        // visible), the bottom stub never sinks into the ground spikes.
+        final minY = Config.gapBottomMinFor(gap);
         final maxY = Config.gapBottomMaxFor(gap, viewHeight);
         var gapBottomY = minY + _random.nextDouble() * (maxY - minY);
         // Keep consecutive gaps within a flyable jump of each other.

@@ -13,6 +13,7 @@ void main() {
       expect(storage.bestScore, 0);
       expect(storage.gamesPlayed, 0);
       expect(storage.muteSound, false);
+      expect(storage.musicVolume, 0.6);
     });
 
     test('loads persisted values', () async {
@@ -20,12 +21,14 @@ void main() {
         'bestScore': 12,
         'gamesPlayed': 34,
         'muteSound': true,
+        'musicVolume': 0.25,
       });
       final storage = GameStorage();
       await storage.load();
       expect(storage.bestScore, 12);
       expect(storage.gamesPlayed, 34);
       expect(storage.muteSound, true);
+      expect(storage.musicVolume, 0.25);
     });
 
     test('bestScore round-trips across instances', () async {
@@ -66,6 +69,22 @@ void main() {
       final third = GameStorage();
       await third.load();
       expect(third.muteSound, false);
+    });
+
+    test('musicVolume round-trips across instances', () async {
+      SharedPreferences.setMockInitialValues({});
+      final writer = GameStorage();
+      await writer.saveMusicVolume(0.3);
+      expect(writer.musicVolume, 0.3);
+
+      final reader = GameStorage();
+      await reader.load();
+      expect(reader.musicVolume, 0.3);
+
+      await reader.saveMusicVolume(0.9);
+      final third = GameStorage();
+      await third.load();
+      expect(third.musicVolume, 0.9);
     });
   });
 }

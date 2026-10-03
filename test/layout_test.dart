@@ -3,8 +3,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/score_hud.dart';
 import 'package:flappy_spikes/components/spike_strip.dart';
-import 'package:flappy_spikes/components/start_panel.dart';
-import 'package:flappy_spikes/components/ui/sprite_button.dart';
+import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -69,16 +68,14 @@ void main() {
         Config.gapBottomMax,
       );
 
-      // Start panel layout follows the playfield center.
-      final panel = game.world.children.query<StartPanel>().single;
-      final title = panel.children
-          .whereType<SpriteComponent>()
-          .firstWhere((c) => c is! SpriteButton);
-      expect(
-        title.position.y,
-        closeTo(711 / 2 - Config.titleSize.y / 2 - 35, 1e-6),
-        reason: 'title keeps its offset above the playfield center',
-      );
+      // Home screen layout follows the playfield height (PRD-1 §4.2): the
+      // title is pinned to the top, the start block sits at its 711 spot.
+      await flushAndMount(game);
+      final home = game.world.children.query<HomeScreen>().single;
+      expect(home.title.position, Config.homeTitlePositionFor(711));
+      expect(home.title.anchor, Anchor.topCenter);
+      expect(home.startButton.position.y, 277);
+      expect(home.startButton.position.y, Config.homeStartTopFor(711));
     },
   );
 }

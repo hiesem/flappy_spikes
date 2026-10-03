@@ -21,6 +21,24 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
 
   final List<SpriteComponent> _tiles = [];
 
+  double _inset = 0;
+
+  /// Visual-only outward shift of the strip art, in points (0 = the full
+  /// 72 pt strip). Menus use [Config.menuSpikeInset] so the strips read as
+  /// the mocks' 44 pt; the physics body never moves.
+  double get visualInset => _inset;
+  set visualInset(double value) {
+    _inset = value;
+    for (final tile in _tiles) {
+      tile.position.y = _tileY;
+    }
+  }
+
+  // Body-local y of a tile: the ceiling tiles are centre-anchored (rotated),
+  // the ground tiles top-left anchored.
+  double get _tileY =>
+      isCeiling ? -_inset : -Config.spikeHeight / 2 + _inset;
+
   double get _centerY =>
       isCeiling ? Config.spikeHeight / 2 : game.viewHeight - Config.spikeHeight / 2;
 
@@ -38,7 +56,10 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
           sprite: Sprite(image),
           size: Vector2(Config.spikeTileWidth, Config.spikeHeight),
           // Rotated 180 degrees around the tile center.
-          position: Vector2(left + Config.spikeTileWidth / 2 - Config.worldWidth / 2, 0),
+          position: Vector2(
+            left + Config.spikeTileWidth / 2 - Config.worldWidth / 2,
+            _tileY,
+          ),
           anchor: Anchor.center,
           angle: 3.141592653589793,
         );
@@ -46,7 +67,7 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
         tile = SpriteComponent(
           sprite: Sprite(image),
           size: Vector2(Config.spikeTileWidth, Config.spikeHeight),
-          position: Vector2(left - Config.worldWidth / 2, -Config.spikeHeight / 2),
+          position: Vector2(left - Config.worldWidth / 2, _tileY),
         );
       }
       _tiles.add(tile);

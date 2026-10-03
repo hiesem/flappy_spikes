@@ -4,43 +4,62 @@ import 'package:flame_forge2d/flame_forge2d.dart';
 import '../game/config.dart';
 import '../game/flappy_game.dart';
 import '../game/sound.dart';
+import '../menu/skin_catalog.dart';
+import 'skin_sprite.dart';
 
-/// The player bird: circle body at (80, 284), 2-frame fly/flap animations,
-/// death animation on game over.
+/// The player bird: circle body at (80, viewHeight / 2), drawn with the
+/// equipped skin (tinted layer + overlay, see [SkinSpriteComponent]),
+/// 2-frame fly/flap animation, death animation on game over.
+///
+/// The skin canvas is anchored on the body centre (manifest anchor), so the
+/// sprite sits exactly where the 1.0 bird did; hitbox and physics are
+/// independent of the skin.
 class Bird extends BodyComponent<FlappySpikesGame> with ContactCallbacks {
   Bird() : super(priority: 10, renderBody: false);
 
-  late final SpriteAnimationComponent _animationComponent;
-  late final SpriteAnimation _idleAnimation;
-  late final SpriteAnimation _flapAnimation;
-  late final Sprite _deadSprite;
+  late final SkinSpriteComponent _sprite;
 
   bool _dead = false;
-  double _flapTimer = 0;
+  double _spriteOpacity = 1;
 
   bool get dead => _dead;
+
+  /// The skin currently drawn (follows `menu.skins` while on the home
+  /// screen).
+  SkinDef get skin => _sprite.sprites.skin;
+
+  /// Exposed for tests.
+  SkinSpriteComponent get skinSprite => _sprite;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    final bird = Sprite(await game.images.load('bird.png'));
-    final flap = Sprite(await game.images.load('bird_flap.png'));
-    _deadSprite = Sprite(await game.images.load('bird_dead.png'));
-    _idleAnimation = SpriteAnimation.spriteList(
-      [bird, flap],
-      stepTime: Config.idleFrameTime,
+    final skin = game.menu.skins.equippedSkin;
+    _sprite = SkinSpriteComponent(
+      sprites: await SkinSprites.load(game.images, skin),
+      initialTint: game.skinTintFor(skin),
+      size: Vector2(SkinDef.spriteWidth, SkinDef.spriteHeight),
+      anchor: const Anchor(SkinDef.anchorX, SkinDef.anchorY),
     );
-    _flapAnimation = SpriteAnimation.spriteList(
-      [flap, bird],
-      stepTime: Config.flapFrameTime,
-      loop: false,
-    );
-    _animationComponent = SpriteAnimationComponent(
-      animation: _idleAnimation,
-      size: Config.birdSize,
-      anchor: Anchor.center,
-    );
-    add(_animationComponent);
+    _sprite.opacity = _spriteOpacity;
+    add(_sprite);
+    game.menu.skins.addListener(_onSkinsChanged);
+  }
+
+  @override
+  void onRemove() {
+    game.menu.skins.removeListener(_onSkinsChanged);
+    super.onRemove();
+  }
+
+  /// Equipping a skin (Skins screen) swaps the sprites in place.
+  Future<void> _onSkinsChanged() async {
+    final skin = game.menu.skins.equippedSkin;
+    if (skin.id == this.skin.id) return;
+    final sprites = await SkinSprites.load(game.images, skin);
+    if (isMounted) {
+      _sprite.sprites = sprites;
+    }
   }
 
   @override
@@ -78,8 +97,7 @@ class Bird extends BodyComponent<FlappySpikesGame> with ContactCallbacks {
     body.linearVelocity.setZero();
     final impulse = Vector2(0, -Config.flapVelocity * body.mass);
     body.applyLinearImpulse(impulse);
-    _animationComponent.animation = _flapAnimation;
-    _flapTimer = 2 * Config.flapFrameTime;
+    _sprite.playFlap();
     game.sound.play(Sfx.flap);
   }
 
@@ -90,11 +108,7 @@ class Bird extends BodyComponent<FlappySpikesGame> with ContactCallbacks {
       return;
     }
     _dead = true;
-    _animationComponent.animation = SpriteAnimation.spriteList(
-      [_deadSprite],
-      stepTime: 1,
-      loop: false,
-    );
+    _sprite.showDead();
     body.setFixedRotation(false);
     body.linearVelocity.setZero();
     final impulse = Config.deathVelocity.clone()..scale(body.mass);
@@ -105,18 +119,23 @@ class Bird extends BodyComponent<FlappySpikesGame> with ContactCallbacks {
     }
   }
 
-  /// Fade the bird sprite out (used on game over).
-  void setSpriteOpacity(double value) => _animationComponent.opacity = value;
+  /// Fade the bird sprite (game over; hidden while on the home screen,
+  /// which draws its own bird). Safe before [onLoad].
+  void setSpriteOpacity(double value) {
+    _spriteOpacity = value;
+    if (isLoaded) {
+      _sprite.opacity = value;
+    }
+  }
+
+  double get spriteOpacity => _spriteOpacity;
 
   @override
   void update(double dt) {
     super.update(dt);
-    if (_flapTimer > 0) {
-      _flapTimer -= dt;
-      if (_flapTimer <= 0 && !_dead) {
-        _animationComponent.animation = _idleAnimation;
-      }
-    }
+    // Identity colour in menus / stage 0, blended toward the stage tint in
+    // later run stages (follows the colour crossfade).
+    _sprite.tint = game.skinTintFor(skin);
     // Terminal velocity (Flappy Bird feel): cap the fall speed so dives stay
     // recoverable. The death toss is exempt — it should tumble freely.
     if (!_dead && game.state == GameState.playing) {

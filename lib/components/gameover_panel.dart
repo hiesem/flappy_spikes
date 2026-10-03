@@ -14,11 +14,15 @@ import 'ui/sprite_button.dart';
 ///
 /// The title and labels use the fixed UI accent pink (NOT the stage
 /// foreground): with the pipe tint they vanished behind the frozen pipes.
+///
+/// 2.0 menu phase: a small "+N" + coin line under the stats shows the coins
+/// credited for the run; [onReplay] returns to the home screen.
 class GameOverPanel extends PositionComponent {
   GameOverPanel({
     required this.score,
     required this.bestScore,
     required this.gamesPlayed,
+    this.coinsEarned = 0,
     required this.onReplay,
     required this.onShare,
     required this.onLeaderboard,
@@ -27,6 +31,10 @@ class GameOverPanel extends PositionComponent {
   final int score;
   final int bestScore;
   final int gamesPlayed;
+
+  /// Coins credited for this run (interim rule: 1 per point), shown as a
+  /// small "+N" + coin line under the stats.
+  final int coinsEarned;
   final void Function() onReplay;
   final void Function() onShare;
   final void Function() onLeaderboard;
@@ -39,6 +47,8 @@ class GameOverPanel extends PositionComponent {
   late final SpriteButton _gameCenterButton;
   late final FadableTextComponent _bestLabel;
   late final FadableTextComponent _gamesLabel;
+  late final FadableTextComponent _coinsLabel;
+  late final SpriteComponent _coinIcon;
 
   double _time = 0;
   static const double _totalFade =
@@ -57,6 +67,7 @@ class GameOverPanel extends PositionComponent {
       images.load('replaybutton.png'),
       images.load('sharebutton.png'),
       images.load('gamecenter_gameover.png'),
+      images.load('menu/coin.png'),
     ]);
 
     _title = SpriteComponent(
@@ -115,6 +126,32 @@ class GameOverPanel extends PositionComponent {
       position: Config.gamesLabelPositionFor(centerY),
       anchor: Anchor.center,
     );
+    // "+N" and the coin centred together as one line.
+    final coinsCenter = Config.coinsEarnedPositionFor(centerY);
+    _coinsLabel = FadableTextComponent(
+      text: '+$coinsEarned',
+      style: const TextStyle(
+        fontFamily: Config.uiFont,
+        fontSize: Config.coinsEarnedFontSize,
+      ),
+      anchor: Anchor.centerLeft,
+    );
+    const iconGap = 6.0;
+    final lineWidth =
+        _coinsLabel.width + iconGap + Config.coinsEarnedIconSize;
+    _coinsLabel.position = Vector2(
+      coinsCenter.x - lineWidth / 2,
+      coinsCenter.y,
+    );
+    _coinIcon = SpriteComponent(
+      sprite: Sprite(loaded[5]),
+      size: Vector2.all(Config.coinsEarnedIconSize),
+      position: Vector2(
+        coinsCenter.x + lineWidth / 2 - Config.coinsEarnedIconSize,
+        coinsCenter.y,
+      ),
+      anchor: Anchor.centerLeft,
+    );
     addAll([
       _title,
       _pointsfield,
@@ -124,6 +161,8 @@ class GameOverPanel extends PositionComponent {
       _gameCenterButton,
       _bestLabel,
       _gamesLabel,
+      _coinsLabel,
+      _coinIcon,
     ]);
     _applyAccent();
     _applyFades();
@@ -147,6 +186,8 @@ class GameOverPanel extends PositionComponent {
     _title.opacity = overall;
     _bestLabel.opacity = overall;
     _gamesLabel.opacity = overall;
+    _coinsLabel.opacity = overall;
+    _coinIcon.opacity = overall;
     _pointsfield.opacity = stagger(0);
     _scoreLabel.opacity = stagger(0);
     _gameCenterButton.opacity = stagger(0);
@@ -162,7 +203,14 @@ class GameOverPanel extends PositionComponent {
         ColorFilter.mode(Config.uiAccent, BlendMode.modulate);
     _bestLabel.setColor(Config.uiAccent);
     _gamesLabel.setColor(Config.uiAccent);
+    _coinsLabel.setColor(Config.uiAccent);
   }
+
+  /// Whether the replay (home) action is ready for the keyboard: the replay
+  /// button has faded in, so a Space held from flapping cannot skip the
+  /// panel by accident.
+  bool get canContinue =>
+      isLoaded && _replayButton.opacity >= _minOpacityForTap;
 
   /// Flame hit-testing ignores opacity, so without this gate a flap-tap
   /// landing at the moment the bird dies hits the still-invisible button and

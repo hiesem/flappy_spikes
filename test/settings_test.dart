@@ -3,7 +3,7 @@ import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
-import 'package:flappy_spikes/components/start_panel.dart';
+import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/components/ui/fadable_text.dart';
 import 'package:flappy_spikes/components/ui/sprite_button.dart';
 import 'package:flappy_spikes/components/ui/text_button.dart';
@@ -172,11 +172,11 @@ void main() {
       await flushAndMount(game);
     },
     verify: (game, tester) async {
-      final startPanel = game.world.children.query<StartPanel>().single;
-      final gear = startPanel.children.whereType<SpriteButton>().firstWhere(
-            (b) => b.position.x == Config.settingsButtonPosition.x,
-          );
-      expect(gear.position.y, Config.settingsButtonPosition.y);
+      final home = game.world.children.query<HomeScreen>().single;
+      final gear = home.gearButton;
+      final gearRect = Config.homeGearRectFor(game.viewHeight);
+      expect(gear.position.x, gearRect.left);
+      expect(gear.position.y, gearRect.top);
 
       gear.onPressed();
       await flushAndMount(game);
@@ -194,11 +194,11 @@ void main() {
       game.onScreenTap();
       expect(game.state, GameState.start);
 
-      // The start panel fades out and is removed; settings reaches full
+      // The home screen fades out and is removed; settings reaches full
       // opacity.
       stepGame(game, 0.6);
       await flushAndMount(game);
-      expect(game.world.children.query<StartPanel>(), isEmpty);
+      expect(game.world.children.query<HomeScreen>(), isEmpty);
       expect(game.world.children.query<SettingsPanel>().single.opacity, 1);
     },
   );
@@ -302,7 +302,7 @@ void main() {
   );
 
   withGame.testGameWidget(
-    'back button fades settings out and the start panel back in',
+    'back button fades settings out and the home screen back in',
     setUp: (game, tester) async {
       await game.ready();
       game.sound.enabled = false;
@@ -322,8 +322,8 @@ void main() {
       await flushAndMount(game);
 
       expect(game.world.children.query<SettingsPanel>(), isEmpty);
-      final startPanel = game.world.children.query<StartPanel>().single;
-      expect(startPanel.opacity, 1);
+      final home = game.world.children.query<HomeScreen>().single;
+      expect(home.opacity, 1);
       expect(game.world.children.query<Bird>(), hasLength(1),
           reason: 'closing settings must not add a second bird');
       expect(game.state, GameState.start);

@@ -3,7 +3,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/gameover_panel.dart';
 import 'package:flappy_spikes/components/pipe_pair.dart';
-import 'package:flappy_spikes/components/start_panel.dart';
+import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/components/ui/sprite_button.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
@@ -26,7 +26,7 @@ void main() {
     },
     verify: (game, tester) async {
       expect(game.state, GameState.start);
-      expect(game.world.children.query<StartPanel>(), hasLength(1));
+      expect(game.world.children.query<HomeScreen>(), hasLength(1));
       expect(game.world.children.query<Bird>(), hasLength(1));
 
       // start -> playing (+ immediate flap).
@@ -43,10 +43,10 @@ void main() {
       game.onScreenTap();
       expect(game.state, GameState.playing);
 
-      // The start panel fades out over 0.5 s and is then removed.
+      // The home screen fades out over 0.5 s and is then removed.
       stepGame(game, 0.7, flapBelow: 320);
       await flushAndMount(game);
-      expect(game.world.children.query<StartPanel>(), isEmpty);
+      expect(game.world.children.query<HomeScreen>(), isEmpty);
 
       // playing -> gameOver.
       game.onBirdHit();
@@ -58,13 +58,13 @@ void main() {
       game.onScreenTap();
       expect(game.state, GameState.gameOver);
 
-      // gameOver -> replay -> start (fresh scene, old panel gone).
+      // gameOver -> replay -> start (fresh home scene, old panel gone).
       game.replay();
       await flushAndMount(game);
       expect(game.state, GameState.start);
       expect(game.score, 0);
       expect(game.world.children.query<GameOverPanel>(), isEmpty);
-      expect(game.world.children.query<StartPanel>(), hasLength(1));
+      expect(game.world.children.query<HomeScreen>(), hasLength(1));
       expect(game.world.children.query<Bird>(), hasLength(1));
     },
   );
@@ -75,7 +75,7 @@ void main() {
   );
 
   withPersistedGame.testGameWidget(
-    'full loop: tap to play -> flap -> collision -> game over -> replay',
+    'full loop: START -> flap -> collision -> game over -> replay',
     setUp: (game, tester) async {
       await game.ready();
       game.sound.enabled = false;
@@ -87,11 +87,24 @@ void main() {
       expect(game.storage.bestScore, 3);
       expect(game.storage.gamesPlayed, 7);
 
-      // --- tap on empty area starts the game -------------------------------
+      // --- a tap on an empty area does NOT start (PRD-1 §4.2) ---------------
+      await flushAndMount(game);
       final rect = tester.getRect(find.byGame<FlappySpikesGame>());
-      await tester.tapAt(Offset(rect.center.dx, rect.top + 30));
+      Offset screenOf(Vector2 world) {
+        final p = game.camera.localToGlobal(world);
+        return rect.topLeft + Offset(p.x, p.y);
+      }
+
+      // Right of the START button, between the title and the tiles.
+      await tester.tapAt(screenOf(Vector2(300, 240)));
       // Advance past the MultiTapGestureRecognizer's 40 ms countdown so no
       // fake-async timer is left pending at teardown.
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(game.state, GameState.start);
+
+      // --- the START button starts the game ---------------------------------
+      final start = Config.homeStartRectFor(game.viewHeight);
+      await tester.tapAt(screenOf(start.center.toVector2()));
       await tester.pump(const Duration(milliseconds: 100));
       expect(game.state, GameState.playing);
 
@@ -136,13 +149,13 @@ void main() {
       expect(game.world.children.query<GameOverPanel>(), isEmpty);
       expect(game.world.children.query<PipePair>(), isEmpty);
 
-      final newPanel = game.world.children.query<StartPanel>().single;
+      final newHome = game.world.children.query<HomeScreen>().single;
       final newBird = game.world.children.query<Bird>().single;
       expect(identical(newBird, bird), isFalse,
           reason: 'replay must reset the scene with a fresh bird');
       expect(newBird.body.position.y, closeTo(Config.birdY, 1e-6));
-      expect(newPanel.bestScore, 3);
-      expect(newPanel.gamesPlayed, 8);
+      expect(newHome.bestScore, 3);
+      expect(newHome.gamesPlayed, 8);
 
       // The world is frozen again: no gravity on the fresh bird.
       stepGame(game, 0.5);

@@ -11,11 +11,11 @@ Outputs (all under <app>/assets/images/):
   from the inline SVGs of the approved HTML mocks (headless Chromium,
   deviceScaleFactor 4, transparent background). Every PNG is exactly
   4x the logical size recorded in the manifest ({name: [w, h]}).
-* ``skins/*.png`` + ``skins/manifest.json`` -- 11 bird skins x 3 frames,
+* ``skins/*.png`` + ``skins/manifest.json`` -- 12 bird skins x 3 frames,
   built from the original ``bird*.png`` sprites. Each skin is two layers:
-  a greyscale *tinted* layer (drawn with the stage foreground colour as a
-  ``modulate`` ColorFilter, like pipes/spikes) and an untinted *overlay*
-  (beak, eye, accessories) drawn on top. Plus full-colour menu previews
+  a greyscale *tinted* layer (drawn through a ``modulate`` ColorFilter of
+  the skin's mockColor blended toward the stage foreground) and an untinted
+  *overlay* (beak, eye, accessories) drawn on top. Plus full-colour menu previews
   rasterised from the skins mock (``<id>_preview.png`` /
   ``<id>_preview_locked.png``).
 
@@ -506,49 +506,155 @@ def build_skin(skin_id, srcs):
     return outs
 
 
+SUFFIX = {"idle": "", "flap": "_flap", "dead": "_dead"}
+
+
+def skin_manifest_entry(sid):
+    """Manifest entry of a two-layer skin (every skin, pink included)."""
+    return {
+        "tinted": [f"skins/{sid}{SUFFIX[f]}.png" for f in ("idle", "flap", "dead")],
+        "overlay": [f"skins/{sid}_acc{SUFFIX[f]}.png" for f in ("idle", "flap", "dead")],
+        "size": [CANVAS[0] / SKIN_PX, CANVAS[1] / SKIN_PX],
+        "offset": [0, -TOP_PAD / SKIN_PX],
+        "anchor": [0.5, round((TOP_PAD + 59 / 2) / CANVAS[1], 6)],
+        "preview": f"skins/{sid}_preview.png",
+        "previewLocked": f"skins/{sid}_preview_locked.png",
+        "previewSize": [48, 52], "mockColor": MOCK_COLOURS[sid],
+    }
+
+
+def pink_manifest_entry():
+    return skin_manifest_entry("pink")
+
+
+def save_skin_frames(out: Path, sid, frames):
+    for f in ("idle", "flap", "dead"):
+        t, o = frames[f]
+        t.save(out / f"{sid}{SUFFIX[f]}.png", optimize=True)
+        o.save(out / f"{sid}_acc{SUFFIX[f]}.png", optimize=True)
+
+
+def build_pink(srcs):
+    """The default pink bird as a tinted layer + overlay, like every skin.
+
+    Drawn with its mockColor (#EC008C) at blend k = 0 it must reproduce the
+    1.0 ``bird*.png`` sprites. A pure modulate of #EC008C cannot make the
+    crimson wing (#C82342) or the dark-grey dead body, so per pixel: the
+    tinted layer gets the least-squares grey ``v`` (so stage blending still
+    shades the whole body), and the overlay gets the *smallest-alpha*
+    correction that makes ``overlay over (v * pink)`` exactly the source
+    colour, under the usual beak/eye overlay (``classify``)."""
+    mc = MOCK_COLOURS["pink"]
+    M = tuple(int(mc[i:i + 2], 16) for i in (1, 3, 5))
+    mm = sum(c * c for c in M)
+    outs = {}
+    for frame, src in srcs.items():
+        alpha, _, beak, eye = classify(src, frame)
+        ob = Image.new("RGBA", src.size, (0, 0, 0, 0))
+        ob.alpha_composite(beak)
+        ob.alpha_composite(eye)
+        sp, op = src.load(), ob.load()
+        tint = Image.new("RGBA", CANVAS, (0, 0, 0, 0))
+        corr = Image.new("RGBA", CANVAS, (0, 0, 0, 0))
+        tp, cp = tint.load(), corr.load()
+        for x in range(src.width):
+            for y in range(src.height):
+                ab = alpha[x][y]
+                if ab == 0:
+                    continue
+                s, o = sp[x, y], op[x, y]
+                oa = o[3] / 255
+                if oa < 0.98:  # colour under the beak/eye overlay
+                    u = [min(255.0, max(0.0, (s[c] - oa * o[c]) / (1 - oa))) for c in range(3)]
+                else:
+                    u = list(M)
+                v = max(0.0, min(1.0, sum(u[c] * M[c] for c in range(3)) / mm))
+                g = round(v * 255)
+                base = [g / 255 * M[c] for c in range(3)]
+                need = 0.0
+                for c in range(3):
+                    if u[c] > base[c] + 0.5:
+                        need = max(need, (u[c] - base[c]) / (255 - base[c]))
+                    elif u[c] < base[c] - 0.5:
+                        need = max(need, 1 - u[c] / base[c])
+                tp[x, y + TOP_PAD] = (g, g, g, ab)
+                if need > 0.5 / 255:
+                    a = min(1.0, need)
+                    col = tuple(max(0, min(255, round((u[c] - (1 - a) * base[c]) / a)))
+                                for c in range(3))
+                    cp[x, y + TOP_PAD] = col + (round(a * ab),)
+        over = corr
+        over.alpha_composite(ob, (0, TOP_PAD))
+        # Beak-edge pixels classify() leaves on neither layer: copy them.
+        vp = over.load()
+        for x in range(src.width):
+            for y in range(src.height):
+                if alpha[x][y] == 0 and sp[x, y][3] and vp[x, y + TOP_PAD] != sp[x, y]:
+                    vp[x, y + TOP_PAD] = sp[x, y]
+        outs[frame] = (tint, over)
+    return outs
+
+
+def verify_pink(app: Path, built):
+    """Max/mean |diff| of pink-at-k=0 vs the 1.0 sprites over the stage-0 bg."""
+    img_dir = app / "assets/images"
+    M = tuple(int(MOCK_COLOURS["pink"][i:i + 2], 16) for i in (1, 3, 5))
+    res = {}
+    for frame, name in [("idle", "bird.png"), ("flap", "bird_flap.png"), ("dead", "bird_dead.png")]:
+        src = Image.open(img_dir / name).convert("RGBA")
+        ref = Image.new("RGBA", CANVAS, (0xF1, 0xF1, 0xF1, 255))
+        ref.alpha_composite(src, (0, TOP_PAD))
+        t, o = built[frame]
+        mine = Image.new("RGBA", CANVAS, (0xF1, 0xF1, 0xF1, 255))
+        mine.alpha_composite(modulate(t, M))
+        mine.alpha_composite(o)
+        diff = ImageChops.difference(mine.convert("RGB"), ref.convert("RGB"))
+        res[frame] = (max(e[1] for e in diff.getextrema()), sum(ImageStat.Stat(diff).mean) / 3)
+    return res
+
+
+def gen_pink_only(app: Path):
+    """``--pink-only``: rebuild just the pink layers + its manifest entry
+    (Pillow only, no browser)."""
+    out = app / "assets/images/skins"
+    img_dir = app / "assets/images"
+    srcs = {f: Image.open(img_dir / n).convert("RGBA") for f, n in
+            [("idle", "bird.png"), ("flap", "bird_flap.png"), ("dead", "bird_dead.png")]}
+    built = build_pink(srcs)
+    save_skin_frames(out, "pink", built)
+    mpath = out / "manifest.json"
+    manifest = json.loads(mpath.read_text())
+    manifest["pink"] = pink_manifest_entry()
+    mpath.write_text(json.dumps(manifest, indent=2) + "\n")
+    for frame, (mx_, mean) in verify_pink(app, built).items():
+        print(f"pink {frame}: max |diff| {mx_}, mean {mean:.3f}")
+
+
 def gen_skins(r: Renderer, app: Path, out: Path):
     out.mkdir(parents=True, exist_ok=True)
     img_dir = app / "assets/images"
     srcs = {f: Image.open(img_dir / n).convert("RGBA") for f, n in
             [("idle", "bird.png"), ("flap", "bird_flap.png"), ("dead", "bird_dead.png")]}
-    suffix = {"idle": "", "flap": "_flap", "dead": "_dead"}
-    size_pt = [CANVAS[0] / SKIN_PX, CANVAS[1] / SKIN_PX]
-    anchor_y = (TOP_PAD + 59 / 2) / CANVAS[1]
     # Paths are relative to assets/images/. Frames are [idle, flap, dead]
     # (same roles as bird.png, bird_flap.png, bird_dead.png). Draw "tinted"
-    # with ColorFilter.mode(stageForeground, BlendMode.modulate), then
+    # with ColorFilter.mode(lerp(mockColor, stageForeground, k),
+    # BlendMode.modulate) (k = 0 in menus / stage 0, 0.35 in later run
+    # stages; see Config.skinStageBlend), then
     # "overlay" untinted on top, both at "size" (pt) with "anchor" on the
     # bird body centre (= the 1.0 bird position; hitbox unchanged). "offset"
     # is the canvas top-left relative to the 1.0 bird.png top-left, in pt.
     # "preview"/"previewLocked" are full-colour menu renders from the skins
     # mock (48x52 pt box, viewBox -2 -14 48 52).
     manifest = {
-        "pink": {
-            "tinted": None,
-            "overlay": ["bird.png", "bird_flap.png", "bird_dead.png"],
-            "size": [93 / SKIN_PX, 59 / SKIN_PX], "offset": [0, 0], "anchor": [0.5, 0.5],
-            "preview": "skins/pink_preview.png", "previewLocked": "skins/pink_preview_locked.png",
-            "previewSize": [48, 52], "mockColor": MOCK_COLOURS["pink"],
-        },
+        "pink": pink_manifest_entry(),
     }
-    built = {}
+    built = {"pink": build_pink(srcs)}
+    save_skin_frames(out, "pink", built["pink"])
     for sid in SKIN_IDS[1:]:
         frames = build_skin(sid, srcs)
         built[sid] = frames
-        tl, ol = [], []
-        for f in ("idle", "flap", "dead"):
-            t, o = frames[f]
-            t.save(out / f"{sid}{suffix[f]}.png", optimize=True)
-            o.save(out / f"{sid}_acc{suffix[f]}.png", optimize=True)
-            tl.append(f"skins/{sid}{suffix[f]}.png")
-            ol.append(f"skins/{sid}_acc{suffix[f]}.png")
-        manifest[sid] = {
-            "tinted": tl, "overlay": ol, "size": size_pt,
-            "offset": [0, -TOP_PAD / SKIN_PX], "anchor": [0.5, round(anchor_y, 6)],
-            "preview": f"skins/{sid}_preview.png",
-            "previewLocked": f"skins/{sid}_preview_locked.png",
-            "previewSize": [48, 52], "mockColor": MOCK_COLOURS[sid],
-        }
+        save_skin_frames(out, sid, frames)
+        manifest[sid] = skin_manifest_entry(sid)
     # full-colour previews straight from the K1 mock
     previews = {}
     for i, sid in enumerate(SKIN_IDS):
@@ -723,7 +829,12 @@ def main():
     ap.add_argument("--app", type=Path, default=default_app, help="Flutter app root")
     ap.add_argument("--design", type=Path, default=None, help="design/menu_v2 dir")
     ap.add_argument("--contact", type=Path, default=None, help="write a verification sheet")
+    ap.add_argument("--pink-only", action="store_true",
+                    help="only rebuild the pink skin layers (no browser needed)")
     a = ap.parse_args()
+    if a.pink_only:
+        gen_pink_only(a.app)
+        return
     design = a.design or find_design(here) or find_design(Path.cwd())
     if not design or not (design / HOME).exists():
         sys.exit("design/menu_v2 not found; pass --design")

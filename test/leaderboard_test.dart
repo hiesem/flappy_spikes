@@ -1,7 +1,7 @@
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/gameover_panel.dart';
-import 'package:flappy_spikes/components/start_panel.dart';
+import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/components/ui/service_message.dart';
 import 'package:flappy_spikes/components/ui/sprite_button.dart';
 import 'package:flappy_spikes/components/ui/text_button.dart';
@@ -79,24 +79,24 @@ void main() {
       await flushAndMount(game);
     },
     verify: (game, tester) async {
-      final panel = game.world.children.query<StartPanel>().single;
+      final home = game.world.children.query<HomeScreen>().single;
 
-      // Small pink button at 3/4 width, level with the settings gear (2014
-      // original layout). The gear shares its 30x30 size, so find by
-      // position instead.
-      final gameCenter = panel.children.whereType<SpriteButton>().firstWhere(
-            (b) => b.position.x == Config.gameCenterButtonPosition.x,
-          );
-      expect(gameCenter.position.y, Config.gameCenterButtonPosition.y);
-      expect(gameCenter.size.x, Config.gameCenterButtonSize.x);
+      // 2.0 home (PRD-1 §4.1): the leaderboard row at the bottom — a 70x70
+      // trophy tile on the left margin plus the stats, all one button.
+      final row = home.leaderboard;
+      final expected = Config.homeLeaderboardRectFor(game.viewHeight);
+      expect(row.position.x, expected.left);
+      expect(row.position.y, expected.top);
+      expect(row.size.x, expected.width);
+      expect(row.size.y, Config.homeLeaderboardSize);
 
-      // The privacy-policy link moved to the settings screen (2026-07-22):
-      // no text buttons remain on the start panel.
-      expect(panel.children.whereType<TextButton>(), isEmpty);
+      // The privacy-policy link lives on the settings screen (2026-07-22):
+      // no text buttons on the home screen.
+      expect(home.children.whereType<TextButton>(), isEmpty);
 
       // Pressing it is a guarded no-op without configured services: no
       // crash, and the tap must not leak through and start the game.
-      gameCenter.onPressed();
+      row.onPressed();
       expect(game.state, GameState.start);
     },
   );

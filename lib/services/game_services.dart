@@ -118,6 +118,12 @@ class GameServices {
 
   void logShareScore(int score) => logEvent('share_score', {'score': score});
 
+  /// Menu / economy analytics (PRD-1 §6: coins_earned, shop_open,
+  /// home_slot_shown, ...). Goes through [logEvent], so test spies that
+  /// override it see these too.
+  void track(String name, [Map<String, Object>? parameters]) =>
+      logEvent(name, parameters);
+
   /// Non-private so tests can record events instead of sending them;
   /// production behavior is unchanged (analytics, try/caught).
   @visibleForTesting

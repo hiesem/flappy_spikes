@@ -1,11 +1,17 @@
 import 'package:flappy_spikes/components/bird.dart';
+import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/menu/skin_catalog.dart';
 import 'package:flappy_spikes/services/game_services.dart';
+import 'package:flappy_spikes/services/monetization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// All sprite assets the game may load, so that component onLoads complete
 /// on cache hits (microtasks) instead of real async decodes.
-const kAllImages = [
+final kAllImages = [
+  ...kHomeImages,
+  for (final skin in kSkins) ...skin.images,
+
   'bird.png',
   'bird_flap.png',
   'bird_dead.png',
@@ -37,12 +43,14 @@ FlappySpikesGame createTestGame(
   [Map<String, Object> initialPrefs = const {},
   double? worldHeight,
   GameServices? services,
+  Monetization? monetization,
 ]) {
   SharedPreferences.setMockInitialValues(initialPrefs);
   // soundEnabled: false — no audioplayers platform-channel calls in tests.
   return FlappySpikesGame(
     worldHeight: worldHeight,
     services: services,
+    monetization: monetization,
     soundEnabled: false,
   );
 }

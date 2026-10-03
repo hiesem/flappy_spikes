@@ -1,9 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <!-- The game has no ads and does not use the advertising ID. The AD_ID
-         permission is pulled into the merged manifest by the
-         play-services-ads-identifier dependency of firebase_analytics;
-         remove it so the "no advertising ID" Play declaration holds. -->
+    <!-- The AD_ID permission is pulled into the merged manifest by
+         firebase_analytics and google_mobile_ads; it stays removed so the
+         current "no advertising ID" Play declaration holds. Rewarded ads
+         still work without it (non-personalized, lower eCPM).
+         TODO(before-release, PRD-1 §3.8): when the Play "contains ads" /
+         advertising-ID / data-safety declarations are updated for 2.0,
+         delete this block so AdMob can use the advertising ID. -->
     <uses-permission
         android:name="com.google.android.gms.permission.AD_ID"
         tools:node="remove" />
@@ -42,6 +45,13 @@
         <meta-data
             android:name="com.google.android.gms.games.APP_ID"
             android:value="@string/games_app_id"/>
+        <!-- AdMob app ID. TODO(before-release): this is Google's official
+             TEST app ID (pairs with the test rewarded unit in
+             lib/services/ads_service.dart); keep it through closed testing
+             and swap in the real AdMob app ID only for production. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

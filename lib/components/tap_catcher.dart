@@ -5,8 +5,8 @@ import '../game/config.dart';
 import '../game/flappy_game.dart';
 
 /// Full-screen tap target sitting below everything else. Receives taps that
-/// no button consumed: starts the game from the start scene, flaps while
-/// playing, ignored on the game-over scene.
+/// no button consumed: flaps while playing; ignored on the menus (only the
+/// START button starts a run, PRD-1 §4.2) and on the game-over scene.
 class TapCatcher extends PositionComponent with TapCallbacks, HasGameReference<FlappySpikesGame> {
   TapCatcher()
       : super(
@@ -23,6 +23,6 @@ class TapCatcher extends PositionComponent with TapCallbacks, HasGameReference<F
 
   @override
   void onTapDown(TapDownEvent event) {
-    game.onScreenTap();
+    game.onPlayfieldTap();
   }
 }

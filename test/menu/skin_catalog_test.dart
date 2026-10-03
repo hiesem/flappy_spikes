@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:ui';
+
 import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/menu/skin_catalog.dart';
 import 'package:flappy_spikes/menu/wallet.dart';
@@ -41,21 +45,58 @@ void main() {
       );
     });
 
-    test('sprite paths: legacy pink files, skins/ folder for the rest', () {
+    test('sprite paths: two layers per skin, pink included (WP4 addendum)',
+        () {
       final pink = skinById('pink')!;
-      expect(pink.normal, 'bird.png');
-      expect(pink.flap, 'bird_flap.png');
-      expect(pink.dead, 'bird_dead.png');
-      expect(pink.overlay, isNull);
+      expect(pink.normal, 'skins/pink.png');
+      expect(pink.flap, 'skins/pink_flap.png');
+      expect(pink.dead, 'skins/pink_dead.png');
+      expect(pink.overlay, 'skins/pink_acc.png');
+      expect(pink.overlayDead, 'skins/pink_acc_dead.png');
 
       final crown = skinById('crown')!;
       expect(crown.normal, 'skins/crown.png');
       expect(crown.flap, 'skins/crown_flap.png');
       expect(crown.dead, 'skins/crown_dead.png');
       expect(crown.overlay, 'skins/crown_acc.png');
+      expect(crown.overlayFlap, 'skins/crown_acc_flap.png');
 
-      expect(skinById('blue')!.overlay, isNull);
+      // Beak/eye live on the overlay of every skin, accessory or not.
+      expect(skinById('blue')!.overlay, 'skins/blue_acc.png');
       expect(skinById('nope'), isNull);
+    });
+
+    test('catalog matches the WP3 manifest (paths, canvas, mock colours)',
+        () {
+      final manifest = jsonDecode(
+        File('assets/images/skins/manifest.json').readAsStringSync(),
+      ) as Map<String, dynamic>;
+      expect(manifest.keys.toList(), kSkins.map((s) => s.id).toList());
+      for (final skin in kSkins) {
+        final entry = manifest[skin.id] as Map<String, dynamic>;
+        expect(entry['tinted'], skin.tintedFrames, reason: skin.id);
+        expect(entry['overlay'], skin.overlayFrames, reason: skin.id);
+        expect(entry['size'], [SkinDef.spriteWidth, SkinDef.spriteHeight]);
+        expect(entry['anchor'], [SkinDef.anchorX, SkinDef.anchorY]);
+        expect(entry['preview'], skin.preview);
+        expect(entry['previewLocked'], skin.previewLocked);
+        final hex = skin.mockColor.toARGB32().toRadixString(16).substring(2);
+        expect((entry['mockColor'] as String).toLowerCase(), '#$hex',
+            reason: skin.id);
+        for (final path in skin.images) {
+          expect(File('assets/images/$path').existsSync(), isTrue,
+              reason: path);
+        }
+      }
+    });
+
+    test('tintFor: identity colour at blend 0, lerp toward the stage', () {
+      final blue = skinById('blue')!;
+      const stage = Color(0xFF0067FF);
+      expect(blue.tintFor(stage, 0), blue.mockColor);
+      expect(blue.tintFor(stage, 0.35),
+          Color.lerp(blue.mockColor, stage, 0.35));
+      expect(blue.tintFor(stage, 1), stage);
     });
   });
 

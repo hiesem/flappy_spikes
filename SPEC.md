@@ -38,6 +38,21 @@ field, preserving all gameplay geometry. Portrait only.
 4. **replay** — full scene reset with a 0.3 s white fade; state returns to `start`;
    bestScore/gamesPlayed/mute reloaded from persistence.
 
+> DEVIATION (2026-10-03, 2.0 menu — PRD-1-menu.md §4): the start scene is the
+> new **home screen** (`lib/components/home/home_screen.dart`, layout in
+> `Config.home*For(viewHeight)`). Only its **START** button starts a run — a tap
+> on an empty area no longer does (keyboard Space/Enter = START). The run's
+> physics bird waits invisibly at its spawn point while the home screen draws
+> the equipped skin in its start block, and fades in on START. The game-over
+> panel's replay goes back to the home screen (`goHome()`: a new arrival that
+> re-rolls the powerup slot) and shows a "+N" coin line (1 coin per point,
+> credited at game over). In menus the spike strips are drawn 28 pt shorter
+> (44 pt, as in the approved mocks) and slide to their full 72 pt when a run
+> starts — visual only, the strip bodies never move. The bird is drawn from
+> the equipped skin (tinted layer + overlay); its tint is the skin's identity
+> colour in menus and at stage 0 and lerps 35 % toward the stage foreground
+> from stage 5 (`Config.skinStageBlend`); hitbox and physics are unchanged.
+
 ## Physics (Forge2D)
 
 > DEVIATION (2026-07-19, user-requested, Flappy Bird feel): the 2014

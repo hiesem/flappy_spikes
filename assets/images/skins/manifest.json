@@ -1,22 +1,26 @@
 {
   "pink": {
-    "tinted": null,
+    "tinted": [
+      "skins/pink.png",
+      "skins/pink_flap.png",
+      "skins/pink_dead.png"
+    ],
     "overlay": [
-      "bird.png",
-      "bird_flap.png",
-      "bird_dead.png"
+      "skins/pink_acc.png",
+      "skins/pink_acc_flap.png",
+      "skins/pink_acc_dead.png"
     ],
     "size": [
       46.5,
-      29.5
+      46.5
     ],
     "offset": [
       0,
-      0
+      -17.0
     ],
     "anchor": [
       0.5,
-      0.5
+      0.682796
     ],
     "preview": "skins/pink_preview.png",
     "previewLocked": "skins/pink_preview_locked.png",

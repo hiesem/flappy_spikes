@@ -261,7 +261,53 @@ Contract: see SPEC.md. Loop rule: a box is checked only when code exists AND
       test/game_services_test.dart (7 tests) + leaderboard_test.dart (+4);
       103/103 green, analyze clean
 
-## Final gate
+## Phase 17 — 2.0 menu (PRD-1, branch `feat/menu-v2`)
+
+Implements `PRD-1-menu.md`: 2.0 home screen, wallet, Shop, Skins, no-ads IAP +
+popup, rewarded ads, IAP, powerup slot, debug panel, keyboard controls and a
+Linux test target. Work lives on the `feat/menu-v2` branch — **not pushed**,
+`main` untouched.
+
+### Done (WP1–WP9)
+- [x] WP1 — menu state: wallet (`Wallet`, coin sources), 12-skin catalog +
+      `SkinStore`, `PowerupSlot` (BIG HOOPS/SHIELD 50/50, never a 4th repeat),
+      `NoAdsPopupPolicy`, `FreeCoinsPolicy` (+40/ad, max 5/day, 5-min cooldown)
+- [x] WP2 — rewarded ads (AdMob + UMP consent, Google TEST app/unit ids) and
+      `in_app_purchase` IAP, both behind no-op-safe/fake layers
+- [x] WP3 — menu icons rasterised from the approved mocks + 12 skins
+      (stage-tinted layer + fixed-colour accessory overlay, menu previews)
+- [x] WP4 — 2.0 home screen (G1 centred), START-only run start, interim coin rule
+      (1 coin/point credited at game over), skins on the bird, debug panel,
+      keyboard controls; WP7 folded in here (Invite = share sheet + store link)
+- [x] WP5 — Shop (S1-B), no-ads popup (P1), IAP granting/restore (+1000 bonus
+      coins with No ads), free coins with cap + cooldown, RESTORE PURCHASES link
+      in Settings
+- [x] WP6 — Skins screen (K1 grid), unlock / not-enough-coins dialog,
+      featured-skin path from the Shop
+- [x] WP7 — folded into WP4–WP6 (invite wiring + analytics events where the
+      actions live)
+- [x] WP8 — Linux runner: phone-shaped (9:19.5), non-resizable window sized to
+      the monitor, Hyprland-friendly title
+- [x] WP9 — docs: SPEC "2.0 menu (PRD-1) deviations" section, this TODO section,
+      AGENTS.md environment/status/decisions, README Linux run instructions
+- [x] Gate at WP9: `flutter analyze` clean, `flutter test` 247/247 green
+
+### Pending — USER-only (store / device / native config)
+- [ ] Create the IAP products in Play Console with the ids `coins_500`,
+      `coins_1800`, `coins_5000`, `coins_12000`, `no_ads`
+- [ ] Replace the AdMob TEST app id / rewarded unit ids with the real ones
+      (AndroidManifest `APPLICATION_ID` + `AdMobRewardedAds` unit ids)
+- [ ] Play declarations for 2.0: tick "contains ads", complete the advertising-ID
+      and data-safety updates — then remove the `AD_ID` `tools:node="remove"`
+      block in `AndroidManifest.xml` (TODO comment there)
+- [ ] Configure the UMP consent message in AdMob
+- [ ] iOS (when it reopens): add `GADApplicationIdentifier` and switch ads from
+      the Noop path to AdMob
+- [ ] Sign off the generated skin art
+- [ ] Install `gst-plugins-good` for Linux audio
+- [ ] Real-device test on the Pixel 8
+
+## Final gate (1.0)
 - [x] `flutter analyze` clean
 - [x] `flutter test` 103/103 green
 - [x] Signed AAB/APK built with final code

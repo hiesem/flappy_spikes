@@ -38,34 +38,53 @@ field, preserving all gameplay geometry. Portrait only.
 4. **replay** — full scene reset with a 0.3 s white fade; state returns to `start`;
    bestScore/gamesPlayed/mute reloaded from persistence.
 
-> DEVIATION (2026-10-03, 2.0 menu — PRD-1-menu.md §4): the start scene is the
-> new **home screen** (`lib/components/home/home_screen.dart`, layout in
-> `Config.home*For(viewHeight)`). Only its **START** button starts a run — a tap
-> on an empty area no longer does (keyboard Space/Enter = START). The run's
-> physics bird waits invisibly at its spawn point while the home screen draws
-> the equipped skin in its start block, and fades in on START. The game-over
-> panel's replay goes back to the home screen (`goHome()`: a new arrival that
-> re-rolls the powerup slot) and shows a "+N" coin line (1 coin per point,
-> credited at game over). In menus the spike strips are drawn 28 pt shorter
-> (44 pt, as in the approved mocks) and slide to their full 72 pt when a run
-> starts — visual only, the strip bodies never move. The bird is drawn from
-> the equipped skin (tinted layer + overlay); its tint is the skin's identity
-> colour in menus and at stage 0 and lerps 35 % toward the stage foreground
-> from stage 5 (`Config.skinStageBlend`); hitbox and physics are unchanged.
->
-> The home screen leads to the **Shop** (`lib/components/shop/`, layout in
-> `Config.shop*For`) and the **No-ads popup** (`lib/components/noads_popup.dart`,
-> `Config.noAds*`), both menu-only (stage 0, never during a run); store
-> purchases are granted by `lib/game/purchases.dart`. The popup also opens by
-> itself on launch from the day after install (max once a day, until three
-> dismissals, never to buyers). Settings gains a RESTORE PURCHASES link.
->
-> The **Skins** screen (`lib/components/skins/`, layout in `Config.skin*`)
-> opens from the home tile or the Shop's featured row (straight into that
-> skin's unlock dialog). Owned skins equip on tap; locked ones open a coin
-> unlock dialog that, when the balance is short, leads to the Shop's coin
-> packs. Shop and Skins return to each other with back when one was opened
-> from the other, else home.
+## 2.0 menu (PRD-1) deviations
+
+The 2.0 menu phase (PRD-1-menu.md, branch `feat/menu-v2`) replaces the 1.0 start
+scene with a **home screen** and supersedes the start/replay flow in "Game
+states" above. Everything else in this document still holds.
+
+- **START-only run start.** Only the home screen's START button begins a run; a
+  tap on the empty playfield no longer does (`onPlayfieldTap` is inert, and the
+  `onScreenTap()` primary-action seam — used by tests and the keyboard — means
+  START). Space/Enter = START and, during a run, flap; Esc = back.
+  (`lib/components/home/home_screen.dart`, layout in
+  `Config.home*For(viewHeight)`.)
+- **Game-over replay → home.** The 1.0 game-over panel is kept, but its replay
+  returns to the home screen (`goHome()`): a new arrival that re-rolls the
+  powerup slot (slots also roll at launch). The run's physics bird waits
+  invisibly at its spawn point while the home screen draws the equipped skin in
+  its start block, and fades in on START.
+- **Menu spike strips.** In menus the strips are drawn 28 pt shorter (44 pt, as
+  in the approved mocks) and slide to their full 72 pt when a run starts —
+  visual only; the strip bodies never move (`Config.menuSpikeInset`,
+  `Config.menuSpikeHeight`).
+- **Menus always stage 0.** Home, Shop, Skins and all dialogs/popups render at
+  colour stage 0; only runs advance the colour stage.
+- **Skin tint rule.** The bird is drawn from the equipped skin (tinted layer +
+  fixed-colour overlay). In menus and at stage 0 the tint is the skin's identity
+  colour; from stage 5 it lerps 35 % toward the stage foreground
+  (`Config.skinStageBlend`) — applied to every skin, the default pink included
+  (a pure stage modulate made all skins grey). Hitbox and physics are unchanged.
+- **"+N" coins line.** The game-over panel gains a small "+N" + coin line under
+  the stats, showing the coins earned (interim rule: 1 coin per point, credited
+  at game over; a fresh install starts at 0 coins).
+
+Also in this phase: the home screen leads to the **Shop**
+(`lib/components/shop/`, layout in `Config.shop*For`) and the **No-ads popup**
+(`lib/components/noads_popup.dart`, `Config.noAds*`), both menu-only; store
+purchases are granted by `lib/game/purchases.dart`. The popup also auto-shows on
+launch from the day after install (max once a day, until three dismissals, never
+to buyers). The **Skins** screen (`lib/components/skins/`, layout in
+`Config.skin*`) opens from the home tile or the Shop's featured row (straight
+into that skin's unlock dialog); owned skins equip on tap, locked ones open a
+coin unlock dialog that leads to the Shop's coin packs when the balance is
+short, and Shop/Skins return to each other with back when one opened the other,
+else home. Settings gains a RESTORE PURCHASES link; rewarded ads (AdMob, test
+IDs), in-app purchases and the debug panel (debug builds + Linux) are also 2.0
+additions. This supersedes the 1.0 "No ads" shell note (the app now shows
+rewarded ads and sells a No-ads IAP), and the privacy-policy link lives on the
+Settings screen rather than the start scene.
 
 ## Physics (Forge2D)
 

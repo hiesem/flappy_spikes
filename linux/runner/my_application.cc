@@ -19,13 +19,59 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
+// Returns TRUE when running under the Hyprland compositor. Hyprland is a
+// tiling window manager, so the client-side header bar is skipped there and
+// the plain title path is used instead.
+static gboolean running_on_hyprland() {
+  const gchar* desktop = g_getenv("XDG_CURRENT_DESKTOP");
+  if (desktop != nullptr && g_strstr_len(desktop, -1, "Hyprland") != nullptr) {
+    return TRUE;
+  }
+  return g_getenv("HYPRLAND_INSTANCE_SIGNATURE") != nullptr;
+}
+
+// Returns the monitor to size the window against: the display's primary
+// monitor when it reports one, otherwise its first monitor. NULL when the
+// display exposes no monitors.
+static GdkMonitor* get_display_monitor(GdkDisplay* display) {
+  if (display == nullptr) {
+    return nullptr;
+  }
+  GdkMonitor* monitor = gdk_display_get_primary_monitor(display);
+  if (monitor == nullptr && gdk_display_get_n_monitors(display) > 0) {
+    monitor = gdk_display_get_monitor(display, 0);
+  }
+  return monitor;
+}
+
+// Computes a phone-shaped window size: 9:19.5 aspect ratio at 85% of the
+// monitor work-area height (logical pixels). Falls back to 390x844 when no
+// monitor is available.
+static void get_phone_window_size(GtkWidget* window, int* width, int* height) {
+  GdkMonitor* monitor = get_display_monitor(gtk_widget_get_display(window));
+  if (monitor != nullptr) {
+    GdkRectangle workarea;
+    gdk_monitor_get_workarea(monitor, &workarea);
+    if (workarea.height > 0) {
+      const int phone_height = (int)(workarea.height * 0.85);
+      *height = phone_height;
+      *width = (int)(phone_height * 9.0 / 19.5 + 0.5);
+      return;
+    }
+  }
+  *width = 390;
+  *height = 844;
+}
+
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
 
-  // Use a header bar when running in GNOME as this is the common style used
+  // Hyprland is a tiling window manager that positions windows itself, so use
+  // the plain title path there instead of a client-side header bar.
+  // Otherwise use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu
   // desktop).
   // If running on X and not using GNOME then just use a traditional title bar
@@ -33,26 +79,37 @@ static void my_application_activate(GApplication* application) {
   // If running on Wayland assume the header bar will work (may need changing
   // if future cases occur).
   gboolean use_header_bar = TRUE;
+  if (running_on_hyprland()) {
+    use_header_bar = FALSE;
+  } else {
 #ifdef GDK_WINDOWING_X11
-  GdkScreen* screen = gtk_window_get_screen(window);
-  if (GDK_IS_X11_SCREEN(screen)) {
-    const gchar* wm_name = gdk_x11_screen_get_window_manager_name(screen);
-    if (g_strcmp0(wm_name, "GNOME Shell") != 0) {
-      use_header_bar = FALSE;
+    GdkScreen* screen = gtk_window_get_screen(window);
+    if (GDK_IS_X11_SCREEN(screen)) {
+      const gchar* wm_name = gdk_x11_screen_get_window_manager_name(screen);
+      if (g_strcmp0(wm_name, "GNOME Shell") != 0) {
+        use_header_bar = FALSE;
+      }
     }
-  }
 #endif
+  }
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "flappy_spikes");
+    gtk_header_bar_set_title(header_bar, "Flappy Spikes");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "flappy_spikes");
+    gtk_window_set_title(window, "Flappy Spikes");
   }
 
-  gtk_window_set_default_size(window, 1280, 720);
+  // Give the window a phone shape inside the monitor's work area.
+  int window_width = 0;
+  int window_height = 0;
+  get_phone_window_size(GTK_WIDGET(window), &window_width, &window_height);
+  gtk_window_set_default_size(window, window_width, window_height);
+  gtk_widget_set_size_request(GTK_WIDGET(window), window_width, window_height);
+  gtk_window_set_resizable(window, FALSE);
+  gtk_window_set_position(window, GTK_WIN_POS_CENTER);
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(

@@ -1,0 +1,370 @@
+{
+  "pink": {
+    "tinted": null,
+    "overlay": [
+      "bird.png",
+      "bird_flap.png",
+      "bird_dead.png"
+    ],
+    "size": [
+      46.5,
+      29.5
+    ],
+    "offset": [
+      0,
+      0
+    ],
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "preview": "skins/pink_preview.png",
+    "previewLocked": "skins/pink_preview_locked.png",
+    "previewSize": [
+      48,
+      52
+    ],
+    "mockColor": "#EC008C"
+  },
+  "blue": {
+    "tinted": [
+      "skins/blue.png",
+      "skins/blue_flap.png",
+      "skins/blue_dead.png"
+    ],
+    "overlay": [
+      "skins/blue_acc.png",
+      "skins/blue_acc_flap.png",
+      "skins/blue_acc_dead.png"
+    ],
+    "size": [
+      46.5,
+      46.5
+    ],
+    "offset": [
+      0,
+      -17.0
+    ],
+    "anchor": [
+      0.5,
+      0.682796
+    ],
+    "preview": "skins/blue_preview.png",
+    "previewLocked": "skins/blue_preview_locked.png",
+    "previewSize": [
+      48,
+      52
+    ],
+    "mockColor": "#29B6F6"
+  },
+  "green": {
+    "tinted": [
+      "skins/green.png",
+      "skins/green_flap.png",
+      "skins/green_dead.png"
+    ],
+    "overlay": [
+      "skins/green_acc.png",
+      "skins/green_acc_flap.png",
+      "skins/green_acc_dead.png"
+    ],
+    "size": [
+      46.5,
+      46.5
+    ],
+    "offset": [
+      0,
+      -17.0
+    ],
+    "anchor": [
+      0.5,
+      0.682796
+    ],
+    "preview": "skins/green_preview.png",
+    "previewLocked": "skins/green_preview_locked.png",
+    "previewSize": [
+      48,
+      52
+    ],
+    "mockColor": "#7CB342"
+  },
+  "purple": {
+    "tinted": [
+      "skins/purple.png",
+      "skins/purple_flap.png",
+      "skins/purple_dead.png"
+    ],
+    "overlay": [
+      "skins/purple_acc.png",
+      "skins/purple_acc_flap.png",
+      "skins/purple_acc_dead.png"
+    ],
+    "size": [
+      46.5,
+      46.5
+    ],
+    "offset": [
+      0,
+      -17.0
+    ],
+    "anchor": [
+      0.5,
+      0.682796
+    ],
+    "preview": "skins/purple_preview.png",
+    "previewLocked": "skins/purple_preview_locked.png",
+    "previewSize": [
+      48,
+      52
+    ],
+    "mockColor": "#8E24AA"
+  },
+  "grey": {
+    "tinted": [
+      "skins/grey.png",
+      "skins/grey_flap.png",
+      "skins/grey_dead.png"
+    ],
+    "overlay": [
+      "skins/grey_acc.png",
+      "skins/grey_acc_flap.png",
+      "skins/grey_acc_dead.png"
+    ],
+    "size": [
+      46.5,
+      46.5
+    ],
+    "offset": [
+      0,
+      -17.0
+    ],
+    "anchor": [
+      0.5,
+      0.682796
+    ],
+    "preview": "skins/grey_preview.png",
+    "previewLocked": "skins/grey_preview_locked.png",
+    "previewSize": [
+      48,
+      52
+    ],
+    "mockColor": "#37474F"
+  },
+  "sand": {
+    "tinted": [
+      "skins/sand.png",
+      "skins/sand_flap.png",
+      "skins/sand_dead.png"
+    ],
+    "overlay": [
+      "skins/sand_acc.png",
+      "skins/sand_acc_flap.png",
+      "skins/sand_acc_dead.png"
+    ],
+    "size": [
+      46.5,
+      46.5
+    ],
+    "offset": [
+      0,
+      -17.0
+    ],
+    "anchor": [
+      0.5,
+      0.682796
+    ],
+    "preview": "skins/sand_preview.png",
+    "previewLocked": "skins/sand_preview_locked.png",
+    "previewSize": [
+      48,
+      52
+    ],
+    "mockColor": "#FFB300"
+  },
+  "crown": {
+    "tinted": [
+      "skins/crown.png",
+      "skins/crown_flap.png",
+      "skins/crown_dead.png"
+    ],
+    "overlay": [
+      "skins/crown_acc.png",
+      "skins/crown_acc_flap.png",
+      "skins/crown_acc_dead.png"
+    ],
+    "size": [
+      46.5,
+      46.5
+    ],
+    "offset": [
+      0,
+      -17.0
+    ],
+    "anchor": [
+      0.5,
+      0.682796
+    ],
+    "preview": "skins/crown_preview.png",
+    "previewLocked": "skins/crown_preview_locked.png",
+    "previewSize": [
+      48,
+      52
+    ],
+    "mockColor": "#EC008C"
+  },
+  "tophat": {
+    "tinted": [
+      "skins/tophat.png",
+      "skins/tophat_flap.png",
+      "skins/tophat_dead.png"
+    ],
+    "overlay": [
+      "skins/tophat_acc.png",
+      "skins/tophat_acc_flap.png",
+      "skins/tophat_acc_dead.png"
+    ],
+    "size": [
+      46.5,
+      46.5
+    ],
+    "offset": [
+      0,
+      -17.0
+    ],
+    "anchor": [
+      0.5,
+      0.682796
+    ],
+    "preview": "skins/tophat_preview.png",
+    "previewLocked": "skins/tophat_preview_locked.png",
+    "previewSize": [
+      48,
+      52
+    ],
+    "mockColor": "#FAFAFA"
+  },
+  "sunglasses": {
+    "tinted": [
+      "skins/sunglasses.png",
+      "skins/sunglasses_flap.png",
+      "skins/sunglasses_dead.png"
+    ],
+    "overlay": [
+      "skins/sunglasses_acc.png",
+      "skins/sunglasses_acc_flap.png",
+      "skins/sunglasses_acc_dead.png"
+    ],
+    "size": [
+      46.5,
+      46.5
+    ],
+    "offset": [
+      0,
+      -17.0
+    ],
+    "anchor": [
+      0.5,
+      0.682796
+    ],
+    "preview": "skins/sunglasses_preview.png",
+    "previewLocked": "skins/sunglasses_preview_locked.png",
+    "previewSize": [
+      48,
+      52
+    ],
+    "mockColor": "#FF7043"
+  },
+  "headband": {
+    "tinted": [
+      "skins/headband.png",
+      "skins/headband_flap.png",
+      "skins/headband_dead.png"
+    ],
+    "overlay": [
+      "skins/headband_acc.png",
+      "skins/headband_acc_flap.png",
+      "skins/headband_acc_dead.png"
+    ],
+    "size": [
+      46.5,
+      46.5
+    ],
+    "offset": [
+      0,
+      -17.0
+    ],
+    "anchor": [
+      0.5,
+      0.682796
+    ],
+    "preview": "skins/headband_preview.png",
+    "previewLocked": "skins/headband_preview_locked.png",
+    "previewSize": [
+      48,
+      52
+    ],
+    "mockColor": "#212121"
+  },
+  "partyhat": {
+    "tinted": [
+      "skins/partyhat.png",
+      "skins/partyhat_flap.png",
+      "skins/partyhat_dead.png"
+    ],
+    "overlay": [
+      "skins/partyhat_acc.png",
+      "skins/partyhat_acc_flap.png",
+      "skins/partyhat_acc_dead.png"
+    ],
+    "size": [
+      46.5,
+      46.5
+    ],
+    "offset": [
+      0,
+      -17.0
+    ],
+    "anchor": [
+      0.5,
+      0.682796
+    ],
+    "preview": "skins/partyhat_preview.png",
+    "previewLocked": "skins/partyhat_preview_locked.png",
+    "previewSize": [
+      48,
+      52
+    ],
+    "mockColor": "#26A69A"
+  },
+  "ghost": {
+    "tinted": [
+      "skins/ghost.png",
+      "skins/ghost_flap.png",
+      "skins/ghost_dead.png"
+    ],
+    "overlay": [
+      "skins/ghost_acc.png",
+      "skins/ghost_acc_flap.png",
+      "skins/ghost_acc_dead.png"
+    ],
+    "size": [
+      46.5,
+      46.5
+    ],
+    "offset": [
+      0,
+      -17.0
+    ],
+    "anchor": [
+      0.5,
+      0.682796
+    ],
+    "preview": "skins/ghost_preview.png",
+    "previewLocked": "skins/ghost_preview_locked.png",
+    "previewSize": [
+      48,
+      52
+    ],
+    "mockColor": "#ECEFF1"
+  }
+}

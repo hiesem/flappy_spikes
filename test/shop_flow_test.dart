@@ -365,12 +365,13 @@ void main() {
     );
 
     shopTest(
-      'featured row opens Skins (stub until WP6)',
+      'featured row opens Skins at that skin (see skins_flow_test)',
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
         shop.featured.onPressed();
         await flushAndMount(game);
-        expect(spy.names, contains('skins_open'));
+        expect(spy.last('skins_open'), {'source': 'shop_featured'});
+        expect(game.menuScene, MenuScene.skins);
       },
     );
   });

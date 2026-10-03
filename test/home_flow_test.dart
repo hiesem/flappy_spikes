@@ -505,15 +505,16 @@ void main() {
     );
 
     homeTest(
-      'Skins stub toasts "Coming soon"; invite logs',
+      'Skins tile opens the Skins screen; invite logs',
       verify: (game, spy, ads, tester) async {
-        game.openSkins();
         game.invite();
         expect(spy.names, contains('invite_tap'));
-        expect(spy.names, contains('skins_open'));
+        game.homeScreen!.skinsTile.onPressed();
         await flushAndMount(game);
-        final toast = game.world.children.query<ServiceMessage>().single;
-        expect(toast.message, 'Coming soon');
+        expect(spy.names, contains('skins_open'));
+        expect(game.menuScene, MenuScene.skins);
+        expect(game.skinsScreen, isNotNull);
+        expect(game.homeScreen, isNull);
         expect(game.state, GameState.start);
       },
     );

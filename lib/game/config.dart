@@ -441,6 +441,77 @@ class Config {
   /// How long a restore may stay silent before "Nothing to restore".
   static const double restoreTimeout = 4;
 
+  // --- Skins (PRD-1 §5.3, design K1; content coordinates = world
+  // coordinates before scrolling, measured at 711 and top-pinned) ---------
+
+  static const int skinGridColumns = 3;
+  static const double skinTileWidth = 92;
+  static const double skinTileHeight = 106;
+  static const double skinTileGap = 8; // 14 + 92 + 8 = 114
+  static const double skinGridTop = 150;
+
+  /// Skin tile [index] (catalogue display order), 3 per row.
+  static Rect skinTileRectFor(double viewHeight, int index) => Rect.fromLTWH(
+    homeMargin + (index % skinGridColumns) * (skinTileWidth + skinTileGap),
+    skinGridTop + (index ~/ skinGridColumns) * (skinTileHeight + skinTileGap),
+    skinTileWidth,
+    skinTileHeight,
+  );
+
+  /// Bottom of the scrollable grid of [count] tiles (one gap below the last
+  /// row): 606 for 12 skins, inside the 667 pt viewport at 711.
+  static double skinsContentBottomFor(double viewHeight, int count) =>
+      skinTileRectFor(viewHeight, count - 1).bottom + skinTileGap;
+
+  // Inside a tile (mock `.sk`, measured on skins_k1.png): the 48 x 52
+  // preview centred at y 54 (its 6 pt top margin minus the inline svg's
+  // baseline gap); price pill 6 pt above the bottom; the lock icon at
+  // (6, 8) (6 pt box, inline svg 2 pt down); NEW tag 4 pt past the right
+  // edge and 6 pt above the top.
+  static const double skinPreviewWidth = 48;
+  static const double skinPreviewHeight = 52;
+  static const double skinPreviewCenterY = 54;
+  static const double skinTileInset = 6;
+  static const double skinLockTop = 8;
+  static const double skinLockSize = 14;
+  static const double skinOutlineWidth = 3;
+  static const double skinCheckBadgeSize = 22;
+  static const double skinCheckIconSize = 14;
+  static const double skinPriceFontSize = 13;
+  static const double skinPriceCoinSize = 14;
+  static const double skinPricePadX = 6;
+  static const double skinPricePadY = 2;
+  // The browser's line box of the 13 pt text (13 x 1.284 rounded down).
+  static const double skinPriceLineHeight = 16;
+  static const double skinPriceGap = 4;
+  static const double skinTagOverhangX = 4;
+  static const double skinTagOverhangY = 6;
+  static const double skinTagFontSize = 10;
+  static const double skinTagLetterSpacing = 0.05; // em
+
+  // --- Skin unlock dialog (no-ads popup visual language) -----------------
+
+  static const double skinDialogHeaderHeight = 120;
+  static const double skinDialogPlateSize = 96; // soft square behind it
+  static const double skinDialogPreviewScale = 1.6; // 77 x 83 bird
+  static const double skinDialogCoinSize = 20;
+  static const double skinDialogMessageFontSize = 16;
+  static const double skinDialogMessageGap = 10;
+  static const double skinDialogCancelHeight = 44;
+  static const double skinDialogCancelFontSize = 13;
+
+  /// Card of [cardHeight] (it depends on the dialog state), x 20 -> 300,
+  /// centred on the same band as the No-ads card.
+  static Rect skinDialogRectFor(double viewHeight, double cardHeight) {
+    final noAds = noAdsCardRectFor(viewHeight);
+    return Rect.fromLTWH(
+      noAds.left,
+      noAds.center.dy - cardHeight / 2,
+      noAds.width,
+      cardHeight,
+    );
+  }
+
   // --- No-ads popup (PRD-1 §5.1, design P1) --------------------------------
 
   /// Card x 20 -> 300, top 190 at 711; the card stays centred on the same

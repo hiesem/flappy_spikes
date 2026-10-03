@@ -21,6 +21,8 @@ import '../components/pipe_pair.dart';
 import '../components/score_hud.dart';
 import '../components/settings_panel.dart';
 import '../components/shop/shop_screen.dart';
+import '../components/skins/skin_unlock_dialog.dart';
+import '../components/skins/skins_screen.dart';
 import '../components/spike_strip.dart';
 import '../components/tap_catcher.dart';
 import '../components/ui/service_message.dart';
@@ -46,7 +48,7 @@ import 'tintable.dart';
 enum GameState { start, playing, gameOver }
 
 /// Which menu screen is up while in [GameState.start] (meaningless in the
-/// other states). Shop / Skins are opened by later work packages.
+/// other states).
 enum MenuScene { home, settings, shop, skins }
 
 class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
@@ -159,6 +161,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   GameOverPanel? _gameOverPanel;
   SettingsPanel? _settingsPanel;
   ShopScreen? _shop;
+  SkinsScreen? _skins;
+  SkinUnlockDialog? _skinDialog;
+  bool _skinPurchaseRunning = false;
   NoAdsPopup? _noAdsPopup;
   bool _freeCoinsBusy = false;
   DebugPanel? _debugPanel;
@@ -176,6 +181,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// handled the back press.
   final List<bool Function()> _backHandlers = [];
 
+  /// Menu screens (Shop / Skins) below the one on top, bottom first: their
+  /// back button returns to the last one (re-created), or home when empty.
+  /// Re-opening a screen already in the trail goes back to it, so the
+  /// Shop <-> Skins hops never pile up.
+  final List<MenuScene> _menuTrail = [];
+
   Color get foregroundColor => _fgColor;
   Color get stageBackground => _bgColor;
   bool get isScrolling => state == GameState.playing;
@@ -185,6 +196,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// The Shop while it is open (null otherwise).
   ShopScreen? get shopScreen => _shop;
+
+  /// The Skins screen while it is open (null otherwise).
+  SkinsScreen? get skinsScreen => _skins;
+
+  /// The skin unlock dialog while it is up (null otherwise).
+  SkinUnlockDialog? get skinDialog => _skinDialog;
 
   /// The No-ads popup while it is up (null otherwise).
   NoAdsPopup? get noAdsPopup => _noAdsPopup;
@@ -286,6 +303,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _setupStartScene() {
     state = GameState.start;
     menuScene = MenuScene.home;
+    _menuTrail.clear();
     final bird = Bird();
     _bird = bird;
     // The home screen draws its own bird in the start block; the physics
@@ -460,14 +478,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       MenuScene.home => _backHandlers.isEmpty,
       MenuScene.shop =>
         _backHandlers.isNotEmpty && _backHandlers.last == _shopBack,
+      MenuScene.skins =>
+        _backHandlers.isNotEmpty && _backHandlers.last == _skinsBack,
       _ => false,
     };
   }
 
-  /// Shop tile / coin pill: fades the home screen out and the Shop in.
-  /// The pill ([scrollToCoins]) opens it at the coin packs; pressed while
-  /// already in the Shop it just scrolls there. [source] defaults to
-  /// "pill" / "tile" (`shop_open` analytics).
+  /// Shop tile / coin pill: fades the home screen (or the Skins screen)
+  /// out and the Shop in. The pill ([scrollToCoins]) opens it at the coin
+  /// packs; pressed while already in the Shop it just scrolls there.
+  /// [source] defaults to "pill" / "tile" (`shop_open` analytics).
   void openShop({bool scrollToCoins = false, String? source}) {
     if (_sceneOnTop(MenuScene.shop)) {
       if (scrollToCoins) {
@@ -476,13 +496,25 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       }
       return;
     }
-    if (!_homeInteractive || _shop != null) return;
+    if (_shop != null) return;
+    final fromSkins = _sceneOnTop(MenuScene.skins);
+    if (!_homeInteractive && !fromSkins) return;
     sound.play(Sfx.click);
     services.track('shop_open', {
       'source': source ?? (scrollToCoins ? 'pill' : 'tile'),
     });
+    if (fromSkins) {
+      _dismissSkins();
+      _advanceTrail(from: MenuScene.skins, to: MenuScene.shop);
+    } else {
+      _menuTrail.clear();
+      _leaveHome();
+    }
+    _showShop(scrollToCoins: scrollToCoins);
+  }
+
+  void _showShop({bool scrollToCoins = false}) {
     menuScene = MenuScene.shop;
-    _leaveHome();
     final shop = ShopScreen(onBack: closeShop);
     _shop = shop;
     world.add(shop);
@@ -496,20 +528,51 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
   }
 
-  /// Back button / Esc in the Shop: back to the home screen (not a new
-  /// arrival: no slot roll).
-  void closeShop() {
+  /// Fades the Shop out and drops it; its buttons stop hit-testing at once.
+  void _dismissShop() {
     final shop = _shop;
-    if (state != GameState.start || shop == null) return;
-    sound.play(Sfx.click);
+    if (shop == null) return;
     _shop = null;
     popBack(_shopBack);
-    menuScene = MenuScene.home;
     shop.active = false;
     unregisterTintable(shop);
     fadeOpacity(shop, from: shop.opacity, to: 0, removeOnDone: true);
-    _addHome();
-    fadeOpacity(_home, from: 0, to: 1);
+  }
+
+  /// Back button / Esc in the Shop: back to the screen it was opened from
+  /// (Skins) or the home screen (not a new arrival: no slot roll).
+  void closeShop() {
+    if (state != GameState.start || _shop == null) return;
+    sound.play(Sfx.click);
+    _dismissShop();
+    _returnFromMenuScreen();
+  }
+
+  /// [from] is being replaced by [to]: remember [from] for back, unless
+  /// [to] is already below (then this is a way back to it).
+  void _advanceTrail({required MenuScene from, required MenuScene to}) {
+    final index = _menuTrail.indexOf(to);
+    if (index >= 0) {
+      _menuTrail.removeRange(index, _menuTrail.length);
+    } else {
+      _menuTrail.add(from);
+    }
+  }
+
+  /// After a menu screen closed: the previous screen of the trail, or a
+  /// fresh home screen.
+  void _returnFromMenuScreen() {
+    final previous = _menuTrail.isEmpty ? null : _menuTrail.removeLast();
+    switch (previous) {
+      case MenuScene.shop:
+        _showShop();
+      case MenuScene.skins:
+        _showSkins();
+      default:
+        menuScene = MenuScene.home;
+        _addHome();
+        fadeOpacity(_home, from: 0, to: 1);
+    }
   }
 
   bool _shopBack() {
@@ -566,18 +629,186 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// Shop featured-skin row: the Skins screen at [skinId]'s purchase
   /// confirmation.
-  void openFeaturedSkin(String skinId) {
-    // TODO(WP6): openSkins(confirmSkinId: skinId) once the Skins screen
-    // takes it (it must also accept being opened from the Shop).
-    openSkins();
+  void openFeaturedSkin(String skinId) =>
+      openSkins(confirmSkinId: skinId, source: 'shop_featured');
+
+  // --- Skins (PRD-1 §5.3) ----------------------------------------------------
+
+  /// Skins tile (home) / featured row (Shop): fades the current screen out
+  /// and the Skins screen in. [confirmSkinId] opens it with that skin's
+  /// unlock dialog already up (scrolled into view). [source] defaults to
+  /// "tile" / "shop" (`skins_open` analytics).
+  void openSkins({String? confirmSkinId, String? source}) {
+    if (_sceneOnTop(MenuScene.skins)) {
+      if (confirmSkinId != null) openSkinDialog(confirmSkinId);
+      return;
+    }
+    if (_skins != null) return;
+    final fromShop = _sceneOnTop(MenuScene.shop);
+    if (!_homeInteractive && !fromShop) return;
+    sound.play(Sfx.click);
+    services.track('skins_open', {
+      'source': source ?? (fromShop ? 'shop' : 'tile'),
+    });
+    if (fromShop) {
+      _dismissShop();
+      _advanceTrail(from: MenuScene.shop, to: MenuScene.skins);
+    } else {
+      _menuTrail.clear();
+      _leaveHome();
+    }
+    _showSkins(confirmSkinId: confirmSkinId);
   }
 
-  /// Skins screen. Stub until WP6 (reachable from home and the Shop).
-  void openSkins() {
-    if (!_homeInteractive && !_sceneOnTop(MenuScene.shop)) return;
+  void _showSkins({String? confirmSkinId}) {
+    menuScene = MenuScene.skins;
+    final screen = SkinsScreen(onBack: closeSkins);
+    _skins = screen;
+    world.add(screen);
+    registerTintable(screen);
+    fadeOpacity(screen, from: 0, to: 1);
+    pushBack(_skinsBack);
+    if (confirmSkinId != null) {
+      screen.loaded.then((_) {
+        if (!identical(_skins, screen) || !_sceneOnTop(MenuScene.skins)) {
+          return;
+        }
+        screen.scrollToSkin(confirmSkinId, animate: false);
+        openSkinDialog(confirmSkinId);
+      });
+    }
+  }
+
+  /// Fades the Skins screen out and drops it (with its dialog, if any).
+  void _dismissSkins() {
+    final screen = _skins;
+    if (screen == null) return;
+    _closeSkinDialog();
+    _skins = null;
+    popBack(_skinsBack);
+    screen.active = false;
+    unregisterTintable(screen);
+    fadeOpacity(screen, from: screen.opacity, to: 0, removeOnDone: true);
+  }
+
+  /// Back button / Esc on the Skins screen: back to the Shop when it was
+  /// opened from there, else home (not a new arrival: no slot roll).
+  void closeSkins() {
+    if (state != GameState.start || _skins == null) return;
     sound.play(Sfx.click);
-    services.track('skins_open');
-    showToast('Coming soon');
+    _dismissSkins();
+    _returnFromMenuScreen();
+  }
+
+  bool _skinsBack() {
+    closeSkins();
+    return true;
+  }
+
+  /// A skin tile: owned -> equip at once; locked -> unlock dialog.
+  void tapSkin(String skinId) {
+    if (!_sceneOnTop(MenuScene.skins)) return;
+    final skins = menu.skins;
+    if (skins.isOwned(skinId)) {
+      sound.play(Sfx.click);
+      if (!skins.isEquipped(skinId)) unawaited(equipSkin(skinId));
+    } else {
+      openSkinDialog(skinId);
+    }
+  }
+
+  /// Equips an owned skin (home bird and run bird follow the store).
+  Future<void> equipSkin(String skinId) async {
+    if (!menu.skins.isOwned(skinId)) return;
+    services.track('skin_equip', {'skin': skinId});
+    await menu.skins.equip(skinId);
+  }
+
+  /// Opens the unlock dialog for a locked skin over the Skins screen.
+  void openSkinDialog(String skinId) {
+    final skin = skinById(skinId);
+    if (skin == null ||
+        menu.skins.isOwned(skinId) ||
+        !_sceneOnTop(MenuScene.skins)) {
+      return;
+    }
+    sound.play(Sfx.click);
+    services.track('skin_dialog_shown', {
+      'skin': skinId,
+      'affordable': menu.wallet.balance >= skin.price ? 1 : 0,
+    });
+    final dialog = SkinUnlockDialog(
+      skin: skin,
+      onConfirm: confirmSkinDialog,
+      onCancel: closeSkinDialog,
+    );
+    _skinDialog = dialog;
+    world.add(dialog);
+    fadeOpacity(dialog, from: 0, to: 1, duration: Config.popupFadeDuration);
+    pushBack(_skinDialogBack);
+  }
+
+  /// CANCEL / dim / Esc on the unlock dialog.
+  void closeSkinDialog() {
+    if (_skinDialog == null) return;
+    sound.play(Sfx.click);
+    _closeSkinDialog();
+  }
+
+  void _closeSkinDialog() {
+    final dialog = _skinDialog;
+    if (dialog == null) return;
+    _skinDialog = null;
+    popBack(_skinDialogBack);
+    dialog.active = false;
+    fadeOpacity(
+      dialog,
+      from: dialog.opacity,
+      to: 0,
+      duration: Config.popupFadeDuration,
+      removeOnDone: true,
+    );
+  }
+
+  bool _skinDialogBack() {
+    closeSkinDialog();
+    return true;
+  }
+
+  /// The dialog's gold button: buys the skin with coins (auto-equips) or,
+  /// when the balance is short, closes the dialog and opens the Shop at
+  /// the coin packs.
+  Future<void> confirmSkinDialog() async {
+    final dialog = _skinDialog;
+    if (dialog == null || _skinPurchaseRunning) return;
+    final skin = dialog.skin;
+    if (menu.wallet.balance < skin.price) {
+      _closeSkinDialog();
+      openShop(scrollToCoins: true, source: 'skins_dialog');
+      return;
+    }
+    sound.play(Sfx.click);
+    _skinPurchaseRunning = true;
+    dialog.active = false;
+    final SkinPurchaseResult result;
+    try {
+      result = await menu.skins.purchase(skin.id);
+    } finally {
+      _skinPurchaseRunning = false;
+    }
+    if (!identical(_skinDialog, dialog)) return;
+    switch (result) {
+      case SkinPurchaseResult.purchased:
+        services.track('skin_purchase', {'skin': skin.id, 'price': skin.price});
+        _closeSkinDialog();
+        showToast('${skin.name} unlocked!');
+      case SkinPurchaseResult.insufficientCoins:
+        // The balance dropped meanwhile: the dialog switches to GET COINS.
+        dialog.active = true;
+      case SkinPurchaseResult.alreadyOwned:
+      case SkinPurchaseResult.unknown:
+        _closeSkinDialog();
+    }
   }
 
   // --- No-ads popup (PRD-1 §5.1) ------------------------------------------

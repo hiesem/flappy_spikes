@@ -5,6 +5,7 @@ import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
+import 'package:flappy_spikes/menu/skin_catalog.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -135,6 +136,85 @@ void main() async {
       await tester.runAsync(() => capture(game, 2, 'shop_711@2x'));
     },
   );
+
+  // Skins (K1) at 711 in the mock's state: balance 1 250; pink (equipped),
+  // blue, green, purple and tophat owned, purple and tophat tagged NEW. NEW
+  // marks skins that were affordable and unseen when the screen opened, so
+  // purple / tophat start locked-but-new and are bought on the open screen
+  // (2 050 - 200 - 600 = 1 250), then pink is re-equipped.
+  FlameTester<FlappySpikesGame>(
+    () => createTestGame({
+      ...mockPrefs,
+      'coins': 2050,
+      'ownedSkins': ['pink', 'blue', 'green'],
+      'seenSkins': [
+        for (final skin in kSkins)
+          if (skin.id != 'purple' && skin.id != 'tophat') skin.id,
+      ],
+    }, 711),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'menu screenshot: skins_711',
+    setUp: (game, tester) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, tester) async {
+      game.openSkins();
+      await flushAndMount(game);
+      stepGame(game, 0.6);
+      await flushAndMount(game);
+      final skins = game.menu.skins;
+      expect(await skins.purchase('purple'), SkinPurchaseResult.purchased);
+      expect(await skins.purchase('tophat'), SkinPurchaseResult.purchased);
+      await skins.equip('pink');
+      game.update(0);
+      await flushAndMount(game);
+      expect(game.menu.wallet.balance, 1250);
+      final screen = game.skinsScreen!;
+      expect(
+        [
+          for (final t in screen.tiles)
+            if (t.isNew) t.skin.id,
+        ],
+        ['purple', 'tophat'],
+      );
+      await tester.runAsync(() => capture(game, 1.5, 'skins_711'));
+      await tester.runAsync(() => capture(game, 2, 'skins_711@2x'));
+    },
+  );
+
+  // Skin unlock dialogs over the Skins screen at 711: affordable (GRAPE)
+  // and short (KING at 1 000 with 250 coins).
+  for (final (name, coins, skin) in [
+    ('skins_dialog_711', 1250, 'purple'),
+    ('skins_dialog_short_711', 250, 'crown'),
+  ]) {
+    FlameTester<FlappySpikesGame>(
+      () => createTestGame({...mockPrefs, 'coins': coins}, 711),
+      gameSize: Vector2(320, 711),
+    ).testGameWidget(
+      'menu screenshot: $name',
+      setUp: (game, tester) async {
+        await game.ready();
+        await preloadImages(game);
+        await flushAndMount(game);
+      },
+      verify: (game, tester) async {
+        game.openSkins();
+        await flushAndMount(game);
+        stepGame(game, 0.6);
+        await flushAndMount(game);
+        game.tapSkin(skin);
+        await flushAndMount(game);
+        stepGame(game, 0.3);
+        await flushAndMount(game);
+        expect(game.skinDialog, isNotNull);
+        await tester.runAsync(() => capture(game, 1.5, name));
+      },
+    );
+  }
 
   // No-ads popup (P1) over the home screen at 711.
   FlameTester<FlappySpikesGame>(

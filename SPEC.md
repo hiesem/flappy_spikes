@@ -59,6 +59,13 @@ field, preserving all gameplay geometry. Portrait only.
 > purchases are granted by `lib/game/purchases.dart`. The popup also opens by
 > itself on launch from the day after install (max once a day, until three
 > dismissals, never to buyers). Settings gains a RESTORE PURCHASES link.
+>
+> The **Skins** screen (`lib/components/skins/`, layout in `Config.skin*`)
+> opens from the home tile or the Shop's featured row (straight into that
+> skin's unlock dialog). Owned skins equip on tap; locked ones open a coin
+> unlock dialog that, when the balance is short, leads to the Shop's coin
+> packs. Shop and Skins return to each other with back when one was opened
+> from the other, else home.
 
 ## Physics (Forge2D)
 

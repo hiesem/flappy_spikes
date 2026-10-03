@@ -248,16 +248,23 @@ class MenuIcon extends SpriteComponent {
   }
 }
 
-/// Gold corner tag ("NEW"): white 11 pt text, 2/5 pt padding (mock `.tag`).
+/// Gold corner tag ("NEW"): white 11 pt text, 2/5 pt padding (mock `.tag`;
+/// the Skins grid's `.tg` is 10 pt at 0.05 em).
 class MenuTag extends PositionComponent {
-  MenuTag(String text, {super.position, super.priority})
-    : _label = MenuText(
-        text,
-        fontSize: 11,
-        color: const Color(0xFFFFFFFF),
-        letterSpacingEm: 0.04,
-        position: Vector2(5, 2),
-      );
+  MenuTag(
+    String text, {
+    double fontSize = 11,
+    double letterSpacingEm = 0.04,
+    super.position,
+    super.anchor,
+    super.priority,
+  }) : _label = MenuText(
+         text,
+         fontSize: fontSize,
+         color: const Color(0xFFFFFFFF),
+         letterSpacingEm: letterSpacingEm,
+         position: Vector2(padX, padY),
+       );
 
   final MenuText _label;
   static const double padX = 5;

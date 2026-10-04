@@ -209,8 +209,8 @@ void main() {
         expect(shop.restoreLink.center.x, 160);
         expect(shop.restoreLink.y, lessThan(Config.shopRestoreTop));
         // Chrome.
-        expect(shop.coinPill.position, Vector2(14, 58));
-        expect(shop.backButton.toRect(), const Rect.fromLTWH(268, 58, 38, 38));
+        expect(shop.coinPill.toRect().topRight, const Offset(306, 58));
+        expect(shop.backButton.toRect(), const Rect.fromLTWH(14, 58, 38, 38));
         expect(shop.titleText.text, 'SHOP');
         expect(shop.titleText.position, Vector2(160, 104));
         // Everything fits above the bottom spike tips at 711.

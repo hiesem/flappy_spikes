@@ -205,13 +205,13 @@ void main() {
     await tap(g, t, const Offset(49, 502));
     expect(g.menuScene, MenuScene.shop);
     expect(r.spy.params('shop_open').single, {'source': 'tile'});
-    await tap(g, t, const Offset(287, 77));
+    await tap(g, t, const Offset(33, 77));
     expect(g.menuScene, MenuScene.home);
     expect(g.menu.slot.offered, offered);
-    await tap(g, t, const Offset(33, 77));
+    await tap(g, t, const Offset(287, 77));
     expect(g.menuScene, MenuScene.shop);
     expect(r.spy.params('shop_open').last, {'source': 'pill'});
-    await tap(g, t, const Offset(287, 77));
+    await tap(g, t, const Offset(33, 77));
     var invites = 0;
     g.onInvite = () => invites++;
     await tap(g, t, const Offset(197, 502));
@@ -465,8 +465,8 @@ void main() {
     await settle(g, t);
     expect(g.menu.noAds, isTrue);
     expect(g.menu.wallet.balance, 1000);
-    await tap(g, t, const Offset(287, 77));
-    await tap(g, t, const Offset(287, 77));
+    await tap(g, t, const Offset(33, 77));
+    await tap(g, t, const Offset(33, 77));
     final settings = g.world.children.query<SettingsPanel>().single;
     expect(settings.restoreLink, isNotNull);
     await tap(g, t, const Offset(160, 653));
@@ -518,7 +518,7 @@ void main() {
     await tap(g, t, const Offset(60, 203));
     expect(g.menu.skins.equipped, 'pink');
     expect(r.spy.params('skin_equip').last, {'skin': 'pink'});
-    await tap(g, t, const Offset(287, 77));
+    await tap(g, t, const Offset(33, 77));
     expect(g.homeScreen!.bird.sprites.skin.id, 'pink');
     expect(g.homeScreen!.skinsTile.tag, isNull);
     await tap(g, t, const Offset(49, 502));
@@ -568,7 +568,7 @@ void main() {
     r,
     t,
   ) async {
-    await tap(g, t, const Offset(287, 77));
+    await tap(g, t, const Offset(33, 77));
     await tap(g, t, const Offset(85, 310.5));
     await tap(g, t, const Offset(150, 370.5));
     expect(g.storage.muteSound, isTrue);
@@ -752,7 +752,7 @@ void main() {
       // Row 3 centre tile is TOPHAT.
       await tap(g, t, const Offset(160, 431));
       expect(g.menu.skins.equipped, 'tophat');
-      await tap(g, t, const Offset(287, 77));
+      await tap(g, t, const Offset(33, 77));
       expect(g.homeScreen!.bird.sprites.skin.id, 'tophat');
       await tap(g, t, const Offset(189, 311), fade: false);
       final bird = g.world.children.query<Bird>().single;
@@ -807,8 +807,9 @@ void main() {
     e2e('QA layout and real short-screen scroll $height', (g, r, t) async {
       final home = g.homeScreen!;
       expect(home.coinPill.y, 58);
+      expect(home.coinPill.x + home.coinPill.width, 306);
       expect(home.gearButton.y, 58);
-      expect(home.gearButton.x + home.gearButton.width, 306);
+      expect(home.gearButton.x, 14);
       expect(home.shopTile.x, 14);
       expect(home.leaderboard.x, 14);
       expect(
@@ -849,7 +850,7 @@ void main() {
       g.openShop();
       await settle(g, t, fade: true);
       final scroll = g.shopScreen!.scroll;
-      await tap(g, t, const Offset(33, 77));
+      await tap(g, t, const Offset(287, 77));
       if (height < 711) expect(scroll.offset, greaterThan(0));
       await t.dragFrom(const Offset(160, 400), const Offset(0, -450));
       await settle(g, t, fade: true);

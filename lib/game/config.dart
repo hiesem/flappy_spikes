@@ -229,9 +229,12 @@ class Config {
 
   /// Height at which the PRD table was measured.
   static const double homeReferenceHeight = 711;
-  static const double homeMargin = 14; // pill / shop tile / trophy left edge
-  static const double homeRightEdge = worldWidth - homeMargin; // 306
-  static const double homeTopRowY = 58; // pill + gear band 58..96
+  // 2.0 DEVIATION (product owner, 2026-10-04): gear / back button top-left,
+  // coin pill top-right. Gear / back = Shop tile = trophy left edge (14);
+  // pill right edge = No-ads tile right edge (306).
+  static const double homeMargin = 14; // gear / shop tile / trophy left edge
+  static const double homeRightEdge = worldWidth - homeMargin; // 306 (pill)
+  static const double homeTopRowY = 58; // gear + pill band 58..96
   static const double homeTopRowHeight = 38;
   static const double homeTitleTop = 128;
   static const double homeTitleFontSize = 42;
@@ -289,10 +292,12 @@ class Config {
       (homeStartBandTopFor(viewHeight) + homeTileRowTopFor(viewHeight)) / 2 -
       homeStartBlockHeight / 2;
 
+  /// TOP-RIGHT corner of the coin pill: the pill grows leftwards with the
+  /// balance, its right edge pinned to [homeRightEdge].
   static Vector2 homeCoinPillPositionFor(double viewHeight) =>
-      Vector2(homeMargin, homeTopRowY);
+      Vector2(homeRightEdge, homeTopRowY);
   static Rect homeGearRectFor(double viewHeight) => Rect.fromLTWH(
-    homeRightEdge - homeTopRowHeight,
+    homeMargin,
     homeTopRowY,
     homeTopRowHeight,
     homeTopRowHeight,
@@ -366,7 +371,8 @@ class Config {
 
   // --- Shared menu-screen chrome (Shop, Skins; PRD-1 §5) --------------------
   //
-  // Coin pill top-left (as on home), back button in the gear's place, title
+  // Back button top-left in the gear's place, coin pill top-right (as on
+  // home; [menuScreenPillPositionFor] is its top-right corner), title
   // centred at the top; the content scrolls in the band between the title
   // and the bottom spike tips. Everything is pinned to the top.
 

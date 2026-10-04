@@ -85,6 +85,16 @@ states" above. Everything else in this document still holds.
   death fade and the game-over panel keep 0.5 s / 0.2 s stagger
   (`Config.gameplayFadeDuration`, `Config.gameOverStaggerDuration`); colour
   crossfade and the 0.3 s white replay flash are untouched.
+- **Top row swapped: gear / back top-left, coin pill top-right** (DEVIATION
+  from PRD-1 §4.1/§5, product-owner change 2026-10-04). On home the settings
+  gear sits at x 14, y 58, 38×38; on Shop and Skins the back button takes the
+  same rect. The coin pill keeps its internal order ("+" box, balance, coin)
+  but is right-anchored: its right edge stays at 306 and it grows leftwards
+  with the balance, re-laid out on every balance change
+  (`Config.homeCoinPillPositionFor` / `menuScreenPillPositionFor` give its
+  top-RIGHT corner). New alignment rules: gear/back left edge = Shop tile left
+  edge = trophy left edge = 14; pill right edge = No-ads tile right edge = 306.
+  Settings keeps its 1.0 bottom-centre back arrow.
 - **"+N" coins line.** The game-over panel gains a small "+N" + coin line under
   the stats, showing the coins earned (interim rule: 1 coin per point, credited
   at game over; a fresh install starts at 0 coins).

@@ -215,8 +215,8 @@ void main() {
       const Offset(123, 502),
       const Offset(197, 502),
       const Offset(271, 502),
-      const Offset(287, 77),
       const Offset(33, 77),
+      const Offset(287, 77),
       const Offset(49, 609),
     ]) {
       await tap(g, t, position, fade: false);

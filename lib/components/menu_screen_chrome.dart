@@ -18,10 +18,10 @@ const List<String> kMenuScreenImages = [
 ];
 
 /// Shared chrome of the full-screen menus (Shop now, Skins next; PRD-1 §5):
-/// coin pill top-left (its "+" opens the Shop at the coin packs), a pink
-/// back button in the home gear's place, the screen title centred at the
-/// top, and a vertically drag-scrollable content area ([scroll]) between
-/// the title and the bottom spike tips. A full-screen blocker below it all
+/// a pink back button top-left in the home gear's place, the coin pill
+/// top-right (right-anchored; it opens the Shop at the coin packs), the
+/// screen title centred at the top, and a vertically drag-scrollable
+/// content area ([scroll]) between the title and the bottom spike tips. A full-screen blocker below it all
 /// swallows taps the buttons miss.
 ///
 /// Subclasses add their content in [buildContent] (into [scroll], in world
@@ -91,7 +91,7 @@ abstract class MenuScreen extends PositionComponent
       plusIcon: sprite('menu/plus.png'),
       coinIcon: sprite('menu/coin.png'),
       initialBalance: game.menu.wallet.balance,
-      position: Config.menuScreenPillPositionFor(h),
+      topRight: Config.menuScreenPillPositionFor(h),
       onPressed: () => game.openShop(scrollToCoins: true),
       isActive: isActive,
     );

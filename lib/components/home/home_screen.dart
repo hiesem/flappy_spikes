@@ -87,7 +87,7 @@ class HomeScreen extends PositionComponent
       plusIcon: icon('plus'),
       coinIcon: icon('coin'),
       initialBalance: game.menu.wallet.balance,
-      position: Config.homeCoinPillPositionFor(h),
+      topRight: Config.homeCoinPillPositionFor(h),
       onPressed: () => game.openShop(scrollToCoins: true),
       isActive: _isActive,
     );
@@ -301,18 +301,24 @@ class HomeScreen extends PositionComponent
 }
 
 /// Coin balance pill (mock `.pill`): darker 38x38 "+" box, balance in soft
-/// pink, gold coin; grows with the number of digits. The whole pill opens
-/// the Shop at the coin packs.
+/// pink, gold coin; grows leftwards with the number of digits, its
+/// top-right corner pinned to [topRight]. The whole pill opens the Shop at
+/// the coin packs.
 class CoinPill extends MenuButton {
   CoinPill({
     required this.plusIcon,
     required this.coinIcon,
     required int initialBalance,
+    required Vector2 topRight,
     required super.onPressed,
     super.isActive,
-    super.position,
   }) : _balance = initialBalance,
-       super(color: Config.menuPink, size: Vector2(0, pillHeight));
+       _topRight = topRight.clone(),
+       super(
+         color: Config.menuPink,
+         size: Vector2(0, pillHeight),
+         position: topRight.clone(),
+       );
 
   static const double pillHeight = Config.homeTopRowHeight;
   static const double plusGap = 9; // "+" box -> text
@@ -323,6 +329,7 @@ class CoinPill extends MenuButton {
 
   final Sprite plusIcon;
   final Sprite coinIcon;
+  final Vector2 _topRight;
   int _balance;
 
   late final MenuText label;
@@ -367,6 +374,8 @@ class CoinPill extends MenuButton {
     final coinX = textX + label.width + coinGap;
     _coinIcon.position = Vector2(coinX, (pillHeight - coinSize) / 2);
     size = Vector2(coinX + coinSize + padRight, pillHeight);
+    // Right-anchored: every width change re-pins the right edge.
+    position = Vector2(_topRight.x - size.x, _topRight.y);
   }
 }
 

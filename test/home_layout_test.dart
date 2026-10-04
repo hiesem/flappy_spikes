@@ -28,8 +28,10 @@ void main() async {
 
   test('Config reproduces the PRD-1 §4.1 table exactly at 711', () {
     const h = 711.0;
-    expect(Config.homeCoinPillPositionFor(h), Vector2(14, 58));
-    expect(Config.homeGearRectFor(h), const Rect.fromLTWH(268, 58, 38, 38));
+    // 2.0 DEVIATION (2026-10-04): gear top-left, pill top-right (the
+    // pill position is its top-right corner).
+    expect(Config.homeCoinPillPositionFor(h), Vector2(306, 58));
+    expect(Config.homeGearRectFor(h), const Rect.fromLTWH(14, 58, 38, 38));
     expect(Config.homeTitlePositionFor(h), Vector2(160, 128));
     expect(Config.homeBirdRectFor(h), const Rect.fromLTWH(38, 293, 44, 36));
     expect(Config.homeStartRectFor(h), const Rect.fromLTWH(96, 277, 186, 68));
@@ -92,7 +94,7 @@ void main() async {
         final tiles = home.tiles.map(rectOf).toList();
         final board = rectOf(home.leaderboard);
         final trophy = Config.homeTrophyRectFor(h);
-        expect(pill.topLeft, const Offset(14, 58));
+        expect(pill.topRight, const Offset(306, 58));
         expect(pill.height, 38);
         expect(gear, Config.homeGearRectFor(h));
         expect(bird, Config.homeBirdRectFor(h));
@@ -117,19 +119,20 @@ void main() async {
         expect(subtitle.first.top, 178);
         expect(subtitle.last.bottom, closeTo(178 + 2 * 19 * 0.9, 0.25));
 
-        // --- PRD-1 §4.1 alignment rules -------------------------------------
+        // --- Alignment rules (PRD-1 §4.1 as revised by the 2.0 DEVIATION of
+        // 2026-10-04: gear top-left, pill top-right) -------------------------
         // Pill and gear share the 58..96 band.
         expect(pill.top, gear.top);
         expect(pill.bottom, gear.bottom);
         expect(gear.top, 58);
         expect(gear.bottom, 96);
-        // Left edges 14: pill, shop tile, trophy tile.
-        expect(pill.left, 14);
+        // Left edges 14: gear, shop tile, trophy tile.
+        expect(gear.left, 14);
         expect(tiles.first.left, 14);
         expect(trophy.left, 14);
         expect(board.left, 14);
-        // Right edges 306: gear, no-ads tile.
-        expect(gear.right, 306);
+        // Right edges 306: pill, no-ads tile.
+        expect(pill.right, 306);
         expect(tiles.last.right, 306);
         // START centre y == bird centre y.
         expect(start.center.dy, bird.center.dy);
@@ -207,7 +210,7 @@ void main() async {
     () => createTestGame(const {'coins': 1234567}, 711),
     gameSize: Vector2(320, 711),
   ).testGameWidget(
-    'coin pill grows with the balance and stays clear of the gear',
+    'coin pill grows leftwards with the balance and stays clear of the gear',
     setUp: (game, tester) async {
       await game.ready();
       await preloadImages(game);
@@ -217,11 +220,48 @@ void main() async {
       final pill = game.homeScreen!.coinPill;
       expect(pill.label.text, '1 234 567');
       expect(pill.width, greaterThan(145));
-      expect(pill.x + pill.width, lessThan(Config.homeGearRectFor(711).left));
+      expect(pill.x + pill.width, 306);
+      expect(pill.x, greaterThan(Config.homeGearRectFor(711).right));
 
       await game.menu.wallet.add(1, CoinSource.play);
       game.update(0);
       expect(pill.label.text, '1 234 568');
+      expect(pill.x + pill.width, 306);
     },
   );
+
+  // 2.0 DEVIATION (2026-10-04): the pill is right-anchored on every screen
+  // with the shared chrome; its right edge never moves with the balance.
+  for (final coins in [0, 1250, 1000000]) {
+    FlameTester<FlappySpikesGame>(
+      () => createTestGame({'coins': coins}, 711),
+      gameSize: Vector2(320, 711),
+    ).testGameWidget(
+      'coin pill right edge stays at 306 for $coins coins (home, shop)',
+      setUp: (game, tester) async {
+        await game.ready();
+        await preloadImages(game);
+        await flushAndMount(game);
+      },
+      verify: (game, tester) async {
+        final home = game.homeScreen!;
+        expect(home.coinPill.balance, coins);
+        expect(rectOf(home.coinPill).topRight, const Offset(306, 58));
+        expect(home.coinPill.x, greaterThan(home.gearButton.x + 38));
+
+        game.openShop();
+        await flushAndMount(game);
+        final shop = game.shopScreen!;
+        expect(rectOf(shop.coinPill).topRight, const Offset(306, 58));
+        expect(rectOf(shop.backButton), const Rect.fromLTWH(14, 58, 38, 38));
+
+        // A balance change mid-screen relayouts the pill leftwards.
+        final before = shop.coinPill.width;
+        await game.menu.wallet.add(9000000, CoinSource.play);
+        game.update(0);
+        expect(shop.coinPill.width, greaterThan(before));
+        expect(rectOf(shop.coinPill).topRight, const Offset(306, 58));
+      },
+    );
+  }
 }

@@ -502,14 +502,23 @@ void main() {
     );
 
     shopTest(
-      'No-ads owners can still opt in to the free-coins ad',
+      'No-ads owners claim free coins without an ad (CLAIM chip)',
       prefs: const {'noAds': true},
       verify: (game, spy, ads, iap, tester) async {
-        await openShop(game);
+        final shop = await openShop(game);
+        game.update(0);
+        expect(shop.freeCoins.chipText, 'CLAIM');
+        expect(
+          shop.freeCoins.chipDimmed,
+          isFalse,
+          reason: 'owners need no ad, so availability cannot dim the chip',
+        );
         await game.claimFreeCoins();
         await settle(game);
-        expect(ads.shown, 1);
+        expect(ads.shown, 0);
         expect(game.menu.wallet.balance, 40);
+        expect(spy.last('coins_earned'), {'amount': 40, 'source': 'rewarded'});
+        expect(spy.names, isNot(contains('ad_rewarded_shown')));
       },
     );
   });
@@ -712,8 +721,7 @@ void main() {
     );
 
     shopTest(
-      'home tile: shown + dismissed (×) are logged; only the launch popup '
-      'counts toward the dismissal cap',
+      'home tile: shown + dismissed (×) are logged and count toward the cap',
       verify: (game, spy, ads, iap, tester) async {
         game.homeScreen!.noAdsTile.onPressed();
         await flushAndMount(game);
@@ -726,7 +734,7 @@ void main() {
         await settle(game);
         expect(game.noAdsPopup, isNull);
         expect(spy.last('noads_popup_dismissed'), {'trigger': 'home_tile'});
-        expect(game.storage.noAdsPopupDismissals, 0);
+        expect(game.storage.noAdsPopupDismissals, 1);
         stepGame(game, 0.3);
         await flushAndMount(game);
         expect(game.world.children.query<NoAdsPopup>(), isEmpty);

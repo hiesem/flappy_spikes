@@ -22,8 +22,12 @@ enum AdResult {
   /// The ad played and the user earned the reward — grant it.
   completed,
 
-  /// An ad was attempted but no reward was earned (failed to show, closed
-  /// early, plugin error).
+  /// The ad was displayed but closed without the reward: it counts for the
+  /// show rate, but grants nothing.
+  dismissed,
+
+  /// An ad was attempted but never displayed (failed to load, failed to
+  /// show, plugin error).
   failed,
 
   /// No ad was ready (not loaded yet, no fill, no consent, not initialized).
@@ -263,7 +267,7 @@ class AdMobRewardedAds implements RewardedAds {
       ad.fullScreenContentCallback = FullScreenContentCallback<RewardedAd>(
         onAdDismissedFullScreenContent: (ad) {
           _dispose(ad);
-          finish(earned ? AdResult.completed : AdResult.failed);
+          finish(earned ? AdResult.completed : AdResult.dismissed);
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
           debugPrint('AdMobRewardedAds show failed: ${error.message}');

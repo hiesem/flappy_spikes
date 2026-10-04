@@ -166,7 +166,7 @@ void main() {
       expect(toast(g), 'No video available right now');
       expect(
         r.spy.params('ad_rewarded_shown'),
-        contains({'placement': placement.analyticsName}),
+        contains(equals({'placement': placement.analyticsName})),
         reason:
             'PRD §6/§8 measures ads shown, including ads closed before earning the reward',
       );

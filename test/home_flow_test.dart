@@ -423,7 +423,10 @@ void main() {
         expect(game.state, GameState.start);
         expect(game.fakeAdOverlay, isNull);
         expect(game.menu.slot.armed, Powerup.none);
-        expect(spy.names, isNot(contains('ad_rewarded_shown')));
+        // The test ad was on screen (S1-07): "shown" counts it even though
+        // the reward was skipped.
+        expect(spy.last('ad_rewarded_shown'), {'placement': 'home_slot'});
+        expect(spy.names, isNot(contains('ad_reward_earned')));
         expect(
           game.world.children.query<ServiceMessage>().single.message,
           'No video available right now',

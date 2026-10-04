@@ -69,6 +69,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           width: Config.worldWidth,
           height: _clampViewHeight(worldHeight ?? Config.worldHeight),
         ),
+        world: _ClampedPhysicsWorld(),
         zoom: 1,
       ) {
     // The game uses 1 Forge2D world unit = 1 logical point (SPEC.md). The
@@ -415,9 +416,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         showToast('No video available right now');
         return;
       }
-      services.track('ad_rewarded_shown', {
-        'placement': AdPlacement.homeSlot.analyticsName,
-      });
       if (state != GameState.start || menuScene != MenuScene.home) return;
     }
     await _runFromHome(withPowerup: true);
@@ -609,34 +607,33 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   /// Shop free-coins row: a rewarded ad for +[FreeCoinsPolicy.reward]
-  /// coins, within the policy's cooldown / daily cap. Also offered to
-  /// No-ads owners (an opt-in ad).
+  /// coins, within the policy's cooldown / daily cap. No-ads owners never
+  /// see an ad (PRD-1 §3.5 / §9): they CLAIM the same +40 directly, under
+  /// the same cap and cooldown, and no `ad_rewarded_shown` is logged.
   Future<void> claimFreeCoins() async {
     if (!_sceneOnTop(MenuScene.shop) || _freeCoinsBusy) return;
     final policy = menu.freeCoins;
     if (!policy.canClaim) return;
     sound.play(Sfx.click);
-    final ads = monetization.ads;
-    if (!ads.isAvailable) {
-      showToast('No video available right now');
-      return;
-    }
     _freeCoinsBusy = true;
-    final AdResult result;
     try {
-      result = await showRewardedAd(AdPlacement.shopFreeCoins);
+      if (!menu.noAds) {
+        final ads = monetization.ads;
+        if (!ads.isAvailable) {
+          showToast('No video available right now');
+          return;
+        }
+        final result = await showRewardedAd(AdPlacement.shopFreeCoins);
+        if (result != AdResult.completed) {
+          showToast('No video available right now');
+          return;
+        }
+      }
+      await policy.recordClaim();
+      await menu.wallet.add(FreeCoinsPolicy.reward, CoinSource.rewarded);
     } finally {
       _freeCoinsBusy = false;
     }
-    if (result != AdResult.completed) {
-      showToast('No video available right now');
-      return;
-    }
-    await policy.recordClaim();
-    services.track('ad_rewarded_shown', {
-      'placement': AdPlacement.shopFreeCoins.analyticsName,
-    });
-    await menu.wallet.add(FreeCoinsPolicy.reward, CoinSource.rewarded);
     showToast('+${FreeCoinsPolicy.reward} coins');
   }
 
@@ -828,6 +825,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     switch (result) {
       case SkinPurchaseResult.purchased:
         services.track('skin_purchase', {'skin': skin.id, 'price': skin.price});
+        // The purchase auto-equips (SkinStore.purchase): mirror the
+        // explicit-equip analytics so both paths log the same events.
+        services.track('skin_equip', {'skin': skin.id});
         _closeSkinDialog();
         showToast('${skin.name} unlocked!');
       case SkinPurchaseResult.insufficientCoins:
@@ -873,8 +873,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   /// Closes the popup. [dismissed] (×, dim, Esc) logs
-  /// `noads_popup_dismissed` and, for the launch popup, counts toward the
-  /// policy's dismissal cap; a purchase closes it with `dismissed: false`.
+  /// `noads_popup_dismissed` and counts toward the policy's dismissal cap
+  /// (any trigger: the BRIEF stops automatic upsells after three manual
+  /// dismissals too); a purchase closes it with `dismissed: false`.
   void closeNoAdsPopup({bool dismissed = true}) {
     final popup = _noAdsPopup;
     if (popup == null) return;
@@ -884,9 +885,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (dismissed) {
       sound.play(Sfx.click);
       services.track('noads_popup_dismissed', {'trigger': popup.trigger});
-      if (popup.trigger == 'launch') {
-        unawaited(menu.noAdsPopup.markDismissed());
-      }
+      unawaited(menu.noAdsPopup.markDismissed());
     }
     fadeOpacity(
       popup,
@@ -908,12 +907,28 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// [Monetization.showFakeAdOverlay] on (the Linux / desktop app shell),
   /// a visible [FakeAdOverlay] stands in for the ad; otherwise (tests,
   /// AdMob) this is just `ads.show`. Callers check `isAvailable` first.
+  ///
+  /// Analytics (PRD-1 §6/§8): `ad_rewarded_shown` fires as soon as the ad
+  /// is DISPLAYED — overlay mounted or the plugin presented it — including
+  /// an ad closed before the reward (the show rate must not depend on the
+  /// outcome); `ad_reward_earned` fires when the reward is actually earned.
   Future<AdResult> showRewardedAd(AdPlacement placement) async {
     final ads = monetization.ads;
     if (!monetization.showFakeAdOverlay ||
         !monetization.isFake ||
         _fakeAd != null) {
-      return ads.show(placement);
+      final result = await ads.show(placement);
+      if (result == AdResult.completed || result == AdResult.dismissed) {
+        services.track('ad_rewarded_shown', {
+          'placement': placement.analyticsName,
+        });
+      }
+      if (result == AdResult.completed) {
+        services.track('ad_reward_earned', {
+          'placement': placement.analyticsName,
+        });
+      }
+      return result;
     }
     // The fake's scripted outcome (it also counts the ad); unavailable
     // shows no overlay at all.
@@ -927,6 +942,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     world.add(overlay);
     fadeOpacity(overlay, from: 0, to: 1, duration: Config.popupFadeDuration);
     pushBack(_fakeAdBack);
+    // Succeed mode puts a playable test ad on screen; the fail variant
+    // only shows a load error, so it is not a displayed ad.
+    if (scripted == AdResult.completed) {
+      services.track('ad_rewarded_shown', {
+        'placement': placement.analyticsName,
+      });
+    }
     final result = await overlay.result;
     _fakeAd = null;
     popBack(_fakeAdBack);
@@ -937,6 +959,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       duration: Config.popupFadeDuration,
       removeOnDone: true,
     );
+    if (result == AdResult.completed) {
+      services.track('ad_reward_earned', {
+        'placement': placement.analyticsName,
+      });
+    }
     return result;
   }
 
@@ -1007,6 +1034,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.escape) {
+      if (state == GameState.gameOver) {
+        // Back from a finished run is the panel's replay: a fresh home
+        // arrival (PRD-1 §3.6), once the panel accepts input.
+        if (_gameOverPanel?.canContinue ?? false) {
+          goHome();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      }
       return handleBack() ? KeyEventResult.handled : KeyEventResult.ignored;
     }
     if (key == LogicalKeyboardKey.keyD && debugAvailable) {
@@ -1027,7 +1063,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (!debugAvailable ||
         state != GameState.start ||
         _debugPanel != null ||
-        _fakeAd != null) {
+        _fakeAd != null ||
+        _runStarting) {
       return;
     }
     final panel = DebugPanel(onClose: closeDebugPanel);
@@ -1270,6 +1307,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// short-lived [ServiceMessage] tells the player what happened — a failed
   /// tap must not be indistinguishable from no tap.
   Future<void> showLeaderboard() async {
+    // A home action: like the tiles, the row is blocked while a run is
+    // starting or a rewarded ad is in flight. The game-over panel's
+    // trophy is not on the home screen and stays available.
+    if (state == GameState.start && !_homeInteractive) return;
     sound.play(Sfx.click);
     switch (await services.showLeaderboards()) {
       case ShowLeaderboardResult.signInFailed:
@@ -1476,5 +1517,15 @@ class _SpikeInsetAdapter implements OpacityProvider {
     for (final strip in _strips) {
       strip.visualInset = Config.menuSpikeInset * value;
     }
+  }
+}
+
+/// [Forge2DWorld] that never advances the physics world by more than
+/// [Config.maxPhysicsStep] in one frame, so a single very long frame
+/// cannot integrate the bird across the playfield.
+class _ClampedPhysicsWorld extends Forge2DWorld {
+  @override
+  void update(double dt) {
+    physicsWorld.stepDt(min(dt, Config.maxPhysicsStep));
   }
 }

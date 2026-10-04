@@ -120,6 +120,8 @@ class Purchases {
       }
       await menu.setNoAds(true);
       services.track('noads_purchased');
+      // The purchase itself, like the coin packs.
+      services.track('iap_purchase', {'product': product.storeId});
       onNoAdsGranted?.call();
       await menu.wallet.add(kNoAdsBonusCoins, CoinSource.noadsBonus);
       toast('Ads removed · +${formatAmount(kNoAdsBonusCoins)} coins');

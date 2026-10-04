@@ -154,6 +154,7 @@ class ShopScreen extends MenuScreen {
       policy: menu.freeCoins,
       adAvailable: game.monetization.ads.isAvailable,
       busy: game.freeCoinsBusy,
+      noAds: menu.noAds,
     );
     for (final card in packs) {
       card.setState(
@@ -276,7 +277,9 @@ class ShopBanner extends MenuButton {
 }
 
 /// Gold "FREE +40" row with the pink WATCH chip (PRD-1 §3.2): a rewarded ad
-/// for [FreeCoinsPolicy.reward] coins. While the policy blocks a claim the
+/// for [FreeCoinsPolicy.reward] coins. No-ads owners get the same reward
+/// without an ad, so their chip reads "CLAIM" with no video icon and ad
+/// availability never dims it. While the policy blocks a claim the
 /// chip shows the cooldown ("04:59") or "TOMORROW" (daily cap), dimmed;
 /// with no ad loaded it is dimmed but still tappable (-> toast).
 class FreeCoinsRow extends MenuButton {
@@ -319,6 +322,7 @@ class FreeCoinsRow extends MenuButton {
     required FreeCoinsPolicy policy,
     required bool adAvailable,
     required bool busy,
+    bool noAds = false,
   }) {
     final String text;
     if (policy.remainingToday <= 0) {
@@ -326,11 +330,11 @@ class FreeCoinsRow extends MenuButton {
     } else if (policy.cooldownRemaining > Duration.zero) {
       text = formatCooldown(policy.cooldownRemaining);
     } else {
-      text = 'WATCH';
+      text = noAds ? 'CLAIM' : 'WATCH';
     }
-    final claimable = text == 'WATCH';
+    final claimable = text == 'WATCH' || text == 'CLAIM';
     tappable = claimable && !busy;
-    final chipDimmed = !claimable || !adAvailable || busy;
+    final chipDimmed = !claimable || busy || (!noAds && !adAvailable);
     if (text == _chipText && chipDimmed == _chipDimmed && _chip != null) {
       return;
     }

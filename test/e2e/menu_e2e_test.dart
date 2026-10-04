@@ -481,7 +481,10 @@ void main() {
     await tap(g, t, const Offset(271, 502));
     await tap(g, t, const Offset(160, 516));
     expect(g.menu.noAds, isTrue);
-    expect(r.spy.params('iap_purchase'), contains({'product': 'no_ads'}));
+    expect(
+      r.spy.params('iap_purchase'),
+      contains(equals({'product': 'no_ads'})),
+    );
   });
 
   e2e('QA empty restore times out with feedback', (g, r, t) async {
@@ -539,7 +542,7 @@ void main() {
     await tap(g, t, const Offset(160, 203));
     await tap(g, t, center(g.skinDialog!.confirmButton));
     expect(g.menu.skins.equipped, 'blue');
-    expect(r.spy.params('skin_equip'), contains({'skin': 'blue'}));
+    expect(r.spy.params('skin_equip'), contains(equals({'skin': 'blue'})));
   }, prefs: {'coins': 100});
 
   e2e('QA insufficient coins GET COINS, shop pill scroll and Esc', (

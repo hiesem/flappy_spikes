@@ -50,7 +50,24 @@ abstract class RewardedAds {
 
   /// Plays a rewarded ad. Never throws. Returns [AdResult.completed] only
   /// when the reward was earned.
-  Future<AdResult> show(AdPlacement placement);
+  ///
+  /// [onShown] is called at most once, the moment the ad is actually
+  /// DISPLAYED (AdMob: `onAdShowedFullScreenContent`) — before the returned
+  /// future completes and independent of reward or dismissal. It is never
+  /// called for an ad that fails to load or show. Impression analytics hang
+  /// off it (PRD-1 §6/§8, DECISIONS #16).
+  Future<AdResult> show(AdPlacement placement, {void Function()? onShown});
+}
+
+/// Calls an [RewardedAds.show] `onShown` hook, swallowing anything it
+/// throws: a listener must never break ad playback.
+void _notifyShown(void Function()? onShown) {
+  if (onShown == null) return;
+  try {
+    onShown();
+  } catch (e) {
+    debugPrint('RewardedAds onShown listener threw: $e');
+  }
 }
 
 /// Ads disabled: never available.
@@ -62,7 +79,10 @@ class NoopRewardedAds implements RewardedAds {
   bool get isAvailable => false;
 
   @override
-  Future<AdResult> show(AdPlacement placement) async => AdResult.unavailable;
+  Future<AdResult> show(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) async => AdResult.unavailable;
 }
 
 /// Behaviour of [FakeRewardedAds.show].
@@ -89,12 +109,19 @@ class FakeRewardedAds implements RewardedAds {
   bool get isAvailable => mode != FakeAdMode.unavailable;
 
   @override
-  Future<AdResult> show(AdPlacement placement) async {
+  Future<AdResult> show(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) async {
     if (mode == FakeAdMode.unavailable) {
       return AdResult.unavailable;
     }
     shown++;
     placements.add(placement);
+    // Succeed mode "displays" an ad for [delay]; fail mode never displays.
+    if (mode == FakeAdMode.succeed) {
+      _notifyShown(onShown);
+    }
     if (delay > Duration.zero) {
       await Future<void>.delayed(delay);
     }
@@ -249,7 +276,10 @@ class AdMobRewardedAds implements RewardedAds {
   }
 
   @override
-  Future<AdResult> show(AdPlacement placement) async {
+  Future<AdResult> show(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) async {
     final ad = _ad;
     if (ad == null || _showing) {
       _load();
@@ -258,6 +288,7 @@ class AdMobRewardedAds implements RewardedAds {
     _ad = null;
     _showing = true;
     var earned = false;
+    var displayed = false;
     final result = Completer<AdResult>();
     void finish(AdResult r) {
       if (!result.isCompleted) result.complete(r);
@@ -265,6 +296,11 @@ class AdMobRewardedAds implements RewardedAds {
 
     try {
       ad.fullScreenContentCallback = FullScreenContentCallback<RewardedAd>(
+        onAdShowedFullScreenContent: (ad) {
+          if (displayed || result.isCompleted) return;
+          displayed = true;
+          _notifyShown(onShown);
+        },
         onAdDismissedFullScreenContent: (ad) {
           _dispose(ad);
           finish(earned ? AdResult.completed : AdResult.dismissed);

@@ -20,9 +20,11 @@ void main() {
 
   e2e('QA menu transitions finish within 170 ms', (g, r, t) async {
     // Measure game time directly, without settle's extra fade allowance.
+    // Exactly 170 ms in six frames: a single update is clamped to
+    // Config.maxFrameStep (one simulation clock, DECISIONS #18).
     Future<void> advance() async {
       await flushAndMount(g);
-      g.update(0.17);
+      stepGame(g, 0.17, dt: 0.17 / 6);
       await flushAndMount(g);
     }
 

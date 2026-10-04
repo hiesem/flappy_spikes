@@ -25,11 +25,14 @@ class Config {
   static const double maxFallSpeed = 500; // pt/s terminal velocity (downward)
   static const double scrollSpeed = 200; // pt/s leftward
 
-  /// Longest physics step in one frame: a stalled frame (app resumed from
-  /// the background, debugger pause, the rewarded-ad wait) must not
-  /// teleport the bird through pipes or into the spikes — the world slows
-  /// instead. 1/30 s still covers 30 fps devices without slowing them down.
-  static const double maxPhysicsStep = 1 / 30;
+  /// Longest simulation step in one frame. [FlappySpikesGame.update] clamps
+  /// the frame's dt ONCE, so physics, the pipe spawner, fades, the colour
+  /// crossfade and every component update share one clock: a stalled frame
+  /// (app resumed from the background, debugger pause, the rewarded-ad
+  /// wait) neither teleports the bird through pipes or into the spikes nor
+  /// spawns overlapping pipe pairs — the whole game slows instead. 1/30 s
+  /// still covers 30 fps devices without slowing them down.
+  static const double maxFrameStep = 1 / 30;
 
   // Collision categories (mirror the original bitmasks).
   static const int categoryBird = 0x1;

@@ -69,7 +69,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           width: Config.worldWidth,
           height: _clampViewHeight(worldHeight ?? Config.worldHeight),
         ),
-        world: _ClampedPhysicsWorld(),
         zoom: 1,
       ) {
     // The game uses 1 Forge2D world unit = 1 logical point (SPEC.md). The
@@ -909,19 +908,30 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// AdMob) this is just `ads.show`. Callers check `isAvailable` first.
   ///
   /// Analytics (PRD-1 §6/§8): `ad_rewarded_shown` fires as soon as the ad
-  /// is DISPLAYED — overlay mounted or the plugin presented it — including
+  /// is DISPLAYED — overlay mounted, or the `onShown` hook of
+  /// [RewardedAds.show] (AdMob `onAdShowedFullScreenContent`) — including
   /// an ad closed before the reward (the show rate must not depend on the
   /// outcome); `ad_reward_earned` fires when the reward is actually earned.
   Future<AdResult> showRewardedAd(AdPlacement placement) async {
     final ads = monetization.ads;
+    // Exactly one impression per displayed ad, logged at display time.
+    var shownLogged = false;
+    void logShown() {
+      if (shownLogged) return;
+      shownLogged = true;
+      services.track('ad_rewarded_shown', {
+        'placement': placement.analyticsName,
+      });
+    }
+
     if (!monetization.showFakeAdOverlay ||
         !monetization.isFake ||
         _fakeAd != null) {
-      final result = await ads.show(placement);
+      final result = await ads.show(placement, onShown: logShown);
+      // Safety net for an implementation that never reports display: a
+      // completed or dismissed ad was displayed, so it still counts (once).
       if (result == AdResult.completed || result == AdResult.dismissed) {
-        services.track('ad_rewarded_shown', {
-          'placement': placement.analyticsName,
-        });
+        logShown();
       }
       if (result == AdResult.completed) {
         services.track('ad_reward_earned', {
@@ -931,7 +941,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       return result;
     }
     // The fake's scripted outcome (it also counts the ad); unavailable
-    // shows no overlay at all.
+    // shows no overlay at all. The overlay below is the display, so the
+    // fake's own onShown is not used here.
     final scripted = await ads.show(placement);
     if (scripted == AdResult.unavailable) return scripted;
     final overlay = FakeAdOverlay(
@@ -945,9 +956,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // Succeed mode puts a playable test ad on screen; the fail variant
     // only shows a load error, so it is not a displayed ad.
     if (scripted == AdResult.completed) {
-      services.track('ad_rewarded_shown', {
-        'placement': placement.analyticsName,
-      });
+      logShown();
     }
     final result = await overlay.result;
     _fakeAd = null;
@@ -1432,6 +1441,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   @override
   void update(double dt) {
+    // One clamped clock for the whole simulation (Config.maxFrameStep):
+    // super.update runs the component tree (Forge2D world step, bird,
+    // pipes, camera) with this same dt, and everything below uses it too,
+    // so a stalled frame slows the game uniformly instead of letting the
+    // spawner or fades run ahead of the bodies.
+    dt = min(dt, Config.maxFrameStep);
     super.update(dt);
     _purchases?.update(dt);
 
@@ -1517,15 +1532,5 @@ class _SpikeInsetAdapter implements OpacityProvider {
     for (final strip in _strips) {
       strip.visualInset = Config.menuSpikeInset * value;
     }
-  }
-}
-
-/// [Forge2DWorld] that never advances the physics world by more than
-/// [Config.maxPhysicsStep] in one frame, so a single very long frame
-/// cannot integrate the bird across the playfield.
-class _ClampedPhysicsWorld extends Forge2DWorld {
-  @override
-  void update(double dt) {
-    physicsWorld.stepDt(min(dt, Config.maxPhysicsStep));
   }
 }

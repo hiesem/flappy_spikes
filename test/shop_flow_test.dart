@@ -467,11 +467,8 @@ void main() {
       'Esc closes the overlay, not the Shop',
       fakeAdOverlay: true,
       verify: (game, spy, ads, iap, tester) async {
-        void advance(double seconds) {
-          for (var t = 0.0; t < seconds - 1e-9; t += 0.05) {
-            game.update(0.05);
-          }
-        }
+        // 60 fps frames: one update never exceeds Config.maxFrameStep.
+        void advance(double seconds) => stepGame(game, seconds);
 
         await openShop(game);
         final claim = game.claimFreeCoins();

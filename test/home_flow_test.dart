@@ -347,11 +347,10 @@ void main() {
 
   group('fake ad overlay (Linux / desktop)', () {
     /// Steps menu time (no run yet) in small increments.
-    void advance(FlappySpikesGame game, double seconds) {
-      for (var t = 0.0; t < seconds - 1e-9; t += 0.05) {
-        game.update(0.05);
-      }
-    }
+    // 60 fps frames: one update never exceeds Config.maxFrameStep, which
+    // would slow the game clock (and the ad countdown) down.
+    void advance(FlappySpikesGame game, double seconds) =>
+        stepGame(game, seconds);
 
     homeTest(
       'off by default: the test fake completes without an overlay',
@@ -607,9 +606,10 @@ void main() {
         game.score = 4;
         // Score 5 -> stage 5 crossfade.
         game.onScoreSensor(PipePair(gapBottomY: 351));
-        game.update(0.25); // halfway through the 0.5 s crossfade
+        // 60 fps frames (a single long update is clamped to maxFrameStep).
+        stepGame(game, 0.25); // halfway through the 0.5 s crossfade
         expect(game.skinBlend, closeTo(Config.skinStageBlend / 2, 1e-9));
-        game.update(0.5);
+        stepGame(game, 0.5);
         expect(game.skinBlend, Config.skinStageBlend);
         game.update(0);
         expect(
@@ -780,7 +780,10 @@ class _GatedAds extends FakeRewardedAds {
   Completer<AdResult>? gate;
 
   @override
-  Future<AdResult> show(AdPlacement placement) async {
+  Future<AdResult> show(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) async {
     shown++;
     placements.add(placement);
     return gate!.future;

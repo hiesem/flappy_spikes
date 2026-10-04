@@ -86,6 +86,51 @@ void main() {
   );
 
   withGame.testGameWidget(
+    'stalled frames keep pipe pairs ~300 pt apart (one clamped clock)',
+    setUp: (game, tester) async {
+      await game.ready();
+      game.sound.enabled = false;
+      await preloadImages(game);
+      game.onScreenTap(); // start -> playing
+      game.update(1 / 60);
+      await flushAndMount(game);
+      // Park the bird outside the physics world so no pipe or spike can end
+      // the run: the spawner must keep running for the whole check.
+      game.world.children.query<Bird>().single.body.setActive(false);
+    },
+    verify: (game, tester) async {
+      // Every 15th frame stalls for a full second (app resume, debugger,
+      // GC). The whole simulation advances only Config.maxFrameStep for it,
+      // so the spawner and the scrolling bodies stay on one clock and the
+      // SPEC spacing (200 pt/s x 1.5 s = 300 pt) holds.
+      const minSpacing =
+          Config.scrollSpeed * Config.pipeSpawnInterval -
+          Config.scrollSpeed * Config.maxFrameStep;
+      final seen = <PipePair>{};
+      for (var frame = 0; frame < 420; frame++) {
+        game.update(frame % 15 == 14 ? 1.0 : 1 / 60);
+        await flushAndMount(game);
+        final pipes = game.world.children.query<PipePair>().toList();
+        seen.addAll(pipes);
+        final xs = pipes.map((p) => p.body.position.x).toList()..sort();
+        for (var i = 1; i < xs.length; i++) {
+          expect(
+            xs[i] - xs[i - 1],
+            greaterThanOrEqualTo(minSpacing),
+            reason: 'frame $frame: overlapping/crowded pairs at $xs',
+          );
+        }
+      }
+      expect(game.state, GameState.playing);
+      expect(
+        seen.length,
+        greaterThanOrEqualTo(3),
+        reason: 'the run must spawn several pairs to check spacing',
+      );
+    },
+  );
+
+  withGame.testGameWidget(
     'pipes despawn after leaving the left edge of the screen',
     setUp: (game, tester) async {
       await game.ready();

@@ -32,15 +32,20 @@ enum SkinPose { idle, flap, dead }
 /// Frame timing mirrors the 1.0 bird: idle alternates idle/flap every
 /// [Config.idleFrameTime]; a flap shows flap then idle for
 /// [Config.flapFrameTime] each and returns to idle; dead is a still frame.
+/// `filterQuality` stays at the Paint default for the in-run bird; the home
+/// screen passes the smoother menu sampling.
 class SkinSpriteComponent extends PositionComponent {
   SkinSpriteComponent({
     required this.sprites,
     required Color initialTint,
+    FilterQuality filterQuality = FilterQuality.none,
     super.position,
     super.size,
     super.anchor,
     super.priority,
   }) : _tint = initialTint {
+    _tintPaint.filterQuality = filterQuality;
+    _overlayPaint.filterQuality = filterQuality;
     _updateTintPaint();
   }
 

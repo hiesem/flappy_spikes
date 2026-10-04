@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show FilterQuality;
 
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
@@ -752,6 +753,20 @@ void main() {
         await flushAndMount(game);
         expect(tile.tag, 'NEW');
         expect(tile.tagComponent, isNotNull);
+      },
+    );
+  });
+
+  group('menu rendering (S1-09)', () {
+    homeTest(
+      'menu icons sample with mipmapped filtering, not nearest-neighbour',
+      verify: (game, spy, ads, tester) async {
+        final icons = game.homeScreen!.descendants().whereType<MenuIcon>();
+        expect(icons, isNotEmpty);
+        for (final icon in icons) {
+          expect(icon.paint.filterQuality, kMenuFilterQuality);
+        }
+        expect(kMenuFilterQuality, isNot(FilterQuality.none));
       },
     );
   });

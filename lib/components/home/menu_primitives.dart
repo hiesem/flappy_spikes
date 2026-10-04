@@ -230,6 +230,13 @@ class _PressShade extends Component {
   }
 }
 
+/// Sampling for all menu chrome art. The menu PNGs are authored at 4x and
+/// drawn scaled down; the `Paint` default ([FilterQuality.none]) samples
+/// nearest-neighbour, which stair-steps every contour and drops the
+/// artwork's blended edge pixels. `medium` = bilinear + mipmaps, the right
+/// filter for minification (gameplay sprites keep the default).
+const FilterQuality kMenuFilterQuality = FilterQuality.medium;
+
 /// A sprite icon from `assets/images/menu/` at its logical size; optional
 /// [recolor] paints it in one flat colour (srcIn), e.g. the soft check
 /// glyph in plum on the gold slot.
@@ -242,6 +249,7 @@ class MenuIcon extends SpriteComponent {
     super.anchor,
     super.priority,
   }) : super(sprite: sprite, size: size) {
+    paint.filterQuality = kMenuFilterQuality;
     if (recolor != null) {
       paint.colorFilter = ColorFilter.mode(recolor, BlendMode.srcIn);
     }

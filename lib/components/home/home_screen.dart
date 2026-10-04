@@ -383,6 +383,7 @@ class HomeBird extends PositionComponent {
     _sprite = SkinSpriteComponent(
       sprites: sprites,
       initialTint: sprites.skin.mockColor,
+      filterQuality: kMenuFilterQuality,
       size: Vector2(SkinDef.spriteWidth, SkinDef.spriteHeight) * scale,
       position: size / 2,
       anchor: const Anchor(SkinDef.anchorX, SkinDef.anchorY),

@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
+import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
 import 'package:flappy_spikes/menu/skin_catalog.dart';
@@ -128,7 +129,8 @@ void main() async {
     verify: (game, tester) async {
       game.openShop();
       await flushAndMount(game);
-      stepGame(game, 0.6); // home fades out, Shop fades in
+      // Home fades out, Shop fades in.
+      stepGame(game, Config.uiFadeDuration + 0.1);
       await flushAndMount(game);
       expect(game.shopScreen, isNotNull);
       expect(game.homeScreen, isNull);

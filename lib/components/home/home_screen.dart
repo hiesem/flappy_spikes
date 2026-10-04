@@ -168,7 +168,6 @@ class HomeScreen extends PositionComponent
       rect: Config.homeSlotRectFor(h),
       video: icon('video'),
       shield: icon('shield_slot'),
-      check: icon('check'),
       onPressed: game.tapPowerupSlot,
       isActive: _isActive,
     );
@@ -264,7 +263,6 @@ class HomeScreen extends PositionComponent
     }
     slotButton.setState(
       offered: menu.slot.offered,
-      armed: menu.slot.armed,
       noAds: noAds,
       adAvailable: game.monetization.ads.isAvailable,
     );
@@ -410,15 +408,16 @@ class HomeBird extends PositionComponent {
   }
 }
 
-/// The gold BIG HOOPS / SHIELD slot under START (PRD-1 §3.6): video icon +
-/// label (+ shield icon), 3 pt background-coloured outline. Armed: label +
-/// check, not tappable. Ad unavailable (and no No-ads): dimmed.
+/// The gold BIG HOOPS / SHIELD slot under START: video icon + label (+
+/// shield icon), 3 pt background-coloured outline. A tap plays a rewarded
+/// ad and then starts the run with that powerup (2.0 DEVIATION from PRD-1
+/// §3.6: there is no armed / check state). No-ads owners get no video icon
+/// (no ad); ad unavailable (and no No-ads): dimmed, still tappable (toast).
 class PowerupSlotButton extends MenuButton {
   PowerupSlotButton({
     required Rect rect,
     required this.video,
     required this.shield,
-    required this.check,
     required super.onPressed,
     super.isActive,
   }) : super(
@@ -429,20 +428,20 @@ class PowerupSlotButton extends MenuButton {
 
   final Sprite video;
   final Sprite shield;
-  final Sprite check;
 
   Color outlineColor = const Color(0xFFF1F1F1);
   final Paint _outline = Paint();
 
   Powerup _shown = Powerup.none;
-  bool _armed = false;
   bool _showVideo = true;
   bool _unavailable = false;
 
   /// The powerup the slot currently shows (exposed for tests).
   Powerup get shown => _shown;
-  bool get armed => _armed;
   bool get unavailable => _unavailable;
+
+  /// Whether the video (ad) icon is drawn (exposed for tests).
+  bool get showsVideo => _showVideo;
 
   /// Visible label ("BIG HOOPS", "SHIELD"); exposed for tests.
   String get labelText => _label?.text ?? '';
@@ -455,25 +454,19 @@ class PowerupSlotButton extends MenuButton {
 
   void setState({
     required Powerup offered,
-    required Powerup armed,
     required bool noAds,
     required bool adAvailable,
   }) {
-    final isArmed = armed != Powerup.none;
-    final shown = isArmed ? armed : offered;
-    final showVideo = !isArmed && !noAds;
-    final unavailable = !isArmed && !noAds && !adAvailable;
-    tappable = !isArmed;
+    final showVideo = !noAds;
+    final unavailable = !noAds && !adAvailable;
     dimmed = unavailable;
-    if (shown == _shown &&
-        isArmed == _armed &&
+    if (offered == _shown &&
         showVideo == _showVideo &&
         unavailable == _unavailable &&
         _label != null) {
       return;
     }
-    _shown = shown;
-    _armed = isArmed;
+    _shown = offered;
     _showVideo = showVideo;
     _unavailable = unavailable;
     if (isLoaded) _rebuild();
@@ -498,10 +491,7 @@ class PowerupSlotButton extends MenuButton {
     final items = <PositionComponent>[
       if (_showVideo) MenuIcon(video, size: Vector2.all(18)),
       label,
-      if (!_armed && _shown == Powerup.shield)
-        MenuIcon(shield, size: Vector2(18, 20)),
-      if (_armed)
-        MenuIcon(check, size: Vector2.all(14), recolor: Config.menuPlum),
+      if (_shown == Powerup.shield) MenuIcon(shield, size: Vector2(18, 20)),
     ];
     _content.addAll(items);
     HomeScreen._layoutRow(this, items, gap: 8);

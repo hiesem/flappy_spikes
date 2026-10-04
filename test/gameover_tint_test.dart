@@ -31,8 +31,11 @@ void main() {
     verify: (game, tester) async {
       game.onBirdHit();
       await flushAndMount(game); // mount the game-over panel
-      // Let the staggered fade-in run to completion (0.5 + 2 * 0.2 = 0.9 s).
-      stepGame(game, 1.0);
+      // Let the staggered fade-in run to completion.
+      stepGame(
+        game,
+        Config.gameplayFadeDuration + 2 * Config.gameOverStaggerDuration + 0.1,
+      );
 
       final panel = game.world.children.query<GameOverPanel>().single;
 

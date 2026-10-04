@@ -132,8 +132,8 @@ mixin GroupOpacity on PositionComponent implements OpacityProvider {
 /// [isActive] gates hit-testing: while it returns false (e.g. the home
 /// screen fading out after START) taps pass straight through to whatever
 /// is below — a flap must never be eaten by a fading button. [tappable]
-/// does the same per button (armed powerup slot). [dimmed] draws the button
-/// at half opacity but keeps it tappable (unavailable ad -> toast).
+/// does the same per button (e.g. a pending purchase). [dimmed] draws the
+/// button at half opacity but keeps it tappable (unavailable ad -> toast).
 class MenuButton extends PositionComponent with TapCallbacks {
   MenuButton({
     required this.onPressed,

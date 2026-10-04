@@ -66,6 +66,25 @@ states" above. Everything else in this document still holds.
   colour; from stage 5 it lerps 35 % toward the stage foreground
   (`Config.skinStageBlend`) — applied to every skin, the default pink included
   (a pure stage modulate made all skins grey). Hitbox and physics are unchanged.
+- **Powerup slot = "watch ad → play with powerup"** (DEVIATION from PRD-1
+  §3.6/§4.2, product-owner decision 2026-10-04). The gold slot always shows the
+  video icon + label (No-ads owners: no icon) and has no armed / ✓ state.
+  Tapping it plays a rewarded ad; on completion the offered powerup is armed and
+  the run starts at once through START's path, which consumes it
+  (`big_hoops_used` / `shield_armed`). A failed / unavailable ad toasts "No video
+  available right now" and stays home with nothing armed; No-ads owners start
+  immediately without an ad. Plain START never carries a powerup (a stale armed
+  value is cleared at launch); the home screen takes no input while the ad
+  plays. On Linux / desktop the fake ads show a visible "TEST AD" overlay
+  (3 s countdown; Esc closes early without reward) — also used by Shop free
+  coins.
+- **Faster menu transitions** (product-owner feedback, 2026-10-04). Menu fades
+  are 3x+ faster than 1.0: screens / home UI on START `Config.uiFadeDuration`
+  0.15 s (was 0.5), popups / dialogs `Config.popupFadeDuration` 0.07 s (was
+  0.2), stagger 0.07 s. Gameplay timing is unchanged: HUD, spike-strip slide,
+  death fade and the game-over panel keep 0.5 s / 0.2 s stagger
+  (`Config.gameplayFadeDuration`, `Config.gameOverStaggerDuration`); colour
+  crossfade and the 0.3 s white replay flash are untouched.
 - **"+N" coins line.** The game-over panel gains a small "+N" + coin line under
   the stats, showing the coins earned (interim rule: 1 coin per point, credited
   at game over; a fresh install starts at 0 coins).

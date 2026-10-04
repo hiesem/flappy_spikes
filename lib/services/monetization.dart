@@ -42,6 +42,11 @@ class Monetization {
   final RewardedAds ads;
   final IapService iap;
 
+  /// Show a visible stand-in ad (FakeAdOverlay: "TEST AD", 3 s countdown)
+  /// when the fakes are in use. Off by default so tests keep the instant
+  /// fake; the app shell turns it on for non-mobile platforms (Linux).
+  bool showFakeAdOverlay = false;
+
   /// True when both services are the in-memory fakes (the debug panel uses
   /// this to offer its fake-mode switches).
   bool get isFake => ads is FakeRewardedAds && iap is FakeIapService;

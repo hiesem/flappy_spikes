@@ -550,6 +550,23 @@ class Config {
     noAdsCardRectFor(viewHeight).bottom + 32,
   );
 
+  // --- Fake rewarded ad overlay (Linux / desktop debug only) ----------------
+
+  /// Centred card, x 20 -> 300 like the popups.
+  static Rect fakeAdCardRectFor(double viewHeight) => Rect.fromLTWH(
+    20,
+    (viewHeight - fakeAdCardHeight) / 2,
+    worldWidth - 40,
+    fakeAdCardHeight,
+  );
+  static const double fakeAdCardHeight = 260;
+  static const double fakeAdHeaderHeight = 64;
+  static const double fakeAdTitleFontSize = 30;
+  static const double fakeAdPlacementFontSize = 13;
+  static const double fakeAdCountFontSize = 64;
+  static const double fakeAdMessageFontSize = 20;
+  static const double fakeAdHintFontSize = 11;
+
   // --- Settings -------------------------------------------------------------
 
   /// "RESTORE PURCHASES" link below the privacy link (centre; 510 at 568),
@@ -577,18 +594,33 @@ class Config {
   static const String uiFont = 'Opificio Neue';
 
   // Durations.
-  static const double uiFadeDuration = 0.5;
+  // Menu transitions (home <-> settings / Shop / Skins, the home UI fading
+  // out on START, toasts): 3x+ faster than 1.0's 0.5 s after product-owner
+  // feedback (2.0 menu deviation, SPEC.md).
+  static const double uiFadeDuration = 0.15;
   static const double colorFadeDuration = 0.5;
   static const double replayFadeDuration = 0.3;
-  // No-ads popup fade in / out.
-  static const double popupFadeDuration = 0.2;
+  // Popups and dialogs (No-ads popup, skin unlock dialog, fake-ad overlay)
+  // fade in / out.
+  static const double popupFadeDuration = 0.07;
   // The run's bird fading in at its spawn point after START (the home
   // screen's bird fades out with the home screen).
   static const double runBirdFadeDuration = 0.25;
-  static const double staggerDuration = 0.2;
+  // Stagger step for staggered menu elements.
+  static const double staggerDuration = 0.07;
+  // Gameplay fades keep the 1.0 timing: the score HUD in / out, the spike
+  // strips sliding out on START, the bird fading on death, and the
+  // game-over panel's staggered fade-in chain.
+  static const double gameplayFadeDuration = 0.5;
+  static const double gameOverStaggerDuration = 0.2;
   // How long a ServiceMessage stays fully visible between its fade-in and
   // fade-out (total lifetime: uiFadeDuration + this + uiFadeDuration).
   static const double serviceMessageHoldDuration = 2.0;
+  // Fake rewarded ad overlay (Linux / desktop debug only): countdown
+  // length, then how long "REWARD GRANTED" / "Ad failed to load" stay up.
+  static const double fakeAdCountdown = 3.0;
+  static const double fakeAdResultHold = 0.8;
+  static const double fakeAdFailHold = 1.5;
 
   // Score HUD watermark: the circle is tinted this fraction of the way from
   // the foreground toward the background color, so pipes (full foreground

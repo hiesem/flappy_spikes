@@ -1,4 +1,5 @@
 import 'package:flappy_spikes/components/bird.dart';
+import 'package:flappy_spikes/components/fake_ad_overlay.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/components/menu_screen_chrome.dart';
 import 'package:flappy_spikes/components/noads_popup.dart';
@@ -18,6 +19,7 @@ final kAllImages = [
   ...kShopImages,
   ...kNoAdsPopupImages,
   ...kSkinsImages,
+  ...kFakeAdOverlayImages,
   for (final skin in kSkins) ...[
     ...skin.images,
     skin.preview,

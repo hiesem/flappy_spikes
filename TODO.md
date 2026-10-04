@@ -291,6 +291,10 @@ Linux test target. Work lives on the `feat/menu-v2` branch — **not pushed**,
 - [x] WP9 — docs: SPEC "2.0 menu (PRD-1) deviations" section, this TODO section,
       AGENTS.md environment/status/decisions, README Linux run instructions
 - [x] Gate at WP9: `flutter analyze` clean, `flutter test` 247/247 green
+- [x] WP10 — product-owner feedback: powerup slot is now "watch ad → play with
+      powerup" (ad completes → run starts with it; no armed/✓ state; visible
+      "TEST AD" overlay on Linux), and menu fades are 3x+ faster
+      (uiFade 0.15 s, popup 0.07 s; gameplay fades unchanged)
 
 ### Pending — USER-only (store / device / native config)
 - [ ] Create the IAP products in Play Console with the ids `coins_500`,

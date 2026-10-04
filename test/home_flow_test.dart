@@ -6,6 +6,7 @@ import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/debug_panel.dart';
 import 'package:flappy_spikes/components/gameover_panel.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
+import 'package:flappy_spikes/components/home/menu_primitives.dart';
 import 'package:flappy_spikes/components/pipe_pair.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
 import 'package:flappy_spikes/components/spike_strip.dart';
@@ -53,6 +54,10 @@ KeyDownEvent keyDown(LogicalKeyboardKey key) => KeyDownEvent(
   timeStamp: Duration.zero,
 );
 
+/// The analytics event a consumed powerup logs on run start.
+String usedEvent(Powerup p) =>
+    p == Powerup.bigHoops ? 'big_hoops_used' : 'shield_armed';
+
 /// Boots a home-screen game with [prefs], a spy and fake ads, then runs
 /// [verify].
 void homeTest(
@@ -60,6 +65,8 @@ void homeTest(
   Map<String, Object> prefs = const {},
   double height = 568,
   FakeAdMode adMode = FakeAdMode.succeed,
+  FakeRewardedAds? fakeAds,
+  bool fakeAdOverlay = false,
   bool exactSurface = false,
   required Future<void> Function(
     FlappySpikesGame game,
@@ -70,9 +77,14 @@ void homeTest(
   verify,
 }) {
   final spy = EventSpy();
-  final ads = FakeRewardedAds()..mode = adMode;
+  final ads = (fakeAds ?? FakeRewardedAds())..mode = adMode;
   FlameTester<FlappySpikesGame>(
-    () => createTestGame(prefs, height, spy, Monetization(ads: ads)),
+    () => createTestGame(
+      prefs,
+      height,
+      spy,
+      Monetization(ads: ads)..showFakeAdOverlay = fakeAdOverlay,
+    ),
     pumpWidget: exactSurface
         ? (gameWidget, tester) async {
             tester.view
@@ -187,51 +199,82 @@ void main() {
     );
   });
 
-  group('powerup slot (PRD-1 §3.6)', () {
+  group('powerup slot: watch ad -> play with it (2.0 deviation)', () {
+    /// No check glyph anywhere in the slot (there is no armed state).
+    void expectNoCheck(FlappySpikesGame game) {
+      final check = game.images.fromCache('menu/check.png');
+      final slot = game.homeScreen!.slotButton;
+      expect(
+        slot.descendants().whereType<MenuIcon>().where(
+          (icon) => identical(icon.sprite?.image, check),
+        ),
+        isEmpty,
+      );
+    }
+
     homeTest(
-      'ad completed -> armed (check, not tappable) -> consumed on START',
+      'ad completed -> the run starts at once with the powerup consumed',
       verify: (game, spy, ads, tester) async {
         final offered = game.menu.slot.offered;
         expect(offered, isNot(Powerup.none));
         final slot = game.homeScreen!.slotButton;
         expect(slot.shown, offered);
-        expect(slot.armed, isFalse);
-
-        await game.tapPowerupSlot();
-        game.update(0);
-        expect(ads.placements, [AdPlacement.homeSlot]);
-        expect(game.menu.slot.armed, offered);
-        expect(spy.last('ad_rewarded_shown'), {'placement': 'home_slot'});
-        expect(slot.armed, isTrue);
+        expect(slot.showsVideo, isTrue, reason: 'the ad icon is always shown');
         expect(slot.labelText, PowerupSlotButton.labelFor(offered));
-        expect(slot.tappable, isFalse, reason: 'armed slot is not tappable');
+        expectNoCheck(game);
 
-        // Tapping again does nothing (no second ad).
         await game.tapPowerupSlot();
-        expect(ads.shown, 1);
-
-        game.onScreenTap(); // START
+        expect(ads.placements, [AdPlacement.homeSlot]);
+        expect(spy.last('ad_rewarded_shown'), {'placement': 'home_slot'});
         expect(game.state, GameState.playing);
-        expect(game.menu.slot.armed, Powerup.none);
-        expect(
-          spy.names,
-          contains(offered == Powerup.bigHoops ? 'big_hoops_used' : 'shield_armed'),
-        );
+        expect(spy.names, contains(usedEvent(offered)));
+        expect(spy.names.where((n) => n == 'game_start'), hasLength(1));
+        expect(game.menu.slot.armed, Powerup.none, reason: 'consumed');
+        await flushPrefs();
+        expect(game.storage.armedPowerup, 'none');
       },
     );
 
     homeTest(
-      'No-ads owners arm without an ad; no video icon',
+      'plain START never carries a powerup (no ad either)',
+      verify: (game, spy, ads, tester) async {
+        game.onScreenTap();
+        expect(game.state, GameState.playing);
+        expect(ads.shown, 0);
+        expect(spy.names, isNot(contains('big_hoops_used')));
+        expect(spy.names, isNot(contains('shield_armed')));
+      },
+    );
+
+    homeTest(
+      'a stale armed powerup from storage is cleared at startup',
+      prefs: const {'armedPowerup': 'shield'},
+      verify: (game, spy, ads, tester) async {
+        expect(game.menu.slot.armed, Powerup.none);
+        game.onScreenTap();
+        expect(game.state, GameState.playing);
+        expect(spy.names, isNot(contains('shield_armed')));
+      },
+    );
+
+    homeTest(
+      'No-ads owners start with the powerup without an ad; no video icon',
       prefs: const {'noAds': true},
       verify: (game, spy, ads, tester) async {
+        game.update(0);
+        expect(game.homeScreen!.slotButton.showsVideo, isFalse);
+        expectNoCheck(game);
+        final offered = game.menu.slot.offered;
         await game.tapPowerupSlot();
         expect(ads.shown, 0);
-        expect(game.menu.slot.armed, game.menu.slot.offered);
+        expect(game.state, GameState.playing);
+        expect(spy.names, contains(usedEvent(offered)));
+        expect(spy.names, isNot(contains('ad_rewarded_shown')));
       },
     );
 
     homeTest(
-      'ad unavailable: dimmed slot, toast, nothing armed',
+      'ad unavailable: dimmed slot, toast, stays home, nothing armed',
       adMode: FakeAdMode.unavailable,
       verify: (game, spy, ads, tester) async {
         game.update(0);
@@ -241,6 +284,7 @@ void main() {
         expect(slot.tappable, isTrue, reason: 'tap -> toast');
         await game.tapPowerupSlot();
         await flushAndMount(game);
+        expect(game.state, GameState.start);
         expect(game.menu.slot.armed, Powerup.none);
         final toast = game.world.children.query<ServiceMessage>().single;
         expect(toast.message, 'No video available right now');
@@ -249,17 +293,182 @@ void main() {
     );
 
     homeTest(
-      'ad failed: toast, nothing armed',
+      'ad failed: toast, stays home, nothing armed',
       adMode: FakeAdMode.fail,
       verify: (game, spy, ads, tester) async {
         await game.tapPowerupSlot();
         await flushAndMount(game);
+        expect(game.state, GameState.start);
+        expect(game.homeScreen, isNotNull);
         expect(game.menu.slot.armed, Powerup.none);
         expect(game.world.children.query<ServiceMessage>(), hasLength(1));
+        expect(spy.names, isNot(contains('ad_rewarded_shown')));
+        expect(spy.names, isNot(contains('game_start')));
+        // The home screen works again afterwards.
+        game.onScreenTap();
+        expect(game.state, GameState.playing);
+      },
+    );
+
+    final gated = _GatedAds();
+    homeTest(
+      'no input while the ad plays: no double start, keys ignored',
+      fakeAds: gated,
+      verify: (game, spy, ads, tester) async {
+        gated.gate = Completer<AdResult>();
+        final tap = game.tapPowerupSlot();
+        await flushAndMount(game);
+        expect(gated.shown, 1);
+
+        game.onScreenTap();
+        await game.startRun();
+        game.onKeyEvent(keyDown(LogicalKeyboardKey.space), {});
+        game.onKeyEvent(keyDown(LogicalKeyboardKey.enter), {});
+        await game.tapPowerupSlot();
+        game.openSettings();
+        game.openShop();
+        game.openSkins();
+        game.openNoAdsPopup('home_tile');
+        expect(game.state, GameState.start);
+        expect(game.menuScene, MenuScene.home);
+        expect(game.noAdsPopup, isNull);
+        expect(gated.shown, 1, reason: 'no second ad');
+
+        gated.gate!.complete(AdResult.completed);
+        await tap;
+        await flushAndMount(game);
+        expect(game.state, GameState.playing);
+        expect(spy.names.where((n) => n == 'game_start'), hasLength(1));
+        expect(spy.names, contains(usedEvent(game.menu.slot.offered)));
+      },
+    );
+  });
+
+  group('fake ad overlay (Linux / desktop)', () {
+    /// Steps menu time (no run yet) in small increments.
+    void advance(FlappySpikesGame game, double seconds) {
+      for (var t = 0.0; t < seconds - 1e-9; t += 0.05) {
+        game.update(0.05);
+      }
+    }
+
+    homeTest(
+      'off by default: the test fake completes without an overlay',
+      verify: (game, spy, ads, tester) async {
+        expect(game.monetization.showFakeAdOverlay, isFalse);
+        await game.tapPowerupSlot();
+        expect(game.fakeAdOverlay, isNull);
+        expect(game.state, GameState.playing);
+      },
+    );
+
+    homeTest(
+      'TEST AD countdown, then reward -> run starts with the powerup',
+      fakeAdOverlay: true,
+      verify: (game, spy, ads, tester) async {
+        final offered = game.menu.slot.offered;
+        final tap = game.tapPowerupSlot();
+        await flushAndMount(game);
+        final overlay = game.fakeAdOverlay!;
+        expect(overlay.isMounted, isTrue);
+        expect(overlay.placement, AdPlacement.homeSlot);
+        expect(overlay.messageText, '3');
+        expect(game.state, GameState.start);
+
+        // Space does not start a run under the ad.
+        game.onKeyEvent(keyDown(LogicalKeyboardKey.space), {});
+        expect(game.state, GameState.start);
+
+        advance(game, 1.5);
+        expect(overlay.messageText, '2');
+        advance(game, Config.fakeAdCountdown - 1.5 + 0.05);
+        expect(overlay.granted, isTrue);
+        expect(overlay.messageText, 'REWARD GRANTED');
+        expect(game.state, GameState.start);
+
+        advance(game, Config.fakeAdResultHold + 0.05);
+        await tap;
+        await flushAndMount(game);
+        expect(game.state, GameState.playing);
+        expect(game.fakeAdOverlay, isNull);
+        expect(spy.last('ad_rewarded_shown'), {'placement': 'home_slot'});
+        expect(spy.names, contains(usedEvent(offered)));
+
+        advance(game, Config.popupFadeDuration + 0.05);
+        await flushAndMount(game);
+        expect(overlay.isMounted, isFalse, reason: 'faded out and removed');
+      },
+    );
+
+    homeTest(
+      'Esc during the countdown closes it early: no reward, stays home',
+      fakeAdOverlay: true,
+      verify: (game, spy, ads, tester) async {
+        final tap = game.tapPowerupSlot();
+        await flushAndMount(game);
+        advance(game, 1);
+        expect(
+          game.onKeyEvent(
+            KeyDownEvent(
+              physicalKey: PhysicalKeyboardKey.escape,
+              logicalKey: LogicalKeyboardKey.escape,
+              timeStamp: Duration.zero,
+            ),
+            {},
+          ),
+          KeyEventResult.handled,
+        );
+        await tap;
+        await flushAndMount(game);
+        expect(game.state, GameState.start);
+        expect(game.fakeAdOverlay, isNull);
+        expect(game.menu.slot.armed, Powerup.none);
+        expect(spy.names, isNot(contains('ad_rewarded_shown')));
+        expect(
+          game.world.children.query<ServiceMessage>().single.message,
+          'No video available right now',
+        );
+        // Home is interactive again.
+        game.onScreenTap();
+        expect(game.state, GameState.playing);
+      },
+    );
+
+    homeTest(
+      'fail mode: "Ad failed to load" briefly, then toast, stays home',
+      fakeAdOverlay: true,
+      adMode: FakeAdMode.fail,
+      verify: (game, spy, ads, tester) async {
+        final tap = game.tapPowerupSlot();
+        await flushAndMount(game);
+        expect(game.fakeAdOverlay!.messageText, 'Ad failed to load');
+        advance(game, Config.fakeAdFailHold + 0.05);
+        await tap;
+        await flushAndMount(game);
+        expect(game.fakeAdOverlay, isNull);
+        expect(game.state, GameState.start);
         expect(spy.names, isNot(contains('ad_rewarded_shown')));
       },
     );
 
+    homeTest(
+      'unavailable mode: no overlay, just the toast',
+      fakeAdOverlay: true,
+      adMode: FakeAdMode.unavailable,
+      verify: (game, spy, ads, tester) async {
+        await game.tapPowerupSlot();
+        await flushAndMount(game);
+        expect(game.fakeAdOverlay, isNull);
+        expect(game.state, GameState.start);
+        expect(
+          game.world.children.query<ServiceMessage>().single.message,
+          'No video available right now',
+        );
+      },
+    );
+  });
+
+  group('powerup slot rolls (PRD-1 §3.6)', () {
     homeTest(
       'one roll per arrival: launch (no extra roll), goHome re-rolls, '
       'settings round trip does not',
@@ -546,4 +755,16 @@ void main() {
       },
     );
   });
+}
+
+/// Fake ads whose [show] waits for [gate] (input-blocking tests).
+class _GatedAds extends FakeRewardedAds {
+  Completer<AdResult>? gate;
+
+  @override
+  Future<AdResult> show(AdPlacement placement) async {
+    shown++;
+    placements.add(placement);
+    return gate!.future;
+  }
 }

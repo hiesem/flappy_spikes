@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../components/bird.dart';
 import '../components/debug_panel.dart';
+import '../components/fake_ad_overlay.dart';
 import '../components/gameover_panel.dart';
 import '../components/home/home_screen.dart';
 import '../components/noads_popup.dart';
@@ -167,6 +168,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   NoAdsPopup? _noAdsPopup;
   bool _freeCoinsBusy = false;
   DebugPanel? _debugPanel;
+  FakeAdOverlay? _fakeAd;
   ServiceMessage? _message;
   bool _runStarting = false;
 
@@ -209,6 +211,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// True while a free-coins rewarded ad is playing.
   bool get freeCoinsBusy => _freeCoinsBusy;
 
+  /// The fake rewarded-ad overlay while it is up (null otherwise).
+  FakeAdOverlay? get fakeAdOverlay => _fakeAd;
+
   /// Current skin blend toward the stage foreground (0 in menus).
   double get skinBlend => _skinBlend;
 
@@ -235,6 +240,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         'source': source.analyticsName,
       }),
     );
+    // The slot arms a powerup only right before it starts the run, which
+    // consumes it: anything still armed here is stale (an app killed
+    // mid-start, or a pre-WP10 arm-then-START build) and must not ride
+    // along on a plain START.
+    if (menu.slot.armed != Powerup.none) menu.slot.consume();
     _purchases = Purchases(
       iap: monetization.iap,
       menu: menu,
@@ -368,22 +378,62 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
   }
 
-  /// The START button. Consumes the armed powerup (the 1.0 run ignores its
-  /// effect; part 2 reads it), awaits [beforeRunStart] if set, then starts
-  /// the run. Synchronous when [beforeRunStart] is null.
+  /// The START button: a plain run, never with a powerup (only the slot
+  /// arms one, right before it starts the run itself). Awaits
+  /// [beforeRunStart] if set; synchronous when it is null.
   Future<void> startRun() async {
-    if (state != GameState.start ||
-        menuScene != MenuScene.home ||
-        _backHandlers.isNotEmpty ||
-        _runStarting) {
-      return;
-    }
+    if (!_homeInteractive) return;
     sound.play(Sfx.click);
+    await _runFromHome();
+  }
+
+  /// Gold home slot (2.0 DEVIATION from PRD-1 §3.6, see SPEC.md): "watch
+  /// an ad -> play with the powerup". A completed rewarded ad arms the
+  /// offered powerup and starts the run at once (START's path, which
+  /// consumes it); a failed / unavailable ad leaves the player home with a
+  /// toast and nothing armed. No-ads owners skip the ad (PRD-1 Q2). The
+  /// home screen takes no input while the ad plays.
+  Future<void> tapPowerupSlot() async {
+    if (!_homeInteractive) return;
+    sound.play(Sfx.click);
+    if (!menu.noAds) {
+      final ads = monetization.ads;
+      if (!ads.isAvailable) {
+        showToast('No video available right now');
+        return;
+      }
+      // Blocks every home action (START, Space / Enter, tiles, a second
+      // slot tap) until the ad is over.
+      _runStarting = true;
+      final AdResult result;
+      try {
+        result = await showRewardedAd(AdPlacement.homeSlot);
+      } finally {
+        _runStarting = false;
+      }
+      if (result != AdResult.completed) {
+        showToast('No video available right now');
+        return;
+      }
+      services.track('ad_rewarded_shown', {
+        'placement': AdPlacement.homeSlot.analyticsName,
+      });
+      if (state != GameState.start || menuScene != MenuScene.home) return;
+    }
+    await _runFromHome(withPowerup: true);
+  }
+
+  /// Shared tail of START and the powerup slot: arms the offered powerup
+  /// ([withPowerup], slot only), awaits [beforeRunStart], then consumes the
+  /// armed powerup (the 1.0 run ignores its effect; part 2 reads it) and
+  /// starts the run. Synchronous for a plain START without a hook.
+  Future<void> _runFromHome({bool withPowerup = false}) async {
     final hook = beforeRunStart;
-    if (hook != null) {
+    if (withPowerup || hook != null) {
       _runStarting = true;
       try {
-        await hook();
+        if (withPowerup) await menu.slot.armOffered();
+        if (hook != null) await hook();
       } finally {
         _runStarting = false;
       }
@@ -413,40 +463,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         duration: Config.runBirdFadeDuration,
       );
     }
-    // The strips slide out to their full 72 pt.
-    fadeOpacity(_spikeInset, from: _spikeInset.opacity, to: 0);
+    // The strips slide out to their full 72 pt (gameplay timing).
+    fadeOpacity(
+      _spikeInset,
+      from: _spikeInset.opacity,
+      to: 0,
+      duration: Config.gameplayFadeDuration,
+    );
     _bird!
       ..enableGravity()
       ..flap();
-    fadeOpacity(_hud, from: 0, to: 1);
+    fadeOpacity(_hud, from: 0, to: 1, duration: Config.gameplayFadeDuration);
     _spawnTimer = Config.pipeSpawnInterval; // spawn the first pair now
-  }
-
-  /// Gold home slot: arm the offered powerup — free for No-ads owners,
-  /// otherwise after a completed rewarded ad (PRD-1 §3.6).
-  Future<void> tapPowerupSlot() async {
-    if (!_homeInteractive || menu.slot.armed != Powerup.none) return;
-    sound.play(Sfx.click);
-    if (menu.noAds) {
-      await menu.slot.armOffered();
-      refreshHome();
-      return;
-    }
-    final ads = monetization.ads;
-    if (!ads.isAvailable) {
-      showToast('No video available right now');
-      return;
-    }
-    final result = await ads.show(AdPlacement.homeSlot);
-    if (result == AdResult.completed) {
-      await menu.slot.armOffered();
-      services.track('ad_rewarded_shown', {
-        'placement': AdPlacement.homeSlot.analyticsName,
-      });
-      refreshHome();
-    } else {
-      showToast('No video available right now');
-    }
   }
 
   /// True while the home screen is up with nothing over it.
@@ -596,7 +624,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _freeCoinsBusy = true;
     final AdResult result;
     try {
-      result = await ads.show(AdPlacement.shopFreeCoins);
+      result = await showRewardedAd(AdPlacement.shopFreeCoins);
     } finally {
       _freeCoinsBusy = false;
     }
@@ -820,6 +848,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final launch = trigger == 'launch';
     if (_noAdsPopup != null ||
         _debugPanel != null ||
+        _fakeAd != null ||
         (!launch &&
             !_homeInteractive &&
             !_sceneOnTop(MenuScene.shop)) ||
@@ -870,6 +899,51 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   bool _noAdsPopupBack() {
     closeNoAdsPopup();
+    return true;
+  }
+
+  // --- rewarded ads -----------------------------------------------------------
+
+  /// Plays a rewarded ad for [placement]. With the in-memory fakes and
+  /// [Monetization.showFakeAdOverlay] on (the Linux / desktop app shell),
+  /// a visible [FakeAdOverlay] stands in for the ad; otherwise (tests,
+  /// AdMob) this is just `ads.show`. Callers check `isAvailable` first.
+  Future<AdResult> showRewardedAd(AdPlacement placement) async {
+    final ads = monetization.ads;
+    if (!monetization.showFakeAdOverlay ||
+        !monetization.isFake ||
+        _fakeAd != null) {
+      return ads.show(placement);
+    }
+    // The fake's scripted outcome (it also counts the ad); unavailable
+    // shows no overlay at all.
+    final scripted = await ads.show(placement);
+    if (scripted == AdResult.unavailable) return scripted;
+    final overlay = FakeAdOverlay(
+      placement: placement,
+      fails: scripted != AdResult.completed,
+    );
+    _fakeAd = overlay;
+    world.add(overlay);
+    fadeOpacity(overlay, from: 0, to: 1, duration: Config.popupFadeDuration);
+    pushBack(_fakeAdBack);
+    final result = await overlay.result;
+    _fakeAd = null;
+    popBack(_fakeAdBack);
+    fadeOpacity(
+      overlay,
+      from: overlay.opacity,
+      to: 0,
+      duration: Config.popupFadeDuration,
+      removeOnDone: true,
+    );
+    return result;
+  }
+
+  /// Esc on the fake ad: closes it early (no reward unless already
+  /// granted).
+  bool _fakeAdBack() {
+    _fakeAd?.close();
     return true;
   }
 
@@ -950,7 +1024,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// Opens the developer panel over the menus (debug builds / Linux only).
   void openDebugPanel() {
-    if (!debugAvailable || state != GameState.start || _debugPanel != null) {
+    if (!debugAvailable ||
+        state != GameState.start ||
+        _debugPanel != null ||
+        _fakeAd != null) {
       return;
     }
     final panel = DebugPanel(onClose: closeDebugPanel);
@@ -1003,7 +1080,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // that fade instead of fighting it.
     final adapter = _birdAdapter;
     if (adapter != null) {
-      fadeOpacity(adapter, from: adapter.opacity, to: 0);
+      fadeOpacity(
+        adapter,
+        from: adapter.opacity,
+        to: 0,
+        duration: Config.gameplayFadeDuration,
+      );
     }
 
     // Interim coin rule (PRD-1 §3.1): 1 coin per point, credited at game
@@ -1038,7 +1120,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     );
     _gameOverPanel = panel;
     world.add(panel);
-    fadeOpacity(_hud, from: 1, to: 0);
+    fadeOpacity(_hud, from: 1, to: 0, duration: Config.gameplayFadeDuration);
   }
 
   // --- buttons -----------------------------------------------------------

@@ -199,7 +199,7 @@ void main() {
         expect(messages.single.position.x, Config.serviceMessagePosition.x);
         expect(messages.single.position.y, Config.serviceMessagePosition.y);
 
-        stepGame(game, 0.6); // fade-in complete (0.5 s)
+        stepGame(game, Config.uiFadeDuration + 0.1); // fade-in complete
         messages = game.world.children.query<ServiceMessage>();
         expect(
           messages.single.textComponent.textRenderer.style.color,
@@ -207,8 +207,11 @@ void main() {
           reason: 'service messages use the fixed UI pink, not the stage tint',
         );
 
-        // Gone after fade-in + hold + fade-out (0.5 + 2.0 + 0.5 s total).
-        stepGame(game, 3.0);
+        // Gone after fade-in + hold + fade-out.
+        stepGame(
+          game,
+          2 * Config.uiFadeDuration + Config.serviceMessageHoldDuration,
+        );
         await flushAndMount(game);
         expect(game.world.children.query<ServiceMessage>(), isEmpty);
       },

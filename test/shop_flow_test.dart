@@ -11,6 +11,7 @@ import 'package:flappy_spikes/components/ui/service_message.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/purchases.dart';
+import 'package:flappy_spikes/menu/powerup_slot.dart';
 import 'package:flappy_spikes/menu/skin_catalog.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
 import 'package:flappy_spikes/services/game_services.dart';
@@ -102,6 +103,7 @@ void shopTest(
   FakeAdMode adMode = FakeAdMode.succeed,
   FakeIapMode iapMode = FakeIapMode.succeed,
   TestClock? clock,
+  bool fakeAdOverlay = false,
   bool exactSurface = false,
   required Future<void> Function(
     FlappySpikesGame game,
@@ -122,7 +124,8 @@ void shopTest(
       return FlappySpikesGame(
         worldHeight: height,
         services: spy,
-        monetization: Monetization(ads: ads, iap: iap),
+        monetization: Monetization(ads: ads, iap: iap)
+          ..showFakeAdOverlay = fakeAdOverlay,
         clock: testClock.call,
         soundEnabled: false,
       );
@@ -460,6 +463,45 @@ void main() {
     );
 
     shopTest(
+      'fake ad overlay (Linux): +40 only after the countdown; '
+      'Esc closes the overlay, not the Shop',
+      fakeAdOverlay: true,
+      verify: (game, spy, ads, iap, tester) async {
+        void advance(double seconds) {
+          for (var t = 0.0; t < seconds - 1e-9; t += 0.05) {
+            game.update(0.05);
+          }
+        }
+
+        await openShop(game);
+        final claim = game.claimFreeCoins();
+        await flushAndMount(game);
+        final overlay = game.fakeAdOverlay!;
+        expect(overlay.placement, AdPlacement.shopFreeCoins);
+        expect(game.freeCoinsBusy, isTrue);
+        advance(Config.fakeAdCountdown + Config.fakeAdResultHold + 0.05);
+        await claim;
+        await settle(game);
+        expect(game.fakeAdOverlay, isNull);
+        expect(game.menu.wallet.balance, 40);
+        expect(toastText(game), '+40 coins');
+
+        // Second claim after the cooldown, closed early with Esc.
+        game.storage.freeCoinsLastMs = 0;
+        final again = game.claimFreeCoins();
+        await flushAndMount(game);
+        expect(game.fakeAdOverlay, isNotNull);
+        game.onKeyEvent(escape(), {});
+        await again;
+        await settle(game);
+        expect(game.fakeAdOverlay, isNull);
+        expect(game.shopScreen, isNotNull, reason: 'Esc only closed the ad');
+        expect(game.menu.wallet.balance, 40);
+        expect(toastText(game), 'No video available right now');
+      },
+    );
+
+    shopTest(
       'No-ads owners can still opt in to the free-coins ad',
       prefs: const {'noAds': true},
       verify: (game, spy, ads, iap, tester) async {
@@ -565,16 +607,18 @@ void main() {
         expect(shop.banner.price, isNull);
         expect(shop.banner.tappable, isFalse);
 
-        // Home: tile shows AD-FREE, the slot arms without an ad.
+        // Home: tile shows AD-FREE, the slot starts the run without an ad.
         shop.backButton.onPressed();
         await flushAndMount(game);
         final home = game.homeScreen!;
         expect(home.noAdsTile.owned, isTrue);
         game.update(0);
         expect(home.slotButton.labelText, isNotEmpty);
+        expect(home.slotButton.showsVideo, isFalse);
         await game.tapPowerupSlot();
         expect(ads.shown, 0);
-        expect(game.menu.slot.armed, game.menu.slot.offered);
+        expect(game.state, GameState.playing);
+        expect(game.menu.slot.armed, Powerup.none, reason: 'consumed');
 
         // A store re-delivery never grants the bonus twice.
         unawaited(iap.buy(IapProduct.noAds));

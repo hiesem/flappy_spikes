@@ -52,7 +52,7 @@ class GameOverPanel extends PositionComponent {
 
   double _time = 0;
   static const double _totalFade =
-      Config.uiFadeDuration + 2 * Config.staggerDuration;
+      Config.gameplayFadeDuration + 2 * Config.gameOverStaggerDuration;
 
   @override
   Future<void> onLoad() async {
@@ -178,9 +178,10 @@ class GameOverPanel extends PositionComponent {
   }
 
   void _applyFades() {
-    final overall = (_time / Config.uiFadeDuration).clamp(0.0, 1.0);
+    final overall = (_time / Config.gameplayFadeDuration).clamp(0.0, 1.0);
     double stagger(int index) =>
-        ((_time - index * Config.staggerDuration) / Config.staggerDuration)
+        ((_time - index * Config.gameOverStaggerDuration) /
+                Config.gameOverStaggerDuration)
             .clamp(0.0, 1.0);
 
     _title.opacity = overall;

@@ -43,8 +43,8 @@ void main() {
       game.onScreenTap();
       expect(game.state, GameState.playing);
 
-      // The home screen fades out over 0.5 s and is then removed.
-      stepGame(game, 0.7, flapBelow: 320);
+      // The home screen fades out and is then removed.
+      stepGame(game, Config.uiFadeDuration + 0.2, flapBelow: 320);
       await flushAndMount(game);
       expect(game.world.children.query<HomeScreen>(), isEmpty);
 
@@ -134,7 +134,11 @@ void main() {
       expect(game.storage.bestScore, 3,
           reason: 'score 0 must not beat the stored best of 3');
 
-      stepGame(game, 1.0); // staggered fade-in: 0.5 + 2 * 0.2 = 0.9 s
+      // Staggered fade-in (gameplay timing, unchanged from 1.0).
+      stepGame(
+        game,
+        Config.gameplayFadeDuration + 2 * Config.gameOverStaggerDuration + 0.1,
+      );
       final panel = game.world.children.query<GameOverPanel>().single;
       for (final button in panel.children.whereType<SpriteButton>()) {
         expect(button.opacity, 1,

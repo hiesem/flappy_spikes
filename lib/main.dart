@@ -45,7 +45,10 @@ Future<void> main() async {
 
   // Rewarded ads + in-app purchases: AdMob / Play Billing / StoreKit on
   // mobile, in-memory fakes elsewhere (Linux).
-  final monetization = Monetization.forPlatform();
+  // Off mobile the fakes are in use: show a visible test ad (countdown
+  // overlay) instead of completing instantly.
+  final monetization = Monetization.forPlatform()
+    ..showFakeAdOverlay = !_isMobile;
 
   final game = FlappySpikesGame(
     worldHeight: worldHeight,
@@ -72,6 +75,10 @@ Future<void> main() async {
   // initialize() never throws; until it lands ads are simply unavailable.
   unawaited(monetization.initialize());
 }
+
+/// Android / iOS host (where [Monetization.forPlatform] picks the real
+/// plugins).
+bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
 /// Fallback aspect (9:19.5 -> ~693 pt) when no usable window size exists
 /// yet: the Linux runner opens a fixed 9:19.5 window.

@@ -10,16 +10,19 @@ import '../game/tintable.dart';
 import 'home/home_screen.dart';
 import 'home/menu_primitives.dart';
 
-/// Chrome images every [MenuScreen] draws (under `assets/images/`).
-const List<String> kMenuScreenImages = [
+/// Images of the shared menu chrome the game owns ([CoinPill],
+/// [MenuCornerBox]).
+const List<String> kMenuChromeImages = [
   'menu/plus.png',
   'menu/coin.png',
+  'menu/gear.png',
   'menu/back.png',
 ];
 
 /// Shared chrome of the full-screen menus (Shop now, Skins next; PRD-1 §5):
-/// a pink back button top-left in the home gear's place, the coin pill
-/// top-right (right-anchored; it opens the Shop at the coin packs), the
+/// a pink back button top-left in the home gear's place and the coin pill
+/// top-right (both drawn by the game's shared chrome, which survives the
+/// screen crossfades: [MenuCornerBox], [CoinPill]), the
 /// screen title centred at the top, and a vertically drag-scrollable
 /// content area ([scroll]) between the title and the bottom spike tips. A full-screen blocker below it all
 /// swallows taps the buttons miss.
@@ -43,14 +46,18 @@ abstract class MenuScreen extends PositionComponent
   bool active = true;
   bool isActive() => active;
 
-  late final CoinPill coinPill;
+  /// The game's shared coin pill (drawn above this screen; it stays put
+  /// across home / Shop / Skins transitions).
+  CoinPill get coinPill => game.coinPill;
+
+  /// Tap target of the back button; its pink box and chevron are the
+  /// game's shared [MenuCornerBox] below this screen.
   late final MenuButton backButton;
   late final MenuText titleText;
   late final MenuScrollArea scroll;
 
   final Map<String, Sprite> _sprites = {};
   Color _tint = const Color(0xFF828282);
-  int? _balance;
 
   /// Current stage foreground (text colour of the title, amounts, ...).
   Color get tint => _tint;
@@ -63,7 +70,7 @@ abstract class MenuScreen extends PositionComponent
   /// Images (under `assets/images/`) [buildContent] uses via [sprite].
   List<String> get contentImages => const [];
 
-  /// A loaded sprite from [kMenuScreenImages] or [contentImages].
+  /// A loaded sprite from [kMenuChromeImages] or [contentImages].
   Sprite sprite(String path) => _sprites[path]!;
 
   /// Adds the screen's content to [scroll].
@@ -76,40 +83,37 @@ abstract class MenuScreen extends PositionComponent
   /// mostly the initial tint).
   void onTint(Color color) {}
 
+  /// True once the screen was taken off the tree (a fast back / Esc can
+  /// close it, and its fade-out remove it, before or while it loads).
+  bool get _detached => parent == null || isRemoving || isRemoved;
+
+  /// Whether [onLoad] ran to the end and built the screen (false for a
+  /// screen closed before it could load).
+  bool get built => _built;
+  bool _built = false;
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    // A screen removed before its load started or finished just stays
+    // empty: there is no game to read from any more, and it is gone anyway.
+    if (_detached) return;
+    final game = this.game;
     final h = game.viewHeight;
     size = Vector2(Config.worldWidth, h);
-    final paths = {...kMenuScreenImages, ...contentImages}.toList();
+    final paths = {...kMenuChromeImages, ...contentImages}.toList();
     final loaded = await Future.wait(paths.map(game.images.load));
+    if (_detached) return;
     for (var i = 0; i < paths.length; i++) {
       _sprites[paths[i]] = Sprite(loaded[i]);
     }
 
-    coinPill = CoinPill(
-      plusIcon: sprite('menu/plus.png'),
-      coinIcon: sprite('menu/coin.png'),
-      initialBalance: game.menu.wallet.balance,
-      topRight: Config.menuScreenPillPositionFor(h),
-      onPressed: () => game.openShop(scrollToCoins: true),
-      isActive: isActive,
-    );
     final backRect = Config.menuScreenBackRectFor(h);
     backButton = MenuButton(
-      color: Config.menuPink,
       position: backRect.topLeft.toVector2(),
       size: backRect.size.toVector2(),
       onPressed: onBack,
       isActive: isActive,
-      children: [
-        MenuIcon(
-          sprite('menu/back.png'),
-          size: Vector2.all(22),
-          position: backRect.size.toVector2() / 2,
-          anchor: Anchor.center,
-        ),
-      ],
     );
     titleText = MenuText(
       title,
@@ -132,12 +136,12 @@ abstract class MenuScreen extends PositionComponent
     addAll([
       _ScreenTapBlocker(size: size.clone()),
       scroll,
-      coinPill,
       backButton,
       titleText,
     ]);
     await buildContent();
-    _syncChrome(force: true);
+    _built = true;
+    if (_detached) return;
     sync(force: true);
     setTint(_tint);
   }
@@ -145,22 +149,13 @@ abstract class MenuScreen extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
-    _syncChrome();
-    sync();
-  }
-
-  void _syncChrome({bool force = false}) {
-    final balance = game.menu.wallet.balance;
-    if (force || balance != _balance) {
-      _balance = balance;
-      coinPill.balance = balance;
-    }
+    if (_built) sync();
   }
 
   @override
   void setTint(Color color) {
     _tint = color;
-    if (isLoaded) {
+    if (_built) {
       titleText.color = color;
       onTint(color);
     }

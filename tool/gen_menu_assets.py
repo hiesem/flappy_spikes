@@ -109,6 +109,11 @@ ICONS = {
     "back": [(SHOP, 1, ".back svg", 0, PINK)],
     "gear": [(HOME, 0, ".gear svg", 0, PINK)],
 }
+# Icons the app draws larger than any mock usage: rasterised at this size
+# (pt, square) instead of the mock's, so the biggest in-app use is still a
+# clean downscale. The manifest keeps the mock's logical size. check: the
+# owned No-ads home tile draws it in the 38 pt icon box (160 px PNG).
+RENDER_PT = {"check": 40}
 # Glyph parts the mock paints in tile-pink are real cut-outs (transparent),
 # so the icon also reads on a pressed/darker tile.
 CUTOUT_ICONS = {"shop", "skins", "trophy"}
@@ -244,7 +249,8 @@ def gen_icons(r: Renderer, out: Path):
         page, phone, sel, idx, bg = uses[0]
         info = r.probe(page, phone, sel, idx)
         w, h = round(info["w"] * 4) / 4, round(info["h"] * 4) / 4
-        inner = prepare_svg(info, w, h, name)
+        rw = rh = RENDER_PT.get(name)
+        inner = prepare_svg(info, rw or w, rh or h, name)
         img, (lw, lh) = r.render(standalone_page(inner, info["color"], info["fill"], None),
                                  "#w > svg")
         lw, lh = round(lw * 4) / 4, round(lh * 4) / 4
@@ -252,7 +258,7 @@ def gen_icons(r: Renderer, out: Path):
         if img.size != target:
             img = img.resize(target, Image.LANCZOS)
         img.save(out / f"{name}.png", optimize=True)
-        manifest[name] = [lw, lh]
+        manifest[name] = [w, h] if rw else [lw, lh]
         for (pg, ph, s, i, b) in uses:
             if (pg, ph) in MOCK_PNG:
                 checks.append((name, img, r.probe(pg, ph, s, i), (pg, ph), b))

@@ -80,9 +80,10 @@ void main() async {
     required double height,
     required Powerup slot,
     List<double> scales = const [1.5, 2],
+    Map<String, Object> prefs = const {},
   }) {
     FlameTester<FlappySpikesGame>(
-      () => createTestGame(mockPrefs, height),
+      () => createTestGame({...mockPrefs, ...prefs}, height),
       gameSize: Vector2(320, height),
     ).testGameWidget(
       'menu screenshot: $name',
@@ -109,6 +110,14 @@ void main() async {
   homeShot('home_711_bighoops', height: 711, slot: Powerup.bigHoops);
   homeShot('home_711_shield', height: 711, slot: Powerup.shield);
   homeShot('home_568', height: 568, slot: Powerup.bigHoops);
+  // No-ads owner: check in the tile's icon slot, "AD-FREE" label, dimmed.
+  homeShot(
+    'home_711_noads_owned',
+    height: 711,
+    slot: Powerup.bigHoops,
+    scales: const [1.5],
+    prefs: const {'noAds': true},
+  );
 
   // Shop (S1-B) at 711: mock balance; pink/blue/green owned so the
   // featured skin is GRAPE as in the mock (its catalogue price is 200, the
@@ -136,6 +145,29 @@ void main() async {
       expect(game.homeScreen, isNull);
       await tester.runAsync(() => capture(game, 1.5, 'shop_711'));
       await tester.runAsync(() => capture(game, 2, 'shop_711@2x'));
+    },
+  );
+
+  // Shop banner for a No-ads owner: check in the icon slot, "AD-FREE".
+  FlameTester<FlappySpikesGame>(
+    () => createTestGame({...mockPrefs, 'noAds': true}, 711),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'menu screenshot: shop_711_noads_owned',
+    setUp: (game, tester) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, tester) async {
+      game.openShop();
+      await flushAndMount(game);
+      stepGame(game, Config.uiFadeDuration + 0.1);
+      await flushAndMount(game);
+      expect(game.shopScreen!.banner.owned, isTrue);
+      await tester.runAsync(
+        () => capture(game, 1.5, 'shop_711_noads_owned@1.5x'),
+      );
     },
   );
 

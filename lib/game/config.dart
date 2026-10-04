@@ -263,6 +263,9 @@ class Config {
   static const double homeTileHeight = 92;
   static const double homeTileGap = 4;
   static const double homeTileIconSize = 38;
+  // Owned No-ads tile: the check glyph (24-unit viewBox, ink ~16 x 12.5)
+  // drawn in the icon slot in the same 38 pt box as the crossed-AD icon.
+  static const double homeTileCheckSize = homeTileIconSize;
   static const double homeLeaderboardSize = 70;
   static const double homeTrophySize = 44;
   static const double homeStatsGap = 14; // trophy tile -> stats text

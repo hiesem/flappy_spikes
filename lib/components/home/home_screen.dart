@@ -14,9 +14,6 @@ import 'menu_primitives.dart';
 
 /// Images the home screen draws (all under `assets/images/`).
 const List<String> kHomeImages = [
-  'menu/plus.png',
-  'menu/coin.png',
-  'menu/gear.png',
   'menu/play.png',
   'menu/video.png',
   'menu/shield_slot.png',
@@ -53,7 +50,12 @@ class HomeScreen extends PositionComponent
 
   Color _tint = const Color(0xFF828282);
 
-  late final CoinPill coinPill;
+  /// The coin pill is shared chrome owned by the game (it stays put across
+  /// home / Shop / Skins transitions), drawn above this screen.
+  CoinPill get coinPill => game.coinPill;
+
+  /// Tap target of the settings gear; its pink box and glyph are the
+  /// game's shared [MenuCornerBox] below this screen.
   late final MenuButton gearButton;
   late final MenuText title;
   late final List<MenuText> subtitle;
@@ -70,12 +72,20 @@ class HomeScreen extends PositionComponent
 
   bool _isActive() => active;
 
+  /// True once the screen was taken off the tree (e.g. a replay right
+  /// after it was added) — see [MenuScreen.built].
+  bool get _detached => parent == null || isRemoving || isRemoved;
+  bool _built = false;
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    if (_detached) return;
+    final game = this.game;
     final h = game.viewHeight;
     final images = game.images;
     final loaded = await Future.wait(kHomeImages.map(images.load));
+    if (_detached) return;
     final sprites = {
       for (var i = 0; i < kHomeImages.length; i++)
         kHomeImages[i]: Sprite(loaded[i]),
@@ -83,29 +93,15 @@ class HomeScreen extends PositionComponent
     Sprite icon(String name) => sprites['menu/$name.png']!;
 
     // --- top row ----------------------------------------------------------
-    coinPill = CoinPill(
-      plusIcon: icon('plus'),
-      coinIcon: icon('coin'),
-      initialBalance: game.menu.wallet.balance,
-      topRight: Config.homeCoinPillPositionFor(h),
-      onPressed: () => game.openShop(scrollToCoins: true),
-      isActive: _isActive,
-    );
+    // The coin pill and the gear's box + glyph are the game's shared chrome
+    // (see FlappySpikesGame.coinPill / MenuCornerBox); only the gear's tap
+    // target (and its pressed shade) lives here.
     final gearRect = Config.homeGearRectFor(h);
     gearButton = MenuButton(
-      color: Config.menuPink,
       position: gearRect.topLeft.toVector2(),
       size: gearRect.size.toVector2(),
       onPressed: game.openSettings,
       isActive: _isActive,
-      children: [
-        MenuIcon(
-          icon('gear'),
-          size: Vector2.all(26),
-          position: gearRect.size.toVector2() / 2,
-          anchor: Anchor.center,
-        ),
-      ],
     );
 
     // --- title ------------------------------------------------------------
@@ -197,7 +193,6 @@ class HomeScreen extends PositionComponent
     );
 
     addAll([
-      coinPill,
       gearButton,
       titleHotspot,
       title,
@@ -208,6 +203,7 @@ class HomeScreen extends PositionComponent
       ...tiles,
       leaderboard,
     ]);
+    _built = true;
     _sync(force: true);
     setTint(_tint);
   }
@@ -223,7 +219,6 @@ class HomeScreen extends PositionComponent
 
   // --- state sync ------------------------------------------------------------
 
-  int? _balance;
   bool? _hasNew;
   bool? _noAds;
   String? _skin;
@@ -231,16 +226,11 @@ class HomeScreen extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
-    _sync();
+    if (_built) _sync();
   }
 
   void _sync({bool force = false}) {
     final menu = game.menu;
-    final balance = menu.wallet.balance;
-    if (force || balance != _balance) {
-      _balance = balance;
-      coinPill.balance = balance;
-    }
     final hasNew = menu.skins.hasNewBadge;
     if (force || hasNew != _hasNew) {
       _hasNew = hasNew;
@@ -249,7 +239,7 @@ class HomeScreen extends PositionComponent
     final noAds = menu.noAds;
     if (force || noAds != _noAds) {
       _noAds = noAds;
-      // PRD-1 §3.5: owners keep the tile, dimmed, as "AD-FREE ✓".
+      // PRD-1 §3.5: owners keep the tile, dimmed: check icon + "AD-FREE".
       noAdsTile
         ..dimmed = noAds
         ..owned = noAds;
@@ -276,13 +266,13 @@ class HomeScreen extends PositionComponent
 
   /// Re-reads all menu state now (instead of on the next frame).
   void refresh() {
-    if (isLoaded) _sync(force: true);
+    if (_built) _sync(force: true);
   }
 
   void setStats({required int bestScore, required int gamesPlayed}) {
     this.bestScore = bestScore;
     this.gamesPlayed = gamesPlayed;
-    if (isLoaded) {
+    if (_built) {
       leaderboard.setStats(bestScore: bestScore, gamesPlayed: gamesPlayed);
     }
   }
@@ -290,7 +280,7 @@ class HomeScreen extends PositionComponent
   @override
   void setTint(Color color) {
     _tint = color;
-    if (isLoaded) {
+    if (_built) {
       title.color = color;
       for (final line in subtitle) {
         line.color = color;
@@ -304,14 +294,18 @@ class HomeScreen extends PositionComponent
 /// pink, gold coin; grows leftwards with the number of digits, its
 /// top-right corner pinned to [topRight]. The whole pill opens the Shop at
 /// the coin packs.
-class CoinPill extends MenuButton {
+///
+/// One instance, owned by the game, serves home, Shop and Skins (all pin
+/// it to the same corner): it survives their crossfades at full opacity
+/// and only fades with a scene that has no pill (settings, a run).
+class CoinPill extends MenuButton
+    with GroupOpacity, HasGameReference<FlappySpikesGame> {
   CoinPill({
-    required this.plusIcon,
-    required this.coinIcon,
     required int initialBalance,
     required Vector2 topRight,
     required super.onPressed,
     super.isActive,
+    super.priority,
   }) : _balance = initialBalance,
        _topRight = topRight.clone(),
        super(
@@ -327,8 +321,6 @@ class CoinPill extends MenuButton {
   static const double padRight = 12;
   static const double fontSize = 20;
 
-  final Sprite plusIcon;
-  final Sprite coinIcon;
   final Vector2 _topRight;
   int _balance;
 
@@ -337,6 +329,7 @@ class CoinPill extends MenuButton {
 
   int get balance => _balance;
   set balance(int value) {
+    if (value == _balance) return;
     _balance = value;
     if (isLoaded) _layout();
   }
@@ -344,6 +337,9 @@ class CoinPill extends MenuButton {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    final images = game.images;
+    final plusIcon = Sprite(await images.load('menu/plus.png'));
+    final coinIcon = Sprite(await images.load('menu/coin.png'));
     label = MenuText(
       formatCoins(_balance),
       fontSize: fontSize,
@@ -377,6 +373,58 @@ class CoinPill extends MenuButton {
     // Right-anchored: every width change re-pins the right edge.
     position = Vector2(_topRight.x - size.x, _topRight.y);
   }
+}
+
+/// The pink 38 pt box in the top-left corner: home's settings gear and the
+/// menu screens' back chevron share it. Owned by the game like [CoinPill]
+/// and drawn BELOW the screens, whose transparent [MenuButton]s on top
+/// take the taps (and draw the pressed shade). The box itself keeps full
+/// opacity across screen-to-screen crossfades; only the glyph crossfades
+/// (gear <-> back), and Shop <-> Skins shows one steady chevron.
+class MenuCornerBox extends PositionComponent
+    with GroupOpacity, HasGameReference<FlappySpikesGame> {
+  MenuCornerBox({required Rect rect, super.priority})
+    : super(position: rect.topLeft.toVector2(), size: rect.size.toVector2());
+
+  static const double gearSize = 26;
+  static const double backSize = 22;
+
+  late final MenuIcon _gear;
+  late final MenuIcon _back;
+  final Paint _fill = Paint()..color = Config.menuPink;
+  double _gearMix = 1;
+
+  /// Share of the glyph that is the gear (1 = home, 0 = Shop / Skins); the
+  /// chevron gets the rest. Within the box's own [opacity].
+  double get gearMix => _gearMix;
+  set gearMix(double value) {
+    _gearMix = value.clamp(0.0, 1.0);
+    if (isLoaded) _applyMix();
+  }
+
+  void _applyMix() {
+    _gear.opacity = _gearMix;
+    _back.opacity = 1 - _gearMix;
+  }
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    final images = game.images;
+    MenuIcon glyph(Image image, double side) => MenuIcon(
+      Sprite(image),
+      size: Vector2.all(side),
+      position: size / 2,
+      anchor: Anchor.center,
+    );
+    _gear = glyph(await images.load('menu/gear.png'), gearSize);
+    _back = glyph(await images.load('menu/back.png'), backSize);
+    _applyMix();
+    addAll([_gear, _back]);
+  }
+
+  @override
+  void render(Canvas canvas) => canvas.drawRect(size.toRect(), _fill);
 }
 
 /// The equipped bird in the start block, drawn exactly like the in-game
@@ -562,14 +610,17 @@ class MenuTile extends MenuButton {
     if (isLoaded) _applyTag();
   }
 
-  /// No-ads tile after purchase: label "AD-FREE" + check.
+  /// No-ads tile after purchase: the soft check replaces the crossed-AD
+  /// icon in the icon slot and the label reads "AD-FREE" (PO 2026-10-04:
+  /// an inline check truncated the label in the 70 pt tile).
   bool get owned => _owned;
   set owned(bool value) {
     _owned = value;
     if (isLoaded) _applyLabel();
   }
 
-  MenuIcon? _check;
+  /// Whether the icon slot currently shows the check (exposed for tests).
+  bool get showsCheck => _owned && _checkSprite != null;
 
   @override
   Future<void> onLoad() async {
@@ -591,26 +642,25 @@ class MenuTile extends MenuButton {
 
   void _applyLabel() {
     label.text = _owned ? 'AD-FREE' : _labelText;
-    _check?.removeFromParent();
-    _check = null;
-    final groupHeight = icon.height + iconGap + label.height;
-    final top = (height - groupHeight) / 2;
-    icon.position = Vector2((width - icon.width) / 2, top);
-    final labelY = top + icon.height + iconGap;
-    if (_owned && _checkSprite != null) {
-      final check = MenuIcon(_checkSprite, size: Vector2.all(10));
-      const gap = 3.0;
-      final rowWidth = label.width + gap + check.width;
-      label.position = Vector2((width - rowWidth) / 2, labelY);
-      check.position = Vector2(
-        label.x + label.width + gap,
-        labelY + (label.height - check.height) / 2,
+    final check = showsCheck;
+    icon
+      ..sprite = check ? _checkSprite : _iconSprite
+      ..size = Vector2.all(
+        check ? Config.homeTileCheckSize : Config.homeTileIconSize,
       );
-      _check = check;
-      add(check);
-    } else {
-      label.position = Vector2((width - label.width) / 2, labelY);
-    }
+    // The column keeps the regular icon box so the label stays on the
+    // same baseline as the other tiles; the check is centred in it.
+    const iconBox = Config.homeTileIconSize;
+    final groupHeight = iconBox + iconGap + label.height;
+    final top = (height - groupHeight) / 2;
+    icon.position = Vector2(
+      (width - icon.width) / 2,
+      top + (iconBox - icon.height) / 2,
+    );
+    label.position = Vector2(
+      (width - label.width) / 2,
+      top + iconBox + iconGap,
+    );
   }
 
   void _applyTag() {

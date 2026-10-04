@@ -159,6 +159,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   late final SpikeStrip _ground;
   late final _SpikeInsetAdapter _spikeInset;
   HomeScreen? _home;
+  late final CoinPill _coinPill;
+  late final MenuCornerBox _cornerBox;
+
+  /// Every home / Shop / Skins screen still on screen (the current one and
+  /// any fading out): the shared chrome's opacity follows them.
+  final List<PositionComponent> _chromeHosts = [];
+
+  /// Set by a screen-to-screen hop between two screens that both show the
+  /// chrome; it then stays fully opaque until the old screen is gone.
+  bool _chromeHold = false;
   GameOverPanel? _gameOverPanel;
   SettingsPanel? _settingsPanel;
   ShopScreen? _shop;
@@ -195,6 +205,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// The home screen while it is up (null in runs / settings).
   HomeScreen? get homeScreen => _home;
+
+  /// The coin pill shared by home, Shop and Skins (see [_updateMenuChrome]).
+  CoinPill get coinPill => _coinPill;
+
+  /// The top-left box behind home's gear and the screens' back button.
+  MenuCornerBox get cornerBox => _cornerBox;
 
   /// The Shop while it is open (null otherwise).
   ShopScreen? get shopScreen => _shop;
@@ -288,6 +304,27 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     registerTintable(_hud);
     world.add(TapCatcher());
 
+    // Shared menu chrome: one coin pill above the screens (it takes its own
+    // taps) and one top-left box below them (their gear / back buttons are
+    // transparent tap targets on top). Both outlive the screens, so a
+    // crossfade between two screens that show them never dims them.
+    _coinPill = CoinPill(
+      initialBalance: menu.wallet.balance,
+      topRight: Config.homeCoinPillPositionFor(viewHeight),
+      onPressed: () => openShop(scrollToCoins: true),
+      isActive: () =>
+          _homeInteractive ||
+          _sceneOnTop(MenuScene.shop) ||
+          _sceneOnTop(MenuScene.skins),
+      priority: 21,
+    )..opacity = 0;
+    _cornerBox = MenuCornerBox(
+      rect: Config.homeGearRectFor(viewHeight),
+      priority: 19,
+    )..opacity = 0;
+    world.add(_cornerBox);
+    world.add(_coinPill);
+
     // First home arrival (app launch): PowerupSlot already rolled in its
     // constructor, so no extra roll here.
     _setupStartScene();
@@ -332,8 +369,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       gamesPlayed: storage.gamesPlayed,
     );
     _home = home;
+    _chromeHosts.add(home);
     world.add(home);
     registerTintable(home);
+    _updateMenuChrome();
   }
 
   /// Fades the home screen out and drops it; its buttons stop hit-testing
@@ -542,6 +581,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     menuScene = MenuScene.shop;
     final shop = ShopScreen(onBack: closeShop);
     _shop = shop;
+    _chromeHosts.add(shop);
+    _chromeHold = true; // always replaces home / Skins
     world.add(shop);
     registerTintable(shop);
     fadeOpacity(shop, from: 0, to: 1);
@@ -595,6 +636,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         _showSkins();
       default:
         menuScene = MenuScene.home;
+        _chromeHold = true; // from the Shop / Skins
         _addHome();
         fadeOpacity(_home, from: 0, to: 1);
     }
@@ -688,6 +730,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     menuScene = MenuScene.skins;
     final screen = SkinsScreen(onBack: closeSkins);
     _skins = screen;
+    _chromeHosts.add(screen);
+    _chromeHold = true; // always replaces home / the Shop
     world.add(screen);
     registerTintable(screen);
     fadeOpacity(screen, from: 0, to: 1);
@@ -1260,6 +1304,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _home = null;
     if (oldHome != null) {
       unregisterTintable(oldHome);
+      _chromeHosts.remove(oldHome);
       oldHome.removeFromParent();
     }
     score = 0;
@@ -1407,6 +1452,41 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _tintables.remove(tintable);
   }
 
+  // --- shared menu chrome ----------------------------------------------------
+
+  /// Drives the shared coin pill / corner box from the screens that show
+  /// them ([_chromeHosts]). On a hop between two such screens (home <->
+  /// Shop <-> Skins, in any order and however fast: [_chromeHold]) the
+  /// chrome stays fully opaque; otherwise it follows the hosts' summed
+  /// opacity, i.e. fades with a screen that is entered from / left for a
+  /// scene without it (settings, START, replay). The corner glyph is the
+  /// hosts' opacity-weighted gear / back mix.
+  void _updateMenuChrome() {
+    final current = _home ?? _shop ?? _skins;
+    _chromeHosts.removeWhere(
+      (host) =>
+          !identical(host, current) &&
+          (host.isRemoving ||
+              host.isRemoved ||
+              (host as OpacityProvider).opacity <= 0),
+    );
+    if (current == null || _chromeHosts.length <= 1) _chromeHold = false;
+    var homeShare = 0.0;
+    var total = 0.0;
+    for (final host in _chromeHosts) {
+      final opacity = (host as OpacityProvider).opacity;
+      total += opacity;
+      if (host is HomeScreen) homeShare += opacity;
+    }
+    final opacity = _chromeHold ? 1.0 : total.clamp(0.0, 1.0);
+    _coinPill
+      ..opacity = opacity
+      ..balance = menu.wallet.balance;
+    _cornerBox
+      ..opacity = opacity
+      ..gearMix = total > 0 ? homeShare / total : 1;
+  }
+
   // --- fades ---------------------------------------------------------------
 
   void fadeOpacity(
@@ -1468,6 +1548,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         _fades.remove(fade);
       }
     }
+    _updateMenuChrome();
 
     if (state == GameState.playing) {
       _spawnTimer += dt;

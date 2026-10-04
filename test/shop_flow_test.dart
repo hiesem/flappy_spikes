@@ -610,6 +610,11 @@ void main() {
         game.update(0);
         expect(shop.banner.owned, isTrue);
         expect(shop.banner.labelText, 'AD-FREE');
+        expect(shop.banner.checkIcon, isNotNull, reason: 'check in icon slot');
+        expect(
+          shop.banner.label!.x + shop.banner.label!.width,
+          lessThan(shop.banner.width),
+        );
         expect(shop.banner.price, isNull);
         expect(shop.banner.tappable, isFalse);
 

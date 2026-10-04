@@ -739,7 +739,27 @@ void main() {
         final tile = game.homeScreen!.noAdsTile;
         expect(tile.owned, isTrue);
         expect(tile.dimmed, isTrue);
+        // PO 2026-10-04: the check sits in the ICON slot (instead of the
+        // crossed-AD icon), the label is exactly "AD-FREE" with no inline
+        // check, and it fits inside the 70 pt tile.
         expect(tile.label.text, 'AD-FREE');
+        expect(tile.showsCheck, isTrue);
+        expect(
+          tile.icon.sprite!.image,
+          same(game.images.fromCache('menu/check.png')),
+        );
+        expect(tile.icon.paint.filterQuality, kMenuFilterQuality);
+        expect(tile.icon.size, Vector2.all(Config.homeTileCheckSize));
+        expect(tile.icon.x + tile.icon.width / 2, closeTo(tile.width / 2, 1e-9));
+        expect(tile.icon.y + tile.icon.height, lessThan(tile.label.y));
+        expect(tile.children.whereType<MenuIcon>(), hasLength(1));
+        // (The label-fits check runs with the real font in
+        // menu_chrome_test.dart; the test font here is monospace boxes.)
+        // Same label line as the other tiles.
+        expect(tile.label.y, game.homeScreen!.shopTile.label.y);
+        // A tap still only toasts.
+        tile.onPressed();
+        expect(spy.names, isNot(contains('noads_popup_shown')));
         game.openNoAdsPopup('home_tile');
         expect(spy.names, isNot(contains('noads_popup_shown')));
       },

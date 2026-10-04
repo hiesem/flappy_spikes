@@ -181,7 +181,8 @@ class ShopScreen extends MenuScreen {
 }
 
 /// Pink "REMOVE ADS" banner with the gold store-price chip; opens the
-/// No-ads popup. Owners see "AD-FREE ✓", dimmed and not tappable.
+/// No-ads popup. Owners see the check in the icon slot and "AD-FREE",
+/// dimmed and not tappable.
 class ShopBanner extends MenuButton {
   ShopBanner({
     required Rect rect,
@@ -200,6 +201,8 @@ class ShopBanner extends MenuButton {
 
   static const double fontSize = 19;
   static const double letterSpacing = 0.04;
+  static const double iconSize = 30;
+  static const double checkSize = 26;
   static const double chipHeight = 36;
   static const double chipPadX = 12;
 
@@ -209,6 +212,9 @@ class ShopBanner extends MenuButton {
 
   MenuText? label;
   MenuText? priceLabel;
+
+  /// The check in the icon slot (owners only); exposed for tests.
+  MenuIcon? checkIcon;
   final List<Component> _content = [];
 
   bool get owned => _owned ?? false;
@@ -243,7 +249,20 @@ class ShopBanner extends MenuButton {
     removeAll(_content);
     _content.clear();
     priceLabel = null;
-    final adIcon = MenuIcon(icon, size: Vector2.all(30));
+    // Owned: the check takes the crossed-AD icon's slot (same box, the
+    // glyph centred in it) instead of trailing the label.
+    final glyph = owned
+        ? MenuIcon(
+            check,
+            size: Vector2.all(checkSize),
+            position: Vector2.all(iconSize / 2),
+            anchor: Anchor.center,
+          )
+        : null;
+    checkIcon = glyph;
+    final adIcon = glyph == null
+        ? MenuIcon(icon, size: Vector2.all(iconSize))
+        : (PositionComponent(size: Vector2.all(iconSize))..add(glyph));
     final text = MenuText(
       owned ? 'AD-FREE' : 'REMOVE ADS',
       fontSize: fontSize,
@@ -252,9 +271,6 @@ class ShopBanner extends MenuButton {
     );
     label = text;
     final left = <PositionComponent>[adIcon, text];
-    if (owned) {
-      left.add(MenuIcon(check, size: Vector2.all(14)));
-    }
     _content.addAll(left);
     // Mock: flex gap 6 + the label's 10 pt margin.
     layoutRow(this, left, gap: 16, left: 12);

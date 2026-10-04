@@ -15,7 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// on cache hits (microtasks) instead of real async decodes.
 final kAllImages = [
   ...kHomeImages,
-  ...kMenuScreenImages,
+  ...kMenuChromeImages,
   ...kShopImages,
   ...kNoAdsPopupImages,
   ...kSkinsImages,

@@ -61,3 +61,20 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   actions are; audit in the Sol E2E pass.
 - Linux visual checks: live capture (grim) hangs while the display is off — use
   headless screenshot tests instead; window geometry via `hyprctl`.
+
+## In-app purchases — test setup (2026-10-05)
+- Payments profile **Duo Leads (0852-6699-4116)** linked (merchant category Computer Software, support
+  hello@duoleads.com, statement DUO LEADS). Bank account + 15% service-fee enrolment still open (user).
+- One-time products (new model) Active: coins_500 / coins_1800 / coins_5000 / coins_12000 / no_ads, purchase
+  options coins-500 … no-ads (Buy, backwards compatible). Prices: same nominal .99 in EUR/USD/GBP (entered
+  ex-VAT so NL shows the target); other countries auto-converted.
+- Licence testing + internal-testing tester list "Flappy Spikes internal" (killerhis@gmail.com).
+  Internal testing track: 2.0.0 (6) live (versions 3-5 superseded).
+- Products need a PUBLISHED bundle with BILLING permission before they can be created (draft is not enough).
+- After creating products the device returned notFound for all 5 until the Play Store app's cache was
+  cleared on the phone; then `[IAP] query 5: found 5`. Read IAP diagnostics with
+  `adb logcat -s flutter | grep '\[IAP\]'` (release builds log them).
+- Release builds need android/app/proguard-rules.pro (keeps WorkManager's Room DB; google_mobile_ads pulls
+  in androidx.work) — without it the release app crashes at launch. Debug builds hide this.
+- Linux: no Google Chrome — tools/browser_linux.js drives /usr/bin/chromium with profile
+  tools/.pw-linux-profile (optional URL arg).

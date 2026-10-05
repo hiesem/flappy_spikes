@@ -366,7 +366,7 @@ void main() {
           });
           expect(toast(g), contains('coins'));
         } else if (mode == FakeIapMode.fail) {
-          expect(toast(g), 'Purchase failed');
+          expect(toast(g), 'Purchase failed: Fake error');
         } else if (mode == FakeIapMode.pending) {
           expect(toast(g), 'Purchase pending…');
           await tap(
@@ -654,7 +654,7 @@ void main() {
         g.purchases.isPending(IapProduct.noAds),
         mode == FakeIapMode.pending,
       );
-      if (mode == FakeIapMode.fail) expect(toast(g), 'Purchase failed');
+      if (mode == FakeIapMode.fail) expect(toast(g), 'Purchase failed: Fake error');
       if (mode == FakeIapMode.pending) {
         expect(g.shopScreen!.banner.tappable, isFalse);
         expect(g.shopScreen!.banner.dimmed, isTrue);

@@ -9,7 +9,7 @@ import 'package:flame/events.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart' show KeyEventResult;
+import 'package:flutter/widgets.dart' show AppLifecycleState, KeyEventResult;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../components/bird.dart';
@@ -347,6 +347,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     super.onRemove();
   }
 
+  /// Back from the background (e.g. after the Play payment sheet or a
+  /// settings detour): re-query store products that were still missing.
+  @override
+  void lifecycleStateChange(AppLifecycleState state) {
+    super.lifecycleStateChange(state);
+    if (state == AppLifecycleState.resumed) {
+      unawaited(monetization.iap.refresh());
+    }
+  }
+
   // --- scene setup -------------------------------------------------------
 
   void _setupStartScene() {
@@ -569,6 +579,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     services.track('shop_open', {
       'source': source ?? (scrollToCoins ? 'pill' : 'tile'),
     });
+    // Real prices for anything the launch query missed (cheap when none).
+    unawaited(monetization.iap.refresh());
     if (fromSkins) {
       _dismissSkins();
       _advanceTrail(from: MenuScene.skins, to: MenuScene.shop);

@@ -17,6 +17,7 @@ import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/services/iap_service.dart';
 import 'package:flappy_spikes/services/monetization.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -561,13 +562,24 @@ void main() {
     );
 
     shopTest(
-      'failed -> "Purchase failed"; canceled -> silent; both re-enable',
+      'failed -> "Purchase failed: <reason>"; canceled -> silent; both re-enable',
       iapMode: FakeIapMode.fail,
       verify: (game, spy, ads, iap, tester) async {
+        // Opening the Shop re-queries missing store prices.
+        final refreshes = iap.refreshes;
         final shop = await openShop(game);
+        expect(iap.refreshes, refreshes + 1);
+        // ...and so does coming back from the background.
+        game.lifecycleStateChange(AppLifecycleState.resumed);
+        expect(iap.refreshes, refreshes + 2);
         shop.packs[2].onPressed();
         await settle(game);
-        expect(toastText(game), 'Purchase failed');
+        expect(toastText(game), 'Purchase failed: Fake error');
+        expect(spy.last('iap_error'), {
+          'product': 'coins_5000',
+          'reason': 'Fake error',
+          'code': 'fake',
+        });
         expect(game.purchases.isPending(IapProduct.coins5000), isFalse);
         expect(game.menu.wallet.balance, 0);
 

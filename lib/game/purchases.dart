@@ -8,7 +8,8 @@ import 'config.dart';
 
 /// Grants what the store sells (PRD-1 §3.2, §3.5): listens to
 /// [IapService.events] for the game's lifetime and turns each update into
-/// coins / the No-ads flag, analytics and a toast. Also tracks which
+/// coins / the No-ads flag, analytics and a toast (failures toast the
+/// store's reason and log `iap_error`; cancels stay silent). Also tracks which
 /// products have a purchase in flight (their buttons are disabled) and the
 /// restore-purchases timeout.
 ///
@@ -105,7 +106,13 @@ class Purchases {
         await _grantRestore(product);
       case IapStatus.failed:
         _inFlight.remove(product);
-        toast('Purchase failed');
+        final reason = event.message;
+        services.track('iap_error', {
+          'product': product.storeId,
+          'reason': reason ?? 'unknown',
+          'code': event.code ?? 'unknown',
+        });
+        toast(reason == null ? 'Purchase failed' : 'Purchase failed: $reason');
       case IapStatus.canceled:
         _inFlight.remove(product);
     }

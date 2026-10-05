@@ -296,6 +296,11 @@ Linux test target. Work lives on the `feat/menu-v2` branch — **not pushed**,
       "TEST AD" overlay on Linux), and menu fades are 3x+ faster
       (uiFade 0.15 s, popup 0.07 s; gameplay fades unchanged)
 
+### Pricing rule (product owner, 2026-10-05)
+- In-app prices use the SAME nominal amount in every local currency, not an
+  exchange-rate conversion: 0.99 USD = 0.99 EUR, 2.99 USD = 2.99 EUR, etc.
+  coins_500 0.99 · coins_1800 2.99 · coins_5000 6.99 · coins_12000 14.99 · no_ads 2.99.
+
 ### Pending — USER-only (store / device / native config)
 - [ ] Create the IAP products in Play Console with the ids `coins_500`,
       `coins_1800`, `coins_5000`, `coins_12000`, `no_ads`

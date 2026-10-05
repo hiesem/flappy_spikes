@@ -298,7 +298,7 @@ Linux test target. Work lives on the `feat/menu-v2` branch — **not pushed**,
 
 ### Pricing rule (product owner, 2026-10-05)
 - In-app prices use the SAME nominal amount in every local currency, not an
-  exchange-rate conversion: 0.99 USD = 0.99 EUR, 2.99 USD = 2.99 EUR, etc.
+  exchange-rate conversion: 0.99 USD = 0.99 EUR = 0.99 GBP, 2.99 USD = 2.99 EUR = 2.99 GBP, etc.
   coins_500 0.99 · coins_1800 2.99 · coins_5000 6.99 · coins_12000 14.99 · no_ads 2.99.
 
 ### Pending — USER-only (store / device / native config)

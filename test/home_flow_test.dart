@@ -170,6 +170,10 @@ void main() {
 
         for (var i = 0; i < 4; i++) {
           await pressAndBack(() => game.homeScreen!.tiles[i].onPressed());
+          // The No-ads tile starts a store purchase now (still no run):
+          // let the fake store's round-trip finish so no timer outlives
+          // the test.
+          if (i == 3) await tester.pump(const Duration(milliseconds: 1));
         }
         await pressAndBack(() => game.homeScreen!.leaderboard.onPressed());
         await pressAndBack(() => game.homeScreen!.coinPill.onPressed());
@@ -329,7 +333,7 @@ void main() {
         game.openSettings();
         game.openShop();
         game.openSkins();
-        game.openNoAdsPopup('home_tile');
+        game.openNoAdsPopup();
         expect(game.state, GameState.start);
         expect(game.menuScene, MenuScene.home);
         expect(game.noAdsPopup, isNull);
@@ -757,10 +761,16 @@ void main() {
         // menu_chrome_test.dart; the test font here is monospace boxes.)
         // Same label line as the other tiles.
         expect(tile.label.y, game.homeScreen!.shopTile.label.y);
-        // A tap still only toasts.
+        // A tap still only toasts (PO 2026-10-05: no popup, no purchase).
         tile.onPressed();
+        await flushAndMount(game);
+        expect(
+          game.world.children.query<ServiceMessage>().last.message,
+          'Already ad-free',
+        );
         expect(spy.names, isNot(contains('noads_popup_shown')));
-        game.openNoAdsPopup('home_tile');
+        expect(spy.names, isNot(contains('noads_purchase_tapped')));
+        game.openNoAdsPopup();
         expect(spy.names, isNot(contains('noads_popup_shown')));
       },
     );

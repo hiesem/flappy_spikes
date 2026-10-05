@@ -262,7 +262,7 @@ void main() async {
       await flushAndMount(game);
     },
     verify: (game, tester) async {
-      game.openNoAdsPopup('home_tile');
+      game.openNoAdsPopup();
       await flushAndMount(game);
       stepGame(game, 0.3);
       await flushAndMount(game);

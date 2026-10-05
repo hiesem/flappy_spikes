@@ -4,7 +4,6 @@ import 'dart:async';
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
-import 'package:flappy_spikes/components/noads_popup.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
 import 'package:flappy_spikes/components/shop/shop_screen.dart';
 import 'package:flappy_spikes/components/ui/service_message.dart';
@@ -587,16 +586,18 @@ void main() {
     );
 
     shopTest(
-      'No ads purchase from the popup: flag + 1,000 bonus, popup closes, '
+      'No ads purchase from the Shop banner: flag + 1,000 bonus, '
       'home tile / slot / Shop banner update',
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
         shop.banner.onPressed();
         await flushAndMount(game);
-        final popup = game.noAdsPopup!;
-        expect(spy.last('noads_popup_shown'), {'trigger': 'shop_banner'});
-        popup.priceButton.onPressed();
+        // PO 2026-10-05: the banner buys straight away — no popup.
+        expect(game.noAdsPopup, isNull);
+        expect(spy.last('noads_purchase_tapped'), {'source': 'shop_banner'});
+        expect(spy.names, isNot(contains('noads_popup_shown')));
         await settle(game);
+        expect(iap.purchases, [IapProduct.noAds]);
         expect(game.menu.noAds, isTrue);
         expect(game.menu.wallet.balance, 1000);
         expect(spy.names, contains('noads_purchased'));
@@ -604,7 +605,6 @@ void main() {
           'amount': 1000,
           'source': 'noads_bonus',
         });
-        expect(game.noAdsPopup, isNull, reason: 'closed by the purchase');
         expect(spy.names, isNot(contains('noads_popup_dismissed')));
         expect(toastText(game), 'Ads removed · +1,000 coins');
         game.update(0);
@@ -635,6 +635,30 @@ void main() {
         unawaited(iap.buy(IapProduct.noAds));
         await settle(game);
         expect(game.menu.wallet.balance, 1000);
+      },
+    );
+
+    shopTest(
+      'pending No-ads purchase disables the home tile and Shop banner',
+      iapMode: FakeIapMode.pending,
+      verify: (game, spy, ads, iap, tester) async {
+        game.homeScreen!.noAdsTile.onPressed();
+        await settle(game);
+        expect(toastText(game), 'Purchase pending…');
+        game.update(0);
+        final tile = game.homeScreen!.noAdsTile;
+        expect(tile.dimmed, isTrue);
+        expect(tile.tappable, isFalse);
+        // A second tap is ignored while pending.
+        tile.onPressed();
+        expect(iap.purchases, hasLength(1));
+
+        final shop = await openShop(game);
+        await flushAndMount(game);
+        expect(shop.banner.dimmed, isTrue);
+        expect(shop.banner.tappable, isFalse);
+        shop.banner.onPressed();
+        expect(iap.purchases, hasLength(1));
       },
     );
 
@@ -703,7 +727,7 @@ void main() {
     shopTest(
       'P1 card geometry at 711 and 568',
       verify: (game, spy, ads, iap, tester) async {
-        game.openNoAdsPopup('home_tile');
+        game.openNoAdsPopup();
         await flushAndMount(game);
         final popup = game.noAdsPopup!;
         expect(popup.card.toRect(), const Rect.fromLTWH(20, 190, 280, 369));
@@ -723,33 +747,28 @@ void main() {
     );
 
     shopTest(
-      'home tile: shown + dismissed (×) are logged and count toward the cap',
+      'home tile: starts the purchase straight away, no popup',
       verify: (game, spy, ads, iap, tester) async {
         game.homeScreen!.noAdsTile.onPressed();
         await flushAndMount(game);
-        final popup = game.noAdsPopup!;
-        expect(spy.last('noads_popup_shown'), {'trigger': 'home_tile'});
-        // START is blocked while the popup is up.
-        game.onScreenTap();
-        expect(game.state, GameState.start);
-        popup.closeButton.onPressed();
-        await settle(game);
+        // PO 2026-10-05: no popup, no dismissal bookkeeping.
         expect(game.noAdsPopup, isNull);
-        expect(spy.last('noads_popup_dismissed'), {'trigger': 'home_tile'});
-        expect(game.storage.noAdsPopupDismissals, 1);
-        stepGame(game, 0.3);
-        await flushAndMount(game);
-        expect(game.world.children.query<NoAdsPopup>(), isEmpty);
-        game.onScreenTap();
-        expect(game.state, GameState.playing);
+        expect(spy.last('noads_purchase_tapped'), {'source': 'home_tile'});
+        expect(spy.names, isNot(contains('noads_popup_shown')));
+        await settle(game);
+        expect(iap.purchases, [IapProduct.noAds]);
+        expect(game.menu.noAds, isTrue);
+        expect(game.menu.wallet.balance, 1000);
+        expect(toastText(game), 'Ads removed · +1,000 coins');
+        expect(game.storage.noAdsPopupDismissals, 0);
       },
     );
 
     shopTest(
       'Esc closes the popup first, then the Shop',
       verify: (game, spy, ads, iap, tester) async {
-        final shop = await openShop(game);
-        shop.banner.onPressed();
+        await openShop(game);
+        game.openNoAdsPopup();
         await flushAndMount(game);
         expect(game.noAdsPopup, isNotNull);
         game.onKeyEvent(escape(), {});
@@ -767,7 +786,7 @@ void main() {
       height: 568,
       exactSurface: true,
       verify: (game, spy, ads, iap, tester) async {
-        game.openNoAdsPopup('home_tile');
+        game.openNoAdsPopup();
         await flushAndMount(game);
         stepGame(game, 0.3);
         final card = Config.noAdsCardRectFor(568);
@@ -780,7 +799,7 @@ void main() {
         await tester.tapAt(Offset(160, card.top - 20));
         await tester.pump(const Duration(milliseconds: 50));
         expect(game.noAdsPopup, isNull);
-        expect(spy.last('noads_popup_dismissed'), {'trigger': 'home_tile'});
+        expect(spy.last('noads_popup_dismissed'), {'trigger': 'launch'});
         expect(game.state, GameState.start, reason: 'no run started');
       },
     );
@@ -789,14 +808,16 @@ void main() {
       'owners get "Already ad-free"; never opens during a run',
       prefs: const {'noAds': true},
       verify: (game, spy, ads, iap, tester) async {
-        game.openNoAdsPopup('home_tile');
+        // The owned tile is still tappable: unchanged toast, no funnel
+        // event and absolutely no popup.
+        game.homeScreen!.noAdsTile.onPressed();
         await flushAndMount(game);
         expect(game.noAdsPopup, isNull);
         expect(toastText(game), 'Already ad-free');
+        expect(spy.names, isNot(contains('noads_purchase_tapped')));
         await game.menu.setNoAds(false);
-        game.onScreenTap();
-        game.openNoAdsPopup('home_tile');
-        game.openNoAdsPopup('launch');
+        game.onScreenTap(); // starts a run
+        game.openNoAdsPopup();
         expect(game.noAdsPopup, isNull);
         expect(spy.names, isNot(contains('noads_popup_shown')));
       },
@@ -806,7 +827,7 @@ void main() {
       'pending purchase disables the popup price button',
       iapMode: FakeIapMode.pending,
       verify: (game, spy, ads, iap, tester) async {
-        game.openNoAdsPopup('home_tile');
+        game.openNoAdsPopup();
         await flushAndMount(game);
         final popup = game.noAdsPopup!;
         popup.priceButton.onPressed();
@@ -833,7 +854,9 @@ void main() {
       verify: (game, spy, ads, iap, tester) async {
         final popup = game.noAdsPopup;
         expect(popup, isNotNull);
-        expect(popup!.trigger, 'launch');
+        // START is blocked while the popup is up.
+        game.onScreenTap();
+        expect(game.state, GameState.start);
         expect(spy.last('noads_popup_shown'), {'trigger': 'launch'});
         await settle(game);
         expect(game.storage.noAdsPopupLastDay, day2.today);

@@ -176,6 +176,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   SkinUnlockDialog? _skinDialog;
   bool _skinPurchaseRunning = false;
   NoAdsPopup? _noAdsPopup;
+  /// The popup's only context since 2026-10-05 (analytics payload).
+  static const String _launchTrigger = 'launch';
   bool _freeCoinsBusy = false;
   DebugPanel? _debugPanel;
   FakeAdOverlay? _fakeAd;
@@ -334,7 +336,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // No-ads upsell on launch: from the day after install, max once a day,
     // until three dismissals, never to owners (NoAdsPopupPolicy).
     if (menu.noAdsPopup.shouldShowOnLaunch()) {
-      openNoAdsPopup('launch');
+      openNoAdsPopup();
       unawaited(menu.noAdsPopup.markShown());
     }
   }
@@ -686,6 +688,28 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     await purchases.buy(product);
   }
 
+  /// Home NO ADS tile / Shop REMOVE ADS banner (PO change 2026-10-05):
+  /// starts the `no_ads` store purchase straight away instead of opening
+  /// the popup — the popup is now the automatic launch upsell only.
+  /// [source] (home_tile / shop_banner) is logged as `noads_purchase_tapped`
+  /// when the tap actually starts a purchase. Owners keep the unchanged
+  /// "Already ad-free" toast; the buttons are not tappable while a
+  /// No-ads purchase is pending.
+  Future<void> buyNoAds(String source) async {
+    if (state != GameState.start) return;
+    if (menu.noAds) {
+      sound.play(Sfx.click);
+      showToast('Already ad-free');
+      return;
+    }
+    if (purchases.isPending(IapProduct.noAds) ||
+        (!_homeInteractive && !_sceneOnTop(MenuScene.shop))) {
+      return;
+    }
+    services.track('noads_purchase_tapped', {'source': source});
+    await buyProduct(IapProduct.noAds);
+  }
+
   /// "RESTORE PURCHASES" (Shop / Settings).
   Future<void> restorePurchases() async {
     if (state != GameState.start) return;
@@ -884,28 +908,24 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   // --- No-ads popup (PRD-1 §5.1) ------------------------------------------
 
-  /// Opens the No-ads popup over the home screen or the Shop. [trigger]:
-  /// launch (auto, from onLoad) / home_tile / shop_banner. Never during a
-  /// run; owners get a toast instead.
-  void openNoAdsPopup(String trigger) {
-    final launch = trigger == 'launch';
+  /// The automatic launch upsell (PO change 2026-10-05: the popup's only
+  /// path — home-tile / Shop-banner taps buy directly now). No-op during a
+  /// run, over another popup / the debug panel / a fake ad, or while the
+  /// menus are transitioning; owners get a toast instead.
+  void openNoAdsPopup() {
     if (_noAdsPopup != null ||
         _debugPanel != null ||
         _fakeAd != null ||
-        (!launch &&
-            !_homeInteractive &&
-            !_sceneOnTop(MenuScene.shop)) ||
-        (launch && state != GameState.start)) {
+        state != GameState.start ||
+        (!_homeInteractive && !_sceneOnTop(MenuScene.shop))) {
       return;
     }
-    if (!launch) sound.play(Sfx.click);
     if (menu.noAds) {
       showToast('Already ad-free');
       return;
     }
-    services.track('noads_popup_shown', {'trigger': trigger});
+    services.track('noads_popup_shown', {'trigger': _launchTrigger});
     final popup = NoAdsPopup(
-      trigger: trigger,
       onDismiss: () => closeNoAdsPopup(),
       onBuy: () => buyProduct(IapProduct.noAds),
     );
@@ -917,8 +937,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// Closes the popup. [dismissed] (×, dim, Esc) logs
   /// `noads_popup_dismissed` and counts toward the policy's dismissal cap
-  /// (any trigger: the BRIEF stops automatic upsells after three manual
-  /// dismissals too); a purchase closes it with `dismissed: false`.
+  /// (the BRIEF stops automatic upsells after three manual dismissals
+  /// too); a purchase closes it with `dismissed: false`.
   void closeNoAdsPopup({bool dismissed = true}) {
     final popup = _noAdsPopup;
     if (popup == null) return;
@@ -927,7 +947,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     popup.active = false;
     if (dismissed) {
       sound.play(Sfx.click);
-      services.track('noads_popup_dismissed', {'trigger': popup.trigger});
+      services.track('noads_popup_dismissed', {'trigger': _launchTrigger});
       unawaited(menu.noAdsPopup.markDismissed());
     }
     fadeOpacity(

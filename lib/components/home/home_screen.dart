@@ -9,6 +9,7 @@ import '../../game/flappy_game.dart';
 import '../../game/tintable.dart';
 import '../../menu/powerup_slot.dart';
 import '../../menu/skin_catalog.dart';
+import '../../services/iap_service.dart';
 import '../skin_sprite.dart';
 import 'menu_primitives.dart';
 
@@ -181,7 +182,9 @@ class HomeScreen extends PositionComponent
     shopTile = tile(0, 'shop', 'SHOP', game.openShop);
     skinsTile = tile(1, 'skins', 'SKINS', game.openSkins);
     inviteTile = tile(2, 'invite', 'INVITE', game.invite);
-    noAdsTile = tile(3, 'noads', 'NO ADS', () => game.openNoAdsPopup('home_tile'));
+    // PO change 2026-10-05: the tile starts the store purchase straight
+    // away; the popup is the automatic launch upsell only.
+    noAdsTile = tile(3, 'noads', 'NO ADS', () => game.buyNoAds('home_tile'));
 
     leaderboard = LeaderboardRow(
       rect: Config.homeLeaderboardRectFor(h),
@@ -221,6 +224,7 @@ class HomeScreen extends PositionComponent
 
   bool? _hasNew;
   bool? _noAds;
+  bool? _noAdsPending;
   String? _skin;
 
   @override
@@ -237,12 +241,16 @@ class HomeScreen extends PositionComponent
       skinsTile.tag = hasNew ? 'NEW' : null;
     }
     final noAds = menu.noAds;
-    if (force || noAds != _noAds) {
+    final pending = game.purchases.isPending(IapProduct.noAds);
+    if (force || noAds != _noAds || pending != _noAdsPending) {
       _noAds = noAds;
+      _noAdsPending = pending;
       // PRD-1 §3.5: owners keep the tile, dimmed: check icon + "AD-FREE".
+      // A pending No-ads purchase disables the tile (as the Shop banner).
       noAdsTile
-        ..dimmed = noAds
-        ..owned = noAds;
+        ..dimmed = noAds || pending
+        ..owned = noAds
+        ..tappable = !pending;
     }
     final skin = menu.skins.equippedSkin;
     if (force || skin.id != _skin) {

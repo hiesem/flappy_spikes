@@ -95,6 +95,15 @@ states" above. Everything else in this document still holds.
   top-RIGHT corner). New alignment rules: gear/back left edge = Shop tile left
   edge = trophy left edge = 14; pill right edge = No-ads tile right edge = 306.
   Settings keeps its 1.0 bottom-centre back arrow.
+- **No-ads buttons go straight to the store; the popup is launch-only**
+  (DEVIATION from PRD-1 §5.1, product-owner change 2026-10-05). Tapping the
+  home NO ADS tile or the Shop REMOVE ADS banner starts the `no_ads` purchase
+  immediately (`Purchases.buy`; `noads_purchase_tapped` with `source`
+  home_tile / shop_banner) and no longer opens the No-ads popup. The popup
+  stays for the automatic launch upsell only (day ≥ 2, max once a day, until
+  three dismissals, never to buyers). While a No-ads purchase is pending both
+  buttons are disabled and dimmed; owners keep the unchanged home-tile
+  "Already ad-free" toast and the non-tappable AD-FREE banner.
 - **"+N" coins line.** The game-over panel gains a small "+N" + coin line under
   the stats, showing the coins earned (interim rule: 1 coin per point, credited
   at game over; a fresh install starts at 0 coins).
@@ -102,16 +111,16 @@ states" above. Everything else in this document still holds.
 Also in this phase: the home screen leads to the **Shop**
 (`lib/components/shop/`, layout in `Config.shop*For`) and the **No-ads popup**
 (`lib/components/noads_popup.dart`, `Config.noAds*`), both menu-only; store
-purchases are granted by `lib/game/purchases.dart`. The popup also auto-shows on
-launch from the day after install (max once a day, until three dismissals, never
-to buyers). The **Skins** screen (`lib/components/skins/`, layout in
-`Config.skin*`) opens from the home tile or the Shop's featured row (straight
-into that skin's unlock dialog); owned skins equip on tap, locked ones open a
-coin unlock dialog that leads to the Shop's coin packs when the balance is
-short, and Shop/Skins return to each other with back when one opened the other,
-else home. Settings gains a RESTORE PURCHASES link; rewarded ads (AdMob, test
-IDs), in-app purchases and the debug panel (debug builds + Linux) are also 2.0
-additions. This supersedes the 1.0 "No ads" shell note (the app now shows
+purchases are granted by `lib/game/purchases.dart`. The popup is the automatic
+launch upsell (from the day after install, max once a day, until three
+dismissals, never to buyers). The **Skins** screen (`lib/components/skins/`,
+layout in `Config.skin*`) opens from the home tile or the Shop's featured row
+(straight into that skin's unlock dialog); owned skins equip on tap, locked ones
+open a coin unlock dialog that leads to the Shop's coin packs when the balance
+is short, and Shop/Skins return to each other with back when one opened the
+other, else home. Settings gains a RESTORE PURCHASES link; rewarded ads (AdMob,
+test IDs), in-app purchases and the debug panel (debug builds + Linux) are also
+2.0 additions. This supersedes the 1.0 "No ads" shell note (the app now shows
 rewarded ads and sells a No-ads IAP), and the privacy-policy link lives on the
 Settings screen rather than the start scene.
 

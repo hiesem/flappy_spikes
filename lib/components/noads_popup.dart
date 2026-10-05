@@ -20,7 +20,9 @@ const List<String> kNoAdsPopupImages = [
 /// The No-ads upsell (PRD-1 §5.1, approved design P1 "Centre card"): a 60 %
 /// dim over whatever screen is below and a centred card — pink header with
 /// the crossed-AD icon and a darker close ×, the soft "GO AD-FREE" strip,
-/// two benefit rows and the gold store-price button.
+/// two benefit rows and the gold store-price button. Since the PO change of
+/// 2026-10-05 it is the automatic launch upsell only: the home tile and the
+/// Shop banner start the purchase directly.
 ///
 /// A tap on the dim or the ×, or Esc, calls [onDismiss]; the price button
 /// [onBuy]. Taps on the card itself are swallowed. The game owns the
@@ -28,13 +30,10 @@ const List<String> kNoAdsPopupImages = [
 class NoAdsPopup extends PositionComponent
     with HasGameReference<FlappySpikesGame>, GroupOpacity, TapCallbacks {
   NoAdsPopup({
-    required this.trigger,
     required this.onDismiss,
     required this.onBuy,
   }) : super(priority: 25);
 
-  /// launch / home_tile / shop_banner.
-  final String trigger;
   final void Function() onDismiss;
   final void Function() onBuy;
 

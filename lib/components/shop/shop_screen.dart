@@ -76,7 +76,8 @@ class ShopScreen extends MenuScreen {
       rect: Config.shopBannerRectFor(h),
       icon: sprite('menu/noads.png'),
       check: sprite('menu/check.png'),
-      onPressed: () => game.openNoAdsPopup('shop_banner'),
+      // PO change 2026-10-05: buys directly; the popup is launch-only.
+      onPressed: () => game.buyNoAds('shop_banner'),
       isActive: isActive,
     );
     freeCoins = FreeCoinsRow(
@@ -180,9 +181,10 @@ class ShopScreen extends MenuScreen {
   }
 }
 
-/// Pink "REMOVE ADS" banner with the gold store-price chip; opens the
-/// No-ads popup. Owners see the check in the icon slot and "AD-FREE",
-/// dimmed and not tappable.
+/// Pink "REMOVE ADS" banner with the gold store-price chip; starts the
+/// No-ads purchase directly (PO 2026-10-05). Owners see the check in the
+/// icon slot and "AD-FREE", dimmed and not tappable; a pending purchase
+/// disables it too.
 class ShopBanner extends MenuButton {
   ShopBanner({
     required Rect rect,

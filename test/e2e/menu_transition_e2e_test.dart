@@ -57,7 +57,7 @@ void main() {
     await advance();
     expect(g.homeScreen!.opacity, 1);
     expect(g.world.children.query<SettingsPanel>(), isEmpty);
-    g.openNoAdsPopup('home_tile');
+    g.openNoAdsPopup();
     await advance();
     expect(g.noAdsPopup!.opacity, 1);
     g.closeNoAdsPopup();

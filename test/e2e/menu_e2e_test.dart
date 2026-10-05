@@ -442,13 +442,15 @@ void main() {
     r,
     t,
   ) async {
+    // PO 2026-10-05: the home tile buys straight away — no popup.
     await tap(g, t, const Offset(271, 502));
-    expect(g.noAdsPopup!.trigger, 'home_tile');
-    expect(r.spy.params('noads_popup_shown').single, {'trigger': 'home_tile'});
-    await tap(g, t, const Offset(160, 516));
+    expect(g.noAdsPopup, isNull);
+    expect(r.spy.params('noads_popup_shown'), isEmpty);
+    expect(r.spy.params('noads_purchase_tapped').single, {
+      'source': 'home_tile',
+    });
     expect(g.menu.noAds, isTrue);
     expect(g.menu.wallet.balance, 1000);
-    expect(g.noAdsPopup, isNull);
     expect(r.spy.params('noads_purchased').length, 1);
     expect(r.spy.params('coins_earned').single, {
       'amount': 1000,
@@ -479,7 +481,9 @@ void main() {
     t,
   ) async {
     await tap(g, t, const Offset(271, 502));
-    await tap(g, t, const Offset(160, 516));
+    expect(r.spy.params('noads_purchase_tapped').single, {
+      'source': 'home_tile',
+    });
     expect(g.menu.noAds, isTrue);
     expect(
       r.spy.params('iap_purchase'),
@@ -634,14 +638,15 @@ void main() {
     FakeIapMode.pending,
     FakeIapMode.cancel,
   ]) {
-    e2e('QA shop banner no-ads popup ${mode.name}', (g, r, t) async {
+    e2e('QA shop banner no-ads purchase ${mode.name}', (g, r, t) async {
       await tap(g, t, const Offset(49, 502));
       await tap(g, t, const Offset(160, 172));
-      expect(g.noAdsPopup!.trigger, 'shop_banner');
-      expect(r.spy.params('noads_popup_shown').single, {
-        'trigger': 'shop_banner',
+      // PO 2026-10-05: the banner buys straight away — no popup.
+      expect(g.noAdsPopup, isNull);
+      expect(r.spy.params('noads_popup_shown'), isEmpty);
+      expect(r.spy.params('noads_purchase_tapped').single, {
+        'source': 'shop_banner',
       });
-      await tap(g, t, const Offset(160, 516));
       expect(r.iap.purchases, [IapProduct.noAds]);
       expect(g.menu.noAds, isFalse);
       expect(g.menu.wallet.balance, 0);
@@ -651,17 +656,16 @@ void main() {
       );
       if (mode == FakeIapMode.fail) expect(toast(g), 'Purchase failed');
       if (mode == FakeIapMode.pending) {
-        expect(g.noAdsPopup!.priceButton.tappable, isFalse);
+        expect(g.shopScreen!.banner.tappable, isFalse);
+        expect(g.shopScreen!.banner.dimmed, isTrue);
         expect(toast(g), 'Purchase pending…');
       }
       g.onKeyEvent(key(LogicalKeyboardKey.space), {});
       expect(g.state, GameState.start);
-      await tap(g, t, const Offset(281, 209));
-      expect(g.noAdsPopup, isNull);
-      expect(g.menuScene, MenuScene.shop);
-      expect(r.spy.params('noads_popup_dismissed').single, {
-        'trigger': 'shop_banner',
-      });
+      // Nothing opened over the Shop; Esc leaves it.
+      g.onKeyEvent(key(LogicalKeyboardKey.escape), {});
+      await settle(g, t, fade: true);
+      expect(g.menuScene, MenuScene.home);
     }, configure: (r) => r.iap.mode = mode);
   }
 
@@ -675,7 +679,7 @@ void main() {
       r.clock.now = r.clock.now.add(const Duration(days: 1));
       var g = await restartWithSamePrefs(r, t);
       if (day <= 4) {
-        expect(g.noAdsPopup!.trigger, 'launch');
+        expect(r.spy.params('noads_popup_shown').last, {'trigger': 'launch'});
         expect(g.storage.noAdsPopupLastDay, r.clock.day);
         await tap(g, t, const Offset(281, 209));
         expect(g.storage.noAdsPopupDismissals, day - 1);
@@ -689,14 +693,17 @@ void main() {
     expect(r.spy.params('noads_popup_dismissed').length, 3);
   });
 
-  e2e('S1-04 three manual popup dismissals also stop automatic upsells', (
+  e2e('S1-04 three launch-popup dismissals also stop automatic upsells', (
     g,
     r,
     t,
   ) async {
     for (var i = 0; i < 3; i++) {
-      await tap(g, t, const Offset(271, 502));
-      await tap(g, t, const Offset(281, 209));
+      r.clock.now = r.clock.now.add(const Duration(days: 1));
+      final day = await restartWithSamePrefs(r, t);
+      expect(day.noAdsPopup, isNotNull, reason: 'launch upsell, day ${i + 2}');
+      day.handleBack();
+      await settle(day, t);
     }
     expect(r.spy.params('noads_popup_dismissed').length, 3);
     r.clock.now = r.clock.now.add(const Duration(days: 1));

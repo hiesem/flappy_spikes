@@ -30,6 +30,12 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   **local test target only** — Android and iOS are the products.
 - iOS work is paused; make no new iOS changes until the user reopens it.
 
+## Status (2026-10-07)
+
+- `feat/skin-shop` (off `feat/menu-v2`) implements `PRD-menu-v2.md`: 5-layer
+  skin shop (88 items), live home & Shop. **Not pushed.** See SPEC "2.0 skin shop
+  (PRD-menu-v2) deviations" and TODO phase 18.
+
 ## Status (2026-10-03)
 
 - `feat/menu-v2` implements PRD-1 (2.0 menu): home screen, wallet, Shop, Skins
@@ -53,9 +59,11 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
 - iOS: ads route to Noop (no `GADApplicationIdentifier`; iOS paused), IAP is real.
 - Menus (home/shop/skins/dialogs/popups) always render at colour stage 0; only
   runs advance the colour stage.
-- Skins: identity colour in menus and at stage 0; in runs the tint is
-  `lerp(identity, stageFg, 0.35)` for every skin including the default pink —
-  a pure stage modulate made all skins grey.
+- Looks (2.0 skin shop): true colours in menus and at stage 0; in runs the whole
+  look (bird + gear + hat) is `lerp(colour, stageFg, 0.35)` — a pure stage
+  modulate made all skins grey. Hoop/Trail layers are preview-only until PRD-2.
+- Item art is drawn in code (`lib/skins/art/`, port of
+  `design/menu_v2/skin_art.js`) — no skin sprite assets any more.
 - Menu spike strips are drawn 44 pt (slide to 72 pt on START); visual only.
 - WP7 folded into WP4–WP6: invite wiring + analytics events live where the
   actions are; audit in the Sol E2E pass.

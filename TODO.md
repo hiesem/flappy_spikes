@@ -316,6 +316,28 @@ Linux test target. Work lives on the `feat/menu-v2` branch — **not pushed**,
 - [ ] Install `gst-plugins-good` for Linux audio
 - [ ] Real-device test on the Pixel 8
 
+## Phase 18 — 2.0 skin shop + live home & Shop (PRD-menu-v2, branch `feat/skin-shop`)
+
+Branch off `feat/menu-v2`, local commits only (not pushed). Built by Opus/DeepSeek
+builders in worktrees, QA by GPT-6.1 Sol (max 2 fix rounds).
+
+- [x] Shared contract `lib/skins/look.dart` (Look / SkinLayer / Rarity)
+- [x] WP-A — catalogue (88 items), ItemStore, persistence + PRD-1 skin reset,
+      item analytics, 15 menu SFX, debug "ALL ITEMS"
+- [x] WP-B1 — Canvas port: 30 birds, 14 gear, 14 hats, LookPainter (try-on dim,
+      dead pose)
+- [x] WP-B2 — Canvas port: 15 hoop skins, 15 trails (pooled particles, ribbon,
+      afterimage)
+- [x] WP-C — skin shop screen (layout A), try-on / equip / buy / celebrations,
+      featured item row, reduce motion
+- [x] WP-D — LookComponent on the run bird and home bird (stage blend, dead pose)
+- [x] WP-E — legacy PRD-1 skin code removed; live home & Shop (§8), GET + coin-fly
+- [x] Sol QA round 1 (S1-10 … S1-15) + fixes
+- [ ] Device check on the Pixel 8 (performance of Afterimage / Black hole /
+      Rainbow ribbon, Q-S7)
+- [ ] Open PRD questions still pending: Q-S1 earn rate, Q-S2/Q-S3/Q-S4 (with
+      PRD-2), Q-S8 random-from-owned, Q-S9 coin-fly for other rewards
+
 ## Final gate (1.0)
 - [x] `flutter analyze` clean
 - [x] `flutter test` 103/103 green

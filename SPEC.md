@@ -61,11 +61,12 @@ states" above. Everything else in this document still holds.
   `Config.menuSpikeHeight`).
 - **Menus always stage 0.** Home, Shop, Skins and all dialogs/popups render at
   colour stage 0; only runs advance the colour stage.
-- **Skin tint rule.** The bird is drawn from the equipped skin (tinted layer +
-  fixed-colour overlay). In menus and at stage 0 the tint is the skin's identity
-  colour; from stage 5 it lerps 35 % toward the stage foreground
-  (`Config.skinStageBlend`) — applied to every skin, the default pink included
-  (a pure stage modulate made all skins grey). Hitbox and physics are unchanged.
+- **Skin tint rule.** The bird is drawn from the equipped 2.0 look (bird + gear +
+  hat, `LookPainter`). In menus and at stage 0 it shows its true colours; from
+  stage 5 the whole look lerps 35 % toward the stage foreground
+  (`Config.skinStageBlend`, a colour-matrix layer) — applied to every look, the
+  default Classic included (a pure stage modulate made all skins grey). Hitbox and
+  physics are unchanged.
 - **Powerup slot = "watch ad → play with powerup"** (DEVIATION from PRD-1
   §3.6/§4.2, product-owner decision 2026-10-04). The gold slot always shows the
   video icon + label (No-ads owners: no icon) and has no armed / ✓ state.
@@ -123,6 +124,45 @@ test IDs), in-app purchases and the debug panel (debug builds + Linux) are also
 2.0 additions. This supersedes the 1.0 "No ads" shell note (the app now shows
 rewarded ads and sells a No-ads IAP), and the privacy-policy link lives on the
 Settings screen rather than the start scene.
+
+## 2.0 skin shop (PRD-menu-v2) deviations
+
+Implements `PRD-menu-v2.md` on branch `feat/skin-shop` (off `feat/menu-v2`):
+5-layer wardrobe (88 items), skin shop layout A, live home & Shop (§8).
+Product-owner decisions 2026-10-06/07 and implementation notes:
+
+- **Hoops and trails are preview-only** until PRD-2 lands: the 1.0 game still
+  has pipes, so the Hoop and Trail layers are bought/equipped and shown in the
+  skin shop's live preview only; runs, home and results show bird + gear + hat.
+- **PRD-1 skins are reset** (Q-S6): the old `ownedSkins` / `equippedSkin` /
+  `seenSkins` prefs are deleted on load, no grant, no refund.
+- **No BUY confirmation** (Q-S5): try-on + the priced BUY button is the step.
+- **Stage blend kept** (DEVIATION from §5 "colours fixed"): see the skin tint rule.
+- **Art in code:** every item is a Canvas port of `design/menu_v2/skin_art.js`
+  (`lib/skins/art/`); no sprite assets. The PRD's "44 × 36 art box / 30 × 30
+  body" are art units: in runs the art body centre (21, 18) sits on the physics
+  body centre at `Config.lookScale` = 29.5 / 30; the hitbox stays the 1.0 circle
+  (r 14.75).
+- **Dead pose:** X eye, wing up, hat and gear stay attached, idle animations
+  frozen (§6 proposal; the wind-up key stops turning).
+- **Gear #10 = Wind-up key** (design change 2026-10-06, replaces the Sidekick).
+- **One try-on at a time:** switching tabs clears it; equipping an owned item
+  clears that layer's.
+- **NEW tags** clear per item when tapped (also when opened tried-on from the
+  Shop's featured row).
+- **Shop featured row = featured item:** first unowned item of the update list
+  (`kNewInUpdate`), else the cheapest unowned item, at its catalogue price
+  (the PRD-1 200-coin featured skin is gone); hidden when all are owned.
+- `sk_hoop` / `sk_fire` play only after the hoop/trail skin changes (primed with
+  the equipped skins on open).
+- **GET** (was WATCH) pulses only while claimable; the "+40" toast stays next to
+  the coin-fly. START plays its own flap only when the run start is delayed (the
+  run's first flap already plays it).
+- **Reduce motion** (OS setting): no pulses, streaks, wobbles, wiggles, glints,
+  flash, shake, rays or random bird actions; bob/flap and tap reactions stay.
+  Idle animations also pause under popups, ads, fake ads and the debug panel.
+- **SFX before warm-up are dropped**, never played through a one-shot player
+  (audio invariant).
 
 ## Physics (Forge2D)
 

@@ -4,6 +4,7 @@ import 'package:flappy_spikes/components/skins/skins_screen.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/skin_catalog.dart';
+import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart' hide escape;
 
@@ -152,9 +153,10 @@ void main() {
 
   group('Skins actions', () {
     shopTest(
-      'tap owned equips at once: outline moves, home + run bird follow',
+      'tap owned equips at once: outline moves, home + run bird follow the look',
       prefs: const {
         'ownedSkins': ['pink', 'blue'],
+        'ownedItems': ['bird:robin'],
       },
       verify: (game, spy, ads, iap, tester) async {
         final screen = await openSkins(game);
@@ -166,7 +168,6 @@ void main() {
         expect(screen.tileFor('blue').equipped, isTrue);
         expect(screen.tileFor('pink').equipped, isFalse);
         expect(screen.tileFor('pink').outline.isVisible, isFalse);
-        expect(game.world.children.query<Bird>().single.skin.id, 'blue');
 
         // Re-tapping the equipped skin logs nothing new.
         screen.tileFor('blue').onPressed();
@@ -176,7 +177,12 @@ void main() {
         screen.backButton.onPressed();
         await settle(game);
         expect(game.menuScene, MenuScene.home);
-        expect(game.homeScreen!.bird.sprites.skin.id, 'blue');
+        // The 2.0 look (menu.items) is what the birds draw; the legacy screen
+        // is replaced by the skin shop (WP-C).
+        await game.menu.items.equip(SkinLayer.bird, 'robin');
+        await settle(game);
+        expect(game.world.children.query<Bird>().single.look.bird, 'robin');
+        expect(game.homeScreen!.bird.look.bird, 'robin');
       },
     );
 

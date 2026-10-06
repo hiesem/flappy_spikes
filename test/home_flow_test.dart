@@ -16,11 +16,11 @@ import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/palettes.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
-import 'package:flappy_spikes/menu/skin_catalog.dart';
 import 'package:flappy_spikes/menu/wallet.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/services/monetization.dart';
+import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show KeyEventResult;
 import 'package:flutter_test/flutter_test.dart';
@@ -568,45 +568,42 @@ void main() {
     );
   });
 
-  group('skins', () {
+  group('look (PRD-menu-v2)', () {
     homeTest(
-      'equipped skin is drawn by the run bird and the home bird',
+      'equipped look is drawn by the run bird and the home bird',
       prefs: const {
-        'ownedSkins': ['pink', 'blue'],
-        'equippedSkin': 'blue',
+        'ownedItems': ['bird:robin'],
+        'equippedItem.bird': 'robin',
       },
       verify: (game, spy, ads, tester) async {
-        final blue = skinById('blue')!;
         final bird = game.world.children.query<Bird>().single;
-        expect(bird.skin.id, 'blue');
-        expect(game.homeScreen!.bird.sprites.skin.id, 'blue');
-        // Menus: identity colour.
+        expect(bird.look.bird, 'robin');
+        expect(game.homeScreen!.bird.look.bird, 'robin');
+        // Menus: identity colours, no stage blend.
         game.update(0);
-        expect(bird.skinSprite.tint, blue.mockColor);
-        expect(game.homeScreen!.bird.skinSprite.tint, blue.mockColor);
+        expect(bird.lookComponent.blend, 0);
+        expect(game.homeScreen!.bird.lookComponent.blend, 0);
 
-        // Equipping another skin swaps both in place.
-        await game.menu.skins.equip('pink');
+        // Equipping another look swaps both in place, live.
+        await game.menu.items.equip(SkinLayer.bird, 'classic');
         await flushAndMount(game);
         game.update(0);
-        await flushAndMount(game);
-        expect(bird.skin.id, 'pink');
-        expect(game.homeScreen!.bird.sprites.skin.id, 'pink');
+        expect(bird.look.bird, 'classic');
+        expect(game.homeScreen!.bird.look.bird, 'classic');
       },
     );
 
     homeTest(
-      'run tint: identity at stage 0, lerp 0.35 toward the stage from 5',
+      'run blend: 0 at stage 0, Config.skinStageBlend from stage 5',
       prefs: const {
-        'ownedSkins': ['pink', 'blue'],
-        'equippedSkin': 'blue',
+        'ownedItems': ['bird:robin'],
+        'equippedItem.bird': 'robin',
       },
       verify: (game, spy, ads, tester) async {
-        final blue = skinById('blue')!;
         game.onScreenTap();
         final bird = game.world.children.query<Bird>().single;
         game.update(1 / 60);
-        expect(bird.skinSprite.tint, blue.mockColor);
+        expect(bird.lookComponent.blend, 0);
         game.score = 4;
         // Score 5 -> stage 5 crossfade.
         game.onScoreSensor(PipePair(gapBottomY: 351));
@@ -616,10 +613,11 @@ void main() {
         stepGame(game, 0.5);
         expect(game.skinBlend, Config.skinStageBlend);
         game.update(0);
-        expect(
-          bird.skinSprite.tint,
-          Color.lerp(blue.mockColor, kPalettes[5]!.foreground, 0.35),
-        );
+        // The bird draws the true colours mixed Config.skinStageBlend toward
+        // the stage foreground (LookComponent applies the blend at draw
+        // time; look_visual_test checks the rendered pixels).
+        expect(bird.lookComponent.blend, Config.skinStageBlend);
+        expect(bird.lookComponent.blendColor, kPalettes[5]!.foreground);
       },
     );
   });

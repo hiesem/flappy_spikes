@@ -47,6 +47,11 @@ class Config {
   static const double birdRadius = 14.75; // sprite height / 2
   static const double idleFrameTime = 0.5;
   static const double flapFrameTime = 0.2;
+
+  /// Points per art unit for the 2.0 look art ([LookPainter]'s 44 x 36 art
+  /// box): the 30-unit art body square matches the 1.0 bird height
+  /// (2 * [birdRadius] = 29.5), so the hitbox and physics stay untouched.
+  static const double lookScale = 2 * birdRadius / 30; // 29.5 / 30
   static const double deathSpin = 5 * 3.141592653589793; // 5pi rad over 1 s
   static const double deathRestitution = 0.1;
   static final Vector2 deathVelocity = Vector2(120, -360);
@@ -316,6 +321,12 @@ class Config {
     homeBirdSize.x,
     homeBirdSize.y,
   );
+
+  /// Points per art unit for the home bird inside [rect]: the 2.0 look keeps
+  /// the body size of the 1.0 home sprite, which drew the [birdSize] canvas
+  /// scaled to the rect width.
+  static double lookScaleForHome(Rect rect) =>
+      lookScale * rect.width / birdSize.x;
   static Rect homeStartRectFor(double viewHeight) => Rect.fromLTWH(
     homeStartLeft,
     homeStartTopFor(viewHeight),

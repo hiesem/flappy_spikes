@@ -6,6 +6,7 @@ import 'package:flame/game.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/gameover_panel.dart';
+import 'package:flappy_spikes/components/look_component.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
 import 'package:flappy_spikes/components/ui/service_message.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
@@ -15,6 +16,7 @@ import 'package:flappy_spikes/services/ads_service.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/services/iap_service.dart';
 import 'package:flappy_spikes/services/monetization.dart';
+import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -523,7 +525,9 @@ void main() {
     expect(g.menu.skins.equipped, 'pink');
     expect(r.spy.params('skin_equip').last, {'skin': 'pink'});
     await tap(g, t, const Offset(33, 77));
-    expect(g.homeScreen!.bird.sprites.skin.id, 'pink');
+    // The 2.0 look (menu.items) drives the birds; the PRD-1 skin below is
+    // reset on load (PRD §3.9).
+    expect(g.homeScreen!.bird.look, Look.defaults);
     expect(g.homeScreen!.skinsTile.tag, isNull);
     await tap(g, t, const Offset(49, 502));
     await tap(g, t, const Offset(160, 616));
@@ -625,7 +629,7 @@ void main() {
     restart.onKeyEvent(key(LogicalKeyboardKey.space), {});
     expect(restart.state, GameState.playing);
     expect(restart.menu.slot.armed, Powerup.none);
-    expect(restart.world.children.query<Bird>().single.skin.id, 'blue');
+    expect(restart.world.children.query<Bird>().single.look, Look.defaults);
     restart.onKeyEvent(key(LogicalKeyboardKey.space), {});
     expect(
       restart.world.children.query<Bird>().single.body.linearVelocity.y,
@@ -753,25 +757,27 @@ void main() {
   });
 
   e2e(
-    'QA owned skin sprites follow equip through home, run, death',
+    'QA equipped look follows equip through home, run, death',
     (g, r, t) async {
-      await tap(g, t, const Offset(123, 502));
-      // Row 3 centre tile is TOPHAT.
-      await tap(g, t, const Offset(160, 431));
-      expect(g.menu.skins.equipped, 'tophat');
-      await tap(g, t, const Offset(33, 77));
-      expect(g.homeScreen!.bird.sprites.skin.id, 'tophat');
+      await g.menu.items.equip(SkinLayer.bird, 'toucan');
+      await g.menu.items.equip(SkinLayer.hat, 'tophat');
+      await settle(g, t);
+      expect(g.homeScreen!.bird.look.bird, 'toucan');
+      expect(g.homeScreen!.bird.look.hat, 'tophat');
       await tap(g, t, const Offset(189, 311), fade: false);
       final bird = g.world.children.query<Bird>().single;
-      expect(bird.skin.id, 'tophat');
+      expect(bird.look.bird, 'toucan');
+      expect(bird.look.hat, 'tophat');
       g.onBirdHit();
       expect(bird.dead, isTrue);
-      expect(bird.skin.id, 'tophat');
+      // The look stays on; the dead pose is frozen (hat/gear tumble along).
+      expect(bird.look.bird, 'toucan');
+      expect(bird.lookComponent.pose, LookPose.dead);
       await settle(g, t, fade: true);
-      await capture(g, t, 'gameover_tophat');
+      await capture(g, t, 'gameover_look');
     },
     prefs: {
-      'ownedSkins': ['pink', 'tophat'],
+      'ownedItems': ['bird:toucan', 'hat:tophat'],
     },
   );
 

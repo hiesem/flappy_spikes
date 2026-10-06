@@ -333,6 +333,8 @@ builders in worktrees, QA by GPT-6.1 Sol (max 2 fix rounds).
 - [x] WP-D — LookComponent on the run bird and home bird (stage blend, dead pose)
 - [x] WP-E — legacy PRD-1 skin code removed; live home & Shop (§8), GET + coin-fly
 - [x] Sol QA round 1 (S1-10 … S1-15) + fixes
+- [x] Sol QA round 2 (S2-10 … S2-12: continuous art clock through flaps, pool
+      ready = pool + duration, contained audio errors) + fixes
 - [ ] Device check on the Pixel 8 (performance of Afterimage / Black hole /
       Rainbow ribbon, Q-S7)
 - [ ] Open PRD questions still pending: Q-S1 earn rate, Q-S2/Q-S3/Q-S4 (with

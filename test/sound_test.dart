@@ -34,5 +34,27 @@ void main() {
       sound.play(Sfx.flap); // muted: swallowed, must not throw
       expect(sound.musicVolume, 0.3);
     });
+
+    test('an SFX with no ready pool is dropped, never one-shotted', () async {
+      // Enabled but no pool ready (warmup still running / failed): play must
+      // drop the sound instead of opening a one-shot player (CLAUDE.md:
+      // preloaded low-latency pools only, no bare FlameAudio.play).
+      var built = 0;
+      final sound = SoundService()
+        ..poolFactory = (file, legacy) async {
+          built++;
+          return null; // models a pool that never became ready
+        };
+      final played = <Sfx>[];
+      sound.onPlay = played.add;
+
+      sound.play(Sfx.skTap); // warms the pools; this play is dropped
+      await Future<void>.delayed(Duration.zero);
+      expect(built, SoundService.audioFiles.length);
+
+      sound.play(Sfx.skTap); // still no pool: dropped, no new warmup
+      expect(built, SoundService.audioFiles.length);
+      expect(played, [Sfx.skTap, Sfx.skTap]);
+    });
   });
 }

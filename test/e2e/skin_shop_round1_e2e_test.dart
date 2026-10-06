@@ -23,10 +23,10 @@ import '../helpers.dart';
 import '../menu_screenshot_test.dart' show captureShot, loadFonts;
 
 // Existing PRD-1 QA tests already use S1-01..09. This round starts at S1-10.
-// To reproduce the open defects without editing their skip markers:
-// flutter test test/e2e/skin_shop_round1_e2e_test.dart \
-//   --dart-define=QA_VERIFY_OPEN_DEFECTS=true --name S1-
-const _verifyOpen = bool.fromEnvironment('QA_VERIFY_OPEN_DEFECTS');
+// S1-10..S1-15 shipped as skipped reproductions in the QA round; branch
+// ss-fix1 fixed the product code, so their pinning tests now run by default.
+// Run just them with:
+//   flutter test test/e2e/skin_shop_round1_e2e_test.dart --name S1-
 
 class _Events extends GameServices {
   final recorded = <(String, Map<String, Object>?)>[];
@@ -53,11 +53,8 @@ void _journey(
   Future<void> Function(FlappySpikesGame, _Rig, WidgetTester) verify, {
   Map<String, Object> prefs = const {},
   double height = 711,
-  String? defect,
 }) {
-  // FlameTester's skip parameter only accepts bool; group supports the
-  // requested explicit reason, e.g. skip: 'S1-11 open'.
-  group(name, skip: defect == null || _verifyOpen ? false : '$defect open', () {
+  group(name, () {
     final rig = _Rig();
     FlameTester<FlappySpikesGame>(
       () => createTestGame(
@@ -487,12 +484,11 @@ void main() {
       isFalse,
       reason: 'CLAUDE.md and PRD §4.4 require preloaded low-latency pools only',
     );
-  }, skip: _verifyOpen ? false : 'S1-10 open');
+  });
 
   _journey(
     'S1-11 animated home gear freezes under a popup and debug panel',
     prefs: _dressedPrefs,
-    defect: 'S1-11',
     (game, rig, tester) async {
       final home = game.homeScreen!;
       game.openNoAdsPopup();
@@ -538,7 +534,6 @@ void main() {
 
   _journey(
     'S1-12 settled locked static tiles need no per-frame saveLayer',
-    defect: 'S1-12',
     (game, rig, tester) async {
       await _tap(game, tester, game.homeScreen!.skinsTile);
       await _fade(game);
@@ -558,7 +553,6 @@ void main() {
 
   _journey(
     'S1-13 featured-item try-on clears its NEW tag and persists seen',
-    defect: 'S1-13',
     (game, rig, tester) async {
       await _tap(game, tester, game.homeScreen!.shopTile);
       await _fade(game);
@@ -578,7 +572,6 @@ void main() {
   _journey(
     'S1-14 debug reset immediately restores the default home look',
     prefs: _dressedPrefs,
-    defect: 'S1-14',
     (game, rig, tester) async {
       game.openDebugPanel();
       await flushAndMount(game);
@@ -600,7 +593,6 @@ void main() {
     prefs: const {
       'ownedItems': ['bird:lemon', 'bird:toucan', 'bird:ghost'],
     },
-    defect: 'S1-15',
     (game, rig, tester) async {
       await _tap(game, tester, game.homeScreen!.shopTile);
       await _fade(game);

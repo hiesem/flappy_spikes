@@ -127,6 +127,7 @@ class ShopScreen extends MenuScreen {
         if (item != null) game.openFeaturedItem(item);
       },
       isActive: isActive,
+      isPaused: () => game.liveMotionPaused,
     );
     const linkSize = Size(200, 24);
     final linkTop = Config.shopRestorePositionFor(h);
@@ -711,6 +712,7 @@ class FeaturedSkinRow extends MenuButton {
     required this.coin,
     required super.onPressed,
     super.isActive,
+    this.isPaused,
   }) : super(
          color: const Color(0xFFE1E1E1),
          position: rect.topLeft.toVector2(),
@@ -718,6 +720,11 @@ class FeaturedSkinRow extends MenuButton {
        );
 
   final Sprite coin;
+
+  /// Freezes the row's artwork clock while it returns true (§8.4: the
+  /// featured art pauses with the Shop's idle clock under a popup / ad /
+  /// debug panel).
+  final bool Function()? isPaused;
 
   /// The price pill's light streak.
   late final LightStreak streak = LightStreak(
@@ -804,6 +811,7 @@ class FeaturedSkinRow extends MenuButton {
   @override
   void update(double dt) {
     super.update(dt);
+    if (isPaused?.call() ?? false) return; // frozen with the idle clock
     _t += dt;
     final emitter = _emitter;
     if (emitter != null) ItemArt.advanceTrail(emitter, _t, dt);

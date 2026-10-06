@@ -96,6 +96,7 @@ abstract final class ItemArt {
 /// kept across tab switches. [dispose] when the screen goes away.
 class ItemArtCache {
   final Map<String, Picture> _pictures = {};
+  final Map<String, Picture> _lockedPictures = {};
   final Map<String, TrailEmitter> _emitters = {};
 
   /// Number of recorded static pictures (tests).
@@ -107,16 +108,39 @@ class ItemArtCache {
     return recorder.endRecording();
   });
 
+  /// [pictureFor] with the locked tiles' 42 % alpha baked in, recorded once:
+  /// a settled locked static tile then replays a single picture instead of
+  /// compositing a fresh `saveLayer` every frame (§4.3 static-art caching).
+  Picture lockedPictureFor(SkinItem item) =>
+      _lockedPictures.putIfAbsent(item.key, () {
+        final recorder = PictureRecorder();
+        final canvas = Canvas(recorder);
+        canvas.saveLayer(
+          null,
+          Paint()
+            ..color = const Color.fromRGBO(
+              0,
+              0,
+              0,
+              Config.skinShopLockedOpacity,
+            ),
+        );
+        ItemArt.paint(canvas, item);
+        canvas.restore();
+        return recorder.endRecording();
+      });
+
   TrailEmitter emitterFor(SkinItem item) => _emitters.putIfAbsent(
     item.key,
     () => TrailEmitter(item.id, lookPainter: paintLookForTrail),
   );
 
   void dispose() {
-    for (final picture in _pictures.values) {
+    for (final picture in [..._pictures.values, ..._lockedPictures.values]) {
       picture.dispose();
     }
     _pictures.clear();
+    _lockedPictures.clear();
     _emitters.clear();
   }
 }

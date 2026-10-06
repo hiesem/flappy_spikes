@@ -754,6 +754,9 @@ class HomeBird extends PositionComponent
 
   @override
   void update(double dt) {
+    // §8.4: the look's own clock (wind-up key / animated gear) pauses with
+    // the screen's idle clock, together with the bob / flap idle.
+    _look.paused = game.liveMotionPaused;
     super.update(dt);
     if (!game.liveMotionPaused) idle.step(dt, still: game.reduceMotion);
     _apply();

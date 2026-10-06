@@ -186,15 +186,11 @@ class ItemTile extends PositionComponent with TapCallbacks {
     final rect = size.toRect();
     canvas.drawRect(rect, _paint..color = cardColor());
 
-    // Art (42 % while locked, solid while being tried on).
+    // Art (42 % while locked, solid while being tried on). Static art is a
+    // cached picture with that alpha already baked in, so a settled locked
+    // tile never composites a per-frame layer; only the animated art (whose
+    // picture changes every frame) is dimmed through one.
     final dim = !s.owned && !s.tryingOn;
-    if (dim) {
-      canvas.saveLayer(
-        rect,
-        _alpha
-          ..color = const Color.fromRGBO(0, 0, 0, Config.skinShopLockedOpacity),
-      );
-    }
     canvas.save();
     canvas.translate(
       (width - Config.skinShopArtWidth) / 2,
@@ -210,6 +206,23 @@ class ItemTile extends PositionComponent with TapCallbacks {
       ),
     );
     if (animatesArt) {
+      if (dim) {
+        canvas.saveLayer(
+          const Rect.fromLTWH(
+            0,
+            0,
+            Config.skinShopArtWidth,
+            Config.skinShopArtHeight,
+          ),
+          _alpha
+            ..color = const Color.fromRGBO(
+              0,
+              0,
+              0,
+              Config.skinShopLockedOpacity,
+            ),
+        );
+      }
       final flap = item.layer == SkinLayer.bird && (s.equipped || s.tryingOn);
       ItemArt.paint(
         canvas,
@@ -218,11 +231,13 @@ class ItemTile extends PositionComponent with TapCallbacks {
         flap: flap,
         emitter: item.layer == SkinLayer.trail ? art.emitterFor(item) : null,
       );
+      if (dim) canvas.restore();
     } else {
-      canvas.drawPicture(art.pictureFor(item));
+      canvas.drawPicture(
+        dim ? art.lockedPictureFor(item) : art.pictureFor(item),
+      );
     }
     canvas.restore();
-    if (dim) canvas.restore();
 
     // Inner outlines: equipped / trying on win over the rarity outline.
     final rarity = item.isNone ? null : item.rarity;

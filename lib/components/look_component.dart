@@ -63,6 +63,12 @@ class LookComponent extends PositionComponent {
   /// of the pose clock; null = the 1.0 frame timing below.
   bool? flapOverride;
 
+  /// Freezes the pose clock (and the gear / hat art it drives) while true.
+  /// The live home bird sets it from the screen's idle-clock pause (§8.4) so
+  /// an animated item (e.g. the wind-up key) stops turning under a popup, ad
+  /// or the debug panel, exactly like the rest of the idle motion.
+  bool paused = false;
+
   /// Draws the eye closed (idle blink, [LookPainter.paint]'s `blink`).
   bool blink = false;
 
@@ -110,8 +116,8 @@ class LookComponent extends PositionComponent {
   @override
   void update(double dt) {
     super.update(dt);
-    if (_pose == LookPose.dead) {
-      return; // Frozen: the dead pose is a still frame.
+    if (_pose == LookPose.dead || paused) {
+      return; // Frozen: the dead pose / idle art under an overlay.
     }
     _time += dt;
     if (_pose == LookPose.flap && _time >= 2 * Config.flapFrameTime) {

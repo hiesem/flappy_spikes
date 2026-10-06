@@ -248,6 +248,24 @@ void main() {
       expect(storage.seenItems, contains('bird:lime'));
     });
 
+    test('resetAll clears the wardrobe and notifies listeners', () async {
+      final (_, _, items) = await build(
+        coins: 900,
+        owned: {'bird:robin', 'gear:windup'},
+        equipped: {SkinLayer.bird: 'robin', SkinLayer.gear: 'windup'},
+      );
+      expect(items.look.bird, 'robin');
+      expect(items.look.gear, 'windup');
+      var notified = 0;
+      items.addListener(() => notified++);
+
+      await items.resetAll();
+
+      expect(notified, 1, reason: 'live views re-read the defaults at once');
+      expect(items.look, Look.defaults);
+      expect(items.ownedCount, 3);
+    });
+
     test('hasNewBadge clears once every new item is seen', () async {
       final (_, _, items) = await build();
       expect(items.hasNewBadge, isTrue);

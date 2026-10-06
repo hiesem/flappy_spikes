@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flame_audio/flame_audio.dart';
+import 'package:flutter/foundation.dart';
 
 /// Sound effects used by the game (files live in assets/audio/).
 ///
@@ -102,6 +103,13 @@ class SoundService {
   /// false), before muting applies.
   void Function(Sfx sfx)? onPlay;
 
+  /// Test seam: builds one pool per file. Defaults to the real low-latency
+  /// [AudioPool]; a test injects a factory (e.g. one returning null, a pool
+  /// that never became ready) to exercise [play]'s drop path without the
+  /// audioplayers plugin.
+  @visibleForTesting
+  Future<AudioPool?> Function(String file, bool legacy)? poolFactory;
+
   void play(Sfx sfx) {
     onPlay?.call(sfx);
     if (muted || !enabled) {
@@ -109,10 +117,12 @@ class SoundService {
     }
     final pool = _pools[sfx];
     if (pool == null) {
-      // Pools not ready yet: fall back to a one-shot player and warm them up
-      // for next time.
+      // The pools are not ready yet (still warming up, or a pool failed to
+      // initialize): start warming them and DROP this one play. A bare
+      // FlameAudio.play here would spawn a fresh one-shot AudioPlayer, which
+      // the project bans (CLAUDE.md: preloaded low-latency pools only), so a
+      // sound requested this early is simply silent.
       unawaited(_initPools());
-      FlameAudio.play(_files[sfx]!);
       return;
     }
     // SoundPool mode never reports completion: stop after the known duration
@@ -128,7 +138,8 @@ class SoundService {
   }
 
   /// Creates the SFX pools once. No-op when [enabled] is false (tests) and
-  /// idempotent afterwards; failures degrade silently to [FlameAudio.play].
+  /// idempotent afterwards; while it runs (or after a failure) [play] simply
+  /// drops the sound instead of opening a one-shot player.
   Future<void> _initPools() async {
     if (!enabled || _poolsStarted) {
       return;
@@ -137,16 +148,18 @@ class SoundService {
     try {
       for (final entry in _files.entries) {
         final legacy = _legacyPool.contains(entry.key);
-        final pool = await AudioPool.create(
-          source: AssetSource(entry.value),
-          audioCache: FlameAudio.audioCache,
-          minPlayers: legacy ? 2 : 1,
-          maxPlayers: legacy ? 4 : 2,
-          playerMode: PlayerMode.lowLatency,
-          audioContext: AudioContextConfig(
-            focus: AudioContextConfigFocus.mixWithOthers,
-          ).build(),
-        );
+        final pool = await (poolFactory?.call(entry.value, legacy) ??
+            AudioPool.create(
+              source: AssetSource(entry.value),
+              audioCache: FlameAudio.audioCache,
+              minPlayers: legacy ? 2 : 1,
+              maxPlayers: legacy ? 4 : 2,
+              playerMode: PlayerMode.lowLatency,
+              audioContext: AudioContextConfig(
+                focus: AudioContextConfigFocus.mixWithOthers,
+              ).build(),
+            ));
+        if (pool == null) continue; // never became ready: stay silent
         _pools[entry.key] = pool;
         _durations[entry.key] =
             await pool.getDuration() ?? const Duration(milliseconds: 500);

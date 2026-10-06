@@ -113,6 +113,18 @@ void main() {
       expect(c.time, 0);
     });
 
+    test('paused freezes the idle clock and resumes where it stopped', () {
+      final c = LookComponent(look: Look.defaults);
+      c.update(0.7);
+      final t = c.time;
+      c.paused = true;
+      c.update(5);
+      expect(c.time, t, reason: 'the idle art pauses with the screen clock');
+      c.paused = false;
+      c.update(0.1);
+      expect(c.time, closeTo(t + 0.1, 1e-9));
+    });
+
     test('showDead freezes the clock in the dead pose', () {
       final c = LookComponent(look: Look.defaults);
       c.update(0.7);

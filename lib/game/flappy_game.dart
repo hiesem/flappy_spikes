@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math';
-import 'dart:ui' show Color, Paint;
+import 'dart:ui' show Color, Paint, PlatformDispatcher;
 
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
@@ -22,8 +22,7 @@ import '../components/pipe_pair.dart';
 import '../components/score_hud.dart';
 import '../components/settings_panel.dart';
 import '../components/shop/shop_screen.dart';
-import '../components/skins/skin_unlock_dialog.dart';
-import '../components/skins/skins_screen.dart';
+import '../components/skins/skin_shop_screen.dart';
 import '../components/spike_strip.dart';
 import '../components/tap_catcher.dart';
 import '../components/ui/service_message.dart';
@@ -36,6 +35,9 @@ import '../services/ads_service.dart';
 import '../services/game_services.dart';
 import '../services/iap_service.dart';
 import '../services/monetization.dart';
+import '../skins/catalog.dart';
+import '../skins/item_store.dart';
+import '../skins/look.dart';
 import 'config.dart';
 import 'fade.dart';
 import 'palettes.dart';
@@ -172,9 +174,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   GameOverPanel? _gameOverPanel;
   SettingsPanel? _settingsPanel;
   ShopScreen? _shop;
-  SkinsScreen? _skins;
-  SkinUnlockDialog? _skinDialog;
-  bool _skinPurchaseRunning = false;
+  SkinShopScreen? _skinShop;
+  bool _itemPurchaseRunning = false;
   NoAdsPopup? _noAdsPopup;
   /// The popup's only context since 2026-10-05 (analytics payload).
   static const String _launchTrigger = 'launch';
@@ -217,11 +218,17 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// The Shop while it is open (null otherwise).
   ShopScreen? get shopScreen => _shop;
 
-  /// The Skins screen while it is open (null otherwise).
-  SkinsScreen? get skinsScreen => _skins;
+  /// The skin shop while it is open (null otherwise).
+  SkinShopScreen? get skinShop => _skinShop;
 
-  /// The skin unlock dialog while it is up (null otherwise).
-  SkinUnlockDialog? get skinDialog => _skinDialog;
+  /// Test / debug override of [reduceMotion] (null = follow the OS).
+  bool? reduceMotionOverride;
+
+  /// The OS "reduce motion" / remove-animations setting (PRD-menu-v2 §8.4):
+  /// no flash, shake, rays or pulsing; bob and flap stay.
+  bool get reduceMotion =>
+      reduceMotionOverride ??
+      PlatformDispatcher.instance.accessibilityFeatures.disableAnimations;
 
   /// The No-ads popup while it is up (null otherwise).
   NoAdsPopup? get noAdsPopup => _noAdsPopup;
@@ -729,23 +736,29 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     await purchases.restore();
   }
 
-  /// Shop featured-skin row: the Skins screen at [skinId]'s purchase
-  /// confirmation.
-  void openFeaturedSkin(String skinId) =>
-      openSkins(confirmSkinId: skinId, source: 'shop_featured');
+  /// Shop featured-item row: the skin shop on [item]'s tab with it tried
+  /// on.
+  void openFeaturedItem(SkinItem item) => openSkins(
+    layer: item.layer,
+    tryOnId: item.id,
+    source: 'shop_featured',
+  );
 
-  // --- Skins (PRD-1 §5.3) ----------------------------------------------------
+  // --- Skin shop (PRD-menu-v2 §3–4) ------------------------------------------
 
   /// Skins tile (home) / featured row (Shop): fades the current screen out
-  /// and the Skins screen in. [confirmSkinId] opens it with that skin's
-  /// unlock dialog already up (scrolled into view). [source] defaults to
-  /// "tile" / "shop" (`skins_open` analytics).
-  void openSkins({String? confirmSkinId, String? source}) {
-    if (_sceneOnTop(MenuScene.skins)) {
-      if (confirmSkinId != null) openSkinDialog(confirmSkinId);
+  /// and the skin shop in, on [layer]'s tab (default Birds) with the locked
+  /// item [tryOnId] tried on (scrolled into view). Already open: switches to
+  /// that tab / try-on. [source] defaults to "tile" / "shop" (`skins_open`
+  /// analytics).
+  void openSkins({SkinLayer? layer, String? tryOnId, String? source}) {
+    final open = _skinShop;
+    if (_sceneOnTop(MenuScene.skins) && open != null) {
+      if (layer != null) selectSkinTab(layer);
+      if (tryOnId != null) tapItem(open.tab, tryOnId);
       return;
     }
-    if (_skins != null) return;
+    if (open != null) return;
     final fromShop = _sceneOnTop(MenuScene.shop);
     if (!_homeInteractive && !fromShop) return;
     sound.play(Sfx.click);
@@ -759,46 +772,47 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       _menuTrail.clear();
       _leaveHome();
     }
-    _showSkins(confirmSkinId: confirmSkinId);
+    _showSkins(layer: layer, tryOnId: tryOnId);
   }
 
-  void _showSkins({String? confirmSkinId}) {
+  void _showSkins({SkinLayer? layer, String? tryOnId}) {
     menuScene = MenuScene.skins;
-    final screen = SkinsScreen(onBack: closeSkins);
-    _skins = screen;
+    final tryOn = layer != null && tryOnId != null && !menu.items.isOwned(layer, tryOnId)
+        ? tryOnId
+        : null;
+    final screen = SkinShopScreen(
+      onBack: closeSkins,
+      initialTab: layer ?? SkinLayer.bird,
+      initialTryOn: tryOn,
+    );
+    _skinShop = screen;
     _chromeHosts.add(screen);
     _chromeHold = true; // always replaces home / the Shop
     world.add(screen);
     registerTintable(screen);
     fadeOpacity(screen, from: 0, to: 1);
     pushBack(_skinsBack);
-    if (confirmSkinId != null) {
-      screen.loaded.then((_) {
-        if (!identical(_skins, screen) || !_sceneOnTop(MenuScene.skins)) {
-          return;
-        }
-        screen.scrollToSkin(confirmSkinId, animate: false);
-        openSkinDialog(confirmSkinId);
-      });
+    if (layer != null && tryOn != null) {
+      final item = itemById(layer, tryOn);
+      if (item != null) services.logItemTryOn(layer, item.id, item.rarity);
     }
   }
 
-  /// Fades the Skins screen out and drops it (with its dialog, if any).
+  /// Fades the skin shop out and drops it.
   void _dismissSkins() {
-    final screen = _skins;
+    final screen = _skinShop;
     if (screen == null) return;
-    _closeSkinDialog();
-    _skins = null;
+    _skinShop = null;
     popBack(_skinsBack);
     screen.active = false;
     unregisterTintable(screen);
     fadeOpacity(screen, from: screen.opacity, to: 0, removeOnDone: true);
   }
 
-  /// Back button / Esc on the Skins screen: back to the Shop when it was
+  /// Back button / Esc in the skin shop: back to the Shop when it was
   /// opened from there, else home (not a new arrival: no slot roll).
   void closeSkins() {
-    if (state != GameState.start || _skins == null) return;
+    if (state != GameState.start || _skinShop == null) return;
     sound.play(Sfx.click);
     _dismissSkins();
     _returnFromMenuScreen();
@@ -809,112 +823,102 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     return true;
   }
 
-  /// A skin tile: owned -> equip at once; locked -> unlock dialog.
-  void tapSkin(String skinId) {
-    if (!_sceneOnTop(MenuScene.skins)) return;
-    final skins = menu.skins;
-    if (skins.isOwned(skinId)) {
-      sound.play(Sfx.click);
-      if (!skins.isEquipped(skinId)) unawaited(equipSkin(skinId));
-    } else {
-      openSkinDialog(skinId);
+  /// A tab of the skin shop: clears the try-on (one at a time), `sk_tab`,
+  /// `skin_shop_tab`, and the grid refills with its entrance animation.
+  void selectSkinTab(SkinLayer layer) {
+    final screen = _skinShop;
+    if (screen == null || !_sceneOnTop(MenuScene.skins)) return;
+    if (screen.tab == layer) return;
+    screen.selectTab(layer);
+    sound.play(Sfx.skTab);
+    services.logSkinShopTab(layer);
+  }
+
+  /// A grid tile (PRD-menu-v2 §3.3–3.5): clears its NEW tag; an owned item
+  /// is equipped at once (or `sk_tap` when it already is); a locked one is
+  /// tried on (on [layer]'s tab — the open one for grid taps).
+  void tapItem(SkinLayer layer, String id) {
+    final screen = _skinShop;
+    if (screen == null || !_sceneOnTop(MenuScene.skins)) return;
+    final item = itemById(layer, id);
+    if (item == null) return;
+    if (layer != screen.tab) selectSkinTab(layer);
+    final items = menu.items;
+    if (screen.isNewTag(item)) {
+      screen.clearNew(item);
+      unawaited(items.markSeen(layer, id));
     }
-  }
-
-  /// Equips an owned skin (home bird and run bird follow the store).
-  Future<void> equipSkin(String skinId) async {
-    if (!menu.skins.isOwned(skinId)) return;
-    services.track('skin_equip', {'skin': skinId});
-    await menu.skins.equip(skinId);
-  }
-
-  /// Opens the unlock dialog for a locked skin over the Skins screen.
-  void openSkinDialog(String skinId) {
-    final skin = skinById(skinId);
-    if (skin == null ||
-        menu.skins.isOwned(skinId) ||
-        !_sceneOnTop(MenuScene.skins)) {
+    if (items.isOwned(layer, id)) {
+      final wasEquipped =
+          items.isEquipped(layer, id) && screen.tryOnId == null;
+      screen.clearTryOn();
+      if (wasEquipped) {
+        sound.play(Sfx.skTap);
+      } else {
+        unawaited(equipItem(layer, id));
+      }
       return;
     }
-    sound.play(Sfx.click);
-    services.track('skin_dialog_shown', {
-      'skin': skinId,
-      'affordable': menu.wallet.balance >= skin.price ? 1 : 0,
-    });
-    final dialog = SkinUnlockDialog(
-      skin: skin,
-      onConfirm: confirmSkinDialog,
-      onCancel: closeSkinDialog,
-    );
-    _skinDialog = dialog;
-    world.add(dialog);
-    fadeOpacity(dialog, from: 0, to: 1, duration: Config.popupFadeDuration);
-    pushBack(_skinDialogBack);
+    if (screen.tryOnId == id) return;
+    screen.setTryOn(id);
+    sound.play(Sfx.skTap);
+    screen.hop(.5);
+    services.logItemTryOn(layer, id, item.rarity);
   }
 
-  /// CANCEL / dim / Esc on the unlock dialog.
-  void closeSkinDialog() {
-    if (_skinDialog == null) return;
-    sound.play(Sfx.click);
-    _closeSkinDialog();
+  /// Equips an owned item (saved at once; the home bird and the run bird
+  /// follow the store): `sk_equip`, the preview bird hops with `flap.mp3`.
+  Future<void> equipItem(SkinLayer layer, String id) async {
+    if (!menu.items.isOwned(layer, id)) return;
+    _skinShop?.clearTryOn();
+    sound.play(Sfx.skEquip);
+    _skinShop?.hop();
+    services.logItemEquip(layer, id);
+    await menu.items.equip(layer, id);
   }
 
-  void _closeSkinDialog() {
-    final dialog = _skinDialog;
-    if (dialog == null) return;
-    _skinDialog = null;
-    popBack(_skinDialogBack);
-    dialog.active = false;
-    fadeOpacity(
-      dialog,
-      from: dialog.opacity,
-      to: 0,
-      duration: Config.popupFadeDuration,
-      removeOnDone: true,
-    );
-  }
-
-  bool _skinDialogBack() {
-    closeSkinDialog();
-    return true;
-  }
-
-  /// The dialog's gold button: buys the skin with coins (auto-equips) or,
-  /// when the balance is short, closes the dialog and opens the Shop at
-  /// the coin packs.
-  Future<void> confirmSkinDialog() async {
-    final dialog = _skinDialog;
-    if (dialog == null || _skinPurchaseRunning) return;
-    final skin = dialog.skin;
-    if (menu.wallet.balance < skin.price) {
-      _closeSkinDialog();
-      openShop(scrollToCoins: true, source: 'skins_dialog');
+  /// The preview's BUY button (§3.6): with enough coins the tried-on item
+  /// is bought (coins spent, owned + equipped), the celebration plays and
+  /// the coin pill counts down; otherwise `sk_nocoins`, the NOT ENOUGH
+  /// COINS toast and the pill shakes with its "+" flashing gold (the "+"
+  /// opens the Shop). No confirmation: the try-on is the confirmation.
+  Future<void> buyTriedOnItem() async {
+    final screen = _skinShop;
+    if (screen == null || !_sceneOnTop(MenuScene.skins)) return;
+    final item = screen.tryOnItem;
+    if (item == null || _itemPurchaseRunning) return;
+    final items = menu.items;
+    if (menu.wallet.balance < item.price) {
+      sound.play(Sfx.skNoCoins);
+      screen.showNoCoins();
+      _coinPill.nudge(shake: !reduceMotion);
+      services.logItemNoCoins(
+        item.layer,
+        item.id,
+        items.shortfall(item.layer, item.id),
+      );
       return;
     }
-    sound.play(Sfx.click);
-    _skinPurchaseRunning = true;
-    dialog.active = false;
-    final SkinPurchaseResult result;
+    final before = menu.wallet.balance;
+    _itemPurchaseRunning = true;
+    final ItemPurchaseResult result;
     try {
-      result = await menu.skins.purchase(skin.id);
+      result = await items.purchase(item.layer, item.id);
     } finally {
-      _skinPurchaseRunning = false;
+      _itemPurchaseRunning = false;
     }
-    if (!identical(_skinDialog, dialog)) return;
-    switch (result) {
-      case SkinPurchaseResult.purchased:
-        services.track('skin_purchase', {'skin': skin.id, 'price': skin.price});
-        // The purchase auto-equips (SkinStore.purchase): mirror the
-        // explicit-equip analytics so both paths log the same events.
-        services.track('skin_equip', {'skin': skin.id});
-        _closeSkinDialog();
-        showToast('${skin.name} unlocked!');
-      case SkinPurchaseResult.insufficientCoins:
-        // The balance dropped meanwhile: the dialog switches to GET COINS.
-        dialog.active = true;
-      case SkinPurchaseResult.alreadyOwned:
-      case SkinPurchaseResult.unknown:
-        _closeSkinDialog();
+    if (result != ItemPurchaseResult.purchased) return;
+    services.logItemPurchase(item.layer, item.id, item.rarity, item.price);
+    // The purchase auto-equips (ItemStore.purchase): mirror the explicit
+    // equip's analytics so both paths log the same events.
+    services.logItemEquip(item.layer, item.id);
+    _coinPill
+      ..balance = menu.wallet.balance
+      ..countFrom(before);
+    if (identical(_skinShop, screen)) {
+      screen
+        ..clearTryOn()
+        ..celebrate(item);
     }
   }
 
@@ -1494,7 +1498,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// scene without it (settings, START, replay). The corner glyph is the
   /// hosts' opacity-weighted gear / back mix.
   void _updateMenuChrome() {
-    final current = _home ?? _shop ?? _skins;
+    final current = _home ?? _shop ?? _skinShop;
     _chromeHosts.removeWhere(
       (host) =>
           !identical(host, current) &&

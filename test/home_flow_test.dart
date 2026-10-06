@@ -21,6 +21,7 @@ import 'package:flappy_spikes/menu/wallet.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/services/monetization.dart';
+import 'package:flappy_spikes/skins/catalog.dart' show kNewInUpdate;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show KeyEventResult;
 import 'package:flutter_test/flutter_test.dart';
@@ -730,7 +731,7 @@ void main() {
         await flushAndMount(game);
         expect(spy.names, contains('skins_open'));
         expect(game.menuScene, MenuScene.skins);
-        expect(game.skinsScreen, isNotNull);
+        expect(game.skinShop, isNotNull);
         expect(game.homeScreen, isNull);
         expect(game.state, GameState.start);
       },
@@ -776,8 +777,9 @@ void main() {
     );
 
     homeTest(
-      'NEW badge on Skins only when a skin is affordable and unseen',
-      prefs: const {'coins': 99},
+      'NEW badge on Skins only when an item is affordable and unseen '
+      '(the 2.0 update items already seen)',
+      prefs: {'coins': 149, 'seenItems': kNewInUpdate.toList()},
       verify: (game, spy, ads, tester) async {
         final tile = game.homeScreen!.skinsTile;
         expect(tile.tag, isNull);

@@ -6,10 +6,14 @@ import 'package:flame/extensions.dart';
 import '../../game/config.dart';
 import '../../game/purchases.dart';
 import '../../menu/free_coins_policy.dart';
-import '../../menu/skin_catalog.dart';
 import '../../services/iap_service.dart';
+import '../../skins/catalog.dart';
+import '../../skins/art/trail.dart';
+import '../../skins/item_store.dart';
+import '../../skins/look.dart';
 import '../home/menu_primitives.dart';
 import '../menu_screen_chrome.dart';
+import '../skins/item_art.dart';
 
 /// Coin packs in grid order with their flap tags (PRD-1 §5.2).
 const List<(IapProduct, String?)> kShopPacks = [
@@ -38,13 +42,22 @@ const List<(double, double)> _kStackSizes = [
   (20, 56),
 ];
 
-/// The cheapest skin not owned yet (display order breaks ties), or null
-/// when every skin is owned — the Shop's featured skin.
-SkinDef? featuredSkinFor(SkinStore skins) {
-  SkinDef? best;
-  for (final skin in kSkins) {
-    if (skins.isOwned(skin.id)) continue;
-    if (best == null || skin.price < best.price) best = skin;
+/// The Shop's featured item (PRD-menu-v2 §4 / WP-C): the first item of the
+/// 2.0 update ([kNewInUpdate], in its order) not owned yet, else the
+/// cheapest item not owned (catalogue order breaks ties), or null when
+/// everything is owned.
+SkinItem? featuredItemFor(ItemStore items) {
+  for (final key in kNewInUpdate) {
+    final [layerKey, id] = key.split(':');
+    final layer = SkinLayer.fromKey(layerKey);
+    if (layer == null) continue;
+    final item = itemById(layer, id);
+    if (item != null && !items.isOwned(layer, id)) return item;
+  }
+  SkinItem? best;
+  for (final item in allItems) {
+    if (item.isNone || items.isOwned(item.layer, item.id)) continue;
+    if (best == null || item.price < best.price) best = item;
   }
   return best;
 }
@@ -64,10 +77,7 @@ class ShopScreen extends MenuScreen {
   late final MenuButton restoreLink;
 
   @override
-  List<String> get contentImages => [
-    ...kShopImages,
-    for (final skin in kSkins) skin.preview,
-  ];
+  List<String> get contentImages => kShopImages;
 
   @override
   Future<void> buildContent() async {
@@ -102,10 +112,9 @@ class ShopScreen extends MenuScreen {
     featured = FeaturedSkinRow(
       rect: Config.shopFeaturedRectFor(h),
       coin: sprite('menu/coin.png'),
-      previewFor: (skin) => sprite(skin.preview),
       onPressed: () {
-        final skin = featured.skin;
-        if (skin != null) game.openFeaturedSkin(skin.id);
+        final item = featured.item;
+        if (item != null) game.openFeaturedItem(item);
       },
       isActive: isActive,
     );
@@ -163,7 +172,7 @@ class ShopScreen extends MenuScreen {
         pending: purchases.isPending(card.product),
       );
     }
-    featured.skin = featuredSkinFor(menu.skins);
+    featured.item = featuredItemFor(menu.items);
     featured.tint = tint;
   }
 
@@ -364,14 +373,19 @@ class FreeCoinsRow extends MenuButton {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    layoutRow(this, [
-      MenuIcon(coin, size: Vector2.all(28)),
-      MenuText(
-        'FREE +${FreeCoinsPolicy.reward}',
-        fontSize: 20,
-        color: Config.menuPlum,
-      ),
-    ], gap: 10, left: 14);
+    layoutRow(
+      this,
+      [
+        MenuIcon(coin, size: Vector2.all(28)),
+        MenuText(
+          'FREE +${FreeCoinsPolicy.reward}',
+          fontSize: 20,
+          color: Config.menuPlum,
+        ),
+      ],
+      gap: 10,
+      left: 14,
+    );
     _rebuildChip();
   }
 
@@ -518,14 +532,14 @@ class CoinPackCard extends MenuButton {
   }
 }
 
-/// Featured skin row: preview (0.85 x of the 48 x 52 menu preview), "FEATURED
-/// SKIN" + name, and a pink coin price pill. Tapping opens the Skins screen
-/// at that skin's purchase confirmation. Hidden when every skin is owned.
+/// Featured item row: the item's art (grid-tile art at 55 %), "FEATURED
+/// SKIN" + name, and a pink coin price pill at the catalogue price. Tapping
+/// opens the skin shop on the item's tab with it tried on. Hidden when
+/// everything is owned.
 class FeaturedSkinRow extends MenuButton {
   FeaturedSkinRow({
     required Rect rect,
     required this.coin,
-    required this.previewFor,
     required super.onPressed,
     super.isActive,
   }) : super(
@@ -535,28 +549,36 @@ class FeaturedSkinRow extends MenuButton {
        );
 
   final Sprite coin;
-  final Sprite Function(SkinDef skin) previewFor;
 
-  static const double previewScale = 0.85;
+  /// Scale of the 84 x 68 grid-tile art in the row.
+  static const double artScale = 0.55;
   static const double padX = 10;
+  static const double artSlot = 48;
 
-  SkinDef? _skin;
+  SkinItem? _item;
   bool _built = false;
   Color _tint = const Color(0xFF828282);
   final List<Component> _content = [];
   MenuText? _caption;
   MenuText? _name;
+  MenuText? _price;
+  TrailEmitter? _emitter;
+  double _t = 0;
 
-  /// The featured skin (null = row hidden).
-  SkinDef? get skin => _skin;
-  set skin(SkinDef? value) {
-    if (_built && value?.id == _skin?.id) return;
-    _skin = value;
+  /// The featured item (null = row hidden).
+  SkinItem? get item => _item;
+  set item(SkinItem? value) {
+    if (_built && value?.key == _item?.key) return;
+    _item = value;
+    _emitter = value != null && value.layer == SkinLayer.trail
+        ? TrailEmitter(value.id, lookPainter: paintLookForTrail)
+        : null;
     if (isLoaded) _rebuild();
   }
 
-  /// The visible name (tests).
+  /// The visible name / price (tests).
   String? get nameText => _name?.text;
+  String? get priceText => _price?.text;
 
   set tint(Color value) {
     if (value == _tint) return;
@@ -567,18 +589,39 @@ class FeaturedSkinRow extends MenuButton {
 
   @override
   void renderTree(Canvas canvas) {
-    if (_skin == null) return;
+    if (_item == null) return;
     super.renderTree(canvas);
   }
 
   @override
   bool containsLocalPoint(Vector2 point) =>
-      _skin != null && super.containsLocalPoint(point);
+      _item != null && super.containsLocalPoint(point);
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
     _rebuild();
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _t += dt;
+    final emitter = _emitter;
+    if (emitter != null) ItemArt.advanceTrail(emitter, _t, dt);
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    final item = _item;
+    if (item == null) return;
+    canvas.save();
+    canvas.translate(padX + artSlot / 2, height / 2);
+    canvas.scale(artScale);
+    canvas.translate(-ItemArt.w / 2, -ItemArt.h / 2);
+    ItemArt.paint(canvas, item, t: _t, emitter: _emitter);
+    canvas.restore();
   }
 
   void _rebuild() {
@@ -587,14 +630,9 @@ class FeaturedSkinRow extends MenuButton {
     _content.clear();
     _caption = null;
     _name = null;
-    final skin = _skin;
-    if (skin == null) return;
-    final preview = MenuIcon(
-      previewFor(skin),
-      size: Vector2(48, 52) * previewScale,
-      position: Vector2(padX + 24, height / 2),
-      anchor: Anchor.center,
-    );
+    _price = null;
+    final item = _item;
+    if (item == null) return;
     // Two-line text block (mock line-height 1.1; tuned against
     // shop_s1b.png): caption 11 pt, name 19 pt.
     final caption = MenuText(
@@ -602,29 +640,30 @@ class FeaturedSkinRow extends MenuButton {
       fontSize: 11,
       color: _tint,
       letterSpacingEm: 0.1,
-      position: Vector2(padX + 48 + 10, 12),
+      position: Vector2(padX + artSlot + 10, 12),
     );
     final name = MenuText(
-      skin.name.toUpperCase(),
+      item.name.toUpperCase(),
       fontSize: 19,
       color: _tint,
-      position: Vector2(padX + 48 + 10, 24),
+      position: Vector2(padX + artSlot + 10, 24),
     );
     _caption = caption;
     _name = name;
     final priceText = MenuText(
-      '${skin.price}',
+      formatCoins(item.price),
       fontSize: 16,
       color: Config.menuSoft,
     );
+    _price = priceText;
     final pill = RectangleComponent(
       size: Vector2(14 + 4 + priceText.width + 20, priceText.height + 12),
       paint: Paint()..color = Config.menuPink,
     );
     // Mock `.price .coin` (14 pt) wins over `.cn` (18 pt).
     layoutRow(pill, [MenuIcon(coin, size: Vector2.all(14)), priceText], gap: 4);
-    _content.addAll([preview, caption, name]);
-    addAll([preview, caption, name]);
+    _content.addAll([caption, name]);
+    addAll([caption, name]);
     _content.add(pill);
     layoutRow(this, [pill], gap: 0, right: width - padX);
   }

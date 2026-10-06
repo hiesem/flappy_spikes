@@ -70,6 +70,18 @@ abstract class MenuScreen extends PositionComponent
   /// Images (under `assets/images/`) [buildContent] uses via [sprite].
   List<String> get contentImages => const [];
 
+  /// Whether the screen shows its [title] (the skin shop has none).
+  bool get showsTitle => true;
+
+  /// The [scroll] viewport in world coordinates (default: from below the
+  /// title to the bottom spike tips, full width).
+  Rect scrollViewportFor(double viewHeight) => Rect.fromLTRB(
+    0,
+    Config.menuScreenContentTopFor(viewHeight),
+    Config.worldWidth,
+    Config.menuScreenContentBottomFor(viewHeight),
+  );
+
   /// A loaded sprite from [kMenuChromeImages] or [contentImages].
   Sprite sprite(String path) => _sprites[path]!;
 
@@ -123,21 +135,12 @@ abstract class MenuScreen extends PositionComponent
       position: Config.menuScreenTitlePositionFor(h),
       anchor: Anchor.topCenter,
     );
-    final top = Config.menuScreenContentTopFor(h);
-    scroll = MenuScrollArea(
-      viewport: Rect.fromLTRB(
-        0,
-        top,
-        Config.worldWidth,
-        Config.menuScreenContentBottomFor(h),
-      ),
-      isActive: isActive,
-    );
+    scroll = MenuScrollArea(viewport: scrollViewportFor(h), isActive: isActive);
     addAll([
       _ScreenTapBlocker(size: size.clone()),
       scroll,
       backButton,
-      titleText,
+      if (showsTitle) titleText,
     ]);
     await buildContent();
     _built = true;
@@ -172,7 +175,9 @@ class MenuScrollArea extends PositionComponent with DragCallbacks {
         position: viewport.topLeft.toVector2(),
         size: viewport.size.toVector2(),
       ) {
-    content = PositionComponent(position: Vector2(0, -viewport.top));
+    content = PositionComponent(
+      position: Vector2(-viewport.left, -viewport.top),
+    );
   }
 
   /// The visible band, in world coordinates.

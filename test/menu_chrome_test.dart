@@ -119,7 +119,7 @@ void main() async {
     s = sample(game);
     expect(s.pill, everyElement(1.0));
     await flushAndMount(game);
-    game.skinsScreen!.backButton.onPressed(); // -> home
+    game.skinShop!.backButton.onPressed(); // -> home
     s = sample(game);
     expect(s.pill, everyElement(1.0));
     expect(game.cornerBox.gearMix, 1);
@@ -160,7 +160,7 @@ void main() async {
     await flushAndMount(game);
     await game.menu.wallet.add(50, CoinSource.play);
     game.update(0);
-    expect(game.skinsScreen!.coinPill.label.text, '1 300');
+    expect(game.skinShop!.coinPill.label.text, '1 300');
     expect(
       game.coinPill.x + game.coinPill.width,
       Config.homeCoinPillPositionFor(711).x,
@@ -206,13 +206,13 @@ void main() async {
       expect(game.menuScene, MenuScene.home);
       expect(game.homeScreen, isNotNull);
       expect(game.shopScreen, isNull);
-      expect(game.skinsScreen, isNull);
+      expect(game.skinShop, isNull);
       expect(game.coinPill.opacity, 1);
       // Interactive again: the same screen opens and loads normally.
       open(game);
       await flushAndMount(game);
       stepGame(game, 0.5);
-      expect((game.shopScreen ?? game.skinsScreen)!.isLoaded, isTrue);
+      expect((game.shopScreen ?? game.skinShop)!.isLoaded, isTrue);
     });
 
     chromeTest('$name tile then double Esc: no error, home stays', (

@@ -111,6 +111,15 @@ class ItemStore extends ChangeNotifier {
         (layer) => itemsFor(layer).any((item) => isNew(layer, item.id)),
       );
 
+  /// Clears every persisted menu field (the debug panel's "Reset menu
+  /// state") and notifies, so live views — the home bird above all — render
+  /// the defaults immediately instead of keeping the deleted outfit until
+  /// their screen is rebuilt.
+  Future<void> resetAll() async {
+    await _storage.resetMenuState();
+    notifyListeners();
+  }
+
   /// Grants every catalogue item (debug panel / QA only).
   Future<void> grantAll() async {
     await _storage.saveOwnedItems({for (final item in allItems) item.key});

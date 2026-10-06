@@ -96,7 +96,7 @@ class DebugPanel extends PositionComponent
         () => menu.wallet.add(1000, CoinSource.debug),
       ),
       DebugAction(() => 'Reset menu state', () async {
-        await menu.storage.resetMenuState();
+        await menu.items.resetAll();
         menu.slot.debugForce = null;
         game.refreshHome();
         game.showToast('Menu state reset');

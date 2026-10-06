@@ -1,5 +1,23 @@
 QA round 1 — skin shop and live home/Shop, 2026-10-07.
 
+**Fix round 1 (branch `ss-fix1`, 2026-10-07):** all six findings are fixed and
+their pinning tests now run by default (the `skip:` markers and the
+`QA_VERIFY_OPEN_DEFECTS` switch are gone). The table below is the original QA
+report, kept verbatim for the record; the fixes are:
+
+- S1-10 `SoundService.play` drops the sound (warming the pools) instead of a
+  one-shot `FlameAudio.play`; a `poolFactory` test seam covers the path.
+- S1-11 `LookComponent.paused` freezes the look's clock; `HomeBird` drives it
+  from `liveMotionPaused`.
+- S1-12 `ItemArtCache.lockedPictureFor` records the 42 % dim once and settled
+  locked static tiles replay it (no per-frame `saveLayer`).
+- S1-13 the shop's initial featured try-on clears the item's NEW tag and calls
+  `markSeen` like a grid tap.
+- S1-14 `ItemStore.resetAll` clears the persisted menu state and notifies;
+  the debug panel uses it, so the home bird shows the defaults at once.
+- S1-15 `FeaturedSkinRow` pauses its artwork clock (`isPaused`) under the
+  Shop's overlays.
+
 Reviewed branch `ss-qa` at `255763eeb2f56ca3d0e15f5f18810bb035a1589e`, against
 the workspace PRD-menu-v2.md, CLAUDE.md, SPEC.md, and common/WP-A/B1/B2/C/D/E
 briefs. Product code was left unchanged. IDs start at S1-10 because the existing

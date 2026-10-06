@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flame/extensions.dart';
 
 import '../../game/config.dart';
@@ -158,6 +160,14 @@ class SkinShopScreen extends MenuScreen {
     if (initial != null && !items.isOwned(_tab, initial)) {
       _tryOnId = initial;
       scrollToItem(initial);
+      // The Shop featured row opens the shop already trying that item on:
+      // that counts as tapping it, so its NEW tag clears and the item is
+      // persisted as seen (§3.3 / WP-C), exactly like a grid tap.
+      final item = itemById(_tab, initial);
+      if (item != null && isNewTag(item)) {
+        clearNew(item);
+        unawaited(items.markSeen(_tab, initial));
+      }
     }
   }
 

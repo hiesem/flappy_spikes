@@ -116,25 +116,38 @@ class SoundService {
       return;
     }
     final pool = _pools[sfx];
-    if (pool == null) {
-      // The pools are not ready yet (still warming up, or a pool failed to
-      // initialize): start warming them and DROP this one play. A bare
-      // FlameAudio.play here would spawn a fresh one-shot AudioPlayer, which
-      // the project bans (CLAUDE.md: preloaded low-latency pools only), so a
-      // sound requested this early is simply silent.
+    // A pool is only ready together with its stop duration (see [_initPools]);
+    // while either is missing the sound is dropped and warm-up is (re)tried.
+    // A bare FlameAudio.play here would spawn a fresh one-shot AudioPlayer,
+    // which the project bans (CLAUDE.md: preloaded low-latency pools only), so
+    // a sound requested this early is simply silent.
+    final duration = _durations[sfx];
+    if (pool == null || duration == null) {
       unawaited(_initPools());
       return;
     }
-    // SoundPool mode never reports completion: stop after the known duration
-    // so the player returns to the pool (see the field comment).
-    unawaited(
-      pool.start().then((stop) {
-        Timer(
-          _durations[sfx]! + const Duration(milliseconds: 100),
-          () => unawaited(stop()),
-        );
-      }),
-    );
+    unawaited(_playPool(pool, duration));
+  }
+
+  /// Plays one low-latency pool hit and returns the borrowed player after the
+  /// known duration — SoundPool mode never fires onPlayerComplete, so only the
+  /// timer releases it (see the `_pools` field comment).
+  ///
+  /// Both the start and the stop Future are error-contained: a native audio
+  /// failure must never take the game down (or escape as an uncaught Future).
+  Future<void> _playPool(AudioPool pool, Duration duration) async {
+    try {
+      final stop = await pool.start();
+      Timer(duration + const Duration(milliseconds: 100), () async {
+        try {
+          await stop();
+        } catch (_) {
+          // Audio failure must never take the game down.
+        }
+      });
+    } catch (_) {
+      // A rejected start simply drops this sound.
+    }
   }
 
   /// Creates the SFX pools once. No-op when [enabled] is false (tests) and
@@ -145,27 +158,33 @@ class SoundService {
       return;
     }
     _poolsStarted = true;
-    try {
-      for (final entry in _files.entries) {
+    for (final entry in _files.entries) {
+      try {
         final legacy = _legacyPool.contains(entry.key);
-        final pool = await (poolFactory?.call(entry.value, legacy) ??
-            AudioPool.create(
-              source: AssetSource(entry.value),
-              audioCache: FlameAudio.audioCache,
-              minPlayers: legacy ? 2 : 1,
-              maxPlayers: legacy ? 4 : 2,
-              playerMode: PlayerMode.lowLatency,
-              audioContext: AudioContextConfig(
-                focus: AudioContextConfigFocus.mixWithOthers,
-              ).build(),
-            ));
+        final pool =
+            await (poolFactory?.call(entry.value, legacy) ??
+                AudioPool.create(
+                  source: AssetSource(entry.value),
+                  audioCache: FlameAudio.audioCache,
+                  minPlayers: legacy ? 2 : 1,
+                  maxPlayers: legacy ? 4 : 2,
+                  playerMode: PlayerMode.lowLatency,
+                  audioContext: AudioContextConfig(
+                    focus: AudioContextConfigFocus.mixWithOthers,
+                  ).build(),
+                ));
         if (pool == null) continue; // never became ready: stay silent
-        _pools[entry.key] = pool;
+        // Publish the pool and its stop duration TOGETHER: until the metadata
+        // is known the pool is not ready and [play] keeps dropping the sound,
+        // so a warm-up play can never dereference a missing duration (a
+        // partially initialized pool stays silent instead).
         _durations[entry.key] =
             await pool.getDuration() ?? const Duration(milliseconds: 500);
+        _pools[entry.key] = pool;
+      } catch (_) {
+        // Audio failure must never take the game down. One bad pool must not
+        // stop the remaining sounds from warming up either.
       }
-    } catch (_) {
-      // Audio failure must never take the game down.
     }
   }
 

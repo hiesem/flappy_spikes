@@ -22,7 +22,14 @@ enum LookPose { idle, flap, dead }
 /// Frame timing mirrors the 1.0 bird: idle alternates idle/flap every
 /// [Config.idleFrameTime]; [playFlap] shows flap then idle for
 /// [Config.flapFrameTime] each and returns to idle; [showDead] switches to the
-/// dead pose and freezes the clock (wing up, X eye — [LookPainter.paint]).
+/// dead pose and freezes both clocks (wing up, X eye — [LookPainter.paint]).
+///
+/// Two clocks are kept apart: the *pose* clock ([poseTime]) only times the
+/// 1.0 wing frames and restarts on every flap, while the *art* clock ([time])
+/// is continuous and is handed to [LookPainter.paint] as its `t`. A flap (or
+/// the return to idle) therefore never resets the clockwork item animations
+/// (the wind-up key, PRD §5.2 "idle-only, no gameplay reactions"); only
+/// [showDead] / [paused] freeze them.
 ///
 /// [blend] (0..1) with [blendColor] is the run stage tint, applied at draw
 /// time: `c * (1 - blend) + blendColor * blend` on RGB with alpha kept — the
@@ -57,13 +64,20 @@ class LookComponent extends PositionComponent {
   Color blendColor;
 
   LookPose _pose = LookPose.idle;
-  double _time = 0;
+
+  /// Wing/frame clock: alternates the idle wing and times the two flap
+  /// frames. Restarted by [playFlap] and when the flap pose returns to idle.
+  double _poseTime = 0;
+
+  /// Continuous art clock, passed to [LookPainter.paint] as `t`; it drives
+  /// the animated gear/hat art and is never reset by a flap.
+  double _artTime = 0;
 
   /// Drives the wing from outside (the live home / Shop idle bird) instead
   /// of the pose clock; null = the 1.0 frame timing below.
   bool? flapOverride;
 
-  /// Freezes the pose clock (and the gear / hat art it drives) while true.
+  /// Freezes both clocks (the wing frames and the gear / hat art) while true.
   /// The live home bird sets it from the screen's idle-clock pause (§8.4) so
   /// an animated item (e.g. the wind-up key) stops turning under a popup, ad
   /// or the debug panel, exactly like the rest of the idle motion.
@@ -90,8 +104,13 @@ class LookComponent extends PositionComponent {
 
   LookPose get pose => _pose;
 
-  /// The internal clock in seconds; frozen in the [LookPose.dead] pose.
-  double get time => _time;
+  /// The continuous art clock in seconds — the `t` handed to
+  /// [LookPainter.paint]; frozen only in the [LookPose.dead] pose / [paused].
+  double get time => _artTime;
+
+  /// The wing/frame clock in seconds (see the class docs); restarted by
+  /// [playFlap], so it differs from [time] during and right after a flap.
+  double get poseTime => _poseTime;
 
   /// Whether the wing is drawn in the flap (down) position right now.
   bool get flapping =>
@@ -99,13 +118,13 @@ class LookComponent extends PositionComponent {
 
   bool get _poseFlapping => switch (_pose) {
         LookPose.dead => false,
-        LookPose.flap => _time < Config.flapFrameTime,
-        LookPose.idle => (_time ~/ Config.idleFrameTime).isOdd,
+        LookPose.flap => _poseTime < Config.flapFrameTime,
+        LookPose.idle => (_poseTime ~/ Config.idleFrameTime).isOdd,
       };
 
   void playFlap() {
     _pose = LookPose.flap;
-    _time = 0;
+    _poseTime = 0; // The art clock keeps running through the wing change.
   }
 
   /// Dead pose (hat and gear stay attached and tumble with the body).
@@ -119,10 +138,11 @@ class LookComponent extends PositionComponent {
     if (_pose == LookPose.dead || paused) {
       return; // Frozen: the dead pose / idle art under an overlay.
     }
-    _time += dt;
-    if (_pose == LookPose.flap && _time >= 2 * Config.flapFrameTime) {
+    _artTime += dt;
+    _poseTime += dt;
+    if (_pose == LookPose.flap && _poseTime >= 2 * Config.flapFrameTime) {
       _pose = LookPose.idle;
-      _time = 0;
+      _poseTime = 0;
     }
   }
 
@@ -150,7 +170,7 @@ class LookComponent extends PositionComponent {
     LookPainter.paint(
       canvas,
       look,
-      t: _time,
+      t: _artTime,
       flap: flapping,
       dead: _pose == LookPose.dead,
       blink: blink,

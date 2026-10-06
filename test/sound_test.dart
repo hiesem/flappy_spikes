@@ -1,5 +1,54 @@
+import 'dart:async';
+
+import 'package:flame_audio/flame_audio.dart' show AudioPool;
 import 'package:flappy_spikes/game/sound.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+/// Plugin-free pool seam: the duration query and the start/stop results can be
+/// delayed or failed independently, like the real asynchronous pool.
+class _FakePool implements AudioPool {
+  _FakePool({Duration? duration}) {
+    if (duration != null) durationReady.complete(duration);
+  }
+
+  final durationReady = Completer<Duration?>();
+  Object? startError;
+  Object? stopError;
+  int starts = 0;
+  int stops = 0;
+
+  @override
+  Future<Duration?> getDuration() => durationReady.future;
+
+  @override
+  Future<Future<void> Function()> start({double volume = 1}) async {
+    starts++;
+    final error = startError;
+    if (error != null) throw error;
+    return () async {
+      stops++;
+      final stopError = this.stopError;
+      if (stopError != null) throw stopError;
+    };
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Lets the warm-up's awaited futures run to their next suspension point.
+Future<void> _flush() async {
+  for (var i = 0; i < 40; i++) {
+    await Future<void>.value();
+  }
+}
+
+/// A service whose pools are all fakes: [flap] is the pool under test, every
+/// other file gets a ready fake so no real AudioPool is ever created.
+SoundService _fakeSound(_FakePool flap) => SoundService()
+  ..poolFactory = (file, legacy) async => file == 'flap.mp3'
+      ? flap
+      : _FakePool(duration: const Duration(milliseconds: 1));
 
 void main() {
   group('SoundService music', () {
@@ -55,6 +104,68 @@ void main() {
       sound.play(Sfx.skTap); // still no pool: dropped, no new warmup
       expect(built, SoundService.audioFiles.length);
       expect(played, [Sfx.skTap, Sfx.skTap]);
+    });
+  });
+
+  group('SoundService low-latency pools', () {
+    test('a pool without its stop duration is not published yet', () async {
+      // S2-11: warm-up must publish the pool and its duration TOGETHER, so a
+      // play during that window is dropped instead of dereferencing a missing
+      // duration (which would throw out of an unawaited future).
+      final pool = _FakePool();
+      final sound = _fakeSound(pool);
+      final uncaught = <Object>[];
+      await runZonedGuarded(() async {
+        sound.play(Sfx.flap); // starts warm-up; this play is dropped
+        await _flush(); // pool created, its duration still pending
+        sound.play(Sfx.flap);
+        await _flush();
+        expect(pool.starts, 0, reason: 'not ready: no duration, no playback');
+        pool.durationReady.complete(const Duration(milliseconds: 1));
+        await _flush();
+        sound.play(Sfx.flap); // the pair is published now
+        await _flush();
+        expect(pool.starts, 1);
+      }, (error, stack) => uncaught.add(error));
+      expect(uncaught, isEmpty);
+    });
+
+    test('a failing pool start is contained, never uncaught', () async {
+      // S2-12: audio must never take the game down.
+      final pool = _FakePool(duration: const Duration(milliseconds: 1))
+        ..startError = StateError('native SoundPool start failed');
+      final sound = _fakeSound(pool);
+      final uncaught = <Object>[];
+      await runZonedGuarded(() async {
+        sound.play(Sfx.flap); // warm-up, then a rejected start
+        await _flush();
+        sound.play(Sfx.flap);
+        await _flush();
+      }, (error, stack) => uncaught.add(error));
+      expect(
+        pool.starts,
+        1,
+        reason: 'the failure must exercise the ready pool',
+      );
+      expect(uncaught, isEmpty);
+    });
+
+    test('a failing pool stop is contained, never uncaught', () async {
+      // S2-12: the deferred player-return stop Future must be contained too.
+      final pool = _FakePool(duration: const Duration(milliseconds: 1))
+        ..stopError = StateError('native SoundPool stop failed');
+      final sound = _fakeSound(pool);
+      final uncaught = <Object>[];
+      await runZonedGuarded(() async {
+        sound.play(Sfx.flap); // warm-up
+        await _flush();
+        sound.play(Sfx.flap); // the stop timer is scheduled here
+        await _flush();
+        await Future<void>.delayed(const Duration(milliseconds: 130));
+      }, (error, stack) => uncaught.add(error));
+      expect(pool.starts, 1);
+      expect(pool.stops, 1, reason: 'the stop timer must still fire');
+      expect(uncaught, isEmpty);
     });
   });
 }

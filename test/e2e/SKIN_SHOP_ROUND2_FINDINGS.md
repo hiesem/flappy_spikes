@@ -1,5 +1,20 @@
 QA round 2 — skin shop and live Home/Shop, 2026-10-07.
 
+**Fix round 2 (branch `ss-fix2`, 2026-10-07):** all three findings are fixed
+and their pinning tests now run by default (the `skip:` markers and the
+`QA_VERIFY_OPEN_DEFECTS` switch are gone). The report below is the original QA
+text, kept verbatim for the record; the fixes are:
+
+- S2-10 `LookComponent` keeps the pose/frame clock (wing frames, still reset by
+  `playFlap`) apart from a continuous art clock that is passed to
+  `LookPainter` as `t` and only freezes on death or `paused`; the wind-up key
+  therefore turns straight through a gameplay flap.
+- S2-11 `SoundService._initPools` publishes a pool and its stop duration
+  together, so a pool without metadata is not ready and `play` keeps dropping
+  the sound instead of dereferencing a missing duration.
+- S2-12 `SoundService._playPool` contains both the pool start and the deferred
+  stop futures (caught and ignored) — audio failures never reach the zone.
+
 Reviewed `ss-qa` at `6d177b8`, against workspace PRD-menu-v2.md, CLAUDE.md,
 SPEC.md, and the common/WP-A/B1/B2/C/D/E briefs. Product code is unchanged.
 IDs start at S2-10 because older PRD-1/AdMob tests already use S2-01/02.

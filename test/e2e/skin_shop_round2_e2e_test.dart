@@ -24,10 +24,7 @@ import '../helpers.dart';
 import '../menu_screenshot_test.dart' show captureShot, loadFonts;
 
 // S2-01/02 already name the older PRD-1/AdMob findings. Skin-shop round 2
-// starts at S2-10. Verify the open reproductions explicitly with:
-// flutter test test/e2e/skin_shop_round2_e2e_test.dart \
-//   --dart-define=QA_VERIFY_OPEN_DEFECTS=true --name S2- --reporter expanded
-const _verifyOpen = bool.fromEnvironment('QA_VERIFY_OPEN_DEFECTS');
+// starts at S2-10; those regressions are fixed (fix round 2) and pinned here.
 
 class _Events extends GameServices {
   final events = <(String, Map<String, Object>?)>[];
@@ -639,8 +636,9 @@ void main() {
         });
       },
     );
-  }, skip: _verifyOpen ? false : 'S2-10 open');
+  });
 
+  // S2-11: a warm pool must never be published before its duration.
   test(
     'S2-11 SFX waits for duration metadata before playing a warm pool',
     () async {
@@ -665,7 +663,6 @@ void main() {
             'a play during warm-up must not dereference a missing stop duration',
       );
     },
-    skip: _verifyOpen ? false : 'S2-11 open',
   );
 
   test('S2-12 low-latency pool playback failure is contained', () async {
@@ -687,5 +684,5 @@ void main() {
       isEmpty,
       reason: 'audio failure must never take the game down',
     );
-  }, skip: _verifyOpen ? false : 'S2-12 open');
+  });
 }

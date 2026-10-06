@@ -110,7 +110,29 @@ void main() {
       expect(c.flapping, isFalse);
       c.update(Config.flapFrameTime);
       expect(c.pose, LookPose.idle);
-      expect(c.time, 0);
+      expect(c.poseTime, 0, reason: 'the wing frames restart with the pose');
+      expect(
+        c.time,
+        closeTo(2 * Config.flapFrameTime + 0.01, 1e-9),
+        reason: 'the art clock keeps running through the whole flap',
+      );
+    });
+
+    test('a gameplay flap never resets the item-animation clock', () {
+      // PRD §5.2: the wind-up key is idle-only with no gameplay reactions, so
+      // the art clock handed to LookPainter must be continuous across flaps
+      // and across the return from the flap pose to idle.
+      final c = LookComponent(look: Look.defaults);
+      c.update(0.48);
+      final art = c.time;
+      c.playFlap(); // wing change; must not rewind the clockwork items
+      expect(c.time, art);
+      c.update(Config.flapFrameTime);
+      expect(c.time, closeTo(art + Config.flapFrameTime, 1e-9));
+      c.update(Config.flapFrameTime);
+      expect(c.pose, LookPose.idle);
+      expect(c.time, closeTo(art + 2 * Config.flapFrameTime, 1e-9));
+      expect(c.poseTime, 0);
     });
 
     test('paused freezes the idle clock and resumes where it stopped', () {

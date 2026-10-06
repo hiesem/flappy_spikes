@@ -8,9 +8,9 @@ import '../../game/config.dart';
 import '../../game/flappy_game.dart';
 import '../../game/tintable.dart';
 import '../../menu/powerup_slot.dart';
-import '../../menu/skin_catalog.dart';
 import '../../services/iap_service.dart';
-import '../skin_sprite.dart';
+import '../../skins/look.dart';
+import '../look_component.dart';
 import 'menu_primitives.dart';
 
 /// Images the home screen draws (all under `assets/images/`).
@@ -142,7 +142,7 @@ class HomeScreen extends PositionComponent
     // --- start block --------------------------------------------------------
     bird = HomeBird(
       rect: Config.homeBirdRectFor(h),
-      sprites: await SkinSprites.load(images, game.menu.skins.equippedSkin),
+      look: game.menu.items.look,
     );
     final startRect = Config.homeStartRectFor(h);
     startButton = MenuButton(
@@ -225,7 +225,6 @@ class HomeScreen extends PositionComponent
   bool? _hasNew;
   bool? _noAds;
   bool? _noAdsPending;
-  String? _skin;
 
   @override
   void update(double dt) {
@@ -252,24 +251,12 @@ class HomeScreen extends PositionComponent
         ..owned = noAds
         ..tappable = !pending;
     }
-    final skin = menu.skins.equippedSkin;
-    if (force || skin.id != _skin) {
-      _skin = skin.id;
-      if (bird.sprites.skin.id != skin.id) {
-        _swapBird(skin);
-      }
-    }
     slotButton.setState(
       offered: menu.slot.offered,
       noAds: noAds,
       adAvailable: game.monetization.ads.isAvailable,
     );
     slotButton.outlineColor = game.stageBackground;
-  }
-
-  Future<void> _swapBird(SkinDef skin) async {
-    final sprites = await SkinSprites.load(game.images, skin);
-    if (isMounted) bird.sprites = sprites;
   }
 
   /// Re-reads all menu state now (instead of on the next frame).
@@ -438,40 +425,44 @@ class MenuCornerBox extends PositionComponent
 /// The equipped bird in the start block, drawn exactly like the in-game
 /// bird at blend 0 (identity colours), scaled to the mock's 44 pt wide box
 /// and centred in it.
-class HomeBird extends PositionComponent {
-  HomeBird({required Rect rect, required SkinSprites sprites})
+class HomeBird extends PositionComponent
+    with HasGameReference<FlappySpikesGame> {
+  HomeBird({required Rect rect, required Look look})
     : super(
         position: rect.topLeft.toVector2(),
         size: rect.size.toVector2(),
       ) {
-    final scale = rect.width / SkinDef.spriteWidth;
-    _sprite = SkinSpriteComponent(
-      sprites: sprites,
-      initialTint: sprites.skin.mockColor,
-      filterQuality: kMenuFilterQuality,
-      size: Vector2(SkinDef.spriteWidth, SkinDef.spriteHeight) * scale,
+    _look = LookComponent(
+      look: look,
+      artScale: Config.lookScaleForHome(rect),
       position: size / 2,
-      anchor: const Anchor(SkinDef.anchorX, SkinDef.anchorY),
+      // Menus always render at colour stage 0: no stage blend.
     );
   }
 
-  late final SkinSpriteComponent _sprite;
+  late final LookComponent _look;
 
-  SkinSprites get sprites => _sprite.sprites;
-  set sprites(SkinSprites value) {
-    _sprite
-      ..sprites = value
-      ..tint = value.skin.mockColor;
-  }
+  /// The look drawn; follows `menu.items` while the screen is up.
+  Look get look => _look.look;
+  set look(Look value) => _look.look = value;
 
   /// Exposed for tests.
-  SkinSpriteComponent get skinSprite => _sprite;
+  LookComponent get lookComponent => _look;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    add(_sprite);
+    add(_look);
+    game.menu.items.addListener(_onItemsChanged);
   }
+
+  @override
+  void onRemove() {
+    game.menu.items.removeListener(_onItemsChanged);
+    super.onRemove();
+  }
+
+  void _onItemsChanged() => _look.look = game.menu.items.look;
 }
 
 /// The gold BIG HOOPS / SHIELD slot under START: video icon + label (+

@@ -43,9 +43,6 @@ class GameStorage {
   double musicVolume = 0.6;
 
   int coins = 0;
-  Set<String> ownedSkins = {'pink'};
-  String equippedSkin = 'pink';
-  Set<String> seenSkins = {};
 
   /// PRD-menu-v2 wardrobe state: owned `"layer:id"` keys, the equipped id per
   /// layer (five keys) and the NEW-badge seen set.
@@ -87,19 +84,8 @@ class GameStorage {
     musicVolume = prefs.getDouble(_musicVolumeKey) ?? 0.6;
 
     coins = prefs.getInt(_coinsKey) ?? 0;
-    final storedOwnedSkins = prefs.getStringList(_ownedSkinsKey);
-    ownedSkins = (storedOwnedSkins ?? const ['pink']).toSet()..add('pink');
-    equippedSkin = prefs.getString(_equippedSkinKey) ?? 'pink';
-    // Only validate against a persisted owned list: once the legacy keys are
-    // reset (below) there is nothing to validate the equipped id against.
-    if (storedOwnedSkins != null && !ownedSkins.contains(equippedSkin)) {
-      equippedSkin = 'pink';
-    }
-    seenSkins = (prefs.getStringList(_seenSkinsKey) ?? const []).toSet();
     // PRD-menu-v2 (product decision): the PRD-1 single-skin keys are reset on
-    // sight — old skins are dropped, with no refund. The fields above stay
-    // for the not-yet-removed PRD-1 screen, but their persisted keys must not
-    // survive.
+    // sight — old skins are dropped, with no refund.
     if (prefs.containsKey(_ownedSkinsKey) ||
         prefs.containsKey(_equippedSkinKey) ||
         prefs.containsKey(_seenSkinsKey)) {
@@ -162,25 +148,6 @@ class GameStorage {
     coins = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_coinsKey, value);
-  }
-
-  /// 'pink' is always kept in the owned set.
-  Future<void> saveOwnedSkins(Set<String> value) async {
-    ownedSkins = {...value, 'pink'};
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_ownedSkinsKey, ownedSkins.toList());
-  }
-
-  Future<void> saveEquippedSkin(String value) async {
-    equippedSkin = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_equippedSkinKey, value);
-  }
-
-  Future<void> saveSeenSkins(Set<String> value) async {
-    seenSkins = {...value};
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_seenSkinsKey, seenSkins.toList());
   }
 
   /// Owned item keys (`"layer:id"`); the free defaults are implicit.
@@ -279,9 +246,6 @@ class GameStorage {
   /// keeps progression, sound settings and the install day.
   Future<void> resetMenuState() async {
     await saveCoins(0);
-    await saveOwnedSkins({'pink'});
-    await saveEquippedSkin('pink');
-    await saveSeenSkins({});
     await saveOwnedItems({});
     await saveEquippedItems({
       for (final layer in SkinLayer.values) layer: Look.defaults.idFor(layer),

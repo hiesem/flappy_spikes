@@ -29,7 +29,6 @@ import '../components/ui/service_message.dart';
 import '../menu/free_coins_policy.dart';
 import '../menu/menu_state.dart';
 import '../menu/powerup_slot.dart';
-import '../menu/skin_catalog.dart';
 import '../menu/wallet.dart';
 import '../services/ads_service.dart';
 import '../services/game_services.dart';
@@ -242,8 +241,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Current skin blend toward the stage foreground (0 in menus).
   double get skinBlend => _skinBlend;
 
-  /// Tint for [skin]'s body layer right now.
-  Color skinTintFor(SkinDef skin) => skin.tintFor(_fgColor, _skinBlend);
 
   // Any letterbox slivers (only on screens beyond the viewHeight clamp, e.g.
   // tablets) are painted with the FOREGROUND tint so they read as an

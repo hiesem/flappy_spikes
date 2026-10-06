@@ -119,8 +119,8 @@ class GameServices {
 
   void logShareScore(int score) => logEvent('share_score', {'score': score});
 
-  /// PRD-menu-v2 §7.3: layer-aware skin-shop events, replacing the PRD-1
-  /// `skin_*` ones (kept below for the not-yet-removed PRD-1 screen).
+  /// PRD-menu-v2 §7.3: layer-aware skin-shop events (they replaced the PRD-1
+  /// `skin_*` ones).
   void logItemTryOn(SkinLayer layer, String id, Rarity? rarity) =>
       logEvent('item_try_on', _itemParams(layer, id, rarity: rarity));
 

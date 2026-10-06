@@ -11,9 +11,6 @@ void main() {
       final storage = GameStorage(clock: () => DateTime(2026, 1, 15, 23, 59));
       await storage.load();
       expect(storage.coins, 0);
-      expect(storage.ownedSkins, {'pink'});
-      expect(storage.equippedSkin, 'pink');
-      expect(storage.seenSkins, isEmpty);
       expect(storage.noAds, false);
       expect(storage.armedPowerup, 'none');
       expect(storage.slotHistory, isEmpty);
@@ -31,9 +28,6 @@ void main() {
       final writer = GameStorage(clock: () => DateTime(2026, 1, 15));
       await writer.load();
       await writer.saveCoins(250);
-      await writer.saveOwnedSkins({'blue', 'crown'});
-      await writer.saveEquippedSkin('crown');
-      await writer.saveSeenSkins({'blue'});
       await writer.saveNoAds(true);
       await writer.saveArmedPowerup('shield');
       await writer.saveSlotHistory(['bigHoops', 'shield', 'shield']);
@@ -48,9 +42,6 @@ void main() {
       final reader = GameStorage(clock: () => DateTime(2026, 1, 15));
       await reader.load();
       expect(reader.coins, 250);
-      expect(reader.ownedSkins, unorderedEquals(['pink', 'blue', 'crown']));
-      expect(reader.equippedSkin, 'crown');
-      expect(reader.seenSkins, {'blue'});
       expect(reader.noAds, true);
       expect(reader.armedPowerup, 'shield');
       expect(reader.slotHistory, ['bigHoops', 'shield', 'shield']);
@@ -61,29 +52,6 @@ void main() {
       expect(reader.freeCoinsCount, 3);
       expect(reader.freeCoinsLastMs, 123456789);
       expect(reader.debugDayOffset, 4);
-    });
-
-    test('pink is always owned after load, even if not stored', () async {
-      SharedPreferences.setMockInitialValues({
-        'ownedSkins': <String>['blue'],
-      });
-      final storage = GameStorage();
-      await storage.load();
-      expect(storage.ownedSkins, contains('pink'));
-      expect(storage.ownedSkins, unorderedEquals(['pink', 'blue']));
-
-      await storage.saveOwnedSkins({'green'});
-      expect(storage.ownedSkins, unorderedEquals(['pink', 'green']));
-    });
-
-    test('equippedSkin falls back to pink when not owned', () async {
-      SharedPreferences.setMockInitialValues({
-        'ownedSkins': <String>['blue'],
-        'equippedSkin': 'ghost',
-      });
-      final storage = GameStorage();
-      await storage.load();
-      expect(storage.equippedSkin, 'pink');
     });
 
     test('installDay is set on first load and kept afterwards', () async {
@@ -135,9 +103,6 @@ void main() {
       await storage.saveMuteSound(true);
       await storage.saveMusicVolume(0.1);
       await storage.saveCoins(500);
-      await storage.saveOwnedSkins({'crown'});
-      await storage.saveEquippedSkin('crown');
-      await storage.saveSeenSkins({'crown'});
       await storage.saveNoAds(true);
       await storage.saveArmedPowerup('shield');
       await storage.saveSlotHistory(['shield']);
@@ -151,9 +116,6 @@ void main() {
       await storage.resetMenuState();
 
       expect(storage.coins, 0);
-      expect(storage.ownedSkins, {'pink'});
-      expect(storage.equippedSkin, 'pink');
-      expect(storage.seenSkins, isEmpty);
       expect(storage.noAds, false);
       expect(storage.armedPowerup, 'none');
       expect(storage.slotHistory, isEmpty);
@@ -172,8 +134,6 @@ void main() {
       final reader = GameStorage(clock: () => DateTime(2026, 1, 15));
       await reader.load();
       expect(reader.coins, 0);
-      expect(reader.ownedSkins, {'pink'});
-      expect(reader.seenSkins, isEmpty);
       expect(reader.noAds, false);
       expect(reader.armedPowerup, 'none');
       expect(reader.slotHistory, isEmpty);

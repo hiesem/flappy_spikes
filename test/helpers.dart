@@ -5,7 +5,6 @@ import 'package:flappy_spikes/components/menu_screen_chrome.dart';
 import 'package:flappy_spikes/components/noads_popup.dart';
 import 'package:flappy_spikes/components/shop/shop_screen.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
-import 'package:flappy_spikes/menu/skin_catalog.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/services/monetization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,11 +17,6 @@ final kAllImages = [
   ...kShopImages,
   ...kNoAdsPopupImages,
   ...kFakeAdOverlayImages,
-  for (final skin in kSkins) ...[
-    ...skin.images,
-    skin.preview,
-    skin.previewLocked,
-  ],
 
   'bird.png',
   'bird_flap.png',

@@ -199,7 +199,7 @@ void main() {
 
   e2e('QA fresh install and PRD-position home taps', (g, r, t) async {
     expect(g.menu.wallet.balance, 0);
-    expect(g.menu.skins.equipped, 'pink');
+    expect(g.menu.items.look.idFor(SkinLayer.bird), 'classic');
     expect(g.menu.slot.offered, isIn([Powerup.bigHoops, Powerup.shield]));
     expect(g.noAdsPopup, isNull);
     final offered = g.menu.slot.offered;
@@ -625,7 +625,7 @@ void main() {
     await settle(g, t);
     expect(g.menu.wallet.balance, 1000);
     expect(g.menu.slot.offered, Powerup.shield);
-    await g.menu.skins.purchase('blue');
+    await g.menu.items.purchase(SkinLayer.bird, 'sky');
     await g.menu.setNoAds(true);
     await g.tapPowerupSlot();
     await g.menu.freeCoins.recordClaim();
@@ -644,9 +644,9 @@ void main() {
       await preloadImages(restart);
       await flushAndMount(restart);
     });
-    expect(restart.menu.wallet.balance, 900);
-    expect(restart.menu.skins.equipped, 'blue');
-    expect(restart.menu.skins.isOwned('blue'), isTrue);
+    expect(restart.menu.wallet.balance, 850);
+    expect(restart.menu.items.look.idFor(SkinLayer.bird), 'sky');
+    expect(restart.menu.items.isOwned(SkinLayer.bird, 'sky'), isTrue);
     expect(restart.menu.noAds, isTrue);
     expect(restart.menu.slot.armed, Powerup.none);
     expect(restart.menu.freeCoins.claimedToday, 1);
@@ -660,7 +660,10 @@ void main() {
     restart.onKeyEvent(key(LogicalKeyboardKey.space), {});
     expect(restart.state, GameState.playing);
     expect(restart.menu.slot.armed, Powerup.none);
-    expect(restart.world.children.query<Bird>().single.look, Look.defaults);
+    expect(
+      restart.world.children.query<Bird>().single.look.idFor(SkinLayer.bird),
+      'sky',
+    );
     restart.onKeyEvent(key(LogicalKeyboardKey.space), {});
     expect(
       restart.world.children.query<Bird>().single.body.linearVelocity.y,
@@ -828,7 +831,7 @@ void main() {
       expect(r.iap.mode, FakeIapMode.fail);
       await actions.firstWhere((a) => a.label() == 'Reset menu state').run();
       expect(g.menu.wallet.balance, 0);
-      expect(g.menu.skins.equipped, 'pink');
+      expect(g.menu.items.look.idFor(SkinLayer.bird), 'classic');
       expect(g.menu.noAds, isFalse);
       expect(g.menu.slot.armed, Powerup.none);
       expect(g.storage.bestScore, 12);
@@ -842,8 +845,8 @@ void main() {
       'gamesPlayed': 34,
       'noAds': true,
       'armedPowerup': 'shield',
-      'ownedSkins': ['pink', 'blue'],
-      'equippedSkin': 'blue',
+      'ownedItems': ['bird:sky'],
+      'equippedItem.bird': 'sky',
     },
   );
 

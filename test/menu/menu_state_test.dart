@@ -10,7 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('MenuState wires storage, wallet, skins, slot and policies', () async {
+  test('MenuState wires storage, wallet, items, slot and policies', () async {
     SharedPreferences.setMockInitialValues({});
     final storage = GameStorage();
     await storage.load();
@@ -21,14 +21,13 @@ void main() {
 
     expect(menu.storage, same(storage));
     expect(menu.wallet.balance, 0);
-    expect(menu.skins.equipped, 'pink');
+    expect(menu.items.look, isNotNull);
     expect(menu.slot.offered, anyOf(Powerup.bigHoops, Powerup.shield));
     expect(menu.noAdsPopup.shouldShowOnLaunch(), false);
     expect(menu.freeCoins.remainingToday, 5);
 
     await menu.wallet.add(10, CoinSource.play);
     expect(earned, [(10, CoinSource.play)]);
-    expect(menu.skins.isNew('blue'), false);
 
     expect(menu.noAds, false);
     await menu.setNoAds(true);

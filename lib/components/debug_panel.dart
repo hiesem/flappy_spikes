@@ -9,6 +9,7 @@ import '../menu/powerup_slot.dart';
 import '../menu/wallet.dart';
 import '../services/ads_service.dart';
 import '../services/iap_service.dart';
+import '../skins/catalog.dart';
 import 'home/menu_primitives.dart';
 
 /// One debug action: a label (re-read after every tap, so it can show the
@@ -125,6 +126,14 @@ class DebugPanel extends PositionComponent
           iap.mode = FakeIapMode
               .values[(iap.mode.index + 1) % FakeIapMode.values.length];
         }),
+      DebugAction(
+        () => 'ALL ITEMS (${menu.items.ownedCount}/$kCollectibleTotal)',
+        () async {
+          await menu.items.grantAll();
+          game.refreshHome();
+          game.showToast('All items granted');
+        },
+      ),
       DebugAction(() => 'Close', () async => onClose()),
     ];
   }

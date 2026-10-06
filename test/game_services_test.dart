@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flappy_spikes/services/game_services.dart';
+import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -152,6 +153,50 @@ void main() {
       expect(result, ShowLeaderboardResult.signInFailed);
       expect(s.events.single['name'], 'pgs_error');
       expect(s.events.single['code'], 'timeout');
+    });
+  });
+
+  group('item analytics (PRD-menu-v2 §7.3)', () {
+    test('each item event carries its layer, id and optional fields', () {
+      final s = FakeGameServices();
+      s.logItemTryOn(SkinLayer.gear, 'windup', Rarity.rare);
+      s.logItemPurchase(SkinLayer.hat, 'crown', Rarity.legendary, 5000);
+      s.logItemEquip(SkinLayer.bird, 'ghost');
+      s.logItemNoCoins(SkinLayer.hoop, 'blackhole', 4000);
+      s.logSkinShopTab(SkinLayer.trail);
+
+      expect(s.events[0], {
+        'name': 'item_try_on',
+        'layer': 'gear',
+        'id': 'windup',
+        'rarity': 'RARE',
+      });
+      expect(s.events[1], {
+        'name': 'item_purchase',
+        'layer': 'hat',
+        'id': 'crown',
+        'rarity': 'LEGENDARY',
+        'price': 5000,
+      });
+      expect(s.events[2], {
+        'name': 'item_equip',
+        'layer': 'bird',
+        'id': 'ghost',
+      });
+      expect(s.events[3], {
+        'name': 'item_no_coins',
+        'layer': 'hoop',
+        'id': 'blackhole',
+        'shortfall': 4000,
+      });
+      expect(s.events[4], {'name': 'skin_shop_tab', 'layer': 'trail'});
+    });
+
+    test('a rarity-less none entry omits the rarity key', () {
+      final s = FakeGameServices();
+      s.logItemTryOn(SkinLayer.gear, 'none', null);
+      expect(s.events.single,
+          {'name': 'item_try_on', 'layer': 'gear', 'id': 'none'});
     });
   });
 

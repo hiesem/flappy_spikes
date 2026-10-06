@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../skins/look.dart';
+
 /// Persistence layer for bestScore / gamesPlayed / muteSound / musicVolume and
 /// the 2.0 menu state (coins, skins, powerup slot, no-ads popup, free coins).
 class GameStorage {
@@ -13,6 +15,8 @@ class GameStorage {
   static const String _ownedSkinsKey = 'ownedSkins';
   static const String _equippedSkinKey = 'equippedSkin';
   static const String _seenSkinsKey = 'seenSkins';
+  static const String _ownedItemsKey = 'ownedItems';
+  static const String _seenItemsKey = 'seenItems';
   static const String _noAdsKey = 'noAds';
   static const String _armedPowerupKey = 'armedPowerup';
   static const String _slotHistoryKey = 'slotHistory';
@@ -23,6 +27,10 @@ class GameStorage {
   static const String _freeCoinsCountKey = 'freeCoinsCount';
   static const String _freeCoinsLastMsKey = 'freeCoinsLastMs';
   static const String _debugDayOffsetKey = 'debugDayOffset';
+
+  /// One preference key per equipped layer (the five-key equipped map).
+  static String _equippedItemKey(SkinLayer layer) =>
+      'equippedItem.${layer.key}';
 
   /// [slotHistory] keeps at most this many entries (most recent last).
   static const int _maxSlotHistory = 3;
@@ -38,6 +46,15 @@ class GameStorage {
   Set<String> ownedSkins = {'pink'};
   String equippedSkin = 'pink';
   Set<String> seenSkins = {};
+
+  /// PRD-menu-v2 wardrobe state: owned `"layer:id"` keys, the equipped id per
+  /// layer (five keys) and the NEW-badge seen set.
+  Set<String> ownedItems = {};
+  Map<SkinLayer, String> equippedItems = {
+    for (final layer in SkinLayer.values) layer: Look.defaults.idFor(layer),
+  };
+  Set<String> seenItems = {};
+
   bool noAds = false;
   String armedPowerup = 'none';
   List<String> slotHistory = [];
@@ -70,11 +87,33 @@ class GameStorage {
     musicVolume = prefs.getDouble(_musicVolumeKey) ?? 0.6;
 
     coins = prefs.getInt(_coinsKey) ?? 0;
-    ownedSkins = (prefs.getStringList(_ownedSkinsKey) ?? const ['pink']).toSet()
-      ..add('pink');
+    final storedOwnedSkins = prefs.getStringList(_ownedSkinsKey);
+    ownedSkins = (storedOwnedSkins ?? const ['pink']).toSet()..add('pink');
     equippedSkin = prefs.getString(_equippedSkinKey) ?? 'pink';
-    if (!ownedSkins.contains(equippedSkin)) equippedSkin = 'pink';
+    // Only validate against a persisted owned list: once the legacy keys are
+    // reset (below) there is nothing to validate the equipped id against.
+    if (storedOwnedSkins != null && !ownedSkins.contains(equippedSkin)) {
+      equippedSkin = 'pink';
+    }
     seenSkins = (prefs.getStringList(_seenSkinsKey) ?? const []).toSet();
+    // PRD-menu-v2 (product decision): the PRD-1 single-skin keys are reset on
+    // sight — old skins are dropped, with no refund. The fields above stay
+    // for the not-yet-removed PRD-1 screen, but their persisted keys must not
+    // survive.
+    if (prefs.containsKey(_ownedSkinsKey) ||
+        prefs.containsKey(_equippedSkinKey) ||
+        prefs.containsKey(_seenSkinsKey)) {
+      await prefs.remove(_ownedSkinsKey);
+      await prefs.remove(_equippedSkinKey);
+      await prefs.remove(_seenSkinsKey);
+    }
+    ownedItems = (prefs.getStringList(_ownedItemsKey) ?? const []).toSet();
+    equippedItems = {
+      for (final layer in SkinLayer.values)
+        layer: prefs.getString(_equippedItemKey(layer)) ??
+            Look.defaults.idFor(layer),
+    };
+    seenItems = (prefs.getStringList(_seenItemsKey) ?? const []).toSet();
     noAds = prefs.getBool(_noAdsKey) ?? false;
     armedPowerup = prefs.getString(_armedPowerupKey) ?? 'none';
     slotHistory = _capSlotHistory(
@@ -144,6 +183,38 @@ class GameStorage {
     await prefs.setStringList(_seenSkinsKey, seenSkins.toList());
   }
 
+  /// Owned item keys (`"layer:id"`); the free defaults are implicit.
+  Future<void> saveOwnedItems(Set<String> value) async {
+    ownedItems = {...value};
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_ownedItemsKey, ownedItems.toList());
+  }
+
+  /// Replaces the whole equipped map (five keys).
+  Future<void> saveEquippedItems(Map<SkinLayer, String> value) async {
+    equippedItems = {...value};
+    final prefs = await SharedPreferences.getInstance();
+    for (final layer in SkinLayer.values) {
+      await prefs.setString(
+        _equippedItemKey(layer),
+        equippedItems[layer] ?? Look.defaults.idFor(layer),
+      );
+    }
+  }
+
+  /// Sets the equipped item of one layer (saves immediately).
+  Future<void> saveEquippedItem(SkinLayer layer, String id) async {
+    equippedItems = {...equippedItems, layer: id};
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_equippedItemKey(layer), id);
+  }
+
+  Future<void> saveSeenItems(Set<String> value) async {
+    seenItems = {...value};
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_seenItemsKey, seenItems.toList());
+  }
+
   Future<void> saveNoAds(bool value) async {
     noAds = value;
     final prefs = await SharedPreferences.getInstance();
@@ -211,6 +282,11 @@ class GameStorage {
     await saveOwnedSkins({'pink'});
     await saveEquippedSkin('pink');
     await saveSeenSkins({});
+    await saveOwnedItems({});
+    await saveEquippedItems({
+      for (final layer in SkinLayer.values) layer: Look.defaults.idFor(layer),
+    });
+    await saveSeenItems({});
     await saveNoAds(false);
     await saveArmedPowerup('none');
     await saveSlotHistory(const []);

@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:games_services/games_services.dart';
 
 import '../firebase_options.dart';
+import '../skins/look.dart';
 
 /// Outcome of a [GameServices.showLeaderboards] call, so the game can tell
 /// "opened fine" apart from the different failure modes (and from "not a
@@ -117,6 +118,41 @@ class GameServices {
   void logNewBest(int score) => logEvent('new_best', {'score': score});
 
   void logShareScore(int score) => logEvent('share_score', {'score': score});
+
+  /// PRD-menu-v2 §7.3: layer-aware skin-shop events, replacing the PRD-1
+  /// `skin_*` ones (kept below for the not-yet-removed PRD-1 screen).
+  void logItemTryOn(SkinLayer layer, String id, Rarity? rarity) =>
+      logEvent('item_try_on', _itemParams(layer, id, rarity: rarity));
+
+  void logItemPurchase(SkinLayer layer, String id, Rarity? rarity, int price) =>
+      logEvent('item_purchase',
+          _itemParams(layer, id, rarity: rarity, price: price));
+
+  void logItemEquip(SkinLayer layer, String id) =>
+      logEvent('item_equip', _itemParams(layer, id));
+
+  void logItemNoCoins(SkinLayer layer, String id, int shortfall) =>
+      logEvent('item_no_coins', _itemParams(layer, id, shortfall: shortfall));
+
+  void logSkinShopTab(SkinLayer layer) =>
+      logEvent('skin_shop_tab', {'layer': layer.key});
+
+  /// Shared parameter map. The Gear/Hat "none" entries have no rarity, so
+  /// that key is omitted rather than sent as null.
+  Map<String, Object> _itemParams(
+    SkinLayer layer,
+    String id, {
+    Rarity? rarity,
+    int? price,
+    int? shortfall,
+  }) =>
+      {
+        'layer': layer.key,
+        'id': id,
+        'rarity': ?rarity?.label,
+        'price': ?price,
+        'shortfall': ?shortfall,
+      };
 
   /// Menu / economy analytics (PRD-1 §6: coins_earned, shop_open,
   /// home_slot_shown, ...). Goes through [logEvent], so test spies that

@@ -3,7 +3,30 @@ import 'dart:async';
 import 'package:flame_audio/flame_audio.dart';
 
 /// Sound effects used by the game (files live in assets/audio/).
-enum Sfx { flap, point, gameover, click }
+///
+/// The first four are the 1.0 gameplay sounds; the `sk*` / `bn*` entries are
+/// the PRD-menu-v2 menu sounds (`design/menu_v2/sfx/`).
+enum Sfx {
+  flap,
+  point,
+  gameover,
+  click,
+  skTab,
+  skTap,
+  skEquip,
+  skBuyCommon,
+  skBuyRare,
+  skBuyEpic,
+  skBuyLegendary,
+  skProgress,
+  skNoCoins,
+  skHoop,
+  skFire,
+  skClose,
+  skDialog,
+  bnAdBtn,
+  bnCoin,
+}
 
 class SoundService {
   SoundService({this.muted = false, this.enabled = true});
@@ -13,6 +36,33 @@ class SoundService {
     Sfx.point: 'point.mp3',
     Sfx.gameover: 'gameover.mp3',
     Sfx.click: 'click.mp3',
+    Sfx.skTab: 'sk_tab.mp3',
+    Sfx.skTap: 'sk_tap.mp3',
+    Sfx.skEquip: 'sk_equip.mp3',
+    Sfx.skBuyCommon: 'sk_buy_common.mp3',
+    Sfx.skBuyRare: 'sk_buy_rare.mp3',
+    Sfx.skBuyEpic: 'sk_buy_epic.mp3',
+    Sfx.skBuyLegendary: 'sk_buy_legendary.mp3',
+    Sfx.skProgress: 'sk_progress.mp3',
+    Sfx.skNoCoins: 'sk_nocoins.mp3',
+    Sfx.skHoop: 'sk_hoop.mp3',
+    Sfx.skFire: 'sk_fire.mp3',
+    Sfx.skClose: 'sk_close.mp3',
+    Sfx.skDialog: 'sk_dialog.mp3',
+    Sfx.bnAdBtn: 'bn_adbtn.mp3',
+    Sfx.bnCoin: 'bn_coin.mp3',
+  };
+
+  /// The bundled file for every [Sfx] (asserted by the asset test).
+  static const Map<Sfx, String> audioFiles = _files;
+
+  /// The 1.0 gameplay sounds keep their deeper pools; the menu sounds only
+  /// ever overlap a couple at a time (PRD-menu-v2 WP-A).
+  static const Set<Sfx> _legacyPool = {
+    Sfx.flap,
+    Sfx.point,
+    Sfx.gameover,
+    Sfx.click,
   };
 
   static const String _musicFile = 'HappyBeat_8-Bit_Retro_Game_Loop.mp3';
@@ -81,11 +131,12 @@ class SoundService {
     _poolsStarted = true;
     try {
       for (final entry in _files.entries) {
+        final legacy = _legacyPool.contains(entry.key);
         final pool = await AudioPool.create(
           source: AssetSource(entry.value),
           audioCache: FlameAudio.audioCache,
-          minPlayers: 2,
-          maxPlayers: 4,
+          minPlayers: legacy ? 2 : 1,
+          maxPlayers: legacy ? 4 : 2,
           playerMode: PlayerMode.lowLatency,
           audioContext: AudioContextConfig(
             focus: AudioContextConfigFocus.mixWithOthers,

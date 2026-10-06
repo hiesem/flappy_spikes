@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../game/storage.dart';
+import '../skins/item_store.dart';
 import 'free_coins_policy.dart';
 import 'noads_popup_policy.dart';
 import 'powerup_slot.dart';
@@ -16,6 +17,7 @@ class MenuState {
   }) {
     wallet = Wallet(storage, onEarned: onEarned);
     skins = SkinStore(storage, wallet);
+    items = ItemStore(storage, wallet);
     slot = PowerupSlot(storage, random: random);
     noAdsPopup = NoAdsPopupPolicy(storage);
     freeCoins = FreeCoinsPolicy(storage);
@@ -24,6 +26,9 @@ class MenuState {
   final GameStorage storage;
   late final Wallet wallet;
   late final SkinStore skins;
+
+  /// PRD-menu-v2 wardrobe (replaces [skins], which a later WP removes).
+  late final ItemStore items;
   late final PowerupSlot slot;
   late final NoAdsPopupPolicy noAdsPopup;
   late final FreeCoinsPolicy freeCoins;

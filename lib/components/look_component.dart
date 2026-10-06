@@ -59,6 +59,13 @@ class LookComponent extends PositionComponent {
   LookPose _pose = LookPose.idle;
   double _time = 0;
 
+  /// Drives the wing from outside (the live home / Shop idle bird) instead
+  /// of the pose clock; null = the 1.0 frame timing below.
+  bool? flapOverride;
+
+  /// Draws the eye closed (idle blink, [LookPainter.paint]'s `blink`).
+  bool blink = false;
+
   final Paint _layerPaint = Paint();
 
   /// Points per art unit; setting it resizes the component's art box.
@@ -81,7 +88,10 @@ class LookComponent extends PositionComponent {
   double get time => _time;
 
   /// Whether the wing is drawn in the flap (down) position right now.
-  bool get flapping => switch (_pose) {
+  bool get flapping =>
+      _pose != LookPose.dead && (flapOverride ?? _poseFlapping);
+
+  bool get _poseFlapping => switch (_pose) {
         LookPose.dead => false,
         LookPose.flap => _time < Config.flapFrameTime,
         LookPose.idle => (_time ~/ Config.idleFrameTime).isOdd,
@@ -137,6 +147,7 @@ class LookComponent extends PositionComponent {
       t: _time,
       flap: flapping,
       dead: _pose == LookPose.dead,
+      blink: blink,
     );
     canvas.restore();
     if (needsLayer) canvas.restore();

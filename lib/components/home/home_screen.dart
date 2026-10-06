@@ -5,6 +5,8 @@ import 'package:flame/components.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/events.dart';
 
+import '../../game/sound.dart';
+
 import '../../game/config.dart';
 import '../../game/flappy_game.dart';
 import '../../game/tintable.dart';
@@ -12,6 +14,8 @@ import '../../menu/powerup_slot.dart';
 import '../../services/iap_service.dart';
 import '../../skins/look.dart';
 import '../look_component.dart';
+import '../ui/bird_idle.dart';
+import '../ui/live_effects.dart';
 import 'menu_primitives.dart';
 
 /// Images the home screen draws (all under `assets/images/`).
@@ -70,6 +74,9 @@ class HomeScreen extends PositionComponent
   late final MenuTile noAdsTile;
   late final LeaderboardRow leaderboard;
 
+  /// The screen's idle clock (§8.2 live effects).
+  late final LiveClock clock;
+
   List<MenuTile> get tiles => [shopTile, skinsTile, inviteTile, noAdsTile];
 
   bool _isActive() => active;
@@ -104,6 +111,11 @@ class HomeScreen extends PositionComponent
       size: gearRect.size.toVector2(),
       onPressed: game.openSettings,
       isActive: _isActive,
+    );
+    // §8.2 / §8.4: one idle clock for the screen's live effects.
+    clock = LiveClock(
+      paused: () => game.liveMotionPaused,
+      still: () => game.reduceMotion,
     );
 
     // --- title ------------------------------------------------------------
@@ -144,6 +156,7 @@ class HomeScreen extends PositionComponent
     bird = HomeBird(
       rect: Config.homeBirdRectFor(h),
       look: game.menu.items.look,
+      isActive: _isActive,
     );
     final startRect = Config.homeStartRectFor(h);
     startButton = MenuButton(
@@ -180,7 +193,8 @@ class HomeScreen extends PositionComponent
           check: icon('check'),
           isActive: _isActive,
         );
-    shopTile = tile(0, 'shop', 'SHOP', game.openShop);
+    // §8.2: tiles press with `sk_tap`.
+    shopTile = tile(0, 'shop', 'SHOP', () => game.openShop(sfx: Sfx.skTap));
     skinsTile = tile(1, 'skins', 'SKINS', game.openSkins);
     inviteTile = tile(2, 'invite', 'INVITE', game.invite);
     // PO change 2026-10-05: the tile starts the store purchase straight
@@ -192,11 +206,25 @@ class HomeScreen extends PositionComponent
       trophy: icon('trophy'),
       bestScore: bestScore,
       gamesPlayed: gamesPlayed,
-      onPressed: game.showLeaderboard,
+      onPressed: () => game.showLeaderboard(sfx: Sfx.skTap),
       isActive: _isActive,
     );
 
+    clock
+      ..bind(slotButton.animate)
+      ..bind(
+        (t, still) => skinsTile.tagWobble.setPose(
+          still ? (scale: 1, degrees: 0) : LiveCurves.newTagWobble(t),
+        ),
+      )
+      ..bind(
+        (t, still) => leaderboard.trophyWiggle.setPose(
+          still ? (scale: 1, degrees: 0) : LiveCurves.trophyWiggle(t),
+        ),
+      );
+
     addAll([
+      clock,
       gearButton,
       titleHotspot,
       title,
@@ -329,8 +357,54 @@ class CoinPill extends MenuButton
   set balance(int value) {
     if (value == _balance) return;
     _balance = value;
-    if (isLoaded && _countFrom == null) _layout();
+    if (isLoaded && _countFrom == null && _held == null) _layout();
   }
+
+  int? _held;
+
+  /// Whether the number is frozen by [hold] (a coin reward in flight).
+  bool get held => _held != null;
+
+  /// Freezes the number on what it shows now: the wallet can be credited
+  /// while the reward's coins are still flying (PRD-menu-v2 §8.3).
+  void hold() {
+    _held ??= _shown;
+  }
+
+  /// Ends a [hold]: counts from the frozen number to [balance] over
+  /// [duration] s ([linear] = the reward's even count, else ease-out).
+  void releaseHold({
+    double duration = Config.coinRewardCountDuration,
+    bool linear = false,
+  }) {
+    final from = _held;
+    if (from == null) return;
+    _held = null;
+    countFrom(from, duration: duration, linear: linear);
+  }
+
+  double _popT = -1;
+  late final WiggleEffect _coinPop;
+
+  /// The pill coin pops to 135 % and back (a reward landing).
+  void popCoin() => _popT = 0;
+
+  /// Current scale of the pill coin (tests).
+  double get coinScale => _coinPop.scale;
+
+  /// Landing spot of a [CoinFly] coin: the coin's top-left + 3 (mock),
+  /// in world coordinates.
+  Offset get coinFlyTarget {
+    final p = isLoaded ? _coinIcon.absolutePosition : absolutePosition;
+    return Offset(p.x + 3, p.y + 3);
+  }
+
+  /// Seconds into the glint loop (frozen while idle motion is paused).
+  double _glintT = 0;
+  late final _CoinGlint _glint;
+
+  /// Current glint opacity (tests).
+  double get glintOpacity => _glint.opacity;
 
   /// The number on the pill right now (differs from [balance] while a
   /// [countFrom] animation runs).
@@ -349,12 +423,19 @@ class CoinPill extends MenuButton
 
   /// Counts the number from [from] to [balance] over [duration] s
   /// (ease-out cubic), e.g. a skin-shop purchase (PRD-menu-v2 §3.6).
-  void countFrom(int from, {double duration = Config.skinShopCountDuration}) {
+  void countFrom(
+    int from, {
+    double duration = Config.skinShopCountDuration,
+    bool linear = false,
+  }) {
     _countFrom = from;
     _countT = 0;
     _countDuration = duration;
+    _countLinear = linear;
     if (isLoaded) _layout();
   }
+
+  bool _countLinear = false;
 
   /// "Not enough coins" (§3.6): a short horizontal shake ([shake] false
   /// under reduce motion) and the "+" box flashing gold twice.
@@ -377,6 +458,7 @@ class CoinPill extends MenuButton
   @override
   void update(double dt) {
     super.update(dt);
+    _updateLive(dt);
     final from = _countFrom;
     if (from != null) {
       _countT += dt;
@@ -401,6 +483,33 @@ class CoinPill extends MenuButton
           Config.menuGold,
           k,
         )!;
+      }
+    }
+  }
+
+  /// Coin glint (§8.2, home and Shop, 8.4 s loop) and the reward pop.
+  void _updateLive(double dt) {
+    if (!isLoaded) return;
+    final scene = game.menuScene;
+    final enabled =
+        !game.reduceMotion &&
+        (scene == MenuScene.home || scene == MenuScene.shop);
+    if (!game.liveMotionPaused) _glintT += dt;
+    final g = LiveCurves.glint(_glintT);
+    _glint
+      ..opacity = enabled ? g.opacity : 0
+      ..glintScale = g.scale
+      ..angle = g.degrees * math.pi / 180;
+    if (_popT >= 0) {
+      _popT += dt;
+      const d = Config.coinPopDuration;
+      if (_popT >= d) {
+        _popT = -1;
+        _coinPop.scale = 1;
+      } else {
+        final u = _popT / d;
+        final k = u < .5 ? u * 2 : (1 - u) * 2;
+        _coinPop.scale = 1 + (Config.coinPopScale - 1) * k;
       }
     }
   }
@@ -430,6 +539,9 @@ class CoinPill extends MenuButton
       color: Config.menuSoft,
     );
     _coinIcon = MenuIcon(coinIcon, size: Vector2.all(coinSize));
+    _coinIcon.decorator.addLast(_coinPop = WiggleEffect(_coinIcon));
+    // Mock `.glint`: 12 pt at left 12 / top -2 of the 24 pt coin box.
+    _glint = _CoinGlint(position: Vector2(18, 4));
     _plusBox = RectangleComponent(
       size: Vector2.all(pillHeight),
       paint: Paint()..color = Config.menuPinkDark,
@@ -445,16 +557,17 @@ class CoinPill extends MenuButton
       label,
       _coinIcon,
     ]);
+    _coinIcon.add(_glint);
     _layout();
   }
 
   void _layout() {
     final from = _countFrom;
     if (from == null) {
-      _shown = _balance;
+      _shown = _held ?? _balance;
     } else {
       final u = (_countT / _countDuration).clamp(0.0, 1.0);
-      final eased = 1 - math.pow(1 - u, 3);
+      final eased = _countLinear ? u : 1 - math.pow(1 - u, 3);
       _shown = (from + (_balance - from) * eased).round();
     }
     label.text = formatCoins(_shown);
@@ -468,6 +581,42 @@ class CoinPill extends MenuButton
   }
 }
 
+/// White 4-point glint on the pill coin (mock `.glint`, a 12 pt star
+/// from the 20-unit path `M0-10L2.2-2.2 10 0 ...`), centred on its
+/// position; [opacity], [glintScale] and `angle` come from
+/// [LiveCurves.glint].
+class _CoinGlint extends PositionComponent {
+  _CoinGlint({super.position})
+    : super(size: Vector2.all(12), anchor: Anchor.center, priority: 5);
+
+  double opacity = 0;
+  double glintScale = 0;
+
+  static final Path _star = Path()
+    ..moveTo(0, -10)
+    ..lineTo(2.2, -2.2)
+    ..lineTo(10, 0)
+    ..lineTo(2.2, 2.2)
+    ..lineTo(0, 10)
+    ..lineTo(-2.2, 2.2)
+    ..lineTo(-10, 0)
+    ..lineTo(-2.2, -2.2)
+    ..close();
+
+  final Paint _paint = Paint();
+
+  @override
+  void render(Canvas canvas) {
+    if (opacity <= 0 || glintScale <= 0) return;
+    _paint.color = Color.fromRGBO(255, 255, 255, opacity);
+    canvas.save();
+    canvas.translate(6, 6);
+    canvas.scale(0.6 * glintScale);
+    canvas.drawPath(_star, _paint);
+    canvas.restore();
+  }
+}
+
 /// The pink 38 pt box in the top-left corner: home's settings gear and the
 /// menu screens' back chevron share it. Owned by the game like [CoinPill]
 /// and drawn BELOW the screens, whose transparent [MenuButton]s on top
@@ -477,7 +626,16 @@ class CoinPill extends MenuButton
 class MenuCornerBox extends PositionComponent
     with GroupOpacity, HasGameReference<FlappySpikesGame> {
   MenuCornerBox({required Rect rect, super.priority})
-    : super(position: rect.topLeft.toVector2(), size: rect.size.toVector2());
+    : super(position: rect.topLeft.toVector2(), size: rect.size.toVector2()) {
+    decorator.addLast(_press = WiggleEffect(this));
+  }
+
+  late final WiggleEffect _press;
+
+  /// Mirrors the press scale of the screen's transparent gear / back
+  /// button on top (§8.1 press), so the visible box shrinks with it.
+  double get pressScale => _press.scale;
+  set pressScale(double value) => _press.scale = value;
 
   static const double gearSize = 26;
   static const double backSize = 22;
@@ -523,13 +681,23 @@ class MenuCornerBox extends PositionComponent
 /// The equipped bird in the start block, drawn exactly like the in-game
 /// bird at blend 0 (identity colours), scaled to the mock's 44 pt wide box
 /// and centred in it.
+///
+/// Live (PRD-menu-v2 §8.2): a [BirdIdle] drives it — bob, idle flap,
+/// blinks and a random action every 6–12 s (bob + flap only under reduce
+/// motion); everything freezes while a dialog / ad is on top. A tap hops
+/// it (−204 pt/s) with `flap.mp3` and 7 pink / gold squares.
 class HomeBird extends PositionComponent
-    with HasGameReference<FlappySpikesGame> {
-  HomeBird({required Rect rect, required Look look})
-    : super(
-        position: rect.topLeft.toVector2(),
-        size: rect.size.toVector2(),
-      ) {
+    with HasGameReference<FlappySpikesGame>, TapCallbacks {
+  HomeBird({
+    required Rect rect,
+    required Look look,
+    this.isActive,
+    BirdIdle? idle,
+  }) : idle = idle ?? BirdIdle(),
+       super(
+         position: rect.topLeft.toVector2(),
+         size: rect.size.toVector2(),
+       ) {
     _look = LookComponent(
       look: look,
       artScale: Config.lookScaleForHome(rect),
@@ -538,7 +706,15 @@ class HomeBird extends PositionComponent
     );
   }
 
+  /// Hop power of a tap on the bird (−204 pt/s) and of START (−153).
+  static const double tapHop = 1.2;
+  static const double startHop = 0.9;
+
   late final LookComponent _look;
+  final bool Function()? isActive;
+
+  /// The idle model (exposed for tests).
+  final BirdIdle idle;
 
   /// The look drawn; follows `menu.items` while the screen is up.
   Look get look => _look.look;
@@ -547,11 +723,27 @@ class HomeBird extends PositionComponent
   /// Exposed for tests.
   LookComponent get lookComponent => _look;
 
+  /// A hop of [power] (1 = −170 pt/s) with the tap burst.
+  void hop(double power) => idle.hop(power, burst: true);
+
+  @override
+  bool containsLocalPoint(Vector2 point) =>
+      (isActive?.call() ?? true) && super.containsLocalPoint(point);
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    event.handled = true;
+    game.sound.play(Sfx.flap);
+    hop(tapHop);
+  }
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
     add(_look);
+    add(_Burst(idle, origin: size / 2));
     game.menu.items.addListener(_onItemsChanged);
+    _apply();
   }
 
   @override
@@ -560,7 +752,45 @@ class HomeBird extends PositionComponent
     super.onRemove();
   }
 
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (!game.liveMotionPaused) idle.step(dt, still: game.reduceMotion);
+    _apply();
+  }
+
+  void _apply() {
+    final o = idle.offset;
+    _look
+      ..position = Vector2(size.x / 2 + o.dx, size.y / 2 + o.dy)
+      ..angle = idle.angle
+      ..scale = Vector2(idle.scaleX, idle.scaleY)
+      ..flapOverride = idle.flap
+      ..blink = idle.blinking;
+  }
+
   void _onItemsChanged() => _look.look = game.menu.items.look;
+}
+
+/// The tap burst's squares, drawn above the bird around [origin] (the
+/// bird's resting centre; they do not follow its bob).
+class _Burst extends Component {
+  _Burst(this._idle, {required this.origin}) : super(priority: 10);
+
+  final BirdIdle _idle;
+  final Vector2 origin;
+  final Paint _paint = Paint();
+
+  @override
+  void render(Canvas canvas) {
+    for (final p in _idle.particles) {
+      _paint.color = p.color.withValues(alpha: p.opacity);
+      canvas.drawRect(
+        Rect.fromLTWH(origin.x + p.x, origin.y + p.y, p.size, p.size),
+        _paint,
+      );
+    }
+  }
 }
 
 /// The gold BIG HOOPS / SHIELD slot under START: video icon + label (+
@@ -568,6 +798,10 @@ class HomeBird extends PositionComponent
 /// ad and then starts the run with that powerup (2.0 DEVIATION from PRD-1
 /// §3.6: there is no armed / check state). No-ads owners get no video icon
 /// (no ad); ad unavailable (and no No-ads): dimmed, still tappable (toast).
+///
+/// Live (§8.2, the home's focus): a 3.2 s pulse 1 -> 1.035 with a gold
+/// glow, a light streak every 6.4 s and the camera icon nodding at each
+/// pulse peak — driven by the home's [LiveClock] through [animate].
 class PowerupSlotButton extends MenuButton {
   PowerupSlotButton({
     required Rect rect,
@@ -579,7 +813,42 @@ class PowerupSlotButton extends MenuButton {
          color: Config.menuGold,
          position: rect.topLeft.toVector2(),
          size: rect.size.toVector2(),
-       );
+       ) {
+    pulse = PulseEffect(
+      this,
+      amount: Config.homeSlotPulse,
+      glowColor: Config.homeSlotGlow,
+      glowBlur: Config.homeSlotGlowBlur,
+      inflate: Config.homeSlotOutline,
+    );
+    streak = LightStreak(this);
+    decorator
+      ..addLast(pulse)
+      ..addLast(streak);
+  }
+
+  late final PulseEffect pulse;
+  late final LightStreak streak;
+
+  /// Nod of the video icon (re-attached to every rebuilt icon).
+  late final WiggleEffect cameraNod = WiggleEffect(this);
+
+  /// The video icon while shown (tests).
+  MenuIcon? videoIcon;
+
+  /// [LiveClock] binding: pulse, streak and nod at idle time [t]; all at
+  /// rest when [still] (reduce motion).
+  void animate(double t, bool still) {
+    if (still) {
+      pulse.rest();
+      streak.progress = null;
+      cameraNod.rest();
+      return;
+    }
+    pulse.k = LiveCurves.pulse(t);
+    streak.at(t);
+    cameraNod.angle = LiveCurves.cameraNod(t) * math.pi / 180;
+  }
 
   final Sprite video;
   final Sprite shield;
@@ -643,8 +912,14 @@ class PowerupSlotButton extends MenuButton {
       letterSpacingEm: 0.04,
     );
     _label = label;
+    final icon = _showVideo ? MenuIcon(video, size: Vector2.all(18)) : null;
+    videoIcon = icon;
+    if (icon != null) {
+      cameraNod.target = icon;
+      icon.decorator.addLast(cameraNod);
+    }
     final items = <PositionComponent>[
-      if (_showVideo) MenuIcon(video, size: Vector2.all(18)),
+      ?icon,
       label,
       if (_shown == Powerup.shield) MenuIcon(shield, size: Vector2(18, 20)),
     ];
@@ -768,8 +1043,14 @@ class MenuTile extends MenuButton {
     // Mock: right -5, top -6 (sticks out of the tile's corner).
     final tag = _TileTag(text, tileWidth: width);
     _tag = tag;
+    tagWobble.target = tag;
+    tag.decorator.addLast(tagWobble);
     add(tag);
   }
+
+  /// The tag's idle wobble (§8.2: Skins NEW tag, driven by the home's
+  /// [LiveClock]); re-attached to every new tag.
+  late final WiggleEffect tagWobble = WiggleEffect(this);
 
   /// Exposed for tests.
   PositionComponent? get tagComponent => _tag;
@@ -806,6 +1087,9 @@ class LeaderboardRow extends MenuButton {
        );
 
   final Sprite trophy;
+
+  /// The trophy's idle wiggle (§8.2, driven by the home's [LiveClock]).
+  late final WiggleEffect trophyWiggle = WiggleEffect(this);
   int bestScore;
   int gamesPlayed;
 
@@ -831,17 +1115,18 @@ class LeaderboardRow extends MenuButton {
   Future<void> onLoad() async {
     await super.onLoad();
     const tileSize = Config.homeLeaderboardSize;
+    final icon = MenuIcon(
+      trophy,
+      size: Vector2.all(Config.homeTrophySize),
+      position: Vector2.all(tileSize / 2),
+      anchor: Anchor.center,
+    );
+    trophyWiggle.target = icon;
+    icon.decorator.addLast(trophyWiggle);
     final tile = RectangleComponent(
       size: Vector2.all(tileSize),
       paint: Paint()..color = Config.menuPink,
-      children: [
-        MenuIcon(
-          trophy,
-          size: Vector2.all(Config.homeTrophySize),
-          position: Vector2.all(tileSize / 2),
-          anchor: Anchor.center,
-        ),
-      ],
+      children: [icon],
     );
     const textX = tileSize + Config.homeStatsGap;
     const line = statsFontSize * statsLineHeight;

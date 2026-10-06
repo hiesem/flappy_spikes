@@ -409,7 +409,7 @@ void main() {
       clock: clock,
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
-        expect(shop.freeCoins.chipText, 'WATCH');
+        expect(shop.freeCoins.chipText, 'GET');
         expect(shop.freeCoins.chipDimmed, isFalse);
 
         await game.claimFreeCoins();
@@ -448,7 +448,7 @@ void main() {
 
         clock.now = clock.now.add(const Duration(days: 1));
         game.update(0);
-        expect(shop.freeCoins.chipText, 'WATCH');
+        expect(shop.freeCoins.chipText, 'GET');
       },
     );
 
@@ -457,7 +457,7 @@ void main() {
       adMode: FakeAdMode.unavailable,
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
-        expect(shop.freeCoins.chipText, 'WATCH');
+        expect(shop.freeCoins.chipText, 'GET');
         expect(shop.freeCoins.chipDimmed, isTrue);
         expect(shop.freeCoins.tappable, isTrue, reason: 'tap -> toast');
         await game.claimFreeCoins();

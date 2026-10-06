@@ -1,19 +1,25 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
 
 import '../../game/config.dart';
 import '../../game/purchases.dart';
+import '../../game/sound.dart';
 import '../../menu/free_coins_policy.dart';
 import '../../services/iap_service.dart';
 import '../../skins/catalog.dart';
+import '../../skins/art/look_painter.dart';
 import '../../skins/art/trail.dart';
 import '../../skins/item_store.dart';
 import '../../skins/look.dart';
 import '../home/menu_primitives.dart';
 import '../menu_screen_chrome.dart';
 import '../skins/item_art.dart';
+import '../ui/bird_idle.dart';
+import '../ui/live_effects.dart';
 
 /// Coin packs in grid order with their flap tags (PRD-1 §5.2).
 const List<(IapProduct, String?)> kShopPacks = [
@@ -76,6 +82,9 @@ class ShopScreen extends MenuScreen {
   late final FeaturedSkinRow featured;
   late final MenuButton restoreLink;
 
+  /// The Shop's idle clock (§8.3 live effects).
+  late final LiveClock clock;
+
   @override
   List<String> get contentImages => kShopImages;
 
@@ -105,8 +114,9 @@ class ShopScreen extends MenuScreen {
           tag: tag,
           stack: sprite('menu/coin_stack_${i + 1}.png'),
           stackSize: Vector2(_kStackSizes[i].$1, _kStackSizes[i].$2),
-          onPressed: () => game.buyProduct(product),
+          onPressed: () => game.buyProduct(product, sfx: Sfx.skTap),
           isActive: isActive,
+          streakDelay: Config.shopStreakDelayPacks[i],
         ),
     ];
     featured = FeaturedSkinRow(
@@ -142,6 +152,22 @@ class ShopScreen extends MenuScreen {
     scroll
       ..contentBottom = Config.shopContentBottomFor(h)
       ..content.addAll([banner, freeCoins, ...packs, featured, restoreLink]);
+
+    // §8.3 / §8.4: GET pulse + nod, the price buttons' cascading streaks,
+    // the pack tags' wiggle and the featured bird's calm idle — one clock,
+    // paused under popups / ads, at rest under reduce motion.
+    clock = LiveClock(
+      paused: () => game.liveMotionPaused,
+      still: () => game.reduceMotion,
+    );
+    clock
+      ..bind(freeCoins.animate)
+      ..bind(banner.animate)
+      ..bind(featured.animate);
+    for (final pack in packs) {
+      clock.bind(pack.animate);
+    }
+    add(clock);
   }
 
   /// Scrolls the coin packs into view (the pill's "+" while in the Shop).
@@ -210,6 +236,19 @@ class ShopBanner extends MenuButton {
   final Sprite icon;
   final Sprite check;
 
+  /// Light streak over the price chip (§8.3 cascade: first, delay 0).
+  late final LightStreak streak = LightStreak(
+    this,
+    delay: Config.shopStreakDelayNoAds,
+  );
+
+  /// The price chip while shown (tests).
+  RectangleComponent? priceChip;
+
+  /// [LiveClock] binding.
+  void animate(double t, bool still) =>
+      still ? streak.progress = null : streak.at(t);
+
   static const double fontSize = 19;
   static const double letterSpacing = 0.04;
   static const double iconSize = 30;
@@ -260,6 +299,7 @@ class ShopBanner extends MenuButton {
     removeAll(_content);
     _content.clear();
     priceLabel = null;
+    priceChip = null;
     // Owned: the check takes the crossed-AD icon's slot (same box, the
     // glyph centred in it) instead of trailing the label.
     final glyph = owned
@@ -298,17 +338,25 @@ class ShopBanner extends MenuButton {
       paint: Paint()..color = Config.menuGold,
     );
     layoutRow(chip, [price], gap: 0);
+    streak.target = chip;
+    chip.decorator.addLast(streak);
+    priceChip = chip;
     _content.add(chip);
     layoutRow(this, [chip], gap: 0, right: width - 8);
   }
 }
 
-/// Gold "FREE +40" row with the pink WATCH chip (PRD-1 §3.2): a rewarded ad
-/// for [FreeCoinsPolicy.reward] coins. No-ads owners get the same reward
-/// without an ad, so their chip reads "CLAIM" with no video icon and ad
-/// availability never dims it. While the policy blocks a claim the
-/// chip shows the cooldown ("04:59") or "TOMORROW" (daily cap), dimmed;
-/// with no ad loaded it is dimmed but still tappable (-> toast).
+/// Gold "FREE +40" row with the pink GET chip (PRD-1 §3.2; PRD-menu-v2
+/// §8.3: was WATCH — label only, the rewarded-ad flow is unchanged): a
+/// rewarded ad for [FreeCoinsPolicy.reward] coins. No-ads owners get the
+/// same reward without an ad, so their chip reads "CLAIM" with no video
+/// icon and ad availability never dims it. While the policy blocks a claim
+/// the chip shows the cooldown ("04:59") or "TOMORROW" (daily cap),
+/// dimmed; with no ad loaded it is dimmed but still tappable (-> toast).
+///
+/// The chip is [Config.shopGetWidth] x [Config.shopGetHeight]: camera 20 pt
+/// + "GET" 20 pt faux bold at 0.12 em. While claimable it pulses (1 ->
+/// 1.05, pink glow) and the camera nods (§8.3), via [animate].
 class FreeCoinsRow extends MenuButton {
   FreeCoinsRow({
     required Rect rect,
@@ -325,17 +373,61 @@ class FreeCoinsRow extends MenuButton {
   final Sprite coin;
   final Sprite video;
 
-  static const double chipHeight = 28;
-  static const double chipPadX = 12;
+  /// The claim label with an ad (was "WATCH").
+  static const String getLabel = 'GET';
+  static const String claimLabel = 'CLAIM';
+
+  static const double chipMinPad = 6;
 
   String? _chipText;
   bool _chipDimmed = false;
 
-  /// Visible chip text ("WATCH", "04:59", "TOMORROW"); exposed for tests.
+  /// Visible chip text ("GET", "CLAIM", "04:59", "TOMORROW"); exposed for
+  /// tests.
   String get chipText => _chipText ?? '';
   bool get chipDimmed => _chipDimmed;
 
   _DimGroup? _chip;
+
+  /// The chip (tests); its world rect is [chipRect].
+  PositionComponent? get chip => _chip;
+
+  /// The chip's rect in world coordinates (the coin-fly start), or null
+  /// before it is built.
+  Rect? get chipRect {
+    final c = _chip;
+    if (c == null || !c.isMounted) return null;
+    final p = c.absolutePositionOfAnchor(Anchor.topLeft);
+    return Rect.fromLTWH(p.x, p.y, c.width, c.height);
+  }
+
+  /// The GET text component while shown (tests).
+  MenuText? chipLabel;
+
+  /// The chip's pulse (re-attached to every rebuilt chip).
+  late final PulseEffect pulse = PulseEffect(
+    this,
+    amount: Config.shopGetPulse,
+    glowColor: Config.shopGetGlow,
+    glowBlur: Config.shopGetGlowBlur,
+  );
+
+  /// The camera icon's nod (re-attached to every rebuilt icon).
+  late final WiggleEffect cameraNod = WiggleEffect(this);
+
+  bool get _claimable =>
+      _chipText == getLabel || _chipText == claimLabel || _chipText == null;
+
+  /// [LiveClock] binding: pulse + nod while claimable and not dimmed.
+  void animate(double t, bool still) {
+    if (still || !_claimable || _chipDimmed) {
+      pulse.rest();
+      cameraNod.rest();
+      return;
+    }
+    pulse.k = LiveCurves.pulse(t);
+    cameraNod.angle = LiveCurves.cameraNod(t) * math.pi / 180;
+  }
 
   /// "mm:ss" for a cooldown.
   static String formatCooldown(Duration d) {
@@ -357,9 +449,9 @@ class FreeCoinsRow extends MenuButton {
     } else if (policy.cooldownRemaining > Duration.zero) {
       text = formatCooldown(policy.cooldownRemaining);
     } else {
-      text = noAds ? 'CLAIM' : 'WATCH';
+      text = noAds ? claimLabel : getLabel;
     }
-    final claimable = text == 'WATCH' || text == 'CLAIM';
+    final claimable = text == getLabel || text == claimLabel;
     tappable = claimable && !busy;
     final chipDimmed = !claimable || busy || (!noAds && !adAvailable);
     if (text == _chipText && chipDimmed == _chipDimmed && _chip != null) {
@@ -391,25 +483,48 @@ class FreeCoinsRow extends MenuButton {
 
   void _rebuildChip() {
     _chip?.removeFromParent();
-    final label = MenuText(
-      _chipText ?? 'WATCH',
-      fontSize: 16,
-      color: Config.menuSoft,
-      letterSpacingEm: 0.04,
-    );
-    final items = <PositionComponent>[
-      if (_chipText == null || _chipText == 'WATCH')
-        MenuIcon(video, size: Vector2.all(20)),
-      label,
-    ];
+    final text = _chipText ?? getLabel;
+    final isGet = text == getLabel;
+    final bold = isGet || text == claimLabel;
+    final label = bold
+        ? MenuText(
+            text,
+            fontSize: Config.shopGetFontSize,
+            color: Config.menuSoft,
+            letterSpacingEm: Config.shopGetLetterSpacing,
+            strokeWidth: Config.shopGetStroke,
+          )
+        : MenuText(
+            text,
+            fontSize: 16,
+            color: Config.menuSoft,
+            letterSpacingEm: 0.04,
+          );
+    chipLabel = label;
+    final icon = isGet
+        ? MenuIcon(video, size: Vector2.all(Config.shopGetIconSize))
+        : null;
+    final items = <PositionComponent>[?icon, label];
+    final gap = isGet ? Config.shopGetGap : 6.0;
     final contentWidth =
         items.fold<double>(0, (sum, c) => sum + c.width) +
-        6 * (items.length - 1);
+        gap * (items.length - 1);
     final chip = _DimGroup(
-      size: Vector2(contentWidth + 2 * chipPadX, chipHeight),
+      size: Vector2(
+        // Fixed 112 pt (mock `.get`); only a longer state text (e.g.
+        // "TOMORROW") may widen it.
+        math.max(Config.shopGetWidth, contentWidth + 2 * chipMinPad),
+        Config.shopGetHeight,
+      ),
       color: Config.menuPink,
     )..opacity = _chipDimmed ? MenuButton.dimmedOpacity : 1;
-    layoutRow(chip, items, gap: 6);
+    pulse.target = chip;
+    chip.decorator.addLast(pulse);
+    if (icon != null) {
+      cameraNod.target = icon;
+      icon.decorator.addLast(cameraNod);
+    }
+    layoutRow(chip, items, gap: gap);
     _chip = chip;
     layoutRow(this, [chip], gap: 0, right: width - 8);
   }
@@ -419,6 +534,10 @@ class FreeCoinsRow extends MenuButton {
 /// amount ("1,800"), full-width pink price button and an optional gold
 /// flap tag centred on the top edge. The whole card buys the pack; it is
 /// dimmed and inert while that purchase is pending.
+///
+/// Live (§8.3): a light streak over the price button every 6.4 s after
+/// [streakDelay] (the cascade), the tag's wiggle every 6 s, and the coin
+/// stack hops 4 pt when the card is pressed.
 class CoinPackCard extends MenuButton {
   CoinPackCard({
     required Rect rect,
@@ -428,7 +547,9 @@ class CoinPackCard extends MenuButton {
     required this.stackSize,
     required super.onPressed,
     super.isActive,
-  }) : super(
+    double streakDelay = 0,
+  }) : streak = LightStreak(PositionComponent(), delay: streakDelay),
+       super(
          color: const Color(0xFFE1E1E1),
          position: rect.topLeft.toVector2(),
          size: rect.size.toVector2(),
@@ -438,6 +559,46 @@ class CoinPackCard extends MenuButton {
   final String? tag;
   final Sprite stack;
   final Vector2 stackSize;
+
+  /// The price button's light streak.
+  final LightStreak streak;
+
+  /// The tag's wiggle (no-op without a tag).
+  late final WiggleEffect tagWiggle = WiggleEffect(this);
+
+  late final MenuIcon stackArt;
+  double _hopT = -1;
+
+  /// Current coin-stack hop offset (pt, negative = up; tests).
+  double get stackHop => LiveCurves.packHop(_hopT);
+
+  /// [LiveClock] binding.
+  void animate(double t, bool still) {
+    if (still) {
+      streak.progress = null;
+      tagWiggle.rest();
+      return;
+    }
+    streak.at(t);
+    if (tag != null) tagWiggle.setPose(LiveCurves.packTagWiggle(t));
+  }
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    super.onTapDown(event);
+    _hopT = 0; // §8.3: the coins hop when the pack is pressed
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (_hopT < 0) return;
+    _hopT += dt;
+    if (_hopT >= LiveCurves.packHopDuration) _hopT = -1;
+    if (isLoaded) {
+      stackArt.position.y = Config.shopPackArtBottom + stackHop;
+    }
+  }
 
   late final MenuText amount;
   late final MenuText priceLabel;
@@ -468,7 +629,7 @@ class CoinPackCard extends MenuButton {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    final art = MenuIcon(
+    final art = stackArt = MenuIcon(
       stack,
       size: stackSize,
       position: Vector2(width / 2, Config.shopPackArtBottom),
@@ -486,6 +647,8 @@ class CoinPackCard extends MenuButton {
       size: Vector2(width, Config.shopPackPriceHeight),
       paint: Paint()..color = Config.menuPink,
     );
+    streak.target = priceButton;
+    priceButton.decorator.addLast(streak);
     priceLabel = MenuText(
       _price ?? product.placeholderPrice,
       fontSize: 20,
@@ -518,6 +681,8 @@ class CoinPackCard extends MenuButton {
       layoutRow(flap, [label], gap: 0);
       label.position.y += 0.5; // browser rounds the flex centring down
       tagComponent = flap;
+      tagWiggle.target = flap;
+      flap.decorator.addLast(tagWiggle);
       add(flap);
     }
   }
@@ -536,6 +701,10 @@ class CoinPackCard extends MenuButton {
 /// SKIN" + name, and a pink coin price pill at the catalogue price. Tapping
 /// opens the skin shop on the item's tab with it tried on. Hidden when
 /// everything is owned.
+///
+/// Live (§8.3): the price pill's light streak closes the cascade (2.5 s)
+/// and a featured bird idles calmly ([BirdIdle.calm]: bob, slow flap,
+/// blink, an occasional lean, no hops).
 class FeaturedSkinRow extends MenuButton {
   FeaturedSkinRow({
     required Rect rect,
@@ -549,6 +718,32 @@ class FeaturedSkinRow extends MenuButton {
        );
 
   final Sprite coin;
+
+  /// The price pill's light streak.
+  late final LightStreak streak = LightStreak(
+    this,
+    delay: Config.shopStreakDelayFeatured,
+  );
+
+  /// The featured bird's calm idle (first lean / blink after 8 s, mock).
+  final BirdIdle idle = BirdIdle(calm: true, firstAction: 8);
+
+  bool _still = false;
+
+  /// [LiveClock] binding; the bird steps here too so it pauses with the
+  /// clock.
+  double _lastT = 0;
+  void animate(double t, bool still) {
+    final dt = t - _lastT;
+    _lastT = t;
+    _still = still;
+    if (still) {
+      streak.progress = null;
+    } else {
+      streak.at(t);
+    }
+    if (dt > 0) idle.step(dt, still: still);
+  }
 
   /// Scale of the 84 x 68 grid-tile art in the row.
   static const double artScale = 0.55;
@@ -575,6 +770,9 @@ class FeaturedSkinRow extends MenuButton {
         : null;
     if (isLoaded) _rebuild();
   }
+
+  /// The price pill while shown (tests).
+  RectangleComponent? pricePill;
 
   /// The visible name / price (tests).
   String? get nameText => _name?.text;
@@ -618,9 +816,25 @@ class FeaturedSkinRow extends MenuButton {
     if (item == null) return;
     canvas.save();
     canvas.translate(padX + artSlot / 2, height / 2);
-    canvas.scale(artScale);
-    canvas.translate(-ItemArt.w / 2, -ItemArt.h / 2);
-    ItemArt.paint(canvas, item, t: _t, emitter: _emitter);
+    if (item.layer == SkinLayer.bird && !item.isNone) {
+      // Same size as the tile art (ItemArt's bird branch), idling.
+      final o = idle.offset;
+      canvas.translate(o.dx, o.dy);
+      canvas.rotate(idle.angle);
+      canvas.scale(idle.scaleX, idle.scaleY);
+      canvas.scale(artScale * math.min(ItemArt.w / 56, ItemArt.h / 44));
+      LookPainter.paint(
+        canvas,
+        Look(bird: item.id),
+        t: _t,
+        flap: idle.flap,
+        blink: idle.blinking && !_still,
+      );
+    } else {
+      canvas.scale(artScale);
+      canvas.translate(-ItemArt.w / 2, -ItemArt.h / 2);
+      ItemArt.paint(canvas, item, t: _t, emitter: _emitter);
+    }
     canvas.restore();
   }
 
@@ -662,6 +876,9 @@ class FeaturedSkinRow extends MenuButton {
     );
     // Mock `.price .coin` (14 pt) wins over `.cn` (18 pt).
     layoutRow(pill, [MenuIcon(coin, size: Vector2.all(14)), priceText], gap: 4);
+    streak.target = pill;
+    pill.decorator.addLast(streak);
+    pricePill = pill;
     _content.addAll([caption, name]);
     addAll([caption, name]);
     _content.add(pill);
@@ -669,7 +886,7 @@ class FeaturedSkinRow extends MenuButton {
   }
 }
 
-/// A flat filled box whose subtree fades as one layer (the dimmed WATCH
+/// A flat filled box whose subtree fades as one layer (the dimmed GET
 /// chip).
 class _DimGroup extends PositionComponent with GroupOpacity {
   _DimGroup({required super.size, required Color color})

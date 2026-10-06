@@ -802,13 +802,17 @@ void paintBirdBody(Canvas c, BirdSpec b, double t) {
   c.restore();
 }
 
-/// Wing, eye and beak (JS `birdFace`). [dead] draws the eye as an X.
+/// Wing, eye and beak (JS `birdFace`). [dead] draws the eye as an X;
+/// [blink] draws it closed: a short horizontal bar in the eye colour
+/// (`build55.py`: the eye square is covered and a 4 x 1 bar drawn 0.6
+/// below its centre).
 void paintBirdFace(
   Canvas c,
   BirdSpec b,
   double t,
   bool flap, {
   bool dead = false,
+  bool blink = false,
 }) {
   final s = b.shape;
   // wing
@@ -833,7 +837,9 @@ void paintBirdFace(
   }
   // eye
   final ex = s.eye.dx, ey = s.eye.dy;
-  if (s.kind == 'owl') {
+  if (blink && !dead && b.pat != 'zombie') {
+    _paintClosedEye(c, b, ex, ey);
+  } else if (s.kind == 'owl') {
     fillRect(c, ex - 5, ey - 5, 10, 10, const Color(0xFFFFFFFF));
     if (dead) {
       paintDeadEye(c, ex, ey, const Color(0xFF212121));
@@ -891,6 +897,27 @@ void paintBirdFace(
     default:
       c.drawPath(s.beakPath, fillPaint(b.bk ?? artGold));
   }
+}
+
+/// Closed eye of the idle blink: a 4 x 1 bar 0.6 below the eye centre in
+/// the colour the open eye's lid line would have (the white eye square /
+/// the owl's pupil / the ghost's eye colour / the robo visor).
+void _paintClosedEye(Canvas c, BirdSpec b, double ex, double ey) {
+  if (b.shape.kind == 'owl') {
+    fillRect(c, ex - 5, ey - 5, 10, 10, const Color(0xFFFFFFFF));
+    fillRect(c, ex - 2, ey + .6, 6, 1, const Color(0xFF212121));
+    c.drawPath(
+      _poly([ex - 7, ey - 8, ex + 6, ey - 6, ex + 6, ey - 5, ex - 7, ey - 5]),
+      fillPaint(b.d),
+    );
+    return;
+  }
+  final color = b.pat == 'robo'
+      ? const Color(0xFF212121)
+      : b.shape.kind == 'ghost'
+      ? b.ey!
+      : b.ey ?? const Color(0xFFFFFFFF);
+  fillRect(c, ex - 2, ey + .6, 4, 1, color);
 }
 
 /// X eye (the zombie eye; also the dead pose) centred at ([ex], [ey]).

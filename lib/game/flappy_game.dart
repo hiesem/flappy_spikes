@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math';
-import 'dart:ui' show Color, Paint, PlatformDispatcher;
+import 'dart:ui' show Color, Paint, PlatformDispatcher, Rect;
 
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
@@ -17,6 +17,7 @@ import '../components/debug_panel.dart';
 import '../components/fake_ad_overlay.dart';
 import '../components/gameover_panel.dart';
 import '../components/home/home_screen.dart';
+import '../components/home/menu_primitives.dart' show MenuButton;
 import '../components/noads_popup.dart';
 import '../components/pipe_pair.dart';
 import '../components/score_hud.dart';
@@ -25,6 +26,7 @@ import '../components/shop/shop_screen.dart';
 import '../components/skins/skin_shop_screen.dart';
 import '../components/spike_strip.dart';
 import '../components/tap_catcher.dart';
+import '../components/ui/coin_fly.dart';
 import '../components/ui/service_message.dart';
 import '../menu/free_coins_policy.dart';
 import '../menu/menu_state.dart';
@@ -232,6 +234,17 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// The No-ads popup while it is up (null otherwise).
   NoAdsPopup? get noAdsPopup => _noAdsPopup;
 
+  /// Rewarded ads on screen right now (real or fake).
+  int _adsShowing = 0;
+
+  /// PRD-menu-v2 §8.4: the idle animations of the live home / Shop pause
+  /// while a dialog, popup, ad, fake ad or the debug panel is on top.
+  bool get liveMotionPaused =>
+      _noAdsPopup != null ||
+      _debugPanel != null ||
+      _fakeAd != null ||
+      _adsShowing > 0;
+
   /// True while a free-coins rewarded ad is playing.
   bool get freeCoinsBusy => _freeCoinsBusy;
 
@@ -438,7 +451,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// [beforeRunStart] if set; synchronous when it is null.
   Future<void> startRun() async {
     if (!_homeInteractive) return;
-    sound.play(Sfx.click);
+    // §8.2: the home bird hops with flap.mp3 as the run starts. The run's
+    // first flap plays flap.mp3 in this same frame, so it is only played
+    // here when [beforeRunStart] delays the run.
+    if (beforeRunStart != null) sound.play(Sfx.flap);
+    _home?.bird.hop(HomeBird.startHop);
     await _runFromHome();
   }
 
@@ -450,7 +467,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// home screen takes no input while the ad plays.
   Future<void> tapPowerupSlot() async {
     if (!_homeInteractive) return;
-    sound.play(Sfx.click);
+    sound.play(Sfx.bnAdBtn);
     if (!menu.noAds) {
       final ads = monetization.ads;
       if (!ads.isAvailable) {
@@ -568,10 +585,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// out and the Shop in. The pill ([scrollToCoins]) opens it at the coin
   /// packs; pressed while already in the Shop it just scrolls there.
   /// [source] defaults to "pill" / "tile" (`shop_open` analytics).
-  void openShop({bool scrollToCoins = false, String? source}) {
+  /// [sfx]: the button's sound (§8.2: `sk_tap` for the tile).
+  void openShop({
+    bool scrollToCoins = false,
+    String? source,
+    Sfx sfx = Sfx.click,
+  }) {
     if (_sceneOnTop(MenuScene.shop)) {
       if (scrollToCoins) {
-        sound.play(Sfx.click);
+        sound.play(sfx);
         _shop?.scrollToCoins();
       }
       return;
@@ -579,7 +601,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (_shop != null) return;
     final fromSkins = _sceneOnTop(MenuScene.skins);
     if (!_homeInteractive && !fromSkins) return;
-    sound.play(Sfx.click);
+    sound.play(sfx);
     services.track('shop_open', {
       'source': source ?? (scrollToCoins ? 'pill' : 'tile'),
     });
@@ -627,7 +649,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// (Skins) or the home screen (not a new arrival: no slot roll).
   void closeShop() {
     if (state != GameState.start || _shop == null) return;
-    sound.play(Sfx.click);
+    sound.play(Sfx.skClose);
     _dismissShop();
     _returnFromMenuScreen();
   }
@@ -673,7 +695,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (!_sceneOnTop(MenuScene.shop) || _freeCoinsBusy) return;
     final policy = menu.freeCoins;
     if (!policy.canClaim) return;
-    sound.play(Sfx.click);
+    sound.play(Sfx.bnAdBtn);
     _freeCoinsBusy = true;
     try {
       if (!menu.noAds) {
@@ -689,18 +711,64 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         }
       }
       await policy.recordClaim();
+      // The pill keeps the old number until the coins land (§8.3).
+      _coinPill.hold();
       await menu.wallet.add(FreeCoinsPolicy.reward, CoinSource.rewarded);
     } finally {
       _freeCoinsBusy = false;
     }
     showToast('+${FreeCoinsPolicy.reward} coins');
+    final chip = _shop?.freeCoins.chipRect;
+    if (chip != null) {
+      playCoinReward(from: chip);
+    } else {
+      _coinPill.releaseHold();
+    }
   }
+
+  /// The standard "coins added" feedback (PRD-menu-v2 §8.3, Q-S9): coins
+  /// fly from [from] (a button, world coordinates) into the coin pill;
+  /// when the last one lands the pill counts up to the wallet balance in
+  /// 0.4 s with `bn_coin`, its coin pops to 135 % and `sk_progress` follows.
+  /// The caller [CoinPill.hold]s the pill before crediting the wallet so
+  /// the number waits for the coins.
+  void playCoinReward({required Rect from}) {
+    final fly = CoinFly(
+      coin: Sprite(images.fromCache('menu/coin.png')),
+      from: from,
+      to: _coinPill.coinFlyTarget,
+      random: coinFlyRandom,
+      onDone: () {
+        sound.play(Sfx.bnCoin);
+        _coinPill
+          ..balance = menu.wallet.balance
+          ..releaseHold(duration: Config.coinRewardCountDuration, linear: true)
+          ..popCoin();
+        world.add(
+          TimerComponent(
+            period: Config.coinRewardProgressDelay,
+            removeOnFinish: true,
+            onTick: () => sound.play(Sfx.skProgress),
+          ),
+        );
+      },
+    );
+    _coinFly = fly;
+    world.add(fly);
+  }
+
+  /// The coin-fly animation while it runs (tests).
+  CoinFly? get coinFly => _coinFly != null && !_coinFly!.done ? _coinFly : null;
+  CoinFly? _coinFly;
+
+  /// Seeds the coin-fly drift (tests); null = random.
+  Random? coinFlyRandom;
 
   /// A coin pack (Shop) or No ads (popup price button): starts the store
   /// purchase; [Purchases] grants it when the store confirms.
-  Future<void> buyProduct(IapProduct product) async {
+  Future<void> buyProduct(IapProduct product, {Sfx sfx = Sfx.click}) async {
     if (state != GameState.start) return;
-    sound.play(Sfx.click);
+    sound.play(sfx);
     await purchases.buy(product);
   }
 
@@ -723,7 +791,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       return;
     }
     services.track('noads_purchase_tapped', {'source': source});
-    await buyProduct(IapProduct.noAds);
+    // §8.2 / §8.3: `sk_tap` for the home tile, `sk_dialog` for the Shop's
+    // Remove-ads banner.
+    await buyProduct(
+      IapProduct.noAds,
+      sfx: source == 'shop_banner' ? Sfx.skDialog : Sfx.skTap,
+    );
   }
 
   /// "RESTORE PURCHASES" (Shop / Settings).
@@ -758,7 +831,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (open != null) return;
     final fromShop = _sceneOnTop(MenuScene.shop);
     if (!_homeInteractive && !fromShop) return;
-    sound.play(Sfx.click);
+    sound.play(Sfx.skTap); // §8.2 tile / §8.3 featured row
     services.track('skins_open', {
       'source': source ?? (fromShop ? 'shop' : 'tile'),
     });
@@ -990,6 +1063,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// an ad closed before the reward (the show rate must not depend on the
   /// outcome); `ad_reward_earned` fires when the reward is actually earned.
   Future<AdResult> showRewardedAd(AdPlacement placement) async {
+    _adsShowing++;
+    try {
+      return await _showRewardedAd(placement);
+    } finally {
+      _adsShowing--;
+    }
+  }
+
+  Future<AdResult> _showRewardedAd(AdPlacement placement) async {
     final ads = monetization.ads;
     // Exactly one impression per displayed ad, logged at display time.
     var shownLogged = false;
@@ -1064,7 +1146,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// reward).
   void invite() {
     if (!_homeInteractive) return;
-    sound.play(Sfx.click);
+    sound.play(Sfx.skTap);
     services.track('invite_tap');
     final share = onInvite;
     if (share == null) {
@@ -1269,7 +1351,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (!_homeInteractive || _settingsPanel != null) {
       return;
     }
-    sound.play(Sfx.click);
+    sound.play(Sfx.skTab); // §8.2 gear
     menuScene = MenuScene.settings;
     _leaveHome();
     final settings = SettingsPanel(
@@ -1393,12 +1475,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// native leaderboard UI (Google Play Games / Game Center). On failure a
   /// short-lived [ServiceMessage] tells the player what happened — a failed
   /// tap must not be indistinguishable from no tap.
-  Future<void> showLeaderboard() async {
+  Future<void> showLeaderboard({Sfx sfx = Sfx.click}) async {
     // A home action: like the tiles, the row is blocked while a run is
     // starting or a rewarded ad is in flight. The game-over panel's
     // trophy is not on the home screen and stays available.
     if (state == GameState.start && !_homeInteractive) return;
-    sound.play(Sfx.click);
+    sound.play(sfx);
     switch (await services.showLeaderboards()) {
       case ShowLeaderboardResult.signInFailed:
         _showServiceMessage('Play Games sign-in unavailable');
@@ -1494,6 +1576,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// opacity, i.e. fades with a screen that is entered from / left for a
   /// scene without it (settings, START, replay). The corner glyph is the
   /// hosts' opacity-weighted gear / back mix.
+  /// The transparent tap target over [_cornerBox] on the current screen.
+  MenuButton? get _cornerButton {
+    final home = _home;
+    if (home != null) return home.isLoaded ? home.gearButton : null;
+    final screen = _shop ?? _skinShop;
+    return screen != null && screen.built ? screen.backButton : null;
+  }
+
   void _updateMenuChrome() {
     final current = _home ?? _shop ?? _skinShop;
     _chromeHosts.removeWhere(
@@ -1517,7 +1607,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       ..balance = menu.wallet.balance;
     _cornerBox
       ..opacity = opacity
-      ..gearMix = total > 0 ? homeShare / total : 1;
+      ..gearMix = total > 0 ? homeShare / total : 1
+      ..pressScale = _cornerButton?.pressScale ?? 1;
   }
 
   // --- fades ---------------------------------------------------------------

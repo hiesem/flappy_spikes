@@ -591,6 +591,44 @@ class Config {
   static const double skinShopEnterColumnDelay = 0.03;
   static const double skinShopEnterRowDelay = 0.04;
 
+  // --- Live home & Shop (PRD-menu-v2 §8) --------------------------------
+  // Effect timings live in components/ui/live_effects.dart (LiveCurves).
+
+  /// Free-coins reward: the pill counts +40 in 0.4 s once the coins have
+  /// landed, then `sk_progress` 0.18 s later.
+  static const double coinRewardCountDuration = 0.4;
+  static const double coinRewardProgressDelay = 0.18;
+
+  /// Coin pill coin pop on a reward (135 % and back in 0.3 s).
+  static const double coinPopScale = 1.35;
+  static const double coinPopDuration = 0.3;
+
+  /// The Shop's GET button (was WATCH): 112 x 32, camera 20 + "GET" 20 pt
+  /// bold (0.9 pt stroke), 0.12 em, gap 9; pulse 1 -> 1.05 with a pink glow
+  /// (12 pt blur, #EC008C 45 %).
+  static const double shopGetWidth = 112;
+  static const double shopGetHeight = 32;
+  static const double shopGetFontSize = 20;
+  static const double shopGetLetterSpacing = 0.12;
+  static const double shopGetStroke = 0.9;
+  static const double shopGetIconSize = 20;
+  static const double shopGetGap = 9;
+  static const double shopGetPulse = 0.05;
+  static const Color shopGetGlow = Color.fromRGBO(236, 0, 140, .45);
+  static const double shopGetGlowBlur = 12;
+
+  /// Home powerup slot pulse: 1 -> 1.035, gold glow (14 pt blur, #FFB529
+  /// 55 %).
+  static const double homeSlotPulse = 0.035;
+  static const Color homeSlotGlow = Color.fromRGBO(255, 181, 41, .55);
+  static const double homeSlotGlowBlur = 14;
+
+  /// Shop price-button light-streak cascade (s): Remove ads, the four
+  /// packs in reading order, the featured item.
+  static const double shopStreakDelayNoAds = 0;
+  static const List<double> shopStreakDelayPacks = [0.7, 1.14, 1.58, 2.02];
+  static const double shopStreakDelayFeatured = 2.5;
+
   /// Purchase feedback: pill count-down, UNLOCKED! banner (top 150,
   /// centred), legendary flash + shake, NOT ENOUGH COINS toast (top 318).
   static const double skinShopCountDuration = 0.6;

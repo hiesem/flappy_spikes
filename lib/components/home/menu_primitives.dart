@@ -6,6 +6,7 @@ import 'package:flame/events.dart';
 import 'package:flutter/painting.dart' show TextLeadingDistribution, TextStyle;
 
 import '../../game/config.dart';
+import '../ui/live_effects.dart';
 
 /// Building blocks of the 2.0 menu screens (home now; Shop / Skins / popups
 /// reuse them). Geometry always comes from [Config]; these only draw.
@@ -35,6 +36,10 @@ TextStyle menuTextStyle({
 
 /// Single-line text whose component box is the CSS line box (so `position`
 /// with a top anchor is the line-box top, as in the mocks).
+///
+/// [strokeWidth] > 0 draws the glyphs a second time as a [strokeWidth] pt
+/// outline in the same colour — the mocks' faux bold
+/// (`-webkit-text-stroke`, e.g. the Shop's GET).
 class MenuText extends TextComponent<TextPaint> {
   MenuText(
     String text, {
@@ -42,6 +47,7 @@ class MenuText extends TextComponent<TextPaint> {
     required Color color,
     double letterSpacingEm = 0,
     double lineHeight = kNormalLineHeight,
+    this.strokeWidth = 0,
     super.position,
     super.anchor,
     super.priority,
@@ -66,6 +72,28 @@ class MenuText extends TextComponent<TextPaint> {
   final double _lineHeight;
   Color _color;
 
+  /// Faux-bold outline width (0 = none).
+  final double strokeWidth;
+
+  TextPaint? _stroke;
+
+  TextPaint _strokeRenderer() => _stroke ??= TextPaint(
+    style:
+        menuTextStyle(
+          fontSize: _fontSize,
+          color: _color,
+          letterSpacingEm: _letterSpacingEm,
+          lineHeight: _lineHeight,
+        ).copyWith(
+          color: null,
+          foreground: Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = strokeWidth
+            ..strokeJoin = StrokeJoin.round
+            ..color = _color,
+        ),
+  );
+
   Color get color => _color;
 
   // SkParagraph spreads letter spacing half before / half after each glyph;
@@ -75,19 +103,21 @@ class MenuText extends TextComponent<TextPaint> {
   @override
   void render(Canvas canvas) {
     final shift = _letterSpacingEm * _fontSize / 2;
-    if (shift == 0) {
+    if (shift == 0 && strokeWidth <= 0) {
       super.render(canvas);
       return;
     }
     canvas.save();
     canvas.translate(-shift, 0);
     super.render(canvas);
+    if (strokeWidth > 0) _strokeRenderer().render(canvas, text, Vector2.zero());
     canvas.restore();
   }
 
   set color(Color value) {
     if (value == _color) return;
     _color = value;
+    _stroke = null;
     textRenderer = TextPaint(
       style: menuTextStyle(
         fontSize: _fontSize,
@@ -134,6 +164,8 @@ mixin GroupOpacity on PositionComponent implements OpacityProvider {
 /// is below — a flap must never be eaten by a fading button. [tappable]
 /// does the same per button (e.g. a pending purchase). [dimmed] draws the
 /// button at half opacity but keeps it tappable (unavailable ad -> toast).
+/// While pressed it also shrinks to [pressedScale] about its centre over
+/// [pressDuration] (PRD-menu-v2 §8.1 "press", CSS `.prs`).
 class MenuButton extends PositionComponent with TapCallbacks {
   MenuButton({
     required this.onPressed,
@@ -143,7 +175,19 @@ class MenuButton extends PositionComponent with TapCallbacks {
     super.size,
     super.priority,
     super.children,
-  });
+  }) {
+    decorator.addLast(_pressEffect = WiggleEffect(this));
+  }
+
+  /// §8.1 press: 93 % for 0.1 s (CSS `transition: transform .1s`).
+  static const double pressedScale = 0.93;
+  static const double pressDuration = 0.1;
+
+  late final WiggleEffect _pressEffect;
+  double _pressK = 0;
+
+  /// Current press scale (1 at rest, [pressedScale] fully pressed).
+  double get pressScale => _pressEffect.scale;
 
   void Function() onPressed;
   Color? color;
@@ -186,6 +230,19 @@ class MenuButton extends PositionComponent with TapCallbacks {
     if (fill != null) {
       _fill.color = fill;
       canvas.drawRect(size.toRect(), _fill);
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    final target = _pressed ? 1.0 : 0.0;
+    if (_pressK != target) {
+      final step = dt / pressDuration;
+      _pressK = _pressK < target
+          ? (_pressK + step).clamp(0.0, target)
+          : (_pressK - step).clamp(target, 1.0);
+      _pressEffect.scale = 1 - (1 - pressedScale) * _pressK;
     }
   }
 

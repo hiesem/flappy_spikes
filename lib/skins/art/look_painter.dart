@@ -30,7 +30,9 @@ abstract final class LookPainter {
   /// ≥ 1 draws the layer normally; ≤ 0 skips it.
   /// [dead]: dead pose — eye drawn as an X (like the zombie eye, white for
   /// dark birds), wing up, all idle animations frozen at t (caller passes a
-  /// fixed t). Hoop and trail ids in [look] are ignored here.
+  /// fixed t). [blink]: the eye drawn closed (a short horizontal bar; the
+  /// live home / Shop idle blink); ignored with [dead]. Hoop and trail ids
+  /// in [look] are ignored here.
   static void paint(
     Canvas canvas,
     Look look, {
@@ -38,6 +40,7 @@ abstract final class LookPainter {
     bool flap = false,
     Map<SkinLayer, double> dim = const {},
     bool dead = false,
+    bool blink = false,
   }) {
     final b = BirdArt.byId(look.bird);
     final s = b.shape;
@@ -49,7 +52,7 @@ abstract final class LookPainter {
     _layer(canvas, gearDim, () => paintGearBack(canvas, gear, s, t, wing));
     _layer(canvas, dim[SkinLayer.bird], () {
       paintBirdBody(canvas, b, t);
-      paintBirdFace(canvas, b, t, wing, dead: dead);
+      paintBirdFace(canvas, b, t, wing, dead: dead, blink: blink);
     });
     _layer(
       canvas,

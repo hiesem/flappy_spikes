@@ -98,7 +98,12 @@ class SoundService {
   /// gates sound effects.
   double get musicVolume => _musicVolume;
 
+  /// Test seam: called with every requested sound (also when [enabled] is
+  /// false), before muting applies.
+  void Function(Sfx sfx)? onPlay;
+
   void play(Sfx sfx) {
+    onPlay?.call(sfx);
     if (muted || !enabled) {
       return;
     }

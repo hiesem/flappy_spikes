@@ -11,7 +11,8 @@ import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/purchases.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
-import 'package:flappy_spikes/menu/skin_catalog.dart';
+import 'package:flappy_spikes/skins/catalog.dart';
+import 'package:flappy_spikes/skins/look.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/services/iap_service.dart';
@@ -351,30 +352,52 @@ void main() {
     );
 
     shopTest(
-      'featured skin = cheapest locked skin; hidden when all are owned',
+      'featured item = first unowned update item, else the cheapest; '
+      'hidden when all are owned',
       prefs: const {
-        'ownedSkins': ['pink', 'blue', 'green'],
+        'ownedItems': ['bird:lemon', 'bird:toucan'],
       },
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
-        expect(shop.featured.skin?.id, 'purple');
-        expect(shop.featured.nameText, 'GRAPE');
-        await game.storage.saveOwnedSkins({for (final s in kSkins) s.id});
+        // kNewInUpdate order: lemon, toucan (owned), then ghost.
+        expect(shop.featured.item?.key, 'bird:ghost');
+        expect(shop.featured.nameText, 'GHOST');
+        expect(shop.featured.priceText, '2 000');
+        // Every update item owned: the cheapest unowned (Sky, 150).
+        await game.storage.saveOwnedItems({
+          'bird:lemon',
+          ...kNewInUpdate,
+        });
         game.update(0);
         await flushAndMount(game);
-        expect(shop.featured.skin, isNull);
+        expect(shop.featured.item?.key, 'bird:sky');
+        expect(shop.featured.priceText, '150');
+        await game.storage.saveOwnedItems({
+          for (final item in allItems) item.key,
+        });
+        game.update(0);
+        await flushAndMount(game);
+        expect(shop.featured.item, isNull);
         expect(shop.featured.containsLocalPoint(Vector2(10, 10)), isFalse);
       },
     );
 
     shopTest(
-      'featured row opens Skins at that skin (see skins_flow_test)',
+      'featured row opens the skin shop on its tab with it tried on',
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
+        final item = shop.featured.item!;
+        expect(item.key, 'bird:lemon');
         shop.featured.onPressed();
         await flushAndMount(game);
         expect(spy.last('skins_open'), {'source': 'shop_featured'});
         expect(game.menuScene, MenuScene.skins);
+        stepGame(game, 0.6);
+        await flushAndMount(game);
+        final screen = game.skinShop!;
+        expect(screen.tab, SkinLayer.bird);
+        expect(screen.tryOnId, 'lemon');
+        expect(spy.last('item_try_on'), containsPair('id', 'lemon'));
       },
     );
   });

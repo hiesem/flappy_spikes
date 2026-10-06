@@ -470,76 +470,139 @@ class Config {
   /// How long a restore may stay silent before "Nothing to restore".
   static const double restoreTimeout = 4;
 
-  // --- Skins (PRD-1 §5.3, design K1; content coordinates = world
-  // coordinates before scrolling, measured at 711 and top-pinned) ---------
+  // --- Skin shop (PRD-menu-v2 §4.1, layout A; world coordinates measured at
+  // 711 and top-pinned — only the grid's bottom follows the view height) ----
 
-  static const int skinGridColumns = 3;
-  static const double skinTileWidth = 92;
-  static const double skinTileHeight = 106;
-  static const double skinTileGap = 8; // 14 + 92 + 8 = 114
-  static const double skinGridTop = 150;
+  /// Collection bar ("owned / 88") under the coin pill.
+  static const Rect skinShopBarRect = Rect.fromLTWH(70, 100, 180, 18);
+  static const double skinShopBarFontSize = 12;
+  static const double skinShopBarLetterSpacing = 0.08; // em
+  static const double skinShopBarPopScale = 1.12;
+  static const double skinShopBarPopDelay = 0.5;
+  static const double skinShopBarPopDuration = 0.4;
+  static const double skinShopBarFillDelay = 0.4;
+  static const double skinShopBarFillDuration = 0.6;
 
-  /// Skin tile [index] (catalogue display order), 3 per row.
-  static Rect skinTileRectFor(double viewHeight, int index) => Rect.fromLTWH(
-    homeMargin + (index % skinGridColumns) * (skinTileWidth + skinTileGap),
-    skinGridTop + (index ~/ skinGridColumns) * (skinTileHeight + skinTileGap),
-    skinTileWidth,
-    skinTileHeight,
+  /// Live preview stage: background = fg at [skinShopStageMix] over bg.
+  static const Rect skinShopStageRect = Rect.fromLTWH(14, 126, 292, 138);
+  static const double skinShopStageMix = 0.09;
+  static const double skinShopBirdScale = 1.9;
+  static const double skinShopBirdX = 0.42; // share of the stage width
+  static const double skinShopBobAmplitude = 3;
+  static const double skinShopBobSpeed = 3.2; // rad/s
+  static const double skinShopHopKick = 150; // pt/s upwards
+  static const double skinShopHopGravity = 900; // pt/s²
+  static const double skinShopHoopInterval = 2.3;
+  static const double skinShopHoopFirst = 0.8;
+  static const double skinShopHoopSpeed = 120; // pt/s
+  static const double skinShopHoopRy = 26; // art units (x bird scale)
+  static const double skinShopFireAfterPass = 1.7;
+  static const double skinShopTrailScroll = -150; // emitter vx
+
+  /// Name row (inside the stage, 8 / 7 from its top-left) and the action
+  /// button (8 / 8 from its bottom-right).
+  static const double skinShopNameLeft = 8;
+  static const double skinShopNameTop = 7;
+  static const double skinShopNameFontSize = 14;
+  static const double skinShopChipFontSize = 9;
+  static const double skinShopActionInset = 8;
+  static const double skinShopActionHeight = 30;
+  static const double skinShopActionFontSize = 13;
+  static const double skinShopActionPulse = 1.06;
+  static const Color skinShopPoorGrey = Color(0xFFA0A0A0);
+
+  /// Tab bar: 5 equal tabs, 3 pt underline sliding 0.3 s with overshoot.
+  static const Rect skinShopTabBarRect = Rect.fromLTWH(14, 270, 292, 52);
+  static const double skinShopTabIconWidth = 30;
+  static const double skinShopTabIconHeight = 24;
+  static const double skinShopTabFontSize = 9;
+  static const double skinShopTabUnderline = 3;
+  static const double skinShopTabSlideDuration = 0.3;
+  static const double skinShopTabIconActiveScale = 1.18;
+
+  /// Item grid: 3 columns of 92 x 92 tiles, 8 pt gaps, 6 pt top / 30 pt
+  /// bottom padding, from y 326 down to 44 pt above the bottom edge (667
+  /// at 711).
+  static const int skinShopColumns = 3;
+  static const double skinShopGridLeft = homeMargin;
+  static const double skinShopGridTop = 326;
+  static const double skinShopGridWidth = 292;
+  static const double skinShopTile = 92;
+  static const double skinShopTileGap = 8;
+  static const double skinShopGridPadTop = 6;
+  static const double skinShopGridPadBottom = 30;
+  static double skinShopGridBottomFor(double viewHeight) =>
+      viewHeight - menuSpikeHeight;
+
+  /// The scrolling grid viewport.
+  static Rect skinShopGridRectFor(double viewHeight) => Rect.fromLTRB(
+    skinShopGridLeft,
+    skinShopGridTop,
+    skinShopGridLeft + skinShopGridWidth,
+    skinShopGridBottomFor(viewHeight),
   );
 
-  /// Bottom of the scrollable grid of [count] tiles (one gap below the last
-  /// row): 606 for 12 skins, inside the 667 pt viewport at 711.
-  static double skinsContentBottomFor(double viewHeight, int count) =>
-      skinTileRectFor(viewHeight, count - 1).bottom + skinTileGap;
+  /// Tile [index] of a tab's grid (content coordinates at scroll 0).
+  static Rect skinShopTileRectFor(double viewHeight, int index) =>
+      Rect.fromLTWH(
+        skinShopGridLeft +
+            (index % skinShopColumns) * (skinShopTile + skinShopTileGap),
+        skinShopGridTop +
+            skinShopGridPadTop +
+            (index ~/ skinShopColumns) * (skinShopTile + skinShopTileGap),
+        skinShopTile,
+        skinShopTile,
+      );
 
-  // Inside a tile (mock `.sk`, measured on skins_k1.png): the 48 x 52
-  // preview centred at y 54 (its 6 pt top margin minus the inline svg's
-  // baseline gap); price pill 6 pt above the bottom; the lock icon at
-  // (6, 8) (6 pt box, inline svg 2 pt down); NEW tag 4 pt past the right
-  // edge and 6 pt above the top.
-  static const double skinPreviewWidth = 48;
-  static const double skinPreviewHeight = 52;
-  static const double skinPreviewCenterY = 54;
-  static const double skinTileInset = 6;
-  static const double skinLockTop = 8;
-  static const double skinLockSize = 14;
-  static const double skinOutlineWidth = 3;
-  static const double skinCheckBadgeSize = 22;
-  static const double skinCheckIconSize = 14;
-  static const double skinPriceFontSize = 13;
-  static const double skinPriceCoinSize = 14;
-  static const double skinPricePadX = 6;
-  static const double skinPricePadY = 2;
-  // The browser's line box of the 13 pt text (13 x 1.284 rounded down).
-  static const double skinPriceLineHeight = 16;
-  static const double skinPriceGap = 4;
-  static const double skinTagOverhangX = 4;
-  static const double skinTagOverhangY = 6;
-  static const double skinTagFontSize = 10;
-  static const double skinTagLetterSpacing = 0.05; // em
+  /// Bottom of a grid of [count] tiles, including the bottom padding.
+  static double skinShopContentBottomFor(double viewHeight, int count) =>
+      skinShopTileRectFor(viewHeight, count - 1).bottom +
+      skinShopGridPadBottom;
 
-  // --- Skin unlock dialog (no-ads popup visual language) -----------------
+  // Inside a tile: art in an 84 x 68 box centred on the tile; card = fg at
+  // [skinShopTileMix] over bg; locked art at 42 %; lock 13 pt at (6, 5);
+  // price pill 8 pt above the bottom; 3 pt equipped / try-on outline; 22 pt
+  // check badge; NEW tag 5 pt past the right edge, 6 pt above the top.
+  static const double skinShopTileMix = 0.15;
+  static const double skinShopArtWidth = 84;
+  static const double skinShopArtHeight = 68;
+  static const double skinShopLockedOpacity = 0.42;
+  static const double skinShopLockSize = 13;
+  static const double skinShopLockLeft = 6;
+  static const double skinShopLockTop = 5;
+  static const double skinShopPriceBottom = 8;
+  static const double skinShopPriceFontSize = 12;
+  static const double skinShopPriceCoin = 13;
+  static const double skinShopOutline = 3;
+  static const double skinShopCheckBadge = 22;
+  static const double skinShopRarityBar = 4;
+  static const double skinShopTagOverhangX = 5;
+  static const double skinShopTagOverhangY = 6;
+  static const double skinShopTagFontSize = 10;
+  static const double skinShopPressScale = 0.93;
+  static const double skinShopTryPulse = 0.9; // s per half cycle
+  static const double skinShopNewWobble = 1.2;
+  static const double skinShopShineLoop = 1.6;
 
-  static const double skinDialogHeaderHeight = 120;
-  static const double skinDialogPlateSize = 96; // soft square behind it
-  static const double skinDialogPreviewScale = 1.6; // 77 x 83 bird
-  static const double skinDialogCoinSize = 20;
-  static const double skinDialogMessageFontSize = 16;
-  static const double skinDialogMessageGap = 10;
-  static const double skinDialogCancelHeight = 44;
-  static const double skinDialogCancelFontSize = 13;
+  /// Tab-switch entrance: tiles rise 16 pt and fade in over 240 ms,
+  /// staggered 30 ms per column and 40 ms per row.
+  static const double skinShopEnterRise = 16;
+  static const double skinShopEnterDuration = 0.24;
+  static const double skinShopEnterColumnDelay = 0.03;
+  static const double skinShopEnterRowDelay = 0.04;
 
-  /// Card of [cardHeight] (it depends on the dialog state), x 20 -> 300,
-  /// centred on the same band as the No-ads card.
-  static Rect skinDialogRectFor(double viewHeight, double cardHeight) {
-    final noAds = noAdsCardRectFor(viewHeight);
-    return Rect.fromLTWH(
-      noAds.left,
-      noAds.center.dy - cardHeight / 2,
-      noAds.width,
-      cardHeight,
-    );
-  }
+  /// Purchase feedback: pill count-down, UNLOCKED! banner (top 150,
+  /// centred), legendary flash + shake, NOT ENOUGH COINS toast (top 318).
+  static const double skinShopCountDuration = 0.6;
+  static const double skinShopBannerTop = 150;
+  static const double skinShopBannerDuration = 1.9;
+  static const double skinShopBannerDurationLegendary = 2.6;
+  static const double skinShopFlashDuration = 0.6;
+  static const double skinShopShakeDuration = 0.38;
+  static const double skinShopToastTop = 318;
+  static const double skinShopToastDuration = 1.5;
+  static const double skinShopProgressSoundDelay = 0.52;
+  static const double skinShopProgressSoundDelayLegendary = 1.3;
 
   // --- No-ads popup (PRD-1 §5.1, design P1) --------------------------------
 

@@ -8,6 +8,7 @@ import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/gameover_panel.dart';
 import 'package:flappy_spikes/components/look_component.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
+import 'package:flappy_spikes/components/skins/celebration.dart';
 import 'package:flappy_spikes/components/ui/service_message.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/palettes.dart';
@@ -502,74 +503,104 @@ void main() {
     expect(toast(g), 'Nothing to restore');
   });
 
-  e2e('QA skins buy/equip/NEW and shop featured/back stack real taps', (
+  // Skin shop grid at scroll 0 (PRD-menu-v2 §4.1): tile i centred at
+  // (60 + 100 * col, 378 + 100 * row); tab i at (43.2 + 58.4 * i, 296).
+  e2e(
+    'QA skin shop try-on/buy/equip/NEW and shop featured/back stack real taps',
+    (g, r, t) async {
+      expect(g.menu.items.hasNewBadge, isTrue);
+      await tap(g, t, const Offset(123, 502));
+      final shop = g.skinShop!;
+      expect(shop.tileFor('classic').current.equipped, isTrue);
+      expect(shop.tileFor('sky').current.owned, isFalse);
+      expect(shop.tileFor('sky').current.isNew, isTrue);
+      await tap(g, t, const Offset(160, 378));
+      expect(shop.tryOnId, 'sky');
+      expect(shop.tileFor('sky').current.isNew, isFalse);
+      expect(r.spy.params('item_try_on').single, {
+        'layer': 'bird',
+        'id': 'sky',
+        'rarity': 'COMMON',
+      });
+      await tap(g, t, shop.actionButton.absoluteCenter.toOffset());
+      expect(g.menu.wallet.balance, 1050);
+      expect(g.menu.items.look.bird, 'sky');
+      expect(shop.tryOnId, isNull);
+      expect(r.spy.params('item_purchase').single, {
+        'layer': 'bird',
+        'id': 'sky',
+        'rarity': 'COMMON',
+        'price': 150,
+      });
+      await tap(g, t, const Offset(60, 378));
+      expect(g.menu.items.look.bird, 'classic');
+      expect(r.spy.params('item_equip').last, {
+        'layer': 'bird',
+        'id': 'classic',
+      });
+      await tap(g, t, const Offset(160, 296));
+      expect(shop.tab, SkinLayer.hat);
+      expect(r.spy.params('skin_shop_tab').single, {'layer': 'hat'});
+      await tap(g, t, const Offset(33, 77));
+      expect(g.menuScene, MenuScene.home);
+      // Untapped affordable items keep their NEW badge.
+      expect(g.homeScreen!.skinsTile.tag, 'NEW');
+      await tap(g, t, const Offset(49, 502));
+      await tap(g, t, const Offset(160, 616));
+      expect(g.menuScene, MenuScene.skins);
+      expect(g.skinShop!.tryOnId, 'lemon');
+      g.onKeyEvent(key(LogicalKeyboardKey.escape), {});
+      await settle(g, t, fade: true);
+      expect(g.menuScene, MenuScene.shop);
+      g.onKeyEvent(key(LogicalKeyboardKey.escape), {});
+      await settle(g, t, fade: true);
+      expect(g.menuScene, MenuScene.home);
+    },
+    prefs: {'coins': 1200},
+  );
+
+  e2e('S1-03 item purchase auto-equip records item_equip', (g, r, t) async {
+    await tap(g, t, const Offset(123, 502));
+    await tap(g, t, const Offset(160, 378));
+    await tap(g, t, g.skinShop!.actionButton.absoluteCenter.toOffset());
+    expect(g.menu.items.look.bird, 'sky');
+    expect(
+      r.spy.params('item_equip'),
+      contains(equals({'layer': 'bird', 'id': 'sky'})),
+    );
+  }, prefs: {'coins': 150});
+
+  e2e('QA not enough coins: toast, pill nudge, + opens the Shop, back', (
     g,
     r,
     t,
   ) async {
-    expect(g.menu.skins.hasNewBadge, isTrue);
     await tap(g, t, const Offset(123, 502));
-    expect(g.skinsScreen!.tileFor('pink').equipped, isTrue);
-    expect(g.skinsScreen!.tileFor('blue').locked, isTrue);
-    expect(g.menu.skins.hasNewBadge, isFalse);
-    await tap(g, t, const Offset(160, 203));
-    expect(g.skinDialog!.skin.id, 'blue');
-    await tap(g, t, center(g.skinDialog!.confirmButton));
-    expect(g.menu.wallet.balance, 1100);
-    expect(g.menu.skins.equipped, 'blue');
-    expect(r.spy.params('skin_purchase').single, {
-      'skin': 'blue',
-      'price': 100,
+    await tap(g, t, const Offset(160, 378));
+    await tap(
+      g,
+      t,
+      g.skinShop!.actionButton.absoluteCenter.toOffset(),
+      fade: false,
+    );
+    expect(g.menu.wallet.balance, 100);
+    expect(
+      g.skinShop!.children.query<ShopToast>().single.message,
+      'NOT ENOUGH COINS',
+    );
+    expect(g.coinPill.flashing, isTrue);
+    expect(r.spy.params('item_no_coins').single, {
+      'layer': 'bird',
+      'id': 'sky',
+      'shortfall': 50,
     });
-    await tap(g, t, const Offset(60, 203));
-    expect(g.menu.skins.equipped, 'pink');
-    expect(r.spy.params('skin_equip').last, {'skin': 'pink'});
-    await tap(g, t, const Offset(33, 77));
-    // The 2.0 look (menu.items) drives the birds; the PRD-1 skin below is
-    // reset on load (PRD §3.9).
-    expect(g.homeScreen!.bird.look, Look.defaults);
-    expect(g.homeScreen!.skinsTile.tag, isNull);
-    await tap(g, t, const Offset(49, 502));
-    await tap(g, t, const Offset(160, 616));
-    expect(g.menuScene, MenuScene.skins);
-    expect(g.skinDialog, isNotNull);
-    g.onKeyEvent(key(LogicalKeyboardKey.escape), {});
-    await settle(g, t, fade: true);
-    expect(g.skinDialog, isNull);
-    expect(g.menuScene, MenuScene.skins);
-    g.onKeyEvent(key(LogicalKeyboardKey.escape), {});
-    await settle(g, t, fade: true);
+    await tap(g, t, center(g.coinPill));
     expect(g.menuScene, MenuScene.shop);
-    g.onKeyEvent(key(LogicalKeyboardKey.escape), {});
-    await settle(g, t, fade: true);
-    expect(g.menuScene, MenuScene.home);
-  }, prefs: {'coins': 1200});
-
-  e2e('S1-03 skin purchase auto-equip records skin_equip', (g, r, t) async {
-    await tap(g, t, const Offset(123, 502));
-    await tap(g, t, const Offset(160, 203));
-    await tap(g, t, center(g.skinDialog!.confirmButton));
-    expect(g.menu.skins.equipped, 'blue');
-    expect(r.spy.params('skin_equip'), contains(equals({'skin': 'blue'})));
-  }, prefs: {'coins': 100});
-
-  e2e('QA insufficient coins GET COINS, shop pill scroll and Esc', (
-    g,
-    r,
-    t,
-  ) async {
-    await tap(g, t, const Offset(123, 502));
-    await tap(g, t, const Offset(160, 203));
-    expect(g.skinDialog!.insufficient, isTrue);
-    expect(g.skinDialog!.confirmLabel.text, 'GET COINS');
-    await tap(g, t, center(g.skinDialog!.confirmButton));
-    expect(g.menuScene, MenuScene.shop);
-    expect(r.spy.params('shop_open').single, {'source': 'skins_dialog'});
     g.handleBack();
     await settle(g, t, fade: true);
     expect(g.menuScene, MenuScene.skins);
-    expect(g.skinDialog, isNull);
-  });
+    expect(g.skinShop!.tryOnId, isNull);
+  }, prefs: {'coins': 100});
 
   e2e('QA keyboard, settings taps/slider, debug actions, persistence', (
     g,
@@ -877,16 +908,19 @@ void main() {
       await settle(g, t, fade: true);
       g.openSkins();
       await settle(g, t, fade: true);
-      final skins = g.skinsScreen!;
-      await t.dragFrom(const Offset(160, 400), const Offset(0, -450));
+      final skins = g.skinShop!;
+      for (var i = 0; i < 4; i++) {
+        await t.dragFrom(const Offset(160, 500), const Offset(0, -400));
+        await settle(g, t);
+      }
       await settle(g, t, fade: true);
       expect(skins.scroll.offset, closeTo(skins.scroll.maxOffset, 0.1));
-      final ghost = skins.tileFor('ghost');
-      final bottom = skins.scroll.screenY(ghost.y + ghost.height);
+      final last = skins.tileFor('phoenix');
+      final bottom = skins.scroll.screenY(last.y + last.height / 2);
       expect(bottom, lessThanOrEqualTo(height - 44));
       await capture(g, t, 'skins_${height.toInt()}_end');
-      await tap(g, t, Offset(260, bottom - 40));
-      expect(g.skinDialog!.skin.id, 'ghost');
+      await tap(g, t, Offset(last.x, bottom - 30));
+      expect(skins.tryOnId, 'phoenix');
     }, height: height);
   }
 }

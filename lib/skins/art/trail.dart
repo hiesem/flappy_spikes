@@ -272,6 +272,14 @@ class TrailEmitter {
     _histHead = 0;
   }
 
+  /// Drops only the path history (ribbon / Afterimage), letting live
+  /// particles fade out — the shop preview's `trail.hist.length = 0` when the
+  /// trail switches off between hoop passes.
+  void resetPath() {
+    _histCount = 0;
+    _histHead = 0;
+  }
+
   /// Shop-grid thumbnail (the `fire` branch of `drawThumb` in skin_shop.js):
   /// advances/emits a mini trail behind the small glowing orb at [orb], then
   /// draws both. Pass `dt == 0` to re-draw without emitting. The mock bobs the

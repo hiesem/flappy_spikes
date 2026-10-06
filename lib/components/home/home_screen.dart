@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
@@ -234,7 +235,7 @@ class HomeScreen extends PositionComponent
 
   void _sync({bool force = false}) {
     final menu = game.menu;
-    final hasNew = menu.skins.hasNewBadge;
+    final hasNew = menu.items.hasNewBadge;
     if (force || hasNew != _hasNew) {
       _hasNew = hasNew;
       skinsTile.tag = hasNew ? 'NEW' : null;
@@ -321,12 +322,100 @@ class CoinPill extends MenuButton
 
   late final MenuText label;
   late final MenuIcon _coinIcon;
+  late final RectangleComponent _plusBox;
 
+  /// The wallet balance (the target of a running [countFrom]).
   int get balance => _balance;
   set balance(int value) {
     if (value == _balance) return;
     _balance = value;
+    if (isLoaded && _countFrom == null) _layout();
+  }
+
+  /// The number on the pill right now (differs from [balance] while a
+  /// [countFrom] animation runs).
+  int get shownBalance => _shown;
+  int _shown = 0;
+
+  int? _countFrom;
+  double _countT = 0;
+  double _countDuration = 0;
+  double _shakeT = -1;
+  double _flashT = -1;
+
+  static const double shakeDuration = 0.32;
+  static const double flashDuration = 0.9; // one of the two gold flashes
+  static const List<double> _shakeKeys = [0, -6, 6, -4, 0];
+
+  /// Counts the number from [from] to [balance] over [duration] s
+  /// (ease-out cubic), e.g. a skin-shop purchase (PRD-menu-v2 §3.6).
+  void countFrom(int from, {double duration = Config.skinShopCountDuration}) {
+    _countFrom = from;
+    _countT = 0;
+    _countDuration = duration;
     if (isLoaded) _layout();
+  }
+
+  /// "Not enough coins" (§3.6): a short horizontal shake ([shake] false
+  /// under reduce motion) and the "+" box flashing gold twice.
+  void nudge({bool shake = true}) {
+    if (shake) _shakeT = 0;
+    _flashT = 0;
+  }
+
+  /// Horizontal shake offset right now (tests).
+  double get shakeOffset {
+    if (_shakeT < 0) return 0;
+    final u = (_shakeT / shakeDuration).clamp(0.0, 1.0) * 4;
+    final i = u.floor().clamp(0, 3);
+    return _shakeKeys[i] + (_shakeKeys[i + 1] - _shakeKeys[i]) * (u - i);
+  }
+
+  /// Whether the "+" box is mid gold flash (tests).
+  bool get flashing => _flashT >= 0;
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    final from = _countFrom;
+    if (from != null) {
+      _countT += dt;
+      if (_countT >= _countDuration) {
+        _countFrom = null;
+      }
+      if (isLoaded) _layout();
+    }
+    if (_shakeT >= 0) {
+      _shakeT += dt;
+      if (_shakeT >= shakeDuration) _shakeT = -1;
+    }
+    if (_flashT >= 0) {
+      _flashT += dt;
+      if (_flashT >= 2 * flashDuration) _flashT = -1;
+      if (isLoaded) {
+        // #c40073 -> gold -> #c40073 per flash (mock `.plus` keyframes).
+        final u = _flashT < 0 ? 0.0 : (_flashT % flashDuration) / flashDuration;
+        final k = u < .5 ? u * 2 : (1 - u) * 2;
+        _plusBox.paint.color = Color.lerp(
+          Config.menuPinkDark,
+          Config.menuGold,
+          k,
+        )!;
+      }
+    }
+  }
+
+  @override
+  void renderTree(Canvas canvas) {
+    final dx = shakeOffset;
+    if (dx == 0) {
+      super.renderTree(canvas);
+      return;
+    }
+    canvas.save();
+    canvas.translate(dx, 0);
+    super.renderTree(canvas);
+    canvas.restore();
   }
 
   @override
@@ -341,11 +430,12 @@ class CoinPill extends MenuButton
       color: Config.menuSoft,
     );
     _coinIcon = MenuIcon(coinIcon, size: Vector2.all(coinSize));
+    _plusBox = RectangleComponent(
+      size: Vector2.all(pillHeight),
+      paint: Paint()..color = Config.menuPinkDark,
+    );
     addAll([
-      RectangleComponent(
-        size: Vector2.all(pillHeight),
-        paint: Paint()..color = Config.menuPinkDark,
-      ),
+      _plusBox,
       MenuIcon(
         plusIcon,
         size: Vector2.all(16),
@@ -359,7 +449,15 @@ class CoinPill extends MenuButton
   }
 
   void _layout() {
-    label.text = formatCoins(_balance);
+    final from = _countFrom;
+    if (from == null) {
+      _shown = _balance;
+    } else {
+      final u = (_countT / _countDuration).clamp(0.0, 1.0);
+      final eased = 1 - math.pow(1 - u, 3);
+      _shown = (from + (_balance - from) * eased).round();
+    }
+    label.text = formatCoins(_shown);
     const textX = pillHeight + plusGap;
     label.position = Vector2(textX, (pillHeight - label.height) / 2);
     final coinX = textX + label.width + coinGap;

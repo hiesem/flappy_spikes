@@ -6,7 +6,6 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
-import 'package:flappy_spikes/menu/skin_catalog.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,6 +29,42 @@ Future<void> loadFonts() async {
 
 const String outDir = 'build/menu_shots';
 
+/// Renders the current frame at [scale] x the 320 pt wide world and
+/// writes it as a PNG. Must run inside tester.runAsync.
+Future<void> captureShot(
+  FlappySpikesGame game,
+  double scale,
+  String name,
+) async {
+  final shotSize = Vector2(
+    320 * scale,
+    (game.viewHeight * scale).roundToDouble(),
+  );
+  // Resize right before rendering: the harness reverts earlier resizes.
+  game.onGameResize(shotSize);
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  canvas.drawRect(
+    Rect.fromLTWH(0, 0, shotSize.x, shotSize.y),
+    ui.Paint()..color = game.backgroundColor(),
+  );
+  game.render(canvas);
+  final image = await recorder.endRecording().toImage(
+    shotSize.x.toInt(),
+    shotSize.y.toInt(),
+  );
+  final bytes = (await image.toByteData(
+    format: ui.ImageByteFormat.png,
+  ))!.buffer.asUint8List();
+  image.dispose();
+  final file = File('$outDir/$name.png');
+  await file.parent.create(recursive: true);
+  await file.writeAsBytes(bytes);
+  debugPrint('SHOT ${file.path}: ${bytes.length} bytes');
+  expect(bytes.length, greaterThan(10000));
+}
+
+
 const Map<String, Object> mockPrefs = {
   'bestScore': 12,
   'gamesPlayed': 34,
@@ -40,40 +75,8 @@ void main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
   await loadFonts();
 
-  /// Renders the current frame at [scale] x the 320 pt wide world and
-  /// writes it as a PNG. Must run inside tester.runAsync.
-  Future<void> capture(
-    FlappySpikesGame game,
-    double scale,
-    String name,
-  ) async {
-    final shotSize = Vector2(
-      320 * scale,
-      (game.viewHeight * scale).roundToDouble(),
-    );
-    // Resize right before rendering: the harness reverts earlier resizes.
-    game.onGameResize(shotSize);
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, shotSize.x, shotSize.y),
-      ui.Paint()..color = game.backgroundColor(),
-    );
-    game.render(canvas);
-    final image = await recorder.endRecording().toImage(
-      shotSize.x.toInt(),
-      shotSize.y.toInt(),
-    );
-    final bytes = (await image.toByteData(
-      format: ui.ImageByteFormat.png,
-    ))!.buffer.asUint8List();
-    image.dispose();
-    final file = File('$outDir/$name.png');
-    await file.parent.create(recursive: true);
-    await file.writeAsBytes(bytes);
-    debugPrint('SHOT ${file.path}: ${bytes.length} bytes');
-    expect(bytes.length, greaterThan(10000));
-  }
+  Future<void> capture(FlappySpikesGame game, double scale, String name) =>
+      captureShot(game, scale, name);
 
   void homeShot(
     String name, {
@@ -96,7 +99,7 @@ void main() async {
       },
       verify: (game, tester) async {
         expect(game.state, GameState.start);
-        expect(game.menu.skins.hasNewBadge, isTrue);
+        expect(game.menu.items.hasNewBadge, isTrue);
         final home = game.homeScreen!;
         expect(home.slotButton.shown, slot);
         for (final scale in scales) {
@@ -119,14 +122,11 @@ void main() async {
     prefs: const {'noAds': true},
   );
 
-  // Shop (S1-B) at 711: mock balance; pink/blue/green owned so the
-  // featured skin is GRAPE as in the mock (its catalogue price is 200, the
-  // mock shows 300). Placeholder store prices.
+  // Shop (S1-B) at 711: mock balance; the featured item is the first
+  // unowned item of the 2.0 update (Lemonade, 150). Placeholder store
+  // prices.
   FlameTester<FlappySpikesGame>(
-    () => createTestGame({
-      ...mockPrefs,
-      'ownedSkins': ['pink', 'blue', 'green'],
-    }, 711),
+    () => createTestGame(mockPrefs, 711),
     gameSize: Vector2(320, 711),
   ).testGameWidget(
     'menu screenshot: shop_711',
@@ -171,84 +171,7 @@ void main() async {
     },
   );
 
-  // Skins (K1) at 711 in the mock's state: balance 1 250; pink (equipped),
-  // blue, green, purple and tophat owned, purple and tophat tagged NEW. NEW
-  // marks skins that were affordable and unseen when the screen opened, so
-  // purple / tophat start locked-but-new and are bought on the open screen
-  // (2 050 - 200 - 600 = 1 250), then pink is re-equipped.
-  FlameTester<FlappySpikesGame>(
-    () => createTestGame({
-      ...mockPrefs,
-      'coins': 2050,
-      'ownedSkins': ['pink', 'blue', 'green'],
-      'seenSkins': [
-        for (final skin in kSkins)
-          if (skin.id != 'purple' && skin.id != 'tophat') skin.id,
-      ],
-    }, 711),
-    gameSize: Vector2(320, 711),
-  ).testGameWidget(
-    'menu screenshot: skins_711',
-    setUp: (game, tester) async {
-      await game.ready();
-      await preloadImages(game);
-      await flushAndMount(game);
-    },
-    verify: (game, tester) async {
-      game.openSkins();
-      await flushAndMount(game);
-      stepGame(game, 0.6);
-      await flushAndMount(game);
-      final skins = game.menu.skins;
-      expect(await skins.purchase('purple'), SkinPurchaseResult.purchased);
-      expect(await skins.purchase('tophat'), SkinPurchaseResult.purchased);
-      await skins.equip('pink');
-      game.update(0);
-      await flushAndMount(game);
-      expect(game.menu.wallet.balance, 1250);
-      final screen = game.skinsScreen!;
-      expect(
-        [
-          for (final t in screen.tiles)
-            if (t.isNew) t.skin.id,
-        ],
-        ['purple', 'tophat'],
-      );
-      await tester.runAsync(() => capture(game, 1.5, 'skins_711'));
-      await tester.runAsync(() => capture(game, 2, 'skins_711@2x'));
-    },
-  );
-
-  // Skin unlock dialogs over the Skins screen at 711: affordable (GRAPE)
-  // and short (KING at 1 000 with 250 coins).
-  for (final (name, coins, skin) in [
-    ('skins_dialog_711', 1250, 'purple'),
-    ('skins_dialog_short_711', 250, 'crown'),
-  ]) {
-    FlameTester<FlappySpikesGame>(
-      () => createTestGame({...mockPrefs, 'coins': coins}, 711),
-      gameSize: Vector2(320, 711),
-    ).testGameWidget(
-      'menu screenshot: $name',
-      setUp: (game, tester) async {
-        await game.ready();
-        await preloadImages(game);
-        await flushAndMount(game);
-      },
-      verify: (game, tester) async {
-        game.openSkins();
-        await flushAndMount(game);
-        stepGame(game, 0.6);
-        await flushAndMount(game);
-        game.tapSkin(skin);
-        await flushAndMount(game);
-        stepGame(game, 0.3);
-        await flushAndMount(game);
-        expect(game.skinDialog, isNotNull);
-        await tester.runAsync(() => capture(game, 1.5, name));
-      },
-    );
-  }
+  // The skin shop is captured by skin_shop_screenshot_test.dart.
 
   // No-ads popup (P1) over the home screen at 711.
   FlameTester<FlappySpikesGame>(

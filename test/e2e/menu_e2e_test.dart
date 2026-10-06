@@ -688,8 +688,7 @@ void main() {
         g.purchases.isPending(IapProduct.noAds),
         mode == FakeIapMode.pending,
       );
-      if (mode == FakeIapMode.fail)
-        expect(toast(g), 'Purchase failed: Fake error');
+      if (mode == FakeIapMode.fail) expect(toast(g), 'Purchase failed: Fake error');
       if (mode == FakeIapMode.pending) {
         expect(g.shopScreen!.banner.tappable, isFalse);
         expect(g.shopScreen!.banner.dimmed, isTrue);

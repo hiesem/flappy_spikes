@@ -137,6 +137,40 @@ class GameServices {
   void logSkinShopTab(SkinLayer layer) =>
       logEvent('skin_shop_tab', {'layer': layer.key});
 
+  // --- PRD-home-v3 §11 -----------------------------------------------------
+
+  /// LEVELS screen opened; [source] e.g. `home_emblem`.
+  void logLevelsOpen(String source) =>
+      logEvent('levels_open', {'source': source});
+
+  /// LEVEL UP popup shown for [level] at best score [best].
+  void logLevelUp(int level, int best) =>
+      logEvent('level_up', {'level': level, 'best': best});
+
+  /// A LEVEL UP reward paid ([coins] = all rewards added together).
+  void logLevelRewardClaimed(int level, int coins) =>
+      logEvent('level_reward_claimed', {'level': level, 'coins': coins});
+
+  /// Purchase cancelled / failed popup: [outcome] `cancelled` / `failed`,
+  /// [code] the store error code (omitted when there is none).
+  void logPurchaseResultPopup(String product, String outcome, String? code) =>
+      logEvent('purchase_result_popup', {
+        'product': product,
+        'outcome': outcome,
+        'code': ?code,
+      });
+
+  /// RUMBLE switched in Settings (`on` as 1 / 0: Firebase has no bool).
+  void logRumbleToggle(bool on) =>
+      logEvent('rumble_toggle', {'on': on ? 1 : 0});
+
+  /// No-ads celebration shown; [source] tile / shop_banner / popup.
+  void logNoAdsCelebrationShown(String source) =>
+      logEvent('noads_celebration_shown', {'source': source});
+
+  /// The No-ads +1 000 bonus collected from the celebration.
+  void logNoAdsBonusClaimed() => logEvent('noads_bonus_claimed');
+
   /// Shared parameter map. The Gear/Hat "none" entries have no rarity, so
   /// that key is omitted rather than sent as null.
   Map<String, Object> _itemParams(

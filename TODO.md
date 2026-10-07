@@ -380,8 +380,11 @@ Branch off `feat/skin-shop`, local commits only (not pushed). Opus/DeepSeek buil
 - [x] WP-K2 — no-ads popup schedule (§8): only at the session-start home arrival (launch / back after >= 30 min),
       4 h gap, max 2 per day, never in the first session, from install day 2 or 10 runs; videos / best / level
       triggers else 24 h fallback, never after a < 6 run; no dismissal cap; `reason` param; debug force
-- [ ] Play Console: create/update the products + PRD-menu-v4 §6 per-currency prices (runbook §7); old ids
-      stay deactivated. Device check: Shop must show store prices, not the `$` placeholders
+- [x] Play Console (2026-10-07): coins_1000/10000/17000/100000 created + Active, every country priced from
+      tools/pricing/play_prices.csv (verified 174/174 x 5), no_ads repriced, old coin products deactivated
+- [x] Sol QA rounds 1–2 + fixes (one No-ads offer at a time, close starts the gap, back = click, one grant per
+      store transaction, localized prices fit)
+- [ ] 2.0.0+7 on internal testing (user presses release) + Pixel 8 device check: Shop shows store prices
 
 ## Final gate (1.0)
 - [x] `flutter analyze` clean

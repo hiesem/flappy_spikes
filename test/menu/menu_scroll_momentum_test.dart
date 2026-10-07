@@ -175,7 +175,10 @@ void main() async {
       expect(stopped, lessThan(0), reason: 'still on its way back');
 
       await tester.pump();
-      final gesture = await tester.startGesture(const ui.Offset(160, 300));
+      // Inside the list (a control outside it would act: S1-51 decision).
+      final gesture = await tester.startGesture(
+        ui.Offset(160, scroll.viewport.center.dy),
+      );
       await tester.pump();
       expect(scroll.isBusy, isFalse, reason: 'the touch stops the spring');
       expect(scroll.isOverScrolled, isTrue, reason: 'held where it stopped');

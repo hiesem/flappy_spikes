@@ -602,6 +602,13 @@ class Config {
   /// The glide stops below this speed (pt/s).
   static const double menuScrollRestVelocity = 6;
 
+  /// Drag slop (world pt): a press that travels further than this is a
+  /// scroll, never a tap: the drag wins the gesture arena, so every pressed
+  /// tile / button cancels (QA S1-50). Flutter's default (18 logical px) is
+  /// replaced by this, converted to logical px at the current camera scale,
+  /// while a [MenuScrollArea] is mounted.
+  static const double menuScrollSlop = 6;
+
   /// Release velocity = average of the drag samples of the last this many
   /// seconds (older samples are stale and ignored).
   static const double menuScrollVelocityWindow = 0.07;

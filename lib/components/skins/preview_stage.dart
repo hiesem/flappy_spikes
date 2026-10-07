@@ -57,6 +57,10 @@ class _Confetti {
 /// The tried-on layer is drawn as one flat layer at `0.42 + 0.14 sin(4t)`
 /// ([tryOnAlpha]). [hop] kicks the bird up (−150 pt/s, 900 pt/s² back);
 /// [celebrate] throws confetti (and rays for epic / legendary).
+///
+/// Tall looks (hats, the duck's raised head) sit lower so the whole look fits
+/// the stage at the top of the bob and a hop; a hop that would still poke out
+/// of the top (the celebration's bigger one) stops there (QA S2-51).
 class PreviewStage extends PositionComponent {
   PreviewStage({
     required Rect rect,
@@ -108,7 +112,40 @@ class PreviewStage extends PositionComponent {
   double get birdX => width * Config.skinShopBirdX;
 
   /// Bird centre y without the bob.
-  double get birdY => height / 2 + _dy;
+  double get birdY => restY + _dy;
+
+  /// Gap kept between the look and the stage edges (pt).
+  static const double fitMargin = 3;
+
+  /// Highest a plain hop lifts the bird (pt). A tall look keeps this much
+  /// room above it; the bigger celebration hop stops at the stage top.
+  static const double _hopRise =
+      Config.skinShopHopKick *
+      Config.skinShopHopKick /
+      (2 * Config.skinShopHopGravity);
+
+  double? _restY;
+
+  /// Resting bird centre y (without bob / hop): the stage middle, or lower
+  /// for a tall look ([restYFor], eased in when the look changes).
+  double get restY => _restY ?? restYFor(look());
+
+  /// Where [look] rests: the stage middle unless its top (at the top of the
+  /// bob and a hop) would leave the stage; never so low that its
+  /// bottom leaves it. Room for the hop goes first (the hop then stops at the
+  /// stage top); a look taller than the whole stage is centred in it.
+  double restYFor(Look look) {
+    final (top, bottom) = LookPainter.extentOf(look);
+    const bob = Config.skinShopBobAmplitude;
+    final fitsTop = fitMargin - top * k + bob;
+    final fitsBottom = height - fitMargin - bottom * k - bob;
+    if (fitsTop > fitsBottom) return (fitsTop + fitsBottom) / 2;
+    final withHop = fitsTop + _hopRise;
+    return math.max(height / 2, math.min(withHop, fitsBottom));
+  }
+
+  /// Top of [look]'s art on the stage right now (tests).
+  double lookTopNow() => birdY + _bob + LookPainter.extentOf(look()).$1 * k;
 
   /// Vertical hop velocity (negative = rising).
   double get hopVelocity => _vy;
@@ -209,11 +246,21 @@ class PreviewStage extends PositionComponent {
     super.update(dt);
     t += dt;
     final current = look();
+    final rest = restYFor(current);
+    final was = _restY;
+    _restY = was == null ? rest : was + (rest - was) * (1 - math.exp(-14 * dt));
     _vy += Config.skinShopHopGravity * dt;
     _dy += _vy * dt;
     if (_dy > 0) {
       _dy = 0;
       _vy = 0;
+    }
+    // A hop never lifts the look out of the stage: it stops at the top.
+    final ceiling =
+        fitMargin - LookPainter.extentOf(current).$1 * k - restY - _bob;
+    if (_dy < ceiling && ceiling <= 0) {
+      _dy = ceiling;
+      if (_vy < 0) _vy = 0;
     }
 
     _next -= dt;
@@ -323,6 +370,12 @@ class PreviewStage extends PositionComponent {
 
     const ry = Config.skinShopHoopRy * k;
     const lw = ry * .17;
+    // Hoops follow the bird but stay inside the stage when a tall look sits
+    // low (S2-51).
+    final hy = (by - bob).clamp(
+      math.min(ry + lw / 2, height / 2),
+      math.max(height - ry - lw / 2, height / 2),
+    ).toDouble();
     final hoopDim = tried == SkinLayer.hoop ? dim : null;
     void hoopHalves({required bool front}) {
       _withAlpha(canvas, hoopDim, () {
@@ -330,7 +383,7 @@ class PreviewStage extends PositionComponent {
           HoopPainter.paintHalf(
             canvas,
             current.hoop,
-            Offset(hoop.x, by - bob),
+            Offset(hoop.x, hy),
             ry,
             t,
             front: front,
@@ -368,7 +421,7 @@ class PreviewStage extends PositionComponent {
       _ring.color = const Color(0xFFFFFFFF).withValues(alpha: 1 - pulse / .4);
       canvas.drawOval(
         Rect.fromCenter(
-          center: Offset(hoop.x, by - bob),
+          center: Offset(hoop.x, hy),
           width: 2 * ry * .26 * (1 + pulse * 2),
           height: 2 * ry * (1 + pulse * .6),
         ),

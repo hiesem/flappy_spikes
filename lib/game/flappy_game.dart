@@ -20,6 +20,7 @@ import '../components/home/home_screen.dart';
 import '../components/home/menu_primitives.dart' show MenuButton;
 import '../components/levels/level_up_popup.dart';
 import '../components/levels/levels_screen.dart';
+import '../components/menu_drag_dispatcher.dart';
 import '../components/menu_screen_chrome.dart' show MenuScreen;
 import '../components/noads_celebration.dart';
 import '../components/noads_popup.dart';
@@ -385,6 +386,20 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   Future<void> onLoad() async {
     await super.onLoad();
     camera.viewfinder.anchor = Anchor.topLeft;
+    // Before any DragCallbacks component mounts, so Flame uses this one: the
+    // menu lists' drag slop is Config.menuScrollSlop world points (S1-50).
+    final drags = MenuDragDispatcher(
+      pointsToPixels: () => canvasSize.x <= 0 || canvasSize.y <= 0
+          ? 1
+          : min(
+              canvasSize.x / Config.worldWidth,
+              canvasSize.y / viewHeight,
+            ),
+    );
+    // Flame's own DragCallbacks registers its default dispatcher this way.
+    // ignore: invalid_use_of_internal_member
+    registerKey(const MultiDragDispatcherKey(), drags);
+    add(drags);
 
     await storage.load();
     menu = MenuState(

@@ -22,6 +22,42 @@ abstract final class LookPainter {
 
   static final Paint _layerPaint = Paint();
 
+  /// Highest point of each hat above its head anchor (`shape.top`), art
+  /// units, over every animation frame (measured from the art; the largest
+  /// value over all shapes). `test/look_extent_test.dart` keeps it honest.
+  static const Map<String, double> hatRise = {
+    'cap': 9.75, 'beanie': 13.5, 'party': 21.25, 'band': 6, //
+    'bucket': 9, 'tophat': 16, 'cowboy': 14, 'prop': 16, 'chef': 19.5,
+    'viking': 15, 'pirate': 15, 'wizard': 26, 'crown': 15, 'halo': 16.5,
+  };
+
+  /// How far each gear reaches below the body bottom (`shape.bot`), art
+  /// units (largest over all shapes; only the eye patch's strap pokes above
+  /// the head, by half a unit).
+  static const Map<String, double> gearDrop = {
+    'scarf': 1.75, 'bandana': 1.75, 'chain': 1.25, //
+    'sneakers': 9.25, 'carpet': 6, 'jetpack': 8.5,
+  };
+
+  /// Body parts above the head anchor (robot antenna, phoenix crest, chick
+  /// tuft, owl ears).
+  static const Map<String, double> _crest = {
+    'robo': 10.25, 'phoenix': 8, 'chick': 6, 'owl': 4, //
+  };
+
+  /// Vertical extent of [look] as [paint] draws it (art units, relative to
+  /// the origin = art-box centre, negative = up): `(top, bottom)`.
+  static (double, double) extentOf(Look look) {
+    final b = BirdArt.byId(look.bird);
+    final s = b.shape;
+    final head = s.top - 18;
+    var top = head - (_crest[b.id] ?? 0) - (look.gear == 'patch' ? .5 : 0);
+    final rise = hatRise[look.hat];
+    if (rise != null && head - rise < top) top = head - rise;
+    final bottom = s.bot - 18 + .5 + (gearDrop[look.gear] ?? 0);
+    return (top, bottom);
+  }
+
   /// Draws the whole look (gear back → bird body/face → gear front → hat)
   /// with the art-box CENTRE (22,18) at the canvas origin, in art units
   /// (caller scales/translates). [dim] = per-layer try-on opacity (0..1):

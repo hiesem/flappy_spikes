@@ -3,12 +3,16 @@ import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
+import 'package:flutter/gestures.dart'
+    show GestureBinding, PointerCancelEvent, PointerDownEvent, PointerEvent,
+        PointerUpEvent;
 
 import '../game/config.dart';
 import '../game/flappy_game.dart';
 import '../game/tintable.dart';
 import 'home/home_screen.dart';
 import 'home/menu_primitives.dart';
+import 'menu_drag_dispatcher.dart';
 
 /// Images of the shared menu chrome the game owns ([CoinPill],
 /// [MenuCornerBox]).
@@ -141,11 +145,13 @@ abstract class MenuScreen extends PositionComponent
       scroll,
       backButton,
       if (showsTitle) titleText,
-      // Above everything while the list moves on its own, so the touch that
-      // stops a fling or a spring presses nothing (decision 1, 2026-10-07).
+      // Over the list while it moves on its own, so the touch that stops a
+      // fling or a spring presses nothing in it (decision 1, 2026-10-07).
+      // Controls outside the list stop it AND act (QA S1-51 decision).
       MenuScrollTapGate(
         scroll: scroll,
-        size: size.clone(),
+        position: scroll.viewport.topLeft.toVector2(),
+        size: scroll.viewport.size.toVector2(),
         priority: 1 << 20,
       ),
     ]);
@@ -182,7 +188,9 @@ abstract class MenuScreen extends PositionComponent
 ///
 /// Taps outside the viewport never reach the content, and neither do the taps
 /// that stop a fling or a spring: [MenuScreen] puts a [MenuScrollTapGate] over
-/// everything while [isBusy].
+/// the viewport while [isBusy]. A press that travels more than
+/// [Config.menuScrollSlop] is a drag and cancels the pressed child
+/// ([MenuDragDispatcher]).
 class MenuScrollArea extends PositionComponent with DragCallbacks {
   MenuScrollArea({required this.viewport, this.isActive})
     : super(
@@ -351,6 +359,25 @@ class MenuScrollArea extends PositionComponent with DragCallbacks {
     add(content);
   }
 
+  MenuDragDispatcher? _drags;
+
+  @override
+  void onMount() {
+    super.onMount();
+    final drags = findRootGame()?.findByKey(const MultiDragDispatcherKey());
+    if (drags is MenuDragDispatcher) {
+      _drags = drags;
+      drags.scrollAreas++;
+    }
+  }
+
+  @override
+  void onRemove() {
+    _drags?.scrollAreas--;
+    _drags = null;
+    super.onRemove();
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
@@ -383,11 +410,15 @@ class MenuScrollArea extends PositionComponent with DragCallbacks {
   }
 
   /// One fling step: exponential deceleration, handing over to the spring
-  /// when the content crosses an edge.
+  /// when the content crosses an edge. Integrated in closed form
+  /// (`v(t) = v0 d^t`, `x(t) = v0 (d^t - 1) / ln d`), so the distance does not
+  /// depend on the frame rate (QA S2-50).
   void _advanceGlide(double dt) {
     final v0 = _velocity;
-    _setRaw(_raw + v0 * dt);
-    final v = v0 * math.pow(Config.menuScrollFlingDecay, dt);
+    const decay = Config.menuScrollFlingDecay;
+    final keep = math.pow(decay, dt).toDouble();
+    _setRaw(_raw + v0 * (keep - 1) / math.log(decay));
+    final v = v0 * keep;
     if (isOverScrolled) {
       // Reached an edge: bounce (the spring starts with the remaining speed).
       _velocity = 0;
@@ -553,10 +584,15 @@ class _SpringBack {
   double t = 0;
 }
 
-/// Full-screen, topmost child of a [MenuScreen]: swallows the touch that
-/// stops a list fling or spring back (product decision 2026-10-07). The list
-/// stops under the finger and nothing below is pressed. Inert (and invisible)
-/// whenever the list is at rest.
+/// Topmost child of a [MenuScreen] covering its list's viewport: swallows the
+/// touch that stops a list fling or spring back (product decision
+/// 2026-10-07). The list stops under the finger and nothing in it is pressed.
+/// Inert (and invisible) whenever the list is at rest.
+///
+/// A touch anywhere else (coin pill, back, tabs, preview BUY) while the list
+/// moves stops it too, but performs its normal action — native list
+/// behaviour (QA S1-51, orchestrator decision 2026-10-07). The gate sees
+/// those touches through a global pointer route.
 class MenuScrollTapGate extends PositionComponent with TapCallbacks {
   MenuScrollTapGate({
     required this.scroll,
@@ -577,6 +613,40 @@ class MenuScrollTapGate extends PositionComponent with TapCallbacks {
   @override
   bool containsLocalPoint(Vector2 point) =>
       _blocking && super.containsLocalPoint(point);
+
+  /// Pointers outside the viewport that stopped the list and are still down.
+  final Set<int> _outside = {};
+
+  @override
+  void onMount() {
+    super.onMount();
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointer);
+  }
+
+  @override
+  void onRemove() {
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_onPointer);
+    if (_outside.isNotEmpty) {
+      _outside.clear();
+      scroll.releaseAfterStop();
+    }
+    super.onRemove();
+  }
+
+  /// Every pointer event of the app, after the hit-tested handlers: a press
+  /// inside the viewport already went through [onTapDown] and stopped the
+  /// list, so a list still moving here was pressed somewhere else.
+  void _onPointer(PointerEvent event) {
+    if (!isMounted) return;
+    if (event is PointerDownEvent) {
+      if ((scroll.isActive?.call() ?? true) && scroll.isBusy) {
+        _outside.add(event.pointer);
+        scroll.stopMotion();
+      }
+    } else if (event is PointerUpEvent || event is PointerCancelEvent) {
+      if (_outside.remove(event.pointer)) scroll.releaseAfterStop();
+    }
+  }
 
   @override
   void onTapDown(TapDownEvent event) {

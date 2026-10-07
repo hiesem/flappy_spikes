@@ -274,11 +274,10 @@ void main() {
       expect(screen.scroll.isGliding, isTrue);
       stepGame(game, .12);
       expect(screen.scroll.offset, greaterThan(released));
-      // The fixed preview BUY also stops a fling without buying.
+      // The fixed preview BUY (outside the list) stops the fling AND buys
+      // (S1-51 decision: native list behaviour).
       await _tap(game, tester, screen.actionButton);
-      expect(events.count('item_purchase'), 0);
       expect(screen.scroll.isBusy, isFalse);
-      await _tap(game, tester, screen.actionButton);
       expect(game.menu.items.look.bird, 'sky');
       expect(events.count('item_purchase'), 1);
       expect(screen.stage.rays, 0);
@@ -313,8 +312,10 @@ void main() {
         stepGame(game, .08);
         expect(scroll.offset, greaterThan(released));
         expect(scroll.velocity.abs(), lessThan(velocity.abs()));
-        // Fixed back control must stop only; the following tap navigates.
-        await _tap(game, tester, screen.backButton);
+        // A tap inside the moving list only stops it (presses nothing).
+        await tester.tapAt(ui.Offset(160, scroll.viewport.center.dy));
+        await tester.pump(const Duration(milliseconds: 60));
+        await flushAndMount(game);
         expect(screen.active, isTrue);
         expect(scroll.isBusy, isFalse);
         final stopped = scroll.offset;
@@ -443,7 +444,6 @@ void main() {
   _journey(
     'S1-50 a 10 pt scroll attempt must not buy the tried-on tile',
     prefs: const {'coins': 1000},
-    skip: 'S1-50 open',
     (game, events, tester) async {
       final screen = await _skins(game, tester);
       final sky = screen.tileFor('sky');
@@ -464,27 +464,28 @@ void main() {
     },
   );
 
+  // S1-51 orchestrator decision (native mobile behaviour): only a tap INSIDE
+  // the gliding list is swallowed; a control outside it stops the list and
+  // acts.
   _journey(
-    'S1-51 a fling stop-tap on the shared coin pill must not open Shop',
-    skip: 'S1-51 open',
+    'S1-51 a tap on the coin pill during a fling stops the list and opens Shop',
     (game, events, tester) async {
       final screen = await _skins(game, tester);
       await _flick(tester, screen.scroll);
       expect(screen.scroll.isGliding, isTrue);
       await _tap(game, tester, game.coinPill);
-      expect(
-        game.menuScene,
-        MenuScene.skins,
-        reason: 'the touch stopping momentum must press no control',
-      );
       expect(screen.scroll.isBusy, isFalse);
-      expect(events.count('shop_open'), 0);
+      final stopped = screen.scroll.offset;
+      stepGame(game, .1);
+      expect(screen.scroll.offset, stopped);
+      await _fade(game, tester);
+      expect(game.menuScene, MenuScene.shop);
+      expect(events.count('shop_open'), 1);
     },
   );
 
   _journey(
     'S2-50 the same flick travels equally at 30, 60 and 120 fps',
-    skip: 'S2-50 open',
     (game, events, tester) async {
       final screen = await _skins(game, tester);
       Future<double> distanceAt(int fps) async {

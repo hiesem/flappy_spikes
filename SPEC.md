@@ -144,6 +144,12 @@ Product-owner decisions 2026-10-06/07 and implementation notes:
   it through the same path as the preview BUY (`item_purchase` gets
   `source: tile|button`). Not enough coins → the usual not-enough-coins
   feedback. Another tile moves the try-on; a tab switch clears it.
+- **Menu list momentum** (decision 2026-10-07, WP-J1 + QA fix round 1): a
+  press that travels > 6 pt (`Config.menuScrollSlop`) is a scroll and never a
+  tap. A touch INSIDE a gliding / springing list only stops it; a control
+  OUTSIDE the list (coin pill, back, tabs, preview BUY) stops it and acts
+  (native behaviour, S1-51). Tall looks rest lower in the skin-shop preview
+  so hats are never clipped (S2-51).
 - **Bird #16 = Rubber duck** (decision 2026-10-07, id `duck`, Rare 750): own
   `rduck` shape (head bump over a boat body with an upturned tail, blue band,
   one glossy highlight, big #FF5722 bill) so it no longer reads as the Chick.

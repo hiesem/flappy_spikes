@@ -71,3 +71,29 @@ builder tests cover velocity-dependent distance, growing edge resistance,
 instant scrollTo cancellation and spring rest. Tablet store screenshots
 written outside this worktree were ignored. Only QA tests and this report
 are committed; generated images and logs remain under ignored paths.
+
+## Fix round 1 (branch `s2-fix1`, 2026-10-07)
+
+All four findings are fixed; the reproductions run unskipped and pass
+(full suite 707 green, analysis clean).
+
+- **S1-50 fixed.** The game registers its own drag dispatcher
+  (`lib/components/menu_drag_dispatcher.dart`) whose recognizer slop is
+  `Config.menuScrollSlop` = 6 world pt (converted at the camera scale) while
+  a `MenuScrollArea` is mounted. Past 6 pt the drag wins the gesture arena,
+  so the pressed tile / button gets a tap cancel: no try-on, select or buy.
+- **S1-51 — ORCHESTRATOR DECISION (native mobile behaviour), behaviour
+  changed instead of the original expectation.** The stop-the-glide gate
+  covers only the list viewport. A tap INSIDE the gliding / springing list
+  only stops it (nothing selected); a tap OUTSIDE it (coin pill, back, tabs,
+  preview BUY) stops the list AND performs its normal action. The pinning
+  test now asserts that a coin-pill tap during a fling stops the list and
+  opens the Shop; the journeys that expected back / preview BUY to only stop
+  were updated to the decision.
+- **S2-50 fixed.** The fling integrates the exponential decay in closed form
+  (`x += v0 (d^dt - 1) / ln d`), so 30 / 60 / 120 fps travel the same distance.
+- **S2-51 fixed.** `LookPainter.extentOf` gives each look's vertical extent
+  (hat rise, crests, gear drop; `test/skins/preview_fit_test.dart` checks it
+  against the rendered art for every bird x hat / gear). The preview rests a
+  tall look lower so it fits through the bob and a hop, the bigger
+  celebration hop stops at the stage top, and hoops stay inside the stage.

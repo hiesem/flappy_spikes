@@ -582,6 +582,40 @@ class Config {
   /// at this opacity over the background (mock `color-mix(fg 14%, bg)`).
   static const double menuCardMix = 0.14;
 
+  // --- Menu list momentum scrolling (product decision 2026-10-07) ----------
+  //
+  // Every menu scroll list (skin shop grid, Shop, LEVELS, any
+  // [MenuScrollArea]) flings after a release, rubber-bands past its edges and
+  // springs back. Physics lives here so the feel is tunable in one place.
+
+  /// Fraction of the release velocity kept per second while flinging
+  /// (`v(t) = v0 * pow(menuScrollFlingDecay, t)`). A quick ~2000 pt/s flick
+  /// travels ~1.3 viewports before it stops.
+  static const double menuScrollFlingDecay = 0.07;
+
+  /// A release slower than this (pt/s) does not fling.
+  static const double menuScrollMinFlingVelocity = 40;
+
+  /// Flings are capped at this initial speed (pt/s).
+  static const double menuScrollMaxFlingVelocity = 4000;
+
+  /// The glide stops below this speed (pt/s).
+  static const double menuScrollRestVelocity = 6;
+
+  /// Release velocity = average of the drag samples of the last this many
+  /// seconds (older samples are stale and ignored).
+  static const double menuScrollVelocityWindow = 0.07;
+
+  /// Rubber band: the displayed overshoot asymptotes at this share of the
+  /// viewport height, so dragging further gets ever more resistance.
+  static const double menuScrollRubber = 0.18;
+
+  /// Critically damped spring back to an edge (~0.35 s to settle).
+  static const double menuScrollSpringOmega = 19;
+  static const double menuScrollSpringRestDistance = 1; // pt
+  static const double menuScrollSpringRestVelocity = 20; // pt/s
+  static const double menuScrollSpringMaxDuration = 1.0; // s
+
   // --- Shop (PRD-1 §5.2, design S1-B; content coordinates = world
   // coordinates before scrolling, measured at 711 and top-pinned) ---------
 

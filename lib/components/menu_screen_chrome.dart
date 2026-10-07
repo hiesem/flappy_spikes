@@ -141,6 +141,13 @@ abstract class MenuScreen extends PositionComponent
       scroll,
       backButton,
       if (showsTitle) titleText,
+      // Above everything while the list moves on its own, so the touch that
+      // stops a fling or a spring presses nothing (decision 1, 2026-10-07).
+      MenuScrollTapGate(
+        scroll: scroll,
+        size: size.clone(),
+        priority: 1 << 20,
+      ),
     ]);
     await buildContent();
     _built = true;
@@ -165,10 +172,17 @@ abstract class MenuScreen extends PositionComponent
   }
 }
 
-/// A vertically drag-scrollable, clipped content area. Children of
-/// [content] are positioned in world coordinates (as on the mock at scroll
-/// 0); the area shows the [viewport] band of them, shifted up by [offset].
-/// Taps outside the viewport never reach the content.
+/// A vertically drag-scrollable, clipped content area with momentum
+/// (product decision 2026-10-07): a release flings the content with an
+/// exponential decay, dragging past an edge follows at a rubber-banded rate,
+/// and a fling or a release that ended past an edge springs back, critically
+/// damped (~0.35 s). Children of [content] are positioned in world
+/// coordinates (as on the mock at scroll 0); the area shows the [viewport]
+/// band of them, shifted up by [offset].
+///
+/// Taps outside the viewport never reach the content, and neither do the taps
+/// that stop a fling or a spring: [MenuScreen] puts a [MenuScrollTapGate] over
+/// everything while [isBusy].
 class MenuScrollArea extends PositionComponent with DragCallbacks {
   MenuScrollArea({required this.viewport, this.isActive})
     : super(
@@ -191,14 +205,35 @@ class MenuScrollArea extends PositionComponent with DragCallbacks {
   /// scrolls until it reaches the viewport bottom.
   double contentBottom = 0;
 
+  /// Unclamped scroll position. In range it is the offset; past an edge the
+  /// rubber band maps it onto the (smaller) displayed [offset].
+  double _raw = 0;
   double _offset = 0;
+
   double? _target;
+
+  /// Fling velocity in pt/s (positive = the offset grows).
+  double _velocity = 0;
+  _SpringBack? _spring;
+
+  /// The pointer is dragging the content (a drag that moved past the slop).
+  bool _dragging = false;
+
+  /// A touch stopped the motion and is still down (the gate's tap-down).
+  bool _touchDown = false;
+
+  /// A stopped spring must resume when that touch lifts without dragging, so
+  /// a stop-tap never leaves the content out of range.
+  bool _resumeSpring = false;
+
+  final List<_DragSample> _samples = [];
 
   /// Current scroll offset (0 = top), in points.
   double get offset => _offset;
   set offset(double value) {
+    _cancelMotion();
     _target = null;
-    _setOffset(value);
+    _setDisplay(value.clamp(0.0, maxOffset));
   }
 
   /// Largest offset: 0 when the content fits.
@@ -208,9 +243,25 @@ class MenuScrollArea extends PositionComponent with DragCallbacks {
   /// Whether the content is taller than the viewport.
   bool get scrollable => maxOffset > 0;
 
+  /// Whether a fling is still moving the content.
+  bool get isGliding => _velocity != 0;
+
+  /// Whether the content is springing back to an edge.
+  bool get isSpringing => _spring != null;
+
+  /// Whether the content is moving on its own (a touch stops it).
+  bool get isBusy => isGliding || isSpringing;
+
+  /// Whether the content currently sits outside the scroll range.
+  bool get isOverScrolled => _raw < 0 || _raw > maxOffset;
+
+  /// Current fling velocity, pt/s (tests).
+  double get velocity => _velocity;
+
   /// Scrolls (eased, ~0.25 s) so content y [worldY] sits at the viewport
-  /// top, clamped to the scroll range.
+  /// top, clamped to the scroll range. Cancels any fling or spring back.
   void scrollTo(double worldY, {bool animate = true}) {
+    _cancelMotion();
     final target = (worldY - viewport.top).clamp(0.0, maxOffset);
     if (animate) {
       _target = target;
@@ -225,9 +276,73 @@ class MenuScrollArea extends PositionComponent with DragCallbacks {
   /// World y of content y [worldY] on screen right now.
   double screenY(double worldY) => worldY - _offset;
 
-  void _setOffset(double value) {
-    _offset = value.clamp(0.0, maxOffset);
+  /// Stops a fling or spring where it is (a pointer went down on it). When
+  /// [releaseAfterStop] follows without a drag, the spring back resumes.
+  void stopMotion() {
+    _cancelMotion();
+    _resumeSpring = isOverScrolled;
+    _touchDown = true;
+  }
+
+  /// The touch that called [stopMotion] lifted without dragging.
+  void releaseAfterStop() {
+    _touchDown = false;
+    if (!_resumeSpring) return;
+    _resumeSpring = false;
+    if (isOverScrolled) _startSpring(0);
+  }
+
+  void _cancelMotion() {
+    _velocity = 0;
+    _spring = null;
+    _resumeSpring = false;
+  }
+
+  /// Moves to the unclamped position [raw] (rubber banded when out of range).
+  void _setRaw(double raw) {
+    _raw = raw;
+    _offset = _displayFor(raw);
+    _syncContent();
+  }
+
+  /// Moves to the displayed [display] (the inverse of the rubber band; used
+  /// by the spring and by every programmatic move, which stays in range).
+  void _setDisplay(double display) {
+    _offset = display;
+    _raw = _rawForDisplay(display);
+    _syncContent();
+  }
+
+  void _syncContent() {
     content.position.y = -viewport.top - _offset;
+  }
+
+  double _displayFor(double raw) {
+    if (raw < 0) return -_rubber(-raw);
+    final max = maxOffset;
+    if (raw > max) return max + _rubber(raw - max);
+    return raw;
+  }
+
+  double _rawForDisplay(double display) {
+    if (display < 0) return -_invertRubber(-display);
+    final max = maxOffset;
+    if (display > max) return max + _invertRubber(display - max);
+    return display;
+  }
+
+  double get _rubberRange => Config.menuScrollRubber * viewport.height;
+
+  /// The rubber band: [over] pt past an edge shows as this much.
+  double _rubber(double over) {
+    final range = _rubberRange;
+    return range * over / (range + over);
+  }
+
+  double _invertRubber(double shown) {
+    final range = _rubberRange;
+    final t = shown.clamp(0.0, range * 0.999);
+    return range * t / (range - t);
   }
 
   @override
@@ -240,15 +355,73 @@ class MenuScrollArea extends PositionComponent with DragCallbacks {
   void update(double dt) {
     super.update(dt);
     final target = _target;
-    if (target == null) return;
-    // Exponential ease: ~95 % of the way in 0.25 s.
-    final next = _offset + (target - _offset) * (1 - math.pow(1e-7, dt));
-    if ((target - next).abs() < 0.5) {
-      _target = null;
-      _setOffset(target);
-    } else {
-      _setOffset(next);
+    if (target != null) {
+      // Exponential ease: ~95 % of the way in 0.25 s.
+      final next = _offset + (target - _offset) * (1 - math.pow(1e-7, dt));
+      if ((target - next).abs() < 0.5) {
+        _target = null;
+        _setDisplay(target);
+      } else {
+        _setDisplay(next);
+      }
+      return;
     }
+    final spring = _spring;
+    if (spring != null) {
+      _advanceSpring(spring, dt);
+      return;
+    }
+    if (_velocity != 0) {
+      _advanceGlide(dt);
+      return;
+    }
+    // The content may have shrunk under us (a new tab): stay in range, but
+    // never while a touch holds a stopped spring where it was.
+    if (isOverScrolled && !_touchDown && !_dragging) {
+      _setDisplay(_offset.clamp(0.0, maxOffset));
+    }
+  }
+
+  /// One fling step: exponential deceleration, handing over to the spring
+  /// when the content crosses an edge.
+  void _advanceGlide(double dt) {
+    final v0 = _velocity;
+    _setRaw(_raw + v0 * dt);
+    final v = v0 * math.pow(Config.menuScrollFlingDecay, dt);
+    if (isOverScrolled) {
+      // Reached an edge: bounce (the spring starts with the remaining speed).
+      _velocity = 0;
+      _startSpring(v);
+      return;
+    }
+    _velocity = v.abs() < Config.menuScrollRestVelocity ? 0 : v;
+  }
+
+  /// Springs the content back to the edge it crossed, from [velocity].
+  void _startSpring(double velocity) {
+    final edge = _raw < 0 ? 0.0 : maxOffset;
+    final x = _offset - edge;
+    if (x.abs() < 1e-9 && velocity.abs() < 1e-9) return;
+    _spring = _SpringBack(edge: edge, x: x, v: velocity);
+  }
+
+  void _advanceSpring(_SpringBack spring, double dt) {
+    final w = Config.menuScrollSpringOmega;
+    spring.t += dt;
+    final t = spring.t;
+    final decay = math.exp(-w * t);
+    final b = spring.v + w * spring.x;
+    final x = (spring.x + b * t) * decay;
+    final v = (spring.v - w * b * t) * decay;
+    final settled =
+        x.abs() < Config.menuScrollSpringRestDistance &&
+        v.abs() < Config.menuScrollSpringRestVelocity;
+    if (settled || t > Config.menuScrollSpringMaxDuration) {
+      _spring = null;
+      _setDisplay(spring.edge);
+      return;
+    }
+    _setDisplay(spring.edge + x);
   }
 
   @override
@@ -288,13 +461,140 @@ class MenuScrollArea extends PositionComponent with DragCallbacks {
     if (!scrollable) return;
     event.handled = true;
     _target = null;
+    _cancelMotion();
+    _dragging = true;
+    _touchDown = false;
+    _samples.clear();
   }
 
   @override
   void onDragUpdate(DragUpdateEvent event) {
-    if (!scrollable) return;
+    if (!_dragging) return;
     event.handled = true;
-    _setOffset(_offset - event.localDelta.y);
+    _setRaw(_raw - event.localDelta.y);
+    _recordSample(event.timestamp, _offset);
+  }
+
+  @override
+  void onDragEnd(DragEndEvent event) {
+    super.onDragEnd(event);
+    if (!_dragging) return;
+    _dragging = false;
+    final velocity = _releaseVelocity(event);
+    _samples.clear();
+    if (isOverScrolled) {
+      _startSpring(velocity);
+    } else if (velocity.abs() >= Config.menuScrollMinFlingVelocity) {
+      _velocity = velocity;
+    }
+  }
+
+  /// Offset velocity (pt/s, positive = the offset grows) when the finger
+  /// lifts: the average over the last [Config.menuScrollVelocityWindow] of
+  /// drag samples. Flutter's own estimate knows the release time, so it rules
+  /// out a finger that had already stopped (stale samples).
+  double _releaseVelocity(DragEndEvent event) {
+    final estimate = _sampleVelocity();
+    if (estimate == 0) return -event.velocity.y;
+    return event.velocity.length < 1 ? 0 : estimate;
+  }
+
+  double _sampleVelocity() {
+    if (_samples.length < 2) return 0;
+    final last = _samples.last;
+    var first = _samples.first;
+    for (final sample in _samples) {
+      if (last.time - sample.time <= Config.menuScrollVelocityWindow) {
+        first = sample;
+        break;
+      }
+    }
+    final dt = last.time - first.time;
+    if (dt <= 0) return 0;
+    return ((last.offset - first.offset) / dt).clamp(
+      -Config.menuScrollMaxFlingVelocity,
+      Config.menuScrollMaxFlingVelocity,
+    );
+  }
+
+  void _recordSample(Duration time, double offset) {
+    var at = time.inMicroseconds / 1e6;
+    // A host that sends no (or non-monotonic) timestamps must not poison the
+    // average: keep the samples in order.
+    if (_samples.isNotEmpty && at < _samples.last.time) at = _samples.last.time;
+    _samples.add(_DragSample(at, offset));
+    while (_samples.length > 2 &&
+        at - _samples.first.time > Config.menuScrollVelocityWindow) {
+      _samples.removeAt(0);
+    }
+  }
+}
+
+/// One drag sample for the release-velocity average.
+class _DragSample {
+  const _DragSample(this.time, this.offset);
+
+  /// Seconds (the pointer event's own monotonic clock).
+  final double time;
+  final double offset;
+}
+
+/// A critically damped spring pulling the displayed offset back to [edge].
+class _SpringBack {
+  _SpringBack({required this.edge, required this.x, required this.v});
+
+  /// The bound being returned to.
+  final double edge;
+
+  /// Initial offset from [edge] and its velocity.
+  final double x;
+  final double v;
+
+  double t = 0;
+}
+
+/// Full-screen, topmost child of a [MenuScreen]: swallows the touch that
+/// stops a list fling or spring back (product decision 2026-10-07). The list
+/// stops under the finger and nothing below is pressed. Inert (and invisible)
+/// whenever the list is at rest.
+class MenuScrollTapGate extends PositionComponent with TapCallbacks {
+  MenuScrollTapGate({
+    required this.scroll,
+    super.position,
+    super.size,
+    super.priority,
+  });
+
+  final MenuScrollArea scroll;
+
+  /// Set while the gate holds this touch's tap-down record (the list is at
+  /// rest by then, so [scroll.isBusy] alone would stop claiming the point).
+  bool _down = false;
+
+  bool get _blocking =>
+      (scroll.isActive?.call() ?? true) && (scroll.isBusy || _down);
+
+  @override
+  bool containsLocalPoint(Vector2 point) =>
+      _blocking && super.containsLocalPoint(point);
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    event.handled = true;
+    _down = true;
+    scroll.stopMotion();
+  }
+
+  @override
+  void onTapUp(TapUpEvent event) {
+    _down = false;
+    scroll.releaseAfterStop();
+  }
+
+  @override
+  void onTapCancel(TapCancelEvent event) {
+    _down = false;
+    scroll.releaseAfterStop();
   }
 }
 

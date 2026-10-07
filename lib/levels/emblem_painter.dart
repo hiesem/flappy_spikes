@@ -2,20 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../skins/art/shapes.dart';
-
-/// One ranked level's colours (`LEVELS[i]` of `design/menu_v2/emblem_art.js`).
-class _LevelStyle {
-  const _LevelStyle(this.plate, this.rim, this.acc);
-
-  /// Plate fill (levels 9 and 10 override it with a gradient).
-  final Color plate;
-
-  /// Plate rim — also the ribbon plate and the odd feather colour.
-  final Color rim;
-
-  /// Accent — ribbon tails, even feathers, the crown gem.
-  final Color acc;
-}
+import 'levels.dart';
 
 /// A cached static path with the single colour it is filled in.
 class _Shape {
@@ -65,18 +52,8 @@ abstract final class EmblemPainter {
   static const Color _goldLight = Color(0xFFFFE082);
   static const Color _white = Color(0xFFFFFFFF);
 
-  static const List<_LevelStyle> _styles = [
-    _LevelStyle(Color(0xFFF6EBD2), Color(0xFFD9C39A), Color(0xFFB89A66)),
-    _LevelStyle(Color(0xFFFFE58A), Color(0xFFFFB300), Color(0xFFE07B00)),
-    _LevelStyle(Color(0xFFB9F3E1), Color(0xFF13B48D), Color(0xFF00796B)),
-    _LevelStyle(Color(0xFFC8ECFD), Color(0xFF1E9BE0), Color(0xFF01579B)),
-    _LevelStyle(Color(0xFFEBD3F5), Color(0xFF9B30D9), Color(0xFF5E1A8C)),
-    _LevelStyle(Color(0xFFFCD9EE), Color(0xFFEC008C), Color(0xFF7A0044)),
-    _LevelStyle(Color(0xFFFFD6D6), Color(0xFFD32F2F), Color(0xFF7F1028)),
-    _LevelStyle(Color(0xFFFFF1C9), Color(0xFFFFB529), Color(0xFFB07800)),
-    _LevelStyle(Color(0xFFFFD3A8), Color(0xFFFF5722), Color(0xFFB23000)),
-    _LevelStyle(Color(0xFF2A1260), Color(0xFFFFB529), Color(0xFF7C4DFF)),
-  ];
+  /// Level colours come from the shared [kLevels] table (PRD-home-v3 §4.2).
+  static const List<LevelDef> _styles = kLevels;
 
   /// Feather count per level (`N` in `wings()`); levels 1-2 have none.
   static const Map<int, int> _wingCount = {
@@ -383,7 +360,7 @@ abstract final class EmblemPainter {
             final ox = side * 32, oy = -14 + i * 9 * scale;
             final color = level == 10
                 ? (i.isOdd ? _goldLight : _white)
-                : (i.isOdd ? lv.acc : lv.rim);
+                : (i.isOdd ? lv.accent : lv.rim);
             shapes.add(
               _Shape(
                 polyPath(_rot(_bladePts(len, w), a, side, ox, oy)),
@@ -483,7 +460,7 @@ abstract final class EmblemPainter {
 
   // --- pennants (7+) --------------------------------------------------------
 
-  static void _flags(Canvas canvas, double t, _LevelStyle lv, int level) {
+  static void _flags(Canvas canvas, double t, LevelDef lv, int level) {
     for (final side in const <double>[-1, 1]) {
       canvas.save();
       canvas.translate(side * 52, -50);
@@ -492,7 +469,7 @@ abstract final class EmblemPainter {
       circ(canvas, 0, -35, 2.6, _gold);
       double wv(int i) =>
           math.sin(t * 5 - i * 1.3 + (side > 0 ? 1.5 : 0)) * 2.4;
-      final colors = level == 10 ? _rainbow : <Color>[lv.rim, lv.acc];
+      final colors = level == 10 ? _rainbow : <Color>[lv.rim, lv.accent];
       canvas.scale(side, 1);
       canvas.drawPath(
         polyPath([1.5, -32, 24, -28 + wv(2), 1.5, -20]),
@@ -653,7 +630,7 @@ abstract final class EmblemPainter {
             -8.0 + i * 8 + (i - 1) * 3, -58 - (i == 1 ? 4 : 0),
             -8.0 + i * 8 + 4, -46,
           ]),
-          i == 1 ? lv.acc : lv.rim,
+          i == 1 ? lv.accent : lv.rim,
         ),
     ];
   }();
@@ -682,7 +659,7 @@ abstract final class EmblemPainter {
     for (var i = 0; i <= 8; i++) {
       crack.lineTo(-40 + i * 10, i.isOdd ? -22 : -12);
     }
-    shapes.add(_Shape(crack, lv.acc, strokeWidth: 2.4));
+    shapes.add(_Shape(crack, lv.accent, strokeWidth: 2.4));
     return shapes;
   }();
 
@@ -697,7 +674,7 @@ abstract final class EmblemPainter {
   static List<_Shape> _ribbonShapes(int level) =>
       _ribbonCache.putIfAbsent(level, () {
         final lv = _styles[level == 0 ? 0 : level - 1];
-        final c = level == 0 ? const Color(0xFFBDBDBD) : lv.acc;
+        final c = level == 0 ? const Color(0xFFBDBDBD) : lv.accent;
         final y = _ribbonY(level);
         const shade = Color.fromRGBO(0, 0, 0, .25);
         return [
@@ -741,7 +718,7 @@ abstract final class EmblemPainter {
     final color = level == 0
         ? _white
         : (level == 8 || level == 1 || level == 2
-              ? _styles[level - 1].acc
+              ? _styles[level - 1].accent
               : _white);
     final builder =
         ParagraphBuilder(

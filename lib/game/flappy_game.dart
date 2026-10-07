@@ -171,7 +171,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   final Set<Tintable> _tintables = {};
   final List<Fade> _fades = [];
+
+  /// Seeds the pipe spawn layout (tests); null = unseeded. Tests inject a
+  /// seeded [Random] so journeys that fly a fixed line meet the same pipes
+  /// every run.
+  Random? pipeRandom;
   final Random _random = Random();
+
+  /// The pipe spawn RNG: the injected [pipeRandom] when set, else [_random].
+  Random get _pipeRandom => pipeRandom ?? _random;
+
   double _spawnTimer = 0;
   double? _lastGapBottomY;
 
@@ -2245,13 +2254,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         // Difficulty ramp: the gap shrinks as the score climbs, plus a
         // bounded random variance on top (the curve value is the MINIMUM
         // gap; the draw is capped so both pipe stubs can stay >= 40 pt).
-        final gap = Config.gapForPipe(score, _random.nextDouble(), viewHeight);
+        final gap = Config.gapForPipe(score, _pipeRandom.nextDouble(), viewHeight);
         // The spawn band keeps both pipe stubs >= 40 pt: the top stub can
         // never hide fully behind the ceiling spikes (a pipe is always
         // visible), the bottom stub never sinks into the ground spikes.
         final minY = Config.gapBottomMinFor(gap);
         final maxY = Config.gapBottomMaxFor(gap, viewHeight);
-        var gapBottomY = minY + _random.nextDouble() * (maxY - minY);
+        var gapBottomY = minY + _pipeRandom.nextDouble() * (maxY - minY);
         // Keep consecutive gaps within a flyable jump of each other.
         final last = _lastGapBottomY;
         if (last != null) {

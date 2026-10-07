@@ -193,6 +193,9 @@ void main() {
       );
       await _settle(game, tester);
     }
+    // The last drag carries momentum: let it settle so the tap below selects
+    // Galaxy instead of just stopping the fling.
+    await settleMenuScroll(screen.scroll, game, tester);
     await _tap(game, tester, screen.tileFor('galaxy'));
     expect(screen.previewLook.bird, 'galaxy');
     expect(game.menu.items.look.bird, 'classic');

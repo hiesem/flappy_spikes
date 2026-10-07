@@ -209,6 +209,9 @@ void main() {
         );
         await _settle(game, tester);
       }
+      // The last drag carries momentum: let it settle so the tap below
+      // selects Galaxy instead of just stopping the fling.
+      await settleMenuScroll(screen.scroll, game, tester);
       final galaxy = screen.tileFor('galaxy');
       final centre = galaxy.absolutePositionOfAnchor(Anchor.center);
       expect(centre.y, inInclusiveRange(326, 667));

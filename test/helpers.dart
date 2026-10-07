@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/fake_ad_overlay.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
@@ -7,6 +9,7 @@ import 'package:flappy_spikes/components/shop/shop_screen.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/services/monetization.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// All sprite assets the game may load, so that component onLoads complete
@@ -53,13 +56,21 @@ FlappySpikesGame createTestGame(
 ]) {
   SharedPreferences.setMockInitialValues(initialPrefs);
   // soundEnabled: false — no audioplayers platform-channel calls in tests.
-  return FlappySpikesGame(
+  final game = FlappySpikesGame(
     worldHeight: worldHeight,
     services: services,
     monetization: monetization,
     soundEnabled: false,
   );
+  // A fixed pipe layout: the spawn variance is otherwise unseeded, which made
+  // the autopilot journeys (_flyToEgg) crash at a random pipe and fail a
+  // score assertion every few runs.
+  game.pipeRandom = math.Random(_pipeSeed);
+  return game;
 }
+
+/// Seed for the deterministic test pipe layout ([createTestGame]).
+const int _pipeSeed = 7;
 
 /// Pre-decodes every sprite into the game's image cache. Call in setUp
 /// (which runs inside runAsync, where real image decoding works).
@@ -99,5 +110,21 @@ void stepGame(
         game.onScreenTap();
       }
     }
+  }
+}
+
+/// Lets a menu list finish the momentum it carries after a release (product
+/// decision 2026-10-07): steps game time until the fling/spring back has come
+/// to rest, pumping the widget clock alongside. Without this a tap that lands
+/// while the list is still moving only stops the motion (and presses nothing),
+/// so journeys that tap a tile after dragging must settle first.
+Future<void> settleMenuScroll(
+  MenuScrollArea scroll,
+  FlappySpikesGame game,
+  WidgetTester tester,
+) async {
+  for (var frame = 0; frame < 300 && scroll.isBusy; frame++) {
+    stepGame(game, 1 / 60);
+    await tester.pump(const Duration(milliseconds: 16));
   }
 }

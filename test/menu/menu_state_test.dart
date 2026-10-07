@@ -23,7 +23,7 @@ void main() {
     expect(menu.wallet.balance, 0);
     expect(menu.items.look, isNotNull);
     expect(menu.slot.offered, anyOf(Powerup.bigHoops, Powerup.shield));
-    expect(menu.noAdsPopup.shouldShowOnLaunch(), false);
+    expect(menu.noAdsPopup.evaluate(), isNull);
     expect(menu.freeCoins.remainingToday, 5);
 
     await menu.wallet.add(10, CoinSource.play);

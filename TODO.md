@@ -366,6 +366,12 @@ Branch off `feat/skin-shop`, local commits only (not pushed). Opus/DeepSeek buil
 - [x] Sol QA round 1 (S1-50, S1-51, S2-50, S2-51) + fixes (6 pt drag slop, fps-independent fling, preview fits tall hats)
 - [x] Sol QA round 2 (S1-52, S2-52) + fixes (fallback velocity in world points, exact fling→spring handover)
 
+## Phase 21 — coin packs, store pricing, no-ads popup schedule (PRD-menu-v4)
+
+- [x] WP-K2 — no-ads popup schedule (§8): only at the session-start home arrival (launch / back after >= 30 min),
+      4 h gap, max 2 per day, never in the first session, from install day 2 or 10 runs; videos / best / level
+      triggers else 24 h fallback, never after a < 6 run; no dismissal cap; `reason` param; debug force
+
 ## Final gate (1.0)
 - [x] `flutter analyze` clean
 - [x] `flutter test` 103/103 green

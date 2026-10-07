@@ -151,6 +151,11 @@ class DebugPanel extends PositionComponent
           game.showToast('All items granted');
         },
       ),
+      DebugAction(() => 'NO-ADS POPUP: force', () async {
+        // Bypasses the PRD-menu-v4 §8 schedule (no bookkeeping either).
+        onClose();
+        game.openNoAdsPopup(reason: 'forced');
+      }),
       DebugAction(() => 'Close', () async => onClose()),
     ];
   }

@@ -493,12 +493,38 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _logSlotShown();
     _applyTints();
 
-    // No-ads upsell on launch: from the day after install, max once a day,
-    // until three dismissals, never to owners (NoAdsPopupPolicy).
-    if (menu.noAdsPopup.shouldShowOnLaunch()) {
-      openNoAdsPopup();
-      unawaited(menu.noAdsPopup.markShown());
-    }
+    // App launch = a session start: the No-ads upsell may show on this
+    // home arrival (PRD-menu-v4 §8, NoAdsPopupPolicy).
+    await _startSession();
+  }
+
+  /// When the app went to the background (null while in the foreground).
+  DateTime? _backgroundSince;
+
+  /// Runs started since the current session began: the session-start
+  /// upsell is dropped once one started (never between runs).
+  int _runsThisSession = 0;
+
+  /// A session starts (launch, or back after >= [Config.sessionGap]): the
+  /// home arrival may show the No-ads upsell, through the popup queue
+  /// (after / before LEVEL UP, purchase results, celebrations). Only when
+  /// home is up — a return into a run, game over or another menu screen
+  /// is no home arrival.
+  Future<void> _startSession() async {
+    await menu.noAdsPopup.startSession();
+    _runsThisSession = 0;
+    if (state != GameState.start || menuScene != MenuScene.home) return;
+    final reason = menu.noAdsPopup.evaluate();
+    if (reason == null) return;
+    bool stale() => _runsThisSession > 0 || menu.noAds;
+    _queuePopup(
+      () => stale() || (_homeInteractive && _fakeAd == null),
+      () {
+        if (stale()) return;
+        openNoAdsPopup(reason: reason.name);
+        if (_noAdsPopup != null) unawaited(menu.noAdsPopup.markShown());
+      },
+    );
   }
 
   @override
@@ -512,8 +538,19 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   @override
   void lifecycleStateChange(AppLifecycleState state) {
     super.lifecycleStateChange(state);
-    if (state == AppLifecycleState.resumed) {
-      unawaited(monetization.iap.refresh());
+    switch (state) {
+      case AppLifecycleState.paused || AppLifecycleState.hidden:
+        _backgroundSince ??= storage.now();
+      case AppLifecycleState.resumed:
+        unawaited(monetization.iap.refresh());
+        final since = _backgroundSince;
+        _backgroundSince = null;
+        if (since != null &&
+            storage.now().difference(since) >= Config.sessionGap) {
+          unawaited(_startSession());
+        }
+      case AppLifecycleState.inactive || AppLifecycleState.detached:
+        break;
     }
   }
 
@@ -661,6 +698,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   void _startGame() {
     state = GameState.playing;
+    _runsThisSession++;
     services.logGameStart();
     _leaveHome();
     final adapter = _birdAdapter;
@@ -1287,14 +1325,17 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   // --- No-ads popup (PRD-1 §5.1) ------------------------------------------
 
-  /// The automatic launch upsell (PO change 2026-10-05: the popup's only
-  /// path — home-tile / Shop-banner taps buy directly now). No-op during a
-  /// run, over another popup / the debug panel / a fake ad, or while the
-  /// menus are transitioning; owners get a toast instead.
-  void openNoAdsPopup() {
+  /// The automatic session-start upsell (PO change 2026-10-05: the
+  /// popup's only path — home-tile / Shop-banner taps buy directly now;
+  /// the schedule is [_startSession] + NoAdsPopupPolicy). [reason] is the
+  /// `noads_popup_shown` reason (videos / best / level / fallback; the
+  /// debug force passes `forced`). No-op during a run, over another
+  /// popup / the debug panel / a fake ad, or while the menus are
+  /// transitioning; owners get a toast instead.
+  void openNoAdsPopup({String? reason}) {
     if (_noAdsPopup == null && modalPopupOpen) {
       // Another popup is up: the upsell takes its turn after it.
-      _queuePopup(() => true, openNoAdsPopup);
+      _queuePopup(() => true, () => openNoAdsPopup(reason: reason));
       return;
     }
     if (_noAdsPopup != null ||
@@ -1308,7 +1349,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       showToast('Already ad-free');
       return;
     }
-    services.track('noads_popup_shown', {'trigger': _launchTrigger});
+    services.track('noads_popup_shown', {
+      'trigger': _launchTrigger,
+      'reason': ?reason,
+    });
     final popup = NoAdsPopup(
       onDismiss: () => closeNoAdsPopup(),
       onBuy: () {
@@ -1323,9 +1367,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   /// Closes the popup. [dismissed] (×, dim, Esc) logs
-  /// `noads_popup_dismissed` and counts toward the policy's dismissal cap
-  /// (the BRIEF stops automatic upsells after three manual dismissals
-  /// too); a purchase closes it with `dismissed: false`.
+  /// `noads_popup_dismissed` and counts the dismissal (analytics only — no
+  /// limit since PRD-menu-v4 §8; the 4 h gap runs from the show); a
+  /// purchase closes it with `dismissed: false`.
   void closeNoAdsPopup({bool dismissed = true}) {
     final popup = _noAdsPopup;
     if (popup == null) return;
@@ -1597,7 +1641,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   Future<AdResult> showRewardedAd(AdPlacement placement) async {
     _adsShowing++;
     try {
-      return await _showRewardedAd(placement);
+      final result = await _showRewardedAd(placement);
+      // PRD-menu-v4 §8: completed rewarded videos feed the upsell trigger.
+      if (result == AdResult.completed && isLoaded) {
+        unawaited(menu.noAdsPopup.recordRewardedVideo());
+      }
+      return result;
     } finally {
       _adsShowing--;
     }
@@ -1855,11 +1904,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
 
     final previousBest = storage.bestScore;
+    final previousLevel = menu.levels.level;
     storage.incrementGamesPlayed();
     unawaited(storage.saveLastScore(score));
     if (score > storage.bestScore) {
       storage.saveBestScore(score);
     }
+    unawaited(
+      menu.noAdsPopup.recordRun(
+        newBest: score > previousBest,
+        newLevel: menu.levels.level > previousLevel,
+      ),
+    );
     services.logGameOver(score: score, bestScore: storage.bestScore);
     if (score > previousBest) {
       services.logNewBest(score);

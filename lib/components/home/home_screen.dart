@@ -557,11 +557,37 @@ class CoinPill extends MenuButton
   late final MenuIcon _coinIcon;
   late final RectangleComponent _plusBox;
 
-  /// The wallet balance (the target of a running [countFrom]).
+  /// The wallet balance ([target] adds the not-yet-animated rewards).
   int get balance => _balance;
   set balance(int value) {
     if (value == _balance) return;
     _balance = value;
+    if (isLoaded && _countFrom == null && _held == null) _layout();
+  }
+
+  int _reserved = 0;
+
+  /// Coins credited (or about to be) whose reward animation has not
+  /// counted them in yet: the pill never shows them early, so each
+  /// [CoinRewardAnimation] counts only its own amount (e.g. a queued
+  /// No-ads bonus stays out of a LEVEL UP count-up).
+  int get reserved => _reserved;
+
+  /// The number the pill settles on: [balance] minus [reserved].
+  int get target => _balance - _reserved;
+
+  /// Keeps [amount] out of the shown number until [unreserve]d.
+  void reserve(int amount) {
+    if (amount <= 0) return;
+    _reserved += amount;
+    if (isLoaded && _countFrom == null && _held == null) _layout();
+  }
+
+  /// Lets [amount] reserved coins count in (the next count-up includes
+  /// them; called right before a reward's [releaseHold]).
+  void unreserve(int amount) {
+    if (amount <= 0) return;
+    _reserved = math.max(0, _reserved - amount);
     if (isLoaded && _countFrom == null && _held == null) _layout();
   }
 
@@ -570,22 +596,23 @@ class CoinPill extends MenuButton
   /// Whether the number is frozen by [hold] (a coin reward in flight).
   bool get held => _held != null;
 
-  /// Freezes the number on what it shows now: the wallet can be credited
-  /// while the reward's coins are still flying (PRD-menu-v2 §8.3).
+  /// Freezes the number on what it shows now (or, mid count, on where
+  /// that count ends): the wallet can be credited while the reward's coins
+  /// are still flying (PRD-menu-v2 §8.3).
   void hold() {
-    _held ??= _shown;
+    _held ??= _countFrom != null ? target : _shown;
   }
 
-  /// Ends a [hold]: counts from the frozen number to [balance] over
-  /// [duration] s ([linear] = the reward's even count, else ease-out).
+  /// Ends a [hold]: counts from the number shown now (the frozen one, or
+  /// where a running count is) to [target] over [duration] s ([linear] =
+  /// the reward's even count, else ease-out).
   void releaseHold({
     double duration = Config.coinRewardCountDuration,
     bool linear = false,
   }) {
-    final from = _held;
-    if (from == null) return;
+    if (_held == null) return;
     _held = null;
-    countFrom(from, duration: duration, linear: linear);
+    countFrom(_shown, duration: duration, linear: linear);
   }
 
   double _popT = -1;
@@ -662,7 +689,7 @@ class CoinPill extends MenuButton
   static const double flashDuration = 0.9; // one of the two gold flashes
   static const List<double> _shakeKeys = [0, -6, 6, -4, 0];
 
-  /// Counts the number from [from] to [balance] over [duration] s
+  /// Counts the number from [from] to [target] over [duration] s
   /// (ease-out cubic), e.g. a skin-shop purchase (PRD-menu-v2 §3.6).
   void countFrom(
     int from, {
@@ -840,11 +867,11 @@ class CoinPill extends MenuButton
   void _layout() {
     final from = _countFrom;
     if (from == null) {
-      _shown = _held ?? _balance;
+      _shown = _held ?? target;
     } else {
       final u = (_countT / _countDuration).clamp(0.0, 1.0);
       final eased = _countLinear ? u : 1 - math.pow(1 - u, 3);
-      _shown = (from + (_balance - from) * eased).round();
+      _shown = (from + (target - from) * eased).round();
     }
     label.text = formatCoins(_shown);
     const textX = pillHeight + plusGap;
@@ -975,10 +1002,7 @@ class HomeBird extends PositionComponent
     this.onTap,
     BirdIdle? idle,
   }) : idle = idle ?? BirdIdle(),
-       super(
-         position: rect.topLeft.toVector2(),
-         size: rect.size.toVector2(),
-       ) {
+       super(position: rect.topLeft.toVector2(), size: rect.size.toVector2()) {
     this.centre = centre ?? size / 2;
     _look = LookComponent(
       look: look,
@@ -1333,10 +1357,7 @@ class MenuTile extends MenuButton {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    icon = MenuIcon(
-      _iconSprite,
-      size: Vector2.all(Config.homeTileIconSize),
-    );
+    icon = MenuIcon(_iconSprite, size: Vector2.all(Config.homeTileIconSize));
     label = MenuText(
       _labelText,
       fontSize: labelFontSize,

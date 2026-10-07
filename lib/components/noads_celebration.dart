@@ -78,9 +78,7 @@ class NoAdsCelebration extends P1Popup {
     const pad = Config.p1PopupPad;
     const headerH = Config.noAdsCelebrationHeaderHeight;
     const titleH = Config.noAdsCelebrationTitleHeight;
-    final motion = !game.reduceMotion;
-
-    _header = _Header(icon: noAds, motion: motion);
+    _header = _Header(icon: noAds, motion: !game.reduceMotion);
     closeButton = closeBox(close, onDismiss);
     titleText = MenuText(
       "YOU'RE AD-FREE!",
@@ -174,7 +172,14 @@ class NoAdsCelebration extends P1Popup {
   }
 
   void _pose() {
-    if (game.reduceMotion) return;
+    // Reduce motion (also switched on mid-celebration): the card settles
+    // and the header's rays, sparkles and wobble stop.
+    final motion = !game.reduceMotion;
+    _header.motion = motion;
+    if (!motion) {
+      cardPose.rest();
+      return;
+    }
     final u = _swingCurve.transform(
       (_t / Config.noAdsCelebrationSwing).clamp(0.0, 1.0),
     );
@@ -227,10 +232,14 @@ class _Header extends PositionComponent {
     _icon.decorator.addLast(_wobble = WiggleEffect(_icon));
   }
 
-  final bool motion;
+  /// False under reduce motion (read live: the card updates it).
+  bool motion;
   late final MenuIcon _icon;
   late final WiggleEffect _wobble;
   double _t = 0;
+
+  /// Time of the rays / sparkles: frozen while [motion] is off.
+  double _motionT = 0;
 
   static const Offset _rayCentre = Offset(140, 88);
   static const _stampCurve = Cubic(.3, 0, .3, 1);
@@ -267,7 +276,11 @@ class _Header extends PositionComponent {
   void update(double dt) {
     super.update(dt);
     _t += dt;
-    if (!motion) return;
+    if (!motion) {
+      _wobble.rest();
+      return;
+    }
+    _motionT += dt;
     final w =
         (_t - Config.noAdsCelebrationWobbleDelay) /
         Config.noAdsCelebrationWobble;
@@ -299,7 +312,7 @@ class _Header extends PositionComponent {
   void _renderBack(Canvas canvas) {
     canvas.drawRect(size.toRect(), _fill);
     // 16 gold rays (half-wedges of 200 pt), turning at 0.5 rad/s.
-    final t = motion ? _t : 0.0;
+    final t = _motionT;
     canvas.save();
     canvas.translate(_rayCentre.dx, _rayCentre.dy);
     canvas.rotate(t * .5);

@@ -71,6 +71,7 @@ class CoinRewardAnimation extends Component
     this.rise = (min: 40, range: 50),
     this.onDone,
     this.random,
+    this.reservation,
     super.priority = 1000,
   }) : _flight = _Flight.burst;
 
@@ -146,9 +147,12 @@ class CoinRewardAnimation extends Component
 
   /// The No-ads +1 000 bonus (§7, build79 `coinReward`): 12 coins from the
   /// CLAIM button's top centre (+8), 0.75 s each, a 1.4 s count with 18
-  /// ticks, 50 confetti with stars.
+  /// ticks, 50 confetti with stars. The bonus was credited (and reserved
+  /// on the pill) at purchase: [reservation] is what this count takes over
+  /// (0 for the debug preview, which credits nothing).
   factory CoinRewardAnimation.noAdsBonus({
     required Rect from,
+    int reservation = kNoAdsBonusCoins,
     void Function()? onDone,
     math.Random? random,
   }) => CoinRewardAnimation(
@@ -170,6 +174,7 @@ class CoinRewardAnimation extends Component
     rise: (min: 60, range: 50),
     onDone: onDone,
     random: random,
+    reservation: reservation,
   );
 
   /// The Shop's GET reward exactly as before (PRD-menu-v2 §8.3): 6 coins,
@@ -182,6 +187,7 @@ class CoinRewardAnimation extends Component
     this.random,
     super.priority = 1000,
   }) : _flight = _Flight.button,
+       reservation = null,
        amount = FreeCoinsPolicy.reward,
        coins = 6,
        flyDuration = 0.65,
@@ -251,6 +257,13 @@ class CoinRewardAnimation extends Component
   void Function()? onDone;
   math.Random? random;
 
+  /// Coins the caller already reserved on the pill for this reward (it
+  /// takes them over and lets them count in at its first landing); null =
+  /// [prepare] reserves [amount] itself. Either way the count-up covers
+  /// only this reward, never another one still waiting (PRD-home-v3 §5).
+  final int? reservation;
+  int _reservedHere = 0;
+
   CoinPill? _pill;
   CoinFly? _fly;
 
@@ -281,6 +294,9 @@ class CoinRewardAnimation extends Component
   void prepare({required CoinPill pill, required Sprite coin}) {
     if (_fly != null) return;
     _pill = pill..hold();
+    final own = reservation;
+    if (own == null) pill.reserve(amount);
+    _reservedHere = own ?? amount;
     final to = pill.coinFlyTarget;
     _fly = switch (_flight) {
       _Flight.button => CoinFly(
@@ -336,6 +352,7 @@ class CoinRewardAnimation extends Component
     );
     if (_countStart != null) return;
     _countStart = _t;
+    _unreserve();
     pill
       ..balance = game.menu.wallet.balance
       ..glow = true
@@ -349,12 +366,18 @@ class CoinRewardAnimation extends Component
     if (pill == null || _countStart != null) return;
     _countStart = _t;
     _countDone = true;
+    _unreserve();
     game.sound.play(Sfx.bnCoin);
     pill
       ..balance = game.menu.wallet.balance
       ..releaseHold(duration: countDuration, linear: true)
       ..popCoin();
     _progressAt = _t + progressDelay;
+  }
+
+  void _unreserve() {
+    _pill?.unreserve(_reservedHere);
+    _reservedHere = 0;
   }
 
   void _tick(double k) {
@@ -432,6 +455,7 @@ class CoinRewardAnimation extends Component
   @override
   void onRemove() {
     if (!_finished) {
+      _unreserve();
       _pill
         ?..releaseHold()
         ..glow = false;

@@ -226,6 +226,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// the powerup slot / GET keep their video icon ([_noAdsVideoHeld]).
   bool _noAdsRevealHeld = false;
   bool _noAdsVideoHeld = false;
+  bool _noAdsBonusReserved = false;
 
   /// The popup's only context since 2026-10-05 (analytics payload).
   static const String _launchTrigger = 'launch';
@@ -1078,7 +1079,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       );
       return;
     }
-    final before = menu.wallet.balance;
+    // Rewards still waiting to count in stay out of the count-down.
+    final before = menu.wallet.balance - _coinPill.reserved;
     _itemPurchaseRunning = true;
     final ItemPurchaseResult result;
     try {
@@ -1392,7 +1394,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _onNoAdsPurchased() {
     _noAdsRevealHeld = true;
     _noAdsVideoHeld = true;
-    _coinPill.hold();
+    // The +1 000 is credited now but counts in only at the celebration's
+    // CLAIM: any other reward before it counts just its own coins.
+    _coinPill
+      ..hold()
+      ..reserve(kNoAdsBonusCoins);
+    _noAdsBonusReserved = true;
     _queuePopup(() => _menusUp, openNoAdsCelebration);
   }
 
@@ -1494,9 +1501,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       duration: Config.noAdsCelebrationFadeOut,
       removeOnDone: true,
     );
+    final reservation = _noAdsBonusReserved ? kNoAdsBonusCoins : 0;
+    _noAdsBonusReserved = false;
     playCoinReward(
       CoinRewardAnimation.noAdsBonus(
         from: from,
+        reservation: reservation,
         onDone: () => _after(Config.noAdsFlipDelay, _flipNoAdsOwned),
       ),
     );

@@ -8,12 +8,14 @@ import 'package:flutter/gestures.dart' show PointerDeviceKind, TapUpDetails;
 import 'package:flappy_spikes/components/home/menu_primitives.dart';
 import 'package:flappy_spikes/components/noads_celebration.dart';
 import 'package:flappy_spikes/components/skins/celebration.dart';
+import 'package:flappy_spikes/components/ui/coin_reward.dart';
 import 'package:flappy_spikes/components/ui/confetti.dart';
 import 'package:flappy_spikes/components/ui/p1_popup.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/purchases.dart';
 import 'package:flappy_spikes/game/sound.dart';
+import 'package:flappy_spikes/menu/wallet.dart';
 import 'package:flappy_spikes/services/iap_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -375,13 +377,14 @@ void main() {
     shopTest(
       'never on restore or a store re-delivery',
       verify: (game, spy, ads, iap, tester) async {
-        // Owned on "another device": restore brings it back silently.
-        unawaited(iap.buy(IapProduct.noAds));
+        // A fresh purchase (started in this session) celebrates once.
+        unawaited(game.purchases.buy(IapProduct.noAds));
         await settle(game);
         expect(game.noAdsCelebration, isNotNull);
         game.handleBack();
         await run(game, 4);
         expect(spy.count('noads_celebration_shown'), 1);
+        // Owned on "another device": restore brings it back silently.
         await game.menu.setNoAds(false);
         await game.restorePurchases();
         await settle(game);
@@ -397,6 +400,48 @@ void main() {
         // Owners see the owned looks straight away.
         game.update(0);
         expect(game.homeScreen!.noAdsTile.owned, isTrue);
+      },
+    );
+
+    shopTest(
+      'a purchased No ads not started this session only restores ownership',
+      verify: (game, spy, ads, iap, tester) async {
+        // An old receipt replayed as `purchased` (reinstall): no buy was
+        // started in this session.
+        unawaited(iap.buy(IapProduct.noAds));
+        await settle(game);
+        await run(game, 1);
+        expect(game.menu.noAds, isTrue);
+        expect(game.noAdsCelebration, isNull);
+        expect(game.queuedPopups, 0);
+        expect(game.menu.wallet.balance, 0, reason: 'no fresh bonus');
+        expect(game.coinPill.reserved, 0);
+        expect(spy.count('noads_celebration_shown'), 0);
+        game.update(0);
+        expect(game.homeScreen!.noAdsTile.owned, isTrue);
+      },
+    );
+
+    shopTest(
+      'a running LEVEL UP count never includes the reserved No-ads bonus',
+      verify: (game, spy, ads, iap, tester) async {
+        game.homeScreen!.noAdsTile.onPressed();
+        await settle(game);
+        expect(game.noAdsCelebration, isNotNull);
+        expect(game.menu.wallet.balance, 1000);
+        expect(game.coinPill.reserved, 1000);
+        // A second reward counting meanwhile counts only its own coins.
+        final reward = game.playCoinReward(
+          CoinRewardAnimation.levelReward(50, 1),
+        );
+        await game.menu.wallet.add(50, CoinSource.levelReward);
+        await run(game, 4);
+        expect(reward.finished, isTrue);
+        expect(game.coinPill.shownBalance, 50);
+        game.noAdsCelebration!.claimButton.onPressed();
+        await run(game, 5);
+        expect(game.coinPill.reserved, 0);
+        expect(game.coinPill.shownBalance, 1050);
       },
     );
 

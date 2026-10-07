@@ -17,9 +17,10 @@ import 'config.dart';
 /// - [onPackPurchased]: a coin pack was bought — called right BEFORE the
 ///   coins are credited (so the pill can hold its number for the
 ///   celebration). Fallback toast "+1,800 coins".
-/// - [onNoAdsPurchased]: a FRESH No-ads purchase (never a restore or a
-///   store re-delivery) — called right before the flag and the bonus are
-///   granted. Fallback toast "Ads removed · +1,000 coins".
+/// - [onNoAdsPurchased]: a FRESH No-ads purchase (one the player started
+///   with [Purchases.buy] in this session; never a restore, a store
+///   re-delivery or an old receipt replayed as `purchased`) — called right
+///   before the flag and the bonus are granted. Fallback toast "Ads removed · +1,000 coins".
 /// - [onPurchaseProblem]: cancelled (always, also a user back-out) or
 ///   failed (any reason; `iap_error` is logged either way for failures).
 ///   Fallback: failures toast the store's reason, cancels stay silent.
@@ -77,6 +78,12 @@ class Purchases {
 
   StreamSubscription<IapEvent>? _sub;
   final Set<IapProduct> _inFlight = {};
+
+  /// Whether the player started a No-ads [buy] in this app session: only
+  /// then is a `purchased` No ads fresh (celebration + bonus). Otherwise it
+  /// is an old receipt replayed by the store (reinstall, launch delivery)
+  /// and only restores ownership, like a restore.
+  bool _noAdsBuyStarted = false;
   double? _restoreRemaining;
   bool _restoreGotEvent = false;
 
@@ -106,6 +113,7 @@ class Purchases {
       return;
     }
     _inFlight.add(product);
+    if (product == IapProduct.noAds) _noAdsBuyStarted = true;
     await iap.buy(product);
   }
 
@@ -177,6 +185,13 @@ class Purchases {
     if (product == IapProduct.noAds) {
       if (menu.noAds) {
         // Re-delivered (e.g. at launch): never grant the bonus twice.
+        onNoAdsGranted?.call();
+        return;
+      }
+      if (!_noAdsBuyStarted) {
+        // Not bought in this session: an old receipt (reinstall / store
+        // replay). Recover ownership silently — no celebration, no bonus.
+        await menu.setNoAds(true);
         onNoAdsGranted?.call();
         return;
       }

@@ -36,8 +36,8 @@ Picture recordEmblem(
 ///
 /// [t] drives the idle animation (pennants, flames, stars, rays, the plate
 /// sweep when [shine]); the owner advances it (frozen = paused / reduce
-/// motion). Whenever the emblem is visually static — levels 1-6 outside the
-/// sweep, or [t] not moving — it draws a cached [Picture] instead of
+/// motion). Whenever the emblem is visually static — unranked always, levels
+/// 1-6 outside the sweep, or [t] not moving — it draws a cached [Picture] instead of
 /// re-running the painter (PRD-home-v3 §11 performance).
 class EmblemView extends PositionComponent {
   EmblemView({
@@ -101,13 +101,14 @@ class EmblemView extends PositionComponent {
     if (scale <= 0) return;
     canvas.save();
     canvas.scale(scale);
-    final sweep = shine && EmblemPainter.sweepActive(t);
+    final sweep =
+        shine && EmblemPainter.sweeps(_level) && EmblemPainter.sweepActive(t);
     if (!sweep && !EmblemPainter.animates(_level)) {
       canvas.drawPicture(
-        _static.putIfAbsent(
-          (_level, grey),
-          () => recordEmblem(_level, grey: grey),
-        ),
+        _static.putIfAbsent((
+          _level,
+          grey,
+        ), () => recordEmblem(_level, grey: grey)),
       );
       _drewCached = true;
     } else if (t == _lastT) {

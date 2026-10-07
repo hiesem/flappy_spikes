@@ -193,6 +193,16 @@ shop build:
   A purchase result or celebration delivered during a run (or while a run is
   starting) waits until the menus are back. The "Purchase pending…" toast is
   removed as soon as that product's purchase resolves.
+- **Coin count-ups count only their own reward:** a reward credited before its
+  animation (the No-ads +1 000, credited at purchase) is reserved on the pill,
+  which shows wallet minus every not-yet-animated reward; each coin reward
+  counts in just its own amount at its first landing.
+- **No-ads celebration = a purchase started this session:** only a `purchased`
+  No ads for a buy the player started in this app session celebrates and pays
+  the +1 000. Any other `purchased` No ads (an old receipt replayed after a
+  reinstall) restores ownership silently, like RESTORE. Never twice.
+- **Reduce motion switched on mid-celebration** settles the No-ads card (no
+  swing) and stops the AD icon wobble, rays and sparkles.
 - **Reduce motion:** the LEVEL UP popup's emblem clock is frozen (no flags /
   stars / ring / rays motion, no sweep) and its header rays do not rotate.
 - **LEVELS** has no coin pill (the mock's screen has none); the shared corner

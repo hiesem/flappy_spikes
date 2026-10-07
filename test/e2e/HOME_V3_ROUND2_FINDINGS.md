@@ -120,3 +120,12 @@ This was a headless Linux/fake-billing pass. Hardware pulse amplitude,
 real Play callback timing, physical-device frame times and OS accessibility
 propagation remain unverified. The tablet generator's files outside qa3
 were ignored and are not part of this commit.
+
+## Status (Fix home-v3 R2)
+
+All four findings are fixed on `hv-fix2`; their reproductions now run as
+normal tests (no skips, no `QA_VERIFY_OPEN_DEFECTS` define):
+S1-31 per-reward pill reservations (`CoinPill.reserve` / `unreserve`),
+S1-32 celebration only for a No-ads `buy` started this session,
+S2-34 live reduce-motion in the No-ads celebration, S2-35 cached unranked
+octagon and no sweep for the unranked emblem.

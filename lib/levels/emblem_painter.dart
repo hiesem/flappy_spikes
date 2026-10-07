@@ -134,13 +134,17 @@ abstract final class EmblemPainter {
   static bool sweepActive(double t) =>
       (t % sweepPeriod) / sweepPeriod < sweepShare;
 
+  /// Whether [level]'s emblem has a plate sweep at all: the unranked frame
+  /// (0) has no plate, so it never sweeps and is always static.
+  static bool sweeps(int level) => _clamp(level) > 0;
+
   // --- the draw itself ------------------------------------------------------
 
   static void _draw(Canvas canvas, int level, double t, bool shine) {
     if (level == 0) {
       canvas.drawPath(_unrankedDash, strokePaint(const Color(0xFFCFCFCF), 4));
       canvas.drawPath(
-        octPath(-48, -48, 96, 96, 26),
+        _unrankedFill,
         fillPaint(const Color.fromRGBO(130, 130, 130, .07)),
       );
       // The unranked ribbon borrows the EGG colours (JS clamps
@@ -305,6 +309,10 @@ abstract final class EmblemPainter {
       shield ? _platePath(level, .74) : null,
     );
   });
+
+  /// The unranked frame's faint octagon fill (cached like every static
+  /// path, §11).
+  static final Path _unrankedFill = octPath(-48, -48, 96, 96, 26);
 
   static final Path _unrankedDash = dashPath(
     octPath(-48, -48, 96, 96, 26),

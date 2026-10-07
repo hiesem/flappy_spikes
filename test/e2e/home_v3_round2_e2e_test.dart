@@ -32,7 +32,8 @@ import '../services/store_iap_service_test.dart' show FakeStore;
 
 // Round 1 already covers the 568/711 fresh journeys and all pack presets.
 // Round 2 extends the real journeys to 640/730 and interrupted/queued flows.
-const _verifyOpen = bool.fromEnvironment('QA_VERIFY_OPEN_DEFECTS');
+// The S1-31 / S1-32 / S2-34 / S2-35 regressions were fixed in "Fix home-v3
+// R2" and run as normal tests.
 
 class _Rig {
   final events = EventSpy();
@@ -96,7 +97,6 @@ void _defect(
 }) => group(
   id,
   () => _journey(description, verify, prefs: prefs, service: service),
-  skip: _verifyOpen ? false : '$id open',
 );
 
 Future<void> _settle(FlappySpikesGame game, WidgetTester tester) async {
@@ -561,7 +561,7 @@ void main() async {
         reason: 'there is no sweep to repaint on the unranked frame',
       );
     });
-  }, skip: _verifyOpen ? false : 'S2-35 open');
+  });
 
   final redeliveryStore = FakeStore()..goLive(IapProduct.values);
   _defect(

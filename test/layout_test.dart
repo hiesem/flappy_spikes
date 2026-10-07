@@ -68,13 +68,13 @@ void main() {
         Config.gapBottomMax,
       );
 
-      // Home screen layout follows the playfield height (PRD-1 §4.2): the
-      // title is pinned to the top, the start block sits at its 711 spot.
+      // Home screen layout follows the playfield height (PRD-home-v3 §3.1):
+      // the title is pinned to the top, START sits at its 711 spot.
       await flushAndMount(game);
       final home = game.world.children.query<HomeScreen>().single;
       expect(home.title.position, Config.homeTitlePositionFor(711));
       expect(home.title.anchor, Anchor.topCenter);
-      expect(home.startButton.position.y, 277);
+      expect(home.startButton.position.y, 390);
       expect(home.startButton.position.y, Config.homeStartTopFor(711));
     },
   );

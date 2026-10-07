@@ -130,14 +130,17 @@ class DebugPanel extends PositionComponent
         () => 'LEVEL UP (best ${menu.storage.bestScore}, '
             'lv ${menu.levels.level})',
         () async {
-          // PRD-home-v3 Q-H1 interim: the popup shows on the next home.
+          // PRD-home-v3 Q-H1 interim: raise the best to the next level,
+          // then show the LEVEL UP popup right away over home (elsewhere
+          // it shows on the next home).
           await menu.levels.debugForceLevelUp();
           final pending = menu.levels.pendingLevelUp;
-          game.showToast(
-            pending == null
-                ? 'No level-up pending'
-                : 'Level up to ${pending.def.name} (+${pending.reward})',
-          );
+          if (pending == null) {
+            game.showToast('No level-up pending');
+            return;
+          }
+          onClose();
+          game.openLevelUpPopup();
         },
       ),
       DebugAction(

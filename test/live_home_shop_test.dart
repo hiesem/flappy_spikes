@@ -222,7 +222,7 @@ void main() {
         expect(home.skinsTile.tagWobble.scale, closeTo(1.14, 0.01));
         stepGame(game, 10 * .92 + 10 - home.clock.t);
         expect(
-          home.leaderboard.trophyWiggle.angle,
+          home.trophyWiggle.angle,
           closeTo(-8 * math.pi / 180, 0.02),
         );
         // The pill's glint near its peak (8.4 s loop).
@@ -242,7 +242,7 @@ void main() {
           expect(home.slotButton.streak.progress, isNull);
           expect(home.slotButton.cameraNod.isIdentity, isTrue);
           expect(home.skinsTile.tagWobble.isIdentity, isTrue);
-          expect(home.leaderboard.trophyWiggle.isIdentity, isTrue);
+          expect(home.trophyWiggle.isIdentity, isTrue);
           expect(game.coinPill.glintOpacity, 0);
           expect(home.bird.idle.blinking, isFalse);
         }
@@ -288,7 +288,15 @@ void main() {
         expect(sounds, [Sfx.flap]);
         expect(home.bird.idle.velocity, -204);
         expect(home.bird.idle.particles, hasLength(7));
-        stepGame(game, 1);
+        // PRD-home-v3 §3.3: LEVELS opens 0.17 s later; back home.
+        stepGame(game, 0.2);
+        await flushAndMount(game);
+        expect(game.menuScene, MenuScene.levels);
+        game.closeLevels();
+        expect(sounds.last, Sfx.skClose);
+        await flushAndMount(game);
+        stepGame(game, 0.6);
+        await flushAndMount(game);
 
         sounds.clear();
         game.openShop(sfx: Sfx.skTap); // the Shop tile's call

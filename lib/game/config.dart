@@ -215,15 +215,17 @@ class Config {
   static final Vector2 privacyLinkPosition = privacyLinkPositionFor(284);
   static final Vector2 serviceMessagePosition = serviceMessagePositionFor(284);
 
-  // --- Home screen (PRD-1 §4, design/menu_v2/screen_home_centered.html) ---
+  // --- Home screen v3 (PRD-home-v3 §3.1, design/menu_v2/
+  // screen_home_final_v2.html = build78 / build77) ---------------------------
   //
-  // Rects are in world points at a given playfield height. The table in
-  // PRD-1 §4.1 is measured at 711 pt and reproduced exactly there. Vertical
-  // rule (§4.2): the coin pill / gear / title / subtitle are pinned to the
-  // top; the tile row and leaderboard row keep their 711 distance to the
-  // bottom edge (compressing toward 568, where the free space runs out); the
-  // start block is centred in the band between the subtitle and the tile
-  // row, so the title->start gap is what shrinks first.
+  // Rects are in world points at a given playfield height. The §3.1 table is
+  // measured at 711 pt and reproduced exactly there. Vertical rule: the top
+  // part (top row, title, subtitle, emblem stage) is pinned to the top; the
+  // tile row keeps its 711 distance to the bottom edge (compressing a little
+  // toward 568); the START + slot block is centred in the band between the
+  // emblem's ribbon and the tile row. When that band gets too small (short
+  // screens) the emblem stage scales down about its top edge, to at least
+  // emblem 0.78 / bird 1.1 (Q-H3), and then the gaps shrink evenly.
 
   /// Fixed menu chrome colours (not stage-tinted).
   static const Color menuPink = Color(0xFFEC008C);
@@ -235,33 +237,74 @@ class Config {
   /// Height at which the PRD table was measured.
   static const double homeReferenceHeight = 711;
   // 2.0 DEVIATION (product owner, 2026-10-04): gear / back button top-left,
-  // coin pill top-right. Gear / back = Shop tile = trophy left edge (14);
-  // pill right edge = No-ads tile right edge (306).
-  static const double homeMargin = 14; // gear / shop tile / trophy left edge
+  // coin pill top-right. Gear = BEST = Shop tile left edge (14); pill right
+  // edge = LAST = No-ads tile right edge (306).
+  static const double homeMargin = 14; // gear / BEST / shop tile left edge
   static const double homeRightEdge = worldWidth - homeMargin; // 306 (pill)
-  static const double homeTopRowY = 58; // gear + pill band 58..96
+  static const double homeTopRowY = 58; // gear + trophy + pill band 58..96
   static const double homeTopRowHeight = 38;
-  static const double homeTitleTop = 128;
-  static const double homeTitleFontSize = 42;
-  static const double homeSubtitleTop = 178;
-  static const double homeSubtitleFontSize = 19;
-  static const double homeSubtitleLineHeight = 0.9;
-  // Top of the band the start block is centred in: the subtitle's ink
-  // bottom (~210) less 10 at 711 (the PRD's "equal gaps"); at 568 it moves
-  // down 6 pt so the squeezed gaps above / below the block stay balanced.
-  static double homeStartBandTopFor(double viewHeight) =>
-      _lerp(206, 200, _homeT(viewHeight));
 
-  static const double homeStartWidth = 186;
-  static const double homeStartHeight = 68;
-  static const double homeSlotHeight = 32;
-  static const double homeSlotGap = 2; // START bottom -> slot top
+  /// The trophy box (moved from the bottom row into the top row; opens the
+  /// Play Games leaderboard) and its 24 pt glyph.
+  static const double homeTrophyLeft = 60;
+  static const double homeTrophyIconSize = 24;
+
+  static const double homeTitleTop = 104;
+  static const double homeTitleFontSize = 34;
+  static const double homeSubtitleTop = 142;
+  static const double homeSubtitleFontSize = 13;
+  static const double homeSubtitleLetterSpacing = 0.14; // em
+
+  /// Emblem + bird stage: 264 x 204 at (28, 148), the plate centre at 52 %
+  /// of its height (160, 254); emblem art scale 0.936, bird 1.32 (points
+  /// per art unit). Scaled down to [homeStageMinScale] on short screens.
+  static const double homeStageTop = 148;
+  static const double homeStageWidth = 264;
+  static const double homeStageHeight = 204;
+  static const double homePlateYFraction = 0.52;
+  static const double homeEmblemScale = 0.936;
+  static const double homeBirdScale = 1.32;
+
+  /// Smallest stage scale: emblem 0.78 / bird 1.1 (the build76 variation).
+  static const double homeStageMinScale = 0.78 / homeEmblemScale;
+
+  /// How far the emblem's ribbon reaches below the plate centre (art units).
+  static const double homeEmblemReach = 70;
+
+  /// Smallest gap above / below the START + slot block before the emblem
+  /// starts scaling down.
+  static const double homeStartMinGap = 24;
+
+  /// BEST / LAST flank columns: 70 wide, label 12 pt (0.18 em, 13 pt line
+  /// + 2) over the number 30 pt (0.02 em, 33 pt line), centred on the
+  /// plate; BEST gold, LAST stage fg.
+  static const double homeFlankWidth = 70;
+  static const double homeFlankLabelFontSize = 12;
+  static const double homeFlankLabelLetterSpacing = 0.18;
+  static const double homeFlankLabelLine = 13;
+  static const double homeFlankLabelGap = 2;
+  static const double homeFlankNumberFontSize = 30;
+  static const double homeFlankNumberLetterSpacing = 0.02;
+  static const double homeFlankNumberLine = 33;
+  /// A 4+ digit number shrinks to this width: the 70 pt column less the
+  /// tips of LEGEND's wings (they reach x 80 / 240).
+  static const double homeFlankNumberMaxWidth = 62;
+  static const double homeFlankHeight =
+      homeFlankLabelLine + homeFlankLabelGap + homeFlankNumberLine; // 48
+
+  /// START 216 x 67 (label 34 pt, play glyph 28, gap 10) and the powerup
+  /// slot 216 x 31 4 pt below it (label 17 pt).
+  static const double homeStartWidth = 216;
+  static const double homeStartHeight = 67;
+  static const double homeStartFontSize = 34;
+  static const double homeStartIconSize = 28;
+  static const double homeSlotHeight = 31;
+  static const double homeSlotFontSize = 17;
+  static const double homeSlotGap = 4; // START bottom -> slot top
   static const double homeSlotOutline = 3; // bg-coloured outline
   static const double homeStartBlockHeight =
       homeStartHeight + homeSlotGap + homeSlotHeight; // 102
-  static const double homeStartLeft = 96;
-  static final Vector2 homeBirdSize = Vector2(44, 36);
-  static const double homeBirdLeft = 38;
+  static const double homeStartLeft = (worldWidth - homeStartWidth) / 2; // 52
 
   static const int homeTileCount = 4;
   static const double homeTileWidth = 70;
@@ -271,34 +314,72 @@ class Config {
   // Owned No-ads tile: the check glyph (24-unit viewBox, ink ~16 x 12.5)
   // drawn in the icon slot in the same 38 pt box as the crossed-AD icon.
   static const double homeTileCheckSize = homeTileIconSize;
-  static const double homeLeaderboardSize = 70;
-  static const double homeTrophySize = 44;
-  static const double homeStatsGap = 14; // trophy tile -> stats text
 
-  /// 0 at 568, 1 at 711 (and above): how much of the 711 spacing the
-  /// bottom-pinned rows keep.
+  /// 0 at 568, 1 at 711 (and above).
   static double _homeT(double viewHeight) =>
       ((viewHeight - minViewHeight) / (homeReferenceHeight - minViewHeight))
           .clamp(0.0, 1.0);
 
   static double _lerp(double a, double b, double t) => a + (b - a) * t;
 
-  /// Top of the leaderboard row: 67 pt above the bottom edge at 711 (23 pt
-  /// above the menu spike tips), 54 at 568.
-  static double homeLeaderboardTopFor(double viewHeight) =>
-      viewHeight - _lerp(54, 67, _homeT(viewHeight)) - homeLeaderboardSize;
-
-  /// Top of the tile row: 26 pt above the leaderboard row at 711, 12 at 568.
+  /// Top of the tile row: 149 pt above the bottom edge at 711 (y 562, 13 pt
+  /// above the menu spike tips), 146 at 568 (10 pt above them).
   static double homeTileRowTopFor(double viewHeight) =>
-      homeLeaderboardTopFor(viewHeight) -
-      _lerp(12, 26, _homeT(viewHeight)) -
-      homeTileHeight;
+      viewHeight - _lerp(146, 149, _homeT(viewHeight));
 
-  /// Top of the START button: the start block centred between
-  /// [homeStartBandTopFor] and the tile row (277 at 711).
+  /// Emblem stage scale (1 = the §3.1 size): shrinks when the START block
+  /// would get less than [homeStartMinGap] above / below it, down to
+  /// [homeStageMinScale].
+  static double homeStageScaleFor(double viewHeight) {
+    const reach =
+        homeStageHeight * homePlateYFraction + homeEmblemReach * homeEmblemScale;
+    final room =
+        homeTileRowTopFor(viewHeight) -
+        2 * homeStartMinGap -
+        homeStartBlockHeight -
+        homeStageTop;
+    return (room / reach).clamp(homeStageMinScale, 1.0);
+  }
+
+  /// The emblem + bird stage (tap area) at [viewHeight], centred on x 160.
+  static Rect homeStageRectFor(double viewHeight) {
+    final k = homeStageScaleFor(viewHeight);
+    return Rect.fromLTWH(
+      (worldWidth - homeStageWidth * k) / 2,
+      homeStageTop,
+      homeStageWidth * k,
+      homeStageHeight * k,
+    );
+  }
+
+  /// The emblem plate centre (160, 254 at 711).
+  static Offset homePlateCentreFor(double viewHeight) {
+    final stage = homeStageRectFor(viewHeight);
+    return Offset(
+      worldWidth / 2,
+      stage.top + stage.height * homePlateYFraction,
+    );
+  }
+
+  /// Emblem art scale (0.936 at full size, 0.78 at the minimum).
+  static double homeEmblemScaleFor(double viewHeight) =>
+      homeEmblemScale * homeStageScaleFor(viewHeight);
+
+  /// Bird art scale (1.32 at full size, 1.1 at the minimum).
+  static double homeBirdScaleFor(double viewHeight) =>
+      homeBirdScale * homeStageScaleFor(viewHeight);
+
+  /// Bottom of the emblem's ribbon (≈ 320 at 711).
+  static double homeEmblemBottomFor(double viewHeight) =>
+      homePlateCentreFor(viewHeight).dy +
+      homeEmblemReach * homeEmblemScaleFor(viewHeight);
+
+  /// Top of the START button: the START + slot block centred between the
+  /// emblem bottom and the tile row, on whole points (390 at 711).
   static double homeStartTopFor(double viewHeight) =>
-      (homeStartBandTopFor(viewHeight) + homeTileRowTopFor(viewHeight)) / 2 -
-      homeStartBlockHeight / 2;
+      ((homeEmblemBottomFor(viewHeight) + homeTileRowTopFor(viewHeight)) / 2 -
+              homeStartBlockHeight / 2)
+          .roundToDouble();
 
   /// TOP-RIGHT corner of the coin pill: the pill grows leftwards with the
   /// balance, its right edge pinned to [homeRightEdge].
@@ -310,23 +391,28 @@ class Config {
     homeTopRowHeight,
     homeTopRowHeight,
   );
+  static Rect homeTrophyRectFor(double viewHeight) => Rect.fromLTWH(
+    homeTrophyLeft,
+    homeTopRowY,
+    homeTopRowHeight,
+    homeTopRowHeight,
+  );
   // Title / subtitle positions are the TOP-CENTRE of their line boxes.
   static Vector2 homeTitlePositionFor(double viewHeight) =>
       Vector2(worldWidth / 2, homeTitleTop);
   static Vector2 homeSubtitlePositionFor(double viewHeight) =>
       Vector2(worldWidth / 2, homeSubtitleTop);
-  static Rect homeBirdRectFor(double viewHeight) => Rect.fromLTWH(
-    homeBirdLeft,
-    homeStartTopFor(viewHeight) + (homeStartHeight - homeBirdSize.y) / 2,
-    homeBirdSize.x,
-    homeBirdSize.y,
-  );
 
-  /// Points per art unit for the home bird inside [rect]: the 2.0 look keeps
-  /// the body size of the 1.0 home sprite, which drew the [birdSize] canvas
-  /// scaled to the rect width.
-  static double lookScaleForHome(Rect rect) =>
-      lookScale * rect.width / birdSize.x;
+  /// BEST (left, x 14) / LAST ([right], right edge 306) column, centred
+  /// vertically on the plate.
+  static Rect homeFlankRectFor(double viewHeight, {required bool right}) =>
+      Rect.fromLTWH(
+        right ? homeRightEdge - homeFlankWidth : homeMargin,
+        homePlateCentreFor(viewHeight).dy - homeFlankHeight / 2,
+        homeFlankWidth,
+        homeFlankHeight,
+      );
+
   static Rect homeStartRectFor(double viewHeight) => Rect.fromLTWH(
     homeStartLeft,
     homeStartTopFor(viewHeight),
@@ -347,21 +433,9 @@ class Config {
     homeTileWidth,
     homeTileHeight,
   );
-  static Rect homeLeaderboardRectFor(double viewHeight) => Rect.fromLTWH(
-    homeMargin,
-    homeLeaderboardTopFor(viewHeight),
-    homeRightEdge - homeMargin,
-    homeLeaderboardSize,
-  );
-  static Rect homeTrophyRectFor(double viewHeight) => Rect.fromLTWH(
-    homeMargin,
-    homeLeaderboardTopFor(viewHeight),
-    homeLeaderboardSize,
-    homeLeaderboardSize,
-  );
 
   /// Short-lived toasts on the home screen: centred in the gap between the
-  /// powerup slot and the tile row (417.5 at 711).
+  /// powerup slot and the tile row.
   static Vector2 homeToastPositionFor(double viewHeight) {
     final slot = homeSlotRectFor(viewHeight);
     return Vector2(
@@ -369,6 +443,98 @@ class Config {
       (slot.bottom + homeTileRowTopFor(viewHeight)) / 2,
     );
   }
+
+  /// Tap on the emblem stage -> LEVELS opens this much later (§3.3), with
+  /// a fade + 14 pt rise over [levelsEnterDuration].
+  static const double homeEmblemTapDelay = 0.17;
+  static const double levelsEnterDuration = 0.22;
+  static const double levelsEnterRise = 14;
+
+  /// The home emblem's upgrade pop after a LEVEL UP claim (§4.3): 0.6 ->
+  /// 1.15 -> 1 over 0.7 s.
+  static const double homeEmblemPopDuration = 0.7;
+
+  /// LEVEL UP trigger (Q-H1 interim): the popup opens once home has been
+  /// up, with nothing over it, for this long.
+  static const double levelUpSettleDelay = 0.35;
+
+  // --- LEVELS screen (PRD-home-v3 §4.4, build74 `.lvh` / `.lvl`) -----------
+  static const double levelsTitleTop = 106;
+  static const Rect levelsHeaderRect = Rect.fromLTWH(14, 150, 292, 84);
+  static const double levelsHeaderEmblemBox = 84;
+  static const double levelsHeaderEmblemScale = 0.34;
+  static const double levelsHeaderEmblemY = 44; // plate centre in the box
+  static const double levelsHeaderNameFontSize = 20;
+  static const double levelsHeaderStatsFontSize = 11;
+  static const double levelsBarWidth = 186;
+  static const double levelsBarHeight = 16;
+  static const double levelsBarFontSize = 10;
+  static const double levelsHeaderMix = 0.15; // card: fg 15 % over bg
+  static const double levelsListTop = 242;
+  static const double levelsListPadTop = 4;
+  static const double levelsListPadBottom = 26;
+  static const double levelsRowHeight = 72;
+  static const double levelsRowGap = 6;
+  static const double levelsRowMix = 0.09; // row: fg 9 % over bg
+  static const double levelsRowEmblemWidth = 84;
+  static const double levelsRowEmblemScale = 0.29;
+  static const double levelsRowEmblemY = 37;
+  static const double levelsRowNameFontSize = 17;
+  static const double levelsRowReachFontSize = 11;
+  static const double levelsChipHeight = 28;
+  static const double levelsChipTop = 22;
+  static const double levelsChipRight = 8;
+  static const double levelsChipPad = 9;
+  static const double levelsChipFontSize = 15;
+  static const double levelsChipCoinSize = 15;
+  static const double levelsCurrentOutline = 3;
+
+  /// Bird on an emblem in the LEVELS header / rows / popup: 1.4 x the
+  /// emblem's art scale (build74 `paintEmb`).
+  static const double levelsBirdOnEmblem = 1.4;
+
+  /// World y of row [index] (0 = EGG) at scroll 0.
+  static double levelsRowTop(int index) =>
+      levelsListTop + levelsListPadTop + index * (levelsRowHeight + levelsRowGap);
+
+  // --- LEVEL UP popup (PRD-home-v3 §4.3, build74 `.pcard`) ------------------
+  static const double levelUpCardWidth = 280;
+  static const double levelUpHeaderHeight = 178;
+  static const double levelUpTitleHeight = 45;
+  static const double levelUpTitleFontSize = 22;
+  static const double levelUpBodyPadTop = 14;
+  static const double levelUpBodyPad = 16;
+  static const double levelUpSmallFontSize = 12;
+  static const double levelUpNameFontSize = 30;
+  static const double levelUpButtonHeight = 50;
+  static const double levelUpButtonGap = 14;
+  static const double levelUpButtonFontSize = 22;
+  static const double levelUpCoinSize = 22;
+  static const double levelUpEmblemScale = 0.72;
+  static const double levelUpEmblemY = 96; // in the header
+  static const double levelUpPopDuration = 0.45;
+  static const double levelUpCardPopDuration = 0.26;
+  static const double levelUpConfettiDelay = 0.18;
+  static const double levelUpCardHeight =
+      levelUpHeaderHeight +
+      levelUpTitleHeight +
+      levelUpBodyPadTop +
+      levelUpSmallFontSize * 1.284 +
+      2 +
+      levelUpNameFontSize * 1.284 +
+      4 +
+      levelUpSmallFontSize * 1.284 +
+      levelUpButtonGap +
+      levelUpButtonHeight +
+      levelUpBodyPad; // ≈ 392
+
+  /// The card, centred on the screen (x 20 -> 300).
+  static Rect levelUpCardRectFor(double viewHeight) => Rect.fromLTWH(
+    (worldWidth - levelUpCardWidth) / 2,
+    (viewHeight - levelUpCardHeight) / 2,
+    levelUpCardWidth,
+    levelUpCardHeight,
+  );
 
   /// Menus show the spike strips 28 pt shorter (44 pt, as in the approved
   /// mocks); they slide to their full 72 pt when a run starts. Visual only:

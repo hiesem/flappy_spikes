@@ -402,7 +402,7 @@ void main() {
       expect(home.bird.idle.time, greaterThan(14));
       expect(home.slotButton.pulse.k, 0);
       expect(home.slotButton.streak.progress, isNull);
-      expect(home.leaderboard.trophyWiggle.isIdentity, isTrue);
+      expect(home.trophyWiggle.isIdentity, isTrue);
       expect(home.skinsTile.tagWobble.isIdentity, isTrue);
       expect(game.coinPill.glintOpacity, 0);
       await _tap(game, tester, home.shopTile);

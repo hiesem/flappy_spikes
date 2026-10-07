@@ -81,14 +81,15 @@ void main() {
     verify: (game, tester) async {
       final home = game.world.children.query<HomeScreen>().single;
 
-      // 2.0 home (PRD-1 §4.1): the leaderboard row at the bottom — a 70x70
-      // trophy tile on the left margin plus the stats, all one button.
-      final row = home.leaderboard;
-      final expected = Config.homeLeaderboardRectFor(game.viewHeight);
+      // PRD-home-v3 §3.1: the trophy box sits in the top row next to the
+      // gear (x 60, y 58, 38 x 38) and opens the leaderboard.
+      final row = home.trophyButton;
+      final expected = Config.homeTrophyRectFor(game.viewHeight);
       expect(row.position.x, expected.left);
       expect(row.position.y, expected.top);
       expect(row.size.x, expected.width);
-      expect(row.size.y, Config.homeLeaderboardSize);
+      expect(row.size.y, expected.height);
+      expect(expected, const Rect.fromLTWH(60, 58, 38, 38));
 
       // The privacy-policy link lives on the settings screen (2026-07-22):
       // no text buttons on the home screen.
@@ -133,7 +134,10 @@ void main() {
   group('score submission', () {
     testGameWidgetWithSpy(
       'submits the stored best on game over even without a new best',
-      prefs: {'bestScore': 25},
+      prefs: {
+        'bestScore': 25,
+        'claimedLevels': ['1'], // no LEVEL UP popup
+      },
       verify: (game, spy, tester) async {
         game.score = 5; // below the stored best
         game.onBirdHit();
@@ -144,7 +148,10 @@ void main() {
 
     testGameWidgetWithSpy(
       'submits the new best when the score beats it',
-      prefs: {'bestScore': 25},
+      prefs: {
+        'bestScore': 25,
+        'claimedLevels': ['1'], // no LEVEL UP popup
+      },
       verify: (game, spy, tester) async {
         game.score = 30;
         game.onBirdHit();

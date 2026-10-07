@@ -23,7 +23,7 @@ void main() {
     r.ads.mode = FakeAdMode.unavailable;
     for (var i = 1; i <= 5; i++) {
       if (g.menuScene == MenuScene.home) {
-        await tap(g, t, const Offset(49, 502));
+        await tap(g, t, const Offset(49, 608));
       }
       final row = g.shopScreen!.freeCoins;
       expect(row.chipText, 'CLAIM');
@@ -44,7 +44,7 @@ void main() {
       if (i == 1) {
         g = await restartWithSamePrefs(r, t);
         g.monetization.showFakeAdOverlay = true;
-        await tap(g, t, const Offset(49, 502));
+        await tap(g, t, const Offset(49, 608));
         expect(g.shopScreen!.freeCoins.chipText, '05:00');
         expect(g.menu.freeCoins.claimedToday, 1);
         expect(g.menu.wallet.balance, 40);
@@ -57,7 +57,7 @@ void main() {
     expect(g.menu.wallet.balance, 200);
     r.clock.now = r.clock.now.add(const Duration(days: 1));
     g = await restartWithSamePrefs(r, t);
-    await tap(g, t, const Offset(49, 502));
+    await tap(g, t, const Offset(49, 608));
     expect(g.noAdsPopup, isNull);
     expect(g.shopScreen!.freeCoins.chipText, 'CLAIM');
     await tap(g, t, const Offset(260, 228));
@@ -78,7 +78,7 @@ void main() {
       e2e('R2 overlay analytics ${placement.name} $outcome', (g, r, t) async {
         g.monetization.showFakeAdOverlay = true;
         if (placement == AdPlacement.shopFreeCoins) {
-          await tap(g, t, const Offset(49, 502));
+          await tap(g, t, const Offset(49, 608));
         }
         r.ads.mode = switch (outcome) {
           'fail' => FakeAdMode.fail,
@@ -89,7 +89,7 @@ void main() {
           g,
           t,
           placement == AdPlacement.homeSlot
-              ? const Offset(189, 363)
+              ? const Offset(189, 476.5)
               : const Offset(260, 228),
           fade: false,
         );

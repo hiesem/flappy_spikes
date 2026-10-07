@@ -68,6 +68,7 @@ Future<void> captureShot(
 const Map<String, Object> mockPrefs = {
   'bestScore': 12,
   'gamesPlayed': 34,
+  'claimedLevels': ['1'], // no LEVEL UP popup over the captures
   'coins': 1250,
 };
 

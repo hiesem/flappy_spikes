@@ -176,7 +176,7 @@ void main() {
           // the test.
           if (i == 3) await tester.pump(const Duration(milliseconds: 1));
         }
-        await pressAndBack(() => game.homeScreen!.leaderboard.onPressed());
+        await pressAndBack(() => game.homeScreen!.trophyButton.onPressed());
         await pressAndBack(() => game.homeScreen!.coinPill.onPressed());
         expect(game.state, GameState.start);
         expect(game.menuScene, MenuScene.home);

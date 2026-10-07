@@ -14,6 +14,7 @@ import '../../game/tintable.dart';
 import '../../menu/powerup_slot.dart';
 import '../../services/iap_service.dart';
 import '../../skins/look.dart';
+import '../levels/emblem_view.dart';
 import '../look_component.dart';
 import '../ui/bird_idle.dart';
 import '../ui/live_effects.dart';
@@ -32,24 +33,22 @@ const List<String> kHomeImages = [
   'menu/trophy.png',
 ];
 
-/// The 2.0 home screen (PRD-1 §4, approved design G1 centred): coin pill,
-/// settings gear, title, the start block (equipped bird + START + powerup
-/// slot), the Shop / Skins / Invite / No-ads tiles and the leaderboard row.
-/// Replaces the 1.0 `StartPanel`.
+/// The 2.0 home screen, v3 layout (PRD-home-v3 §3, approved design
+/// `screen_home_final_v2.html`): settings gear, trophy and coin pill in the
+/// top row, title + one-line subtitle, the level emblem with the equipped
+/// bird on it (tap: LEVELS) flanked by BEST / LAST, START + the powerup
+/// slot centred below it, and the Shop / Skins / Invite / No-ads tiles.
+/// Replaces the 1.0 `StartPanel` and the PRD-1 layout.
 ///
 /// Every button routes to a [FlappySpikesGame] method; this component only
 /// draws and keeps itself in sync with the menu state (polled each frame —
 /// cheap, and it also catches changes without a notifier such as an ad
-/// finishing loading or the no-ads flag). Text uses the stage foreground
-/// (Tintable); chrome is the fixed menu pink.
+/// finishing loading, the no-ads flag or a claimed level). Text uses the
+/// stage foreground (Tintable); chrome is the fixed menu pink.
 class HomeScreen extends PositionComponent
     with HasGameReference<FlappySpikesGame>, GroupOpacity
     implements Tintable {
-  HomeScreen({required this.bestScore, required this.gamesPlayed})
-    : super(priority: 20);
-
-  int bestScore;
-  int gamesPlayed;
+  HomeScreen() : super(priority: 20);
 
   /// False once the screen starts leaving (START, settings): its buttons
   /// stop hit-testing so taps reach the game below during the fade-out.
@@ -64,16 +63,25 @@ class HomeScreen extends PositionComponent
   /// Tap target of the settings gear; its pink box and glyph are the
   /// game's shared [MenuCornerBox] below this screen.
   late final MenuButton gearButton;
+
+  /// The trophy box next to the gear (PRD-home-v3 §3.1): opens the Play
+  /// Games leaderboard; its glyph wiggles every 10 s.
+  late final MenuButton trophyButton;
+  late final WiggleEffect trophyWiggle;
   late final MenuText title;
-  late final List<MenuText> subtitle;
+  late final MenuText subtitle;
+
+  /// The level emblem under the bird (§3.1 / §3.2).
+  late final EmblemView emblem;
   late final HomeBird bird;
+  late final HomeStat bestStat;
+  late final HomeStat lastStat;
   late final MenuButton startButton;
   late final PowerupSlotButton slotButton;
   late final MenuTile shopTile;
   late final MenuTile skinsTile;
   late final MenuTile inviteTile;
   late final MenuTile noAdsTile;
-  late final LeaderboardRow leaderboard;
 
   /// The screen's idle clock (§8.2 live effects).
   late final LiveClock clock;
@@ -86,6 +94,9 @@ class HomeScreen extends PositionComponent
   /// after it was added) — see [MenuScreen.built].
   bool get _detached => parent == null || isRemoving || isRemoved;
   bool _built = false;
+
+  /// Whether [onLoad] ran to the end.
+  bool get built => _built;
 
   @override
   Future<void> onLoad() async {
@@ -113,7 +124,24 @@ class HomeScreen extends PositionComponent
       onPressed: game.openSettings,
       isActive: _isActive,
     );
-    // §8.2 / §8.4: one idle clock for the screen's live effects.
+    final trophyRect = Config.homeTrophyRectFor(h);
+    final trophyIcon = MenuIcon(
+      icon('trophy'),
+      size: Vector2.all(Config.homeTrophyIconSize),
+      position: trophyRect.size.toVector2() / 2,
+      anchor: Anchor.center,
+    );
+    trophyWiggle = WiggleEffect(trophyIcon);
+    trophyIcon.decorator.addLast(trophyWiggle);
+    trophyButton = MenuButton(
+      color: Config.menuPink,
+      position: trophyRect.topLeft.toVector2(),
+      size: trophyRect.size.toVector2(),
+      onPressed: () => game.showLeaderboard(sfx: Sfx.skTap),
+      isActive: _isActive,
+      children: [trophyIcon],
+    );
+    // §8.2: one idle clock for the screen's live effects.
     clock = LiveClock(
       paused: () => game.liveMotionPaused,
       still: () => game.reduceMotion,
@@ -128,37 +156,58 @@ class HomeScreen extends PositionComponent
       position: Config.homeTitlePositionFor(h),
       anchor: Anchor.topCenter,
     );
-    final sub = Config.homeSubtitlePositionFor(h);
-    const subLine =
-        Config.homeSubtitleFontSize * Config.homeSubtitleLineHeight;
-    subtitle = [
-      for (final (i, line) in const ['DON’T TOUCH', 'THE SPIKES'].indexed)
-        MenuText(
-          line,
-          fontSize: Config.homeSubtitleFontSize,
-          color: _tint,
-          lineHeight: Config.homeSubtitleLineHeight,
-          position: sub + Vector2(0, i * subLine),
-          anchor: Anchor.topCenter,
-        ),
-    ];
+    subtitle = MenuText(
+      'DON’T TOUCH THE SPIKES',
+      fontSize: Config.homeSubtitleFontSize,
+      color: _tint,
+      letterSpacingEm: Config.homeSubtitleLetterSpacing,
+      position: Config.homeSubtitlePositionFor(h),
+      anchor: Anchor.topCenter,
+    );
     // Long-press on the title opens the debug panel (debug builds / Linux).
     final titleHotspot = _LongPressArea(
-      position: Vector2(Config.homeMargin, Config.homeTitleTop),
+      position: Vector2(
+        Config.homeTrophyLeft + Config.homeTopRowHeight + 4,
+        Config.homeTitleTop,
+      ),
       size: Vector2(
-        Config.worldWidth - 2 * Config.homeMargin,
-        Config.homeSubtitleTop + 2 * subLine - Config.homeTitleTop,
+        Config.worldWidth - 2 * (Config.homeTrophyLeft + 42),
+        Config.homeSubtitleTop +
+            Config.homeSubtitleFontSize * kNormalLineHeight -
+            Config.homeTitleTop,
       ),
       onLongPress: game.openDebugPanel,
       isActive: () => active && FlappySpikesGame.debugAvailable,
     );
 
-    // --- start block --------------------------------------------------------
+    // --- emblem + bird stage, BEST / LAST ------------------------------------
+    final stage = Config.homeStageRectFor(h);
+    final plate = Config.homePlateCentreFor(h);
+    emblem = EmblemView(
+      level: _displayLevel,
+      artScale: Config.homeEmblemScaleFor(h),
+      position: plate.toVector2(),
+    );
     bird = HomeBird(
-      rect: Config.homeBirdRectFor(h),
+      rect: stage,
+      centre: (plate - stage.topLeft).toVector2(),
+      artScale: Config.homeBirdScaleFor(h),
       look: game.menu.items.look,
       isActive: _isActive,
+      onTap: game.tapHomeEmblem,
     );
+    bestStat = HomeStat(
+      rect: Config.homeFlankRectFor(h, right: false),
+      label: 'BEST',
+      gold: true,
+    );
+    lastStat = HomeStat(
+      rect: Config.homeFlankRectFor(h, right: true),
+      label: 'LAST',
+      alignRight: true,
+    );
+
+    // --- START + powerup slot -------------------------------------------------
     final startRect = Config.homeStartRectFor(h);
     startButton = MenuButton(
       color: Config.menuPink,
@@ -168,10 +217,10 @@ class HomeScreen extends PositionComponent
       isActive: _isActive,
     );
     _layoutRow(startButton, [
-      MenuIcon(icon('play'), size: Vector2.all(32)),
+      MenuIcon(icon('play'), size: Vector2.all(Config.homeStartIconSize)),
       MenuText(
         'START',
-        fontSize: 36,
+        fontSize: Config.homeStartFontSize,
         color: Config.menuSoft,
         letterSpacingEm: 0.14,
       ),
@@ -202,15 +251,6 @@ class HomeScreen extends PositionComponent
     // away; the popup is the automatic launch upsell only.
     noAdsTile = tile(3, 'noads', 'NO ADS', () => game.buyNoAds('home_tile'));
 
-    leaderboard = LeaderboardRow(
-      rect: Config.homeLeaderboardRectFor(h),
-      trophy: icon('trophy'),
-      bestScore: bestScore,
-      gamesPlayed: gamesPlayed,
-      onPressed: () => game.showLeaderboard(sfx: Sfx.skTap),
-      isActive: _isActive,
-    );
-
     clock
       ..bind(slotButton.animate)
       ..bind(
@@ -219,22 +259,32 @@ class HomeScreen extends PositionComponent
         ),
       )
       ..bind(
-        (t, still) => leaderboard.trophyWiggle.setPose(
+        (t, still) => trophyWiggle.setPose(
           still ? (scale: 1, degrees: 0) : LiveCurves.trophyWiggle(t),
         ),
-      );
+      )
+      // §3.2: the emblem's sweep + per-level idle; reduce motion freezes
+      // it (static picture, no sweep).
+      ..bind((t, still) {
+        emblem
+          ..t = still ? 0 : t
+          ..shine = !still;
+      });
 
     addAll([
       clock,
       gearButton,
+      trophyButton,
       titleHotspot,
       title,
-      ...subtitle,
+      subtitle,
+      emblem,
       bird,
+      bestStat,
+      lastStat,
       slotButton,
       startButton,
       ...tiles,
-      leaderboard,
     ]);
     _built = true;
     _sync(force: true);
@@ -255,11 +305,26 @@ class HomeScreen extends PositionComponent
   bool? _hasNew;
   bool? _noAds;
   bool? _noAdsPending;
+  int? _best;
+  int? _last;
+  bool _lastKnown = false;
+
+  /// The level the emblem shows: the current one, except that a LEVEL UP
+  /// still owed shows the last claimed level until its CLAIM (the emblem
+  /// then upgrades with a pop, §4.3).
+  int get _displayLevel {
+    final levels = game.menu.levels;
+    final pending = levels.pendingLevelUp;
+    return pending?.fromLevel ?? levels.level;
+  }
 
   @override
   void update(double dt) {
     super.update(dt);
-    if (_built) _sync();
+    if (_built) {
+      _sync();
+      _updatePop(dt);
+    }
   }
 
   void _sync({bool force = false}) {
@@ -287,6 +352,22 @@ class HomeScreen extends PositionComponent
       adAvailable: game.monetization.ads.isAvailable,
     );
     slotButton.outlineColor = game.stageBackground;
+
+    // §3.1: BEST / LAST and the emblem follow the storage / levels.
+    final storage = game.storage;
+    final best = storage.bestScore;
+    final last = storage.lastScore;
+    if (force || best != _best) {
+      _best = best;
+      bestStat.value = formatCoins(best);
+    }
+    if (force || last != _last || _lastKnown != (last != null)) {
+      _last = last;
+      _lastKnown = last != null;
+      // Unranked / new players: "—" before the first run.
+      lastStat.value = last == null ? '—' : formatCoins(last);
+    }
+    emblem.level = _displayLevel;
   }
 
   /// Re-reads all menu state now (instead of on the next frame).
@@ -294,11 +375,35 @@ class HomeScreen extends PositionComponent
     if (_built) _sync(force: true);
   }
 
-  void setStats({required int bestScore, required int gamesPlayed}) {
-    this.bestScore = bestScore;
-    this.gamesPlayed = gamesPlayed;
-    if (_built) {
-      leaderboard.setStats(bestScore: bestScore, gamesPlayed: gamesPlayed);
+  double _popT = -1;
+
+  /// Whether the upgrade pop is running (tests).
+  bool get popping => _popT >= 0;
+
+  /// §4.3: after a LEVEL UP claim the emblem upgrades with a pop (scale
+  /// 0.6 -> 1.15 -> 1 over 0.7 s, build74 `evo`).
+  void playUpgradePop() {
+    if (!_built) return;
+    _sync(force: true);
+    _popT = 0;
+    emblem.popScale = upgradePopScale(0);
+  }
+
+  /// The build74 pop curve at [u] (0..1 of the 0.7 s).
+  static double upgradePopScale(double u) {
+    final k = u.clamp(0.0, 1.0);
+    return .6 + .4 * (1 - math.pow(1 - k, 3)) + math.sin(k * math.pi) * .15;
+  }
+
+  void _updatePop(double dt) {
+    if (_popT < 0) return;
+    _popT += dt;
+    final u = _popT / Config.homeEmblemPopDuration;
+    if (u >= 1) {
+      _popT = -1;
+      emblem.popScale = 1;
+    } else {
+      emblem.popScale = upgradePopScale(u);
     }
   }
 
@@ -307,11 +412,94 @@ class HomeScreen extends PositionComponent
     _tint = color;
     if (_built) {
       title.color = color;
-      for (final line in subtitle) {
-        line.color = color;
-      }
-      leaderboard.tint = color;
+      subtitle.color = color;
+      bestStat.tint = color;
+      lastStat.tint = color;
     }
+  }
+}
+
+/// BEST / LAST column flanking the emblem (§3.1, build76 `.flank`): the
+/// label (12 pt, 0.18 em, stage fg at 85 %) over the number (30 pt, faux
+/// bold; BEST gold, LAST stage fg). Left-aligned, or right-aligned
+/// ([alignRight]). A 4+ digit number is shrunk to fit the column clear of
+/// LEGEND's wings ([Config.homeFlankNumberMaxWidth]).
+class HomeStat extends PositionComponent {
+  HomeStat({
+    required Rect rect,
+    required this.label,
+    this.gold = false,
+    this.alignRight = false,
+  }) : super(position: rect.topLeft.toVector2(), size: rect.size.toVector2());
+
+  final String label;
+  final bool gold;
+  final bool alignRight;
+
+  late final MenuText labelText;
+  MenuText? _number;
+  String _value = '';
+  Color _tint = const Color(0xFF828282);
+
+  /// The number component (tests).
+  MenuText get numberText => _number!;
+
+  /// The number shown ("1 250", "—").
+  String get value => _value;
+  set value(String text) {
+    if (text == _value && _number != null) return;
+    _value = text;
+    if (isLoaded) _buildNumber();
+  }
+
+  set tint(Color color) {
+    _tint = color;
+    if (!isLoaded) return;
+    labelText.color = color.withValues(alpha: color.a * .85);
+    if (!gold) _buildNumber();
+  }
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    labelText = MenuText(
+      label,
+      fontSize: Config.homeFlankLabelFontSize,
+      color: _tint.withValues(alpha: .85),
+      letterSpacingEm: Config.homeFlankLabelLetterSpacing,
+      lineHeight: Config.homeFlankLabelLine / Config.homeFlankLabelFontSize,
+    );
+    labelText.position = Vector2(alignRight ? width - labelText.width : 0, 0);
+    add(labelText);
+    _buildNumber();
+  }
+
+  void _buildNumber() {
+    _number?.removeFromParent();
+    final color = gold ? Config.menuGold : _tint;
+    final number = MenuText(
+      _value,
+      fontSize: Config.homeFlankNumberFontSize,
+      color: color,
+      letterSpacingEm: Config.homeFlankNumberLetterSpacing,
+      lineHeight: Config.homeFlankNumberLine / Config.homeFlankNumberFontSize,
+      strokeWidth: gold ? .6 : .5,
+    );
+    // §3.1: 4+ digits shrink the font so the number fits the column.
+    final digits = _value.replaceAll(RegExp(r'[^0-9]'), '').length;
+    const maxWidth = Config.homeFlankNumberMaxWidth;
+    final fit = digits >= 4 && number.width > maxWidth
+        ? maxWidth / number.width
+        : 1.0;
+    final top = Config.homeFlankLabelLine + Config.homeFlankLabelGap;
+    number
+      ..scale = Vector2.all(fit)
+      ..position = Vector2(
+        alignRight ? width - number.width * fit : 0,
+        top + Config.homeFlankNumberLine * (1 - fit) / 2,
+      );
+    _number = number;
+    add(number);
   }
 }
 
@@ -752,9 +940,11 @@ class MenuCornerBox extends PositionComponent
   void render(Canvas canvas) => canvas.drawRect(size.toRect(), _fill);
 }
 
-/// The equipped bird in the start block, drawn exactly like the in-game
-/// bird at blend 0 (identity colours), scaled to the mock's 44 pt wide box
-/// and centred in it.
+/// The equipped bird standing on the home emblem (PRD-home-v3 §3.1),
+/// drawn like the in-game bird at blend 0 (identity colours), its art-box
+/// centre on [centre] (the plate centre) at [artScale] points per art unit
+/// (1.32 at full size). The component covers the whole emblem stage: a tap
+/// anywhere on it hops the bird and calls [onTap] (open LEVELS, §3.3).
 ///
 /// Live (PRD-menu-v2 §8.2): a [BirdIdle] drives it — bob, idle flap,
 /// blinks and a random action every 6–12 s (bob + flap only under reduce
@@ -765,20 +955,31 @@ class HomeBird extends PositionComponent
   HomeBird({
     required Rect rect,
     required Look look,
+    Vector2? centre,
+    double? artScale,
     this.isActive,
+    this.onTap,
     BirdIdle? idle,
   }) : idle = idle ?? BirdIdle(),
        super(
          position: rect.topLeft.toVector2(),
          size: rect.size.toVector2(),
        ) {
+    this.centre = centre ?? size / 2;
     _look = LookComponent(
       look: look,
-      artScale: Config.lookScaleForHome(rect),
-      position: size / 2,
+      artScale: artScale ?? Config.homeBirdScale,
+      anchor: Anchor.center,
+      position: this.centre.clone(),
       // Menus always render at colour stage 0: no stage blend.
     );
   }
+
+  /// The bird's resting art-box centre in local coordinates.
+  late final Vector2 centre;
+
+  /// Called after a tap's hop (the home emblem: LEVELS).
+  final void Function()? onTap;
 
   /// Hop power of a tap on the bird (−204 pt/s) and of START (−153).
   static const double tapHop = 1.2;
@@ -809,13 +1010,15 @@ class HomeBird extends PositionComponent
     event.handled = true;
     game.sound.play(Sfx.flap);
     hop(tapHop);
+    final tap = onTap;
+    if (tap != null) withMenuKnock(this, tap);
   }
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
     add(_look);
-    add(_Burst(idle, origin: size / 2));
+    add(_Burst(idle, origin: centre));
     game.menu.items.addListener(_onItemsChanged);
     _apply();
   }
@@ -839,7 +1042,7 @@ class HomeBird extends PositionComponent
   void _apply() {
     final o = idle.offset;
     _look
-      ..position = Vector2(size.x / 2 + o.dx, size.y / 2 + o.dy)
+      ..position = Vector2(centre.x + o.dx, centre.y + o.dy)
       ..angle = idle.angle
       ..scale = Vector2(idle.scaleX, idle.scaleY)
       ..flapOverride = idle.flap
@@ -984,7 +1187,7 @@ class PowerupSlotButton extends MenuButton {
     _content.clear();
     final label = MenuText(
       labelFor(_shown),
-      fontSize: 18,
+      fontSize: Config.homeSlotFontSize,
       color: Config.menuPlum,
       letterSpacingEm: 0.04,
     );
@@ -1144,105 +1347,6 @@ class _TileTag extends MenuTag {
   Future<void> onLoad() async {
     await super.onLoad();
     position = Vector2(tileWidth + 5 - width, -6);
-  }
-}
-
-/// Leaderboard row (y 574 at 711): 70x70 trophy tile + "Best Score" /
-/// "Games Played" (21 pt, stage fg, line-height 1.15) and a pink
-/// "LEADERBOARD ›" caption; the whole row opens the leaderboards.
-class LeaderboardRow extends MenuButton {
-  LeaderboardRow({
-    required Rect rect,
-    required this.trophy,
-    required this.bestScore,
-    required this.gamesPlayed,
-    required super.onPressed,
-    super.isActive,
-  }) : super(
-         position: rect.topLeft.toVector2(),
-         size: rect.size.toVector2(),
-       );
-
-  final Sprite trophy;
-
-  /// The trophy's idle wiggle (§8.2, driven by the home's [LiveClock]).
-  late final WiggleEffect trophyWiggle = WiggleEffect(this);
-  int bestScore;
-  int gamesPlayed;
-
-  static const double statsFontSize = 21;
-  static const double statsLineHeight = 1.15;
-  static const double captionFontSize = 11;
-
-  late final MenuText bestLabel;
-  late final MenuText gamesLabel;
-  late final MenuText caption;
-
-  Color _tint = const Color(0xFF828282);
-
-  set tint(Color value) {
-    _tint = value;
-    if (isLoaded) {
-      bestLabel.color = value;
-      gamesLabel.color = value;
-    }
-  }
-
-  @override
-  Future<void> onLoad() async {
-    await super.onLoad();
-    const tileSize = Config.homeLeaderboardSize;
-    final icon = MenuIcon(
-      trophy,
-      size: Vector2.all(Config.homeTrophySize),
-      position: Vector2.all(tileSize / 2),
-      anchor: Anchor.center,
-    );
-    trophyWiggle.target = icon;
-    icon.decorator.addLast(trophyWiggle);
-    final tile = RectangleComponent(
-      size: Vector2.all(tileSize),
-      paint: Paint()..color = Config.menuPink,
-      children: [icon],
-    );
-    const textX = tileSize + Config.homeStatsGap;
-    const line = statsFontSize * statsLineHeight;
-    // The caption inherits line-height 1.15 (mock); the three lines are
-    // centred as one block in the 70 pt row.
-    const blockHeight = 2 * line + captionFontSize * statsLineHeight;
-    const top = (tileSize - blockHeight) / 2;
-    bestLabel = MenuText(
-      'Best Score: $bestScore',
-      fontSize: statsFontSize,
-      color: _tint,
-      lineHeight: statsLineHeight,
-      position: Vector2(textX, top),
-    );
-    gamesLabel = MenuText(
-      'Games Played: $gamesPlayed',
-      fontSize: statsFontSize,
-      color: _tint,
-      lineHeight: statsLineHeight,
-      position: Vector2(textX, top + line),
-    );
-    caption = MenuText(
-      'LEADERBOARD ›',
-      fontSize: captionFontSize,
-      color: Config.menuPink,
-      letterSpacingEm: 0.1,
-      lineHeight: statsLineHeight,
-      position: Vector2(textX, top + 2 * line),
-    );
-    addAll([tile, bestLabel, gamesLabel, caption]);
-  }
-
-  void setStats({required int bestScore, required int gamesPlayed}) {
-    this.bestScore = bestScore;
-    this.gamesPlayed = gamesPlayed;
-    if (isLoaded) {
-      bestLabel.text = 'Best Score: $bestScore';
-      gamesLabel.text = 'Games Played: $gamesPlayed';
-    }
   }
 }
 

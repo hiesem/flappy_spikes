@@ -50,7 +50,12 @@ void main() async {
   const dt = 1 / 60;
 
   final withGame = FlameTester<FlappySpikesGame>(
-    () => createTestGame({'bestScore': 12, 'gamesPlayed': 34}),
+    () => createTestGame({
+      'bestScore': 12,
+      'gamesPlayed': 34,
+      // EGG already claimed: no LEVEL UP popup over the captures.
+      'claimedLevels': ['1'],
+    }),
     gameSize: shotSize,
   );
 

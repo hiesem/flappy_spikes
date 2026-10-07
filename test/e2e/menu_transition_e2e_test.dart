@@ -69,13 +69,13 @@ void main() {
     ) async {
       g.monetization.showFakeAdOverlay = true;
       if (placement == AdPlacement.shopFreeCoins) {
-        await tap(g, t, const Offset(49, 502));
+        await tap(g, t, const Offset(49, 608));
       }
       await tap(
         g,
         t,
         placement == AdPlacement.homeSlot
-            ? const Offset(189, 363)
+            ? const Offset(189, 476.5)
             : const Offset(260, 228),
         fade: false,
       );
@@ -90,7 +90,7 @@ void main() {
       expect(g.state, GameState.start);
       await capture(g, t, 'fake_ad_${placement.name}');
       // Tap inside the card at the underlying START's PRD position.
-      await tap(g, t, const Offset(189, 311), fade: false);
+      await tap(g, t, const Offset(189, 423.5), fade: false);
       g.onKeyEvent(key(LogicalKeyboardKey.space), {});
       g.openShop();
       g.openSkins();
@@ -142,13 +142,13 @@ void main() {
     ) async {
       g.monetization.showFakeAdOverlay = true;
       if (placement == AdPlacement.shopFreeCoins) {
-        await tap(g, t, const Offset(49, 502));
+        await tap(g, t, const Offset(49, 608));
       }
       await tap(
         g,
         t,
         placement == AdPlacement.homeSlot
-            ? const Offset(189, 363)
+            ? const Offset(189, 476.5)
             : const Offset(260, 228),
         fade: false,
       );
@@ -174,10 +174,10 @@ void main() {
     ) async {
       g.monetization.showFakeAdOverlay = true;
       if (placement == AdPlacement.shopFreeCoins) {
-        await tap(g, t, const Offset(49, 502));
+        await tap(g, t, const Offset(49, 608));
       }
       final position = placement == AdPlacement.homeSlot
-          ? const Offset(189, 363)
+          ? const Offset(189, 476.5)
           : const Offset(260, 228);
       r.ads.mode = FakeAdMode.fail;
       await tap(g, t, position, fade: false);
@@ -201,16 +201,16 @@ void main() {
     t,
   ) async {
     r.ads.delay = const Duration(seconds: 2);
-    await tap(g, t, const Offset(189, 363), fade: false);
+    await tap(g, t, const Offset(189, 476.5), fade: false);
     for (final position in [
-      const Offset(189, 311),
-      const Offset(49, 502),
-      const Offset(123, 502),
-      const Offset(197, 502),
-      const Offset(271, 502),
+      const Offset(189, 423.5),
+      const Offset(49, 608),
+      const Offset(123, 608),
+      const Offset(197, 608),
+      const Offset(271, 608),
       const Offset(33, 77),
       const Offset(287, 77),
-      const Offset(49, 609),
+      const Offset(79, 77),
     ]) {
       await tap(g, t, position, fade: false);
     }

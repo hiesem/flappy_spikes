@@ -158,8 +158,10 @@ void main() {
       expect(identical(newBird, bird), isFalse,
           reason: 'replay must reset the scene with a fresh bird');
       expect(newBird.body.position.y, closeTo(Config.birdY, 1e-6));
-      expect(newHome.bestScore, 3);
-      expect(newHome.gamesPlayed, 8);
+      // PRD-home-v3 §3.1: BEST / LAST read the persisted best and the
+      // last run's score (games played moved to the LEVELS header).
+      expect(newHome.bestStat.value, '3');
+      expect(game.storage.gamesPlayed, 8);
 
       // The world is frozen again: no gravity on the fresh bird.
       stepGame(game, 0.5);

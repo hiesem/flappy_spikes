@@ -144,7 +144,7 @@ void main() async {
     () => createTestGame(_ownedPrefs),
     gameSize: Vector2(Config.worldWidth, Config.worldHeight),
   ).testGameWidget(
-    'home bird: classic and robin + wind-up + cowboy sit on the 1.0 rect',
+    'home bird: classic and robin + wind-up + cowboy sit on the plate',
     setUp: (game, tester) async {
       await game.ready();
       await preloadImages(game);
@@ -152,8 +152,8 @@ void main() async {
     },
     verify: (game, tester) async {
       await tester.runAsync(() async {
-        final rect = Config.homeBirdRectFor(game.viewHeight);
-        final centre = rect.center;
+        // PRD-home-v3 §3.1: the bird stands on the emblem plate centre.
+        final centre = Config.homePlateCentreFor(game.viewHeight);
         _pinHomeBird(game);
         final classic = await _capture(game, 'home_classic');
         final classicPixel = _pixel(classic, centre.dx, centre.dy);
@@ -174,7 +174,7 @@ void main() async {
         // The only difference between the two captures is the bird art, and
         // it all sits around the home-bird rect: the differing pixels are the
         // bird (body + hat + wind-up key) drawn at the 1.0 position.
-        final region = Rect.fromCenter(center: centre, width: 90, height: 80);
+        final region = Rect.fromCenter(center: centre, width: 110, height: 100);
         final diff = _diffWithin(classic, looked, region);
         expect(diff.count, greaterThan(2000));
         // The silhouette is centred on the rect (the hat and key overhang by

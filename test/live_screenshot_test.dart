@@ -15,7 +15,12 @@ void main() {
 
   shopTest(
     'live screenshot: home',
-    prefs: const {'coins': 1250, 'bestScore': 12, 'gamesPlayed': 34},
+    prefs: const {
+      'coins': 1250,
+      'bestScore': 12,
+      'gamesPlayed': 34,
+      'claimedLevels': ['1'], // no LEVEL UP popup over the captures
+    },
     verify: (game, spy, ads, iap, tester) async {
       game.menu.slot.debugForce = Powerup.bigHoops;
       game.menu.slot.rollForArrival();

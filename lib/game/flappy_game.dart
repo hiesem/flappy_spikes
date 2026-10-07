@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math';
-import 'dart:ui' show Color, Paint, PlatformDispatcher;
+import 'dart:ui' show Color, Paint, PlatformDispatcher, Rect;
 
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
@@ -18,6 +18,9 @@ import '../components/fake_ad_overlay.dart';
 import '../components/gameover_panel.dart';
 import '../components/home/home_screen.dart';
 import '../components/home/menu_primitives.dart' show MenuButton;
+import '../components/levels/level_up_popup.dart';
+import '../components/levels/levels_screen.dart';
+import '../components/menu_screen_chrome.dart' show MenuScreen;
 import '../components/noads_popup.dart';
 import '../components/pipe_pair.dart';
 import '../components/score_hud.dart';
@@ -55,7 +58,7 @@ enum GameState { start, playing, gameOver }
 
 /// Which menu screen is up while in [GameState.start] (meaningless in the
 /// other states).
-enum MenuScene { home, settings, shop, skins }
+enum MenuScene { home, settings, shop, skins, levels }
 
 class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   FlappySpikesGame({
@@ -190,6 +193,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   SettingsPanel? _settingsPanel;
   ShopScreen? _shop;
   SkinShopScreen? _skinShop;
+  LevelsScreen? _levels;
+  LevelUpPopup? _levelUpPopup;
+
+  /// Seconds until a tapped home emblem opens LEVELS (null = none due).
+  double? _levelsOpenIn;
+
+  /// How long home has been settled with a LEVEL UP owed (Q-H1 trigger).
+  double _levelUpSettle = 0;
   bool _itemPurchaseRunning = false;
   NoAdsPopup? _noAdsPopup;
   /// The popup's only context since 2026-10-05 (analytics payload).
@@ -236,6 +247,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// The skin shop while it is open (null otherwise).
   SkinShopScreen? get skinShop => _skinShop;
 
+  /// The LEVELS screen while it is open (null otherwise).
+  LevelsScreen? get levelsScreen => _levels;
+
+  /// The LEVEL UP popup while it is up (null otherwise).
+  LevelUpPopup? get levelUpPopup => _levelUpPopup;
+
   /// Test / debug override of [reduceMotion] (null = follow the OS).
   bool? reduceMotionOverride;
 
@@ -255,6 +272,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// while a dialog, popup, ad, fake ad or the debug panel is on top.
   bool get liveMotionPaused =>
       _noAdsPopup != null ||
+      _levelUpPopup != null ||
       _debugPanel != null ||
       _fakeAd != null ||
       _adsShowing > 0;
@@ -408,10 +426,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   void _addHome() {
-    final home = HomeScreen(
-      bestScore: storage.bestScore,
-      gamesPlayed: storage.gamesPlayed,
-    );
+    final home = HomeScreen();
     _home = home;
     _chromeHosts.add(home);
     world.add(home);
@@ -592,6 +607,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         _backHandlers.isNotEmpty && _backHandlers.last == _shopBack,
       MenuScene.skins =>
         _backHandlers.isNotEmpty && _backHandlers.last == _skinsBack,
+      MenuScene.levels =>
+        _backHandlers.isNotEmpty && _backHandlers.last == _levelsBack,
       _ => false,
     };
   }
@@ -998,6 +1015,146 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
   }
 
+  // --- LEVELS + LEVEL UP (PRD-home-v3 §3.3, §4.3, §4.4) ---------------------
+
+  /// A tap on the home emblem stage (§3.3): the bird already hopped; LEVELS
+  /// opens [Config.homeEmblemTapDelay] later.
+  void tapHomeEmblem() {
+    if (!_homeInteractive || _levelsOpenIn != null) return;
+    _levelsOpenIn = Config.homeEmblemTapDelay;
+  }
+
+  /// Fades home out and the LEVELS screen in (fade + 14 pt rise, 0.22 s).
+  /// [source] is logged as `levels_open`.
+  void openLevels({String source = 'home_emblem'}) {
+    _levelsOpenIn = null;
+    if (!_homeInteractive || _levels != null) return;
+    services.logLevelsOpen(source);
+    _menuTrail.clear();
+    _leaveHome();
+    menuScene = MenuScene.levels;
+    final screen = LevelsScreen(onBack: closeLevels);
+    _levels = screen;
+    _chromeHosts.add(screen);
+    _chromeHold = true; // replaces home: the corner box stays
+    world.add(screen);
+    registerTintable(screen);
+    fadeOpacity(
+      screen,
+      from: 0,
+      to: 1,
+      duration: Config.levelsEnterDuration,
+    );
+    pushBack(_levelsBack);
+  }
+
+  /// Back button / Esc on LEVELS: back home (not a new arrival).
+  void closeLevels() {
+    final screen = _levels;
+    if (state != GameState.start || screen == null) return;
+    sound.play(Sfx.skClose);
+    _levels = null;
+    popBack(_levelsBack);
+    screen.active = false;
+    unregisterTintable(screen);
+    fadeOpacity(screen, from: screen.opacity, to: 0, removeOnDone: true);
+    _returnFromMenuScreen();
+  }
+
+  bool _levelsBack() {
+    closeLevels();
+    return true;
+  }
+
+  /// Q-H1 interim trigger: once home has been up with nothing over it for
+  /// [Config.levelUpSettleDelay] and a LEVEL UP is owed (a run reached a
+  /// new level, or the catch-up after the update), the popup opens. The
+  /// no-ads launch popup goes first (it blocks home until closed).
+  void _checkLevelUp(double dt) {
+    final home = _home;
+    final ready =
+        _levelUpPopup == null &&
+        _levelsOpenIn == null &&
+        home != null &&
+        home.built &&
+        home.opacity >= 1 &&
+        _homeInteractive &&
+        _fakeAd == null &&
+        _adsShowing == 0 &&
+        menu.levels.pendingLevelUp != null;
+    if (!ready) {
+      _levelUpSettle = 0;
+      return;
+    }
+    _levelUpSettle += dt;
+    if (_levelUpSettle >= Config.levelUpSettleDelay) {
+      _levelUpSettle = 0;
+      openLevelUpPopup();
+    }
+  }
+
+  /// Shows the owed LEVEL UP popup over home (§4.3): `sk_buy_rare` /
+  /// `epic` / `legendary` for lv 1-4 / 5-8 / 9-10 and `level_up`. No-op
+  /// when nothing is owed or home is not up with nothing over it.
+  void openLevelUpPopup() {
+    final pending = menu.levels.pendingLevelUp;
+    if (pending == null || _levelUpPopup != null || !_homeInteractive) return;
+    final level = pending.toLevel;
+    sound.play(
+      level >= 9
+          ? Sfx.skBuyLegendary
+          : level >= 5
+          ? Sfx.skBuyEpic
+          : Sfx.skBuyRare,
+    );
+    services.logLevelUp(level, storage.bestScore);
+    final popup = LevelUpPopup(
+      pending: pending,
+      look: menu.items.look,
+      onClaim: (from) => unawaited(claimLevelUp(from: from)),
+    );
+    _levelUpPopup = popup;
+    world.add(popup);
+    fadeOpacity(popup, from: 0, to: 1, duration: Config.popupFadeDuration);
+    pushBack(_levelUpBack);
+  }
+
+  /// CLAIM ([from] = the button's rect) or ✕ / Esc ([from] null): the
+  /// popup closes, every owed reward is paid (`menu.levels.claim()`), the
+  /// coins fly into the pill and count up, and the home emblem upgrades
+  /// with a pop. ✕ claims too — the reward is never lost.
+  Future<void> claimLevelUp({Rect? from}) async {
+    final popup = _levelUpPopup;
+    if (popup == null) return;
+    _levelUpPopup = null;
+    popBack(_levelUpBack);
+    popup.active = false;
+    sound.play(from == null ? Sfx.skClose : Sfx.skTap);
+    fadeOpacity(
+      popup,
+      from: popup.opacity,
+      to: 0,
+      duration: Config.popupFadeDuration * 2,
+      removeOnDone: true,
+    );
+    final level = popup.pending.toLevel;
+    // The pill keeps its number until the coins land.
+    final reward = CoinRewardAnimation.levelReward(
+      popup.pending.reward,
+      level,
+      from: from,
+    );
+    playCoinReward(reward);
+    final paid = await menu.levels.claim();
+    if (paid > 0) services.logLevelRewardClaimed(level, paid);
+    _home?.playUpgradePop();
+  }
+
+  bool _levelUpBack() {
+    unawaited(claimLevelUp());
+    return true;
+  }
+
   // --- No-ads popup (PRD-1 §5.1) ------------------------------------------
 
   /// The automatic launch upsell (PO change 2026-10-05: the popup's only
@@ -1308,6 +1465,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
     final previousBest = storage.bestScore;
     storage.incrementGamesPlayed();
+    unawaited(storage.saveLastScore(score));
     if (score > storage.bestScore) {
       storage.saveBestScore(score);
     }
@@ -1454,12 +1612,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _applyTints();
 
     // Best/games/mute reloaded from persistence.
+    // (Home polls best / last / level from the storage.)
     storage.load().then((_) {
       sound.muted = storage.muteSound;
-      _home?.setStats(
-        bestScore: storage.bestScore,
-        gamesPlayed: storage.gamesPlayed,
-      );
     });
 
     _setupStartScene();
@@ -1596,12 +1751,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   MenuButton? get _cornerButton {
     final home = _home;
     if (home != null) return home.isLoaded ? home.gearButton : null;
-    final screen = _shop ?? _skinShop;
+    final MenuScreen? screen = _shop ?? _skinShop ?? _levels;
     return screen != null && screen.built ? screen.backButton : null;
   }
 
   void _updateMenuChrome() {
-    final current = _home ?? _shop ?? _skinShop;
+    final current = _home ?? _shop ?? _skinShop ?? _levels;
     _chromeHosts.removeWhere(
       (host) =>
           !identical(host, current) &&
@@ -1618,8 +1773,17 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       if (host is HomeScreen) homeShare += opacity;
     }
     final opacity = _chromeHold ? 1.0 : total.clamp(0.0, 1.0);
+    // LEVELS has no coin pill (PRD-home-v3 §4.4): the pill fades with the
+    // screens around it that show one.
+    var pillOpacity = opacity;
+    if (_chromeHosts.any((host) => host is LevelsScreen)) {
+      pillOpacity = _chromeHosts
+          .where((host) => host is! LevelsScreen)
+          .fold(0.0, (sum, host) => sum + (host as OpacityProvider).opacity)
+          .clamp(0.0, 1.0);
+    }
     _coinPill
-      ..opacity = opacity
+      ..opacity = pillOpacity
       ..balance = menu.wallet.balance;
     _cornerBox
       ..opacity = opacity
@@ -1690,6 +1854,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       }
     }
     _updateMenuChrome();
+    final levelsIn = _levelsOpenIn;
+    if (levelsIn != null) {
+      _levelsOpenIn = levelsIn - dt;
+      if (_levelsOpenIn! <= 0) openLevels();
+    }
+    if (state == GameState.start) _checkLevelUp(dt);
 
     if (state == GameState.playing) {
       _spawnTimer += dt;

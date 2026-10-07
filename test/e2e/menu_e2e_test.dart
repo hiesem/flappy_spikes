@@ -10,6 +10,7 @@ import 'package:flappy_spikes/components/look_component.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
 import 'package:flappy_spikes/components/skins/celebration.dart';
 import 'package:flappy_spikes/components/ui/service_message.dart';
+import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/palettes.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
@@ -205,7 +206,7 @@ void main() {
     final offered = g.menu.slot.offered;
     await tap(g, t, const Offset(300, 220));
     expect(g.state, GameState.start);
-    await tap(g, t, const Offset(49, 502));
+    await tap(g, t, const Offset(49, 608));
     expect(g.menuScene, MenuScene.shop);
     expect(r.spy.params('shop_open').single, {'source': 'tile'});
     await tap(g, t, const Offset(33, 77));
@@ -217,13 +218,13 @@ void main() {
     await tap(g, t, const Offset(33, 77));
     var invites = 0;
     g.onInvite = () => invites++;
-    await tap(g, t, const Offset(197, 502));
+    await tap(g, t, const Offset(197, 608));
     expect(invites, 1);
     expect(g.menu.wallet.balance, 0);
     expect(r.spy.params('invite_tap').length, 1);
-    await tap(g, t, const Offset(49, 609));
+    await tap(g, t, const Offset(79, 77));
     expect(r.spy.leaderboardCalls, 1);
-    await tap(g, t, const Offset(189, 311), fade: false);
+    await tap(g, t, const Offset(189, 423.5), fade: false);
     expect(g.state, GameState.playing);
     expect(
       g.world.children.query<Bird>().single.body.linearVelocity.y,
@@ -241,7 +242,7 @@ void main() {
     r,
     t,
   ) async {
-    await tap(g, t, const Offset(189, 311), fade: false);
+    await tap(g, t, const Offset(189, 423.5), fade: false);
     // Exercise the public score-contact path with an actual spawned pair.
     await flushAndMount(g);
     final pairs = g.world.children.where(
@@ -291,7 +292,7 @@ void main() {
         await settle(g, t);
         expect(g.homeScreen!.slotButton.showsVideo, isTrue);
         expect(g.homeScreen!.slotButton.labelText, isNot(contains('✓')));
-        await tap(g, t, const Offset(189, 363));
+        await tap(g, t, const Offset(189, 476.5));
         if (mode == FakeAdMode.succeed) {
           expect(g.state, GameState.playing);
           expect(g.homeScreen, isNull);
@@ -309,7 +310,7 @@ void main() {
           }
         }
         if (mode != FakeAdMode.succeed) {
-          await tap(g, t, const Offset(189, 311), fade: false);
+          await tap(g, t, const Offset(189, 423.5), fade: false);
         }
         expect(g.state, GameState.playing);
         expect(g.menu.slot.armed, Powerup.none);
@@ -330,7 +331,7 @@ void main() {
   e2e('QA no-ads owner slot starts immediately without an ad', (g, r, t) async {
     final offered = g.menu.slot.offered;
     expect(g.homeScreen!.slotButton.showsVideo, isFalse);
-    await tap(g, t, const Offset(189, 363));
+    await tap(g, t, const Offset(189, 476.5));
     expect(g.state, GameState.playing);
     expect(g.menu.slot.armed, Powerup.none);
     expect(r.ads.shown, 0);
@@ -348,7 +349,7 @@ void main() {
   for (final mode in FakeIapMode.values) {
     for (final (i, p) in IapProduct.values.take(4).indexed) {
       e2e('QA actual pack tap ${p.name}: ${mode.name}', (g, r, t) async {
-        await tap(g, t, const Offset(49, 502));
+        await tap(g, t, const Offset(49, 608));
         await tap(
           g,
           t,
@@ -389,7 +390,7 @@ void main() {
     r,
     t,
   ) async {
-    await tap(g, t, const Offset(49, 502));
+    await tap(g, t, const Offset(49, 608));
     for (var i = 1; i <= 5; i++) {
       await tap(g, t, const Offset(260, 228));
       expect(g.menu.wallet.balance, i * 40);
@@ -431,7 +432,7 @@ void main() {
     r,
     t,
   ) async {
-    await tap(g, t, const Offset(49, 502));
+    await tap(g, t, const Offset(49, 608));
     await tap(g, t, const Offset(260, 228));
     expect(
       r.ads.shown,
@@ -446,7 +447,7 @@ void main() {
     t,
   ) async {
     // PO 2026-10-05: the home tile buys straight away — no popup.
-    await tap(g, t, const Offset(271, 502));
+    await tap(g, t, const Offset(271, 608));
     expect(g.noAdsPopup, isNull);
     expect(r.spy.params('noads_popup_shown'), isEmpty);
     expect(r.spy.params('noads_purchase_tapped').single, {
@@ -460,7 +461,7 @@ void main() {
       'source': 'noads_bonus',
     });
     expect(g.homeScreen!.noAdsTile.owned, isTrue);
-    await tap(g, t, const Offset(49, 502));
+    await tap(g, t, const Offset(49, 608));
     expect(g.shopScreen!.banner.owned, isTrue);
     await tap(g, t, const Offset(160, 658));
     expect(toast(g), 'Purchases restored');
@@ -483,7 +484,7 @@ void main() {
     r,
     t,
   ) async {
-    await tap(g, t, const Offset(271, 502));
+    await tap(g, t, const Offset(271, 608));
     expect(r.spy.params('noads_purchase_tapped').single, {
       'source': 'home_tile',
     });
@@ -509,7 +510,7 @@ void main() {
     'QA skin shop try-on/buy/equip/NEW and shop featured/back stack real taps',
     (g, r, t) async {
       expect(g.menu.items.hasNewBadge, isTrue);
-      await tap(g, t, const Offset(123, 502));
+      await tap(g, t, const Offset(123, 608));
       final shop = g.skinShop!;
       expect(shop.tileFor('classic').current.equipped, isTrue);
       expect(shop.tileFor('sky').current.owned, isFalse);
@@ -545,7 +546,7 @@ void main() {
       expect(g.menuScene, MenuScene.home);
       // Untapped affordable items keep their NEW badge.
       expect(g.homeScreen!.skinsTile.tag, 'NEW');
-      await tap(g, t, const Offset(49, 502));
+      await tap(g, t, const Offset(49, 608));
       await tap(g, t, const Offset(160, 616));
       expect(g.menuScene, MenuScene.skins);
       expect(g.skinShop!.tryOnId, 'lemon');
@@ -560,7 +561,7 @@ void main() {
   );
 
   e2e('S1-03 item purchase auto-equip records item_equip', (g, r, t) async {
-    await tap(g, t, const Offset(123, 502));
+    await tap(g, t, const Offset(123, 608));
     await tap(g, t, const Offset(160, 378));
     await tap(g, t, g.skinShop!.actionButton.absoluteCenter.toOffset());
     expect(g.menu.items.look.bird, 'sky');
@@ -575,7 +576,7 @@ void main() {
     r,
     t,
   ) async {
-    await tap(g, t, const Offset(123, 502));
+    await tap(g, t, const Offset(123, 608));
     await tap(g, t, const Offset(160, 378));
     await tap(
       g,
@@ -677,7 +678,7 @@ void main() {
     FakeIapMode.cancel,
   ]) {
     e2e('QA shop banner no-ads purchase ${mode.name}', (g, r, t) async {
-      await tap(g, t, const Offset(49, 502));
+      await tap(g, t, const Offset(49, 608));
       await tap(g, t, const Offset(160, 172));
       // PO 2026-10-05: the banner buys straight away — no popup.
       expect(g.noAdsPopup, isNull);
@@ -774,7 +775,7 @@ void main() {
     r,
     t,
   ) async {
-    await tap(g, t, const Offset(189, 311), fade: false);
+    await tap(g, t, const Offset(189, 423.5), fade: false);
     g.onBirdHit();
     await settle(g, t, fade: true);
     stepGame(g, 1.5);
@@ -798,7 +799,7 @@ void main() {
       await settle(g, t);
       expect(g.homeScreen!.bird.look.bird, 'toucan');
       expect(g.homeScreen!.bird.look.hat, 'tophat');
-      await tap(g, t, const Offset(189, 311), fade: false);
+      await tap(g, t, const Offset(189, 423.5), fade: false);
       final bird = g.world.children.query<Bird>().single;
       expect(bird.look.bird, 'toucan');
       expect(bird.look.hat, 'tophat');
@@ -858,35 +859,39 @@ void main() {
       expect(home.gearButton.y, 58);
       expect(home.gearButton.x, 14);
       expect(home.shopTile.x, 14);
-      expect(home.leaderboard.x, 14);
-      expect(
-        home.bird.y + home.bird.height / 2,
-        closeTo(home.startButton.y + home.startButton.height / 2, 0.001),
-      );
-      expect(
-        (home.bird.x + home.startButton.x + home.startButton.width) / 2,
-        160,
-      );
+      // PRD-home-v3 §3.1: trophy in the top row, BEST / LAST on the
+      // margins, START / slot / emblem on the centre line.
+      expect(home.trophyButton.x, 60);
+      expect(home.trophyButton.y, 58);
+      expect(home.bestStat.x, 14);
+      expect(home.lastStat.x + home.lastStat.width, 306);
+      expect(home.startButton.x + home.startButton.width / 2, 160);
+      expect(home.bird.x + home.bird.width / 2, closeTo(160, 1e-9));
       expect(
         home.slotButton.y + home.slotButton.height,
         lessThan(home.shopTile.y),
       );
       expect(
-        home.subtitle.last.y + home.subtitle.last.height,
-        lessThan(home.startButton.y),
+        home.subtitle.y + home.subtitle.height,
+        lessThan(
+          Config.homePlateCentreFor(height).dy -
+              90 * Config.homeEmblemScaleFor(height),
+        ),
       );
       expect(
-        home.leaderboard.y + home.leaderboard.height,
-        lessThan(height - 44),
+        Config.homeEmblemBottomFor(height),
+        lessThan(home.startButton.y),
       );
       for (final c in [
         home.coinPill,
         home.gearButton,
+        home.trophyButton,
         home.startButton,
         home.bird,
+        home.bestStat,
+        home.lastStat,
         home.slotButton,
         ...home.tiles,
-        home.leaderboard,
       ]) {
         expect(c.x, greaterThanOrEqualTo(0));
         expect(c.x + c.width, lessThanOrEqualTo(320));

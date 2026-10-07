@@ -9,13 +9,19 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
 
-/// Home screen geometry (PRD-1 §4.1 table + alignment rules, §4.2 vertical
-/// rule) at the 711 pt reference height and the 568 pt minimum.
+/// Home screen v3 geometry (PRD-home-v3 §3.1 table + alignment rules, the
+/// vertical rule) at the 711 pt reference height, 568, 640 and 730.
 Future<void> loadFonts() async {
   final opificio = FontLoader('Opificio Neue')
     ..addFont(rootBundle.load('assets/fonts/Opificio_neue-regular.ttf'));
   await opificio.load();
 }
+
+Matcher rectNear(Rect r) => isA<Rect>()
+    .having((x) => x.left, 'left', closeTo(r.left, 1e-3))
+    .having((x) => x.top, 'top', closeTo(r.top, 1e-3))
+    .having((x) => x.width, 'width', closeTo(r.width, 1e-3))
+    .having((x) => x.height, 'height', closeTo(r.height, 1e-3));
 
 Rect rectOf(PositionComponent c) {
   final topLeft = c.absolutePositionOfAnchor(Anchor.topLeft);
@@ -26,38 +32,67 @@ void main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
   await loadFonts();
 
-  test('Config reproduces the PRD-1 §4.1 table exactly at 711', () {
+  test('Config reproduces the PRD-home-v3 §3.1 table exactly at 711', () {
     const h = 711.0;
     // 2.0 DEVIATION (2026-10-04): gear top-left, pill top-right (the
     // pill position is its top-right corner).
     expect(Config.homeCoinPillPositionFor(h), Vector2(306, 58));
     expect(Config.homeGearRectFor(h), const Rect.fromLTWH(14, 58, 38, 38));
-    expect(Config.homeTitlePositionFor(h), Vector2(160, 128));
-    expect(Config.homeBirdRectFor(h), const Rect.fromLTWH(38, 293, 44, 36));
-    expect(Config.homeStartRectFor(h), const Rect.fromLTWH(96, 277, 186, 68));
-    expect(Config.homeSlotRectFor(h), const Rect.fromLTWH(96, 347, 186, 32));
+    expect(Config.homeTrophyRectFor(h), const Rect.fromLTWH(60, 58, 38, 38));
+    expect(Config.homeTitlePositionFor(h), Vector2(160, 104));
+    expect(Config.homeTitleFontSize, 34);
+    expect(Config.homeSubtitlePositionFor(h), Vector2(160, 142));
+    expect(Config.homeSubtitleFontSize, 13);
+    expect(Config.homeStageRectFor(h), const Rect.fromLTWH(28, 148, 264, 204));
+    final plate = Config.homePlateCentreFor(h);
+    expect(plate.dx, 160);
+    expect(plate.dy, closeTo(254, 0.1));
+    expect(Config.homeEmblemScaleFor(h), 0.936);
+    expect(Config.homeBirdScaleFor(h), 1.32);
+    expect(Config.homeStartRectFor(h), const Rect.fromLTWH(52, 390, 216, 67));
+    expect(Config.homeSlotRectFor(h), const Rect.fromLTWH(52, 461, 216, 31));
+    expect(Config.homeStartFontSize, 34);
+    final best = Config.homeFlankRectFor(h, right: false);
+    final last = Config.homeFlankRectFor(h, right: true);
+    expect(best.left, 14);
+    expect(best.width, 70);
+    expect(best.top, closeTo(230, 0.1));
+    expect(last.right, 306);
     for (var i = 0; i < 4; i++) {
       expect(
         Config.homeTileRectFor(h, i),
-        Rect.fromLTWH(14 + 74.0 * i, 456, 70, 92),
+        Rect.fromLTWH(14 + 74.0 * i, 562, 70, 92),
       );
     }
     expect(Config.homeTileRectFor(h, 3).right, 306);
-    expect(
-      Config.homeLeaderboardRectFor(h),
-      const Rect.fromLTWH(14, 574, 292, 70),
-    );
-    expect(Config.homeTrophyRectFor(h), const Rect.fromLTWH(14, 574, 70, 70));
+    // START + slot centred between the emblem bottom (≈ 320) and the
+    // tiles: ≈ 70 pt above and below.
+    final above = 390 - Config.homeEmblemBottomFor(h);
+    final below = 562 - Config.homeSlotRectFor(h).bottom;
+    expect(above, closeTo(70, 0.5));
+    expect(below, closeTo(70, 0.5));
   });
 
-  test('vertical rule: top pinned, bottom rows pinned to the bottom edge', () {
+  test('vertical rule: top pinned, tiles bottom-anchored, START centred', () {
     for (final h in [711.0, 730.0]) {
-      // Above 711 the bottom rows keep their 711 distance to the bottom.
-      expect(Config.homeLeaderboardRectFor(h).bottom, h - 67);
-      expect(Config.homeTileRowTopFor(h), h - 255);
-      expect(Config.homeTitlePositionFor(h).y, 128);
+      expect(Config.homeTileRowTopFor(h), h - 149);
+      expect(Config.homeTitlePositionFor(h).y, 104);
+      expect(Config.homeStageScaleFor(h), 1);
     }
-    // 568 compresses, 711..568 is monotonic.
+    // Short screens: the emblem shrinks to at least 0.78 / 1.1.
+    expect(Config.homeEmblemScaleFor(568), closeTo(0.78, 1e-9));
+    expect(Config.homeBirdScaleFor(568), closeTo(1.1, 1e-9));
+    for (var h = 568.0; h <= 730; h += 2) {
+      final k = Config.homeStageScaleFor(h);
+      expect(k, inInclusiveRange(Config.homeStageMinScale, 1));
+      final start = Config.homeStartRectFor(h);
+      final slot = Config.homeSlotRectFor(h);
+      final above = start.top - Config.homeEmblemBottomFor(h);
+      final below = Config.homeTileRowTopFor(h) - slot.bottom;
+      expect((above - below).abs(), lessThanOrEqualTo(1.01), reason: '$h');
+      expect(above, greaterThan(8), reason: '$h');
+    }
+    // 711..568 is monotonic.
     var lastStart = double.infinity;
     for (var h = 711.0; h >= 568; h -= 11) {
       final start = Config.homeStartTopFor(h);
@@ -66,15 +101,21 @@ void main() async {
     }
   });
 
-  for (final height in [711.0, 568.0]) {
+  for (final height in [568.0, 640.0, 711.0, 730.0]) {
     FlameTester<FlappySpikesGame>(
       () => createTestGame(
-        const {'coins': 1250, 'bestScore': 12, 'gamesPlayed': 34},
+        const {
+          'coins': 1250,
+          'bestScore': 640,
+          'lastScore': 12,
+          'gamesPlayed': 34,
+          'claimedLevels': ['1', '2', '3', '4', '5', '6'],
+        },
         height,
       ),
       gameSize: Vector2(320, height),
     ).testGameWidget(
-      'home layout at ${height.toInt()}',
+      'home v3 layout at ${height.toInt()}',
       setUp: (game, tester) async {
         await game.ready();
         await preloadImages(game);
@@ -88,89 +129,124 @@ void main() async {
         // Every element sits at its Config rect.
         final pill = rectOf(home.coinPill);
         final gear = rectOf(home.gearButton);
-        final bird = rectOf(home.bird);
+        final trophy = rectOf(home.trophyButton);
+        final stage = rectOf(home.bird);
+        final best = rectOf(home.bestStat);
+        final last = rectOf(home.lastStat);
         final start = rectOf(home.startButton);
         final slot = rectOf(home.slotButton);
         final tiles = home.tiles.map(rectOf).toList();
-        final board = rectOf(home.leaderboard);
-        final trophy = Config.homeTrophyRectFor(h);
         expect(pill.topRight, const Offset(306, 58));
         expect(pill.height, 38);
-        expect(gear, Config.homeGearRectFor(h));
-        expect(bird, Config.homeBirdRectFor(h));
-        expect(start, Config.homeStartRectFor(h));
-        expect(slot, Config.homeSlotRectFor(h));
+        expect(gear, rectNear(Config.homeGearRectFor(h)));
+        expect(trophy, rectNear(Config.homeTrophyRectFor(h)));
+        expect(stage, rectNear(Config.homeStageRectFor(h)));
+        expect(best, rectNear(Config.homeFlankRectFor(h, right: false)));
+        expect(last, rectNear(Config.homeFlankRectFor(h, right: true)));
+        expect(start, rectNear(Config.homeStartRectFor(h)));
+        expect(slot, rectNear(Config.homeSlotRectFor(h)));
         for (var i = 0; i < 4; i++) {
-          expect(tiles[i], Config.homeTileRectFor(h, i));
+          expect(tiles[i], rectNear(Config.homeTileRectFor(h, i)));
         }
-        expect(board, Config.homeLeaderboardRectFor(h));
+        final plate = Config.homePlateCentreFor(h);
+        expect(home.emblem.position.x, closeTo(plate.dx, 1e-3));
+        expect(home.emblem.position.y, closeTo(plate.dy, 1e-3));
+        expect(home.emblem.artScale, closeTo(Config.homeEmblemScaleFor(h), 1e-9));
+        expect(home.emblem.level, 6);
 
-        // Coin pill: 145 x 38 for "1 250" (the mock's width), grows with
-        // the number of digits.
+        // Coin pill: 145 x 38 for "1 250", grows with the digits.
         expect(home.coinPill.label.text, '1 250');
         expect(pill.width, closeTo(145, 1.5));
 
-        // Title + subtitle: centred, 42 pt / 19 pt, tops 128 / 178.
+        // Title + subtitle: centred, 34 pt / 13 pt one line, tops 104 / 142.
         final title = rectOf(home.title);
-        expect(title.top, 128);
+        expect(title.top, 104);
         expect(title.center.dx, closeTo(160, 1e-9));
-        expect(title.height, closeTo(42, 1e-6), reason: 'line-height 1');
-        final subtitle = home.subtitle.map(rectOf).toList();
-        expect(subtitle.first.top, 178);
-        expect(subtitle.last.bottom, closeTo(178 + 2 * 19 * 0.9, 0.25));
+        expect(title.height, closeTo(34, 1e-6), reason: 'line-height 1');
+        final subtitle = rectOf(home.subtitle);
+        expect(subtitle.top, 142);
+        expect(subtitle.center.dx, closeTo(160, 1e-9));
+        expect(home.subtitle.text, 'DON’T TOUCH THE SPIKES');
 
-        // --- Alignment rules (PRD-1 §4.1 as revised by the 2.0 DEVIATION of
-        // 2026-10-04: gear top-left, pill top-right) -------------------------
-        // Pill and gear share the 58..96 band.
-        expect(pill.top, gear.top);
-        expect(pill.bottom, gear.bottom);
-        expect(gear.top, 58);
-        expect(gear.bottom, 96);
-        // Left edges 14: gear, shop tile, trophy tile.
+        // BEST / LAST: label + number, BEST gold, LAST the stage fg.
+        expect(home.bestStat.value, '640');
+        expect(home.lastStat.value, '12');
+        expect(home.bestStat.numberText.color, Config.menuGold);
+        expect(home.lastStat.numberText.color, game.foregroundColor);
+
+        // --- Alignment rules (§3.1 GUIDES) -----------------------------------
+        // Top row band 58..96.
+        for (final r in [pill, gear, trophy]) {
+          expect(r.top, 58);
+          expect(r.bottom, 96);
+        }
+        // Left margin 14: gear, BEST, Shop tile.
         expect(gear.left, 14);
+        expect(best.left, 14);
         expect(tiles.first.left, 14);
-        expect(trophy.left, 14);
-        expect(board.left, 14);
-        // Right edges 306: pill, no-ads tile.
+        // Right margin 306: pill, LAST, No-ads tile.
         expect(pill.right, 306);
+        expect(last.right, 306);
         expect(tiles.last.right, 306);
-        // START centre y == bird centre y.
-        expect(start.center.dy, bird.center.dy);
-        // Start block (bird + START/slot) centred on x = 160.
-        expect((bird.left + start.right) / 2, 160);
+        // LAST's number is right-aligned on 306, BEST's left on 14.
+        final lastNumber = rectOf(home.lastStat.numberText);
+        expect(lastNumber.right, closeTo(306, 1e-3));
+        expect(rectOf(home.bestStat.numberText).left, closeTo(14, 1e-3));
+        // Centre line x 160: title, subtitle, emblem + bird, START, slot.
+        expect(stage.center.dx, closeTo(160, 1e-3));
+        expect(start.center.dx, 160);
+        expect(slot.center.dx, 160);
         expect(slot.left, start.left);
         expect(slot.right, start.right);
+        // BEST / LAST centred vertically on the plate centre.
+        expect(best.center.dy, closeTo(plate.dy, 1e-3));
+        expect(last.center.dy, closeTo(plate.dy, 1e-3));
         // 4 tiles of 70 x 92 with 4 pt gaps.
         for (var i = 1; i < 4; i++) {
           expect(tiles[i].left - tiles[i - 1].right, 4);
         }
-
-        // Start block centred between the subtitle band and the tile row.
-        final above = start.top - Config.homeStartBandTopFor(h);
+        // START block centred between the emblem bottom and the tiles.
+        final above = start.top - Config.homeEmblemBottomFor(h);
         final below = tiles.first.top - slot.bottom;
-        expect(above, closeTo(below, 1e-9));
+        expect((above - below).abs(), lessThanOrEqualTo(1.01));
 
         // --- no overlaps, everything between the (menu) spike strips -------
-        final outlinedSlot = slot.inflate(Config.homeSlotOutline);
+        // The emblem's ink: wings ±100, LEGEND's gem / flags up to ≈ -85 art
+        // units (its faint rays reach further).
+        final emblemInk = Rect.fromLTRB(
+          plate.dx - 100 * Config.homeEmblemScaleFor(h),
+          plate.dy - 90 * Config.homeEmblemScaleFor(h),
+          plate.dx + 100 * Config.homeEmblemScaleFor(h),
+          Config.homeEmblemBottomFor(h),
+        );
         final named = <String, Rect>{
           'pill': pill,
           'gear': gear,
+          'trophy': trophy,
           'title': title,
-          'subtitle': subtitle.first.expandToInclude(subtitle.last),
-          'bird': bird,
+          'subtitle': subtitle,
+          'emblem': emblemInk,
+          'best': best,
+          'last': last,
           'start': start,
-          'slot': slot,
+          'slot': slot.inflate(Config.homeSlotOutline),
           for (var i = 0; i < 4; i++) 'tile$i': tiles[i],
-          'leaderboard': board,
+        };
+        const allowed = {
+          // The flank columns sit beside the plate, under the wing tips.
+          {'emblem', 'best'},
+          {'emblem', 'last'},
+          // Attached by design (4 pt gap, the slot's 3 pt outline).
+          {'start', 'slot'},
         };
         final keys = named.keys.toList();
         for (var i = 0; i < keys.length; i++) {
           for (var j = i + 1; j < keys.length; j++) {
+            if (allowed.any((p) => p.containsAll([keys[i], keys[j]]))) {
+              continue;
+            }
             final a = named[keys[i]]!;
             final b = named[keys[j]]!;
-            if ({keys[i], keys[j]}.containsAll(['start', 'slot'])) {
-              continue; // attached by design (2 pt gap under the outline)
-            }
             final overlap = a.intersect(b);
             expect(
               overlap.width <= 0 || overlap.height <= 0,
@@ -180,9 +256,6 @@ void main() async {
           }
         }
         expect(start.bottom, lessThan(slot.top));
-        expect(outlinedSlot.bottom, lessThan(tiles.first.top));
-        // The subtitle ink ends ~10 pt above its band top; keep clear of it.
-        expect(start.top, greaterThan(subtitle.last.bottom));
 
         const stripTip = Config.spikeHeight - Config.menuSpikeInset; // 44
         for (final entry in named.entries) {
@@ -196,15 +269,82 @@ void main() async {
 
         // The 711 reference reproduces the PRD table.
         if (h == 711) {
-          expect(start, const Rect.fromLTWH(96, 277, 186, 68));
-          expect(bird, const Rect.fromLTWH(38, 293, 44, 36));
-          expect(slot, const Rect.fromLTWH(96, 347, 186, 32));
-          expect(tiles.first.top, 456);
-          expect(board.top, 574);
+          expect(start, rectNear(const Rect.fromLTWH(52, 390, 216, 67)));
+          expect(slot, rectNear(const Rect.fromLTWH(52, 461, 216, 31)));
+          expect(stage, rectNear(const Rect.fromLTWH(28, 148, 264, 204)));
+          expect(tiles.first.top, 562);
         }
       },
     );
   }
+
+  // §3.1 unranked: grey dashed frame, LAST "—" before the first run.
+  FlameTester<FlappySpikesGame>(
+    () => createTestGame(const {'bestScore': 7}, 711),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'unranked home: dashed frame (level 0), BEST 0-9, LAST — before a run',
+    setUp: (game, tester) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, tester) async {
+      final home = game.homeScreen!;
+      expect(home.emblem.level, 0);
+      expect(home.bestStat.value, '7');
+      expect(home.lastStat.value, '—');
+      expect(game.levelUpPopup, isNull);
+      // A run sets LAST.
+      await game.storage.saveLastScore(3);
+      game.update(0);
+      expect(home.lastStat.value, '3');
+    },
+  );
+
+  // §3.1: 4+ digit numbers shrink to fit the column (clear of LEGEND's
+  // wings); 3 digits keep 30 pt.
+  FlameTester<FlappySpikesGame>(
+    () => createTestGame(
+      {
+        'bestScore': 6000,
+        'lastScore': 12345,
+        'claimedLevels': [for (var l = 1; l <= 10; l++) '$l'],
+      },
+      711,
+    ),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'BEST / LAST numbers shrink for 4+ digits',
+    setUp: (game, tester) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, tester) async {
+      final home = game.homeScreen!;
+      expect(home.emblem.level, 10);
+      for (final stat in [home.bestStat, home.lastStat]) {
+        final number = rectOf(stat.numberText);
+        final shown = stat.numberText.width * stat.numberText.scale.x;
+        expect(stat.numberText.scale.x, lessThan(1));
+        expect(shown, closeTo(Config.homeFlankNumberMaxWidth, 1e-6));
+        expect(number.left, greaterThanOrEqualTo(14 - 1e-6));
+        expect(number.left + shown, lessThanOrEqualTo(306 + 1e-6));
+      }
+      expect(home.bestStat.value, '6 000');
+      expect(home.lastStat.value, '12 345');
+      // LEGEND's wing tips: x 80 / 240 at the home scale.
+      final best = home.bestStat.numberText;
+      expect(best.x + best.width * best.scale.x + 14, lessThanOrEqualTo(80));
+      final last = home.lastStat;
+      expect(last.x + last.numberText.x, greaterThanOrEqualTo(240));
+
+      await game.storage.saveLastScore(999);
+      game.update(0);
+      expect(home.lastStat.numberText.scale.x, 1);
+    },
+  );
 
   FlameTester<FlappySpikesGame>(
     () => createTestGame(const {'coins': 1234567}, 711),

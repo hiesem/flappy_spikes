@@ -20,6 +20,7 @@ import 'menu_screenshot_test.dart' show captureShot, loadFonts;
 const Map<String, Object> skinShopMockPrefs = {
   'bestScore': 12,
   'gamesPlayed': 34,
+  'claimedLevels': ['1'], // no LEVEL UP popup over the captures
   'coins': 3250,
   'ownedItems': [
     'bird:sky',

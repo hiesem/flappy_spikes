@@ -1,3 +1,4 @@
+import 'package:flame/components.dart' show Anchor;
 import 'package:flame_forge2d/flame_forge2d.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
@@ -111,27 +112,29 @@ void main() {
   );
 
   withGame.testGameWidget(
-    'the home bird keeps the 1.0 rect size and centre, at stage 0',
+    'the home bird stands on the emblem plate centre at scale 1.32, stage 0',
     setUp: (game, tester) async {
       await game.ready();
       await preloadImages(game);
       await flushAndMount(game);
     },
     verify: (game, tester) async {
-      final rect = Config.homeBirdRectFor(game.viewHeight);
+      final plate = Config.homePlateCentreFor(game.viewHeight);
       final home = game.homeScreen!.bird;
       game.update(0);
       expect(home.look.bird, 'classic');
-      // The body keeps the legacy home-bird size (the 46.5 pt sprite canvas
-      // scaled to the rect width) and sits on the rect centre.
-      final expectedScale = Config.lookScale * rect.width / Config.birdSize.x;
-      expect(home.lookComponent.artScale, closeTo(expectedScale, 1e-3));
-      expect(home.lookComponent.artScale * 30, closeTo(27.91, 0.05));
-      final centre = home.lookComponent.absolutePositionOfAnchor(
-        LookComponent.bodyAnchor,
+      // PRD-home-v3 §3.1: bird scale 1.32 (1.1 on the shortest screens),
+      // its art-box centre on the plate centre.
+      expect(
+        home.lookComponent.artScale,
+        closeTo(Config.homeBirdScaleFor(game.viewHeight), 1e-6),
       );
-      expect(centre.x, closeTo(rect.center.dx, 1e-3));
-      expect(centre.y, closeTo(rect.center.dy, 1e-3));
+      final centre = home.lookComponent.absolutePositionOfAnchor(
+        Anchor.center,
+      );
+      // At rest the idle bob moves it at most a few points.
+      expect(centre.x, closeTo(plate.dx, 8));
+      expect(centre.y, closeTo(plate.dy, 4));
       // Menus always render at colour stage 0: identity colours.
       expect(home.lookComponent.blend, 0);
 

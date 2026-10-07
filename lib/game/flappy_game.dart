@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math';
-import 'dart:ui' show Color, Paint, PlatformDispatcher, Rect;
+import 'dart:ui' show Color, Paint, PlatformDispatcher;
 
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
@@ -27,6 +27,7 @@ import '../components/skins/skin_shop_screen.dart';
 import '../components/spike_strip.dart';
 import '../components/tap_catcher.dart';
 import '../components/ui/coin_fly.dart';
+import '../components/ui/coin_reward.dart';
 import '../components/ui/service_message.dart';
 import '../menu/free_coins_policy.dart';
 import '../menu/menu_state.dart';
@@ -734,46 +735,37 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     showToast('+${FreeCoinsPolicy.reward} coins');
     final chip = _shop?.freeCoins.chipRect;
     if (chip != null) {
-      playCoinReward(from: chip);
+      playCoinReward(CoinRewardAnimation.freeCoins(from: chip));
     } else {
       _coinPill.releaseHold();
     }
   }
 
-  /// The standard "coins added" feedback (PRD-menu-v2 §8.3, Q-S9): coins
-  /// fly from [from] (a button, world coordinates) into the coin pill;
-  /// when the last one lands the pill counts up to the wallet balance in
-  /// 0.4 s with `bn_coin`, its coin pops to 135 % and `sk_progress` follows.
-  /// The caller [CoinPill.hold]s the pill before crediting the wallet so
-  /// the number waits for the coins.
-  void playCoinReward({required Rect from}) {
-    final fly = CoinFly(
+  /// The standard "coins added" feedback (PRD-home-v3 §5, Q-S9): starts
+  /// [reward] (a [CoinRewardAnimation] preset) into the shared coin pill,
+  /// which it holds until the coins land — credit the wallet before or
+  /// after this call, the number waits either way. Returns [reward].
+  CoinRewardAnimation playCoinReward(CoinRewardAnimation reward) {
+    reward.random ??= coinFlyRandom;
+    reward.prepare(
+      pill: _coinPill,
       coin: Sprite(images.fromCache('menu/coin.png')),
-      from: from,
-      to: _coinPill.coinFlyTarget,
-      random: coinFlyRandom,
-      onDone: () {
-        sound.play(Sfx.bnCoin);
-        _coinPill
-          ..balance = menu.wallet.balance
-          ..releaseHold(duration: Config.coinRewardCountDuration, linear: true)
-          ..popCoin();
-        world.add(
-          TimerComponent(
-            period: Config.coinRewardProgressDelay,
-            removeOnFinish: true,
-            onTick: () => sound.play(Sfx.skProgress),
-          ),
-        );
-      },
     );
-    _coinFly = fly;
-    world.add(fly);
+    _coinReward = reward;
+    world.add(reward);
+    return reward;
   }
 
+  /// The coin reward while it runs (tests; null once it finished).
+  CoinRewardAnimation? get coinReward =>
+      _coinReward != null && !_coinReward!.finished ? _coinReward : null;
+  CoinRewardAnimation? _coinReward;
+
   /// The coin-fly animation while it runs (tests).
-  CoinFly? get coinFly => _coinFly != null && !_coinFly!.done ? _coinFly : null;
-  CoinFly? _coinFly;
+  CoinFly? get coinFly {
+    final fly = _coinReward?.fly;
+    return fly != null && !fly.done ? fly : null;
+  }
 
   /// Seeds the coin-fly drift (tests); null = random.
   Random? coinFlyRandom;

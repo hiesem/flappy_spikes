@@ -603,6 +603,33 @@ class Config {
   static const double coinPopScale = 1.35;
   static const double coinPopDuration = 0.3;
 
+  // --- Coin reward celebration (PRD-home-v3 §5, build73 / 74 / 79) -------
+  /// Each landing pops the pill coin to 125 % (0.18 s).
+  static const double coinRewardLandPopScale = 1.25;
+  static const double coinRewardLandPopDuration = 0.18;
+
+  /// End of the count: the pill pops 114 % (0.38 s, ease-out) and its coin
+  /// spins and pops 150 % / -20° (0.42 s).
+  static const double coinRewardPillPopScale = 1.14;
+  static const double coinRewardPillPopDuration = 0.38;
+  static const double coinRewardSpinPopScale = 1.5;
+  static const double coinRewardSpinPopDuration = 0.42;
+  static const double coinRewardSpinPopDegrees = -20;
+
+  /// Pill gold glow fade (CSS `transition: box-shadow .25s`).
+  static const double coinRewardGlowFade = 0.25;
+
+  /// "+amount" under the pill: gold 26 pt, right edge 8 pt inside the
+  /// pill's, top 8 pt below it (mock right 22 / top 104), 1.5 s.
+  static const double coinRewardLabelFontSize = 26;
+  static const double coinRewardLabelInset = 8;
+  static const double coinRewardLabelGap = 8;
+  static const double coinRewardLabelDuration = 1.5;
+
+  /// The 12 000 pack's white flash: 75 % -> 0 in 0.5 s.
+  static const double coinRewardFlashOpacity = 0.75;
+  static const double coinRewardFlashDuration = 0.5;
+
   /// The Shop's GET button (was WATCH): 112 x 32, camera 20 + "GET" 20 pt
   /// bold (0.9 pt stroke), 0.12 em, gap 9; pulse 1 -> 1.05 with a pink glow
   /// (12 pt blur, #EC008C 45 %).

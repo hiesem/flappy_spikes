@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame/events.dart';
+import 'package:flutter/animation.dart' show Curves;
 
 import '../../game/sound.dart';
 
@@ -336,7 +337,9 @@ class CoinPill extends MenuButton
          color: Config.menuPink,
          size: Vector2(0, pillHeight),
          position: topRight.clone(),
-       );
+       ) {
+    decorator.addLast(_pillPop = WiggleEffect(this));
+  }
 
   static const double pillHeight = Config.homeTopRowHeight;
   static const double plusGap = 9; // "+" box -> text
@@ -384,10 +387,46 @@ class CoinPill extends MenuButton
   }
 
   double _popT = -1;
+  double _popScale = Config.coinPopScale;
+  double _popDuration = Config.coinPopDuration;
+  double _popDegrees = 0;
   late final WiggleEffect _coinPop;
 
-  /// The pill coin pops to 135 % and back (a reward landing).
-  void popCoin() => _popT = 0;
+  /// The pill coin pops to [scale] and back over [duration] s, turning to
+  /// [degrees] at the peak (default: the GET landing, 135 % in 0.3 s; the
+  /// PRD-home-v3 §5 landings 125 % / 0.18 s, the end spin-pop 150 % /
+  /// -20° / 0.42 s).
+  void popCoin({
+    double scale = Config.coinPopScale,
+    double duration = Config.coinPopDuration,
+    double degrees = 0,
+  }) {
+    _popT = 0;
+    _popScale = scale;
+    _popDuration = duration;
+    _popDegrees = degrees;
+  }
+
+  late final WiggleEffect _pillPop;
+  double _pillPopT = -1;
+
+  /// §5 end of a count-up: the whole pill pops to 114 % and back in
+  /// 0.38 s (ease-out).
+  void popPill() => _pillPopT = 0;
+
+  /// Current scale of the whole pill (tests).
+  double get pillScale => _pillPop.scale;
+
+  /// §5 count-up: the pill glows gold (`0 0 16px 4px` gold 75 %, fades in
+  /// / out in 0.25 s) and its number turns gold (0.2 s).
+  bool glow = false;
+  double _glowK = 0;
+
+  /// Glow strength 0..1 right now (tests).
+  double get glowLevel => _glowK;
+
+  final Paint _glowPaint = Paint()
+    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
 
   /// Current scale of the pill coin (tests).
   double get coinScale => _coinPop.scale;
@@ -502,16 +541,51 @@ class CoinPill extends MenuButton
       ..angle = g.degrees * math.pi / 180;
     if (_popT >= 0) {
       _popT += dt;
-      const d = Config.coinPopDuration;
+      final d = _popDuration;
       if (_popT >= d) {
         _popT = -1;
-        _coinPop.scale = 1;
+        _coinPop.rest();
       } else {
         final u = _popT / d;
         final k = u < .5 ? u * 2 : (1 - u) * 2;
-        _coinPop.scale = 1 + (Config.coinPopScale - 1) * k;
+        _coinPop
+          ..scale = 1 + (_popScale - 1) * k
+          ..angle = _popDegrees * k * math.pi / 180;
       }
     }
+    if (_pillPopT >= 0) {
+      _pillPopT += dt;
+      const d = Config.coinRewardPillPopDuration;
+      if (_pillPopT >= d) {
+        _pillPopT = -1;
+        _pillPop.scale = 1;
+      } else {
+        final u = Curves.easeOut.transform(_pillPopT / d);
+        final k = u < .5 ? u * 2 : (1 - u) * 2;
+        _pillPop.scale = 1 + (Config.coinRewardPillPopScale - 1) * k;
+      }
+    }
+    final glowTarget = glow ? 1.0 : 0.0;
+    if (_glowK != glowTarget) {
+      final step = dt / Config.coinRewardGlowFade;
+      _glowK = _glowK < glowTarget
+          ? math.min(glowTarget, _glowK + step)
+          : math.max(glowTarget, _glowK - step);
+      label.color = Color.lerp(
+        Config.menuSoft,
+        Config.menuGold,
+        (_glowK * 1.25).clamp(0.0, 1.0), // number: 0.2 s of the 0.25 s
+      )!;
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (_glowK > 0) {
+      _glowPaint.color = Config.menuGold.withValues(alpha: .75 * _glowK);
+      canvas.drawRect(size.toRect().inflate(4), _glowPaint);
+    }
+    super.render(canvas);
   }
 
   @override

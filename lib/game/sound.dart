@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 /// Sound effects used by the game (files live in assets/audio/).
 ///
 /// The first four are the 1.0 gameplay sounds; the `sk*` / `bn*` entries are
-/// the PRD-menu-v2 menu sounds (`design/menu_v2/sfx/`).
+/// the PRD-menu-v2 / PRD-home-v3 menu sounds (`design/menu_v2/sfx/`).
 enum Sfx {
   flap,
   point,
@@ -27,6 +27,9 @@ enum Sfx {
   skDialog,
   bnAdBtn,
   bnCoin,
+  skTick,
+  noadsUnlock,
+  noadsStamp,
 }
 
 class SoundService {
@@ -52,6 +55,9 @@ class SoundService {
     Sfx.skDialog: 'sk_dialog.mp3',
     Sfx.bnAdBtn: 'bn_adbtn.mp3',
     Sfx.bnCoin: 'bn_coin.mp3',
+    Sfx.skTick: 'sk_tick.mp3',
+    Sfx.noadsUnlock: 'noads_unlock.mp3',
+    Sfx.noadsStamp: 'noads_stamp.mp3',
   };
 
   /// The bundled file for every [Sfx] (asserted by the asset test).
@@ -65,6 +71,12 @@ class SoundService {
     Sfx.gameover,
     Sfx.click,
   };
+
+  /// The coin-reward count-up (PRD-home-v3 §5) fires these in bursts: up
+  /// to 16 `bn_coin` landings 55 ms apart and up to 24 `sk_tick`s, so
+  /// their pools keep more warm players (a pool that runs dry creates a
+  /// fresh player mid-animation).
+  static const Set<Sfx> _burstPool = {Sfx.bnCoin, Sfx.skTick};
 
   static const String _musicFile = 'HappyBeat_8-Bit_Retro_Game_Loop.mp3';
 
@@ -161,13 +173,14 @@ class SoundService {
     for (final entry in _files.entries) {
       try {
         final legacy = _legacyPool.contains(entry.key);
+        final burst = _burstPool.contains(entry.key);
         final pool =
             await (poolFactory?.call(entry.value, legacy) ??
                 AudioPool.create(
                   source: AssetSource(entry.value),
                   audioCache: FlameAudio.audioCache,
-                  minPlayers: legacy ? 2 : 1,
-                  maxPlayers: legacy ? 4 : 2,
+                  minPlayers: burst ? 3 : (legacy ? 2 : 1),
+                  maxPlayers: burst ? 6 : (legacy ? 4 : 2),
                   playerMode: PlayerMode.lowLatency,
                   audioContext: AudioContextConfig(
                     focus: AudioContextConfigFocus.mixWithOthers,

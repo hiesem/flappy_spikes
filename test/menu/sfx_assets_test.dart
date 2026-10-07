@@ -34,5 +34,9 @@ void main() {
     expect(SoundService.audioFiles[Sfx.skDialog], 'sk_dialog.mp3');
     expect(SoundService.audioFiles[Sfx.bnAdBtn], 'bn_adbtn.mp3');
     expect(SoundService.audioFiles[Sfx.bnCoin], 'bn_coin.mp3');
+    // PRD-home-v3 §5 / §7.
+    expect(SoundService.audioFiles[Sfx.skTick], 'sk_tick.mp3');
+    expect(SoundService.audioFiles[Sfx.noadsUnlock], 'noads_unlock.mp3');
+    expect(SoundService.audioFiles[Sfx.noadsStamp], 'noads_stamp.mp3');
   });
 }

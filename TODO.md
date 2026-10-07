@@ -357,6 +357,15 @@ Branch off `feat/skin-shop`, local commits only (not pushed). Opus/DeepSeek buil
 - [ ] Device check on the Pixel 8 (vibration feel, 568-pt layout Q-H3, emblem performance)
 - [ ] Open: Q-H1 LEVEL UP timing (interim: on return home), Q-H2 thresholds vs 1.0 scoring
 
+## Phase 20 — skin shop v2 tweaks (branch `feat/skin-shop-v2`, off `feat/home-v3`)
+
+- [x] WP-J1 — momentum scrolling + rubber-band bounce in every menu list (MenuScrollArea), stop-tap inside the list
+      never selects; taps outside the list still act (native behaviour, orchestrator decision)
+- [x] WP-J2 — tap-twice buy on skin tiles (1st tap try-on + BUY pill, 2nd tap buys; top-right BUY kept);
+      bird #16 redesigned as "Rubber duck" (own shape, `bl` back anchor for the wind-up key)
+- [x] Sol QA round 1 (S1-50, S1-51, S2-50, S2-51) + fixes (6 pt drag slop, fps-independent fling, preview fits tall hats)
+- [x] Sol QA round 2 (S1-52, S2-52) + fixes (fallback velocity in world points, exact fling→spring handover)
+
 ## Final gate (1.0)
 - [x] `flutter analyze` clean
 - [x] `flutter test` 103/103 green

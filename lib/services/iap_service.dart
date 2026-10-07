@@ -58,10 +58,33 @@ enum IapStatus { pending, purchased, restored, failed, canceled }
 /// A purchase update. Granting coins / No ads on [IapStatus.purchased] and
 /// [IapStatus.restored] is the listener's job, not this layer's.
 class IapEvent {
-  const IapEvent(this.product, this.status, [this.message, this.code]);
+  const IapEvent(this.product, this.status, [this.message, this.code])
+    : transactionIds = const [],
+      granted = null;
+
+  /// A store purchase update carrying the transaction identity.
+  const IapEvent.store(
+    this.product,
+    this.status, {
+    this.transactionIds = const [],
+    this.granted,
+  }) : message = null,
+       code = null;
 
   final IapProduct product;
   final IapStatus status;
+
+  /// S1-71: the store identity of this transaction (purchaseID, and on
+  /// Google Play also the purchase token; empty when the store gave none).
+  /// A `purchased` coin pack whose id was granted before is a re-delivery
+  /// of the same paid transaction and must not grant again.
+  final List<String> transactionIds;
+
+  /// Completed by the listener once the event was handled (coins granted
+  /// and the transaction id persisted). [StoreIapService] waits for it
+  /// (bounded) before it completes / consumes the purchase with the store:
+  /// grant first, then acknowledge.
+  final Completer<void>? granted;
 
   /// For [IapStatus.failed]: a short player-facing reason ("Product not
   /// found", "Item unavailable", ...), shown as `Purchase failed: <reason>`.
@@ -266,6 +289,22 @@ void iapLog(String message) {
   print('[IAP] $message');
 }
 
+/// The store identity of [purchase] (S1-71): its purchaseID (Play order id /
+/// StoreKit transaction id) and, on Google Play, the purchase token. iOS
+/// tokens are the whole app receipt (shared by every transaction), so they
+/// are never used as an id.
+@visibleForTesting
+List<String> transactionIdsOf(PurchaseDetails purchase) {
+  final ids = <String>[];
+  final id = purchase.purchaseID;
+  if (id != null && id.isNotEmpty) ids.add('id:$id');
+  final data = purchase.verificationData;
+  if (data.source == 'google_play' && data.serverVerificationData.isNotEmpty) {
+    ids.add('token:${data.serverVerificationData}');
+  }
+  return ids;
+}
+
 /// Short player-facing reason (shown as `Purchase failed: <reason>`) plus
 /// a machine code for analytics, derived from a store error.
 @visibleForTesting
@@ -339,7 +378,12 @@ class StoreIapService implements IapService {
     IapStore? store,
     this.queryTimeout = const Duration(seconds: 5),
     this.launchErrorGrace = const Duration(seconds: 2),
+    this.grantTimeout = const Duration(seconds: 5),
   }) : _store = store ?? PluginIapStore();
+
+  /// Upper bound for waiting on [IapEvent.granted] before the purchase is
+  /// completed with the store anyway.
+  final Duration grantTimeout;
 
   final IapStore _store;
 
@@ -508,6 +552,27 @@ class StoreIapService implements IapService {
                 ? (reason: 'Store error', code: 'unknown')
                 : iapFailureFrom(error),
           );
+        } else if (status == IapStatus.purchased ||
+            status == IapStatus.restored) {
+          final granted = Completer<void>();
+          final hasListener = _events.hasListener;
+          _events.add(
+            IapEvent.store(
+              product,
+              status,
+              transactionIds: transactionIdsOf(purchase),
+              granted: granted,
+            ),
+          );
+          // Grant before completing (S1-71): if the app dies first, the
+          // store re-delivers and the persisted id stops a double grant.
+          if (hasListener) {
+            try {
+              await granted.future.timeout(grantTimeout);
+            } catch (_) {
+              iapLog('grant of ${product.storeId} not confirmed in time');
+            }
+          }
         } else {
           _events.add(IapEvent(product, status));
         }

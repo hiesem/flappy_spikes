@@ -29,10 +29,8 @@ const List<String> kNoAdsPopupImages = [
 /// open/close bookkeeping (back stack, analytics, policy).
 class NoAdsPopup extends PositionComponent
     with HasGameReference<FlappySpikesGame>, GroupOpacity, TapCallbacks {
-  NoAdsPopup({
-    required this.onDismiss,
-    required this.onBuy,
-  }) : super(priority: 25);
+  NoAdsPopup({required this.onDismiss, required this.onBuy})
+    : super(priority: 25);
 
   final void Function() onDismiss;
   final void Function() onBuy;
@@ -132,8 +130,8 @@ class NoAdsPopup extends PositionComponent
       // square; the 13 pt subtitle sits on the second line's baseline.
       const line = benefitTitleSize * kNormalLineHeight;
       const blockTop = (Config.noAdsBenefitSize - 2 * line) / 2;
-      const baseline = (line - benefitTitleSize * 1.256) / 2 +
-          benefitTitleSize * 0.992;
+      const baseline =
+          (line - benefitTitleSize * 1.256) / 2 + benefitTitleSize * 0.992;
       const subBaseline =
           (benefitSubSize * kNormalLineHeight - benefitSubSize * 1.256) / 2 +
           benefitSubSize * 0.992;
@@ -179,11 +177,7 @@ class NoAdsPopup extends PositionComponent
         2 * Config.noAdsBenefitSize +
         Config.noAdsBenefitGap +
         Config.noAdsPriceGap;
-    priceLabel = MenuText(
-      _priceText,
-      fontSize: 28,
-      color: Config.menuPlum,
-    );
+    priceLabel = MenuText(_priceText, fontSize: 28, color: Config.menuPlum);
     priceButton = MenuButton(
       color: Config.menuGold,
       position: Vector2(Config.noAdsPad, priceTop),
@@ -215,8 +209,9 @@ class NoAdsPopup extends PositionComponent
       _price ?? game.monetization.iap.priceOf(IapProduct.noAds);
 
   void _layoutPrice() {
+    // S2-71: a long localized price shrinks to fit the button.
     priceLabel
-      ..text = _priceText
+      ..fitWidth(_priceText, priceButton.width - 2 * 16)
       ..position = Vector2(
         (priceButton.width - priceLabel.width) / 2,
         (priceButton.height - priceLabel.height) / 2,

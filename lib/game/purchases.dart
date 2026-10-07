@@ -29,6 +29,12 @@ import 'config.dart';
 /// product's purchase resolves (purchased / restored / failed / canceled),
 /// before any other feedback, so the game can drop the pending toast.
 ///
+/// Coin packs grant once per store transaction (S1-71): the ids in
+/// [IapEvent.transactionIds] are persisted with the grant, and a later
+/// `purchased` event carrying one of them is ignored (the store layer still
+/// completes it so it stops re-delivering). After handling a `purchased` /
+/// `restored` event, [IapEvent.granted] is completed.
+///
 /// Plain Dart (no Flame), so it is unit-testable on its own; the game owns
 /// one, [start]s it in onLoad, [dispose]s it in onRemove and drives the
 /// restore timeout from its update loop ([update]).
@@ -155,10 +161,18 @@ class Purchases {
         }
       case IapStatus.purchased:
         _inFlight.remove(product);
-        await _grantPurchase(product);
+        try {
+          await _grantPurchase(product, event.transactionIds);
+        } finally {
+          _confirm(event);
+        }
       case IapStatus.restored:
         _inFlight.remove(product);
-        await _grantRestore(product);
+        try {
+          await _grantRestore(product);
+        } finally {
+          _confirm(event);
+        }
       case IapStatus.failed:
         _inFlight.remove(product);
         final reason = event.message;
@@ -181,7 +195,21 @@ class Purchases {
     }
   }
 
-  Future<void> _grantPurchase(IapProduct product) async {
+  /// Tells the store layer the event was handled (it completes the
+  /// purchase with the store next).
+  void _confirm(IapEvent event) {
+    final granted = event.granted;
+    if (granted != null && !granted.isCompleted) granted.complete();
+  }
+
+  /// Transaction ids being granted right now (a re-delivery racing the
+  /// first grant is skipped too).
+  final Set<String> _granting = {};
+
+  Future<void> _grantPurchase(
+    IapProduct product, [
+    List<String> transactionIds = const [],
+  ]) async {
     if (product == IapProduct.noAds) {
       if (menu.noAds) {
         // Re-delivered (e.g. at launch): never grant the bonus twice.
@@ -208,11 +236,28 @@ class Purchases {
       }
       return;
     }
-    services.track('iap_purchase', {'product': product.storeId});
-    final celebrate = onPackPurchased;
-    celebrate?.call(product);
-    await menu.wallet.add(product.coins, CoinSource.iap);
-    if (celebrate == null) toast('+${formatAmount(product.coins)} coins');
+    // S1-71: one grant per store transaction. A re-delivery of an already
+    // granted purchase (same purchaseID / token) is only acknowledged.
+    final storage = menu.storage;
+    if (transactionIds.any(_granting.contains) ||
+        storage.isPurchaseGranted(transactionIds)) {
+      return;
+    }
+    _granting.addAll(transactionIds);
+    try {
+      services.track('iap_purchase', {'product': product.storeId});
+      final celebrate = onPackPurchased;
+      celebrate?.call(product);
+      await menu.wallet.add(product.coins, CoinSource.iap);
+      // Coins first, then the id: a crash in between can at worst pay a
+      // replay again, never lose a paid pack.
+      if (transactionIds.isNotEmpty) {
+        await storage.saveGrantedPurchase(transactionIds);
+      }
+      if (celebrate == null) toast('+${formatAmount(product.coins)} coins');
+    } finally {
+      _granting.removeAll(transactionIds);
+    }
   }
 
   Future<void> _grantRestore(IapProduct product) async {

@@ -250,6 +250,12 @@ class ShopBanner extends MenuButton {
   static const double chipHeight = 36;
   static const double chipPadX = 12;
 
+  /// Chip padding when a long localized price needs the room.
+  static const double chipPadXTight = 6;
+
+  /// Minimum clearance between "REMOVE ADS" and the price chip.
+  static const double chipGap = 8;
+
   bool? _owned;
   String? _price;
   bool _pending = false;
@@ -352,11 +358,12 @@ class ShopBanner extends MenuButton {
       letterSpacingEm: letterSpacing,
     );
     label = text;
+    final price = owned ? null : _fitPrice(text);
     final left = <PositionComponent>[adIcon, text];
     _content.addAll(left);
     // Mock: flex gap 6 + the label's 10 pt margin.
     layoutRow(this, left, gap: 16, left: 12);
-    if (owned) {
+    if (price == null) {
       // Mock: soft 12 pt at 0.12 em, 85 %, 14 pt from the right edge.
       final thanks = MenuText(
         'THANK YOU',
@@ -369,15 +376,10 @@ class ShopBanner extends MenuButton {
       layoutRow(this, [thanks], gap: 0, right: width - 14);
       return;
     }
-    final price = MenuText(
-      _price ?? '',
-      fontSize: fontSize,
-      color: Config.menuPlum,
-      letterSpacingEm: letterSpacing,
-    );
+    final padX = _chipPadX;
     priceLabel = price;
     final chip = RectangleComponent(
-      size: Vector2(price.width + 2 * chipPadX, chipHeight),
+      size: Vector2(price.width + 2 * padX, chipHeight),
       paint: Paint()..color = Config.menuGold,
     );
     layoutRow(chip, [price], gap: 0);
@@ -386,6 +388,40 @@ class ShopBanner extends MenuButton {
     priceChip = chip;
     _content.add(chip);
     layoutRow(this, [chip], gap: 0, right: width - 8);
+  }
+
+  /// x of "REMOVE ADS" (12 pt inset + icon + 16 pt gap, see [_rebuild]).
+  static const double _labelX = 12 + iconSize + 16;
+
+  double _chipPadX = chipPadX;
+
+  /// S2-71: builds the price text so the chip fits right of [text] (at
+  /// least [chipGap] clear of it, 8 pt from the right edge). A long
+  /// localized price first takes the tighter chip padding, then shrinks
+  /// down to 60 %; if that still does not fit, "REMOVE ADS" shrinks (to
+  /// 60 % at most) to make room, and only then the price shrinks further.
+  MenuText _fitPrice(MenuText text) {
+    final value = _price ?? '';
+    final price = MenuText(
+      '',
+      fontSize: fontSize,
+      color: Config.menuPlum,
+      letterSpacingEm: letterSpacing,
+    );
+    double room() => (width - 8) - (_labelX + text.width + chipGap);
+    price.fitWidth(value, double.infinity);
+    _chipPadX = price.width + 2 * chipPadX <= room() ? chipPadX : chipPadXTight;
+    price.fitWidth(value, room() - 2 * _chipPadX);
+    if (price.fontSize < fontSize * 0.6) {
+      // Floor the price at 60 % and give it the room it needs.
+      price.fitWidth(value, double.infinity);
+      final floorWidth = price.width * 0.6;
+      final labelMax =
+          (width - 8) - _labelX - chipGap - floorWidth - 2 * _chipPadX;
+      text.fitWidth(text.text, math.max(labelMax, text.width * 0.6));
+      price.fitWidth(value, room() - 2 * _chipPadX);
+    }
+    return price;
   }
 }
 
@@ -753,9 +789,16 @@ class CoinPackCard extends MenuButton {
     }
   }
 
+  /// Side inset of the price text inside [priceButton] (S2-71: long
+  /// localized prices shrink to fit within it).
+  static const double pricePadX = 8;
+
   void _layoutPrice() {
     priceLabel
-      ..text = _price ?? product.placeholderPrice
+      ..fitWidth(
+        _price ?? product.placeholderPrice,
+        priceButton.width - 2 * pricePadX,
+      )
       ..position = Vector2(
         (priceButton.width - priceLabel.width) / 2,
         (priceButton.height - priceLabel.height) / 2,

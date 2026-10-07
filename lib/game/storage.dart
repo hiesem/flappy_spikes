@@ -37,6 +37,7 @@ class GameStorage {
   static const String _claimedLevelsKey = 'claimedLevels';
   static const String _rumbleKey = 'rumble';
   static const String _lastScoreKey = 'lastScore';
+  static const String _grantedPurchasesKey = 'grantedPurchases';
 
   /// One preference key per equipped layer (the five-key equipped map).
   static String _equippedItemKey(SkinLayer layer) =>
@@ -44,6 +45,11 @@ class GameStorage {
 
   /// [slotHistory] keeps at most this many entries (most recent last).
   static const int _maxSlotHistory = 3;
+
+  /// [grantedPurchases] keeps at most this many purchase ids (most recent
+  /// last): the last 200 purchases, each with its purchaseID and its Play
+  /// purchase token.
+  static const int maxGrantedPurchases = 400;
 
   final DateTime Function() _clock;
 
@@ -66,6 +72,7 @@ class GameStorage {
   String armedPowerup = 'none';
   List<String> slotHistory = [];
   int? installDay;
+
   /// PRD-menu-v4 §8: the local day of the latest show (with
   /// [noAdsPopupShowsToday], the per-day cap).
   int noAdsPopupLastDay = -1;
@@ -110,6 +117,11 @@ class GameStorage {
   /// before the first run.
   int? lastScore;
 
+  /// S1-71: store transaction ids (purchaseID / Play purchase token) of the
+  /// coin packs already granted, so a store re-delivery of the same
+  /// transaction never pays twice. Bounded to [maxGrantedPurchases].
+  List<String> grantedPurchases = [];
+
   /// Current wall-clock time (overridable for tests).
   DateTime now() => _clock();
 
@@ -117,9 +129,11 @@ class GameStorage {
   /// [debugDayOffset].
   int get today {
     final t = now();
-    return DateTime.utc(t.year, t.month, t.day)
-            .difference(DateTime.utc(1970))
-            .inDays +
+    return DateTime.utc(
+          t.year,
+          t.month,
+          t.day,
+        ).difference(DateTime.utc(1970)).inDays +
         debugDayOffset;
   }
 
@@ -143,14 +157,16 @@ class GameStorage {
     ownedItems = (prefs.getStringList(_ownedItemsKey) ?? const []).toSet();
     equippedItems = {
       for (final layer in SkinLayer.values)
-        layer: prefs.getString(_equippedItemKey(layer)) ??
+        layer:
+            prefs.getString(_equippedItemKey(layer)) ??
             Look.defaults.idFor(layer),
     };
     seenItems = (prefs.getStringList(_seenItemsKey) ?? const []).toSet();
     noAds = prefs.getBool(_noAdsKey) ?? false;
     armedPowerup = prefs.getString(_armedPowerupKey) ?? 'none';
     slotHistory = _capSlotHistory(
-        prefs.getStringList(_slotHistoryKey) ?? const []);
+      prefs.getStringList(_slotHistoryKey) ?? const [],
+    );
     debugDayOffset = prefs.getInt(_debugDayOffsetKey) ?? 0;
     final storedInstallDay = prefs.getInt(_installDayKey);
     if (storedInstallDay == null) {
@@ -178,7 +194,31 @@ class GameStorage {
         .toSet();
     rumble = prefs.getBool(_rumbleKey) ?? true;
     lastScore = prefs.getInt(_lastScoreKey);
+    grantedPurchases = _capGranted(
+      prefs.getStringList(_grantedPurchasesKey) ?? const [],
+    );
   }
+
+  /// Whether any of [ids] belongs to an already granted purchase.
+  bool isPurchaseGranted(Iterable<String> ids) =>
+      ids.any(grantedPurchases.contains);
+
+  /// Records [ids] as granted (deduplicated, bounded, persisted).
+  Future<void> saveGrantedPurchase(Iterable<String> ids) async {
+    final next = [
+      ...grantedPurchases,
+      for (final id in ids)
+        if (id.isNotEmpty && !grantedPurchases.contains(id)) id,
+    ];
+    grantedPurchases = _capGranted(next);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_grantedPurchasesKey, grantedPurchases);
+  }
+
+  List<String> _capGranted(List<String> value) =>
+      value.length > maxGrantedPurchases
+      ? value.sublist(value.length - maxGrantedPurchases)
+      : List.of(value);
 
   Future<void> saveBestScore(int value) async {
     bestScore = value;
@@ -385,6 +425,6 @@ class GameStorage {
 
   List<String> _capSlotHistory(List<String> value) =>
       value.length > _maxSlotHistory
-          ? value.sublist(value.length - _maxSlotHistory)
-          : List.of(value);
+      ? value.sublist(value.length - _maxSlotHistory)
+      : List.of(value);
 }

@@ -53,6 +53,7 @@ class MenuText extends TextComponent<TextPaint> {
     super.anchor,
     super.priority,
   }) : _fontSize = fontSize,
+       baseFontSize = fontSize,
        _letterSpacingEm = letterSpacingEm,
        _lineHeight = lineHeight,
        _color = color,
@@ -68,10 +69,47 @@ class MenuText extends TextComponent<TextPaint> {
          ),
        );
 
-  final double _fontSize;
+  double _fontSize;
+
+  /// The font size the text was created with ([fitWidth] shrinks from it).
+  final double baseFontSize;
   final double _letterSpacingEm;
   final double _lineHeight;
   Color _color;
+
+  /// Current font size (below [baseFontSize] after a shrinking [fitWidth]).
+  double get fontSize => _fontSize;
+
+  /// Sets [text] and shrinks the font so the text is at most [maxWidth]
+  /// wide (S2-71: localized store prices like "Rp 1.599.000,00"). Starts
+  /// from [baseFontSize] every call, so a shorter text grows back. Fitting
+  /// never stops at [minScale] of the base size if the text would still
+  /// overflow: staying inside the box wins over the size floor, which only
+  /// sets the first guess.
+  void fitWidth(String value, double maxWidth, {double minScale = 0.6}) {
+    text = value;
+    _setFontSize(baseFontSize);
+    if (maxWidth <= 0 || width <= maxWidth) return;
+    final guess = baseFontSize * (maxWidth / width).clamp(minScale, 1.0);
+    _setFontSize(guess);
+    while (width > maxWidth && _fontSize > 4) {
+      _setFontSize(_fontSize * 0.96);
+    }
+  }
+
+  void _setFontSize(double value) {
+    if (value == _fontSize) return;
+    _fontSize = value;
+    _stroke = null;
+    textRenderer = TextPaint(
+      style: menuTextStyle(
+        fontSize: value,
+        color: _color,
+        letterSpacingEm: _letterSpacingEm,
+        lineHeight: _lineHeight,
+      ),
+    );
+  }
 
   /// Faux-bold outline width (0 = none).
   final double strokeWidth;

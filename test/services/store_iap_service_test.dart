@@ -149,7 +149,11 @@ void main() {
       launchErrorGrace: const Duration(milliseconds: 50),
     );
     events = [];
-    sub = iap.events.listen(events.add);
+    // Acts like the game's Purchases: confirms each grant.
+    sub = iap.events.listen((e) {
+      events.add(e);
+      e.granted?.complete();
+    });
   });
 
   tearDown(() => sub.cancel());
@@ -181,7 +185,11 @@ void main() {
       expect(iap.priceOf(IapProduct.coins10000), 'CHF coins_10000');
 
       // Purchase completes on the stream: granted + acknowledged.
-      store.emit('coins_10000', PurchaseStatus.purchased, pendingComplete: true);
+      store.emit(
+        'coins_10000',
+        PurchaseStatus.purchased,
+        pendingComplete: true,
+      );
       await pump();
       expect(events.single.status, IapStatus.purchased);
       expect(events.single.product, IapProduct.coins10000);
@@ -481,4 +489,145 @@ void main() {
       expect(purchases.isPending(IapProduct.coins10000), isFalse);
     });
   });
+
+  group('S1-71 one grant per store transaction', () {
+    late MenuState menu;
+    late GameStorage storage;
+    late Purchases purchases;
+    late EventSpy spy;
+
+    PurchaseDetails receipt(
+      String product, {
+      String? id,
+      String token = '',
+      String source = 'google_play',
+    }) => PurchaseDetails(
+      purchaseID: id,
+      productID: product,
+      verificationData: PurchaseVerificationData(
+        localVerificationData: '',
+        serverVerificationData: token,
+        source: source,
+      ),
+      transactionDate: null,
+      status: PurchaseStatus.purchased,
+    )..pendingCompletePurchase = true;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      storage = GameStorage();
+      await storage.load();
+      spy = EventSpy();
+      menu = MenuState(storage);
+      purchases = Purchases(iap: iap, menu: menu, services: spy, toast: (_) {})
+        ..start();
+      store.goLive(IapProduct.values);
+      await iap.initialize();
+    });
+
+    tearDown(() => purchases.dispose());
+
+    test('transactionIdsOf: purchaseID + Play token; never an iOS receipt', () {
+      expect(
+        transactionIdsOf(receipt('coins_1000', id: 'GPA.1', token: 'tok')),
+        ['id:GPA.1', 'token:tok'],
+      );
+      expect(
+        transactionIdsOf(
+          receipt('coins_1000', id: '1000', token: 'R', source: 'app_store'),
+        ),
+        ['id:1000'],
+      );
+      expect(transactionIdsOf(receipt('coins_1000')), isEmpty);
+    });
+
+    test(
+      'same transaction re-delivered: one grant, completed both times',
+      () async {
+        final r = receipt('coins_10000', id: 'GPA.7', token: 'tok-7');
+        store.purchases.add([r]);
+        await pump();
+        store.purchases.add([r]);
+        await pump();
+        expect(menu.wallet.balance, 10000);
+        expect(store.completed, hasLength(2));
+        expect(spy.events.where((e) => e.$1 == 'iap_purchase'), hasLength(1));
+        expect(storage.grantedPurchases, ['id:GPA.7', 'token:tok-7']);
+      },
+    );
+
+    test(
+      'a replay is recognised by its token alone (order id appears later)',
+      () async {
+        store.purchases.add([receipt('coins_1000', token: 'tok-9')]);
+        await pump();
+        store.purchases.add([
+          receipt('coins_1000', id: 'GPA.9', token: 'tok-9'),
+        ]);
+        await pump();
+        expect(menu.wallet.balance, 1000);
+      },
+    );
+
+    test('the ledger survives a restart', () async {
+      store.purchases.add([receipt('coins_17000', id: 'GPA.3')]);
+      await pump();
+      final reloaded = GameStorage();
+      await reloaded.load();
+      expect(reloaded.isPurchaseGranted(['id:GPA.3']), isTrue);
+    });
+
+    test('distinct transactions both grant', () async {
+      store.purchases.add([receipt('coins_1000', id: 'a', token: 'ta')]);
+      store.purchases.add([receipt('coins_1000', id: 'b', token: 'tb')]);
+      await pump();
+      expect(menu.wallet.balance, 2000);
+    });
+
+    test('grant happens before the store completes the purchase', () async {
+      var balanceAtComplete = -1;
+      final gated = _GatedStore(() => balanceAtComplete = menu.wallet.balance)
+        ..goLive(IapProduct.values);
+      final service = StoreIapService(store: gated);
+      final p = Purchases(
+        iap: service,
+        menu: menu,
+        services: spy,
+        toast: (_) {},
+      )..start();
+      await service.initialize();
+      gated.purchases.add([receipt('coins_1000', id: 'g1')]);
+      await pump();
+      await pump();
+      expect(balanceAtComplete, 1000);
+      p.dispose();
+    });
+
+    test('ledger is bounded', () async {
+      for (var i = 0; i < GameStorage.maxGrantedPurchases + 10; i++) {
+        await storage.saveGrantedPurchase(['id:$i']);
+      }
+      expect(
+        storage.grantedPurchases,
+        hasLength(GameStorage.maxGrantedPurchases),
+      );
+      expect(
+        storage.grantedPurchases.last,
+        'id:${GameStorage.maxGrantedPurchases + 9}',
+      );
+      expect(storage.isPurchaseGranted(['id:0']), isFalse);
+    });
+  });
+}
+
+class _GatedStore extends FakeStore {
+  _GatedStore(this.onComplete);
+
+  final void Function() onComplete;
+
+  @override
+  Future<void> completePurchase(PurchaseDetails purchase) async {
+    onComplete();
+    return super.completePurchase(purchase);
+  }
 }

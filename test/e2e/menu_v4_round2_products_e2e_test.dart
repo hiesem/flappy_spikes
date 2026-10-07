@@ -8,8 +8,6 @@ import '../services/store_iap_service_test.dart' show FakeStore;
 import '../shop_flow_test.dart' show openShop;
 import 'menu_v4_qa_helpers.dart';
 
-const _runOpen = bool.fromEnvironment('QA_V4_R2_OPEN_DEFECTS');
-
 // Replace only native billing. All grants, pricing and feedback use the game.
 class _PriceStore extends FakeStore {
   final prices = <String, String>{};
@@ -148,7 +146,7 @@ void main() {
     },
   );
 
-  group('S1-71', skip: _runOpen ? false : 'S1-71 open', () {
+  group('S1-71', () {
     for (final product in IapProduct.values.where((p) => p.consumable)) {
       final store = FakeStore()..goLive(IapProduct.values);
       v4Journey(
@@ -186,7 +184,7 @@ void main() {
     }
   });
 
-  group('S2-71', skip: _runOpen ? false : 'S2-71 open', () {
+  group('S2-71', () {
     for (final height in [568.0, 711.0]) {
       final store = _PriceStore()
         ..prices.addAll({

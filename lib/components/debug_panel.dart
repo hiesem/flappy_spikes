@@ -127,6 +127,20 @@ class DebugPanel extends PositionComponent
               .values[(iap.mode.index + 1) % FakeIapMode.values.length];
         }),
       DebugAction(
+        () => 'LEVEL UP (best ${menu.storage.bestScore}, '
+            'lv ${menu.levels.level})',
+        () async {
+          // PRD-home-v3 Q-H1 interim: the popup shows on the next home.
+          await menu.levels.debugForceLevelUp();
+          final pending = menu.levels.pendingLevelUp;
+          game.showToast(
+            pending == null
+                ? 'No level-up pending'
+                : 'Level up to ${pending.def.name} (+${pending.reward})',
+          );
+        },
+      ),
+      DebugAction(
         () => 'ALL ITEMS (${menu.items.ownedCount}/$kCollectibleTotal)',
         () async {
           await menu.items.grantAll();

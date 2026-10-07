@@ -6,6 +6,7 @@ import 'package:flame/events.dart';
 import 'package:flutter/painting.dart' show TextLeadingDistribution, TextStyle;
 
 import '../../game/config.dart';
+import '../../game/flappy_game.dart';
 import '../ui/live_effects.dart';
 
 /// Building blocks of the 2.0 menu screens (home now; Shop / Skins / popups
@@ -171,6 +172,7 @@ class MenuButton extends PositionComponent with TapCallbacks {
     required this.onPressed,
     this.color,
     this.isActive,
+    this.knocks = true,
     super.position,
     super.size,
     super.priority,
@@ -194,6 +196,9 @@ class MenuButton extends PositionComponent with TapCallbacks {
   bool Function()? isActive;
   bool tappable = true;
   bool dimmed = false;
+
+  /// PRD-home-v3 §10: a press gives one rumble knock (when RUMBLE is on).
+  bool knocks;
 
   static const double dimmedOpacity = 0.5;
   static const Color _pressedShade = Color(0x26000000); // 15 % black
@@ -256,7 +261,11 @@ class MenuButton extends PositionComponent with TapCallbacks {
   void onTapUp(TapUpEvent event) {
     event.handled = true;
     _pressed = false;
-    onPressed();
+    if (knocks) {
+      withMenuKnock(this, onPressed);
+    } else {
+      onPressed();
+    }
   }
 
   @override
@@ -285,6 +294,21 @@ class _PressShade extends Component {
       canvas.drawRect(_button.size.toRect(), _button._pressPaint);
     }
   }
+}
+
+/// PRD-home-v3 §10: runs a menu press [action] of [pressed], then gives
+/// one rumble knock — unless a run was on when the press came in. The
+/// knock comes after the action so the RUMBLE switch reads its new value
+/// (switching on knocks once, switching off is silent); the service
+/// checks the setting and the 90 ms throttle. Outside a
+/// [FlappySpikesGame] it only runs [action].
+void withMenuKnock(Component pressed, void Function() action) {
+  final game = pressed.findGame();
+  final rumble = game is FlappySpikesGame && game.state != GameState.playing
+      ? game.rumble
+      : null;
+  action();
+  rumble?.knock();
 }
 
 /// Sampling for all menu chrome art. The menu PNGs are authored at 4x and

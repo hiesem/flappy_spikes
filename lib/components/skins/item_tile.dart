@@ -7,6 +7,7 @@ import 'package:flame/extensions.dart';
 import 'package:flutter/animation.dart' show Curves;
 
 import '../../game/config.dart';
+import '../home/menu_primitives.dart' show withMenuKnock;
 import '../../skins/catalog.dart';
 import '../../skins/look.dart';
 import 'item_art.dart';
@@ -131,7 +132,7 @@ class ItemTile extends PositionComponent with TapCallbacks {
   void onTapUp(TapUpEvent event) {
     event.handled = true;
     _pressed = false;
-    onPressed();
+    withMenuKnock(this, onPressed);
   }
 
   @override

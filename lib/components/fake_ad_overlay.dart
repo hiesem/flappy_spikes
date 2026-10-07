@@ -78,12 +78,14 @@ class FakeAdOverlay extends PositionComponent
         ),
       ],
     );
+    // A stand-in for the real ad UI, which never knocks.
     closeButton = MenuButton(
       color: Config.menuPinkDark,
       position: Vector2(w - Config.noAdsCloseSize, 0),
       size: Vector2.all(Config.noAdsCloseSize),
       onPressed: this.close,
       isActive: () => !done,
+      knocks: false,
       children: [
         MenuIcon(
           close,

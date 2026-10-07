@@ -6,6 +6,7 @@ import 'package:flame/extensions.dart';
 import 'package:flutter/animation.dart' show Cubic;
 
 import '../../game/config.dart';
+import '../home/menu_primitives.dart' show withMenuKnock;
 import '../../skins/look.dart';
 import 'shop_glyphs.dart';
 
@@ -140,7 +141,7 @@ class SkinTab extends PositionComponent with TapCallbacks {
   @override
   void onTapUp(TapUpEvent event) {
     event.handled = true;
-    bar.onSelect(layer);
+    withMenuKnock(this, () => bar.onSelect(layer));
   }
 
   @override

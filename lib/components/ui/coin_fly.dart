@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
-import 'package:flutter/animation.dart' show Curves;
+import 'package:flutter/animation.dart' show Cubic, Curves;
 
 import '../home/menu_primitives.dart' show kMenuFilterQuality;
 
@@ -12,6 +12,10 @@ import '../home/menu_primitives.dart' show kMenuFilterQuality;
 /// `design/menu_v2/build55.py`. Each coin pops out of [from] (fading in at
 /// 60 %), arcs 30 pt up with a random sideways drift (110 %) and lands on
 /// [to] (80 %), the whole path eased in.
+///
+/// [CoinFly.burst] is the PRD-home-v3 §5 flight (build73 / build74 /
+/// build79): coins burst out around a point, rise to a random mid point
+/// and land, 0.7 s each, 55 ms apart.
 ///
 /// [onLand] fires for every coin as it lands, [onDone] once after the last
 /// one; then the component removes itself. Removed early (scene change),
@@ -30,7 +34,7 @@ class CoinFly extends Component {
     this.onDone,
     math.Random? random,
     super.priority = 1000,
-  }) {
+  }) : _burst = false {
     final rnd = random ?? math.Random();
     for (var i = 0; i < count; i++) {
       // Mock: x0 = button left + 40 + rand * 30 (of the 112 pt GET), y0 =
@@ -45,6 +49,49 @@ class CoinFly extends Component {
     }
   }
 
+  /// The §5 burst: coin [i] starts at [origin] + x (rand - .5) *
+  /// [spreadX], y in [jitterY]; its mid point drifts (rand - .5) *
+  /// [midSpreadX] and rises [rise].min + rand * [rise].range; keyframes
+  /// scale .5 (transparent) -> 1.15 at 32 % -> .75 on [to], the whole path
+  /// on `cubic-bezier(.5, 0, .8, .6)`.
+  CoinFly.burst({
+    required this.coin,
+    required Offset origin,
+    required this.to,
+    required this.count,
+    this.duration = 0.7,
+    this.stagger = 0.055,
+    this.delay = 0,
+    double spreadX = 16,
+    ({double min, double max}) jitterY = (min: 0, max: 0),
+    double midSpreadX = 90,
+    ({double min, double range}) rise = (min: 40, range: 50),
+    this.coinSize = 18,
+    this.onLand,
+    this.onDone,
+    math.Random? random,
+    super.priority = 1000,
+  }) : _burst = true {
+    final rnd = random ?? math.Random();
+    for (var i = 0; i < count; i++) {
+      final x0 = origin.dx + (rnd.nextDouble() - .5) * spreadX;
+      final y0 =
+          origin.dy +
+          jitterY.min +
+          rnd.nextDouble() * (jitterY.max - jitterY.min);
+      _starts.add(Offset(x0, y0));
+      _mids.add(
+        Offset(
+          x0 + (rnd.nextDouble() - .5) * midSpreadX,
+          y0 - rise.min - rnd.nextDouble() * rise.range,
+        ),
+      );
+    }
+  }
+
+  static const Cubic _burstEase = Cubic(.5, 0, .8, .6);
+
+  final bool _burst;
   final Sprite coin;
   final int count;
   final double duration;
@@ -81,6 +128,23 @@ class CoinFly extends Component {
   /// Where coin [i] is (top-left of its box), its scale and opacity at
   /// path progress [p] (linear keyframes, eased-in overall timing).
   ({Offset position, double scale, double opacity}) poseOf(int i, double p) {
+    if (_burst) {
+      final e = _burstEase.transform(p);
+      if (e < .32) {
+        final k = e / .32;
+        return (
+          position: Offset.lerp(_starts[i], _mids[i], k)!,
+          scale: .5 + (1.15 - .5) * k,
+          opacity: k,
+        );
+      }
+      final k = (e - .32) / .68;
+      return (
+        position: Offset.lerp(_mids[i], to, k)!,
+        scale: 1.15 + (.75 - 1.15) * k,
+        opacity: 1,
+      );
+    }
     final e = Curves.easeIn.transform(p);
     if (e < .3) {
       final k = e / .3;

@@ -157,38 +157,38 @@ void main() {
   group('StoreIapService', () {
     test('launch query: real prices for live products, placeholders for '
         'the rest', () async {
-      store.goLive([IapProduct.coins500, IapProduct.noAds]);
+      store.goLive([IapProduct.coins1000, IapProduct.noAds]);
       await iap.initialize();
       expect(iap.isAvailable, isTrue);
       expect(store.queries.single, hasLength(5));
-      expect(iap.priceOf(IapProduct.coins500), 'CHF coins_500');
+      expect(iap.priceOf(IapProduct.coins1000), 'CHF coins_1000');
       expect(iap.priceOf(IapProduct.noAds), 'CHF no_ads');
-      expect(iap.priceOf(IapProduct.coins1800), '€2.99');
+      expect(iap.priceOf(IapProduct.coins10000), r'$9.99');
     });
 
     test('missing details at buy time -> re-query -> billing flow '
         'launches', () async {
       await iap.initialize(); // nothing live yet (fresh Play products)
-      expect(iap.priceOf(IapProduct.coins1800), '€2.99');
+      expect(iap.priceOf(IapProduct.coins10000), r'$9.99');
       store.goLive(IapProduct.values);
 
-      await iap.buy(IapProduct.coins1800);
+      await iap.buy(IapProduct.coins10000);
       await pump();
       expect(store.queries, hasLength(2));
       expect(store.queries.last, hasLength(5), reason: 're-queries missing');
-      expect(store.launched, ['coins_1800']);
+      expect(store.launched, ['coins_10000']);
       expect(events, isEmpty, reason: 'no failure');
-      expect(iap.priceOf(IapProduct.coins1800), 'CHF coins_1800');
+      expect(iap.priceOf(IapProduct.coins10000), 'CHF coins_10000');
 
       // Purchase completes on the stream: granted + acknowledged.
-      store.emit('coins_1800', PurchaseStatus.purchased, pendingComplete: true);
+      store.emit('coins_10000', PurchaseStatus.purchased, pendingComplete: true);
       await pump();
       expect(events.single.status, IapStatus.purchased);
-      expect(events.single.product, IapProduct.coins1800);
+      expect(events.single.product, IapProduct.coins10000);
       expect(store.completed, hasLength(1));
 
       // Everything known now: a further buy does not query again.
-      await iap.buy(IapProduct.coins500);
+      await iap.buy(IapProduct.coins1000);
       expect(store.queries, hasLength(2));
     });
 
@@ -207,9 +207,9 @@ void main() {
     });
 
     test('product not in the store -> "Product not found"', () async {
-      store.goLive([IapProduct.coins500]);
+      store.goLive([IapProduct.coins1000]);
       await iap.initialize();
-      await iap.buy(IapProduct.coins12000);
+      await iap.buy(IapProduct.coins100000);
       await pump();
       expect(store.launched, isEmpty);
       expect(events.single.status, IapStatus.failed);
@@ -220,7 +220,7 @@ void main() {
     test('billing unavailable -> "Store unavailable"', () async {
       store.available = false;
       await iap.initialize();
-      await iap.buy(IapProduct.coins500);
+      await iap.buy(IapProduct.coins1000);
       await pump();
       expect(store.availableCalls, 2, reason: 're-checked before failing');
       expect(events.single.message, 'Store unavailable');
@@ -229,7 +229,7 @@ void main() {
 
     test('isAvailable throwing -> "Store unavailable"', () async {
       store.availableError = PlatformException(code: 'boom');
-      await iap.buy(IapProduct.coins500); // never initialized: still safe
+      await iap.buy(IapProduct.coins1000); // never initialized: still safe
       await pump();
       expect(events.single.message, 'Store unavailable');
       expect(events.single.code, 'is_available_error');
@@ -245,7 +245,7 @@ void main() {
       await iap.initialize();
       // The failed re-query invalidates the earlier notFound: its error wins.
       store.queryThrows = PlatformException(code: 'BILLING_GLITCH');
-      await iap.buy(IapProduct.coins500);
+      await iap.buy(IapProduct.coins1000);
       await pump();
       expect(events.single.message, 'BILLING_GLITCH');
       expect(events.single.code, 'BILLING_GLITCH');
@@ -271,13 +271,13 @@ void main() {
       store.queryGate = Completer<void>();
       final a = iap.refresh();
       final b = iap.refresh();
-      final c = iap.buy(IapProduct.coins500);
+      final c = iap.buy(IapProduct.coins1000);
       await pump();
       expect(store.queries, hasLength(2), reason: 'joined, not stacked');
       store.goLive(IapProduct.values);
       store.queryGate!.complete();
       await Future.wait([a, b, c]);
-      expect(store.launched, ['coins_500']);
+      expect(store.launched, ['coins_1000']);
 
       store.queryGate = null;
       await iap.refresh();
@@ -287,7 +287,7 @@ void main() {
     test('purchase error on the stream carries the Billing response', () async {
       store.goLive(IapProduct.values);
       await iap.initialize();
-      await iap.buy(IapProduct.coins5000);
+      await iap.buy(IapProduct.coins17000);
       // Play reports flow errors with an empty product id.
       store.emit(
         '',
@@ -295,7 +295,7 @@ void main() {
         error: billingError('itemUnavailable'),
       );
       await pump();
-      expect(events.single.product, IapProduct.coins5000);
+      expect(events.single.product, IapProduct.coins17000);
       expect(events.single.status, IapStatus.failed);
       expect(events.single.message, 'Item unavailable');
       expect(events.single.code, 'itemUnavailable');
@@ -317,7 +317,7 @@ void main() {
         // empty-id "purchased" never grants anything.
         store.emit('', PurchaseStatus.error, error: billingError('error'));
         await pump();
-        await iap.buy(IapProduct.coins500);
+        await iap.buy(IapProduct.coins1000);
         store.emit('', PurchaseStatus.purchased);
         await pump();
         expect(events, hasLength(1));
@@ -331,7 +331,7 @@ void main() {
         store.launchResult = false;
         await iap.initialize();
 
-        await iap.buy(IapProduct.coins500);
+        await iap.buy(IapProduct.coins1000);
         store.emit(
           '',
           PurchaseStatus.error,
@@ -342,7 +342,7 @@ void main() {
         expect(events.single.code, 'developerError');
 
         events.clear();
-        await iap.buy(IapProduct.coins500);
+        await iap.buy(IapProduct.coins1000);
         await Future<void>.delayed(const Duration(milliseconds: 80));
         expect(events.single.message, 'Not started');
         expect(events.single.code, 'launch_failed');
@@ -355,22 +355,22 @@ void main() {
         store.goLive(IapProduct.values);
         await iap.initialize();
         store.launchError = PlatformException(code: 'NOT_FOUND');
-        await iap.buy(IapProduct.coins500);
+        await iap.buy(IapProduct.coins1000);
         await pump();
         expect(events.single.message, 'Product not found');
         expect(events.single.code, 'NOT_FOUND');
 
         store.launchError = null;
-        await iap.buy(IapProduct.coins500);
+        await iap.buy(IapProduct.coins1000);
         expect(store.queries, hasLength(2));
-        expect(store.launched, ['coins_500', 'coins_500']);
+        expect(store.launched, ['coins_1000', 'coins_1000']);
       },
     );
 
     test('query timeout -> "Store timeout"', () async {
       store.queryGate = Completer<void>(); // never completes
       await iap.initialize();
-      await iap.buy(IapProduct.coins500);
+      await iap.buy(IapProduct.coins1000);
       await pump();
       expect(events.single.message, 'Store timeout');
       expect(events.single.code, 'timeout');
@@ -433,16 +433,16 @@ void main() {
 
     test('not found', () async {
       await iap.initialize();
-      await purchases.buy(IapProduct.coins500);
+      await purchases.buy(IapProduct.coins1000);
       await pump();
       expect(toasts, ['Purchase failed: Product not found']);
       expect(spy.events.single.$1, 'iap_error');
       expect(spy.events.single.$2, {
-        'product': 'coins_500',
+        'product': 'coins_1000',
         'reason': 'Product not found',
         'code': 'not_found',
       });
-      expect(purchases.isPending(IapProduct.coins500), isFalse);
+      expect(purchases.isPending(IapProduct.coins1000), isFalse);
     });
 
     test('store unavailable', () async {
@@ -457,28 +457,28 @@ void main() {
     test('Billing error code reaches the toast', () async {
       store.goLive(IapProduct.values);
       await iap.initialize();
-      await purchases.buy(IapProduct.coins1800);
-      expect(purchases.isPending(IapProduct.coins1800), isTrue);
+      await purchases.buy(IapProduct.coins10000);
+      expect(purchases.isPending(IapProduct.coins10000), isTrue);
       store.emit('', PurchaseStatus.error, error: billingError('networkError'));
       await pump();
       expect(toasts, ['Purchase failed: Network error']);
       expect(spy.events.single.$2, {
-        'product': 'coins_1800',
+        'product': 'coins_10000',
         'reason': 'Network error',
         'code': 'networkError',
       });
-      expect(purchases.isPending(IapProduct.coins1800), isFalse);
+      expect(purchases.isPending(IapProduct.coins10000), isFalse);
     });
 
     test('cancel stays silent and re-enables the button', () async {
       store.goLive(IapProduct.values);
       await iap.initialize();
-      await purchases.buy(IapProduct.coins1800);
+      await purchases.buy(IapProduct.coins10000);
       store.emit('', PurchaseStatus.canceled);
       await pump();
       expect(toasts, isEmpty);
       expect(spy.events, isEmpty);
-      expect(purchases.isPending(IapProduct.coins1800), isFalse);
+      expect(purchases.isPending(IapProduct.coins10000), isFalse);
     });
   });
 }

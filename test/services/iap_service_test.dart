@@ -22,20 +22,20 @@ void main() {
   group('IapProduct', () {
     test('store ids', () {
       expect(IapProduct.values.map((p) => p.storeId), [
-        'coins_500',
-        'coins_1800',
-        'coins_5000',
-        'coins_12000',
+        'coins_1000',
+        'coins_10000',
+        'coins_17000',
+        'coins_100000',
         'no_ads',
       ]);
     });
 
     test('coins, consumable and placeholder prices', () {
       expect(IapProduct.values.map((p) => p.coins), [
-        500,
-        1800,
-        5000,
-        12000,
+        1000,
+        10000,
+        17000,
+        100000,
         0,
       ]);
       expect(IapProduct.values.map((p) => p.consumable), [
@@ -45,12 +45,13 @@ void main() {
         true,
         false,
       ]);
+      // PRD-menu-v4 §3: US-dollar placeholders.
       expect(IapProduct.values.map((p) => p.placeholderPrice), [
-        '€0.99',
-        '€2.99',
-        '€6.99',
-        '€14.99',
-        '€2.99',
+        r'$1.29',
+        r'$9.99',
+        r'$15.99',
+        r'$84.99',
+        r'$3.49',
       ]);
       expect(kNoAdsBonusCoins, 1000);
     });
@@ -66,9 +67,9 @@ void main() {
         for (final p in IapProduct.values) {
           expect(iap.priceOf(p), p.placeholderPrice);
         }
-        final events = await collect(iap, () => iap.buy(IapProduct.coins500));
+        final events = await collect(iap, () => iap.buy(IapProduct.coins1000));
         expect(events, hasLength(1));
-        expect(events.single.product, IapProduct.coins500);
+        expect(events.single.product, IapProduct.coins1000);
         expect(events.single.status, IapStatus.failed);
         expect(await collect(iap, iap.restore), isEmpty);
       },
@@ -81,27 +82,27 @@ void main() {
       await iap.initialize();
       expect(iap.isAvailable, isTrue);
       expect(iap.mode, FakeIapMode.succeed);
-      expect(iap.priceOf(IapProduct.coins12000), '€14.99');
+      expect(iap.priceOf(IapProduct.coins100000), r'$84.99');
     });
 
     test('succeed: pending then purchased', () async {
       final iap = FakeIapService();
-      final events = await collect(iap, () => iap.buy(IapProduct.coins1800));
+      final events = await collect(iap, () => iap.buy(IapProduct.coins10000));
       expect(statuses(events), [IapStatus.pending, IapStatus.purchased]);
-      expect(events.every((e) => e.product == IapProduct.coins1800), isTrue);
-      expect(iap.purchases, [IapProduct.coins1800]);
+      expect(events.every((e) => e.product == IapProduct.coins10000), isTrue);
+      expect(iap.purchases, [IapProduct.coins10000]);
     });
 
     test('fail: pending then failed with a message', () async {
       final iap = FakeIapService()..mode = FakeIapMode.fail;
-      final events = await collect(iap, () => iap.buy(IapProduct.coins500));
+      final events = await collect(iap, () => iap.buy(IapProduct.coins1000));
       expect(statuses(events), [IapStatus.pending, IapStatus.failed]);
       expect(events.last.message, isNotNull);
     });
 
     test('cancel: pending then canceled', () async {
       final iap = FakeIapService()..mode = FakeIapMode.cancel;
-      final events = await collect(iap, () => iap.buy(IapProduct.coins5000));
+      final events = await collect(iap, () => iap.buy(IapProduct.coins17000));
       expect(statuses(events), [IapStatus.pending, IapStatus.canceled]);
     });
 
@@ -130,7 +131,7 @@ void main() {
 
         // Consumables are never restored.
         iap.mode = FakeIapMode.succeed;
-        await iap.buy(IapProduct.coins500);
+        await iap.buy(IapProduct.coins1000);
         expect(await collect(iap, iap.restore), isEmpty);
 
         await iap.buy(IapProduct.noAds);
@@ -146,7 +147,7 @@ void main() {
       final iap = FakeIapService()..delay = const Duration(milliseconds: 30);
       final events = <IapEvent>[];
       final sub = iap.events.listen(events.add);
-      final purchase = iap.buy(IapProduct.coins500);
+      final purchase = iap.buy(IapProduct.coins1000);
       await Future<void>.delayed(const Duration(milliseconds: 5));
       expect(statuses(events), [IapStatus.pending]);
       await purchase;
@@ -161,7 +162,7 @@ void main() {
       final b = <IapEvent>[];
       final subA = iap.events.listen(a.add);
       final subB = iap.events.listen(b.add);
-      await iap.buy(IapProduct.coins500);
+      await iap.buy(IapProduct.coins1000);
       await Future<void>.delayed(Duration.zero);
       expect(a, hasLength(2));
       expect(b, hasLength(2));

@@ -829,7 +829,7 @@ class Config {
   static const double coinRewardLabelGap = 8;
   static const double coinRewardLabelDuration = 1.5;
 
-  /// The 12 000 pack's white flash: 75 % -> 0 in 0.5 s.
+  /// The 100 000 pack's white flash: 75 % -> 0 in 0.5 s.
   static const double coinRewardFlashOpacity = 0.75;
   static const double coinRewardFlashDuration = 0.5;
 

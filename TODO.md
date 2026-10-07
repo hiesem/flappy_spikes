@@ -296,14 +296,16 @@ Linux test target. Work lives on the `feat/menu-v2` branch — **not pushed**,
       "TEST AD" overlay on Linux), and menu fades are 3x+ faster
       (uiFade 0.15 s, popup 0.07 s; gameplay fades unchanged)
 
-### Pricing rule (product owner, 2026-10-05)
-- In-app prices use the SAME nominal amount in every local currency, not an
-  exchange-rate conversion: 0.99 USD = 0.99 EUR = 0.99 GBP, 2.99 USD = 2.99 EUR = 2.99 GBP, etc.
+### Pricing rule (product owner, 2026-10-05) — SUPERSEDED
+- Superseded by PRD-menu-v4 §5 (2026-10-07, phase 21): worth at least the USD
+  target before tax, rounded up to an App Store-supported local price, per country.
+- Old rule for history: same nominal amount in every local currency (0.99 USD = 0.99 EUR = 0.99 GBP);
   coins_500 0.99 · coins_1800 2.99 · coins_5000 6.99 · coins_12000 14.99 · no_ads 2.99.
 
 ### Pending — USER-only (store / device / native config)
-- [ ] Create the IAP products in Play Console with the ids `coins_500`,
-      `coins_1800`, `coins_5000`, `coins_12000`, `no_ads`
+- [ ] Create/activate the new IAP products in Play Console with the ids `coins_1000`,
+      `coins_10000`, `coins_17000`, `coins_100000`, `no_ads` and the PRD-menu-v4 §6 per-currency prices
+      (runbook §7). The old ids stay deactivated; the code no longer sells them.
 - [ ] Replace the AdMob TEST app id / rewarded unit ids with the real ones
       (AndroidManifest `APPLICATION_ID` + `AdMobRewardedAds` unit ids)
 - [ ] Play declarations for 2.0: tick "contains ads", complete the advertising-ID
@@ -365,6 +367,18 @@ Branch off `feat/skin-shop`, local commits only (not pushed). Opus/DeepSeek buil
       bird #16 redesigned as "Rubber duck" (own shape, `bl` back anchor for the wind-up key)
 - [x] Sol QA round 1 (S1-50, S1-51, S2-50, S2-51) + fixes (6 pt drag slop, fps-independent fling, preview fits tall hats)
 - [x] Sol QA round 2 (S1-52, S2-52) + fixes (fallback velocity in world points, exact fling→spring handover)
+
+## Phase 21 — new coin packs + USD placeholders (PRD-menu-v4 §2–4, branch `v4-wpK1`)
+
+- [x] WP-K1 — `IapProduct` (lib/services/iap_service.dart): new ids `coins_1000` / `coins_10000` /
+      `coins_17000` / `coins_100000` (1 000 / 10 000 / 17 000 / 100 000 coins), old ids removed everywhere
+      (code, fake store, tests); `no_ads` unchanged
+- [x] WP-K1 — USD placeholders `$1.29` / `$9.99` / `$15.99` / `$84.99` / `$3.49`; Shop + No-ads popup keep
+      showing the store price (`iap.priceOf`) when present, the placeholder otherwise
+- [x] WP-K1 — Shop amounts "1,000 / 10,000 / 17,000 / 100,000" (verified the 100,000 text fits the tile),
+      tags moved to MOST POPULAR (10,000) and BEST DEAL (100,000); celebration tiers map smallest → largest
+- [ ] USER-only: update the Play Console products + PRD-menu-v4 §6 per-currency prices (runbook §7); old ids
+      stay deactivated. Device check: Shop must show store prices, not the `$` placeholders
 
 ## Final gate (1.0)
 - [x] `flutter analyze` clean

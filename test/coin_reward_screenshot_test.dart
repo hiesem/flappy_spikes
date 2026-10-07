@@ -12,7 +12,7 @@ import 'helpers.dart';
 import 'menu_screenshot_test.dart' show captureShot, loadFonts;
 import 'shop_flow_test.dart' show openShop;
 
-/// PRD-home-v3 §5 visual check: the 1 800 pack celebration in the Shop
+/// PRD-home-v3 §5 visual check: the 10 000 pack celebration in the Shop
 /// (compare with design/menu_v2/coinbuy_count.png / coinbuy_end.png),
 /// written to build/menu_shots/.
 void main() {
@@ -35,7 +35,7 @@ void main() {
       final p = art.absolutePosition;
       game.coinFlyRandom = math.Random(5);
       game.coinPill.hold();
-      await game.menu.wallet.add(1800, CoinSource.iap);
+      await game.menu.wallet.add(10000, CoinSource.iap);
       game.playCoinReward(
         CoinRewardAnimation.pack(
           pack.product,

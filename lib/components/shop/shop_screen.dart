@@ -22,12 +22,14 @@ import '../ui/bird_idle.dart';
 import '../ui/flip.dart';
 import '../ui/live_effects.dart';
 
-/// Coin packs in grid order with their flap tags (PRD-1 §5.2).
+/// Coin packs in grid order with their flap tags (PRD-menu-v4 §2):
+/// 1 000 / 10 000 / 17 000 / 100 000, tags on 10 000 (MOST POPULAR) and
+/// 100 000 (BEST DEAL).
 const List<(IapProduct, String?)> kShopPacks = [
-  (IapProduct.coins500, null),
-  (IapProduct.coins1800, 'MOST POPULAR'),
-  (IapProduct.coins5000, null),
-  (IapProduct.coins12000, 'BEST DEAL'),
+  (IapProduct.coins1000, null),
+  (IapProduct.coins10000, 'MOST POPULAR'),
+  (IapProduct.coins17000, null),
+  (IapProduct.coins100000, 'BEST DEAL'),
 ];
 
 /// Images the Shop content draws (besides the chrome).

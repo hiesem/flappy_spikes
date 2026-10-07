@@ -58,7 +58,7 @@ Iterable<String> paragraphs(Component c) =>
 void main() {
   group('Coin-pack celebration (PRD-home-v3 §5)', () {
     shopTest(
-      '5 000 pack from the Shop: coins burst from its stack, count-up, '
+      '17 000 pack from the Shop: coins burst from its stack, count-up, '
       'payoff sounds, no toast',
       prefs: const {'coins': 100},
       verify: (game, spy, ads, iap, tester) async {
@@ -69,9 +69,9 @@ void main() {
         final stack = shop.packs[2].stackRect!;
         shop.packs[2].onPressed();
         await settle(game);
-        expect(game.menu.wallet.balance, 5100);
+        expect(game.menu.wallet.balance, 17100);
         final reward = game.coinReward!;
-        expect(reward.amount, 5000);
+        expect(reward.amount, 17000);
         expect(reward.from, stack);
         expect(reward.coins, 12);
         // The pill waits for the coins.
@@ -83,8 +83,8 @@ void main() {
           onStep: () =>
               maxShown = math.max(maxShown, game.coinPill.shownBalance),
         );
-        expect(maxShown, 5100, reason: 'never counts past the balance');
-        expect(game.coinPill.shownBalance, 5100);
+        expect(maxShown, 17100, reason: 'never counts past the balance');
+        expect(game.coinPill.shownBalance, 17100);
         expect(sounds.where((s) => s == Sfx.bnCoin), hasLength(12));
         expect(sounds, contains(Sfx.skTick));
         expect(sounds, contains(Sfx.skBuyEpic));
@@ -98,12 +98,12 @@ void main() {
       'a late pack callback off the Shop plays from the screen centre',
       verify: (game, spy, ads, iap, tester) async {
         // Bought on home (e.g. the store answered after the player left).
-        unawaited(game.purchases.buy(IapProduct.coins500));
+        unawaited(game.purchases.buy(IapProduct.coins1000));
         await settle(game);
         final reward = game.coinReward!;
         expect(reward.from.center, Offset(160, game.viewHeight / 2));
         await run(game, 2.5);
-        expect(game.coinPill.shownBalance, 500);
+        expect(game.coinPill.shownBalance, 1000);
       },
     );
   });
@@ -127,12 +127,12 @@ void main() {
           'You have not been charged. Please try again later.',
         ]);
         expect(spy.last('iap_error'), {
-          'product': 'coins_500',
+          'product': 'coins_1000',
           'reason': 'Fake error',
           'code': 'fake',
         });
         expect(spy.last('purchase_result_popup'), {
-          'product': 'coins_500',
+          'product': 'coins_1000',
           'outcome': 'failed',
           'code': 'fake',
         });
@@ -184,7 +184,7 @@ void main() {
           'You have not been charged.',
         ]);
         expect(spy.last('purchase_result_popup'), {
-          'product': 'coins_1800',
+          'product': 'coins_10000',
           'outcome': 'cancelled',
         });
         expect(spy.names, isNot(contains('iap_error')));

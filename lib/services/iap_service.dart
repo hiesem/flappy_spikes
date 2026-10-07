@@ -6,38 +6,40 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 
 /// Store products (Play Console / App Store Connect product IDs in
 /// [IapProductInfo.storeId]).
-enum IapProduct { coins500, coins1800, coins5000, coins12000, noAds }
+enum IapProduct { coins1000, coins10000, coins17000, coins100000, noAds }
 
 extension IapProductInfo on IapProduct {
   /// Store product ID.
   String get storeId => switch (this) {
-    IapProduct.coins500 => 'coins_500',
-    IapProduct.coins1800 => 'coins_1800',
-    IapProduct.coins5000 => 'coins_5000',
-    IapProduct.coins12000 => 'coins_12000',
+    IapProduct.coins1000 => 'coins_1000',
+    IapProduct.coins10000 => 'coins_10000',
+    IapProduct.coins17000 => 'coins_17000',
+    IapProduct.coins100000 => 'coins_100000',
     IapProduct.noAds => 'no_ads',
   };
 
   /// Coins granted by a coin pack (0 for No ads — its bonus is
   /// [kNoAdsBonusCoins]).
   int get coins => switch (this) {
-    IapProduct.coins500 => 500,
-    IapProduct.coins1800 => 1800,
-    IapProduct.coins5000 => 5000,
-    IapProduct.coins12000 => 12000,
+    IapProduct.coins1000 => 1000,
+    IapProduct.coins10000 => 10000,
+    IapProduct.coins17000 => 17000,
+    IapProduct.coins100000 => 100000,
     IapProduct.noAds => 0,
   };
 
   /// Coin packs are consumable; No ads is a one-time (restorable) purchase.
   bool get consumable => this != IapProduct.noAds;
 
-  /// Shown until (or unless) the store returns the localized price.
+  /// Shown until (or unless) the store returns the localized price
+  /// (PRD-menu-v4 §3): a US-dollar placeholder ("$1.29"), used offline /
+  /// before the products load / on Linux / in tests.
   String get placeholderPrice => switch (this) {
-    IapProduct.coins500 => '€0.99',
-    IapProduct.coins1800 => '€2.99',
-    IapProduct.coins5000 => '€6.99',
-    IapProduct.coins12000 => '€14.99',
-    IapProduct.noAds => '€2.99',
+    IapProduct.coins1000 => r'$1.29',
+    IapProduct.coins10000 => r'$9.99',
+    IapProduct.coins17000 => r'$15.99',
+    IapProduct.coins100000 => r'$84.99',
+    IapProduct.noAds => r'$3.49',
   };
 }
 

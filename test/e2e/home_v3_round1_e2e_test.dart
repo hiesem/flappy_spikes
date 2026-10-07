@@ -434,10 +434,10 @@ void main() async {
   }
 
   const packs = [
-    (IapProduct.coins500, 6, .9, 40, Sfx.skBuyCommon),
-    (IapProduct.coins1800, 9, 1.2, 70, Sfx.skBuyRare),
-    (IapProduct.coins5000, 12, 1.5, 100, Sfx.skBuyEpic),
-    (IapProduct.coins12000, 16, 1.9, 150, Sfx.skBuyLegendary),
+    (IapProduct.coins1000, 6, .9, 40, Sfx.skBuyCommon),
+    (IapProduct.coins10000, 9, 1.2, 70, Sfx.skBuyRare),
+    (IapProduct.coins17000, 12, 1.5, 100, Sfx.skBuyEpic),
+    (IapProduct.coins100000, 16, 1.9, 150, Sfx.skBuyLegendary),
   ];
   for (final preset in packs) {
     _journey(
@@ -523,7 +523,7 @@ void main() async {
           expect(game.menu.noAds, isFalse);
           expect(game.noAdsCelebration, isNull);
           expect(game.coinReward, isNull);
-          final product = noAds ? 'no_ads' : 'coins_500';
+          final product = noAds ? 'no_ads' : 'coins_1000';
           if (mode == FakeIapMode.pending) {
             expect(game.purchaseResultPopup, isNull);
             expect(rig.events.params('purchase_result_popup'), isEmpty);
@@ -754,7 +754,7 @@ void main() async {
           isEmpty,
         ),
       );
-      expect(game.coinPill.shownBalance, 12000);
+      expect(game.coinPill.shownBalance, 100000);
       await _tap(game, tester, game.shopScreen!.banner);
       await _advance(game, .8);
       expect(game.world.children.query<ScreenFlash>(), isEmpty);
@@ -762,7 +762,7 @@ void main() async {
       expect(game.world.descendants().whereType<ConfettiBurst>(), isEmpty);
       await _tap(game, tester, game.noAdsCelebration!.claimButton);
       await _advance(game, 5);
-      expect(game.coinPill.shownBalance, 13000);
+      expect(game.coinPill.shownBalance, 101000);
       expect(game.shopScreen!.banner.owned, isTrue);
     },
     prefs: {'bestScore': 6000, 'claimedLevels': _claimed(10)},
@@ -913,7 +913,7 @@ void main() async {
       final toast = game.toastMessage;
       expect(toast?.message, 'Purchase pending…');
       // An unrelated product resolving must not drop No ads' toast.
-      game.purchases.onResolved!(IapProduct.coins500);
+      game.purchases.onResolved!(IapProduct.coins1000);
       await flushAndMount(game);
       expect(game.toastMessage, same(toast));
       await tester.pump(const Duration(seconds: 2));

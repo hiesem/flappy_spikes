@@ -318,16 +318,16 @@ void main() async {
     await run(game, .6);
     await _tap(game, tester, game.homeScreen!.bird);
     await run(game, 5);
-    expect(game.menu.wallet.balance, 6250);
-    expect(game.coinPill.shownBalance, 6250);
+    expect(game.menu.wallet.balance, 18250);
+    expect(game.coinPill.shownBalance, 18250);
     expect(game.coinPill.held, isFalse);
     expect(game.world.descendants().whereType<ConfettiBurst>(), isEmpty);
     await _tap(game, tester, game.levelsScreen!.backButton);
     await run(game, .6);
     expect(game.coinPill.opacity, 1);
-    expect(game.coinPill.shownBalance, 6250);
+    expect(game.coinPill.shownBalance, 18250);
     expect(rig.sounds.where((s) => s == Sfx.bnCoin), hasLength(12));
-    expect((await _saved()).coins, 6250);
+    expect((await _saved()).coins, 18250);
   }, prefs: const {'coins': 1250});
 
   for (final mode in [

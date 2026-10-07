@@ -75,11 +75,11 @@ class CoinRewardAnimation extends Component
     super.priority = 1000,
   }) : _flight = _Flight.burst;
 
-  /// A coin pack (§5 table): 500 / 1 800 / 5 000 / 12 000 -> 6 / 9 / 12 /
-  /// 16 coins, 0.9 / 1.2 / 1.5 / 1.9 s count, 40 / 70 / 100 / 150
-  /// confetti, `sk_buy_common` / `rare` / `epic` / `legendary`; 12 000
-  /// adds the white flash. [from] = the pack's coin-stack box (coins burst
-  /// out of its top-left).
+  /// A coin pack (PRD-menu-v4 §2, PRD-home-v3 §5 table): 1 000 / 10 000 /
+  /// 17 000 / 100 000 -> 6 / 9 / 12 / 16 coins, 0.9 / 1.2 / 1.5 / 1.9 s
+  /// count, 40 / 70 / 100 / 150 confetti, `sk_buy_common` / `rare` /
+  /// `epic` / `legendary`; 100 000 adds the white flash. [from] = the
+  /// pack's coin-stack box (coins burst out of its top-left).
   factory CoinRewardAnimation.pack(
     IapProduct product, {
     required Rect from,
@@ -87,13 +87,13 @@ class CoinRewardAnimation extends Component
     math.Random? random,
   }) {
     final (coins, count, confetti, jingle) = switch (product) {
-      IapProduct.coins500 => (6, 0.9, 40, Sfx.skBuyCommon),
-      IapProduct.coins1800 => (9, 1.2, 70, Sfx.skBuyRare),
-      IapProduct.coins5000 => (12, 1.5, 100, Sfx.skBuyEpic),
-      IapProduct.coins12000 => (16, 1.9, 150, Sfx.skBuyLegendary),
+      IapProduct.coins1000 => (6, 0.9, 40, Sfx.skBuyCommon),
+      IapProduct.coins10000 => (9, 1.2, 70, Sfx.skBuyRare),
+      IapProduct.coins17000 => (12, 1.5, 100, Sfx.skBuyEpic),
+      IapProduct.coins100000 => (16, 1.9, 150, Sfx.skBuyLegendary),
       IapProduct.noAds => throw ArgumentError('No ads is not a coin pack'),
     };
-    final big = product.coins >= 5000;
+    final big = product.coins >= 17000;
     return CoinRewardAnimation(
       amount: product.coins,
       from: from,
@@ -104,7 +104,7 @@ class CoinRewardAnimation extends Component
       confettiSpeed: big ? 300 : 220,
       confettiStars: big,
       jingle: jingle,
-      flash: product == IapProduct.coins12000,
+      flash: product == IapProduct.coins100000,
       progressDelay: 0.7,
       spreadX: 16,
       jitterY: (min: -4, max: 16),
@@ -236,7 +236,7 @@ class CoinRewardAnimation extends Component
   /// Plays at the end of the count (null = none).
   final Sfx? jingle;
 
-  /// White full-screen flash at the end (the 12 000 pack).
+  /// White full-screen flash at the end (the 100 000 pack).
   final bool flash;
 
   /// End of the count -> `sk_progress` (and the glow off).
@@ -465,7 +465,7 @@ class CoinRewardAnimation extends Component
   }
 }
 
-/// "+1 800" under the pill (§5): gold 26 pt with a 1 pt gold outline and
+/// "+10 000" under the pill (§5): gold 26 pt with a 1 pt gold outline and
 /// a plum 25 % drop shadow (0, 2); 1.5 s ease-out: in from 10 pt lower at
 /// 60 %, 115 % at 20 %, 6 pt up at 70 %, then 22 pt up fading out.
 class _PlusLabel extends PositionComponent with GroupOpacity {
@@ -545,7 +545,7 @@ class _PlusLabel extends PositionComponent with GroupOpacity {
   }
 }
 
-/// The 12 000 pack's white flash over the whole screen.
+/// The 100 000 pack's white flash over the whole screen.
 class _Flash extends Component {
   _Flash(this.height) : super(priority: 4);
 

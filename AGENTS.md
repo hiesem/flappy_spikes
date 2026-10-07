@@ -76,12 +76,18 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
 - Linux visual checks: live capture (grim) hangs while the display is off — use
   headless screenshot tests instead; window geometry via `hyprctl`.
 
-## In-app purchases — test setup (2026-10-05)
+## In-app purchases — test setup (2026-10-05, packs revised 2026-10-07)
 - Payments profile **Duo Leads (0852-6699-4116)** linked (merchant category Computer Software, support
   hello@duoleads.com, statement DUO LEADS). Bank account + 15% service-fee enrolment still open (user).
 - One-time products (new model) Active: coins_500 / coins_1800 / coins_5000 / coins_12000 / no_ads, purchase
   options coins-500 … no-ads (Buy, backwards compatible). Prices: same nominal .99 in EUR/USD/GBP (entered
   ex-VAT so NL shows the target); other countries auto-converted.
+- **Coin packs revised 2026-10-07 (PRD-menu-v4 §2–4, code + tests):** new ids `coins_1000` / `coins_10000` /
+  `coins_17000` / `coins_100000` (1 000 / 10 000 / 17 000 / 100 000 coins) + unchanged `no_ads`. USD
+  placeholders `$1.29` / `$9.99` / `$15.99` / `$84.99`, No ads `$3.49`; the UI shows `iap.priceOf(...)`
+  (the store price) whenever the store has returned one, else the placeholder. The Play Console products +
+  per-currency prices (PRD-menu-v4 §5–7) are updated separately; the old ids stay deactivated in Play
+  (Google cannot delete product IDs) and are gone from the code (no grant table).
 - Licence testing + internal-testing tester list "Flappy Spikes internal" (killerhis@gmail.com).
   Internal testing track: 2.0.0 (6) live (versions 3-5 superseded).
 - Products need a PUBLISHED bundle with BILLING permission before they can be created (draft is not enough).

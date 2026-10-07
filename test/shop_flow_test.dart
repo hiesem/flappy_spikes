@@ -104,6 +104,10 @@ void shopTest(
   double height = 711,
   FakeAdMode adMode = FakeAdMode.succeed,
   FakeIapMode iapMode = FakeIapMode.succeed,
+
+  /// Store stand-in (e.g. a subclass returning real store prices); the
+  /// default is a plain [FakeIapService] with placeholder prices.
+  FakeIapService? iapService,
   TestClock? clock,
   bool fakeAdOverlay = false,
   bool exactSurface = false,
@@ -118,7 +122,7 @@ void shopTest(
 }) {
   final spy = EventSpy();
   final ads = FakeRewardedAds()..mode = adMode;
-  final iap = FakeIapService()..mode = iapMode;
+  final iap = (iapService ?? FakeIapService())..mode = iapMode;
   final testClock = clock ?? TestClock();
   FlameTester<FlappySpikesGame>(
     () {
@@ -179,18 +183,18 @@ void main() {
           Rect.fromLTWH(164, 426, 142, 150),
         ]);
         expect(shop.packs.map((p) => p.product).toList(), [
-          IapProduct.coins500,
-          IapProduct.coins1800,
-          IapProduct.coins5000,
-          IapProduct.coins12000,
+          IapProduct.coins1000,
+          IapProduct.coins10000,
+          IapProduct.coins17000,
+          IapProduct.coins100000,
         ]);
         expect(shop.packs.map((p) => p.amount.text).toList(), [
-          '500',
-          '1,800',
-          '5,000',
-          '12,000',
+          '1,000',
+          '10,000',
+          '17,000',
+          '100,000',
         ]);
-        // Tags: MOST POPULAR on 1,800, BEST DEAL on 12,000, 24 tall,
+        // Tags: MOST POPULAR on 10,000, BEST DEAL on 100,000, 24 tall,
         // centred on the top edge.
         expect(shop.packs[0].tagComponent, isNull);
         expect(shop.packs[2].tagComponent, isNull);
@@ -222,13 +226,13 @@ void main() {
         expect(shop.scroll.viewport.bottom, h - 44);
         expect(shop.scroll.scrollable, isFalse);
         expect(Config.shopContentBottomFor(h), lessThanOrEqualTo(h - 44));
-        // Placeholder store prices.
-        expect(shop.banner.price, '€2.99');
+        // Placeholder store prices (PRD-menu-v4 §3, USD).
+        expect(shop.banner.price, r'$3.49');
         expect(shop.packs.map((p) => p.priceLabel.text).toList(), [
-          '€0.99',
-          '€2.99',
-          '€6.99',
-          '€14.99',
+          r'$1.29',
+          r'$9.99',
+          r'$15.99',
+          r'$84.99',
         ]);
       },
     );
@@ -552,19 +556,19 @@ void main() {
       prefs: const {'coins': 5},
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
-        shop.packs[1].onPressed(); // 1,800
+        shop.packs[1].onPressed(); // 10,000
         await settle(game);
-        expect(iap.purchases, [IapProduct.coins1800]);
-        expect(game.menu.wallet.balance, 1805);
-        expect(spy.last('iap_purchase'), {'product': 'coins_1800'});
-        expect(spy.last('coins_earned'), {'amount': 1800, 'source': 'iap'});
+        expect(iap.purchases, [IapProduct.coins10000]);
+        expect(game.menu.wallet.balance, 10005);
+        expect(spy.last('iap_purchase'), {'product': 'coins_10000'});
+        expect(spy.last('coins_earned'), {'amount': 10000, 'source': 'iap'});
         // PRD-home-v3 §5: the coin-fly + count-up replaces the toast.
         expect(toastText(game), isNot(contains('coins')));
-        expect(game.coinReward!.amount, 1800);
-        expect(game.purchases.isPending(IapProduct.coins1800), isFalse);
+        expect(game.coinReward!.amount, 10000);
+        expect(game.purchases.isPending(IapProduct.coins10000), isFalse);
         expect(shop.packs[1].tappable, isTrue);
         // The pill follows the balance.
-        expect(shop.coinPill.balance, 1805);
+        expect(shop.coinPill.balance, 10005);
       },
     );
 
@@ -576,14 +580,14 @@ void main() {
         shop.packs[0].onPressed();
         await settle(game);
         expect(toastText(game), 'Purchase pending…');
-        expect(game.purchases.isPending(IapProduct.coins500), isTrue);
+        expect(game.purchases.isPending(IapProduct.coins1000), isTrue);
         game.update(0);
         expect(shop.packs[0].pending, isTrue);
         expect(shop.packs[0].tappable, isFalse);
         expect(shop.packs[0].dimmed, isTrue);
         expect(shop.packs[1].tappable, isTrue);
         // A second press is ignored while pending.
-        await game.buyProduct(IapProduct.coins500);
+        await game.buyProduct(IapProduct.coins1000);
         expect(iap.purchases, hasLength(1));
         expect(game.menu.wallet.balance, 0);
       },
@@ -606,16 +610,16 @@ void main() {
         expect(game.purchaseResultPopup!.problem, PurchaseProblem.failed);
         expect(toastText(game), isNot(startsWith('Purchase failed')));
         expect(spy.last('purchase_result_popup'), {
-          'product': 'coins_5000',
+          'product': 'coins_17000',
           'outcome': 'failed',
           'code': 'fake',
         });
         expect(spy.last('iap_error'), {
-          'product': 'coins_5000',
+          'product': 'coins_17000',
           'reason': 'Fake error',
           'code': 'fake',
         });
-        expect(game.purchases.isPending(IapProduct.coins5000), isFalse);
+        expect(game.purchases.isPending(IapProduct.coins17000), isFalse);
         expect(game.menu.wallet.balance, 0);
         game.purchaseResultPopup!.okButton.onPressed();
         await flushAndMount(game);
@@ -633,11 +637,11 @@ void main() {
         expect(toastText(game), isNull);
         expect(game.purchaseResultPopup!.problem, PurchaseProblem.cancelled);
         expect(spy.last('purchase_result_popup'), {
-          'product': 'coins_5000',
+          'product': 'coins_17000',
           'outcome': 'cancelled',
         });
         expect(spy.count('iap_error'), 1, reason: 'cancels are no errors');
-        expect(game.purchases.isPending(IapProduct.coins5000), isFalse);
+        expect(game.purchases.isPending(IapProduct.coins17000), isFalse);
         expect(spy.names, isNot(contains('iap_purchase')));
       },
     );
@@ -801,7 +805,7 @@ void main() {
             const Rect.fromLTWH(242, 0, 38, 38));
         expect(popup.priceButton.toRect(),
             const Rect.fromLTWH(16, 299, 248, 54));
-        expect(popup.priceLabel.text, '€2.99');
+        expect(popup.priceLabel.text, r'$3.49');
         expect(popup.size, Vector2(320, 711));
         // Card on the same centred band at 568.
         final at568 = Config.noAdsCardRectFor(568);
@@ -967,8 +971,8 @@ void main() {
 
   test('formatAmount groups thousands with commas', () {
     expect(formatAmount(500), '500');
-    expect(formatAmount(1800), '1,800');
-    expect(formatAmount(12000), '12,000');
+    expect(formatAmount(10000), '10,000');
+    expect(formatAmount(100000), '100,000');
     expect(formatAmount(1234567), '1,234,567');
   });
 

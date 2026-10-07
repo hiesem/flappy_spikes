@@ -42,14 +42,14 @@ void main() {
     test('pack table', () {
       final table = {
         for (final p in [
-          IapProduct.coins500,
-          IapProduct.coins1800,
-          IapProduct.coins5000,
-          IapProduct.coins12000,
+          IapProduct.coins1000,
+          IapProduct.coins10000,
+          IapProduct.coins17000,
+          IapProduct.coins100000,
         ])
           p: CoinRewardAnimation.pack(p, from: _stack),
       };
-      expect(table.values.map((a) => a.amount), [500, 1800, 5000, 12000]);
+      expect(table.values.map((a) => a.amount), [1000, 10000, 17000, 100000]);
       expect(table.values.map((a) => a.coins), [6, 9, 12, 16]);
       expect(table.values.map((a) => a.countDuration), [.9, 1.2, 1.5, 1.9]);
       expect(table.values.map((a) => a.confetti), [40, 70, 100, 150]);
@@ -99,7 +99,7 @@ void main() {
 
   group('CoinRewardAnimation in the game', () {
     homeTest(
-      '1 800 pack: fly, count-up with ticks and glow, payoff, sounds in order',
+      '10 000 pack: fly, count-up with ticks and glow, payoff, sounds in order',
       prefs: const {'coins': 1250},
       verify: (game, spy, ads, tester) async {
         final sounds = <Sfx>[];
@@ -109,7 +109,7 @@ void main() {
         final reward = await start(
           game,
           CoinRewardAnimation.pack(
-            IapProduct.coins1800,
+            IapProduct.coins10000,
             from: _stack,
             onDone: () => done++,
           ),
@@ -128,11 +128,11 @@ void main() {
         expect(pill.glow, isTrue);
         expect(pill.glowLevel, 1);
         expect(pill.label.color, Config.menuGold);
-        expect(pill.shownBalance, inExclusiveRange(1250, 3050));
+        expect(pill.shownBalance, inExclusiveRange(1250, 11250));
         // End of the count (0.7 + 1.2 s): jingle, pops, confetti, label.
         await run(game, .8);
         expect(reward.countDone, isTrue);
-        expect(pill.shownBalance, 3050);
+        expect(pill.shownBalance, 11250);
         expect(sounds.last, Sfx.skBuyRare);
         expect(reward.confettiBurst!.count, 70);
         expect(reward.confettiBurst!.isMounted, isTrue);
@@ -159,17 +159,17 @@ void main() {
         await run(game, 3);
         expect(reward.isMounted, isFalse);
         expect(pill.held, isFalse);
-        expect(pill.shownBalance, 3050);
+        expect(pill.shownBalance, 11250);
         expect(done, 1);
       },
     );
 
     homeTest(
-      '12 000 pack: white flash, 150 confetti with coins and stars',
+      '100 000 pack: white flash, 150 confetti with coins and stars',
       verify: (game, spy, ads, tester) async {
         final reward = await start(
           game,
-          CoinRewardAnimation.pack(IapProduct.coins12000, from: _stack),
+          CoinRewardAnimation.pack(IapProduct.coins100000, from: _stack),
         );
         await run(game, .7 + 1.9 + .05);
         expect(reward.countDone, isTrue);
@@ -183,7 +183,7 @@ void main() {
           hasLength(1),
         );
         await run(game, 4);
-        expect(game.coinPill.shownBalance, 12000);
+        expect(game.coinPill.shownBalance, 100000);
       },
     );
 
@@ -196,10 +196,10 @@ void main() {
         game.sound.onPlay = sounds.add;
         final reward = await start(
           game,
-          CoinRewardAnimation.pack(IapProduct.coins12000, from: _stack),
+          CoinRewardAnimation.pack(IapProduct.coins100000, from: _stack),
         );
         await run(game, 1.5);
-        expect(game.coinPill.shownBalance, inExclusiveRange(5, 12005));
+        expect(game.coinPill.shownBalance, inExclusiveRange(5, 100005));
         await run(game, 1.3);
         expect(reward.countDone, isTrue);
         expect(reward.confettiBurst, isNull);
@@ -207,7 +207,7 @@ void main() {
           reward.children.where((c) => c.runtimeType.toString() == '_Flash'),
           isEmpty,
         );
-        expect(game.coinPill.shownBalance, 12005);
+        expect(game.coinPill.shownBalance, 100005);
         await run(game, 1);
         expect(sounds.last, Sfx.skProgress);
         expect(sounds, contains(Sfx.skBuyLegendary));
@@ -291,7 +291,7 @@ void main() {
         final reward = await start(
           game,
           CoinRewardAnimation.pack(
-            IapProduct.coins500,
+            IapProduct.coins1000,
             from: _stack,
             onDone: () => done++,
           ),
@@ -303,7 +303,7 @@ void main() {
         expect(done, 1);
         expect(game.coinPill.glow, isFalse);
         expect(game.coinPill.held, isFalse);
-        expect(game.coinPill.shownBalance, 510);
+        expect(game.coinPill.shownBalance, 1010);
       },
     );
   });

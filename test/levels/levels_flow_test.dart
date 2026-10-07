@@ -117,7 +117,7 @@ void main() async {
 
       sounds.clear();
       game.onKeyEvent(_esc(), {});
-      expect(sounds, [Sfx.skClose]);
+      expect(sounds, [Sfx.click]);
       expect(game.levelsScreen, isNull);
       expect(game.menuScene, MenuScene.home);
       await flushAndMount(game);

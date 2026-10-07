@@ -505,22 +505,37 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// upsell is dropped once one started (never between runs).
   int _runsThisSession = 0;
 
+  /// A No-ads offer waits in [_popupQueue] (never more than one).
+  bool _noAdsOfferQueued = false;
+
   /// A session starts (launch, or back after >= [Config.sessionGap]): the
   /// home arrival may show the No-ads upsell, through the popup queue
   /// (after / before LEVEL UP, purchase results, celebrations). Only when
   /// home is up — a return into a run, game over or another menu screen
   /// is no home arrival.
+  ///
+  /// At most one offer at a time (QA S1-70): no new request while one is
+  /// queued or the popup is up, and the full §8 window is re-checked the
+  /// moment the queued request would show — dropped if it closed since.
   Future<void> _startSession() async {
     await menu.noAdsPopup.startSession();
     _runsThisSession = 0;
     if (state != GameState.start || menuScene != MenuScene.home) return;
-    final reason = menu.noAdsPopup.evaluate();
-    if (reason == null) return;
-    bool stale() => _runsThisSession > 0 || menu.noAds;
+    if (_noAdsOfferQueued || _noAdsPopup != null) return;
+    if (menu.noAdsPopup.evaluate() == null) return;
+    bool stale() =>
+        _runsThisSession > 0 ||
+        menu.noAds ||
+        state != GameState.start ||
+        menuScene != MenuScene.home;
+    _noAdsOfferQueued = true;
     _queuePopup(
       () => stale() || (_homeInteractive && _fakeAd == null),
       () {
-        if (stale()) return;
+        _noAdsOfferQueued = false;
+        if (stale() || _noAdsPopup != null) return;
+        final reason = menu.noAdsPopup.evaluate();
+        if (reason == null) return;
         openNoAdsPopup(reason: reason.name);
         if (_noAdsPopup != null) unawaited(menu.noAdsPopup.markShown());
       },
@@ -829,7 +844,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// (Skins) or the home screen (not a new arrival: no slot roll).
   void closeShop() {
     if (state != GameState.start || _shop == null) return;
-    sound.play(Sfx.skClose);
+    sound.play(Sfx.click);
     _dismissShop();
     _returnFromMenuScreen();
   }
@@ -1214,7 +1229,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void closeLevels() {
     final screen = _levels;
     if (state != GameState.start || screen == null) return;
-    sound.play(Sfx.skClose);
+    sound.play(Sfx.click);
     _levels = null;
     popBack(_levelsBack);
     screen.active = false;
@@ -1334,8 +1349,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// transitioning; owners get a toast instead.
   void openNoAdsPopup({String? reason}) {
     if (_noAdsPopup == null && modalPopupOpen) {
-      // Another popup is up: the upsell takes its turn after it.
-      _queuePopup(() => true, () => openNoAdsPopup(reason: reason));
+      // Another popup is up: the upsell takes its turn after it (only one
+      // offer ever waits).
+      if (_noAdsOfferQueued) return;
+      _noAdsOfferQueued = true;
+      _queuePopup(() => true, () {
+        _noAdsOfferQueued = false;
+        openNoAdsPopup(reason: reason);
+      });
       return;
     }
     if (_noAdsPopup != null ||
@@ -1368,7 +1389,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// Closes the popup. [dismissed] (×, dim, Esc) logs
   /// `noads_popup_dismissed` and counts the dismissal (analytics only — no
-  /// limit since PRD-menu-v4 §8; the 4 h gap runs from the show); a
+  /// limit since PRD-menu-v4 §8; closing restarts the 4 h gap); a
   /// purchase closes it with `dismissed: false`.
   void closeNoAdsPopup({bool dismissed = true}) {
     final popup = _noAdsPopup;

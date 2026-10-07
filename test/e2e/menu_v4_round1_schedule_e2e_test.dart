@@ -562,7 +562,7 @@ void main() {
     },
   );
 
-  group('S1-70', skip: runOpenV4Defects ? false : 'S1-70 open', () {
+  group('S1-70', () {
     v4Journey(
       'queued session arrivals must coalesce and recheck the show window',
       prefs: (rig) => {..._recent(rig), 'bestScore': 10, 'lastScore': 10},
@@ -637,7 +637,7 @@ void main() {
     );
   });
 
-  group('S2-70', skip: runOpenV4Defects ? false : 'S2-70 open', () {
+  group('S2-70', () {
     v4Journey(
       'closing a long-open offer starts the four-hour gap (PRD §8.5)',
       eligible: true,

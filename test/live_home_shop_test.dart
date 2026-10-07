@@ -293,7 +293,7 @@ void main() {
         await flushAndMount(game);
         expect(game.menuScene, MenuScene.levels);
         game.closeLevels();
-        expect(sounds.last, Sfx.skClose);
+        expect(sounds.last, Sfx.click);
         await flushAndMount(game);
         stepGame(game, 0.6);
         await flushAndMount(game);
@@ -305,7 +305,7 @@ void main() {
         stepGame(game, 0.6);
         sounds.clear();
         game.closeShop();
-        expect(sounds, [Sfx.skClose]);
+        expect(sounds, [Sfx.click]);
         await flushAndMount(game);
         stepGame(game, 0.6);
         await flushAndMount(game);

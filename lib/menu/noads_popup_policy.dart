@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../game/config.dart';
 import '../game/storage.dart';
 
@@ -29,12 +31,13 @@ abstract final class RunMood {
 ///
 /// The window: not to owners, never in the first session, from install
 /// day 2 or after [Config.noAdsPopupMinRuns] finished runs, >=
-/// [Config.noAdsPopupMinGap] since the last show, at most
-/// [Config.noAdsPopupMaxPerDay] shows per local day, and never right after
-/// a run below [Config.noAdsPopupMinScore]. Inside it: a good moment
-/// (videos, then level, then best — a new level is always a new best too,
-/// so the more specific one wins), else the 24 h fallback. Dismissals are
-/// counted for analytics only.
+/// [Config.noAdsPopupMinGap] since the later of the last show and the
+/// last close, at most [Config.noAdsPopupMaxPerDay] shows per local day,
+/// and never right after a run below [Config.noAdsPopupMinScore]. Inside
+/// it: a good moment (videos, then level, then best — a new level is
+/// always a new best too, so the more specific one wins), else the 24 h
+/// fallback (from the last show). Dismissals are counted for analytics
+/// only (no limit); closing restarts the gap.
 ///
 /// The wall clock is [GameStorage.now] shifted by the debug day offset, so
 /// the debug panel's "Next day" also moves the hour gaps on.
@@ -88,7 +91,11 @@ class NoAdsPopupPolicy {
     if (last != null && last < Config.noAdsPopupMinScore) return null;
     final lastMs = _storage.noAdsPopupLastMs;
     final sinceMs = lastMs == 0 ? null : _nowMs - lastMs;
-    if (sinceMs != null && sinceMs < Config.noAdsPopupMinGap.inMilliseconds) {
+    // §8.2 / §8.5: the 4 h gap runs from the later of the last show and
+    // the last close; the 24 h fallback stays anchored to the show.
+    final gapFromMs = math.max(lastMs, _storage.noAdsPopupClosedMs);
+    if (gapFromMs != 0 &&
+        _nowMs - gapFromMs < Config.noAdsPopupMinGap.inMilliseconds) {
       return null;
     }
     if (showsToday >= Config.noAdsPopupMaxPerDay) return null;
@@ -130,8 +137,11 @@ class NoAdsPopupPolicy {
             : RunMood.none,
       );
 
-  /// ✕ / dim / back / Esc: analytics count only (the gap runs from the
-  /// show).
-  Future<void> markDismissed() =>
-      _storage.saveNoAdsPopupDismissals(_storage.noAdsPopupDismissals + 1);
+  /// ✕ / dim / back / Esc: counts the dismissal (analytics only — no
+  /// limit) and restarts the 4 h gap from now (§8.5 "closing simply starts
+  /// the 4-hour gap").
+  Future<void> markDismissed() async {
+    await _storage.saveNoAdsPopupClosedMs(_nowMs);
+    await _storage.saveNoAdsPopupDismissals(_storage.noAdsPopupDismissals + 1);
+  }
 }

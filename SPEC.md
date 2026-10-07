@@ -105,6 +105,12 @@ states" above. Everything else in this document still holds.
   PRD-menu-v4 §8). While a No-ads purchase is pending both
   buttons are disabled and dimmed; owners keep the unchanged home-tile
   "Already ad-free" toast and the non-tappable AD-FREE banner.
+- **Every menu back plays `click`** (DEVIATION from PRD-menu-v2 §8.3 "Back →
+  sk_close", owner request 2026-10-07). The Shop and LEVELS back buttons (and
+  Esc / Android back, which take the same path) play the same `Sfx.click` as
+  the Skins and Settings back. Popup ✕ sounds are unchanged (`sk_close` on
+  LEVEL UP ✕, purchase result, No-ads celebration; `click` on the No-ads
+  popup).
 - **"+N" coins line.** The game-over panel gains a small "+N" + coin line under
   the stats, showing the coins earned (interim rule: 1 coin per point, credited
   at game over; a fresh install starts at 0 coins).
@@ -118,14 +124,21 @@ session-start upsell. **DEVIATION (PRD-menu-v4 §8, owner decision 2026-10-07)
 dismissals):** it may show only on the home arrival at the start of a session
 (app launch, or back after ≥ 30 min in the background; never between runs,
 right after START, away from home or over another popup — the popup queue
-orders it), at least 4 h after the last show (wall clock) and at most 2 times
+orders it), at least 4 h after the later of the last show and the last close (wall
+clock; S2-70 decision 2026-10-07, PRD-menu-v4 §8.5 "closing starts the
+4-hour gap" — the close time is persisted as `noAdsPopupClosedMs`) and at most 2 times
 per local calendar day, never in the install's first session, and only from
 install day 2 or after 10 finished runs. Within that window it shows when ≥ 3
 rewarded videos were completed since the last show (reason `videos`) or the
 previous run reached a new level (`level`) / set a new best (`best`), else
 once ≥ 24 h passed since the last show (`fallback`); never right after a run
-under 6 points. Closing (✕ / dim / back / Esc) just lets the 4 h gap run — no
-dismissal limit, back-off or lifetime cap; never to buyers. The numbers are
+under 6 points (the 24 h fallback stays measured from the last show).
+Closing (✕ / dim / back / Esc) restarts the 4 h gap from the close — no
+dismissal limit, back-off or lifetime cap; never to buyers. At most one offer
+is ever pending: a session start while one is queued or on screen adds
+nothing, and a queued offer re-checks the whole window (owner, gap, daily cap,
+< 6 rule, home, no run this session) the moment it would show and is dropped
+if it no longer holds (S1-70). The numbers are
 `Config` constants (`sessionGap`, `noAdsPopup*`); `NoAdsPopupPolicy` holds the
 rule, `noads_popup_shown` carries `reason`, and the debug panel's "NO-ADS
 POPUP: force" bypasses it. The **Skins** screen (`lib/components/skins/`,

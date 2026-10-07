@@ -25,6 +25,7 @@ class GameStorage {
   static const String _noAdsPopupLastDayKey = 'noAdsPopupLastDay';
   static const String _noAdsPopupDismissalsKey = 'noAdsPopupDismissals';
   static const String _noAdsPopupLastMsKey = 'noAdsPopupLastMs';
+  static const String _noAdsPopupClosedMsKey = 'noAdsPopupClosedMs';
   static const String _noAdsPopupShowsTodayKey = 'noAdsPopupShowsToday';
   static const String _noAdsPopupVideosKey = 'noAdsPopupVideos';
   static const String _lastRunMoodKey = 'lastRunMood';
@@ -75,6 +76,11 @@ class GameStorage {
   /// Wall-clock ms of the latest show (0 = never; the 4 h gap / 24 h
   /// fallback).
   int noAdsPopupLastMs = 0;
+
+  /// Wall-clock ms of the latest close (✕ / dim / back / Esc; 0 = never).
+  /// PRD-menu-v4 §8.5: closing starts the 4 h gap, so the gap runs from
+  /// the later of this and [noAdsPopupLastMs].
+  int noAdsPopupClosedMs = 0;
 
   /// Shows on [noAdsPopupLastDay].
   int noAdsPopupShowsToday = 0;
@@ -157,6 +163,7 @@ class GameStorage {
     noAdsPopupLastDay = prefs.getInt(_noAdsPopupLastDayKey) ?? -1;
     noAdsPopupDismissals = prefs.getInt(_noAdsPopupDismissalsKey) ?? 0;
     noAdsPopupLastMs = prefs.getInt(_noAdsPopupLastMsKey) ?? 0;
+    noAdsPopupClosedMs = prefs.getInt(_noAdsPopupClosedMsKey) ?? 0;
     noAdsPopupShowsToday = prefs.getInt(_noAdsPopupShowsTodayKey) ?? 0;
     noAdsPopupVideos = prefs.getInt(_noAdsPopupVideosKey) ?? 0;
     lastRunMood = prefs.getString(_lastRunMoodKey) ?? '';
@@ -281,6 +288,12 @@ class GameStorage {
     noAdsPopupLastMs = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_noAdsPopupLastMsKey, value);
+  }
+
+  Future<void> saveNoAdsPopupClosedMs(int value) async {
+    noAdsPopupClosedMs = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_noAdsPopupClosedMsKey, value);
   }
 
   Future<void> saveNoAdsPopupShowsToday(int value) async {

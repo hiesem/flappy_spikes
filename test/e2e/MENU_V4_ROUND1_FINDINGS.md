@@ -2,7 +2,8 @@
 
 Date: 2026-10-07. Branch: `v4-qa`. Scope: PRD §2–4 and §8, with
 `briefs5/common.md`, `wpK1.md`, `wpK2.md` and `CLAUDE.md` applied.
-**Two open findings. Product code was not modified.**
+**Two findings — both fixed in branch `v4-fix1` (Fix menu-v4 R1); the
+S1-70 / S2-70 groups now run unskipped.**
 
 ## Gates and reproductions
 

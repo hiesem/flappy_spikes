@@ -17,11 +17,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers.dart';
 import '../shop_flow_test.dart' show EventSpy;
 
-// Run the quarantined assertions without editing their skips:
-// flutter test test/e2e/menu_v4_round1_schedule_e2e_test.dart \
-//   --dart-define=QA_V4_OPEN_DEFECTS=true
-const runOpenV4Defects = bool.fromEnvironment('QA_V4_OPEN_DEFECTS');
-
 class V4Clock {
   DateTime now = DateTime(2026, 10, 7, 8);
   DateTime call() => now;

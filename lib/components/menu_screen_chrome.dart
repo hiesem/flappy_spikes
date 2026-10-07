@@ -4,7 +4,11 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
 import 'package:flutter/gestures.dart'
-    show GestureBinding, PointerCancelEvent, PointerDownEvent, PointerEvent,
+    show
+        GestureBinding,
+        PointerCancelEvent,
+        PointerDownEvent,
+        PointerEvent,
         PointerUpEvent;
 
 import '../game/config.dart';
@@ -39,8 +43,7 @@ const List<String> kMenuChromeImages = [
 abstract class MenuScreen extends PositionComponent
     with HasGameReference<FlappySpikesGame>, GroupOpacity
     implements Tintable {
-  MenuScreen({required this.title, required this.onBack})
-    : super(priority: 20);
+  MenuScreen({required this.title, required this.onBack}) : super(priority: 20);
 
   /// Uppercase title text.
   final String title;
@@ -416,15 +419,27 @@ class MenuScrollArea extends PositionComponent with DragCallbacks {
   void _advanceGlide(double dt) {
     final v0 = _velocity;
     const decay = Config.menuScrollFlingDecay;
+    final lnDecay = math.log(decay);
     final keep = math.pow(decay, dt).toDouble();
-    _setRaw(_raw + v0 * (keep - 1) / math.log(decay));
-    final v = v0 * keep;
-    if (isOverScrolled) {
-      // Reached an edge: bounce (the spring starts with the remaining speed).
+    final next = _raw + v0 * (keep - 1) / lnDecay;
+    final max = maxOffset;
+    final edge = next < 0 ? 0.0 : (next > max ? max : null);
+    if (edge != null) {
+      // Reached an edge inside this frame: split the frame at the exact
+      // crossing time (solve `raw + v0 (d^t - 1) / ln d = edge`) and spend
+      // the rest of it in the spring, so the handover does not depend on
+      // the frame rate (QA S2-52).
+      final reach = 1 + (edge - _raw) * lnDecay / v0;
+      final t = reach > 0 ? (math.log(reach) / lnDecay).clamp(0.0, dt) : 0.0;
+      final v = v0 * math.pow(decay, t).toDouble();
       _velocity = 0;
-      _startSpring(v);
+      _setDisplay(edge);
+      _spring = _SpringBack(edge: edge, x: 0, v: v);
+      _advanceSpring(_spring!, dt - t);
       return;
     }
+    _setRaw(next);
+    final v = v0 * keep;
     _velocity = v.abs() < Config.menuScrollRestVelocity ? 0 : v;
   }
 
@@ -526,7 +541,16 @@ class MenuScrollArea extends PositionComponent with DragCallbacks {
   /// out a finger that had already stopped (stale samples).
   double _releaseVelocity(DragEndEvent event) {
     final estimate = _sampleVelocity();
-    if (estimate == 0) return -event.velocity.y;
+    if (estimate == 0) {
+      // Too few drag samples (a sparse flick): Flutter's estimate is in
+      // logical pixels/s, so convert it to world points like the samples
+      // (QA S1-52) and apply the same cap.
+      final scale = _drags?.pointsToPixels() ?? 1;
+      return (-event.velocity.y / (scale > 0 ? scale : 1)).clamp(
+        -Config.menuScrollMaxFlingVelocity,
+        Config.menuScrollMaxFlingVelocity,
+      );
+    }
     return event.velocity.length < 1 ? 0 : estimate;
   }
 

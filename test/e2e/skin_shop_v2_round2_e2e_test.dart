@@ -172,13 +172,12 @@ void main() {
     expect(events.count('item_purchase'), 0);
   });
 
-  // S1-52, Medium: menu_screen_chrome.dart:529 falls back to the host's
+  // S1-52 (fixed in R2), Medium: menu_screen_chrome.dart fell back to the host's
   // pixel/s velocity without converting to world pt/s or applying the cap.
   // This identical sparse world-point flick yields 3145 / 6290 / 9435 pt/s
   // at 1x / 2x / 3x; the latter two exceed the configured 4000 pt/s ceiling.
   _journey(
     'S1-52 sparse flicks keep the same velocity at every camera scale',
-    skip: 'S1-52 open',
     (game, events, tester) async {
       final screen = await _skins(game, tester);
       Future<double> sparseFlick(double scale) async {
@@ -215,7 +214,7 @@ void main() {
     },
   );
 
-  // S2-52, Low: menu_screen_chrome.dart:420-425 advances a whole fling
+  // S2-52 (fixed in R2), Low: menu_screen_chrome.dart advanced a whole fling
   // frame before starting the spring, losing the edge-crossing time within
   // that frame. At t=.1s, 30/60 fps overshoots exceed 120 fps by 3.83 pt in
   // Skins, 4.49 pt in Shop and 4.21 pt in LEVELS (about 20% of the bounce).
@@ -223,7 +222,6 @@ void main() {
   for (final menu in ['skins', 'Shop', 'LEVELS']) {
     _journey(
       'S2-52 $menu edge bounce trajectory is independent of fps',
-      skip: 'S2-52 open',
       (game, events, tester) async {
         final MenuScreen screen;
         if (menu == 'skins') {

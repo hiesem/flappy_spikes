@@ -78,8 +78,8 @@ class CoinRewardAnimation extends Component
   /// A coin pack (PRD-menu-v4 §2, PRD-home-v3 §5 table): 1 000 / 10 000 /
   /// 17 000 / 100 000 -> 6 / 9 / 12 / 16 coins, 0.9 / 1.2 / 1.5 / 1.9 s
   /// count, 40 / 70 / 100 / 150 confetti, `sk_buy_common` / `rare` /
-  /// `epic` / `legendary`; 100 000 adds the white flash. [from] = the
-  /// pack's coin-stack box (coins burst out of its top-left).
+  /// `epic` / `legendary`; 100 000 adds the white flash. [from] = the top
+  /// of the pack art's heap (coins burst out of its top centre).
   factory CoinRewardAnimation.pack(
     IapProduct product, {
     required Rect from,
@@ -106,6 +106,7 @@ class CoinRewardAnimation extends Component
       jingle: jingle,
       flash: product == IapProduct.coins100000,
       progressDelay: 0.7,
+      originCentre: true,
       spreadX: 16,
       jitterY: (min: -4, max: 16),
       midSpreadX: 90,

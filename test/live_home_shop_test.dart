@@ -395,7 +395,7 @@ void main() {
     );
 
     shopTest(
-      'pack press: sk_tap and the coin stack hops 4 pt',
+      'pack press: sk_tap and the pack art hops 4 pt',
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
         final sounds = <Sfx>[];
@@ -403,12 +403,12 @@ void main() {
         final pack = shop.packs[1];
         pack.onTapDown(_tapDown());
         stepGame(game, LiveCurves.packHopDuration / 2, dt: 0.0175);
-        expect(pack.stackHop, closeTo(-4, 0.01));
+        expect(pack.artHop, closeTo(-4, 0.01));
         pack.onTapUp(_tapUp());
         expect(sounds.first, Sfx.skTap);
         await _settle(game, tester);
         stepGame(game, 0.5);
-        expect(pack.stackHop, 0);
+        expect(pack.artHop, 0);
       },
     );
 

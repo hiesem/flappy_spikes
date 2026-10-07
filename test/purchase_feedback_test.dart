@@ -66,7 +66,7 @@ void main() {
         final sounds = <Sfx>[];
         game.sound.onPlay = sounds.add;
         game.coinFlyRandom = math.Random(1);
-        final stack = shop.packs[2].stackRect!;
+        final stack = shop.packs[2].artRect!;
         shop.packs[2].onPressed();
         await settle(game);
         expect(game.menu.wallet.balance, 17100);

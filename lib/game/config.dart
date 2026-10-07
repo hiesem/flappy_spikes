@@ -652,10 +652,11 @@ class Config {
     shopPackHeight,
   );
 
-  /// Inside a pack card: the coin stack's bottom edge, the amount's line
-  /// box top and the price button height (mock flex column, 26 pt top
-  /// padding, 56 pt art box, space-between).
-  static const double shopPackArtBottom = 78;
+  /// Inside a pack card: the pack art box's top-left (PRD-menu-v4 §2.1,
+  /// mock `.packart` 120 x 68 at 11 / 12), the amount's line box top and
+  /// the price button height.
+  static const double shopPackArtLeft = 11;
+  static const double shopPackArtTop = 12;
   static const double shopPackAmountTop = 82.875;
   static const double shopPackPriceHeight = 38;
   // Gold flap tag centred on the card's top edge.

@@ -455,7 +455,7 @@ void main() async {
         expect(reward.coins, preset.$2);
         expect(reward.countDuration, preset.$3);
         expect(reward.confetti, preset.$4);
-        expect(reward.from, pack.stackRect);
+        expect(reward.from, pack.artRect);
         var previous = 1250;
         var sawIntermediate = false;
         await _advance(

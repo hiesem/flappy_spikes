@@ -1449,7 +1449,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   // --- purchase feedback (PRD-home-v3 §5–7) -------------------------------
 
   /// §5: a coin pack was bought; called right before the coins are
-  /// credited. In the menus the pack's coins burst from its coin stack in
+  /// credited. In the menus the pack's coins burst from its pack art in
   /// the Shop (the screen centre when the Shop is not on top, e.g. a late
   /// store callback) into the pill and count up; during a run the pill is
   /// hidden and simply shows the new balance later.
@@ -1459,7 +1459,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         ? _shop
         : null;
     final from =
-        shop?.packFor(product)?.stackRect ??
+        shop?.packFor(product)?.artRect ??
         Rect.fromLTWH(Config.worldWidth / 2, viewHeight / 2, 0, 0);
     playCoinReward(CoinRewardAnimation.pack(product, from: from));
   }

@@ -194,7 +194,7 @@ void main() {
           'source': 'iap',
         });
         final reward = game.coinReward!;
-        expect(reward.from, pack.stackRect);
+        expect(reward.from, pack.artRect);
         expect(reward.amount, _amounts[i]);
         expect(reward.coins, [6, 9, 12, 16][i]);
         expect(reward.countDuration, [.9, 1.2, 1.5, 1.9][i]);

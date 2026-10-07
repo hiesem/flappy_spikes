@@ -31,16 +31,11 @@ void main() {
     verify: (game, tester) async {
       final shop = await openShop(game, scrollToCoins: true);
       final pack = shop.packs[1];
-      final art = pack.stackArt;
-      final p = art.absolutePosition;
       game.coinFlyRandom = math.Random(5);
       game.coinPill.hold();
       await game.menu.wallet.add(10000, CoinSource.iap);
       game.playCoinReward(
-        CoinRewardAnimation.pack(
-          pack.product,
-          from: Rect.fromLTWH(p.x, p.y, art.width, art.height),
-        ),
+        CoinRewardAnimation.pack(pack.product, from: pack.artRect!),
       );
       await flushAndMount(game);
       await run(game, .95);

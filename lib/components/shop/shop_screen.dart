@@ -21,6 +21,7 @@ import '../skins/item_art.dart';
 import '../ui/bird_idle.dart';
 import '../ui/flip.dart';
 import '../ui/live_effects.dart';
+import 'pack_art.dart';
 
 /// Coin packs in grid order with their flap tags (PRD-menu-v4 §2):
 /// 1 000 / 10 000 / 17 000 / 100 000, tags on 10 000 (MOST POPULAR) and
@@ -37,18 +38,6 @@ const List<String> kShopImages = [
   'menu/noads.png',
   'menu/check.png',
   'menu/video_soft.png',
-  'menu/coin_stack_1.png',
-  'menu/coin_stack_2.png',
-  'menu/coin_stack_3.png',
-  'menu/coin_stack_4.png',
-];
-
-/// Logical sizes of the coin-stack art (WP3 manifest).
-const List<(double, double)> _kStackSizes = [
-  (28, 28),
-  (28, 43),
-  (20, 44),
-  (20, 56),
 ];
 
 /// The Shop's featured item (PRD-menu-v2 §4 / WP-C): the first item of the
@@ -115,8 +104,7 @@ class ShopScreen extends MenuScreen {
           rect: Config.shopPackRectFor(h, i),
           product: product,
           tag: tag,
-          stack: sprite('menu/coin_stack_${i + 1}.png'),
-          stackSize: Vector2(_kStackSizes[i].$1, _kStackSizes[i].$2),
+          tier: i,
           onPressed: () => game.buyProduct(product, sfx: Sfx.skTap),
           isActive: isActive,
           streakDelay: Config.shopStreakDelayPacks[i],
@@ -624,21 +612,21 @@ class FreeCoinsRow extends MenuButton {
   }
 }
 
-/// One coin pack: card fill, coin-stack art (bottom at card top + 78),
+/// One coin pack: card fill, the pack art (PRD-menu-v4 §2.1, [PackArt]),
 /// amount ("1,800"), full-width pink price button and an optional gold
 /// flap tag centred on the top edge. The whole card buys the pack; it is
 /// dimmed and inert while that purchase is pending.
 ///
 /// Live (§8.3): a light streak over the price button every 6.4 s after
-/// [streakDelay] (the cascade), the tag's wiggle every 6 s, and the coin
-/// stack hops 4 pt when the card is pressed.
+/// [streakDelay] (the cascade), the tag's wiggle every 6 s, the art's
+/// sparkles twinkle (still under reduce motion), and the art hops 4 pt
+/// when the card is pressed.
 class CoinPackCard extends MenuButton {
   CoinPackCard({
     required Rect rect,
     required this.product,
     required this.tag,
-    required this.stack,
-    required this.stackSize,
+    required this.tier,
     required super.onPressed,
     super.isActive,
     double streakDelay = 0,
@@ -651,8 +639,9 @@ class CoinPackCard extends MenuButton {
 
   final IapProduct product;
   final String? tag;
-  final Sprite stack;
-  final Vector2 stackSize;
+
+  /// Pack art tier 0..3 (1 000 / 10 000 / 17 000 / 100 000).
+  final int tier;
 
   /// The price button's light streak.
   final LightStreak streak;
@@ -660,22 +649,28 @@ class CoinPackCard extends MenuButton {
   /// The tag's wiggle (no-op without a tag).
   late final WiggleEffect tagWiggle = WiggleEffect(this);
 
-  late final MenuIcon stackArt;
+  late final PackArt art;
   double _hopT = -1;
 
-  /// The coin stack in world coordinates (PRD-home-v3 §5: the bought
-  /// pack's coins burst out of it), or null before it is mounted.
-  Rect? get stackRect {
-    if (!isLoaded || !stackArt.isMounted) return null;
-    final p = stackArt.absolutePositionOfAnchor(Anchor.topLeft);
-    return Rect.fromLTWH(p.x, p.y, stackArt.width, stackArt.height);
+  /// The top of the art's heap in world coordinates (PRD-home-v3 §5: the
+  /// bought pack's coins burst out of its top centre), or null before
+  /// the art is mounted.
+  Rect? get artRect {
+    if (!isLoaded || !art.isMounted) return null;
+    final p = art.absolutePositionOfAnchor(Anchor.topLeft);
+    return PackArtPainter.heapBox(tier).shift(Offset(p.x, p.y));
   }
 
-  /// Current coin-stack hop offset (pt, negative = up; tests).
-  double get stackHop => LiveCurves.packHop(_hopT);
+  /// Current art hop offset (pt, negative = up; tests).
+  double get artHop => LiveCurves.packHop(_hopT);
 
   /// [LiveClock] binding.
   void animate(double t, bool still) {
+    if (isLoaded) {
+      art
+        ..t = t
+        ..still = still;
+    }
     if (still) {
       streak.progress = null;
       tagWiggle.rest();
@@ -688,7 +683,7 @@ class CoinPackCard extends MenuButton {
   @override
   void onTapDown(TapDownEvent event) {
     super.onTapDown(event);
-    _hopT = 0; // §8.3: the coins hop when the pack is pressed
+    _hopT = 0; // §8.3: the art hops when the pack is pressed
   }
 
   @override
@@ -698,7 +693,7 @@ class CoinPackCard extends MenuButton {
     _hopT += dt;
     if (_hopT >= LiveCurves.packHopDuration) _hopT = -1;
     if (isLoaded) {
-      stackArt.position.y = Config.shopPackArtBottom + stackHop;
+      art.position.y = Config.shopPackArtTop + artHop;
     }
   }
 
@@ -731,11 +726,9 @@ class CoinPackCard extends MenuButton {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    final art = stackArt = MenuIcon(
-      stack,
-      size: stackSize,
-      position: Vector2(width / 2, Config.shopPackArtBottom),
-      anchor: Anchor.bottomCenter,
+    art = PackArt(
+      tier: tier,
+      position: Vector2(Config.shopPackArtLeft, Config.shopPackArtTop),
     );
     amount = MenuText(
       formatAmount(product.coins),

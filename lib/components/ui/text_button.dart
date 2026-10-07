@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/painting.dart';
 
+import '../home/menu_primitives.dart' show withMenuKnock;
 import 'fadable_text.dart';
 
 /// A text label that acts as a tap target (the privacy-policy link on the
@@ -37,7 +38,7 @@ class TextButton extends PositionComponent with TapCallbacks {
   @override
   void onTapDown(TapDownEvent event) {
     event.handled = true;
-    onPressed();
+    withMenuKnock(this, onPressed);
   }
 
   /// Retints the link text (color-stage system).

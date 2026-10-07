@@ -1,6 +1,8 @@
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 
+import '../home/menu_primitives.dart' show withMenuKnock;
+
 /// A sprite that acts as a tap target. Consumes the tap so it does not
 /// propagate to the full-screen tap catcher below.
 class SpriteButton extends SpriteComponent with TapCallbacks {
@@ -17,6 +19,6 @@ class SpriteButton extends SpriteComponent with TapCallbacks {
   @override
   void onTapDown(TapDownEvent event) {
     event.handled = true;
-    onPressed();
+    withMenuKnock(this, onPressed);
   }
 }

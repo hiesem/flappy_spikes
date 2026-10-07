@@ -43,6 +43,7 @@ import 'config.dart';
 import 'fade.dart';
 import 'palettes.dart';
 import 'purchases.dart';
+import 'rumble.dart';
 import 'sound.dart';
 import 'storage.dart';
 import 'tintable.dart';
@@ -62,7 +63,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     Monetization? monetization,
     DateTime Function()? clock,
     this.soundEnabled = true,
+    bool? rumbleEnabled,
   }) : services = services ?? GameServices(),
+       rumble = Rumble(hardware: rumbleEnabled ?? soundEnabled),
        monetization = monetization ?? Monetization(),
        storage = GameStorage(clock: clock),
        viewHeight = _clampViewHeight(worldHeight ?? Config.worldHeight),
@@ -81,6 +84,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // beyond anything reachable (bird speeds stay in the low hundreds).
     maxTranslation = 10000;
     maxTranslationSquared = maxTranslation * maxTranslation;
+    // The knock throttle runs on game time (tests step it).
+    rumble.clock = () => _clock;
   }
 
   static double _clampViewHeight(double height) =>
@@ -101,6 +106,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// call ever happens (the per-test `sound.enabled = false` lines predate
   /// this and only run after [onLoad]).
   final bool soundEnabled;
+
+  /// Phone vibration (PRD-2 §3.33; menu knocks PRD-home-v3 §10). Its
+  /// `hardware` follows `rumbleEnabled` (default: [soundEnabled]), so
+  /// headless tests get a recorder; `on` follows `GameStorage.rumble`.
+  final Rumble rumble;
+
+  /// Seconds of game time (clamped frame steps): the rumble throttle clock.
+  double _clock = 0;
 
   /// Analytics + leaderboards. No-op unless main() initialized it.
   final GameServices services;
@@ -291,6 +304,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       },
     )..start();
     sound = SoundService(muted: storage.muteSound, enabled: soundEnabled);
+    rumble.on = storage.rumble;
     // Background music: persisted volume, then start the loop (everywhere —
     // menus and gameplay). Guarded/unawaited: no-ops in headless tests.
     unawaited(sound.setMusicVolume(storage.musicVolume));
@@ -1337,6 +1351,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     sound.play(Sfx.click); // only audible when unmuting
   }
 
+  /// The RUMBLE switch (PRD-2 §3.33, PRD-home-v3 §8): applies at once and
+  /// persists; switching it on gives one knock, off is silent.
+  void setRumble(bool on) {
+    if (rumble.on == on) return;
+    rumble.on = on;
+    unawaited(storage.saveRumble(on));
+    services.logRumbleToggle(on);
+    if (on) rumble.knock();
+  }
+
   /// Music slider on the settings panel: applies the volume live and
   /// persists it. Fire-and-forget (no-op-safe in headless tests).
   void setMusicVolume(double volume) {
@@ -1651,6 +1675,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // so a stalled frame slows the game uniformly instead of letting the
     // spawner or fades run ahead of the bodies.
     dt = min(dt, Config.maxFrameStep);
+    _clock += dt;
     super.update(dt);
     _purchases?.update(dt);
 

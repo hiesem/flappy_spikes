@@ -6,6 +6,7 @@ import 'package:flame/extensions.dart';
 import 'package:flutter/animation.dart' show Curves;
 
 import '../../game/config.dart';
+import '../home/menu_primitives.dart' show withMenuKnock;
 import '../../skins/catalog.dart';
 import '../../skins/look.dart';
 import 'shop_glyphs.dart';
@@ -233,7 +234,7 @@ class ShopActionButton extends PositionComponent with TapCallbacks {
   @override
   void onTapUp(TapUpEvent event) {
     event.handled = true;
-    onPressed();
+    withMenuKnock(this, onPressed);
   }
 
   @override

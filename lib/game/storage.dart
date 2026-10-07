@@ -30,6 +30,7 @@ class GameStorage {
   static const String _debugDayOffsetKey = 'debugDayOffset';
   static const String _claimedLevelsKey = 'claimedLevels';
   static const String _rumbleKey = 'rumble';
+  static const String _lastScoreKey = 'lastScore';
 
   /// One preference key per equipped layer (the five-key equipped map).
   static String _equippedItemKey(SkinLayer layer) =>
@@ -71,6 +72,10 @@ class GameStorage {
 
   /// PRD-2 §3.33: the RUMBLE switch (on by default).
   bool rumble = true;
+
+  /// PRD-home-v3 §3.1: the score of the most recent run (home LAST); null
+  /// before the first run.
+  int? lastScore;
 
   /// Current wall-clock time (overridable for tests).
   DateTime now() => _clock();
@@ -132,12 +137,19 @@ class GameStorage {
         .whereType<int>()
         .toSet();
     rumble = prefs.getBool(_rumbleKey) ?? true;
+    lastScore = prefs.getInt(_lastScoreKey);
   }
 
   Future<void> saveBestScore(int value) async {
     bestScore = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_bestScoreKey, value);
+  }
+
+  Future<void> saveLastScore(int value) async {
+    lastScore = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_lastScoreKey, value);
   }
 
   Future<void> incrementGamesPlayed() async {

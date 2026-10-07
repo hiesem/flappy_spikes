@@ -125,6 +125,15 @@ abstract final class EmblemPainter {
   /// (7..10: pennants, spike rings, flames, stars and rays).
   static bool animates(int level) => _clamp(level) >= 7;
 
+  /// Plate light-sweep loop (s) and the share of it the sweep is visible.
+  static const double sweepPeriod = 6.4;
+  static const double sweepShare = .28;
+
+  /// True while the plate light sweep is on screen at [t] (the first 28 %
+  /// of every 6.4 s loop); outside it a level 1-6 emblem is static.
+  static bool sweepActive(double t) =>
+      (t % sweepPeriod) / sweepPeriod < sweepShare;
+
   // --- the draw itself ------------------------------------------------------
 
   static void _draw(Canvas canvas, int level, double t, bool shine) {
@@ -201,7 +210,7 @@ abstract final class EmblemPainter {
       }
     }
     if (shine) {
-      final u = ((t % 6.4) / 6.4) / .28;
+      final u = ((t % sweepPeriod) / sweepPeriod) / sweepShare;
       if (u < 1) {
         final x = -110 + u * 220;
         canvas.drawPath(

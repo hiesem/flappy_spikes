@@ -95,7 +95,7 @@ void paintGearBack(Canvas c, String id, BirdShape s, double t, bool flap) {
       final a = (k + f * f * (3 - 2 * f)) * math.pi;
       final cs = math.cos(a);
       final sc = (cs == 0 ? 1.0 : cs.sign) * math.max(.12, cs.abs());
-      final x = s.l, y = s.bot - 8;
+      final x = s.bl, y = s.bot - 8;
       fillRect(c, x - 4, y - 1.3, 6, 2.6, const Color(0xFFA8741A));
       fillRect(c, x - 5.5, y - 2.6, 2, 5.2, const Color(0xFFA8741A));
       c.save();

@@ -1016,8 +1016,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// A grid tile (PRD-menu-v2 §3.3–3.5): clears its NEW tag; an owned item
   /// is equipped at once (or `sk_tap` when it already is); a locked one is
-  /// tried on (on [layer]'s tab — the open one for grid taps).
-  void tapItem(SkinLayer layer, String id) {
+  /// tried on (on [layer]'s tab — the open one for grid taps). [fromTile]:
+  /// a real tap on that grid tile — a second tap on the tile already being
+  /// tried on buys it (WP-J2, same path as the preview's BUY).
+  void tapItem(SkinLayer layer, String id, {bool fromTile = false}) {
     final screen = _skinShop;
     if (screen == null || !_sceneOnTop(MenuScene.skins)) return;
     final item = itemById(layer, id);
@@ -1039,7 +1041,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       }
       return;
     }
-    if (screen.tryOnId == id) return;
+    if (screen.tryOnId == id) {
+      if (fromTile) unawaited(buyTriedOnItem(source: 'tile'));
+      return;
+    }
     screen.setTryOn(id);
     sound.play(Sfx.skTap);
     screen.hop(.5);
@@ -1062,7 +1067,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// the coin pill counts down; otherwise `sk_nocoins`, the NOT ENOUGH
   /// COINS toast and the pill shakes with its "+" flashing gold (the "+"
   /// opens the Shop). No confirmation: the try-on is the confirmation.
-  Future<void> buyTriedOnItem() async {
+  /// [source]: `button` (preview BUY) or `tile` (second tap on the tile).
+  Future<void> buyTriedOnItem({String source = 'button'}) async {
     final screen = _skinShop;
     if (screen == null || !_sceneOnTop(MenuScene.skins)) return;
     final item = screen.tryOnItem;
@@ -1089,7 +1095,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       _itemPurchaseRunning = false;
     }
     if (result != ItemPurchaseResult.purchased) return;
-    services.logItemPurchase(item.layer, item.id, item.rarity, item.price);
+    services.logItemPurchase(
+      item.layer,
+      item.id,
+      item.rarity,
+      item.price,
+      source: source,
+    );
     // The purchase auto-equips (ItemStore.purchase): mirror the explicit
     // equip's analytics so both paths log the same events.
     services.logItemEquip(item.layer, item.id);

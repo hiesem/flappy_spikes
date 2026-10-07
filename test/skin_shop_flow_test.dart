@@ -295,6 +295,7 @@ void main() {
             'id': id,
             'rarity': rarity.label,
             'price': item.price,
+            'source': 'button',
           });
           expect(spy.last('item_equip'), {'layer': layer.key, 'id': id});
           expect(sounds.first, sfx);

@@ -150,4 +150,28 @@ void main() async {
       expect(game.menu.items.look.hat, 'crown');
     },
   );
+
+  // WP-J2: the Rubber duck tried on from its tile — the price pill became
+  // the pulsing BUY pill (mid-pulse); the tile below shows a grey one.
+  shot(
+    'tile_buy',
+    prefs: {'coins': 1000},
+    act: (game) async {
+      game.tapItem(SkinLayer.bird, 'duck', fromTile: true);
+      game.skinShop!.scrollToItem('duck');
+      stepGame(game, 0.5);
+      expect(game.skinShop!.tileFor('duck').showsBuyPill, isTrue);
+    },
+  );
+
+  shot(
+    'tile_buy_poor',
+    prefs: {'coins': 100},
+    act: (game) async {
+      game.tapItem(SkinLayer.bird, 'duck', fromTile: true);
+      game.skinShop!.scrollToItem('duck');
+      stepGame(game, 0.5);
+      expect(game.skinShop!.tileFor('duck').current.affordable, isFalse);
+    },
+  );
 }

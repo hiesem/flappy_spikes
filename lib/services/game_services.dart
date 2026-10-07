@@ -124,9 +124,18 @@ class GameServices {
   void logItemTryOn(SkinLayer layer, String id, Rarity? rarity) =>
       logEvent('item_try_on', _itemParams(layer, id, rarity: rarity));
 
-  void logItemPurchase(SkinLayer layer, String id, Rarity? rarity, int price) =>
-      logEvent('item_purchase',
-          _itemParams(layer, id, rarity: rarity, price: price));
+  /// [source] = where the purchase was confirmed: `button` (the preview's
+  /// BUY) or `tile` (the second tap on a tried-on grid tile, WP-J2).
+  void logItemPurchase(
+    SkinLayer layer,
+    String id,
+    Rarity? rarity,
+    int price, {
+    String? source,
+  }) => logEvent('item_purchase', {
+    ..._itemParams(layer, id, rarity: rarity, price: price),
+    'source': ?source,
+  });
 
   void logItemEquip(SkinLayer layer, String id) =>
       logEvent('item_equip', _itemParams(layer, id));

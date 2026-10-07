@@ -255,6 +255,7 @@ void main() {
         'id': 'galaxy',
         'rarity': 'LEGENDARY',
         'price': 5000,
+        'source': 'button',
       });
 
       // Add two freely combinable layers via their own tabs and BUY buttons.

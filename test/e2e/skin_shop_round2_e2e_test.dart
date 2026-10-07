@@ -232,6 +232,7 @@ void main() {
       'id': 'galaxy',
       'rarity': 'LEGENDARY',
       'price': 5000,
+      'source': 'button',
     });
     await _tab(game, tester, SkinLayer.gear);
     // Wind-up key is in the fourth row: scroll before tapping it.

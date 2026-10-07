@@ -7,7 +7,7 @@ import 'package:flame/extensions.dart';
 import 'package:flutter/animation.dart' show Curves;
 
 import '../../game/config.dart';
-import '../home/menu_primitives.dart' show withMenuKnock;
+import '../home/menu_primitives.dart' show formatCoins, withMenuKnock;
 import '../../skins/catalog.dart';
 import '../../skins/look.dart';
 import 'item_art.dart';
@@ -20,9 +20,13 @@ class ItemTileState {
     required this.equipped,
     required this.tryingOn,
     required this.isNew,
+    this.affordable = true,
   });
 
   final bool owned;
+
+  /// The wallet covers the price (the tried-on BUY pill turns grey if not).
+  final bool affordable;
 
   /// Equipped and not covered by a try-on on its layer.
   final bool equipped;
@@ -34,7 +38,9 @@ class ItemTileState {
 /// `.tile`): the item art in an 84 x 68 box on the card fill plus its state
 /// decorations — equipped (3 pt pink inner outline + check badge, the bird
 /// flaps), locked (art at 42 %, lock top-left, coin price pill), trying on
-/// (outline pulsing pink <-> soft, art solid, no pill), NEW (gold tag
+/// (outline pulsing pink <-> soft, art solid, the price pill turned into a
+/// pulsing pink "BUY [coin] price" pill — WP-J2: a second tap buys; grey
+/// and still when unaffordable, still tappable), NEW (gold tag
 /// overhanging the top-right corner, wobbling) and the rarity markers
 /// (rare / epic / legendary bottom bar, epic / legendary 1 pt inner
 /// outline, a moving shine on the legendary bar). Presses scale it to 93 %;
@@ -85,6 +91,7 @@ class ItemTile extends PositionComponent with TapCallbacks {
   final bool Function()? isOnScreen;
 
   final PriceChip _price;
+  late final TileBuyPill _buyPill = TileBuyPill(item.price);
   late final ShopText _newLabel = ShopText(
     'NEW',
     fontSize: Config.skinShopTagFontSize,
@@ -105,6 +112,29 @@ class ItemTile extends PositionComponent with TapCallbacks {
   );
 
   ItemTileState get current => _state;
+
+  /// Whether the BUY pill replaces the price pill (locked + tried on).
+  bool get showsBuyPill => !_state.owned && _state.tryingOn;
+
+  /// The BUY pill (tests).
+  TileBuyPill get buyPill => _buyPill;
+
+  /// Current BUY pill scale (1 when still: unaffordable / reduce motion).
+  double get buyPillScale {
+    if (!showsBuyPill || !_state.affordable || reduceMotion()) return 1;
+    // Same `buyp 1s ease-in-out infinite` pulse as the preview's BUY.
+    final u = _clock % 1;
+    final k = Curves.easeInOut.transform(u < .5 ? u * 2 : 2 - u * 2);
+    return 1 + (Config.skinShopActionPulse - 1) * k;
+  }
+
+  /// BUY pill rect in tile-local coordinates (unscaled).
+  Rect get buyPillRect => Rect.fromLTWH(
+    (width - _buyPill.width) / 2,
+    height - Config.skinShopPriceBottom - _buyPill.height,
+    _buyPill.width,
+    _buyPill.height,
+  );
   bool get pressed => _pressed;
 
   /// Entrance progress 0..1 (1 = settled).
@@ -279,7 +309,19 @@ class ItemTile extends PositionComponent with TapCallbacks {
         tint().withValues(alpha: .75),
       );
       canvas.restore();
-      if (!s.tryingOn) {
+      if (s.tryingOn) {
+        final r = buyPillRect;
+        final k = buyPillScale;
+        canvas.save();
+        canvas.translate(r.center.dx, r.center.dy);
+        canvas.scale(k);
+        _buyPill.paint(
+          canvas,
+          Offset(-r.width / 2, -r.height / 2),
+          poor: !s.affordable,
+        );
+        canvas.restore();
+      } else {
         _price.paint(
           canvas,
           Offset(
@@ -357,5 +399,54 @@ class ItemTile extends PositionComponent with TapCallbacks {
     );
     _newLabel.paint(canvas, Offset(-tw / 2 + padX, -th / 2 + padY));
     canvas.restore();
+  }
+}
+
+/// The tried-on tile's "BUY [coin] price" pill (WP-J2): pink with soft
+/// text like the preview's BUY button, grey #A0A0A0 when unaffordable.
+/// Sized so "BUY 5 000" still fits a 92 pt tile at the 1.06 pulse peak.
+class TileBuyPill {
+  TileBuyPill(int price)
+    : _buy = ShopText(
+        'BUY',
+        fontSize: fontSize,
+        color: Config.menuSoft,
+        letterSpacingEm: 0.06,
+      ),
+      _price = ShopText(
+        formatCoins(price),
+        fontSize: fontSize,
+        color: Config.menuSoft,
+        letterSpacingEm: 0.04,
+      );
+
+  static const double fontSize = 10, padX = 4, padY = 3, gap = 3, coin = 11;
+  static const double coinGap = 2;
+
+  final ShopText _buy, _price;
+
+  /// "BUY" and the price (tests).
+  String get label => '${_buy.text} ${_price.text}';
+
+  double get width =>
+      padX + _buy.width + gap + coin + coinGap + _price.width + padX;
+  double get height => coin + 2 * padY;
+
+  static final Paint _paint = Paint();
+
+  void paint(Canvas canvas, Offset topLeft, {required bool poor}) {
+    canvas.drawRect(
+      topLeft & Size(width, height),
+      _paint..color = poor ? Config.skinShopPoorGrey : Config.menuPink,
+    );
+    var x = topLeft.dx + padX;
+    _buy.paint(canvas, Offset(x, topLeft.dy + (height - _buy.height) / 2));
+    x += _buy.width + gap;
+    canvas.save();
+    canvas.translate(x, topLeft.dy + padY);
+    ShopGlyphs.coin(canvas, coin);
+    canvas.restore();
+    x += coin + coinGap;
+    _price.paint(canvas, Offset(x, topLeft.dy + (height - _price.height) / 2));
   }
 }

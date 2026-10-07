@@ -23,10 +23,12 @@ class BirdShape {
     required this.hx,
     required Path Function() body,
     this.px = false,
-  }) : _bodyBuilder = body;
+    double? bl,
+  }) : _bodyBuilder = body,
+       bl = bl ?? l;
 
   /// JS shape key (`sq`, `round`, `tall`, `chick`, `peng`, `owl`, `puff`,
-  /// `ghost`, `pixel`).
+  /// `ghost`, `pixel`, `rduck`).
   final String kind;
 
   /// Eye centre.
@@ -40,6 +42,10 @@ class BirdShape {
 
   /// Head top, neck line, bottom edge, left (back) and right edge, hat x.
   final double top, neck, bot, l, r, hx;
+
+  /// Back edge of the lower body (wind-up key); [l] unless the head sits
+  /// well forward of the body (the rubber duck: JS `bl`).
+  final double bl;
 
   /// Pixel-art shape (blocky wing).
   final bool px;
@@ -179,6 +185,24 @@ class BirdShape {
       r: 36,
       hx: 22,
     ),
+    // Bath-toy rubber duck: a rounded-geometric head bump forward over a
+    // wide boat-shaped body whose back rises into an upturned tail. [l] is
+    // the head's back (head-level gear), [bl] the boat's stern.
+    'rduck': BirdShape._(
+      kind: 'rduck',
+      body: () => polyPath(_rduckBody),
+      eye: const Offset(30, 8),
+      beak: [33, 10, 43, 10, 46, 12.5, 43, 14.5, 45, 16.5, 42, 18, 33, 18],
+      tail: [6, 22, 10, 22, 8, 25], // inside the body: the tail is the body's
+      wing: [12, 25, 26],
+      top: 1,
+      neck: 19,
+      bot: 34,
+      l: 18,
+      r: 36,
+      hx: 27,
+      bl: 4,
+    ),
     'pixel': BirdShape._(
       kind: 'pixel',
       body: _pixelBody,
@@ -195,6 +219,11 @@ class BirdShape {
       px: true,
     ),
   };
+
+  static const List<double> _rduckBody = [
+    23, 1, 31, 1, 36, 6, 36, 13, 34, 17, 39, 21, 39, 27, 33, 34, //
+    11, 34, 5, 29, 3, 21, 1, 8, 6, 11, 11, 18, 18, 18, 18, 6,
+  ];
 
   static Path _ghostBody() {
     final p = Path()
@@ -252,7 +281,7 @@ class BirdSpec {
   /// Beak colour (default gold), eye colour (default white), belly colour.
   final Color? bk, ey, belly;
 
-  /// Special beak (`toucan`, `duck`, `hook`).
+  /// Special beak (`toucan`, `hook`).
   final String? beak;
 
   /// Body pattern (`stripes`, `camo`, `dots`, `zebra`, `bee`, `robo`,
@@ -397,10 +426,11 @@ abstract final class BirdArt {
     ),
     BirdSpec(
       'duck',
-      'round',
-      c: const Color(0xFFFFEB3B),
+      'rduck',
+      c: const Color(0xFFFFD600),
       d: const Color(0xFFF9A825),
-      beak: 'duck',
+      bk: const Color(0xFFFF5722),
+      ey: const Color(0xFF212121),
     ),
     BirdSpec(
       'flamingo',
@@ -637,10 +667,11 @@ final Path _toucanTip = polyPath([42, 7, 47, 9, 45.8, 14, 42, 14]);
 final Path _toucanShade = polyPath([36, 14, 45.3, 14, 44, 20, 36, 20]);
 final Path _hookWhite = polyPath([35, 13, 42, 15, 44, 20, 35, 21]);
 final Path _hookTip = polyPath([42, 15, 44, 20, 42, 23, 39, 19]);
-final RRect _duckBill = RRect.fromRectAndRadius(
-  const Rect.fromLTWH(34, 15, 10, 7),
-  const Radius.circular(3),
-);
+
+/// Rubber duck: the sailor-hat band round the head bump and the one glossy
+/// highlight on the body (both clipped to the body).
+const Color _rduckBand = Color(0xFF1E88E5);
+final Path _rduckGloss = polyPath([20, 10, 23, 7, 25, 7, 22, 12]);
 
 const _rainbow = [
   Color(0xFFFF3B30), Color(0xFFFF9500), Color(0xFFFFCC00), //
@@ -714,6 +745,10 @@ void paintBirdBody(Canvas c, BirdSpec b, double t) {
   if (belly != null) {
     c.drawPath(belly, fillPaint(b.belly!));
     if (s.kind == 'owl') c.drawPath(_owlFeathers, fillPaint(b.d));
+  }
+  if (s.kind == 'rduck') {
+    fillRect(c, 17, 2.6, 20, 3.2, _rduckBand);
+    c.drawPath(_rduckGloss, fillPaint(const Color(0xFFFFFFFF)));
   }
   switch (b.pat) {
     case 'zebra' || 'stripes':
@@ -889,8 +924,6 @@ void paintBirdFace(
       c.drawPath(s.beakPath, shaderPaint(_toucanBeak));
       c.drawPath(_toucanTip, fillPaint(const Color(0xFF212121)));
       c.drawPath(_toucanShade, fillPaint(const Color.fromRGBO(0, 0, 0, .25)));
-    case 'duck':
-      c.drawRRect(_duckBill, fillPaint(const Color(0xFFFF8F00)));
     case 'hook':
       c.drawPath(_hookWhite, fillPaint(const Color(0xFFFFFFFF)));
       c.drawPath(_hookTip, fillPaint(const Color(0xFF212121)));

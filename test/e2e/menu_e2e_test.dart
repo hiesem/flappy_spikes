@@ -553,6 +553,7 @@ void main() {
         'id': 'sky',
         'rarity': 'COMMON',
         'price': 150,
+        'source': 'button',
       });
       await tap(g, t, const Offset(60, 378));
       expect(g.menu.items.look.bird, 'classic');

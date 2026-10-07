@@ -49,7 +49,7 @@ const List<SkinItem> kBirds = [
   SkinItem(layer: SkinLayer.bird, id: 'chick', name: 'Chick', rarity: Rarity.rare, price: 750),
   SkinItem(layer: SkinLayer.bird, id: 'penguin', name: 'Penguin', rarity: Rarity.rare, price: 750),
   SkinItem(layer: SkinLayer.bird, id: 'owl', name: 'Owl', rarity: Rarity.rare, price: 750),
-  SkinItem(layer: SkinLayer.bird, id: 'duck', name: 'Duck', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.bird, id: 'duck', name: 'Rubber duck', rarity: Rarity.rare, price: 750),
   SkinItem(layer: SkinLayer.bird, id: 'flamingo', name: 'Flamingo', rarity: Rarity.rare, price: 750),
   SkinItem(layer: SkinLayer.bird, id: 'puffer', name: 'Puffer', rarity: Rarity.rare, price: 750),
   SkinItem(layer: SkinLayer.bird, id: 'zebra', name: 'Zebra', rarity: Rarity.rare, price: 750),

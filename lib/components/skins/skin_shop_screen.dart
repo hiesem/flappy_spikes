@@ -199,9 +199,10 @@ class SkinShopScreen extends MenuScreen {
           equipped: _tryOnId == null && items.isEquipped(item.layer, item.id),
           tryingOn: tried,
           isNew: _newKeys.contains(item.key),
+          affordable: game.menu.wallet.balance >= item.price,
         );
       },
-      onPressed: () => game.tapItem(item.layer, item.id),
+      onPressed: () => game.tapItem(item.layer, item.id, fromTile: true),
       cardColor: () => tileColor,
       tint: () => tint,
       reduceMotion: () => reduceMotion,

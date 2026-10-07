@@ -137,6 +137,17 @@ Product-owner decisions 2026-10-06/07 and implementation notes:
 - **PRD-1 skins are reset** (Q-S6): the old `ownedSkins` / `equippedSkin` /
   `seenSkins` prefs are deleted on load, no grant, no refund.
 - **No BUY confirmation** (Q-S5): try-on + the priced BUY button is the step.
+- **Tap-twice buy** (decision 2026-10-07, WP-J2): the first tap on a locked
+  tile tries it on and its price pill becomes a pulsing pink "BUY [coin] price"
+  pill (scale 1.06 / 1 s like the preview BUY; grey #A0A0A0 and still when
+  unaffordable; still under reduce motion); a second real tap on that tile buys
+  it through the same path as the preview BUY (`item_purchase` gets
+  `source: tile|button`). Not enough coins → the usual not-enough-coins
+  feedback. Another tile moves the try-on; a tab switch clears it.
+- **Bird #16 = Rubber duck** (decision 2026-10-07, id `duck`, Rare 750): own
+  `rduck` shape (head bump over a boat body with an upturned tail, blue band,
+  one glossy highlight, big #FF5722 bill) so it no longer reads as the Chick.
+  Shapes may set `bl` (stern x for the wind-up key; defaults to `l`).
 - **Stage blend kept** (DEVIATION from §5 "colours fixed"): see the skin tint rule.
 - **Art in code:** every item is a Canvas port of `design/menu_v2/skin_art.js`
   (`lib/skins/art/`); no sprite assets. The PRD's "44 × 36 art box / 30 × 30

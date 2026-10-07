@@ -94,5 +94,7 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   `adb logcat -s flutter | grep '\[IAP\]'` (release builds log them).
 - Release builds need android/app/proguard-rules.pro (keeps WorkManager's Room DB; google_mobile_ads pulls
   in androidx.work) — without it the release app crashes at launch. Debug builds hide this.
+- AAB upload via Playwright over CDP: `setInputFiles` refuses files > 50 MB — use CDP `DOM.setFileInputFiles` on the
+  upload input instead (2.0.0+7 is 56 MB). Internal testing: 2.0.0 (7) saved as DRAFT 2026-10-07 (user releases).
 - Linux: no Google Chrome — tools/browser_linux.js drives /usr/bin/chromium with profile
   tools/.pw-linux-profile (optional URL arg).

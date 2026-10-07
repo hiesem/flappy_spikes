@@ -16,6 +16,7 @@ import '../../services/iap_service.dart';
 import '../../skins/look.dart';
 import '../look_component.dart';
 import '../ui/bird_idle.dart';
+import '../ui/flip.dart';
 import '../ui/live_effects.dart';
 import 'menu_primitives.dart';
 
@@ -269,21 +270,24 @@ class HomeScreen extends PositionComponent
       _hasNew = hasNew;
       skinsTile.tag = hasNew ? 'NEW' : null;
     }
-    final noAds = menu.noAds;
+    // PRD-home-v3 §7: after a fresh purchase the owned looks wait for the
+    // celebration's flips.
+    final noAds = game.noAdsShown;
     final pending = game.purchases.isPending(IapProduct.noAds);
     if (force || noAds != _noAds || pending != _noAdsPending) {
       _noAds = noAds;
       _noAdsPending = pending;
-      // PRD-1 §3.5: owners keep the tile, dimmed: check icon + "AD-FREE".
-      // A pending No-ads purchase disables the tile (as the Shop banner).
+      // PRD-1 §3.5 / PRD-home-v3 §7: owners keep the tile on a lighter
+      // pink: check icon + "AD-FREE". A pending No-ads purchase dims and
+      // disables the tile (as the Shop banner).
       noAdsTile
-        ..dimmed = noAds || pending
+        ..dimmed = !noAds && pending
         ..owned = noAds
         ..tappable = !pending;
     }
     slotButton.setState(
       offered: menu.slot.offered,
-      noAds: noAds,
+      noAds: game.noAdsVideoGone,
       adAvailable: game.monetization.ads.isAvailable,
     );
     slotButton.outlineColor = game.stageBackground;
@@ -913,6 +917,18 @@ class PowerupSlotButton extends MenuButton {
   /// The video icon while shown (tests).
   MenuIcon? videoIcon;
 
+  /// True while [shrinkVideo] runs: the icon stays until it is gone.
+  bool _shrinking = false;
+
+  /// PRD-home-v3 §7: the video icon shrinks away (0.3 s) after the No-ads
+  /// celebration; the slot then rebuilds without it.
+  void shrinkVideo() {
+    final icon = videoIcon;
+    if (icon == null || _shrinking) return;
+    _shrinking = true;
+    add(ShrinkDriver(icon, onDone: () => _shrinking = false));
+  }
+
   /// [LiveClock] binding: pulse, streak and nod at idle time [t]; all at
   /// rest when [still] (reduce motion).
   void animate(double t, bool still) {
@@ -958,7 +974,7 @@ class PowerupSlotButton extends MenuButton {
     required bool noAds,
     required bool adAvailable,
   }) {
-    final showVideo = !noAds;
+    final showVideo = !noAds || _shrinking;
     final unavailable = !noAds && !adAvailable;
     dimmed = unavailable;
     if (offered == _shown &&
@@ -1062,14 +1078,44 @@ class MenuTile extends MenuButton {
   /// No-ads tile after purchase: the soft check replaces the crossed-AD
   /// icon in the icon slot and the label reads "AD-FREE" (PO 2026-10-04:
   /// an inline check truncated the label in the 70 pt tile).
-  bool get owned => _owned;
+  bool get owned => _owned && !_flipHold;
   set owned(bool value) {
     _owned = value;
     if (isLoaded) _applyLabel();
   }
 
   /// Whether the icon slot currently shows the check (exposed for tests).
-  bool get showsCheck => _owned && _checkSprite != null;
+  bool get showsCheck => owned && _checkSprite != null;
+
+  /// True from [flipToOwned] until the flip shows the new face.
+  bool _flipHold = false;
+  FlipEffect? _flip;
+
+  /// The flip while it runs (tests).
+  FlipDriver? flipDriver;
+
+  /// PRD-home-v3 §7: the No-ads tile flips over (rotateY, 0.18 s out +
+  /// 0.28 s in) to its owned face.
+  void flipToOwned() {
+    _flipHold = true;
+    if (isLoaded) _applyLabel();
+    var effect = _flip;
+    if (effect == null) {
+      effect = _flip = FlipEffect(this, vertical: false);
+      decorator.addLast(effect);
+    }
+    flipDriver?.removeFromParent();
+    add(
+      flipDriver = FlipDriver(
+        effect,
+        onSwap: () {
+          _flipHold = false;
+          if (isLoaded) _applyLabel();
+        },
+        onDone: () => flipDriver = null,
+      ),
+    );
+  }
 
   @override
   Future<void> onLoad() async {
@@ -1090,7 +1136,9 @@ class MenuTile extends MenuButton {
   }
 
   void _applyLabel() {
-    label.text = _owned ? 'AD-FREE' : _labelText;
+    // PRD-home-v3 §7: owned = lighter pink (pink 55 % over the background).
+    color = owned ? Config.noAdsOwnedFill : Config.menuPink;
+    label.text = owned ? 'AD-FREE' : _labelText;
     final check = showsCheck;
     icon
       ..sprite = check ? _checkSprite : _iconSprite

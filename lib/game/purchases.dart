@@ -8,10 +8,22 @@ import 'config.dart';
 
 /// Grants what the store sells (PRD-1 §3.2, §3.5): listens to
 /// [IapService.events] for the game's lifetime and turns each update into
-/// coins / the No-ads flag, analytics and a toast (failures toast the
-/// store's reason and log `iap_error`; cancels stay silent). Also tracks which
+/// coins / the No-ads flag, analytics and feedback. Also tracks which
 /// products have a purchase in flight (their buttons are disabled) and the
 /// restore-purchases timeout.
+///
+/// Feedback (PRD-home-v3 §5–7) goes through the optional hooks; each one
+/// left null falls back to the PRD-1 toast:
+/// - [onPackPurchased]: a coin pack was bought — called right BEFORE the
+///   coins are credited (so the pill can hold its number for the
+///   celebration). Fallback toast "+1,800 coins".
+/// - [onNoAdsPurchased]: a FRESH No-ads purchase (never a restore or a
+///   store re-delivery) — called right before the flag and the bonus are
+///   granted. Fallback toast "Ads removed · +1,000 coins".
+/// - [onPurchaseProblem]: cancelled (always, also a user back-out) or
+///   failed (any reason; `iap_error` is logged either way for failures).
+///   Fallback: failures toast the store's reason, cancels stay silent.
+/// A pending purchase toasts "Purchase pending…" and completes later.
 ///
 /// Plain Dart (no Flame), so it is unit-testable on its own; the game owns
 /// one, [start]s it in onLoad, [dispose]s it in onRemove and drives the
@@ -23,6 +35,9 @@ class Purchases {
     required this.services,
     required this.toast,
     this.onNoAdsGranted,
+    this.onPackPurchased,
+    this.onNoAdsPurchased,
+    this.onPurchaseProblem,
   });
 
   final IapService iap;
@@ -34,6 +49,20 @@ class Purchases {
 
   /// Called after No ads was bought or restored (closes the popup).
   final void Function()? onNoAdsGranted;
+
+  /// See the class doc (PRD-home-v3 §5).
+  final void Function(IapProduct product)? onPackPurchased;
+
+  /// See the class doc (PRD-home-v3 §7).
+  final void Function()? onNoAdsPurchased;
+
+  /// See the class doc (PRD-home-v3 §6); [code] = the store error code.
+  final void Function(
+    IapProduct product,
+    PurchaseProblem problem,
+    String? code,
+  )?
+  onPurchaseProblem;
 
   StreamSubscription<IapEvent>? _sub;
   final Set<IapProduct> _inFlight = {};
@@ -112,9 +141,17 @@ class Purchases {
           'reason': reason ?? 'unknown',
           'code': event.code ?? 'unknown',
         });
-        toast(reason == null ? 'Purchase failed' : 'Purchase failed: $reason');
+        final problem = onPurchaseProblem;
+        if (problem != null) {
+          problem(product, PurchaseProblem.failed, event.code);
+        } else {
+          toast(
+            reason == null ? 'Purchase failed' : 'Purchase failed: $reason',
+          );
+        }
       case IapStatus.canceled:
         _inFlight.remove(product);
+        onPurchaseProblem?.call(product, PurchaseProblem.cancelled, null);
     }
   }
 
@@ -125,18 +162,24 @@ class Purchases {
         onNoAdsGranted?.call();
         return;
       }
+      final celebrate = onNoAdsPurchased;
+      celebrate?.call();
       await menu.setNoAds(true);
       services.track('noads_purchased');
       // The purchase itself, like the coin packs.
       services.track('iap_purchase', {'product': product.storeId});
       onNoAdsGranted?.call();
       await menu.wallet.add(kNoAdsBonusCoins, CoinSource.noadsBonus);
-      toast('Ads removed · +${formatAmount(kNoAdsBonusCoins)} coins');
+      if (celebrate == null) {
+        toast('Ads removed · +${formatAmount(kNoAdsBonusCoins)} coins');
+      }
       return;
     }
     services.track('iap_purchase', {'product': product.storeId});
+    final celebrate = onPackPurchased;
+    celebrate?.call(product);
     await menu.wallet.add(product.coins, CoinSource.iap);
-    toast('+${formatAmount(product.coins)} coins');
+    if (celebrate == null) toast('+${formatAmount(product.coins)} coins');
   }
 
   Future<void> _grantRestore(IapProduct product) async {
@@ -149,6 +192,33 @@ class Purchases {
     }
     toast('Purchases restored');
   }
+}
+
+/// Why a store purchase did not complete (PRD-home-v3 §6).
+enum PurchaseProblem {
+  /// The player backed out of the store sheet (or the store says so).
+  cancelled,
+
+  /// Anything else: no connection, declined, item unavailable, ...
+  failed;
+
+  /// Analytics `outcome`.
+  String get analyticsName => name;
+
+  String get title => switch (this) {
+    cancelled => 'PURCHASE CANCELLED',
+    failed => 'PURCHASE FAILED',
+  };
+
+  String get message => switch (this) {
+    cancelled => 'The purchase was cancelled.',
+    failed => 'Your purchase could not be completed.',
+  };
+
+  String get smallLine => switch (this) {
+    cancelled => 'You have not been charged.',
+    failed => 'You have not been charged. Please try again later.',
+  };
 }
 
 /// Formats an amount like the Shop mock ("1,800", "12,000").

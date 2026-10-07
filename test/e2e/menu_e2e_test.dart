@@ -629,8 +629,10 @@ void main() {
     t,
   ) async {
     await tap(g, t, const Offset(33, 77));
-    await tap(g, t, const Offset(85, 310.5));
-    await tap(g, t, const Offset(150, 370.5));
+    // Settings v3 rows (PRD-home-v3 §8): SOUND at y 235, the slider at
+    // y 295 from x 130.
+    await tap(g, t, const Offset(85, 235));
+    await tap(g, t, const Offset(165, 295));
     expect(g.storage.muteSound, isTrue);
     expect(g.storage.musicVolume, closeTo(0.25, 0.01));
     g.onKeyEvent(key(LogicalKeyboardKey.escape), {});

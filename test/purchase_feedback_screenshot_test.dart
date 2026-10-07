@@ -9,7 +9,8 @@ import 'purchase_feedback_test.dart' show run;
 import 'shop_flow_test.dart' show openShop, settle, shopTest;
 
 /// PRD-home-v3 §5–7 visual check, written to build/menu_shots/: compare
-/// with design/menu_v2/coinbuy_*.png, purchase_*.png and noads_*.png.
+/// with design/menu_v2/coinbuy_*.png, purchase_*.png, noads_*.png,
+/// settings_v3.png and shop_v3.png.
 void main() {
   setUpAll(loadFonts);
 
@@ -73,6 +74,23 @@ void main() {
       game.closeShop();
       await run(game, .6);
       await shot(game, tester, 'wpi_noads_owned_home');
+    },
+  );
+
+  shopTest(
+    'settings v3 and shop v3 screenshots',
+    prefs: const {'coins': 3050},
+    verify: (game, spy, ads, iap, tester) async {
+      await openShop(game);
+      await shot(game, tester, 'wpi_shop_v3');
+      game.closeShop();
+      await run(game, .6);
+      game.openSettings();
+      await run(game, .6);
+      await shot(game, tester, 'wpi_settings_v3');
+      game.setRumble(false);
+      await run(game, .1);
+      await shot(game, tester, 'wpi_settings_v3_rumble_off');
     },
   );
 }

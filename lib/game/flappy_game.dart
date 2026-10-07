@@ -190,6 +190,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Set by a screen-to-screen hop between two screens that both show the
   /// chrome; it then stays fully opaque until the old screen is gone.
   bool _chromeHold = false;
+
+  /// Like [_chromeHold] for the corner box only (home <-> settings: the
+  /// box stays, the pill fades with home).
+  bool _cornerHold = false;
   GameOverPanel? _gameOverPanel;
   SettingsPanel? _settingsPanel;
   ShopScreen? _shop;
@@ -1620,6 +1624,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     rumble.on = on;
     unawaited(storage.saveRumble(on));
     services.logRumbleToggle(on);
+    _settingsPanel?.setRumble(on);
     if (on) rumble.knock();
   }
 
@@ -1648,8 +1653,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onBack: closeSettings,
       onPrivacyPolicy: openPrivacyPolicy,
       onRestorePurchases: restorePurchases,
+      rumble: rumble.on,
+      onToggleRumble: () => setRumble(!rumble.on),
     );
     _settingsPanel = settings;
+    // PRD-home-v3 §8: the settings back button is the shared corner box
+    // (the gear turns into the chevron); the coin pill fades with home.
+    _chromeHosts.add(settings);
+    _cornerHold = true;
     world.add(settings);
     registerTintable(settings);
     fadeOpacity(settings, from: 0, to: 1);
@@ -1669,6 +1680,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     menuScene = MenuScene.home;
     unregisterTintable(settings);
     fadeOpacity(settings, from: settings.opacity, to: 0, removeOnDone: true);
+    _cornerHold = true;
     _addHome();
     fadeOpacity(_home, from: 0, to: 1);
   }
@@ -1866,12 +1878,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   MenuButton? get _cornerButton {
     final home = _home;
     if (home != null) return home.isLoaded ? home.gearButton : null;
+    final settings = _settingsPanel;
+    if (settings != null) return settings.isLoaded ? settings.backButton : null;
     final screen = _shop ?? _skinShop;
     return screen != null && screen.built ? screen.backButton : null;
   }
 
   void _updateMenuChrome() {
-    final current = _home ?? _shop ?? _skinShop;
+    final current = _home ?? _shop ?? _skinShop ?? _settingsPanel;
     _chromeHosts.removeWhere(
       (host) =>
           !identical(host, current) &&
@@ -1879,20 +1893,24 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
               host.isRemoved ||
               (host as OpacityProvider).opacity <= 0),
     );
-    if (current == null || _chromeHosts.length <= 1) _chromeHold = false;
+    if (current == null || _chromeHosts.length <= 1) {
+      _chromeHold = false;
+      _cornerHold = false;
+    }
     var homeShare = 0.0;
     var total = 0.0;
+    var pillTotal = 0.0; // settings has the corner box but no pill
     for (final host in _chromeHosts) {
       final opacity = (host as OpacityProvider).opacity;
       total += opacity;
+      if (host is! SettingsPanel) pillTotal += opacity;
       if (host is HomeScreen) homeShare += opacity;
     }
-    final opacity = _chromeHold ? 1.0 : total.clamp(0.0, 1.0);
     _coinPill
-      ..opacity = opacity
+      ..opacity = _chromeHold ? 1.0 : pillTotal.clamp(0.0, 1.0)
       ..balance = menu.wallet.balance;
     _cornerBox
-      ..opacity = opacity
+      ..opacity = _chromeHold || _cornerHold ? 1.0 : total.clamp(0.0, 1.0)
       ..gearMix = total > 0 ? homeShare / total : 1
       ..pressScale = _cornerButton?.pressScale ?? 1;
   }

@@ -164,6 +164,31 @@ Product-owner decisions 2026-10-06/07 and implementation notes:
 - **SFX before warm-up are dropped**, never played through a one-shot player
   (audio invariant).
 
+## Home v3 and levels (PRD-home-v3 §3–4) deviations
+
+Implements the home part of `PRD-home-v3.md` (WP-H) on top of the 2.0 skin
+shop build:
+
+- **Home layout v3** replaces the PRD-1 / PRD-menu-v2 home layout: trophy box
+  in the top row (x 60), emblem + bird stage (plate centre 160, 254 at 711),
+  BEST / LAST flank, START 216 × 67 at y 390, slot 216 × 31; the leaderboard
+  row and the Games Played stat left home (games now in the LEVELS header).
+  Short screens scale the emblem stage down about its top edge (min emblem
+  0.78 / bird 1.1) before the START gaps shrink; tiles stay bottom-anchored
+  (149 pt above the edge at 711, 146 at 568). Numbers with 4+ digits shrink
+  to 62 pt, clear of LEGEND's wings.
+- **LAST** = the most recent run's score (`lastScore`, saved at game over);
+  "—" before the first run.
+- **LEVEL UP trigger (interim, Q-H1):** the popup opens once home has been up
+  with nothing over it for 0.35 s while a level-up is owed — after a run's
+  return home, and once on the first home after the update for players whose
+  best already passed levels (all reached rewards added together). The no-ads
+  launch popup goes first; never two popups. Until the claim, the home emblem
+  shows the last claimed level; CLAIM / ✕ / Esc all claim, then it pops to the
+  new one. The debug panel's LEVEL UP shows it at once.
+- **LEVELS** has no coin pill (the mock's screen has none); the shared corner
+  box stays as its back button. The dim of the LEVEL UP popup does not close it.
+
 ## Physics (Forge2D)
 
 > DEVIATION (2026-07-19, user-requested, Flappy Bird feel): the 2014

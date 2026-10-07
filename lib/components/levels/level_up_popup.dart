@@ -270,10 +270,14 @@ class LevelUpPopup extends PositionComponent
         : 1.05 - .05 * ((u - .7) / .3);
     // Emblem + bird pop in (0 -> 1.12 -> 1 over 0.45 s).
     final s = popIn(_t / Config.levelUpPopDuration);
+    // Reduce motion (PRD-home-v3 §3.2): a frozen emblem clock as on home
+    // and LEVELS (flags, stars, rays, ring) and no sweep; the header rays
+    // stop rotating too (_Header.render).
+    final still = game.reduceMotion;
     emblem
       ..popScale = s
-      ..t = _t + 1
-      ..shine = !game.reduceMotion;
+      ..t = still ? 0 : _t + 1
+      ..shine = !still;
     bird
       ..scale = Vector2.all(s)
       ..flapOverride = (_t * 1.4) % 1 < .3;

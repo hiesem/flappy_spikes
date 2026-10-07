@@ -212,11 +212,15 @@ abstract final class EmblemPainter {
     if (shine) {
       final u = ((t % sweepPeriod) / sweepPeriod) / sweepShare;
       if (u < 1) {
-        final x = -110 + u * 220;
+        // One cached band at x = 0, moved with a translate (§11: no
+        // per-frame path allocation).
+        canvas.save();
+        canvas.translate(-110 + u * 220, 0);
         canvas.drawPath(
-          polyPath([x, -60, x + 22, -60, x - 8, 60, x - 30, 60]),
+          _sweepBand,
           fillPaint(const Color.fromRGBO(255, 255, 255, .38)),
         );
+        canvas.restore();
       }
     }
     canvas.restore();
@@ -239,6 +243,9 @@ abstract final class EmblemPainter {
     }
     _ribbon(canvas, level);
   }
+
+  /// The plate light-sweep band with its leading edge at x = 0.
+  static final Path _sweepBand = polyPath([0, -60, 22, -60, -8, 60, -30, 60]);
 
   /// Draws a cached shape list with the shared (reused) paints.
   static void _paintShapes(Canvas canvas, List<_Shape> shapes) {

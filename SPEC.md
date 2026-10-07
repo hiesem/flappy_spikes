@@ -184,8 +184,17 @@ shop build:
   return home, and once on the first home after the update for players whose
   best already passed levels (all reached rewards added together). The no-ads
   launch popup goes first; never two popups. Until the claim, the home emblem
-  shows the last claimed level; CLAIM / ✕ / Esc all claim, then it pops to the
-  new one. The debug panel's LEVEL UP shows it at once.
+  shows the last claimed level; CLAIM / ✕ / Esc all claim, the reward coins fly
+  and count up, and only then the emblem pops to the new one. The debug panel's
+  LEVEL UP shows it at once.
+- **Popup queue (never two popups):** the modal popups (no-ads launch upsell,
+  LEVEL UP, purchase CANCELLED/FAILED, No-ads celebration) open one at a time
+  in arrival order; one that arrives while another is up waits until it closes.
+  A purchase result or celebration delivered during a run (or while a run is
+  starting) waits until the menus are back. The "Purchase pending…" toast is
+  removed as soon as that product's purchase resolves.
+- **Reduce motion:** the LEVEL UP popup's emblem clock is frozen (no flags /
+  stars / ring / rays motion, no sweep) and its header rays do not rotate.
 - **LEVELS** has no coin pill (the mock's screen has none); the shared corner
   box stays as its back button. The dim of the LEVEL UP popup does not close it.
 

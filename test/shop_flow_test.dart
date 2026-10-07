@@ -628,8 +628,9 @@ void main() {
         iap.mode = FakeIapMode.cancel;
         shop.packs[2].onPressed();
         await settle(game);
-        // Only the store's "pending" step toasted; the popup explains.
-        expect(toastText(game), 'Purchase pending…');
+        // The store's "pending" toast goes as soon as the purchase
+        // resolves; the popup explains.
+        expect(toastText(game), isNull);
         expect(game.purchaseResultPopup!.problem, PurchaseProblem.cancelled);
         expect(spy.last('purchase_result_popup'), {
           'product': 'coins_5000',

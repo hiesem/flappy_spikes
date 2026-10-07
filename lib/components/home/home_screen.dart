@@ -314,10 +314,19 @@ class HomeScreen extends PositionComponent
   /// still owed shows the last claimed level until its CLAIM (the emblem
   /// then upgrades with a pop, §4.3).
   int get _displayLevel {
+    final held = _heldLevel;
+    if (held != null) return held;
     final levels = game.menu.levels;
     final pending = levels.pendingLevelUp;
     return pending?.fromLevel ?? levels.level;
   }
+
+  /// The level shown between a LEVEL UP claim and its upgrade pop (§4.3:
+  /// the emblem upgrades after the reward count-up); null = live level.
+  int? _heldLevel;
+
+  /// Keeps the emblem at [level] until [playUpgradePop].
+  void holdLevel(int level) => _heldLevel = level;
 
   @override
   void update(double dt) {
@@ -387,6 +396,7 @@ class HomeScreen extends PositionComponent
   /// §4.3: after a LEVEL UP claim the emblem upgrades with a pop (scale
   /// 0.6 -> 1.15 -> 1 over 0.7 s, build74 `evo`).
   void playUpgradePop() {
+    _heldLevel = null;
     if (!_built) return;
     _sync(force: true);
     _popT = 0;

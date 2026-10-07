@@ -30,11 +30,8 @@ import 'package:flutter_test/flutter_test.dart';
 import '../helpers.dart';
 import '../menu_screenshot_test.dart' show captureShot, loadFonts;
 
-// Independent QA against PRD-home-v3 and briefs3/common.md. Only test
-// code changes. Run open reproductions with:
-// flutter test test/e2e/home_v3_round1_e2e_test.dart
-//   --dart-define=QA_VERIFY_OPEN_DEFECTS=true --name 'S[12]-'
-const _verifyOpen = bool.fromEnvironment('QA_VERIFY_OPEN_DEFECTS');
+// Independent QA against PRD-home-v3 and briefs3/common.md. The S1-/S2-
+// groups pin the round-1 findings (fixed in hv-fix1).
 
 class _Events extends GameServices {
   final events = <(String, Map<String, Object>?)>[];
@@ -116,18 +113,14 @@ void _journey(
   );
 }
 
+// Round-1 defect reproductions, fixed in hv-fix1 (now regular regressions).
 void _defect(
   String id,
   String description,
   Future<void> Function(FlappySpikesGame, _Rig, WidgetTester) verify, {
   Map<String, Object> prefs = const {},
 }) {
-  // FlameTester accepts bool skip; the group supplies the required reason.
-  group(
-    id,
-    () => _journey(description, verify, prefs: prefs),
-    skip: _verifyOpen ? false : '$id open',
-  );
+  group(id, () => _journey(description, verify, prefs: prefs));
 }
 
 Future<void> _settle(FlappySpikesGame game, WidgetTester tester) async {
@@ -788,12 +781,21 @@ void main() async {
       await tester.pump(const Duration(seconds: 2));
       await _settle(game, tester);
       expect(game.menu.noAds, isTrue, reason: 'billing callback delivered');
-      await _shot(game, tester, 'S1-30_two_popups');
+      await _shot(game, tester, 'S1-30_queued');
       expect(
         game.noAdsCelebration,
         isNull,
         reason: 'queue the celebration until LEVEL UP has been claimed',
       );
+      expect(game.queuedPopups, 1);
+      await _tap(game, tester, game.levelUpPopup!.claimButton);
+      expect(game.levelUpPopup, isNull);
+      expect(game.noAdsCelebration, isNotNull, reason: 'its turn now');
+      expect(game.queuedPopups, 0);
+      await _tap(game, tester, game.noAdsCelebration!.claimButton);
+      await _advance(game, 5);
+      expect(game.levelUpPopup, isNull, reason: 'EGG paid once');
+      expect(game.coinPill.shownBalance, 1050);
     },
     prefs: const {'bestScore': 10},
   );
@@ -833,6 +835,23 @@ void main() async {
       isFalse,
       reason: 'upgrade pop belongs after the reward count-up (§4.3)',
     );
+    expect(game.homeScreen!.emblem.level, 0, reason: 'upgrades with the pop');
+    var popAt = -1.0;
+    var countedAt = -1.0;
+    var t = .1;
+    await _advance(
+      game,
+      4,
+      sample: () {
+        t += .05;
+        if (countedAt < 0 && game.coinPill.shownBalance == 50) countedAt = t;
+        if (popAt < 0 && game.homeScreen!.popping) popAt = t;
+      },
+    );
+    expect(countedAt, greaterThan(0));
+    expect(popAt, greaterThanOrEqualTo(countedAt));
+    expect(game.homeScreen!.emblem.level, 1);
+    expect(game.homeScreen!.popping, isFalse);
   }, prefs: const {'bestScore': 10});
 
   for (final mode in [FakeIapMode.cancel, FakeIapMode.fail]) {
@@ -862,6 +881,67 @@ void main() async {
     );
   }
 
+  for (final mode in [
+    FakeIapMode.succeed,
+    FakeIapMode.cancel,
+    FakeIapMode.fail,
+  ]) {
+    _journey(
+      'R1 pending toast is dismissed when the No ads purchase resolves (${mode.name})',
+      (game, rig, tester) async {
+        rig.iap.mode = mode;
+        rig.iap.delay = const Duration(seconds: 2);
+        await _tap(game, tester, game.homeScreen!.noAdsTile);
+        expect(game.toastMessage?.message, 'Purchase pending…');
+        await tester.pump(const Duration(seconds: 2));
+        await _settle(game, tester);
+        expect(game.toastMessage, isNull, reason: 'resolved: toast gone');
+        if (mode == FakeIapMode.succeed) {
+          expect(game.noAdsCelebration, isNotNull);
+        } else {
+          expect(game.purchaseResultPopup, isNotNull);
+        }
+      },
+    );
+  }
+
+  _journey(
+    'R1 a coin pack result keeps the toast of another pending product',
+    (game, rig, tester) async {
+      rig.iap.delay = const Duration(seconds: 2);
+      await _tap(game, tester, game.homeScreen!.noAdsTile);
+      final toast = game.toastMessage;
+      expect(toast?.message, 'Purchase pending…');
+      // An unrelated product resolving must not drop No ads' toast.
+      game.purchases.onResolved!(IapProduct.coins500);
+      await flushAndMount(game);
+      expect(game.toastMessage, same(toast));
+      await tester.pump(const Duration(seconds: 2));
+      await _settle(game, tester);
+    },
+  );
+
+  _journey(
+    'R1 a purchase result waits for LEVEL UP, then opens (arrival order)',
+    (game, rig, tester) async {
+      rig.iap.mode = FakeIapMode.cancel;
+      rig.iap.delay = const Duration(seconds: 2);
+      await _tap(game, tester, game.homeScreen!.noAdsTile);
+      await _advance(game, .8);
+      expect(game.levelUpPopup, isNotNull);
+      await tester.pump(const Duration(seconds: 2));
+      await _settle(game, tester);
+      expect(rig.events.params('purchase_result_popup'), hasLength(1));
+      expect(game.purchaseResultPopup, isNull, reason: 'never two popups');
+      await _tap(game, tester, game.levelUpPopup!.claimButton);
+      expect(game.purchaseResultPopup, isNotNull);
+      await _tap(game, tester, game.purchaseResultPopup!.okButton);
+      expect(game.purchaseResultPopup, isNull);
+      expect(game.queuedPopups, 0);
+    },
+    prefs: const {'bestScore': 10},
+  );
+
   group('S2-33', () {
     test('FALCON sweep must reuse path geometry between frames (§11)', () {
       final first = _PathRecorder();
@@ -877,5 +957,5 @@ void main() async {
         reason: 'move a cached sweep shape with a canvas transform',
       );
     });
-  }, skip: _verifyOpen ? false : 'S2-33 open');
+  });
 }

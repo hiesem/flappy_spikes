@@ -214,8 +214,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   PurchaseResultPopup? _purchasePopup;
   NoAdsCelebration? _noAdsCelebration;
 
-  /// A fresh No-ads purchase waits for the menus to show its celebration.
-  bool _noAdsCelebrationQueued = false;
+  /// Modal popups waiting for the one on screen to close (or for the
+  /// menus to come back), oldest first: never two popups at once.
+  final List<_PopupRequest> _popupQueue = [];
 
   /// Where the last No-ads purchase started (tile / shop_banner / popup).
   String _noAdsSource = 'popup';
@@ -232,6 +233,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   DebugPanel? _debugPanel;
   FakeAdOverlay? _fakeAd;
   ServiceMessage? _message;
+
+  /// The "Purchase pending…" toast and its product, while it may be up.
+  (IapProduct, ServiceMessage)? _pendingToast;
   bool _runStarting = false;
 
   // Skin tint blend (see Config.skinStageBlend): follows the colour
@@ -293,6 +297,40 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// The No-ads celebration while it is up (PRD-home-v3 §7).
   NoAdsCelebration? get noAdsCelebration => _noAdsCelebration;
+
+  /// Whether one of the modal popups (launch No-ads upsell, LEVEL UP,
+  /// purchase result, No-ads celebration) is up.
+  bool get modalPopupOpen =>
+      _noAdsPopup != null ||
+      _levelUpPopup != null ||
+      _purchasePopup != null ||
+      _noAdsCelebration != null;
+
+  /// How many modal popups wait for their turn (tests).
+  int get queuedPopups => _popupQueue.length;
+
+  /// Queues a modal popup: [open] runs as soon as no other modal popup is
+  /// up, every popup queued earlier has opened, and [canOpen] holds
+  /// (checked again each frame). Right away when all that holds now.
+  void _queuePopup(bool Function() canOpen, void Function() open) {
+    _popupQueue.add(_PopupRequest(canOpen, open));
+    _drainPopups();
+  }
+
+  /// Opens the oldest queued popup when its turn has come (see
+  /// [_queuePopup]); called each frame and whenever a popup closes.
+  void _drainPopups() {
+    while (_popupQueue.isNotEmpty && !modalPopupOpen) {
+      final next = _popupQueue.first;
+      if (!next.canOpen()) return;
+      _popupQueue.removeAt(0);
+      next.open();
+    }
+  }
+
+  /// Menus up and no run starting: where queued results / celebrations
+  /// may show (a late store callback during a run waits for home).
+  bool get _menusUp => state == GameState.start && !_runStarting;
 
   /// Whether the No-ads owned looks show (tile / banner AD-FREE): the
   /// owned flag, except between a fresh purchase and its flips.
@@ -363,6 +401,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onPackPurchased: _onPackPurchased,
       onNoAdsPurchased: _onNoAdsPurchased,
       onPurchaseProblem: openPurchaseResultPopup,
+      pendingToast: (product, text) {
+        showToast(text);
+        _pendingToast = (product, _message!);
+      },
+      onResolved: _dismissPendingToast,
     )..start();
     sound = SoundService(muted: storage.muteSound, enabled: soundEnabled);
     rumble.on = storage.rumble;
@@ -1117,6 +1160,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final home = _home;
     final ready =
         _levelUpPopup == null &&
+        _popupQueue.isEmpty &&
         _levelsOpenIn == null &&
         home != null &&
         home.built &&
@@ -1181,16 +1225,21 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       removeOnDone: true,
     );
     final level = popup.pending.toLevel;
-    // The pill keeps its number until the coins land.
+    _home?.holdLevel(popup.pending.fromLevel);
+    // The pill keeps its number until the coins land; the home emblem's
+    // upgrade pop follows the finished count-up (§4.3).
     final reward = CoinRewardAnimation.levelReward(
       popup.pending.reward,
       level,
       from: from,
+      onDone: () {
+        if (state == GameState.start) _home?.playUpgradePop();
+      },
     );
     playCoinReward(reward);
+    _drainPopups();
     final paid = await menu.levels.claim();
     if (paid > 0) services.logLevelRewardClaimed(level, paid);
-    _home?.playUpgradePop();
   }
 
   bool _levelUpBack() {
@@ -1205,6 +1254,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// run, over another popup / the debug panel / a fake ad, or while the
   /// menus are transitioning; owners get a toast instead.
   void openNoAdsPopup() {
+    if (_noAdsPopup == null && modalPopupOpen) {
+      // Another popup is up: the upsell takes its turn after it.
+      _queuePopup(() => true, openNoAdsPopup);
+      return;
+    }
     if (_noAdsPopup != null ||
         _debugPanel != null ||
         _fakeAd != null ||
@@ -1252,6 +1306,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       duration: Config.popupFadeDuration,
       removeOnDone: true,
     );
+    _drainPopups();
   }
 
   bool _noAdsPopupBack() {
@@ -1278,8 +1333,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   /// §6: CANCELLED (always) / FAILED (any reason) over whatever is on
-  /// screen; `sk_nocoins` on open. Ignored during a run or while one is
-  /// already up (the analytics event is logged either way).
+  /// screen; `sk_nocoins` on open. The analytics event is logged on
+  /// arrival; the card itself waits its turn behind another popup, and a
+  /// result arriving during a run waits until the menus are back.
   void openPurchaseResultPopup(
     IapProduct product,
     PurchaseProblem problem,
@@ -1290,7 +1346,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       problem.analyticsName,
       code,
     );
-    if (state != GameState.start || _purchasePopup != null) return;
+    _queuePopup(() => _menusUp, () => _showPurchaseResult(problem));
+  }
+
+  void _showPurchaseResult(PurchaseProblem problem) {
     sound.play(Sfx.skNoCoins);
     final popup = PurchaseResultPopup(
       problem: problem,
@@ -1318,6 +1377,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       duration: Config.purchasePopupFadeOut,
       removeOnDone: true,
     );
+    _drainPopups();
   }
 
   bool _purchasePopupBack() {
@@ -1328,24 +1388,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// §7: a FRESH No-ads purchase (never a restore or re-delivery), right
   /// before the flag and the bonus are granted: the owned looks and the
   /// pill's number wait for the celebration, which opens as soon as the
-  /// menus are up.
+  /// menus are up and no other popup is (popups queue in arrival order).
   void _onNoAdsPurchased() {
     _noAdsRevealHeld = true;
     _noAdsVideoHeld = true;
     _coinPill.hold();
-    _noAdsCelebrationQueued = true;
-    _maybeOpenNoAdsCelebration();
-  }
-
-  void _maybeOpenNoAdsCelebration() {
-    if (!_noAdsCelebrationQueued ||
-        _noAdsCelebration != null ||
-        state != GameState.start ||
-        _runStarting) {
-      return;
-    }
-    _noAdsCelebrationQueued = false;
-    openNoAdsCelebration();
+    _queuePopup(() => _menusUp, openNoAdsCelebration);
   }
 
   /// The celebration itself (also the debug panel's preview): `noads_unlock`,
@@ -1452,6 +1500,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         onDone: () => _after(Config.noAdsFlipDelay, _flipNoAdsOwned),
       ),
     );
+    _drainPopups();
   }
 
   /// §7 owned states, `noads_stamp`: the Shop banner flips to AD-FREE ·
@@ -1693,6 +1742,28 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Short-lived message ([ServiceMessage] style): on the home screen in
   /// the gap above the tiles, elsewhere bottom-centre.
   void showToast(String text) => _showServiceMessage(text);
+
+  /// The toast on screen (tests; null once it has gone).
+  ServiceMessage? get toastMessage {
+    final message = _message;
+    if (message == null ||
+        message.parent == null ||
+        message.isRemoving ||
+        message.isRemoved) {
+      return null;
+    }
+    return message;
+  }
+
+  /// [product]'s purchase resolved: its "Purchase pending…" toast goes at
+  /// once, so it never sits under the celebration or the result popup.
+  void _dismissPendingToast(IapProduct product) {
+    final pending = _pendingToast;
+    if (pending == null || pending.$1 != product) return;
+    _pendingToast = null;
+    final message = pending.$2;
+    if (message.parent != null) message.removeFromParent();
+  }
 
   // --- scoring & contacts ------------------------------------------------
 
@@ -2117,7 +2188,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _clock += dt;
     super.update(dt);
     _purchases?.update(dt);
-    _maybeOpenNoAdsCelebration();
+    _drainPopups();
 
     if (_colorFadeT < 1) {
       _colorFadeT = (_colorFadeT + dt / Config.colorFadeDuration).clamp(
@@ -2209,4 +2280,12 @@ class _SpikeInsetAdapter implements OpacityProvider {
       strip.visualInset = Config.menuSpikeInset * value;
     }
   }
+}
+
+/// A modal popup waiting for its turn (see FlappySpikesGame._queuePopup).
+class _PopupRequest {
+  _PopupRequest(this.canOpen, this.open);
+
+  final bool Function() canOpen;
+  final void Function() open;
 }

@@ -23,7 +23,10 @@ import 'config.dart';
 /// - [onPurchaseProblem]: cancelled (always, also a user back-out) or
 ///   failed (any reason; `iap_error` is logged either way for failures).
 ///   Fallback: failures toast the store's reason, cancels stay silent.
-/// A pending purchase toasts "Purchase pending…" and completes later.
+/// A pending purchase toasts "Purchase pending…" (through [pendingToast]
+/// when set) and completes later; [onResolved] fires as soon as that
+/// product's purchase resolves (purchased / restored / failed / canceled),
+/// before any other feedback, so the game can drop the pending toast.
 ///
 /// Plain Dart (no Flame), so it is unit-testable on its own; the game owns
 /// one, [start]s it in onLoad, [dispose]s it in onRemove and drives the
@@ -38,6 +41,8 @@ class Purchases {
     this.onPackPurchased,
     this.onNoAdsPurchased,
     this.onPurchaseProblem,
+    this.pendingToast,
+    this.onResolved,
   });
 
   final IapService iap;
@@ -63,6 +68,12 @@ class Purchases {
     String? code,
   )?
   onPurchaseProblem;
+
+  /// Shows the "Purchase pending…" toast for [product] (null = [toast]).
+  final void Function(IapProduct product, String text)? pendingToast;
+
+  /// See the class doc.
+  final void Function(IapProduct product)? onResolved;
 
   StreamSubscription<IapEvent>? _sub;
   final Set<IapProduct> _inFlight = {};
@@ -123,10 +134,17 @@ class Purchases {
 
   Future<void> _onEvent(IapEvent event) async {
     final product = event.product;
+    if (event.status != IapStatus.pending) onResolved?.call(product);
     switch (event.status) {
       case IapStatus.pending:
         _inFlight.add(product);
-        toast('Purchase pending…');
+        const text = 'Purchase pending…';
+        final pending = pendingToast;
+        if (pending != null) {
+          pending(product, text);
+        } else {
+          toast(text);
+        }
       case IapStatus.purchased:
         _inFlight.remove(product);
         await _grantPurchase(product);

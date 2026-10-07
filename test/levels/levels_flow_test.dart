@@ -273,12 +273,19 @@ void main() async {
       expect(reward.amount, 1550);
       expect(reward.level, 6);
       expect(game.coinPill.held, isTrue);
+      // The emblem upgrades with its pop after the count-up (§4.3).
+      expect(home.emblem.level, 0);
+      expect(home.popping, isFalse);
+      while (game.coinReward != null) {
+        stepGame(game, 0.05);
+        await flushAndMount(game);
+      }
+      expect(game.coinPill.shownBalance, 1650);
       expect(home.emblem.level, 6);
       expect(home.popping, isTrue);
-      expect(home.emblem.popScale, closeTo(0.6, 1e-9));
-      stepGame(game, 3.5);
+      expect(home.emblem.popScale, closeTo(0.6, 0.1));
+      stepGame(game, Config.homeEmblemPopDuration + 0.05);
       await flushAndMount(game);
-      expect(game.coinPill.shownBalance, 1650);
       expect(home.popping, isFalse);
       expect(home.emblem.popScale, 1);
       // Never again.
@@ -351,6 +358,9 @@ void main() async {
       await _flush(game);
       // +120 run coins, +250 rewards.
       expect(game.menu.wallet.balance, 370);
+      expect(game.homeScreen!.emblem.level, 1, reason: 'until the pop');
+      stepGame(game, 4);
+      await flushAndMount(game);
       expect(game.homeScreen!.emblem.level, 3);
     },
   );

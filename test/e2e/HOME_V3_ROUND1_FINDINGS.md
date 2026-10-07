@@ -1,5 +1,8 @@
 # QA round 1 — Home v3
 
+> Status (hv-fix1): S1-30, S2-30, S2-31, S2-32 and S2-33 are fixed; their
+> reproductions run unskipped as regular regressions.
+
 Reviewed branch `hv-qa`, product baseline `26c6feb`, on 2026-10-07 against
 workspace `PRD-home-v3.md`, `PRD-2-gameplay.md` §3.33, `CLAUDE.md`,
 `SPEC.md`, and `.worktrees/briefs3/{common,wpF,wpG,wpH,wpI}.md`.

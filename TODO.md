@@ -352,6 +352,8 @@ Branch off `feat/skin-shop`, local commits only (not pushed). Opus/DeepSeek buil
 - [x] WP-I — coin-pack celebration, purchase cancelled/failed popup, No-ads celebration + owned flips, Settings v3
       (shared back spot, RUMBLE row), RESTORE PURCHASES removed from the Shop
 - [x] Sol QA round 1 (S1-30, S2-30 … S2-33) + fixes (popup queue, late purchase results, pending toast dismissal)
+- [x] Sol QA round 2 (S1-31, S1-32, S2-34, S2-35) + fixes (pill counts only its own reward, No-ads bonus only for a
+      purchase started this session, reduce-motion celebration, cached unranked emblem)
 - [ ] Device check on the Pixel 8 (vibration feel, 568-pt layout Q-H3, emblem performance)
 - [ ] Open: Q-H1 LEVEL UP timing (interim: on return home), Q-H2 thresholds vs 1.0 scoring
 

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../game/storage.dart';
+import '../levels/level_progress.dart';
 import '../skins/item_store.dart';
 import 'free_coins_policy.dart';
 import 'noads_popup_policy.dart';
@@ -19,6 +20,7 @@ class MenuState {
     slot = PowerupSlot(storage, random: random);
     noAdsPopup = NoAdsPopupPolicy(storage);
     freeCoins = FreeCoinsPolicy(storage);
+    levels = LevelProgress(storage, wallet);
   }
 
   final GameStorage storage;
@@ -28,6 +30,8 @@ class MenuState {
   late final PowerupSlot slot;
   late final NoAdsPopupPolicy noAdsPopup;
   late final FreeCoinsPolicy freeCoins;
+  /// PRD-home-v3 §4: ranks on the best score + one-time rewards.
+  late final LevelProgress levels;
 
   bool get noAds => storage.noAds;
 

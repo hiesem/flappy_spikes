@@ -2,8 +2,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../skins/look.dart';
 
-/// Persistence layer for bestScore / gamesPlayed / muteSound / musicVolume and
-/// the 2.0 menu state (coins, skins, powerup slot, no-ads popup, free coins).
+/// Persistence layer for bestScore / gamesPlayed / muteSound / musicVolume /
+/// rumble and the 2.0 menu state (coins, skins, powerup slot, no-ads popup,
+/// free coins, claimed level rewards).
 class GameStorage {
   GameStorage({DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
 
@@ -27,6 +28,8 @@ class GameStorage {
   static const String _freeCoinsCountKey = 'freeCoinsCount';
   static const String _freeCoinsLastMsKey = 'freeCoinsLastMs';
   static const String _debugDayOffsetKey = 'debugDayOffset';
+  static const String _claimedLevelsKey = 'claimedLevels';
+  static const String _rumbleKey = 'rumble';
 
   /// One preference key per equipped layer (the five-key equipped map).
   static String _equippedItemKey(SkinLayer layer) =>
@@ -62,6 +65,12 @@ class GameStorage {
   int freeCoinsCount = 0;
   int freeCoinsLastMs = 0;
   int debugDayOffset = 0;
+
+  /// PRD-home-v3 §11: levels whose one-time reward was paid.
+  Set<int> claimedLevels = {};
+
+  /// PRD-2 §3.33: the RUMBLE switch (on by default).
+  bool rumble = true;
 
   /// Current wall-clock time (overridable for tests).
   DateTime now() => _clock();
@@ -118,6 +127,11 @@ class GameStorage {
     freeCoinsDay = prefs.getInt(_freeCoinsDayKey) ?? -1;
     freeCoinsCount = prefs.getInt(_freeCoinsCountKey) ?? 0;
     freeCoinsLastMs = prefs.getInt(_freeCoinsLastMsKey) ?? 0;
+    claimedLevels = (prefs.getStringList(_claimedLevelsKey) ?? const [])
+        .map(int.tryParse)
+        .whereType<int>()
+        .toSet();
+    rumble = prefs.getBool(_rumbleKey) ?? true;
   }
 
   Future<void> saveBestScore(int value) async {
@@ -242,8 +256,24 @@ class GameStorage {
     await prefs.setInt(_debugDayOffsetKey, value);
   }
 
+  Future<void> saveClaimedLevels(Set<int> value) async {
+    claimedLevels = {...value};
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _claimedLevelsKey,
+      (claimedLevels.toList()..sort()).map((l) => '$l').toList(),
+    );
+  }
+
+  Future<void> saveRumble(bool value) async {
+    rumble = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_rumbleKey, value);
+  }
+
   /// Debug-panel reset: clears the menu economy/skin/powerup/popup state but
-  /// keeps progression, sound settings and the install day.
+  /// keeps progression, sound / rumble settings and the install day. The
+  /// claimed level rewards are cleared (they pay again on the next home).
   Future<void> resetMenuState() async {
     await saveCoins(0);
     await saveOwnedItems({});
@@ -259,6 +289,7 @@ class GameStorage {
     await saveFreeCoinsDay(-1);
     await saveFreeCoinsCount(0);
     await saveFreeCoinsLastMs(0);
+    await saveClaimedLevels({});
   }
 
   List<String> _capSlotHistory(List<String> value) =>

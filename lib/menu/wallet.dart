@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../game/storage.dart';
 
 /// Where coins came from (Firebase Analytics `coins_earned` source).
-enum CoinSource { play, iap, rewarded, noadsBonus, debug }
+enum CoinSource { play, iap, rewarded, noadsBonus, levelReward, debug }
 
 extension CoinSourceName on CoinSource {
   String get analyticsName => switch (this) {
@@ -11,6 +11,7 @@ extension CoinSourceName on CoinSource {
         CoinSource.iap => 'iap',
         CoinSource.rewarded => 'rewarded',
         CoinSource.noadsBonus => 'noads_bonus',
+        CoinSource.levelReward => 'level_reward',
         CoinSource.debug => 'debug',
       };
 }

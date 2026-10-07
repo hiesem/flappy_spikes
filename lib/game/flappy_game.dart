@@ -776,6 +776,35 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     };
   }
 
+  /// Mounted [MenuScreen]s. While any is, the ground spike strip draws
+  /// above them, so their scroll lists show only through the gaps between
+  /// the teeth instead of being cut off flat at the tips.
+  final Set<MenuScreen> _menuScreens = {};
+
+  /// Priority of the ground strip while a [MenuScreen] is mounted: above
+  /// the screens (20), below popups, toasts and flashes (25+). Shares 21
+  /// with the coin pill, which never overlaps it.
+  static const int groundOverMenusPriority = 21;
+
+  /// Ground strip priority (tests).
+  int get groundStripPriority => _ground.priority;
+
+  void menuScreenMounted(MenuScreen screen) {
+    _menuScreens.add(screen);
+    _syncGroundPriority();
+  }
+
+  void menuScreenRemoved(MenuScreen screen) {
+    _menuScreens.remove(screen);
+    _syncGroundPriority();
+  }
+
+  void _syncGroundPriority() {
+    _ground.priority = _menuScreens.isEmpty
+        ? SpikeStrip.basePriority
+        : groundOverMenusPriority;
+  }
+
   /// Shop tile / coin pill: fades the home screen (or the Skins screen)
   /// out and the Shop in. The pill ([scrollToCoins]) opens it at the coin
   /// packs; pressed while already in the Shop it just scrolls there.

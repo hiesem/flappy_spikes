@@ -142,7 +142,13 @@ abstract class MenuScreen extends PositionComponent
       position: Config.menuScreenTitlePositionFor(h),
       anchor: Anchor.topCenter,
     );
-    scroll = MenuScrollArea(viewport: scrollViewportFor(h), isActive: isActive);
+    // The list continues behind the bottom spike strip (which the game
+    // draws above menu screens): it shows in the gaps between the teeth.
+    scroll = MenuScrollArea(
+      viewport: scrollViewportFor(h),
+      bleedBottom: Config.menuSpikeToothDepth,
+      isActive: isActive,
+    );
     addAll([
       _ScreenTapBlocker(size: size.clone()),
       scroll,
@@ -153,8 +159,8 @@ abstract class MenuScreen extends PositionComponent
       // Controls outside the list stop it AND act (QA S1-51 decision).
       MenuScrollTapGate(
         scroll: scroll,
-        position: scroll.viewport.topLeft.toVector2(),
-        size: scroll.viewport.size.toVector2(),
+        position: scroll.visibleRect.topLeft.toVector2(),
+        size: scroll.visibleRect.size.toVector2(),
         priority: 1 << 20,
       ),
     ]);
@@ -163,6 +169,18 @@ abstract class MenuScreen extends PositionComponent
     if (_detached) return;
     sync(force: true);
     setTint(_tint);
+  }
+
+  @override
+  void onMount() {
+    super.onMount();
+    game.menuScreenMounted(this);
+  }
+
+  @override
+  void onRemove() {
+    game.menuScreenRemoved(this);
+    super.onRemove();
   }
 
   @override
@@ -189,16 +207,20 @@ abstract class MenuScreen extends PositionComponent
 /// coordinates (as on the mock at scroll 0); the area shows the [viewport]
 /// band of them, shifted up by [offset].
 ///
+/// The scroll range is set by [viewport]; the content is drawn (and takes
+/// touches) [bleedBottom] further down, into the gaps between the bottom
+/// spike teeth, which the game draws over the list.
+///
 /// Taps outside the viewport never reach the content, and neither do the taps
 /// that stop a fling or a spring: [MenuScreen] puts a [MenuScrollTapGate] over
 /// the viewport while [isBusy]. A press that travels more than
 /// [Config.menuScrollSlop] is a drag and cancels the pressed child
 /// ([MenuDragDispatcher]).
 class MenuScrollArea extends PositionComponent with DragCallbacks {
-  MenuScrollArea({required this.viewport, this.isActive})
+  MenuScrollArea({required this.viewport, this.bleedBottom = 0, this.isActive})
     : super(
         position: viewport.topLeft.toVector2(),
-        size: viewport.size.toVector2(),
+        size: Vector2(viewport.width, viewport.height + bleedBottom),
       ) {
     content = PositionComponent(
       position: Vector2(-viewport.left, -viewport.top),
@@ -207,7 +229,20 @@ class MenuScrollArea extends PositionComponent with DragCallbacks {
 
   /// The visible band, in world coordinates.
   final Rect viewport;
+
+  /// How far below [viewport] the content stays visible and tappable (the
+  /// gaps between the bottom spike teeth). Does not change the scroll range.
+  final double bleedBottom;
   final bool Function()? isActive;
+
+  /// The band the content is drawn in and takes touches in, in world
+  /// coordinates: [viewport] plus [bleedBottom].
+  Rect get visibleRect => Rect.fromLTRB(
+    viewport.left,
+    viewport.top,
+    viewport.right,
+    viewport.bottom + bleedBottom,
+  );
 
   /// Holds the scrolled children (world coordinates at offset 0).
   late final PositionComponent content;
@@ -485,7 +520,7 @@ class MenuScrollArea extends PositionComponent with DragCallbacks {
     T? Function(CoordinateTransform, T) transformContext,
     bool Function(Component, T) checkContains,
   ) {
-    // Content scrolled out of the viewport must not take taps.
+    // Content scrolled out of the visible band must not take taps.
     if (locationContext is Vector2 && !containsLocalPoint(locationContext)) {
       return const [];
     }

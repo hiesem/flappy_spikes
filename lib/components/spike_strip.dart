@@ -11,7 +11,12 @@ import '../game/tintable.dart';
 /// 200 pt/s with seamless wrap, backed by a static full-width physics body.
 /// The ceiling strip uses the same texture rotated 180 degrees.
 class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
-  SpikeStrip({required this.isCeiling}) : super(priority: -5, renderBody: false);
+  SpikeStrip({required this.isCeiling})
+    : super(priority: basePriority, renderBody: false);
+
+  /// Draw order during runs (above pipes, below the bird). The game lifts
+  /// the ground strip above open menu screens.
+  static const int basePriority = -5;
 
   final bool isCeiling;
 

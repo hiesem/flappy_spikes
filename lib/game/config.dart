@@ -549,6 +549,11 @@ class Config {
   /// edge).
   static const double menuSpikeHeight = spikeHeight - menuSpikeInset; // 44
 
+  /// Depth of the spike teeth of `ground_spikes.png` (tip to the solid
+  /// base). Menu scroll lists show through the gaps between the bottom teeth
+  /// down to this depth below the tips.
+  static const double menuSpikeToothDepth = 22;
+
   // --- Shared menu-screen chrome (Shop, Skins; PRD-1 §5) --------------------
   //
   // Back button top-left in the gear's place, coin pill top-right (as on

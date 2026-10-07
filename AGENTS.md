@@ -32,6 +32,10 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
 
 ## Status (2026-10-07)
 
+- `feat/home-v3` (off `feat/skin-shop`) implements `PRD-home-v3.md`: emblem home, 10 levels on best score, LEVELS
+  screen + LEVEL UP popup, coin-pack / No-ads celebrations, purchase cancelled/failed popup, Settings v3 with RUMBLE.
+  **Not pushed.** See TODO phase 19.
+
 - `feat/skin-shop` (off `feat/menu-v2`) implements `PRD-menu-v2.md`: 5-layer
   skin shop (88 items), live home & Shop. **Not pushed.** See SPEC "2.0 skin shop
   (PRD-menu-v2) deviations" and TODO phase 18.
@@ -62,6 +66,8 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
 - Looks (2.0 skin shop): true colours in menus and at stage 0; in runs the whole
   look (bird + gear + hat) is `lerp(colour, stageFg, 0.35)` — a pure stage
   modulate made all skins grey. Hoop/Trail layers are preview-only until PRD-2.
+- Modal popups (no-ads launch, LEVEL UP, purchase result, No-ads celebration) go through one queue: never two at
+  once. Menu button presses knock when RUMBLE is on (PRD-home-v3 §10); nothing rumbles in runs until PRD-2.
 - Item art is drawn in code (`lib/skins/art/`, port of
   `design/menu_v2/skin_art.js`) — no skin sprite assets any more.
 - Menu spike strips are drawn 44 pt (slide to 72 pt on START); visual only.

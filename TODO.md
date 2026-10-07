@@ -340,6 +340,21 @@ builders in worktrees, QA by GPT-6.1 Sol (max 2 fix rounds).
 - [ ] Open PRD questions still pending: Q-S1 earn rate, Q-S2/Q-S3/Q-S4 (with
       PRD-2), Q-S8 random-from-owned, Q-S9 coin-fly for other rewards
 
+## Phase 19 — home v3: emblem home, levels, purchase feedback, settings (PRD-home-v3, branch `feat/home-v3`)
+
+Branch off `feat/skin-shop`, local commits only (not pushed). Opus/DeepSeek builders in worktrees, QA by GPT-6.1 Sol.
+
+- [x] WP-F — levels table + LevelProgress (catch-up, claim once), storage (`claimedLevels`, `rumble`, `lastScore`),
+      Rumble service (`vibration`, VIBRATE permission, knock/shake + throttle), menu knocks, CoinRewardAnimation +
+      ConfettiBurst, new sounds, analytics, debug LEVEL UP
+- [x] WP-G — EmblemPainter (Canvas port of `design/menu_v2/emblem_art.js`)
+- [x] WP-H — home v3 layout, emblem idle, LEVELS screen, LEVEL UP popup + interim trigger (on return home) + catch-up
+- [x] WP-I — coin-pack celebration, purchase cancelled/failed popup, No-ads celebration + owned flips, Settings v3
+      (shared back spot, RUMBLE row), RESTORE PURCHASES removed from the Shop
+- [x] Sol QA round 1 (S1-30, S2-30 … S2-33) + fixes (popup queue, late purchase results, pending toast dismissal)
+- [ ] Device check on the Pixel 8 (vibration feel, 568-pt layout Q-H3, emblem performance)
+- [ ] Open: Q-H1 LEVEL UP timing (interim: on return home), Q-H2 thresholds vs 1.0 scoring
+
 ## Final gate (1.0)
 - [x] `flutter analyze` clean
 - [x] `flutter test` 103/103 green

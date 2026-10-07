@@ -101,8 +101,8 @@ states" above. Everything else in this document still holds.
   home NO ADS tile or the Shop REMOVE ADS banner starts the `no_ads` purchase
   immediately (`Purchases.buy`; `noads_purchase_tapped` with `source`
   home_tile / shop_banner) and no longer opens the No-ads popup. The popup
-  stays for the automatic launch upsell only (day ≥ 2, max once a day, until
-  three dismissals, never to buyers). While a No-ads purchase is pending both
+  stays for the automatic session-start upsell only (schedule below,
+  PRD-menu-v4 §8). While a No-ads purchase is pending both
   buttons are disabled and dimmed; owners keep the unchanged home-tile
   "Already ad-free" toast and the non-tappable AD-FREE banner.
 - **"+N" coins line.** The game-over panel gains a small "+N" + coin line under
@@ -113,8 +113,22 @@ Also in this phase: the home screen leads to the **Shop**
 (`lib/components/shop/`, layout in `Config.shop*For`) and the **No-ads popup**
 (`lib/components/noads_popup.dart`, `Config.noAds*`), both menu-only; store
 purchases are granted by `lib/game/purchases.dart`. The popup is the automatic
-launch upsell (from the day after install, max once a day, until three
-dismissals, never to buyers). The **Skins** screen (`lib/components/skins/`,
+session-start upsell. **DEVIATION (PRD-menu-v4 §8, owner decision 2026-10-07)
+— replaces the PRD-1 rule (day ≥ 2, once a day, stop after three
+dismissals):** it may show only on the home arrival at the start of a session
+(app launch, or back after ≥ 30 min in the background; never between runs,
+right after START, away from home or over another popup — the popup queue
+orders it), at least 4 h after the last show (wall clock) and at most 2 times
+per local calendar day, never in the install's first session, and only from
+install day 2 or after 10 finished runs. Within that window it shows when ≥ 3
+rewarded videos were completed since the last show (reason `videos`) or the
+previous run reached a new level (`level`) / set a new best (`best`), else
+once ≥ 24 h passed since the last show (`fallback`); never right after a run
+under 6 points. Closing (✕ / dim / back / Esc) just lets the 4 h gap run — no
+dismissal limit, back-off or lifetime cap; never to buyers. The numbers are
+`Config` constants (`sessionGap`, `noAdsPopup*`); `NoAdsPopupPolicy` holds the
+rule, `noads_popup_shown` carries `reason`, and the debug panel's "NO-ADS
+POPUP: force" bypasses it. The **Skins** screen (`lib/components/skins/`,
 layout in `Config.skin*`) opens from the home tile or the Shop's featured row
 (straight into that skin's unlock dialog); owned skins equip on tap, locked ones
 open a coin unlock dialog that leads to the Shop's coin packs when the balance
@@ -204,7 +218,7 @@ shop build:
   shows the last claimed level; CLAIM / ✕ / Esc all claim, the reward coins fly
   and count up, and only then the emblem pops to the new one. The debug panel's
   LEVEL UP shows it at once.
-- **Popup queue (never two popups):** the modal popups (no-ads launch upsell,
+- **Popup queue (never two popups):** the modal popups (no-ads session-start upsell,
   LEVEL UP, purchase CANCELLED/FAILED, No-ads celebration) open one at a time
   in arrival order; one that arrives while another is up waits until it closes.
   A purchase result or celebration delivered during a run (or while a run is

@@ -368,7 +368,7 @@ Branch off `feat/skin-shop`, local commits only (not pushed). Opus/DeepSeek buil
 - [x] Sol QA round 1 (S1-50, S1-51, S2-50, S2-51) + fixes (6 pt drag slop, fps-independent fling, preview fits tall hats)
 - [x] Sol QA round 2 (S1-52, S2-52) + fixes (fallback velocity in world points, exact fling→spring handover)
 
-## Phase 21 — new coin packs + USD placeholders (PRD-menu-v4 §2–4, branch `v4-wpK1`)
+## Phase 21 — coin packs, store pricing, no-ads popup schedule (PRD-menu-v4, branch `feat/menu-v4`)
 
 - [x] WP-K1 — `IapProduct` (lib/services/iap_service.dart): new ids `coins_1000` / `coins_10000` /
       `coins_17000` / `coins_100000` (1 000 / 10 000 / 17 000 / 100 000 coins), old ids removed everywhere
@@ -377,7 +377,10 @@ Branch off `feat/skin-shop`, local commits only (not pushed). Opus/DeepSeek buil
       showing the store price (`iap.priceOf`) when present, the placeholder otherwise
 - [x] WP-K1 — Shop amounts "1,000 / 10,000 / 17,000 / 100,000" (verified the 100,000 text fits the tile),
       tags moved to MOST POPULAR (10,000) and BEST DEAL (100,000); celebration tiers map smallest → largest
-- [ ] USER-only: update the Play Console products + PRD-menu-v4 §6 per-currency prices (runbook §7); old ids
+- [x] WP-K2 — no-ads popup schedule (§8): only at the session-start home arrival (launch / back after >= 30 min),
+      4 h gap, max 2 per day, never in the first session, from install day 2 or 10 runs; videos / best / level
+      triggers else 24 h fallback, never after a < 6 run; no dismissal cap; `reason` param; debug force
+- [ ] Play Console: create/update the products + PRD-menu-v4 §6 per-currency prices (runbook §7); old ids
       stay deactivated. Device check: Shop must show store prices, not the `$` placeholders
 
 ## Final gate (1.0)

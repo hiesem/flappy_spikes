@@ -24,6 +24,11 @@ class GameStorage {
   static const String _installDayKey = 'installDay';
   static const String _noAdsPopupLastDayKey = 'noAdsPopupLastDay';
   static const String _noAdsPopupDismissalsKey = 'noAdsPopupDismissals';
+  static const String _noAdsPopupLastMsKey = 'noAdsPopupLastMs';
+  static const String _noAdsPopupShowsTodayKey = 'noAdsPopupShowsToday';
+  static const String _noAdsPopupVideosKey = 'noAdsPopupVideos';
+  static const String _lastRunMoodKey = 'lastRunMood';
+  static const String _firstSessionDoneKey = 'firstSessionDone';
   static const String _freeCoinsDayKey = 'freeCoinsDay';
   static const String _freeCoinsCountKey = 'freeCoinsCount';
   static const String _freeCoinsLastMsKey = 'freeCoinsLastMs';
@@ -60,8 +65,30 @@ class GameStorage {
   String armedPowerup = 'none';
   List<String> slotHistory = [];
   int? installDay;
+  /// PRD-menu-v4 §8: the local day of the latest show (with
+  /// [noAdsPopupShowsToday], the per-day cap).
   int noAdsPopupLastDay = -1;
+
+  /// Analytics only since PRD-menu-v4 §8 (no dismissal limit any more).
   int noAdsPopupDismissals = 0;
+
+  /// Wall-clock ms of the latest show (0 = never; the 4 h gap / 24 h
+  /// fallback).
+  int noAdsPopupLastMs = 0;
+
+  /// Shows on [noAdsPopupLastDay].
+  int noAdsPopupShowsToday = 0;
+
+  /// Rewarded videos completed since the popup was last shown.
+  int noAdsPopupVideos = 0;
+
+  /// The latest finished run's good moment: 'level', 'best' or '' (none);
+  /// cleared when the popup shows.
+  String lastRunMood = '';
+
+  /// Whether the first session has started already (any later session is
+  /// not the first one). Installs from before the flag count as done.
+  bool firstSessionDone = false;
   int freeCoinsDay = -1;
   int freeCoinsCount = 0;
   int freeCoinsLastMs = 0;
@@ -129,6 +156,12 @@ class GameStorage {
     }
     noAdsPopupLastDay = prefs.getInt(_noAdsPopupLastDayKey) ?? -1;
     noAdsPopupDismissals = prefs.getInt(_noAdsPopupDismissalsKey) ?? 0;
+    noAdsPopupLastMs = prefs.getInt(_noAdsPopupLastMsKey) ?? 0;
+    noAdsPopupShowsToday = prefs.getInt(_noAdsPopupShowsTodayKey) ?? 0;
+    noAdsPopupVideos = prefs.getInt(_noAdsPopupVideosKey) ?? 0;
+    lastRunMood = prefs.getString(_lastRunMoodKey) ?? '';
+    firstSessionDone =
+        prefs.getBool(_firstSessionDoneKey) ?? storedInstallDay != null;
     freeCoinsDay = prefs.getInt(_freeCoinsDayKey) ?? -1;
     freeCoinsCount = prefs.getInt(_freeCoinsCountKey) ?? 0;
     freeCoinsLastMs = prefs.getInt(_freeCoinsLastMsKey) ?? 0;
@@ -244,6 +277,36 @@ class GameStorage {
     await prefs.setInt(_noAdsPopupDismissalsKey, value);
   }
 
+  Future<void> saveNoAdsPopupLastMs(int value) async {
+    noAdsPopupLastMs = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_noAdsPopupLastMsKey, value);
+  }
+
+  Future<void> saveNoAdsPopupShowsToday(int value) async {
+    noAdsPopupShowsToday = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_noAdsPopupShowsTodayKey, value);
+  }
+
+  Future<void> saveNoAdsPopupVideos(int value) async {
+    noAdsPopupVideos = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_noAdsPopupVideosKey, value);
+  }
+
+  Future<void> saveLastRunMood(String value) async {
+    lastRunMood = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastRunMoodKey, value);
+  }
+
+  Future<void> saveFirstSessionDone(bool value) async {
+    firstSessionDone = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_firstSessionDoneKey, value);
+  }
+
   Future<void> saveFreeCoinsDay(int value) async {
     freeCoinsDay = value;
     final prefs = await SharedPreferences.getInstance();
@@ -298,6 +361,9 @@ class GameStorage {
     await saveSlotHistory(const []);
     await saveNoAdsPopupLastDay(-1);
     await saveNoAdsPopupDismissals(0);
+    await saveNoAdsPopupLastMs(0);
+    await saveNoAdsPopupShowsToday(0);
+    await saveNoAdsPopupVideos(0);
     await saveFreeCoinsDay(-1);
     await saveFreeCoinsCount(0);
     await saveFreeCoinsLastMs(0);

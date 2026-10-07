@@ -872,6 +872,31 @@ class Config {
   static const double skinShopProgressSoundDelay = 0.52;
   static const double skinShopProgressSoundDelayLegendary = 1.3;
 
+  // --- No-ads popup schedule (PRD-menu-v4 §8, plain constants) -------------
+
+  /// A return from the background after at least this long starts a new
+  /// session (the popup may show on that home arrival).
+  static const Duration sessionGap = Duration(minutes: 30);
+
+  /// Minimum wall-clock gap since the popup was last shown.
+  static const Duration noAdsPopupMinGap = Duration(hours: 4);
+
+  /// At most this many shows per local calendar day.
+  static const int noAdsPopupMaxPerDay = 2;
+
+  /// Eligible from install day 2 OR after this many finished runs.
+  static const int noAdsPopupMinRuns = 10;
+
+  /// Rewarded videos watched since the last show that trigger the popup.
+  static const int noAdsPopupVideos = 3;
+
+  /// Without a good-moment trigger, shown once this long has passed.
+  static const Duration noAdsPopupFallback = Duration(hours: 24);
+
+  /// A previous run below this score suppresses the popup ("frustrating
+  /// death").
+  static const int noAdsPopupMinScore = 6;
+
   // --- No-ads popup (PRD-1 §5.1, design P1) --------------------------------
 
   /// Card x 20 -> 300, top 190 at 711; the card stays centred on the same

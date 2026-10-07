@@ -915,11 +915,11 @@ void main() {
     );
   });
 
-  group('launch auto-trigger', () {
+  group('launch auto-trigger (PRD-menu-v4 §8)', () {
     final day2 = TestClock();
     shopTest(
-      'day >= 2 after install: shown on launch once (trigger launch); '
-      'dismissing counts',
+      'day >= 2 after install: shown on launch (trigger launch, reason '
+      'fallback); dismissing counts, no cap',
       clock: day2,
       prefs: {'installDay': day2.today - 1},
       verify: (game, spy, ads, iap, tester) async {
@@ -928,11 +928,14 @@ void main() {
         // START is blocked while the popup is up.
         game.onScreenTap();
         expect(game.state, GameState.start);
-        expect(spy.last('noads_popup_shown'), {'trigger': 'launch'});
+        expect(spy.last('noads_popup_shown'), {
+          'trigger': 'launch',
+          'reason': 'fallback',
+        });
         await settle(game);
         expect(game.storage.noAdsPopupLastDay, day2.today);
-        expect(game.menu.noAdsPopup.shouldShowOnLaunch(), isFalse,
-            reason: 'max once per day');
+        expect(game.storage.noAdsPopupShowsToday, 1);
+        expect(game.menu.noAdsPopup.evaluate(), isNull, reason: '4 h gap');
         game.handleBack();
         await settle(game);
         expect(game.storage.noAdsPopupDismissals, 1);
@@ -950,11 +953,11 @@ void main() {
 
     final capped = TestClock();
     shopTest(
-      'after three dismissals: not shown',
+      'three earlier dismissals no longer stop it',
       clock: capped,
       prefs: {'installDay': capped.today - 5, 'noAdsPopupDismissals': 3},
       verify: (game, spy, ads, iap, tester) async {
-        expect(game.noAdsPopup, isNull);
+        expect(game.noAdsPopup, isNotNull);
       },
     );
 

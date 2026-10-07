@@ -125,18 +125,22 @@ void main() async {
     expect(game.cornerBox.gearMix, 1);
   });
 
-  chromeTest('home -> settings fades the pill out, and back in', (game) async {
+  chromeTest('home -> settings fades the pill out, and back in; the corner '
+      'box stays and turns into the back chevron', (game) async {
     game.openSettings();
     var s = sample(game);
     expect(s.pill.any((o) => o > 0.2 && o < 0.8), isTrue,
         reason: 'fades with home');
     expect(s.pill.last, 0);
-    expect(s.box.last, 0);
+    // PRD-home-v3 §8: the back button is the shared top-left box.
+    expect(s.box, everyElement(1));
+    expect(game.cornerBox.gearMix, 0);
     await flushAndMount(game);
     game.closeSettings();
     s = sample(game);
     expect(s.pill.any((o) => o > 0.2 && o < 0.8), isTrue);
     expect(s.pill.last, 1);
+    expect(s.box, everyElement(1));
     expect(game.cornerBox.gearMix, 1);
   });
 

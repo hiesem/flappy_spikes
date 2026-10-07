@@ -619,13 +619,9 @@ class Config {
   static Rect shopFeaturedRectFor(double viewHeight) =>
       const Rect.fromLTWH(homeMargin, 588, shopRowWidth, 56);
 
-  /// "RESTORE PURCHASES" link: top of its text line, centred.
-  static const double shopRestoreTop = 650;
-  static Vector2 shopRestorePositionFor(double viewHeight) =>
-      Vector2(worldWidth / 2, shopRestoreTop);
-
-  /// Bottom of the scrollable content (just below the restore link): fits
-  /// the 667 pt viewport at 711 without scrolling.
+  /// Bottom of the scrollable content (22 pt below the featured row, where
+  /// the restore link ended before PRD-home-v3 §9 moved it to Settings):
+  /// fits the 667 pt viewport at 711 without scrolling.
   static double shopContentBottomFor(double viewHeight) => 666;
 
   /// Content y the "+" of the coin pill scrolls to the top of the viewport:
@@ -949,4 +945,98 @@ class Config {
   // the foreground toward the background color, so pipes (full foreground
   // tint) stay visibly darker than the circle behind them.
   static const double hudCircleLighten = 0.45;
+
+  // --- PRD-home-v3 §6 / §7: P1 popups after a purchase ----------------------
+
+  /// The P1 popups' dim (`rgba(40,40,48,.72)`) and card width (x 20 -> 300).
+  static const Color p1PopupDim = Color(0xB8282830);
+  static const double p1PopupWidth = 280;
+  static const double p1PopupCloseSize = 38;
+  static const double p1PopupPad = 16;
+
+  /// Grey body line (`#9a4d78`).
+  static const Color p1PopupSmallText = Color(0xFF9A4D78);
+
+  /// Purchase cancelled / failed (§6, build73 `.pcard`): 120 pt header,
+  /// 45 pt title band (20 pt at 0.08 em), 20 pt body top padding, message
+  /// 18 pt (line-height 1.3), small line 13 pt 8 pt below, OK 50 pt
+  /// (24 pt at 0.12 em) 18 pt below.
+  static const double purchasePopupHeaderHeight = 120;
+  static const double purchasePopupTitleHeight = 45;
+  static const double purchasePopupTitleFontSize = 20;
+  static const double purchasePopupBodyTop = 20;
+  static const double purchasePopupMessageFontSize = 18;
+  static const double purchasePopupSmallFontSize = 13;
+  static const double purchasePopupSmallGap = 8;
+  static const double purchasePopupOkGap = 18;
+  static const double purchasePopupOkHeight = 50;
+  static const double purchasePopupOkFontSize = 24;
+
+  /// §6 timings: dim in 0.15 s, card pop .82 -> 1.04 -> 1 in 0.24 s, the
+  /// gold ✕ badge spins in over 0.38 s after 0.12 s, close fade 0.12 s.
+  static const double purchasePopupFadeIn = 0.15;
+  static const double purchasePopupPopDuration = 0.24;
+  static const double purchasePopupBadgeDelay = 0.12;
+  static const double purchasePopupBadgeDuration = 0.38;
+  static const double purchasePopupFadeOut = 0.12;
+
+  /// No-ads celebration (§7, build79): 170 pt header, 48 pt title band
+  /// (22 pt at 0.1 em), body 16 pt padding, chip 15 pt, CLAIM 52 pt (22 pt
+  /// at 0.1 em); 92 pt AD icon, 62 pt gold stamp at (154, 88) in the
+  /// header with a 5 pt pink ring.
+  static const double noAdsCelebrationHeaderHeight = 170;
+  static const double noAdsCelebrationTitleHeight = 48;
+  static const double noAdsCelebrationTitleFontSize = 22;
+  static const double noAdsCelebrationIconSize = 92;
+  static const double noAdsCelebrationStampSize = 62;
+  static const Offset noAdsCelebrationStampTopLeft = Offset(154, 88);
+  static const double noAdsCelebrationClaimHeight = 52;
+
+  /// §7 timings (s).
+  static const double noAdsCelebrationFlash = 0.6;
+  static const double noAdsCelebrationShakeDelay = 0.2;
+  static const double noAdsCelebrationShake = 0.38;
+  static const double noAdsCelebrationSwing = 0.36;
+  static const double noAdsCelebrationWobbleDelay = 0.12;
+  static const double noAdsCelebrationWobble = 0.42;
+  static const double noAdsCelebrationStampDelay = 0.33;
+  static const double noAdsCelebrationStampDuration = 0.34;
+  static const double noAdsCelebrationConfettiAt = 0.43;
+  static const int noAdsCelebrationConfetti = 90;
+  static const double noAdsCelebrationFadeOut = 0.15;
+
+  /// Owned flips after the bonus count-up: 0.25 s after it, the Shop
+  /// banner (rotateX); 0.7 s later the home tile (rotateY) and the video
+  /// icons shrinking away. Flip: 0.18 s out + 0.28 s in.
+  static const double noAdsFlipDelay = 0.25;
+  static const double noAdsFlipHomeDelay = 0.7;
+  static const double flipOutDuration = 0.18;
+  static const double flipInDuration = 0.28;
+  static const double videoIconShrinkDuration = 0.3;
+
+  /// Owned No-ads tile / banner fill: pink 55 % over the menu background.
+  static final Color noAdsOwnedFill = Color.lerp(
+    const Color(0xFFF1F1F1),
+    menuPink,
+    .55,
+  )!;
+
+  // --- Settings v3 (PRD-home-v3 §8) -----------------------------------------
+
+  /// Rows relative to the playfield centre, from the mock at 711 (centre
+  /// 355.5): title line box top 140 (centre 158), SOUND EFFECTS 235, MUSIC
+  /// 295, RUMBLE 355, credit top 405 (centre 414.6).
+  static const double settingsTitleDy = -197.5;
+  static const double settingsSfxRowDy = -120.5;
+  static const double settingsMusicRowDy = -60.5;
+  static const double settingsRumbleRowDy = -0.5;
+  static const double settingsCreditDy = 59.1;
+
+  /// 30 pt icon squares centred at x 85; labels / slider from x 130 (mock
+  /// `.srow` left 70 + 30 pt icon + 30 pt margin).
+  static const double settingsIconX = 85;
+  static const double settingsContentX = 130;
+
+  /// The RUMBLE icon's buzz when switched on (s).
+  static const double settingsRumbleBuzz = 0.32;
 }

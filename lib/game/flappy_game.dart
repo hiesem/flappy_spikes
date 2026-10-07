@@ -21,16 +21,20 @@ import '../components/home/menu_primitives.dart' show MenuButton;
 import '../components/levels/level_up_popup.dart';
 import '../components/levels/levels_screen.dart';
 import '../components/menu_screen_chrome.dart' show MenuScreen;
+import '../components/noads_celebration.dart';
 import '../components/noads_popup.dart';
 import '../components/pipe_pair.dart';
+import '../components/purchase_result_popup.dart';
 import '../components/score_hud.dart';
 import '../components/settings_panel.dart';
 import '../components/shop/shop_screen.dart';
+import '../components/skins/celebration.dart' show ScreenFlash, ScreenShake;
 import '../components/skins/skin_shop_screen.dart';
 import '../components/spike_strip.dart';
 import '../components/tap_catcher.dart';
 import '../components/ui/coin_fly.dart';
 import '../components/ui/coin_reward.dart';
+import '../components/ui/confetti.dart';
 import '../components/ui/service_message.dart';
 import '../menu/free_coins_policy.dart';
 import '../menu/menu_state.dart';
@@ -189,6 +193,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Set by a screen-to-screen hop between two screens that both show the
   /// chrome; it then stays fully opaque until the old screen is gone.
   bool _chromeHold = false;
+
+  /// Like [_chromeHold] for the corner box only (home <-> settings: the
+  /// box stays, the pill fades with home).
+  bool _cornerHold = false;
   GameOverPanel? _gameOverPanel;
   SettingsPanel? _settingsPanel;
   ShopScreen? _shop;
@@ -203,6 +211,21 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   double _levelUpSettle = 0;
   bool _itemPurchaseRunning = false;
   NoAdsPopup? _noAdsPopup;
+  PurchaseResultPopup? _purchasePopup;
+  NoAdsCelebration? _noAdsCelebration;
+
+  /// A fresh No-ads purchase waits for the menus to show its celebration.
+  bool _noAdsCelebrationQueued = false;
+
+  /// Where the last No-ads purchase started (tile / shop_banner / popup).
+  String _noAdsSource = 'popup';
+
+  /// PRD-home-v3 §7: from a fresh No-ads purchase until the owned flips,
+  /// the No-ads tile / banner keep their old face ([_noAdsRevealHeld]) and
+  /// the powerup slot / GET keep their video icon ([_noAdsVideoHeld]).
+  bool _noAdsRevealHeld = false;
+  bool _noAdsVideoHeld = false;
+
   /// The popup's only context since 2026-10-05 (analytics payload).
   static const String _launchTrigger = 'launch';
   bool _freeCoinsBusy = false;
@@ -265,6 +288,20 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// The No-ads popup while it is up (null otherwise).
   NoAdsPopup? get noAdsPopup => _noAdsPopup;
 
+  /// The purchase cancelled / failed popup while it is up (PRD-home-v3 §6).
+  PurchaseResultPopup? get purchaseResultPopup => _purchasePopup;
+
+  /// The No-ads celebration while it is up (PRD-home-v3 §7).
+  NoAdsCelebration? get noAdsCelebration => _noAdsCelebration;
+
+  /// Whether the No-ads owned looks show (tile / banner AD-FREE): the
+  /// owned flag, except between a fresh purchase and its flips.
+  bool get noAdsShown => menu.noAds && !_noAdsRevealHeld;
+
+  /// Whether the powerup slot / GET chip drop their video icon (as
+  /// [noAdsShown], released with the icons' shrink).
+  bool get noAdsVideoGone => menu.noAds && !_noAdsVideoHeld;
+
   /// Rewarded ads on screen right now (real or fake).
   int _adsShowing = 0;
 
@@ -273,6 +310,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   bool get liveMotionPaused =>
       _noAdsPopup != null ||
       _levelUpPopup != null ||
+      _purchasePopup != null ||
+      _noAdsCelebration != null ||
       _debugPanel != null ||
       _fakeAd != null ||
       _adsShowing > 0;
@@ -321,6 +360,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         closeNoAdsPopup(dismissed: false);
         refreshHome();
       },
+      onPackPurchased: _onPackPurchased,
+      onNoAdsPurchased: _onNoAdsPurchased,
+      onPurchaseProblem: openPurchaseResultPopup,
     )..start();
     sound = SoundService(muted: storage.muteSound, enabled: soundEnabled);
     rumble.on = storage.rumble;
@@ -814,6 +856,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       return;
     }
     services.track('noads_purchase_tapped', {'source': source});
+    _noAdsSource = source == 'home_tile' ? 'tile' : source;
     // §8.2 / §8.3: `sk_tap` for the home tile, `sk_dialog` for the Shop's
     // Remove-ads banner.
     await buyProduct(
@@ -822,7 +865,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     );
   }
 
-  /// "RESTORE PURCHASES" (Shop / Settings).
+  /// "RESTORE PURCHASES" (Settings; PRD-home-v3 §9 took it off the Shop).
   Future<void> restorePurchases() async {
     if (state != GameState.start) return;
     sound.play(Sfx.click);
@@ -1176,7 +1219,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     services.track('noads_popup_shown', {'trigger': _launchTrigger});
     final popup = NoAdsPopup(
       onDismiss: () => closeNoAdsPopup(),
-      onBuy: () => buyProduct(IapProduct.noAds),
+      onBuy: () {
+        _noAdsSource = 'popup';
+        buyProduct(IapProduct.noAds);
+      },
     );
     _noAdsPopup = popup;
     world.add(popup);
@@ -1212,6 +1258,234 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     closeNoAdsPopup();
     return true;
   }
+
+  // --- purchase feedback (PRD-home-v3 §5–7) -------------------------------
+
+  /// §5: a coin pack was bought; called right before the coins are
+  /// credited. In the menus the pack's coins burst from its coin stack in
+  /// the Shop (the screen centre when the Shop is not on top, e.g. a late
+  /// store callback) into the pill and count up; during a run the pill is
+  /// hidden and simply shows the new balance later.
+  void _onPackPurchased(IapProduct product) {
+    if (state != GameState.start) return;
+    final shop = _sceneOnTop(MenuScene.shop) && (_shop?.built ?? false)
+        ? _shop
+        : null;
+    final from =
+        shop?.packFor(product)?.stackRect ??
+        Rect.fromLTWH(Config.worldWidth / 2, viewHeight / 2, 0, 0);
+    playCoinReward(CoinRewardAnimation.pack(product, from: from));
+  }
+
+  /// §6: CANCELLED (always) / FAILED (any reason) over whatever is on
+  /// screen; `sk_nocoins` on open. Ignored during a run or while one is
+  /// already up (the analytics event is logged either way).
+  void openPurchaseResultPopup(
+    IapProduct product,
+    PurchaseProblem problem,
+    String? code,
+  ) {
+    services.logPurchaseResultPopup(
+      product.storeId,
+      problem.analyticsName,
+      code,
+    );
+    if (state != GameState.start || _purchasePopup != null) return;
+    sound.play(Sfx.skNoCoins);
+    final popup = PurchaseResultPopup(
+      problem: problem,
+      onDismiss: closePurchaseResultPopup,
+    );
+    _purchasePopup = popup;
+    world.add(popup);
+    fadeOpacity(popup, from: 0, to: 1, duration: Config.purchasePopupFadeIn);
+    pushBack(_purchasePopupBack);
+  }
+
+  /// ✕ / OK / dim / Esc: `sk_close` and a 0.12 s fade. Balance and buttons
+  /// are untouched.
+  void closePurchaseResultPopup() {
+    final popup = _purchasePopup;
+    if (popup == null) return;
+    _purchasePopup = null;
+    popBack(_purchasePopupBack);
+    popup.active = false;
+    sound.play(Sfx.skClose);
+    fadeOpacity(
+      popup,
+      from: popup.opacity,
+      to: 0,
+      duration: Config.purchasePopupFadeOut,
+      removeOnDone: true,
+    );
+  }
+
+  bool _purchasePopupBack() {
+    closePurchaseResultPopup();
+    return true;
+  }
+
+  /// §7: a FRESH No-ads purchase (never a restore or re-delivery), right
+  /// before the flag and the bonus are granted: the owned looks and the
+  /// pill's number wait for the celebration, which opens as soon as the
+  /// menus are up.
+  void _onNoAdsPurchased() {
+    _noAdsRevealHeld = true;
+    _noAdsVideoHeld = true;
+    _coinPill.hold();
+    _noAdsCelebrationQueued = true;
+    _maybeOpenNoAdsCelebration();
+  }
+
+  void _maybeOpenNoAdsCelebration() {
+    if (!_noAdsCelebrationQueued ||
+        _noAdsCelebration != null ||
+        state != GameState.start ||
+        _runStarting) {
+      return;
+    }
+    _noAdsCelebrationQueued = false;
+    openNoAdsCelebration();
+  }
+
+  /// The celebration itself (also the debug panel's preview): `noads_unlock`,
+  /// a white flash and a short shake (not under reduce motion), the popup,
+  /// and at 0.43 s a confetti burst from the card plus a rain over the
+  /// screen.
+  void openNoAdsCelebration() {
+    if (_noAdsCelebration != null) return;
+    services.logNoAdsCelebrationShown(_noAdsSource);
+    sound.play(Sfx.noadsUnlock);
+    final motion = !reduceMotion;
+    final popup = NoAdsCelebration(
+      onClaim: () => _claimNoAdsBonus(claimed: true),
+      onDismiss: () => _claimNoAdsBonus(claimed: false),
+    );
+    _noAdsCelebration = popup;
+    world.add(popup);
+    fadeOpacity(popup, from: 0, to: 1, duration: 0.16);
+    pushBack(_noAdsCelebrationBack);
+    if (motion) {
+      world.add(ScreenFlash(size: Vector2(Config.worldWidth, viewHeight)));
+      world.add(
+        ScreenShake(
+          camera.viewfinder,
+          keysX: _celebrationShakeX,
+          keysY: _celebrationShakeY,
+          duration: Config.noAdsCelebrationShake,
+          delay: Config.noAdsCelebrationShakeDelay,
+        ),
+      );
+      _after(Config.noAdsCelebrationConfettiAt, () {
+        if (!identical(_noAdsCelebration, popup) || !popup.isLoaded) return;
+        world
+          ..add(
+            ConfettiBurst.burst(
+              origin: popup.confettiOrigin,
+              count: Config.noAdsCelebrationConfetti,
+              speed: 340,
+              up: 200,
+              driftX: 0,
+              stars: true,
+              random: coinFlyRandom,
+              priority: 27,
+            ),
+          )
+          ..add(
+            ConfettiBurst.rain(
+              count: Config.noAdsCelebrationConfetti,
+              random: coinFlyRandom,
+              priority: 27,
+            ),
+          );
+      });
+    }
+  }
+
+  static const List<(double, double)> _celebrationShakeX = [
+    (0, 0),
+    (.2, -5),
+    (.4, 4),
+    (.6, -3),
+    (.8, 2),
+    (1, 0),
+  ];
+  static const List<(double, double)> _celebrationShakeY = [
+    (0, 0),
+    (.2, 3),
+    (.4, -3),
+    (.6, 2),
+    (.8, -1),
+    (1, 0),
+  ];
+
+  bool _noAdsCelebrationBack() {
+    _claimNoAdsBonus(claimed: false);
+    return true;
+  }
+
+  /// CLAIM or ✕ / dim / Esc (the bonus is never lost): the popup fades out
+  /// and the +1 000 (already credited at purchase, the pill held its old
+  /// number) flies from the CLAIM button into the pill and counts up; 0.25 s
+  /// later the owned looks flip.
+  void _claimNoAdsBonus({required bool claimed}) {
+    final popup = _noAdsCelebration;
+    if (popup == null) return;
+    _noAdsCelebration = null;
+    popBack(_noAdsCelebrationBack);
+    popup.active = false;
+    sound.play(claimed ? Sfx.skTap : Sfx.skClose);
+    services.logNoAdsBonusClaimed();
+    final from = popup.isLoaded
+        ? popup.claimRect
+        : Rect.fromLTWH(Config.worldWidth / 2, viewHeight / 2, 0, 0);
+    fadeOpacity(
+      popup,
+      from: popup.opacity,
+      to: 0,
+      duration: Config.noAdsCelebrationFadeOut,
+      removeOnDone: true,
+    );
+    playCoinReward(
+      CoinRewardAnimation.noAdsBonus(
+        from: from,
+        onDone: () => _after(Config.noAdsFlipDelay, _flipNoAdsOwned),
+      ),
+    );
+  }
+
+  /// §7 owned states, `noads_stamp`: the Shop banner flips to AD-FREE ·
+  /// THANK YOU and, 0.7 s later, GET loses its video icon; on home the
+  /// No-ads tile flips to ✓ AD-FREE and the slot's video icon shrinks
+  /// away. Screens opened later simply show the owned state.
+  void _flipNoAdsOwned() {
+    if (!_noAdsRevealHeld && !_noAdsVideoHeld) return;
+    _noAdsRevealHeld = false;
+    final shop = _sceneOnTop(MenuScene.shop) ? _shop : null;
+    final home = _home;
+    if (shop != null || home != null) sound.play(Sfx.noadsStamp);
+    shop?.banner.flipToOwned();
+    if (home != null && home.isLoaded) {
+      home.noAdsTile.flipToOwned();
+      home.slotButton.shrinkVideo();
+    }
+    void dropVideo() {
+      _noAdsVideoHeld = false;
+      final current = _sceneOnTop(MenuScene.shop) ? _shop : null;
+      if (current != null && current.built) current.freeCoins.shrinkVideo();
+    }
+
+    if (shop != null) {
+      _after(Config.noAdsFlipHomeDelay, dropVideo);
+    } else {
+      dropVideo();
+    }
+  }
+
+  /// Runs [action] after [seconds] of game time.
+  void _after(double seconds, void Function() action) => world.add(
+    TimerComponent(period: seconds, removeOnFinish: true, onTick: action),
+  );
 
   // --- rewarded ads -----------------------------------------------------------
 
@@ -1508,6 +1782,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     rumble.on = on;
     unawaited(storage.saveRumble(on));
     services.logRumbleToggle(on);
+    _settingsPanel?.setRumble(on);
     if (on) rumble.knock();
   }
 
@@ -1536,8 +1811,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onBack: closeSettings,
       onPrivacyPolicy: openPrivacyPolicy,
       onRestorePurchases: restorePurchases,
+      rumble: rumble.on,
+      onToggleRumble: () => setRumble(!rumble.on),
     );
     _settingsPanel = settings;
+    // PRD-home-v3 §8: the settings back button is the shared corner box
+    // (the gear turns into the chevron); the coin pill fades with home.
+    _chromeHosts.add(settings);
+    _cornerHold = true;
     world.add(settings);
     registerTintable(settings);
     fadeOpacity(settings, from: 0, to: 1);
@@ -1557,6 +1838,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     menuScene = MenuScene.home;
     unregisterTintable(settings);
     fadeOpacity(settings, from: settings.opacity, to: 0, removeOnDone: true);
+    _cornerHold = true;
     _addHome();
     fadeOpacity(_home, from: 0, to: 1);
   }
@@ -1751,12 +2033,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   MenuButton? get _cornerButton {
     final home = _home;
     if (home != null) return home.isLoaded ? home.gearButton : null;
+    final settings = _settingsPanel;
+    if (settings != null) return settings.isLoaded ? settings.backButton : null;
     final MenuScreen? screen = _shop ?? _skinShop ?? _levels;
     return screen != null && screen.built ? screen.backButton : null;
   }
 
   void _updateMenuChrome() {
-    final current = _home ?? _shop ?? _skinShop ?? _levels;
+    final current = _home ?? _shop ?? _skinShop ?? _levels ?? _settingsPanel;
     _chromeHosts.removeWhere(
       (host) =>
           !identical(host, current) &&
@@ -1764,29 +2048,28 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
               host.isRemoved ||
               (host as OpacityProvider).opacity <= 0),
     );
-    if (current == null || _chromeHosts.length <= 1) _chromeHold = false;
+    if (current == null || _chromeHosts.length <= 1) {
+      _chromeHold = false;
+      _cornerHold = false;
+    }
     var homeShare = 0.0;
     var total = 0.0;
+    var pillTotal = 0.0; // settings has the corner box but no pill
     for (final host in _chromeHosts) {
       final opacity = (host as OpacityProvider).opacity;
       total += opacity;
+      // Settings and LEVELS have no coin pill (PRD-home-v3 §4.4): the pill
+      // fades with the screens around them that show one.
+      if (host is! SettingsPanel && host is! LevelsScreen) {
+        pillTotal += opacity;
+      }
       if (host is HomeScreen) homeShare += opacity;
     }
-    final opacity = _chromeHold ? 1.0 : total.clamp(0.0, 1.0);
-    // LEVELS has no coin pill (PRD-home-v3 §4.4): the pill fades with the
-    // screens around it that show one.
-    var pillOpacity = opacity;
-    if (_chromeHosts.any((host) => host is LevelsScreen)) {
-      pillOpacity = _chromeHosts
-          .where((host) => host is! LevelsScreen)
-          .fold(0.0, (sum, host) => sum + (host as OpacityProvider).opacity)
-          .clamp(0.0, 1.0);
-    }
     _coinPill
-      ..opacity = pillOpacity
+      ..opacity = _chromeHold ? 1.0 : pillTotal.clamp(0.0, 1.0)
       ..balance = menu.wallet.balance;
     _cornerBox
-      ..opacity = opacity
+      ..opacity = _chromeHold || _cornerHold ? 1.0 : total.clamp(0.0, 1.0)
       ..gearMix = total > 0 ? homeShare / total : 1
       ..pressScale = _cornerButton?.pressScale ?? 1;
   }
@@ -1834,6 +2117,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _clock += dt;
     super.update(dt);
     _purchases?.update(dt);
+    _maybeOpenNoAdsCelebration();
 
     if (_colorFadeT < 1) {
       _colorFadeT = (_colorFadeT + dt / Config.colorFadeDuration).clamp(

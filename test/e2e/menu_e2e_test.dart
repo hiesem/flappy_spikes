@@ -12,6 +12,7 @@ import 'package:flappy_spikes/components/skins/celebration.dart';
 import 'package:flappy_spikes/components/ui/service_message.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/game/purchases.dart' show PurchaseProblem;
 import 'package:flappy_spikes/game/palettes.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
@@ -368,10 +369,18 @@ void main() {
             'amount': p.coins,
             'source': 'iap',
           });
-          expect(toast(g), contains('coins'));
+          // PRD-home-v3 §5: the coin-fly celebration replaces the toast.
+          expect(g.coinReward, isNotNull);
+          expect(toast(g), isNot(contains('coins')));
+          expect(g.purchaseResultPopup, isNull);
         } else if (mode == FakeIapMode.fail) {
-          expect(toast(g), 'Purchase failed: Fake error');
+          // §6: the FAILED popup replaces the failure toast.
+          expect(g.purchaseResultPopup!.problem, PurchaseProblem.failed);
+          expect(r.spy.params('iap_error').single!['code'], 'fake');
+        } else if (mode == FakeIapMode.cancel) {
+          expect(g.purchaseResultPopup!.problem, PurchaseProblem.cancelled);
         } else if (mode == FakeIapMode.pending) {
+          expect(g.purchaseResultPopup, isNull);
           expect(toast(g), 'Purchase pending…');
           await tap(
             g,
@@ -460,11 +469,23 @@ void main() {
       'amount': 1000,
       'source': 'noads_bonus',
     });
+    // PRD-home-v3 §7: the celebration comes first; the tile keeps its old
+    // face until CLAIM's count-up is done, then flips.
+    final celebration = g.noAdsCelebration!;
+    expect(r.spy.params('noads_celebration_shown').single, {'source': 'tile'});
+    expect(g.homeScreen!.noAdsTile.owned, isFalse);
+    expect(g.coinPill.shownBalance, 0, reason: 'bonus not shown yet');
+    await tap(g, t, celebration.claimRect.center);
+    expect(g.noAdsCelebration, isNull);
+    expect(r.spy.params('noads_bonus_claimed').length, 1);
+    for (var i = 0; i < 80; i++) {
+      stepGame(g, .05);
+      await flushAndMount(g);
+    }
+    expect(g.coinPill.shownBalance, 1000);
     expect(g.homeScreen!.noAdsTile.owned, isTrue);
     await tap(g, t, const Offset(49, 608));
     expect(g.shopScreen!.banner.owned, isTrue);
-    await tap(g, t, const Offset(160, 658));
-    expect(toast(g), 'Purchases restored');
     expect(g.menu.wallet.balance, 1000);
     await g.menu.setNoAds(false);
     await g.restorePurchases();
@@ -609,8 +630,10 @@ void main() {
     t,
   ) async {
     await tap(g, t, const Offset(33, 77));
-    await tap(g, t, const Offset(85, 310.5));
-    await tap(g, t, const Offset(150, 370.5));
+    // Settings v3 rows (PRD-home-v3 §8): SOUND at y 235, the slider at
+    // y 295 from x 130.
+    await tap(g, t, const Offset(85, 235));
+    await tap(g, t, const Offset(165, 295));
     expect(g.storage.muteSound, isTrue);
     expect(g.storage.musicVolume, closeTo(0.25, 0.01));
     g.onKeyEvent(key(LogicalKeyboardKey.escape), {});
@@ -693,7 +716,19 @@ void main() {
         g.purchases.isPending(IapProduct.noAds),
         mode == FakeIapMode.pending,
       );
-      if (mode == FakeIapMode.fail) expect(toast(g), 'Purchase failed: Fake error');
+      if (mode != FakeIapMode.pending) {
+        // PRD-home-v3 §6: FAILED / CANCELLED popup; Esc closes it first.
+        expect(
+          g.purchaseResultPopup!.problem,
+          mode == FakeIapMode.fail
+              ? PurchaseProblem.failed
+              : PurchaseProblem.cancelled,
+        );
+        g.onKeyEvent(key(LogicalKeyboardKey.escape), {});
+        await settle(g, t, fade: true);
+        expect(g.purchaseResultPopup, isNull);
+        expect(g.menuScene, MenuScene.shop);
+      }
       if (mode == FakeIapMode.pending) {
         expect(g.shopScreen!.banner.tappable, isFalse);
         expect(g.shopScreen!.banner.dimmed, isTrue);
@@ -908,7 +943,9 @@ void main() {
       await settle(g, t, fade: true);
       expect(scroll.offset, closeTo(scroll.maxOffset, 0.1));
       expect(
-        scroll.screenY(g.shopScreen!.restoreLink.y),
+        scroll.screenY(
+          g.shopScreen!.featured.y + g.shopScreen!.featured.height,
+        ),
         lessThan(height - 44),
       );
       await capture(g, t, 'shop_${height.toInt()}_end');

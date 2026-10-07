@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
+import 'package:flappy_spikes/components/home/menu_primitives.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
 import 'package:flappy_spikes/components/shop/shop_screen.dart';
 import 'package:flappy_spikes/components/ui/service_message.dart';
@@ -207,8 +208,11 @@ void main() {
           shop.featured.toRect(),
           const Rect.fromLTWH(14, 588, 292, 56),
         );
-        expect(shop.restoreLink.center.x, 160);
-        expect(shop.restoreLink.y, lessThan(Config.shopRestoreTop));
+        // PRD-home-v3 §9: RESTORE PURCHASES lives in Settings only.
+        expect(
+          shop.descendants().whereType<MenuText>().map((t) => t.text),
+          isNot(contains('RESTORE PURCHASES')),
+        );
         // Chrome.
         expect(shop.coinPill.toRect().topRight, const Offset(306, 58));
         expect(shop.backButton.toRect(), const Rect.fromLTWH(14, 58, 38, 38));
@@ -230,7 +234,7 @@ void main() {
     );
 
     shopTest(
-      'at 568 the content scrolls (no overlaps) and reaches the restore link',
+      'at 568 the content scrolls (no overlaps) and reaches the featured row',
       height: 568,
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
@@ -239,7 +243,6 @@ void main() {
           contentRect(shop.freeCoins),
           ...shop.packs.map(contentRect),
           contentRect(shop.featured),
-          contentRect(shop.restoreLink),
         ];
         for (var i = 0; i < rects.length; i++) {
           for (var j = i + 1; j < rects.length; j++) {
@@ -255,8 +258,8 @@ void main() {
         expect(scroll.offset, scroll.maxOffset);
         final linkBottom = scroll.screenY(Config.shopContentBottomFor(568));
         expect(linkBottom, lessThanOrEqualTo(scroll.viewport.bottom));
-        final linkTop = scroll.screenY(Config.shopRestoreTop);
-        expect(linkTop, greaterThan(scroll.viewport.top));
+        final featuredTop = scroll.screenY(shop.featured.y);
+        expect(featuredTop, greaterThan(scroll.viewport.top));
         scroll.offset = -5;
         expect(scroll.offset, 0);
       },
@@ -278,12 +281,12 @@ void main() {
         expect(game.state, GameState.start);
         expect(game.menuScene, MenuScene.shop);
 
-        // Scroll all the way: the restore link is tappable.
+        // Scroll all the way: the featured row is tappable.
         shop.scroll.offset = shop.scroll.maxOffset;
-        final y = shop.scroll.screenY(Config.shopRestoreTop + 7);
+        final y = shop.scroll.screenY(shop.featured.y + 28);
         await tester.tapAt(Offset(160, y));
         await tester.pump(const Duration(milliseconds: 50));
-        expect(game.purchases.restoring, isTrue);
+        expect(game.menuScene, MenuScene.skins);
       },
     );
   });
@@ -545,7 +548,7 @@ void main() {
 
   group('IAP', () {
     shopTest(
-      'coin pack purchase -> balance, analytics, toast',
+      'coin pack purchase -> balance, analytics, celebration (no toast)',
       prefs: const {'coins': 5},
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
@@ -555,7 +558,9 @@ void main() {
         expect(game.menu.wallet.balance, 1805);
         expect(spy.last('iap_purchase'), {'product': 'coins_1800'});
         expect(spy.last('coins_earned'), {'amount': 1800, 'source': 'iap'});
-        expect(toastText(game), '+1,800 coins');
+        // PRD-home-v3 §5: the coin-fly + count-up replaces the toast.
+        expect(toastText(game), isNot(contains('coins')));
+        expect(game.coinReward!.amount, 1800);
         expect(game.purchases.isPending(IapProduct.coins1800), isFalse);
         expect(shop.packs[1].tappable, isTrue);
         // The pill follows the balance.
@@ -585,7 +590,8 @@ void main() {
     );
 
     shopTest(
-      'failed -> "Purchase failed: <reason>"; canceled -> silent; both re-enable',
+      'failed -> FAILED popup (+ iap_error); canceled -> CANCELLED popup; both '
+      're-enable',
       iapMode: FakeIapMode.fail,
       verify: (game, spy, ads, iap, tester) async {
         // Opening the Shop re-queries missing store prices.
@@ -597,7 +603,13 @@ void main() {
         expect(iap.refreshes, refreshes + 2);
         shop.packs[2].onPressed();
         await settle(game);
-        expect(toastText(game), 'Purchase failed: Fake error');
+        expect(game.purchaseResultPopup!.problem, PurchaseProblem.failed);
+        expect(toastText(game), isNot(startsWith('Purchase failed')));
+        expect(spy.last('purchase_result_popup'), {
+          'product': 'coins_5000',
+          'outcome': 'failed',
+          'code': 'fake',
+        });
         expect(spy.last('iap_error'), {
           'product': 'coins_5000',
           'reason': 'Fake error',
@@ -605,6 +617,9 @@ void main() {
         });
         expect(game.purchases.isPending(IapProduct.coins5000), isFalse);
         expect(game.menu.wallet.balance, 0);
+        game.purchaseResultPopup!.okButton.onPressed();
+        await flushAndMount(game);
+        expect(game.purchaseResultPopup, isNull);
 
         // Let the toast expire, then cancel a purchase.
         stepGame(game, 4);
@@ -613,8 +628,14 @@ void main() {
         iap.mode = FakeIapMode.cancel;
         shop.packs[2].onPressed();
         await settle(game);
-        // Only the store's "pending" step toasted; no failure message.
+        // Only the store's "pending" step toasted; the popup explains.
         expect(toastText(game), 'Purchase pending…');
+        expect(game.purchaseResultPopup!.problem, PurchaseProblem.cancelled);
+        expect(spy.last('purchase_result_popup'), {
+          'product': 'coins_5000',
+          'outcome': 'cancelled',
+        });
+        expect(spy.count('iap_error'), 1, reason: 'cancels are no errors');
         expect(game.purchases.isPending(IapProduct.coins5000), isFalse);
         expect(spy.names, isNot(contains('iap_purchase')));
       },
@@ -641,9 +662,19 @@ void main() {
           'source': 'noads_bonus',
         });
         expect(spy.names, isNot(contains('noads_popup_dismissed')));
-        expect(toastText(game), 'Ads removed · +1,000 coins');
+        // PRD-home-v3 §7: the celebration replaces the toast; the banner
+        // keeps its old face until CLAIM's count-up has run.
+        expect(toastText(game), isNot(startsWith('Ads removed')));
+        expect(spy.last('noads_celebration_shown'), {'source': 'shop_banner'});
         game.update(0);
+        expect(shop.banner.owned, isFalse);
+        game.noAdsCelebration!.claimButton.onPressed();
+        for (var i = 0; i < 90; i++) {
+          stepGame(game, .05);
+          await flushAndMount(game);
+        }
         expect(shop.banner.owned, isTrue);
+        expect(shop.freeCoins.chipText, 'CLAIM');
         expect(shop.banner.labelText, 'AD-FREE');
         expect(shop.banner.checkIcon, isNotNull, reason: 'check in icon slot');
         expect(
@@ -705,8 +736,7 @@ void main() {
         await settle(game);
         await game.menu.setNoAds(false);
         final balance = game.menu.wallet.balance;
-        final shop = await openShop(game);
-        shop.restoreLink.onPressed();
+        await game.restorePurchases(); // Settings link
         await settle(game);
         expect(game.menu.noAds, isTrue);
         expect(game.menu.wallet.balance, balance, reason: 'no bonus');
@@ -794,7 +824,8 @@ void main() {
         expect(iap.purchases, [IapProduct.noAds]);
         expect(game.menu.noAds, isTrue);
         expect(game.menu.wallet.balance, 1000);
-        expect(toastText(game), 'Ads removed · +1,000 coins');
+        expect(game.noAdsCelebration, isNotNull);
+        expect(spy.last('noads_celebration_shown'), {'source': 'tile'});
         expect(game.storage.noAdsPopupDismissals, 0);
       },
     );

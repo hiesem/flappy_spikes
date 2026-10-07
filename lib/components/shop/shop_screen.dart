@@ -19,6 +19,7 @@ import '../home/menu_primitives.dart';
 import '../menu_screen_chrome.dart';
 import '../skins/item_art.dart';
 import '../ui/bird_idle.dart';
+import '../ui/flip.dart';
 import '../ui/live_effects.dart';
 
 /// Coin packs in grid order with their flap tags (PRD-1 §5.2).
@@ -69,8 +70,9 @@ SkinItem? featuredItemFor(ItemStore items) {
 }
 
 /// The Shop (PRD-1 §5.2, approved design S1-B): Remove-ads banner, free
-/// coins for a rewarded ad, the 2 x 2 coin packs, the featured skin and a
-/// restore-purchases link, on the shared [MenuScreen] chrome. Every action
+/// coins for a rewarded ad, the 2 x 2 coin packs and the featured skin, on
+/// the shared [MenuScreen] chrome (PRD-home-v3 §9: RESTORE PURCHASES lives
+/// in Settings only). Every action
 /// routes to a game method; the screen polls the menu / store state each
 /// frame (prices, pending purchases, cooldown, No-ads ownership).
 class ShopScreen extends MenuScreen {
@@ -80,7 +82,6 @@ class ShopScreen extends MenuScreen {
   late final FreeCoinsRow freeCoins;
   late final List<CoinPackCard> packs;
   late final FeaturedSkinRow featured;
-  late final MenuButton restoreLink;
 
   /// The Shop's idle clock (§8.3 live effects).
   late final LiveClock clock;
@@ -129,30 +130,9 @@ class ShopScreen extends MenuScreen {
       isActive: isActive,
       isPaused: () => game.liveMotionPaused,
     );
-    const linkSize = Size(200, 24);
-    final linkTop = Config.shopRestorePositionFor(h);
-    restoreLink = MenuButton(
-      position: Vector2(
-        linkTop.x - linkSize.width / 2,
-        linkTop.y - (linkSize.height - 11 * kNormalLineHeight) / 2,
-      ),
-      size: linkSize.toVector2(),
-      onPressed: game.restorePurchases,
-      isActive: isActive,
-      children: [
-        MenuText(
-          'RESTORE PURCHASES',
-          fontSize: 11,
-          color: Config.menuPink,
-          letterSpacingEm: 0.1,
-          position: linkSize.toVector2() / 2,
-          anchor: Anchor.center,
-        ),
-      ],
-    );
     scroll
       ..contentBottom = Config.shopContentBottomFor(h)
-      ..content.addAll([banner, freeCoins, ...packs, featured, restoreLink]);
+      ..content.addAll([banner, freeCoins, ...packs, featured]);
 
     // §8.3 / §8.4: GET pulse + nod, the price buttons' cascading streaks,
     // the pack tags' wiggle and the featured bird's calm idle — one clock,
@@ -171,6 +151,14 @@ class ShopScreen extends MenuScreen {
     add(clock);
   }
 
+  /// The card selling [product] (null for No ads).
+  CoinPackCard? packFor(IapProduct product) {
+    for (final card in packs) {
+      if (card.product == product) return card;
+    }
+    return null;
+  }
+
   /// Scrolls the coin packs into view (the pill's "+" while in the Shop).
   void scrollToCoins({bool animate = true}) => scroll.scrollTo(
     Config.shopCoinsAnchorFor(game.viewHeight),
@@ -182,8 +170,10 @@ class ShopScreen extends MenuScreen {
     final menu = game.menu;
     final iap = game.monetization.iap;
     final purchases = game.purchases;
+    // PRD-home-v3 §7: after a fresh purchase the owned looks wait for the
+    // celebration's flips (game.noAdsShown / noAdsVideoGone).
     banner.setState(
-      owned: menu.noAds,
+      owned: game.noAdsShown,
       price: iap.priceOf(IapProduct.noAds),
       pending: purchases.isPending(IapProduct.noAds),
     );
@@ -191,7 +181,7 @@ class ShopScreen extends MenuScreen {
       policy: menu.freeCoins,
       adAvailable: game.monetization.ads.isAvailable,
       busy: game.freeCoinsBusy,
-      noAds: menu.noAds,
+      noAds: game.noAdsVideoGone,
     );
     for (final card in packs) {
       card.setState(
@@ -218,9 +208,10 @@ class ShopScreen extends MenuScreen {
 }
 
 /// Pink "REMOVE ADS" banner with the gold store-price chip; starts the
-/// No-ads purchase directly (PO 2026-10-05). Owners see the check in the
-/// icon slot and "AD-FREE", dimmed and not tappable; a pending purchase
-/// disables it too.
+/// No-ads purchase directly (PO 2026-10-05). Owners see "✓ AD-FREE ·
+/// THANK YOU" on a lighter pink ([Config.noAdsOwnedFill], PRD-home-v3 §7),
+/// not tappable; a pending purchase dims and disables it. [flipToOwned]
+/// turns it over (rotateX) to the owned face after the No-ads celebration.
 class ShopBanner extends MenuButton {
   ShopBanner({
     required Rect rect,
@@ -268,7 +259,42 @@ class ShopBanner extends MenuButton {
   MenuIcon? checkIcon;
   final List<Component> _content = [];
 
-  bool get owned => _owned ?? false;
+  /// The owned face is up (false while a [flipToOwned] still shows the
+  /// old one).
+  bool get owned => (_owned ?? false) && !_flipHold;
+
+  /// True from [flipToOwned] until the flip shows the new face.
+  bool _flipHold = false;
+  FlipEffect? _flip;
+
+  /// The flip while it runs (tests).
+  FlipDriver? flipDriver;
+
+  /// "THANK YOU" on the owned face (tests).
+  MenuText? thanksLabel;
+
+  /// PRD-home-v3 §7: flips over (0.18 s out + 0.28 s in, rotateX) to the
+  /// owned face.
+  void flipToOwned() {
+    _flipHold = true;
+    if (isLoaded) _rebuild();
+    var effect = _flip;
+    if (effect == null) {
+      effect = _flip = FlipEffect(this, vertical: true);
+      decorator.addLast(effect);
+    }
+    flipDriver?.removeFromParent();
+    add(
+      flipDriver = FlipDriver(
+        effect,
+        onSwap: () {
+          _flipHold = false;
+          if (isLoaded) _rebuild();
+        },
+        onDone: () => flipDriver = null,
+      ),
+    );
+  }
 
   /// Visible label ("REMOVE ADS" / "AD-FREE"); exposed for tests.
   String get labelText => label?.text ?? '';
@@ -282,7 +308,7 @@ class ShopBanner extends MenuButton {
     required bool pending,
   }) {
     tappable = !owned && !pending;
-    dimmed = owned || pending;
+    dimmed = !owned && pending;
     if (owned == _owned && price == _price && pending == _pending) return;
     _owned = owned;
     _price = price;
@@ -301,6 +327,8 @@ class ShopBanner extends MenuButton {
     _content.clear();
     priceLabel = null;
     priceChip = null;
+    thanksLabel = null;
+    color = owned ? Config.noAdsOwnedFill : Config.menuPink;
     // Owned: the check takes the crossed-AD icon's slot (same box, the
     // glyph centred in it) instead of trailing the label.
     final glyph = owned
@@ -326,7 +354,19 @@ class ShopBanner extends MenuButton {
     _content.addAll(left);
     // Mock: flex gap 6 + the label's 10 pt margin.
     layoutRow(this, left, gap: 16, left: 12);
-    if (owned) return;
+    if (owned) {
+      // Mock: soft 12 pt at 0.12 em, 85 %, 14 pt from the right edge.
+      final thanks = MenuText(
+        'THANK YOU',
+        fontSize: 12,
+        color: Config.menuSoft.withValues(alpha: .85),
+        letterSpacingEm: 0.12,
+      );
+      thanksLabel = thanks;
+      _content.add(thanks);
+      layoutRow(this, [thanks], gap: 0, right: width - 14);
+      return;
+    }
     final price = MenuText(
       _price ?? '',
       fontSize: fontSize,
@@ -405,6 +445,21 @@ class FreeCoinsRow extends MenuButton {
   /// The GET text component while shown (tests).
   MenuText? chipLabel;
 
+  /// The chip's video icon while shown (tests).
+  MenuIcon? videoIcon;
+
+  /// True while [shrinkVideo] runs: the chip keeps reading GET.
+  bool _shrinking = false;
+
+  /// PRD-home-v3 §7: after the No-ads celebration the video icon shrinks
+  /// away (0.3 s), then the chip reads CLAIM. No-op without an icon.
+  void shrinkVideo() {
+    final icon = videoIcon;
+    if (icon == null || _shrinking) return;
+    _shrinking = true;
+    add(ShrinkDriver(icon, onDone: () => _shrinking = false));
+  }
+
   /// The chip's pulse (re-attached to every rebuilt chip).
   late final PulseEffect pulse = PulseEffect(
     this,
@@ -450,7 +505,7 @@ class FreeCoinsRow extends MenuButton {
     } else if (policy.cooldownRemaining > Duration.zero) {
       text = formatCooldown(policy.cooldownRemaining);
     } else {
-      text = noAds ? claimLabel : getLabel;
+      text = noAds && !_shrinking ? claimLabel : getLabel;
     }
     final claimable = text == getLabel || text == claimLabel;
     tappable = claimable && !busy;
@@ -502,7 +557,7 @@ class FreeCoinsRow extends MenuButton {
             letterSpacingEm: 0.04,
           );
     chipLabel = label;
-    final icon = isGet
+    final icon = videoIcon = isGet
         ? MenuIcon(video, size: Vector2.all(Config.shopGetIconSize))
         : null;
     final items = <PositionComponent>[?icon, label];
@@ -569,6 +624,14 @@ class CoinPackCard extends MenuButton {
 
   late final MenuIcon stackArt;
   double _hopT = -1;
+
+  /// The coin stack in world coordinates (PRD-home-v3 §5: the bought
+  /// pack's coins burst out of it), or null before it is mounted.
+  Rect? get stackRect {
+    if (!isLoaded || !stackArt.isMounted) return null;
+    final p = stackArt.absolutePositionOfAnchor(Anchor.topLeft);
+    return Rect.fromLTWH(p.x, p.y, stackArt.width, stackArt.height);
+  }
 
   /// Current coin-stack hop offset (pt, negative = up; tests).
   double get stackHop => LiveCurves.packHop(_hopT);

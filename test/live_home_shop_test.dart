@@ -475,6 +475,10 @@ void main() {
         unawaited(game.buyNoAds('shop_banner'));
         expect(sounds.first, Sfx.skDialog);
         await _settle(game, tester);
+        // The No-ads celebration is up (PRD-home-v3 §7): collect it first.
+        expect(game.noAdsCelebration, isNotNull);
+        game.handleBack();
+        await _settle(game, tester);
         sounds.clear();
         final item = shop.featured.item!;
         game.openFeaturedItem(item);

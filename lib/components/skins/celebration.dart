@@ -148,11 +148,22 @@ class ScreenFlash extends PositionComponent {
 
 /// Short screen shake of a legendary purchase (0.38 s, mock keyframes
 /// (0,0) (-4,3) (4,-3) (-2,2) (0,0)): offsets the camera, restored at the
-/// end or when removed early.
+/// end or when removed early. [keysX] / [keysY], [duration] and [delay]
+/// override the skin-shop shake (e.g. the No-ads celebration).
 class ScreenShake extends Component {
-  ScreenShake(this.viewfinder);
+  ScreenShake(
+    this.viewfinder, {
+    this.keysX = _x,
+    this.keysY = _y,
+    this.duration = Config.skinShopShakeDuration,
+    this.delay = 0,
+  });
 
   final Viewfinder viewfinder;
+  final List<(double, double)> keysX;
+  final List<(double, double)> keysY;
+  final double duration;
+  final double delay;
   double _t = 0;
 
   static const List<(double, double)> _x = [
@@ -174,9 +185,10 @@ class ScreenShake extends Component {
   void update(double dt) {
     super.update(dt);
     _t += dt;
-    final u = (_t / Config.skinShopShakeDuration).clamp(0.0, 1.0);
+    if (_t < delay) return;
+    final u = ((_t - delay) / duration).clamp(0.0, 1.0);
     // The world moves by the offset: the camera moves the other way.
-    viewfinder.position = Vector2(-keyframe(_x, u), -keyframe(_y, u));
+    viewfinder.position = Vector2(-keyframe(keysX, u), -keyframe(keysY, u));
     if (u >= 1) removeFromParent();
   }
 

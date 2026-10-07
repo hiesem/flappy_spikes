@@ -1,20 +1,27 @@
+import 'dart:math' as math;
+
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
+import 'package:flame/extensions.dart';
+import 'package:flutter/animation.dart' show Curves;
 import 'package:flutter/painting.dart';
 
 import '../game/config.dart';
 import '../game/flappy_game.dart';
 import '../game/tintable.dart';
 import 'home/menu_primitives.dart';
+import 'skins/celebration.dart' show keyframe;
 import 'ui/fadable_text.dart';
 import 'ui/sprite_button.dart';
 import 'ui/text_button.dart';
 
-/// Settings screen, opened from the start scene's gear button: SOUND EFFECTS
-/// toggle row, MUSIC volume slider row, music credit, privacy-policy link and
-/// a back button. Same visual language as the start panel (tinted labels,
-/// natively pink buttons); a full-screen blocker behind the rows consumes
+/// Settings screen (PRD-home-v3 §8), opened from the home gear: SOUND
+/// EFFECTS toggle row, MUSIC volume slider row, RUMBLE toggle row, music
+/// credit, privacy-policy link and RESTORE PURCHASES. The back button sits
+/// in the shared top-left spot ([backButton] is the transparent tap target
+/// over the game's shared `MenuCornerBox`, as on the Shop / Skins). Tinted labels,
+/// natively pink buttons; a full-screen blocker behind the rows consumes
 /// stray taps so they cannot start the game while the panel is open.
 ///
 /// Setters are safe to call before [onLoad] has run: values are stored and
@@ -29,10 +36,18 @@ class SettingsPanel extends PositionComponent
     required this.onBack,
     required this.onPrivacyPolicy,
     this.onRestorePurchases,
+    this.rumble = true,
+    this.onToggleRumble,
   }) : super(priority: 20);
 
   bool muted;
   double musicVolume;
+
+  /// The RUMBLE switch (PRD-2 §3.33).
+  bool rumble;
+
+  /// RUMBLE row tap (the game flips the setting and calls [setRumble]).
+  final void Function()? onToggleRumble;
   final void Function() onToggleSound;
   final void Function(double volume) onMusicVolume;
   final void Function() onBack;
@@ -48,8 +63,16 @@ class SettingsPanel extends PositionComponent
   late final SpriteComponent _musicIcon;
   late final VolumeSlider _slider;
   late final FadableTextComponent _credit;
-  late final SpriteButton _backButton;
+  late final RumbleToggle _rumbleButton;
+  late final FadableTextComponent _rumbleLabel;
   late final TextButton _privacyLink;
+
+  /// The back button's tap target (x 14, y 58, 38 x 38; the pink box and
+  /// chevron are the game's shared corner box below the panel).
+  late final MenuButton backButton;
+
+  /// The RUMBLE toggle (tests).
+  RumbleToggle get rumbleButton => _rumbleButton;
   RestoreLink? _restoreLink;
 
   /// The restore-purchases link (tests).
@@ -60,17 +83,16 @@ class SettingsPanel extends PositionComponent
   double _opacity = 1;
   Color _tint = const Color(0xFF828282);
 
-  // Vertical layout, all derived from the playfield center Y (values at the
-  // 568 design height in parentheses). Everything stays within the safe band
-  // between the spike strips (72 .. viewHeight - 72).
-  static const double _titleDy = -140; // (144)
-  static const double _sfxRowDy = -45; // (239)
-  static const double _musicRowDy = 15; // (299)
-  static const double _creditDy = 60; // (344)
-  static const double _backDy = 115; // (399)
-  // Row composition: 30x30 icon centered at x=85, content from x=115.
-  static const double _iconX = 85;
-  static const double _contentX = 115;
+  // Vertical layout, all derived from the playfield center Y (the mock's
+  // rows at 711: Config.settings*Dy). Row composition: 30x30 icon centred
+  // at x 85, content from x 130.
+  static const double _titleDy = Config.settingsTitleDy;
+  static const double _sfxRowDy = Config.settingsSfxRowDy;
+  static const double _musicRowDy = Config.settingsMusicRowDy;
+  static const double _rumbleRowDy = Config.settingsRumbleRowDy;
+  static const double _creditDy = Config.settingsCreditDy;
+  static const double _iconX = Config.settingsIconX;
+  static const double _contentX = Config.settingsContentX;
 
   @override
   Future<void> onLoad() async {
@@ -120,12 +142,23 @@ class SettingsPanel extends PositionComponent
       position: Vector2(160, centerY + _creditDy),
       anchor: Anchor.center,
     );
-    _backButton = SpriteButton(
-      sprite: Sprite(await images.load('back_arrow.png')),
-      size: Config.settingsButtonSize,
-      position: Vector2(160, centerY + _backDy),
-      anchor: Anchor.center,
+    _rumbleButton = RumbleToggle(
+      on: rumble,
+      position: Vector2(_iconX, centerY + _rumbleRowDy),
+      onPressed: () => onToggleRumble?.call(),
+    );
+    _rumbleLabel = FadableTextComponent(
+      text: 'RUMBLE',
+      style: const TextStyle(fontFamily: Config.uiFont, fontSize: 18),
+      position: Vector2(_contentX, centerY + _rumbleRowDy),
+      anchor: Anchor.centerLeft,
+    );
+    final backRect = Config.menuScreenBackRectFor(game.viewHeight);
+    backButton = MenuButton(
+      position: backRect.topLeft.toVector2(),
+      size: backRect.size.toVector2(),
       onPressed: onBack,
+      priority: 1,
     );
     _privacyLink = TextButton(
       text: 'Privacy Policy',
@@ -143,8 +176,10 @@ class SettingsPanel extends PositionComponent
       _sfxLabel,
       _musicIcon,
       _slider,
+      _rumbleButton,
+      _rumbleLabel,
       _credit,
-      _backButton,
+      backButton,
     ]);
     add(_privacyLink);
     final restore = onRestorePurchases;
@@ -166,11 +201,13 @@ class SettingsPanel extends PositionComponent
     _musicIcon.opacity = _opacity;
     _slider.opacity = _opacity;
     _credit.opacity = _opacity;
-    _backButton.opacity = _opacity;
+    _rumbleButton.opacity = _opacity;
+    _rumbleLabel.opacity = _opacity;
     _privacyLink.opacity = _opacity;
     _restoreLink?.opacity = _opacity;
     _title.setColor(_tint);
     _sfxLabel.setColor(_tint);
+    _rumbleLabel.setColor(_tint);
     _credit.setColor(_tint);
     _slider.setColor(_tint);
     _privacyLink.setColor(_tint);
@@ -181,6 +218,12 @@ class SettingsPanel extends PositionComponent
     if (isLoaded) {
       _sfxButton.sprite = value ? _muteSprite : _soundSprite;
     }
+  }
+
+  /// The RUMBLE switch changed: the icon follows; switching on buzzes it.
+  void setRumble(bool value) {
+    rumble = value;
+    if (isLoaded) _rumbleButton.setOn(value, buzz: value);
   }
 
   void setMusicVolume(double value) {
@@ -196,6 +239,7 @@ class SettingsPanel extends PositionComponent
     if (isLoaded) {
       _title.setColor(color);
       _sfxLabel.setColor(color);
+      _rumbleLabel.setColor(color);
       _credit.setColor(color);
       _slider.setColor(color);
       _privacyLink.setColor(color);
@@ -215,9 +259,131 @@ class SettingsPanel extends PositionComponent
       _musicIcon.opacity = _opacity;
       _slider.opacity = _opacity;
       _credit.opacity = _opacity;
-      _backButton.opacity = _opacity;
+      _rumbleButton.opacity = _opacity;
+      _rumbleLabel.opacity = _opacity;
       _privacyLink.opacity = _opacity;
       _restoreLink?.opacity = _opacity;
+    }
+  }
+}
+
+/// The RUMBLE toggle (PRD-home-v3 §8, mock build73 `PHONE`): a 30 pt pink
+/// square (like soundbutton.png) with a soft phone outline; on = vibration
+/// marks either side, off = a slash. [setOn] with `buzz` shakes the phone
+/// and pops the marks in ([Config.settingsRumbleBuzz]). Fires on tap-down
+/// like the SOUND toggle (a menu knock follows, PRD-home-v3 §10).
+class RumbleToggle extends PositionComponent with TapCallbacks {
+  RumbleToggle({
+    required bool on,
+    required super.position,
+    required this.onPressed,
+  }) : super(size: Vector2.all(30), anchor: Anchor.center) {
+    _on = on;
+  }
+
+  final void Function() onPressed;
+
+  late bool _on;
+  bool get on => _on;
+
+  double _opacity = 1;
+  double get opacity => _opacity;
+  set opacity(double value) => _opacity = value.clamp(0.0, 1.0);
+
+  /// Seconds into the buzz (-1 = idle).
+  double _buzzT = -1;
+
+  /// Whether the buzz is running (tests).
+  bool get buzzing => _buzzT >= 0;
+
+  static const List<(double, double)> _shake = [
+    (0, 0),
+    (.12, -1.6),
+    (.25, 1.6),
+    (.37, -1.4),
+    (.5, 1.4),
+    (.62, -1),
+    (.75, 1),
+    (.87, -.5),
+    (1, 0),
+  ];
+
+  final Paint _fill = Paint();
+  final Paint _stroke = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2;
+  final Paint _glyph = Paint();
+
+  void setOn(bool value, {bool buzz = false}) {
+    _on = value;
+    if (buzz) _buzzT = 0;
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (_buzzT < 0) return;
+    _buzzT += dt;
+    if (_buzzT >= Config.settingsRumbleBuzz) _buzzT = -1;
+  }
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    event.handled = true;
+    withMenuKnock(this, onPressed);
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (_opacity <= 0) return;
+    final soft = Config.menuSoft.withValues(alpha: _opacity);
+    _fill.color = Config.menuPink.withValues(alpha: _opacity);
+    _stroke.color = soft;
+    _glyph.color = soft;
+    canvas.drawRect(size.toRect(), _fill);
+    final u = _buzzT < 0 ? 1.0 : _buzzT / Config.settingsRumbleBuzz;
+    // Phone body (translateX keyframes while buzzing).
+    canvas.save();
+    canvas.translate(_buzzT < 0 ? 0 : keyframe(_shake, u), 0);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(10.5, 5.5, 9, 19),
+        const Radius.circular(1.5),
+      ),
+      _stroke..strokeWidth = 2,
+    );
+    canvas.drawRect(const Rect.fromLTWH(13.5, 21, 3, 1.4), _glyph);
+    canvas.restore();
+    if (_on) {
+      // Vibration marks; while buzzing they pop in about the centre
+      // (opacity 0 -> 1, scale .6 -> 1.15 -> 1, ease-out).
+      final e = Curves.easeOut.transform(u);
+      final k = _buzzT < 0 ? 1.0 : math.min(1.0, e / .4);
+      final scale = _buzzT < 0
+          ? 1.0
+          : keyframe(const [(0, .6), (.4, 1.15), (1, 1)], e);
+      canvas.save();
+      canvas.translate(15, 15);
+      canvas.scale(scale);
+      canvas.translate(-15, -15);
+      _stroke
+        ..strokeWidth = 2
+        ..color = Config.menuSoft.withValues(alpha: _opacity * k);
+      for (final (x, top, bottom) in const [
+        (7.0, 11.0, 19.0),
+        (4.0, 13.0, 17.0),
+        (23.0, 11.0, 19.0),
+        (26.0, 13.0, 17.0),
+      ]) {
+        canvas.drawLine(Offset(x, top), Offset(x, bottom), _stroke);
+      }
+      canvas.restore();
+    } else {
+      canvas.drawLine(
+        const Offset(6, 25),
+        const Offset(24, 5),
+        _stroke..strokeWidth = 2.2,
+      );
     }
   }
 }

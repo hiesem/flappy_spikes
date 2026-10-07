@@ -736,12 +736,14 @@ void main() {
     );
 
     homeTest(
-      'No-ads owners: tile shows AD-FREE (dimmed); popup is not offered',
+      'No-ads owners: tile shows AD-FREE (lighter pink); popup is not offered',
       prefs: const {'noAds': true},
       verify: (game, spy, ads, tester) async {
         final tile = game.homeScreen!.noAdsTile;
         expect(tile.owned, isTrue);
-        expect(tile.dimmed, isTrue);
+        // PRD-home-v3 §7: pink 55 % over the background, not dimmed.
+        expect(tile.dimmed, isFalse);
+        expect(tile.color, Config.noAdsOwnedFill);
         // PO 2026-10-04: the check sits in the ICON slot (instead of the
         // crossed-AD icon), the label is exactly "AD-FREE" with no inline
         // check, and it fits inside the 70 pt tile.

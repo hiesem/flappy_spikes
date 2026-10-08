@@ -28,16 +28,18 @@ class FirebaseVersusBackend implements VersusBackend {
   /// SDK — "Enter this debug secret into the allow list …" — for the
   /// orchestrator to register; a `FS_APPCHECK_DEBUG_TOKEN` dart-define
   /// passes a registered one). iOS: App Attest with DeviceCheck fallback.
-  static Future<void> activateAppCheck() async {
+  /// [debugToken] overrides the dart-define (the P6 live versus e2e prints
+  /// and passes its own, WP-6a).
+  static Future<void> activateAppCheck({String? debugToken}) async {
     if (_appCheck) return;
     _appCheck = true;
     final debug = kDebugMode || kE2E;
     await FirebaseAppCheck.instance.activate(
       providerAndroid: debug
           ? AndroidDebugProvider(
-              debugToken: kAppCheckDebugToken.isEmpty
-                  ? null
-                  : kAppCheckDebugToken,
+              debugToken:
+                  debugToken ??
+                  (kAppCheckDebugToken.isEmpty ? null : kAppCheckDebugToken),
             )
           : const AndroidPlayIntegrityProvider(),
       providerApple: debug

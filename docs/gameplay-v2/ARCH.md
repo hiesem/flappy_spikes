@@ -1299,3 +1299,17 @@ regression in `test/e2e/p2_gameplay_e2e_test.dart` (S6-20 … S6-24).
 | Dialog | `DeleteDataPopup extends P1Popup` (`lib/components/delete_data_popup.dart`): confirm face = soft trash glyph + CANCEL (soft) / DELETE (pink); result faces = gold OK, "DATA DELETED" (`Sfx.skProgress`) or "COULDN'T DELETE" (`Sfx.skNoCoins`). Wording is a call (PRD Q22 fixes what it deletes, not the copy) | P1 popup style (`purchase_result_popup.dart`) |
 | Modal rules | `_deleteDataPopup` joins `modalPopupOpen` and `liveMotionPaused`; `openDeleteDataConfirm()` / `confirmDeleteMyData()` / `closeDeleteDataPopup()` / `_deleteDataBack()` in the game (region WP-4c). CANCEL, the ✕, Esc and the dim dismiss without a call | one popup queue, never two at once (§3.0.9) |
 | Tests | `test/versus/s3_13_delete_data_test.dart` (row at 568 + 711 + safe band, confirm wording, CANCEL / ✕ / Esc, DELETE → `deleteCalls` + "DATA DELETED", failure text, `resetVersusData`), the two new `persistence_test.dart` cases (§3.14 payout record, §3.13 reset) and `settingsShot` in `test/menu_screenshot_test.dart` (row + confirm / deleted / failed at 568 + 711) | PRD §7 test list, WP-4c sheet |
+
+---
+
+## 28. WP-6a contract notes (as built, 2026-10-08)
+
+| Area | As built | Why |
+|---|---|---|
+| Release e2e | `integration_test/release_e2e_test.dart`: journey (ad revive → coin revive → No thanks → level-up results → CLAIM → NEXT → home), element sweep (every `ForceMenu.forceable` element the build registers + Big Hoops via the armed home slot + the squeeze; a catalogue element that is neither swept nor listed in `_coveredElsewhere` fails the test), the six rides, reminders (Android), versus live (`FS_LIVE_VERSUS`, Android) and a FrameTiming log (tier 3, comet, space ride) | ARCH §7.3 P6 |
+| Persistence in e2e | every launch uses `SharedPreferences.setMockInitialValues` (in-memory, also on the phone): a fresh best 0 / 0 coins / `firstSessionDone`, the sweep with every element met (no first-meet forcing in the way) | deterministic journeys; the phone's real data is untouched |
+| Screenshots (call) | `RenderRepaintBoundary.toImage` of the boundary above the `GameWidget` (not `takeScreenshot` / `convertFlutterSurfaceToImage`): one path on Linux and Android. Linux: `build/e2e/release/`; Android: `<cache>/e2e_release` (pull with `adb exec-out run-as … tar`) | `takeScreenshot` has no desktop implementation |
+| Frame log (call) | own `addTimingsCallback` summary (build / raster / total ms: avg, p50, p90, p99, max, frames over 16.7 ms) into `binding.reportData['frame_timings']`, `frame_timings.json` and a `FRAMES` log line; not `watchPerformance` / `traceAction` | those wait on the VM-service timeline and can hang without frames; the log is not a gate |
+| RunEvents errors | the test traps `RunEvents: … threw` debug prints (the bus swallows handler errors) and fails on them | "no exceptions" must include swallowed handler errors |
+| App Check | `FirebaseVersusBackend.activateAppCheck({String? debugToken})`: the live versus test passes `FS_APPCHECK_DEBUG_TOKEN` or a fresh UUID v4 and prints it in a banner for registration | the orchestrator needs a printable token |
+| iOS | `PORT-IOS.md` (repo root): the port checklist + every Android-only path with file:line | P6 prep |

@@ -7,6 +7,7 @@ import '../game/config.dart';
 import '../game/flappy_game.dart';
 import '../menu/powerup_slot.dart';
 import '../menu/wallet.dart';
+import '../run/debug/force_menu.dart';
 import '../services/ads_service.dart';
 import '../services/iap_service.dart';
 import '../skins/catalog.dart';
@@ -35,14 +36,19 @@ class DebugPanel extends PositionComponent
   static const Color _dim = Color(0xD914141E); // rgba(20,20,30,.85)
   static const Color _text = Color(0xFFFFFFFF);
 
-  late final List<DebugAction> actions;
+  /// The current page's actions (the main page, or a page of the §3.0.8
+  /// force menu).
+  late List<DebugAction> actions;
   final List<MenuText> _labels = [];
+  final List<Component> _rows = [];
+
+  /// null = the main page; else the force-menu page index.
+  int? _forcePage;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
     size = Vector2(Config.worldWidth, game.viewHeight);
-    actions = _buildActions();
     final top = Config.debugPanelTopFor(game.viewHeight);
     add(
       MenuText(
@@ -54,6 +60,26 @@ class DebugPanel extends PositionComponent
         anchor: Anchor.topCenter,
       ),
     );
+    _rebuild();
+  }
+
+  /// Rows that fit between the title and the bottom strip.
+  int get _rowsPerPage {
+    final top = Config.debugPanelTopFor(game.viewHeight).y;
+    return ((game.viewHeight - top - Config.spikeHeight - 16) /
+                Config.debugRowHeight)
+            .floor() -
+        1;
+  }
+
+  void _rebuild() {
+    for (final r in _rows) {
+      r.removeFromParent();
+    }
+    _rows.clear();
+    _labels.clear();
+    actions = _forcePage == null ? _buildActions() : _forceActions();
+    final top = Config.debugPanelTopFor(game.viewHeight);
     for (final (i, action) in actions.indexed) {
       final y = top.y + (i + 1) * Config.debugRowHeight + 6;
       final label = MenuText(
@@ -64,26 +90,49 @@ class DebugPanel extends PositionComponent
         position: Vector2(Config.worldWidth / 2, Config.debugRowHeight / 2),
       );
       _labels.add(label);
-      add(
-        MenuButton(
-          position: Vector2(Config.homeMargin, y),
-          size: Vector2(
-            Config.worldWidth - 2 * Config.homeMargin,
-            Config.debugRowHeight - 2,
-          ),
-          color: const Color(0x33FFFFFF),
-          onPressed: () => _run(i),
-          children: [label],
+      final row = MenuButton(
+        position: Vector2(Config.homeMargin, y),
+        size: Vector2(
+          Config.worldWidth - 2 * Config.homeMargin,
+          Config.debugRowHeight - 2,
         ),
+        color: const Color(0x33FFFFFF),
+        onPressed: () => _run(i),
+        children: [label],
       );
+      _rows.add(row);
+      add(row);
     }
   }
 
+  /// Presses row [index] (the button path; tests).
+  Future<void> press(int index) => _run(index);
+
   Future<void> _run(int index) async {
+    final page = _forcePage;
     await actions[index].run();
+    if (page != _forcePage) {
+      _rebuild();
+      return;
+    }
     for (final (i, action) in actions.indexed) {
       _labels[i].text = action.label();
     }
+  }
+
+  /// One page of the §3.0.8 force menu plus page navigation.
+  List<DebugAction> _forceActions() {
+    final all = ForceMenu.actions(game);
+    final per = (_rowsPerPage - 2).clamp(4, 40);
+    final pages = (all.length / per).ceil();
+    final page = (_forcePage ?? 0).clamp(0, pages - 1);
+    return [
+      ...all.skip(page * per).take(per),
+      DebugAction(() => 'Page ${page + 1}/$pages  >', () async {
+        _forcePage = (page + 1) % pages;
+      }),
+      DebugAction(() => '< Back', () async => _forcePage = null),
+    ];
   }
 
   List<DebugAction> _buildActions() {
@@ -156,6 +205,8 @@ class DebugPanel extends PositionComponent
         onClose();
         game.openNoAdsPopup(reason: 'forced');
       }),
+      // §3.0.8 debug force menu (PRD-2, WP-0b).
+      DebugAction(() => 'RUN DEBUG >', () async => _forcePage = 0),
       DebugAction(() => 'Close', () async => onClose()),
     ];
   }

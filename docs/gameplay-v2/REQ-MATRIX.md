@@ -20,68 +20,68 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.1-4 | Gravity 1250 pt/s²; flap sets vy to −370 (rise ≈ 55 pt) | 3.0.1 | 1a | | todo |
 | R-3.0.1-5 | Max fall speed 650 pt/s | 3.0.1 | 1a | | todo |
 | R-3.0.1-6 | Bird screen x 70, collider circle r 14.75 (Mini × 0.52) | 3.0.1 | 1a | | todo |
-| R-3.0.1-7 | Opening 118 pt at hoop 0, −0.32 % per hoop, floor 92 pt (78 %), by hoop index | 3.0.1 | 0b | | todo |
+| R-3.0.1-7 | Opening 118 pt at hoop 0, −0.32 % per hoop, floor 92 pt (78 %), by hoop index | 3.0.1 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.1-8 | Rim ends: two circles r 7, restitution 0.85 | 3.0.1, 3.0.4 | 1a | | todo |
 | R-3.0.1-9 | Forward recovery 2000 pt/s² back to cruise after a knock-back | 3.0.1 | 1a | | todo |
-| R-3.0.1-10 | Hoops spawned during comet / portal rides are 118 pt, upright, still | 3.0.1, 3.0.3 | 0b | | todo |
+| R-3.0.1-10 | Hoops spawned during comet / portal rides are 118 pt, upright, still | 3.0.1, 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.1-11 | Score +1 per hoop (no "1 + streak"); +5 from a pair SCORE gift | 3.0.1 | 1a | | todo |
 | R-3.0.1-12 | Colour stage = floor(hoopsPassed / 10) mod 11 over the existing 11 palettes (gold last); replaces `stageOf(score)` | 3.0.1 | 1a | | todo |
-| R-3.0.1-13 | Hoop index = slots spawned (train / pair = 1 slot), not reset by a revive; ramps use the index of the slot being spawned | 3.0.1 | 0b | | todo |
-| R-3.0.1-14 | `runClock` runs in play and rides, stops in pause / revive offer / phoenix, slows with Hourglass; used by scroll ramp, squeeze, versus timeline, Big Hoops | 3.0.1 | 0b | | todo |
-| R-3.0.1-15 | Screen heights 568–730: HUD row + score circle top-anchored, bottom buttons bottom-anchored, centred blocks keep their offset from centre (y − 355.5 at 711) | 3.0.1 | 0b (geometry), 2d / 2e / 4a / 5b (screens) | | todo |
-| R-3.0.1-16 | Normal bird position (70, viewHeight / 2) wherever the PRD returns the bird "to its normal position" | 3.0.1 | 0b | | todo |
+| R-3.0.1-13 | Hoop index = slots spawned (train / pair = 1 slot), not reset by a revive; ramps use the index of the slot being spawned | 3.0.1 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
+| R-3.0.1-14 | `runClock` runs in play and rides, stops in pause / revive offer / phoenix, slows with Hourglass; used by scroll ramp, squeeze, versus timeline, Big Hoops | 3.0.1 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
+| R-3.0.1-15 | Screen heights 568–730: HUD row + score circle top-anchored, bottom buttons bottom-anchored, centred blocks keep their offset from centre (y − 355.5 at 711) | 3.0.1 | 0b (geometry), 2d / 2e / 4a / 5b (screens) | lib/run/run_geometry.dart (RunGeometry) | done (0b geometry); screens pending |
+| R-3.0.1-16 | Normal bird position (70, viewHeight / 2) wherever the PRD returns the bird "to its normal position" | 3.0.1 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
 | R-3.0.1-17 | Every number of §3.0 is a `Config` knob with its PRD section; nothing hard-coded in components | 3.0 | all | | todo |
 
 ## 3.0.2 Hoop layout ramp
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.0.2-1 | Heights are fractions of the band between the tooth lines (623 pt at 711, 480 at 568) | 3.0.2 | 0b | | todo |
+| R-3.0.2-1 | Heights are fractions of the band between the tooth lines (623 pt at 711, 480 at 568) | 3.0.2 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.2-2 | Band table by hoop index (centre range, \|Δy\| median / p90 / max, tilt %, tilt weights, moving %) for 0–2, 3–9, 10–19, 20–34, 35–44, 45+ | 3.0.2 | 0b | | todo |
-| R-3.0.2-3 | Hoop 0 at exactly 0.50 | 3.0.2 | 0b | | todo |
+| R-3.0.2-3 | Hoop 0 at exactly 0.50 | 3.0.2 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.2-4 | \|Δy\| sampling by linear quantile pieces (u < 0.5 / < 0.9 / else) × band | 3.0.2 | 0b | | todo |
-| R-3.0.2-5 | Direction flips vs the previous step with p 0.65; flip if outside the range; then clamp | 3.0.2 | 0b | | todo |
-| R-3.0.2-6 | Band rule: centre ≥ opening / 2 + 7 + 18 pt from each tooth line (saw: wider opening; pair: full height); squeezed band during a squeeze | 3.0.2 | 0b | | todo |
-| R-3.0.2-7 | The band's max replaces the old 140 pt max jump everywhere | 3.0.2 | 0b | | todo |
-| R-3.0.2-8 | Tilt and movement only on normal hoops; specials and the comet hoop upright and still | 3.0.2 | 0b / 1b | | todo |
-| R-3.0.2-9 | Tilt steps capped at 45° (60° folded into 45°) | 3.0.2 | 0b | | todo |
-| R-3.0.2-10 | Moving types: 20–44 rail 80 / swing 20; 45+ rail 50 / swing 15 / horizontal 10 / diagonal 10 / orbit 8 / rock 7 | 3.0.2 | 0b / 1b | | todo |
-| R-3.0.2-11 | No moving rings during a squeeze (tilted rings fine) | 3.0.2, 3.17 | 0b | | todo |
-| R-3.0.2-12 | Tables mirror `spawn_tables.json` (mirror test), with the PRD overrides | 3.0, 7 | 0b | | todo |
+| R-3.0.2-5 | Direction flips vs the previous step with p 0.65; flip if outside the range; then clamp | 3.0.2 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.2-6 | Band rule: centre ≥ opening / 2 + 7 + 18 pt from each tooth line (saw: wider opening; pair: full height); squeezed band during a squeeze | 3.0.2 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.2-7 | The band's max replaces the old 140 pt max jump everywhere | 3.0.2 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.2-8 | Tilt and movement only on normal hoops; specials and the comet hoop upright and still | 3.0.2 | 0b / 1b | test/run/director/s3_0_3_director_test.dart | done (0b part); 1b pending |
+| R-3.0.2-9 | Tilt steps capped at 45° (60° folded into 45°) | 3.0.2 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.2-10 | Moving types: 20–44 rail 80 / swing 20; 45+ rail 50 / swing 15 / horizontal 10 / diagonal 10 / orbit 8 / rock 7 | 3.0.2 | 0b / 1b | test/run/director/s3_0_3_director_test.dart | done (0b part); 1b pending |
+| R-3.0.2-11 | No moving rings during a squeeze (tilted rings fine) | 3.0.2, 3.17 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.2-12 | Tables mirror `spawn_tables.json` (mirror test), with the PRD overrides | 3.0, 7 | 0b | test/run/config/tables_mirror_test.dart; test/run/director/s3_0_3_director_test.dart | done |
 
 ## 3.0.3 Run director
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.0.3-1 | Director decides each slot's kind and each gap's item when the slot spawns (just off-screen right) | 3.0.3 | 0b | | todo |
-| R-3.0.3-2 | One seeded `layout` stream per run + separate `cosmetic` stream (visuals never change spawns); per-run seed | 3.0.3, 7 | 0b | | todo |
-| R-3.0.3-3 | Same seed → same slot / gap sequence (unit test) | 7 | 0b | | todo |
-| R-3.0.3-4 | Slot order 1: ride active → normal, full size, upright, still, no special, no gap item | 3.0.3 | 0b | | todo |
-| R-3.0.3-5 | Slot order 2: first hoop after a revive is normal | 3.0.3 | 0b | | todo |
-| R-3.0.3-6 | Slot order 3: portal at `portalAt` (first 25–50, then +40–60) when no squeeze is coming and the last comet hoop ≥ 10 back; waits otherwise | 3.0.3 | 0b | | todo |
-| R-3.0.3-7 | Slot order 4: cooldown — next slot normal after a special (2 after train / spring / pair, 3 after portal) | 3.0.3 | 0b | | todo |
-| R-3.0.3-8 | Slot order 5: special roll with the budget chance, weighted among eligible types (unlocked, min distance, allowed now) | 3.0.3 | 0b | | todo |
-| R-3.0.3-9 | Slot order 6: comet hoop at `cometAt` (first 10–30, then +45–60) if still normal, no timed powerup, no squeeze window, portal ≥ 10 hoops away both ways | 3.0.3 | 0b | | todo |
-| R-3.0.3-10 | Slot order 7: tilt and movement modifiers from 3.0.2 | 3.0.3 | 0b / 1b | | todo |
-| R-3.0.3-11 | Gap order 1: running piggy places 4 coins per gap (4 + 4 × 4 = 20); running jar places a swarm of 7; either fills the gap | 3.0.3 | 0b | | todo |
-| R-3.0.3-12 | Gap order 2: fixed schedules heart (3, then +17–27; skipped while extra life active, schedule moves on), feather (once, 3–12), piece (once, 14–25); taken gap → next free gap | 3.0.3 | 0b | | todo |
-| R-3.0.3-13 | Gap order 3: a switch ring's switch takes the gap before it; if taken, the switch ring becomes normal | 3.0.3 | 0b | | todo |
-| R-3.0.3-14 | Gap order 4: optional item roll with the gap budget, weighted among eligible types | 3.0.3 | 0b | | todo |
-| R-3.0.3-15 | Budget table (special / gap chance) for 0–4, 5–7, 8–19, 20–34, 35–49, 50+ | 3.0.3 | 0b | | todo |
-| R-3.0.3-16 | Measured share check: specials 0 % at 0–7, ≈ 15 % at 8–19, ≈ 20 % at 20–49, ≈ 25 % from 50; ≈ 1 gap in 3 holds something (tolerance test over many seeds) | 3.0.3 | 0b | | todo |
-| R-3.0.3-17 | Special-hoop table (from, weight, min since same, cooldown, not-allowed) for bullseye, train, spring, switch, pair, FEVER, Lucky Spin, saw (18 → 26 from 45), portal, comet | 3.0.3 | 0b | | todo |
-| R-3.0.3-18 | Squeeze window (3 s before warning → walls open): only bullseye, FEVER and saw specials; no comet hoop (waits) | 3.0.3, 3.17 | 0b | | todo |
-| R-3.0.3-19 | Optional gap-item table (from, weight, min gaps, limits, placement) for Star Trail, capsule (35 / 35 / 30), egg, piggy, jar, shield (max 1, not while shielded) | 3.0.3 | 0b | | todo |
-| R-3.0.3-20 | Placements: heart mid-gap (first on line, later 50 % on / 50 % off by 0.1–0.4 band); feather / piece 0.65 × spacing after the hoop, 64–200 pt above; switch 1.0 s × scroll (≥ 150 pt) before its ring, 70–100 pt above/below; capsule / egg / piggy / jar mid-gap on the line; shield 0.1–0.4 band off the line; star trail arc 40 pt after → 40 pt before, bulging 40 pt | 3.0.3 | 0b (plans) / element WPs (components) | | todo |
-| R-3.0.3-21 | Exclusivity: one timed powerup (comet, Hourglass, Mini, Frenzy); no capsule / comet hoop while one runs; no COMET gift while one runs | 3.0.3 | 0b / 3f / 3d | | todo |
-| R-3.0.3-22 | Exclusivity: piggy or jar (never both); one egg/chick; star trail combines | 3.0.3 | 0b | | todo |
-| R-3.0.3-23 | Rides: no specials, no gap items, no squeeze start (waits until 2 s after) | 3.0.3 | 0b / 3g | | todo |
+| R-3.0.3-1 | Director decides each slot's kind and each gap's item when the slot spawns (just off-screen right) | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-2 | One seeded `layout` stream per run + separate `cosmetic` stream (visuals never change spawns); per-run seed | 3.0.3, 7 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-3 | Same seed → same slot / gap sequence (unit test) | 7 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-4 | Slot order 1: ride active → normal, full size, upright, still, no special, no gap item | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-5 | Slot order 2: first hoop after a revive is normal | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-6 | Slot order 3: portal at `portalAt` (first 25–50, then +40–60) when no squeeze is coming and the last comet hoop ≥ 10 back; waits otherwise | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-7 | Slot order 4: cooldown — next slot normal after a special (2 after train / spring / pair, 3 after portal) | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-8 | Slot order 5: special roll with the budget chance, weighted among eligible types (unlocked, min distance, allowed now) | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-9 | Slot order 6: comet hoop at `cometAt` (first 10–30, then +45–60) if still normal, no timed powerup, no squeeze window, portal ≥ 10 hoops away both ways | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-10 | Slot order 7: tilt and movement modifiers from 3.0.2 | 3.0.3 | 0b / 1b | test/run/director/s3_0_3_director_test.dart | done (0b part); 1b pending |
+| R-3.0.3-11 | Gap order 1: running piggy places 4 coins per gap (4 + 4 × 4 = 20); running jar places a swarm of 7; either fills the gap | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-12 | Gap order 2: fixed schedules heart (3, then +17–27; skipped while extra life active, schedule moves on), feather (once, 3–12), piece (once, 14–25); taken gap → next free gap | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-13 | Gap order 3: a switch ring's switch takes the gap before it; if taken, the switch ring becomes normal | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-14 | Gap order 4: optional item roll with the gap budget, weighted among eligible types | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-15 | Budget table (special / gap chance) for 0–4, 5–7, 8–19, 20–34, 35–49, 50+ | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-16 | Measured share check: specials 0 % at 0–7, ≈ 15 % at 8–19, ≈ 20 % at 20–49, ≈ 25 % from 50; ≈ 1 gap in 3 holds something (tolerance test over many seeds) | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-17 | Special-hoop table (from, weight, min since same, cooldown, not-allowed) for bullseye, train, spring, switch, pair, FEVER, Lucky Spin, saw (18 → 26 from 45), portal, comet | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-18 | Squeeze window (3 s before warning → walls open): only bullseye, FEVER and saw specials; no comet hoop (waits) | 3.0.3, 3.17 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-19 | Optional gap-item table (from, weight, min gaps, limits, placement) for Star Trail, capsule (35 / 35 / 30), egg, piggy, jar, shield (max 1, not while shielded) | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-20 | Placements: heart mid-gap (first on line, later 50 % on / 50 % off by 0.1–0.4 band); feather / piece 0.65 × spacing after the hoop, 64–200 pt above; switch 1.0 s × scroll (≥ 150 pt) before its ring, 70–100 pt above/below; capsule / egg / piggy / jar mid-gap on the line; shield 0.1–0.4 band off the line; star trail arc 40 pt after → 40 pt before, bulging 40 pt | 3.0.3 | 0b (plans) / element WPs (components) | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-21 | Exclusivity: one timed powerup (comet, Hourglass, Mini, Frenzy); no capsule / comet hoop while one runs; no COMET gift while one runs | 3.0.3 | 0b / 3f / 3d | test/run/director/s3_0_3_director_test.dart | done (0b part); 3f / 3d pending |
+| R-3.0.3-22 | Exclusivity: piggy or jar (never both); one egg/chick; star trail combines | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-23 | Rides: no specials, no gap items, no squeeze start (waits until 2 s after) | 3.0.3 | 0b / 3g | test/run/director/s3_0_3_director_test.dart | done (0b part); 3g pending |
 | R-3.0.3-24 | Portal ride pauses a running Hourglass / Mini / Frenzy and resumes it after landing | 3.0.3, 3.12 | 3f / 3b | | todo |
 | R-3.0.3-25 | Portal ride start: all hoops/items ahead fade 0.2 s and are removed; uncaught piggy coins / fireflies not counted missed; piggy / jar placement continues after landing; ride rings crack the egg | 3.0.3 | 3b / 3e | | todo |
 | R-3.0.3-26 | Comet flies through what is spawned: rims ignored (saw too), closed switch rings open, nearest pair ring + its gift, springs don't launch, tilt/motion kept, pickups only if touched | 3.0.3, 3.8 | 3a | | todo |
-| R-3.0.3-27 | Only hoops spawned before a ride can be angled or moving | 3.0.3 | 0b | | todo |
-| R-3.0.3-28 | Pickup hit test: distance(bird, pickup) − bird r (× 0.52 Mini) ≤ radius; radii heart 16, shield 18, feather 18, piece 22, switch 18, comet 18, egg 16, piggy 18, jar 18, capsule 18, piggy coin 10, star 10, firefly 16 | 3.0.3 | 0b (base) | | todo |
-| R-3.0.3-29 | Per-run order players meet things matches the table (typical run; flow test over seeds) | 3.0.3 | 0b | | todo |
+| R-3.0.3-27 | Only hoops spawned before a ride can be angled or moving | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.0.3-28 | Pickup hit test: distance(bird, pickup) − bird r (× 0.52 Mini) ≤ radius; radii heart 16, shield 18, feather 18, piece 22, switch 18, comet 18, egg 16, piggy 18, jar 18, capsule 18, piggy coin 10, star 10, firefly 16 | 3.0.3 | 0b (base) | test/run/s7_run_parts_test.dart::§3.0.3 pickup hit radii; test/run/flow/s3_0_run_core_flow_test.dart::§3.0.3 pickups* | done |
+| R-3.0.3-29 | Per-run order players meet things matches the table (typical run; flow test over seeds) | 3.0.3 | 0b | test/run/director/s3_0_8_first_meet_test.dart::§3.0.8 every element is met… | done |
 | R-3.0.3-30 | Typical run 30–110 hoops in 1–3 min with the bot; ≈ 3–4 hearts, 1–2 comets, ≈ 1 portal, ≈ 1 squeeze per 2.5 min (soak test, informational) | 3.0.3 | 6 | | todo |
 
 ## 3.0.4 Rim bounce and miss rule
@@ -131,14 +131,14 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
 | R-3.0.8-1 | Every catalogue element has spawn rule, visuals + sounds, analytics event and a test (rows R-3.0.8-E*) | 3.0.8 | all | | todo |
-| R-3.0.8-2 | `metElements` stored per install; met = spawned on screen in a run | 3.0.8 | 0b | | todo |
-| R-3.0.8-3 | Never-met element forced within 5 slots / 5 gaps after its first-possible hoop, when its rules allow | 3.0.8 | 0b | | todo |
-| R-3.0.8-4 | One forced element at a time, oldest unlock first; counts against the budget | 3.0.8 | 0b | | todo |
-| R-3.0.8-5 | Squeeze met at its normal time; feather / piece need no forcing | 3.0.8 | 0b | | todo |
-| R-3.0.8-6 | After met, normal weights and schedules only | 3.0.8 | 0b | | todo |
-| R-3.0.8-7 | Debug force menu (debug builds only): every element → next slot/gap ignoring unlock + cooldown, keeping exclusivity | 3.0.8 | 0b | | todo |
-| R-3.0.8-8 | Debug: "start at hoop N" (= `startHoopIndex`), "reset met elements", "force portal ride: cannon / space / volcano / sea / pinball / storm" | 3.0.8 | 0b (3b for rides) | | todo |
-| R-3.0.8-9 | Debug menu never compiled into release builds | 3.0.8 | 0b | | todo |
+| R-3.0.8-2 | `metElements` stored per install; met = spawned on screen in a run | 3.0.8 | 0b | test/run/director/s3_0_8_first_meet_test.dart | done |
+| R-3.0.8-3 | Never-met element forced within 5 slots / 5 gaps after its first-possible hoop, when its rules allow | 3.0.8 | 0b | test/run/director/s3_0_8_first_meet_test.dart | done |
+| R-3.0.8-4 | One forced element at a time, oldest unlock first; counts against the budget | 3.0.8 | 0b | test/run/director/s3_0_8_first_meet_test.dart | done |
+| R-3.0.8-5 | Squeeze met at its normal time; feather / piece need no forcing | 3.0.8 | 0b | test/run/director/s3_0_8_first_meet_test.dart | done |
+| R-3.0.8-6 | After met, normal weights and schedules only | 3.0.8 | 0b | test/run/director/s3_0_8_first_meet_test.dart | done |
+| R-3.0.8-7 | Debug force menu (debug builds only): every element → next slot/gap ignoring unlock + cooldown, keeping exclusivity | 3.0.8 | 0b | test/run/debug/s3_0_8_force_menu_test.dart; test/run/director/s3_0_3_director_test.dart::§3.0.8 debug force* | done |
+| R-3.0.8-8 | Debug: "start at hoop N" (= `startHoopIndex`), "reset met elements", "force portal ride: cannon / space / volcano / sea / pinball / storm" | 3.0.8 | 0b (3b for rides) | test/run/debug/s3_0_8_force_menu_test.dart; test/run/director/s3_0_3_director_test.dart::§3.0.8 debug force* | done |
+| R-3.0.8-9 | Debug menu never compiled into release builds | 3.0.8 | 0b | test/run/debug/s3_0_8_force_menu_test.dart; test/run/director/s3_0_3_director_test.dart::§3.0.8 debug force* | done |
 | R-3.0.8-E1 | Element: normal hoop | 3.0.7 | 1a | | todo |
 | R-3.0.8-E2 | Element: angled ring | 3.0.7 | 1b | | todo |
 | R-3.0.8-E3 | Element: moving ring | 3.0.7 | 1b | | todo |
@@ -203,7 +203,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.1-8 | Every hoop spawns ≥ 60 pt past the right edge (glow and decorations out of view) | 3.1 | 1a | | todo |
 | R-3.1-9 | Colours fixed (not stage-tinted); Big Hoops gold `#FFB529`/`#D48A00`; contrast checked on stage 45 | 3.1 | 1a / 2a | | todo |
 | R-3.1-10 | `pipe_pair` → `Hoop`; pipe Config constants → hoop constants; min/max centre bands use the same margin | 3.1 | 1a | | todo |
-| R-3.1-11 | Fredoka SemiBold added (assets + pubspec) | 3.1, 5.7 | 0b | | todo |
+| R-3.1-11 | Fredoka SemiBold added (assets + pubspec) | 3.1, 5.7 | 0b | pubspec.yaml font family Fredoka (assets/fonts/Fredoka-SemiBold.ttf, OFL) | done |
 | R-3.1-12 | Tint registry no longer applies to obstacles; pipe sprites dropped | 3.1 | 1a | | todo |
 | R-3.1-13 | SPEC.md DEVIATION: obstacle, score trigger, miss rule, 2.0 physics | 3.1, 7 | 1a | | todo |
 | R-3.1-14 | Tests updated: autopilot, gap-variance, layout, collision; plane-crossing suite (see R-7-T1) | 3.1 | 1a | | todo |
@@ -229,10 +229,10 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.3-3 | 3rd heart → extra life; heart badge floats above the bird (bobbing) | 3.3, 5.5 | 2a | | todo |
 | R-3.3-4 | Mistake list (missed hoop incl. pair, spikes, saw rim, closed switch) forgiven once by the extra life | 3.3 | 2a | | todo |
 | R-3.3-5 | On use: badge pops (heart particles), indicator → 0/3, bird flashes + 2 s invulnerability, keep playing; missed hoop not counted | 3.3 | 2a | | todo |
-| R-3.3-6 | Doesn't stack; no heart spawns while active (schedule moves on) | 3.3 | 2a / 0b | | todo |
+| R-3.3-6 | Doesn't stack; no heart spawns while active (schedule moves on) | 3.3 | 2a / 0b | test/run/director/s3_0_3_director_test.dart | done (0b part); 2a pending |
 | R-3.3-7 | Separate from the shield; both can be active | 3.3 | 2a | | todo |
 | R-3.3-8 | Hearts reset at game over (run-only) | 3.3 | 2a | | todo |
-| R-3.3-9 | Spawn: first after hoop 3, then every 17–27, mid-gap; first on line, later 50/50 off by 0.1–0.4 band; never in a hoop or strip; max one on screen | 3.3 | 0b / 2a | | todo |
+| R-3.3-9 | Spawn: first after hoop 3, then every 17–27, mid-gap; first on line, later 50/50 off by 0.1–0.4 band; never in a hoop or strip; max one on screen | 3.3 | 0b / 2a | test/run/director/s3_0_3_director_test.dart | done (0b part); 2a pending |
 | R-3.3-10 | Big Hoops and hearts independent | 3.3 | 2a | | todo |
 
 ## 3.4 Perfect-pass streak
@@ -285,7 +285,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
 | R-3.8-1 | Pickup: gold 4-point star with pink/gold tail hanging 20 pt past the plane of a normal (upright, still) hoop; collected by flying through | 3.8 | 3a | | todo |
-| R-3.8-2 | Spawn first 10–30, then +45–60; also the COMET pair gift | 3.8 | 0b / 3a | | todo |
+| R-3.8-2 | Spawn first 10–30, then +45–60; also the COMET pair gift | 3.8 | 0b / 3a | test/run/director/s3_0_3_director_test.dart | done (0b part); 3a pending |
 | R-3.8-3 | On collection: pop (white flash, squares, gold ring); bird inside the fireball | 3.8 | 3a | | todo |
 | R-3.8-4 | 10 s; scroll eases to 1.7 × cruise (0.45 s); hoops spawned during are 118 pt upright still; existing hoops keep motion; comet flies through as 3.0.3 | 3.8 | 3a | | todo |
 | R-3.8-5 | Bird flies itself; taps ignored; white speed streaks; gold countdown ring with seconds left | 3.8 | 3a | | todo |
@@ -301,13 +301,13 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.9-2 | `pu_shield_get` on collection; `pu_shield_hit` on absorb | 3.9 | 2a | | todo |
 | R-3.9-3 | `pu_comet_get` on collection; `pu_comet_loop` from ≈ 1.2 s until the end (fade ≈ 0.3 s, ≈ 30 % volume, BGM-style looping player); `pu_comet_end` at the end | 3.9 | 3a | | todo |
 | R-3.9-4 | `pu_portal`, `pu_cannon_aim`, `pu_cannon_shot`, `pu_land` at their moments | 3.9 | 3b | | todo |
-| R-3.9-5 | All through low-latency AudioPool (loops via the looping player); peak ≈ −1.4 dBFS | 3.9 | 0b (API) | | todo |
+| R-3.9-5 | All through low-latency AudioPool (loops via the looping player); peak ≈ −1.4 dBFS | 3.9 | 0b (API) | test/run/director/s3_0_3_director_test.dart | done |
 
 ## 3.10 Angled rings
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.10-1 | Fixed steps −20, −10, +15, +30, +45 (positive = top leans right), weights by hoop index; none before 10; 45° from 35 | 3.10 | 0b / 1b | | todo |
+| R-3.10-1 | Fixed steps −20, −10, +15, +30, +45 (positive = top leans right), weights by hoop index; none before 10; 45° from 35 | 3.10 | 0b / 1b | test/run/director/s3_0_3_director_test.dart | done (0b part); 1b pending |
 | R-3.10-2 | Effective opening = opening × cos(angle); pass inside the tilted segment | 3.10 | 1b | | todo |
 | R-3.10-3 | Same opening as upright before tilt; band max jump kept; autopilot passes with angled rings | 3.10 | 1b | | todo |
 | R-3.10-4 | Art: the ring rotated around its centre, layers and streak effects as normal; no angle label | 3.10 | 1b | | todo |
@@ -344,7 +344,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.12-10 | Return ≈ 2.5 s: tint fades, strips fade in with teeth scrolling ≈ 1 300 pt/s easing to stop; glide to (70, viewHeight/2) with squash + wobble; normal rings ≈ 1 s after landing; piggy/jar resume | 3.12 | 3b | | todo |
 | R-3.12-11 | +1 score, +2 coins per ride ring; no extra ride bonus | 3.12 | 3b | | todo |
 | R-3.12-12 | Timing: pass 0 → ride ≈ 9.6 s → entry 0.2 → aim ≈ 1 → flight 1.7 → return 2.5 (≈ 15 s) | 3.12 | 3b | | todo |
-| R-3.12-13 | Each portal picks one of 6 rides with equal chance, never the same twice in a row (also across runs, `lastPortalRide`) | 3.12 | 0b / 3b | | todo |
+| R-3.12-13 | Each portal picks one of 6 rides with equal chance, never the same twice in a row (also across runs, `lastPortalRide`) | 3.12 | 0b / 3b | test/run/director/s3_0_3_director_test.dart | done (0b part); 3b pending |
 | R-3.12-14 | All rides: same portal ring, 11 golden rings + portal = 12 passes (+12 score, +24 coins), ≈ 9.6 s ride, exit, launch flight, glide | 3.12 | 3b | | todo |
 | R-3.12-15 | Engine: one `PortalRide` (path from segments/curve, 11 rings at equal arc length, ride camera, exit → launch → glide) + pluggable `RideTheme` | 7 | 3b | | todo |
 
@@ -404,7 +404,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.14-15 | Straight back in at 1.65 s: no countdown, no slow motion; small upward flap; 2 s invulnerability | 3.14 | 2d | | todo |
 | R-3.14-16 | Kept: score, coins, hearts, feather/piece progress. Lost: running egg/chick, piggy, jar. Reset: streak + fire. Ended: timed powerups | 3.14 | 2d (+ 3e / 3f / 3c hooks) | | todo |
 | R-3.14-17 | Running squeeze resets to open during the phoenix (0.5 s); next 60–120 s later | 3.14 | 3g | | todo |
-| R-3.14-18 | First hoop after a revive is normal | 3.14 | 0b | | todo |
+| R-3.14-18 | First hoop after a revive is normal | 3.14 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.14-19 | Versus: opponent recording pauses during offer and phoenix | 3.14 | 5b | | todo |
 | R-3.14-20 | Results page content: WIN/LOSE header, versus card (scores, WINNER), NEW BEST, level (emblem + bird, rank, progress), YOUR REWARD, NEXT → `goHome()` (new arrival) | 3.14 | 2e / 5b | | todo |
 | R-3.14-21 | YOUR REWARD = run coins + puzzle coins + win/draw bonus, excluding balloon coins; one total, no breakdown | 3.14 | 2e | | todo |
@@ -421,7 +421,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 |---|---|---|---|---|---|
 | R-3.15-1 | One feather per run max (revive = same run) | 3.15 | 4a | | todo |
 | R-3.15-2 | Floats between hoops, collected by touch; missed = none that run | 3.15 | 4a | | todo |
-| R-3.15-3 | Spawn once in the gap after a random hoop 3–12 (pushed to the next free gap), only while < 3 held, never during rides; placement 0.65 × spacing after, 64–200 pt above | 3.15 | 0b / 4a | | todo |
+| R-3.15-3 | Spawn once in the gap after a random hoop 3–12 (pushed to the next free gap), only while < 3 held, never during rides; placement 0.65 × spacing after, 64–200 pt above | 3.15 | 0b / 4a | test/run/director/s3_0_3_director_test.dart | done (0b part); 4a pending |
 | R-3.15-4 | Fetch animation into the feather tray (3 slots, y ≈ 206–254), tray fades out | 3.15 | 4a | | todo |
 | R-3.15-5 | 3rd feather: set-complete celebration + "BONUS UNLOCKED!" sticker | 3.15 | 4a | | todo |
 | R-3.15-6 | `feathers` 0–3 persistent; reset to 0 when the bonus screen opens | 3.15 | 4a | | todo |
@@ -448,7 +448,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.16-1 | One piece per run max (revive = same run); independent of feathers | 3.16 | 4a | | todo |
 | R-3.16-2 | Bigger pickup (≈ 50 pt + tabs, rays, glow), collected by touch | 3.16 | 4a | | todo |
 | R-3.16-3 | Only missing pieces spawn, in any order; the pill shows where it goes | 3.16 | 4a | | todo |
-| R-3.16-4 | Spawn every run once in the gap after a random hoop 14–25, only while the round is incomplete; not in rides; placement as the feather | 3.16 | 0b / 4a | | todo |
+| R-3.16-4 | Spawn every run once in the gap after a random hoop 14–25, only while the round is incomplete; not in rides; placement as the feather | 3.16 | 0b / 4a | test/run/director/s3_0_3_director_test.dart | done (0b part); 4a pending |
 | R-3.16-5 | Fetch into the puzzle pill (y ≈ 206–254): colour pieces, grey silhouettes, "n/4"; fades out | 3.16 | 4a | | todo |
 | R-3.16-6 | 4/4: picture flashes + bounces, PICTURE COMPLETE sticker, coin badge counts up | 3.16 | 4a | | todo |
 | R-3.16-7 | Reward uniform 50–250 in steps of 5, credited (`puzzle`) at the 4/4 moment in the run | 3.16 | 4a | | todo |
@@ -468,11 +468,11 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.17-3 | Open space between tooth tips: 50 / 45 / 40 / 35 % of screen height for squeeze 1 / 2 / 3 / 4+, never < 230 pt; both walls move (band − open)/2 | 3.17 | 3g | | todo |
 | R-3.17-4 | Phases: warning 1.5 s (shake 0 → 2.6, teeth flash red, falling bits, no text); closing 3 s ease-in-out (shake 2.2); lock (punch 6 pt, 0.35 s, dust); hold random 10–20 s, no indicator, last 3 s ticks + tremble; opening 3 s (shake 1.4, 0.8 s) | 3.17 | 3g | | todo |
 | R-3.17-5 | Moving walls are spike strips (mistake on touch; saves as 3.3 / 3.7) | 3.17 | 3g | | todo |
-| R-3.17-6 | From 3 s before the warning until open, new hoops and pickups spawn only within the squeezed band (normal spacing, max jump clamped) | 3.17 | 0b / 3g | | todo |
+| R-3.17-6 | From 3 s before the warning until open, new hoops and pickups spawn only within the squeezed band (normal spacing, max jump clamped) | 3.17 | 0b / 3g | test/run/director/s3_0_3_director_test.dart | done (0b part); 3g pending |
 | R-3.17-7 | Hoop size, scroll, scoring unchanged; no extra reward | 3.17 | 3g | | todo |
 | R-3.17-8 | HUD above the walls; score circle turns white while covered | 3.17 | 3g | | todo |
 | R-3.17-9 | Revived death during a squeeze: walls slide out over 0.5 s; next 60–120 s later | 3.17 | 3g | | todo |
-| R-3.17-10 | Director during the window: specials only saw / FEVER / bullseye; gap items only scheduled hearts + star trails; no moving rings | 3.17 | 0b | | todo |
+| R-3.17-10 | Director during the window: specials only saw / FEVER / bullseye; gap items only scheduled hearts + star trails; no moving rings | 3.17 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.17-11 | Each player has their own squeeze moments in versus | 3.17 | 3g | | todo |
 
 ## 3.18 Saw rings
@@ -487,8 +487,8 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.18-6 | Visual effects never kill; only the rim | 3.18 | 3d | | todo |
 | R-3.18-7 | Opening +28 pt vs a normal hoop at the same index; autopilot passes with saw rings | 3.18 | 3d | | todo |
 | R-3.18-8 | Black Hole pull: within 34 pt of the rim 260 pt/s² toward the rim; inhale 0.9 s every 3.4 s at 570 pt/s² | 3.18 | 3d | | todo |
-| R-3.18-9 | Spawn from 20, weight 18 (26 from 45), ≥ 3 apart; never the first hoop after a revive; upright and still | 3.18 | 0b | | todo |
-| R-3.18-10 | Band rule with the wider opening (also in a squeeze) | 3.18 | 0b | | todo |
+| R-3.18-9 | Spawn from 20, weight 18 (26 from 45), ≥ 3 apart; never the first hoop after a revive; upright and still | 3.18 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.18-10 | Band rule with the wider opening (also in a squeeze) | 3.18 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.18-11 | Comet / portal fly through saw rings; Big Hoops grows them but keeps the design | 3.18 | 3d | | todo |
 | R-3.18-12 | Saw rings keep their own look (no tier look) | 3.18 | 3d | | todo |
 
@@ -503,9 +503,9 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.19-5 | +1 score, +2 coins; no extra FEVER bonus | 3.19 | 3c | | todo |
 | R-3.19-6 | Only the FEVER ring (and FEVER gift) lights the fire; ×5 via normal passes doesn't | 3.19 | 3c | | todo |
 | R-3.19-7 | Replaces a normal hoop; same opening, rim bounce, spacing, max jump | 3.19 | 3c | | todo |
-| R-3.19-8 | Spawn from 15, weight 6, ≥ 20 apart; not next to a saw ring or the portal (± 3); not while on fire; never tilted/moving | 3.19 | 0b | | todo |
+| R-3.19-8 | Spawn from 15, weight 6, ≥ 20 apart; not next to a saw ring or the portal (± 3); not while on fire; never tilted/moving | 3.19 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.19-9 | Not spawned during rides; a burning fire keeps burning through a ride | 3.19 | 3c | | todo |
-| R-3.19-10 | Can spawn during a squeeze (inside the band) | 3.19 | 0b | | todo |
+| R-3.19-10 | Can spawn during a squeeze (inside the band) | 3.19 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 
 ## 3.20 Switch rings
 
@@ -514,11 +514,11 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.20-1 | Spawns closed; switch pickup floats in front; touch opens; reaching it closed = mistake | 3.20 | 3d | | todo |
 | R-3.20-2 | Five designs (Lockdown, Laser Gate, Power Iris, Snoozer, Gift Wrap) at random, never twice in a row per run; mixed in a run | 3.20 | 3d | | todo |
 | R-3.20-3 | Mandatory hoop: same opening, spacing, max jump; once open it's a normal hoop (+1, coins, streak, bounce) | 3.20 | 3d | | todo |
-| R-3.20-4 | Switch 1.0 s × scroll before the ring (≥ 150 pt), gap otherwise empty, 70–100 pt above/below, ≤ 110 pt vertical from the previous hoop centre, never in a strip | 3.20 | 0b / 3d | | todo |
+| R-3.20-4 | Switch 1.0 s × scroll before the ring (≥ 150 pt), gap otherwise empty, 70–100 pt above/below, ≤ 110 pt vertical from the previous hoop centre, never in a strip | 3.20 | 0b / 3d | test/run/director/s3_0_3_director_test.dart | done (0b part); 3d pending |
 | R-3.20-5 | Touch: ring opens at once in logic (open animation ≤ 0.8 s); +1 coin with "+1 ●"; streak unchanged | 3.20 | 3d | | todo |
 | R-3.20-6 | Closed ring reached: crash animation + mistake; with a save the ring counts as passed (no score); streak resets | 3.20 | 3d | | todo |
 | R-3.20-7 | Always readable as closed; switch matches its ring (Iris draws a cable); no text tutorial | 3.20 | 3d | | todo |
-| R-3.20-8 | Spawn from 12, weight 14, ≥ 8 apart; not near the portal; never first after revive; upright still; not in rides or squeeze | 3.20 | 0b | | todo |
+| R-3.20-8 | Spawn from 12, weight 14, ≥ 8 apart; not near the portal; never first after revive; upright still; not in rides or squeeze | 3.20 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.20-9 | Comet opens a closed switch ring already on screen | 3.20 | 3a / 3d | | todo |
 | R-3.20-10 | Big Hoops grows the ring (own design), switch stays the same size | 3.20 | 3d | | todo |
 | R-3.20-11 | Own look (no tier look); counts for the streak once open | 3.20 | 3d | | todo |
@@ -531,13 +531,13 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.21-1 | A pair is one hoop: through one ring → its gift + normal scoring; perfect = no contact on the chosen ring | 3.21 | 3d | | todo |
 | R-3.21-2 | Through neither (between, above, below) = miss (mistake) | 3.21 | 3d | | todo |
 | R-3.21-3 | Resolves once at the plane; the other ring + box shrink and fade (≈ 0.45 s) | 3.21 | 3d | | todo |
-| R-3.21-4 | Offset 230 × viewHeight / 711 (230 at 711, ≈ 184 at 568); both rings + tags fit between the HUD bottom (≈ 114) and the floor; one ring within max jump; else normal hoop | 3.21 | 0b / 3d | | todo |
-| R-3.21-5 | Two different rewards, weights Shield 25, Comet 20, Coins 25, Score 15, FEVER 15 | 3.21 | 0b | | todo |
+| R-3.21-4 | Offset 230 × viewHeight / 711 (230 at 711, ≈ 184 at 568); both rings + tags fit between the HUD bottom (≈ 114) and the floor; one ring within max jump; else normal hoop | 3.21 | 0b / 3d | test/run/director/s3_0_3_director_test.dart | done (0b part); 3d pending |
+| R-3.21-5 | Two different rewards, weights Shield 25, Comet 20, Coins 25, Score 15, FEVER 15 | 3.21 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.21-6 | Effects: SHIELD arms; COMET starts the boost; +10 COINS (`pair`); +5 SCORE; FEVER (any pass) | 3.21 | 3d | | todo |
-| R-3.21-7 | No useless reward: no shield if armed, no FEVER if on fire, no comet within 10 of a portal or while a timed powerup runs | 3.21 | 0b | | todo |
-| R-3.21-8 | Spawn from 12, weight 10, ≥ 15 apart, 2 normal hoops after; never in rides / squeeze; upright still; gifts on top of per-run limits | 3.21 | 0b | | todo |
+| R-3.21-7 | No useless reward: no shield if armed, no FEVER if on fire, no comet within 10 of a portal or while a timed powerup runs | 3.21 | 0b | test/run/director/s3_0_3_director_test.dart | done |
+| R-3.21-8 | Spawn from 12, weight 10, ≥ 15 apart, 2 normal hoops after; never in rides / squeeze; upright still; gifts on top of per-run limits | 3.21 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.21-9 | +5 SCORE counts in the duel | 3.21 | 5b | | todo |
-| R-3.21-10 | Autopilot targets the nearer ring | 7 | 0b / 3d | | todo |
+| R-3.21-10 | Autopilot targets the nearer ring | 7 | 0b / 3d | lib/run/debug/autopilot.dart (nearest ring); switch pre-target via HoopKind.autopilotTarget (3d) | done (0b part); 3d pending |
 
 ## 3.22 – 3.32 Smaller elements
 
@@ -546,38 +546,38 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.22-1 | Ring Train: three rings 56 pt apart, ±16 pt steps in one direction, dotted track; one slot (next hoop at normal spacing after the 3rd) | 3.22 | 3c | | todo |
 | R-3.22-2 | Train rings are normal hoops (score, coins, streak, bounce); missing any is a miss | 3.22 | 3c | | todo |
 | R-3.22-3 | Combo dots fill gold; all three → +3 coins (`train`) + TRAIN ×3 banner + rising finish; a miss saved by a life → no combo; a rim touch still counts | 3.22 | 3c | | todo |
-| R-3.22-4 | Spawn from 8, weight 14, ≥ 10 apart, 2 normal after; not in rides / squeeze | 3.22 | 0b | | todo |
+| R-3.22-4 | Spawn from 8, weight 14, ≥ 10 apart, 2 normal after; not in rides / squeeze | 3.22 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.23-1 | Spring: pass sets vy −770 (up) or +420 (down) per its arrows; flap ignored 0.45 s / 0.28 s | 3.23 | 3c | | todo |
-| R-3.23-2 | Next hoop placed 240 pt above/below (out of normal reach); normal in every other way | 3.23 | 0b / 3c | | todo |
+| R-3.23-2 | Next hoop placed 240 pt above/below (out of normal reach); normal in every other way | 3.23 | 0b / 3c | test/run/director/s3_0_3_director_test.dart | done (0b part); 3c pending |
 | R-3.23-3 | Wobble on pass, "BOING ↑/↓" pop, boing sound | 3.23 | 3c | | todo |
-| R-3.23-4 | Spawn from 10, weight 12, ≥ 10 apart, 2 normal after; up/down 50/50 with room; not in squeeze | 3.23 | 0b | | todo |
+| R-3.23-4 | Spawn from 10, weight 12, ≥ 10 apart, 2 normal after; up/down 50/50 with room; not in squeeze | 3.23 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.24-1 | Bullseye: normal hoop + target + dashed lines at ±12 pt (fixed as openings shrink) | 3.24 | 3c | | todo |
 | R-3.24-2 | Centre inside the band = BULLSEYE +3 coins (`bullseye`), banner, flash, thunk + chord | 3.24 | 3c | | todo |
-| R-3.24-3 | Spawn from 6, weight 20, ≥ 6 apart; upright still; allowed in squeeze | 3.24 | 0b | | todo |
+| R-3.24-3 | Spawn from 6, weight 20, ≥ 6 apart; upright still; allowed in squeeze | 3.24 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.25-1 | Lucky Spin: wheel on a post above the ring, spins freely, stops ≈ 0.9 s after the pass; slice paid as coins (`lucky_spin`) + banner | 3.25 | 3c | | todo |
-| R-3.25-2 | Slices +2, +5, +10, +3, +20, +5 equal chance; prize pre-rolled at spawn from the `layout` stream; wheel animated to stop on it | 3.25 | 0b / 3c | | todo |
-| R-3.25-3 | Spawn from 15, weight 8, ≥ 18 apart; upright still | 3.25 | 0b | | todo |
+| R-3.25-2 | Slices +2, +5, +10, +3, +20, +5 equal chance; prize pre-rolled at spawn from the `layout` stream; wheel animated to stop on it | 3.25 | 0b / 3c | test/run/director/s3_0_3_director_test.dart | done (0b part); 3c pending |
+| R-3.25-3 | Spawn from 15, weight 8, ≥ 18 apart; upright still | 3.25 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.26-1 | Star Trail: 8 stars on an arc 40 pt after → 40 pt before the next hoop, bulging 40 pt up, dotted line; touch collects, rising scale notes | 3.26 | 3e | | todo |
 | R-3.26-2 | All 8 → PERFECT LINE +5 coins (`star_trail`); fewer → "n / 8", nothing; single stars pay nothing | 3.26 | 3e | | todo |
-| R-3.26-3 | Spawn from gap 5, weight 30, ≥ 8 gaps apart, empty gap only; allowed in squeeze | 3.26 | 0b | | todo |
+| R-3.26-3 | Spawn from gap 5, weight 30, ≥ 8 gaps apart, empty gap only; allowed in squeeze | 3.26 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.27-1 | Egg pickup mid-gap puts the egg on the bird's back ("EGG! hatches in 5 rings") | 3.27 | 3e | | todo |
 | R-3.27-2 | Every ring passed cracks it (countdown 4…1; ride rings count); after 5 it hatches into a chick ("HATCHED!") | 3.27 | 3e | | todo |
-| R-3.27-3 | Chick: every coin earned counts double (ring coins and every bonus); gold ×2 badge under the score; pops read "+2 ×2" | 3.27 | 3e / 0b (earn) | | todo |
+| R-3.27-3 | Chick: every coin earned counts double (ring coins and every bonus); gold ×2 badge under the score; pops read "+2 ×2" | 3.27 | 3e / 0b (earn) | test/run/director/s3_0_3_director_test.dart | done (0b part); 3e /  (earn) pending |
 | R-3.27-4 | Any rim touch scares the chick ("bye!", "×2 LOST"); crash before hatching breaks the egg; a save also loses egg/chick; revive-offer death loses it | 3.27 | 3e | | todo |
-| R-3.27-5 | No extra coin pickups; spawn from gap 10, weight 12, ≥ 15 apart; one egg/chick at a time | 3.27 | 0b / 3e | | todo |
+| R-3.27-5 | No extra coin pickups; spawn from gap 10, weight 12, ≥ 15 apart; one egg/chick at a time | 3.27 | 0b / 3e | test/run/director/s3_0_3_director_test.dart | done (0b part); 3e pending |
 | R-3.28-1 | Piggy: grab → "PIGGY BANK"; exactly 20 coins: 4 in its gap then 4 per gap × 4 | 3.28 | 3e | | todo |
 | R-3.28-2 | Caught coins go into the bank; uncaught = missed | 3.28 | 3e | | todo |
 | R-3.28-3 | When all 20 resolved: smash, pays ×2 of caught (`piggy`); HUD piggy, "n / 20", bar, "n missed" | 3.28 | 3e | | todo |
 | R-3.28-4 | Crash before pay-out loses the bank (also with revive); a save keeps it; egg ×2 doubles the pay-out; portal removes on-screen coins without counting them missed | 3.28 | 3e | | todo |
-| R-3.28-5 | Spawn from gap 12, weight 10, ≥ 30 apart; never with a jar; its coins fill the next gaps | 3.28 | 0b | | todo |
+| R-3.28-5 | Spawn from gap 12, weight 10, ≥ 30 apart; never with a jar; its coins fill the next gaps | 3.28 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.29-1 | Jar: animated pickup; grab → "FIREFLY JAR"; fireflies only after the grab | 3.29 | 3e | | todo |
 | R-3.29-2 | Each following gap: swarm of 7 weaving ±45 pt around the line; catch radius 16 | 3.29 | 3e | | todo |
 | R-3.29-3 | Uncaught firefly escapes; 3 ✕ marks; 20 caught = JAR FULL +25 (`jar`); 3 escaped = JAR BROKE, nothing; remaining fly away | 3.29 | 3e | | todo |
 | R-3.29-4 | Crash loses it (also with revive); save keeps it; portal removes swarms without counting escapes | 3.29 | 3e | | todo |
-| R-3.29-5 | Spawn from gap 15, weight 10, ≥ 30 apart; never with a piggy | 3.29 | 0b | | todo |
+| R-3.29-5 | Spawn from gap 15, weight 10, ≥ 30 apart; never with a piggy | 3.29 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.30-1 | Capsule mid-gap on the line; flying into it starts the powerup at once (banner name + one line, start sound) | 3.30 | 3f | | todo |
 | R-3.30-2 | Timer pill near the top (y ≈ 206): icon + draining bar + seconds left | 3.30 | 3f | | todo |
-| R-3.30-3 | One timed powerup at a time (incl. comet); no capsule while one runs, nor in rides / squeeze; spawn from gap 10, weight 20, ≥ 20 apart; Hourglass 35 / Mini 35 / Frenzy 30 | 3.30 | 0b / 3f | | todo |
+| R-3.30-3 | One timed powerup at a time (incl. comet); no capsule while one runs, nor in rides / squeeze; spawn from gap 10, weight 20, ≥ 20 apart; Hourglass 35 / Mini 35 / Frenzy 30 | 3.30 | 0b / 3f | test/run/director/s3_0_3_director_test.dart | done (0b part); 3f pending |
 | R-3.30-4 | Hourglass: whole world incl. bird at 45 % (scroll, gravity, flap, spawns, motion, animations), 0.2 s ease in/out; rules unchanged | 3.30 | 3f | | todo |
 | R-3.30-5 | Hourglass duration random 10–20 s real time, rolled at pickup | 3.30 | 3f | | todo |
 | R-3.30-6 | Hourglass feedback: blue tint + vignette, ghost trail, clock ring with turning hand, tick every 0.6 s, music ≈ 72 % | 3.30 | 3f | | todo |
@@ -619,14 +619,14 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.34-12 | Inexact scheduling (`inexactAllowWhileIdle`), reboot rescheduling via the plugin | 3.34 | 4b | | todo |
 | R-3.34-13 | Small icon white monochrome bird; large icon app icon | 3.34 | 4b | | todo |
 | R-3.34-14 | Tap opens the app on home (no deep links); `notif_opened` sent | 3.34 | 4b | | todo |
-| R-3.34-15 | Persisted: order, position, last-sent dates, permission-asked | 3.34 | 4b (keys 0b) | | todo |
+| R-3.34-15 | Persisted: order, position, last-sent dates, permission-asked | 3.34 | 4b (keys 0b) | test/run/persistence_test.dart | done (0b part); 4b (keys ) pending |
 | R-3.34-16 | iOS later: same schedule (`UNCalendarNotificationTrigger`), `notif_chime.caf` — documented only | 3.34 | 4b | | todo |
 
 ## 4. Run flow
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-4-1 | Home START → [VS intro if opponent prefetched] → run | 4 | 0b / 5b | | todo |
+| R-4-1 | Home START → [VS intro if opponent prefetched] → run | 4 | 0b / 5b | test/run/flow/s3_0_run_core_flow_test.dart | done (0b part); 5b pending |
 | R-4-2 | Mistake without save → tumble ≈ 1.5 s → revive offer (≥ 6 hoops) → ad / coins → phoenix → run | 4 | 2d | | todo |
 | R-4-3 | No thanks / timeout → [balloon bonus with 3 feathers] → results → NEXT → home (new slot roll) | 4 | 2d / 4a / 2e | | todo |
 | R-4-4 | Pause any time in the run → RESUME → straight back in (no countdown) | 4, 5.7 | 2d | | todo |
@@ -781,7 +781,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Event (params) | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-6-1 | `coins_earned` (source: hoop / perfect / win_bonus / level / bonus / puzzle / switch / pair / train / bullseye / lucky_spin / star_trail / piggy / jar / frenzy; flag `egg_x2`) | 6 | 0b (router) + source WPs | | todo |
+| R-6-1 | `coins_earned` (source: hoop / perfect / win_bonus / level / bonus / puzzle / switch / pair / train / bullseye / lucky_spin / star_trail / piggy / jar / frenzy; flag `egg_x2`) | 6 | 0b (router) + source WPs | test/run/flow/s3_0_run_core_flow_test.dart::§3.0.1 START builds a RunController…; test/run/s7_run_parts_test.dart::§6* | done |
 | R-6-2 | `big_hoops_used` | 6 | existing / 2a verify | | todo |
 | R-6-3 | `heart_collected` | 6 | 2a | | todo |
 | R-6-4 | `extra_life_used` (cause: missed_hoop / spikes) | 6 | 2a | | todo |
@@ -844,69 +844,69 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-6-61 | `switchring_switch_taken` (design) | 6 | 3d | | todo |
 | R-6-62 | `switchring_passed` (design) | 6 | 3d | | todo |
 | R-6-63 | `switchring_closed_hit` (design, used: none / extra_life / shield) | 6 | 3d | | todo |
-| R-6-64 | `run_end` (cause: missed_hoop / spikes / saw / closed_switch / pair_missed, hoop_index, hoop_kind, run_s, hoops, coins, saves) | 6 | 0b | | todo |
-| R-6-65 | `run_director_hoops` (one int per hoop kind and modifier + rim_touches + perfect_pct; ≤ 25 params) with `run_end` | 6 | 0b | | todo |
-| R-6-66 | `run_director_items` (one int per gap item type; ≤ 25 params) with `run_end` | 6 | 0b | | todo |
-| R-6-67 | `ad_rewarded_shown` placements `revive` / `bonus_feathers` (2× coins placement removed) | 6 | 0b (enum) / 2d / 4a | | todo |
+| R-6-64 | `run_end` (cause: missed_hoop / spikes / saw / closed_switch / pair_missed, hoop_index, hoop_kind, run_s, hoops, coins, saves) | 6 | 0b | test/run/flow/s3_0_run_core_flow_test.dart::§3.0.1 START builds a RunController…; test/run/s7_run_parts_test.dart::§6* | done |
+| R-6-65 | `run_director_hoops` (one int per hoop kind and modifier + rim_touches + perfect_pct; ≤ 25 params) with `run_end` | 6 | 0b | test/run/flow/s3_0_run_core_flow_test.dart::§3.0.1 START builds a RunController…; test/run/s7_run_parts_test.dart::§6* | done |
+| R-6-66 | `run_director_items` (one int per gap item type; ≤ 25 params) with `run_end` | 6 | 0b | test/run/flow/s3_0_run_core_flow_test.dart::§3.0.1 START builds a RunController…; test/run/s7_run_parts_test.dart::§6* | done |
+| R-6-67 | `ad_rewarded_shown` placements `revive` / `bonus_feathers` (2× coins placement removed) | 6 | 0b (enum) / 2d / 4a | test/run/flow/s3_0_run_core_flow_test.dart::§3.0.1 START builds a RunController…; test/run/s7_run_parts_test.dart::§6* | done |
 | R-6-68 | Store data declarations updated for the new events / data | 6 | 4c | | todo |
 
 ## 7. Technical notes and test list
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-7-1 | Run state (hearts, extra life, shield, streak, ride) lives in the game, not storage; coins via the wallet at the moment earned | 7 | 0b | | todo |
+| R-7-1 | Run state (hearts, extra life, shield, streak, ride) lives in the game, not storage; coins via the wallet at the moment earned | 7 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
 | R-7-2 | New components for pickups, pooled effects, moving paths + guides, portal + cannon, HUD row, pause, revive, results | 7 | per WP | | todo |
-| R-7-3 | `RunDirector` owned by the game; tables as `Config` data mirroring `spawn_tables.json` / prototype `BANDS` / `BUDGET` / `SPECIAL` / `GAPITEM` | 7 | 0b | | todo |
-| R-7-4 | One `Hoop` component with a `kind` (normal, saw, switch, pair, fever, train, spring, bullseye, spin, portal) and ring offsets; strategy objects; tilt/move modifiers | 7 | 0b / 1a | | todo |
+| R-7-3 | `RunDirector` owned by the game; tables as `Config` data mirroring `spawn_tables.json` / prototype `BANDS` / `BUDGET` / `SPECIAL` / `GAPITEM` | 7 | 0b | test/run/config/tables_mirror_test.dart; test/run/director/s3_0_3_director_test.dart | done |
+| R-7-4 | One `Hoop` component with a `kind` (normal, saw, switch, pair, fever, train, spring, bullseye, spin, portal) and ring offsets; strategy objects; tilt/move modifiers | 7 | 0b / 1a | test/run/flow/s3_0_run_core_flow_test.dart (Hoop / HoopKind skeleton + registry) | done (0b part); 1a pending |
 | R-7-5 | Bird at fixed screen x; world moves at the bird's forward speed; rim ends checked in plain math; `maxTranslation = 10000` kept | 7 | 1a | | todo |
 | R-7-6 | Death: free ballistic body, world eases to 0 over 0.4 s | 7 | 1a | | todo |
 | R-7-7 | Results reads the level from `bestScore` before/after; `unclaimedLevelReward` until CLAIM/NEXT; emblem painter shared with home | 7 | 2e | | todo |
 | R-7-8 | `PortalRide` engine + `RideTheme` per ride; `rides84.js` timings | 7 | 3b | | todo |
-| R-7-9 | Sounds through `AudioPool` only; comet loop via the BGM-style player | 7 | 0b / all | | todo |
+| R-7-9 | Sounds through `AudioPool` only; comet loop via the BGM-style player | 7 | 0b / all | test/run/s7_run_parts_test.dart::§3.9 loops… | done (0b part); all pending |
 | R-7-10 | Versus backend in repo: `functions/` (TS, 2nd gen), `firestore.rules`, `firestore.indexes.json`, TTL policy; Emulator Suite tests; `VersusService` no-op by default | 7 | 5a / 5b | | todo |
 | R-7-11 | Feathers: persistent count, at most one pickup, bonus screen between revive and results, wallet per pop, ad placement `bonus_feathers`; timings from `bonus.js` / `collect.js` | 7 | 4a | | todo |
 | R-7-12 | Puzzle: mask + round, one missing piece per run, 4/4 credit + reset + round + 1 atomically, colour themes as data (`PZT`) | 7 | 4a | | todo |
 | R-7-13 | Switch ring: one kind, pluggable design, shared rules; spawner places ring + switch; seeded design pick | 7 | 3d | | todo |
 | R-7-T1 | Plane-crossing tests: inside scores; outside ends; rim bounces + scores +1 without perfect; pressed against the inside passes (upright and every tilt step); tilted ring never missed early; saw rim kills; exactly-once game over | 3.1, 7 | 1a (saw: 3d) | | todo |
-| R-7-T2 | Run-director tests (3.0.3), incl. same seed → same sequence | 3.1, 7 | 0b | | todo |
+| R-7-T2 | Run-director tests (3.0.3), incl. same seed → same sequence | 3.1, 7 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-7-T3 | Death-physics tests (3.0.5) | 3.1, 7 | 1a | | todo |
 | R-7-T4 | `flutter test` green incl. autopilot at 568 and 711, with and without Big Hoops, director on (all elements), each special forced on every allowed slot | 7 | 1a / 1b / 2a / P3 | | todo |
-| R-7-T5 | `startHoopIndex` override; gate ≥ 12 hoops after each type unlocks at both heights; plain run ≥ 12 | 7 | 0b / P3 | | todo |
-| R-7-T6 | Autopilot targets the switch before a closed switch ring and the nearer ring of a pair | 7 | 0b / 3d | | todo |
+| R-7-T5 | `startHoopIndex` override; gate ≥ 12 hoops after each type unlocks at both heights; plain run ≥ 12 | 7 | 0b / P3 | test/run/director/s3_0_3_director_test.dart | done (0b part); P3 pending |
+| R-7-T6 | Autopilot targets the switch before a closed switch ring and the nearer ring of a pair | 7 | 0b / 3d | lib/run/debug/autopilot.dart (nearest ring); switch pre-target via HoopKind.autopilotTarget (3d) | done (0b part); 3d pending |
 | R-7-T7 | Revive tests: ladder (ad → 250 → 500 → 1 000 → doubling, reset per game, no-ad start 250); phoenix (safe line, drift to 70, scroll at 1.65 s, 2 s invuln, Black Hole re-form); ≥ 6 rule (≤ 5 → no offer, no ladder step); collectables lost and timed powerups ended at death; squeeze reset | 7 | 2d (+ 3d / 3e / 3f / 3g cases) | | todo |
 | R-7-T8 | Results tests: level-up one / several, CLAIM, auto-claim on NEXT, `unclaimedLevelReward` at next start; YOUR REWARD incl. puzzle + win/draw, excl. balloon | 7 | 2e (+ 4a / 5b cases) | | todo |
 | R-7-T9 | Versus tests: timeline replay on runClock (pause, revive offer, phoenix, Hourglass); opponent out at timeline end; WIN / LOSE / DRAW + bonus; solo start without prefetch | 7 | 5b (+ 3f case) | | todo |
 | R-7-T10 | Rumble tests: recorder per event; 90 ms throttle; shake never skipped | 7 | 2c | | todo |
 | R-7-T11 | Notification tests with a fake clock: windows, quiet hours incl. TZ / DST, skip-after-play, 7 d / 14 slots, rotation no repeat in 10 d, fill-in + fallback | 7 | 4b | | todo |
-| R-7-T12 | Persistence: every key round-trips with its default | 7 | 0b / 4c | | todo |
+| R-7-T12 | Persistence: every key round-trips with its default | 7 | 0b / 4c | test/run/persistence_test.dart | done (0b part); 4c pending |
 | R-7-T13 | Emulator tests: rules, function, matching | 7 | 5a | | todo |
-| R-7-T14 | Pixel 8 `integration_test` with `FS_E2E` (fixed seed, fake ads, debug App Check, force hooks) per phase; final release e2e | ARCH | 0b / 6 | | todo |
+| R-7-T14 | Pixel 8 `integration_test` with `FS_E2E` (fixed seed, fake ads, debug App Check, force hooks) per phase; final release e2e | ARCH | 0b / 6 | integration_test/run_core_e2e_test.dart | done (0b part); 6 pending |
 | R-7-T15 | Screenshot checks vs the approved PNG for every drawn element (`captureShot` pattern) | common | all visual WPs | | todo |
 
 ## 7. Persistence keys
 
 | ID | Key (type, default) | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-7-P1 | `bestScore` (int, 0) — existing | 7 | 0b (test) | | todo |
-| R-7-P2 | `gamesPlayed` (int, 0) — existing | 7 | 0b (test) | | todo |
-| R-7-P3 | `muteSound` (bool, false) — existing | 7 | 0b (test) | | todo |
-| R-7-P4 | `musicVolume` (double 0–1, 0.6) — existing | 7 | 0b (test) | | todo |
-| R-7-P5 | `rumble` (bool, true) | 3.33 | existing / 0b (test) | | todo |
-| R-7-P6 | `feathers` (int 0–3, 0) | 3.15 | 0b | | todo |
-| R-7-P7 | `puzzlePieces` (int 4-bit mask, 0) | 3.16 | 0b | | todo |
-| R-7-P8 | `puzzleRound` (int, 0) | 3.16 | 0b | | todo |
-| R-7-P9 | `lastPortalRide` (string ride id or null) | 3.12 | 0b | | todo |
-| R-7-P10 | `unclaimedLevelReward` (int coins, 0) | 3.14, 5.10 | 0b | | todo |
-| R-7-P11 | `metElements` (set of element ids, empty) | 3.0.8 | 0b | | todo |
-| R-7-P12 | `levelRewardsClaimed` (highest level claimed) — mapped onto the existing `claimedLevels` set (ARCH §5 call) | 3.14 | 0b | | todo |
-| R-7-P13 | `versusNickname` (string, generated once at first start) | 3.13 | 0b (key) / 5b (generation) | | todo |
-| R-7-P14 | `uploadQueue` (list of run entries JSON, empty) | 3.13 | 0b | | todo |
-| R-7-P15 | `uploadsToday` + `uploadsDay` (int + date string, 0 + '') | 3.13 | 0b | | todo |
-| R-7-P16 | `notifOrder` (list of int, shuffled at first schedule) | 3.34 | 0b | | todo |
-| R-7-P17 | `notifPosition` (int, 0) | 3.34 | 0b | | todo |
-| R-7-P18 | `notifLastSent` (map message → date, empty) | 3.34 | 0b | | todo |
-| R-7-P19 | `notifPermissionAsked` (bool, false) | 3.34 | 0b | | todo |
-| R-7-P20 | Menu keys of PRD-1 unchanged; Firebase uid not in storage; saw / switch design history not stored | 7 | 0b | | todo |
+| R-7-P1 | `bestScore` (int, 0) — existing | 7 | 0b (test) | test/run/persistence_test.dart | done |
+| R-7-P2 | `gamesPlayed` (int, 0) — existing | 7 | 0b (test) | test/run/persistence_test.dart | done |
+| R-7-P3 | `muteSound` (bool, false) — existing | 7 | 0b (test) | test/run/persistence_test.dart | done |
+| R-7-P4 | `musicVolume` (double 0–1, 0.6) — existing | 7 | 0b (test) | test/run/persistence_test.dart | done |
+| R-7-P5 | `rumble` (bool, true) | 3.33 | existing / 0b (test) | test/run/persistence_test.dart | done |
+| R-7-P6 | `feathers` (int 0–3, 0) | 3.15 | 0b | test/run/persistence_test.dart | done |
+| R-7-P7 | `puzzlePieces` (int 4-bit mask, 0) | 3.16 | 0b | test/run/persistence_test.dart | done |
+| R-7-P8 | `puzzleRound` (int, 0) | 3.16 | 0b | test/run/persistence_test.dart | done |
+| R-7-P9 | `lastPortalRide` (string ride id or null) | 3.12 | 0b | test/run/persistence_test.dart | done |
+| R-7-P10 | `unclaimedLevelReward` (int coins, 0) | 3.14, 5.10 | 0b | test/run/persistence_test.dart | done |
+| R-7-P11 | `metElements` (set of element ids, empty) | 3.0.8 | 0b | test/run/persistence_test.dart | done |
+| R-7-P12 | `levelRewardsClaimed` (highest level claimed) — mapped onto the existing `claimedLevels` set (ARCH §5 call) | 3.14 | 0b | test/run/persistence_test.dart | done |
+| R-7-P13 | `versusNickname` (string, generated once at first start) | 3.13 | 0b (key) / 5b (generation) | test/run/persistence_test.dart | done |
+| R-7-P14 | `uploadQueue` (list of run entries JSON, empty) | 3.13 | 0b | test/run/persistence_test.dart | done |
+| R-7-P15 | `uploadsToday` + `uploadsDay` (int + date string, 0 + '') | 3.13 | 0b | test/run/persistence_test.dart | done |
+| R-7-P16 | `notifOrder` (list of int, shuffled at first schedule) | 3.34 | 0b | test/run/persistence_test.dart | done |
+| R-7-P17 | `notifPosition` (int, 0) | 3.34 | 0b | test/run/persistence_test.dart | done |
+| R-7-P18 | `notifLastSent` (map message → date, empty) | 3.34 | 0b | test/run/persistence_test.dart | done |
+| R-7-P19 | `notifPermissionAsked` (bool, false) | 3.34 | 0b | test/run/persistence_test.dart | done |
+| R-7-P20 | Menu keys of PRD-1 unchanged; Firebase uid not in storage; saw / switch design history not stored | 7 | 0b | test/run/persistence_test.dart | done |
 
 ## 8. Sounds (approved files to ship + deliverables still to make)
 
@@ -916,19 +916,19 @@ the looping player).
 
 | ID | Sound | PRD § | WP (ship / make) | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-S-1 | `perfect_1`, `perfect_2`, `perfect_3` | 3.4 | 0b ship / 2b use | | todo |
-| R-S-2 | `pu_heart_1`, `pu_heart_2`, `pu_heart_use` | 3.9 | 0b / 2a | | todo |
-| R-S-3 | `pu_shield_get`, `pu_shield_hit` | 3.9 | 0b / 2a | | todo |
-| R-S-4 | `pu_comet_get`, `pu_comet_loop` (loop), `pu_comet_end` | 3.9 | 0b / 3a | | todo |
-| R-S-5 | `pu_portal`, `pu_cannon_aim`, `pu_cannon_shot`, `pu_land` | 3.9 | 0b / 3b | | todo |
-| R-S-6 | `miss_shock` | 5.13 | 0b / 1a | | todo |
-| R-S-7 | `rv_pay`, `rv_ignite`, `rv_burst`, `rv_locked` | 5.9 | 0b / 2d | | todo |
-| R-S-8 | `lv_bar`, `lv_up`, `lv_up_big`, `lv_claim` | 5.10 | 0b / 2e | | todo |
-| R-S-9 | `col_feather_get`, `col_feather_slot1/2/3` | 3.15 | 0b / 4a | | todo |
-| R-S-10 | `bn_balloon_open`, `bn_prize_s/m/big`, `bn_coin` (exists), `bn_adbtn` (exists) | 3.15 | 0b / 4a | | todo |
-| R-S-11 | `col4_puzzle_get`, `col4_puzzle_slot1..4`, `col4_coins` | 3.16 | 0b / 4a | | todo |
-| R-S-12 | `sq_warn`, `sq_close`, `sq_lock`, `sq_hold` (seamless loop: ship `.ogg`/`.wav`, not mp3), `sq_tick`, `sq_open` | 5.16 | 0b / 3g | | todo |
-| R-S-13 | Ride sounds `rd_space_*`, `rd_volc_*`, `rd_sea_*`, `rd_pin_*`, `rd_storm_*` (16 files) | 5.12b | 0b / 3b | | todo |
+| R-S-1 | `perfect_1`, `perfect_2`, `perfect_3` | 3.4 | 0b ship / 2b use | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | shipped (0b); use pending |
+| R-S-2 | `pu_heart_1`, `pu_heart_2`, `pu_heart_use` | 3.9 | 0b / 2a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 2a pending |
+| R-S-3 | `pu_shield_get`, `pu_shield_hit` | 3.9 | 0b / 2a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 2a pending |
+| R-S-4 | `pu_comet_get`, `pu_comet_loop` (loop), `pu_comet_end` | 3.9 | 0b / 3a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 3a pending |
+| R-S-5 | `pu_portal`, `pu_cannon_aim`, `pu_cannon_shot`, `pu_land` | 3.9 | 0b / 3b | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 3b pending |
+| R-S-6 | `miss_shock` | 5.13 | 0b / 1a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 1a pending |
+| R-S-7 | `rv_pay`, `rv_ignite`, `rv_burst`, `rv_locked` | 5.9 | 0b / 2d | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 2d pending |
+| R-S-8 | `lv_bar`, `lv_up`, `lv_up_big`, `lv_claim` | 5.10 | 0b / 2e | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 2e pending |
+| R-S-9 | `col_feather_get`, `col_feather_slot1/2/3` | 3.15 | 0b / 4a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 4a pending |
+| R-S-10 | `bn_balloon_open`, `bn_prize_s/m/big`, `bn_coin` (exists), `bn_adbtn` (exists) | 3.15 | 0b / 4a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 4a pending |
+| R-S-11 | `col4_puzzle_get`, `col4_puzzle_slot1..4`, `col4_coins` | 3.16 | 0b / 4a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 4a pending |
+| R-S-12 | `sq_warn`, `sq_close`, `sq_lock`, `sq_hold` (seamless loop: ship `.ogg`/`.wav`, not mp3), `sq_tick`, `sq_open` | 5.16 | 0b / 3g | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 3g pending |
+| R-S-13 | Ride sounds `rd_space_*`, `rd_volc_*`, `rd_sea_*`, `rd_pin_*`, `rd_storm_*` (16 files) | 5.12b | 0b / 3b | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 3b pending |
 | R-S-14 | `notif_b.ogg` → `android/app/src/main/res/raw/notif_chime.ogg` | 3.34 | 4b | | todo |
 | R-S-15 | Deliverable: versus intro set (whoosh, ticks, chime, rocket, pop / crackle, thud, boing) | 5.8, 7 | 3h make / 5b use | | todo |
 | R-S-16 | Deliverable: saw-ring hums (3 loops) and deaths (Live Wire zap + thunder + crackles; Frost crunch + hiss, crack, shatter; Black Hole roar + sub drop, boom, inhale) | 5.17, 7 | 3h / 3d | | todo |

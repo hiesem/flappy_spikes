@@ -944,3 +944,32 @@ regions.
 | Play Games link conflict: the account that already owns the Play Games id wins | §6.4 |
 | Debug force menu reachable from home (queued for the next run) and from the pause screen (debug builds) | §1.12 |
 | Delete my data regenerates the nickname and clears the upload queue | §5 |
+
+---
+
+## 11. WP-0b contract notes (as built, 2026-10-08)
+
+Changes to the contracts above, made while building WP-0b. Later WPs build against these.
+
+| Area | As built | Why |
+|---|---|---|
+| `HoopKindId`, `RideId`, `RideKind`, `PairReward`, `CapsuleType`, `SawDesign`, `SwitchDesign`, `MotionType`, `SpringDir` | live in `lib/run/director/plans.dart`; `hoops/hoop_kind.dart` and `rides/ride.dart` re-export them | the director stays pure Dart (§1.2) |
+| `SlotPlan` | + `attached` (the switch of a switch ring — it sits in the gap *before* the ring — and the comet star), + `duringRide`, `lastRingX`; `extra` uses `TrainSpec`, `SpinPrize` (slice + coins) | the switch is decided with its ring, after the gap before was planned (prototype order) |
+| `GapItemPlan` | `y == null` items carry `lineOffset` (heart / shield off the line), runs carry `toTrackX`; the spawner fills `y`/`toY` via `resolved()` once the next slot is planned | the line needs the next hoop's centre |
+| `DirectorContext` | + `featherWanted` (`feathers < 3`), `puzzleMask`; `DirectorContext.open(vh, …)` for pure tests | feather / piece rules |
+| Director calls | first slot after a revive is plain (upright, still, no comet); Big Hoops mult also scales ride hoops (capped to the band); a forced spring with no room moves to the edge of its range that leaves room (within the row's max jump), a rolled one becomes normal; feather / piece wait during the squeeze window (R-3.17-10); `startHoopIndex` shifts a comet / portal schedule that lies before the start by the start and pulls the heart / feather / piece to the start | §3.0.3 ambiguities |
+| First-meet | one queue over slots and gaps, oldest unlock first; a head that waited > 10 indices without its rules allowing it (e.g. shield while the home-slot shield stays armed) goes behind the others for the rest of the run; capsule types are met separately (`hourglass`, `miniBird`, `coinFrenzy`; `capsule` follows any) | one stuck element must not block all others |
+| Registries | `hoops/kinds/registry.dart`: `_kinds` (HoopKindId → factory) + `_hoopElements` (modifiers / scheduled elements: angled, moving, comet, portal register here); `pickups/registry.dart`: `_kinds` (ElementId → PickupKind) + `_pickupElements`; `testHoopKinds` / `testPickupKinds` seams. The spawner is **live only once `HoopKindId.normal` is registered** (WP-1a); until then the 1.0 pipes run and the controller is in "legacy pipes" mode | |
+| Layers | the four `RunTrack`s are direct children of the world (added by the controller on mount) | z-order against the bird / strips |
+| Events | the squeeze event is `SqueezePhaseChanged` (the name `SqueezePhase` is the enum); + `DebugForced(element)` for elements the director does not place (squeeze) | name clash; §3.0.8 |
+| `Hoop` | skeleton: `front` (`HoopFrontLayer` in `layers.front`), `HoopMotionDriver` interface (1b's `HoopMotion` implements it), `announced`; `frame()` is WP-1a's | |
+| `HoopKind` | `onRim(Hoop, RimTouch, ctx)`; `autopilotTarget(Hoop, RunState, double birdY)` (default: nearest ring) | |
+| `Pickup` | `id` is an `ElementId`; `PickupRadii` (§3.0.3); hit test + `isPast` in the base; the spawner runs collect / escape | |
+| `RunController` | `RunController({setup, game})`; `legacyPoint(score)` and `endRun()`; death → `game.endRun(summary)` → persistence → `PostRunFlow` (`PostRunScreens.revive/bonus/results` statics; results default = `LegacyGameOverResults`); `game.onBirdHit([MistakeCause])` routes into `run.mistake` | |
+| `RunClock` | `tick(gameDt)`: `RunScaledWorld` (lib/run/run_scaled_world.dart) already scales the world by `RunState.timeScale` | |
+| `RunContext.addScore` | does not write the timeline; WP-5b's recorder does from `ScoreChanged` | single writer |
+| Sound | `SfxLoop { cometLoop, sqHold }` ship as `.wav` (seamless, iOS-playable); `SoundService.loop/stopAllLoops/setMusicRate/duckMusic`, `onLoop` seam | |
+| Analytics | `CoinSource.aggregatedInRun`; the game's wallet hook skips those sources, the router sends them per (source, egg_x2) at `RunEnded` | |
+| Test harness | `createRunTestGame({prefs, worldHeight, services, monetization, seed, versus})` (Dart cannot mix positional and named optionals); `createTestGame` sets `runSeed = 7`; the spy is `AnalyticsSpy` (`SpyGameServices` exists in leaderboard_test) | |
+| Debug | `RunDebugState` on the game (`runDebug`): start hoop, force queue, forced ride, bot, god, overlay; the debug panel's `RUN DEBUG >` page (paged) | |
+| e2e | `FS_E2E` builds use `Monetization()` (fake ads + fake store) with the visible fake-ad overlay | |

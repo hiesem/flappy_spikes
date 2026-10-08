@@ -1,0 +1,350 @@
+{
+ "_note": "Run tables for PRD-2-gameplay.md section 3.0 (build-ready 2026-10-07). Layout bands by hoop index; y and dy are fractions of the band between the spike tooth lines. Mirrors design/menu_v2/proto_gameplay.html (BANDS, BUDGET, SPECIAL, GAPITEM).",
+ "bands": [
+  {
+   "from": 0,
+   "centre_y": [
+    0.45,
+    0.55
+   ],
+   "abs_dy_median_p90_max": [
+    0.03,
+    0.06,
+    0.07
+   ],
+   "tilt_chance": 0,
+   "tilt_weights": {},
+   "moving_chance": 0,
+   "first_hoop": "exact centre"
+  },
+  {
+   "from": 3,
+   "centre_y": [
+    0.33,
+    0.67
+   ],
+   "abs_dy_median_p90_max": [
+    0.11,
+    0.27,
+    0.35
+   ],
+   "tilt_chance": 0,
+   "tilt_weights": {},
+   "moving_chance": 0
+  },
+  {
+   "from": 10,
+   "centre_y": [
+    0.3,
+    0.69
+   ],
+   "abs_dy_median_p90_max": [
+    0.09,
+    0.3,
+    0.38
+   ],
+   "tilt_chance": 0.3,
+   "tilt_weights": {
+    "-10": 6,
+    "15": 4
+   },
+   "moving_chance": 0
+  },
+  {
+   "from": 20,
+   "centre_y": [
+    0.27,
+    0.69
+   ],
+   "abs_dy_median_p90_max": [
+    0.12,
+    0.31,
+    0.38
+   ],
+   "tilt_chance": 0.5,
+   "tilt_weights": {
+    "-10": 35,
+    "15": 30,
+    "30": 25,
+    "-20": 10
+   },
+   "moving_chance": 0.06
+  },
+  {
+   "from": 35,
+   "centre_y": [
+    0.24,
+    0.72
+   ],
+   "abs_dy_median_p90_max": [
+    0.14,
+    0.33,
+    0.42
+   ],
+   "tilt_chance": 0.6,
+   "tilt_weights": {
+    "-10": 25,
+    "15": 20,
+    "30": 30,
+    "-20": 10,
+    "45": 15
+   },
+   "moving_chance": 0.15
+  },
+  {
+   "from": 45,
+   "centre_y": [
+    0.16,
+    0.76
+   ],
+   "abs_dy_median_p90_max": [
+    0.15,
+    0.38,
+    0.52
+   ],
+   "tilt_chance": 0.78,
+   "tilt_weights": {
+    "-20": 20,
+    "-10": 10,
+    "15": 10,
+    "30": 30,
+    "45": 30
+   },
+   "moving_chance": 0.4
+  }
+ ],
+ "dy_sampling": "u<0.5: median*u/0.5; u<0.9: median..p90; else p90..max (linear pieces). Direction flips vs previous step with p=0.65 (zig-zag, same-sign runs 1-3); flip again if it leaves the band.",
+ "opening": {
+  "at_hoop_0_pt": 118,
+  "shrink_pct_per_hoop": 0.32,
+  "floor_pct_of_start": 78,
+  "saw_extra_pt": 28,
+  "rides": "full size"
+ },
+ "moving": {
+  "rail": {
+   "share": 0.8,
+   "axis_deg": [
+    -25,
+    25
+   ],
+   "half_travel_pt": [
+    40,
+    60
+   ],
+   "speed_pt_s": [
+    30,
+    39
+   ],
+   "motion": "constant speed ping-pong"
+  },
+  "swing": {
+   "share": 0.2,
+   "amplitude_deg": 15,
+   "period_s": 1.8,
+   "rope": "from above the top spikes"
+  },
+  "types_from_hoop_45": {
+   "rail": 50,
+   "swing": 15,
+   "horizontal": 10,
+   "diagonal": 10,
+   "orbit": 8,
+   "rock": 7
+  },
+  "types_hoop_20_44": {
+   "rail": 80,
+   "swing": 20
+  }
+ },
+ "tilt_cap_deg": 45,
+ "core": {
+  "scroll_pt_s": 150,
+  "scroll_ramp_pct_per_min": 3.5,
+  "spacing_pt": 310,
+  "first_hoop_after_tap_s": 1.3,
+  "gravity": 1250,
+  "flap_sets_vy": -370,
+  "max_fall": 650,
+  "bird_x": 70,
+  "bird_r": 14.75,
+  "rim_end_r": 7,
+  "rim_restitution": 0.85,
+  "forward_recovery_pt_s2": 2000,
+  "colour_stage_every_hoops": 10
+ },
+ "budget": [
+  {
+   "from": 0,
+   "special": 0,
+   "gap": 0
+  },
+  {
+   "from": 5,
+   "special": 0,
+   "gap": 0.25
+  },
+  {
+   "from": 8,
+   "special": 0.25,
+   "gap": 0.25
+  },
+  {
+   "from": 20,
+   "special": 0.35,
+   "gap": 0.33
+  },
+  {
+   "from": 35,
+   "special": 0.45,
+   "gap": 0.33
+  },
+  {
+   "from": 50,
+   "special": 0.6,
+   "gap": 0.33
+  }
+ ],
+ "special_hoops": {
+  "bullseye": {
+   "from": 6,
+   "w": 20,
+   "min_gap": 6,
+   "cooldown": 1
+  },
+  "train": {
+   "from": 8,
+   "w": 14,
+   "min_gap": 10,
+   "cooldown": 2
+  },
+  "spring": {
+   "from": 10,
+   "w": 12,
+   "min_gap": 10,
+   "cooldown": 2
+  },
+  "switch": {
+   "from": 12,
+   "w": 14,
+   "min_gap": 8,
+   "cooldown": 1
+  },
+  "pair": {
+   "from": 12,
+   "w": 10,
+   "min_gap": 15,
+   "cooldown": 2
+  },
+  "fever": {
+   "from": 15,
+   "w": 6,
+   "min_gap": 20,
+   "cooldown": 1
+  },
+  "lucky_spin": {
+   "from": 15,
+   "w": 8,
+   "min_gap": 18,
+   "cooldown": 1
+  },
+  "saw": {
+   "from": 20,
+   "w": 18,
+   "w_from_45": 26,
+   "min_gap": 3,
+   "cooldown": 1
+  }
+ },
+ "schedules": {
+  "portal": {
+   "first": [
+    25,
+    50
+   ],
+   "then": [
+    40,
+    60
+   ]
+  },
+  "comet_hoop": {
+   "first": [
+    10,
+    30
+   ],
+   "then": [
+    45,
+    60
+   ]
+  },
+  "heart": {
+   "first": 3,
+   "then": [
+    17,
+    27
+   ],
+   "per_life": 3
+  },
+  "feather": {
+   "window": [
+    3,
+    12
+   ]
+  },
+  "puzzle_piece": {
+   "window": [
+    14,
+    25
+   ]
+  }
+ },
+ "gap_items": {
+  "star_trail": {
+   "from": 5,
+   "w": 30,
+   "min_gap": 8
+  },
+  "capsule": {
+   "from": 10,
+   "w": 20,
+   "min_gap": 20,
+   "types": {
+    "hourglass": 35,
+    "mini_bird": 35,
+    "coin_frenzy": 30
+   }
+  },
+  "egg": {
+   "from": 10,
+   "w": 12,
+   "min_gap": 15
+  },
+  "piggy": {
+   "from": 12,
+   "w": 10,
+   "min_gap": 30
+  },
+  "jar": {
+   "from": 15,
+   "w": 10,
+   "min_gap": 30
+  },
+  "shield": {
+   "from": 12,
+   "w": 6,
+   "max_per_run": 1
+  }
+ },
+ "pair_weights": {
+  "shield": 25,
+  "comet": 20,
+  "coins": 25,
+  "score": 15,
+  "fever": 15
+ },
+ "comet": {
+  "duration_s": 10,
+  "speed_mult": 1.7,
+  "placement": "hangs in a normal hoop, 20 pt past its plane"
+ }
+}

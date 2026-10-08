@@ -3,7 +3,30 @@ import 'package:flutter/foundation.dart';
 import '../game/storage.dart';
 
 /// Where coins came from (Firebase Analytics `coins_earned` source).
-enum CoinSource { play, iap, rewarded, noadsBonus, levelReward, debug }
+enum CoinSource {
+  play,
+  iap,
+  rewarded,
+  noadsBonus,
+  levelReward,
+  debug,
+  // region WP-0b — PRD-2 §6 coins_earned sources
+  hoop,
+  perfect,
+  winBonus,
+  bonus,
+  puzzle,
+  switchRing,
+  pair,
+  train,
+  bullseye,
+  luckySpin,
+  starTrail,
+  piggy,
+  jar,
+  frenzy,
+  // endregion WP-0b
+}
 
 extension CoinSourceName on CoinSource {
   String get analyticsName => switch (this) {
@@ -11,8 +34,41 @@ extension CoinSourceName on CoinSource {
         CoinSource.iap => 'iap',
         CoinSource.rewarded => 'rewarded',
         CoinSource.noadsBonus => 'noads_bonus',
+        // Call (ARCH §2.7): keeps its home-v3 name (PRD §6 lists `level`).
         CoinSource.levelReward => 'level_reward',
         CoinSource.debug => 'debug',
+        CoinSource.hoop => 'hoop',
+        CoinSource.perfect => 'perfect',
+        CoinSource.winBonus => 'win_bonus',
+        CoinSource.bonus => 'bonus',
+        CoinSource.puzzle => 'puzzle',
+        CoinSource.switchRing => 'switch',
+        CoinSource.pair => 'pair',
+        CoinSource.train => 'train',
+        CoinSource.bullseye => 'bullseye',
+        CoinSource.luckySpin => 'lucky_spin',
+        CoinSource.starTrail => 'star_trail',
+        CoinSource.piggy => 'piggy',
+        CoinSource.jar => 'jar',
+        CoinSource.frenzy => 'frenzy',
+      };
+
+  /// In-run sources: `coins_earned` for these is aggregated per source by
+  /// the run's analytics router and sent once at run end (call, ARCH §2.7);
+  /// every other source is tracked at once.
+  bool get aggregatedInRun => switch (this) {
+        CoinSource.hoop ||
+        CoinSource.perfect ||
+        CoinSource.switchRing ||
+        CoinSource.pair ||
+        CoinSource.train ||
+        CoinSource.bullseye ||
+        CoinSource.luckySpin ||
+        CoinSource.starTrail ||
+        CoinSource.piggy ||
+        CoinSource.jar ||
+        CoinSource.frenzy => true,
+        _ => false,
       };
 }
 

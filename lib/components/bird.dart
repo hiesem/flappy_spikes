@@ -3,6 +3,8 @@ import 'package:flame_forge2d/flame_forge2d.dart';
 import '../game/config.dart';
 import '../game/flappy_game.dart';
 import '../game/sound.dart';
+import '../run/mistakes.dart';
+import 'pipe_pair.dart';
 import '../skins/look.dart';
 import 'look_component.dart';
 
@@ -151,7 +153,10 @@ class Bird extends BodyComponent<FlappySpikesGame> with ContactCallbacks {
     if (fixture.isSensor) {
       game.onScoreSensor(other);
     } else {
-      game.onBirdHit();
+      // WP-0b: the mistake cause for `run_end` (pipes until WP-1a).
+      game.onBirdHit(
+        other is PipePair ? MistakeCause.missedHoop : MistakeCause.spikes,
+      );
     }
   }
 }

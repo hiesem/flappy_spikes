@@ -58,6 +58,10 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   flame_test: ^2.2.4
+  # region WP-0b — Pixel 8 e2e harness (PRD-2 ARCH §7.3)
+  integration_test:
+    sdk: flutter
+  # endregion WP-0b
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.8
 
@@ -84,6 +88,14 @@ flutter:
     - family: Opificio Neue
       fonts:
         - asset: assets/fonts/Opificio_neue-regular.ttf
+    # region WP-0b — PRD-2 §3.1 / §5.7 Fredoka SemiBold (SIL OFL 1.1, see
+    # assets/fonts/Fredoka-OFL.txt): a static wght 600 / wdth 100 instance of
+    # google/fonts ofl/fredoka/Fredoka[wdth,wght].ttf (fontTools instancer).
+    - family: Fredoka
+      fonts:
+        - asset: assets/fonts/Fredoka-SemiBold.ttf
+          weight: 600
+    # endregion WP-0b
 
 flutter_launcher_icons:
   android: true

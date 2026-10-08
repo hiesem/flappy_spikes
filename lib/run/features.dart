@@ -3,6 +3,8 @@ import 'items/analytics_router.dart';
 import 'items/big_hoops.dart';
 import 'items/extra_life.dart';
 import 'items/fever.dart'; // WP-3c
+import 'hoops/kinds/saw/saw_death.dart'; // WP-3d
+import 'hoops/kinds/switch/switch_kind.dart'; // WP-3d
 import 'items/invulnerability.dart';
 import 'items/shield.dart';
 import 'items/met_elements.dart';
@@ -46,6 +48,11 @@ List<RunFeature> buildRunFeatures() => [
   // region WP-3b — portal roller-coaster rides (PRD-2 §3.12, §5.12b)
   PortalRideFeature(),
   // endregion WP-3b
+  // region WP-3d — saw-ring deaths / hums / lensing, switch-ring crashes
+  // (PRD-2 §3.18, §3.20, §5.17, §5.19)
+  SawFeature(),
+  SwitchRingFeature(),
+  // endregion WP-3d
   // region WP-2d — revive rules (PRD-2 §3.14); keep last
   ReviveRulesFeature(),
   // endregion WP-2d

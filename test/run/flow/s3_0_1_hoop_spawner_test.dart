@@ -67,7 +67,15 @@ void main() {
               closeTo(RunConfig.spacing, 1e-6),
             );
           }
-          expect(hoop.opening, closeTo(RunConfig.openingFor(i), 1e-9));
+          // WP-3d: a saw ring's opening is +28 pt (§3.18).
+          expect(
+            hoop.opening,
+            closeTo(
+              RunConfig.openingFor(i) +
+                  (plan.kind == HoopKindId.saw ? RunConfig.sawExtraOpening : 0),
+              1e-9,
+            ),
+          );
           final m =
               hoop.opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin;
           expect(

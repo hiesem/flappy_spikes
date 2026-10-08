@@ -269,3 +269,13 @@ class FeverFireChanged extends RunEvent {
   final String? cause;
 }
 // endregion WP-3c
+
+// region WP-3d — pair gifts (PRD-2 §3.21)
+/// Raises the perfect-pass streak to at least [value] (the pair FEVER
+/// gift: "streak set to at least ×5", Q59). `StreakFeature` applies it
+/// (tier change, banner); a higher streak is kept.
+class StreakAtLeast extends RunEvent {
+  const StreakAtLeast(this.value);
+  final int value;
+}
+// endregion WP-3d

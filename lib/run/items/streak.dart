@@ -103,7 +103,8 @@ class StreakFeature extends RunFeature {
       ..on<HoopSpawned>(_onSpawned)
       ..on<HoopPassed>(_onPassed)
       ..on<MistakeSaved>(_onSaved)
-      ..on<RunDied>(_onDied);
+      ..on<RunDied>(_onDied)
+      ..on<StreakAtLeast>(_onAtLeast); // WP-3d
     for (final h in c.run.spawner.hoops) {
       _track(h);
     }
@@ -140,6 +141,15 @@ class StreakFeature extends RunFeature {
     }
     c.track('perfect_pass', {'tier': tier});
   }
+
+  // region WP-3d — §3.21 the pair FEVER gift: streak at least ×5
+  void _onAtLeast(StreakAtLeast e) {
+    final c = _c;
+    if (c == null || c.s.streak >= e.value) return;
+    _set(e.value, StreakCause.fever);
+    _banners?.showStreak(c.s.tier);
+  }
+  // endregion WP-3d
 
   void _onSaved(MistakeSaved e) => _break(StreakCause.save);
 
@@ -273,7 +283,8 @@ class StreakFeature extends RunFeature {
         ..off<HoopSpawned>(_onSpawned)
         ..off<HoopPassed>(_onPassed)
         ..off<MistakeSaved>(_onSaved)
-        ..off<RunDied>(_onDied);
+        ..off<RunDied>(_onDied)
+        ..off<StreakAtLeast>(_onAtLeast); // WP-3d
       final bird = c.game.runBird;
       if (bird != null && bird.isLoaded) bird.lookComponent.goldTier = false;
     }

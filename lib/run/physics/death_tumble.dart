@@ -145,6 +145,20 @@ class DeathTumble {
     }
   }
 
+  // region WP-3d — themed death moments (PRD-2 §3.0.5)
+  /// Only the world's 0.4 s ease to a stop, while a themed death holds the
+  /// bird (Live Wire, Frost Ring, Black Hole); the bird starts its tumble
+  /// with its momentum once the moment is over.
+  void stepCamera(double dt) {
+    if (dt <= 0 || _camSpeed0 <= 0) return;
+    camSpeed = math.max(
+      0,
+      camSpeed - _camSpeed0 / PhysicsConfig.worldStopSeconds * dt,
+    );
+    camX += camSpeed * dt;
+  }
+  // endregion WP-3d
+
   /// Lying flat: resting and the angle settled to a multiple of π.
   bool get settledFlat {
     if (!resting) return false;

@@ -24,7 +24,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.1-8 | Rim ends: two circles r 7, restitution 0.85 | 3.0.1, 3.0.4 | 1a | test/run/physics/s3_0_4_rim_test.dart::§3.0.4 1 two rim ends r 7 …; test/run/physics/s3_0_4_rim_test.dart::§3.0.4 2 head-on … restitution 0.85 | done |
 | R-3.0.1-9 | Forward recovery 2000 pt/s² back to cruise after a knock-back | 3.0.1 | 1a | test/run/physics/s3_0_4_rim_test.dart::§3.0.4 4 after a knock-back the forward speed recovers …; test/run/flow/s3_1_hoop_flow_test.dart::§3.0.4 a rim touch bounces, the world jolts back … | done |
 | R-3.0.1-10 | Hoops spawned during comet / portal rides are 118 pt, upright, still | 3.0.1, 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.0.1-11 | Score +1 per hoop (no "1 + streak"); +5 from a pair SCORE gift | 3.0.1 | 1a | test/collision_test.dart::§3.1 crossing the plane inside the opening scores exactly once | done (+5 pair gift: 3d) |
+| R-3.0.1-11 | Score +1 per hoop (no "1 + streak"); +5 from a pair SCORE gift | 3.0.1 | 1a | test/collision_test.dart::§3.1 crossing the plane inside the opening scores exactly once; test/run/hoops/s3_21_pair_test.dart::§3.21 the score gift does what it says | done |
 | R-3.0.1-12 | Colour stage = floor(hoopsPassed / 10) mod 11 over the existing 11 palettes (gold last); replaces `stageOf(score)` | 3.0.1 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.1 the colour stage changes every 10 hoops passed …; test/color_state_test.dart | done |
 | R-3.0.1-13 | Hoop index = slots spawned (train / pair = 1 slot), not reset by a revive; ramps use the index of the slot being spawned | 3.0.1 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
 | R-3.0.1-14 | `runClock` runs in play and rides, stops in pause / revive offer / phoenix, slows with Hourglass; used by scroll ramp, squeeze, versus timeline, Big Hoops | 3.0.1 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
@@ -97,7 +97,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.4-7 | Miss only when fully past: bird x − r > centre x + \|sin tilt\| × (largest offset + opening/2 + 7) + 7 | 3.0.4 | 1a | test/run/physics/s3_0_4_pass_test.dart::§3.0.4 miss only when fully past …; test/run/physics/s3_0_4_pass_test.dart::§3.0.4 rightmost point of a tilted ring …; test/run/physics/s3_0_4_pass_test.dart::§3.0.4 a tilted ring is never missed early (every tilt step) | done |
 | R-3.0.4-8 | Knocked back across the plane → not judged; each hoop resolves once | 3.0.4 | 1a | test/run/physics/s3_0_4_pass_test.dart::§3.0.4 a bird knocked back across the plane is not judged; test/collision_test.dart::§3.1 crossing the plane … scores exactly once | done |
 | R-3.0.4-9 | Inside half of a rim end pushes into the opening (save); outside half pushes away | 3.0.4 | 1a | test/run/physics/s3_0_4_rim_test.dart::§3.0.4 6 the inside half pushes the bird into the opening, the outside half away from it | done |
-| R-3.0.4-10 | Exceptions: saw rim = mistake, no bounce; closed switch reached = mistake; rides ignore rims | 3.0.4 | 1a (hooks) / 3d / 3a / 3b |lib/run/run_controller.dart hooks (RimMode.deadly → saw mistake, PlaneVerdict.mistake → closed switch, RimMode.ignored in rides); test/run/rides/s3_12_ride_rules_test.dart::§3.12 entering… (ride rings: rims ignored); test/run/rides/s3_12_portal_ride_test.dart | part (hooks done 1a; behaviour tests 3d / 3a / 3b); 3b done |
+| R-3.0.4-10 | Exceptions: saw rim = mistake, no bounce; closed switch reached = mistake; rides ignore rims | 3.0.4 | 1a (hooks) / 3d / 3a / 3b | lib/run/run_controller.dart hooks (RimMode.deadly → saw mistake, PlaneVerdict.mistake → closed switch, RimMode.ignored in rides); test/run/rides/s3_12_ride_rules_test.dart::§3.12 entering… (ride rings: rims ignored); test/run/rides/s3_12_portal_ride_test.dart; test/run/hoops/s3_18_saw_test.dart::§3.18 the rim is deadly …; test/run/hoops/s3_20_switch_test.dart::§3.20 reaching the ring while it is still closed… | part (3d, 3b done; 3a pending) |
 | R-3.0.4-11 | Upward passes count like any forward pass | 10 (R16) | 1a | test/run/physics/s3_0_4_pass_test.dart::§3.0.4 inside the opening scores … (any forward crossing, vy free) | done |
 
 ## 3.0.5 Death physics
@@ -114,7 +114,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.5-8 | Rest: slides to a stop (−600 %/s), spin settles flat (belly or back, nearer), stays behind the tooth tips through revive and until results | 3.0.5 | 1a | test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 bounces 1–2 times …; test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 … the dead bird rests on the floor spikes | done |
 | R-3.0.5-9 | Screen edges: bounce back at 24 pt from left / 30 pt from right (forward × −0.3); never leaves the screen | 3.0.5 | 1a | test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 never leaves the screen sideways (24 pt / 30 pt edges) | done |
 | R-3.0.5-10 | During a squeeze the resting line is the squeezed floor | 3.0.5 | 3g | | todo |
-| R-3.0.5-11 | Themed deaths: signature moment first, then the same tumble (Frost: ice block shatters, frozen bird lies there); Black Hole swallows (no tumble, no body, only the shock ring) | 3.0.5 | 3d | | todo |
+| R-3.0.5-11 | Themed deaths: signature moment first, then the same tumble (Frost: ice block shatters, frozen bird lies there); Black Hole swallows (no tumble, no body, only the shock ring) | 3.0.5 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 / §3.0.5 touching the <design> rim kills…; test/run/hoops/s3_18_saw_test.dart::§3.14 / §3.0.5 a revive after a Black Hole death… | done |
 | R-3.0.5-12 | Revive offer 1.5 s after the hit (or when resting, if sooner); themed: moment + ≤ 1.5 s, max 2.2 s | 3.0.5 | 2d | test/run/screens/s3_14_revive_test.dart | done |
 | R-3.0.5-13 | ≤ 5 hoops: same tumble, then bonus / results after 1.5 s (2.2 s max) | 3.0.5 | 2d | test/run/screens/s3_14_revive_test.dart | done |
 | R-3.0.5-14 | Extra life / shield saves: no tumble, keep flying; spike save bounces off the tooth line during the 2 s (top: down at 30 %; floor: vy −222) | 3.0.5 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 / §3.0.5 a spike save bounces off the tooth line and the bird stays on screen through the 2 s | done |
@@ -145,11 +145,11 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.8-E4 | Element: Bullseye Ring | 3.0.7 | 3c | test/run/flow/s3_19_s3_22_s3_25_autopilot_test.dart | done (WP-3c) |
 | R-3.0.8-E5 | Element: Ring Train | 3.0.7 | 3c | test/run/flow/s3_19_s3_22_s3_25_autopilot_test.dart | done (WP-3c) |
 | R-3.0.8-E6 | Element: Spring Ring | 3.0.7 | 3c | test/run/flow/s3_19_s3_22_s3_25_autopilot_test.dart | done (WP-3c) |
-| R-3.0.8-E7 | Element: switch ring (5 designs) | 3.0.7 | 3d | | todo |
-| R-3.0.8-E8 | Element: pair of powerup rings | 3.0.7 | 3d | | todo |
+| R-3.0.8-E7 | Element: switch ring (5 designs) | 3.0.7 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 <design>: … (met on screen); test/run/flow/s3_18_s3_20_s3_21_autopilot_test.dart | done |
+| R-3.0.8-E8 | Element: pair of powerup rings | 3.0.7 | 3d | test/run/hoops/s3_21_pair_test.dart::§3.21 flying through the … ring … (met); test/run/flow/s3_18_s3_20_s3_21_autopilot_test.dart | done |
 | R-3.0.8-E9 | Element: glowing ring (FEVER) | 3.0.7 | 3c | test/run/flow/s3_19_s3_22_s3_25_autopilot_test.dart | done (WP-3c) |
 | R-3.0.8-E10 | Element: Lucky Spin | 3.0.7 | 3c | test/run/flow/s3_19_s3_22_s3_25_autopilot_test.dart | done (WP-3c) |
-| R-3.0.8-E11 | Element: saw ring (3 designs) | 3.0.7 | 3d | | todo |
+| R-3.0.8-E11 | Element: saw ring (3 designs) | 3.0.7 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 a clean pass … (met); test/run/flow/s3_18_s3_20_s3_21_autopilot_test.dart | done |
 | R-3.0.8-E12 | Element: portal roller-coaster | 3.0.7 | 3b | test/run/rides/s3_12_portal_ride_test.dart; test/run/rides/s3_12_portal_autopilot_test.dart | done |
 | R-3.0.8-E13 | Element: comet boost | 3.0.7 | 3a | | todo |
 | R-3.0.8-E14 | Element: heart → extra life | 3.0.7 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 three hearts give one extra life …; test/run/items/s3_3_s3_7_lives_test.dart::§3.3 a heart pickup on the bird is collected by touch … | done |
@@ -276,7 +276,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 |---|---|---|---|---|---|
 | R-3.7-1 | Absorbs exactly one mistake (full mistake list), no timer; shatters; flash + 2 s invulnerability; spike save stays on screen | 3.7 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 / §3.3 save order …; test/run/items/s3_3_s3_7_lives_test.dart::§3.3 / §3.0.5 a spike save bounces … | done |
 | R-3.7-2 | Active look: translucent circle, gold ring, rotating dashed inner ring, gentle pulse, no badge | 3.7, 5.5 | 2a | shot: build/shots/run/lives/shield_circle_*.png; test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the shield pickup arms the shield … circle forms | done |
-| R-3.7-3 | Obtained by field pickup (from hoop 12, max 1 per run, off the line), SHIELD pair gift, home slot (active from start) | 3.7 | 2a / 3d | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the shield pickup arms the shield …; test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the home-slot shield is consumed at the start … | done (pair gift: 3d sets state.shield; the circle observes it) |
+| R-3.7-3 | Obtained by field pickup (from hoop 12, max 1 per run, off the line), SHIELD pair gift, home slot (active from start) | 3.7 | 2a / 3d | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the shield pickup arms the shield …; test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the home-slot shield is consumed at the start …; test/run/hoops/s3_21_pair_test.dart::§3.21 the shield gift does what it says | done |
 | R-3.7-4 | Icon: pink fill, gold border, gold star (same asset as the home slot) | 3.7 | 2a | shot: build/shots/run/lives/shield_circle_*.png (LifeIcons.paintShield) | done |
 | R-3.7-5 | Stacks with all powerups; visuals layer | 3.7 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 / §3.3 save order … (shield + extra life together) | done |
 
@@ -399,7 +399,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.14-10 | No thanks → bonus or results | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
 | R-3.14-11 | Countdown 5 s, urgency in the last 2 s, empty heart stays 1 s, then moves on | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
 | R-3.14-12 | Phoenix ≈ 1.65 s: flames around the dead bird, rise to the safe line in a flame column turning upright with flame wings, burst out | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
-| R-3.14-13 | Black Hole death: phoenix re-forms from the shock ring at the last position | 3.14 | 2d / 3d | test/run/screens/s3_14_revive_test.dart | part (re-form from a shock ring at the last position; 3d supplies the Black Hole death) |
+| R-3.14-13 | Black Hole death: phoenix re-forms from the shock ring at the last position | 3.14 | 2d / 3d | test/run/screens/s3_14_revive_test.dart; test/run/hoops/s3_18_saw_test.dart::§3.14 / §3.0.5 a revive after a Black Hole death… | done (3d supplies the Black Hole death) |
 | R-3.14-14 | Safe line = centre of the next hoop ahead (clamped to band), else band centre; drift back to x 70 while rising | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
 | R-3.14-15 | Straight back in at 1.65 s: no countdown, no slow motion; small upward flap; 2 s invulnerability | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
 | R-3.14-16 | Kept: score, coins, hearts, feather/piece progress. Lost: running egg/chick, piggy, jar. Reset: streak + fire. Ended: timed powerups | 3.14 | 2d (+ 3e / 3f / 3c hooks) | test/run/screens/s3_14_revive_test.dart | done (state cleared generically; 3e / 3f / 3c add their visuals) |
@@ -479,18 +479,18 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.18-1 | Touching any part of the rim = mistake (death or extra life/shield); no bounce | 3.18 | 3d | | todo |
-| R-3.18-2 | Each spawn picks Live Wire / Frost Ring / Black Hole at random (equal), never the same twice in a row per run | 3.18 | 3d | | todo |
-| R-3.18-3 | Mandatory hoop: +1, coins, streak; a clean pass is always perfect | 3.18 | 3d | | todo |
-| R-3.18-4 | Collider: two circles at the ring ends, r 5 (Live Wire / Frost) or 6 (Black Hole) | 3.18 | 3d | | todo |
-| R-3.18-5 | On contact: design death moment, then tumble, then revive offer; with a save the ring is treated as passed (no score) | 3.18 | 3d | | todo |
-| R-3.18-6 | Visual effects never kill; only the rim | 3.18 | 3d | | todo |
-| R-3.18-7 | Opening +28 pt vs a normal hoop at the same index; autopilot passes with saw rings | 3.18 | 3d | | todo |
-| R-3.18-8 | Black Hole pull: within 34 pt of the rim 260 pt/s² toward the rim; inhale 0.9 s every 3.4 s at 570 pt/s² | 3.18 | 3d | | todo |
+| R-3.18-1 | Touching any part of the rim = mistake (death or extra life/shield); no bounce | 3.18 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 / §3.0.5 touching the <design> rim kills…; test/run/hoops/s3_18_saw_test.dart::§3.18 the rim is deadly (no bounce)… | done |
+| R-3.18-2 | Each spawn picks Live Wire / Frost Ring / Black Hole at random (equal), never the same twice in a row per run | 3.18 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 designs: each spawn picks one at random… | done |
+| R-3.18-3 | Mandatory hoop: +1, coins, streak; a clean pass is always perfect | 3.18 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 a clean pass is an ordinary, always-perfect hoop… | done |
+| R-3.18-4 | Collider: two circles at the ring ends, r 5 (Live Wire / Frost) or 6 (Black Hole) | 3.18 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 rim-end collider r = half the rim… | done |
+| R-3.18-5 | On contact: design death moment, then tumble, then revive offer; with a save the ring is treated as passed (no score) | 3.18 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 / §3.0.5 touching the <design> rim kills…; test/run/hoops/s3_18_saw_test.dart::§3.18 with an armed shield the touch is saved… | done |
+| R-3.18-6 | Visual effects never kill; only the rim | 3.18 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 Black Hole pull… (the opening centre is clear); the collider is the rim ends only | done |
+| R-3.18-7 | Opening +28 pt vs a normal hoop at the same index; autopilot passes with saw rings | 3.18 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 a clean pass … +28 pt…; test/run/flow/s3_18_s3_20_s3_21_autopilot_test.dart | done |
+| R-3.18-8 | Black Hole pull: within 34 pt of the rim 260 pt/s² toward the rim; inhale 0.9 s every 3.4 s at 570 pt/s² | 3.18 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 Black Hole pull…; test/run/hoops/s3_18_saw_test.dart::§3.18 the Black Hole pulls a bird near its rim toward it | done |
 | R-3.18-9 | Spawn from 20, weight 18 (26 from 45), ≥ 3 apart; never the first hoop after a revive; upright and still | 3.18 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.18-10 | Band rule with the wider opening (also in a squeeze) | 3.18 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.18-11 | Comet / portal fly through saw rings; Big Hoops grows them but keeps the design | 3.18 | 3d | | todo |
-| R-3.18-12 | Saw rings keep their own look (no tier look) | 3.18 | 3d | | todo |
+| R-3.18-11 | Comet / portal fly through saw rings; Big Hoops grows them but keeps the design | 3.18 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 the rim is deadly (no bounce); rides … fly through it (Big Hoops: the director scales the opening; the saw art ignores the gold) | done |
+| R-3.18-12 | Saw rings keep their own look (no tier look) | 3.18 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 a clean pass … (no tier fx, no gold) | done |
 
 ## 3.19 Glowing ring (FEVER)
 
@@ -511,33 +511,33 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.20-1 | Spawns closed; switch pickup floats in front; touch opens; reaching it closed = mistake | 3.20 | 3d | | todo |
-| R-3.20-2 | Five designs (Lockdown, Laser Gate, Power Iris, Snoozer, Gift Wrap) at random, never twice in a row per run; mixed in a run | 3.20 | 3d | | todo |
-| R-3.20-3 | Mandatory hoop: same opening, spacing, max jump; once open it's a normal hoop (+1, coins, streak, bounce) | 3.20 | 3d | | todo |
-| R-3.20-4 | Switch 1.0 s × scroll before the ring (≥ 150 pt), gap otherwise empty, 70–100 pt above/below, ≤ 110 pt vertical from the previous hoop centre, never in a strip | 3.20 | 0b / 3d | test/run/director/s3_0_3_director_test.dart | done (0b part); 3d pending |
-| R-3.20-5 | Touch: ring opens at once in logic (open animation ≤ 0.8 s); +1 coin with "+1 ●"; streak unchanged | 3.20 | 3d | | todo |
-| R-3.20-6 | Closed ring reached: crash animation + mistake; with a save the ring counts as passed (no score); streak resets | 3.20 | 3d | | todo |
-| R-3.20-7 | Always readable as closed; switch matches its ring (Iris draws a cable); no text tutorial | 3.20 | 3d | | todo |
+| R-3.20-1 | Spawns closed; switch pickup floats in front; touch opens; reaching it closed = mistake | 3.20 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 <design>: spawns closed …; test/run/hoops/s3_20_switch_test.dart::§3.20 reaching the ring while it is still closed is a mistake… | done |
+| R-3.20-2 | Five designs (Lockdown, Laser Gate, Power Iris, Snoozer, Gift Wrap) at random, never twice in a row per run; mixed in a run | 3.20 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 five designs at random… | done |
+| R-3.20-3 | Mandatory hoop: same opening, spacing, max jump; once open it's a normal hoop (+1, coins, streak, bounce) | 3.20 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 <design>: … then a normal pass | done |
+| R-3.20-4 | Switch 1.0 s × scroll before the ring (≥ 150 pt), gap otherwise empty, 70–100 pt above/below, ≤ 110 pt vertical from the previous hoop centre, never in a strip | 3.20 | 0b / 3d | test/run/director/s3_0_3_director_test.dart; test/run/hoops/s3_20_switch_test.dart::§3.20 <design>: spawns closed with its switch in the gap before… | done |
+| R-3.20-5 | Touch: ring opens at once in logic (open animation ≤ 0.8 s); +1 coin with "+1 ●"; streak unchanged | 3.20 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 <design>: … +1 coin (switch), the ring opens at once (animation ≤ 0.8 s), the streak is unchanged…; test/run/hoops/s3_20_switch_test.dart::§3.20 / §5.19 every design opens within 0.8 s… | done |
+| R-3.20-6 | Closed ring reached: crash animation + mistake; with a save the ring counts as passed (no score); streak resets | 3.20 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 reaching the ring while it is still closed…; test/run/hoops/s3_20_switch_test.dart::§3.20 with a shield the closed ring is saved… | done |
+| R-3.20-7 | Always readable as closed; switch matches its ring (Iris draws a cable); no text tutorial | 3.20 | 3d | test/run/shots/hazard_rings_shots_test.dart (switchring_*_off: closed look, Iris cable) | done (visual) |
 | R-3.20-8 | Spawn from 12, weight 14, ≥ 8 apart; not near the portal; never first after revive; upright still; not in rides or squeeze | 3.20 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.20-9 | Comet opens a closed switch ring already on screen | 3.20 | 3a / 3d | | todo |
-| R-3.20-10 | Big Hoops grows the ring (own design), switch stays the same size | 3.20 | 3d | | todo |
-| R-3.20-11 | Own look (no tier look); counts for the streak once open | 3.20 | 3d | | todo |
-| R-3.20-12 | One `SwitchRing` kind with pluggable designs (barrier, decorations, switch sprite, open timeline, crash); autopilot steers to the switch first | 7 | 3d | | todo |
+| R-3.20-9 | Comet opens a closed switch ring already on screen | 3.20 | 3a / 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 a closed switch ring on screen opens by itself when the comet arrives | done (3d part; the comet ride is 3a) |
+| R-3.20-10 | Big Hoops grows the ring (own design), switch stays the same size | 3.20 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 rules (pure) (the switch size / radius are fixed) | done |
+| R-3.20-11 | Own look (no tier look); counts for the streak once open | 3.20 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 a closed ring at the plane is a mistake; open, a pass (no tier look) | done |
+| R-3.20-12 | One `SwitchRing` kind with pluggable designs (barrier, decorations, switch sprite, open timeline, crash); autopilot steers to the switch first | 7 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 <design>: … the autopilot takes the switch first …; test/run/flow/s3_18_s3_20_s3_21_autopilot_test.dart | done |
 
 ## 3.21 Pairs of powerup rings
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.21-1 | A pair is one hoop: through one ring → its gift + normal scoring; perfect = no contact on the chosen ring | 3.21 | 3d | | todo |
-| R-3.21-2 | Through neither (between, above, below) = miss (mistake) | 3.21 | 3d | | todo |
-| R-3.21-3 | Resolves once at the plane; the other ring + box shrink and fade (≈ 0.45 s) | 3.21 | 3d | | todo |
-| R-3.21-4 | Offset 230 × viewHeight / 711 (230 at 711, ≈ 184 at 568); both rings + tags fit between the HUD bottom (≈ 114) and the floor; one ring within max jump; else normal hoop | 3.21 | 0b / 3d | test/run/director/s3_0_3_director_test.dart | done (0b part); 3d pending |
+| R-3.21-1 | A pair is one hoop: through one ring → its gift + normal scoring; perfect = no contact on the chosen ring | 3.21 | 3d | test/run/hoops/s3_21_pair_test.dart::§3.21 flying through the top / bottom ring takes its gift… | done |
+| R-3.21-2 | Through neither (between, above, below) = miss (mistake) | 3.21 | 3d | test/run/hoops/s3_21_pair_test.dart::§3.21 flying through neither ring (between them) is a miss… | done |
+| R-3.21-3 | Resolves once at the plane; the other ring + box shrink and fade (≈ 0.45 s) | 3.21 | 3d | test/run/hoops/s3_21_pair_test.dart::§3.21 flying through the … ring … resolves once… | done |
+| R-3.21-4 | Offset 230 × viewHeight / 711 (230 at 711, ≈ 184 at 568); both rings + tags fit between the HUD bottom (≈ 114) and the floor; one ring within max jump; else normal hoop | 3.21 | 0b / 3d | test/run/director/s3_0_3_director_test.dart; test/run/hoops/s3_21_pair_test.dart::§3.21 geometry at 711 / 568 pt… | done |
 | R-3.21-5 | Two different rewards, weights Shield 25, Comet 20, Coins 25, Score 15, FEVER 15 | 3.21 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.21-6 | Effects: SHIELD arms; COMET starts the boost; +10 COINS (`pair`); +5 SCORE; FEVER (any pass) | 3.21 | 3d | | todo |
+| R-3.21-6 | Effects: SHIELD arms; COMET starts the boost; +10 COINS (`pair`); +5 SCORE; FEVER (any pass) | 3.21 | 3d | test/run/hoops/s3_21_pair_test.dart::§3.21 the <reward> gift does what it says; test/run/hoops/s3_21_pair_test.dart::§3.21 FEVER gift keeps a higher streak | done (COMET emits the WP-3a pair contract event) |
 | R-3.21-7 | No useless reward: no shield if armed, no FEVER if on fire, no comet within 10 of a portal or while a timed powerup runs | 3.21 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.21-8 | Spawn from 12, weight 10, ≥ 15 apart, 2 normal hoops after; never in rides / squeeze; upright still; gifts on top of per-run limits | 3.21 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.21-9 | +5 SCORE counts in the duel | 3.21 | 5b | | todo |
-| R-3.21-10 | Autopilot targets the nearer ring | 7 | 0b / 3d | lib/run/debug/autopilot.dart (nearest ring); switch pre-target via HoopKind.autopilotTarget (3d) | done (0b part); 3d pending |
+| R-3.21-10 | Autopilot targets the nearer ring | 7 | 0b / 3d | lib/run/debug/autopilot.dart (nearest ring); test/run/flow/s3_18_s3_20_s3_21_autopilot_test.dart | done |
 
 ## 3.22 – 3.32 Smaller elements
 
@@ -721,34 +721,34 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.16-3 | Falling bits 2–5 pt ≈ 28/s (warning, closing, opening), fade 0.7 s; lock dust 40 squares 3–7 pt | 5.16 | 3g | | todo |
 | R-5.16-4 | Shake: whole view; exposed edges show the wall grey | 5.16 | 3g | | todo |
 | R-5.16-5 | Sounds `sq_warn`, `sq_close`, `sq_lock`, `sq_hold` (loop, wav/ogg), `sq_tick` × 3, `sq_open`; music keeps playing; hold loop stops when opening starts | 5.16 | 3g | | todo |
-| R-5.17-1 | Saw rings not stage-tinted; two render layers; danger hum per design fading with closeness² | 5.17 | 3d | | todo |
-| R-5.17-2 | Live Wire look (navy core, cyan glow, filament, 3–4 forked arcs redrawn 18×/s, big strike ≈ 9 %, near-miss bolt within 46 pt) | 5.17 | 3d | | todo |
-| R-5.17-3 | Live Wire death (0.6 s held: jitter, spikes, lightning, X-ray alternation; then charred tumble, smoke, twitches) + sounds | 5.17 | 3d | | todo |
-| R-5.17-4 | Frost Ring look (rim colours, frost zig-zag, icicles, shard clusters at 46 points, fog, snow) | 5.17 | 3d | | todo |
-| R-5.17-5 | Frost death (blue, ice block 0.3 s, cracks 0.38 s, tumble, shatter on the spikes, frozen bird stays) + sounds | 5.17 | 3d | | todo |
-| R-5.17-6 | Black Hole look (black torus 16 pt, photon ring, plasma, void ≈ 36 pt, spiralling stars, ripples, strips bend toward it within ≈ 170 pt; inhale every 3.4 s for 0.9 s) | 5.17 | 3d | | todo |
-| R-5.17-7 | Black Hole death (pulled, stretched, spun, shrunk 0.8 s, rumble + darkening, boom + white shock ring, nothing left) + sounds | 5.17 | 3d | | todo |
+| R-5.17-1 | Saw rings not stage-tinted; two render layers; danger hum per design fading with closeness² | 5.17 | 3d | test/run/hoops/s3_18_saw_test.dart::§5.17 the danger hum fades in…; test/run/shots/hazard_rings_shots_test.dart | done |
+| R-5.17-2 | Live Wire look (navy core, cyan glow, filament, 3–4 forked arcs redrawn 18×/s, big strike ≈ 9 %, near-miss bolt within 46 pt) | 5.17 | 3d | test/run/shots/hazard_rings_shots_test.dart (sawring_electric_fly) | done (visual) |
+| R-5.17-3 | Live Wire death (0.6 s held: jitter, spikes, lightning, X-ray alternation; then charred tumble, smoke, twitches) + sounds | 5.17 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 / §3.0.5 touching the liveWire rim kills…; test/run/shots/hazard_rings_shots_test.dart (sawring_electric_death) | done |
+| R-5.17-4 | Frost Ring look (rim colours, frost zig-zag, icicles, shard clusters at 46 points, fog, snow) | 5.17 | 3d | test/run/shots/hazard_rings_shots_test.dart (sawring_ice_fly) | done (visual) |
+| R-5.17-5 | Frost death (blue, ice block 0.3 s, cracks 0.38 s, tumble, shatter on the spikes, frozen bird stays) + sounds | 5.17 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 / §3.0.5 touching the frostRing rim kills… (shatters); test/run/shots/hazard_rings_shots_test.dart (sawring_ice_death) | done |
+| R-5.17-6 | Black Hole look (black torus 16 pt, photon ring, plasma, void ≈ 36 pt, spiralling stars, ripples, strips bend toward it within ≈ 170 pt; inhale every 3.4 s for 0.9 s) | 5.17 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 Black Hole pull… (inhale 0.9 s / 3.4 s); test/run/hoops/s3_18_saw_test.dart::§3.18 the Black Hole pulls… (strips bend); test/run/shots/hazard_rings_shots_test.dart (sawring_hole_fly) | done |
+| R-5.17-7 | Black Hole death (pulled, stretched, spun, shrunk 0.8 s, rumble + darkening, boom + white shock ring, nothing left) + sounds | 5.17 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 / §3.0.5 touching the blackHole rim kills… (swallowed, no body); test/run/shots/hazard_rings_shots_test.dart (sawring_hole_death) | done |
 | R-5.18-1 | FEVER ring look: red rim + dark-red outline + orange glow, 30 boiling beads 12×/s, inner gold ring, 3 plasma loops, golden beam ≈ 125 pt with 8 streaks, warm halo, sparkles, embers | 5.18 | 3c | test/run/items/s3_19_fever_test.dart + test/run/shots/special_hoops_shots_test.dart | done (WP-3c) |
 | R-5.18-2 | FEVER pass effect: three light rings 0.09 s apart, ≈ 26 plasma flames, beam/halo flare, warm screen flash ≈ 0.3 s, small shake 6 pt | 5.18 | 3c | test/run/items/s3_19_fever_test.dart + test/run/shots/special_hoops_shots_test.dart | done (WP-3c) |
 | R-5.18-3 | Bird on fire: ≈ 115 teardrop flames/s, warm halo, behind the bird; out: smoke + sizzle | 5.18 | 3c | test/run/items/s3_19_fever_test.dart + test/run/shots/special_hoops_shots_test.dart | done (WP-3c) |
 | R-5.18-4 | FEVER! banner: Opificio 44 pt gradient `#FFF59D` → `#FF9800` → `#E64A19`, plum 7 pt outline, pop 0.6 → 1.1 → 1, tilt + jitter, ≈ 1.6 s above the tier banner | 5.18 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
 | R-5.18-5 | Sounds: FEVER pass (whoosh + boom + chord on top of `perfect_3`), burning crackle loop, fire-out sizzle | 5.18 | 3c / 3h | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
-| R-5.19-1 | Switch rings not stage-tinted; barrier + back half behind the bird, front decorations in front | 5.19 | 3d | | todo |
-| R-5.19-2 | Switch pickups 40–46 pt, bob, halo, twinkles; touch fx + "+1 ●"; Laser button / Iris lever stay to show ON then fade | 5.19 | 3d | | todo |
-| R-5.19-3 | Open words: POWER OFF (green), POWER ON (gold), WAKE UP! (purple), SNIP! (pink); Lockdown uses CLEAR! sign | 5.19 | 3d | | todo |
-| R-5.19-4 | Crash: tumble (+180 straight back), design crash effect + sound, red banner LOCKED! / ZAPPED! / SHUT! / HMPF! / WRAPPED!, then normal death flow | 5.19 | 3d | | todo |
-| R-5.19-5 | Lockdown look + key + 0–0.5 s open timeline (key arc, turn, links fly, padlock drops, siren green ✓, CLEAR!) + crash | 5.19 | 3d | | todo |
-| R-5.19-6 | Laser Gate look + button + timeline (press, 0.12 s power-down, beams retract 0.4 s) + crash | 5.19 | 3d | | todo |
-| R-5.19-7 | Power Iris look + cable + lever + timeline (flip, spark along cable, bulbs, iris open 0.5–0.8 s) + crash | 5.19 | 3d | | todo |
-| R-5.19-8 | Snoozer look + alarm clock + timeline (ring, eyes open 0.2, yawn 0.38–0.73, fill fades 0.78) + crash (spit back) | 5.19 | 3d | | todo |
-| R-5.19-9 | Gift Wrap look + scissors + timeline (fly, snips, cut at 0.5, paper tears, confetti 34) + crash (drum bounce) | 5.19 | 3d | | todo |
-| R-5.19-10 | Sounds per design (switch touched, opening, crash) + shared "clear" chord; pass plays `perfect_1/2/3` | 5.19 | 3d / 3h | | todo |
-| R-5.20-1 | Reward colours and icons (Shield, Comet, +10 Coins, +5 Score, FEVER) | 5.20 | 3d | | todo |
-| R-5.20-2 | Ring 7 pt in the main colour, dark back half, 1.6 pt white inner line on the front | 5.20 | 3d | | todo |
-| R-5.20-3 | Gift box ≈ 44 pt (body, dark right half, lid, white ribbon + bow), bob ±3, tilt ±5° | 5.20 | 3d | | todo |
-| R-5.20-4 | Gift tag (luggage tag, 2 pt outline, icon + word Opificio 14) on a string ≈ 30 pt out from the top/bottom ring; never in the gap or opening | 5.20 | 3d | | todo |
-| R-5.20-5 | Pick feedback: lid flies, icon jumps out, ≈ 22 confetti, colour ring pulse, reward word pops; skipped ring/box/tag shrink to 60 % and fade 0.45 s with a grey puff | 5.20 | 3d | | todo |
-| R-5.20-6 | Sounds: box opens, per reward (5), ring skipped | 5.20 | 3d / 3h | | todo |
+| R-5.19-1 | Switch rings not stage-tinted; barrier + back half behind the bird, front decorations in front | 5.19 | 3d | test/run/shots/hazard_rings_shots_test.dart (switchring_*) | done (visual) |
+| R-5.19-2 | Switch pickups 40–46 pt, bob, halo, twinkles; touch fx + "+1 ●"; Laser button / Iris lever stay to show ON then fade | 5.19 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 / §5.19 every design opens within 0.8 s… (stay 0.3 / 1.1 s); test/run/shots/hazard_rings_shots_test.dart | done |
+| R-5.19-3 | Open words: POWER OFF (green), POWER ON (gold), WAKE UP! (purple), SNIP! (pink); Lockdown uses CLEAR! sign | 5.19 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 / §5.19 … the open words…; test/run/shots/hazard_rings_shots_test.dart (switchring_*_open) | done |
+| R-5.19-4 | Crash: tumble (+180 straight back), design crash effect + sound, red banner LOCKED! / ZAPPED! / SHUT! / HMPF! / WRAPPED!, then normal death flow | 5.19 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 reaching the ring while it is still closed… (knock −x, red banner word); test/run/shots/hazard_rings_shots_test.dart (switchring_*_fail) | done |
+| R-5.19-5 | Lockdown look + key + 0–0.5 s open timeline (key arc, turn, links fly, padlock drops, siren green ✓, CLEAR!) + crash | 5.19 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 lockdown: …; test/run/shots/hazard_rings_shots_test.dart (switchring_lock_*) | done |
+| R-5.19-6 | Laser Gate look + button + timeline (press, 0.12 s power-down, beams retract 0.4 s) + crash | 5.19 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 laserGate: …; test/run/shots/hazard_rings_shots_test.dart (switchring_laser_*) | done |
+| R-5.19-7 | Power Iris look + cable + lever + timeline (flip, spark along cable, bulbs, iris open 0.5–0.8 s) + crash | 5.19 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 powerIris: …; test/run/shots/hazard_rings_shots_test.dart (switchring_iris_*) | done |
+| R-5.19-8 | Snoozer look + alarm clock + timeline (ring, eyes open 0.2, yawn 0.38–0.73, fill fades 0.78) + crash (spit back) | 5.19 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 snoozer: …; test/run/shots/hazard_rings_shots_test.dart (switchring_sleepy_*) | done |
+| R-5.19-9 | Gift Wrap look + scissors + timeline (fly, snips, cut at 0.5, paper tears, confetti 34) + crash (drum bounce) | 5.19 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 giftWrap: …; test/run/shots/hazard_rings_shots_test.dart (switchring_gift_*) | done |
+| R-5.19-10 | Sounds per design (switch touched, opening, crash) + shared "clear" chord; pass plays `perfect_1/2/3` | 5.19 | 3d / 3h | test/run/hoops/s3_20_switch_test.dart::§3.20 <design>: … (touch + opening sounds); test/run/hoops/s3_20_switch_test.dart::§3.20 reaching the ring … (crash sound) | done |
+| R-5.20-1 | Reward colours and icons (Shield, Comet, +10 Coins, +5 Score, FEVER) | 5.20 | 3d | test/run/hoops/s3_21_pair_test.dart::§3.21 gifts: … §5.20 reward colours and words… | done |
+| R-5.20-2 | Ring 7 pt in the main colour, dark back half, 1.6 pt white inner line on the front | 5.20 | 3d | test/run/shots/hazard_rings_shots_test.dart (giftpair_approach) | done (visual) |
+| R-5.20-3 | Gift box ≈ 44 pt (body, dark right half, lid, white ribbon + bow), bob ±3, tilt ±5° | 5.20 | 3d | test/run/shots/hazard_rings_shots_test.dart (giftpair_approach) | done (visual) |
+| R-5.20-4 | Gift tag (luggage tag, 2 pt outline, icon + word Opificio 14) on a string ≈ 30 pt out from the top/bottom ring; never in the gap or opening | 5.20 | 3d | test/run/hoops/s3_21_pair_test.dart::§3.21 geometry … (tags outside the pair); test/run/hoops/s3_21_pair_test.dart::§5.20 the gift tag…; test/run/shots/hazard_rings_shots_test.dart | done |
+| R-5.20-5 | Pick feedback: lid flies, icon jumps out, ≈ 22 confetti, colour ring pulse, reward word pops; skipped ring/box/tag shrink to 60 % and fade 0.45 s with a grey puff | 5.20 | 3d | test/run/hoops/s3_21_pair_test.dart::§3.21 flying through the … ring … the other ring shrinks and fades; test/run/shots/hazard_rings_shots_test.dart (giftpair_pick) | done |
+| R-5.20-6 | Sounds: box opens, per reward (5), ring skipped | 5.20 | 3d / 3h | test/run/hoops/s3_21_pair_test.dart::§3.21 the <reward> gift does what it says (reward sounds); pair_kind.dart (box pop, skipped blip) | done |
 | R-5.21-1 | Train look: pink rings turn gold when passed; dotted track fg 50 % 2.5 pt 6/6 moving toward the bird, 34 pt before → after; progress dots 6.5 pt 20 pt above; banner TRAIN ×3 | 5.21 | 3c | test/run/hoops/s3_22_train_test.dart + test/run/shots/special_hoops_shots_test.dart | done (WP-3c) |
 | R-5.21-2 | Train sounds C5 / E5 / G5 per ring; finish high C + chord + rising whistle | 5.21 | 3c / 3h | test/run/hoops/s3_22_train_test.dart | done (WP-3c) |
 | R-5.22-1 | Spring look: green `#2EBD6B` / `#1E8A4C`, coils above and below, three chevrons moving in the launch direction; wobble ±7 pt 0.5 s, green burst, "BOING ↑/↓" | 5.22 | 3c | test/run/hoops/s3_23_spring_test.dart + test/run/shots/special_hoops_shots_test.dart | done (WP-3c) |
@@ -814,15 +814,15 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-6-31 | `squeeze_started` (index, open_pct, hold_s) | 6 | 3g | | todo |
 | R-6-32 | `squeeze_survived` (index) | 6 | 3g | | todo |
 | R-6-33 | `squeeze_death` (index, phase) | 6 | 3g | | todo |
-| R-6-34 | `sawring_spawned` (design) | 6 | 3d | | todo |
-| R-6-35 | `sawring_passed` (design) | 6 | 3d | | todo |
-| R-6-36 | `sawring_death` (design, used: none / extra_life / shield) | 6 | 3d | | todo |
+| R-6-34 | `sawring_spawned` (design) | 6 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 a clean pass … sawring_spawned / sawring_passed | done |
+| R-6-35 | `sawring_passed` (design) | 6 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 a clean pass … sawring_passed | done |
+| R-6-36 | `sawring_death` (design, used: none / extra_life / shield) | 6 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 / §3.0.5 touching the <design> rim kills … (used: none); test/run/hoops/s3_18_saw_test.dart::§3.18 with an armed shield … (used: shield) | done |
 | R-6-37 | `fever_ring_spawned` (hoop_index) | 6 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
 | R-6-38 | `fever_ring_passed` (perfect, streak_before, streak_after) | 6 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
 | R-6-39 | `fever_fire_out` (streak, hoops_burned, cause: graze / extra_life / shield / death) | 6 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
-| R-6-40 | `pair_spawned` (reward_top, reward_bottom) | 6 | 3d | | todo |
-| R-6-41 | `pair_picked` (reward, skipped_reward, top/bottom, perfect) | 6 | 3d | | todo |
-| R-6-42 | `pair_missed` | 6 | 3d | | todo |
+| R-6-40 | `pair_spawned` (reward_top, reward_bottom) | 6 | 3d | test/run/hoops/s3_21_pair_test.dart::§3.21 geometry … (pair_spawned) | done |
+| R-6-41 | `pair_picked` (reward, skipped_reward, top/bottom, perfect) | 6 | 3d | test/run/hoops/s3_21_pair_test.dart::§3.21 flying through the … ring … pair_picked | done |
+| R-6-42 | `pair_missed` | 6 | 3d | test/run/hoops/s3_21_pair_test.dart::§3.21 flying through neither ring … pair_missed | done |
 | R-6-43 | `train_completed` | 6 | 3c | test/run/hoops/s3_22_train_test.dart | done (WP-3c) |
 | R-6-44 | `spring_used` (up/down) | 6 | 3c | test/run/hoops/s3_23_spring_test.dart | done (WP-3c) |
 | R-6-45 | `bullseye_hit` | 6 | 3c | test/run/hoops/s3_24_bullseye_test.dart | done (WP-3c) |
@@ -840,10 +840,10 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-6-57 | `setting_changed` (setting: rumble, value) | 6 | 2c (existing `rumble_toggle` → rename or send both; call in 2c) | test/run/items/s3_33_rumble_test.dart::§3.33 the RUMBLE switch — call: both `rumble_toggle` and `setting_changed` are sent | done |
 | R-6-58 | `notif_permission` (granted / denied) | 6 | 4b | test/services/s3_34_reminders_test.dart::§3.34 service permission is asked once and the result is logged; ::§3.34 service a decline is final and logged | done |
 | R-6-59 | `notif_opened` (message 1–20, slot midday / evening) | 6 | 4b | test/services/s3_34_reminders_test.dart::§3.34 service tapping a reminder logs notif_opened | done |
-| R-6-60 | `switchring_spawned` (design) | 6 | 3d | | todo |
-| R-6-61 | `switchring_switch_taken` (design) | 6 | 3d | | todo |
-| R-6-62 | `switchring_passed` (design) | 6 | 3d | | todo |
-| R-6-63 | `switchring_closed_hit` (design, used: none / extra_life / shield) | 6 | 3d | | todo |
+| R-6-60 | `switchring_spawned` (design) | 6 | 3d | lib/run/hoops/kinds/switch/switch_kind.dart (onSpawn) | done |
+| R-6-61 | `switchring_switch_taken` (design) | 6 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 <design>: … switchring_switch_taken | done |
+| R-6-62 | `switchring_passed` (design) | 6 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 <design>: … switchring_passed | done |
+| R-6-63 | `switchring_closed_hit` (design, used: none / extra_life / shield) | 6 | 3d | test/run/hoops/s3_20_switch_test.dart::§3.20 reaching the ring … (used: none); test/run/hoops/s3_20_switch_test.dart::§3.20 with a shield … (used: shield) | done |
 | R-6-64 | `run_end` (cause: missed_hoop / spikes / saw / closed_switch / pair_missed, hoop_index, hoop_kind, run_s, hoops, coins, saves) | 6 | 0b | test/run/flow/s3_0_run_core_flow_test.dart::§3.0.1 START builds a RunController…; test/run/s7_run_parts_test.dart::§6* | done |
 | R-6-65 | `run_director_hoops` (one int per hoop kind and modifier + rim_touches + perfect_pct; ≤ 25 params) with `run_end` | 6 | 0b | test/run/flow/s3_0_run_core_flow_test.dart::§3.0.1 START builds a RunController…; test/run/s7_run_parts_test.dart::§6* | done |
 | R-6-66 | `run_director_items` (one int per gap item type; ≤ 25 params) with `run_end` | 6 | 0b | test/run/flow/s3_0_run_core_flow_test.dart::§3.0.1 START builds a RunController…; test/run/s7_run_parts_test.dart::§6* | done |
@@ -866,13 +866,13 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-7-10 | Versus backend in repo: `functions/` (TS, 2nd gen), `firestore.rules`, `firestore.indexes.json`, TTL policy; Emulator Suite tests; `VersusService` no-op by default | 7 | 5a / 5b | functions/, firestore.rules, firestore.indexes.json, functions/scripts/set_ttl.sh; `npm --prefix functions test` | 5a done (VersusService: 5b) |
 | R-7-11 | Feathers: persistent count, at most one pickup, bonus screen between revive and results, wallet per pop, ad placement `bonus_feathers`; timings from `bonus.js` / `collect.js` | 7 | 4a | | todo |
 | R-7-12 | Puzzle: mask + round, one missing piece per run, 4/4 credit + reset + round + 1 atomically, colour themes as data (`PZT`) | 7 | 4a | | todo |
-| R-7-13 | Switch ring: one kind, pluggable design, shared rules; spawner places ring + switch; seeded design pick | 7 | 3d | | todo |
-| R-7-T1 | Plane-crossing tests: inside scores; outside ends; rim bounces + scores +1 without perfect; pressed against the inside passes (upright and every tilt step); tilted ring never missed early; saw rim kills; exactly-once game over | 3.1, 7 | 1a (saw: 3d) | test/run/physics/s3_0_4_pass_test.dart; test/run/physics/s3_0_4_rim_test.dart; test/collision_test.dart; test/run/flow/s3_1_hoop_flow_test.dart | done (saw rim: 3d) |
+| R-7-13 | Switch ring: one kind, pluggable design, shared rules; spawner places ring + switch; seeded design pick | 7 | 3d | test/run/hoops/s3_20_switch_test.dart; lib/run/hoops/kinds/switch/switch_kind.dart | done |
+| R-7-T1 | Plane-crossing tests: inside scores; outside ends; rim bounces + scores +1 without perfect; pressed against the inside passes (upright and every tilt step); tilted ring never missed early; saw rim kills; exactly-once game over | 3.1, 7 | 1a (saw: 3d) | test/run/physics/s3_0_4_pass_test.dart; test/run/physics/s3_0_4_rim_test.dart; test/collision_test.dart; test/run/flow/s3_1_hoop_flow_test.dart; test/run/hoops/s3_18_saw_test.dart::§3.18 / §3.0.5 touching the <design> rim kills (saw rim) | done |
 | R-7-T2 | Run-director tests (3.0.3), incl. same seed → same sequence | 3.1, 7 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-7-T3 | Death-physics tests (3.0.5) | 3.1, 7 | 1a | test/run/physics/s3_0_5_tumble_test.dart; test/run/flow/s3_1_hoop_flow_test.dart | done |
 | R-7-T4 | `flutter test` green incl. autopilot at 568 and 711, with and without Big Hoops, director on (all elements), each special forced on every allowed slot | 7 | 1a / 1b / 2a / P3 | test/autopilot_test.dart::AUTOPILOT (568 / 711) seed 7, 21, 1234: §7 the hoop-aware bot passes >= 12 hoops | part (plain gate 1a; Big Hoops 2a: test/autopilot_test.dart::AUTOPILOT (568 / 711) seed 7, 21, 1234 Big Hoops; elements: P3) |
 | R-7-T5 | `startHoopIndex` override; gate ≥ 12 hoops after each type unlocks at both heights; plain run ≥ 12 | 7 | 0b / P3 | test/run/director/s3_0_3_director_test.dart | done (0b part); P3 pending |
-| R-7-T6 | Autopilot targets the switch before a closed switch ring and the nearer ring of a pair | 7 | 0b / 3d | lib/run/debug/autopilot.dart (nearest ring); switch pre-target via HoopKind.autopilotTarget (3d) | done (0b part); 3d pending |
+| R-7-T6 | Autopilot targets the switch before a closed switch ring and the nearer ring of a pair | 7 | 0b / 3d | lib/run/debug/autopilot.dart (nearest ring); switch pre-target via HoopKind.autopilotTarget (3d); test/run/hoops/s3_20_switch_test.dart::§3.20 <design>: … the autopilot takes the switch first; test/run/flow/s3_18_s3_20_s3_21_autopilot_test.dart | done |
 | R-7-T7 | Revive tests: ladder (ad → 250 → 500 → 1 000 → doubling, reset per game, no-ad start 250); phoenix (safe line, drift to 70, scroll at 1.65 s, 2 s invuln, Black Hole re-form); ≥ 6 rule (≤ 5 → no offer, no ladder step); collectables lost and timed powerups ended at death; squeeze reset | 7 | 2d (+ 3d / 3e / 3f / 3g cases) | | todo |
 | R-7-T8 | Results tests: level-up one / several, CLAIM, auto-claim on NEXT, `unclaimedLevelReward` at next start; YOUR REWARD incl. puzzle + win/draw, excl. balloon | 7 | 2e (+ 4a / 5b cases) | test/run/screens/s3_14_s5_10_results_test.dart (4a / 5b cases: their WPs) | done |
 | R-7-T9 | Versus tests: timeline replay on runClock (pause, revive offer, phoenix, Hourglass); opponent out at timeline end; WIN / LOSE / DRAW + bonus; solo start without prefetch | 7 | 5b (+ 3f case) | | todo |

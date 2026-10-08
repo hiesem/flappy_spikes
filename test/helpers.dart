@@ -487,3 +487,56 @@ Future<void> finishVersusIntro(FlappySpikesGame g, {double dt = 1 / 30}) async {
   await flushAndMount(g);
 }
 // endregion WP-5b
+// region WP-4a — golden feathers / puzzle pieces (PRD-2 §3.15, §3.16)
+/// Flies with the autopilot (re-forcing [e] on every gap while
+/// [reforce]) until a pickup of element [e] is ahead within [lead] pt,
+/// then holds the bird on the pickup's line until it is collected.
+/// Returns the collected pickup, or null.
+Future<Pickup?> collectPickup(
+  FlappySpikesGame g,
+  ElementId e, {
+  double lead = 60,
+  double maxSeconds = 60,
+  bool reforce = true,
+}) async {
+  Pickup? target;
+  final near = await flyUntil(g, (r) {
+    if (reforce && !r.director.forcedQueue.contains(e)) r.debugForce(e);
+    final b = r.birdTrackPosition();
+    if (b == null) return false;
+    for (final p in r.spawner.pickups) {
+      if (p.id != e || p.collected || p.escaped) continue;
+      final dx = p.position.x - b.x;
+      if (dx > 0 && dx <= lead) {
+        target = p;
+        return true;
+      }
+    }
+    return false;
+  }, maxSeconds: maxSeconds);
+  final p = target;
+  if (!near || p == null) return null;
+  final got = await flyUntil(
+    g,
+    (r) {
+      if (!p.collected && !p.escaped) {
+        g.runBird?.setFlight(y: p.position.y - r.state.camY, vy: 0);
+      }
+      return p.collected || p.escaped;
+    },
+    maxSeconds: 3,
+    autopilot: false,
+  );
+  return got && p.collected ? p : null;
+}
+
+/// Steps the game [seconds] in 1/60 s frames (mounting what spawns).
+Future<void> stepSeconds(FlappySpikesGame g, double seconds) async {
+  final n = (seconds * 60).round();
+  for (var i = 0; i < n; i++) {
+    g.update(1 / 60);
+    if (i % 10 == 9) await flushAndMount(g);
+  }
+  await flushAndMount(g);
+}
+// endregion WP-4a

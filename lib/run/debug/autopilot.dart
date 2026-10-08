@@ -105,6 +105,14 @@ class Autopilot {
     if (h != null) {
       final t = h.kind.autopilotTarget(h, s, bird?.y ?? ty);
       ty = t.preTarget != null ? t.preTarget!.y + 6 : t.y;
+      // region WP-4a — a small bird (Mini Bird, §3.31) has a shorter pickup
+      // reach (18 + r × 0.52): centre the ≈ 55 pt bang-bang flap arc on the
+      // switch instead of letting it peak ≈ 30 pt above it (found when the
+      // feather / piece rolls changed a seeded switch-ring course).
+      if (t.preTarget != null && s.birdScale < 1) {
+        ty += 12 * (1 - s.birdScale) / (1 - .52);
+      }
+      // endregion WP-4a
       // region WP-1b — moving rings: aim where the ring will be when the
       // bird reaches its plane (§3.11), not where it is now.
       final m = h.motion;

@@ -22,6 +22,8 @@ import 'items/mini_bird.dart'; // WP-3f
 import 'items/timed_powerup.dart'; // WP-3f
 import 'items/versus_recorder.dart'; // WP-5b
 import 'items/streak.dart';
+import 'items/feathers.dart'; // WP-4a
+import 'items/puzzle.dart'; // WP-4a
 import 'rides/portal_ride.dart';
 import 'run_feature.dart';
 import 'screens/revive_rules.dart';
@@ -90,6 +92,10 @@ List<RunFeature> buildRunFeatures() => [
   // region WP-5b — versus timeline + duel (PRD-2 §3.13)
   VersusRecorder(),
   // endregion WP-5b
+  // region WP-4a — golden feathers, puzzle pieces (PRD-2 §3.15, §3.16)
+  FeathersFeature(),
+  PuzzleFeature(),
+  // endregion WP-4a
   // region WP-2d — revive rules (PRD-2 §3.14); keep last
   ReviveRulesFeature(),
   // endregion WP-2d

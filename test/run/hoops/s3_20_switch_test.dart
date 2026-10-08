@@ -127,6 +127,9 @@ void main() {
         game,
         HoopKindId.switchRing,
         ElementId.switchRing,
+        // The design is a seeded roll: feathers / pieces (WP-4a) shift the
+        // course, so allow a longer flight to meet every design.
+        maxSeconds: 150,
         where: (h) {
           final st = SwitchRingKind.stateOf(h);
           final p = st?.pickup;

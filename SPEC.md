@@ -778,3 +778,20 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   floor). From 3 s before the warning until open, new hoops and pickups fit
   the coming squeeze's band. A revive resets a running squeeze to open over
   0.5 s; the interrupted squeeze counts toward the tightening.
+
+### WP-5b — versus client, VS intro, versus results (PRD-2 §3.13, §5.7, §5.8, §5.10)
+
+- DEVIATION (PRD-2 §3.13, new mechanic; 1.0 runs were always solo): every
+  run is a duel against a **real player's recorded run** when one is
+  prefetched (a Firebase pool read at app start / home, matched locally:
+  same level and below my best → any run → solo; never my own runs, no
+  repeat within a session). START takes the prefetched opponent at once and
+  plays the ≈ 7.3 s VS intro (not skippable, taps do nothing), then the run;
+  with no opponent START goes straight into a solo run. Their score replays
+  their timeline on my `runClock` (stops in pause, the revive offer and the
+  phoenix, slows with the Hourglass) and their box dims when their run ends.
+  At the end WIN (higher), LOSE (lower) or DRAW (equal) on the final scores;
+  a win pays +10 coins, a draw +5 (`win_bonus`), credited before the summary
+  so YOUR REWARD includes them. Runs (score ≥ 3; a new best always, others
+  ≤ 3 per UTC day) are uploaded through a persisted queue, one run per
+  write, retried when online. Every Firebase failure means a solo run.

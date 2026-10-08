@@ -12,6 +12,7 @@ import 'items/met_elements.dart';
 import 'items/rumble_router.dart';
 import 'items/scoring.dart';
 import 'items/squeeze.dart'; // WP-3g
+import 'items/versus_recorder.dart'; // WP-5b
 import 'items/streak.dart';
 import 'rides/portal_ride.dart';
 import 'run_feature.dart';
@@ -62,6 +63,9 @@ List<RunFeature> buildRunFeatures() => [
   // rules, so it sees a running squeeze before the revive resets it
   SqueezeFeature(),
   // endregion WP-3g
+  // region WP-5b — versus timeline + duel (PRD-2 §3.13)
+  VersusRecorder(),
+  // endregion WP-5b
   // region WP-2d — revive rules (PRD-2 §3.14); keep last
   ReviveRulesFeature(),
   // endregion WP-2d

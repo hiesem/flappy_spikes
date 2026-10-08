@@ -20,6 +20,8 @@ import '../effects/coin_icon.dart';
 import '../effects/easing.dart';
 import '../effects/fireworks.dart';
 import '../effects/gold_sticker.dart';
+import '../items/versus_recorder.dart' show duelOf; // WP-5b
+import '../../versus/opponent.dart'; // WP-5b
 import '../run_summary.dart';
 import 'post_run_screens.dart';
 
@@ -179,6 +181,21 @@ class ResultsScreen extends PositionComponent
   late final ResultsFx fx;
 
   late final ResultsPlayerColumn you;
+
+  // region WP-5b — versus parts
+  /// The opponent's column (null = solo).
+  ResultsPlayerColumn? them;
+
+  /// WIN / LOSE / DRAW header (null = solo).
+  ResultsHeader? header;
+
+  /// WIN / LOSE / DRAW of this run (null = solo).
+  DuelResult? get duel {
+    final opp = summary.opponent;
+    if (opp == null) return null;
+    return summary.duel ?? duelOf(summary.score, opp.score);
+  }
+  // endregion WP-5b
   late final MenuText rank;
   late final ResultsBar bar;
   late final MenuText barLabel;
@@ -279,12 +296,51 @@ class ResultsScreen extends PositionComponent
     // region WP-5b — versus parts of §5.10 (header WIN / LOSE / DRAW, the
     // opponent column with VS, WINNER tags, the +10 / +5 in the reward via
     // the run's coins). Solo (no opponent): you alone, centred.
-    you = ResultsPlayerColumn(
-      name: 'You',
-      score: model.score,
-      centreX: ResultsConfig.soloColumnX,
-      mine: true,
-    );
+    final opp = summary.opponent;
+    final duel = this.duel;
+    final versusParts = <PositionComponent>[];
+    if (opp == null || duel == null) {
+      you = ResultsPlayerColumn(
+        name: 'You',
+        score: model.score,
+        centreX: ResultsConfig.soloColumnX,
+        mine: true,
+      );
+    } else {
+      you = ResultsPlayerColumn(
+        name: 'You',
+        score: model.score,
+        centreX: ResultsConfig.youColumnX,
+        mine: true,
+        lower: duel == DuelResult.lose,
+        winner: duel == DuelResult.win,
+      );
+      final column = ResultsPlayerColumn(
+        name: opp.name,
+        score: opp.score,
+        centreX: ResultsConfig.opponentColumnX,
+        mine: false,
+        lower: duel == DuelResult.win,
+        winner: duel == DuelResult.lose,
+      );
+      them = column;
+      final head = ResultsHeader(duel);
+      header = head;
+      versusParts.addAll([
+        head,
+        column,
+        MenuText(
+          'VS',
+          fontSize: ResultsConfig.nameFontSize,
+          color: ResultsConfig.plum,
+          fontFamily: 'Fredoka',
+          fontWeight: FontWeight.w600,
+          lineHeight: 1,
+          position: Vector2(160, ResultsConfig.vsCentreY),
+          anchor: Anchor.center,
+        ),
+      ]);
+    }
     // endregion WP-5b
 
     // --- level stage -----------------------------------------------------
@@ -417,6 +473,9 @@ class ResultsScreen extends PositionComponent
       nextButton,
       levelUpBanner,
     ]);
+    // region WP-5b — header, opponent column, VS
+    content.addAll(versusParts);
+    // endregion WP-5b
     add(content);
     _built = true;
     _layoutReward();
@@ -646,6 +705,13 @@ class ResultsScreen extends PositionComponent
       final u = ((_t - ss) / ResultsConfig.countDuration).clamp(0.0, 1.0);
       final e = 1 - math.pow(1 - u, 3).toDouble();
       you.shownScore = (model.score * e).round();
+      // region WP-5b — both scores count up (§5.10)
+      final opp = summary.opponent;
+      final col = them;
+      if (opp != null && col != null && col.isLoaded) {
+        col.shownScore = (opp.score * e).round();
+      }
+      // endregion WP-5b
     }
     // Bar fill (ease-in-out).
     final bs = _barStart;
@@ -834,15 +900,13 @@ class ResultsPlayerColumn extends PositionComponent
     );
     add(scoreText);
     if (winner) {
+      // region WP-5b — §5.10 WINNER: gold tag, plum 11 pt, 0.1 em, 2 × 8
       add(
-        MenuTag(
-          'WINNER',
-          fontSize: ResultsConfig.winnerTagFontSize,
-          letterSpacingEm: .1,
-          position: Vector2(centreX, ResultsConfig.avatarTop - 12),
-          anchor: Anchor.topCenter,
+        ResultsWinnerTag(
+          position: Vector2(centreX, ResultsConfig.winnerTagTop),
         ),
       );
+      // endregion WP-5b
     }
   }
 
@@ -1291,3 +1355,80 @@ class ResultsFx extends PositionComponent {
     canvas.drawRect(const Rect.fromLTWH(-400, -200, 1120, 1400), _flash);
   }
 }
+
+// region WP-5b — versus parts of §5.10
+
+/// §5.10 the header (x 14 → 306, y 70, 48 tall, 28 pt, 0.12 em): pink
+/// "YOU WIN!" (soft-pink text) or, on the stage foreground, "YOU LOSE" /
+/// "DRAW" in the stage background colour.
+class ResultsHeader extends PositionComponent
+    with HasGameReference<FlappySpikesGame> {
+  ResultsHeader(this.result)
+    : super(
+        position: ResultsConfig.header.topLeft.toVector2(),
+        size: ResultsConfig.header.size.toVector2(),
+      );
+
+  final DuelResult result;
+  late final MenuText label;
+  final Paint _paint = Paint();
+
+  String get text => switch (result) {
+    DuelResult.win => 'YOU WIN!',
+    DuelResult.lose => 'YOU LOSE',
+    DuelResult.draw => 'DRAW',
+  };
+
+  bool get pink => result == DuelResult.win;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    label = MenuText(
+      text,
+      fontSize: ResultsConfig.headerFontSize,
+      color: pink ? ResultsConfig.soft : game.stageBackground,
+      letterSpacingEm: ResultsConfig.headerLetterSpacing,
+      lineHeight: 1,
+      position: size / 2,
+      anchor: Anchor.center,
+    );
+    add(label);
+  }
+
+  @override
+  void render(Canvas canvas) {
+    _paint.color = pink ? ResultsConfig.pink : game.foregroundColor;
+    canvas.drawRect(size.toRect(), _paint);
+  }
+}
+
+/// §5.10 the gold WINNER tag above the winner's avatar (plum 11 pt, 0.1 em,
+/// padding 2 × 8), centred on [position].
+class ResultsWinnerTag extends PositionComponent {
+  ResultsWinnerTag({super.position}) : super(anchor: Anchor.topCenter);
+
+  final Paint _paint = Paint()..color = ResultsConfig.gold;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    final label = MenuText(
+      'WINNER',
+      fontSize: ResultsConfig.winnerTagFontSize,
+      color: ResultsConfig.plum,
+      letterSpacingEm: .1,
+      lineHeight: 1.2,
+      position: Vector2(ResultsConfig.winnerTagPadX, ResultsConfig.winnerTagPadY),
+    );
+    add(label);
+    size = Vector2(
+      label.width + 2 * ResultsConfig.winnerTagPadX,
+      label.height + 2 * ResultsConfig.winnerTagPadY,
+    );
+  }
+
+  @override
+  void render(Canvas canvas) => canvas.drawRect(size.toRect(), _paint);
+}
+// endregion WP-5b

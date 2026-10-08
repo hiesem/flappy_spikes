@@ -15,6 +15,7 @@ import 'services/game_services.dart';
 import 'services/e2e.dart';
 import 'services/monetization.dart';
 import 'services/reminders.dart';
+import 'services/versus_service.dart';
 
 /// Key on the [RepaintBoundary] wrapping the game, used to capture a
 /// screenshot of the game area for sharing.
@@ -55,10 +56,20 @@ Future<void> main() async {
     ..showFakeAdOverlay = kE2E || !_isMobile;
   // endregion WP-0b
 
-  final game = FlappySpikesGame(
+  // region WP-5b — versus (PRD-2 §3.13): the Firebase service on Android
+  // only (iOS later, Linux desktop never); everything else keeps the no-op.
+  // It reads the game's storage lazily (the game is built right below).
+  late final FlappySpikesGame game;
+  final VersusService versus = _isAndroid
+      ? FirebaseVersusService(storageOf: () => game.storage)
+      : NoopVersusService();
+  // endregion WP-5b
+
+  game = FlappySpikesGame(
     worldHeight: worldHeight,
     services: services,
     monetization: monetization,
+    versus: versus,
   );
   game.onShareScore = _shareScore;
   game.onInvite = _invite;
@@ -83,7 +94,15 @@ Future<void> main() async {
   // can stall cold start on a slow/offline device. initialize() swallows its
   // own errors; the service is a safe no-op until it lands.
   if (!isLinux) {
-    unawaited(services.initialize());
+    // region WP-5b — versus after Firebase.initializeApp (services) and the
+    // game's storage load; initialize() never throws (failure = solo).
+    unawaited(
+      services.initialize().then((_) async {
+        await game.loaded;
+        await versus.initialize();
+      }),
+    );
+    // endregion WP-5b
   }
   // Same fire-and-forget rule: the UMP consent form may be shown here, and
   // initialize() never throws; until it lands ads are simply unavailable.
@@ -93,6 +112,9 @@ Future<void> main() async {
 /// Android / iOS host (where [Monetization.forPlatform] picks the real
 /// plugins).
 bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+
+/// The versus backend runs on Android only for now (WP-5b; iOS paused).
+bool get _isAndroid => !kIsWeb && Platform.isAndroid;
 
 /// Fallback aspect (9:19.5 -> ~693 pt) when no usable window size exists
 /// yet: the Linux runner opens a fixed 9:19.5 window.

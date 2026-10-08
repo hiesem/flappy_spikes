@@ -1,6 +1,7 @@
 import 'config/run_config.dart';
 import 'director/plans.dart';
 import 'elements.dart';
+import '../versus/opponent.dart' show DuelResult;
 import '../versus/timeline.dart';
 
 /// All mutable data of one run (ARCH §2.1). Pure data: the controller and
@@ -118,6 +119,15 @@ class RunState {
   /// boost eases it to 1.7 and back, `BirdMotion.step`).
   double cruiseMult = 1;
   // endregion WP-3a
+
+  // region WP-5b — versus (PRD-2 §3.13)
+  /// WIN / LOSE / DRAW, settled when the run ends with an opponent (null =
+  /// solo, or not over yet).
+  DuelResult? duel;
+
+  /// The win / draw bonus credited at the end (part of [coinsThisRun]).
+  int duelBonus = 0;
+  // endregion WP-5b
 
   // bookkeeping for analytics and tests
   /// run_director_hoops / _items (spawned).

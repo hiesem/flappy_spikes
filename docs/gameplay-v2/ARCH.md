@@ -509,6 +509,10 @@ spike save bounce); otherwise `RunDied` → tumble → `PostRunFlow`.
   `LoopHandle loop(SfxLoop l, {double volume})` (looping `AudioPlayer` in low-latency mode, BGM-style, owned by the
   service; `comet_loop` at 0.3, `sq_hold`, saw hums, fever crackle), `setMusicRate(double)` (Hourglass 0.72),
   `duckMusic(double)` (GET COINS 0.5). Still never `FlameAudio.play`. Tests: `onPlay` / a new `onLoop` recorder.
+  **WP-3h** generates the rest of the §7 deliverable list (`design/menu_v2/gen_sfx15.py`) and registers it: 88 one-shot
+  `Sfx` + 4 `SfxLoop` (`sawWireHum`, `sawFrostHum`, `sawHoleHum`, `feverLoop`) in the `// region WP-3h` blocks of
+  `lib/game/sound.dart`; each has its file, use, length and generator in `docs/gameplay-v2/SOUNDS.md`. The 58 files 0b
+  shipped are unchanged; 3c/3d/3e/3f/3g/5b reference these names (never invent a new one — §3.0.9).
 - **Rumble.** `Rumble` exists (throttle, setting). Only `rumble_router.dart` (2c) calls `knock()/shake()` for run
   events; no rumble outside `playing` (paused/revive/bonus/results never rumble).
 - **Analytics.** `ctx.track(name, params)` → `GameServices.track`. Element events are sent by the owning feature at the
@@ -946,7 +950,7 @@ regions.
 | **3e** Star Trail / Egg / Piggy / Firefly | `pickups/{star_trail,egg_pickup,piggy_pickup,piggy_coin,jar_pickup,firefly_swarm}.dart`, `items/{egg,piggy,jar,star_trail_feature}.dart`, `hud/run_badges.dart`, configs | registries | P2 |
 | **3f** Hourglass / Mini Bird / Coin Frenzy | `pickups/capsule.dart`, `items/{timed_powerup,hourglass,mini_bird,coin_frenzy}.dart`, `hud/timer_pill.dart`, configs | registries, sound (music rate already in 0b) | P2 |
 | **3g** spike squeeze | `items/squeeze.dart`, `config/squeeze_config.dart`, squeeze parts of `spike_strip.dart` / `spike_walls.dart` / `score_hud.dart` | features | P2 |
-| **3h** sound pack | `design/menu_v2/gen_sfx15+.py` outputs → `assets/audio/*`, all new `Sfx`/`SfxLoop` entries | sound.dart | — (recommended: run in P2) |
+| **3h** sound pack | done: `design/menu_v2/gen_sfx15.py` outputs (88 one-shot mp3 + 4 loop wav) → `assets/audio/*`, all new `Sfx`/`SfxLoop` entries + `docs/gameplay-v2/SOUNDS.md` | sound.dart | — (done) |
 | **4a** feathers + balloon bonus + puzzle | `pickups/{feather_pickup,puzzle_piece_pickup}.dart`, `items/{feathers,puzzle}.dart`, `screens/bonus_screen.dart`, configs | registries, post_run_screens | P3 |
 | **4b** reminders | `lib/services/reminders.dart`, android res/raw + keep.xml + icon, permission prompt | main.dart, flappy_game.dart lifecycle, pubspec, manifest, gradle | 0b (independent of gameplay) |
 | **4c** persistence table + Delete my data | settings row + confirm dialog, `VersusService.deleteMyData` call site, data-safety notes in `SUBMISSION.md` | settings_panel.dart, storage.dart (reset helper) | 0b; real delete needs 5b |
@@ -1021,7 +1025,7 @@ Changes to the contracts above, made while building WP-0b. Later WPs build again
 | `RunController` | `RunController({setup, game})`; `legacyPoint(score)` and `endRun()`; death → `game.endRun(summary)` → persistence → `PostRunFlow` (`PostRunScreens.revive/bonus/results` statics; results default = `LegacyGameOverResults`); `game.onBirdHit([MistakeCause])` routes into `run.mistake` | |
 | `RunClock` | `tick(gameDt)`: `RunScaledWorld` (lib/run/run_scaled_world.dart) already scales the world by `RunState.timeScale` | |
 | `RunContext.addScore` | does not write the timeline; WP-5b's recorder does from `ScoreChanged` | single writer |
-| Sound | `SfxLoop { cometLoop, sqHold }` ship as `.wav` (seamless, iOS-playable); `SoundService.loop/stopAllLoops/setMusicRate/duckMusic`, `onLoop` seam | |
+| Sound | `SfxLoop { cometLoop, sqHold, sawWireHum, sawFrostHum, sawHoleHum, feverLoop }` ship as `.wav` (seamless, iOS-playable); `SoundService.loop/stopAllLoops/setMusicRate/duckMusic`, `onLoop` seam | |
 | Analytics | `CoinSource.aggregatedInRun`; the game's wallet hook skips those sources, the router sends them per (source, egg_x2) at `RunEnded` | |
 | Test harness | `createRunTestGame({prefs, worldHeight, services, monetization, seed, versus})` (Dart cannot mix positional and named optionals); `createTestGame` sets `runSeed = 7`; the spy is `AnalyticsSpy` (`SpyGameServices` exists in leaderboard_test) | |
 | Debug | `RunDebugState` on the game (`runDebug`): start hoop, force queue, forced ride, bot, god, overlay; the debug panel's `RUN DEBUG >` page (paged) | |

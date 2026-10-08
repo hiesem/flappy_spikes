@@ -1,4 +1,5 @@
 import 'package:flappy_spikes/game/config.dart';
+import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -18,26 +19,27 @@ void main() {
       expect(Config.flapVelocity, lessThan(410));
     });
 
-    test('terminal velocity caps the fall speed (Flappy Bird feel)', () {
-      expect(Config.maxFallSpeed, 500);
+    test('§3.0.1 terminal velocity caps the fall speed at 650 pt/s', () {
+      expect(Config.maxFallSpeed, 650);
+      expect(Config.maxFallSpeed, RunConfig.maxFallSpeed);
       expect(Config.maxFallSpeed, greaterThan(Config.flapVelocity));
     });
 
-    test('world scrolls at a constant 200 pt/s', () {
-      expect(Config.scrollSpeed, 200);
+    test('§3.0.1 the world scrolls at the cruise: 150 pt/s + 3.5 %/min', () {
+      expect(RunConfig.cruise(0), 150);
+      expect(RunConfig.cruise(120), closeTo(160.5, 1e-9));
     });
 
     test('collision categories mirror the original bitmasks', () {
       expect(Config.categoryBird, 0x1);
       expect(Config.categoryWorld, 0x2);
-      expect(Config.categoryPipe, 0x4);
-      expect(Config.categoryScore, 0x8);
     });
   });
 
   group('bird geometry', () {
-    test('bird sits at x = width / 4, vertically centered', () {
-      expect(Config.birdX, Config.worldWidth / 4);
+    test('§3.0.1 bird sits at x = 70, vertically centered', () {
+      expect(Config.birdX, 70);
+      expect(Config.birdX, RunConfig.birdX);
       expect(Config.birdY, Config.worldHeight / 2);
     });
 
@@ -49,92 +51,32 @@ void main() {
     });
   });
 
-  group('pipe math (SPEC.md "Pipes")', () {
-    test('gap ramps from 145 pt at score 0 down to the final 105 pt', () {
-      expect(Config.pipeGapStart, 145);
-      expect(Config.pipeGap, 105);
-      expect(Config.difficultyRampScore, 25);
-
-      expect(Config.gapForScore(0), Config.pipeGapStart);
-      expect(
-        Config.gapForScore(Config.difficultyRampScore),
-        closeTo(Config.pipeGap, 1e-9),
-      );
-      expect(
-        Config.gapForScore(999),
-        Config.pipeGap,
-        reason: 'gap must clamp at the final 105 pt past the ramp',
-      );
-
-      // Strictly shrinking across the whole ramp.
-      var previous = Config.gapForScore(0);
-      for (var score = 1; score <= Config.difficultyRampScore; score++) {
-        final gap = Config.gapForScore(score);
-        expect(gap, lessThan(previous), reason: 'gap must shrink at $score');
-        previous = gap;
-      }
+  group('PRD-2 hoop course (WP-1a: replaces the pipe math)', () {
+    test('§3.0.1 opening 118 at hoop 0, −0.32 % per hoop, floor 92 pt', () {
+      expect(RunConfig.openingFor(0), 118);
+      expect(RunConfig.openingFor(10), closeTo(118 * (1 - .032), 1e-9));
+      expect(RunConfig.openingFor(69), closeTo(92.04, .05));
+      expect(RunConfig.openingFor(200), closeTo(118 * .78, 1e-9));
+      expect(RunConfig.openingFor(200, ride: true), 118);
     });
 
-    test('gap-bottom y range is [72 + 130, 568 - 72 - gap - 20]', () {
-      expect(Config.gapBottomMin, 202);
-      expect(Config.gapBottomMax, 371);
-      expect(
-        Config.gapBottomMin,
-        Config.spikeHeight + 130,
-        reason: 'spike strip + min flyable window',
-      );
-      expect(
-        Config.gapBottomMax,
-        Config.worldHeight -
-            Config.spikeHeight -
-            Config.pipeGap -
-            Config.minPipeStub,
-      );
-      expect(
-        Config.gapBottomMaxFor(Config.pipeGap),
-        Config.gapBottomMax,
-        reason: 'at the final gap the per-gap bound equals the constant',
-      );
-      expect(
-        Config.gapBottomMaxFor(Config.pipeGapStart),
-        331,
-        reason: 'the bigger start gap narrows the spawn band',
-      );
-      expect(
-        Config.gapBottomMaxFor(Config.pipeGap, 711),
-        711 - Config.spikeHeight - Config.pipeGap - Config.minPipeStub,
-        reason: 'the band scales with the playfield height',
-      );
-      expect(
-        Config.maxGapJump,
-        140,
-        reason: 'consecutive gaps are clamped to a flyable jump',
-      );
+    test('§3.0.1 spacing 310 pt, first hoop 60 pt past the right edge', () {
+      expect(RunConfig.spacing, 310);
+      expect(RunConfig.firstHoopOffscreen, 60);
+      // 320 + 60 − 70 = one spacing to the bird.
+      expect(Config.worldWidth + RunConfig.firstHoopOffscreen - Config.birdX,
+          RunConfig.spacing);
     });
 
-    test('pair enters at x = 320 + pipeWidth / 2', () {
-      expect(Config.pipeSpawnX, 364);
-      expect(Config.pipeSpawnX, Config.worldWidth + Config.pipeWidth / 2);
-    });
-
-    test('score sensor sits 111 pt right of the pipe center', () {
-      expect(Config.sensorOffsetX, 111);
-    });
-
-    test('spawn interval 1.5 s at 200 pt/s gives 300 pt spacing', () {
-      expect(Config.pipeSpawnInterval, 1.5);
-      expect(Config.pipeSpawnInterval * Config.scrollSpeed, 300);
-    });
-
-    test('pipe sprites are 88x513.5 pt', () {
-      expect(Config.pipeWidth, 88);
-      expect(Config.pipeHeight, 513.5);
+    test('§3.0.2 band rule: the same margin (7 + 18) on both sides', () {
+      expect(RunConfig.rimRadius + RunConfig.bandMargin, 25);
     });
   });
 
   group('spike strips', () {
-    test('strips are 72 pt tall and tiled with the 384 pt texture', () {
-      expect(Config.spikeHeight, 72);
+    test('§3.0.9 #1 strips are 44 pt tall (band 26 + teeth 18)', () {
+      expect(Config.spikeHeight, 44);
+      expect(Config.spikeHeight, RunConfig.stripHeight);
       expect(Config.spikeTileWidth, 384);
     });
   });

@@ -604,7 +604,8 @@ void main() {
       game.onScreenTap();
       expect(bird.lookComponent.pose, LookPose.flap);
       await _shot(game, tester, 'rubber_duck_flap');
-      for (var i = 0; i < 180 && game.state == GameState.playing; i++) {
+      // Falls onto the floor spikes, tumbles (PRD-2 §3.0.5), results.
+      for (var i = 0; i < 400 && game.state != GameState.gameOver; i++) {
         game.update(1 / 60);
       }
       await flushAndMount(game);

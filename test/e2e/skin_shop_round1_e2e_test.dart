@@ -6,7 +6,6 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/home/menu_primitives.dart';
 import 'package:flappy_spikes/components/look_component.dart';
-import 'package:flappy_spikes/components/pipe_pair.dart';
 import 'package:flappy_spikes/components/skins/celebration.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/storage.dart';
@@ -296,8 +295,9 @@ void main() {
       expect(bird.body.fixtures.single.shape.radius, 14.75);
       expect(bird.lookComponent.artScale * 30, closeTo(29.5, 1e-6));
       // Complete the first colour transition, preserving the equipped identity.
-      for (var i = 0; i < 5; i++) {
-        game.onScoreSensor(PipePair(gapBottomY: 351));
+      // PRD-2 §3.0.1: the first colour change comes at hoop 10.
+      for (var i = 0; i < 10; i++) {
+        game.run!.debugPass();
       }
       stepGame(game, .55, flapBelow: game.viewHeight / 2);
       expect(bird.lookComponent.blend, closeTo(.35, 1e-6));

@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
 import 'package:flame_test/flame_test.dart';
-import 'package:flappy_spikes/components/pipe_pair.dart';
+import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/components/spike_strip.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
@@ -18,35 +18,39 @@ void main() {
   );
 
   withGame.testGameWidget(
-    'world scrolls leftward at a constant 200 pt/s',
+    'PRD-2 §3.0.1 the world scrolls leftward at the cruise speed (150 pt/s '
+    '+ 3.5 %/min), hoops and spike teeth alike',
     setUp: (game, tester) async {
       await game.ready();
       game.sound.enabled = false;
       await preloadImages(game);
       game.onScreenTap(); // start -> playing
       game.update(1 / 60);
-      await game.ready(); // mount the first auto-spawned pipe pair
+      await game.ready(); // mount the first hoop
     },
     verify: (game, tester) async {
       const dt = 1 / 60;
-
-      // Let the first pipe pair spawn and the scrolling settle in.
       stepGame(game, 0.3, dt: dt, flapBelow: 320);
-      final pipe = game.world.children.query<PipePair>().first;
-      final x0 = pipe.body.position.x;
+      final hoop = hoopsOf(game).first;
+      final run = game.run!;
+      final strip = game.world.children.query<SpikeStrip>().first;
+      final x0 = hoop.planeX - run.state.camX;
+      final teeth0 = strip.toothOffset;
 
       // Measure over the next 0.7 s (bird kept airborne by flapping; the
-      // pipe is still well right of the bird at the end of the window).
+      // hoop is still well right of the bird at the end of the window).
       stepGame(game, 0.7, dt: dt, flapBelow: 320);
-      final x1 = pipe.body.position.x;
+      final x1 = hoop.planeX - run.state.camX;
 
       final speed = (x0 - x1) / 0.7;
       expect(
         speed,
-        closeTo(Config.scrollSpeed, 0.5),
+        closeTo(RunConfig.cruise(run.state.runClock), 0.5),
         reason: 'measured scroll speed $speed pt/s',
       );
       expect(x1, lessThan(x0), reason: 'world must scroll leftward');
+      expect((teeth0 - strip.toothOffset) / 0.7, closeTo(speed, 0.5),
+          reason: 'the spike teeth scroll with the world');
     },
   );
 

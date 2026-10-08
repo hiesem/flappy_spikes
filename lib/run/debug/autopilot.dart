@@ -5,8 +5,7 @@ import '../run_controller.dart';
 /// unresolved hoop through `HoopKind.autopilotTarget` (switch first, nearer
 /// pair ring, spring launch line, saw centre) and flaps whenever the bird
 /// is more than [margin] below the target and not already rising fast
-/// (prototype `botStep`). Until WP-1a the course is the 1.0 pipes: it aims
-/// at the next pipe gap. Used by the debug bot, `test/helpers.dart` and
+/// (prototype `botStep`). Used by the debug bot, `test/helpers.dart` and
 /// `integration_test/`.
 class Autopilot {
   Autopilot(this.run, {this.margin = 10});
@@ -21,9 +20,6 @@ class Autopilot {
   double targetY() {
     final s = run.state;
     var ty = s.viewHeight / 2;
-    if (run.legacyPipes) {
-      return run.game.legacyPipeTargetY() ?? ty;
-    }
     final bird = run.game.runBirdPosition;
     final h = run.spawner.nextHoopAhead();
     if (h != null) {

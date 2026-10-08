@@ -113,7 +113,7 @@ void main() async {
     await game.startRun();
     expect(game.state, GameState.playing);
     game.score = score;
-    game.onBirdHit();
+    killRun(game);
     await _flush(game);
     game.goHome();
     stepGame(game, 1);
@@ -304,7 +304,7 @@ void main() async {
     expect(game.noAdsPopup, isNull);
     expect(game.queuedPopups, 0);
     game.score = 10;
-    game.onBirdHit();
+    killRun(game);
     await _flush(game);
     game.goHome();
     stepGame(game, 1);

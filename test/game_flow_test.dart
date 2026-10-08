@@ -2,7 +2,6 @@ import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/gameover_panel.dart';
-import 'package:flappy_spikes/components/pipe_pair.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/components/ui/sprite_button.dart';
 import 'package:flappy_spikes/game/config.dart';
@@ -48,8 +47,10 @@ void main() {
       await flushAndMount(game);
       expect(game.world.children.query<HomeScreen>(), isEmpty);
 
-      // playing -> gameOver.
+      // playing -> dying (§3.0.5 tumble) -> gameOver.
       game.onBirdHit();
+      expect(game.state, GameState.dying);
+      killRun(game);
       expect(game.state, GameState.gameOver);
       await flushAndMount(game);
       expect(game.world.children.query<GameOverPanel>(), hasLength(1));
@@ -112,18 +113,18 @@ void main() {
       stepGame(game, 1.0, flapBelow: 320);
       await flushAndMount(game);
       expect(game.state, GameState.playing);
-      expect(game.world.children.query<PipePair>(), isNotEmpty);
+      expect(hoopsOf(game), isNotEmpty);
 
-      // --- force a collision: teleport the bird into a pipe ----------------
-      final pipe = game.world.children.query<PipePair>().first;
+      // --- force a collision: teleport the bird onto the floor spikes -------
       final bird = game.world.children.query<Bird>().single;
       bird.body.setTransform(
-        Vector2(pipe.body.position.x, pipe.gapBottomY + 50),
+        Vector2(Config.birdX, game.viewHeight - Config.spikeHeight),
         0,
       );
-      // The broadphase pair is created on the first step after the
-      // teleport and the contact fires on the next one.
-      stepGame(game, 0.2);
+      stepGame(game, 1 / 60);
+      expect(game.state, GameState.dying, reason: '§3.0.5 the tumble first');
+      // The results come after the tumble (≤ 1.5 s).
+      stepGame(game, 1.6);
       expect(game.state, GameState.gameOver);
 
       // --- game-over panel appears and builds fully ------------------------
@@ -151,7 +152,7 @@ void main() {
       expect(game.state, GameState.start);
       expect(game.score, 0);
       expect(game.world.children.query<GameOverPanel>(), isEmpty);
-      expect(game.world.children.query<PipePair>(), isEmpty);
+      expect(hoopsOf(game), isEmpty);
 
       final newHome = game.world.children.query<HomeScreen>().single;
       final newBird = game.world.children.query<Bird>().single;

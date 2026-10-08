@@ -1,14 +1,30 @@
-import 'package:flame/components.dart';
+import 'dart:ui';
 
-import '../game/config.dart';
+import 'package:flame/components.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
+import '../components/bird.dart';
 import '../game/flappy_game.dart';
+import '../game/sound.dart';
 import '../menu/powerup_slot.dart';
+import 'config/physics_config.dart';
 import 'config/run_config.dart';
 import 'director/run_director.dart';
+import 'effects/dust_puff.dart';
+import 'effects/miss_flash.dart';
+import 'effects/particle_pool.dart';
 import 'elements.dart';
 import 'features.dart';
+import 'hoops/hoop.dart';
+import 'hoops/hoop_kind.dart';
 import 'hoops/kinds/registry.dart';
 import 'mistakes.dart';
+import 'physics/bird_motion.dart';
+import 'physics/death_tumble.dart';
+import 'physics/hoop_frame.dart';
+import 'physics/pass_test.dart';
+import 'physics/rim_collision.dart';
+import 'physics/spike_walls.dart';
 import 'pickups/registry.dart';
 import 'rides/ride.dart';
 import 'run_clock.dart';
@@ -23,12 +39,14 @@ import 'run_state.dart';
 import 'run_summary.dart';
 
 /// Owns one run (ARCH §1.1): state, clock, director, spawner, features,
-/// layers, the mistake pipeline and the end of the run.
+/// layers, the physics step, the mistake pipeline and the end of the run.
 ///
-/// WP-0b plumbing: until WP-1a registers the normal hoop the 1.0 pipes keep
-/// running in `FlappySpikesGame` ("legacy pipes"); the controller then
-/// tracks the run (clock, score mirror, analytics, summary) and drives the
-/// post-run flow, so the pipe game plays exactly as before.
+/// Physics (WP-1a, PRD-2 §3.0.1 / §3.0.4 / §3.0.5 / §7): Forge2D only moves
+/// the bird vertically; the world scrolls at the bird's forward speed
+/// ([BirdMotion]); rim ends, the pass plane, the miss rule and the spike
+/// tooth lines are plain math against the bird circle; a death turns the
+/// bird into the [DeathTumble] and the post-run flow starts 1.5 s later
+/// (or once the bird rests).
 class RunController extends Component {
   RunController({required this.setup, required this.game}) {
     final storage = game.storage;
@@ -53,6 +71,7 @@ class RunController extends Component {
     );
     state.hoopIndex = setup.startHoopIndex;
     geo = RunGeometry(state);
+    walls = SpikeWalls(geo);
     ctx = RunContext(this);
     spawner = RunSpawner(this);
     features = buildRunFeatures();
@@ -70,6 +89,7 @@ class RunController extends Component {
   final RunLayers layers = RunLayers();
   final MistakePipeline pipeline = MistakePipeline();
   late final RunGeometry geo;
+  late final SpikeWalls walls;
   late final RunContext ctx;
   late final RunSpawner spawner;
   late final List<RunFeature> features;
@@ -88,9 +108,6 @@ class RunController extends Component {
   bool get ended => _ended;
   bool get dying => _dying;
 
-  /// The 1.0 pipes are still the course (WP-1a not landed).
-  bool get legacyPipes => !spawner.live;
-
   /// True while playing and the world moves.
   bool get isScrolling =>
       _started &&
@@ -108,6 +125,7 @@ class RunController extends Component {
     for (final l in layers.all) {
       parent?.add(l);
     }
+    layers.fx.add(particles);
   }
 
   @override
@@ -124,9 +142,7 @@ class RunController extends Component {
     if (_started) return;
     _started = true;
     clock.running = true;
-    state.forwardSpeed = legacyPipes
-        ? Config.scrollSpeed
-        : RunConfig.cruise(state.runClock);
+    state.forwardSpeed = BirdMotion.cruise(state.runClock);
     if (setup.starter == Powerup.shield) state.shield = true;
     for (final f in features) {
       f.attach(ctx);
@@ -195,50 +211,292 @@ class RunController extends Component {
   @override
   void update(double dt) {
     super.update(dt);
-    if (!_started || _ended || _frozen) return;
+    if (!_started || _frozen) return;
     final gameDt = dt;
+    if (tumble != null) {
+      // §3.0.5 the tumble keeps playing (and the bird keeps lying on the
+      // floor spikes) through the revive offer and the results.
+      _stepDeath(gameDt);
+      layers.follow(state.camX, state.camY);
+      return;
+    }
+    if (_ended) return;
     clock.tick(gameDt);
     state.runClock = clock.t;
     if (isScrolling) {
-      if (!legacyPipes) {
-        // §3.0.1 cruise ramp; WP-1a adds the knock-back recovery.
-        state.forwardSpeed = RunConfig.cruise(state.runClock);
-      }
-      state.camX += state.forwardSpeed * gameDt;
+      BirdMotion.step(state, gameDt);
       if (state.invulnerable > 0) {
         state.invulnerable = (state.invulnerable - gameDt).clamp(0, 99);
       }
     }
     layers.follow(state.camX, state.camY);
     spawner.update(gameDt);
+    if (isScrolling) _stepPhysics(gameDt);
+    layers.follow(state.camX, state.camY);
     final scale = state.timeScale <= 0 ? 1 : state.timeScale;
     for (final f in features) {
       f.update(gameDt, gameDt / scale);
     }
   }
 
-  /// The one mistake path (ARCH §2.6).
-  void mistake(Mistake m) {
-    if (!_started || _dying || _ended) return;
-    switch (pipeline.resolve(m, ctx)) {
-      case MistakeOutcome.ignored:
-      case MistakeOutcome.saved:
-        return;
-      case MistakeOutcome.died:
-        _die(m);
+  // region WP-1a — physics step, pass / miss / rim, death tumble
+  // (PRD-2 §3.0.1, §3.0.4, §3.0.5, §3.1, §5.13)
+
+  /// The shared run particle pool (sparks, dust; ARCH §3), in `layers.fx`.
+  final ParticlePool particles = ParticlePool();
+
+  /// §3.0.5 the death tumble (null while flying).
+  DeathTumble? tumble;
+  Mistake? _death;
+  double _deathTime = 0;
+  bool _handedOff = false;
+
+  /// The bird's track position at the end of the previous physics step
+  /// (the pass test's "before").
+  Vector2? _prevBird;
+
+  Bird? get _bird {
+    final b = game.runBird;
+    return b != null && b.isLoaded ? b : null;
+  }
+
+  double get _birdR => RunConfig.birdRadius * state.birdScale;
+
+  void _stepPhysics(double dt) {
+    final bird = _bird;
+    if (bird == null) return;
+    final r = _birdR;
+    var pos = geo.toTrack(bird.body.position);
+    final prev = _prevBird ?? pos.clone();
+    for (final h in List.of(spawner.hoops)) {
+      h.syncMotion(state.runClock);
+      if (h.resolved || h.isRemoved) continue;
+      final kind = h.kind;
+      var f = h.frame();
+      final mode = kind.rimMode(h, state);
+      if (mode != RimMode.ignored && state.invulnerable <= 0) {
+        final vy = bird.body.linearVelocity.y;
+        final res = collideRims(
+          f,
+          BirdCircle(pos, r),
+          Vector2(state.forwardSpeed, vy),
+        );
+        if (res != null) {
+          if (mode == RimMode.deadly) {
+            final c0 = res.contacts.first;
+            h.resolveMiss();
+            final rc = RimTouch(point: c0.point, normal: c0.normal, ring: c0.ring);
+            kind.onRim(h, rc, ctx);
+            mistake(Mistake(MistakeCause.saw, normal: c0.normal, hoop: h));
+            if (_dying) return;
+            continue;
+          }
+          _applyRim(h, bird, pos, res);
+          pos = res.position;
+          f = h.frame();
+        }
+      }
+      final ev = testPlane(f, BirdCircle(prev, r), BirdCircle(pos, r));
+      if (ev != null) {
+        if (state.ride == null &&
+            kind.onPlane(h, ev.ring, ctx) == PlaneVerdict.mistake) {
+          h.resolveMiss();
+          events.emit(ClosedSwitchReached(h));
+          mistake(
+            Mistake(MistakeCause.closedSwitch, normal: Vector2(-1, 0), hoop: h),
+          );
+          if (_dying) return;
+          continue;
+        }
+        _pass(h, ev.ring);
+        continue;
+      }
+      if (isFullyPast(f, BirdCircle(pos, r))) {
+        if (state.ride != null) {
+          _pass(h, 0);
+          continue;
+        }
+        _miss(h);
+        if (_dying) return;
+      }
     }
+    // §3.1 spikes: contact = a mistake; a save bounces off the tooth line.
+    final side = walls.touches(BirdCircle(pos, r));
+    if (side != null) {
+      final normal = side == SpikeSide.top ? Vector2(0, 1) : Vector2(0, -1);
+      final outcome = mistake(Mistake(MistakeCause.spikes, normal: normal));
+      if (_dying) return;
+      if (outcome != MistakeOutcome.died) {
+        final (y, vy) = walls.saveBounce(side, r, bird.body.linearVelocity.y);
+        bird.setFlight(y: y, vy: vy);
+        pos = Vector2(pos.x, y);
+      }
+    }
+    _prevBird = pos;
+  }
+
+  /// §3.0.4 3 the rim "tonk". WP-3h registers `Sfx.rimTonk` (parallel
+  /// WP); it is looked up by name so this compiles before that merge and
+  /// plays once it has landed.
+  static final Sfx? _rimTonk = Sfx.values
+      .where((s) => s.name == 'rimTonk')
+      .firstOrNull;
+
+  /// §3.0.4 2–3: push-out, reflected velocity (the forward part moves the
+  /// camera: the world jolts back), touched, tonk, spin, sparks.
+  void _applyRim(Hoop h, Bird bird, Vector2 pos, RimResult res) {
+    state.camX += res.position.x - pos.x;
+    state.forwardSpeed = res.velocity.x;
+    bird.setFlight(y: res.position.y, vy: res.velocity.y);
+    for (final c in res.contacts) {
+      if (!c.bounced) continue;
+      if (!h.touched) {
+        state.rimTouches++;
+        bird.startRimSpin(rimSpinVelocity(res.velocity.y));
+      }
+      h.touched = true;
+      final tonk = _rimTonk;
+      if (tonk != null) ctx.sfx(tonk);
+      final at = c.point;
+      for (var i = 0; i < PhysicsConfig.rimSparks; i++) {
+        final r = ctx.cosmetic;
+        particles.spawn(
+          x: at.x,
+          y: at.y,
+          vx: c.normal.x * 60 + (r.nextDouble() - .5) * 160,
+          vy: c.normal.y * 60 + (r.nextDouble() - .5) * 160,
+          w: 3 + r.nextDouble() * 2,
+          color: const Color(0xFFFFFFFF),
+          life: .25 + r.nextDouble() * .15,
+          damp: 3,
+        );
+      }
+      events.emit(RimTouched(h, at, c.normal));
+      h.kind.onRim(h, RimTouch(point: at, normal: c.normal, ring: c.ring), ctx);
+    }
+  }
+
+  /// §3.0.4 5 a pass: perfect when no rim was touched (rides: always).
+  void _pass(Hoop h, int ring) {
+    h.resolvePass(ring);
+    final ride = state.ride != null;
+    final perfect = !h.touched || ride;
+    state.passes++;
+    state.hoopsPassed++;
+    if (perfect) state.perfectPasses++;
+    final id = h.plan.element.storageId;
+    state.taken[id] = (state.taken[id] ?? 0) + 1;
+    events.emit(
+      HoopPassed(
+        h,
+        ring: ring,
+        perfect: perfect,
+        rimTouched: h.touched,
+        duringRide: ride,
+      ),
+    );
+    h.kind.onPass(
+      h,
+      PassInfo(ring: ring, perfect: perfect, rimTouched: h.touched, duringRide: ride),
+      ctx,
+    );
+  }
+
+  /// §3.0.4 5 / §5.13 a miss: the shock-ring miss flash, then the mistake
+  /// (death tumble, or a save by an extra life / shield).
+  void _miss(Hoop h) {
+    h.resolveMiss();
+    events.emit(HoopMissed(h));
+    h.kind.onMiss(h, ctx);
+    MissFlash.play(
+      h,
+      fx: layers.fx,
+      glowParent: game.world,
+      glowPriority: RunLayer.items,
+      screen: Vector2(RunConfig.worldWidth, state.viewHeight),
+    );
+    ctx.sfx(Sfx.missShock);
+    final cause = h.plan.kind == HoopKindId.pair
+        ? MistakeCause.pairMissed
+        : MistakeCause.missedHoop;
+    mistake(Mistake(cause, hoop: h));
+  }
+
+  void _stepDeath(double dt) {
+    final t = tumble!;
+    t
+      ..top = walls.top
+      ..floor = walls.floor
+      ..step(dt);
+    state.camX = t.camX;
+    state.forwardSpeed = t.camSpeed;
+    _bird?.placeTumble(geo.toScreen(t.position), t.angle);
+    _deathTime += dt;
+    if (_handedOff) return;
+    final limit = _death?.themed != null
+        ? PhysicsConfig.themedResultsMax
+        : PhysicsConfig.resultsDelay;
+    if (_deathTime >= limit || t.resting) {
+      _handedOff = true;
+      game.endRun(endRun());
+    }
+  }
+
+  /// Test seam: a pass of no particular hoop (scoring, stage, coins) —
+  /// replaces the 1.0 tests' `onScoreSensor(PipePair(...))`.
+  @visibleForTesting
+  void debugPass({bool perfect = false}) {
+    state.passes++;
+    state.hoopsPassed++;
+    if (perfect) state.perfectPasses++;
+    events.emit(HoopPassed(null, perfect: perfect, rimTouched: !perfect));
+  }
+  // endregion WP-1a
+
+  /// The one mistake path (ARCH §2.6). Returns what happened.
+  MistakeOutcome mistake(Mistake m) {
+    if (!_started || _dying || _ended) return MistakeOutcome.ignored;
+    if (FlappySpikesGame.debugAvailable && game.runDebug.god) {
+      return MistakeOutcome.ignored;
+    }
+    final outcome = pipeline.resolve(m, ctx);
+    if (outcome == MistakeOutcome.died) _die(m);
+    return outcome;
   }
 
   void _die(Mistake m) {
     _dying = true;
     _cause = m.cause;
+    _death = m;
     clock.running = false;
     for (final f in features) {
       f.onDeath(m);
     }
-    // WP-0b: no tumble yet (WP-1a) — the run ends at once, as in 1.0.
-    final summary = endRun();
-    game.endRun(summary);
+    final bird = _bird;
+    final birdPos = bird != null
+        ? geo.toTrack(bird.body.position)
+        : Vector2(state.camX + RunConfig.birdX, state.viewHeight / 2);
+    final vy = bird?.body.linearVelocity.y ?? 0;
+    final t = DeathTumble(
+      position: birdPos,
+      velocity: Vector2(state.forwardSpeed, vy),
+      normal: m.normal,
+      camX: state.camX,
+      camSpeed: state.forwardSpeed,
+      top: walls.top,
+      floor: walls.floor,
+      radius: _birdR,
+      angle: bird?.body.angle ?? 0,
+    );
+    t.onLand = (at) => DustPuff.emit(
+      particles,
+      Offset(at.x, at.y),
+      game.foregroundColor,
+      ctx.cosmetic,
+    );
+    tumble = t;
+    _deathTime = 0;
+    game.beginDying();
   }
 
   /// Ends the run (idempotent) and emits [RunEnded].
@@ -277,7 +535,7 @@ class RunController extends Component {
       revives: s.revivesThisGame,
       runSeconds: s.runClock,
       cause: _cause ?? MistakeCause.missedHoop,
-      hoopKind: hoop?.plan.kind,
+      hoopKind: _death?.hoop?.plan.kind ?? hoop?.plan.kind,
       hoopIndex: s.hoopIndex,
       timeline: s.timeline,
       opponent: setup.opponent,
@@ -287,18 +545,6 @@ class RunController extends Component {
       perfectPasses: s.perfectPasses,
     );
   }
-
-  // region WP-0b — legacy pipes (removed by WP-1a)
-  /// A 1.0 pipe was passed: mirror the point into the run.
-  void legacyPoint(int newScore) {
-    final old = state.score;
-    state.score = newScore;
-    state.hoopsPassed++;
-    state.passes++;
-    events.emit(const HoopPassed(null));
-    events.emit(ScoreChanged(old, newScore));
-  }
-  // endregion WP-0b
 
   /// §3.0.8 debug force: the next slot / gap; elements the director does not
   /// place (squeeze) go to their feature as [DebugForced].
@@ -316,6 +562,7 @@ class RunController extends Component {
       f.detach();
     }
     spawner.dispose();
+    particles.clear();
     events.clear();
     game.sound.stopAllLoops();
     for (final l in layers.all) {

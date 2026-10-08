@@ -1,14 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:flame_forge2d/flame_forge2d.dart';
 
 import '../game/config.dart';
 import '../game/flappy_game.dart';
 import '../game/sound.dart';
-import '../run/mistakes.dart';
-import 'pipe_pair.dart';
+import '../run/run_layers.dart';
 import '../skins/look.dart';
 import 'look_component.dart';
 
-/// The player bird: circle body at (80, viewHeight / 2), drawn with the
+/// The player bird: circle body at (70, viewHeight / 2), drawn with the
 /// equipped 2.0 look (bird + gear + hat, [LookComponent]) whose art body
 /// centre sits on the physics body centre — the 1.0 bird box, so the hitbox
 /// and physics are independent of the look (PRD-menu-v2 §3.1/§3.8).
@@ -17,8 +18,14 @@ import 'look_component.dart';
 /// blends 35 % toward the stage foreground from stage 5 ([LookComponent.blend],
 /// `Config.skinStageBlend`). Death keeps the look and switches to the frozen
 /// dead pose, so hat and gear tumble with the body.
-class Bird extends BodyComponent<FlappySpikesGame> with ContactCallbacks {
-  Bird() : super(priority: 10, renderBody: false);
+///
+/// PRD-2 (WP-1a): Forge2D only integrates the vertical motion (gravity, a
+/// flap sets vy −370, max fall 650); every contact — rim ends, pass plane,
+/// spikes — is plain math in `lib/run/physics/` (no fixtures collide). On
+/// death the body turns kinematic and the run drives it from the §3.0.5
+/// tumble ([placeTumble]).
+class Bird extends BodyComponent<FlappySpikesGame> {
+  Bird() : super(priority: RunLayer.bird, renderBody: false);
 
   late final LookComponent _look;
 
@@ -72,8 +79,8 @@ class Bird extends BodyComponent<FlappySpikesGame> with ContactCallbacks {
         ..friction = 0
         ..restitution = 0
         ..filter.categoryBits = Config.categoryBird
-        ..filter.maskBits =
-            Config.categoryWorld | Config.categoryPipe | Config.categoryScore,
+        // Plain-math contacts only (PRD-2 §7): nothing collides in Forge2D.
+        ..filter.maskBits = 0,
     );
     return body;
   }
@@ -95,23 +102,64 @@ class Bird extends BodyComponent<FlappySpikesGame> with ContactCallbacks {
     game.sound.play(Sfx.flap);
   }
 
-  /// Death animation: dead pose (hat and gear stay attached), up-right
-  /// impulse, restitution 0.1, spin 5pi rad/s.
+  /// §3.0.5 death: the dead pose (white X eyes; hat and gear stay
+  /// attached); the body turns kinematic and is drawn behind the tooth tips
+  /// ([RunLayer.deadBird]). The run's `DeathTumble` moves it through
+  /// [placeTumble].
   void die() {
     if (_dead) {
       return;
     }
     _dead = true;
-    _look.showDead();
-    body.setFixedRotation(false);
-    body.linearVelocity.setZero();
-    final impulse = Config.deathVelocity.clone()..scale(body.mass);
-    body.applyLinearImpulse(impulse);
-    body.angularVelocity = Config.deathSpin;
-    for (final fixture in body.fixtures) {
-      fixture.restitution = Config.deathRestitution;
+    _spinVelocity = 0;
+    if (isLoaded) {
+      _look.showDead();
+      body
+        ..setType(BodyType.kinematic)
+        ..linearVelocity.setZero()
+        ..angularVelocity = 0;
     }
+    priority = RunLayer.deadBird;
   }
+
+  /// §3.0.5 tumble frame: the bird's screen centre and angle.
+  void placeTumble(Vector2 screen, double angle) {
+    if (!isLoaded) return;
+    body.setTransform(screen, angle);
+  }
+
+  // region WP-1a — rim knock (PRD-2 §3.0.4 2–3)
+  double _spinVelocity = 0;
+  double _spin = 0;
+
+  /// Sets the flight state after a rim push-out / save bounce.
+  void setFlight({required double y, required double vy}) {
+    if (!isLoaded || _dead) return;
+    body
+      ..setTransform(Vector2(body.position.x, y), body.angle)
+      ..linearVelocity.setValues(0, vy);
+  }
+
+  /// §3.0.4 3 a rim hit: one full turn at [omega] rad/s (0.35 s).
+  void startRimSpin(double omega) {
+    if (_dead) return;
+    _spinVelocity = omega;
+    _spin = 0;
+  }
+
+  /// True while the rim-hit turn plays.
+  bool get spinning => _spinVelocity != 0;
+
+  void _stepSpin(double dt) {
+    if (_spinVelocity == 0 || _dead || !isLoaded) return;
+    _spin += _spinVelocity * dt;
+    if (_spin.abs() >= 2 * math.pi) {
+      _spin = 0;
+      _spinVelocity = 0;
+    }
+    body.setTransform(body.position, _spin);
+  }
+  // endregion WP-1a
 
   /// Fade the bird art (game over; hidden while on the home screen, which
   /// draws its own bird). Safe before [onLoad].
@@ -139,24 +187,10 @@ class Bird extends BodyComponent<FlappySpikesGame> with ContactCallbacks {
       if (vy > Config.maxFallSpeed) {
         body.linearVelocity.y = Config.maxFallSpeed;
       }
+      // Forge2D never moves the bird sideways: the world scrolls at its
+      // forward speed instead (PRD-2 §7).
+      if (body.linearVelocity.x != 0) body.linearVelocity.x = 0;
     }
-  }
-
-  @override
-  void beginContact(Object other, Contact contact) {
-    super.beginContact(other, contact);
-    if (_dead) {
-      return;
-    }
-    final fixture =
-        contact.fixtureA.body == body ? contact.fixtureB : contact.fixtureA;
-    if (fixture.isSensor) {
-      game.onScoreSensor(other);
-    } else {
-      // WP-0b: the mistake cause for `run_end` (pipes until WP-1a).
-      game.onBirdHit(
-        other is PipePair ? MistakeCause.missedHoop : MistakeCause.spikes,
-      );
-    }
+    _stepSpin(dt);
   }
 }

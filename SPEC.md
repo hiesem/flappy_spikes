@@ -263,6 +263,9 @@ shop build:
 
 ## Physics (Forge2D)
 
+> PRD-2 (WP-1a): the max fall speed, bird x, the death and the collisions below
+> are superseded — see "PRD-2 hoops replace pipes" at the end.
+
 > DEVIATION (2026-07-19, user-requested, Flappy Bird feel): the 2014
 > calibration (gravity ≈ 1350 pt/s², flap Δv ≈ 525 pt/s, rise 90–110 pt) made
 > a single flap cross nearly the whole 105 pt gap. Retuned to a smaller pop
@@ -286,6 +289,9 @@ shop build:
 
 ## Scrolling
 
+> PRD-2 (WP-1a): superseded — the world scrolls at the bird's forward speed and
+> the strips are the 44 pt master (see the end of this file).
+
 - World speed: **200 pt/s** leftward, constant, frame-rate independent.
 - Ground spike strip: `ground_spikes` tiled to cover screen width (+2 tiles), 72 pt
   tall at the bottom edge of the playfield; **ceiling strip: same texture rotated
@@ -297,6 +303,9 @@ shop build:
   of the strips; the world background itself is an in-world backdrop rect.)
 
 ## Pipes
+
+> PRD-2 (WP-1a): pipes are removed; hoops replace them (see the end of this
+> file). This section is the 1.0 history.
 
 - Spawn every **1.5 s** → 300 pt horizontal spacing at 200 pt/s.
 - Each pair: `pipe_bottom` + `pipe_top`, each 88×513.5 pt, tinted with current fg color,
@@ -329,6 +338,9 @@ shop build:
 - Pipes removed when fully off-screen left.
 
 ## Color system
+
+> PRD-2 (WP-1a): in runs the stage changes every 10 hoops passed (see the end
+> of this file); the palettes are unchanged.
 
 Every 5 points (stage = score mod 50), fade (0.5 s) background + foreground tints:
 
@@ -464,3 +476,80 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   prototype's 1.4 reached 43 pt/s).
 - Hearts are placed by the director (gap 3, then every 17–27) as a
   PLACEHOLDER pickup with no effect until WP-2a.
+## PRD-2 hoops replace pipes (WP-1a, 2026-10-08)
+
+- DEVIATION (PRD-2 §3.1, §5.1): **pipes are removed**; the obstacle is the
+  M0 hoop — a vertical ring 24 pt wide, stroke 7, height = opening + 2 × 7,
+  drawn by `RingPainter` in two layers (back half behind the bird, front half
+  over it), in the equipped hoop skin (default `#EC008C` / `#B0006B`), **not**
+  stage-tinted. One `Hoop` component per slot with a kind (`NormalHoopKind`);
+  the run director places them (§3.0.2 / §3.0.3): spacing **310 pt** plane to
+  plane, the first hoop **60 pt past the right edge** at the first tap at the
+  exact vertical centre (it scrolls in, ≈ 2.1 s to the bird), opening **118 pt
+  at hoop 0, −0.32 % per hoop, floor 92 pt**, centre ≥ opening/2 + 7 + 18 pt
+  from each tooth line (the same margin on both sides).
+- DEVIATION (PRD-2 §3.0.1, §7, "2.0 physics"): Forge2D integrates **only the
+  bird's vertical motion** (gravity 1250, a flap sets vy −370 — the 45–65 pt
+  rise band is unchanged — **max fall 650 pt/s**, was 500). Bird x **70**
+  (was 80). There is no fixed scroll speed: the bird has a real forward speed
+  (cruise **150 pt/s, +3.5 % per minute of run time**; after a knock-back it
+  recovers toward cruise at 2000 pt/s²) and the world — hoops, spike teeth —
+  moves at that speed (the camera follows the bird). **No Forge2D contacts**:
+  rim ends, the pass plane, the miss rule and the spike tooth lines are plain
+  math (`lib/run/physics/`); the bird's fixture mask is 0.
+- DEVIATION (PRD-2 §3.0.4, rim bounce): touching a rim **no longer kills**.
+  Each ring has two rim-end circles (r 7) at local (0, ±(opening/2 + 7)),
+  rotated with the tilt. On overlap the bird is pushed out along the contact
+  normal and, when moving into the rim (relative to the rim's velocity), its
+  velocity is reflected with restitution **0.85** (tangential part kept); the
+  hoop is marked touched (that pass is not perfect), white sparks, a 360°
+  spin over 0.35 s. The forward part of the bounce moves the camera (the world
+  jolts back). No rim bounce while invulnerable.
+- DEVIATION (PRD-2 §3.0.4 5 / §3.1, score trigger and miss rule): a point
+  fires when the bird centre crosses the hoop plane forward **between the two
+  rim-end centres** (|local y − ring| ≤ opening/2 + 7; a bird pressed against
+  the inside of a rim end is through); crossings beside the ring decide
+  nothing; a knock-back across the plane is not judged. **Miss** only when the
+  bird is fully past the ring: centre − r > centre x + |sin tilt| × (largest
+  ring offset + opening/2 + 7) + 7. Each hoop resolves once. (Replaces the
+  sensor 111 pt right of the pipe centre.)
+- DEVIATION (PRD-2 §3.1 / §3.2 / §3.0.1, scoring): **+1 per hoop**; **a coin
+  per hoop at the moment of the pass** through the menu wallet (1; **2 for a
+  perfect pass** = no rim touched), shown by the gold "+N" coin popup; the
+  1.0 / menu interim "1 coin per point at game over" (`CoinSource.play`) is
+  gone. A non-perfect pass plays `point.mp3` and the §5.1 ring-outline pulse;
+  perfect-pass sounds/effects belong to the streak (WP-2b). The **colour stage
+  changes every 10 hoops passed**: index floor(hoopsPassed / 10) mod 11 over
+  the 11 palettes in order (gold last: hoops 100–109, 210–219, …) —
+  `stageForHoops`; `stageOf(score)` stays only for the 1.0 table.
+- DEVIATION (PRD-2 §3.0.5, death tumble; replaces "impulse up-right,
+  restitution 0.1, spin 5π"): at death the world eases to a stop over 0.4 s;
+  the bird keeps its velocity + 180 pt/s along the contact normal (a plain
+  miss: vy − 140), spins at clamp(forward / 25 + impact, ±12) rad/s, falls
+  with gravity and −40 %/s air drag, bounces off the top strip (0.3), bounces
+  on the floor tooth line (0.3, forward × 0.6, spin × −0.6) while landing
+  faster than 140 pt/s, then rests at **tooth tips − r + 2**, slides to a stop
+  and settles flat; it never leaves the screen (24 pt left / 30 pt right,
+  × −0.3), passes through hoops and pickups, shows the white X eyes and stays
+  lying there (drawn behind the tooth tips, not faded) through the results.
+  The game state is `dying` meanwhile; the post-run flow (results) starts
+  **1.5 s** after the hit or as soon as the bird rests. `gameover.mp3` plays
+  at the hit. A spike save (invulnerable / extra life / shield) bounces off
+  the tooth line instead (top: down at 30 %; floor: vy −222).
+- DEVIATION (PRD-2 §5.13): a miss plays the "C · Shock ring" flash — the hoop
+  flashes white (0.12 s, stroke 8, glow 24), a red `#FF1F3D` shockwave ring
+  (1 → 2.6×, 0.55 s), one red edge glow pulse (0.7 s, drawn under the spike
+  strips as in the mock), the hoop drains to a grey dashed ghost (0.12–0.52 s,
+  alpha 1 → 0.35, dashed 6/6 from 30 %) that stays; `miss_shock` sound.
+- DEVIATION (PRD-2 §3.0.9 #1, 44 pt strips): `Config.spikeHeight` **72 → 44**
+  and `SpikeStrip.defaultArt` = `SpikeArt.teeth` (26 pt band + 18 pt teeth,
+  period 40). Menus and runs show the same strip (`menuSpikeInset` 28 → 0;
+  the menu list bleed uses the 18 pt tooth depth). The band between the tooth
+  lines is 623 pt at 711 and 480 pt at 568. Spike contact = the bird circle
+  reaching the tooth line (tips). The teeth scroll with the run camera.
+- Tests: `autopilot_test` (hoop-aware bot ≥ 12 hoops at 568 and 711),
+  `collision_test` (pass once / miss once / spikes once), `test/run/physics/*`
+  (rim, pass/miss, tumble — pure), `test/run/flow/s3_1_hoop_flow_test.dart`,
+  `test/run/flow/s3_0_1_hoop_spawner_test.dart`; `pipe_spawner_test` and
+  `gap_variance_test` were replaced by the latter.
+

@@ -1,113 +1,116 @@
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/gameover_panel.dart';
-import 'package:flappy_spikes/components/pipe_pair.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/run/mistakes.dart';
+import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
 
+/// The 1.0 collision tests ported to hoops (WP-1a, PRD-2 §3.1 / §3.0.4 /
+/// §3.0.5): the plane crossing inside the opening scores exactly once, a
+/// miss and a spike contact end the run exactly once (after the death
+/// tumble), with one results panel and one game counted.
 void main() {
   final withGame = FlameTester<FlappySpikesGame>(
     createTestGame,
     gameSize: Vector2(Config.worldWidth, Config.worldHeight),
   );
 
-  /// Starts the game and lets the first auto-spawned pipe pair fully load
-  /// (setUp runs inside runAsync, so real image decodes complete here).
-  Future<void> startPlaying(FlappySpikesGame game) async {
+  Future<void> boot(FlappySpikesGame game) async {
+    await game.ready();
     game.sound.enabled = false;
     await preloadImages(game);
-    game.onScreenTap(); // start -> playing
-    game.update(1 / 60); // let the spawner fire
-    await game.ready(); // mount everything that is pending
   }
 
-  /// Removes every pipe pair from the world.
-  Future<void> clearPipes(FlappySpikesGame game) async {
-    for (final pipe in game.world.children.query<PipePair>()) {
-      pipe.removeFromParent();
-    }
-    game.update(1 / 60); // process removals (no new spawn yet: timer reset)
-    await game.ready();
-  }
+  /// Holds the bird level at [y] every frame.
+  void Function(dynamic) hold(FlappySpikesGame game, double y) =>
+      (_) => game.runBird!.setFlight(y: y, vy: 0);
 
   withGame.testGameWidget(
-    'score sensor contact increments the score exactly once per pair',
-    setUp: (game, tester) async {
-      await game.ready();
-      await startPlaying(game);
-      await clearPipes(game);
-
-      // Gap vertically centered on the bird so only the sensor touches it.
-      final pipe = PipePair(gapBottomY: Config.birdY + Config.pipeGap / 2);
-      await game.world.ensureAdd(pipe);
-      await pipe.loaded;
-      // Sensor (111 pt right of center, 10 pt wide) overlaps the bird's
-      // right edge; the pipe bodies are far left of the bird.
-      pipe.body.setTransform(Vector2(-20, Config.worldHeight / 2), 0);
-    },
-    verify: (game, tester) async {
-      stepGame(game, 1 / 60); // one frame: sensor contact begins
-      expect(game.score, 1, reason: 'sensor contact must score one point');
-
-      // Keep flying through and past the sensor: no further increments from
-      // the same pair.
-      game.onScreenTap(); // flap to hold altitude inside the gap
-      stepGame(game, 0.25);
-      expect(game.score, 1, reason: 'a pair must never score twice');
-      expect(game.state, GameState.playing,
-          reason: 'sensor contact must not kill the bird');
+    '§3.1 crossing the plane inside the opening scores exactly once',
+    setUp: (game, _) => boot(game),
+    verify: (game, _) async {
+      final run = await startRun(game);
+      run.events.recordLog = true;
+      final y = game.viewHeight / 2; // hoop 0 sits at the exact centre
+      await flyRun(
+        game,
+        maxSeconds: 2.6,
+        autopilot: false,
+        onFrame: hold(game, y),
+      );
+      expect(game.state, GameState.playing);
+      expect(run.events.log.whereType<HoopPassed>(), hasLength(1));
+      expect(game.score, 1, reason: 'one hoop, one point');
+      // Keep flying level well past the hoop: no second point from it.
+      await flyRun(
+        game,
+        maxSeconds: 0.5,
+        autopilot: false,
+        onFrame: hold(game, y),
+      );
+      expect(game.score, 1, reason: 'a hoop never scores twice');
+      expect(run.events.log.whereType<HoopMissed>(), isEmpty);
     },
   );
 
   withGame.testGameWidget(
-    'bird-pipe contact triggers game over exactly once',
-    setUp: (game, tester) async {
-      await game.ready();
-      await startPlaying(game);
-      await clearPipes(game);
-
-      // Gap high above the bird: the bottom pipe overlaps the bird.
-      final pipe = PipePair(gapBottomY: 150);
-      await game.world.ensureAdd(pipe);
-      await pipe.loaded;
-      pipe.body.setTransform(Vector2(Config.birdX, Config.worldHeight / 2), 0);
-    },
-    verify: (game, tester) async {
-      stepGame(game, 1 / 60); // one frame: contact begins
-      expect(game.state, GameState.gameOver);
-      await flushAndMount(game); // let the game-over panel finish mounting
-      expect(
-        game.world.children.query<GameOverPanel>(),
-        hasLength(1),
-        reason: 'exactly one game-over panel must be built',
+    '§3.1 missing a hoop ends the run exactly once',
+    setUp: (game, _) => boot(game),
+    verify: (game, _) async {
+      final run = await startRun(game);
+      run.events.recordLog = true;
+      // Above the first hoop (its top rim end is at 284 − 66 = 218).
+      await flyRun(
+        game,
+        maxSeconds: 3,
+        autopilot: false,
+        onFrame: hold(game, 150),
       );
-      expect(game.storage.gamesPlayed, 1);
-
-      // Further contact events / frames must not fire game over again.
-      stepGame(game, 0.5);
+      expect(run.events.log.whereType<HoopMissed>(), hasLength(1));
+      expect(game.state, GameState.dying, reason: '§3.0.5 the tumble first');
+      stepGame(game, 2);
       await flushAndMount(game);
       expect(game.state, GameState.gameOver);
       expect(game.world.children.query<GameOverPanel>(), hasLength(1));
       expect(game.storage.gamesPlayed, 1);
-      expect(game.score, 0, reason: 'bird never reached the score sensor');
+      expect(run.events.log.whereType<RunDied>(), hasLength(1));
+      expect(
+        run.events.log.whereType<RunDied>().single.mistake.cause,
+        MistakeCause.missedHoop,
+      );
+
+      stepGame(game, 0.5);
+      await flushAndMount(game);
+      expect(game.world.children.query<GameOverPanel>(), hasLength(1));
+      expect(game.storage.gamesPlayed, 1);
+      expect(game.score, 0);
     },
   );
 
   withGame.testGameWidget(
-    'bird-spike contact triggers game over exactly once',
-    setUp: (game, tester) async {
-      await game.ready();
-      await startPlaying(game);
-    },
-    verify: (game, tester) async {
-      // Never flap again: the bird rises, then falls onto the ground spikes.
+    '§3.1 bird-spike contact ends the run exactly once',
+    setUp: (game, _) => boot(game),
+    verify: (game, _) async {
+      final run = await startRun(game);
+      run.events.recordLog = true;
+      // Never flap again: the bird rises, then falls onto the floor spikes.
       stepGame(game, 1.5);
-      expect(game.state, GameState.gameOver,
-          reason: 'an unassisted bird must hit the ground spikes');
+      expect(
+        game.state,
+        isNot(GameState.playing),
+        reason: 'an unassisted bird must hit the floor spikes',
+      );
+      expect(
+        run.events.log.whereType<RunDied>().single.mistake.cause,
+        MistakeCause.spikes,
+      );
+      stepGame(game, 1.6);
       await flushAndMount(game);
+      expect(game.state, GameState.gameOver);
       expect(game.world.children.query<GameOverPanel>(), hasLength(1));
       expect(game.storage.gamesPlayed, 1);
 

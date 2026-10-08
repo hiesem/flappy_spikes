@@ -98,7 +98,7 @@ void main() {
       final bird = game.world.children.query<Bird>().single;
       stepGame(game, 0.3, flapBelow: 200);
       final t = bird.lookComponent.time;
-      game.onBirdHit();
+      killRun(game);
       expect(bird.dead, isTrue);
       expect(bird.lookComponent.pose, LookPose.dead);
       // Hat and gear stay attached (the whole look tumbles with the body).

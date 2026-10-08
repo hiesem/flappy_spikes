@@ -14,18 +14,18 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.0.1-1 | Cruise scroll 150 pt/s, rising +3.5 % per minute of `runClock` | 3.0.1 | 1a | | todo |
-| R-3.0.1-2 | Hoop spacing constant 310 pt (never shortened for difficulty) | 3.0.1 | 1a | | todo |
-| R-3.0.1-3 | First hoop spawns 60 pt past the right edge at the first tap, at exact vertical centre, scrolls in, reaches the bird ≈ 2.1 s after the tap; nothing pops into view | 3.0.1, 3.1 | 1a | | todo |
-| R-3.0.1-4 | Gravity 1250 pt/s²; flap sets vy to −370 (rise ≈ 55 pt) | 3.0.1 | 1a | | todo |
-| R-3.0.1-5 | Max fall speed 650 pt/s | 3.0.1 | 1a | | todo |
-| R-3.0.1-6 | Bird screen x 70, collider circle r 14.75 (Mini × 0.52) | 3.0.1 | 1a | | todo |
+| R-3.0.1-1 | Cruise scroll 150 pt/s, rising +3.5 % per minute of `runClock` | 3.0.1 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.1 … reaches the bird ≈ 2.1 s later; test/run/physics/s3_0_4_rim_test.dart::§3.0.4 4 … recovers toward cruise; test/scrolling_test.dart::PRD-2 §3.0.1 the world scrolls … at the cruise speed | done |
+| R-3.0.1-2 | Hoop spacing constant 310 pt (never shortened for difficulty) | 3.0.1 | 1a | test/run/flow/s3_0_1_hoop_spawner_test.dart::§3.0.1 / §3.0.2 spawned hoops: one spacing apart …; test/run/flow/s3_0_1_hoop_spawner_test.dart::stalled frames keep hoops one spacing apart | done |
+| R-3.0.1-3 | First hoop spawns 60 pt past the right edge at the first tap, at exact vertical centre, scrolls in, reaches the bird ≈ 2.1 s after the tap; nothing pops into view | 3.0.1, 3.1 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.1 the first hoop spawns 60 pt past the right edge …; test/run/flow/s3_0_1_hoop_spawner_test.dart::… scrolled in from ≥ 60 pt past the edge | done |
+| R-3.0.1-4 | Gravity 1250 pt/s²; flap sets vy to −370 (rise ≈ 55 pt) | 3.0.1 | 1a | test/flap_physics_test.dart (45–65 pt rise band, unchanged); test/config_test.dart | done |
+| R-3.0.1-5 | Max fall speed 650 pt/s | 3.0.1 | 1a | test/flap_physics_test.dart::terminal velocity; test/config_test.dart::§3.0.1 terminal velocity caps the fall speed at 650 pt/s | done |
+| R-3.0.1-6 | Bird screen x 70, collider circle r 14.75 (Mini × 0.52) | 3.0.1 | 1a | test/config_test.dart::§3.0.1 bird sits at x = 70; test/bird_look_test.dart (radius 14.75) | done (Mini × 0.52 via RunState.birdScale: 3f) |
 | R-3.0.1-7 | Opening 118 pt at hoop 0, −0.32 % per hoop, floor 92 pt (78 %), by hoop index | 3.0.1 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.0.1-8 | Rim ends: two circles r 7, restitution 0.85 | 3.0.1, 3.0.4 | 1a | | todo |
-| R-3.0.1-9 | Forward recovery 2000 pt/s² back to cruise after a knock-back | 3.0.1 | 1a | | todo |
+| R-3.0.1-8 | Rim ends: two circles r 7, restitution 0.85 | 3.0.1, 3.0.4 | 1a | test/run/physics/s3_0_4_rim_test.dart::§3.0.4 1 two rim ends r 7 …; test/run/physics/s3_0_4_rim_test.dart::§3.0.4 2 head-on … restitution 0.85 | done |
+| R-3.0.1-9 | Forward recovery 2000 pt/s² back to cruise after a knock-back | 3.0.1 | 1a | test/run/physics/s3_0_4_rim_test.dart::§3.0.4 4 after a knock-back the forward speed recovers …; test/run/flow/s3_1_hoop_flow_test.dart::§3.0.4 a rim touch bounces, the world jolts back … | done |
 | R-3.0.1-10 | Hoops spawned during comet / portal rides are 118 pt, upright, still | 3.0.1, 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.0.1-11 | Score +1 per hoop (no "1 + streak"); +5 from a pair SCORE gift | 3.0.1 | 1a | | todo |
-| R-3.0.1-12 | Colour stage = floor(hoopsPassed / 10) mod 11 over the existing 11 palettes (gold last); replaces `stageOf(score)` | 3.0.1 | 1a | | todo |
+| R-3.0.1-11 | Score +1 per hoop (no "1 + streak"); +5 from a pair SCORE gift | 3.0.1 | 1a | test/collision_test.dart::§3.1 crossing the plane inside the opening scores exactly once | done (+5 pair gift: 3d) |
+| R-3.0.1-12 | Colour stage = floor(hoopsPassed / 10) mod 11 over the existing 11 palettes (gold last); replaces `stageOf(score)` | 3.0.1 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.1 the colour stage changes every 10 hoops passed …; test/color_state_test.dart | done |
 | R-3.0.1-13 | Hoop index = slots spawned (train / pair = 1 slot), not reset by a revive; ramps use the index of the slot being spawned | 3.0.1 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
 | R-3.0.1-14 | `runClock` runs in play and rides, stops in pause / revive offer / phoenix, slows with Hourglass; used by scroll ramp, squeeze, versus timeline, Big Hoops | 3.0.1 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
 | R-3.0.1-15 | Screen heights 568–730: HUD row + score circle top-anchored, bottom buttons bottom-anchored, centred blocks keep their offset from centre (y − 355.5 at 711) | 3.0.1 | 0b (geometry), 2d / 2e / 4a / 5b (screens) | lib/run/run_geometry.dart (RunGeometry) | done (0b geometry); screens pending |
@@ -88,37 +88,37 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.0.4-1 | Rim-end circles at local (0, ±(opening/2 + 7)), rotated with tilt, moved with motion; rest of the ring has no collider | 3.0.4 | 1a | | todo |
-| R-3.0.4-2 | On overlap push out along the normal; reflect velocity into the rim (relative to rim velocity) with restitution 0.85, tangential unchanged | 3.0.4 | 1a | | todo |
-| R-3.0.4-3 | Rim touch marks the hoop touched (no perfect), rim "tonk", white sparks at contact, 360° spin over 0.35 s (direction from vy) | 3.0.4 | 1a | | todo |
-| R-3.0.4-4 | Forward speed is a real velocity; recovers at 2000 pt/s²; camera follows → the world jolts back | 3.0.4 | 1a | | todo |
-| R-3.0.4-5 | Pass: centre crosses the plane forward between the rim-end centres (\|local y − ring offset\| ≤ opening/2 + 7); pressed against the inside counts as through | 3.0.4 | 1a | | todo |
-| R-3.0.4-6 | Crossings of the plane's extension beside the ring decide nothing | 3.0.4 | 1a | | todo |
-| R-3.0.4-7 | Miss only when fully past: bird x − r > centre x + \|sin tilt\| × (largest offset + opening/2 + 7) + 7 | 3.0.4 | 1a | | todo |
-| R-3.0.4-8 | Knocked back across the plane → not judged; each hoop resolves once | 3.0.4 | 1a | | todo |
-| R-3.0.4-9 | Inside half of a rim end pushes into the opening (save); outside half pushes away | 3.0.4 | 1a | | todo |
-| R-3.0.4-10 | Exceptions: saw rim = mistake, no bounce; closed switch reached = mistake; rides ignore rims | 3.0.4 | 1a (hooks) / 3d / 3a / 3b | | todo |
-| R-3.0.4-11 | Upward passes count like any forward pass | 10 (R16) | 1a | | todo |
+| R-3.0.4-1 | Rim-end circles at local (0, ±(opening/2 + 7)), rotated with tilt, moved with motion; rest of the ring has no collider | 3.0.4 | 1a | test/run/physics/s3_0_4_rim_test.dart::§3.0.4 1 two rim ends r 7 at local (0, ±(opening/2 + 7)), rotated with the tilt; test/run/physics/s3_0_4_rim_test.dart::§3.0.4 2 relative to the rim's own velocity (moving rings) | done |
+| R-3.0.4-2 | On overlap push out along the normal; reflect velocity into the rim (relative to rim velocity) with restitution 0.85, tangential unchanged | 3.0.4 | 1a | test/run/physics/s3_0_4_rim_test.dart::§3.0.4 2 head-on …; test/run/physics/s3_0_4_rim_test.dart::§3.0.4 2 moving away …; test/run/physics/s3_0_4_rim_test.dart::§3.0.4 2 relative to the rim's own velocity | done |
+| R-3.0.4-3 | Rim touch marks the hoop touched (no perfect), rim "tonk", white sparks at contact, 360° spin over 0.35 s (direction from vy) | 3.0.4 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.4 a rim touch bounces …; test/run/physics/s3_0_4_rim_test.dart::§3.0.4 3 the spin is one turn over 0.35 s | part (touched, sparks, spin done; the rim "tonk" sound file does not exist yet: 3h) |
+| R-3.0.4-4 | Forward speed is a real velocity; recovers at 2000 pt/s²; camera follows → the world jolts back | 3.0.4 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.4 a rim touch bounces, the world jolts back … | done |
+| R-3.0.4-5 | Pass: centre crosses the plane forward between the rim-end centres (\|local y − ring offset\| ≤ opening/2 + 7); pressed against the inside counts as through | 3.0.4 | 1a | test/run/physics/s3_0_4_pass_test.dart::§3.0.4 inside the opening scores …; test/run/physics/s3_0_4_pass_test.dart::§3.0.4 the segment ends at the rim-end centres; test/run/physics/s3_0_4_pass_test.dart::§3.0.4 a bird pressed against the inside of a rim end passes (upright and every tilt step, both ends); test/run/flow/s3_1_hoop_flow_test.dart::§3.0.4 a bird pressed against the inside of the bottom rim end passes | done |
+| R-3.0.4-6 | Crossings of the plane's extension beside the ring decide nothing | 3.0.4 | 1a | test/run/physics/s3_0_4_pass_test.dart::§3.0.4 crossings of the plane beside the ring decide nothing | done |
+| R-3.0.4-7 | Miss only when fully past: bird x − r > centre x + \|sin tilt\| × (largest offset + opening/2 + 7) + 7 | 3.0.4 | 1a | test/run/physics/s3_0_4_pass_test.dart::§3.0.4 miss only when fully past …; test/run/physics/s3_0_4_pass_test.dart::§3.0.4 rightmost point of a tilted ring …; test/run/physics/s3_0_4_pass_test.dart::§3.0.4 a tilted ring is never missed early (every tilt step) | done |
+| R-3.0.4-8 | Knocked back across the plane → not judged; each hoop resolves once | 3.0.4 | 1a | test/run/physics/s3_0_4_pass_test.dart::§3.0.4 a bird knocked back across the plane is not judged; test/collision_test.dart::§3.1 crossing the plane … scores exactly once | done |
+| R-3.0.4-9 | Inside half of a rim end pushes into the opening (save); outside half pushes away | 3.0.4 | 1a | test/run/physics/s3_0_4_rim_test.dart::§3.0.4 6 the inside half pushes the bird into the opening, the outside half away from it | done |
+| R-3.0.4-10 | Exceptions: saw rim = mistake, no bounce; closed switch reached = mistake; rides ignore rims | 3.0.4 | 1a (hooks) / 3d / 3a / 3b | lib/run/run_controller.dart hooks (RimMode.deadly → saw mistake, PlaneVerdict.mistake → closed switch, RimMode.ignored in rides) | part (hooks done 1a; behaviour tests 3d / 3a / 3b) |
+| R-3.0.4-11 | Upward passes count like any forward pass | 10 (R16) | 1a | test/run/physics/s3_0_4_pass_test.dart::§3.0.4 inside the opening scores … (any forward crossing, vy free) | done |
 
 ## 3.0.5 Death physics
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.0.5-1 | At death camera and scroll ease to a stop over 0.4 s (ease-out); hoops, teeth, pickups stop with it | 3.0.5 | 1a | | todo |
-| R-3.0.5-2 | Bird keeps its velocity (forward + vertical) | 3.0.5 | 1a | | todo |
-| R-3.0.5-3 | Knock +180 pt/s along the contact normal (rim/saw from rim end, strip away from strip, closed switch −x); plain miss pops vy −140 | 3.0.5 | 1a | | todo |
-| R-3.0.5-4 | Spin ω = clamp(forward / 25 + impact ±3–4, −12, 12) rad/s; dead X eyes | 3.0.5 | 1a | | todo |
-| R-3.0.5-5 | Then gravity 1250 and air drag −40 %/s on forward speed; top strip bounces down (restitution 0.3) | 3.0.5 | 1a | | todo |
-| R-3.0.5-6 | No collisions while tumbling (hoops, rims, pickups) | 3.0.5 | 1a | | todo |
-| R-3.0.5-7 | Floor bounce at tooth tips − r + 2 with restitution 0.3 (forward × 0.6, spin × −0.6, dust/feather puff) while landing > 140 pt/s; usually 1–2 bounces | 3.0.5 | 1a | | todo |
-| R-3.0.5-8 | Rest: slides to a stop (−600 %/s), spin settles flat (belly or back, nearer), stays behind the tooth tips through revive and until results | 3.0.5 | 1a | | todo |
-| R-3.0.5-9 | Screen edges: bounce back at 24 pt from left / 30 pt from right (forward × −0.3); never leaves the screen | 3.0.5 | 1a | | todo |
+| R-3.0.5-1 | At death camera and scroll ease to a stop over 0.4 s (ease-out); hoops, teeth, pickups stop with it | 3.0.5 | 1a | test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 the world eases to a stop over 0.4 s; test/run/flow/s3_1_hoop_flow_test.dart::§3.0.5 the world eases to a stop over 0.4 s … | done |
+| R-3.0.5-2 | Bird keeps its velocity (forward + vertical) | 3.0.5 | 1a | test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 momentum + 180 pt/s knock along the contact normal | done |
+| R-3.0.5-3 | Knock +180 pt/s along the contact normal (rim/saw from rim end, strip away from strip, closed switch −x); plain miss pops vy −140 | 3.0.5 | 1a | test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 momentum + 180 pt/s knock …; test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 a plain miss pops the bird up (vy − 140) | done |
+| R-3.0.5-4 | Spin ω = clamp(forward / 25 + impact ±3–4, −12, 12) rad/s; dead X eyes | 3.0.5 | 1a | test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 spin = clamp(forward / 25 + impact, ±12) rad/s; test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 … the dead bird rests on the floor spikes | done |
+| R-3.0.5-5 | Then gravity 1250 and air drag −40 %/s on forward speed; top strip bounces down (restitution 0.3) | 3.0.5 | 1a | test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 a top-strip hit bounces the bird back down (0.3) | done |
+| R-3.0.5-6 | No collisions while tumbling (hoops, rims, pickups) | 3.0.5 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.5 the world eases to a stop over 0.4 s; the dead bird passes through hoops | done |
+| R-3.0.5-7 | Floor bounce at tooth tips − r + 2 with restitution 0.3 (forward × 0.6, spin × −0.6, dust/feather puff) while landing > 140 pt/s; usually 1–2 bounces | 3.0.5 | 1a | test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 bounces 1–2 times, then rests on the floor tooth line … | done |
+| R-3.0.5-8 | Rest: slides to a stop (−600 %/s), spin settles flat (belly or back, nearer), stays behind the tooth tips through revive and until results | 3.0.5 | 1a | test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 bounces 1–2 times …; test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 … the dead bird rests on the floor spikes | done |
+| R-3.0.5-9 | Screen edges: bounce back at 24 pt from left / 30 pt from right (forward × −0.3); never leaves the screen | 3.0.5 | 1a | test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 never leaves the screen sideways (24 pt / 30 pt edges) | done |
 | R-3.0.5-10 | During a squeeze the resting line is the squeezed floor | 3.0.5 | 3g | | todo |
 | R-3.0.5-11 | Themed deaths: signature moment first, then the same tumble (Frost: ice block shatters, frozen bird lies there); Black Hole swallows (no tumble, no body, only the shock ring) | 3.0.5 | 3d | | todo |
 | R-3.0.5-12 | Revive offer 1.5 s after the hit (or when resting, if sooner); themed: moment + ≤ 1.5 s, max 2.2 s | 3.0.5 | 2d | | todo |
 | R-3.0.5-13 | ≤ 5 hoops: same tumble, then bonus / results after 1.5 s (2.2 s max) | 3.0.5 | 2d | | todo |
 | R-3.0.5-14 | Extra life / shield saves: no tumble, keep flying; spike save bounces off the tooth line during the 2 s (top: down at 30 %; floor: vy −222) | 3.0.5 | 2a | | todo |
-| R-3.0.5-15 | SPEC.md DEVIATION note: death tumble replaces the 1.0 death | 3.0.5 | 1a | | todo |
+| R-3.0.5-15 | SPEC.md DEVIATION note: death tumble replaces the 1.0 death | 3.0.5 | 1a | SPEC.md "PRD-2 hoops replace pipes (WP-1a)" | done |
 
 ## 3.0.6 Coin icon
 
@@ -139,7 +139,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.8-7 | Debug force menu (debug builds only): every element → next slot/gap ignoring unlock + cooldown, keeping exclusivity | 3.0.8 | 0b | test/run/debug/s3_0_8_force_menu_test.dart; test/run/director/s3_0_3_director_test.dart::§3.0.8 debug force* | done |
 | R-3.0.8-8 | Debug: "start at hoop N" (= `startHoopIndex`), "reset met elements", "force portal ride: cannon / space / volcano / sea / pinball / storm" | 3.0.8 | 0b (3b for rides) | test/run/debug/s3_0_8_force_menu_test.dart; test/run/director/s3_0_3_director_test.dart::§3.0.8 debug force* | done |
 | R-3.0.8-9 | Debug menu never compiled into release builds | 3.0.8 | 0b | test/run/debug/s3_0_8_force_menu_test.dart; test/run/director/s3_0_3_director_test.dart::§3.0.8 debug force* | done |
-| R-3.0.8-E1 | Element: normal hoop | 3.0.7 | 1a | | todo |
+| R-3.0.8-E1 | Element: normal hoop | 3.0.7 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.1 … normal kind …; test/autopilot_test.dart | done |
 | R-3.0.8-E2 | Element: angled ring | 3.0.7 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.10 an angled hoop is rotated around its centre… | done |
 | R-3.0.8-E3 | Element: moving ring | 3.0.7 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 a moving hoop gets its motion and its guide… | done |
 | R-3.0.8-E4 | Element: Bullseye Ring | 3.0.7 | 3c | | todo |
@@ -164,7 +164,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.8-E23 | Element: spike squeeze | 3.0.7 | 3g | | todo |
 | R-3.0.8-E24 | Element: Big Hoops | 3.0.7 | 2a | | todo |
 | R-3.0.8-E25 | Element: perfect streak + ring tier looks | 3.0.7 | 2b | | todo |
-| R-3.0.8-E26 | Element: coins (per pass + bonuses) | 3.0.7 | 1a | | todo |
+| R-3.0.8-E26 | Element: coins (per pass + bonuses) | 3.0.7 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 a perfect pass pays 2 coins at once …; test/home_flow_test.dart::PRD-2 §3.2 coins are credited per hoop … | done (bonus sources: their WPs) |
 | R-3.0.8-E27 | Element: rumble | 3.0.7 | 2c | | todo |
 | R-3.0.8-E28 | Element: revive, results, versus | 3.0.7 | 2d / 2e / 5b | | todo |
 
@@ -172,7 +172,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.0.9-1 | Spike strips 44 pt (band 26 + teeth 18, period 40), stage fg, 40 × 44 repeating tile, scrollable teeth; replaces 72 pt sprite; `spikeHeight` → 44 | 3.0.9 #1 | 0c / 1a | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #1 44 pt = band 26 + teeth 18, period 40, tips at 20 + 40k; test/run/shots/parts_shots_test.dart::§3.0.9 #1 menu with the 44 pt teeth art | part (art done 0c; 72→44 switch 1a) |
+| R-3.0.9-1 | Spike strips 44 pt (band 26 + teeth 18, period 40), stage fg, 40 × 44 repeating tile, scrollable teeth; replaces 72 pt sprite; `spikeHeight` → 44 | 3.0.9 #1 | 0c / 1a | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #1 44 pt = band 26 + teeth 18, period 40, tips at 20 + 40k; test/run/shots/parts_shots_test.dart::§3.0.9 #1 menu with the 44 pt teeth art | done (0c art; 1a: spikeHeight 44 + SpikeArt.teeth default, test/config_test.dart::§3.0.9 #1 strips are 44 pt tall) |
 | R-3.0.9-2 | Score circle = current game's 183 pt disc at (160, centre + 35), LVDC digits, behind hoops and bird | 3.0.9 #2 | existing / 0c check | shot: build/parts_shots/01_hoops_m0.png (existing ScoreHud) | done |
 | R-3.0.9-3 | Hoop ring master: 24 pt wide, stroke 7, front `#EC008C` over bird, back `#B0006B` behind; height = opening + 2 × 7; specials change colours/decorations only | 3.0.9 #3 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #3 24 pt wide, stroke 7, half height = opening / 2 + 7; shot: 01_hoops_m0.png, 03_ring_variants.png | done |
 | R-3.0.9-4 | Bird = `LookPainter` (classic + equipped skin), ×0.983, flap, blink, stage blend; every screen draws the equipped skin | 3.0.9 #4 | 0c (check) | shot: build/parts_shots/05_birds.png (existing LookPainter) | done |
@@ -193,29 +193,29 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.1-1 | Pipes removed; bird flies through hoops; spike strips stay lethal | 3.1 | 1a | | todo |
-| R-3.1-2 | Pass inside the opening: +1, `point.mp3` (non-perfect), HUD update, colour-stage check, pass feedback | 3.1 | 1a | | todo |
-| R-3.1-3 | Missing a hoop ends the run (or uses extra life / shield), plays the miss flash | 3.1 | 1a | | todo |
-| R-3.1-4 | Rim touch doesn't end the run: bounce; if through, +1 and 1 coin, not perfect, streak resets | 3.1 | 1a / 2b | | todo |
-| R-3.1-5 | Floor/ceiling spikes: contact = mistake | 3.1 | 1a | | todo |
-| R-3.1-6 | Score fires at the plane crossing (replaces the 111 pt sensor) | 3.1 | 1a | | todo |
-| R-3.1-7 | Hoop art ~22–24 pt deep, opening + 2 × 7 tall, scales with the opening; two layers (back half behind, front half in front) | 3.1 | 1a / 0c | | todo |
-| R-3.1-8 | Every hoop spawns ≥ 60 pt past the right edge (glow and decorations out of view) | 3.1 | 1a | | todo |
-| R-3.1-9 | Colours fixed (not stage-tinted); Big Hoops gold `#FFB529`/`#D48A00`; contrast checked on stage 45 | 3.1 | 1a / 2a | | todo |
-| R-3.1-10 | `pipe_pair` → `Hoop`; pipe Config constants → hoop constants; min/max centre bands use the same margin | 3.1 | 1a | | todo |
+| R-3.1-1 | Pipes removed; bird flies through hoops; spike strips stay lethal | 3.1 | 1a | test/collision_test.dart; test/autopilot_test.dart | done |
+| R-3.1-2 | Pass inside the opening: +1, `point.mp3` (non-perfect), HUD update, colour-stage check, pass feedback | 3.1 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.1 a non-perfect pass plays point.mp3 and the §5.1 pulse; test/run/flow/s3_1_hoop_flow_test.dart::§3.0.1 the colour stage … | done |
+| R-3.1-3 | Missing a hoop ends the run (or uses extra life / shield), plays the miss flash | 3.1 | 1a | test/collision_test.dart::§3.1 missing a hoop ends the run exactly once; test/run/flow/s3_1_hoop_flow_test.dart::§5.13 a miss plays the shock-ring miss flash … | done (extra life / shield: 2a) |
+| R-3.1-4 | Rim touch doesn't end the run: bounce; if through, +1 and 1 coin, not perfect, streak resets | 3.1 | 1a / 2b | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.4 a rim touch bounces … +1 with 1 coin and is not perfect | done (streak reset: 2b) |
+| R-3.1-5 | Floor/ceiling spikes: contact = mistake | 3.1 | 1a | test/collision_test.dart::§3.1 bird-spike contact ends the run exactly once; test/run/flow/s3_1_hoop_flow_test.dart::§3.0.5 a spike save (invulnerable) bounces off the floor tooth line | done |
+| R-3.1-6 | Score fires at the plane crossing (replaces the 111 pt sensor) | 3.1 | 1a | test/run/physics/s3_0_4_pass_test.dart; test/collision_test.dart::§3.1 crossing the plane inside the opening scores exactly once | done |
+| R-3.1-7 | Hoop art ~22–24 pt deep, opening + 2 × 7 tall, scales with the opening; two layers (back half behind, front half in front) | 3.1 | 1a / 0c | shot: build/shots/run/hoops/run_711.png (test/run/shots/hoops_shots_test.dart::§5.1 run frame with M0 hoops at 711) | done |
+| R-3.1-8 | Every hoop spawns ≥ 60 pt past the right edge (glow and decorations out of view) | 3.1 | 1a | test/run/flow/s3_0_1_hoop_spawner_test.dart::… scrolled in from ≥ 60 pt past the edge | done |
+| R-3.1-9 | Colours fixed (not stage-tinted); Big Hoops gold `#FFB529`/`#D48A00`; contrast checked on stage 45 | 3.1 | 1a / 2a | test/color_state_test.dart (hoops keep the skin colours, not the tint) | part (fixed colours done; Big Hoops gold: 2a) |
+| R-3.1-10 | `pipe_pair` → `Hoop`; pipe Config constants → hoop constants; min/max centre bands use the same margin | 3.1 | 1a | pipe_pair.dart deleted; test/config_test.dart::PRD-2 hoop course …; test/run/flow/s3_0_1_hoop_spawner_test.dart | done |
 | R-3.1-11 | Fredoka SemiBold added (assets + pubspec) | 3.1, 5.7 | 0b | pubspec.yaml font family Fredoka (assets/fonts/Fredoka-SemiBold.ttf, OFL) | done |
-| R-3.1-12 | Tint registry no longer applies to obstacles; pipe sprites dropped | 3.1 | 1a | | todo |
-| R-3.1-13 | SPEC.md DEVIATION: obstacle, score trigger, miss rule, 2.0 physics | 3.1, 7 | 1a | | todo |
-| R-3.1-14 | Tests updated: autopilot, gap-variance, layout, collision; plane-crossing suite (see R-7-T1) | 3.1 | 1a | | todo |
-| R-3.1-15 | Home/store copy "Don't touch the spikes" unchanged | 3.1 | 1a | | todo |
+| R-3.1-12 | Tint registry no longer applies to obstacles; pipe sprites dropped | 3.1 | 1a | test/color_state_test.dart (hoops are not Tintable) | done |
+| R-3.1-13 | SPEC.md DEVIATION: obstacle, score trigger, miss rule, 2.0 physics | 3.1, 7 | 1a | SPEC.md "PRD-2 hoops replace pipes (WP-1a)" | done |
+| R-3.1-14 | Tests updated: autopilot, gap-variance, layout, collision; plane-crossing suite (see R-7-T1) | 3.1 | 1a | test/autopilot_test.dart; test/collision_test.dart; test/run/flow/s3_0_1_hoop_spawner_test.dart (replaces pipe_spawner / gap_variance); test/layout_test.dart; test/run/physics/s3_0_4_pass_test.dart | done |
+| R-3.1-15 | Home/store copy "Don't touch the spikes" unchanged | 3.1 | 1a | lib/components/home/home_screen.dart unchanged | done |
 
 ## 3.2 Coin earning
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.2-1 | 1 coin per hoop passed; floating "+1" with coin icon at the hoop | 3.2 | 1a | | todo |
-| R-3.2-2 | Perfect pass +2 instead of 1 | 3.2 | 1a / 2b | | todo |
-| R-3.2-3 | Coins credited to the wallet at the moment of the pass (kept if the run ends right after); interim "1 coin per point at game over" removed | 3.2 | 1a | | todo |
+| R-3.2-1 | 1 coin per hoop passed; floating "+1" with coin icon at the hoop | 3.2 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.4 a rim touch bounces … 1 coin; lib/run/items/scoring.dart (CoinPopup, master #8) | done |
+| R-3.2-2 | Perfect pass +2 instead of 1 | 3.2 | 1a / 2b | test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 a perfect pass pays 2 coins at once … | done |
+| R-3.2-3 | Coins credited to the wallet at the moment of the pass (kept if the run ends right after); interim "1 coin per point at game over" removed | 3.2 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 … no coins at game over …; test/home_flow_test.dart::PRD-2 §3.2 coins are credited per hoop at the pass …; test/e2e/menu_e2e_test.dart::QA play score is credited once … | done |
 | R-3.2-4 | A hoop saved by an extra life / shield gives no coin | 3.2 | 2a | | todo |
 | R-3.2-5 | No coin total in the in-game HUD | 3.2 | 2d | | todo |
 | R-3.2-6 | Versus win +10 (draw +5) | 3.2, 3.13 | 5b | | todo |
@@ -636,8 +636,8 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-5.1-1 | In-game hoop M0: pink stroke 7, no posts / inner spikes, two layers; matches `hoops_m0.png` | 5.1 | 1a | | todo |
-| R-5.1-2 | Non-perfect pass feedback: ring outline pulses 0.8 → 1.9 in ≈ 0.55 s, gold "+1" floats up; `point.mp3`; HUD increments | 5.1 | 1a | | todo |
+| R-5.1-1 | In-game hoop M0: pink stroke 7, no posts / inner spikes, two layers; matches `hoops_m0.png` | 5.1 | 1a | shot: build/shots/run/hoops/run_568.png, run_711.png vs design/menu_v2/hoops_m0.png (test/run/shots/hoops_shots_test.dart) | done |
+| R-5.1-2 | Non-perfect pass feedback: ring outline pulses 0.8 → 1.9 in ≈ 0.55 s, gold "+1" floats up; `point.mp3`; HUD increments | 5.1 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.1 a non-perfect pass plays point.mp3 and the §5.1 pulse | done |
 | R-5.1-3 | Big Hoops look 1.5× and gold; matches `hoops_m0_big.png` | 5.1 | 2a | | todo |
 | R-5.2-1 | Heart pickup 32 pt `#FF3B5C`, 1.8 pt white outline, pulse 1.0 ↔ 1.14 (1 s), no glow | 5.2 | 2a | | todo |
 | R-5.2-2 | "+1 coin" gold text with icon rising ≈ 30 pt, fading 1.6 s at the hoop (superseded by master #8 for passes) | 5.2 | 0c | | todo |
@@ -701,9 +701,9 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.12b-10 | Deep sea dive (path, world, whale spout) + `rd_sea_splash/bubble/whale`, `rd_space_land`, `rd_sea_spout` | 5.12b | 3b | | todo |
 | R-5.12b-11 | Pinball (lanes, bumpers +500, spinning ball bird, flipper → jackpot loop → plunger) + `rd_pin_bumper/flipper/jackpot/plunger` | 5.12b | 3b | | todo |
 | R-5.12b-12 | Storm & tornado (corkscrew 4.2 turns r 150 → 70, depth scale ±12 %, debris, lightning, spit-out, pink umbrella) + `rd_storm_thunder/wind/umbrella` | 5.12b | 3b | | todo |
-| R-5.13-1 | Miss flash on every miss (normal + all special kinds; both rings of a pair), also when saved; not for saw / closed switch / spikes | 5.13 | 1a | | todo |
-| R-5.13-2 | Sequence: white flash 0–0.12 (stroke 8, glow 24); red `#FF1F3D` shockwave 1 → 2.6× 0–0.55; red edge glow 0–0.7 (180 → 430 pt radii, 0 → 0.55 → 0); drain to grey + dashed 0.12–0.52; grey dashed ghost stays and scrolls | 5.13 | 1a | | todo |
-| R-5.13-3 | World keeps easing to a stop; tier look cleared on the missed hoop; `miss_shock` sound; no rumble | 5.13 | 1a | | todo |
+| R-5.13-1 | Miss flash on every miss (normal + all special kinds; both rings of a pair), also when saved; not for saw / closed switch / spikes | 5.13 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§5.13 a miss plays the shock-ring miss flash … | done (one shockwave per ring offset; special kinds: their WPs) |
+| R-5.13-2 | Sequence: white flash 0–0.12 (stroke 8, glow 24); red `#FF1F3D` shockwave 1 → 2.6× 0–0.55; red edge glow 0–0.7 (180 → 430 pt radii, 0 → 0.55 → 0); drain to grey + dashed 0.12–0.52; grey dashed ghost stays and scrolls | 5.13 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§5.13 …; shot: build/shots/run/hoops/miss_(flash, wave, ghost)_(568, 711).png vs miss_c_*.png | done |
+| R-5.13-3 | World keeps easing to a stop; tier look cleared on the missed hoop; `miss_shock` sound; no rumble | 5.13 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§5.13 … (missShock); test/run/flow/s3_1_hoop_flow_test.dart::§3.0.5 the world eases to a stop | done (tier look: Hoop.look.missed for 2b) |
 | R-5.14-1 | Feather art (vane `#FFB529`/`#F09A0A`, notches, pink quill, white outline, ≈ 20 × 44, 20° tilt, flat) and idle (bob, pulse, sway, drift, twinkles every 0.28 s) | 5.14 | 4a | | todo |
 | R-5.14-2 | Touch fx + swell ×1.4 + 0.62 s curved flight into the tray shrinking to 0.82, turning 26°, block trail | 5.14 | 4a | | todo |
 | R-5.14-3 | Tray: centre (160, 230), 132 × 48, three 36 pt slots at −42 / 0 / +42; fades in sliding 10 pt; landing punch ×1.38, gold ring, 6 sparkles; fades ≈ 2.15 s after touch | 5.14 | 4a | | todo |
@@ -857,9 +857,9 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-7-1 | Run state (hearts, extra life, shield, streak, ride) lives in the game, not storage; coins via the wallet at the moment earned | 7 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
 | R-7-2 | New components for pickups, pooled effects, moving paths + guides, portal + cannon, HUD row, pause, revive, results | 7 | per WP | | todo |
 | R-7-3 | `RunDirector` owned by the game; tables as `Config` data mirroring `spawn_tables.json` / prototype `BANDS` / `BUDGET` / `SPECIAL` / `GAPITEM` | 7 | 0b | test/run/config/tables_mirror_test.dart; test/run/director/s3_0_3_director_test.dart | done |
-| R-7-4 | One `Hoop` component with a `kind` (normal, saw, switch, pair, fever, train, spring, bullseye, spin, portal) and ring offsets; strategy objects; tilt/move modifiers | 7 | 0b / 1a | test/run/flow/s3_0_run_core_flow_test.dart (Hoop / HoopKind skeleton + registry) | done (0b part); 1a pending |
-| R-7-5 | Bird at fixed screen x; world moves at the bird's forward speed; rim ends checked in plain math; `maxTranslation = 10000` kept | 7 | 1a | | todo |
-| R-7-6 | Death: free ballistic body, world eases to 0 over 0.4 s | 7 | 1a | | todo |
+| R-7-4 | One `Hoop` component with a `kind` (normal, saw, switch, pair, fever, train, spring, bullseye, spin, portal) and ring offsets; strategy objects; tilt/move modifiers | 7 | 0b / 1a | test/run/flow/s3_0_run_core_flow_test.dart; test/run/flow/s3_1_hoop_flow_test.dart | done (kinds per WP) |
+| R-7-5 | Bird at fixed screen x; world moves at the bird's forward speed; rim ends checked in plain math; `maxTranslation = 10000` kept | 7 | 1a | test/run/flow/s3_1_hoop_flow_test.dart; test/run/physics/s3_0_4_rim_test.dart; lib/game/flappy_game.dart maxTranslation = 10000 kept | done |
+| R-7-6 | Death: free ballistic body, world eases to 0 over 0.4 s | 7 | 1a | test/run/physics/s3_0_5_tumble_test.dart; test/run/flow/s3_1_hoop_flow_test.dart::§3.0.5 the world eases to a stop over 0.4 s | done |
 | R-7-7 | Results reads the level from `bestScore` before/after; `unclaimedLevelReward` until CLAIM/NEXT; emblem painter shared with home | 7 | 2e | | todo |
 | R-7-8 | `PortalRide` engine + `RideTheme` per ride; `rides84.js` timings | 7 | 3b | | todo |
 | R-7-9 | Sounds through `AudioPool` only; comet loop via the BGM-style player | 7 | 0b / all | test/run/s7_run_parts_test.dart::§3.9 loops… | done (0b part); all pending |
@@ -867,10 +867,10 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-7-11 | Feathers: persistent count, at most one pickup, bonus screen between revive and results, wallet per pop, ad placement `bonus_feathers`; timings from `bonus.js` / `collect.js` | 7 | 4a | | todo |
 | R-7-12 | Puzzle: mask + round, one missing piece per run, 4/4 credit + reset + round + 1 atomically, colour themes as data (`PZT`) | 7 | 4a | | todo |
 | R-7-13 | Switch ring: one kind, pluggable design, shared rules; spawner places ring + switch; seeded design pick | 7 | 3d | | todo |
-| R-7-T1 | Plane-crossing tests: inside scores; outside ends; rim bounces + scores +1 without perfect; pressed against the inside passes (upright and every tilt step); tilted ring never missed early; saw rim kills; exactly-once game over | 3.1, 7 | 1a (saw: 3d) | | todo |
+| R-7-T1 | Plane-crossing tests: inside scores; outside ends; rim bounces + scores +1 without perfect; pressed against the inside passes (upright and every tilt step); tilted ring never missed early; saw rim kills; exactly-once game over | 3.1, 7 | 1a (saw: 3d) | test/run/physics/s3_0_4_pass_test.dart; test/run/physics/s3_0_4_rim_test.dart; test/collision_test.dart; test/run/flow/s3_1_hoop_flow_test.dart | done (saw rim: 3d) |
 | R-7-T2 | Run-director tests (3.0.3), incl. same seed → same sequence | 3.1, 7 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-7-T3 | Death-physics tests (3.0.5) | 3.1, 7 | 1a | | todo |
-| R-7-T4 | `flutter test` green incl. autopilot at 568 and 711, with and without Big Hoops, director on (all elements), each special forced on every allowed slot | 7 | 1a / 1b / 2a / P3 | | todo |
+| R-7-T3 | Death-physics tests (3.0.5) | 3.1, 7 | 1a | test/run/physics/s3_0_5_tumble_test.dart; test/run/flow/s3_1_hoop_flow_test.dart | done |
+| R-7-T4 | `flutter test` green incl. autopilot at 568 and 711, with and without Big Hoops, director on (all elements), each special forced on every allowed slot | 7 | 1a / 1b / 2a / P3 | test/autopilot_test.dart::AUTOPILOT (568 / 711) seed 7, 21, 1234: §7 the hoop-aware bot passes >= 12 hoops | part (plain gate done 1a; Big Hoops / elements: 1b / 2a / P3) |
 | R-7-T5 | `startHoopIndex` override; gate ≥ 12 hoops after each type unlocks at both heights; plain run ≥ 12 | 7 | 0b / P3 | test/run/director/s3_0_3_director_test.dart | done (0b part); P3 pending |
 | R-7-T6 | Autopilot targets the switch before a closed switch ring and the nearer ring of a pair | 7 | 0b / 3d | lib/run/debug/autopilot.dart (nearest ring); switch pre-target via HoopKind.autopilotTarget (3d) | done (0b part); 3d pending |
 | R-7-T7 | Revive tests: ladder (ad → 250 → 500 → 1 000 → doubling, reset per game, no-ad start 250); phoenix (safe line, drift to 70, scroll at 1.65 s, 2 s invuln, Black Hole re-form); ≥ 6 rule (≤ 5 → no offer, no ladder step); collectables lost and timed powerups ended at death; squeeze reset | 7 | 2d (+ 3d / 3e / 3f / 3g cases) | | todo |

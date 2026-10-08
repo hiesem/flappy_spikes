@@ -1,7 +1,6 @@
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/gameover_panel.dart';
-import 'package:flappy_spikes/components/pipe_pair.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
@@ -79,7 +78,7 @@ void main() {
     await preloadImages(game);
   }
 
-  group('§3.0 run core with the 1.0 pipes (WP-0b plumbing)', () {
+  group('§3.0 run core with the normal hoop (WP-0b plumbing, WP-1a course)', () {
     final spy = AnalyticsSpy();
     final tester = FlameTester<FlappySpikesGame>(
       () => createRunTestGame(services: spy, seed: 99),
@@ -87,27 +86,31 @@ void main() {
     );
 
     tester.testGameWidget(
-      '§3.0.1 START builds a RunController; the pipes still play; the run '
-      'mirrors the score, ends through the mistake pipeline and reports '
-      'run_end',
+      '§3.0.1 START builds a RunController; the hoops play; the run keeps '
+      'the score, ends through the mistake pipeline (after the tumble) and '
+      'reports run_end',
       setUp: (game, _) => boot(game),
       verify: (game, _) async {
         spy.events.clear();
         final run = await startRun(game);
         expect(run.setup.seed, 99);
         expect(run.started, isTrue);
-        expect(run.legacyPipes, isTrue);
+        expect(run.spawner.live, isTrue);
         expect(game.isScrolling, isTrue);
         run.events.recordLog = true;
 
         final flight = await flyRun(game, maxSeconds: 30, untilHoops: 2);
-        expect(game.world.children.query<PipePair>(), isNotEmpty);
+        expect(hoopsOf(game), isNotEmpty);
         expect(flight.hoops, greaterThanOrEqualTo(2));
         expect(run.state.score, game.score);
         expect(run.clock.t, greaterThan(2));
-        expect(run.state.camX, closeTo(run.clock.t * Config.scrollSpeed, 1));
+        // §3.0.1 the camera is the bird's forward motion (cruise + ramp).
+        expect(
+          run.state.camX,
+          closeTo(run.clock.t * RunConfig.cruise(run.clock.t / 2), 2),
+        );
 
-        game.onBirdHit(MistakeCause.spikes);
+        killRun(game, MistakeCause.spikes);
         await flushAndMount(game);
         expect(game.state, GameState.gameOver);
         expect(run.ended, isTrue);
@@ -133,7 +136,7 @@ void main() {
     );
 
     tester.testGameWidget(
-      '§7 the autopilot flies the legacy course',
+      '§7 the autopilot flies the hoop course',
       setUp: (game, _) => boot(game),
       verify: (game, _) async {
         await startRun(game);
@@ -156,9 +159,9 @@ void main() {
       setUp: (game, _) => boot(game),
       verify: (game, _) async {
         registerTestKinds();
-        game.runDebug.god = true; // the pipes still run underneath
+        game.runDebug.god = true; // the test kinds have no visuals
         final run = await startRun(game);
-        expect(run.legacyPipes, isFalse);
+        expect(run.spawner.live, isTrue);
         expect(run.state.forwardSpeed, RunConfig.cruiseSpeed);
         final first = hoopsOf(game).single;
         expect(first.planeX, 380);
@@ -254,7 +257,7 @@ void main() {
         expect(run.setup.opponent, same(opponent));
         expect(run.setup.starter, Powerup.shield);
         expect(run.state.shield, isTrue);
-        game.onBirdHit();
+        killRun(game);
         await flushAndMount(game);
         expect(versus.submitted, hasLength(1));
       },
@@ -281,7 +284,7 @@ void main() {
         expect(earned.last.eggX2, isTrue);
         expect(analyticsLog(spy).where((e) => e.$1 == 'coins_earned'), isEmpty);
 
-        game.onBirdHit();
+        killRun(game);
         await flushAndMount(game);
         final coins = analyticsLog(spy)
             .where((e) => e.$1 == 'coins_earned')
@@ -290,8 +293,8 @@ void main() {
         expect(coins, contains(allOf(containsPair('source', 'hoop'), containsPair('amount', 1))));
         expect(coins, contains(allOf(containsPair('source', 'perfect'), containsPair('egg_x2', 0), containsPair('amount', 2))));
         expect(coins, contains(allOf(containsPair('source', 'perfect'), containsPair('egg_x2', 1), containsPair('amount', 4))));
-        // The 1.0 game-over credit is not an in-run source: sent at once.
-        expect(coins.where((c) => c['source'] == 'play').length, lessThanOrEqualTo(1));
+        // PRD-2 §3.2: no 1.0 "1 coin per point" credit at game over.
+        expect(coins.where((c) => c['source'] == 'play'), isEmpty);
       },
     );
 

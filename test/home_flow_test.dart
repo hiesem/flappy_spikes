@@ -8,7 +8,6 @@ import 'package:flappy_spikes/components/debug_panel.dart';
 import 'package:flappy_spikes/components/gameover_panel.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/components/home/menu_primitives.dart';
-import 'package:flappy_spikes/components/pipe_pair.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
 import 'package:flappy_spikes/components/spike_strip.dart';
 import 'package:flappy_spikes/components/ui/service_message.dart';
@@ -493,7 +492,7 @@ void main() {
 
         game.menu.slot.debugForce = Powerup.shield;
         game.onScreenTap();
-        game.onBirdHit();
+        killRun(game);
         await flushAndMount(game);
         game.goHome();
         await flushAndMount(game);
@@ -508,21 +507,32 @@ void main() {
 
   group('coins + game over', () {
     homeTest(
-      'coins credited at game over = score; panel shows "+N"',
+      'PRD-2 §3.2 coins are credited per hoop at the pass (1, perfect 2), '
+      'none at game over; panel shows the run\'s "+N"',
       prefs: const {'coins': 7},
       verify: (game, spy, ads, tester) async {
         game.onScreenTap();
-        game.score = 13;
-        game.onBirdHit();
+        final run = game.run!;
+        for (var i = 0; i < 3; i++) {
+          run.debugPass(); // rim touched: 1 coin
+        }
+        run.debugPass(perfect: true); // 2 coins
+        await flushPrefs();
+        expect(game.menu.wallet.balance, 7 + 5, reason: 'at the pass');
+        killRun(game);
         await flushPrefs();
         await flushAndMount(game);
-        expect(game.menu.wallet.balance, 20);
-        expect(spy.last('coins_earned'), {'amount': 13, 'source': 'play'});
+        expect(game.menu.wallet.balance, 12, reason: 'nothing at game over');
+        final coins = spy.events.where((e) => e.$1 == 'coins_earned').map((e) => e.$2).toList();
+        expect(coins, containsAll([
+          {'amount': 3, 'source': 'hoop', 'egg_x2': 0},
+          {'amount': 2, 'source': 'perfect', 'egg_x2': 0},
+        ]));
         final panel = game.world.children.query<GameOverPanel>().single;
-        expect(panel.coinsEarned, 13);
+        expect(panel.coinsEarned, 5);
         final labels = panel.children.whereType<TextComponent>();
-        expect(labels.map((l) => l.text), contains('+13'));
-        final coin = labels.firstWhere((l) => l.text == '+13');
+        expect(labels.map((l) => l.text), contains('+5'));
+        final coin = labels.firstWhere((l) => l.text == '+5');
         expect(coin.position.y, Config.coinsEarnedPositionFor(284).y);
       },
     );
@@ -531,7 +541,7 @@ void main() {
       'score 0 credits nothing',
       verify: (game, spy, ads, tester) async {
         game.onScreenTap();
-        game.onBirdHit();
+        killRun(game);
         await flushPrefs();
         expect(game.menu.wallet.balance, 0);
         expect(spy.names, isNot(contains('coins_earned')));
@@ -550,7 +560,7 @@ void main() {
             reason: 'the strips slide to full height during a run');
 
         game.score = 4;
-        game.onBirdHit();
+        killRun(game);
         await flushAndMount(game);
         final panel = game.world.children.query<GameOverPanel>().single;
         expect(panel.canContinue, isFalse);
@@ -605,9 +615,10 @@ void main() {
         final bird = game.world.children.query<Bird>().single;
         game.update(1 / 60);
         expect(bird.lookComponent.blend, 0);
-        game.score = 4;
-        // Score 5 -> stage 5 crossfade.
-        game.onScoreSensor(PipePair(gapBottomY: 351));
+        // Hoop 10 -> stage 5 crossfade (PRD-2 §3.0.1).
+        for (var i = 0; i < 10; i++) {
+          game.run!.debugPass();
+        }
         // 60 fps frames (a single long update is clamped to maxFrameStep).
         stepGame(game, 0.25); // halfway through the 0.5 s crossfade
         expect(game.skinBlend, closeTo(Config.skinStageBlend / 2, 1e-9));

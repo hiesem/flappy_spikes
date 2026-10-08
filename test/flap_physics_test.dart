@@ -1,7 +1,6 @@
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
-import 'package:flappy_spikes/components/pipe_pair.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -99,11 +98,8 @@ void main() {
       await preloadImages(game);
       game.onScreenTap(); // start -> playing (+ first flap)
       game.update(1 / 60);
-      // No pipes: let the bird free-fall without pipe collisions.
-      for (final pipe in game.world.children.query<PipePair>()) {
-        pipe.removeFromParent();
-      }
-      game.update(1 / 60);
+      // PRD-2 §3.0.1: the clamp is now 650 pt/s (hoops never collide with
+      // a level-falling bird before it reaches the floor spikes).
     },
     verify: (game, tester) async {
       final b = bird(game);

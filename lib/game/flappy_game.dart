@@ -24,7 +24,6 @@ import '../components/menu_drag_dispatcher.dart';
 import '../components/menu_screen_chrome.dart' show MenuScreen;
 import '../components/noads_celebration.dart';
 import '../components/noads_popup.dart';
-import '../components/pipe_pair.dart';
 import '../components/purchase_result_popup.dart';
 import '../components/score_hud.dart';
 import '../components/settings_panel.dart';
@@ -213,17 +212,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   final Set<Tintable> _tintables = {};
   final List<Fade> _fades = [];
 
-  /// Seeds the pipe spawn layout (tests); null = unseeded. Tests inject a
-  /// seeded [Random] so journeys that fly a fixed line meet the same pipes
-  /// every run.
-  Random? pipeRandom;
   final Random _random = Random();
-
-  /// The pipe spawn RNG: the injected [pipeRandom] when set, else [_random].
-  Random get _pipeRandom => pipeRandom ?? _random;
-
-  double _spawnTimer = 0;
-  double? _lastGapBottomY;
 
   // region WP-0b — run plumbing (ARCH §2.3)
   RunController? _run;
@@ -826,7 +815,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       ..enableGravity()
       ..flap();
     fadeOpacity(_hud, from: 0, to: 1, duration: Config.gameplayFadeDuration);
-    _spawnTimer = Config.pipeSpawnInterval; // spawn the first pair now
     _startRun(starter);
   }
 
@@ -901,22 +889,34 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
   }
 
-  /// Legacy pipes (until WP-1a): the next pipe gap's centre ahead of the
-  /// bird, for the autopilot.
-  double? legacyPipeTargetY() {
-    final bird = runBirdPosition;
-    if (bird == null) return null;
-    PipePair? next;
-    for (final p in world.children.query<PipePair>()) {
-      if (!p.isLoaded) continue;
-      final x = p.body.position.x;
-      if (x + Config.pipeWidth / 2 < bird.x - Config.birdRadius) continue;
-      if (next == null || x < next.body.position.x) next = p;
-    }
-    if (next == null) return null;
-    return next.gapBottomY - next.gap / 2;
-  }
   // endregion WP-0b
+
+  // region WP-1a — hoops replace pipes (PRD-2 §3.0.4, §3.0.5, §3.1)
+  /// The run bird (null on the home screen before a run / after a reset).
+  Bird? get runBird => _bird;
+
+  /// The current colour stage's palette key (0, 5, …, 50).
+  int get stageKey => _stage;
+
+  /// §3.0.1 colour stage of a run: [stageIndex] = floor(hoopsPassed / 10)
+  /// mod 11, the existing 11 palettes in order (gold last).
+  void applyRunStage(int stageIndex) {
+    final key = paletteKeyForStageIndex(stageIndex);
+    if (key == _stage) return;
+    _stage = key;
+    _startColorFade(paletteForStage(key), stage: key);
+  }
+
+  /// §3.0.5 a death that is not saved: the bird turns into the ballistic
+  /// tumble (the run drives it) and the game waits in [GameState.dying]
+  /// until the run hands over to the post-run flow ([endRun]).
+  void beginDying() {
+    if (state != GameState.playing) return;
+    state = GameState.dying;
+    sound.play(Sfx.gameover);
+    _bird?.die();
+  }
+  // endregion WP-1a
 
   /// True while the home screen is up with nothing over it.
   bool get _homeInteractive =>
@@ -2091,25 +2091,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   // --- scoring & contacts ------------------------------------------------
 
-  void onScoreSensor(Object other) {
-    if (state != GameState.playing || other is! PipePair || other.scored) {
-      return;
-    }
-    other.scored = true;
-    score++;
-    sound.play(Sfx.point);
-    _hud.setScore(score);
-    _run?.legacyPoint(score);
-    final newStage = stageOf(score);
-    if (newStage != _stage) {
-      _stage = newStage;
-      _startColorFade(paletteForStage(newStage), stage: newStage);
-    }
-  }
-
-  /// A contact with a pipe or a spike strip (1.0 rules until WP-1a): a
-  /// mistake through the run's pipeline (ARCH §2.6), which ends the run via
-  /// [endRun].
+  /// A mistake through the run's pipeline (ARCH §2.6) from outside the
+  /// run's own physics (tests, debug): a death plays the §3.0.5 tumble and
+  /// the run then ends via [endRun].
   void onBirdHit([MistakeCause cause = MistakeCause.missedHoop]) {
     if (state != GameState.playing) {
       return;
@@ -2127,31 +2111,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// game-over / new-best analytics, the leaderboard submit, the versus
   /// upload, then the [PostRunFlow] (WP-0b: the legacy `GameOverPanel`).
   void endRun(RunSummary? summary) {
-    if (state != GameState.playing) {
+    if (state != GameState.playing && state != GameState.dying) {
       return;
     }
+    if (state == GameState.playing) {
+      // No tumble ran (a run-less end): the 1.0 game over.
+      sound.play(Sfx.gameover);
+      _bird?.die();
+    }
     state = GameState.gameOver;
-    sound.play(Sfx.gameover);
-    _bird?.die();
-    // Same adapter as the START fade-in, so a very early death replaces
-    // that fade instead of fighting it.
-    final adapter = _birdAdapter;
-    if (adapter != null) {
-      fadeOpacity(
-        adapter,
-        from: adapter.opacity,
-        to: 0,
-        duration: Config.gameplayFadeDuration,
-      );
-    }
-
-    // Interim coin rule (PRD-1 §3.1): 1 coin per point, credited at game
-    // over (removed by WP-1a: coins are earned per pass).
-    final coins = score;
-    if (coins > 0) {
-      unawaited(menu.wallet.add(coins, CoinSource.play));
-    }
-    _lastRunCoins = coins;
+    // §3.0.5 the dead bird stays lying on the floor spikes through the
+    // results (no fade). Coins were credited per pass (§3.2).
+    _lastRunCoins = summary?.coins ?? _run?.state.coinsThisRun ?? 0;
 
     final previousBest = storage.bestScore;
     final previousLevel = menu.levels.level;
@@ -2306,9 +2277,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _run = null;
     _debugBot = null;
     (world as RunScaledWorld).timeScaleSource = null;
-    for (final pipe in world.children.query<PipePair>()) {
-      pipe.removeFromParent();
-    }
     final oldPanel = _gameOverPanel;
     _gameOverPanel = null;
     if (oldPanel != null) {
@@ -2324,7 +2292,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     score = 0;
     _stage = 0;
     _skinBlend = _skinBlendFrom = _skinBlendTo = 0;
-    _lastGapBottomY = null;
     _hud.setScore(0);
     _fades.removeWhere((fade) => identical(fade.target, _hud));
     _hud.opacity = 0;
@@ -2595,31 +2562,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     // endregion WP-0b
 
-    if (state == GameState.playing) {
-      _spawnTimer += dt;
-      if (_spawnTimer >= Config.pipeSpawnInterval) {
-        _spawnTimer = 0;
-        // Difficulty ramp: the gap shrinks as the score climbs, plus a
-        // bounded random variance on top (the curve value is the MINIMUM
-        // gap; the draw is capped so both pipe stubs can stay >= 40 pt).
-        final gap = Config.gapForPipe(score, _pipeRandom.nextDouble(), viewHeight);
-        // The spawn band keeps both pipe stubs >= 40 pt: the top stub can
-        // never hide fully behind the ceiling spikes (a pipe is always
-        // visible), the bottom stub never sinks into the ground spikes.
-        final minY = Config.gapBottomMinFor(gap);
-        final maxY = Config.gapBottomMaxFor(gap, viewHeight);
-        var gapBottomY = minY + _pipeRandom.nextDouble() * (maxY - minY);
-        // Keep consecutive gaps within a flyable jump of each other.
-        final last = _lastGapBottomY;
-        if (last != null) {
-          gapBottomY = gapBottomY
-              .clamp(last - Config.maxGapJump, last + Config.maxGapJump)
-              .clamp(minY, maxY);
-        }
-        _lastGapBottomY = gapBottomY;
-        world.add(PipePair(gapBottomY: gapBottomY, gap: gap));
-      }
-    }
   }
 }
 

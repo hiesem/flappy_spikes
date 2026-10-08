@@ -244,25 +244,23 @@ void main() {
     t,
   ) async {
     await tap(g, t, const Offset(189, 423.5), fade: false);
-    // Exercise the public score-contact path with an actual spawned pair.
+    // PRD-2 §3.2: a coin per hoop, credited at the moment of the pass (a
+    // pass with a rim touch: 1 coin, source `hoop`), kept at game over.
     await flushAndMount(g);
-    final pairs = g.world.children.where(
-      (c) => c.runtimeType.toString() == 'PipePair',
-    );
-    expect(pairs, isNotEmpty);
-    g.onScoreSensor(pairs.first);
-    g.onScoreSensor(pairs.first);
+    expect(hoopsOf(g), isNotEmpty);
+    g.run!.debugPass();
     expect(g.score, 1);
-    expect(g.menu.wallet.balance, 0);
-    g.onBirdHit();
-    g.onBirdHit();
+    expect(g.menu.wallet.balance, 1);
+    killRun(g);
+    killRun(g);
     await settle(g, t, fade: true);
     expect(g.menu.wallet.balance, 1);
     expect(g.storage.gamesPlayed, 1);
     expect(g.world.children.query<GameOverPanel>().single.coinsEarned, 1);
     expect(r.spy.params('coins_earned').single, {
       'amount': 1,
-      'source': 'play',
+      'source': 'hoop',
+      'egg_x2': 0,
     });
     await capture(g, t, 'gameover_1coin');
     // Existing 1.0 replay button centre = centreY + 25.25.
@@ -275,7 +273,7 @@ void main() {
     for (var i = 0; i < 30; i++) {
       rolls.add(g.menu.slot.offered);
       await g.startRun();
-      g.onBirdHit();
+      killRun(g);
       await settle(g, t, fade: true);
       g.goHome();
       await settle(g, t, fade: true);
@@ -830,7 +828,7 @@ void main() {
     t,
   ) async {
     await tap(g, t, const Offset(189, 423.5), fade: false);
-    g.onBirdHit();
+    killRun(g);
     await settle(g, t, fade: true);
     stepGame(g, 1.5);
     await flushAndMount(g);
@@ -857,7 +855,7 @@ void main() {
       final bird = g.world.children.query<Bird>().single;
       expect(bird.look.bird, 'toucan');
       expect(bird.look.hat, 'tophat');
-      g.onBirdHit();
+      killRun(g);
       expect(bird.dead, isTrue);
       // The look stays on; the dead pose is frozen (hat/gear tumble along).
       expect(bird.look.bird, 'toucan');

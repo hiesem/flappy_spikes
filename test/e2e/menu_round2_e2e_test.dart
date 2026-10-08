@@ -1,6 +1,6 @@
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/home/menu_primitives.dart';
-import 'package:flappy_spikes/components/pipe_pair.dart';
+import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
 import 'package:flutter/services.dart';
@@ -126,7 +126,7 @@ void main() {
     }
   }
 
-  e2e('R2 long frame clamps bird and pipe translation to 1/30 second', (
+  e2e('R2 long frame clamps bird and hoop translation to 1/30 second', (
     g,
     r,
     t,
@@ -135,12 +135,14 @@ void main() {
     await flushAndMount(g);
     g.update(1 / 60);
     final b = g.world.children.query<Bird>().single;
-    final pipe = g.world.children.query<PipePair>().single;
+    final run = g.run!;
+    final hoop = hoopsOf(g).single;
     final y = b.body.position.y;
-    final x = pipe.body.position.x;
+    final x = hoop.planeX - run.state.camX;
+    final speed = run.state.forwardSpeed;
     g.update(1);
     expect((b.body.position.y - y).abs(), lessThan(17));
-    expect(x - pipe.body.position.x, closeTo(200 / 30, 0.001));
+    expect(x - (hoop.planeX - run.state.camX), closeTo(speed / 30, 0.05));
     expect(g.state, GameState.playing);
   });
 
@@ -152,22 +154,19 @@ void main() {
     await g.startRun();
     await flushAndMount(g);
     g.update(1 / 60);
-    expect(g.world.children.query<PipePair>().length, 1);
-    // One frame lasting the spawn interval, e.g. app resume / a debugger
-    // stall. Physics advances only 1/30 s, so a new pair is not due yet.
-    g.update(1.5);
+    expect(hoopsOf(g).length, 1);
+    // One frame lasting a whole hoop interval, e.g. app resume / a debugger
+    // stall. The world advances only 1/30 s, so no new hoop is due yet.
+    g.update(2.1);
     await flushAndMount(g);
-    final pipes = g.world.children.query<PipePair>().toList();
-    final xs = pipes.map((p) => p.body.position.x).toList();
+    final hoops = hoopsOf(g).toList();
     stepGame(g, 0.75, flapBelow: 355);
-    await capture(g, t, 'round2_stalled_frame_pipes');
+    await capture(g, t, 'round2_stalled_frame_hoops');
     expect(
-      pipes.length,
+      hoops.length,
       1,
-      reason:
-          'Only ~0.05 s of simulation elapsed; positions=$xs. '
-          'SPEC requires 300 pt pipe spacing. A full-dt spawner creates '
-          'overlapping pairs although body movement is clamped.',
+      reason: 'Only ~0.05 s of simulation elapsed; PRD-2 §3.0.1 requires '
+          '${RunConfig.spacing} pt hoop spacing.',
     );
   });
 }

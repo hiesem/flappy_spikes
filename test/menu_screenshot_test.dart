@@ -234,7 +234,7 @@ void main() async {
       game.onScreenTap();
       stepGame(game, 0.2, flapBelow: 340);
       game.score = 9;
-      game.onBirdHit();
+      killRun(game);
       await flushAndMount(game);
       stepGame(game, 1.2);
       await tester.runAsync(() => capture(game, 1.5, 'gameover_coins_711'));

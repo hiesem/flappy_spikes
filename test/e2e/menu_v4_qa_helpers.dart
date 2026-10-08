@@ -48,7 +48,7 @@ class V4Rig {
     monetization: Monetization(iap: iap, ads: ads),
     clock: clock.call,
     soundEnabled: false,
-  )..pipeRandom = math.Random(7);
+  )..runSeed = 7;
 }
 
 void v4Journey(
@@ -170,7 +170,7 @@ Future<void> v4FinishRun(
   await game.startRun();
   expect(game.state, GameState.playing);
   game.score = score;
-  game.onBirdHit();
+  killRun(game);
   await v4Settle(game, tester);
   game.goHome();
   stepGame(game, .3);

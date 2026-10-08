@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../elements.dart';
 import '../hoop_kind.dart';
+import 'normal.dart';
 
 /// Registered hoop kinds (ARCH §1.5). A kind that is not registered here is
 /// never offered by the director. One registration line per WP, inside its
@@ -9,6 +10,9 @@ import '../hoop_kind.dart';
 final Map<HoopKindId, HoopKind Function()> _kinds = {
   // region anchors — append below (one region per WP)
   // endregion anchors
+  // region WP-1a — the normal hoop (PRD-2 §3.1)
+  HoopKindId.normal: NormalHoopKind.new,
+  // endregion WP-1a
 };
 
 /// Modifier / scheduled elements that ride on hoops (angled, moving, comet,

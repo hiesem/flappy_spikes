@@ -336,7 +336,7 @@ void main() async {
       expect(game.levelUpPopup, isNull, reason: 'EGG already claimed');
       await game.startRun();
       game.score = 120; // CHICK + FLEDGLING in one run
-      game.onBirdHit();
+      killRun(game);
       await _flush(game);
       expect(game.storage.lastScore, 120);
       stepGame(game, 1);
@@ -356,8 +356,9 @@ void main() async {
       expect(popup.nameText.text, 'FLEDGLING');
       popup.claimButton.onPressed();
       await _flush(game);
-      // +120 run coins, +250 rewards.
-      expect(game.menu.wallet.balance, 370);
+      // +250 rewards (PRD-2 §3.2: run coins come per hoop passed, and this
+      // run's score was set directly, so it passed none).
+      expect(game.menu.wallet.balance, 250);
       expect(game.homeScreen!.emblem.level, 1, reason: 'until the pop');
       stepGame(game, 4);
       await flushAndMount(game);
@@ -479,7 +480,7 @@ void main() async {
       expect(game.homeScreen!.lastStat.value, '—');
       await game.startRun();
       game.score = 4;
-      game.onBirdHit();
+      killRun(game);
       await _flush(game);
       expect(game.storage.lastScore, 4);
       game.goHome();

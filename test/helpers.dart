@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/fake_ad_overlay.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
@@ -36,8 +34,6 @@ final kAllImages = [
   'bird.png',
   'bird_flap.png',
   'bird_dead.png',
-  'pipe_top.png',
-  'pipe_bottom.png',
   'ground_spikes.png',
   'background_score.png',
   'title.png',
@@ -76,16 +72,13 @@ FlappySpikesGame createTestGame(
     reminders: reminders,
     soundEnabled: false,
   );
-  // A fixed pipe layout: the spawn variance is otherwise unseeded, which made
-  // the autopilot journeys (_flyToEgg) crash at a random pipe and fail a
-  // score assertion every few runs.
-  game.pipeRandom = math.Random(_pipeSeed);
-  // WP-0b: a fixed run seed (the director's course), same as e2e builds.
+  // A fixed run seed (the director's course, same as e2e builds), so
+  // journeys that fly the autopilot meet the same hoops every run.
   game.runSeed = _pipeSeed;
   return game;
 }
 
-/// Seed for the deterministic test pipe layout ([createTestGame]).
+/// Seed for the deterministic test course ([createTestGame]).
 const int _pipeSeed = 7;
 
 /// Pre-decodes every sprite into the game's image cache. Call in setUp
@@ -166,7 +159,6 @@ FlappySpikesGame createRunTestGame({
     soundEnabled: false,
     versus: versus,
   );
-  game.pipeRandom = math.Random(_pipeSeed);
   game.runSeed = seed;
   return game;
 }
@@ -293,3 +285,22 @@ class AnalyticsSpy extends GameServices {
 List<(String, Map<String, Object>?)> analyticsLog(AnalyticsSpy s) =>
     s.events;
 // endregion WP-0b
+
+// region WP-1a — hoops replace pipes (PRD-2 §3.0.5)
+
+/// Ends the running run through the mistake pipeline (`onBirdHit`) and
+/// steps through the §3.0.5 death tumble until the post-run flow is up
+/// (state leaves [GameState.dying]; at most 1.5 s of tumble). Replaces the
+/// 1.0 tests' instant `onBirdHit()` → game over.
+void killRun(
+  FlappySpikesGame g, [
+  MistakeCause cause = MistakeCause.missedHoop,
+]) {
+  g.onBirdHit(cause);
+  var t = 0.0;
+  while (g.state == GameState.dying && t < 3) {
+    g.update(1 / 60);
+    t += 1 / 60;
+  }
+}
+// endregion WP-1a

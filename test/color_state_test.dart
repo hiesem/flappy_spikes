@@ -2,13 +2,13 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
-import 'package:flappy_spikes/components/pipe_pair.dart';
 import 'package:flappy_spikes/components/score_hud.dart';
 import 'package:flappy_spikes/components/spike_strip.dart';
 import 'package:flappy_spikes/components/ui/fadable_text.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/palettes.dart';
+import 'package:flappy_spikes/game/tintable.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
@@ -46,16 +46,13 @@ void main() {
     final expectedFilter =
         ColorFilter.mode(stage0.foreground, BlendMode.modulate).toString();
 
-    // Pipe sprites tinted with stage-0 fg.
-    final pipes = game.world.children.query<PipePair>();
-    expect(pipes, isNotEmpty, reason: 'need a pipe on screen to inspect');
-    for (final pipe in pipes) {
-      for (final sprite in pipe.children.whereType<SpriteComponent>()) {
-        expect(sprite.paint.colorFilter, isNotNull,
-            reason: 'pipe sprites must carry the fg tint');
-        expect(sprite.paint.colorFilter.toString(), expectedFilter,
-            reason: 'pipe tint must be stage-0 fg #828282');
-      }
+    // PRD-2 §3.1: hoops keep their fixed colours (the equipped skin, M0
+    // pink by default) — the tint registry no longer applies to obstacles.
+    final hoops = hoopsOf(game);
+    expect(hoops, isNotEmpty, reason: 'need a hoop on screen to inspect');
+    for (final hoop in hoops) {
+      expect(hoop, isNot(isA<Tintable>()));
+      expect(hoop.look.colors, isNull, reason: 'skin colours, not the tint');
     }
 
     // Spike strip tiles tinted with stage-0 fg.
@@ -89,16 +86,9 @@ void main() {
     );
   }
 
-  /// Ensures at least one pipe pair is mounted for tint inspection: mounts
-  /// any pending spawn, then adds a controlled pair if the world is empty.
-  Future<void> ensureInspectablePipe(FlappySpikesGame game) async {
-    await flushAndMount(game);
-    if (game.world.children.query<PipePair>().isEmpty) {
-      final pipe = PipePair(gapBottomY: 300);
-      await game.world.add(pipe);
-      await flushAndMount(game);
-    }
-  }
+  /// Lets the run's first hoop finish mounting for the inspection.
+  Future<void> ensureInspectableHoop(FlappySpikesGame game) =>
+      flushAndMount(game);
 
   withGame.testGameWidget(
     'colors stay stage-0 through an unscored playing phase',
@@ -109,25 +99,19 @@ void main() {
       game.onScreenTap(); // start -> playing
       game.update(1 / 60);
       await game.ready();
-      // No pipes near the bird during this test's window.
-      for (final pipe in game.world.children.query<PipePair>()) {
-        pipe.removeFromParent();
-      }
-      game.update(1 / 60);
-      await game.ready();
     },
     verify: (game, tester) async {
       // Step well past any fade (> 1 s), no scoring.
       stepGame(game, 1.2, flapBelow: 320);
       expect(game.state, GameState.playing);
       expect(game.score, 0);
-      await ensureInspectablePipe(game);
+      await ensureInspectableHoop(game);
       expectStage0Colors(game);
     },
   );
 
   withGame.testGameWidget(
-    'colors stay stage-0 after scoring one point (no fade at score 1)',
+    'colors stay stage-0 after one hoop (no fade before hoop 10)',
     setUp: (game, tester) async {
       await game.ready();
       game.sound.enabled = false;
@@ -135,27 +119,16 @@ void main() {
       game.onScreenTap(); // start -> playing
       game.update(1 / 60);
       await game.ready();
-      // Controlled pair whose sensor already overlaps the bird: scores on
-      // the first frames, then despawns; the natural t=1.5 spawn remains
-      // for the tint inspection.
-      for (final pipe in game.world.children.query<PipePair>()) {
-        pipe.removeFromParent();
-      }
-      game.update(1 / 60);
-      await game.ready();
-      final pipe = PipePair(gapBottomY: Config.birdY + Config.pipeGap / 2);
-      await game.world.ensureAdd(pipe);
-      await pipe.loaded;
-      pipe.body.setTransform(Vector2(-20, Config.worldHeight / 2), 0);
     },
     verify: (game, tester) async {
+      game.run!.debugPass(); // one hoop passed
       stepGame(game, 1.2, flapBelow: 320);
       expect(game.state, GameState.playing);
-      expect(game.score, 1, reason: 'sensor should have fired by now');
-      // stageOf(1) == 0: no color fade may be triggered by the point.
+      expect(game.score, 1);
+      // §3.0.1 the stage changes every 10 hoops: no fade at hoop 1.
       stepGame(game, 1.0, flapBelow: 320);
       expect(game.state, GameState.playing);
-      await ensureInspectablePipe(game);
+      await ensureInspectableHoop(game);
       expectStage0Colors(game);
     },
   );

@@ -4,7 +4,9 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 
 import '../director/plans.dart';
+import '../physics/hoop_frame.dart';
 import 'hoop_kind.dart';
+import 'ring_painter.dart';
 
 /// A moving-ring driver (WP-1b's `HoopMotion` implements it).
 abstract interface class HoopMotionDriver {
@@ -64,6 +66,49 @@ class Hoop extends PositionComponent {
   /// Track x of the plane.
   double get planeX => position.x;
 
+  // region WP-1a — frame, look, back painter (PRD-2 §3.0.4, §3.1, §5.13)
+  /// How the ring is drawn right now (master #3 parameters): colour
+  /// override (tier / Big Hoops / miss flash), stroke, dash, glow. Kinds'
+  /// painters read it; the miss flash and later the tier look write it.
+  final HoopLook look = HoopLook();
+
+  /// Paints the back half (behind the bird), in hoop-local coordinates.
+  void Function(Canvas canvas)? paintBack;
+
+  /// The tilt in radians (plan tilt; motion adds its angle offset).
+  double get tiltRad => tilt * math.pi / 180;
+
+  /// §3.0.4 the hoop's world transform now: centre (base + motion offset),
+  /// tilt (+ motion angle), ring offsets, opening, the kind's rim radius
+  /// and the motion velocity.
+  HoopFrame frame() {
+    final m = motion;
+    return HoopFrame(
+      centre: m == null ? basePosition.clone() : basePosition + m.offset,
+      tilt: tiltRad + (m?.angleOffset ?? 0),
+      rings: rings,
+      opening: opening,
+      rimR: kind.rimRadius(this),
+      velocity: m?.velocity.clone(),
+    );
+  }
+
+  /// Advances the motion to runClock [t] and moves both halves with it.
+  void syncMotion(double t) {
+    final m = motion;
+    if (m == null) return;
+    m.update(this, t);
+    position.setFrom(basePosition + m.offset);
+    angle = tiltRad + m.angleOffset;
+    front
+      ..position.setFrom(position)
+      ..angle = angle;
+  }
+
+  @override
+  void render(Canvas canvas) => paintBack?.call(canvas);
+  // endregion WP-1a
+
   void resolvePass(int ring) {
     resolved = true;
     takenRing = ring;
@@ -85,6 +130,22 @@ class Hoop extends PositionComponent {
       ..angle = angle;
   }
 }
+
+// region WP-1a — ring look (master #3 parameters)
+/// The mutable drawing parameters of a hoop's rings (master #3,
+/// [RingPainter.paintHalf]): null colours = the equipped hoop skin.
+class HoopLook {
+  RingColors? colors;
+  double strokeWidth = RingPainter.stroke;
+  List<double>? dash;
+  Color? glow;
+  double glowBlur = 24;
+  double opacity = 1;
+
+  /// Missed: the streak tier look stays off (§5.13).
+  bool missed = false;
+}
+// endregion WP-1a
 
 /// The front half of a [Hoop] (drawn over the bird). Kinds add children or
 /// set [paintFront].

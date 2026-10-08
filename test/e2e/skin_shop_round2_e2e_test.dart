@@ -283,13 +283,17 @@ void main() {
     // A real spike collision, then the existing results REPLAY action.
     stepGame(game, 2);
     await flushAndMount(game);
-    expect(game.state, GameState.gameOver);
+    expect(game.state, GameState.results);
     expect(bird.lookComponent.pose, LookPose.dead);
     expect(bird.look, outfit);
     final deadClock = bird.lookComponent.time;
     stepGame(game, .2);
     expect(bird.lookComponent.time, deadClock);
-    await tester.tapAt(ui.Offset(160, game.viewHeight / 2 + 25.25));
+    // PRD-2 §5.10: the results page's NEXT (after its 0.3 s fade-in).
+    await flushAndMount(game);
+    stepGame(game, .35);
+    final next = game.resultsScreen!.nextButton.absoluteCenter;
+    await tester.tapAt(ui.Offset(next.x, next.y));
     await _settle(game, tester);
     await _fade(game);
     expect(game.state, GameState.start);

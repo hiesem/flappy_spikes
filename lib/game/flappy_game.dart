@@ -15,7 +15,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../components/bird.dart';
 import '../components/debug_panel.dart';
 import '../components/fake_ad_overlay.dart';
-import '../components/gameover_panel.dart';
 import '../components/home/home_screen.dart';
 import '../components/home/menu_primitives.dart' show MenuButton;
 import '../components/levels/level_up_popup.dart';
@@ -51,7 +50,9 @@ import '../run/run_scaled_world.dart';
 import '../run/run_setup.dart';
 import '../run/run_summary.dart';
 import '../run/screens/post_run_flow.dart';
+import '../run/screens/results_screen.dart';
 import '../services/e2e.dart';
+import '../versus/timeline.dart';
 import '../services/versus_service.dart';
 import '../services/ads_service.dart';
 import '../services/game_services.dart';
@@ -74,12 +75,12 @@ import 'tintable.dart';
 /// [GameState.start] after a full reset with a 0.3 s white fade.
 ///
 /// PRD-2 (ARCH §2.3): `versusIntro`, `paused`, `dying`, `reviving` and
-/// `bonus` are entered by later WPs; `gameOver` is the results page (WP-2e
-/// renames it `results`).
+/// `bonus` are entered by later WPs; `results` is the results page (WP-2e,
+/// PRD-2 §5.10; the 1.0 `gameOver`).
 enum GameState {
   start,
   playing,
-  gameOver,
+  results,
   versusIntro,
   paused,
   dying,
@@ -251,7 +252,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Like [_chromeHold] for the corner box only (home <-> settings: the
   /// box stays, the pill fades with home).
   bool _cornerHold = false;
-  GameOverPanel? _gameOverPanel;
+  ResultsScreen? _results;
   SettingsPanel? _settingsPanel;
   ShopScreen? _shop;
   SkinShopScreen? _skinShop;
@@ -463,6 +464,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // mid-start, or a pre-WP10 arm-then-START build) and must not ride
     // along on a plain START.
     if (menu.slot.armed != Powerup.none) menu.slot.consume();
+    // region WP-2e — results page (PRD-2 §3.14)
+    await _creditUnclaimedLevelReward();
+    // endregion WP-2e
     _purchases = Purchases(
       iap: monetization.iap,
       menu: menu,
@@ -696,7 +700,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       case GameState.playing:
         _run?.onTap();
         _bird?.flap();
-      case GameState.gameOver:
+      case GameState.results:
       case GameState.versusIntro:
       case GameState.paused:
       case GameState.dying:
@@ -2001,22 +2005,21 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (key == LogicalKeyboardKey.space ||
         key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.numpadEnter) {
-      if (state == GameState.gameOver) {
-        // The game-over panel's action, once it has faded in.
-        if (_gameOverPanel?.canContinue ?? false) {
-          goHome();
-        }
+      if (state == GameState.results) {
+        // The results page's NEXT, once it has faded in (WP-2e).
+        _results?.next();
       } else {
         onScreenTap();
       }
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.escape) {
-      if (state == GameState.gameOver) {
-        // Back from a finished run is the panel's replay: a fresh home
-        // arrival (PRD-1 §3.6), once the panel accepts input.
-        if (_gameOverPanel?.canContinue ?? false) {
-          goHome();
+      if (state == GameState.results) {
+        // Back from a finished run is the results page's NEXT: a fresh home
+        // arrival (PRD-1 §3.6), once the page accepts input (WP-2e).
+        final results = _results;
+        if (results != null && results.canContinue) {
+          results.next();
           return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
@@ -2109,7 +2112,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// The end of a run (ARCH §2.3): persistence, `noAdsPopup.recordRun`,
   /// game-over / new-best analytics, the leaderboard submit, the versus
-  /// upload, then the [PostRunFlow] (WP-0b: the legacy `GameOverPanel`).
+  /// upload, then the [PostRunFlow] (ending on the WP-2e results page).
   void endRun(RunSummary? summary) {
     if (state != GameState.playing && state != GameState.dying) {
       return;
@@ -2119,10 +2122,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       sound.play(Sfx.gameover);
       _bird?.die();
     }
-    state = GameState.gameOver;
-    // §3.0.5 the dead bird stays lying on the floor spikes through the
-    // results (no fade). Coins were credited per pass (§3.2).
-    _lastRunCoins = summary?.coins ?? _run?.state.coinsThisRun ?? 0;
+    state = GameState.results;
+    // §3.0.5 the dead bird stays lying on the floor spikes until the results
+    // page covers it. Coins were credited per pass (§3.2).
 
     final previousBest = storage.bestScore;
     final previousLevel = menu.levels.level;
@@ -2131,6 +2133,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (score > storage.bestScore) {
       storage.saveBestScore(score);
     }
+    // region WP-2e — results page (PRD-2 §3.14, §7)
+    // A new level's reward is owed from now on: kept until CLAIM / NEXT so
+    // an app kill never loses it (credited at the next app start).
+    final owed = menu.levels.pendingLevelUp;
+    if (owed != null && menu.levels.level > previousLevel) {
+      unawaited(storage.saveUnclaimedLevelReward(owed.reward));
+    }
+    // endregion WP-2e
     unawaited(
       menu.noAdsPopup.recordRun(
         newBest: score > previousBest,
@@ -2149,32 +2159,60 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       unawaited(versus.submitRun(summary, menu.items.look));
     }
 
-    final s = summary ?? _run?.endRun();
-    if (s != null) {
-      unawaited(PostRunFlow(this).run(s));
-    } else {
-      showLegacyGameOver(null);
-    }
+    final s =
+        summary ??
+        _run?.endRun() ??
+        // A run-less end (tests): the bare score.
+        RunSummary(
+          score: score,
+          hoopsPassed: 0,
+          coins: 0,
+          bestBefore: previousBest,
+          bestAfter: max(score, previousBest),
+          runSeconds: 0,
+          cause: MistakeCause.missedHoop,
+          hoopIndex: 0,
+          timeline: RunTimeline.empty(),
+        );
+    unawaited(PostRunFlow(this).run(s));
     fadeOpacity(_hud, from: 1, to: 0, duration: Config.gameplayFadeDuration);
   }
 
-  int _lastRunCoins = 0;
+  // region WP-2e — results page (PRD-2 §3.14, §5.10)
 
-  /// WP-0b results (until WP-2e): the 1.0 game-over panel.
-  void showLegacyGameOver(RunSummary? summary) {
-    if (_gameOverPanel != null) return;
-    final panel = GameOverPanel(
-      score: score,
-      bestScore: storage.bestScore,
-      gamesPlayed: storage.gamesPlayed,
-      coinsEarned: _lastRunCoins,
-      onReplay: goHome,
-      onShare: shareScore,
-      onLeaderboard: showLeaderboard,
+  /// The results page while it is up (tests, keyboard).
+  ResultsScreen? get resultsScreen => _results;
+
+  /// Puts up the results page for [s] (PRD-2 §5.10; replaces the 1.0
+  /// game-over panel). The strips are lifted above it, as over the menu
+  /// screens.
+  void showResults(RunSummary s) {
+    if (_results != null || state != GameState.results) return;
+    final page = ResultsScreen(
+      summary: s,
+      model: ResultsModel.of(s, pending: menu.levels.pendingLevelUp),
     );
-    _gameOverPanel = panel;
-    world.add(panel);
+    _results = page;
+    world.add(page);
+    _ground.priority = groundOverMenusPriority;
+    _ceiling.priority = groundOverMenusPriority;
   }
+
+  void _removeResults() {
+    final page = _results;
+    _results = null;
+    page?.removeFromParent();
+    _ceiling.priority = SpikeStrip.basePriority;
+    _syncGroundPriority();
+  }
+
+  /// §3.14 / §7: a level reward still owed when the app was closed on the
+  /// results page is credited at the next start, without animation.
+  Future<void> _creditUnclaimedLevelReward() async {
+    if (storage.unclaimedLevelReward <= 0) return;
+    await claimLevelRewards(this, 'app_start');
+  }
+  // endregion WP-2e
 
   // --- buttons -----------------------------------------------------------
 
@@ -2253,10 +2291,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     fadeOpacity(_home, from: 0, to: 1);
   }
 
-  /// The game-over panel's action (and part 2's results NEXT): back to the
-  /// home screen as a NEW arrival — the powerup slot re-rolls (PRD-1 §3.6).
+  /// The results page's NEXT: back to the home screen as a NEW arrival —
+  /// the powerup slot re-rolls (PRD-1 §3.6).
   void goHome() {
-    if (state != GameState.gameOver) {
+    if (state != GameState.results) {
       return;
     }
     menu.slot.rollForArrival();
@@ -2277,11 +2315,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _run = null;
     _debugBot = null;
     (world as RunScaledWorld).timeScaleSource = null;
-    final oldPanel = _gameOverPanel;
-    _gameOverPanel = null;
-    if (oldPanel != null) {
-      oldPanel.removeFromParent();
-    }
+    _removeResults();
     final oldHome = _home;
     _home = null;
     if (oldHome != null) {

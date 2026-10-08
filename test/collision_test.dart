@@ -1,6 +1,6 @@
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
-import 'package:flappy_spikes/components/gameover_panel.dart';
+import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/run/mistakes.dart';
@@ -74,8 +74,8 @@ void main() {
       expect(game.state, GameState.dying, reason: '§3.0.5 the tumble first');
       stepGame(game, 2);
       await flushAndMount(game);
-      expect(game.state, GameState.gameOver);
-      expect(game.world.children.query<GameOverPanel>(), hasLength(1));
+      expect(game.state, GameState.results);
+      expect(game.world.children.query<ResultsScreen>(), hasLength(1));
       expect(game.storage.gamesPlayed, 1);
       expect(run.events.log.whereType<RunDied>(), hasLength(1));
       expect(
@@ -85,7 +85,7 @@ void main() {
 
       stepGame(game, 0.5);
       await flushAndMount(game);
-      expect(game.world.children.query<GameOverPanel>(), hasLength(1));
+      expect(game.world.children.query<ResultsScreen>(), hasLength(1));
       expect(game.storage.gamesPlayed, 1);
       expect(game.score, 0);
     },
@@ -110,13 +110,13 @@ void main() {
       );
       stepGame(game, 1.6);
       await flushAndMount(game);
-      expect(game.state, GameState.gameOver);
-      expect(game.world.children.query<GameOverPanel>(), hasLength(1));
+      expect(game.state, GameState.results);
+      expect(game.world.children.query<ResultsScreen>(), hasLength(1));
       expect(game.storage.gamesPlayed, 1);
 
       stepGame(game, 0.5);
       await flushAndMount(game);
-      expect(game.world.children.query<GameOverPanel>(), hasLength(1));
+      expect(game.world.children.query<ResultsScreen>(), hasLength(1));
       expect(game.storage.gamesPlayed, 1);
     },
   );

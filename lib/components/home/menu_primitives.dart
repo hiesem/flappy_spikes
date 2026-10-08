@@ -3,7 +3,8 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
-import 'package:flutter/painting.dart' show TextLeadingDistribution, TextStyle;
+import 'package:flutter/painting.dart'
+    show FontWeight, TextLeadingDistribution, TextStyle;
 
 import '../../game/config.dart';
 import '../../game/flappy_game.dart';
@@ -26,8 +27,10 @@ TextStyle menuTextStyle({
   double letterSpacingEm = 0,
   double lineHeight = kNormalLineHeight,
   String fontFamily = Config.uiFont,
+  FontWeight? fontWeight,
 }) => TextStyle(
   fontFamily: fontFamily,
+  fontWeight: fontWeight,
   fontSize: fontSize,
   color: color,
   letterSpacing: letterSpacingEm * fontSize,
@@ -49,6 +52,8 @@ class MenuText extends TextComponent<TextPaint> {
     double letterSpacingEm = 0,
     double lineHeight = kNormalLineHeight,
     this.strokeWidth = 0,
+    this.fontFamily = Config.uiFont,
+    this.fontWeight,
     super.position,
     super.anchor,
     super.priority,
@@ -65,11 +70,17 @@ class MenuText extends TextComponent<TextPaint> {
              color: color,
              letterSpacingEm: letterSpacingEm,
              lineHeight: lineHeight,
+             fontFamily: fontFamily,
+             fontWeight: fontWeight,
            ),
          ),
        );
 
   double _fontSize;
+
+  /// Font family (Opificio by default; PRD-2 screens use Fredoka 600).
+  final String fontFamily;
+  final FontWeight? fontWeight;
 
   /// The font size the text was created with ([fitWidth] shrinks from it).
   final double baseFontSize;
@@ -107,6 +118,8 @@ class MenuText extends TextComponent<TextPaint> {
         color: _color,
         letterSpacingEm: _letterSpacingEm,
         lineHeight: _lineHeight,
+        fontFamily: fontFamily,
+        fontWeight: fontWeight,
       ),
     );
   }
@@ -123,6 +136,8 @@ class MenuText extends TextComponent<TextPaint> {
           color: _color,
           letterSpacingEm: _letterSpacingEm,
           lineHeight: _lineHeight,
+          fontFamily: fontFamily,
+          fontWeight: fontWeight,
         ).copyWith(
           color: null,
           foreground: Paint()
@@ -163,6 +178,8 @@ class MenuText extends TextComponent<TextPaint> {
         color: value,
         letterSpacingEm: _letterSpacingEm,
         lineHeight: _lineHeight,
+        fontFamily: fontFamily,
+        fontWeight: fontWeight,
       ),
     );
   }

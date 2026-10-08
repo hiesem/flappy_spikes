@@ -605,3 +605,29 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `test/run/items/s3_33_rumble_test.dart`,
   `test/run/effects/s3_0_9_gold_glow_perf_test.dart`; shots
   `test/run/shots/streak_shots_test.dart`.
+
+## PRD-2 results page (WP-2e, 2026-10-08)
+
+- DEVIATION (PRD-2 §3.14 / §5.10; replaces the 1.0 game-over panel and the
+  `gameOver` state, now `GameState.results`): after the tumble (and the revive
+  offer / balloon bonus when they apply) an opaque stage-coloured **results
+  page** covers the playfield between the strips (the strips are lifted over
+  it): the card with your score (solo: you alone, centred; versus header and
+  opponent column are WP-5b's), NEW BEST, your level (emblem + equipped bird,
+  rank line, progress bar), YOUR REWARD (the run's coins incl. puzzle coins
+  and the win / draw bonus, excl. the balloon bonus) and NEXT → home (a new
+  arrival). The 1.0 title sprite, pointsfield, "Best Score / Games Played"
+  labels, REPLAY and the 2× coins idea are gone; the leaderboard and share
+  buttons are kept as two pink boxes flanking the reward pill (PRD-1 §3.7).
+  The page uses the mock's fixed colours (plum / pink / gold, stage-grey
+  labels) instead of `Config.uiAccent` — readable because the page is opaque.
+  Buttons and the keyboard (Space / Enter / Esc = NEXT) take input after the
+  0.3 s fade-in. On short screens (568) the 320 × 711 column scales down
+  uniformly (≈ 0.8) about the top centre.
+- DEVIATION (PRD-2 §3.14, levels): a run that reaches new levels plays the
+  LEVEL UP celebration on the results page and its reward is claimed there
+  (CLAIM, or automatically on NEXT); the home LEVEL UP popup now only serves
+  the catch-up of players updating with a best already past unclaimed levels
+  (and the debug LEVEL UP). The owed reward is stored as
+  `unclaimedLevelReward` at the run's end and credited silently at the next
+  app start if the app was closed before claiming.

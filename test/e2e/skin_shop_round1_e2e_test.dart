@@ -305,7 +305,7 @@ void main() {
       // A real collision with the spikes ends the run.
       stepGame(game, 2);
       await flushAndMount(game);
-      expect(game.state, GameState.gameOver);
+      expect(game.state, GameState.results);
       expect(bird.lookComponent.pose, LookPose.dead);
       expect(bird.look, dressed);
       final deadTime = bird.lookComponent.time;
@@ -313,8 +313,11 @@ void main() {
       expect(bird.lookComponent.time, deadTime);
       await _shot(game, tester, 'dead_galaxy_shades_cap');
       await _deadLookShot(bird.lookComponent, tester);
-      // Tap the actual results REPLAY button (SPEC.md: centreY + 25.25).
-      await tester.tapAt(ui.Offset(160, game.viewHeight / 2 + 25.25));
+      // Tap the results page's NEXT (PRD-2 §5.10, after its fade-in).
+      await flushAndMount(game);
+      stepGame(game, .35);
+      final next = game.resultsScreen!.nextButton.absoluteCenter;
+      await tester.tapAt(ui.Offset(next.x, next.y));
       await _settle(game, tester);
       await flushAndMount(game);
       await _fade(game);

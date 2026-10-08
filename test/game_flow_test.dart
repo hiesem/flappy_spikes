@@ -1,9 +1,9 @@
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
-import 'package:flappy_spikes/components/gameover_panel.dart';
+import 'package:flappy_spikes/run/config/results_config.dart';
+import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
-import 'package:flappy_spikes/components/ui/sprite_button.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,7 +17,7 @@ void main() {
   );
 
   withGame.testGameWidget(
-    'state machine: start -> playing -> gameOver -> replay -> start',
+    'state machine: start -> playing -> results -> replay -> start',
     setUp: (game, tester) async {
       await game.ready();
       game.sound.enabled = false;
@@ -51,20 +51,20 @@ void main() {
       game.onBirdHit();
       expect(game.state, GameState.dying);
       killRun(game);
-      expect(game.state, GameState.gameOver);
+      expect(game.state, GameState.results);
       await flushAndMount(game);
-      expect(game.world.children.query<GameOverPanel>(), hasLength(1));
+      expect(game.world.children.query<ResultsScreen>(), hasLength(1));
 
       // Taps on empty areas are ignored on the game-over scene.
       game.onScreenTap();
-      expect(game.state, GameState.gameOver);
+      expect(game.state, GameState.results);
 
       // gameOver -> replay -> start (fresh home scene, old panel gone).
       game.replay();
       await flushAndMount(game);
       expect(game.state, GameState.start);
       expect(game.score, 0);
-      expect(game.world.children.query<GameOverPanel>(), isEmpty);
+      expect(game.world.children.query<ResultsScreen>(), isEmpty);
       expect(game.world.children.query<HomeScreen>(), hasLength(1));
       expect(game.world.children.query<Bird>(), hasLength(1));
     },
@@ -125,33 +125,29 @@ void main() {
       expect(game.state, GameState.dying, reason: '§3.0.5 the tumble first');
       // The results come after the tumble (≤ 1.5 s).
       stepGame(game, 1.6);
-      expect(game.state, GameState.gameOver);
+      expect(game.state, GameState.results);
 
       // --- game-over panel appears and builds fully ------------------------
       await flushAndMount(game);
-      expect(game.world.children.query<GameOverPanel>(), hasLength(1));
+      expect(game.world.children.query<ResultsScreen>(), hasLength(1));
       expect(game.storage.gamesPlayed, 8,
           reason: 'gamesPlayed must increment on each game over');
       expect(game.storage.bestScore, 3,
           reason: 'score 0 must not beat the stored best of 3');
 
-      // Staggered fade-in (gameplay timing, unchanged from 1.0).
-      stepGame(
-        game,
-        Config.gameplayFadeDuration + 2 * Config.gameOverStaggerDuration + 0.1,
-      );
-      final panel = game.world.children.query<GameOverPanel>().single;
-      for (final button in panel.children.whereType<SpriteButton>()) {
-        expect(button.opacity, 1,
-            reason: 'panel buttons must fade in completely');
-      }
+      // PRD-2 §5.10: the results page fades in, then takes input.
+      final panel = game.world.children.query<ResultsScreen>().single;
+      expect(panel.canContinue, isFalse);
+      stepGame(game, ResultsConfig.pageFadeIn + 0.1);
+      expect(panel.opacity, 1, reason: 'the page must fade in completely');
+      expect(panel.canContinue, isTrue);
 
       // --- replay resets to the start state --------------------------------
       game.replay();
       await flushAndMount(game);
       expect(game.state, GameState.start);
       expect(game.score, 0);
-      expect(game.world.children.query<GameOverPanel>(), isEmpty);
+      expect(game.world.children.query<ResultsScreen>(), isEmpty);
       expect(hoopsOf(game), isEmpty);
 
       final newHome = game.world.children.query<HomeScreen>().single;

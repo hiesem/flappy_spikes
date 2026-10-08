@@ -402,7 +402,7 @@ switch is placed at 1.0 s × scroll speed ≥ 150 pt (proto: fixed 150); piggy p
 ### 2.3 Game state machine and `flappy_game.dart`
 
 ```dart
-enum GameState { start, versusIntro, playing, paused, dying, reviving, bonus, gameOver /* = results; renamed `results` by WP-2e */ }
+enum GameState { start, playing, results /* the 1.0 gameOver, renamed by WP-2e */, versusIntro, paused, dying, reviving, bonus }
 ```
 
 - `playing` covers normal play and rides. `paused` = pause screen (runClock stopped). `dying` = tumble until the
@@ -570,6 +570,7 @@ Additional shared parts (not in the PRD table, introduced here so elements do no
 | Confetti (results / bonus / VS) | `ConfettiBurst` | `lib/components/ui/confetti.dart` (existing) | screens | existing |
 | Coin fly (balance pill ↔ targets) | `CoinFly` | `lib/components/ui/coin_fly.dart` (existing) | revive pay, CLAIM, bonus coins | existing |
 | Level emblem | `EmblemPainter` | `lib/levels/emblem_painter.dart` (existing) | results, VS plates | existing |
+| Fireworks (rocket 0.5 s rise → 34 streaks) | `Fireworks` | `lib/run/effects/fireworks.dart` | results level up, VS intro | 2e |
 
 **WP-0c as built (2026-10-08) — parameters added to masters / contract notes:**
 - Knobs of every shared part: `lib/run/config/parts_config.dart` (`PartsConfig`), each with its PRD section.
@@ -1090,3 +1091,16 @@ Changes to the contracts above, made while building WP-0b. Later WPs build again
 | Analytics | `GameServices.logRumbleToggle` sends `rumble_toggle {on}` **and** `setting_changed {setting: rumble, value: 0/1}` (call) | R-6-57 |
 | Gold glow perf | `LookPainter` bounds the gold-glow `saveLayer` to `goldGlowBounds` (art box + blur reach). Measured (CPU raster, 960 × 2133): unbounded ≈ 15 ms/frame vs bounded ≈ 2 ms (incl. ≈ 2 ms readback); same pixels | WP-0c perf warning |
 | Config | `lib/run/config/streak_config.dart` (`StreakConfig`) | ARCH §4 |
+
+## 16. WP-2e contract notes (as built, 2026-10-08)
+
+| Area | As built | Why |
+|---|---|---|
+| Files | `lib/run/screens/results_screen.dart` (`ResultsPage` factory, `ResultsScreen` component, pure `ResultsModel` / `LevelBar` / `rankText`, `claimLevelRewards`), `lib/run/config/results_config.dart` (`ResultsConfig`), `lib/run/effects/fireworks.dart` (`Fireworks`, new shared part). `gameover_panel.dart`, `LegacyGameOverResults` and `game.showLegacyGameOver` deleted; `PostRunScreens.results` defaults to `ResultsPage` | §5.10 |
+| State | `GameState.gameOver` → `results` (lib + tests + integration_test) | ARCH §2.3 |
+| Game (region WP-2e) | `showResults(RunSummary)` (adds the page to the **world** at priority 20 and lifts both strips to 21; the menus also live in the world), `resultsScreen` getter, `_removeResults()` in `replay()`; `endRun` stores `unclaimedLevelReward` when the run reached a new level; `onLoad` credits it (`claimLevelRewards(this, 'app_start')`) right after the menu state is built. A run-less `endRun` builds a bare `RunSummary` | the page needs the strips over it |
+| YOUR REWARD | `RunSummary.coins` (= `RunState.coinsThisRun`): every `ctx.earn` in the run — hoop / perfect / elements / **puzzle** / **winBonus** (WP-5b must credit the win / draw bonus through `ctx.earn(…, CoinSource.winBonus)` before `RunController.endRun` builds the summary). The balloon bonus (WP-4a) pays with `wallet.add` after the run and is therefore not in it | §3.14 Q36 |
+| Level reward | `claimLevelRewards(game, how)` = `menu.levels.claim()` (marks claimed first, then `wallet.add(level_reward)`) + `unclaimedLevelReward = 0` + `level_up {from, to, reward, claim: tap / auto_next / app_start}`. The page shows CLAIM when the run's level after > level before and a reward is owed; NEXT while CLAIM shows plays the claim animation (≈ 1.4 s) + 0.25 s, then `goHome()`; NEXT before CLAIM is up pays at once and goes home. The home `LevelUpPopup` stays for the catch-up / debug case only (pending rewards without a results-page level up) | §3.14 |
+| Versus parts | region WP-5b in `ResultsScreen.onLoad` (card build): header WIN / LOSE / DRAW at `ResultsConfig.header`, the opponent `ResultsPlayerColumn(mine: false, lower:, winner:)` at `opponentColumnX` and yours moved to `youColumnX`, VS between. Solo = your column alone at x 160 | brief |
+| Layout | the 320 × 711 mock in `content` coordinates, scaled by `ResultsConfig.scaleFor(h)` (1 from 711, ≈ 0.8 at 568) about the top centre; the fx layer (`ResultsFx`: confetti, fireworks, `CoinFly` claim coins, white flash) is a world sibling at priority 30 with the same transform | §5.10 at 568 |
+| Kept buttons (call) | leaderboard (trophy) and share (invite glyph) as 40 pt pink boxes flanking the reward pill; gated on the 0.3 s fade-in also when pressed directly | PRD-1 §3.7 "kept" |

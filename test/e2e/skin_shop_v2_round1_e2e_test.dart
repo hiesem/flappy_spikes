@@ -605,11 +605,11 @@ void main() {
       expect(bird.lookComponent.pose, LookPose.flap);
       await _shot(game, tester, 'rubber_duck_flap');
       // Falls onto the floor spikes, tumbles (PRD-2 §3.0.5), results.
-      for (var i = 0; i < 400 && game.state != GameState.gameOver; i++) {
+      for (var i = 0; i < 400 && game.state != GameState.results; i++) {
         game.update(1 / 60);
       }
       await flushAndMount(game);
-      expect(game.state, GameState.gameOver);
+      expect(game.state, GameState.results);
       expect(bird.lookComponent.pose, LookPose.dead);
       expect(bird.look, outfit);
       await _shot(game, tester, 'rubber_duck_dead');

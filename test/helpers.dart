@@ -15,6 +15,7 @@ import 'package:flappy_spikes/run/mistakes.dart';
 import 'package:flappy_spikes/run/pickups/pickup.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
 import 'package:flappy_spikes/run/run_events.dart';
+import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/services/monetization.dart';
 import 'package:flappy_spikes/services/reminders.dart';
@@ -30,6 +31,9 @@ final kAllImages = [
   ...kShopImages,
   ...kNoAdsPopupImages,
   ...kFakeAdOverlayImages,
+  // region WP-2e — results page images
+  ...kResultsImages,
+  // endregion WP-2e
 
   'bird.png',
   'bird_flap.png',

@@ -1,9 +1,9 @@
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
-import 'package:flappy_spikes/components/gameover_panel.dart';
+import 'package:flappy_spikes/run/config/results_config.dart';
+import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/components/ui/service_message.dart';
-import 'package:flappy_spikes/components/ui/sprite_button.dart';
 import 'package:flappy_spikes/components/ui/text_button.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
@@ -103,7 +103,8 @@ void main() {
   );
 
   withGame.testGameWidget(
-    'game-over scene: leaderboard button sits at the right of the pointsfield',
+    'results page (PRD-2 §5.10): the kept leaderboard button flanks the '
+    'reward pill',
     setUp: (game, tester) async {
       await game.ready();
       game.sound.enabled = false;
@@ -114,20 +115,17 @@ void main() {
     },
     verify: (game, tester) async {
       killRun(game);
-      await flushAndMount(game); // mount the game-over panel
+      await flushAndMount(game); // mount the results page
 
-      final panel = game.world.children.query<GameOverPanel>().single;
-      final buttons = panel.children.whereType<SpriteButton>().toList();
-      expect(buttons, hasLength(3), reason: 'replay + share + leaderboard');
-      final gameCenter = buttons.firstWhere(
-        (b) => b.size.x == Config.gameCenterGameoverButtonSize.x,
+      final panel = game.world.children.query<ResultsScreen>().single;
+      final button = panel.leaderboardButton;
+      expect(button.position, ResultsConfig.leaderboardButton.topLeft.toVector2());
+      expect(
+        button.toRect().right,
+        lessThan(ResultsConfig.rewardPill.left),
       );
-      expect(gameCenter.position.x, Config.gameCenterGameoverButtonPosition.x);
-      expect(gameCenter.position.y, Config.gameCenterGameoverButtonPosition.y);
-      // The button is fade-gated while invisible (Fix E): step past its
-      // fade-in so the press exercises the real path.
-      stepGame(game, 0.3);
-      gameCenter.onPressed(); // guarded no-op: must not throw
+      stepGame(game, 0.4);
+      button.onPressed(); // guarded no-op: must not throw
     },
   );
 
@@ -169,12 +167,8 @@ void main() {
         killRun(game);
         await flushAndMount(game); // mount the game-over panel (opacity 0)
 
-        final panel = game.world.children.query<GameOverPanel>().single;
-        final gameCenter = panel.children
-            .whereType<SpriteButton>()
-            .firstWhere(
-              (b) => b.size.x == Config.gameCenterGameoverButtonSize.x,
-            );
+        final panel = game.world.children.query<ResultsScreen>().single;
+        final gameCenter = panel.leaderboardButton;
 
         gameCenter.onPressed();
         expect(
@@ -184,7 +178,7 @@ void main() {
               'on the fade-in completing',
         );
 
-        stepGame(game, 0.3); // stagger(0) reaches opacity 1
+        stepGame(game, 0.35); // the page has faded in
         gameCenter.onPressed();
         expect(spy.showCalls, 1);
       },

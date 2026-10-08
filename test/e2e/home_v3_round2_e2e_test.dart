@@ -3,11 +3,10 @@ import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
-import 'package:flappy_spikes/components/gameover_panel.dart';
+import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/components/levels/levels_screen.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
 import 'package:flappy_spikes/components/ui/confetti.dart';
-import 'package:flappy_spikes/components/ui/sprite_button.dart';
 import 'package:flappy_spikes/components/levels/emblem_view.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/palettes.dart';
@@ -177,16 +176,20 @@ void main() async {
         await _tap(game, tester, home.startButton);
         await _flyToEgg(game);
         await run(game, 3);
-        expect(game.state, GameState.gameOver);
+        expect(game.state, GameState.results);
         expect(game.levelUpPopup, isNull);
         final earned = game.menu.wallet.balance;
-        final panel = game.world.children.query<GameOverPanel>().single;
-        await _tap(game, tester, panel.children.query<SpriteButton>().first);
-        await run(game, 1);
+        // PRD-2 §3.14: NEXT on the results page claims the owed level
+        // reward first (never lost), then home — no home LEVEL UP popup.
+        final panel = game.world.children.query<ResultsScreen>().single;
+        await run(game, .4);
+        await _tap(game, tester, panel.nextButton);
+        expect(game.menu.wallet.balance, earned + 50);
+        await run(game, 2.5);
+        expect(game.state, GameState.start);
         expect(game.stageBackground, paletteForStage(0).background);
-        expect(game.levelUpPopup!.pending.reward, 50);
-        await _tap(game, tester, game.levelUpPopup!.claimButton);
         await run(game, 4);
+        expect(game.levelUpPopup, isNull);
         expect(game.coinPill.shownBalance, earned + 50);
         expect(game.storage.claimedLevels, {1});
         await _tap(game, tester, game.homeScreen!.bird);
@@ -197,9 +200,11 @@ void main() async {
         await run(game, 1);
         expect(game.levelUpPopup, isNull);
         expect(rig.events.count('level_up'), 1);
-        expect(rig.events.last('level_reward_claimed'), {
-          'level': 1,
-          'coins': 50,
+        expect(rig.events.last('level_up'), {
+          'from': 0,
+          'to': 1,
+          'reward': 50,
+          'claim': 'auto_next',
         });
       },
       height: height,
@@ -448,9 +453,10 @@ void main() async {
       expect(game.noAdsCelebration, isNull);
       expect(game.queuedPopups, 1);
       await run(game, 2);
-      expect(game.state, GameState.gameOver);
-      final panel = game.world.children.query<GameOverPanel>().single;
-      await _tap(game, tester, panel.children.query<SpriteButton>().first);
+      expect(game.state, GameState.results);
+      final panel = game.world.children.query<ResultsScreen>().single;
+      await run(game, .4);
+      await _tap(game, tester, panel.nextButton);
       await run(game, .8);
       expect(_modalCount(game), 1);
       expect(game.noAdsCelebration, isNotNull);

@@ -28,6 +28,9 @@ void main() {
     expect(s.lastPortalRide, isNull);
     expect(s.unclaimedLevelReward, 0);
     expect(s.levelRewardPayout, 0);
+    expect(s.puzzlePayout, 0);
+    expect(s.uploadsSent, 0);
+    expect(s.uploadsSentDay, '');
     expect(s.metElements, isEmpty);
     expect(s.levelRewardsClaimed, 0);
     expect(s.versusNickname, isNull);
@@ -53,6 +56,7 @@ void main() {
     await a.saveLastPortalRide('storm');
     await a.saveUnclaimedLevelReward(150);
     await a.saveLevelRewardPayout(150);
+    await a.saveUploadsSent('2026-10-08', 3);
     await a.saveMetElements({'saw', 'portal'});
     await a.markElementMet('egg');
     await a.saveClaimedLevels({1, 2, 4});
@@ -76,6 +80,8 @@ void main() {
     expect(b.lastPortalRide, 'storm');
     expect(b.unclaimedLevelReward, 150);
     expect(b.levelRewardPayout, 150);
+    expect(b.uploadsSent, 3);
+    expect(b.uploadsSentDay, '2026-10-08');
     expect(b.metElements, {'saw', 'portal', 'egg'});
     expect(b.levelRewardsClaimed, 4);
     expect(b.versusNickname, 'BrightOwl123');

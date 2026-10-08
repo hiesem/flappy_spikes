@@ -8,6 +8,7 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/storage.dart';
+import 'package:flappy_spikes/menu/wallet.dart';
 import 'package:flappy_spikes/run/config/bonus_config.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/items/squeeze.dart';
@@ -368,7 +369,7 @@ void main() {
     expect(g.state, GameState.results);
   }, prefs: {'feathers': 3});
 
-  group('S6-65 open: the intro shows the current identity name', () {
+  group('S6-65: the intro shows the current identity name', () {
     FlameTester<FlappySpikesGame>(
       () => createRunTestGame(
         worldHeight: 711,
@@ -397,9 +398,9 @@ void main() {
         );
       },
     );
-  }, skip: 'S6-65 open');
+  });
 
-  group('S6-64 open: a cached Play Games avatar is displayed', () {
+  group('S6-64: a cached Play Games avatar is displayed', () {
     const url = 'https://qa.invalid/avatar.png';
     final source = opponentAt([1, 3, 6]);
     final opponent = OpponentRun(
@@ -456,7 +457,7 @@ void main() {
         });
       },
     );
-  }, skip: 'S6-64 open');
+  });
 
   test(
     'P45 reminders: repeated sessions, spring DST and 20-message rotation',
@@ -553,10 +554,71 @@ void main() {
       );
       expect(backend.starts, greaterThan(0));
     },
-    skip: 'S6-66 open',
   );
 
-  group('S6-60 open: offline backlog must survive the server UTC upload cap', () {
+  test(
+    'S6-66 a failed start retries by itself with backoff (no other call)',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final store = GameStorage();
+      await store.load();
+      final backend = fixture.FakeBackend()..offline = true;
+      final identity = fixture.FakeIdentity();
+      final service = FirebaseVersusService(
+        storageOf: () => store,
+        backend: backend,
+        identity: identity,
+        random: Random(2),
+        retryBase: const Duration(milliseconds: 20),
+        retryMax: const Duration(milliseconds: 80),
+      );
+      try {
+        await service.initialize();
+        expect(service.ready, isFalse);
+        // Still offline: the waits double (20, 40, 80, 80 … ms).
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        expect(service.ready, isFalse);
+        expect(service.failures, greaterThanOrEqualTo(3));
+        expect(backend.starts, 0);
+        // Back online: the next background retry starts the service.
+        backend.offline = false;
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+        expect(service.ready, isTrue);
+        expect(backend.starts, 1);
+        expect(service.failures, 0);
+        // App resume on a ready service flushes the queue.
+        await service.submitRun(fixture.summary(3), const Look());
+        await service.onResume();
+        expect(service.queue.pending, isEmpty);
+      } finally {
+        service.dispose();
+        await identity.controller.close();
+      }
+    },
+  );
+
+  test('S6-66 app resume recovers a failed start', () async {
+    SharedPreferences.setMockInitialValues({});
+    final store = GameStorage();
+    await store.load();
+    final backend = fixture.FakeBackend()..offline = true;
+    final identity = fixture.FakeIdentity();
+    final service = FirebaseVersusService(
+      storageOf: () => store,
+      backend: backend,
+      identity: identity,
+      random: Random(2),
+    );
+    await service.initialize();
+    expect(service.ready, isFalse);
+    backend.offline = false;
+    await service.onResume();
+    expect(service.ready, isTrue);
+    expect(backend.starts, 1);
+    await identity.controller.close();
+  });
+
+  group('S6-60: offline backlog must survive the server UTC upload cap', () {
     test(
       'S6-60 six non-best runs queued over two days are retained until accepted',
       () async {
@@ -581,8 +643,9 @@ void main() {
           now = now.add(const Duration(days: 1));
         }
         final documents = <Map<String, Object?>>[];
+        final processedAt = <int>[];
         Map<String, Object?>? old;
-        await queue.flush((q) async {
+        Future<UploadWrite> write(QueuedRun q) async {
           old = nextPlayerDoc(
             old: old,
             run: q.entry.toMap(ts: q.entry.ts.millisecondsSinceEpoch),
@@ -595,29 +658,92 @@ void main() {
             uploadsCount: queue.uploadsToday,
           );
           documents.add(old!);
+          processedAt.add(now.millisecondsSinceEpoch);
           // The real backend returns done on a successful Firestore transaction,
           // before the trigger's acceptance/rejection (no acknowledgement read).
           return UploadWrite.done;
-        });
-        final result = await backendProbe({
+        }
+
+        // Day three: only the server's three non-best runs a UTC day go out.
+        expect(await queue.flush(write), 3);
+        var result = await backendProbe({
           'mode': 'queue',
           'documents': documents,
-          'nowMs': now.millisecondsSinceEpoch,
+          'nowMs': processedAt,
         });
-        expect(result['rejected'], hasLength(3));
+        expect(result['accepted'], hasLength(3));
         expect(
-          (result['rejected'] as List).every((r) => r['reason'] == 'rate'),
-          isTrue,
+          result['rejected'],
+          isEmpty,
+          reason: 'no run is sent past the server rate and lost',
         );
         expect(
           queue.pending.length,
           3,
           reason:
-              'three runs refused by the real backend disappeared from the queue',
+              'the three runs over the server rate stay queued for a later day',
         );
+        // Same day again: nothing more goes out.
+        expect(await queue.flush(write), 0);
+        expect(queue.pending.length, 3);
+        // Day four: the rest are written and accepted.
+        now = now.add(const Duration(days: 1));
+        expect(await queue.flush(write), 3);
+        result = await backendProbe({
+          'mode': 'queue',
+          'documents': documents,
+          'nowMs': processedAt,
+        });
+        expect(result['accepted'], hasLength(6));
+        expect(result['rejected'], isEmpty);
+        expect(queue.pending, isEmpty);
       },
     );
-  }, skip: 'S6-60 open');
+
+    test('S6-60 a new best is not held back by the paced backlog', () async {
+      var now = DateTime.utc(2026, 10, 6, 12);
+      SharedPreferences.setMockInitialValues({});
+      final store = GameStorage();
+      await store.load();
+      final queue = UploadQueue(store, clock: () => now);
+      for (var i = 0; i < 6; i++) {
+        if (i == 3) now = now.add(const Duration(days: 1));
+        await queue.offer(
+          RunEntry.fromSummary(
+            fixture.summary(3, bestBefore: 100),
+            runId: 'n$i',
+            name: 'SwiftKiwi482',
+            ts: now,
+          ),
+          newBest: false,
+        );
+      }
+      await queue.offer(
+        RunEntry.fromSummary(
+          fixture.summary(120, bestBefore: 100),
+          runId: 'best',
+          name: 'SwiftKiwi482',
+          ts: now,
+        ),
+        newBest: true,
+      );
+      now = now.add(const Duration(days: 1));
+      final sent = <String>[];
+      expect(
+        await queue.flush((q) async {
+          sent.add(q.entry.runId);
+          return UploadWrite.done;
+        }),
+        4,
+      );
+      expect(sent, ['n0', 'n1', 'n2', 'best']);
+      expect(queue.pending.map((q) => q.entry.runId), ['n3', 'n4', 'n5']);
+      // A restart keeps the upload-day count.
+      final again = GameStorage();
+      await again.load();
+      expect(UploadQueue(again, clock: () => now).sentToday, 3);
+    });
+  });
 
   test(
     'S6-61 a backend delete failure leaves every online document intact',
@@ -631,11 +757,10 @@ void main() {
         reason: 'call failed after removing the player document',
       );
     },
-    skip: 'S6-61 open',
   );
 
   group(
-    'S6-62 open: completing a picture survives interrupted coin persistence',
+    'S6-62: completing a picture survives interrupted coin persistence',
     () {
       journey(
         'S6-62 real fourth-piece collection does not lose an unpaid picture on restart',
@@ -665,6 +790,10 @@ void main() {
                 .paid
                 .single;
             expect(cut.stopped, isTrue);
+            // Every coin write of this session is cut (the pickups' too),
+            // so the balance the app held is what a restart must reach.
+            final live = g.storage.coins;
+            expect(live, greaterThanOrEqualTo(100 + paid));
             final saved = await cut.getAll();
             SharedPreferencesStorePlatform.instance = original;
             SharedPreferences.setMockInitialValues({
@@ -674,11 +803,28 @@ void main() {
             final restarted = GameStorage();
             await restarted.load();
             expect(
-              restarted.coins == 100 + paid || restarted.puzzlePieces == 7,
+              restarted.coins == live ||
+                  restarted.puzzlePieces == 7 ||
+                  restarted.puzzlePayout == live,
               isTrue,
               reason:
                   'disk has no coin payout and no recoverable completed picture: $saved',
             );
+            // The start-up recovery pays the interrupted credit exactly once.
+            final wallet = Wallet(restarted);
+            final owed = live - restarted.coins;
+            expect(owed, greaterThanOrEqualTo(paid));
+            expect(await PuzzleFeature.settlePayout(restarted, wallet), owed);
+            expect(restarted.coins, live);
+            expect(restarted.puzzlePieces, 0);
+            expect(restarted.puzzleRound, 3);
+            expect(await PuzzleFeature.settlePayout(restarted, wallet), 0);
+            expect(restarted.coins, live);
+            final again = GameStorage();
+            await again.load();
+            expect(again.coins, live);
+            expect(again.puzzlePayout, 0);
+            expect(await PuzzleFeature.settlePayout(again, Wallet(again)), 0);
           } finally {
             SharedPreferencesStorePlatform.instance = original;
           }
@@ -686,30 +832,65 @@ void main() {
         prefs: {'puzzlePieces': 7, 'puzzleRound': 2, 'coins': 100},
       );
     },
-    skip: 'S6-62 open',
   );
 
   group(
-    'S6-63 open: bonus NEXT retains its reference size and bottom distance',
+    'S6-63: bonus NEXT retains its reference size and bottom distance',
     () {
       journey(
         'S6-63 568pt balloon page keeps NEXT 292x50 and 99pt bottom gap',
-        (g, _) async {
+        (g, tester) async {
           await startRun(g);
           killRun(g);
           await flushAndMount(g);
           final b = g.bonusScreen!;
-          final rect = BonusConfig.nextButton;
-          final bottom = b.content.position.y + rect.bottom * b.content.scale.y;
-          expect(g.viewHeight - bottom, closeTo(711 - rect.bottom, .01));
-          expect(rect.width * b.content.scale.x, closeTo(292, .01));
-          expect(rect.height * b.content.scale.y, closeTo(50, .01));
+          final ref = BonusConfig.nextButton;
+          final rect = b.nextRect;
+          expect(g.viewHeight - rect.bottom, closeTo(711 - ref.bottom, .01));
+          expect(rect.width, closeTo(292, .01));
+          expect(rect.height, closeTo(50, .01));
+          // The scaled column above ends at or above the band.
+          final (k, off) = BonusRules.layoutFor(g.viewHeight);
+          expect(
+            off.dy + BonusConfig.panel.bottom * k,
+            lessThan(rect.top),
+          );
+          // What is drawn and tapped: NEXT's pink fills that rect.
+          b.phase = BonusPhase.done;
+          await stepSeconds(g, 1.2);
+          expect(b.nextShown, isTrue);
+          await tester.runAsync(() async {
+            final rec = ui.PictureRecorder();
+            b.renderTree(ui.Canvas(rec));
+            final image = await rec.endRecording().toImage(320, 568);
+            final bytes = (await image.toByteData(
+              format: ui.ImageByteFormat.rawRgba,
+            ))!.buffer.asUint8List();
+            image.dispose();
+            List<int> at(double x, double y) {
+              final i = (y.floor() * 320 + x.floor()) * 4;
+              return bytes.sublist(i, i + 3);
+            }
+
+            final pink = BonusConfig.pink;
+            final want = [
+              (pink.r * 255).round(),
+              (pink.g * 255).round(),
+              (pink.b * 255).round(),
+            ];
+            expect(at(rect.left + 2, rect.top + 2), want);
+            expect(at(rect.right - 2, rect.bottom - 2), want);
+            expect(at(rect.left + 2, rect.bottom + 2), isNot(want));
+            expect(at(rect.right + 2, rect.top + 2), isNot(want));
+          });
+          b.tapAt(rect.bottomRight - const Offset(2, 2));
+          await flushAndMount(g);
+          expect(g.state, GameState.results);
         },
         prefs: {'feathers': 3},
         h: 568,
       );
     },
-    skip: 'S6-63 open',
   );
 }
 

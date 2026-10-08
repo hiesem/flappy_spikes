@@ -3,7 +3,7 @@
  * processPlayerWrite / sweepAllPools / deletePlayerData with a fixed clock and shard).
  */
 import assert from 'node:assert/strict';
-import { Timestamp } from 'firebase-admin/firestore';
+import { DocumentReference, Firestore, Timestamp, Transaction } from 'firebase-admin/firestore';
 import { deletePlayerData, processPlayerWrite, sweepAllPools } from '../src/pools.js';
 import { POOL_CAP, POOL_MAX_BYTES, poolId, RATE_COLLECTION } from '../src/schema.js';
 import { docSize } from '../src/size.js';
@@ -242,5 +242,48 @@ describe('§3.13 deleteMyData (data part)', () => {
     assert.equal((await db.collection('players').doc(uid).get()).exists, false);
     assert.equal(await rate(uid), undefined);
     assert.equal(await deletePlayerData(db, uid), 0);
+  });
+
+  it('S6-61 a failure inside the deletion deletes nothing; a retry completes it', async () => {
+    const uid = uniq('atomic');
+    const now = Date.now();
+    for (const s of [0, 1]) {
+      const run = makeRun({ score: 130 + s });
+      await processLive(uid, undefined, makePlayer({ best: 130 + s, bestRun: run, recent: [run] }), {
+        rand: () => s / 4,
+        nowMs: now,
+      });
+    }
+    await db.collection('players').doc(uid).set({ marker: true });
+    // The same emulator, with the rate-doc delete failing inside the transaction.
+    const faulty = {
+      collection: (c: string) => db.collection(c),
+      runTransaction: <T>(fn: (tx: Transaction) => Promise<T>) =>
+        db.runTransaction((tx) =>
+          fn(
+            new Proxy(tx, {
+              get(t, k) {
+                if (k === 'delete') {
+                  return (ref: DocumentReference) => {
+                    if (ref.path.startsWith(`${RATE_COLLECTION}/`)) throw new Error('injected rate deletion failure');
+                    return t.delete(ref);
+                  };
+                }
+                const v = Reflect.get(t, k, t);
+                return typeof v === 'function' ? v.bind(t) : v;
+              },
+            }),
+          ),
+        ),
+    } as unknown as Firestore;
+    await assert.rejects(deletePlayerData(faulty, uid), /injected/);
+    assert.equal((await db.collection('players').doc(uid).get()).exists, true);
+    assert.notEqual(await rate(uid), undefined);
+    for (const s of [0, 1]) assert.ok((await poolEntries(poolId(3, s))).some((e) => e.uid === uid));
+    // Re-run: the complete end state.
+    assert.equal(await deletePlayerData(db, uid), 2);
+    assert.equal((await db.collection('players').doc(uid).get()).exists, false);
+    assert.equal(await rate(uid), undefined);
+    for (const s of [0, 1]) assert.ok((await poolEntries(poolId(3, s))).every((e) => e.uid !== uid));
   });
 });

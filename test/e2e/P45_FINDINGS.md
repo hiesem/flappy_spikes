@@ -23,6 +23,20 @@ S6-60 is skipped with the same reason.
 | S6-65 | minor | `lib/game/flappy_game.dart:978`; `lib/run/screens/results_screen.dart:304`, `:311` | The own-player name is hardcoded to “You”, ignoring the available generated nickname / Play Games profile. | Give `FakeVersusService.me` the name `SwiftKiwi482` and start a real VS intro. The own name plate shows **You**. Results likewise constructs both solo and versus own columns with the literal **You**. | The own plate shows the player's name, using the persistent nickname or Play Games display name (§3.13 identity, §5.8 Your plate, §5.10 versus card). |
 | S6-66 | major | `lib/services/versus_service.dart:274`, `:350`, `:401`; `lib/main.dart:102` | If anonymous-auth startup fails, `ready` remains false. The normal Home prefetch and run-submit/flush paths never retry initialization, so network recovery does not restore matching or uploads during that app session. | Start the real service with a backend that throws offline from `start`; restore connectivity; submit a valid new-best run; call Home prefetch and flush. The backend has no successful auth start and the run remains queued. A restart or an explicit second `initialize` is required, neither wired to normal recovery. | Offline failures fall back to solo and queued runs retry when the phone is online; first-start auth must recover without requiring an app restart (§3.13 upload/offline rules; R-3.13-2, -8). |
 
+## Fix decisions (`Fix P45 R1`, 2026-10-08)
+
+All seven regressions now run without `skip:` (ARCH §30).
+
+- **S6-60:** the queue paces non-best writes to 3 per UTC upload day (`uploadsSent`/`uploadsSentDay`); the rest stay queued for later days, bests are never held back, the cap of 12 is unchanged.
+- **S6-61:** `deletePlayerData` is one Firestore transaction (player, rate, 44 shards) after an Auth reachability check, so a failure deletes nothing and a retry completes it; new emulator test injects a mid-transaction failure.
+- **S6-62:** 4/4 writes a `puzzlePayout` record (target balance) with the mask reset/round advance before the coin write and clears it after; `PuzzleFeature.settlePayout` pays the rest once at start (the S6-22 pattern).
+- **S6-63:** the bonus bottom band (row, ad, NO THANKS, NEXT) is unscaled and bottom-anchored; only the column above scales, so NEXT is 292 × 50 with a 99 pt gap at 568.
+- **S6-64:** games_services 5.1.0 exposes `PlayerData.iconImage` (base64); it and avatar URLs load into one shared `AvatarImages` cache drawn on the plates, HUD and results card, with the neutral glyph as fallback.
+- **S6-65:** the own name is `VersusService.me.name` (Play Games display name, else the generated nickname, §3.13), "You" only with no identity.
+- **S6-66:** a failed start is retried with backoff (5 s → 2 min), on app resume, Home prefetch, submit and before every flush; no connectivity plugin was added (the backoff is the probe).
+
+The S6-60 test now asserts the stronger contract (no `rate` rejection at all, three retained, all six accepted by day four) instead of three rejections plus retention; the S6-62 test additionally runs the start-up recovery; S6-63 measures the real NEXT rect and its pixels.
+
 ## Verification
 
 | Check | Result |

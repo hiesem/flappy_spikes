@@ -227,11 +227,37 @@ export async function sweepAllPools(db: Firestore, nowMs = Date.now()): Promise<
   return counts.reduce((a, b) => a + b, 0);
 }
 
-/** Removes everything stored online for [uid] except the Auth user (the caller deletes that). */
+/**
+ * Removes everything stored online for [uid] except the Auth user (the
+ * caller deletes that). All-or-nothing (S6-61): the player doc, the rate
+ * doc and this uid's entries in all 44 pool shards go in **one**
+ * transaction (46 reads, ≤ 46 writes), so a failure deletes nothing and a
+ * retry starts from the same state. Serializable with `processPlayerWrite`
+ * (which re-reads the player doc in its transaction): a run write either
+ * commits first (its pool entry is then removed here) or sees the player
+ * gone and writes nothing. Idempotent: a second call removes 0.
+ */
 export async function deletePlayerData(db: Firestore, uid: string, nowMs = Date.now()): Promise<number> {
-  // The player doc first, so no later write can re-add a pool entry from it.
-  await db.collection('players').doc(uid).delete();
-  await db.collection(RATE_COLLECTION).doc(uid).delete();
-  const counts = await Promise.all(allPoolIds().map((pid) => rewritePool(db, pid, uid, nowMs)));
-  return counts.reduce((a, b) => a + b, 0);
+  const playerRef = db.collection('players').doc(uid);
+  const rateRef = db.collection(RATE_COLLECTION).doc(uid);
+  const poolRefs = allPoolIds().map((pid) => db.collection('pools').doc(pid));
+  return db.runTransaction(async (tx) => {
+    const [player, rate, ...pools] = await Promise.all([
+      tx.get(playerRef),
+      tx.get(rateRef),
+      ...poolRefs.map((ref) => tx.get(ref)),
+    ]);
+    let removed = 0;
+    pools.forEach((snap, i) => {
+      if (!snap.exists) return;
+      const pool = snap.data() as PoolDoc;
+      const { entries, changed } = mergePool(poolRefs[i].path, pool, null, uid, nowMs);
+      if (!changed) return;
+      tx.update(poolRefs[i], { entries, updatedAt: Timestamp.fromMillis(nowMs) });
+      removed += (pool.entries?.length ?? 0) - entries.length;
+    });
+    if (player.exists) tx.delete(playerRef);
+    if (rate.exists) tx.delete(rateRef);
+    return removed;
+  });
 }

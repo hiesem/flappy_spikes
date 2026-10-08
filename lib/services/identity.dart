@@ -9,10 +9,18 @@ import '../run/config/versus_config.dart';
 /// "Who plays", ARCH §6.4): its display name, and once signed in the
 /// credential that links it to the anonymous Firebase user.
 class PlatformPlayer {
-  const PlatformPlayer({required this.id, required this.displayName});
+  const PlatformPlayer({
+    required this.id,
+    required this.displayName,
+    this.iconImage = '',
+  });
 
   final String id;
   final String displayName;
+
+  /// The icon-size profile image, base64 ('' when none; games_services
+  /// 5.1.0 `PlayerData.iconImage`, S6-64).
+  final String iconImage;
 }
 
 /// Platform identity behind a small interface (ARCH §8: platform code stays
@@ -52,7 +60,11 @@ class PlayGamesIdentity implements PlatformIdentity {
     final id = p?.playerID;
     _last = p == null
         ? null
-        : PlatformPlayer(id: id ?? '', displayName: p.displayName);
+        : PlatformPlayer(
+            id: id ?? '',
+            displayName: p.displayName,
+            iconImage: p.iconImage ?? '',
+          );
     return _last;
   });
 

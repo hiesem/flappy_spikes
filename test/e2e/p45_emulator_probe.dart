@@ -14,7 +14,7 @@ void main() {
   // This opt-in integration probe needs the real loopback HttpClient.
   HttpOverrides.global = null;
   test(
-    'S6-60 real emulators: an offline backlog loses three rate-rejected runs',
+    'S6-60 real emulators: an offline backlog is paced, nothing is rate-rejected',
     () async {
       expect(
         emulator.enabled,
@@ -46,37 +46,37 @@ void main() {
           statuses.add(status);
           return status == 200 ? UploadWrite.done : UploadWrite.retry;
         }),
-        6,
+        3,
+        reason: 'one UTC upload day takes the server\'s three non-best runs',
       );
       expect(
         statuses,
         everyElement(200),
-        reason: 'all six client documents pass the real rules',
+        reason: 'the client documents pass the real rules',
       );
       Map<String, Object?>? rate;
       for (var i = 0; i < 100; i++) {
         // Emulator-only administrator token: the supporting rate collection is
         // deliberately unreadable by clients; never use a production endpoint.
         rate = await emulator.getDoc('versusRate/$uid', 'owner');
-        if ((rate?['seen'] as List?)?.length == 6) {
+        if ((rate?['seen'] as List?)?.length == 3) {
           break;
         }
         await Future<void>.delayed(const Duration(milliseconds: 100));
       }
       expect(
         rate?['seen'],
-        hasLength(6),
-        reason: 'all six trigger invocations finished',
+        hasLength(3),
+        reason: 'all three trigger invocations finished',
       );
       expect(rate?['count'], 3);
-      expect(rate?['last'], containsPair('reason', 'rate'));
+      expect(rate?['last'], containsPair('status', 'accepted'));
       expect(
         queue.pending.length,
         3,
-        reason:
-            'rules accepted all writes, the trigger refused three, and the queue lost them',
+        reason: 'the three runs over the server rate wait for a later day',
       );
     },
-    skip: 'S6-60 open',
+    skip: emulator.enabled ? false : 'opt-in: FS_EMULATOR_TESTS=1 in demo emulators',
   );
 }

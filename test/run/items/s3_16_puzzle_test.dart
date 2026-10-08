@@ -203,6 +203,10 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getInt('puzzlePieces'), 0);
       expect(prefs.getInt('puzzleRound'), 8);
+      // S6-62: once the coin write landed, the payout record is cleared.
+      expect(g.storage.puzzlePayout, 0);
+      expect(prefs.getInt('puzzlePayout'), 0);
+      expect(prefs.getInt('coins'), wallet + bonus);
       final spy = g.services as AnalyticsSpy;
       expect(
         analyticsLog(spy).where((e) => e.$1 == 'puzzle_completed').single.$2,

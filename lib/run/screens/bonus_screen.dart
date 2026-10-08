@@ -71,18 +71,26 @@ abstract final class BonusRules {
     return adAvailable ? BonusOffer.ad : BonusOffer.none;
   }
 
-  /// §5.14 the reference → screen transform for a [h] pt tall screen: the
-  /// 711 pt mock between the two 44 pt strips, scaled to fit on shorter
-  /// screens (about the top centre) and centred on taller ones.
+  /// §5.14 the reference → screen transform of the column above the
+  /// bottom band for a [h] pt tall screen: the 711 pt mock between the two
+  /// 44 pt strips, scaled about the top centre so the reference band top
+  /// ([BonusConfig.bandTop]) meets the bottom-anchored band on shorter
+  /// screens, and centred on taller ones (§3.0.1, S6-63).
   static (double scale, Offset offset) layoutFor(double h) {
     const strips = 44.0;
+    const band = BonusConfig.referenceHeight - BonusConfig.bandTop;
     final k = math.min(
       1.0,
-      (h - 2 * strips) / (BonusConfig.referenceHeight - 2 * strips),
+      (h - band - strips) / (BonusConfig.bandTop - strips),
     );
     final dy = strips - strips * k + math.max(0.0, (h - 711) / 2);
     return (k, Offset(160 * (1 - k), dy));
   }
+
+  /// §3.0.1 (S6-63) the bottom band's screen shift for a [h] pt tall
+  /// screen: unscaled, its reference bottom distance kept (the feather
+  /// row, the ad button, NO THANKS and NEXT).
+  static double bandShiftFor(double h) => h - BonusConfig.referenceHeight;
 
   /// §5.14 tile [i]'s rect and centre (reference coordinates).
   static Rect tileRect(int i) => Rect.fromLTWH(
@@ -207,6 +215,21 @@ class BonusScreen extends PositionComponent
   Image? _coin;
   double _k = 1;
   Offset _offset = Offset.zero;
+  double _band = 0;
+
+  /// §3.0.1 (S6-63) a bottom-band reference point in [content]'s
+  /// (scaled) reference coordinates.
+  Offset _bandToContent(Offset p) => Offset(
+    (p.dx - _offset.dx) / _k,
+    (p.dy + _band - _offset.dy) / _k,
+  );
+
+  /// NEXT's rect on the screen (tests): 292 × 50 at the reference bottom
+  /// distance on every height (§5.14, §3.0.1).
+  Rect get nextRect => BonusConfig.nextButton.shift(Offset(0, _band));
+
+  /// The ad button's rect on the screen (tests).
+  Rect get adRect => BonusConfig.adButton.shift(Offset(0, _band));
 
   /// The prizes in grid order (tests).
   List<int> get prizes => [for (final t in _tiles) t.prize];
@@ -241,6 +264,7 @@ class BonusScreen extends PositionComponent
     final (k, off) = BonusRules.layoutFor(h);
     _k = k;
     _offset = off;
+    _band = BonusRules.bandShiftFor(h);
     content = PositionComponent(
       position: Vector2(off.dx, off.dy),
       scale: Vector2.all(k),
@@ -267,14 +291,17 @@ class BonusScreen extends PositionComponent
   @override
   void onTapDown(TapDownEvent event) {
     final p = event.localPosition;
-    tapAt(Offset((p.x - _offset.dx) / _k, (p.y - _offset.dy) / _k));
+    tapAt(Offset(p.x, p.y));
   }
 
-  /// A tap at [p] (reference coordinates).
-  void tapAt(Offset p) {
+  /// A tap at [s] (screen coordinates): the grid is hit-tested in the
+  /// scaled column, the buttons in the bottom-anchored band (S6-63).
+  void tapAt(Offset s) {
+    final c = Offset((s.dx - _offset.dx) / _k, (s.dy - _offset.dy) / _k);
+    final p = Offset(s.dx, s.dy - _band);
     if (phase == BonusPhase.pick) {
       for (var i = 0; i < _tiles.length; i++) {
-        if (BonusRules.tileRect(i).contains(p)) {
+        if (BonusRules.tileRect(i).contains(c)) {
           tapTile(i);
           return;
         }
@@ -308,7 +335,7 @@ class BonusScreen extends PositionComponent
     final c = BonusRules.tileRect(i).center;
     _flights.add(
       _Flight(
-        from: BonusRules.rowSlot(k),
+        from: _bandToContent(BonusRules.rowSlot(k)),
         to: c,
         t0: _t,
         dur: BonusConfig.featherFly,
@@ -368,12 +395,12 @@ class BonusScreen extends PositionComponent
   void _refill() {
     phase = BonusPhase.pick;
     _ph0 = _t;
-    final from = BonusConfig.adButton.center;
+    final from = _bandToContent(BonusConfig.adButton.center);
     for (var k = 0; k < BonusConfig.feathers; k++) {
       _flights.add(
         _Flight(
           from: from,
-          to: BonusRules.rowSlot(k),
+          to: _bandToContent(BonusRules.rowSlot(k)),
           t0: _t + k * BonusConfig.refillGap,
           dur: BonusConfig.refillFly,
           n: k + 1,
@@ -423,7 +450,8 @@ class BonusScreen extends PositionComponent
             2 => Sfx.colFeatherSlot2,
             _ => Sfx.colFeatherSlot3,
           });
-          _ring(f.to, from: 6, to: 28, stroke: 2.5, length: .4);
+          // In the unscaled band: the ring keeps its reference size.
+          _ring(f.to, from: 6 / _k, to: 28 / _k, stroke: 2.5 / _k, length: .4);
         }
       }
     }
@@ -788,6 +816,10 @@ class BonusScreen extends PositionComponent
       _text(canvas, prompt, const Offset(160, BonusConfig.promptY), BonusConfig.promptFont, BonusConfig.plum,
           spacing: BonusConfig.promptSpacing);
     }
+    // §3.0.1 (S6-63) the bottom band: unscaled, bottom-anchored.
+    canvas.save();
+    canvas.scale(1 / _k);
+    canvas.translate(-_offset.dx, _band - _offset.dy);
     if (phase == BonusPhase.pick) {
       for (var s = 0; s < 3; s++) {
         final has = s < feathers;
@@ -818,6 +850,7 @@ class BonusScreen extends PositionComponent
         );
       }
     }
+    canvas.restore();
   }
 
   void _offerButton(Canvas canvas, double t) {
@@ -963,8 +996,13 @@ class BonusScreen extends PositionComponent
       if (u < 0) continue;
       final p = _flightPos(f, u);
       final e = Ease.cubicInOut(u.clamp(0.0, 1.0));
+      // The row lives in the unscaled band (S6-63): a feather keeps the
+      // row's size there and shrinks to the column's scale at a tile.
+      final band = 1 / _k;
       final s = BonusConfig.rowScale *
-          (f.refill ? .7 + .3 * e : 1 + .25 * math.sin(math.pi * e));
+          (f.refill
+              ? (.7 + .3 * e) * band
+              : (1 + .25 * math.sin(math.pi * e)) * (band + (1 - band) * e));
       FeatherArt.paintAt(
         canvas,
         p,

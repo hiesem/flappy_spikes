@@ -13,6 +13,7 @@ import '../../components/ui/confetti.dart';
 import '../../components/ui/live_effects.dart' show WiggleEffect;
 import '../../game/flappy_game.dart';
 import '../../game/sound.dart';
+import '../../services/avatars.dart';
 import '../../levels/level_progress.dart';
 import '../../levels/levels.dart';
 import '../config/results_config.dart';
@@ -301,17 +302,19 @@ class ResultsScreen extends PositionComponent
     final versusParts = <PositionComponent>[];
     if (opp == null || duel == null) {
       you = ResultsPlayerColumn(
-        name: 'You',
+        name: game.myVersusName,
         score: model.score,
         centreX: ResultsConfig.soloColumnX,
         mine: true,
+        avatar: game.myAvatarKey,
       );
     } else {
       you = ResultsPlayerColumn(
-        name: 'You',
+        name: game.myVersusName,
         score: model.score,
         centreX: ResultsConfig.youColumnX,
         mine: true,
+        avatar: game.myAvatarKey,
         lower: duel == DuelResult.lose,
         winner: duel == DuelResult.win,
       );
@@ -320,6 +323,7 @@ class ResultsScreen extends PositionComponent
         score: opp.score,
         centreX: ResultsConfig.opponentColumnX,
         mine: false,
+        avatar: opp.avatarUrl,
         lower: duel == DuelResult.win,
         winner: duel == DuelResult.lose,
       );
@@ -849,11 +853,16 @@ class ResultsPlayerColumn extends PositionComponent
     required this.mine,
     this.lower = false,
     this.winner = false,
+    this.avatar = '',
   });
 
   final String name;
   final int score;
   final double centreX;
+
+  /// The avatar's `AvatarImages` key ('' / not cached yet = the neutral
+  /// glyph, S6-64).
+  final String avatar;
 
   /// Yours (pink avatar) or the opponent's (stage grey).
   final bool mine;
@@ -931,6 +940,11 @@ class ResultsPlayerColumn extends PositionComponent
     final top = ResultsConfig.avatarTop;
     _paint.color = mine ? ResultsConfig.pink : game.foregroundColor;
     canvas.drawRect(Rect.fromLTWH(left, top, s, s), _paint);
+    final picture = game.avatars.lookup(avatar);
+    if (picture != null) {
+      AvatarImages.paint(canvas, picture, Rect.fromLTWH(left, top, s, s));
+      return;
+    }
     const g = ResultsConfig.avatarGlyph;
     canvas.save();
     canvas.translate(left + (s - g) / 2, top + (s - g) / 2);

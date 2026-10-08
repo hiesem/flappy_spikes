@@ -38,6 +38,13 @@ enum UploadWrite {
 /// `functions/src/schema.ts` `utcDay`); runs under score 3 never. [flush]
 /// writes **one run per write** (ARCH §6.1 write contract), oldest first,
 /// and stops at the first transient failure (retried on the next flush).
+///
+/// (S6-60) The server's rate counts runs by the UTC day it *processes*
+/// them, so [flush] also paces the non-best writes by the upload day
+/// (`uploadsSent` + `uploadsSentDay`): at most 3 a UTC day. Non-best runs
+/// over that stay queued (a new best still goes out) and are written on a
+/// later day, instead of being rejected for `rate` and lost. The cap of
+/// [VersusConfig.queueCap] still evicts the oldest non-best first.
 class UploadQueue {
   UploadQueue(this.storage, {DateTime Function()? clock})
     : _clock = clock ?? DateTime.now;
@@ -55,6 +62,10 @@ class UploadQueue {
   /// Non-best runs queued today (0 on a new UTC day).
   int get uploadsToday =>
       storage.uploadsDay == today ? storage.uploadsToday : 0;
+
+  /// (S6-60) Non-best runs written today, UTC (0 on a new UTC day).
+  int get sentToday =>
+      storage.uploadsSentDay == today ? storage.uploadsSent : 0;
 
   /// The pending runs, oldest first (unreadable entries are skipped).
   List<QueuedRun> get pending => [
@@ -84,16 +95,26 @@ class UploadQueue {
     return newBest ? UploadDecision.queuedBest : UploadDecision.queued;
   }
 
-  /// Writes the queue one run per [write] call, oldest first. Returns how
-  /// many were written. Re-entrant calls while a flush runs return 0.
+  /// Writes the queue one run per [write] call, oldest first, at most
+  /// [VersusConfig.dailyUploads] non-best runs per UTC upload day (the rest
+  /// wait for a later day, S6-60). Returns how many were written.
+  /// Re-entrant calls while a flush runs return 0.
   Future<int> flush(Future<UploadWrite> Function(QueuedRun run) write) async {
     if (_flushing) return 0;
     _flushing = true;
     var written = 0;
     try {
-      while (storage.uploadQueue.isNotEmpty) {
-        final head = storage.uploadQueue.first;
+      var i = 0;
+      while (i < storage.uploadQueue.length) {
+        final head = storage.uploadQueue[i];
         final run = QueuedRun.fromJson(head);
+        if (run != null &&
+            !run.newBest &&
+            sentToday >= VersusConfig.dailyUploads) {
+          // Today's server allowance is used: keep it for a later day.
+          i++;
+          continue;
+        }
         var verdict = UploadWrite.drop;
         if (run != null) {
           try {
@@ -106,7 +127,12 @@ class UploadQueue {
         final rest = [...storage.uploadQueue];
         rest.remove(head);
         await storage.saveUploadQueue(rest);
-        if (verdict == UploadWrite.done) written++;
+        if (verdict == UploadWrite.done) {
+          written++;
+          if (run != null && !run.newBest) {
+            await storage.saveUploadsSent(today, sentToday + 1);
+          }
+        }
       }
     } finally {
       _flushing = false;
@@ -118,5 +144,6 @@ class UploadQueue {
   Future<void> clear() async {
     await storage.saveUploadQueue(const []);
     await storage.saveUploadsToday('', 0);
+    await storage.saveUploadsSent('', 0);
   }
 }

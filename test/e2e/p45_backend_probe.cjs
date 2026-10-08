@@ -10,11 +10,18 @@ function ref(collection, id) { return { path: `${collection}/${id}`, async delet
   if (input.mode === 'delete' && collection === 'versusRate') throw Error('injected rate deletion failure');
   data.delete(this.path);
 }, async update(v) { data.set(this.path, { ...data.get(this.path), ...v }); } }; }
+const DELETE = Symbol('delete');
 const db = { collection: c => ({ doc: id => ref(c, id) }), async runTransaction(fn) {
   const writes = [];
   const out = await fn({ async get(r) { return { exists: data.has(r.path), data: () => data.get(r.path) }; },
-    set(r, v) { writes.push([r.path, v]); }, update(r, v) { writes.push([r.path, { ...data.get(r.path), ...v }]); } });
-  for (const [path, value] of writes) data.set(path, value);
+    set(r, v) { writes.push([r.path, v]); }, update(r, v) { writes.push([r.path, { ...data.get(r.path), ...v }]); },
+    delete(r) { writes.push([r.path, DELETE]); } });
+  // The same injected fault inside a transaction: the commit fails as a
+  // whole (Firestore commits are atomic), so nothing is applied.
+  if (input.mode === 'delete' && writes.some(([p, v]) => v === DELETE && p.startsWith('versusRate/'))) {
+    throw Error('injected rate deletion failure');
+  }
+  for (const [path, value] of writes) value === DELETE ? data.delete(path) : data.set(path, value);
   return out;
 } };
 function hydrate(v) {
@@ -34,10 +41,12 @@ function hydrate(v) {
   }
   let old;
   const results = [];
-  for (const raw of input.documents) {
+  for (const [i, raw] of input.documents.entries()) {
     const next = hydrate(raw);
     data.set('players/qa', next);
-    results.push(await processPlayerWrite(db, 'qa', old, next, { nowMs: input.nowMs, rand: () => 0 }));
+    // nowMs: one processing time, or one per document (multi-day backlogs).
+    const nowMs = Array.isArray(input.nowMs) ? input.nowMs[i] : input.nowMs;
+    results.push(await processPlayerWrite(db, 'qa', old, next, { nowMs, rand: () => 0 }));
     old = next;
   }
   console.log(JSON.stringify({ accepted: results.flatMap(r => r.accepted), rejected: results.flatMap(r => r.rejected) }));

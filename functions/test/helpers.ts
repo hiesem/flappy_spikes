@@ -2,6 +2,7 @@
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { processPlayerWrite, type ProcessOptions } from '../src/pools.js';
 import { encodeDeltas, encodeFlags } from '../src/timeline.js';
 import type { Look, PlayerDoc, RunEntry } from '../src/schema.js';
 
@@ -93,4 +94,21 @@ export async function waitFor<T>(fn: () => Promise<T | undefined | null | false>
 export function fakeJwt(payload: Record<string, unknown>): string {
   const b = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
   return `${b({ alg: 'none', typ: 'JWT' })}.${b(payload)}.`;
+}
+
+/**
+ * Direct `processPlayerWrite` calls model a trigger for a live player, so the
+ * `players/{uid}` doc must exist (S6-08: a write for a deleted player is
+ * dropped). A run-less marker doc fires a no-op trigger, never a second
+ * processing of the snapshot under test.
+ */
+export async function processLive(
+  uid: string,
+  before: PlayerDoc | undefined,
+  after: PlayerDoc | undefined,
+  opts: ProcessOptions = {},
+) {
+  const ref = db.collection('players').doc(uid);
+  if (!(await ref.get()).exists) await ref.set({ marker: true });
+  return processPlayerWrite(db, uid, before, after, opts);
 }

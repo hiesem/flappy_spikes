@@ -7,7 +7,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { deletePlayerData, processPlayerWrite, sweepAllPools } from '../src/pools.js';
 import { POOL_CAP, POOL_MAX_BYTES, poolId, RATE_COLLECTION } from '../src/schema.js';
 import { docSize } from '../src/size.js';
-import { DAY, db, makePlayer, makeRun, poolEntries, uniq, waitFor } from './helpers.js';
+import { DAY, db, makePlayer, makeRun, poolEntries, processLive, uniq, waitFor } from './helpers.js';
 
 const shard0 = () => 0;
 const rate = async (uid: string) => (await db.collection(RATE_COLLECTION).doc(uid).get()).data();
@@ -18,7 +18,7 @@ describe('§3.13 onPlayerRunWrite: accept', () => {
     const run = makeRun({ score: 150 });
     const after = { ...makePlayer({ best: 150, bestRun: run, recent: [run] }), level: 9 }; // client level is wrong
     const now = Date.now();
-    const r = await processPlayerWrite(db, uid, undefined, after, { rand: shard0, nowMs: now });
+    const r = await processLive(uid, undefined, after, { rand: shard0, nowMs: now });
     assert.deepEqual(r.accepted, [run.runId]);
     assert.equal(r.pool, poolId(3, 0)); // best 150 → FLEDGLING (3)
     const entries = await poolEntries(poolId(3, 0));
@@ -35,10 +35,10 @@ describe('§3.13 onPlayerRunWrite: accept', () => {
     const uid = uniq('dedupe');
     const r1 = makeRun({ score: 160, tsMs: Date.now() - 1000 });
     const p1 = makePlayer({ best: 160, bestRun: r1, recent: [r1] });
-    await processPlayerWrite(db, uid, undefined, p1, { rand: shard0 });
+    await processLive(uid, undefined, p1, { rand: shard0 });
     const r2 = makeRun({ score: 170 });
     const p2 = makePlayer({ best: 170, bestRun: r2, recent: [r2, r1] });
-    await processPlayerWrite(db, uid, p1, p2, { rand: shard0 });
+    await processLive(uid, p1, p2, { rand: shard0 });
     const mine = (await poolEntries(poolId(3, 0))).filter((e) => e.uid === uid);
     assert.deepEqual(
       mine.map((e) => e.runId),
@@ -48,7 +48,7 @@ describe('§3.13 onPlayerRunWrite: accept', () => {
 
   it('§3.13 a profile-only write (no new run) touches no pool', async () => {
     const uid = uniq('noop');
-    const r = await processPlayerWrite(db, uid, undefined, makePlayer({ best: 0 }));
+    const r = await processLive(uid, undefined, makePlayer({ best: 0 }));
     assert.deepEqual(r, { accepted: [], rejected: [] });
     assert.equal(await rate(uid), undefined);
   });
@@ -71,7 +71,7 @@ describe('§3.13 onPlayerRunWrite: cheat filter rejects', () => {
     it(`§3.13 rejects: ${name}`, async () => {
       const uid = uniq('rej');
       const { best, run } = mk();
-      const r = await processPlayerWrite(db, uid, undefined, makePlayer({ best, recent: [run] }), { rand: shard0 });
+      const r = await processLive(uid, undefined, makePlayer({ best, recent: [run] }), { rand: shard0 });
       assert.deepEqual(r.accepted, []);
       assert.deepEqual(r.rejected, [{ runId: run.runId, reason }]);
       assert.equal(r.pool, undefined);
@@ -92,7 +92,7 @@ describe('§3.13 onPlayerRunWrite: upload rate (3 a day, best always)', () => {
       const run = makeRun({ score: 200 + i, best: 300 });
       recent.unshift(run);
       const next = makePlayer({ best: 300, recent: recent.slice(0, 5) });
-      const r = await processPlayerWrite(db, uid, prev, next, { rand: shard0, nowMs: day0 + i });
+      const r = await processLive(uid, prev, next, { rand: shard0, nowMs: day0 + i });
       results.push(r.accepted.length ? 'ok' : r.rejected[0].reason);
       prev = next;
     }
@@ -101,21 +101,21 @@ describe('§3.13 onPlayerRunWrite: upload rate (3 a day, best always)', () => {
     const bestRun = makeRun({ score: 310 });
     recent.unshift(bestRun);
     let next = makePlayer({ best: 310, bestRun, recent: recent.slice(0, 5) });
-    let r = await processPlayerWrite(db, uid, prev, next, { rand: shard0, nowMs: day0 + 10 });
+    let r = await processLive(uid, prev, next, { rand: shard0, nowMs: day0 + 10 });
     assert.deepEqual(r.accepted, [bestRun.runId]);
     prev = next;
     // Marking an old score as "best" does not dodge the limit.
     const fake = makeRun({ score: 250, best: 310 });
     recent.unshift(fake);
     next = makePlayer({ best: 310, bestRun: fake, recent: recent.slice(0, 5) });
-    r = await processPlayerWrite(db, uid, prev, next, { rand: shard0, nowMs: day0 + 11 });
+    r = await processLive(uid, prev, next, { rand: shard0, nowMs: day0 + 11 });
     assert.deepEqual(r.rejected, [{ runId: fake.runId, reason: 'rate' }]);
     prev = next;
     // Next UTC day.
     const run = makeRun({ score: 220, best: 310 });
     recent.unshift(run);
     next = makePlayer({ best: 310, bestRun: fake, recent: recent.slice(0, 5) });
-    r = await processPlayerWrite(db, uid, prev, next, { rand: shard0, nowMs: day0 + DAY });
+    r = await processLive(uid, prev, next, { rand: shard0, nowMs: day0 + DAY });
     assert.deepEqual(r.accepted, [run.runId]);
   });
 
@@ -124,8 +124,8 @@ describe('§3.13 onPlayerRunWrite: upload rate (3 a day, best always)', () => {
     const run = makeRun({ score: 200, best: 300 });
     const before = makePlayer({ best: 300 });
     const after = makePlayer({ best: 300, recent: [run] });
-    const a = await processPlayerWrite(db, uid, before, after, { rand: shard0 });
-    const b = await processPlayerWrite(db, uid, before, after, { rand: shard0 });
+    const a = await processLive(uid, before, after, { rand: shard0 });
+    const b = await processLive(uid, before, after, { rand: shard0 });
     assert.deepEqual(a.accepted, [run.runId]);
     assert.deepEqual(b.rejected, [{ runId: run.runId, reason: 'duplicate' }]);
     assert.equal((await rate(uid))?.count, 1);
@@ -150,7 +150,7 @@ describe('§3.13 pool shard limits', () => {
     await db.collection('pools').doc(pid).set({ level: 6, shard: 1, updatedAt: Timestamp.now(), entries: seeded });
     const uid = uniq('cap');
     const run = makeRun({ score: 650 });
-    await processPlayerWrite(db, uid, undefined, makePlayer({ best: 650, bestRun: run, recent: [run] }), {
+    await processLive(uid, undefined, makePlayer({ best: 650, bestRun: run, recent: [run] }), {
       rand: () => 0.3,
       nowMs: now,
     });
@@ -168,7 +168,7 @@ describe('§3.13 pool shard limits', () => {
     await db.collection('pools').doc(pid).set({ level: 7, shard: 2, updatedAt: Timestamp.now(), entries: seeded });
     const uid = uniq('bytes');
     const run = makeRun({ score: 850 });
-    await processPlayerWrite(db, uid, undefined, makePlayer({ best: 850, bestRun: run, recent: [run] }), {
+    await processLive(uid, undefined, makePlayer({ best: 850, bestRun: run, recent: [run] }), {
       rand: () => 0.6,
       nowMs: now,
     });
@@ -185,7 +185,7 @@ describe('§3.13 pool shard limits', () => {
     const seeded = [seedEntry(1, 8, now - 10 * DAY), seedEntry(2, 8, now - 61 * DAY)];
     await db.collection('pools').doc(pid).set({ level: 8, shard: 3, updatedAt: Timestamp.now(), entries: seeded });
     const run = makeRun({ score: 1500 });
-    await processPlayerWrite(db, uniq('ttl'), undefined, makePlayer({ best: 1500, bestRun: run, recent: [run] }), {
+    await processLive(uniq('ttl'), undefined, makePlayer({ best: 1500, bestRun: run, recent: [run] }), {
       rand: () => 0.99,
       nowMs: now,
     });
@@ -214,7 +214,7 @@ describe('§3.13 pool shard limits', () => {
     const fresh = makeRun({ score: 2, tsMs: now - DAY });
     const p = makePlayer({ best: 5, recent: [fresh, old] });
     await db.collection('players').doc(uid).set(p);
-    const r = await processPlayerWrite(db, uid, undefined, p, { nowMs: now });
+    const r = await processLive(uid, undefined, p, { nowMs: now });
     assert.equal(r.trimmedRecent, 1);
     const recent = await waitFor(async () => {
       const d = (await db.collection('players').doc(uid).get()).data();
@@ -230,7 +230,7 @@ describe('§3.13 deleteMyData (data part)', () => {
     const now = Date.now();
     for (const s of [0, 1, 2, 3]) {
       const run = makeRun({ score: 120 + s });
-      await processPlayerWrite(db, uid, undefined, makePlayer({ best: 120 + s, bestRun: run, recent: [run] }), {
+      await processLive(uid, undefined, makePlayer({ best: 120 + s, bestRun: run, recent: [run] }), {
         rand: () => s / 4,
         nowMs: now,
       });

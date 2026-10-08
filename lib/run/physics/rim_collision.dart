@@ -56,8 +56,8 @@ class RimResult {
 
 /// §3.0.4 1–2: the bird circle against every rim-end circle of [f] (plain
 /// math, no Forge2D). On overlap the bird is pushed out along the contact
-/// normal; if it moves into the rim relative to the rim's own velocity
-/// ([HoopFrame.velocity]) its velocity is reflected along the normal with
+/// normal; if it moves into the rim relative to the rim end's own velocity
+/// ([HoopFrame.velocityAt]: centre motion plus rotation) its velocity is reflected along the normal with
 /// [restitution]; the tangential part is unchanged. Ends are processed in
 /// order, each against the already-corrected bird (prototype `hoopStep`).
 /// Returns null without contact. Pure.
@@ -82,7 +82,10 @@ RimResult? collideRims(
       final local = f.toLocal(pos);
       final inside = (local.y - f.rings[ring]).abs() < f.reach;
       pos = pos + n * overlap;
-      final rvx = v.x - f.velocity.x, rvy = v.y - f.velocity.y;
+      // §3.0.4 2 relative to the rim end's own velocity (centre motion
+      // plus rock / swing / orbit rotation).
+      final rv = f.velocityAt(end);
+      final rvx = v.x - rv.x, rvy = v.y - rv.y;
       final vn = rvx * n.x + rvy * n.y;
       final bounced = vn < 0;
       if (bounced) {

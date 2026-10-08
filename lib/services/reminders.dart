@@ -376,10 +376,19 @@ class PendingReminder {
 
 /// The result of one scheduling pass.
 class ReminderPlan {
-  const ReminderPlan({required this.reminders, required this.state});
+  const ReminderPlan({
+    required this.reminders,
+    required this.state,
+    ReminderState? unscheduledState,
+  }) : unscheduledState = unscheduledState ?? state;
 
   final List<ScheduledReminder> reminders;
   final ReminderState state;
+
+  /// §3.34 The state to persist when [reminders] could not be scheduled:
+  /// fired messages stay consumed, none of this plan's are (S6-07), so the
+  /// next pause / start retries them.
+  final ReminderState unscheduledState;
 }
 
 /// Pure §3.34 scheduler.
@@ -457,9 +466,14 @@ class ReminderScheduler {
       tzNow,
       lastPlayedAt == null ? null : tz.TZDateTime.from(lastPlayedAt, location),
     );
+    final unscheduled = ReminderState(
+      order: state.order.isEmpty ? _freshOrder() : state.order,
+      position: position,
+      lastSent: Map<int, String>.of(lastSent),
+    );
     final rotation = _Rotation(
       random: _random,
-      order: state.order.isEmpty ? _freshOrder() : state.order,
+      order: unscheduled.order,
       position: position,
     );
 
@@ -490,6 +504,7 @@ class ReminderScheduler {
         position: rotation.position,
         lastSent: lastSent,
       ),
+      unscheduledState: unscheduled,
     );
   }
 
@@ -499,13 +514,26 @@ class ReminderScheduler {
     return order;
   }
 
-  /// The window's slot times: today's remaining slots plus the next days,
-  /// skipping anything inside 2 h after play and anything outside 09:00-22:00.
+  /// The window's slot times: today's remaining slots plus the next days up
+  /// to the same wall-clock time 7 days on, skipping (not refilling, S6-06)
+  /// anything inside 2 h after play and anything outside 09:00-22:00.
   List<({ReminderSlot slot, tz.TZDateTime time})> _slots(
     tz.TZDateTime now,
     tz.TZDateTime? playedAt,
   ) {
     final out = <({ReminderSlot slot, tz.TZDateTime time})>[];
+    // §3.34 "schedule the next 7 days": a fixed horizon, so a player who
+    // never returns gets seven days and then nothing.
+    final horizon = tz.TZDateTime(
+      location,
+      now.year,
+      now.month,
+      now.day + windowDays,
+      now.hour,
+      now.minute,
+      now.second,
+      now.millisecond,
+    );
     for (var offset = 0; out.length < windowSlots && offset <= windowDays; offset++) {
       // Calendar arithmetic on the plain (normalised) date, then the wall
       // clock time in the current zone: a DST change never shifts the window.
@@ -520,6 +548,7 @@ class ReminderScheduler {
           slot.startMinute % 60,
         ).add(Duration(minutes: _random.nextInt(slot.windowMinutes)));
         if (!time.isAfter(now)) continue;
+        if (time.isAfter(horizon)) continue;
         if (playedAt != null &&
             !time.isBefore(playedAt) &&
             time.difference(playedAt) <= skipAfterPlay) {
@@ -940,6 +969,9 @@ class LocalReminders implements Reminders {
     if (!_ready || _busy) return;
     _busy = true;
     try {
+      // §3.34 recalculated in the *current* local zone: the device may have
+      // changed zone since [initialize] (S6-05).
+      await _resolveLocalZone();
       final now = _store.now();
       var pending = const <PendingReminder>[];
       try {
@@ -979,6 +1011,13 @@ class LocalReminders implements Reminders {
       );
       try {
         await _platform.cancelAll();
+      } catch (_) {
+        // Nothing changed on the platform: the persisted state still matches
+        // what is pending. The next pause/start retries.
+        return;
+      }
+      var state = plan.state;
+      try {
         for (final reminder in plan.reminders) {
           await _platform.schedule(
             id: reminder.id,
@@ -989,11 +1028,18 @@ class LocalReminders implements Reminders {
           );
         }
       } catch (_) {
-        // The plan is persisted anyway; the next pause/start retries.
+        // S6-07: a failed plan consumes no message. Drop any partial plan
+        // and persist the state without it; the next pause/start retries.
+        state = plan.unscheduledState;
+        try {
+          await _platform.cancelAll();
+        } catch (_) {
+          // Best effort.
+        }
       }
-      await _store.saveNotifOrder(plan.state.order);
-      await _store.saveNotifPosition(plan.state.position);
-      await _store.saveNotifLastSent(plan.state.lastSent);
+      await _store.saveNotifOrder(state.order);
+      await _store.saveNotifPosition(state.position);
+      await _store.saveNotifLastSent(state.lastSent);
     } finally {
       _busy = false;
     }

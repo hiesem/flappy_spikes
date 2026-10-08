@@ -7,9 +7,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { matchCandidates, pickOpponent, poolReadPlan, MatchEntry } from '../src/matching.js';
-import { processPlayerWrite } from '../src/pools.js';
 import { poolId, SHARDS } from '../src/schema.js';
-import { db, makePlayer, makeRun, poolEntries, uniq } from './helpers.js';
+import { makePlayer, makeRun, poolEntries, processLive, uniq } from './helpers.js';
 
 const fixture = JSON.parse(
   readFileSync(join(__dirname, '..', '..', 'test', 'fixtures', 'versus_matching.json'), 'utf8'),
@@ -52,12 +51,12 @@ describe('§3.13 matching on server-built pools', () => {
       const uid = uniq(`opp${s}`);
       others.push(uid);
       const run = makeRun({ score: 60 });
-      await processPlayerWrite(db, uid, undefined, makePlayer({ best: 60, bestRun: run, recent: [run] }), {
+      await processLive(uid, undefined, makePlayer({ best: 60, bestRun: run, recent: [run] }), {
         rand: () => (s + 0.5) / SHARDS,
       });
     }
     const mine = makeRun({ score: 70 });
-    await processPlayerWrite(db, me, undefined, makePlayer({ best: 70, bestRun: mine, recent: [mine] }), {
+    await processLive(me, undefined, makePlayer({ best: 70, bestRun: mine, recent: [mine] }), {
       rand: () => 0,
     });
     for (let s = 0; s < SHARDS; s++) {

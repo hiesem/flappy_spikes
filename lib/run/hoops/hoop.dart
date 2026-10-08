@@ -14,6 +14,9 @@ abstract interface class HoopMotionDriver {
   Vector2 get offset;
   double get angleOffset;
   Vector2 get velocity;
+
+  /// Degrees per second of [angleOffset] (§3.11 rock / swing / orbit).
+  double get angularVelocity;
 }
 
 /// One hoop slot in track coordinates (PRD-2 §7: one `Hoop` component with
@@ -90,6 +93,7 @@ class Hoop extends PositionComponent {
       opening: opening,
       rimR: kind.rimRadius(this),
       velocity: m?.velocity.clone(),
+      angularVelocity: (m?.angularVelocity ?? 0) * math.pi / 180,
     );
   }
 

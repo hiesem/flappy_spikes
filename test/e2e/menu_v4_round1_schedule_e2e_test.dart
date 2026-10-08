@@ -9,7 +9,7 @@ import 'package:flappy_spikes/services/iap_service.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 
-import '../helpers.dart' show killRun;
+import '../helpers.dart' show killRun, killRunThroughSaves;
 import '../menu_screenshot_test.dart' show loadFonts;
 import '../purchase_feedback_test.dart' show run;
 import '../shop_flow_test.dart' show openShop;
@@ -329,7 +329,9 @@ void main() {
       expect(game.storage.noAdsPopupVideos, 3);
       expect(game.noAdsPopup, isNull, reason: 'never after START');
       game.score = 6;
-      killRun(game);
+      // The slot's powerup may be a Shield, which correctly saves one hit.
+      killRunThroughSaves(game);
+      expect(game.state, GameState.gameOver);
       await v4Settle(game, tester);
       game.goHome();
       await run(game, .3);

@@ -31,6 +31,8 @@ export interface WriteResult {
   rejected: { runId: string; reason: RejectReason }[];
   pool?: string;
   trimmedRecent?: number;
+  /** The live `players/{uid}` doc is gone (Delete my data): nothing written. */
+  playerGone?: boolean;
 }
 
 function runsOf(p: PlayerDoc | undefined): RunEntry[] {
@@ -89,6 +91,13 @@ export interface ProcessOptions {
  * Handles one `players/{uid}` write: validates the new run(s), applies the
  * upload rate, writes the newest accepted run to a random shard of the
  * player's (server-recomputed) level and trims stale `recent` entries.
+ *
+ * The event snapshot may arrive after `deletePlayerData` (S6-08): the
+ * transaction re-reads the live player doc and writes nothing (no rate doc,
+ * no pool entry) when it no longer exists, so a delayed write can never
+ * recreate deleted data (§3.13 privacy). `deletePlayerData` deletes that doc
+ * first, so either this transaction sees it gone or the deletion's pool
+ * rewrite runs after this commit.
  */
 export async function processPlayerWrite(
   db: Firestore,
@@ -111,13 +120,23 @@ export async function processPlayerWrite(
     const pid = poolId(level, shard);
     const poolRef = db.collection('pools').doc(pid);
     const rateRef = db.collection(RATE_COLLECTION).doc(uid);
+    const playerRef = db.collection('players').doc(uid);
     const today = utcDay(nowMs);
 
     await db.runTransaction(async (tx) => {
       result.accepted = [];
       result.rejected = [];
       delete result.pool;
-      const [rateSnap, poolSnap] = await Promise.all([tx.get(rateRef), tx.get(poolRef)]);
+      delete result.playerGone;
+      const [playerSnap, rateSnap, poolSnap] = await Promise.all([
+        tx.get(playerRef),
+        tx.get(rateRef),
+        tx.get(poolRef),
+      ]);
+      if (!playerSnap.exists) {
+        result.playerGone = true;
+        return;
+      }
       const rate: RateDoc = (rateSnap.data() as RateDoc | undefined) ?? { day: today, count: 0, seen: [] };
       if (rate.day !== today) {
         rate.day = today;
@@ -173,7 +192,7 @@ export async function processPlayerWrite(
 
   // Retention for `recent` (ARCH §6.2): drop entries older than 60 days. The
   // follow-up trigger sees no new run and nothing stale, so it stops.
-  if (Array.isArray(after.recent)) {
+  if (!result.playerGone && Array.isArray(after.recent)) {
     const cutoff = nowMs - RETENTION_MS;
     const kept = after.recent.filter((r) => tsMillis(r?.ts) >= cutoff);
     if (kept.length !== after.recent.length) {

@@ -1,0 +1,26 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "players",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "players",
+      "fieldPath": "bestRun",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "players",
+      "fieldPath": "recent",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "pools",
+      "fieldPath": "entries",
+      "indexes": []
+    }
+  ]
+}

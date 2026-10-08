@@ -1,0 +1,132 @@
+rules_version = '2';
+
+// Flappy Spikes versus (PRD-2 §3.13, ARCH §6.2).
+// - players/{uid}: only that player reads / writes it, with a validated shape and size.
+// - pools/{doc}: read-only for signed-in clients; written by the Cloud Function (Admin SDK) only.
+// - everything else (incl. the server's versusRate/{uid}): denied.
+// App Check is enforced on Firestore by the platform (console setting), not here.
+// Rules cannot rate-limit: onPlayerRunWrite enforces the 3-a-day upload rate.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isStr(v, minLen, maxLen) {
+      return v is string && v.size() >= minLen && v.size() <= maxLen;
+    }
+
+    function isInt(v, lo, hi) {
+      return v is int && v >= lo && v <= hi;
+    }
+
+    function validPlatform(p) {
+      return p in ['android', 'ios'];
+    }
+
+    // look: the five skin-shop ids (bird, gear, hat, hoop, trail).
+    function validLook(l) {
+      return l is map
+        && l.keys().hasOnly(['bird', 'gear', 'hat', 'hoop', 'trail'])
+        && l.keys().hasAll(['bird', 'gear', 'hat', 'hoop', 'trail'])
+        && isStr(l.bird, 0, 40) && isStr(l.gear, 0, 40) && isStr(l.hat, 0, 40)
+        && isStr(l.hoop, 0, 40) && isStr(l.trail, 0, 40);
+    }
+
+    // RunEntry (ARCH §6.1). Kept lean: rules may evaluate at most 1 000 expressions per
+    // request, and a doc holds up to 6 runs. The function re-checks every run it puts in
+    // a pool (shape, sizes, cheat filter), so these rules only bound size and type.
+    // tl ≤ 16 KB of base64 (≈ 6 000 points, enough past the LEGEND threshold 5 000),
+    // fl ≤ 8 KB (one byte per point).
+    function validRun(r, best) {
+      // size() == 11 plus the 11 typed fields below = exactly these keys, without a
+      // key-list literal (rules stop at 1 000 evaluated expressions per request).
+      return r is map && r.size() == 11
+        && r.runId is string && r.runId.size() > 0 && r.runId.size() <= 64
+        && r.score is int && r.score >= 0
+        && r.best is int && r.best >= r.score && best >= r.best
+        && r.ts is timestamp
+        && r.name is string && r.name.size() > 0 && r.name.size() <= 32
+        && r.avatar is string && r.avatar.size() <= 512
+        && r.look is map && r.look.size() == 5
+        && r.look.bird is string && r.look.bird.size() <= 40
+        && r.look.gear is string && r.look.gear.size() <= 40
+        && r.look.hat is string && r.look.hat.size() <= 40
+        && r.look.hoop is string && r.look.hoop.size() <= 40
+        && r.look.trail is string && r.look.trail.size() <= 40
+        && (r.platform == 'android' || r.platform == 'ios')
+        && r.tl is string && r.tl.size() <= 16384
+        && r.end is int && r.end >= 0 && r.end <= 65535
+        && r.fl is string && r.fl.size() <= 8192;
+    }
+
+    // One new run per write (ARCH §6.1 contract): recent[0] may be new and is validated;
+    // recent[1..4] must be runs the stored doc already holds (they only shift down, or
+    // the server trimmed them). A create holds at most one run. This keeps a write far
+    // under the rules limit of 1 000 evaluated expressions.
+    function validRecent(rs, best, old) {
+      return rs is list && rs.size() <= 5
+        && (rs.size() < 1 || rs[0] in old || validRun(rs[0], best))
+        && (rs.size() < 2 || rs[1] in old)
+        && (rs.size() < 3 || rs[2] in old)
+        && (rs.size() < 4 || rs[3] in old)
+        && (rs.size() < 5 || rs[4] in old);
+    }
+
+    function validUploads(u) {
+      return u is map
+        && u.keys().hasOnly(['day', 'count'])
+        && u.keys().hasAll(['day', 'count'])
+        && isStr(u.day, 0, 10)
+        && isInt(u.count, 0, 1000);
+    }
+
+    // The runs already in the stored doc (recent + bestRun).
+    function storedRuns(d) {
+      return ('recent' in d && d.recent is list ? d.recent : [])
+        .concat('bestRun' in d && d.bestRun != null ? [d.bestRun] : []);
+    }
+
+    function validPlayer(d, old) {
+      return d.keys().hasOnly(['name', 'avatar', 'platform', 'look', 'best', 'level', 'bestRun', 'recent',
+                               'uploads', 'updatedAt', 'expireAt'])
+        && d.keys().hasAll(['name', 'avatar', 'platform', 'look', 'best', 'level', 'recent', 'updatedAt', 'expireAt'])
+        && isStr(d.name, 1, 32)
+        && isStr(d.avatar, 0, 512)
+        && validPlatform(d.platform)
+        && validLook(d.look)
+        && isInt(d.best, 0, 100000)
+        && isInt(d.level, 0, 10)
+        && validRecent(d.recent, d.best, old)
+        // A new best run is also recent[0] (validated there); otherwise it is unchanged.
+        && (!('bestRun' in d) || d.bestRun == null || d.bestRun in old
+            || (d.recent.size() > 0 && d.bestRun == d.recent[0]))
+        && (!('uploads' in d) || validUploads(d.uploads))
+        && d.updatedAt == request.time
+        // TTL field (players.expireAt, 60 days): the client sets now + 60 d; ±1 d for clock skew.
+        && d.expireAt is timestamp
+        && d.expireAt > request.time + duration.value(59, 'd')
+        && d.expireAt < request.time + duration.value(61, 'd');
+    }
+
+    match /players/{uid} {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && validPlayer(request.resource.data, []);
+      // The best score never goes down (the server uses it to recognise a new best).
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.best >= resource.data.best
+        && validPlayer(request.resource.data, storedRuns(resource.data));
+    }
+
+    match /pools/{doc} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

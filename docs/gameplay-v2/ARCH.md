@@ -658,24 +658,41 @@ players/{uid}
   best: int  level: int (0–10, derived from best client-side; server recomputes)
   bestRun: RunEntry | null       recent: RunEntry[] (≤ 5, newest first)
   uploads: { day: 'YYYY-MM-DD', count: int }
-  updatedAt: timestamp (server)  expireAt: timestamp (updatedAt + 60 d; TTL policy on players)
+  updatedAt: timestamp (server)  expireAt: timestamp (client now + 60 d, rules accept ±1 d; TTL policy on players)
 
 RunEntry
   runId: string (client uuid)    score: int   best: int   ts: timestamp
   name, avatar, look, platform   (denormalised so a pool entry is self-contained)
-  tl: string  (base64 of uint16 LE centisecond deltas, one per point)
-  end: int (cs from the last point to death)
-  fl: string (base64, one byte per point: ride 1 | train 2 | gift 4)
+  tl: string  (base64 of uint16 LE centisecond deltas, one per point; ≤ 16 384 chars)
+  end: int (cs from the last point to death, 0–65535)
+  fl: string (base64, one byte per point: ride 1 | train 2 | gift 4; ≤ 8 192 chars)
 
 pools/{level}_{shard}            level 0–10, shard 0–3   (server-written only)
   level: int  shard: int  updatedAt: timestamp
-  entries: (RunEntry + uid)[]    newest first, ≤ 150 and ≤ 900 KB total (1 MiB doc cap with long timelines)
+  entries: (RunEntry + uid + level)[]   newest first, ≤ 150 and ≤ 900 KB total (1 MiB doc cap with long timelines);
+                                        ts = server accept time; level = server-recomputed from the player's best
+
+versusRate/{uid}                 server-only (rules deny all clients): { day 'YYYY-MM-DD' UTC, count, seen: runId[≤20],
+                                 last: { runId, status, reason?, pool? } }  — upload rate + idempotent retries
 ```
+
+**Write contract (WP-5a, binding for the 5b client):**
+- **One new run per write.** A run is added as `recent[0]` (the rest shift down; `recent` ≤ 5). A new best run is the
+  same object in `bestRun` and `recent[0]`; otherwise `bestRun` is unchanged or null. A create holds at most one run.
+  (Rules allow at most 1 000 evaluated expressions per request; validating more than one new run per write exceeds it.)
+  The upload queue therefore flushes one run per write.
+- **Point count == score.** A pair "+5" gift is five points (pass point + gift points, or five gift points, any
+  delta — usually 0) flagged `gift` (4); flagged points (ride / train / gift) are exempt from the 0.9 s gap check.
+- `best` never decreases (rules); a run counts as a "new best" for the rate only if `bestRun.runId == runId`,
+  `score == best` and `score >` the previous stored `best`.
+- `runId` ≤ 64 chars; `name` 1–32; `avatar` ≤ 512; `look` five string ids ≤ 40; `platform` `android | ios`.
 
 ### 6.2 Security-rule intent (`firestore.rules`, WP-5a) and App Check
 
 - `players/{uid}`: read / create / update / delete only when `request.auth.uid == uid`; field whitelist; `name` 1–32
-  chars; `recent.size() <= 5`; `tl`/`fl` strings ≤ 8 KB; `best >= bestRun.score`; `updatedAt == request.time`.
+  chars; `recent.size() <= 5`; `tl` ≤ 16 KB and `fl` ≤ 8 KB (WP-5a: 8 KB of base64 `tl` holds only ≈ 3 000 points, short
+  of the LEGEND threshold 5 000); `best >= run.best >= run.score`; `best` never decreases; `updatedAt == request.time`;
+  `expireAt` within now + 59–61 d; one new run per write (above).
 - `pools/{doc}`: `read: if request.auth != null`; `write: if false` (Admin SDK in the function only).
 - Everything else: denied.
 - App Check **enforced** on Firestore and on the callable function (console setting; user-only step if Playwright cannot
@@ -688,9 +705,12 @@ pools/{level}_{shard}            level 0–10, shard 0–3   (server-written onl
 
 | Function | Trigger | Contract |
 |---|---|---|
-| `onPlayerRunWrite` | `onDocumentWritten('players/{uid}')` | Detect the new run (new `recent[0].runId` or new `bestRun.runId`). Validate (cheat filter): decoded point count == `score`; every gap between consecutive points without the ride/train/gift flag ≥ 0.9 s; `best >= score`; upload rate ≤ 3 non-best runs per day per uid (+ best always). On accept: in a transaction on `pools/{level}_{random shard}` remove this uid's entries, prepend the entry (+ uid), drop entries > 60 d, trim to 150 / 900 KB. On reject: log, no write (no trigger loops). Level is recomputed from `best` with `functions/src/levels.ts` (thresholds must equal `lib/levels/levels.dart`; a Dart test compares them). |
-| `deleteMyData` | callable (`enforceAppCheck: true`) | Removes the caller's entries from all 44 pool shards, deletes `players/{uid}`, deletes the Auth user (Admin SDK). Idempotent. |
-| `sweepPools` | `onSchedule('every 24 hours')` | Trims > 60 d entries in every shard. |
+| `onPlayerRunWrite` | `onDocumentWritten('players/{uid}')` | Detect the new run (new `recent[0].runId` or new `bestRun.runId`). Validate (cheat filter): decoded point count == `score`; every gap between consecutive points without the ride/train/gift flag ≥ 0.9 s; `best >= score`; score ≥ 3; display fields re-checked; upload rate ≤ 3 non-best runs per UTC day per uid (+ best always). On accept: in a transaction on `pools/{level}_{random shard}` (+ `versusRate/{uid}`) remove this uid's entries, prepend the entry (+ uid, level, server ts), drop entries > 60 d, trim to 150 / 900 KB. On reject: log + `versusRate/{uid}.last`, no pool write. Also trims `recent` entries > 60 d in the player doc (the follow-up trigger finds nothing new and stops). Level is recomputed from `best` with `functions/src/levels.ts` (thresholds must equal `lib/levels/levels.dart`; `functions/test/levels.test.ts` parses the Dart file and compares). |
+| `deleteMyData` | callable (`enforceAppCheck: true`, `consumeAppCheckToken: false`) | Deletes `players/{uid}` and `versusRate/{uid}`, removes the caller's entries from all 44 pool shards, deletes the Auth user (Admin SDK). Idempotent. Returns `{ ok: true, removed }`. Client: `FirebaseFunctions.instanceFor(region: 'europe-west1').httpsCallable('deleteMyData')`. |
+| `sweepPools` | `onSchedule('every 24 hours', UTC)` | Trims > 60 d entries in every shard. |
+
+Reference implementations for the 5b client live in `functions/src/` (`matching.ts`: candidates + pool read plan;
+`timeline.ts`: codec, `scoreAt`, cheat filter). The Dart matcher test must pass `test/fixtures/versus_matching.json`.
 
 ### 6.4 Client interfaces
 
@@ -775,11 +795,15 @@ List<(String, Map<String,Object>?)> analyticsLog(SpyGameServices s);
 
 ### 7.2 Firebase Emulator Suite (WP-5a)
 
-`functions/test/` with `@firebase/rules-unit-testing` and `firebase-functions-test`, run by
-`firebase emulators:exec --only auth,firestore,functions "npm test"` from `flappy_spikes/`. Covers: rules (own doc
-only, pools read-only, size limits), `onPlayerRunWrite` (accept, each cheat-filter reject, shard trim to 150 / 900 KB,
-dedupe per uid, 60-day trim, level recompute), `deleteMyData`, `sweepPools`, and the matching fixtures shared with the
-Dart matcher test (same JSON). The Firestore emulator needs Java ≥ 11 (system Java is fine; JDK 17 also works).
+`functions/test/` (mocha + tsx) with `@firebase/rules-unit-testing`, the Admin SDK and the real functions emulator
+(`firebase-functions-test` is not used: it does not support firebase-admin 14). `npm --prefix functions test` builds,
+type-checks and wraps mocha in `firebase emulators:exec --project demo-flappy-spikes --only auth,firestore,functions`
+(a demo project: nothing touches the real one). Covers: rules (own doc only, pools read-only, size limits, one new run
+per write), `onPlayerRunWrite` (logic called directly with a fixed clock/shard: accept, each cheat-filter reject, rate,
+retries, shard trim to 150 / 900 KB, dedupe per uid, 60-day trim, level recompute; plus end to end through the emulated
+trigger), `deleteMyData` (over HTTP: App Check missing → 401, delete + idempotent), `sweepPools`, and the matching
+fixtures shared with the Dart matcher test (`test/fixtures/versus_matching.json`). The Firestore emulator needs Java ≥ 11
+(system Java is fine; JDK 17 also works).
 
 ### 7.3 `integration_test/` on the Pixel 8 (`FS_E2E`)
 
@@ -944,3 +968,8 @@ regions.
 | Play Games link conflict: the account that already owns the Play Games id wins | §6.4 |
 | Debug force menu reachable from home (queued for the next run) and from the pause screen (debug builds) | §1.12 |
 | Delete my data regenerates the nickname and clears the upload queue | §5 |
+| WP-5a: one new run per player-doc write (rules expression limit); `bestRun` new only as `recent[0]` | §6.1 |
+| WP-5a: `tl` ≤ 16 KB / `fl` ≤ 8 KB (8 KB `tl` cannot hold a LEGEND-level run) | §6.1, §6.2 |
+| WP-5a: server-only `versusRate/{uid}` holds the UTC-day upload count, seen runIds (idempotent retries) and the last verdict | §6.1, §6.3 |
+| WP-5a: pool entry `ts` = server accept time (client clocks cannot keep an entry alive); entry carries `level` | §6.1 |
+| WP-5a: `expireAt` set by the client to now + 60 d, rules accept ±1 d | §6.1, §6.2 |

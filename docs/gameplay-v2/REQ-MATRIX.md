@@ -365,18 +365,18 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.13-11 | Opponent score replays their timeline on my runClock (stops in pause, revive offer, phoenix; slows with Hourglass); out (dimmed) at the end of their timeline | 3.13 | 5b | | todo |
 | R-3.13-12 | Result WIN / LOSE / DRAW on final scores; +10 win, +5 draw (`win_bonus`), in YOUR REWARD | 3.13 | 5b | | todo |
 | R-3.13-13 | Powerups, revives, rides part of both runs | 3.13 | 5b | | todo |
-| R-3.13-14 | Firestore `players/{uid}` written only by its owner (rules: auth uid, field + size validation) | 3.13 | 5a | | todo |
-| R-3.13-15 | `pools/{level}_{shard}`: server-only writes, ≤ 150 entries, level 0–10 × 4 shards, newest first; clients read only | 3.13 | 5a | | todo |
-| R-3.13-16 | Function `onPlayerRunWrite` (2nd gen, europe-west1): validate, append to a random shard of the level, trim to 150, remove the player's older entries | 3.13 | 5a | | todo |
+| R-3.13-14 | Firestore `players/{uid}` written only by its owner (rules: auth uid, field + size validation) | 3.13 | 5a | functions/test/rules.test.ts::§3.13 a player can create, read, update and delete their own doc; functions/test/rules.test.ts::§3.13 a player cannot read or write another player doc; functions/test/rules.test.ts::§3.13 rejects a player doc with … (19 cases) | done |
+| R-3.13-15 | `pools/{level}_{shard}`: server-only writes, ≤ 150 entries, level 0–10 × 4 shards, newest first; clients read only | 3.13 | 5a | functions/test/rules.test.ts::§3.13 signed-in clients can read a pool but never write one; functions/test/pools.test.ts::§3.13 a shard is trimmed to 150 entries, newest first; functions/test/matching.test.ts::§3.13 runs land in a shard of the uploader level; all 4 shards are used; no self-match | done |
+| R-3.13-16 | Function `onPlayerRunWrite` (2nd gen, europe-west1): validate, append to a random shard of the level, trim to 150, remove the player's older entries | 3.13 | 5a | functions/test/functions.test.ts::§3.13 a client upload of a new best lands in the pool of its level; functions/test/pools.test.ts::§3.13 a new best run goes to a shard of the server-recomputed level, newest first; functions/test/pools.test.ts::§3.13 the player older entries are removed from the shard (dedupe per uid) | done |
 | R-3.13-17 | Client reads one pool doc at app start (own level, random shard; miss → random other level) and when candidates run out | 3.13 | 5b | | todo |
-| R-3.13-18 | Cheat filter: timeline length ≠ score (minus gifts), points < 0.9 s apart (not for ride/train), best < score, upload rate exceeded → reject | 3.13 | 5a | | todo |
-| R-3.13-19 | App Check with Play Integrity on Firestore and the function | 3.13 | 5a / 5b | | todo |
-| R-3.13-20 | TTL: pool entries and recent runs older than 60 days deleted; best runs stay while the player is active | 3.13 | 5a | | todo |
-| R-3.13-21 | Budget alert $5/month; Blaze plan (already set up) | 3.13 | 5a (verify) | | todo |
+| R-3.13-18 | Cheat filter: timeline length ≠ score (minus gifts), points < 0.9 s apart (not for ride/train), best < score, upload rate exceeded → reject | 3.13 | 5a | functions/test/pools.test.ts::§3.13 rejects: … (5 cases); functions/test/pools.test.ts::§3.13 the 4th non-best run of a UTC day is rejected; a new best still goes; the next day resets; functions/test/timeline.test.ts::§3.13 ride / train / gift points are exempt from the 0.9 s gap; functions/test/functions.test.ts::§3.13 a cheated timeline (points 0.5 s apart) is rejected and never reaches a pool | done |
+| R-3.13-19 | App Check with Play Integrity on Firestore and the function | 3.13 | 5a / 5b | functions/test/functions.test.ts::§3.13 refuses a call without an App Check token (callable); Firestore enforcement = console step, docs/gameplay-v2/VERSUS-BACKEND.md §5 | 5a done (console enforcement at deploy; client: 5b todo) |
+| R-3.13-20 | TTL: pool entries and recent runs older than 60 days deleted; best runs stay while the player is active | 3.13 | 5a | functions/test/pools.test.ts::§3.13 entries older than 60 days are dropped on write; functions/test/pools.test.ts::§3.13 sweepPools trims > 60-day entries in every shard; functions/test/pools.test.ts::§3.13 recent runs older than 60 days are trimmed from the player doc; TTL on players.expireAt: firestore.indexes.json + functions/scripts/set_ttl.sh | done (TTL policy applied at deploy) |
+| R-3.13-21 | Budget alert $5/month; Blaze plan (already set up) | 3.13 | 5a (verify) | docs/gameplay-v2/VERSUS-BACKEND.md §7 (Blaze + €5 budget recorded 2026-10-08; maxInstances 10) | done (from the setup record; no gcloud here to re-read the budget) |
 | R-3.13-22 | Data-safety form lists user IDs, name, game progress shared with other players | 3.13 | 4c | | todo |
-| R-3.13-23 | "Delete my data" in Settings deletes players doc, pool entries (function), Firebase account, resets the Analytics ID; local progress untouched | 3.13 | 4c / 5a / 5b | | todo |
+| R-3.13-23 | "Delete my data" in Settings deletes players doc, pool entries (function), Firebase account, resets the Analytics ID; local progress untouched | 3.13 | 4c / 5a / 5b | functions/test/functions.test.ts::§3.13 deletes the player doc, their pool entries and the Auth user; idempotent; functions/test/pools.test.ts::§3.13 removes the player doc, the rate doc and the entries in every shard; idempotent | 5a done (4c / 5b todo) |
 | R-3.13-24 | Every Firebase call wrapped: failure = solo, never a crash or blocked START | 3.13 | 5b | | todo |
-| R-3.13-25 | One shared pool for Android and iOS; never filtered by platform; `platform` stored for analytics only | 3.13 | 5a / 5b | | todo |
+| R-3.13-25 | One shared pool for Android and iOS; never filtered by platform; `platform` stored for analytics only | 3.13 | 5a / 5b | functions/test/matching.test.ts::§3.13 platform is never used for matching (an iOS run matches an Android player); functions/test/functions.test.ts::§3.13 a client upload of a new best lands in the pool of its level | 5a done (5b todo) |
 | R-3.13-26 | Identity: Play Games link on Android; Game Center (iOS) behind the same interface (stub until iOS reopens) | 3.13 | 5b | | todo |
 | R-3.13-27 | App Check providers: Play Integrity (Android), App Attest + DeviceCheck fallback (iOS, later); debug provider only in debug / FS_E2E | 3.13 | 5b | | todo |
 | R-3.13-28 | Looks: same catalogue ids on both platforms; unknown item → default look | 3.13 | 5b | | todo |
@@ -863,7 +863,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-7-7 | Results reads the level from `bestScore` before/after; `unclaimedLevelReward` until CLAIM/NEXT; emblem painter shared with home | 7 | 2e | | todo |
 | R-7-8 | `PortalRide` engine + `RideTheme` per ride; `rides84.js` timings | 7 | 3b | | todo |
 | R-7-9 | Sounds through `AudioPool` only; comet loop via the BGM-style player | 7 | 0b / all | | todo |
-| R-7-10 | Versus backend in repo: `functions/` (TS, 2nd gen), `firestore.rules`, `firestore.indexes.json`, TTL policy; Emulator Suite tests; `VersusService` no-op by default | 7 | 5a / 5b | | todo |
+| R-7-10 | Versus backend in repo: `functions/` (TS, 2nd gen), `firestore.rules`, `firestore.indexes.json`, TTL policy; Emulator Suite tests; `VersusService` no-op by default | 7 | 5a / 5b | functions/, firestore.rules, firestore.indexes.json, functions/scripts/set_ttl.sh; `npm --prefix functions test` | 5a done (VersusService: 5b) |
 | R-7-11 | Feathers: persistent count, at most one pickup, bonus screen between revive and results, wallet per pop, ad placement `bonus_feathers`; timings from `bonus.js` / `collect.js` | 7 | 4a | | todo |
 | R-7-12 | Puzzle: mask + round, one missing piece per run, 4/4 credit + reset + round + 1 atomically, colour themes as data (`PZT`) | 7 | 4a | | todo |
 | R-7-13 | Switch ring: one kind, pluggable design, shared rules; spawner places ring + switch; seeded design pick | 7 | 3d | | todo |
@@ -879,7 +879,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-7-T10 | Rumble tests: recorder per event; 90 ms throttle; shake never skipped | 7 | 2c | | todo |
 | R-7-T11 | Notification tests with a fake clock: windows, quiet hours incl. TZ / DST, skip-after-play, 7 d / 14 slots, rotation no repeat in 10 d, fill-in + fallback | 7 | 4b | | todo |
 | R-7-T12 | Persistence: every key round-trips with its default | 7 | 0b / 4c | | todo |
-| R-7-T13 | Emulator tests: rules, function, matching | 7 | 5a | | todo |
+| R-7-T13 | Emulator tests: rules, function, matching | 7 | 5a | functions/test/*.test.ts (77 tests: rules, trigger, callable, matching fixture test/fixtures/versus_matching.json, level parity) | done |
 | R-7-T14 | Pixel 8 `integration_test` with `FS_E2E` (fixed seed, fake ads, debug App Check, force hooks) per phase; final release e2e | ARCH | 0b / 6 | | todo |
 | R-7-T15 | Screenshot checks vs the approved PNG for every drawn element (`captureShot` pattern) | common | all visual WPs | | todo |
 

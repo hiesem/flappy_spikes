@@ -757,3 +757,19 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   Comet starts the boost, +10 coins, +5 score flagged `gift`, FEVER sets the
   streak to at least ×5 and lights the fire); through neither: a miss
   (`pair_missed`).
+
+### WP-3g — spike squeeze (PRD-2 §3.17, §5.16)
+
+- DEVIATION (PRD-2 §3.17 / §5.16, new mechanic; 1.0's spike strips never
+  moved): at a random 60–120 s of `runClock` (again 60–120 s after each
+  squeeze has opened; a moment inside a ride or a revive waits until it ends
+  + 2 s) both spike walls warn (1.5 s: shake, red teeth, falling bits), close
+  in over 3 s (ease-in-out), lock, hold a random 10–20 s (ticks in the last
+  3 s) and open over 3 s. Each wall moves (band − open) / 2 with the open
+  space 50 / 45 / 40 / 35 % of the screen for squeezes 1 / 2 / 3 / 4+, never
+  under 230 pt (134 / 152 / 170 / 187 pt at 711; 98 / 112 / 125 / 125 at
+  568). The moving tooth lines are the spikes (contact = a mistake; saves
+  bounce off the squeezed line; the death tumble rests on the squeezed
+  floor). From 3 s before the warning until open, new hoops and pickups fit
+  the coming squeeze's band. A revive resets a running squeeze to open over
+  0.5 s; the interrupted squeeze counts toward the tightening.

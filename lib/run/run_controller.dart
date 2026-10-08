@@ -11,6 +11,7 @@ import '../menu/powerup_slot.dart';
 import 'config/physics_config.dart';
 import 'config/revive_config.dart';
 import 'config/saw_config.dart'; // WP-3d
+import 'config/squeeze_config.dart'; // WP-3g
 import 'config/run_config.dart';
 import 'director/run_director.dart';
 import 'effects/dust_puff.dart';
@@ -195,8 +196,19 @@ class RunController extends Component {
       viewHeight: s.viewHeight,
       topTooth: geo.stripHeight,
       floorTooth: s.viewHeight - geo.stripHeight,
-      squeezeTopTooth: geo.topTooth,
-      squeezeFloorTooth: geo.floorTooth,
+      // region WP-3g — §3.17 in the window new hoops fit the band of the
+      // squeeze that is coming / running (its full depth), not the walls'
+      // current position.
+      squeezeTopTooth: window
+          ? math.max(geo.topTooth, geo.stripHeight + _squeezeDepth())
+          : geo.topTooth,
+      squeezeFloorTooth: window
+          ? math.min(
+              geo.floorTooth,
+              s.viewHeight - geo.stripHeight - _squeezeDepth(),
+            )
+          : geo.floorTooth,
+      // endregion WP-3g
       squeezeWindow: window,
       rideActive: s.ride != null,
       ride: s.ride?.kind,
@@ -617,6 +629,12 @@ class RunController extends Component {
   /// feature on [RunDied]. Null = held still.
   ThemedDeathPose? themedPose;
   // endregion WP-3d
+
+  // region WP-3g — spike squeeze (PRD-2 §3.17)
+  /// The inset of the squeeze that is coming or running (§3.17 table).
+  double _squeezeDepth() =>
+      SqueezeConfig.insetFor(state.squeeze.index, state.viewHeight);
+  // endregion WP-3g
 
   // region WP-3b — portal rides (PRD-2 §3.12)
   /// The portal ride drives the bird and the camera itself: no forward

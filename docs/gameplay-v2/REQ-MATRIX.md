@@ -75,7 +75,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.3-20 | Placements: heart mid-gap (first on line, later 50 % on / 50 % off by 0.1–0.4 band); feather / piece 0.65 × spacing after the hoop, 64–200 pt above; switch 1.0 s × scroll (≥ 150 pt) before its ring, 70–100 pt above/below; capsule / egg / piggy / jar mid-gap on the line; shield 0.1–0.4 band off the line; star trail arc 40 pt after → 40 pt before, bulging 40 pt | 3.0.3 | 0b (plans) / element WPs (components) | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.3-21 | Exclusivity: one timed powerup (comet, Hourglass, Mini, Frenzy); no capsule / comet hoop while one runs; no COMET gift while one runs | 3.0.3 | 0b / 3f / 3d | test/run/director/s3_0_3_director_test.dart | done (0b part); 3f / 3d pending |
 | R-3.0.3-22 | Exclusivity: piggy or jar (never both); one egg/chick; star trail combines | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.0.3-23 | Rides: no specials, no gap items, no squeeze start (waits until 2 s after) | 3.0.3 | 0b / 3g | test/run/director/s3_0_3_director_test.dart | done (0b part); 3g pending |
+| R-3.0.3-23 | Rides: no specials, no gap items, no squeeze start (waits until 2 s after) | 3.0.3 | 0b / 3g | test/run/director/s3_0_3_director_test.dart; test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze never starts during a ride | done |
 | R-3.0.3-24 | Portal ride pauses a running Hourglass / Mini / Frenzy and resumes it after landing | 3.0.3, 3.12 | 3f / 3b | test/run/rides/s3_12_ride_rules_test.dart::§3.12 / §3.0.3 a running Hourglass… | 3b done; 3f pending (timer honours `paused`) |
 | R-3.0.3-25 | Portal ride start: all hoops/items ahead fade 0.2 s and are removed; uncaught piggy coins / fireflies not counted missed; piggy / jar placement continues after landing; ride rings crack the egg | 3.0.3 | 3b / 3e | test/run/rides/s3_12_ride_rules_test.dart::§3.12 entering… (cleared; spawner.clearAhead never judges) | 3b done; 3e pending (egg / piggy / jar) |
 | R-3.0.3-26 | Comet flies through what is spawned: rims ignored (saw too), closed switch rings open, nearest pair ring + its gift, springs don't launch, tilt/motion kept, pickups only if touched | 3.0.3, 3.8 | 3a | test/run/items/s3_8_comet_test.dart::§3.8 / §3.0.3 the comet flies through what is spawned…; test/run/items/s3_8_comet_test.dart::§3.8 the comet steers to the ring nearest its line… | done (3a part: rims / mistakes / closed-switch verdict ignored, nearest pair ring, pickups by touch); switch opening look 3d, spring no-launch 3c |
@@ -113,7 +113,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.5-7 | Floor bounce at tooth tips − r + 2 with restitution 0.3 (forward × 0.6, spin × −0.6, dust/feather puff) while landing > 140 pt/s; usually 1–2 bounces | 3.0.5 | 1a | test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 bounces 1–2 times, then rests on the floor tooth line … | done |
 | R-3.0.5-8 | Rest: slides to a stop (−600 %/s), spin settles flat (belly or back, nearer), stays behind the tooth tips through revive and until results | 3.0.5 | 1a | test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 bounces 1–2 times …; test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 … the dead bird rests on the floor spikes | done |
 | R-3.0.5-9 | Screen edges: bounce back at 24 pt from left / 30 pt from right (forward × −0.3); never leaves the screen | 3.0.5 | 1a | test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 never leaves the screen sideways (24 pt / 30 pt edges) | done |
-| R-3.0.5-10 | During a squeeze the resting line is the squeezed floor | 3.0.5 | 3g | | todo |
+| R-3.0.5-10 | During a squeeze the resting line is the squeezed floor | 3.0.5 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 the moving walls are the spikes | done |
 | R-3.0.5-11 | Themed deaths: signature moment first, then the same tumble (Frost: ice block shatters, frozen bird lies there); Black Hole swallows (no tumble, no body, only the shock ring) | 3.0.5 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 / §3.0.5 touching the <design> rim kills…; test/run/hoops/s3_18_saw_test.dart::§3.14 / §3.0.5 a revive after a Black Hole death… | done |
 | R-3.0.5-12 | Revive offer 1.5 s after the hit (or when resting, if sooner); themed: moment + ≤ 1.5 s, max 2.2 s | 3.0.5 | 2d | test/run/screens/s3_14_revive_test.dart | done |
 | R-3.0.5-13 | ≤ 5 hoops: same tumble, then bonus / results after 1.5 s (2.2 s max) | 3.0.5 | 2d | test/run/screens/s3_14_revive_test.dart | done |
@@ -161,7 +161,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.8-E20 | Element: Firefly Jar | 3.0.7 | 3e | | todo |
 | R-3.0.8-E21 | Element: golden feather | 3.0.7 | 4a | | todo |
 | R-3.0.8-E22 | Element: puzzle piece | 3.0.7 | 4a | | todo |
-| R-3.0.8-E23 | Element: spike squeeze | 3.0.7 | 3g | | todo |
+| R-3.0.8-E23 | Element: spike squeeze | 3.0.7 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.0.8 the squeeze is forceable; test/run/items/s3_17_squeeze_autopilot_test.dart | done |
 | R-3.0.8-E24 | Element: Big Hoops | 3.0.7 | 2a | test/run/items/s3_6_big_hoops_test.dart::§3.6 the home-slot Big Hoops is consumed at the start … | done |
 | R-3.0.8-E25 | Element: perfect streak + ring tier looks | 3.0.7 | 2b | test/run/items/s3_4_streak_test.dart::§3.4 perfect passes build the streak; test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier | done |
 | R-3.0.8-E26 | Element: coins (per pass + bonuses) | 3.0.7 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 a perfect pass pays 2 coins at once …; test/home_flow_test.dart::PRD-2 §3.2 coins are credited per hoop … | done (bonus sources: their WPs) |
@@ -403,7 +403,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.14-14 | Safe line = centre of the next hoop ahead (clamped to band), else band centre; drift back to x 70 while rising | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
 | R-3.14-15 | Straight back in at 1.65 s: no countdown, no slow motion; small upward flap; 2 s invulnerability | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
 | R-3.14-16 | Kept: score, coins, hearts, feather/piece progress. Lost: running egg/chick, piggy, jar. Reset: streak + fire. Ended: timed powerups | 3.14 | 2d (+ 3e / 3f / 3c hooks) | test/run/screens/s3_14_revive_test.dart | done (state cleared generically; 3e / 3f / 3c add their visuals) |
-| R-3.14-17 | Running squeeze resets to open during the phoenix (0.5 s); next 60–120 s later | 3.14 | 3g | test/run/screens/s3_14_revive_test.dart | done (baseline reset; 3g adds the wall animation) |
+| R-3.14-17 | Running squeeze resets to open during the phoenix (0.5 s); next 60–120 s later | 3.14 | 3g | test/run/screens/s3_14_revive_test.dart; test/run/items/s3_17_squeeze_test.dart::§3.17 / §3.14 a revived death during a squeeze | done |
 | R-3.14-18 | First hoop after a revive is normal | 3.14 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.14-19 | Versus: opponent recording pauses during offer and phoenix | 3.14 | 5b | | todo |
 | R-3.14-20 | Results page content: WIN/LOSE header, versus card (scores, WINNER), NEW BEST, level (emblem + bird, rank, progress), YOUR REWARD, NEXT → `goHome()` (new arrival) | 3.14 | 2e / 5b | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 solo…; test/run/shots/results_shots_test.dart (versus parts: 5b) | done |
@@ -463,17 +463,17 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.17-1 | First squeeze at random 60–120 s runClock; next 60–120 s after fully open; any number per run | 3.17 | 3g | | todo |
-| R-3.17-2 | Never starts during a ride / comet / revive; waits until it ends + 2 s | 3.17 | 3g | | todo |
-| R-3.17-3 | Open space between tooth tips: 50 / 45 / 40 / 35 % of screen height for squeeze 1 / 2 / 3 / 4+, never < 230 pt; both walls move (band − open)/2 | 3.17 | 3g | | todo |
-| R-3.17-4 | Phases: warning 1.5 s (shake 0 → 2.6, teeth flash red, falling bits, no text); closing 3 s ease-in-out (shake 2.2); lock (punch 6 pt, 0.35 s, dust); hold random 10–20 s, no indicator, last 3 s ticks + tremble; opening 3 s (shake 1.4, 0.8 s) | 3.17 | 3g | | todo |
-| R-3.17-5 | Moving walls are spike strips (mistake on touch; saves as 3.3 / 3.7) | 3.17 | 3g | | todo |
-| R-3.17-6 | From 3 s before the warning until open, new hoops and pickups spawn only within the squeezed band (normal spacing, max jump clamped) | 3.17 | 0b / 3g | test/run/director/s3_0_3_director_test.dart | done (0b part); 3g pending |
-| R-3.17-7 | Hoop size, scroll, scoring unchanged; no extra reward | 3.17 | 3g | | todo |
-| R-3.17-8 | HUD above the walls; score circle turns white while covered | 3.17 | 3g | | todo |
-| R-3.17-9 | Revived death during a squeeze: walls slide out over 0.5 s; next 60–120 s later | 3.17 | 3g | | todo |
+| R-3.17-1 | First squeeze at random 60–120 s runClock; next 60–120 s after fully open; any number per run | 3.17 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze from start to open | done |
+| R-3.17-2 | Never starts during a ride / comet / revive; waits until it ends + 2 s | 3.17 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze never starts during a ride; ::§3.17 / §3.14 a revived death during a squeeze | done |
+| R-3.17-3 | Open space between tooth tips: 50 / 45 / 40 / 35 % of screen height for squeeze 1 / 2 / 3 / 4+, never < 230 pt; both walls move (band − open)/2 | 3.17 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 each wall moves …; ::§3.17 open space … | done |
+| R-3.17-4 | Phases: warning 1.5 s (shake 0 → 2.6, teeth flash red, falling bits, no text); closing 3 s ease-in-out (shake 2.2); lock (punch 6 pt, 0.35 s, dust); hold random 10–20 s, no indicator, last 3 s ticks + tremble; opening 3 s (shake 1.4, 0.8 s) | 3.17 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze from start to open; ::§3.17 phases …; ::§3.17 shake … | done |
+| R-3.17-5 | Moving walls are spike strips (mistake on touch; saves as 3.3 / 3.7) | 3.17 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 the moving walls are the spikes; ::§3.17 a save on a squeezed wall | done |
+| R-3.17-6 | From 3 s before the warning until open, new hoops and pickups spawn only within the squeezed band (normal spacing, max jump clamped) | 3.17 | 0b / 3g | test/run/director/s3_0_3_director_test.dart; test/run/items/s3_17_squeeze_test.dart::§3.17 the window; test/run/items/s3_17_squeeze_autopilot_test.dart | done |
+| R-3.17-7 | Hoop size, scroll, scoring unchanged; no extra reward | 3.17 | 3g | test/run/items/s3_17_squeeze_autopilot_test.dart (scoring / scroll untouched by the feature) | done |
+| R-3.17-8 | HUD above the walls; score circle turns white while covered | 3.17 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 the score circle turns white; test/run/shots/squeeze_shots_test.dart | done |
+| R-3.17-9 | Revived death during a squeeze: walls slide out over 0.5 s; next 60–120 s later | 3.17 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 / §3.14 a revived death during a squeeze | done |
 | R-3.17-10 | Director during the window: specials only saw / FEVER / bullseye; gap items only scheduled hearts + star trails; no moving rings | 3.17 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.17-11 | Each player has their own squeeze moments in versus | 3.17 | 3g | | todo |
+| R-3.17-11 | Each player has their own squeeze moments in versus | 3.17 | 3g | (own `RunController` per run: own director timing stream) | done (by construction) |
 
 ## 3.18 Saw rings
 
@@ -716,11 +716,11 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.15-3 | Pill centre (160, 230) 140 × 64; board at x −32, silhouettes fg 40 %, "n/4" Opificio 24 at +34; landing punch; fades ≈ 2.15 s | 5.15 | 4a | | todo |
 | R-5.15-4 | 4/4: flash, bounces 0.08 apart, board pop ×1.15 + gold frame, 22 confetti, ring 20 → 100, "n/4" plum, sticker PICTURE COMPLETE; coin badge 0.55 s later (7 coins, `col4_coins`, count-up 0.8 s, bump); hold until ≈ 4.6 s | 5.15 | 4a | | todo |
 | R-5.15-5 | The 8 round colour hexes (card, body, wing + tail, beak, sparkles) as data | 5.15 | 4a | | todo |
-| R-5.16-1 | Walls: the normal strip moves as one piece (solid part grows, teeth ride on it), one flat stage-fg grey | 5.16 | 3g | | todo |
-| R-5.16-2 | Warning flash: teeth blend to `#FF3B5C` pulsing every 0.5 s through the warning and the first 0.4 s of closing | 5.16 | 3g | | todo |
-| R-5.16-3 | Falling bits 2–5 pt ≈ 28/s (warning, closing, opening), fade 0.7 s; lock dust 40 squares 3–7 pt | 5.16 | 3g | | todo |
-| R-5.16-4 | Shake: whole view; exposed edges show the wall grey | 5.16 | 3g | | todo |
-| R-5.16-5 | Sounds `sq_warn`, `sq_close`, `sq_lock`, `sq_hold` (loop, wav/ogg), `sq_tick` × 3, `sq_open`; music keeps playing; hold loop stops when opening starts | 5.16 | 3g | | todo |
+| R-5.16-1 | Walls: the normal strip moves as one piece (solid part grows, teeth ride on it), one flat stage-fg grey | 5.16 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze from start to open; test/run/shots/squeeze_shots_test.dart | done |
+| R-5.16-2 | Warning flash: teeth blend to `#FF3B5C` pulsing every 0.5 s through the warning and the first 0.4 s of closing | 5.16 | 3g | test/run/items/s3_17_squeeze_test.dart::§5.16 warning flash; test/run/shots/squeeze_shots_test.dart | done |
+| R-5.16-3 | Falling bits 2–5 pt ≈ 28/s (warning, closing, opening), fade 0.7 s; lock dust 40 squares 3–7 pt | 5.16 | 3g | test/run/items/s3_17_squeeze_test.dart::§5.16 bits …; ::§3.17 a squeeze from start to open | done |
+| R-5.16-4 | Shake: whole view; exposed edges show the wall grey | 5.16 | 3g | test/run/items/s3_17_squeeze_test.dart::§5.16 / §5.18 / §5.17 the squeeze shake composes | done |
+| R-5.16-5 | Sounds `sq_warn`, `sq_close`, `sq_lock`, `sq_hold` (loop, wav/ogg), `sq_tick` × 3, `sq_open`; music keeps playing; hold loop stops when opening starts | 5.16 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze from start to open; ::§5.16 the hold loop stops in pause | done |
 | R-5.17-1 | Saw rings not stage-tinted; two render layers; danger hum per design fading with closeness² | 5.17 | 3d | test/run/hoops/s3_18_saw_test.dart::§5.17 the danger hum fades in…; test/run/shots/hazard_rings_shots_test.dart | done |
 | R-5.17-2 | Live Wire look (navy core, cyan glow, filament, 3–4 forked arcs redrawn 18×/s, big strike ≈ 9 %, near-miss bolt within 46 pt) | 5.17 | 3d | test/run/shots/hazard_rings_shots_test.dart (sawring_electric_fly) | done (visual) |
 | R-5.17-3 | Live Wire death (0.6 s held: jitter, spikes, lightning, X-ray alternation; then charred tumble, smoke, twitches) + sounds | 5.17 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 / §3.0.5 touching the liveWire rim kills…; test/run/shots/hazard_rings_shots_test.dart (sawring_electric_death) | done |
@@ -811,9 +811,9 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-6-28 | `bonus_declined` (pops used) | 6 | 4a | | todo |
 | R-6-29 | `puzzle_piece_collected` (piece 1–4, count 1–4, round) | 6 | 4a | | todo |
 | R-6-30 | `puzzle_completed` (round, coins) | 6 | 4a | | todo |
-| R-6-31 | `squeeze_started` (index, open_pct, hold_s) | 6 | 3g | | todo |
-| R-6-32 | `squeeze_survived` (index) | 6 | 3g | | todo |
-| R-6-33 | `squeeze_death` (index, phase) | 6 | 3g | | todo |
+| R-6-31 | `squeeze_started` (index, open_pct, hold_s) | 6 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze from start to open | done |
+| R-6-32 | `squeeze_survived` (index) | 6 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze from start to open | done |
+| R-6-33 | `squeeze_death` (index, phase) | 6 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 the moving walls are the spikes | done |
 | R-6-34 | `sawring_spawned` (design) | 6 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 a clean pass … sawring_spawned / sawring_passed | done |
 | R-6-35 | `sawring_passed` (design) | 6 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 a clean pass … sawring_passed | done |
 | R-6-36 | `sawring_death` (design, used: none / extra_life / shield) | 6 | 3d | test/run/hoops/s3_18_saw_test.dart::§3.18 / §3.0.5 touching the <design> rim kills … (used: none); test/run/hoops/s3_18_saw_test.dart::§3.18 with an armed shield … (used: shield) | done |
@@ -927,7 +927,7 @@ the looping player).
 | R-S-9 | `col_feather_get`, `col_feather_slot1/2/3` | 3.15 | 0b / 4a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 4a pending |
 | R-S-10 | `bn_balloon_open`, `bn_prize_s/m/big`, `bn_coin` (exists), `bn_adbtn` (exists) | 3.15 | 0b / 4a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 4a pending |
 | R-S-11 | `col4_puzzle_get`, `col4_puzzle_slot1..4`, `col4_coins` | 3.16 | 0b / 4a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 4a pending |
-| R-S-12 | `sq_warn`, `sq_close`, `sq_lock`, `sq_hold` (seamless loop: ship `.ogg`/`.wav`, not mp3), `sq_tick`, `sq_open` | 5.16 | 0b / 3g | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 3g pending |
+| R-S-12 | `sq_warn`, `sq_close`, `sq_lock`, `sq_hold` (seamless loop: ship `.ogg`/`.wav`, not mp3), `sq_tick`, `sq_open` | 5.16 | 0b / 3g | test/run/s7_run_parts_test.dart; test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze from start to open | done |
 | R-S-13 | Ride sounds `rd_space_*`, `rd_volc_*`, `rd_sea_*`, `rd_pin_*`, `rd_storm_*` (16 files) | 5.12b | 0b / 3b |test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled; test/run/rides/s3_12_portal_ride_test.dart (ride cues per theme) | done |
 | R-S-14 | `notif_b.ogg` → `android/app/src/main/res/raw/notif_chime.ogg` | 3.34 | 4b | integration_test/reminders_e2e_test.dart::WP-4b reminders: permission + the pending 7-day window; `flutter build apk --debug` -> res/raw/notif_chime.ogg | done (19246 B, byte-identical to design/menu_v2/sfx/notif_b.ogg) |
 | R-S-15 | Deliverable: versus intro set (whoosh, ticks, chime, rocket, pop / crackle, thud, boing) | 5.8, 7 | 3h make / 5b use | test/run/sound_pack_test.dart::§7 every cue maps to one existing, non-empty mp3 | done (3h: `vs_*`, 7 files); 5b use pending |
@@ -939,4 +939,4 @@ the looping player).
 | R-S-21 | Deliverable: Egg (chime, crack, hatch, peeps, goodbye), Piggy (oink, clink, blip, smash cascade), Jar (chime, twinkle, blip, crack, chord) | 5.26–5.28, 7 | 3h / 3e | test/run/sound_pack_test.dart::§7 every PRD-2 §7 deliverable is a registered Sfx | done (3h: `egg_*`, `piggy_*`, `jar_*`, 14 files); 3e use pending |
 | R-S-22 | Deliverable: Hourglass (slowdown, tick-tock, speed-up), Mini Bird (start, end), Coin Frenzy (start run, cascade, end tone) | 5.29–5.31, 7 | 3h / 3f | test/run/sound_pack_test.dart::§7 every PRD-2 §7 deliverable is a registered Sfx | done (3h: `hourglass_*`, `mini_*`, `frenzy_*`, 8 files); 3f use pending |
 | R-S-23 | Deliverable: rim "tonk" | 3.0.4, 7 | 3h / 1a (placeholder: `sk_tap` until 3h lands) | test/run/sound_pack_test.dart::§7 every PRD-2 §7 deliverable is a registered Sfx | done (3h: `rim_tonk`); 1a wiring pending |
-| R-S-24 | Deliverable: squeeze tick-last-3-s tremble uses `sq_tick`; graze sound = `point.mp3` (no new file) | 3.17, 3.4 | 3g / 2b | | todo |
+| R-S-24 | Deliverable: squeeze tick-last-3-s tremble uses `sq_tick`; graze sound = `point.mp3` (no new file) | 3.17, 3.4 | 3g / 2b | test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze from start to open (3 × sq_tick + tremble) | done (3g part) |

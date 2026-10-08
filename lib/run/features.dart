@@ -11,6 +11,7 @@ import 'items/shield.dart';
 import 'items/met_elements.dart';
 import 'items/rumble_router.dart';
 import 'items/scoring.dart';
+import 'items/squeeze.dart'; // WP-3g
 import 'items/streak.dart';
 import 'rides/portal_ride.dart';
 import 'run_feature.dart';
@@ -57,6 +58,10 @@ List<RunFeature> buildRunFeatures() => [
   SawFeature(),
   SwitchRingFeature(),
   // endregion WP-3d
+  // region WP-3g — spike squeeze (PRD-2 §3.17, §5.16); before 2d's revive
+  // rules, so it sees a running squeeze before the revive resets it
+  SqueezeFeature(),
+  // endregion WP-3g
   // region WP-2d — revive rules (PRD-2 §3.14); keep last
   ReviveRulesFeature(),
   // endregion WP-2d

@@ -41,6 +41,7 @@ abstract final class SpikeTeethPainter {
     double opacity = 1,
     double left = 0,
     Offset Function(double x, double y)? warp,
+    Color? toothColor,
   }) {
     if (opacity <= 0 || reach <= 0) return;
     final base = reach - depth;
@@ -71,6 +72,7 @@ abstract final class SpikeTeethPainter {
         ..lineTo(x1, -1)
         ..close();
       canvas.drawPath(_path, _paint);
+      _overdrawTeeth(canvas, toothColor, opacity, left, width, offset, base, reach, warp); // WP-3g
       return;
     }
     // endregion WP-3d
@@ -85,5 +87,54 @@ abstract final class SpikeTeethPainter {
         ..close();
     }
     canvas.drawPath(_path, _paint);
+    _overdrawTeeth(canvas, toothColor, opacity, left, width, offset, base, reach, null); // WP-3g
   }
+
+  // region WP-3g — spike squeeze warning flash (PRD-2 §5.16)
+  static final Paint _toothPaint = Paint();
+  static final Path _toothPath = Path();
+
+  /// §5.16 the teeth (not the solid part) in [toothColor]: the same
+  /// triangles drawn again over the strip (bent by [warp] when set).
+  static void _overdrawTeeth(
+    Canvas canvas,
+    Color? toothColor,
+    double opacity,
+    double left,
+    double width,
+    double offset,
+    double base,
+    double reach,
+    Offset Function(double x, double y)? warp,
+  ) {
+    if (toothColor == null) return;
+    _toothPaint.color = toothColor.withValues(
+      alpha: (toothColor.a * opacity).clamp(0.0, 1.0),
+    );
+    _toothPath.reset();
+    final o = ((offset % period) + period) % period;
+    final mid = (base + reach) / 2;
+    for (var x = left - 2 * period + o; x < left + width + period; x += period) {
+      if (warp == null) {
+        _toothPath
+          ..moveTo(x, base)
+          ..lineTo(x + period / 2, reach)
+          ..lineTo(x + period, base)
+          ..close();
+      } else {
+        final a = warp(x, base), q = warp(x + period / 4, mid);
+        final tip = warp(x + period / 2, reach);
+        final q2 = warp(x + 3 * period / 4, mid), b = warp(x + period, base);
+        _toothPath
+          ..moveTo(a.dx, a.dy)
+          ..lineTo(q.dx, q.dy)
+          ..lineTo(tip.dx, tip.dy)
+          ..lineTo(q2.dx, q2.dy)
+          ..lineTo(b.dx, b.dy)
+          ..close();
+      }
+    }
+    canvas.drawPath(_toothPath, _toothPaint);
+  }
+  // endregion WP-3g
 }

@@ -6,6 +6,7 @@ import 'package:flame_forge2d/flame_forge2d.dart';
 import '../game/config.dart';
 import '../game/flappy_game.dart';
 import '../game/tintable.dart';
+import '../run/config/squeeze_config.dart';
 import '../run/effects/spike_teeth.dart';
 
 /// Which art a [SpikeStrip] draws (PRD-2 §3.0.9 #1).
@@ -65,6 +66,24 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
   /// out (null = straight). Visual only; the tooth line that kills stays.
   Offset Function(Offset screen)? lens;
   // endregion WP-3d
+
+  // region WP-3g — spike squeeze (PRD-2 §3.17, §5.16)
+  /// How far the wall has moved in (pt): the solid part grows from the
+  /// screen edge and the teeth ride on its edge. Follows the run's
+  /// `RunState.squeeze.inset` (0 without a run).
+  double squeezeInset = 0;
+
+  /// §5.16 warning flash: the teeth (not the solid part) blend from the
+  /// stage grey toward `SqueezeConfig.flashColor` by this much (0..1).
+  double toothFlash = 0;
+
+  /// The tooth tips' distance from the screen edge including the squeeze.
+  double get squeezedReach => toothReach + squeezeInset;
+
+  Color? get _toothColor => toothFlash <= 0
+      ? null
+      : Color.lerp(_tint, SqueezeConfig.flashColor, toothFlash.clamp(0, 1));
+  // endregion WP-3g
 
   /// Distance from the screen edge to the tooth tips: the same line as the
   /// sprite's tips (`Config.spikeHeight` − [visualInset]); 44 in menus and,
@@ -173,10 +192,11 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
       canvas,
       width: Config.worldWidth,
       color: _tint,
-      reach: toothReach,
+      reach: squeezedReach, // WP-3g
       offset: toothOffset,
       opacity: teethOpacity,
       warp: _warp(), // WP-3d
+      toothColor: _toothColor, // WP-3g
     );
     canvas.restore();
   }
@@ -201,7 +221,9 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
     // The teeth move with the world: the run's camera (forward speed, the
     // rim knock-back jolt, the 0.4 s ease to a stop on a death).
     final run = game.run;
+    squeezeInset = run?.state.squeeze.inset ?? 0; // WP-3g
     if (run == null) {
+      toothFlash = 0; // WP-3g
       return;
     }
     toothOffset = -run.state.camX + rideShift;

@@ -660,10 +660,12 @@ void main() async {
       game.run!.debugPass();
       killRun(game);
       await _advance(game, 2);
+      // PRD-2 §3.33 (WP-2b): a non-perfect pass knocks once; the death and
+      // the screens after it never rumble.
       expect(
-        game.rumble.fired.length,
-        inRun,
-        reason: 'no gameplay pulses in this build',
+        game.rumble.fired.sublist(inRun),
+        [RumbleKind.knock],
+        reason: 'one knock for the pass, nothing for the death',
       );
     },
   );

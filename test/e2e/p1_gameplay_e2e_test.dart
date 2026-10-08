@@ -112,6 +112,7 @@ void main() {
         final coins = g.storage.coins;
         killRun(g);
         await flushAndMount(g);
+        await declineRevive(g);
         expect(g.state, GameState.gameOver);
         expect(g.world.children.query<GameOverPanel>(), hasLength(1));
         expect(g.storage.coins, coins, reason: 'passes were already credited');
@@ -253,7 +254,7 @@ void main() {
         expect(run.spawner.hoops.first.look.colors, RingColors.gold);
       },
     );
-  }, skip: 'S6-01 open');
+  });
 
   group('S6-02 regression', () {
     FlameTester<FlappySpikesGame>(() => createRunTestGame()).testGameWidget(
@@ -438,9 +439,15 @@ void main() {
         'npm',
         ['--prefix', 'functions', 'test', '--', '--grep', 'S6-08'],
         environment: {'S6_QA_OPEN': '1'},
+        runInShell: true,
       );
       expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     },
+    // Needs the firebase CLI + Java; `npm --prefix functions test` runs it in
+    // the backend gate. Set FS_EMULATOR_TESTS=1 to run it from here.
+    skip: Platform.environment['FS_EMULATOR_TESTS'] == '1'
+        ? false
+        : 'emulator test: runs in npm --prefix functions test',
     timeout: const Timeout(Duration(minutes: 2)),
   );
 

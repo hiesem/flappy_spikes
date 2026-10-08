@@ -93,7 +93,7 @@ void main() {
         service.dispose();
       },
     );
-  }, skip: 'S6-F01 open');
+  });
 
   group('S6-F02 nickname across cold starts', () {
     const original = 'SwiftKiwi482';
@@ -129,7 +129,7 @@ void main() {
         expect(g.storage.versusNickname, original);
       },
     );
-  }, skip: 'S6-F02 open');
+  });
 
   group('S6-F03 Piggy Bank banner collision', () {
     FlameTester<FlappySpikesGame>(
@@ -177,5 +177,5 @@ void main() {
         );
       },
     );
-  }, skip: 'S6-F03 open');
+  });
 }

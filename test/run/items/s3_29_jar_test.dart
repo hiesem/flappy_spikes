@@ -5,6 +5,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart' show Powerup;
 import 'package:flappy_spikes/menu/wallet.dart';
+import 'package:flappy_spikes/run/config/hud_config.dart';
 import 'package:flappy_spikes/run/config/director_tables.dart';
 import 'package:flappy_spikes/run/config/jar_config.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
@@ -106,10 +107,10 @@ void main() {
         expect(JarConfig.weaveBand, 45);
         expect(JarConfig.pickupScale, 1.05);
         expect(JarConfig.hudJarX, 46);
-        expect(JarConfig.hudJarY, 218);
+        expect(JarConfig.hudJarY, 218 - HudConfig.collectLift); // S6-F03
         expect(JarConfig.hudJarScale, .95);
         expect(JarConfig.hudTextX, 66);
-        expect(JarConfig.hudTextY, 210);
+        expect(JarConfig.hudTextY, 210 - HudConfig.collectLift); // S6-F03
         expect(JarConfig.hudTextSize, 14);
         expect(JarConfig.bannerColor, const Color(0xFF7CB518));
         expect(JarConfig.brokeGrey, const Color(0xFF9E9E9E));
@@ -127,7 +128,7 @@ void main() {
         expect(JarConfig.dotR, 2.6);
         expect(JarConfig.flyHaloR, 14);
         expect(JarConfig.markX, 72);
-        expect(JarConfig.markY, 228);
+        expect(JarConfig.markY, 228 - HudConfig.collectLift); // S6-F03
         expect(JarConfig.markStep, 16);
         expect(JarConfig.markRed, const Color(0xFFFF3B5C));
       },

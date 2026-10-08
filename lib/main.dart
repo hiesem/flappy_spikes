@@ -67,6 +67,15 @@ Future<void> main() async {
           storageOf: () => game.storage,
           // S6-66: a failed start-up auth retries in the background.
           retryBase: VersusConfig.authRetryBase,
+          // S6-F01 / S6-F02: every start (main below, Home prefetch, an
+          // early resume) waits for the ONE shared Firebase.initializeApp
+          // and for the game's storage load.
+          startAfter: () async {
+            if (!await services.ensureFirebase()) {
+              throw StateError('Firebase is not initialized');
+            }
+            await game.loaded;
+          },
         )
       : NoopVersusService();
   // endregion WP-5b
@@ -103,13 +112,11 @@ Future<void> main() async {
   // own errors; the service is a safe no-op until it lands.
   if (!isLinux) {
     // region WP-5b — versus after Firebase.initializeApp (services) and the
-    // game's storage load; initialize() never throws (failure = solo).
-    unawaited(
-      services.initialize().then((_) async {
-        await game.loaded;
-        await versus.initialize();
-      }),
-    );
+    // game's storage load (S6-F01: its startAfter gate, shared with every
+    // other start path); initialize() never throws (failure = solo).
+    unawaited(services.initialize());
+    // versus.initialize() waits for Firebase + storage itself (startAfter).
+    unawaited(versus.initialize());
     // endregion WP-5b
   }
   // Same fire-and-forget rule: the UMP consent form may be shown here, and

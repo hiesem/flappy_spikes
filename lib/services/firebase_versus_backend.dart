@@ -21,7 +21,16 @@ class FirebaseVersusBackend implements VersusBackend {
   FirebaseAuth get _auth => FirebaseAuth.instance;
   FirebaseFirestore get _db => FirebaseFirestore.instance;
 
-  static bool _appCheck = false;
+  /// S6-F01: set only AFTER an activation succeeded; a failure (e.g.
+  /// `[core/no-app]` when Firebase is not initialized yet) leaves it false
+  /// so the next [activateAppCheck] tries again.
+  static bool _appCheckActive = false;
+
+  /// The activation in flight: concurrent callers share one attempt.
+  static Future<void>? _appCheckActivation;
+
+  /// Whether App Check was activated successfully in this process.
+  static bool get appCheckActive => _appCheckActive;
 
   /// ARCH §6.5: Play Integrity in release; the debug provider in debug and
   /// `FS_E2E` builds (its debug secret is printed to logcat by the native
@@ -30,9 +39,17 @@ class FirebaseVersusBackend implements VersusBackend {
   /// passes a registered one). iOS: App Attest with DeviceCheck fallback.
   /// [debugToken] overrides the dart-define (the P6 live versus e2e prints
   /// and passes its own, WP-6a).
-  static Future<void> activateAppCheck({String? debugToken}) async {
-    if (_appCheck) return;
-    _appCheck = true;
+  ///
+  /// Once per process after it SUCCEEDED (S6-F01): a failed activation
+  /// rethrows and the next call tries again.
+  static Future<void> activateAppCheck({String? debugToken}) {
+    if (_appCheckActive) return Future.value();
+    return _appCheckActivation ??= _activateAppCheck(
+      debugToken,
+    ).whenComplete(() => _appCheckActivation = null);
+  }
+
+  static Future<void> _activateAppCheck(String? debugToken) async {
     final debug = kDebugMode || kE2E;
     await FirebaseAppCheck.instance.activate(
       providerAndroid: debug
@@ -45,6 +62,11 @@ class FirebaseVersusBackend implements VersusBackend {
       providerApple: debug
           ? const AppleDebugProvider()
           : const AppleAppAttestWithDeviceCheckFallbackProvider(),
+    );
+    _appCheckActive = true;
+    debugPrint(
+      'versus: App Check activated '
+      '(${debug ? 'debug provider' : 'Play Integrity / App Attest'})',
     );
     if (debug) {
       debugPrint(

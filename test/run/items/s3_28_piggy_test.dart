@@ -6,6 +6,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart' show Powerup;
 import 'package:flappy_spikes/menu/wallet.dart';
+import 'package:flappy_spikes/run/config/hud_config.dart';
 import 'package:flappy_spikes/run/config/director_tables.dart';
 import 'package:flappy_spikes/run/config/piggy_config.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
@@ -123,16 +124,16 @@ void main() {
         expect(PiggyConfig.coinSize, 8);
         expect(PiggyConfig.fetchSeconds, .35);
         expect(PiggyConfig.hudPigX, 46);
-        expect(PiggyConfig.hudPigY, 216);
+        expect(PiggyConfig.hudPigY, 216 - HudConfig.collectLift); // S6-F03
         expect(PiggyConfig.hudTextX, 68);
-        expect(PiggyConfig.hudTextY, 209);
+        expect(PiggyConfig.hudTextY, 209 - HudConfig.collectLift); // S6-F03
         expect(PiggyConfig.hudTextSize, 16);
         expect(PiggyConfig.hudBarX, 68);
-        expect(PiggyConfig.hudBarY, 220);
+        expect(PiggyConfig.hudBarY, 220 - HudConfig.collectLift); // S6-F03
         expect(PiggyConfig.hudBarW, 90);
         expect(PiggyConfig.hudBarH, 8);
         expect(PiggyConfig.hudBarRadius, 4);
-        expect(PiggyConfig.hudMissedY, 236);
+        expect(PiggyConfig.hudMissedY, 236 - HudConfig.collectLift); // S6-F03
         expect(PiggyConfig.hudMissedSize, 11);
         expect(PiggyConfig.smashPieces, 22);
         expect(PiggyConfig.smashSpeed, 200);

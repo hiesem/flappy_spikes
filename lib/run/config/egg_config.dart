@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'hud_config.dart';
+
 /// Egg / chick (PRD-2 §3.27, §5.26; `design/menu_v2/lab2_collect.js`
 /// `IDEAS.egg2` + `lab3_collect.js` `IDEAS.egg3`). Every member's doc starts
 /// with its PRD section.
@@ -129,16 +131,16 @@ abstract final class EggConfig {
   // --- §5.26 the HUD ×2 pill (mock `rr(c,128,202,64,24,12)`) ----------------
 
   static const double hudX = 128;
-  static const double hudY = 202;
+  static const double hudY = 202 - HudConfig.collectLift;
   static const double hudW = 64;
   static const double hudH = 24;
   static const double hudRadius = 12;
 
   /// §5.26 The chick inside the pill (centre 144,214, 36 %) and "×2" at 172,215.
   static const double hudChickX = 144;
-  static const double hudChickY = 214;
+  static const double hudChickY = 214 - HudConfig.collectLift;
   static const double hudChickScale = .36;
   static const double hudTextX = 172;
-  static const double hudTextY = 215;
+  static const double hudTextY = 215 - HudConfig.collectLift;
   static const double hudTextSize = 17;
 }

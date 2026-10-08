@@ -83,14 +83,7 @@ class GameServices {
   /// in games_services 5.1.0 it completes with the STALE cached player before
   /// the real native check lands, i.e. false on every cold call.
   Future<void> initialize() async {
-    try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      _analytics = FirebaseAnalytics.instance;
-    } catch (_) {
-      _analytics = null;
-    }
+    await ensureFirebase();
     try {
       _playerSub = GameAuth.player.listen((player) {
         _signedIn = player != null;
@@ -101,6 +94,38 @@ class GameServices {
     // Set even when the plugin setup above failed: initialize() having RUN is
     // what distinguishes the real app from tests/unconfigured builds.
     _initialized = true;
+  }
+
+  /// The shared `Firebase.initializeApp` (S6-F01): every caller —
+  /// [initialize] and the versus start-up (`main.dart`) — waits for the
+  /// SAME attempt, so nothing that needs Firebase runs before it landed.
+  /// Completes with whether Firebase is up; never throws. After a failure
+  /// the next call tries again (a transient start-up failure recovers).
+  /// Only `main.dart` paths call it: tests never touch the plugins.
+  Future<bool> ensureFirebase() {
+    if (_firebaseUp) return Future.value(true);
+    return _firebaseInit ??= _initFirebase().whenComplete(
+      () => _firebaseInit = null,
+    );
+  }
+
+  bool _firebaseUp = false;
+  Future<bool>? _firebaseInit;
+
+  Future<bool> _initFirebase() async {
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
+      _analytics = FirebaseAnalytics.instance;
+      _firebaseUp = true;
+    } catch (e) {
+      debugPrint('GameServices: Firebase.initializeApp failed: $e');
+      _analytics = null;
+    }
+    return _firebaseUp;
   }
 
   /// Test seam: simulates a main()-initialized service without touching
@@ -215,7 +240,22 @@ class GameServices {
   @visibleForTesting
   void logEvent(String name, [Map<String, Object>? parameters]) {
     try {
-      _analytics?.logEvent(name: name, parameters: parameters);
+      // Firebase Analytics takes only String / num values (a bool fails its
+      // assertion asynchronously, outside this try — seen on the Pixel 8
+      // for `notif_permission` {granted: true}): bools go as 1 / 0.
+      final params = parameters == null
+          ? null
+          : {
+              for (final e in parameters.entries)
+                e.key: switch (e.value) {
+                  true => 1,
+                  false => 0,
+                  final v => v,
+                },
+            };
+      _analytics
+          ?.logEvent(name: name, parameters: params)
+          .catchError((Object _) {});
     } catch (_) {
       // Analytics must never affect gameplay.
     }

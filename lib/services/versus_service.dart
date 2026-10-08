@@ -237,6 +237,7 @@ class FirebaseVersusService implements VersusService {
     this.timeout = VersusConfig.callTimeout,
     this.retryBase,
     this.retryMax = VersusConfig.authRetryMax,
+    this.startAfter,
   }) : identity = identity ?? PlayGamesIdentity(),
        backend = backend ?? FirebaseVersusBackend(),
        _random = random ?? Random(),
@@ -256,6 +257,13 @@ class FirebaseVersusService implements VersusService {
   /// recoveries still run. `main.dart` passes [VersusConfig.authRetryBase].
   final Duration? retryBase;
   final Duration retryMax;
+
+  /// S6-F01 / S6-F02: what every start attempt waits for first — in the
+  /// app `Firebase.initializeApp` (the shared `GameServices.ensureFirebase`
+  /// future) and the game's storage load, so neither Home's prefetch nor
+  /// an early app resume can start versus before them. A throw counts as a
+  /// failed start (retried like one). Null = start at once (tests).
+  final Future<void> Function()? startAfter;
 
   bool _ready = false;
   Future<void>? _start;
@@ -344,6 +352,8 @@ class FirebaseVersusService implements VersusService {
 
   Future<void> _initialize() async {
     try {
+      final gate = startAfter;
+      if (gate != null) await gate();
       await ensureNickname();
       await _call(backend.start());
       _ready = true;
@@ -364,14 +374,12 @@ class FirebaseVersusService implements VersusService {
   }
 
   /// §3.13 the generated nickname, created once per install.
-  Future<String> ensureNickname() async {
-    final s = storage;
-    final have = s.versusNickname;
-    if (have != null && have.isNotEmpty) return have;
-    final name = generateNickname(_random);
-    await s.saveVersusNickname(name);
-    return name;
-  }
+  ///
+  /// S6-F02: the saved value on disk wins over the in-memory field, which
+  /// is still empty when this runs before the storage finished loading
+  /// (an early app resume) — a saved nickname is never overwritten.
+  Future<String> ensureNickname() =>
+      storage.ensureVersusNickname(() => generateNickname(_random));
 
   void _onPlayer(PlatformPlayer? p) {
     _player = p;
@@ -463,6 +471,13 @@ class FirebaseVersusService implements VersusService {
       _pool = entries;
       _pickFromPool();
       _emptyReadAt = _held == null ? _clock() : null;
+      if (kDebugMode) {
+        debugPrint(
+          'versus: pool ${plan.first} / ${plan.fallback} → '
+          '${entries.length} entries, opponent '
+          '${_held == null ? 'none' : 'held'}',
+        );
+      }
     } catch (e) {
       _log('prefetch', e);
       _emptyReadAt = _clock();

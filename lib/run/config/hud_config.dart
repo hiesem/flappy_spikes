@@ -57,6 +57,17 @@ abstract final class HudConfig {
   static const Color plum = Color(0xFF7A0044);
   static const String nameFont = 'Fredoka';
 
+  /// §5.26–§5.28 / §3.0.9 #7 (S6-F03 call): the collectables' HUD badges
+  /// (egg ×2 pill, piggy, jar) are drawn this far ABOVE the mock's spot
+  /// (mock y ≈ 195–242), whose band is the banner band (y 190 → ≈ 249 with
+  /// a subtitle) that shows on every perfect pass and with each badge's own
+  /// announcement ("PIGGY BANK", "FIREFLY JAR", "HATCHED!"). Lifted, they
+  /// keep the approved art and layout in the free strip between the name
+  /// chips (end y 114) and the §5.29 timer pill (top y 156) — the same
+  /// "move it clear of the band" call as the timer pill (y 156) and the
+  /// collect tray (y 288, ARCH §27).
+  static const double collectLift = 86;
+
   /// §5.7 VS label between the boxes (x 150 → 170), same font and size.
   static const double vsLeft = 150;
   static const double vsWidth = 20;

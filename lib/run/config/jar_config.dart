@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'hud_config.dart';
+
 /// Firefly Jar (PRD-2 §3.29, §5.28; `design/menu_v2/lab2_collect.js`
 /// `IDEAS.flies` / `flies2` + `lab3_collect.js` `IDEAS.flies3`). The spawn
 /// rules (gap 15, weight 10, ≥ 30 gaps apart, 7 fireflies / gap) live in
@@ -146,14 +148,14 @@ abstract final class JarConfig {
   /// §5.28 Jar at (46,218,·95); "n / 20" `#7CB518` 14 pt at (66,210); three ✕
   /// at (72 + 16i, 228), red `#FF3B5C` per escape, else grey.
   static const double hudJarX = 46;
-  static const double hudJarY = 218;
+  static const double hudJarY = 218 - HudConfig.collectLift;
   static const double hudJarScale = .95;
   static const Color hudText = Color(0xFF7CB518);
   static const double hudTextX = 66;
-  static const double hudTextY = 210;
+  static const double hudTextY = 210 - HudConfig.collectLift;
   static const double hudTextSize = 14;
   static const double markX = 72;
-  static const double markY = 228;
+  static const double markY = 228 - HudConfig.collectLift;
   static const double markStep = 16;
   static const double markSize = 4;
   static const double markWidth = 2.4;

@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'hud_config.dart';
+
 /// Piggy Bank (PRD-2 §3.28, §5.27; `design/menu_v2/lab2_collect.js`
 /// `IDEAS.piggy` / `piggy2` + `lab3_collect.js` `IDEAS.piggy3`). The spawn
 /// rules (gap 12, weight 10, ≥ 30 gaps apart, 4 coins / gap, 4 follow gaps)
@@ -82,18 +84,18 @@ abstract final class PiggyConfig {
   // --- §5.27 the HUD (under the score, left) --------------------------------
 
   static const double hudPigX = 46;
-  static const double hudPigY = 216;
+  static const double hudPigY = 216 - HudConfig.collectLift;
 
   /// §5.27 "n / 20" in `#E05A99` 16 pt at (68, 209).
   static const Color hudText = Color(0xFFE05A99);
   static const double hudTextX = 68;
-  static const double hudTextY = 209;
+  static const double hudTextY = 209 - HudConfig.collectLift;
   static const double hudTextSize = 16;
 
   /// §5.27 A 90 pt bar at (68, 220), h 8, r 4: caught `#FF6FB0`, missed grey
   /// `rgba(158,158,158,.8)`, track `rgba(130,130,130,.25)`.
   static const double hudBarX = 68;
-  static const double hudBarY = 220;
+  static const double hudBarY = 220 - HudConfig.collectLift;
   static const double hudBarW = 90;
   static const double hudBarH = 8;
   static const double hudBarRadius = 4;
@@ -103,7 +105,7 @@ abstract final class PiggyConfig {
 
   /// §5.27 "n missed" 11 pt `#9E9E9E` at (68, 236).
   static const Color hudMissed = Color(0xFF9E9E9E);
-  static const double hudMissedY = 236;
+  static const double hudMissedY = 236 - HudConfig.collectLift;
   static const double hudMissedSize = 11;
 
   // --- §5.27 the smash ------------------------------------------------------

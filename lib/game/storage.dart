@@ -429,6 +429,33 @@ class GameStorage {
     await saveMetElements({...metElements, id});
   }
 
+  /// §3.13 / §7 `versusNickname` (S6-F02): the nickname, created once per
+  /// install. Reads the saved value from disk first — not just the
+  /// in-memory field, which is empty until [load] ran — and only calls
+  /// [generate] and saves when none is stored. Concurrent callers share one
+  /// pass, so two can never save two different names.
+  Future<String> ensureVersusNickname(String Function() generate) {
+    final have = versusNickname;
+    if (have != null && have.isNotEmpty) return Future.value(have);
+    return _nicknameInit ??= _ensureVersusNickname(
+      generate,
+    ).whenComplete(() => _nicknameInit = null);
+  }
+
+  Future<String>? _nicknameInit;
+
+  Future<String> _ensureVersusNickname(String Function() generate) async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_versusNicknameKey);
+    if (saved != null && saved.isNotEmpty) {
+      versusNickname = saved;
+      return saved;
+    }
+    final name = generate();
+    await saveVersusNickname(name);
+    return name;
+  }
+
   Future<void> saveVersusNickname(String value) async {
     versusNickname = value;
     final prefs = await SharedPreferences.getInstance();

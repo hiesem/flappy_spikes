@@ -162,3 +162,10 @@ the locked dependencies with `npm --prefix functions ci` and building Functions
 resolved the environment-only failures. The final complete suite above passed.
 No tracked dependency or product files changed. This is a QA-only commit: report,
 open reproductions and real-device evidence.
+
+## Fix round R1 decisions (Fix P6 R1)
+
+- **S6-F01:** fixed — `GameServices.ensureFirebase()` owns one shared `Firebase.initializeApp` future and every versus start waits for it plus the storage load (`FirebaseVersusService.startAfter`); `activateAppCheck` latches only after a successful activation and retries after a failure.
+- **S6-F02:** fixed — versus waits for the storage load, and `GameStorage.ensureVersusNickname` reads the saved name from disk before generating one once per install; a saved nickname is never overwritten.
+- **S6-F03:** fixed by moving, not hiding — the egg / piggy / jar HUD badges keep their approved art and layout but sit `HudConfig.collectLift` = 86 pt higher (between the name chips at y 114 and the timer pill at y 156), clear of the y-190 banner band, like the timer pill and the y-288 tray calls.
+- **Device re-check (Pixel 8, debug APK with the registered token):** across 10+ cold starts logcat shows `versus: App Check activated (debug provider)` with no `[core/no-app]` or `permission-denied`. The nickname stayed `CleverDove701` on every start. Pool reads succeed, and when a shard holds a foreign run, Home holds an opponent and START plays the VS intro. `release_e2e_test.dart --plain-name "versus live"` passes, including `deleteMyData ok`. Side fix: `notif_permission {granted: bool}` tripped a Firebase Analytics assertion. `GameServices.logEvent` now sends bools as 1 / 0.

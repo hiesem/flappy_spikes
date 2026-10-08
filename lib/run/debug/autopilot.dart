@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show Offset;
 
 import 'package:flame/components.dart';
 
@@ -12,7 +13,15 @@ import '../physics/bird_motion.dart';
 import '../physics/hoop_frame.dart';
 import '../physics/pass_test.dart';
 import '../physics/rim_collision.dart';
-import '../pickups/pickup.dart' show PickupRadii;
+// region WP-3e — the collectables the bot steers toward (PRD-2 §3.26–§3.29)
+import '../pickups/egg_pickup.dart';
+import '../pickups/firefly_swarm.dart';
+import '../pickups/jar_pickup.dart';
+import '../pickups/piggy_coin.dart';
+import '../pickups/piggy_pickup.dart';
+import '../pickups/star_trail.dart';
+// endregion WP-3e
+import '../pickups/pickup.dart' show Pickup, PickupRadii;
 import '../run_controller.dart';
 
 /// The hoop-aware bot (ARCH §1.12, PRD-2 §7). Used by the debug bot,
@@ -69,6 +78,20 @@ class Autopilot {
   static const double cometStarMargin = 6;
   // endregion WP-3a
 
+  // region WP-3e — collectables (PRD-2 §3.26–§3.29)
+  /// The bot aims at the nearest collectable ahead while the next hoop's
+  /// plane is still at least this many seconds away, then hands back to the
+  /// ring planner so the pass itself is planned (§7: the mock's bot is
+  /// bang-bang toward the item, the planner is what makes angled / moving
+  /// rings survivable).
+  static const double chaseHandover = .85;
+
+  /// The vertical band (pt from the walls) a collectable must sit inside to
+  /// be chased at all — items always are; this just keeps a stray plan from
+  /// diving the bird into a tooth line.
+  static const double chaseClearance = 30;
+  // endregion WP-3e
+
   _Plan? _plan;
   Hoop? _planHoop;
   int _sinceCheck = 0;
@@ -93,6 +116,12 @@ class Autopilot {
       }
       // endregion WP-1b
     }
+    // region WP-3e — a collectable nearer than the next hoop wins while the
+    // plane is still far enough away (the mock's bot: the nearest `aim` item,
+    // else the ring).
+    final chase = _chaseY();
+    if (chase != null && _farFromPlane()) return chase;
+    // endregion WP-3e
     return ty;
   }
 
@@ -102,10 +131,93 @@ class Autopilot {
     final bird = run.game.runBirdPosition;
     final vy = run.game.runBirdVelocityY;
     if (bird == null || vy == null) return false;
+    // region WP-3e — chasing a collectable replaces the ring plan until the
+    // handover (§7).
+    if (_chaseY() != null && _farFromPlane()) {
+      return bird.y > targetY() + margin && vy > risingVy;
+    }
+    // endregion WP-3e
     final planned = _plannedFlap(vy);
     if (planned != null) return planned;
     return bird.y > targetY() + margin && vy > risingVy;
   }
+
+  // region WP-3e — collectables (PRD-2 §3.26–§3.29)
+  /// The y of the nearest uncollected collectable ahead of the bird that is
+  /// closer than the next hoop's plane — the mock bot's `aim` item scan
+  /// (`for (it of items) if (it.aim && !it.got && it.x > BX - 6 && it.x <
+  /// best) { best = it.x; aim = it.y }`). Null when there is none.
+  double? _chaseY() {
+    final pos = run.birdTrackPosition();
+    if (pos == null) return null;
+    final h = run.spawner.nextHoopAhead();
+    var bestX = h == null ? double.infinity : h.planeX;
+    double? best;
+    for (final p in run.spawner.pickups) {
+      final at = _aimAt(p, pos.x);
+      if (at == null) continue;
+      if (at.dx < pos.x - 6 || at.dx >= bestX) continue;
+      bestX = at.dx;
+      best = at.dy;
+    }
+    if (best == null) return null;
+    final top = run.walls.top + chaseClearance;
+    final floor = run.walls.floor - chaseClearance;
+    if (best < top || best > floor) return null;
+    return best;
+  }
+
+  /// The nearest uncollected item of [p] ahead of the bird, or null when
+  /// there is nothing left to aim at (the mock marks one `aim` item).
+  Offset? _aimAt(Pickup p, double birdTrackX) {
+    if (p is StarTrail) {
+      final items = <Offset>[
+        for (var i = 0; i < p.caught.length; i++)
+          if (!p.caught[i]) p.starAt(i),
+      ];
+      return _nearest(items, birdTrackX);
+    }
+    if (p is PiggyCoin) {
+      final items = <Offset>[
+        for (var i = 0; i < p.count; i++)
+          if (!p.caught[i] && !p.missed[i]) p.coinAt(i),
+      ];
+      return _nearest(items, birdTrackX);
+    }
+    if (p is FireflySwarm) {
+      final items = <Offset>[
+        for (var i = 0; i < p.count; i++)
+          if (!p.caught[i] && !p.escapedFly[i]) p.flyAt(i),
+      ];
+      return _nearest(items, birdTrackX);
+    }
+    if (p is EggPickup || p is PiggyPickup || p is JarPickup) {
+      if (p.collected || p.escaped) return null;
+      return Offset(p.position.x, p.position.y);
+    }
+    return null;
+  }
+
+  Offset? _nearest(Iterable<Offset> items, double birdTrackX) {
+    Offset? best;
+    for (final o in items) {
+      if (o.dx < birdTrackX - 6) continue;
+      if (best == null || o.dx < best.dx) best = o;
+    }
+    return best;
+  }
+
+  /// The next hoop's plane is still at least [chaseHandover] seconds away
+  /// (or there is no hoop): safe to steer at an item.
+  bool _farFromPlane() {
+    final h = run.spawner.nextHoopAhead();
+    if (h == null) return true;
+    final pos = run.birdTrackPosition();
+    if (pos == null) return true;
+    final v = run.state.forwardSpeed <= 1 ? 1.0 : run.state.forwardSpeed;
+    return (h.planeX - pos.x) / v > chaseHandover;
+  }
+  // endregion WP-3e
 
   // ---------------------------------------------------------------- planner
 

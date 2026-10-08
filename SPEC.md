@@ -807,3 +807,54 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
 - Tests: `test/run/items/s3_30_s3_32_capsules_test.dart`,
   `test/run/items/s3_30_capsule_autopilot_test.dart`; shots in
   `test/run/shots/capsule_shots_test.dart`.
+## PRD-2 collectables: Star Trail, Egg, Piggy Bank, Firefly Jar (WP-3e, 2026-10-08)
+
+- DEVIATION (PRD-2 §3.26 / §5.25, new collectable; 1.0 had none): a **Star
+  Trail** is 8 gold 4-point stars on an arc from 40 pt after to 40 pt before
+  the next hoop, bulging 40 pt up, joined by a 2/6 dotted gold line (hit
+  radius 10; a sparkle + the next C-major note per star). Touching all 8 in
+  one trail adds 8 to `caught`; when the last star is behind the bird the
+  trail ends — **all 8** shows PERFECT LINE "8 / 8 stars · +5 coins", pays
+  +5 (`star_trail`) and plays the chord; fewer pops "n / 8" and pays
+  nothing, and a single star pays nothing on its own.
+- DEVIATION (PRD-2 §3.27 / §5.26, new collectable): an **Egg** pickup
+  (mid-gap, on the line) goes on the bird's back ("EGG! hatches in 5
+  rings"). Every ring passed — ride rings too — cracks it (countdown 4…1 +
+  wobble); after 5 it hatches into a `golden` **chick** that flies ≈ 36 pt
+  behind / 10 pt below the bird. While the chick lives **every** coin
+  `RunContext.earn` pays is doubled (ring coins, bonuses — and the piggy
+  pay-out), tracked as `coins_doubled`; a gold ×2 pill sits under the score.
+  A rim touch scares the chick away ("bye!", "×2 LOST"); a crash before
+  hatching breaks the egg; a save (shield / extra life) loses it; a
+  revive-offer death loses it too (WP-2d clears `RunState.egg`).
+- DEVIATION (PRD-2 §3.28 / §5.27, new collectable): a **Piggy Bank** grab
+  starts a bank ("PIGGY BANK") of exactly 20 coins — 4 in the piggy's own
+  gap, then 4 per gap × 4. Caught coins go into the bank (they fly into the
+  HUD piggy), uncaught ones are missed. When all 20 resolve the piggy
+  smashes and pays **×2 of what was caught** (`piggy`) — the chick's ×2
+  stacks on top. The HUD piggy shows "n / 20", a 90 pt bar and "n missed";
+  a crash before the pay-out loses the bank (also with a revive), a save
+  keeps it. A portal ride removes the on-screen coins **without counting
+  them missed** (they are voided) and placement resumes after the landing.
+- DEVIATION (PRD-2 §3.29 / §5.28, new collectable): a **Firefly Jar** pickup
+  (animated: bob ±5, sway ±7°, lime glow, rays, 4 fireflies inside) starts a
+  jar ("FIREFLY JAR"); from then on each following gap has a swarm of 7
+  fireflies weaving ±45 pt around the line (catch radius 16). Caught
+  fireflies glow into the HUD jar ("n / 20" `#7CB518`); an uncaught one
+  escapes and lights a red ✕. 20 caught = JAR FULL +25 (`jar`); 3 escaped =
+  JAR BROKE, no reward; either way the jar and its fireflies are gone. A
+  crash loses it (also with a revive), a save keeps it. A portal ride
+  removes the swarms on screen without counting escapes.
+- DEVIATION (PRD-2 §5.26 / §5.27, HUD placement): the collectable badges
+  (`run_badges.dart`) are **left-aligned** under the score (x 46–172, y ≈
+  216), matching `lab_piggy3`, while WP-2d's score circle is centred; the
+  egg ×2 pill can therefore sit just above the circle rather than directly
+  under it as in `lab_egg3` (the same call WP-2d made for the HUD row).
+- DEVIATION (PRD-2 §5.25 / §5.26, the rising pop): the shared `TextPop` is
+  centred on its `at` point, so "EGG! hatches in 5 rings" is anchored at
+  the bird + (70, −36) and may run to the 320 pt edge; the mocks left-align
+  their pops. No other collectable look differs from the mocks.
+- Tests: `test/run/items/s3_26_star_trail_test.dart`,
+  `s3_27_egg_test.dart`, `s3_28_piggy_test.dart`, `s3_29_jar_test.dart`,
+  `s3_26_29_collect_autopilot_test.dart`; shots in
+  `test/run/shots/collect_shots_test.dart`.

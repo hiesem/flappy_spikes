@@ -7,6 +7,7 @@ import 'elements.dart';
 import 'hoops/hoop.dart';
 import 'mistakes.dart';
 import 'pickups/pickup.dart';
+import 'pickups/star_trail.dart';
 import 'run_setup.dart';
 import 'run_state.dart';
 import 'run_summary.dart';
@@ -269,3 +270,23 @@ class FeverFireChanged extends RunEvent {
   final String? cause;
 }
 // endregion WP-3c
+
+// region WP-3e — collectables (PRD-2 §3.26 Star Trail)
+/// §3.0.3 a portal ride cleared an uncaught item on screen: it is gone
+/// without counting as a miss / escape. The Piggy Bank and the Firefly Jar
+/// drop the unresolved coins / fireflies from what they still owe (a bank
+/// whose coins vanished can still resolve); nothing else listens.
+class PickupCleared extends RunEvent {
+  const PickupCleared(this.element, this.pickup);
+  final ElementId element;
+  final Pickup pickup;
+}
+
+/// The Star Trail's last star went behind the bird (§3.26): the trail is
+/// over. `StarTrailFeature` reads [trail]'s caught count and either shows
+/// PERFECT LINE and pays +5 coins, or shows the "n / 8" pop.
+class StarTrailFinished extends RunEvent {
+  const StarTrailFinished(this.trail);
+  final StarTrail trail;
+}
+// endregion WP-3e

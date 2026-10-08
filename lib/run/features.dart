@@ -4,7 +4,11 @@ import 'items/big_hoops.dart';
 import 'items/comet.dart';
 import 'items/extra_life.dart';
 import 'items/fever.dart'; // WP-3c
+import 'items/egg.dart'; // WP-3e
 import 'items/invulnerability.dart';
+import 'items/jar.dart'; // WP-3e
+import 'items/piggy.dart'; // WP-3e
+import 'items/star_trail_feature.dart'; // WP-3e
 import 'items/shield.dart';
 import 'items/met_elements.dart';
 import 'items/rumble_router.dart';
@@ -50,6 +54,13 @@ List<RunFeature> buildRunFeatures() => [
   // region WP-3a — comet boost (PRD-2 §3.8, §3.9, §5.6)
   CometFeature(),
   // endregion WP-3a
+  // region WP-3e — Star Trail / Egg / Piggy Bank / Firefly Jar
+  // (PRD-2 §3.26–§3.29, §5.25–§5.28)
+  StarTrailFeature(),
+  EggFeature(),
+  PiggyFeature(),
+  JarFeature(),
+  // endregion WP-3e
   // region WP-2d — revive rules (PRD-2 §3.14); keep last
   ReviveRulesFeature(),
   // endregion WP-2d

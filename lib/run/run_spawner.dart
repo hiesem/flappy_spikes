@@ -225,6 +225,11 @@ class RunSpawner {
     });
     _pickups.removeWhere((p) {
       if (p.position.x <= birdX || p.collected) return false;
+      // region WP-3e — a ride clears the collectables on screen unjudged
+      // (§3.0.3): the Piggy Bank / Firefly Jar drop the unresolved coins /
+      // fireflies from what they still owe, so the bank can resolve.
+      run.events.emit(PickupCleared(p.id, p));
+      // endregion WP-3e
       p.escaped = true; // never judged
       _fading.add((p, fade));
       return true;
@@ -265,6 +270,14 @@ class RunSpawner {
     _pending.clear();
   }
   // endregion WP-3b
+
+  // region WP-3e — the collectables' own items (PRD-2 §3.28/§3.29)
+  /// Spawns one gap item right away, hit-tested like any other (the Piggy
+  /// Bank's own-gap coins and the Firefly Jar's first swarm are emitted by
+  /// their features; the director's follow-gap fields come through the
+  /// normal slot path).
+  void spawnItem(GapItemPlan item) => _spawnItem(item);
+  // endregion WP-3e
 
   void dispose() {
     for (final h in _hoops) {

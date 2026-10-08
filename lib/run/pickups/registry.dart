@@ -5,6 +5,14 @@ import 'pickup.dart';
 import 'comet_star.dart';
 import 'heart_pickup.dart';
 import 'shield_pickup.dart';
+// region WP-3e — collectable pickups (PRD-2 §3.26–§3.29)
+import 'egg_pickup.dart';
+import 'firefly_swarm.dart';
+import 'jar_pickup.dart';
+import 'piggy_coin.dart';
+import 'piggy_pickup.dart';
+import 'star_trail.dart';
+// endregion WP-3e
 
 /// Registered pickup kinds (ARCH §1.6). One registration line per WP,
 /// inside its region. Capsule types: WP-3f registers `capsule` plus each
@@ -19,6 +27,14 @@ final Map<ElementId, PickupKind Function()> _kinds = {
   // region WP-3a — the comet star (PRD-2 §3.8)
   ElementId.comet: CometStarKind.new,
   // endregion WP-3a
+  // region WP-3e — collectables (PRD-2 §3.26–§3.29)
+  ElementId.starTrail: StarTrailKind.new,
+  ElementId.egg: EggPickupKind.new,
+  ElementId.piggy: PiggyPickupKind.new,
+  ElementId.piggyCoins: PiggyCoinKind.new,
+  ElementId.jar: JarPickupKind.new,
+  ElementId.fireflySwarm: FireflySwarmKind.new,
+  // endregion WP-3e
 };
 
 /// Elements switched on without a pickup of their own (e.g. capsule types

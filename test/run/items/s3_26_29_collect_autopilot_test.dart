@@ -1,0 +1,79 @@
+import 'package:flame/components.dart';
+import 'package:flame_test/flame_test.dart';
+import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/run/elements.dart';
+import 'package:flappy_spikes/run/run_controller.dart';
+import 'package:flappy_spikes/run/run_events.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import '../../helpers.dart';
+
+/// WP-3e §7 playability gate (P3 test gate): each collectable (Star Trail,
+/// Egg, Piggy Bank, Firefly Jar) forced on every allowed slot from its
+/// unlock index, at 568 and 711 pt over three seeds — the bot steers at the
+/// item (autopilot `_chaseY`) and still passes ≥ 12 hoops without dying.
+void main() {
+  const cases = [
+    (ElementId.starTrail, '3.26 Star Trail'),
+    (ElementId.egg, '3.27 Egg'),
+    (ElementId.piggy, '3.28 Piggy Bank'),
+    (ElementId.jar, '3.29 Firefly Jar'),
+  ];
+
+  for (final (element, label) in cases) {
+    final from = element.firstPossible!;
+    for (final height in [568.0, 711.0]) {
+      for (final seed in [3, 11, 29]) {
+        FlameTester<FlappySpikesGame>(
+          () => createRunTestGame(worldHeight: height, seed: seed),
+          gameSize: Vector2(320, height),
+        ).testGameWidget(
+          '§7 $label forced from hoop $from: the autopilot passes ≥ 12 hoops '
+          '(${height.toInt()} pt, seed $seed)',
+          setUp: (game, _) async {
+            await game.ready();
+            game.sound.enabled = false;
+            await preloadImages(game);
+          },
+          verify: (game, _) async {
+            final run = await startRun(
+              game,
+              startHoopIndex: from,
+              force: [element],
+            );
+            var spawned = 0, taken = 0;
+            run.events
+              ..on<ElementSpawned>((e) {
+                if (e.element == element) spawned++;
+              })
+              ..on<PickupCollected>((e) {
+                if (e.element == element) taken++;
+              });
+            final flight = await flyRun(
+              game,
+              maxSeconds: 90,
+              untilHoops: 30,
+              onFrame: (RunController r) {
+                if (!r.director.forcedQueue.contains(element)) {
+                  r.debugForce(element);
+                }
+              },
+            );
+            expect(
+              flight.hoops,
+              greaterThanOrEqualTo(30),
+              reason: flight.trace.join('\n'),
+            );
+            expect(
+              spawned,
+              greaterThan(0),
+              reason: '$label never spawned',
+            );
+            expect(taken, greaterThan(0), reason: '$label never caught');
+            expect(run.ended, isFalse);
+          },
+        );
+      }
+    }
+  }
+}

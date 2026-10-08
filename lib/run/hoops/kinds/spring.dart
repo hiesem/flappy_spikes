@@ -2,10 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
-import 'package:flutter/painting.dart' show TextPainter, TextSpan, TextStyle;
-import 'package:flutter/painting.dart' as p show TextDirection;
 
-import '../../../game/config.dart';
 import '../../../game/sound.dart';
 import '../../config/special_hoops_config.dart';
 import '../../run_context.dart';
@@ -14,6 +11,10 @@ import '../../director/plans.dart';
 import '../hoop_kind.dart';
 import '../ring_painter.dart';
 import 'normal.dart';
+
+import '../../effects/text_pop.dart';
+
+export '../../effects/text_pop.dart' show TextPop;
 
 /// Spring Ring (PRD-2 §3.23, §5.22; lab mock `?only=spring`): a springy
 /// green ring that **launches** the bird the way its chevrons point.
@@ -190,55 +191,5 @@ class _SpringState extends Component {
   void update(double dt) {
     t += dt;
     if (boing > 0) boing = math.max(0, boing - dt / SpringConfig.wobbleSeconds);
-  }
-}
-
-/// A short text pop that rises and fades (the lab mocks' `pop()`: 20 pt
-/// Opificio, rises 28 pt/s, fades over 1 s) — "BOING ↑ / ↓".
-class TextPop extends PositionComponent {
-  TextPop(this.text, Vector2 at, this.color, {this.fontSize = 20})
-    : super(position: at, anchor: Anchor.center);
-
-  final String text;
-  final Color color;
-  final double fontSize;
-  double _t = 0;
-
-  static const double life = 1;
-  static const double rise = 28;
-
-  late final TextPainter _tp = TextPainter(
-    text: TextSpan(
-      text: text,
-      style: TextStyle(
-        fontFamily: Config.uiFont,
-        fontSize: fontSize,
-        color: color,
-      ),
-    ),
-    textDirection: p.TextDirection.ltr,
-  )..layout();
-
-  @override
-  void update(double dt) {
-    _t += dt;
-    position.y -= rise * dt;
-    if (_t >= life) removeFromParent();
-  }
-
-  @override
-  void render(Canvas canvas) {
-    final a = (1 - _t / life).clamp(0.0, 1.0);
-    if (a <= 0) return;
-    canvas.saveLayer(
-      Rect.fromCenter(
-        center: Offset.zero,
-        width: _tp.width + 8,
-        height: _tp.height + 8,
-      ),
-      Paint()..color = Color.fromRGBO(0, 0, 0, a),
-    );
-    _tp.paint(canvas, Offset(-_tp.width / 2, -_tp.height / 2));
-    canvas.restore();
   }
 }

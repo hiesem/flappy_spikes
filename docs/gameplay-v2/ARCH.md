@@ -128,7 +128,7 @@ code. Paths are relative to `flappy_spikes/`.
 |---|---|---|
 | `pickup.dart` | 0b | `abstract class Pickup extends PositionComponent` (track coords): `PickupKindId id; double hitRadius; bool collected; void onCollect(RunContext c); void onPassedUncaught(RunContext c);` — hit test §3.0.3 (distance − bird r ≤ radius), one shared `PickupTouchFx` |
 | `pickup_kind.dart` / `registry.dart` | 0b | `abstract class PickupKind { ElementId get element; Pickup build(GapItemPlan p, RunContext c); }`; `PickupKind? pickupKindFor(ElementId e)` |
-| `heart_pickup.dart`, `shield_pickup.dart` | 2a | |
+| `heart_pickup.dart`, `shield_pickup.dart` | 2a | `HeartPickupKind` / `ShieldPickupKind` (§14) |
 | `comet_star.dart` | 3a | hangs 20 pt past the plane |
 | `star_trail.dart`, `egg_pickup.dart`, `piggy_pickup.dart`, `piggy_coin.dart`, `jar_pickup.dart`, `firefly_swarm.dart` | 3e | |
 | `capsule.dart` | 3f | one capsule, `CapsuleType` param |
@@ -140,10 +140,10 @@ code. Paths are relative to `flappy_spikes/`.
 | File | Owner | Feature |
 |---|---|---|
 | `scoring.dart` | 1a | +1 per pass, coin per pass (1 / 2 perfect), colour stage per 10 hoops, `point.mp3` on non-perfect |
-| `extra_life.dart`, `shield.dart` | 2a | `MistakeInterceptor`s (shield order 10, extra life order 20), 2 s invulnerability, flash |
+| `extra_life.dart`, `shield.dart`, `invulnerability.dart` | 2a | `MistakeInterceptor`s (shield order 10, extra life order 20), 2 s invulnerability, flash (`InvulnerabilityFeature`, §14) |
 | `big_hoops.dart` | 2a | D = 30–40 s (`timing` stream), mult 1.5 eased over last 8 s, gold look, cap to band |
 | `streak.dart` | 2b | streak/tier, banners, pass sounds, FEVER hook (`streak = max(5, streak+1)`), break on graze/save |
-| `rumble_router.dart` | 2c | events → `Rumble.knock/shake` |
+| `rumble_router.dart` | 2b (2c folded in) | events → `Rumble.knock/shake` |
 | `comet.dart` | 3a | 10 s × 1.7, auto-pilot, rims ignored, timed-powerup slot |
 | `fever.dart` | 3c | fire on/off, crackle loop |
 | `egg.dart`, `piggy.dart`, `jar.dart`, `star_trail_feature.dart` | 3e | |
@@ -1062,10 +1062,38 @@ Changes to the contracts above, made while building WP-0b. Later WPs build again
 | Calls | spike contact = the bird circle reaching the tooth tips (prototype used tips + 8); no rim bounce while invulnerable (prototype); perfect passes are silent until WP-2b's perfect sounds (ARCH: `point.mp3` on non-perfect only); the rim "tonk" plays `Sfx.rimTonk` looked up by name (WP-3h adds it) | |
 | Tests | `killRun(game[, cause])` helper (onBirdHit + step through the tumble) replaces the 1.0 instant game over in the menu / e2e tests | |
 
-## 14. WP-P1int contract notes (as built, 2026-10-08)
+## 13b. WP-P1int contract notes (as built, 2026-10-08)
 
 | Area | As built | Why |
 |---|---|---|
 | `RunSpawner.nextHoopAhead()` | the first unresolved hoop the bird is not fully past (`birdX − r ≤ frame().rightmostX`, the §3.0.4 5 miss line), instead of `planeX > birdX − 4` | a tilted ring's plane centre is behind the bird while it still crosses the upper / lower half: the bot (and `RunSummary.hoopKind`) jumped to the next hoop mid-crossing and flew into the rim |
 | `Autopilot` | plain rings: a planner rolls the real physics (`BirdMotion.recover`, `collideRims`, `testPlane`, `isFullyPast`, spike lines, moving poses via `HoopMotion.poseAt`) for a family of controllers (bang-bang to ring centre + aim offset; from τ s before the plane glide or flap once) and follows the cheapest passing one (rim clearance < 4 pt counts as a touch); re-checked every 4 frames. Switch pre-targets / closed switches / no pass found → the prototype `botStep` rule | the prototype's bang-bang bot also fails most forced 35°+ / moving rings (node harness: 6/20 at 35°, 5/20 at moving 45); a θ-tilted ring leaves only `reach·cosθ − (r + rimR)` of a level path |
 | `SoundService` | lazy pools: `prewarmed` (flap, point, gameover, click, rimTonk, perfect1–3) warm at start; every other `Sfx` creates its low-latency `AudioPool` on first `play`, which is played once ready if that took ≤ `firstPlayLateLimit` (250 ms), else dropped; one creation per sound (`poolRequested` test seam) | 168 pools at start-up (WP-3h warning) |
+## 14. WP-2a contract notes (as built, 2026-10-08)
+
+| Area | As built | Why |
+|---|---|---|
+| Files | `pickups/{heart,shield}_pickup.dart` (`HeartPickupKind` / `ShieldPickupKind`, registered in `pickups/registry.dart` region WP-2a; `placeholder_heart.dart` and the WP-1b registry line deleted); `items/{extra_life,shield,big_hoops,invulnerability}.dart` (features region WP-2a); `config/lives_config.dart` (`LivesConfig`). **No `big_hoops_config.dart`**: the four §3.6 knobs already live in `RunConfig` (`bigHoopsMult/Min/Max/Ease`, used by the director and `BigHoopsState`) | one source per knob |
+| Pickups vs features | a pickup only draws itself and plays its touch fx (`PickupTouchFx.heart` / `.shield`) on collect; what it *does* is the feature reacting to `PickupCollected` (so a pair gift or a test can emit the same event) | features read events |
+| Saves | `ShieldFeature` (order 10) and `ExtraLifeFeature` (order 20) implement `MistakeInterceptor` and add themselves to `RunController.pipeline` on attach. A save sets `state.invulnerable = 2` (the controller counts it down while scrolling), plays `puShieldHit` / `puHeartUse`, sends `shield_used` / `extra_life_used` (`cause`), and pops the visual | §3.3, §3.7, Q27 |
+| Invulnerability look | `InvulnerabilityFeature` owns the one `InvulnFlash`: whenever `state.invulnerable` *rises* it starts the 2 s blink on `Bird.setSpriteOpacity`. **Anyone granting invulnerability (WP-2d phoenix) only sets `state.invulnerable`** — the flash follows | one flash, no per-feature copies |
+| SAVED! | on `MistakeSaved`, `InvulnerabilityFeature` shows `ElementBanner('SAVED!')` in the first mounted `BannerHost` (viewport, then world). No host is mounted before WP-2d's `RunHud`; until then nothing shows | master #7, banners never stack |
+| Heart HUD | the heart indicator is WP-2d's (`hud/heart_indicator.dart`); it reads `state.hearts` (0..2) and `state.extraLife`. A collected heart flies (shared `FetchFlight`, `FetchSpec.heart`) to `LivesConfig.indicatorCentre` (33, 71), drawn in the world at `RunLayer.fx + 1` | §5.2 / §5.7 |
+| Badge / circle | `HeartBadge` (in `ExtraLifeFeature`) and `ShieldCircle` (in `ShieldFeature`) are world components at `RunLayer.bird + 1` (over the bird, under the hoop fronts) following `game.runBird`. Both **observe the state** (`extraLife` / `shield`): any source (pair SHIELD gift of WP-3d, home slot, tests) shows them; a cleared flag hides them | sources stay decoupled |
+| Shared parts added | `effects/life_icons.dart` (`LifeIcons.paintHeart` — the mock `HEARTP` — and `paintShield`: the one heart and shield drawing for pickups, badge, shards, flying heart and the WP-2d indicator); `effects/save_burst.dart` (`SaveBurst.emit`: white flash + 12 hearts / triangles); `ParticlePool` gained `ParticleShape.heart` | §3.0.9: no second heart / burst drawing |
+| Big Hoops | `BigHoopsFeature.attach` (before the first slot is planned) sets `state.bigHoops = BigHoopsState(D = director.rollBigHoopsDuration(), start: runClock)` when `setup.starter == Powerup.bigHoops`; the director already scales and caps every opening by `bigHoopsMult` at spawn. On `HoopSpawned` a **normal** hoop spawned with mult > 1 gets `look.colors = RingColors.gold` (also during the ease — "after D … normal size and colour"); `BigHoopsFeature.isGold(hoop)` tells WP-2b's tier look to fall back to gold. The state is cleared once D is over | §3.6 |
+| Home slot | `_runFromHome` → `RunSetup.starter`: shield → `state.shield` in `RunController.start` (0b), Big Hoops → `BigHoopsFeature`. Analytics `big_hoops_used` / `shield_armed` stay in the game | §3.6 / §3.7 |
+| Rumble | no new events: pickups already raise `PickupCollected` (knock, WP-2c); saves raise `MistakeSaved` (no rumble by §3.33) | §3.33 |
+## 15. WP-2b contract notes (as built, 2026-10-08; WP-2c folded in)
+
+| Area | As built | Why |
+|---|---|---|
+| `items/streak.dart` | `StreakFeature` (features region WP-2b): `HoopPassed` perfect → `streak + 1` (FEVER kind: `max(5, streak + 1)`, cause `fever`); non-perfect → 0 (`graze`); `MistakeSaved` → 0 (`save`); `RunDied` → 0 (`death`). Emits `StreakChanged` on every change and `TierChanged` when `RunState.tier` changes; keeps `bestStreak`. Per perfect pass: `BannerHost.showStreak(tier)`, `perfect_1/2/3` (min(streak, 3)), `PerfectBurst` at the bird in **screen space** (world coordinates, own `ParticlePool` at `RunLayer.fx`, like the §5.3 mock's `pop`), `perfect_pass {tier}`. `streak_broken {length, cause}` when a running streak breaks. The "+2 coin" popup and coins stay in `ScoringFeature` (WP-1a), as does `point` + the pulse on a graze | single owner per effect |
+| Ring field | on `HoopSpawned` every hoop whose kind `usesTierLook` gets one `RingTierFx` per ring; the streak **wraps** the hoop's `paintBack` (glow, behind the ring) and `front.paintFront` (sparkles / flames, over it) closures, so kinds must set those in `buildVisual` (before `HoopSpawned`) and not replace them later. `Hoop.look.colors` gets `RingPainter.colorsForTier(tier)` — **only while it still holds the value the streak wrote last** (another owner such as Big Hoops gold or the miss flash keeps its colours; Big Hoops should write its gold every frame or on spawn). `look.missed` hoops drop out (fx cleared, no tint) | §3.5 / §5.13 |
+| Bird / trail | `LookComponent.goldTier = tier >= 2` every frame (reset on detach and on death). `TierTrail` (equipped trail; blocks item → `BlockTrail`) in a screen-space component at `RunLayer.bird − 1`, active at tier 3+ **or while `RunState.ride != null`** (comet / portal, §3.0.9 #10). Heading: 0 in normal flight (call: matches the §5.3 mock — the camera follows the bird forward, flaps do not tilt the trail); during a ride the bird's motion relative to the world (screen Δ + camera Δ) | §3.0.9 #10 |
+| Banners | `BannerHost.ensureIn(parent, priority:)` — one host per parent (the run puts it in the world at priority 18, under the HUD pills 19 / 21) shared by streak, FEVER (3c) and element banners; a new banner replaces the one showing. 2d's `RunHud` may adopt the same host | master #7 host |
+| Graze notice | §5.3 "GRAZE · streak lost" (stage foreground, 22 pt Opificio, 0.1 em, centred at x 160, top 250, rises 26 pt and fades in 1.1 s) on a graze that breaks a running streak (call: the mock's demo text is shown in the game) | R-5.3-4 |
+| `items/rumble_router.dart` | `RumbleRouter` (features region WP-2b): perfect pass → shake; non-perfect pass → knock; `PickupCollected` → knock; nothing else. Only while `RunController.isScrolling`. Requests are **coalesced per frame** and flushed in `update` (and on death): a shake wins over any knock in that frame; `Rumble` keeps the 90 ms knock throttle and "shake never skipped" across frames | §3.33 "same window → only the shake" |
+| Analytics | `GameServices.logRumbleToggle` sends `rumble_toggle {on}` **and** `setting_changed {setting: rumble, value: 0/1}` (call) | R-6-57 |
+| Gold glow perf | `LookPainter` bounds the gold-glow `saveLayer` to `goldGlowBounds` (art box + blur reach). Measured (CPU raster, 960 × 2133): unbounded ≈ 15 ms/frame vs bounded ≈ 2 ms (incl. ≈ 2 ms readback); same pixels | WP-0c perf warning |
+| Config | `lib/run/config/streak_config.dart` (`StreakConfig`) | ARCH §4 |

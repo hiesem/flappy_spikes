@@ -10,7 +10,7 @@ import 'package:flappy_spikes/run/effects/spike_teeth.dart';
 import 'package:flappy_spikes/run/hoops/motion/hoop_motion.dart';
 import 'package:flappy_spikes/run/hoops/motion/motion_guide.dart';
 import 'package:flappy_spikes/run/hoops/ring_painter.dart';
-import 'package:flappy_spikes/run/pickups/placeholder_heart.dart';
+import 'package:flappy_spikes/run/pickups/heart_pickup.dart';
 import 'package:flappy_spikes/skins/art/look_painter.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter/foundation.dart';
@@ -239,9 +239,9 @@ void main() {
           );
           _scene(c, [swing, rock], Offset(RunConfig.birdX, mid - 140));
         });
-        // The placeholder heart (WP-1b; WP-2a replaces it) mid-gap.
-        await _write('3_3_placeholder_heart_$tag', h, (c) {
-          final heart = PlaceholderHeartPickup(
+        // The heart pickup (WP-2a, §5.2) mid-gap.
+        await _write('3_3_heart_$tag', h, (c) {
+          final heart = HeartPickup(
             GapItemPlan(kind: ElementId.heart, trackX: 160, y: mid - 40),
           );
           c.save();

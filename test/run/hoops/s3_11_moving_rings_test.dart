@@ -13,7 +13,7 @@ import 'package:flappy_spikes/run/hoops/kinds/registry.dart';
 import 'package:flappy_spikes/run/hoops/motion/hoop_motion.dart';
 import 'package:flappy_spikes/run/hoops/motion/motion_guide.dart';
 import 'package:flappy_spikes/run/hoops/motion/moving_rings_feature.dart';
-import 'package:flappy_spikes/run/pickups/placeholder_heart.dart';
+import 'package:flappy_spikes/run/pickups/heart_pickup.dart';
 import 'package:flappy_spikes/run/pickups/registry.dart';
 import 'package:flappy_spikes/run/run_context.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -294,7 +294,7 @@ void main() {
         containsAll([ElementId.angledRing, ElementId.movingRing]),
       );
       expect(registeredPickupElements(), contains(ElementId.heart));
-      expect(pickupKindFor(ElementId.heart), isA<PlaceholderHeartKind>());
+      expect(pickupKindFor(ElementId.heart), isA<HeartPickupKind>());
     });
 
     tester.testGameWidget(
@@ -393,14 +393,14 @@ void main() {
       setUp: (game, _) => boot(game),
       verify: (game, _) async {
         final run = await startRun(game);
-        PlaceholderHeartPickup? heart;
+        HeartPickup? heart;
         await flyRun(
           game,
           maxSeconds: 12,
           onFrame: (r) {
             heart ??= pickupsOf(
               game,
-            ).whereType<PlaceholderHeartPickup>().firstOrNull;
+            ).whereType<HeartPickup>().firstOrNull;
           },
         );
         expect(heart, isNotNull);

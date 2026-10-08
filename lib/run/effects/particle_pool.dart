@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 
 import '../config/parts_config.dart';
+import 'life_icons.dart';
 import 'twinkle.dart';
 
 /// Shapes the shared pool can draw (flat, no textures — §5.4).
@@ -21,6 +22,10 @@ enum ParticleShape {
   /// Four-point [Twinkle] star of size [Particle.w] that follows the §5.3
   /// twinkle curve (scale 0 → 1.1 → 0, 0° → 90°, opacity 0 → 1 → 0).
   twinkle,
+
+  /// The §5.2 heart ([LifeIcons.heart24]) [Particle.w] wide, rotating with
+  /// [Particle.rot] (the extra-life badge's pop, §5.5; WP-2a).
+  heart,
 }
 
 /// One pooled particle. Plain mutable data, recycled in place.
@@ -220,6 +225,14 @@ class ParticlePool extends Component {
             ..restore();
         case ParticleShape.twinkle:
           break;
+        case ParticleShape.heart:
+          LifeIcons.paintHeart(
+            canvas,
+            Offset(p.x, p.y),
+            w,
+            fill: _paint.color,
+            rotation: p.rot,
+          );
       }
     }
   }

@@ -2,18 +2,19 @@ import 'package:flutter/foundation.dart';
 
 import '../elements.dart';
 import 'pickup.dart';
-import 'placeholder_heart.dart';
+import 'heart_pickup.dart';
+import 'shield_pickup.dart';
 
 /// Registered pickup kinds (ARCH §1.6). One registration line per WP,
 /// inside its region. Capsule types: WP-3f registers `capsule` plus each
 /// type element it supports.
 final Map<ElementId, PickupKind Function()> _kinds = {
-  // region WP-1b — heart placement wiring (PRD-2 §3.0.3 / §3.3).
-  // PLACEHOLDER: WP-2a replaces this line with its real heart kind.
-  ElementId.heart: PlaceholderHeartKind.new,
-  // endregion WP-1b
   // region anchors — append below (one region per WP)
   // endregion anchors
+  // region WP-2a — hearts / shield (PRD-2 §3.3, §3.7)
+  ElementId.heart: HeartPickupKind.new,
+  ElementId.shield: ShieldPickupKind.new,
+  // endregion WP-2a
 };
 
 /// Elements switched on without a pickup of their own (e.g. capsule types

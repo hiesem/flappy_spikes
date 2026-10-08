@@ -170,8 +170,15 @@ class GameServices {
       });
 
   /// RUMBLE switched in Settings (`on` as 1 / 0: Firebase has no bool).
-  void logRumbleToggle(bool on) =>
-      logEvent('rumble_toggle', {'on': on ? 1 : 0});
+  ///
+  /// region WP-2b — PRD-2 §6 `setting_changed` (setting: rumble, value).
+  /// Call: both events are sent — `rumble_toggle` keeps the home-v3
+  /// dashboards working, `setting_changed` is the PRD-2 name.
+  void logRumbleToggle(bool on) {
+    logEvent('rumble_toggle', {'on': on ? 1 : 0});
+    logEvent('setting_changed', {'setting': 'rumble', 'value': on ? 1 : 0});
+  }
+  // endregion WP-2b
 
   /// No-ads celebration shown; [source] tile / shop_banner / popup.
   void logNoAdsCelebrationShown(String source) =>

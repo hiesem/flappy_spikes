@@ -553,3 +553,55 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `test/run/flow/s3_0_1_hoop_spawner_test.dart`; `pipe_spawner_test` and
   `gap_variance_test` were replaced by the latter.
 
+
+## PRD-2 hearts, extra life, shield, Big Hoops (WP-2a, 2026-10-08)
+
+- DEVIATION (PRD-2 §3.3, "a mistake ends the run"): a mistake (missed hoop
+  incl. a pair, spike touch, saw rim, closed switch) is first offered to the
+  **saves**, in order: the **shield** (order 10), then the **extra life**
+  (order 20). A save keeps the run going from where the bird is (no respawn,
+  no tumble; the missed hoop gives no point / coin), gives **2 s of
+  invulnerability** (every mistake is ignored, no rim bounce; the bird
+  blinks 100 % ↔ 25 % every 0.1 s) and on a spike strip bounces the bird off
+  the tooth line. Only an unsaved mistake starts the death tumble.
+- Hearts (§3.3, §5.2): 32 pt `#FF3B5C` pickups (white outline, pulse 1.0 ↔
+  1.14 over 1 s, hit radius 16) placed by the director; **3 hearts = one
+  extra life** (does not stack; hearts are run-only). The extra life shows as
+  a 34 pt heart badge ≈ 41 pt above the bird (bob ±4 pt), popping in 0.3 s
+  after the 3rd heart; a save pops it into 12 small hearts.
+- Shield (§3.7, §5.5): absorbs exactly one mistake, no timer; armed by the
+  field pickup (from gap 12, max one per run), a pair's SHIELD gift or the
+  home slot (active from the first frame). Shown as an 84 pt circle around
+  the bird (gold 3.5 pt ring, 28 % soft-pink fill, dashed white inner ring
+  turning 90°/s, ±5 % pulse); a hit shatters it into 12 gold / pink shards.
+- DEVIATION (PRD-2 §3.6 / §3.0.1, Big Hoops; replaces the 1.0-era "1.5× for
+  50 s"): the home-slot Big Hoops rolls **D = 30–40 s** of run time at the
+  start; hoops spawned until D − 8 s are **1.5× taller** (capped to the band)
+  and normal hoops are drawn gold (`#FFB529` / `#D48A00`); the multiplier
+  eases 1.5 → 1.0 per newly spawned hoop over the last 8 s; a hoop keeps its
+  size on screen; after D everything is normal. Boosted runs count for
+  everything; no indicator.
+- Tests: `test/run/items/s3_3_s3_7_lives_test.dart`,
+  `test/run/items/s3_6_big_hoops_test.dart`, the Big Hoops cases of
+  `test/autopilot_test.dart`; shots in `test/run/shots/lives_shots_test.dart`.
+## PRD-2 perfect streak, ring tiers and run rumble (WP-2b + WP-2c, 2026-10-08)
+
+- DEVIATION (PRD-2 §3.4 / §3.5, new mechanic): a **perfect pass** (no rim
+  touch; every ride hoop) builds a streak, capped at tier 10 (IMMORTAL ×10);
+  a graze, a saved mistake or a death resets it to 0. A perfect FEVER pass
+  sets it to max(5, streak + 1) (§3.19). Each perfect pass shows the streak
+  banner (y 190, 10 names), plays `perfect_1/2/3` instead of `point`, and a
+  small burst at the bird; the whole ring field reflects the tier (tier 1
+  sparkles, tier 2 gold rings + gold bird, tier 3+ bright gold + glow +
+  flame flicks + the bird's trail). A graze with a streak shows
+  "GRAZE · streak lost" (§5.3). No screen flash at any tier (§3.0.9 #13).
+  The coins (+2 perfect) are unchanged from WP-1a.
+- DEVIATION (PRD-2 §3.33): runs now vibrate — a 45 ms full shake on every
+  perfect pass, a 15 ms knock on a non-perfect pass and on every pickup touch
+  (one knock per 90 ms; a shake is never skipped and a knock in the same
+  frame is dropped); only while the run is live, never for deaths, saves or
+  screens. The RUMBLE switch also sends `setting_changed`.
+- Tests: `test/run/items/s3_4_streak_test.dart`,
+  `test/run/items/s3_33_rumble_test.dart`,
+  `test/run/effects/s3_0_9_gold_glow_perf_test.dart`; shots
+  `test/run/shots/streak_shots_test.dart`.

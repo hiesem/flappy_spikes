@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../../run/effects/gold_bird.dart';
 import '../look.dart';
 import 'bird_art.dart';
@@ -75,6 +77,15 @@ abstract final class LookPainter {
   /// the eye (dark `#212121` only on light bodies, where white would vanish).
   /// [gold]: the streak tier-2+ gold bird (§3.0.9 #5, [GoldBird]) — the
   /// classic bird is recoloured; other birds get a gold glow outline.
+  /// The gold glow layer's bounds in art units (the art box 44 × 36 grown by
+  /// 3σ of the blur plus room for bodies that poke out of the box).
+  static const Rect goldGlowBounds = Rect.fromLTRB(-15, -15, 59, 51);
+
+  /// Test seam (perf comparison): false paints the glow through an
+  /// unbounded layer, as before WP-2b.
+  @visibleForTesting
+  static bool goldGlowBounded = true;
+
   static void paint(
     Canvas canvas,
     Look look, {
@@ -94,8 +105,11 @@ abstract final class LookPainter {
     canvas.translate(-22, -18);
     if (gold && !recolour) {
       // Gold glow outline: the body silhouette, blurred, in gold, behind.
+      // WP-2b: the layer is bounded to the art box plus the blur reach, so
+      // the per-frame blur covers ~74 × 66 art units instead of the whole
+      // screen (measured in test/run/effects/s3_0_9_gold_glow_perf_test.dart).
       canvas.saveLayer(
-        null,
+        goldGlowBounded ? goldGlowBounds : null,
         Paint()
           ..imageFilter = ImageFilter.blur(
             sigmaX: GoldBird.glowSigma,

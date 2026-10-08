@@ -137,16 +137,21 @@ void main() {
           ));
           sizes[e.hoop] = e.hoop.opening;
         });
-        await flyRun(
-          game,
-          maxSeconds: b.duration + 6,
-          onFrame: (r) {
-            for (final hp in r.spawner.hoops) {
-              final s0 = sizes[hp];
-              if (s0 != null) expect(hp.opening, s0);
-            }
-          },
-        );
+        // WP-3f: an Hourglass capsule on the way slows runClock (§3.30), so
+        // fly until D has passed in run time, not for a fixed real time.
+        for (var i = 0; i < 4 && run.state.runClock <= b.duration + 2; i++) {
+          await flyRun(
+            game,
+            maxSeconds: b.duration + 6 - run.state.runClock,
+            onFrame: (r) {
+              for (final hp in r.spawner.hoops) {
+                final s0 = sizes[hp];
+                if (s0 != null) expect(hp.opening, s0);
+              }
+            },
+          );
+          if (run.ended) break;
+        }
         expect(run.state.runClock, greaterThan(b.duration));
         final band = h - 2 * RunConfig.stripHeight;
         final cap = band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin);

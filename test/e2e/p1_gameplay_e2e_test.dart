@@ -159,19 +159,29 @@ void main() {
           );
           originals[e.hoop] = e.hoop.opening;
         });
-        final flight = await flyRun(
-          g,
-          maxSeconds: boost.duration + 6,
-          onFrame: (_) {
-            for (final hoop in run.spawner.hoops) {
-              expect(
-                hoop.opening,
-                originals[hoop],
-                reason: 'visible hoops never resize',
-              );
-            }
-          },
-        );
+        // WP-3f: an Hourglass capsule on the way slows runClock (§3.30), so
+        // fly until D has passed in run time, not for a fixed real time.
+        var flight = RunFlight();
+        for (
+          var i = 0;
+          i < 4 && run.state.runClock <= boost.duration + 2;
+          i++
+        ) {
+          flight = await flyRun(
+            g,
+            maxSeconds: boost.duration + 6 - run.state.runClock,
+            onFrame: (_) {
+              for (final hoop in run.spawner.hoops) {
+                expect(
+                  hoop.opening,
+                  originals[hoop],
+                  reason: 'visible hoops never resize',
+                );
+              }
+            },
+          );
+          if (run.ended) break;
+        }
         expect(
           flight.hoops,
           greaterThanOrEqualTo(12),

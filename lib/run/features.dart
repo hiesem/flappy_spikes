@@ -12,6 +12,10 @@ import 'items/met_elements.dart';
 import 'items/rumble_router.dart';
 import 'items/scoring.dart';
 import 'items/squeeze.dart'; // WP-3g
+import 'items/coin_frenzy.dart'; // WP-3f
+import 'items/hourglass.dart'; // WP-3f
+import 'items/mini_bird.dart'; // WP-3f
+import 'items/timed_powerup.dart'; // WP-3f
 import 'items/streak.dart';
 import 'rides/portal_ride.dart';
 import 'run_feature.dart';
@@ -62,6 +66,15 @@ List<RunFeature> buildRunFeatures() => [
   // rules, so it sees a running squeeze before the revive resets it
   SqueezeFeature(),
   // endregion WP-3g
+  // region WP-3f — powerup capsules: the timed-powerup slot, Hourglass,
+  // Mini Bird, Coin Frenzy (PRD-2 §3.30–§3.32, §5.29–§5.31); after the
+  // streak and Big Hoops (Coin Frenzy wraps their ring painters), before
+  // 2d's revive rules (which end the slot at a death)
+  TimedPowerupSlot(),
+  HourglassFeature(),
+  MiniBirdFeature(),
+  CoinFrenzyFeature(),
+  // endregion WP-3f
   // region WP-2d — revive rules (PRD-2 §3.14); keep last
   ReviveRulesFeature(),
   // endregion WP-2d

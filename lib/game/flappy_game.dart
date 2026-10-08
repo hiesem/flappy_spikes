@@ -45,6 +45,7 @@ import '../run/debug/debug_overlay.dart';
 import '../run/debug/force_menu.dart';
 import '../run/director/plans.dart';
 import '../run/elements.dart';
+import '../run/items/puzzle.dart';
 import '../run/mistakes.dart';
 import '../run/run_controller.dart';
 import '../run/run_scaled_world.dart';
@@ -66,6 +67,7 @@ import '../versus/opponent.dart'; // WP-5b
 import '../run/screens/bonus_screen.dart'; // WP-4a
 import '../services/e2e.dart';
 import '../versus/timeline.dart';
+import '../services/avatars.dart';
 import '../services/versus_service.dart';
 import '../services/ads_service.dart';
 import '../services/game_services.dart';
@@ -115,7 +117,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     this.soundEnabled = true,
     bool? rumbleEnabled,
     VersusService? versus,
+    AvatarSource? avatarSource,
   }) : services = services ?? GameServices(),
+       _avatarSource = avatarSource ?? const NoAvatarSource(),
        versus = versus ?? NoopVersusService(),
        reminders = reminders ?? const NoopReminders(),
        rumble = Rumble(hardware: rumbleEnabled ?? soundEnabled),
@@ -174,6 +178,35 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// Versus backend (PRD-2 §3.13). No-op unless main() passes one (WP-5b).
   final VersusService versus;
+
+  final AvatarSource _avatarSource;
+
+  /// §3.13 / §5.8 (S6-64) the avatar image cache shared by the VS intro,
+  /// the versus HUD bar and the results card (the neutral glyph while an
+  /// image is missing). The network source is wired by `main.dart` only.
+  late final AvatarImages avatars = AvatarImages(images, source: _avatarSource);
+
+  /// §3.13 / §5.8 / §5.10 (S6-65) the own name on the plates, the HUD chip
+  /// and the results card: the Play Games display name when signed in,
+  /// else the generated nickname ([VersusService.me]); "You" only when the
+  /// service has no identity at all (no backend, before the nickname).
+  String get myVersusName {
+    try {
+      final n = versus.me.name.trim();
+      if (n.isNotEmpty) return n;
+    } catch (_) {}
+    final nick = storage.versusNickname?.trim() ?? '';
+    return nick.isNotEmpty ? nick : 'You';
+  }
+
+  /// (S6-64) the own avatar's [avatars] key ('' = the neutral glyph).
+  String get myAvatarKey {
+    try {
+      return versus.me.avatarImage;
+    } catch (_) {
+      return '';
+    }
+  }
 
   /// Reminder notifications (PRD-2 §3.34). No-op unless the app shell swaps
   /// in the real service (`main.dart`, mobile only); [onLoad] asks for the
@@ -491,6 +524,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // mid-start, or a pre-WP10 arm-then-START build) and must not ride
     // along on a plain START.
     if (menu.slot.armed != Powerup.none) menu.slot.consume();
+    // §3.16 (S6-62) a 4/4 puzzle bonus a kill interrupted is paid first
+    // (it happened before any level-reward claim of that session).
+    try {
+      await PuzzleFeature.settlePayout(storage, menu.wallet);
+    } catch (_) {}
     // region WP-2e — results page (PRD-2 §3.14)
     await _creditUnclaimedLevelReward();
     // endregion WP-2e
@@ -676,6 +714,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         _backgroundSince ??= storage.now();
       case AppLifecycleState.resumed:
         unawaited(monetization.iap.refresh());
+        // §3.13 (S6-66) a failed versus start recovers; the queue retries.
+        unawaited(versus.onResume());
         final since = _backgroundSince;
         _backgroundSince = null;
         if (since != null &&
@@ -973,9 +1013,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// screen; the run then starts under the white, which fades out (0.3 s).
   Future<void> _playVersusIntro(OpponentRun opponent) async {
     state = GameState.versusIntro;
+    // S6-64: start both avatar loads now; they land in the cache before
+    // the reel locks (≈ 3.9 s), else the neutral glyph stays.
+    avatars.lookup(opponent.avatarUrl);
+    avatars.lookup(myAvatarKey);
     final intro = VersusIntro(
       opponent: opponent,
-      myName: 'You',
+      myName: myVersusName,
+      myAvatar: myAvatarKey,
       myLook: menu.items.look,
       myLevel: menu.levels.level,
       onCovered: _dropHomeUnderIntro,

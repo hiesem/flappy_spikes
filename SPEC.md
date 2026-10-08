@@ -883,6 +883,17 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   so YOUR REWARD includes them. Runs (score ≥ 3; a new best always, others
   ≤ 3 per UTC day) are uploaded through a persisted queue, one run per
   write, retried when online. Every Firebase failure means a solo run.
+- (`Fix P45 R1`) S6-60: the queue also paces non-best writes to 3 per UTC
+  *upload* day (the server's rate day), so an offline backlog is written
+  over the following days instead of being rate-rejected and lost; a new
+  best is never held back. S6-66: a failed start-up auth recovers without a
+  restart (background retries with doubling waits 5 s → 2 min, and at once
+  on app resume, Home prefetch, a run submit and before every flush).
+  S6-65: the own name on the VS plate, the HUD chip and the results card is
+  the Play Games display name or the generated nickname ("You" only with no
+  identity at all). S6-64: avatars (the Play Games icon image / the uploaded
+  avatar URL) are drawn from one in-memory cache on the plates, the HUD and
+  the results card; the neutral glyph shows while one is missing.
 
 ### WP-4c — "Delete my data" and the persistence audit (PRD-2 §3.13 Q22)
 
@@ -896,7 +907,9 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   and daily counter cleared). **Coins, skins, levels, feathers, puzzle pieces
   and met elements are kept** (Q22) — nothing else on the phone is touched.
   Offline or a refused call deletes nothing, keeps the account and local state
-  for a retry, and the card says so ("COULDN'T DELETE"); success shows
+  for a retry, and the card says so ("COULDN'T DELETE"); the server side is
+  all-or-nothing (`Fix P45 R1`, S6-61: one transaction for the player, rate
+  and pool data after an Auth reachability check); success shows
   "DATA DELETED". CANCEL, ✕, Esc and the dim dismiss without a call.
   `deleteMyData()` therefore returns `Future<bool>` (`true` = deleted).
 - The local reset is `GameStorage.resetVersusData()` (region WP-4c); the versus
@@ -933,6 +946,15 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   source `puzzle`) at that moment in the run — included in YOUR REWARD, not
   doubled by the chick — and resets the mask to 0 with `puzzleRound` + 1 in
   the same step; the next round has the next of 8 colour themes (looped).
+- DEVIATION (PRD-2 §3.0.1 / §5.14, balloon bonus; `Fix P45 R1`, S6-63): the
+  bottom band (feather row, ad button, NO THANKS, NEXT — reference y ≥ 552)
+  is unscaled and bottom-anchored on every height 568–730, so NEXT keeps
+  292 × 50 and its 99 pt bottom gap; only the column above (pill, hero,
+  grid, prompt) scales, into the space the band leaves (0.72 at 568).
+- (`Fix P45 R1`, S6-62) the 4/4 completion is recoverable: a `puzzlePayout`
+  record (the balance to reach) is written with the mask reset + round
+  advance before the coin write and cleared after it; a kill in between is
+  paid at the next start, exactly once.
 - Call: the feather tray / puzzle pill sit at y 288 (not the PRD's 230) so
   they never overlap the y-190 banner band or the y-156 timer pill.
 - Tests: `test/run/items/s3_15_feathers_test.dart`,

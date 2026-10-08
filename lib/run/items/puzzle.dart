@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../../game/sound.dart';
+import '../../game/storage.dart';
 import '../../menu/wallet.dart';
 import '../config/feather_config.dart';
 import '../config/puzzle_config.dart';
@@ -24,7 +25,7 @@ import '../run_feature.dart';
 /// piece completes the picture **at that moment, in the run**: the bonus
 /// (`director.rollPuzzleBonus()`, uniform 50–250 step 5) goes to the wallet
 /// (source `puzzle`) and into YOUR REWARD, and the mask goes to 0 with the
-/// round + 1 (`storage.completePuzzleRound()`), all at once —
+/// round + 1 (`storage.beginPuzzleCompletion()`), all at once —
 /// `puzzle_completed {round, coins}`. The piece then flies (the shared
 /// [FetchFlight]) into the puzzle pill ([PuzzlePillItem]).
 class PuzzleFeature extends RunFeature {
@@ -72,8 +73,7 @@ class PuzzleFeature extends RunFeature {
     int? reward;
     if (count >= PuzzleConfig.pieces) {
       reward = c.director.rollPuzzleBonus();
-      _credit(c, reward);
-      unawaited(storage.completePuzzleRound());
+      _complete(c, reward);
       paid.add(reward);
       c.track('puzzle_completed', {'round': round + 1, 'coins': reward});
     } else {
@@ -135,10 +135,36 @@ class PuzzleFeature extends RunFeature {
   /// §3.16 the 4/4 bonus: wallet (source `puzzle`), YOUR REWARD and
   /// [CoinsEarned] — **not** doubled by the chick (call: the badge shows
   /// the rolled amount; §3.16 pays "random 50 to 250").
-  static void _credit(RunContext c, int coins) {
+  ///
+  /// (call, S6-62) Completion is recoverable, as the level-reward claim
+  /// (S6-22): the payout record (the balance to reach) goes out with the
+  /// mask reset + round advance *before* the coin write, and is cleared
+  /// only after the coin write landed. A kill in between is paid by
+  /// [settlePayout] at the next start — never lost, never paid twice.
+  static void _complete(RunContext c, int coins) {
+    final storage = c.game.storage;
+    final wallet = c.game.menu.wallet;
     c.s.coinsThisRun += coins;
-    c.game.menu.wallet.add(coins, CoinSource.puzzle);
+    unawaited(storage.beginPuzzleCompletion(payout: wallet.balance + coins));
+    unawaited(
+      wallet
+          .add(coins, CoinSource.puzzle)
+          .then((_) => storage.endPuzzlePayout()),
+    );
     c.emit(CoinsEarned(coins, CoinSource.puzzle));
+  }
+
+  /// §3.16 (call, S6-62) Pays the part of an interrupted 4/4 bonus the
+  /// wallet has not received ([GameStorage.puzzlePayout] minus the
+  /// balance) and clears the record. Returns what was paid; a second call
+  /// pays nothing. Run at app start, before the level-reward recovery.
+  static Future<int> settlePayout(GameStorage storage, Wallet wallet) async {
+    final target = storage.puzzlePayout;
+    if (target <= 0) return 0;
+    final due = target - wallet.balance;
+    if (due > 0) await wallet.add(due, CoinSource.puzzle);
+    await storage.endPuzzlePayout();
+    return due > 0 ? due : 0;
   }
 
   static int _bits(int m) {

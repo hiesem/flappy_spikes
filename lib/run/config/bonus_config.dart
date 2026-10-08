@@ -17,6 +17,12 @@ abstract final class BonusConfig {
   /// §5.14 Reference screen.
   static const double referenceHeight = 711;
 
+  /// §3.0.1 / §5.14 (S6-63) Top of the bottom-button band in the
+  /// reference: the feather row, the ad button, NO THANKS and NEXT (y ≥
+  /// 552) keep their reference size and bottom distance on every screen
+  /// height; only the column above (pill, hero, grid, prompt) scales.
+  static const double bandTop = 552;
+
   /// §5.14 Coin total pill: white, x 204 → 306, y 52, 38 tall.
   static const Rect pill = Rect.fromLTWH(204, 52, 102, 38);
 

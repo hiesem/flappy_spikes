@@ -13,14 +13,29 @@ import '../versus/nickname.dart';
 import '../versus/opponent.dart';
 import '../versus/run_entry.dart';
 import '../versus/upload_queue.dart';
+import 'avatars.dart';
 import 'firebase_versus_backend.dart';
 import 'identity.dart';
 
 /// The player's own versus identity (§3.13).
 class VersusProfile {
-  const VersusProfile({this.name = '', this.avatarUrl = '', this.level = 0});
+  const VersusProfile({
+    this.name = '',
+    this.avatarUrl = '',
+    this.avatarImage = '',
+    this.level = 0,
+  });
+
+  /// §3.13 the Play Games display name when signed in, else the
+  /// generated nickname ('' before either exists).
   final String name;
+
+  /// The avatar URL that is uploaded with a run ('' = default avatar).
   final String avatarUrl;
+
+  /// The [AvatarImages] key of the own avatar on this phone: the Play
+  /// Games icon image (`data:` URI) or [avatarUrl] (S6-64); '' = glyph.
+  final String avatarImage;
   final int level;
 }
 
@@ -52,6 +67,10 @@ abstract class VersusService {
 
   /// Links the platform identity's credential to the Firebase user.
   Future<void> onPlatformSignIn();
+
+  /// App back in the foreground: recovers a failed start (S6-66) and
+  /// retries the upload queue. Never throws.
+  Future<void> onResume();
 }
 
 /// Default: no backend, always solo.
@@ -79,6 +98,9 @@ class NoopVersusService implements VersusService {
 
   @override
   Future<void> onPlatformSignIn() async {}
+
+  @override
+  Future<void> onResume() async {}
 }
 
 /// Tests / `FS_E2E`: a scripted opponent pool; records submissions.
@@ -125,6 +147,11 @@ class FakeVersusService implements VersusService {
 
   @override
   Future<void> onPlatformSignIn() async => signInCalls++;
+
+  int resumeCalls = 0;
+
+  @override
+  Future<void> onResume() async => resumeCalls++;
 }
 
 // region WP-5b — the Firebase implementation (PRD-2 §3.13, ARCH §6.3–§6.5)
@@ -208,6 +235,8 @@ class FirebaseVersusService implements VersusService {
     Random? random,
     DateTime Function()? clock,
     this.timeout = VersusConfig.callTimeout,
+    this.retryBase,
+    this.retryMax = VersusConfig.authRetryMax,
   }) : identity = identity ?? PlayGamesIdentity(),
        backend = backend ?? FirebaseVersusBackend(),
        _random = random ?? Random(),
@@ -222,8 +251,17 @@ class FirebaseVersusService implements VersusService {
   final DateTime Function() _clock;
   final Duration timeout;
 
+  /// S6-66 the first background retry wait after a failed start (doubling
+  /// up to [retryMax]); null = no background timer (tests), the on-demand
+  /// recoveries still run. `main.dart` passes [VersusConfig.authRetryBase].
+  final Duration? retryBase;
+  final Duration retryMax;
+
   bool _ready = false;
-  bool _starting = false;
+  Future<void>? _start;
+  Timer? _retry;
+  int _failures = 0;
+  Future<int>? _flushing;
   OpponentRun? _held;
   List<PoolEntry> _pool = const [];
   final Set<String> _seen = {};
@@ -254,14 +292,64 @@ class FirebaseVersusService implements VersusService {
   @override
   bool get ready => _ready;
 
+  /// Background auth retries scheduled so far (tests).
+  int get failures => _failures;
+
   @override
-  Future<void> initialize() async {
-    if (_ready || _starting) return;
-    _starting = true;
+  Future<void> initialize() {
+    if (_ready) return Future.value();
+    // A start in flight: every caller waits for the same attempt.
+    return _start ??= _initialize().whenComplete(() => _start = null);
+  }
+
+  /// S6-66 a failed (or never finished) start is tried again now: on app
+  /// resume, Home prefetch, a run submit and before every flush.
+  Future<void> _recover() async {
+    if (_ready) return;
+    await initialize();
+  }
+
+  void _scheduleRetry() {
+    final base = retryBase;
+    if (base == null || _retry != null) return;
+    final ms = min(
+      base.inMilliseconds * pow(2, min(_failures, 16)),
+      retryMax.inMilliseconds.toDouble(),
+    );
+    _failures++;
+    _retry = Timer(Duration(milliseconds: ms.round()), () {
+      _retry = null;
+      if (!_ready) unawaited(initialize());
+    });
+  }
+
+  /// Stops a pending background retry (tests / teardown).
+  void dispose() {
+    _retry?.cancel();
+    _retry = null;
+  }
+
+  @override
+  Future<void> onResume() async {
+    try {
+      if (!_ready) {
+        await _recover();
+      } else {
+        await flush();
+      }
+    } catch (e) {
+      _log('resume', e);
+    }
+  }
+
+  Future<void> _initialize() async {
     try {
       await ensureNickname();
       await _call(backend.start());
       _ready = true;
+      _failures = 0;
+      _retry?.cancel();
+      _retry = null;
       try {
         _playerSub ??= identity.player.listen(_onPlayer, onError: (_) {});
       } catch (e) {
@@ -271,9 +359,7 @@ class FirebaseVersusService implements VersusService {
       await prefetch();
     } catch (e) {
       _log('initialize', e);
-      _ready = false;
-    } finally {
-      _starting = false;
+      if (!_ready) _scheduleRetry();
     }
   }
 
@@ -298,11 +384,14 @@ class FirebaseVersusService implements VersusService {
   VersusProfile get me {
     final s = storage;
     final pgs = _player?.displayName ?? '';
+    final url = _safe(() => backend.photoUrl) ?? '';
+    final icon = _player?.iconImage ?? '';
     return VersusProfile(
       name: pgs.trim().isNotEmpty
           ? RunEntry.clampName(pgs)
           : (s.versusNickname ?? ''),
-      avatarUrl: _safe(() => backend.photoUrl) ?? '',
+      avatarUrl: url,
+      avatarImage: icon.isNotEmpty ? AvatarImages.dataUri(icon) : url,
       level: levelFor(s.bestScore),
     );
   }
@@ -347,7 +436,13 @@ class FirebaseVersusService implements VersusService {
 
   @override
   Future<void> prefetch() async {
-    if (!_ready || _held != null) return;
+    if (!_ready) {
+      // S6-66: Home prefetch recovers a failed start (initialize ends
+      // with its own prefetch).
+      await _recover();
+      return;
+    }
+    if (_held != null) return;
     _pickFromPool();
     if (_held != null || _loading) return;
     final empty = _emptyReadAt;
@@ -396,9 +491,18 @@ class FirebaseVersusService implements VersusService {
     }
   }
 
-  /// Uploads the queue one run per write (retried on the next call).
+  /// Uploads the queue one run per write (retried on the next call). A
+  /// flush in flight is shared: every caller waits for the same pass.
   Future<int> flush() async {
-    if (!_ready) return 0;
+    if (!_ready) {
+      // S6-66: before a flush, a failed start is retried.
+      await _recover();
+      if (!_ready) return 0;
+    }
+    return _flushing ??= _flush().whenComplete(() => _flushing = null);
+  }
+
+  Future<int> _flush() async {
     try {
       return await queue.flush((q) async {
         final p = me;

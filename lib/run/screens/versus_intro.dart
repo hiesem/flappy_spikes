@@ -19,6 +19,7 @@ import '../effects/easing.dart';
 import '../effects/fireworks.dart';
 import '../effects/particle_pool.dart';
 import '../hud/run_hud.dart' show HudText;
+import '../../services/avatars.dart';
 
 const Color _pink = Color(0xFFEC008C);
 const Color _soft = Color(0xFFFCD9EE);
@@ -78,6 +79,7 @@ class VersusIntro extends PositionComponent
     required this.myName,
     required this.myLook,
     required this.myLevel,
+    this.myAvatar = '',
     this.onCovered,
     math.Random? random,
   }) : _rnd = random ?? math.Random(),
@@ -91,6 +93,9 @@ class VersusIntro extends PositionComponent
   final String myName;
   final Look myLook;
   final int myLevel;
+
+  /// The own avatar's `AvatarImages` key ('' = the neutral glyph, S6-64).
+  final String myAvatar;
   final math.Random _rnd;
 
   /// Called once the panels have landed and cover the home screen.
@@ -241,6 +246,7 @@ class VersusIntro extends PositionComponent
       avatar: _pink,
       glyph: _soft,
       level: myLevel,
+      image: myAvatar,
     );
     _bottom.addAll([youBird, youPlate]);
 
@@ -370,6 +376,8 @@ class VersusIntro extends PositionComponent
         oppPlate.avatar = last
             ? game.foregroundColor
             : avatarColors[i % avatarColors.length];
+        // §5.8 the real avatar settles with the real name (S6-64).
+        if (last) oppPlate.image = opponent.avatarUrl;
         oppPlate.level = _reelLevels[i];
         _sfx(Sfx.vsTick);
       });
@@ -676,6 +684,7 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
     required this.glyph,
     required int level,
     this.reel = false,
+    this.image = '',
   }) : super(position: rect.topLeft.toVector2(), size: rect.size.toVector2()) {
     emblem = EmblemView(
       level: level,
@@ -689,6 +698,10 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
   Color avatar;
   final Color glyph;
   final bool reel;
+
+  /// §5.8 the avatar image's `AvatarImages` key ('' = the neutral glyph;
+  /// also the glyph while the image is not cached yet, S6-64).
+  String image;
   late final EmblemView emblem;
 
   double? dropAt, popAt, flashAt, punchAt;
@@ -774,20 +787,29 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
     canvas.drawRect(Rect.fromLTWH(0, 0, w, hh), _p);
     _p.color = avatar;
     canvas.drawRect(const Rect.fromLTWH(0, 0, slot, slot), _p);
-    // Person glyph, 32 pt (24-unit box).
-    canvas.save();
-    canvas.translate(10, 10);
-    canvas.scale(32 / 24);
-    _p.color = glyph;
-    canvas.drawCircle(const Offset(12, 8), 4.5, _p);
-    canvas.drawPath(
-      Path()
-        ..moveTo(3, 22)
-        ..arcToPoint(const Offset(21, 22), radius: const Radius.circular(9))
-        ..close(),
-      _p,
-    );
-    canvas.restore();
+    final picture = intro.game.avatars.lookup(image);
+    if (picture != null) {
+      AvatarImages.paint(
+        canvas,
+        picture,
+        const Rect.fromLTWH(0, 0, slot, slot),
+      );
+    } else {
+      // Person glyph, 32 pt (24-unit box).
+      canvas.save();
+      canvas.translate(10, 10);
+      canvas.scale(32 / 24);
+      _p.color = glyph;
+      canvas.drawCircle(const Offset(12, 8), 4.5, _p);
+      canvas.drawPath(
+        Path()
+          ..moveTo(3, 22)
+          ..arcToPoint(const Offset(21, 22), radius: const Radius.circular(9))
+          ..close(),
+        _p,
+      );
+      canvas.restore();
+    }
     // Name window (clipped; the reel rolls names through it).
     final win = Rect.fromLTWH(slot, 0, w - 2 * slot, hh);
     canvas.save();

@@ -49,9 +49,29 @@ export const onPlayerRunWrite = onDocumentWritten(
 export const deleteMyData = onCall({ enforceAppCheck: true, consumeAppCheckToken: false }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign-in required.');
-  const removed = await deletePlayerData(getFirestore(), uid);
+  const auth = getAuth();
+  // S6-61: Auth must answer before anything is deleted, so an Auth outage
+  // fails the call with every online document intact.
   try {
-    await getAuth().deleteUser(uid);
+    await auth.getUser(uid);
+  } catch (err) {
+    if ((err as { code?: string }).code !== 'auth/user-not-found') {
+      throw new HttpsError('unavailable', 'Auth unavailable; nothing was deleted.');
+    }
+  }
+  // All-or-nothing: the player, rate and every pool membership in one
+  // transaction (a failure deletes nothing).
+  let removed: number;
+  try {
+    removed = await deletePlayerData(getFirestore(), uid);
+  } catch (err) {
+    logger.error('deleteMyData: data delete failed, nothing deleted', { uid, err: String(err) });
+    throw new HttpsError('unavailable', 'Delete failed; nothing was deleted.');
+  }
+  // The data part is idempotent, so a failure here is completed by the
+  // client's retry with the same (still existing) account.
+  try {
+    await auth.deleteUser(uid);
   } catch (err) {
     if ((err as { code?: string }).code !== 'auth/user-not-found') throw new HttpsError('internal', 'Auth delete failed.');
   }

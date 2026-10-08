@@ -19,6 +19,9 @@ class NameChip {
 
   final double left;
   final HudText _text;
+
+  /// The name shown (tests).
+  String get name => _text.text;
   static final Paint _white = Paint();
 
   Rect get rect => Rect.fromLTWH(

@@ -56,11 +56,14 @@ class GameStorage {
   static const String _lastPortalRideKey = 'lastPortalRide';
   static const String _unclaimedLevelRewardKey = 'unclaimedLevelReward';
   static const String _levelRewardPayoutKey = 'levelRewardPayout';
+  static const String _puzzlePayoutKey = 'puzzlePayout';
   static const String _metElementsKey = 'metElements';
   static const String _versusNicknameKey = 'versusNickname';
   static const String _uploadQueueKey = 'uploadQueue';
   static const String _uploadsTodayKey = 'uploadsToday';
   static const String _uploadsDayKey = 'uploadsDay';
+  static const String _uploadsSentKey = 'uploadsSent';
+  static const String _uploadsSentDayKey = 'uploadsSentDay';
   static const String _notifOrderKey = 'notifOrder';
   static const String _notifPositionKey = 'notifPosition';
   static const String _notifLastSentKey = 'notifLastSent';
@@ -174,6 +177,13 @@ class GameStorage {
   /// paid exactly once. 0 = no credit in flight.
   int levelRewardPayout = 0;
 
+  /// §3.16 (call, S6-62) The wallet balance a completed picture's bonus is
+  /// to reach: written with the mask reset + round advance and before the
+  /// credit, cleared right after the credit lands, so a kill in between is
+  /// paid at the next start exactly once (`PuzzleFeature.settlePayout`).
+  /// 0 = no puzzle credit in flight.
+  int puzzlePayout = 0;
+
   /// §3.0.8 Element storage ids the player has met (spawned on screen).
   Set<String> metElements = {};
 
@@ -188,6 +198,14 @@ class GameStorage {
 
   /// §3.13 'YYYY-MM-DD' of [uploadsToday]; '' = never.
   String uploadsDay = '';
+
+  /// §3.13 (S6-60) Non-best runs *written* on [uploadsSentDay] (UTC): the
+  /// server accepts 3 a day by the day it processes them, so a backlog is
+  /// paced by the upload day, not the play day.
+  int uploadsSent = 0;
+
+  /// §3.13 (S6-60) 'YYYY-MM-DD' (UTC) of [uploadsSent]; '' = never.
+  String uploadsSentDay = '';
 
   /// §3.34 Shuffled reminder message order (empty until the first schedule).
   List<int> notifOrder = [];
@@ -290,11 +308,14 @@ class GameStorage {
     lastPortalRide = prefs.getString(_lastPortalRideKey);
     unclaimedLevelReward = prefs.getInt(_unclaimedLevelRewardKey) ?? 0;
     levelRewardPayout = prefs.getInt(_levelRewardPayoutKey) ?? 0;
+    puzzlePayout = prefs.getInt(_puzzlePayoutKey) ?? 0;
     metElements = (prefs.getStringList(_metElementsKey) ?? const []).toSet();
     versusNickname = prefs.getString(_versusNicknameKey);
     uploadQueue = List.of(prefs.getStringList(_uploadQueueKey) ?? const []);
     uploadsToday = prefs.getInt(_uploadsTodayKey) ?? 0;
     uploadsDay = prefs.getString(_uploadsDayKey) ?? '';
+    uploadsSent = prefs.getInt(_uploadsSentKey) ?? 0;
+    uploadsSentDay = prefs.getString(_uploadsSentDayKey) ?? '';
     notifOrder = (prefs.getStringList(_notifOrderKey) ?? const [])
         .map(int.tryParse)
         .whereType<int>()
@@ -347,6 +368,32 @@ class GameStorage {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_puzzlePiecesKey, 0);
     await prefs.setInt(_puzzleRoundKey, puzzleRound);
+  }
+
+  /// §3.16 (call, S6-62) 4/4 as one recoverable step: the payout record
+  /// ([puzzlePayout], the balance the bonus is to reach) and the mask
+  /// reset + round advance. Every cache field is set before the first
+  /// await and the platform writes go out record first, so the coin write
+  /// that follows (`Wallet.add`) is always issued after the record.
+  Future<void> beginPuzzleCompletion({required int payout}) async {
+    puzzlePayout = payout;
+    puzzlePieces = 0;
+    puzzleRound++;
+    final round = puzzleRound;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    final record = prefs.setInt(_puzzlePayoutKey, payout);
+    final mask = prefs.setInt(_puzzlePiecesKey, 0);
+    final next = prefs.setInt(_puzzleRoundKey, round);
+    await record;
+    await mask;
+    await next;
+  }
+
+  /// §3.16 (call, S6-62) Settles a puzzle payout: clears the record.
+  Future<void> endPuzzlePayout() async {
+    puzzlePayout = 0;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(_puzzlePayoutKey, 0);
   }
 
   Future<void> saveLastPortalRide(String value) async {
@@ -402,6 +449,15 @@ class GameStorage {
     await prefs.setInt(_uploadsTodayKey, count);
   }
 
+  /// §3.13 (S6-60) the upload-day counter of written non-best runs.
+  Future<void> saveUploadsSent(String day, int count) async {
+    uploadsSentDay = day;
+    uploadsSent = count;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_uploadsSentDayKey, day);
+    await prefs.setInt(_uploadsSentKey, count);
+  }
+
   Future<void> saveNotifOrder(List<int> value) async {
     notifOrder = List.of(value);
     final prefs = await SharedPreferences.getInstance();
@@ -445,6 +501,7 @@ class GameStorage {
     await prefs.remove(_versusNicknameKey);
     await saveUploadQueue(const []);
     await saveUploadsToday('', 0);
+    await saveUploadsSent('', 0);
   }
   // endregion WP-4c
 

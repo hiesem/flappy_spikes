@@ -64,11 +64,20 @@ void main() {
       final (k711, o711) = BonusRules.layoutFor(711);
       expect(k711, 1);
       expect(o711, Offset.zero);
+      expect(BonusRules.bandShiftFor(711), 0);
       final (k568, o568) = BonusRules.layoutFor(568);
-      expect(k568, closeTo(480 / 623, 1e-9));
-      // NO THANKS (y 641) stays above the bottom strip (568 − 44).
-      expect(o568.dy + 651 * k568, lessThan(568 - 44));
+      // S6-63: the column above the bottom band scales into what the
+      // unscaled, bottom-anchored band leaves (568 − 159 − 44 of 552 − 44).
+      expect(k568, closeTo(365 / 508, 1e-9));
+      final band = BonusRules.bandShiftFor(568);
+      // NO THANKS (y 641, unscaled band) stays above the bottom strip.
+      expect(651 + band, lessThan(568 - 44));
       expect(o568.dy + 52 * k568, greaterThan(44));
+      // The scaled column meets the band without overlapping it.
+      expect(
+        o568.dy + BonusConfig.bandTop * k568,
+        closeTo(BonusConfig.bandTop + band, 1e-9),
+      );
       expect(BonusRules.tileRect(0), const Rect.fromLTWH(22, 230, 88, 88));
       expect(BonusRules.tileRect(8), const Rect.fromLTWH(210, 418, 88, 88));
       expect(BonusRules.rowSlot(2), const Offset(208, 588));

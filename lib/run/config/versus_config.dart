@@ -49,6 +49,13 @@ abstract final class VersusConfig {
   /// this (the session's candidates ran out / offline).
   static const Duration poolRetry = Duration(seconds: 60);
 
+  /// §3.13 offline rules (S6-66) A failed start-up auth is retried in the
+  /// background with doubling waits from [authRetryBase] up to
+  /// [authRetryMax] (also at once on app resume, Home prefetch, a run
+  /// submit and before every flush).
+  static const Duration authRetryBase = Duration(seconds: 5);
+  static const Duration authRetryMax = Duration(minutes: 2);
+
   /// §3.13 Firebase project and Functions region (ARCH §6.3).
   static const String functionsRegion = 'europe-west1';
 

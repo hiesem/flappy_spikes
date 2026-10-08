@@ -15,6 +15,8 @@ import 'services/game_services.dart';
 import 'services/e2e.dart';
 import 'services/monetization.dart';
 import 'services/reminders.dart';
+import 'run/config/versus_config.dart';
+import 'services/avatars.dart';
 import 'services/versus_service.dart';
 
 /// Key on the [RepaintBoundary] wrapping the game, used to capture a
@@ -61,7 +63,11 @@ Future<void> main() async {
   // It reads the game's storage lazily (the game is built right below).
   late final FlappySpikesGame game;
   final VersusService versus = _isAndroid
-      ? FirebaseVersusService(storageOf: () => game.storage)
+      ? FirebaseVersusService(
+          storageOf: () => game.storage,
+          // S6-66: a failed start-up auth retries in the background.
+          retryBase: VersusConfig.authRetryBase,
+        )
       : NoopVersusService();
   // endregion WP-5b
 
@@ -70,6 +76,8 @@ Future<void> main() async {
     services: services,
     monetization: monetization,
     versus: versus,
+    // S6-64: Play Games avatars over https on the products only.
+    avatarSource: _isMobile && !kE2E ? HttpAvatarSource() : null,
   );
   game.onShareScore = _shareScore;
   game.onInvite = _invite;

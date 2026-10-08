@@ -4,6 +4,7 @@ import 'package:flame/components.dart';
 
 import '../config/hud_config.dart';
 import '../config/versus_config.dart';
+import '../../services/avatars.dart';
 import 'name_chip.dart';
 import 'run_hud.dart';
 
@@ -24,7 +25,8 @@ class VersusBar extends PositionComponent {
 
   final RunHud hud;
 
-  late final NameChip you = NameChip('You', HudConfig.youLeft);
+  /// §5.7 / §3.13 (S6-65) the own name: Play Games name or nickname.
+  late final NameChip you = NameChip(hud.game.myVersusName, HudConfig.youLeft);
   late final NameChip them = NameChip(
     hud.run.setup.opponent?.name ?? '',
     HudConfig.themLeft,
@@ -79,7 +81,7 @@ class VersusBar extends PositionComponent {
     _box(canvas, youBox, HudConfig.youBox, a);
     final youAv = Rect.fromLTWH(HudConfig.youLeft, top, h, h);
     _box(canvas, youAv, HudConfig.youAvatar, a);
-    _avatar(canvas, youAv, HudConfig.soft, a);
+    _avatar(canvas, youAv, HudConfig.soft, a, g.myAvatarKey);
     _score(
       canvas,
       '$myScore',
@@ -98,7 +100,7 @@ class VersusBar extends PositionComponent {
       Color.lerp(const Color(0xFF000000), fg, HudConfig.themAvatarMix)!,
       ta,
     );
-    _avatar(canvas, themAv, bg, ta);
+    _avatar(canvas, themAv, bg, ta, hud.run.setup.opponent?.avatarUrl ?? '');
     _score(
       canvas,
       '$theirScore',
@@ -128,9 +130,15 @@ class VersusBar extends PositionComponent {
     canvas.drawRect(r, _p);
   }
 
-  /// The mock's person glyph (head r 4.5 at (12, 8), shoulders from y 22)
-  /// at 25 pt in [r].
-  void _avatar(Canvas canvas, Rect r, Color c, double a) {
+  /// The avatar image ([image], an `AvatarImages` key, S6-64) filling
+  /// [r]; while it is missing, the mock's person glyph (head r 4.5 at
+  /// (12, 8), shoulders from y 22) at 25 pt in [r].
+  void _avatar(Canvas canvas, Rect r, Color c, double a, String image) {
+    final picture = hud.game.avatars.lookup(image);
+    if (picture != null) {
+      AvatarImages.paint(canvas, picture, r, opacity: a);
+      return;
+    }
     final k = 25 / 24;
     final o = r.center - Offset(12 * k, 12 * k);
     _p.color = c.withValues(alpha: c.a * a);

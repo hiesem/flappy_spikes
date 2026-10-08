@@ -29,7 +29,7 @@ import '../run_feature.dart';
 ///   back and up from the bird with a warm halo, drawn behind the bird (the
 ///   gold bird, tier look and trail stay). Visual only — no speed, score,
 ///   coin or hitbox change. It keeps burning through rides.
-/// - **Goes out** on a graze, a save (extra life / shield) or a death:
+/// - **Goes out** on a graze (at the rim contact, S6-40), a save (extra life / shield) or a death:
 ///   smoke puffs, the sizzle (not on a death: the game-over sound plays),
 ///   `fever_fire_out` {streak, hoops_burned, cause}.
 ///
@@ -51,6 +51,7 @@ class FeverFeature extends RunFeature {
     c.events
       ..on<HoopSpawned>(_onSpawned)
       ..on<HoopPassed>(_onPassed)
+      ..on<RimTouched>(_onRim)
       ..on<MistakeSaved>(_onSaved)
       ..on<RunDied>(_onDied)
       ..on<FeverIgnite>(_onIgnite);
@@ -87,6 +88,14 @@ class FeverFeature extends RunFeature {
     } else {
       _out('graze');
     }
+  }
+
+  /// §3.19 a graze puts the fire out at the rim contact itself, not when
+  /// the pass resolves (S6-40). Ride rings never graze the fire (rides keep
+  /// it burning).
+  void _onRim(RimTouched e) {
+    if (_c?.s.ride != null) return;
+    _out('graze');
   }
 
   void _onSaved(MistakeSaved e) => _out(e.by);
@@ -158,6 +167,7 @@ class FeverFeature extends RunFeature {
       c.events
         ..off<HoopSpawned>(_onSpawned)
         ..off<HoopPassed>(_onPassed)
+        ..off<RimTouched>(_onRim)
         ..off<MistakeSaved>(_onSaved)
         ..off<RunDied>(_onDied)
         ..off<FeverIgnite>(_onIgnite);

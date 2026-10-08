@@ -145,10 +145,133 @@ class Autopilot {
       return bird.y > targetY() + margin && vy > risingVy;
     }
     // endregion WP-3e
+    // S6-44 a closed switch first: plan the touch with the real bird
+    // radius (Mini Bird's 0.52 hitbox leaves the bang-bang hover too little
+    // reach).
+    final toSwitch = _switchFlap(vy);
+    if (toSwitch != null) return toSwitch;
     final planned = _plannedFlap(vy);
     if (planned != null) return planned;
     return bird.y > targetY() + margin && vy > risingVy;
   }
+
+  // region S6-44 — the switch approach (PRD-2 §3.20, §3.31)
+  /// Margin (pt) kept inside the switch's catch reach (18 + bird r).
+  static const double switchSafety = 3;
+
+  _SwitchPlan? _switchPlan;
+  Vector2? _switchFor;
+
+  /// The planned decision toward the next hoop's closed switch, or null
+  /// when there is none ahead (or no controller reaches it: the hover rule
+  /// takes over). Rolls `BirdMotion` + gravity / flap forward for the same
+  /// controller family as the ring planner (hover at the switch + an offset,
+  /// then from τ s before it glide or flap once) and keeps the cheapest one
+  /// whose path passes within the catch reach of the switch.
+  bool? _switchFlap(double vy) {
+    final h = run.spawner.nextHoopAhead();
+    final pos = run.birdTrackPosition();
+    if (h == null || pos == null) return _dropSwitchPlan();
+    final s = run.state;
+    final target = h.kind.autopilotTarget(h, s, pos.y).preTarget;
+    if (target == null) return _dropSwitchPlan();
+    final r = RunConfig.birdRadius * s.birdScale;
+    final reach = PickupRadii.switchPickup + r - switchSafety;
+    if (target.x < pos.x - reach) return _dropSwitchPlan();
+    final start = _SimState(
+      x: pos.x,
+      y: pos.y,
+      vy: vy,
+      forward: s.forwardSpeed,
+      clock: s.runClock,
+      invulnerable: s.invulnerable,
+    );
+    if (_switchFor == null || _switchFor!.distanceTo(target) > .5) {
+      _switchFor = target.clone();
+      _switchPlan = null;
+    }
+    final plan = _switchPlan;
+    if (plan != null && ++plan.sinceCheck >= recheckEvery) {
+      plan.sinceCheck = 0;
+      if (_switchRollout(target, start, plan.controller.copy(), r, reach) ==
+          null) {
+        _switchPlan = null;
+      }
+    }
+    _switchPlan ??= _switchSearch(target, start, r, reach);
+    final p = _switchPlan;
+    if (p == null) return null;
+    return p.controller.decideAt(start, target, this);
+  }
+
+  bool? _dropSwitchPlan() {
+    _switchPlan = null;
+    _switchFor = null;
+    return null;
+  }
+
+  _SwitchPlan? _switchSearch(
+    Vector2 target,
+    _SimState start,
+    double r,
+    double reach,
+  ) {
+    _SwitchPlan? best;
+    for (final o in aimOffsets) {
+      if (o.abs() >= reach) continue;
+      for (final tau in finalWindows) {
+        for (final once in tau == 0 ? const [false] : const [false, true]) {
+          final c = _Controller(offset: o, window: tau, flapOnce: once);
+          final cost = _switchRollout(target, start, c.copy(), r, reach);
+          if (cost == null) continue;
+          if (best == null || cost < best.cost) best = _SwitchPlan(c, cost);
+        }
+      }
+      if (best != null && best.cost < 1) break;
+    }
+    return best;
+  }
+
+  /// The cost of [c] reaching the switch at [target] (closest approach,
+  /// offset, room to the walls), or null when it misses / hits the spikes.
+  double? _switchRollout(
+    Vector2 target,
+    _SimState s0,
+    _Controller c,
+    double r,
+    double reach,
+  ) {
+    final s = s0.copy();
+    final top = run.walls.top, floor = run.walls.floor;
+    var closest = double.infinity;
+    var t = 0.0;
+    while (t < horizon) {
+      if (c.decideAt(s, target, this)) s.vy = -Config.flapVelocity;
+      s.clock += simDt;
+      s.forward = BirdMotion.recover(
+        s.forward,
+        BirdMotion.cruise(s.clock),
+        simDt,
+      );
+      s.x += s.forward * simDt;
+      s.vy = math.min(Config.maxFallSpeed, s.vy + Config.gravity * simDt);
+      s.y += s.vy * simDt;
+      t += simDt;
+      if (s.y - r <= top || s.y + r >= floor) return null;
+      final dx = s.x - target.x, dy = s.y - target.y;
+      closest = math.min(closest, math.sqrt(dx * dx + dy * dy));
+      if (closest <= reach) {
+        final room = math.min(s.y - r - top, floor - s.y - r);
+        return closest * .2 +
+            c.offset.abs() * .3 +
+            c.window * 2 +
+            (room < 40 ? (40 - room) * 2 : 0);
+      }
+      if (s.x > target.x + reach) return null;
+    }
+    return null;
+  }
+  // endregion S6-44
 
   // region WP-3e — collectables (PRD-2 §3.26–§3.29)
   /// The y of the nearest uncollected collectable ahead of the bird that is
@@ -506,6 +629,27 @@ class _Controller {
     final ty = a._ringYAt(h, ringOff, s.clock + lead) + offset;
     return s.y > ty + a.margin && s.vy > Autopilot.risingVy;
   }
+
+  /// The same rule toward a fixed point (the switch, S6-44).
+  bool decideAt(_SimState s, Vector2 target, Autopilot a) {
+    final v = s.forward <= 1 ? 1.0 : s.forward;
+    final toPoint = (target.x - s.x) / v;
+    if (window > 0 && toPoint <= window) {
+      if (flapOnce && !_flapped) {
+        _flapped = true;
+        return true;
+      }
+      return false;
+    }
+    return s.y > target.y + offset + a.margin && s.vy > Autopilot.risingVy;
+  }
+}
+
+class _SwitchPlan {
+  _SwitchPlan(this.controller, this.cost);
+  final _Controller controller;
+  final double cost;
+  int sinceCheck = 0;
 }
 
 class _Plan {

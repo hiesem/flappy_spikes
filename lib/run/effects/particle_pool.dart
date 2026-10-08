@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 
 import '../config/parts_config.dart';
+import 'coin_icon.dart';
 import 'life_icons.dart';
 import 'twinkle.dart';
 
@@ -33,6 +34,11 @@ enum ParticleShape {
   /// colour runs through the ramp (white → yellow → orange → red).
   flame,
   // endregion WP-3c
+
+  /// Master #14 the coin sprite (`menu/coin.png`, [ParticlePool.coinImage])
+  /// [Particle.w] wide (§3.0.9 #14; the pair's +10 COINS spray, S6-43).
+  /// Not drawn while the pool has no coin image.
+  coin,
 }
 
 /// One pooled particle. Plain mutable data, recycled in place.
@@ -90,6 +96,9 @@ class ParticlePool extends Component {
 
   /// Freezes the pool (debug freeze, pause screens).
   bool frozen = false;
+
+  /// The loaded `menu/coin.png` for [ParticleShape.coin] particles.
+  Image? coinImage;
 
   int get alive => _alive;
 
@@ -229,6 +238,19 @@ class ParticlePool extends Component {
       final s = p.scale0 + (p.scale1 - p.scale0) * k;
       final w = p.w * s, h = p.h * s;
       final base = p.ramp == null ? p.color : rampColor(p.ramp!, k);
+      if (p.shape == ParticleShape.coin) {
+        final image = coinImage;
+        if (image != null) {
+          CoinIcon.paint(
+            canvas,
+            image,
+            Offset(p.x, p.y),
+            w,
+            opacity: alpha.toDouble(),
+          );
+        }
+        continue;
+      }
       _paint.color = base.withValues(alpha: base.a * alpha.clamp(0, 1));
       switch (p.shape) {
         case ParticleShape.rect:
@@ -264,6 +286,7 @@ class ParticlePool extends Component {
             ..drawPath(_tri, _paint)
             ..restore();
         case ParticleShape.twinkle:
+        case ParticleShape.coin:
           break;
         case ParticleShape.flame:
           paintFlame(canvas, _tri, Offset(p.x, p.y), w / 2 * (1 - k * .65), _paint);

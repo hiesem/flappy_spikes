@@ -4,6 +4,7 @@ import 'package:flame/components.dart';
 
 import 'config/run_config.dart';
 import 'director/run_director.dart';
+import 'effects/clear_fade.dart';
 import 'elements.dart';
 import 'hoops/hoop.dart';
 import 'hoops/kinds/registry.dart';
@@ -24,7 +25,8 @@ class RunSpawner {
   final RunController run;
   final List<Hoop> _hoops = [];
   final List<Pickup> _pickups = [];
-  final List<(Component, double)> _fading = [];
+  /// Parts a ride cleared, fading out: (part, seconds left, fade length).
+  final List<(Component, double, double)> _fading = [];
   final List<(GapItemPlan, SlotPlan)> _pending = [];
 
   /// Every plan, in order (tests, debug overlay).
@@ -201,12 +203,14 @@ class RunSpawner {
       return gone;
     });
     for (var i = _fading.length - 1; i >= 0; i--) {
-      final (c, t) = _fading[i];
+      final (c, t, len) = _fading[i];
       if (t - dt <= 0) {
         c.removeFromParent();
         _fading.removeAt(i);
       } else {
-        _fading[i] = (c, t - dt);
+        _fading[i] = (c, t - dt, len);
+        // §3.12 the opacity follows the fade (S6-47).
+        if (c is ClearFade) c.clearAlpha = (t - dt) / len;
       }
     }
   }
@@ -219,8 +223,8 @@ class RunSpawner {
     _hoops.removeWhere((h) {
       if (h.planeX <= birdX) return false;
       _fading
-        ..add((h, fade))
-        ..add((h.front, fade));
+        ..add((h, fade, fade))
+        ..add((h.front, fade, fade));
       return true;
     });
     _pickups.removeWhere((p) {
@@ -231,9 +235,16 @@ class RunSpawner {
       run.events.emit(PickupCleared(p.id, p));
       // endregion WP-3e
       p.escaped = true; // never judged
-      _fading.add((p, fade));
+      _fading.add((p, fade, fade));
       return true;
     });
+    // S6-41 planned-but-unplaced bank fields are cleared too: the bank
+    // places those coins again after the landing.
+    for (final (item, _) in _pending) {
+      if (item.kind == ElementId.piggyCoins && run.state.piggy != null) {
+        run.director.refundPiggyCoins(item.extra as int? ?? 0);
+      }
+    }
     _pending.clear();
   }
 
@@ -286,7 +297,7 @@ class RunSpawner {
     for (final p in _pickups) {
       p.removeFromParent();
     }
-    for (final (c, _) in _fading) {
+    for (final (c, _, _) in _fading) {
       c.removeFromParent();
     }
     _hoops.clear();

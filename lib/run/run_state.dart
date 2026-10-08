@@ -209,13 +209,6 @@ class PiggyState {
   int placed = 0;
   int caught = 0;
   int missed = 0;
-
-  // region WP-3e — PRD-2 §3.28: coins a portal ride cleared unjudged
-  /// Coins that a portal ride removed before they could be caught or
-  /// missed (§3.0.3): they are gone without counting as missed, so the
-  /// bank resolves at `caught + missed + voided == 20`.
-  int voided = 0;
-  // endregion WP-3e
 }
 
 class JarState {

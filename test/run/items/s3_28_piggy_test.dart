@@ -321,7 +321,8 @@ void main() {
 
   tester().testGameWidget(
     '§3.0.3 a portal ride clears the on-screen coins without counting them '
-    'missed; the bank still resolves once the rest are caught',
+    'missed; the director places them again and the bank resolves at 20 '
+    'caught or missed (S6-41)',
     setUp: (g, _) => boot(g),
     verify: (game, _) async {
       final run = await startRun(game);
@@ -342,14 +343,25 @@ void main() {
       await flushAndMount(game);
       run.spawner.clearAhead();
       expect(run.state.piggy!.missed, 0);
-      expect(run.state.piggy!.voided, 4);
-      // The remaining 8 coins resolve the bank and it pays what was caught.
+      // The 4 cleared coins are owed again (placed after the landing): no
+      // follow gap was planned yet, so 4 × 4 follow coins + the 4 cleared.
+      expect(
+        run.director.piggyCoinsOwed,
+        RunConfig.piggyFollowGaps * RunConfig.piggyCoinsPerGap + 4,
+      );
+      // 8 more caught = 16: not 20 resolved yet, so no early pay-out.
       final coins0 = run.state.coinsThisRun;
       for (var i = 0; i < 8; i++) {
         run.events.emit(PickupCollected(ElementId.piggyCoins, null));
       }
+      expect(run.state.piggy, isNotNull);
+      expect(featureOf(run).paid, 0);
+      // The re-placed 4 are caught: the bank pays 20 caught × 2.
+      for (var i = 0; i < 4; i++) {
+        run.events.emit(PickupCollected(ElementId.piggyCoins, null));
+      }
       expect(run.state.piggy, isNull);
-      expect(run.state.coinsThisRun - coins0, 32); // 16 caught × 2
+      expect(run.state.coinsThisRun - coins0, 40);
       expect(featureOf(run).paid, 1);
     },
   );

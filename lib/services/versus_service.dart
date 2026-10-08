@@ -43,8 +43,10 @@ abstract class VersusService {
   /// Queue + rules (best always, ≤ 3 a day, score ≥ 3), retried online.
   Future<void> submitRun(RunSummary s, Look look);
 
-  /// Callable + local reset + analytics reset.
-  Future<void> deleteMyData();
+  /// Callable + local reset + analytics reset (WP-4c: `false` when the
+  /// server could not be reached, so Settings can say so and keep the local
+  /// state for a retry).
+  Future<bool> deleteMyData();
 
   VersusProfile get me;
 
@@ -70,7 +72,7 @@ class NoopVersusService implements VersusService {
   Future<void> submitRun(RunSummary s, Look look) async {}
 
   @override
-  Future<void> deleteMyData() async {}
+  Future<bool> deleteMyData() async => true;
 
   @override
   VersusProfile get me => const VersusProfile();
@@ -90,6 +92,9 @@ class FakeVersusService implements VersusService {
 
   final List<RunSummary> submitted = [];
   int deleteCalls = 0;
+
+  /// What [deleteMyData] reports (tests script the failure path).
+  bool deleteSucceeds = true;
   int prefetchCalls = 0;
   int signInCalls = 0;
   bool _ready = false;
@@ -110,7 +115,10 @@ class FakeVersusService implements VersusService {
   Future<void> submitRun(RunSummary s, Look look) async => submitted.add(s);
 
   @override
-  Future<void> deleteMyData() async => deleteCalls++;
+  Future<bool> deleteMyData() async {
+    deleteCalls++;
+    return deleteSucceeds;
+  }
 
   @override
   VersusProfile get me => profile;
@@ -424,22 +432,29 @@ class FirebaseVersusService implements VersusService {
   }
 
   @override
-  Future<void> deleteMyData() async {
+  Future<bool> deleteMyData() async {
+    var ok = false;
     try {
-      await _call(backend.deleteMyData());
+      ok = await _call(backend.deleteMyData());
     } catch (e) {
       _log('deleteMyData', e);
+    }
+    if (!ok) {
+      // Offline / refused: nothing online was deleted, so keep the local
+      // state (nickname, queue) and the account — the same account is
+      // needed for a retry, and a retry must not orphan the online data.
+      return false;
     }
     try {
       await _call(backend.resetAnalytics());
     } catch (e) {
       _log('resetAnalytics', e);
     }
-    // Local reset (ARCH §5): new nickname, empty queue and counter; the
-    // session's pool and held opponent go too. Coins, skins and levels stay.
+    // Local reset (WP-4c storage helper, ARCH §5): the nickname is created
+    // again, the queue and the counter are emptied; the session's pool and
+    // held opponent go too. Coins, skins and levels stay.
     try {
-      await queue.clear();
-      await storage.saveVersusNickname(generateNickname(_random));
+      await storage.resetVersusData();
     } catch (e) {
       _log('local reset', e);
     }
@@ -450,6 +465,7 @@ class FirebaseVersusService implements VersusService {
     _ready = false;
     // A fresh anonymous account so versus keeps working.
     await initialize();
+    return true;
   }
 
   @override

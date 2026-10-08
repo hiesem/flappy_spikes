@@ -874,3 +874,22 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   so YOUR REWARD includes them. Runs (score ≥ 3; a new best always, others
   ≤ 3 per UTC day) are uploaded through a persisted queue, one run per
   write, retried when online. Every Firebase failure means a solo run.
+
+### WP-4c — "Delete my data" and the persistence audit (PRD-2 §3.13 Q22)
+
+- DEVIATION (PRD-2 §3.13, new action; 1.0 had no online data): Settings gains a
+  **DELETE MY DATA** row (between the credit and Privacy Policy, 565 pt at 711 /
+  425 pt at 568 — clear of the 44 pt bottom spike strip) that opens a confirm
+  card in the P1 popup style (trash glyph, CANCEL / DELETE) and, on DELETE,
+  calls `VersusService.deleteMyData()`. The callable deletes the player doc,
+  the pool entries and the Firebase account; the client then resets the
+  Analytics ID and the local versus state (nickname regenerated, upload queue
+  and daily counter cleared). **Coins, skins, levels, feathers, puzzle pieces
+  and met elements are kept** (Q22) — nothing else on the phone is touched.
+  Offline or a refused call deletes nothing, keeps the account and local state
+  for a retry, and the card says so ("COULDN'T DELETE"); success shows
+  "DATA DELETED". CANCEL, ✕, Esc and the dim dismiss without a call.
+  `deleteMyData()` therefore returns `Future<bool>` (`true` = deleted).
+- The local reset is `GameStorage.resetVersusData()` (region WP-4c); the versus
+  keys and their defaults are unchanged (PRD §7 table) and the audit test
+  checks every §7 key plus `levelRewardPayout` (the P2-fix recovery record).

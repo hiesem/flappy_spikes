@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../components/bird.dart';
 import '../components/debug_panel.dart';
+import '../components/delete_data_popup.dart';
 import '../components/fake_ad_overlay.dart';
 import '../components/home/home_screen.dart';
 import '../components/home/menu_primitives.dart' show MenuButton;
@@ -278,6 +279,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   bool _itemPurchaseRunning = false;
   NoAdsPopup? _noAdsPopup;
   PurchaseResultPopup? _purchasePopup;
+  // region WP-4c — Delete my data (PRD-2 §3.13 / Q22)
+  DeleteDataPopup? _deleteDataPopup;
+  // endregion WP-4c
   NoAdsCelebration? _noAdsCelebration;
 
   /// Modal popups waiting for the one on screen to close (or for the
@@ -362,6 +366,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// The purchase cancelled / failed popup while it is up (PRD-home-v3 §6).
   PurchaseResultPopup? get purchaseResultPopup => _purchasePopup;
 
+  // region WP-4c — Delete my data (PRD-2 §3.13 / Q22)
+  /// The "Delete my data" dialog while it is up (null otherwise).
+  DeleteDataPopup? get deleteDataPopup => _deleteDataPopup;
+  // endregion WP-4c
+
   /// The No-ads celebration while it is up (PRD-home-v3 §7).
   NoAdsCelebration? get noAdsCelebration => _noAdsCelebration;
 
@@ -371,6 +380,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       _noAdsPopup != null ||
       _levelUpPopup != null ||
       _purchasePopup != null ||
+      // region WP-4c — Delete my data (PRD-2 §3.13 / Q22)
+      _deleteDataPopup != null ||
+      // endregion WP-4c
       _noAdsCelebration != null;
 
   /// How many modal popups wait for their turn (tests).
@@ -416,6 +428,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       _noAdsPopup != null ||
       _levelUpPopup != null ||
       _purchasePopup != null ||
+      // region WP-4c — Delete my data (PRD-2 §3.13 / Q22)
+      _deleteDataPopup != null ||
+      // endregion WP-4c
       _noAdsCelebration != null ||
       _debugPanel != null ||
       _fakeAd != null ||
@@ -1120,6 +1135,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onRestorePurchases: restorePurchases,
       rumble: rumble.on,
       onToggleRumble: () => setRumble(!rumble.on),
+      onDeleteMyData: openDeleteDataConfirm,
     );
     _settingsPanel = settings;
     _runSettingsOpen = true;
@@ -2651,6 +2667,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onRestorePurchases: restorePurchases,
       rumble: rumble.on,
       onToggleRumble: () => setRumble(!rumble.on),
+      onDeleteMyData: openDeleteDataConfirm,
     );
     _settingsPanel = settings;
     // PRD-home-v3 §8: the settings back button is the shared corner box
@@ -2684,6 +2701,93 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _addHome();
     fadeOpacity(_home, from: 0, to: 1);
   }
+
+  // region WP-4c — Delete my data (PRD-2 §3.13 / Q22)
+
+  /// §3.13 Settings row: the confirm dialog (never two popups at once).
+  void openDeleteDataConfirm() {
+    if (_deleteDataPopup != null ||
+        modalPopupOpen ||
+        _debugPanel != null ||
+        _fakeAd != null ||
+        (state != GameState.start && state != GameState.paused)) {
+      return;
+    }
+    sound.play(Sfx.skDialog);
+    final popup = DeleteDataPopup(
+      step: DeleteDataStep.confirm,
+      onConfirm: confirmDeleteMyData,
+      onDismiss: closeDeleteDataPopup,
+    );
+    _deleteDataPopup = popup;
+    world.add(popup);
+    fadeOpacity(popup, from: 0, to: 1, duration: Config.popupFadeDuration);
+    pushBack(_deleteDataBack);
+  }
+
+  /// The confirm face's DELETE: runs [VersusService.deleteMyData] (which
+  /// deletes the online data and does the local reset; never throws) and
+  /// swaps to the PRD's result text — done, or the offline / failure text
+  /// with nothing touched.
+  Future<void> confirmDeleteMyData() async {
+    final popup = _deleteDataPopup;
+    if (popup == null || popup.step != DeleteDataStep.confirm || popup.busy) {
+      return;
+    }
+    popup.setBusy(true);
+    var ok = false;
+    try {
+      ok = await versus.deleteMyData();
+    } catch (_) {
+      ok = false;
+    }
+    if (_deleteDataPopup != popup) return;
+    _deleteDataPopup = null;
+    popBack(_deleteDataBack);
+    popup.active = false;
+    fadeOpacity(
+      popup,
+      from: popup.opacity,
+      to: 0,
+      duration: Config.popupFadeDuration,
+      removeOnDone: true,
+    );
+    sound.play(ok ? Sfx.skProgress : Sfx.skNoCoins);
+    // The result face, over the same screen (settings stays up).
+    final result = DeleteDataPopup(
+      step: ok ? DeleteDataStep.done : DeleteDataStep.failed,
+      onConfirm: () {},
+      onDismiss: closeDeleteDataPopup,
+    );
+    _deleteDataPopup = result;
+    world.add(result);
+    fadeOpacity(result, from: 0, to: 1, duration: Config.popupFadeDuration);
+    pushBack(_deleteDataBack);
+  }
+
+  /// OK / ✕ / dim / Esc: `sk_close` and a short fade.
+  void closeDeleteDataPopup() {
+    final popup = _deleteDataPopup;
+    if (popup == null) return;
+    _deleteDataPopup = null;
+    popBack(_deleteDataBack);
+    popup.active = false;
+    sound.play(Sfx.skClose);
+    fadeOpacity(
+      popup,
+      from: popup.opacity,
+      to: 0,
+      duration: Config.popupFadeDuration,
+      removeOnDone: true,
+    );
+    _drainPopups();
+  }
+
+  bool _deleteDataBack() {
+    closeDeleteDataPopup();
+    return true;
+  }
+  // endregion WP-4c
 
   /// The results page's NEXT: back to the home screen as a NEW arrival —
   /// the powerup slot re-rolls (PRD-1 §3.6).

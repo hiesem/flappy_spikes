@@ -1,4 +1,5 @@
 import 'package:flappy_spikes/components/bird.dart';
+import 'package:flappy_spikes/components/delete_data_popup.dart';
 import 'package:flappy_spikes/components/fake_ad_overlay.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/components/menu_screen_chrome.dart';
@@ -30,6 +31,7 @@ final kAllImages = [
   ...kMenuChromeImages,
   ...kShopImages,
   ...kNoAdsPopupImages,
+  ...kDeleteDataPopupImages,
   ...kFakeAdOverlayImages,
   // region WP-2e — results page images
   ...kResultsImages,

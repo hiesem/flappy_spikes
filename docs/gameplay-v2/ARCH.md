@@ -753,7 +753,8 @@ abstract class VersusService {                       // lib/services/versus_serv
   OpponentRun? takeOpponent();                       // sync at START: a prefetched match or null (→ solo, no intro)
   Future<void> prefetch();                           // own level + random shard, else a random other level
   Future<void> submitRun(RunSummary s, Look look);   // queue + rules (best always, ≤ 3/day, score ≥ 3), retry online
-  Future<void> deleteMyData();                       // callable + local reset + FirebaseAnalytics.resetAnalyticsData()
+  Future<bool> deleteMyData();                       // callable + local reset + FirebaseAnalytics.resetAnalyticsData();
+                                                     // false = offline / refused, nothing deleted (WP-4c)
   VersusProfile get me;                              // name, avatarUrl, level
   Future<void> onPlatformSignIn();                   // links PlatformIdentity credential to the Firebase user
 }
@@ -861,7 +862,7 @@ fixtures shared with the Dart matcher test (`test/fixtures/versus_matching.json`
 | versus: timeline on runClock (pause, revive, phoenix, Hourglass), opponent out, WIN/LOSE/DRAW + bonus, solo start | `test/versus/s3_13_*_test.dart` | 5b (Hourglass case 3f) |
 | rumble: recorder per event, 90 ms throttle, shake never skipped | `test/run/items/s3_33_rumble_test.dart` | 2c |
 | notifications: fake clock, windows, quiet hours + TZ/DST, skip-after-play, 7 d horizon (≤ 14 slots, skipped slots are not refilled), current zone each reschedule, failed schedule consumes nothing, rotation no repeat in 10 d, fill-in + fallback | `test/services/s3_34_reminders_test.dart` | 4b |
-| persistence: every key round-trips with its default | `test/run/persistence_test.dart` | 0b (4c re-checks) |
+| persistence: every key round-trips with its default | `test/run/persistence_test.dart` | 0b; 4c audits + adds `levelRewardPayout` (recovery, not a §7 key) and the versus reset |
 
 ---
 
@@ -963,7 +964,7 @@ its regions — all append-only, nothing reordered.
 | **3h** sound pack | done: `design/menu_v2/gen_sfx15.py` outputs (88 one-shot mp3 + 4 loop wav) → `assets/audio/*`, all new `Sfx`/`SfxLoop` entries + `docs/gameplay-v2/SOUNDS.md` | sound.dart | — (done) |
 | **4a** feathers + balloon bonus + puzzle | `pickups/{feather_pickup,puzzle_piece_pickup}.dart`, `items/{feathers,puzzle}.dart`, `screens/bonus_screen.dart`, configs | registries, post_run_screens | P3 |
 | **4b** reminders | `lib/services/reminders.dart`, android res/raw + keep.xml + icon, permission prompt | main.dart, flappy_game.dart lifecycle, pubspec, manifest, gradle | 0b (independent of gameplay) |
-| **4c** persistence table + Delete my data | settings row + confirm dialog, `VersusService.deleteMyData` call site, data-safety notes in `SUBMISSION.md` | settings_panel.dart, storage.dart (reset helper) | 0b; real delete needs 5b |
+| **4c** persistence table + Delete my data | settings row + confirm dialog, `VersusService.deleteMyData` call site, data-safety notes in `SUBMISSION.md` | settings_panel.dart, `components/delete_data_popup.dart`, storage.dart (reset helper), versus_service.dart (signature) | 0b; real delete needs 5b |
 | **5a** versus backend | `functions/**`, `firestore.rules`, `firestore.indexes.json`, firebase.json keys, emulator tests | — | 0a |
 | **5b** versus client + VS intro + results versus parts | `lib/versus/{matcher,nickname,upload_queue,run_entry}.dart`, `lib/services/{versus_service (Firebase impl),identity}.dart`, `items/versus_recorder.dart`, `screens/versus_intro.dart`, versus parts of results (region in `results_screen.dart`) | main.dart, flappy_game.dart, pubspec, results_screen (region) | 5a, 2d, 2e |
 | **6** final e2e + release | `integration_test/release_e2e_test.dart`, version bump, store notes | — | all |
@@ -1284,3 +1285,17 @@ regression in `test/e2e/p2_gameplay_e2e_test.dart` (S6-20 … S6-24).
 | Live check | `tool/versus_emulator_test.sh` → `firebase emulators:exec --project demo-flappy-spikes` + `FS_EMULATOR_TESTS=1 flutter test test/versus/s3_13_emulator_test.dart`: client-built docs pass the real rules, `onPlayerRunWrite` pools them, a second player matches and replays; one run per write; a foreign token is refused; `deleteMyData` needs App Check. Skipped in the normal suite | ARCH §7.2 |
 | ProGuard | `android/app/proguard-rules.pro` region WP-5b (gRPC, protobuf-lite, Firestore / App Check / Functions / Auth, Play Games, Play Integrity); `flutter build apk --release` builds | build gate |
 | iOS setup (when reopened) | register the iOS app (`flutterfire configure` → `GoogleService-Info.plist`), enable Game Center sign-in in Firebase Auth and implement `GameCenterIdentity` (`GameCenterAuthProvider.credential()`), register App Attest in App Check, wire `FirebaseVersusService` for iOS in `main.dart` (`identity: GameCenterIdentity()`), add the App Store privacy labels (same data as the Play data-safety form). Rules, pools and functions need no change | §3.13 cross-platform |
+
+---
+
+## 27. WP-4c contract notes (as built, 2026-10-08)
+
+| Area | As built | Why |
+|---|---|---|
+| Service signature | `VersusService.deleteMyData()` is **`Future<bool>`** (was `Future<void>`): `true` = the callable confirmed and the local state was reset; `false` = offline / refused, nothing was deleted and the local state (nickname, queue, counter, account) is kept for a retry. `NoopVersusService` → `true`; `FakeVersusService` → `deleteSucceeds` (scriptable) + `deleteCalls` | the Settings row must tell "failed" from "done" (PRD-2 §3.13 offline/failure) |
+| Local reset | `GameStorage.resetVersusData()` (region WP-4c): clears `versusNickname` (removed, so it is regenerated), `uploadQueue`, `uploadsToday` / `uploadsDay`. Coins, skins, levels, feathers, puzzle, met elements and the sound / rumble settings are untouched | ARCH §5 / Q22 |
+| Firebase order | `FirebaseVersusService.deleteMyData()`: callable first (`backend.deleteMyData()`), then `resetAnalytics()`, then `resetVersusData()`, then the session's pool / held opponent / `_seen` are dropped, `_ready = false` and `initialize()` runs again (a fresh anonymous account so versus keeps working) | a false callable must not wipe local state; the same account is needed for the retry |
+| UI | `SettingsPanel.onDeleteMyData` (the home panel and `openRunSettings`); the row is `DeleteDataIcon` + "DELETE MY DATA", placed at `deleteRowPositionFor(centerY) = privacyLinkPositionFor(centerY).y − 60` (**565 @ 711, 425 @ 568**) so it never collides with the 44 pt bottom spike strip (starts at 524 @ 568) | PRD §3.13 "in Settings"; §5.1 spike strips |
+| Dialog | `DeleteDataPopup extends P1Popup` (`lib/components/delete_data_popup.dart`): confirm face = soft trash glyph + CANCEL (soft) / DELETE (pink); result faces = gold OK, "DATA DELETED" (`Sfx.skProgress`) or "COULDN'T DELETE" (`Sfx.skNoCoins`). Wording is a call (PRD Q22 fixes what it deletes, not the copy) | P1 popup style (`purchase_result_popup.dart`) |
+| Modal rules | `_deleteDataPopup` joins `modalPopupOpen` and `liveMotionPaused`; `openDeleteDataConfirm()` / `confirmDeleteMyData()` / `closeDeleteDataPopup()` / `_deleteDataBack()` in the game (region WP-4c). CANCEL, the ✕, Esc and the dim dismiss without a call | one popup queue, never two at once (§3.0.9) |
+| Tests | `test/versus/s3_13_delete_data_test.dart` (row at 568 + 711 + safe band, confirm wording, CANCEL / ✕ / Esc, DELETE → `deleteCalls` + "DATA DELETED", failure text, `resetVersusData`), the two new `persistence_test.dart` cases (§3.14 payout record, §3.13 reset) and `settingsShot` in `test/menu_screenshot_test.dart` (row + confirm / deleted / failed at 568 + 711) | PRD §7 test list, WP-4c sheet |

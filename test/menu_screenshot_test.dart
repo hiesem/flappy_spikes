@@ -3,9 +3,12 @@ import 'dart:ui' as ui;
 
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
+import 'package:flappy_spikes/components/delete_data_popup.dart';
+import 'package:flappy_spikes/components/settings_panel.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
+import 'package:flappy_spikes/services/versus_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -114,6 +117,72 @@ void main() async {
   homeShot('home_711_bighoops', height: 711, slot: Powerup.bigHoops);
   homeShot('home_711_shield', height: 711, slot: Powerup.shield);
   homeShot('home_568', height: 568, slot: Powerup.bigHoops);
+
+  /// WP-4c: the Settings panel incl. the PRD-2 §3.13 DELETE MY DATA row and
+  /// the confirm dialog (compare the panel with design/menu_v2/
+  /// settings_v3.png; the row must stay in the free band above the bottom
+  /// strip on both heights).
+  void settingsShot(String name, {required double height}) {
+    late FakeVersusService versus;
+    FlameTester<FlappySpikesGame>(
+      () {
+        versus = FakeVersusService();
+        return createRunTestGame(
+          prefs: mockPrefs,
+          worldHeight: height,
+          versus: versus,
+        );
+      },
+      gameSize: Vector2(320, height),
+    ).testGameWidget(
+      'menu screenshot: $name',
+      setUp: (game, tester) async {
+        await game.ready();
+        await preloadImages(game);
+        await flushAndMount(game);
+        game.openSettings();
+        await flushAndMount(game);
+        stepGame(game, 0.6);
+        await flushAndMount(game);
+      },
+      verify: (game, tester) async {
+        expect(game.state, GameState.start);
+        final panel = game.world.children.query<SettingsPanel>().single;
+        expect(panel.deleteIcon, isNotNull);
+        expect(panel.deleteLabel?.text, 'DELETE MY DATA');
+        await tester.runAsync(() => capture(game, 2, name));
+        game.openDeleteDataConfirm();
+        stepGame(game, 0.4);
+        await flushAndMount(game);
+        expect(game.deleteDataPopup, isNotNull);
+        await tester.runAsync(() => capture(game, 2, '${name}_confirm'));
+        // DELETE: the "DATA DELETED" face.
+        game.deleteDataPopup!.confirmButton.onPressed();
+        await flushAndMount(game);
+        expect(game.deleteDataPopup!.step, DeleteDataStep.done);
+        stepGame(game, 0.3);
+        await flushAndMount(game);
+        await tester.runAsync(() => capture(game, 2, '${name}_deleted'));
+        game.closeDeleteDataPopup();
+        stepGame(game, 0.4);
+        await flushAndMount(game);
+        // Offline: the "COULDN'T DELETE" face.
+        versus.deleteSucceeds = false;
+        game.openDeleteDataConfirm();
+        stepGame(game, 0.4);
+        await flushAndMount(game);
+        game.deleteDataPopup!.confirmButton.onPressed();
+        await flushAndMount(game);
+        expect(game.deleteDataPopup!.step, DeleteDataStep.failed);
+        stepGame(game, 0.3);
+        await flushAndMount(game);
+        await tester.runAsync(() => capture(game, 2, '${name}_failed'));
+      },
+    );
+  }
+
+  settingsShot('settings_568', height: 568);
+  settingsShot('settings_711', height: 711);
   // No-ads owner: check in the tile's icon slot, "AD-FREE" label, dimmed.
   homeShot(
     'home_711_noads_owned',

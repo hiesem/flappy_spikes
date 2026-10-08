@@ -433,6 +433,21 @@ class GameStorage {
   }
   // endregion PRD-2 keys
 
+  // region WP-4c — "Delete my data" local reset (PRD-2 §3.13 Q22, ARCH §5)
+  /// Q22: "Delete my data" resets the versus install state — the generated
+  /// nickname (cleared; a new one is made at the next use), the upload queue
+  /// and the daily upload counter. Progress kept only on the phone (coins,
+  /// skins, levels, feathers, puzzle pieces, met elements) and the sound /
+  /// rumble settings are not touched.
+  Future<void> resetVersusData() async {
+    versusNickname = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_versusNicknameKey);
+    await saveUploadQueue(const []);
+    await saveUploadsToday('', 0);
+  }
+  // endregion WP-4c
+
   /// Whether any of [ids] belongs to an already granted purchase.
   bool isPurchaseGranted(Iterable<String> ids) =>
       ids.any(grantedPurchases.contains);

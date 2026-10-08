@@ -146,3 +146,64 @@ Analytics) and Google Play Games / Game Center leaderboards (added
 2026-07-20). Still absent by design: ads — when adding AdMob later, also add
 the iOS ATT prompt, Google's UMP consent flow, and update both stores' data
 declarations.
+
+## 6. Data safety — what versus stores online (PRD-2 §3.13, WP-4c)
+
+Versus (async duels against real players' recorded runs) is the only feature that
+sends anything to a server of ours. Firebase project **`flappy-spikes-a2b55`**
+(Firestore in `eur3`, Cloud Functions in `europe-west1`). Use this list to fill in
+Play Console → **Data safety** (and, when iOS reopens, the App Privacy labels).
+
+### What is collected and stored
+
+| Firestore path | Written by | Fields | Why |
+|---|---|---|---|
+| `players/{uid}` | the player's own client (rules: same `auth.uid` only) | `name` (nickname or Play Games display name), `avatar` (URL or `''`), `platform` (`android`/`ios`, analytics only), `look` (`bird`/`gear`/`hat`/`hoop`/`trail` item ids), `best`, `level`, `bestRun`, `recent` (≤ 5 recent run entries), `uploads {day, count}`, `updatedAt`, `expireAt` | the duel: who you played and their run timeline |
+| `pools/{level}_{shard}` | the server only (Cloud Function `onPlayerRunWrite`) | run entries: `uid`, `level`, `ts`, the run's score/best, display fields (`name`, `avatar`, `look`, `platform`) and the compressed timeline | other players' clients read a pool to find an opponent |
+| `versusRate/{uid}` | the server only | `last`, upload counts | rate limit (≤ 3 non-best uploads per UTC day) |
+
+A stored run entry holds: score, best, timestamp, `name`, `avatar`, `look` (5 ids),
+the timeline (`tl`: uint16 delta stream on `runClock`) and its end, the ride/train
+flags and `platform`. No free text exists anywhere (nicknames are generated from a
+fixed 20 + 20 word list + 3 digits; the only user-supplied string is a Play Games
+display name, ≤ 32 chars).
+
+### Identity
+
+- **Anonymous Firebase Auth uid** by default — no email, no phone, no password.
+- **Optional** Play Games link: the Firebase account keeps the same uid, and
+  `name` / `avatar` become the Play Games display name / photo URL, plus the Play
+  Games player id in Firebase Auth's provider data. Sign-in is never required to play.
+- **App Check**: Play Integrity (Android) / App Attest + DeviceCheck fallback (iOS,
+  later) attest that the app is genuine. No personal data.
+- Firebase **Analytics**: an installation id and event names only (no free text);
+  see the Play data-safety answers in §2.6.
+
+### Retention
+
+- Firestore TTL policy on `players.expireAt` (client writes now + 60 d on every
+  write) deletes an inactive player's **whole document** ~24 h after it expires;
+  pool entries and `recent` runs older than **60 days** are trimmed on write and by
+  the daily `sweepPools` function. Best runs stay while the player is active.
+- Nothing else is stored: the server keeps no logs with player content, and no
+  third party receives this data.
+
+### "Delete my data" (Settings, PRD-2 §3.13 / Q22)
+
+The Settings row opens a confirm dialog; DELETE calls the `deleteMyData` Cloud
+Function (App Check enforced), which
+
+- deletes `players/{uid}` and `versusRate/{uid}`,
+- removes the caller's entries from all pool shards,
+- deletes the Firebase Auth account (anonymous or linked), and
+
+then the client resets the Firebase Analytics ID (`resetAnalyticsData`) and the
+local versus state (`versusNickname`, upload queue, daily upload counter). A fresh
+anonymous account starts on the next launch. **Coins, skins, levels, feathers,
+puzzle pieces and met elements stay on the phone** — they were never uploaded.
+
+Offline or a refused call deletes nothing and says so; the player can retry.
+
+Note for the form: the **Play Games "Top Scores" leaderboard** is stored by Google
+Play Games Services, not by us; that score is removed through the player's own Play
+Games data controls, not by this button.

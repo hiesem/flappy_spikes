@@ -27,6 +27,7 @@ void main() {
     expect(s.puzzleRound, 0);
     expect(s.lastPortalRide, isNull);
     expect(s.unclaimedLevelReward, 0);
+    expect(s.levelRewardPayout, 0);
     expect(s.metElements, isEmpty);
     expect(s.levelRewardsClaimed, 0);
     expect(s.versusNickname, isNull);
@@ -51,6 +52,7 @@ void main() {
     await a.savePuzzleRound(3);
     await a.saveLastPortalRide('storm');
     await a.saveUnclaimedLevelReward(150);
+    await a.saveLevelRewardPayout(150);
     await a.saveMetElements({'saw', 'portal'});
     await a.markElementMet('egg');
     await a.saveClaimedLevels({1, 2, 4});
@@ -73,6 +75,7 @@ void main() {
     expect(b.puzzleRound, 3);
     expect(b.lastPortalRide, 'storm');
     expect(b.unclaimedLevelReward, 150);
+    expect(b.levelRewardPayout, 150);
     expect(b.metElements, {'saw', 'portal', 'egg'});
     expect(b.levelRewardsClaimed, 4);
     expect(b.versusNickname, 'BrightOwl123');
@@ -112,6 +115,50 @@ void main() {
     await a.markElementMet('saw');
     await a.markElementMet('saw');
     expect(a.metElements, {'saw'});
+  });
+
+  test('§3.14 (Fix P2 R1, S6-22) the level-reward record is durable and '
+      'cleared in one write', () async {
+    final a = await fresh();
+    await a.beginLevelRewardClaim(payout: 190, claimed: {1, 2});
+    // The record must already be on disk before the credit runs.
+    final mid = await fresh();
+    expect(mid.levelRewardPayout, 190);
+    expect(mid.levelRewardsClaimed, 2);
+    await a.endLevelRewardClaim();
+    final b = await fresh();
+    expect(b.levelRewardPayout, 0);
+    expect(b.unclaimedLevelReward, 0);
+    expect(b.levelRewardsClaimed, 2, reason: 'the claim itself stays');
+  });
+
+  test('§3.13 "Delete my data" (Q22) resets the versus keys only', () async {
+    SharedPreferences.setMockInitialValues({
+      'coins': 77,
+      'noAds': true,
+      'bestScore': 12,
+      'feathers': 2,
+      'versusNickname': 'SwiftKiwi482',
+      'uploadQueue': ['{"runId":"a"}'],
+      'uploadsToday': 2,
+      'uploadsDay': '2026-10-08',
+    });
+    final a = await fresh();
+    await a.resetVersusData();
+    expect(a.versusNickname, isNull);
+    expect(a.uploadQueue, isEmpty);
+    expect(a.uploadsToday, 0);
+    expect(a.uploadsDay, '');
+    expect(a.coins, 77);
+    expect(a.noAds, isTrue);
+    expect(a.bestScore, 12);
+    expect(a.feathers, 2);
+    // The clear is durable (a kill right after it does not resurrect it).
+    final b = await fresh();
+    expect(b.versusNickname, isNull);
+    expect(b.uploadQueue, isEmpty);
+    expect(b.uploadsDay, '');
+    expect(b.coins, 77);
   });
 
   test('§7 the PRD-1 menu keys are untouched by the PRD-2 keys', () async {

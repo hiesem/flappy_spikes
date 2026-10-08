@@ -18,7 +18,8 @@ import 'ui/text_button.dart';
 
 /// Settings screen (PRD-home-v3 §8), opened from the home gear: SOUND
 /// EFFECTS toggle row, MUSIC volume slider row, RUMBLE toggle row, music
-/// credit, privacy-policy link and RESTORE PURCHASES. The back button sits
+/// credit, the DELETE MY DATA row (PRD-2 §3.13), privacy-policy link and
+/// RESTORE PURCHASES. The back button sits
 /// in the shared top-left spot ([backButton] is the transparent tap target
 /// over the game's shared `MenuCornerBox`, as on the Shop / Skins). Tinted labels,
 /// natively pink buttons; a full-screen blocker behind the rows consumes
@@ -38,6 +39,7 @@ class SettingsPanel extends PositionComponent
     this.onRestorePurchases,
     this.rumble = true,
     this.onToggleRumble,
+    this.onDeleteMyData,
   }) : super(priority: 20);
 
   bool muted;
@@ -57,6 +59,10 @@ class SettingsPanel extends PositionComponent
   /// when null.
   final void Function()? onRestorePurchases;
 
+  /// The DELETE MY DATA row (PRD-2 §3.13 / Q22): the game shows the confirm
+  /// dialog, runs the callable and reports the result. Hidden when null.
+  final void Function()? onDeleteMyData;
+
   late final FadableTextComponent _title;
   late final SpriteButton _sfxButton;
   late final FadableTextComponent _sfxLabel;
@@ -65,6 +71,8 @@ class SettingsPanel extends PositionComponent
   late final FadableTextComponent _credit;
   late final RumbleToggle _rumbleButton;
   late final FadableTextComponent _rumbleLabel;
+  late final DeleteDataIcon? _deleteIcon;
+  late final FadableTextComponent? _deleteLabel;
   late final TextButton _privacyLink;
 
   /// The back button's tap target (x 14, y 58, 38 x 38; the pink box and
@@ -77,6 +85,12 @@ class SettingsPanel extends PositionComponent
 
   /// The restore-purchases link (tests).
   RestoreLink? get restoreLink => _restoreLink;
+
+  /// The DELETE MY DATA row's icon (tests); null when the row is hidden.
+  DeleteDataIcon? get deleteIcon => _deleteIcon;
+
+  /// The DELETE MY DATA row's label (tests); null when the row is hidden.
+  FadableTextComponent? get deleteLabel => _deleteLabel;
   late Sprite _soundSprite;
   late Sprite _muteSprite;
 
@@ -93,6 +107,14 @@ class SettingsPanel extends PositionComponent
   static const double _creditDy = Config.settingsCreditDy;
   static const double _iconX = Config.settingsIconX;
   static const double _contentX = Config.settingsContentX;
+
+  /// The DELETE MY DATA row (PRD-2 §3.13): [deleteRowGap] above the
+  /// privacy-policy link, so on a 568 pt screen it sits in the free band
+  /// between the music credit and the link and can never collide with the
+  /// bottom spike strip (the mock's own band, design/menu_v2/settings_v3.png).
+  static Vector2 deleteRowPositionFor(double centerY) =>
+      Vector2(_iconX, Config.privacyLinkPositionFor(centerY).y - deleteRowGap);
+  static const double deleteRowGap = 60;
 
   @override
   Future<void> onLoad() async {
@@ -153,6 +175,20 @@ class SettingsPanel extends PositionComponent
       position: Vector2(_contentX, centerY + _rumbleRowDy),
       anchor: Anchor.centerLeft,
     );
+    final deleteRow = onDeleteMyData;
+    if (deleteRow != null) {
+      final at = deleteRowPositionFor(centerY);
+      _deleteIcon = DeleteDataIcon(
+        position: at,
+        onPressed: deleteRow,
+      );
+      _deleteLabel = FadableTextComponent(
+        text: 'DELETE MY DATA',
+        style: const TextStyle(fontFamily: Config.uiFont, fontSize: 18),
+        position: Vector2(_contentX, at.y),
+        anchor: Anchor.centerLeft,
+      );
+    }
     final backRect = Config.menuScreenBackRectFor(game.viewHeight);
     backButton = MenuButton(
       position: backRect.topLeft.toVector2(),
@@ -181,6 +217,11 @@ class SettingsPanel extends PositionComponent
       _credit,
       backButton,
     ]);
+    final deleteIcon = _deleteIcon;
+    final deleteLabel = _deleteLabel;
+    if (deleteIcon != null && deleteLabel != null) {
+      addAll([deleteIcon, deleteLabel]);
+    }
     add(_privacyLink);
     final restore = onRestorePurchases;
     if (restore != null) {
@@ -203,11 +244,14 @@ class SettingsPanel extends PositionComponent
     _credit.opacity = _opacity;
     _rumbleButton.opacity = _opacity;
     _rumbleLabel.opacity = _opacity;
+    _deleteIcon?.opacity = _opacity;
+    _deleteLabel?.opacity = _opacity;
     _privacyLink.opacity = _opacity;
     _restoreLink?.opacity = _opacity;
     _title.setColor(_tint);
     _sfxLabel.setColor(_tint);
     _rumbleLabel.setColor(_tint);
+    _deleteLabel?.setColor(_tint);
     _credit.setColor(_tint);
     _slider.setColor(_tint);
     _privacyLink.setColor(_tint);
@@ -240,6 +284,7 @@ class SettingsPanel extends PositionComponent
       _title.setColor(color);
       _sfxLabel.setColor(color);
       _rumbleLabel.setColor(color);
+      _deleteLabel?.setColor(color);
       _credit.setColor(color);
       _slider.setColor(color);
       _privacyLink.setColor(color);
@@ -261,8 +306,70 @@ class SettingsPanel extends PositionComponent
       _credit.opacity = _opacity;
       _rumbleButton.opacity = _opacity;
       _rumbleLabel.opacity = _opacity;
+      _deleteIcon?.opacity = _opacity;
+      _deleteLabel?.opacity = _opacity;
       _privacyLink.opacity = _opacity;
       _restoreLink?.opacity = _opacity;
+    }
+  }
+}
+
+/// The DELETE MY DATA icon (PRD-2 §3.13): a 30 pt pink square (the rows'
+/// icon slot) with a soft trash can — lid handle, lid, bin and three ribs.
+/// Fires on tap-down like the SOUND / RUMBLE rows (a menu knock follows).
+class DeleteDataIcon extends PositionComponent with TapCallbacks {
+  DeleteDataIcon({
+    required super.position,
+    required this.onPressed,
+  }) : super(size: Vector2.all(30), anchor: Anchor.center);
+
+  final void Function() onPressed;
+
+  double _opacity = 1;
+  double get opacity => _opacity;
+  set opacity(double value) => _opacity = value.clamp(0.0, 1.0);
+
+  final Paint _fill = Paint();
+  final Paint _stroke = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round;
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    event.handled = true;
+    withMenuKnock(this, onPressed);
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (_opacity <= 0) return;
+    final soft = Config.menuSoft.withValues(alpha: _opacity);
+    _fill.color = Config.menuPink.withValues(alpha: _opacity);
+    _stroke.color = soft;
+    canvas.drawRect(size.toRect(), _fill);
+    canvas.drawPath(
+      Path()
+        ..moveTo(12, 11)
+        ..lineTo(12, 8)
+        ..quadraticBezierTo(12, 6.5, 13.5, 6.5)
+        ..lineTo(16.5, 6.5)
+        ..quadraticBezierTo(18, 6.5, 18, 8)
+        ..lineTo(18, 11),
+      _stroke,
+    );
+    canvas.drawLine(const Offset(6.5, 11), const Offset(23.5, 11), _stroke);
+    canvas.drawPath(
+      Path()
+        ..moveTo(9.2, 13.5)
+        ..lineTo(10.2, 23.6)
+        ..lineTo(19.8, 23.6)
+        ..lineTo(20.8, 13.5),
+      _stroke,
+    );
+    for (final x in const [12.6, 15.0, 17.4]) {
+      canvas.drawLine(Offset(x, 17), Offset(x, 21), _stroke);
     }
   }
 }

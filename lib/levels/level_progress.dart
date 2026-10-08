@@ -84,18 +84,68 @@ class LevelProgress extends ChangeNotifier {
   /// Pays the owed rewards (`wallet.add(reward, CoinSource.levelReward)`)
   /// and marks every level <= the current one claimed. Returns what was
   /// paid (0 when nothing was owed); a second call never pays again.
+  ///
+  /// §3.14 (call, S6-22) the claim is recoverable: it records the balance
+  /// its credit is to reach ([GameStorage.levelRewardPayout]) *before*
+  /// marking the levels and crediting, and clears that record right after
+  /// the credit (before [GameStorage.unclaimedLevelReward]). A kill
+  /// anywhere in between is resumed at the next start and pays the rest
+  /// exactly once — the reward is never lost and never paid twice.
   Future<int> claim() async {
+    // A concurrent / re-entrant call pays nothing (the claim in flight
+    // pays everything owed).
+    if (_claimInFlight) return 0;
+    _claimInFlight = true;
+    try {
+      return await _claim();
+    } finally {
+      _claimInFlight = false;
+    }
+  }
+
+  Future<int> _claim() async {
     final pending = pendingLevelUp;
-    if (pending == null) return 0;
-    // Mark first (saveClaimedLevels updates memory before its first
-    // await): a re-entrant claim sees nothing owed.
-    await _storage.saveClaimedLevels({
-      ..._storage.claimedLevels,
-      for (var l = 1; l <= pending.toLevel; l++) l,
-    });
-    await _wallet.add(pending.reward, CoinSource.levelReward);
+    if (pending == null) {
+      // A killed claim that had already marked the levels: pay the rest
+      // of the recorded credit (0 when it landed or there is no record).
+      final rest = _owedPayout;
+      if (rest <= 0) {
+        // Nothing owed and nothing in flight: drop a stale record / flag.
+        if (_storage.levelRewardPayout != 0 ||
+            _storage.unclaimedLevelReward != 0) {
+          await _storage.endLevelRewardClaim();
+        }
+        return 0;
+      }
+      await _wallet.add(rest, CoinSource.levelReward);
+      await _storage.endLevelRewardClaim();
+      notifyListeners();
+      return rest;
+    }
+    final reward = pending.reward;
+    // The record + claim go first (memory is updated before the first
+    // await), then the credit, then the settle.
+    await _storage.beginLevelRewardClaim(
+      payout: _wallet.balance + reward,
+      claimed: {
+        ..._storage.claimedLevels,
+        for (var l = 1; l <= pending.toLevel; l++) l,
+      },
+    );
+    await _wallet.add(reward, CoinSource.levelReward);
+    await _storage.endLevelRewardClaim();
     notifyListeners();
-    return pending.reward;
+    return reward;
+  }
+
+  /// A claim in flight: a re-entrant / concurrent call pays nothing.
+  bool _claimInFlight = false;
+
+  /// §3.14 the part of an interrupted credit the wallet has not received
+  /// yet ([GameStorage.levelRewardPayout] minus the balance).
+  int get _owedPayout {
+    final due = _storage.levelRewardPayout - _wallet.balance;
+    return due > 0 ? due : 0;
   }
 
   /// Debug panel "LEVEL UP": raises the best to the next threshold (a

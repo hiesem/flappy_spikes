@@ -114,11 +114,12 @@ class ResultsModel {
 /// source `level_reward`, every reached level marked claimed), clears
 /// `unclaimedLevelReward` and sends `level_up {from, to, reward, claim}`
 /// with [how] = `tap` / `auto_next` / `app_start`. Returns what was paid; a
-/// second call pays nothing (the levels are marked first).
+/// second call pays nothing. `claim()` also resumes a claim that a kill
+/// interrupted between its claim writes and the credit (S6-22) and then
+/// clears its `levelRewardPayout` record, so the reward lands exactly once.
 Future<int> claimLevelRewards(FlappySpikesGame game, String how) async {
   final pending = game.menu.levels.pendingLevelUp;
   final paid = await game.menu.levels.claim();
-  await game.storage.saveUnclaimedLevelReward(0);
   if (paid > 0 && pending != null) {
     game.services.track('level_up', {
       'from': pending.fromLevel,
@@ -348,17 +349,29 @@ class ResultsScreen extends PositionComponent
     rewardPill.decorator.addLast(_pillBump);
 
     // --- buttons -------------------------------------------------------------
+    // §3.0.1 (S6-23): NEXT is a bottom button — it keeps the reference
+    // 65 pt gap to the screen's bottom edge and its §5.10 292 × 50 size
+    // while the column above it scales. Its box (and label font) are
+    // pre-divided by the page scale, so the rendered button is the
+    // reference size again on every screen height.
+    final inv = 1 / content.scale.y;
+    final nextBox = Rect.fromLTWH(
+      (ResultsConfig.next.left - content.position.x) * inv,
+      (ResultsConfig.nextTopFor(h) - content.position.y) * inv,
+      ResultsConfig.next.width * inv,
+      ResultsConfig.next.height * inv,
+    );
     nextButton = MenuButton(
       color: ResultsConfig.pink,
-      position: ResultsConfig.next.topLeft.toVector2(),
-      size: ResultsConfig.next.size.toVector2(),
+      position: nextBox.topLeft.toVector2(),
+      size: nextBox.size.toVector2(),
       onPressed: next,
       isActive: _active,
     );
     layoutRow(nextButton, [
       MenuText(
         'NEXT',
-        fontSize: ResultsConfig.nextFontSize,
+        fontSize: ResultsConfig.nextFontSize * inv,
         color: ResultsConfig.soft,
         letterSpacingEm: ResultsConfig.nextLetterSpacing,
       ),
@@ -1077,11 +1090,9 @@ class ResultsClaimButton extends PositionComponent with GroupOpacity {
     );
     layoutRow(button, [
       label('CLAIM'),
-      MenuIcon(
-        coin,
-        size: Vector2.all(ResultsConfig.claimCoinSize),
-        recolor: ResultsConfig.plum,
-      ),
+      // §3.0.6 / §3.0.9 #14 (S6-24): the CLAIM coin is the one shared gold
+      // sprite with its pale inner ring — never a recoloured variant.
+      MenuIcon(coin, size: Vector2.all(ResultsConfig.claimCoinSize)),
       label('+${formatCoins(reward)}'),
     ], gap: 8);
     add(button);

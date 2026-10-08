@@ -27,9 +27,10 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../helpers.dart';
 
-/// Independent P1 QA. Open regressions contain the expected PRD behavior;
-/// `flutter test --run-skipped test/e2e/p1_gameplay_e2e_test.dart` reproduces
-/// them. S6-08 starts only the demo Firebase emulators, never production.
+/// Independent P1 QA. The S6 regressions contain the expected PRD behavior
+/// (S6-02..09 fixed in Fix P1 R1; S6-01 stays skipped until WP-2d lands);
+/// `flutter test --run-skipped test/e2e/p1_gameplay_e2e_test.dart` runs it.
+/// S6-08 starts only the demo Firebase emulators, never production.
 void main() {
   setUpAll(tzdata.initializeTimeZones);
 
@@ -292,7 +293,7 @@ void main() {
         expect(run.state.coinsThisRun, 1);
       },
     );
-  }, skip: 'S6-02 open');
+  });
 
   group('S6-03 regression', () {
     FlameTester<FlappySpikesGame>(() => createRunTestGame()).testGameWidget(
@@ -310,7 +311,7 @@ void main() {
         expect(g.storage.metElements, isNot(contains('angled_ring')));
       },
     );
-  }, skip: 'S6-03 open');
+  });
 
   late AnalyticsSpy spy;
   group('S6-04 regression', () {
@@ -340,7 +341,7 @@ void main() {
         expect(event['hoop_index'], missed.plan.index);
       },
     );
-  }, skip: 'S6-04 open');
+  });
 
   test(
     'S6-05 service reschedules in the current device zone after travel',
@@ -379,7 +380,6 @@ void main() {
         );
       }
     },
-    skip: 'S6-05 open',
   );
 
   test('S6-06 skipped slots do not extend reminders past seven days', () {
@@ -402,7 +402,7 @@ void main() {
         );
       }
     }
-  }, skip: 'S6-06 open');
+  });
 
   test(
     'S6-07 failed notification scheduling does not consume the rotation',
@@ -429,7 +429,6 @@ void main() {
       );
       expect(store.notifPosition, 0);
     },
-    skip: 'S6-07 open',
   );
 
   test(
@@ -442,7 +441,6 @@ void main() {
       );
       expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     },
-    skip: 'S6-08 open',
     timeout: const Timeout(Duration(minutes: 2)),
   );
 
@@ -479,5 +477,5 @@ void main() {
         );
       },
     );
-  }, skip: 'S6-09 open');
+  });
 }

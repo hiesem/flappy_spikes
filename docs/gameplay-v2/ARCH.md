@@ -99,11 +99,11 @@ code. Paths are relative to `flappy_spikes/`.
 | File | Responsibility | API |
 |---|---|---|
 | `bird_motion.dart` | forward speed + recovery 2000 pt/s², cruise ramp (+3.5 %/min of runClock), max fall, flap lock (spring), Mini scale | `class BirdMotion { double cruise(double runClock); void step(RunState s, Bird b, double dt); void knock(Vector2 normal, double restitution); }` |
-| `rim_collision.dart` | §3.0.4 1–3, 6: rim-end circles, push-out, restitution 0.85 against the rim's own velocity, spin 360°/0.35 s | `RimContact? collideRims(HoopFrame f, BirdCircle b, Vector2 vel)` pure; `void applyBounce(...)` |
+| `rim_collision.dart` | §3.0.4 1–3, 6: rim-end circles, push-out, restitution 0.85 against the rim end's own velocity (`HoopFrame.velocityAt`: centre motion + rotation), every contact marks a graze, spin 360°/0.35 s | `RimContact? collideRims(HoopFrame f, BirdCircle b, Vector2 vel)` pure; `void applyBounce(...)` |
 | `pass_test.dart` | §3.0.4 5: local-frame plane crossing between rim-end centres; "fully past" miss; one resolution per hoop | `PlaneEvent? testPlane(HoopFrame f, BirdCircle prev, BirdCircle now)`, `bool isFullyPast(HoopFrame f, BirdCircle b)` — `enum PlaneEventKind { pass, missPast, closedReached }` |
 | `spike_walls.dart` | Current top/floor tooth lines (squeeze-aware), spike contact + save bounce (top ×0.3 down, floor vy −222) | `class SpikeWalls { double top, floor; double squeezeInset; bool touches(BirdCircle b); void saveBounce(Bird b, bool top); }` |
 | `death_tumble.dart` | §3.0.5 momentum tumble, ease-out world stop 0.4 s, floor bounces/rest, edge bounces, settle flat | `class DeathTumble { DeathTumble(Mistake m, Vector2 v); bool get resting; void step(double dt); Vector2 position; double angle; }` |
-| `hoop_frame.dart` | A hoop's world transform at time t (centre, tilt, ring offsets, velocity) | `class HoopFrame { Vector2 centre; double tilt; List<double> rings; double opening; double rimR; Vector2 velocity; Vector2 toLocal(Vector2 p); double rightmostX; }` |
+| `hoop_frame.dart` | A hoop's world transform at time t (centre, tilt, ring offsets, velocity, angular velocity) | `class HoopFrame { Vector2 centre; double tilt; List<double> rings; double opening; double rimR; Vector2 velocity; double angularVelocity /* rad/s */; Vector2 velocityAt(Vector2 p); Vector2 toLocal(Vector2 p); double rightmostX; }` |
 
 ### 1.5 `lib/run/hoops/`
 
@@ -856,7 +856,7 @@ fixtures shared with the Dart matcher test (`test/fixtures/versus_matching.json`
 | results: level-up one / several, CLAIM, auto-claim on NEXT, unclaimed at next start, YOUR REWARD incl. puzzle + win/draw, excl. balloon | `test/run/screens/s5_10_results_test.dart` | 2e (puzzle: 4a, win/draw: 5b add cases) |
 | versus: timeline on runClock (pause, revive, phoenix, Hourglass), opponent out, WIN/LOSE/DRAW + bonus, solo start | `test/versus/s3_13_*_test.dart` | 5b (Hourglass case 3f) |
 | rumble: recorder per event, 90 ms throttle, shake never skipped | `test/run/items/s3_33_rumble_test.dart` | 2c |
-| notifications: fake clock, windows, quiet hours + TZ/DST, skip-after-play, 7 d / 14 slots, rotation no repeat in 10 d, fill-in + fallback | `test/services/s3_34_reminders_test.dart` | 4b |
+| notifications: fake clock, windows, quiet hours + TZ/DST, skip-after-play, 7 d horizon (≤ 14 slots, skipped slots are not refilled), current zone each reschedule, failed schedule consumes nothing, rotation no repeat in 10 d, fill-in + fallback | `test/services/s3_34_reminders_test.dart` | 4b |
 | persistence: every key round-trips with its default | `test/run/persistence_test.dart` | 0b (4c re-checks) |
 
 ---

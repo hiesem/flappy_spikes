@@ -303,4 +303,18 @@ void killRun(
     t += 1 / 60;
   }
 }
+
+/// [killRun] until the run really ends: a Shield / extra life (e.g. one
+/// rolled in the home powerup slot) correctly absorbs a single mistake, so
+/// tests that only need *a* death retry past the saves and their
+/// invulnerability.
+void killRunThroughSaves(
+  FlappySpikesGame g, [
+  MistakeCause cause = MistakeCause.missedHoop,
+]) {
+  for (var i = 0; i < 8 && g.state == GameState.playing; i++) {
+    g.run?.state.invulnerable = 0;
+    killRun(g, cause);
+  }
+}
 // endregion WP-1a

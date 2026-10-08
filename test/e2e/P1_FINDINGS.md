@@ -158,3 +158,16 @@ HUD row, pause, revive and new results page; comet, rides, special-hoop effects,
 unbuilt gap items, capsules, squeeze, feathers, puzzle, versus client. Their
 absence was not reported. Existing director data for these elements was still
 reviewed as part of the shared director contract.
+
+## Fix round P1-R1 decisions (2026-10-08, branch `g6-fixp1`)
+
+- **S6-01:** not in this round; WP-2d fixes it. Its skip stays.
+- **S6-02:** fixed. A rim overlap that is already moving away is still a graze. It marks the hoop as touched (rim count, spin, tonk, sparks, `RimTouched`) on the first contact. Later separating overlaps on the same hoop give no extra feedback. Only reflected contacts give feedback on every hit (`run_controller.dart` `_applyRim`).
+- **S6-03:** fixed. A hoop counts as on screen (`ElementSpawned` → met) when the left edge of its ring art crosses the right screen edge. The art edge is each ring ellipse (rx 12 × ry, rotated by the current tilt) plus half the stroke (`RunSpawner.artLeftX`). It replaces the old `planeX - opening/2` estimate.
+- **S6-04:** fixed. `run_end.hoop_index` and `hoop_kind` both come from one hoop, captured at death. That is the mistake's own hoop (miss, pair, saw, switch), or else the next hoop ahead at that moment (spikes).
+- **S6-05:** fixed. `LocalReminders.reschedule` resolves the device zone again before every plan.
+- **S6-06:** fixed. The plan has a fixed horizon: the same wall-clock time seven calendar days later. Dropped slots are not refilled, so a plan has at most 14 reminders. The 9:00 / 22:00 tests still get exactly 14.
+- **S6-07:** fixed. If `cancelAll` fails, nothing is persisted, because the platform is unchanged. If a `schedule` call fails, any partial plan is cancelled and `ReminderPlan.unscheduledState` is persisted: fired messages stay consumed, none of this plan's are. The order is still persisted, so the existing "plan is persisted, next pause retries" test keeps its intent.
+- **S6-08:** fixed. The `processPlayerWrite` transaction re-reads `players/{uid}` and writes nothing (no rate doc, no pool entry) when that doc is gone. Direct emulator tests now call the `processLive` helper, which first creates a run-less marker doc (its trigger does nothing). The "deleted player doc is a no-op" test still calls `processPlayerWrite` directly. The QA case now always runs.
+- **S6-09:** fixed. `HoopFrame` carries `angularVelocity` (rad/s, from the motion's °/s). Rim reflection uses the rim end's own velocity, `velocityAt(end)` = centre velocity + ω × r.
+- **Menu test** `menu_v4_round1_schedule_e2e_test` "…the slot starts a run": fixed in the test harness only. The new `killRunThroughSaves` helper (`test/helpers.dart`) clears invulnerability and kills again until the run ends, and the test then asserts `gameOver`. A copy forced to Shield passed.

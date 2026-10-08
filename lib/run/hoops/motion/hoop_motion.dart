@@ -44,8 +44,9 @@ abstract class HoopMotion implements HoopMotionDriver {
   @override
   final Vector2 velocity = Vector2.zero();
 
-  /// Degrees per second of [angleOffset] (rim-end velocity of a rocking /
-  /// swinging ring, for WP-1a's rim collision if it wants it).
+  /// Degrees per second of [angleOffset]: the rim ends' rotation speed of a
+  /// rocking / swinging / orbiting ring (rim collision, §3.0.4 2).
+  @override
   double angularVelocity = 0;
 
   /// Sets [offset], [angleOffset], [velocity] and [angularVelocity] for run

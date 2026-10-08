@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flame/components.dart';
 
 import 'config/run_config.dart';
@@ -5,6 +7,7 @@ import 'director/run_director.dart';
 import 'elements.dart';
 import 'hoops/hoop.dart';
 import 'hoops/kinds/registry.dart';
+import 'hoops/ring_painter.dart';
 import 'pickups/pickup.dart';
 import 'pickups/registry.dart';
 import 'run_controller.dart';
@@ -113,11 +116,29 @@ class RunSpawner {
     _pickups.add(p);
   }
 
+  /// §3.0.8 The leftmost track x of [h]'s ring artwork right now (every
+  /// ring ellipse, rx 12 × ry, rotated by the frame tilt, plus half the
+  /// stroke): the hoop is on screen once this is left of the right edge.
+  static double artLeftX(Hoop h) {
+    final f = h.frame();
+    final c = math.cos(f.tilt), s = math.sin(f.tilt);
+    final ry = RingPainter.ryFor(f.opening);
+    final half =
+        math.sqrt(math.pow(RingPainter.rx * c, 2) + math.pow(ry * s, 2)) +
+        RingPainter.stroke / 2;
+    var left = double.infinity;
+    for (final o in f.rings) {
+      final x = f.toWorld(Vector2(0, o)).x - half;
+      if (x < left) left = x;
+    }
+    return left;
+  }
+
   void _announce() {
     final s = run.state;
     final right = s.camX + RunConfig.worldWidth;
     for (final h in _hoops) {
-      if (h.announced || h.planeX - h.opening / 2 > right) continue;
+      if (h.announced || artLeftX(h) > right) continue;
       h.announced = true;
       run.events.emit(ElementSpawned(h.plan.element));
       if (h.plan.tiltDeg != 0) {

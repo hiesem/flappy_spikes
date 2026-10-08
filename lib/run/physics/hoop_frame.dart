@@ -25,6 +25,7 @@ class HoopFrame {
     required this.opening,
     this.rimR = RunConfig.rimRadius,
     Vector2? velocity,
+    this.angularVelocity = 0,
   }) : velocity = velocity ?? Vector2.zero();
 
   /// Track coordinates of the hoop centre.
@@ -40,6 +41,20 @@ class HoopFrame {
 
   /// The hoop's own velocity (moving rings; pt/s).
   final Vector2 velocity;
+
+  /// The rate of [tilt] (rad/s; rocking / swinging / orbiting rings,
+  /// §3.11). Rim ends move with it about [centre].
+  final double angularVelocity;
+
+  /// §3.0.4 2 The velocity of the rigid hoop at track point [p]: the centre
+  /// velocity plus the rotation about the centre (ω × r, canvas rotation).
+  Vector2 velocityAt(Vector2 p) {
+    final rx = p.x - centre.x, ry = p.y - centre.y;
+    return Vector2(
+      velocity.x - angularVelocity * ry,
+      velocity.y + angularVelocity * rx,
+    );
+  }
 
   /// §3.0.4 1 Distance from a ring's centre to its rim-end centres.
   double get reach => opening / 2 + rimR;

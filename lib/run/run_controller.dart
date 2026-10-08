@@ -248,6 +248,10 @@ class RunController extends Component {
   /// §3.0.5 the death tumble (null while flying).
   DeathTumble? tumble;
   Mistake? _death;
+
+  /// §6 `run_end`: the slot tied to the run-ending cause (the missed /
+  /// touched ring, else the next ring ahead at the moment of death).
+  Hoop? _deathHoop;
   double _deathTime = 0;
   bool _handedOff = false;
 
@@ -343,13 +347,17 @@ class RunController extends Component {
       .firstOrNull;
 
   /// §3.0.4 2–3: push-out, reflected velocity (the forward part moves the
-  /// camera: the world jolts back), touched, tonk, spin, sparks.
+  /// camera: the world jolts back), touched, tonk, spin, sparks. Any
+  /// contact marks the hoop touched (S6-02).
   void _applyRim(Hoop h, Bird bird, Vector2 pos, RimResult res) {
     state.camX += res.position.x - pos.x;
     state.forwardSpeed = res.velocity.x;
     bird.setFlight(y: res.position.y, vy: res.velocity.y);
     for (final c in res.contacts) {
-      if (!c.bounced) continue;
+      // §3.0.4 2–3 every rim touch is a graze, also an overlap that was
+      // already separating (pushed out, not reflected). Such a contact
+      // gives its feedback once; reflected contacts give it each hit.
+      if (!c.bounced && h.touched) continue;
       if (!h.touched) {
         state.rimTouches++;
         bird.startRimSpin(rimSpinVelocity(res.velocity.y));
@@ -468,6 +476,7 @@ class RunController extends Component {
     _dying = true;
     _cause = m.cause;
     _death = m;
+    _deathHoop = m.hoop ?? spawner.nextHoopAhead();
     clock.running = false;
     for (final f in features) {
       f.onDeath(m);
@@ -524,7 +533,7 @@ class RunController extends Component {
 
   RunSummary summarize() {
     final s = state;
-    final hoop = spawner.nextHoopAhead();
+    final hoop = _deathHoop ?? spawner.nextHoopAhead();
     return RunSummary(
       score: s.score,
       hoopsPassed: s.hoopsPassed,
@@ -535,8 +544,8 @@ class RunController extends Component {
       revives: s.revivesThisGame,
       runSeconds: s.runClock,
       cause: _cause ?? MistakeCause.missedHoop,
-      hoopKind: _death?.hoop?.plan.kind ?? hoop?.plan.kind,
-      hoopIndex: s.hoopIndex,
+      hoopKind: hoop?.plan.kind,
+      hoopIndex: hoop?.plan.index ?? s.hoopIndex,
       timeline: s.timeline,
       opponent: setup.opponent,
       spawned: {...director.spawnedCounts, ...s.spawned},

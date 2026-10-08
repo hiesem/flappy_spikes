@@ -163,9 +163,9 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.8-E22 | Element: puzzle piece | 3.0.7 | 4a | | todo |
 | R-3.0.8-E23 | Element: spike squeeze | 3.0.7 | 3g | | todo |
 | R-3.0.8-E24 | Element: Big Hoops | 3.0.7 | 2a | | todo |
-| R-3.0.8-E25 | Element: perfect streak + ring tier looks | 3.0.7 | 2b | | todo |
+| R-3.0.8-E25 | Element: perfect streak + ring tier looks | 3.0.7 | 2b | test/run/items/s3_4_streak_test.dart::§3.4 perfect passes build the streak; test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier | done |
 | R-3.0.8-E26 | Element: coins (per pass + bonuses) | 3.0.7 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 a perfect pass pays 2 coins at once …; test/home_flow_test.dart::PRD-2 §3.2 coins are credited per hoop … | done (bonus sources: their WPs) |
-| R-3.0.8-E27 | Element: rumble | 3.0.7 | 2c | | todo |
+| R-3.0.8-E27 | Element: rumble | 3.0.7 | 2c | test/run/items/s3_33_rumble_test.dart::§3.33 mapping; test/run/items/s3_33_rumble_test.dart::§3.33 throttle | done |
 | R-3.0.8-E28 | Element: revive, results, versus | 3.0.7 | 2d / 2e / 5b | | todo |
 
 ## 3.0.9 Shared parts (one master each)
@@ -176,15 +176,15 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.9-2 | Score circle = current game's 183 pt disc at (160, centre + 35), LVDC digits, behind hoops and bird | 3.0.9 #2 | existing / 0c check | shot: build/parts_shots/01_hoops_m0.png (existing ScoreHud) | done |
 | R-3.0.9-3 | Hoop ring master: 24 pt wide, stroke 7, front `#EC008C` over bird, back `#B0006B` behind; height = opening + 2 × 7; specials change colours/decorations only | 3.0.9 #3 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #3 24 pt wide, stroke 7, half height = opening / 2 + 7; shot: 01_hoops_m0.png, 03_ring_variants.png | done |
 | R-3.0.9-4 | Bird = `LookPainter` (classic + equipped skin), ×0.983, flap, blink, stage blend; every screen draws the equipped skin | 3.0.9 #4 | 0c (check) | shot: build/parts_shots/05_birds.png (existing LookPainter) | done |
-| R-3.0.9-5 | Gold bird (tier 2+): body `#FFB529`, tail + wing `#E08A00`, beak `#FFB529`, eye white; everywhere incl. rides and comet | 3.0.9 #5 | 0c / 2b | test/run/effects/s3_0_9_bird_test.dart::§3.0.9 #5 gold bird: body #FFB529, shade #E08A00, beak gold | part (master 0c; wiring 2b) |
+| R-3.0.9-5 | Gold bird (tier 2+): body `#FFB529`, tail + wing `#E08A00`, beak `#FFB529`, eye white; everywhere incl. rides and comet | 3.0.9 #5 | 0c / 2b | test/run/effects/s3_0_9_bird_test.dart::§3.0.9 #5 gold bird: body #FFB529, shade #E08A00, beak gold; test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier (goldTier at tier 2+); test/run/effects/s3_0_9_gold_glow_perf_test.dart::§3.0.9 #5 the gold glow layer is bounded: same pixels | done |
 | R-3.0.9-6 | Dead X-eyes: white X 6 × 6, line 2, replacing the eye | 3.0.9 #6 | 0c | test/run/effects/s3_0_9_bird_test.dart::§3.0.9 #6 dead X: white 6 × 6, line 2, replacing the eye | done |
-| R-3.0.9-7 | Streak banner master (y 190, pad 6, fixed font per tier [28,32,34,30,32,34,34,32,34,30], 0.1 em, white Opificio, scale-in ≈ 0.1 s, hold 1–1.9 s, scale-out; 10 names, cap IMMORTAL ×10) for every perfect pass incl. rides | 3.0.9 #7 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #7 ten names, fixed sizes, colours, capped at IMMORTAL ×10; shot: 07_banners.png | part (master 0c; wiring 2b) |
-| R-3.0.9-8 | Pass coin popup: gold "+2" 28 pt + coin.png 24 pt from (x − 10, y − 70), scale 0.7 → 1.1 → 1, rises 40 pt, fades, 1.1 s; "+1" the same | 3.0.9 #8 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #8 1.1 s, scale 0.7 → 1.1 → 1, rises 40 pt, fades; shot: 07_perfect_tier*.png | part (master 0c; wiring 1a/2b) |
-| R-3.0.9-9 | Perfect burst: 8 + 3 × min(tier,3) squares, 5–8 pt, pink/gold/soft pink, 25–55 pt, 350–600 ms, no rotation, no shockwave | 3.0.9 #9 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #9 5–8 pt, 25–55 pt, 350–600 ms, no rotation, 3 colours | part (master 0c; wiring 2b) |
-| R-3.0.9-10 | Block trail tier 3+: 8–13 pt squares every ≈ 33 ms, 50/50 `#FFB529`/`#EC008C`, 0.9 → 0 in 450 ms, 26 pt behind along flight direction ± 8, drifting 70 pt opposite | 3.0.9 #10 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #10 spawned 26 pt behind along the flight direction, drifts 70 pt opposite; shot: 10_trail_direction.png | part (master 0c; wiring 2b) |
-| R-3.0.9-11 | Ring tier looks: pink → gold (`#FFB529`/`#D48A00`) → bright gold (`#FFD54A`/`#E0A800`); stars 9–15 / 10–17 / 12–24 pt at 7 / 16 / 38 per s per ring, 0.5–0.9 s; tier 3+ glow sprite + flame flicks | 3.0.9 #11 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.3 sparkles at 7 / 16 / 38 per second, sizes per tier; shot: 04_ringtier_*.png | part (master 0c; wiring 2b) |
+| R-3.0.9-7 | Streak banner master (y 190, pad 6, fixed font per tier [28,32,34,30,32,34,34,32,34,30], 0.1 em, white Opificio, scale-in ≈ 0.1 s, hold 1–1.9 s, scale-out; 10 names, cap IMMORTAL ×10) for every perfect pass incl. rides | 3.0.9 #7 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #7 ten names, fixed sizes, colours, capped at IMMORTAL ×10; shot: 07_banners.png; test/run/items/s3_4_streak_test.dart::§3.4 perfect passes build the streak; shot: build/shots/run/streak/tier{1,2,3,5,10}_{711,568}.png (test/run/shots/streak_shots_test.dart) | done |
+| R-3.0.9-8 | Pass coin popup: gold "+2" 28 pt + coin.png 24 pt from (x − 10, y − 70), scale 0.7 → 1.1 → 1, rises 40 pt, fades, 1.1 s; "+1" the same | 3.0.9 #8 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #8 1.1 s, scale 0.7 → 1.1 → 1, rises 40 pt, fades; shot: 07_perfect_tier*.png; shot: build/shots/run/streak/tier{1,2,3,5,10}_{711,568}.png (test/run/shots/streak_shots_test.dart) (wired by ScoringFeature, WP-1a) | done |
+| R-3.0.9-9 | Perfect burst: 8 + 3 × min(tier,3) squares, 5–8 pt, pink/gold/soft pink, 25–55 pt, 350–600 ms, no rotation, no shockwave | 3.0.9 #9 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #9 5–8 pt, 25–55 pt, 350–600 ms, no rotation, 3 colours; test/run/items/s3_4_streak_test.dart::§3.0.9 #9 perfect burst at the bird | done |
+| R-3.0.9-10 | Block trail tier 3+: 8–13 pt squares every ≈ 33 ms, 50/50 `#FFB529`/`#EC008C`, 0.9 → 0 in 450 ms, 26 pt behind along flight direction ± 8, drifting 70 pt opposite | 3.0.9 #10 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #10 spawned 26 pt behind along the flight direction, drifts 70 pt opposite; shot: 10_trail_direction.png; test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier (trail active at tier 3+); shot: tier3_blocks_*.png | done |
+| R-3.0.9-11 | Ring tier looks: pink → gold (`#FFB529`/`#D48A00`) → bright gold (`#FFD54A`/`#E0A800`); stars 9–15 / 10–17 / 12–24 pt at 7 / 16 / 38 per s per ring, 0.5–0.9 s; tier 3+ glow sprite + flame flicks | 3.0.9 #11 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.3 sparkles at 7 / 16 / 38 per second, sizes per tier; shot: 04_ringtier_*.png; test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier | done |
 | R-3.0.9-12 | Speed lines kept separate: comet (2 pt, 30–110, 0.7, ≈ 34 ms, −460 pt in 260 ms); cannon (70 × 2, 0.7, −420 in 380 ms; vertical 2 × 60 in ride); themed (2 pt, 60 pt, 0.55, ≈ 500 pt over 0.38 s along flight) | 3.0.9 #12 | 3a / 3b | | todo |
-| R-3.0.9-13 | No full-screen flash on perfect passes at any tier | 3.0.9 #13 | 2b | | todo |
+| R-3.0.9-13 | No full-screen flash on perfect passes at any tier | 3.0.9 #13 | 2b | test/run/items/s3_4_streak_test.dart::§3.0.9 #13 no screen flash | done |
 | R-3.0.9-14 | Coin icon = coin.png everywhere | 3.0.9 #14 | 0c | lib/run/effects/coin_icon.dart (CoinIcon); shot: 08_coin_popup_timeline.png | part (master 0c) |
 | R-3.0.9-15 | Dust / feather puff: 12–22 particles 4–9 pt in the surface colour, ±140 / −90…−10 pt/s, slow down, fade 0.6–1 s (tumble bounce, landings) | 3.0.9 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 dust: 12–22 round particles 4–9 pt, up 10–90 pt/s, 0.6–1 s | part (master 0c; wiring 1a) |
 | R-3.0.9-16 | No element draws its own version of a master (code review checklist item at each WP) | 3.0.9 | all | | todo |
@@ -196,7 +196,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.1-1 | Pipes removed; bird flies through hoops; spike strips stay lethal | 3.1 | 1a | test/collision_test.dart; test/autopilot_test.dart | done |
 | R-3.1-2 | Pass inside the opening: +1, `point.mp3` (non-perfect), HUD update, colour-stage check, pass feedback | 3.1 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.1 a non-perfect pass plays point.mp3 and the §5.1 pulse; test/run/flow/s3_1_hoop_flow_test.dart::§3.0.1 the colour stage … | done |
 | R-3.1-3 | Missing a hoop ends the run (or uses extra life / shield), plays the miss flash | 3.1 | 1a | test/collision_test.dart::§3.1 missing a hoop ends the run exactly once; test/run/flow/s3_1_hoop_flow_test.dart::§5.13 a miss plays the shock-ring miss flash … | done (extra life / shield: 2a) |
-| R-3.1-4 | Rim touch doesn't end the run: bounce; if through, +1 and 1 coin, not perfect, streak resets | 3.1 | 1a / 2b | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.4 a rim touch bounces … +1 with 1 coin and is not perfect | done (streak reset: 2b) |
+| R-3.1-4 | Rim touch doesn't end the run: bounce; if through, +1 and 1 coin, not perfect, streak resets | 3.1 | 1a / 2b | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.4 a rim touch bounces … +1 with 1 coin and is not perfect; test/run/items/s3_4_streak_test.dart::§3.4 / §5.3 a graze resets the streak | done |
 | R-3.1-5 | Floor/ceiling spikes: contact = mistake | 3.1 | 1a | test/collision_test.dart::§3.1 bird-spike contact ends the run exactly once; test/run/flow/s3_1_hoop_flow_test.dart::§3.0.5 a spike save (invulnerable) bounces off the floor tooth line | done |
 | R-3.1-6 | Score fires at the plane crossing (replaces the 111 pt sensor) | 3.1 | 1a | test/run/physics/s3_0_4_pass_test.dart; test/collision_test.dart::§3.1 crossing the plane inside the opening scores exactly once | done |
 | R-3.1-7 | Hoop art ~22–24 pt deep, opening + 2 × 7 tall, scales with the opening; two layers (back half behind, front half in front) | 3.1 | 1a / 0c | shot: build/shots/run/hoops/run_711.png (test/run/shots/hoops_shots_test.dart::§5.1 run frame with M0 hoops at 711) | done |
@@ -239,23 +239,23 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.4-1 | Perfect = no rim contact; non-perfect pass or mistake resets the streak to 0 | 3.4 | 2b | | todo |
-| R-3.4-2 | Every perfect pass +2 coins (flat at all tiers) | 3.4 | 2b | | todo |
-| R-3.4-3 | 10 tiers, names and banner colours (PERFECT pink … IMMORTAL ×10 plum; cap at 10) | 3.4 | 2b | | todo |
-| R-3.4-4 | Tier effects: 1 small burst; 2 bigger burst + gold bird; 3+ biggest burst + block trail; tier 4+ reuse tier 3 | 3.4 | 2b | | todo |
-| R-3.4-5 | Sounds: `perfect_1` (streak 1), `perfect_2` (2), `perfect_3` (3+); replace `point.mp3` on perfect; `point.mp3` still on a graze | 3.4 | 2b | | todo |
-| R-3.4-6 | Streak sounds respect SFX mute; peak ≈ −1.4 dBFS, checked against flap loudness | 3.4 | 2b / 3h | | todo |
+| R-3.4-1 | Perfect = no rim contact; non-perfect pass or mistake resets the streak to 0 | 3.4 | 2b | test/run/items/s3_4_streak_test.dart::§3.4 / §5.3 a graze resets the streak; test/run/items/s3_4_streak_test.dart::§3.4 a save or a death breaks the streak | done |
+| R-3.4-2 | Every perfect pass +2 coins (flat at all tiers) | 3.4 | 2b | test/run/flow/s3_1_hoop_flow_test.dart (ScoringFeature: +2 perfect at every tier) | done |
+| R-3.4-3 | 10 tiers, names and banner colours (PERFECT pink … IMMORTAL ×10 plum; cap at 10) | 3.4 | 2b | test/run/items/s3_4_streak_test.dart::§3.4 perfect passes build the streak | done |
+| R-3.4-4 | Tier effects: 1 small burst; 2 bigger burst + gold bird; 3+ biggest burst + block trail; tier 4+ reuse tier 3 | 3.4 | 2b | test/run/items/s3_4_streak_test.dart::§3.0.9 #9 perfect burst at the bird; test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier | done |
+| R-3.4-5 | Sounds: `perfect_1` (streak 1), `perfect_2` (2), `perfect_3` (3+); replace `point.mp3` on perfect; `point.mp3` still on a graze | 3.4 | 2b | test/run/items/s3_4_streak_test.dart::§3.4 perfect passes build the streak; test/run/items/s3_4_streak_test.dart::§3.4 / §5.3 a graze resets the streak | done |
+| R-3.4-6 | Streak sounds respect SFX mute; peak ≈ −1.4 dBFS, checked against flap loudness | 3.4 | 2b / 3h | test/run/items/s3_4_streak_test.dart::§3.4 perfect passes build the streak (through SoundService.play: the SFX mute applies); loudness: WP-3h files | done |
 
 ## 3.5 Ring reactions to the streak
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.5-1 | Whole ring field (passed, ahead, newly spawned) shows the current tier's look | 3.5 | 2b | | todo |
-| R-3.5-2 | Tier 0 pink, tier 1 light gold sparkles, tier 2 gold rings + gold bird, tier 3+ heavier sparkles + flame flicks + glow + bright gold + block trail | 3.5 | 2b | | todo |
-| R-3.5-3 | Streak break: all rings instantly return to pink, effects stop | 3.5 | 2b | | todo |
-| R-3.5-4 | Banner, +2 popup, small burst and tier sound still fire per pass; tier 4+ confetti + full-screen flash removed | 3.5 | 2b | | todo |
+| R-3.5-1 | Whole ring field (passed, ahead, newly spawned) shows the current tier's look | 3.5 | 2b | test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier | done |
+| R-3.5-2 | Tier 0 pink, tier 1 light gold sparkles, tier 2 gold rings + gold bird, tier 3+ heavier sparkles + flame flicks + glow + bright gold + block trail | 3.5 | 2b | test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier | done |
+| R-3.5-3 | Streak break: all rings instantly return to pink, effects stop | 3.5 | 2b | test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier; test/run/items/s3_4_streak_test.dart::§3.4 a save or a death breaks the streak | done |
+| R-3.5-4 | Banner, +2 popup, small burst and tier sound still fire per pass; tier 4+ confetti + full-screen flash removed | 3.5 | 2b | test/run/items/s3_4_streak_test.dart::§3.4 perfect passes build the streak; test/run/items/s3_4_streak_test.dart::§3.0.9 #9 perfect burst at the bird; test/run/items/s3_4_streak_test.dart::§3.0.9 #13 no screen flash | done |
 | R-3.5-5 | Comet: hoops count as perfect, build streak, same banners/sounds; streak carries on after | 3.5 | 3a | | todo |
-| R-3.5-6 | Performance: sparkles children of each ring, pooled, capped (≈ 38/s per ring, ≤ 3 rings); one glow sprite per ring | 3.5 | 0c / 2b | test/run/effects/s3_0_9_parts_test.dart::§3.5 a streak break clears every effect at once | part (RingTierFx pooled + capped 64/ring) |
+| R-3.5-6 | Performance: sparkles children of each ring, pooled, capped (≈ 38/s per ring, ≤ 3 rings); one glow sprite per ring | 3.5 | 0c / 2b | test/run/effects/s3_0_9_parts_test.dart::§3.5 a streak break clears every effect at once; test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier (one RingTierFx per ring, painted with the ring) | done |
 
 ## 3.6 Big Hoops (run side)
 
@@ -326,7 +326,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.11-7 | Rock (45+): stays, rocks ±15°, period 3 s | 3.11 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 rock…; test/run/director/s3_0_2_layout_ramp_test.dart | done |
 | R-3.11-8 | Pass judged at the ring's actual position and angle at the crossing | 3.11 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 / §3.10 a moving ring is posed at home + offset… | 1b part done (pose at runClock); 1a pass test pending |
 | R-3.11-9 | Amplitudes capped to stay in the band and within the max jump; autopilot passes with moving rings | 3.11 | 1b | test/run/director/s3_0_2_layout_ramp_test.dart::§3.11 fairness…; test/run/flow/s3_10_s3_11_autopilot_test.dart (skipped until WP-1a) | 1b part done; autopilot runs after the WP-1a merge |
-| R-3.11-10 | Moving rings may also be tilted and react to the streak | 3.11 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 / §3.10 a moving ring is posed… (tilt + motion) | done (streak look: 2b) |
+| R-3.11-10 | Moving rings may also be tilted and react to the streak | 3.11 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 / §3.10 a moving ring is posed… (tilt + motion) | done |
 
 ## 3.12 Portal roller-coaster
 
@@ -591,15 +591,15 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.33-1 | Knock (15 ms, amp ≈ 90) on non-perfect pass and on every pickup (coins, stars, fireflies, hearts, shield, comet, feather, piece, switch, egg, piggy, jar, capsules) | 3.33 | 2c | | todo |
-| R-3.33-2 | Shake (45 ms, 255) on every perfect pass incl. pair, train, FEVER, comet and portal hoops; never grows | 3.33 | 2c | | todo |
-| R-3.33-3 | Nothing else rumbles (death, saves, rewards, squeeze, menus); vibration only, no screen shake added | 3.33 | 2c | | todo |
-| R-3.33-4 | Throttle one knock per 90 ms; a shake is never skipped; same window → only the shake | 3.33 | 2c (service exists) | | todo |
-| R-3.33-5 | Pass rumbles at the plane decision; pickup knocks at touch | 3.33 | 2c | | todo |
-| R-3.33-6 | Ignores SFX mute and music volume; own switch | 3.33 | 2c | | todo |
-| R-3.33-7 | No rumble on paused, revive, bonus, results screens; Hourglass doesn't change pulses | 3.33 | 2c | | todo |
-| R-3.33-8 | Settings: RUMBLE row under MUSIC, toggle style as SOUND, phone icon, on by default, `rumble` stored, applies immediately (also to a paused run); row shown without a vibrator | 3.33 | existing (verify 2c) | | todo |
-| R-3.33-9 | Vibration plugin with amplitude (fallback plain pulse); VIBRATE permission; one `Rumble` service; no-op recorder in tests | 3.33 | existing (verify 2c) | | todo |
+| R-3.33-1 | Knock (15 ms, amp ≈ 90) on non-perfect pass and on every pickup (coins, stars, fireflies, hearts, shield, comet, feather, piece, switch, egg, piggy, jar, capsules) | 3.33 | 2c | test/run/items/s3_33_rumble_test.dart::§3.33 mapping | done |
+| R-3.33-2 | Shake (45 ms, 255) on every perfect pass incl. pair, train, FEVER, comet and portal hoops; never grows | 3.33 | 2c | test/run/items/s3_33_rumble_test.dart::§3.33 mapping | done |
+| R-3.33-3 | Nothing else rumbles (death, saves, rewards, squeeze, menus); vibration only, no screen shake added | 3.33 | 2c | test/run/items/s3_33_rumble_test.dart::§3.33 no rumble while paused | done |
+| R-3.33-4 | Throttle one knock per 90 ms; a shake is never skipped; same window → only the shake | 3.33 | 2c (service exists) | test/run/items/s3_33_rumble_test.dart::§3.33 throttle; test/run/items/s3_33_rumble_test.dart::§3.33 a perfect pass that also collects | done |
+| R-3.33-5 | Pass rumbles at the plane decision; pickup knocks at touch | 3.33 | 2c | test/run/items/s3_33_rumble_test.dart::§3.33 a perfect pass that also collects (flushed at the end of the frame of the decision / touch) | done |
+| R-3.33-6 | Ignores SFX mute and music volume; own switch | 3.33 | 2c | test/run/items/s3_33_rumble_test.dart::§3.33 the RUMBLE switch | done |
+| R-3.33-7 | No rumble on paused, revive, bonus, results screens; Hourglass doesn't change pulses | 3.33 | 2c | test/run/items/s3_33_rumble_test.dart::§3.33 no rumble while paused; test/run/items/s3_33_rumble_test.dart::§3.33 Hourglass | done |
+| R-3.33-8 | Settings: RUMBLE row under MUSIC, toggle style as SOUND, phone icon, on by default, `rumble` stored, applies immediately (also to a paused run); row shown without a vibrator | 3.33 | existing (verify 2c) | test/rumble_test.dart (settings row, existing); test/run/items/s3_33_rumble_test.dart::§3.33 the RUMBLE switch | done |
+| R-3.33-9 | Vibration plugin with amplitude (fallback plain pulse); VIBRATE permission; one `Rumble` service; no-op recorder in tests | 3.33 | existing (verify 2c) | test/rumble_test.dart (Rumble service, existing) | done |
 
 ## 3.34 Reminder notifications
 
@@ -642,11 +642,11 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.2-1 | Heart pickup 32 pt `#FF3B5C`, 1.8 pt white outline, pulse 1.0 ↔ 1.14 (1 s), no glow | 5.2 | 2a | | todo |
 | R-5.2-2 | "+1 coin" gold text with icon rising ≈ 30 pt, fading 1.6 s at the hoop (superseded by master #8 for passes) | 5.2 | 0c | | todo |
 | R-5.2-3 | Saved: shards burst, "SAVED!" rises in pink, bird shakes briefly, hearts reset | 5.2 | 2a | | todo |
-| R-5.3-1 | Sparkle spec (colours, sizes per tier, twinkle 0.5–0.9 s, 45° → 90° spin, emission 7/16/38 per s) | 5.3 | 0c / 2b | test/run/effects/s3_0_9_parts_test.dart::§5.3 sparkles at 7 / 16 / 38 per second, sizes per tier | part (master 0c) |
+| R-5.3-1 | Sparkle spec (colours, sizes per tier, twinkle 0.5–0.9 s, 45° → 90° spin, emission 7/16/38 per s) | 5.3 | 0c / 2b | test/run/effects/s3_0_9_parts_test.dart::§5.3 sparkles at 7 / 16 / 38 per second, sizes per tier | done |
 | R-5.3-2 | Flame flicks tier 3+ (7–12 pt wide, 1.6–2.4× tall, rise 20–45 pt, 0.4–0.7 s) | 5.3 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.3 flame flicks and glow only from tier 3; glow fades in 0.25 s | part (master 0c) |
 | R-5.3-3 | Glow tier 3+: radial gold ≈ 96 × 152 pt behind each ring (fade in 0.25 s) | 5.3 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.3 flame flicks and glow only from tier 3; glow fades in 0.25 s | part (master 0c) |
-| R-5.3-4 | Graze: "GRAZE · streak lost" rises and fades (1.1 s); everything resets at once | 5.3 | 2b | | todo |
-| R-5.4-1 | Perfect effects match `perfect_tier{1,2,3,5,10}.png` within the master rules (no shockwave rings, no flash, no confetti) | 5.4 | 2b | | todo |
+| R-5.3-4 | Graze: "GRAZE · streak lost" rises and fades (1.1 s); everything resets at once | 5.3 | 2b | test/run/items/s3_4_streak_test.dart::§3.4 / §5.3 a graze resets the streak | done |
+| R-5.4-1 | Perfect effects match `perfect_tier{1,2,3,5,10}.png` within the master rules (no shockwave rings, no flash, no confetti) | 5.4 | 2b | shot: build/shots/run/streak/tier{1,2,3,5,10}_{711,568}.png (test/run/shots/streak_shots_test.dart) — big rotating burst / shock rings / flash / confetti not copied (§3.0.9) | done |
 | R-5.4-2 | Effects cosmetic, above hoops, below HUD, pooled ≤ 130 particles | 5.4 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.4 the pool caps particles at 130 and recycles them | part (pool 0c) |
 | R-5.5-1 | Extra-life badge 34 pt above the bird ≈ 40 pt, bob ±4 pt ≈ 0.6 Hz, pops in 0.35 s after the heart flies to the indicator | 5.5 | 2a | | todo |
 | R-5.5-2 | On a mistake: badge pops into hearts, indicator resets, bird flashes 2 s (25 % ↔ 100 % every 0.1 s) | 5.5 | 2a | | todo |
@@ -789,8 +789,8 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-6-6 | `shield_collected` | 6 | 2a | | todo |
 | R-6-7 | `shield_used` | 6 | 2a | | todo |
 | R-6-8 | `portal_entered` (ride: cannon / space / volcano / sea / pinball / storm) | 6 | 3b | | todo |
-| R-6-9 | `perfect_pass` (tier) | 6 | 2b | | todo |
-| R-6-10 | `streak_broken` (length) | 6 | 2b | | todo |
+| R-6-9 | `perfect_pass` (tier) | 6 | 2b | test/run/items/s3_4_streak_test.dart::§3.4 perfect passes build the streak | done |
+| R-6-10 | `streak_broken` (length) | 6 | 2b | test/run/items/s3_4_streak_test.dart::§3.4 / §5.3 a graze resets the streak; test/run/items/s3_4_streak_test.dart::§3.4 a save or a death breaks the streak (+ cause param: graze / save / death) | done |
 | R-6-11 | `revive_offered` | 6 | 2d | | todo |
 | R-6-12 | `revive_ad_started` | 6 | 2d | | todo |
 | R-6-13 | `revive_ad_completed` | 6 | 2d | | todo |
@@ -837,7 +837,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-6-54 | `jar_result` (full / broken, caught) | 6 | 3e | | todo |
 | R-6-55 | `powerup_started` (hourglass / mini / frenzy, duration) | 6 | 3f | | todo |
 | R-6-56 | `powerup_ended` (type) | 6 | 3f | | todo |
-| R-6-57 | `setting_changed` (setting: rumble, value) | 6 | 2c (existing `rumble_toggle` → rename or send both; call in 2c) | | todo |
+| R-6-57 | `setting_changed` (setting: rumble, value) | 6 | 2c (existing `rumble_toggle` → rename or send both; call in 2c) | test/run/items/s3_33_rumble_test.dart::§3.33 the RUMBLE switch — call: both `rumble_toggle` and `setting_changed` are sent | done |
 | R-6-58 | `notif_permission` (granted / denied) | 6 | 4b | test/services/s3_34_reminders_test.dart::§3.34 service permission is asked once and the result is logged; ::§3.34 service a decline is final and logged | done |
 | R-6-59 | `notif_opened` (message 1–20, slot midday / evening) | 6 | 4b | test/services/s3_34_reminders_test.dart::§3.34 service tapping a reminder logs notif_opened | done |
 | R-6-60 | `switchring_spawned` (design) | 6 | 3d | | todo |

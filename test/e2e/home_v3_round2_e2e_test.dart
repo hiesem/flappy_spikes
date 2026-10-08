@@ -12,6 +12,7 @@ import 'package:flappy_spikes/components/levels/emblem_view.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/palettes.dart';
 import 'package:flappy_spikes/game/rumble.dart';
+import 'package:flappy_spikes/run/run_events.dart' show PickupCollected;
 import 'package:flappy_spikes/game/sound.dart';
 import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/levels/emblem_painter.dart';
@@ -362,9 +363,24 @@ void main() async {
       await run(game, .6);
       await _tap(game, tester, game.homeScreen!.startButton);
       final inRun = game.rumble.fired.length;
+      final runState = game.run!.state;
+      var pickups = 0;
+      game.run!.events.on<PickupCollected>((_) => pickups++);
       await _flyToEgg(game);
       await run(game, 2);
-      expect(game.rumble.fired.length, inRun);
+      // PRD-2 §3.33 (WP-2b): runs rumble — one shake per perfect pass (never
+      // skipped), knocks only for grazes / pickups; nothing else.
+      final pulses = game.rumble.fired.sublist(inRun);
+      expect(
+        pulses.where((k) => k == RumbleKind.shake).length,
+        runState.perfectPasses,
+      );
+      expect(
+        pulses.where((k) => k == RumbleKind.knock).length,
+        lessThanOrEqualTo(
+          runState.passes - runState.perfectPasses + pickups,
+        ),
+      );
     },
   );
 

@@ -143,7 +143,7 @@ code. Paths are relative to `flappy_spikes/`.
 | `extra_life.dart`, `shield.dart` | 2a | `MistakeInterceptor`s (shield order 10, extra life order 20), 2 s invulnerability, flash |
 | `big_hoops.dart` | 2a | D = 30–40 s (`timing` stream), mult 1.5 eased over last 8 s, gold look, cap to band |
 | `streak.dart` | 2b | streak/tier, banners, pass sounds, FEVER hook (`streak = max(5, streak+1)`), break on graze/save |
-| `rumble_router.dart` | 2c | events → `Rumble.knock/shake` |
+| `rumble_router.dart` | 2b (2c folded in) | events → `Rumble.knock/shake` |
 | `comet.dart` | 3a | 10 s × 1.7, auto-pilot, rims ignored, timed-powerup slot |
 | `fever.dart` | 3c | fire on/off, crackle loop |
 | `egg.dart`, `piggy.dart`, `jar.dart`, `star_trail_feature.dart` | 3e | |
@@ -1061,3 +1061,17 @@ Changes to the contracts above, made while building WP-0b. Later WPs build again
 | Miss flash | `MissFlash.play(hoop, fx:, glowParent:, glowPriority:, screen:)` — the edge glow goes into the **world under the strips** (`RunLayer.items`), as the mock paints it, not the viewport | §5.13 mock order |
 | Calls | spike contact = the bird circle reaching the tooth tips (prototype used tips + 8); no rim bounce while invulnerable (prototype); perfect passes are silent until WP-2b's perfect sounds (ARCH: `point.mp3` on non-perfect only); the rim "tonk" plays `Sfx.rimTonk` looked up by name (WP-3h adds it) | |
 | Tests | `killRun(game[, cause])` helper (onBirdHit + step through the tumble) replaces the 1.0 instant game over in the menu / e2e tests | |
+
+## 14. WP-2b contract notes (as built, 2026-10-08; WP-2c folded in)
+
+| Area | As built | Why |
+|---|---|---|
+| `items/streak.dart` | `StreakFeature` (features region WP-2b): `HoopPassed` perfect → `streak + 1` (FEVER kind: `max(5, streak + 1)`, cause `fever`); non-perfect → 0 (`graze`); `MistakeSaved` → 0 (`save`); `RunDied` → 0 (`death`). Emits `StreakChanged` on every change and `TierChanged` when `RunState.tier` changes; keeps `bestStreak`. Per perfect pass: `BannerHost.showStreak(tier)`, `perfect_1/2/3` (min(streak, 3)), `PerfectBurst` at the bird in **screen space** (world coordinates, own `ParticlePool` at `RunLayer.fx`, like the §5.3 mock's `pop`), `perfect_pass {tier}`. `streak_broken {length, cause}` when a running streak breaks. The "+2 coin" popup and coins stay in `ScoringFeature` (WP-1a), as does `point` + the pulse on a graze | single owner per effect |
+| Ring field | on `HoopSpawned` every hoop whose kind `usesTierLook` gets one `RingTierFx` per ring; the streak **wraps** the hoop's `paintBack` (glow, behind the ring) and `front.paintFront` (sparkles / flames, over it) closures, so kinds must set those in `buildVisual` (before `HoopSpawned`) and not replace them later. `Hoop.look.colors` gets `RingPainter.colorsForTier(tier)` — **only while it still holds the value the streak wrote last** (another owner such as Big Hoops gold or the miss flash keeps its colours; Big Hoops should write its gold every frame or on spawn). `look.missed` hoops drop out (fx cleared, no tint) | §3.5 / §5.13 |
+| Bird / trail | `LookComponent.goldTier = tier >= 2` every frame (reset on detach and on death). `TierTrail` (equipped trail; blocks item → `BlockTrail`) in a screen-space component at `RunLayer.bird − 1`, active at tier 3+ **or while `RunState.ride != null`** (comet / portal, §3.0.9 #10). Heading: 0 in normal flight (call: matches the §5.3 mock — the camera follows the bird forward, flaps do not tilt the trail); during a ride the bird's motion relative to the world (screen Δ + camera Δ) | §3.0.9 #10 |
+| Banners | `BannerHost.ensureIn(parent, priority:)` — one host per parent (the run puts it in the world at priority 18, under the HUD pills 19 / 21) shared by streak, FEVER (3c) and element banners; a new banner replaces the one showing. 2d's `RunHud` may adopt the same host | master #7 host |
+| Graze notice | §5.3 "GRAZE · streak lost" (stage foreground, 22 pt Opificio, 0.1 em, centred at x 160, top 250, rises 26 pt and fades in 1.1 s) on a graze that breaks a running streak (call: the mock's demo text is shown in the game) | R-5.3-4 |
+| `items/rumble_router.dart` | `RumbleRouter` (features region WP-2b): perfect pass → shake; non-perfect pass → knock; `PickupCollected` → knock; nothing else. Only while `RunController.isScrolling`. Requests are **coalesced per frame** and flushed in `update` (and on death): a shake wins over any knock in that frame; `Rumble` keeps the 90 ms knock throttle and "shake never skipped" across frames | §3.33 "same window → only the shake" |
+| Analytics | `GameServices.logRumbleToggle` sends `rumble_toggle {on}` **and** `setting_changed {setting: rumble, value: 0/1}` (call) | R-6-57 |
+| Gold glow perf | `LookPainter` bounds the gold-glow `saveLayer` to `goldGlowBounds` (art box + blur reach). Measured (CPU raster, 960 × 2133): unbounded ≈ 15 ms/frame vs bounded ≈ 2 ms (incl. ≈ 2 ms readback); same pixels | WP-0c perf warning |
+| Config | `lib/run/config/streak_config.dart` (`StreakConfig`) | ARCH §4 |

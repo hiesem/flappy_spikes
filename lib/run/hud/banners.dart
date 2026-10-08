@@ -195,6 +195,23 @@ class ElementBanner extends RunBanner {
 class BannerHost extends PositionComponent {
   BannerHost({super.priority});
 
+  static final Expando<BannerHost> _hosts = Expando('BannerHost');
+
+  /// The one banner host under [parent], created at [priority] the first
+  /// time (WP-2b): the streak, FEVER and element banners all share it, so a
+  /// new banner replaces the one showing instead of stacking. Safe to call
+  /// several times in one frame (before the host is mounted).
+  static BannerHost ensureIn(Component parent, {int priority = 18}) {
+    final existing = _hosts[parent];
+    if (existing != null && !existing.isRemoving && !existing.isRemoved) {
+      return existing;
+    }
+    final host = BannerHost(priority: priority);
+    _hosts[parent] = host;
+    parent.add(host);
+    return host;
+  }
+
   RunBanner? _current;
 
   /// The banner on screen, if any.

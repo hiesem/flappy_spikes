@@ -553,3 +553,25 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `test/run/flow/s3_0_1_hoop_spawner_test.dart`; `pipe_spawner_test` and
   `gap_variance_test` were replaced by the latter.
 
+
+## PRD-2 perfect streak, ring tiers and run rumble (WP-2b + WP-2c, 2026-10-08)
+
+- DEVIATION (PRD-2 §3.4 / §3.5, new mechanic): a **perfect pass** (no rim
+  touch; every ride hoop) builds a streak, capped at tier 10 (IMMORTAL ×10);
+  a graze, a saved mistake or a death resets it to 0. A perfect FEVER pass
+  sets it to max(5, streak + 1) (§3.19). Each perfect pass shows the streak
+  banner (y 190, 10 names), plays `perfect_1/2/3` instead of `point`, and a
+  small burst at the bird; the whole ring field reflects the tier (tier 1
+  sparkles, tier 2 gold rings + gold bird, tier 3+ bright gold + glow +
+  flame flicks + the bird's trail). A graze with a streak shows
+  "GRAZE · streak lost" (§5.3). No screen flash at any tier (§3.0.9 #13).
+  The coins (+2 perfect) are unchanged from WP-1a.
+- DEVIATION (PRD-2 §3.33): runs now vibrate — a 45 ms full shake on every
+  perfect pass, a 15 ms knock on a non-perfect pass and on every pickup touch
+  (one knock per 90 ms; a shake is never skipped and a knock in the same
+  frame is dropped); only while the run is live, never for deaths, saves or
+  screens. The RUMBLE switch also sends `setting_changed`.
+- Tests: `test/run/items/s3_4_streak_test.dart`,
+  `test/run/items/s3_33_rumble_test.dart`,
+  `test/run/effects/s3_0_9_gold_glow_perf_test.dart`; shots
+  `test/run/shots/streak_shots_test.dart`.

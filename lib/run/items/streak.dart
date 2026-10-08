@@ -1,0 +1,424 @@
+import 'dart:math' as math;
+import 'dart:ui';
+
+import 'package:flame/components.dart';
+import 'package:flutter/painting.dart' show TextPainter, TextSpan, TextStyle;
+import 'package:flutter/painting.dart' as p show TextDirection;
+
+import '../../components/skins/item_art.dart' show paintLookForTrail;
+import '../../game/config.dart';
+import '../config/run_config.dart';
+import '../config/streak_config.dart';
+import '../director/plans.dart';
+import '../effects/particle_pool.dart';
+import '../effects/perfect_burst.dart';
+import '../effects/ring_tier_fx.dart';
+import '../effects/tier_trail.dart';
+import '../hoops/hoop.dart';
+import '../hoops/ring_painter.dart';
+import '../hud/banners.dart';
+import '../run_context.dart';
+import '../run_events.dart';
+import '../run_feature.dart';
+
+/// The perfect-pass streak (PRD-2 §3.4, §3.5, §3.19 FEVER hook, §5.3, §5.4).
+///
+/// **Rules.** A perfect pass (no rim touch, every ride hoop) adds one to
+/// `RunState.streak`; a perfect FEVER pass sets it to
+/// max([StreakConfig.feverMinStreak], streak + 1). A non-perfect pass (a
+/// graze), a saved mistake ([MistakeSaved]) and a death ([RunDied]) reset it
+/// to 0. The tier is `RunState.tier` (streak capped at 10). Every change
+/// emits [StreakChanged]; a tier change emits [TierChanged].
+///
+/// **Per perfect pass** (the §3.0.9 masters, never redrawn here): the
+/// streak banner #7 ([BannerHost.showStreak], one host shared with the
+/// FEVER / element banners), the tier sound `perfect_1/2/3`, the small
+/// burst #9 at the bird ([PerfectBurst], screen space like the §5.3 mock)
+/// and `perfect_pass` (tier). The "+2 coin" popup #8 and the coins belong to
+/// `ScoringFeature`; a graze keeps `point` + the ring pulse there. **No
+/// screen flash** (#13).
+///
+/// **The ring field** (§3.5): every hoop whose kind `usesTierLook` gets one
+/// [RingTierFx] per ring (#11: sparkles / flame flicks in front, the glow
+/// behind) and the tier colours on `Hoop.look.colors` — passed rings, rings
+/// ahead and rings spawned later alike; a missed hoop (`look.missed`) stays
+/// out of it. The streak only writes `look.colors` while they still hold
+/// the value it wrote last, so another owner (Big Hoops gold, the miss
+/// flash) keeps its colours.
+///
+/// **The bird**: gold from tier 2 (#5, `LookComponent.goldTier`), its trail
+/// from tier 3 (#10 via [TierTrail]: the equipped trail, or the block trail
+/// for the blocks item) — also during a ride (comet / portal).
+///
+/// **Graze** with a streak running: "GRAZE · streak lost" rises and fades
+/// (§5.3, 1.1 s); everything else resets at once.
+class StreakFeature extends RunFeature {
+  RunContext? _c;
+
+  final Map<Hoop, _HoopTier> _hoops = {};
+
+  /// Screen-space pool of the perfect bursts.
+  ParticlePool? _burst;
+  _TrailComponent? _trail;
+  BannerHost? _banners;
+
+  int get tier => _c?.s.tier ?? 0;
+
+  /// The bursts' pool (tests).
+  ParticlePool? get burstPool => _burst;
+
+  /// The bird's trail (tests).
+  TierTrail? get trail => _trail?.trail;
+
+  /// Whether the bird's trail is emitting (tests).
+  bool get trailActive => _trail?.active ?? false;
+
+  /// The banner host (tests).
+  BannerHost? get banners => _banners;
+
+  /// The tier fx of [h]'s rings (null for kinds without the tier look).
+  List<RingTierFx>? fxOf(Hoop h) => _hoops[h]?.fx;
+
+  @override
+  void attach(RunContext c) {
+    _c = c;
+    final world = c.game.world;
+    _burst = ParticlePool(priority: StreakConfig.burstPriority);
+    world.add(_burst!);
+    final look = c.game.menu.items.look;
+    _trail = _TrailComponent(
+      c,
+      TierTrail(
+        trailId: look.trail,
+        random: c.cosmetic,
+        lookPainter: paintLookForTrail,
+      )..emitter.look = look,
+    );
+    world.add(_trail!);
+    _banners = BannerHost.ensureIn(
+      world,
+      priority: StreakConfig.bannerPriority,
+    );
+    c.events
+      ..on<HoopSpawned>(_onSpawned)
+      ..on<HoopPassed>(_onPassed)
+      ..on<MistakeSaved>(_onSaved)
+      ..on<RunDied>(_onDied);
+    for (final h in c.run.spawner.hoops) {
+      _track(h);
+    }
+  }
+
+  // ---------------------------------------------------------------- events
+
+  void _onSpawned(HoopSpawned e) => _track(e.hoop);
+
+  void _onPassed(HoopPassed e) {
+    final c = _c;
+    if (c == null) return;
+    final s = c.s;
+    if (!e.perfect) {
+      _break(StreakCause.graze, notice: true);
+      return;
+    }
+    final old = s.streak;
+    final fever = e.hoop?.plan.kind == HoopKindId.fever;
+    final next = fever
+        ? math.max(StreakConfig.feverMinStreak, old + 1)
+        : old + 1;
+    _set(next, fever ? StreakCause.fever : StreakCause.pass);
+    final tier = s.tier;
+    _banners?.showStreak(tier);
+    c.sfx(StreakConfig.tierSounds[math.min(s.streak, 3) - 1]);
+    final bird = c.game.runBirdPosition;
+    final burst = _burst;
+    if (burst != null) {
+      final at = bird != null
+          ? Offset(bird.x, bird.y)
+          : Offset(RunConfig.birdX, c.viewHeight / 2);
+      PerfectBurst.emit(burst, at, tier, c.cosmetic);
+    }
+    c.track('perfect_pass', {'tier': tier});
+  }
+
+  void _onSaved(MistakeSaved e) => _break(StreakCause.save);
+
+  void _onDied(RunDied e) => _break(StreakCause.death);
+
+  // ----------------------------------------------------------------- rules
+
+  void _break(StreakCause cause, {bool notice = false}) {
+    final c = _c;
+    if (c == null) return;
+    final old = c.s.streak;
+    if (old == 0) return;
+    _set(0, cause);
+    c.track('streak_broken', {'length': old, 'cause': cause.name});
+    if (notice) {
+      c.game.world.add(_GrazeNotice(c.game.foregroundColor));
+    }
+  }
+
+  void _set(int value, StreakCause cause) {
+    final c = _c!;
+    final s = c.s;
+    final old = s.streak;
+    final oldTier = s.tier;
+    s.streak = value;
+    if (value > s.bestStreak) s.bestStreak = value;
+    if (old != value) c.emit(StreakChanged(old, value, cause));
+    final newTier = s.tier;
+    if (newTier != oldTier) {
+      _applyTier(newTier);
+      c.emit(TierChanged(oldTier, newTier));
+    }
+  }
+
+  // ------------------------------------------------------------ ring field
+
+  void _track(Hoop h) {
+    final c = _c;
+    if (c == null || _hoops.containsKey(h) || !h.kind.usesTierLook) return;
+    final fx = [
+      for (final _ in h.rings)
+        RingTierFx(random: c.cosmetic, opening: h.opening),
+    ];
+    final entry = _HoopTier(fx, h.look.colors);
+    _hoops[h] = entry;
+    final back = h.paintBack;
+    h.paintBack = (canvas) {
+      if (entry.visible) {
+        for (var i = 0; i < fx.length; i++) {
+          canvas.save();
+          canvas.translate(0, h.rings[i]);
+          fx[i].paintBack(canvas);
+          canvas.restore();
+        }
+      }
+      back?.call(canvas);
+    };
+    final front = h.front.paintFront;
+    h.front.paintFront = (canvas) {
+      front?.call(canvas);
+      if (!entry.visible) return;
+      for (var i = 0; i < fx.length; i++) {
+        canvas.save();
+        canvas.translate(0, h.rings[i]);
+        fx[i].paintFront(canvas);
+        canvas.restore();
+      }
+    };
+    _applyHoop(h, entry, tier);
+  }
+
+  void _applyTier(int tier) {
+    for (final e in _hoops.entries) {
+      _applyHoop(e.key, e.value, tier);
+    }
+    _applyBird(tier);
+  }
+
+  void _applyHoop(Hoop h, _HoopTier e, int tier) {
+    final t = h.look.missed ? 0 : tier;
+    for (final f in e.fx) {
+      f
+        ..opening = h.opening
+        ..tier = t;
+    }
+    e.visible = !h.look.missed;
+    if (h.look.missed) return;
+    final want = RingPainter.colorsForTier(t);
+    // Only overwrite what the streak wrote itself (Big Hoops / miss flash
+    // keep their colours).
+    if (h.look.colors == e.written) {
+      h.look.colors = want;
+      e.written = want;
+    }
+  }
+
+  void _applyBird(int tier) {
+    final bird = _c?.game.runBird;
+    if (bird == null || !bird.isLoaded) return;
+    bird.lookComponent.goldTier = tier >= StreakConfig.goldBirdTier;
+  }
+
+  @override
+  void update(double gameDt, double realDt) {
+    final c = _c;
+    if (c == null) return;
+    final t = tier;
+    _hoops.removeWhere((h, _) => h.isRemoved || h.isRemoving);
+    for (final e in _hoops.entries) {
+      final h = e.key;
+      final entry = e.value;
+      if (h.look.missed && entry.visible) _applyHoop(h, entry, t);
+      if (!entry.visible) continue;
+      for (final f in entry.fx) {
+        f.opening = h.opening;
+        f.update(gameDt);
+      }
+    }
+    _applyBird(t);
+  }
+
+  @override
+  void detach() {
+    final c = _c;
+    if (c != null) {
+      c.events
+        ..off<HoopSpawned>(_onSpawned)
+        ..off<HoopPassed>(_onPassed)
+        ..off<MistakeSaved>(_onSaved)
+        ..off<RunDied>(_onDied);
+      final bird = c.game.runBird;
+      if (bird != null && bird.isLoaded) bird.lookComponent.goldTier = false;
+    }
+    for (final e in _hoops.values) {
+      for (final f in e.fx) {
+        f.clear();
+      }
+    }
+    _hoops.clear();
+    _burst?.removeFromParent();
+    _trail?.removeFromParent();
+    _banners?.clear();
+    _burst = null;
+    _trail = null;
+    _banners = null;
+    _c = null;
+  }
+}
+
+class _HoopTier {
+  _HoopTier(this.fx, this.written);
+  final List<RingTierFx> fx;
+
+  /// The colours the streak wrote last (null = the skin).
+  RingColors? written;
+
+  /// False once the hoop was missed (§5.13: its tier look stays off).
+  bool visible = true;
+}
+
+/// The bird's tier-3+ trail (master #10 / equipped trail via [TierTrail]),
+/// in screen space right behind the bird. It also runs during a ride.
+class _TrailComponent extends Component {
+  _TrailComponent(this.c, this.trail)
+    : super(priority: StreakConfig.trailPriority);
+
+  final RunContext c;
+  final TierTrail trail;
+
+  /// Screen-space blocks of the block trail.
+  final ParticlePool pool = ParticlePool(capacity: 48);
+
+  bool active = false;
+
+  Vector2? _prevBird;
+  double _prevCamX = 0, _prevCamY = 0;
+
+  /// The flight direction for master #10 (radians, 0 = right). Normal
+  /// flight: 0 — the camera follows the bird forward, so the trail lies
+  /// level behind it and drifts with the world, exactly the §5.3 mock (call:
+  /// the vertical flap motion does not tilt it). Rides (comet / portal):
+  /// the bird's motion relative to the world (screen motion + camera
+  /// motion), so the trail bends with diagonal and curved flight.
+  double _heading(Vector2? bird, double dt) {
+    final s = c.s;
+    final prev = _prevBird;
+    final dxCam = s.camX - _prevCamX, dyCam = s.camY - _prevCamY;
+    _prevBird = bird?.clone();
+    _prevCamX = s.camX;
+    _prevCamY = s.camY;
+    if (s.ride == null || bird == null || prev == null || dt <= 0) return 0;
+    final vx = bird.x - prev.x + dxCam;
+    final vy = bird.y - prev.y + dyCam;
+    if (vx * vx + vy * vy < 1e-6) return 0;
+    return math.atan2(vy, vx);
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    final s = c.s;
+    final bird = c.game.runBirdPosition;
+    final live = !c.run.dying && !c.run.ended;
+    active =
+        live &&
+        bird != null &&
+        (s.tier >= StreakConfig.trailTier || s.ride != null);
+    final vx = s.forwardSpeed;
+    final heading = _heading(bird, dt);
+    trail.update(
+      pool,
+      dt,
+      bird == null ? Offset.zero : Offset(bird.x, bird.y),
+      heading,
+      active: active,
+      scrollVx: -vx,
+    );
+    pool.step(dt);
+  }
+
+  @override
+  void render(Canvas canvas) {
+    pool.paint(canvas);
+    trail.paint(canvas);
+  }
+
+  @override
+  void onRemove() {
+    trail.clear();
+    pool.clear();
+    super.onRemove();
+  }
+}
+
+/// §5.3 "GRAZE · streak lost": stage-foreground text that rises
+/// [StreakConfig.grazeRise] pt and fades over [StreakConfig.grazeDuration].
+class _GrazeNotice extends Component {
+  _GrazeNotice(this.color) : super(priority: StreakConfig.grazePriority);
+
+  final Color color;
+  double _t = 0;
+
+  late final TextPainter _tp = TextPainter(
+    text: TextSpan(
+      text: StreakConfig.grazeText,
+      style: TextStyle(
+        fontFamily: Config.uiFont,
+        fontSize: StreakConfig.grazeFontSize,
+        letterSpacing:
+            StreakConfig.grazeFontSize * StreakConfig.grazeLetterSpacing,
+        color: color,
+      ),
+    ),
+    textDirection: p.TextDirection.ltr,
+  )..layout();
+
+  final Paint _layer = Paint();
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _t += dt;
+    if (_t >= StreakConfig.grazeDuration) removeFromParent();
+  }
+
+  @override
+  void render(Canvas canvas) {
+    final k = (_t / StreakConfig.grazeDuration).clamp(0.0, 1.0);
+    final a = 1 - k;
+    if (a <= 0) return;
+    final spacing =
+        StreakConfig.grazeFontSize * StreakConfig.grazeLetterSpacing;
+    final x = StreakConfig.grazeCentreX - (_tp.width - spacing) / 2;
+    final y = StreakConfig.grazeTop - StreakConfig.grazeRise * k;
+    canvas.saveLayer(
+      Rect.fromLTWH(x - 2, y - 2, _tp.width + 4, _tp.height + 4),
+      _layer..color = Color.fromRGBO(0, 0, 0, a),
+    );
+    _tp.paint(canvas, Offset(x, y));
+    canvas.restore();
+  }
+}

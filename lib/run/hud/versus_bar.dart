@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 
 import '../config/hud_config.dart';
+import '../config/versus_config.dart';
 import 'name_chip.dart';
 import 'run_hud.dart';
 
@@ -13,9 +14,11 @@ import 'run_hud.dart';
 /// The opponent box flashes a 3 pt gold outline whenever their score
 /// rises. Only added when the run has an opponent (solo: no bar).
 ///
-/// WP-2d placeholder: the opponent's score replays their recorded
-/// timeline on `runClock` ([OpponentRun.scoreAt]); WP-5b (`VersusService`)
-/// owns the live parts (avatars, out state, the duel).
+/// The opponent's score replays their recorded timeline on `runClock`
+/// ([OpponentRun.scoreAt]): it stops with the run in pause, the revive
+/// offer and the phoenix and slows with the Hourglass (§3.13). Once their
+/// timeline has ended ([out], WP-5b) their score stays final and their box
+/// (and name chip) is drawn dimmed ([VersusConfig.outOpacity]).
 class VersusBar extends PositionComponent {
   VersusBar(this.hud) : super(position: Vector2.zero());
 
@@ -41,6 +44,12 @@ class VersusBar extends PositionComponent {
       hud.run.setup.opponent?.scoreAt(hud.run.state.runClock) ?? 0;
 
   int get myScore => hud.run.state.score;
+
+  // region WP-5b — the opponent goes "out" at the end of their timeline
+  /// §3.13 their recorded run is over at my runClock.
+  bool get out =>
+      hud.run.setup.opponent?.outAt(hud.run.state.runClock) ?? false;
+  // endregion WP-5b
 
   /// Seconds of gold outline flash left (tests).
   double get flash => _flash;
@@ -78,23 +87,24 @@ class VersusBar extends PositionComponent {
       HudConfig.soft,
       a,
     );
-    // Opponent: avatar outside (right).
+    // Opponent: avatar outside (right); dimmed once they are out (WP-5b).
+    final ta = out ? a * VersusConfig.outOpacity : a;
     final themBox = Rect.fromLTWH(HudConfig.themLeft, top, w, h);
-    _box(canvas, themBox, fg, a);
+    _box(canvas, themBox, fg, ta);
     final themAv = Rect.fromLTWH(themBox.right - h, top, h, h);
     _box(
       canvas,
       themAv,
       Color.lerp(const Color(0xFF000000), fg, HudConfig.themAvatarMix)!,
-      a,
+      ta,
     );
-    _avatar(canvas, themAv, bg, a);
+    _avatar(canvas, themAv, bg, ta);
     _score(
       canvas,
       '$theirScore',
       Rect.fromLTRB(themBox.left, top, themAv.left, top + h).center,
       bg,
-      a,
+      ta,
     );
     if (_flash > 0) {
       _stroke
@@ -110,7 +120,7 @@ class VersusBar extends PositionComponent {
       opacity: a,
     );
     you.render(canvas, a);
-    them.render(canvas, a);
+    them.render(canvas, ta);
   }
 
   void _box(Canvas canvas, Rect r, Color c, double a) {

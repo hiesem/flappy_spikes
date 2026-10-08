@@ -20,6 +20,7 @@ import 'items/coin_frenzy.dart'; // WP-3f
 import 'items/hourglass.dart'; // WP-3f
 import 'items/mini_bird.dart'; // WP-3f
 import 'items/timed_powerup.dart'; // WP-3f
+import 'items/versus_recorder.dart'; // WP-5b
 import 'items/streak.dart';
 import 'rides/portal_ride.dart';
 import 'run_feature.dart';
@@ -86,6 +87,9 @@ List<RunFeature> buildRunFeatures() => [
   PiggyFeature(),
   JarFeature(),
   // endregion WP-3e
+  // region WP-5b — versus timeline + duel (PRD-2 §3.13)
+  VersusRecorder(),
+  // endregion WP-5b
   // region WP-2d — revive rules (PRD-2 §3.14); keep last
   ReviveRulesFeature(),
   // endregion WP-2d

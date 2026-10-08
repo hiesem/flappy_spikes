@@ -577,6 +577,9 @@ class RunController extends Component {
     _ended = true;
     clock.running = false;
     state.timeline.end(state.runClock);
+    // region WP-5b — the duel settles (win / draw bonus) before the summary
+    events.emit(const RunEnding());
+    // endregion WP-5b
     final s = summarize();
     _summary = s;
     events.emit(RunEnded(s));
@@ -671,6 +674,7 @@ class RunController extends Component {
       hoopIndex: hoop?.plan.index ?? s.hoopIndex,
       timeline: s.timeline,
       opponent: setup.opponent,
+      duel: s.duel, // WP-5b
       spawned: {...director.spawnedCounts, ...s.spawned},
       rimTouches: s.rimTouches,
       passes: s.passes,

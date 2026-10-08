@@ -271,6 +271,15 @@ class FeverFireChanged extends RunEvent {
 }
 // endregion WP-3c
 
+// region WP-5b — versus (PRD-2 §3.13)
+/// The run is ending: emitted by `RunController.endRun` right before the
+/// summary is built, so the versus duel can credit its win / draw bonus
+/// through `ctx.earn` and land in YOUR REWARD (ARCH §17).
+class RunEnding extends RunEvent {
+  const RunEnding();
+}
+// endregion WP-5b
+
 // region WP-3d — pair gifts (PRD-2 §3.21)
 /// Raises the perfect-pass streak to at least [value] (the pair FEVER
 /// gift: "streak set to at least ×5", Q59). `StreakFeature` applies it

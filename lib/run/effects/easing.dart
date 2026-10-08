@@ -31,6 +31,11 @@ abstract final class Ease {
   /// CSS `cubic-bezier(.34, 1.56, .64, 1)` (the mocks' `OUT`).
   static double cssOut(double u) => _bezier(u.clamp(0.0, 1.0), .34, 1.56, .64, 1);
 
+  /// Any CSS `cubic-bezier(x1, y1, x2, y2)` (WP-5b: the VS intro's
+  /// `ease-out` / `ease-in` / panel and fly-in curves).
+  static double bezier(double u, double x1, double y1, double x2, double y2) =>
+      _bezier(u.clamp(0.0, 1.0), x1, y1, x2, y2);
+
   static double _bezier(double x, double x1, double y1, double x2, double y2) {
     // Solve x(t) = x by Newton iterations, then return y(t).
     double bx(double t) =>

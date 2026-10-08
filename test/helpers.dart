@@ -185,6 +185,9 @@ Future<RunController> startRun(
     ..addAll(force);
   if (starter != Powerup.none) g.storage.armedPowerup = starter.name;
   g.onScreenTap();
+  // region WP-5b — a prefetched opponent plays the VS intro first (§5.8)
+  await finishVersusIntro(g);
+  // endregion WP-5b
   await flushAndMount(g);
   return g.run!;
 }
@@ -468,3 +471,17 @@ Future<void> glideInto(
   );
 }
 // endregion WP-3d
+
+// region WP-5b — versus (PRD-2 §3.13, §5.8)
+
+/// Plays a running VS intro to its end on fixed steps (it is not
+/// skippable in the game), so the run starts as after the real ≈ 7 s.
+Future<void> finishVersusIntro(FlappySpikesGame g, {double dt = 1 / 30}) async {
+  await flushAndMount(g);
+  for (var i = 0; i < 1200 && g.state == GameState.versusIntro; i++) {
+    g.update(dt);
+    await Future<void>.value();
+  }
+  await flushAndMount(g);
+}
+// endregion WP-5b

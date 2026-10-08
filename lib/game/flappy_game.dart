@@ -59,6 +59,9 @@ import '../run/screens/revive_ladder.dart';
 import '../run/screens/revive_screen.dart';
 import '../run/screens/shop_overlay.dart';
 import '../run/screens/results_screen.dart';
+import '../run/screens/versus_intro.dart'; // WP-5b
+import '../run/config/versus_config.dart'; // WP-5b
+import '../versus/opponent.dart'; // WP-5b
 import '../services/e2e.dart';
 import '../versus/timeline.dart';
 import '../services/versus_service.dart';
@@ -680,6 +683,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _fades.removeWhere((fade) => identical(fade.target, _spikeInset));
     _spikeInset.opacity = 1;
     _addHome();
+    // region WP-5b — §3.13 an opponent is prefetched at home
+    unawaited(versus.prefetch());
+    // endregion WP-5b
   }
 
   void _addHome() {
@@ -798,11 +804,19 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// starts the run. Synchronous for a plain START without a hook.
   Future<void> _runFromHome({bool withPowerup = false}) async {
     final hook = beforeRunStart;
-    if (withPowerup || hook != null) {
+    // region WP-5b — §3.13 / §5.8 the opponent is taken at tap time: the
+    // VS intro plays only when one is already prefetched, else START goes
+    // straight into a solo run (no intro, no waiting)
+    final opponent = _takeRunOpponent();
+    // endregion WP-5b
+    if (withPowerup || hook != null || opponent != null) {
       _runStarting = true;
       try {
         if (withPowerup) await menu.slot.armOffered();
         if (hook != null) await hook();
+        // region WP-5b
+        if (opponent != null) await _playVersusIntro(opponent);
+        // endregion WP-5b
       } finally {
         _runStarting = false;
       }
@@ -858,7 +872,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final setup = RunSetup(
       seed: runSeed ?? (kE2E ? kE2ESeed : _random.nextInt(1 << 31)),
       starter: starter,
-      opponent: versus.takeOpponent(),
+      // region WP-5b — the opponent taken at START (null = solo)
+      opponent: _consumeRunOpponent(),
+      // endregion WP-5b
       startHoopIndex: e2e && E2EHooks.startHoopIndex > 0
           ? E2EHooks.startHoopIndex
           : d.startHoopIndex,
@@ -882,6 +898,104 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     (world as RunScaledWorld).frozenSource = () => state == GameState.paused;
     // endregion WP-2d
   }
+
+  // region WP-5b — versus (PRD-2 §3.13, §5.8)
+  /// The opponent taken at START for the run about to begin.
+  OpponentRun? _runOpponent;
+
+  /// The VS intro while it plays (tests, screenshots).
+  VersusIntro? get versusIntro => _versusIntro;
+  VersusIntro? _versusIntro;
+
+  /// §3.13 takes the prefetched opponent (sync, never waits) and logs
+  /// `versus_matched` / `versus_skipped {reason: no_opponent}` (§6).
+  OpponentRun? _takeRunOpponent() {
+    OpponentRun? o;
+    try {
+      o = versus.takeOpponent();
+    } catch (_) {
+      o = null;
+    }
+    _runOpponent = o;
+    if (o == null) {
+      services.track('versus_skipped', {'reason': 'no_opponent'});
+    } else {
+      services.track('versus_matched', {
+        'opp_level': o.level,
+        'opp_score': o.score,
+        'level': menu.levels.level,
+      });
+    }
+    return o;
+  }
+
+  /// The panels cover the home screen: drop it at once (its chrome goes
+  /// with it), so nothing of it shows through a shake or the white fade.
+  void _dropHomeUnderIntro() {
+    final home = _home;
+    if (home == null) return;
+    _home = null;
+    home.active = false;
+    unregisterTintable(home);
+    _chromeHosts.remove(home);
+    home.removeFromParent();
+    _updateMenuChrome();
+  }
+
+  OpponentRun? _consumeRunOpponent() {
+    final o = _runOpponent;
+    _runOpponent = null;
+    return o;
+  }
+
+  /// §5.8 plays the VS intro over the home screen (state `versusIntro`,
+  /// taps do nothing) and returns when its white fade has covered the
+  /// screen; the run then starts under the white, which fades out (0.3 s).
+  Future<void> _playVersusIntro(OpponentRun opponent) async {
+    state = GameState.versusIntro;
+    final intro = VersusIntro(
+      opponent: opponent,
+      myName: 'You',
+      myLook: menu.items.look,
+      myLevel: menu.levels.level,
+      onCovered: _dropHomeUnderIntro,
+    );
+    _versusIntro = intro;
+    world.add(intro);
+    _ground.priority = groundOverMenusPriority;
+    _ceiling.priority = groundOverMenusPriority;
+    // The panels slide over the home screen *and* its coin pill.
+    _coinPill.priority = VersusIntro.priorityOnTop - 1;
+    try {
+      if (E2EHooks.skipVersusIntroWait) {
+        await intro.loaded;
+        intro.finishNow();
+      }
+      await intro.done;
+    } finally {
+      if (state == GameState.versusIntro) state = GameState.start;
+      _versusIntro = null;
+      _coinPill.priority = 21;
+      intro.removeFromParent();
+      _ceiling.priority = SpikeStrip.basePriority;
+      _syncGroundPriority();
+      final white = RectangleComponent(
+        position: Vector2.zero(),
+        size: Vector2(Config.worldWidth, viewHeight),
+        paint: Paint()..color = const Color(0xFFFFFFFF),
+        priority: 1000,
+      );
+      world.add(white);
+      fadeOpacity(
+        white,
+        from: 1,
+        to: 0,
+        duration: VersusConfig.whiteFade,
+        removeOnDone: true,
+      );
+    }
+  }
+  // endregion WP-5b
 
   /// The run bird's centre on screen (null without a bird).
   Vector2? get runBirdPosition {

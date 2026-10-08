@@ -71,6 +71,18 @@ abstract final class ResultsConfig {
   /// column top.
   static const double winnerTagFontSize = 11;
 
+  // region WP-5b — versus parts
+  /// §5.10 WINNER tag: top (12 pt above the column's 4 pt padding) and its
+  /// padding 2 × 8.
+  static const double winnerTagTop = 128;
+  static const double winnerTagPadX = 8;
+  static const double winnerTagPadY = 2;
+
+  /// §5.10 "VS" (Fredoka 15 plum) centred between the columns, on their
+  /// vertical middle.
+  static const double vsCentreY = 194;
+  // endregion WP-5b
+
   /// §5.10 NEW BEST sticker top (overlapping the card's bottom edge).
   static const double newBestTop = 238;
 

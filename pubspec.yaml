@@ -39,7 +39,7 @@ dependencies:
   flame_audio: ^2.12.1
   shared_preferences: ^2.5.5
   share_plus: ^13.2.1
-  firebase_core: ^4.12.1
+  firebase_core: ^4.15.0
   firebase_analytics: ^12.4.5
   games_services: ^5.1.0
   url_launcher: ^6.3.2
@@ -51,6 +51,12 @@ dependencies:
   timezone: ^0.11.1
   flutter_timezone: ^5.1.1
   # endregion WP-4b
+  # region WP-5b — versus backend client (PRD-2 §3.13, ARCH §8)
+  firebase_auth: ^6.7.0
+  cloud_firestore: ^6.10.0
+  firebase_app_check: ^0.4.8
+  cloud_functions: ^6.5.0
+  # endregion WP-5b
 
 dev_dependencies:
   flutter_test:

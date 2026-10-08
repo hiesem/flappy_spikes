@@ -166,7 +166,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.8-E25 | Element: perfect streak + ring tier looks | 3.0.7 | 2b | test/run/items/s3_4_streak_test.dart::§3.4 perfect passes build the streak; test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier | done |
 | R-3.0.8-E26 | Element: coins (per pass + bonuses) | 3.0.7 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 a perfect pass pays 2 coins at once …; test/home_flow_test.dart::PRD-2 §3.2 coins are credited per hoop … | done (bonus sources: their WPs) |
 | R-3.0.8-E27 | Element: rumble | 3.0.7 | 2c | test/run/items/s3_33_rumble_test.dart::§3.33 mapping; test/run/items/s3_33_rumble_test.dart::§3.33 throttle | done |
-| R-3.0.8-E28 | Element: revive, results, versus | 3.0.7 | 2d / 2e / 5b | | todo |
+| R-3.0.8-E28 | Element: revive, results, versus | 3.0.7 | 2d / 2e / 5b | test/versus/s3_13_versus_run_test.dart::§5.8 / §3.13 a prefetched opponent…; test/versus/s3_13_versus_run_test.dart::§3.13 / §5.10 WIN… | done (versus: 5b) |
 
 ## 3.0.9 Shared parts (one master each)
 
@@ -218,7 +218,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.2-3 | Coins credited to the wallet at the moment of the pass (kept if the run ends right after); interim "1 coin per point at game over" removed | 3.2 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 … no coins at game over …; test/home_flow_test.dart::PRD-2 §3.2 coins are credited per hoop at the pass …; test/e2e/menu_e2e_test.dart::QA play score is credited once … | done |
 | R-3.2-4 | A hoop saved by an extra life / shield gives no coin | 3.2 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 the extra life forgives one mistake … (no pass → no point / coin) | done |
 | R-3.2-5 | No coin total in the in-game HUD | 3.2 | 2d | test/run/screens/s5_7_hud_pause_test.dart | done |
-| R-3.2-6 | Versus win +10 (draw +5) | 3.2, 3.13 | 5b | | todo |
+| R-3.2-6 | Versus win +10 (draw +5) | 3.2, 3.13 | 5b | test/versus/s3_13_versus_run_test.dart::§3.13 / §5.10 WIN: 5 vs 3 → +10…; …DRAW: 3 vs 3 → +5… | done |
 
 ## 3.3 Hearts and extra life
 
@@ -352,35 +352,35 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.13-1 | Every run is a duel vs a real recorded run when available, else solo; no generated opponents | 3.13 | 5b | | todo |
-| R-3.13-2 | Anonymous Firebase Auth account on first start (no UI) | 3.13 | 5b | | todo |
-| R-3.13-3 | Play Games players show PGS name + avatar; anonymous show generated nickname + default avatar | 3.13 | 5b | | todo |
-| R-3.13-4 | Play Games sign-in later links the same Firebase account (runs carry over, name switches) | 3.13 | 5b | | todo |
-| R-3.13-5 | Nickname: Adjective + Bird + 3 digits; ≤ 14 chars before digits; the 20 + 20 word lists; once per install; no free text | 3.13 | 5b | | todo |
-| R-3.13-6 | Stored per run: score, best, ts, name, avatar, look (5 ids), `tl` (cs deltas uint16 base64 on runClock), `end`, flags ride/train, platform | 3.13 | 5b | | todo |
-| R-3.13-7 | Pair +5 gifts appear as a step of 5 in the timeline | 3.13 | 5b | | todo |
-| R-3.13-8 | Kept: best run + last 5; best always uploaded; others ≤ 3 a day; score < 3 never; local queue with retry | 3.13 | 5b | | todo |
-| R-3.13-9 | Matching from a prefetched pool before START: same level & below my best → any → solo; never own runs; no repeat in a session | 3.13 | 5b | | todo |
-| R-3.13-10 | VS intro only if an opponent is prefetched at tap time; otherwise straight to a solo run | 3.13, 5.8 | 5b | | todo |
-| R-3.13-11 | Opponent score replays their timeline on my runClock (stops in pause, revive offer, phoenix; slows with Hourglass); out (dimmed) at the end of their timeline | 3.13 | 5b | | todo |
-| R-3.13-12 | Result WIN / LOSE / DRAW on final scores; +10 win, +5 draw (`win_bonus`), in YOUR REWARD | 3.13 | 5b | | todo |
-| R-3.13-13 | Powerups, revives, rides part of both runs | 3.13 | 5b | | todo |
+| R-3.13-1 | Every run is a duel vs a real recorded run when available, else solo; no generated opponents | 3.13 | 5b | test/versus/s3_13_versus_run_test.dart::§3.13 solo start…; test/versus/s3_13_service_test.dart::§3.13 matching from the prefetched pool… | done |
+| R-3.13-2 | Anonymous Firebase Auth account on first start (no UI) | 3.13 | 5b | test/versus/s3_13_service_test.dart::§3.13 initialize: a nickname once per install, anonymous auth…; lib/services/firebase_versus_backend.dart (start: signInAnonymously) | done (plugin call: device / e2e) |
+| R-3.13-3 | Play Games players show PGS name + avatar; anonymous show generated nickname + default avatar | 3.13 | 5b | test/versus/s3_13_service_test.dart::§3.13 a Play Games player links the account and shows their name | done (avatar image: neutral glyph, see ARCH §24) |
+| R-3.13-4 | Play Games sign-in later links the same Firebase account (runs carry over, name switches) | 3.13 | 5b | test/versus/s3_13_service_test.dart::§3.13 a Play Games player links the account…; lib/services/identity.dart (GameAuth.getAuthCode → PlayGamesAuthProvider) | done (live link: device) |
+| R-3.13-5 | Nickname: Adjective + Bird + 3 digits; ≤ 14 chars before digits; the 20 + 20 word lists; once per install; no free text | 3.13 | 5b | test/versus/s3_13_matching_nickname_test.dart::§3.13 nicknames (3 tests) | done |
+| R-3.13-6 | Stored per run: score, best, ts, name, avatar, look (5 ids), `tl` (cs deltas uint16 base64 on runClock), `end`, flags ride/train, platform | 3.13 | 5b | test/versus/s3_13_upload_entry_test.dart::§3.13 an entry carries score, best, name, look, platform and the timeline…; test/versus/s3_13_emulator_test.dart (opt-in, tool/versus_emulator_test.sh) | done |
+| R-3.13-7 | Pair +5 gifts appear as a step of 5 in the timeline | 3.13 | 5b | test/versus/s3_13_versus_run_test.dart::§3.13 the timeline records every point on runClock… | done |
+| R-3.13-8 | Kept: best run + last 5; best always uploaded; others ≤ 3 a day; score < 3 never; local queue with retry | 3.13 | 5b | test/versus/s3_13_upload_entry_test.dart::§3.13 upload queue (4 tests); test/versus/s3_13_upload_entry_test.dart::§3.13 player doc — one new run per write (2 tests); test/versus/s3_13_service_test.dart::§3.13 submitRun… | done |
+| R-3.13-9 | Matching from a prefetched pool before START: same level & below my best → any → solo; never own runs; no repeat in a session | 3.13 | 5b | test/versus/s3_13_matching_nickname_test.dart::§3.13 matching — test/fixtures/versus_matching.json (all cases); test/versus/s3_13_service_test.dart::§3.13 matching from the prefetched pool… | done |
+| R-3.13-10 | VS intro only if an opponent is prefetched at tap time; otherwise straight to a solo run | 3.13, 5.8 | 5b | test/versus/s3_13_versus_run_test.dart::§3.13 solo start…; test/versus/s3_13_versus_run_test.dart::§5.8 / §3.13 a prefetched opponent… | done |
+| R-3.13-11 | Opponent score replays their timeline on my runClock (stops in pause, revive offer, phoenix; slows with Hourglass); out (dimmed) at the end of their timeline | 3.13 | 5b | test/versus/s3_13_versus_run_test.dart::§3.13 timeline replay on runClock…; test/versus/s3_13_versus_run_test.dart::§3.13 the replay holds through the revive offer and the phoenix… | done |
+| R-3.13-12 | Result WIN / LOSE / DRAW on final scores; +10 win, +5 draw (`win_bonus`), in YOUR REWARD | 3.13 | 5b | test/versus/s3_13_versus_run_test.dart::§3.13 / §5.10 WIN / LOSE / DRAW (3 tests) | done |
+| R-3.13-13 | Powerups, revives, rides part of both runs | 3.13 | 5b | test/versus/s3_13_versus_run_test.dart::§3.13 the timeline records every point… (ride / train / gift flags) | done |
 | R-3.13-14 | Firestore `players/{uid}` written only by its owner (rules: auth uid, field + size validation) | 3.13 | 5a | functions/test/rules.test.ts::§3.13 a player can create, read, update and delete their own doc; functions/test/rules.test.ts::§3.13 a player cannot read or write another player doc; functions/test/rules.test.ts::§3.13 rejects a player doc with … (19 cases) | done |
 | R-3.13-15 | `pools/{level}_{shard}`: server-only writes, ≤ 150 entries, level 0–10 × 4 shards, newest first; clients read only | 3.13 | 5a | functions/test/rules.test.ts::§3.13 signed-in clients can read a pool but never write one; functions/test/pools.test.ts::§3.13 a shard is trimmed to 150 entries, newest first; functions/test/matching.test.ts::§3.13 runs land in a shard of the uploader level; all 4 shards are used; no self-match | done |
 | R-3.13-16 | Function `onPlayerRunWrite` (2nd gen, europe-west1): validate, append to a random shard of the level, trim to 150, remove the player's older entries | 3.13 | 5a | functions/test/functions.test.ts::§3.13 a client upload of a new best lands in the pool of its level; functions/test/pools.test.ts::§3.13 a new best run goes to a shard of the server-recomputed level, newest first; functions/test/pools.test.ts::§3.13 the player older entries are removed from the shard (dedupe per uid) | done |
-| R-3.13-17 | Client reads one pool doc at app start (own level, random shard; miss → random other level) and when candidates run out | 3.13 | 5b | | todo |
+| R-3.13-17 | Client reads one pool doc at app start (own level, random shard; miss → random other level) and when candidates run out | 3.13 | 5b | test/versus/s3_13_service_test.dart::§3.13 initialize… (own level, random shard; on a miss another level); test/versus/s3_13_matching_nickname_test.dart::§3.13 pool read plan… | done |
 | R-3.13-18 | Cheat filter: timeline length ≠ score (minus gifts), points < 0.9 s apart (not for ride/train), best < score, upload rate exceeded → reject | 3.13 | 5a | functions/test/pools.test.ts::§3.13 rejects: … (5 cases); functions/test/pools.test.ts::§3.13 the 4th non-best run of a UTC day is rejected; a new best still goes; the next day resets; functions/test/timeline.test.ts::§3.13 ride / train / gift points are exempt from the 0.9 s gap; functions/test/functions.test.ts::§3.13 a cheated timeline (points 0.5 s apart) is rejected and never reaches a pool | done |
-| R-3.13-19 | App Check with Play Integrity on Firestore and the function | 3.13 | 5a / 5b | functions/test/functions.test.ts::§3.13 refuses a call without an App Check token (callable); Firestore enforcement = console step, docs/gameplay-v2/VERSUS-BACKEND.md §5 | 5a done (console enforcement at deploy; client: 5b todo) |
+| R-3.13-19 | App Check with Play Integrity on Firestore and the function | 3.13 | 5a / 5b | functions/test/functions.test.ts::§3.13 refuses a call without an App Check token (callable); Firestore enforcement = console step, docs/gameplay-v2/VERSUS-BACKEND.md §5; lib/services/firebase_versus_backend.dart (activateAppCheck); test/versus/s3_13_emulator_test.dart (opt-in, tool/versus_emulator_test.sh)::…deleteMyData needs App Check | done (client sends tokens; console enforcement = deploy step) |
 | R-3.13-20 | TTL: pool entries and recent runs older than 60 days deleted; best runs stay while the player is active | 3.13 | 5a | functions/test/pools.test.ts::§3.13 entries older than 60 days are dropped on write; functions/test/pools.test.ts::§3.13 sweepPools trims > 60-day entries in every shard; functions/test/pools.test.ts::§3.13 recent runs older than 60 days are trimmed from the player doc; TTL on players.expireAt: firestore.indexes.json + functions/scripts/set_ttl.sh | done (TTL policy applied at deploy) |
 | R-3.13-21 | Budget alert $5/month; Blaze plan (already set up) | 3.13 | 5a (verify) | docs/gameplay-v2/VERSUS-BACKEND.md §7 (Blaze + €5 budget recorded 2026-10-08; maxInstances 10) | done (from the setup record; no gcloud here to re-read the budget) |
 | R-3.13-22 | Data-safety form lists user IDs, name, game progress shared with other players | 3.13 | 4c | | todo |
-| R-3.13-23 | "Delete my data" in Settings deletes players doc, pool entries (function), Firebase account, resets the Analytics ID; local progress untouched | 3.13 | 4c / 5a / 5b | functions/test/functions.test.ts::§3.13 deletes the player doc, their pool entries and the Auth user; idempotent; functions/test/pools.test.ts::§3.13 removes the player doc, the rate doc and the entries in every shard; idempotent | 5a done (4c / 5b todo) |
-| R-3.13-24 | Every Firebase call wrapped: failure = solo, never a crash or blocked START | 3.13 | 5b | | todo |
-| R-3.13-25 | One shared pool for Android and iOS; never filtered by platform; `platform` stored for analytics only | 3.13 | 5a / 5b | functions/test/matching.test.ts::§3.13 platform is never used for matching (an iOS run matches an Android player); functions/test/functions.test.ts::§3.13 a client upload of a new best lands in the pool of its level | 5a done (5b todo) |
-| R-3.13-26 | Identity: Play Games link on Android; Game Center (iOS) behind the same interface (stub until iOS reopens) | 3.13 | 5b | | todo |
-| R-3.13-27 | App Check providers: Play Integrity (Android), App Attest + DeviceCheck fallback (iOS, later); debug provider only in debug / FS_E2E | 3.13 | 5b | | todo |
-| R-3.13-28 | Looks: same catalogue ids on both platforms; unknown item → default look | 3.13 | 5b | | todo |
-| R-3.13-29 | iOS setup steps documented for when iOS reopens (no `ios/` changes now) | 3.13 | 5b | | todo |
+| R-3.13-23 | "Delete my data" in Settings deletes players doc, pool entries (function), Firebase account, resets the Analytics ID; local progress untouched | 3.13 | 4c / 5a / 5b | functions/test/functions.test.ts::§3.13 deletes the player doc, their pool entries and the Auth user; idempotent; functions/test/pools.test.ts::§3.13 removes the player doc, the rate doc and the entries in every shard; idempotent; test/versus/s3_13_service_test.dart::§3.13 Delete my data… | done (client: callable + analytics reset + local reset; Settings row: 4c) |
+| R-3.13-24 | Every Firebase call wrapped: failure = solo, never a crash or blocked START | 3.13 | 5b | test/versus/s3_13_service_test.dart::§3.13 offline / any failure: solo, never a crash or a blocked START | done |
+| R-3.13-25 | One shared pool for Android and iOS; never filtered by platform; `platform` stored for analytics only | 3.13 | 5a / 5b | functions/test/matching.test.ts::§3.13 platform is never used for matching (an iOS run matches an Android player); functions/test/functions.test.ts::§3.13 a client upload of a new best lands in the pool of its level; lib/versus/matcher.dart (never filters by platform) | done |
+| R-3.13-26 | Identity: Play Games link on Android; Game Center (iOS) behind the same interface (stub until iOS reopens) | 3.13 | 5b | lib/services/identity.dart (PlayGamesIdentity, GameCenterIdentity stub) | done |
+| R-3.13-27 | App Check providers: Play Integrity (Android), App Attest + DeviceCheck fallback (iOS, later); debug provider only in debug / FS_E2E | 3.13 | 5b | lib/services/firebase_versus_backend.dart (activateAppCheck) | done |
+| R-3.13-28 | Looks: same catalogue ids on both platforms; unknown item → default look | 3.13 | 5b | test/versus/s3_13_upload_entry_test.dart::§3.13 cross-platform looks: unknown item ids fall back… | done |
+| R-3.13-29 | iOS setup steps documented for when iOS reopens (no `ios/` changes now) | 3.13 | 5b | docs/gameplay-v2/ARCH.md §24 (iOS setup note) | done |
 | R-3.13-30 | Before launch: cross-platform match test (iPhone ↔ Android) — deferred until iOS reopens | 3.13 | 6 | | todo |
 
 ## 3.14 Revive and results
@@ -405,8 +405,8 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.14-16 | Kept: score, coins, hearts, feather/piece progress. Lost: running egg/chick, piggy, jar. Reset: streak + fire. Ended: timed powerups | 3.14 | 2d (+ 3e / 3f / 3c hooks) | test/run/screens/s3_14_revive_test.dart | done (state cleared generically; 3e / 3f / 3c add their visuals) |
 | R-3.14-17 | Running squeeze resets to open during the phoenix (0.5 s); next 60–120 s later | 3.14 | 3g | test/run/screens/s3_14_revive_test.dart; test/run/items/s3_17_squeeze_test.dart::§3.17 / §3.14 a revived death during a squeeze | done |
 | R-3.14-18 | First hoop after a revive is normal | 3.14 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.14-19 | Versus: opponent recording pauses during offer and phoenix | 3.14 | 5b | | todo |
-| R-3.14-20 | Results page content: WIN/LOSE header, versus card (scores, WINNER), NEW BEST, level (emblem + bird, rank, progress), YOUR REWARD, NEXT → `goHome()` (new arrival) | 3.14 | 2e / 5b | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 solo…; test/run/shots/results_shots_test.dart (versus parts: 5b) | done |
+| R-3.14-19 | Versus: opponent recording pauses during offer and phoenix | 3.14 | 5b | test/versus/s3_13_versus_run_test.dart::§3.13 the replay holds through the revive offer and the phoenix… | done |
+| R-3.14-20 | Results page content: WIN/LOSE header, versus card (scores, WINNER), NEW BEST, level (emblem + bird, rank, progress), YOUR REWARD, NEXT → `goHome()` (new arrival) | 3.14 | 2e / 5b | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 solo…; test/run/shots/results_shots_test.dart (versus parts: 5b); test/versus/s3_13_versus_run_test.dart::§3.13 / §5.10 WIN…; shot: build/shots/run/versus/results_* | done |
 | R-3.14-21 | YOUR REWARD = run coins + puzzle coins + win/draw bonus, excluding balloon coins; one total, no breakdown | 3.14 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 YOUR REWARD includes puzzle coins… | done |
 | R-3.14-22 | Solo: same page without versus card / header | 3.14 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 solo… | done |
 | R-3.14-23 | Results replaces the 1.0 game-over panel; league strip and 2× coins ad removed; no ad on results | 3.14 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 solo…; test/services/ads_service_test.dart | done |
@@ -536,7 +536,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.21-6 | Effects: SHIELD arms; COMET starts the boost; +10 COINS (`pair`); +5 SCORE; FEVER (any pass) | 3.21 | 3d | test/run/hoops/s3_21_pair_test.dart::§3.21 the <reward> gift does what it says; test/run/hoops/s3_21_pair_test.dart::§3.21 FEVER gift keeps a higher streak | done (COMET emits the WP-3a pair contract event) |
 | R-3.21-7 | No useless reward: no shield if armed, no FEVER if on fire, no comet within 10 of a portal or while a timed powerup runs | 3.21 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.21-8 | Spawn from 12, weight 10, ≥ 15 apart, 2 normal hoops after; never in rides / squeeze; upright still; gifts on top of per-run limits | 3.21 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.21-9 | +5 SCORE counts in the duel | 3.21 | 5b | | todo |
+| R-3.21-9 | +5 SCORE counts in the duel | 3.21 | 5b | test/versus/s3_13_versus_run_test.dart::§3.13 the timeline records every point… | done |
 | R-3.21-10 | Autopilot targets the nearer ring | 7 | 0b / 3d | lib/run/debug/autopilot.dart (nearest ring); test/run/flow/s3_18_s3_20_s3_21_autopilot_test.dart | done |
 
 ## 3.22 – 3.32 Smaller elements
@@ -626,7 +626,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-4-1 | Home START → [VS intro if opponent prefetched] → run | 4 | 0b / 5b | test/run/flow/s3_0_run_core_flow_test.dart | done (0b part); 5b pending |
+| R-4-1 | Home START → [VS intro if opponent prefetched] → run | 4 | 0b / 5b | test/run/flow/s3_0_run_core_flow_test.dart; test/versus/s3_13_versus_run_test.dart::§5.8 / §3.13 a prefetched opponent… | done |
 | R-4-2 | Mistake without save → tumble ≈ 1.5 s → revive offer (≥ 6 hoops) → ad / coins → phoenix → run | 4 | 2d | test/run/screens/s3_14_revive_test.dart | done |
 | R-4-3 | No thanks / timeout → [balloon bonus with 3 feathers] → results → NEXT → home (new slot roll) | 4 | 2d / 4a / 2e | | todo |
 | R-4-4 | Pause any time in the run → RESUME → straight back in (no countdown) | 4, 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart | done |
@@ -657,24 +657,24 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.6-3 | Countdown ring r 34, gold 6 pt, drains 10 s inside the graphic; "10s → 1s" gold 18 pt 50 pt below | 5.6 | 3a | test/run/items/s3_8_comet_test.dart::§5.6 the fireball and countdown …; shots: build/shots/run/comet/comet_{pickup,active,tier,landing}_711.png, comet_active_568.png (test/run/shots/comet_shots_test.dart) | done |
 | R-5.6-4 | Banners replace each other (never stack) during the boost; HUD unchanged | 5.6 | 3a / 0c | test/run/effects/s3_0_9_parts_test.dart::§5.6 banners replace each other, never stack; shots: build/shots/run/comet/comet_{pickup,active,tier,landing}_711.png, comet_active_568.png (test/run/shots/comet_shots_test.dart) | done |
 | R-5.7-1 | HUD row y 52, 38 tall: heart indicator x 14 (38 × 38, fg 18 % panel) | 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
-| R-5.7-2 | Versus bar x 60 → 260: two 90 × 38 boxes (you pink + dark-pink avatar outside; opponent stage grey), VS between, scores 26 pt; gold 3 pt outline flash when the opponent scores | 5.7 | 2d / 5b | test/run/screens/s5_7_hud_pause_test.dart; test/run/shots/revive_hud_shots_test.dart | part (placeholder: boxes, scores on runClock, gold flash; live avatars / out state 5b) |
+| R-5.7-2 | Versus bar x 60 → 260: two 90 × 38 boxes (you pink + dark-pink avatar outside; opponent stage grey), VS between, scores 26 pt; gold 3 pt outline flash when the opponent scores | 5.7 | 2d / 5b | test/run/screens/s5_7_hud_pause_test.dart; test/run/shots/revive_hud_shots_test.dart; test/versus/s3_13_versus_run_test.dart::§3.13 timeline replay on runClock… (out state); shot: build/shots/run/versus/hud_versus_* | done (avatars: neutral glyph, ARCH §24) |
 | R-5.7-3 | Name chips 90 × 22 at y 92, white, plum Fredoka SemiBold 15 pt, ellipsis; VS same font | 5.7 | 2d | test/run/shots/revive_hud_shots_test.dart | done |
 | R-5.7-4 | Pause button right edge 306 (38 × 38, pink, two bars) | 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart | done |
 | R-5.7-5 | Score circle only (no small HUD circle); no coin total in the HUD | 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart | done |
 | R-5.7-6 | Solo HUD: no versus bar; heart and pause in place | 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart | done |
 | R-5.7-7 | Pause screen: dark overlay, bg card, "PAUSED" pink 34 pt 0.14 em, gold RESUME (56 tall), sound + settings pink buttons; no Quit | 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
-| R-5.7-8 | RESUME straight back in; opponent's run paused with the player | 5.7 | 2d / 5b | test/run/screens/s5_7_hud_pause_test.dart | part (no countdown done; the opponent pauses with runClock — 5b recorder) |
-| R-5.8-1 | VS layout: top stage panel (fg 26 %) with opponent, bottom soft-pink panel with you, zigzag seam (22 pt teeth, period 32), spike strips above panels | 5.8 | 5b | | todo |
-| R-5.8-2 | Plates: opponent x 44 y 80 (232 × 52), you x 44 y 584, avatar + name + level emblem at 0.32× in the 52 pt slot (overhanging, animated) | 5.8 | 5b | | todo |
-| R-5.8-3 | Levels: yours from your best, opponent's from their stored best | 5.8 | 5b | | todo |
-| R-5.8-4 | Birds 2.2× in equipped skins (opponent mirrored), always alive (bob, flap, tail, blink, accessories), one-off reactions | 5.8 | 5b | | todo |
-| R-5.8-5 | VS square pink 100 × 56 at (110, 316), soft-pink 42 pt | 5.8 | 5b | | todo |
-| R-5.8-6 | Stripes background: top 45° fg 9 % drifting left 39.6 pt / 3.2 s; bottom −45° pink 7 % drifting right; floating squares; shake shows fg grey | 5.8 | 5b | | todo |
-| R-5.8-7 | Timeline ≈ 6.3 s (tap squash, panels slide 0.42 s, your bird flies in, emblem pop, opponent plate drops, FINDING RIVAL…, name reel 20 names easing 40 + 330·p^2.4 ms, lock flash + emblem + MATCH FOUND! + confetti 80 + 3 fireworks, opponent flies in, VS punch + shake + lunge, taunts, 0.3 s white fade) | 5.8 | 5b | | todo |
-| R-5.8-8 | Reel always lands on the real prefetched opponent; filler names random display names | 5.8 | 5b | | todo |
-| R-5.8-9 | Avatars from cache; neutral avatar while missing | 5.8 | 5b | | todo |
-| R-5.8-10 | Music keeps playing; flaps use flap.mp3; intro SFX as files through pools | 5.8 | 5b / 3h | | todo |
-| R-5.8-11 | Not skippable; taps ignored | 5.8 | 5b | | todo |
+| R-5.7-8 | RESUME straight back in; opponent's run paused with the player | 5.7 | 2d / 5b | test/run/screens/s5_7_hud_pause_test.dart; test/versus/s3_13_versus_run_test.dart::§3.13 timeline replay on runClock… | done |
+| R-5.8-1 | VS layout: top stage panel (fg 26 %) with opponent, bottom soft-pink panel with you, zigzag seam (22 pt teeth, period 32), spike strips above panels | 5.8 | 5b | shot: test/run/shots/versus_shots_test.dart (vs_*) | done |
+| R-5.8-2 | Plates: opponent x 44 y 80 (232 × 52), you x 44 y 584, avatar + name + level emblem at 0.32× in the 52 pt slot (overhanging, animated) | 5.8 | 5b | shot: test/run/shots/versus_shots_test.dart; test/versus/s3_13_versus_run_test.dart::§5.8 / §3.13 a prefetched opponent… | done |
+| R-5.8-3 | Levels: yours from your best, opponent's from their stored best | 5.8 | 5b | test/versus/s3_13_versus_run_test.dart::§5.8 / §3.13 a prefetched opponent…; test/versus/s3_13_upload_entry_test.dart::§3.13 JSON round trip… (level from their best) | done |
+| R-5.8-4 | Birds 2.2× in equipped skins (opponent mirrored), always alive (bob, flap, tail, blink, accessories), one-off reactions | 5.8 | 5b | shot: test/run/shots/versus_shots_test.dart | done (no separate tail wiggle: the LookPainter has no tail part, ARCH §24) |
+| R-5.8-5 | VS square pink 100 × 56 at (110, 316), soft-pink 42 pt | 5.8 | 5b | shot: test/run/shots/versus_shots_test.dart | done |
+| R-5.8-6 | Stripes background: top 45° fg 9 % drifting left 39.6 pt / 3.2 s; bottom −45° pink 7 % drifting right; floating squares; shake shows fg grey | 5.8 | 5b | shot: test/run/shots/versus_shots_test.dart | done |
+| R-5.8-7 | Timeline ≈ 6.3 s (tap squash, panels slide 0.42 s, your bird flies in, emblem pop, opponent plate drops, FINDING RIVAL…, name reel 20 names easing 40 + 330·p^2.4 ms, lock flash + emblem + MATCH FOUND! + confetti 80 + 3 fireworks, opponent flies in, VS punch + shake + lunge, taunts, 0.3 s white fade) | 5.8 | 5b | test/versus/s3_13_versus_run_test.dart::§5.8 / §3.13 a prefetched opponent… | done (≈ 7.3 s from the mock timings, ARCH §24) |
+| R-5.8-8 | Reel always lands on the real prefetched opponent; filler names random display names | 5.8 | 5b | test/versus/s3_13_versus_run_test.dart::§5.8 / §3.13 a prefetched opponent… | done |
+| R-5.8-9 | Avatars from cache; neutral avatar while missing | 5.8 | 5b | lib/run/screens/versus_intro.dart (neutral avatar) | part (neutral avatar always; image loading not built, ARCH §24) |
+| R-5.8-10 | Music keeps playing; flaps use flap.mp3; intro SFX as files through pools | 5.8 | 5b / 3h | test/versus/s3_13_versus_run_test.dart::§5.8 / §3.13 a prefetched opponent… | done |
+| R-5.8-11 | Not skippable; taps ignored | 5.8 | 5b | test/versus/s3_13_versus_run_test.dart::§5.8 / §3.13 a prefetched opponent… (taps do nothing) | done |
 | R-5.9-1 | Offer background: frozen game, miss ghost, dead bird on the floor, 62 % overlay, strips remain | 5.9 | 2d | test/run/shots/revive_hud_shots_test.dart | done |
 | R-5.9-2 | Heart 226 pt at x 47 y ≈ 222, drains from the top over 5 s; ad / coins / locked styles exactly as specified | 5.9 | 2d | test/run/screens/s3_14_revive_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
 | R-5.9-3 | NO AD AVAILABLE 34 pt above; GET COINS › 22 pt under (locked only); No thanks 86 pt under; balance pill (x → 306, y 58) | 5.9 | 2d | test/run/shots/revive_hud_shots_test.dart | done |
@@ -683,7 +683,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.9-6 | Phoenix timeline 0–0.5 / 0.5–1.0 / 1.0 burst / 1.0–1.65 / 1.65 exactly as the table (flames, rise, wings, 34 feathers, 46 embers, shockwave 20 → 170) | 5.9 | 2d | test/run/screens/s3_14_revive_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
 | R-5.9-7 | Sounds `rv_pay`, `rv_ignite`, `rv_burst`, `rv_locked`, `bn_coin` per coin, `flap.mp3` on resume | 5.9 | 2d | test/run/screens/s3_14_revive_test.dart | done |
 | R-5.10-1 | Layout: header y 70 (pink YOU WIN! / grey YOU LOSE), versus card y 124, NEW BEST sticker y ≈ 238, level stage y 262 (emblem 0.62 at (160, 346) + bird), rank line y 414, bar y 444, YOUR REWARD y 494 + pill y 512, NEXT y 596 | 5.10 | 2e / 5b | test/run/shots/results_shots_test.dart | done |
-| R-5.10-2 | Draw: "DRAW" grey, both scores plum, no WINNER tag, +5 in reward | 5.10 | 5b | | todo |
+| R-5.10-2 | Draw: "DRAW" grey, both scores plum, no WINNER tag, +5 in reward | 5.10 | 5b | test/versus/s3_13_versus_run_test.dart::§3.13 / §5.10 DRAW…; shot: build/shots/run/versus/results_draw_* | done |
 | R-5.10-3 | Sequence: level before → count-ups 0.45 s → NEW BEST 1.2 s → bar fill 1.65 s → LEVEL UP (flash, shake, pop, rays, banner, rank bounce, confetti 60/100/150 + 3 fireworks; lv 9–10 second wave) → CLAIM button +0.9 s pulsing → claim (12 coins, count-up, pill bump, confetti) → bar refills | 5.10 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§5.10 new best…; §3.14 level up…; §5.10 lv 9-10…; test/run/shots/results_shots_test.dart | done |
 | R-5.10-4 | Sounds `perfect_1` (NEW BEST), `lv_bar`, `lv_up` / `lv_up_big`, `lv_claim`, `bn_coin` | 5.10 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§5.10 new best…; §3.14 level up…; §5.10 lv 9-10… | done |
 | R-5.10-5 | Solo: no header, card shows only you centred | 5.10 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 solo…; test/run/shots/results_shots_test.dart | done |
@@ -800,9 +800,9 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-6-17 | `revive_declined` | 6 | 2d | | todo |
 | R-6-18 | `revive_timeout` | 6 | 2d | | todo |
 | R-6-19 | `level_up` (from, to, reward, claim: tap / auto_next / app_start) | 6 | 2e | | todo |
-| R-6-20 | `versus_matched` | 6 | 5b | | todo |
-| R-6-21 | `versus_skipped` (reason: no_opponent) | 6 | 5b | | todo |
-| R-6-22 | `versus_result` (win/lose/draw, score, opp_score) | 6 | 5b | | todo |
+| R-6-20 | `versus_matched` | 6 | 5b | test/versus/s3_13_versus_run_test.dart::§5.8 / §3.13 a prefetched opponent… | done |
+| R-6-21 | `versus_skipped` (reason: no_opponent) | 6 | 5b | test/versus/s3_13_versus_run_test.dart::§3.13 solo start… | done |
+| R-6-22 | `versus_result` (win/lose/draw, score, opp_score) | 6 | 5b | test/versus/s3_13_versus_run_test.dart::§3.13 / §5.10 WIN / LOSE / DRAW | done |
 | R-6-23 | `feather_collected` (count 1–3) | 6 | 4a | | todo |
 | R-6-24 | `bonus_shown` | 6 | 4a | | todo |
 | R-6-25 | `bonus_pop` (prize, pop 1–6) | 6 | 4a | | todo |
@@ -863,7 +863,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-7-7 | Results reads the level from `bestScore` before/after; `unclaimedLevelReward` until CLAIM/NEXT; emblem painter shared with home | 7 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 level up…; §7 an unclaimed level reward… | done |
 | R-7-8 | `PortalRide` engine + `RideTheme` per ride; `rides84.js` timings | 7 | 3b | | todo |
 | R-7-9 | Sounds through `AudioPool` only; comet loop via the BGM-style player | 7 | 0b / all | test/run/s7_run_parts_test.dart::§3.9 loops… | done (0b part); all pending |
-| R-7-10 | Versus backend in repo: `functions/` (TS, 2nd gen), `firestore.rules`, `firestore.indexes.json`, TTL policy; Emulator Suite tests; `VersusService` no-op by default | 7 | 5a / 5b | functions/, firestore.rules, firestore.indexes.json, functions/scripts/set_ttl.sh; `npm --prefix functions test` | 5a done (VersusService: 5b) |
+| R-7-10 | Versus backend in repo: `functions/` (TS, 2nd gen), `firestore.rules`, `firestore.indexes.json`, TTL policy; Emulator Suite tests; `VersusService` no-op by default | 7 | 5a / 5b | functions/, firestore.rules, firestore.indexes.json, functions/scripts/set_ttl.sh; `npm --prefix functions test`; test/versus/s3_13_service_test.dart; test/versus/s3_13_emulator_test.dart (opt-in, tool/versus_emulator_test.sh) | done |
 | R-7-11 | Feathers: persistent count, at most one pickup, bonus screen between revive and results, wallet per pop, ad placement `bonus_feathers`; timings from `bonus.js` / `collect.js` | 7 | 4a | | todo |
 | R-7-12 | Puzzle: mask + round, one missing piece per run, 4/4 credit + reset + round + 1 atomically, colour themes as data (`PZT`) | 7 | 4a | | todo |
 | R-7-13 | Switch ring: one kind, pluggable design, shared rules; spawner places ring + switch; seeded design pick | 7 | 3d | test/run/hoops/s3_20_switch_test.dart; lib/run/hoops/kinds/switch/switch_kind.dart | done |
@@ -875,7 +875,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-7-T6 | Autopilot targets the switch before a closed switch ring and the nearer ring of a pair | 7 | 0b / 3d | lib/run/debug/autopilot.dart (nearest ring); switch pre-target via HoopKind.autopilotTarget (3d); test/run/hoops/s3_20_switch_test.dart::§3.20 <design>: … the autopilot takes the switch first; test/run/flow/s3_18_s3_20_s3_21_autopilot_test.dart | done |
 | R-7-T7 | Revive tests: ladder (ad → 250 → 500 → 1 000 → doubling, reset per game, no-ad start 250); phoenix (safe line, drift to 70, scroll at 1.65 s, 2 s invuln, Black Hole re-form); ≥ 6 rule (≤ 5 → no offer, no ladder step); collectables lost and timed powerups ended at death; squeeze reset | 7 | 2d (+ 3d / 3e / 3f / 3g cases) | | todo |
 | R-7-T8 | Results tests: level-up one / several, CLAIM, auto-claim on NEXT, `unclaimedLevelReward` at next start; YOUR REWARD incl. puzzle + win/draw, excl. balloon | 7 | 2e (+ 4a / 5b cases) | test/run/screens/s3_14_s5_10_results_test.dart (4a / 5b cases: their WPs) | done |
-| R-7-T9 | Versus tests: timeline replay on runClock (pause, revive offer, phoenix, Hourglass); opponent out at timeline end; WIN / LOSE / DRAW + bonus; solo start without prefetch | 7 | 5b (+ 3f case) | | todo |
+| R-7-T9 | Versus tests: timeline replay on runClock (pause, revive offer, phoenix, Hourglass); opponent out at timeline end; WIN / LOSE / DRAW + bonus; solo start without prefetch | 7 | 5b (+ 3f case) | test/versus/s3_13_versus_run_test.dart (Hourglass via RunState.timeScale; 3f adds the capsule case) | done |
 | R-7-T10 | Rumble tests: recorder per event; 90 ms throttle; shake never skipped | 7 | 2c | | todo |
 | R-7-T11 | Notification tests with a fake clock: windows, quiet hours incl. TZ / DST, skip-after-play, 7 d / 14 slots, rotation no repeat in 10 d, fill-in + fallback | 7 | 4b | | todo |
 | R-7-T12 | Persistence: every key round-trips with its default | 7 | 0b / 4c | test/run/persistence_test.dart | done (0b part); 4c pending |
@@ -899,7 +899,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-7-P10 | `unclaimedLevelReward` (int coins, 0) | 3.14, 5.10 | 0b | test/run/persistence_test.dart | done |
 | R-7-P11 | `metElements` (set of element ids, empty) | 3.0.8 | 0b | test/run/persistence_test.dart | done |
 | R-7-P12 | `levelRewardsClaimed` (highest level claimed) — mapped onto the existing `claimedLevels` set (ARCH §5 call) | 3.14 | 0b | test/run/persistence_test.dart | done |
-| R-7-P13 | `versusNickname` (string, generated once at first start) | 3.13 | 0b (key) / 5b (generation) | test/run/persistence_test.dart | done |
+| R-7-P13 | `versusNickname` (string, generated once at first start) | 3.13 | 0b (key) / 5b (generation) | test/run/persistence_test.dart; test/versus/s3_13_service_test.dart::§3.13 initialize: a nickname once per install… | done |
 | R-7-P14 | `uploadQueue` (list of run entries JSON, empty) | 3.13 | 0b | test/run/persistence_test.dart | done |
 | R-7-P15 | `uploadsToday` + `uploadsDay` (int + date string, 0 + '') | 3.13 | 0b | test/run/persistence_test.dart | done |
 | R-7-P16 | `notifOrder` (list of int, shuffled at first schedule) | 3.34 | 0b | test/run/persistence_test.dart | done |
@@ -930,7 +930,7 @@ the looping player).
 | R-S-12 | `sq_warn`, `sq_close`, `sq_lock`, `sq_hold` (seamless loop: ship `.ogg`/`.wav`, not mp3), `sq_tick`, `sq_open` | 5.16 | 0b / 3g | test/run/s7_run_parts_test.dart; test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze from start to open | done |
 | R-S-13 | Ride sounds `rd_space_*`, `rd_volc_*`, `rd_sea_*`, `rd_pin_*`, `rd_storm_*` (16 files) | 5.12b | 0b / 3b |test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled; test/run/rides/s3_12_portal_ride_test.dart (ride cues per theme) | done |
 | R-S-14 | `notif_b.ogg` → `android/app/src/main/res/raw/notif_chime.ogg` | 3.34 | 4b | integration_test/reminders_e2e_test.dart::WP-4b reminders: permission + the pending 7-day window; `flutter build apk --debug` -> res/raw/notif_chime.ogg | done (19246 B, byte-identical to design/menu_v2/sfx/notif_b.ogg) |
-| R-S-15 | Deliverable: versus intro set (whoosh, ticks, chime, rocket, pop / crackle, thud, boing) | 5.8, 7 | 3h make / 5b use | test/run/sound_pack_test.dart::§7 every cue maps to one existing, non-empty mp3 | done (3h: `vs_*`, 7 files); 5b use pending |
+| R-S-15 | Deliverable: versus intro set (whoosh, ticks, chime, rocket, pop / crackle, thud, boing) | 5.8, 7 | 3h make / 5b use | test/run/sound_pack_test.dart::§7 every cue maps to one existing, non-empty mp3; test/versus/s3_13_versus_run_test.dart::§5.8 / §3.13 a prefetched opponent… (vs_* sounds) | done |
 | R-S-16 | Deliverable: saw-ring hums (3 loops) and deaths (Live Wire zap + thunder + crackles; Frost crunch + hiss, crack, shatter; Black Hole roar + sub drop, boom, inhale) | 5.17, 7 | 3h / 3d | test/run/sound_pack_test.dart::§7 the 4 new loops are SfxLoop entries with a .wav file | done (3h: 3 `SfxLoop` hums + 12 one-shots); 3d use pending |
 | R-S-17 | Deliverable: FEVER pass, burning crackle loop, fire out sizzle | 5.18, 7 | 3h / 3c | test/run/sound_pack_test.dart::§7 the 4 new loops start, keep volume and stop | done (3h: `fever_*`); 3c uses them (WP-3c) |
 | R-S-18 | Deliverable: switch rings × 5 designs (touched, opening, crash) + shared "clear" chord | 5.19, 7 | 3h / 3d | test/run/sound_pack_test.dart::§7 every PRD-2 §7 deliverable is a registered Sfx | done (3h: `sw_*`, 16 files); 3d use pending |

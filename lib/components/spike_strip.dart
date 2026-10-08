@@ -54,6 +54,12 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
   /// Opacity of the master teeth (ride fade, PRD-2 §3.12).
   double teethOpacity = 1;
 
+  // region WP-3b — portal ride return (PRD-2 §3.12)
+  /// Extra tooth scroll (pt) on top of the camera: the teeth race right to
+  /// left as the strips fade back in after a portal ride.
+  double rideShift = 0;
+  // endregion WP-3b
+
   /// Distance from the screen edge to the tooth tips: the same line as the
   /// sprite's tips (`Config.spikeHeight` − [visualInset]); 44 in menus and,
   /// after WP-1a, in runs.
@@ -177,7 +183,7 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
     if (run == null) {
       return;
     }
-    toothOffset = -run.state.camX;
+    toothOffset = -run.state.camX + rideShift;
     // The legacy sprite tiles (SpikeArt.sprite) follow the same offset.
     const w = Config.spikeTileWidth;
     final o = (toothOffset % w + w) % w - w; // (-w, 0]

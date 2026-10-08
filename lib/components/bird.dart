@@ -95,6 +95,8 @@ class Bird extends BodyComponent<FlappySpikesGame> {
     if (_dead || game.state != GameState.playing) {
       return;
     }
+    // WP-3b: input is ignored while a portal ride drives the bird (§3.12).
+    if (_ride) return;
     body.linearVelocity.setZero();
     final impulse = Vector2(0, -Config.flapVelocity * body.mass);
     body.applyLinearImpulse(impulse);
@@ -192,6 +194,57 @@ class Bird extends BodyComponent<FlappySpikesGame> {
     body.gravityScale = Vector2.all(1);
   }
   // endregion WP-2d
+
+  // region WP-3b — portal rides (PRD-2 §3.12, §5.12b)
+  bool _ride = false;
+
+  /// A portal ride drives the bird (kinematic; flaps ignored).
+  bool get inRide => _ride;
+
+  /// §3.12 the ride takes the bird over at its current position.
+  void beginRide() {
+    _ride = true;
+    _spinVelocity = 0;
+    _spin = 0;
+    if (!isLoaded) return;
+    body
+      ..setType(BodyType.kinematic)
+      ..linearVelocity.setZero()
+      ..angularVelocity = 0;
+  }
+
+  /// One ride frame: screen centre, angle, scale (squash / storm depth);
+  /// [hidden] in the cannon barrel, the volcano or the rocket.
+  void placeRide(
+    Vector2 screen,
+    double angle, {
+    double scale = 1,
+    bool hidden = false,
+  }) {
+    if (!isLoaded) return;
+    body.setTransform(screen, angle);
+    _look
+      ..scale.setValues(scale, scale)
+      ..opacity = hidden ? 0 : _spriteOpacity;
+  }
+
+  /// §3.12 home: a dynamic flying bird at ([Config.birdX], [y]), upright,
+  /// at rest, at its normal layer.
+  void endRide(double y) {
+    _ride = false;
+    priority = RunLayer.bird;
+    if (!isLoaded) return;
+    _look
+      ..scale.setValues(1, 1)
+      ..opacity = _spriteOpacity;
+    body
+      ..setType(BodyType.dynamic)
+      ..setTransform(Vector2(Config.birdX, y), 0)
+      ..linearVelocity.setZero()
+      ..angularVelocity = 0;
+    body.gravityScale = Vector2.all(1);
+  }
+  // endregion WP-3b
 
   /// Fade the bird art (game over; hidden while on the home screen, which
   /// draws its own bird). Safe before [onLoad].

@@ -172,6 +172,12 @@ class RideState {
 
   /// Engine-defined phase name (e.g. 'enter', 'ride', 'launch', 'glide').
   String phase;
+
+  // region WP-3b — portal rides (PRD-2 §3.12)
+  /// The bird is hidden (in the cannon barrel, the volcano, the rocket):
+  /// no trail.
+  bool birdHidden = false;
+  // endregion WP-3b
 }
 
 enum EggStage { egg, chick }

@@ -8,6 +8,7 @@ import 'items/met_elements.dart';
 import 'items/rumble_router.dart';
 import 'items/scoring.dart';
 import 'items/streak.dart';
+import 'rides/portal_ride.dart';
 import 'run_feature.dart';
 import 'screens/revive_rules.dart';
 
@@ -37,6 +38,9 @@ List<RunFeature> buildRunFeatures() => [
   StreakFeature(),
   RumbleRouter(),
   // endregion WP-2b
+  // region WP-3b — portal roller-coaster rides (PRD-2 §3.12, §5.12b)
+  PortalRideFeature(),
+  // endregion WP-3b
   // region WP-2d — revive rules (PRD-2 §3.14); keep last
   ReviveRulesFeature(),
   // endregion WP-2d

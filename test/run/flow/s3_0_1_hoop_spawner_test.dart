@@ -36,9 +36,11 @@ void main() {
         for (final hoop in run.spawner.hoops) {
           spawns.add((hoop, hoop.plan, run.state.camX));
         }
-        run.events.on<HoopSpawned>(
-          (e) => spawns.add((e.hoop, e.plan, run.state.camX)),
-        );
+        run.events.on<HoopSpawned>((e) {
+          // WP-3b: a portal's ride rings are hoops of the ride, not slots.
+          if (e.plan.kind == HoopKindId.rideRing) return;
+          spawns.add((e.hoop, e.plan, run.state.camX));
+        });
         final flight = await flyRun(game, maxSeconds: 60, untilHoops: 25);
         expect(
           flight.hoops,

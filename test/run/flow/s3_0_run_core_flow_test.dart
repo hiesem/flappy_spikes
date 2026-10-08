@@ -257,6 +257,9 @@ void main() {
         expect(run.setup.opponent, same(opponent));
         expect(run.setup.starter, Powerup.shield);
         expect(run.state.shield, isTrue);
+        // WP-2a: the armed shield absorbs a mistake (§3.7); drop it so the
+        // kill ends the run.
+        run.state.shield = false;
         killRun(game);
         await flushAndMount(game);
         expect(versus.submitted, hasLength(1));

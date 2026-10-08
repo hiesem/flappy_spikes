@@ -128,7 +128,7 @@ code. Paths are relative to `flappy_spikes/`.
 |---|---|---|
 | `pickup.dart` | 0b | `abstract class Pickup extends PositionComponent` (track coords): `PickupKindId id; double hitRadius; bool collected; void onCollect(RunContext c); void onPassedUncaught(RunContext c);` — hit test §3.0.3 (distance − bird r ≤ radius), one shared `PickupTouchFx` |
 | `pickup_kind.dart` / `registry.dart` | 0b | `abstract class PickupKind { ElementId get element; Pickup build(GapItemPlan p, RunContext c); }`; `PickupKind? pickupKindFor(ElementId e)` |
-| `heart_pickup.dart`, `shield_pickup.dart` | 2a | |
+| `heart_pickup.dart`, `shield_pickup.dart` | 2a | `HeartPickupKind` / `ShieldPickupKind` (§14) |
 | `comet_star.dart` | 3a | hangs 20 pt past the plane |
 | `star_trail.dart`, `egg_pickup.dart`, `piggy_pickup.dart`, `piggy_coin.dart`, `jar_pickup.dart`, `firefly_swarm.dart` | 3e | |
 | `capsule.dart` | 3f | one capsule, `CapsuleType` param |
@@ -140,7 +140,7 @@ code. Paths are relative to `flappy_spikes/`.
 | File | Owner | Feature |
 |---|---|---|
 | `scoring.dart` | 1a | +1 per pass, coin per pass (1 / 2 perfect), colour stage per 10 hoops, `point.mp3` on non-perfect |
-| `extra_life.dart`, `shield.dart` | 2a | `MistakeInterceptor`s (shield order 10, extra life order 20), 2 s invulnerability, flash |
+| `extra_life.dart`, `shield.dart`, `invulnerability.dart` | 2a | `MistakeInterceptor`s (shield order 10, extra life order 20), 2 s invulnerability, flash (`InvulnerabilityFeature`, §14) |
 | `big_hoops.dart` | 2a | D = 30–40 s (`timing` stream), mult 1.5 eased over last 8 s, gold look, cap to band |
 | `streak.dart` | 2b | streak/tier, banners, pass sounds, FEVER hook (`streak = max(5, streak+1)`), break on graze/save |
 | `rumble_router.dart` | 2c | events → `Rumble.knock/shake` |
@@ -1061,3 +1061,19 @@ Changes to the contracts above, made while building WP-0b. Later WPs build again
 | Miss flash | `MissFlash.play(hoop, fx:, glowParent:, glowPriority:, screen:)` — the edge glow goes into the **world under the strips** (`RunLayer.items`), as the mock paints it, not the viewport | §5.13 mock order |
 | Calls | spike contact = the bird circle reaching the tooth tips (prototype used tips + 8); no rim bounce while invulnerable (prototype); perfect passes are silent until WP-2b's perfect sounds (ARCH: `point.mp3` on non-perfect only); the rim "tonk" plays `Sfx.rimTonk` looked up by name (WP-3h adds it) | |
 | Tests | `killRun(game[, cause])` helper (onBirdHit + step through the tumble) replaces the 1.0 instant game over in the menu / e2e tests | |
+
+## 14. WP-2a contract notes (as built, 2026-10-08)
+
+| Area | As built | Why |
+|---|---|---|
+| Files | `pickups/{heart,shield}_pickup.dart` (`HeartPickupKind` / `ShieldPickupKind`, registered in `pickups/registry.dart` region WP-2a; `placeholder_heart.dart` and the WP-1b registry line deleted); `items/{extra_life,shield,big_hoops,invulnerability}.dart` (features region WP-2a); `config/lives_config.dart` (`LivesConfig`). **No `big_hoops_config.dart`**: the four §3.6 knobs already live in `RunConfig` (`bigHoopsMult/Min/Max/Ease`, used by the director and `BigHoopsState`) | one source per knob |
+| Pickups vs features | a pickup only draws itself and plays its touch fx (`PickupTouchFx.heart` / `.shield`) on collect; what it *does* is the feature reacting to `PickupCollected` (so a pair gift or a test can emit the same event) | features read events |
+| Saves | `ShieldFeature` (order 10) and `ExtraLifeFeature` (order 20) implement `MistakeInterceptor` and add themselves to `RunController.pipeline` on attach. A save sets `state.invulnerable = 2` (the controller counts it down while scrolling), plays `puShieldHit` / `puHeartUse`, sends `shield_used` / `extra_life_used` (`cause`), and pops the visual | §3.3, §3.7, Q27 |
+| Invulnerability look | `InvulnerabilityFeature` owns the one `InvulnFlash`: whenever `state.invulnerable` *rises* it starts the 2 s blink on `Bird.setSpriteOpacity`. **Anyone granting invulnerability (WP-2d phoenix) only sets `state.invulnerable`** — the flash follows | one flash, no per-feature copies |
+| SAVED! | on `MistakeSaved`, `InvulnerabilityFeature` shows `ElementBanner('SAVED!')` in the first mounted `BannerHost` (viewport, then world). No host is mounted before WP-2d's `RunHud`; until then nothing shows | master #7, banners never stack |
+| Heart HUD | the heart indicator is WP-2d's (`hud/heart_indicator.dart`); it reads `state.hearts` (0..2) and `state.extraLife`. A collected heart flies (shared `FetchFlight`, `FetchSpec.heart`) to `LivesConfig.indicatorCentre` (33, 71), drawn in the world at `RunLayer.fx + 1` | §5.2 / §5.7 |
+| Badge / circle | `HeartBadge` (in `ExtraLifeFeature`) and `ShieldCircle` (in `ShieldFeature`) are world components at `RunLayer.bird + 1` (over the bird, under the hoop fronts) following `game.runBird`. Both **observe the state** (`extraLife` / `shield`): any source (pair SHIELD gift of WP-3d, home slot, tests) shows them; a cleared flag hides them | sources stay decoupled |
+| Shared parts added | `effects/life_icons.dart` (`LifeIcons.paintHeart` — the mock `HEARTP` — and `paintShield`: the one heart and shield drawing for pickups, badge, shards, flying heart and the WP-2d indicator); `effects/save_burst.dart` (`SaveBurst.emit`: white flash + 12 hearts / triangles); `ParticlePool` gained `ParticleShape.heart` | §3.0.9: no second heart / burst drawing |
+| Big Hoops | `BigHoopsFeature.attach` (before the first slot is planned) sets `state.bigHoops = BigHoopsState(D = director.rollBigHoopsDuration(), start: runClock)` when `setup.starter == Powerup.bigHoops`; the director already scales and caps every opening by `bigHoopsMult` at spawn. On `HoopSpawned` a **normal** hoop spawned with mult > 1 gets `look.colors = RingColors.gold` (also during the ease — "after D … normal size and colour"); `BigHoopsFeature.isGold(hoop)` tells WP-2b's tier look to fall back to gold. The state is cleared once D is over | §3.6 |
+| Home slot | `_runFromHome` → `RunSetup.starter`: shield → `state.shield` in `RunController.start` (0b), Big Hoops → `BigHoopsFeature`. Analytics `big_hoops_used` / `shield_armed` stay in the game | §3.6 / §3.7 |
+| Rumble | no new events: pickups already raise `PickupCollected` (knock, WP-2c); saves raise `MistakeSaved` (no rumble by §3.33) | §3.33 |

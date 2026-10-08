@@ -1,5 +1,9 @@
 import 'hoops/motion/moving_rings_feature.dart';
 import 'items/analytics_router.dart';
+import 'items/big_hoops.dart';
+import 'items/extra_life.dart';
+import 'items/invulnerability.dart';
+import 'items/shield.dart';
 import 'items/met_elements.dart';
 import 'items/scoring.dart';
 import 'run_feature.dart';
@@ -16,6 +20,12 @@ List<RunFeature> buildRunFeatures() => [
   // endregion WP-1b
   // region anchors — append below (one region per WP)
   // endregion anchors
+  // region WP-2a — hearts / extra life / shield / Big Hoops (PRD-2 §3.3, §3.6, §3.7)
+  BigHoopsFeature(),
+  ShieldFeature(),
+  ExtraLifeFeature(),
+  InvulnerabilityFeature(),
+  // endregion WP-2a
   // region WP-1a — scoring (PRD-2 §3.0.1, §3.1, §3.2)
   ScoringFeature(),
   // endregion WP-1a

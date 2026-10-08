@@ -117,7 +117,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.5-11 | Themed deaths: signature moment first, then the same tumble (Frost: ice block shatters, frozen bird lies there); Black Hole swallows (no tumble, no body, only the shock ring) | 3.0.5 | 3d | | todo |
 | R-3.0.5-12 | Revive offer 1.5 s after the hit (or when resting, if sooner); themed: moment + ≤ 1.5 s, max 2.2 s | 3.0.5 | 2d | | todo |
 | R-3.0.5-13 | ≤ 5 hoops: same tumble, then bonus / results after 1.5 s (2.2 s max) | 3.0.5 | 2d | | todo |
-| R-3.0.5-14 | Extra life / shield saves: no tumble, keep flying; spike save bounces off the tooth line during the 2 s (top: down at 30 %; floor: vy −222) | 3.0.5 | 2a | | todo |
+| R-3.0.5-14 | Extra life / shield saves: no tumble, keep flying; spike save bounces off the tooth line during the 2 s (top: down at 30 %; floor: vy −222) | 3.0.5 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 / §3.0.5 a spike save bounces off the tooth line and the bird stays on screen through the 2 s | done |
 | R-3.0.5-15 | SPEC.md DEVIATION note: death tumble replaces the 1.0 death | 3.0.5 | 1a | SPEC.md "PRD-2 hoops replace pipes (WP-1a)" | done |
 
 ## 3.0.6 Coin icon
@@ -152,8 +152,8 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.8-E11 | Element: saw ring (3 designs) | 3.0.7 | 3d | | todo |
 | R-3.0.8-E12 | Element: portal roller-coaster | 3.0.7 | 3b | | todo |
 | R-3.0.8-E13 | Element: comet boost | 3.0.7 | 3a | | todo |
-| R-3.0.8-E14 | Element: heart → extra life | 3.0.7 | 2a | | todo |
-| R-3.0.8-E15 | Element: shield | 3.0.7 | 2a | | todo |
+| R-3.0.8-E14 | Element: heart → extra life | 3.0.7 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 three hearts give one extra life …; test/run/items/s3_3_s3_7_lives_test.dart::§3.3 a heart pickup on the bird is collected by touch … | done |
+| R-3.0.8-E15 | Element: shield | 3.0.7 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the shield pickup arms the shield … | done |
 | R-3.0.8-E16 | Element: Star Trail | 3.0.7 | 3e | | todo |
 | R-3.0.8-E17 | Element: powerup capsule (Hourglass / Mini Bird / Coin Frenzy) | 3.0.7 | 3f | | todo |
 | R-3.0.8-E18 | Element: Egg → chick ×2 | 3.0.7 | 3e | | todo |
@@ -162,7 +162,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.8-E21 | Element: golden feather | 3.0.7 | 4a | | todo |
 | R-3.0.8-E22 | Element: puzzle piece | 3.0.7 | 4a | | todo |
 | R-3.0.8-E23 | Element: spike squeeze | 3.0.7 | 3g | | todo |
-| R-3.0.8-E24 | Element: Big Hoops | 3.0.7 | 2a | | todo |
+| R-3.0.8-E24 | Element: Big Hoops | 3.0.7 | 2a | test/run/items/s3_6_big_hoops_test.dart::§3.6 the home-slot Big Hoops is consumed at the start … | done |
 | R-3.0.8-E25 | Element: perfect streak + ring tier looks | 3.0.7 | 2b | | todo |
 | R-3.0.8-E26 | Element: coins (per pass + bonuses) | 3.0.7 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 a perfect pass pays 2 coins at once …; test/home_flow_test.dart::PRD-2 §3.2 coins are credited per hoop … | done (bonus sources: their WPs) |
 | R-3.0.8-E27 | Element: rumble | 3.0.7 | 2c | | todo |
@@ -195,13 +195,13 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 |---|---|---|---|---|---|
 | R-3.1-1 | Pipes removed; bird flies through hoops; spike strips stay lethal | 3.1 | 1a | test/collision_test.dart; test/autopilot_test.dart | done |
 | R-3.1-2 | Pass inside the opening: +1, `point.mp3` (non-perfect), HUD update, colour-stage check, pass feedback | 3.1 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.1 a non-perfect pass plays point.mp3 and the §5.1 pulse; test/run/flow/s3_1_hoop_flow_test.dart::§3.0.1 the colour stage … | done |
-| R-3.1-3 | Missing a hoop ends the run (or uses extra life / shield), plays the miss flash | 3.1 | 1a | test/collision_test.dart::§3.1 missing a hoop ends the run exactly once; test/run/flow/s3_1_hoop_flow_test.dart::§5.13 a miss plays the shock-ring miss flash … | done (extra life / shield: 2a) |
+| R-3.1-3 | Missing a hoop ends the run (or uses extra life / shield), plays the miss flash | 3.1 | 1a | test/collision_test.dart::§3.1 missing a hoop ends the run exactly once; test/run/flow/s3_1_hoop_flow_test.dart::§5.13 a miss plays the shock-ring miss flash … | done (extra life / shield: test/run/items/s3_3_s3_7_lives_test.dart::§3.3 the extra life forgives one mistake …) |
 | R-3.1-4 | Rim touch doesn't end the run: bounce; if through, +1 and 1 coin, not perfect, streak resets | 3.1 | 1a / 2b | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.4 a rim touch bounces … +1 with 1 coin and is not perfect | done (streak reset: 2b) |
 | R-3.1-5 | Floor/ceiling spikes: contact = mistake | 3.1 | 1a | test/collision_test.dart::§3.1 bird-spike contact ends the run exactly once; test/run/flow/s3_1_hoop_flow_test.dart::§3.0.5 a spike save (invulnerable) bounces off the floor tooth line | done |
 | R-3.1-6 | Score fires at the plane crossing (replaces the 111 pt sensor) | 3.1 | 1a | test/run/physics/s3_0_4_pass_test.dart; test/collision_test.dart::§3.1 crossing the plane inside the opening scores exactly once | done |
 | R-3.1-7 | Hoop art ~22–24 pt deep, opening + 2 × 7 tall, scales with the opening; two layers (back half behind, front half in front) | 3.1 | 1a / 0c | shot: build/shots/run/hoops/run_711.png (test/run/shots/hoops_shots_test.dart::§5.1 run frame with M0 hoops at 711) | done |
 | R-3.1-8 | Every hoop spawns ≥ 60 pt past the right edge (glow and decorations out of view) | 3.1 | 1a | test/run/flow/s3_0_1_hoop_spawner_test.dart::… scrolled in from ≥ 60 pt past the edge | done |
-| R-3.1-9 | Colours fixed (not stage-tinted); Big Hoops gold `#FFB529`/`#D48A00`; contrast checked on stage 45 | 3.1 | 1a / 2a | test/color_state_test.dart (hoops keep the skin colours, not the tint) | part (fixed colours done; Big Hoops gold: 2a) |
+| R-3.1-9 | Colours fixed (not stage-tinted); Big Hoops gold `#FFB529`/`#D48A00`; contrast checked on stage 45 | 3.1 | 1a / 2a | test/color_state_test.dart (hoops keep the skin colours, not the tint) | done (Big Hoops gold: test/run/items/s3_6_big_hoops_test.dart::§3.6 every hoop spawned is sized by the multiplier …) |
 | R-3.1-10 | `pipe_pair` → `Hoop`; pipe Config constants → hoop constants; min/max centre bands use the same margin | 3.1 | 1a | pipe_pair.dart deleted; test/config_test.dart::PRD-2 hoop course …; test/run/flow/s3_0_1_hoop_spawner_test.dart | done |
 | R-3.1-11 | Fredoka SemiBold added (assets + pubspec) | 3.1, 5.7 | 0b | pubspec.yaml font family Fredoka (assets/fonts/Fredoka-SemiBold.ttf, OFL) | done |
 | R-3.1-12 | Tint registry no longer applies to obstacles; pipe sprites dropped | 3.1 | 1a | test/color_state_test.dart (hoops are not Tintable) | done |
@@ -216,7 +216,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.2-1 | 1 coin per hoop passed; floating "+1" with coin icon at the hoop | 3.2 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.4 a rim touch bounces … 1 coin; lib/run/items/scoring.dart (CoinPopup, master #8) | done |
 | R-3.2-2 | Perfect pass +2 instead of 1 | 3.2 | 1a / 2b | test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 a perfect pass pays 2 coins at once … | done |
 | R-3.2-3 | Coins credited to the wallet at the moment of the pass (kept if the run ends right after); interim "1 coin per point at game over" removed | 3.2 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 … no coins at game over …; test/home_flow_test.dart::PRD-2 §3.2 coins are credited per hoop at the pass …; test/e2e/menu_e2e_test.dart::QA play score is credited once … | done |
-| R-3.2-4 | A hoop saved by an extra life / shield gives no coin | 3.2 | 2a | | todo |
+| R-3.2-4 | A hoop saved by an extra life / shield gives no coin | 3.2 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 the extra life forgives one mistake … (no pass → no point / coin) | done |
 | R-3.2-5 | No coin total in the in-game HUD | 3.2 | 2d | | todo |
 | R-3.2-6 | Versus win +10 (draw +5) | 3.2, 3.13 | 5b | | todo |
 
@@ -224,16 +224,16 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.3-1 | Heart pickups collected by touch | 3.3 | 2a | | todo |
+| R-3.3-1 | Heart pickups collected by touch | 3.3 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 a heart pickup on the bird is collected by touch (the spawner hit test) and counts | done |
 | R-3.3-2 | HUD single heart: empty dashed, 1/3, 2/3 (clipped from bottom), full + pulse = extra life | 3.3, 5.7 | 2d | | todo |
-| R-3.3-3 | 3rd heart → extra life; heart badge floats above the bird (bobbing) | 3.3, 5.5 | 2a | | todo |
-| R-3.3-4 | Mistake list (missed hoop incl. pair, spikes, saw rim, closed switch) forgiven once by the extra life | 3.3 | 2a | | todo |
-| R-3.3-5 | On use: badge pops (heart particles), indicator → 0/3, bird flashes + 2 s invulnerability, keep playing; missed hoop not counted | 3.3 | 2a | | todo |
-| R-3.3-6 | Doesn't stack; no heart spawns while active (schedule moves on) | 3.3 | 2a / 0b | test/run/director/s3_0_3_director_test.dart | done (0b part); 2a pending |
-| R-3.3-7 | Separate from the shield; both can be active | 3.3 | 2a | | todo |
-| R-3.3-8 | Hearts reset at game over (run-only) | 3.3 | 2a | | todo |
-| R-3.3-9 | Spawn: first after hoop 3, then every 17–27, mid-gap; first on line, later 50/50 off by 0.1–0.4 band; never in a hoop or strip; max one on screen | 3.3 | 0b / 2a | test/run/director/s3_0_3_director_test.dart; test/run/hoops/s3_11_moving_rings_test.dart::§3.3 heart placement… | done (0b schedule; 1b placement wiring, placeholder pickup); 2a pending |
-| R-3.3-10 | Big Hoops and hearts independent | 3.3 | 2a | | todo |
+| R-3.3-3 | 3rd heart → extra life; heart badge floats above the bird (bobbing) | 3.3, 5.5 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 three hearts give one extra life …; shot: build/shots/run/lives/big_heart_badge_*.png | done |
+| R-3.3-4 | Mistake list (missed hoop incl. pair, spikes, saw rim, closed switch) forgiven once by the extra life | 3.3 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 / §3.3 save order … (spikes, saw, closed switch, missed hoop) | done |
+| R-3.3-5 | On use: badge pops (heart particles), indicator → 0/3, bird flashes + 2 s invulnerability, keep playing; missed hoop not counted | 3.3 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 the extra life forgives one mistake …; shot: build/shots/run/lives/extra_life_pop_*.png | done |
+| R-3.3-6 | Doesn't stack; no heart spawns while active (schedule moves on) | 3.3 | 2a / 0b | test/run/director/s3_0_3_director_test.dart | done (0b schedule; 2a: test/run/items/s3_3_s3_7_lives_test.dart::§3.3 three hearts … a 4th heart does not stack) |
+| R-3.3-7 | Separate from the shield; both can be active | 3.3 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 / §3.3 save order: the shield (order 10) absorbs first, then the extra life (order 20) … | done |
+| R-3.3-8 | Hearts reset at game over (run-only) | 3.3 | 2a | RunState is per run (new run → hearts 0); test/run/items/s3_6_big_hoops_test.dart::§3.6 … no run without it is boosted (second run starts fresh) | done |
+| R-3.3-9 | Spawn: first after hoop 3, then every 17–27, mid-gap; first on line, later 50/50 off by 0.1–0.4 band; never in a hoop or strip; max one on screen | 3.3 | 0b / 2a | test/run/director/s3_0_3_director_test.dart; test/run/hoops/s3_11_moving_rings_test.dart::§3.3 heart placement… | done (0b schedule; 1b placement; 2a real pickup: test/run/items/s3_3_s3_7_lives_test.dart::§3.3 a heart pickup on the bird is collected by touch …) |
+| R-3.3-10 | Big Hoops and hearts independent | 3.3 | 2a | independent features (BigHoopsFeature / ExtraLifeFeature); shot: build/shots/run/lives/big_heart_badge_*.png | done |
 
 ## 3.4 Perfect-pass streak
 
@@ -261,24 +261,24 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.6-1 | Read and consume `armedPowerup` at run start; next run only; no stacking | 3.6 | 2a | | todo |
-| R-3.6-2 | D random 30–40 s of runClock; hoops spawned until D − 8 s are 1.5× (capped to fit the band) and gold | 3.6 | 2a | | todo |
-| R-3.6-3 | Last 8 s: multiplier eases 1.5 → 1.0 per newly spawned hoop; a hoop never changes size on screen; normal after D | 3.6 | 2a | | todo |
-| R-3.6-4 | Every hoop kind grows; specials keep their look (no gold); tier look on top | 3.6 | 2a | | todo |
-| R-3.6-5 | Autopilot playability test passes with Big Hoops on | 3.6 | 2a | | todo |
-| R-3.6-6 | Boosted runs count for best, levels, versus pools, leaderboard (not flagged) | 3.6 | 2a / 5b | | todo |
-| R-3.6-7 | No in-game indicator | 3.6 | 2a | | todo |
-| R-3.6-8 | Knobs `bigHoopsMult 1.5`, `bigHoopsMin 30`, `bigHoopsMax 40`, `bigHoopsEase 8` | 3.6 | 2a | | todo |
+| R-3.6-1 | Read and consume `armedPowerup` at run start; next run only; no stacking | 3.6 | 2a | test/run/items/s3_6_big_hoops_test.dart::§3.6 the home-slot Big Hoops is consumed at the start and rolls D in 30–40 s … | done |
+| R-3.6-2 | D random 30–40 s of runClock; hoops spawned until D − 8 s are 1.5× (capped to fit the band) and gold | 3.6 | 2a | test/run/items/s3_6_big_hoops_test.dart::§3.6 D over many seeds …; test/run/items/s3_6_big_hoops_test.dart::§3.6 every hoop spawned is sized by the multiplier at its spawn time … | done |
+| R-3.6-3 | Last 8 s: multiplier eases 1.5 → 1.0 per newly spawned hoop; a hoop never changes size on screen; normal after D | 3.6 | 2a | test/run/items/s3_6_big_hoops_test.dart::§3.6 BigHoopsState §3.6 ×1.5 until D − 8 s, easing …; test/run/items/s3_6_big_hoops_test.dart::§3.6 every hoop spawned … a hoop never changes size on screen | done |
+| R-3.6-4 | Every hoop kind grows; specials keep their look (no gold); tier look on top | 3.6 | 2a | director scales every kind (0b); gold only for normal hoops: test/run/items/s3_6_big_hoops_test.dart::§3.6 every hoop spawned … | done (special kinds land in P3; BigHoopsFeature.isGold for 2b) |
+| R-3.6-5 | Autopilot playability test passes with Big Hoops on | 3.6 | 2a | test/autopilot_test.dart::AUTOPILOT (568 / 711) seed 7, 21, 1234 Big Hoops | done |
+| R-3.6-6 | Boosted runs count for best, levels, versus pools, leaderboard (not flagged) | 3.6 | 2a / 5b | no flag on boosted runs (RunSummary unchanged) | done (versus pools: 5b) |
+| R-3.6-7 | No in-game indicator | 3.6 | 2a | no indicator component | done |
+| R-3.6-8 | Knobs `bigHoopsMult 1.5`, `bigHoopsMin 30`, `bigHoopsMax 40`, `bigHoopsEase 8` | 3.6 | 2a | test/run/items/s3_6_big_hoops_test.dart::§3.6 knobs (bigHoopsMult 1.5, bigHoopsMin 30, bigHoopsMax 40, bigHoopsEase 8) | done |
 
 ## 3.7 Shield (run side)
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.7-1 | Absorbs exactly one mistake (full mistake list), no timer; shatters; flash + 2 s invulnerability; spike save stays on screen | 3.7 | 2a | | todo |
-| R-3.7-2 | Active look: translucent circle, gold ring, rotating dashed inner ring, gentle pulse, no badge | 3.7, 5.5 | 2a | | todo |
-| R-3.7-3 | Obtained by field pickup (from hoop 12, max 1 per run, off the line), SHIELD pair gift, home slot (active from start) | 3.7 | 2a / 3d | | todo |
-| R-3.7-4 | Icon: pink fill, gold border, gold star (same asset as the home slot) | 3.7 | 2a | | todo |
-| R-3.7-5 | Stacks with all powerups; visuals layer | 3.7 | 2a | | todo |
+| R-3.7-1 | Absorbs exactly one mistake (full mistake list), no timer; shatters; flash + 2 s invulnerability; spike save stays on screen | 3.7 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 / §3.3 save order …; test/run/items/s3_3_s3_7_lives_test.dart::§3.3 / §3.0.5 a spike save bounces … | done |
+| R-3.7-2 | Active look: translucent circle, gold ring, rotating dashed inner ring, gentle pulse, no badge | 3.7, 5.5 | 2a | shot: build/shots/run/lives/shield_circle_*.png; test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the shield pickup arms the shield … circle forms | done |
+| R-3.7-3 | Obtained by field pickup (from hoop 12, max 1 per run, off the line), SHIELD pair gift, home slot (active from start) | 3.7 | 2a / 3d | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the shield pickup arms the shield …; test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the home-slot shield is consumed at the start … | done (pair gift: 3d sets state.shield; the circle observes it) |
+| R-3.7-4 | Icon: pink fill, gold border, gold star (same asset as the home slot) | 3.7 | 2a | shot: build/shots/run/lives/shield_circle_*.png (LifeIcons.paintShield) | done |
+| R-3.7-5 | Stacks with all powerups; visuals layer | 3.7 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 / §3.3 save order … (shield + extra life together) | done |
 
 ## 3.8 Comet boost
 
@@ -297,8 +297,8 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.9-1 | `pu_heart_1` on 1st/2nd heart; `pu_heart_2` on the 3rd (badge appears at once); `pu_heart_use` when the extra life absorbs | 3.9 | 2a | | todo |
-| R-3.9-2 | `pu_shield_get` on collection; `pu_shield_hit` on absorb | 3.9 | 2a | | todo |
+| R-3.9-1 | `pu_heart_1` on 1st/2nd heart; `pu_heart_2` on the 3rd (badge appears at once); `pu_heart_use` when the extra life absorbs | 3.9 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 three hearts give one extra life …; test/run/items/s3_3_s3_7_lives_test.dart::§3.3 the extra life forgives one mistake … | done |
+| R-3.9-2 | `pu_shield_get` on collection; `pu_shield_hit` on absorb | 3.9 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the shield pickup arms the shield …; test/run/items/s3_3_s3_7_lives_test.dart::§3.7 / §3.3 save order … | done |
 | R-3.9-3 | `pu_comet_get` on collection; `pu_comet_loop` from ≈ 1.2 s until the end (fade ≈ 0.3 s, ≈ 30 % volume, BGM-style looping player); `pu_comet_end` at the end | 3.9 | 3a | | todo |
 | R-3.9-4 | `pu_portal`, `pu_cannon_aim`, `pu_cannon_shot`, `pu_land` at their moments | 3.9 | 3b | | todo |
 | R-3.9-5 | All through low-latency AudioPool (loops via the looping player); peak ≈ −1.4 dBFS | 3.9 | 0b (API) | test/run/director/s3_0_3_director_test.dart | done |
@@ -638,20 +638,20 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 |---|---|---|---|---|---|
 | R-5.1-1 | In-game hoop M0: pink stroke 7, no posts / inner spikes, two layers; matches `hoops_m0.png` | 5.1 | 1a | shot: build/shots/run/hoops/run_568.png, run_711.png vs design/menu_v2/hoops_m0.png (test/run/shots/hoops_shots_test.dart) | done |
 | R-5.1-2 | Non-perfect pass feedback: ring outline pulses 0.8 → 1.9 in ≈ 0.55 s, gold "+1" floats up; `point.mp3`; HUD increments | 5.1 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.1 a non-perfect pass plays point.mp3 and the §5.1 pulse | done |
-| R-5.1-3 | Big Hoops look 1.5× and gold; matches `hoops_m0_big.png` | 5.1 | 2a | | todo |
-| R-5.2-1 | Heart pickup 32 pt `#FF3B5C`, 1.8 pt white outline, pulse 1.0 ↔ 1.14 (1 s), no glow | 5.2 | 2a | | todo |
+| R-5.1-3 | Big Hoops look 1.5× and gold; matches `hoops_m0_big.png` | 5.1 | 2a | shot: build/shots/run/lives/big_heart_badge_*.png vs hoops_m0_big.png | done |
+| R-5.2-1 | Heart pickup 32 pt `#FF3B5C`, 1.8 pt white outline, pulse 1.0 ↔ 1.14 (1 s), no glow | 5.2 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§5.2 the heart pickup pulses 1.0 ↔ 1.14 over 1 s; hit radius 16; shot: build/shots/run/lives/big_heart_badge_*.png | done |
 | R-5.2-2 | "+1 coin" gold text with icon rising ≈ 30 pt, fading 1.6 s at the hoop (superseded by master #8 for passes) | 5.2 | 0c | | todo |
-| R-5.2-3 | Saved: shards burst, "SAVED!" rises in pink, bird shakes briefly, hearts reset | 5.2 | 2a | | todo |
+| R-5.2-3 | Saved: shards burst, "SAVED!" rises in pink, bird shakes briefly, hearts reset | 5.2 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 the extra life forgives one mistake … | part (shards + hearts reset done; "SAVED!" shows once a BannerHost is mounted, 2d; bird shake superseded by the §5.5 flash) |
 | R-5.3-1 | Sparkle spec (colours, sizes per tier, twinkle 0.5–0.9 s, 45° → 90° spin, emission 7/16/38 per s) | 5.3 | 0c / 2b | test/run/effects/s3_0_9_parts_test.dart::§5.3 sparkles at 7 / 16 / 38 per second, sizes per tier | part (master 0c) |
 | R-5.3-2 | Flame flicks tier 3+ (7–12 pt wide, 1.6–2.4× tall, rise 20–45 pt, 0.4–0.7 s) | 5.3 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.3 flame flicks and glow only from tier 3; glow fades in 0.25 s | part (master 0c) |
 | R-5.3-3 | Glow tier 3+: radial gold ≈ 96 × 152 pt behind each ring (fade in 0.25 s) | 5.3 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.3 flame flicks and glow only from tier 3; glow fades in 0.25 s | part (master 0c) |
 | R-5.3-4 | Graze: "GRAZE · streak lost" rises and fades (1.1 s); everything resets at once | 5.3 | 2b | | todo |
 | R-5.4-1 | Perfect effects match `perfect_tier{1,2,3,5,10}.png` within the master rules (no shockwave rings, no flash, no confetti) | 5.4 | 2b | | todo |
 | R-5.4-2 | Effects cosmetic, above hoops, below HUD, pooled ≤ 130 particles | 5.4 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.4 the pool caps particles at 130 and recycles them | part (pool 0c) |
-| R-5.5-1 | Extra-life badge 34 pt above the bird ≈ 40 pt, bob ±4 pt ≈ 0.6 Hz, pops in 0.35 s after the heart flies to the indicator | 5.5 | 2a | | todo |
-| R-5.5-2 | On a mistake: badge pops into hearts, indicator resets, bird flashes 2 s (25 % ↔ 100 % every 0.1 s) | 5.5 | 2a | | todo |
-| R-5.5-3 | Shield icon (pink fill, gold border, gold star white outline) for pickup and HUD | 5.5 | 2a | | todo |
-| R-5.5-4 | Shield circle 84 pt, gold 3.5 pt ring, 28 % soft-pink fill, dashed white inner ring 90°/s, pulse ±5 %, forms with a gold ring burst, hit: white flash + 12 shards | 5.5 | 2a | | todo |
+| R-5.5-1 | Extra-life badge 34 pt above the bird ≈ 40 pt, bob ±4 pt ≈ 0.6 Hz, pops in 0.35 s after the heart flies to the indicator | 5.5 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 three hearts give one extra life … the badge pops in over the bird | done |
+| R-5.5-2 | On a mistake: badge pops into hearts, indicator resets, bird flashes 2 s (25 % ↔ 100 % every 0.1 s) | 5.5 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 the extra life forgives one mistake …; shot: build/shots/run/lives/extra_life_pop_*.png | done |
+| R-5.5-3 | Shield icon (pink fill, gold border, gold star white outline) for pickup and HUD | 5.5 | 2a | shot: build/shots/run/lives/shield_circle_*.png | done |
+| R-5.5-4 | Shield circle 84 pt, gold 3.5 pt ring, 28 % soft-pink fill, dashed white inner ring 90°/s, pulse ±5 %, forms with a gold ring burst, hit: white flash + 12 shards | 5.5 | 2a | shot: build/shots/run/lives/shield_circle_*.png, shield_hit_*.png; test/run/items/s3_3_s3_7_lives_test.dart::§3.7 / §3.3 save order … (12 triangles) | done |
 | R-5.6-1 | Comet pickup 46 pt star, white 2 pt outline, inner white star, pink + gold tail; wobble ±14°, pulse ±8 % | 5.6 | 3a | | todo |
 | R-5.6-2 | Bird inside the fireball (bird 90 %, pink/gold shell, triangle tail), pixel-block shower | 5.6 | 3a | | todo |
 | R-5.6-3 | Countdown ring r 34, gold 6 pt, drains 10 s inside the graphic; "10s → 1s" gold 18 pt 50 pt below | 5.6 | 3a | | todo |
@@ -782,12 +782,12 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | ID | Event (params) | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
 | R-6-1 | `coins_earned` (source: hoop / perfect / win_bonus / level / bonus / puzzle / switch / pair / train / bullseye / lucky_spin / star_trail / piggy / jar / frenzy; flag `egg_x2`) | 6 | 0b (router) + source WPs | test/run/flow/s3_0_run_core_flow_test.dart::§3.0.1 START builds a RunController…; test/run/s7_run_parts_test.dart::§6* | done |
-| R-6-2 | `big_hoops_used` | 6 | existing / 2a verify | | todo |
-| R-6-3 | `heart_collected` | 6 | 2a | | todo |
-| R-6-4 | `extra_life_used` (cause: missed_hoop / spikes) | 6 | 2a | | todo |
+| R-6-2 | `big_hoops_used` | 6 | existing / 2a verify | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the home-slot shield …; test/run/items/s3_6_big_hoops_test.dart::§3.6 the home-slot Big Hoops … (big_hoops_used) | done |
+| R-6-3 | `heart_collected` | 6 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 three hearts give one extra life … | done |
+| R-6-4 | `extra_life_used` (cause: missed_hoop / spikes) | 6 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 the extra life forgives one mistake … | done |
 | R-6-5 | `comet_collected` | 6 | 3a | | todo |
-| R-6-6 | `shield_collected` | 6 | 2a | | todo |
-| R-6-7 | `shield_used` | 6 | 2a | | todo |
+| R-6-6 | `shield_collected` | 6 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the shield pickup arms the shield … | done |
+| R-6-7 | `shield_used` | 6 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 / §3.3 save order … | done |
 | R-6-8 | `portal_entered` (ride: cannon / space / volcano / sea / pinball / storm) | 6 | 3b | | todo |
 | R-6-9 | `perfect_pass` (tier) | 6 | 2b | | todo |
 | R-6-10 | `streak_broken` (length) | 6 | 2b | | todo |
@@ -870,7 +870,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-7-T1 | Plane-crossing tests: inside scores; outside ends; rim bounces + scores +1 without perfect; pressed against the inside passes (upright and every tilt step); tilted ring never missed early; saw rim kills; exactly-once game over | 3.1, 7 | 1a (saw: 3d) | test/run/physics/s3_0_4_pass_test.dart; test/run/physics/s3_0_4_rim_test.dart; test/collision_test.dart; test/run/flow/s3_1_hoop_flow_test.dart | done (saw rim: 3d) |
 | R-7-T2 | Run-director tests (3.0.3), incl. same seed → same sequence | 3.1, 7 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-7-T3 | Death-physics tests (3.0.5) | 3.1, 7 | 1a | test/run/physics/s3_0_5_tumble_test.dart; test/run/flow/s3_1_hoop_flow_test.dart | done |
-| R-7-T4 | `flutter test` green incl. autopilot at 568 and 711, with and without Big Hoops, director on (all elements), each special forced on every allowed slot | 7 | 1a / 1b / 2a / P3 | test/autopilot_test.dart::AUTOPILOT (568 / 711) seed 7, 21, 1234: §7 the hoop-aware bot passes >= 12 hoops | part (plain gate done 1a; Big Hoops / elements: 1b / 2a / P3) |
+| R-7-T4 | `flutter test` green incl. autopilot at 568 and 711, with and without Big Hoops, director on (all elements), each special forced on every allowed slot | 7 | 1a / 1b / 2a / P3 | test/autopilot_test.dart::AUTOPILOT (568 / 711) seed 7, 21, 1234: §7 the hoop-aware bot passes >= 12 hoops | part (plain gate 1a; Big Hoops 2a: test/autopilot_test.dart::AUTOPILOT (568 / 711) seed 7, 21, 1234 Big Hoops; elements: P3) |
 | R-7-T5 | `startHoopIndex` override; gate ≥ 12 hoops after each type unlocks at both heights; plain run ≥ 12 | 7 | 0b / P3 | test/run/director/s3_0_3_director_test.dart | done (0b part); P3 pending |
 | R-7-T6 | Autopilot targets the switch before a closed switch ring and the nearer ring of a pair | 7 | 0b / 3d | lib/run/debug/autopilot.dart (nearest ring); switch pre-target via HoopKind.autopilotTarget (3d) | done (0b part); 3d pending |
 | R-7-T7 | Revive tests: ladder (ad → 250 → 500 → 1 000 → doubling, reset per game, no-ad start 250); phoenix (safe line, drift to 70, scroll at 1.65 s, 2 s invuln, Black Hole re-form); ≥ 6 rule (≤ 5 → no offer, no ladder step); collectables lost and timed powerups ended at death; squeeze reset | 7 | 2d (+ 3d / 3e / 3f / 3g cases) | | todo |
@@ -917,8 +917,8 @@ the looping player).
 | ID | Sound | PRD § | WP (ship / make) | Test ID(s) | Status |
 |---|---|---|---|---|---|
 | R-S-1 | `perfect_1`, `perfect_2`, `perfect_3` | 3.4 | 0b ship / 2b use | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | shipped (0b); use pending |
-| R-S-2 | `pu_heart_1`, `pu_heart_2`, `pu_heart_use` | 3.9 | 0b / 2a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 2a pending |
-| R-S-3 | `pu_shield_get`, `pu_shield_hit` | 3.9 | 0b / 2a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 2a pending |
+| R-S-2 | `pu_heart_1`, `pu_heart_2`, `pu_heart_use` | 3.9 | 0b / 2a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done |
+| R-S-3 | `pu_shield_get`, `pu_shield_hit` | 3.9 | 0b / 2a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done |
 | R-S-4 | `pu_comet_get`, `pu_comet_loop` (loop), `pu_comet_end` | 3.9 | 0b / 3a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 3a pending |
 | R-S-5 | `pu_portal`, `pu_cannon_aim`, `pu_cannon_shot`, `pu_land` | 3.9 | 0b / 3b | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 3b pending |
 | R-S-6 | `miss_shock` | 5.13 | 0b / 1a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 1a pending |

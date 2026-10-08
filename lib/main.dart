@@ -12,6 +12,7 @@ import 'package:share_plus/share_plus.dart';
 import 'game/config.dart';
 import 'game/flappy_game.dart';
 import 'services/game_services.dart';
+import 'services/e2e.dart';
 import 'services/monetization.dart';
 
 /// Key on the [RepaintBoundary] wrapping the game, used to capture a
@@ -47,8 +48,11 @@ Future<void> main() async {
   // mobile, in-memory fakes elsewhere (Linux).
   // Off mobile the fakes are in use: show a visible test ad (countdown
   // overlay) instead of completing instantly.
-  final monetization = Monetization.forPlatform()
-    ..showFakeAdOverlay = !_isMobile;
+  // region WP-0b — FS_E2E builds use the fake ads with the visible overlay
+  // (succeed) and the in-memory store (ARCH §7.3).
+  final monetization = (kE2E ? Monetization() : Monetization.forPlatform())
+    ..showFakeAdOverlay = kE2E || !_isMobile;
+  // endregion WP-0b
 
   final game = FlappySpikesGame(
     worldHeight: worldHeight,

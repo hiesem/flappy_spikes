@@ -5,7 +5,14 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 /// Where a rewarded ad was requested from. Shop free coins and the home
 /// powerup slot belong to the menu (PRD-1); revive and 2× coins to gameplay.
-enum AdPlacement { shopFreeCoins, homeSlot, revive, doubleCoins }
+enum AdPlacement {
+  shopFreeCoins,
+  homeSlot,
+  revive,
+  doubleCoins,
+  // PRD-2 §3.15 balloon bonus extra pops (WP-0b).
+  bonusFeathers,
+}
 
 extension AdPlacementName on AdPlacement {
   /// Analytics parameter value for this placement.
@@ -14,6 +21,7 @@ extension AdPlacementName on AdPlacement {
     AdPlacement.homeSlot => 'home_slot',
     AdPlacement.revive => 'revive',
     AdPlacement.doubleCoins => 'double_coins',
+    AdPlacement.bonusFeathers => 'bonus_feathers',
   };
 }
 

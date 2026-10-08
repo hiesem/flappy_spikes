@@ -41,6 +41,19 @@ import '../menu/free_coins_policy.dart';
 import '../menu/menu_state.dart';
 import '../menu/powerup_slot.dart';
 import '../menu/wallet.dart';
+import '../run/debug/autopilot.dart';
+import '../run/debug/debug_overlay.dart';
+import '../run/debug/force_menu.dart';
+import '../run/director/plans.dart';
+import '../run/elements.dart';
+import '../run/mistakes.dart';
+import '../run/run_controller.dart';
+import '../run/run_scaled_world.dart';
+import '../run/run_setup.dart';
+import '../run/run_summary.dart';
+import '../run/screens/post_run_flow.dart';
+import '../services/e2e.dart';
+import '../services/versus_service.dart';
 import '../services/ads_service.dart';
 import '../services/game_services.dart';
 import '../services/iap_service.dart';
@@ -59,7 +72,20 @@ import 'tintable.dart';
 
 /// Game states from SPEC.md. `replay` is a transition that returns to
 /// [GameState.start] after a full reset with a 0.3 s white fade.
-enum GameState { start, playing, gameOver }
+///
+/// PRD-2 (ARCH §2.3): `versusIntro`, `paused`, `dying`, `reviving` and
+/// `bonus` are entered by later WPs; `gameOver` is the results page (WP-2e
+/// renames it `results`).
+enum GameState {
+  start,
+  playing,
+  gameOver,
+  versusIntro,
+  paused,
+  dying,
+  reviving,
+  bonus,
+}
 
 /// Which menu screen is up while in [GameState.start] (meaningless in the
 /// other states).
@@ -73,12 +99,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     DateTime Function()? clock,
     this.soundEnabled = true,
     bool? rumbleEnabled,
+    VersusService? versus,
   }) : services = services ?? GameServices(),
+       versus = versus ?? NoopVersusService(),
        rumble = Rumble(hardware: rumbleEnabled ?? soundEnabled),
        monetization = monetization ?? Monetization(),
        storage = GameStorage(clock: clock),
        viewHeight = _clampViewHeight(worldHeight ?? Config.worldHeight),
        super(
+        world: RunScaledWorld(gravity: Vector2(0, Config.gravity)),
         gravity: Vector2(0, Config.gravity),
         camera: CameraComponent.withFixedResolution(
           width: Config.worldWidth,
@@ -126,6 +155,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// Analytics + leaderboards. No-op unless main() initialized it.
   final GameServices services;
+
+  /// Versus backend (PRD-2 §3.13). No-op unless main() passes one (WP-5b).
+  final VersusService versus;
 
   /// Rewarded ads + in-app purchases. In-memory fakes unless main() passes
   /// `Monetization.forPlatform()`.
@@ -184,6 +216,21 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   double _spawnTimer = 0;
   double? _lastGapBottomY;
+
+  // region WP-0b — run plumbing (ARCH §2.3)
+  RunController? _run;
+
+  /// The current run (null on the home screen).
+  RunController? get run => _run;
+
+  /// Seed of the next run: tests set it, e2e builds use [kE2ESeed],
+  /// production rolls one per run (each player flies their own course).
+  int? runSeed;
+
+  /// §3.0.8 debug choices for the next run (debug panel force page).
+  final RunDebugState runDebug = RunDebugState();
+  Autopilot? _debugBot;
+  // endregion WP-0b
 
   Bird? _bird;
   _BirdOpacityAdapter? _birdAdapter;
@@ -268,7 +315,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   Color get foregroundColor => _fgColor;
   Color get stageBackground => _bgColor;
-  bool get isScrolling => state == GameState.playing;
+  bool get isScrolling => _run?.isScrolling ?? state == GameState.playing;
 
   /// The home screen while it is up (null in runs / settings).
   HomeScreen? get homeScreen => _home;
@@ -404,10 +451,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     await storage.load();
     menu = MenuState(
       storage,
-      onEarned: (amount, source) => services.track('coins_earned', {
-        'amount': amount,
-        'source': source.analyticsName,
-      }),
+      onEarned: (amount, source) {
+        // In-run sources are aggregated by the run's analytics router and
+        // sent once at run end (ARCH §2.7).
+        if (source.aggregatedInRun) return;
+        services.track('coins_earned', {
+          'amount': amount,
+          'source': source.analyticsName,
+        });
+      },
     );
     // The slot arms a powerup only right before it starts the run, which
     // consumes it: anything still armed here is stale (an app killed
@@ -623,8 +675,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           startRun();
         }
       case GameState.playing:
+        _run?.onTap();
         _bird?.flap();
       case GameState.gameOver:
+      case GameState.versusIntro:
+      case GameState.paused:
+      case GameState.dying:
+      case GameState.reviving:
+      case GameState.bonus:
         break;
     }
   }
@@ -634,6 +692,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// (PRD-1 §4.2).
   void onPlayfieldTap() {
     if (state == GameState.playing) {
+      _run?.onTap();
       _bird?.flap();
     }
   }
@@ -700,7 +759,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       }
       if (state != GameState.start) return;
     }
-    switch (menu.slot.consume()) {
+    final starter = menu.slot.consume();
+    switch (starter) {
       case Powerup.bigHoops:
         services.track('big_hoops_used');
       case Powerup.shield:
@@ -708,10 +768,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       case Powerup.none:
         break;
     }
-    _startGame();
+    _startGame(starter);
   }
 
-  void _startGame() {
+  void _startGame([Powerup starter = Powerup.none]) {
     state = GameState.playing;
     _runsThisSession++;
     services.logGameStart();
@@ -737,7 +797,96 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       ..flap();
     fadeOpacity(_hud, from: 0, to: 1, duration: Config.gameplayFadeDuration);
     _spawnTimer = Config.pipeSpawnInterval; // spawn the first pair now
+    _startRun(starter);
   }
+
+  // region WP-0b — run plumbing (ARCH §2.3)
+  /// Builds the [RunSetup] (seed, starter, versus opponent, debug / e2e
+  /// force queue) and starts the [RunController] with the first tap.
+  void _startRun(Powerup starter) {
+    _run?.disposeRun();
+    final d = runDebug;
+    final e2e = kE2E || E2EHooks.force.isNotEmpty || E2EHooks.startHoopIndex > 0;
+    final setup = RunSetup(
+      seed: runSeed ?? (kE2E ? kE2ESeed : _random.nextInt(1 << 31)),
+      starter: starter,
+      opponent: versus.takeOpponent(),
+      startHoopIndex: e2e && E2EHooks.startHoopIndex > 0
+          ? E2EHooks.startHoopIndex
+          : d.startHoopIndex,
+      forced: [...d.force, if (e2e) ...E2EHooks.force],
+      forcedRide: d.forcedRide ?? (e2e ? E2EHooks.forcedRide : null),
+      viewHeight: viewHeight,
+    );
+    d.force.clear();
+    d.forcedRide = null;
+    final run = RunController(setup: setup, game: this);
+    _run = run;
+    (world as RunScaledWorld).timeScaleSource = () => run.state.timeScale;
+    world.add(run);
+    run.start();
+    _debugBot = debugAvailable && (d.bot || E2EHooks.autopilot)
+        ? Autopilot(run)
+        : null;
+    if (debugAvailable && d.overlay) run.layers.fx.add(RunDebugOverlay(run));
+  }
+
+  /// The run bird's centre on screen (null without a bird).
+  Vector2? get runBirdPosition {
+    final b = _bird;
+    if (b == null || !b.isLoaded) return null;
+    return b.body.position.clone();
+  }
+
+  /// The run bird's vertical velocity (pt/s).
+  double? get runBirdVelocityY {
+    final b = _bird;
+    if (b == null || !b.isLoaded) return null;
+    return b.body.linearVelocity.y;
+  }
+
+  /// Score + HUD (the run's `RunContext.addScore`).
+  void showRunScore(int value) {
+    score = value;
+    _hud.setScore(value);
+  }
+
+  /// §3.0.8 debug force: into the running run, else queued for the next.
+  void debugForceElement(ElementId e) {
+    final run = _run;
+    if (run != null && state == GameState.playing) {
+      run.debugForce(e);
+    } else if (!runDebug.force.contains(e)) {
+      runDebug.force.add(e);
+    }
+  }
+
+  /// §3.0.8 debug: the next portal takes [r].
+  void debugForceRide(RideId r) {
+    final run = _run;
+    if (run != null && state == GameState.playing) {
+      run.debugForceRide(r);
+    } else {
+      runDebug.forcedRide = r;
+    }
+  }
+
+  /// Legacy pipes (until WP-1a): the next pipe gap's centre ahead of the
+  /// bird, for the autopilot.
+  double? legacyPipeTargetY() {
+    final bird = runBirdPosition;
+    if (bird == null) return null;
+    PipePair? next;
+    for (final p in world.children.query<PipePair>()) {
+      if (!p.isLoaded) continue;
+      final x = p.body.position.x;
+      if (x + Config.pipeWidth / 2 < bird.x - Config.birdRadius) continue;
+      if (next == null || x < next.body.position.x) next = p;
+    }
+    if (next == null) return null;
+    return next.gapBottomY - next.gap / 2;
+  }
+  // endregion WP-0b
 
   /// True while the home screen is up with nothing over it.
   bool get _homeInteractive =>
@@ -1920,6 +2069,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     score++;
     sound.play(Sfx.point);
     _hud.setScore(score);
+    _run?.legacyPoint(score);
     final newStage = stageOf(score);
     if (newStage != _stage) {
       _stage = newStage;
@@ -1927,7 +2077,26 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
   }
 
-  void onBirdHit() {
+  /// A contact with a pipe or a spike strip (1.0 rules until WP-1a): a
+  /// mistake through the run's pipeline (ARCH §2.6), which ends the run via
+  /// [endRun].
+  void onBirdHit([MistakeCause cause = MistakeCause.missedHoop]) {
+    if (state != GameState.playing) {
+      return;
+    }
+    final run = _run;
+    if (run != null && run.started && !run.ended) {
+      if (debugAvailable && runDebug.god) return;
+      run.mistake(Mistake(cause));
+      return;
+    }
+    endRun(null);
+  }
+
+  /// The end of a run (ARCH §2.3): persistence, `noAdsPopup.recordRun`,
+  /// game-over / new-best analytics, the leaderboard submit, the versus
+  /// upload, then the [PostRunFlow] (WP-0b: the legacy `GameOverPanel`).
+  void endRun(RunSummary? summary) {
     if (state != GameState.playing) {
       return;
     }
@@ -1947,11 +2116,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
 
     // Interim coin rule (PRD-1 §3.1): 1 coin per point, credited at game
-    // over.
+    // over (removed by WP-1a: coins are earned per pass).
     final coins = score;
     if (coins > 0) {
       unawaited(menu.wallet.add(coins, CoinSource.play));
     }
+    _lastRunCoins = coins;
 
     final previousBest = storage.bestScore;
     final previousLevel = menu.levels.level;
@@ -1974,19 +2144,35 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // Games keeps each player's highest score server-side (one entry), and
     // this also backfills a best set before sign-in was available.
     services.submitBestScore(storage.bestScore);
+    if (summary != null) {
+      unawaited(versus.submitRun(summary, menu.items.look));
+    }
 
+    final s = summary ?? _run?.endRun();
+    if (s != null) {
+      unawaited(PostRunFlow(this).run(s));
+    } else {
+      showLegacyGameOver(null);
+    }
+    fadeOpacity(_hud, from: 1, to: 0, duration: Config.gameplayFadeDuration);
+  }
+
+  int _lastRunCoins = 0;
+
+  /// WP-0b results (until WP-2e): the 1.0 game-over panel.
+  void showLegacyGameOver(RunSummary? summary) {
+    if (_gameOverPanel != null) return;
     final panel = GameOverPanel(
       score: score,
       bestScore: storage.bestScore,
       gamesPlayed: storage.gamesPlayed,
-      coinsEarned: coins,
+      coinsEarned: _lastRunCoins,
       onReplay: goHome,
       onShare: shareScore,
       onLeaderboard: showLeaderboard,
     );
     _gameOverPanel = panel;
     world.add(panel);
-    fadeOpacity(_hud, from: 1, to: 0, duration: Config.gameplayFadeDuration);
   }
 
   // --- buttons -----------------------------------------------------------
@@ -2086,6 +2272,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _bird?.removeFromParent();
     _bird = null;
     _birdAdapter = null;
+    _run?.disposeRun();
+    _run = null;
+    _debugBot = null;
+    (world as RunScaledWorld).timeScaleSource = null;
     for (final pipe in world.children.query<PipePair>()) {
       pipe.removeFromParent();
     }
@@ -2367,6 +2557,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       if (_levelsOpenIn! <= 0) openLevels();
     }
     if (state == GameState.start) _checkLevelUp(dt);
+
+    // region WP-0b — debug / e2e autopilot
+    final bot = _debugBot;
+    if (bot != null && state == GameState.playing && bot.shouldFlap()) {
+      onScreenTap();
+    }
+    // endregion WP-0b
 
     if (state == GameState.playing) {
       _spawnTimer += dt;

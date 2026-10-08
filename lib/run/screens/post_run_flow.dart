@@ -1,0 +1,34 @@
+import '../../game/flappy_game.dart';
+import '../run_summary.dart';
+import 'post_run_screens.dart';
+
+/// The run's end (ARCH §1.11): dying (tumble, WP-1a) → the revive offer if
+/// at least [reviveMinHoops] hoops were passed (WP-2d) → back to play, or →
+/// the bonus when 3 feathers are held (WP-4a) → results (WP-2e; legacy
+/// `GameOverPanel` until then) → `game.goHome()`.
+///
+/// Every slot is optional; with none registered (WP-0b) the results come
+/// up synchronously, exactly like the 1.0 game over.
+class PostRunFlow {
+  PostRunFlow(this.game);
+
+  final FlappySpikesGame game;
+
+  /// §3.14 the revive offer needs at least this many hoops passed.
+  static const int reviveMinHoops = 6;
+
+  /// Returns true when the player revived (the run continues).
+  Future<bool> run(RunSummary s) async {
+    final revive = PostRunScreens.revive;
+    if (revive != null && s.hoopsPassed >= reviveMinHoops) {
+      final outcome = await revive.show(game, s);
+      if (outcome == ReviveOutcome.revived) return true;
+    }
+    final bonus = PostRunScreens.bonus;
+    if (bonus != null && game.storage.feathers >= 3) {
+      await bonus.show(game, s);
+    }
+    await PostRunScreens.results.show(game, s);
+    return false;
+  }
+}

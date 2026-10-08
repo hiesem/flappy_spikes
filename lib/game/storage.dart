@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:math' as math;
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../skins/look.dart';
@@ -38,6 +41,23 @@ class GameStorage {
   static const String _rumbleKey = 'rumble';
   static const String _lastScoreKey = 'lastScore';
   static const String _grantedPurchasesKey = 'grantedPurchases';
+
+  // region PRD-2 keys (WP-0b; PRD-2 §7 persistence table, ARCH §5)
+  static const String _feathersKey = 'feathers';
+  static const String _puzzlePiecesKey = 'puzzlePieces';
+  static const String _puzzleRoundKey = 'puzzleRound';
+  static const String _lastPortalRideKey = 'lastPortalRide';
+  static const String _unclaimedLevelRewardKey = 'unclaimedLevelReward';
+  static const String _metElementsKey = 'metElements';
+  static const String _versusNicknameKey = 'versusNickname';
+  static const String _uploadQueueKey = 'uploadQueue';
+  static const String _uploadsTodayKey = 'uploadsToday';
+  static const String _uploadsDayKey = 'uploadsDay';
+  static const String _notifOrderKey = 'notifOrder';
+  static const String _notifPositionKey = 'notifPosition';
+  static const String _notifLastSentKey = 'notifLastSent';
+  static const String _notifPermissionAskedKey = 'notifPermissionAsked';
+  // endregion PRD-2 keys
 
   /// One preference key per equipped layer (the five-key equipped map).
   static String _equippedItemKey(SkinLayer layer) =>
@@ -122,6 +142,57 @@ class GameStorage {
   /// transaction never pays twice. Bounded to [maxGrantedPurchases].
   List<String> grantedPurchases = [];
 
+  // region PRD-2 keys (WP-0b)
+  /// §3.15 Golden feathers held (0–3).
+  int feathers = 0;
+
+  /// §3.16 Puzzle pieces of the open round (4-bit mask).
+  int puzzlePieces = 0;
+
+  /// §3.16 Puzzle round (0-based; colour = round % 8).
+  int puzzleRound = 0;
+
+  /// §3.12 The last portal ride id (never the same twice in a row, also
+  /// across runs); null before the first portal.
+  String? lastPortalRide;
+
+  /// §3.14 / §5.10 Level reward coins not yet claimed (credited at the next
+  /// app start if > 0).
+  int unclaimedLevelReward = 0;
+
+  /// §3.0.8 Element storage ids the player has met (spawned on screen).
+  Set<String> metElements = {};
+
+  /// §3.13 Versus nickname (generated once by WP-5b); null = not yet.
+  String? versusNickname;
+
+  /// §3.13 Pending versus uploads (JSON run entries).
+  List<String> uploadQueue = [];
+
+  /// §3.13 Non-best uploads on [uploadsDay] (3 a day).
+  int uploadsToday = 0;
+
+  /// §3.13 'YYYY-MM-DD' of [uploadsToday]; '' = never.
+  String uploadsDay = '';
+
+  /// §3.34 Shuffled reminder message order (empty until the first schedule).
+  List<int> notifOrder = [];
+
+  /// §3.34 Position in [notifOrder].
+  int notifPosition = 0;
+
+  /// §3.34 Message number → last sent date ('YYYY-MM-DD').
+  Map<int, String> notifLastSent = {};
+
+  /// §3.34 Whether the notification permission was asked.
+  bool notifPermissionAsked = false;
+
+  /// §3.14 `levelRewardsClaimed` maps onto [claimedLevels] (call, ARCH §5):
+  /// the highest claimed level, 0 when none.
+  int get levelRewardsClaimed =>
+      claimedLevels.isEmpty ? 0 : claimedLevels.reduce(math.max);
+  // endregion PRD-2 keys
+
   /// Current wall-clock time (overridable for tests).
   DateTime now() => _clock();
 
@@ -197,7 +268,148 @@ class GameStorage {
     grantedPurchases = _capGranted(
       prefs.getStringList(_grantedPurchasesKey) ?? const [],
     );
+    // region PRD-2 keys (WP-0b)
+    feathers = (prefs.getInt(_feathersKey) ?? 0).clamp(0, 3);
+    puzzlePieces = (prefs.getInt(_puzzlePiecesKey) ?? 0) & 0xF;
+    puzzleRound = prefs.getInt(_puzzleRoundKey) ?? 0;
+    lastPortalRide = prefs.getString(_lastPortalRideKey);
+    unclaimedLevelReward = prefs.getInt(_unclaimedLevelRewardKey) ?? 0;
+    metElements = (prefs.getStringList(_metElementsKey) ?? const []).toSet();
+    versusNickname = prefs.getString(_versusNicknameKey);
+    uploadQueue = List.of(prefs.getStringList(_uploadQueueKey) ?? const []);
+    uploadsToday = prefs.getInt(_uploadsTodayKey) ?? 0;
+    uploadsDay = prefs.getString(_uploadsDayKey) ?? '';
+    notifOrder = (prefs.getStringList(_notifOrderKey) ?? const [])
+        .map(int.tryParse)
+        .whereType<int>()
+        .toList();
+    notifPosition = prefs.getInt(_notifPositionKey) ?? 0;
+    notifLastSent = _decodeIntMap(prefs.getString(_notifLastSentKey));
+    notifPermissionAsked = prefs.getBool(_notifPermissionAskedKey) ?? false;
+    // endregion PRD-2 keys
   }
+
+  // region PRD-2 keys (WP-0b) — setters
+  static Map<int, String> _decodeIntMap(String? json) {
+    if (json == null || json.isEmpty) return {};
+    try {
+      final raw = jsonDecode(json);
+      if (raw is! Map) return {};
+      return {
+        for (final e in raw.entries)
+          if (int.tryParse('${e.key}') != null && e.value is String)
+            int.parse('${e.key}'): e.value as String,
+      };
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> saveFeathers(int value) async {
+    feathers = value.clamp(0, 3);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_feathersKey, feathers);
+  }
+
+  Future<void> savePuzzlePieces(int value) async {
+    puzzlePieces = value & 0xF;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_puzzlePiecesKey, puzzlePieces);
+  }
+
+  Future<void> savePuzzleRound(int value) async {
+    puzzleRound = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_puzzleRoundKey, value);
+  }
+
+  /// §3.16 4/4: the mask goes to 0 and the round + 1 in one step (both
+  /// fields set before the first await, so no reader sees half of it).
+  Future<void> completePuzzleRound() async {
+    puzzlePieces = 0;
+    puzzleRound++;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_puzzlePiecesKey, 0);
+    await prefs.setInt(_puzzleRoundKey, puzzleRound);
+  }
+
+  Future<void> saveLastPortalRide(String value) async {
+    lastPortalRide = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastPortalRideKey, value);
+  }
+
+  Future<void> saveUnclaimedLevelReward(int value) async {
+    unclaimedLevelReward = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_unclaimedLevelRewardKey, value);
+  }
+
+  Future<void> saveMetElements(Set<String> value) async {
+    metElements = {...value};
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _metElementsKey,
+      metElements.toList()..sort(),
+    );
+  }
+
+  /// Adds one element id; no write when it was already met.
+  Future<void> markElementMet(String id) async {
+    if (metElements.contains(id)) return;
+    await saveMetElements({...metElements, id});
+  }
+
+  Future<void> saveVersusNickname(String value) async {
+    versusNickname = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_versusNicknameKey, value);
+  }
+
+  Future<void> saveUploadQueue(List<String> value) async {
+    uploadQueue = List.of(value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_uploadQueueKey, uploadQueue);
+  }
+
+  Future<void> saveUploadsToday(String day, int count) async {
+    uploadsDay = day;
+    uploadsToday = count;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_uploadsDayKey, day);
+    await prefs.setInt(_uploadsTodayKey, count);
+  }
+
+  Future<void> saveNotifOrder(List<int> value) async {
+    notifOrder = List.of(value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _notifOrderKey,
+      notifOrder.map((n) => '$n').toList(),
+    );
+  }
+
+  Future<void> saveNotifPosition(int value) async {
+    notifPosition = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_notifPositionKey, value);
+  }
+
+  Future<void> saveNotifLastSent(Map<int, String> value) async {
+    notifLastSent = {...value};
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _notifLastSentKey,
+      jsonEncode({for (final e in notifLastSent.entries) '${e.key}': e.value}),
+    );
+  }
+
+  Future<void> saveNotifPermissionAsked(bool value) async {
+    notifPermissionAsked = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_notifPermissionAskedKey, value);
+  }
+  // endregion PRD-2 keys
 
   /// Whether any of [ids] belongs to an already granted purchase.
   bool isPurchaseGranted(Iterable<String> ids) =>

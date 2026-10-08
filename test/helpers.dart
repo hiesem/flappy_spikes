@@ -417,3 +417,54 @@ Future<void> flyOutOfRide(FlappySpikesGame g, {double maxSeconds = 30}) async {
   await flushAndMount(g);
 }
 // endregion WP-3a
+
+// region WP-3d — saw / switch / pair (PRD-2 §3.18, §3.20, §3.21)
+/// Flies with the autopilot, re-forcing [force] on every slot, until a
+/// hoop of [kind] that matches [where] has spawned ahead of the bird.
+Future<Hoop?> flyToHoop(
+  FlappySpikesGame g,
+  HoopKindId kind,
+  ElementId force, {
+  bool Function(Hoop h)? where,
+  double maxSeconds = 60,
+}) async {
+  Hoop? found;
+  await flyUntil(g, (r) {
+    if (!r.director.forcedQueue.contains(force)) r.debugForce(force);
+    final b = r.birdTrackPosition();
+    for (final h in hoopsOf(g)) {
+      if (h.plan.kind != kind || h.resolved) continue;
+      if (b != null && h.planeX < b.x + 120) continue;
+      if (where != null && !where(h)) continue;
+      found = h;
+      return true;
+    }
+    return false;
+  }, maxSeconds: maxSeconds);
+  return found;
+}
+
+/// Flies (autopilot) until [h]'s plane is [lead] pt ahead of the bird,
+/// then puts the bird at screen y [y] (vy 0) and glides without flaps
+/// for at most [seconds] or until [until] holds.
+Future<void> glideInto(
+  FlappySpikesGame g,
+  Hoop h,
+  double y, {
+  double lead = 12,
+  double seconds = 1,
+  bool Function(RunController r)? until,
+}) async {
+  await flyUntil(g, (r) {
+    final b = r.birdTrackPosition();
+    return b != null && h.planeX - b.x <= lead;
+  });
+  g.runBird!.setFlight(y: y, vy: 0);
+  await flyUntil(
+    g,
+    until ?? (_) => false,
+    maxSeconds: seconds,
+    autopilot: false,
+  );
+}
+// endregion WP-3d

@@ -12,6 +12,12 @@ import 'spring.dart';
 import 'train.dart';
 
 // endregion WP-3c
+// region WP-3d — saw rings, switch rings, pairs of powerup rings
+import 'pair/pair_kind.dart';
+import 'saw/saw_kind.dart';
+import 'switch/switch_kind.dart';
+
+// endregion WP-3d
 
 /// Registered hoop kinds (ARCH §1.5). A kind that is not registered here is
 /// never offered by the director. One registration line per WP, inside its
@@ -34,6 +40,12 @@ final Map<HoopKindId, HoopKind Function()> _kinds = {
   HoopKindId.portal: PortalHoopKind.new,
   HoopKindId.rideRing: RideRingKind.new,
   // endregion WP-3b
+  // region WP-3d — saw rings, switch rings, pairs of powerup rings
+  // (PRD-2 §3.18, §3.20, §3.21)
+  HoopKindId.saw: SawHoopKind.new,
+  HoopKindId.switchRing: SwitchRingKind.new,
+  HoopKindId.pair: PairHoopKind.new,
+  // endregion WP-3d
 };
 
 /// Modifier / scheduled elements that ride on hoops (angled, moving, comet,

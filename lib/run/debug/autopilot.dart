@@ -6,6 +6,7 @@ import '../../game/config.dart';
 import '../config/run_config.dart';
 import '../hoops/hoop.dart';
 import '../hoops/hoop_kind.dart';
+import '../hoops/kinds/saw/saw_kind.dart'; // WP-3d
 import '../hoops/motion/hoop_motion.dart';
 import '../physics/bird_motion.dart';
 import '../physics/hoop_frame.dart';
@@ -193,6 +194,9 @@ class Autopilot {
         );
         s.x += s.forward * simDt;
         s.vy = math.min(Config.maxFallSpeed, s.vy + Config.gravity * simDt);
+        // region WP-3d — §3.18 the Black Hole pulls toward its rim
+        s.vy += SawHoopKind.pullFrom(h, Vector2(s.x, s.y), r, s.clock) * simDt;
+        // endregion WP-3d
         s.y += s.vy * simDt;
         if (s.invulnerable > 0) s.invulnerable -= simDt;
         t += simDt;

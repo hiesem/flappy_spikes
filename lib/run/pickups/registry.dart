@@ -5,6 +5,7 @@ import 'pickup.dart';
 import 'comet_star.dart';
 import 'heart_pickup.dart';
 import 'shield_pickup.dart';
+import '../hoops/kinds/switch/switch_kind.dart'; // WP-3d
 
 /// Registered pickup kinds (ARCH §1.6). One registration line per WP,
 /// inside its region. Capsule types: WP-3f registers `capsule` plus each
@@ -19,6 +20,9 @@ final Map<ElementId, PickupKind Function()> _kinds = {
   // region WP-3a — the comet star (PRD-2 §3.8)
   ElementId.comet: CometStarKind.new,
   // endregion WP-3a
+  // region WP-3d — the switch of a switch ring (PRD-2 §3.20)
+  ElementId.switchRing: SwitchPickupKind.new,
+  // endregion WP-3d
 };
 
 /// Elements switched on without a pickup of their own (e.g. capsule types

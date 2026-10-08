@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show Color; // WP-3d
 
 import 'package:flame_forge2d/flame_forge2d.dart';
 
@@ -246,6 +247,14 @@ class Bird extends BodyComponent<FlappySpikesGame> {
   }
   // endregion WP-3b
 
+  // region WP-3d — themed death tints (PRD-2 §5.17)
+  /// While set, the look blends [deathTintAmount] toward this colour
+  /// instead of the stage blend (Live Wire charred / X-ray, Frost Ring
+  /// frozen blue). The saw death owns it and clears it on a revive.
+  Color? deathTint;
+  double deathTintAmount = 0;
+  // endregion WP-3d
+
   /// Fade the bird art (game over; hidden while on the home screen, which
   /// draws its own bird). Safe before [onLoad].
   void setSpriteOpacity(double value) {
@@ -262,9 +271,11 @@ class Bird extends BodyComponent<FlappySpikesGame> {
     super.update(dt);
     // Identity colours in menus / stages 0-4, blended toward the stage
     // foreground from stage 5 (follows the colour crossfade).
+    // WP-3d: a themed death's tint (charred / frozen / X-ray) wins.
+    final tint = deathTint;
     _look
-      ..blend = game.skinBlend
-      ..blendColor = game.foregroundColor;
+      ..blend = tint != null ? deathTintAmount : game.skinBlend
+      ..blendColor = tint ?? game.foregroundColor;
     // Terminal velocity (Flappy Bird feel): cap the fall speed so dives stay
     // recoverable. The death toss is exempt — it should tumble freely.
     if (!_dead && game.state == GameState.playing) {

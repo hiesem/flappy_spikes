@@ -69,11 +69,13 @@ void main() {
             );
           }
           // WP-3a: hoops spawned during the comet boost (a ride) are full
-          // size (§3.0.1 "Rides", §3.8).
+          // size (§3.0.1 "Rides", §3.8); WP-3d: a saw ring's opening is
+          // +28 pt (§3.18).
           expect(
             hoop.opening,
             closeTo(
-              plan.duringRide ? RunConfig.opening0 : RunConfig.openingFor(i),
+              (plan.duringRide ? RunConfig.opening0 : RunConfig.openingFor(i)) +
+                  (plan.kind == HoopKindId.saw ? RunConfig.sawExtraOpening : 0),
               1e-9,
             ),
           );

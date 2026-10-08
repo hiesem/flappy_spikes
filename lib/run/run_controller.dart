@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
@@ -9,6 +10,7 @@ import '../game/sound.dart';
 import '../menu/powerup_slot.dart';
 import 'config/physics_config.dart';
 import 'config/revive_config.dart';
+import 'config/saw_config.dart'; // WP-3d
 import 'config/run_config.dart';
 import 'director/run_director.dart';
 import 'effects/dust_puff.dart';
@@ -297,7 +299,14 @@ class RunController extends Component {
             h.resolveMiss();
             final rc = RimTouch(point: c0.point, normal: c0.normal, ring: c0.ring);
             kind.onRim(h, rc, ctx);
-            mistake(Mistake(MistakeCause.saw, normal: c0.normal, hoop: h));
+            mistake(
+              Mistake(
+                MistakeCause.saw,
+                normal: c0.normal,
+                hoop: h,
+                themed: kind.themedDeath(h), // WP-3d
+              ),
+            );
             if (_dying) return;
             continue;
           }
@@ -313,7 +322,12 @@ class RunController extends Component {
           h.resolveMiss();
           events.emit(ClosedSwitchReached(h));
           mistake(
-            Mistake(MistakeCause.closedSwitch, normal: Vector2(-1, 0), hoop: h),
+            Mistake(
+              MistakeCause.closedSwitch,
+              normal: Vector2(-1, 0),
+              hoop: h,
+              themed: kind.themedDeath(h), // WP-3d
+            ),
           );
           if (_dying) return;
           continue;
@@ -438,6 +452,30 @@ class RunController extends Component {
 
   void _stepDeath(double dt) {
     final t = tumble!;
+    // region WP-3d — §3.0.5 themed deaths: the design's moment holds the
+    // bird (the world still eases to a stop), then the same tumble; the
+    // Black Hole swallows it (no tumble, no body).
+    final themed = _death?.themed;
+    if (themed != null &&
+        (_deathTime < themed.holdSeconds || themed.noBody)) {
+      t.stepCamera(dt);
+      state.camX = t.camX;
+      state.forwardSpeed = t.camSpeed;
+      final pose = themedPose;
+      _bird?.placeTumble(
+        geo.toScreen(pose == null ? t.position : t.position + pose.offset),
+        pose?.angle ?? t.angle,
+      );
+      _deathTime += dt;
+      if (!_handedOff &&
+          themed.noBody &&
+          _deathTime >= themed.holdSeconds + SawConfig.holeAfter) {
+        _handedOff = true;
+        game.runDeathSettled(this);
+      }
+      return;
+    }
+    // endregion WP-3d
     t
       ..top = walls.top
       ..floor = walls.floor
@@ -447,8 +485,13 @@ class RunController extends Component {
     _bird?.placeTumble(geo.toScreen(t.position), t.angle);
     _deathTime += dt;
     if (_handedOff) return;
-    final limit = _death?.themed != null
-        ? PhysicsConfig.themedResultsMax
+    // WP-3d: a themed death hands over after its moment + up to 1.5 s, at
+    // most 2.2 s (§3.0.5).
+    final limit = themed != null
+        ? math.min(
+            themed.holdSeconds + PhysicsConfig.resultsDelay,
+            PhysicsConfig.themedResultsMax,
+          )
         : PhysicsConfig.resultsDelay;
     if (_deathTime >= limit || t.resting) {
       _handedOff = true;
@@ -547,6 +590,7 @@ class RunController extends Component {
   /// revive resets (squeeze opens), [RevivePhoenixStarted].
   void beginRevive(ReviveKind k, int price) {
     tumble = null;
+    themedPose = null; // WP-3d
     _handedOff = false;
     _deathTime = 0;
     revive(k);
@@ -566,6 +610,13 @@ class RunController extends Component {
     events.emit(Revived(k, price));
   }
   // endregion WP-2d
+
+  // region WP-3d — themed death moments (PRD-2 §3.0.5, §3.18, §5.17)
+  /// The held bird's pose during a themed death's moment (Live Wire jitter,
+  /// Black Hole pull), relative to where it was hit; set by the saw
+  /// feature on [RunDied]. Null = held still.
+  ThemedDeathPose? themedPose;
+  // endregion WP-3d
 
   // region WP-3b — portal rides (PRD-2 §3.12)
   /// The portal ride drives the bird and the camera itself: no forward
@@ -634,3 +685,12 @@ class RunController extends Component {
     removeFromParent();
   }
 }
+
+// region WP-3d — themed death pose (PRD-2 §3.0.5)
+/// Offset (track pt) and angle (rad) of the held bird during a themed
+/// death's moment; the owner (the saw death) updates it every frame.
+class ThemedDeathPose {
+  final Vector2 offset = Vector2.zero();
+  double angle = 0;
+}
+// endregion WP-3d

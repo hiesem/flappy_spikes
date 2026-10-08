@@ -4,6 +4,8 @@ import 'items/big_hoops.dart';
 import 'items/comet.dart';
 import 'items/extra_life.dart';
 import 'items/fever.dart'; // WP-3c
+import 'hoops/kinds/saw/saw_death.dart'; // WP-3d
+import 'hoops/kinds/switch/switch_kind.dart'; // WP-3d
 import 'items/invulnerability.dart';
 import 'items/shield.dart';
 import 'items/met_elements.dart';
@@ -50,6 +52,11 @@ List<RunFeature> buildRunFeatures() => [
   // region WP-3a — comet boost (PRD-2 §3.8, §3.9, §5.6)
   CometFeature(),
   // endregion WP-3a
+  // region WP-3d — saw-ring deaths / hums / lensing, switch-ring crashes
+  // (PRD-2 §3.18, §3.20, §5.17, §5.19)
+  SawFeature(),
+  SwitchRingFeature(),
+  // endregion WP-3d
   // region WP-2d — revive rules (PRD-2 §3.14); keep last
   ReviveRulesFeature(),
   // endregion WP-2d

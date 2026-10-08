@@ -1,4 +1,4 @@
-import 'dart:ui' show BlendMode, Canvas, Color, ColorFilter;
+import 'dart:ui' show BlendMode, Canvas, Color, ColorFilter, Offset;
 
 import 'package:flame/components.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
@@ -59,6 +59,12 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
   /// left as the strips fade back in after a portal ride.
   double rideShift = 0;
   // endregion WP-3b
+
+  // region WP-3d — Black Hole lensing (PRD-2 §5.17)
+  /// Bends the teeth toward a Black Hole: screen point in → screen point
+  /// out (null = straight). Visual only; the tooth line that kills stays.
+  Offset Function(Offset screen)? lens;
+  // endregion WP-3d
 
   /// Distance from the screen edge to the tooth tips: the same line as the
   /// sprite's tips (`Config.spikeHeight` − [visualInset]); 44 in menus and,
@@ -170,9 +176,24 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
       reach: toothReach,
       offset: toothOffset,
       opacity: teethOpacity,
+      warp: _warp(), // WP-3d
     );
     canvas.restore();
   }
+
+  // region WP-3d — strip space ↔ screen for [lens]
+  Offset Function(double x, double y)? _warp() {
+    final l = lens;
+    if (l == null) return null;
+    final h = game.viewHeight;
+    return (x, y) {
+      if (y <= 0) return Offset(x, y);
+      final screen = isCeiling ? Offset(x, y) : Offset(x, h - y);
+      final w = l(screen);
+      return isCeiling ? w : Offset(w.dx, h - w.dy);
+    };
+  }
+  // endregion WP-3d
 
   @override
   void update(double dt) {

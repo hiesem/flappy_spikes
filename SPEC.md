@@ -727,3 +727,33 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
 - Tests: `test/run/items/s3_8_comet_test.dart`,
   `test/run/items/s3_8_comet_autopilot_test.dart`; shots in
   `test/run/shots/comet_shots_test.dart`.
+
+### WP-3d — saw rings, switch rings, pairs of powerup rings (PRD-2 §3.18, §3.20, §3.21)
+
+- DEVIATION (PRD-2 §3.18 / §5.17, new mechanic): from hoop 20 a **saw ring**
+  (Live Wire, Frost Ring or Black Hole, picked at random, never the same twice
+  in a row per run) replaces a slot. Its rim is deadly: touching either rim-end
+  circle (r 5, Black Hole 6) is a mistake (`saw`) instead of a bounce — the
+  design's death moment plays (Live Wire held 0.6 s, Frost Ring ice block
+  0.4 s, Black Hole 0.8 s and no body), then the usual tumble; an extra life /
+  shield absorbs it and the ring counts as passed with no score. Its opening is
+  +28 pt; a clean pass is an ordinary perfect hoop. The Black Hole pulls the
+  bird toward its rim within 34 pt (260 pt/s², 570 at the inhale peak, 0.9 s
+  every 3.4 s) and bends the spike strips (visual only). Rides ignore saw rims.
+- DEVIATION (PRD-2 §3.0.5, themed deaths): a themed death hands over to the
+  revive offer / results after its moment + up to 1.5 s, at most 2.2 s (switch
+  crashes have no held moment: 1.5 s); the Black Hole hands over 0.6 s after
+  the swallow.
+- DEVIATION (PRD-2 §3.20 / §5.19, new mechanic): from hoop 12 a **switch
+  ring** (Lockdown, Laser Gate, Power Iris, Snoozer, Gift Wrap) spawns closed
+  with its switch pickup in the gap before it. Touching the switch (hit radius
+  18) opens the ring at once (animation ≤ 0.8 s) and gives +1 coin; reaching
+  the plane while closed is a mistake (`closed_switch`, knock straight back,
+  the red crash word); a save makes it count as passed with no score. A comet
+  opens a closed ring by itself.
+- DEVIATION (PRD-2 §3.21 / §5.20, new mechanic): from hoop 12 a **pair** of
+  two rings (offset 230 × viewHeight / 711) holding gift boxes replaces a
+  slot. Through one ring: a normal pass plus its gift (Shield arms the shield,
+  Comet starts the boost, +10 coins, +5 score flagged `gift`, FEVER sets the
+  streak to at least ×5 and lights the fire); through neither: a miss
+  (`pair_missed`).

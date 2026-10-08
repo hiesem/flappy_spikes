@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 
 import '../director/plans.dart';
 import '../elements.dart';
+import '../mistakes.dart' show ThemedDeath; // WP-3d
 import '../run_context.dart';
 import '../run_state.dart';
 import 'hoop.dart';
@@ -90,6 +91,14 @@ abstract class HoopKind {
   /// rims, miss); together they are one slot (`hoopIndex` counts once).
   List<SlotPlan> extraHoops(SlotPlan p) => const [];
   // endregion WP-3c
+
+  // region WP-3d — themed deaths (PRD-2 §3.0.5, §3.18, §3.20)
+  /// The design's death moment for a deadly rim (saw) or a closed switch
+  /// ring reached ([PlaneVerdict.mistake]); null = the plain tumble. The
+  /// controller puts it on the [Mistake] (the revive offer timing, the
+  /// Black Hole's "no body").
+  ThemedDeath? themedDeath(Hoop h) => null;
+  // endregion WP-3d
 
   /// Default: the centre of the ring nearest the bird's current y.
   AutopilotTarget autopilotTarget(Hoop h, RunState s, double birdY) {

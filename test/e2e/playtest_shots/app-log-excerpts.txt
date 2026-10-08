@@ -1,0 +1,20 @@
+launch_flutter.log
+10-08 10:07:53.928 23505 23505 I flutter : versus: initialize failed: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+10-08 10:07:55.640 23505 23505 I flutter : versus: prefetch failed: [cloud_firestore/permission-denied] PERMISSION_DENIED: Missing or insufficient permissions.
+reconnected_flutter.log
+10-08 10:16:31.534 24923 24923 I flutter : versus: initialize failed: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+10-08 10:16:32.164 24923 24923 I flutter : versus: prefetch failed: [cloud_firestore/permission-denied] PERMISSION_DENIED: Missing or insufficient permissions.
+normal_flutter_after_delete.log
+10-08 10:39:29.505 11195 11195 I flutter : versus: prefetch failed: [cloud_firestore/permission-denied] PERMISSION_DENIED: Missing or insufficient permissions.
+10-08 10:39:45.423 11475 11475 I flutter : versus: initialize failed: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+10-08 10:39:46.138 11475 11475 I flutter : [IAP] query 5: found 5
+10-08 10:39:46.152 11475 11475 I flutter : versus: prefetch failed: [cloud_firestore/permission-denied] PERMISSION_DENIED: Missing or insufficient permissions.
+10-08 10:40:28.043 11475 11475 I flutter : AdMobRewardedAds load failed: Unable to obtain a JavascriptEngine.
+10-08 10:40:33.403 12033 12033 I flutter : versus: initialize failed: [core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+10-08 10:40:33.713 12033 12033 I flutter : [IAP] query 5: found 5
+10-08 10:40:33.956 12033 12033 I flutter : versus: prefetch failed: [cloud_firestore/permission-denied] PERMISSION_DENIED: Missing or insufficient permissions.
+10-08 10:40:34.656 12033 12033 I flutter : AdMobRewardedAds load failed: Unable to obtain a JavascriptEngine.
+10-08 10:40:44.882 12033 12033 I flutter : AdMobRewardedAds load failed: Unable to obtain a JavascriptEngine.
+10-08 10:41:05.068 12033 12033 I flutter : AdMobRewardedAds load failed: Unable to obtain a JavascriptEngine.
+10-08 10:41:38.737 12033 12033 I flutter : versus: deleteMyData failed: [firebase_functions/unauthenticated] Unauthenticated
+10-08 10:41:45.235 12033 12033 I flutter : AdMobRewardedAds load failed: Unable to obtain a JavascriptEngine.

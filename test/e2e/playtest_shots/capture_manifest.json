@@ -1,0 +1,402 @@
+{
+  "source": "adb -s 38300DLJH004SD exec-out screencap -p",
+  "resolution": "1080x2400",
+  "captures": [
+    {
+      "file": "home_fresh.png",
+      "source_capture": "first_start.png"
+    },
+    {
+      "file": "notification_permission.png",
+      "source_capture": "normal_first_home.png"
+    },
+    {
+      "file": "S6-F02_home_before_restart.png",
+      "source_capture": "nickname_home_0.png"
+    },
+    {
+      "file": "S6-F01_F02_home_after_restart.png",
+      "source_capture": "nickname_home_1.png"
+    },
+    {
+      "file": "S6-F03_piggy_banner_overlap.png",
+      "source_capture": "piggy_04.png"
+    },
+    {
+      "file": "S6-F03_jar_banner_overlap.png",
+      "source_capture": "jar_04.png"
+    },
+    {
+      "file": "death_floor_rest.png",
+      "source_capture": "death_00.png"
+    },
+    {
+      "file": "revive_ad_offer.png",
+      "source_capture": "revive_ad_ready.png"
+    },
+    {
+      "file": "revive_fake_ad.png",
+      "source_capture": "revive_fake_ad.png"
+    },
+    {
+      "file": "revive_coins250.png",
+      "source_capture": "revive_coin_ready.png"
+    },
+    {
+      "file": "revive_coin_payment.png",
+      "source_capture": "revive_coin_pay.png"
+    },
+    {
+      "file": "revive_coins500.png",
+      "source_capture": "third_death_coin500.png"
+    },
+    {
+      "file": "phoenix_ignite.png",
+      "source_capture": "phoenix3_01.png"
+    },
+    {
+      "file": "phoenix_rise.png",
+      "source_capture": "phoenix3_02.png"
+    },
+    {
+      "file": "phoenix_wings.png",
+      "source_capture": "phoenix3_03.png"
+    },
+    {
+      "file": "phoenix_resume.png",
+      "source_capture": "phoenix3_04.png"
+    },
+    {
+      "file": "results_levelup_claim.png",
+      "source_capture": "phoenix_01.png"
+    },
+    {
+      "file": "results_levelup_claimed.png",
+      "source_capture": "results_claimed.png"
+    },
+    {
+      "file": "results_next_home.png",
+      "source_capture": "home_after_claim.png"
+    },
+    {
+      "file": "pause.png",
+      "source_capture": "pause_tap.png"
+    },
+    {
+      "file": "background_paused.png",
+      "source_capture": "background_pause.png"
+    },
+    {
+      "file": "resume.png",
+      "source_capture": "resume_tap.png"
+    },
+    {
+      "file": "bonus_revive_no_thanks.png",
+      "source_capture": "bonus_revive_offer.png"
+    },
+    {
+      "file": "balloon_start.png",
+      "source_capture": "bonus_start_device.png"
+    },
+    {
+      "file": "balloon_pop_animation.png",
+      "source_capture": "balloon_pop1_motion.png"
+    },
+    {
+      "file": "balloon_offer_before_no_thanks.png",
+      "source_capture": "balloon_offer_early.png"
+    },
+    {
+      "file": "balloon_offer_after3s.png",
+      "source_capture": "balloon_offer_ready.png"
+    },
+    {
+      "file": "balloon_fake_ad.png",
+      "source_capture": "balloon_fake_ad.png"
+    },
+    {
+      "file": "balloon_refill.png",
+      "source_capture": "balloon_refill.png"
+    },
+    {
+      "file": "balloon_after6_next.png",
+      "source_capture": "balloon_next_ready.png"
+    },
+    {
+      "file": "balloon_results.png",
+      "source_capture": "bonus_results.png"
+    },
+    {
+      "file": "feather_fetch.png",
+      "source_capture": "feather_complete_01.png"
+    },
+    {
+      "file": "feather_complete.png",
+      "source_capture": "feather_complete_03.png"
+    },
+    {
+      "file": "puzzle_3of4.png",
+      "source_capture": "puzzle_round3_05.png"
+    },
+    {
+      "file": "puzzle_4of4_reward130.png",
+      "source_capture": "puzzle_round4_06.png"
+    },
+    {
+      "file": "settings_before.png",
+      "source_capture": "settings_before.png"
+    },
+    {
+      "file": "settings_changed.png",
+      "source_capture": "settings_changed.png"
+    },
+    {
+      "file": "settings_persisted.png",
+      "source_capture": "settings_persisted.png"
+    },
+    {
+      "file": "delete_confirm.png",
+      "source_capture": "delete_confirm_actual.png"
+    },
+    {
+      "file": "delete_failed.png",
+      "source_capture": "delete_result.png"
+    },
+    {
+      "file": "element_angled_ring.png",
+      "source_capture": "angled_ring_01.png"
+    },
+    {
+      "file": "element_moving_ring.png",
+      "source_capture": "moving_ring_01.png"
+    },
+    {
+      "file": "element_bullseye.png",
+      "source_capture": "bullseye_03.png"
+    },
+    {
+      "file": "element_train.png",
+      "source_capture": "train_03.png"
+    },
+    {
+      "file": "element_spring.png",
+      "source_capture": "spring_02.png"
+    },
+    {
+      "file": "element_switch_ring.png",
+      "source_capture": "switch_ring_01.png"
+    },
+    {
+      "file": "element_pair.png",
+      "source_capture": "pair_02.png"
+    },
+    {
+      "file": "element_fever.png",
+      "source_capture": "fever_03.png"
+    },
+    {
+      "file": "element_lucky_spin.png",
+      "source_capture": "lucky_spin_04.png"
+    },
+    {
+      "file": "element_saw.png",
+      "source_capture": "saw_01.png"
+    },
+    {
+      "file": "element_comet.png",
+      "source_capture": "comet_04.png"
+    },
+    {
+      "file": "element_heart.png",
+      "source_capture": "heart_03.png"
+    },
+    {
+      "file": "element_shield.png",
+      "source_capture": "shield_03.png"
+    },
+    {
+      "file": "element_star_trail.png",
+      "source_capture": "star_trail_03.png"
+    },
+    {
+      "file": "element_hourglass.png",
+      "source_capture": "hourglass_04.png"
+    },
+    {
+      "file": "element_mini_bird.png",
+      "source_capture": "mini_bird_04.png"
+    },
+    {
+      "file": "element_coin_frenzy.png",
+      "source_capture": "coin_frenzy_04.png"
+    },
+    {
+      "file": "element_egg.png",
+      "source_capture": "egg_04.png"
+    },
+    {
+      "file": "element_piggy.png",
+      "source_capture": "piggy_06.png"
+    },
+    {
+      "file": "element_jar.png",
+      "source_capture": "jar_07.png"
+    },
+    {
+      "file": "element_feather.png",
+      "source_capture": "feather_03.png"
+    },
+    {
+      "file": "element_puzzle_piece.png",
+      "source_capture": "puzzle_piece_03.png"
+    },
+    {
+      "file": "element_squeeze_warning.png",
+      "source_capture": "squeeze_full_05.png"
+    },
+    {
+      "file": "element_squeeze_closed.png",
+      "source_capture": "squeeze_full_08.png"
+    },
+    {
+      "file": "element_squeeze_hold.png",
+      "source_capture": "squeeze_full_17.png"
+    },
+    {
+      "file": "ride_space_1.png",
+      "source_capture": "space_04.png"
+    },
+    {
+      "file": "ride_space_2.png",
+      "source_capture": "space_12.png"
+    },
+    {
+      "file": "ride_space_3.png",
+      "source_capture": "space_14.png"
+    },
+    {
+      "file": "ride_space_4.png",
+      "source_capture": "space_18.png"
+    },
+    {
+      "file": "ride_volcano_1.png",
+      "source_capture": "volcano_04.png"
+    },
+    {
+      "file": "ride_volcano_2.png",
+      "source_capture": "volcano_12.png"
+    },
+    {
+      "file": "ride_volcano_3.png",
+      "source_capture": "volcano_13.png"
+    },
+    {
+      "file": "ride_volcano_4.png",
+      "source_capture": "volcano_17.png"
+    },
+    {
+      "file": "ride_sea_1.png",
+      "source_capture": "sea_04.png"
+    },
+    {
+      "file": "ride_sea_2.png",
+      "source_capture": "sea_12.png"
+    },
+    {
+      "file": "ride_sea_3.png",
+      "source_capture": "sea_13.png"
+    },
+    {
+      "file": "ride_sea_4.png",
+      "source_capture": "sea_17.png"
+    },
+    {
+      "file": "ride_pinball_1.png",
+      "source_capture": "pinball_04.png"
+    },
+    {
+      "file": "ride_pinball_2.png",
+      "source_capture": "pinball_12.png"
+    },
+    {
+      "file": "ride_pinball_3.png",
+      "source_capture": "pinball_13.png"
+    },
+    {
+      "file": "ride_pinball_4.png",
+      "source_capture": "pinball_16.png"
+    },
+    {
+      "file": "ride_storm_1.png",
+      "source_capture": "storm_04.png"
+    },
+    {
+      "file": "ride_storm_2.png",
+      "source_capture": "storm_13.png"
+    },
+    {
+      "file": "ride_storm_3.png",
+      "source_capture": "storm_14.png"
+    },
+    {
+      "file": "ride_storm_4.png",
+      "source_capture": "storm_19.png"
+    },
+    {
+      "file": "ride_cannon_1.png",
+      "source_capture": "cannon_12.png"
+    },
+    {
+      "file": "ride_cannon_2.png",
+      "source_capture": "cannon_13.png"
+    },
+    {
+      "file": "ride_cannon_3.png",
+      "source_capture": "cannon_14.png"
+    },
+    {
+      "file": "ride_cannon_4.png",
+      "source_capture": "cannon_17.png"
+    },
+    {
+      "file": "egg_hatched.png",
+      "source_capture": "egg_extended_13.png"
+    },
+    {
+      "file": "egg_chick_x2.png",
+      "source_capture": "egg_extended_14.png"
+    },
+    {
+      "file": "piggy_payout26.png",
+      "source_capture": "piggy_extended_14.png"
+    },
+    {
+      "file": "jar_full_reward25.png",
+      "source_capture": "jar_extended_14.png"
+    },
+    {
+      "file": "comet_expired.png",
+      "source_capture": "comet_extended_14.png"
+    },
+    {
+      "file": "shield_saved.png",
+      "source_capture": "shield_slot_armed.png"
+    },
+    {
+      "file": "shield_from_gift_pair.png",
+      "source_capture": "pair_03.png"
+    },
+    {
+      "file": "big_hoops_starter.png",
+      "source_capture": "big_hoops_run_01.png"
+    },
+    {
+      "file": "final_home.png",
+      "source_capture": "final_home.png"
+    },
+    {
+      "file": "rim_contact_spin.png",
+      "source_capture": "rim_tuned1_00.png"
+    }
+  ]
+}

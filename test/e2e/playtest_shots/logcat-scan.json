@@ -1,0 +1,20 @@
+{
+  "logcat-mid.txt": {
+    "FATAL EXCEPTION": 0,
+    "Fatal signal": 0,
+    "Unhandled Exception": 0,
+    "E/flutter": 0,
+    "AudioPlayerError": 0,
+    "MediaPlayer.*error": 0,
+    "RunEvents:.*threw": 0
+  },
+  "logcat-final.txt": {
+    "FATAL EXCEPTION": 0,
+    "Fatal signal": 0,
+    "Unhandled Exception": 0,
+    "E/flutter": 0,
+    "AudioPlayerError": 0,
+    "MediaPlayer.*error": 0,
+    "RunEvents:.*threw": 0
+  }
+}

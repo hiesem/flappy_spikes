@@ -176,7 +176,10 @@ class HeartBadge extends PositionComponent {
   @override
   void update(double dt) {
     super.update(dt);
-    _t += dt;
+    // WP-2d: HUD-like, so it ignores the Hourglass time scale (the world
+    // updates with dt × timeScale; this undoes it).
+    final ts = c.s.timeScale;
+    _t += ts > 0 ? dt / ts : dt;
     // Any source of an extra life shows the badge (and a lost one hides it).
     if (c.s.extraLife && _formAt == null) form();
     if (!c.s.extraLife && _formAt != null) _formAt = null;

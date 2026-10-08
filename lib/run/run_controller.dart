@@ -8,6 +8,7 @@ import '../game/flappy_game.dart';
 import '../game/sound.dart';
 import '../menu/powerup_slot.dart';
 import 'config/physics_config.dart';
+import 'config/revive_config.dart';
 import 'config/run_config.dart';
 import 'director/run_director.dart';
 import 'effects/dust_puff.dart';
@@ -438,7 +439,8 @@ class RunController extends Component {
         : PhysicsConfig.resultsDelay;
     if (_deathTime >= limit || t.resting) {
       _handedOff = true;
-      game.endRun(endRun());
+      // WP-2d: the revive offer (≥ 6 hoops) comes before the run ends.
+      game.runDeathSettled(this);
     }
   }
 
@@ -521,6 +523,35 @@ class RunController extends Component {
       f.onRevive();
     }
   }
+
+  // region WP-2d — revive v2 (PRD-2 §3.14, §5.9)
+  /// The mistake that killed the bird last (null while flying).
+  Mistake? get lastDeath => _death;
+
+  /// §5.9 the phoenix takes the bird over: the tumble stops, the ladder
+  /// and the director move on (next slot normal), features reset what a
+  /// revive resets (squeeze opens), [RevivePhoenixStarted].
+  void beginRevive(ReviveKind k, int price) {
+    tumble = null;
+    _handedOff = false;
+    _deathTime = 0;
+    revive(k);
+    events.emit(RevivePhoenixStarted(k, price));
+  }
+
+  /// §3.14 straight back in at 1.65 s: the bird flies again at [birdY]
+  /// (screen), runClock runs, 2 s of invulnerability (the flash follows
+  /// `state.invulnerable`), [Revived].
+  void finishRevive(ReviveKind k, int price, double birdY) {
+    _dying = false;
+    _death = null;
+    _cause = null;
+    _prevBird = geo.toTrack(Vector2(RunConfig.birdX, birdY));
+    clock.running = true;
+    state.invulnerable = ReviveConfig.invulnerable;
+    events.emit(Revived(k, price));
+  }
+  // endregion WP-2d
 
   RunSummary summarize() {
     final s = state;

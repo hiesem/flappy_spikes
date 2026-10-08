@@ -137,6 +137,13 @@ class LookComponent extends PositionComponent {
     _pose = LookPose.dead;
   }
 
+  /// Back from the dead pose (WP-2d phoenix, PRD-2 §5.9): idle wings.
+  void showAlive() {
+    if (_pose != LookPose.dead) return;
+    _pose = LookPose.idle;
+    _poseTime = 0;
+  }
+
   @override
   void update(double dt) {
     super.update(dt);

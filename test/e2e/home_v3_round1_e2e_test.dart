@@ -227,6 +227,8 @@ void main() async {
       // Stop flapping: the bird misses a hoop or hits the floor, tumbles
       // (§3.0.5) and the results come up.
       await _advance(game, 3);
+      // PRD-2 §3.14 (WP-2d): ≥ 6 hoops → the revive offer; No thanks.
+      await declineRevive(game);
       expect(game.state, GameState.gameOver);
       expect(game.levelUpPopup, isNull, reason: 'no popup at game over');
       final score = game.storage.lastScore!;

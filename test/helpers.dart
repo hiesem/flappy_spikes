@@ -304,3 +304,22 @@ void killRun(
   }
 }
 // endregion WP-1a
+
+// region WP-2d — revive offer (PRD-2 §3.14)
+/// A death with ≥ 6 hoops brings up the revive offer: "No thanks" →
+/// results, as the 1.0-era journeys expect. No-op without an offer.
+Future<void> declineRevive(FlappySpikesGame g) async {
+  if (g.state != GameState.reviving) return;
+  await flushAndMount(g);
+  final screen = g.reviveScreen;
+  if (screen == null) return;
+  for (var i = 0; i < 30 && screen.ui < 1; i++) {
+    g.update(1 / 60);
+  }
+  screen.tapNoThanks();
+  for (var i = 0; i < 60 && g.state == GameState.reviving; i++) {
+    g.update(1 / 60);
+  }
+  await flushAndMount(g);
+}
+// endregion WP-2d

@@ -605,3 +605,35 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `test/run/items/s3_33_rumble_test.dart`,
   `test/run/effects/s3_0_9_gold_glow_perf_test.dart`; shots
   `test/run/shots/streak_shots_test.dart`.
+
+## PRD-2 HUD row, pause and revive v2 (WP-2d, 2026-10-08)
+
+- DEVIATION (PRD-2 §5.7, HUD): the run HUD lives in `camera.viewport` (real
+  time: the Hourglass does not slow it, run shakes do not move it): one top
+  row at y 52 — the heart indicator (x 14, 38 × 38; empty dashed / ⅓ / ⅔ /
+  full + pulse), the versus bar + name chips (only with an opponent) and a
+  pink pause button (right edge 306). No coin total. The y-190 banner band
+  and the graze notice moved into the HUD; the extra-life badge stays over
+  the bird in the world but ignores the time scale.
+- DEVIATION (PRD-2 §5.7 / §4, pause; 1.0 had none): the pause button, Esc
+  and backgrounding the app (`paused` / `hidden` / `inactive`) pause a
+  running run (state `paused`): the world gets dt 0 (Forge2D, bird, hoops,
+  particles), runClock stops. The card offers RESUME (straight back in, **no
+  3-2-1**), sound and settings (the settings panel over the paused run). No
+  Quit. Not available during the tumble / revive / results.
+- DEVIATION (PRD-2 §3.14 / §5.9, revive; 1.0 had none): a death with
+  **≥ 6 hoops passed** brings up the revive offer after the tumble (state
+  `reviving`) *before* the run ends — persistence, analytics and the versus
+  upload run once per game, at the real end. One option per death from the
+  per-game price ladder: rewarded ad (placement `revive`) → 250 → 500 →
+  1 000 → doubling, no cap; no ad / no-ads owner on the 1st offer → "NO AD
+  AVAILABLE" + 250. Not enough coins → grey locked heart + GET COINS (the
+  Shop over the paused game, countdown paused, music × 0.5). 5 s drain + 1 s
+  empty, then results. Paid → the 1.65 s phoenix rise (safe line = the next
+  hoop's centre, drift to x 70), then straight back in with 2 s
+  invulnerability; the next slot is a normal hoop. A death with ≤ 5 hoops
+  goes to results as before and uses no ladder step.
+- DEVIATION (PRD-2 §3.14): every death ends a running Egg / Piggy / Jar (no
+  pay-out), a timed powerup (time scale and bird scale back to 1) and the
+  fire; a revive resets a running squeeze to open (0.5 s) and rolls the next
+  one 60–120 s later. Score, coins, hearts and feather / piece progress stay.

@@ -177,6 +177,8 @@ void main() async {
         await _tap(game, tester, home.startButton);
         await _flyToEgg(game);
         await run(game, 3);
+        // PRD-2 §3.14 (WP-2d): ≥ 6 hoops → the revive offer; No thanks.
+        await declineRevive(game);
         expect(game.state, GameState.gameOver);
         expect(game.levelUpPopup, isNull);
         final earned = game.menu.wallet.balance;

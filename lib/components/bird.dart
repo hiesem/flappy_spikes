@@ -161,6 +161,38 @@ class Bird extends BodyComponent<FlappySpikesGame> {
   }
   // endregion WP-1a
 
+  // region WP-2d — phoenix rise (PRD-2 §3.14, §5.9)
+  /// §5.9 the burst: the X eyes open (alive pose) while the phoenix still
+  /// drives the kinematic body.
+  void phoenixAlive() {
+    _dead = false;
+    _spinVelocity = 0;
+    if (isLoaded) _look.showAlive();
+  }
+
+  /// §5.9 a wing beat while hovering after the burst.
+  void phoenixFlap() {
+    if (isLoaded) _look.playFlap();
+  }
+
+  /// §3.14 straight back in: a dynamic flying bird at ([Config.birdX], [y]),
+  /// upright, at rest (the caller flaps it), drawn at its normal layer.
+  void reviveFlight(double y) {
+    _dead = false;
+    _spinVelocity = 0;
+    _spin = 0;
+    priority = RunLayer.bird;
+    if (!isLoaded) return;
+    _look.showAlive();
+    body
+      ..setType(BodyType.dynamic)
+      ..setTransform(Vector2(Config.birdX, y), 0)
+      ..linearVelocity.setZero()
+      ..angularVelocity = 0;
+    body.gravityScale = Vector2.all(1);
+  }
+  // endregion WP-2d
+
   /// Fade the bird art (game over; hidden while on the home screen, which
   /// draws its own bird). Safe before [onLoad].
   void setSpriteOpacity(double value) {

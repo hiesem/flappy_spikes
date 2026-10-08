@@ -17,6 +17,7 @@ import '../effects/tier_trail.dart';
 import '../hoops/hoop.dart';
 import '../hoops/ring_painter.dart';
 import '../hud/banners.dart';
+import '../hud/run_hud.dart';
 import 'big_hoops.dart';
 import '../run_context.dart';
 import '../run_events.dart';
@@ -96,10 +97,8 @@ class StreakFeature extends RunFeature {
       )..emitter.look = look,
     );
     world.add(_trail!);
-    _banners = BannerHost.ensureIn(
-      world,
-      priority: StreakConfig.bannerPriority,
-    );
+    // WP-2d: the banner band lives in the run HUD (viewport, real time).
+    _banners = RunHud.ensureFor(c.run).banners;
     c.events
       ..on<HoopSpawned>(_onSpawned)
       ..on<HoopPassed>(_onPassed)
@@ -156,7 +155,8 @@ class StreakFeature extends RunFeature {
     _set(0, cause);
     c.track('streak_broken', {'length': old, 'cause': cause.name});
     if (notice) {
-      c.game.world.add(_GrazeNotice(c.game.foregroundColor));
+      // WP-2d: HUD text (viewport, real time).
+      RunHud.ensureFor(c.run).add(_GrazeNotice(c.game.foregroundColor));
     }
   }
 

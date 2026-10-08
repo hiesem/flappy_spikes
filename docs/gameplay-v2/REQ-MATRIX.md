@@ -28,7 +28,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.1-12 | Colour stage = floor(hoopsPassed / 10) mod 11 over the existing 11 palettes (gold last); replaces `stageOf(score)` | 3.0.1 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.1 the colour stage changes every 10 hoops passed …; test/color_state_test.dart | done |
 | R-3.0.1-13 | Hoop index = slots spawned (train / pair = 1 slot), not reset by a revive; ramps use the index of the slot being spawned | 3.0.1 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
 | R-3.0.1-14 | `runClock` runs in play and rides, stops in pause / revive offer / phoenix, slows with Hourglass; used by scroll ramp, squeeze, versus timeline, Big Hoops | 3.0.1 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
-| R-3.0.1-15 | Screen heights 568–730: HUD row + score circle top-anchored, bottom buttons bottom-anchored, centred blocks keep their offset from centre (y − 355.5 at 711) | 3.0.1 | 0b (geometry), 2d / 2e / 4a / 5b (screens) | lib/run/run_geometry.dart (RunGeometry) | done (0b geometry); screens pending |
+| R-3.0.1-15 | Screen heights 568–730: HUD row + score circle top-anchored, bottom buttons bottom-anchored, centred blocks keep their offset from centre (y − 355.5 at 711) | 3.0.1 | 0b (geometry), 2d / 2e / 4a / 5b (screens) | lib/run/run_geometry.dart (RunGeometry) | done (0b geometry); 2d HUD row top-anchored, revive / pause centred offsets; 2e / 4a / 5b screens pending |
 | R-3.0.1-16 | Normal bird position (70, viewHeight / 2) wherever the PRD returns the bird "to its normal position" | 3.0.1 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
 | R-3.0.1-17 | Every number of §3.0 is a `Config` knob with its PRD section; nothing hard-coded in components | 3.0 | all | | todo |
 
@@ -115,8 +115,8 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.5-9 | Screen edges: bounce back at 24 pt from left / 30 pt from right (forward × −0.3); never leaves the screen | 3.0.5 | 1a | test/run/physics/s3_0_5_tumble_test.dart::§3.0.5 never leaves the screen sideways (24 pt / 30 pt edges) | done |
 | R-3.0.5-10 | During a squeeze the resting line is the squeezed floor | 3.0.5 | 3g | | todo |
 | R-3.0.5-11 | Themed deaths: signature moment first, then the same tumble (Frost: ice block shatters, frozen bird lies there); Black Hole swallows (no tumble, no body, only the shock ring) | 3.0.5 | 3d | | todo |
-| R-3.0.5-12 | Revive offer 1.5 s after the hit (or when resting, if sooner); themed: moment + ≤ 1.5 s, max 2.2 s | 3.0.5 | 2d | | todo |
-| R-3.0.5-13 | ≤ 5 hoops: same tumble, then bonus / results after 1.5 s (2.2 s max) | 3.0.5 | 2d | | todo |
+| R-3.0.5-12 | Revive offer 1.5 s after the hit (or when resting, if sooner); themed: moment + ≤ 1.5 s, max 2.2 s | 3.0.5 | 2d | test/run/screens/s3_14_revive_test.dart | done |
+| R-3.0.5-13 | ≤ 5 hoops: same tumble, then bonus / results after 1.5 s (2.2 s max) | 3.0.5 | 2d | test/run/screens/s3_14_revive_test.dart | done |
 | R-3.0.5-14 | Extra life / shield saves: no tumble, keep flying; spike save bounces off the tooth line during the 2 s (top: down at 30 %; floor: vy −222) | 3.0.5 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 / §3.0.5 a spike save bounces off the tooth line and the bird stays on screen through the 2 s | done |
 | R-3.0.5-15 | SPEC.md DEVIATION note: death tumble replaces the 1.0 death | 3.0.5 | 1a | SPEC.md "PRD-2 hoops replace pipes (WP-1a)" | done |
 
@@ -217,7 +217,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.2-2 | Perfect pass +2 instead of 1 | 3.2 | 1a / 2b | test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 a perfect pass pays 2 coins at once … | done |
 | R-3.2-3 | Coins credited to the wallet at the moment of the pass (kept if the run ends right after); interim "1 coin per point at game over" removed | 3.2 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.2 / §5.1 … no coins at game over …; test/home_flow_test.dart::PRD-2 §3.2 coins are credited per hoop at the pass …; test/e2e/menu_e2e_test.dart::QA play score is credited once … | done |
 | R-3.2-4 | A hoop saved by an extra life / shield gives no coin | 3.2 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 the extra life forgives one mistake … (no pass → no point / coin) | done |
-| R-3.2-5 | No coin total in the in-game HUD | 3.2 | 2d | | todo |
+| R-3.2-5 | No coin total in the in-game HUD | 3.2 | 2d | test/run/screens/s5_7_hud_pause_test.dart | done |
 | R-3.2-6 | Versus win +10 (draw +5) | 3.2, 3.13 | 5b | | todo |
 
 ## 3.3 Hearts and extra life
@@ -225,7 +225,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
 | R-3.3-1 | Heart pickups collected by touch | 3.3 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 a heart pickup on the bird is collected by touch (the spawner hit test) and counts | done |
-| R-3.3-2 | HUD single heart: empty dashed, 1/3, 2/3 (clipped from bottom), full + pulse = extra life | 3.3, 5.7 | 2d | | todo |
+| R-3.3-2 | HUD single heart: empty dashed, 1/3, 2/3 (clipped from bottom), full + pulse = extra life | 3.3, 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart | done |
 | R-3.3-3 | 3rd heart → extra life; heart badge floats above the bird (bobbing) | 3.3, 5.5 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 three hearts give one extra life …; shot: build/shots/run/lives/big_heart_badge_*.png | done |
 | R-3.3-4 | Mistake list (missed hoop incl. pair, spikes, saw rim, closed switch) forgiven once by the extra life | 3.3 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 / §3.3 save order … (spikes, saw, closed switch, missed hoop) | done |
 | R-3.3-5 | On use: badge pops (heart particles), indicator → 0/3, bird flashes + 2 s invulnerability, keep playing; missed hoop not counted | 3.3 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 the extra life forgives one mistake …; shot: build/shots/run/lives/extra_life_pop_*.png | done |
@@ -387,23 +387,23 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.14-1 | On a run-ending mistake: tumble, freeze with the dead bird on the floor under a dim overlay, offer for 5 s | 3.14 | 2d | | todo |
-| R-3.14-2 | Offer only with ≥ 6 hoops passed (gifts don't count, ride hoops do); ≤ 5 → tumble then bonus/results after 1.5 s, no ladder step used (`reviveMinHoops = 6`) | 3.14 | 2d | | todo |
-| R-3.14-3 | Price ladder per game: ad → 250 → 500 → 1 000 → doubling, no cap; resets each new game | 3.14 | 2d | | todo |
-| R-3.14-4 | No ad available or no-ads owner on the 1st revive: "NO AD AVAILABLE" + gold heart 250, ladder continues 500, 1 000 … | 3.14 | 2d | | todo |
-| R-3.14-5 | The whole heart is the button; ad heart: revive only after a fully watched ad; closed early / failed → offer returns with the remaining time | 3.14 | 2d | | todo |
-| R-3.14-6 | Coin heart: `wallet.spend(price)`, coins fly from the pill into the heart, balance counts down, then revive | 3.14 | 2d | | todo |
-| R-3.14-7 | Not enough coins: grey locked heart "🔒 REVIVE ● 250" + "need N more"; tap shakes (nope thud) | 3.14 | 2d | | todo |
-| R-3.14-8 | GET COINS › opens the Shop as a GameWidget overlay on the paused game; countdown paused; music × 0.5; returns with remaining time; gold heart if enough coins now | 3.14 | 2d | | todo |
-| R-3.14-9 | Balance pill top-right on the revive screen | 3.14 | 2d | | todo |
-| R-3.14-10 | No thanks → bonus or results | 3.14 | 2d | | todo |
-| R-3.14-11 | Countdown 5 s, urgency in the last 2 s, empty heart stays 1 s, then moves on | 3.14 | 2d | | todo |
-| R-3.14-12 | Phoenix ≈ 1.65 s: flames around the dead bird, rise to the safe line in a flame column turning upright with flame wings, burst out | 3.14 | 2d | | todo |
-| R-3.14-13 | Black Hole death: phoenix re-forms from the shock ring at the last position | 3.14 | 2d / 3d | | todo |
-| R-3.14-14 | Safe line = centre of the next hoop ahead (clamped to band), else band centre; drift back to x 70 while rising | 3.14 | 2d | | todo |
-| R-3.14-15 | Straight back in at 1.65 s: no countdown, no slow motion; small upward flap; 2 s invulnerability | 3.14 | 2d | | todo |
-| R-3.14-16 | Kept: score, coins, hearts, feather/piece progress. Lost: running egg/chick, piggy, jar. Reset: streak + fire. Ended: timed powerups | 3.14 | 2d (+ 3e / 3f / 3c hooks) | | todo |
-| R-3.14-17 | Running squeeze resets to open during the phoenix (0.5 s); next 60–120 s later | 3.14 | 3g | | todo |
+| R-3.14-1 | On a run-ending mistake: tumble, freeze with the dead bird on the floor under a dim overlay, offer for 5 s | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
+| R-3.14-2 | Offer only with ≥ 6 hoops passed (gifts don't count, ride hoops do); ≤ 5 → tumble then bonus/results after 1.5 s, no ladder step used (`reviveMinHoops = 6`) | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
+| R-3.14-3 | Price ladder per game: ad → 250 → 500 → 1 000 → doubling, no cap; resets each new game | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
+| R-3.14-4 | No ad available or no-ads owner on the 1st revive: "NO AD AVAILABLE" + gold heart 250, ladder continues 500, 1 000 … | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
+| R-3.14-5 | The whole heart is the button; ad heart: revive only after a fully watched ad; closed early / failed → offer returns with the remaining time | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
+| R-3.14-6 | Coin heart: `wallet.spend(price)`, coins fly from the pill into the heart, balance counts down, then revive | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
+| R-3.14-7 | Not enough coins: grey locked heart "🔒 REVIVE ● 250" + "need N more"; tap shakes (nope thud) | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
+| R-3.14-8 | GET COINS › opens the Shop as a GameWidget overlay on the paused game; countdown paused; music × 0.5; returns with remaining time; gold heart if enough coins now | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done (Flame overlay of the menus' ShopScreen over the paused game, not a Flutter widget overlay — call) |
+| R-3.14-9 | Balance pill top-right on the revive screen | 3.14 | 2d | test/run/shots/revive_hud_shots_test.dart | done |
+| R-3.14-10 | No thanks → bonus or results | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
+| R-3.14-11 | Countdown 5 s, urgency in the last 2 s, empty heart stays 1 s, then moves on | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
+| R-3.14-12 | Phoenix ≈ 1.65 s: flames around the dead bird, rise to the safe line in a flame column turning upright with flame wings, burst out | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
+| R-3.14-13 | Black Hole death: phoenix re-forms from the shock ring at the last position | 3.14 | 2d / 3d | test/run/screens/s3_14_revive_test.dart | part (re-form from a shock ring at the last position; 3d supplies the Black Hole death) |
+| R-3.14-14 | Safe line = centre of the next hoop ahead (clamped to band), else band centre; drift back to x 70 while rising | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
+| R-3.14-15 | Straight back in at 1.65 s: no countdown, no slow motion; small upward flap; 2 s invulnerability | 3.14 | 2d | test/run/screens/s3_14_revive_test.dart | done |
+| R-3.14-16 | Kept: score, coins, hearts, feather/piece progress. Lost: running egg/chick, piggy, jar. Reset: streak + fire. Ended: timed powerups | 3.14 | 2d (+ 3e / 3f / 3c hooks) | test/run/screens/s3_14_revive_test.dart | done (state cleared generically; 3e / 3f / 3c add their visuals) |
+| R-3.14-17 | Running squeeze resets to open during the phoenix (0.5 s); next 60–120 s later | 3.14 | 3g | test/run/screens/s3_14_revive_test.dart | done (baseline reset; 3g adds the wall animation) |
 | R-3.14-18 | First hoop after a revive is normal | 3.14 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.14-19 | Versus: opponent recording pauses during offer and phoenix | 3.14 | 5b | | todo |
 | R-3.14-20 | Results page content: WIN/LOSE header, versus card (scores, WINNER), NEW BEST, level (emblem + bird, rank, progress), YOUR REWARD, NEXT → `goHome()` (new arrival) | 3.14 | 2e / 5b | | todo |
@@ -627,9 +627,9 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
 | R-4-1 | Home START → [VS intro if opponent prefetched] → run | 4 | 0b / 5b | test/run/flow/s3_0_run_core_flow_test.dart | done (0b part); 5b pending |
-| R-4-2 | Mistake without save → tumble ≈ 1.5 s → revive offer (≥ 6 hoops) → ad / coins → phoenix → run | 4 | 2d | | todo |
+| R-4-2 | Mistake without save → tumble ≈ 1.5 s → revive offer (≥ 6 hoops) → ad / coins → phoenix → run | 4 | 2d | test/run/screens/s3_14_revive_test.dart | done |
 | R-4-3 | No thanks / timeout → [balloon bonus with 3 feathers] → results → NEXT → home (new slot roll) | 4 | 2d / 4a / 2e | | todo |
-| R-4-4 | Pause any time in the run → RESUME → straight back in (no countdown) | 4, 5.7 | 2d | | todo |
+| R-4-4 | Pause any time in the run → RESUME → straight back in (no countdown) | 4, 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart | done |
 | R-4-5 | Puzzle needs no screen (paid in the run) | 4 | 4a | | todo |
 
 ## 5.x Screens and visual specs
@@ -641,7 +641,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.1-3 | Big Hoops look 1.5× and gold; matches `hoops_m0_big.png` | 5.1 | 2a | shot: build/shots/run/lives/big_heart_badge_*.png vs hoops_m0_big.png | done |
 | R-5.2-1 | Heart pickup 32 pt `#FF3B5C`, 1.8 pt white outline, pulse 1.0 ↔ 1.14 (1 s), no glow | 5.2 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§5.2 the heart pickup pulses 1.0 ↔ 1.14 over 1 s; hit radius 16; shot: build/shots/run/lives/big_heart_badge_*.png | done |
 | R-5.2-2 | "+1 coin" gold text with icon rising ≈ 30 pt, fading 1.6 s at the hoop (superseded by master #8 for passes) | 5.2 | 0c | | todo |
-| R-5.2-3 | Saved: shards burst, "SAVED!" rises in pink, bird shakes briefly, hearts reset | 5.2 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 the extra life forgives one mistake … | part (shards + hearts reset done; "SAVED!" shows once a BannerHost is mounted, 2d; bird shake superseded by the §5.5 flash) |
+| R-5.2-3 | Saved: shards burst, "SAVED!" rises in pink, bird shakes briefly, hearts reset | 5.2 | 2a | test/run/screens/s5_7_hud_pause_test.dart | done (SAVED! shows in the RunHud banner band) |
 | R-5.3-1 | Sparkle spec (colours, sizes per tier, twinkle 0.5–0.9 s, 45° → 90° spin, emission 7/16/38 per s) | 5.3 | 0c / 2b | test/run/effects/s3_0_9_parts_test.dart::§5.3 sparkles at 7 / 16 / 38 per second, sizes per tier | part (master 0c) |
 | R-5.3-2 | Flame flicks tier 3+ (7–12 pt wide, 1.6–2.4× tall, rise 20–45 pt, 0.4–0.7 s) | 5.3 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.3 flame flicks and glow only from tier 3; glow fades in 0.25 s | part (master 0c) |
 | R-5.3-3 | Glow tier 3+: radial gold ≈ 96 × 152 pt behind each ring (fade in 0.25 s) | 5.3 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.3 flame flicks and glow only from tier 3; glow fades in 0.25 s | part (master 0c) |
@@ -656,14 +656,14 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.6-2 | Bird inside the fireball (bird 90 %, pink/gold shell, triangle tail), pixel-block shower | 5.6 | 3a | | todo |
 | R-5.6-3 | Countdown ring r 34, gold 6 pt, drains 10 s inside the graphic; "10s → 1s" gold 18 pt 50 pt below | 5.6 | 3a | | todo |
 | R-5.6-4 | Banners replace each other (never stack) during the boost; HUD unchanged | 5.6 | 3a / 0c | test/run/effects/s3_0_9_parts_test.dart::§5.6 banners replace each other, never stack | part (BannerHost 0c) |
-| R-5.7-1 | HUD row y 52, 38 tall: heart indicator x 14 (38 × 38, fg 18 % panel) | 5.7 | 2d | | todo |
-| R-5.7-2 | Versus bar x 60 → 260: two 90 × 38 boxes (you pink + dark-pink avatar outside; opponent stage grey), VS between, scores 26 pt; gold 3 pt outline flash when the opponent scores | 5.7 | 2d / 5b | | todo |
-| R-5.7-3 | Name chips 90 × 22 at y 92, white, plum Fredoka SemiBold 15 pt, ellipsis; VS same font | 5.7 | 2d | | todo |
-| R-5.7-4 | Pause button right edge 306 (38 × 38, pink, two bars) | 5.7 | 2d | | todo |
-| R-5.7-5 | Score circle only (no small HUD circle); no coin total in the HUD | 5.7 | 2d | | todo |
-| R-5.7-6 | Solo HUD: no versus bar; heart and pause in place | 5.7 | 2d | | todo |
-| R-5.7-7 | Pause screen: dark overlay, bg card, "PAUSED" pink 34 pt 0.14 em, gold RESUME (56 tall), sound + settings pink buttons; no Quit | 5.7 | 2d | | todo |
-| R-5.7-8 | RESUME straight back in; opponent's run paused with the player | 5.7 | 2d / 5b | | todo |
+| R-5.7-1 | HUD row y 52, 38 tall: heart indicator x 14 (38 × 38, fg 18 % panel) | 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
+| R-5.7-2 | Versus bar x 60 → 260: two 90 × 38 boxes (you pink + dark-pink avatar outside; opponent stage grey), VS between, scores 26 pt; gold 3 pt outline flash when the opponent scores | 5.7 | 2d / 5b | test/run/screens/s5_7_hud_pause_test.dart; test/run/shots/revive_hud_shots_test.dart | part (placeholder: boxes, scores on runClock, gold flash; live avatars / out state 5b) |
+| R-5.7-3 | Name chips 90 × 22 at y 92, white, plum Fredoka SemiBold 15 pt, ellipsis; VS same font | 5.7 | 2d | test/run/shots/revive_hud_shots_test.dart | done |
+| R-5.7-4 | Pause button right edge 306 (38 × 38, pink, two bars) | 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart | done |
+| R-5.7-5 | Score circle only (no small HUD circle); no coin total in the HUD | 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart | done |
+| R-5.7-6 | Solo HUD: no versus bar; heart and pause in place | 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart | done |
+| R-5.7-7 | Pause screen: dark overlay, bg card, "PAUSED" pink 34 pt 0.14 em, gold RESUME (56 tall), sound + settings pink buttons; no Quit | 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
+| R-5.7-8 | RESUME straight back in; opponent's run paused with the player | 5.7 | 2d / 5b | test/run/screens/s5_7_hud_pause_test.dart | part (no countdown done; the opponent pauses with runClock — 5b recorder) |
 | R-5.8-1 | VS layout: top stage panel (fg 26 %) with opponent, bottom soft-pink panel with you, zigzag seam (22 pt teeth, period 32), spike strips above panels | 5.8 | 5b | | todo |
 | R-5.8-2 | Plates: opponent x 44 y 80 (232 × 52), you x 44 y 584, avatar + name + level emblem at 0.32× in the 52 pt slot (overhanging, animated) | 5.8 | 5b | | todo |
 | R-5.8-3 | Levels: yours from your best, opponent's from their stored best | 5.8 | 5b | | todo |
@@ -675,13 +675,13 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.8-9 | Avatars from cache; neutral avatar while missing | 5.8 | 5b | | todo |
 | R-5.8-10 | Music keeps playing; flaps use flap.mp3; intro SFX as files through pools | 5.8 | 5b / 3h | | todo |
 | R-5.8-11 | Not skippable; taps ignored | 5.8 | 5b | | todo |
-| R-5.9-1 | Offer background: frozen game, miss ghost, dead bird on the floor, 62 % overlay, strips remain | 5.9 | 2d | | todo |
-| R-5.9-2 | Heart 226 pt at x 47 y ≈ 222, drains from the top over 5 s; ad / coins / locked styles exactly as specified | 5.9 | 2d | | todo |
-| R-5.9-3 | NO AD AVAILABLE 34 pt above; GET COINS › 22 pt under (locked only); No thanks 86 pt under; balance pill (x → 306, y 58) | 5.9 | 2d | | todo |
-| R-5.9-4 | Urgency as V1 (shake from 3 s, heartbeat 1.2 → 3 Hz to 1.06, red edge glow, ease-out 4.6–5.5 s; idle beat 1.25 Hz 1.035) | 5.9 | 2d | | todo |
-| R-5.9-5 | Tap → pay: ad (pop, fade 0.25 s, ad); coins (10 coins fly 0.5 s each 0.05 apart + ticks, balance counts down 0.7 s, pill squeezes, heart flashes); locked (shake ±9 pt, GET COINS bumps) | 5.9 | 2d | | todo |
-| R-5.9-6 | Phoenix timeline 0–0.5 / 0.5–1.0 / 1.0 burst / 1.0–1.65 / 1.65 exactly as the table (flames, rise, wings, 34 feathers, 46 embers, shockwave 20 → 170) | 5.9 | 2d | | todo |
-| R-5.9-7 | Sounds `rv_pay`, `rv_ignite`, `rv_burst`, `rv_locked`, `bn_coin` per coin, `flap.mp3` on resume | 5.9 | 2d | | todo |
+| R-5.9-1 | Offer background: frozen game, miss ghost, dead bird on the floor, 62 % overlay, strips remain | 5.9 | 2d | test/run/shots/revive_hud_shots_test.dart | done |
+| R-5.9-2 | Heart 226 pt at x 47 y ≈ 222, drains from the top over 5 s; ad / coins / locked styles exactly as specified | 5.9 | 2d | test/run/screens/s3_14_revive_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
+| R-5.9-3 | NO AD AVAILABLE 34 pt above; GET COINS › 22 pt under (locked only); No thanks 86 pt under; balance pill (x → 306, y 58) | 5.9 | 2d | test/run/shots/revive_hud_shots_test.dart | done |
+| R-5.9-4 | Urgency as V1 (shake from 3 s, heartbeat 1.2 → 3 Hz to 1.06, red edge glow, ease-out 4.6–5.5 s; idle beat 1.25 Hz 1.035) | 5.9 | 2d | test/run/screens/s3_14_revive_test.dart | done |
+| R-5.9-5 | Tap → pay: ad (pop, fade 0.25 s, ad); coins (10 coins fly 0.5 s each 0.05 apart + ticks, balance counts down 0.7 s, pill squeezes, heart flashes); locked (shake ±9 pt, GET COINS bumps) | 5.9 | 2d | test/run/screens/s3_14_revive_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
+| R-5.9-6 | Phoenix timeline 0–0.5 / 0.5–1.0 / 1.0 burst / 1.0–1.65 / 1.65 exactly as the table (flames, rise, wings, 34 feathers, 46 embers, shockwave 20 → 170) | 5.9 | 2d | test/run/screens/s3_14_revive_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
+| R-5.9-7 | Sounds `rv_pay`, `rv_ignite`, `rv_burst`, `rv_locked`, `bn_coin` per coin, `flap.mp3` on resume | 5.9 | 2d | test/run/screens/s3_14_revive_test.dart | done |
 | R-5.10-1 | Layout: header y 70 (pink YOU WIN! / grey YOU LOSE), versus card y 124, NEW BEST sticker y ≈ 238, level stage y 262 (emblem 0.62 at (160, 346) + bird), rank line y 414, bar y 444, YOUR REWARD y 494 + pill y 512, NEXT y 596 | 5.10 | 2e / 5b | | todo |
 | R-5.10-2 | Draw: "DRAW" grey, both scores plum, no WINNER tag, +5 in reward | 5.10 | 5b | | todo |
 | R-5.10-3 | Sequence: level before → count-ups 0.45 s → NEW BEST 1.2 s → bar fill 1.65 s → LEVEL UP (flash, shake, pop, rays, banner, rank bounce, confetti 60/100/150 + 3 fireworks; lv 9–10 second wave) → CLAIM button +0.9 s pulsing → claim (12 coins, count-up, pill bump, confetti) → bar refills | 5.10 | 2e | | todo |

@@ -107,6 +107,12 @@ class RunState {
   bool adStepAvailableThisGame = true;
   bool firstSlotAfterRevive = false;
 
+  // region WP-2d — revive ladder (PRD-2 §3.14)
+  /// Revives paid with coins this game: the next coin price is
+  /// 250 × 2^coinRevives.
+  int coinRevives = 0;
+  // endregion WP-2d
+
   // bookkeeping for analytics and tests
   /// run_director_hoops / _items (spawned).
   final Map<String, int> spawned = {};

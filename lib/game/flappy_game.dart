@@ -51,6 +51,14 @@ import '../run/run_scaled_world.dart';
 import '../run/run_setup.dart';
 import '../run/run_summary.dart';
 import '../run/screens/post_run_flow.dart';
+import '../run/config/revive_config.dart';
+import '../run/hud/run_hud.dart';
+import '../run/run_events.dart' show ReviveKind;
+import '../run/screens/pause_screen.dart';
+import '../run/screens/post_run_screens.dart';
+import '../run/screens/revive_ladder.dart';
+import '../run/screens/revive_screen.dart';
+import '../run/screens/shop_overlay.dart';
 import '../services/e2e.dart';
 import '../services/versus_service.dart';
 import '../services/ads_service.dart';
@@ -546,6 +554,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // home arrival (PRD-menu-v4 §8, NoAdsPopupPolicy).
     await _startSession();
 
+    // region WP-2d — revive v2 (PRD-2 §3.14): the revive slot of the flow
+    PostRunScreens.revive ??= const ReviveFlow();
+    // endregion WP-2d
+
     // region WP-4b — reminder notifications (PRD-2 §3.34)
     // §3.34 "Permission": asked once, at the first app start, before the
     // first game. §3.34 "Scheduling": the same plan is laid out at app start
@@ -624,6 +636,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       unawaited(reminders.reschedule());
     }
     // endregion WP-4b
+    // region WP-2d — backgrounding pauses a running run (PRD-2 §5.7, ARCH
+    // §2.3 call)
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.inactive) {
+      pause();
+    }
+    // endregion WP-2d
     switch (state) {
       case AppLifecycleState.paused || AppLifecycleState.hidden:
         _backgroundSince ??= storage.now();
@@ -847,6 +867,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         ? Autopilot(run)
         : null;
     if (debugAvailable && d.overlay) run.layers.fx.add(RunDebugOverlay(run));
+    // region WP-2d — run HUD (viewport, real time) + pause freeze
+    RunHud.ensureFor(run);
+    (world as RunScaledWorld).frozenSource = () => state == GameState.paused;
+    // endregion WP-2d
   }
 
   /// The run bird's centre on screen (null without a bird).
@@ -890,6 +914,233 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   // endregion WP-0b
+
+  // region WP-2d — HUD, pause, revive v2 (PRD-2 §3.14, §5.7, §5.9)
+  PauseScreen? _pauseScreen;
+  RunMenuBackdrop? _runBackdrop;
+  void Function()? _reviveShopClosed;
+  bool _runSettingsOpen = false;
+
+  /// The pause screen while the run is paused (null otherwise).
+  PauseScreen? get pauseScreen => _pauseScreen;
+
+  /// The revive offer while it is up (null otherwise).
+  ReviveScreen? get reviveScreen =>
+      camera.viewport.children.whereType<ReviveScreen>().firstOrNull;
+
+  /// The run's HUD (null without a run).
+  RunHud? get runHud {
+    final run = _run;
+    return run == null ? null : RunHud.of(run);
+  }
+
+  /// True while a menu screen (Shop / settings) sits over a paused run.
+  bool get _runMenuOverlayOpen => _runBackdrop != null;
+
+  /// Settings opened from the pause screen (tests).
+  bool get runSettingsOpen => _runSettingsOpen;
+
+  /// The Shop opened from the revive offer (tests).
+  bool get reviveShopOpen => _reviveShopClosed != null;
+
+  /// §5.7 pause (button, Esc, backgrounding): the world freezes (runClock,
+  /// Forge2D, hoops, particles), the pause card comes up. Only while
+  /// playing (not during the tumble, revive or results).
+  void pause() {
+    if (state != GameState.playing) return;
+    final run = _run;
+    if (run == null || !run.started || run.dying || run.ended) return;
+    state = GameState.paused;
+    run.pause();
+    final screen = PauseScreen();
+    _pauseScreen = screen;
+    camera.viewport.add(screen);
+    pushBack(_pauseBack);
+    sound.play(Sfx.click);
+  }
+
+  /// RESUME: straight back in — no 3-2-1 (owner decision 2026-10-08).
+  void resume() {
+    if (state != GameState.paused || _runMenuOverlayOpen) return;
+    popBack(_pauseBack);
+    _pauseScreen?.removeFromParent();
+    _pauseScreen = null;
+    state = GameState.playing;
+    _run?.resume();
+    sound.play(Sfx.click);
+  }
+
+  bool _pauseBack() {
+    if (_runSettingsOpen) {
+      closeRunSettings();
+    } else {
+      resume();
+    }
+    return true;
+  }
+
+  /// §5.7 the pause screen's settings button: the settings panel over the
+  /// paused run (same panel and chrome as from home).
+  void openRunSettings() {
+    if (state != GameState.paused || _runMenuOverlayOpen) return;
+    sound.play(Sfx.skTab);
+    _pauseScreen?.hidden = true;
+    _openRunBackdrop();
+    final settings = SettingsPanel(
+      muted: sound.muted,
+      musicVolume: sound.musicVolume,
+      onToggleSound: toggleSound,
+      onMusicVolume: setMusicVolume,
+      onBack: closeSettings,
+      onPrivacyPolicy: openPrivacyPolicy,
+      onRestorePurchases: restorePurchases,
+      rumble: rumble.on,
+      onToggleRumble: () => setRumble(!rumble.on),
+    );
+    _settingsPanel = settings;
+    _runSettingsOpen = true;
+    _chromeHosts.add(settings);
+    world.add(settings);
+    (world as RunScaledWorld).realTime.add(settings);
+    registerTintable(settings);
+    fadeOpacity(settings, from: 0, to: 1);
+    pushBack(_settingsBack);
+  }
+
+  /// Back from the run's settings: the pause card again.
+  void closeRunSettings() {
+    final settings = _settingsPanel;
+    if (!_runSettingsOpen || settings == null) return;
+    sound.play(Sfx.click);
+    _settingsPanel = null;
+    _runSettingsOpen = false;
+    popBack(_settingsBack);
+    unregisterTintable(settings);
+    fadeOpacity(settings, from: settings.opacity, to: 0, removeOnDone: true);
+    _closeRunBackdrop();
+    _pauseScreen?.hidden = false;
+  }
+
+  /// §3.14 GET COINS ›: the Shop as an overlay on the paused game; the
+  /// revive countdown waits ([onClose] when the Shop's back is pressed),
+  /// the music plays at × 0.5.
+  void openReviveShop({required void Function() onClose}) {
+    if (state != GameState.reviving || _runMenuOverlayOpen) return;
+    services.track('shop_open', {'source': 'revive'});
+    _reviveShopClosed = onClose;
+    _openRunBackdrop();
+    unawaited(sound.duckMusic(ReviveConfig.shopMusicDuck));
+    _menuTrail.clear();
+    sound.play(Sfx.click);
+    _showShop();
+  }
+
+  void _closeReviveShop() {
+    sound.play(Sfx.click);
+    _dismissShop();
+    menuScene = MenuScene.home;
+    _closeRunBackdrop();
+    unawaited(sound.duckMusic(1));
+    final cb = _reviveShopClosed;
+    _reviveShopClosed = null;
+    cb?.call();
+  }
+
+  void _openRunBackdrop() {
+    final b = RunMenuBackdrop();
+    _runBackdrop = b;
+    world.add(b);
+    (world as RunScaledWorld).realTime.add(b);
+    fadeOpacity(b, from: 0, to: 1);
+    // The strips draw over the sheet, as over the menus.
+    _ceiling.priority = kRunMenuBackdropPriority + 1;
+    _ground.priority = groundOverMenusPriority;
+  }
+
+  void _closeRunBackdrop() {
+    final b = _runBackdrop;
+    _runBackdrop = null;
+    if (b != null) {
+      fadeOpacity(b, from: b.opacity, to: 0, removeOnDone: true);
+    }
+    _ceiling.priority = SpikeStrip.basePriority;
+    _syncGroundPriority();
+  }
+
+  /// Drops the pause screen and any in-run menu overlay at once (replay).
+  void _clearRunOverlays() {
+    popBack(_pauseBack);
+    _pauseScreen?.removeFromParent();
+    _pauseScreen = null;
+    if (_runSettingsOpen) {
+      final settings = _settingsPanel;
+      _settingsPanel = null;
+      _runSettingsOpen = false;
+      popBack(_settingsBack);
+      if (settings != null) {
+        unregisterTintable(settings);
+        settings.removeFromParent();
+      }
+    }
+    if (_reviveShopClosed != null) {
+      _reviveShopClosed = null;
+      _dismissShop();
+      menuScene = MenuScene.home;
+      unawaited(sound.duckMusic(1));
+    }
+    _runBackdrop?.removeFromParent();
+    _runBackdrop = null;
+    _ceiling.priority = SpikeStrip.basePriority;
+    _syncGroundPriority();
+    (world as RunScaledWorld).frozenSource = null;
+  }
+
+  /// §3.0.5 / §3.14 the tumble is over (1.5 s, or resting): the revive
+  /// offer when at least 6 hoops were passed, else the run ends (bonus /
+  /// results). A death with ≤ 5 hoops uses no ladder step.
+  void runDeathSettled(RunController run) {
+    if (!identical(run, _run)) return;
+    final revive = PostRunScreens.revive;
+    if (state == GameState.dying &&
+        revive != null &&
+        ReviveLadder.eligible(run.state)) {
+      state = GameState.reviving;
+      unawaited(_offerRevive(run, revive));
+      return;
+    }
+    endRun(run.endRun());
+  }
+
+  Future<void> _offerRevive(
+    RunController run,
+    ReviveScreenFactory revive,
+  ) async {
+    var outcome = ReviveOutcome.declined;
+    try {
+      outcome = await revive.show(this, run.summarize());
+    } catch (_) {
+      outcome = ReviveOutcome.declined;
+    }
+    if (!identical(run, _run) || outcome == ReviveOutcome.revived) return;
+    if (state == GameState.reviving) endRun(run.endRun());
+  }
+
+  /// §3.14 straight back in at the end of the phoenix (1.65 s): the bird
+  /// flies again at the safe line [y], flaps up once (flap.mp3), and the
+  /// run resumes with 2 s of invulnerability.
+  void finishRevive(RunController run, ReviveKind k, int price, double y) {
+    if (!identical(run, _run) || state != GameState.reviving) return;
+    state = GameState.playing;
+    final bird = _bird;
+    if (bird != null) {
+      bird
+        ..reviveFlight(y)
+        ..setSpriteOpacity(1)
+        ..flap();
+    }
+    run.finishRevive(k, price, y);
+  }
+  // endregion WP-2d
 
   // region WP-1a — hoops replace pipes (PRD-2 §3.0.4, §3.0.5, §3.1)
   /// The run bird (null on the home screen before a run / after a reset).
@@ -940,7 +1191,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// True while [scene] is the menu screen up, with no popup / debug panel
   /// over it and no run starting.
   bool _sceneOnTop(MenuScene scene) {
-    if (state != GameState.start || menuScene != scene || _runStarting) {
+    // WP-2d: also the Shop opened over a paused run (revive GET COINS).
+    final menusUp = state == GameState.start || _runMenuOverlayOpen;
+    if (!menusUp || menuScene != scene || _runStarting) {
       return false;
     }
     return switch (scene) {
@@ -1051,6 +1304,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Back button / Esc in the Shop: back to the screen it was opened from
   /// (Skins) or the home screen (not a new arrival: no slot roll).
   void closeShop() {
+    if (_reviveShopClosed != null) {
+      _closeReviveShop();
+      return;
+    }
     if (state != GameState.start || _shop == null) return;
     sound.play(Sfx.click);
     _dismissShop();
@@ -1161,7 +1418,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// A coin pack (Shop) or No ads (popup price button): starts the store
   /// purchase; [Purchases] grants it when the store confirms.
   Future<void> buyProduct(IapProduct product, {Sfx sfx = Sfx.click}) async {
-    if (state != GameState.start) return;
+    if (state != GameState.start && !_runMenuOverlayOpen) return;
     sound.play(sfx);
     await purchases.buy(product);
   }
@@ -1174,7 +1431,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// "Already ad-free" toast; the buttons are not tappable while a
   /// No-ads purchase is pending.
   Future<void> buyNoAds(String source) async {
-    if (state != GameState.start) return;
+    if (state != GameState.start && !_runMenuOverlayOpen) return;
     if (menu.noAds) {
       sound.play(Sfx.click);
       showToast('Already ad-free');
@@ -1196,14 +1453,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// "RESTORE PURCHASES" (Settings; PRD-home-v3 §9 took it off the Shop).
   Future<void> restorePurchases() async {
-    if (state != GameState.start) return;
+    if (state != GameState.start && !_runMenuOverlayOpen) return;
     sound.play(Sfx.click);
     await purchases.restore();
   }
 
   /// Shop featured-item row: the skin shop on [item]'s tab with it tried
   /// on.
-  void openFeaturedItem(SkinItem item) => openSkins(
+  void openFeaturedItem(SkinItem item) => _runMenuOverlayOpen
+      ? null // WP-2d: no skin shop over a paused run
+      : openSkins(
     layer: item.layer,
     tryOnId: item.id,
     source: 'shop_featured',
@@ -2012,6 +2271,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.escape) {
+      // WP-2d: Esc while playing pauses (ARCH §2.3).
+      if (state == GameState.playing) {
+        pause();
+        return KeyEventResult.handled;
+      }
       if (state == GameState.gameOver) {
         // Back from a finished run is the panel's replay: a fresh home
         // arrival (PRD-1 §3.6), once the panel accepts input.
@@ -2111,7 +2375,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// game-over / new-best analytics, the leaderboard submit, the versus
   /// upload, then the [PostRunFlow] (WP-0b: the legacy `GameOverPanel`).
   void endRun(RunSummary? summary) {
-    if (state != GameState.playing && state != GameState.dying) {
+    if (state != GameState.playing &&
+        state != GameState.dying &&
+        state != GameState.reviving) {
       return;
     }
     if (state == GameState.playing) {
@@ -2238,6 +2504,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Back button / Esc on the settings panel: fades the settings panel out
   /// and a fresh home screen back in (not a new arrival: no slot roll).
   void closeSettings() {
+    if (_runSettingsOpen) {
+      closeRunSettings();
+      return;
+    }
     final settings = _settingsPanel;
     if (state != GameState.start || settings == null) {
       return;
@@ -2268,6 +2538,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// colour stage 0. [goHome] wraps it with the new-arrival bookkeeping.
   void replay() {
     sound.play(Sfx.click);
+
+    // region WP-2d — drop the pause screen / in-run menu overlays
+    _clearRunOverlays();
+    // endregion WP-2d
 
     // Full scene reset.
     _bird?.removeFromParent();

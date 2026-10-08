@@ -51,13 +51,13 @@ abstract final class ReviveConfig {
   /// §5.9 Heartbeat rate rise length (s).
   static const double beatRise = 1.6;
 
-  /// §5.9 Urgent heartbeat: scale up to 1 + 2 × this (1.06 peak … 1.12).
+  /// §5.9 Urgent heartbeat: the peak scale above 1 (1.06).
   static const double beatAmplitude = .06;
 
   /// §5.9 Idle beat rate (Hz) before the urgency.
   static const double idleBeatHz = 1.25;
 
-  /// §5.9 Idle beat scale (1.035).
+  /// §5.9 Idle beat scale: the peak scale above 1 (1.035).
   static const double idleBeatScale = .035;
 
   /// §5.9 Red edge glow fade-in length after [urgencyStart] (s).

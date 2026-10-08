@@ -76,10 +76,10 @@ double reviveSafeLine(RunController run) {
   final r = RunConfig.birdRadius * s.birdScale;
   final lo = geo.stripHeight + r + ReviveConfig.safeMargin;
   final hi = s.viewHeight - geo.stripHeight - r - ReviveConfig.safeMargin;
-  final birdX = s.camX + RunConfig.birdX;
-  final h = run.spawner.hoops
-      .where((h) => !h.resolved && h.planeX > birdX - 4)
-      .firstOrNull;
+  // §3.0.4 5 / S6-20: the same "fully past" predicate as the spawner's
+  // next-hoop contract (ARCH 13b) — a tilted ring whose plane centre is
+  // behind the bird still counts while the bird crosses its rim.
+  final h = run.spawner.nextHoopAhead();
   final y = h != null ? h.frame().centre.y - s.camY : s.viewHeight / 2;
   return lo > hi ? s.viewHeight / 2 : y.clamp(lo, hi).toDouble();
 }

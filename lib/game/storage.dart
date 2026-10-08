@@ -11,6 +11,13 @@ import '../skins/look.dart';
 class GameStorage {
   GameStorage({DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
 
+  /// The preferences handle [load] resolved. The legacy API keeps every
+  /// value in a memory cache that its setters update synchronously, so a
+  /// settler that must win against a concurrent [load] (the level-reward
+  /// claim, §3.14) goes through this handle instead of awaiting a fresh
+  /// `getInstance()`.
+  SharedPreferences? _prefs;
+
   static const String _bestScoreKey = 'bestScore';
   static const String _gamesPlayedKey = 'gamesPlayed';
   static const String _muteSoundKey = 'muteSound';
@@ -48,6 +55,7 @@ class GameStorage {
   static const String _puzzleRoundKey = 'puzzleRound';
   static const String _lastPortalRideKey = 'lastPortalRide';
   static const String _unclaimedLevelRewardKey = 'unclaimedLevelReward';
+  static const String _levelRewardPayoutKey = 'levelRewardPayout';
   static const String _metElementsKey = 'metElements';
   static const String _versusNicknameKey = 'versusNickname';
   static const String _uploadQueueKey = 'uploadQueue';
@@ -160,6 +168,12 @@ class GameStorage {
   /// app start if > 0).
   int unclaimedLevelReward = 0;
 
+  /// §3.14 (call, S6-22) The wallet balance a level-reward credit is to
+  /// reach: written before the credit and cleared right after, so a kill
+  /// between the claim's writes and the credit is recovered at start and
+  /// paid exactly once. 0 = no credit in flight.
+  int levelRewardPayout = 0;
+
   /// §3.0.8 Element storage ids the player has met (spawned on screen).
   Set<String> metElements = {};
 
@@ -210,6 +224,7 @@ class GameStorage {
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
+    _prefs = prefs;
     bestScore = prefs.getInt(_bestScoreKey) ?? 0;
     gamesPlayed = prefs.getInt(_gamesPlayedKey) ?? 0;
     muteSound = prefs.getBool(_muteSoundKey) ?? false;
@@ -274,6 +289,7 @@ class GameStorage {
     puzzleRound = prefs.getInt(_puzzleRoundKey) ?? 0;
     lastPortalRide = prefs.getString(_lastPortalRideKey);
     unclaimedLevelReward = prefs.getInt(_unclaimedLevelRewardKey) ?? 0;
+    levelRewardPayout = prefs.getInt(_levelRewardPayoutKey) ?? 0;
     metElements = (prefs.getStringList(_metElementsKey) ?? const []).toSet();
     versusNickname = prefs.getString(_versusNicknameKey);
     uploadQueue = List.of(prefs.getStringList(_uploadQueueKey) ?? const []);
@@ -343,6 +359,12 @@ class GameStorage {
     unclaimedLevelReward = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_unclaimedLevelRewardKey, value);
+  }
+
+  Future<void> saveLevelRewardPayout(int value) async {
+    levelRewardPayout = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_levelRewardPayoutKey, value);
   }
 
   Future<void> saveMetElements(Set<String> value) async {
@@ -599,10 +621,45 @@ class GameStorage {
   Future<void> saveClaimedLevels(Set<int> value) async {
     claimedLevels = {...value};
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
+    await prefs.setStringList(_claimedLevelsKey, _levelList(claimedLevels));
+  }
+
+  List<String> _levelList(Set<int> levels) =>
+      (levels.toList()..sort()).map((l) => '$l').toList();
+
+  /// §3.14 (call, S6-22) One durable step for a level-reward claim: it
+  /// records the wallet balance the credit is to reach *before* the
+  /// claimed levels, in one preferences scope, so a kill in between is
+  /// recoverable at the next start (see `LevelProgress.claim`).
+  Future<void> beginLevelRewardClaim({
+    required int payout,
+    required Set<int> claimed,
+  }) async {
+    levelRewardPayout = payout;
+    claimedLevels = {...claimed};
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    // Both cache updates land now (a concurrent `load()` must see the
+    // claim); the platform writes go out in this order, record first.
+    final record = prefs.setInt(_levelRewardPayoutKey, payout);
+    final mark = prefs.setStringList(
       _claimedLevelsKey,
-      (claimedLevels.toList()..sort()).map((l) => '$l').toList(),
+      _levelList(claimedLevels),
     );
+    await record;
+    await mark;
+  }
+
+  /// §3.14 (call, S6-22) Settles a level-reward claim: the in-flight
+  /// record goes first, then the owed flag, so a record never outlives its
+  /// flag and a stale one cannot be mistaken for a pending credit.
+  Future<void> endLevelRewardClaim() async {
+    levelRewardPayout = 0;
+    unclaimedLevelReward = 0;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    final record = prefs.setInt(_levelRewardPayoutKey, 0);
+    final flag = prefs.setInt(_unclaimedLevelRewardKey, 0);
+    await record;
+    await flag;
   }
 
   Future<void> saveRumble(bool value) async {

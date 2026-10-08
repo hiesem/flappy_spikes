@@ -660,6 +660,7 @@ default). Later WPs only read/write them.
 | `puzzleRound` | int 0 | `puzzleRound` | `savePuzzleRound(int)` | 4a |
 | `lastPortalRide` | String? null | `lastPortalRide` | `saveLastPortalRide(String)` | 3b |
 | `unclaimedLevelReward` | int 0 | `unclaimedLevelReward` | `saveUnclaimedLevelReward(int)` | 2e (credited at app start if > 0) |
+| `levelRewardPayout` | int 0 | `levelRewardPayout` | `beginLevelRewardClaim` / `endLevelRewardClaim` + `saveLevelRewardPayout(int)` | 2e recovery (Fix P2 R1, S6-22): bookkeeping for a level-reward credit in flight — the balance the credit must reach, written before it and cleared right after; **not** a PRD-2 key, so it is not in the §7 round-trip list |
 | `metElements` | Set\<String\> (storageIds) empty | `metElements` | `saveMetElements(Set<String>)`, `markElementMet(String)` | 0b |
 | `levelRewardsClaimed` | — | **reuses existing `claimedLevels`** (Set\<int\>; highest = max) | `saveClaimedLevels` (exists) | 2e (call: no second key) |
 | `versusNickname` | String? (generated once) | `versusNickname` | `saveVersusNickname(String)` | 5b |
@@ -1128,3 +1129,17 @@ Changes to the contracts above, made while building WP-0b. Later WPs build again
 | Versus parts | region WP-5b in `ResultsScreen.onLoad` (card build): header WIN / LOSE / DRAW at `ResultsConfig.header`, the opponent `ResultsPlayerColumn(mine: false, lower:, winner:)` at `opponentColumnX` and yours moved to `youColumnX`, VS between. Solo = your column alone at x 160 | brief |
 | Layout | the 320 × 711 mock in `content` coordinates, scaled by `ResultsConfig.scaleFor(h)` (1 from 711, ≈ 0.8 at 568) about the top centre; the fx layer (`ResultsFx`: confetti, fireworks, `CoinFly` claim coins, white flash) is a world sibling at priority 30 with the same transform | §5.10 at 568 |
 | Kept buttons (call) | leaderboard (trophy) and share (invite glyph) as 40 pt pink boxes flanking the reward pill; gated on the 0.3 s fade-in also when pressed directly | PRD-1 §3.7 "kept" |
+
+## 18. QA round P2 fix notes (`Fix P2 R1`, as built 2026-10-08)
+
+Fixes for the five findings in `test/e2e/P2_FINDINGS.md`; each has a live
+regression in `test/e2e/p2_gameplay_e2e_test.dart` (S6-20 … S6-24).
+
+| Area | As built | Why |
+|---|---|---|
+| Phoenix safe line (S6-20) | `reviveSafeLine()` uses `RunSpawner.nextHoopAhead()` — the §3.0.4 5 "fully past" miss-line predicate (`birdX − r ≤ frame().rightmostX`) — replacing the centre-plane test `planeX > birdX − 4` | a tilted ring's plane centre can sit behind the bird while it still crosses the upper / lower half, so the old predicate skipped the ring the spawner calls next and the phoenix rose to the wrong line (ARCH §13b, one predicate) |
+| Revive beat (S6-21) | `ReviveConfig.idleBeatScale` (.035) and `beatAmplitude` (.06) are the **peak amplitudes themselves**: idle is `scale · sin²`, urgent is `amplitude · urgency · (1 − cos)/2`. The old code doubled both (peak 1.07 / ≈1.12) | §5.9 peaks are 1.035 idle / 1.06 urgent; the configured knob is the peak, never a half-wave |
+| Level reward claim (S6-22) | `LevelProgress.claim()` is recoverable and idempotent: `beginLevelRewardClaim(payout, claimed)` writes the payout record (`levelRewardPayout` = target wallet balance) and the claimed set in one scope, then `wallet.add`, then `endLevelRewardClaim()` (record, then flag). A re-entrant call pays nothing (`_claimInFlight`); a start with a leftover record pays the rest and settles. `claimLevelRewards` no longer writes `unclaimedLevelReward = 0` (that is `endLevelRewardClaim`); `_creditUnclaimedLevelReward` runs for a pending reward **or** a record | a kill between the claim write and the credit must neither lose nor double the coins; the two persisted keys alone cannot tell an interrupted claim from a completed one, so the payout record makes the intent explicit (§3.14 reward guarantee, §5.10, §7) |
+| `GameStorage` handle | `load()` caches the resolved `SharedPreferences` in `_prefs`; `begin`/`endLevelRewardClaim` use it (`_prefs ?? getInstance()`) and issue their writes in order (record before mark; record before flag) | the claim must win against a concurrent `load()` whose own `getInstance()` may resolve first and clobber the in-memory caches (results `next()` fires the claim unawaited, then the 1.0 home → replay path runs `load()`); a fast `getInstance()` still lands the memory update before the first await |
+| Next button (S6-23) | at 568 … 730 NEXT is laid out in inverse scale: `ResultsConfig.bottomGap` (= 711 − 646 = 65) and `nextTopFor(h)` anchor its top edge; its box and label font are pre-divided by the page scale, so the rendered button is the §5.10 292 × 50 at the reference bottom gap while the column above scales | §3.0.1 bottom buttons keep the same bottom distance on every screen height; PRD outranks the ARCH §17 uniform-scale note |
+| Claim coin (S6-24) | the CLAIM icon is the unmodified shared `coin.png` `MenuIcon` (no `recolor`) | §3.0.6 / §3.0.9 #14: every coin keeps the gold disc and thick pale inner ring; the plum recolour was a forbidden variant |

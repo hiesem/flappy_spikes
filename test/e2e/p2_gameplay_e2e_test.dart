@@ -29,8 +29,8 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../helpers.dart';
 
-// Independent QA: no product changes. Open cases run with --run-skipped.
-// FlameTester accepts only bool skips; each defect uses a group's string reason.
+// Independent QA round P2: the five defects it found (S6-20 … S6-24) are
+// fixed in `Fix P2 R1`; the regressions below run with, and guard, the fix.
 void main() {
   setUpAll(tzdata.initializeTimeZones);
   Future<void> boot(FlappySpikesGame g) async {
@@ -275,7 +275,7 @@ void main() {
       expect(hoop.frame().rightmostX, greaterThan(r.state.camX + 70));
       expect(reviveSafeLine(r), closeTo(200, .001));
     });
-  }, skip: 'S6-20 open');
+  });
 
   group('S6-21 regression', () {
     qa('S6-21 revive heartbeat stays within approved idle/urgent peaks', (
@@ -303,7 +303,7 @@ void main() {
         [lessThanOrEqualTo(1.0351), lessThanOrEqualTo(1.0601)],
       );
     });
-  }, skip: 'S6-21 open');
+  });
 
   Map<String, Object>? interruptedClaim;
   group('S6-22 regression', () {
@@ -348,15 +348,18 @@ void main() {
         expect(g.storage.unclaimedLevelReward, 0);
       },
     );
-  }, skip: 'S6-22 open');
+  });
 
   group('S6-23 regression', () {
-    qa('S6-23 NEXT keeps its reference bottom offset at 568 pt', (
+    qa('S6-23 NEXT keeps its reference bottom offset and size at 568 pt', (
       g,
       tester,
     ) async {
       await endWith(g, 3);
       final page = g.resultsScreen!;
+      final k = page.content.scale.y;
+      final left =
+          page.content.position.x + page.nextButton.x * page.content.scale.x;
       final bottom =
           page.content.position.y +
           (page.nextButton.y + page.nextButton.height) * page.content.scale.y;
@@ -364,8 +367,13 @@ void main() {
         g.viewHeight - bottom,
         closeTo(711 - ResultsConfig.next.bottom, .001),
       );
+      // §3.0.1: the bottom button keeps its §5.10 size while the column
+      // above it scales.
+      expect(page.nextButton.height * k, closeTo(ResultsConfig.next.height, .001));
+      expect(page.nextButton.width * k, closeTo(ResultsConfig.next.width, .001));
+      expect(left, closeTo(ResultsConfig.next.left, .001));
     }, height: 568);
-  }, skip: 'S6-23 open');
+  });
 
   group('S6-24 regression', () {
     qa('S6-24 CLAIM renders the unmodified shared coin sprite', (
@@ -406,7 +414,7 @@ void main() {
         );
       });
     });
-  }, skip: 'S6-24 open');
+  });
 }
 
 /// Stops exactly before persisting a reward's coin credit, while keeping

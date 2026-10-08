@@ -447,9 +447,10 @@ class ReviveScreen extends PositionComponent
     if (offerUp && t < ReviveConfig.offerSeconds + .5) {
       _beatPhase += dt * hz * 2 * math.pi;
     }
+    // §5.9 S6-21: the two amplitudes are the peaks themselves (idle 1.035,
+    // urgent 1.06), so neither may be doubled by its waveform.
     final idle = t < ReviveConfig.urgencyStart
         ? ReviveConfig.idleBeatScale *
-              2 *
               math.pow(
                 math.sin(_clock * 2 * math.pi * ReviveConfig.idleBeatHz),
                 2,
@@ -458,7 +459,10 @@ class ReviveScreen extends PositionComponent
     beat = offerUp
         ? 1 +
               idle +
-              ReviveConfig.beatAmplitude * urgency * (1 - math.cos(_beatPhase))
+              ReviveConfig.beatAmplitude *
+                  urgency *
+                  (1 - math.cos(_beatPhase)) /
+                  2
         : 1;
     shake =
         math.sin(_clock * 2 * math.pi * ReviveConfig.shakeHz) *

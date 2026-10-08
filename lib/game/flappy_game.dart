@@ -2475,7 +2475,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// §3.14 / §7: a level reward still owed when the app was closed on the
   /// results page is credited at the next start, without animation.
   Future<void> _creditUnclaimedLevelReward() async {
-    if (storage.unclaimedLevelReward <= 0) return;
+    // Either a pending reward (the ran-end flag) or the record of a claim
+    // a kill interrupted mid-way (S6-22); both are settled here.
+    if (storage.unclaimedLevelReward <= 0 && storage.levelRewardPayout <= 0) {
+      return;
+    }
     await claimLevelRewards(this, 'app_start');
   }
   // endregion WP-2e

@@ -118,6 +118,13 @@ abstract final class ResultsConfig {
   static const double nextFontSize = 28;
   static const double nextLetterSpacing = .14;
 
+  /// §3.0.1 Bottom buttons keep the same distance to the bottom edge on
+  /// every screen height 568 … 730 (the reference: 711 − 646 = 65 pt).
+  static const double bottomGap = referenceHeight - contentBottom;
+
+  /// §3.0.1 Screen y of NEXT's top edge at [h] (bottom-anchored).
+  static double nextTopFor(double h) => h - bottomGap - next.height;
+
   /// §3.14 / PRD-1 §3.7 (call) The kept leaderboard and share buttons: two
   /// 40 pt pink boxes flanking the reward pill, 24 pt glyphs.
   static const Rect leaderboardButton = Rect.fromLTWH(14, 515, 40, 40);

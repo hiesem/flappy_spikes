@@ -33,10 +33,28 @@ this same combination of claimed-level / pending keys as a completed claim
 with a stale flag; the persisted keys cannot distinguish that case from an
 interrupted unpaid claim. The ordinary **kill before CLAIM** case passes.
 
-Each defect is in a group with `skip: 'S6-xx open'` (FlameTester accepts only a
-boolean skip argument). S6-22 has a producer plus its failing restart case.
-When enabled, the file finishes with six passes and **five expected assertion
-failures**, one per defect; no setup/compilation failures.
+Each defect was filed in a group with `skip: 'S6-xx open'` (FlameTester accepts
+only a boolean skip argument). Round `Fix P2 R1` fixed all five in product code
+and removed the skips; each regression now runs and guards its fix. S6-22 has a
+producer plus its restart case. The file finishes with all regressions passing;
+no setup/compilation failures.
+
+## Fix decisions (`Fix P2 R1`)
+
+- **S6-20:** `reviveSafeLine()` now delegates to `RunSpawner.nextHoopAhead()` so
+  the phoenix rises to the vertical centre of the next ring still fully ahead,
+  reusing the §3.0.4 miss-line predicate instead of the centre-plane test.
+- **S6-21:** the idle beat stopped squaring its amplitude and the urgent beat
+  stopped doubling it; the configured peaks are now the observed peaks
+  (1.035 idle, 1.06 urgent, §5.9).
+- **S6-22:** the claim is recoverable — a bookkeeping payout record is written
+  before the coin credit and the pending flag is cleared after; startup credits
+  any unfinished claim exactly once (§3.14, §5.10, §7).
+- **S6-23:** the NEXT button is laid out in inverse scale so it keeps its §5.10
+  size and its 65 pt bottom gap at 568 pt while the column above scales
+  (§3.0.1); the PRD precedence over the ARCH scaling note is honoured.
+- **S6-24:** the CLAIM icon uses the unmodified shared `coin.png` with its pale
+  inner ring, dropping the forbidden plum `srcIn` recolour (§3.0.6, §3.0.9 #14).
 
 ## Gates
 

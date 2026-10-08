@@ -655,6 +655,11 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   Buttons and the keyboard (Space / Enter / Esc = NEXT) take input after the
   0.3 s fade-in. On short screens (568) the 320 × 711 column scales down
   uniformly (≈ 0.8) about the top centre.
+- DEVIATION (PRD-2 §3.0.1, results NEXT; `Fix P2 R1`, S6-23): NEXT is a
+  bottom button, so it keeps the reference 65 pt gap to the screen bottom
+  **and** its §5.10 292 × 50 size on every screen height 568–730 while the
+  column above it scales; the uniform scaling down statement above applies
+  to everything except the button, which is laid out in inverse scale.
 - DEVIATION (PRD-2 §3.14, levels): a run that reaches new levels plays the
   LEVEL UP celebration on the results page and its reward is claimed there
   (CLAIM, or automatically on NEXT); the home LEVEL UP popup now only serves

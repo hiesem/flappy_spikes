@@ -156,6 +156,11 @@ class RunController extends Component {
   /// gate it (rides, flap lock, tumble).
   void onTap() {}
 
+  // region WP-3c — §3.23 spring flap lock
+  /// Flap input is ignored (the spring launch's 0.45 s / 0.28 s).
+  bool get flapLocked => state.flapLock > 0;
+  // endregion WP-3c
+
   void pause() {
     _paused = true;
     clock.running = false;

@@ -4,7 +4,9 @@ import 'package:flame/components.dart';
 
 import '../../game/sound.dart';
 import '../../menu/wallet.dart';
+import '../../versus/timeline.dart' show PointFlags;
 import '../config/run_config.dart';
+import '../director/plans.dart' show HoopKindId, RideKind;
 import '../effects/coin_popup.dart';
 import '../effects/shock_ring.dart';
 import '../hoops/ring_painter.dart';
@@ -13,8 +15,6 @@ import '../run_events.dart';
 import '../run_feature.dart';
 import '../run_layers.dart';
 import '../run_state.dart';
-import '../director/plans.dart' show RideKind;
-import '../../versus/timeline.dart' show PointFlags;
 
 /// What a hoop pass is worth (PRD-2 §3.0.1 score, §3.1 rules, §3.2 coins,
 /// §5.1 pass feedback):
@@ -47,9 +47,15 @@ class ScoringFeature extends RunFeature {
   void _onPassed(HoopPassed e) {
     final c = _c;
     if (c == null) return;
-    // region WP-3b — ride points are flagged for the versus timeline (§3.13)
-    c.addScore(1, flags: e.duringRide ? PointFlags.ride : 0);
-    // endregion WP-3b
+    // region WP-3b / WP-3c — versus timeline flags (§3.13): ride points (3b)
+    // and Ring Train points (§3.22, 3c) skip the 0.9 s gap check
+    final train = e.hoop?.plan.kind == HoopKindId.train;
+    c.addScore(
+      1,
+      flags: (e.duringRide ? PointFlags.ride : PointFlags.none) |
+          (train ? PointFlags.train : PointFlags.none),
+    );
+    // endregion WP-3b / WP-3c
     final perfect = e.perfect;
     final coins = perfect ? 2 : 1;
     c.earn(coins, perfect ? CoinSource.perfect : CoinSource.hoop);

@@ -341,3 +341,59 @@ Future<void> declineRevive(FlappySpikesGame g) async {
   await flushAndMount(g);
 }
 // endregion WP-2d
+
+// region WP-3c — special hoops (PRD-2 §3.19, §3.22–§3.25)
+/// Flies the run with the hoop-aware autopilot (unless [autopilot] is
+/// false; [flap] overrides the bot's decision) until [done] holds, the run
+/// stops playing or [maxSeconds] pass. Returns whether [done] held.
+Future<bool> flyUntil(
+  FlappySpikesGame g,
+  bool Function(RunController r) done, {
+  double maxSeconds = 60,
+  bool autopilot = true,
+  bool Function(RunController r)? flap,
+  double dt = 1 / 60,
+}) async {
+  final run = g.run!;
+  final bot = Autopilot(run);
+  var t = 0.0;
+  var frame = 0;
+  while (t < maxSeconds) {
+    if (done(run)) return true;
+    if (g.state != GameState.playing || run.ended) return done(run);
+    final want = flap != null ? flap(run) : (autopilot && bot.shouldFlap());
+    if (want) g.onScreenTap();
+    g.update(dt);
+    t += dt;
+    if (++frame % 10 == 0) await flushAndMount(g);
+  }
+  return done(run);
+}
+
+/// Flies with the autopilot until [h]'s plane is [lead] pt ahead of the
+/// bird, then puts the bird at the ring centre + [dy] (screen y, vy 0) and
+/// glides — no flaps — until [h] is resolved. Returns whether it resolved.
+Future<bool> passHoopAt(
+  FlappySpikesGame g,
+  Hoop h, {
+  double dy = 0,
+  double lead = 10,
+}) async {
+  final near = await flyUntil(g, (r) {
+    final b = r.birdTrackPosition();
+    return b != null && h.planeX - b.x <= lead;
+  });
+  if (!near) return false;
+  final y = h.position.y + h.rings.first + dy;
+  g.runBird!.setFlight(y: y, vy: 0);
+  return flyUntil(g, (_) => h.resolved, maxSeconds: 2, autopilot: false);
+}
+
+/// The first spawned hoop of [kind] (null if none yet).
+Hoop? firstHoopOf(FlappySpikesGame g, HoopKindId kind) {
+  for (final h in hoopsOf(g)) {
+    if (h.plan.kind == kind) return h;
+  }
+  return null;
+}
+// endregion WP-3c

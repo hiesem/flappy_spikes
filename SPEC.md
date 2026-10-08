@@ -684,3 +684,22 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   bird ≈ 1 s after the landing. The run clock keeps running; a running
   Hourglass / Mini / Frenzy is paused for the ride. Ride points carry the
   `ride` flag in the versus timeline.
+
+### WP-3c — Bullseye, Ring Train, Spring Ring, Lucky Spin, FEVER (PRD-2 §3.19, §3.22–§3.25)
+
+- DEVIATION (PRD-2 §3.22–§3.25): four new special hoops replace a normal
+  hoop slot when the run director picks them. **Bullseye** (+3 coins when the
+  bird centre crosses within ±12 pt of the ring centre), **Ring Train** (three
+  rings 56 pt apart, one slot; all three passed → +3 coins), **Spring Ring**
+  (a pass sets vy −770 up / +420 down and ignores flaps for 0.45 / 0.28 s;
+  the next ring sits 240 pt away), **Lucky Spin** (a pre-rolled wheel prize
+  of +2…+20 coins paid when the wheel stops ≈ 0.9 s after the pass). Each is
+  otherwise a normal hoop (score, coins, streak, rim bounce).
+- DEVIATION (PRD-2 §3.19): the **FEVER ring** — a perfect pass sets the
+  streak to max(5, streak + 1) and sets the bird on fire (visual only) until
+  the streak breaks (graze, save or death). A rim touch on it is a normal
+  pass.
+- DEVIATION (PRD-2 §3.23, director): the spring's 240 pt room is checked
+  against the band rule (tooth lines − opening/2 − 7 − 18), not the row's
+  centre range, and the ring after a spring may leave that range — otherwise
+  springs could never appear on 568 pt screens before hoop 50.

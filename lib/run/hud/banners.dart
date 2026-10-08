@@ -50,8 +50,37 @@ abstract class RunBanner extends PositionComponent {
     textDirection: p.TextDirection.ltr,
   )..layout();
 
+  // region WP-3c — optional subtitle line (PRD-2 §5.21 / §5.23 / §5.24)
+  /// A second, smaller line under the title ("all three rings · +3
+  /// coins", "+3 coins", "lucky spin · coins"), or null.
+  String? get subtitle => null;
+
+  /// Subtitle font size (pt; the lab mocks' 13 px).
+  static const double subtitleSize = 13;
+
+  TextPainter? _sp;
+  TextPainter? get _sub {
+    final s = subtitle;
+    if (s == null) return null;
+    return _sp ??= TextPainter(
+      text: TextSpan(
+        text: s,
+        style: const TextStyle(
+          fontFamily: Config.uiFont,
+          fontSize: subtitleSize,
+          color: Color(0xFFFFFFFF),
+        ),
+      ),
+      textDirection: p.TextDirection.ltr,
+    )..layout();
+  }
+  // endregion WP-3c
+
   /// Band height: the text line plus the padding above and below.
-  double get bandHeight => _text.height + 2 * PartsConfig.bannerPadding;
+  double get bandHeight =>
+      _text.height +
+      2 * PartsConfig.bannerPadding +
+      (_sub == null ? 0 : _sub!.height);
 
   /// (scaleY, opacity) at [t] seconds: the §5.4 keyframes.
   (double, double) curveAt(double t) {
@@ -96,6 +125,16 @@ abstract class RunBanner extends PositionComponent {
       canvas,
       Offset((bandWidth - tp.width + spacing) / 2, PartsConfig.bannerPadding),
     );
+    final sub = _sub;
+    if (sub != null) {
+      sub.paint(
+        canvas,
+        Offset(
+          (bandWidth - sub.width) / 2,
+          PartsConfig.bannerPadding + tp.height,
+        ),
+      );
+    }
     if (layer) canvas.restore();
     canvas.restore();
   }
@@ -170,6 +209,7 @@ class ElementBanner extends RunBanner {
     double? duration,
     super.bandWidth,
     super.lane = BannerLane.element,
+    this.subtitle,
   }) : fontSize = fontSize ?? autoSize(text),
        duration = duration ?? 1.2;
 
@@ -186,6 +226,9 @@ class ElementBanner extends RunBanner {
   final double fontSize;
   @override
   final double duration;
+
+  @override
+  final String? subtitle;
 }
 
 /// Hosts the y-190 banner band (ARCH §1.10 master #7 host): lanes `streak`
@@ -223,8 +266,32 @@ class BannerHost extends PositionComponent {
     return c != null && !c.done && !c.isRemoved && !c.isRemoving;
   }
 
+  // region WP-3c — the FEVER lane (PRD-2 §3.19 / §5.18)
+  /// The FEVER! banner shows **together with** the tier banner, above it
+  /// (§3.19 "a big FEVER! banner (above the tier banner)"): banners of the
+  /// [BannerLane.fever] lane use their own slot (a new FEVER! replaces the
+  /// previous one); streak and element banners keep replacing each other.
+  PositionComponent? _fever;
+
+  /// The FEVER! banner on screen (tests).
+  PositionComponent? get fever =>
+      _fever != null && !_fever!.isRemoved && !_fever!.isRemoving
+      ? _fever
+      : null;
+
+  /// Shows [banner] in the FEVER slot.
+  T showFever<T extends PositionComponent>(T banner) {
+    final old = _fever;
+    if (old != null && !old.isRemoved) old.removeFromParent();
+    _fever = banner;
+    add(banner);
+    return banner;
+  }
+  // endregion WP-3c
+
   /// Shows [banner], replacing any banner on screen.
   T show<T extends RunBanner>(T banner) {
+    if (banner.lane == BannerLane.fever) return showFever(banner);
     final old = _current;
     if (old != null && !old.isRemoved) old.removeFromParent();
     _current = banner;
@@ -239,5 +306,8 @@ class BannerHost extends PositionComponent {
     final old = _current;
     if (old != null && !old.isRemoved) old.removeFromParent();
     _current = null;
+    final f = _fever;
+    if (f != null && !f.isRemoved) f.removeFromParent();
+    _fever = null;
   }
 }

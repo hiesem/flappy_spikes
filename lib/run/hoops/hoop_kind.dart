@@ -84,6 +84,13 @@ abstract class HoopKind {
   void onRim(Hoop h, RimTouch rc, RunContext c) {}
   void update(Hoop h, double dt, RunContext c) {}
 
+  // region WP-3c — one slot, several hoops (PRD-2 §3.22 Ring Train)
+  /// Further hoops of the same slot, spawned right after the slot's own
+  /// hoop (the Ring Train's rings 2 and 3). Each is a full hoop (pass test,
+  /// rims, miss); together they are one slot (`hoopIndex` counts once).
+  List<SlotPlan> extraHoops(SlotPlan p) => const [];
+  // endregion WP-3c
+
   /// Default: the centre of the ring nearest the bird's current y.
   AutopilotTarget autopilotTarget(Hoop h, RunState s, double birdY) {
     var best = h.position.y + h.rings.first;

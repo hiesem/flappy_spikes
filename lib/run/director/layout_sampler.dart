@@ -83,7 +83,17 @@ class LayoutSampler {
     final forced = forceY;
     if (forced != null) {
       forceY = null;
-      final y = forced.clamp(lo, hi).toDouble();
+      // region WP-3c — §3.23 the ring after a spring sits 240 pt away
+      // inside the band (band rule), even outside the row's centre range.
+      final (flo, fhi) = limits(
+        hoopIndex,
+        ctx,
+        opening,
+        extra: extra,
+        useTable: false,
+      );
+      final y = forced.clamp(flo, fhi).toDouble();
+      // endregion WP-3c
       lastSign = (y - prev).sign == 0 ? lastSign : (y - prev).sign;
       lastY = y;
       return y;

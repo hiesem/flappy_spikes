@@ -28,6 +28,15 @@ class ShockRing extends PooledEffect {
   double length = .5;
   Color color = PartsConfig.pink;
 
+  // region WP-3c — additive growth + glow (PRD-2 §5.18 FEVER pass rings)
+  /// Points added to both radii over the life (the FEVER rings grow
+  /// `rx + u × 160`, `ry + u × 160`), on top of the scale.
+  double grow = 0;
+
+  /// Glow blur (pt) in the ring colour; 0 = none.
+  double glowBlur = 0;
+  // endregion WP-3c
+
   @override
   double get duration => length;
 
@@ -46,9 +55,13 @@ class ShockRing extends PooledEffect {
     double alphaTo = 0,
     double tilt = 0,
     double delay = 0,
+    double grow = 0,
+    double glowBlur = 0,
   }) {
     position.setValues(at.dx, at.dy);
     this
+      ..grow = grow
+      ..glowBlur = glowBlur
       ..rx = rx
       ..ry = ry ?? rx
       ..color = color
@@ -139,13 +152,23 @@ class ShockRing extends PooledEffect {
     if (a <= 0 || w <= 0) return;
     _paint
       ..strokeWidth = w
-      ..color = color.withValues(alpha: color.a * a.clamp(0.0, 1.0));
+      ..color = color.withValues(alpha: color.a * a.clamp(0.0, 1.0))
+      ..maskFilter = glowBlur > 0
+          ? MaskFilter.blur(BlurStyle.normal, glowBlur / 2)
+          : null;
     canvas.save();
     if (tilt != 0) canvas.rotate(tilt);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset.zero, width: 2 * rx * s, height: 2 * ry * s),
-      _paint,
+    final g = grow * k;
+    final rect = Rect.fromCenter(
+      center: Offset.zero,
+      width: 2 * (rx * s + g),
+      height: 2 * (ry * s + g),
     );
+    if (glowBlur > 0) {
+      canvas.drawOval(rect, _paint);
+      _paint.maskFilter = null;
+    }
+    canvas.drawOval(rect, _paint);
     canvas.restore();
   }
 }

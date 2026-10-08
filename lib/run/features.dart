@@ -1,6 +1,7 @@
 import 'hoops/motion/moving_rings_feature.dart';
 import 'items/analytics_router.dart';
 import 'items/big_hoops.dart';
+import 'items/comet.dart';
 import 'items/extra_life.dart';
 import 'items/fever.dart'; // WP-3c
 import 'items/invulnerability.dart';
@@ -46,6 +47,9 @@ List<RunFeature> buildRunFeatures() => [
   // region WP-3b — portal roller-coaster rides (PRD-2 §3.12, §5.12b)
   PortalRideFeature(),
   // endregion WP-3b
+  // region WP-3a — comet boost (PRD-2 §3.8, §3.9, §5.6)
+  CometFeature(),
+  // endregion WP-3a
   // region WP-2d — revive rules (PRD-2 §3.14); keep last
   ReviveRulesFeature(),
   // endregion WP-2d

@@ -703,3 +703,27 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   against the band rule (tooth lines − opening/2 − 7 − 18), not the row's
   centre range, and the ring after a spring may leave that range — otherwise
   springs could never appear on 568 pt screens before hoop 50.
+## PRD-2 comet boost (WP-3a, 2026-10-08)
+
+- DEVIATION (PRD-2 §3.8 / §5.6, new powerup; 1.0 had none): from hoop 10–30
+  (then every 45–60 hoops; never within 10 hoops of a portal, in the squeeze
+  window, or while a timed powerup runs) a **comet star** hangs 20 pt past
+  the plane of an upright, still normal hoop, at its centre (46 pt gold
+  4-point star with a pink / gold tail, wobble ±14°, pulse ±8 %, hit radius
+  18). Touching it (or a pair's COMET gift) starts a **10 s boost**: the
+  scroll eases to **1.7 × cruise** in 0.45 s and back over the last 0.9 s;
+  the bird rides inside a comet fireball (bird 90 %, gold shell with a pink
+  rim, gold / pink tail, a gold countdown ring r 34 draining over the 10 s,
+  "Ns" 50 pt below) and **flies itself** to the ring nearest its line of the
+  next hoop (taps ignored, ±25° tilt); white speed streaks cross the screen.
+  The boost is a ride: rims are ignored, mistakes (spikes, closed switches)
+  are ignored, every hoop passed is a **perfect pass** (banner, burst, +2
+  coins, tier sound, ring field), hoops spawned during it are 118 pt,
+  upright and still. Sounds `pu_comet_get`, `pu_comet_loop` (30 %, from
+  1.2 s, 0.3 s fade), `pu_comet_end`. At the end the bird pops back (white
+  flash, squares, gold ring) at its current height and control returns; no
+  invulnerability afterwards. The streak carries on; the shield and the
+  extra life stay armed. Analytics `comet_collected {source: hoop | pair}`.
+- Tests: `test/run/items/s3_8_comet_test.dart`,
+  `test/run/items/s3_8_comet_autopilot_test.dart`; shots in
+  `test/run/shots/comet_shots_test.dart`.

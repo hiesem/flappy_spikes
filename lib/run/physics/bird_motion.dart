@@ -27,7 +27,10 @@ abstract final class BirdMotion {
     // region WP-3c — §3.23 the spring's flap lock runs out with game time
     if (s.flapLock > 0) s.flapLock = math.max(0, s.flapLock - dt);
     // endregion WP-3c
-    s.forwardSpeed = recover(s.forwardSpeed, cruise(s.runClock), dt);
+    // region WP-3a — the comet boost scales the cruise (PRD-2 §3.8)
+    final target = cruise(s.runClock) * s.cruiseMult;
+    // endregion WP-3a
+    s.forwardSpeed = recover(s.forwardSpeed, target, dt);
     final dx = s.forwardSpeed * dt;
     s.camX += dx;
     return dx;

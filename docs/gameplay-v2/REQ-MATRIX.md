@@ -78,7 +78,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.3-23 | Rides: no specials, no gap items, no squeeze start (waits until 2 s after) | 3.0.3 | 0b / 3g | test/run/director/s3_0_3_director_test.dart | done (0b part); 3g pending |
 | R-3.0.3-24 | Portal ride pauses a running Hourglass / Mini / Frenzy and resumes it after landing | 3.0.3, 3.12 | 3f / 3b | test/run/rides/s3_12_ride_rules_test.dart::§3.12 / §3.0.3 a running Hourglass… | 3b done; 3f pending (timer honours `paused`) |
 | R-3.0.3-25 | Portal ride start: all hoops/items ahead fade 0.2 s and are removed; uncaught piggy coins / fireflies not counted missed; piggy / jar placement continues after landing; ride rings crack the egg | 3.0.3 | 3b / 3e | test/run/rides/s3_12_ride_rules_test.dart::§3.12 entering… (cleared; spawner.clearAhead never judges) | 3b done; 3e pending (egg / piggy / jar) |
-| R-3.0.3-26 | Comet flies through what is spawned: rims ignored (saw too), closed switch rings open, nearest pair ring + its gift, springs don't launch, tilt/motion kept, pickups only if touched | 3.0.3, 3.8 | 3a | | todo |
+| R-3.0.3-26 | Comet flies through what is spawned: rims ignored (saw too), closed switch rings open, nearest pair ring + its gift, springs don't launch, tilt/motion kept, pickups only if touched | 3.0.3, 3.8 | 3a | test/run/items/s3_8_comet_test.dart::§3.8 / §3.0.3 the comet flies through what is spawned…; test/run/items/s3_8_comet_test.dart::§3.8 the comet steers to the ring nearest its line… | done (3a part: rims / mistakes / closed-switch verdict ignored, nearest pair ring, pickups by touch); switch opening look 3d, spring no-launch 3c |
 | R-3.0.3-27 | Only hoops spawned before a ride can be angled or moving | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.3-28 | Pickup hit test: distance(bird, pickup) − bird r (× 0.52 Mini) ≤ radius; radii heart 16, shield 18, feather 18, piece 22, switch 18, comet 18, egg 16, piggy 18, jar 18, capsule 18, piggy coin 10, star 10, firefly 16 | 3.0.3 | 0b (base) | test/run/s7_run_parts_test.dart::§3.0.3 pickup hit radii; test/run/flow/s3_0_run_core_flow_test.dart::§3.0.3 pickups* | done |
 | R-3.0.3-29 | Per-run order players meet things matches the table (typical run; flow test over seeds) | 3.0.3 | 0b | test/run/director/s3_0_8_first_meet_test.dart::§3.0.8 every element is met… | done |
@@ -151,7 +151,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.8-E10 | Element: Lucky Spin | 3.0.7 | 3c | test/run/flow/s3_19_s3_22_s3_25_autopilot_test.dart | done (WP-3c) |
 | R-3.0.8-E11 | Element: saw ring (3 designs) | 3.0.7 | 3d | | todo |
 | R-3.0.8-E12 | Element: portal roller-coaster | 3.0.7 | 3b | test/run/rides/s3_12_portal_ride_test.dart; test/run/rides/s3_12_portal_autopilot_test.dart | done |
-| R-3.0.8-E13 | Element: comet boost | 3.0.7 | 3a | | todo |
+| R-3.0.8-E13 | Element: comet boost | 3.0.7 | 3a | test/run/items/s3_8_comet_test.dart; test/run/items/s3_8_comet_autopilot_test.dart; test/run/shots/comet_shots_test.dart | done |
 | R-3.0.8-E14 | Element: heart → extra life | 3.0.7 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 three hearts give one extra life …; test/run/items/s3_3_s3_7_lives_test.dart::§3.3 a heart pickup on the bird is collected by touch … | done |
 | R-3.0.8-E15 | Element: shield | 3.0.7 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the shield pickup arms the shield … | done |
 | R-3.0.8-E16 | Element: Star Trail | 3.0.7 | 3e | | todo |
@@ -183,7 +183,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.9-9 | Perfect burst: 8 + 3 × min(tier,3) squares, 5–8 pt, pink/gold/soft pink, 25–55 pt, 350–600 ms, no rotation, no shockwave | 3.0.9 #9 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #9 5–8 pt, 25–55 pt, 350–600 ms, no rotation, 3 colours; test/run/items/s3_4_streak_test.dart::§3.0.9 #9 perfect burst at the bird | done |
 | R-3.0.9-10 | Block trail tier 3+: 8–13 pt squares every ≈ 33 ms, 50/50 `#FFB529`/`#EC008C`, 0.9 → 0 in 450 ms, 26 pt behind along flight direction ± 8, drifting 70 pt opposite | 3.0.9 #10 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #10 spawned 26 pt behind along the flight direction, drifts 70 pt opposite; shot: 10_trail_direction.png; test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier (trail active at tier 3+); shot: tier3_blocks_*.png | done |
 | R-3.0.9-11 | Ring tier looks: pink → gold (`#FFB529`/`#D48A00`) → bright gold (`#FFD54A`/`#E0A800`); stars 9–15 / 10–17 / 12–24 pt at 7 / 16 / 38 per s per ring, 0.5–0.9 s; tier 3+ glow sprite + flame flicks | 3.0.9 #11 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.3 sparkles at 7 / 16 / 38 per second, sizes per tier; shot: 04_ringtier_*.png; test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier | done |
-| R-3.0.9-12 | Speed lines kept separate: comet (2 pt, 30–110, 0.7, ≈ 34 ms, −460 pt in 260 ms); cannon (70 × 2, 0.7, −420 in 380 ms; vertical 2 × 60 in ride); themed (2 pt, 60 pt, 0.55, ≈ 500 pt over 0.38 s along flight) | 3.0.9 #12 | 3a / 3b | test/run/rides/s3_12_ride_rules_test.dart::§3.0.9 #12 cannon / sea… | 3b done; 3a pending |
+| R-3.0.9-12 | Speed lines kept separate: comet (2 pt, 30–110, 0.7, ≈ 34 ms, −460 pt in 260 ms); cannon (70 × 2, 0.7, −420 in 380 ms; vertical 2 × 60 in ride); themed (2 pt, 60 pt, 0.55, ≈ 500 pt over 0.38 s along flight) | 3.0.9 #12 | 3a / 3b | test/run/rides/s3_12_ride_rules_test.dart::§3.0.9 #12 cannon / sea…; test/run/items/s3_8_comet_test.dart::§5.6 / §3.0.9 #12 comet speed streaks… | done |
 | R-3.0.9-13 | No full-screen flash on perfect passes at any tier | 3.0.9 #13 | 2b | test/run/items/s3_4_streak_test.dart::§3.0.9 #13 no screen flash | done |
 | R-3.0.9-14 | Coin icon = coin.png everywhere | 3.0.9 #14 | 0c | lib/run/effects/coin_icon.dart (CoinIcon); shot: 08_coin_popup_timeline.png | part (master 0c) |
 | R-3.0.9-15 | Dust / feather puff: 12–22 particles 4–9 pt in the surface colour, ±140 / −90…−10 pt/s, slow down, fade 0.6–1 s (tumble bounce, landings) | 3.0.9 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 dust: 12–22 round particles 4–9 pt, up 10–90 pt/s, 0.6–1 s | part (master 0c; wiring 1a) |
@@ -254,7 +254,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.5-2 | Tier 0 pink, tier 1 light gold sparkles, tier 2 gold rings + gold bird, tier 3+ heavier sparkles + flame flicks + glow + bright gold + block trail | 3.5 | 2b | test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier | done |
 | R-3.5-3 | Streak break: all rings instantly return to pink, effects stop | 3.5 | 2b | test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier; test/run/items/s3_4_streak_test.dart::§3.4 a save or a death breaks the streak | done |
 | R-3.5-4 | Banner, +2 popup, small burst and tier sound still fire per pass; tier 4+ confetti + full-screen flash removed | 3.5 | 2b | test/run/items/s3_4_streak_test.dart::§3.4 perfect passes build the streak; test/run/items/s3_4_streak_test.dart::§3.0.9 #9 perfect burst at the bird; test/run/items/s3_4_streak_test.dart::§3.0.9 #13 no screen flash | done |
-| R-3.5-5 | Comet: hoops count as perfect, build streak, same banners/sounds; streak carries on after | 3.5 | 3a | | todo |
+| R-3.5-5 | Comet: hoops count as perfect, build streak, same banners/sounds; streak carries on after | 3.5 | 3a | test/run/items/s3_8_comet_test.dart::§3.8 during the boost …; test/run/items/s3_8_comet_test.dart::§3.8 / §3.9 the end … the streak carries on | done |
 | R-3.5-6 | Performance: sparkles children of each ring, pooled, capped (≈ 38/s per ring, ≤ 3 rings); one glow sprite per ring | 3.5 | 0c / 2b | test/run/effects/s3_0_9_parts_test.dart::§3.5 a streak break clears every effect at once; test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier (one RingTierFx per ring, painted with the ring) | done |
 
 ## 3.6 Big Hoops (run side)
@@ -284,14 +284,14 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.8-1 | Pickup: gold 4-point star with pink/gold tail hanging 20 pt past the plane of a normal (upright, still) hoop; collected by flying through | 3.8 | 3a | | todo |
-| R-3.8-2 | Spawn first 10–30, then +45–60; also the COMET pair gift | 3.8 | 0b / 3a | test/run/director/s3_0_3_director_test.dart | done (0b part); 3a pending |
-| R-3.8-3 | On collection: pop (white flash, squares, gold ring); bird inside the fireball | 3.8 | 3a | | todo |
-| R-3.8-4 | 10 s; scroll eases to 1.7 × cruise (0.45 s); hoops spawned during are 118 pt upright still; existing hoops keep motion; comet flies through as 3.0.3 | 3.8 | 3a | | todo |
-| R-3.8-5 | Bird flies itself; taps ignored; white speed streaks; gold countdown ring with seconds left | 3.8 | 3a | | todo |
-| R-3.8-6 | Hoops score + coins and count as perfect (banner, burst, +2, tier sounds, ring field) | 3.8 | 3a | | todo |
-| R-3.8-7 | Last 0.9 s eases speed down; bird pops back; control returns; no extra invulnerability | 3.8 | 3a | | todo |
-| R-3.8-8 | Combines with extra life and shield (shield circle around the comet) | 3.8 | 3a | | todo |
+| R-3.8-1 | Pickup: gold 4-point star with pink/gold tail hanging 20 pt past the plane of a normal (upright, still) hoop; collected by flying through | 3.8 | 3a | test/run/items/s3_8_comet_test.dart::§3.8 / §3.0.3 the comet hoop …; test/run/items/s3_8_comet_autopilot_test.dart; shots: build/shots/run/comet/comet_{pickup,active,tier,landing}_711.png, comet_active_568.png (test/run/shots/comet_shots_test.dart) | done |
+| R-3.8-2 | Spawn first 10–30, then +45–60; also the COMET pair gift | 3.8 | 0b / 3a | test/run/director/s3_0_3_director_test.dart; test/run/items/s3_8_comet_test.dart::§3.21 a pair COMET gift …; test/run/items/s3_8_comet_test.dart::§3.0.8 first meet … | done (the pair gift fires through `PickupCollected(comet, null)`, emitted by 3d) |
+| R-3.8-3 | On collection: pop (white flash, squares, gold ring); bird inside the fireball | 3.8 | 3a | test/run/items/s3_8_comet_test.dart::§3.8 the pop …; shots: build/shots/run/comet/comet_{pickup,active,tier,landing}_711.png, comet_active_568.png (test/run/shots/comet_shots_test.dart) | done |
+| R-3.8-4 | 10 s; scroll eases to 1.7 × cruise (0.45 s); hoops spawned during are 118 pt upright still; existing hoops keep motion; comet flies through as 3.0.3 | 3.8 | 3a | test/run/items/s3_8_comet_test.dart::§3.8 10 s at 1.7 × cruise …; test/run/items/s3_8_comet_test.dart::§3.8 during the boost … | done |
+| R-3.8-5 | Bird flies itself; taps ignored; white speed streaks; gold countdown ring with seconds left | 3.8 | 3a | test/run/items/s3_8_comet_test.dart::§3.8 / §3.9 / §6 collecting the star … taps are ignored; test/run/items/s3_8_comet_test.dart::§5.6 / §3.0.9 #12 comet speed streaks …; shots: build/shots/run/comet/comet_{pickup,active,tier,landing}_711.png, comet_active_568.png (test/run/shots/comet_shots_test.dart) | done |
+| R-3.8-6 | Hoops score + coins and count as perfect (banner, burst, +2, tier sounds, ring field) | 3.8 | 3a | test/run/items/s3_8_comet_test.dart::§3.8 during the boost … | done |
+| R-3.8-7 | Last 0.9 s eases speed down; bird pops back; control returns; no extra invulnerability | 3.8 | 3a | test/run/items/s3_8_comet_test.dart::§3.8 / §3.9 the end … | done |
+| R-3.8-8 | Combines with extra life and shield (shield circle around the comet) | 3.8 | 3a | test/run/items/s3_8_comet_test.dart::§3.8 combines with the shield and the extra life … | done |
 
 ## 3.9 Powerup sounds
 
@@ -299,7 +299,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 |---|---|---|---|---|---|
 | R-3.9-1 | `pu_heart_1` on 1st/2nd heart; `pu_heart_2` on the 3rd (badge appears at once); `pu_heart_use` when the extra life absorbs | 3.9 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 three hearts give one extra life …; test/run/items/s3_3_s3_7_lives_test.dart::§3.3 the extra life forgives one mistake … | done |
 | R-3.9-2 | `pu_shield_get` on collection; `pu_shield_hit` on absorb | 3.9 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the shield pickup arms the shield …; test/run/items/s3_3_s3_7_lives_test.dart::§3.7 / §3.3 save order … | done |
-| R-3.9-3 | `pu_comet_get` on collection; `pu_comet_loop` from ≈ 1.2 s until the end (fade ≈ 0.3 s, ≈ 30 % volume, BGM-style looping player); `pu_comet_end` at the end | 3.9 | 3a | | todo |
+| R-3.9-3 | `pu_comet_get` on collection; `pu_comet_loop` from ≈ 1.2 s until the end (fade ≈ 0.3 s, ≈ 30 % volume, BGM-style looping player); `pu_comet_end` at the end | 3.9 | 3a | test/run/items/s3_8_comet_test.dart::§3.8 / §3.9 the end …; test/run/items/s3_8_comet_test.dart::§3.9 a paused run silences the comet loop … | done |
 | R-3.9-4 | `pu_portal`, `pu_cannon_aim`, `pu_cannon_shot`, `pu_land` at their moments | 3.9 | 3b | test/run/rides/s3_12_portal_ride_test.dart (pu_portal, pu_cannon_aim, pu_cannon_shot, pu_land) | done |
 | R-3.9-5 | All through low-latency AudioPool (loops via the looping player); peak ≈ −1.4 dBFS | 3.9 | 0b (API) | test/run/director/s3_0_3_director_test.dart | done |
 
@@ -519,7 +519,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.20-6 | Closed ring reached: crash animation + mistake; with a save the ring counts as passed (no score); streak resets | 3.20 | 3d | | todo |
 | R-3.20-7 | Always readable as closed; switch matches its ring (Iris draws a cable); no text tutorial | 3.20 | 3d | | todo |
 | R-3.20-8 | Spawn from 12, weight 14, ≥ 8 apart; not near the portal; never first after revive; upright still; not in rides or squeeze | 3.20 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.20-9 | Comet opens a closed switch ring already on screen | 3.20 | 3a / 3d | | todo |
+| R-3.20-9 | Comet opens a closed switch ring already on screen | 3.20 | 3a / 3d | test/run/items/s3_8_comet_test.dart::§3.8 / §3.0.3 the comet flies through what is spawned… | part (3a: no closed-switch verdict in a ride); the opening look is 3d |
 | R-3.20-10 | Big Hoops grows the ring (own design), switch stays the same size | 3.20 | 3d | | todo |
 | R-3.20-11 | Own look (no tier look); counts for the streak once open | 3.20 | 3d | | todo |
 | R-3.20-12 | One `SwitchRing` kind with pluggable designs (barrier, decorations, switch sprite, open timeline, crash); autopilot steers to the switch first | 7 | 3d | | todo |
@@ -652,10 +652,10 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.5-2 | On a mistake: badge pops into hearts, indicator resets, bird flashes 2 s (25 % ↔ 100 % every 0.1 s) | 5.5 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 the extra life forgives one mistake …; shot: build/shots/run/lives/extra_life_pop_*.png | done |
 | R-5.5-3 | Shield icon (pink fill, gold border, gold star white outline) for pickup and HUD | 5.5 | 2a | shot: build/shots/run/lives/shield_circle_*.png | done |
 | R-5.5-4 | Shield circle 84 pt, gold 3.5 pt ring, 28 % soft-pink fill, dashed white inner ring 90°/s, pulse ±5 %, forms with a gold ring burst, hit: white flash + 12 shards | 5.5 | 2a | shot: build/shots/run/lives/shield_circle_*.png, shield_hit_*.png; test/run/items/s3_3_s3_7_lives_test.dart::§3.7 / §3.3 save order … (12 triangles) | done |
-| R-5.6-1 | Comet pickup 46 pt star, white 2 pt outline, inner white star, pink + gold tail; wobble ±14°, pulse ±8 % | 5.6 | 3a | | todo |
-| R-5.6-2 | Bird inside the fireball (bird 90 %, pink/gold shell, triangle tail), pixel-block shower | 5.6 | 3a | | todo |
-| R-5.6-3 | Countdown ring r 34, gold 6 pt, drains 10 s inside the graphic; "10s → 1s" gold 18 pt 50 pt below | 5.6 | 3a | | todo |
-| R-5.6-4 | Banners replace each other (never stack) during the boost; HUD unchanged | 5.6 | 3a / 0c | test/run/effects/s3_0_9_parts_test.dart::§5.6 banners replace each other, never stack | part (BannerHost 0c) |
+| R-5.6-1 | Comet pickup 46 pt star, white 2 pt outline, inner white star, pink + gold tail; wobble ±14°, pulse ±8 % | 5.6 | 3a | test/run/items/s3_8_comet_test.dart::§5.6 the pickup …; shots: build/shots/run/comet/comet_{pickup,active,tier,landing}_711.png, comet_active_568.png (test/run/shots/comet_shots_test.dart) | done |
+| R-5.6-2 | Bird inside the fireball (bird 90 %, pink/gold shell, triangle tail), pixel-block shower | 5.6 | 3a | test/run/items/s3_8_comet_test.dart::§5.6 the fireball and countdown …; shots: build/shots/run/comet/comet_{pickup,active,tier,landing}_711.png, comet_active_568.png (test/run/shots/comet_shots_test.dart) | done (the pixel shower is the master #10 trail) |
+| R-5.6-3 | Countdown ring r 34, gold 6 pt, drains 10 s inside the graphic; "10s → 1s" gold 18 pt 50 pt below | 5.6 | 3a | test/run/items/s3_8_comet_test.dart::§5.6 the fireball and countdown …; shots: build/shots/run/comet/comet_{pickup,active,tier,landing}_711.png, comet_active_568.png (test/run/shots/comet_shots_test.dart) | done |
+| R-5.6-4 | Banners replace each other (never stack) during the boost; HUD unchanged | 5.6 | 3a / 0c | test/run/effects/s3_0_9_parts_test.dart::§5.6 banners replace each other, never stack; shots: build/shots/run/comet/comet_{pickup,active,tier,landing}_711.png, comet_active_568.png (test/run/shots/comet_shots_test.dart) | done |
 | R-5.7-1 | HUD row y 52, 38 tall: heart indicator x 14 (38 × 38, fg 18 % panel) | 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
 | R-5.7-2 | Versus bar x 60 → 260: two 90 × 38 boxes (you pink + dark-pink avatar outside; opponent stage grey), VS between, scores 26 pt; gold 3 pt outline flash when the opponent scores | 5.7 | 2d / 5b | test/run/screens/s5_7_hud_pause_test.dart; test/run/shots/revive_hud_shots_test.dart | part (placeholder: boxes, scores on runClock, gold flash; live avatars / out state 5b) |
 | R-5.7-3 | Name chips 90 × 22 at y 92, white, plum Fredoka SemiBold 15 pt, ellipsis; VS same font | 5.7 | 2d | test/run/shots/revive_hud_shots_test.dart | done |
@@ -785,7 +785,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-6-2 | `big_hoops_used` | 6 | existing / 2a verify | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the home-slot shield …; test/run/items/s3_6_big_hoops_test.dart::§3.6 the home-slot Big Hoops … (big_hoops_used) | done |
 | R-6-3 | `heart_collected` | 6 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 three hearts give one extra life … | done |
 | R-6-4 | `extra_life_used` (cause: missed_hoop / spikes) | 6 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 the extra life forgives one mistake … | done |
-| R-6-5 | `comet_collected` | 6 | 3a | | todo |
+| R-6-5 | `comet_collected` | 6 | 3a | test/run/items/s3_8_comet_test.dart::§3.8 / §3.9 / §6 collecting the star … (comet_collected {source}) | done |
 | R-6-6 | `shield_collected` | 6 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the shield pickup arms the shield … | done |
 | R-6-7 | `shield_used` | 6 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 / §3.3 save order … | done |
 | R-6-8 | `portal_entered` (ride: cannon / space / volcano / sea / pinball / storm) | 6 | 3b | test/run/rides/s3_12_portal_ride_test.dart (portal_entered {ride}) | done |
@@ -919,7 +919,7 @@ the looping player).
 | R-S-1 | `perfect_1`, `perfect_2`, `perfect_3` | 3.4 | 0b ship / 2b use | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | shipped (0b); use pending |
 | R-S-2 | `pu_heart_1`, `pu_heart_2`, `pu_heart_use` | 3.9 | 0b / 2a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done |
 | R-S-3 | `pu_shield_get`, `pu_shield_hit` | 3.9 | 0b / 2a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done |
-| R-S-4 | `pu_comet_get`, `pu_comet_loop` (loop), `pu_comet_end` | 3.9 | 0b / 3a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 3a pending |
+| R-S-4 | `pu_comet_get`, `pu_comet_loop` (loop), `pu_comet_end` | 3.9 | 0b / 3a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled; test/run/items/s3_8_comet_test.dart::§3.8 / §3.9 the end … | done |
 | R-S-5 | `pu_portal`, `pu_cannon_aim`, `pu_cannon_shot`, `pu_land` | 3.9 | 0b / 3b | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 3b pending |
 | R-S-6 | `miss_shock` | 5.13 | 0b / 1a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 1a pending |
 | R-S-7 | `rv_pay`, `rv_ignite`, `rv_burst`, `rv_locked` | 5.9 | 0b / 2d | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 2d pending |

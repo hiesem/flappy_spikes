@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../elements.dart';
 import 'pickup.dart';
+import 'comet_star.dart';
 import 'heart_pickup.dart';
 import 'shield_pickup.dart';
 
@@ -15,6 +16,9 @@ final Map<ElementId, PickupKind Function()> _kinds = {
   ElementId.heart: HeartPickupKind.new,
   ElementId.shield: ShieldPickupKind.new,
   // endregion WP-2a
+  // region WP-3a — the comet star (PRD-2 §3.8)
+  ElementId.comet: CometStarKind.new,
+  // endregion WP-3a
 };
 
 /// Elements switched on without a pickup of their own (e.g. capsule types

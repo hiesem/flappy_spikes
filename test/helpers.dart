@@ -397,3 +397,23 @@ Hoop? firstHoopOf(FlappySpikesGame g, HoopKindId kind) {
   return null;
 }
 // endregion WP-3c
+
+// region WP-3a — comet boost (PRD-2 §3.8)
+/// Flies on with the hoop-aware bot until no ride (comet boost, portal) is
+/// running, so a journey that then stops flapping or tests the mistake
+/// pipeline is in normal flight again (a ride ignores taps and mistakes,
+/// §3.8 / §3.12). The first-meet guarantee (§3.0.8) brings the comet in
+/// every fresh run from hoop 10.
+Future<void> flyOutOfRide(FlappySpikesGame g, {double maxSeconds = 30}) async {
+  final run = g.run;
+  if (run == null) return;
+  final bot = Autopilot(run);
+  for (var f = 0; f < maxSeconds * 60; f++) {
+    if (run.state.ride == null || g.state != GameState.playing) break;
+    if (bot.shouldFlap()) g.onScreenTap();
+    g.update(1 / 60);
+    if (f % 10 == 0) await flushAndMount(g);
+  }
+  await flushAndMount(g);
+}
+// endregion WP-3a

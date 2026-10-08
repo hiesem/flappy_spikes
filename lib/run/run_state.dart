@@ -113,6 +113,12 @@ class RunState {
   int coinRevives = 0;
   // endregion WP-2d
 
+  // region WP-3a — comet boost (PRD-2 §3.8)
+  /// The cruise multiplier the forward motion recovers toward (1; the comet
+  /// boost eases it to 1.7 and back, `BirdMotion.step`).
+  double cruiseMult = 1;
+  // endregion WP-3a
+
   // bookkeeping for analytics and tests
   /// run_director_hoops / _items (spawned).
   final Map<String, int> spawned = {};

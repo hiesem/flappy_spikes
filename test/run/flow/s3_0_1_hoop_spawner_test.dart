@@ -55,10 +55,11 @@ void main() {
         for (var i = 0; i < spawns.length; i++) {
           final (hoop, plan, cam) = spawns[i];
           expect(plan.index, i);
-          // Never pops into view (one frame of scrolling at most).
+          // Never pops into view (one frame of scrolling at most; WP-3a:
+          // up to 1.7 × cruise ≈ 4.5 pt per frame in a comet boost).
           expect(
             plan.trackX - cam,
-            greaterThanOrEqualTo(320 + 60 - 4),
+            greaterThanOrEqualTo(320 + 60 - (plan.duringRide ? 5 : 4)),
             reason: 'hoop $i spawned at ${plan.trackX - cam} on screen',
           );
           if (i > 0) {
@@ -67,7 +68,15 @@ void main() {
               closeTo(RunConfig.spacing, 1e-6),
             );
           }
-          expect(hoop.opening, closeTo(RunConfig.openingFor(i), 1e-9));
+          // WP-3a: hoops spawned during the comet boost (a ride) are full
+          // size (§3.0.1 "Rides", §3.8).
+          expect(
+            hoop.opening,
+            closeTo(
+              plan.duringRide ? RunConfig.opening0 : RunConfig.openingFor(i),
+              1e-9,
+            ),
+          );
           final m =
               hoop.opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin;
           expect(

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../config/comet_config.dart';
 import 'ride_theme.dart';
 
 /// Master #12 (PRD-2 §3.0.9): the speed lines are **kept separate on
@@ -142,3 +143,65 @@ class RideSpeedLines {
     _h.paint(c);
   }
 }
+
+// region WP-3a — comet boost speed streaks (PRD-2 §5.6, §3.0.9 #12)
+class _Streak {
+  _Streak(this.y, this.len);
+  final double y, len;
+  double t = 0;
+}
+
+/// §5.6 / §3.0.9 #12 the comet boost's own speed streaks (kept separate
+/// from the ride lines on purpose): thin white lines (2 pt, 30–110 pt long,
+/// 0.7) start at x 340 and slide 460 pt to the left in 260 ms, one every
+/// ≈ 34 ms while the boost runs, crossing the screen right to left. Screen
+/// space; drawn under the hoops (the mock's z-order).
+class CometSpeedLines {
+  final List<_Streak> _lines = [];
+  double _acc = 0;
+
+  /// Streaks on screen (tests).
+  int get count => _lines.length;
+
+  /// Spawns while [active]; existing streaks always finish their slide.
+  void update(double dt, double viewHeight, math.Random rnd, {bool active = true}) {
+    _lines.removeWhere((l) => (l.t += dt) >= CometConfig.lineLife);
+    if (!active) {
+      _acc = 0;
+      return;
+    }
+    _acc += dt;
+    while (_acc >= CometConfig.lineEvery) {
+      _acc -= CometConfig.lineEvery;
+      final top = CometConfig.lineTop;
+      final bottom = viewHeight - CometConfig.lineBottomInset;
+      _lines.add(
+        _Streak(
+          top + rnd.nextDouble() * (bottom - top),
+          CometConfig.lineMin +
+              rnd.nextDouble() * (CometConfig.lineMax - CometConfig.lineMin),
+        ),
+      );
+    }
+  }
+
+  void clear() {
+    _lines.clear();
+    _acc = 0;
+  }
+
+  void paint(Canvas c) {
+    if (_lines.isEmpty) return;
+    _white.color = const Color(0xFFFFFFFF).withValues(alpha: CometConfig.lineAlpha);
+    for (final l in _lines) {
+      final x =
+          CometConfig.lineStartX -
+          CometConfig.lineTravel * (l.t / CometConfig.lineLife);
+      c.drawRect(
+        Rect.fromLTWH(x, l.y, l.len, CometConfig.lineThickness),
+        _white,
+      );
+    }
+  }
+}
+// endregion WP-3a

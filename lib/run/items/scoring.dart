@@ -4,7 +4,9 @@ import 'package:flame/components.dart';
 
 import '../../game/sound.dart';
 import '../../menu/wallet.dart';
+import '../../versus/timeline.dart' show PointFlags;
 import '../config/run_config.dart';
+import '../director/plans.dart' show HoopKindId;
 import '../effects/coin_popup.dart';
 import '../effects/shock_ring.dart';
 import '../hoops/ring_painter.dart';
@@ -44,7 +46,11 @@ class ScoringFeature extends RunFeature {
   void _onPassed(HoopPassed e) {
     final c = _c;
     if (c == null) return;
-    c.addScore(1);
+    // region WP-3c — §3.13 / §3.22 Ring Train points carry the `train` flag
+    // (the versus cheat filter skips the 0.9 s gap check for them)
+    final train = e.hoop?.plan.kind == HoopKindId.train;
+    c.addScore(1, flags: train ? PointFlags.train : PointFlags.none);
+    // endregion WP-3c
     final perfect = e.perfect;
     final coins = perfect ? 2 : 1;
     c.earn(coins, perfect ? CoinSource.perfect : CoinSource.hoop);

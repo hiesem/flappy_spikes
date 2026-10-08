@@ -6,6 +6,7 @@ import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/hoops/hoop.dart';
 import 'package:flappy_spikes/run/run_events.dart';
+import 'package:flappy_spikes/run/hoops/kinds/train.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers.dart';
@@ -36,10 +37,12 @@ void main() {
         for (final hoop in run.spawner.hoops) {
           spawns.add((hoop, hoop.plan, run.state.camX));
         }
-        run.events.on<HoopSpawned>(
-          (e) => spawns.add((e.hoop, e.plan, run.state.camX)),
-        );
-        final flight = await flyRun(game, maxSeconds: 60, untilHoops: 25);
+        run.events.on<HoopSpawned>((e) {
+          // WP-3c: a Ring Train's rings 2 and 3 belong to the same slot.
+          if (e.plan.extra is TrainRing) return;
+          spawns.add((e.hoop, e.plan, run.state.camX));
+        });
+        final flight = await flyRun(game, maxSeconds: 80, untilHoops: 32);
         expect(
           flight.hoops,
           greaterThanOrEqualTo(25),
@@ -58,7 +61,7 @@ void main() {
           );
           if (i > 0) {
             expect(
-              plan.trackX - spawns[i - 1].$2.trackX,
+              plan.trackX - spawns[i - 1].$2.lastRingX,
               closeTo(RunConfig.spacing, 1e-6),
             );
           }

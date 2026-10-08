@@ -3,6 +3,14 @@ import 'package:flutter/foundation.dart';
 import '../../elements.dart';
 import '../hoop_kind.dart';
 import 'normal.dart';
+// region WP-3c — Bullseye / Train / Spring / Lucky Spin / FEVER
+import 'bullseye.dart';
+import 'fever.dart';
+import 'lucky_spin.dart';
+import 'spring.dart';
+import 'train.dart';
+
+// endregion WP-3c
 
 /// Registered hoop kinds (ARCH §1.5). A kind that is not registered here is
 /// never offered by the director. One registration line per WP, inside its
@@ -10,6 +18,14 @@ import 'normal.dart';
 final Map<HoopKindId, HoopKind Function()> _kinds = {
   // region anchors — append below (one region per WP)
   // endregion anchors
+  // region WP-3c — Bullseye, Ring Train, Spring Ring, Lucky Spin, FEVER
+  // (PRD-2 §3.19, §3.22–§3.25)
+  HoopKindId.bullseye: BullseyeHoopKind.new,
+  HoopKindId.train: TrainHoopKind.new,
+  HoopKindId.spring: SpringHoopKind.new,
+  HoopKindId.luckySpin: LuckySpinHoopKind.new,
+  HoopKindId.fever: FeverHoopKind.new,
+  // endregion WP-3c
   // region WP-1a — the normal hoop (PRD-2 §3.1)
   HoopKindId.normal: NormalHoopKind.new,
   // endregion WP-1a

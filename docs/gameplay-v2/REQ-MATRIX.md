@@ -142,13 +142,13 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.8-E1 | Element: normal hoop | 3.0.7 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.1 … normal kind …; test/autopilot_test.dart | done |
 | R-3.0.8-E2 | Element: angled ring | 3.0.7 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.10 an angled hoop is rotated around its centre… | done |
 | R-3.0.8-E3 | Element: moving ring | 3.0.7 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 a moving hoop gets its motion and its guide… | done |
-| R-3.0.8-E4 | Element: Bullseye Ring | 3.0.7 | 3c | | todo |
-| R-3.0.8-E5 | Element: Ring Train | 3.0.7 | 3c | | todo |
-| R-3.0.8-E6 | Element: Spring Ring | 3.0.7 | 3c | | todo |
+| R-3.0.8-E4 | Element: Bullseye Ring | 3.0.7 | 3c | test/run/flow/s3_19_s3_22_s3_25_autopilot_test.dart | done (WP-3c) |
+| R-3.0.8-E5 | Element: Ring Train | 3.0.7 | 3c | test/run/flow/s3_19_s3_22_s3_25_autopilot_test.dart | done (WP-3c) |
+| R-3.0.8-E6 | Element: Spring Ring | 3.0.7 | 3c | test/run/flow/s3_19_s3_22_s3_25_autopilot_test.dart | done (WP-3c) |
 | R-3.0.8-E7 | Element: switch ring (5 designs) | 3.0.7 | 3d | | todo |
 | R-3.0.8-E8 | Element: pair of powerup rings | 3.0.7 | 3d | | todo |
-| R-3.0.8-E9 | Element: glowing ring (FEVER) | 3.0.7 | 3c | | todo |
-| R-3.0.8-E10 | Element: Lucky Spin | 3.0.7 | 3c | | todo |
+| R-3.0.8-E9 | Element: glowing ring (FEVER) | 3.0.7 | 3c | test/run/flow/s3_19_s3_22_s3_25_autopilot_test.dart | done (WP-3c) |
+| R-3.0.8-E10 | Element: Lucky Spin | 3.0.7 | 3c | test/run/flow/s3_19_s3_22_s3_25_autopilot_test.dart | done (WP-3c) |
 | R-3.0.8-E11 | Element: saw ring (3 designs) | 3.0.7 | 3d | | todo |
 | R-3.0.8-E12 | Element: portal roller-coaster | 3.0.7 | 3b | | todo |
 | R-3.0.8-E13 | Element: comet boost | 3.0.7 | 3a | | todo |
@@ -496,15 +496,15 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.19-1 | Perfect pass sets streak to max(5, streak + 1); ≥ ×5 already → normal +1 (cap ×10) | 3.19 | 3c | | todo |
-| R-3.19-2 | Bird catches fire until the streak breaks (graze or save); smoke puff + sizzle; visual only; tier look stays, fire on top | 3.19 | 3c | | todo |
-| R-3.19-3 | Feedback: FEVER! banner (≈ 1.6 s, above the tier banner) + tier banner, +2, `perfect_3` + FEVER sound, ring pass effect | 3.19 | 3c | | todo |
-| R-3.19-4 | Rim touch on the FEVER ring: normal hoop behaviour, no FEVER, no fire | 3.19 | 3c | | todo |
-| R-3.19-5 | +1 score, +2 coins; no extra FEVER bonus | 3.19 | 3c | | todo |
-| R-3.19-6 | Only the FEVER ring (and FEVER gift) lights the fire; ×5 via normal passes doesn't | 3.19 | 3c | | todo |
-| R-3.19-7 | Replaces a normal hoop; same opening, rim bounce, spacing, max jump | 3.19 | 3c | | todo |
+| R-3.19-1 | Perfect pass sets streak to max(5, streak + 1); ≥ ×5 already → normal +1 (cap ×10) | 3.19 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
+| R-3.19-2 | Bird catches fire until the streak breaks (graze or save); smoke puff + sizzle; visual only; tier look stays, fire on top | 3.19 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
+| R-3.19-3 | Feedback: FEVER! banner (≈ 1.6 s, above the tier banner) + tier banner, +2, `perfect_3` + FEVER sound, ring pass effect | 3.19 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
+| R-3.19-4 | Rim touch on the FEVER ring: normal hoop behaviour, no FEVER, no fire | 3.19 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
+| R-3.19-5 | +1 score, +2 coins; no extra FEVER bonus | 3.19 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
+| R-3.19-6 | Only the FEVER ring (and FEVER gift) lights the fire; ×5 via normal passes doesn't | 3.19 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
+| R-3.19-7 | Replaces a normal hoop; same opening, rim bounce, spacing, max jump | 3.19 | 3c | test/run/flow/s3_19_s3_22_s3_25_autopilot_test.dart | done (WP-3c) |
 | R-3.19-8 | Spawn from 15, weight 6, ≥ 20 apart; not next to a saw ring or the portal (± 3); not while on fire; never tilted/moving | 3.19 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.19-9 | Not spawned during rides; a burning fire keeps burning through a ride | 3.19 | 3c | | todo |
+| R-3.19-9 | Not spawned during rides; a burning fire keeps burning through a ride | 3.19 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
 | R-3.19-10 | Can spawn during a squeeze (inside the band) | 3.19 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 
 ## 3.20 Switch rings
@@ -543,19 +543,19 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.22-1 | Ring Train: three rings 56 pt apart, ±16 pt steps in one direction, dotted track; one slot (next hoop at normal spacing after the 3rd) | 3.22 | 3c | | todo |
-| R-3.22-2 | Train rings are normal hoops (score, coins, streak, bounce); missing any is a miss | 3.22 | 3c | | todo |
-| R-3.22-3 | Combo dots fill gold; all three → +3 coins (`train`) + TRAIN ×3 banner + rising finish; a miss saved by a life → no combo; a rim touch still counts | 3.22 | 3c | | todo |
+| R-3.22-1 | Ring Train: three rings 56 pt apart, ±16 pt steps in one direction, dotted track; one slot (next hoop at normal spacing after the 3rd) | 3.22 | 3c | test/run/hoops/s3_22_train_test.dart | done (WP-3c) |
+| R-3.22-2 | Train rings are normal hoops (score, coins, streak, bounce); missing any is a miss | 3.22 | 3c | test/run/hoops/s3_22_train_test.dart | done (WP-3c) |
+| R-3.22-3 | Combo dots fill gold; all three → +3 coins (`train`) + TRAIN ×3 banner + rising finish; a miss saved by a life → no combo; a rim touch still counts | 3.22 | 3c | test/run/hoops/s3_22_train_test.dart | done (WP-3c) |
 | R-3.22-4 | Spawn from 8, weight 14, ≥ 10 apart, 2 normal after; not in rides / squeeze | 3.22 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.23-1 | Spring: pass sets vy −770 (up) or +420 (down) per its arrows; flap ignored 0.45 s / 0.28 s | 3.23 | 3c | | todo |
-| R-3.23-2 | Next hoop placed 240 pt above/below (out of normal reach); normal in every other way | 3.23 | 0b / 3c | test/run/director/s3_0_3_director_test.dart | done (0b part); 3c pending |
-| R-3.23-3 | Wobble on pass, "BOING ↑/↓" pop, boing sound | 3.23 | 3c | | todo |
+| R-3.23-1 | Spring: pass sets vy −770 (up) or +420 (down) per its arrows; flap ignored 0.45 s / 0.28 s | 3.23 | 3c | test/run/hoops/s3_23_spring_test.dart | done (WP-3c) |
+| R-3.23-2 | Next hoop placed 240 pt above/below (out of normal reach); normal in every other way | 3.23 | 0b / 3c | test/run/hoops/s3_23_spring_test.dart | done (WP-3c) |
+| R-3.23-3 | Wobble on pass, "BOING ↑/↓" pop, boing sound | 3.23 | 3c | test/run/hoops/s3_23_spring_test.dart | done (WP-3c) |
 | R-3.23-4 | Spawn from 10, weight 12, ≥ 10 apart, 2 normal after; up/down 50/50 with room; not in squeeze | 3.23 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.24-1 | Bullseye: normal hoop + target + dashed lines at ±12 pt (fixed as openings shrink) | 3.24 | 3c | | todo |
-| R-3.24-2 | Centre inside the band = BULLSEYE +3 coins (`bullseye`), banner, flash, thunk + chord | 3.24 | 3c | | todo |
+| R-3.24-1 | Bullseye: normal hoop + target + dashed lines at ±12 pt (fixed as openings shrink) | 3.24 | 3c | test/run/hoops/s3_24_bullseye_test.dart | done (WP-3c) |
+| R-3.24-2 | Centre inside the band = BULLSEYE +3 coins (`bullseye`), banner, flash, thunk + chord | 3.24 | 3c | test/run/hoops/s3_24_bullseye_test.dart | done (WP-3c) |
 | R-3.24-3 | Spawn from 6, weight 20, ≥ 6 apart; upright still; allowed in squeeze | 3.24 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.25-1 | Lucky Spin: wheel on a post above the ring, spins freely, stops ≈ 0.9 s after the pass; slice paid as coins (`lucky_spin`) + banner | 3.25 | 3c | | todo |
-| R-3.25-2 | Slices +2, +5, +10, +3, +20, +5 equal chance; prize pre-rolled at spawn from the `layout` stream; wheel animated to stop on it | 3.25 | 0b / 3c | test/run/director/s3_0_3_director_test.dart | done (0b part); 3c pending |
+| R-3.25-1 | Lucky Spin: wheel on a post above the ring, spins freely, stops ≈ 0.9 s after the pass; slice paid as coins (`lucky_spin`) + banner | 3.25 | 3c | test/run/hoops/s3_25_lucky_spin_test.dart | done (WP-3c) |
+| R-3.25-2 | Slices +2, +5, +10, +3, +20, +5 equal chance; prize pre-rolled at spawn from the `layout` stream; wheel animated to stop on it | 3.25 | 0b / 3c | test/run/hoops/s3_25_lucky_spin_test.dart | done (WP-3c) |
 | R-3.25-3 | Spawn from 15, weight 8, ≥ 18 apart; upright still | 3.25 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.26-1 | Star Trail: 8 stars on an arc 40 pt after → 40 pt before the next hoop, bulging 40 pt up, dotted line; touch collects, rising scale notes | 3.26 | 3e | | todo |
 | R-3.26-2 | All 8 → PERFECT LINE +5 coins (`star_trail`); fewer → "n / 8", nothing; single stars pay nothing | 3.26 | 3e | | todo |
@@ -728,11 +728,11 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.17-5 | Frost death (blue, ice block 0.3 s, cracks 0.38 s, tumble, shatter on the spikes, frozen bird stays) + sounds | 5.17 | 3d | | todo |
 | R-5.17-6 | Black Hole look (black torus 16 pt, photon ring, plasma, void ≈ 36 pt, spiralling stars, ripples, strips bend toward it within ≈ 170 pt; inhale every 3.4 s for 0.9 s) | 5.17 | 3d | | todo |
 | R-5.17-7 | Black Hole death (pulled, stretched, spun, shrunk 0.8 s, rumble + darkening, boom + white shock ring, nothing left) + sounds | 5.17 | 3d | | todo |
-| R-5.18-1 | FEVER ring look: red rim + dark-red outline + orange glow, 30 boiling beads 12×/s, inner gold ring, 3 plasma loops, golden beam ≈ 125 pt with 8 streaks, warm halo, sparkles, embers | 5.18 | 3c | | todo |
-| R-5.18-2 | FEVER pass effect: three light rings 0.09 s apart, ≈ 26 plasma flames, beam/halo flare, warm screen flash ≈ 0.3 s, small shake 6 pt | 5.18 | 3c | | todo |
-| R-5.18-3 | Bird on fire: ≈ 115 teardrop flames/s, warm halo, behind the bird; out: smoke + sizzle | 5.18 | 3c | | todo |
-| R-5.18-4 | FEVER! banner: Opificio 44 pt gradient `#FFF59D` → `#FF9800` → `#E64A19`, plum 7 pt outline, pop 0.6 → 1.1 → 1, tilt + jitter, ≈ 1.6 s above the tier banner | 5.18 | 3c | | todo |
-| R-5.18-5 | Sounds: FEVER pass (whoosh + boom + chord on top of `perfect_3`), burning crackle loop, fire-out sizzle | 5.18 | 3c / 3h | | todo |
+| R-5.18-1 | FEVER ring look: red rim + dark-red outline + orange glow, 30 boiling beads 12×/s, inner gold ring, 3 plasma loops, golden beam ≈ 125 pt with 8 streaks, warm halo, sparkles, embers | 5.18 | 3c | test/run/items/s3_19_fever_test.dart + test/run/shots/special_hoops_shots_test.dart | done (WP-3c) |
+| R-5.18-2 | FEVER pass effect: three light rings 0.09 s apart, ≈ 26 plasma flames, beam/halo flare, warm screen flash ≈ 0.3 s, small shake 6 pt | 5.18 | 3c | test/run/items/s3_19_fever_test.dart + test/run/shots/special_hoops_shots_test.dart | done (WP-3c) |
+| R-5.18-3 | Bird on fire: ≈ 115 teardrop flames/s, warm halo, behind the bird; out: smoke + sizzle | 5.18 | 3c | test/run/items/s3_19_fever_test.dart + test/run/shots/special_hoops_shots_test.dart | done (WP-3c) |
+| R-5.18-4 | FEVER! banner: Opificio 44 pt gradient `#FFF59D` → `#FF9800` → `#E64A19`, plum 7 pt outline, pop 0.6 → 1.1 → 1, tilt + jitter, ≈ 1.6 s above the tier banner | 5.18 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
+| R-5.18-5 | Sounds: FEVER pass (whoosh + boom + chord on top of `perfect_3`), burning crackle loop, fire-out sizzle | 5.18 | 3c / 3h | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
 | R-5.19-1 | Switch rings not stage-tinted; barrier + back half behind the bird, front decorations in front | 5.19 | 3d | | todo |
 | R-5.19-2 | Switch pickups 40–46 pt, bob, halo, twinkles; touch fx + "+1 ●"; Laser button / Iris lever stay to show ON then fade | 5.19 | 3d | | todo |
 | R-5.19-3 | Open words: POWER OFF (green), POWER ON (gold), WAKE UP! (purple), SNIP! (pink); Lockdown uses CLEAR! sign | 5.19 | 3d | | todo |
@@ -749,14 +749,14 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.20-4 | Gift tag (luggage tag, 2 pt outline, icon + word Opificio 14) on a string ≈ 30 pt out from the top/bottom ring; never in the gap or opening | 5.20 | 3d | | todo |
 | R-5.20-5 | Pick feedback: lid flies, icon jumps out, ≈ 22 confetti, colour ring pulse, reward word pops; skipped ring/box/tag shrink to 60 % and fade 0.45 s with a grey puff | 5.20 | 3d | | todo |
 | R-5.20-6 | Sounds: box opens, per reward (5), ring skipped | 5.20 | 3d / 3h | | todo |
-| R-5.21-1 | Train look: pink rings turn gold when passed; dotted track fg 50 % 2.5 pt 6/6 moving toward the bird, 34 pt before → after; progress dots 6.5 pt 20 pt above; banner TRAIN ×3 | 5.21 | 3c | | todo |
-| R-5.21-2 | Train sounds C5 / E5 / G5 per ring; finish high C + chord + rising whistle | 5.21 | 3c / 3h | | todo |
-| R-5.22-1 | Spring look: green `#2EBD6B` / `#1E8A4C`, coils above and below, three chevrons moving in the launch direction; wobble ±7 pt 0.5 s, green burst, "BOING ↑/↓" | 5.22 | 3c | | todo |
-| R-5.22-2 | Spring sound: sine sweep 160 → 720 Hz (up) / 480 → 140 (down) + triangle overtone | 5.22 | 3c / 3h | | todo |
-| R-5.23-1 | Bullseye target (white / red rings at 15 / 11 / 7 / 3.5 pt, 62 % width), band lines from 46 pt before; hit: flash, burst, banner "BULLSEYE!" "+3 coins" | 5.23 | 3c | | todo |
-| R-5.23-2 | Bullseye sound: dart thunk + bright chord | 5.23 | 3c / 3h | | todo |
-| R-5.24-1 | Lucky Spin: 3 pt post, wheel r 24 36 pt above, pointer, six coloured slices with labels, spins 7 rad/s with ticks, slows 8 rad/s² after the pass, banner in slice colour, burst | 5.24 | 3c | | todo |
-| R-5.24-2 | Lucky Spin sounds: ticks, whoosh on pass, 4-note win chord | 5.24 | 3c / 3h | | todo |
+| R-5.21-1 | Train look: pink rings turn gold when passed; dotted track fg 50 % 2.5 pt 6/6 moving toward the bird, 34 pt before → after; progress dots 6.5 pt 20 pt above; banner TRAIN ×3 | 5.21 | 3c | test/run/hoops/s3_22_train_test.dart + test/run/shots/special_hoops_shots_test.dart | done (WP-3c) |
+| R-5.21-2 | Train sounds C5 / E5 / G5 per ring; finish high C + chord + rising whistle | 5.21 | 3c / 3h | test/run/hoops/s3_22_train_test.dart | done (WP-3c) |
+| R-5.22-1 | Spring look: green `#2EBD6B` / `#1E8A4C`, coils above and below, three chevrons moving in the launch direction; wobble ±7 pt 0.5 s, green burst, "BOING ↑/↓" | 5.22 | 3c | test/run/hoops/s3_23_spring_test.dart + test/run/shots/special_hoops_shots_test.dart | done (WP-3c) |
+| R-5.22-2 | Spring sound: sine sweep 160 → 720 Hz (up) / 480 → 140 (down) + triangle overtone | 5.22 | 3c / 3h | test/run/hoops/s3_23_spring_test.dart | done (WP-3c) |
+| R-5.23-1 | Bullseye target (white / red rings at 15 / 11 / 7 / 3.5 pt, 62 % width), band lines from 46 pt before; hit: flash, burst, banner "BULLSEYE!" "+3 coins" | 5.23 | 3c | test/run/hoops/s3_24_bullseye_test.dart + test/run/shots/special_hoops_shots_test.dart | done (WP-3c) |
+| R-5.23-2 | Bullseye sound: dart thunk + bright chord | 5.23 | 3c / 3h | test/run/hoops/s3_24_bullseye_test.dart | done (WP-3c) |
+| R-5.24-1 | Lucky Spin: 3 pt post, wheel r 24 36 pt above, pointer, six coloured slices with labels, spins 7 rad/s with ticks, slows 8 rad/s² after the pass, banner in slice colour, burst | 5.24 | 3c | test/run/hoops/s3_25_lucky_spin_test.dart + test/run/shots/special_hoops_shots_test.dart | done (WP-3c) |
+| R-5.24-2 | Lucky Spin sounds: ticks, whoosh on pass, 4-note win chord | 5.24 | 3c / 3h | test/run/hoops/s3_25_lucky_spin_test.dart | done (WP-3c) |
 | R-5.25-1 | Star Trail look: 8 four-point stars gold with pale core, 8–10 pt, halo, dotted gold line 2/6; collect sparkle; banner PERFECT LINE "8 / 8 stars · +5 coins" or "n / 8" | 5.25 | 3e | | todo |
 | R-5.25-2 | Star Trail sounds: C major C5 → C6 per star, bright chord on all 8 | 5.25 | 3e / 3h | | todo |
 | R-5.26-1 | Egg look (cream oval 8 × 10, ×1.3 pickup, speckles, halo; on the back ≈ 22 pt above; cracks + wobble); hatch burst + banner | 5.26 | 3e | | todo |
@@ -817,16 +817,16 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-6-34 | `sawring_spawned` (design) | 6 | 3d | | todo |
 | R-6-35 | `sawring_passed` (design) | 6 | 3d | | todo |
 | R-6-36 | `sawring_death` (design, used: none / extra_life / shield) | 6 | 3d | | todo |
-| R-6-37 | `fever_ring_spawned` (hoop_index) | 6 | 3c | | todo |
-| R-6-38 | `fever_ring_passed` (perfect, streak_before, streak_after) | 6 | 3c | | todo |
-| R-6-39 | `fever_fire_out` (streak, hoops_burned, cause: graze / extra_life / shield / death) | 6 | 3c | | todo |
+| R-6-37 | `fever_ring_spawned` (hoop_index) | 6 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
+| R-6-38 | `fever_ring_passed` (perfect, streak_before, streak_after) | 6 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
+| R-6-39 | `fever_fire_out` (streak, hoops_burned, cause: graze / extra_life / shield / death) | 6 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
 | R-6-40 | `pair_spawned` (reward_top, reward_bottom) | 6 | 3d | | todo |
 | R-6-41 | `pair_picked` (reward, skipped_reward, top/bottom, perfect) | 6 | 3d | | todo |
 | R-6-42 | `pair_missed` | 6 | 3d | | todo |
-| R-6-43 | `train_completed` | 6 | 3c | | todo |
-| R-6-44 | `spring_used` (up/down) | 6 | 3c | | todo |
-| R-6-45 | `bullseye_hit` | 6 | 3c | | todo |
-| R-6-46 | `lucky_spin` (prize) | 6 | 3c | | todo |
+| R-6-43 | `train_completed` | 6 | 3c | test/run/hoops/s3_22_train_test.dart | done (WP-3c) |
+| R-6-44 | `spring_used` (up/down) | 6 | 3c | test/run/hoops/s3_23_spring_test.dart | done (WP-3c) |
+| R-6-45 | `bullseye_hit` | 6 | 3c | test/run/hoops/s3_24_bullseye_test.dart | done (WP-3c) |
+| R-6-46 | `lucky_spin` (prize) | 6 | 3c | test/run/hoops/s3_25_lucky_spin_test.dart | done (WP-3c) |
 | R-6-47 | `star_trail` (stars) | 6 | 3e | | todo |
 | R-6-48 | `egg_collected` | 6 | 3e | | todo |
 | R-6-49 | `egg_hatched` | 6 | 3e | | todo |
@@ -932,10 +932,10 @@ the looping player).
 | R-S-14 | `notif_b.ogg` → `android/app/src/main/res/raw/notif_chime.ogg` | 3.34 | 4b | integration_test/reminders_e2e_test.dart::WP-4b reminders: permission + the pending 7-day window; `flutter build apk --debug` -> res/raw/notif_chime.ogg | done (19246 B, byte-identical to design/menu_v2/sfx/notif_b.ogg) |
 | R-S-15 | Deliverable: versus intro set (whoosh, ticks, chime, rocket, pop / crackle, thud, boing) | 5.8, 7 | 3h make / 5b use | test/run/sound_pack_test.dart::§7 every cue maps to one existing, non-empty mp3 | done (3h: `vs_*`, 7 files); 5b use pending |
 | R-S-16 | Deliverable: saw-ring hums (3 loops) and deaths (Live Wire zap + thunder + crackles; Frost crunch + hiss, crack, shatter; Black Hole roar + sub drop, boom, inhale) | 5.17, 7 | 3h / 3d | test/run/sound_pack_test.dart::§7 the 4 new loops are SfxLoop entries with a .wav file | done (3h: 3 `SfxLoop` hums + 12 one-shots); 3d use pending |
-| R-S-17 | Deliverable: FEVER pass, burning crackle loop, fire out sizzle | 5.18, 7 | 3h / 3c | test/run/sound_pack_test.dart::§7 the 4 new loops start, keep volume and stop | done (3h: `fever_*`); 3c use pending |
+| R-S-17 | Deliverable: FEVER pass, burning crackle loop, fire out sizzle | 5.18, 7 | 3h / 3c | test/run/sound_pack_test.dart::§7 the 4 new loops start, keep volume and stop | done (3h: `fever_*`); 3c uses them (WP-3c) |
 | R-S-18 | Deliverable: switch rings × 5 designs (touched, opening, crash) + shared "clear" chord | 5.19, 7 | 3h / 3d | test/run/sound_pack_test.dart::§7 every PRD-2 §7 deliverable is a registered Sfx | done (3h: `sw_*`, 16 files); 3d use pending |
 | R-S-19 | Deliverable: pair gifts (box opens, shield, comet, coins, score, FEVER, ring skipped) | 5.20, 7 | 3h / 3d | test/run/sound_pack_test.dart::§7 every PRD-2 §7 deliverable is a registered Sfx | done (3h: `pair_*`, 7 files); 3d use pending |
-| R-S-20 | Deliverable: Ring Train notes + finish; Spring boing up/down; Bullseye thunk + chord; Lucky Spin ticks / whoosh / win chord; Star Trail scale notes + chord | 5.21–5.25, 7 | 3h / 3c / 3e | test/run/sound_pack_test.dart::§7 every PRD-2 §7 deliverable is a registered Sfx | done (3h: `train_*`, `spring_*`, `bull_*`, `lucky_*`, `trail_*`, 21 files); 3c/3e use pending |
+| R-S-20 | Deliverable: Ring Train notes + finish; Spring boing up/down; Bullseye thunk + chord; Lucky Spin ticks / whoosh / win chord; Star Trail scale notes + chord | 5.21–5.25, 7 | 3h / 3c / 3e | test/run/sound_pack_test.dart::§7 every PRD-2 §7 deliverable is a registered Sfx | done (3h: `train_*`, `spring_*`, `bull_*`, `lucky_*`, `trail_*`, 21 files); 3c uses its (WP-3c), 3e pending |
 | R-S-21 | Deliverable: Egg (chime, crack, hatch, peeps, goodbye), Piggy (oink, clink, blip, smash cascade), Jar (chime, twinkle, blip, crack, chord) | 5.26–5.28, 7 | 3h / 3e | test/run/sound_pack_test.dart::§7 every PRD-2 §7 deliverable is a registered Sfx | done (3h: `egg_*`, `piggy_*`, `jar_*`, 14 files); 3e use pending |
 | R-S-22 | Deliverable: Hourglass (slowdown, tick-tock, speed-up), Mini Bird (start, end), Coin Frenzy (start run, cascade, end tone) | 5.29–5.31, 7 | 3h / 3f | test/run/sound_pack_test.dart::§7 every PRD-2 §7 deliverable is a registered Sfx | done (3h: `hourglass_*`, `mini_*`, `frenzy_*`, 8 files); 3f use pending |
 | R-S-23 | Deliverable: rim "tonk" | 3.0.4, 7 | 3h / 1a (placeholder: `sk_tap` until 3h lands) | test/run/sound_pack_test.dart::§7 every PRD-2 §7 deliverable is a registered Sfx | done (3h: `rim_tonk`); 1a wiring pending |

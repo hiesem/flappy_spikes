@@ -2,6 +2,7 @@ import 'hoops/motion/moving_rings_feature.dart';
 import 'items/analytics_router.dart';
 import 'items/big_hoops.dart';
 import 'items/extra_life.dart';
+import 'items/fever.dart'; // WP-3c
 import 'items/invulnerability.dart';
 import 'items/shield.dart';
 import 'items/met_elements.dart';
@@ -23,6 +24,10 @@ List<RunFeature> buildRunFeatures() => [
   // endregion WP-1b
   // region anchors — append below (one region per WP)
   // endregion anchors
+  // region WP-3c — FEVER fire (PRD-2 §3.19, §5.18); before the streak, so
+  // it sees the streak before a pass / save changes it
+  FeverFeature(),
+  // endregion WP-3c
   // region WP-2a — hearts / extra life / shield / Big Hoops (PRD-2 §3.3, §3.6, §3.7)
   BigHoopsFeature(),
   ShieldFeature(),

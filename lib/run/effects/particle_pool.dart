@@ -26,6 +26,13 @@ enum ParticleShape {
   /// The §5.2 heart ([LifeIcons.heart24]) [Particle.w] wide, rotating with
   /// [Particle.rot] (the extra-life badge's pop, §5.5; WP-2a).
   heart,
+
+  // region WP-3c — FEVER flames (PRD-2 §5.18)
+  /// A teardrop flame [Particle.w] wide (the §5.18 fire / plasma burst):
+  /// its radius shrinks to 35 % over the life; with [Particle.ramp] the
+  /// colour runs through the ramp (white → yellow → orange → red).
+  flame,
+  // endregion WP-3c
 }
 
 /// One pooled particle. Plain mutable data, recycled in place.
@@ -54,6 +61,11 @@ class Particle {
   /// Opacity curve exponent: alpha = a0 + (a1 − a0) · k^fadePow (2 = the
   /// mocks' `1 − u²`).
   double fadePow = 1;
+
+  // region WP-3c — colour ramp over the life (PRD-2 §5.18 flames)
+  /// Colours over the life (k 0 → 1), or null for [color].
+  List<Color>? ramp;
+  // endregion WP-3c
 
   double get k => life <= 0 ? 1 : (t / life).clamp(0.0, 1.0);
 }
@@ -106,6 +118,7 @@ class ParticlePool extends Component {
     double drag = 0,
     double damp = 0,
     double fadePow = 1,
+    List<Color>? ramp,
   }) {
     if (_alive >= capacity) return null;
     final p = _items[_alive++]
@@ -128,11 +141,37 @@ class ParticlePool extends Component {
       ..gravity = gravity
       ..drag = drag
       ..damp = damp
-      ..fadePow = fadePow;
+      ..fadePow = fadePow
+      ..ramp = ramp;
     return p;
   }
 
   void clear() => _alive = 0;
+
+  // region WP-3c — flame helpers (PRD-2 §5.18)
+  /// The colour at [k] (0..1) along [ramp] (the mock's `ramp()`).
+  static Color rampColor(List<Color> ramp, double k) {
+    if (ramp.length == 1) return ramp.first;
+    final u = k.clamp(0.0, .999) * (ramp.length - 1);
+    final i = u.floor();
+    return Color.lerp(ramp[i], ramp[i + 1], u - i)!;
+  }
+
+  /// The §5.18 teardrop: a half disc of radius [r] at [c] with a point
+  /// rising 2.2 r above it (the mock's flame path).
+  static void paintFlame(Canvas canvas, Path path, Offset c, double r, Paint paint) {
+    if (r <= 0) return;
+    final x = c.dx, y = c.dy;
+    path
+      ..reset()
+      ..moveTo(x - r, y)
+      ..quadraticBezierTo(x - r, y - r * 1.9, x + r * .2, y - r * 2.2)
+      ..quadraticBezierTo(x + r, y - r * .9, x + r, y)
+      ..arcTo(Rect.fromCircle(center: c, radius: r), 0, math.pi, false)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+  // endregion WP-3c
 
   /// Advances every particle by [dt] and recycles the finished ones
   /// (swap-remove, so live particles stay contiguous).
@@ -189,7 +228,8 @@ class ParticlePool extends Component {
       if (alpha <= 0) continue;
       final s = p.scale0 + (p.scale1 - p.scale0) * k;
       final w = p.w * s, h = p.h * s;
-      _paint.color = p.color.withValues(alpha: p.color.a * alpha.clamp(0, 1));
+      final base = p.ramp == null ? p.color : rampColor(p.ramp!, k);
+      _paint.color = base.withValues(alpha: base.a * alpha.clamp(0, 1));
       switch (p.shape) {
         case ParticleShape.rect:
           if (p.rot == 0) {
@@ -225,6 +265,8 @@ class ParticlePool extends Component {
             ..restore();
         case ParticleShape.twinkle:
           break;
+        case ParticleShape.flame:
+          paintFlame(canvas, _tri, Offset(p.x, p.y), w / 2 * (1 - k * .65), _paint);
         case ParticleShape.heart:
           LifeIcons.paintHeart(
             canvas,

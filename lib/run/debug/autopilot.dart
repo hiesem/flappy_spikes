@@ -262,7 +262,11 @@ class Autopilot {
       }
       if (identical(o, h)) found = true;
     }
-    if (next != null) {
+    // region WP-3c — §3.23 a spring launches the bird toward the next ring
+    // (240 pt away): its crossing height does not set up the next hoop.
+    final launches = h.kind.id == HoopKindId.spring && run.state.ride == null;
+    // endregion WP-3c
+    if (next != null && !launches) {
       cost += (s.y - next.basePosition.y).abs() * .15;
     }
     final room = math.min(s.y - r - top, floor - s.y - r);

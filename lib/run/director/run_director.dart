@@ -371,7 +371,13 @@ class RunDirector {
 
     // Kind-specific checks that need the centre (downgrade → normal).
     if (kind == HoopKindId.spring) {
-      final (lo, hi) = _layout.limits(i + 1, ctx, opening);
+      // region WP-3c — §3.23 "always with room for the next ring inside the
+      // band": the 240 pt target is checked against the band rule (tooth
+      // lines − opening / 2 − 7 − 18), not the row's centre range — that
+      // range is narrower than 240 pt on a 568 pt screen until hoop 50, so
+      // springs (and their first meet) never came up there.
+      final (lo, hi) = _layout.limits(i + 1, ctx, opening, useTable: false);
+      // endregion WP-3c
       var dir = r.nextDouble() < 0.5 ? -1 : 1;
       bool fits(int d) {
         final t = y + d * RunConfig.springJump;

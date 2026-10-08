@@ -249,3 +249,23 @@ class DebugForced extends RunEvent {
 
 // region anchors — append below (one region per WP)
 // endregion anchors
+
+// region WP-3c — FEVER (PRD-2 §3.19, §3.21 FEVER gift)
+/// Lights the FEVER fire from another source than the FEVER ring (the pair
+/// FEVER gift, Q59). `FeverFeature` reacts; the streak part of the gift is
+/// the gift's owner's.
+class FeverIgnite extends RunEvent {
+  const FeverIgnite(this.source);
+
+  /// Analytics source, e.g. 'pair'.
+  final String source;
+}
+
+/// The bird caught fire ([lit]) or the fire went out (cause: graze /
+/// extra_life / shield / death).
+class FeverFireChanged extends RunEvent {
+  const FeverFireChanged({required this.lit, this.cause});
+  final bool lit;
+  final String? cause;
+}
+// endregion WP-3c

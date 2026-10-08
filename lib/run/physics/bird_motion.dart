@@ -24,6 +24,9 @@ abstract final class BirdMotion {
   /// One step of the forward motion: recovery toward the cruise of the
   /// current runClock, then the camera advance. Returns the distance moved.
   static double step(RunState s, double dt) {
+    // region WP-3c — §3.23 the spring's flap lock runs out with game time
+    if (s.flapLock > 0) s.flapLock = math.max(0, s.flapLock - dt);
+    // endregion WP-3c
     s.forwardSpeed = recover(s.forwardSpeed, cruise(s.runClock), dt);
     final dx = s.forwardSpeed * dt;
     s.camX += dx;

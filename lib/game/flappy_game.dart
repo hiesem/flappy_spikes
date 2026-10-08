@@ -714,6 +714,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           startRun();
         }
       case GameState.playing:
+        // region WP-3c — §3.23 flap input is ignored during a spring launch
+        if (_run?.flapLocked ?? false) break;
+        // endregion WP-3c
         _run?.onTap();
         _bird?.flap();
       case GameState.gameOver:
@@ -731,6 +734,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// (PRD-1 §4.2).
   void onPlayfieldTap() {
     if (state == GameState.playing) {
+      // region WP-3c — §3.23 flap input is ignored during a spring launch
+      if (_run?.flapLocked ?? false) return;
+      // endregion WP-3c
       _run?.onTap();
       _bird?.flap();
     }

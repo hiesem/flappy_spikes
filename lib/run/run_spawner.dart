@@ -66,6 +66,17 @@ class RunSpawner {
     run.layers.front.add(hoop.front);
     _hoops.add(hoop);
     run.events.emit(HoopSpawned(hoop, plan));
+    // region WP-3c — the Ring Train's rings 2 and 3 (PRD-2 §3.22)
+    for (final p in kind.extraHoops(plan)) {
+      final extra = Hoop(plan: p, kind: kind);
+      kind.onSpawn(extra, run.ctx);
+      kind.buildVisual(extra, run.ctx);
+      run.layers.back.add(extra);
+      run.layers.front.add(extra.front);
+      _hoops.add(extra);
+      run.events.emit(HoopSpawned(extra, p));
+    }
+    // endregion WP-3c
     for (final a in plan.attached) {
       _spawnItem(a);
     }

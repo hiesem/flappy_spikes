@@ -219,6 +219,12 @@ class RunDirector {
     if (!_forced.contains(ElementId.portal)) _forced.add(ElementId.portal);
   }
 
+  // region WP-3b — portal rides (PRD-2 §3.12)
+  /// §3.12 normal hoops resume after a portal ride: the next slot's plane
+  /// moves to [trackX] (the course jumped while the ride flew).
+  void resumeAt(double trackX) => _nextX = trackX;
+  // endregion WP-3b
+
   /// §3.0.8 the element was met (spawned on screen).
   void markMet(ElementId e) => firstMeet.markMet(e);
 

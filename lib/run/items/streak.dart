@@ -350,7 +350,10 @@ class _TrailComponent extends Component {
     active =
         live &&
         bird != null &&
-        (s.tier >= StreakConfig.trailTier || s.ride != null);
+        (s.tier >= StreakConfig.trailTier || s.ride != null) &&
+        // region WP-3b — no trail while a ride hides the bird (§3.12)
+        !(s.ride?.birdHidden ?? false);
+    // endregion WP-3b
     final vx = s.forwardSpeed;
     final heading = _heading(bird, dt);
     trail.update(

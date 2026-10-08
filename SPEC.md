@@ -662,3 +662,25 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   (and the debug LEVEL UP). The owed reward is stored as
   `unclaimedLevelReward` at the run's end and credited silently at the next
   app start if the app was closed before claiming.
+
+## PRD-2 portal roller-coaster rides (WP-3b, 2026-10-08)
+
+- DEVIATION (PRD-2 §3.12 / §5.12b, new mechanic; 1.0 had none): from hoop
+  25 (then every 40–60 hoops) a **portal** ring (purple / violet with a cyan
+  inner rim and a light beam) replaces a slot. Flying through it counts as a
+  normal pass and starts an automatic ride, one of six picked at random with
+  equal chance, never the same twice in a row (also across runs,
+  `lastPortalRide`): the cannon ride, Space trip, Volcano eruption, Deep sea
+  dive, Pinball machine, Storm & tornado. The ride clears everything ahead
+  (0.2 s fade, never judged), fades the spike strips out, ignores input and
+  cannot end the run (mistakes, rims, spikes are off). The bird follows the
+  ride path (from the live scroll speed to 480 pt/s over 2.2 s) through 11
+  rings at equal arc length — each a perfect pass (+1 score, +2 coins,
+  banner, tier sound, burst, shake), so a ride is +12 score / +24 coins with
+  the portal; then the theme's exit moment, a launch flight (560 / −640
+  pt/s, g 520, 1.7 s), the glide home to (70, viewHeight / 2) (2.5 s +
+  0.6 s settle, `pu_land`) while the strips fade back in with their teeth
+  racing right to left. Normal hoops resume so that the first one reaches the
+  bird ≈ 1 s after the landing. The run clock keeps running; a running
+  Hourglass / Mini / Frenzy is paused for the ride. Ride points carry the
+  `ride` flag in the versus timeline.

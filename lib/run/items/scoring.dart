@@ -11,7 +11,10 @@ import '../hoops/ring_painter.dart';
 import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
+import '../run_layers.dart';
 import '../run_state.dart';
+import '../director/plans.dart' show RideKind;
+import '../../versus/timeline.dart' show PointFlags;
 
 /// What a hoop pass is worth (PRD-2 §3.0.1 score, §3.1 rules, §3.2 coins,
 /// §5.1 pass feedback):
@@ -44,7 +47,9 @@ class ScoringFeature extends RunFeature {
   void _onPassed(HoopPassed e) {
     final c = _c;
     if (c == null) return;
-    c.addScore(1);
+    // region WP-3b — ride points are flagged for the versus timeline (§3.13)
+    c.addScore(1, flags: e.duringRide ? PointFlags.ride : 0);
+    // endregion WP-3b
     final perfect = e.perfect;
     final coins = perfect ? 2 : 1;
     c.earn(coins, perfect ? CoinSource.perfect : CoinSource.hoop);
@@ -63,9 +68,19 @@ class ScoringFeature extends RunFeature {
           c.run.birdTrackPosition() ??
           Vector2(c.s.camX + RunConfig.birdX, c.viewHeight / 2);
     }
-    final fx = c.layers.fx;
+    // region WP-3b — portal rides: the popup stays with the bird on screen
+    // (the ride camera races along the path; §5.12b mock)
+    Component fx = c.layers.fx;
+    final popup = _popups.obtain();
+    if (e.duringRide && c.s.ride?.kind == RideKind.portal) {
+      final b = c.game.runBirdPosition;
+      if (b != null) at = b;
+      fx = c.game.world;
+      popup.priority = RunLayer.fx;
+    }
+    // endregion WP-3b
     fx.add(
-      _popups.obtain()..play(
+      popup..play(
         Offset(at.x, at.y),
         coins,
         doubled: c.s.egg?.stage == EggStage.chick,

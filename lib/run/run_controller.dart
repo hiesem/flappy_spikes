@@ -224,7 +224,7 @@ class RunController extends Component {
     if (_ended) return;
     clock.tick(gameDt);
     state.runClock = clock.t;
-    if (isScrolling) {
+    if (isScrolling && !rideHold) {
       BirdMotion.step(state, gameDt);
       if (state.invulnerable > 0) {
         state.invulnerable = (state.invulnerable - gameDt).clamp(0, 99);
@@ -232,7 +232,7 @@ class RunController extends Component {
     }
     layers.follow(state.camX, state.camY);
     spawner.update(gameDt);
-    if (isScrolling) _stepPhysics(gameDt);
+    if (isScrolling && !rideHold) _stepPhysics(gameDt);
     layers.follow(state.camX, state.camY);
     final scale = state.timeScale <= 0 ? 1 : state.timeScale;
     for (final f in features) {
@@ -561,6 +561,24 @@ class RunController extends Component {
     events.emit(Revived(k, price));
   }
   // endregion WP-2d
+
+  // region WP-3b — portal rides (PRD-2 §3.12)
+  /// The portal ride drives the bird and the camera itself: no forward
+  /// motion, rims, plane tests or spikes while it holds (ARCH §17).
+  bool rideHold = false;
+
+  /// §3.12 a ride ring is passed (always perfect in a ride).
+  void ridePass(Hoop h) {
+    if (h.resolved) return;
+    _pass(h, 0);
+  }
+
+  /// The ride handed the bird back (the next physics step starts fresh).
+  void endRideHold() {
+    rideHold = false;
+    _prevBird = null;
+  }
+  // endregion WP-3b
 
   RunSummary summarize() {
     final s = state;

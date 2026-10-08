@@ -44,7 +44,7 @@ class RunSpawner {
     final edge =
         s.camX + RunConfig.worldWidth + RunConfig.firstHoopOffscreen + 1e-6;
     var guard = 0;
-    while (run.director.nextTrackX <= edge && guard++ < 8) {
+    while (!hold && run.director.nextTrackX <= edge && guard++ < 8) {
       _spawnSlot();
     }
     _announce();
@@ -234,6 +234,26 @@ class RunSpawner {
     }
     return null;
   }
+
+  // region WP-3b — portal rides (PRD-2 §3.12)
+  /// The portal ride holds the course: no slots are planned while true.
+  bool hold = false;
+
+  /// §3.12 the way back: the old course (passed hoops, the portal) goes;
+  /// nothing of it is judged.
+  void clearAll() {
+    for (final h in _hoops) {
+      h.removeFromRun();
+    }
+    for (final p in _pickups) {
+      p.escaped = p.escaped || !p.collected;
+      p.removeFromParent();
+    }
+    _hoops.clear();
+    _pickups.clear();
+    _pending.clear();
+  }
+  // endregion WP-3b
 
   void dispose() {
     for (final h in _hoops) {

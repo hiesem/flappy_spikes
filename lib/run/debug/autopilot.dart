@@ -1,3 +1,4 @@
+import '../hoops/motion/hoop_motion.dart';
 import '../run_controller.dart';
 
 /// The hoop-aware bang-bang bot (ARCH §1.12, PRD-2 §7): aims at the next
@@ -28,6 +29,16 @@ class Autopilot {
     if (h != null) {
       final t = h.kind.autopilotTarget(h, s, bird?.y ?? ty);
       ty = t.preTarget != null ? t.preTarget!.y + 6 : t.y;
+      // region WP-1b — moving rings: aim where the ring will be when the
+      // bird reaches its plane (§3.11), not where it is now.
+      final m = h.motion;
+      if (t.preTarget == null && m is HoopMotion && bird != null) {
+        final birdX = s.camX + bird.x;
+        final v = s.forwardSpeed <= 1 ? 1.0 : s.forwardSpeed;
+        final dt = ((h.position.x - birdX) / v).clamp(0.0, 3.0);
+        ty += m.offsetAt(s.runClock + dt).y - m.offset.y;
+      }
+      // endregion WP-1b
     }
     return ty;
   }

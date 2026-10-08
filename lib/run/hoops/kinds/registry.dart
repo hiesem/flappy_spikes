@@ -14,6 +14,10 @@ final Map<HoopKindId, HoopKind Function()> _kinds = {
 /// Modifier / scheduled elements that ride on hoops (angled, moving, comet,
 /// portal…) and are switched on by their WP.
 final Set<ElementId> _hoopElements = {
+  // region WP-1b — angled and moving rings (PRD-2 §3.10, §3.11)
+  ElementId.angledRing,
+  ElementId.movingRing,
+  // endregion WP-1b
   // region anchors — append below (one region per WP)
   // endregion anchors
 };

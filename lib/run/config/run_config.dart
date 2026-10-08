@@ -194,8 +194,9 @@ abstract final class RunConfig {
   /// §3.11 Orbit ellipse ≈ 50 × 62 pt: max y radius (pt).
   static const double orbitRy = 31;
 
-  /// §3.11 Orbit angular speed (rad/s; path speed ≤ 39 pt/s).
-  static const double orbitOmega = 1.4;
+  /// §3.11 Orbit angular speed (rad/s): path speed ≤ 39 pt/s on the
+  /// 31 pt radius (WP-1b call; the prototype's 1.4 reached 43 pt/s).
+  static const double orbitOmega = 1.25;
 
   /// §3.11 Rock amplitude (deg).
   static const double rockAmplitudeDeg = 15;

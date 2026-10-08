@@ -37,15 +37,15 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
 | R-3.0.2-1 | Heights are fractions of the band between the tooth lines (623 pt at 711, 480 at 568) | 3.0.2 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.0.2-2 | Band table by hoop index (centre range, \|Δy\| median / p90 / max, tilt %, tilt weights, moving %) for 0–2, 3–9, 10–19, 20–34, 35–44, 45+ | 3.0.2 | 0b | | todo |
+| R-3.0.2-2 | Band table by hoop index (centre range, \|Δy\| median / p90 / max, tilt %, tilt weights, moving %) for 0–2, 3–9, 10–19, 20–34, 35–44, 45+ | 3.0.2 | 0b | test/run/director/s3_0_2_layout_ramp_test.dart | done |
 | R-3.0.2-3 | Hoop 0 at exactly 0.50 | 3.0.2 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.0.2-4 | \|Δy\| sampling by linear quantile pieces (u < 0.5 / < 0.9 / else) × band | 3.0.2 | 0b | | todo |
+| R-3.0.2-4 | \|Δy\| sampling by linear quantile pieces (u < 0.5 / < 0.9 / else) × band | 3.0.2 | 0b | test/run/director/s3_0_3_director_test.dart; test/run/director/s3_0_2_layout_ramp_test.dart | done |
 | R-3.0.2-5 | Direction flips vs the previous step with p 0.65; flip if outside the range; then clamp | 3.0.2 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.2-6 | Band rule: centre ≥ opening / 2 + 7 + 18 pt from each tooth line (saw: wider opening; pair: full height); squeezed band during a squeeze | 3.0.2 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.2-7 | The band's max replaces the old 140 pt max jump everywhere | 3.0.2 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.0.2-8 | Tilt and movement only on normal hoops; specials and the comet hoop upright and still | 3.0.2 | 0b / 1b | test/run/director/s3_0_3_director_test.dart | done (0b part); 1b pending |
+| R-3.0.2-8 | Tilt and movement only on normal hoops; specials and the comet hoop upright and still | 3.0.2 | 0b / 1b | test/run/director/s3_0_3_director_test.dart; test/run/director/s3_0_2_layout_ramp_test.dart | done |
 | R-3.0.2-9 | Tilt steps capped at 45° (60° folded into 45°) | 3.0.2 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.0.2-10 | Moving types: 20–44 rail 80 / swing 20; 45+ rail 50 / swing 15 / horizontal 10 / diagonal 10 / orbit 8 / rock 7 | 3.0.2 | 0b / 1b | test/run/director/s3_0_3_director_test.dart | done (0b part); 1b pending |
+| R-3.0.2-10 | Moving types: 20–44 rail 80 / swing 20; 45+ rail 50 / swing 15 / horizontal 10 / diagonal 10 / orbit 8 / rock 7 | 3.0.2 | 0b / 1b | test/run/director/s3_0_3_director_test.dart; test/run/director/s3_0_2_layout_ramp_test.dart | done |
 | R-3.0.2-11 | No moving rings during a squeeze (tilted rings fine) | 3.0.2, 3.17 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.2-12 | Tables mirror `spawn_tables.json` (mirror test), with the PRD overrides | 3.0, 7 | 0b | test/run/config/tables_mirror_test.dart; test/run/director/s3_0_3_director_test.dart | done |
 
@@ -62,7 +62,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.3-7 | Slot order 4: cooldown — next slot normal after a special (2 after train / spring / pair, 3 after portal) | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.3-8 | Slot order 5: special roll with the budget chance, weighted among eligible types (unlocked, min distance, allowed now) | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.3-9 | Slot order 6: comet hoop at `cometAt` (first 10–30, then +45–60) if still normal, no timed powerup, no squeeze window, portal ≥ 10 hoops away both ways | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.0.3-10 | Slot order 7: tilt and movement modifiers from 3.0.2 | 3.0.3 | 0b / 1b | test/run/director/s3_0_3_director_test.dart | done (0b part); 1b pending |
+| R-3.0.3-10 | Slot order 7: tilt and movement modifiers from 3.0.2 | 3.0.3 | 0b / 1b | test/run/director/s3_0_3_director_test.dart; test/run/director/s3_0_2_layout_ramp_test.dart; test/run/hoops/s3_11_moving_rings_test.dart | done |
 | R-3.0.3-11 | Gap order 1: running piggy places 4 coins per gap (4 + 4 × 4 = 20); running jar places a swarm of 7; either fills the gap | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.3-12 | Gap order 2: fixed schedules heart (3, then +17–27; skipped while extra life active, schedule moves on), feather (once, 3–12), piece (once, 14–25); taken gap → next free gap | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.3-13 | Gap order 3: a switch ring's switch takes the gap before it; if taken, the switch ring becomes normal | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
@@ -140,8 +140,8 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.8-8 | Debug: "start at hoop N" (= `startHoopIndex`), "reset met elements", "force portal ride: cannon / space / volcano / sea / pinball / storm" | 3.0.8 | 0b (3b for rides) | test/run/debug/s3_0_8_force_menu_test.dart; test/run/director/s3_0_3_director_test.dart::§3.0.8 debug force* | done |
 | R-3.0.8-9 | Debug menu never compiled into release builds | 3.0.8 | 0b | test/run/debug/s3_0_8_force_menu_test.dart; test/run/director/s3_0_3_director_test.dart::§3.0.8 debug force* | done |
 | R-3.0.8-E1 | Element: normal hoop | 3.0.7 | 1a | | todo |
-| R-3.0.8-E2 | Element: angled ring | 3.0.7 | 1b | | todo |
-| R-3.0.8-E3 | Element: moving ring | 3.0.7 | 1b | | todo |
+| R-3.0.8-E2 | Element: angled ring | 3.0.7 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.10 an angled hoop is rotated around its centre… | done |
+| R-3.0.8-E3 | Element: moving ring | 3.0.7 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 a moving hoop gets its motion and its guide… | done |
 | R-3.0.8-E4 | Element: Bullseye Ring | 3.0.7 | 3c | | todo |
 | R-3.0.8-E5 | Element: Ring Train | 3.0.7 | 3c | | todo |
 | R-3.0.8-E6 | Element: Spring Ring | 3.0.7 | 3c | | todo |
@@ -232,7 +232,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.3-6 | Doesn't stack; no heart spawns while active (schedule moves on) | 3.3 | 2a / 0b | test/run/director/s3_0_3_director_test.dart | done (0b part); 2a pending |
 | R-3.3-7 | Separate from the shield; both can be active | 3.3 | 2a | | todo |
 | R-3.3-8 | Hearts reset at game over (run-only) | 3.3 | 2a | | todo |
-| R-3.3-9 | Spawn: first after hoop 3, then every 17–27, mid-gap; first on line, later 50/50 off by 0.1–0.4 band; never in a hoop or strip; max one on screen | 3.3 | 0b / 2a | test/run/director/s3_0_3_director_test.dart | done (0b part); 2a pending |
+| R-3.3-9 | Spawn: first after hoop 3, then every 17–27, mid-gap; first on line, later 50/50 off by 0.1–0.4 band; never in a hoop or strip; max one on screen | 3.3 | 0b / 2a | test/run/director/s3_0_3_director_test.dart; test/run/hoops/s3_11_moving_rings_test.dart::§3.3 heart placement… | done (0b schedule; 1b placement wiring, placeholder pickup); 2a pending |
 | R-3.3-10 | Big Hoops and hearts independent | 3.3 | 2a | | todo |
 
 ## 3.4 Perfect-pass streak
@@ -307,26 +307,26 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.10-1 | Fixed steps −20, −10, +15, +30, +45 (positive = top leans right), weights by hoop index; none before 10; 45° from 35 | 3.10 | 0b / 1b | test/run/director/s3_0_3_director_test.dart | done (0b part); 1b pending |
-| R-3.10-2 | Effective opening = opening × cos(angle); pass inside the tilted segment | 3.10 | 1b | | todo |
-| R-3.10-3 | Same opening as upright before tilt; band max jump kept; autopilot passes with angled rings | 3.10 | 1b | | todo |
-| R-3.10-4 | Art: the ring rotated around its centre, layers and streak effects as normal; no angle label | 3.10 | 1b | | todo |
-| R-3.10-5 | Other powerups don't change tilting | 3.10 | 1b | | todo |
+| R-3.10-1 | Fixed steps −20, −10, +15, +30, +45 (positive = top leans right), weights by hoop index; none before 10; 45° from 35 | 3.10 | 0b / 1b | test/run/director/s3_0_3_director_test.dart; test/run/director/s3_0_2_layout_ramp_test.dart::§3.10 tilt share and step weights per row… | done |
+| R-3.10-2 | Effective opening = opening × cos(angle); pass inside the tilted segment | 3.10 | 1b | — (pass test in the hoop frame is WP-1a; 1b poses position / angle) | 1b part done; 1a pending |
+| R-3.10-3 | Same opening as upright before tilt; band max jump kept; autopilot passes with angled rings | 3.10 | 1b | test/run/director/s3_0_2_layout_ramp_test.dart; test/run/flow/s3_10_s3_11_autopilot_test.dart (skipped until WP-1a) | 1b part done; autopilot runs after the WP-1a merge |
+| R-3.10-4 | Art: the ring rotated around its centre, layers and streak effects as normal; no angle label | 3.10 | 1b | test/run/hoops/s3_11_moving_rings_test.dart; shot: build/shots/run/rings/5_11_*.png | done |
+| R-3.10-5 | Other powerups don't change tilting | 3.10 | 1b | test/run/director/s3_0_2_layout_ramp_test.dart (tilt is rolled from the hoop index only) | done |
 
 ## 3.11 Moving rings
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.11-1 | Dashed guide with arrowheads scrolls with the ring; visible before the ring is reachable (spawn together) | 3.11, 5.12 | 1b | | todo |
-| R-3.11-2 | Rail slide: up to ±25° off vertical, ±40–60 pt, constant 30–39 pt/s, turns at the ends | 3.11 | 1b | | todo |
-| R-3.11-3 | Swing: hangs from a rope above the top spikes, ±15°, period 1.8 s, ring in line with the rope | 3.11 | 1b | | todo |
-| R-3.11-4 | Horizontal slide (45+): toward/away from the bird ±40–60 pt at 30–39 pt/s | 3.11 | 1b | | todo |
-| R-3.11-5 | Diagonal slide (45+): ±38° diagonal, ±40–60 pt at 30–39 pt/s | 3.11 | 1b | | todo |
-| R-3.11-6 | Orbit (45+): ellipse ≈ 50 × 62, path speed ≤ 39 pt/s, angle ±22° along the path | 3.11 | 1b | | todo |
-| R-3.11-7 | Rock (45+): stays, rocks ±15°, period 3 s | 3.11 | 1b | | todo |
-| R-3.11-8 | Pass judged at the ring's actual position and angle at the crossing | 3.11 | 1b | | todo |
-| R-3.11-9 | Amplitudes capped to stay in the band and within the max jump; autopilot passes with moving rings | 3.11 | 1b | | todo |
-| R-3.11-10 | Moving rings may also be tilted and react to the streak | 3.11 | 1b | | todo |
+| R-3.11-1 | Dashed guide with arrowheads scrolls with the ring; visible before the ring is reachable (spawn together) | 3.11, 5.12 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 a moving hoop gets its motion and its guide…; shot: build/shots/run/rings/5_12_*.png | done |
+| R-3.11-2 | Rail slide: up to ±25° off vertical, ±40–60 pt, constant 30–39 pt/s, turns at the ends | 3.11 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 rail slide…; test/run/director/s3_0_2_layout_ramp_test.dart::§3.11 slides… | done |
+| R-3.11-3 | Swing: hangs from a rope above the top spikes, ±15°, period 1.8 s, ring in line with the rope | 3.11 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 swing…; test/run/director/s3_0_2_layout_ramp_test.dart | done |
+| R-3.11-4 | Horizontal slide (45+): toward/away from the bird ±40–60 pt at 30–39 pt/s | 3.11 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 horizontal slide…; test/run/director/s3_0_2_layout_ramp_test.dart | done |
+| R-3.11-5 | Diagonal slide (45+): ±38° diagonal, ±40–60 pt at 30–39 pt/s | 3.11 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 horizontal slide… (diagonals); test/run/director/s3_0_2_layout_ramp_test.dart | done |
+| R-3.11-6 | Orbit (45+): ellipse ≈ 50 × 62, path speed ≤ 39 pt/s, angle ±22° along the path | 3.11 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 orbit…; test/run/director/s3_0_2_layout_ramp_test.dart | done |
+| R-3.11-7 | Rock (45+): stays, rocks ±15°, period 3 s | 3.11 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 rock…; test/run/director/s3_0_2_layout_ramp_test.dart | done |
+| R-3.11-8 | Pass judged at the ring's actual position and angle at the crossing | 3.11 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 / §3.10 a moving ring is posed at home + offset… | 1b part done (pose at runClock); 1a pass test pending |
+| R-3.11-9 | Amplitudes capped to stay in the band and within the max jump; autopilot passes with moving rings | 3.11 | 1b | test/run/director/s3_0_2_layout_ramp_test.dart::§3.11 fairness…; test/run/flow/s3_10_s3_11_autopilot_test.dart (skipped until WP-1a) | 1b part done; autopilot runs after the WP-1a merge |
+| R-3.11-10 | Moving rings may also be tilted and react to the streak | 3.11 | 1b | test/run/hoops/s3_11_moving_rings_test.dart::§3.11 / §3.10 a moving ring is posed… (tilt + motion) | done (streak look: 2b) |
 
 ## 3.12 Portal roller-coaster
 
@@ -687,8 +687,8 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.10-3 | Sequence: level before → count-ups 0.45 s → NEW BEST 1.2 s → bar fill 1.65 s → LEVEL UP (flash, shake, pop, rays, banner, rank bounce, confetti 60/100/150 + 3 fireworks; lv 9–10 second wave) → CLAIM button +0.9 s pulsing → claim (12 coins, count-up, pill bump, confetti) → bar refills | 5.10 | 2e | | todo |
 | R-5.10-4 | Sounds `perfect_1` (NEW BEST), `lv_bar`, `lv_up` / `lv_up_big`, `lv_claim`, `bn_coin` | 5.10 | 2e | | todo |
 | R-5.10-5 | Solo: no header, card shows only you centred | 5.10 | 2e | | todo |
-| R-5.11-1 | Angled rings match `rings_angled.png` (no labels) | 5.11 | 1b | | todo |
-| R-5.12-1 | Guides: dashed fg 2.5 pt 6/6, 75 %, arrowheads 13 × 12, 16 pt end caps, behind the ring, attached to the home position | 5.12 | 1b | | todo |
+| R-5.11-1 | Angled rings match `rings_angled.png` (no labels) | 5.11 | 1b | shot: build/shots/run/rings/5_11_angled_{711,568}.png vs rings_angled.png | done |
+| R-5.12-1 | Guides: dashed fg 2.5 pt 6/6, 75 %, arrowheads 13 × 12, 16 pt end caps, behind the ring, attached to the home position | 5.12 | 1b | shot: build/shots/run/rings/5_12_*.png vs moving_1..4.png; test/run/hoops/s3_11_moving_rings_test.dart::§5.12 guide painter… | done |
 | R-5.12b-1 | Portal ring ellipse 64 × 150, front `#7C4DFF` 9 pt + cyan 3 pt inner rim, back `#4B2BB8`, 13 % cyan fill, beam 66 × 126 pulsing 75–100 % | 5.12b | 3b | | todo |
 | R-5.12b-2 | Ride rings: the standard ring rotated to the heading with tier looks | 5.12b | 3b | | todo |
 | R-5.12b-3 | Cannon art (120 × 150, barrel, muzzle, spikes, bands, base, square wheels) and violet ground with cyan line | 5.12b | 3b | | todo |

@@ -1,3 +1,4 @@
+import 'hoops/motion/moving_rings_feature.dart';
 import 'items/analytics_router.dart';
 import 'items/met_elements.dart';
 import 'run_feature.dart';
@@ -9,6 +10,9 @@ List<RunFeature> buildRunFeatures() => [
   MetElementsFeature(),
   AnalyticsRouter(),
   // endregion WP-0b
+  // region WP-1b — angled / moving rings (PRD-2 §3.10, §3.11)
+  MovingRingsFeature(),
+  // endregion WP-1b
   // region anchors — append below (one region per WP)
   // endregion anchors
 ];

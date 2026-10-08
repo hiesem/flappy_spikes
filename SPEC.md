@@ -447,3 +447,20 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `lib/run/hud/{banners,collect_slot}.dart`; their knobs are in
   `lib/run/config/parts_config.dart`. They are not wired into runs yet (WP-1a/2b…).
 
+
+## PRD-2 layout ramp, angled and moving rings (WP-1b, 2026-10-08)
+
+- DEVIATION (PRD-2 §3.0.2 / §3.10 / §3.11): the 1.0 pipe layout (uniform gap
+  height with a 140 pt max jump) is replaced by the §3.0.2 hoop layout ramp per
+  hoop index (`lib/run/config/layout_config.dart`, read by the run director).
+  Normal hoops can be tilted (−20°, −10°, +15°, +30°, +45°; from hoop 10) and
+  moving (rail / swing from hoop 20; horizontal, diagonal, orbit, rock from 45),
+  each with a dashed guide (§5.12). A moving ring's pose is a pure function of
+  `runClock` (`lib/run/hoops/motion/hoop_motion.dart`), so it stops with the
+  clock and is judged where it is at the crossing.
+- Calls: a slide's travel is capped by the band rule (not the row's centre
+  range); a slide with < 10 pt of travel left rocks in place instead. The orbit
+  turns at 1.25 rad/s (path speed ≤ 39 pt/s on its 25 × 31 pt radii; the
+  prototype's 1.4 reached 43 pt/s).
+- Hearts are placed by the director (gap 3, then every 17–27) as a
+  PLACEHOLDER pickup with no effect until WP-2a.

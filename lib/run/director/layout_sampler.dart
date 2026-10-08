@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../config/director_tables.dart';
+import '../config/layout_config.dart';
 import '../config/run_config.dart';
 import 'director_context.dart';
 import 'plans.dart';
@@ -58,9 +59,10 @@ class LayoutSampler {
   /// else p90…max (fractions of the band).
   static double sampleDy((double, double, double) q, double u) {
     final (m, p90, mx) = q;
-    if (u < 0.5) return m * u / 0.5;
-    if (u < 0.9) return m + (p90 - m) * (u - 0.5) / 0.4;
-    return p90 + (mx - p90) * (u - 0.9) / 0.1;
+    const a = LayoutConfig.dyMedianU, b = LayoutConfig.dyP90U;
+    if (u < a) return m * u / a;
+    if (u < b) return m + (p90 - m) * (u - a) / (b - a);
+    return p90 + (mx - p90) * (u - b) / (1 - b);
   }
 
   /// §3.0.2 The next centre for slot [hoopIndex].
@@ -88,7 +90,9 @@ class LayoutSampler {
     }
     final b = tables.bandFor(hoopIndex);
     final mag = sampleDy(b.dy, random.nextDouble()) * ctx.band;
-    var sign = random.nextDouble() < 0.65 ? -lastSign : lastSign;
+    var sign = random.nextDouble() < LayoutConfig.flipChance
+        ? -lastSign
+        : lastSign;
     var y = prev + sign * mag;
     if (y < lo || y > hi) {
       sign = -sign;
@@ -130,7 +134,12 @@ class LayoutSampler {
     if (!force && roll >= b.moving) return null;
     final (lo, hi) = limits(hoopIndex, ctx, opening);
     final room = max(0.0, min(centre - lo, hi - centre));
-    final types = hoopIndex >= 45 ? tables.movingTypes45 : tables.movingTypes20;
+    // The band rule (not the row's centre range) bounds a slide's travel.
+    final (blo, bhi) = limits(hoopIndex, ctx, opening, useTable: false);
+    final bandRoom = max(0.0, min(centre - blo, bhi - centre));
+    final types = hoopIndex >= LayoutConfig.allMotionTypesFrom
+        ? tables.movingTypes45
+        : tables.movingTypes20;
     final t = RunRandom.pickWeighted<MotionType>(random, types)!;
     final rail = tables.rail;
     switch (t) {
@@ -153,11 +162,19 @@ class LayoutSampler {
           rail.halfTravel.$1,
           rail.halfTravel.$2,
         );
-        final cap = cosA < 0.2 ? rail.halfTravel.$2 : room / cosA;
-        final half = want.clamp(
-          RunConfig.railMinHalfTravel,
-          max(RunConfig.railMinHalfTravel, cap),
-        );
+        // §3.11 fairness (WP-1b): the travel is capped so the ring keeps the
+        // band rule along its whole path; a slide with less than the minimum
+        // travel left rocks in place instead.
+        final cap = cosA < 0.2 ? rail.halfTravel.$2 : bandRoom / cosA;
+        if (cap < RunConfig.railMinHalfTravel) {
+          return MotionSpec(
+            type: MotionType.rock,
+            amplitudeDeg: RunConfig.rockAmplitudeDeg,
+            period: RunConfig.rockPeriod,
+            phase: RunRandom.range(random, 0, 2 * pi),
+          );
+        }
+        final half = want.clamp(RunConfig.railMinHalfTravel, cap);
         return MotionSpec(
           type: t,
           axisDeg: axis,

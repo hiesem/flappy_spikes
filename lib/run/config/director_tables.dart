@@ -7,6 +7,7 @@ library;
 
 import '../director/plans.dart';
 import '../elements.dart';
+import 'layout_config.dart';
 
 /// §3.0.2 One row of the hoop layout ramp (fractions of the band).
 class LayoutBand {
@@ -204,58 +205,10 @@ class DirectorTables {
     return b;
   }
 
-  /// §3.0.2 / §3.0.3 The PRD-2 launch tables.
+  /// §3.0.2 / §3.0.3 The PRD-2 launch tables (the §3.0.2 layout rows and
+  /// the §3.11 motion tables come from `LayoutConfig`, WP-1b).
   static const DirectorTables prd2 = DirectorTables(
-    bands: [
-      LayoutBand(
-        from: 0,
-        centre: (0.45, 0.55),
-        dy: (0.03, 0.06, 0.07),
-        tilt: 0,
-        tiltWeights: {},
-        moving: 0,
-      ),
-      LayoutBand(
-        from: 3,
-        centre: (0.33, 0.67),
-        dy: (0.11, 0.27, 0.35),
-        tilt: 0,
-        tiltWeights: {},
-        moving: 0,
-      ),
-      LayoutBand(
-        from: 10,
-        centre: (0.30, 0.69),
-        dy: (0.09, 0.30, 0.38),
-        tilt: 0.30,
-        tiltWeights: {-10: 6, 15: 4},
-        moving: 0,
-      ),
-      LayoutBand(
-        from: 20,
-        centre: (0.27, 0.69),
-        dy: (0.12, 0.31, 0.38),
-        tilt: 0.50,
-        tiltWeights: {-10: 35, 15: 30, 30: 25, -20: 10},
-        moving: 0.06,
-      ),
-      LayoutBand(
-        from: 35,
-        centre: (0.24, 0.72),
-        dy: (0.14, 0.33, 0.42),
-        tilt: 0.60,
-        tiltWeights: {-10: 25, 15: 20, 30: 30, -20: 10, 45: 15},
-        moving: 0.15,
-      ),
-      LayoutBand(
-        from: 45,
-        centre: (0.16, 0.76),
-        dy: (0.15, 0.38, 0.52),
-        tilt: 0.78,
-        tiltWeights: {-20: 20, -10: 10, 15: 10, 30: 30, 45: 30},
-        moving: 0.40,
-      ),
-    ],
+    bands: LayoutConfig.bands,
     budget: [
       BudgetRow(0, 0, 0),
       BudgetRow(5, 0, 0.25),
@@ -356,21 +309,10 @@ class DirectorTables {
       CapsuleType.miniBird: 35,
       CapsuleType.coinFrenzy: 30,
     },
-    movingTypes20: {MotionType.rail: 80, MotionType.swing: 20},
-    movingTypes45: {
-      MotionType.rail: 50,
-      MotionType.swing: 15,
-      MotionType.horizontal: 10,
-      MotionType.diagonal: 10,
-      MotionType.orbit: 8,
-      MotionType.rock: 7,
-    },
-    rail: RailTable(
-      axisDeg: (-25, 25),
-      halfTravel: (40, 60),
-      speed: (30, 39),
-    ),
-    swing: SwingTable(amplitudeDeg: 15, period: 1.8),
+    movingTypes20: LayoutConfig.movingTypes20,
+    movingTypes45: LayoutConfig.movingTypes45,
+    rail: LayoutConfig.rail,
+    swing: LayoutConfig.swing,
   );
 }
 

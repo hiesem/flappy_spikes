@@ -113,7 +113,7 @@ void main() {
       await game.ready();
     },
     verify: (game, tester) async {
-      game.onBirdHit();
+      killRun(game);
       await flushAndMount(game); // mount the game-over panel
 
       final panel = game.world.children.query<GameOverPanel>().single;
@@ -140,7 +140,7 @@ void main() {
       },
       verify: (game, spy, tester) async {
         game.score = 5; // below the stored best
-        game.onBirdHit();
+        killRun(game);
         expect(spy.submitCalls, 1);
         expect(spy.lastSubmitted, 25, reason: 'PGS keeps the max server-side');
       },
@@ -154,7 +154,7 @@ void main() {
       },
       verify: (game, spy, tester) async {
         game.score = 30;
-        game.onBirdHit();
+        killRun(game);
         expect(spy.submitCalls, 1);
         expect(spy.lastSubmitted, 30);
       },
@@ -166,7 +166,7 @@ void main() {
       'is untappable while invisible, tappable after the fade-in',
       prefs: const {},
       verify: (game, spy, tester) async {
-        game.onBirdHit();
+        killRun(game);
         await flushAndMount(game); // mount the game-over panel (opacity 0)
 
         final panel = game.world.children.query<GameOverPanel>().single;

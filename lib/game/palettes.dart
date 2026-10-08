@@ -39,3 +39,19 @@ int stageOf(int score) {
 
 /// The palette for a given stage.
 Palette paletteForStage(int stage) => kPalettes[stage] ?? kPalettes[0]!;
+
+// region WP-1a — colour stage per 10 hoops (PRD-2 §3.0.1, §3.1)
+/// The [kPalettes] keys in order: 0, 5, …, 45 and the gold stage 50 last.
+const List<int> kStageKeys = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+
+/// §3.0.1 the palette key of run stage index [index] (0–10, see
+/// `RunConfig.stageForHoops`: floor(hoopsPassed / 10) mod 11).
+int paletteKeyForStageIndex(int index) =>
+    kStageKeys[index % kStageKeys.length];
+
+/// §3.0.1 the palette key for [hoopsPassed] hoops: a new stage every 10
+/// hoops, the 11 palettes in order, the gold stage at hoops 100–109,
+/// 210–219, … (replaces [stageOf] in runs).
+int stageForHoops(int hoopsPassed) =>
+    paletteKeyForStageIndex(hoopsPassed ~/ 10);
+// endregion WP-1a

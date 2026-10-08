@@ -29,7 +29,7 @@ void main() {
       await game.ready();
     },
     verify: (game, tester) async {
-      game.onBirdHit();
+      killRun(game);
       await flushAndMount(game); // mount the game-over panel
       // Let the staggered fade-in run to completion.
       stepGame(

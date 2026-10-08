@@ -1,4 +1,3 @@
-import 'dart:math' show max, min;
 
 import 'package:flame/extensions.dart';
 
@@ -22,8 +21,10 @@ class Config {
   static const double gravity = 1250; // pt/s^2 downward
   static const double flapVelocity = 370; // pt/s upward delta-v:
   // rise = v^2 / (2 * g) = 370^2 / 2500 ~= 55 pt (continuous, 60 fps alike)
-  static const double maxFallSpeed = 500; // pt/s terminal velocity (downward)
-  static const double scrollSpeed = 200; // pt/s leftward
+  /// PRD-2 §3.0.1 max fall speed (pt/s, downward; was 500).
+  static const double maxFallSpeed = 650;
+  // PRD-2 §3.0.1: no fixed scroll speed any more — the world scrolls at the
+  // bird's forward speed (`RunConfig.cruise`, 150 pt/s + 3.5 %/min).
 
   /// Longest simulation step in one frame. [FlappySpikesGame.update] clamps
   /// the frame's dt ONCE, so physics, the pipe spawner, fades, the colour
@@ -34,14 +35,14 @@ class Config {
   /// still covers 30 fps devices without slowing them down.
   static const double maxFrameStep = 1 / 30;
 
-  // Collision categories (mirror the original bitmasks).
+  // Collision categories (mirror the original bitmasks). PRD-2 §7: hoops,
+  // rims and spikes are plain math, so nothing collides in Forge2D any more.
   static const int categoryBird = 0x1;
   static const int categoryWorld = 0x2;
-  static const int categoryPipe = 0x4;
-  static const int categoryScore = 0x8;
 
   // Bird.
-  static const double birdX = 80; // width / 4
+  /// PRD-2 §3.0.1 bird screen x in flight (was 80).
+  static const double birdX = 70;
   static const double birdY = 284; // vertical center
   static final Vector2 birdSize = Vector2(46.5, 29.5);
   static const double birdRadius = 14.75; // sprite height / 2
@@ -52,89 +53,15 @@ class Config {
   /// box): the 30-unit art body square matches the 1.0 bird height
   /// (2 * [birdRadius] = 29.5), so the hitbox and physics stay untouched.
   static const double lookScale = 2 * birdRadius / 30; // 29.5 / 30
-  static const double deathSpin = 5 * 3.141592653589793; // 5pi rad over 1 s
-  static const double deathRestitution = 0.1;
-  static final Vector2 deathVelocity = Vector2(120, -360);
+  // PRD-2 §3.0.5: the 1.0 death (impulse, restitution 0.1, spin 5π) is
+  // replaced by the momentum tumble (`PhysicsConfig`).
 
   // Spike strips.
-  static const double spikeHeight = 72;
+  /// PRD-2 §3.0.9 #1 spike strip height: band 26 + teeth 18 (was the 72 pt
+  /// sprite strip).
+  static const double spikeHeight = 44;
   static const double spikeTileWidth = 384;
 
-  // Pipes.
-  static const double pipeWidth = 88;
-  static const double pipeHeight = 513.5;
-  static const double pipeGapStart = 145; // gap at score 0 (easy onboarding)
-  static const double pipeGap = 105; // final/min gap once fully ramped
-  static const int difficultyRampScore = 25; // score where the gap bottoms out
-  // Random gap bonus: 50 pt at score 0 tapering to 20 pt once ramped (raised
-  // from 25/10 on user request 2026-07-22 — "at least 2x, more dynamic").
-  static const double gapVarianceStart = 50; // random gap bonus at score 0
-  static const double gapVarianceEnd = 20; // bonus once fully ramped
-  static const double pipeSpawnInterval = 1.5;
-  static const double pipeSpawnX = worldWidth + pipeWidth / 2; // 320 + 44
-  static const double gapBottomMin = 202; // 72 + 130: every draw leaves a
-  // >= 130 pt flyable window below the ceiling spikes — and from gap 130
-  // down the gap can never tuck under the ceiling at all (the original's
-  // 112 could leave a nearly unflyable 40 pt window)
-  static const double gapBottomMax = 371; // 568 - 72 - 105 - 20 (final gap)
-  static const double maxGapJump = 140; // max vertical jump of the gap
-  // between consecutive pipes — keeps every transition flyable
-  static const double sensorOffsetX = 111; // right of pipe center
-
-  /// Minimum visible length of each pipe stub (top and bottom) for any
-  /// spawned gap: 20 pt still clearly shows the pipe and its cap rim, so "a
-  /// pipe is always visible" holds while leaving room for the 2x variance.
-  /// (Was 40 pt before the 2026-07-22 variance increase.)
-  static const double minPipeStub = 20;
-
-  /// Pipe gap for a given score: [pipeGapStart] at 0, shrinking linearly to
-  /// [pipeGap] once the score reaches [difficultyRampScore].
-  static double gapForScore(int score) {
-    final t = score.clamp(0, difficultyRampScore) / difficultyRampScore;
-    return pipeGapStart + (pipeGap - pipeGapStart) * t;
-  }
-
-  /// Random gap variance for a given score: [gapVarianceStart] at 0,
-  /// tapering linearly to [gapVarianceEnd] once the score reaches
-  /// [difficultyRampScore] (the same ramp schedule as [gapForScore]).
-  static double gapVarianceForScore(int score) {
-    final t = score.clamp(0, difficultyRampScore) / difficultyRampScore;
-    return gapVarianceStart + (gapVarianceEnd - gapVarianceStart) * t;
-  }
-
-  /// Gap for one spawned pipe: [gapForScore] plus a random bonus of up to
-  /// [gapVarianceForScore] on top ([rng01] in [0, 1]) — the curve value
-  /// stays the MINIMUM gap — capped at [maxGapFor] so both pipe stubs stay
-  /// >= [minPipeStub].
-  static double gapForPipe(
-    int score,
-    double rng01, [
-    double viewHeight = worldHeight,
-  ]) {
-    final gap =
-        gapForScore(score) + rng01.clamp(0.0, 1.0) * gapVarianceForScore(score);
-    return min(gap, maxGapFor(viewHeight));
-  }
-
-  /// Largest gap where both pipe stubs can still be >= [minPipeStub] at a
-  /// given playfield height (192 at 568, 273 at 730).
-  static double maxGapFor(double viewHeight) =>
-      (viewHeight - 2 * (spikeHeight + minPipeStub)) / 2;
-
-  /// Lowest allowed gap-bottom y (top edge of the bottom pipe) for a given
-  /// gap: [gapBottomMin], or gap + spikeHeight + [minPipeStub] when that is
-  /// higher. Guarantees the TOP pipe stub is always >= [minPipeStub] — a
-  /// pipe is always visible, never fully hidden behind the ceiling spikes.
-  static double gapBottomMinFor(double gap) =>
-      max(gapBottomMin, gap + spikeHeight + minPipeStub);
-
-  /// Highest allowed gap-bottom y (top edge of the bottom pipe) for a given
-  /// gap and playfield height: keeps [minPipeStub] clearance between the
-  /// bottom pipe and the ground spikes.
-  static double gapBottomMaxFor(
-    double gap, [
-    double viewHeight = worldHeight,
-  ]) => viewHeight - spikeHeight - gap - minPipeStub;
 
   // UI sizes.
   static final Vector2 titleSize = Vector2(274.5, 147.5);
@@ -184,12 +111,12 @@ class Config {
   // Privacy-policy link at the bottom of the start scene, just above the
   // ground spikes.
   static Vector2 privacyLinkPositionFor(double centerY) =>
-      Vector2(160, 2 * centerY - spikeHeight - 20); // 476 at 284
+      Vector2(160, 2 * centerY - 92); // 476 at 284 (above the 1.0 strip)
   // Transient service-failure message (ServiceMessage): bottom-center, the
   // same free band the privacy link used before it moved into settings —
   // visible on both the start and game-over scenes.
   static Vector2 serviceMessagePositionFor(double centerY) =>
-      Vector2(160, 2 * centerY - spikeHeight - 20); // 476 at 284
+      Vector2(160, 2 * centerY - 92); // 476 at 284 (above the 1.0 strip)
 
   // Game-over coin line ("+N" + coin, PRD-1 §4.2): below the games label,
   // in the free band above the ground spikes (466 at 284).
@@ -536,10 +463,9 @@ class Config {
     levelUpCardHeight,
   );
 
-  /// Menus show the spike strips 28 pt shorter (44 pt, as in the approved
-  /// mocks); they slide to their full 72 pt when a run starts. Visual only:
-  /// the strips' physics bodies never move.
-  static const double menuSpikeInset = 28;
+  /// Menus and runs show the same 44 pt strip since PRD-2 §3.0.9 #1 (it
+  /// was 28 pt shorter than the 72 pt run strip in 1.0/2.0 menus).
+  static const double menuSpikeInset = 0;
 
   /// Skin tint during runs at stages >= 5: lerp(mockColor, stageFg, this).
   /// 0 in menus and at stage 0 (identity colours, as mocked).
@@ -549,10 +475,10 @@ class Config {
   /// edge).
   static const double menuSpikeHeight = spikeHeight - menuSpikeInset; // 44
 
-  /// Depth of the spike teeth of `ground_spikes.png` (tip to the solid
-  /// base). Menu scroll lists show through the gaps between the bottom teeth
-  /// down to this depth below the tips.
-  static const double menuSpikeToothDepth = 22;
+  /// Depth of the spike teeth (tip to the solid band; PRD-2 §3.0.9 #1:
+  /// 18 pt). Menu scroll lists show through the gaps between the bottom
+  /// teeth down to this depth below the tips.
+  static const double menuSpikeToothDepth = 18;
 
   // --- Shared menu-screen chrome (Shop, Skins; PRD-1 §5) --------------------
   //

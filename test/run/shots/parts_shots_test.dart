@@ -550,7 +550,7 @@ void main() async {
     },
     verify: (game, tester) async {
       for (final strip in game.world.children.whereType<SpikeStrip>()) {
-        expect(strip.art, SpikeArt.sprite, reason: 'default until WP-1a');
+        expect(strip.art, SpikeArt.teeth, reason: 'the default since WP-1a');
         expect(strip.toothReach, 44, reason: 'menus show the 44 pt strip');
       }
       Future<void> shot(String name) => tester.runAsync(() async {
@@ -575,11 +575,11 @@ void main() async {
         await file.writeAsBytes(bytes);
         expect(bytes.length, greaterThan(10000));
       });
-      await shot('13_menu_sprite');
-      for (final strip in game.world.children.whereType<SpikeStrip>()) {
-        strip.art = SpikeArt.teeth;
-      }
       await shot('13_menu_teeth');
+      for (final strip in game.world.children.whereType<SpikeStrip>()) {
+        strip.art = SpikeArt.sprite;
+      }
+      await shot('13_menu_sprite');
     },
   );
 }

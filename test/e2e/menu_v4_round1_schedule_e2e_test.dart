@@ -9,6 +9,7 @@ import 'package:flappy_spikes/services/iap_service.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers.dart' show killRun;
 import '../menu_screenshot_test.dart' show loadFonts;
 import '../purchase_feedback_test.dart' show run;
 import '../shop_flow_test.dart' show openShop;
@@ -328,7 +329,7 @@ void main() {
       expect(game.storage.noAdsPopupVideos, 3);
       expect(game.noAdsPopup, isNull, reason: 'never after START');
       game.score = 6;
-      game.onBirdHit();
+      killRun(game);
       await v4Settle(game, tester);
       game.goHome();
       await run(game, .3);
@@ -498,7 +499,7 @@ void main() {
       await v4Background(game, rig, tester, v4SessionGap);
       expect(game.noAdsPopup, isNull);
       game.score = 6;
-      game.onBirdHit();
+      killRun(game);
       await v4Settle(game, tester);
       game.goHome();
       await run(game, .3);
@@ -524,7 +525,7 @@ void main() {
       expect(game.state, GameState.playing);
       expect(game.queuedPopups, 0);
       game.score = 6;
-      game.onBirdHit();
+      killRun(game);
       await v4Settle(game, tester);
       game.goHome();
       await run(game, .3);

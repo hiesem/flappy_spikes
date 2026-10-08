@@ -57,16 +57,10 @@ void main() {
       final hud = game.world.children.query<ScoreHud>().single;
       expect(hud.position.y, closeTo(711 / 2 + 35, 1e-9));
 
-      // The gap band scales with the playfield height; the 568 default is
-      // unchanged.
-      expect(
-        Config.gapBottomMaxFor(Config.pipeGap, 711),
-        711 - Config.spikeHeight - Config.pipeGap - Config.minPipeStub,
-      );
-      expect(
-        Config.gapBottomMaxFor(Config.pipeGap),
-        Config.gapBottomMax,
-      );
+      // §3.0.2 the hoop band scales with the playfield height: 623 pt
+      // between the 44 pt strips' tooth lines at 711 (480 at 568).
+      expect(711 - 2 * Config.spikeHeight, 623);
+      expect(Config.worldHeight - 2 * Config.spikeHeight, 480);
 
       // Home screen layout follows the playfield height (PRD-home-v3 §3.1):
       // the title is pinned to the top, START sits at its 711 spot.

@@ -61,10 +61,16 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
     expect(run.clock.t, greaterThan(1));
+    // WP-1a: the course is hoops (PRD-2 §3.1).
+    expect(run.spawner.live, isTrue);
+    expect(run.spawner.hoops, isNotEmpty);
 
-    // End the run (if the bot is still alive) and go home.
+    // End the run (if the bot is still alive), let the §3.0.5 tumble play
+    // (≤ 1.5 s) and go home.
     if (g.state == GameState.playing) g.onBirdHit(MistakeCause.spikes);
-    await tester.pump(const Duration(milliseconds: 500));
+    for (var i = 0; i < 30 && g.state != GameState.gameOver; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     expect(g.state, GameState.gameOver);
     expect(run.ended, isTrue);
     g.goHome();

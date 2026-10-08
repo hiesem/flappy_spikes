@@ -3,15 +3,12 @@ import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
-import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/gameover_panel.dart';
 import 'package:flappy_spikes/components/levels/levels_screen.dart';
-import 'package:flappy_spikes/components/pipe_pair.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
 import 'package:flappy_spikes/components/ui/confetti.dart';
 import 'package:flappy_spikes/components/ui/sprite_button.dart';
 import 'package:flappy_spikes/components/levels/emblem_view.dart';
-import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/palettes.dart';
 import 'package:flappy_spikes/game/rumble.dart';
@@ -147,74 +144,10 @@ List<String> _claimed(int n) => [for (var i = 1; i <= n; i++) '$i'];
 // Same physical flight controller as the acceptance bot / round 1. It
 // presses flap; it never writes score, best, wallet or claimed levels.
 Future<void> _flyToEgg(FlappySpikesGame game) async {
-  final bird = game.world.children.query<Bird>().single;
-  double aimBand(PipePair pipe) => (pipe.gapBottomY - pipe.gap / 2 + 10).clamp(
-    math.max(pipe.gapBottomY - pipe.gap, Config.spikeHeight) +
-        Config.birdRadius +
-        4,
-    math.min(pipe.gapBottomY, game.viewHeight - Config.spikeHeight) -
-        Config.birdRadius -
-        4,
-  );
-  for (
-    var frame = 0;
-    frame < 4500 && game.state == GameState.playing && game.score < 12;
-    frame++
-  ) {
-    game.update(1 / 60);
-    if (frame % 10 == 0) await flushAndMount(game);
-    if (game.state != GameState.playing) break;
-    final upcoming =
-        game.world.children
-            .query<PipePair>()
-            .where(
-              (pipe) =>
-                  pipe.isLoaded &&
-                  pipe.body.position.x + Config.pipeWidth / 2 >
-                      Config.birdX - Config.birdRadius,
-            )
-            .toList()
-          ..sort((a, b) => a.body.position.x.compareTo(b.body.position.x));
-    var lo = Config.spikeHeight + Config.birdRadius + 2;
-    var hi = game.viewHeight - Config.spikeHeight - Config.birdRadius - 2;
-    var aim = game.viewHeight / 2 + 16;
-    var crossing = 999.0;
-    if (upcoming.isNotEmpty) {
-      final first = upcoming.first;
-      lo =
-          math.max(first.gapBottomY - first.gap, Config.spikeHeight) +
-          Config.birdRadius +
-          2;
-      hi =
-          math.min(first.gapBottomY, game.viewHeight - Config.spikeHeight) -
-          Config.birdRadius -
-          2;
-      aim = upcoming.length > 1
-          ? aimBand(upcoming[1]).clamp(lo, hi)
-          : aimBand(first);
-      crossing = math.max(
-        0,
-        (first.body.position.x -
-                Config.pipeWidth / 2 -
-                Config.birdX -
-                Config.birdRadius) /
-            Config.scrollSpeed,
-      );
-    }
-    final y = bird.body.position.y;
-    final vy = bird.body.linearVelocity.y;
-    final cap = math.max(0, (Config.maxFallSpeed - vy) / Config.gravity);
-    final forecast = crossing <= cap
-        ? y + vy * crossing + .5 * Config.gravity * crossing * crossing
-        : y +
-              vy * cap +
-              .5 * Config.gravity * cap * cap +
-              Config.maxFallSpeed * (crossing - cap);
-    if ((y > aim || forecast > hi - 5) && y - 65 > lo && vy > -50) {
-      game.onScreenTap();
-    }
-  }
-  expect(game.score, greaterThanOrEqualTo(12));
+  // WP-1a: the hoop-aware acceptance bot (PRD-2 §7) flies the real course.
+  final flight = await flyRun(game, maxSeconds: 75, untilHoops: 12);
+  expect(game.score, greaterThanOrEqualTo(12),
+      reason: 'actual hoop scoring\n${flight.trace.reversed.take(5).join('\n')}');
 }
 
 void main() async {
@@ -242,7 +175,7 @@ void main() async {
         );
         await _tap(game, tester, home.startButton);
         await _flyToEgg(game);
-        await run(game, 2);
+        await run(game, 3);
         expect(game.state, GameState.gameOver);
         expect(game.levelUpPopup, isNull);
         final earned = game.menu.wallet.balance;

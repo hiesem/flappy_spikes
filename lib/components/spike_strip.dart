@@ -18,9 +18,11 @@ enum SpikeArt {
   teeth,
 }
 
-/// A scrolling spike strip: tiled ground_spikes texture scrolling at
-/// 200 pt/s with seamless wrap, backed by a static full-width physics body.
-/// The ceiling strip uses the same texture rotated 180 degrees.
+/// A spike strip (PRD-2 §3.0.9 #1): the 44 pt master teeth
+/// ([SpikeTeethPainter]) whose teeth scroll with the run's camera (they stop
+/// with the world on a death, §3.0.5), backed by a static full-width body.
+/// Spike contact is plain math (`lib/run/physics/spike_walls.dart`). The
+/// 1.0 `ground_spikes.png` tiles remain as [SpikeArt.sprite] (tests).
 class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
   SpikeStrip({required this.isCeiling})
     : super(priority: basePriority, renderBody: false);
@@ -31,10 +33,9 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
 
   final bool isCeiling;
 
-  /// The art new strips draw. WP-1a switches this to [SpikeArt.teeth]
-  /// together with `Config.spikeHeight` 72 → 44 (PRD-2 §3.0.9 #1): that is
-  /// the whole art switch.
-  static const SpikeArt defaultArt = SpikeArt.sprite;
+  /// The art new strips draw: the 2.0 master teeth with
+  /// `Config.spikeHeight` 44 (PRD-2 §3.0.9 #1, switched by WP-1a).
+  static const SpikeArt defaultArt = SpikeArt.teeth;
 
   SpikeArt _art = defaultArt;
 
@@ -60,7 +61,6 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
 
   /// Tiles cover the screen width plus 2 extra tiles for seamless wrap.
   static const int _tileCount = 3;
-  static const double _wrapWidth = _tileCount * Config.spikeTileWidth;
 
   final List<SpriteComponent> _tiles = [];
 
@@ -171,18 +171,19 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
   @override
   void update(double dt) {
     super.update(dt);
-    if (!game.isScrolling) {
+    // The teeth move with the world: the run's camera (forward speed, the
+    // rim knock-back jolt, the 0.4 s ease to a stop on a death).
+    final run = game.run;
+    if (run == null) {
       return;
     }
-    toothOffset -= Config.scrollSpeed * dt;
-    for (final tile in _tiles) {
-      tile.position.x -= Config.scrollSpeed * dt;
-      // Left edge of the tile in body-local coordinates.
-      final tileLeft =
-          isCeiling ? tile.position.x - Config.spikeTileWidth / 2 : tile.position.x;
-      if (tileLeft + Config.spikeTileWidth <= -Config.worldWidth / 2) {
-        tile.position.x += _wrapWidth;
-      }
+    toothOffset = -run.state.camX;
+    // The legacy sprite tiles (SpikeArt.sprite) follow the same offset.
+    const w = Config.spikeTileWidth;
+    final o = (toothOffset % w + w) % w - w; // (-w, 0]
+    for (var i = 0; i < _tiles.length; i++) {
+      final left = (i - 1) * w - Config.worldWidth / 2 + o;
+      _tiles[i].position.x = isCeiling ? left + w / 2 : left;
     }
   }
 

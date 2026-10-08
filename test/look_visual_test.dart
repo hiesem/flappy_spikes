@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
-import 'package:flappy_spikes/components/pipe_pair.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/palettes.dart';
@@ -221,9 +220,11 @@ void main() async {
           isNot(_pixel(look0, body.dx, body.dy)),
         );
 
-        // Drive the game to stage 5 (score 5) and finish the crossfade.
-        game.score = 4;
-        game.onScoreSensor(PipePair(gapBottomY: 351));
+        // Drive the run to stage 5 (PRD-2 §3.0.1: hoop 10) and finish the
+        // crossfade.
+        for (var i = 0; i < 10; i++) {
+          game.run!.debugPass();
+        }
         stepGame(game, 0.6);
         final bird = game.world.children.query<Bird>().single;
         expect(game.skinBlend, Config.skinStageBlend);

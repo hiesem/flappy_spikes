@@ -1,12 +1,10 @@
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/gameover_panel.dart';
-import 'package:flappy_spikes/components/pipe_pair.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flutter/foundation.dart';
@@ -99,79 +97,45 @@ void main() async {
       await tester.runAsync(() => captureAll(game, 'start'));
 
       // --- enter playing state ----------------------------------------------
+      // PRD-2 (WP-1a): the real hoop course, flown by the hoop-aware
+      // autopilot; captured when the next hoop is just ahead of the bird.
       game.onScreenTap();
       game.update(dt);
       await flushAndMount(game);
-
-      for (final pipe in game.world.children.query<PipePair>()) {
-        pipe.removeFromParent();
-      }
-      game.update(dt);
-      final staged = <PipePair>{};
-      for (final x in [364.0, 564.0, 764.0]) {
-        final pipe = PipePair(gapBottomY: 351);
-        await game.world.add(pipe);
-        await pipe.loaded;
-        game.update(0);
-        pipe.body.setTransform(Vector2(x, Config.worldHeight / 2), 0);
-        staged.add(pipe);
+      final run = game.run!;
+      await flyRun(game, untilHoops: 2);
+      for (var i = 0; i < 300; i++) {
+        final next = run.spawner.nextHoopAhead();
+        if (next != null && next.planeX - run.state.camX < 110) break;
+        await flyRun(game, maxSeconds: dt);
       }
 
       // --- shot 2: gameplay -------------------------------------------------
-      stepGame(game, 0.8, flapBelow: 320);
-      var t = 0.8;
-      double? blendFrom;
-      const captureT = 2.42;
-
-      Future<void> stepFrame() async {
-        game.update(dt);
-        t += dt;
-        await Future<void>.value();
-        for (final pipe in game.world.children.query<PipePair>()) {
-          if (!staged.contains(pipe)) {
-            pipe.removeFromParent();
-          }
-        }
-      }
-
-      while (t < captureT) {
-        await stepFrame();
-        if (game.state == GameState.playing) {
-          blendFrom ??= bird.body.position.y;
-          final blend = ((t - 0.8) / 0.25).clamp(0.0, 1.0);
-          final target = 298.5 + 32 * math.sin(2 * math.pi * (t - 0.8) / 1.4);
-          bird.body.linearVelocity.setZero();
-          bird.body.setTransform(
-            Vector2(Config.birdX, blendFrom + (target - blendFrom) * blend),
-            0,
-          );
-        }
-      }
-
       expect(game.state, GameState.playing);
-      expect(game.score, greaterThanOrEqualTo(1),
-          reason: 'bird must have passed a score sensor');
-      expect(game.world.children.query<PipePair>(), hasLength(2));
-      await tester.runAsync(() => captureAll(game, 'gameplay'));
+      expect(game.score, greaterThanOrEqualTo(2),
+          reason: 'the bird must have passed real hoops');
+      expect(hoopsOf(game), isNotEmpty);
+      await tester.runAsync(
+        () => captureAll(game, 'gameplay'),
+      );
 
       // --- shot 3: game over -------------------------------------------------
-      bird.body.setTransform(Vector2(Config.birdX, 401), 0);
-      final frozenT = t + 0.2;
-      while (t < frozenT) {
-        await stepFrame();
+      // Force a collision: the bird onto the floor spikes; the §3.0.5 tumble
+      // plays, then the results (the panel's staggered fade-in is 0.9 s).
+      bird.body.setTransform(
+        Vector2(Config.birdX, game.viewHeight - Config.spikeHeight),
+        0,
+      );
+      for (var i = 0; i < 180 && game.state != GameState.gameOver; i++) {
+        game.update(dt);
       }
       expect(game.state, GameState.gameOver);
-
-      for (final pipe in game.world.children.query<PipePair>()) {
-        pipe.removeFromParent();
-      }
-      final revealT = t + 1.0;
-      while (t < revealT) {
-        await stepFrame();
-      }
+      stepGame(game, 1.0);
       await flushAndMount(game);
       expect(game.world.children.query<GameOverPanel>(), hasLength(1));
-      await tester.runAsync(() => captureAll(game, 'gameover'));
+      await tester.runAsync(
+        () => captureAll(game, 'gameover'),
+      );
     },
   );
 }

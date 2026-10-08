@@ -4,13 +4,12 @@ import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
-import 'package:flappy_spikes/components/gameover_panel.dart';
+import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/components/home/menu_primitives.dart';
 import 'package:flappy_spikes/components/levels/levels_screen.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
 import 'package:flappy_spikes/components/skins/celebration.dart';
 import 'package:flappy_spikes/components/ui/confetti.dart';
-import 'package:flappy_spikes/components/ui/sprite_button.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/palettes.dart';
 import 'package:flappy_spikes/game/rumble.dart';
@@ -229,7 +228,7 @@ void main() async {
       await _advance(game, 3);
       // PRD-2 §3.14 (WP-2d): ≥ 6 hoops → the revive offer; No thanks.
       await declineRevive(game);
-      expect(game.state, GameState.gameOver);
+      expect(game.state, GameState.results);
       expect(game.levelUpPopup, isNull, reason: 'no popup at game over');
       final score = game.storage.lastScore!;
       final earned = game.menu.wallet.balance;
@@ -237,24 +236,28 @@ void main() async {
       // PRD-2 §3.2: 1 coin per hoop, 2 for a perfect pass, at the pass.
       expect(earned, game.run!.state.coinsThisRun);
       expect(earned, greaterThanOrEqualTo(score));
-      final panel = game.world.children.query<GameOverPanel>().single;
-      await _tap(game, tester, panel.children.query<SpriteButton>().first);
+      // PRD-2 §3.14: the level up is celebrated and claimed on the results
+      // page (it replaces the home LEVEL UP popup).
+      final panel = game.world.children.query<ResultsScreen>().single;
+      await _advance(game, 4.2);
+      expect(panel.claimShowing, isTrue);
+      expect(panel.rank.text, 'EGG · LV 1');
+      await _tap(game, tester, panel.claimButton.button);
+      expect(game.menu.wallet.balance, earned + 50);
+      await _advance(game, 3);
+      expect(panel.shownReward, earned + 50);
+      await _tap(game, tester, panel.nextButton);
       await _advance(game, .9);
-      final popup = game.levelUpPopup!;
-      expect(popup.pending.toLevel, 1);
-      expect(popup.pending.reward, 50);
+      expect(game.levelUpPopup, isNull, reason: 'claimed on the results page');
       expect(game.stageBackground, paletteForStage(0).background);
       expect(game.foregroundColor, paletteForStage(0).foreground);
-      await _tap(game, tester, popup.claimButton);
       await _advance(game, 4);
+      expect(game.levelUpPopup, isNull);
       expect(game.coinPill.shownBalance, earned + 50);
       expect(game.menu.levels.pendingLevelUp, isNull);
       expect(game.homeScreen!.emblem.level, 1);
       expect(rig.events.params('level_up'), [
-        {'level': 1, 'best': score},
-      ]);
-      expect(rig.events.params('level_reward_claimed'), [
-        {'level': 1, 'coins': 50},
+        {'from': 0, 'to': 1, 'reward': 50, 'claim': 'tap'},
       ]);
       final saved = await _reload();
       expect(saved.claimedLevels, {1});

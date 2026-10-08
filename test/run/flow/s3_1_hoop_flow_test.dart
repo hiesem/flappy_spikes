@@ -1,6 +1,6 @@
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
-import 'package:flappy_spikes/components/gameover_panel.dart';
+import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/palettes.dart';
 import 'package:flappy_spikes/menu/wallet.dart';
@@ -162,8 +162,8 @@ void main() {
         }
         expect(d, lessThanOrEqualTo(PhysicsConfig.resultsDelay + 1e-6));
         await flushAndMount(game);
-        expect(game.state, GameState.gameOver);
-        expect(game.world.children.query<GameOverPanel>(), hasLength(1));
+        expect(game.state, GameState.results);
+        expect(game.world.children.query<ResultsScreen>(), hasLength(1));
         expect(
           game.menu.wallet.balance,
           wallet + 2,

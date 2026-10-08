@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
-import 'package:flappy_spikes/components/gameover_panel.dart';
+import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flutter/foundation.dart';
@@ -122,20 +122,21 @@ void main() async {
         () => capturePng(game, '../shots/store_gameplay.png'),
       );
 
-      // --- shot 3: game over -------------------------------------------------
+      // --- shot 3: results -----------------------------------------------------
       // Force a collision: the bird onto the floor spikes; the §3.0.5 tumble
-      // plays, then the results (the panel's staggered fade-in is 0.9 s).
+      // plays, then the PRD-2 §5.10 results page (counts up by 1.15 s).
       bird.body.setTransform(
         Vector2(Config.birdX, game.viewHeight - Config.spikeHeight),
         0,
       );
-      for (var i = 0; i < 180 && game.state != GameState.gameOver; i++) {
+      for (var i = 0; i < 180 && game.state != GameState.results; i++) {
         game.update(dt);
       }
-      expect(game.state, GameState.gameOver);
-      stepGame(game, 1.0);
+      expect(game.state, GameState.results);
       await flushAndMount(game);
-      expect(game.world.children.query<GameOverPanel>(), hasLength(1));
+      stepGame(game, 1.3);
+      await flushAndMount(game);
+      expect(game.world.children.query<ResultsScreen>(), hasLength(1));
       await tester.runAsync(
         () => capturePng(game, '../shots/store_gameover.png'),
       );

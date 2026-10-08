@@ -68,10 +68,10 @@ void main() {
     // End the run (if the bot is still alive), let the §3.0.5 tumble play
     // (≤ 1.5 s) and go home.
     if (g.state == GameState.playing) g.onBirdHit(MistakeCause.spikes);
-    for (var i = 0; i < 30 && g.state != GameState.gameOver; i++) {
+    for (var i = 0; i < 30 && g.state != GameState.results; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
-    expect(g.state, GameState.gameOver);
+    expect(g.state, GameState.results);
     expect(run.ended, isTrue);
     g.goHome();
     await tester.pump(const Duration(seconds: 1));

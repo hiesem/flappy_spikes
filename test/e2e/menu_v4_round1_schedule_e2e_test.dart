@@ -331,7 +331,7 @@ void main() {
       game.score = 6;
       // The slot's powerup may be a Shield, which correctly saves one hit.
       killRunThroughSaves(game);
-      expect(game.state, GameState.gameOver);
+      expect(game.state, GameState.results);
       await v4Settle(game, tester);
       game.goHome();
       await run(game, .3);

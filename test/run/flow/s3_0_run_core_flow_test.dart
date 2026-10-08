@@ -1,6 +1,6 @@
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
-import 'package:flappy_spikes/components/gameover_panel.dart';
+import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
@@ -112,11 +112,11 @@ void main() {
 
         killRun(game, MistakeCause.spikes);
         await flushAndMount(game);
-        expect(game.state, GameState.gameOver);
+        expect(game.state, GameState.results);
         expect(run.ended, isTrue);
         expect(run.events.log.whereType<RunDied>(), hasLength(1));
         expect(run.events.log.whereType<RunEnded>(), hasLength(1));
-        expect(game.world.children.query<GameOverPanel>(), hasLength(1));
+        expect(game.world.children.query<ResultsScreen>(), hasLength(1));
 
         final names = analyticsLog(spy).map((e) => e.$1).toList();
         expect(names, containsAllInOrder(['run_end', 'run_director_hoops', 'run_director_items']));

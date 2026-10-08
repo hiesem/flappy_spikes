@@ -5,7 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/debug_panel.dart';
-import 'package:flappy_spikes/components/gameover_panel.dart';
+import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/components/home/menu_primitives.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
@@ -528,12 +528,11 @@ void main() {
           {'amount': 3, 'source': 'hoop', 'egg_x2': 0},
           {'amount': 2, 'source': 'perfect', 'egg_x2': 0},
         ]));
-        final panel = game.world.children.query<GameOverPanel>().single;
-        expect(panel.coinsEarned, 5);
-        final labels = panel.children.whereType<TextComponent>();
-        expect(labels.map((l) => l.text), contains('+5'));
-        final coin = labels.firstWhere((l) => l.text == '+5');
-        expect(coin.position.y, Config.coinsEarnedPositionFor(284).y);
+        // PRD-2 §5.10: the run's coins are YOUR REWARD on the results page.
+        final panel = game.world.children.query<ResultsScreen>().single;
+        expect(panel.model.reward, 5);
+        stepGame(game, 1.3);
+        expect(panel.rewardText.text, '5');
       },
     );
 
@@ -562,11 +561,11 @@ void main() {
         game.score = 4;
         killRun(game);
         await flushAndMount(game);
-        final panel = game.world.children.query<GameOverPanel>().single;
+        final panel = game.world.children.query<ResultsScreen>().single;
         expect(panel.canContinue, isFalse);
         stepGame(game, 1.0);
         expect(panel.canContinue, isTrue);
-        // Space on game over = the panel's action (goHome).
+        // Space on the results page = NEXT (goHome).
         game.onKeyEvent(keyDown(LogicalKeyboardKey.space), {});
         await flushAndMount(game);
         expect(game.state, GameState.start);

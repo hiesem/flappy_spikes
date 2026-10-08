@@ -131,7 +131,7 @@ void main() {
       setUp: (g, _) => boot(g),
       verify: (game, _) async {
         final run = await dieAfter(game, 5);
-        expect(game.state, GameState.gameOver);
+        expect(game.state, GameState.results);
         expect(game.reviveScreen, isNull);
         expect(run.state.adStepAvailableThisGame, isTrue);
         expect(run.state.coinRevives, 0);
@@ -255,7 +255,7 @@ void main() {
         s3.tapNoThanks();
         step(game, .5);
         await flushAndMount(game);
-        expect(game.state, GameState.gameOver);
+        expect(game.state, GameState.results);
         expect(game.storage.gamesPlayed, played + 1);
         expect(run.summarize().revives, 2);
       },
@@ -353,7 +353,7 @@ void main() {
       );
       step(game, 1.5);
       await flushAndMount(game);
-      expect(game.state, GameState.gameOver);
+      expect(game.state, GameState.results);
       expect(analyticsLog(spy).map((e) => e.$1), contains('revive_timeout'));
     },
   );

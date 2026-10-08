@@ -4,12 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 /// Where a rewarded ad was requested from. Shop free coins and the home
-/// powerup slot belong to the menu (PRD-1); revive and 2× coins to gameplay.
+/// powerup slot belong to the menu (PRD-1); revive and the balloon bonus to
+/// gameplay (PRD-2; the results-page 2× coins ad was removed, §3.14).
 enum AdPlacement {
   shopFreeCoins,
   homeSlot,
   revive,
-  doubleCoins,
   // PRD-2 §3.15 balloon bonus extra pops (WP-0b).
   bonusFeathers,
 }
@@ -20,7 +20,6 @@ extension AdPlacementName on AdPlacement {
     AdPlacement.shopFreeCoins => 'shop_free_coins',
     AdPlacement.homeSlot => 'home_slot',
     AdPlacement.revive => 'revive',
-    AdPlacement.doubleCoins => 'double_coins',
     AdPlacement.bonusFeathers => 'bonus_feathers',
   };
 }

@@ -406,14 +406,14 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.14-17 | Running squeeze resets to open during the phoenix (0.5 s); next 60–120 s later | 3.14 | 3g | test/run/screens/s3_14_revive_test.dart | done (baseline reset; 3g adds the wall animation) |
 | R-3.14-18 | First hoop after a revive is normal | 3.14 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.14-19 | Versus: opponent recording pauses during offer and phoenix | 3.14 | 5b | | todo |
-| R-3.14-20 | Results page content: WIN/LOSE header, versus card (scores, WINNER), NEW BEST, level (emblem + bird, rank, progress), YOUR REWARD, NEXT → `goHome()` (new arrival) | 3.14 | 2e / 5b | | todo |
-| R-3.14-21 | YOUR REWARD = run coins + puzzle coins + win/draw bonus, excluding balloon coins; one total, no breakdown | 3.14 | 2e | | todo |
-| R-3.14-22 | Solo: same page without versus card / header | 3.14 | 2e | | todo |
-| R-3.14-23 | Results replaces the 1.0 game-over panel; league strip and 2× coins ad removed; no ad on results | 3.14 | 2e | | todo |
-| R-3.14-24 | Levels = the 10 ranks of PRD-home-v3 §4.1 from best score; page shows the level after this run | 3.14 | 2e | | todo |
-| R-3.14-25 | Level up on the results page: celebration for the highest new level, rewards summed, CLAIM credits `wallet.add(level)` at the claim; replaces the home LEVEL UP popup | 3.14 | 2e | | todo |
-| R-3.14-26 | NEXT while CLAIM showing auto-claims with the same animation, then home | 3.14 | 2e | | todo |
-| R-3.14-27 | App closed before claiming: `unclaimedLevelReward` credited at next start without animation | 3.14, 7 | 2e | | todo |
+| R-3.14-20 | Results page content: WIN/LOSE header, versus card (scores, WINNER), NEW BEST, level (emblem + bird, rank, progress), YOUR REWARD, NEXT → `goHome()` (new arrival) | 3.14 | 2e / 5b | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 solo…; test/run/shots/results_shots_test.dart (versus parts: 5b) | done |
+| R-3.14-21 | YOUR REWARD = run coins + puzzle coins + win/draw bonus, excluding balloon coins; one total, no breakdown | 3.14 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 YOUR REWARD includes puzzle coins… | done |
+| R-3.14-22 | Solo: same page without versus card / header | 3.14 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 solo… | done |
+| R-3.14-23 | Results replaces the 1.0 game-over panel; league strip and 2× coins ad removed; no ad on results | 3.14 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 solo…; test/services/ads_service_test.dart | done |
+| R-3.14-24 | Levels = the 10 ranks of PRD-home-v3 §4.1 from best score; page shows the level after this run | 3.14 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§5.10 level bar…; §3.14 the model reads the level… | done |
+| R-3.14-25 | Level up on the results page: celebration for the highest new level, rewards summed, CLAIM credits `wallet.add(level)` at the claim; replaces the home LEVEL UP popup | 3.14 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 level up (one level)…; §3.14 several levels… | done |
+| R-3.14-26 | NEXT while CLAIM showing auto-claims with the same animation, then home | 3.14 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 NEXT while CLAIM shows…; §3.14 NEXT before CLAIM… | done |
+| R-3.14-27 | App closed before claiming: `unclaimedLevelReward` credited at next start without animation | 3.14, 7 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§7 an unclaimed level reward is credited at the next app start… | done |
 
 ## 3.15 Golden feathers and the balloon bonus
 
@@ -437,7 +437,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.15-16 | No thanks / NEXT → results; unpopped balloons never revealed | 3.15 | 4a | | todo |
 | R-3.15-17 | No ad available → skip offer, show NEXT; no-ads owners get 3 extra feathers without an ad (no video icon, once) | 3.15 | 4a | | todo |
 | R-3.15-18 | Taps ignored while a balloon opens (≈ 1.1 s) | 3.15 | 4a | | todo |
-| R-3.15-19 | Results YOUR REWARD excludes bonus coins | 3.15 | 2e / 4a | | todo |
+| R-3.15-19 | Results YOUR REWARD excludes bonus coins | 3.15 | 2e / 4a | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 YOUR REWARD includes puzzle coins… (balloon excluded) | done |
 | R-3.15-20 | App killed on the bonus screen: remaining pops lost (Q39) | 10 | 4a | | todo |
 | R-3.15-21 | Tray waits until a banner has gone (Q37, same queue as Q42) | 10 | 4a / 0c | test/run/effects/s3_0_9_parts_test.dart::Q37 / Q42 collect slot: one at a time, waits for the banner | part (CollectSlot 0c) |
 
@@ -682,11 +682,11 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.9-5 | Tap → pay: ad (pop, fade 0.25 s, ad); coins (10 coins fly 0.5 s each 0.05 apart + ticks, balance counts down 0.7 s, pill squeezes, heart flashes); locked (shake ±9 pt, GET COINS bumps) | 5.9 | 2d | test/run/screens/s3_14_revive_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
 | R-5.9-6 | Phoenix timeline 0–0.5 / 0.5–1.0 / 1.0 burst / 1.0–1.65 / 1.65 exactly as the table (flames, rise, wings, 34 feathers, 46 embers, shockwave 20 → 170) | 5.9 | 2d | test/run/screens/s3_14_revive_test.dart; test/run/shots/revive_hud_shots_test.dart | done |
 | R-5.9-7 | Sounds `rv_pay`, `rv_ignite`, `rv_burst`, `rv_locked`, `bn_coin` per coin, `flap.mp3` on resume | 5.9 | 2d | test/run/screens/s3_14_revive_test.dart | done |
-| R-5.10-1 | Layout: header y 70 (pink YOU WIN! / grey YOU LOSE), versus card y 124, NEW BEST sticker y ≈ 238, level stage y 262 (emblem 0.62 at (160, 346) + bird), rank line y 414, bar y 444, YOUR REWARD y 494 + pill y 512, NEXT y 596 | 5.10 | 2e / 5b | | todo |
+| R-5.10-1 | Layout: header y 70 (pink YOU WIN! / grey YOU LOSE), versus card y 124, NEW BEST sticker y ≈ 238, level stage y 262 (emblem 0.62 at (160, 346) + bird), rank line y 414, bar y 444, YOUR REWARD y 494 + pill y 512, NEXT y 596 | 5.10 | 2e / 5b | test/run/shots/results_shots_test.dart | done |
 | R-5.10-2 | Draw: "DRAW" grey, both scores plum, no WINNER tag, +5 in reward | 5.10 | 5b | | todo |
-| R-5.10-3 | Sequence: level before → count-ups 0.45 s → NEW BEST 1.2 s → bar fill 1.65 s → LEVEL UP (flash, shake, pop, rays, banner, rank bounce, confetti 60/100/150 + 3 fireworks; lv 9–10 second wave) → CLAIM button +0.9 s pulsing → claim (12 coins, count-up, pill bump, confetti) → bar refills | 5.10 | 2e | | todo |
-| R-5.10-4 | Sounds `perfect_1` (NEW BEST), `lv_bar`, `lv_up` / `lv_up_big`, `lv_claim`, `bn_coin` | 5.10 | 2e | | todo |
-| R-5.10-5 | Solo: no header, card shows only you centred | 5.10 | 2e | | todo |
+| R-5.10-3 | Sequence: level before → count-ups 0.45 s → NEW BEST 1.2 s → bar fill 1.65 s → LEVEL UP (flash, shake, pop, rays, banner, rank bounce, confetti 60/100/150 + 3 fireworks; lv 9–10 second wave) → CLAIM button +0.9 s pulsing → claim (12 coins, count-up, pill bump, confetti) → bar refills | 5.10 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§5.10 new best…; §3.14 level up…; §5.10 lv 9-10…; test/run/shots/results_shots_test.dart | done |
+| R-5.10-4 | Sounds `perfect_1` (NEW BEST), `lv_bar`, `lv_up` / `lv_up_big`, `lv_claim`, `bn_coin` | 5.10 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§5.10 new best…; §3.14 level up…; §5.10 lv 9-10… | done |
+| R-5.10-5 | Solo: no header, card shows only you centred | 5.10 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 solo…; test/run/shots/results_shots_test.dart | done |
 | R-5.11-1 | Angled rings match `rings_angled.png` (no labels) | 5.11 | 1b | shot: build/shots/run/rings/5_11_angled_{711,568}.png vs rings_angled.png | done |
 | R-5.12-1 | Guides: dashed fg 2.5 pt 6/6, 75 %, arrowheads 13 × 12, 16 pt end caps, behind the ring, attached to the home position | 5.12 | 1b | shot: build/shots/run/rings/5_12_*.png vs moving_1..4.png; test/run/hoops/s3_11_moving_rings_test.dart::§5.12 guide painter… | done |
 | R-5.12b-1 | Portal ring ellipse 64 × 150, front `#7C4DFF` 9 pt + cyan 3 pt inner rim, back `#4B2BB8`, 13 % cyan fill, beam 66 × 126 pulsing 75–100 % | 5.12b | 3b | | todo |
@@ -860,7 +860,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-7-4 | One `Hoop` component with a `kind` (normal, saw, switch, pair, fever, train, spring, bullseye, spin, portal) and ring offsets; strategy objects; tilt/move modifiers | 7 | 0b / 1a | test/run/flow/s3_0_run_core_flow_test.dart; test/run/flow/s3_1_hoop_flow_test.dart | done (kinds per WP) |
 | R-7-5 | Bird at fixed screen x; world moves at the bird's forward speed; rim ends checked in plain math; `maxTranslation = 10000` kept | 7 | 1a | test/run/flow/s3_1_hoop_flow_test.dart; test/run/physics/s3_0_4_rim_test.dart; lib/game/flappy_game.dart maxTranslation = 10000 kept | done |
 | R-7-6 | Death: free ballistic body, world eases to 0 over 0.4 s | 7 | 1a | test/run/physics/s3_0_5_tumble_test.dart; test/run/flow/s3_1_hoop_flow_test.dart::§3.0.5 the world eases to a stop over 0.4 s | done |
-| R-7-7 | Results reads the level from `bestScore` before/after; `unclaimedLevelReward` until CLAIM/NEXT; emblem painter shared with home | 7 | 2e | | todo |
+| R-7-7 | Results reads the level from `bestScore` before/after; `unclaimedLevelReward` until CLAIM/NEXT; emblem painter shared with home | 7 | 2e | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 level up…; §7 an unclaimed level reward… | done |
 | R-7-8 | `PortalRide` engine + `RideTheme` per ride; `rides84.js` timings | 7 | 3b | | todo |
 | R-7-9 | Sounds through `AudioPool` only; comet loop via the BGM-style player | 7 | 0b / all | test/run/s7_run_parts_test.dart::§3.9 loops… | done (0b part); all pending |
 | R-7-10 | Versus backend in repo: `functions/` (TS, 2nd gen), `firestore.rules`, `firestore.indexes.json`, TTL policy; Emulator Suite tests; `VersusService` no-op by default | 7 | 5a / 5b | functions/, firestore.rules, firestore.indexes.json, functions/scripts/set_ttl.sh; `npm --prefix functions test` | 5a done (VersusService: 5b) |
@@ -874,7 +874,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-7-T5 | `startHoopIndex` override; gate ≥ 12 hoops after each type unlocks at both heights; plain run ≥ 12 | 7 | 0b / P3 | test/run/director/s3_0_3_director_test.dart | done (0b part); P3 pending |
 | R-7-T6 | Autopilot targets the switch before a closed switch ring and the nearer ring of a pair | 7 | 0b / 3d | lib/run/debug/autopilot.dart (nearest ring); switch pre-target via HoopKind.autopilotTarget (3d) | done (0b part); 3d pending |
 | R-7-T7 | Revive tests: ladder (ad → 250 → 500 → 1 000 → doubling, reset per game, no-ad start 250); phoenix (safe line, drift to 70, scroll at 1.65 s, 2 s invuln, Black Hole re-form); ≥ 6 rule (≤ 5 → no offer, no ladder step); collectables lost and timed powerups ended at death; squeeze reset | 7 | 2d (+ 3d / 3e / 3f / 3g cases) | | todo |
-| R-7-T8 | Results tests: level-up one / several, CLAIM, auto-claim on NEXT, `unclaimedLevelReward` at next start; YOUR REWARD incl. puzzle + win/draw, excl. balloon | 7 | 2e (+ 4a / 5b cases) | | todo |
+| R-7-T8 | Results tests: level-up one / several, CLAIM, auto-claim on NEXT, `unclaimedLevelReward` at next start; YOUR REWARD incl. puzzle + win/draw, excl. balloon | 7 | 2e (+ 4a / 5b cases) | test/run/screens/s3_14_s5_10_results_test.dart (4a / 5b cases: their WPs) | done |
 | R-7-T9 | Versus tests: timeline replay on runClock (pause, revive offer, phoenix, Hourglass); opponent out at timeline end; WIN / LOSE / DRAW + bonus; solo start without prefetch | 7 | 5b (+ 3f case) | | todo |
 | R-7-T10 | Rumble tests: recorder per event; 90 ms throttle; shake never skipped | 7 | 2c | | todo |
 | R-7-T11 | Notification tests with a fake clock: windows, quiet hours incl. TZ / DST, skip-after-play, 7 d / 14 slots, rotation no repeat in 10 d, fill-in + fallback | 7 | 4b | | todo |

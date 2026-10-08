@@ -5,7 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
-import 'package:flappy_spikes/components/gameover_panel.dart';
+import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/components/look_component.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
 import 'package:flappy_spikes/components/skins/celebration.dart';
@@ -238,7 +238,7 @@ void main() {
     );
   });
 
-  e2e('QA play score is credited once, +N panel, replay rolls home', (
+  e2e('QA play score is credited once, YOUR REWARD, NEXT rolls home', (
     g,
     r,
     t,
@@ -256,15 +256,16 @@ void main() {
     await settle(g, t, fade: true);
     expect(g.menu.wallet.balance, 1);
     expect(g.storage.gamesPlayed, 1);
-    expect(g.world.children.query<GameOverPanel>().single.coinsEarned, 1);
+    expect(g.world.children.query<ResultsScreen>().single.model.reward, 1);
     expect(r.spy.params('coins_earned').single, {
       'amount': 1,
       'source': 'hoop',
       'egg_x2': 0,
     });
     await capture(g, t, 'gameover_1coin');
-    // Existing 1.0 replay button centre = centreY + 25.25.
-    await tap(g, t, const Offset(160, 380.75));
+    // The results page's NEXT (PRD-2 §5.10).
+    final next = g.resultsScreen!.nextButton.absoluteCenter;
+    await tap(g, t, Offset(next.x, next.y));
     expect(g.state, GameState.start);
     expect(g.menuScene, MenuScene.home);
     expect(r.spy.params('home_slot_shown').length, 2);
@@ -832,7 +833,7 @@ void main() {
     await settle(g, t, fade: true);
     stepGame(g, 1.5);
     await flushAndMount(g);
-    expect(g.world.children.query<GameOverPanel>().single.canContinue, isTrue);
+    expect(g.world.children.query<ResultsScreen>().single.canContinue, isTrue);
     g.onKeyEvent(key(LogicalKeyboardKey.escape), {});
     await settle(g, t, fade: true);
     expect(

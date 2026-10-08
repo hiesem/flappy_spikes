@@ -7,7 +7,12 @@ void main() {
       expect(AdPlacement.shopFreeCoins.analyticsName, 'shop_free_coins');
       expect(AdPlacement.homeSlot.analyticsName, 'home_slot');
       expect(AdPlacement.revive.analyticsName, 'revive');
-      expect(AdPlacement.doubleCoins.analyticsName, 'double_coins');
+      expect(AdPlacement.bonusFeathers.analyticsName, 'bonus_feathers');
+      // PRD-2 §3.14: the results-page 2× coins ad is removed.
+      expect(
+        AdPlacement.values.map((p) => p.analyticsName),
+        isNot(contains('double_coins')),
+      );
     });
   });
 
@@ -44,7 +49,7 @@ void main() {
     test('unavailable mode: nothing plays, not counted', () async {
       final ads = FakeRewardedAds()..mode = FakeAdMode.unavailable;
       expect(ads.isAvailable, isFalse);
-      expect(await ads.show(AdPlacement.doubleCoins), AdResult.unavailable);
+      expect(await ads.show(AdPlacement.revive), AdResult.unavailable);
       expect(ads.shown, 0);
       expect(ads.placements, isEmpty);
     });

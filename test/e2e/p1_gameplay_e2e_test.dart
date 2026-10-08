@@ -3,7 +3,7 @@ import 'dart:math';
 
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
-import 'package:flappy_spikes/components/gameover_panel.dart';
+import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
@@ -113,8 +113,8 @@ void main() {
         killRun(g);
         await flushAndMount(g);
         await declineRevive(g);
-        expect(g.state, GameState.gameOver);
-        expect(g.world.children.query<GameOverPanel>(), hasLength(1));
+        expect(g.state, GameState.results);
+        expect(g.world.children.query<ResultsScreen>(), hasLength(1));
         expect(g.storage.coins, coins, reason: 'passes were already credited');
         // Tumble continues through the current results flow to a floor rest.
         stepGame(g, 5);

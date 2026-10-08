@@ -6,8 +6,8 @@ import 'post_run_screens.dart';
 /// The run's end (ARCH §1.11): dying (tumble, WP-1a) → the revive offer if
 /// at least [reviveMinHoops] hoops were passed (WP-2d, offered by the game
 /// before the run ends) → back to play, or →
-/// the bonus when 3 feathers are held (WP-4a) → results (WP-2e; legacy
-/// `GameOverPanel` until then) → `game.goHome()`.
+/// the bonus when 3 feathers are held (WP-4a) → results (WP-2e
+/// `ResultsPage`) → `game.goHome()`.
 ///
 /// Every slot is optional; with none registered (WP-0b) the results come
 /// up synchronously, exactly like the 1.0 game over.

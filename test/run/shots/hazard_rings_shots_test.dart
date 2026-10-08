@@ -158,6 +158,9 @@ void main() {
               startHoopIndex: 12,
               force: [ElementId.switchRing],
             );
+            // The next switch takes this design (the course is otherwise
+            // free; a 120 s wait for a random design is seed luck).
+            run.director.debugForceSwitchDesign(design);
             final hoop = await flyToHoop(
               game,
               HoopKindId.switchRing,

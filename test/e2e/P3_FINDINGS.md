@@ -172,3 +172,16 @@ separately:** SOUNDS' implementation notes explicitly mix that chord into
 each switch `*_open` clip; the independent opening cue is already played.
 Versus-only cues are outside scope. Verification observes SoundService
 requests and asset loading; audible playback on Android was not tested.
+
+## Fix round P3-R1 decisions (2026-10-08)
+
+All eight regressions are active (skips removed, assertions unchanged).
+
+- **S6-40:** `FeverFeature` listens to `RimTouched` and puts the fire out (cause `graze`) at the contact; rim contacts during a ride are ignored (rides keep the fire).
+- **S6-41:** PRD wins: `PiggyState.voided` is gone; portal-cleared (and pending planned) bank coins are refunded to the director (`refundPiggyCoins`) and placed again after the landing; payout only at caught + missed = 20. ARCH §25 / SPEC updated; `s3_28_piggy_test` portal case rewritten to the PRD rule.
+- **S6-42:** the partial "n / 8" pop plays `Sfx.trailPop`.
+- **S6-43:** new `ParticleShape.coin` draws master #14 (`CoinIcon.paint` from `menu/coin.png`); the +10 COINS spray uses it.
+- **S6-44:** the autopilot plans the closed-switch approach with a physics rollout (same controller family as the ring planner, reach = 18 + bird r × birdScale − 3) instead of the bang-bang hover.
+- **S6-45:** the switch is chosen inside 70–100 pt of its ring ∩ ≤ 110 pt of the previous centre ∩ item margins; with no such spot the ring moves to the nearest band height that has one (else the slot becomes a normal hoop). `switchMinFromRing` removed.
+- **S6-46:** running bank / jar fields are not placed in the squeeze window; the bank keeps its owed coins for after the reopening.
+- **S6-47:** a `ClearFade` mixin on hoop halves and pickups fades `clearAlpha` 1 → 0 over the clear's 0.2 s (one translucent layer), then the spawner removes them.

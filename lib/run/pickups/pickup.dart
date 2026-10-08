@@ -1,6 +1,7 @@
 import 'package:flame/components.dart';
 
 import '../director/plans.dart';
+import '../effects/clear_fade.dart';
 import '../elements.dart';
 import '../run_context.dart';
 
@@ -70,7 +71,7 @@ abstract final class PickupRadii {
 
 /// Base of every in-run pickup, in track coordinates (ARCH §1.6). WP-0c's
 /// `PickupTouchFx` is the shared touch effect.
-abstract class Pickup extends PositionComponent {
+abstract class Pickup extends PositionComponent with ClearFade {
   Pickup({
     required this.id,
     required this.hitRadius,

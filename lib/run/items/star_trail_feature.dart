@@ -18,7 +18,7 @@ import '../run_feature.dart';
 /// (sparkle + the next C-major note) and emits [StarTrailFinished] when its
 /// last star is behind the bird; this feature records the count and decides
 /// the end: **all 8** shows PERFECT LINE, pays +5 coins (`star_trail`) and
-/// plays the chord, anything less pops "n / 8" and pays nothing. Single
+/// plays the chord, anything less pops "n / 8" (`trailPop`) and pays nothing. Single
 /// stars pay nothing on their own (Q65).
 class StarTrailFeature extends RunFeature {
   RunContext? _c;
@@ -64,6 +64,8 @@ class StarTrailFeature extends RunFeature {
       c.sfx(Sfx.trailChord);
       return;
     }
+    // §3.26 / SOUNDS the partial "n / 8" pop (S6-42).
+    c.sfx(Sfx.trailPop);
     final bird = c.run.birdTrackPosition();
     if (bird == null) return;
     c.layers.fx.add(

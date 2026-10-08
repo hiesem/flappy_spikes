@@ -703,7 +703,8 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
 - DEVIATION (PRD-2 §3.19): the **FEVER ring** — a perfect pass sets the
   streak to max(5, streak + 1) and sets the bird on fire (visual only) until
   the streak breaks (graze, save or death). A rim touch on it is a normal
-  pass.
+  pass. The fire goes out at the rim contact itself, not when the pass
+  resolves (Fix P3 R1, S6-40); ride rings never put it out.
 - DEVIATION (PRD-2 §3.23, director): the spring's 240 pt room is checked
   against the band rule (tooth lines − opening/2 − 7 − 18), not the row's
   centre range, and the ring after a spring may leave that range — otherwise
@@ -755,7 +756,11 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   18) opens the ring at once (animation ≤ 0.8 s) and gives +1 coin; reaching
   the plane while closed is a mistake (`closed_switch`, knock straight back,
   the red crash word); a save makes it count as passed with no score. A comet
-  opens a closed ring by itself.
+  opens a closed ring by itself. The switch is always 70–100 pt above / below
+  its ring centre **and** ≤ 110 pt from the previous hoop centre; when the
+  ring's drawn height leaves no such spot the ring moves to the nearest
+  band height that does (else the slot becomes a normal hoop) (Fix P3 R1,
+  S6-45).
 - DEVIATION (PRD-2 §3.21 / §5.20, new mechanic): from hoop 12 a **pair** of
   two rings (offset 230 × viewHeight / 711) holding gift boxes replaces a
   slot. Through one ring: a normal pass plus its gift (Shield arms the shield,
@@ -834,8 +839,12 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   smashes and pays **×2 of what was caught** (`piggy`) — the chick's ×2
   stacks on top. The HUD piggy shows "n / 20", a 90 pt bar and "n missed";
   a crash before the pay-out loses the bank (also with a revive), a save
-  keeps it. A portal ride removes the on-screen coins **without counting
-  them missed** (they are voided) and placement resumes after the landing.
+  keeps it. A portal ride removes the on-screen (and planned) coins
+  **without counting them missed**; the bank stays open and the director
+  places those coins again after the landing — the pay-out only comes once
+  all 20 are caught or missed (Fix P3 R1, S6-41). During a squeeze window
+  no new bank coin fields or firefly swarms are placed; they wait for the
+  reopening (§3.17, S6-46).
 - DEVIATION (PRD-2 §3.29 / §5.28, new collectable): a **Firefly Jar** pickup
   (animated: bob ±5, sway ±7°, lime glow, rays, 4 fireflies inside) starts a
   jar ("FIREFLY JAR"); from then on each following gap has a swarm of 7

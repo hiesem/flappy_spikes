@@ -9,6 +9,7 @@ import '../../../../versus/timeline.dart' show PointFlags;
 import '../../../config/pair_config.dart';
 import '../../../config/run_config.dart';
 import '../../../director/plans.dart';
+import '../../../effects/coin_icon.dart';
 import '../../../effects/particle_pool.dart';
 import '../../../effects/rising_word.dart';
 import '../../../effects/shock_ring.dart';
@@ -154,8 +155,14 @@ class PairHoopKind extends HoopKind {
     }
   }
 
-  /// §5.20 +10 COINS: coins spray from the bird.
+  /// §5.20 +10 COINS: coins spray from the bird — master #14's coin
+  /// sprite (§3.0.9 #14, S6-43), never a code-drawn disc.
   static void _coinSpray(RunContext c) {
+    final images = c.game.images;
+    final pool = c.run.particles;
+    if (pool.coinImage == null && images.containsKey(CoinIcon.asset)) {
+      pool.coinImage = images.fromCache(CoinIcon.asset);
+    }
     final b =
         c.run.birdTrackPosition() ??
         Vector2(c.s.camX + RunConfig.birdX, c.viewHeight / 2);
@@ -164,7 +171,7 @@ class PairHoopKind extends HoopKind {
       final a = -math.pi / 2 + (r.nextDouble() - .5) * 1.6;
       final s = 150 + r.nextDouble() * 120;
       c.run.particles.spawn(
-        shape: ParticleShape.circle,
+        shape: ParticleShape.coin,
         x: b.x,
         y: b.y,
         vx: math.cos(a) * s,

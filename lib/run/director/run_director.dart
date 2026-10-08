@@ -108,11 +108,15 @@ class RunDirector {
   SwitchDesign? _lastSwitch;
   RideId? _lastRide;
   RideId? _forcedRide;
+  SwitchDesign? _forcedSwitch;
   final List<ElementId> _forced;
   bool _revivePending = false;
   final Set<int> _gapUsed = {};
   bool _piggyActive = false;
-  int _piggyGapsLeft = 0;
+
+  /// §3.28 bank coins the director still has to place in follow-up gaps
+  /// (4 per gap). A portal clear refunds what it removed unjudged (S6-41).
+  int _piggyOwed = 0;
   int _collectablePlannedAt = -99;
   RideKind? _ride;
   final Map<String, int> _spawned = {};
@@ -218,6 +222,10 @@ class RunDirector {
     _forcedRide = id;
     if (!_forced.contains(ElementId.portal)) _forced.add(ElementId.portal);
   }
+
+  /// §3.0.8 debug / shots: the next switch ring takes [design] (the layout
+  /// draw still happens, so the course stays the same).
+  void debugForceSwitchDesign(SwitchDesign design) => _forcedSwitch = design;
 
   // region WP-3b — portal rides (PRD-2 §3.12)
   /// §3.12 normal hoops resume after a portal ride: the next slot's plane
@@ -454,11 +462,36 @@ class RunDirector {
         final options = SwitchDesign.values
             .where((d) => d != _lastSwitch)
             .toList();
-        final d = options[r.nextInt(options.length)];
+        final picked = options[r.nextInt(options.length)];
+        final d = _forcedSwitch ?? picked;
+        _forcedSwitch = null;
         _lastSwitch = d;
         extra = d;
-        attached.add(_switchItem(trackX, y, ctx, d, prevY));
-        _gapUsed.add(i - 1);
+        final (lo0, hi0) = _layout.limits(i, ctx, opening, useTable: false);
+        final fit = _switchItem(
+          trackX,
+          y,
+          ctx,
+          d,
+          prevY,
+          ringLo: lo0,
+          ringHi: hi0,
+          maxJump: maxJump,
+        );
+        if (fit == null) {
+          // No ring height inside the band leaves a switch spot that obeys
+          // both §3.20 rules → a normal hoop (like pair / spring).
+          kind = HoopKindId.normal;
+          forced = false;
+          extra = null;
+        } else {
+          if (fit.$1 != y) {
+            y = fit.$1;
+            _layout.lastY = y;
+          }
+          attached.add(fit.$2);
+          _gapUsed.add(i - 1);
+        }
       case HoopKindId.portal:
         final ride =
             _forcedRide ??
@@ -620,14 +653,22 @@ class RunDirector {
   }
 
   /// §3.20 the switch: 1.0 s × scroll (≥ 150 pt) before its ring, 70–100 pt
-  /// above / below the ring centre, ≤ 110 pt from the previous hoop centre.
-  GapItemPlan _switchItem(
+  /// above / below the ring centre, ≤ 110 pt from the previous hoop centre
+  /// and inside the item margins. Both rules always hold (S6-45): when no
+  /// switch spot fits the ring at [y], the ring moves to the nearest height
+  /// in [ringLo, ringHi] (and within [maxJump] of the previous hoop) that
+  /// leaves one. Returns the ring centre and the switch, or null when no
+  /// ring height fits.
+  (double, GapItemPlan)? _switchItem(
     double ringX,
     double y,
     DirectorContext ctx,
     SwitchDesign design,
-    double? prevY,
-  ) {
+    double? prevY, {
+    required double ringLo,
+    required double ringHi,
+    required double maxJump,
+  }) {
     final r = rng.layout;
     final lead = max(
       RunConfig.switchLeadMin,
@@ -635,32 +676,75 @@ class RunDirector {
     );
     final lo = ctx.squeezeTopTooth + RunConfig.itemEdgeMargin;
     final hi = ctx.squeezeFloorTooth - RunConfig.itemEdgeMargin;
-    final off =
-        RunRandom.range(r, RunConfig.switchOffsetMin, RunConfig.switchOffsetMax) *
-        (r.nextDouble() < 0.5 ? -1 : 1);
-    double place(double o) => (y + o).clamp(lo, hi).toDouble();
-    var sy = place(off);
-    if ((sy - y).abs() < RunConfig.switchMinFromRing) sy = place(-off);
-    if (prevY != null && (sy - prevY).abs() > RunConfig.switchMaxFromPrev) {
-      final other = place(-off);
-      if ((other - prevY).abs() < (sy - prevY).abs()) sy = other;
-      sy = sy
-          .clamp(
-            prevY - RunConfig.switchMaxFromPrev,
-            prevY + RunConfig.switchMaxFromPrev,
-          )
-          .clamp(lo, hi)
-          .toDouble();
+    final mag = RunRandom.range(
+      r,
+      RunConfig.switchOffsetMin,
+      RunConfig.switchOffsetMax,
+    );
+    final side = r.nextDouble() < 0.5 ? -1 : 1;
+
+    /// The switch y for a ring at [ry] (preferred side first), or null.
+    double? place(double ry) {
+      for (final sd in [side, -side]) {
+        var a = ry + sd * RunConfig.switchOffsetMin;
+        var b = ry + sd * RunConfig.switchOffsetMax;
+        if (a > b) (a, b) = (b, a);
+        a = max(a, lo);
+        b = min(b, hi);
+        if (prevY != null) {
+          a = max(a, prevY - RunConfig.switchMaxFromPrev);
+          b = min(b, prevY + RunConfig.switchMaxFromPrev);
+        }
+        if (a <= b) return (ry + sd * mag).clamp(a, b).toDouble();
+      }
+      return null;
     }
-    return GapItemPlan(
-      kind: ElementId.switchRing,
-      trackX: ringX - lead,
-      y: sy,
-      extra: design,
+
+    var ringY = y;
+    var sy = place(y);
+    if (sy == null) {
+      // Nearest ring height (1 pt steps) that leaves a switch spot.
+      final reach = max((y - ringLo).abs(), (ringHi - y).abs()).ceil();
+      for (var k = 1; k <= reach && sy == null; k++) {
+        for (final cand in [y - k, y + k]) {
+          if (cand < ringLo || cand > ringHi) continue;
+          if (prevY != null && (cand - prevY).abs() > maxJump) continue;
+          sy = place(cand);
+          if (sy != null) {
+            ringY = cand;
+            break;
+          }
+        }
+      }
+    }
+    if (sy == null) return null;
+    return (
+      ringY,
+      GapItemPlan(
+        kind: ElementId.switchRing,
+        trackX: ringX - lead,
+        y: sy,
+        extra: design,
+      ),
     );
   }
 
   // --- gaps -------------------------------------------------------------------
+
+  /// §3.0.3 / §3.28 a portal ride cleared [coins] bank coins unjudged: they
+  /// are neither caught nor missed, so the bank places them again in the
+  /// gaps after the landing (S6-41).
+  void refundPiggyCoins(int coins) {
+    if (coins <= 0) return;
+    if (!_piggyActive) {
+      _piggyActive = true;
+      _piggyOwed = RunConfig.piggyFollowGaps * RunConfig.piggyCoinsPerGap;
+    }
+    _piggyOwed += coins;
+  }
+
+  /// Bank coins still to be placed (tests).
+  int get piggyCoinsOwed => _piggyOwed;
 
   /// §3.0.3 "order of decisions for the gap" after [slot].
   GapPlan nextGap(DirectorContext ctx, SlotPlan slot) {
@@ -687,28 +771,33 @@ class RunDirector {
       _count(p.kind.storageId);
     }
 
-    // 1. Running Piggy Bank / Firefly Jar fill the gap.
+    // 1. Running Piggy Bank / Firefly Jar fill the gap. §3.17: in the
+    // squeeze window their fields wait (S6-46); the bank keeps what it
+    // still owes and places it once the squeeze has reopened.
+    final sq = ctx.squeezeWindow;
     if (ctx.piggyRunning) {
       if (!_piggyActive) {
         _piggyActive = true;
-        _piggyGapsLeft = RunConfig.piggyFollowGaps;
+        _piggyOwed = RunConfig.piggyFollowGaps * RunConfig.piggyCoinsPerGap;
       }
-      if (_piggyGapsLeft > 0) {
-        _piggyGapsLeft--;
-        const half = (RunConfig.piggyCoinsPerGap - 1) * 45 / 2;
+      if (_piggyOwed > 0 && !sq) {
+        final n = min(RunConfig.piggyCoinsPerGap, _piggyOwed);
+        _piggyOwed -= n;
+        final half = (n - 1) * 45 / 2;
         put(
           GapItemPlan(
             kind: ElementId.piggyCoins,
             trackX: mid - half,
             toTrackX: mid + half,
-            extra: RunConfig.piggyCoinsPerGap,
+            extra: n,
           ),
         );
       }
     } else {
       _piggyActive = false;
+      _piggyOwed = 0;
     }
-    if (ctx.jarRunning && !used) {
+    if (ctx.jarRunning && !used && !sq) {
       put(
         GapItemPlan(
           kind: ElementId.fireflySwarm,
@@ -738,7 +827,6 @@ class RunDirector {
     }
     // §3.17: in the squeeze window only scheduled hearts (and star trails)
     // spawn; the feather and the piece wait for the next free gap.
-    final sq = ctx.squeezeWindow;
     if (!used &&
         !sq &&
         !_featherDone &&

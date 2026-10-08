@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 
 import '../director/plans.dart';
+import '../effects/clear_fade.dart';
 import '../physics/hoop_frame.dart';
 import 'hoop_kind.dart';
 import 'ring_painter.dart';
@@ -24,7 +25,7 @@ abstract interface class HoopMotionDriver {
 /// logic. The hoop itself lives in `RunLayers.back` and draws the back half;
 /// [front] lives in `RunLayers.front` and draws the front half over the
 /// bird (master #3).
-class Hoop extends PositionComponent {
+class Hoop extends PositionComponent with ClearFade {
   Hoop({required this.plan, required this.kind})
     : opening = plan.opening,
       tilt = plan.tiltDeg,
@@ -110,7 +111,10 @@ class Hoop extends PositionComponent {
   }
 
   @override
-  void render(Canvas canvas) => paintBack?.call(canvas);
+  void render(Canvas canvas) {
+    final paint = paintBack;
+    if (paint != null) paintFaded(canvas, paint);
+  }
   // endregion WP-1a
 
   void resolvePass(int ring) {
@@ -153,12 +157,15 @@ class HoopLook {
 
 /// The front half of a [Hoop] (drawn over the bird). Kinds add children or
 /// set [paintFront].
-class HoopFrontLayer extends PositionComponent {
+class HoopFrontLayer extends PositionComponent with ClearFade {
   HoopFrontLayer(this.hoop)
     : super(position: hoop.position.clone(), anchor: Anchor.center);
   final Hoop hoop;
   void Function(Canvas canvas)? paintFront;
 
   @override
-  void render(Canvas canvas) => paintFront?.call(canvas);
+  void render(Canvas canvas) {
+    final paint = paintFront;
+    if (paint != null) paintFaded(canvas, paint);
+  }
 }

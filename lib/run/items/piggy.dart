@@ -32,8 +32,8 @@ import '../run_state.dart';
 /// the chick's ×2 stacks on top through `RunContext.earn`), shows "+N" and
 /// disappears. A crash before the pay-out loses the bank (also with a
 /// revive); a shield / extra life save keeps it (Q67). A portal ride clears
-/// the coins on screen without counting them missed and placement resumes
-/// after the landing (§3.0.3).
+/// the coins on screen without counting them missed; the director places
+/// them again after the landing (§3.0.3, S6-41).
 class PiggyFeature extends RunFeature {
   RunContext? _c;
   PiggyBadge? _badge;
@@ -86,19 +86,20 @@ class PiggyFeature extends RunFeature {
     _check(c, bank);
   }
 
-  /// §3.0.3 a portal ride cleared a coin field: its unresolved coins are
-  /// gone without counting as missed, so drop them from what the bank owes
-  /// (else a cleared bank could never resolve).
+  /// §3.0.3 / §3.28 a portal ride cleared a coin field: its unresolved
+  /// coins are neither caught nor missed. The bank stays open and the
+  /// director places them again after the landing (S6-41: all 20 must be
+  /// caught or missed before the pay-out).
   void _onCleared(PickupCleared e) {
     final c = _c;
     if (c == null || e.element != ElementId.piggyCoins) return;
-    final bank = c.s.piggy;
-    if (bank == null) return;
+    if (c.s.piggy == null) return;
     final field = e.pickup;
     if (field is PiggyCoin) {
-      bank.voided += field.count - field.caughtCount - field.missedCount;
+      c.run.director.refundPiggyCoins(
+        field.count - field.caughtCount - field.missedCount,
+      );
     }
-    _check(c, bank);
   }
 
   /// Starts the bank and emits the 4 own-gap coins (PRD §3.28: from 20 pt
@@ -138,7 +139,7 @@ class PiggyFeature extends RunFeature {
 
   /// Pays out once all 20 coins are caught or missed.
   void _check(RunContext c, PiggyState bank) {
-    if (bank.caught + bank.missed + bank.voided < PiggyConfig.total) return;
+    if (bank.caught + bank.missed < PiggyConfig.total) return;
     final caught = bank.caught;
     final payout = caught * PiggyConfig.payoutMult;
     c.s.piggy = null;

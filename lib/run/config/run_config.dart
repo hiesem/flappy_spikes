@@ -111,9 +111,6 @@ abstract final class RunConfig {
   /// centre (pt).
   static const double switchMaxFromPrev = 110;
 
-  /// §3.20 A switch below this vertical distance from its ring flips side.
-  static const double switchMinFromRing = 60;
-
   /// §3.0.3 Items stay this far inside the tooth lines (pt).
   static const double itemEdgeMargin = 40;
 

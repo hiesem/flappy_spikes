@@ -176,10 +176,9 @@ void main() {
       ElementId.pair,
       ElementId.saw,
     ]) {
-      final open = element == ElementId.switchRing;
+      final s644 = element == ElementId.switchRing;
       group(
-        open ? 'S6-44 open' : 'P3 Mini Bird',
-        skip: open ? 'S6-44 open' : null,
+        s644 ? 'S6-44 regression' : 'P3 Mini Bird',
         () {
           qa('P3 Mini Bird through $element h=$height', (g) async {
             final run = await startRun(g, startHoopIndex: 20, force: [element]);
@@ -303,7 +302,7 @@ void main() {
     }, height: height);
   }
 
-  group('S6-40 open', skip: 'S6-40 open', () {
+  group('S6-40 regression', () {
     qa(
       'S6-40 a physical rim touch extinguishes FEVER before plane resolution',
       (g) async {
@@ -324,7 +323,7 @@ void main() {
     );
   });
 
-  group('S6-41 open', skip: 'S6-41 open', () {
+  group('S6-41 regression', () {
     qa('S6-41 portal clears the last 4 bank coins without early payout', (
       g,
     ) async {
@@ -358,7 +357,7 @@ void main() {
     });
   });
 
-  group('S6-42 open', skip: 'S6-42 open', () {
+  group('S6-42 regression', () {
     qa('S6-42 a partial Star Trail requests trailPop', (g) async {
       final run = await startRun(g);
       final sounds = sfxLog(g);
@@ -383,7 +382,7 @@ void main() {
     });
   });
 
-  group('S6-43 open', skip: 'S6-43 open', () {
+  group('S6-43 regression', () {
     qa('S6-43 +10 COINS pair spray retains the pale inner coin ring', (
       g,
     ) async {
@@ -421,7 +420,7 @@ void main() {
     }, realAsync: true);
   });
 
-  group('S6-45 open', skip: 'S6-45 open', () {
+  group('S6-45 regression', () {
     test('S6-45 every switch remains 70–100 pt off its ring centre', () {
       final enabled = {...registeredElements(), ...registeredPickupElements()};
       for (var seed = 1; seed <= 60; seed++) {
@@ -444,7 +443,7 @@ void main() {
     });
   });
 
-  group('S6-46 open', skip: 'S6-46 open', () {
+  group('S6-46 regression', () {
     for (final piggy in [true, false]) {
       test('S6-46 ${piggy ? 'Piggy Bank' : 'Firefly Jar'} suspends new gap '
           'fields in the squeeze window', () {
@@ -478,7 +477,7 @@ void main() {
     }
   });
 
-  group('S6-47 open', skip: 'S6-47 open', () {
+  group('S6-47 regression', () {
     qa('S6-47 portal clearing fades a mounted normal ring over 0.2 s', (
       g,
     ) async {

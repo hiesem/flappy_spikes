@@ -1,0 +1,66 @@
+/**
+ * Flappy Spikes versus backend (PRD-2 §3.13, ARCH §6.3). 2nd gen, europe-west1
+ * (inside the eur3 multi-region of the Firestore database).
+ */
+import { initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
+import { setGlobalOptions, logger } from 'firebase-functions/v2';
+import { onDocumentWritten } from 'firebase-functions/v2/firestore';
+import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { deletePlayerData, processPlayerWrite, sweepAllPools } from './pools.js';
+import type { PlayerDoc } from './schema.js';
+
+initializeApp();
+
+/** Region next to the eur3 database; small caps keep the Blaze bill near zero (§3.13 costs). */
+const REGION = 'europe-west1';
+setGlobalOptions({ region: REGION, maxInstances: 10, memory: '256MiB' });
+
+/**
+ * Validates the new run of a `players/{uid}` write and maintains the pools.
+ * Not client-invoked, so App Check does not apply here: Firestore itself
+ * enforces App Check on the client write that triggers it (ARCH §6.2).
+ */
+export const onPlayerRunWrite = onDocumentWritten(
+  { document: 'players/{uid}', retry: false },
+  async (event) => {
+    const uid = event.params.uid;
+    const before = event.data?.before.data() as PlayerDoc | undefined;
+    const after = event.data?.after.data() as PlayerDoc | undefined;
+    try {
+      const r = await processPlayerWrite(getFirestore(), uid, before, after);
+      if (r.accepted.length || r.rejected.length || r.trimmedRecent) {
+        logger.info('onPlayerRunWrite', { uid, ...r });
+      }
+    } catch (err) {
+      logger.error('onPlayerRunWrite failed', { uid, err: String(err) });
+    }
+  },
+);
+
+/**
+ * "Delete my data" (§3.13 privacy): the caller's pool entries in all 44
+ * shards, `players/{uid}`, the server rate doc and the Auth user. Idempotent.
+ * App Check enforced (ARCH §6.3 / §6.5); tokens are not consumed (no replay
+ * risk: the call only deletes the caller's own data).
+ */
+export const deleteMyData = onCall({ enforceAppCheck: true, consumeAppCheckToken: false }, async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign-in required.');
+  const removed = await deletePlayerData(getFirestore(), uid);
+  try {
+    await getAuth().deleteUser(uid);
+  } catch (err) {
+    if ((err as { code?: string }).code !== 'auth/user-not-found') throw new HttpsError('internal', 'Auth delete failed.');
+  }
+  logger.info('deleteMyData', { uid, removed });
+  return { ok: true, removed };
+});
+
+/** Daily retention sweep of the pool shards (ARCH §6.2: entries > 60 d). */
+export const sweepPools = onSchedule({ schedule: 'every 24 hours', timeZone: 'Etc/UTC' }, async () => {
+  const removed = await sweepAllPools(getFirestore());
+  logger.info('sweepPools', { removed });
+});

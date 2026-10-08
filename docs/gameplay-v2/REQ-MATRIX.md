@@ -73,10 +73,10 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.3-18 | Squeeze window (3 s before warning → walls open): only bullseye, FEVER and saw specials; no comet hoop (waits) | 3.0.3, 3.17 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.3-19 | Optional gap-item table (from, weight, min gaps, limits, placement) for Star Trail, capsule (35 / 35 / 30), egg, piggy, jar, shield (max 1, not while shielded) | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.3-20 | Placements: heart mid-gap (first on line, later 50 % on / 50 % off by 0.1–0.4 band); feather / piece 0.65 × spacing after the hoop, 64–200 pt above; switch 1.0 s × scroll (≥ 150 pt) before its ring, 70–100 pt above/below; capsule / egg / piggy / jar mid-gap on the line; shield 0.1–0.4 band off the line; star trail arc 40 pt after → 40 pt before, bulging 40 pt | 3.0.3 | 0b (plans) / element WPs (components) | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.0.3-21 | Exclusivity: one timed powerup (comet, Hourglass, Mini, Frenzy); no capsule / comet hoop while one runs; no COMET gift while one runs | 3.0.3 | 0b / 3f / 3d | test/run/director/s3_0_3_director_test.dart | done (0b part); 3f / 3d pending |
+| R-3.0.3-21 | Exclusivity: one timed powerup (comet, Hourglass, Mini, Frenzy); no capsule / comet hoop while one runs; no COMET gift while one runs | 3.0.3 | 0b / 3f / 3d | test/run/director/s3_0_3_director_test.dart; test/run/items/s3_30_s3_32_capsules_test.dart::§3.30 / §6 a capsule starts its powerup at once …; test/run/items/s3_30_s3_32_capsules_test.dart::§6 / WP-3a the comet uses the slot … | done |
 | R-3.0.3-22 | Exclusivity: piggy or jar (never both); one egg/chick; star trail combines | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.0.3-23 | Rides: no specials, no gap items, no squeeze start (waits until 2 s after) | 3.0.3 | 0b / 3g | test/run/director/s3_0_3_director_test.dart; test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze never starts during a ride | done |
-| R-3.0.3-24 | Portal ride pauses a running Hourglass / Mini / Frenzy and resumes it after landing | 3.0.3, 3.12 | 3f / 3b | test/run/rides/s3_12_ride_rules_test.dart::§3.12 / §3.0.3 a running Hourglass… | 3b done; 3f pending (timer honours `paused`) |
+| R-3.0.3-24 | Portal ride pauses a running Hourglass / Mini / Frenzy and resumes it after landing | 3.0.3, 3.12 | 3f / 3b | test/run/rides/s3_12_ride_rules_test.dart::§3.12 / §3.0.3 a running Hourglass…; test/run/items/s3_30_s3_32_capsules_test.dart::§3.0.3 a portal ride pauses the powerup … | done |
 | R-3.0.3-25 | Portal ride start: all hoops/items ahead fade 0.2 s and are removed; uncaught piggy coins / fireflies not counted missed; piggy / jar placement continues after landing; ride rings crack the egg | 3.0.3 | 3b / 3e | test/run/rides/s3_12_ride_rules_test.dart::§3.12 entering… (cleared; spawner.clearAhead never judges) | 3b done; 3e pending (egg / piggy / jar) |
 | R-3.0.3-26 | Comet flies through what is spawned: rims ignored (saw too), closed switch rings open, nearest pair ring + its gift, springs don't launch, tilt/motion kept, pickups only if touched | 3.0.3, 3.8 | 3a | test/run/items/s3_8_comet_test.dart::§3.8 / §3.0.3 the comet flies through what is spawned…; test/run/items/s3_8_comet_test.dart::§3.8 the comet steers to the ring nearest its line… | done (3a part: rims / mistakes / closed-switch verdict ignored, nearest pair ring, pickups by touch); switch opening look 3d, spring no-launch 3c |
 | R-3.0.3-27 | Only hoops spawned before a ride can be angled or moving | 3.0.3 | 0b | test/run/director/s3_0_3_director_test.dart | done |
@@ -155,7 +155,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.8-E14 | Element: heart → extra life | 3.0.7 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.3 three hearts give one extra life …; test/run/items/s3_3_s3_7_lives_test.dart::§3.3 a heart pickup on the bird is collected by touch … | done |
 | R-3.0.8-E15 | Element: shield | 3.0.7 | 2a | test/run/items/s3_3_s3_7_lives_test.dart::§3.7 the shield pickup arms the shield … | done |
 | R-3.0.8-E16 | Element: Star Trail | 3.0.7 | 3e | | todo |
-| R-3.0.8-E17 | Element: powerup capsule (Hourglass / Mini Bird / Coin Frenzy) | 3.0.7 | 3f | | todo |
+| R-3.0.8-E17 | Element: powerup capsule (Hourglass / Mini Bird / Coin Frenzy) | 3.0.7 | 3f | test/run/items/s3_30_s3_32_capsules_test.dart::§3.0.8 / §3.30 a forced … capsule … counts as met on screen; test/run/items/s3_30_capsule_autopilot_test.dart | done |
 | R-3.0.8-E18 | Element: Egg → chick ×2 | 3.0.7 | 3e | | todo |
 | R-3.0.8-E19 | Element: Piggy Bank | 3.0.7 | 3e | | todo |
 | R-3.0.8-E20 | Element: Firefly Jar | 3.0.7 | 3e | | todo |
@@ -575,17 +575,17 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.29-3 | Uncaught firefly escapes; 3 ✕ marks; 20 caught = JAR FULL +25 (`jar`); 3 escaped = JAR BROKE, nothing; remaining fly away | 3.29 | 3e | | todo |
 | R-3.29-4 | Crash loses it (also with revive); save keeps it; portal removes swarms without counting escapes | 3.29 | 3e | | todo |
 | R-3.29-5 | Spawn from gap 15, weight 10, ≥ 30 apart; never with a piggy | 3.29 | 0b | test/run/director/s3_0_3_director_test.dart | done |
-| R-3.30-1 | Capsule mid-gap on the line; flying into it starts the powerup at once (banner name + one line, start sound) | 3.30 | 3f | | todo |
-| R-3.30-2 | Timer pill near the top (y ≈ 206): icon + draining bar + seconds left | 3.30 | 3f | | todo |
-| R-3.30-3 | One timed powerup at a time (incl. comet); no capsule while one runs, nor in rides / squeeze; spawn from gap 10, weight 20, ≥ 20 apart; Hourglass 35 / Mini 35 / Frenzy 30 | 3.30 | 0b / 3f | test/run/director/s3_0_3_director_test.dart | done (0b part); 3f pending |
-| R-3.30-4 | Hourglass: whole world incl. bird at 45 % (scroll, gravity, flap, spawns, motion, animations), 0.2 s ease in/out; rules unchanged | 3.30 | 3f | | todo |
-| R-3.30-5 | Hourglass duration random 10–20 s real time, rolled at pickup | 3.30 | 3f | | todo |
-| R-3.30-6 | Hourglass feedback: blue tint + vignette, ghost trail, clock ring with turning hand, tick every 0.6 s, music ≈ 72 % | 3.30 | 3f | | todo |
-| R-3.30-7 | runClock timers (squeeze, comet, Big Hoops, versus) slow with it | 3.30 | 3f | | todo |
-| R-3.31-1 | Mini Bird: shrink to 52 % (0.15 s ease) for 8 s; hitbox shrinks (rims, strips, pickups); physics unchanged | 3.31 | 3f | | todo |
-| R-3.31-2 | Pops back at the end; rim bounce applies if touching while growing | 3.31 | 3f | | todo |
-| R-3.31-3 | Feedback: purple sparkles in, bubbles trail, pop + burst at the end | 3.31 | 3f | | todo |
-| R-3.32-1 | Coin Frenzy: 6 s, every ring not yet passed is a coin ring paying +5 on top (`frenzy`); coin shower, cash sound, pulsing gold border | 3.32 | 3f | | todo |
+| R-3.30-1 | Capsule mid-gap on the line; flying into it starts the powerup at once (banner name + one line, start sound) | 3.30 | 3f | test/run/items/s3_30_s3_32_capsules_test.dart::§3.0.8 / §3.30 a forced … capsule floats mid-gap on the line …; test/run/items/s3_30_s3_32_capsules_test.dart::§3.30 / §6 a capsule starts its powerup at once … | done |
+| R-3.30-2 | Timer pill near the top (y ≈ 206): icon + draining bar + seconds left | 3.30 | 3f | test/run/items/s3_30_s3_32_capsules_test.dart::§3.30 the HUD stays real time; the timer pill …; shot: build/shots/run/capsules/capsule_hourglass_711.png | done (call: pill top y 156, above the y-190 banner band — ARCH §23) |
+| R-3.30-3 | One timed powerup at a time (incl. comet); no capsule while one runs, nor in rides / squeeze; spawn from gap 10, weight 20, ≥ 20 apart; Hourglass 35 / Mini 35 / Frenzy 30 | 3.30 | 0b / 3f | test/run/director/s3_0_3_director_test.dart; test/run/items/s3_30_s3_32_capsules_test.dart::§3.0.3 / §3.30 spawn …; test/run/items/s3_30_s3_32_capsules_test.dart::§3.30 a capsule collected while a ride runs starts nothing … | done |
+| R-3.30-4 | Hourglass: whole world incl. bird at 45 % (scroll, gravity, flap, spawns, motion, animations), 0.2 s ease in/out; rules unchanged | 3.30 | 3f | test/run/items/s3_30_s3_32_capsules_test.dart::§3.30 the world runs at 45 % (eased over 0.2 s) … | done |
+| R-3.30-5 | Hourglass duration random 10–20 s real time, rolled at pickup | 3.30 | 3f | test/run/items/s3_30_s3_32_capsules_test.dart::§3.30 the world runs at 45 % … the timer counts real time … | done |
+| R-3.30-6 | Hourglass feedback: blue tint + vignette, ghost trail, clock ring with turning hand, tick every 0.6 s, music ≈ 72 % | 3.30 | 3f | test/run/items/s3_30_s3_32_capsules_test.dart::§3.30 the world runs at 45 % … ticks every 0.6 s; music 72 % …; shot: build/shots/run/capsules/capsule_hourglass_711.png | done |
+| R-3.30-7 | runClock timers (squeeze, comet, Big Hoops, versus) slow with it | 3.30 | 3f | test/run/items/s3_30_s3_32_capsules_test.dart::§3.30 the world runs at 45 % … runClock slows with it … | done |
+| R-3.31-1 | Mini Bird: shrink to 52 % (0.15 s ease) for 8 s; hitbox shrinks (rims, strips, pickups); physics unchanged | 3.31 | 3f | test/run/items/s3_30_s3_32_capsules_test.dart::§3.31 the bird shrinks to 52 % over 0.15 s …; test/run/items/s3_30_s3_32_capsules_test.dart::§3.30 a capsule collected while a ride runs … (touch radius × 0.52) | done |
+| R-3.31-2 | Pops back at the end; rim bounce applies if touching while growing | 3.31 | 3f | test/run/items/s3_30_s3_32_capsules_test.dart::§3.31 the bird shrinks to 52 % … then pops back … | done |
+| R-3.31-3 | Feedback: purple sparkles in, bubbles trail, pop + burst at the end | 3.31 | 3f | shot: build/shots/run/capsules/capsule_mini_711.png | done |
+| R-3.32-1 | Coin Frenzy: 6 s, every ring not yet passed is a coin ring paying +5 on top (`frenzy`); coin shower, cash sound, pulsing gold border | 3.32 | 3f | test/run/items/s3_30_s3_32_capsules_test.dart::§3.32 every ring passed pays +5 on top …; shot: build/shots/run/capsules/capsule_frenzy_711.png | done |
 
 ## 3.33 Rumble
 
@@ -768,14 +768,14 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.28-1 | Jar pickup animated (glass, lid, glowing liquid, bob ±5, sway ±7°, lime glow pulse, 10 rays, 4 fireflies inside, sparks) | 5.28 | 3e | | todo |
 | R-5.28-2 | Fireflies 2.6 pt pale-yellow with lime halo, weaving; HUD jar filling, "n / 20" `#7CB518`, 3 ✕ turning red; JAR FULL! / JAR BROKE banners | 5.28 | 3e | | todo |
 | R-5.28-3 | Jar sounds: pickup chime, twinkle per firefly, blip per escape, crack, bright chord | 5.28 | 3e / 3h | | todo |
-| R-5.29-1 | Capsule (all timed powerups): 34 pt rounded square (r 8) in the powerup colour, darker lower band, white icon, bob ±3 in a pulsing 25 pt ring, burst on pickup | 5.29 | 3f | | todo |
-| R-5.29-2 | Timer pill 120 × 22 at y ≈ 206 (icon disc 26 pt + draining bar); seconds left next to it | 5.29 | 3f | | todo |
-| R-5.29-3 | Hourglass `#2F80FF`, white hourglass icon; blue tint 10 % + dark-blue vignette, ghost birds, thin blue clock ring with hand | 5.29 | 3f | | todo |
-| R-5.29-4 | Hourglass sounds: slowdown sweep 700 → 110 Hz, tick-tock 0.6 s, speed-up sweep; music ≈ 72 % | 5.29 | 3f / 3h | | todo |
-| R-5.30-1 | Mini Bird `#2EBD6B`, shrink-potion icon (flask, cork, purple liquid, bubbles, pink bird label); purple sparkles in, bubbles, green/purple/white burst at the end | 5.30 | 3f | | todo |
-| R-5.30-2 | Mini sounds: bubble blips + falling whistle 1400 → 300 Hz; rising whistle + pop at the end | 5.30 | 3f / 3h | | todo |
-| R-5.31-1 | Coin Frenzy `#FFB529`, three-coins icon; rings not yet passed gold `#FFD54A`/`#D48A00` 8 pt with 10 orbiting coins; each pass "+5" + 5 coins up; pulsing 10 pt gold border; sparkles | 5.31 | 3f | | todo |
-| R-5.31-2 | Frenzy sounds: 5-note jackpot run + chord, coin cascade per ring, short falling tone at the end | 5.31 | 3f / 3h | | todo |
+| R-5.29-1 | Capsule (all timed powerups): 34 pt rounded square (r 8) in the powerup colour, darker lower band, white icon, bob ±3 in a pulsing 25 pt ring, burst on pickup | 5.29 | 3f | shot: build/shots/run/capsules/capsule_capsule_711.png, capsule_mini_capsule_711.png; test/run/items/s3_30_s3_32_capsules_test.dart::§5.29 capsule 34 pt … | done |
+| R-5.29-2 | Timer pill 120 × 22 at y ≈ 206 (icon disc 26 pt + draining bar); seconds left next to it | 5.29 | 3f | test/run/items/s3_30_s3_32_capsules_test.dart::§3.30 the HUD stays real time; the timer pill …; shot: capsule_hourglass_568.png | done (call: y 156, ARCH §23) |
+| R-5.29-3 | Hourglass `#2F80FF`, white hourglass icon; blue tint 10 % + dark-blue vignette, ghost birds, thin blue clock ring with hand | 5.29 | 3f | shot: build/shots/run/capsules/capsule_hourglass_711.png | done |
+| R-5.29-4 | Hourglass sounds: slowdown sweep 700 → 110 Hz, tick-tock 0.6 s, speed-up sweep; music ≈ 72 % | 5.29 | 3f / 3h | test/run/items/s3_30_s3_32_capsules_test.dart::§3.30 the world runs at 45 % … (hourglassStart / Tick / End, music 0.72) | done |
+| R-5.30-1 | Mini Bird `#2EBD6B`, shrink-potion icon (flask, cork, purple liquid, bubbles, pink bird label); purple sparkles in, bubbles, green/purple/white burst at the end | 5.30 | 3f | shot: build/shots/run/capsules/capsule_mini_711.png | done |
+| R-5.30-2 | Mini sounds: bubble blips + falling whistle 1400 → 300 Hz; rising whistle + pop at the end | 5.30 | 3f / 3h | test/run/items/s3_30_s3_32_capsules_test.dart::§3.31 … sounds and bubbles | done |
+| R-5.31-1 | Coin Frenzy `#FFB529`, three-coins icon; rings not yet passed gold `#FFD54A`/`#D48A00` 8 pt with 10 orbiting coins; each pass "+5" + 5 coins up; pulsing 10 pt gold border; sparkles | 5.31 | 3f | shot: build/shots/run/capsules/capsule_frenzy_711.png; test/run/items/s3_30_s3_32_capsules_test.dart::§3.32 … | done |
+| R-5.31-2 | Frenzy sounds: 5-note jackpot run + chord, coin cascade per ring, short falling tone at the end | 5.31 | 3f / 3h | test/run/items/s3_30_s3_32_capsules_test.dart::§3.32 every ring passed pays +5 … (frenzyStart / Ring / End) | done |
 
 ## 6. Analytics (Firebase)
 
@@ -835,8 +835,8 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-6-52 | `piggy_paid` (caught, payout) | 6 | 3e | | todo |
 | R-6-53 | `jar_collected` | 6 | 3e | | todo |
 | R-6-54 | `jar_result` (full / broken, caught) | 6 | 3e | | todo |
-| R-6-55 | `powerup_started` (hourglass / mini / frenzy, duration) | 6 | 3f | | todo |
-| R-6-56 | `powerup_ended` (type) | 6 | 3f | | todo |
+| R-6-55 | `powerup_started` (hourglass / mini / frenzy, duration) | 6 | 3f | test/run/items/s3_30_s3_32_capsules_test.dart::§3.30 / §6 a capsule starts its powerup at once …; test/run/items/s3_30_s3_32_capsules_test.dart::§6 / WP-3a the comet … | done |
+| R-6-56 | `powerup_ended` (type) | 6 | 3f | test/run/items/s3_30_s3_32_capsules_test.dart::§3.30 / §6 …; test/run/items/s3_30_s3_32_capsules_test.dart::§3.14 a death ends the timed powerup … | done |
 | R-6-57 | `setting_changed` (setting: rumble, value) | 6 | 2c (existing `rumble_toggle` → rename or send both; call in 2c) | test/run/items/s3_33_rumble_test.dart::§3.33 the RUMBLE switch — call: both `rumble_toggle` and `setting_changed` are sent | done |
 | R-6-58 | `notif_permission` (granted / denied) | 6 | 4b | test/services/s3_34_reminders_test.dart::§3.34 service permission is asked once and the result is logged; ::§3.34 service a decline is final and logged | done |
 | R-6-59 | `notif_opened` (message 1–20, slot midday / evening) | 6 | 4b | test/services/s3_34_reminders_test.dart::§3.34 service tapping a reminder logs notif_opened | done |

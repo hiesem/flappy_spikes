@@ -778,3 +778,32 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   floor). From 3 s before the warning until open, new hoops and pickups fit
   the coming squeeze's band. A revive resets a running squeeze to open over
   0.5 s; the interrupted squeeze counts toward the tightening.
+
+### WP-3f — powerup capsules: Hourglass, Mini Bird, Coin Frenzy (PRD-2 §3.30–§3.32)
+
+- DEVIATION (PRD-2 §3.30–§3.32 / §5.29–§5.31, new powerups; 1.0 had none):
+  from gap 10 (weight 20, ≥ 20 gaps apart, never while a timed powerup, a
+  ride or the squeeze window runs) a **powerup capsule** (34 pt rounded
+  square, bobbing in a pulsing ring, hit radius 18) floats mid-gap on the
+  line between two hoops: Hourglass 35 %, Mini Bird 35 %, Coin Frenzy 30 %.
+  Flying into it starts the powerup at once (banner with its name and one
+  line, start sound, a timer pill near the top). Only one timed powerup
+  (these three and the comet) runs at a time; its timer counts real time,
+  stops while a portal ride pauses it (the effect is suspended for the ride)
+  and a death ends it.
+  - **Hourglass** (10–20 s, rolled at pickup): the whole world, bird
+    included, runs at **45 %** (scroll, gravity, flap, spawns, moving rings,
+    animations and every `runClock` timer), easing in / out over 0.2 s; the
+    HUD stays real time; music at 72 %; blue tint + vignette, ghost birds, a
+    clock ring with a turning hand, a tick every 0.6 s.
+  - **Mini Bird** (8 s): the bird and its collider shrink to **52 %** (0.15 s
+    ease; rims, spike strips, pickups); physics unchanged; it pops back at the
+    end (a rim touched while growing bounces as usual).
+  - **Coin Frenzy** (6 s): every ring not yet passed is a gold coin ring; each
+    ring passed pays **+5 coins on top** of the normal ring coins (source
+    `frenzy`), with a coin shower and a pulsing gold border.
+- Analytics `powerup_started {type: hourglass / mini / frenzy, duration}`,
+  `powerup_ended {type}` (never for the comet).
+- Tests: `test/run/items/s3_30_s3_32_capsules_test.dart`,
+  `test/run/items/s3_30_capsule_autopilot_test.dart`; shots in
+  `test/run/shots/capsule_shots_test.dart`.

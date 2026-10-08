@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../../run/effects/gold_bird.dart';
 import '../look.dart';
 import 'bird_art.dart';
 import 'gear_art.dart';
@@ -69,6 +70,11 @@ abstract final class LookPainter {
   /// fixed t). [blink]: the eye drawn closed (a short horizontal bar; the
   /// live home / Shop idle blink); ignored with [dead]. Hoop and trail ids
   /// in [look] are ignored here.
+  ///
+  /// [dead] draws the PRD-2 §3.0.9 #6 X: a white 6 x 6 X, line 2, replacing
+  /// the eye (dark `#212121` only on light bodies, where white would vanish).
+  /// [gold]: the streak tier-2+ gold bird (§3.0.9 #5, [GoldBird]) — the
+  /// classic bird is recoloured; other birds get a gold glow outline.
   static void paint(
     Canvas canvas,
     Look look, {
@@ -77,13 +83,29 @@ abstract final class LookPainter {
     Map<SkinLayer, double> dim = const {},
     bool dead = false,
     bool blink = false,
+    bool gold = false,
   }) {
-    final b = BirdArt.byId(look.bird);
+    final recolour = gold && look.bird == GoldBird.classicId;
+    final b = recolour ? GoldBird.classic : BirdArt.byId(look.bird);
     final s = b.shape;
     final gear = look.gear, hat = look.hat;
     final wing = flap && !dead;
     canvas.save();
     canvas.translate(-22, -18);
+    if (gold && !recolour) {
+      // Gold glow outline: the body silhouette, blurred, in gold, behind.
+      canvas.saveLayer(
+        null,
+        Paint()
+          ..imageFilter = ImageFilter.blur(
+            sigmaX: GoldBird.glowSigma,
+            sigmaY: GoldBird.glowSigma,
+          )
+          ..colorFilter = const ColorFilter.mode(GoldBird.glow, BlendMode.srcIn),
+      );
+      paintBirdBody(canvas, b, t);
+      canvas.restore();
+    }
     final gearDim = dim[SkinLayer.gear];
     _layer(canvas, gearDim, () => paintGearBack(canvas, gear, s, t, wing));
     _layer(canvas, dim[SkinLayer.bird], () {

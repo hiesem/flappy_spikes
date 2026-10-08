@@ -323,6 +323,10 @@ class BirdSpec {
 
   /// Dark body: the dead-pose X eye is drawn white.
   late final bool isDark = c.computeLuminance() < 0.15;
+
+  /// Light body (white, yellow): the PRD-2 white dead X would vanish, so it
+  /// is drawn dark there.
+  late final bool isLight = c.computeLuminance() > 0.6;
 }
 
 /// The 30 birds of the catalogue, in grid order, plus the shop mannequin.
@@ -877,7 +881,7 @@ void paintBirdFace(
   } else if (s.kind == 'owl') {
     fillRect(c, ex - 5, ey - 5, 10, 10, const Color(0xFFFFFFFF));
     if (dead) {
-      paintDeadEye(c, ex, ey, const Color(0xFF212121));
+      paintDeadX(c, ex, ey, const Color(0xFF212121));
     } else {
       fillRect(c, ex - 1, ey - 2.5, 5, 5, const Color(0xFF212121));
       fillRect(c, ex + 1.5, ey - 2, 1.5, 1.5, const Color(0xFFFFFFFF));
@@ -887,11 +891,11 @@ void paintBirdFace(
       fillPaint(b.d),
     );
   } else if (dead) {
-    paintDeadEye(
+    paintDeadX(
       c,
       ex,
       ey,
-      b.isDark ? const Color(0xFFFFFFFF) : const Color(0xFF212121),
+      b.isLight ? const Color(0xFF212121) : const Color(0xFFFFFFFF),
     );
   } else if (b.pat == 'robo') {
     fillRect(c, ex - 4, ey - 3, 9, 6, const Color(0xFF212121));
@@ -958,4 +962,12 @@ void paintDeadEye(Canvas c, double ex, double ey, Color color) {
   final p = strokePaint(color, 1.5);
   c.drawLine(Offset(ex - 2.5, ey - 2.5), Offset(ex + 2.5, ey + 2.5), p);
   c.drawLine(Offset(ex + 2.5, ey - 2.5), Offset(ex - 2.5, ey + 2.5), p);
+}
+
+/// The PRD-2 §3.0.9 #6 dead-bird X (miss-flash mock, `build85.py`): a 6 x 6
+/// X with a 2 pt line centred on the eye, replacing it.
+void paintDeadX(Canvas c, double ex, double ey, Color color) {
+  final p = strokePaint(color, 2);
+  c.drawLine(Offset(ex - 3, ey - 3), Offset(ex + 3, ey + 3), p);
+  c.drawLine(Offset(ex + 3, ey - 3), Offset(ex - 3, ey + 3), p);
 }

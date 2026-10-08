@@ -47,7 +47,9 @@ class HoopPainter {
 
   /// Draws one half of the vertical ring centred at [center].
   ///
-  /// [ry] is the half opening height; `rx = ry * 0.26` (JS). Draw the back
+  /// [ry] is the half opening height; `rx = ry * 0.26` (JS) unless [rx] is
+  /// given (gameplay rings keep the fixed 24 pt width, PRD-2 §3.0.9 #3, via
+  /// `RingPainter`). Draw the back
   /// half (`front: false`) before the bird and the front half after it. For
   /// the black-hole skin the back half also fills the opening with the swirl.
   /// [t] is time in seconds.
@@ -59,11 +61,12 @@ class HoopPainter {
     double t, {
     required bool front,
     double lineWidth = 7,
+    double? rx,
   }) {
     if (ry <= 0 || lineWidth <= 0) return;
     final def = _byId(hoopId);
     final lw = lineWidth;
-    final rx = ry * .26;
+    rx ??= ry * .26;
     final a0 = front ? math.pi / 2 : -math.pi / 2;
     final a1 = front ? math.pi * 1.5 : math.pi / 2;
 

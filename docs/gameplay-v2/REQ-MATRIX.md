@@ -124,7 +124,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.0.6-1 | Every coin in a run and its screens uses `assets/images/menu/coin.png` (popups, flying coins, pills, prices, hearts); never a code-drawn thin ring; no recolour on gold backgrounds | 3.0.6 | 0c (+ every visual WP) | | todo |
+| R-3.0.6-1 | Every coin in a run and its screens uses `assets/images/menu/coin.png` (popups, flying coins, pills, prices, hearts); never a code-drawn thin ring; no recolour on gold backgrounds | 3.0.6 | 0c (+ every visual WP) | shot: build/parts_shots/08_coin_popup_timeline.png (CoinIcon) | part (0c: CoinIcon + popup; screens later) |
 
 ## 3.0.8 Every element, first meet, debug menu
 
@@ -172,21 +172,21 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.0.9-1 | Spike strips 44 pt (band 26 + teeth 18, period 40), stage fg, 40 × 44 repeating tile, scrollable teeth; replaces 72 pt sprite; `spikeHeight` → 44 | 3.0.9 #1 | 0c / 1a | | todo |
-| R-3.0.9-2 | Score circle = current game's 183 pt disc at (160, centre + 35), LVDC digits, behind hoops and bird | 3.0.9 #2 | existing / 0c check | | todo |
-| R-3.0.9-3 | Hoop ring master: 24 pt wide, stroke 7, front `#EC008C` over bird, back `#B0006B` behind; height = opening + 2 × 7; specials change colours/decorations only | 3.0.9 #3 | 0c | | todo |
-| R-3.0.9-4 | Bird = `LookPainter` (classic + equipped skin), ×0.983, flap, blink, stage blend; every screen draws the equipped skin | 3.0.9 #4 | 0c (check) | | todo |
-| R-3.0.9-5 | Gold bird (tier 2+): body `#FFB529`, tail + wing `#E08A00`, beak `#FFB529`, eye white; everywhere incl. rides and comet | 3.0.9 #5 | 0c / 2b | | todo |
-| R-3.0.9-6 | Dead X-eyes: white X 6 × 6, line 2, replacing the eye | 3.0.9 #6 | 0c | | todo |
-| R-3.0.9-7 | Streak banner master (y 190, pad 6, fixed font per tier [28,32,34,30,32,34,34,32,34,30], 0.1 em, white Opificio, scale-in ≈ 0.1 s, hold 1–1.9 s, scale-out; 10 names, cap IMMORTAL ×10) for every perfect pass incl. rides | 3.0.9 #7 | 0c | | todo |
-| R-3.0.9-8 | Pass coin popup: gold "+2" 28 pt + coin.png 24 pt from (x − 10, y − 70), scale 0.7 → 1.1 → 1, rises 40 pt, fades, 1.1 s; "+1" the same | 3.0.9 #8 | 0c | | todo |
-| R-3.0.9-9 | Perfect burst: 8 + 3 × min(tier,3) squares, 5–8 pt, pink/gold/soft pink, 25–55 pt, 350–600 ms, no rotation, no shockwave | 3.0.9 #9 | 0c | | todo |
-| R-3.0.9-10 | Block trail tier 3+: 8–13 pt squares every ≈ 33 ms, 50/50 `#FFB529`/`#EC008C`, 0.9 → 0 in 450 ms, 26 pt behind along flight direction ± 8, drifting 70 pt opposite | 3.0.9 #10 | 0c | | todo |
-| R-3.0.9-11 | Ring tier looks: pink → gold (`#FFB529`/`#D48A00`) → bright gold (`#FFD54A`/`#E0A800`); stars 9–15 / 10–17 / 12–24 pt at 7 / 16 / 38 per s per ring, 0.5–0.9 s; tier 3+ glow sprite + flame flicks | 3.0.9 #11 | 0c | | todo |
+| R-3.0.9-1 | Spike strips 44 pt (band 26 + teeth 18, period 40), stage fg, 40 × 44 repeating tile, scrollable teeth; replaces 72 pt sprite; `spikeHeight` → 44 | 3.0.9 #1 | 0c / 1a | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #1 44 pt = band 26 + teeth 18, period 40, tips at 20 + 40k; test/run/shots/parts_shots_test.dart::§3.0.9 #1 menu with the 44 pt teeth art | part (art done 0c; 72→44 switch 1a) |
+| R-3.0.9-2 | Score circle = current game's 183 pt disc at (160, centre + 35), LVDC digits, behind hoops and bird | 3.0.9 #2 | existing / 0c check | shot: build/parts_shots/01_hoops_m0.png (existing ScoreHud) | done |
+| R-3.0.9-3 | Hoop ring master: 24 pt wide, stroke 7, front `#EC008C` over bird, back `#B0006B` behind; height = opening + 2 × 7; specials change colours/decorations only | 3.0.9 #3 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #3 24 pt wide, stroke 7, half height = opening / 2 + 7; shot: 01_hoops_m0.png, 03_ring_variants.png | done |
+| R-3.0.9-4 | Bird = `LookPainter` (classic + equipped skin), ×0.983, flap, blink, stage blend; every screen draws the equipped skin | 3.0.9 #4 | 0c (check) | shot: build/parts_shots/05_birds.png (existing LookPainter) | done |
+| R-3.0.9-5 | Gold bird (tier 2+): body `#FFB529`, tail + wing `#E08A00`, beak `#FFB529`, eye white; everywhere incl. rides and comet | 3.0.9 #5 | 0c / 2b | test/run/effects/s3_0_9_bird_test.dart::§3.0.9 #5 gold bird: body #FFB529, shade #E08A00, beak gold | part (master 0c; wiring 2b) |
+| R-3.0.9-6 | Dead X-eyes: white X 6 × 6, line 2, replacing the eye | 3.0.9 #6 | 0c | test/run/effects/s3_0_9_bird_test.dart::§3.0.9 #6 dead X: white 6 × 6, line 2, replacing the eye | done |
+| R-3.0.9-7 | Streak banner master (y 190, pad 6, fixed font per tier [28,32,34,30,32,34,34,32,34,30], 0.1 em, white Opificio, scale-in ≈ 0.1 s, hold 1–1.9 s, scale-out; 10 names, cap IMMORTAL ×10) for every perfect pass incl. rides | 3.0.9 #7 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #7 ten names, fixed sizes, colours, capped at IMMORTAL ×10; shot: 07_banners.png | part (master 0c; wiring 2b) |
+| R-3.0.9-8 | Pass coin popup: gold "+2" 28 pt + coin.png 24 pt from (x − 10, y − 70), scale 0.7 → 1.1 → 1, rises 40 pt, fades, 1.1 s; "+1" the same | 3.0.9 #8 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #8 1.1 s, scale 0.7 → 1.1 → 1, rises 40 pt, fades; shot: 07_perfect_tier*.png | part (master 0c; wiring 1a/2b) |
+| R-3.0.9-9 | Perfect burst: 8 + 3 × min(tier,3) squares, 5–8 pt, pink/gold/soft pink, 25–55 pt, 350–600 ms, no rotation, no shockwave | 3.0.9 #9 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #9 5–8 pt, 25–55 pt, 350–600 ms, no rotation, 3 colours | part (master 0c; wiring 2b) |
+| R-3.0.9-10 | Block trail tier 3+: 8–13 pt squares every ≈ 33 ms, 50/50 `#FFB529`/`#EC008C`, 0.9 → 0 in 450 ms, 26 pt behind along flight direction ± 8, drifting 70 pt opposite | 3.0.9 #10 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 #10 spawned 26 pt behind along the flight direction, drifts 70 pt opposite; shot: 10_trail_direction.png | part (master 0c; wiring 2b) |
+| R-3.0.9-11 | Ring tier looks: pink → gold (`#FFB529`/`#D48A00`) → bright gold (`#FFD54A`/`#E0A800`); stars 9–15 / 10–17 / 12–24 pt at 7 / 16 / 38 per s per ring, 0.5–0.9 s; tier 3+ glow sprite + flame flicks | 3.0.9 #11 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.3 sparkles at 7 / 16 / 38 per second, sizes per tier; shot: 04_ringtier_*.png | part (master 0c; wiring 2b) |
 | R-3.0.9-12 | Speed lines kept separate: comet (2 pt, 30–110, 0.7, ≈ 34 ms, −460 pt in 260 ms); cannon (70 × 2, 0.7, −420 in 380 ms; vertical 2 × 60 in ride); themed (2 pt, 60 pt, 0.55, ≈ 500 pt over 0.38 s along flight) | 3.0.9 #12 | 3a / 3b | | todo |
 | R-3.0.9-13 | No full-screen flash on perfect passes at any tier | 3.0.9 #13 | 2b | | todo |
-| R-3.0.9-14 | Coin icon = coin.png everywhere | 3.0.9 #14 | 0c | | todo |
-| R-3.0.9-15 | Dust / feather puff: 12–22 particles 4–9 pt in the surface colour, ±140 / −90…−10 pt/s, slow down, fade 0.6–1 s (tumble bounce, landings) | 3.0.9 | 0c | | todo |
+| R-3.0.9-14 | Coin icon = coin.png everywhere | 3.0.9 #14 | 0c | lib/run/effects/coin_icon.dart (CoinIcon); shot: 08_coin_popup_timeline.png | part (master 0c) |
+| R-3.0.9-15 | Dust / feather puff: 12–22 particles 4–9 pt in the surface colour, ±140 / −90…−10 pt/s, slow down, fade 0.6–1 s (tumble bounce, landings) | 3.0.9 | 0c | test/run/effects/s3_0_9_parts_test.dart::§3.0.9 dust: 12–22 round particles 4–9 pt, up 10–90 pt/s, 0.6–1 s | part (master 0c; wiring 1a) |
 | R-3.0.9-16 | No element draws its own version of a master (code review checklist item at each WP) | 3.0.9 | all | | todo |
 
 ## 3.1 Hoops replace pipes
@@ -255,7 +255,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.5-3 | Streak break: all rings instantly return to pink, effects stop | 3.5 | 2b | | todo |
 | R-3.5-4 | Banner, +2 popup, small burst and tier sound still fire per pass; tier 4+ confetti + full-screen flash removed | 3.5 | 2b | | todo |
 | R-3.5-5 | Comet: hoops count as perfect, build streak, same banners/sounds; streak carries on after | 3.5 | 3a | | todo |
-| R-3.5-6 | Performance: sparkles children of each ring, pooled, capped (≈ 38/s per ring, ≤ 3 rings); one glow sprite per ring | 3.5 | 0c / 2b | | todo |
+| R-3.5-6 | Performance: sparkles children of each ring, pooled, capped (≈ 38/s per ring, ≤ 3 rings); one glow sprite per ring | 3.5 | 0c / 2b | test/run/effects/s3_0_9_parts_test.dart::§3.5 a streak break clears every effect at once | part (RingTierFx pooled + capped 64/ring) |
 
 ## 3.6 Big Hoops (run side)
 
@@ -439,7 +439,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.15-18 | Taps ignored while a balloon opens (≈ 1.1 s) | 3.15 | 4a | | todo |
 | R-3.15-19 | Results YOUR REWARD excludes bonus coins | 3.15 | 2e / 4a | | todo |
 | R-3.15-20 | App killed on the bonus screen: remaining pops lost (Q39) | 10 | 4a | | todo |
-| R-3.15-21 | Tray waits until a banner has gone (Q37, same queue as Q42) | 10 | 4a / 0c | | todo |
+| R-3.15-21 | Tray waits until a banner has gone (Q37, same queue as Q42) | 10 | 4a / 0c | test/run/effects/s3_0_9_parts_test.dart::Q37 / Q42 collect slot: one at a time, waits for the banner | part (CollectSlot 0c) |
 
 ## 3.16 Puzzle pieces
 
@@ -456,7 +456,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.16-9 | Rounds have their own colours; next round new colours; pill resets to grey | 3.16 | 4a | | todo |
 | R-3.16-10 | 8 colours in order Pink, Sky, Gold, Ocean, Cocoa, Mint, Grape, Tangerine, then loop (themes as data) | 3.16, 5.15 | 4a | | todo |
 | R-3.16-11 | `puzzlePieces` (mask) and `puzzleRound` persistent; 4/4 sets mask 0 and round + 1 at once | 3.16, 7 | 4a | | todo |
-| R-3.16-12 | Tray/pill clash: second waits for the first to fade | 3.16 | 4a / 0c | | todo |
+| R-3.16-12 | Tray/pill clash: second waits for the first to fade | 3.16 | 4a / 0c | test/run/effects/s3_0_9_parts_test.dart::Q37 / Q42 collect slot: one at a time, waits for the banner | part (CollectSlot 0c) |
 | R-3.16-13 | Slot sound by count held (1st collected plays slot1 whatever its position) | 3.16 | 4a | | todo |
 
 ## 3.17 Spike squeeze
@@ -642,12 +642,12 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.2-1 | Heart pickup 32 pt `#FF3B5C`, 1.8 pt white outline, pulse 1.0 ↔ 1.14 (1 s), no glow | 5.2 | 2a | | todo |
 | R-5.2-2 | "+1 coin" gold text with icon rising ≈ 30 pt, fading 1.6 s at the hoop (superseded by master #8 for passes) | 5.2 | 0c | | todo |
 | R-5.2-3 | Saved: shards burst, "SAVED!" rises in pink, bird shakes briefly, hearts reset | 5.2 | 2a | | todo |
-| R-5.3-1 | Sparkle spec (colours, sizes per tier, twinkle 0.5–0.9 s, 45° → 90° spin, emission 7/16/38 per s) | 5.3 | 0c / 2b | | todo |
-| R-5.3-2 | Flame flicks tier 3+ (7–12 pt wide, 1.6–2.4× tall, rise 20–45 pt, 0.4–0.7 s) | 5.3 | 0c | | todo |
-| R-5.3-3 | Glow tier 3+: radial gold ≈ 96 × 152 pt behind each ring (fade in 0.25 s) | 5.3 | 0c | | todo |
+| R-5.3-1 | Sparkle spec (colours, sizes per tier, twinkle 0.5–0.9 s, 45° → 90° spin, emission 7/16/38 per s) | 5.3 | 0c / 2b | test/run/effects/s3_0_9_parts_test.dart::§5.3 sparkles at 7 / 16 / 38 per second, sizes per tier | part (master 0c) |
+| R-5.3-2 | Flame flicks tier 3+ (7–12 pt wide, 1.6–2.4× tall, rise 20–45 pt, 0.4–0.7 s) | 5.3 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.3 flame flicks and glow only from tier 3; glow fades in 0.25 s | part (master 0c) |
+| R-5.3-3 | Glow tier 3+: radial gold ≈ 96 × 152 pt behind each ring (fade in 0.25 s) | 5.3 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.3 flame flicks and glow only from tier 3; glow fades in 0.25 s | part (master 0c) |
 | R-5.3-4 | Graze: "GRAZE · streak lost" rises and fades (1.1 s); everything resets at once | 5.3 | 2b | | todo |
 | R-5.4-1 | Perfect effects match `perfect_tier{1,2,3,5,10}.png` within the master rules (no shockwave rings, no flash, no confetti) | 5.4 | 2b | | todo |
-| R-5.4-2 | Effects cosmetic, above hoops, below HUD, pooled ≤ 130 particles | 5.4 | 0c | | todo |
+| R-5.4-2 | Effects cosmetic, above hoops, below HUD, pooled ≤ 130 particles | 5.4 | 0c | test/run/effects/s3_0_9_parts_test.dart::§5.4 the pool caps particles at 130 and recycles them | part (pool 0c) |
 | R-5.5-1 | Extra-life badge 34 pt above the bird ≈ 40 pt, bob ±4 pt ≈ 0.6 Hz, pops in 0.35 s after the heart flies to the indicator | 5.5 | 2a | | todo |
 | R-5.5-2 | On a mistake: badge pops into hearts, indicator resets, bird flashes 2 s (25 % ↔ 100 % every 0.1 s) | 5.5 | 2a | | todo |
 | R-5.5-3 | Shield icon (pink fill, gold border, gold star white outline) for pickup and HUD | 5.5 | 2a | | todo |
@@ -655,7 +655,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.6-1 | Comet pickup 46 pt star, white 2 pt outline, inner white star, pink + gold tail; wobble ±14°, pulse ±8 % | 5.6 | 3a | | todo |
 | R-5.6-2 | Bird inside the fireball (bird 90 %, pink/gold shell, triangle tail), pixel-block shower | 5.6 | 3a | | todo |
 | R-5.6-3 | Countdown ring r 34, gold 6 pt, drains 10 s inside the graphic; "10s → 1s" gold 18 pt 50 pt below | 5.6 | 3a | | todo |
-| R-5.6-4 | Banners replace each other (never stack) during the boost; HUD unchanged | 5.6 | 3a / 0c | | todo |
+| R-5.6-4 | Banners replace each other (never stack) during the boost; HUD unchanged | 5.6 | 3a / 0c | test/run/effects/s3_0_9_parts_test.dart::§5.6 banners replace each other, never stack | part (BannerHost 0c) |
 | R-5.7-1 | HUD row y 52, 38 tall: heart indicator x 14 (38 × 38, fg 18 % panel) | 5.7 | 2d | | todo |
 | R-5.7-2 | Versus bar x 60 → 260: two 90 × 38 boxes (you pink + dark-pink avatar outside; opponent stage grey), VS between, scores 26 pt; gold 3 pt outline flash when the opponent scores | 5.7 | 2d / 5b | | todo |
 | R-5.7-3 | Name chips 90 × 22 at y 92, white, plum Fredoka SemiBold 15 pt, ellipsis; VS same font | 5.7 | 2d | | todo |
@@ -692,7 +692,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.12b-1 | Portal ring ellipse 64 × 150, front `#7C4DFF` 9 pt + cyan 3 pt inner rim, back `#4B2BB8`, 13 % cyan fill, beam 66 × 126 pulsing 75–100 % | 5.12b | 3b | | todo |
 | R-5.12b-2 | Ride rings: the standard ring rotated to the heading with tier looks | 5.12b | 3b | | todo |
 | R-5.12b-3 | Cannon art (120 × 150, barrel, muzzle, spikes, bands, base, square wheels) and violet ground with cyan line | 5.12b | 3b | | todo |
-| R-5.12b-4 | Strips as a repeating 40 × 44 tooth mask so teeth scroll (same approach in the game) | 5.12b | 0c | | todo |
+| R-5.12b-4 | Strips as a repeating 40 × 44 tooth mask so teeth scroll (same approach in the game) | 5.12b | 0c | lib/run/effects/spike_teeth.dart (offset scroll); shot: 01_strip_72_reach.png | part (0c) |
 | R-5.12b-5 | Z-order back halves 5 < bird 10 < cannon 11 < front halves 12; bird raised to 12 after the shot | 5.12b | 3b | | todo |
 | R-5.12b-6 | Themed rides share portal, rings, bird, trail, banners, popup, burst, speed lines, HUD, score circle; no track line; ride position offset 66, 40 pt over 1.6 s; speed to 480 over 2.2 s; strips fade 0.8 s | 5.12b | 3b | | todo |
 | R-5.12b-7 | Way back for every ride: launch flight 1.7 s (camera eases 110→140, 330→310, theme wash tint per ride), glide 2.5 s + 0.6 s settle, strips fade in 0.3 s with scrolling teeth, speed lines thin out 1.4 s, hoops ≈ 1 s after landing | 5.12b | 3b | | todo |

@@ -189,6 +189,15 @@ Product-owner decisions 2026-10-06/07 and implementation notes:
   (r 14.75).
 - **Dead pose:** X eye, wing up, hat and gear stay attached, idle animations
   frozen (§6 proposal; the wind-up key stops turning).
+  DEVIATION (2026-10-08, PRD-2 §3.0.9 #6, WP-0c): the dead X is now a white
+  6 × 6 X with a 2 pt line replacing the eye (was a dark #212121 5 × 5 X, 1.5 pt,
+  white only on dark bodies); on light bodies (white, yellow: luminance > 0.6)
+  and on the owl's white eye patch it stays dark so it remains visible. The
+  zombie's living X eye is unchanged.
+- **Gold tier look** (PRD-2 §3.0.9 #5, WP-0c): `LookPainter.paint(gold: true)` /
+  `LookComponent.goldTier` recolours the classic bird (body #FFB529, tail +
+  wing #E08A00, beak #FFB529, eye white); other bird skins keep their art and
+  get a gold glow outline.
 - **Gear #10 = Wind-up key** (design change 2026-10-06, replaces the Sidekick).
 - **One try-on at a time:** switching tabs clears it; equipping an owned item
   clears that layer's.
@@ -423,3 +432,18 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   autopilot survives past score 12 (easy-phase gate, run at 568 and 711).
 - Calibration test: flap rise height within 45–65 pt (tune constants until green).
 - `flutter analyze` clean, `flutter test` all green.
+
+## PRD-2 shared parts (WP-0c, 2026-10-08)
+
+- DEVIATION (PRD-2 §3.0.9 #1): the 2.0 spike strip art is the 44 pt master
+  (26 pt band + 18 pt teeth, period 40, tips at x = 20 + 40k, flat stage
+  foreground) drawn by `SpikeTeethPainter`. `SpikeStrip.defaultArt` stays
+  `SpikeArt.sprite` (the 72 pt `ground_spikes.png`) until WP-1a switches it to
+  `SpikeArt.teeth` together with `Config.spikeHeight` 72 → 44. The teeth tips sit
+  on the same line as the sprite's (`spikeHeight − visualInset`), so in menus the
+  new art reads exactly as today's inset 44 pt strip.
+- Every other §3.0.9 master and the ARCH §3 shared effects live in
+  `lib/run/effects/`, `lib/run/hoops/ring_painter.dart` and
+  `lib/run/hud/{banners,collect_slot}.dart`; their knobs are in
+  `lib/run/config/parts_config.dart`. They are not wired into runs yet (WP-1a/2b…).
+

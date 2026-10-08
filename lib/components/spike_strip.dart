@@ -1,4 +1,4 @@
-import 'dart:ui' show BlendMode, Color, ColorFilter;
+import 'dart:ui' show BlendMode, Canvas, Color, ColorFilter;
 
 import 'package:flame/components.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
@@ -6,6 +6,17 @@ import 'package:flame_forge2d/flame_forge2d.dart';
 import '../game/config.dart';
 import '../game/flappy_game.dart';
 import '../game/tintable.dart';
+import '../run/effects/spike_teeth.dart';
+
+/// Which art a [SpikeStrip] draws (PRD-2 §3.0.9 #1).
+enum SpikeArt {
+  /// The 1.0 72 pt `ground_spikes.png` sprite tiles.
+  sprite,
+
+  /// The 2.0 master strip: 26 pt band + 18 pt teeth, period 40
+  /// ([SpikeTeethPainter]).
+  teeth,
+}
 
 /// A scrolling spike strip: tiled ground_spikes texture scrolling at
 /// 200 pt/s with seamless wrap, backed by a static full-width physics body.
@@ -19,6 +30,33 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
   static const int basePriority = -5;
 
   final bool isCeiling;
+
+  /// The art new strips draw. WP-1a switches this to [SpikeArt.teeth]
+  /// together with `Config.spikeHeight` 72 → 44 (PRD-2 §3.0.9 #1): that is
+  /// the whole art switch.
+  static const SpikeArt defaultArt = SpikeArt.sprite;
+
+  SpikeArt _art = defaultArt;
+
+  /// The art this strip draws (tests and the menu check flip it per strip).
+  SpikeArt get art => _art;
+  set art(SpikeArt value) {
+    _art = value;
+    _applyTileVisibility();
+  }
+
+  Color _tint = const Color(0xFFFFFFFF);
+
+  /// Scroll offset of the master teeth (pt, positive = right).
+  double toothOffset = 0;
+
+  /// Opacity of the master teeth (ride fade, PRD-2 §3.12).
+  double teethOpacity = 1;
+
+  /// Distance from the screen edge to the tooth tips: the same line as the
+  /// sprite's tips (`Config.spikeHeight` − [visualInset]); 44 in menus and,
+  /// after WP-1a, in runs.
+  double get toothReach => Config.spikeHeight - _inset;
 
   /// Tiles cover the screen width plus 2 extra tiles for seamless wrap.
   static const int _tileCount = 3;
@@ -78,6 +116,7 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
       _tiles.add(tile);
       add(tile);
     }
+    _applyTileVisibility();
     game.registerTintable(this);
   }
 
@@ -100,12 +139,42 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
     return body;
   }
 
+  void _applyTileVisibility() {
+    for (final tile in _tiles) {
+      tile.opacity = _art == SpikeArt.sprite ? 1 : 0;
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    if (_art != SpikeArt.teeth) return;
+    canvas.save();
+    if (isCeiling) {
+      canvas.translate(-Config.worldWidth / 2, -Config.spikeHeight / 2);
+    } else {
+      canvas
+        ..translate(-Config.worldWidth / 2, Config.spikeHeight / 2)
+        ..scale(1, -1);
+    }
+    SpikeTeethPainter.paint(
+      canvas,
+      width: Config.worldWidth,
+      color: _tint,
+      reach: toothReach,
+      offset: toothOffset,
+      opacity: teethOpacity,
+    );
+    canvas.restore();
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
     if (!game.isScrolling) {
       return;
     }
+    toothOffset -= Config.scrollSpeed * dt;
     for (final tile in _tiles) {
       tile.position.x -= Config.scrollSpeed * dt;
       // Left edge of the tile in body-local coordinates.
@@ -119,6 +188,7 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
 
   @override
   void setTint(Color color) {
+    _tint = color;
     for (final tile in _tiles) {
       tile.paint.colorFilter = ColorFilter.mode(color, BlendMode.modulate);
     }

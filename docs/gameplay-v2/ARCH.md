@@ -567,6 +567,30 @@ Additional shared parts (not in the PRD table, introduced here so elements do no
 | Coin fly (balance pill ↔ targets) | `CoinFly` | `lib/components/ui/coin_fly.dart` (existing) | revive pay, CLAIM, bonus coins | existing |
 | Level emblem | `EmblemPainter` | `lib/levels/emblem_painter.dart` (existing) | results, VS plates | existing |
 
+**WP-0c as built (2026-10-08) — parameters added to masters / contract notes:**
+- Knobs of every shared part: `lib/run/config/parts_config.dart` (`PartsConfig`), each with its PRD section.
+- #1: `SpikeStrip.defaultArt` (`SpikeArt.sprite` → WP-1a sets `SpikeArt.teeth` with `Config.spikeHeight` 44 — the
+  whole switch). Per strip: `art`, `toothOffset`, `teethOpacity`, `toothReach` (= `spikeHeight − visualInset`).
+  `SpikeTeethPainter.paint(canvas, width, color, reach, offset, opacity)` draws in strip space (y 0 = screen edge).
+- #3: `RingPainter.paintHalf(centre, opening, front, skinId, colors, strokeWidth, tilt, dash, dashPhase, glow,
+  glowBlur, opacity, t)`; `RingColors.{pink,gold,brightGold,ghost,white}`; `colorsForTier(tier)`; `ryFor(opening)`
+  = opening / 2 + 7. `HoopPainter.paintHalf` gained an optional `rx` (gameplay keeps rx 12).
+- #5/#6: `LookPainter.paint(gold:)`, `LookComponent.goldTier`; dead pose draws `paintDeadX` (white 6 × 6, 2 pt;
+  dark on light bodies). Colours in `GoldBird`.
+- #7: `BannerHost.show(RunBanner)` / `showStreak(tier)`, `busy`; `RunBanner` is the base class for `FeverBanner` (3c).
+- #8: `CoinPopup` (`play(at, amount, doubled:)`) + `CoinIcon` (#14). #9 `PerfectBurst.emit(pool, at, tier, rnd)`.
+  #10 `BlockTrail.update(pool, dt, bird, heading)` and `TierTrail` (equipped trail vs blocks; the equipped
+  `TrailEmitter` only drifts horizontally). #11 `RingTierFx` (one per ring; `tier`, `update`, `paintBack` glow,
+  `paintFront` sparkles/flames, `ringColors`). Dust: `DustPuff.emit(pool, at, color, rnd, count:)`.
+- Pooling: `ParticlePool` (Component; capacity 130; `spawn(...)` with gravity / drag / damp / fadePow / spin /
+  delay; shapes rect, circle, triangle, twinkle) and `EffectPool<T extends PooledEffect>` (`CoinPopup.newPool()`,
+  `ShockRing.newPool()`, `PickupTouchFx.newPool()`).
+- `ShockRing.passPulse / missWave / goldRing / play`; `PickupTouchFx` + `PickupTouchSpec.{feather, puzzlePiece,
+  switchTouch, heart, shield, capsule}`; `FetchFlight` + `FetchSpec.{feather, puzzlePiece, heart}`; `Twinkle`
+  (`waist`: ring 0.354 / pickups 0.28); `GoldSticker.newBest / collect`; `InvulnFlash`; `DashedPathPainter`;
+  `ScreenEdgeGlow.miss / reviveUrgency / hourglass / coinFrenzy`; `RunShake` (kick + sustain, squeeze helpers);
+  `CollectSlot.request(CollectSlotItem)`; shared easings in `lib/run/effects/easing.dart` (`Ease`).
+
 **Skin interplay (call, from PRD-menu-v2 §3.8/§6 and Q-S2…Q-S4 proposals):** normal hoops draw the **equipped hoop
 skin** at tier 0–1 (default `pink` = the M0 colours of master #3); gameplay gold states (tier 2+, Big Hoops, Coin Frenzy,
 passed train rings) override the skin while active. Tier 2+ uses master #5 on the classic bird; on other bird skins

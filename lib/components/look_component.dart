@@ -86,6 +86,11 @@ class LookComponent extends PositionComponent {
   /// Draws the eye closed (idle blink, [LookPainter.paint]'s `blink`).
   bool blink = false;
 
+  /// Streak tier 2+ gold bird (PRD-2 §3.0.9 #5): the classic bird turns
+  /// gold, other skins get a gold glow outline ([LookPainter.paint]'s
+  /// `gold`). Set by the run's streak feature.
+  bool goldTier = false;
+
   final Paint _layerPaint = Paint();
 
   /// Points per art unit; setting it resizes the component's art box.
@@ -174,6 +179,7 @@ class LookComponent extends PositionComponent {
       flap: flapping,
       dead: _pose == LookPose.dead,
       blink: blink,
+      gold: goldTier,
     );
     canvas.restore();
     if (needsLayer) canvas.restore();

@@ -17,6 +17,8 @@ import '../effects/tier_trail.dart';
 import '../hoops/hoop.dart';
 import '../hoops/ring_painter.dart';
 import '../hud/banners.dart';
+import '../hud/run_hud.dart';
+import 'big_hoops.dart';
 import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
@@ -95,10 +97,8 @@ class StreakFeature extends RunFeature {
       )..emitter.look = look,
     );
     world.add(_trail!);
-    _banners = BannerHost.ensureIn(
-      world,
-      priority: StreakConfig.bannerPriority,
-    );
+    // WP-2d: the banner band lives in the run HUD (viewport, real time).
+    _banners = RunHud.ensureFor(c.run).banners;
     c.events
       ..on<HoopSpawned>(_onSpawned)
       ..on<HoopPassed>(_onPassed)
@@ -155,7 +155,8 @@ class StreakFeature extends RunFeature {
     _set(0, cause);
     c.track('streak_broken', {'length': old, 'cause': cause.name});
     if (notice) {
-      c.game.world.add(_GrazeNotice(c.game.foregroundColor));
+      // WP-2d: HUD text (viewport, real time).
+      RunHud.ensureFor(c.run).add(_GrazeNotice(c.game.foregroundColor));
     }
   }
 
@@ -227,10 +228,13 @@ class StreakFeature extends RunFeature {
     }
     e.visible = !h.look.missed;
     if (h.look.missed) return;
-    final want = RingPainter.colorsForTier(t);
-    // Only overwrite what the streak wrote itself (Big Hoops / miss flash
-    // keep their colours).
-    if (h.look.colors == e.written) {
+    var want = RingPainter.colorsForTier(t);
+    // WP-2d fix: a Big Hoops hoop keeps its gold at every tier (its tier
+    // sparkles / glow still play); other owners (miss flash) keep their
+    // colours — the streak only overwrites what it wrote itself.
+    final bigGold = BigHoopsFeature.isGold(h);
+    if (bigGold) want = RingColors.gold;
+    if (bigGold || h.look.colors == e.written) {
       h.look.colors = want;
       e.written = want;
     }

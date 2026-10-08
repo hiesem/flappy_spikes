@@ -9,6 +9,7 @@ import 'items/rumble_router.dart';
 import 'items/scoring.dart';
 import 'items/streak.dart';
 import 'run_feature.dart';
+import 'screens/revive_rules.dart';
 
 /// The run features of a run, in attach order (ARCH §1.7). One region per
 /// WP; append only.
@@ -36,4 +37,7 @@ List<RunFeature> buildRunFeatures() => [
   StreakFeature(),
   RumbleRouter(),
   // endregion WP-2b
+  // region WP-2d — revive rules (PRD-2 §3.14); keep last
+  ReviveRulesFeature(),
+  // endregion WP-2d
 ];

@@ -56,6 +56,14 @@ class BigHoopsFeature extends RunFeature {
   void update(double gameDt, double realDt) {
     final c = _c;
     if (c == null) return;
+    // WP-2d fix: the Big Hoops gold re-applies every frame while its hoops
+    // are on screen (gold and tier-2 gold share a colour, so a broken
+    // streak could otherwise drop them back to the skin); only the miss
+    // flash's ghost wins over it.
+    for (final h in c.run.spawner.hoops) {
+      if (!isGold(h) || h.look.missed) continue;
+      if (h.look.colors != RingColors.gold) h.look.colors = RingColors.gold;
+    }
     final b = c.s.bigHoops;
     // Over: back to normal hoops (the state is cleared, mult = 1).
     if (b != null && c.s.runClock - b.start >= b.duration) c.s.bigHoops = null;

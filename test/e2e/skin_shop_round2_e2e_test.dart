@@ -283,6 +283,8 @@ void main() {
     // A real spike collision, then the existing results REPLAY action.
     stepGame(game, 2);
     await flushAndMount(game);
+    // PRD-2 §3.14 (WP-2d): ≥ 6 hoops → the revive offer; No thanks.
+    await declineRevive(game);
     expect(game.state, GameState.gameOver);
     expect(bird.lookComponent.pose, LookPose.dead);
     expect(bird.look, outfit);

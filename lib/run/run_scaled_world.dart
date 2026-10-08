@@ -1,3 +1,4 @@
+import 'package:flame/components.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
 
 /// The game world with a run time scale (ARCH §0): everything in it —
@@ -12,6 +13,28 @@ class RunScaledWorld extends Forge2DWorld {
 
   double get timeScale => timeScaleSource?.call() ?? 1;
 
+  // region WP-2d — pause freezes the world (PRD-2 §5.7)
+  /// True while the run is paused: the world (Forge2D step, bird, hoops,
+  /// particles) gets dt 0 — except [realTime] children (an in-run menu
+  /// overlay such as settings over the pause screen), which keep real dt.
+  bool Function()? frozenSource;
+
+  bool get frozen => frozenSource?.call() ?? false;
+
+  /// World children that keep updating in real time while [frozen].
+  final Set<Component> realTime = {};
+  // endregion WP-2d
+
   @override
-  void updateTree(double dt) => super.updateTree(dt * timeScale);
+  void updateTree(double dt) {
+    if (!frozen) {
+      super.updateTree(dt * timeScale);
+      return;
+    }
+    super.updateTree(0);
+    realTime.removeWhere((c) => c.isRemoved);
+    for (final c in realTime) {
+      if (c.isMounted) c.updateTree(dt);
+    }
+  }
 }

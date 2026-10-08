@@ -165,7 +165,8 @@ void main() {
       final broken = spy.events.where((e) => e.$1 == 'streak_broken').single;
       expect(broken.$2, {'length': 4, 'cause': 'graze'});
       await flushAndMount(game);
-      final notice = game.world.children.where(
+      // WP-2d: the notice is HUD text (viewport, real time).
+      final notice = game.runHud!.children.where(
         (c) => c.runtimeType.toString() == '_GrazeNotice',
       );
       expect(notice, hasLength(1));
@@ -176,7 +177,7 @@ void main() {
       }
       await flushAndMount(game);
       expect(
-        game.world.children.where(
+        game.runHud!.children.where(
           (c) => c.runtimeType.toString() == '_GrazeNotice',
         ),
         isEmpty,
@@ -186,7 +187,7 @@ void main() {
       await flushAndMount(game);
       expect(spy.events.where((e) => e.$1 == 'streak_broken'), hasLength(1));
       expect(
-        game.world.children.where(
+        game.runHud!.children.where(
           (c) => c.runtimeType.toString() == '_GrazeNotice',
         ),
         isEmpty,

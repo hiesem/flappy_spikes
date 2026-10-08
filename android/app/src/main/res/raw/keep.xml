@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PRD-2 §3.34: the notification channel's custom sound ("B · Perfect
+     chime") and the small icon must survive the release build's resource
+     shrinking (shrinkResources), or reminders play the system sound / show a
+     blank icon. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/notif_chime,@drawable/ic_notif_bird,@drawable/ic_notif_large" />

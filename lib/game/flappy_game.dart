@@ -58,6 +58,7 @@ import '../services/ads_service.dart';
 import '../services/game_services.dart';
 import '../services/iap_service.dart';
 import '../services/monetization.dart';
+import '../services/reminders.dart';
 import '../skins/catalog.dart';
 import '../skins/item_store.dart';
 import '../skins/look.dart';
@@ -96,12 +97,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     double? worldHeight,
     GameServices? services,
     Monetization? monetization,
+    Reminders? reminders,
     DateTime Function()? clock,
     this.soundEnabled = true,
     bool? rumbleEnabled,
     VersusService? versus,
   }) : services = services ?? GameServices(),
        versus = versus ?? NoopVersusService(),
+       reminders = reminders ?? const NoopReminders(),
        rumble = Rumble(hardware: rumbleEnabled ?? soundEnabled),
        monetization = monetization ?? Monetization(),
        storage = GameStorage(clock: clock),
@@ -158,6 +161,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// Versus backend (PRD-2 §3.13). No-op unless main() passes one (WP-5b).
   final VersusService versus;
+
+  /// Reminder notifications (PRD-2 §3.34). No-op unless the app shell swaps
+  /// in the real service (`main.dart`, mobile only); [onLoad] asks for the
+  /// permission once and lays out the first 7-day plan.
+  Reminders reminders;
 
   /// Rewarded ads + in-app purchases. In-memory fakes unless main() passes
   /// `Monetization.forPlatform()`.
@@ -548,6 +556,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // App launch = a session start: the No-ads upsell may show on this
     // home arrival (PRD-menu-v4 §8, NoAdsPopupPolicy).
     await _startSession();
+
+    // region WP-4b — reminder notifications (PRD-2 §3.34)
+    // §3.34 "Permission": asked once, at the first app start, before the
+    // first game. §3.34 "Scheduling": the same plan is laid out at app start
+    // (covers reboots and app updates); storage is loaded by now, so the
+    // `{best}` / `{coins}` fill-in has the real values.
+    unawaited(() async {
+      await reminders.initialize();
+      await reminders.requestPermissionIfNeeded();
+      await reminders.reschedule();
+    }());
+    // endregion WP-4b
   }
 
   /// When the app went to the background (null while in the foreground).
@@ -605,6 +625,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   @override
   void lifecycleStateChange(AppLifecycleState state) {
     super.lifecycleStateChange(state);
+    // region WP-4b — reminder notifications (PRD-2 §3.34)
+    // §3.34 "Scheduling": leaving the app (background or close) cancels the
+    // pending plan and schedules the next 7 days, so the reminders always
+    // reflect the last time the player was in the game.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      unawaited(reminders.reschedule());
+    }
+    // endregion WP-4b
     switch (state) {
       case AppLifecycleState.paused || AppLifecycleState.hidden:
         _backgroundSince ??= storage.now();

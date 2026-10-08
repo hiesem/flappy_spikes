@@ -12,6 +12,14 @@
         tools:node="remove" />
     <!-- RUMBLE (PRD-2 §3.33): the vibration plugin's knock / shake pulses. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Reminder notifications (PRD-2 §3.34): POST_NOTIFICATIONS is the
+         Android 13+ runtime permission the app asks for once at the first
+         start; RECEIVE_BOOT_COMPLETED lets flutter_local_notifications
+         re-arm the 7-day plan after a reboot. Scheduling is INEXACT
+         (AndroidScheduleMode.inexactAllowWhileIdle), so no
+         SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM permission is declared. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <application
         android:label="Flappy Spikes"
         android:name="${applicationName}"
@@ -54,6 +62,22 @@
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3940256099942544~3347511713"/>
+        <!-- PRD-2 §3.34: flutter_local_notifications' receivers for
+             scheduled reminders and for re-scheduling them after a reboot /
+             app update. -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

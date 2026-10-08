@@ -605,22 +605,22 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.34-1 | Local notifications only, no server / FCM | 3.34 | 4b | | todo |
-| R-3.34-2 | 20 English messages with `{best}` / `{coins}` filled at scheduling | 3.34 | 4b | | todo |
-| R-3.34-3 | New-player fallback (best 0) for #1 and #2 | 3.34 | 4b | | todo |
-| R-3.34-4 | Two a day: midday random 11:30–13:30, evening random 18:30–20:30, local time | 3.34 | 4b | | todo |
-| R-3.34-5 | Never 22:00–09:00, also across time-zone / DST changes | 3.34 | 4b | | todo |
-| R-3.34-6 | Skip a slot within 2 h after play | 3.34 | 4b | | todo |
-| R-3.34-7 | Shuffled order, reshuffle after 20; no message twice within 10 days | 3.34 | 4b | | todo |
-| R-3.34-8 | Android 13+: ask POST_NOTIFICATIONS once at first app start (before the first game); never again if declined; no prompt on ≤ 12 | 3.34 | 4b | | todo |
-| R-3.34-9 | No in-game on/off switch; system channel "Reminders" | 3.34 | 4b | | todo |
-| R-3.34-10 | Channel: default importance, custom sound `notif_chime` (from `notif_b.ogg`) set at creation (`reminders` id; change = new id), keep.xml for the raw file | 3.34 | 4b | | todo |
-| R-3.34-11 | On every background / close: cancel all and schedule 7 days (14 slots), drop slots within 2 h, fill text, next messages in order; also at app start | 3.34 | 4b | | todo |
-| R-3.34-12 | Inexact scheduling (`inexactAllowWhileIdle`), reboot rescheduling via the plugin | 3.34 | 4b | | todo |
-| R-3.34-13 | Small icon white monochrome bird; large icon app icon | 3.34 | 4b | | todo |
-| R-3.34-14 | Tap opens the app on home (no deep links); `notif_opened` sent | 3.34 | 4b | | todo |
-| R-3.34-15 | Persisted: order, position, last-sent dates, permission-asked | 3.34 | 4b (keys 0b) | test/run/persistence_test.dart | done (0b part); 4b (keys ) pending |
-| R-3.34-16 | iOS later: same schedule (`UNCalendarNotificationTrigger`), `notif_chime.caf` — documented only | 3.34 | 4b | | todo |
+| R-3.34-1 | Local notifications only, no server / FCM | 3.34 | 4b | test/services/s3_34_reminders_test.dart::§3.34 service reschedule lays out 14 filled reminders and persists the plan | done (local only; `ReminderPlatform` seam — no FCM/server) |
+| R-3.34-2 | 20 English messages with `{best}` / `{coins}` filled at scheduling | 3.34 | 4b | test/services/s3_34_reminders_test.dart::§3.34 messages 20 English messages, numbered 1-20; ::§3.34 messages {best} and {coins} are filled in | done |
+| R-3.34-3 | New-player fallback (best 0) for #1 and #2 | 3.34 | 4b | test/services/s3_34_reminders_test.dart::§3.34 messages new-player fallback for #1 and #2 (best 0) | done |
+| R-3.34-4 | Two a day: midday random 11:30–13:30, evening random 18:30–20:30, local time | 3.34 | 4b | test/services/s3_34_reminders_test.dart::§3.34 when two slots a day inside their windows | done |
+| R-3.34-5 | Never 22:00–09:00, also across time-zone / DST changes | 3.34 | 4b | test/services/s3_34_reminders_test.dart::§3.34 when nothing between 22:00 and 09:00, across DST and time-zone changes | done |
+| R-3.34-6 | Skip a slot within 2 h after play | 3.34 | 4b | test/services/s3_34_reminders_test.dart::§3.34 when a slot within 2 h after play is skipped | done |
+| R-3.34-7 | Shuffled order, reshuffle after 20; no message twice within 10 days | 3.34 | 4b | test/services/s3_34_reminders_test.dart::§3.34 order the rotation never repeats a message within 10 days; ::§3.34 order a long absence does not break the rotation | done (10 seeds + a 40-day absence) |
+| R-3.34-8 | Android 13+: ask POST_NOTIFICATIONS once at first app start (before the first game); never again if declined; no prompt on ≤ 12 | 3.34 | 4b | test/services/s3_34_reminders_test.dart::§3.34 service permission is asked once and the result is logged; ::§3.34 service a decline is final and logged; ::§3.34 service no prompt on an OS without one (Android <= 12) | done |
+| R-3.34-9 | No in-game on/off switch; system channel "Reminders" | 3.34 | 4b | test/services/s3_34_reminders_test.dart::§3.34 service reschedule lays out 14 filled reminders and persists the plan | done (no settings switch; channel "Reminders") |
+| R-3.34-10 | Channel: default importance, custom sound `notif_chime` (from `notif_b.ogg`) set at creation (`reminders` id; change = new id), keep.xml for the raw file | 3.34 | 4b | integration_test/reminders_e2e_test.dart::WP-4b reminders: permission + the pending 7-day window; android/app/src/main/res/raw/keep.xml; `flutter build apk --debug` | done (channel `reminders`, `RawResourceAndroidNotificationSound(notif_chime)`) |
+| R-3.34-11 | On every background / close: cancel all and schedule 7 days (14 slots), drop slots within 2 h, fill text, next messages in order; also at app start | 3.34 | 4b | test/services/s3_34_reminders_test.dart::§3.34 lifecycle app start asks once and lays out the plan; leaving reschedules; ::§3.34 service a delivered slot advances the rotation, pending ones stay | done |
+| R-3.34-12 | Inexact scheduling (`inexactAllowWhileIdle`), reboot rescheduling via the plugin | 3.34 | 4b | integration_test/reminders_e2e_test.dart::WP-4b reminders: permission + the pending 7-day window | done (`AndroidScheduleMode.inexactAllowWhileIdle`; no exact-alarm permission; boot receiver per plugin docs) |
+| R-3.34-13 | Small icon white monochrome bird; large icon app icon | 3.34 | 4b | shot: android/app/src/main/res/drawable-*/ic_notif_bird.png (visual check) | done |
+| R-3.34-14 | Tap opens the app on home (no deep links); `notif_opened` sent | 3.34 | 4b | test/services/s3_34_reminders_test.dart::§3.34 service tapping a reminder logs notif_opened | done (tap -> home, no deep links) |
+| R-3.34-15 | Persisted: order, position, last-sent dates, permission-asked | 3.34 | 4b (keys 0b) | test/run/persistence_test.dart; test/services/s3_34_reminders_test.dart::§3.34 service reschedule lays out 14 filled reminders and persists the plan | done (0b keys; 4b reads/writes them) |
+| R-3.34-16 | iOS later: same schedule (`UNCalendarNotificationTrigger`), `notif_chime.caf` — documented only | 3.34 | 4b | — | n/a: iOS paused; the schedule + `notif_chime.caf` are behind `ReminderPlatform` (Darwin settings present), no `ios/` edits |
 
 ## 4. Run flow
 
@@ -838,8 +838,8 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-6-55 | `powerup_started` (hourglass / mini / frenzy, duration) | 6 | 3f | | todo |
 | R-6-56 | `powerup_ended` (type) | 6 | 3f | | todo |
 | R-6-57 | `setting_changed` (setting: rumble, value) | 6 | 2c (existing `rumble_toggle` → rename or send both; call in 2c) | | todo |
-| R-6-58 | `notif_permission` (granted / denied) | 6 | 4b | | todo |
-| R-6-59 | `notif_opened` (message 1–20, slot midday / evening) | 6 | 4b | | todo |
+| R-6-58 | `notif_permission` (granted / denied) | 6 | 4b | test/services/s3_34_reminders_test.dart::§3.34 service permission is asked once and the result is logged; ::§3.34 service a decline is final and logged | done |
+| R-6-59 | `notif_opened` (message 1–20, slot midday / evening) | 6 | 4b | test/services/s3_34_reminders_test.dart::§3.34 service tapping a reminder logs notif_opened | done |
 | R-6-60 | `switchring_spawned` (design) | 6 | 3d | | todo |
 | R-6-61 | `switchring_switch_taken` (design) | 6 | 3d | | todo |
 | R-6-62 | `switchring_passed` (design) | 6 | 3d | | todo |
@@ -929,7 +929,7 @@ the looping player).
 | R-S-11 | `col4_puzzle_get`, `col4_puzzle_slot1..4`, `col4_coins` | 3.16 | 0b / 4a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 4a pending |
 | R-S-12 | `sq_warn`, `sq_close`, `sq_lock`, `sq_hold` (seamless loop: ship `.ogg`/`.wav`, not mp3), `sq_tick`, `sq_open` | 5.16 | 0b / 3g | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 3g pending |
 | R-S-13 | Ride sounds `rd_space_*`, `rd_volc_*`, `rd_sea_*`, `rd_pin_*`, `rd_storm_*` (16 files) | 5.12b | 0b / 3b | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 3b pending |
-| R-S-14 | `notif_b.ogg` → `android/app/src/main/res/raw/notif_chime.ogg` | 3.34 | 4b | | todo |
+| R-S-14 | `notif_b.ogg` → `android/app/src/main/res/raw/notif_chime.ogg` | 3.34 | 4b | integration_test/reminders_e2e_test.dart::WP-4b reminders: permission + the pending 7-day window; `flutter build apk --debug` -> res/raw/notif_chime.ogg | done (19246 B, byte-identical to design/menu_v2/sfx/notif_b.ogg) |
 | R-S-15 | Deliverable: versus intro set (whoosh, ticks, chime, rocket, pop / crackle, thud, boing) | 5.8, 7 | 3h make / 5b use | | todo |
 | R-S-16 | Deliverable: saw-ring hums (3 loops) and deaths (Live Wire zap + thunder + crackles; Frost crunch + hiss, crack, shatter; Black Hole roar + sub drop, boom, inhale) | 5.17, 7 | 3h / 3d | | todo |
 | R-S-17 | Deliverable: FEVER pass, burning crackle loop, fire out sizzle | 5.18, 7 | 3h / 3c | | todo |

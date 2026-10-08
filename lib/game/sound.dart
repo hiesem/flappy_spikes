@@ -91,7 +91,114 @@ enum Sfx {
   rdVolcErupt,
   rdVolcRumble,
   // endregion WP-0b
-  // region anchors — append below (WP-3h generated sounds)
+  // region WP-3h — generated PRD-2 sound pack (design/menu_v2/gen_sfx15.py)
+  // §5.8 versus intro (whoosh, ticks, chime, rocket, pop/crackle, thud, boing)
+  vsWhoosh,
+  vsTick,
+  vsChime,
+  vsRocket,
+  vsPop,
+  vsThud,
+  vsBoing,
+  // §5.17 saw rings: deaths (hums are SfxLoop, below)
+  sawWireZap,
+  sawWireThunder,
+  sawWireCrackle,
+  sawFrostCrunch,
+  sawFrostHiss,
+  sawFrostCrack,
+  sawFrostTink,
+  sawFrostShatter,
+  sawHoleInhale,
+  sawHoleRoar,
+  sawHoleBoom,
+  sawHoleSubdrop,
+  // §5.18 FEVER: pass + fire out (fever_loop is an SfxLoop)
+  feverPass,
+  feverOut,
+  // §5.19 switch rings, all 5 designs: touched / opening / crash + the shared clear chord
+  swLockTouch,
+  swLockOpen,
+  swLockCrash,
+  swLaserTouch,
+  swLaserOpen,
+  swLaserCrash,
+  swIrisTouch,
+  swIrisOpen,
+  swIrisCrash,
+  swSnoozeTouch,
+  swSnoozeOpen,
+  swSnoozeCrash,
+  swGiftTouch,
+  swGiftOpen,
+  swGiftCrash,
+  swClear,
+  // §5.20 pair gifts: box opens, one per reward, ring skipped
+  pairBoxOpen,
+  pairShield,
+  pairComet,
+  pairCoins,
+  pairScore,
+  pairFever,
+  pairSkipped,
+  // §5.21 Ring Train (C5/E5/G5 + rising finish)
+  trainNote1,
+  trainNote2,
+  trainNote3,
+  trainFinish,
+  // §5.22 Spring Ring (up / down)
+  springUp,
+  springDown,
+  // §5.23 Bullseye Ring (dart thunk + bright chord)
+  bullThunk,
+  bullChord,
+  // §5.24 Lucky Spin (ticks, pass whoosh, win chord)
+  luckyTick,
+  luckyWhoosh,
+  luckyWin,
+  // §5.25 Star Trail (C major C5 -> C6, pop, bright chord)
+  trailNote1,
+  trailNote2,
+  trailNote3,
+  trailNote4,
+  trailNote5,
+  trailNote6,
+  trailNote7,
+  trailNote8,
+  trailPop,
+  trailChord,
+  // §5.26 Egg (pickup, crack, hatch, peeps, goodbye)
+  eggPickup,
+  eggCrack,
+  eggHatch,
+  eggPeep,
+  eggBye,
+  // §5.27 Piggy Bank (oink, coin clinks, missed blip, smash + cascade + chord)
+  piggyOink,
+  piggyCoin,
+  piggyMiss,
+  piggySmash,
+  // §5.28 Firefly Jar (pickup, twinkle, escape blip, crack, full chord)
+  jarPickup,
+  jarTwinkle,
+  jarEscape,
+  jarBreak,
+  jarFull,
+  // §3.0.4 rim "tonk" (rim bounce; placeholder was sk_tap before WP-3h)
+  rimTonk,
+  // §5.29 Hourglass (slowdown, tick-tock, speed-up)
+  hourglassStart,
+  hourglassTick,
+  hourglassEnd,
+  // §5.30 Mini Bird (shrink potion start / end)
+  miniStart,
+  miniEnd,
+  // §5.31 Coin Frenzy (jackpot run, per-ring cascade, end tone)
+  frenzyStart,
+  frenzyRing,
+  frenzyEnd,
+  // endregion WP-3h
+  // region anchors — append below (one value per WP, with a `// WP-x` note)
   // endregion anchors
 }
 
@@ -101,7 +208,13 @@ enum Sfx {
 enum SfxLoop {
   cometLoop('pu_comet_loop.wav'),
   sqHold('sq_hold.wav'),
-  // region anchors — append below (WP-3h saw hums, FEVER crackle)
+  // region WP-3h — §5.17 saw hums + §5.18 FEVER burning crackle (gen_sfx15.py)
+  sawWireHum('saw_wire_hum.wav'),
+  sawFrostHum('saw_frost_hum.wav'),
+  sawHoleHum('saw_hole_hum.wav'),
+  feverLoop('fever_loop.wav')
+  // endregion WP-3h
+  // region anchors — append below (one value per WP, with a `// WP-x` note)
   // endregion anchors
   ;
 
@@ -203,6 +316,96 @@ class SoundService {
     Sfx.rdVolcErupt: 'rd_volc_erupt.mp3',
     Sfx.rdVolcRumble: 'rd_volc_rumble.mp3',
     // endregion WP-0b
+    // region WP-3h — generated PRD-2 sound pack (§5.8-§5.31, §3.0.4)
+    Sfx.vsWhoosh: 'vs_whoosh.mp3',
+    Sfx.vsTick: 'vs_tick.mp3',
+    Sfx.vsChime: 'vs_chime.mp3',
+    Sfx.vsRocket: 'vs_rocket.mp3',
+    Sfx.vsPop: 'vs_pop.mp3',
+    Sfx.vsThud: 'vs_thud.mp3',
+    Sfx.vsBoing: 'vs_boing.mp3',
+    Sfx.sawWireZap: 'saw_wire_zap.mp3',
+    Sfx.sawWireThunder: 'saw_wire_thunder.mp3',
+    Sfx.sawWireCrackle: 'saw_wire_crackle.mp3',
+    Sfx.sawFrostCrunch: 'saw_frost_crunch.mp3',
+    Sfx.sawFrostHiss: 'saw_frost_hiss.mp3',
+    Sfx.sawFrostCrack: 'saw_frost_crack.mp3',
+    Sfx.sawFrostTink: 'saw_frost_tink.mp3',
+    Sfx.sawFrostShatter: 'saw_frost_shatter.mp3',
+    Sfx.sawHoleInhale: 'saw_hole_inhale.mp3',
+    Sfx.sawHoleRoar: 'saw_hole_roar.mp3',
+    Sfx.sawHoleBoom: 'saw_hole_boom.mp3',
+    Sfx.sawHoleSubdrop: 'saw_hole_subdrop.mp3',
+    Sfx.feverPass: 'fever_pass.mp3',
+    Sfx.feverOut: 'fever_out.mp3',
+    Sfx.swLockTouch: 'sw_lock_touch.mp3',
+    Sfx.swLockOpen: 'sw_lock_open.mp3',
+    Sfx.swLockCrash: 'sw_lock_crash.mp3',
+    Sfx.swLaserTouch: 'sw_laser_touch.mp3',
+    Sfx.swLaserOpen: 'sw_laser_open.mp3',
+    Sfx.swLaserCrash: 'sw_laser_crash.mp3',
+    Sfx.swIrisTouch: 'sw_iris_touch.mp3',
+    Sfx.swIrisOpen: 'sw_iris_open.mp3',
+    Sfx.swIrisCrash: 'sw_iris_crash.mp3',
+    Sfx.swSnoozeTouch: 'sw_snooze_touch.mp3',
+    Sfx.swSnoozeOpen: 'sw_snooze_open.mp3',
+    Sfx.swSnoozeCrash: 'sw_snooze_crash.mp3',
+    Sfx.swGiftTouch: 'sw_gift_touch.mp3',
+    Sfx.swGiftOpen: 'sw_gift_open.mp3',
+    Sfx.swGiftCrash: 'sw_gift_crash.mp3',
+    Sfx.swClear: 'sw_clear.mp3',
+    Sfx.pairBoxOpen: 'pair_box_open.mp3',
+    Sfx.pairShield: 'pair_shield.mp3',
+    Sfx.pairComet: 'pair_comet.mp3',
+    Sfx.pairCoins: 'pair_coins.mp3',
+    Sfx.pairScore: 'pair_score.mp3',
+    Sfx.pairFever: 'pair_fever.mp3',
+    Sfx.pairSkipped: 'pair_skipped.mp3',
+    Sfx.trainNote1: 'train_note1.mp3',
+    Sfx.trainNote2: 'train_note2.mp3',
+    Sfx.trainNote3: 'train_note3.mp3',
+    Sfx.trainFinish: 'train_finish.mp3',
+    Sfx.springUp: 'spring_up.mp3',
+    Sfx.springDown: 'spring_down.mp3',
+    Sfx.bullThunk: 'bull_thunk.mp3',
+    Sfx.bullChord: 'bull_chord.mp3',
+    Sfx.luckyTick: 'lucky_tick.mp3',
+    Sfx.luckyWhoosh: 'lucky_whoosh.mp3',
+    Sfx.luckyWin: 'lucky_win.mp3',
+    Sfx.trailNote1: 'trail_note1.mp3',
+    Sfx.trailNote2: 'trail_note2.mp3',
+    Sfx.trailNote3: 'trail_note3.mp3',
+    Sfx.trailNote4: 'trail_note4.mp3',
+    Sfx.trailNote5: 'trail_note5.mp3',
+    Sfx.trailNote6: 'trail_note6.mp3',
+    Sfx.trailNote7: 'trail_note7.mp3',
+    Sfx.trailNote8: 'trail_note8.mp3',
+    Sfx.trailPop: 'trail_pop.mp3',
+    Sfx.trailChord: 'trail_chord.mp3',
+    Sfx.eggPickup: 'egg_pickup.mp3',
+    Sfx.eggCrack: 'egg_crack.mp3',
+    Sfx.eggHatch: 'egg_hatch.mp3',
+    Sfx.eggPeep: 'egg_peep.mp3',
+    Sfx.eggBye: 'egg_bye.mp3',
+    Sfx.piggyOink: 'piggy_oink.mp3',
+    Sfx.piggyCoin: 'piggy_coin.mp3',
+    Sfx.piggyMiss: 'piggy_miss.mp3',
+    Sfx.piggySmash: 'piggy_smash.mp3',
+    Sfx.jarPickup: 'jar_pickup.mp3',
+    Sfx.jarTwinkle: 'jar_twinkle.mp3',
+    Sfx.jarEscape: 'jar_escape.mp3',
+    Sfx.jarBreak: 'jar_break.mp3',
+    Sfx.jarFull: 'jar_full.mp3',
+    Sfx.rimTonk: 'rim_tonk.mp3',
+    Sfx.hourglassStart: 'hourglass_start.mp3',
+    Sfx.hourglassTick: 'hourglass_tick.mp3',
+    Sfx.hourglassEnd: 'hourglass_end.mp3',
+    Sfx.miniStart: 'mini_start.mp3',
+    Sfx.miniEnd: 'mini_end.mp3',
+    Sfx.frenzyStart: 'frenzy_start.mp3',
+    Sfx.frenzyRing: 'frenzy_ring.mp3',
+    Sfx.frenzyEnd: 'frenzy_end.mp3',
+    // endregion WP-3h
   };
 
   /// The bundled file for every [Sfx] (asserted by the asset test).
@@ -221,7 +424,7 @@ class SoundService {
   /// to 16 `bn_coin` landings 55 ms apart and up to 24 `sk_tick`s, so
   /// their pools keep more warm players (a pool that runs dry creates a
   /// fresh player mid-animation).
-  static const Set<Sfx> _burstPool = {Sfx.bnCoin, Sfx.skTick};
+  static const Set<Sfx> _burstPool = {Sfx.bnCoin, Sfx.skTick, Sfx.piggyCoin};
 
   static const String _musicFile = 'HappyBeat_8-Bit_Retro_Game_Loop.mp3';
 

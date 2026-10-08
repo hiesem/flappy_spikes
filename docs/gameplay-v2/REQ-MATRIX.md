@@ -880,7 +880,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-7-T11 | Notification tests with a fake clock: windows, quiet hours incl. TZ / DST, skip-after-play, 7 d / 14 slots, rotation no repeat in 10 d, fill-in + fallback | 7 | 4b | | todo |
 | R-7-T12 | Persistence: every key round-trips with its default | 7 | 0b / 4c | test/run/persistence_test.dart | done (0b part); 4c pending |
 | R-7-T13 | Emulator tests: rules, function, matching | 7 | 5a | functions/test/*.test.ts (77 tests: rules, trigger, callable, matching fixture test/fixtures/versus_matching.json, level parity) | done |
-| R-7-T14 | Pixel 8 `integration_test` with `FS_E2E` (fixed seed, fake ads, debug App Check, force hooks) per phase; final release e2e | ARCH | 0b / 6 | integration_test/run_core_e2e_test.dart | done (0b part); 6 pending |
+| R-7-T14 | Pixel 8 `integration_test` with `FS_E2E` (fixed seed, fake ads, debug App Check, force hooks) per phase; final release e2e | ARCH | 0b / 6 | integration_test/run_core_e2e_test.dart; integration_test/release_e2e_test.dart::P6 §7 journey …, ::P6 §3.0.8 element sweep …, ::P6 §3.12 rides …, ::P6 §3.34 reminders …, ::P6 §3.13 versus live round trip … | done on Linux (WP-6a; reminders / versus live skip there); Pixel 8 run by the orchestrator |
 | R-7-T15 | Screenshot checks vs the approved PNG for every drawn element (`captureShot` pattern) | common | all visual WPs | | todo |
 
 ## 7. Persistence keys

@@ -1327,3 +1327,16 @@ regression in `test/e2e/p2_gameplay_e2e_test.dart` (S6-20 … S6-24).
 | S6-45 | `RunDirector._switchItem` picks the switch from the intersection of 70–100 pt off the ring, ≤ 110 pt from the previous centre and the item margins; if empty the ring moves (1 pt steps, band limits, ≤ max jump) to the nearest height that has one, else the slot is a normal hoop. `RunConfig.switchMinFromRing` removed | §3.20 |
 | S6-46 | `nextGap`: running bank / jar fields are not placed inside the squeeze window (the bank keeps what it owes) | §3.17 |
 | S6-47 | `ClearFade` mixin (`effects/clear_fade.dart`) on `Hoop`, `HoopFrontLayer`, `Pickup`: `clearAlpha` drawn through one translucent layer; `RunSpawner` sets it to remaining / fade each frame of the 0.2 s clear | §3.12 / §3.0.3 |
+---
+
+## 30. WP-6a contract notes (as built, 2026-10-08)
+
+| Area | As built | Why |
+|---|---|---|
+| Release e2e | `integration_test/release_e2e_test.dart`: journey (ad revive → coin revive → No thanks → level-up results → CLAIM → NEXT → home), element sweep (every `ForceMenu.forceable` element the build registers + Big Hoops via the armed home slot + the squeeze; a catalogue element that is neither swept nor listed in `_coveredElsewhere` fails the test), the six rides, reminders (Android), versus live (`FS_LIVE_VERSUS`, Android) and a FrameTiming log (tier 3, comet, space ride) | ARCH §7.3 P6 |
+| Persistence in e2e | every launch uses `SharedPreferences.setMockInitialValues` (in-memory, also on the phone): a fresh best 0 / 0 coins / `firstSessionDone`, the sweep with every element met (no first-meet forcing in the way) | deterministic journeys; the phone's real data is untouched |
+| Screenshots (call) | `RenderRepaintBoundary.toImage` of the boundary above the `GameWidget` (not `takeScreenshot` / `convertFlutterSurfaceToImage`): one path on Linux and Android. Linux: `build/e2e/release/`; Android: `<cache>/e2e_release` (pull with `adb exec-out run-as … tar`) | `takeScreenshot` has no desktop implementation |
+| Frame log (call) | own `addTimingsCallback` summary (build / raster / total ms: avg, p50, p90, p99, max, frames over 16.7 ms) into `binding.reportData['frame_timings']`, `frame_timings.json` and a `FRAMES` log line; not `watchPerformance` / `traceAction` | those wait on the VM-service timeline and can hang without frames; the log is not a gate |
+| RunEvents errors | the test traps `RunEvents: … threw` debug prints (the bus swallows handler errors) and fails on them | "no exceptions" must include swallowed handler errors |
+| App Check | `FirebaseVersusBackend.activateAppCheck({String? debugToken})`: the live versus test passes `FS_APPCHECK_DEBUG_TOKEN` or a fresh UUID v4 and prints it in a banner for registration | the orchestrator needs a printable token |
+| iOS | `PORT-IOS.md` (repo root): the port checklist + every Android-only path with file:line | P6 prep |

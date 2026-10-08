@@ -90,6 +90,9 @@ void main() {
           isTrue,
         );
         expect(g.storage.coins - walletBefore, run.state.coinsThisRun);
+        // WP-3a: a ride (the comet boost, first met at hoop 10) ignores
+        // mistakes — finish it first.
+        await flyOutOfRide(g);
         // The same pipeline used by contacts: shield precedes extra life.
         run.state
           ..shield = true
@@ -147,7 +150,12 @@ void main() {
           mults.add(mult);
           expect(
             e.hoop.opening,
-            closeTo(RunConfig.openingFor(e.plan.index) * mult, .001),
+            // WP-3a: comet-boost hoops are full size (§3.0.1 "Rides").
+            closeTo(
+              RunConfig.openingFor(e.plan.index, ride: e.plan.duringRide) *
+                  mult,
+              .001,
+            ),
           );
           originals[e.hoop] = e.hoop.opening;
         });

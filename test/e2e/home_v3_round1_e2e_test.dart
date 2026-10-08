@@ -178,6 +178,8 @@ Future<void> _flyToEgg(FlappySpikesGame game) async {
   final flight = await flyRun(game, maxSeconds: 75, untilHoops: 12);
   expect(game.score, greaterThanOrEqualTo(12),
       reason: 'actual hoop scoring\n${flight.trace.reversed.take(5).join('\n')}');
+  // WP-3a: a comet boost (first met at hoop 10) flies itself; finish it.
+  await flyOutOfRide(game);
 }
 
 void main() async {

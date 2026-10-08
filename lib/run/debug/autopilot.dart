@@ -11,6 +11,7 @@ import '../physics/bird_motion.dart';
 import '../physics/hoop_frame.dart';
 import '../physics/pass_test.dart';
 import '../physics/rim_collision.dart';
+import '../pickups/pickup.dart' show PickupRadii;
 import '../run_controller.dart';
 
 /// The hoop-aware bot (ARCH §1.12, PRD-2 §7). Used by the debug bot,
@@ -61,6 +62,11 @@ class Autopilot {
 
   /// Frames between re-checks of the current plan.
   static const int recheckEvery = 4;
+
+  // region WP-3a — comet hoops (PRD-2 §3.8)
+  /// Safety margin (pt) inside the comet star's reach (18 + bird r).
+  static const double cometStarMargin = 6;
+  // endregion WP-3a
 
   _Plan? _plan;
   Hoop? _planHoop;
@@ -267,6 +273,15 @@ class Autopilot {
     }
     final room = math.min(s.y - r - top, floor - s.y - r);
     if (room < 40) cost += (40 - room) * 2;
+    // region WP-3a — a comet hoop: cross the plane where the star hangs (it
+    // is 20 pt past the plane at the hoop centre), so the pass collects it
+    // (§3.8, the prototype bot flies through the hoop centre).
+    if (h.plan.cometHang) {
+      final reach = PickupRadii.comet + r - cometStarMargin;
+      final off = (s.y - h.plan.centreY).abs();
+      if (off > reach) cost += (off - reach) * 50;
+    }
+    // endregion WP-3a
     return cost;
   }
 

@@ -111,10 +111,18 @@ void main() {
         final run = await startRun(game, starter: Powerup.bigHoops);
         game.runDebug.god = true;
         final b = run.state.bigHoops!;
-        final spawned = <(double, double, int, bool)>[];
+        // WP-3a: (runClock, opening, index, gold, spawned during a ride —
+        // the comet boost's hoops are full size, §3.0.1 / §3.8).
+        final spawned = <(double, double, int, bool, bool)>[];
         // The first hoop was spawned at run start (runClock 0).
         final f = run.spawner.hoops.first;
-        spawned.add((0, f.opening, f.plan.index, f.look.colors != null));
+        spawned.add((
+          0,
+          f.opening,
+          f.plan.index,
+          f.look.colors != null,
+          f.plan.duringRide,
+        ));
         final sizes = <Object, double>{};
         run.events.on<HoopSpawned>((e) {
           spawned.add((
@@ -122,6 +130,7 @@ void main() {
             e.hoop.opening,
             e.plan.index,
             e.hoop.look.colors == RingColors.gold,
+            e.plan.duringRide,
           ));
           sizes[e.hoop] = e.hoop.opening;
         });
@@ -139,9 +148,9 @@ void main() {
         final band = h - 2 * RunConfig.stripHeight;
         final cap = band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin);
         var sawEase = false, sawPlain = false;
-        for (final (t, opening, idx, gold) in spawned) {
+        for (final (t, opening, idx, gold, ride) in spawned) {
           final m = b.mult(t);
-          final base = run.director.openingFor(idx, ride: false);
+          final base = run.director.openingFor(idx, ride: ride);
           expect(opening, closeTo(min(base * m, cap), 1e-6), reason: 't=$t');
           expect(gold, m > 1, reason: 't=$t m=$m');
           if (m > 1 && m < 1.5) sawEase = true;

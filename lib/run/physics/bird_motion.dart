@@ -24,7 +24,10 @@ abstract final class BirdMotion {
   /// One step of the forward motion: recovery toward the cruise of the
   /// current runClock, then the camera advance. Returns the distance moved.
   static double step(RunState s, double dt) {
-    s.forwardSpeed = recover(s.forwardSpeed, cruise(s.runClock), dt);
+    // region WP-3a — the comet boost scales the cruise (PRD-2 §3.8)
+    final target = cruise(s.runClock) * s.cruiseMult;
+    // endregion WP-3a
+    s.forwardSpeed = recover(s.forwardSpeed, target, dt);
     final dx = s.forwardSpeed * dt;
     s.camX += dx;
     return dx;

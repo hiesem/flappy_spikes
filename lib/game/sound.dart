@@ -439,21 +439,50 @@ class SoundService {
   bool _musicStarted = false;
   bool _bgmInitialized = false;
 
-  /// Preloaded low-latency pools, one per SFX. Without these, FlameAudio.play
+  /// Low-latency pools, one per SFX. Without these, FlameAudio.play
   /// creates a brand-new AudioPlayer (decoder + AudioTrack + audio-focus
   /// request) for EVERY effect — that made flap sounds laggy and churned CPU
   /// on the Pixel 8 (2026-07-22).
   ///
   /// The pools use SoundPool mode ([PlayerMode.lowLatency]): sounds are
-  /// decoded ONCE at warmup and each play is a sub-millisecond queue on an
-  /// open stream. The default MediaPlayer mode made every play open+close an
-  /// audio route, which stalled frames on the Pixel 8 (few-frame freeze on
-  /// every flap, 2026-07-22). Caveat of SoundPool mode: onPlayerComplete
-  /// never fires, so [play] stops each sound after its measured duration to
-  /// return the player to the pool.
+  /// decoded ONCE when the pool is created and each play is a
+  /// sub-millisecond queue on an open stream. The default MediaPlayer mode
+  /// made every play open+close an audio route, which stalled frames on the
+  /// Pixel 8 (few-frame freeze on every flap, 2026-07-22). Caveat of
+  /// SoundPool mode: onPlayerComplete never fires, so [play] stops each
+  /// sound after its measured duration to return the player to the pool.
+  ///
+  /// PRD-2 has ~170 cues, so pools are created lazily (WP-P1int): only
+  /// [prewarmed] warms up at start; every other pool is created on its first
+  /// [play].
   final Map<Sfx, AudioPool> _pools = {};
   final Map<Sfx, Duration> _durations = {};
   bool _poolsStarted = false;
+
+  /// One creation per sound (also when it failed: no retry storm).
+  final Map<Sfx, Future<void>> _creating = {};
+
+  /// First plays of lazily created pools, waiting for their pool (when the
+  /// request was made).
+  final Map<Sfx, DateTime> _pendingFirst = {};
+
+  /// The core run sounds, warmed up at start (PRD-2 §7, WP-P1int): flap,
+  /// point, the rim tonk, the perfect / streak set — plus the 1.0 game-over
+  /// and the menu click, which every session plays.
+  static const Set<Sfx> prewarmed = {
+    Sfx.flap,
+    Sfx.point,
+    Sfx.gameover,
+    Sfx.click,
+    Sfx.rimTonk,
+    Sfx.perfect1,
+    Sfx.perfect2,
+    Sfx.perfect3,
+  };
+
+  /// A lazily created pool plays its first request once it is ready, unless
+  /// that took longer than this (a late sound is worse than none).
+  static const Duration firstPlayLateLimit = Duration(milliseconds: 250);
 
   /// Background-music volume (0..1). Independent of [muted], which only
   /// gates sound effects.
@@ -476,18 +505,27 @@ class SoundService {
       return;
     }
     final pool = _pools[sfx];
-    // A pool is only ready together with its stop duration (see [_initPools]);
-    // while either is missing the sound is dropped and warm-up is (re)tried.
+    // A pool is only ready together with its stop duration (see
+    // [_createPool]); while either is missing the sound is not played now.
     // A bare FlameAudio.play here would spawn a fresh one-shot AudioPlayer,
-    // which the project bans (CLAUDE.md: preloaded low-latency pools only), so
-    // a sound requested this early is simply silent.
+    // which the project bans (CLAUDE.md: preloaded low-latency pools only).
     final duration = _durations[sfx];
     if (pool == null || duration == null) {
       unawaited(_initPools());
+      if (!prewarmed.contains(sfx) && !_creating.containsKey(sfx)) {
+        // First request of a lazy pool: create it and play this request
+        // once it is ready (if that is quick enough).
+        _pendingFirst[sfx] = DateTime.now();
+        unawaited(_ensurePool(sfx));
+      }
       return;
     }
     unawaited(_playPool(pool, duration));
   }
+
+  /// True once [sfx]'s pool creation has been started (tests).
+  @visibleForTesting
+  bool poolRequested(Sfx sfx) => _creating.containsKey(sfx);
 
   /// Plays one low-latency pool hit and returns the borrowed player after the
   /// known duration — SoundPool mode never fires onPlayerComplete, so only the
@@ -510,42 +548,62 @@ class SoundService {
     }
   }
 
-  /// Creates the SFX pools once. No-op when [enabled] is false (tests) and
-  /// idempotent afterwards; while it runs (or after a failure) [play] simply
-  /// drops the sound instead of opening a one-shot player.
+  /// Warms up the [prewarmed] pools once. No-op when [enabled] is false
+  /// (tests) and idempotent afterwards; while it runs (or after a failure)
+  /// [play] simply drops those sounds instead of opening a one-shot player.
   Future<void> _initPools() async {
     if (!enabled || _poolsStarted) {
       return;
     }
     _poolsStarted = true;
-    for (final entry in _files.entries) {
-      try {
-        final legacy = _legacyPool.contains(entry.key);
-        final burst = _burstPool.contains(entry.key);
-        final pool =
-            await (poolFactory?.call(entry.value, legacy) ??
-                AudioPool.create(
-                  source: AssetSource(entry.value),
-                  audioCache: FlameAudio.audioCache,
-                  minPlayers: burst ? 3 : (legacy ? 2 : 1),
-                  maxPlayers: burst ? 6 : (legacy ? 4 : 2),
-                  playerMode: PlayerMode.lowLatency,
-                  audioContext: AudioContextConfig(
-                    focus: AudioContextConfigFocus.mixWithOthers,
-                  ).build(),
-                ));
-        if (pool == null) continue; // never became ready: stay silent
-        // Publish the pool and its stop duration TOGETHER: until the metadata
-        // is known the pool is not ready and [play] keeps dropping the sound,
-        // so a warm-up play can never dereference a missing duration (a
-        // partially initialized pool stays silent instead).
-        _durations[entry.key] =
-            await pool.getDuration() ?? const Duration(milliseconds: 500);
-        _pools[entry.key] = pool;
-      } catch (_) {
-        // Audio failure must never take the game down. One bad pool must not
-        // stop the remaining sounds from warming up either.
+    for (final sfx in prewarmed) {
+      await _ensurePool(sfx);
+    }
+  }
+
+  Future<void> _ensurePool(Sfx sfx) =>
+      _creating.putIfAbsent(sfx, () => _createPool(sfx));
+
+  /// Creates [sfx]'s low-latency pool (never throws).
+  Future<void> _createPool(Sfx sfx) async {
+    final file = _files[sfx];
+    if (file == null) return;
+    try {
+      final legacy = _legacyPool.contains(sfx);
+      final burst = _burstPool.contains(sfx);
+      final pool =
+          await (poolFactory?.call(file, legacy) ??
+              AudioPool.create(
+                source: AssetSource(file),
+                audioCache: FlameAudio.audioCache,
+                minPlayers: burst ? 3 : (legacy ? 2 : 1),
+                maxPlayers: burst ? 6 : (legacy ? 4 : 2),
+                playerMode: PlayerMode.lowLatency,
+                audioContext: AudioContextConfig(
+                  focus: AudioContextConfigFocus.mixWithOthers,
+                ).build(),
+              ));
+      if (pool == null) return; // never became ready: stay silent
+      // Publish the pool and its stop duration TOGETHER: until the metadata
+      // is known the pool is not ready and [play] keeps dropping the sound,
+      // so a warm-up play can never dereference a missing duration (a
+      // partially initialized pool stays silent instead).
+      final duration =
+          await pool.getDuration() ?? const Duration(milliseconds: 500);
+      _durations[sfx] = duration;
+      _pools[sfx] = pool;
+      final asked = _pendingFirst.remove(sfx);
+      if (asked != null &&
+          enabled &&
+          !muted &&
+          DateTime.now().difference(asked) <= firstPlayLateLimit) {
+        unawaited(_playPool(pool, duration));
       }
+    } catch (_) {
+      // Audio failure must never take the game down. One bad pool must not
+      // stop the remaining sounds from warming up either.
+    } finally {
+      _pendingFirst.remove(sfx);
     }
   }
 
@@ -668,7 +726,9 @@ class _LoopPlayer implements LoopHandle {
       _player = p;
       await p.setPlayerMode(PlayerMode.lowLatency);
       await p.setAudioContext(
-        AudioContextConfig(focus: AudioContextConfigFocus.mixWithOthers).build(),
+        AudioContextConfig(
+          focus: AudioContextConfigFocus.mixWithOthers,
+        ).build(),
       );
       await p.setReleaseMode(ReleaseMode.loop);
       if (_stopped) {

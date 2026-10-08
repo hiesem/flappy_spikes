@@ -1061,3 +1061,11 @@ Changes to the contracts above, made while building WP-0b. Later WPs build again
 | Miss flash | `MissFlash.play(hoop, fx:, glowParent:, glowPriority:, screen:)` — the edge glow goes into the **world under the strips** (`RunLayer.items`), as the mock paints it, not the viewport | §5.13 mock order |
 | Calls | spike contact = the bird circle reaching the tooth tips (prototype used tips + 8); no rim bounce while invulnerable (prototype); perfect passes are silent until WP-2b's perfect sounds (ARCH: `point.mp3` on non-perfect only); the rim "tonk" plays `Sfx.rimTonk` looked up by name (WP-3h adds it) | |
 | Tests | `killRun(game[, cause])` helper (onBirdHit + step through the tumble) replaces the 1.0 instant game over in the menu / e2e tests | |
+
+## 14. WP-P1int contract notes (as built, 2026-10-08)
+
+| Area | As built | Why |
+|---|---|---|
+| `RunSpawner.nextHoopAhead()` | the first unresolved hoop the bird is not fully past (`birdX − r ≤ frame().rightmostX`, the §3.0.4 5 miss line), instead of `planeX > birdX − 4` | a tilted ring's plane centre is behind the bird while it still crosses the upper / lower half: the bot (and `RunSummary.hoopKind`) jumped to the next hoop mid-crossing and flew into the rim |
+| `Autopilot` | plain rings: a planner rolls the real physics (`BirdMotion.recover`, `collideRims`, `testPlane`, `isFullyPast`, spike lines, moving poses via `HoopMotion.poseAt`) for a family of controllers (bang-bang to ring centre + aim offset; from τ s before the plane glide or flap once) and follows the cheapest passing one (rim clearance < 4 pt counts as a touch); re-checked every 4 frames. Switch pre-targets / closed switches / no pass found → the prototype `botStep` rule | the prototype's bang-bang bot also fails most forced 35°+ / moving rings (node harness: 6/20 at 35°, 5/20 at moving 45); a θ-tilted ring leaves only `reach·cosθ − (r + rimR)` of a level path |
+| `SoundService` | lazy pools: `prewarmed` (flap, point, gameover, click, rimTonk, perfect1–3) warm at start; every other `Sfx` creates its low-latency `AudioPool` on first `play`, which is played once ready if that took ≤ `firstPlayLateLimit` (250 ms), else dropped; one creation per sound (`poolRequested` test seam) | 168 pools at start-up (WP-3h warning) |

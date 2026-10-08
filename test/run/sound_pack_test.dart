@@ -197,7 +197,10 @@ void main() {
             requested.add(file);
             return null; // never ready: stays silent, no plugin call
           };
-        sound.play(Sfx.vsWhoosh);
+        // Pools are created on first play (WP-P1int): play every cue once.
+        for (final sfx in newSfx) {
+          sound.play(sfx);
+        }
         await pumpEventQueue();
         for (final sfx in newSfx) {
           expect(

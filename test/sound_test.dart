@@ -97,12 +97,13 @@ void main() {
       final played = <Sfx>[];
       sound.onPlay = played.add;
 
-      sound.play(Sfx.skTap); // warms the pools; this play is dropped
+      sound.play(Sfx.skTap); // warms the core pools + skTap's; dropped
       await Future<void>.delayed(Duration.zero);
-      expect(built, SoundService.audioFiles.length);
+      // WP-P1int: only the core run sounds warm up, plus the requested one.
+      expect(built, SoundService.prewarmed.length + 1);
 
       sound.play(Sfx.skTap); // still no pool: dropped, no new warmup
-      expect(built, SoundService.audioFiles.length);
+      expect(built, SoundService.prewarmed.length + 1);
       expect(played, [Sfx.skTap, Sfx.skTap]);
     });
   });
@@ -166,6 +167,95 @@ void main() {
       expect(pool.starts, 1);
       expect(pool.stops, 1, reason: 'the stop timer must still fire');
       expect(uncaught, isEmpty);
+    });
+  });
+
+  group('§7 lazy pools (WP-P1int)', () {
+    test('start-up warms only the core run sounds, not every cue', () async {
+      final built = <String>[];
+      final sound = SoundService()
+        ..poolFactory = (file, legacy) async {
+          built.add(file);
+          return _FakePool(duration: const Duration(milliseconds: 1));
+        };
+      sound.play(Sfx.flap); // first sound of the session: core warm-up
+      await _flush();
+      expect(built.toSet(), {
+        for (final s in SoundService.prewarmed) SoundService.audioFiles[s],
+      });
+      expect(built, hasLength(SoundService.prewarmed.length));
+      expect(
+        SoundService.prewarmed,
+        containsAll(<Sfx>[
+          Sfx.flap,
+          Sfx.point,
+          Sfx.rimTonk,
+          Sfx.perfect1,
+          Sfx.perfect2,
+          Sfx.perfect3,
+        ]),
+      );
+      expect(sound.poolRequested(Sfx.sawWireZap), isFalse);
+      expect(
+        SoundService.prewarmed.length,
+        lessThan(SoundService.audioFiles.length ~/ 10),
+      );
+    });
+
+    test('a cue gets its pool on first play and that play is heard', () async {
+      final pools = <String, _FakePool>{};
+      var built = 0;
+      final sound = SoundService()
+        ..poolFactory = (file, legacy) async {
+          built++;
+          return pools[file] = _FakePool(
+            duration: const Duration(milliseconds: 1),
+          );
+        };
+      sound.play(Sfx.sawWireZap);
+      await _flush();
+      final zap = pools['saw_wire_zap.mp3']!;
+      expect(zap.starts, 1, reason: 'the first request plays once ready');
+      expect(built, SoundService.prewarmed.length + 1);
+      sound.play(Sfx.sawWireZap);
+      await _flush();
+      expect(zap.starts, 2);
+      expect(built, SoundService.prewarmed.length + 1, reason: 'one pool');
+      await Future<void>.delayed(const Duration(milliseconds: 130));
+    });
+
+    test('a first play whose pool comes too late is dropped', () async {
+      final slow = _FakePool();
+      final sound = SoundService()
+        ..poolFactory = (file, legacy) async => file == 'egg_hatch.mp3'
+            ? slow
+            : _FakePool(duration: const Duration(milliseconds: 1));
+      sound.play(Sfx.eggHatch);
+      await _flush();
+      await Future<void>.delayed(
+        SoundService.firstPlayLateLimit + const Duration(milliseconds: 50),
+      );
+      slow.durationReady.complete(const Duration(milliseconds: 1));
+      await _flush();
+      expect(slow.starts, 0);
+      sound.play(Sfx.eggHatch); // ready now
+      await _flush();
+      expect(slow.starts, 1);
+      await Future<void>.delayed(const Duration(milliseconds: 130));
+    });
+
+    test('muted / disabled never create a pool', () async {
+      var built = 0;
+      final muted = SoundService(muted: true)
+        ..poolFactory = (file, legacy) async {
+          built++;
+          return null;
+        };
+      final off = SoundService(enabled: false)..poolFactory = muted.poolFactory;
+      muted.play(Sfx.trailNote1);
+      off.play(Sfx.trailNote1);
+      await _flush();
+      expect(built, 0);
     });
   });
 }

@@ -86,7 +86,10 @@ class RunSpawner {
     for (final (item, prev) in _pending) {
       final x0 = prev.lastRingX;
       final y0 = prev.extra is TrainSpec
-          ? prev.centreY + 2 * (prev.extra! as TrainSpec).dy * (prev.extra! as TrainSpec).dir
+          ? prev.centreY +
+                2 *
+                    (prev.extra! as TrainSpec).dy *
+                    (prev.extra! as TrainSpec).dir
           : prev.centreY;
       final x1 = next.trackX;
       final y1 = next.centreY;
@@ -179,7 +182,8 @@ class RunSpawner {
   /// §3.0.3 portal ride: everything ahead of the bird goes ([fade] s);
   /// uncaught items do not count as missed.
   void clearAhead({double fade = 0.2}) {
-    final birdX = run.birdTrackPosition()?.x ?? run.state.camX + RunConfig.birdX;
+    final birdX =
+        run.birdTrackPosition()?.x ?? run.state.camX + RunConfig.birdX;
     _hoops.removeWhere((h) {
       if (h.planeX <= birdX) return false;
       _fading
@@ -196,11 +200,16 @@ class RunSpawner {
     _pending.clear();
   }
 
-  /// The next unresolved hoop the bird has not fully passed.
+  /// The next unresolved hoop the bird has not fully passed (§3.0.4 5:
+  /// the ring's rightmost point, so a tilted ring whose plane centre is
+  /// already behind the bird still counts while the bird crosses its upper
+  /// or lower half).
   Hoop? nextHoopAhead() {
-    final birdX = run.birdTrackPosition()?.x ?? run.state.camX + RunConfig.birdX;
+    final birdX =
+        run.birdTrackPosition()?.x ?? run.state.camX + RunConfig.birdX;
+    final r = RunConfig.birdRadius * run.state.birdScale;
     for (final h in _hoops) {
-      if (!h.resolved && h.planeX > birdX - 4) return h;
+      if (!h.resolved && birdX - r <= h.frame().rightmostX) return h;
     }
     return null;
   }

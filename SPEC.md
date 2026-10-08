@@ -158,9 +158,11 @@ Implements `PRD-menu-v2.md` on branch `feat/skin-shop` (off `feat/menu-v2`):
 5-layer wardrobe (88 items), skin shop layout A, live home & Shop (§8).
 Product-owner decisions 2026-10-06/07 and implementation notes:
 
-- **Hoops and trails are preview-only** until PRD-2 lands: the 1.0 game still
-  has pipes, so the Hoop and Trail layers are bought/equipped and shown in the
-  skin shop's live preview only; runs, home and results show bird + gear + hat.
+- **Hoops and trails** were preview-only until PRD-2 landed: with the 1.0 pipes
+  still in place, the Hoop and Trail layers were bought/equipped and shown in the
+  skin shop's live preview only; runs, home and results showed bird + gear + hat.
+  **Superseded by PRD-2 (WP-1a):** pipes are gone and the equipped hoop skin +
+  trail now render in runs — see "PRD-2 hoops replace pipes" below.
 - **PRD-1 skins are reset** (Q-S6): the old `ownedSkins` / `equippedSkin` /
   `seenSkins` prefs are deleted on load, no grant, no refund.
 - **No BUY confirmation** (Q-S5): try-on + the priced BUY button is the step.

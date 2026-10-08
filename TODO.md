@@ -386,6 +386,70 @@ Branch off `feat/skin-shop`, local commits only (not pushed). Opus/DeepSeek buil
       store transaction, localized prices fit)
 - [ ] 2.0.0+7 on internal testing (user presses release) + Pixel 8 device check: Shop shows store prices
 
+## Phase 22 — 2.1 gameplay (PRD-2, branch `feat/gameplay-v2`, off `feat/menu-v4` 0380b4e)
+
+The full gameplay rebuild (`PRD-2-gameplay.md`): hoops replace pipes, the run
+director, all special hoops / gap items / capsules, the comet, the portal rides,
+the spike squeeze, the meta collectables, the results page, versus (Firebase),
+rumble and reminder notifications. **Local only** — everything is merged into
+`feat/gameplay-v2` (head `0f96074`); `origin` has only `main` (`c901ece`).
+Module map / contracts: `docs/gameplay-v2/{ARCH,REQ-MATRIX,SOUNDS,VERSUS-BACKEND}.md`;
+the per-WP **DEVIATION** notes are in `SPEC.md`.
+
+Feature WPs (as merged):
+
+- [x] WP-0a — gameplay v2 architecture + requirement matrix (df6be27)
+- [x] WP-0c — shared parts, one master each (97b9da6)
+- [x] WP-0b — run scaffolding: run core, run director, registries, post-run flow, debug force menu,
+      storage keys, sound loops, e2e harness (d43ffdf)
+- [x] WP-1a — hoops replace pipes: plain-math physics, scoring, death tumble, miss flash, 44 pt strips (6182943)
+- [x] WP-1b — layout ramp as data, angled + moving rings with guides, heart placement (b148326)
+- [x] WP-3h — sound pack: 88 one-shots + 4 loops, `SOUNDS.md` (8b4f00c)
+- [x] WP-4b — reminder notifications (2e53e0e)
+- [x] WP-2a — hearts, extra life, shield, Big Hoops (8c72e91)
+- [x] WP-2b — perfect streak, ring tiers, banners, run rumble (WP-2c folded in) (90be9ae)
+- [x] WP-2d — run HUD row, pause, revive v2 (price ladder + phoenix) (f33c78e)
+- [x] WP-2e — results page replaces the game-over panel + level up / CLAIM (0e56fa3)
+- [x] WP-3a — comet boost (10 s at 1.7×) (7891ef3)
+- [x] WP-3b — portal roller-coaster engine + 5 themed rides + cannon (ff3d631)
+- [x] WP-3c — Bullseye, Ring Train, Spring Ring, Lucky Spin, FEVER (6fd8492)
+- [x] WP-3d — saw rings, switch rings, pairs of powerup rings (ca9ee74)
+- [x] WP-3e — Star Trail, Egg, Piggy Bank, Firefly Jar (4285a36)
+- [x] WP-3f — capsules: Hourglass, Mini Bird, Coin Frenzy + the timed-powerup slot and timer pill (8f6e4bb)
+- [x] WP-3g — spike squeeze scheduler, phases, moving strips, flash, bits, shake, score-circle cover (2da142a)
+- [x] WP-4a — golden feathers + balloon bonus + puzzle pieces (09a3aca)
+- [x] WP-4c — "Delete my data" + persistence audit (8881013)
+- [x] WP-5a — versus backend: rules, indexes + TTL, Cloud Functions, 77 emulator tests (b128fbf)
+- [x] WP-5b — versus client, VS intro, versus results (f23dcee)
+- [x] WP-6a — release e2e suite + `PORT-IOS.md` (a1a5d2e)
+- [x] P1int — P1 integration fixes: tilted-ring next hoop, planning autopilot, lazy SFX pools (735c5da)
+
+QA rounds (Sol) + fix rounds, all merged:
+
+- [x] QA P1 (59a9592): 9 findings S6-01…09 — 5 major, 4 minor → `Fix P1 R1` (3391645 + 78b493f follow-up)
+- [x] QA P2 (1bcdee5): 5 findings S6-20…24 — 1 major, 4 minor → `Fix P2 R1` (d4c0f00)
+- [x] QA P3 (9082948): 8 findings S6-40…47 — 2 major, 6 minor → `Fix P3 R1` (587c851)
+- [x] QA P4/P5 (84271e1): 7 findings S6-60…66 — 4 major, 3 minor → `Fix P45 R1` (6fbe750, merged 0f96074)
+- [~] QA P6 playtest (`g6-qa5`): started on the Pixel 8, **not finished**
+
+Gates:
+
+- [x] Gate 1 — `flutter analyze` clean + full `flutter test` green (1871 passed / 3 skipped; 247 before PRD-2)
+- [x] Gate 2 — Pixel 8 `integration_test/release_e2e_test.dart` with `FS_E2E` (and `FS_LIVE_VERSUS`): the
+      journey, the §3.0.8 element sweep (76 shots), the portal rides, reminders and the live versus round trip;
+      space-ride frame log avg 12 ms / p90 15.6 ms. App Check Play Integrity registered and **enforced on
+      Firestore**; versus backend (rules, indexes, TTL, functions) deployed to `flappy-spikes-a2b55`.
+- [ ] Gate 3 — Sol device playtest on the Pixel 8 (`g6-qa5`) — open.
+
+Left:
+
+- [ ] Gate 3 device playtest (`g6-qa5`) + any findings and fixes
+- [ ] 2.1.0+8 version bump; the release APK on the Pixel 8; the AAB draft on internal testing (owner presses release)
+- [ ] AdMob: swap the test unit ID / app ID for the real ones and update the Play "contains ads" +
+      advertising-ID declarations (see the TODO in `AndroidManifest.xml`)
+- [x] Store/privacy docs brought in line with the build (`SUBMISSION.md` §2/§5, `docs/index.html`,
+      `SPEC.md`, this file, `AGENTS.md`) — the "Docs 2.1" pass
+
 ## Final gate (1.0)
 - [x] `flutter analyze` clean
 - [x] `flutter test` 103/103 green

@@ -19,8 +19,8 @@ Everything below maps a deliverable to an exact store action.
 | Source repo | https://github.com/hiesem/flappy_spikes | CI runs here |
 
 App identity: name **Flappy Spikes**, bundle/package **com.flappyspikes.flappy_spikes**,
-version 1.0.0+1, portrait-only, min Android per Flutter default (24+), iOS 15+
-(Firebase minimum).
+version 2.0.0+7 on internal testing (2.1.0+8 is the next bump), portrait-only,
+min Android 24+, iOS 15+ (Firebase minimum).
 
 ## 2. Google Play Store
 
@@ -47,8 +47,13 @@ version 1.0.0+1, portrait-only, min Android per Flutter default (24+), iOS 15+
    - *Personal info → nickname*: only via the Google Play Games profile for the
      leaderboard, user-provided by Google, not collected by us. Declare per the
      form's leaderboard/gameplay wording.
-   - No data shared with third parties, no ads, data encrypted in transit (yes),
-     users can request deletion (yes, via the policy email).
+   - *Rewarded ads (opt-in)*: an ad is only served when the player taps to watch
+     one. Declare the app **contains ads**; declare the advertising ID as *not
+     collected* while the `AD_ID` permission is removed (the real AdMob IDs and
+     the final declaration are a pre-release TODO — see §5).
+   - No data shared with third parties, data encrypted in transit (yes),
+     users can request deletion (yes, via Settings → Delete my data, or the
+     policy email).
 7. Submit for review.
 
 ### Play Games Services (leaderboard) — console state (2026-07-21)
@@ -142,10 +147,15 @@ In App Store Connect (either path):
 The 2014 original's dead third-party SDKs were not ported: Chartboost ads,
 AdMob 6.x banner, Parse push/promo (Parse shut down in 2017), Facebook SDK.
 Modern equivalents now PRESENT in the build: Firebase Analytics (Google
-Analytics) and Google Play Games / Game Center leaderboards (added
-2026-07-20). Still absent by design: ads — when adding AdMob later, also add
-the iOS ATT prompt, Google's UMP consent flow, and update both stores' data
-declarations.
+Analytics), Google Play Games / Game Center leaderboards (added 2026-07-20) and
+**rewarded ads** (Google AdMob + the UMP consent flow, added with the 2.0 menu
+and extended by PRD-2's revive / balloon placements). The Android build still
+uses Google's **test** AdMob unit ID and app ID and keeps the advertising-ID
+permission removed, so the Play "contains ads" / advertising-ID declarations are
+**not final**: swap in the real IDs and update both stores' declarations (plus
+the iOS ATT prompt and the UMP flow) before the production release. Still absent
+by design: banner and interstitial ads, and push notifications (the 2.1 reminders
+are local-only — no FCM, no server).
 
 ## 6. Data safety — what versus stores online (PRD-2 §3.13, WP-4c)
 

@@ -28,7 +28,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.1-12 | Colour stage = floor(hoopsPassed / 10) mod 11 over the existing 11 palettes (gold last); replaces `stageOf(score)` | 3.0.1 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§3.0.1 the colour stage changes every 10 hoops passed …; test/color_state_test.dart | done |
 | R-3.0.1-13 | Hoop index = slots spawned (train / pair = 1 slot), not reset by a revive; ramps use the index of the slot being spawned | 3.0.1 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
 | R-3.0.1-14 | `runClock` runs in play and rides, stops in pause / revive offer / phoenix, slows with Hourglass; used by scroll ramp, squeeze, versus timeline, Big Hoops | 3.0.1 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
-| R-3.0.1-15 | Screen heights 568–730: HUD row + score circle top-anchored, bottom buttons bottom-anchored, centred blocks keep their offset from centre (y − 355.5 at 711) | 3.0.1 | 0b (geometry), 2d / 2e / 4a / 5b (screens) | lib/run/run_geometry.dart (RunGeometry) | done (0b geometry); 2d HUD row top-anchored, revive / pause centred offsets; 2e / 4a / 5b screens pending |
+| R-3.0.1-15 | Screen heights 568–730: HUD row + score circle top-anchored, bottom buttons bottom-anchored, centred blocks keep their offset from centre (y − 355.5 at 711) | 3.0.1 | 0b (geometry), 2d / 2e / 4a / 5b (screens) | lib/run/run_geometry.dart (RunGeometry) | done (0b geometry); 2d HUD row top-anchored, revive / pause centred offsets; 4a bonus screen fits 568–730 (BonusRules.layoutFor); 2e / 5b screens pending |
 | R-3.0.1-16 | Normal bird position (70, viewHeight / 2) wherever the PRD returns the bird "to its normal position" | 3.0.1 | 0b | test/run/flow/s3_0_run_core_flow_test.dart | done |
 | R-3.0.1-17 | Every number of §3.0 is a `Config` knob with its PRD section; nothing hard-coded in components | 3.0 | all | | todo |
 
@@ -159,8 +159,8 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.0.8-E18 | Element: Egg → chick ×2 | 3.0.7 | 3e | | todo |
 | R-3.0.8-E19 | Element: Piggy Bank | 3.0.7 | 3e | | todo |
 | R-3.0.8-E20 | Element: Firefly Jar | 3.0.7 | 3e | | todo |
-| R-3.0.8-E21 | Element: golden feather | 3.0.7 | 4a | | todo |
-| R-3.0.8-E22 | Element: puzzle piece | 3.0.7 | 4a | | todo |
+| R-3.0.8-E21 | Element: golden feather | 3.0.7 | 4a | test/run/items/s3_15_feathers_test.dart; test/run/items/s3_15_s3_16_collect_autopilot_test.dart | done (4a) |
+| R-3.0.8-E22 | Element: puzzle piece | 3.0.7 | 4a | test/run/items/s3_16_puzzle_test.dart; test/run/items/s3_15_s3_16_collect_autopilot_test.dart | done (4a) |
 | R-3.0.8-E23 | Element: spike squeeze | 3.0.7 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.0.8 the squeeze is forceable; test/run/items/s3_17_squeeze_autopilot_test.dart | done |
 | R-3.0.8-E24 | Element: Big Hoops | 3.0.7 | 2a | test/run/items/s3_6_big_hoops_test.dart::§3.6 the home-slot Big Hoops is consumed at the start … | done |
 | R-3.0.8-E25 | Element: perfect streak + ring tier looks | 3.0.7 | 2b | test/run/items/s3_4_streak_test.dart::§3.4 perfect passes build the streak; test/run/items/s3_4_streak_test.dart::§3.5 the whole ring field shows the tier | done |
@@ -419,45 +419,45 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.15-1 | One feather per run max (revive = same run) | 3.15 | 4a | | todo |
-| R-3.15-2 | Floats between hoops, collected by touch; missed = none that run | 3.15 | 4a | | todo |
-| R-3.15-3 | Spawn once in the gap after a random hoop 3–12 (pushed to the next free gap), only while < 3 held, never during rides; placement 0.65 × spacing after, 64–200 pt above | 3.15 | 0b / 4a | test/run/director/s3_0_3_director_test.dart | done (0b part); 4a pending |
-| R-3.15-4 | Fetch animation into the feather tray (3 slots, y ≈ 206–254), tray fades out | 3.15 | 4a | | todo |
-| R-3.15-5 | 3rd feather: set-complete celebration + "BONUS UNLOCKED!" sticker | 3.15 | 4a | | todo |
-| R-3.15-6 | `feathers` 0–3 persistent; reset to 0 when the bonus screen opens | 3.15 | 4a | | todo |
-| R-3.15-7 | Feathers don't affect score, coins, streak, duel | 3.15 | 4a | | todo |
-| R-3.15-8 | Bonus screen after the run (offer declined/timed out) with 3 feathers, between revive and results | 3.15 | 4a | | todo |
-| R-3.15-9 | 9 balloons; a tap uses a feather: feather flies in, stretch, pop, prize card + confetti, coins into the total pill | 3.15 | 4a | | todo |
-| R-3.15-10 | Prizes coins only: 25, 25, 50, 50, 75, 75, 100, 150, 250 jackpot, shuffled per screen | 3.15 | 4a | | todo |
-| R-3.15-11 | Jackpot: gold card, gold screen flash, bigger confetti, big fanfare | 3.15 | 4a | | todo |
-| R-3.15-12 | Coins credited at each pop | 3.15 | 4a | | todo |
-| R-3.15-13 | Hero: "POP THE JACKPOT!" banner under a coin-heap circle with feather wings; no title | 3.15 | 4a | | todo |
-| R-3.15-14 | Out of feathers: "MORE FEATHERS?" + gold ad button ▶ feather ×3 alone for 3 s, then NO THANKS fades in | 3.15 | 4a | | todo |
-| R-3.15-15 | Ad → 3 feathers fly back → 3 more pops; ad once per bonus screen; after 6 pops only NEXT | 3.15 | 4a | | todo |
-| R-3.15-16 | No thanks / NEXT → results; unpopped balloons never revealed | 3.15 | 4a | | todo |
-| R-3.15-17 | No ad available → skip offer, show NEXT; no-ads owners get 3 extra feathers without an ad (no video icon, once) | 3.15 | 4a | | todo |
-| R-3.15-18 | Taps ignored while a balloon opens (≈ 1.1 s) | 3.15 | 4a | | todo |
-| R-3.15-19 | Results YOUR REWARD excludes bonus coins | 3.15 | 2e / 4a | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 YOUR REWARD includes puzzle coins… (balloon excluded) | done |
-| R-3.15-20 | App killed on the bonus screen: remaining pops lost (Q39) | 10 | 4a | | todo |
-| R-3.15-21 | Tray waits until a banner has gone (Q37, same queue as Q42) | 10 | 4a / 0c | test/run/effects/s3_0_9_parts_test.dart::Q37 / Q42 collect slot: one at a time, waits for the banner | part (CollectSlot 0c) |
+| R-3.15-1 | One feather per run max (revive = same run) | 3.15 | 4a | test/run/items/s3_15_feathers_test.dart::§3.15 / §3.0.3 one feather per run (gap 3–12, also across a revive)… | done (4a) |
+| R-3.15-2 | Floats between hoops, collected by touch; missed = none that run | 3.15 | 4a | test/run/items/s3_15_feathers_test.dart::§3.15 a touched feather is banked at once… | done (4a) |
+| R-3.15-3 | Spawn once in the gap after a random hoop 3–12 (pushed to the next free gap), only while < 3 held, never during rides; placement 0.65 × spacing after, 64–200 pt above | 3.15 | 0b / 4a | test/run/director/s3_0_3_director_test.dart; test/run/items/s3_15_feathers_test.dart::§3.15 / §3.0.3 one feather per run…; test/run/items/s3_15_feathers_test.dart::§3.15 no feather spawns while 3 are held | done (4a) |
+| R-3.15-4 | Fetch animation into the feather tray (3 slots, y ≈ 206–254), tray fades out | 3.15 | 4a | test/run/items/s3_15_feathers_test.dart::§3.15 a touched feather is banked at once…; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-3.15-5 | 3rd feather: set-complete celebration + "BONUS UNLOCKED!" sticker | 3.15 | 4a | test/run/items/s3_15_feathers_test.dart::§3.15 the 3rd feather: set complete, BONUS UNLOCKED!… | done (4a) |
+| R-3.15-6 | `feathers` 0–3 persistent; reset to 0 when the bonus screen opens | 3.15 | 4a | test/run/items/s3_15_feathers_test.dart::§3.15 a death keeps the banked feather…; test/run/screens/s3_15_bonus_screen_test.dart::§3.15 opens after the run with 3 feathers… | done (4a) |
+| R-3.15-7 | Feathers don't affect score, coins, streak, duel | 3.15 | 4a | test/run/items/s3_15_feathers_test.dart::§3.15 feathers do not touch score, coins, streak | done (4a) |
+| R-3.15-8 | Bonus screen after the run (offer declined/timed out) with 3 feathers, between revive and results | 3.15 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 opens after the run with 3 feathers…; test/run/screens/s3_15_bonus_screen_test.dart::§3.15 fewer than 3 feathers… | done (4a) |
+| R-3.15-9 | 9 balloons; a tap uses a feather: feather flies in, stretch, pop, prize card + confetti, coins into the total pill | 3.15 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 opens after the run…; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-3.15-10 | Prizes coins only: 25, 25, 50, 50, 75, 75, 100, 150, 250 jackpot, shuffled per screen | 3.15 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 / Q35 prizes… | done (4a) |
+| R-3.15-11 | Jackpot: gold card, gold screen flash, bigger confetti, big fanfare | 3.15 | 4a | test/run/shots/collect_shots_test.dart (balloon_next: jackpot card) | done (4a) |
+| R-3.15-12 | Coins credited at each pop | 3.15 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 opens after the run… (wallet at the tap) | done (4a) |
+| R-3.15-13 | Hero: "POP THE JACKPOT!" banner under a coin-heap circle with feather wings; no title | 3.15 | 4a | test/run/shots/collect_shots_test.dart (balloon_start) | done (4a) |
+| R-3.15-14 | Out of feathers: "MORE FEATHERS?" + gold ad button ▶ feather ×3 alone for 3 s, then NO THANKS fades in | 3.15 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 out of feathers: ad offer alone, NO THANKS after 3 s… | done (4a) |
+| R-3.15-15 | Ad → 3 feathers fly back → 3 more pops; ad once per bonus screen; after 6 pops only NEXT | 3.15 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 the ad gives 3 more feathers once; after 6 pops only NEXT | done (4a) |
+| R-3.15-16 | No thanks / NEXT → results; unpopped balloons never revealed | 3.15 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 out of feathers… unpopped balloons never revealed… | done (4a) |
+| R-3.15-17 | No ad available → skip offer, show NEXT; no-ads owners get 3 extra feathers without an ad (no video icon, once) | 3.15 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 no rewarded ad available…; test/run/screens/s3_15_bonus_screen_test.dart::§3.15 no-ads owners… | done (4a) |
+| R-3.15-18 | Taps ignored while a balloon opens (≈ 1.1 s) | 3.15 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 opens after the run… taps ignored while a balloon opens | done (4a) |
+| R-3.15-19 | Results YOUR REWARD excludes bonus coins | 3.15 | 2e / 4a | test/run/screens/s3_14_s5_10_results_test.dart::§3.14 YOUR REWARD includes puzzle coins… (balloon excluded); test/run/screens/s3_15_bonus_screen_test.dart::§3.15 out of feathers… YOUR REWARD excludes the bonus | done (4a) |
+| R-3.15-20 | App killed on the bonus screen: remaining pops lost (Q39) | 10 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 opens after the run with 3 feathers; feathers back to 0… | done (4a) |
+| R-3.15-21 | Tray waits until a banner has gone (Q37, same queue as Q42) | 10 | 4a / 0c | test/run/items/s3_15_feathers_test.dart::§3.15 / §3.16 the collect slot clears the banner band… (call: no overlap → no wait) | done (4a) |
 
 ## 3.16 Puzzle pieces
 
 | ID | Requirement | PRD § | WP | Test ID(s) | Status |
 |---|---|---|---|---|---|
-| R-3.16-1 | One piece per run max (revive = same run); independent of feathers | 3.16 | 4a | | todo |
-| R-3.16-2 | Bigger pickup (≈ 50 pt + tabs, rays, glow), collected by touch | 3.16 | 4a | | todo |
-| R-3.16-3 | Only missing pieces spawn, in any order; the pill shows where it goes | 3.16 | 4a | | todo |
-| R-3.16-4 | Spawn every run once in the gap after a random hoop 14–25, only while the round is incomplete; not in rides; placement as the feather | 3.16 | 0b / 4a | test/run/director/s3_0_3_director_test.dart | done (0b part); 4a pending |
-| R-3.16-5 | Fetch into the puzzle pill (y ≈ 206–254): colour pieces, grey silhouettes, "n/4"; fades out | 3.16 | 4a | | todo |
-| R-3.16-6 | 4/4: picture flashes + bounces, PICTURE COMPLETE sticker, coin badge counts up | 3.16 | 4a | | todo |
-| R-3.16-7 | Reward uniform 50–250 in steps of 5, credited (`puzzle`) at the 4/4 moment in the run | 3.16 | 4a | | todo |
-| R-3.16-8 | YOUR REWARD includes puzzle coins (no separate line) | 3.16 | 2e / 4a | | todo |
-| R-3.16-9 | Rounds have their own colours; next round new colours; pill resets to grey | 3.16 | 4a | | todo |
-| R-3.16-10 | 8 colours in order Pink, Sky, Gold, Ocean, Cocoa, Mint, Grape, Tangerine, then loop (themes as data) | 3.16, 5.15 | 4a | | todo |
-| R-3.16-11 | `puzzlePieces` (mask) and `puzzleRound` persistent; 4/4 sets mask 0 and round + 1 at once | 3.16, 7 | 4a | | todo |
-| R-3.16-12 | Tray/pill clash: second waits for the first to fade | 3.16 | 4a / 0c | test/run/effects/s3_0_9_parts_test.dart::Q37 / Q42 collect slot: one at a time, waits for the banner | part (CollectSlot 0c) |
-| R-3.16-13 | Slot sound by count held (1st collected plays slot1 whatever its position) | 3.16 | 4a | | todo |
+| R-3.16-1 | One piece per run max (revive = same run); independent of feathers | 3.16 | 4a | test/run/items/s3_16_puzzle_test.dart::§3.16 / §3.0.3 one piece per run… | done (4a) |
+| R-3.16-2 | Bigger pickup (≈ 50 pt + tabs, rays, glow), collected by touch | 3.16 | 4a | test/run/items/s3_16_puzzle_test.dart::§5.15 knobs; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-3.16-3 | Only missing pieces spawn, in any order; the pill shows where it goes | 3.16 | 4a | test/run/items/s3_16_puzzle_test.dart::§3.16 only a missing piece spawns… | done (4a) |
+| R-3.16-4 | Spawn every run once in the gap after a random hoop 14–25, only while the round is incomplete; not in rides; placement as the feather | 3.16 | 0b / 4a | test/run/director/s3_0_3_director_test.dart; test/run/items/s3_16_puzzle_test.dart::§3.16 / §3.0.3 one piece per run… | done (4a) |
+| R-3.16-5 | Fetch into the puzzle pill (y ≈ 206–254): colour pieces, grey silhouettes, "n/4"; fades out | 3.16 | 4a | test/run/items/s3_16_puzzle_test.dart::§3.16 the slot sound follows the count held…; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-3.16-6 | 4/4: picture flashes + bounces, PICTURE COMPLETE sticker, coin badge counts up | 3.16 | 4a | test/run/items/s3_16_puzzle_test.dart::§3.16 4/4: random 50–250…; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-3.16-7 | Reward uniform 50–250 in steps of 5, credited (`puzzle`) at the 4/4 moment in the run | 3.16 | 4a | test/run/items/s3_16_puzzle_test.dart::§3.16 4/4: random 50–250 step 5 credited exactly once… | done (4a) |
+| R-3.16-8 | YOUR REWARD includes puzzle coins (no separate line) | 3.16 | 2e / 4a | test/run/items/s3_16_puzzle_test.dart::§3.16 4/4… YOUR REWARD includes it | done (4a) |
+| R-3.16-9 | Rounds have their own colours; next round new colours; pill resets to grey | 3.16 | 4a | test/run/items/s3_16_puzzle_test.dart::§3.16 4/4… (next round Pink, 1/4) | done (4a) |
+| R-3.16-10 | 8 colours in order Pink, Sky, Gold, Ocean, Cocoa, Mint, Grape, Tangerine, then loop (themes as data) | 3.16, 5.15 | 4a | test/run/items/s3_16_puzzle_test.dart::§5.15 the 8 rounds in order… | done (4a) |
+| R-3.16-11 | `puzzlePieces` (mask) and `puzzleRound` persistent; 4/4 sets mask 0 and round + 1 at once | 3.16, 7 | 4a | test/run/items/s3_16_puzzle_test.dart::§3.16 4/4… mask 0 + round + 1 at once | done (4a) |
+| R-3.16-12 | Tray/pill clash: second waits for the first to fade | 3.16 | 4a / 0c | test/run/effects/s3_0_9_parts_test.dart::Q37 / Q42 collect slot: one at a time… | done (4a) |
+| R-3.16-13 | Slot sound by count held (1st collected plays slot1 whatever its position) | 3.16 | 4a | test/run/items/s3_16_puzzle_test.dart::§3.16 the slot sound follows the count held, not the position | done (4a) |
 
 ## 3.17 Spike squeeze
 
@@ -628,9 +628,9 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 |---|---|---|---|---|---|
 | R-4-1 | Home START → [VS intro if opponent prefetched] → run | 4 | 0b / 5b | test/run/flow/s3_0_run_core_flow_test.dart | done (0b part); 5b pending |
 | R-4-2 | Mistake without save → tumble ≈ 1.5 s → revive offer (≥ 6 hoops) → ad / coins → phoenix → run | 4 | 2d | test/run/screens/s3_14_revive_test.dart | done |
-| R-4-3 | No thanks / timeout → [balloon bonus with 3 feathers] → results → NEXT → home (new slot roll) | 4 | 2d / 4a / 2e | | todo |
+| R-4-3 | No thanks / timeout → [balloon bonus with 3 feathers] → results → NEXT → home (new slot roll) | 4 | 2d / 4a / 2e | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 out of feathers… → results; test/run/screens/s3_14_revive_then_results_test.dart | done (4a part) |
 | R-4-4 | Pause any time in the run → RESUME → straight back in (no countdown) | 4, 5.7 | 2d | test/run/screens/s5_7_hud_pause_test.dart | done |
-| R-4-5 | Puzzle needs no screen (paid in the run) | 4 | 4a | | todo |
+| R-4-5 | Puzzle needs no screen (paid in the run) | 4 | 4a | test/run/items/s3_16_puzzle_test.dart::§3.16 4/4… (paid in the run) | done (4a) |
 
 ## 5.x Screens and visual specs
 
@@ -704,18 +704,18 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-5.13-1 | Miss flash on every miss (normal + all special kinds; both rings of a pair), also when saved; not for saw / closed switch / spikes | 5.13 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§5.13 a miss plays the shock-ring miss flash … | done (one shockwave per ring offset; special kinds: their WPs) |
 | R-5.13-2 | Sequence: white flash 0–0.12 (stroke 8, glow 24); red `#FF1F3D` shockwave 1 → 2.6× 0–0.55; red edge glow 0–0.7 (180 → 430 pt radii, 0 → 0.55 → 0); drain to grey + dashed 0.12–0.52; grey dashed ghost stays and scrolls | 5.13 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§5.13 …; shot: build/shots/run/hoops/miss_(flash, wave, ghost)_(568, 711).png vs miss_c_*.png | done |
 | R-5.13-3 | World keeps easing to a stop; tier look cleared on the missed hoop; `miss_shock` sound; no rumble | 5.13 | 1a | test/run/flow/s3_1_hoop_flow_test.dart::§5.13 … (missShock); test/run/flow/s3_1_hoop_flow_test.dart::§3.0.5 the world eases to a stop | done (tier look: Hoop.look.missed for 2b) |
-| R-5.14-1 | Feather art (vane `#FFB529`/`#F09A0A`, notches, pink quill, white outline, ≈ 20 × 44, 20° tilt, flat) and idle (bob, pulse, sway, drift, twinkles every 0.28 s) | 5.14 | 4a | | todo |
-| R-5.14-2 | Touch fx + swell ×1.4 + 0.62 s curved flight into the tray shrinking to 0.82, turning 26°, block trail | 5.14 | 4a | | todo |
-| R-5.14-3 | Tray: centre (160, 230), 132 × 48, three 36 pt slots at −42 / 0 / +42; fades in sliding 10 pt; landing punch ×1.38, gold ring, 6 sparkles; fades ≈ 2.15 s after touch | 5.14 | 4a | | todo |
-| R-5.14-4 | 3rd feather: gold flash, bounces, 26 confetti, ring 20 → 90, sticker "BONUS UNLOCKED!"; holds ≈ 3.4 s | 5.14 | 4a | | todo |
-| R-5.14-5 | Bonus screen: total pill (x 204 → 306, y 52), hero r 42 at (160, 146) with rays + coin heap + feather wings, banner y 188, grid panel x 14 → 306 y 222 → 522 with nine 88 pt tiles, balloons, prompt y 541, feather row y 588, ad button y 562, NO THANKS y ≈ 641, NEXT y 562 | 5.14 | 4a | | todo |
-| R-5.14-6 | Pop timeline (feather 0.42 s, stretch 0–0.32, pop at 0.32 with scraps, card at 0.6 overshoot, ring + confetti, 3–8 coins 0.5 s each 0.07 apart); prize card + jackpot variant | 5.14 | 4a | | todo |
-| R-5.14-7 | After the ad: three feathers fly back (0.5 s each, 0.22 apart) with slot chimes; NEXT fades in ≈ 0.3 s after the last coin | 5.14 | 4a | | todo |
-| R-5.15-1 | Picture 48 × 48 in the round's colours, 2 × 2 jigsaw (24 pt cells, pinwheel tabs), white 4 pt outline + 1.1 pt edge line | 5.15 | 4a | | todo |
-| R-5.15-2 | Field piece ×2.1 with radial glow + 8 rotating rays; idle bob/pulse/rock; twinkles every 0.22 s; touch fx (r 10 → 40, ring 10 → 52, 16 squares) + 0.62 s flight + trail | 5.15 | 4a | | todo |
-| R-5.15-3 | Pill centre (160, 230) 140 × 64; board at x −32, silhouettes fg 40 %, "n/4" Opificio 24 at +34; landing punch; fades ≈ 2.15 s | 5.15 | 4a | | todo |
-| R-5.15-4 | 4/4: flash, bounces 0.08 apart, board pop ×1.15 + gold frame, 22 confetti, ring 20 → 100, "n/4" plum, sticker PICTURE COMPLETE; coin badge 0.55 s later (7 coins, `col4_coins`, count-up 0.8 s, bump); hold until ≈ 4.6 s | 5.15 | 4a | | todo |
-| R-5.15-5 | The 8 round colour hexes (card, body, wing + tail, beak, sparkles) as data | 5.15 | 4a | | todo |
+| R-5.14-1 | Feather art (vane `#FFB529`/`#F09A0A`, notches, pink quill, white outline, ≈ 20 × 44, 20° tilt, flat) and idle (bob, pulse, sway, drift, twinkles every 0.28 s) | 5.14 | 4a | test/run/items/s3_15_feathers_test.dart::§5.14 feather art, idle and tray numbers; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-5.14-2 | Touch fx + swell ×1.4 + 0.62 s curved flight into the tray shrinking to 0.82, turning 26°, block trail | 5.14 | 4a | test/run/items/s3_15_feathers_test.dart::§5.14 fetch: swell ×1.4 from the pickup…; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-5.14-3 | Tray: centre (160, 230), 132 × 48, three 36 pt slots at −42 / 0 / +42; fades in sliding 10 pt; landing punch ×1.38, gold ring, 6 sparkles; fades ≈ 2.15 s after touch | 5.14 | 4a | test/run/items/s3_15_feathers_test.dart::§5.14 feather art, idle and tray numbers; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-5.14-4 | 3rd feather: gold flash, bounces, 26 confetti, ring 20 → 90, sticker "BONUS UNLOCKED!"; holds ≈ 3.4 s | 5.14 | 4a | test/run/items/s3_15_feathers_test.dart::§3.15 the 3rd feather…; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-5.14-5 | Bonus screen: total pill (x 204 → 306, y 52), hero r 42 at (160, 146) with rays + coin heap + feather wings, banner y 188, grid panel x 14 → 306 y 222 → 522 with nine 88 pt tiles, balloons, prompt y 541, feather row y 588, ad button y 562, NO THANKS y ≈ 641, NEXT y 562 | 5.14 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§5.14 geometry knobs; test/run/screens/s3_15_bonus_screen_test.dart::§5.14 layout…; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-5.14-6 | Pop timeline (feather 0.42 s, stretch 0–0.32, pop at 0.32 with scraps, card at 0.6 overshoot, ring + confetti, 3–8 coins 0.5 s each 0.07 apart); prize card + jackpot variant | 5.14 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§5.14 geometry knobs; test/run/screens/s3_15_bonus_screen_test.dart::§5.14 3–8 coins fly per prize…; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-5.14-7 | After the ad: three feathers fly back (0.5 s each, 0.22 apart) with slot chimes; NEXT fades in ≈ 0.3 s after the last coin | 5.14 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 the ad gives 3 more feathers once… | done (4a) |
+| R-5.15-1 | Picture 48 × 48 in the round's colours, 2 × 2 jigsaw (24 pt cells, pinwheel tabs), white 4 pt outline + 1.1 pt edge line | 5.15 | 4a | test/run/items/s3_16_puzzle_test.dart::§5.15 2 × 2 cut, 24 pt cells, pinwheel tabs…; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-5.15-2 | Field piece ×2.1 with radial glow + 8 rotating rays; idle bob/pulse/rock; twinkles every 0.22 s; touch fx (r 10 → 40, ring 10 → 52, 16 squares) + 0.62 s flight + trail | 5.15 | 4a | test/run/items/s3_16_puzzle_test.dart::§5.15 knobs; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-5.15-3 | Pill centre (160, 230) 140 × 64; board at x −32, silhouettes fg 40 %, "n/4" Opificio 24 at +34; landing punch; fades ≈ 2.15 s | 5.15 | 4a | test/run/items/s3_16_puzzle_test.dart::§5.15 knobs; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-5.15-4 | 4/4: flash, bounces 0.08 apart, board pop ×1.15 + gold frame, 22 confetti, ring 20 → 100, "n/4" plum, sticker PICTURE COMPLETE; coin badge 0.55 s later (7 coins, `col4_coins`, count-up 0.8 s, bump); hold until ≈ 4.6 s | 5.15 | 4a | test/run/items/s3_16_puzzle_test.dart::§3.16 4/4…; test/run/shots/collect_shots_test.dart | done (4a) |
+| R-5.15-5 | The 8 round colour hexes (card, body, wing + tail, beak, sparkles) as data | 5.15 | 4a | test/run/items/s3_16_puzzle_test.dart::§5.15 the 8 rounds in order, hexes as data, looped | done (4a) |
 | R-5.16-1 | Walls: the normal strip moves as one piece (solid part grows, teeth ride on it), one flat stage-fg grey | 5.16 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze from start to open; test/run/shots/squeeze_shots_test.dart | done |
 | R-5.16-2 | Warning flash: teeth blend to `#FF3B5C` pulsing every 0.5 s through the warning and the first 0.4 s of closing | 5.16 | 3g | test/run/items/s3_17_squeeze_test.dart::§5.16 warning flash; test/run/shots/squeeze_shots_test.dart | done |
 | R-5.16-3 | Falling bits 2–5 pt ≈ 28/s (warning, closing, opening), fade 0.7 s; lock dust 40 squares 3–7 pt | 5.16 | 3g | test/run/items/s3_17_squeeze_test.dart::§5.16 bits …; ::§3.17 a squeeze from start to open | done |
@@ -803,14 +803,14 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-6-20 | `versus_matched` | 6 | 5b | | todo |
 | R-6-21 | `versus_skipped` (reason: no_opponent) | 6 | 5b | | todo |
 | R-6-22 | `versus_result` (win/lose/draw, score, opp_score) | 6 | 5b | | todo |
-| R-6-23 | `feather_collected` (count 1–3) | 6 | 4a | | todo |
-| R-6-24 | `bonus_shown` | 6 | 4a | | todo |
-| R-6-25 | `bonus_pop` (prize, pop 1–6) | 6 | 4a | | todo |
-| R-6-26 | `bonus_ad_offered` | 6 | 4a | | todo |
-| R-6-27 | `bonus_ad_completed` | 6 | 4a | | todo |
-| R-6-28 | `bonus_declined` (pops used) | 6 | 4a | | todo |
-| R-6-29 | `puzzle_piece_collected` (piece 1–4, count 1–4, round) | 6 | 4a | | todo |
-| R-6-30 | `puzzle_completed` (round, coins) | 6 | 4a | | todo |
+| R-6-23 | `feather_collected` (count 1–3) | 6 | 4a | test/run/items/s3_15_feathers_test.dart::§3.15 a touched feather is banked at once… | done (4a) |
+| R-6-24 | `bonus_shown` | 6 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 opens after the run… | done (4a) |
+| R-6-25 | `bonus_pop` (prize, pop 1–6) | 6 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 opens after the run… | done (4a) |
+| R-6-26 | `bonus_ad_offered` | 6 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 out of feathers… | done (4a) |
+| R-6-27 | `bonus_ad_completed` | 6 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 the ad gives 3 more feathers once… | done (4a) |
+| R-6-28 | `bonus_declined` (pops used) | 6 | 4a | test/run/screens/s3_15_bonus_screen_test.dart::§3.15 out of feathers… | done (4a) |
+| R-6-29 | `puzzle_piece_collected` (piece 1–4, count 1–4, round) | 6 | 4a | test/run/items/s3_16_puzzle_test.dart::§3.16 only a missing piece spawns… | done (4a) |
+| R-6-30 | `puzzle_completed` (round, coins) | 6 | 4a | test/run/items/s3_16_puzzle_test.dart::§3.16 4/4… | done (4a) |
 | R-6-31 | `squeeze_started` (index, open_pct, hold_s) | 6 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze from start to open | done |
 | R-6-32 | `squeeze_survived` (index) | 6 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze from start to open | done |
 | R-6-33 | `squeeze_death` (index, phase) | 6 | 3g | test/run/items/s3_17_squeeze_test.dart::§3.17 the moving walls are the spikes | done |
@@ -864,8 +864,8 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-7-8 | `PortalRide` engine + `RideTheme` per ride; `rides84.js` timings | 7 | 3b | | todo |
 | R-7-9 | Sounds through `AudioPool` only; comet loop via the BGM-style player | 7 | 0b / all | test/run/s7_run_parts_test.dart::§3.9 loops… | done (0b part); all pending |
 | R-7-10 | Versus backend in repo: `functions/` (TS, 2nd gen), `firestore.rules`, `firestore.indexes.json`, TTL policy; Emulator Suite tests; `VersusService` no-op by default | 7 | 5a / 5b | functions/, firestore.rules, firestore.indexes.json, functions/scripts/set_ttl.sh; `npm --prefix functions test` | 5a done (VersusService: 5b) |
-| R-7-11 | Feathers: persistent count, at most one pickup, bonus screen between revive and results, wallet per pop, ad placement `bonus_feathers`; timings from `bonus.js` / `collect.js` | 7 | 4a | | todo |
-| R-7-12 | Puzzle: mask + round, one missing piece per run, 4/4 credit + reset + round + 1 atomically, colour themes as data (`PZT`) | 7 | 4a | | todo |
+| R-7-11 | Feathers: persistent count, at most one pickup, bonus screen between revive and results, wallet per pop, ad placement `bonus_feathers`; timings from `bonus.js` / `collect.js` | 7 | 4a | test/run/items/s3_15_feathers_test.dart; test/run/screens/s3_15_bonus_screen_test.dart | done (4a) |
+| R-7-12 | Puzzle: mask + round, one missing piece per run, 4/4 credit + reset + round + 1 atomically, colour themes as data (`PZT`) | 7 | 4a | test/run/items/s3_16_puzzle_test.dart | done (4a) |
 | R-7-13 | Switch ring: one kind, pluggable design, shared rules; spawner places ring + switch; seeded design pick | 7 | 3d | test/run/hoops/s3_20_switch_test.dart; lib/run/hoops/kinds/switch/switch_kind.dart | done |
 | R-7-T1 | Plane-crossing tests: inside scores; outside ends; rim bounces + scores +1 without perfect; pressed against the inside passes (upright and every tilt step); tilted ring never missed early; saw rim kills; exactly-once game over | 3.1, 7 | 1a (saw: 3d) | test/run/physics/s3_0_4_pass_test.dart; test/run/physics/s3_0_4_rim_test.dart; test/collision_test.dart; test/run/flow/s3_1_hoop_flow_test.dart; test/run/hoops/s3_18_saw_test.dart::§3.18 / §3.0.5 touching the <design> rim kills (saw rim) | done |
 | R-7-T2 | Run-director tests (3.0.3), incl. same seed → same sequence | 3.1, 7 | 0b | test/run/director/s3_0_3_director_test.dart | done |
@@ -924,9 +924,9 @@ the looping player).
 | R-S-6 | `miss_shock` | 5.13 | 0b / 1a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 1a pending |
 | R-S-7 | `rv_pay`, `rv_ignite`, `rv_burst`, `rv_locked` | 5.9 | 0b / 2d | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 2d pending |
 | R-S-8 | `lv_bar`, `lv_up`, `lv_up_big`, `lv_claim` | 5.10 | 0b / 2e | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 2e pending |
-| R-S-9 | `col_feather_get`, `col_feather_slot1/2/3` | 3.15 | 0b / 4a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 4a pending |
-| R-S-10 | `bn_balloon_open`, `bn_prize_s/m/big`, `bn_coin` (exists), `bn_adbtn` (exists) | 3.15 | 0b / 4a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 4a pending |
-| R-S-11 | `col4_puzzle_get`, `col4_puzzle_slot1..4`, `col4_coins` | 3.16 | 0b / 4a | test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled | done (0b part); 4a pending |
+| R-S-9 | `col_feather_get`, `col_feather_slot1/2/3` | 3.15 | 0b / 4a | test/run/items/s3_15_feathers_test.dart::§3.15 a touched feather is banked at once…; test/run/items/s3_15_feathers_test.dart::§3.15 the 3rd feather… | done (4a) |
+| R-S-10 | `bn_balloon_open`, `bn_prize_s/m/big`, `bn_coin` (exists), `bn_adbtn` (exists) | 3.15 | 0b / 4a | test/run/screens/s3_15_bonus_screen_test.dart (sounds through SoundService.play) | done (4a) |
+| R-S-11 | `col4_puzzle_get`, `col4_puzzle_slot1..4`, `col4_coins` | 3.16 | 0b / 4a | test/run/items/s3_16_puzzle_test.dart::§3.16 only a missing piece spawns…; test/run/items/s3_16_puzzle_test.dart::§3.16 4/4… | done (4a) |
 | R-S-12 | `sq_warn`, `sq_close`, `sq_lock`, `sq_hold` (seamless loop: ship `.ogg`/`.wav`, not mp3), `sq_tick`, `sq_open` | 5.16 | 0b / 3g | test/run/s7_run_parts_test.dart; test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze from start to open | done |
 | R-S-13 | Ride sounds `rd_space_*`, `rd_volc_*`, `rd_sea_*`, `rd_pin_*`, `rd_storm_*` (16 files) | 5.12b | 0b / 3b |test/run/s7_run_parts_test.dart::§3.9 every approved PRD-2 run sound is bundled; test/run/rides/s3_12_portal_ride_test.dart (ride cues per theme) | done |
 | R-S-14 | `notif_b.ogg` → `android/app/src/main/res/raw/notif_chime.ogg` | 3.34 | 4b | integration_test/reminders_e2e_test.dart::WP-4b reminders: permission + the pending 7-day window; `flutter build apk --debug` -> res/raw/notif_chime.ogg | done (19246 B, byte-identical to design/menu_v2/sfx/notif_b.ogg) |

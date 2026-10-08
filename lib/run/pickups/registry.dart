@@ -7,6 +7,8 @@ import 'heart_pickup.dart';
 import 'shield_pickup.dart';
 import '../hoops/kinds/switch/switch_kind.dart'; // WP-3d
 import 'capsule.dart'; // WP-3f
+import 'feather_pickup.dart'; // WP-4a
+import 'puzzle_piece_pickup.dart'; // WP-4a
 
 /// Registered pickup kinds (ARCH §1.6). One registration line per WP,
 /// inside its region. Capsule types: WP-3f registers `capsule` plus each
@@ -27,6 +29,10 @@ final Map<ElementId, PickupKind Function()> _kinds = {
   // region WP-3f — powerup capsules (PRD-2 §3.30–§3.32)
   ElementId.capsule: CapsulePickupKind.new,
   // endregion WP-3f
+  // region WP-4a — golden feather, puzzle piece (PRD-2 §3.15, §3.16)
+  ElementId.feather: FeatherPickupKind.new,
+  ElementId.puzzlePiece: PuzzlePieceKind.new,
+  // endregion WP-4a
 };
 
 /// Elements switched on without a pickup of their own (e.g. capsule types

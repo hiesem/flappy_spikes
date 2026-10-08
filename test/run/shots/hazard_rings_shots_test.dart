@@ -76,9 +76,12 @@ Future<void> _steps(FlappySpikesGame g, double seconds) async {
 void main() {
   setUpAll(_fonts);
 
-  FlameTester<FlappySpikesGame> tester(double h) =>
+  // WP-4a: the switch-ring shots use their own seed — with the feather /
+  // puzzle-piece rolls in the director the seed-4 course at 568 pt showed
+  // no Lockdown switch before the bot's run ended.
+  FlameTester<FlappySpikesGame> tester(double h, {int seed = 4}) =>
       FlameTester<FlappySpikesGame>(
-        () => createRunTestGame(worldHeight: h, seed: 4),
+        () => createRunTestGame(worldHeight: h, seed: seed),
         gameSize: Vector2(320, h),
       );
 
@@ -88,6 +91,7 @@ void main() {
     g.sound.enabled = false;
   }
 
+  const switchSeed = 6;
   for (final h in [711.0, 568.0]) {
     // §5.17 saw rings.
     for (final (design, name) in [
@@ -149,7 +153,7 @@ void main() {
     ]) {
       for (final moment in ['off', 'open', 'fail']) {
         final shotName = 'switchring_${name}_${moment}_${h.round()}';
-        tester(h).testGameWidget(
+        tester(h, seed: switchSeed).testGameWidget(
           '§5.19 shot $shotName',
           setUp: (g, _) => prepare(g),
           verify: (game, tester) async {

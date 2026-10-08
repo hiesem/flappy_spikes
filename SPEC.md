@@ -807,3 +807,41 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
 - Tests: `test/run/items/s3_30_s3_32_capsules_test.dart`,
   `test/run/items/s3_30_capsule_autopilot_test.dart`; shots in
   `test/run/shots/capsule_shots_test.dart`.
+
+### WP-4a — golden feathers, balloon bonus, puzzle pieces (PRD-2 §3.15, §3.16)
+
+- DEVIATION (PRD-2 §3.15 / §5.14, new meta collectable; 1.0 had none): once
+  per run (gap after a random hoop 3–12, pushed to the next free gap; never
+  in a ride or the squeeze window; only while fewer than 3 are held) a
+  **golden feather** floats 0.65 × spacing after a hoop and 64–200 pt above
+  its centre (a detour, hit radius 18). Touching it **banks it at once**:
+  the persistent `feathers` count (0–3) goes up, so a death or an app kill a
+  second later keeps it; a revive is the same run (no second feather). It
+  flies into a 3-slot feather tray on the HUD; the 3rd plays the
+  set-complete celebration and the BONUS UNLOCKED! sticker. Feathers change
+  nothing in the run (score, coins, streak, duel).
+- DEVIATION (PRD-2 §3.15 / §5.14, new post-run screen): with 3 feathers the
+  run ends on the **balloon bonus** before the results page (after a
+  declined revive offer). Opening it sets `feathers` to 0. Nine balloons hide
+  25, 25, 50, 50, 75, 75, 100, 150 and the 250 jackpot (shuffled); each tap
+  uses one feather (taps ignored ≈ 1.1 s while a balloon opens) and credits
+  the prize to the wallet **at once** (source `bonus`). Out of feathers: a
+  once-per-screen rewarded ad (`bonus_feathers`) gives 3 more (no-ads owners:
+  free, no ad; no ad available: skipped); NO THANKS (after 3 s) / NEXT go to
+  the results; unpopped balloons are never revealed. The results' YOUR
+  REWARD does not include these coins.
+- DEVIATION (PRD-2 §3.16 / §5.15, new meta collectable): once per run (gap
+  after a random hoop 14–25, placed like the feather, hit radius 22) a
+  **puzzle piece** — always one the player does not hold yet — floats in
+  the colours of the open round. Touching it banks it (persistent 4-bit
+  `puzzlePieces`). The 4th piece pays **50–250 coins** (uniform, step 5,
+  source `puzzle`) at that moment in the run — included in YOUR REWARD, not
+  doubled by the chick — and resets the mask to 0 with `puzzleRound` + 1 in
+  the same step; the next round has the next of 8 colour themes (looped).
+- Call: the feather tray / puzzle pill sit at y 288 (not the PRD's 230) so
+  they never overlap the y-190 banner band or the y-156 timer pill.
+- Tests: `test/run/items/s3_15_feathers_test.dart`,
+  `test/run/items/s3_16_puzzle_test.dart`,
+  `test/run/screens/s3_15_bonus_screen_test.dart`,
+  `test/run/items/s3_15_s3_16_collect_autopilot_test.dart`; shots in
+  `test/run/shots/collect_shots_test.dart`.

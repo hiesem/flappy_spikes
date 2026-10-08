@@ -54,19 +54,23 @@ class FetchSpec {
 
   double get total => (straight ? 0 : grow) + fly;
 
-  /// §5.14 feather → tray (scale 1.47 → 0.82, 20° → 26°).
+  /// §5.14 feather → tray: swells from the pickup's 1.05 to ×1.4 (1.47),
+  /// then flies shrinking to 0.82 and turning 20° → 26° (WP-4a: the swell
+  /// starts at the pickup scale, as `collect.js itemTf` — it started at
+  /// 1.47 and grew to 2.06 before).
   static const FetchSpec feather = FetchSpec(
-    scaleFrom: 1.05 * 1.4,
+    scaleFrom: 1.05,
     scaleTo: .82,
     rotFrom: .35,
     rotTo: .45,
   );
 
-  /// §5.15 puzzle piece → pill (scale 2.73 → 1, grow +0.3, control −30).
+  /// §5.15 puzzle piece → pill: swells 2.1 → ×1.3 (2.73), then flies
+  /// shrinking to 1 (control −30). WP-4a: starts at the pickup scale.
   static const FetchSpec puzzlePiece = FetchSpec(
     growBy: .3,
     controlDx: -30,
-    scaleFrom: 2.1 * 1.3,
+    scaleFrom: 2.1,
     scaleTo: 1,
     trailJitter: 5,
     trailMax: 11,

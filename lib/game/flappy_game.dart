@@ -59,6 +59,7 @@ import '../run/screens/revive_ladder.dart';
 import '../run/screens/revive_screen.dart';
 import '../run/screens/shop_overlay.dart';
 import '../run/screens/results_screen.dart';
+import '../run/screens/bonus_screen.dart'; // WP-4a
 import '../services/e2e.dart';
 import '../versus/timeline.dart';
 import '../services/versus_service.dart';
@@ -561,6 +562,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // region WP-2d — revive v2 (PRD-2 §3.14): the revive slot of the flow
     PostRunScreens.revive ??= const ReviveFlow();
     // endregion WP-2d
+
+    // region WP-4a — balloon bonus (PRD-2 §3.15): the bonus slot of the flow
+    PostRunScreens.bonus ??= const BonusPage();
+    // endregion WP-4a
 
     // region WP-4b — reminder notifications (PRD-2 §3.34)
     // §3.34 "Permission": asked once, at the first app start, before the
@@ -2490,6 +2495,49 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
   // endregion WP-2e
 
+  // region WP-4a — balloon bonus (PRD-2 §3.15, §5.14)
+  BonusScreen? _bonus;
+
+  /// The balloon bonus screen while it is up (tests).
+  BonusScreen? get bonusScreen => _bonus;
+
+  /// §3.15 the bonus screen between the revive offer and the results
+  /// (`PostRunFlow`): state [GameState.bonus], the feathers go back to 0
+  /// as it opens (`bonus_shown`), the strips are lifted over it as over the
+  /// results page. Completes on NO THANKS / NEXT (state back to
+  /// [GameState.results], the results page then comes up over it; the
+  /// screen removes itself a moment later).
+  Future<void> showBonus(RunSummary s) async {
+    if (_bonus != null || state != GameState.results) return;
+    state = GameState.bonus;
+    unawaited(storage.saveFeathers(0));
+    services.track('bonus_shown');
+    final rng = _run?.director.rng.timing ?? Random();
+    final screen = BonusScreen(
+      summary: s,
+      prizes: BonusRules.shuffledPrizes(rng),
+      seed: rng.nextInt(1 << 30),
+    );
+    _bonus = screen;
+    world.add(screen);
+    _ground.priority = groundOverMenusPriority;
+    _ceiling.priority = groundOverMenusPriority;
+    await screen.finished;
+    if (!identical(_bonus, screen)) return;
+    _bonus = null;
+    if (state == GameState.bonus) state = GameState.results;
+  }
+
+  void _removeBonus() {
+    final screen = _bonus;
+    _bonus = null;
+    if (screen == null) return;
+    screen.removeFromParent();
+    _ceiling.priority = SpikeStrip.basePriority;
+    _syncGroundPriority();
+  }
+  // endregion WP-4a
+
   // --- buttons -----------------------------------------------------------
 
   void toggleSound() {
@@ -2600,6 +2648,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _debugBot = null;
     (world as RunScaledWorld).timeScaleSource = null;
     _removeResults();
+    // region WP-4a — drop a bonus screen still up
+    _removeBonus();
+    // endregion WP-4a
     final oldHome = _home;
     _home = null;
     if (oldHome != null) {

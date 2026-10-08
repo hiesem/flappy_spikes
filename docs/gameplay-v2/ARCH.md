@@ -227,7 +227,7 @@ code. Paths are relative to `flappy_spikes/`.
 | `lib/components/pipe_pair.dart` | deleted by 1a | — | — |
 | `functions/`, `firestore.rules`, `firestore.indexes.json`, `firebase.json` (emulators/functions/firestore keys) | 5a | §6 | — |
 | `integration_test/` | 0b harness, every WP may add a file, 6 final | §7.4 | — |
-| `android/app/src/main/res/raw/notif_chime.ogg`, `res/raw/keep.xml`, `res/drawable/ic_notif_bird.xml`, manifest permissions | 4b | §3.34 | — |
+| `android/app/src/main/res/raw/notif_chime.ogg` + `keep.xml`, `res/drawable-*/ic_notif_bird.png` (white bird small icon) + `ic_notif_large.png`, manifest permissions/receivers | 4b | §3.34 | — |
 
 ---
 

@@ -19,6 +19,7 @@ import 'package:flappy_spikes/run/run_controller.dart';
 import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/services/monetization.dart';
+import 'package:flappy_spikes/services/reminders.dart';
 import 'package:flappy_spikes/services/versus_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -64,6 +65,7 @@ FlappySpikesGame createTestGame(
   double? worldHeight,
   GameServices? services,
   Monetization? monetization,
+  Reminders? reminders,
 ]) {
   SharedPreferences.setMockInitialValues(initialPrefs);
   // soundEnabled: false — no audioplayers platform-channel calls in tests.
@@ -71,6 +73,7 @@ FlappySpikesGame createTestGame(
     worldHeight: worldHeight,
     services: services,
     monetization: monetization,
+    reminders: reminders,
     soundEnabled: false,
   );
   // A fixed pipe layout: the spawn variance is otherwise unseeded, which made

@@ -14,6 +14,7 @@ import 'game/flappy_game.dart';
 import 'services/game_services.dart';
 import 'services/e2e.dart';
 import 'services/monetization.dart';
+import 'services/reminders.dart';
 
 /// Key on the [RepaintBoundary] wrapping the game, used to capture a
 /// screenshot of the game area for sharing.
@@ -61,6 +62,15 @@ Future<void> main() async {
   );
   game.onShareScore = _shareScore;
   game.onInvite = _invite;
+
+  // region WP-4b — reminder notifications (PRD-2 §3.34)
+  // Real local notifications on the mobile products only; the Linux desktop
+  // target and FS_E2E builds keep the no-op default. The game asks for the
+  // permission once and lays out the first 7-day plan from onLoad.
+  if (_isMobile && !kE2E) {
+    game.reminders = LocalReminders(storage: game.storage, services: services);
+  }
+  // endregion WP-4b
 
   runApp(
     RepaintBoundary(

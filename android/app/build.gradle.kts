@@ -24,6 +24,9 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // PRD-2 §3.34 / flutter_local_notifications 22: scheduled
+        // notifications use java.time through core-library desugaring.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -66,6 +69,10 @@ kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {

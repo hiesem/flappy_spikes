@@ -17,6 +17,7 @@ import '../effects/tier_trail.dart';
 import '../hoops/hoop.dart';
 import '../hoops/ring_painter.dart';
 import '../hud/banners.dart';
+import 'big_hoops.dart';
 import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
@@ -227,10 +228,13 @@ class StreakFeature extends RunFeature {
     }
     e.visible = !h.look.missed;
     if (h.look.missed) return;
-    final want = RingPainter.colorsForTier(t);
-    // Only overwrite what the streak wrote itself (Big Hoops / miss flash
-    // keep their colours).
-    if (h.look.colors == e.written) {
+    var want = RingPainter.colorsForTier(t);
+    // WP-2d fix: a Big Hoops hoop keeps its gold at every tier (its tier
+    // sparkles / glow still play); other owners (miss flash) keep their
+    // colours — the streak only overwrites what it wrote itself.
+    final bigGold = BigHoopsFeature.isGold(h);
+    if (bigGold) want = RingColors.gold;
+    if (bigGold || h.look.colors == e.written) {
       h.look.colors = want;
       e.written = want;
     }

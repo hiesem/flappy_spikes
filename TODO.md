@@ -306,12 +306,19 @@ Linux test target. Work lives on the `feat/menu-v2` branch — **not pushed**,
 - [ ] Create/activate the new IAP products in Play Console with the ids `coins_1000`,
       `coins_10000`, `coins_17000`, `coins_100000`, `no_ads` and the PRD-menu-v4 §6 per-currency prices
       (runbook §7). The old ids stay deactivated; the code no longer sells them.
-- [ ] Replace the AdMob TEST app id / rewarded unit ids with the real ones
-      (AndroidManifest `APPLICATION_ID` + `AdMobRewardedAds` unit ids)
+- [x] Real AdMob app id `ca-app-pub-2660521344509391~8153764631` + rewarded unit
+      `ca-app-pub-2660521344509391/3758032081` (release builds only; debug keeps the TEST unit);
+      Unity Ads bidding via `gma_mediation_unity` (mediation group 9050711652); no ads on
+      Play pre-launch / Test Lab devices (`flappy_spikes/device` channel) — feat/ads-mediation
+- [x] app-ads.txt live at https://hiesem.github.io/app-ads.txt (repo hiesem/hiesem.github.io;
+      AdMob line + Unity's seller list — recheck Unity's list monthly)
+- [x] GDPR message "Flappy Spikes Android - GDPR" published 2026-10-09 (logo = Play icon)
+- [ ] Settings entry for UMP privacy options (re-open consent; required by Google's
+      EU consent policy when `privacyOptionsRequirementStatus == required`)
+- [ ] Create + publish a US-states message; add DT Exchange (pending approval) and Moloco later
 - [ ] Play declarations for 2.0: tick "contains ads", complete the advertising-ID
       and data-safety updates — then remove the `AD_ID` `tools:node="remove"`
       block in `AndroidManifest.xml` (TODO comment there)
-- [ ] Configure the UMP consent message in AdMob
 - [ ] iOS (when it reopens): add `GADApplicationIdentifier` and switch ads from
       the Noop path to AdMob
 - [ ] Sign off the generated skin art
@@ -445,8 +452,8 @@ Left:
 
 - [ ] Gate 3 device playtest (`g6-qa5`) + any findings and fixes
 - [ ] 2.1.0+8 version bump; the release APK on the Pixel 8; the AAB draft on internal testing (owner presses release)
-- [ ] AdMob: swap the test unit ID / app ID for the real ones and update the Play "contains ads" +
-      advertising-ID declarations (see the TODO in `AndroidManifest.xml`)
+- [ ] Play "contains ads" + advertising-ID declarations (see the TODO in `AndroidManifest.xml`);
+      the AdMob IDs themselves are done (feat/ads-mediation)
 - [x] Store/privacy docs brought in line with the build (`SUBMISSION.md` §2/§5, `docs/index.html`,
       `SPEC.md`, this file, `AGENTS.md`) — the "Docs 2.1" pass
 

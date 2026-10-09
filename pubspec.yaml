@@ -56,6 +56,7 @@ dependencies:
   cloud_firestore: ^6.10.0
   firebase_app_check: ^0.4.8
   cloud_functions: ^6.5.0
+  gma_mediation_unity: ^1.11.1
   # endregion WP-5b
 
 dev_dependencies:

@@ -55,13 +55,11 @@
         <meta-data
             android:name="com.google.android.gms.games.APP_ID"
             android:value="@string/games_app_id"/>
-        <!-- AdMob app ID. TODO(before-release): this is Google's official
-             TEST app ID (pairs with the test rewarded unit in
-             lib/services/ads_service.dart); keep it through closed testing
-             and swap in the real AdMob app ID only for production. -->
+        <!-- AdMob app ID (production). Debug builds still request Google's
+             TEST rewarded unit, see AdMobRewardedAds in ads_service.dart. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713"/>
+            android:value="ca-app-pub-2660521344509391~8153764631"/>
         <!-- PRD-2 §3.34: flutter_local_notifications' receivers for
              scheduled reminders and for re-scheduling them after a reboot /
              app update. -->

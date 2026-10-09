@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 /// Where a rewarded ad was requested from. Shop free coins and the home
@@ -143,17 +144,21 @@ class FakeRewardedAds implements RewardedAds {
 /// loaded after every show and every failure (load failures back off).
 /// Every plugin call is try/caught: ads must never take the game down.
 ///
-/// TODO(before-release): the unit IDs below are Google's official TEST
-/// rewarded units, and the app ID in AndroidManifest.xml is the test app ID.
-/// Keep them for closed testing (ADS_RESEARCH.md checklist #1/#3); swap in
-/// the real AdMob IDs only for the production release, and gate ad loading
-/// on the Play pre-launch / Test Lab / monkey checks (checklist "Trigger 4",
-/// needs a native method channel in MainActivity) before that.
+/// Release builds use the production AdMob unit (Unity Ads bids on it
+/// through AdMob mediation, `gma_mediation_unity`); debug/profile builds keep
+/// Google's official TEST units so development taps never hit real ads.
+/// Nothing loads on Play pre-launch / Firebase Test Lab devices
+/// ([_isTestLabDevice]).
 class AdMobRewardedAds implements RewardedAds {
-  // TODO(before-release): replace with the production rewarded unit IDs.
+  /// Production rewarded unit "Rewarded - all placements" (app
+  /// `ca-app-pub-2660521344509391~8153764631`). iOS has no production unit
+  /// yet (iOS paused) and only ever runs [NoopRewardedAds].
+  static const String androidUnitId = 'ca-app-pub-2660521344509391/3758032081';
   static const String androidTestUnitId =
       'ca-app-pub-3940256099942544/5224354917';
   static const String iosTestUnitId = 'ca-app-pub-3940256099942544/1712485313';
+
+  static const MethodChannel _device = MethodChannel('flappy_spikes/device');
 
   /// Longest wait between load retries after a failed load.
   static const Duration maxRetryDelay = Duration(minutes: 5);
@@ -166,9 +171,10 @@ class AdMobRewardedAds implements RewardedAds {
   int _loadFailures = 0;
   Timer? _retryTimer;
 
-  String get _unitId => defaultTargetPlatform == TargetPlatform.iOS
-      ? iosTestUnitId
-      : androidTestUnitId;
+  String get _unitId {
+    if (defaultTargetPlatform == TargetPlatform.iOS) return iosTestUnitId;
+    return kReleaseMode ? androidUnitId : androidTestUnitId;
+  }
 
   @override
   bool get isAvailable => _ad != null && !_showing;
@@ -179,6 +185,9 @@ class AdMobRewardedAds implements RewardedAds {
       return;
     }
     _initialized = true;
+    if (await _isTestLabDevice()) {
+      return;
+    }
     await _gatherConsent();
     try {
       _canRequestAds = await ConsentInformation.instance.canRequestAds();
@@ -197,6 +206,19 @@ class AdMobRewardedAds implements RewardedAds {
       return;
     }
     _load();
+  }
+
+  /// True on Play pre-launch report / Firebase Test Lab devices (Android
+  /// system setting `firebase.test.lab`). Robot taps on real ads there would
+  /// count as invalid traffic, so ads stay off. Any failure means "not".
+  Future<bool> _isTestLabDevice() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return false;
+    try {
+      return await _device.invokeMethod<bool>('isTestLab') ?? false;
+    } catch (e) {
+      debugPrint('AdMobRewardedAds isTestLab check failed: $e');
+      return false;
+    }
   }
 
   /// UMP: refresh the consent info and show the form when it is required

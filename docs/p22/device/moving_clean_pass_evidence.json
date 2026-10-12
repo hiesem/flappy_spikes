@@ -1,0 +1,8 @@
+{
+  "rail": "10-12 07:10:20.991 I/flutter (29364): QADEV event HoopPassed wall=139.215 kind=normal motion=rail perfect=true rim=false offset=-9.59858500648826 ride=false opening=94.2112",
+  "diagonal": "10-12 07:10:19.092 I/flutter (29364): QADEV event HoopPassed wall=137.315 kind=normal motion=diagonal perfect=false rim=false offset=-19.941321222126795 ride=false opening=94.58879999999999",
+  "horizontal": "10-12 07:42:16.861 I/flutter (30669): QADEV event HoopPassed wall=117.51 kind=normal motion=horizontal perfect=true rim=false offset=-17.85124391212699 ride=false opening=92.04",
+  "swing": "10-12 07:10:23.194 I/flutter (29364): QADEV event HoopPassed wall=141.417 kind=normal motion=swing perfect=false rim=false offset=-22.34462265601841 ride=false opening=93.8336",
+  "orbit": "10-12 07:49:03.212 I/flutter (10683): QADEV event HoopPassed wall=120.553 kind=normal motion=orbit perfect=false rim=false offset=-20.272343631642947 ride=false opening=95.72160000000001",
+  "rock": "10-12 07:10:17.008 I/flutter (29364): QADEV event HoopPassed wall=135.232 kind=normal motion=rock perfect=true rim=false offset=-13.258687407189424 ride=false opening=94.9664"
+}

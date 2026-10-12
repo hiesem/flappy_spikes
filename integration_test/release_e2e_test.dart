@@ -46,6 +46,8 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
 
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flame/game.dart';
 import 'package:flame_audio/flame_audio.dart';
@@ -824,10 +826,17 @@ void main() {
     g.runDebug.god = true;
     await _waitFor(tester, () => run.state.hoopsPassed >= 1, seconds: 15);
     run.events.emit(const StreakAtLeast(3));
+    // PRD-2.2 §11: a clean off-centre bot pass now resets the streak.
+    // This is an effects/frame probe, so keep its requested tier active;
+    // physical perfect-pass behavior is tested separately.
     await _recordFrames(
       'tier3',
-      () => _waitFor(tester, () => false, seconds: 5),
+      () => _waitFor(tester, () {
+        run.events.emit(const StreakAtLeast(3));
+        return false;
+      }, seconds: 5),
     );
+    run.events.emit(const StreakAtLeast(3));
     expect(run.state.tier, greaterThanOrEqualTo(3));
     await _shot(tester, 'rides_00_tier3');
     g.runDebug.god = false;
@@ -1018,6 +1027,9 @@ void main() {
           '${g.versus.soloReason.code}',
     );
     expect(g.versus.lastSearch.reads, lessThanOrEqualTo(44));
+    // The synthetic level-2 best can queue LEVEL UP while the asynchronous
+    // prefetch runs. Dismiss menu popups before exercising START.
+    await _settleHome(tester, g);
     await _shot(tester, 'p22_live_home');
     unawaited(g.startRun());
     expect(
@@ -1066,12 +1078,32 @@ void main() {
  APP CHECK DEBUG TOKEN: $token
  ${kAppCheckDebugToken.isEmpty ? 'NEW: register it in the Firebase console (flappy-spikes-a2b55 →\n App Check → Apps → Android → Manage debug tokens), then rerun with\n --dart-define=FS_APPCHECK_DEBUG_TOKEN=$token' : '(from FS_APPCHECK_DEBUG_TOKEN)'}
 =====================================================================''');
-    await Firebase.initializeApp(
+    // QA device safety: the destructive round trip must never use the
+    // owner's default Firebase identity (including an auto-linked PGS user).
+    final roundTripApp = await Firebase.initializeApp(
+      name: 'qa-device-round-trip',
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    await FirebaseVersusBackend.activateAppCheck(debugToken: token);
-    final backend = FirebaseVersusBackend();
+    await FirebaseAppCheck.instanceFor(
+      app: roundTripApp,
+    ).activate(providerAndroid: AndroidDebugProvider(debugToken: token));
+    final backend = FirebaseVersusBackend(app: roundTripApp);
     final uid = await backend.start().timeout(const Duration(seconds: 30));
+    expect(
+      backend.linkedToPlatform,
+      isFalse,
+      reason: 'only the isolated anonymous QA account may be deleted',
+    );
+    // Finish the named app's own credential handshake before its first
+    // transaction; default-app credentials are intentionally unrelated.
+    final authToken = await FirebaseAuth.instanceFor(
+      app: roundTripApp,
+    ).currentUser!.getIdToken(true);
+    final appCheckToken = await FirebaseAppCheck.instanceFor(
+      app: roundTripApp,
+    ).getToken(true);
+    expect(authToken, isNotEmpty);
+    expect(appCheckToken, isNotEmpty);
     debugPrint('VERSUS uid $uid');
 
     // One real-shaped run: 5 points 1.2 s apart (the cheat filter wants

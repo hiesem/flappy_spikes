@@ -1,0 +1,109 @@
+{
+  "cannon": {
+    "puCannonAim": {
+      "asset": "pu_cannon_aim.mp3",
+      "nativeStartCount": 6,
+      "example": "QADEV native-start pu_cannon_aim.mp3 fcf99509-2bcf-4563-894d-c9ed73611fe1"
+    },
+    "puCannonShot": {
+      "asset": "pu_cannon_shot.mp3",
+      "nativeStartCount": 6,
+      "example": "QADEV native-start pu_cannon_shot.mp3 d6c8a167-4631-40a5-a515-4d53aae43645"
+    }
+  },
+  "pinball": {
+    "rdPinBumper": {
+      "asset": "rd_pin_bumper.mp3",
+      "nativeStartCount": 21,
+      "example": "QADEV native-start rd_pin_bumper.mp3 046cf6d1-755c-4692-8327-f1d8165a23af"
+    },
+    "rdPinFlipper": {
+      "asset": "rd_pin_flipper.mp3",
+      "nativeStartCount": 3,
+      "example": "QADEV native-start rd_pin_flipper.mp3 358c4dd5-a0b1-4195-ab22-2aeca09cf358"
+    },
+    "rdPinJackpot": {
+      "asset": "rd_pin_jackpot.mp3",
+      "nativeStartCount": 3,
+      "example": "QADEV native-start rd_pin_jackpot.mp3 ae00f321-6344-4977-97bb-5cc4252570a1"
+    },
+    "rdPinPlunger": {
+      "asset": "rd_pin_plunger.mp3",
+      "nativeStartCount": 3,
+      "example": "QADEV native-start rd_pin_plunger.mp3 23322976-5663-4860-9a3d-a771eeb1351a"
+    }
+  },
+  "sea": {
+    "rdSeaBubble": {
+      "asset": "rd_sea_bubble.mp3",
+      "nativeStartCount": 90,
+      "example": "QADEV native-start rd_sea_bubble.mp3 cf3b2719-2207-446a-a474-cd9afaa08a6f"
+    },
+    "rdSeaSplash": {
+      "asset": "rd_sea_splash.mp3",
+      "nativeStartCount": 4,
+      "example": "QADEV native-start rd_sea_splash.mp3 c2df7db5-61eb-4e40-9f34-6534a8dfe9a0"
+    },
+    "rdSeaSpout": {
+      "asset": "rd_sea_spout.mp3",
+      "nativeStartCount": 4,
+      "example": "QADEV native-start rd_sea_spout.mp3 71fec8e6-b369-4d70-972d-0d00571042e0"
+    },
+    "rdSeaWhale": {
+      "asset": "rd_sea_whale.mp3",
+      "nativeStartCount": 4,
+      "example": "QADEV native-start rd_sea_whale.mp3 d8a0af69-5186-4a1b-8c7e-09e81bdfd4c9"
+    },
+    "rdSpaceLand": {
+      "asset": "rd_space_land.mp3",
+      "nativeStartCount": 6,
+      "example": "QADEV native-start rd_space_land.mp3 a83633ff-d6c5-4a36-96a5-6104f1756818"
+    }
+  },
+  "space": {
+    "rdSpaceLand": {
+      "asset": "rd_space_land.mp3",
+      "nativeStartCount": 6,
+      "example": "QADEV native-start rd_space_land.mp3 a83633ff-d6c5-4a36-96a5-6104f1756818"
+    },
+    "rdSpacePop": {
+      "asset": "rd_space_pop.mp3",
+      "nativeStartCount": 2,
+      "example": "QADEV native-start rd_space_pop.mp3 04ab9554-c925-4681-ab3e-1259fcf36fd3"
+    },
+    "rdSpaceRocket": {
+      "asset": "rd_space_rocket.mp3",
+      "nativeStartCount": 2,
+      "example": "QADEV native-start rd_space_rocket.mp3 e4f41701-a0c1-461c-84d6-dd8e192f8632"
+    }
+  },
+  "storm": {
+    "rdStormThunder": {
+      "asset": "rd_storm_thunder.mp3",
+      "nativeStartCount": 8,
+      "example": "QADEV native-start rd_storm_thunder.mp3 d564e4c6-90ff-47ea-8fec-98db29bbc04c"
+    },
+    "rdStormUmbrella": {
+      "asset": "rd_storm_umbrella.mp3",
+      "nativeStartCount": 2,
+      "example": "QADEV native-start rd_storm_umbrella.mp3 1d02cf4a-da26-4f29-9133-93ea96223ad7"
+    },
+    "rdStormWind": {
+      "asset": "rd_storm_wind.mp3",
+      "nativeStartCount": 2,
+      "example": "QADEV native-start rd_storm_wind.mp3 883e066c-c4cf-4946-bc7e-4a6f03b1d834"
+    }
+  },
+  "volcano": {
+    "rdVolcErupt": {
+      "asset": "rd_volc_erupt.mp3",
+      "nativeStartCount": 4,
+      "example": "QADEV native-start rd_volc_erupt.mp3 e9ca19a2-5e8d-4dd8-9caf-0dbd5ea1217c"
+    },
+    "rdVolcRumble": {
+      "asset": "rd_volc_rumble.mp3",
+      "nativeStartCount": 4,
+      "example": "QADEV native-start rd_volc_rumble.mp3 954fde53-a47a-40df-ac39-d66087c49ec3"
+    }
+  }
+}

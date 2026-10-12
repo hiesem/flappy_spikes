@@ -68,7 +68,6 @@ void main() {
 
   gameCase(
     '§13.2 three- to five-digit score text stays within the circle',
-    skip: 'S7-01',
     setUp: (g, _) async {
       await prepare(g);
       await (FontLoader(
@@ -95,7 +94,6 @@ void main() {
 
   gameCase(
     '§13.1 chick doubles the actual puzzle completion coins and points',
-    skip: 'S7-03',
     setUp: (g, _) => prepare(g),
     verify: (g, _) async {
       final run = await startRun(g);
@@ -113,7 +111,6 @@ void main() {
   for (final (dy, vy, hit) in [(10.0, 500.0, true), (26.0, -500.0, false)]) {
     gameCase(
       '§11.2 Bullseye uses crossing offset: start $dy, velocity $vy',
-      skip: 'S7-04',
       setUp: (g, _) => prepare(g),
       verify: (g, _) async {
         final run = await startRun(
@@ -198,6 +195,8 @@ void main() {
         t.addEntry((e[0] as num).toDouble(), e[1] as int, flag: e[2] as int);
       }
       t.end((entries.last[0] as num).toDouble() + 1);
+      // The Dart mirror of the server's timeline rules agrees.
+      expect(t.check(), c['expect']);
       const times = [0, 199, 200, 289, 290, 380, 400, 600];
       final checks = await serverChecks([
         {'run': wireRun(t), 'replay': times},

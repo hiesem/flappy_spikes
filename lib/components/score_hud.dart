@@ -16,20 +16,18 @@ import 'ui/fadable_text.dart';
 /// applied once the children exist.
 class ScoreHud extends PositionComponent implements OpacityProvider, Tintable {
   ScoreHud({Vector2? position})
-      : super(
-          position: position ?? Config.scoreHudPosition,
-          priority: -100,
-        );
+    : super(position: position ?? Config.scoreHudPosition, priority: -100);
 
   late final SpriteComponent _circle;
   late final FadableTextComponent _scoreText;
 
   // region PRD-2.2 §13.2 — points count-up and shrink-to-fit
-  /// PRD-2.2 §13.2 The score font size up to [fullDigits] digits (pt).
+  /// PRD-2.2 §13.2 The largest score font size (pt); short scores keep it.
   static const double fontSize = 125;
 
-  /// PRD-2.2 §13.2 Up to this many digits the score keeps [fontSize].
-  static const int fullDigits = 3;
+  /// PRD-2.2 §13.2 The side margin (pt, each side) the score keeps inside
+  /// the circle ([Config.scoreCircleSize]).
+  static const double sideMargin = 12;
 
   /// PRD-2.2 §13.2 A gain of more than 1 counts up over this long (s,
   /// ease-out cubic).
@@ -40,13 +38,47 @@ class ScoreHud extends PositionComponent implements OpacityProvider, Tintable {
   static const double popScale = 1.12;
   static const double popDuration = .16;
 
-  /// PRD-2.2 §13.2 The font size for a [digits]-digit score: 125 pt up to 3
-  /// digits; from 4 it shrinks so the number keeps the width (and the side
-  /// margin in the circle) of a 3-digit number: 125 × 3 / digits (≈ 94 pt
-  /// for 4, 75 for 5). LVDC digits share one advance width (the '1'
-  /// aside), so it changes only with the digit count.
-  static double fontSizeFor(int digits) =>
-      digits <= fullDigits ? fontSize : fontSize * fullDigits / digits;
+  /// PRD-2.2 §13.2 (fix S7-01) The font size for a [digits]-digit score:
+  /// min([fontSize], the size at which the widest [digits]-digit number,
+  /// measured with the real font metrics of [style], fits the circle with
+  /// [sideMargin] on each side). Measuring the widest number of a digit
+  /// count keeps "the size changes only when the digit count changes" while
+  /// every value of that count fits.
+  static double fontSizeFor(int digits, {TextStyle? style}) {
+    final base = (style ?? const TextStyle(fontFamily: Config.scoreFont))
+        .copyWith(fontSize: fontSize);
+    double widthOf(String text) {
+      final tp = TextPainter(
+        text: TextSpan(text: text, style: base),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final w = tp.width;
+      tp.dispose();
+      return w;
+    }
+
+    var widest = '0';
+    var widestW = widthOf(widest);
+    for (var d = 1; d <= 9; d++) {
+      final w = widthOf('$d');
+      if (w > widestW) {
+        widest = '$d';
+        widestW = w;
+      }
+    }
+    final width = widthOf(widest * math.max(1, digits));
+    final maxWidth = Config.scoreCircleSize.x - 2 * sideMargin;
+    if (width <= maxWidth || width <= 0) return fontSize;
+    // Text width scales linearly with the font size.
+    return fontSize * maxWidth / width;
+  }
+
+  final Map<int, double> _fontSizes = {};
+
+  static const TextStyle _baseStyle = TextStyle(
+    fontFamily: Config.scoreFont,
+    fontSize: fontSize,
+  );
 
   /// The score shown right now (counting up toward [score]).
   int get shownScore => _shown.round();
@@ -79,11 +111,7 @@ class ScoreHud extends PositionComponent implements OpacityProvider, Tintable {
     );
     _scoreText = FadableTextComponent(
       text: '0',
-      style: const TextStyle(
-        fontFamily: Config.scoreFont,
-        fontSize: fontSize,
-        color: Color(0xFFF1F1F1),
-      ),
+      style: _baseStyle.copyWith(color: const Color(0xFFF1F1F1)),
       anchor: Anchor.center,
       priority: 1,
     );
@@ -95,7 +123,10 @@ class ScoreHud extends PositionComponent implements OpacityProvider, Tintable {
     _showText();
     _circle.opacity = _opacity;
     _scoreText.opacity = _opacity;
-    _circle.paint.colorFilter = ColorFilter.mode(_circleTint, BlendMode.modulate);
+    _circle.paint.colorFilter = ColorFilter.mode(
+      _circleTint,
+      BlendMode.modulate,
+    );
     _scoreText.setColor(_textColor);
   }
 
@@ -120,7 +151,9 @@ class ScoreHud extends PositionComponent implements OpacityProvider, Tintable {
   void _showText() {
     final v = _shown.round();
     final text = '$v';
-    _scoreText.setFontSize(fontSizeFor(text.length));
+    _scoreText.setFontSize(
+      _fontSizes[text.length] ??= fontSizeFor(text.length, style: _baseStyle),
+    );
     _scoreText.text = text;
   }
 
@@ -202,9 +235,8 @@ class ScoreHud extends PositionComponent implements OpacityProvider, Tintable {
   /// grey so it stays readable.
   double get squeezeCover => _cover;
 
-  Color get _circleTint => _cover <= 0
-      ? _tint
-      : Color.lerp(_tint, const Color(0xFFFFFFFF), _cover)!;
+  Color get _circleTint =>
+      _cover <= 0 ? _tint : Color.lerp(_tint, const Color(0xFFFFFFFF), _cover)!;
 
   Color get _textColor => _cover > .5 ? _coverText : _scoreColor;
 

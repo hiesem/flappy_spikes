@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/score_hud.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/menu/wallet.dart';
 import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/elements.dart';
@@ -258,40 +259,67 @@ void main() {
       },
     );
 
-    test('§13.2 font: 125 pt up to 3 digits, then 125 × 3 / digits', () {
+    test('§13.2 font (S7-01): min(125 pt, the size at which the widest '
+        'n-digit number fits the circle with the side margin)', () {
+      final maxW = Config.scoreCircleSize.x - 2 * ScoreHud.sideMargin;
+      double widthAt(String text, double size) {
+        final tp = TextPainter(
+          text: TextSpan(
+            text: text,
+            style: TextStyle(fontFamily: Config.scoreFont, fontSize: size),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        return tp.width;
+      }
+
       expect(ScoreHud.fontSizeFor(1), 125);
-      expect(ScoreHud.fontSizeFor(3), 125);
-      expect(ScoreHud.fontSizeFor(4), closeTo(93.75, 1e-9));
-      expect(ScoreHud.fontSizeFor(5), 75);
+      var last = 125.0;
+      for (var n = 1; n <= 6; n++) {
+        final size = ScoreHud.fontSizeFor(n);
+        expect(size, lessThanOrEqualTo(last), reason: '$n digits');
+        last = size;
+        for (var d = 0; d <= 9; d++) {
+          expect(
+            widthAt('$d' * n, size),
+            lessThanOrEqualTo(maxW + .5),
+            reason: '$d × $n at $size pt',
+          );
+        }
+      }
+      // The PRD's ≈ 95 / ≈ 76 pt for 4 / 5 digits are upper bounds.
+      expect(ScoreHud.fontSizeFor(4), lessThanOrEqualTo(95));
+      expect(ScoreHud.fontSizeFor(5), lessThanOrEqualTo(76));
     });
 
     tester().testGameWidget(
-      '§13.7 scores 999, 1 000, 12 345 fit the circle with the side margin '
-      'of a 3-digit number (999 at 125 pt)',
+      '§13.7 scores of 1 to 5 digits (incl. wide 888, 8888, 88888) fit the '
+      'circle with the side margin; the size changes only with the digit '
+      'count',
       setUp: (g, _) => prepare(g),
       verify: (game, _) async {
         await startRun(game);
         final hud = game.world.children.whereType<ScoreHud>().single;
-        double widthAt(int v) {
+        final maxW = Config.scoreCircleSize.x - 2 * ScoreHud.sideMargin;
+        final sizeByDigits = <int, double>{};
+        for (final v in [7, 88, 111, 888, 999, 1000, 8888, 12345, 88888]) {
           hud.setScore(0);
           hud.setScore(v);
           for (var i = 0; i < 60; i++) {
             hud.update(1 / 60);
           }
           expect(hud.shownScore, v);
-          return hud.textWidth;
+          expect(hud.textWidth, lessThanOrEqualTo(maxW + .5), reason: '$v');
+          expect(hud.textFontSize, lessThanOrEqualTo(125));
+          final n = '$v'.length;
+          expect(
+            hud.textFontSize,
+            sizeByDigits[n] ??= hud.textFontSize,
+            reason: '$v',
+          );
         }
-
-        final w999 = widthAt(999);
-        expect(hud.textFontSize, 125);
-        // The widest 3-digit number sets the margin every longer one keeps.
-        final w888 = widthAt(888);
-        for (final v in [1000, 8888, 12345, 88888]) {
-          final w = widthAt(v);
-          expect(w, lessThanOrEqualTo(w888 + .5), reason: '$v');
-          expect(hud.textFontSize, lessThan(125));
-        }
-        expect(w999, lessThanOrEqualTo(w888 + .5));
+        expect(sizeByDigits[1], 125);
+        expect(sizeByDigits[5], lessThan(sizeByDigits[3]!));
       },
     );
   });

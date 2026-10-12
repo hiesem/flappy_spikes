@@ -28,6 +28,11 @@ export const FLAG_GIFT = 4;
 /** PRD-2.2 §13.6 a coin bonus paid as points (can land right after a pass). */
 export const FLAG_BONUS = 8;
 /**
+ * PRD-2.2 §13.1 / §13.5 (fix S7-05) marks a bonus entry as the puzzle 4/4
+ * completion payout (always together with FLAG_BONUS); it has its own cap.
+ */
+export const FLAG_PUZZLE = 16;
+/**
  * Flags that exempt an entry from the 0.9 s gap check (§3.13; gift = the +5
  * pair gift, ARCH §6.3; PRD-2.2 §13.5 adds the bonus entries).
  */
@@ -43,11 +48,16 @@ export const TIMELINE_VERSION = 2;
 export const PASS_CAP_MULT = 2;
 export const PASS_CAP_EXTRA = 5;
 /**
- * PRD-2.2 §13.5 plausibility cap of a bonus entry (points). The PRD names
- * 2 × 40 (the piggy payout with the chick); the puzzle 4/4 bonus pays up to
- * 250 points (not doubled, PRD-2 §3.16), so the cap is the larger of the two.
+ * PRD-2.2 §13.5 plausibility cap of a generic bonus entry (points):
+ * 2 × the largest in-run coin bonus (the 40-coin piggy, doubled by the chick).
  */
-export const BONUS_CAP = 250;
+export const BONUS_CAP = 80;
+/**
+ * PRD-2.2 §13.1 / §13.5 (fix S7-05) plausibility cap of a puzzle completion
+ * entry (FLAG_BONUS | FLAG_PUZZLE): the largest roll (250, PRD-2 §3.16)
+ * doubled by the chick.
+ */
+export const PUZZLE_BONUS_CAP = 500;
 /** PRD-2.2 §13.5 plausibility cap of a gift entry: 2 × the pair's +5. */
 export const GIFT_CAP = 10;
 /** How many processed runIds the server remembers per player (idempotent retries). */

@@ -1,15 +1,23 @@
 {
-  "_doc": "PRD-2.2 §13.5 QA P1 boundary cases; entries [seconds, value, flag]. Shared Dart recorder/replay and TypeScript production validator. Findings stay skipped until fixed.",
+  "_doc": "PRD-2.2 §13.5 QA P1 boundary cases; entries [seconds, value, flag]. Shared Dart recorder/replay and TypeScript production validator. Fixed in P22-FIX1: S7-02 (a bonus does not restart the gap interval) and S7-05 (bonus cap 80; puzzle completion entries, flag 24 = bonus 8 | puzzle 16, cap 500).",
   "cases": [
     {"name": "ordinary passes at the minimum gap", "entries": [[2,2,0],[2.9,2,0]], "expect": null},
     {"name": "Bullseye bonus at the same time as a pass", "entries": [[2,2,0],[2,3,8],[4,2,0]], "expect": null},
-    {"name": "bonus before a pass with two seconds between hoops", "entries": [[2,2,0],[3.8,5,8],[4,2,0]], "expect": null, "finding": "S7-02"},
+    {"name": "bonus before a pass with two seconds between hoops", "entries": [[2,2,0],[3.8,5,8],[4,2,0]], "expect": null},
     {"name": "chick piggy payout at approved cap", "entries": [[2,80,8]], "expect": null},
-    {"name": "bonus one point above approved cap", "entries": [[2,81,8]], "expect": "count", "finding": "S7-05"},
+    {"name": "bonus one point above approved cap", "entries": [[2,81,8]], "expect": "count"},
+    {"name": "puzzle completion bonus doubled by the chick at its cap", "entries": [[2,500,24]], "expect": null},
+    {"name": "puzzle completion bonus undoubled maximum", "entries": [[2,250,24]], "expect": null},
+    {"name": "forged puzzle completion bonus above its cap", "entries": [[2,501,24]], "expect": "count"},
+    {"name": "puzzle-sized value without the puzzle flag", "entries": [[2,250,8]], "expect": "count"},
     {"name": "chick pair gift at its cap", "entries": [[2,10,4]], "expect": null},
     {"name": "forged pair gift above cap", "entries": [[2,11,4]], "expect": "count"},
     {"name": "FEVER jump and chick values", "entries": [[2,10,0],[4,12,0],[6,14,0]], "expect": null},
     {"name": "forged first hoop beyond plausibility cap", "entries": [[2,13,0]], "expect": "count"},
-    {"name": "ordinary passes below minimum gap", "entries": [[2,2,0],[2.89,2,0]], "expect": "gap"}
+    {"name": "ordinary passes below minimum gap", "entries": [[2,2,0],[2.89,2,0]], "expect": "gap"},
+    {"name": "a bonus between two too-close passes does not hide the gap", "entries": [[2,2,0],[2.5,5,8],[2.89,2,0]], "expect": "gap"},
+    {"name": "puzzle bonus between two too-close passes does not hide the gap", "entries": [[2,2,0],[2.5,250,24],[2.89,2,0]], "expect": "gap"},
+    {"name": "a bonus before the first pass", "entries": [[1,5,8],[1.5,2,0],[2.4,2,0]], "expect": null},
+    {"name": "a bonus right after a pass, next pass at the minimum gap", "entries": [[2,2,0],[2.05,5,8],[2.9,2,0]], "expect": null}
   ]
 }

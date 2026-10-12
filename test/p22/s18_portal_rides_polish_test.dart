@@ -1,6 +1,8 @@
 import 'dart:ui';
 
+import 'package:audioplayers_platform_interface/audioplayers_platform_interface.dart';
 import 'package:flame/components.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
@@ -261,62 +263,70 @@ void main() {
   });
 
   group('§18.4 ride sounds always play (fake pools)', () {
+    setUpAll(() {
+      // Ride loops also use audioplayers; keep the whole audio backend fake.
+      AudioplayersPlatformInterface.instance = FakeAudioPlatform();
+      GlobalAudioplayersPlatformInterface.instance = FakeGlobalAudioPlatform();
+      FlameAudio.audioCache = FakeAudioCache();
+    });
     for (final id in [RideId.cannon, RideId.storm, RideId.sea]) {
       _tester(711).testGameWidget(
         '§18.4 ${id.name}: the portal spawn requests every cue\'s pool; each '
         'first play in the ride then plays',
         setUp: _setUp,
         verify: (game, tester) async {
-          final audio = FakeAudio();
-          final sound = game.sound
-            ..enabled = true
-            ..muted = false
-            ..voiceFactory = audio.create;
-          final played = <Sfx>[];
-          sound.onPlay = played.add;
-          final run = await startRun(game, startHoopIndex: 25, ride: id);
-          final pre = run.features.whereType<SoundPreloadFeature>().single;
-          final bot = Autopilot(run);
-          final cues = SoundPreloadFeature.portalCues(rideThemeFor(id));
-          bool spawned() =>
-              run.spawner.hoops.any((h) => h.plan.kind == HoopKindId.portal);
-          for (var i = 0; i < 60 * 60 && !spawned(); i++) {
-            if (bot.shouldFlap()) game.onScreenTap();
-            game.update(1 / 60);
-          }
-          expect(spawned(), isTrue);
-          expect(pre.requests.any((r) => r.containsAll(cues)), isTrue);
-          await flushAudio();
-          for (final cue in cues) {
-            expect(sound.poolRequested(cue), isTrue, reason: '$cue');
-            expect(sound.poolOf(cue), isNotNull, reason: '$cue');
-          }
-          // Fly the ride; every cue played in it starts a voice.
-          final f = _feature(run);
-          var seen = false;
-          played.clear();
-          for (var i = 0; i < 60 * 40; i++) {
-            if (f.ride != null) seen = true;
-            if (seen && f.ride == null) break;
-            if (!seen && bot.shouldFlap()) game.onScreenTap();
-            game.update(1 / 60);
-            if (i % 5 == 0) await flushAudio();
-          }
-          await flushAudio();
-          expect(seen, isTrue);
-          final ridePlayed = played.where(cues.contains).toSet();
-          expect(ridePlayed, containsAll([Sfx.puPortal, Sfx.puLand]));
-          for (final cue in ridePlayed) {
-            final file = SoundService.audioFiles[cue]!;
-            final starts = audio.of(file).fold<int>(0, (n, v) => n + v.starts);
-            expect(starts, greaterThan(0), reason: '$cue was dropped');
-          }
-          // Let the pools' stop timers run out, then tidy up.
-          await tester.pump(const Duration(seconds: 5));
-          await sound.dispose();
-          sound
-            ..enabled = false
-            ..voiceFactory = null;
+          await tester.runAsync(() async {
+            final audio = FakeAudio();
+            final sound = game.sound
+              ..enabled = true
+              ..muted = false
+              ..voiceFactory = audio.create;
+            final played = <Sfx>[];
+            sound.onPlay = played.add;
+            final run = await startRun(game, startHoopIndex: 25, ride: id);
+            final pre = run.features.whereType<SoundPreloadFeature>().single;
+            final bot = Autopilot(run);
+            final cues = SoundPreloadFeature.portalCues(rideThemeFor(id));
+            bool spawned() =>
+                run.spawner.hoops.any((h) => h.plan.kind == HoopKindId.portal);
+            for (var i = 0; i < 60 * 60 && !spawned(); i++) {
+              if (bot.shouldFlap()) game.onScreenTap();
+              game.update(1 / 60);
+            }
+            expect(spawned(), isTrue);
+            expect(pre.requests.any((r) => r.containsAll(cues)), isTrue);
+            await flushAudio();
+            for (final cue in cues) {
+              expect(sound.poolRequested(cue), isTrue, reason: '$cue');
+              expect(sound.poolOf(cue), isNotNull, reason: '$cue');
+            }
+            // Fly the ride; every cue played in it starts a voice.
+            final f = _feature(run);
+            var seen = false;
+            played.clear();
+            for (var i = 0; i < 60 * 40; i++) {
+              if (f.ride != null) seen = true;
+              if (seen && f.ride == null) break;
+              if (!seen && bot.shouldFlap()) game.onScreenTap();
+              game.update(1 / 60);
+              if (i % 5 == 0) await flushAudio();
+            }
+            await flushAudio();
+            expect(seen, isTrue);
+            final ridePlayed = played.where(cues.contains).toSet();
+            expect(ridePlayed, containsAll([Sfx.puPortal, Sfx.puLand]));
+            for (final cue in ridePlayed) {
+              final file = SoundService.audioFiles[cue]!;
+              final starts = audio
+                  .of(file)
+                  .fold<int>(0, (n, v) => n + v.starts);
+              expect(starts, greaterThan(0), reason: '$cue was dropped');
+            }
+            await sound.dispose();
+            sound
+              ..enabled = false
+              ..voiceFactory = null;
+          });
         },
       );
     }

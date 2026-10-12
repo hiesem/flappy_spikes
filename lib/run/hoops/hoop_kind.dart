@@ -3,6 +3,7 @@ import 'package:flame/components.dart';
 import '../director/plans.dart';
 import '../elements.dart';
 import '../mistakes.dart' show ThemedDeath; // WP-3d
+import '../pickups/pickup.dart'; // WP-G2
 import '../run_context.dart';
 import '../run_state.dart';
 import 'hoop.dart';
@@ -73,6 +74,11 @@ abstract class HoopKind {
   double rimRadius(Hoop h) => 7;
 
   void onSpawn(Hoop h, RunContext c) {}
+
+  /// PRD-2.2 §15 an item attached to this slot ([SlotPlan.attached]) was
+  /// created when the slot was planned, one gap before the hoop: link it
+  /// now (the switch ring takes its switch).
+  void linkAttached(Hoop h, Pickup p, RunContext c) {}
 
   /// Adds the back / front visuals (via `RingPainter` or design painters).
   void buildVisual(Hoop h, RunContext c);

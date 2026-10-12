@@ -66,7 +66,7 @@ void main() {
   group('§3.28 / §5.27 Piggy Bank rules (pure)', () {
     test(
       '§3.28 exactly 20 coins, 4 in the own gap, pays ×2 of what you '
-      'caught; gap 12 weight 10 ≥ 30 apart; hit radii 18 / 10',
+      'caught; gap 12 weight 10 ≥ 30 apart; hit radii 18 / 14 (PRD-2.2 §26)',
       () {
         expect(PiggyConfig.total, 20);
         expect(PiggyConfig.ownGapCoins, 4);
@@ -86,9 +86,9 @@ void main() {
         expect(rule.weight, 10);
         expect(rule.minSince, 30);
         expect(PickupRadii.piggy, 18);
-        expect(PickupRadii.piggyCoin, 10);
+        expect(PickupRadii.piggyCoin, 14); // PRD-2.2 §26 (PRD-2: 10)
         expect(PickupRadii.forElement(ElementId.piggy), 18);
-        expect(PickupRadii.forElement(ElementId.piggyCoins), 10);
+        expect(PickupRadii.forElement(ElementId.piggyCoins), 14);
         expect(pickupKindFor(ElementId.piggy), isA<PiggyPickupKind>());
         expect(pickupKindFor(ElementId.piggyCoins), isA<PiggyCoinKind>());
         expect(registeredPickupElements(), contains(ElementId.piggy));
@@ -121,7 +121,7 @@ void main() {
         expect(PiggyConfig.haloColor, const Color(0xFFFF8AC4));
         expect(PiggyConfig.haloR, 26);
         expect(PiggyConfig.haloAlpha, .5);
-        expect(PiggyConfig.coinSize, 8);
+        expect(PiggyConfig.coinSize, 16); // PRD-2.2 §26 (PRD-2: 8)
         expect(PiggyConfig.fetchSeconds, .35);
         expect(PiggyConfig.hudPigX, 46);
         expect(PiggyConfig.hudPigY, 216 - HudConfig.collectLift); // S6-F03
@@ -170,6 +170,10 @@ void main() {
       final sfx = sfxLog(game);
       spawnPiggy(run);
       await flushAndMount(game);
+      final piggyX = pickupsOf(game)
+          .firstWhere((p) => p.id == ElementId.piggy)
+          .position
+          .x;
       await flyToPiggy(game, run, () => run.state.piggy != null);
       expect(run.state.piggy, isNotNull);
       expect(sfx, contains('piggyOink'));
@@ -186,24 +190,31 @@ void main() {
         RunHud.ensureFor(run).children.whereType<PiggyBadge>(),
         hasLength(1),
       );
-      // The own-gap field: 4 coins from 20 pt after the piggy to 40 pt
-      // before the next hoop, on the line (mock `coinGap(x+20, nh.x-40)`).
+      // The own-gap field (PRD-2.2 §26: coins 45 pt apart, mock B): 4 coins
+      // from 20 pt after the piggy on the line toward the next hoop; when
+      // they would not end 40 pt before it, in the gap after it.
       final field = pickupsOf(game).whereType<PiggyCoin>().single;
       expect(field.count, 4);
       final next = run.spawner.nextHoopAhead()!;
       final x0 = field.plan!.trackX, x1 = field.plan!.toTrackX!;
       final y0 = field.plan!.y!, y1 = field.plan!.toY!;
-      expect(x0, closeTo(next.plan.trackX - 40 - (x1 - x0), 1e-6));
-      expect(x1, closeTo(next.plan.trackX - 40, 1e-6));
-      expect(y1, closeTo(next.plan.centreY, 1e-6));
+      expect(x1 - x0, closeTo(3 * 45, 1e-6));
+      final own = x1 <= next.plan.trackX - 40 + 1e-6;
+      if (own) {
+        expect(x0, closeTo(piggyX + 20, 1e-6));
+      } else {
+        expect(x0, greaterThan(next.plan.lastRingX + 40));
+      }
       for (var i = 0; i < 4; i++) {
         final u = (i + 1) / 5;
         final coin = field.coinAt(i);
-        expect(coin.dx, closeTo(x0 + (x1 - x0) * u, 1e-6));
+        expect(coin.dx, closeTo(x0 + 45.0 * i, 1e-6));
         expect(
           coin.dy,
           closeTo(
-            y0 + (y1 - y0) * u - PiggyConfig.coinBulge * math.sin(math.pi * u),
+            y0 +
+                (y1 - y0) * i / 3 -
+                PiggyConfig.coinBulge * math.sin(math.pi * u),
             1e-6,
           ),
         );

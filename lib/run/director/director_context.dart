@@ -29,6 +29,8 @@ class DirectorContext {
     this.hudBottom = RunConfig.hudBottom,
     this.featherWanted = true,
     this.puzzleMask = 0,
+    this.activity = false,
+    this.activityEndedAtSlot = -99,
   }) : squeezeTopTooth = squeezeTopTooth ?? topTooth,
        squeezeFloorTooth = squeezeFloorTooth ?? floorTooth;
 
@@ -51,6 +53,8 @@ class DirectorContext {
     double? prevCentreY,
     bool featherWanted = true,
     int puzzleMask = 0,
+    bool activity = false,
+    int activityEndedAtSlot = -99,
   }) {
     const top = RunConfig.stripHeight;
     final floor = viewHeight - RunConfig.stripHeight;
@@ -75,6 +79,8 @@ class DirectorContext {
       prevCentreY: prevCentreY,
       featherWanted: featherWanted,
       puzzleMask: puzzleMask,
+      activity: activity,
+      activityEndedAtSlot: activityEndedAtSlot,
     );
   }
 
@@ -126,6 +132,14 @@ class DirectorContext {
 
   /// §3.16 `storage.puzzlePieces` (4-bit mask; 0xF = round complete).
   final int puzzleMask;
+
+  /// PRD-2.2 §27 an activity (comet / portal ride, piggy / jar run,
+  /// capsule power-up) runs: no reward item is planned.
+  final bool activity;
+
+  /// PRD-2.2 §27.2 the director's next slot index when the last activity
+  /// ended (the 2-hoop cool-down counts from it); −99 = none.
+  final int activityEndedAtSlot;
 
   double get band => floorTooth - topTooth;
 }

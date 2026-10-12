@@ -178,7 +178,8 @@ void main() {
         expect(run.layers.front.position.x, closeTo(-run.state.camX, 1e-2));
         expect(game.storage.metElements, contains('normal_hoop'));
         expect(run.state.camX, greaterThan(RunConfig.cruiseSpeed * 3.4));
-        expect(run.state.hoopIndex, run.director.hoopIndex);
+        // PRD-2.2 §15: the director plans one slot ahead of the spawned ones.
+        expect(run.state.hoopIndex, run.director.hoopIndex - 1);
         expect(
           run.layers.back.children.whereType<Hoop>().length,
           hoopsOf(game).length,

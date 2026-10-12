@@ -328,16 +328,16 @@ void main() {
         final run = await startRun(game);
         game.runDebug.god = true;
         final sfx = sfxLog(game);
-        // Fly the hoop-aware bot until the director's first heart (gap 3,
-        // on the straight line) is close, then steer into it.
+        // Fly the hoop-aware bot until the director's first heart (PRD-2.2
+        // §19.1: a random gap 5–27) is there, then steer into it.
         HeartPickup? p;
         await flyRun(
           game,
-          maxSeconds: 14,
+          maxSeconds: 60,
           onFrame: (r) {
             p ??= pickupsOf(game).whereType<HeartPickup>().firstOrNull;
           },
-          untilHoops: 4,
+          untilHoops: run.director.heartAt + 3,
         );
         expect(p, isNotNull);
         for (var i = 0; i < 400 && !p!.collected && !p!.escaped; i++) {

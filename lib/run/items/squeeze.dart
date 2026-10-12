@@ -110,6 +110,10 @@ class SqueezeFeature extends RunFeature {
     for (final h in c.run.spawner.hoops) {
       ahead = math.max(ahead, h.planeX - birdX);
     }
+    // PRD-2.2 §15 the slot planned one gap ahead was planned under the old
+    // band too.
+    final planned = c.run.spawner.plannedAhead;
+    if (planned != null) ahead = math.max(ahead, planned.lastRingX - birdX);
     final lead = ahead / RunConfig.cruise(s.runClock);
     _sq.nextAt = s.runClock + RunConfig.squeezeWindowLead + lead + .05;
   }

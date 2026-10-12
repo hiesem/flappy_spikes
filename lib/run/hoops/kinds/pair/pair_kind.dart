@@ -82,24 +82,53 @@ class PairHoopKind extends HoopKind {
     _states[h] = state;
     h.add(state);
     h.front.add(state.pool);
+    void back(Canvas canvas) {
+      for (var i = 0; i < h.rings.length; i++) {
+        state.withRing(canvas, i, () => state.paintBack(canvas, i));
+      }
+    }
+
+    void front(Canvas canvas) {
+      for (var i = 0; i < h.rings.length; i++) {
+        state.withRing(canvas, i, () => state.paintFront(canvas, i));
+      }
+      state.paintBits(canvas);
+    }
+
     h.paintBack = (canvas) {
       if (h.look.missed) {
         NormalHoopKind.paintRings(canvas, h, '', front: false);
         return;
       }
-      for (var i = 0; i < h.rings.length; i++) {
-        state.withRing(canvas, i, () => state.paintBack(canvas, i));
+      if (h.rewardStripped) {
+        // PRD-2.2 §27.3 the gift boxes fade, the rings stay plain.
+        NormalHoopKind.paintStripped(
+          canvas,
+          h,
+          c,
+          front: false,
+          reward: () => back(canvas),
+        );
+        return;
       }
+      back(canvas);
     };
     h.front.paintFront = (canvas) {
       if (h.look.missed) {
         NormalHoopKind.paintRings(canvas, h, '', front: true);
         return;
       }
-      for (var i = 0; i < h.rings.length; i++) {
-        state.withRing(canvas, i, () => state.paintFront(canvas, i));
+      if (h.rewardStripped) {
+        NormalHoopKind.paintStripped(
+          canvas,
+          h,
+          c,
+          front: true,
+          reward: () => front(canvas),
+        );
+        return;
       }
-      state.paintBits(canvas);
+      front(canvas);
     };
   }
 
@@ -119,6 +148,8 @@ class PairHoopKind extends HoopKind {
 
   @override
   void onPass(Hoop h, PassInfo p, RunContext c) {
+    // PRD-2.2 §27.3 an activity stripped the gifts: a normal pass.
+    if (h.rewardStripped) return;
     var ring = p.ring.clamp(0, h.rings.length - 1);
     if (p.duringRide) {
       final b = c.run.birdTrackPosition();
@@ -186,7 +217,9 @@ class PairHoopKind extends HoopKind {
   }
 
   @override
-  void onMiss(Hoop h, RunContext c) => c.track('pair_missed');
+  void onMiss(Hoop h, RunContext c) {
+    if (!h.rewardStripped) c.track('pair_missed');
+  }
 }
 
 /// Per-pair state (world time): the clock, each box's phase, the pick, the

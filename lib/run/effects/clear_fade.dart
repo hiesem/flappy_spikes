@@ -14,8 +14,33 @@ mixin ClearFade on Component {
   bool _layered = false;
   final Paint _fadePaint = Paint();
 
+  /// PRD-2.2 §15.1 the pop-in scale of a feature follow-up created inside
+  /// the screen (0 → 1.15 → 1), about the component's position.
+  double popScale = 1;
+
   @override
   void renderTree(Canvas canvas) {
+    if (popScale != 1) {
+      if (popScale <= 0) return;
+      final Object self = this;
+      final pivot = self is PositionComponent
+          ? Offset(self.position.x, self.position.y)
+          : Offset.zero;
+      canvas.save();
+      canvas.translate(pivot.dx, pivot.dy);
+      canvas.scale(popScale);
+      canvas.translate(-pivot.dx, -pivot.dy);
+      try {
+        _renderFaded(canvas);
+      } finally {
+        canvas.restore();
+      }
+      return;
+    }
+    _renderFaded(canvas);
+  }
+
+  void _renderFaded(Canvas canvas) {
     if (clearAlpha >= 1) {
       super.renderTree(canvas);
       return;

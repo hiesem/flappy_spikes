@@ -3,8 +3,10 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 
+import '../config/run_config.dart';
 import '../director/plans.dart';
 import '../effects/clear_fade.dart';
+import '../elements.dart';
 import '../physics/hoop_frame.dart';
 import 'hoop_kind.dart';
 import 'ring_painter.dart';
@@ -38,7 +40,10 @@ class Hoop extends PositionComponent with ClearFade {
     front = HoopFrontLayer(this);
   }
 
-  final SlotPlan plan;
+  /// The slot plan. PRD-2.2 §27.3: a reward ring whose reward was stripped
+  /// gets a copy with `kind: normal` ([stripReward]), so every rule keyed
+  /// on the plan's kind treats it as a normal ring; [kind] keeps drawing it.
+  SlotPlan plan;
   final HoopKind kind;
   double opening;
 
@@ -136,9 +141,34 @@ class Hoop extends PositionComponent with ClearFade {
     removeFromParent();
   }
 
+  // region WP-G2 — PRD-2.2 §27.3 reward parts fade out
+  /// An activity started while this reward ring (pair, Lucky Spin, FEVER)
+  /// was ahead: its reward parts fade out and it passes as a normal ring.
+  bool rewardStripped = false;
+
+  /// 1 → 0 over `RunConfig.rewardClearFade` once [rewardStripped].
+  double rewardAlpha = 1;
+
+  /// PRD-2.2 §27.3 the reward parts go (gift boxes, wheel, plasma); the
+  /// ring stays as a normal ring (its plan's kind becomes normal).
+  void stripReward() {
+    if (rewardStripped) return;
+    rewardStripped = true;
+    plan = plan.copyWith(
+      kind: HoopKindId.normal,
+      element: plan.element == ElementId.normalHoop
+          ? plan.element
+          : ElementId.normalHoop,
+    );
+  }
+  // endregion WP-G2
+
   @override
   void update(double dt) {
     super.update(dt);
+    if (rewardStripped && rewardAlpha > 0) {
+      rewardAlpha = math.max(0, rewardAlpha - dt / RunConfig.rewardClearFade);
+    }
     front
       ..position.setFrom(position)
       ..angle = angle;

@@ -73,6 +73,9 @@ class AnalyticsRouter extends RunFeature {
       'hoops': s.hoopsPassed,
       'coins': s.coins,
       'saves': s.saves,
+      // PRD-2.2 §19.3 the feather / piece came this run (0 / 1).
+      'feather': c.s.featherSpawned ? 1 : 0,
+      'piece': c.s.pieceSpawned ? 1 : 0,
     });
     c.track('run_director_hoops', {
       for (final k in hoopKeys) k: s.spawned[k] ?? 0,

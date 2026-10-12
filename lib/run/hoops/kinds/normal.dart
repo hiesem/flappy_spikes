@@ -31,6 +31,30 @@ class NormalHoopKind extends HoopKind {
 
   /// Paints one half of every ring of [h] in hoop-local coordinates (the
   /// hoop component already carries the position and tilt).
+  /// PRD-2.2 §27.3 a reward ring whose reward was stripped (an activity
+  /// started): the plain rings with the equipped skin, and its own look
+  /// ([reward]: gift boxes, wheel, plasma) fading out on top over 0.2 s.
+  static void paintStripped(
+    Canvas canvas,
+    Hoop h,
+    RunContext c, {
+    required bool front,
+    required void Function() reward,
+  }) {
+    paintRings(
+      canvas,
+      h,
+      c.game.menu.items.look.hoop,
+      front: front,
+      t: c.s.runClock,
+    );
+    final a = h.rewardAlpha;
+    if (a <= 0) return;
+    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, a));
+    reward();
+    canvas.restore();
+  }
+
   static void paintRings(
     Canvas canvas,
     Hoop h,

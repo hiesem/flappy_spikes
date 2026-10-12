@@ -214,6 +214,9 @@ void main() {
           for (final run in plans[vh]!) {
             for (final s in run) {
               if (s.index < row.from || s.index > last) continue;
+              // PRD-2.2 §19.2 indices 4–9 draw the early pool instead (its
+              // angled ring; tested in test/p22/s19_random_opening_test).
+              if (DirectorTables.prd2.earlyPool!.covers(s.index)) continue;
               normal++;
               if (s.motion?.type == MotionType.swing) {
                 swing++;

@@ -6,6 +6,7 @@ import 'package:flappy_spikes/components/spike_strip.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
 import 'package:flappy_spikes/run/config/director_tables.dart';
+import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/debug/force_menu.dart';
 import 'package:flappy_spikes/run/elements.dart';
@@ -92,10 +93,22 @@ void main() {
       qa('P3 $id + Hourglass: pause every ride phase, suspend and resume '
           'the effect h=$height', (g) async {
         final run = await startRun(g, startHoopIndex: 25, ride: id);
+        // PRD-2.2 §27: no portal is planned during a power-up and one ahead
+        // fades when a power-up starts; the pause stays as a safety net —
+        // start the Hourglass once the portal is on screen, as if its
+        // activity start had been handled.
+        expect(
+          await flyUntil(
+            g,
+            (r) => r.spawner.hoops.any((h) => h.plan.kind == HoopKindId.portal),
+          ),
+          isTrue,
+        );
         expect(
           feature<TimedPowerupSlot>(run).start(CapsuleType.hourglass),
           isTrue,
         );
+        run.state.activity = RunActivity.capsule;
         expect(
           await flyUntil(g, (r) => r.state.ride?.kind == RideKind.portal),
           isTrue,
@@ -165,6 +178,7 @@ void main() {
         expect(
           await flyUntil(g, (r) => r.state.squeeze.phase == phase),
           isTrue,
+          reason: '$phase ended ${run.ended} dying ${run.dying}',
         );
         await pauseSnapshot(g);
       }
@@ -182,25 +196,45 @@ void main() {
         () {
           qa('P3 Mini Bird through $element h=$height', (g) async {
             final run = await startRun(g, startHoopIndex: 20, force: [element]);
-            expect(
-              feature<TimedPowerupSlot>(run).start(CapsuleType.miniBird),
-              isTrue,
-            );
+            // PRD-2.2 §27: a pair (a reward ring) never comes during a
+            // power-up; one already on screen when it starts loses its gifts
+            // and stays a two-ring hoop. So for the pair the Mini Bird starts
+            // once a pair is on screen, and ends after its pass.
+            final pair = element == ElementId.pair;
+            if (!pair) {
+              expect(
+                feature<TimedPowerupSlot>(run).start(CapsuleType.miniBird),
+                isTrue,
+              );
+            }
             var miniPasses = 0;
             run.events.on<HoopPassed>((e) {
-              if (e.hoop?.plan.element == element && run.state.birdScale < .6) {
+              final hit = pair
+                  ? e.hoop?.kind.id == HoopKindId.pair
+                  : e.hoop?.plan.element == element;
+              if (hit && run.state.birdScale < .6) {
                 miniPasses++;
+                if (pair) run.state.timed?.remaining = 0;
               }
             });
             final flight = await flyRun(
               g,
-              maxSeconds: 60,
-              untilHoops: 20,
+              maxSeconds: pair ? 120 : 60,
+              untilHoops: pair ? 60 : 20,
               onFrame: (r) {
+                if (pair && miniPasses > 3) return;
                 if (!r.director.forcedQueue.contains(element)) {
                   r.debugForce(element);
                 }
-                if (r.state.timed == null && r.state.ride == null) {
+                final pairAhead = r.spawner.hoops.any(
+                  (h) =>
+                      h.kind.id == HoopKindId.pair &&
+                      !h.resolved &&
+                      h.planeX - r.state.camX < RunConfig.worldWidth,
+                );
+                if (r.state.timed == null &&
+                    r.state.ride == null &&
+                    (!pair || pairAhead)) {
                   feature<TimedPowerupSlot>(r).start(CapsuleType.miniBird);
                 }
               },
@@ -549,7 +583,11 @@ void main() {
         final rule = DirectorTables.prd2.specials[p.kind];
         if (rule == null) continue;
         specials[row]++;
-        expect(i, greaterThanOrEqualTo(rule.from));
+        // PRD-2.2 §19.2: the early pool's Bullseye may come from index 4.
+        final pooled =
+            p.kind == HoopKindId.bullseye &&
+            d.earlyPicks[i] == EarlyPick.bullseye;
+        expect(i, greaterThanOrEqualTo(pooled ? 4 : rule.from));
         expect(i, greaterThan(coolUntil));
         final prev = last[p.kind];
         if (prev != null) expect(i - prev, greaterThanOrEqualTo(rule.minSince));
@@ -687,6 +725,17 @@ void main() {
           } else {
             expect(
               await flyUntil(g, (r) {
+                // PRD-2.2 §27: an activity on the way (a first-meet comet,
+                // …) fades a forced collectable ahead; force it again.
+                if (!used &&
+                    element.isGapElement &&
+                    !element.isCapsuleType &&
+                    !r.director.forcedQueue.contains(element) &&
+                    !r.spawner.pickups.any(
+                      (p) => p.id == element && !p.collected && !p.escaped,
+                    )) {
+                  r.debugForce(element);
+                }
                 // Guide into the real forced capsule, before other timed items
                 // unlock. The regular bot primarily plans hoop crossings.
                 if (element.isCapsuleType && r.state.timed == null) {

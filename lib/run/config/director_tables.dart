@@ -136,6 +136,9 @@ class DirectorTables {
     required this.heart,
     required this.featherWindow,
     required this.pieceWindow,
+    this.featherChance = 1,
+    this.pieceChance = 1,
+    this.earlyPool,
     required this.pairWeights,
     required this.capsuleWeights,
     required this.movingTypes20,
@@ -162,14 +165,28 @@ class DirectorTables {
   /// §3.0.3 Comet hoop schedule (10–30, then +45–60).
   final Schedule comet;
 
-  /// §3.0.3 Heart schedule (3, then +17–27).
+  /// §3.0.3 Heart schedule. PRD-2.2 §19.1: first at a random gap 5–27,
+  /// then every 17–27 gaps (was: exactly gap 3).
   final Schedule heart;
 
-  /// §3.15 Golden feather window (gap 3–12, once).
+  /// §3.15 Golden feather window. PRD-2.2 §19.3: a random gap 3–40 (was
+  /// 3–12), at most once per run.
   final (int, int) featherWindow;
 
-  /// §3.16 Puzzle piece window (gap 14–25, once).
+  /// §3.16 Puzzle piece window. PRD-2.2 §19.3: a random gap 3–40 (was
+  /// 14–25), at most once per run.
   final (int, int) pieceWindow;
+
+  /// PRD-2.2 §19.3 Chance (rolled at run start) that the golden feather
+  /// appears this run (≈ 60 %).
+  final double featherChance;
+
+  /// PRD-2.2 §19.3 Chance (rolled at run start) that a puzzle piece appears
+  /// this run (≈ 60 %).
+  final double pieceChance;
+
+  /// PRD-2.2 §19.2 The early random pool (indices 4–9); null = none.
+  final EarlyPool? earlyPool;
 
   /// §3.21 Pair gift weights.
   final Map<PairReward, int> pairWeights;
@@ -294,9 +311,22 @@ class DirectorTables {
     },
     portal: Schedule(first: (25, 50), then: (40, 60)),
     comet: Schedule(first: (10, 30), then: (45, 60)),
-    heart: Schedule(first: (3, 3), then: (17, 27)),
-    featherWindow: (3, 12),
-    pieceWindow: (14, 25),
+    // PRD-2.2 §19 (supersedes the PRD-2 §3.0.3 / §3.15 / §3.16 values).
+    heart: Schedule(first: (5, 27), then: (17, 27)),
+    featherWindow: (3, 40),
+    pieceWindow: (3, 40),
+    featherChance: 0.6,
+    pieceChance: 0.6,
+    earlyPool: EarlyPool(
+      from: 4,
+      to: 9,
+      weights: {
+        EarlyPick.starTrail: 1,
+        EarlyPick.bullseye: 1,
+        EarlyPick.angled: 1,
+        EarlyPick.nothing: 1,
+      },
+    ),
     pairWeights: {
       PairReward.shield: 25,
       PairReward.comet: 20,
@@ -314,6 +344,41 @@ class DirectorTables {
     rail: LayoutConfig.rail,
     swing: LayoutConfig.swing,
   );
+}
+
+/// PRD-2.2 §19.2 one option of the early random pool.
+enum EarlyPick {
+  /// A Star Trail in the gap after the slot.
+  starTrail,
+
+  /// The slot is a Bullseye Ring.
+  bullseye,
+
+  /// The slot is an angled (tilted) normal ring.
+  angled,
+
+  /// Nothing extra (a quiet index).
+  nothing,
+}
+
+/// PRD-2.2 §19.2 For slot / gap indices [from]–[to] the director makes one
+/// equal-chance draw per index from [weights] instead of the special-hoop
+/// and optional-gap-item rolls. Bullseye and the angled ring may come from
+/// index [from] here (their normal unlocks stay for the regular tables);
+/// the usual exclusivity and cooldowns still apply.
+class EarlyPool {
+  const EarlyPool({required this.from, required this.to, required this.weights});
+
+  /// PRD-2.2 §19.2 First index of the pool (4).
+  final int from;
+
+  /// PRD-2.2 §19.2 Last index of the pool (9).
+  final int to;
+
+  /// PRD-2.2 §19.2 The options, equal weight.
+  final Map<EarlyPick, int> weights;
+
+  bool covers(int i) => i >= from && i <= to;
 }
 
 /// §3.11 Rail slide: axis range (deg), half travel (pt), speed (pt/s).

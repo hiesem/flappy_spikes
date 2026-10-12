@@ -157,8 +157,13 @@ void main() {
       final allowedSteps = {-20.0, -10.0, 15.0, 30.0, 45.0};
       var tilted = 0, moving = 0;
       for (var seed = 1; seed <= 40; seed++) {
-        for (final (s, _) in fly(director(seed: seed), 100)) {
-          if (s.index < 10) expect(s.tiltDeg, 0);
+        final d = director(seed: seed);
+        for (final (s, _) in fly(d, 100)) {
+          // PRD-2.2 §19.2: the early pool's angled ring may come from 4.
+          if (s.index < 10 && d.earlyPicks[s.index] != EarlyPick.angled) {
+            expect(s.tiltDeg, 0);
+          }
+          if (s.index < 4) expect(s.tiltDeg, 0);
           if (s.index < 20) expect(s.motion, isNull);
           if (s.kind != HoopKindId.normal || s.cometHang) {
             expect(s.tiltDeg, 0);
@@ -172,7 +177,12 @@ void main() {
           if (s.motion != null) {
             moving++;
             if (s.index < 45) {
-              expect([MotionType.rail, MotionType.swing], contains(s.motion!.type));
+              // A rail without room for its minimum travel rocks in place
+              // (§3.11 fairness, WP-1b); PRD-2.2 §19 courses hit that too.
+              expect(
+                [MotionType.rail, MotionType.swing, MotionType.rock],
+                contains(s.motion!.type),
+              );
             }
           }
         }
@@ -274,10 +284,15 @@ void main() {
         'than their min distance', () {
       for (var seed = 1; seed <= 60; seed++) {
         final last = <HoopKindId, int>{};
-        for (final (s, _) in fly(director(seed: seed), 150)) {
+        final d = director(seed: seed);
+        for (final (s, _) in fly(d, 150)) {
           final rule = DirectorTables.prd2.specials[s.kind];
           if (rule == null) continue;
-          expect(s.index, greaterThanOrEqualTo(rule.from));
+          // PRD-2.2 §19.2: the early pool's Bullseye may come from 4.
+          final pooled =
+              s.kind == HoopKindId.bullseye &&
+              d.earlyPicks[s.index] == EarlyPick.bullseye;
+          expect(s.index, greaterThanOrEqualTo(pooled ? 4 : rule.from));
           final prev = last[s.kind];
           if (prev != null) expect(s.index - prev, greaterThanOrEqualTo(rule.minSince));
           last[s.kind] = s.index;
@@ -347,7 +362,8 @@ void main() {
       }
     });
 
-    test('§3.0.3 saw: +28 pt opening, never right next to a FEVER ring, '
+    test('§3.0.3 saw: normal opening (PRD-2.2 §25; PRD-2 had +28 pt), never '
+        'right next to a FEVER ring, '
         'design never the same twice in a row', () {
       for (var seed = 1; seed <= 40; seed++) {
         final plans = fly(director(seed: seed), 150).map((e) => e.$1).toList();
@@ -355,7 +371,7 @@ void main() {
         SwitchDesign? lastSwitch;
         for (final s in plans) {
           if (s.kind == HoopKindId.saw) {
-            expect(s.opening, closeTo(RunConfig.openingFor(s.index) + 28, 1e-9));
+            expect(s.opening, closeTo(RunConfig.openingFor(s.index), 1e-9));
             expect(s.extra, isNot(lastSaw));
             lastSaw = s.extra! as SawDesign;
             if (s.index > 0) expect(plans[s.index - 1].kind, isNot(HoopKindId.fever));
@@ -474,16 +490,22 @@ void main() {
   });
 
   group('§3.0.3 gap order', () {
-    test('§3.0.3 heart: first at gap 3 on the line, then every 17–27 gaps', () {
+    test('§3.0.3 heart (PRD-2.2 §19.1): first at a random gap 5–27, then '
+        'every 17–27 gaps; ±50 pt off the line (§19.4)', () {
       for (var seed = 1; seed <= 40; seed++) {
         final hearts = <int>[];
-        for (final (s, g) in fly(director(seed: seed), 120)) {
+        final d = director(seed: seed);
+        final first = d.heartAt;
+        expect(first, inInclusiveRange(5, 27));
+        for (final (s, g) in fly(d, 120)) {
           for (final it in g.items.where((i) => i.kind == ElementId.heart)) {
             hearts.add(s.index);
-            if (hearts.length == 1) expect(it.lineOffset, 0);
+            expect(it.lineOffset.abs(), lessThanOrEqualTo(50));
           }
         }
-        expect(hearts.first, 3);
+        // A taken gap pushes it to the next free one.
+        expect(hearts.first, greaterThanOrEqualTo(first));
+        expect(hearts.first - first, lessThan(4));
         for (var k = 1; k < hearts.length; k++) {
           expect(hearts[k] - hearts[k - 1], greaterThanOrEqualTo(17));
         }
@@ -499,15 +521,17 @@ void main() {
         ctxFor: (_) => DirectorContext.open(711, extraLifeActive: true),
       );
       expect(plans.expand((e) => e.$2.items).where((i) => i.kind == ElementId.heart), isEmpty);
-      expect(d.heartAt, greaterThan(3 + 17));
+      expect(d.heartAt, greaterThan(5 + 17));
     });
 
-    test('§3.15 / §3.16 feather once in gaps 3–12 (only while < 3 held), '
-        'piece once in 14–25 (a missing piece), 0.65 × spacing after, 64–200 '
-        'pt above', () {
+    test('§3.15 / §3.16 (PRD-2.2 §19.3 / §19.4) feather at most once in '
+        'gaps 3–40 (only while < 3 held), piece at most once in 3–40 (a '
+        'missing piece), never in the same / neighbouring gap; 30–70 % along '
+        'the gap, ±50 pt off the line', () {
       for (var seed = 1; seed <= 40; seed++) {
+        final d = director(seed: seed);
         final plans = fly(
-          director(seed: seed),
+          d,
           80,
           ctxFor: (_) => DirectorContext.open(711, puzzleMask: 0x5),
         );
@@ -521,17 +545,28 @@ void main() {
             for (final it in g.items)
               if (it.kind == ElementId.puzzlePiece) (s, it),
         ];
-        expect(feathers, hasLength(1));
-        expect(pieces, hasLength(1));
+        expect(feathers, hasLength(d.featherThisRun ? 1 : 0));
+        expect(pieces, hasLength(d.pieceThisRun ? 1 : 0));
         // "Pushed to the next free gap": at or after the window start.
-        expect(feathers.single.$1.index, greaterThanOrEqualTo(3));
-        expect(pieces.single.$1.index, greaterThanOrEqualTo(14));
-        expect([1, 3], contains(pieces.single.$2.extra));
+        for (final f in feathers) {
+          expect(f.$1.index, greaterThanOrEqualTo(3));
+          expect(f.$1.index, greaterThanOrEqualTo(d.featherAt));
+        }
+        for (final p in pieces) {
+          expect(p.$1.index, greaterThanOrEqualTo(3));
+          expect([1, 3], contains(p.$2.extra));
+        }
+        if (feathers.isNotEmpty && pieces.isNotEmpty) {
+          expect(
+            (feathers.single.$1.index - pieces.single.$1.index).abs(),
+            greaterThan(1),
+          );
+        }
         for (final (s, it) in [...feathers, ...pieces]) {
-          expect(it.trackX, closeTo(s.lastRingX + 0.65 * 310, 1e-6));
-          final up = s.centreY - it.y!;
-          expect(up <= 200 + 1e-6, isTrue);
-          expect(up >= 64 - 1e-6 || it.y == RunConfig.stripHeight + 40, isTrue);
+          expect(it.y, isNull, reason: 'on the line, resolved by the spawner');
+          final u = (it.trackX - s.lastRingX) / 310;
+          expect(u, inInclusiveRange(0.3 - 1e-9, 0.7 + 1e-9));
+          expect(it.lineOffset.abs(), lessThanOrEqualTo(50));
         }
       }
       final none = fly(
@@ -580,11 +615,16 @@ void main() {
       for (var seed = 1; seed <= 60; seed++) {
         final last = <ElementId, int>{};
         var shields = 0;
-        for (final (s, g) in fly(director(seed: seed), 150)) {
+        final d = director(seed: seed);
+        for (final (s, g) in fly(d, 150)) {
           for (final it in g.items) {
             final rule = DirectorTables.prd2.gapItems[it.kind];
             if (rule == null) continue;
-            expect(s.index, greaterThanOrEqualTo(rule.from));
+            // PRD-2.2 §19.2: the early pool's Star Trail may come from 4.
+            final pooled =
+                it.kind == ElementId.starTrail &&
+                d.earlyPicks[s.index] == EarlyPick.starTrail;
+            expect(s.index, greaterThanOrEqualTo(pooled ? 4 : rule.from));
             final prev = last[it.kind];
             if (prev != null) {
               expect(s.index - prev, greaterThanOrEqualTo(rule.minSince));
@@ -623,13 +663,24 @@ void main() {
     });
 
     test('§3.0.3 budget: no special at hoops 0–7 and no optional item at '
-        'gaps 0–4', () {
+        'gaps 0–4 (PRD-2.2 §19.2: but the early pool at 4–9)', () {
       for (var seed = 1; seed <= 100; seed++) {
-        for (final (s, g) in fly(director(seed: seed), 8)) {
-          expect(s.kind, HoopKindId.normal);
-          if (s.index < 5) {
-            for (final it in g.items) {
-              expect([ElementId.heart, ElementId.feather], contains(it.kind));
+        final d = director(seed: seed);
+        for (final (s, g) in fly(d, 8)) {
+          final pick = d.earlyPicks[s.index];
+          if (s.kind != HoopKindId.normal) {
+            expect(s.kind, HoopKindId.bullseye);
+            expect(pick, EarlyPick.bullseye);
+          }
+          if (s.index < 4) expect(pick, isNull);
+          for (final it in g.items) {
+            if (it.kind == ElementId.starTrail) {
+              expect(pick, EarlyPick.starTrail);
+            } else {
+              expect(
+                [ElementId.heart, ElementId.feather, ElementId.puzzlePiece],
+                contains(it.kind),
+              );
             }
           }
         }
@@ -670,7 +721,9 @@ void main() {
         }
       }
       double pct(String k) => 100 * n[k]![0] / n[k]![1];
-      expect(pct('0-7'), 0);
+      // PRD-2.2 §19.2: the early pool's Bullseye (¼ of the draws at 4–7,
+      // ≥ 6 apart) is the only special below hoop 8 now.
+      expect(pct('0-7'), closeTo(9, 3));
       expect(pct('8-19'), closeTo(18.1, 4));
       expect(pct('20-49'), closeTo(25.5, 4));
       expect(pct('50+'), closeTo(32.1, 4));

@@ -77,12 +77,23 @@ class LuckySpinHoopKind extends HoopKind {
     );
     h.front.paintFront = (canvas) {
       NormalHoopKind.paintRings(canvas, h, skin, front: true, t: c.s.runClock);
-      paintWheel(
+      void paint() => paintWheel(
         canvas,
         Offset(0, -RingPainter.ryFor(h.opening) + h.rings.first),
         wheel.angle,
         c.game.foregroundColor,
       );
+      if (!h.rewardStripped) {
+        paint();
+      } else if (h.rewardAlpha > 0) {
+        // PRD-2.2 §27.3 the wheel fades, the ring stays.
+        canvas.saveLayer(
+          null,
+          Paint()..color = Color.fromRGBO(0, 0, 0, h.rewardAlpha),
+        );
+        paint();
+        canvas.restore();
+      }
     };
   }
 
@@ -153,6 +164,8 @@ class LuckySpinHoopKind extends HoopKind {
 
   @override
   void onPass(Hoop h, PassInfo p, RunContext c) {
+    // PRD-2.2 §27.3 an activity stripped the wheel: a normal pass.
+    if (h.rewardStripped) return;
     _wheels[h]?.release();
     c.sfx(Sfx.luckyWhoosh);
   }
@@ -244,6 +257,7 @@ class LuckyWheel extends Component {
       }
     }
     if (angle != before &&
+        !hoop.rewardStripped && // PRD-2.2 §27.3 a faded wheel is silent
         LuckySpinHoopKind.sliceAt(angle) != LuckySpinHoopKind.sliceAt(before) &&
         _onScreen) {
       c.sfx(Sfx.luckyTick);

@@ -180,7 +180,8 @@ void main() {
             reason: 'the switch keeps the streak',
           );
           final coins = events.whereType<CoinsEarned>().toList();
-          expect(coins.single.amount, 1);
+          // A hatched chick (a seeded egg on the way) doubles it.
+          expect(coins.single.amount, coins.single.eggX2 ? 2 : 1);
           expect(coins.single.source, CoinSource.switchRing);
           expect(sfx, contains(SwitchConfig.touchSound(design).name));
           expect(h.kind.autopilotTarget(h, run.state, 0).preTarget, isNull);

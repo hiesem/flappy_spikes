@@ -141,7 +141,8 @@ void main() {
       expect(PickupRadii.forElement(ElementId.heart), 16);
       expect(PickupRadii.forElement(ElementId.shield), 18);
       expect(PickupRadii.forElement(ElementId.puzzlePiece), 22);
-      expect(PickupRadii.forElement(ElementId.piggyCoins), 10);
+      // PRD-2.2 §26: the 16 pt piggy coin catches at 14 (was 10).
+      expect(PickupRadii.forElement(ElementId.piggyCoins), 14);
       expect(PickupRadii.forElement(ElementId.starTrail), 10);
       expect(PickupRadii.forElement(ElementId.fireflySwarm), 16);
       expect(PickupRadii.forElement(ElementId.hourglass), 18);

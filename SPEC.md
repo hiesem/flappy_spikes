@@ -772,6 +772,12 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   +28 pt; a clean pass is an ordinary perfect hoop. The Black Hole pulls the
   bird toward its rim within 34 pt (260 pt/s², 570 at the inhale peak, 0.9 s
   every 3.4 s) and bends the spike strips (visual only). Rides ignore saw rims.
+- DEVIATION (PRD-2.2 §25): saw rings have exactly the normal opening at that
+  hoop (`sawExtraOpening = 0`, was +28 pt; Big Hoops still enlarges them), and
+  the saw / FEVER decoration (glow, swirl, ripples, sparks, crystals, stars,
+  plasma loops, beam, halo) scales by `ry / ryDesign` (designed at 146 pt saw,
+  118 pt FEVER). Rim thickness, rim-end colliders and the 34 pt pull range are
+  unchanged; the portal ring stays 118 pt.
 - DEVIATION (PRD-2 §3.0.5, themed deaths): a themed death hands over to the
   revive offer / results after its moment + up to 1.5 s, at most 2.2 s (switch
   crashes have no held moment: 1.5 s); the Black Hole hands over 0.6 s after
@@ -878,6 +884,10 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   all 20 are caught or missed (Fix P3 R1, S6-41). During a squeeze window
   no new bank coin fields or firefly swarms are placed; they wait for the
   reopening (§3.17, S6-46).
+- DEVIATION (PRD-2.2 §26): bank coins are 16 pt (was 8) with a 14 pt catch
+  radius (was 10; the miss rule uses it too); a caught coin leaves at 16 pt
+  and shrinks into the HUD piggy over 0.35 s. Positions, spin and the 18 pt
+  bulge are unchanged.
 - DEVIATION (PRD-2 §3.29 / §5.28, new collectable): a **Firefly Jar** pickup
   (animated: bob ±5, sway ±7°, lime glow, rays, 4 fireflies inside) starts a
   jar ("FIREFLY JAR"); from then on each following gap has a swarm of 7
@@ -1009,3 +1019,63 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `test/run/screens/s3_15_bonus_screen_test.dart`,
   `test/run/items/s3_15_s3_16_collect_autopilot_test.dart`; shots in
   `test/run/shots/collect_shots_test.dart`.
+
+## PRD-2.2 run director: scroll-in, random opening, one bonus at a time (WP-G2, 2026-10-12)
+
+- DEVIATION (PRD-2.2 §15, P22-G2): **nothing pops into view.** The run
+  director plans **one slot ahead**: slot B (kind, centre, attached items,
+  the gap after it) is planned when the hoop before it spawns, one full gap
+  before B's own hoop spawns (still 60 pt past the right edge). Every line
+  item between two hoops (heart, shield, capsule, Star Trail, …) and every
+  attached item (the switch, the comet star) is created off-screen and
+  scrolls in. Accepted side effect: decisions that react to the run state
+  (a heart after a lost life, the Big Hoops multiplier, the squeeze window)
+  are taken ≈ 1.5 s (one gap) earlier. A ride or a revive that starts after
+  the planned-ahead slot was planned turns that slot into a plain hoop
+  (§3.0.3 slot order 1–2 keep holding). The run's first slot is never a
+  switch ring (its switch would be on screen). Feature follow-ups placed at
+  a grab (the piggy's own coins, the jar's first swarm) that start inside
+  the screen **pop in** (scale 0 → 1.15 → 1 over 0.25 s + a small sparkle);
+  the director's follow-up fields come with the normal gaps, off-screen.
+- DEVIATION (PRD-2.2 §19, P22-G2; supersedes PRD-2 §3.0.3 / §3.15 / §3.16
+  table values): **a different opening every run.** The first heart comes at
+  a **random gap 5–27** (then every 17–27, as before). Indices **4–9** make
+  one equal-chance draw each from {Star Trail, Bullseye, angled ring,
+  nothing} (instead of the special / optional rolls; Bullseye and the angled
+  ring may come from 4 here; min distances still hold). The **golden feather
+  and the puzzle piece come in ≈ 60 % of runs each** (rolled at run start),
+  at a random gap 3–40, at most once, never in the same or a neighbouring
+  gap; `run_end` carries `feather` / `piece` 0 / 1. **Single pickups**
+  (heart, shield, capsule, egg, jar, piggy, feather, piece) sit at a random
+  point **30–70 % along the gap, up to ±50 pt off the line** (replacing
+  mid-gap, the heart / shield off-line offsets and the feather / piece
+  detour), kept 40 pt inside the teeth; patterns keep their shape (a Star
+  Trail's arc and a coin line's bulge stay inside the margin too), the
+  piggy coins' and swarms' start moves inside the gap.
+- DEVIATION (PRD-2.2 §27, P22-G2; supersedes PRD-2 §3.0.3 "Exclusivity" and
+  "Rides and what is already spawned"): **one bonus at a time.** Activities
+  are a comet ride, a portal ride, a Piggy Bank run, a Firefly Jar run and a
+  capsule power-up (`RunState.activity`, derived from the features' state).
+  While one runs and for **2 hoops** after it, no reward item is planned
+  (heart, shield, feather, piece, egg, capsule, Star Trail, piggy, jar, the
+  comet-star hoop, pair, Lucky Spin, FEVER, portal); obstacle rings still
+  come. Scheduled items (hearts, the comet hoop, the portal, the owed
+  feather / piece) wait for the first allowed slot / gap. When an activity
+  starts, every reward item ahead fades out in 0.2 s; the planned-ahead slot
+  becomes plain if it was a reward slot (a portal / comet hoop there stays
+  due); a pair, Lucky Spin or FEVER ring on screen fades its reward parts and
+  passes as a normal ring; a portal on screen fades out. The feather and the
+  piece are owed and placed again; everything else is just back in the draw.
+  Carrying the egg / chick, a shield, an extra life, Big Hoops, the fire and
+  FEVER are not activities.
+- Call (§19 / §26, P22-G2): piggy coins sit **45 pt apart** in a field
+  (approved mock B), centred in it; the own-gap coins start 20 pt after the
+  piggy, and when the piggy sits too late in its gap for them to end 40 pt
+  before the next hoop they go in the gap after that hoop instead.
+- Call (§25.1, P22-G2): the portal ring is a fixed **118 pt** at every hoop
+  (it had taken the shrinking opening).
+- Tests: `test/p22/s15_scroll_in_test.dart`,
+  `test/p22/s19_random_opening_test.dart`,
+  `test/p22/s27_one_bonus_test.dart`,
+  `test/p22/s27_one_bonus_director_test.dart`; shots
+  `test/p22/s15_s23_s27_screenshot_test.dart` (→ `build/menu_shots/p22/`).

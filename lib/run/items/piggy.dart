@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import '../../game/sound.dart';
 import '../../menu/wallet.dart';
 import '../config/piggy_config.dart';
+import '../config/run_config.dart';
 import '../director/plans.dart';
 import '../effects/collect_fx.dart';
 import '../effects/hud_fetch.dart';
@@ -118,22 +119,70 @@ class PiggyFeature extends RunFeature {
       ),
     );
     if (piggy == null) return;
+    c.run.spawner.spawnItem(_ownField(c, piggy));
+  }
+
+  /// PRD-2.2 §26 / §19.4 the 4 own-gap coins, 45 pt apart: from 20 pt after
+  /// the piggy, on the line toward the next hoop. When the piggy sits too
+  /// late in its gap for them to end 40 pt before the next hoop (§19.4
+  /// places it 30–70 % along), they go in the gap after that hoop instead
+  /// (on its line), so the bank's coins still run on without overlapping
+  /// the ring; there they are usually still off-screen and scroll in.
+  GapItemPlan _ownField(RunContext c, Pickup piggy) {
+    const n = PiggyConfig.ownGapCoins;
+    const len = (n - 1) * RunConfig.piggyCoinSpacing;
     final next = c.run.spawner.nextHoopAhead();
     final x0 = piggy.position.x + PiggyConfig.ownGapStart;
-    final x1 = next != null
-        ? next.plan.trackX - PiggyConfig.ownGapEnd
-        : x0 + PiggyConfig.ownGapFallback;
     final y0 = piggy.position.y;
-    final y1 = next?.plan.centreY ?? y0;
-    c.run.spawner.spawnItem(
-      GapItemPlan(
+    if (next == null) {
+      return GapItemPlan(
         kind: ElementId.piggyCoins,
         trackX: x0,
-        toTrackX: x1,
+        toTrackX: x0 + PiggyConfig.ownGapFallback,
         y: y0,
-        toY: y1,
-        extra: PiggyConfig.ownGapCoins,
-      ),
+        toY: y0,
+        extra: n,
+      );
+    }
+    final x1 = next.plan.trackX - PiggyConfig.ownGapEnd;
+    final y1 = next.plan.centreY;
+    double line(double ax, double ay, double bx, double by, double x) =>
+        bx == ax ? ay : ay + (by - ay) * ((x - ax) / (bx - ax)).clamp(0, 1);
+    if (x1 - x0 >= len) {
+      return GapItemPlan(
+        kind: ElementId.piggyCoins,
+        trackX: x0,
+        toTrackX: x0 + len,
+        y: y0,
+        toY: line(x0, y0, x1, y1, x0 + len),
+        extra: n,
+      );
+    }
+    // The gap after the next hoop: its line runs to the hoop after it (or
+    // the planned-ahead slot).
+    final ax = next.plan.lastRingX;
+    double bx = ax + RunConfig.spacing, by = y1;
+    final want = next.plan.index + 1;
+    final after = c.run.spawner.hoops
+        .where((h) => h.plan.index == want)
+        .firstOrNull;
+    final ahead = c.run.spawner.plannedAhead;
+    if (after != null) {
+      bx = after.plan.trackX;
+      by = after.plan.centreY;
+    } else if (ahead != null && ahead.index == want) {
+      bx = ahead.trackX;
+      by = ahead.centreY;
+    }
+    final mid = (ax + bx) / 2;
+    final from = mid - len / 2, to = mid + len / 2;
+    return GapItemPlan(
+      kind: ElementId.piggyCoins,
+      trackX: from,
+      toTrackX: to,
+      y: line(ax, y1, bx, by, from),
+      toY: line(ax, y1, bx, by, to),
+      extra: n,
     );
   }
 

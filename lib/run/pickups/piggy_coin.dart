@@ -27,8 +27,8 @@ class PiggyCoinKind extends PickupKind {
   Pickup build(GapItemPlan p, RunContext c) => PiggyCoin(p, c);
 }
 
-/// §5.27 / §3.28 a field of `extra` spinning coins. Catching one — the bird
-/// within 10 pt (§3.0.3) — puts it in the bank; a coin that passes the bird
+/// §5.27 / §3.28 a field of `extra` spinning 16 pt coins. Catching one —
+/// the bird within 14 pt (PRD-2.2 §26; was 10) — puts it in the bank; a coin that passes the bird
 /// uncaught is **missed** and gone (each one emits `PickupEscaped`). While
 /// the piggy is gone (`RunState.piggy == null`, e.g. after a death or a
 /// portal ride cleared them) the remaining coins fly away unjudged. Caught
@@ -69,15 +69,26 @@ class PiggyCoin extends Pickup with HasGameReference<FlappySpikesGame> {
       _span(p).abs() / 2 + PickupRadii.piggyCoin;
   static double _midX(GapItemPlan p) => (p.trackX + (p.toTrackX ?? p.trackX)) / 2;
 
-  /// The track position of coin [i]: u = (i + 1) / (n + 1) along the field,
-  /// the line plus the 18 pt upward bulge.
+  /// The track position of coin [i]. PRD-2.2 §26 (approved mock B): the
+  /// coins sit `RunConfig.piggyCoinSpacing` (45 pt) apart, centred in the
+  /// field (closer only when the field is shorter), on the line from
+  /// (`trackX`, `y`) to (`toTrackX`, `toY`) plus the 18 pt upward bulge at
+  /// u = (i + 1) / (n + 1) (mock `-sin(u·π)·18`).
   Offset coinAt(int i) {
-    final u = (i + 1) / (count + 1);
+    final n = count;
     final x0 = plan!.trackX, x1 = plan!.toTrackX ?? plan!.trackX;
     final y0 = plan!.y ?? 0, y1 = plan!.toY ?? y0;
+    final span = x1 - x0;
+    final step = n > 1
+        ? math.min(RunConfig.piggyCoinSpacing, span.abs() / (n - 1)) *
+              span.sign
+        : 0.0;
+    final x = (x0 + x1) / 2 + (i - (n - 1) / 2) * step;
+    final v = span == 0 ? 0.0 : (x - x0) / span;
+    final ub = (i + 1) / (n + 1);
     return Offset(
-      x0 + (x1 - x0) * u,
-      y0 + (y1 - y0) * u - math.sin(math.pi * u) * PiggyConfig.coinBulge,
+      x,
+      y0 + (y1 - y0) * v - math.sin(math.pi * ub) * PiggyConfig.coinBulge,
     );
   }
 

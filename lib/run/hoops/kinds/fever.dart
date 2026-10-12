@@ -48,39 +48,56 @@ class FeverHoopKind extends HoopKind {
     final state = FeverRingState(h, c);
     _states[h] = state;
     h.add(state);
+    void paint(Canvas canvas, {required bool front}) =>
+        FeverRingPainter.paint(
+          canvas,
+          h.opening,
+          state.t,
+          state.seed,
+          state.flare,
+          front: front,
+        );
     h.paintBack = (canvas) {
       if (h.look.missed) {
         NormalHoopKind.paintRings(canvas, h, '', front: false);
         return;
       }
-      FeverRingPainter.paint(
-        canvas,
-        h.opening,
-        state.t,
-        state.seed,
-        state.flare,
-        front: false,
-      );
+      if (h.rewardStripped) {
+        // PRD-2.2 §27.3 the plasma fades, the ring stays plain.
+        NormalHoopKind.paintStripped(
+          canvas,
+          h,
+          c,
+          front: false,
+          reward: () => paint(canvas, front: false),
+        );
+        return;
+      }
+      paint(canvas, front: false);
     };
     h.front.paintFront = (canvas) {
       if (h.look.missed) {
         NormalHoopKind.paintRings(canvas, h, '', front: true);
         return;
       }
-      FeverRingPainter.paint(
-        canvas,
-        h.opening,
-        state.t,
-        state.seed,
-        state.flare,
-        front: true,
-      );
+      if (h.rewardStripped) {
+        NormalHoopKind.paintStripped(
+          canvas,
+          h,
+          c,
+          front: true,
+          reward: () => paint(canvas, front: true),
+        );
+        return;
+      }
+      paint(canvas, front: true);
     };
   }
 
   @override
   void onPass(Hoop h, PassInfo p, RunContext c) {
     if (!p.perfect) return; // Q50: a rim touch is a normal pass
+    if (h.rewardStripped) return; // PRD-2.2 §27.3 a plain ring now
     _states[h]?.flare = 1;
     c.sfx(Sfx.feverPass);
     final f = h.frame();
@@ -150,9 +167,11 @@ class FeverRingState extends Component {
     t += dt;
     if (flare > 0) flare = math.max(0, flare - dt * FeverConfig.flareDecay);
     if (hoop.look.missed) return;
+    if (hoop.rewardStripped) return; // PRD-2.2 §27.3 no more sparks
     final x = hoop.planeX - c.s.camX;
     if (x < -60 || x > RunConfig.worldWidth + 60) return;
     final ry = RingPainter.ryFor(hoop.opening);
+    final d = FeverRingPainter.decorScaleFor(hoop.opening); // PRD-2.2 §25
     final at = hoop.frame().toWorld(Vector2(0, hoop.rings.first));
     final r = c.cosmetic;
     _sparkAcc += dt * FeverConfig.sparksPerSecond;
@@ -160,11 +179,11 @@ class FeverRingState extends Component {
       _sparkAcc -= 1;
       c.run.particles.spawn(
         shape: ParticleShape.twinkle,
-        x: at.x - 8,
+        x: at.x - 8 * d,
         y: at.y + (r.nextDouble() - .5) * ry * 1.6,
         vx: -30 - r.nextDouble() * 40,
         vy: (r.nextDouble() - .5) * 10,
-        w: 5 + r.nextDouble() * 5,
+        w: (5 + r.nextDouble() * 5) * d,
         color: r.nextBool() ? const Color(0xFFFFF59D) : const Color(0xFFFFFFFF),
         life: .9,
       );
@@ -173,14 +192,14 @@ class FeverRingState extends Component {
     while (_emberAcc >= 1) {
       _emberAcc -= 1;
       final a = r.nextDouble() * 2 * math.pi;
-      final (ex, ey) = FeverRingPainter.ellPt(ry, a, 5);
+      final (ex, ey) = FeverRingPainter.ellPt(ry, a, 5 * d);
       c.run.particles.spawn(
         shape: ParticleShape.circle,
         x: at.x + ex,
         y: at.y + ey,
         vx: math.cos(a) * 40,
         vy: math.sin(a) * 40,
-        w: 4,
+        w: 4 * d,
         color: r.nextBool() ? const Color(0xFFFFD54A) : const Color(0xFFFF6D00),
         life: .5,
       );
@@ -193,6 +212,20 @@ class FeverRingState extends Component {
 /// glowing outline, the boiling plasma beads and the inner gold ring.
 abstract final class FeverRingPainter {
   static const double rx = RingPainter.rx;
+
+  /// PRD-2.2 §25 The decoration scale of a FEVER ring with [opening]:
+  /// `ry / ryDesign` (designed at 118 pt). The halo, beam, streaks, plasma
+  /// loops, sparkles and embers are multiplied by it; the rim, outline,
+  /// beads and inner gold ring are not.
+  static double decorScaleFor(double opening) =>
+      RingPainter.ryFor(opening) / FeverConfig.ryDesign;
+
+  /// PRD-2.2 §25 The vertical half extent (pt from the centre) of the
+  /// decoration's outer bounds (the halo, the widest part; flare 0) for a
+  /// ring with [opening].
+  static double decorExtent(double opening) =>
+      RingPainter.ryFor(opening) +
+      FeverConfig.haloExtra * decorScaleFor(opening);
 
   /// The mock's deterministic `rnd(n)` (cosmetic only).
   static double rnd(num n) {
@@ -226,18 +259,20 @@ abstract final class FeverRingPainter {
     required bool front,
   }) {
     final ry = RingPainter.ryFor(opening);
+    final d = decorScaleFor(opening); // PRD-2.2 §25
     if (!front) {
-      _aura(canvas, ry, t, seed, flare, front: false);
+      _aura(canvas, ry, d, t, seed, flare, front: false);
       _ring(canvas, ry, t, seed, front: false);
     } else {
       _ring(canvas, ry, t, seed, front: true);
-      _aura(canvas, ry, t, seed, flare, front: true);
+      _aura(canvas, ry, d, t, seed, flare, front: true);
     }
   }
 
   static void _aura(
     Canvas canvas,
     double ry,
+    double d,
     double t,
     int seed,
     double fl, {
@@ -245,7 +280,7 @@ abstract final class FeverRingPainter {
   }) {
     if (!front) {
       // Warm halo (ring + 44 pt).
-      final hr = ry + FeverConfig.haloExtra;
+      final hr = ry + FeverConfig.haloExtra * d;
       final ha = (FeverConfig.haloAlpha + .25 * fl).clamp(0.0, 1.0);
       _p
         ..style = PaintingStyle.fill
@@ -256,7 +291,7 @@ abstract final class FeverRingPainter {
         ]);
       canvas.drawRect(Rect.fromCircle(center: Offset.zero, radius: hr), _p);
       // The light beam toward the bird with drifting streaks.
-      final len = FeverConfig.beamLength * (1 + .35 * fl);
+      final len = FeverConfig.beamLength * (1 + .35 * fl) * d;
       final ba = FeverConfig.beamAlpha;
       _p.shader = Gradient.linear(
         Offset.zero,
@@ -268,7 +303,7 @@ abstract final class FeverRingPainter {
         ],
         const [0, .6, 1],
       );
-      const sp = FeverConfig.beamSpread;
+      final sp = FeverConfig.beamSpread * d;
       canvas.drawPath(
         Path()
           ..moveTo(0, -ry + 5)
@@ -281,14 +316,18 @@ abstract final class FeverRingPainter {
       _p.shader = null;
       _p
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.6
+        ..strokeWidth = 1.6 * d
         ..strokeCap = StrokeCap.butt;
       for (var i = 0; i < FeverConfig.beamStreaks; i++) {
         final u = (t * .7 + i / FeverConfig.beamStreaks) % 1;
         final y = (rnd(i * 3 + seed) - .5) * ry * 1.6;
-        final x = -6 - u * len;
+        final x = -6 * d - u * len;
         _p.color = Color.fromRGBO(255, 255, 255, .75 * (1 - u));
-        canvas.drawLine(Offset(x, y), Offset(x - 12 - 8 * rnd(i), y), _p);
+        canvas.drawLine(
+          Offset(x, y),
+          Offset(x - (12 + 8 * rnd(i)) * d, y),
+          _p,
+        );
       }
     }
     // Plasma loops rising off the rim (prominences).
@@ -301,19 +340,19 @@ abstract final class FeverRingPainter {
       if (_isFront(am) != front) continue;
       final rise = math.sin(ph * math.pi);
       if (rise <= .01) continue;
-      final (x0, y0) = ellPt(ry, a0, 3);
-      final (x1, y1) = ellPt(ry, a0 + span, 3);
-      final (mx, my) = ellPt(ry, am, 10 + FeverConfig.loopHeight * rise);
+      final (x0, y0) = ellPt(ry, a0, 3 * d);
+      final (x1, y1) = ellPt(ry, a0 + span, 3 * d);
+      final (mx, my) = ellPt(ry, am, (10 + FeverConfig.loopHeight * rise) * d);
       final path = Path()
         ..moveTo(x0, y0)
         ..quadraticBezierTo(mx, my, x1, y1);
       _p
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
-        ..strokeWidth = FeverConfig.loopWidth
-        ..maskFilter = const MaskFilter.blur(
+        ..strokeWidth = FeverConfig.loopWidth * d
+        ..maskFilter = MaskFilter.blur(
           BlurStyle.normal,
-          FeverConfig.glowBlur / 2,
+          FeverConfig.glowBlur / 2 * d,
         )
         ..color = const Color(0xFFFF3D00).withValues(alpha: .85 * rise);
       canvas.drawPath(path, _p);
@@ -322,7 +361,7 @@ abstract final class FeverRingPainter {
         ..color = FeverConfig.loopColor.withValues(alpha: .85 * rise);
       canvas.drawPath(path, _p);
       _p
-        ..strokeWidth = math.max(1, FeverConfig.loopWidth / 3)
+        ..strokeWidth = math.max(1, FeverConfig.loopWidth / 3 * d)
         ..color = FeverConfig.loopCore.withValues(alpha: rise);
       canvas.drawPath(path, _p);
     }

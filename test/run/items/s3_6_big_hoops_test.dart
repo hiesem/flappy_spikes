@@ -103,9 +103,10 @@ void main() {
       () => createRunTestGame(worldHeight: h, seed: 21),
       gameSize: Vector2(320, h),
     ).testGameWidget(
-      '§3.6 ($h) every hoop spawned is sized by the multiplier at its spawn '
-      'time (1.5 → eased → 1), capped to the band, gold only while > 1; a '
-      'hoop never changes size on screen',
+      '§3.6 ($h) every hoop spawned is sized by the multiplier when it is '
+      'planned (PRD-2.2 §15: one gap before it spawns) (1.5 → eased → 1), '
+      'capped to the band, gold only while > 1; a hoop never changes size on '
+      'screen',
       setUp: (g, _) => boot(g),
       verify: (game, _) async {
         final run = await startRun(game, starter: Powerup.bigHoops);
@@ -125,6 +126,10 @@ void main() {
           f.plan.duringRide,
         ));
         final sizes = <Object, double>{};
+        // PRD-2.2 §15 the runClock at which each slot was planned.
+        final planned = <int, double>{
+          for (final p in run.spawner.slotLog) p.index: 0,
+        };
         run.events.on<HoopSpawned>((e) {
           spawned.add((
             run.state.runClock,
@@ -144,6 +149,9 @@ void main() {
             game,
             maxSeconds: b.duration + 6 - run.state.runClock,
             onFrame: (r) {
+              for (final p in r.spawner.slotLog) {
+                planned.putIfAbsent(p.index, () => r.state.runClock);
+              }
               for (final hp in r.spawner.hoops) {
                 final s0 = sizes[hp];
                 if (s0 != null) expect(hp.opening, s0);
@@ -159,7 +167,8 @@ void main() {
         for (final (t, opening, idx, gold, normal, ride) in spawned) {
           final m = b.mult(t);
           final base = run.director.openingFor(idx, ride: ride);
-          expect(opening, closeTo(min(base * m, cap), 1e-6), reason: 't=$t');
+          final mp = b.mult(planned[idx] ?? t);
+          expect(opening, closeTo(min(base * mp, cap), 1e-6), reason: 't=$t');
           if (normal) expect(gold, m > 1, reason: 't=$t m=$m');
           if (!normal) expect(gold, isFalse, reason: 'special at t=$t');
           if (m > 1 && m < 1.5) sawEase = true;

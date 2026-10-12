@@ -430,7 +430,7 @@ void main() {
     });
 
     test('§3.21 pair: offset 230 × viewHeight / 711, two different gifts, no '
-        'shield when armed, no FEVER when on fire', () {
+        'shield when armed, no FEVER during FEVER', () {
       for (final vh in [568.0, 711.0]) {
         final o = 230 * vh / 711;
         var pairs = 0;
@@ -439,7 +439,7 @@ void main() {
             director(seed: seed),
             150,
             viewHeight: vh,
-            ctxFor: (_) => DirectorContext.open(vh, shieldArmed: true, onFire: true),
+            ctxFor: (_) => DirectorContext.open(vh, shieldArmed: true, onFire: true, fever: true),
           )) {
             if (s.kind != HoopKindId.pair) continue;
             pairs++;

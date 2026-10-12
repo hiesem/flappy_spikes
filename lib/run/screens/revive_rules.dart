@@ -40,7 +40,7 @@ class ReviveRulesFeature extends RunFeature {
       ..piggy = null
       ..jar = null
       ..onFire = false
-      ..feverLeft = 0;
+      ..feverLit = false;
     final timed = s.timed;
     if (timed != null) {
       s.timed = null;

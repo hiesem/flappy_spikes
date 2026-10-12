@@ -164,8 +164,23 @@ is built on the same focus request). So the game **observes** instead:
   That also counts the game's own SFX on the music stream, which is why the
   question is only asked while the game music is not playing, and the
   scene-change re-check waits `Config.ownMusicRecheckDelay` (0.6 s) for the
-  scene's click / flap to ring out (a flapping run start can therefore keep
-  the music off until the next Home arrival).
+  scene's click / flap to ring out.
+  **Own sound vs other music (P22-FIX2, QA S7-13).** Waiting is not enough
+  while the player keeps flapping, so the native side reports two signals:
+  `isOtherMusicActive` (playback list **or** the `isMusicActive()` fallback)
+  and `isOtherMediaListed` (the playback list alone: other apps' `MEDIA` /
+  `UNKNOWN` players, never the game's `USAGE_GAME` ones).
+  `FlappySpikesGame._otherMusicNow` asks the first; a "yes" is trusted only
+  while the game is quiet (`SoundService.ownSoundRecent` false: no one-shot
+  within its table length + 100 ms + 0.6 s, no loop running). While the
+  game's own sound may be on the music stream the "yes" is confirmed by the
+  playback list alone. Chosen over a time window alone because the game's
+  sounds are known exactly on the Dart side (each play's table length, the
+  loop list), so it holds however often the player flaps, and the only case
+  it gives up — a muted external player hidden from the list while the game
+  is making sound — is one where the game music is inaudible anyway (the
+  media stream is muted). So the music returns at this run start even
+  while the player keeps flapping.
   Checked at launch (before the music starts), on foreground (before the
   music comes back — the game owns the music lifecycle now, no Bgm observer)
   and at scene changes while the music is skipped. Below API 26:

@@ -429,7 +429,7 @@ void main() {
 
   tester.testGameWidget(
     '§21.1 sound: one fever_loop player, quiet crackle → FEVER volume → '
-    'back to ≈ 25 % with a ≈ 0.3 s ramp; stops on out / pause / death',
+    'FEVER until the streak breaks; stops on out / pause / death',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(game);
@@ -456,32 +456,28 @@ void main() {
       expect(fever.loopVolume, FeverConfig.loopVolume);
       expect(handle.volume, FeverConfig.loopVolume);
       expect(identical(fever.loop, handle), isTrue);
-      // FEVER ends after its passes while the fire burns on: back down.
-      for (var i = 0; i < FeverConfig.feverHoops; i++) {
+      // FEVER is unchanged (S7-07): it runs until the streak breaks, at the
+      // FEVER volume, however many perfect passes follow.
+      for (var i = 0; i < 8; i++) {
         expect(run.state.fever, isTrue);
         run.debugPass(perfect: true);
       }
-      expect(run.state.fever, isFalse);
-      expect(run.state.onFire, isTrue);
-      for (var i = 0; i < 9; i++) {
+      for (var i = 0; i < 30; i++) {
         game.update(1 / 60);
       }
-      expect(fever.loopVolume, closeTo(.30, .01));
-      for (var i = 0; i < 20; i++) {
-        game.update(1 / 60);
-      }
-      expect(handle.volume, FeverConfig.crackleVolume);
+      expect(run.state.fever, isTrue);
+      expect(handle.volume, FeverConfig.loopVolume);
       expect(identical(fever.loop, handle), isTrue);
       expect(loops, hasLength(1));
       expect(handle.stopped, isFalse);
-      // Pause stops it; resume starts it again (quiet).
+      // Pause stops it; resume starts it again (still FEVER).
       game.pause();
       game.update(1 / 60);
       expect(handle.stopped, isTrue);
       game.resume();
       game.update(1 / 60);
       expect(loops, hasLength(2));
-      expect(loops.last.$2, FeverConfig.crackleVolume);
+      expect(loops.last.$2, FeverConfig.loopVolume);
       // Out: stops.
       final h2 = fever.loop!;
       run.debugPass(perfect: false);
@@ -525,7 +521,7 @@ void main() {
       killRunThroughSaves(game);
       expect(run.state.onFire, isFalse);
       expect(run.state.fever, isFalse);
-      expect(run.state.feverLeft, 0);
+      expect(run.state.feverLit, isFalse);
       expect(sfx, isNot(contains('feverOut')));
       expect(outs().last!['cause'], 'death');
     },

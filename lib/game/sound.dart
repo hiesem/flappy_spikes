@@ -489,6 +489,19 @@ class SoundService {
   /// request was made).
   final Map<Sfx, DateTime> _pendingFirst = {};
 
+  /// PRD-2.2 §33.4 / §33.7 (S7-10): bumped by [dispose]. A pool creation or
+  /// warm-up that started in an older generation publishes nothing and
+  /// disposes the voices it created meanwhile.
+  int _generation = 0;
+
+  /// Pools whose creation runs now (not yet published or given up): they
+  /// count towards the live-pool cap at admission (S7-11).
+  final Set<Sfx> _inflight = {};
+
+  /// PRD-2.2 §18.4 / §33.4 item 3 (S7-11): the cues of the latest [preload]
+  /// (the ride / power-up about to happen). The cap never evicts them.
+  Set<Sfx> _reserved = const {};
+
   /// Monotonic clock for pool use / eviction.
   final Stopwatch _clock = Stopwatch()..start();
   int get _nowMs => clockMs?.call() ?? _clock.elapsedMilliseconds;
@@ -567,6 +580,7 @@ class SoundService {
       return;
     }
     onAudible?.call(sfx);
+    _markOwnSound(sfx);
     if (!enabled) {
       return;
     }
@@ -590,18 +604,66 @@ class SoundService {
 
   /// PRD-2.2 §18.4: creates the pools of [cues] without playing them (e.g.
   /// a portal's ride cues when the portal spawns), so their first [play] is
-  /// heard. Marks existing pools as used (no eviction right before use).
+  /// heard. Marks existing pools as used and reserves the batch (the cap
+  /// never evicts the latest preload, S7-11).
+  ///
+  /// PRD-2.2 §33.4 item 3 (S7-11): a preload respects
+  /// [Config.sfxMaxLivePools]. Pools alive, being created and the core set
+  /// count; when there is no room the least recently used idle pool goes
+  /// (never the core set, a ringing pool or this batch); when nothing can
+  /// go the rest of the batch is not created now (it is created on its
+  /// first [play], as before §18.4).
   void preload(Iterable<Sfx> cues) {
     if (muted || !enabled) return;
     unawaited(_initPools());
-    for (final sfx in cues) {
+    final batch = cues.toSet();
+    _reserved = batch;
+    final now = _nowMs;
+    for (final sfx in batch) {
       final pool = _pools[sfx];
       if (pool != null) {
-        pool.lastUsedMs = _nowMs;
-      } else {
-        unawaited(_ensurePool(sfx));
+        pool.lastUsedMs = now;
+        continue;
       }
+      if (_creating.containsKey(sfx)) continue;
+      if (_projectedPools() >= Config.sfxMaxLivePools &&
+          !_evictOneFor(batch, now)) {
+        continue;
+      }
+      unawaited(_ensurePool(sfx));
     }
+  }
+
+  /// Pools alive or being created, plus the core set still to warm up.
+  int _projectedPools() => {
+    ..._pools.keys,
+    ..._inflight,
+    if (enabled) ...prewarmed,
+  }.length;
+
+  /// Whether [pool] has a copy ringing at [now] (played within its length +
+  /// margin). A pool that never played is not ringing.
+  static bool _ringing(SfxPool pool, int now) {
+    final t = pool.lastPlayedMs;
+    return t != null &&
+        now - t < pool.length.inMilliseconds + Config.sfxStopMarginMs;
+  }
+
+  /// Evicts the least recently used idle pool outside [keep] and the core
+  /// set. False when there is none.
+  bool _evictOneFor(Set<Sfx> keep, int now) {
+    MapEntry<Sfx, SfxPool>? lru;
+    for (final e in _pools.entries) {
+      if (prewarmed.contains(e.key) ||
+          keep.contains(e.key) ||
+          _ringing(e.value, now)) {
+        continue;
+      }
+      if (lru == null || e.value.lastUsedMs < lru.value.lastUsedMs) lru = e;
+    }
+    if (lru == null) return false;
+    _evict(lru.key);
+    return true;
   }
 
   // region P22-33 — §33.3 soak counters (debug / FS_SOAK only)
@@ -678,7 +740,10 @@ class SoundService {
       return;
     }
     _poolsStarted = true;
+    final gen = _generation;
     for (final sfx in prewarmed) {
+      // S7-10: a teardown stops the warm-up.
+      if (gen != _generation) return;
       await _ensurePool(sfx);
     }
   }
@@ -704,8 +769,19 @@ class SoundService {
     final file = _files[sfx];
     if (file == null) return;
     final length = lengthOf(file);
+    final gen = _generation;
+    _inflight.add(sfx);
+    // S7-10: true (and the voice disposed) when [dispose] ran meanwhile.
+    // Synchronous on the normal path (no extra hops in the warm-up).
+    bool stale(SfxVoice? voice) {
+      if (gen == _generation) return false;
+      if (voice != null) unawaited(_discard(voice));
+      return true;
+    }
+
     try {
       await _ensureGlobalContext();
+      if (stale(null)) return;
       final pool = SfxPool(
         file: file,
         length: length,
@@ -715,6 +791,7 @@ class SoundService {
       )..onStopped = debugOnStop;
       final first = await _newVoice(file);
       if (first == null) return; // never became ready: stay silent
+      if (stale(first)) return;
       pool.add(first);
       _pools[sfx] = pool;
       final asked = _pendingFirst.remove(sfx);
@@ -729,6 +806,7 @@ class SoundService {
       while (!pool.disposed && pool.voiceCount < pool.capacity) {
         final voice = await _newVoice(file);
         if (voice == null) break;
+        if (stale(voice)) break;
         if (!pool.add(voice)) {
           await voice.dispose(); // evicted meanwhile
           break;
@@ -738,7 +816,10 @@ class SoundService {
       // Audio failure must never take the game down. One bad pool must not
       // stop the remaining sounds from warming up either.
     } finally {
-      _pendingFirst.remove(sfx);
+      if (gen == _generation) {
+        _pendingFirst.remove(sfx);
+        _inflight.remove(sfx);
+      }
     }
   }
 
@@ -750,11 +831,10 @@ class SoundService {
     final now = _nowMs;
     _lastTrimMs = now;
     // Busy = played within its length + margin (by the same clock as
-    // lastUsedMs, so a pool is never disposed under a ringing copy).
+    // lastPlayedMs, so a pool is never disposed under a ringing copy). A
+    // preloaded pool that never played is not busy (S7-11).
     bool evictable(MapEntry<Sfx, SfxPool> e) =>
-        !prewarmed.contains(e.key) &&
-        now - e.value.lastUsedMs >=
-            e.value.length.inMilliseconds + Config.sfxStopMarginMs;
+        !prewarmed.contains(e.key) && !_ringing(e.value, now);
     final stale = _pools.entries
         .where(
           (e) =>
@@ -765,7 +845,10 @@ class SoundService {
         .toList();
     stale.forEach(_evict);
     if (_pools.length <= Config.sfxMaxLivePools) return;
-    final lru = _pools.entries.where(evictable).toList()
+    // The latest preload (the ride about to happen) is kept (S7-11).
+    final lru = _pools.entries
+        .where((e) => evictable(e) && !_reserved.contains(e.key))
+        .toList()
       ..sort((a, b) => a.value.lastUsedMs.compareTo(b.value.lastUsedMs));
     for (final e in lru) {
       if (_pools.length <= Config.sfxMaxLivePools) break;
@@ -781,12 +864,29 @@ class SoundService {
     unawaited(pool.dispose());
   }
 
+  static Future<void> _discard(SfxVoice voice) async {
+    try {
+      await voice.dispose();
+    } catch (_) {
+      // Audio failure must never take the game down.
+    }
+  }
+
   /// Teardown: disposes every pool and loop (never needed in a normal
   /// session; tests and the soak use it).
+  ///
+  /// S7-10: creations still loading are invalidated ([_generation]): they
+  /// publish nothing and dispose what they created, and the core warm-up
+  /// stops. A later [play] / [preload] starts afresh.
   Future<void> dispose() async {
+    _generation++;
+    _poolsStarted = false;
     final pools = List.of(_pools.values);
     _pools.clear();
     _creating.clear();
+    _inflight.clear();
+    _pendingFirst.clear();
+    _reserved = const {};
     await stopAllLoops();
     await Future.wait(pools.map((p) => p.dispose()));
   }
@@ -863,8 +963,42 @@ class SoundService {
     _suspends++;
     if (_suspends == 1) {
       _pendingFirst.clear();
+      _stopOneShots();
       unawaited(stopAllLoops());
       unawaited(_syncMusic());
+    }
+  }
+
+  /// Monotonic ms until which the game's own one-shots may still be on the
+  /// music stream (S7-13).
+  int _ownSoundUntilMs = -1;
+
+  void _markOwnSound(Sfx sfx) {
+    final file = _files[sfx];
+    if (file == null) return;
+    final until =
+        _nowMs +
+        lengthOf(file).inMilliseconds +
+        Config.sfxStopMarginMs +
+        (Config.ownMusicRecheckDelay * 1000).round();
+    if (until > _ownSoundUntilMs) _ownSoundUntilMs = until;
+  }
+
+  /// PRD-2.2 §28.3 (S7-13): the game's own sound may be on the music stream
+  /// right now: a one-shot played within its length + margin +
+  /// [Config.ownMusicRecheckDelay], or a loop (FEVER crackle, comet, …)
+  /// is running. Android's `isMusicActive()` fallback cannot tell it from
+  /// another app's music, so an "other music" answer is then confirmed by
+  /// the playback list alone (`AudioFocus.isOtherMediaListed`).
+  bool get ownSoundRecent =>
+      _nowMs < _ownSoundUntilMs || _loops.any((l) => !l.stopped);
+
+  /// §28.2 / §28.3 (S7-09): the one-shots already ringing stop when an ad
+  /// shows or an interruption starts (§28.1's "one-shots finish" is for a
+  /// death only). Not resumed afterwards.
+  void _stopOneShots() {
+    for (final p in _pools.values) {
+      p.stopAll();
     }
   }
 
@@ -891,6 +1025,10 @@ class SoundService {
   void setInterrupted(bool on) {
     if (_interrupted == on) return;
     _interrupted = on;
+    if (on) {
+      _pendingFirst.clear();
+      _stopOneShots();
+    }
     for (final l in List.of(_loops)) {
       unawaited(l.applyQuiet(on));
     }

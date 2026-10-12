@@ -31,8 +31,8 @@ import '../run_feature.dart';
 /// - **FEVER lights** on a *perfect* pass through the FEVER ring (and on a
 ///   [FeverIgnite] — the pair FEVER gift, Q59): the fire (at least the ×5
 ///   size), the FEVER! banner above the tier banner, the crackle loop at
-///   the FEVER volume for [FeverConfig.feverHoops] perfect passes, then
-///   ramping back to the quiet crackle while the fire burns on;
+///   the FEVER volume (a ≈ 0.3 s ramp up from the quiet crackle when the
+///   bird already burned), unchanged until the streak breaks (S7-07);
 ///   `fever_ring_passed` {perfect, streak_before, streak_after}. A rim
 ///   touch on the FEVER ring gives no FEVER (Q50).
 /// - **Goes out** on a graze (at the rim contact, S6-40), a clean off-centre
@@ -114,7 +114,6 @@ class FeverFeature extends RunFeature {
     if (!s.onFire) return;
     if (e.perfect) {
       s.hoopsBurned++;
-      if (s.feverLeft > 0) s.feverLeft--;
     } else {
       // PRD-2.2 §11.2 a clean off-centre pass is an ordinary non-perfect
       // pass: it puts the fire out too.
@@ -150,7 +149,7 @@ class FeverFeature extends RunFeature {
     if (c == null) return;
     final s = c.s;
     if (fever) {
-      s.feverLeft = FeverConfig.feverHoops;
+      s.feverLit = true;
       RunHud.ensureFor(c.run).banners.showFever(FeverBanner());
     }
     if (s.onFire) {
@@ -167,7 +166,7 @@ class FeverFeature extends RunFeature {
     final c = _c;
     if (c == null) return;
     final s = c.s;
-    s.feverLeft = 0;
+    s.feverLit = false;
     if (!s.onFire) return;
     c.track('fever_fire_out', {
       'streak': s.streak,

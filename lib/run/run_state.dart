@@ -93,12 +93,14 @@ class RunState {
   /// Perfect passes since the fire was lit (analytics `hoops_burned`).
   int hoopsBurned = 0;
 
-  /// PRD-2.2 §21.1 FEVER runs (the loud crackle loop, at least the ×5 fire
-  /// size): perfect passes left of FEVER; 0 = no FEVER.
-  int feverLeft = 0;
+  /// PRD-2 §3.19 / PRD-2.2 §21.1 FEVER was lit (FEVER ring / pair gift) and
+  /// runs, unchanged, until the streak breaks (the fire goes out). It has no
+  /// pass count (S7-07).
+  bool feverLit = false;
 
-  /// PRD-2.2 §21.1 Whether FEVER runs.
-  bool get fever => onFire && feverLeft > 0;
+  /// PRD-2.2 §21.1 Whether FEVER runs (the loud crackle loop, at least the
+  /// ×5 fire size).
+  bool get fever => onFire && feverLit;
 
   // powerups
   /// Hourglass | mini | frenzy | comet.

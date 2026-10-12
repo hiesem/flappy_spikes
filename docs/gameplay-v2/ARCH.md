@@ -535,15 +535,23 @@ spike save bounce); otherwise `RunDied` → tumble → `PostRunFlow`.
     context (each one rewrote AudioManager mode on Android).
   - **Bounded lazy pools.** `prewarmed` (core run set) is created at start and never evicted; other pools are created
     on first `play` / `preload` and disposed after `Config.sfxPoolIdleDisposeMs` without a play, or LRU-first above
-    `Config.sfxMaxLivePools` (a pool still ringing is kept). `preload(Iterable<Sfx>)` warms cues ahead (§18.4).
+    `Config.sfxMaxLivePools` (a pool still ringing is kept; "ringing" = really played within its length + margin,
+    `SfxPool.lastPlayedMs`, never a preload touch). `preload(Iterable<Sfx>)` warms cues ahead (§18.4): the latest
+    batch is reserved (the cap never evicts it), and a preload never goes over the cap — pools alive, being created and
+    the core set count; it evicts an idle LRU pool for room, else leaves the rest of the batch to its first `play`.
+  - **Teardown is final for in-flight work.** `dispose()` bumps a generation: creations still loading publish nothing
+    and dispose the voices they made; the core warm-up stops. The service can be used again afterwards.
   - Test seam: `voiceFactory` (fake voices, `test/p22/fake_audio.dart`, which also has a fake audioplayers platform for
     the real `PlayerVoice`).
 - **Audio around ads, death and other apps (PRD-2.2 §28).** `SoundService.suspend()` / `resume()` (ref-counted;
   `clearSuspend()` on app resume / scene change when no ad is up) pause the music at its position, stop every loop and
-  drop every `play` (a loop asked for while suspended is born stopped). `FlappySpikesGame.showRewardedAd`, the
+  drop every `play` (a loop asked for while suspended is born stopped); one-shots already ringing are stopped
+  (`SfxPool.stopAll`, queued after any pending start, so nothing bursts out after the hold), as on `setInterrupted(true)`. `FlappySpikesGame.showRewardedAd`, the
   interstitial and the fake overlay suspend when the ad is displayed and resume when it ends. `setInterrupted(bool)`
   (from `AudioFocus.interruptions`, `lib/services/audio_focus.dart`) pauses the music and mutes SFX + loops;
-  `setOtherMusicActive` skips the game music while the player's own music plays (cleared only at a scene change);
+  `setOtherMusicActive` skips the game music while the player's own music plays (cleared only at a scene change; the
+  check is `FlappySpikesGame._otherMusicNow`: `AudioFocus.isOtherMusicActive`, confirmed by `isOtherMediaListed`
+  while `SoundService.ownSoundRecent`, so the game's own flaps never count as other music);
   `setBackground` replaces Bgm's lifecycle observer (the game owns the music lifecycle). The global audio context is
   mixWithOthers with Android usage `USAGE_GAME` (`SoundService.gameAudioContext`), so `MainActivity.kt`'s
   `AudioWatch` can tell the game's players from other apps'. `RunController._die` stops all loops at the moment of

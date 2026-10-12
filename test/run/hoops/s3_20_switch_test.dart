@@ -138,7 +138,15 @@ void main() {
           return (design == null || SwitchRingKind.designOf(h) == design) &&
               p != null &&
               b != null &&
-              p.position.x > b.x + 60;
+              p.position.x > b.x + 60 &&
+              // No other hoop between the bird and the switch (its pass
+              // would change the streak this test reads, P22-FIX2).
+              !run.spawner.hoops.any(
+                (o) =>
+                    !identical(o, h) &&
+                    o.planeX > b.x &&
+                    o.planeX < p.position.x,
+              );
         },
       );
       expect(h, isNotNull);

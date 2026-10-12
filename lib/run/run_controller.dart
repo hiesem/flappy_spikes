@@ -215,6 +215,7 @@ class RunController extends Component {
       ride: s.ride?.kind,
       timedPowerupRunning: s.timed != null,
       onFire: s.onFire,
+      fever: s.fever,
       shieldArmed: s.shield,
       extraLifeActive: s.extraLife,
       eggOrChick: s.egg != null,

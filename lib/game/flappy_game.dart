@@ -2564,8 +2564,20 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         storage.now().difference(t) < Config.adAudioSettle;
   }
 
+  /// PRD-2.2 §28.3 (S7-13): is the player's own music playing? The full
+  /// answer (Android: the playback list or the `isMusicActive()` stream
+  /// fallback) is trusted while the game is quiet; when the game's own
+  /// sound may be on the music stream ([SoundService.ownSoundRecent]) a
+  /// "yes" is confirmed by the playback list alone, so the game's flaps
+  /// never count as other music (docs/p22/ADS.md).
+  Future<bool> _otherMusicNow() async {
+    if (!await audioFocus.isOtherMusicActive()) return false;
+    if (!sound.ownSoundRecent) return true;
+    return audioFocus.isOtherMediaListed();
+  }
+
   Future<void> _startMusicChecked() async {
-    if (await audioFocus.isOtherMusicActive()) {
+    if (await _otherMusicNow()) {
       sound.setOtherMusicActive(true);
     }
     await sound.startMusic();
@@ -2588,7 +2600,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       return;
     }
     unawaited(() async {
-      final other = await audioFocus.isOtherMusicActive();
+      final other = await _otherMusicNow();
       if (gen != _foregroundGen) return;
       if (other) sound.setOtherMusicActive(true);
       sound.setBackground(false);
@@ -2606,7 +2618,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // Android check also counts the game's SFX on the music stream).
     _after(Config.ownMusicRecheckDelay, () {
       unawaited(() async {
-        final other = await audioFocus.isOtherMusicActive();
+        final other = await _otherMusicNow();
         if (!other) sound.setOtherMusicActive(false, sceneChange: true);
       }());
     });

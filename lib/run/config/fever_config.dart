@@ -249,11 +249,6 @@ abstract final class FeverConfig {
   /// platform traffic, §33).
   static const double loopRampSteps = 20;
 
-  /// PRD-2.2 §21.1 "During FEVER" (call): FEVER runs from the FEVER ring /
-  /// pair gift for this many perfect passes (or until the fire goes out);
-  /// then the loop ramps back to [crackleVolume] while the fire burns on.
-  static const int feverHoops = 5;
-
   /// PRD-2.2 §21.1 FEVER shows the fire at least at the ×5 size.
   static const int feverSizeStreak = 5;
 

@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../../skins/art/trail.dart';
-import '../config/parts_config.dart';
+import '../config/trail_config.dart';
 import 'block_trail.dart';
 import 'particle_pool.dart';
 
@@ -14,14 +14,19 @@ import 'particle_pool.dart';
 /// [useEquippedTrail] is switched off.
 ///
 /// Both use the master #10 flight-direction rule for the emission point:
-/// 26 pt behind the bird along [heading]. The equipped trail's particles
-/// drift with the world scroll (`TrailEmitter` has horizontal drift only).
+/// [TrailConfig.runBack] (18 pt, PRD-2.2 §21.1; was 26) behind the bird
+/// along [heading]. The equipped trail's particles drift with the world
+/// scroll (`TrailEmitter` has horizontal drift only).
+///
+/// PRD-2.2 §21.1: every trail is drawn at 2× the old scale — the equipped
+/// trail at [k] = [TrailConfig.runScale] (≈ 1.97, was the look scale
+/// ≈ 0.98) and the block trail at [TrailConfig.blockScale].
 class TierTrail {
   TierTrail({
     required String trailId,
     math.Random? random,
     LookPaint? lookPainter,
-    this.k = 29.5 / 30,
+    this.k = TrailConfig.runScale,
   }) : _trailId = trailId,
        _blocks = BlockTrail(random: random),
        _emitter = TrailEmitter(
@@ -68,7 +73,14 @@ class TierTrail {
   }) {
     if (usesBlocks) {
       if (active) {
-        _blocks.update(pool, dt, bird, heading);
+        _blocks.update(
+          pool,
+          dt,
+          bird,
+          heading,
+          scale: TrailConfig.blockScale,
+          back: TrailConfig.runBack,
+        );
       } else {
         _blocks.reset();
       }
@@ -76,10 +88,17 @@ class TierTrail {
     }
     if (active) {
       final head = Offset(
-        bird.dx - math.cos(heading) * PartsConfig.trailBack,
-        bird.dy - math.sin(heading) * PartsConfig.trailBack,
+        bird.dx - math.cos(heading) * TrailConfig.runBack,
+        bird.dy - math.sin(heading) * TrailConfig.runBack,
       );
-      _emitter.emit(head, dt, k: k, vx: scrollVx);
+      // The emitter drifts at vx × k / 2; the mock's drift is 0.7 × the
+      // forward speed at k = 2 (PRD-2.2 §21.1).
+      _emitter.emit(
+        head,
+        dt,
+        k: k,
+        vx: scrollVx * TrailConfig.scrollShare * 2 / k,
+      );
     }
     _emitter.step(dt);
   }

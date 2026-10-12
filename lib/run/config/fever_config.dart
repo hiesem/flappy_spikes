@@ -149,19 +149,62 @@ abstract final class FeverConfig {
   static const double flareDecay = 2;
 
   // ------------------------------------------------------- bird on fire
-  /// §5.18 Flame particles per second.
-  static const double fireRate = 115;
+  // PRD-2.2 §21 (supersedes PRD-2 §3.19 Q51): the one fire master, lit by a
+  // perfect streak of ×3 or by FEVER; approved mock
+  // `design/menu_v2/screen_fire_choice2.html`, right phone.
 
-  /// §5.18 Flame teardrop size (pt): 10 … 18.
-  static const double fireSize = 10;
+  /// PRD-2.2 §21.1 The perfect streak that sets the bird on fire.
+  static const int fireStreak = 3;
 
-  /// §5.18 Flame life (s): 0.35 … 0.65.
-  static const double fireLifeMin = .35;
+  /// PRD-2.2 §21.1 Size levels: streak ×3–×4 → level 1, ×5–×6 → 2, ×7+ → 3.
+  static const List<int> fireLevelStreaks = [3, 5, 7];
 
-  /// §5.18 Flame life range (s).
-  static const double fireLifeRange = .3;
+  /// PRD-2.2 §21.1 Flames per second per level (1, 2, 3).
+  static const List<double> fireRates = [55, 95, 150];
 
-  /// §5.18 Flame colours over the life: white → #FFF3B0 → #FF9100 → #D50000.
+  /// PRD-2.2 §21.1 Flame size factor per level (70 %, 85 %, 100 %).
+  static const List<double> fireScales = [.7, .85, 1];
+
+  /// PRD-2.2 §21.1 Teardrop size at 100 % (pt): 9 … 16 (≈ 6–11 at 70 %).
+  static const double fireSizeMin = 9;
+
+  /// PRD-2.2 §21.1 Largest teardrop at 100 % (pt).
+  static const double fireSizeMax = 16;
+
+  /// PRD-2.2 §21.1 Master teardrop width per pt of flame size: the mock's
+  /// drop of size s is ≈ 0.5 s wide and 1.2 s tall; the master teardrop
+  /// (w wide, ≈ 1.6 w tall) covers the same area at w ≈ 0.6 s.
+  static const double fireDropWidth = .6;
+
+  /// PRD-2.2 §21.1 Flame life (s): 0.3 … 0.55, × (0.8 + 0.2 × size factor)
+  /// as in the mock.
+  static const double fireLifeMin = .3;
+
+  /// PRD-2.2 §21.1 Longest flame life at 100 % (s).
+  static const double fireLifeMax = .55;
+
+  /// PRD-2.2 §21.1 Flame velocity (pt/s): vx −130 … −60, vy −80 … −20.
+  static const double fireVxMin = -130, fireVxMax = -60;
+
+  /// PRD-2.2 §21.1 Vertical flame velocity range (pt/s).
+  static const double fireVyMin = -80, fireVyMax = -20;
+
+  /// PRD-2.2 §21.1 The bottom edge gives half the lift.
+  static const double fireBottomLift = .5;
+
+  /// PRD-2.2 §21.1 Share of flames from the back edge (40 %) and the top
+  /// edge (35 %); the rest (25 %) rises from the bottom edge (mock).
+  static const double fireBackShare = .4, fireTopShare = .35;
+
+  /// PRD-2.2 §21.1 Back edge: x = bird − 22 + (−2 … 4), y = ± 14 (pt).
+  static const double fireBackX = -22, fireBackSpread = 14;
+
+  /// PRD-2.2 §21.1 Top / bottom edges: y = ∓ 15 pt, x = bird − 20 … + 16
+  /// (top) / + 10 (bottom).
+  static const double fireEdgeY = 15;
+
+  /// PRD-2.2 §21.1 Flame colours over the life (classic orange fire, used
+  /// with every non-flame trail): white → #FFF3B0 → #FF9100 → #D50000.
   static const List<Color> firePalette = [
     Color(0xFFFFFFFF),
     Color(0xFFFFF3B0),
@@ -169,11 +212,21 @@ abstract final class FeverConfig {
     Color(0xFFD50000),
   ];
 
-  /// §5.18 Warm halo around the burning bird (radius pt, opacity).
-  static const double fireHalo = 44;
+  /// PRD-2.2 §21.1 Warm halo behind the bird per level: radius (pt).
+  static const List<double> fireHaloRadii = [34, 42, 52];
 
-  /// §5.18 Fire halo opacity.
-  static const double fireHaloAlpha = .45;
+  /// PRD-2.2 §21.1 Halo opacity per level.
+  static const List<double> fireHaloAlphas = [.22, .30, .38];
+
+  /// PRD-2.2 §21.1 The halo's solid core radius (pt) and its centre offset
+  /// from the bird (−4, −2), as in the mock.
+  static const double fireHaloCore = 6;
+
+  /// PRD-2.2 §21.1 Halo centre x offset (pt).
+  static const double fireHaloDx = -4;
+
+  /// PRD-2.2 §21.1 Halo centre y offset (pt).
+  static const double fireHaloDy = -2;
 
   /// §5.18 Fire out: grey smoke puffs.
   static const int smokePuffs = 16;
@@ -181,12 +234,32 @@ abstract final class FeverConfig {
   /// §5.18 Smoke colour.
   static const Color smoke = Color(0x80787878);
 
-  /// §5.18 Burning crackle loop volume.
+  /// PRD-2.2 §21.1 The quiet crackle loop (`fever_loop`) while the bird
+  /// burns outside FEVER (≈ 25 %).
+  static const double crackleVolume = .25;
+
+  /// §5.18 / PRD-2.2 §21.1 The same loop at today's FEVER volume while
+  /// FEVER runs.
   static const double loopVolume = .35;
 
-  /// §5.18 Fire particles draw behind the bird (gold bird and trail stay
-  /// visible).
-  static const int firePriority = RunLayer.bird - 2;
+  /// PRD-2.2 §21.1 Volume ramp between the two (s).
+  static const double loopRamp = .3;
+
+  /// PRD-2.2 §21.1 Volume updates per second during the ramp (no per-frame
+  /// platform traffic, §33).
+  static const double loopRampSteps = 20;
+
+  /// PRD-2.2 §21.1 "During FEVER" (call): FEVER runs from the FEVER ring /
+  /// pair gift for this many perfect passes (or until the fire goes out);
+  /// then the loop ramps back to [crackleVolume] while the fire burns on.
+  static const int feverHoops = 5;
+
+  /// PRD-2.2 §21.1 FEVER shows the fire at least at the ×5 size.
+  static const int feverSizeStreak = 5;
+
+  /// §5.18 / PRD-2.2 §21.1 The fire draws behind the bird (never over the
+  /// body) and over the trail (mock order trail → halo → flames → bird).
+  static const int firePriority = RunLayer.bird - 1;
 
   // ------------------------------------------------------- FEVER! banner
   /// §5.18 FEVER! text.

@@ -1168,6 +1168,32 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   before the next hoop they go in the gap after that hoop instead.
 - Call (§25.1, P22-G2): the portal ring is a fixed **118 pt** at every hoop
   (it had taken the shrinking opening).
+- DEVIATION (PRD-2.2 §21, P22-V2; supersedes PRD-2 §3.19 Q51 "only the
+  FEVER ring lights the fire" and the PRD-2 §3.5 / `TierTrail` trail scale):
+  the **3rd perfect pass in a row sets the bird on fire**; it burns until the
+  streak breaks (graze at the rim contact, a §11 clean off-centre pass, a
+  save, a death) and goes out with smoke + `fever_out` (no sizzle on a
+  death); a revive starts without fire. One fire master
+  (`FeverFeature` / `FireMaster`): flame teardrops from the bird's back
+  (40 %), top (35 %) and bottom (25 %, half lift) edges, vx −130…−60,
+  vy −80…−20 pt/s, life 0.3–0.55 s, with a warm halo, behind the bird
+  (bird − 1, over the trail at bird − 2), no outline. Size by streak:
+  ×3–×4 55/s 70 % (halo 34 pt / 22 %), ×5–×6 95/s 85 % (42 / 30 %), ×7+
+  150/s 100 % (52 / 38 %). Colours: a flame-type trail's four colours,
+  else white → #FFF3B0 → #FF9100 → #D50000. FEVER (ring / pair gift) is
+  unchanged but shows this same fire at least at the ×5 size. Kept through
+  portal rides (not drawn while the ride hides the bird), hidden inside the
+  comet. Sound: one `fever_loop` player at 25 % while burning, at the FEVER
+  volume (0.35) during FEVER, ramping (0.3 s) between them. Every equipped
+  trail is drawn at 2× (k = 2 × lookScale; Pixel blocks 16–26 pt), emitted
+  18 pt behind the bird (was 26), drifting at 0.7 × the forward speed.
+- Call (§21.1, P22-V2): "during FEVER" lasts **5 perfect passes** after the
+  FEVER ring / gift (`FeverConfig.feverHoops`), or until the fire goes out;
+  then the loop ramps back to 25 % while the fire burns on. The director's
+  "no FEVER ring / FEVER gift while on fire" rule now reads the fire (also
+  a ×3 streak fire), literally as PRD-2 §3.19 words it.
+- Tests: `test/p22/s21_fire_test.dart`; shots
+  `test/p22/s21_fire_screenshot_test.dart` (→ `build/shots/p22/`).
 - Tests: `test/p22/s15_scroll_in_test.dart`,
   `test/p22/s19_random_opening_test.dart`,
   `test/p22/s27_one_bonus_test.dart`,

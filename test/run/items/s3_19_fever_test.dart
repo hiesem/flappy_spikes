@@ -26,7 +26,8 @@ void main() {
   test('§5.18 Gate Nova numbers: red rim 10 pt on a 14 pt dark-red outline, '
       'glow 16, 30 beads re-rolled 12×/s, 3 loops up to ≈ 54 pt, beam 125 pt '
       'with 8 streaks, halo +44; pass: 3 rings 0.09 s apart, 26 flames, '
-      'flash ≈ 0.3 s, shake 6 pt; fire 115/s, 10–18 pt, 0.35–0.65 s', () {
+      'flash ≈ 0.3 s, shake 6 pt; fire palette (PRD-2.2 §21 sizes in '
+      's21_fire_test)', () {
     expect(FeverConfig.rimFront.toARGB32(), 0xFFE8141C);
     expect(FeverConfig.rimBack.toARGB32(), 0xFFA50E14);
     expect(FeverConfig.outline.toARGB32(), 0xFF5E000A);
@@ -47,11 +48,6 @@ void main() {
     // The world shake preset is the one master (RunShake.feverPass).
     final shake = RunShake()..feverPass();
     expect(shake.amplitude, FeverConfig.passShake);
-    expect(FeverConfig.fireRate, 115);
-    expect(FeverConfig.fireSize, 10);
-    expect(FeverConfig.fireSize + 8, 18);
-    expect(FeverConfig.fireLifeMin, .35);
-    expect(FeverConfig.fireLifeMin + FeverConfig.fireLifeRange, closeTo(.65, 1e-9));
     expect(FeverConfig.firePalette.map((c) => c.toARGB32()), [
       0xFFFFFFFF,
       0xFFFFF3B0,
@@ -204,15 +200,18 @@ void main() {
   );
 
   tester.testGameWidget(
-    '§3.19 reaching ×5 through normal passes does not light the fire (Q51)',
+    'PRD-2.2 §21 (supersedes Q51) normal perfect passes light the fire at '
+    '×3, without FEVER',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(game);
       for (var i = 0; i < 7; i++) {
         run.debugPass(perfect: true);
+        expect(run.state.onFire, i >= 2);
       }
       expect(run.state.streak, 7);
-      expect(run.state.onFire, isFalse);
+      expect(run.state.fever, isFalse);
+      expect(RunHud.of(run)!.banners.fever, isNull);
     },
   );
 

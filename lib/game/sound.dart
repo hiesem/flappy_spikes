@@ -235,6 +235,14 @@ enum SfxLoop {
 abstract class LoopHandle {
   SfxLoop get loop;
   bool get stopped;
+
+  /// Whether the loop is heard: false when SFX are muted or the service is
+  /// disabled (a silent recorder). PRD-2.2 §21.1: loops follow the SFX
+  /// switch.
+  bool get audible;
+
+  /// The volume last set (0..1).
+  double get volume;
   Future<void> setVolume(double volume);
   Future<void> stop();
 }
@@ -888,7 +896,11 @@ class _LoopPlayer implements LoopHandle {
   @override
   bool get stopped => _stopped;
 
+  @override
   double get volume => _volume;
+
+  @override
+  bool get audible => live;
 
   Future<void> start() async {
     try {

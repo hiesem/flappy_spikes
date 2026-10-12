@@ -9,6 +9,7 @@ import '../config/fever_config.dart';
 import '../config/run_config.dart';
 import '../config/streak_config.dart';
 import '../director/plans.dart';
+import '../../skins/art/trail.dart';
 import '../effects/particle_pool.dart';
 import '../hud/fever_banner.dart';
 import '../hud/run_hud.dart';
@@ -17,36 +18,58 @@ import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
 
-/// FEVER: the fire (PRD-2 §3.19, §5.18).
+/// FEVER and the bird's fire (PRD-2 §3.19, §5.18; PRD-2.2 §21).
 ///
-/// - **Lights** on a *perfect* pass through the FEVER ring (and on a
-///   [FeverIgnite] — the pair FEVER gift, Q59): `RunState.onFire`, the
-///   FEVER! banner above the tier banner, the burning crackle loop,
-///   `fever_ring_passed` {perfect, streak_before, streak_after}. Reaching
-///   ×5 through normal passes never lights it (Q51); a rim touch on the
-///   FEVER ring gives no fire (Q50).
-/// - **Burns** until the streak breaks: ≈ 115 teardrop flames/s streaming
-///   back and up from the bird with a warm halo, drawn behind the bird (the
-///   gold bird, tier look and trail stay). Visual only — no speed, score,
-///   coin or hitbox change. It keeps burning through rides.
-/// - **Goes out** on a graze (at the rim contact, S6-40), a save (extra life / shield) or a death:
-///   smoke puffs, the sizzle (not on a death: the game-over sound plays),
+/// - **The fire master** (PRD-2.2 §21, one master, PRD-2 §3.0.9): the bird
+///   burns from the 3rd perfect pass in a row ([StreakChanged] to ≥ ×3) or
+///   from FEVER, until the streak breaks. Flame teardrops rise from the
+///   bird's back, top and bottom edges and stream back and up, with a warm
+///   halo, drawn behind the bird only (no outline). The size grows with the
+///   streak (×3 / ×5 / ×7, [FireLevel]); the colours follow a flame-type
+///   trail ([fireColorsFor]). Hidden inside the comet fireball, kept through
+///   portal rides. Visual only.
+/// - **FEVER lights** on a *perfect* pass through the FEVER ring (and on a
+///   [FeverIgnite] — the pair FEVER gift, Q59): the fire (at least the ×5
+///   size), the FEVER! banner above the tier banner, the crackle loop at
+///   the FEVER volume for [FeverConfig.feverHoops] perfect passes, then
+///   ramping back to the quiet crackle while the fire burns on;
+///   `fever_ring_passed` {perfect, streak_before, streak_after}. A rim
+///   touch on the FEVER ring gives no FEVER (Q50).
+/// - **Goes out** on a graze (at the rim contact, S6-40), a clean off-centre
+///   pass (PRD-2.2 §11), a save (extra life / shield) or a death: smoke
+///   puffs, the sizzle (not on a death: the game-over sound plays),
 ///   `fever_fire_out` {streak, hoops_burned, cause}.
+/// - **Sound**: one `fever_loop` player while burning (quiet crackle,
+///   [FeverConfig.crackleVolume]; [FeverConfig.loopVolume] during FEVER,
+///   a ≈ 0.3 s ramp between them); it stops on pause, death and the end.
 ///
 /// Attached before `StreakFeature` (features region WP-3c), so its handlers
 /// see the streak before the streak feature changes it.
 class FeverFeature extends RunFeature {
   RunContext? _c;
-  _FireComponent? _fire;
+  FireMaster? _fire;
   LoopHandle? _loop;
+
+  /// The loop volume last sent and the ramp's step clock.
+  double _volume = 0;
+  double _rampClock = 0;
 
   /// The fire's particles and halo (tests, shots).
   ParticlePool? get flames => _fire?.pool;
 
+  /// The fire master (tests, shots).
+  FireMaster? get fire => _fire;
+
+  /// The crackle loop (tests).
+  LoopHandle? get loop => _loop;
+
+  /// The loop volume the feature has set last (tests).
+  double get loopVolume => _volume;
+
   @override
   void attach(RunContext c) {
     _c = c;
-    _fire = _FireComponent(c);
+    _fire = FireMaster(c, colors: fireColorsFor(c.game.menu.items.look.trail));
     c.game.world.add(_fire!);
     c.events
       ..on<HoopSpawned>(_onSpawned)
@@ -54,8 +77,14 @@ class FeverFeature extends RunFeature {
       ..on<RimTouched>(_onRim)
       ..on<MistakeSaved>(_onSaved)
       ..on<RunDied>(_onDied)
-      ..on<FeverIgnite>(_onIgnite);
+      ..on<FeverIgnite>(_onIgnite)
+      ..on<StreakChanged>(_onStreak);
   }
+
+  /// PRD-2.2 §21.1 The fire's colours for the equipped trail [trailId]: a
+  /// flame-type trail's four colours, else the classic orange fire.
+  static List<Color> fireColorsFor(String trailId) =>
+      TrailEmitter.flameColors(trailId) ?? FeverConfig.firePalette;
 
   void _onSpawned(HoopSpawned e) {
     if (e.plan.kind != HoopKindId.fever) return;
@@ -78,18 +107,26 @@ class FeverFeature extends RunFeature {
         'streak_after': after,
       });
       if (e.perfect) {
-        _light();
+        _light(fever: true);
         return;
       }
     }
     if (!s.onFire) return;
     if (e.perfect) {
       s.hoopsBurned++;
+      if (s.feverLeft > 0) s.feverLeft--;
     } else {
       // PRD-2.2 §11.2 a clean off-centre pass is an ordinary non-perfect
       // pass: it puts the fire out too.
       _out(e.clean ? 'clean' : 'graze');
     }
+  }
+
+  /// PRD-2.2 §21.1 the 3rd perfect pass in a row lights the fire.
+  void _onStreak(StreakChanged e) {
+    final c = _c;
+    if (c == null) return;
+    if (e.newStreak >= FeverConfig.fireStreak && !c.s.onFire) _light();
   }
 
   /// §3.19 a graze puts the fire out at the rim contact itself, not when
@@ -104,17 +141,25 @@ class FeverFeature extends RunFeature {
 
   void _onDied(RunDied e) => _out('death', sizzle: false);
 
-  void _onIgnite(FeverIgnite e) => _light();
+  void _onIgnite(FeverIgnite e) => _light(fever: true);
 
-  /// Sets the bird on fire (FEVER ring / gift).
-  void _light() {
+  /// Sets the bird on fire: by the streak (×3) or by FEVER ([fever]: the
+  /// FEVER! banner and the FEVER phase, also when the bird already burns).
+  void _light({bool fever = false}) {
     final c = _c;
     if (c == null) return;
     final s = c.s;
-    s.hoopsBurned = 0;
-    RunHud.ensureFor(c.run).banners.showFever(FeverBanner());
-    if (s.onFire) return;
-    s.onFire = true;
+    if (fever) {
+      s.feverLeft = FeverConfig.feverHoops;
+      RunHud.ensureFor(c.run).banners.showFever(FeverBanner());
+    }
+    if (s.onFire) {
+      if (fever) s.hoopsBurned = 0;
+      return;
+    }
+    s
+      ..onFire = true
+      ..hoopsBurned = 0;
     c.emit(const FeverFireChanged(lit: true));
   }
 
@@ -122,6 +167,7 @@ class FeverFeature extends RunFeature {
     final c = _c;
     if (c == null) return;
     final s = c.s;
+    s.feverLeft = 0;
     if (!s.onFire) return;
     c.track('fever_fire_out', {
       'streak': s.streak,
@@ -141,6 +187,10 @@ class FeverFeature extends RunFeature {
     if (l != null && !l.stopped) l.stop();
   }
 
+  /// PRD-2.2 §21.1 the loop's target volume right now.
+  double get _target =>
+      (_c?.s.fever ?? false) ? FeverConfig.loopVolume : FeverConfig.crackleVolume;
+
   @override
   void update(double gameDt, double realDt) {
     final c = _c;
@@ -152,10 +202,28 @@ class FeverFeature extends RunFeature {
         c.game.state == GameState.playing &&
         !c.run.dying &&
         !c.run.ended;
+    final target = _target;
     if (want && (_loop == null || _loop!.stopped)) {
-      _loop = c.loop(SfxLoop.feverLoop, volume: FeverConfig.loopVolume);
+      _volume = target;
+      _rampClock = 0;
+      _loop = c.loop(SfxLoop.feverLoop, volume: _volume);
     } else if (!want && _loop != null) {
       _stopLoop();
+    } else if (want && _volume != target) {
+      // PRD-2.2 §21.1 a ≈ 0.3 s ramp on the one loop player, sent in
+      // steps (no per-frame platform traffic, §33).
+      const speed =
+          (FeverConfig.loopVolume - FeverConfig.crackleVolume) /
+          FeverConfig.loopRamp;
+      final d = speed * realDt;
+      _volume = _volume < target
+          ? math.min(target, _volume + d)
+          : math.max(target, _volume - d);
+      _rampClock += realDt;
+      if (_volume == target || _rampClock >= 1 / FeverConfig.loopRampSteps) {
+        _rampClock = 0;
+        _loop?.setVolume(_volume);
+      }
     }
   }
 
@@ -172,7 +240,8 @@ class FeverFeature extends RunFeature {
         ..off<RimTouched>(_onRim)
         ..off<MistakeSaved>(_onSaved)
         ..off<RunDied>(_onDied)
-        ..off<FeverIgnite>(_onIgnite);
+        ..off<FeverIgnite>(_onIgnite)
+        ..off<StreakChanged>(_onStreak);
     }
     _stopLoop();
     _fire?.removeFromParent();
@@ -181,42 +250,159 @@ class FeverFeature extends RunFeature {
   }
 }
 
-/// The bird's fire (screen space, behind the bird): the flame stream, the
-/// warm halo and the smoke puffs when it goes out.
-class _FireComponent extends Component {
-  _FireComponent(this.c) : super(priority: FeverConfig.firePriority);
+/// PRD-2.2 §21.1 the fire's size level for an effective streak: 0 (none),
+/// 1 (×3–×4), 2 (×5–×6), 3 (×7+).
+abstract final class FireLevel {
+  static int of(int streak) {
+    var l = 0;
+    for (final at in FeverConfig.fireLevelStreaks) {
+      if (streak >= at) l++;
+    }
+    return l;
+  }
+}
+
+/// The one fire master (PRD-2 §3.0.9; PRD-2.2 §21): the bird's flames, the
+/// warm halo and the smoke puffs when it goes out. Screen space, behind the
+/// bird ([FeverConfig.firePriority]). Allocation-free per frame: the halo
+/// paints are built once per colour set (PRD-2.2 §33.4 item 6).
+class FireMaster extends Component {
+  FireMaster(this.c, {List<Color> colors = FeverConfig.firePalette})
+    : super(priority: FeverConfig.firePriority) {
+    this.colors = colors;
+  }
 
   final RunContext c;
-  final ParticlePool pool = ParticlePool(capacity: 110);
+  final ParticlePool pool = ParticlePool(capacity: 120);
   final ParticlePool smokePool = ParticlePool(capacity: 24);
   double _acc = 0;
 
+  /// One halo paint per size level, its shader centred on the origin.
+  final List<Paint> _halos = [Paint(), Paint(), Paint()];
+
+  late List<Color> _colors;
+
+  /// The flame colours over the life (lightest → darkest).
+  List<Color> get colors => _colors;
+  set colors(List<Color> value) {
+    _colors = value;
+    final warm = value[2];
+    for (var i = 0; i < _halos.length; i++) {
+      final r = FeverConfig.fireHaloRadii[i];
+      final a = FeverConfig.fireHaloAlphas[i];
+      _halos[i].shader = Gradient.radial(
+        Offset.zero,
+        r,
+        [warm.withValues(alpha: a), warm.withValues(alpha: 0)],
+        [FeverConfig.fireHaloCore / r, 1],
+      );
+    }
+  }
+
+  /// Whether the bird burns (state).
   bool get burning => c.s.onFire && !c.run.dying && !c.run.ended;
 
-  Vector2? get _bird => c.game.runBirdPosition;
+  /// PRD-2.2 §21.1 hidden inside the comet fireball and while a portal
+  /// ride hides the bird (cannon barrel, volcano, rocket).
+  bool get hidden =>
+      c.s.ride?.kind == RideKind.comet || (c.s.ride?.birdHidden ?? false);
+
+  /// Whether the fire shows (emits and draws its halo).
+  bool get showing => burning && !hidden && _hasBird;
+
+  /// The streak that sets the size (FEVER: at least ×5).
+  int get sizeStreak {
+    final s = c.s;
+    final n = s.fever
+        ? math.max(s.streak, FeverConfig.feverSizeStreak)
+        : s.streak;
+    return math.max(n, FeverConfig.fireStreak);
+  }
+
+  /// The size level (1 … 3) while burning, 0 otherwise.
+  int get level => burning ? FireLevel.of(sizeStreak) : 0;
+
+  /// Flames per second now.
+  double get rate {
+    final l = level;
+    return l == 0 ? 0 : FeverConfig.fireRates[l - 1];
+  }
+
+  /// Size factor now (0.7 / 0.85 / 1).
+  double get scale {
+    final l = level;
+    return l == 0 ? 0 : FeverConfig.fireScales[l - 1];
+  }
+
+  bool _hasBird = false;
+  double _bx = 0, _by = 0;
+
+  void _readBird() {
+    final b = c.game.runBird;
+    if (b == null || !b.isLoaded) {
+      _hasBird = false;
+      return;
+    }
+    final p = b.body.position;
+    _hasBird = true;
+    _bx = p.x;
+    _by = p.y;
+  }
 
   @override
   void update(double dt) {
-    final bird = _bird;
-    if (burning && bird != null) {
-      _acc += FeverConfig.fireRate * dt;
+    _readBird();
+    if (showing) {
+      final sc = scale;
+      final k = c.s.birdScale;
+      _acc += rate * dt;
       final r = c.cosmetic;
       while (_acc >= 1) {
         _acc -= 1;
-        final s = FeverConfig.fireSize + r.nextDouble() * 8;
+        final e = r.nextDouble();
+        double x, y, lift = 1;
+        if (e < FeverConfig.fireBackShare) {
+          x = FeverConfig.fireBackX - 2 + r.nextDouble() * 6;
+          y = (r.nextDouble() * 2 - 1) * FeverConfig.fireBackSpread;
+        } else if (e < FeverConfig.fireBackShare + FeverConfig.fireTopShare) {
+          x = -20 + r.nextDouble() * 36;
+          y = -FeverConfig.fireEdgeY - 3 + r.nextDouble() * 5;
+        } else {
+          x = -20 + r.nextDouble() * 30;
+          y = FeverConfig.fireEdgeY - 2 + r.nextDouble() * 5;
+          lift = FeverConfig.fireBottomLift;
+        }
+        final size =
+            (FeverConfig.fireSizeMin +
+                r.nextDouble() *
+                    (FeverConfig.fireSizeMax - FeverConfig.fireSizeMin)) *
+            sc;
+        final life =
+            (FeverConfig.fireLifeMin +
+                r.nextDouble() *
+                    (FeverConfig.fireLifeMax - FeverConfig.fireLifeMin)) *
+            (.8 + .2 * sc);
+        final vx =
+            FeverConfig.fireVxMin +
+            r.nextDouble() * (FeverConfig.fireVxMax - FeverConfig.fireVxMin);
+        final vy =
+            (FeverConfig.fireVyMin +
+                r.nextDouble() *
+                    (FeverConfig.fireVyMax - FeverConfig.fireVyMin)) *
+            lift;
         pool.spawn(
           shape: ParticleShape.flame,
-          x: bird.x - 4 + (r.nextDouble() - .5) * 24,
-          y: bird.y + (r.nextDouble() - .5) * 22,
-          vx: -130 - r.nextDouble() * 90,
-          vy: -70 - r.nextDouble() * 70,
-          w: 2 * s,
-          color: FeverConfig.firePalette.first,
-          ramp: FeverConfig.firePalette,
-          life:
-              FeverConfig.fireLifeMin +
-              r.nextDouble() * FeverConfig.fireLifeRange,
-          fadePow: 2,
+          x: _bx + x * k,
+          y: _by + y * k,
+          vx: vx,
+          vy: vy,
+          // The tip points along the motion (the mock's rotation).
+          rot: math.atan2(vy, vx) + math.pi / 2,
+          w: size * FeverConfig.fireDropWidth * k,
+          color: _colors.first,
+          ramp: _colors,
+          life: life,
+          alpha1: .2,
         );
       }
     } else {
@@ -228,13 +414,15 @@ class _FireComponent extends Component {
 
   /// §5.18 the fire goes out: grey smoke puffs rising from the bird.
   void smoke() {
-    final bird = _bird ?? Vector2(RunConfig.birdX, c.viewHeight / 2);
+    _readBird();
+    final bx = _hasBird ? _bx : RunConfig.birdX;
+    final by = _hasBird ? _by : c.viewHeight / 2;
     final r = c.cosmetic;
     for (var i = 0; i < FeverConfig.smokePuffs; i++) {
       smokePool.spawn(
         shape: ParticleShape.circle,
-        x: bird.x + (r.nextDouble() - .5) * 20,
-        y: bird.y + (r.nextDouble() - .5) * 20,
+        x: bx + (r.nextDouble() - .5) * 20,
+        y: by + (r.nextDouble() - .5) * 20,
         vx: -60 + (r.nextDouble() - .5) * 40,
         vy: -40 - r.nextDouble() * 40,
         w: 12,
@@ -245,21 +433,24 @@ class _FireComponent extends Component {
     }
   }
 
-  final Paint _halo = Paint();
-
   @override
   void render(Canvas canvas) {
-    final bird = _bird;
-    if (burning && bird != null) {
-      const hr = FeverConfig.fireHalo;
-      _halo.shader = Gradient.radial(Offset(bird.x, bird.y), hr, [
-        const Color.fromRGBO(255, 190, 70, FeverConfig.fireHaloAlpha),
-        const Color.fromRGBO(255, 190, 70, 0),
-      ]);
-      canvas.drawRect(
-        Rect.fromCircle(center: Offset(bird.x, bird.y), radius: hr),
-        _halo,
-      );
+    final l = level;
+    if (l > 0 && showing) {
+      final k = c.s.birdScale;
+      canvas
+        ..save()
+        ..translate(
+          _bx + FeverConfig.fireHaloDx * k,
+          _by + FeverConfig.fireHaloDy * k,
+        )
+        ..scale(k)
+        ..drawCircle(
+          Offset.zero,
+          FeverConfig.fireHaloRadii[l - 1],
+          _halos[l - 1],
+        )
+        ..restore();
     }
     pool.paint(canvas);
     smokePool.paint(canvas);

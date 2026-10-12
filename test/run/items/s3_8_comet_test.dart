@@ -360,7 +360,12 @@ void main() {
         game.onScreenTap();
         expect(sfx, contains(Sfx.flap.name));
         _step(game, .7);
-        expect(game.sound.activeLoops, isEmpty);
+        // PRD-2.2 §21: the comet's loop stopped; the bird's fire (streak
+        // ≥ ×3 from the boost hoops) keeps its own crackle loop.
+        expect(
+          game.sound.activeLoops.where((l) => l.loop != SfxLoop.feverLoop),
+          isEmpty,
+        );
         expect(_comet(run).ride, isNull);
       },
     );

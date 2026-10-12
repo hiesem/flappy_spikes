@@ -29,19 +29,28 @@ class BlockTrail {
 
   /// Emits for [dt] seconds behind a bird at [bird] flying along [heading]
   /// (radians, 0 = right, y down). Returns the number of blocks spawned.
-  int update(ParticlePool pool, double dt, Offset bird, double heading) {
+  /// PRD-2.2 §21.1: [scale] multiplies the block size (the run trail draws
+  /// it at 2×) and [back] is the spawn distance behind the bird.
+  int update(
+    ParticlePool pool,
+    double dt,
+    Offset bird,
+    double heading, {
+    double scale = 1,
+    double back = PartsConfig.trailBack,
+  }) {
     if (dt <= 0) return 0;
     _acc += dt * PartsConfig.trailRate;
     var n = 0;
     final hx = math.cos(heading), hy = math.sin(heading);
-    const back = PartsConfig.trailBack;
     const v = PartsConfig.trailDrift / PartsConfig.trailLife;
     while (_acc >= 1) {
       _acc -= 1;
       final j = (_r.nextDouble() * 2 - 1) * PartsConfig.trailSide;
-      final size = PartsConfig.trailSizeMin +
-          _r.nextDouble() *
-              (PartsConfig.trailSizeMax - PartsConfig.trailSizeMin);
+      final size = scale *
+          (PartsConfig.trailSizeMin +
+              _r.nextDouble() *
+                  (PartsConfig.trailSizeMax - PartsConfig.trailSizeMin));
       final p = pool.spawn(
         x: bird.dx - hx * back - hy * j,
         y: bird.dy - hy * back + hx * j,

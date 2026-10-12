@@ -7,7 +7,7 @@ import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode, kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleState, KeyEventResult;
 import 'package:url_launcher/url_launcher.dart';
@@ -37,6 +37,7 @@ import '../components/ui/coin_reward.dart';
 import '../components/ui/confetti.dart';
 import '../components/ui/service_message.dart';
 import '../menu/free_coins_policy.dart';
+import '../menu/home_mode.dart';
 import '../menu/menu_state.dart';
 import '../menu/powerup_slot.dart';
 import '../menu/wallet.dart';
@@ -64,6 +65,7 @@ import '../run/screens/results_screen.dart';
 import '../run/screens/versus_intro.dart'; // WP-5b
 import '../run/config/versus_config.dart'; // WP-5b
 import '../versus/opponent.dart'; // WP-5b
+import '../versus/diagnostics.dart'; // P22-2
 import '../run/screens/bonus_screen.dart'; // WP-4a
 import '../services/e2e.dart';
 import '../versus/timeline.dart';
@@ -871,7 +873,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // region WP-5b — §3.13 / §5.8 the opponent is taken at tap time: the
     // VS intro plays only when one is already prefetched, else START goes
     // straight into a solo run (no intro, no waiting)
-    final opponent = _takeRunOpponent();
+    // PRD-2.2 §2.2: FREE FLY never takes the opponent (no intro, no bar,
+    // no versus result); the held one stays ready for a later VERSUS.
+    final opponent = homeMode == HomeMode.versus ? _takeRunOpponent() : null;
+    if (homeMode == HomeMode.freeFly) _runOpponent = null;
     // endregion WP-5b
     if (withPowerup || hook != null || opponent != null) {
       _runStarting = true;
@@ -902,6 +907,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     state = GameState.playing;
     _runsThisSession++;
     services.logGameStart();
+    // PRD-2.2 §2.3 run_start {mode, opponent (VERSUS only)}; §3 the next
+    // Home visit searches again.
+    final mode = homeMode;
+    services.track('run_start', {
+      'mode': mode.analytics,
+      if (mode == HomeMode.versus) 'opponent': _runOpponent != null ? 1 : 0,
+    });
+    try {
+      versus.onRunStart();
+    } catch (_) {}
     _leaveHome();
     final adapter = _birdAdapter;
     if (adapter != null) {
@@ -983,6 +998,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _runOpponent = o;
     if (o == null) {
       services.track('versus_skipped', {'reason': 'no_opponent'});
+      _logVersusSolo();
     } else {
       services.track('versus_matched', {
         'opp_level': o.level,
@@ -991,6 +1007,44 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       });
     }
     return o;
+  }
+
+  /// PRD-2.2 §4 a VERSUS START went solo: why, for us only (analytics
+  /// `versus_solo {reason, reads, level}` and a logcat line; the debug panel
+  /// shows [VersusService.lastSearch]). The player sees nothing.
+  void _logVersusSolo() {
+    VersusSoloReason reason;
+    int reads;
+    try {
+      reason = versus.soloReason;
+      reads = versus.lastSearch.reads;
+    } catch (_) {
+      reason = VersusSoloReason.error;
+      reads = 0;
+    }
+    services.track('versus_solo', {
+      'reason': reason.code,
+      'reads': reads,
+      'level': menu.levels.level,
+    });
+    debugPrint(versusSoloLogLine(reason, reads));
+  }
+
+  // --- PRD-2.2 §2 mode button ------------------------------------------------
+
+  /// The Home mode (VERSUS / FREE FLY), remembered in `homeMode`.
+  HomeMode get homeMode => storage.homeMode;
+
+  /// PRD-2.2 §2.2 the mode button: switches the mode (remembered), plays
+  /// `mode_to_vs` / `mode_to_ff`, logs `mode_changed`. The menu knock comes
+  /// from the button. Ignored while a run starts or a popup is up.
+  void toggleHomeMode() {
+    if (!_homeInteractive) return;
+    final next = homeMode.toggled;
+    unawaited(storage.saveHomeMode(next));
+    sound.play(next == HomeMode.versus ? Sfx.modeToVs : Sfx.modeToFf);
+    services.track('mode_changed', {'mode': next.analytics});
+    _home?.syncMode();
   }
 
   /// The panels cover the home screen: drop it at once (its chrome goes
@@ -2877,6 +2931,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       // back to its default, live; the Settings slider follows.
       await storage.resetMusicVolume();
       unawaited(sound.setMusicVolume(storage.musicVolume));
+      // PRD-2.2 §2.2: the mode goes back to VERSUS.
+      await storage.resetHomeMode();
+      _home?.syncMode(animate: false);
       _settingsPanel?.setMusicVolume(sound.musicVolume);
     }
     if (_deleteDataPopup != popup) return;

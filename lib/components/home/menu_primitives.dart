@@ -228,6 +228,8 @@ class MenuButton extends PositionComponent with TapCallbacks {
     this.color,
     this.isActive,
     this.knocks = true,
+    this.pressedTo = pressedScale,
+    this.pressShade = true,
     super.position,
     super.size,
     super.priority,
@@ -239,6 +241,14 @@ class MenuButton extends PositionComponent with TapCallbacks {
   /// §8.1 press: 93 % for 0.1 s (CSS `transition: transform .1s`).
   static const double pressedScale = 0.93;
   static const double pressDuration = 0.1;
+
+  /// The scale while fully pressed ([pressedScale] unless a design sets
+  /// its own, e.g. the PRD-2.2 mode button's 96 %).
+  final double pressedTo;
+
+  /// Whether a press darkens the button (off for buttons whose mock only
+  /// shrinks).
+  final bool pressShade;
 
   late final WiggleEffect _pressEffect;
   double _pressK = 0;
@@ -302,7 +312,7 @@ class MenuButton extends PositionComponent with TapCallbacks {
       _pressK = _pressK < target
           ? (_pressK + step).clamp(0.0, target)
           : (_pressK - step).clamp(target, 1.0);
-      _pressEffect.scale = 1 - (1 - pressedScale) * _pressK;
+      _pressEffect.scale = 1 - (1 - pressedTo) * _pressK;
     }
   }
 
@@ -333,7 +343,7 @@ class MenuButton extends PositionComponent with TapCallbacks {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    add(_PressShade(this));
+    if (pressShade) add(_PressShade(this));
   }
 }
 

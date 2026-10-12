@@ -26,6 +26,14 @@
 //    in quiet hours). Android only.
 // 5. Versus live round trip (opt-in, Android only).
 // 6. Frame-time logging (not a gate): tier 3, a comet and a ride.
+// 7. PRD-2.2 §2 mode button: VERSUS by default, the switch (both ways,
+//    remembered across a relaunch), the VS tag.
+// 8. PRD-2.2 §2.2 FREE FLY run: no VS intro, no versus bar, no versus
+//    result, the run is still offered to the upload queue.
+// 9. PRD-2.2 §2–§4 live VERSUS match (opt-in FS_LIVE_VERSUS, Android): the
+//    Home search finds a seeded test account's real run (seed it first),
+//    START plays the VS intro, the run shows the versus bar, the results
+//    page the duel. Needs the registered App Check debug token.
 //
 // Screenshots are PNGs of the game's RepaintBoundary (works on Linux and
 // Android without `convertFlutterSurfaceToImage`). Linux: `build/e2e/release/`
@@ -46,6 +54,7 @@ import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/levels/levels.dart';
 import 'package:flappy_spikes/main.dart' as app;
+import 'package:flappy_spikes/menu/home_mode.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
 import 'package:flappy_spikes/menu/wallet.dart';
 import 'package:flappy_spikes/run/config/versus_config.dart';
@@ -63,6 +72,7 @@ import 'package:flappy_spikes/services/firebase_versus_backend.dart';
 import 'package:flappy_spikes/services/reminders.dart';
 import 'package:flappy_spikes/services/versus_service.dart';
 import 'package:flappy_spikes/skins/look.dart';
+import 'package:flappy_spikes/versus/diagnostics.dart';
 import 'package:flappy_spikes/versus/run_entry.dart';
 import 'package:flappy_spikes/versus/timeline.dart';
 import 'package:flappy_spikes/versus/upload_queue.dart';
@@ -894,6 +904,149 @@ void main() {
     await plugin.cancelAll();
     E2EHooks.reset();
   });
+
+  // region P22-2 — PRD-2.2 §2–§4 device steps (run by the QA phase)
+  testWidgets('P22 §2 mode button on the phone: VERSUS by default, a tap '
+      'switches to FREE FLY and back, the choice survives a relaunch', (
+    tester,
+  ) async {
+    E2EHooks.reset();
+    _freshPrefs();
+    var g = await _launch(tester);
+    expect(g.homeMode, HomeMode.versus);
+    var home = g.homeScreen!;
+    expect(home.modeButton.mode, HomeMode.versus);
+    expect(home.vsTag.shown, isTrue);
+    await _shot(tester, 'p22_mode_01_versus');
+
+    // The button's own tap path (knock, sound, analytics, storage).
+    home.modeButton.onPressed();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(g.homeMode, HomeMode.freeFly);
+    expect(home.modeButton.label, 'FREE FLY');
+    expect(home.vsTag.shown, isFalse);
+    await _shot(tester, 'p22_mode_02_free_fly');
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('homeMode'), 'freeFly');
+
+    // Relaunch: still FREE FLY.
+    await _teardown(tester);
+    g = await _launch(tester);
+    expect(g.homeMode, HomeMode.freeFly);
+    home = g.homeScreen!;
+    expect(home.modeButton.mode, HomeMode.freeFly);
+
+    // And back to VERSUS.
+    home.modeButton.onPressed();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(g.homeMode, HomeMode.versus);
+    expect(home.vsTag.shown, isTrue);
+    await _shot(tester, 'p22_mode_03_back_to_versus');
+    expect(_handlerErrors, isEmpty);
+    await _teardown(tester);
+  });
+
+  testWidgets('P22 §2.2 FREE FLY run: no VS intro, no versus bar, no versus '
+      'result; the run is still queued for upload', (tester) async {
+    E2EHooks.reset();
+    E2EHooks.autopilot = true;
+    _freshPrefs({'homeMode': 'freeFly'});
+    final g = await _launch(tester);
+    expect(g.homeMode, HomeMode.freeFly);
+    final run = await _start(tester, g);
+    expect(g.versusIntro, isNull, reason: 'FREE FLY: no VS intro');
+    expect(run.setup.opponent, isNull);
+    expect(g.runHud?.versus, isNull, reason: 'no versus bar');
+    g.runDebug.god = true;
+    expect(
+      await _waitFor(tester, () => run.state.score >= 3, seconds: 60),
+      isTrue,
+      reason: 'the bot scored 3 (an uploadable run)',
+    );
+    await _shot(tester, 'p22_free_fly_run');
+    await _killToPostRun(tester, g);
+    await _toResults(tester, g);
+    final page = g.resultsScreen!;
+    expect(page.duel, isNull, reason: 'no WIN / LOSE / DRAW');
+    expect(page.header, isNull);
+    expect(run.summarize().duel, isNull);
+    await _shot(tester, 'p22_free_fly_results');
+    final v = g.versus;
+    if (v is FirebaseVersusService) {
+      expect(
+        v.lastOffer,
+        anyOf(UploadDecision.queued, UploadDecision.queuedBest),
+        reason: 'FREE FLY runs go into the upload queue',
+      );
+    }
+    expect(_handlerErrors, isEmpty);
+    await _teardown(tester);
+  });
+
+  testWidgets('P22 §2–§4 live VERSUS match (FS_LIVE_VERSUS): the search '
+      'finds a seeded test account run, VS intro, versus bar, result', (
+    tester,
+  ) async {
+    if (!kLiveVersus || !_isAndroid) {
+      debugPrint(
+        'SKIP live versus match: needs Android, '
+        '--dart-define=FS_LIVE_VERSUS=true and a registered '
+        'FS_APPCHECK_DEBUG_TOKEN',
+      );
+      markTestSkipped('live versus match is opt-in (Android)');
+      return;
+    }
+    E2EHooks.reset();
+    E2EHooks.autopilot = true;
+    E2EHooks.skipVersusIntroWait = false;
+    // Level 2 (best 50..99): any seeded run is found by the §3 search.
+    _freshPrefs({'bestScore': 60, 'homeMode': 'versus'});
+    final g = await _launch(tester);
+    expect(g.homeMode, HomeMode.versus);
+    final found = await _waitFor(
+      tester,
+      () => g.versus.lastSearch.state == VersusSearchState.found,
+      seconds: 60,
+    );
+    debugPrint('P22 ${g.versus.lastSearch.debugLine}');
+    expect(
+      found,
+      isTrue,
+      reason:
+          'the §3 search found an opponent (${g.versus.lastSearch.debugLine}); '
+          'seed a test account run first. Solo reason: '
+          '${g.versus.soloReason.code}',
+    );
+    expect(g.versus.lastSearch.reads, lessThanOrEqualTo(44));
+    await _shot(tester, 'p22_live_home');
+    unawaited(g.startRun());
+    expect(
+      await _waitFor(tester, () => g.versusIntro != null, seconds: 5),
+      isTrue,
+      reason: 'START played the VS intro',
+    );
+    await tester.pump(const Duration(seconds: 2));
+    await _shot(tester, 'p22_live_vs_intro');
+    expect(
+      await _waitFor(tester, () => g.state == GameState.playing, seconds: 20),
+      isTrue,
+    );
+    final run = g.run!;
+    expect(run.setup.opponent, isNotNull);
+    expect(g.runHud?.versus, isNotNull, reason: 'the versus bar');
+    g.runDebug.god = true;
+    await _waitFor(tester, () => run.state.score >= 3, seconds: 60);
+    await _shot(tester, 'p22_live_versus_bar');
+    await _killToPostRun(tester, g);
+    await _toResults(tester, g);
+    final page = g.resultsScreen!;
+    expect(page.duel, isNotNull, reason: 'WIN / LOSE / DRAW');
+    await tester.pump(const Duration(seconds: 1));
+    await _shot(tester, 'p22_live_versus_results');
+    expect(_handlerErrors, isEmpty);
+    await _teardown(tester);
+  });
+  // endregion P22-2
 
   testWidgets('P6 §3.13 versus live round trip (FS_LIVE_VERSUS): anonymous '
       'sign-in, upload, pool read, deleteMyData', (tester) async {

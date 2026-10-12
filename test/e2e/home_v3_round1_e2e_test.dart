@@ -344,7 +344,8 @@ void main() async {
         expect(home.bestStat.y + home.bestStat.height / 2, home.emblem.y);
         expect(home.lastStat.y + home.lastStat.height / 2, home.emblem.y);
         final ribbonBottom = home.emblem.y + 72 * home.emblem.artScale;
-        final topGap = home.startButton.y - ribbonBottom;
+        // PRD-2.2 §2.1: the centred block starts at the mode button.
+        final topGap = home.modeButton.y - ribbonBottom;
         final bottomGap =
             home.shopTile.y - home.slotButton.y - home.slotButton.height;
         expect(topGap, greaterThan(0));
@@ -360,10 +361,11 @@ void main() async {
           );
           expect(stat.numberText.scale.x, lessThan(1));
         }
-        expect(home.emblem.artScale, greaterThanOrEqualTo(.78));
+        // PRD-2.2 §2.1: below 0.78 only on the shortest screens (8 pt gaps).
+        expect(home.emblem.artScale, greaterThanOrEqualTo(.70));
         if (height == 711) {
-          expect(home.startButton.y, 390);
-          expect(home.slotButton.y, 461);
+          expect(home.startButton.y, 403); // PRD-2.2 §2.1 (was 390)
+          expect(home.slotButton.y, 474); // (was 461)
           expect(home.shopTile.y, 562);
         }
       },

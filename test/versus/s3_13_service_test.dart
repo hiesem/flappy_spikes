@@ -152,7 +152,7 @@ void main() {
   setUp(() => now = DateTime.utc(2026, 10, 8, 12));
 
   test('§3.13 initialize: a nickname once per install, anonymous auth, the '
-      'first prefetch (own level, random shard; on a miss another level)', () async {
+      'first prefetch (PRD-2.2 §3: own level shards, then the other levels)', () async {
     await build(prefs: {'bestScore': 120}); // level 3 (100 → 3)
     await versus.initialize();
     expect(versus.ready, isTrue);
@@ -160,9 +160,11 @@ void main() {
     expect(isGeneratedNickname(nick), isTrue);
     expect(versus.me.name, nick);
     expect(versus.me.level, 3);
-    expect(backend.poolReads, hasLength(2), reason: 'empty own pool → fallback');
-    expect(backend.poolReads.first, startsWith('3_'));
-    expect(backend.poolReads.last, isNot(startsWith('3_')));
+    // PRD-2.2 §3 (changed from the 2.1 two-read plan): nothing anywhere →
+    // all 44 pools, own level first.
+    expect(backend.poolReads, hasLength(44));
+    expect(backend.poolReads.take(4), everyElement(startsWith('3_')));
+    expect(backend.poolReads.skip(4), everyElement(isNot(startsWith('3_'))));
     expect(versus.takeOpponent(), isNull, reason: 'nothing anywhere: solo');
     // Second initialize keeps the nickname.
     await build(prefs: {'versusNickname': nick});
@@ -186,7 +188,7 @@ void main() {
     await versus.initialize();
     final first = versus.takeOpponent()!;
     expect(['a1', 'b1'], contains(first.runId));
-    expect(first.level, first.runId == 'a1' ? 5 : 2,
+    expect(first.level, first.runId == 'a1' ? 4 : 2, // 300 → 4 (200..399)
         reason: 'emblem level from their best');
     final second = versus.takeOpponent()!;
     expect(['a1', 'b1'], contains(second.runId));

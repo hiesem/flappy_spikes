@@ -8,6 +8,7 @@ import '../levels/levels.dart';
 import '../run/config/versus_config.dart';
 import '../run/run_summary.dart';
 import '../skins/look.dart';
+import '../versus/diagnostics.dart';
 import '../versus/matcher.dart';
 import '../versus/nickname.dart';
 import '../versus/opponent.dart';
@@ -52,8 +53,21 @@ abstract class VersusService {
   /// Sync at START: a prefetched match, or null (→ solo, no intro).
   OpponentRun? takeOpponent();
 
-  /// Own level + random shard, else a random other level.
+  /// PRD-2.2 §3 the opponent search (Home prefetch): every shard of the own
+  /// level, then the other levels nearest first, stopping at the first
+  /// usable opponent; 6 s limit; cached for the Home visit (a new search
+  /// only after [onRunStart]).
   Future<void> prefetch();
+
+  /// PRD-2.2 §3 a run starts (VERSUS or FREE FLY): the next Home prefetch
+  /// searches again.
+  void onRunStart();
+
+  /// PRD-2.2 §4 the latest search (debug panel).
+  VersusSearchInfo get lastSearch;
+
+  /// PRD-2.2 §4 why a VERSUS START without an opponent is solo right now.
+  VersusSoloReason get soloReason;
 
   /// Queue + rules (best always, ≤ 3 a day, score ≥ 3), retried online.
   Future<void> submitRun(RunSummary s, Look look);
@@ -86,6 +100,16 @@ class NoopVersusService implements VersusService {
 
   @override
   Future<void> prefetch() async {}
+
+  @override
+  void onRunStart() {}
+
+  @override
+  VersusSearchInfo get lastSearch => const VersusSearchInfo();
+
+  /// No backend wired (tests, iOS while paused): never signed in.
+  @override
+  VersusSoloReason get soloReason => VersusSoloReason.auth;
 
   @override
   Future<void> submitRun(RunSummary s, Look look) async {}
@@ -132,6 +156,21 @@ class FakeVersusService implements VersusService {
 
   @override
   Future<void> prefetch() async => prefetchCalls++;
+
+  int runStarts = 0;
+
+  @override
+  void onRunStart() => runStarts++;
+
+  /// PRD-2.2 §4 scripted diagnostics (tests).
+  VersusSearchInfo searchInfo = const VersusSearchInfo();
+  VersusSoloReason reason = VersusSoloReason.noRival;
+
+  @override
+  VersusSearchInfo get lastSearch => searchInfo;
+
+  @override
+  VersusSoloReason get soloReason => reason;
 
   @override
   Future<void> submitRun(RunSummary s, Look look) async => submitted.add(s);
@@ -221,9 +260,12 @@ class PlayerFields {
 /// - [initialize]: App Check + anonymous auth, the nickname (once per
 ///   install), the Play Games link when a player is signed in, the queue
 ///   flush and the first [prefetch];
-/// - matching is local from one pool document per read (own level, random
-///   shard, else a random other level), re-read when the session's
-///   candidates run out; an opponent is always held ready for START;
+/// - matching is local: the Home prefetch searches the pools (PRD-2.2 §3:
+///   every shard of the own level, then the other levels nearest first,
+///   stopping at the first usable opponent, ≤ 44 reads, 6 s limit) once
+///   per Home visit; the found shard's other candidates are used first;
+///   a held opponent is ready for START; a solo START has a §4 reason
+///   ([soloReason], [lastSearch]);
 /// - [submitRun]: the §3.13 upload rules through the persisted
 ///   [UploadQueue] (3 a day per UTC day, best always, score ≥ 3), flushed
 ///   one run per write and retried on the next flush.
@@ -235,6 +277,7 @@ class FirebaseVersusService implements VersusService {
     Random? random,
     DateTime Function()? clock,
     this.timeout = VersusConfig.callTimeout,
+    this.searchLimit = VersusConfig.searchLimit,
     this.retryBase,
     this.retryMax = VersusConfig.authRetryMax,
     this.startAfter,
@@ -251,6 +294,9 @@ class FirebaseVersusService implements VersusService {
   final Random _random;
   final DateTime Function() _clock;
   final Duration timeout;
+
+  /// PRD-2.2 §3 the search's own time limit (6 s).
+  final Duration searchLimit;
 
   /// S6-66 the first background retry wait after a failed start (doubling
   /// up to [retryMax]); null = no background timer (tests), the on-demand
@@ -274,7 +320,14 @@ class FirebaseVersusService implements VersusService {
   List<PoolEntry> _pool = const [];
   final Set<String> _seen = {};
   bool _loading = false;
-  DateTime? _emptyReadAt;
+
+  /// PRD-2.2 §3 a search ended since the last run start: the result is
+  /// cached for the Home visit (no new search until [onRunStart]).
+  bool _searched = false;
+  VersusSearchInfo _search = const VersusSearchInfo();
+
+  /// PRD-2.2 §4 why the last start (App Check + auth) failed.
+  VersusSoloReason? _startFailure;
   PlatformPlayer? _player;
   StreamSubscription<PlatformPlayer?>? _playerSub;
   UploadQueue? _queue;
@@ -287,6 +340,10 @@ class FirebaseVersusService implements VersusService {
 
   /// Run ids met this session (tests).
   Set<String> get seen => _seen;
+
+  /// What the upload queue decided for the last submitted run (tests and
+  /// the device e2e: PRD-2.2 §2.2 FREE FLY runs are queued too).
+  UploadDecision? lastOffer;
 
   /// Pool entries loaded this session (tests).
   List<PoolEntry> get pool => _pool;
@@ -357,6 +414,7 @@ class FirebaseVersusService implements VersusService {
       await ensureNickname();
       await _call(backend.start());
       _ready = true;
+      _startFailure = null;
       _failures = 0;
       _retry?.cancel();
       _retry = null;
@@ -369,7 +427,12 @@ class FirebaseVersusService implements VersusService {
       await prefetch();
     } catch (e) {
       _log('initialize', e);
-      if (!_ready) _scheduleRetry();
+      if (!_ready) {
+        // §4: a classified failure keeps its reason (offline, app_check,
+        // …); anything else means sign-in failed.
+        _startFailure = e is VersusFailure ? e.reason : VersusSoloReason.auth;
+        _scheduleRetry();
+      }
     }
   }
 
@@ -418,10 +481,25 @@ class FirebaseVersusService implements VersusService {
     _held = null;
     if (o != null) {
       _seen.add(o.runId);
+      // The next match from the same shard, held for the next START; a new
+      // search only runs on the next Home visit (PRD-2.2 §3).
       _pickFromPool();
-      if (_held == null) unawaited(prefetch());
     }
     return o;
+  }
+
+  @override
+  void onRunStart() => _searched = false;
+
+  @override
+  VersusSearchInfo get lastSearch => _search;
+
+  @override
+  VersusSoloReason get soloReason {
+    if (!_ready) return _startFailure ?? VersusSoloReason.auth;
+    // START came while the search still ran: it did not finish in time.
+    if (_loading) return VersusSoloReason.timeout;
+    return _search.reason ?? VersusSoloReason.noRival;
   }
 
   /// Holds a random match from the loaded pool (§3.13 matching).
@@ -452,37 +530,66 @@ class FirebaseVersusService implements VersusService {
     }
     if (_held != null) return;
     _pickFromPool();
-    if (_held != null || _loading) return;
-    final empty = _emptyReadAt;
-    if (empty != null &&
-        _clock().difference(empty) < VersusConfig.poolRetry) {
-      return;
-    }
+    if (_held != null || _loading || _searched) return;
     _loading = true;
+    final level = levelFor(storage.bestScore);
+    _search = VersusSearchInfo(state: VersusSearchState.running, level: level);
+    final startedAt = _clock();
+    final watch = Stopwatch()..start();
+    Duration elapsed() {
+      final byClock = _clock().difference(startedAt);
+      return byClock > watch.elapsed ? byClock : watch.elapsed;
+    }
+
+    var reads = 0;
     try {
-      final plan = poolReadPlan(levelFor(storage.bestScore), _random);
-      var entries = await _call(backend.readPool(plan.first));
-      final uid = backend.uid ?? '';
-      bool usable(List<PoolEntry> l) =>
-          l.any((e) => e.uid != uid && !_seen.contains(e.runId));
-      if (!usable(entries)) {
-        entries = await _call(backend.readPool(plan.fallback));
-      }
-      _pool = entries;
+      final uid = _safe(() => backend.uid) ?? '';
+      final found = await searchPools<PoolCandidate>(
+        order: poolSearchOrder(level, _random),
+        myUid: uid,
+        seen: _seen,
+        expired: () => elapsed() >= searchLimit,
+        onRead: (n) => reads = n,
+        read: (id) async {
+          final left = searchLimit - elapsed();
+          final entries = await backend
+              .readPool(id)
+              .timeout(left < timeout ? left : timeout);
+          return entries.map(PoolCandidate.new).toList();
+        },
+      );
+      _pool = [for (final c in found.pool) c.entry];
       _pickFromPool();
-      _emptyReadAt = _held == null ? _clock() : null;
-      if (kDebugMode) {
-        debugPrint(
-          'versus: pool ${plan.first} / ${plan.fallback} → '
-          '${entries.length} entries, opponent '
-          '${_held == null ? 'none' : 'held'}',
-        );
-      }
+      final held = _held;
+      _search = held != null
+          ? VersusSearchInfo(
+              state: VersusSearchState.found,
+              reads: found.reads,
+              level: level,
+              opponentUid: held.uid,
+            )
+          : VersusSearchInfo(
+              state: VersusSearchState.solo,
+              reason: found.timedOut
+                  ? VersusSoloReason.timeout
+                  : VersusSoloReason.noRival,
+              reads: found.reads,
+              level: level,
+            );
     } catch (e) {
       _log('prefetch', e);
-      _emptyReadAt = _clock();
+      _search = VersusSearchInfo(
+        state: VersusSearchState.solo,
+        reason: soloReasonOf(e),
+        reads: reads,
+        level: level,
+      );
     } finally {
       _loading = false;
+      _searched = true;
+    }
+    if (kDebugMode) {
+      debugPrint('versus: search (${_search.debugLine})');
     }
   }
 
@@ -499,7 +606,7 @@ class FirebaseVersusService implements VersusService {
         platform: identity.platform,
         ts: _clock().toUtc(),
       );
-      await queue.offer(entry, newBest: s.newBest);
+      lastOffer = await queue.offer(entry, newBest: s.newBest);
       unawaited(flush());
     } catch (e) {
       _log('submit', e);
@@ -580,7 +687,8 @@ class FirebaseVersusService implements VersusService {
     _held = null;
     _pool = const [];
     _seen.clear();
-    _emptyReadAt = null;
+    _searched = false;
+    _search = const VersusSearchInfo();
     _ready = false;
     // A fresh anonymous account so versus keeps working.
     await initialize();

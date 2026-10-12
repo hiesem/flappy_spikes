@@ -95,5 +95,97 @@
       "pool": [{ "uid": "i", "runId": "i1", "score": 55, "level": 2, "platform": "ios" }],
       "expect": { "tier": "level", "runIds": ["i1"] }
     }
+  ],
+  "_searchDoc": "PRD-2.2 §3 search: 'pools' maps a pool id (level_shard) to its entries (absent = empty doc). The search reads every shard of my level in random order, then the other levels nearest first (lower before higher at each distance), stopping at the first shard with a usable opponent (not mine, not seen). 'expect.pool' is that shard (null = solo); 'expect.runIds' the matchCandidates set inside it; reads lie in [minReads, maxReads] whatever the shard shuffle.",
+  "search": [
+    {
+      "name": "sparse pool: one run in one shard of my level is found within my level's 4 reads",
+      "me": { "uid": "me", "best": 120, "level": 3 },
+      "seen": [],
+      "pools": {
+        "3_2": [{ "uid": "a", "runId": "a1", "score": 80, "level": 3 }]
+      },
+      "expect": { "pool": "3_2", "tier": "level", "runIds": ["a1"], "minReads": 1, "maxReads": 4 }
+    },
+    {
+      "name": "own uid only everywhere: solo after reading all 44 shards",
+      "me": { "uid": "me", "best": 120, "level": 3 },
+      "seen": [],
+      "pools": {
+        "3_0": [{ "uid": "me", "runId": "m1", "score": 100, "level": 3 }],
+        "3_3": [{ "uid": "me", "runId": "m2", "score": 110, "level": 3 }],
+        "4_1": [{ "uid": "me", "runId": "m3", "score": 150, "level": 4 }],
+        "0_0": [{ "uid": "me", "runId": "m4", "score": 5, "level": 0 }]
+      },
+      "expect": { "pool": null, "tier": "solo", "runIds": [], "minReads": 44, "maxReads": 44 }
+    },
+    {
+      "name": "other-level hit: my level empty, the nearest level with a run wins (level 4 at distance 1 before level 1 at distance 2)",
+      "me": { "uid": "me", "best": 120, "level": 3 },
+      "seen": [],
+      "pools": {
+        "4_3": [{ "uid": "b", "runId": "b1", "score": 210, "level": 4 }],
+        "1_0": [{ "uid": "c", "runId": "c1", "score": 30, "level": 1 }]
+      },
+      "expect": { "pool": "4_3", "tier": "any", "runIds": ["b1"], "minReads": 9, "maxReads": 12 }
+    },
+    {
+      "name": "at the same distance the lower level is read first",
+      "me": { "uid": "me", "best": 120, "level": 3 },
+      "seen": [],
+      "pools": {
+        "2_1": [{ "uid": "d", "runId": "d1", "score": 60, "level": 2 }],
+        "4_0": [{ "uid": "e", "runId": "e1", "score": 160, "level": 4 }]
+      },
+      "expect": { "pool": "2_1", "tier": "any", "runIds": ["d1"], "minReads": 5, "maxReads": 8 }
+    },
+    {
+      "name": "a shard with only my own run is skipped; the next usable shard of my level is the hit",
+      "me": { "uid": "me", "best": 120, "level": 3 },
+      "seen": [],
+      "pools": {
+        "3_0": [{ "uid": "me", "runId": "m1", "score": 100, "level": 3 }],
+        "3_1": [{ "uid": "me", "runId": "m2", "score": 90, "level": 3 }],
+        "3_2": [{ "uid": "me", "runId": "m3", "score": 95, "level": 3 }],
+        "3_3": [{ "uid": "me", "runId": "m4", "score": 70, "level": 3 }, { "uid": "f", "runId": "f1", "score": 60, "level": 3 }]
+      },
+      "expect": { "pool": "3_3", "tier": "level", "runIds": ["f1"], "minReads": 1, "maxReads": 4 }
+    },
+    {
+      "name": "runs met this session do not count as a hit",
+      "me": { "uid": "me", "best": 120, "level": 3 },
+      "seen": ["a1"],
+      "pools": {
+        "3_1": [{ "uid": "a", "runId": "a1", "score": 80, "level": 3 }],
+        "5_2": [{ "uid": "g", "runId": "g1", "score": 400, "level": 5 }]
+      },
+      "expect": { "pool": "5_2", "tier": "any", "runIds": ["g1"], "minReads": 17, "maxReads": 20 }
+    },
+    {
+      "name": "level 0 player: own level, then 1, 2, … upward",
+      "me": { "uid": "me", "best": 0, "level": 0 },
+      "seen": [],
+      "pools": {
+        "2_0": [{ "uid": "h", "runId": "h1", "score": 60, "level": 2 }],
+        "9_0": [{ "uid": "i", "runId": "i1", "score": 900, "level": 9 }]
+      },
+      "expect": { "pool": "2_0", "tier": "any", "runIds": ["h1"], "minReads": 9, "maxReads": 12 }
+    },
+    {
+      "name": "top level player: own level 10, then 9, 8, … downward",
+      "me": { "uid": "me", "best": 5000, "level": 10 },
+      "seen": [],
+      "pools": {
+        "8_3": [{ "uid": "j", "runId": "j1", "score": 700, "level": 8 }]
+      },
+      "expect": { "pool": "8_3", "tier": "any", "runIds": ["j1"], "minReads": 9, "maxReads": 12 }
+    },
+    {
+      "name": "all pools empty: solo after 44 reads",
+      "me": { "uid": "me", "best": 0, "level": 0 },
+      "seen": [],
+      "pools": {},
+      "expect": { "pool": null, "tier": "solo", "runIds": [], "minReads": 44, "maxReads": 44 }
+    }
   ]
 }

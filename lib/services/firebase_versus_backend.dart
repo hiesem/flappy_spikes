@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../run/config/versus_config.dart';
+import '../versus/diagnostics.dart';
 import '../versus/run_entry.dart';
 import '../versus/upload_queue.dart';
 import 'e2e.dart';
@@ -78,13 +79,65 @@ class FirebaseVersusBackend implements VersusBackend {
     }
   }
 
+  /// PRD-2.2 §4: start failures carry their reason ([VersusFailure]):
+  /// App Check activation → `app_check`; no network → `offline`; any other
+  /// sign-in failure → `auth`.
   @override
   Future<String> start() async {
-    await activateAppCheck();
-    final user = _auth.currentUser ?? (await _auth.signInAnonymously()).user;
+    try {
+      await activateAppCheck();
+    } catch (e) {
+      throw VersusFailure(VersusSoloReason.appCheck, e);
+    }
+    final User? user;
+    try {
+      user = _auth.currentUser ?? (await _auth.signInAnonymously()).user;
+    } on FirebaseAuthException catch (e) {
+      throw VersusFailure(
+        e.code == 'network-request-failed'
+            ? VersusSoloReason.offline
+            : VersusSoloReason.auth,
+        e,
+      );
+    }
     final uid = user?.uid;
     if (uid == null) throw StateError('no Firebase user');
     return uid;
+  }
+
+  /// PRD-2.2 §4 the reason of a refused Firestore call. A permission-denied
+  /// with a working App Check token is the rules; without one it is App
+  /// Check (enforced App Check refuses sideloaded release builds, which
+  /// fail Play Integrity — AGENTS.md).
+  static Future<VersusSoloReason> classify(FirebaseException e) async {
+    final text = '${e.code} ${e.message}'.toLowerCase();
+    if (text.contains('app check') ||
+        text.contains('appcheck') ||
+        text.contains('app-check')) {
+      return VersusSoloReason.appCheck;
+    }
+    switch (e.code) {
+      case 'unavailable' || 'network-request-failed':
+        return VersusSoloReason.offline;
+      case 'unauthenticated':
+        return VersusSoloReason.auth;
+      case 'permission-denied':
+        return await _appCheckTokenOk()
+            ? VersusSoloReason.rules
+            : VersusSoloReason.appCheck;
+    }
+    return VersusSoloReason.error;
+  }
+
+  static Future<bool> _appCheckTokenOk() async {
+    try {
+      final token = await FirebaseAppCheck.instance.getToken().timeout(
+        const Duration(seconds: 5),
+      );
+      return token != null && token.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
   }
 
   @override
@@ -105,7 +158,12 @@ class FirebaseVersusBackend implements VersusBackend {
 
   @override
   Future<List<PoolEntry>> readPool(String id) async {
-    final snap = await _db.collection('pools').doc(id).get();
+    final DocumentSnapshot<Map<String, dynamic>> snap;
+    try {
+      snap = await _db.collection('pools').doc(id).get();
+    } on FirebaseException catch (e) {
+      throw VersusFailure(await classify(e), e);
+    }
     final entries = snap.data()?['entries'];
     if (entries is! List) return const [];
     return [

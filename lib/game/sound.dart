@@ -201,6 +201,10 @@ enum Sfx {
   frenzyEnd,
   // endregion WP-3h
   // region anchors — append below (one value per WP, with a `// WP-x` note)
+  // P22-2 — PRD-2.2 §2.2 Home mode button (design/menu_v2/gen_sfx16.py):
+  // swipe down into the bubble pop (VERSUS) / swipe up, lighter pop (FREE FLY)
+  modeToVs,
+  modeToFf,
   // endregion anchors
 }
 
@@ -408,6 +412,9 @@ class SoundService {
     Sfx.frenzyRing: 'frenzy_ring.mp3',
     Sfx.frenzyEnd: 'frenzy_end.mp3',
     // endregion WP-3h
+    // P22-2 — PRD-2.2 §2.2
+    Sfx.modeToVs: 'mode_to_vs.mp3',
+    Sfx.modeToFf: 'mode_to_ff.mp3',
   };
 
   /// The bundled file for every [Sfx] (asserted by the asset test).

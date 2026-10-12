@@ -49,8 +49,12 @@ void main() async {
     expect(plate.dy, closeTo(254, 0.1));
     expect(Config.homeEmblemScaleFor(h), 0.936);
     expect(Config.homeBirdScaleFor(h), 1.32);
-    expect(Config.homeStartRectFor(h), const Rect.fromLTWH(52, 390, 216, 67));
-    expect(Config.homeSlotRectFor(h), const Rect.fromLTWH(52, 461, 216, 31));
+    // PRD-2.2 §2.1: the mode button row (21 + 5) joined the centred START
+    // block, so START moved from 390 to 403 (the mode button at 377).
+    expect(Config.homeStartRectFor(h), const Rect.fromLTWH(52, 403, 216, 67));
+    expect(Config.homeSlotRectFor(h), const Rect.fromLTWH(52, 474, 216, 31));
+    expect(Config.homeModeRectFor(h), const Rect.fromLTWH(121, 377, 147, 21));
+    expect(Config.homeVsTagRectFor(h), const Rect.fromLTWH(61, 395, 31, 17));
     expect(Config.homeStartFontSize, 34);
     final best = Config.homeFlankRectFor(h, right: false);
     final last = Config.homeFlankRectFor(h, right: true);
@@ -65,12 +69,12 @@ void main() async {
       );
     }
     expect(Config.homeTileRectFor(h, 3).right, 306);
-    // START + slot centred between the emblem bottom (≈ 320) and the
-    // tiles: ≈ 70 pt above and below.
-    final above = 390 - Config.homeEmblemBottomFor(h);
+    // Mode button + START + slot centred between the emblem bottom (≈ 320)
+    // and the tiles: ≈ 57 pt above and below (PRD-2.2 §2.1; 70 before).
+    final above = 377 - Config.homeEmblemBottomFor(h);
     final below = 562 - Config.homeSlotRectFor(h).bottom;
-    expect(above, closeTo(70, 0.5));
-    expect(below, closeTo(70, 0.5));
+    expect(above, closeTo(57, 0.5));
+    expect(below, closeTo(57, 0.5));
   });
 
   test('vertical rule: top pinned, tiles bottom-anchored, START centred', () {
@@ -79,18 +83,22 @@ void main() async {
       expect(Config.homeTitlePositionFor(h).y, 104);
       expect(Config.homeStageScaleFor(h), 1);
     }
-    // Short screens: the emblem shrinks to at least 0.78 / 1.1.
-    expect(Config.homeEmblemScaleFor(568), closeTo(0.78, 1e-9));
-    expect(Config.homeBirdScaleFor(568), closeTo(1.1, 1e-9));
+    // Short screens: the emblem shrinks to 0.78 / 1.1; PRD-2.2 §2.1 (the
+    // mode row joined the START block): on the very shortest screens it
+    // shrinks a little further so the block keeps 8 pt above and below.
+    expect(Config.homeEmblemScaleFor(590), closeTo(0.78, 1e-9));
+    expect(Config.homeBirdScaleFor(590), closeTo(1.1, 1e-9));
+    expect(Config.homeEmblemScaleFor(568), closeTo(0.709, 0.002));
     for (var h = 568.0; h <= 730; h += 2) {
       final k = Config.homeStageScaleFor(h);
-      expect(k, inInclusiveRange(Config.homeStageMinScale, 1));
-      final start = Config.homeStartRectFor(h);
+      expect(k, inInclusiveRange(0.75, 1));
       final slot = Config.homeSlotRectFor(h);
-      final above = start.top - Config.homeEmblemBottomFor(h);
+      // PRD-2.2 §2.1: the block starts at the mode button.
+      final above = Config.homeModeRectFor(h).top - Config.homeEmblemBottomFor(h);
       final below = Config.homeTileRowTopFor(h) - slot.bottom;
       expect((above - below).abs(), lessThanOrEqualTo(1.01), reason: '$h');
-      expect(above, greaterThan(8), reason: '$h');
+      expect(above, greaterThanOrEqualTo(Config.homeStartTightGap - 0.51),
+          reason: '$h');
     }
     // 711..568 is monotonic.
     var lastStart = double.infinity;
@@ -205,8 +213,13 @@ void main() async {
         for (var i = 1; i < 4; i++) {
           expect(tiles[i].left - tiles[i - 1].right, 4);
         }
-        // START block centred between the emblem bottom and the tiles.
-        final above = start.top - Config.homeEmblemBottomFor(h);
+        // START block (from the PRD-2.2 mode button) centred between the
+        // emblem bottom and the tiles.
+        final mode = rectOf(home.modeButton);
+        final vsTag = rectOf(home.vsTag);
+        expect(mode, rectNear(Config.homeModeRectFor(h)));
+        expect(vsTag, rectNear(Config.homeVsTagRectFor(h)));
+        final above = mode.top - Config.homeEmblemBottomFor(h);
         final below = tiles.first.top - slot.bottom;
         expect((above - below).abs(), lessThanOrEqualTo(1.01));
 
@@ -229,6 +242,8 @@ void main() async {
           'best': best,
           'last': last,
           'start': start,
+          'mode': mode,
+          'vstag': vsTag,
           'slot': slot.inflate(Config.homeSlotOutline),
           for (var i = 0; i < 4; i++) 'tile$i': tiles[i],
         };
@@ -238,6 +253,8 @@ void main() async {
           {'emblem', 'last'},
           // Attached by design (4 pt gap, the slot's 3 pt outline).
           {'start', 'slot'},
+          // PRD-2.2 §2.1: the VS tag sits half outside START's corner.
+          {'vstag', 'start'},
         };
         final keys = named.keys.toList();
         for (var i = 0; i < keys.length; i++) {
@@ -269,8 +286,10 @@ void main() async {
 
         // The 711 reference reproduces the PRD table.
         if (h == 711) {
-          expect(start, rectNear(const Rect.fromLTWH(52, 390, 216, 67)));
-          expect(slot, rectNear(const Rect.fromLTWH(52, 461, 216, 31)));
+          // PRD-2.2 §2.1: 13 pt lower than the home-v3 table (390 / 461).
+          expect(start, rectNear(const Rect.fromLTWH(52, 403, 216, 67)));
+          expect(slot, rectNear(const Rect.fromLTWH(52, 474, 216, 31)));
+          expect(mode, rectNear(const Rect.fromLTWH(121, 377, 147, 21)));
           expect(stage, rectNear(const Rect.fromLTWH(28, 148, 264, 204)));
           expect(tiles.first.top, 562);
         }

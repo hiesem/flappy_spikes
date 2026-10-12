@@ -58,6 +58,12 @@ class Hoop extends PositionComponent with ClearFade {
   /// Each hoop resolves once (§3.0.4 5).
   bool resolved = false;
 
+  /// PRD-2.2 §30.2 (for §11): at a plane-crossing pass, the bird centre's
+  /// local y minus the passed ring's offset, measured in the ring's own
+  /// moving frame at the crossing (`PlaneEvent.offset`). Null until then,
+  /// and for passes without a crossing (ride passes).
+  double? passOffset;
+
   /// Switch rings start closed (§3.20).
   bool open = true;
   int? takenRing;

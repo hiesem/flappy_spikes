@@ -515,6 +515,17 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   bird is fully past the ring: centre − r > centre x + |sin tilt| × (largest
   ring offset + opening/2 + 7) + 7. Each hoop resolves once. (Replaces the
   sensor 111 pt right of the pipe centre.)
+- NOTE (PRD-2.2 §30, moving rings — bug fix, no rule change; PRD-2
+  §3.0.4 / §3.11): the crossing is judged **relative to the moving ring**:
+  the bird's previous position is measured in the ring's pose of the
+  previous physics step and its current position in the current pose, the
+  local y interpolated to the crossing. A ring whose centre or rim ends move
+  more than 2 pt in a step is tested in 4 sub-steps (pose and bird
+  interpolated), for the plane and the rim ends alike, so neither can jump
+  over the bird. Borderline crossings lean to the player (exactly at the
+  reach passes; a pass in the step wins over a miss). Ring sizes, motions,
+  speeds, the swing period, rim physics and the still-ring miss rule are
+  unchanged.
 - DEVIATION (PRD-2 §3.1 / §3.2 / §3.0.1, scoring): **+1 per hoop**; **a coin
   per hoop at the moment of the pass** through the menu wallet (1; **2 for a
   perfect pass** = no rim touched), shown by the gold "+N" coin popup; the

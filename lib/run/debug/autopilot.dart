@@ -423,7 +423,11 @@ class Autopilot {
     var touched = h.touched;
     var clear = double.infinity;
     var t = 0.0;
+    // PRD-2.2 §30.2 the ring's pose of the previous sim step (the same
+    // relative crossing and rim sweep as the run).
+    HoopFrame? pf;
     try {
+      pf = _frameAt(h, s.clock);
       while (t < horizon) {
         if (c.decide(s, _timeToPlane(h, s), ringOff, this, h)) {
           s.vy = -Config.flapVelocity;
@@ -444,9 +448,13 @@ class Autopilot {
         if (s.invulnerable > 0) s.invulnerable -= simDt;
         t += simDt;
         final f = _frameAt(h, s.clock);
+        final before = pf;
+        pf = f;
         if (mode != RimMode.ignored && s.invulnerable <= 0) {
-          final res = collideRims(
+          final res = collideRimsSwept(
+            before,
             f,
+            BirdCircle(prev, r),
             BirdCircle(Vector2(s.x, s.y), r),
             Vector2(s.forward, s.vy),
           );
@@ -463,7 +471,7 @@ class Autopilot {
         }
         final now = BirdCircle(Vector2(s.x, s.y), r);
         if (s.y - r <= top || s.y + r >= floor) return null;
-        if (testPlane(f, BirdCircle(prev, r), now) != null) {
+        if (testPlane(f, BirdCircle(prev, r), now, prevFrame: before) != null) {
           // A graze inside [safety] is as good as a touch: the real flight
           // differs from the rollout by a point or two.
           final risky = touched || clear < safety;

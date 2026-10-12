@@ -10,6 +10,7 @@ import 'package:flappy_spikes/run/effects/fetch_flight.dart';
 import 'package:flappy_spikes/run/effects/gold_sticker.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/hud/collect_layer.dart';
+import 'package:flappy_spikes/run/hud/run_hud.dart';
 import 'package:flappy_spikes/run/items/feathers.dart';
 import 'package:flappy_spikes/run/pickups/feather_pickup.dart';
 import 'package:flappy_spikes/run/pickups/pickup.dart';
@@ -157,11 +158,14 @@ void main() {
       await stepSeconds(g, 1.3);
       expect(sfx, contains('colFeatherSlot3'));
       expect(item.doneAt, isNotNull);
-      final sticker = layer.children.whereType<GoldSticker>().single;
+      // PRD-2.2 §12.2: the sticker is drawn in the run's banner layer.
+      final banners = RunHud.of(run)!.bannerLayer;
+      final sticker = banners.children.whereType<GoldSticker>().single;
       expect(sticker.text, 'BONUS UNLOCKED!');
+      expect(layer.children.whereType<GoldSticker>(), isEmpty);
       await stepSeconds(g, 2.6);
       expect(layer.slot.current, isNull);
-      expect(layer.children.whereType<GoldSticker>(), isEmpty);
+      expect(banners.children.whereType<GoldSticker>(), isEmpty);
     },
   );
 

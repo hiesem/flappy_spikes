@@ -11,6 +11,7 @@ import 'package:flappy_spikes/run/hoops/hoop.dart';
 import 'package:flappy_spikes/run/hoops/hoop_kind.dart';
 import 'package:flappy_spikes/run/hoops/kinds/switch/switch_kind.dart';
 import 'package:flappy_spikes/run/hud/banners.dart';
+import 'package:flappy_spikes/run/hud/run_hud.dart';
 import 'package:flappy_spikes/run/mistakes.dart';
 import 'package:flappy_spikes/run/pickups/pickup.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
@@ -268,7 +269,8 @@ void main() {
           reason: 'no miss flash',
         );
         expect(run.tumble!.velocity.x, lessThan(run.state.forwardSpeed));
-        final host = BannerHost.ensureIn(game.world);
+        // PRD-2.2 §12: the run's banner host (in the banner layer).
+        final host = RunHud.of(run)!.banners;
         expect(
           (host.current! as ElementBanner).text,
           SwitchConfig.crashWord(design),

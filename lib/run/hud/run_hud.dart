@@ -7,8 +7,8 @@ import 'package:flutter/painting.dart' as p show TextDirection;
 import '../../game/config.dart';
 import '../../game/flappy_game.dart';
 import '../config/hud_config.dart';
-import '../config/streak_config.dart';
 import '../run_controller.dart';
+import 'banner_layer.dart';
 import 'banners.dart';
 import 'heart_indicator.dart';
 import 'pause_button.dart';
@@ -20,10 +20,11 @@ import 'versus_bar.dart';
 ///
 /// Holds the top row — heart indicator (x 14), versus bar + name chips
 /// (only with an opponent, driven by `RunSetup.opponent`; WP-5b fills the
-/// live parts) and the pause button (right edge 306) — plus the shared
-/// banner band ([banners], master #7) and the graze notice. No coin total
-/// (§5.7). The row shows while the run is playing or paused and fades out
-/// on a death (the revive screen has its own balance pill).
+/// live parts) and the pause button (right edge 306) — plus the graze
+/// notice. No coin total (§5.7). The row shows while the run is playing or
+/// paused and fades out on a death (the revive screen has its own balance
+/// pill). The banner band ([banners], master #7) is not in the HUD any more:
+/// PRD-2.2 §12 moved it to the world's [bannerLayer], behind the gameplay.
 class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
   RunHud(this.run) : super(priority: 10);
 
@@ -41,17 +42,23 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
     final hud = RunHud(run);
     _huds[run] = hud;
     run.game.camera.viewport.add(hud);
+    run.game.world.add(hud.bannerLayer);
     return hud;
   }
 
   /// The HUD of [run] if one was created.
   static RunHud? of(RunController run) => _huds[run];
 
-  /// The shared banner band (streak, FEVER, element banners).
-  late final BannerHost banners = BannerHost.ensureIn(
-    this,
-    priority: StreakConfig.bannerPriority,
+  /// The run's banner layer (PRD-2.2 §12.2): a screen-space layer in the
+  /// world, drawn behind the bird, the hoops and the pickups.
+  late final RunBannerLayer bannerLayer = RunBannerLayer(
+    game: run.game,
+    hud: this,
   );
+
+  /// The shared banner band (streak, FEVER, element and switch banners);
+  /// it lives in [bannerLayer].
+  BannerHost get banners => bannerLayer.banners;
 
   late final HeartIndicator heart = HeartIndicator(this);
   late final PauseButton pauseButton = PauseButton(this);
@@ -83,10 +90,15 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
   @override
   Future<void> onLoad() async {
     size = Vector2(320, game.viewHeight);
-    banners; // created under this HUD
     add(heart);
     if (run.setup.opponent != null) add(versus = VersusBar(this));
     add(pauseButton);
+  }
+
+  @override
+  void onRemove() {
+    bannerLayer.removeFromParent();
+    super.onRemove();
   }
 
   @override
@@ -101,7 +113,7 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
     if (run.dying && !_cleared) {
       _cleared = true;
       banners.clear();
-      for (final c in children.where((c) => c is! BannerHost).toList()) {
+      for (final c in children.toList()) {
         if (c != heart && c != pauseButton && c != versus) {
           c.removeFromParent();
         }

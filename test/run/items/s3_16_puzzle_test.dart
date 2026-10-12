@@ -6,6 +6,7 @@ import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/effects/gold_sticker.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/hud/collect_layer.dart';
+import 'package:flappy_spikes/run/hud/run_hud.dart';
 import 'package:flappy_spikes/run/items/puzzle.dart';
 import 'package:flappy_spikes/run/pickups/pickup.dart';
 import 'package:flappy_spikes/run/pickups/puzzle_piece_pickup.dart';
@@ -219,8 +220,12 @@ void main() {
       expect(item.theme.name, 'Tangerine', reason: 'the round just finished');
       expect(item.fadeAt, PuzzleConfig.fadeAtComplete);
       await stepSeconds(g, 1.3);
+      // PRD-2.2 §12.2: the sticker is drawn in the run's banner layer.
       expect(
-        layer.children.whereType<GoldSticker>().single.text,
+        RunHud.of(run)!.bannerLayer.children
+            .whereType<GoldSticker>()
+            .single
+            .text,
         'PICTURE COMPLETE',
       );
       await stepSeconds(g, 1.5);

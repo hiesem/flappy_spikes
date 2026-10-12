@@ -24,6 +24,11 @@ abstract class RunBanner extends PositionComponent {
 
   final BannerLane lane;
 
+  /// PRD-2.2 §12.2: a banner that stays up through a death's clear (the
+  /// switch's crash word, shown on the death itself). It still ends on its
+  /// own timing or with the run's banner layer.
+  bool survivesDeath = false;
+
   /// Band width (pt, the 320 pt playfield).
   final double bandWidth;
 
@@ -217,25 +222,12 @@ class ElementBanner extends RunBanner {
 /// (StreakBanner), `fever` (FeverBanner, WP-3c subclasses [RunBanner]) and
 /// `element` (ElementBanner). A new banner **replaces** the one showing —
 /// banners never stack. [busy] tells the [CollectSlot] queue to wait.
+///
+/// PRD-2.2 §12: the one host of a run lives in the run's banner layer in the
+/// world ([RunBannerLayer], priority −60, behind the bird, the hoops and the
+/// pickups), not in the HUD; `RunHud.banners` returns it.
 class BannerHost extends PositionComponent {
   BannerHost({super.priority});
-
-  static final Expando<BannerHost> _hosts = Expando('BannerHost');
-
-  /// The one banner host under [parent], created at [priority] the first
-  /// time (WP-2b): the streak, FEVER and element banners all share it, so a
-  /// new banner replaces the one showing instead of stacking. Safe to call
-  /// several times in one frame (before the host is mounted).
-  static BannerHost ensureIn(Component parent, {int priority = 18}) {
-    final existing = _hosts[parent];
-    if (existing != null && !existing.isRemoving && !existing.isRemoved) {
-      return existing;
-    }
-    final host = BannerHost(priority: priority);
-    _hosts[parent] = host;
-    parent.add(host);
-    return host;
-  }
 
   RunBanner? _current;
 
@@ -315,10 +307,14 @@ class BannerHost extends PositionComponent {
   /// PRD-2.2 §29 the banner of perfect streak [streak] (not the tier).
   StreakBanner showStreak(int streak) => show(StreakBanner(streak));
 
+  /// Removes the banners on screen (a death, a run ending), except a banner
+  /// that [RunBanner.survivesDeath] (the switch's crash word).
   void clear() {
     final old = _current;
-    if (old != null && !old.isRemoved) old.removeFromParent();
-    _current = null;
+    if (old != null && !old.survivesDeath && !old.isRemoved) {
+      old.removeFromParent();
+      _current = null;
+    }
     final f = _fever;
     if (f != null && !f.isRemoved) f.removeFromParent();
     _fever = null;

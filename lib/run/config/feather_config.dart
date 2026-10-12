@@ -110,6 +110,8 @@ abstract final class CollectConfig {
   static const double slotX = 160;
   static const double slotY = 288;
 
-  /// §3.15 / §3.16 HUD priority of the collect layer (under the banners).
+  /// §3.15 / §3.16 HUD priority of the collect layer (the slot, the fetch
+  /// flights, the particles and the rings; the stickers are in the banner
+  /// layer, PRD-2.2 §12.2).
   static const int priority = 17;
 }

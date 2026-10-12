@@ -209,6 +209,11 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   re-rolls. An armed powerup is consumed on START.
 - `AD_ID` permission: the `tools:node="remove"` block is gone (PRD-2.2 §7.13, after the
   Play declarations were saved 2026-10-12); ads may be personalised where consent allows.
+- Run banners (PRD-2.2 §12): every run banner and the collect stickers are drawn by the
+  run's `RunBannerLayer` in the world at `RunLayer.banners` (−60): behind the bird, the
+  hoops and the pickups, above the score circle. The HUD keeps the top row, the tray /
+  pill and their fetch flights. The band keeps real time (not slowed by the Hourglass),
+  freezes on pause and stays on screen during a camera shake. `RunHud.banners` is the host.
 - Gameplay banner (PRD-2.2 §7.5, WP-7a): `main.dart` is `Column(Expanded(game), BannerSlot)`;
   `game.setPlayfieldHeight` is the only resize entry point (START with a banner / Home arrival).
   In a run with a banner `viewHeight` = visible height + `Config.bannerStripDrop` (20): run layouts

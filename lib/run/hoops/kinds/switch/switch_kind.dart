@@ -12,12 +12,12 @@ import '../../../effects/pickup_touch_fx.dart';
 import '../../../effects/rising_word.dart';
 import '../../../elements.dart';
 import '../../../hud/banners.dart';
+import '../../../hud/run_hud.dart';
 import '../../../mistakes.dart';
 import '../../../pickups/pickup.dart';
 import '../../../run_context.dart';
 import '../../../run_events.dart';
 import '../../../run_feature.dart';
-import '../../../run_layers.dart';
 import '../../../run_state.dart';
 import '../../hoop.dart';
 import '../../hoop_kind.dart';
@@ -585,8 +585,12 @@ class SwitchRingFeature extends RunFeature {
       'design': SwitchRingKind.storageName(d),
       'used': 'none',
     });
-    BannerHost.ensureIn(c.game.world, priority: RunLayer.fx + 3).show(
-      ElementBanner(SwitchConfig.crashWord(d), color: SwitchConfig.crashRed),
+    // PRD-2.2 §12.2: the run's banner host (in the banner layer, behind the
+    // gameplay); the crash word is shown on the death itself, so it survives
+    // the death's clear.
+    RunHud.ensureFor(c.run).banners.show(
+      ElementBanner(SwitchConfig.crashWord(d), color: SwitchConfig.crashRed)
+        ..survivesDeath = true,
     );
   }
 

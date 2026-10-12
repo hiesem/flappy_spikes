@@ -1278,3 +1278,30 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   classic and an accessory look: the bird's solid pixels equal the stage-0
   pixels; gold tier 2 and the death tint keep working); `look_visual_test.dart`,
   `home_flow_test.dart` and `look_component_test.dart` updated to the new rule.
+- DEVIATION (PRD-2.2 §12, supersedes the PRD-2 §5.4 layer order of the run
+  banners and the collect stickers): **banners behind the gameplay.** Every
+  run banner (streak tiers, FEVER, BULLSEYE, PERFECT LINE, Ring Train, Lucky
+  Spin, jar, piggy, egg, timed power-ups, SAVED, the switch crash word) is
+  drawn by the run's banner layer: a screen-space layer in the **world** at
+  `RunLayer.banners` (−60). Order back to front: backdrop, score circle
+  (−100), banner layer (−60), guides, hoop backs, pickups, spike strips, the
+  bird, hoop fronts, hit effects (fx 15), then the HUD (viewport): top row
+  (heart, pause, versus bar), feather tray / puzzle pill with their fetch
+  flights, sparkles and rings, graze notice, timer pill, FEVER flash; then the
+  pause / revive / results / popups. The collect stickers ("BONUS UNLOCKED!",
+  "PICTURE COMPLETE") are in the banner layer. The banner band keeps real time
+  (the Hourglass does not slow it), freezes while the run is paused, stays on
+  its screen place during a camera shake, and is hidden with the HUD (settings,
+  revive shop). Positions, sizes, colours, timings and texts are unchanged.
+  **Call:** the `CollectText` labels inside the puzzle pill and its coin badge
+  (`n/4`, `+N`) stay with the pill in the HUD: they sit on the pill's opaque
+  panel, so behind it they would not show. The stickers are the collect texts
+  that float outside the pill and move.
+- Tests: `test/p22/s12_banner_layer_test.dart` (order, every banner kind in the
+  layer, the switch crash word surviving a death's clear, the top row in the
+  HUD, pause freezes a banner, the Hourglass does not slow it, the band stays
+  put under a shake, the bird in front of a COSMIC band at 568 and 711 pt);
+  `test/run/items/s3_15_feathers_test.dart` and `s3_16_puzzle_test.dart` (the
+  stickers are in the banner layer), `test/run/screens/s5_7_hud_pause_test.dart`
+  (the host lives in the banner layer), `test/run/hoops/s3_20_switch_test.dart`
+  (the switch banner uses the run's host).

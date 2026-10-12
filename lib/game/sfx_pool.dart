@@ -104,6 +104,10 @@ class SfxPool {
   /// Monotonic ms of the last [play] (or creation / preload touch).
   int lastUsedMs;
 
+  /// Monotonic ms of the last real [play]; null while the pool has never
+  /// played (a preloaded pool is not ringing, PRD-2.2 §33.4 item 3, S7-11).
+  int? lastPlayedMs;
+
   bool _disposed = false;
   bool get disposed => _disposed;
 
@@ -136,6 +140,7 @@ class SfxPool {
   int play(int nowMs) {
     if (_disposed || _voices.isEmpty) return -1;
     lastUsedMs = nowMs;
+    lastPlayedMs = nowMs;
     var slot = _stopTimers.indexWhere((t) => t == null);
     final steal = slot < 0;
     if (steal) {
@@ -167,6 +172,25 @@ class SfxPool {
         // Audio failure must never take the game down.
       }
     });
+  }
+
+  /// PRD-2.2 §28.2 / §28.3 (S7-09): stops every copy that is ringing now
+  /// (a full-screen ad or a call / alarm / assistant starts). The stop is
+  /// queued after any start still on the voice's chain, so a start that was
+  /// already requested ends stopped (no late burst after the hold).
+  /// Returns the number of voices stopped.
+  int stopAll() {
+    if (_disposed) return 0;
+    var n = 0;
+    for (var i = 0; i < _voices.length; i++) {
+      final t = _stopTimers[i];
+      if (t == null) continue;
+      t.cancel();
+      _stopTimers[i] = null;
+      _run(i, _voices[i].stop);
+      n++;
+    }
+    return n;
   }
 
   /// Stops every voice and disposes it (eviction / teardown). Idempotent.

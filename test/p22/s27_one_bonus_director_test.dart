@@ -312,6 +312,7 @@ extension on DirectorContext {
         ride: ride,
         timedPowerupRunning: timedPowerupRunning,
         onFire: onFire,
+        fever: fever,
         shieldArmed: shieldArmed,
         extraLifeActive: extraLifeActive,
         eggOrChick: eggOrChick,

@@ -11,7 +11,12 @@ import 'package:flutter/services.dart';
 ///   effects), false when it ends.
 /// - [isOtherMusicActive]: someone else's music is playing right now
 ///   (checked at launch, on foreground and at scene changes while the game
-///   music is skipped).
+///   music is skipped). On Android this includes the `isMusicActive()`
+///   stream fallback, which also counts the game's own sound effects.
+/// - [isOtherMediaListed]: only the public playback list (other apps'
+///   media players, never the game's `USAGE_GAME` players). The game asks
+///   it when [isOtherMusicActive] said yes while its own sound was ringing
+///   (S7-13, docs/p22/ADS.md).
 ///
 /// Android: `flappy_spikes/audio` in `MainActivity.kt` (an
 /// `AudioPlaybackCallback` + audio-mode listener for the interruptions,
@@ -23,6 +28,9 @@ abstract class AudioFocus {
   Stream<bool> get interruptions;
 
   Future<bool> isOtherMusicActive();
+
+  /// Another app's media player is listed as playing (no stream fallback).
+  Future<bool> isOtherMediaListed();
 }
 
 /// Tests, Linux, iOS (paused): nothing is ever interrupted.
@@ -34,6 +42,9 @@ class NoopAudioFocus implements AudioFocus {
 
   @override
   Future<bool> isOtherMusicActive() async => false;
+
+  @override
+  Future<bool> isOtherMediaListed() async => false;
 }
 
 /// Scriptable in tests.
@@ -56,6 +67,10 @@ class FakeAudioFocus implements AudioFocus {
     checks++;
     return otherMusic;
   }
+
+  /// The scripted other music is another app's listed media player.
+  @override
+  Future<bool> isOtherMediaListed() async => otherMusic;
 }
 
 /// The Android implementation (MethodChannel + EventChannel).
@@ -82,6 +97,16 @@ class PlatformAudioFocus implements AudioFocus {
       return await _methods.invokeMethod<bool>('isOtherMusicActive') ?? false;
     } catch (e) {
       debugPrint('AudioFocus isOtherMusicActive failed: $e');
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> isOtherMediaListed() async {
+    try {
+      return await _methods.invokeMethod<bool>('isOtherMediaListed') ?? false;
+    } catch (e) {
+      debugPrint('AudioFocus isOtherMediaListed failed: $e');
       return false;
     }
   }

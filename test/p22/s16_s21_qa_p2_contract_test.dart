@@ -51,7 +51,7 @@ void main() {
         expect(run.state.fever, isTrue);
       },
     );
-  }, skip: 'S7-07');
+  });
 
   test('§21 / §27 ordinary streak fire cannot block a FEVER ring', () {
     final d = RunDirector(
@@ -69,7 +69,7 @@ void main() {
       HoopKindId.fever,
       reason: 'fire is passive; FEVER ring eligibility is unchanged',
     );
-  }, skip: 'S7-08');
+  });
 
   group('S7-12', () {
     for (final modifier in [ElementId.angledRing, ElementId.movingRing]) {
@@ -112,5 +112,5 @@ void main() {
         },
       );
     }
-  }, skip: 'S7-12');
+  });
 }

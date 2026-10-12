@@ -47,6 +47,7 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "isOtherMusicActive" -> result.success(watch.otherMusicActive())
+                    "isOtherMediaListed" -> result.success(watch.otherMediaListed())
                     else -> result.notImplemented()
                 }
             }
@@ -171,10 +172,19 @@ class AudioWatch(private val am: AudioManager) : EventChannel.StreamHandler {
         // on the Pixel 8), so isMusicActive() backs it up. The Dart side
         // only asks while the game's own music is not playing (at launch
         // before it starts, on foreground before it resumes, while skipped).
-        val media = active().any {
+        return otherMediaListed() || try { am.isMusicActive } catch (_: Exception) { false }
+    }
+
+    /// Only the public playback list: another app's (unmuted) media player.
+    /// Never the game's own players (USAGE_GAME). The Dart side asks this
+    /// when the game's own sound may be on the music stream (S7-13).
+    fun otherMediaListed(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return try { am.isMusicActive } catch (_: Exception) { false }
+        }
+        return active().any {
             it.usage == AudioAttributes.USAGE_MEDIA || it.usage == AudioAttributes.USAGE_UNKNOWN
         }
-        return media || try { am.isMusicActive } catch (_: Exception) { false }
     }
 
     private fun interrupted(): Boolean {

@@ -1189,11 +1189,14 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   volume (0.35) during FEVER, ramping (0.3 s) between them. Every equipped
   trail is drawn at 2× (k = 2 × lookScale; Pixel blocks 16–26 pt), emitted
   18 pt behind the bird (was 26), drifting at 0.7 × the forward speed.
-- Call (§21.1, P22-V2): "during FEVER" lasts **5 perfect passes** after the
-  FEVER ring / gift (`FeverConfig.feverHoops`), or until the fire goes out;
-  then the loop ramps back to 25 % while the fire burns on. The director's
-  "no FEVER ring / FEVER gift while on fire" rule now reads the fire (also
-  a ×3 streak fire), literally as PRD-2 §3.19 words it.
+- FEVER itself is unchanged (P22-FIX2, QA S7-07 / S7-08; reverts the two
+  P22-V2 Calls "FEVER lasts 5 perfect passes" and "no FEVER ring / gift
+  while any fire burns"): FEVER lit by the FEVER ring / pair gift runs
+  until the streak breaks (`RunState.feverLit`, cleared when the fire goes
+  out), the loop staying at the FEVER volume; it only ramps up from the
+  25 % crackle when the bird already burned. The director's "no FEVER ring
+  / FEVER gift" rule reads FEVER (`DirectorContext.fever`), as before 2.2:
+  an ordinary ×3 fire is passive and blocks no reward (§27.1).
 - Tests: `test/p22/s21_fire_test.dart`; shots
   `test/p22/s21_fire_screenshot_test.dart` (→ `build/shots/p22/`).
 - Tests: `test/p22/s15_scroll_in_test.dart`,
@@ -1223,6 +1226,11 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   - Call: the zigzag replaces only the centre; the director still makes
     the normal layout draw for a ride slot, so the course after the ride
     keeps its random stream.
+  - The planned-ahead slot (§15) when the comet starts keeps its height,
+    tilt and motion (full size like every ride hoop; the height is only
+    clamped if the larger opening needs it) (`RunDirector.plainSlot(keepGeometry: true)`,
+    P22-FIX2, QA S7-12); only its reward / special kind, gifts, attached
+    items and comet star go (§27). A revive still makes it fully plain.
 - DEVIATION (PRD-2.2 §17, supersedes the PRD-2 §3.8 "Ending" line on these
   points): **comet landing.** When control returns (`CometRide._finish`,
   every comet ride incl. the pair's COMET gift) the bird does one normal

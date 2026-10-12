@@ -16,6 +16,7 @@ class DirectorContext {
     this.ride,
     this.timedPowerupRunning = false,
     this.onFire = false,
+    this.fever = false,
     this.shieldArmed = false,
     this.extraLifeActive = false,
     this.eggOrChick = false,
@@ -43,6 +44,7 @@ class DirectorContext {
     RideKind? ride,
     bool timedPowerupRunning = false,
     bool onFire = false,
+    bool fever = false,
     bool shieldArmed = false,
     bool extraLifeActive = false,
     bool eggOrChick = false,
@@ -69,6 +71,7 @@ class DirectorContext {
       ride: ride,
       timedPowerupRunning: timedPowerupRunning,
       onFire: onFire,
+      fever: fever,
       shieldArmed: shieldArmed,
       extraLifeActive: extraLifeActive,
       eggOrChick: eggOrChick,
@@ -102,7 +105,14 @@ class DirectorContext {
 
   /// Hourglass / Mini Bird / Coin Frenzy / comet running.
   final bool timedPowerupRunning;
+
+  /// PRD-2.2 §21 The bird burns (a ×3 streak fire or FEVER). Passive: it
+  /// blocks nothing (§27.1).
   final bool onFire;
+
+  /// PRD-2 §3.19 / PRD-2.2 §21 FEVER runs. Only FEVER itself keeps a FEVER
+  /// ring / pair FEVER gift away (an ordinary ×3 fire does not, S7-08).
+  final bool fever;
   final bool shieldArmed;
   final bool extraLifeActive;
   final bool eggOrChick;

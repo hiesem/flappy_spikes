@@ -52,7 +52,7 @@ void main() {
       // Clean up before asserting, so the failure leaves no pending timer.
       await sound.dispose();
       expect(ringing, 0, reason: 'all game audio quiet under ads / calls');
-    }, skip: 'S7-09');
+    });
   }
 
   test('§33 dispose during first-voice load cannot publish new pools or '
@@ -73,7 +73,7 @@ void main() {
     await sound.dispose();
     expect(poolsAfterDispose, 0, reason: 'late creations must be disposed');
     expect(liveAfterDispose, 0);
-  }, skip: 'S7-10');
+  });
 
   test('§33 preload enforces the live-pool cap even when every newly '
       'created pool has never played', () async {
@@ -89,7 +89,7 @@ void main() {
     final peak = sound.poolCount;
     await sound.dispose();
     expect(peak, lessThanOrEqualTo(Config.sfxMaxLivePools));
-  }, skip: 'S7-11');
+  });
 
   test('§28 a lazy one-shot requested before suspend never plays late '
       'after its pool finishes loading', () async {
@@ -144,5 +144,5 @@ void main() {
         expect(g.sound.ownMusicSkipped, isFalse);
       },
     );
-  }, skip: 'S7-13');
+  });
 }

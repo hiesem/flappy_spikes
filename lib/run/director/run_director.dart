@@ -729,7 +729,7 @@ class RunDirector {
     if (rewardKinds.contains(k) && _rewardsBlocked(i, ctx)) return false;
     if (ctx.squeezeWindow && !rule.allowedInSqueeze) return false;
     if (k == HoopKindId.fever &&
-        (ctx.onFire || _prevKind == HoopKindId.saw)) {
+        (ctx.fever || _prevKind == HoopKindId.saw)) {
       return false;
     }
     if (k == HoopKindId.saw && _prevKind == HoopKindId.fever) return false;
@@ -769,7 +769,7 @@ class RunDirector {
     for (final e in tables.pairWeights.entries) {
       final ok = switch (e.key) {
         PairReward.shield => !ctx.shieldArmed && _on(ElementId.shield),
-        PairReward.fever => !ctx.onFire && _on(ElementId.fever),
+        PairReward.fever => !ctx.fever && _on(ElementId.fever),
         PairReward.comet =>
           _on(ElementId.comet) &&
               !ctx.timedPowerupRunning &&
@@ -914,7 +914,19 @@ class RunDirector {
   /// meanwhile ([ride]: full size, §3.0.1) or when an activity started
   /// (its reward ring / comet star goes, §27.3). A portal or comet hoop
   /// that never showed stays due: it comes at the first allowed slot.
-  SlotPlan plainSlot(SlotPlan p, DirectorContext ctx, {bool ride = false}) {
+  ///
+  /// [keepGeometry] (PRD-2.2 §16.1, S7-12): a comet ride started after the
+  /// slot was planned. The slot is already planned, so it keeps its height,
+  /// tilt and motion; only what §27 removes (the reward / special kind,
+  /// gifts, attached items, the comet star) goes. Like every ride hoop it
+  /// is full size (§3.0.1), the height clamped into the band only if the
+  /// larger opening needs it.
+  SlotPlan plainSlot(
+    SlotPlan p,
+    DirectorContext ctx, {
+    bool ride = false,
+    bool keepGeometry = false,
+  }) {
     if (p.kind == HoopKindId.portal) {
       _portalAt = p.index;
       _lastPortal = -99;
@@ -934,8 +946,10 @@ class RunDirector {
     final y = lo <= hi ? p.centreY.clamp(lo, hi).toDouble() : p.centreY;
     void uncount(String k) => _spawned[k] = max(0, (_spawned[k] ?? 1) - 1);
     uncount(p.element.storageId);
-    if (p.tiltDeg != 0) uncount('tilted');
-    if (p.motion != null) uncount('moving');
+    if (!keepGeometry) {
+      if (p.tiltDeg != 0) uncount('tilted');
+      if (p.motion != null) uncount('moving');
+    }
     if (p.cometHang) uncount(ElementId.comet.storageId);
     _count(ElementId.normalHoop.storageId);
     if (_prevKind == p.kind) _prevKind = HoopKindId.normal;
@@ -944,8 +958,8 @@ class RunDirector {
       element: ElementId.normalHoop,
       centreY: y,
       opening: opening,
-      tiltDeg: 0,
-      motion: () => null,
+      tiltDeg: keepGeometry ? p.tiltDeg : 0,
+      motion: () => keepGeometry ? p.motion : null,
       cometHang: false,
       ringOffsets: const [0],
       extra: () => null,

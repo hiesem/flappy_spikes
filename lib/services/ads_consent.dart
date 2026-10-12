@@ -231,7 +231,15 @@ class AdMobAdsConsent implements AdsConsent {
 const List<String> kAdTestDeviceIds = <String>[
   // Pixel 8 (38300DLJH004SD), read from logcat 2026-10-12 (docs/p22/ADS.md).
   kPixel8AdTestDeviceId,
+  // The same Pixel 8 with the Play-signed build: the hash is derived from
+  // ANDROID_ID, which Android keys per signing key, so the Play-installed app
+  // (app-signing key) gets a different hash than local builds (upload key).
+  kPixel8PlayAdTestDeviceId,
 ];
 
 /// The owner's Pixel 8 (see [kAdTestDeviceIds]).
 const String kPixel8AdTestDeviceId = '375F7680953C1B0F47A1FC3E475A9AA1';
+
+/// The owner's Pixel 8 running the Play-signed build (2.2.0 (9) from internal
+/// testing, logcat 2026-10-12).
+const String kPixel8PlayAdTestDeviceId = 'C8EDCAE2408A20189883DF41E7E998DA';

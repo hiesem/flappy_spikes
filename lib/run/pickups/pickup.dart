@@ -39,8 +39,9 @@ abstract final class PickupRadii {
   /// §3.0.3 Powerup capsule.
   static const double capsule = 18;
 
-  /// §3.0.3 Piggy coin.
-  static const double piggyCoin = 10;
+  /// §3.0.3 Piggy coin. PRD-2.2 §26: 14 (was 10) — the 16 pt coin's catch
+  /// radius; the miss rule uses the same radius.
+  static const double piggyCoin = 14;
 
   /// §3.0.3 Star (Star Trail).
   static const double star = 10;

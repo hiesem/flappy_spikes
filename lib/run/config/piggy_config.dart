@@ -61,10 +61,15 @@ abstract final class PiggyConfig {
 
   // --- §5.27 the coins ------------------------------------------------------
 
-  /// §5.27 Coins are our coin icon, 8 pt, caight coins fly into the HUD piggy
+  /// §5.27 Coins are our coin icon; caught coins fly into the HUD piggy
   /// (mock `parts.push({kind:'coin', tx:46, ty:216, m:.35, s:6})`).
-  static const double coinSize = 8;
+  /// PRD-2.2 §26: 16 pt (was 8; mock `screen_piggy_coins2x.html` phone B).
+  static const double coinSize = 16;
   static const double fetchSeconds = .35;
+
+  /// PRD-2.2 §26 The caught coin leaves at [coinSize] and shrinks by this
+  /// fraction over the flight into the HUD piggy (mock `COIN_PT·(1 − .6u)`).
+  static const double fetchShrink = .6;
 
   /// §3.28 "PIGGY BANK" banner and its one-line explanation.
   static const String bannerText = 'PIGGY BANK';

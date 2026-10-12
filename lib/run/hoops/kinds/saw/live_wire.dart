@@ -13,7 +13,9 @@ import 'saw_kind.dart';
 /// a soft cyan glow shell, 3–4 thin forked arcs crawling round the ring
 /// (redrawn 18×/s), the odd short spark, ≈ 9 % of redraws a big forked
 /// strike (70–120 pt) with a thunder crack, and a bolt reaching for the
-/// bird within 46 pt of the rim.
+/// bird within 46 pt of the rim. PRD-2.2 §25: the glow shell, arcs,
+/// strikes and sparks scale with the ring ([SawRingState.decor]); the rim
+/// and the near-miss bolt (it reaches for the bird) do not.
 class LiveWireArt implements SawDesignArt {
   const LiveWireArt();
 
@@ -32,7 +34,7 @@ class LiveWireArt implements SawDesignArt {
     if (cached is (int, List<BoltSeg>, List<BoltSeg>, bool) && cached.$1 == b) {
       return (cached.$2, cached.$3, cached.$4);
     }
-    final ry = s.ry;
+    final ry = s.ry, d = s.decor; // PRD-2.2 §25 decoration scale
     final r = Mulberry(b * 977 + s.seed * 31);
     final f = <BoltSeg>[], bk = <BoltSeg>[];
     final st = _strike(s, b);
@@ -44,23 +46,23 @@ class LiveWireArt implements SawDesignArt {
           tt * (i.isOdd ? 1.3 : -1.0) +
           RingArcs.rnd(s.seed + i) * 2;
       final sp = .5 + r() * .35, am = a0 + sp / 2;
-      final p0 = RingArcs.ellPt(ry, a0, 2 + r() * 5);
-      final pm = RingArcs.ellPt(ry, am, 8 + r() * 7);
-      final p1 = RingArcs.ellPt(ry, a0 + sp, 2 + r() * 5);
+      final p0 = RingArcs.ellPt(ry, a0, (2 + r() * 5) * d);
+      final pm = RingArcs.ellPt(ry, am, (8 + r() * 7) * d);
+      final p1 = RingArcs.ellPt(ry, a0 + sp, (2 + r() * 5) * d);
       final l = RingArcs.isFront(am) ? f : bk;
-      Lightning.seg(p0.dx, p0.dy, pm.dx, pm.dy, 8, r, l, 1);
-      Lightning.seg(pm.dx, pm.dy, p1.dx, p1.dy, 8, r, l, 1);
+      Lightning.seg(p0.dx, p0.dy, pm.dx, pm.dy, 8 * d, r, l, 1);
+      Lightning.seg(pm.dx, pm.dy, p1.dx, p1.dy, 8 * d, r, l, 1);
     }
     if (r() < .35) {
       final a = r() * RingArcs.tau;
-      final p = RingArcs.ellPt(ry, a, 2);
-      final e = RingArcs.ellPt(ry, a + (r() - .5) * .4, 8 + r() * 10);
+      final p = RingArcs.ellPt(ry, a, 2 * d);
+      final e = RingArcs.ellPt(ry, a + (r() - .5) * .4, (8 + r() * 10) * d);
       Lightning.seg(
         p.dx,
         p.dy,
         e.dx,
         e.dy,
-        6,
+        6 * d,
         r,
         RingArcs.isFront(a) ? f : bk,
         2,
@@ -68,14 +70,14 @@ class LiveWireArt implements SawDesignArt {
     }
     if (st) {
       final a = r() * RingArcs.tau;
-      final p = RingArcs.ellPt(ry, a, 4);
-      final e = RingArcs.ellPt(ry, a + (r() - .5) * .6, 70 + r() * 50);
+      final p = RingArcs.ellPt(ry, a, 4 * d);
+      final e = RingArcs.ellPt(ry, a + (r() - .5) * .6, (70 + r() * 50) * d);
       Lightning.seg(
         p.dx,
         p.dy,
         e.dx,
         e.dy,
-        36,
+        36 * d,
         r,
         RingArcs.isFront(a) ? f : bk,
         0,
@@ -88,11 +90,12 @@ class LiveWireArt implements SawDesignArt {
   void _aura(Canvas canvas, SawRingState s, bool front) {
     final (f, bk, st) = cocoon(s);
     final fl = .7 + .3 * RingArcs.rnd((s.t * 30).floor() + s.seed);
+    final d = s.decor; // PRD-2.2 §25
     RingArcs.glowShell(canvas, s.ry, front, [
-      (34, .06 * fl * (st ? 2.5 : 1)),
-      (18, .12 * fl * (st ? 1.8 : 1)),
+      (34 * d, .06 * fl * (st ? 2.5 : 1)),
+      (18 * d, .12 * fl * (st ? 1.8 : 1)),
     ], const Color(0xFF3CD2FF));
-    Lightning.paint(canvas, front ? f : bk, k: st ? 1 : .7);
+    Lightning.paint(canvas, front ? f : bk, k: (st ? 1 : .7) * d);
   }
 
   void _ring(Canvas canvas, SawRingState s, bool front) {
@@ -182,14 +185,15 @@ class LiveWireArt implements SawDesignArt {
     final r = s.c.cosmetic;
     if (r.nextDouble() < dt * 5) {
       final a = r.nextDouble() * RingArcs.tau;
-      final p = RingArcs.ellPt(s.ry, a, 4 + r.nextDouble() * 8);
+      final d = s.decor; // PRD-2.2 §25
+      final p = RingArcs.ellPt(s.ry, a, (4 + r.nextDouble() * 8) * d);
       s.frontPool.spawn(
         shape: ParticleShape.circle,
         x: p.dx,
         y: p.dy,
-        vx: math.cos(a) * 60,
-        vy: math.sin(a) * 60,
-        w: 1.8 * 2,
+        vx: math.cos(a) * 60 * d,
+        vy: math.sin(a) * 60 * d,
+        w: 1.8 * 2 * d,
         color: r.nextBool() ? const Color(0xFFFFFFFF) : SawConfig.wireCyan,
         life: .25,
         gravity: 300,

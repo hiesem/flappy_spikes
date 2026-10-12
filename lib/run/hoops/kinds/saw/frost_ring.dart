@@ -20,6 +20,8 @@ class _Shard {
 /// longest at the top and bottom curves — up to ≈ 35 pt — and about half
 /// at the sides so the flight path stays clean; each tip glints in turn),
 /// a cold fog shell, fog puffs and drifting snow, the odd ice "tink".
+/// PRD-2.2 §25: the fog shell, shards, glints and particles scale with the
+/// ring ([SawRingState.decor]); the rim and its zig-zag do not.
 class FrostRingArt implements SawDesignArt {
   const FrostRingArt();
 
@@ -53,19 +55,21 @@ class FrostRingArt implements SawDesignArt {
   }
 
   void _aura(Canvas canvas, SawRingState s, bool front) {
-    RingArcs.glowShell(canvas, s.ry, front, const [
-      (64, .09),
-      (40, .14),
-      (22, .22),
+    final d = s.decor; // PRD-2.2 §25 decoration scale
+    RingArcs.glowShell(canvas, s.ry, front, [
+      (64 * d, .09),
+      (40 * d, .14),
+      (22 * d, .22),
     ], const Color(0xFFC8EEFF));
     final ry = s.ry;
     for (final sh in _shards(s)) {
       if (RingArcs.isFront(sh.a) != front) continue;
       final p = RingArcs.ellPt(ry, sh.a, 1);
       final ang = RingArcs.normal(ry, sh.a) + sh.da;
-      final l = sh.l * (1 + .05 * math.sin(s.t * 3 + sh.g * 5));
+      final l = sh.l * d * (1 + .05 * math.sin(s.t * 3 + sh.g * 5));
       final tip = p + Offset(math.cos(ang) * l, math.sin(ang) * l);
-      final n = Offset(-math.sin(ang) * sh.w, math.cos(ang) * sh.w);
+      final w = sh.w * d;
+      final n = Offset(-math.sin(ang) * w, math.cos(ang) * w);
       RingArcs.poly(canvas, [
         p + n,
         tip,
@@ -80,12 +84,12 @@ class FrostRingArt implements SawDesignArt {
       final edge = Path()
         ..moveTo(p.dx + n.dx * .4, p.dy + n.dy * .4)
         ..lineTo(tip.dx, tip.dy);
-      RingArcs.stroke(canvas, edge, const Color(0xF2FFFFFF), .9);
+      RingArcs.stroke(canvas, edge, const Color(0xF2FFFFFF), .9 * d);
       final g = (s.t * 1.1 + sh.g) % 3;
       if (g < .2) {
         final z = 1 - (g - .1).abs() / .1;
         final gp = tip - (tip - p) * .12;
-        RingArcs.star4(canvas, gp, 6 * z, const Color(0xFFFFFFFF));
+        RingArcs.star4(canvas, gp, 6 * z * d, const Color(0xFFFFFFFF));
       }
     }
   }
@@ -132,16 +136,17 @@ class FrostRingArt implements SawDesignArt {
   @override
   void ambient(SawRingState s, double dt) {
     final r = s.c.cosmetic;
+    final d = s.decor; // PRD-2.2 §25
     if (r.nextDouble() < dt * 14) {
       final a = r.nextDouble() * RingArcs.tau;
-      final p = RingArcs.ellPt(s.ry, a, 10 + r.nextDouble() * 14);
+      final p = RingArcs.ellPt(s.ry, a, (10 + r.nextDouble() * 14) * d);
       (RingArcs.isFront(a) ? s.frontPool : s.backPool).spawn(
         shape: ParticleShape.circle,
         x: p.dx,
         y: p.dy,
-        vx: math.cos(a) * 14,
-        vy: math.sin(a) * 14 + 6,
-        w: 2 * (4 + r.nextDouble() * 5),
+        vx: math.cos(a) * 14 * d,
+        vy: (math.sin(a) * 14 + 6) * d,
+        w: 2 * (4 + r.nextDouble() * 5) * d,
         color: const Color(0x80EBFAFF),
         life: 1.8,
         scale1: 4,
@@ -149,14 +154,14 @@ class FrostRingArt implements SawDesignArt {
     }
     if (r.nextDouble() < dt * 10) {
       final a = r.nextDouble() * RingArcs.tau;
-      final p = RingArcs.ellPt(s.ry, a, 20 + r.nextDouble() * 30);
+      final p = RingArcs.ellPt(s.ry, a, (20 + r.nextDouble() * 30) * d);
       s.frontPool.spawn(
         shape: ParticleShape.circle,
         x: p.dx,
         y: p.dy,
-        vx: (r.nextDouble() - .5) * 16,
-        vy: 20 + r.nextDouble() * 20,
-        w: 2 * (1.4 + r.nextDouble() * 1.4),
+        vx: (r.nextDouble() - .5) * 16 * d,
+        vy: (20 + r.nextDouble() * 20) * d,
+        w: 2 * (1.4 + r.nextDouble() * 1.4) * d,
         color: const Color(0xFFFFFFFF),
         life: 1.6,
       );

@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 
 import '../../game/flappy_game.dart';
+import '../config/piggy_config.dart';
 import 'coin_icon.dart';
 
 /// The collectables' "fly into the HUD" effect (PRD-2 §5.27 "caught coins
@@ -71,8 +72,11 @@ class CoinFetch extends HudFetch with HasGameReference<FlappySpikesGame> {
   /// §5.27 The flight time (s; mock `m:.35`).
   static const double coinLife = .35;
 
-  /// The coin's drawn size (mock `s:6`).
-  static const double coinSize = 8;
+  /// PRD-2.2 §26 The coin's drawn size at [k] (life fraction 0..1): it
+  /// leaves at the piggy coin's 16 pt and shrinks into the HUD piggy
+  /// (mock `COIN_PT·(1 − .6u)`).
+  static double coinSizeAt(double k) =>
+      PiggyConfig.coinSize * (1 - PiggyConfig.fetchShrink * k.clamp(0.0, 1.0));
 
   Image? _image;
 
@@ -86,7 +90,7 @@ class CoinFetch extends HudFetch with HasGameReference<FlappySpikesGame> {
     final image = _image;
     if (image == null) return;
     canvas.scale(math.cos(k * 12).abs().clamp(.15, 1.0), 1);
-    CoinIcon.paint(canvas, image, Offset.zero, coinSize, opacity: alpha);
+    CoinIcon.paint(canvas, image, Offset.zero, coinSizeAt(k), opacity: alpha);
   }
 }
 

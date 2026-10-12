@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../run_layers.dart';
+import 'parts_config.dart';
 
 /// FEVER — the glowing ring "Gate Nova" and the bird on fire (PRD-2 §3.19,
 /// §5.18; mock `screen_fever_gatenova_A.html`, preset `full` of
@@ -86,6 +87,16 @@ abstract final class FeverConfig {
 
   /// §5.18 White light streaks drifting through the beam.
   static const int beamStreaks = 8;
+
+  /// PRD-2.2 §25 The halo, beam, loops, sparkles and embers were designed
+  /// at the full-size opening 118 pt; every decoration size / offset is
+  /// multiplied by `ry / ryDesign` (`FeverRingPainter.decorScaleFor`). The
+  /// rim, outline, beads and inner gold ring are not scaled.
+  static const double decorDesignOpening = 118;
+
+  /// PRD-2.2 §25 The half height the decorations were designed at
+  /// (`RingPainter.ryFor(118)` = 118 / 2 + 7).
+  static const double ryDesign = decorDesignOpening / 2 + PartsConfig.rimRadius;
 
   /// §5.18 Warm halo radius beyond the ring half height (pt).
   static const double haloExtra = 44;

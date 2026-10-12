@@ -25,11 +25,12 @@ import '../../helpers.dart';
 void main() {
   group('§3.18 rules (pure)', () {
     test('§3.18 rim-end collider r = half the rim: 5 (Live Wire / Frost), 6 '
-        '(Black Hole); +28 pt opening; only the rim is the hitbox', () {
+        '(Black Hole); PRD-2.2 §25: no extra opening; only the rim is the '
+        'hitbox', () {
       expect(SawConfig.rimRadius(SawDesign.liveWire), 5);
       expect(SawConfig.rimRadius(SawDesign.frostRing), 5);
       expect(SawConfig.rimRadius(SawDesign.blackHole), 6);
-      expect(RunConfig.sawExtraOpening, 28);
+      expect(RunConfig.sawExtraOpening, 0); // PRD-2.2 §25 (PRD-2: 28)
       final kind = SawHoopKind();
       expect(kind.usesTierLook, isFalse);
       for (final d in SawDesign.values) {
@@ -173,14 +174,14 @@ void main() {
     tester().testGameWidget(
       '§3.18 a clean pass is an ordinary, always-perfect hoop: +1, +2 coins, '
       'streak +1, sawring_spawned / sawring_passed {design}; the opening is '
-      '+28 pt over a normal hoop at the same index',
+      'a normal hoop\'s at the same index (PRD-2.2 §25)',
       setUp: (g, _) => prepare(g),
       verify: (game, _) async {
         final (run, h) = await sawRun(game);
         expect(
           h.opening,
           closeTo(
-            run.director.openingFor(h.plan.index, ride: false) + 28,
+            run.director.openingFor(h.plan.index, ride: false),
             1e-9,
           ),
         );

@@ -37,6 +37,8 @@ dependencies:
   flame: ^1.37.0
   flame_forge2d: ^0.19.2+6
   flame_audio: ^2.12.1
+  # PRD-2.2 §33.3: the FS_SOAK live-player counter (lib/game/audio_counter.dart)
+  audioplayers_platform_interface: ^7.2.0
   shared_preferences: ^2.5.5
   share_plus: ^13.2.1
   firebase_core: ^4.15.0

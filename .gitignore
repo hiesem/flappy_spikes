@@ -50,3 +50,6 @@ android/upload-keystore.jks
 
 # Gradle problems-report output
 /android/build/
+
+# PRD-2.2 §33.3 soak traces (~100 MB each): kept locally, path in docs/p22/PERF.md
+docs/p22/perf/**/*.perfetto-trace

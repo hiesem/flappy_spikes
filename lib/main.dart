@@ -8,13 +8,16 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'game/audio_counter.dart';
 import 'game/config.dart';
 import 'game/flappy_game.dart';
 import 'services/game_services.dart';
 import 'services/e2e.dart';
 import 'services/monetization.dart';
 import 'services/reminders.dart';
+import 'services/soak.dart';
 import 'run/config/versus_config.dart';
 import 'services/avatars.dart';
 import 'services/versus_service.dart';
@@ -28,6 +31,22 @@ Future<void> main() async {
   // The Linux desktop build is a local test target only: no Firebase / Play
   // Games, and no orientation or system-UI control.
   final isLinux = !kIsWeb && Platform.isLinux;
+  // region P22-33 — FS_SOAK profile build (§33.3): the player's saved data
+  // is never touched (in-memory prefs), no Firebase / Play Games / versus /
+  // reminders (no analytics, leaderboard or pool writes from the bot), and
+  // the live audio player counter wraps the audioplayers platform before
+  // the first player exists.
+  if (kSoak) {
+    // The in-memory store on purpose (the release e2e does the same).
+    // ignore: invalid_use_of_visible_for_testing_member
+    SharedPreferences.setMockInitialValues({
+      'bestScore': 0,
+      'coins': 0,
+      'firstSessionDone': true,
+    });
+    CountingAudioPlatform.install();
+  }
+  // endregion P22-33
   try {
     await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     // Fullscreen: hide the status bar (and navigation bar).
@@ -62,7 +81,7 @@ Future<void> main() async {
   // only (iOS later, Linux desktop never); everything else keeps the no-op.
   // It reads the game's storage lazily (the game is built right below).
   late final FlappySpikesGame game;
-  final VersusService versus = _isAndroid
+  final VersusService versus = _isAndroid && !kSoak
       ? FirebaseVersusService(
           storageOf: () => game.storage,
           // S6-66: a failed start-up auth retries in the background.
@@ -86,7 +105,7 @@ Future<void> main() async {
     monetization: monetization,
     versus: versus,
     // S6-64: Play Games avatars over https on the products only.
-    avatarSource: _isMobile && !kE2E ? HttpAvatarSource() : null,
+    avatarSource: _isMobile && !kE2E && !kSoak ? HttpAvatarSource() : null,
   );
   game.onShareScore = _shareScore;
   game.onInvite = _invite;
@@ -95,7 +114,7 @@ Future<void> main() async {
   // Real local notifications on the mobile products only; the Linux desktop
   // target and FS_E2E builds keep the no-op default. The game asks for the
   // permission once and lays out the first 7-day plan from onLoad.
-  if (_isMobile && !kE2E) {
+  if (_isMobile && !kE2E && !kSoak) {
     game.reminders = LocalReminders(storage: game.storage, services: services);
   }
   // endregion WP-4b
@@ -110,7 +129,7 @@ Future<void> main() async {
   // Fire-and-forget AFTER runApp: Firebase.initializeApp has no timeout and
   // can stall cold start on a slow/offline device. initialize() swallows its
   // own errors; the service is a safe no-op until it lands.
-  if (!isLinux) {
+  if (!isLinux && !kSoak) {
     // region WP-5b — versus after Firebase.initializeApp (services) and the
     // game's storage load (S6-F01: its startAfter gate, shared with every
     // other start path); initialize() never throws (failure = solo).

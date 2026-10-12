@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/foundation.dart';
 
+import 'audio_counter.dart';
+
 /// Sound effects used by the game (files live in assets/audio/).
 ///
 /// The first four are the 1.0 gameplay sounds; the `sk*` / `bn*` entries are
@@ -522,6 +524,31 @@ class SoundService {
     }
     unawaited(_playPool(pool, duration));
   }
+
+  // region P22-33 — §33.3 soak counters (debug / FS_SOAK only)
+  /// Low-latency pools created so far (they are never disposed in 2.1).
+  int get poolCount => _pools.length;
+
+  /// Live native audio players (created − disposed) when the FS_SOAK
+  /// counter ([CountingAudioPlatform]) is installed; null otherwise.
+  int? get livePlayers => CountingAudioPlatform.installed?.live;
+
+  /// One-line counter summary for the soak log (logcat).
+  String debugStats() {
+    final c = CountingAudioPlatform.installed;
+    final pooled = _pools.values.fold<int>(
+      0,
+      // Read-only soak diagnostics of the plugin's pool lists.
+      // ignore: invalid_use_of_visible_for_testing_member
+      (n, p) => n + p.availablePlayers.length + p.currentPlayers.length,
+    );
+    return 'pools=${_pools.length} pooled=$pooled '
+        'loops=${activeLoops.length}'
+        '${c == null ? '' : ' players=${c.live} creates=${c.creates} '
+                  'disposes=${c.disposes} releases=${c.releases} '
+                  'resumes=${c.starts} posPolls=${c.positionPolls}'}';
+  }
+  // endregion P22-33
 
   /// True once [sfx]'s pool creation has been started (tests).
   @visibleForTesting

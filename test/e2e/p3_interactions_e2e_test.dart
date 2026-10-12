@@ -177,44 +177,41 @@ void main() {
       ElementId.saw,
     ]) {
       final s644 = element == ElementId.switchRing;
-      group(
-        s644 ? 'S6-44 regression' : 'P3 Mini Bird',
-        () {
-          qa('P3 Mini Bird through $element h=$height', (g) async {
-            final run = await startRun(g, startHoopIndex: 20, force: [element]);
-            expect(
-              feature<TimedPowerupSlot>(run).start(CapsuleType.miniBird),
-              isTrue,
-            );
-            var miniPasses = 0;
-            run.events.on<HoopPassed>((e) {
-              if (e.hoop?.plan.element == element && run.state.birdScale < .6) {
-                miniPasses++;
+      group(s644 ? 'S6-44 regression' : 'P3 Mini Bird', () {
+        qa('P3 Mini Bird through $element h=$height', (g) async {
+          final run = await startRun(g, startHoopIndex: 20, force: [element]);
+          expect(
+            feature<TimedPowerupSlot>(run).start(CapsuleType.miniBird),
+            isTrue,
+          );
+          var miniPasses = 0;
+          run.events.on<HoopPassed>((e) {
+            if (e.hoop?.plan.element == element && run.state.birdScale < .6) {
+              miniPasses++;
+            }
+          });
+          final flight = await flyRun(
+            g,
+            maxSeconds: 60,
+            untilHoops: 20,
+            onFrame: (r) {
+              if (!r.director.forcedQueue.contains(element)) {
+                r.debugForce(element);
               }
-            });
-            final flight = await flyRun(
-              g,
-              maxSeconds: 60,
-              untilHoops: 20,
-              onFrame: (r) {
-                if (!r.director.forcedQueue.contains(element)) {
-                  r.debugForce(element);
-                }
-                if (r.state.timed == null && r.state.ride == null) {
-                  feature<TimedPowerupSlot>(r).start(CapsuleType.miniBird);
-                }
-              },
-            );
-            expect(
-              flight.hoops,
-              greaterThanOrEqualTo(20),
-              reason: flight.trace.join('\n'),
-            );
-            expect(miniPasses, greaterThan(2));
-            expect(run.dying, isFalse);
-          }, height: height);
-        },
-      );
+              if (r.state.timed == null && r.state.ride == null) {
+                feature<TimedPowerupSlot>(r).start(CapsuleType.miniBird);
+              }
+            },
+          );
+          expect(
+            flight.hoops,
+            greaterThanOrEqualTo(20),
+            reason: flight.trace.join('\n'),
+          );
+          expect(miniPasses, greaterThan(2));
+          expect(run.dying, isFalse);
+        }, height: height);
+      });
     }
     qa('P3 S6-44 control: full-size switch autopilot h=$height', (g) async {
       await startRun(g, startHoopIndex: 20, force: [ElementId.switchRing]);
@@ -233,7 +230,21 @@ void main() {
         starter: Powerup.bigHoops,
         force: [ElementId.fever],
       );
-      expect(await flyUntil(g, (r) => r.state.onFire), isTrue);
+      // PRD-2.2 §11: only a centred FEVER pass lights the fire, so the bird
+      // glides through the FEVER ring's centre (the bot's Big Hoops aim may
+      // be off-centre).
+      expect(
+        await flyUntil(
+          g,
+          (_) => hoopsOf(g).any((h) => h.plan.kind == HoopKindId.fever),
+        ),
+        isTrue,
+      );
+      final fever = hoopsOf(
+        g,
+      ).firstWhere((h) => h.plan.kind == HoopKindId.fever);
+      expect(await passHoopAt(g, fever), isTrue);
+      expect(run.state.onFire, isTrue);
       expect(run.state.streak, greaterThanOrEqualTo(5));
       expect(
         feature<TimedPowerupSlot>(run).start(CapsuleType.coinFrenzy),
@@ -254,10 +265,16 @@ void main() {
       run.events.on<CoinsEarned>((e) {
         if (e.source.name == 'frenzy') frenzyCoins += e.amount;
       });
+      var cleanOrGraze = false;
+      run.events.on<HoopPassed>((e) {
+        if (!e.perfect) cleanOrGraze = true;
+      });
       await flyRun(g, maxSeconds: 7);
       expect(frenzyCoins, greaterThanOrEqualTo(5));
       expect(run.state.timed, isNull);
-      expect(run.state.onFire, isTrue);
+      // PRD-2.2 §11: the bot's off-centre (clean) passes now put the fire
+      // out; it burns on as long as every pass was perfect.
+      expect(run.state.onFire || cleanOrGraze, isTrue);
       expect(run.dying, isFalse);
     }, height: height);
 

@@ -29,6 +29,8 @@ class CollectBursts extends Component {
     double sizeMin = 3,
     double sizeMax = 7,
     double life = .6,
+    // PRD-2.2 §23 the egg break's falling shell pieces (pt/s²).
+    double gravity = 0,
   }) {
     final r = math.Random();
     for (var i = 0; i < pieces; i++) {
@@ -50,6 +52,7 @@ class CollectBursts extends Component {
         h: h,
         color: colors[i % colors.length],
         life: life,
+        gravity: gravity,
       );
     }
   }

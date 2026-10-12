@@ -858,6 +858,13 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   A rim touch scares the chick away ("bye!", "×2 LOST"); a crash before
   hatching breaks the egg; a save (shield / extra life) loses it; a
   revive-offer death loses it too (WP-2d clears `RunState.egg`).
+- DEVIATION (PRD-2.2 §23, P22-G2): **any rim touch while still an egg
+  breaks it** (also a graze the bird survives): the shell pieces (the
+  hatch's shell triangles + yolk-yellow pieces) fall away with `egg_crack`,
+  no banner, no other sound, `egg_broken {cause: rim, cracks}`; the touched
+  hoop does not crack. A clean off-centre pass still cracks it. **Ride rings
+  (portal and comet) neither crack nor break the egg.** After hatching, a
+  crash, and the spawn rules are unchanged.
 - DEVIATION (PRD-2 §3.28 / §5.27, new collectable): a **Piggy Bank** grab
   starts a bank ("PIGGY BANK") of exactly 20 coins — 4 in the piggy's own
   gap, then 4 per gap × 4. Caught coins go into the bank (they fly into the

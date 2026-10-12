@@ -106,6 +106,21 @@ abstract final class EggConfig {
   static const double hatchSpeed = 140;
   static const List<Color> hatchColors = [Color(0xFFFFF3D6), Color(0xFFFFFFFF)];
 
+  /// PRD-2.2 §23 A rim touch breaks the egg: the hatch's shell triangles
+  /// plus a few yolk-yellow pieces fall away from the egg on the bird's
+  /// back (≈ 0.6 s, with gravity). Same shell master as the hatch
+  /// (`CollectBursts.burst`, triangle shape).
+  static const int breakPieces = 10;
+  static const double breakSpeed = 110;
+  static const double breakGravity = 900;
+  static const double breakLife = .6;
+  static const List<Color> breakColors = [
+    Color(0xFFFFF3D6),
+    Color(0xFFFFFFFF),
+    Color(0xFFFFF3D6),
+    Color(0xFFFFD54A),
+  ];
+
   /// §5.26 The chick sits 36 pt behind and 10 pt below the bird and bobs.
   /// (see the chick block below).
 

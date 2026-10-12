@@ -28,11 +28,12 @@ import '../run_state.dart';
 /// The egg and the ×2 chick (PRD-2 §3.27, §5.26).
 ///
 /// Picking the egg up puts it on the bird's back ("EGG! hatches in 5
-/// rings"); every ring passed — ride rings too — cracks it (countdown
+/// rings"); every ring passed — not ride rings (PRD-2.2 §23) — cracks it (countdown
 /// 4…1, a wobble), and after 5 it hatches into a `golden` chick that flies
 /// behind the bird. While the chick is alive **every** coin earned in the
 /// run counts double: `RunContext.earn` already applies that from
-/// `RunState.egg.stage`, so nothing else has to know. A rim touch scares
+/// `RunState.egg.stage`, so nothing else has to know. A rim touch while
+/// still an egg breaks it quietly (PRD-2.2 §23); after hatching it scares
 /// the chick away ("bye!", "×2 LOST"); a crash (death or a shield / extra
 /// life save) loses the egg or chick silently, and a death that brings up
 /// the revive offer loses it even if the player revives (the WP-2d
@@ -91,6 +92,10 @@ class EggFeature extends RunFeature {
     if (c == null) return;
     final egg = c.s.egg;
     if (egg == null || egg.stage != EggStage.egg) return;
+    // PRD-2.2 §23 ride rings (portal and comet) no longer crack the egg;
+    // the hoop whose rim broke an egg never cracks the next one.
+    if (e.duringRide || c.s.ride != null) return;
+    if (e.hoop != null && identical(e.hoop, _brokenOn)) return;
     egg.cracks++;
     _view?.wob = EggConfig.wobbleSeconds;
     c.sfx(Sfx.eggCrack);
@@ -137,9 +142,23 @@ class EggFeature extends RunFeature {
     }
   }
 
+  /// PRD-2.2 §23 the hoop whose rim broke the egg (it does not crack).
+  Object? _brokenOn;
+
+  /// Eggs broken on a rim this run (tests / debug).
+  int broken = 0;
+
+  /// The shell / burst particles (tests).
+  CollectBursts? get bursts => _bursts;
+
   void _onRim(RimTouched e) {
     final c = _c;
     if (c == null) return;
+    if (c.s.egg?.stage == EggStage.egg) {
+      // Rides ignore rims; a ride ring never breaks the egg (§23).
+      if (c.s.ride == null) _break(c, e.hoop);
+      return;
+    }
     if (c.s.egg?.stage != EggStage.chick) return;
     final screen = c.geo.toScreen(e.point);
     _bursts?.burst(
@@ -149,6 +168,34 @@ class EggFeature extends RunFeature {
       speed: 140,
     );
     _lose(c, 'rim');
+  }
+
+  /// PRD-2.2 §23 any rim touch while still an egg breaks it, quietly: the
+  /// shell pieces (the hatch's shell triangles + a few yolk pieces) fall
+  /// away from the bird's back with `egg_crack`; no banner, no other sound.
+  void _break(RunContext c, Object hoop) {
+    final egg = c.s.egg;
+    if (egg == null) return;
+    final cracks = egg.cracks;
+    c.s.egg = null;
+    _brokenOn = hoop;
+    broken++;
+    _dropBadge();
+    _view?.reset();
+    c.sfx(Sfx.eggCrack);
+    c.track('egg_broken', {'cause': 'rim', 'cracks': cracks});
+    final bird = c.game.runBirdPosition;
+    if (bird != null) {
+      _bursts?.burst(
+        at: Offset(bird.x + EggConfig.onBirdDx, bird.y + EggConfig.onBirdDy),
+        colors: EggConfig.breakColors,
+        pieces: EggConfig.breakPieces,
+        speed: EggConfig.breakSpeed,
+        shape: ParticleShape.triangle,
+        gravity: EggConfig.breakGravity,
+        life: EggConfig.breakLife,
+      );
+    }
   }
 
   void _onSaved(MistakeSaved e) => _lose(_c, 'crash');

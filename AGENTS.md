@@ -173,6 +173,12 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   and gold-tier rules are the ones in SPEC's skin-shop deviations.
 - **Rumble (PRD-2 §3.33):** runs vibrate (knocks + death shake), 90 ms throttle;
   the `rumble` setting (Settings v3) applies. Menu knocks are unchanged.
+  PRD-2.2 §10 (2026-10-12): the rim touch knocks at contact, the perfect shake
+  is 80 ms. §10.2 check on the Pixel 8 (`dumpsys vibrator_manager`):
+  `hasAmplitudeControl=true`; knocks reach the motor as `Step=15ms(amplitude=0,35)`
+  and the 2.1 shakes as `Step=45ms(amplitude=1,00)` — the amplitude path works,
+  but the HAL reports ≈ 90–135 ms effect duration for both (ramp-down), which is
+  why 15 ms vs 45 ms felt alike; the 80 ms shake still needs Sol's feel check.
 - **Reminders (PRD-2 §3.34):** local only (`flutter_local_notifications` +
   `timezone`), 2 slots a day, never 22:00–09:00, next-7-days plan rescheduled on
   pause / close / start; no server and no FCM.

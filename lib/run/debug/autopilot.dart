@@ -88,8 +88,11 @@ class Autopilot {
 
   /// The vertical band (pt from the walls) a collectable must sit inside to
   /// be chased at all — items always are; this just keeps a stray plan from
-  /// diving the bird into a tooth line.
-  static const double chaseClearance = 30;
+  /// diving the bird into a tooth line. PRD-2.2 §19.4 (WP-G2): 60 (was 30)
+  /// — items now sit anywhere down to the 40 pt item margin (a Star Trail's
+  /// arc top too), and a flap toward one that close overshoots into the
+  /// squeezed teeth.
+  static const double chaseClearance = 60;
   // endregion WP-3e
 
   _Plan? _plan;

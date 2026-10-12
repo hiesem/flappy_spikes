@@ -226,6 +226,10 @@ class RunController extends Component {
       bigHoopsMult: s.bigHoops?.mult(s.runClock) ?? 1,
       featherWanted: storage.feathers < 3 && !s.featherSpawned,
       puzzleMask: storage.puzzlePieces,
+      // region WP-G2 — PRD-2.2 §27 one bonus at a time
+      activity: s.activity != null || RunActivity.of(s) != null,
+      activityEndedAtSlot: s.activityEndedAtSlot,
+      // endregion WP-G2
     );
   }
 
@@ -728,7 +732,7 @@ class RunController extends Component {
       timeline: s.timeline,
       opponent: setup.opponent,
       duel: s.duel, // WP-5b
-      spawned: {...director.spawnedCounts, ...s.spawned},
+      spawned: {...spawner.spawnedCounts, ...s.spawned},
       rimTouches: s.rimTouches,
       passes: s.passes,
       perfectPasses: s.perfectPasses,

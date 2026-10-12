@@ -14,6 +14,7 @@ import 'package:flappy_spikes/run/items/feathers.dart';
 import 'package:flappy_spikes/run/pickups/feather_pickup.dart';
 import 'package:flappy_spikes/run/pickups/pickup.dart';
 import 'package:flappy_spikes/run/run_events.dart';
+import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -193,27 +194,49 @@ void main() {
     },
   );
 
+  // PRD-2.2 §19.3: the feather comes in ≈ 60 % of runs (gap 3–40): a seed
+  // whose run-start roll has it, early enough to keep the flight short.
+  final featherSeed = [
+    for (var s = 1; s < 200; s++) s,
+  ].firstWhere((s) {
+    final d = RunDirector(seed: s, enabled: const {}, met: const {});
+    return d.featherThisRun && d.featherAt >= 3 && d.featherAt <= 12;
+  });
   for (final h in [568.0, 711.0]) {
-    tester(height: h, seed: 11).testGameWidget(
-      '§3.15 / §3.0.3 one feather per run (gap 3–12, also across a '
-      'revive) while < 3 held '
+    tester(height: h, seed: featherSeed).testGameWidget(
+      '§3.15 / §3.0.3 one feather per run (PRD-2.2 §19.3: in ≈ 60 % of '
+      'runs, gap 3–40; also across a revive) while < 3 held '
       '(${h.round()} pt)',
       setUp: (g, _) => boot(g),
       verify: (g, _) async {
         g.runDebug.god = true;
         final run = await startRun(g);
         final at = run.director.featherAt;
-        expect(at, inInclusiveRange(3, 12));
+        expect(at, inInclusiveRange(3, 40));
+        expect(run.director.featherThisRun, isTrue);
         var spawned = 0;
-        run.events.on<ElementSpawned>((e) {
-          if (e.element == ElementId.feather) spawned++;
-        });
-        await flyRun(g, untilHoops: 14, maxSeconds: 90);
+        run.events
+          ..on<ElementSpawned>((e) {
+            if (e.element == ElementId.feather) spawned++;
+          })
+          // PRD-2.2 §27.3 a feather an activity cleared ahead is owed and
+          // placed again: only one ever stays in the run.
+          ..on<PickupCleared>((e) {
+            if (e.element == ElementId.feather && e.pickup.announced) {
+              spawned--;
+            }
+          });
+        await flyUntil(
+          g,
+          (r) => spawned == 1 && r.state.featherSpawned,
+          maxSeconds: 150,
+        );
         expect(spawned, 1);
+        final h0 = run.state.hoopsPassed;
         // A revive keeps the run's director: no second feather after it.
         run.director.onRevive();
-        await flyRun(g, untilHoops: 28, maxSeconds: 90);
-        expect(run.state.hoopsPassed, greaterThanOrEqualTo(20));
+        await flyRun(g, untilHoops: h0 + 14, maxSeconds: 90);
+        expect(run.state.hoopsPassed, greaterThanOrEqualTo(h0 + 10));
         expect(spawned, 1);
         expect(run.state.featherSpawned, isTrue);
       },

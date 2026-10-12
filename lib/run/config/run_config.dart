@@ -76,8 +76,9 @@ abstract final class RunConfig {
 
   // --- §3.0.3 placements ---------------------------------------------------
 
-  /// §3.18 Saw rings: extra opening (pt).
-  static const double sawExtraOpening = 28;
+  /// §3.18 Saw rings: extra opening (pt). PRD-2.2 §25: 0 (was 28) — saw
+  /// rings have exactly the normal opening at that point in the run.
+  static const double sawExtraOpening = 0;
 
   /// §3.21 Pair ring offset at a 711 pt screen (pt between ring centres;
   /// scales with viewHeight / 711).
@@ -131,6 +132,53 @@ abstract final class RunConfig {
 
   /// §3.0.3 Heart: later hearts sit on the line with this chance.
   static const double heartOnLineChance = 0.5;
+
+  /// PRD-2.2 §25.1 The portal ring is a fixed 118 pt at every hoop (the
+  /// same value as `PortalConfig.ringOpening`; it does not shrink).
+  static const double portalOpening = 118;
+
+  /// PRD-2.2 §19.4 Single pickups (heart, shield, capsule, egg, jar,
+  /// piggy, feather, puzzle piece) sit at a random point this far along the
+  /// gap (fraction of the spacing; supersedes mid-gap / the detour).
+  static const double singleAlongMin = 0.3;
+
+  /// PRD-2.2 §19.4 See [singleAlongMin].
+  static const double singleAlongMax = 0.7;
+
+  /// PRD-2.2 §19.4 Single pickups sit up to this far off the straight line
+  /// between the hoops (pt; supersedes [offLineMin] / [offLineMax] and the
+  /// detour heights). The spawner keeps them [itemEdgeMargin] inside.
+  static const double singleOffLine = 50;
+
+  /// §3.28 / PRD-2.2 §26 Piggy coins sit this far apart (pt) in a field.
+  static const double piggyCoinSpacing = 45;
+
+  /// §3.29 A firefly swarm spans ± this much around its centre (pt).
+  static const double fireflyHalfSpan = 110;
+
+  /// PRD-2.2 §19.4 Patterns (piggy coins, firefly swarms) keep their shape;
+  /// their start moves randomly inside the gap, keeping this far from the
+  /// rings (pt).
+  static const double patternInset = 40;
+
+  /// PRD-2.2 §27.2 Cool-down after an activity ends: hoops before the next
+  /// reward item may appear.
+  static const int activityCooldownHoops = 2;
+
+  /// PRD-2.2 §27.3 Reward items ahead fade out over this long (s) when an
+  /// activity starts.
+  static const double rewardClearFade = 0.2;
+
+  /// PRD-2.2 §15.1 Pop-in of a feature follow-up created inside the
+  /// screen: scale 0 → [popInOvershoot] → 1 over this long (s).
+  static const double popInTime = 0.25;
+
+  /// PRD-2.2 §15.1 See [popInTime].
+  static const double popInOvershoot = 1.15;
+
+  /// PRD-2.2 §15.1 The pop-in's small sparkle (pieces of the pickup
+  /// sparkle master, `CollectBursts`).
+  static const int popInSparkle = 6;
 
   /// §3.26 Star Trail: stars per trail.
   static const int starTrailStars = 8;

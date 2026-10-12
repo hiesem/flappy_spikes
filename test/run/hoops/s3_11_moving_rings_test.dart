@@ -388,15 +388,17 @@ void main() {
     );
 
     tester.testGameWidget(
-      '§3.3 heart placement: the director\'s first heart (gap 3) becomes a '
-      'heart pickup mid-gap on the straight line between hoops 3 and 4',
+      '§3.3 heart placement (PRD-2.2 §19): the director\'s first heart (a '
+      'random gap 5–27) becomes a heart pickup 30–70 % along its gap, ±50 pt '
+      'off the straight line between the two hoops',
       setUp: (game, _) => boot(game),
       verify: (game, _) async {
         final run = await startRun(game);
+        game.runDebug.god = true;
         HeartPickup? heart;
         await flyRun(
           game,
-          maxSeconds: 12,
+          maxSeconds: 60,
           onFrame: (r) {
             heart ??= pickupsOf(
               game,
@@ -404,22 +406,32 @@ void main() {
           },
         );
         expect(heart, isNotNull);
+        final gaps = run.spawner.gapLog
+            .where((g) => g.items.any((i) => i.kind == ElementId.heart))
+            .map((g) => g.index)
+            .toList();
+        final g = gaps.first;
+        expect(g, inInclusiveRange(5, 30));
         final slots = run.spawner.slotLog;
-        final s3 = slots.firstWhere((s) => s.index == 3);
-        final s4 = slots.firstWhere((s) => s.index == 4);
-        expect(heart!.plan!.kind, ElementId.heart);
+        final a = slots.firstWhere((s) => s.index == g);
+        final b = slots.firstWhere((s) => s.index == g + 1);
+        final plan = heart!.plan!;
+        expect(plan.kind, ElementId.heart);
+        final u = (heart!.position.x - a.lastRingX) / RunConfig.spacing;
+        expect(u, inInclusiveRange(.3 - 1e-6, .7 + 1e-6));
+        final lineY =
+            a.centreY +
+            (b.centreY - a.centreY) *
+                (heart!.position.x - a.lastRingX) /
+                (b.trackX - a.lastRingX);
+        final lo = RunConfig.stripHeight + RunConfig.itemEdgeMargin;
+        final hi = 711 - RunConfig.stripHeight - RunConfig.itemEdgeMargin;
         expect(
-          heart!.position.x,
-          closeTo(s3.trackX + RunConfig.spacing / 2, 1e-3),
+          heart!.position.y,
+          closeTo((lineY + plan.lineOffset).clamp(lo, hi), 1e-3),
         );
-        expect(heart!.position.y, closeTo((s3.centreY + s4.centreY) / 2, 1e-3));
+        expect(plan.lineOffset.abs(), lessThanOrEqualTo(50));
         expect(heart!.hitRadius, 16);
-        expect(
-          run.spawner.gapLog
-              .where((g) => g.items.any((i) => i.kind == ElementId.heart))
-              .map((g) => g.index),
-          [3],
-        );
       },
     );
   });

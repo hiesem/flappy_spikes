@@ -145,8 +145,15 @@ void main() {
           run.spawner.hoops.first: run.spawner.hoops.first.opening,
         };
         final mults = <double>[1.5];
+        // PRD-2.2 §15: a slot is sized when it is planned, one gap before
+        // its hoop spawns.
+        final planned = <int, double>{
+          for (final p in run.spawner.slotLog) p.index: run.state.runClock,
+        };
         run.events.on<HoopSpawned>((e) {
-          final mult = boost.mult(run.state.runClock);
+          final mult = boost.mult(
+            planned[e.plan.index] ?? run.state.runClock,
+          );
           mults.add(mult);
           expect(
             e.hoop.opening,
@@ -171,6 +178,9 @@ void main() {
             g,
             maxSeconds: boost.duration + 6 - run.state.runClock,
             onFrame: (_) {
+              for (final p in run.spawner.slotLog) {
+                planned.putIfAbsent(p.index, () => run.state.runClock);
+              }
               for (final hoop in run.spawner.hoops) {
                 expect(
                   hoop.opening,

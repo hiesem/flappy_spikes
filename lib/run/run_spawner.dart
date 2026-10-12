@@ -1,10 +1,13 @@
 import 'dart:math' as math;
+import 'dart:ui' show Color, Offset;
 
 import 'package:flame/components.dart';
 
+import 'config/piggy_config.dart';
 import 'config/run_config.dart';
 import 'director/run_director.dart';
 import 'effects/clear_fade.dart';
+import 'effects/collect_fx.dart';
 import 'elements.dart';
 import 'hoops/hoop.dart';
 import 'hoops/kinds/registry.dart';
@@ -13,12 +16,23 @@ import 'pickups/pickup.dart';
 import 'pickups/registry.dart';
 import 'run_controller.dart';
 import 'run_events.dart';
+import 'run_state.dart';
 
-/// Turns director plans into components (ARCH §1.1): keeps the next slot
-/// planned once its plane is within 60 pt of the right edge (§3.0.1 first
-/// hoop "60 pt past the right edge"), resolves line items between two
-/// hoops, announces elements entering the screen, runs the pickup hit test
-/// (§3.0.3) and removes parts that left the screen.
+/// Turns director plans into components (ARCH §1.1): spawns each hoop once
+/// its plane is within 60 pt of the right edge (§3.0.1 first hoop "60 pt
+/// past the right edge"), resolves line items between two hoops, announces
+/// elements entering the screen, runs the pickup hit test (§3.0.3) and
+/// removes parts that left the screen.
+///
+/// PRD-2.2 §15 plan one hoop ahead: the director plans slot B (its kind,
+/// centre, attached items and the gap after it) one full gap before B's
+/// hoop spawns — when the hoop before it spawns. So every item between A
+/// and B is resolved and created off-screen and scrolls in; nothing pops
+/// into view. The planned-ahead slot ([plannedAhead]) has no hoop yet.
+///
+/// PRD-2.2 §27 one bonus at a time: it keeps `RunState.activity` in sync
+/// ([RunActivity.of]); when an activity starts, the reward items ahead fade
+/// out ([clearRewardsAhead]).
 class RunSpawner {
   RunSpawner(this.run);
 
@@ -29,6 +43,16 @@ class RunSpawner {
   final List<(Component, double, double)> _fading = [];
   final List<(GapItemPlan, SlotPlan)> _pending = [];
 
+  /// PRD-2.2 §15 the planned-ahead slot (no hoop yet) and the items
+  /// attached to it (created when it was planned: the switch, the comet
+  /// star).
+  SlotPlan? _ahead;
+  final List<Pickup> _aheadItems = [];
+
+  /// PRD-2.2 §15.1 feature follow-ups popping in: (pickup, seconds).
+  final List<(Pickup, double)> _popping = [];
+  CollectBursts? _sparkle;
+
   /// Every plan, in order (tests, debug overlay).
   final List<SlotPlan> slotLog = [];
   final List<GapPlan> gapLog = [];
@@ -36,30 +60,109 @@ class RunSpawner {
   Iterable<Hoop> get hoops => _hoops;
   Iterable<Pickup> get pickups => _pickups;
 
+  /// PRD-2.2 §15 the slot planned one gap ahead (its hoop not spawned yet).
+  SlotPlan? get plannedAhead => _ahead;
+
+  /// The director's spawned counts (`run_director_hoops` / `_items`) minus
+  /// the planned-ahead slot, which never spawned (PRD-2.2 §15).
+  Map<String, int> get spawnedCounts {
+    final out = {...run.director.spawnedCounts};
+    final a = _ahead;
+    if (a != null) {
+      void minus(String k) {
+        final n = (out[k] ?? 0) - 1;
+        if (n > 0) {
+          out[k] = n;
+        } else {
+          out.remove(k);
+        }
+      }
+
+      minus(a.element.storageId);
+      if (a.tiltDeg != 0) minus('tilted');
+      if (a.motion != null) minus('moving');
+      if (a.cometHang) minus(ElementId.comet.storageId);
+    }
+    return out;
+  }
+
+  /// PRD-2.2 §15 the line items waiting for the planned-ahead slot's
+  /// centre (tests).
+  Iterable<GapItemPlan> get pendingItems => _pending.map((e) => e.$1);
+
   /// Hoops are live once WP-1a registers the normal hoop (or a test does).
   /// Until then the 1.0 pipes run and the spawner stays idle.
   bool get live => hoopKindFor(HoopKindId.normal) != null;
 
   void update(double dt) {
     if (!live) return;
+    syncActivity();
     final s = run.state;
     final edge =
         s.camX + RunConfig.worldWidth + RunConfig.firstHoopOffscreen + 1e-6;
     var guard = 0;
-    while (!hold && run.director.nextTrackX <= edge && guard++ < 8) {
-      _spawnSlot();
+    while (!hold && guard++ < 16) {
+      final ahead = _ahead;
+      if (ahead == null) {
+        _planSlot();
+        continue;
+      }
+      if (ahead.trackX > edge) break;
+      _spawnAhead();
     }
     _announce();
     _hitTest();
     _cull(dt);
+    _stepPopIns(dt);
   }
 
-  void _spawnSlot() {
+  /// PRD-2.2 §15 plans the next slot one gap ahead: resolves (and creates)
+  /// the line items of the gap before it, creates its attached items and
+  /// plans the gap after it. Its hoop spawns later ([_spawnAhead]).
+  void _planSlot() {
     final ctx = run.directorContext();
     final plan = run.director.nextSlot(ctx);
     slotLog.add(plan);
-    run.state.hoopIndex = run.director.hoopIndex;
     _resolvePending(plan);
+    _ahead = plan;
+    _aheadItems.clear();
+    for (final a in plan.attached) {
+      final p = _spawnItem(a);
+      if (p != null) _aheadItems.add(p);
+    }
+    final gap = run.director.nextGap(run.directorContext(), plan);
+    gapLog.add(gap);
+    for (final item in gap.items) {
+      if (item.y == null) {
+        _pending.add((item, plan));
+      } else {
+        _spawnItem(item);
+      }
+    }
+  }
+
+  /// The planned-ahead slot's plane reached the spawn edge: its hoop(s).
+  void _spawnAhead() {
+    var plan = _ahead!;
+    _ahead = null;
+    final s = run.state;
+    // §3.0.3 slot order 1–2 hold for the slot planned one gap earlier
+    // (PRD-2.2 §15): a revive since then, or a ride that started since
+    // then, makes it a plain hoop (rides: full size).
+    final revived = run.director.takeRevivePending();
+    final rideNow = s.ride != null && !plan.duringRide;
+    if (revived || rideNow) {
+      final plain = run.director.plainSlot(
+        plan,
+        run.directorContext(),
+        ride: s.ride != null,
+      );
+      _dropAheadItems();
+      plan = plain;
+    }
+    s
+      ..hoopIndex = plan.index + 1
+      ..gapIndex = plan.index;
     final kind = hoopKindFor(plan.kind) ?? hoopKindFor(HoopKindId.normal)!;
     final hoop = Hoop(plan: plan, kind: kind);
     kind.onSpawn(hoop, run.ctx);
@@ -67,6 +170,10 @@ class RunSpawner {
     run.layers.back.add(hoop);
     run.layers.front.add(hoop.front);
     _hoops.add(hoop);
+    for (final p in _aheadItems) {
+      kind.linkAttached(hoop, p, run.ctx);
+    }
+    _aheadItems.clear();
     run.events.emit(HoopSpawned(hoop, plan));
     // region WP-3c — the Ring Train's rings 2 and 3 (PRD-2 §3.22)
     for (final p in kind.extraHoops(plan)) {
@@ -79,19 +186,16 @@ class RunSpawner {
       run.events.emit(HoopSpawned(extra, p));
     }
     // endregion WP-3c
-    for (final a in plan.attached) {
-      _spawnItem(a);
+  }
+
+  /// The planned-ahead slot's attached items go (it became plain).
+  void _dropAheadItems() {
+    for (final p in _aheadItems) {
+      _pickups.remove(p);
+      p.escaped = true;
+      p.removeFromParent();
     }
-    final gap = run.director.nextGap(run.directorContext(), plan);
-    gapLog.add(gap);
-    run.state.gapIndex = plan.index;
-    for (final item in gap.items) {
-      if (item.y == null) {
-        _pending.add((item, plan));
-      } else {
-        _spawnItem(item);
-      }
-    }
+    _aheadItems.clear();
   }
 
   /// Items "on the straight line between the hoops" (§3.0.3) wait for the
@@ -114,19 +218,32 @@ class RunSpawner {
         return y0 + (y1 - y0) * u;
       }
 
-      final y = (line(item.trackX) + item.lineOffset).clamp(lo, hi).toDouble();
+      // PRD-2.2 §19.4 patterns keep their shape inside the margins too: an
+      // arc's upward bulge stays below the top margin.
+      final bulge = switch (item.kind) {
+        ElementId.starTrail => RunConfig.starTrailBulge,
+        ElementId.piggyCoins => PiggyConfig.coinBulge,
+        _ => 0.0,
+      };
+      final top = math.min(lo + bulge, hi);
+      double fit(double v) => v.clamp(top, hi).toDouble();
+      final y = fit(line(item.trackX) + item.lineOffset);
       final toX = item.toTrackX;
-      _spawnItem(item.resolved(y: y, toY: toX == null ? null : line(toX)));
+      _spawnItem(
+        item.resolved(y: y, toY: toX == null ? null : fit(line(toX))),
+      );
     }
     _pending.clear();
   }
 
-  void _spawnItem(GapItemPlan item) {
+  Pickup? _spawnItem(GapItemPlan item) {
     final kind = pickupKindFor(item.kind);
-    if (kind == null) return;
+    if (kind == null) return null;
     final p = kind.build(item, run.ctx);
     run.layers.items.add(p);
     _pickups.add(p);
+    run.events.emit(PickupSpawned(p));
+    return p;
   }
 
   /// §3.0.8 The leftmost track x of [h]'s ring artwork right now (every
@@ -246,7 +363,112 @@ class RunSpawner {
       }
     }
     _pending.clear();
+    // PRD-2.2 §15 the planned-ahead slot goes too (its attached items were
+    // cleared with the pickups above).
+    _ahead = null;
+    _aheadItems.clear();
   }
+
+  // region WP-G2 — one bonus at a time (PRD-2.2 §27)
+  /// Keeps `RunState.activity` in step with the features' state
+  /// ([RunActivity.of]): a start clears the rewards ahead, an end starts
+  /// the 2-hoop cool-down (counted from the director's next slot).
+  void syncActivity() {
+    final s = run.state;
+    final now = RunActivity.of(s);
+    final was = s.activity;
+    if (now == was) return;
+    s.activity = now;
+    if (now != null) {
+      s.activityStart = s.runClock;
+      run.events.emit(ActivityStarted(now));
+      clearRewardsAhead();
+    } else {
+      s.activityEndedAtSlot = run.director.hoopIndex;
+      run.events.emit(ActivityEnded(was!));
+    }
+  }
+
+  /// PRD-2.2 §27.3 an activity started: every reward item ahead of the bird
+  /// (on screen, created off-screen, waiting for its line, or attached to
+  /// the planned-ahead slot) fades out over [fade] s and is removed; the
+  /// planned-ahead slot becomes plain if it is a reward slot; a reward ring
+  /// on screen (pair, Lucky Spin, FEVER) fades its reward parts and passes
+  /// as a normal ring; a portal on screen fades out. The feather and the
+  /// puzzle piece keep their once-per-run chance (owed); everything else is
+  /// back in the normal draw. A piggy / jar run's own items for the planned
+  /// gap are added so its follow-ups start there and scroll in.
+  void clearRewardsAhead({double fade = RunConfig.rewardClearFade}) {
+    final birdX =
+        run.birdTrackPosition()?.x ?? run.state.camX + RunConfig.birdX;
+    final starsGone = <GapItemPlan>{};
+    _pickups.removeWhere((p) {
+      if (p.collected || p.escaped || p.position.x <= birdX) return false;
+      if (!RunDirector.isRewardItem(p.id)) return false;
+      _owe(p.id);
+      final plan = p.plan;
+      if (p.id == ElementId.comet && plan != null) starsGone.add(plan);
+      run.events.emit(PickupCleared(p.id, p));
+      p.escaped = true; // never judged
+      _aheadItems.remove(p);
+      _fading.add((p, fade, fade));
+      return true;
+    });
+    _pending.removeWhere((e) {
+      if (!RunDirector.isRewardItem(e.$1.kind)) return false;
+      _owe(e.$1.kind);
+      return true;
+    });
+    final ctx = run.directorContext();
+    final ahead = _ahead;
+    if (ahead != null && RunDirector.isRewardSlot(ahead)) {
+      _dropAheadItems();
+      _ahead = run.director.plainSlot(ahead, ctx);
+    }
+    final a = _ahead;
+    if (a != null) {
+      final pending = _pending.where((e) => identical(e.$2, ahead)).toList();
+      if (!identical(a, ahead)) {
+        // Re-point the waiting line items to the re-planned slot.
+        _pending.removeWhere((e) => identical(e.$2, ahead));
+        _pending.addAll([for (final e in pending) (e.$1, a)]);
+      }
+      final own = run.director.activityItemsFor(
+        ctx,
+        a,
+        hasItems: pending.isNotEmpty,
+      );
+      for (final item in own) {
+        _pending.add((item, a));
+      }
+    }
+    _hoops.removeWhere((h) {
+      if (h.resolved || h.planeX <= birdX) return false;
+      if (h.plan.kind == HoopKindId.portal) {
+        _fading
+          ..add((h, fade, fade))
+          ..add((h.front, fade, fade));
+        return true;
+      }
+      if (RunDirector.rewardKinds.contains(h.plan.kind)) h.stripReward();
+      // Its comet star went with the pickups: a plain hoop now.
+      if (h.plan.cometHang && h.plan.attached.any(starsGone.contains)) {
+        h.plan = h.plan.copyWith(cometHang: false);
+      }
+      return false;
+    });
+  }
+
+  void _owe(ElementId e) {
+    if (e == ElementId.feather) {
+      run.director.oweFeather();
+      run.state.featherSpawned = false;
+    } else if (e == ElementId.puzzlePiece) {
+      run.director.owePiece();
+      run.state.pieceSpawned = false;
+    }
+  }
+  // endregion WP-G2
 
   /// The next unresolved hoop the bird has not fully passed (§3.0.4 5:
   /// the ring's rightmost point, so a tilted ring whose plane centre is
@@ -279,6 +501,9 @@ class RunSpawner {
     _hoops.clear();
     _pickups.clear();
     _pending.clear();
+    _ahead = null;
+    _aheadItems.clear();
+    _popping.clear();
   }
   // endregion WP-3b
 
@@ -287,8 +512,73 @@ class RunSpawner {
   /// Bank's own-gap coins and the Firefly Jar's first swarm are emitted by
   /// their features; the director's follow-gap fields come through the
   /// normal slot path).
-  void spawnItem(GapItemPlan item) => _spawnItem(item);
+  ///
+  /// PRD-2.2 §15.1 such a follow-up placed at the moment of the grab pops
+  /// in (scale 0 → 1.15 → 1 over 0.25 s + a small sparkle) when its left
+  /// edge is already inside the screen; one created off-screen just
+  /// scrolls in.
+  Pickup? spawnItem(GapItemPlan item) {
+    final p = _spawnItem(item);
+    if (p != null) {
+      final right = run.state.camX + RunConfig.worldWidth;
+      if (p.position.x - p.hitRadius < right) _popIn(p);
+    }
+    return p;
+  }
   // endregion WP-3e
+
+  // region WP-G2 — pop-in of feature follow-ups (PRD-2.2 §15.1)
+  /// Feature follow-ups currently popping in (tests).
+  Iterable<Pickup> get poppingIn => _popping.map((e) => e.$1);
+
+  /// The pop-in sparkle pool (tests).
+  CollectBursts? get popSparkle => _sparkle;
+
+  void _popIn(Pickup p) {
+    p.popScale = 0;
+    _popping.add((p, 0));
+    var sparkle = _sparkle;
+    if (sparkle == null || sparkle.isRemoved) {
+      sparkle = _sparkle = CollectBursts();
+      run.layers.fx.add(sparkle);
+    }
+    sparkle.burst(
+      at: Offset(p.position.x, p.position.y),
+      colors: const [Color(0xFFFFFFFF), Color(0xFFFFE27A)],
+      pieces: RunConfig.popInSparkle,
+      speed: 90,
+      sizeMin: 2,
+      sizeMax: 4,
+      life: .35,
+    );
+  }
+
+  /// PRD-2.2 §15.1 scale 0 → 1.15 (first 60 %) → 1 over 0.25 s.
+  static double popInScale(double t) {
+    const len = RunConfig.popInTime;
+    const peak = RunConfig.popInOvershoot;
+    final u = (t / len).clamp(0.0, 1.0);
+    if (u < .6) {
+      final k = u / .6;
+      return peak * (1 - (1 - k) * (1 - k));
+    }
+    return peak + (1 - peak) * ((u - .6) / .4);
+  }
+
+  void _stepPopIns(double dt) {
+    for (var i = _popping.length - 1; i >= 0; i--) {
+      final (p, t0) = _popping[i];
+      final t = t0 + dt;
+      if (t >= RunConfig.popInTime || p.isRemoved) {
+        p.popScale = 1;
+        _popping.removeAt(i);
+      } else {
+        p.popScale = popInScale(t);
+        _popping[i] = (p, t);
+      }
+    }
+  }
+  // endregion WP-G2
 
   void dispose() {
     for (final h in _hoops) {
@@ -304,5 +594,10 @@ class RunSpawner {
     _pickups.clear();
     _fading.clear();
     _pending.clear();
+    _ahead = null;
+    _aheadItems.clear();
+    _popping.clear();
+    _sparkle?.removeFromParent();
+    _sparkle = null;
   }
 }

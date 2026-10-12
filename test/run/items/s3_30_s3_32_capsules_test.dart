@@ -311,8 +311,8 @@ void main() {
   group('§3.30 the capsule in the run', () {
     for (final type in CapsuleType.values) {
       _tester().testGameWidget(
-        '§3.0.8 / §3.30 a forced ${type.name} capsule floats mid-gap on the '
-        'line between the two hoops, counts as met on screen (capsule + its '
+        '§3.0.8 / §3.30 a forced ${type.name} capsule floats in its gap '
+        '(PRD-2.2 §19.4: 30–70 %, ±50 pt off the line), counts as met on screen (capsule + its '
         'type) and starts its powerup when flown into',
         setUp: _setUp,
         verify: (game, _) async {
@@ -326,16 +326,19 @@ void main() {
           await _fly(game, run, 20, until: () => cap()?.announced ?? false);
           final p = cap()!;
           expect(p.type, TimedPowerupInfo.fromCapsule(type));
-          // Mid-gap, on the straight line between the two slot centres.
+          // PRD-2.2 §19.4: 30–70 % along the gap, ±50 pt off the straight
+          // line between the two slot centres (was: mid-gap on the line).
           final slots = run.spawner.slotLog;
           final i = slots.lastIndexWhere((s) => s.lastRingX < p.position.x);
           final a = slots[i], b = slots[i + 1];
-          expect(p.position.x, closeTo((a.lastRingX + b.trackX) / 2, 1));
           final u = (p.position.x - a.lastRingX) / (b.trackX - a.lastRingX);
+          expect(u, inInclusiveRange(.3 - .01, .7 + .01));
+          final line = a.centreY + (b.centreY - a.centreY) * u;
           expect(
             p.position.y,
-            closeTo(a.centreY + (b.centreY - a.centreY) * u, 1),
+            closeTo(line + p.plan!.lineOffset, 1),
           );
+          expect(p.plan!.lineOffset.abs(), lessThanOrEqualTo(50));
           game.update(1 / 60);
           expect(game.storage.metElements, contains('capsule'));
           expect(game.storage.metElements, contains(type.element.storageId));

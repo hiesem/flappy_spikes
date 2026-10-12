@@ -1,3 +1,4 @@
+import 'package:flappy_spikes/run/config/director_tables.dart';
 import 'package:flappy_spikes/run/director/first_meet.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
@@ -26,6 +27,25 @@ int? firstShown(RunDirector d, ElementId e, {int n = 120}) {
   return null;
 }
 
+/// PRD-2.2 §19.2 the early pool may show Bullseye, the angled ring and the
+/// Star Trail from index 4 (before their normal unlock); the first meet
+/// itself is unchanged.
+int earliest(ElementId e) => switch (e) {
+  ElementId.bullseye ||
+  ElementId.angledRing ||
+  ElementId.starTrail => DirectorTables.prd2.earlyPool!.from,
+  _ => e.firstPossible!,
+};
+
+/// The slot / gap at [index] showed [e] because of the §19.2 early pool.
+bool fromPool(RunDirector d, ElementId e, int index) =>
+    switch (d.earlyPicks[index]) {
+      EarlyPick.bullseye => e == ElementId.bullseye,
+      EarlyPick.angled => e == ElementId.angledRing,
+      EarlyPick.starTrail => e == ElementId.starTrail,
+      _ => false,
+    };
+
 void main() {
   final firstMeet = ElementId.values.where((e) => e.firstMeet).toList();
 
@@ -45,7 +65,7 @@ void main() {
           );
           final at = firstShown(d, e);
           expect(at, isNotNull, reason: 'seed $seed');
-          expect(at!, greaterThanOrEqualTo(e.firstPossible!));
+          expect(at!, greaterThanOrEqualTo(earliest(e)));
           expect(
             at - e.firstPossible!,
             lessThanOrEqualTo(5),
@@ -74,7 +94,7 @@ void main() {
         }
         for (final e in firstMeet) {
           expect(first[e], isNotNull, reason: 'seed $seed never met ${e.storageId}');
-          expect(first[e]!, greaterThanOrEqualTo(e.firstPossible!));
+          expect(first[e]!, greaterThanOrEqualTo(earliest(e)));
         }
         expect(d.firstMeet.met, containsAll(firstMeet));
       }
@@ -88,7 +108,16 @@ void main() {
         enabled: {ElementId.normalHoop, ElementId.bullseye},
         met: {ElementId.bullseye},
       );
-      expect(firstShown(d, ElementId.bullseye, n: 8), isNull);
+      // PRD-2.2 §19.2: the early pool may still draw it (not a force).
+      for (var k = 0; k < 8; k++) {
+        final ctx = DirectorContext.open(711);
+        final s = d.nextSlot(ctx);
+        final g = d.nextGap(ctx, s);
+        if (shown(s, g).contains(ElementId.bullseye)) {
+          expect(fromPool(d, ElementId.bullseye, s.index), isTrue);
+          expect(s.forced, isFalse);
+        }
+      }
     });
 
     test('§3.0.8 one forced element at a time, oldest unlock first', () {

@@ -22,7 +22,10 @@ class _Star {
 /// spiralling in; ripples shrinking into the rim. Every 3.4 s it inhales
 /// for 0.9 s: the void grows ≈ 60 %, a red glow appears, the swirl speeds
 /// up, the photon ring turns pink, the strips bend more (`SawFeature`),
-/// the pull peaks at 570 pt/s² and the inhale sound plays.
+/// the pull peaks at 570 pt/s² and the inhale sound plays. PRD-2.2 §25:
+/// the void, swirl, ripples and stars scale with the ring
+/// ([SawRingState.decor]); the torus, photon ring and plasma (the rim) do
+/// not.
 class BlackHoleArt implements SawDesignArt {
   const BlackHoleArt();
 
@@ -52,8 +55,8 @@ class BlackHoleArt implements SawDesignArt {
 
   /// The void: a dark shell that eats the stage round the ring.
   void _void(Canvas canvas, SawRingState s, double k) {
-    final ry = s.ry;
-    final e = SawConfig.holeVoid * (1 + SawConfig.holeVoidHunger * k);
+    final ry = s.ry, d = s.decor; // PRD-2.2 §25 decoration scale
+    final e = SawConfig.holeVoid * (1 + SawConfig.holeVoidHunger * k) * d;
     final r = ry + e, rim = ry / r;
     canvas.save();
     canvas.scale((RingArcs.rx + e) / r, 1);
@@ -76,16 +79,21 @@ class BlackHoleArt implements SawDesignArt {
     if (k > 0) {
       RingArcs.stroke(
         canvas,
-        RingArcs.half(ry + 14, front: false, x: RingArcs.rx + 14, full: true),
+        RingArcs.half(
+          ry + 14 * d,
+          front: false,
+          x: RingArcs.rx + 14 * d,
+          full: true,
+        ),
         SawConfig.holeHunger.withValues(alpha: .3 * k),
-        22 * k + 4,
-        blur: 14 * k,
+        (22 * k + 4) * d,
+        blur: 14 * k * d,
       );
     }
   }
 
   void _swirl(Canvas canvas, SawRingState s, bool front, double k) {
-    final ry = s.ry, t = s.clock;
+    final ry = s.ry, t = s.clock, d = s.decor; // PRD-2.2 §25
     final spd = 1 + 1.6 * k;
     final paint = Paint()
       ..style = PaintingStyle.stroke
@@ -93,37 +101,37 @@ class BlackHoleArt implements SawDesignArt {
     final fill = Paint();
     for (final st in _stars(s)) {
       final u = ((st.o - t * .22 * spd * st.w) % 1 + 1) % 1;
-      final off = 5 + 32 * u;
+      final off = (5 + 32 * u) * d;
       final ang = st.a + t * spd * (1.2 + 3.2 * (1 - u)) * st.w;
       if (RingArcs.isFront(ang) != front) continue;
       final a0 = ang - .12 - .25 * (1 - u);
       final p1 = RingArcs.ellPt(ry, ang, off);
-      final p0 = RingArcs.ellPt(ry, a0, off + 3);
+      final p0 = RingArcs.ellPt(ry, a0, off + 3 * d);
       final alpha = math.min(1.0, u * 3) * (front ? 1 : .7);
       if (st.chunk) {
         canvas.save();
         canvas.translate(p1.dx, p1.dy);
         canvas.rotate(ang * 3);
         canvas.drawRect(
-          const Rect.fromLTWH(-2.5, -2.5, 5, 5),
+          Rect.fromLTWH(-2.5 * d, -2.5 * d, 5 * d, 5 * d),
           fill..color = Color.fromRGBO(90, 84, 104, alpha),
         );
         canvas.restore();
       } else {
         paint
-          ..strokeWidth = st.s
+          ..strokeWidth = st.s * d
           ..color = st.c.withValues(alpha: alpha);
         canvas.drawLine(p0, p1, paint);
       }
     }
     for (var j = 0; j < 3; j++) {
       final u = (t * (.7 + 1.3 * k) + j / 3) % 1;
-      final o = 36 * (1 - u);
+      final o = 36 * (1 - u) * d;
       RingArcs.stroke(
         canvas,
         RingArcs.half(ry + o, front: front, x: RingArcs.rx + o),
         Color.fromRGBO(210, 180, 255, .45 * u),
-        1.3,
+        1.3 * d,
       );
     }
   }

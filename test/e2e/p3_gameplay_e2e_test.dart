@@ -47,6 +47,11 @@ void main() {
             expect(await flyUntil(g, (r) => r.state.ride == null), isTrue);
           }
           killRunThroughSaves(g);
+          // A natural death may still be tumbling: let it reach the offer.
+          for (var f = 0; f < 600 && g.state == GameState.dying; f++) {
+            g.update(1 / 60);
+          }
+          await flushAndMount(g);
           await declineRevive(g);
           final names = spy.events.map((e) => e.$1).toList();
           expect(

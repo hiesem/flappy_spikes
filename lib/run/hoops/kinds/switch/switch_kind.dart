@@ -128,6 +128,15 @@ class SwitchRingKind extends HoopKind {
     c.track('switchring_spawned', {'design': storageName(designOf(h))});
   }
 
+  /// PRD-2.2 §15 the switch was created one gap before its ring (the plan
+  /// ahead): the ring takes it now.
+  @override
+  void linkAttached(Hoop h, Pickup p, RunContext c) {
+    if (p is! SwitchPickup) return;
+    p.ring = h;
+    stateOf(h)?.pickup = p;
+  }
+
   @override
   void buildVisual(Hoop h, RunContext c) {
     final art = SwitchDesignArt.of(designOf(h));
@@ -392,7 +401,12 @@ class SwitchPickupKind extends PickupKind {
         : (ring == null
               ? SwitchDesign.lockdown
               : SwitchRingKind.designOf(ring));
-    final pickup = SwitchPickup(p, design, ring);
+    // PRD-2.2 §15 planned one gap ahead: the ring is not spawned yet (it is
+    // linked when it is, `SwitchRingKind.linkAttached`); its plan places
+    // the Power Iris cable meanwhile.
+    final ahead = c.run.spawner.plannedAhead;
+    final pickup = SwitchPickup(p, design, ring)
+      ..ringPlan = ahead != null && ahead.attached.contains(p) ? ahead : null;
     final st = ring == null ? null : SwitchRingKind.stateOf(ring);
     st?.pickup = pickup;
     return pickup;
@@ -420,7 +434,12 @@ class SwitchPickup extends Pickup {
   }
 
   final SwitchDesign design;
-  final Hoop? ring;
+
+  /// The switch ring (PRD-2.2 §15: null until its hoop spawns).
+  Hoop? ring;
+
+  /// PRD-2.2 §15 the ring's plan while its hoop is not spawned yet.
+  SlotPlan? ringPlan;
   late final SwitchDesignArt art;
 
   static final _touch = PickupTouchFx.newPool();

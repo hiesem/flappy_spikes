@@ -275,7 +275,18 @@ void main() {
       verify: (game, _) async {
         final run = await startRun(game, startHoopIndex: 25, ride: RideId.storm);
         final f = _feature(run);
-        run.state.timed = TimedPowerupState(type: TimedPowerup.hourglass, duration: 30);
+        // PRD-2.2 §27: a portal is never planned during a power-up (an
+        // activity), and one ahead fades when a power-up starts. The pause
+        // stays as a safety net: start the power-up once the portal is on
+        // screen, as if its activity start had already been handled.
+        await _flyUntil(
+          game,
+          run,
+          () => run.spawner.hoops.any((h) => h.plan.kind == HoopKindId.portal),
+        );
+        run.state
+          ..timed = TimedPowerupState(type: TimedPowerup.hourglass, duration: 30)
+          ..activity = RunActivity.capsule;
         final events = <RunEvent>[];
         run.events.onAny(events.add);
         await _flyUntil(game, run, () => f.ride != null);

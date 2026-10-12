@@ -307,6 +307,28 @@ class PickupCleared extends RunEvent {
   final Pickup pickup;
 }
 
+// region WP-G2 — PRD-2.2 §15 / §27
+/// A pickup component was created (the spawner; PRD-2.2 §15 on-screen
+/// spawn checks).
+class PickupSpawned extends RunEvent {
+  const PickupSpawned(this.pickup);
+  final Pickup pickup;
+}
+
+/// PRD-2.2 §27 an activity started (comet / portal ride, piggy / jar run,
+/// capsule power-up).
+class ActivityStarted extends RunEvent {
+  const ActivityStarted(this.activity);
+  final RunActivity activity;
+}
+
+/// PRD-2.2 §27 the activity ended (the 2-hoop cool-down starts).
+class ActivityEnded extends RunEvent {
+  const ActivityEnded(this.activity);
+  final RunActivity activity;
+}
+// endregion WP-G2
+
 /// The Star Trail's last star went behind the bird (§3.26): the trail is
 /// over. `StarTrailFeature` reads [trail]'s caught count and either shows
 /// PERFECT LINE and pays +5 coins, or shows the "n / 8" pop.

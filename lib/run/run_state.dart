@@ -101,6 +101,20 @@ class RunState {
   // squeeze
   final SqueezeState squeeze = SqueezeState();
 
+  // region WP-G2 — one bonus at a time (PRD-2.2 §27)
+  /// The running activity (comet ride, portal ride, piggy / jar run,
+  /// capsule power-up), kept in sync by `RunSpawner` from the state the
+  /// features set ([RunActivity.of]); null = none.
+  RunActivity? activity;
+
+  /// runClock when [activity] started.
+  double activityStart = 0;
+
+  /// The director's next slot index when the last activity ended (the
+  /// 2-hoop cool-down counts from it); −99 = none yet.
+  int activityEndedAtSlot = -99;
+  // endregion WP-G2
+
   // revive
   int revivesThisGame = 0;
 
@@ -150,6 +164,45 @@ class RunState {
   /// Rides and the squeeze window block director spawns of most kinds.
   bool rideOrSqueezeBlocksSpawns() =>
       ride != null || squeeze.phase != SqueezePhase.idle;
+}
+
+/// PRD-2.2 §27.1 The activities: while one runs no other reward item
+/// appears. Carrying the egg / chick, a shield, an extra life, Big Hoops,
+/// the fire and FEVER are not activities.
+enum RunActivity {
+  /// §3.8 comet ride (incl. the pair's COMET gift): the star / gift is
+  /// taken → control returns.
+  comet,
+
+  /// §3.12 portal ride: the bird enters the portal → control returns.
+  portal,
+
+  /// §3.28 Piggy Bank run: the piggy is grabbed → the pay-out or the bank
+  /// is lost.
+  piggy,
+
+  /// §3.29 Firefly Jar run: the jar is grabbed → JAR FULL, or the jar is
+  /// lost.
+  jar,
+
+  /// §3.30–3.32 capsule power-up (Hourglass, Mini Bird, Coin Frenzy): the
+  /// capsule is opened → its timer ends.
+  capsule;
+
+  /// The activity [s] is in right now, derived from what the features set
+  /// (`ride`, `timed`, `piggy`, `jar`), so every start and end is seen
+  /// without the features knowing about activities.
+  static RunActivity? of(RunState s) {
+    final ride = s.ride?.kind;
+    if (ride == RideKind.portal) return RunActivity.portal;
+    if (ride == RideKind.comet || s.timed?.type == TimedPowerup.comet) {
+      return RunActivity.comet;
+    }
+    if (s.piggy != null) return RunActivity.piggy;
+    if (s.jar != null) return RunActivity.jar;
+    if (s.timed != null) return RunActivity.capsule;
+    return null;
+  }
 }
 
 /// Timed powerups (§3.8, §3.30–3.32): only one runs at a time.

@@ -1,11 +1,13 @@
 import 'dart:ui';
 
 import '../director/plans.dart' show SawDesign;
+import 'parts_config.dart';
 
 /// Saw rings — Live Wire, Frost Ring, Black Hole (PRD-2 §3.18, §5.17; mock
 /// `screen_hazard_hoops4.html`, builder `build60.py` + `build60_themes.js`).
-/// Every member's doc starts with its PRD section (ARCH §4). The +28 pt
-/// opening lives in `RunConfig.sawExtraOpening` (the director applies it).
+/// Every member's doc starts with its PRD section (ARCH §4). The extra
+/// opening lives in `RunConfig.sawExtraOpening` (the director applies it;
+/// PRD-2.2 §25: 0, saw rings have the normal opening).
 abstract final class SawConfig {
   // ------------------------------------------------------------- the rim
   /// §3.18 Rim-end collider radius (pt) = half the design's rim thickness:
@@ -14,6 +16,18 @@ abstract final class SawConfig {
     SawDesign.liveWire || SawDesign.frostRing => 5,
     SawDesign.blackHole => 6,
   };
+
+  // ------------------------------------------------- decoration scale
+  /// PRD-2.2 §25 The saw decorations (glow, swirl, ripples, sparks,
+  /// crystals, stars / debris) were designed at this opening (pt): the
+  /// PRD-2 normal 118 + 28. Every decoration size / offset is multiplied by
+  /// `ry / ryDesign` (`SawHoopKind.decorScaleFor`); the rim thickness, the
+  /// rim-end colliders and [pullRange] are not scaled.
+  static const double decorDesignOpening = 146;
+
+  /// PRD-2.2 §25 The half height the decorations were designed at
+  /// (`RingPainter.ryFor(146)` = 146 / 2 + 7).
+  static const double ryDesign = decorDesignOpening / 2 + PartsConfig.rimRadius;
 
   // --------------------------------------------------- Black Hole pull
   /// §3.18 The pull acts within this distance (pt) of a rim end, measured

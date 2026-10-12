@@ -173,7 +173,8 @@ void main() {
   );
 
   tester().testGameWidget(
-    '§3.27 every ring cracks it (a ride ring counts): countdown 4…1, a crack '
+    '§3.27 every ring cracks it (PRD-2.2 §23: a ride ring does not): '
+    'countdown 4…1, a crack '
     'sound each; 5 rings hatch the chick with HATCHED! and the ×2 badge',
     setUp: (g, _) => boot(g),
     verify: (game, _) async {
@@ -184,11 +185,12 @@ void main() {
       await flushAndMount(game);
       await flyToEgg(game, run, () => run.state.egg != null);
       expect(run.state.egg, isNotNull);
-      // Ring 1 is a portal-ride ring: it still cracks the egg (§3.27).
+      // PRD-2.2 §23 (changed from §3.27): a portal-ride ring no longer
+      // cracks the egg.
+      run.events.emit(HoopPassed(null, perfect: true, duringRide: true));
+      expect(run.state.egg!.cracks, 0);
       for (var i = 0; i < 4; i++) {
-        run.events.emit(
-          HoopPassed(null, perfect: true, duringRide: i == 0),
-        );
+        run.events.emit(HoopPassed(null, perfect: true));
         expect(run.state.egg!.cracks, i + 1);
         await flushAndMount(game);
       }

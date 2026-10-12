@@ -13,6 +13,7 @@ import '../../../run_context.dart';
 import '../../../run_state.dart';
 import '../../hoop.dart';
 import '../../hoop_kind.dart';
+import '../../ring_painter.dart';
 import '../normal.dart';
 import 'black_hole.dart';
 import 'frost_ring.dart';
@@ -49,8 +50,9 @@ abstract class SawDesignArt {
 ///   with r = 5 (Live Wire / Frost Ring) or 6 (Black Hole); any touch is a
 ///   mistake ([RimMode.deadly] → `MistakeCause.saw`), never a bounce;
 ///   decoration never kills;
-/// - the opening is +28 pt (the director adds `RunConfig.sawExtraOpening`),
-///   so the clear gap matches a normal hoop;
+/// - the opening is the normal hoop's (PRD-2.2 §25: the director adds
+///   `RunConfig.sawExtraOpening`, now 0; PRD-2 had +28 pt), and the
+///   decoration scales with the ring ([decorScaleFor]);
 /// - a clean pass is an ordinary (always perfect) hoop: +1, coins, streak;
 /// - rides (comet / portal) ignore its rim; Big Hoops grows it but it keeps
 ///   its own look (no gold, no tier look);
@@ -135,6 +137,13 @@ class SawHoopKind extends HoopKind {
     c.track('sawring_passed', {'design': storageName(designOf(h))});
   }
 
+  /// PRD-2.2 §25 The decoration scale of a saw ring with [opening]:
+  /// `ry / ryDesign` (`RingPainter.ryFor`, designed at 146 pt). Every
+  /// decoration size / offset (glow, swirl, ripples, sparks, crystals,
+  /// stars / debris) is multiplied by it; the rim is not.
+  static double decorScaleFor(double opening) =>
+      RingPainter.ryFor(opening) / SawConfig.ryDesign;
+
   /// Analytics name of a design (§6 `sawring_*` {design}).
   static String storageName(SawDesign d) => switch (d) {
     SawDesign.liveWire => 'live_wire',
@@ -198,7 +207,8 @@ class SawHoopKind extends HoopKind {
 /// it): the design clock, a cosmetic seed, the ambient particle pools
 /// (behind / over the bird) and the Black Hole pull on the live bird.
 class SawRingState extends Component {
-  SawRingState(this.hoop, this.c, this.art) : seed = c.cosmetic.nextInt(100);
+  SawRingState(this.hoop, this.c, this.art, {int? seed})
+    : seed = seed ?? c.cosmetic.nextInt(100);
 
   final Hoop hoop;
   final RunContext c;
@@ -216,6 +226,9 @@ class SawRingState extends Component {
 
   /// Half height of the ring's stroke centre line (the rim-end centres).
   double get ry => hoop.opening / 2 + hoop.kind.rimRadius(hoop);
+
+  /// PRD-2.2 §25 Decoration scale (`ry / ryDesign`) of this ring.
+  double get decor => SawHoopKind.decorScaleFor(hoop.opening);
 
   /// The run clock (the Black Hole's inhale is on it).
   double get clock => c.s.runClock;

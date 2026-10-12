@@ -13,7 +13,6 @@ import 'package:flappy_spikes/run/config/bonus_config.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/items/squeeze.dart';
 import 'package:flappy_spikes/run/items/puzzle.dart';
-import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/items/comet.dart';
 import 'package:flappy_spikes/run/run_state.dart';
 import 'package:flappy_spikes/versus/opponent.dart';
@@ -24,6 +23,7 @@ import 'package:flappy_spikes/services/versus_service.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flappy_spikes/versus/upload_queue.dart';
 import 'package:flappy_spikes/versus/run_entry.dart';
+import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // Fault injection at the real preferences persistence boundary.
@@ -57,12 +57,13 @@ void main() {
     Map<String, Object> prefs = const {},
     double h = 711,
     bool duel = false,
+    int seed = 21,
   }) {
     FlameTester<FlappySpikesGame>(
       () => createRunTestGame(
         prefs: prefs,
         worldHeight: h,
-        seed: 21,
+        seed: seed,
         services: AnalyticsSpy(),
         versus: FakeVersusService(
           pool: duel
@@ -274,8 +275,23 @@ void main() {
     },
   );
 
+  // PRD-2.2 §19.3: the feather and the piece come in ≈ 60 % of runs each
+  // (gap 3–40): a seed whose run has both, before the held windows end.
+  final bothSeed = [for (var s = 1; s < 300; s++) s].firstWhere((s) {
+    final d = RunDirector(
+      seed: s,
+      enabled: const {},
+      met: const {},
+      startHoopIndex: 2,
+    );
+    return d.featherThisRun &&
+        d.pieceThisRun &&
+        d.featherAt <= 25 &&
+        d.pieceAt <= 25;
+  });
   journey(
     'P45 squeeze: feather and piece remain scheduled until the walls reopen',
+    seed: bothSeed,
     (g, _) async {
       final r = await startRun(g, startHoopIndex: 2);
       g.runDebug.god = true;
@@ -296,7 +312,9 @@ void main() {
         await flyUntil(
           g,
           (r) => r.state.featherSpawned && r.state.pieceSpawned,
-          maxSeconds: 20,
+          // PRD-2.2 §19.3 / §27: never in neighbouring gaps, and an
+          // activity on the way makes them wait.
+          maxSeconds: 60,
         ),
         isTrue,
       );

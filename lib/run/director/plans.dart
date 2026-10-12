@@ -364,6 +364,39 @@ class SlotPlan {
   /// Spawned while a ride was on (full size, upright, still).
   final bool duringRide;
 
+  /// A copy with the given fields replaced (PRD-2.2 §15 / §27: the
+  /// spawner turns a planned-ahead slot into a plain one).
+  SlotPlan copyWith({
+    HoopKindId? kind,
+    ElementId? element,
+    double? centreY,
+    double? opening,
+    double? tiltDeg,
+    MotionSpec? Function()? motion,
+    bool? cometHang,
+    List<double>? ringOffsets,
+    Object? Function()? extra,
+    bool? forced,
+    List<GapItemPlan>? attached,
+    bool? duringRide,
+  }) => SlotPlan(
+    index: index,
+    kind: kind ?? this.kind,
+    element: element ?? this.element,
+    trackX: trackX,
+    centreY: centreY ?? this.centreY,
+    opening: opening ?? this.opening,
+    tiltDeg: tiltDeg ?? this.tiltDeg,
+    motion: motion != null ? motion() : this.motion,
+    cometHang: cometHang ?? this.cometHang,
+    ringOffsets: ringOffsets ?? this.ringOffsets,
+    advance: advance,
+    extra: extra != null ? extra() : this.extra,
+    forced: forced ?? this.forced,
+    attached: attached ?? this.attached,
+    duringRide: duringRide ?? this.duringRide,
+  );
+
   /// Track x of the last ring of the slot (train: + 2 × 56).
   double get lastRingX => kind == HoopKindId.train && extra is TrainSpec
       ? trackX + 2 * (extra as TrainSpec).dx

@@ -35,6 +35,7 @@ class RunDirector {
   }) : rng = RunRandom(seed),
        enabled = {...enabled},
        _i = startHoopIndex,
+       _startIndex = startHoopIndex,
        _nextX = firstTrackX,
        _lastRide = lastPortalRide,
        _forcedRide = forcedRide,
@@ -59,6 +60,13 @@ class RunDirector {
       tables.pieceWindow.$2,
     );
     _heartAt = RunRandom.rangeInt(r, tables.heart.first.$1, tables.heart.first.$2);
+    // PRD-2.2 §19.3 the feather and the piece come in ≈ 60 % of runs each
+    // (rolled at run start, on the timing stream so the course itself is
+    // not shifted by the rolls).
+    _featherOn = rng.timing.nextDouble() < tables.featherChance;
+    _pieceOn = rng.timing.nextDouble() < tables.pieceChance;
+    if (!_featherOn) _featherDone = true;
+    if (!_pieceOn) _pieceDone = true;
     if (forcedRide != null && !_forced.contains(ElementId.portal)) {
       _forced.add(ElementId.portal);
     }
@@ -72,6 +80,15 @@ class RunDirector {
       _heartAt = max(_heartAt, s);
       _featherAt = max(_featherAt, s);
       _pieceAt = max(_pieceAt, s);
+    }
+    // PRD-2.2 §19.3 never in the same or neighbouring gaps: the later one
+    // moves 2 gaps on.
+    if (_featherOn && _pieceOn && (_featherAt - _pieceAt).abs() <= 1) {
+      if (_featherAt > _pieceAt) {
+        _featherAt += 2;
+      } else {
+        _pieceAt += 2;
+      }
     }
   }
 
@@ -87,6 +104,9 @@ class RunDirector {
   int _i;
   double _nextX;
 
+  /// The run's first slot (PRD-2.2 §15: no switch ring there).
+  final int _startIndex;
+
   late int _cometAt;
   late int _portalAt;
   late int _heartAt;
@@ -94,7 +114,16 @@ class RunDirector {
   late int _pieceAt;
   bool _featherDone = false;
   bool _pieceDone = false;
-  int _heartsPlaced = 0;
+  late final bool _featherOn;
+  late final bool _pieceOn;
+
+  /// PRD-2.2 §19.3 the gaps the feather / piece were placed in (null = not
+  /// yet): the other one never lands in the same or a neighbouring gap.
+  int? _featherGap;
+  int? _pieceGap;
+
+  /// PRD-2.2 §19.2 the early-pool draw per index (tests, debug overlay).
+  final Map<int, EarlyPick> _earlyPicks = {};
 
   int _lastSpecial = -99;
   int _cdLeft = 0;
@@ -139,6 +168,13 @@ class RunDirector {
   int get heartAt => _heartAt;
   int get featherAt => _featherAt;
   int get pieceAt => _pieceAt;
+
+  /// PRD-2.2 §19.3 the run-start rolls: does the feather / piece come?
+  bool get featherThisRun => _featherOn;
+  bool get pieceThisRun => _pieceOn;
+
+  /// PRD-2.2 §19.2 the early-pool draws so far (index → pick).
+  Map<int, EarlyPick> get earlyPicks => Map.unmodifiable(_earlyPicks);
   RideId? get lastRide => _lastRide;
 
   /// Spawned counts per kind / modifier / item storage id (analytics
@@ -287,7 +323,7 @@ class RunDirector {
         ok = _specialAllowed(special, i, ctx, ignoreUnlock: true);
         if (ok) kind = special;
       } else if (e == ElementId.portal) {
-        ok = _on(e) && !ctx.squeezeWindow;
+        ok = _on(e) && !ctx.squeezeWindow && !_rewardsBlocked(i, ctx);
         if (ok) kind = HoopKindId.portal;
       } else if (e == ElementId.comet) {
         ok = _cometAllowed(i, ctx, mode: 2);
@@ -306,8 +342,23 @@ class RunDirector {
 
     final due = forced ? null : firstMeet.dueSlot(i);
 
-    // 3. Portal (fixed schedule; first-meet pulls it forward).
-    if (kind == null && !forced && _portalOn) {
+    // PRD-2.2 §19.2 the early random pool: one equal-chance draw per index
+    // 4–9 (replaces the special roll and the optional gap roll there).
+    final pool = tables.earlyPool;
+    EarlyPick? early;
+    if (pool != null && pool.covers(i)) {
+      early = RunRandom.pickWeighted<EarlyPick>(rng.layout, pool.weights);
+      if (early != null) _earlyPicks[i] = early;
+      // §27.2 the early pool waits during an activity (its rewards).
+      if (early == EarlyPick.starTrail && _rewardsBlocked(i, ctx, gap: true)) {
+        _earlyPicks.remove(i);
+        early = null;
+      }
+    }
+
+    // 3. Portal (fixed schedule; first-meet pulls it forward). PRD-2.2
+    // §27.2: during an activity and its cool-down it waits.
+    if (kind == null && !forced && _portalOn && !_rewardsBlocked(i, ctx)) {
       if (due == ElementId.portal) _portalAt = min(_portalAt, i);
       if (i >= _portalAt &&
           !ctx.squeezeWindow &&
@@ -324,6 +375,13 @@ class RunDirector {
       if (dueSpecial != null && _specialAllowed(dueSpecial, i, ctx)) {
         kind = dueSpecial;
         forced = true;
+      } else if (early != null) {
+        // PRD-2.2 §19.2 Bullseye may come from index 4 here (its usual
+        // min distance still holds).
+        if (early == EarlyPick.bullseye &&
+            _specialAllowed(HoopKindId.bullseye, i, ctx, ignoreFrom: true)) {
+          kind = HoopKindId.bullseye;
+        }
       } else {
         final budget = tables.budgetFor(i).special;
         if (rng.layout.nextDouble() < budget) {
@@ -340,6 +398,10 @@ class RunDirector {
     if (!forced && due == ElementId.comet) cometMode = 1;
     if (!forced && (due == ElementId.angledRing || due == ElementId.movingRing)) {
       forceMod = due;
+    }
+    // PRD-2.2 §19.2 the angled ring may come from index 4 here.
+    if (early == EarlyPick.angled && kind == null && forceMod == null) {
+      forceMod = ElementId.angledRing;
     }
 
     kind ??= HoopKindId.normal;
@@ -372,6 +434,11 @@ class RunDirector {
     var opening = openingFor(i, ride: false);
     var extraMargin = 0.0;
     if (kind == HoopKindId.saw) opening += RunConfig.sawExtraOpening;
+    // PRD-2.2 §25.1 the portal ring stays a big, easy 118 pt entrance at
+    // every hoop (it took the shrinking normal opening before).
+    // (`RunConfig.portalOpening` == `PortalConfig.ringOpening`; the director
+    // stays free of Flame imports.)
+    if (kind == HoopKindId.portal) opening = RunConfig.portalOpening;
     final pairO = RunConfig.pairOffsetAt711 * ctx.viewHeight / RunConfig.designHeight;
     if (kind == HoopKindId.pair) extraMargin = pairO / 2;
     opening = cap(opening * ctx.bigHoopsMult, extraMargin);
@@ -593,13 +660,16 @@ class RunDirector {
     int i,
     DirectorContext ctx, {
     bool ignoreUnlock = false,
+    bool ignoreFrom = false,
   }) {
     final rule = tables.specials[k];
     if (rule == null || !_on(k.element)) return false;
     if (!ignoreUnlock) {
-      if (i < rule.from) return false;
+      if (!ignoreFrom && i < rule.from) return false;
       if (i - (_lastOf[k] ?? -99) < rule.minSince) return false;
     }
+    // PRD-2.2 §27.2 reward rings wait for the activity + cool-down.
+    if (rewardKinds.contains(k) && _rewardsBlocked(i, ctx)) return false;
     if (ctx.squeezeWindow && !rule.allowedInSqueeze) return false;
     if (k == HoopKindId.fever &&
         (ctx.onFire || _prevKind == HoopKindId.saw)) {
@@ -610,6 +680,9 @@ class RunDirector {
       return false;
     }
     if (k == HoopKindId.switchRing && _gapUsed.contains(i - 1)) return false;
+    // PRD-2.2 §15 the run's first hoop scrolls in from 60 pt past the edge:
+    // its switch (1 s before the ring) would already be inside the screen.
+    if (k == HoopKindId.switchRing && i == _startIndex) return false;
     return true;
   }
 
@@ -618,6 +691,8 @@ class RunDirector {
   /// (also ignores the portal distance; exclusivity still applies).
   bool _cometAllowed(int i, DirectorContext ctx, {int mode = 0}) {
     if (!_on(ElementId.comet)) return false;
+    // PRD-2.2 §27.2 the comet hoop waits for the activity + cool-down.
+    if (_rewardsBlocked(i, ctx)) return false;
     if (mode == 0 && i < _cometAt) return false;
     if (ctx.timedPowerupRunning || ctx.squeezeWindow || ctx.rideActive) {
       return false;
@@ -729,6 +804,227 @@ class RunDirector {
     );
   }
 
+  // region WP-G2 — one bonus at a time (PRD-2.2 §27), plan one ahead (§15)
+  /// PRD-2.2 §27.2 the reward rings: pair, Lucky Spin, FEVER, portal (the
+  /// comet-star hoop is a normal slot with `cometHang`).
+  static const Set<HoopKindId> rewardKinds = {
+    HoopKindId.pair,
+    HoopKindId.luckySpin,
+    HoopKindId.fever,
+    HoopKindId.portal,
+  };
+
+  /// PRD-2.2 §27.2 the reward items (pickups) of the table.
+  static bool isRewardItem(ElementId e) => switch (e) {
+    ElementId.heart ||
+    ElementId.shield ||
+    ElementId.feather ||
+    ElementId.puzzlePiece ||
+    ElementId.egg ||
+    ElementId.capsule ||
+    ElementId.hourglass ||
+    ElementId.miniBird ||
+    ElementId.coinFrenzy ||
+    ElementId.starTrail ||
+    ElementId.piggy ||
+    ElementId.jar ||
+    ElementId.comet => true,
+    _ => false,
+  };
+
+  /// A reward slot (§27.2): a reward ring or the comet-star hoop.
+  static bool isRewardSlot(SlotPlan p) =>
+      rewardKinds.contains(p.kind) || p.cometHang;
+
+  /// PRD-2.2 §27.2 no reward item at [index] while an activity runs and for
+  /// [RunConfig.activityCooldownHoops] hoops after it. The planner works
+  /// one slot ahead of the screen (§15), so at the end the next slot to be
+  /// planned (n) still has hoop n − 1 between it and the bird: a reward
+  /// ring may come from slot n + 1, a gap item from gap n (both with ≥ 2
+  /// hoops between the bird and the reward when it ended).
+  bool _rewardsBlocked(int index, DirectorContext ctx, {bool gap = false}) {
+    if (ctx.activity) return true;
+    final from =
+        ctx.activityEndedAtSlot +
+        RunConfig.activityCooldownHoops -
+        (gap ? 2 : 1);
+    return index < from;
+  }
+
+  /// PRD-2.2 §15 / §27: [p] (the planned-ahead slot, not spawned yet) as a
+  /// plain normal hoop — upright, still, no gifts, one ring — at the same
+  /// place: after a revive (§3.0.3 slot order 2), when a ride started
+  /// meanwhile ([ride]: full size, §3.0.1) or when an activity started
+  /// (its reward ring / comet star goes, §27.3). A portal or comet hoop
+  /// that never showed stays due: it comes at the first allowed slot.
+  SlotPlan plainSlot(SlotPlan p, DirectorContext ctx, {bool ride = false}) {
+    if (p.kind == HoopKindId.portal) {
+      _portalAt = p.index;
+      _lastPortal = -99;
+      _forcedRide ??= p.extra is RideId ? p.extra! as RideId : null;
+    }
+    if (p.cometHang) {
+      _cometAt = p.index;
+      _lastComet = -99;
+    }
+    final band = ctx.band;
+    final opening = min(
+      openingFor(p.index, ride: ride) * ctx.bigHoopsMult,
+      band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
+    );
+    final m = opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin;
+    final lo = ctx.topTooth + m, hi = ctx.floorTooth - m;
+    final y = lo <= hi ? p.centreY.clamp(lo, hi).toDouble() : p.centreY;
+    void uncount(String k) => _spawned[k] = max(0, (_spawned[k] ?? 1) - 1);
+    uncount(p.element.storageId);
+    if (p.tiltDeg != 0) uncount('tilted');
+    if (p.motion != null) uncount('moving');
+    if (p.cometHang) uncount(ElementId.comet.storageId);
+    _count(ElementId.normalHoop.storageId);
+    if (_prevKind == p.kind) _prevKind = HoopKindId.normal;
+    return p.copyWith(
+      kind: HoopKindId.normal,
+      element: ElementId.normalHoop,
+      centreY: y,
+      opening: opening,
+      tiltDeg: 0,
+      motion: () => null,
+      cometHang: false,
+      ringOffsets: const [0],
+      extra: () => null,
+      forced: false,
+      attached: const [],
+      duringRide: ride,
+    );
+  }
+
+  /// §3.0.3 slot order 2: true once if a revive is still waiting for its
+  /// plain slot (the spawner then turns its planned-ahead slot plain).
+  bool takeRevivePending() {
+    final v = _revivePending;
+    _revivePending = false;
+    return v;
+  }
+
+  /// PRD-2.2 §27.3 a golden feather ahead was cleared by an activity: it
+  /// keeps its "once this run" and is placed again after the activity +
+  /// cool-down.
+  void oweFeather() {
+    _featherDone = false;
+    _featherGap = null;
+    _featherAt = min(_featherAt, _i);
+  }
+
+  /// PRD-2.2 §27.3 the same for the puzzle piece.
+  void owePiece() {
+    _pieceDone = false;
+    _pieceGap = null;
+    _pieceAt = min(_pieceAt, _i);
+  }
+
+  /// PRD-2.2 §19.4 a single pickup at a random point 30–70 % along the gap
+  /// after [slot], up to ±50 pt off the straight line (the spawner keeps it
+  /// `itemEdgeMargin` inside the teeth).
+  GapItemPlan _single(ElementId kind, SlotPlan slot, {Object? extra}) {
+    final r = rng.layout;
+    final u = RunRandom.range(
+      r,
+      RunConfig.singleAlongMin,
+      RunConfig.singleAlongMax,
+    );
+    final off = RunRandom.range(
+      r,
+      -RunConfig.singleOffLine,
+      RunConfig.singleOffLine,
+    );
+    return GapItemPlan(
+      kind: kind,
+      trackX: slot.lastRingX + u * spacing,
+      lineOffset: off,
+      extra: extra,
+    );
+  }
+
+  /// PRD-2.2 §19.4 a pattern [span] pt long keeps its shape; its start
+  /// moves randomly inside the gap (keeping `patternInset` from the rings).
+  /// Returns the pattern's centre x.
+  double _patternMid(SlotPlan slot, double span) {
+    final room = spacing - 2 * RunConfig.patternInset - span;
+    final mid = slot.lastRingX + spacing / 2;
+    if (room <= 0) return mid;
+    return mid + RunRandom.range(rng.layout, -room / 2, room / 2);
+  }
+  // endregion WP-G2
+
+  /// §3.28 / §3.29 the running Piggy Bank / Firefly Jar fill the gap after
+  /// [slot]. §3.17: in the squeeze window their fields wait (S6-46); the
+  /// bank keeps what it still owes and places it once the squeeze has
+  /// reopened. PRD-2.2 §19.4: the patterns keep their shape, their start
+  /// moves inside the gap.
+  List<GapItemPlan> _activityItems(
+    DirectorContext ctx,
+    SlotPlan slot, {
+    required bool used,
+  }) {
+    final out = <GapItemPlan>[];
+    final sq = ctx.squeezeWindow;
+    if (ctx.piggyRunning) {
+      if (!_piggyActive) {
+        _piggyActive = true;
+        _piggyOwed = RunConfig.piggyFollowGaps * RunConfig.piggyCoinsPerGap;
+      }
+      if (_piggyOwed > 0 && !sq) {
+        final n = min(RunConfig.piggyCoinsPerGap, _piggyOwed);
+        _piggyOwed -= n;
+        final half = (n - 1) * RunConfig.piggyCoinSpacing / 2;
+        final at = _patternMid(slot, 2 * half);
+        out.add(
+          GapItemPlan(
+            kind: ElementId.piggyCoins,
+            trackX: at - half,
+            toTrackX: at + half,
+            extra: n,
+          ),
+        );
+      }
+    } else {
+      _piggyActive = false;
+      _piggyOwed = 0;
+    }
+    if (ctx.jarRunning && !used && out.isEmpty && !sq) {
+      final at = _patternMid(slot, 2 * RunConfig.fireflyHalfSpan);
+      out.add(
+        GapItemPlan(
+          kind: ElementId.fireflySwarm,
+          trackX: at - RunConfig.fireflyHalfSpan,
+          toTrackX: at + RunConfig.fireflyHalfSpan,
+          extra: RunConfig.fireflySwarm,
+        ),
+      );
+    }
+    return out;
+  }
+
+  /// PRD-2.2 §15 / §27.3 a piggy / jar run started after the gap after
+  /// [slot] (the planned-ahead slot) was planned: the run's own items for
+  /// that gap, so its follow-up fields still start there (and scroll in).
+  /// [hasItems]: the gap already holds an item.
+  List<GapItemPlan> activityItemsFor(
+    DirectorContext ctx,
+    SlotPlan slot, {
+    bool hasItems = false,
+  }) {
+    if (slot.duringRide || slot.kind == HoopKindId.portal || _ride != null) {
+      return const [];
+    }
+    final items = _activityItems(ctx, slot, used: hasItems);
+    if (items.isNotEmpty) _gapUsed.add(slot.index);
+    for (final p in items) {
+      _count(p.kind.storageId);
+    }
+    return items;
+  }
+
   // --- gaps -------------------------------------------------------------------
 
   /// §3.0.3 / §3.28 a portal ride cleared [coins] bank coins unjudged: they
@@ -763,6 +1059,8 @@ class RunDirector {
     final items = <GapItemPlan>[];
     final mid = slot.lastRingX + spacing / 2;
     final nextX = slot.trackX + slot.advance;
+    // PRD-2.2 §27.2 no reward item during an activity and its cool-down.
+    final blocked = _rewardsBlocked(g, ctx, gap: true);
     var used = _gapUsed.contains(g);
     void put(GapItemPlan p) {
       items.add(p);
@@ -771,47 +1069,16 @@ class RunDirector {
       _count(p.kind.storageId);
     }
 
-    // 1. Running Piggy Bank / Firefly Jar fill the gap. §3.17: in the
-    // squeeze window their fields wait (S6-46); the bank keeps what it
-    // still owes and places it once the squeeze has reopened.
+    // 1. Running Piggy Bank / Firefly Jar fill the gap.
     final sq = ctx.squeezeWindow;
-    if (ctx.piggyRunning) {
-      if (!_piggyActive) {
-        _piggyActive = true;
-        _piggyOwed = RunConfig.piggyFollowGaps * RunConfig.piggyCoinsPerGap;
-      }
-      if (_piggyOwed > 0 && !sq) {
-        final n = min(RunConfig.piggyCoinsPerGap, _piggyOwed);
-        _piggyOwed -= n;
-        final half = (n - 1) * 45 / 2;
-        put(
-          GapItemPlan(
-            kind: ElementId.piggyCoins,
-            trackX: mid - half,
-            toTrackX: mid + half,
-            extra: n,
-          ),
-        );
-      }
-    } else {
-      _piggyActive = false;
-      _piggyOwed = 0;
-    }
-    if (ctx.jarRunning && !used && !sq) {
-      put(
-        GapItemPlan(
-          kind: ElementId.fireflySwarm,
-          trackX: mid - 110,
-          toTrackX: mid + 110,
-          extra: RunConfig.fireflySwarm,
-        ),
-      );
+    for (final p in _activityItems(ctx, slot, used: used)) {
+      put(p);
     }
 
     // Debug force: the head gap element of the queue, ignoring unlock,
     // schedules and min distances (exclusivity still applies).
     final dbgIdx = _forced.indexWhere((e) => e.isGapElement);
-    if (!used && dbgIdx >= 0) {
+    if (!used && !blocked && dbgIdx >= 0) {
       final e = _forced[dbgIdx];
       final p = _forcedGapItem(e, g, ctx, slot, mid, nextX);
       if (p != null) {
@@ -821,24 +1088,33 @@ class RunDirector {
     }
 
     // 2. Fixed schedules: heart, feather, piece (taken gap → next free gap).
-    if (!used && g >= _heartAt && _on(ElementId.heart)) {
-      if (!ctx.extraLifeActive) put(_heart(g, ctx, mid));
+    if (!used && !blocked && g >= _heartAt && _on(ElementId.heart)) {
+      if (!ctx.extraLifeActive) put(_heart(g, ctx, slot));
       _heartAt = g + RunRandom.rangeInt(r, tables.heart.then.$1, tables.heart.then.$2);
     }
     // §3.17: in the squeeze window only scheduled hearts (and star trails)
     // spawn; the feather and the piece wait for the next free gap.
+    // PRD-2.2 §19.3 never in the same or a neighbouring gap as the other.
+    bool near(int? other) => other != null && (g - other).abs() <= 1;
     if (!used &&
         !sq &&
+        !blocked &&
         !_featherDone &&
         g >= _featherAt &&
+        !near(_pieceGap) &&
         _on(ElementId.feather)) {
       _featherDone = true;
-      if (ctx.featherWanted) put(_detour(ElementId.feather, slot, ctx, null));
+      if (ctx.featherWanted) {
+        _featherGap = g;
+        put(_detour(ElementId.feather, slot, ctx, null));
+      }
     }
     if (!used &&
         !sq &&
+        !blocked &&
         !_pieceDone &&
         g >= _pieceAt &&
+        !near(_featherGap) &&
         _on(ElementId.puzzlePiece)) {
       _pieceDone = true;
       final missing = [
@@ -847,6 +1123,7 @@ class RunDirector {
       ];
       if (missing.isNotEmpty) {
         final piece = missing[r.nextInt(missing.length)];
+        _pieceGap = g;
         put(_detour(ElementId.puzzlePiece, slot, ctx, piece));
       }
     }
@@ -856,14 +1133,22 @@ class RunDirector {
 
     // 4. Optional item: first-meet (never-met element, ignores the budget)
     // or the budget roll.
-    if (!used) {
+    if (!used && !blocked) {
       final due = firstMeet.dueGap(g);
+      final pool = tables.earlyPool;
       ElementId? pick;
       CapsuleType? capsule;
       if (due != null && _gapAllowed(due, g, ctx)) {
         pick = due.isCapsuleType ? ElementId.capsule : due;
         if (due.isCapsuleType) {
           capsule = CapsuleType.values.firstWhere((c) => c.element == due);
+        }
+      } else if (pool != null && pool.covers(g)) {
+        // PRD-2.2 §19.2 the early pool's Star Trail (drawn with the slot);
+        // it may come from index 4 (its min distance still holds).
+        if (_earlyPicks[g] == EarlyPick.starTrail &&
+            _gapAllowed(ElementId.starTrail, g, ctx, ignoreFrom: true)) {
+          pick = ElementId.starTrail;
         }
       } else if (r.nextDouble() < tables.budgetFor(g).gap) {
         final w = <ElementId, int>{};
@@ -896,49 +1181,21 @@ class RunDirector {
     return GapPlan(index: g, items: items);
   }
 
-  GapItemPlan _heart(int g, DirectorContext ctx, double mid) {
-    final r = rng.layout;
-    var offset = 0.0;
-    if (_heartsPlaced > 0 && r.nextDouble() >= RunConfig.heartOnLineChance) {
-      offset = _offLine(ctx);
-    }
-    _heartsPlaced++;
-    return GapItemPlan(kind: ElementId.heart, trackX: mid, lineOffset: offset);
-  }
+  /// §3.0.3 heart. PRD-2.2 §19.4: a single pickup (random spot in the
+  /// gap, ±50 pt off the line; supersedes "first on the line, later 50 %
+  /// off by 0.1–0.4 band").
+  GapItemPlan _heart(int g, DirectorContext ctx, SlotPlan slot) =>
+      _single(ElementId.heart, slot);
 
-  double _offLine(DirectorContext ctx) {
-    final r = rng.layout;
-    return RunRandom.range(r, RunConfig.offLineMin, RunConfig.offLineMax) *
-        ctx.band *
-        (r.nextDouble() < 0.5 ? -1 : 1);
-  }
-
-  /// §3.0.3 feather / piece: 0.65 × spacing after the hoop, 64–200 pt above.
+  /// §3.0.3 feather / piece. PRD-2.2 §19.4: single pickups like the others
+  /// (random spot 30–70 % along the gap, ±50 pt off the line; supersedes
+  /// the 0.65 × spacing / 64–200 pt above detour).
   GapItemPlan _detour(
     ElementId kind,
     SlotPlan slot,
     DirectorContext ctx,
     Object? extra,
-  ) {
-    final r = rng.layout;
-    final up = RunRandom.range(
-      r,
-      RunConfig.detourAboveMin,
-      RunConfig.detourAboveMax,
-    );
-    final y = (slot.centreY - up)
-        .clamp(
-          ctx.squeezeTopTooth + RunConfig.itemEdgeMargin,
-          ctx.squeezeFloorTooth - RunConfig.itemEdgeMargin,
-        )
-        .toDouble();
-    return GapItemPlan(
-      kind: kind,
-      trackX: slot.lastRingX + RunConfig.detourAfter * spacing,
-      y: y,
-      extra: extra,
-    );
-  }
+  ) => _single(kind, slot, extra: extra);
 
   /// §3.0.3 optional gap-item eligibility.
   bool _gapAllowed(
@@ -946,6 +1203,7 @@ class RunDirector {
     int g,
     DirectorContext ctx, {
     bool ignoreUnlock = false,
+    bool ignoreFrom = false,
   }) {
     final key = k.isCapsuleType ? ElementId.capsule : k;
     final rule = tables.gapItems[key];
@@ -956,7 +1214,7 @@ class RunDirector {
       return false;
     }
     if (!ignoreUnlock) {
-      if (g < rule.from) return false;
+      if (!ignoreFrom && g < rule.from) return false;
       if (g - (_lastGapOf[key] ?? -99) < rule.minSince) return false;
       final maxN = rule.maxPerRun;
       if (maxN != null) {
@@ -1000,12 +1258,11 @@ class RunDirector {
           toTrackX: nextX - RunConfig.starTrailInset,
           extra: RunConfig.starTrailStars,
         );
+      // PRD-2.2 §19.4 single pickups: random spot, ±50 pt off the line.
       case ElementId.capsule:
-        return GapItemPlan(kind: k, trackX: mid, extra: capsule);
-      case ElementId.shield:
-        return GapItemPlan(kind: k, trackX: mid, lineOffset: _offLine(ctx));
+        return _single(k, slot, extra: capsule);
       default:
-        return GapItemPlan(kind: k, trackX: mid);
+        return _single(k, slot);
     }
   }
 
@@ -1020,7 +1277,7 @@ class RunDirector {
     switch (e) {
       case ElementId.heart:
         if (!_on(e) || ctx.extraLifeActive) return null;
-        return _heart(g, ctx, mid);
+        return _heart(g, ctx, slot);
       case ElementId.feather:
         if (!_on(e)) return null;
         _featherDone = true;

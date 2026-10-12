@@ -130,10 +130,23 @@ void main() {
     expect(pair(t.portal.then), s['portal']['then']);
     expect(pair(t.comet.first), s['comet_hoop']['first']);
     expect(pair(t.comet.then), s['comet_hoop']['then']);
-    expect(t.heart.first, (s['heart']['first'], s['heart']['first']));
+    // PRD-2.2 §19 supersedes the PRD-2 heart / feather / piece values the
+    // fixture holds (heart 3, feather 3–12, piece 14–25).
+    expect(s['heart']['first'], 3);
+    expect(t.heart.first, (5, 27));
     expect(pair(t.heart.then), s['heart']['then']);
-    expect(pair(t.featherWindow), s['feather']['window']);
-    expect(pair(t.pieceWindow), s['puzzle_piece']['window']);
+    expect(pair(t.featherWindow), [3, 40]);
+    expect(pair(t.pieceWindow), [3, 40]);
+    expect(t.featherChance, 0.6);
+    expect(t.pieceChance, 0.6);
+    expect(t.earlyPool!.from, 4);
+    expect(t.earlyPool!.to, 9);
+    expect(t.earlyPool!.weights, {
+      EarlyPick.starTrail: 1,
+      EarlyPick.bullseye: 1,
+      EarlyPick.angled: 1,
+      EarlyPick.nothing: 1,
+    });
   });
 
   test('§3.21 / §3.0.2 pair weights and moving types mirror the json', () {
@@ -174,12 +187,18 @@ void main() {
     expect(RunConfig.opening0, o['at_hoop_0_pt']);
     expect(RunConfig.openingShrinkPerHoop * 100, closeTo(o['shrink_pct_per_hoop'] as num, 1e-9));
     expect(RunConfig.openingFloor * 100, closeTo(o['floor_pct_of_start'] as num, 1e-9));
-    expect(RunConfig.sawExtraOpening, o['saw_extra_pt']);
+    // PRD-2.2 §25 overrides the json's saw_extra_pt (see the group below).
+    expect(o['saw_extra_pt'], 28);
     final comet = json['comet'] as Map<String, dynamic>;
     expect(comet['duration_s'], 10);
   });
 
   group('PRD overrides of the json / prototype (ARCH §2.2)', () {
+    test('PRD-2.2 §25 saw rings: no extra opening (json: saw_extra_pt 28)', () {
+      expect(json['opening']['saw_extra_pt'], 28);
+      expect(RunConfig.sawExtraOpening, 0);
+    });
+
     test('§3.0.1 first hoop: 60 pt past the right edge (json: "1.3 s")', () {
       expect(json['core']['first_hoop_after_tap_s'], 1.3);
       expect(RunConfig.firstHoopOffscreen, 60);

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../../../../game/flappy_game.dart';
 import '../../../config/switch_config.dart';
 import '../../../director/plans.dart' show SwitchDesign;
 import '../../../effects/dashed_path.dart';
@@ -118,7 +119,17 @@ class PowerIrisArt extends SwitchDesignArt {
   /// lever, and its side (−1 top, +1 bottom).
   static (Offset, double)? _end(SwitchPickup p) {
     final h = p.ring;
-    if (h == null) return null;
+    if (h == null) {
+      // PRD-2.2 §15 the ring is planned but not spawned yet: its plan.
+      final rp = p.ringPlan;
+      if (rp == null) return null;
+      final sg = p.position.y < rp.centreY ? -1.0 : 1.0;
+      final ry = rp.opening / 2 + 7;
+      return (
+        Offset(rp.trackX - p.position.x, rp.centreY + sg * (ry + 6) - p.position.y),
+        sg,
+      );
+    }
     final sg = p.position.y < h.position.y ? -1.0 : 1.0;
     final ry = SwitchRingKind.stateOf(h)?.ry ?? h.opening / 2 + 7;
     return (
@@ -152,7 +163,9 @@ class PowerIrisArt extends SwitchDesignArt {
       final q = _bez(a, c1, c2, e, i / n);
       path.lineTo(q.dx, q.dy);
     }
-    final fg = p.ring == null ? const Color(0xFF828282) : _fg(p);
+    final fg = p.ring == null && p.ringPlan == null
+        ? const Color(0xFF828282)
+        : _fg(p);
     DashedPathPainter.stroke(
       canvas,
       path,
@@ -188,8 +201,10 @@ class PowerIrisArt extends SwitchDesignArt {
   }
 
   static Color _fg(SwitchPickup p) {
-    final g = p.ringState?.c.game;
-    return g?.foregroundColor ?? const Color(0xFF828282);
+    final g = p.ringState?.c.game ?? p.findGame();
+    return g is FlappySpikesGame
+        ? g.foregroundColor
+        : const Color(0xFF828282);
   }
 
   @override

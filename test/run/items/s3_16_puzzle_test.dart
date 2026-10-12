@@ -10,6 +10,7 @@ import 'package:flappy_spikes/run/items/puzzle.dart';
 import 'package:flappy_spikes/run/pickups/pickup.dart';
 import 'package:flappy_spikes/run/pickups/puzzle_piece_pickup.dart';
 import 'package:flappy_spikes/run/run_events.dart';
+import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -240,15 +241,24 @@ void main() {
     },
   );
 
+  // PRD-2.2 §19.3: the piece comes in ≈ 60 % of runs (gap 3–40): a seed
+  // whose run-start roll has it, early enough to keep the flight short.
+  final pieceSeed = [
+    for (var s = 1; s < 200; s++) s,
+  ].firstWhere((s) {
+    final d = RunDirector(seed: s, enabled: const {}, met: const {});
+    return d.pieceThisRun && d.pieceAt >= 10 && d.pieceAt <= 25;
+  });
   for (final h in [568.0, 711.0]) {
-    tester(height: h, seed: 11).testGameWidget(
-      '§3.16 / §3.0.3 one piece per run (gap 14–25) while the round is open '
-      '(${h.round()} pt)',
+    tester(height: h, seed: pieceSeed).testGameWidget(
+      '§3.16 / §3.0.3 one piece per run (PRD-2.2 §19.3: ≈ 60 % of runs, gap '
+      '3–40) while the round is open (${h.round()} pt)',
       setUp: (g, _) => boot(g),
       verify: (g, _) async {
         g.runDebug.god = true;
         final run = await startRun(g);
-        expect(run.director.pieceAt, inInclusiveRange(14, 25));
+        expect(run.director.pieceThisRun, isTrue);
+        expect(run.director.pieceAt, inInclusiveRange(10, 25));
         var spawned = 0;
         run.events.on<ElementSpawned>((e) {
           if (e.element == ElementId.puzzlePiece) spawned++;

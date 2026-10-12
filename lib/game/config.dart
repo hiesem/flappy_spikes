@@ -14,6 +14,36 @@ class Config {
   static const double minViewHeight = 568;
   static const double maxViewHeight = 730;
 
+  // region PRD-2.2 §7.5 — gameplay banner
+  /// §7.5.5: the smallest VISIBLE run playfield with a banner (a 16:9 phone
+  /// with a 50 dp banner leaves ≈ 524 pt). Menus keep [minViewHeight].
+  static const double minRunViewHeight = 500;
+
+  /// §7.5.4: in a run with a banner the bottom spike strip moves this far
+  /// down, under the bottom edge of the game view: 18 pt teeth + 6 pt base
+  /// stay visible. Never below 20 → the 6 pt gap to the ad (§7.5.3).
+  static const double bannerStripDrop = 20;
+
+  /// §7.4: the banner fades in over this long when the bird starts flying.
+  static const double bannerFadeIn = 0.25;
+  // endregion PRD-2.2 §7.5
+
+  // region PRD-2.2 §7.6 — interstitial after each run
+  /// §7.6 guard 4: no interstitial within this long after the previous
+  /// full-screen ad (rewarded or interstitial) closed.
+  static const Duration interstitialMinGap = Duration(seconds: 60);
+
+  /// §7.6 guard 2: a new player's first runs (`gamesPlayed <= 3`) get none.
+  static const int interstitialFreeRuns = 3;
+
+  /// §7.8: how long the balloon bonus "▶ feather ×3" offer waits for a
+  /// rewarded ad to load (WP-7b).
+  static const Duration bonusAdWait = Duration(seconds: 5);
+
+  /// §7.6 / §7.10: the Linux fake interstitial ("TEST AD") length (s).
+  static const double fakeInterstitialSeconds = 3.0;
+  // endregion PRD-2.2 §7.6
+
   // Physics (Flappy Bird feel; an intentional, user-requested deviation from
   // the 2014 original's 1350/525 — see SPEC.md): a modest flap pop whose rise
   // is about half the final pipe gap, plus a terminal fall speed so dives

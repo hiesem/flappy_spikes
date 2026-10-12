@@ -207,8 +207,13 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   START); real taps no longer start runs (`TapCatcher` → `onPlayfieldTap`).
 - `PowerupSlot` rolls in its constructor (= launch arrival); only `goHome()`
   re-rolls. An armed powerup is consumed on START.
-- `AD_ID` permission stays removed (non-personalized ads only) until the Play ads
-  declarations are updated — see the TODO comment in `AndroidManifest.xml`.
+- `AD_ID` permission: the `tools:node="remove"` block is gone (PRD-2.2 §7.13, after the
+  Play declarations were saved 2026-10-12); ads may be personalised where consent allows.
+- Gameplay banner (PRD-2.2 §7.5, WP-7a): `main.dart` is `Column(Expanded(game), BannerSlot)`;
+  `game.setPlayfieldHeight` is the only resize entry point (START with a banner / Home arrival).
+  In a run with a banner `viewHeight` = visible height + `Config.bannerStripDrop` (20): run layouts
+  keep their 44 pt bottom strip, its lowest 20 pt sit under the view's edge (`bottomStripInset` 24).
+  Persistent components that cache heights implement `PlayfieldResizable`. Map in `docs/p22/ADS.md`.
 - iOS: ads route to Noop (no `GADApplicationIdentifier`; iOS paused), IAP is real.
 - Menus (home/shop/skins/dialogs/popups) always render at colour stage 0; only
   runs advance the colour stage.
@@ -243,9 +248,22 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   `adb logcat -s flutter | grep '\[IAP\]'` (release builds log them).
 - Release builds need android/app/proguard-rules.pro (keeps WorkManager's Room DB; google_mobile_ads pulls
   in androidx.work) — without it the release app crashes at launch. Debug builds hide this.
-- The AdMob rewarded unit + app ID are still Google's **test** IDs (see the TODO in
-  `AndroidManifest.xml` and `lib/services/ads_service.dart`); swap them for the real
-  IDs and update the Play "contains ads" declarations before the production release.
+- **Store prices (PRD-2.2 §32, saved in Play Console 2026-10-12):** coins_1000 0.99, coins_10000 8.99,
+  coins_17000 14.99, coins_100000 79.99, no_ads 2.99 — the same number in $/£/€ in every country of those
+  currencies (VAT included where Play includes it, never added on top). Every other currency = USD price x the
+  day's rate (open.er-api.com), rounded to the NEAREST natural App Store price step
+  (tools/pricing/pricing.py + test_pricing.py; 2026-10-12 rates). 5 products x 174 countries verified 174/174
+  (tools/pricing/PLAY_VERIFY_2026-10-12.md). Offline placeholders (IapProduct.placeholderPrice): $0.99, $8.99,
+  $14.99, $79.99, NO ADS $2.99. The UI always shows the store's price (PRD-menu-v4 §4).
+- **Ad IDs (Android, release builds):** App ca-app-pub-2660521344509391~8153764631; rewarded
+  /3758032081 (group 9050711652); banner "Banner - gameplay" ca-app-pub-2660521344509391/8797133596
+  (group 7736442819, Unity Banner_Android); interstitial "Interstitial - after run"
+  ca-app-pub-2660521344509391/1357627279 (group 5294815708, Unity Interstitial_Android). All groups:
+  AdMob Network + Unity Ads bidding, Unity Game ID 6202807. Debug/profile builds use Google test IDs only
+  (banner /9214589741, interstitial /1033173712, rewarded test unit).
+- **Play declarations (saved 2026-10-12):** contains ads = yes; Advertising ID used (analytics, advertising);
+  Data safety adds Device or other IDs + Approximate location (collected and shared for advertising).
+  Ads + Data safety changes await "Send for review" in Publishing overview (owner/release step).
 - AAB upload via Playwright over CDP: `setInputFiles` refuses files > 50 MB — use CDP `DOM.setFileInputFiles` on the
   upload input instead (2.0.0+7 is 56 MB). Internal testing: 2.0.0 (7) saved as DRAFT 2026-10-07 (user releases).
 - Linux: no Google Chrome — tools/browser_linux.js drives /usr/bin/chromium with profile

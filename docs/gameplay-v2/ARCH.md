@@ -221,7 +221,9 @@ the HUD" ease). Details and owners in §3 and §21.
 | `lib/services/identity.dart` | 5b | `PlatformIdentity` (§6.4) | uses `games_services` |
 | `lib/services/reminders.dart` | 4b | `Reminders` service + pure `ReminderScheduler` (§3.34) | — |
 | `lib/services/e2e.dart` | 0b | `const bool kE2E = bool.fromEnvironment('FS_E2E'); const int kE2ESeed = int.fromEnvironment('FS_E2E_SEED', defaultValue: 7); const String kAppCheckDebugToken = String.fromEnvironment('FS_APPCHECK_DEBUG_TOKEN');` + `E2EHooks` | — |
-| `lib/components/spike_strip.dart` | 0c (art), 1a (44 pt switch), 3g (squeeze) | master #1 | 72 pt sprite tiles |
+| `lib/components/spike_strip.dart` | 0c (art), 1a (44 pt switch), 3g (squeeze), P22-7 (`PlayfieldResizable`) | master #1 | 72 pt sprite tiles |
+| `lib/game/playfield.dart`, `lib/game/playfield_viewport.dart` | P22-7 | PRD-2.2 §7.5.2: `PlayfieldResizable { onPlayfieldResize(h) }` registry (`game.registerResizable`), `BannerState`, `InterstitialSkip`; `PlayfieldViewport` = FixedResolutionViewport with `setResolution`. `game.setPlayfieldHeight(visible, {stripDrop})` is the ONLY resize entry point; `viewHeight` = visible + stripDrop, `visibleHeight`, `bottomStripInset` (24 / 44) | `CameraComponent.withFixedResolution` |
+| `lib/services/ads_service.dart`, `ads_consent.dart`, `lib/components/banner_slot.dart` | P22-7 | §7.10: `AdsConsent` (once, shared), `RewardedAds` (+`ensureLoaded`), `InterstitialAds`, `BannerAds` — Noop / Fake / AdMob each; `Monetization.{ads, interstitial, banner, consent}`; `BannerSlot` under the `GameWidget` | — |
 | `lib/components/score_hud.dart` | 3g adds white-when-covered | master #2 | — |
 | `lib/components/bird.dart` | 1a | flight + kinematic tumble mode; `Bird.scale` (Mini), `Bird.goldTier`, `Bird.onFire` flags read by painters | 1.0 death impulse/spin |
 | `lib/components/look_component.dart`, `lib/skins/art/look_painter.dart` | 0c | gold tier (#5), white X-eyes (#6) | — |

@@ -5,6 +5,7 @@ import 'package:flame_forge2d/flame_forge2d.dart';
 
 import '../game/config.dart';
 import '../game/flappy_game.dart';
+import '../game/playfield.dart';
 import '../game/sound.dart';
 import '../run/run_layers.dart';
 import '../skins/look.dart';
@@ -25,7 +26,8 @@ import 'look_component.dart';
 /// spikes — is plain math in `lib/run/physics/` (no fixtures collide). On
 /// death the body turns kinematic and the run drives it from the §3.0.5
 /// tumble ([placeTumble]).
-class Bird extends BodyComponent<FlappySpikesGame> {
+class Bird extends BodyComponent<FlappySpikesGame>
+    implements PlayfieldResizable {
   Bird() : super(priority: RunLayer.bird, renderBody: false);
 
   late final LookComponent _look;
@@ -51,12 +53,23 @@ class Bird extends BodyComponent<FlappySpikesGame> {
     );
     add(_look);
     game.menu.items.addListener(_onItemsChanged);
+    game.registerResizable(this);
   }
 
   @override
   void onRemove() {
     game.menu.items.removeListener(_onItemsChanged);
+    game.unregisterResizable(this);
     super.onRemove();
+  }
+
+  /// PRD-2.2 §7.5.2: the bird waiting at its spawn point (gravity still off,
+  /// START not yet flown) moves to the new playfield's middle.
+  @override
+  void onPlayfieldResize(double viewHeight) {
+    if (!isLoaded || body.gravityScale != Vector2.zero()) return;
+    body.setTransform(Vector2(Config.birdX, viewHeight / 2), 0);
+    body.linearVelocity = Vector2.zero();
   }
 
   /// Equipping an item (skin shop) swaps the look in place.

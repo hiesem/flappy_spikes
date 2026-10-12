@@ -11,10 +11,12 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'game/audio_counter.dart';
+import 'components/banner_slot.dart';
 import 'game/config.dart';
 import 'game/flappy_game.dart';
 import 'services/game_services.dart';
 import 'services/e2e.dart';
+import 'services/ads_service.dart';
 import 'services/monetization.dart';
 import 'services/reminders.dart';
 import 'services/soak.dart';
@@ -73,8 +75,21 @@ Future<void> main() async {
   // overlay) instead of completing instantly.
   // region WP-0b — FS_E2E builds use the fake ads with the visible overlay
   // (succeed) and the in-memory store (ARCH §7.3).
-  final monetization = (kE2E ? Monetization() : Monetization.forPlatform())
-    ..showFakeAdOverlay = kE2E || !_isMobile;
+  // PRD-2.2 §7.5.1: the adaptive banner size is worked out for the screen
+  // width in dp. Off mobile (Linux) the fake interstitial ("TEST AD", 3 s)
+  // and a grey fake banner strip show the flow (§7.10); E2E builds keep both
+  // off unless a test asks for them.
+  final widthDp = _screenWidthDp();
+  final monetization =
+      (kE2E
+            ? Monetization()
+            : _isMobile
+            ? Monetization.forPlatform(bannerWidthDp: widthDp)
+            : Monetization(
+                interstitial: FakeInterstitialAds(mode: FakeAdMode.succeed),
+                banner: FakeBannerAds(enabled: true, widthDp: widthDp),
+              ))
+        ..showFakeAdOverlay = kE2E || !_isMobile;
   // endregion WP-0b
 
   // region WP-5b — versus (PRD-2 §3.13): the Firebase service on Android
@@ -124,10 +139,24 @@ Future<void> main() async {
   }
   // endregion WP-4b
 
+  // PRD-2.2 §7.5.2: the game over the banner slot. The share capture keeps
+  // using the RepaintBoundary around the game only, so the ad is never in a
+  // shared image.
   runApp(
-    RepaintBoundary(
-      key: _gameBoundaryKey,
-      child: GameWidget(game: game),
+    Directionality(
+      textDirection: TextDirection.ltr,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: RepaintBoundary(
+              key: _gameBoundaryKey,
+              child: GameWidget(game: game),
+            ),
+          ),
+          BannerSlot(game: game),
+        ],
+      ),
     ),
   );
 
@@ -169,6 +198,15 @@ bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
 /// The versus backend runs on Android only for now (WP-5b; iOS paused).
 bool get _isAndroid => !kIsWeb && Platform.isAndroid;
+
+/// The screen width in logical pixels (dp); 360 when unknown.
+double _screenWidthDp() {
+  final views = WidgetsBinding.instance.platformDispatcher.views;
+  if (views.isEmpty) return 360;
+  final view = views.first;
+  final w = view.physicalSize.width / view.devicePixelRatio;
+  return w.isFinite && w > 0 ? w : 360;
+}
 
 /// Fallback aspect (9:19.5 -> ~693 pt) when no usable window size exists
 /// yet: the Linux runner opens a fixed 9:19.5 window.

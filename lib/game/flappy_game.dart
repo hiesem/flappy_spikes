@@ -7,7 +7,8 @@ import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
-import 'package:flutter/foundation.dart' show debugPrint, kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show ValueListenable, ValueNotifier, debugPrint, kDebugMode, kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleState, KeyEventResult;
 import 'package:url_launcher/url_launcher.dart';
@@ -58,6 +59,7 @@ import '../run/config/revive_config.dart';
 import '../run/hud/run_hud.dart';
 import '../run/run_events.dart' show ReviveKind;
 import '../run/screens/pause_screen.dart';
+import '../run/screens/phoenix_rise.dart' show ReviveDim;
 import '../run/screens/post_run_screens.dart';
 import '../run/screens/revive_ladder.dart';
 import '../run/screens/revive_screen.dart';
@@ -83,6 +85,8 @@ import '../skins/look.dart';
 import 'config.dart';
 import 'fade.dart';
 import 'palettes.dart';
+import 'playfield.dart';
+import 'playfield_viewport.dart';
 import 'purchases.dart';
 import 'rumble.dart';
 import 'sound.dart';
@@ -128,16 +132,24 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
        rumble = Rumble(hardware: rumbleEnabled ?? soundEnabled),
        monetization = monetization ?? Monetization(),
        storage = GameStorage(clock: clock),
-       viewHeight = _clampViewHeight(worldHeight ?? Config.worldHeight),
+       screenHeight = worldHeight ?? Config.worldHeight,
+       _viewHeight = _clampViewHeight(worldHeight ?? Config.worldHeight),
        super(
-         world: RunScaledWorld(gravity: Vector2(0, Config.gravity)),
-         gravity: Vector2(0, Config.gravity),
-         camera: CameraComponent.withFixedResolution(
-           width: Config.worldWidth,
-           height: _clampViewHeight(worldHeight ?? Config.worldHeight),
-         ),
-         zoom: 1,
-       ) {
+        world: RunScaledWorld(gravity: Vector2(0, Config.gravity)),
+        gravity: Vector2(0, Config.gravity),
+        // PRD-2.2 §7.5.2: a fixed 320 pt wide window whose height follows
+        // setPlayfieldHeight (FixedResolutionViewport with a settable
+        // resolution).
+        camera: CameraComponent(
+          viewport: PlayfieldViewport(
+            resolution: Vector2(
+              Config.worldWidth,
+              _clampViewHeight(worldHeight ?? Config.worldHeight),
+            ),
+          ),
+        ),
+        zoom: 1,
+      ) {
     // The game uses 1 Forge2D world unit = 1 logical point (SPEC.md). The
     // engine's default per-step translation clamp (2.0 units, tuned for
     // meter-scale worlds) would otherwise cap every body at ~120 pt/s at
@@ -152,10 +164,40 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   static double _clampViewHeight(double height) =>
       height.clamp(Config.minViewHeight, Config.maxViewHeight);
 
-  /// Playfield height in points: 320/aspect on the device, clamped to
-  /// [Config.minViewHeight]..[Config.maxViewHeight]. The spike strips are
+  /// PRD-2.2 §7.5.5: the visible run height with a banner is clamped to
+  /// [Config.minRunViewHeight]..[Config.maxViewHeight].
+  static double clampRunViewHeight(double height) =>
+      height.clamp(Config.minRunViewHeight, Config.maxViewHeight);
+
+  /// Playfield (layout) height in points: 320/aspect on the device, clamped
+  /// to [Config.minViewHeight]..[Config.maxViewHeight]. The spike strips are
   /// pinned to the top/bottom edges, so there are no letterbox bars.
-  final double viewHeight;
+  ///
+  /// PRD-2.2 §7.5.2: settable through [setPlayfieldHeight] only (START with
+  /// a banner, the Home arrival). In a run with a banner it is the visible
+  /// height + [stripDrop]: the bottom [stripDrop] points (the lowered spike
+  /// strip's base, §7.5.4) lie under the bottom edge of the game view, so
+  /// every run layout keeps its 44 pt bottom strip while only 24 pt of it
+  /// show ([bottomStripInset]).
+  double get viewHeight => _viewHeight;
+  double _viewHeight;
+
+  /// The full screen height (320 / aspect, unclamped) from the app shell.
+  final double screenHeight;
+
+  /// PRD-2.2 §7.5.4: how far the bottom spike strip is lowered under the
+  /// view's bottom edge ([Config.bannerStripDrop] in a run with a banner,
+  /// else 0).
+  double get stripDrop => _stripDrop;
+  double _stripDrop = 0;
+
+  /// PRD-2.2 §7.5.2: the height the game view shows (the camera's
+  /// resolution): [viewHeight] − [stripDrop].
+  double get visibleHeight => _viewHeight - _stripDrop;
+
+  /// PRD-2.2 §7.5.4: from the visible bottom edge to the deadly tooth line:
+  /// 24 in a run with a banner, 44 otherwise.
+  double get bottomStripInset => Config.spikeHeight - _stripDrop;
 
   /// Persistence; its clock (wall time unless the constructor's `clock`
   /// overrides it, e.g. in tests) also drives the daily menu policies.
@@ -584,6 +626,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       paint: Paint()..color = _bgColor,
     );
     world.add(_backdrop);
+    // PRD-2.2 §7.5.2: the backdrop and the score HUD follow the playfield.
+    registerResizable(
+      PlayfieldResizeCallback((h) {
+        _backdrop.size = Vector2(Config.worldWidth, h);
+        _hud.position = Config.scoreHudPositionFor(h / 2);
+      }),
+    );
 
     _ground = SpikeStrip(isCeiling: false);
     _ceiling = SpikeStrip(isCeiling: true);
@@ -620,6 +669,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // First home arrival (app launch): PowerupSlot already rolled in its
     // constructor, so no extra roll here.
     _setupStartScene();
+    // PRD-2.2 §7.5.1: preload the banner on Home as soon as ads may be
+    // requested (and again whenever consent changes).
+    monetization.consent.canRequestAds.addListener(_preloadBanner);
+    _preloadBanner();
     _logSlotShown();
     _applyTints();
 
@@ -691,6 +744,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   @override
   void onRemove() {
+    monetization.consent.canRequestAds.removeListener(_preloadBanner);
     _purchases?.dispose();
     super.onRemove();
   }
@@ -718,6 +772,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       pause();
     }
     // endregion WP-2d
+    // region PRD-2.2 §7.6 guard 6 — no interstitial while in the background
+    _inBackground =
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached;
+    // endregion PRD-2.2 §7.6
     switch (state) {
       case AppLifecycleState.paused || AppLifecycleState.hidden:
         _backgroundSince ??= storage.now();
@@ -872,6 +932,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// armed powerup (the 1.0 run ignores its effect; part 2 reads it) and
   /// starts the run. Synchronous for a plain START without a hook.
   Future<void> _runFromHome({bool withPowerup = false}) async {
+    // PRD-2.2 §7.5.2: the playfield shrinks at START, before the VS intro
+    // and the run scene are built.
+    _reserveRunBanner();
     final hook = beforeRunStart;
     // region WP-5b — §3.13 / §5.8 the opponent is taken at tap time: the
     // VS intro plays only when one is already prefetched, else START goes
@@ -909,6 +972,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _startGame([Powerup starter = Powerup.none]) {
     state = GameState.playing;
     _runsThisSession++;
+    // PRD-2.2 §7.4: the bird starts flying — banner in, interstitial load.
+    _onFirstFlight();
     services.logGameStart();
     // PRD-2.2 §2.3 run_start {mode, opponent (VERSUS only)}; §3 the next
     // Home visit searches again.
@@ -2373,6 +2438,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _adsShowing++;
     try {
       final result = await _showRewardedAd(placement);
+      // PRD-2.2 §7.6 guards 3 / 4: a displayed rewarded ad (completed or
+      // closed early) counts for "rewarded this run" and the 60 s gap.
+      if (result == AdResult.completed || result == AdResult.dismissed) {
+        _lastFullScreenAdClosedAt = storage.now();
+        if (state != GameState.start) _rewardedWatchedThisRun = true;
+      }
       // PRD-menu-v4 §8: completed rewarded videos feed the upsell trigger.
       if (result == AdResult.completed && isLoaded) {
         unawaited(menu.noAdsPopup.recordRewardedVideo());
@@ -2453,6 +2524,248 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _fakeAd?.close();
     return true;
   }
+
+  // region PRD-2.2 §7.4–§7.6 — gameplay banner, resize per scene, interstitial
+
+  final List<PlayfieldResizable> _resizables = [];
+
+  /// §7.5.2: persistent components that cache `viewHeight`-derived layout
+  /// register here (like [registerTintable]); [setPlayfieldHeight] calls
+  /// their [PlayfieldResizable.onPlayfieldResize].
+  void registerResizable(PlayfieldResizable resizable) {
+    if (!_resizables.contains(resizable)) _resizables.add(resizable);
+  }
+
+  void unregisterResizable(PlayfieldResizable resizable) =>
+      _resizables.remove(resizable);
+
+  /// The registered [PlayfieldResizable]s (tests).
+  List<PlayfieldResizable> get resizables => List.unmodifiable(_resizables);
+
+  /// §7.5.2: the ONE entry point that changes the playfield. [visible] is the
+  /// height the game view shows (the camera's resolution); [stripDrop] the
+  /// part of the bottom spike strip that lies under the view's bottom edge
+  /// (§7.5.4). `viewHeight` becomes `visible + stripDrop`. Called only at
+  /// START (run with a banner) and on the Home arrival.
+  void setPlayfieldHeight(double visible, {double stripDrop = 0}) {
+    final layout = visible + stripDrop;
+    final changed = layout != _viewHeight || stripDrop != _stripDrop;
+    _viewHeight = layout;
+    _stripDrop = stripDrop;
+    final viewport = camera.viewport;
+    if (viewport is PlayfieldViewport) {
+      viewport.setResolution(Config.worldWidth, visible);
+    }
+    if (!changed) return;
+    for (final r in List.of(_resizables)) {
+      r.onPlayfieldResize(layout);
+    }
+  }
+
+  final ValueNotifier<BannerState> _bannerState = ValueNotifier(
+    BannerState.off,
+  );
+
+  /// §7.10: what the app shell's banner slot shows (off / reserved / ad).
+  ValueListenable<BannerState> get bannerState => _bannerState;
+
+  final ValueNotifier<Color> _bannerStripColor = ValueNotifier(
+    kPalettes[0]!.foreground,
+  );
+
+  /// §7.5.4: the empty strip's grey = the spike strips' colour (the stage
+  /// foreground, darkened by the revive dim: #828282 → #313131).
+  ValueListenable<Color> get bannerStripColor => _bannerStripColor;
+
+  bool _runBanner = false;
+  bool _bannerImpressionLogged = false;
+
+  /// Whether the current run reserved a banner strip (read once at START).
+  bool get runHasBanner => _runBanner;
+
+  /// The banner strip's height in points on this device (null = no size).
+  double? get bannerStripHeight {
+    final b = monetization.banner;
+    final dp = b.heightDp;
+    if (dp == null || dp <= 0 || b.widthDp <= 0) return null;
+    return dp * Config.worldWidth / b.widthDp;
+  }
+
+  /// §7.5.6: the banner is off for NO ADS owners, without consent, on Test
+  /// Lab devices / iOS / Linux without the fake, and in E2E builds unless a
+  /// test asks for it ([E2EHooks.banner]).
+  bool get bannerWanted {
+    if (menu.noAds) return false;
+    if (kE2E && !E2EHooks.banner) return false;
+    if (!monetization.banner.canShow) return false;
+    return bannerStripHeight != null;
+  }
+
+  /// §7.5.1: preload the banner on Home (invisible) when one may be used.
+  void _preloadBanner() {
+    if (state == GameState.start && !_runBanner && bannerWanted) {
+      monetization.banner.preload();
+    }
+  }
+
+  /// §7.5.2 shrink at START (before the VS intro and the run scene): the
+  /// flag is read once here, so a NO ADS purchase applies from the next run.
+  void _reserveRunBanner() {
+    if (_runBanner || !bannerWanted) return;
+    _runBanner = true;
+    _bannerImpressionLogged = false;
+    final visible = clampRunViewHeight(screenHeight - bannerStripHeight!);
+    setPlayfieldHeight(visible, stripDrop: Config.bannerStripDrop);
+    _syncBannerStripColor();
+    _bannerState.value = BannerState.reservedEmpty;
+    monetization.banner.onImpression = _onBannerImpression;
+    // Home normally preloaded it already; no-op then.
+    monetization.banner.preload();
+  }
+
+  /// §7.4: the first frame of `playing`: the banner fades in and the
+  /// interstitial starts loading.
+  void _onFirstFlight() {
+    _rewardedWatchedThisRun = false;
+    if (!menu.noAds &&
+        storage.gamesPlayed + 1 > Config.interstitialFreeRuns) {
+      monetization.interstitial.preload();
+    }
+    if (_runBanner) _bannerState.value = BannerState.showing;
+  }
+
+  /// §7.5.2 grow on the Home arrival: full height, no strip; the used
+  /// banner is dropped and the next one loads on Home.
+  void _releaseRunBanner() {
+    final had = _runBanner;
+    _runBanner = false;
+    _bannerState.value = BannerState.off;
+    final full = _clampViewHeight(screenHeight);
+    if (_viewHeight != full || _stripDrop != 0) setPlayfieldHeight(full);
+    if (had) {
+      // After the slot has unmounted the ad widget.
+      _after(0.1, () {
+        monetization.banner.dispose();
+        _preloadBanner();
+      });
+    }
+  }
+
+  void _onBannerImpression() {
+    if (_bannerImpressionLogged || !_runBanner) return;
+    _bannerImpressionLogged = true;
+    services.track('ad_banner_shown');
+  }
+
+  void _syncBannerStripColor() {
+    var c = _fgColor;
+    for (final dim in world.children.whereType<ReviveDim>()) {
+      if (dim.alpha > 0) {
+        c = Color.lerp(c, ReviveConfig.dimColor, dim.alpha.clamp(0.0, 1.0))!;
+      }
+    }
+    if (_bannerStripColor.value != c) _bannerStripColor.value = c;
+  }
+
+  bool _interstitialBusy = false;
+  bool _rewardedWatchedThisRun = false;
+  DateTime? _lastFullScreenAdClosedAt;
+  bool _inBackground = false;
+
+  /// §7.6 guard 3: a rewarded ad was displayed in this run.
+  bool get rewardedWatchedThisRun => _rewardedWatchedThisRun;
+
+  /// §7.6 guard 4: when the last full-screen ad closed (this app session).
+  DateTime? get lastFullScreenAdClosedAt => _lastFullScreenAdClosedAt;
+
+  /// True while the interstitial between NEXT and Home is up.
+  bool get interstitialShowing => _interstitialBusy;
+
+  /// §7.6: why NEXT goes straight Home, or null when the video ad plays.
+  InterstitialSkip? interstitialSkipReason() {
+    if (menu.noAds) return InterstitialSkip.noAds;
+    if (storage.gamesPlayed <= Config.interstitialFreeRuns) {
+      return InterstitialSkip.firstRuns;
+    }
+    if (_rewardedWatchedThisRun) return InterstitialSkip.rewardedThisRun;
+    final last = _lastFullScreenAdClosedAt;
+    if (last != null &&
+        storage.now().difference(last) < Config.interstitialMinGap) {
+      return InterstitialSkip.cooldown;
+    }
+    if (!monetization.interstitial.isAvailable) {
+      return InterstitialSkip.notLoaded;
+    }
+    if (_inBackground) return InterstitialSkip.background;
+    return null;
+  }
+
+  /// §7.6: plays the interstitial like a rewarded ad (`_adsShowing`: input
+  /// blocked, motion / popups held), then the Home arrival.
+  Future<void> _showInterstitialThenHome() async {
+    _interstitialBusy = true;
+    _adsShowing++;
+    var shown = false;
+    void onShown() {
+      if (shown) return;
+      shown = true;
+      services.track('ad_interstitial_shown');
+      // §7.6: a displayed video ad feeds the NO ADS upsell trigger.
+      if (isLoaded) unawaited(menu.noAdsPopup.recordRewardedVideo());
+    }
+
+    try {
+      final ads = monetization.interstitial;
+      final AdResult result;
+      if (monetization.showFakeAdOverlay &&
+          ads is FakeInterstitialAds &&
+          _fakeAd == null) {
+        result = await _showFakeInterstitial(ads, onShown);
+      } else {
+        result = await ads.show(onShown: onShown);
+      }
+      if (shown || result == AdResult.completed) {
+        _lastFullScreenAdClosedAt = storage.now();
+      }
+    } catch (e) {
+      debugPrint('interstitial failed: $e');
+    } finally {
+      _adsShowing--;
+      _interstitialBusy = false;
+    }
+    _arriveHome();
+  }
+
+  /// The Linux / desktop stand-in: "TEST AD" for
+  /// [Config.fakeInterstitialSeconds].
+  Future<AdResult> _showFakeInterstitial(
+    FakeInterstitialAds ads,
+    void Function() onShown,
+  ) async {
+    final scripted = await ads.show();
+    if (scripted == AdResult.unavailable) return scripted;
+    final overlay = FakeAdOverlay(
+      interstitial: true,
+      fails: scripted != AdResult.completed,
+    );
+    _fakeAd = overlay;
+    world.add(overlay);
+    fadeOpacity(overlay, from: 0, to: 1, duration: Config.popupFadeDuration);
+    pushBack(_fakeAdBack);
+    if (scripted == AdResult.completed) onShown();
+    final result = await overlay.result;
+    _fakeAd = null;
+    popBack(_fakeAdBack);
+    fadeOpacity(
+      overlay,
+      from: overlay.opacity,
+      to: 0,
+      duration: Config.popupFadeDuration,
+      removeOnDone: true,
+    );
+    return result;
+  }
+  // endregion PRD-2.2 §7.4–§7.6
 
   /// Invite tile: system share sheet with the store link (PRD-1 §3.4, no
   /// reward).
@@ -2981,9 +3294,23 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// The results page's NEXT: back to the home screen as a NEW arrival —
   /// the powerup slot re-rolls (PRD-1 §3.6).
   void goHome() {
-    if (state != GameState.results) {
+    if (state != GameState.results || _interstitialBusy) {
       return;
     }
+    // region PRD-2.2 §7.6 — the video ad between NEXT and Home
+    final skip = interstitialSkipReason();
+    if (skip == null) {
+      unawaited(_showInterstitialThenHome());
+      return;
+    }
+    services.track('ad_interstitial_skipped', {'reason': skip.analyticsName});
+    // endregion PRD-2.2 §7.6
+    _arriveHome();
+  }
+
+  /// The Home arrival after a run (after the interstitial, or at once).
+  void _arriveHome() {
+    if (state != GameState.results) return;
     menu.slot.rollForArrival();
     replay();
     _logSlotShown();
@@ -3036,6 +3363,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     storage.load().then((_) {
       sound.muted = storage.muteSound;
     });
+
+    // PRD-2.2 §7.5.2: the playfield grows back inside the Home arrival,
+    // before the menus are rebuilt at full height.
+    _releaseRunBanner();
 
     _setupStartScene();
 
@@ -3282,6 +3613,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       if (_levelsOpenIn! <= 0) openLevels();
     }
     if (state == GameState.start) _checkLevelUp(dt);
+    if (_bannerState.value != BannerState.off) _syncBannerStripColor();
 
     // region P22-33 — FS_SOAK driver (§33.3)
     soak?.update(dt);

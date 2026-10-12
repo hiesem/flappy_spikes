@@ -36,6 +36,13 @@ class CannonTheme extends RideTheme {
     step: PortalConfig.cannonRingStep,
   );
 
+  /// PRD-2.2 §18.1 the score circle in this scene.
+  @override
+  Color get circleColor => const Color(0xFF7C4DFF);
+
+  @override
+  Color get circleDigits => const Color(0xFF3B2A8A);
+
   @override
   (Color, Color) get washTint =>
       (PortalConfig.cannonTintTop, PortalConfig.cannonTintBottom);
@@ -76,13 +83,17 @@ class CannonTheme extends RideTheme {
   }
 
   @override
-  void paintWorld(Canvas c, RideView v, Vector2 cam) {
+  void paintBackdrop(Canvas c, RideView v, Vector2 cam) {
     vGradient(
       c,
       Rect.fromLTWH(0, 0, v.w, v.h),
       PortalConfig.cannonTintTop,
       PortalConfig.cannonTintBottom,
     );
+  }
+
+  @override
+  void paintWorld(Canvas c, RideView v, Vector2 cam) {
     final near = _near(v);
     if (near <= 0) return;
     final e = v.path.end;

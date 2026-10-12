@@ -1324,6 +1324,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   ReviveScreen? get reviveScreen =>
       camera.viewport.children.whereType<ReviveScreen>().firstOrNull;
 
+  /// The giant score circle (one master, PRD-2 §3.0.9; PRD-2.2 §18.1 a
+  /// portal ride moves it into its scene).
+  ScoreHud get scoreHud => _hud;
+
   /// The run's HUD (null without a run).
   RunHud? get runHud {
     final run = _run;

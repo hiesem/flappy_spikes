@@ -45,6 +45,13 @@ class SeaTheme extends RideTheme {
     RideSeg.arc(600, 30),
   ]);
 
+  /// PRD-2.2 §18.1 the score circle in this scene.
+  @override
+  Color get circleColor => const Color(0xFF7FC8EE);
+
+  @override
+  Color get circleDigits => const Color(0xFF0B3A6B);
+
   @override
   (Color, Color) get washTint => (const Color(0xFFBFE3F5), const Color(0xFFD3F1F7));
 
@@ -121,10 +128,12 @@ class SeaTheme extends RideTheme {
 
   static double _wrap(double v, double m) => ((v % m) + m) % m;
 
+  /// The water's depth at [cam] (0 near the surface, 1 deep).
+  static double _depth(Vector2 cam) => ((cam.y + 360) / 1200).clamp(0.0, 1.0);
+
   @override
-  void paintWorld(Canvas c, RideView v, Vector2 cam) {
-    final t = v.t;
-    final depth = ((cam.y + 360) / 1200).clamp(0.0, 1.0);
+  void paintBackdrop(Canvas c, RideView v, Vector2 cam) {
+    final depth = _depth(cam);
     int l(double a, double b) => lerpD(a, b, depth).round();
     final top = Color.fromARGB(255, l(79, 8), l(201, 58), l(242, 104));
     final bot = Color.fromARGB(255, l(14, 4), l(74, 30), l(125, 60));
@@ -134,6 +143,11 @@ class SeaTheme extends RideTheme {
       final x = _wrap(i * 110 - cam.x * .2, 440) - 60;
       c.drawPath(poly([x, 0, x + 50, 0, x + 160, v.h, x + 90, v.h]), shaft);
     }
+  }
+
+  @override
+  void paintWorld(Canvas c, RideView v, Vector2 cam) {
+    final t = v.t;
     final sy = 20 - cam.y;
     if (sy > -20) {
       final sky = Path()
@@ -240,7 +254,7 @@ class SeaTheme extends RideTheme {
   }
 
   @override
-  void paintExit(Canvas c, RideView v, double et, Offset off) {
+  void paintExitBackdrop(Canvas c, RideView v, double et, Offset off) {
     c.drawRect(Rect.fromLTWH(0, 0, v.w, v.h), fillOf(const Color(0xFFF1F1F1)));
     c
       ..save()
@@ -257,7 +271,16 @@ class SeaTheme extends RideTheme {
       final y = wl + math.sin(x / 25 + v.t * 4) * 4;
       x == -400 ? wave.moveTo(x, y) : wave.lineTo(x, y);
     }
-    c.drawPath(wave, strokeOf(const Color(0xFFFFFFFF), 3));
+    c
+      ..drawPath(wave, strokeOf(const Color(0xFFFFFFFF), 3))
+      ..restore();
+  }
+
+  @override
+  void paintExit(Canvas c, RideView v, double et, Offset off) {
+    c
+      ..save()
+      ..translate(-off.dx, -off.dy);
     whale(c, Offset(lerpD(-260, 150, easeOut(et / .9)), v.fromBottom(520)), v.t);
     c.restore();
   }

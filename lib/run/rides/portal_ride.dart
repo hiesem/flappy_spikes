@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 
+import '../../components/score_hud.dart';
 import '../../components/spike_strip.dart';
 import '../../game/sound.dart';
 import '../config/portal_config.dart';
@@ -11,6 +12,8 @@ import '../director/plans.dart';
 import '../hoops/hoop.dart';
 import '../hoops/kinds/portal.dart';
 import '../hoops/kinds/registry.dart';
+import '../hud/banners.dart';
+import '../hud/run_hud.dart';
 import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
@@ -193,6 +196,12 @@ class _RideLayer extends Component {
 /// the theme's exit moment → launch flight (560 / −640 pt/s, g 520, 1.7 s)
 /// → glide home (2.5 s + 0.6 s settle). Input is ignored and the run cannot
 /// end while it runs; the run clock keeps running.
+///
+/// PRD-2.2 §18: the score circle and the banners sit inside the scene
+/// (between its backdrop and its objects) at 50 % in the scene's colours,
+/// and crossfade back to the normal look over the launch flight, drawn
+/// above the wash; control returns with one automatic flap; the first ring
+/// reaches the bird 2 s after control returns.
 class PortalRide implements Ride {
   PortalRide(
     this.c,
@@ -268,6 +277,32 @@ class PortalRide implements Ride {
   final RideSpeedLines rideLines = RideSpeedLines();
   final List<_RideLayer> _layers = [];
   List<SpikeStrip> _strips = const [];
+
+  // region WP-G3 — the circle and banners in the scene (PRD-2.2 §18.1)
+  ScoreHud? _hud;
+  int _hudPriority = -100;
+  BannerHost? _banners;
+  _RideLayer? _bannerLayer;
+
+  /// PRD-2.2 §18.1 how far the circle / banners show the scene look now
+  /// (ride: the world's fade-in; exit: 1; flight: 1 → 0; glide: 0).
+  double get sceneMix => switch (view.phase) {
+    RidePhase.ride => view.envA,
+    RidePhase.exit => 1.0,
+    RidePhase.fly =>
+      1 - sm(view.ft / (PortalConfig.flyTime - PortalConfig.flyEndEarly)),
+    _ => 0.0,
+  };
+
+  /// PRD-2.2 §18.1 the banners' opacity now (50 % in the scene).
+  double get bannerOpacity =>
+      1 - (1 - PortalConfig.sceneCircleOpacity) * sceneMix;
+
+  /// The scene layers (tests): backdrop, banner, objects.
+  Component? get backdropLayer => _layers.isEmpty ? null : _layers[0];
+  Component? get bannerLayer => _bannerLayer;
+  Component? get objectsLayer => _layers.length < 3 ? null : _layers[2];
+  // endregion WP-G3
 
   bool get _cannon => theme.id == RideId.cannon;
 
@@ -347,7 +382,18 @@ class PortalRide implements Ride {
       _spOff = st.rideShift;
     }
     final world = game.world;
+    // PRD-2.2 §18.1 the circle and the banners move into the scene.
+    final hud = game.scoreHud;
+    _hud = hud;
+    _hudPriority = hud.priority;
+    _banners = RunHud.of(c.run)?.banners?..drawnByScene = true;
+    _bannerLayer = _RideLayer(
+      _paintSceneBanners,
+      priority: PortalConfig.sceneBannerPriority,
+    );
     for (final l in [
+      _RideLayer(_paintBackdrop, priority: PortalConfig.backdropPriority),
+      _bannerLayer!,
       _RideLayer(_paintWorld, priority: PortalConfig.worldPriority),
       _RideLayer(_paintUnder, priority: PortalConfig.underBirdPriority),
       _RideLayer(_paintFront, priority: PortalConfig.frontPriority),
@@ -360,6 +406,47 @@ class PortalRide implements Ride {
     c.track('portal_entered', {'ride': theme.id.storageId});
     game.storage.saveLastPortalRide(theme.id.storageId);
     _stepRide(0);
+    _applySceneLook();
+  }
+
+  /// PRD-2.2 §18.1 the circle's look and layer, the banners' opacity and
+  /// layer for this frame.
+  void _applySceneLook() {
+    final hud = _hud;
+    if (hud == null) return;
+    hud.setSceneLook(
+      circle: theme.circleColor,
+      digits: theme.circleDigits,
+      mix: sceneMix,
+      alpha: PortalConfig.sceneCircleOpacity,
+    );
+    final over =
+        view.phase == RidePhase.fly || view.phase == RidePhase.glide;
+    final hp = over ? PortalConfig.circleOverWashPriority : _hudPriority;
+    if (hud.priority != hp) hud.priority = hp;
+    final bl = _bannerLayer;
+    final bp = over
+        ? PortalConfig.bannerOverWashPriority
+        : PortalConfig.sceneBannerPriority;
+    if (bl != null && bl.priority != bp) bl.priority = bp;
+  }
+
+  /// PRD-2.2 §18.1 the circle and the banners go back to normal.
+  void _restoreScene() {
+    final hud = _hud;
+    if (hud != null) {
+      hud.clearSceneLook();
+      if (hud.priority != _hudPriority) hud.priority = _hudPriority;
+    }
+    _hud = null;
+    _banners?.drawnByScene = false;
+    _banners = null;
+  }
+
+  void _paintSceneBanners(Canvas canvas) {
+    final b = _banners;
+    if (b == null || (RunHud.of(c.run)?.hidden ?? false)) return;
+    b.renderInScene(canvas, bannerOpacity);
   }
 
   void _playCue(RideCue cue) {
@@ -416,6 +503,7 @@ class PortalRide implements Ride {
     _prevCamX = c.s.camX;
     if (dt > 0 && view.phase != RidePhase.glide) c.s.forwardSpeed = dx / dt;
     _placeBird();
+    _applySceneLook();
   }
 
   void _placeBird() {
@@ -569,12 +657,31 @@ class PortalRide implements Ride {
     c.run.spawner
       ..clearAll()
       ..hold = false;
+    // PRD-2.2 §18.3 the first ring reaches the bird 2 s after control
+    // returns (glide + settle), at cruise.
     c.director.resumeAt(
       _glideCamX +
           RunConfig.birdX +
-          cruise * (PortalConfig.glideTime + PortalConfig.resumeAfterLanding),
+          cruiseDistance(
+            s.runClock,
+            PortalConfig.glideTime +
+                PortalConfig.settleTime +
+                PortalConfig.firstRingAfterControl,
+          ),
     );
     _stepGlide(0);
+  }
+
+  /// PRD-2.2 §18.3 the track the bird covers at cruise in [seconds] from
+  /// [runClock] (the cruise grows 3.5 % per minute).
+  static double cruiseDistance(double runClock, double seconds) {
+    var x = 0.0;
+    const step = 1 / 60;
+    for (var t = 0.0; t < seconds - 1e-12; t += step) {
+      final h = math.min(step, seconds - t);
+      x += RunConfig.cruise(runClock + t + h / 2) * h;
+    }
+    return x;
   }
 
   void _stepGlide(double dt) {
@@ -628,6 +735,9 @@ class PortalRide implements Ride {
     final bird = c.game.runBird;
     if (bird != null) {
       bird.endRide(y);
+      // PRD-2.2 §18.2 one normal flap (a tap's impulse, animation and
+      // flap.mp3); no slow motion, no text.
+      bird.flap();
     }
     c.run.endRideHold();
     c.director.onRideEnd(RideKind.portal);
@@ -637,6 +747,7 @@ class PortalRide implements Ride {
       c.emit(PowerupResumed(timed.type));
     }
     _removeLayers();
+    _restoreScene();
     c.emit(RideEnded(RideKind.portal, theme.id));
   }
 
@@ -655,6 +766,7 @@ class PortalRide implements Ride {
     c.run.spawner.hold = false;
     c.s.ride = null;
     _removeLayers();
+    _restoreScene();
   }
 
   void _removeLayers() {
@@ -671,6 +783,36 @@ class PortalRide implements Ride {
   double get _exitTime =>
       view.phase == RidePhase.exit ? view.et : theme.exitDuration + view.ft;
 
+  /// PRD-2.2 §18.5 the scene's backdrop (under the circle and banners).
+  void _paintBackdrop(Canvas canvas) {
+    final v = view;
+    switch (v.phase) {
+      case RidePhase.ride:
+        if (v.envA <= 0) break;
+        final layer = v.envA < 1;
+        if (layer) {
+          canvas.saveLayer(_screen, Paint()..color = Color.fromRGBO(0, 0, 0, v.envA));
+        }
+        theme.paintBackdrop(canvas, v, v.cam);
+        if (layer) canvas.restore();
+      case RidePhase.exit:
+      case RidePhase.fly:
+        final off = v.phase == RidePhase.fly ? v.off : Offset.zero;
+        if (!theme.exitFill) {
+          theme.paintBackdrop(
+            canvas,
+            v,
+            v.camEnd + Vector2(off.dx * .5, off.dy * .5),
+          );
+        }
+        theme.paintExitBackdrop(canvas, v, _exitTime, off);
+      case RidePhase.glide:
+      case RidePhase.done:
+        break;
+    }
+  }
+
+  /// The scene's objects (over the circle and banners), the way-back wash.
   void _paintWorld(Canvas canvas) {
     final v = view;
     switch (v.phase) {

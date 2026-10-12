@@ -239,6 +239,36 @@ class BannerHost extends PositionComponent {
 
   RunBanner? _current;
 
+  // region WP-G3 — banners inside a ride scene (PRD-2.2 §18.1)
+  /// PRD-2.2 §18.1 while a portal ride runs, its scene layer draws this
+  /// host (between the scene's backdrop and objects, at 50 %) through
+  /// [renderInScene]; the host's own pass then draws nothing. Wherever the
+  /// host lives (the HUD now, the background banner layer of §12 later),
+  /// the same switch moves it into the scene.
+  bool drawnByScene = false;
+
+  @override
+  void renderTree(Canvas canvas) {
+    if (drawnByScene) return;
+    super.renderTree(canvas);
+  }
+
+  /// PRD-2.2 §18.1 draws the banners (same place, same colours) at
+  /// [opacity] for the ride scene's layer.
+  void renderInScene(Canvas canvas, double opacity) {
+    if (opacity <= 0 || children.isEmpty) return;
+    final layer = opacity < 1;
+    if (layer) {
+      canvas.saveLayer(
+        null,
+        Paint()..color = Color.fromRGBO(0, 0, 0, opacity.clamp(0.0, 1.0)),
+      );
+    }
+    super.renderTree(canvas);
+    if (layer) canvas.restore();
+  }
+  // endregion WP-G3
+
   /// The banner on screen, if any.
   RunBanner? get current => busy ? _current : null;
 

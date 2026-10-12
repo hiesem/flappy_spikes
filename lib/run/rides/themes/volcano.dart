@@ -44,6 +44,13 @@ class VolcanoTheme extends RideTheme {
     RideSeg.line(1090),
   ]);
 
+  /// PRD-2.2 §18.1 the score circle in this scene.
+  @override
+  Color get circleColor => const Color(0xFFC2410C);
+
+  @override
+  Color get circleDigits => const Color(0xFF2A140D);
+
   @override
   (Color, Color) get washTint => (const Color(0xFFFFD3BA), const Color(0xFFFFEBCD));
 
@@ -107,7 +114,7 @@ class VolcanoTheme extends RideTheme {
   }
 
   @override
-  void paintWorld(Canvas c, RideView v, Vector2 cam) {
+  void paintBackdrop(Canvas c, RideView v, Vector2 cam) {
     final full = Rect.fromLTWH(0, 0, v.w, v.h);
     vGradient(c, full, const Color(0xFF2A140D), const Color(0xFF120705));
     final gl = .25 + .1 * math.sin(v.t * 3);
@@ -119,6 +126,10 @@ class VolcanoTheme extends RideTheme {
       Color.fromRGBO(255, 90, 26, gl + .2),
       r0: 40,
     );
+  }
+
+  @override
+  void paintWorld(Canvas c, RideView v, Vector2 cam) {
     final crack = strokeOf(const Color(0x73FF6E28), 2);
     for (final k in _rocks) {
       final x = k.x - cam.x, y = k.y - cam.y;
@@ -227,13 +238,17 @@ class VolcanoTheme extends RideTheme {
   }
 
   @override
-  void paintExit(Canvas c, RideView v, double et, Offset off) {
+  void paintExitBackdrop(Canvas c, RideView v, double et, Offset off) {
     vGradient(
       c,
       Rect.fromLTWH(0, 0, v.w, v.h),
       const Color(0xFFFF8A50),
       const Color(0xFFFFD29A),
     );
+  }
+
+  @override
+  void paintExit(Canvas c, RideView v, double et, Offset off) {
     final sh = et < .6 ? math.sin(et * 90) * 4 * (et / .6) : 0.0;
     final rim = v.fromBottom(560);
     c

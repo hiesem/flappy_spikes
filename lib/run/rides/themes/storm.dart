@@ -64,6 +64,13 @@ class StormTheme extends RideTheme {
     return RidePath.sampled(pts)..axisX = cx;
   }
 
+  /// PRD-2.2 §18.1 the score circle in this scene.
+  @override
+  Color get circleColor => const Color(0xFF8C97AB);
+
+  @override
+  Color get circleDigits => const Color(0xFF252C3A);
+
   @override
   (Color, Color) get washTint => (const Color(0xFFCDD3DE), const Color(0xFFE4E8EF));
 
@@ -114,8 +121,7 @@ class StormTheme extends RideTheme {
   static double _wrap(double v, double m) => ((v % m) + m) % m;
 
   @override
-  void paintWorld(Canvas c, RideView v, Vector2 cam) {
-    final t = v.t;
+  void paintBackdrop(Canvas c, RideView v, Vector2 cam) {
     vGradient(
       c,
       Rect.fromLTWH(0, 0, v.w, v.h),
@@ -130,6 +136,11 @@ class StormTheme extends RideTheme {
         ..drawCircle(Offset(x, y), 60, cloud)
         ..drawCircle(Offset(x + 50, y + 10), 45, cloud);
     }
+  }
+
+  @override
+  void paintWorld(Canvas c, RideView v, Vector2 cam) {
+    final t = v.t;
     final ax = v.path.axisX - cam.x;
     for (var i = 0; i < 32; i++) {
       final yy = _y0 - i * 110 - cam.y;

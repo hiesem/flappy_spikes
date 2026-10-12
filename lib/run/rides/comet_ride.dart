@@ -29,8 +29,13 @@ import 'speed_lines.dart';
 /// - The bird **flies itself** (kinematic, taps ignored — `Bird.beginRide`)
 ///   toward the next unresolved hoop: the ring nearest its line
 ///   (`HoopKind.autopilotTarget`, moving rings where they will be at the
-///   crossing), y += (target − y) · min(1, dt · 16), capped at 900 pt/s,
-///   tilting ±25° with its vertical motion.
+///   crossing). PRD-2.2 §16: on a smooth ease-in-out curve over track x
+///   from the last hoop's plane (or the pickup) to the next one's, level at
+///   each hoop and through its centre, tilting along its flight direction
+///   (max ±35°); the hoops the director plans meanwhile zigzag ±70 pt
+///   around the middle ([RunDirector.onCometStart]).
+/// - PRD-2.2 §17: at the end the bird gets one normal flap and the run
+///   world runs in a quiet slow motion for ≈ 1.5 s ([LandingSlowMo]).
 /// - It is a ride (`RunState.ride` = comet): rims are ignored, closed
 ///   switches never stop it, every hoop passed is a perfect pass (the
 ///   controller), the mistake pipeline ignores mistakes, hoops spawned now
@@ -47,12 +52,16 @@ import 'speed_lines.dart';
 /// - Pop (white flash, pink / gold squares, gold ring, the graphic 0.4 →
 ///   1.3 → 1) on collection and when the bird pops back at the end.
 class CometRide implements Ride {
-  CometRide(this.c, {this.source = 'hoop'});
+  CometRide(this.c, {this.source = 'hoop', this.starY});
 
   final RunContext c;
 
   /// 'hoop' (the star in a comet hoop) or 'pair' (a pair's COMET gift).
   final String source;
+
+  /// PRD-2.2 §16.1 the centre of the hoop the star hung in (null: a pair's
+  /// gift — the bird's height at the pickup is used).
+  final double? starY;
 
   @override
   RideKind get kind => RideKind.comet;
@@ -87,6 +96,21 @@ class CometRide implements Ride {
   /// The comet's screen y and tilt (rad).
   double y = 0;
   double tilt = 0;
+
+  // region WP-G3 — the curve (PRD-2.2 §16)
+  /// The hoop the curve leads to now (null: none ahead, fly level).
+  Hoop? _target;
+
+  /// The curve's start: the last hoop's plane (track x) and the comet's y
+  /// there (at the pickup: the bird's x and height).
+  double _x0 = 0, _y0 = 0;
+
+  /// The curve's slope dy/dx now (0 at each hoop).
+  double slope = 0;
+
+  /// PRD-2.2 §16.1 the flight direction now (rad, unclamped, unsmoothed).
+  double get flightAngle => math.atan(slope);
+  // endregion WP-G3
 
   /// The graphic's pop scale now.
   double get popScale => _popAt(_done ? _after : t);
@@ -136,12 +160,21 @@ class CometRide implements Ride {
     final s = c.s;
     final bird = c.game.runBirdPosition;
     y = bird?.y ?? c.viewHeight / 2;
+    _x0 = s.camX + RunConfig.birdX;
+    _y0 = y;
     s.ride = RideState(kind: RideKind.comet, phase: 'boost');
     s.timed = TimedPowerupState(
       type: TimedPowerup.comet,
       duration: CometConfig.duration,
     );
-    c.director.onRideStart(RideKind.comet);
+    c.director
+      ..onRideStart(RideKind.comet)
+      ..onCometStart(
+        fromY: starY ?? y,
+        endTrackX: predictEndTrackX(),
+        viewHeight: c.viewHeight,
+        amplitude: CometConfig.zigzagAmp,
+      );
     c.game.runBird?.beginRide();
     final world = c.game.world;
     _pool = ParticlePool(capacity: 40, priority: RunLayer.fx);
@@ -180,6 +213,7 @@ class CometRide implements Ride {
     s.cruiseMult = cruiseMultAt(t);
     s.timed?.remaining = remaining;
     if (t >= CometConfig.duration - CometConfig.easeOut) s.ride?.phase = 'landing';
+    c.director.updateCometEnd(predictEndTrackX());
     _steer(dt);
     _place(dt);
     lines.update(dt, c.viewHeight, c.cosmetic);
@@ -187,23 +221,83 @@ class CometRide implements Ride {
     if (t >= CometConfig.duration) _finish();
   }
 
-  /// §3.8 the bird flies itself toward the ring nearest its line.
+  /// PRD-2.2 §16.2 the bird's track x when the boost (and its ease-out)
+  /// ends: the rest of the boost at `cruise · cruiseMultAt` (the forward
+  /// speed follows that target within a few frames).
+  double predictEndTrackX() {
+    final s = c.s;
+    var x = s.camX + RunConfig.birdX;
+    const step = 1 / 60;
+    var tau = t;
+    var clock = s.runClock;
+    while (tau < CometConfig.duration) {
+      final h = math.min(step, CometConfig.duration - tau);
+      x += RunConfig.cruise(clock) * cruiseMultAt(tau + h / 2) * h;
+      tau += h;
+      clock += h;
+    }
+    return x;
+  }
+
+  /// PRD-2.2 §16.1 the bird flies itself on an ease-in-out curve over
+  /// track x: from the last hoop's plane (or the pickup) at [_y0] to the
+  /// next ring's centre at its crossing, `y = y0 + (y1 − y0) · (1 −
+  /// cos(π·u)) / 2` — level at each hoop. A new target starts the next
+  /// curve at the comet's current height, so nothing ever jumps.
   void _steer(double dt) {
-    if (dt <= 0) return;
-    final target = targetY();
-    final want = (target - y) * math.min(1, dt * CometConfig.steerRate);
-    final cap = CometConfig.maxSteerSpeed * dt;
-    final step = want.clamp(-cap, cap).toDouble();
-    y += step;
+    final s = c.s;
+    final bx = s.camX + RunConfig.birdX;
+    final cur = _target;
+    final keep =
+        cur != null && !cur.resolved && !cur.isRemoved && cur.planeX > bx;
+    final h = keep ? cur : nextPlaneAhead(minAhead: CometConfig.minCurveSpan);
+    if (!identical(h, _target)) {
+      final prev = _target;
+      _x0 = prev == null ? bx : math.min(prev.planeX, bx);
+      _y0 = y;
+      _target = h;
+    }
+    if (h == null) {
+      slope = 0;
+    } else {
+      final y1 = ringYAtCrossing(h);
+      final span = h.planeX - _x0;
+      if (span <= 1) {
+        y = y1;
+        slope = 0;
+      } else {
+        final u = ((bx - _x0) / span).clamp(0.0, 1.0);
+        y = _y0 + (y1 - _y0) * (1 - math.cos(math.pi * u)) / 2;
+        slope = u >= 1
+            ? 0
+            : (y1 - _y0) * math.pi / 2 * math.sin(math.pi * u) / span;
+      }
+    }
     final r = RunConfig.birdRadius * c.s.birdScale;
     final lo = c.run.walls.top + r + 4;
     final hi = c.run.walls.floor - r - 4;
     if (lo < hi) y = y.clamp(lo, hi).toDouble();
-    final deg = ((target - y) * CometConfig.tiltPerPt).clamp(
-      -CometConfig.maxTiltDeg,
-      CometConfig.maxTiltDeg,
-    );
-    tilt = deg * math.pi / 180;
+    // PRD-2.2 §16.1 the tilt is the flight direction (atan2(vy, forward)
+    // = atan(dy/dx)), max ±35°, turning at a bounded rate (no snaps).
+    const cap = CometConfig.maxTiltDeg * math.pi / 180;
+    final want = flightAngle.clamp(-cap, cap);
+    if (dt > 0) {
+      final turn = CometConfig.maxTiltRateDeg * math.pi / 180 * dt;
+      tilt = (tilt + (want - tilt).clamp(-turn, turn)).clamp(-cap, cap);
+    }
+  }
+
+  /// PRD-2.2 §16.1 the next hoop whose plane the comet has not reached
+  /// yet (the curve switches to the next hoop at the plane, so it stays
+  /// level and centred there).
+  Hoop? nextPlaneAhead({double minAhead = 0}) {
+    final bx = c.s.camX + RunConfig.birdX;
+    Hoop? best;
+    for (final h in c.run.spawner.hoops) {
+      if (h.resolved || h.isRemoved || h.planeX <= bx + minAhead) continue;
+      if (best == null || h.planeX < best.planeX) best = h;
+    }
+    return best;
   }
 
   /// The screen y the comet steers to: the next unresolved hoop's ring
@@ -281,7 +375,8 @@ class CometRide implements Ride {
   }
 
   /// §3.8 ending: the bird pops back into its normal shape, control
-  /// returns at its current height (no invulnerability beyond the landing).
+  /// returns at its current height (no invulnerability beyond the landing)
+  /// with one automatic flap (PRD-2.2 §17).
   void _finish() {
     _done = true;
     _after = 0;
@@ -290,7 +385,11 @@ class CometRide implements Ride {
       ..cruiseMult = 1
       ..ride = null
       ..timed = null;
-    c.game.runBird?.endRide(y);
+    final bird = c.game.runBird;
+    bird?.endRide(y);
+    // PRD-2.2 §17.1 one normal flap (a tap's impulse, animation and
+    // flap.mp3); the feature starts the landing slow motion.
+    bird?.flap();
     c.director.onRideEnd(RideKind.comet);
     c.sfx(Sfx.puCometEnd);
     _loopFadeT = _loop == null ? -1 : 0;

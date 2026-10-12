@@ -359,7 +359,9 @@ void main() {
         sfx.clear();
         game.onScreenTap();
         expect(sfx, contains(Sfx.flap.name));
-        _step(game, .7);
+        // PRD-2.2 §17: the landing runs the world at 0.5× (game time), so
+        // the 0.6 s tail takes ≈ 1.1 s of real time.
+        _step(game, 1.4);
         // PRD-2.2 §21: the comet's loop stopped; the bird's fire (streak
         // ≥ ×3 from the boost hoops) keeps its own crackle loop.
         expect(
@@ -391,8 +393,8 @@ void main() {
     );
 
     _tester().testGameWidget(
-      '§3.8 the comet steers to the ring nearest its line and tilts ±25° '
-      'with its vertical motion',
+      '§3.8 the comet steers to the ring nearest its line and (PRD-2.2 §16) '
+      'tilts along its flight direction, max ±35°',
       setUp: _setUp,
       verify: (game, _) async {
         final run = await _intoBoost(game);
@@ -402,7 +404,7 @@ void main() {
           final bird = game.runBirdPosition!;
           expect(bird.x, RunConfig.birdX);
           expect(bird.y, closeTo(ride.y, 1e-3));
-          expect(ride.tilt.abs(), lessThanOrEqualTo(25 * math.pi / 180 + 1e-9));
+          expect(ride.tilt.abs(), lessThanOrEqualTo(35 * math.pi / 180 + 1e-9));
         }
         // Right before a plane the comet sits on the ring centre.
         Hoop? h;

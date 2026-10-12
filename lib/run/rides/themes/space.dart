@@ -47,6 +47,13 @@ class SpaceTheme extends RideTheme {
     RideSeg.arc(600, 35),
   ]);
 
+  /// PRD-2.2 §18.1 the score circle in this scene.
+  @override
+  Color get circleColor => const Color(0xFF6E5BD6);
+
+  @override
+  Color get circleDigits => const Color(0xFF1F1252);
+
   @override
   (Color, Color) get washTint => (const Color(0xFFCFC8F2), const Color(0xFFC9E7F6));
 
@@ -96,7 +103,7 @@ class SpaceTheme extends RideTheme {
   static double _wrap(double v, double m) => ((v % m) + m) % m;
 
   @override
-  void paintWorld(Canvas c, RideView v, Vector2 cam) {
+  void paintBackdrop(Canvas c, RideView v, Vector2 cam) {
     final full = Rect.fromLTWH(0, 0, v.w, v.h);
     vGradient(c, full, const Color(0xFF08071F), const Color(0xFF1F1252));
     for (final (wx, wy, col) in const [
@@ -116,6 +123,10 @@ class SpaceTheme extends RideTheme {
         );
       }
     }
+  }
+
+  @override
+  void paintWorld(Canvas c, RideView v, Vector2 cam) {
     final bx = 70.0, by = v.h * 360 / 711;
     for (final p in _planets) {
       final x = p.x - cam.x * .6 - bx * .4, y = p.y - cam.y * .6 - by * .4;

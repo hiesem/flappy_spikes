@@ -241,7 +241,60 @@ class RunDirector {
 
   void onRideEnd(RideKind k) {
     if (_ride == k) _ride = null;
+    if (k == RideKind.comet) {
+      _zigEndX = null;
+      _zigSide = 0;
+    }
   }
+
+  // region WP-G3 — comet zigzag (PRD-2.2 §16)
+  /// PRD-2.2 §16.1 the comet ride's predicted end: hoops whose plane lies
+  /// at or before this track x are reached during the ride and zigzag;
+  /// later ones get a normal height. Null outside a comet ride.
+  double? _zigEndX;
+
+  /// +1: the next zigzag hoop goes below the middle; −1: above; 0: off.
+  int _zigSide = 0;
+  double _zigAmp = 0;
+
+  /// PRD-2.2 §16.1 a comet ride started (after [onRideStart]): [fromY] is
+  /// the centre of the star's hoop (the bird's height for a pair's COMET
+  /// gift), so the first zigzag hoop goes to the other side of the middle;
+  /// [endTrackX] the bird's predicted track x when the ride (and its
+  /// ease-out) ends; [amplitude] = `CometConfig.zigzagAmp`.
+  void onCometStart({
+    required double fromY,
+    required double endTrackX,
+    required double viewHeight,
+    required double amplitude,
+  }) {
+    _zigEndX = endTrackX;
+    _zigAmp = amplitude;
+    _zigSide = fromY < viewHeight / 2 ? 1 : -1;
+  }
+
+  /// PRD-2.2 §16.2 the ride's end prediction, refreshed while it flies.
+  void updateCometEnd(double endTrackX) {
+    if (_zigEndX != null) _zigEndX = endTrackX;
+  }
+
+  /// The predicted end of the running comet ride (tests).
+  double? get cometEndTrackX => _zigEndX;
+
+  /// PRD-2.2 §16.1 the zigzag centre for a ride slot at [trackX], or null
+  /// (no comet ride, or the hoop is reached after the ride ends).
+  double? _zigzagY(double trackX, int i, DirectorContext ctx, double opening) {
+    final end = _zigEndX;
+    if (end == null || _zigSide == 0 || trackX > end) return null;
+    final (lo, hi) = _layout.limits(i, ctx, opening, useTable: false);
+    final y = (ctx.viewHeight / 2 + _zigSide * _zigAmp).clamp(lo, hi).toDouble();
+    _layout
+      ..lastSign = _zigSide.toDouble()
+      ..lastY = y;
+    _zigSide = -_zigSide;
+    return y;
+  }
+  // endregion WP-G3
 
   /// §3.0.8 debug: [e] spawns in the next slot / gap, ignoring unlock and
   /// cooldown (exclusivity still applies). Returns false for elements the
@@ -291,7 +344,11 @@ class RunDirector {
     if (ride || _revivePending) {
       _revivePending = false;
       final opening = cap(openingFor(i, ride: ride) * ctx.bigHoopsMult);
-      final y = _layout.nextCentre(i, ctx, opening);
+      // PRD-2.2 §16.1 comet ride hoops zigzag ±70 pt around the middle
+      // (the normal draw still happens, so the course after the ride keeps
+      // its random stream).
+      final normal = _layout.nextCentre(i, ctx, opening);
+      final y = (ride ? _zigzagY(trackX, i, ctx, opening) : null) ?? normal;
       _prevKind = HoopKindId.normal;
       _count(ElementId.normalHoop.storageId);
       _nextX += spacing;

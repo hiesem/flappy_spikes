@@ -1199,3 +1199,65 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `test/p22/s27_one_bonus_test.dart`,
   `test/p22/s27_one_bonus_director_test.dart`; shots
   `test/p22/s15_s23_s27_screenshot_test.dart` (→ `build/menu_shots/p22/`).
+
+## PRD-2.2 rides (P22-G3, 2026-10-12)
+
+- DEVIATION (PRD-2.2 §16, supersedes the PRD-2 §3.8 / §5.6 autopilot
+  steering and the "hoops spawned during the boost" heights): **comet
+  zigzag.** Hoops the director plans during a comet ride (incl. the pair's
+  COMET gift) sit alternately **70 pt above / below `viewHeight / 2`**
+  (`CometConfig.zigzagAmp`, every run height), full size, upright, still;
+  the first goes to the other side of the star's hoop (the bird's height for
+  the gift). A hoop whose plane the bird reaches after the predicted end of
+  the ride (boost + ease-out, `CometRide.predictEndTrackX`) gets a normal
+  height. Hoops already on screen or planned ahead at the pickup keep their
+  heights. The comet flies `y = y0 + (y1 − y0)·(1 − cos πu)/2` over track x
+  from the last hoop's plane (or the pickup) to the next ring's centre at
+  its crossing (level at each hoop); the tilt is the flight direction, max
+  **±35°**, turning ≤ 240°/s (no snaps).
+  - Call: a hoop less than 40 pt ahead when a curve starts (the star is
+    caught just before its own hoop's plane) is flown through as it is; the
+    first curve leads from the bird's height to the hoop after it.
+  - Call: the zigzag replaces only the centre; the director still makes
+    the normal layout draw for a ride slot, so the course after the ride
+    keeps its random stream.
+- DEVIATION (PRD-2.2 §17, supersedes the PRD-2 §3.8 "Ending" line on these
+  points): **comet landing.** When control returns (`CometRide._finish`,
+  every comet ride incl. the pair's COMET gift) the bird does one normal
+  flap (`Bird.flap()`: the tap impulse, animation and `flap.mp3`), and the
+  run world runs at **0.5× for 0.8 s, then eases (smoothstep) back to 1×
+  over 0.7 s** of real time (`LandingSlowMo`, `CometConfig.landing*`): it
+  slows what the Hourglass slows (`RunState.timeScale` / `RunClock`), but
+  quietly (no vignette, tick-tock, sweep or ghost trail; the music keeps its
+  pitch). No grace period; taps work at once. With the Hourglass at the same
+  time the lower scale wins frame by frame (`RunState.hourglassScale` /
+  `landingScale`); pause freezes it; a death, a revive or a portal ride ends
+  it. The comet activity (§27) lasts until the landing is done
+  (`RunState.cometLanding`). The ease-out, the pop, `pu_comet_end` and "no
+  invulnerability afterwards" are unchanged.
+- DEVIATION (PRD-2.2 §18, supersedes for portal rides the PRD-2 §3.12 /
+  §5.12b layer order of the ride world and the score circle, the "control
+  returns" moment and the first-ring timing): **portal rides polish.**
+  - In all six rides the score circle (and the banners) sit **between the
+    scene's backdrop and its objects** (`RideTheme.paintBackdrop` /
+    `paintWorld`, `paintExitBackdrop` / `paintExit`) at **50 %** in the
+    scene's colour with the digits in its dark tone (cannon #7C4DFF /
+    #3B2A8A, space #6E5BD6 / #1F1252, volcano #C2410C / #2A140D, sea
+    #7FC8EE / #0B3A6B, pinball #7C4DFF / #141640, storm #8C97AB / #252C3A);
+    banners keep their colours at 50 %. At the ride start the normal circle
+    fades out as the scene fades in; on the way back the circle and banners
+    are drawn above the wash and crossfade to the normal look over the
+    launch flight (`1 − smoothstep(ft / flyTime)`), normal at the glide
+    start; the circle never disappears (visible ≥ 50 %).
+  - Control returns with one normal flap (`Bird.flap()`), no slow motion,
+    no text.
+  - The first ring's plane reaches the bird **2.0 s after control returns**
+    (`PortalConfig.firstRingAfterControl`, at cruise; was ≈ 1 s after the
+    landing, i.e. ≈ 0.4 s after control).
+  - Every ride sound plays: the pools of `pu_portal`, `pu_land`, `flap` and
+    the theme's cues are created when the portal hoop spawns
+    (`SoundPreloadFeature`); also the comet star's and the capsules' cues.
+- Tests: `test/p22/s16_comet_zigzag_test.dart`,
+  `test/p22/s17_comet_landing_test.dart`,
+  `test/p22/s18_portal_rides_polish_test.dart`; shots
+  `test/p22/s18_portal_rides_shots_test.dart` (→ `build/menu_shots/p22/s18/`).

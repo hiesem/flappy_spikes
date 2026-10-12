@@ -988,3 +988,25 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `test/run/screens/s3_15_bonus_screen_test.dart`,
   `test/run/items/s3_15_s3_16_collect_autopilot_test.dart`; shots in
   `test/run/shots/collect_shots_test.dart`.
+
+## PRD-2.2 gameplay banner and the video ad after a run (WP-7a, 2026-10-12)
+- DEVIATION (PRD-2.2 §7.5, new; 1.0 had no banner): during a run with a banner
+  the playfield is shorter by the banner strip (visible height = screen − banner,
+  clamped to [`Config.minRunViewHeight` 500, 730] instead of [568, 730]). Menus
+  keep the full height; it shrinks at START (before the VS intro) and grows back
+  on the Home arrival. NO ADS owners, no consent, Test Lab and E2E builds: no
+  banner, no resize (the 2.1 layout).
+- DEVIATION (PRD-2.2 §7.5.4): in a run with a banner the bottom spike strip is
+  lowered by `Config.bannerStripDrop` (20 pt): only its 18 pt teeth + 6 pt base
+  show, and the deadly tooth line is 24 pt above the visible bottom edge
+  (`bottomStripInset`). Implementation: `viewHeight` = visible + 20 and the
+  camera shows only the top `visible` points, so every run layout keeps its
+  44 pt strip arithmetic (this is how the approved mock frames were rendered).
+  The top strip is unchanged.
+- DEVIATION (PRD-2.2 §7.6, new): NEXT on the results page plays an
+  interstitial before Home unless: NO ADS, `gamesPlayed <= 3`, a rewarded ad was
+  displayed in the run, < 60 s since the last full-screen ad closed, none
+  loaded, or the app is in the background.
+- Tests: `test/p22/s7_ads_test.dart`, `test/p22/s7_banner_layout_test.dart`
+  (autopilot gate + run screens at 663 / 596 / 524); shots
+  `test/p22/s7_banner_shots_test.dart` → `build/p22_banner_shots/`.

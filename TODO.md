@@ -310,15 +310,20 @@ Linux test target. Work lives on the `feat/menu-v2` branch — **not pushed**,
       `ca-app-pub-2660521344509391/3758032081` (release builds only; debug keeps the TEST unit);
       Unity Ads bidding via `gma_mediation_unity` (mediation group 9050711652); no ads on
       Play pre-launch / Test Lab devices (`flappy_spikes/device` channel) — feat/ads-mediation
+- [x] PRD-2.2 §7.3 ad units (2026-10-12, in code: `AdMobBannerAds` / `AdMobInterstitialAds`
+      `androidUnitId`, release builds only): banner "Banner - gameplay"
+      `ca-app-pub-2660521344509391/8797133596` (mediation group 7736442819, Unity `Banner_Android`),
+      interstitial "Interstitial - after run" `ca-app-pub-2660521344509391/1357627279` (group
+      5294815708, Unity `Interstitial_Android`); Unity Game ID 6202807. Debug/profile: Google test
+      units (banner /9214589741, interstitial /1033173712) — feat/2.2 WP-7a
+- [x] Play declarations saved 2026-10-12 (ads, advertising ID, data safety) and the `AD_ID`
+      `tools:node="remove"` block removed (PRD-2.2 §7.13); "Send for review" is the owner's
 - [x] app-ads.txt live at https://hiesem.github.io/app-ads.txt (repo hiesem/hiesem.github.io;
       AdMob line + Unity's seller list — recheck Unity's list monthly)
 - [x] GDPR message "Flappy Spikes Android - GDPR" published 2026-10-09 (logo = Play icon)
 - [ ] Settings entry for UMP privacy options (re-open consent; required by Google's
       EU consent policy when `privacyOptionsRequirementStatus == required`)
 - [ ] Create + publish a US-states message; add DT Exchange (pending approval) and Moloco later
-- [ ] Play declarations for 2.0: tick "contains ads", complete the advertising-ID
-      and data-safety updates — then remove the `AD_ID` `tools:node="remove"`
-      block in `AndroidManifest.xml` (TODO comment there)
 - [ ] iOS (when it reopens): add `GADApplicationIdentifier` and switch ads from
       the Noop path to AdMob
 - [ ] Sign off the generated skin art

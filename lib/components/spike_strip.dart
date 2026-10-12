@@ -5,6 +5,7 @@ import 'package:flame_forge2d/flame_forge2d.dart';
 
 import '../game/config.dart';
 import '../game/flappy_game.dart';
+import '../game/playfield.dart';
 import '../game/tintable.dart';
 import '../run/config/squeeze_config.dart';
 import '../run/effects/spike_teeth.dart';
@@ -24,7 +25,8 @@ enum SpikeArt {
 /// with the world on a death, §3.0.5), backed by a static full-width body.
 /// Spike contact is plain math (`lib/run/physics/spike_walls.dart`). The
 /// 1.0 `ground_spikes.png` tiles remain as [SpikeArt.sprite] (tests).
-class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
+class SpikeStrip extends BodyComponent<FlappySpikesGame>
+    implements Tintable, PlayfieldResizable {
   SpikeStrip({required this.isCeiling})
     : super(priority: basePriority, renderBody: false);
 
@@ -149,6 +151,17 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
     }
     _applyTileVisibility();
     game.registerTintable(this);
+    game.registerResizable(this);
+  }
+
+  /// PRD-2.2 §7.5.2 / §7.5.4: the ground strip stays pinned to the
+  /// playfield's bottom (`viewHeight` − 44); in a run with a banner that is
+  /// [Config.bannerStripDrop] under the view's bottom edge, so 18 pt teeth +
+  /// 6 pt base show. The ceiling never moves.
+  @override
+  void onPlayfieldResize(double viewHeight) {
+    if (isCeiling || !isLoaded) return;
+    body.setTransform(Vector2(Config.worldWidth / 2, _centerY), 0);
   }
 
   @override
@@ -247,6 +260,7 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame> implements Tintable {
   @override
   void onRemove() {
     game.unregisterTintable(this);
+    game.unregisterResizable(this);
     super.onRemove();
   }
 }

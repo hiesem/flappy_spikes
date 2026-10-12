@@ -26,10 +26,19 @@ const List<String> kFakeAdOverlayImages = ['menu/close.png'];
 /// already granted. Swallows every tap so nothing below reacts.
 class FakeAdOverlay extends PositionComponent
     with HasGameReference<FlappySpikesGame>, GroupOpacity, TapCallbacks {
-  FakeAdOverlay({required this.placement, required this.fails})
-    : super(priority: 950);
+  FakeAdOverlay({this.placement, required this.fails, this.interstitial = false})
+    : assert(placement != null || interstitial),
+      super(priority: 950);
 
-  final AdPlacement placement;
+  /// The rewarded placement (null for the interstitial).
+  final AdPlacement? placement;
+
+  /// PRD-2.2 §7.10: the fake interstitial ("TEST AD", 3 s, no reward):
+  /// ends with [AdResult.completed] after the countdown or on close.
+  final bool interstitial;
+
+  double get _countdown =>
+      interstitial ? Config.fakeInterstitialSeconds : Config.fakeAdCountdown;
 
   /// Plays the "failed to load" variant.
   final bool fails;
@@ -96,7 +105,7 @@ class FakeAdOverlay extends PositionComponent
       ],
     );
     final placementLabel = MenuText(
-      placement.analyticsName.toUpperCase(),
+      interstitial ? 'AFTER RUN' : placement!.analyticsName.toUpperCase(),
       fontSize: Config.fakeAdPlacementFontSize,
       color: Config.menuPlum.withValues(alpha: 0.75),
       letterSpacingEm: 0.1,
@@ -111,7 +120,7 @@ class FakeAdOverlay extends PositionComponent
       anchor: Anchor.center,
     );
     final hint = MenuText(
-      'ESC / × TO CLOSE · NO REWARD',
+      interstitial ? 'ESC / × TO CLOSE' : 'ESC / × TO CLOSE · NO REWARD',
       fontSize: Config.fakeAdHintFontSize,
       color: Config.menuPlum.withValues(alpha: 0.6),
       letterSpacingEm: 0.06,
@@ -130,7 +139,7 @@ class FakeAdOverlay extends PositionComponent
 
   /// Seconds left on the countdown, rounded up (3, 2, 1).
   int get secondsLeft =>
-      (Config.fakeAdCountdown - _time).ceil().clamp(0, 1 << 20);
+      (_countdown - _time).ceil().clamp(0, 1 << 20);
 
   String get _messageText => fails
       ? 'Ad failed to load'
@@ -159,6 +168,11 @@ class FakeAdOverlay extends PositionComponent
       if (_time >= Config.fakeAdFailHold) _finish(AdResult.failed);
       return;
     }
+    if (interstitial) {
+      if (isLoaded) message.text = _messageText;
+      if (_time >= _countdown) _finish(AdResult.completed);
+      return;
+    }
     if (!_granted && _time >= Config.fakeAdCountdown) {
       _granted = true;
       message.textRenderer = TextPaint(
@@ -172,7 +186,9 @@ class FakeAdOverlay extends PositionComponent
   }
 
   /// Closes the ad early (Esc, ×, dim tap).
-  void close() => _finish(_granted ? AdResult.completed : AdResult.failed);
+  void close() => _finish(
+    _granted || (interstitial && !fails) ? AdResult.completed : AdResult.failed,
+  );
 
   void _finish(AdResult result) {
     if (!done) _result.complete(result);

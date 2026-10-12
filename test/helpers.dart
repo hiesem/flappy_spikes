@@ -156,6 +156,7 @@ FlappySpikesGame createRunTestGame({
   Monetization? monetization,
   int seed = 7,
   VersusService? versus,
+  DateTime Function()? clock,
 }) {
   SharedPreferences.setMockInitialValues(prefs);
   final game = FlappySpikesGame(
@@ -164,6 +165,7 @@ FlappySpikesGame createRunTestGame({
     monetization: monetization,
     soundEnabled: false,
     versus: versus,
+    clock: clock,
   );
   game.runSeed = seed;
   return game;

@@ -35,6 +35,10 @@ abstract final class E2EHooks {
   /// The autopilot plays the run (integration tests drive it).
   static bool autopilot = false;
 
+  /// PRD-2.2 §7.5.6: E2E builds run without the gameplay banner unless a
+  /// test asks for it.
+  static bool banner = false;
+
   static void reset() {
     force.clear();
     startHoopIndex = 0;
@@ -42,5 +46,6 @@ abstract final class E2EHooks {
     clockOffset = Duration.zero;
     skipVersusIntroWait = false;
     autopilot = false;
+    banner = false;
   }
 }

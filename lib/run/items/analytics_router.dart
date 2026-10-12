@@ -70,7 +70,12 @@ class AnalyticsRouter extends RunFeature {
       'hoop_index': s.hoopIndex,
       'hoop_kind': s.hoopKind?.element.storageId ?? 'none',
       'run_s': s.runSeconds.round(),
+      // PRD-2.2 §13.6 score = points; hoops = the hoop count.
+      'score': s.score,
       'hoops': s.hoopsPassed,
+      'max_streak': s.maxStreak,
+      // PRD-2.2 §11.4
+      'clean_passes': s.cleanPasses,
       'coins': s.coins,
       'saves': s.saves,
     });

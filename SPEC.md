@@ -975,3 +975,26 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `test/run/screens/s3_15_bonus_screen_test.dart`,
   `test/run/items/s3_15_s3_16_collect_autopilot_test.dart`; shots in
   `test/run/shots/collect_shots_test.dart`.
+
+## PRD-2.2 scoring: perfect zone, hoop rumble, points, results ticks, streak names (WP-G1, 2026-10-12)
+
+- DEVIATION (PRD-2.2 §11, replaces PRD-2 §3.0.4 5 / §3.4 "perfect pass = no
+  rim touched"): a pass is **perfect** only when no rim was touched **and**
+  the bird's centre crosses the plane within ±min(24, 0.2 × opening) pt of the
+  passed ring's centre (`PerfectConfig`, measured in the ring's moving frame
+  at the crossing: `Hoop.passOffset`; pairs / trains per ring). Three
+  outcomes: **perfect** (+2 coins, streak +1, banner, burst, tier sound,
+  shake), **clean** (no rim, outside the zone: +1 coin, streak reset, no
+  banner and no GRAZE notice, `point` + ring pulse, one knock) and **graze**
+  (a rim was touched: +1 coin, streak reset, GRAZE notice, no rumble at the
+  pass). Ride rings stay always perfect; only a perfect FEVER pass lights
+  the fire; a bullseye is always also perfect (±12 lies inside the zone).
+  `RunSummary.cleanPasses`, `run_end.clean_passes`.
+- DEVIATION (PRD-2.2 §10, supersedes PRD-2 §3.33 on these points): a rim
+  touch **knocks at the moment of contact** (`RimTouched`; a lethal saw touch
+  or a touch in the frame of a death doesn't rumble), a graze pass adds
+  nothing, a clean pass knocks, and the perfect-pass shake is **80 ms** at
+  255 (was 45 ms). Throttle, pickups and "shake wins" unchanged. The plugin's
+  `hasVibrator` / `hasAmplitudeControl` probe is logged once in debug builds.
+- Tests: `test/p22/s11_perfect_zone_test.dart`,
+  `test/p22/s10_hoop_rumble_test.dart`, `test/run/items/s3_33_rumble_test.dart`.

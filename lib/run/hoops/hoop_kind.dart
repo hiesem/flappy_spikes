@@ -30,11 +30,15 @@ class PassInfo {
   const PassInfo({
     required this.ring,
     this.perfect = false,
+    this.clean = false,
     this.rimTouched = false,
     this.duringRide = false,
   });
   final int ring;
   final bool perfect;
+
+  /// PRD-2.2 §11 no rim touched but outside the perfect zone.
+  final bool clean;
   final bool rimTouched;
   final bool duringRide;
 }

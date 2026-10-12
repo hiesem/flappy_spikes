@@ -92,6 +92,7 @@ class HoopPassed extends RunEvent {
     this.hoop, {
     this.ring = 0,
     this.perfect = false,
+    this.clean = false,
     this.rimTouched = false,
     this.bullseye = false,
     this.duringRide = false,
@@ -100,6 +101,10 @@ class HoopPassed extends RunEvent {
   final Hoop? hoop;
   final int ring;
   final bool perfect;
+
+  /// PRD-2.2 §11 a clean off-centre pass: no rim touched, outside the
+  /// perfect zone (non-perfect, not a graze).
+  final bool clean;
   final bool rimTouched;
   final bool bullseye;
   final bool duringRide;
@@ -155,7 +160,8 @@ class CoinsEarned extends RunEvent {
   final bool eggX2;
 }
 
-enum StreakCause { pass, graze, save, death, fever, ride }
+/// PRD-2.2 §11: [clean] = a clean off-centre pass reset the streak.
+enum StreakCause { pass, graze, clean, save, death, fever, ride }
 
 class StreakChanged extends RunEvent {
   const StreakChanged(this.oldStreak, this.newStreak, this.cause);
@@ -288,6 +294,7 @@ class StreakAtLeast extends RunEvent {
   const StreakAtLeast(this.value);
   final int value;
 }
+
 // endregion WP-3d
 // region WP-3e — collectables (PRD-2 §3.26 Star Trail)
 /// §3.0.3 a portal ride cleared an uncaught item on screen: it is gone

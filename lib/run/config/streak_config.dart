@@ -25,7 +25,11 @@ abstract final class StreakConfig {
   static const int feverMinStreak = 5;
 
   /// §3.4 Tier sounds: streak 1, 2 and 3+ (index = min(streak, 3) − 1).
-  static const List<Sfx> tierSounds = [Sfx.perfect1, Sfx.perfect2, Sfx.perfect3];
+  static const List<Sfx> tierSounds = [
+    Sfx.perfect1,
+    Sfx.perfect2,
+    Sfx.perfect3,
+  ];
 
   /// §5.3 Graze notice text ("GRAZE · streak lost").
   static const String grazeText = 'GRAZE · streak lost';
@@ -61,4 +65,29 @@ abstract final class StreakConfig {
 
   /// §5.3 Graze notice colour fallback (the stage foreground is used).
   static const Color grazeFallback = Color(0xFF828282);
+}
+
+/// PRD-2.2 §11 The perfect zone: a pass is perfect only when no rim was
+/// touched **and** the bird's centre crosses the plane within ±[halfWidth]
+/// of the passed ring's centre (measured in the ring's own moving frame,
+/// `PlaneEvent.offset` / `Hoop.passOffset`). Ride rings stay always perfect.
+abstract final class PerfectConfig {
+  /// PRD-2.2 §11.1 Zone half-width = [zoneFactor] × the ring's opening …
+  static const double zoneFactor = 0.2;
+
+  /// PRD-2.2 §11.1 … capped at this many pt (Big Hoops and saw openings
+  /// make passing easier, not perfects).
+  static const double zoneMax = 24;
+
+  /// PRD-2.2 §11.1 The zone half-width (pt) for a ring of [opening] pt:
+  /// ±23.6 at 118, ±18.4 at 92, ±24 from 120 up.
+  static double halfWidth(double opening) {
+    final w = zoneFactor * opening;
+    return w < zoneMax ? w : zoneMax;
+  }
+
+  /// PRD-2.2 §11.1 Whether a crossing [offset] pt from the ring centre is
+  /// inside the zone of a ring of [opening] pt (the edge counts as inside).
+  static bool inZone(double offset, double opening) =>
+      offset.abs() <= halfWidth(opening) + 1e-9;
 }

@@ -23,7 +23,8 @@ import 'normal.dart';
 /// places it). Fixed colours (not stage-tinted, no tier look), two render
 /// layers like every ring.
 ///
-/// A **perfect** pass (no rim touch) is the FEVER pass: the streak sets
+/// A **perfect** pass (no rim touch, inside the PRD-2.2 §11 zone) is the
+/// FEVER pass: the streak sets
 /// max(5, streak + 1) (`StreakFeature`), the bird catches fire and the
 /// FEVER! banner shows (`FeverFeature`), and this kind plays the ring's pass
 /// effect — three expanding rings of light (gold, white, orange, 0.09 s

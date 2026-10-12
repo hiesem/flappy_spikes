@@ -52,8 +52,9 @@ void main() {
   }, gameSize: Vector2(320, 711));
 
   tester.testGameWidget(
-    '§3.33 mapping: perfect pass → shake, non-perfect pass → knock, '
-    'pickup → knock; the shake never grows with the streak',
+    '§3.33 / PRD-2.2 §10 mapping: perfect pass → shake, clean off-centre '
+    'pass → knock, graze pass → nothing (the touch knocked), pickup → '
+    'knock; the shake never grows with the streak',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await boot(game);
@@ -63,6 +64,11 @@ void main() {
       frame(game);
       expect(log, [RumbleKind.shake]);
       wait(game, .1);
+      run.debugPass(perfect: false, clean: true);
+      frame(game);
+      expect(log, [RumbleKind.shake, RumbleKind.knock]);
+      wait(game, .1);
+      // PRD-2.2 §10.1 a graze pass adds nothing at the pass.
       run.debugPass(perfect: false);
       frame(game);
       expect(log, [RumbleKind.shake, RumbleKind.knock]);
@@ -78,7 +84,7 @@ void main() {
         frame(game);
       }
       expect(log, List.filled(10, RumbleKind.shake));
-      expect(Rumble.shakeMs, 45);
+      expect(Rumble.shakeMs, 80); // PRD-2.2 §10.3
       expect(Rumble.shakeAmplitude, 255);
       expect(Rumble.knockMs, 15);
       expect(Rumble.knockAmplitude, 90);

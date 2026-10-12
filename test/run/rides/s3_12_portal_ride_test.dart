@@ -227,9 +227,10 @@ void main() {
             rumbleLog(game).where((k) => k == RumbleKind.shake).length,
             greaterThanOrEqualTo(11),
           );
-          // §3.12 normal hoops resume ≈ 1 s after the landing.
+          // PRD-2.2 §18.3 (supersedes §3.12 "≈ 1 s after the landing"):
+          // the first ring is passed ≈ 2 s after control returns.
           expect(tr.firstHoopAt, isNotNull);
-          expect(tr.firstHoopAt! - tr.landedAt, closeTo(1.0, .25));
+          expect(tr.firstHoopAt! - tr.endAt, closeTo(2.0, .25));
         },
       );
     }

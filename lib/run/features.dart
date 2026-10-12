@@ -12,6 +12,7 @@ import 'items/jar.dart'; // WP-3e
 import 'items/piggy.dart'; // WP-3e
 import 'items/star_trail_feature.dart'; // WP-3e
 import 'items/shield.dart';
+import 'items/sound_preload.dart'; // WP-G3
 import 'items/met_elements.dart';
 import 'items/rumble_router.dart';
 import 'items/scoring.dart';
@@ -97,6 +98,9 @@ List<RunFeature> buildRunFeatures() => [
   FeathersFeature(),
   PuzzleFeature(),
   // endregion WP-4a
+  // region WP-G3 — ride / power-up sound preload (PRD-2.2 §18.4)
+  SoundPreloadFeature(),
+  // endregion WP-G3
   // region WP-2d — revive rules (PRD-2 §3.14); keep last
   ReviveRulesFeature(),
   // endregion WP-2d

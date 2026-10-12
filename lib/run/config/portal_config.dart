@@ -124,9 +124,17 @@ abstract final class PortalConfig {
   /// §5.12b Speed lines thin out over this (s) of the glide.
   static const double linesThinOut = 1.4;
 
-  /// §3.12 Normal hoops resume: the first one reaches the bird this long
-  /// after the landing (s) (mock: ≈ 1 s).
-  static const double resumeAfterLanding = 1;
+  /// PRD-2.2 §18.3 Normal hoops resume: the first ring's plane reaches the
+  /// bird this long after control returns (end of the glide + settle), at
+  /// cruise (s; supersedes PRD-2 §3.12 "≈ 1 s after the landing").
+  static const double firstRingAfterControl = 2.0;
+
+  // ------------------------------------------- PRD-2.2 §18.1 circle in scene
+
+  /// PRD-2.2 §18.1 In a ride scene the score circle (in the theme's
+  /// `circleColor`, digits `circleDigits`) and the banners draw at this
+  /// opacity.
+  static const double sceneCircleOpacity = .5;
 
   // ------------------------------------------------------------- art / z
 
@@ -168,9 +176,19 @@ abstract final class PortalConfig {
   static const Color cannonTintTop = Color(0x553B2A8A);
   static const Color cannonTintBottom = Color(0x3322E6FF);
 
-  /// §5.12b Z-order: ride world under the score circle; cannon 11; the
-  /// bird is raised to 12 after the shot; effects over the hoop fronts.
-  static const int worldPriority = RunLayer.scoreCircle - 50;
+  /// §5.12b Z-order; PRD-2.2 §18.1 / §18.5: the scene's backdrop under the
+  /// score circle (−100), the scene banner layer just over the circle, the
+  /// scene's objects over both (all below the guides −20 and the hoop
+  /// backs −10); cannon 11; the bird is raised to 12 after the shot;
+  /// effects over the hoop fronts.
+  static const int backdropPriority = RunLayer.scoreCircle - 50;
+  static const int sceneBannerPriority = RunLayer.scoreCircle + 1;
+  static const int worldPriority = RunLayer.scoreCircle + 40;
+
+  /// PRD-2.2 §18.1 on the way back (launch flight, glide) the circle and
+  /// the banner draw above the wash (the objects layer).
+  static const int circleOverWashPriority = worldPriority + 1;
+  static const int bannerOverWashPriority = worldPriority + 2;
   static const int underBirdPriority = RunLayer.bird - 1;
   static const int frontPriority = RunLayer.rideCannon;
   static const int birdAfterShot = RunLayer.hoopFront;

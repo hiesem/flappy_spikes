@@ -226,6 +226,117 @@ class ScoreHud extends PositionComponent implements OpacityProvider, Tintable {
     }
   }
 
+  // region WP-G3 — the circle inside a ride scene (PRD-2.2 §18.1)
+  double _sceneMix = 0;
+  double _sceneAlpha = .5;
+  Color _sceneCircle = const Color(0xFF828282);
+  Color _sceneDigits = const Color(0xFF000000);
+  final Paint _scenePaint = Paint();
+  final Map<String, TextPainter> _sceneText = {};
+
+  /// PRD-2.2 §18.1 how far the circle shows its scene look (0 = the normal
+  /// grey circle, 1 = the scene's colours at [sceneAlpha]); in between the
+  /// two crossfade (normal at 1 − mix, scene at mix · [sceneAlpha]).
+  double get sceneMix => _sceneMix;
+
+  /// The scene look's opacity (`PortalConfig.sceneCircleOpacity`).
+  double get sceneAlpha => _sceneAlpha;
+
+  /// The scene look's circle / digit colours (tests).
+  Color get sceneCircleColor => _sceneCircle;
+  Color get sceneDigitColor => _sceneDigits;
+
+  /// PRD-2.2 §18.6 the circle's total visible opacity now: the normal
+  /// look's share plus the scene look's share (× the HUD's fade).
+  double get visibleOpacity =>
+      _opacity * ((1 - _sceneMix) + _sceneAlpha * _sceneMix);
+
+  /// PRD-2.2 §18.1 shows the circle in a ride scene's look: [circle] /
+  /// [digits] at [alpha], crossfaded with the normal look by [mix].
+  /// Still the one score circle (PRD-2 §3.0.9): only its layer (the ride
+  /// sets the priority), opacity and tint change.
+  void setSceneLook({
+    required Color circle,
+    required Color digits,
+    required double mix,
+    double alpha = .5,
+  }) {
+    _sceneCircle = circle;
+    _sceneDigits = digits;
+    _sceneMix = mix.clamp(0.0, 1.0);
+    _sceneAlpha = alpha.clamp(0.0, 1.0);
+  }
+
+  /// Back to the normal look only.
+  void clearSceneLook() => _sceneMix = 0;
+
+  @override
+  void renderTree(Canvas canvas) {
+    final mix = _sceneMix;
+    if (mix <= 0 || !isLoaded) {
+      super.renderTree(canvas);
+      return;
+    }
+    final bounds = Rect.fromCenter(
+      center: Offset(position.x, position.y),
+      width: Config.scoreCircleSize.x * 1.4,
+      height: Config.scoreCircleSize.y * 1.4,
+    );
+    final normal = 1 - mix;
+    if (normal > 0) {
+      canvas.saveLayer(bounds, Paint()..color = Color.fromRGBO(0, 0, 0, normal));
+      super.renderTree(canvas);
+      canvas.restore();
+    }
+    final a = _opacity * _sceneAlpha * mix;
+    if (a <= 0) return;
+    canvas
+      ..save()
+      ..translate(position.x, position.y);
+    // The circle: the same sprite, modulated by the scene colour.
+    _scenePaint
+      ..colorFilter = ColorFilter.mode(_sceneCircle, BlendMode.modulate)
+      ..color = Color.fromRGBO(255, 255, 255, a);
+    _circle.sprite?.render(
+      canvas,
+      size: Config.scoreCircleSize,
+      anchor: Anchor.center,
+      overridePaint: _scenePaint,
+    );
+    // The digits in the scene's dark colour, same size / pop as the normal.
+    final text = _scoreText.text;
+    final size = textFontSize;
+    final key = '$text|$size';
+    if (_sceneText.length > 16) _sceneText.clear();
+    final tp = _sceneText[key] ??= TextPainter(
+      text: TextSpan(
+        text: text,
+        style: _baseStyle.copyWith(fontSize: size, color: const Color(0xFFFFFFFF)),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final k = _scoreText.scale.x;
+    canvas
+      ..scale(k)
+      ..saveLayer(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: tp.width + 8,
+          height: tp.height + 8,
+        ),
+        Paint()
+          ..colorFilter = ColorFilter.mode(
+            _sceneDigits.withValues(alpha: _sceneDigits.a * a),
+            BlendMode.srcIn,
+          ),
+      );
+    tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2));
+    canvas
+      ..restore()
+      ..restore();
+  }
+  // endregion WP-G3
+
   // region WP-3g — spike squeeze (PRD-2 §3.17)
   double _cover = 0;
   Color _coverText = const Color(0xFF828282);

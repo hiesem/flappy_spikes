@@ -168,6 +168,15 @@ abstract class RideTheme {
   /// §5.12b The way-back wash tint (top → bottom).
   (Color, Color) get washTint;
 
+  // region WP-G3 — the score circle in the scene (PRD-2.2 §18.1)
+  /// PRD-2.2 §18.1 The score circle's colour in this scene (drawn at
+  /// `PortalConfig.sceneCircleOpacity`).
+  Color get circleColor;
+
+  /// PRD-2.2 §18.1 The score digits' colour in this scene (its dark tone).
+  Color get circleDigits;
+  // endregion WP-G3
+
   /// §5.12b sounds per cue.
   Map<RideCue, Sfx> get sounds;
 
@@ -195,14 +204,24 @@ abstract class RideTheme {
   /// Builds the theme's world (seeded art, path-anchored props).
   void init(RideView v) {}
 
-  /// The ride world (path coordinates through [cam]).
+  /// PRD-2.2 §18.5 The ride world's backdrop (sky, gradient, stars, grid,
+  /// light shafts, clouds): drawn under the score circle and the banner.
+  void paintBackdrop(Canvas c, RideView v, Vector2 cam) {}
+
+  /// The ride world's objects (planets, rocks, crystals, lava, ship, fish,
+  /// bumpers, the funnel, the ground …), path coordinates through [cam]:
+  /// drawn over the score circle and the banner (PRD-2.2 §18.1).
   void paintWorld(Canvas c, RideView v, Vector2 cam);
 
   /// Drawn over the bird during the ride (the cannon).
   void paintWorldFront(Canvas c, RideView v) {}
 
-  /// The exit / launch scene, behind the bird ([et] runs on through the
-  /// flight; the scene is drawn at −[off]).
+  /// PRD-2.2 §18.5 The backdrop of an exit scene that fills the screen
+  /// ([exitFill]: volcano, sea, pinball), under the score circle.
+  void paintExitBackdrop(Canvas c, RideView v, double et, Offset off) {}
+
+  /// The exit / launch scene's objects, behind the bird ([et] runs on
+  /// through the flight; the scene is drawn at −[off]).
   void paintExit(Canvas c, RideView v, double et, Offset off) {}
 
   /// The exit / launch scene over the bird.

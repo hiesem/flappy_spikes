@@ -47,6 +47,13 @@ class PinballTheme extends RideTheme {
     RideSeg.line(300),
   ]);
 
+  /// PRD-2.2 §18.1 the score circle in this scene.
+  @override
+  Color get circleColor => const Color(0xFF7C4DFF);
+
+  @override
+  Color get circleDigits => const Color(0xFF141640);
+
   @override
   (Color, Color) get washTint => (const Color(0xFFD3CFF3), const Color(0xFFE8D8F3));
 
@@ -90,7 +97,7 @@ class PinballTheme extends RideTheme {
   double _flipY(RideView v) => v.fromBottom(600);
 
   @override
-  void paintWorld(Canvas c, RideView v, Vector2 cam) {
+  void paintBackdrop(Canvas c, RideView v, Vector2 cam) {
     c.drawRect(Rect.fromLTWH(0, 0, v.w, v.h), fillOf(const Color(0xFF141640)));
     final grid = strokeOf(const Color(0x2E7C4DFF), 1);
     final ox = -((cam.x * .6) % 40), oy = -((cam.y * .6) % 40);
@@ -100,6 +107,10 @@ class PinballTheme extends RideTheme {
     for (var y = oy; y < v.h; y += 40) {
       c.drawLine(Offset(0, y), Offset(v.w, y), grid);
     }
+  }
+
+  @override
+  void paintWorld(Canvas c, RideView v, Vector2 cam) {
     c.drawRect(
       Rect.fromLTWH(10, 64, v.w - 20, v.h - 128),
       strokeOf(const Color(0xFFFF4FB7), 4),
@@ -143,7 +154,7 @@ class PinballTheme extends RideTheme {
   }
 
   @override
-  void paintExit(Canvas c, RideView v, double et, Offset off) {
+  void paintExitBackdrop(Canvas c, RideView v, double et, Offset off) {
     c.drawRect(Rect.fromLTWH(0, 0, v.w, v.h), fillOf(const Color(0xFF0E1030)));
     c
       ..save()
@@ -155,7 +166,15 @@ class PinballTheme extends RideTheme {
       ..drawRect(
         Rect.fromLTWH(10, 64, v.w - 20, v.h - 128),
         strokeOf(const Color(0xFFFF4FB7), 4),
-      );
+      )
+      ..restore();
+  }
+
+  @override
+  void paintExit(Canvas c, RideView v, double et, Offset off) {
+    c
+      ..save()
+      ..translate(-off.dx, -off.dy);
     final smack = et > .55 && et < .75;
     final fy = _flipY(v);
     _flip(c, Offset(100, fy), .45 - (smack ? .7 : 0));

@@ -1209,3 +1209,29 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   it. The comet activity (§27) lasts until the landing is done
   (`RunState.cometLanding`). The ease-out, the pop, `pu_comet_end` and "no
   invulnerability afterwards" are unchanged.
+- DEVIATION (PRD-2.2 §18, supersedes for portal rides the PRD-2 §3.12 /
+  §5.12b layer order of the ride world and the score circle, the "control
+  returns" moment and the first-ring timing): **portal rides polish.**
+  - In all six rides the score circle (and the banners) sit **between the
+    scene's backdrop and its objects** (`RideTheme.paintBackdrop` /
+    `paintWorld`, `paintExitBackdrop` / `paintExit`) at **50 %** in the
+    scene's colour with the digits in its dark tone (cannon #7C4DFF /
+    #3B2A8A, space #6E5BD6 / #1F1252, volcano #C2410C / #2A140D, sea
+    #7FC8EE / #0B3A6B, pinball #7C4DFF / #141640, storm #8C97AB / #252C3A);
+    banners keep their colours at 50 %. At the ride start the normal circle
+    fades out as the scene fades in; on the way back the circle and banners
+    are drawn above the wash and crossfade to the normal look over the
+    launch flight (`1 − smoothstep(ft / flyTime)`), normal at the glide
+    start; the circle never disappears (visible ≥ 50 %).
+  - Control returns with one normal flap (`Bird.flap()`), no slow motion,
+    no text.
+  - The first ring's plane reaches the bird **2.0 s after control returns**
+    (`PortalConfig.firstRingAfterControl`, at cruise; was ≈ 1 s after the
+    landing, i.e. ≈ 0.4 s after control).
+  - Every ride sound plays: the pools of `pu_portal`, `pu_land`, `flap` and
+    the theme's cues are created when the portal hoop spawns
+    (`SoundPreloadFeature`); also the comet star's and the capsules' cues.
+- Tests: `test/p22/s16_comet_zigzag_test.dart`,
+  `test/p22/s17_comet_landing_test.dart`,
+  `test/p22/s18_portal_rides_polish_test.dart`; shots
+  `test/p22/s18_portal_rides_shots_test.dart` (→ `build/menu_shots/p22/s18/`).

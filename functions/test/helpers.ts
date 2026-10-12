@@ -3,7 +3,7 @@ import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { processPlayerWrite, type ProcessOptions } from '../src/pools.js';
-import { encodeDeltas, encodeFlags } from '../src/timeline.js';
+import { encodeDeltas, encodeEntries } from '../src/timeline.js';
 import type { Look, PlayerDoc, RunEntry } from '../src/schema.js';
 
 export const PROJECT = process.env.GCLOUD_PROJECT ?? 'demo-flappy-spikes';
@@ -32,17 +32,20 @@ export interface RunOpts {
   best?: number;
   deltas?: number[];
   flags?: number[];
+  /** PRD-2.2 §13.5 v2 entry values (default 1 each). */
+  values?: number[];
   tsMs?: number;
   name?: string;
   platform?: 'android' | 'ios';
   end?: number;
 }
 
-/** A plain plausible run: one point per score, 1.2 s apart, no flags. */
+/** A plain plausible v2 run: one entry of value 1 per point, 1.2 s apart, no flags. */
 export function makeRun(o: RunOpts = {}): RunEntry {
   const score = o.score ?? 12;
   const deltas = o.deltas ?? Array.from({ length: score }, () => 120);
   const flags = o.flags ?? deltas.map(() => 0);
+  const values = o.values ?? flags.map(() => 1);
   return {
     runId: o.runId ?? uniq('run'),
     score,
@@ -54,7 +57,7 @@ export function makeRun(o: RunOpts = {}): RunEntry {
     platform: o.platform ?? 'android',
     tl: encodeDeltas(deltas),
     end: o.end ?? 80,
-    fl: encodeFlags(flags),
+    fl: encodeEntries(flags, values),
   };
 }
 

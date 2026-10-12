@@ -95,7 +95,10 @@ void main() {
         final scoreBefore = run.state.score;
         expect(await passHoopAt(game, h, dy: dy), isTrue);
         expect(h.takenRing, 0, reason: 'passed, not missed');
-        expect(run.state.score, scoreBefore + 1);
+        // PRD-2.2 §11 / §13.1: a bullseye is a perfect pass (2 points at
+        // streak 1) plus the +3 bonus in points; outside the band at 28 pt
+        // it is a clean off-centre pass (1 point).
+        expect(run.state.score, scoreBefore + (hit ? 2 + 3 : 1));
         final bonus = events
             .whereType<CoinsEarned>()
             .where((e) => e.source == CoinSource.bullseye)

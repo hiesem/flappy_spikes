@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { initializeTestEnvironment, RulesTestEnvironment } from '@firebase/rules-unit-testing';
 import { doc, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
 import { poolId, RATE_COLLECTION, SHARDS } from '../src/schema.js';
-import { encodeDeltas, encodeFlags } from '../src/timeline.js';
+import { encodeDeltas, encodeEntries } from '../src/timeline.js';
 import { auth, DAY, db, fakeJwt, LOOK, PROJECT, uniq, waitFor } from './helpers.js';
 
 const LEVEL = 5; // best 400..599: no other suite writes this level
@@ -28,7 +28,7 @@ function clientRun(score: number, deltas?: number[]) {
     platform: 'ios',
     tl: encodeDeltas(d),
     end: 64,
-    fl: encodeFlags(d.map(() => 0)),
+    fl: encodeEntries(d.map(() => 0), d.map(() => 1)),
   };
 }
 

@@ -5,7 +5,8 @@ import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
 
-/// §3.13 WIN if my final score is higher, LOSE if lower, DRAW if equal.
+/// §3.13 WIN if my final score is higher, LOSE if lower, DRAW if equal
+/// (PRD-2.2 §13.5: the scores are points).
 DuelResult duelOf(int mine, int theirs) => mine > theirs
     ? DuelResult.win
     : mine < theirs
@@ -21,10 +22,11 @@ int bonusFor(DuelResult r) => switch (r) {
 
 /// The versus side of a run (PRD-2 §3.13, ARCH §1.13 / §11):
 ///
-/// - **the timeline** — every [ScoreChanged] records one entry per point on
-///   `runClock` (a pair's +5 is five points at the same time with the
-///   event's `gift` flag; ride / train points carry theirs), so the
-///   uploaded timeline's point count always equals the score. `runClock`
+/// - **the timeline** (format v2, PRD-2.2 §13.5) — every [ScoreChanged]
+///   records one entry on `runClock` whose value is the points it added (a
+///   pass 1 / 2 / the streak, a pair's +5 gift, a coin bonus) with the
+///   event's flags (ride / train / gift / bonus), so the uploaded values
+///   always sum to the score. `runClock`
 ///   stops in pause, the revive offer and the phoenix and slows with the
 ///   Hourglass, so the recording matches what the opponent bar replays;
 /// - **the duel** — when the run ends ([RunEnding], before the summary) with
@@ -47,9 +49,11 @@ class VersusRecorder extends RunFeature {
   void _onScore(ScoreChanged e) {
     final c = _c;
     if (c == null) return;
-    for (var i = e.oldScore; i < e.newScore; i++) {
-      c.s.timeline.addPoint(c.s.runClock, flag: e.flags);
-    }
+    c.s.timeline.addEntry(
+      c.s.runClock,
+      e.newScore - e.oldScore,
+      flag: e.flags,
+    );
   }
 
   void _onEnding(RunEnding e) {

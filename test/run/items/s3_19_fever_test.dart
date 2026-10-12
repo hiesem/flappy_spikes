@@ -117,7 +117,7 @@ void main() {
 
   tester.testGameWidget(
     '§3.19 a perfect FEVER pass: streak max(5, streak + 1), the bird '
-    'catches fire, FEVER! over SOARING ×5, +1 score / +2 coins only, '
+    'catches fire, FEVER! over SOARING ×5, 5 points / +2 coins only, '
     'perfect_3 + the FEVER sound, the pass effect, analytics',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
@@ -138,7 +138,8 @@ void main() {
       expect(h.takenRing, 0);
       expect(run.state.streak, 5);
       expect(run.state.onFire, isTrue);
-      expect(run.state.score, score0 + 1);
+      // PRD-2.2 §13.1 the FEVER pass follows the new streak (5).
+      expect(run.state.score, score0 + 5);
       final coins = events.whereType<CoinsEarned>().toList();
       expect(coins.single.source, CoinSource.perfect);
       expect(coins.single.amount, 2);

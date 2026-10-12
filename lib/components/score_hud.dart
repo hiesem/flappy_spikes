@@ -24,6 +24,45 @@ class ScoreHud extends PositionComponent implements OpacityProvider, Tintable {
   late final SpriteComponent _circle;
   late final FadableTextComponent _scoreText;
 
+  // region PRD-2.2 §13.2 — points count-up and shrink-to-fit
+  /// PRD-2.2 §13.2 The score font size up to [fullDigits] digits (pt).
+  static const double fontSize = 125;
+
+  /// PRD-2.2 §13.2 Up to this many digits the score keeps [fontSize].
+  static const int fullDigits = 3;
+
+  /// PRD-2.2 §13.2 A gain of more than 1 counts up over this long (s,
+  /// ease-out cubic).
+  static const double countDuration = .3;
+
+  /// PRD-2.2 §13.2 The small pop at the end of a count-up: peak scale and
+  /// length (s).
+  static const double popScale = 1.12;
+  static const double popDuration = .16;
+
+  /// PRD-2.2 §13.2 The font size for a [digits]-digit score: 125 pt up to 3
+  /// digits; from 4 it shrinks so the number keeps the width (and the side
+  /// margin in the circle) of a 3-digit number: 125 × 3 / digits (≈ 94 pt
+  /// for 4, 75 for 5). LVDC digits share one advance width (the '1'
+  /// aside), so it changes only with the digit count.
+  static double fontSizeFor(int digits) =>
+      digits <= fullDigits ? fontSize : fontSize * fullDigits / digits;
+
+  /// The score shown right now (counting up toward [score]).
+  int get shownScore => _shown.round();
+
+  /// The target score.
+  int get score => _score;
+
+  /// Whether a count-up is running.
+  bool get counting => _countT != null;
+
+  double _shown = 0;
+  double _from = 0;
+  double? _countT;
+  double? _popT;
+  // endregion PRD-2.2 §13.2
+
   int _score = 0;
   double _opacity = 1;
   Color _tint = const Color(0xFF828282);
@@ -42,7 +81,7 @@ class ScoreHud extends PositionComponent implements OpacityProvider, Tintable {
       text: '0',
       style: const TextStyle(
         fontFamily: Config.scoreFont,
-        fontSize: 125,
+        fontSize: fontSize,
         color: Color(0xFFF1F1F1),
       ),
       anchor: Anchor.center,
@@ -53,19 +92,75 @@ class ScoreHud extends PositionComponent implements OpacityProvider, Tintable {
   }
 
   void _apply() {
-    _scoreText.text = '$_score';
+    _showText();
     _circle.opacity = _opacity;
     _scoreText.opacity = _opacity;
     _circle.paint.colorFilter = ColorFilter.mode(_circleTint, BlendMode.modulate);
     _scoreText.setColor(_textColor);
   }
 
+  /// PRD-2.2 §13.2 sets the score (points). A gain of more than 1 (or any
+  /// gain during a count) counts up from the shown value to the new total
+  /// over [countDuration] and ends with a small pop; a +1 or a reset shows
+  /// at once.
   void setScore(int score) {
+    final old = _score;
     _score = score;
-    if (isLoaded) {
-      _scoreText.text = '$_score';
+    if (score > old && (score - _shown.round() > 1 || counting)) {
+      _from = _shown;
+      _countT = 0;
+    } else {
+      _countT = null;
+      _shown = score.toDouble();
+      if (score <= old) _popT = null;
+    }
+    if (isLoaded) _showText();
+  }
+
+  void _showText() {
+    final v = _shown.round();
+    final text = '$v';
+    _scoreText.setFontSize(fontSizeFor(text.length));
+    _scoreText.text = text;
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    final t = _countT;
+    if (t != null) {
+      final nt = t + dt;
+      final u = (nt / countDuration).clamp(0.0, 1.0);
+      final e = 1 - math.pow(1 - u, 3).toDouble();
+      _shown = _from + (_score - _from) * e;
+      if (u >= 1) {
+        _shown = _score.toDouble();
+        _countT = null;
+        _popT = 0;
+      } else {
+        _countT = nt;
+      }
+      if (isLoaded) _showText();
+    }
+    final p = _popT;
+    if (p != null && isLoaded) {
+      final np = p + dt;
+      final u = (np / popDuration).clamp(0.0, 1.0);
+      final k = u < .5 ? u / .5 : (1 - u) / .5;
+      _scoreText.scale.setAll(1 + (popScale - 1) * k);
+      _popT = u >= 1 ? null : np;
+      if (u >= 1) _scoreText.scale.setAll(1);
     }
   }
+
+  /// The score text's laid-out width at its current size (tests).
+  double get textWidth => _scoreText.size.x;
+
+  /// The score text's current font size (tests).
+  double get textFontSize => _scoreText.textRenderer.style.fontSize ?? fontSize;
+
+  /// Whether the end-of-count pop is running (tests).
+  bool get popping => _popT != null;
 
   /// The watermark color follows the background color.
   void setScoreColor(Color color) {

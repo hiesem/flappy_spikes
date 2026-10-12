@@ -922,7 +922,8 @@ void main() {
     debugPrint('VERSUS uid $uid');
 
     // One real-shaped run: 5 points 1.2 s apart (the cheat filter wants
-    // ≥ 0.9 s between plain points and score ≥ 3).
+    // ≥ 0.9 s between plain points and score ≥ 3); timeline v2 (PRD-2.2
+    // §13.5, one entry of value 1 each).
     final t = RunTimeline();
     for (var i = 1; i <= 5; i++) {
       t.addPoint(i * 1.2);
@@ -976,6 +977,21 @@ void main() {
     expect(mine!.runId, entry.runId);
     expect(mine.score, 5);
     debugPrint('VERSUS pool hit after ${sw.elapsed.inSeconds} s');
+    // PRD-2.2 §13.5 timeline v2: our run and every (converted or new) run in
+    // the low-level pools replays to its score; v1 entries would be skipped.
+    expect(mine.run.timeline.points, 5);
+    var replayed = 0;
+    for (var l = 0; l <= 2; l++) {
+      for (var shard = 0; shard < VersusConfig.shards; shard++) {
+        for (final p in await backend.readPool('${l}_$shard')) {
+          final o = p.toOpponent();
+          expect(o.timeline.points, p.score, reason: 'pool ${l}_$shard ${p.runId}');
+          expect(o.scoreAt(o.timeline.lengthSeconds + 1), p.score);
+          replayed++;
+        }
+      }
+    }
+    debugPrint('VERSUS replayed $replayed pool runs (v2)');
 
     final deleted = await backend.deleteMyData().timeout(
       const Duration(seconds: 60),

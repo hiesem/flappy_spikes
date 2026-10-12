@@ -64,13 +64,15 @@ class RunEntry {
   /// 'android' | 'ios' (analytics only, never used for matching).
   final String platform;
 
-  /// base64 of uint16 LE centisecond deltas, one per point.
+  /// base64 of uint16 LE centisecond deltas, one per timeline entry.
   final String tl;
 
   /// cs from the last point to the death.
   final int end;
 
-  /// base64, one flag byte per point (ride 1 | train 2 | gift 4).
+  /// Timeline format v2 (PRD-2.2 §13.5): base64 of the version byte 2,
+  /// then per entry the flag byte (ride 1 | train 2 | gift 4 | bonus 8) and
+  /// the entry's value (uint16 LE). The values sum to [score].
   final String fl;
 
   RunTimeline get timeline => RunTimeline.decode(tl, fl, end);
@@ -99,12 +101,18 @@ class RunEntry {
     'fl': fl,
   };
 
-  /// Reads a stored / pooled entry; null when the shape is wrong. `ts` may
-  /// be a [DateTime] or epoch ms (the backend converts `Timestamp`s first).
+  /// Reads a stored / pooled entry; null when the shape is wrong or the
+  /// timeline is not format v2 (PRD-2.2 §13.5: v1 runs are not replayed).
+  /// `ts` may be a [DateTime] or epoch ms (the backend converts
+  /// `Timestamp`s first).
   static RunEntry? fromMap(Map<Object?, Object?> m) {
     try {
       final ts = m['ts'];
       final look = m['look'];
+      final tl = m['tl']! as String;
+      final fl = m['fl']! as String;
+      final end = (m['end']! as num).toInt();
+      if (RunTimeline.tryDecode(tl, fl, end) == null) return null;
       return RunEntry(
         runId: m['runId']! as String,
         score: (m['score']! as num).toInt(),
@@ -118,9 +126,9 @@ class RunEntry {
         avatar: (m['avatar'] as String?) ?? '',
         look: look is Map ? lookFromMap(look) : Look.defaults,
         platform: (m['platform'] as String?) ?? 'android',
-        tl: m['tl']! as String,
-        end: (m['end']! as num).toInt(),
-        fl: m['fl']! as String,
+        tl: tl,
+        end: end,
+        fl: fl,
       );
     } catch (_) {
       return null;

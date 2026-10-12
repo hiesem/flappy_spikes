@@ -1006,6 +1006,31 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `screen_streak_names.html`; the old fixed per-tier sizes are retired).
   Tier effects (cap 10), sounds, look, place and timing are unchanged;
   analytics keep sending the streak number.
-- Tests: `test/p22/s11_perfect_zone_test.dart`,
+- DEVIATION (PRD-2.2 §13, supersedes PRD-2 "+1 point per hoop", §3.0.4 5 /
+  §3.4): the **score is points**. A non-perfect pass (graze or clean) is 1
+  point, a perfect pass max(2, streak) with the streak *after* the pass (×3 =
+  3, ×12 = 12, no cap; FEVER and ride rings follow their streak); every coin
+  bonus (bullseye, train, pair +10, Lucky Spin, Star Trail, jar, piggy, Coin
+  Frenzy, switch, puzzle) also pays its amount in points (`RunContext.earn`,
+  `PointFlags.bonus`); the pair "+5 score" gift is +5; the chick doubles
+  points like coins (not the puzzle bonus); the versus win / draw bonus pays
+  0 points. **Coins are unchanged** (1 / 2 per hoop + bonuses). The big
+  circle shows points and counts up over 0.3 s (ease-out) with a small pop
+  for gains above 1; from 4 digits its font shrinks to 125 × 3 / digits so
+  the number keeps a 3-digit width. NEW BEST, levels, the leaderboard and
+  versus use points; colour stages, revive eligibility, the opening curve
+  and the director still count hoops. `run_end` sends `score` (points),
+  `hoops` and `max_streak`. The streak feature now runs before scoring.
+- DEVIATION (PRD-2.2 §13.5, versus timeline **v2**): one entry per score
+  change with its value (`fl` = version byte 2 + flag byte + uint16 value per
+  entry; the 11 `RunEntry` keys and the rules are unchanged); the server
+  checks sum of values == score, the 0.9 s gap per plain entry (ride / train
+  / gift / bonus exempt) and a plausibility cap per entry (pass ≤ 2 × (pass
+  entries so far + 5), bonus ≤ 250, gift ≤ 10), and rejects v1 uploads
+  (`version`); the client skips v1 pool entries. The 2.1 pool runs are
+  converted once (value 1 per entry) by `functions/scripts/convert_pools_v2.ts`.
+- Tests: `test/p22/s13_points_test.dart`, `test/p22/s13_versus_timeline_test.dart`,
+  `test/p22/s13_score_circle_shots_test.dart`, `functions/test/timeline.test.ts`,
+  `functions/test/convert.test.ts`, `test/p22/s11_perfect_zone_test.dart`,
   `test/p22/s10_hoop_rumble_test.dart`, `test/run/items/s3_33_rumble_test.dart`,
   `test/p22/s29_streak_names_test.dart`.

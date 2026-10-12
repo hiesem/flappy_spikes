@@ -3,6 +3,7 @@ import 'dart:math';
 import '../game/flappy_game.dart';
 import '../game/sound.dart';
 import '../menu/wallet.dart';
+import '../versus/timeline.dart' show PointFlags;
 import 'director/run_director.dart';
 import 'mistakes.dart';
 import 'run_controller.dart';
@@ -44,6 +45,11 @@ class RunContext {
 
   /// The only in-run coin path (ARCH §2.7): the chick's ×2, the wallet at
   /// once (kept if the run ends), YOUR REWARD, [CoinsEarned].
+  ///
+  /// PRD-2.2 §13.6 a **coin bonus** (every source but the hoop / perfect
+  /// pass coins and the versus win / draw bonus) also adds the same,
+  /// already doubled, amount in **points** ([PointFlags.bonus]) — one
+  /// place, so every bonus is covered.
   void earn(int coins, CoinSource source) {
     if (coins <= 0) return;
     final x2 = s.egg?.stage == EggStage.chick;
@@ -51,14 +57,28 @@ class RunContext {
     s.coinsThisRun += amount;
     game.menu.wallet.add(amount, source);
     emit(CoinsEarned(amount, source, eggX2: x2));
+    if (paysPoints(source)) {
+      addScore(amount, flags: PointFlags.bonus, chickX2: false);
+    }
   }
 
-  /// Score + HUD; the versus timeline records from [ScoreChanged] (WP-5b).
-  /// [flags] = `PointFlags` (ride / train / gift).
-  void addScore(int n, {int flags = 0}) {
+  /// PRD-2.2 §13.1 whether coins from [source] are a coin bonus that also
+  /// pays points (not the pass coins, not the versus win / draw bonus).
+  static bool paysPoints(CoinSource source) => switch (source) {
+    CoinSource.hoop || CoinSource.perfect || CoinSource.winBonus => false,
+    _ => true,
+  };
+
+  /// Score (points) + HUD; the versus timeline records from [ScoreChanged]
+  /// (WP-5b). [flags] = `PointFlags` (ride / train / gift / bonus).
+  /// PRD-2.2 §13.1 the chick doubles points like coins ([chickX2] false:
+  /// the amount is already doubled, or never doubled — the puzzle bonus).
+  void addScore(int n, {int flags = 0, bool chickX2 = true}) {
     if (n <= 0) return;
+    final x2 = chickX2 && s.egg?.stage == EggStage.chick;
+    final add = x2 ? n * 2 : n;
     final old = s.score;
-    s.score += n;
+    s.score += add;
     game.showRunScore(s.score);
     emit(ScoreChanged(old, s.score, flags: flags));
   }

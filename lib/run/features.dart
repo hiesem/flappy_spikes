@@ -50,14 +50,15 @@ List<RunFeature> buildRunFeatures() => [
   ExtraLifeFeature(),
   InvulnerabilityFeature(),
   // endregion WP-2a
-  // region WP-1a — scoring (PRD-2 §3.0.1, §3.1, §3.2)
-  ScoringFeature(),
-  // endregion WP-1a
   // region WP-2b — perfect streak, ring tiers, banners, pass sounds; rumble
   // (WP-2c folded in) (PRD-2 §3.4, §3.5, §3.33, §5.3, §5.4)
   StreakFeature(),
   RumbleRouter(),
   // endregion WP-2b
+  // region WP-1a — scoring (PRD-2 §3.0.1, §3.1, §3.2). PRD-2.2 §13.6: after
+  // the streak, so a perfect pass's points read the streak *after* it.
+  ScoringFeature(),
+  // endregion WP-1a
   // region WP-3b — portal roller-coaster rides (PRD-2 §3.12, §5.12b)
   PortalRideFeature(),
   // endregion WP-3b

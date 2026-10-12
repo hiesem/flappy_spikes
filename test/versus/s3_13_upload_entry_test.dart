@@ -57,7 +57,7 @@ void main() {
 
   group('§3.13 run entry (ARCH §6.1)', () {
     test('§3.13 an entry carries score, best, name, look, platform and the '
-        'timeline (tl / end / fl); the point count equals the score', () {
+        'timeline (tl / end / fl v2); the values sum to the score', () {
       final e = entry(7, bestBefore: 3);
       expect(e.score, 7);
       expect(e.best, 7);
@@ -68,7 +68,10 @@ void main() {
       ]));
       expect(decodeDeltas(e.tl), hasLength(7));
       expect(decodeDeltas(e.tl).skip(1), everyElement(100));
-      expect(base64Decode(e.fl), hasLength(7));
+      // PRD-2.2 §13.5 fl v2: version byte 2, then (flag, value u16) each.
+      final fl = base64Decode(e.fl);
+      expect(fl, hasLength(1 + 7 * 3));
+      expect(fl[0], 2);
       expect(e.end, 100);
       expect(e.timeline.scoreAt(3.5), 3);
       expect(e.fitsLimits, isTrue);

@@ -62,6 +62,12 @@ android {
                 signingConfigs.getByName("debug")
             }
         }
+        // Local debug/profile builds are signed with the upload key when it is present, so they
+        // install over the owner's release build on the Pixel 8 (keeps its data) and Play Games auth works.
+        if (keystorePropertiesFile.exists()) {
+            getByName("debug") { signingConfig = signingConfigs.getByName("release") }
+            maybeCreate("profile").signingConfig = signingConfigs.getByName("release")
+        }
     }
 }
 

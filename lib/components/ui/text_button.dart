@@ -15,7 +15,9 @@ class TextButton extends PositionComponent with TapCallbacks {
     required this.onPressed,
     super.position,
     super.anchor,
-  }) : label = FadableTextComponent(
+    Vector2? padding,
+  }) : padding = padding ?? Vector2(32, 24),
+       label = FadableTextComponent(
           text: text,
           style: style,
           anchor: Anchor.center,
@@ -25,13 +27,16 @@ class TextButton extends PositionComponent with TapCallbacks {
   final FadableTextComponent label;
   final void Function() onPressed;
 
+  /// Tap padding around the glyphs (total width / height).
+  final Vector2 padding;
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
     add(label);
     await label.loaded;
     // Generous padding around the glyphs makes the small link easy to tap.
-    size = label.size + Vector2(32, 24);
+    size = label.size + padding;
     label.position = size / 2;
   }
 

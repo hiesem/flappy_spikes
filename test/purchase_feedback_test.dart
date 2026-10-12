@@ -242,7 +242,7 @@ void main() {
   group('No-ads celebration (PRD-home-v3 §7)', () {
     shopTest(
       'fresh purchase from the Shop: jingle, flash, shake, confetti; CLAIM '
-      'counts the bonus once; banner flips, then GET loses its icon',
+      'counts the bonus once; banner flips; GET keeps its icon (PRD-2.2 §7.7)',
       prefs: const {'coins': 250},
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
@@ -317,10 +317,11 @@ void main() {
         expect(shop.banner.color, Config.noAdsOwnedFill);
         expect(shop.banner.dimmed, isFalse);
         expect(shop.banner.tappable, isFalse);
-        // 0.7 s after the banner: GET's video icon shrinks, then CLAIM.
+        // PRD-2.2 §7.7: GET keeps its video icon (free coins need an ad
+        // for everyone, owners included).
         await run(game, .5);
-        expect(shop.freeCoins.chipText, 'CLAIM');
-        expect(shop.freeCoins.videoIcon, isNull);
+        expect(shop.freeCoins.chipText, 'GET');
+        expect(shop.freeCoins.videoIcon, isNotNull);
         expect(toastText(game), isNot(startsWith('Ads removed')));
       },
     );

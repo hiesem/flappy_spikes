@@ -551,8 +551,9 @@ void main() async {
         if (source == 'shop_banner') {
           expect(game.shopScreen!.banner.owned, isTrue);
           expect(game.shopScreen!.banner.tappable, isFalse);
-          expect(game.shopScreen!.freeCoins.chipText, 'CLAIM');
-          expect(game.shopScreen!.freeCoins.videoIcon, isNull);
+          // PRD-2.2 §7.7: the free-coins chip keeps its ad (▶ GET).
+          expect(game.shopScreen!.freeCoins.chipText, 'GET');
+          expect(game.shopScreen!.freeCoins.videoIcon, isNotNull);
           await _tap(game, tester, game.shopScreen!.backButton);
           await _advance(game, .6);
         }

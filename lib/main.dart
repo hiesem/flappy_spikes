@@ -17,6 +17,7 @@ import 'game/flappy_game.dart';
 import 'services/game_services.dart';
 import 'services/e2e.dart';
 import 'services/ads_service.dart';
+import 'services/audio_focus.dart';
 import 'services/monetization.dart';
 import 'services/reminders.dart';
 import 'services/soak.dart';
@@ -131,6 +132,8 @@ Future<void> main() async {
   }
   game.onShareScore = _shareScore;
   game.onInvite = _invite;
+  // PRD-2.2 §28.3: other apps' calls / alarms / music (Android; iOS later).
+  if (_isAndroid) game.audioFocus = PlatformAudioFocus();
 
   // region PRD-2.2 §8 — the Android system back closes the menus only, and
   // never the app (SystemBackObserver below).

@@ -171,7 +171,6 @@ class ShopScreen extends MenuScreen {
       policy: menu.freeCoins,
       adAvailable: game.monetization.ads.isAvailable,
       busy: game.freeCoinsBusy,
-      noAds: game.noAdsVideoGone,
     );
     for (final card in packs) {
       card.setState(
@@ -441,8 +440,9 @@ class FreeCoinsRow extends MenuButton {
   final Sprite video;
 
   /// The claim label with an ad (was "WATCH").
+  /// PRD-2.2 §7.7: NO ADS owners get the same ▶ GET ad chip (the 2.1
+  /// owners' CLAIM chip without an ad is gone).
   static const String getLabel = 'GET';
-  static const String claimLabel = 'CLAIM';
 
   static const double chipMinPad = 6;
 
@@ -474,18 +474,6 @@ class FreeCoinsRow extends MenuButton {
   /// The chip's video icon while shown (tests).
   MenuIcon? videoIcon;
 
-  /// True while [shrinkVideo] runs: the chip keeps reading GET.
-  bool _shrinking = false;
-
-  /// PRD-home-v3 §7: after the No-ads celebration the video icon shrinks
-  /// away (0.3 s), then the chip reads CLAIM. No-op without an icon.
-  void shrinkVideo() {
-    final icon = videoIcon;
-    if (icon == null || _shrinking) return;
-    _shrinking = true;
-    add(ShrinkDriver(icon, onDone: () => _shrinking = false));
-  }
-
   /// The chip's pulse (re-attached to every rebuilt chip).
   late final PulseEffect pulse = PulseEffect(
     this,
@@ -498,7 +486,7 @@ class FreeCoinsRow extends MenuButton {
   late final WiggleEffect cameraNod = WiggleEffect(this);
 
   bool get _claimable =>
-      _chipText == getLabel || _chipText == claimLabel || _chipText == null;
+      _chipText == getLabel || _chipText == null;
 
   /// [LiveClock] binding: pulse + nod while claimable and not dimmed.
   void animate(double t, bool still) {
@@ -523,7 +511,6 @@ class FreeCoinsRow extends MenuButton {
     required FreeCoinsPolicy policy,
     required bool adAvailable,
     required bool busy,
-    bool noAds = false,
   }) {
     final String text;
     if (policy.remainingToday <= 0) {
@@ -531,11 +518,11 @@ class FreeCoinsRow extends MenuButton {
     } else if (policy.cooldownRemaining > Duration.zero) {
       text = formatCooldown(policy.cooldownRemaining);
     } else {
-      text = noAds && !_shrinking ? claimLabel : getLabel;
+      text = getLabel;
     }
-    final claimable = text == getLabel || text == claimLabel;
+    final claimable = text == getLabel;
     tappable = claimable && !busy;
-    final chipDimmed = !claimable || busy || (!noAds && !adAvailable);
+    final chipDimmed = !claimable || busy || !adAvailable;
     if (text == _chipText && chipDimmed == _chipDimmed && _chip != null) {
       return;
     }
@@ -567,7 +554,7 @@ class FreeCoinsRow extends MenuButton {
     _chip?.removeFromParent();
     final text = _chipText ?? getLabel;
     final isGet = text == getLabel;
-    final bold = isGet || text == claimLabel;
+    final bold = isGet;
     final label = bold
         ? MenuText(
             text,

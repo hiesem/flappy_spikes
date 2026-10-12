@@ -529,23 +529,31 @@ void main() {
     );
 
     shopTest(
-      'No-ads owners claim free coins without an ad (CLAIM chip)',
+      'PRD-2.2 §7.7 No-ads owners watch the ad for free coins like everyone '
+      '(GET chip with its video icon, dimmed without an ad)',
       prefs: const {'noAds': true},
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
         game.update(0);
-        expect(shop.freeCoins.chipText, 'CLAIM');
-        expect(
-          shop.freeCoins.chipDimmed,
-          isFalse,
-          reason: 'owners need no ad, so availability cannot dim the chip',
-        );
+        expect(shop.freeCoins.chipText, 'GET');
+        expect(shop.freeCoins.videoIcon, isNotNull);
+        expect(shop.freeCoins.chipDimmed, isFalse);
         await game.claimFreeCoins();
         await settle(game);
-        expect(ads.shown, 0);
+        expect(ads.shown, 1);
+        expect(ads.placements, [AdPlacement.shopFreeCoins]);
         expect(game.menu.wallet.balance, 40);
-        expect(spy.last('coins_earned'), {'amount': 40, 'source': 'rewarded'});
-        expect(spy.names, isNot(contains('ad_rewarded_shown')));
+        expect(spy.last('ad_rewarded_shown'), {
+          'placement': 'shop_free_coins',
+        });
+        // No ad loaded: dimmed like for everyone, and nothing claimed.
+        ads.mode = FakeAdMode.unavailable;
+        game.storage.freeCoinsLastMs = 0;
+        game.update(0);
+        expect(shop.freeCoins.chipDimmed, isTrue);
+        await game.claimFreeCoins();
+        await settle(game);
+        expect(game.menu.wallet.balance, 40);
       },
     );
   });
@@ -679,7 +687,9 @@ void main() {
           await flushAndMount(game);
         }
         expect(shop.banner.owned, isTrue);
-        expect(shop.freeCoins.chipText, 'CLAIM');
+        // PRD-2.2 §7.7: free coins keep their ad chip for owners.
+        expect(shop.freeCoins.chipText, 'GET');
+        expect(shop.freeCoins.videoIcon, isNotNull);
         expect(shop.banner.labelText, 'AD-FREE');
         expect(shop.banner.checkIcon, isNotNull, reason: 'check in icon slot');
         expect(

@@ -41,23 +41,21 @@ void main() {
       }
     });
 
-    test('§3.15 the offer: once, free for no-ads owners, skipped without ad', () {
+    test('§3.15 / PRD-2.2 §7.7–§7.8 the offer: once, always when ads are '
+        'possible (no free variant), none when ads are impossible', () {
       expect(
-        BonusRules.offerFor(adUsed: false, noAds: false, adAvailable: true),
+        BonusRules.offerFor(adUsed: false, adsPossible: true),
         BonusOffer.ad,
       );
       expect(
-        BonusRules.offerFor(adUsed: false, noAds: false, adAvailable: false),
+        BonusRules.offerFor(adUsed: false, adsPossible: false),
         BonusOffer.none,
       );
       expect(
-        BonusRules.offerFor(adUsed: false, noAds: true, adAvailable: false),
-        BonusOffer.free,
-      );
-      expect(
-        BonusRules.offerFor(adUsed: true, noAds: true, adAvailable: true),
+        BonusRules.offerFor(adUsed: true, adsPossible: true),
         BonusOffer.none,
       );
+      expect(BonusOffer.values, [BonusOffer.none, BonusOffer.ad]);
     });
 
     test('§5.14 layout: 1:1 at 711, fits between the strips at 568', () {
@@ -253,7 +251,8 @@ void main() {
       ads: FakeRewardedAds()..mode = FakeAdMode.unavailable,
     ),
   ).testGameWidget(
-    '§3.15 no rewarded ad available: the offer is skipped, NEXT',
+    '§3.15 / PRD-2.2 §7.8 no rewarded ad loaded: the offer still appears, '
+    'waits 5 s, then fades out to NEXT',
     setUp: (g, _) async {
       await g.ready();
       await preloadImages(g);
@@ -261,8 +260,15 @@ void main() {
     verify: (g, _) async {
       final b = await openBonus(g);
       await popThree(g, b, [3, 4, 5]);
+      expect(b.phase, BonusPhase.offer);
+      expect(b.adWaiting, isTrue);
+      await stepSeconds(g, 5.5);
       expect(b.phase, BonusPhase.done);
-      expect(analyticsLog(g.services as AnalyticsSpy).map((e) => e.$1), isNot(contains('bonus_ad_offered')));
+      expect(
+        analyticsLog(g.services as AnalyticsSpy).where((e) => e.$1 == 'bonus_offer_shown').single.$2!['outcome'],
+        'timeout',
+      );
+      await stepSeconds(g, 1);
       b.tapNext();
       await flushAndMount(g);
       expect(g.state, GameState.results);
@@ -270,7 +276,8 @@ void main() {
   );
 
   tester(prefs: {'noAds': true}).testGameWidget(
-    '§3.15 no-ads owners get the 3 extra feathers without an ad (once)',
+    '§3.15 / PRD-2.2 §7.7 no-ads owners watch the ad like everyone (once); '
+    'never a free refill',
     setUp: (g, _) async {
       await g.ready();
       await preloadImages(g);
@@ -280,9 +287,10 @@ void main() {
       final b = await openBonus(g);
       await popThree(g, b, [6, 7, 8]);
       expect(b.phase, BonusPhase.offer);
-      expect(b.offer, BonusOffer.free);
+      expect(b.offer, BonusOffer.ad);
       await b.tapOffer();
-      expect(ads.shown, 0);
+      expect(ads.shown, 1);
+      expect(ads.placements.single, AdPlacement.bonusFeathers);
       await stepSeconds(g, 1.3);
       expect(b.feathers, 3);
       await popThree(g, b, [0, 1, 2]);

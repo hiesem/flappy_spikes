@@ -559,7 +559,15 @@ class SoundService {
 
   void play(Sfx sfx) {
     onPlay?.call(sfx);
-    if (muted || !enabled) {
+    if (muted) return;
+    // PRD-2.2 §28.2 / §28.3: dropped (never queued) while a full-screen ad
+    // is up or another app's call / alarm / assistant holds the audio.
+    if (_sfxSilenced) {
+      droppedPlays++;
+      return;
+    }
+    onAudible?.call(sfx);
+    if (!enabled) {
       return;
     }
     final pool = _pools[sfx];
@@ -636,6 +644,19 @@ class SoundService {
   @visibleForTesting
   SfxPool? poolOf(Sfx sfx) => _pools[sfx];
 
+  /// The game's audio context: mixWithOthers (no audio-focus request: the
+  /// player's own music keeps playing, PRD-2.2 §28.3) with the Android
+  /// usage `USAGE_GAME`, so `MainActivity.kt` can tell the game's players
+  /// from another app's music in the active playback configurations.
+  static AudioContext gameAudioContext() {
+    final base = AudioContextConfig(
+      focus: AudioContextConfigFocus.mixWithOthers,
+    ).build();
+    return base.copy(
+      android: base.android.copy(usageType: AndroidUsageType.game),
+    );
+  }
+
   /// Sets the one global audio context (mixWithOthers: no audio-focus
   /// request, no AudioManager mode write per player; PERF.md §5). Awaited
   /// before any SFX / loop player is created, so each player inherits it.
@@ -643,11 +664,7 @@ class SoundService {
   Future<void> _ensureGlobalContext() => _globalContext ??= () async {
     if (voiceFactory != null) return; // fake voices: no plugin
     try {
-      await AudioPlayer.global.setAudioContext(
-        AudioContextConfig(
-          focus: AudioContextConfigFocus.mixWithOthers,
-        ).build(),
-      );
+      await AudioPlayer.global.setAudioContext(gameAudioContext());
     } catch (_) {
       // Audio failure must never take the game down.
     }
@@ -704,6 +721,7 @@ class SoundService {
       if (asked != null &&
           enabled &&
           !muted &&
+          !_sfxSilenced &&
           DateTime.now().difference(asked) <= firstPlayLateLimit) {
         pool.play(_nowMs);
       }
@@ -774,28 +792,179 @@ class SoundService {
   }
 
   /// Starts the looping background music. Idempotent: only the first
-  /// successful call starts playback. No-op when [enabled] is false.
+  /// successful call starts playback; later calls only re-apply the holds
+  /// (PRD-2.2 §28: ads, interruptions, the player's own music, the
+  /// background). No plugin call when [enabled] is false.
   Future<void> startMusic() async {
-    if (!enabled || _musicStarted) {
-      return;
+    _musicWanted = true;
+    await _syncMusic();
+    if (enabled) unawaited(_initPools());
+  }
+
+  // region PRD-2.2 §28 — audio around ads, death and other apps
+
+  /// Open [suspend]s (reference-counted like the game's `_adsShowing`).
+  int _suspends = 0;
+
+  /// §28.3 a call / alarm / assistant of another app holds the audio.
+  bool _interrupted = false;
+
+  /// §28.3 the player's own music was playing at launch / foreground: the
+  /// game skips its own music until the next scene change finds it quiet.
+  bool _ownMusicSkipped = false;
+
+  /// The app is not in the foreground (the music pauses, as Bgm's observer
+  /// did before §28 took the music lifecycle over).
+  bool _background = false;
+
+  /// [startMusic] was called (the game wants its music).
+  bool _musicWanted = false;
+
+  /// The music player is playing right now (logical; also when disabled).
+  bool _musicActive = false;
+
+  /// The track was loaded once: later starts are resumes (position kept).
+  bool _musicLoaded = false;
+
+  /// Serialises the music plugin calls.
+  Future<void> _musicOps = Future<void>.value();
+
+  /// Sound effects dropped while silenced (tests / diagnostics).
+  int droppedPlays = 0;
+
+  /// Test seam: every sound that passed the mute and silence gates (also
+  /// when [enabled] is false).
+  void Function(Sfx sfx)? onAudible;
+
+  /// Test seam: the music transitions (`start`, `pause`, `resume`), also
+  /// when [enabled] is false.
+  void Function(String event)? onMusic;
+
+  /// §28.2 a full-screen ad is up.
+  bool get suspended => _suspends > 0;
+
+  /// §28.3 another app's call / alarm / assistant holds the audio.
+  bool get interrupted => _interrupted;
+
+  /// §28.3 the player's own music plays: the game music stays off.
+  bool get ownMusicSkipped => _ownMusicSkipped;
+
+  /// The game music is playing now (logical state).
+  bool get musicPlaying => _musicActive;
+
+  bool get _sfxSilenced => _suspends > 0 || _interrupted;
+
+  bool get _musicHeld =>
+      _suspends > 0 || _interrupted || _ownMusicSkipped || _background;
+
+  /// §28.2 a full-screen ad is shown: the music pauses (position kept),
+  /// every loop stops and every [play] is dropped until [resume].
+  void suspend() {
+    _suspends++;
+    if (_suspends == 1) {
+      _pendingFirst.clear();
+      unawaited(stopAllLoops());
+      unawaited(_syncMusic());
     }
+  }
+
+  /// §28.2 the ad closed (dismissed / failed to show): SFX allowed again,
+  /// the music resumes from where it was. Interrupted loops do not come
+  /// back by themselves (each feature restarts its own).
+  void resume() {
+    if (_suspends == 0) return;
+    _suspends--;
+    if (_suspends == 0) unawaited(_syncMusic());
+  }
+
+  /// §28.2 safety: a suspend without its resume (ad SDK crash) is cleared
+  /// on the next app resume / scene change.
+  void clearSuspend() {
+    if (_suspends == 0) return;
+    _suspends = 0;
+    unawaited(_syncMusic());
+  }
+
+  /// §28.3 transient audio loss from another app (call, alarm, assistant):
+  /// the music pauses and the sound effects (loops included) go quiet
+  /// until it ends; then the music resumes.
+  void setInterrupted(bool on) {
+    if (_interrupted == on) return;
+    _interrupted = on;
+    for (final l in List.of(_loops)) {
+      unawaited(l.applyQuiet(on));
+    }
+    unawaited(_syncMusic());
+  }
+
+  /// §28.3 the player's own music is playing ([active], checked at launch
+  /// and on foreground): the game skips its music. A quiet check only
+  /// re-enables it when [sceneChange] is set (Home / run start, never
+  /// mid-run).
+  void setOtherMusicActive(bool active, {bool sceneChange = false}) {
+    if (active) {
+      if (_ownMusicSkipped) return;
+      _ownMusicSkipped = true;
+    } else {
+      if (!_ownMusicSkipped || !sceneChange) return;
+      _ownMusicSkipped = false;
+    }
+    unawaited(_syncMusic());
+  }
+
+  /// The app left / came back to the foreground (the game owns the music
+  /// lifecycle since §28: no Bgm observer, so a foreground check can run
+  /// before the music comes back).
+  void setBackground(bool background) {
+    if (_background == background) return;
+    _background = background;
+    unawaited(_syncMusic());
+  }
+
+  Future<void> _syncMusic() {
+    final want = _musicWanted && !_musicHeld;
+    if (want == _musicActive) return _musicOps;
+    _musicActive = want;
+    final event = want ? (_musicLoaded ? 'resume' : 'start') : 'pause';
+    if (want) _musicLoaded = true;
+    onMusic?.call(event);
+    if (!enabled) return _musicOps;
+    if (kDebugMode) {
+      debugPrint(
+        'Sound: music $event (suspends $_suspends, interrupted '
+        '$_interrupted, own music $_ownMusicSkipped, background $_background)',
+      );
+    }
+    return _musicOps = _musicOps.then((_) => _musicCall(event));
+  }
+
+  Future<void> _musicCall(String event) async {
     try {
-      if (!_bgmInitialized) {
-        // Registers Bgm's WidgetsBinding observer so the music pauses when
-        // the app backgrounds and resumes on foreground.
-        await FlameAudio.bgm.initialize();
-        // PRD-2.2 §33.4 item 2: the music never polls its position (it
-        // polled 60×/s all session, also on Home).
-        FlameAudio.bgm.audioPlayer.positionUpdater = null;
-        _bgmInitialized = true;
+      final bgm = FlameAudio.bgm;
+      switch (event) {
+        case 'start':
+          if (!_bgmInitialized) {
+            // §28.3 mixWithOthers (the player's own music keeps playing);
+            // no Bgm lifecycle observer: [setBackground] pauses / resumes.
+            await bgm.audioPlayer.setAudioContext(gameAudioContext());
+            // PRD-2.2 §33.4 item 2: the music never polls its position (it
+            // polled 60×/s all session, also on Home).
+            bgm.audioPlayer.positionUpdater = null;
+            _bgmInitialized = true;
+          }
+          await bgm.play(_musicFile, volume: _musicVolume * _musicDuck);
+          _musicStarted = true;
+          if (_musicRate != 1) await bgm.audioPlayer.setPlaybackRate(_musicRate);
+        case 'pause':
+          await bgm.pause();
+        case 'resume':
+          await bgm.resume();
       }
-      await FlameAudio.bgm.play(_musicFile, volume: _musicVolume);
-      _musicStarted = true;
     } catch (_) {
       // Audio failure must never take the game down.
     }
-    unawaited(_initPools());
   }
+  // endregion PRD-2.2 §28
 
   /// Stores the music volume (clamped to 0..1) and applies it live when
   /// music is playing. Never touches the plugin when [enabled] is false.
@@ -827,25 +996,38 @@ class SoundService {
   /// returns a silent handle. Disabled (tests): a recording no-op handle.
   LoopHandle loop(SfxLoop l, {double volume = 1}) {
     onLoop?.call(l, volume);
+    // PRD-2.2 §28.2: no loop starts while a full-screen ad is up.
+    final live = enabled && !muted && _suspends == 0;
     final handle = _LoopPlayer(
       l,
       volume,
-      enabled && !muted,
-      enabled && !muted ? _ensureGlobalContext : null,
-    );
+      live,
+      live ? _ensureGlobalContext : null,
+    ).._quiet = _interrupted;
+    if (_suspends > 0) {
+      // Born stopped: the feature sees `stopped` and asks again after the
+      // ad (interrupted loops never resume by themselves).
+      handle._stopped = true;
+      return handle;
+    }
     _loops.add(handle);
     _loops.removeWhere((x) => x.stopped && !identical(x, handle));
     if (handle.live) unawaited(handle.start());
     return handle;
   }
 
-  /// Stops every loop (end of a run, pause).
+  /// Stops every loop (end of a run, pause, PRD-2.2 §28.1 the moment of
+  /// death, §28.2 a full-screen ad). Every handle is stopped at once
+  /// (synchronously marked), then the players are awaited.
   Future<void> stopAllLoops() async {
-    for (final l in List.of(_loops)) {
-      await l.stop();
-    }
+    final all = List.of(_loops);
     _loops.clear();
+    stopAllLoopsCalls++;
+    await Future.wait(all.map((l) => l.stop()));
   }
+
+  /// [stopAllLoops] calls so far (PRD-2.2 §28.5 tests).
+  int stopAllLoopsCalls = 0;
 
   double _musicRate = 1;
   double _musicDuck = 1;
@@ -893,6 +1075,16 @@ class _LoopPlayer implements LoopHandle {
   AudioPlayer? _player;
   bool _stopped = false;
 
+  /// PRD-2.2 §28.3 interrupted: plays at volume 0, [_volume] kept.
+  bool _quiet = false;
+
+  Future<void> applyQuiet(bool quiet) async {
+    _quiet = quiet;
+    try {
+      await _player?.setVolume(quiet ? 0 : _volume);
+    } catch (_) {}
+  }
+
   @override
   bool get stopped => _stopped;
 
@@ -916,7 +1108,7 @@ class _LoopPlayer implements LoopHandle {
         await p.dispose();
         return;
       }
-      await p.play(AssetSource(loop.file), volume: _volume);
+      await p.play(AssetSource(loop.file), volume: _quiet ? 0 : _volume);
       if (_stopped) await p.stop();
     } catch (_) {
       // Audio failure must never take the game down.
@@ -927,7 +1119,7 @@ class _LoopPlayer implements LoopHandle {
   Future<void> setVolume(double volume) async {
     _volume = volume;
     try {
-      await _player?.setVolume(volume);
+      await _player?.setVolume(_quiet ? 0 : volume);
     } catch (_) {}
   }
 

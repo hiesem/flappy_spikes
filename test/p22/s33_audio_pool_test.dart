@@ -204,11 +204,16 @@ void main() {
         isTrue,
       );
       expect(global.contexts, hasLength(1), reason: 'one global context');
+      // PRD-2.2 §28.3: mixWithOthers (no focus request) with the Android
+      // usage GAME, so the game's players can be told from other apps'.
+      expect(global.contexts.single, SoundService.gameAudioContext());
       expect(
-        global.contexts.single,
-        AudioContextConfig(
-          focus: AudioContextConfigFocus.mixWithOthers,
-        ).build(),
+        global.contexts.single.android.audioFocus,
+        AndroidAudioFocus.none,
+      );
+      expect(
+        global.contexts.single.android.usageType,
+        AndroidUsageType.game,
       );
       expect(platform.contextWrites, isEmpty, reason: 'no per-player context');
 

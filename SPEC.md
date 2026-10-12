@@ -991,8 +991,9 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   25, 25, 50, 50, 75, 75, 100, 150 and the 250 jackpot (shuffled); each tap
   uses one feather (taps ignored ≈ 1.1 s while a balloon opens) and credits
   the prize to the wallet **at once** (source `bonus`). Out of feathers: a
-  once-per-screen rewarded ad (`bonus_feathers`) gives 3 more (no-ads owners:
-  free, no ad; no ad available: skipped); NO THANKS (after 3 s) / NEXT go to
+  once-per-screen rewarded ad (`bonus_feathers`) gives 3 more (superseded by
+  PRD-2.2 §7.7 / §7.8 below: everyone watches the ad, and the offer waits up to
+  5 s for one); NO THANKS (after 3 s) / NEXT go to
   the results; unpopped balloons are never revealed. The results' YOUR
   REWARD does not include these coins.
 - DEVIATION (PRD-2 §3.16 / §5.15, new meta collectable): once per run (gap
@@ -1261,3 +1262,38 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `test/p22/s17_comet_landing_test.dart`,
   `test/p22/s18_portal_rides_polish_test.dart`; shots
   `test/p22/s18_portal_rides_shots_test.dart` (→ `build/menu_shots/p22/s18/`).
+## PRD-2.2 NO ADS, bonus offer, revive, audio (WP-7b, 2026-10-12)
+- DEVIATION (PRD-2.2 §7.7, supersedes the PRD-2 §3.14 no-ads rule): a NO ADS
+  owner's ad step of the revive ladder is a **free revive** (`ReviveOffer.free`,
+  price 0, no ad, whatever the ad availability): the pink heart with REVIVE
+  only (no video / coin icon, no "NO AD AVAILABLE"), straight to the phoenix
+  (`ReviveKind.free`, `revive_free_used`). Then 250, 500, 1 000 … per game as
+  usual. Normal players unchanged.
+- DEVIATION (PRD-2.2 §7.7, supersedes PRD-2 §3.15 "no-ads owners get the 3
+  extra feathers without an ad" and PRD-1 §3.5 "owners CLAIM free coins without
+  an ad"): the balloon bonus "▶ feather ×3" and the Shop's 40 free coins need a
+  watched ad for everyone, NO ADS owners included (GET chip with its video
+  icon). The home power-up slot stays free for owners.
+- DEVIATION (PRD-2.2 §7.8): the bonus offer appears after the 3rd pop whenever
+  ads are possible (consent, not Test Lab / iOS), loaded or not. Without a
+  loaded ad the button waits (dimmed, spinner, no taps) up to 5 s
+  (`Config.bonusAdWait`) while a load is requested; it turns active when the ad
+  arrives, else fades out to NEXT. NO THANKS keeps its 3 s delay.
+- DEVIATION (PRD-2.2 §7.15, supersedes the PRD-2 §3.14 / §5.9 timeout): the
+  revive offer never times out. The heart drains over 5 s with the urgency as
+  before; when empty the page stays up, the heart keeps pulsing at the urgent
+  beat and the red edge glow settles to a steady 35 % until REVIVE or No thanks
+  (§24: the only taps that react, besides GET COINS when locked).
+  `revive_timeout` is gone; `revive_offer_waited {seconds}`.
+- DEVIATION (PRD-2.2 §28, new): at the moment of death every run loop stops
+  (`SoundService.stopAllLoops` in `RunController._die`) and the chick only
+  peeps while the run is live. While a full-screen ad (rewarded, interstitial,
+  the desktop fake overlay) is displayed, game audio is suspended (music
+  paused at its position, loops stopped, every `play` dropped) and resumed when
+  it closes. Another app's call / ringtone / alarm / assistant pauses the music
+  and mutes the SFX until it ends; the player's own music keeps mixing, and if
+  it plays at launch / on foreground the game music stays off until a scene
+  change finds it quiet (`docs/p22/ADS.md` "§28 audio focus").
+- Tests: `test/p22/s7_7_noads_test.dart`, `test/p22/s7_9_privacy_options_test.dart`,
+  `test/p22/s24_revive_taps_test.dart`, `test/p22/s28_audio_test.dart`,
+  `test/run/screens/s3_14_revive_test.dart`, `test/run/screens/s3_15_bonus_screen_test.dart`.

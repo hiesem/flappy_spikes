@@ -76,6 +76,7 @@ import '../versus/timeline.dart';
 import '../services/avatars.dart';
 import '../services/versus_service.dart';
 import '../services/ads_service.dart';
+import '../services/audio_focus.dart';
 import '../services/game_services.dart';
 import '../services/iap_service.dart';
 import '../services/monetization.dart';
@@ -275,6 +276,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// in the real service (`main.dart`, mobile only); [onLoad] asks for the
   /// permission once and lays out the first 7-day plan.
   Reminders reminders;
+
+  /// PRD-2.2 §28.3 other apps' audio (calls, alarms, the player's music).
+  /// No-op by default (tests, Linux); `main.dart` sets the Android one.
+  AudioFocus audioFocus = const NoopAudioFocus();
+  StreamSubscription<bool>? _audioFocusSub;
 
   /// Rewarded ads + in-app purchases. In-memory fakes unless main() passes
   /// `Monetization.forPlatform()`.
@@ -667,6 +673,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onResolved: _dismissPendingToast,
     )..start();
     sound = SoundService(muted: storage.muteSound, enabled: soundEnabled);
+    _soundReady = true;
     if (kSoak && soundEnabled) {
       // P22-33 §33.3 (+ the §22 stop-timing log)
       final d = soak = SoakDriver(this);
@@ -676,7 +683,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // Background music: persisted volume, then start the loop (everywhere —
     // menus and gameplay). Guarded/unawaited: no-ops in headless tests.
     unawaited(sound.setMusicVolume(storage.musicVolume));
-    unawaited(sound.startMusic());
+    // PRD-2.2 §28.3: the player's own music already playing at launch →
+    // the game skips its own (SFX stay on); calls / alarms hold the audio.
+    _audioFocusSub = audioFocus.interruptions.listen(sound.setInterrupted);
+    unawaited(_startMusicChecked());
 
     final palette = paletteForStage(0);
     _bgColor = palette.background;
@@ -811,6 +821,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   @override
   void onRemove() {
+    unawaited(_audioFocusSub?.cancel());
     monetization.consent.canRequestAds.removeListener(_preloadBanner);
     idleFrames.detach();
     _purchases?.dispose();
@@ -852,6 +863,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       pause();
     }
     // endregion WP-2d
+    // region PRD-2.2 §28 — the game owns the music lifecycle
+    _audioLifecycle(state);
+    // endregion PRD-2.2 §28
     // region PRD-2.2 §7.6 guard 6 — no interstitial while in the background
     _inBackground =
         state == AppLifecycleState.paused ||
@@ -879,6 +893,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   // --- scene setup -------------------------------------------------------
 
   void _setupStartScene() {
+    _audioSceneChange(); // PRD-2.2 §28
     state = GameState.start;
     menuScene = MenuScene.home;
     _menuTrail.clear();
@@ -1094,6 +1109,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// force queue) and starts the [RunController] with the first tap.
   void _startRun(Powerup starter) {
     _run?.disposeRun();
+    _audioSceneChange(); // PRD-2.2 §28
     final d = runDebug;
     final e2e =
         kE2E || E2EHooks.force.isNotEmpty || E2EHooks.startHoopIndex > 0;
@@ -1397,6 +1413,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       rumble: rumble.on,
       onToggleRumble: () => setRumble(!rumble.on),
       onDeleteMyData: openDeleteDataConfirm,
+      onPrivacyOptions: privacyOptionsShown ? openPrivacyOptions : null,
     );
     _settingsPanel = settings;
     _runSettingsOpen = true;
@@ -1748,10 +1765,37 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     return true;
   }
 
+  // region PRD-2.2 §7.9 — privacy options entry
+  /// The Settings "Privacy options" link shows (EEA/UK: the UMP privacy
+  /// options are required; never on iOS / Linux, whose consent is a fake
+  /// that never requires them).
+  bool get privacyOptionsShown => monetization.consent.privacyOptionsRequired;
+
+  bool _privacyOptionsBusy = false;
+
+  /// Opens the UMP privacy options form. The consent helper re-reads
+  /// `canRequestAds` when it closes: withdrawn → the ad loaders stop and
+  /// banner / interstitial are off from the next START; granted → the SDK
+  /// starts and the ads preload (the services listen to it).
+  Future<void> openPrivacyOptions() async {
+    if (_privacyOptionsBusy) return;
+    _privacyOptionsBusy = true;
+    sound.play(Sfx.click);
+    services.track('privacy_options_opened');
+    try {
+      await monetization.consent.showPrivacyOptions();
+    } catch (e) {
+      debugPrint('privacy options failed: $e');
+    } finally {
+      _privacyOptionsBusy = false;
+    }
+  }
+  // endregion PRD-2.2 §7.9
+
   /// Shop free-coins row: a rewarded ad for +[FreeCoinsPolicy.reward]
-  /// coins, within the policy's cooldown / daily cap. No-ads owners never
-  /// see an ad (PRD-1 §3.5 / §9): they CLAIM the same +40 directly, under
-  /// the same cap and cooldown, and no `ad_rewarded_shown` is logged.
+  /// coins, within the policy's cooldown / daily cap. PRD-2.2 §7.7: NO ADS
+  /// owners watch the ad like everyone (the 2.1 CLAIM without an ad is
+  /// gone).
   Future<void> claimFreeCoins() async {
     if (!_sceneOnTop(MenuScene.shop) || _freeCoinsBusy) return;
     final policy = menu.freeCoins;
@@ -1759,17 +1803,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     sound.play(Sfx.bnAdBtn);
     _freeCoinsBusy = true;
     try {
-      if (!menu.noAds) {
-        final ads = monetization.ads;
-        if (!ads.isAvailable) {
-          showToast('No video available right now');
-          return;
-        }
-        final result = await showRewardedAd(AdPlacement.shopFreeCoins);
-        if (result != AdResult.completed) {
-          showToast('No video available right now');
-          return;
-        }
+      final ads = monetization.ads;
+      if (!ads.isAvailable) {
+        showToast('No video available right now');
+        return;
+      }
+      final result = await showRewardedAd(AdPlacement.shopFreeCoins);
+      if (result != AdResult.completed) {
+        showToast('No video available right now');
+        return;
       }
       await policy.recordClaim();
       // The pill keeps the old number until the coins land (§8.3).
@@ -2474,9 +2516,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   /// §7 owned states, `noads_stamp`: the Shop banner flips to AD-FREE ·
-  /// THANK YOU and, 0.7 s later, GET loses its video icon; on home the
-  /// No-ads tile flips to ✓ AD-FREE and the slot's video icon shrinks
-  /// away. Screens opened later simply show the owned state.
+  /// THANK YOU; on home the No-ads tile flips to ✓ AD-FREE and the slot's
+  /// video icon shrinks away. PRD-2.2 §7.7: the Shop's GET chip keeps its
+  /// video icon (free coins need an ad for everyone). Screens opened later
+  /// simply show the owned state.
   void _flipNoAdsOwned() {
     if (!_noAdsRevealHeld && !_noAdsVideoHeld) return;
     _noAdsRevealHeld = false;
@@ -2488,11 +2531,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       home.noAdsTile.flipToOwned();
       home.slotButton.shrinkVideo();
     }
-    void dropVideo() {
-      _noAdsVideoHeld = false;
-      final current = _sceneOnTop(MenuScene.shop) ? _shop : null;
-      if (current != null && current.built) current.freeCoins.shrinkVideo();
-    }
+    void dropVideo() => _noAdsVideoHeld = false;
 
     if (shop != null) {
       _after(Config.noAdsFlipHomeDelay, dropVideo);
@@ -2505,6 +2544,87 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _after(double seconds, void Function() action) => world.add(
     TimerComponent(period: seconds, removeOnFinish: true, onTick: action),
   );
+
+  // region PRD-2.2 §28 — game audio around ads, death and other apps
+
+  /// Bumped on every lifecycle change: a foreground check that finishes
+  /// after the app left again is dropped.
+  int _foregroundGen = 0;
+
+  /// [sound] exists (lifecycle events can arrive before onLoad made it).
+  bool _soundReady = false;
+
+  /// When the last full-screen ad ended (any outcome): the ad's own player
+  /// may still be listed as "other music" right after it closes.
+  DateTime? _lastAdEndedAt;
+
+  bool get _adJustEnded {
+    final t = _lastAdEndedAt;
+    return t != null &&
+        storage.now().difference(t) < Config.adAudioSettle;
+  }
+
+  Future<void> _startMusicChecked() async {
+    if (await audioFocus.isOtherMusicActive()) {
+      sound.setOtherMusicActive(true);
+    }
+    await sound.startMusic();
+  }
+
+  /// §28.2 / §28.3: the music pauses whenever the app is not in the
+  /// foreground; coming back, a stale ad suspend is cleared and the
+  /// player's own music (if it plays now) keeps the game music off.
+  void _audioLifecycle(AppLifecycleState state) {
+    final gen = ++_foregroundGen;
+    if (kDebugMode) debugPrint('Sound: lifecycle ${state.name}');
+    if (!_soundReady) return;
+    if (state != AppLifecycleState.resumed) {
+      sound.setBackground(true);
+      return;
+    }
+    if (_adsShowing == 0) sound.clearSuspend();
+    if (_adsShowing > 0 || _adJustEnded) {
+      sound.setBackground(false);
+      return;
+    }
+    unawaited(() async {
+      final other = await audioFocus.isOtherMusicActive();
+      if (gen != _foregroundGen) return;
+      if (other) sound.setOtherMusicActive(true);
+      sound.setBackground(false);
+    }());
+  }
+
+  /// §28.2 / §28.3 at a scene change (Home arrival, run start): a stale
+  /// suspend is cleared, and skipped game music comes back when the
+  /// player's own music has stopped (never mid-run).
+  void _audioSceneChange() {
+    if (!_soundReady) return;
+    if (_adsShowing == 0) sound.clearSuspend();
+    if (!sound.ownMusicSkipped || _adJustEnded) return;
+    // A moment later, so the scene's own click / flap has rung out (the
+    // Android check also counts the game's SFX on the music stream).
+    _after(Config.ownMusicRecheckDelay, () {
+      unawaited(() async {
+        final other = await audioFocus.isOtherMusicActive();
+        if (!other) sound.setOtherMusicActive(false, sceneChange: true);
+      }());
+    });
+  }
+
+  /// §28.2 a full-screen ad is displayed: everything suspended until
+  /// [_adAudioEnd].
+  bool _adAudioBegin(bool suspended) {
+    if (!_soundReady) return false;
+    if (!suspended) sound.suspend();
+    return true;
+  }
+
+  void _adAudioEnd(bool suspended) {
+    _lastAdEndedAt = storage.now();
+    if (suspended && _soundReady) sound.resume();
+  }
+  // endregion PRD-2.2 §28
 
   // --- rewarded ads -----------------------------------------------------------
 
@@ -2520,8 +2640,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// outcome); `ad_reward_earned` fires when the reward is actually earned.
   Future<AdResult> showRewardedAd(AdPlacement placement) async {
     _adsShowing++;
+    var suspended = false;
     try {
-      final result = await _showRewardedAd(placement);
+      final result = await _showRewardedAd(
+        placement,
+        onDisplayed: () => suspended = _adAudioBegin(suspended),
+      );
       // PRD-2.2 §7.6 guards 3 / 4: a displayed rewarded ad (completed or
       // closed early) counts for "rewarded this run" and the 60 s gap.
       if (result == AdResult.completed || result == AdResult.dismissed) {
@@ -2535,10 +2659,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       return result;
     } finally {
       _adsShowing--;
+      _adAudioEnd(suspended);
     }
   }
 
-  Future<AdResult> _showRewardedAd(AdPlacement placement) async {
+  Future<AdResult> _showRewardedAd(
+    AdPlacement placement, {
+    required void Function() onDisplayed,
+  }) async {
     final ads = monetization.ads;
     // Exactly one impression per displayed ad, logged at display time.
     var shownLogged = false;
@@ -2548,6 +2676,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       services.track('ad_rewarded_shown', {
         'placement': placement.analyticsName,
       });
+      // PRD-2.2 §28.2: game audio suspended while the ad is up.
+      onDisplayed();
     }
 
     if (!monetization.showFakeAdOverlay ||
@@ -2577,6 +2707,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     );
     _fakeAd = overlay;
     world.add(overlay);
+    onDisplayed(); // §28.2 the fake overlay suspends on mount too
     fadeOpacity(overlay, from: 0, to: 1, duration: Config.popupFadeDuration);
     pushBack(_fakeAdBack);
     // Succeed mode puts a playable test ad on screen; the fail variant
@@ -2790,9 +2921,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _interstitialBusy = true;
     _adsShowing++;
     var shown = false;
+    var suspended = false;
+    void suspendAudio() => suspended = _adAudioBegin(suspended); // §28.2
     void onShown() {
       if (shown) return;
       shown = true;
+      suspendAudio();
       services.track('ad_interstitial_shown');
       // §7.6: a displayed video ad feeds the NO ADS upsell trigger.
       if (isLoaded) unawaited(menu.noAdsPopup.recordRewardedVideo());
@@ -2804,7 +2938,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       if (monetization.showFakeAdOverlay &&
           ads is FakeInterstitialAds &&
           _fakeAd == null) {
-        result = await _showFakeInterstitial(ads, onShown);
+        result = await _showFakeInterstitial(ads, onShown, suspendAudio);
       } else {
         result = await ads.show(onShown: onShown);
       }
@@ -2816,6 +2950,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     } finally {
       _adsShowing--;
       _interstitialBusy = false;
+      _adAudioEnd(suspended);
     }
     _arriveHome();
   }
@@ -2825,6 +2960,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   Future<AdResult> _showFakeInterstitial(
     FakeInterstitialAds ads,
     void Function() onShown,
+    void Function() onMounted,
   ) async {
     final scripted = await ads.show();
     if (scripted == AdResult.unavailable) return scripted;
@@ -2836,6 +2972,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     world.add(overlay);
     fadeOpacity(overlay, from: 0, to: 1, duration: Config.popupFadeDuration);
     pushBack(_fakeAdBack);
+    // §28.2: the fake overlay suspends on mount (also its fail variant).
+    onMounted();
     if (scripted == AdResult.completed) onShown();
     final result = await overlay.result;
     _fakeAd = null;
@@ -3246,6 +3384,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       rumble: rumble.on,
       onToggleRumble: () => setRumble(!rumble.on),
       onDeleteMyData: openDeleteDataConfirm,
+      onPrivacyOptions: privacyOptionsShown ? openPrivacyOptions : null,
     );
     _settingsPanel = settings;
     // PRD-home-v3 §8: the settings back button is the shared corner box

@@ -106,3 +106,110 @@ harness with `--dart-define=ADSPERF_INTERSTITIAL=true` was used:
   `test/p22/s7_ads_test.dart` with the fakes) and the consent-form logo check
   (it needs a consent reset with the UMP debug geography EEA, which would
   change the owner's consent state).
+
+# WP-7b: NO ADS, bonus offer, privacy options, revive, audio (§7.7–§7.9, §7.15, §24, §28)
+
+## §7.7 NO ADS in 2.2 (as built)
+| Spot | NO ADS owner (2.2) | Where |
+|---|---|---|
+| Gameplay banner | not shown (WP-7a, §7.5.6) | `FlappySpikesGame._reserveRunBanner` |
+| Video ad after run | not shown (guard `no_ads`, WP-7a) | `interstitialSkipReason` |
+| Revive | 1st revive of a game FREE (`ReviveOffer.free`, `ReviveKind.free`), then 250, 500 … | `revive_ladder.dart`, `revive_screen.dart` |
+| Shop 40 free coins | watch the ad (▶ GET chip with its video icon, dimmed when no ad) | `claimFreeCoins`, `FreeCoinsRow` |
+| Home power-up slot | unchanged: free | `tapPowerupSlot` |
+| Balloon bonus feather ×3 | watch the ad, once (no free button) | `BonusRules.offerFor` |
+
+The celebration no longer shrinks the Shop chip's video icon (the home slot's
+still shrinks). Copy check: "NO FORCED ADS — or banners, ever" (popup) and "No
+more forced ads." (celebration) stay true; no text promises free rewards without
+ads. Analytics: `revive_offered.offer` = `ad` / `coins` / `free`,
+`revive_free_used {revive_index}`.
+
+## §7.8 bonus offer
+`RewardedAds` already reloads right after every show and every failure
+(`_AdMobFullScreenLoader.show` → `_load()`; verified). The bonus asks
+`ensureLoaded()` (no wait inside the service) when the offer opens without a
+loaded ad and polls `isAvailable` in game time for `Config.bonusAdWait` (5 s):
+game time keeps the wait deterministic in tests and stops while the app is in
+the background. `bonus_offer_shown {wait_ms, outcome: ad|timeout}`.
+
+## §7.9 privacy options
+`AdsConsent.privacyOptionsRequired` (WP-7a) gates a 14 pt "Privacy options"
+link at `Config.settingsPrivacyOptionsPositionFor` (485 at 568); "Privacy
+Policy" lifts 18 pt while it shows (458 at 568), RESTORE PURCHASES stays at 510,
+DELETE MY DATA at 416. Tap → `privacy_options_opened`,
+`consent.showPrivacyOptions()`; the consent helper re-reads `canRequestAds`,
+the loaders follow it (withdrawn: no new loads, banner / interstitial off from
+the next START; granted: SDK start + preload). Shots:
+`build/menu_shots/p22_s7_9_privacy_options_{568,711}.png`.
+
+## §28 audio focus (chosen approach)
+**Constraint:** the game must keep mixing with the player's own music
+(Spotify), so it can never *request* audio focus — and on Android only a focus
+holder receives `OnAudioFocusChangeListener` callbacks (a `GAIN_TRANSIENT_MAY_DUCK`
+request would duck Spotify while held; `audio_session`'s interruption stream
+is built on the same focus request). So the game **observes** instead:
+- `AudioManager.registerAudioPlaybackCallback` (API 26+): on every change the
+  active playback configurations are read. Their `AudioAttributes` are visible
+  for other apps' players (anonymised uid only). An active player with usage
+  `ALARM`, `NOTIFICATION_RINGTONE`, `VOICE_COMMUNICATION(_SIGNALLING)` or
+  `ASSISTANT`, or the audio mode `RINGTONE` / `IN_CALL` / `IN_COMMUNICATION`
+  (`addOnModeChangedListener`, API 31+), is a transient interruption: the game
+  pauses its music and mutes its SFX (loops at volume 0) until it ends.
+- "Other music playing" = an active `USAGE_MEDIA` / `UNKNOWN` player that is
+  not the game's. To tell them apart, the game's global audio context and the
+  music player now use usage `USAGE_GAME` (still mixWithOthers, no focus).
+  **Found on the Pixel 8:** the public playback list hides muted players (the
+  phone's media volume was 0), so `AudioManager.isMusicActive()` backs it up.
+  That also counts the game's own SFX on the music stream, which is why the
+  question is only asked while the game music is not playing, and the
+  scene-change re-check waits `Config.ownMusicRecheckDelay` (0.6 s) for the
+  scene's click / flap to ring out (a flapping run start can therefore keep
+  the music off until the next Home arrival).
+  Checked at launch (before the music starts), on foreground (before the
+  music comes back — the game owns the music lifecycle now, no Bgm observer)
+  and at scene changes while the music is skipped. Below API 26:
+  `AudioManager.isMusicActive()`. The check is skipped for 3 s after a
+  full-screen ad (`Config.adAudioSettle`): the ad's own player may still be
+  listed.
+- A video in another app puts the game in the background (lifecycle pause),
+  which already pauses the run and the music.
+- Code: `MainActivity.kt` (`AudioWatch`, channels `flappy_spikes/audio` and
+  `flappy_spikes/audio_interruptions`), `lib/services/audio_focus.dart`,
+  `SoundService.setInterrupted / setOtherMusicActive / setBackground /
+  suspend / resume`. iOS equivalents in `PORT-IOS.md`.
+- Debug builds register `com.flappyspikes.DEBUG_RINGTONE` (`adb shell am
+  broadcast -a com.flappyspikes.DEBUG_RINGTONE`): plays the default ringtone
+  for 6 s with ringtone usage, to drive the interruption path without a call.
+
+## Device pass (Pixel 8, debug build, Google TEST ads, 2026-10-12)
+Harness `integration_test/p22_audio_ads_device_main.dart` (`flutter run -d
+38300DLJH004SD -t …`, own prefs prefix `p7b.`; `--dart-define=P7B_AUDIO_ONLY=true`
+skips the ad part), logs `P7B` in logcat. The phone's media volume was 0 (not
+changed), so the checks are by logs and `dumpsys audio` / `media.audio_flinger`.
+- **§28.1 / §28.2 revive ad with the chick:** the chick peeped while flying
+  (2 `egg_peep` requests), death → `chick=null`, revive offer = ad, the heart →
+  the TEST rewarded ad ("Test Ad" label; closed with its × after "Reward
+  granted"). During the ad: `suspended=true`, music paused, **0 `egg_peep`
+  requests**, the ad's own player active (`USAGE_MEDIA`, AAudio) while the game
+  music player was paused (`USAGE_GAME`). After close: `music resume` (not
+  `start`), revived, music playing.
+- **§7.8 after a revive ad:** 2nd death with 3 feathers → 250 offer → No thanks
+  → bonus → 3 pops → the "▶ feather ×3" offer appeared at once (the rewarded ad
+  had already reloaded after the revive ad: `wait_ms` 0) → TEST ad (suspended,
+  music paused) → closed → music resumed, `feathers=3`, 3 more pops possible.
+- **§28.3 interruption, ringtone:** `adb shell am broadcast -a
+  com.flappyspikes.DEBUG_RINGTONE` on Home → `interrupted=true`, music pause;
+  6 s later `interrupted=false`, music resume.
+- **§28.3 interruption, another app's alarm:** `adb shell am start -a
+  android.intent.action.SET_TIMER --ei android.intent.extra.alarm.LENGTH 5 --ez
+  android.intent.extra.alarm.SKIP_UI true` (Clock app; `USAGE_ALARM` from its
+  pid) → when it rang `interrupted=true`, music paused; "Stop" on the Clock
+  heads-up → resumed. A real phone call could not be placed.
+- **§28.3 own music:** Spotify was not started (owner's account); instead
+  `…DEBUG_MEDIA` plays a looping media-usage track for 20 s. App to the
+  background (HOME), the track started, app back → `ownMusicSkipped=true`, game
+  music stayed off, SFX unaffected; after the track stopped the music stayed
+  off (no scene change, as specified).
+- The normal debug app was reinstalled afterwards (`adb install -r`, data
+  kept); its music player runs as an active `USAGE_GAME` track.

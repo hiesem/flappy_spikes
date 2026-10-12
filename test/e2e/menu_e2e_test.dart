@@ -435,7 +435,8 @@ void main() {
     });
   });
 
-  e2e('S1-01 no-ads owners never receive rewarded ads in Shop', (
+  e2e('S1-01 (PRD-2.2 §7.7) no-ads owners watch the Shop free-coins ad '
+      'like everyone', (
     g,
     r,
     t,
@@ -444,8 +445,8 @@ void main() {
     await tap(g, t, const Offset(260, 228));
     expect(
       r.ads.shown,
-      0,
-      reason: 'PRD §3.5 removes all ads; §9 never show ads to buyers',
+      1,
+      reason: 'PRD-2.2 §7.7: the 40 free coins need a watched ad for everyone',
     );
   }, prefs: {'noAds': true});
 

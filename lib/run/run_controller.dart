@@ -598,6 +598,11 @@ class RunController extends Component {
     for (final f in features) {
       f.onDeath(m);
     }
+    // PRD-2.2 §28.1: at the moment of death every run sound stops (loops;
+    // the chick is lost through RunDied and stops peeping). One-shots
+    // already playing finish; features restart their own loops after a
+    // revive.
+    game.sound.stopAllLoops();
     final bird = _bird;
     final birdPos = bird != null
         ? geo.toTrack(bird.body.position)

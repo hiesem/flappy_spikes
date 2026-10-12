@@ -94,6 +94,15 @@ abstract final class BonusConfig {
   static const double adHz = 1.2;
   static const double shineEvery = 1.6;
 
+  /// PRD-2.2 §7.8 while the offer waits for an ad (up to
+  /// `Config.bonusAdWait`): the button at this opacity with a spinner in
+  /// place of the video icon, no taps.
+  static const double adWaitAlpha = .6;
+
+  /// PRD-2.2 §7.8 no ad within the wait: the offer fades out over this long
+  /// (s), then NEXT fades in.
+  static const double adWaitFadeOut = .3;
+
   /// §5.14 NO THANKS: `fg` 80 %, 20 pt, 2 px spacing, y 641, fades in
   /// (0.45 s) after 3 s; tap band y 622 → 660.
   static const double noThanksDelay = 3;

@@ -538,6 +538,17 @@ spike save bounce); otherwise `RunDied` → tumble → `PostRunFlow`.
     `Config.sfxMaxLivePools` (a pool still ringing is kept). `preload(Iterable<Sfx>)` warms cues ahead (§18.4).
   - Test seam: `voiceFactory` (fake voices, `test/p22/fake_audio.dart`, which also has a fake audioplayers platform for
     the real `PlayerVoice`).
+- **Audio around ads, death and other apps (PRD-2.2 §28).** `SoundService.suspend()` / `resume()` (ref-counted;
+  `clearSuspend()` on app resume / scene change when no ad is up) pause the music at its position, stop every loop and
+  drop every `play` (a loop asked for while suspended is born stopped). `FlappySpikesGame.showRewardedAd`, the
+  interstitial and the fake overlay suspend when the ad is displayed and resume when it ends. `setInterrupted(bool)`
+  (from `AudioFocus.interruptions`, `lib/services/audio_focus.dart`) pauses the music and mutes SFX + loops;
+  `setOtherMusicActive` skips the game music while the player's own music plays (cleared only at a scene change);
+  `setBackground` replaces Bgm's lifecycle observer (the game owns the music lifecycle). The global audio context is
+  mixWithOthers with Android usage `USAGE_GAME` (`SoundService.gameAudioContext`), so `MainActivity.kt`'s
+  `AudioWatch` can tell the game's players from other apps'. `RunController._die` stops all loops at the moment of
+  death; features restart their own loops after a revive. Test seams: `onAudible` (passed every gate), `onMusic`
+  (`start` / `pause` / `resume`), `droppedPlays`, `stopAllLoopsCalls`.
 - **Rumble.** `Rumble` exists (throttle, setting). Only `rumble_router.dart` (2c) calls `knock()/shake()` for run
   events; no rumble outside `playing` (paused/revive/bonus/results never rumble).
 - **Analytics.** `ctx.track(name, params)` → `GameServices.track`. Element events are sent by the owning feature at the

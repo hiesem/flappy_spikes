@@ -47,11 +47,11 @@ void main() {
       ]);
       // PRD-menu-v4 §3: US-dollar placeholders.
       expect(IapProduct.values.map((p) => p.placeholderPrice), [
-        r'$1.29',
-        r'$9.99',
-        r'$15.99',
-        r'$84.99',
-        r'$3.49',
+        r'$0.99',
+        r'$8.99',
+        r'$14.99',
+        r'$79.99',
+        r'$2.99',
       ]);
       expect(kNoAdsBonusCoins, 1000);
     });
@@ -82,7 +82,7 @@ void main() {
       await iap.initialize();
       expect(iap.isAvailable, isTrue);
       expect(iap.mode, FakeIapMode.succeed);
-      expect(iap.priceOf(IapProduct.coins100000), r'$84.99');
+      expect(iap.priceOf(IapProduct.coins100000), r'$79.99');
     });
 
     test('succeed: pending then purchased', () async {

@@ -167,13 +167,13 @@ void main() {
       expect(store.queries.single, hasLength(5));
       expect(iap.priceOf(IapProduct.coins1000), 'CHF coins_1000');
       expect(iap.priceOf(IapProduct.noAds), 'CHF no_ads');
-      expect(iap.priceOf(IapProduct.coins10000), r'$9.99');
+      expect(iap.priceOf(IapProduct.coins10000), r'$8.99');
     });
 
     test('missing details at buy time -> re-query -> billing flow '
         'launches', () async {
       await iap.initialize(); // nothing live yet (fresh Play products)
-      expect(iap.priceOf(IapProduct.coins10000), r'$9.99');
+      expect(iap.priceOf(IapProduct.coins10000), r'$8.99');
       store.goLive(IapProduct.values);
 
       await iap.buy(IapProduct.coins10000);

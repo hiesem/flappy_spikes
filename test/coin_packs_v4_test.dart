@@ -108,12 +108,12 @@ void main() {
     'USD placeholders while no store price exists (Shop + No-ads popup)',
     verify: (game, spy, ads, iap, tester) async {
       final shop = await openShop(game);
-      expect(shop.banner.price, r'$3.49');
+      expect(shop.banner.price, r'$2.99');
       expect(shop.packs.map((p) => p.priceLabel.text).toList(), [
-        r'$1.29',
-        r'$9.99',
-        r'$15.99',
-        r'$84.99',
+        r'$0.99',
+        r'$8.99',
+        r'$14.99',
+        r'$79.99',
       ]);
       expect(shop.packs.map((p) => p.tag).toList(), [
         null,
@@ -123,7 +123,7 @@ void main() {
       ]);
       game.openNoAdsPopup();
       await flushAndMount(game);
-      expect(game.noAdsPopup!.priceLabel.text, r'$3.49');
+      expect(game.noAdsPopup!.priceLabel.text, r'$2.99');
     },
   );
 

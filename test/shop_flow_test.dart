@@ -227,12 +227,12 @@ void main() {
         expect(shop.scroll.scrollable, isFalse);
         expect(Config.shopContentBottomFor(h), lessThanOrEqualTo(h - 44));
         // Placeholder store prices (PRD-menu-v4 §3, USD).
-        expect(shop.banner.price, r'$3.49');
+        expect(shop.banner.price, r'$2.99');
         expect(shop.packs.map((p) => p.priceLabel.text).toList(), [
-          r'$1.29',
-          r'$9.99',
-          r'$15.99',
-          r'$84.99',
+          r'$0.99',
+          r'$8.99',
+          r'$14.99',
+          r'$79.99',
         ]);
       },
     );
@@ -805,7 +805,7 @@ void main() {
             const Rect.fromLTWH(242, 0, 38, 38));
         expect(popup.priceButton.toRect(),
             const Rect.fromLTWH(16, 299, 248, 54));
-        expect(popup.priceLabel.text, r'$3.49');
+        expect(popup.priceLabel.text, r'$2.99');
         expect(popup.size, Vector2(320, 711));
         // Card on the same centred band at 568.
         final at568 = Config.noAdsCardRectFor(568);

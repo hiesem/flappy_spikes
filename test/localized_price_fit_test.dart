@@ -35,7 +35,7 @@ class _PriceStore extends FakeStore {
 void main() {
   setUpAll(loadFonts);
 
-  const prices = ['Rp 1.599.000,00', '₫2.079.000', 'CHF 72.00', r'$3.49'];
+  const prices = ['Rp 1.599.000,00', '₫2.079.000', 'CHF 72.00', r'$2.99'];
   for (final height in [568.0, 711.0]) {
     for (final (i, price) in prices.indexed) {
       v4Journey(
@@ -99,7 +99,7 @@ void main() {
             banner.label!.fontSize,
             greaterThanOrEqualTo(banner.label!.baseFontSize * 0.6 - 0.01),
           );
-          if (price == r'$3.49') {
+          if (price == r'$2.99') {
             expect(chipLabel.fontSize, chipLabel.baseFontSize);
             expect(shop.packs.first.priceLabel.fontSize, 20);
           }

@@ -1,0 +1,15 @@
+{
+  "_doc": "PRD-2.2 §13.5 QA P1 boundary cases; entries [seconds, value, flag]. Shared Dart recorder/replay and TypeScript production validator. Findings stay skipped until fixed.",
+  "cases": [
+    {"name": "ordinary passes at the minimum gap", "entries": [[2,2,0],[2.9,2,0]], "expect": null},
+    {"name": "Bullseye bonus at the same time as a pass", "entries": [[2,2,0],[2,3,8],[4,2,0]], "expect": null},
+    {"name": "bonus before a pass with two seconds between hoops", "entries": [[2,2,0],[3.8,5,8],[4,2,0]], "expect": null, "finding": "S7-02"},
+    {"name": "chick piggy payout at approved cap", "entries": [[2,80,8]], "expect": null},
+    {"name": "bonus one point above approved cap", "entries": [[2,81,8]], "expect": "count", "finding": "S7-05"},
+    {"name": "chick pair gift at its cap", "entries": [[2,10,4]], "expect": null},
+    {"name": "forged pair gift above cap", "entries": [[2,11,4]], "expect": "count"},
+    {"name": "FEVER jump and chick values", "entries": [[2,10,0],[4,12,0],[6,14,0]], "expect": null},
+    {"name": "forged first hoop beyond plausibility cap", "entries": [[2,13,0]], "expect": "count"},
+    {"name": "ordinary passes below minimum gap", "entries": [[2,2,0],[2.89,2,0]], "expect": "gap"}
+  ]
+}

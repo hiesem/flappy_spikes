@@ -226,4 +226,4 @@ const List<String> kAdTestDeviceIds = <String>[
 ];
 
 /// The owner's Pixel 8 (see [kAdTestDeviceIds]).
-const String kPixel8AdTestDeviceId = 'TODO_PIXEL8_TEST_DEVICE_ID';
+const String kPixel8AdTestDeviceId = '375F7680953C1B0F47A1FC3E475A9AA1';

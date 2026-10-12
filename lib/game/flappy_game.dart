@@ -46,6 +46,7 @@ import '../run/debug/autopilot.dart';
 import '../run/debug/debug_overlay.dart';
 import '../run/debug/force_menu.dart';
 import '../services/soak.dart';
+import '../services/redact.dart';
 import 'idle_frames.dart';
 import '../run/director/plans.dart';
 import '../run/elements.dart';
@@ -1776,7 +1777,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     try {
       await monetization.consent.showPrivacyOptions();
     } catch (e) {
-      debugPrint('privacy options failed: $e');
+      debugPrint('privacy options failed: ${redactSecrets(e)}');
     } finally {
       _privacyOptionsBusy = false;
     }
@@ -2951,7 +2952,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         _lastFullScreenAdClosedAt = storage.now();
       }
     } catch (e) {
-      debugPrint('interstitial failed: $e');
+      debugPrint('interstitial failed: ${redactSecrets(e)}');
     } finally {
       _adsShowing--;
       _interstitialBusy = false;
@@ -3011,10 +3012,38 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   // --- back stack & keyboard -------------------------------------------------
 
   /// Registers a back handler (topmost wins). Pair with [popBack].
-  void pushBack(bool Function() handler) => _backHandlers.add(handler);
+  void pushBack(bool Function() handler) {
+    _backHandlers.add(handler);
+    _syncSystemBackWanted();
+  }
 
   /// Removes [handler] wherever it is in the stack.
-  void popBack(bool Function() handler) => _backHandlers.remove(handler);
+  void popBack(bool Function() handler) {
+    _backHandlers.remove(handler);
+    _syncSystemBackWanted();
+  }
+
+  /// S7-20: true while a system back would close something (a menu screen
+  /// or popup over Home): the same gate as [handleSystemBack].
+  bool get systemBackWanted =>
+      state == GameState.start &&
+      !_runStarting &&
+      _fakeAd == null &&
+      _backHandlers.isNotEmpty;
+
+  /// S7-20: called with [systemBackWanted] whenever it changes. main.dart
+  /// shows the (gesture) navigation bar while it is true: in sticky
+  /// immersive mode Android spends the first edge swipe on revealing the
+  /// hidden bars, so a single back swipe could not close a menu.
+  void Function(bool wanted)? onSystemBackWanted;
+  bool _systemBackWantedSent = false;
+
+  void _syncSystemBackWanted() {
+    final wanted = systemBackWanted;
+    if (wanted == _systemBackWantedSent) return;
+    _systemBackWantedSent = wanted;
+    onSystemBackWanted?.call(wanted);
+  }
 
   /// Back (Esc): runs the topmost handler. False when nothing handled it.
   bool handleBack() => _backHandlers.isNotEmpty && _backHandlers.last.call();
@@ -3834,6 +3863,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     dt = min(dt, Config.maxFrameStep);
     _clock += dt;
     if (_systemBackLock > 0) _systemBackLock = max(0.0, _systemBackLock - dt);
+    _syncSystemBackWanted();
     super.update(dt);
     _purchases?.update(dt);
     _drainPopups();

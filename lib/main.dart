@@ -57,6 +57,16 @@ Future<void> main() async {
       SystemUiMode.manual,
       overlays: [],
     );
+    // S7-20: when the navigation bar is shown over a menu (see
+    // SystemBackObserver), it is see-through: only the gesture handle shows
+    // over the bottom spike strip; the playfield never moves (edge-to-edge).
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        systemNavigationBarColor: Color(0x00000000),
+        systemNavigationBarDividerColor: Color(0x00000000),
+        systemNavigationBarContrastEnforced: false,
+      ),
+    );
   } catch (_) {
     // Unsupported on desktop; never block startup on it.
   }
@@ -137,7 +147,7 @@ Future<void> main() async {
 
   // region PRD-2.2 §8 — the Android system back closes the menus only, and
   // never the app (SystemBackObserver below).
-  WidgetsBinding.instance.addObserver(SystemBackObserver(game));
+  SystemBackObserver(game).install();
   // endregion PRD-2.2 §8
 
   // region WP-4b — reminder notifications (PRD-2 §3.34)
@@ -190,10 +200,57 @@ Future<void> main() async {
 /// PRD-2.2 §8.2: the Android system back (the gesture, or the 3-button back)
 /// reaches the game's back stack. It is always reported as handled, so
 /// Flutter never calls `SystemNavigator.pop` and the app never leaves on back.
+///
+/// S7-20: with predictive back (targetSdk 36, Android 14+) the system only
+/// hands back to the app while the engine's `OnBackInvokedCallback` is
+/// registered, and the engine registers it only when the framework says it
+/// handles back (`SystemNavigator.setFrameworkHandlesBack(true)`, normally
+/// sent by `WidgetsApp`, which this game does not use). Without it a back
+/// swipe / KEYCODE_BACK finished the activity and [didPopRoute] was never
+/// reached. [install] claims back for the whole app lifetime (MainActivity
+/// also claims it natively in onCreate, before Dart runs); the predictive
+/// commit then lands in [didPopRoute] via `handlePopRoute`.
 class SystemBackObserver extends WidgetsBindingObserver {
   SystemBackObserver(this.game);
 
   final FlappySpikesGame game;
+
+  /// Adds the observer and claims system back for the framework.
+  void install() {
+    WidgetsBinding.instance.addObserver(this);
+    _claimBack();
+    game.onSystemBackWanted = showNavigationBar;
+  }
+
+  /// S7-20: Android's sticky immersive mode spends the first edge swipe on
+  /// revealing the hidden system bars, so the back swipe would need two
+  /// swipes. While a menu screen / popup is open (the only place back does
+  /// something) the navigation bar (the gesture handle) is shown, so one
+  /// swipe closes it; Home and runs stay fully immersive (an accidental
+  /// edge swipe there only reveals the bars, as before). The status bar is
+  /// always hidden.
+  static void showNavigationBar(bool show) {
+    if (!_isAndroid) return;
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.manual,
+        overlays: show ? const [SystemUiOverlay.bottom] : const [],
+      ).catchError((Object _) {}),
+    );
+  }
+
+  static void _claimBack() {
+    unawaited(
+      SystemNavigator.setFrameworkHandlesBack(true).catchError((Object _) {}),
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Re-assert after returning to the app (a recreated activity starts
+    // without the engine callback until told again).
+    if (state == AppLifecycleState.resumed) _claimBack();
+  }
 
   @override
   Future<bool> didPopRoute() async {

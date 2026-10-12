@@ -22,7 +22,12 @@
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
+            android:enableOnBackInvokedCallback="true"
             android:windowSoftInputMode="adjustResize">
+            <!-- PRD-2.2 §8 / S7-20: predictive back on (targetSdk 36 forces
+                 it anyway). MainActivity claims back for the Flutter side in
+                 onCreate, so a back swipe / KEYCODE_BACK reaches the game's
+                 back stack and never finishes the activity. -->
             <!-- Specifies an Android theme to apply to this Activity as soon as
                  the Android process has started. This theme is visible to the user
                  while the Flutter UI initializes. After that, this theme continues

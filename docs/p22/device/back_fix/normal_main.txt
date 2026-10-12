@@ -1,0 +1,4 @@
+early launch swipe (0.3 s after am start -W): topResumedActivity=ActivityRecord{208931682 u0 com.flappyspikes.flappy_spikes/.MainActivity t3141}
+home 2 swipes + KEYCODE_BACK: topResumedActivity=ActivityRecord{208931682 u0 com.flappyspikes.flappy_spikes/.MainActivity t3141}
+settings edge swipe: topResumedActivity=ActivityRecord{208931682 u0 com.flappyspikes.flappy_spikes/.MainActivity t3141}
+settings KEYCODE_BACK: topResumedActivity=ActivityRecord{208931682 u0 com.flappyspikes.flappy_spikes/.MainActivity t3141}

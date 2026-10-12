@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import 'redact.dart';
+
 /// PRD-2.2 §7.10: consent and SDK start-up, shared ONCE by the rewarded,
 /// interstitial and banner services (it used to live inside
 /// `AdMobRewardedAds`).
@@ -156,7 +158,9 @@ class AdMobAdsConsent implements AdsConsent {
     try {
       await ConsentForm.showPrivacyOptionsForm((formError) {
         if (formError != null) {
-          debugPrint('AdsConsent privacy form: ${formError.message}');
+          debugPrint(
+            'AdsConsent privacy form: ${redactSecrets(formError.message)}',
+          );
         }
         if (!done.isCompleted) done.complete();
       });
@@ -194,7 +198,9 @@ class AdMobAdsConsent implements AdsConsent {
           try {
             await ConsentForm.loadAndShowConsentFormIfRequired((formError) {
               if (formError != null) {
-                debugPrint('AdsConsent consent form: ${formError.message}');
+                debugPrint(
+            'AdsConsent consent form: ${redactSecrets(formError.message)}',
+          );
               }
             });
           } catch (e) {
@@ -203,7 +209,9 @@ class AdMobAdsConsent implements AdsConsent {
           if (!done.isCompleted) done.complete();
         },
         (error) {
-          debugPrint('AdsConsent consent update: ${error.message}');
+          debugPrint(
+            'AdsConsent consent update: ${redactSecrets(error.message)}',
+          );
           if (!done.isCompleted) done.complete();
         },
       );

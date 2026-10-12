@@ -17,6 +17,7 @@ import '../versus/upload_queue.dart';
 import 'avatars.dart';
 import 'firebase_versus_backend.dart';
 import 'identity.dart';
+import 'redact.dart';
 
 /// The player's own versus identity (§3.13).
 class VersusProfile {
@@ -356,7 +357,9 @@ class FirebaseVersusService implements VersusService {
   Future<T> _call<T>(Future<T> f) => f.timeout(timeout);
 
   void _log(String what, Object e) {
-    if (kDebugMode) debugPrint('versus: $what failed: $e');
+    // S7-18: plugin messages can carry OAuth / id tokens (a failed link
+    // echoes `?access_token=…`): never print them.
+    if (kDebugMode) debugPrint('versus: $what failed: ${redactSecrets(e)}');
   }
 
   @override

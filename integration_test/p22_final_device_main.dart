@@ -110,7 +110,7 @@ Future<void> main() async {
     worldHeight: 320 * view.physicalSize.height / view.physicalSize.width,
     monetization: monetization,
   )..audioFocus = PlatformAudioFocus();
-  WidgetsBinding.instance.addObserver(SystemBackObserver(game));
+  SystemBackObserver(game).install();
   runApp(
     Directionality(
       textDirection: TextDirection.ltr,

@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:in_app_purchase/in_app_purchase.dart';
 
+import 'redact.dart';
+
 /// Store products (Play Console / App Store Connect product IDs in
 /// [IapProductInfo.storeId]).
 enum IapProduct { coins1000, coins10000, coins17000, coins100000, noAds }
@@ -287,7 +289,7 @@ class PluginIapStore implements IapStore {
 /// Product ids and store codes only — no PII.
 void iapLog(String message) {
   // ignore: avoid_print
-  print('[IAP] $message');
+  print('[IAP] ${redactSecrets(message)}'); // S7-18
 }
 
 /// The store identity of [purchase] (S1-71): its purchaseID (Play order id /

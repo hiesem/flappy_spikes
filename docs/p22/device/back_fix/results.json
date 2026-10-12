@@ -1,0 +1,614 @@
+[
+  {
+    "case": "swipe_settings",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{77559327 u0 com.flappyspikes.flappy_spikes/.MainActivity t3106}",
+    "before": {
+      "state": "start",
+      "menu": "settings",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_shop",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{37075539 u0 com.flappyspikes.flappy_spikes/.MainActivity t3107}",
+    "before": {
+      "state": "start",
+      "menu": "shop",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_skins",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{177863673 u0 com.flappyspikes.flappy_spikes/.MainActivity t3108}",
+    "before": {
+      "state": "start",
+      "menu": "skins",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_levels",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{76644867 u0 com.flappyspikes.flappy_spikes/.MainActivity t3109}",
+    "before": {
+      "state": "start",
+      "menu": "levels",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_debug",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{236427928 u0 com.flappyspikes.flappy_spikes/.MainActivity t3110}",
+    "before": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": true
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_no_ads",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{94292015 u0 com.flappyspikes.flappy_spikes/.MainActivity t3111}",
+    "before": {
+      "state": "start",
+      "menu": "home",
+      "modal": true,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_level_up",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{80258238 u0 com.flappyspikes.flappy_spikes/.MainActivity t3112}",
+    "before": {
+      "state": "start",
+      "menu": "home",
+      "modal": true,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_purchase_cancelled",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{74642760 u0 com.flappyspikes.flappy_spikes/.MainActivity t3113}",
+    "before": {
+      "state": "start",
+      "menu": "home",
+      "modal": true,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_purchase_failed",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{187134500 u0 com.flappyspikes.flappy_spikes/.MainActivity t3114}",
+    "before": {
+      "state": "start",
+      "menu": "home",
+      "modal": true,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_celebration",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{235678122 u0 com.flappyspikes.flappy_spikes/.MainActivity t3115}",
+    "before": {
+      "state": "start",
+      "menu": "home",
+      "modal": true,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_nested_shop_skins",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{1710259 u0 com.flappyspikes.flappy_spikes/.MainActivity t3116}",
+    "before": {
+      "state": "start",
+      "menu": "skins",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "shop",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_delete_confirm",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{104498472 u0 com.flappyspikes.flappy_spikes/.MainActivity t3117}",
+    "before": {
+      "state": "start",
+      "menu": "settings",
+      "modal": true,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "settings",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_home",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{95315275 u0 com.flappyspikes.flappy_spikes/.MainActivity t3118}",
+    "before": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_playing",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{231724047 u0 com.flappyspikes.flappy_spikes/.MainActivity t3119}",
+    "before": {
+      "state": "playing",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "playing",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_paused",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{144348121 u0 com.flappyspikes.flappy_spikes/.MainActivity t3120}",
+    "before": {
+      "state": "paused",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "paused",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_run_settings",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{47375271 u0 com.flappyspikes.flappy_spikes/.MainActivity t3121}",
+    "before": {
+      "state": "paused",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "paused",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "swipe_results",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{246584850 u0 com.flappyspikes.flappy_spikes/.MainActivity t3123}",
+    "before": {
+      "state": "results",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "results",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_settings",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{132126683 u0 com.flappyspikes.flappy_spikes/.MainActivity t3124}",
+    "before": {
+      "state": "start",
+      "menu": "settings",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_shop",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{50399539 u0 com.flappyspikes.flappy_spikes/.MainActivity t3125}",
+    "before": {
+      "state": "start",
+      "menu": "shop",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_skins",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{169161253 u0 com.flappyspikes.flappy_spikes/.MainActivity t3126}",
+    "before": {
+      "state": "start",
+      "menu": "skins",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_levels",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{89187224 u0 com.flappyspikes.flappy_spikes/.MainActivity t3127}",
+    "before": {
+      "state": "start",
+      "menu": "levels",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_debug",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{129046882 u0 com.flappyspikes.flappy_spikes/.MainActivity t3128}",
+    "before": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": true
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_no_ads",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{202595687 u0 com.flappyspikes.flappy_spikes/.MainActivity t3129}",
+    "before": {
+      "state": "start",
+      "menu": "home",
+      "modal": true,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_level_up",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{172088741 u0 com.flappyspikes.flappy_spikes/.MainActivity t3130}",
+    "before": {
+      "state": "start",
+      "menu": "home",
+      "modal": true,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_purchase_cancelled",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{179243704 u0 com.flappyspikes.flappy_spikes/.MainActivity t3131}",
+    "before": {
+      "state": "start",
+      "menu": "home",
+      "modal": true,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_purchase_failed",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{199891507 u0 com.flappyspikes.flappy_spikes/.MainActivity t3132}",
+    "before": {
+      "state": "start",
+      "menu": "home",
+      "modal": true,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_celebration",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{207859717 u0 com.flappyspikes.flappy_spikes/.MainActivity t3133}",
+    "before": {
+      "state": "start",
+      "menu": "home",
+      "modal": true,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_nested_shop_skins",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{49008469 u0 com.flappyspikes.flappy_spikes/.MainActivity t3134}",
+    "before": {
+      "state": "start",
+      "menu": "skins",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "shop",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_delete_confirm",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{167465169 u0 com.flappyspikes.flappy_spikes/.MainActivity t3135}",
+    "before": {
+      "state": "start",
+      "menu": "settings",
+      "modal": true,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "settings",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_home",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{223466450 u0 com.flappyspikes.flappy_spikes/.MainActivity t3136}",
+    "before": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "start",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_playing",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{197388209 u0 com.flappyspikes.flappy_spikes/.MainActivity t3137}",
+    "before": {
+      "state": "playing",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "playing",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_paused",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{3979035 u0 com.flappyspikes.flappy_spikes/.MainActivity t3138}",
+    "before": {
+      "state": "paused",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "paused",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_run_settings",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{91366981 u0 com.flappyspikes.flappy_spikes/.MainActivity t3139}",
+    "before": {
+      "state": "paused",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "paused",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  },
+  {
+    "case": "key_results",
+    "pass_": true,
+    "foreground": true,
+    "resumed": "topResumedActivity=ActivityRecord{151979691 u0 com.flappyspikes.flappy_spikes/.MainActivity t3140}",
+    "before": {
+      "state": "results",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    },
+    "after": {
+      "state": "results",
+      "menu": "home",
+      "modal": false,
+      "debug": false
+    }
+  }
+]

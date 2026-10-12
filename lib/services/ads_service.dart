@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'ads_consent.dart';
+import 'redact.dart';
 
 export 'ads_consent.dart';
 
@@ -278,7 +279,7 @@ abstract class _AdMobFullScreenLoader<T extends AdWithoutView> {
 
   void _failed(String message) {
     _loading = false;
-    debugPrint('$logName $message');
+    debugPrint('$logName ${redactSecrets(message)}'); // S7-18
     _retryTimer?.cancel();
     _loadFailures++;
     _retryTimer = Timer(_retryDelay(_loadFailures, maxRetryDelay), _load);
@@ -396,7 +397,9 @@ class AdMobRewardedAds extends _AdMobFullScreenLoader<RewardedAd>
           finish(earned ? AdResult.completed : AdResult.dismissed);
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
-          debugPrint('AdMobRewardedAds show failed: ${error.message}');
+          debugPrint(
+            'AdMobRewardedAds show failed: ${redactSecrets(error.message)}',
+          );
           _dispose(ad);
           finish(AdResult.failed);
         },
@@ -572,7 +575,9 @@ class AdMobInterstitialAds extends _AdMobFullScreenLoader<InterstitialAd>
           finish(AdResult.completed);
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
-          debugPrint('AdMobInterstitialAds show failed: ${error.message}');
+          debugPrint(
+            'AdMobInterstitialAds show failed: ${redactSecrets(error.message)}',
+          );
           _dispose(ad);
           finish(AdResult.failed);
         },
@@ -845,7 +850,9 @@ class AdMobBannerAds implements BannerAds {
           _loaded.value = true;
         },
         onAdFailedToLoad: (_, error) {
-          debugPrint('AdMobBannerAds load failed: ${error.message}');
+          debugPrint(
+            'AdMobBannerAds load failed: ${redactSecrets(error.message)}',
+          );
           try {
             ad.dispose();
           } catch (_) {}

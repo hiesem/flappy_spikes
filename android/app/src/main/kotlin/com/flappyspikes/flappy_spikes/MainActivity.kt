@@ -10,6 +10,7 @@ import android.media.AudioManager
 import android.media.AudioPlaybackConfiguration
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
@@ -22,6 +23,18 @@ class MainActivity : FlutterActivity() {
     private var audioWatch: AudioWatch? = null
     private var debugReceiver: BroadcastReceiver? = null
     private var debugPlayer: android.media.MediaPlayer? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // PRD-2.2 §8 / S7-20: the game is the only back consumer. With
+        // predictive back (targetSdk 36) the system finishes the activity
+        // unless the engine's OnBackInvokedCallback is registered, and the
+        // engine only registers it when the framework claims back (normally
+        // WidgetsApp, which this game does not use). Claim it here, before
+        // Dart runs; the Dart side (SystemBackObserver.install) claims it
+        // again and every back lands in FlappySpikesGame.handleSystemBack.
+        setFrameworkHandlesBack(true)
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

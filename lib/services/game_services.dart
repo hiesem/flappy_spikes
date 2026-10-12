@@ -9,6 +9,7 @@ import 'package:games_services/games_services.dart';
 
 import '../firebase_options.dart';
 import '../skins/look.dart';
+import 'redact.dart';
 
 /// Outcome of a [GameServices.showLeaderboards] call, so the game can tell
 /// "opened fine" apart from the different failure modes (and from "not a
@@ -122,7 +123,9 @@ class GameServices {
       _analytics = FirebaseAnalytics.instance;
       _firebaseUp = true;
     } catch (e) {
-      debugPrint('GameServices: Firebase.initializeApp failed: $e');
+      debugPrint(
+        'GameServices: Firebase.initializeApp failed: ${redactSecrets(e)}',
+      );
       _analytics = null;
     }
     return _firebaseUp;
@@ -233,7 +236,8 @@ class GameServices {
   /// home_slot_shown, ...). Goes through [logEvent], so test spies that
   /// override it see these too.
   void track(String name, [Map<String, Object>? parameters]) =>
-      logEvent(name, parameters);
+      // S7-18: no credential ever reaches an analytics parameter.
+      logEvent(name, redactParams(parameters));
 
   /// Non-private so tests can record events instead of sending them;
   /// production behavior is unchanged (analytics, try/caught).
@@ -243,10 +247,12 @@ class GameServices {
       // Firebase Analytics takes only String / num values (a bool fails its
       // assertion asynchronously, outside this try — seen on the Pixel 8
       // for `notif_permission` {granted: true}): bools go as 1 / 0.
-      final params = parameters == null
+      // S7-18: credentials are stripped from every String value.
+      final safe = redactParams(parameters);
+      final params = safe == null
           ? null
           : {
-              for (final e in parameters.entries)
+              for (final e in safe.entries)
                 e.key: switch (e.value) {
                   true => 1,
                   false => 0,
@@ -313,6 +319,9 @@ class GameServices {
       code = 'unknown';
       message = error.toString();
     }
+    // S7-18: strip credentials before truncating (a cut could leave half a
+    // token that no longer matches the patterns).
+    message = redactSecrets(message);
     // Analytics parameter values are capped at 100 chars — truncate at 90.
     message = message.substring(0, min(90, message.length));
     debugPrint('GameServices pgs_error: op=$op code=$code message=$message');

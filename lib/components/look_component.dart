@@ -31,10 +31,11 @@ enum LookPose { idle, flap, dead }
 /// (the wind-up key, PRD §5.2 "idle-only, no gameplay reactions"); only
 /// [showDead] / [paused] freeze them.
 ///
-/// [blend] (0..1) with [blendColor] is the run stage tint, applied at draw
-/// time: `c * (1 - blend) + blendColor * blend` on RGB with alpha kept — the
-/// `Config.skinStageBlend` rule (SPEC "Skin tint rule"). At 0 the look draws
-/// its true colours with no extra layer (menus and stages 0–4).
+/// [blend] (0..1) with [blendColor] tints the look at draw time:
+/// `c * (1 - blend) + blendColor * blend` on RGB with alpha kept. The run
+/// bird only uses it for the themed death tints (`Bird.deathTint`, PRD-2
+/// §5.17); the stage blend is gone (PRD-2.2 §20). At 0 the look draws its
+/// true colours with no extra layer.
 class LookComponent extends PositionComponent {
   LookComponent({
     required this.look,
@@ -103,7 +104,7 @@ class LookComponent extends PositionComponent {
   double get opacity => _opacity;
   set opacity(double value) => _opacity = value.clamp(0.0, 1.0);
 
-  /// Stage tint factor; 0 keeps the identity colours.
+  /// Tint factor (themed death tints); 0 keeps the identity colours.
   double get blend => _blend;
   set blend(double value) => _blend = value.clamp(0.0, 1.0);
 
@@ -192,7 +193,7 @@ class LookComponent extends PositionComponent {
     if (needsLayer) canvas.restore();
   }
 
-  /// The 4x5 [ColorFilter.matrix] of the stage blend: every RGB channel
+  /// The 4x5 [ColorFilter.matrix] of a tint blend: every RGB channel
   /// becomes `c * (1 - blend) + tint * blend`, alpha is kept.
   static List<double> blendMatrix(double blend, Color tint) {
     final keep = 1 - blend;

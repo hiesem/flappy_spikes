@@ -62,10 +62,9 @@ states" above. Everything else in this document still holds.
 - **Menus always stage 0.** Home, Shop, Skins and all dialogs/popups render at
   colour stage 0; only runs advance the colour stage.
 - **Skin tint rule.** The bird is drawn from the equipped 2.0 look (bird + gear +
-  hat, `LookPainter`). In menus and at stage 0 it shows its true colours; from
-  stage 5 the whole look lerps 35 % toward the stage foreground
-  (`Config.skinStageBlend`, a colour-matrix layer) — applied to every look, the
-  default Classic included (a pure stage modulate made all skins grey). Hitbox and
+  hat, `LookPainter`) in its **true colours at every stage** (PRD-2.2 §20: the
+  stage blend of this rule is removed, see the DEVIATION at the end). Only a
+  themed death tints the look (`Bird.deathTint`, PRD-2 §5.17). Hitbox and
   physics are unchanged.
 - **Powerup slot = "watch ad → play with powerup"** (DEVIATION from PRD-1
   §3.6/§4.2, product-owner decision 2026-10-04). The gold slot always shows the
@@ -194,7 +193,9 @@ Product-owner decisions 2026-10-06/07 and implementation notes:
   `rduck` shape (head bump over a boat body with an upturned tail, blue band,
   one glossy highlight, big #FF5722 bill) so it no longer reads as the Chick.
   Shapes may set `bl` (stern x for the wind-up key; defaults to `l`).
-- **Stage blend kept** (DEVIATION from §5 "colours fixed"): see the skin tint rule.
+- **Stage blend removed** (PRD-2.2 §20, supersedes the 2.0 "stage blend kept"
+  line): the run bird keeps its own colours at every colour stage; see the
+  DEVIATION (PRD-2.2 §20) at the end of this file.
 - **Art in code:** every item is a Canvas port of `design/menu_v2/skin_art.js`
   (`lib/skins/art/`); no sprite assets. The PRD's "44 × 36 art box / 30 × 30
   body" are art units: in runs the art body centre (21, 18) sits on the physics
@@ -1261,3 +1262,19 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `test/p22/s17_comet_landing_test.dart`,
   `test/p22/s18_portal_rides_polish_test.dart`; shots
   `test/p22/s18_portal_rides_shots_test.dart` (→ `build/menu_shots/p22/s18/`).
+
+## PRD-2.2 visual layering and colours (WP-V1, 2026-10-12)
+- DEVIATION (PRD-2.2 §20, supersedes the 2.0 "skin tint rule" stage blend and
+  the PRD-2 look-colour rule): **the bird keeps its own colours at every
+  colour stage.** The run look (bird, gear, hat) is no longer lerped 35 %
+  toward the stage foreground from stage 5 (`Config.skinStageBlend` and the
+  skin blend of the colour crossfade are removed). It shows its shop colours
+  in runs, portal rides, the comet, revive, results and the VS intro. Kept:
+  the gold bird of the perfect streak (tier 2+, PRD-2 §3.5) and the themed
+  death tints (charred, frozen, X-ray; PRD-2 §5.17), which are the only blend
+  of the look (`Bird.deathTint` / `deathTintAmount`). Background, spike
+  strips, score circle and HUD tints still follow the colour stage.
+- Tests: `test/p22/s20_bird_colours_test.dart` (stages 0, 1, 5, 10 with the
+  classic and an accessory look: the bird's solid pixels equal the stage-0
+  pixels; gold tier 2 and the death tint keep working); `look_visual_test.dart`,
+  `home_flow_test.dart` and `look_component_test.dart` updated to the new rule.

@@ -18,9 +18,8 @@ import 'menu_screenshot_test.dart' show loadFonts;
 /// WP-D visual check: renders the home bird and the run bird with the classic
 /// look and with a non-default look (robin + wind-up key + cowboy) to
 /// `build/look_shots/*.png` (LOOKed at by the author), and asserts the pixels
-/// that matter: the look is drawn where the 1.0 bird sat, and the run bird at
-/// stage 5 is tinted exactly `Config.skinStageBlend` of the stage foreground
-/// toward the body colours.
+/// that matter: the look is drawn where the 1.0 bird sat, and the run bird
+/// keeps its own colours at stage 5 (PRD-2.2 §20: no stage blend).
 ///
 /// Every capture pins the bird first ([_pinBird] / the home bird's clock) so
 /// the art frame, position and opacity are fixed; the widget's own ticks then
@@ -188,7 +187,7 @@ void main() async {
     () => createTestGame(_ownedPrefs),
     gameSize: Vector2(Config.worldWidth, Config.worldHeight),
   ).testGameWidget(
-    'run bird: look at stage 0 and the 35 % stage blend at stage 5',
+    'run bird: look at stage 0 and at stage 5 with no stage blend (PRD-2.2 §20)',
     setUp: (game, tester) async {
       await game.ready();
       await preloadImages(game);
@@ -221,93 +220,30 @@ void main() async {
         );
 
         // Drive the run to stage 5 (PRD-2 §3.0.1: hoop 10) and finish the
-        // crossfade.
+        // crossfade. PRD-2.2 §20: the bird keeps its own colours there.
         for (var i = 0; i < 10; i++) {
           game.run!.debugPass();
         }
         stepGame(game, 0.6);
         final bird = game.world.children.query<Bird>().single;
-        expect(game.skinBlend, Config.skinStageBlend);
-        expect(bird.lookComponent.blend, Config.skinStageBlend);
-        expect(bird.lookComponent.blendColor, game.foregroundColor);
+        expect(bird.lookComponent.blend, 0);
         expect(game.foregroundColor, kPalettes[5]!.foreground);
         _pinBird(game);
-        await _capture(game, 'run_stage5_robin_windup_cowboy');
+        final stage5 = await _capture(game, 'run_stage5_robin_windup_cowboy');
 
-        // The same frame rendered twice — blend 0 and blend 0.35 — so the
-        // only difference is the tint (no update in between). Every changed
-        // pixel of the bird must be `off * (1 - blend) + foreground * blend`
-        // on RGB with alpha kept: solving for the mixed-in colour recovers
-        // the stage foreground exactly on the body pixels (anti-aliased edge
-        // pixels mix in the background, so only the solid body counts).
-        final pair = await _captureBlendPair(game);
-        const blend = Config.skinStageBlend;
-        final fg = kPalettes[5]!.foreground;
-        final fgR = fg.r * 255, fgG = fg.g * 255, fgB = fg.b * 255;
-        var changed = 0, tinted = 0;
-        for (var i = 0; i < pair.off.length; i += 4) {
-          if (pair.off[i] == pair.on[i] &&
-              pair.off[i + 1] == pair.on[i + 1] &&
-              pair.off[i + 2] == pair.on[i + 2]) {
-            continue;
-          }
-          changed++;
-          expect(pair.on[i + 3], pair.off[i + 3], reason: 'alpha must be kept');
-          final implied = [
-            (pair.on[i] - (1 - blend) * pair.off[i]) / blend,
-            (pair.on[i + 1] - (1 - blend) * pair.off[i + 1]) / blend,
-            (pair.on[i + 2] - (1 - blend) * pair.off[i + 2]) / blend,
-          ];
-          if ((implied[0] - fgR).abs() <= 2 &&
-              (implied[1] - fgG).abs() <= 2 &&
-              (implied[2] - fgB).abs() <= 2) {
-            tinted++;
-          }
+        // A solid body pixel of the bird is the same colour at stage 0 and at
+        // stage 5 (the background behind the bird changed; the bird did not).
+        for (final p in [
+          body,
+          body.translate(-6, 0),
+          body.translate(0, -5),
+        ]) {
+          final at0 = _pixel(look0, p.dx, p.dy);
+          expect(at0.a, 1);
+          expect(_pixel(stage5, p.dx, p.dy), at0, reason: 'at $p');
         }
-        expect(changed, greaterThan(1000), reason: 'the bird art changed');
-        expect(tinted, greaterThan(1000), reason: 'solid body tinted by fg');
       });
     },
   );
 }
 
-/// Renders the current frame twice, with the run bird's blend forced to 0
-/// then [Config.skinStageBlend], without an update in between, so the two
-/// images share geometry, pose and background exactly.
-Future<({Uint8List off, Uint8List on})> _captureBlendPair(
-  FlappySpikesGame game,
-) async {
-  final bird = game.world.children.query<Bird>().single;
-  final size = _canvasSize(game);
-  game.onGameResize(size);
-  final w = size.x.toInt(), h = size.y.toInt();
-  ui.Picture record(double blend) {
-    bird.lookComponent.blend = blend;
-    final rec = ui.PictureRecorder();
-    final canvas = Canvas(rec);
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.x, size.y),
-      Paint()..color = game.backgroundColor(),
-    );
-    game.render(canvas);
-    return rec.endRecording();
-  }
-
-  final offPicture = record(0);
-  final onPicture = record(Config.skinStageBlend);
-  final offImage = await offPicture.toImage(w, h);
-  final onImage = await onPicture.toImage(w, h);
-  final off = (await offImage.toByteData(
-    format: ui.ImageByteFormat.rawStraightRgba,
-  ))!
-      .buffer
-      .asUint8List();
-  final on = (await onImage.toByteData(
-    format: ui.ImageByteFormat.rawStraightRgba,
-  ))!
-      .buffer
-      .asUint8List();
-  offImage.dispose();
-  onImage.dispose();
-  return (off: off, on: on);
-}

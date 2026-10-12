@@ -410,12 +410,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   (IapProduct, ServiceMessage)? _pendingToast;
   bool _runStarting = false;
 
-  // Skin tint blend (see Config.skinStageBlend): follows the colour
-  // crossfade from _skinBlendFrom to _skinBlendTo.
-  double _skinBlend = 0;
-  double _skinBlendFrom = 0;
-  double _skinBlendTo = 0;
-
   /// Back handlers, topmost last (settings, debug panel; later the Shop,
   /// Skins and popups). Esc pops the topmost. Each returns true when it
   /// handled the back press.
@@ -595,9 +589,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// The fake rewarded-ad overlay while it is up (null otherwise).
   FakeAdOverlay? get fakeAdOverlay => _fakeAd;
-
-  /// Current skin blend toward the stage foreground (0 in menus).
-  double get skinBlend => _skinBlend;
 
   // Any letterbox slivers (only on screens beyond the viewHeight clamp, e.g.
   // tablets) are painted with the FOREGROUND tint so they read as an
@@ -1556,7 +1547,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final key = paletteKeyForStageIndex(stageIndex);
     if (key == _stage) return;
     _stage = key;
-    _startColorFade(paletteForStage(key), stage: key);
+    _startColorFade(paletteForStage(key));
   }
 
   /// §3.0.5 a death that is not saved: the bird turns into the ballistic
@@ -3432,7 +3423,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     score = 0;
     _stage = 0;
-    _skinBlend = _skinBlendFrom = _skinBlendTo = 0;
     _hud.setScore(0);
     _fades.removeWhere((fade) => identical(fade.target, _hud));
     _hud.opacity = 0;
@@ -3543,9 +3533,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   // --- color stages --------------------------------------------------------
 
-  void _startColorFade(Palette palette, {required int stage}) {
-    _skinBlendFrom = _skinBlend;
-    _skinBlendTo = stage == 0 ? 0 : Config.skinStageBlend;
+  /// Crossfades the background and foreground to [palette]. The bird keeps
+  /// its own colours at every stage (PRD-2.2 §20): no skin blend follows.
+  void _startColorFade(Palette palette) {
     _fadeFromBg = _bgColor;
     _fadeFromFg = _fgColor;
     _targetBg = palette.background;
@@ -3684,8 +3674,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       );
       _bgColor = Color.lerp(_fadeFromBg, _targetBg, _colorFadeT)!;
       _fgColor = Color.lerp(_fadeFromFg, _targetFg, _colorFadeT)!;
-      _skinBlend =
-          _skinBlendFrom + (_skinBlendTo - _skinBlendFrom) * _colorFadeT;
       _applyTints();
     }
 

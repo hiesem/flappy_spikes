@@ -13,6 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// PRD-1 sprite component).
 
 const int _w = 96, _h = 88; // generous margins around the 44 x 36 art box
+/// The tint factor the blend tests use (the themed death tints of PRD-2
+/// §5.17 are the only run blend since PRD-2.2 §20 removed the stage blend).
+const double _blend = 0.35;
 const double _scale = 1.5; // device px per art unit
 
 /// Renders [component] with its art body centre at ([cx], [cy]) and returns
@@ -160,22 +163,22 @@ void main() {
     });
   });
 
-  group('stage blend', () {
+  group('tint blend (themed death tints, PRD-2.2 §20)', () {
     test('blendMatrix mixes 35 % of the tint into every RGB channel', () {
       const tint = Color(0xFF102030);
-      final m = LookComponent.blendMatrix(Config.skinStageBlend, tint);
+      final m = LookComponent.blendMatrix(_blend, tint);
       expect(m, hasLength(20));
       expect(m[0], closeTo(0.65, 1e-12));
-      expect(m[4], closeTo(tint.r * 255 * Config.skinStageBlend, 1e-9));
+      expect(m[4], closeTo(tint.r * 255 * _blend, 1e-9));
       expect(m[6], closeTo(0.65, 1e-12));
-      expect(m[9], closeTo(tint.g * 255 * Config.skinStageBlend, 1e-9));
+      expect(m[9], closeTo(tint.g * 255 * _blend, 1e-9));
       expect(m[12], closeTo(0.65, 1e-12));
-      expect(m[14], closeTo(tint.b * 255 * Config.skinStageBlend, 1e-9));
+      expect(m[14], closeTo(tint.b * 255 * _blend, 1e-9));
       // Alpha is kept.
       expect(m.sublist(15), [0, 0, 0, 1, 0]);
     });
 
-    testWidgets('apply 0.35 toward the stage foreground on RGB only', (
+    testWidgets('apply 0.35 toward the tint on RGB only', (
       tester,
     ) async {
       await tester.runAsync(() async {
@@ -184,7 +187,7 @@ void main() {
         final blended = LookComponent(
           look: Look.defaults,
           artScale: _scale,
-          blend: Config.skinStageBlend,
+          blend: _blend,
           blendColor: tint,
         );
         final a = await _render(plain, _w / 2, _h / 2);
@@ -193,14 +196,14 @@ void main() {
         for (var i = 0; i < a.length; i += 4) {
           if (a[i + 3] != 255) continue; // opaque body pixels only
           for (var k = 0; k < 3; k++) {
-            final expected = a[i + k] * (1 - Config.skinStageBlend) +
+            final expected = a[i + k] * (1 - _blend) +
                 (k == 0
                         ? tint.r
                         : k == 1
                             ? tint.g
                             : tint.b) *
                     255 *
-                    Config.skinStageBlend;
+                    _blend;
             expect(b[i + k], closeTo(expected, 2), reason: 'channel $k');
           }
           expect(b[i + 3], a[i + 3], reason: 'alpha must be kept');

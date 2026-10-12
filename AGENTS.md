@@ -217,9 +217,10 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
 - iOS: ads route to Noop (no `GADApplicationIdentifier`; iOS paused), IAP is real.
 - Menus (home/shop/skins/dialogs/popups) always render at colour stage 0; only
   runs advance the colour stage.
-- Looks (2.0 skin shop): true colours in menus and at stage 0; in runs the whole
-  look (bird + gear + hat) is `lerp(colour, stageFg, 0.35)` — a pure stage
-  modulate made all skins grey.
+- Looks (2.0 skin shop, PRD-2.2 §20): the whole look (bird + gear + hat) keeps its
+  true colours at every colour stage, in menus and in runs; the old 0.35 stage
+  blend is gone (a pure stage modulate had made all skins grey). Only a themed
+  death tints the look (`Bird.deathTint`).
 - Modal popups (no-ads launch, LEVEL UP, purchase result, No-ads celebration) go through one queue: never two at
   once. Menu button presses knock when RUMBLE is on (PRD-home-v3 §10).
 - Item art is drawn in code (`lib/skins/art/`, port of

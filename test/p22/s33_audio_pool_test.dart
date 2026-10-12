@@ -146,7 +146,10 @@ void main() {
       sound.play(Sfx.lvUpBig); // 3.4 s, the least recently used pool
       await flushAudio();
       now = 1000;
-      for (final s in rare.where((s) => s != Sfx.lvUpBig).take(45)) {
+      for (final s
+          in rare
+              .where((s) => s != Sfx.lvUpBig)
+              .take(Config.sfxMaxLivePools + 5)) {
         sound.play(s); // each new pool runs the cap check
         await flushAudio();
       }

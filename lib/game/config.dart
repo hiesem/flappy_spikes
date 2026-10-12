@@ -1233,7 +1233,9 @@ class Config {
 
   /// ... and at most this many pools stay alive (least recently used idle
   /// pools go first). With ≤ 6 players each this bounds the native players.
-  static const int sfxMaxLivePools = 40;
+  /// §33.6 (S7-19): 56 = the pinned session set (`SoundService.prewarmed` +
+  /// `sessionWarm`, 33 pools) + 23 run-scoped pools (disposed at run end).
+  static const int sfxMaxLivePools = 56;
 
   /// §33.4 item 3: the idle check runs at most this often (from `play`).
   static const int sfxTrimIntervalMs = 5000;

@@ -526,6 +526,55 @@ class SoundService {
     Sfx.perfect3,
   };
 
+  /// PRD-2.2 §33.6 (S7-19): the session sound set. Besides the core run
+  /// set ([prewarmed]) these are the cues that (nearly) every session plays
+  /// game after game: the post-run count-up, coin landings and ticks, the
+  /// balloon bonus, LEVEL UP / CLAIM, the feather slots and the star trail.
+  /// [warmSession] creates them once, right after the core, and from then
+  /// on they are never evicted, so the native player count no longer goes
+  /// up and down with the run-to-run mix of cues (flat from game 2, §33.6).
+  /// Every other cue is run-scoped: created on its first play / preload and
+  /// disposed at the end of its run ([endRun]).
+  static const Set<Sfx> sessionWarm = {
+    Sfx.skTick,
+    Sfx.bnCoin,
+    Sfx.bnAdBtn,
+    Sfx.lvBar,
+    Sfx.lvUp,
+    Sfx.lvUpBig,
+    Sfx.lvClaim,
+    Sfx.bnBalloonOpen,
+    Sfx.bnPrizeS,
+    Sfx.bnPrizeM,
+    Sfx.bnPrizeBig,
+    Sfx.colFeatherGet,
+    Sfx.colFeatherSlot1,
+    Sfx.colFeatherSlot2,
+    Sfx.colFeatherSlot3,
+    Sfx.trailNote1,
+    Sfx.trailNote2,
+    Sfx.trailNote3,
+    Sfx.trailNote4,
+    Sfx.trailNote5,
+    Sfx.trailNote6,
+    Sfx.trailNote7,
+    Sfx.trailNote8,
+    Sfx.trailPop,
+    Sfx.trailChord,
+  };
+
+  /// True once [warmSession] ran: [sessionWarm] is pinned like [prewarmed].
+  bool _sessionPinned = false;
+
+  /// The pools that are never evicted now ([prewarmed], plus [sessionWarm]
+  /// once [warmSession] ran).
+  bool _pinned(Sfx sfx) =>
+      prewarmed.contains(sfx) || (_sessionPinned && sessionWarm.contains(sfx));
+
+  /// Run-scoped pools still ringing when their run ended ([endRun]); each
+  /// is disposed by [maintain] once its last copy has finished.
+  final Set<Sfx> _runEnded = {};
+
   /// A lazily created pool plays its first request once it is ready, unless
   /// that took longer than this (a late sound is worse than none).
   static const Duration firstPlayLateLimit = Duration(milliseconds: 250);
@@ -598,6 +647,7 @@ class SoundService {
       }
       return;
     }
+    _runEnded.remove(sfx);
     pool.play(_nowMs);
     if (_nowMs - _lastTrimMs >= Config.sfxTrimIntervalMs) _trimPools();
   }
@@ -623,6 +673,7 @@ class SoundService {
       final pool = _pools[sfx];
       if (pool != null) {
         pool.lastUsedMs = now;
+        _runEnded.remove(sfx);
         continue;
       }
       if (_creating.containsKey(sfx)) continue;
@@ -639,6 +690,7 @@ class SoundService {
     ..._pools.keys,
     ..._inflight,
     if (enabled) ...prewarmed,
+    if (enabled && _sessionPinned) ...sessionWarm,
   }.length;
 
   /// Whether [pool] has a copy ringing at [now] (played within its length +
@@ -654,9 +706,7 @@ class SoundService {
   bool _evictOneFor(Set<Sfx> keep, int now) {
     MapEntry<Sfx, SfxPool>? lru;
     for (final e in _pools.entries) {
-      if (prewarmed.contains(e.key) ||
-          keep.contains(e.key) ||
-          _ringing(e.value, now)) {
+      if (_pinned(e.key) || keep.contains(e.key) || _ringing(e.value, now)) {
         continue;
       }
       if (lru == null || e.value.lastUsedMs < lru.value.lastUsedMs) lru = e;
@@ -748,6 +798,58 @@ class SoundService {
     }
   }
 
+  /// PRD-2.2 §33.6 (S7-19): pins [sessionWarm] and creates its pools once,
+  /// one by one after the core set (on Home, before the first run needs
+  /// them). Idempotent; no pool while muted or disabled (a later play
+  /// creates it on demand, still pinned).
+  Future<void> warmSession() async {
+    _sessionPinned = true;
+    if (!enabled || muted) return;
+    final gen = _generation;
+    await _initPools();
+    for (final sfx in sessionWarm) {
+      if (gen != _generation || muted) return;
+      if (_pools.containsKey(sfx)) continue;
+      await _ensurePool(sfx);
+    }
+  }
+
+  /// PRD-2.2 §33.4 item 3 / §33.6 (S7-19): the run is over (Home arrival).
+  /// Every run-scoped pool (not [prewarmed], not [sessionWarm] once
+  /// pinned) is disposed now, or by [maintain] as soon as its last copy has
+  /// finished, so each Home visit holds exactly the session set.
+  void endRun() {
+    final now = _nowMs;
+    _reserved = const {};
+    for (final e in List.of(_pools.entries)) {
+      if (_pinned(e.key)) continue;
+      if (_ringing(e.value, now)) {
+        _runEnded.add(e.key);
+      } else {
+        _evict(e.key);
+      }
+    }
+  }
+
+  /// Called every game frame: disposes the run-ended pools whose copies
+  /// have finished ([endRun]). Nothing to do (and no work) otherwise.
+  void maintain() {
+    if (_runEnded.isEmpty) return;
+    final now = _nowMs;
+    for (final sfx in List.of(_runEnded)) {
+      final pool = _pools[sfx];
+      if (pool == null) {
+        _runEnded.remove(sfx);
+      } else if (!_ringing(pool, now)) {
+        _evict(sfx);
+      }
+    }
+  }
+
+  /// Run-ended pools still waiting for their last copy (tests).
+  @visibleForTesting
+  int get runEndedPending => _runEnded.length;
+
   Future<void> _ensurePool(Sfx sfx) =>
       _creating.putIfAbsent(sfx, () => _createPool(sfx));
 
@@ -834,7 +936,7 @@ class SoundService {
     // lastPlayedMs, so a pool is never disposed under a ringing copy). A
     // preloaded pool that never played is not busy (S7-11).
     bool evictable(MapEntry<Sfx, SfxPool> e) =>
-        !prewarmed.contains(e.key) && !_ringing(e.value, now);
+        !_pinned(e.key) && !_ringing(e.value, now);
     final stale = _pools.entries
         .where(
           (e) =>
@@ -857,6 +959,7 @@ class SoundService {
   }
 
   void _evict(Sfx sfx) {
+    _runEnded.remove(sfx);
     final pool = _pools.remove(sfx);
     if (pool == null) return;
     _creating.remove(sfx);
@@ -887,6 +990,8 @@ class SoundService {
     _inflight.clear();
     _pendingFirst.clear();
     _reserved = const {};
+    _runEnded.clear();
+    _sessionPinned = false;
     await stopAllLoops();
     await Future.wait(pools.map((p) => p.dispose()));
   }

@@ -23,6 +23,7 @@ From the flappy_spikes worktree, with the PATH of CLAUDE.md "Commands" and `andr
 ```bash
 python3 -I tool/soak.py --label <name>          # builds, installs -r, plays 20 games, records
 python3 -I tool/soak.py --label <name> --no-build   # reuse build/app/outputs/flutter-apk/app-profile.apk
+python3 -I tool/soak.py --label <name> --no-banner  # S7-19 diagnosis: FS_SOAK_NO_BANNER, no gameplay banner
 ```
 
 Output goes to `docs/p22/perf/<name>/`:
@@ -331,3 +332,77 @@ Raw evidence: [CSV](perf/final-qa/soak.csv), [JSON](perf/final-qa/soak.json), [l
 Flutter frame timings are the run metric. Unlike the old baseline, HWUI now reports some frames (the native banner); they are not substituted for the Flutter surface timings. At game 20 build90 /raster90 are 4.41 /5.21 ms; the greater total-span p90 is not attributed to a component without trace analysis.
 
 §22 native stop evidence in this soak: `perfect_3` **12 copies, 2,400–2,411 ms**; `perfect_2` 20, 1,500–1,506 ms; `perfect_1` 59, 1,000–1,017 ms; `lv_claim` 4, 1,500–1,504 ms. No 0.6 s truncation for these cues. Oldest-copy steals on burst pools are counted separately (327 at game 20).
+
+## 2e. Final fix round R1-b (S7-19): session sound set, re-soak (2026-10-12, `g7-fin-soak`)
+
+**Phase 1, causes from the data and the code.**
+- **Players not flat (76 → 82 → 94 → 96).** No leak (live = pool voices + music at every hold), but the live set
+  followed the run-to-run mix of lazily created pools: cues first heard in later games (bonus, level-up, rides,
+  power-ups) were created, then evicted 180 s later, so the count at each hold depended on the last few games.
+  **Fix (`P22-FINAL-33`):** `SoundService.warmSession()` pins a session set (`sessionWarm`: post-run count-up / coins /
+  ticks, balloon bonus, LEVEL UP / CLAIM, feather slots, star trail; 25 pools) next to the 8 core pools and creates it
+  once on Home; pinned pools are never evicted. Every other pool is run-scoped: `replay()` (Home arrival) calls
+  `endRun()`, which disposes them at once, or via `maintain()` (each frame, no work when nothing is pending) once their
+  last copy has finished. `Config.sfxMaxLivePools` 40 → 56 (33 pinned + room for one run). Tests:
+  `test/p22/s33_session_pools_test.dart` (20 simulated games with fake voices: the live count on Home is identical after
+  every game; ringing pools wait; a re-played pool stays; 6 real soak-driver games in the game).
+- **Run frames.** Not our Dart or raster work: in the final-qa game-10 trace build90 / raster90 stay 4–5 ms while the
+  total span p90 is ≈ 15 ms. The main thread (with Flutter 3.47 the Android platform thread **is** the Dart UI thread;
+  `MergedPlatformUIThread=disabled` is rejected on Android by an `FML_CHECK`) runs Android view `traversal` +
+  `draw-VRI[MainActivity]` + `postAndWait` for the **§7.5 banner's platform view** (the AdWidget, TLHC): 208 traversals
+  of ≈ 7.3 ms in 40 s, in bursts of ≈ 0.62 s (38 frames) every 5.0 s from the first flight until the Home arrival (the
+  Google test creative animates every 5 s). The after-idle trace (no banner) has none. Frames overlapping a traversal are slower (final-qa trace, span
+  from the Dart frame start to the raster end, a proxy of the in-app metric): 76 % over 12.5 ms vs 43 % for the others. The final-qa window also had **Telegram** using 22.2 s of
+  CPU in the 40 s trace (the owner's app in the background; final-fix: Signal 12.4 s).
+- **Memory.** Java heap grows only with the banner (22 → 27 MB with it, 19–20 MB flat without); graphics grows
+  ≈ +25 MB from game 2 to 5 in **every** soak (2.1 too: GL 82 → 96 MB), with or without the banner, then plateaus: the
+  first bonus (game 3) and LEVEL UP (game 4) warm Impeller's GPU caches. The banner and interstitials are already
+  disposed after each run (`_releaseRunBanner`, `_dispose` after every show), so no Dart-side ad object leaks.
+
+**Phase 2, re-soak.** `python3 -I tool/soak.py --label final-fix` (build `8379282` = feat/2.2 `b26e121` + the
+P22-FINAL-33 commit), same phone / hub / charging / 60 Hz / brightness 128 (restored to auto, 3), stay-awake 7
+(unchanged). Start skin 28.7 °C, battery 27.9 °C, thermal 0. The host closed 7 Google **test** interstitials by
+their × button (same watcher rules as final-qa). Raw data: [perf/final-fix/soak.csv](perf/final-fix/soak.csv),
+[logcat.txt](perf/final-fix/logcat.txt), [raw/](perf/final-fix/raw/).
+
+| after game | 1 | 2 | 5 | 10 | 20 | final-qa at 20 | 2.1 at 20 |
+|---|---|---|---|---|---|---|---|
+| PSS total (MB) | 440.9 | 454.9 | 487.1 | 486.8 | **499.9** | 509.2 | 432.7 |
+| Native heap (MB) | 64.2 | 48.3 | 49.5 | 46.9 | 48.2 | 51.3 | 34.3 |
+| Graphics (MB) | 182.0 | 192.8 | 217.2 | 217.9 | 218.1 | 227.4 | 213.5 |
+| Java heap (MB) | 21.2 | 22.0 | 22.6 | 23.1 | 26.9 | 30.5 | 15.7 |
+| Code (MB) | 73.6 | 41.6 | 37.8 | 29.8 | 29.2 | – | – |
+| **Live native players** | **93** | **93** | **93** | **93** | **93** | 96 | 78 |
+| Pools alive / evicted so far | 33 / 2 | 33 / 8 | 33 / 15 | 33 / 27 | 33 / 55 | 35 / 44 | 33 / – |
+| Threads | 175 | 170 | 171 | 173 | 177 | 168 | 137 |
+| Home idle CPU (% of one core) | 55.0 | 52.0 | 49.0 | 55.4 | 50.5 | 56.5 | 84.4 |
+| Home position polls/s | 0 | 0 | 0 | 0 | 0 | 0 | 60 |
+| Run p90 (ms) | 12.81 | 14.48 | 15.00 | 15.78 | 14.74 | 14.73 | 13.72 |
+| Run slow % (> 12.5 ms) | 11.7 | 25.0 | 23.1 | 24.5 | 25.9 | 20.0 | 20.0 |
+| Run build90 / raster90 (ms) | 3.70 / 4.67 | 4.08 / 5.50 | 4.20 / 4.95 | 3.77 / 5.15 | 4.22 / 5.14 | 4.41 / 5.21 | – |
+| Thermal status | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Battery temperature (°C) | 27.6 | 27.4 | 27.5 | 28.0 | 29.0 | 26.5 | 25.3 |
+
+In-run the live count rises by the run-scoped pools (95–102 at the deaths) and is back to 93 (= 92 pinned voices +
+the music player) at every Home arrival; 155 disposals, 0 leaked. Run p90 per game: 12.8, 14.5, 15.0, 16.1, 15.0,
+15.4, 14.5, 14.3, 14.5, 15.8, 15.2, 16.6, 16.6, 16.1, 15.2, **12.1, 12.2**, 14.8, 15.5, 14.7 ms; the quiet games 16–17
+(slow 8–9 %) show the spread from outside the game.
+
+**Diagnosis run without the banner** (`--no-banner`: the soak-only define `FS_SOAK_NO_BANNER`, never in release;
+10 games, otherwise identical; [perf/diag-no-banner/](perf/diag-no-banner/soak.csv)): run p90 / slow % per game
+12.5/9.9, 12.7/11.7, 11.6/4.9, 11.4/3.5, 11.8/5.7, 12.8/12.3, 12.5/10.1, 12.7/11.0, 13.3/13.6, 12.2/8.3: flat, game 10
+≤ game 1, and every game under 2.1's game-20 value (13.72 ms / 20.0 %). No Android view traversals in its game-10 trace. Players 93 at every hold; PSS
+447.5 → 491.0 MB at game 10 (+9.7 %, graphics 187 → 220 MB); Java heap flat (19–20 MB); Home CPU 53–55 %.
+
+| §33.6 criterion | final-fix (this round) | verdict |
+|---|---|---|
+| PSS ≤ 10 % above game 2 | 454.9 → 499.9 MB = **+9.9 %** (limit 500.4); game 5 +7.1 %, game 10 +7.0 % | **PASS** (narrow; the graphics warm-up of games 3–4 is +24 MB of it) |
+| Native player count flat from game 2 | **93 at every hold** (games 1, 2, 5, 10, 20) | **PASS** |
+| Home idle CPU clearly below 2.1, no audio polling | 49.0–55.4 % (2.1: 80.5–84.4 %), 0 polls/s | **PASS** |
+| No moderate thermal state | status 0 at every sample, battery ≤ 29.0 °C | **PASS** |
+| Game-20 p90 / slow % = game 1 and no worse than 2.1 | 12.81 → 14.74 ms, 11.7 → 25.9 %; vs 2.1 at 20: +7.4 % p90, 25.9 vs 20.0 % | **FAIL** — caused by the §7.5 banner platform view (without it, 10 games: flat and under 2.1's game 20) |
+
+**Release gate: 4 of 5 pass; the frame criterion fails because of the gameplay banner.** Removing or changing the
+banner is outside this round (§7.5 is a product decision, and the look must not change). Options for the owner:
+accept the banner's frame cost; measure with real (not test) creatives; or move the banner out of the Flutter view
+(a native view still runs on the same main thread with the merged threads, so this needs a spike first).

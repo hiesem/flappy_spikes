@@ -117,7 +117,7 @@ void main() {
 
   tester.testGameWidget(
     '§3.19 a perfect FEVER pass: streak max(5, streak + 1), the bird '
-    'catches fire, FEVER! over LEGENDARY ×5, +1 score / +2 coins only, '
+    'catches fire, FEVER! over SOARING ×5, +1 score / +2 coins only, '
     'perfect_3 + the FEVER sound, the pass effect, analytics',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
@@ -144,7 +144,7 @@ void main() {
       expect(coins.single.amount, 2);
       final host = RunHud.of(run)!.banners;
       expect(host.fever, isA<FeverBanner>());
-      expect((host.current! as StreakBanner).text, 'LEGENDARY ×5');
+      expect((host.current! as StreakBanner).text, 'SOARING ×5');
       expect(sfx, containsAll(['perfect3', 'feverPass']));
       expect(paramsOf('fever_ring_passed').single, {
         'perfect': 1,

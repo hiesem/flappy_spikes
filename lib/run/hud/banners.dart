@@ -7,6 +7,7 @@ import 'package:flutter/painting.dart' as p show TextDirection;
 
 import '../../game/config.dart';
 import '../config/parts_config.dart';
+import '../config/streak_config.dart';
 
 /// Which kind of banner occupies the y-190 band (ARCH §1.10).
 enum BannerLane { streak, fever, element }
@@ -141,61 +142,41 @@ abstract class RunBanner extends PositionComponent {
 }
 
 /// Master #7 — the streak banner (PRD §3.0.9 #7, §3.4, §5.4
-/// `screen_perfect4.html banner()`): the 10 tier names and colours of §3.4,
-/// fixed font size per tier [28, 32, 34, 30, 32, 34, 34, 32, 34, 30],
-/// duration 0.9 + 0.16 × min(tier, 6) s (1.06–1.86 s). Tiers above 10 stay
-/// IMMORTAL ×10. Used by every perfect pass incl. comet, portal and rides.
+/// `screen_perfect4.html banner()`; names and colours PRD-2.2 §29,
+/// `screen_streak_names.html`): the text and colour of perfect streak
+/// [streak] (`StreakConfig.nameFor` / `colourFor`: 50 names, then FLAPPY
+/// GOD ×n; 10 rotating colours), the font shrinking for long names
+/// ([ElementBanner.autoSize]: min(34, 300 / (characters × 0.72))),
+/// duration 0.9 + 0.16 × min(streak, 6) s (1.06–1.86 s). Used by every
+/// perfect pass incl. comet, portal and rides.
 class StreakBanner extends RunBanner {
-  StreakBanner(int tier, {super.bandWidth})
-    : tier = tier.clamp(1, names.length),
+  StreakBanner(int streak, {super.bandWidth})
+    : streak = math.max(1, streak),
       super(lane: BannerLane.streak);
 
-  static const List<String> names = [
-    'PERFECT',
-    'GREAT ×2',
-    'AMAZING ×3',
-    'INCREDIBLE ×4',
-    'LEGENDARY ×5',
-    'UNREAL ×6',
-    'GODLIKE ×7',
-    'MYTHIC ×8',
-    'COSMIC ×9',
-    'IMMORTAL ×10',
-  ];
+  /// The perfect streak shown (≥ 1; no cap).
+  final int streak;
 
-  static const List<Color> colors = [
-    PartsConfig.pink,
-    PartsConfig.lightPink,
-    PartsConfig.gold,
-    PartsConfig.deepPink,
-    PartsConfig.plum,
-    PartsConfig.gold,
-    PartsConfig.lightPink,
-    PartsConfig.pink,
-    PartsConfig.deepPink,
-    PartsConfig.plum,
-  ];
+  /// The tier shown (streak capped at `StreakConfig.tierCap`; effects).
+  int get tier => math.min(streak, StreakConfig.tierCap);
 
-  /// Displayed tier 1..10.
-  final int tier;
-
-  /// Duration for a tier (s).
+  /// Duration for a streak / tier (s).
   static double durationFor(int tier) =>
       PartsConfig.bannerBase +
       PartsConfig.bannerPerTier *
           math.min(math.max(tier, 1), PartsConfig.bannerTierCap);
 
   @override
-  String get text => names[tier - 1];
+  String get text => StreakConfig.nameFor(streak);
 
   @override
-  Color get color => colors[tier - 1];
+  Color get color => StreakConfig.colourFor(streak);
 
   @override
-  double get fontSize => PartsConfig.bannerFontSizes[tier - 1];
+  double get fontSize => ElementBanner.autoSize(text);
 
   @override
-  double get duration => durationFor(tier);
+  double get duration => durationFor(streak);
 }
 
 /// An element banner (TRAIN ×3, BULLSEYE!, LUCKY SPIN, PERFECT LINE,
@@ -300,7 +281,8 @@ class BannerHost extends PositionComponent {
   }
 
   /// Convenience: the streak banner for [tier].
-  StreakBanner showStreak(int tier) => show(StreakBanner(tier));
+  /// PRD-2.2 §29 the banner of perfect streak [streak] (not the tier).
+  StreakBanner showStreak(int streak) => show(StreakBanner(streak));
 
   void clear() {
     final old = _current;

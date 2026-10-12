@@ -56,8 +56,8 @@ void main() {
   }, gameSize: Vector2(320, 711));
 
   tester.testGameWidget(
-    '§3.4 perfect passes build the streak; 10 tiers capped at IMMORTAL ×10; '
-    'banner sequence, tier sounds and analytics per pass',
+    '§3.4 perfect passes build the streak; 10 tiers (effects) capped at 10; '
+    'banner sequence (PRD-2.2 §29 names), tier sounds and analytics per pass',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await boot(game);
@@ -73,16 +73,16 @@ void main() {
       expect(names, [
         'PERFECT',
         'GREAT ×2',
-        'AMAZING ×3',
-        'INCREDIBLE ×4',
-        'LEGENDARY ×5',
-        'UNREAL ×6',
-        'GODLIKE ×7',
-        'MYTHIC ×8',
-        'COSMIC ×9',
-        'IMMORTAL ×10',
-        'IMMORTAL ×10',
-        'IMMORTAL ×10',
+        'ON FIRE ×3',
+        'AMAZING ×4',
+        'SOARING ×5',
+        'SKY HIGH ×6',
+        'HIGH FLYER ×7',
+        'FEATHERLIGHT ×8',
+        'EAGLE EYE ×9',
+        'FREE BIRD ×10',
+        'TAILWIND ×11',
+        'SKYLARK ×12',
       ]);
       expect(run.state.streak, 12);
       expect(run.state.tier, 10);

@@ -137,7 +137,7 @@ class StreakFeature extends RunFeature {
         : old + 1;
     _set(next, fever ? StreakCause.fever : StreakCause.pass);
     final tier = s.tier;
-    _banners?.showStreak(tier);
+    _banners?.showStreak(s.streak); // PRD-2.2 §29: the streak number
     c.sfx(StreakConfig.tierSounds[math.min(s.streak, 3) - 1]);
     final bird = c.game.runBirdPosition;
     final burst = _burst;
@@ -155,7 +155,7 @@ class StreakFeature extends RunFeature {
     final c = _c;
     if (c == null || c.s.streak >= e.value) return;
     _set(e.value, StreakCause.fever);
-    _banners?.showStreak(c.s.tier);
+    _banners?.showStreak(c.s.streak);
   }
   // endregion WP-3d
 

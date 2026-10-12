@@ -996,5 +996,16 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   nothing, a clean pass knocks, and the perfect-pass shake is **80 ms** at
   255 (was 45 ms). Throttle, pickups and "shake wins" unchanged. The plugin's
   `hasVibrator` / `hasAmplitudeControl` probe is logged once in debug builds.
+- DEVIATION (PRD-2.2 §29, supersedes the PRD-2 §3.4 tier-name table and
+  its 5 banner colours): the streak banner shows **50 bird-themed names**
+  (`StreakConfig.names`: ×1 PERFECT, ×2 GREAT ×2, ×3 ON FIRE ×3, … ×50 FLAPPY
+  GOD ×50; from ×51 FLAPPY GOD ×n) in **10 rotating colours**
+  (`StreakConfig.colours`, streak n → colour ((n − 1) mod 10) + 1, white
+  text). The banner font follows the long-name rule min(34, 300 /
+  (characters × 0.72)) for every name (the approved
+  `screen_streak_names.html`; the old fixed per-tier sizes are retired).
+  Tier effects (cap 10), sounds, look, place and timing are unchanged;
+  analytics keep sending the streak number.
 - Tests: `test/p22/s11_perfect_zone_test.dart`,
-  `test/p22/s10_hoop_rumble_test.dart`, `test/run/items/s3_33_rumble_test.dart`.
+  `test/p22/s10_hoop_rumble_test.dart`, `test/run/items/s3_33_rumble_test.dart`,
+  `test/p22/s29_streak_names_test.dart`.

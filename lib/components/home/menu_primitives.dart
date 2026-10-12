@@ -9,6 +9,7 @@ import 'package:flutter/painting.dart'
 import '../../game/config.dart';
 import '../../game/flappy_game.dart';
 import '../ui/live_effects.dart';
+import '../../game/paints.dart';
 
 /// Building blocks of the 2.0 menu screens (home now; Shop / Skins / popups
 /// reuse them). Geometry always comes from [Config]; these only draw.
@@ -203,10 +204,7 @@ mixin GroupOpacity on PositionComponent implements OpacityProvider {
       super.renderTree(canvas);
       return;
     }
-    canvas.saveLayer(
-      null,
-      Paint()..color = Color.fromRGBO(0, 0, 0, _groupOpacity),
-    );
+    canvas.saveLayer(null, layerPaint(_groupOpacity));
     super.renderTree(canvas);
     canvas.restore();
   }

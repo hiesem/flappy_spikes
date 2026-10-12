@@ -9,6 +9,7 @@ import '../../game/sound.dart';
 import '../director/plans.dart';
 import '../effects/particle_pool.dart';
 import 'ride_path.dart';
+import '../../game/paints.dart';
 
 /// The phases of a portal ride (PRD-2 §3.12, §5.12b; `rides84.js`):
 /// ride (≈ 9.6 s on the path) → exit moment → launch flight (1.7 s) →
@@ -322,7 +323,7 @@ void paintText(
   if (alpha < 1) {
     c.saveLayer(
       Rect.fromCenter(center: centre, width: tp.width + 4, height: tp.height + 4),
-      Paint()..color = Color.fromRGBO(0, 0, 0, alpha.clamp(0.0, 1.0)),
+      layerPaint(alpha.clamp(0.0, 1.0)),
     );
   }
   tp.paint(c, centre - Offset(tp.width / 2, tp.height / 2));

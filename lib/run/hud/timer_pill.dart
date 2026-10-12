@@ -8,6 +8,7 @@ import '../pickups/capsule.dart';
 import '../run_controller.dart';
 import '../run_state.dart';
 import 'run_hud.dart';
+import '../../game/paints.dart';
 
 /// §3.30 / §5.29 the timer pill of a running capsule powerup: a fixed spot
 /// near the top (x 100, y 156 — see `CapsuleConfig.pillY` —, 120 × 22 pt,
@@ -76,7 +77,7 @@ class TimerPill extends PositionComponent {
     if (layer) {
       canvas.saveLayer(
         Rect.fromLTWH(-4, -6, size.x + 80, size.y + 12),
-        Paint()..color = Color.fromRGBO(0, 0, 0, alpha),
+        layerPaint(alpha),
       );
     }
     const w = CapsuleConfig.pillWidth, h = CapsuleConfig.pillHeight;

@@ -8,6 +8,7 @@ import 'package:flutter/painting.dart' as p show TextDirection;
 import '../../game/config.dart';
 import '../config/fever_config.dart';
 import 'banners.dart';
+import '../../game/paints.dart';
 
 /// §5.18 the FEVER! banner: "FEVER!" in Opificio 44 pt with a vertical
 /// gradient `#FFF59D` → `#FF9800` → `#E64A19` and a 7 pt plum `#7A0044`
@@ -105,7 +106,7 @@ class FeverBanner extends RunBanner {
     );
     final layer = a < 1;
     if (layer) {
-      canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, a));
+      canvas.saveLayer(null, layerPaint(a));
     }
     final o = Offset(-fill.width / 2, -fill.height / 2);
     stroke.paint(canvas, o);

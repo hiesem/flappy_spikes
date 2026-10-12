@@ -20,6 +20,7 @@ import '../effects/fireworks.dart';
 import '../effects/particle_pool.dart';
 import '../hud/run_hud.dart' show HudText;
 import '../../services/avatars.dart';
+import '../../game/paints.dart';
 
 const Color _pink = Color(0xFFEC008C);
 const Color _soft = Color(0xFFFCD9EE);
@@ -1008,7 +1009,7 @@ class VersusIntroVs extends PositionComponent {
   @override
   void render(Canvas canvas) {
     if (_opacity <= 0) return;
-    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, _opacity));
+    canvas.saveLayer(null, layerPaint(_opacity));
     canvas.drawRect(size.toRect(), _p);
     canvas.translate(size.x / 2, size.y / 2);
     canvas.scale(_pulse);

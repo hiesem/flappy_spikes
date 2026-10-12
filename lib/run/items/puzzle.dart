@@ -18,6 +18,7 @@ import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
 import '../run_state.dart';
+import '../../game/paints.dart';
 
 /// Puzzle pieces in the run (PRD-2 §3.16, §5.15).
 ///
@@ -317,7 +318,7 @@ class PuzzlePillItem extends CollectTimeline {
   @override
   void paint(Canvas canvas, double alpha, double t) {
     fadeStickers(alpha);
-    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
+    canvas.saveLayer(null, layerPaint(alpha));
     const w = PuzzleConfig.pillWidth, h = PuzzleConfig.pillHeight;
     final rect = Rect.fromCenter(center: Offset.zero, width: w, height: h);
     canvas.drawRect(rect, _fill..color = layer.mix(PuzzleConfig.panelMix));

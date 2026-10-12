@@ -7,6 +7,7 @@ import '../../../effects/particle_pool.dart';
 import '../ring_arcs.dart';
 import 'lockdown.dart';
 import 'switch_kind.dart';
+import '../../../../game/paints.dart';
 
 /// Snoozer (PRD-2 §5.19; mock `TH.sleepy`): a sleeping purple ring
 /// creature (`#8E44FF` / `#5420B0` 10 pt, breathing ±2 %) with two frog
@@ -49,10 +50,7 @@ class SnoozerArt extends SwitchDesignArt {
     final puff = s.get('puff');
     final ry = s.ry;
     if (fade < 1) {
-      canvas.saveLayer(
-        null,
-        Paint()..color = Color.fromRGBO(0, 0, 0, 1 - fade),
-      );
+      canvas.saveLayer(null, layerPaint(1 - fade));
       final ax = (RingArcs.rx - 3) * (1 + puff * .45), ay = ry - 3;
       canvas.drawOval(
         Rect.fromCenter(center: Offset.zero, width: 2 * ax, height: 2 * ay),

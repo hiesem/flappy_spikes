@@ -12,6 +12,7 @@ import '../../skins/catalog.dart';
 import '../../skins/look.dart';
 import 'item_art.dart';
 import 'shop_glyphs.dart';
+import '../../game/paints.dart';
 
 /// What a tile shows right now (read from the shop every frame).
 class ItemTileState {
@@ -199,7 +200,7 @@ class ItemTile extends PositionComponent with TapCallbacks {
     }
     if (e <= 0) return;
     final eased = Curves.easeOut.transform(e);
-    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, eased));
+    canvas.saveLayer(null, layerPaint(eased));
     if (!reduceMotion()) {
       canvas.translate(0, Config.skinShopEnterRise * (1 - eased));
     }

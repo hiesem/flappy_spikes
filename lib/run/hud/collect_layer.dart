@@ -225,8 +225,20 @@ abstract class CollectTimeline implements CollectSlotItem {
 class CollectText {
   static final Map<(String, double, int), TextPainter> _cache = {};
 
+  /// PRD-2.2 §33.4 item 6: drops the cached painters and frees their
+  /// native paragraphs.
+  static void clearCache() {
+    for (final painter in _cache.values) {
+      painter.dispose();
+    }
+    _cache.clear();
+  }
+
+  /// Cached painters (tests).
+  static int get cachedCount => _cache.length;
+
   static TextPainter of(String s, double size, Color c, {double spacing = 0}) {
-    if (_cache.length > 400) _cache.clear();
+    if (_cache.length > 400) clearCache();
     return _cache.putIfAbsent(
         (s, size, c.toARGB32() ^ spacing.hashCode),
         () => TextPainter(

@@ -28,6 +28,7 @@ import 'laser_gate.dart';
 import 'lockdown.dart';
 import 'power_iris.dart';
 import 'snoozer.dart';
+import '../../../../game/paints.dart';
 
 /// One switch-ring design (PRD-2 §5.19, ARCH §1.5 "pluggable design"): the
 /// closed barrier, the front decorations, the switch sprite, the open
@@ -533,7 +534,7 @@ class SwitchPickup extends Pickup {
     }
     canvas.translate(0, touchT >= 0 ? 0 : bob);
     if (alpha < 1) {
-      canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
+      canvas.saveLayer(null, layerPaint(alpha));
     }
     canvas.scale(scale);
     art.paintSwitch(canvas, this);

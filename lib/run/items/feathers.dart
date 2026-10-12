@@ -11,6 +11,7 @@ import '../pickups/feather_pickup.dart';
 import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
+import '../../game/paints.dart';
 
 /// Golden feathers in the run (PRD-2 §3.15, §5.14).
 ///
@@ -171,7 +172,7 @@ class FeatherTrayItem extends CollectTimeline {
   @override
   void paint(Canvas canvas, double alpha, double t) {
     fadeStickers(alpha);
-    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
+    canvas.saveLayer(null, layerPaint(alpha));
     const w = FeatherConfig.trayWidth, h = FeatherConfig.trayHeight;
     final rect = Rect.fromCenter(center: Offset.zero, width: w, height: h);
     canvas.drawRect(rect, _fill..color = layer.mix(FeatherConfig.panelMix));

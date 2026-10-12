@@ -25,6 +25,7 @@ import '../ring_arcs.dart';
 import '../switch/switch_kind.dart' show SwitchBit;
 import 'gift_box.dart';
 import 'gift_tag.dart';
+import '../../../../game/paints.dart';
 
 /// Pairs of two powerup rings, design "Gift Box" (PRD-2 §3.21, §5.20):
 /// two rings stacked at the same x ([Hoop.rings] = [−o/2, +o/2], o = 230 ×
@@ -258,7 +259,7 @@ class PairState extends Component {
     canvas.translate(0, hoop.rings[i]);
     if (scale != 1) canvas.scale(scale);
     if (alpha < 1) {
-      canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
+      canvas.saveLayer(null, layerPaint(alpha));
     }
     draw();
     if (alpha < 1) canvas.restore();
@@ -367,10 +368,7 @@ class PairState extends Component {
         vy: -120,
         life: 1,
         draw: (canvas, b) {
-          canvas.saveLayer(
-            null,
-            Paint()..color = Color.fromRGBO(0, 0, 0, b.alpha),
-          );
+          canvas.saveLayer(null, layerPaint(b.alpha));
           GiftBox.icon(canvas, r, Offset.zero, 13);
           canvas.restore();
         },

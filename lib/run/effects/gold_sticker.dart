@@ -8,6 +8,7 @@ import 'package:flutter/painting.dart' as p show TextDirection;
 import '../../game/config.dart';
 import '../config/parts_config.dart';
 import 'easing.dart';
+import '../../game/paints.dart';
 
 /// The gold sticker (ARCH §3 "GoldSticker"): plum Opificio text on a flat
 /// gold `#FFB529` box, tilted a few degrees, popping in — NEW BEST on the
@@ -119,9 +120,9 @@ class GoldSticker extends PositionComponent {
     canvas.translate(-b.width / 2, -b.height / 2);
     final layer = alpha < 1;
     if (layer) {
-      canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
+      canvas.saveLayer(null, layerPaint(alpha));
     }
-    canvas.drawRect(Offset.zero & b, Paint()..color = PartsConfig.gold);
+    canvas.drawRect(Offset.zero & b, fillPaint(PartsConfig.gold));
     _tp.paint(
       canvas,
       Offset((b.width - _tp.width) / 2 + letterSpacing / 2, (b.height - _tp.height) / 2),

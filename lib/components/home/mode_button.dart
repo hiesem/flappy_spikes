@@ -7,6 +7,7 @@ import 'package:flutter/animation.dart' show Cubic, Curves;
 import '../../game/config.dart';
 import '../../menu/home_mode.dart';
 import 'menu_primitives.dart';
+import '../../game/paints.dart';
 
 /// The mock's `cubic-bezier(.3, 1.4, .5, 1)`: the parts' slide overshoot.
 const Cubic kModeSwapCurve = Cubic(0.3, 1.4, 0.5, 1);
@@ -258,7 +259,7 @@ class VsTag extends PositionComponent {
       super.renderTree(canvas);
       return;
     }
-    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, _opacity));
+    canvas.saveLayer(null, layerPaint(_opacity));
     super.renderTree(canvas);
     canvas.restore();
   }

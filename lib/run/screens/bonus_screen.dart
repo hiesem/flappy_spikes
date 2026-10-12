@@ -20,6 +20,7 @@ import '../hud/collect_layer.dart' show CollectText;
 import '../pickups/feather_pickup.dart';
 import '../run_summary.dart';
 import 'post_run_screens.dart';
+import '../../game/paints.dart';
 
 /// The balloon bonus slot of the post-run flow (PRD-2 §3.15, ARCH §1.11):
 /// registered by the game (region WP-4a), shown by `PostRunFlow.run` when
@@ -965,7 +966,7 @@ class BonusScreen extends PositionComponent
     final big = p == BonusConfig.jackpot;
     final r = BonusRules.tileRect(i);
     const ts = BonusConfig.tile;
-    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, a));
+    canvas.saveLayer(null, layerPaint(a));
     canvas.translate(r.center.dx, r.center.dy);
     canvas.scale(s);
     final box = Rect.fromCenter(center: Offset.zero, width: ts, height: ts);

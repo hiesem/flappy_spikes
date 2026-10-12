@@ -8,6 +8,7 @@ import 'package:flutter/painting.dart' as p show TextDirection;
 import '../../game/config.dart';
 import '../config/parts_config.dart';
 import '../config/streak_config.dart';
+import '../../game/paints.dart';
 
 /// Which kind of banner occupies the y-190 band (ARCH §1.10).
 enum BannerLane { streak, fever, element }
@@ -116,9 +117,9 @@ abstract class RunBanner extends PositionComponent {
     canvas.translate(0, -h / 2);
     final layer = a < 1;
     if (layer) {
-      canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, a));
+      canvas.saveLayer(null, layerPaint(a));
     }
-    canvas.drawRect(Rect.fromLTWH(0, 0, bandWidth, h), Paint()..color = color);
+    canvas.drawRect(Rect.fromLTWH(0, 0, bandWidth, h), fillPaint(color));
     final tp = _text;
     // Letter-spacing trails the last glyph; shift by half to stay centred.
     final spacing = fontSize * PartsConfig.bannerLetterSpacing;

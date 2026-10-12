@@ -10,6 +10,7 @@ import '../effects/pickup_touch_fx.dart';
 import '../elements.dart';
 import '../run_context.dart';
 import 'pickup.dart';
+import '../../game/paints.dart';
 
 /// The golden feather kind (PRD-2 §3.15): the director's feather
 /// `GapItemPlan` (§3.0.3: once per run in the gap after hoop 3–12, 0.65 ×
@@ -164,7 +165,7 @@ abstract final class FeatherArt {
     if (layer) {
       canvas.saveLayer(
         null,
-        Paint()..color = Color.fromRGBO(0, 0, 0, opacity.clamp(0.0, 1.0)),
+        layerPaint(opacity.clamp(0.0, 1.0)),
       );
     }
     if (ghost != null) {

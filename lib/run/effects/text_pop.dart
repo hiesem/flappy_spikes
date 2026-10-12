@@ -5,6 +5,7 @@ import 'package:flutter/painting.dart' show TextPainter, TextSpan, TextStyle;
 import 'package:flutter/painting.dart' as p show TextDirection;
 
 import '../../game/config.dart';
+import '../../game/paints.dart';
 
 /// A short text pop that rises and fades (the lab mocks' `pop()`: 20 pt
 /// Opificio, rises 28 pt/s, fades over 1 s) — "BOING ↑ / ↓" (the spring,
@@ -55,7 +56,7 @@ class TextPop extends PositionComponent {
         width: _tp.width + 8,
         height: _tp.height + 8,
       ),
-      Paint()..color = Color.fromRGBO(0, 0, 0, a),
+      layerPaint(a),
     );
     _tp.paint(canvas, Offset(-_tp.width / 2, -_tp.height / 2));
     canvas.restore();

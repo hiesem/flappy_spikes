@@ -1173,3 +1173,22 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `test/p22/s27_one_bonus_test.dart`,
   `test/p22/s27_one_bonus_director_test.dart`; shots
   `test/p22/s15_s23_s27_screenshot_test.dart` (→ `build/menu_shots/p22/`).
+
+## PRD-2.2 rides (P22-G3, 2026-10-12)
+
+- DEVIATION (PRD-2.2 §16, supersedes the PRD-2 §3.8 / §5.6 autopilot
+  steering and the "hoops spawned during the boost" heights): **comet
+  zigzag.** Hoops the director plans during a comet ride (incl. the pair's
+  COMET gift) sit alternately **70 pt above / below `viewHeight / 2`**
+  (`CometConfig.zigzagAmp`, every run height), full size, upright, still;
+  the first goes to the other side of the star's hoop (the bird's height for
+  the gift). A hoop whose plane the bird reaches after the predicted end of
+  the ride (boost + ease-out, `CometRide.predictEndTrackX`) gets a normal
+  height. Hoops already on screen or planned ahead at the pickup keep their
+  heights. The comet flies `y = y0 + (y1 − y0)·(1 − cos πu)/2` over track x
+  from the last hoop's plane (or the pickup) to the next ring's centre at
+  its crossing (level at each hoop); the tilt is the flight direction, max
+  **±35°**, turning ≤ 240°/s (no snaps).
+  - Call: a hoop less than 40 pt ahead when a curve starts (the star is
+    caught just before its own hoop's plane) is flown through as it is; the
+    first curve leads from the bird's height to the hoop after it.

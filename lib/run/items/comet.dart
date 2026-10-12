@@ -33,19 +33,19 @@ class CometFeature extends RunFeature {
     if (c == null || e.element != ElementId.comet) return;
     final source = e.pickup == null ? 'pair' : 'hoop';
     c.track('comet_collected', {'source': source});
-    start(source: source);
+    start(source: source, starY: e.pickup?.position.y);
   }
 
   /// Starts the boost now (no-op while a ride or another timed powerup
   /// runs — the director never offers one then, §3.0.3 exclusivity).
-  bool start({String source = 'hoop'}) {
+  bool start({String source = 'hoop', double? starY}) {
     final c = _c;
     if (c == null) return false;
     final current = ride;
     if (current != null && !current.done) return false;
     if (c.s.ride != null || c.s.timed != null) return false;
     current?.abort();
-    final r = CometRide(c, source: source);
+    final r = CometRide(c, source: source, starY: starY);
     ride = r;
     started++;
     r.start(c);

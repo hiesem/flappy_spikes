@@ -23,23 +23,41 @@ abstract final class CometConfig {
   /// smoothstep: the smooth landing).
   static const double easeOut = .9;
 
-  /// §5.6 Auto-pilot steering: the comet closes this fraction of its
-  /// vertical distance to the target per second (`screen_comet2.html`
-  /// `rate = 16`; y += (target − y) · min(1, dt · rate)).
-  static const double steerRate = 16;
+  /// PRD-2.2 §16.1 Hoops the director plans during a comet ride sit
+  /// alternately this far above and below the playfield middle
+  /// (`viewHeight / 2`), the first opposite to the star hoop (pt; fixed on
+  /// every run height).
+  static const double zigzagAmp = 70;
 
-  /// §5.6 Auto-pilot vertical speed cap (pt/s). Call: the mock's rate alone
-  /// jumps up to ≈ 4 800 pt/s when the target switches to the next hoop;
-  /// 900 pt/s still reaches any next hoop (≤ 0.52 band) in < 0.4 s of the
-  /// ≈ 1.2 s between boost hoops.
-  static const double maxSteerSpeed = 900;
+  /// PRD-2.2 §16.1 The comet tilts along its flight direction
+  /// (`atan2(vy, forward speed)`), capped at ±this (degrees; was ±25° from
+  /// the vertical speed in PRD-2 §5.6).
+  static const double maxTiltDeg = 35;
 
-  /// §5.6 The comet tilts with its vertical motion: (target − y) × this
-  /// (degrees per pt), capped at ±[maxTiltDeg].
-  static const double tiltPerPt = .3;
+  /// PRD-2.2 §16.1 The tilt follows the flight direction but turns at
+  /// most this fast (degrees per second), so it never snaps (a moving
+  /// ring's crossing point can move; the curve itself turns ≤ ≈ 110°/s).
+  static const double maxTiltRateDeg = 240;
 
-  /// §5.6 Tilt cap (degrees).
-  static const double maxTiltDeg = 25;
+  /// PRD-2.2 §16.1 A hoop whose plane is less than this far ahead when a
+  /// new curve starts (the star is caught up to ≈ 30 pt before its hoop's
+  /// plane) is flown through as it is: the curve starts at the bird's
+  /// height and leads to the hoop after it (pt).
+  static const double minCurveSpan = 40;
+
+  // --- PRD-2.2 §17 the landing ------------------------------------------------
+
+  /// PRD-2.2 §17.1 At control return the run world runs at this time scale
+  /// (the Hourglass's `RunState.timeScale`; quiet: no vignette, no sounds,
+  /// music at its normal pitch)…
+  static const double landingScale = .5;
+
+  /// PRD-2.2 §17.1 …for this long (s of real time)…
+  static const double landingHold = .8;
+
+  /// PRD-2.2 §17.1 …then eases back to 1 over this long (s of real time,
+  /// smoothstep): ≈ 1.5 s in all.
+  static const double landingEase = .7;
 
   // --- §3.9 sounds ----------------------------------------------------------
 

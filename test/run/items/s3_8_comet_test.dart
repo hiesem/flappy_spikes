@@ -386,8 +386,8 @@ void main() {
     );
 
     _tester().testGameWidget(
-      '§3.8 the comet steers to the ring nearest its line and tilts ±25° '
-      'with its vertical motion',
+      '§3.8 the comet steers to the ring nearest its line and (PRD-2.2 §16) '
+      'tilts along its flight direction, max ±35°',
       setUp: _setUp,
       verify: (game, _) async {
         final run = await _intoBoost(game);
@@ -397,7 +397,7 @@ void main() {
           final bird = game.runBirdPosition!;
           expect(bird.x, RunConfig.birdX);
           expect(bird.y, closeTo(ride.y, 1e-3));
-          expect(ride.tilt.abs(), lessThanOrEqualTo(25 * math.pi / 180 + 1e-9));
+          expect(ride.tilt.abs(), lessThanOrEqualTo(35 * math.pi / 180 + 1e-9));
         }
         // Right before a plane the comet sits on the ring centre.
         Hoop? h;

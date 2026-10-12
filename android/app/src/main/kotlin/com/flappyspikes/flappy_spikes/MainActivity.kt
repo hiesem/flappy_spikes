@@ -21,6 +21,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private var audioWatch: AudioWatch? = null
     private var debugReceiver: BroadcastReceiver? = null
+    private var debugPlayer: android.media.MediaPlayer? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -55,23 +56,57 @@ class MainActivity : FlutterActivity() {
         // Debug builds only: `adb shell am broadcast -a
         // com.flappyspikes.DEBUG_RINGTONE` plays the default ringtone for
         // 6 s with ringtone usage, to exercise the §28.3 interruption path
-        // on a device without placing a call.
+        // on a device without placing a call; `…DEBUG_MEDIA` plays it 20 s
+        // with media usage (stands in for the player's own music).
         if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
             val r = object : BroadcastReceiver() {
                 override fun onReceive(context: Context, intent: Intent) {
                     try {
+                        // DEBUG_MEDIA: the same tone as "someone else's
+                        // music" (USAGE_MEDIA, 20 s) for the own-music check.
+                        val media = intent.action == "com.flappyspikes.DEBUG_MEDIA"
                         val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                        if (media) {
+                            // A plain MediaPlayer: Ringtone skips playing
+                            // while the stream volume is 0.
+                            val mp = android.media.MediaPlayer()
+                            mp.setAudioAttributes(
+                                AudioAttributes.Builder()
+                                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                                    .build()
+                            )
+                            mp.setDataSource(context, uri)
+                            mp.isLooping = true
+                            mp.prepare()
+                            mp.start()
+                            debugPlayer = mp // keep it from the GC
+                            Handler(Looper.getMainLooper()).postDelayed(
+                                { mp.stop(); mp.release(); debugPlayer = null },
+                                20000L,
+                            )
+                            return
+                        }
                         val tone = RingtoneManager.getRingtone(context, uri)
                         tone.audioAttributes = AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                            .setUsage(
+                                if (media) AudioAttributes.USAGE_MEDIA
+                                else AudioAttributes.USAGE_NOTIFICATION_RINGTONE
+                            )
                             .build()
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) tone.isLooping = media
                         tone.play()
-                        Handler(Looper.getMainLooper()).postDelayed({ tone.stop() }, 6000)
+                        Handler(Looper.getMainLooper()).postDelayed(
+                            { tone.stop() },
+                            if (media) 20000L else 6000L,
+                        )
                     } catch (_: Exception) {
                     }
                 }
             }
-            val filter = IntentFilter("com.flappyspikes.DEBUG_RINGTONE")
+            val filter = IntentFilter("com.flappyspikes.DEBUG_RINGTONE").apply {
+                addAction("com.flappyspikes.DEBUG_MEDIA")
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 registerReceiver(r, filter, Context.RECEIVER_EXPORTED)
             } else {
@@ -132,9 +167,14 @@ class AudioWatch(private val am: AudioManager) : EventChannel.StreamHandler {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             return try { am.isMusicActive } catch (_: Exception) { false }
         }
-        return active().any {
+        // The public playback list hides muted players (e.g. media volume 0
+        // on the Pixel 8), so isMusicActive() backs it up. The Dart side
+        // only asks while the game's own music is not playing (at launch
+        // before it starts, on foreground before it resumes, while skipped).
+        val media = active().any {
             it.usage == AudioAttributes.USAGE_MEDIA || it.usage == AudioAttributes.USAGE_UNKNOWN
         }
+        return media || try { am.isMusicActive } catch (_: Exception) { false }
     }
 
     private fun interrupted(): Boolean {

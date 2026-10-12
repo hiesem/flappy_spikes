@@ -2492,6 +2492,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// player's own music (if it plays now) keeps the game music off.
   void _audioLifecycle(AppLifecycleState state) {
     final gen = ++_foregroundGen;
+    if (kDebugMode) debugPrint('Sound: lifecycle ${state.name}');
     if (!_soundReady) return;
     if (state != AppLifecycleState.resumed) {
       sound.setBackground(true);
@@ -2517,10 +2518,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (!_soundReady) return;
     if (_adsShowing == 0) sound.clearSuspend();
     if (!sound.ownMusicSkipped || _adJustEnded) return;
-    unawaited(() async {
-      final other = await audioFocus.isOtherMusicActive();
-      if (!other) sound.setOtherMusicActive(false, sceneChange: true);
-    }());
+    // A moment later, so the scene's own click / flap has rung out (the
+    // Android check also counts the game's SFX on the music stream).
+    _after(Config.ownMusicRecheckDelay, () {
+      unawaited(() async {
+        final other = await audioFocus.isOtherMusicActive();
+        if (!other) sound.setOtherMusicActive(false, sceneChange: true);
+      }());
+    });
   }
 
   /// §28.2 a full-screen ad is displayed: everything suspended until

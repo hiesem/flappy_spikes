@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
+import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/sound.dart';
 import 'package:flappy_spikes/run/director/plans.dart';
@@ -477,7 +478,10 @@ void main() {
       expect(log, [Sfx.click]);
       // Still playing at the run start: stays off.
       await startRun(g);
+      g.runDebug.god = true;
+      stepGame(g, Config.ownMusicRecheckDelay + .2);
       await flushAndMount(g);
+      g.runDebug.god = false;
       expect(g.sound.musicPlaying, isFalse);
       // The other music stops: not mid-run …
       ownMusic.otherMusic = false;
@@ -491,6 +495,9 @@ void main() {
       stepGame(g, 1);
       expect(g.state, GameState.results);
       g.goHome();
+      await flushAndMount(g);
+      expect(g.sound.musicPlaying, isFalse, reason: 're-check waits 0.6 s');
+      stepGame(g, Config.ownMusicRecheckDelay + .1);
       await flushAndMount(g);
       expect(g.sound.musicPlaying, isTrue);
       // Back to the foreground with someone else's music on: off again.

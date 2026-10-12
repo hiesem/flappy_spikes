@@ -921,6 +921,12 @@ class SoundService {
     if (want) _musicLoaded = true;
     onMusic?.call(event);
     if (!enabled) return _musicOps;
+    if (kDebugMode) {
+      debugPrint(
+        'Sound: music $event (suspends $_suspends, interrupted '
+        '$_interrupted, own music $_ownMusicSkipped, background $_background)',
+      );
+    }
     return _musicOps = _musicOps.then((_) => _musicCall(event));
   }
 

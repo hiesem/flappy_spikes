@@ -159,6 +159,13 @@ is built on the same focus request). So the game **observes** instead:
 - "Other music playing" = an active `USAGE_MEDIA` / `UNKNOWN` player that is
   not the game's. To tell them apart, the game's global audio context and the
   music player now use usage `USAGE_GAME` (still mixWithOthers, no focus).
+  **Found on the Pixel 8:** the public playback list hides muted players (the
+  phone's media volume was 0), so `AudioManager.isMusicActive()` backs it up.
+  That also counts the game's own SFX on the music stream, which is why the
+  question is only asked while the game music is not playing, and the
+  scene-change re-check waits `Config.ownMusicRecheckDelay` (0.6 s) for the
+  scene's click / flap to ring out (a flapping run start can therefore keep
+  the music off until the next Home arrival).
   Checked at launch (before the music starts), on foreground (before the
   music comes back — the game owns the music lifecycle now, no Bgm observer)
   and at scene changes while the music is skipped. Below API 26:
@@ -174,3 +181,35 @@ is built on the same focus request). So the game **observes** instead:
 - Debug builds register `com.flappyspikes.DEBUG_RINGTONE` (`adb shell am
   broadcast -a com.flappyspikes.DEBUG_RINGTONE`): plays the default ringtone
   for 6 s with ringtone usage, to drive the interruption path without a call.
+
+## Device pass (Pixel 8, debug build, Google TEST ads, 2026-10-12)
+Harness `integration_test/p22_audio_ads_device_main.dart` (`flutter run -d
+38300DLJH004SD -t …`, own prefs prefix `p7b.`; `--dart-define=P7B_AUDIO_ONLY=true`
+skips the ad part), logs `P7B` in logcat. The phone's media volume was 0 (not
+changed), so the checks are by logs and `dumpsys audio` / `media.audio_flinger`.
+- **§28.1 / §28.2 revive ad with the chick:** the chick peeped while flying
+  (2 `egg_peep` requests), death → `chick=null`, revive offer = ad, the heart →
+  the TEST rewarded ad ("Test Ad" label; closed with its × after "Reward
+  granted"). During the ad: `suspended=true`, music paused, **0 `egg_peep`
+  requests**, the ad's own player active (`USAGE_MEDIA`, AAudio) while the game
+  music player was paused (`USAGE_GAME`). After close: `music resume` (not
+  `start`), revived, music playing.
+- **§7.8 after a revive ad:** 2nd death with 3 feathers → 250 offer → No thanks
+  → bonus → 3 pops → the "▶ feather ×3" offer appeared at once (the rewarded ad
+  had already reloaded after the revive ad: `wait_ms` 0) → TEST ad (suspended,
+  music paused) → closed → music resumed, `feathers=3`, 3 more pops possible.
+- **§28.3 interruption, ringtone:** `adb shell am broadcast -a
+  com.flappyspikes.DEBUG_RINGTONE` on Home → `interrupted=true`, music pause;
+  6 s later `interrupted=false`, music resume.
+- **§28.3 interruption, another app's alarm:** `adb shell am start -a
+  android.intent.action.SET_TIMER --ei android.intent.extra.alarm.LENGTH 5 --ez
+  android.intent.extra.alarm.SKIP_UI true` (Clock app; `USAGE_ALARM` from its
+  pid) → when it rang `interrupted=true`, music paused; "Stop" on the Clock
+  heads-up → resumed. A real phone call could not be placed.
+- **§28.3 own music:** Spotify was not started (owner's account); instead
+  `…DEBUG_MEDIA` plays a looping media-usage track for 20 s. App to the
+  background (HOME), the track started, app back → `ownMusicSkipped=true`, game
+  music stayed off, SFX unaffected; after the track stopped the music stayed
+  off (no scene change, as specified).
+- The normal debug app was reinstalled afterwards (`adb install -r`, data
+  kept); its music player runs as an active `USAGE_GAME` track.

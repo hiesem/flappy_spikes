@@ -48,6 +48,10 @@ class Config {
   /// §28.3: for this long after a full-screen ad ended, the "other music
   /// playing" check is skipped (the ad's own player can still be listed).
   static const Duration adAudioSettle = Duration(seconds: 3);
+
+  /// §28.3: at a scene change the "own music still playing?" re-check waits
+  /// this long (s) so the scene's click / flap has rung out.
+  static const double ownMusicRecheckDelay = .6;
   // endregion PRD-2.2 §28
 
   // Physics (Flappy Bird feel; an intentional, user-requested deviation from

@@ -920,6 +920,11 @@ class Config {
   // Popups and dialogs (No-ads popup, skin unlock dialog, fake-ad overlay)
   // fade in / out.
   static const double popupFadeDuration = 0.07;
+  // PRD-2.2 §8.1 "one close per gesture": after a system back closes a menu
+  // screen or popup, further system backs are ignored for its close fade
+  // (uiFadeDuration), so the next back closes the screen below only once the
+  // first close has finished.
+  static const double systemBackDebounce = uiFadeDuration;
   // The run's bird fading in at its spawn point after START (the home
   // screen's bird fades out with the home screen).
   static const double runBirdFadeDuration = 0.25;
@@ -1020,6 +1025,13 @@ class Config {
   )!;
 
   // --- Settings v3 (PRD-home-v3 §8) -----------------------------------------
+
+  // --- Music (PRD-2.2 §9) ---------------------------------------------------
+
+  /// The music volume (0..1) until the player moves the Settings slider
+  /// (PRD-2.2 §9.1): fresh installs, players who never moved it, and "Delete
+  /// my data", which clears the stored key. A stored volume always wins.
+  static const double defaultMusicVolume = 0.25;
 
   /// Rows relative to the playfield centre, from the mock at 711 (centre
   /// 355.5): title line box top 140 (centre 158), SOUND EFFECTS 235, MUSIC

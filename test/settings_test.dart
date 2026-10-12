@@ -119,7 +119,7 @@ void main() {
       expect(slider.position.x, contentX);
       expect(slider.position.y, centerY + musicRowDy - 12);
       expect(slider.size.x, VolumeSlider.trackWidth);
-      expect(slider.value, 0.6, reason: 'default music volume');
+      expect(slider.value, 0.25, reason: 'default music volume');
 
       // RUMBLE row: 30x30 toggle + label.
       final rumble = panel.rumbleButton;

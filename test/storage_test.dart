@@ -13,7 +13,7 @@ void main() {
       expect(storage.bestScore, 0);
       expect(storage.gamesPlayed, 0);
       expect(storage.muteSound, false);
-      expect(storage.musicVolume, 0.6);
+      expect(storage.musicVolume, 0.25);
     });
 
     test('loads persisted values', () async {

@@ -2834,6 +2834,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     } catch (_) {
       ok = false;
     }
+    if (ok) {
+      // PRD-2.2 §9.1: the stored music volume is cleared and the music goes
+      // back to its default, live; the Settings slider follows.
+      await storage.resetMusicVolume();
+      unawaited(sound.setMusicVolume(storage.musicVolume));
+      _settingsPanel?.setMusicVolume(sound.musicVolume);
+    }
     if (_deleteDataPopup != popup) return;
     _deleteDataPopup = null;
     popBack(_deleteDataBack);

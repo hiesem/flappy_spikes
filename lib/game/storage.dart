@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../skins/look.dart';
+import 'config.dart';
 
 /// Persistence layer for bestScore / gamesPlayed / muteSound / musicVolume /
 /// rumble and the 2.0 menu state (coins, skins, powerup slot, no-ads popup,
@@ -87,7 +88,7 @@ class GameStorage {
   int bestScore = 0;
   int gamesPlayed = 0;
   bool muteSound = false;
-  double musicVolume = 0.6;
+  double musicVolume = Config.defaultMusicVolume;
 
   int coins = 0;
 
@@ -246,7 +247,7 @@ class GameStorage {
     bestScore = prefs.getInt(_bestScoreKey) ?? 0;
     gamesPlayed = prefs.getInt(_gamesPlayedKey) ?? 0;
     muteSound = prefs.getBool(_muteSoundKey) ?? false;
-    musicVolume = prefs.getDouble(_musicVolumeKey) ?? 0.6;
+    musicVolume = prefs.getDouble(_musicVolumeKey) ?? Config.defaultMusicVolume;
 
     coins = prefs.getInt(_coinsKey) ?? 0;
     // PRD-menu-v2 (product decision): the PRD-1 single-skin keys are reset on
@@ -520,8 +521,9 @@ class GameStorage {
   /// Q22: "Delete my data" resets the versus install state — the generated
   /// nickname (cleared; a new one is made at the next use), the upload queue
   /// and the daily upload counter. Progress kept only on the phone (coins,
-  /// skins, levels, feathers, puzzle pieces, met elements) and the sound /
-  /// rumble settings are not touched.
+  /// skins, levels, feathers, puzzle pieces, met elements) and the mute /
+  /// rumble settings are not touched. The music volume goes back to its
+  /// default (PRD-2.2 §9.1).
   Future<void> resetVersusData() async {
     versusNickname = null;
     final prefs = await SharedPreferences.getInstance();
@@ -529,6 +531,7 @@ class GameStorage {
     await saveUploadQueue(const []);
     await saveUploadsToday('', 0);
     await saveUploadsSent('', 0);
+    await resetMusicVolume();
   }
   // endregion WP-4c
 
@@ -581,6 +584,14 @@ class GameStorage {
     musicVolume = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_musicVolumeKey, value);
+  }
+
+  /// PRD-2.2 §9.1: "Delete my data" clears the stored music volume (the key
+  /// is removed, not written, so the default keeps applying).
+  Future<void> resetMusicVolume() async {
+    musicVolume = Config.defaultMusicVolume;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_musicVolumeKey);
   }
 
   Future<void> saveCoins(int value) async {

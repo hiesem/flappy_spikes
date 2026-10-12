@@ -20,7 +20,7 @@ void main() {
     expect(s.bestScore, 0);
     expect(s.gamesPlayed, 0);
     expect(s.muteSound, isFalse);
-    expect(s.musicVolume, 0.6);
+    expect(s.musicVolume, 0.25);
     expect(s.rumble, isTrue);
     expect(s.feathers, 0);
     expect(s.puzzlePieces, 0);

@@ -51,8 +51,8 @@ class _LocalizedStore extends FakeStore {
 
 const _ids = ['coins_1000', 'coins_10000', 'coins_17000', 'coins_100000'];
 const _amounts = [1000, 10000, 17000, 100000];
-const _placeholders = [r'$1.29', r'$9.99', r'$15.99', r'$84.99'];
-const _localized = ['1,29 €', '¥1,600', r'R$ 89,90', 'CHF 72.00'];
+const _placeholders = [r'$0.99', r'$8.99', r'$14.99', r'$79.99'];
+const _localized = ['0,99 €', '¥1,600', r'R$ 89,90', 'CHF 72.00'];
 
 void main() {
   setUpAll(loadFonts);
@@ -82,16 +82,16 @@ void main() {
           'BEST DEAL',
         ]);
         expect(shop.packs.map((p) => p.priceLabel.text), _placeholders);
-        expect(shop.banner.priceLabel!.text, r'$3.49');
+        expect(shop.banner.priceLabel!.text, r'$2.99');
         for (final pack in shop.packs) {
           expect(pack.amount.width, lessThanOrEqualTo(pack.width));
         }
         expect(store.queries.first, {..._ids, 'no_ads'});
 
-        store.prices.addAll({'coins_1000': _localized[0], 'no_ads': '1,29 €'});
+        store.prices.addAll({'coins_1000': _localized[0], 'no_ads': '2,99 €'});
         await rig.iap.refresh();
         await v4Settle(game, tester);
-        expect(shop.banner.priceLabel!.text, '1,29 €');
+        expect(shop.banner.priceLabel!.text, '2,99 €');
         expect(shop.packs.map((p) => p.priceLabel.text), [
           _localized[0],
           ..._placeholders.skip(1),
@@ -114,7 +114,7 @@ void main() {
     iap: StoreIapService(store: popupStore),
     (game, rig, tester) async {
       final popup = game.noAdsPopup!;
-      expect(popup.priceLabel.text, r'$3.49');
+      expect(popup.priceLabel.text, r'$2.99');
       popupStore.prices['no_ads'] = r'R$ 17,90';
       await rig.iap.refresh();
       await v4Settle(game, tester);
@@ -223,7 +223,7 @@ void main() {
     (game, rig, tester) async {
       final shop = await openShop(game);
       await v4Tap(shop.packs.last, game, tester);
-      expect(shop.packs.last.priceLabel.text, r'$84.99');
+      expect(shop.packs.last.priceLabel.text, r'$79.99');
       expect(game.purchaseResultPopup, isNotNull);
       expect(game.menu.wallet.balance, 0);
       expect(missingStore.launched, isEmpty);

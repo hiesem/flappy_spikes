@@ -91,6 +91,7 @@ which of the items below are build blockers.
 | `lib/main.dart:81` | Reminders already run on iOS (`_isMobile`) | Works once the AppDelegate delegate (§1) is set; verify the permission prompt timing |
 | `lib/game/flappy_game.dart:208` | Debug panel on Linux / debug builds | Nothing (no Android branch) |
 | `assets/audio/` | 169 mp3 + 6 wav, no ogg in the game assets | Plays on iOS (AVPlayer). Loops are wav on purpose (`docs/gameplay-v2/SOUNDS.md`) |
+| `lib/main.dart` `SystemBackObserver` (PRD-2.2 §8) | Android system back (`WidgetsBindingObserver.didPopRoute`) goes to the game's back stack and is always reported as handled. The manifest keeps predictive back off (`enableOnBackInvokedCallback` unset) | iOS has no system back: `didPopRoute` is never called, so nothing to port. No `ios/` edits |
 | `android/app/src/main/AndroidManifest.xml:10–22` | `AD_ID`, `VIBRATE`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`; Play Games app id meta-data; notification receivers | iOS equivalents: ATT string, notification permission at runtime, Game Center capability (already in `Runner.entitlements`) |
 
 ## 4. Verification on iOS

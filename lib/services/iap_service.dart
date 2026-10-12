@@ -32,14 +32,15 @@ extension IapProductInfo on IapProduct {
   bool get consumable => this != IapProduct.noAds;
 
   /// Shown until (or unless) the store returns the localized price
-  /// (PRD-menu-v4 §3): a US-dollar placeholder ("$1.29"), used offline /
-  /// before the products load / on Linux / in tests.
+  /// (PRD-menu-v4 §3; the values are PRD-2.2 §32.5's): a US-dollar
+  /// placeholder ("$0.99"), used offline / before the products load / on
+  /// Linux / in tests.
   String get placeholderPrice => switch (this) {
-    IapProduct.coins1000 => r'$1.29',
-    IapProduct.coins10000 => r'$9.99',
-    IapProduct.coins17000 => r'$15.99',
-    IapProduct.coins100000 => r'$84.99',
-    IapProduct.noAds => r'$3.49',
+    IapProduct.coins1000 => r'$0.99',
+    IapProduct.coins10000 => r'$8.99',
+    IapProduct.coins17000 => r'$14.99',
+    IapProduct.coins100000 => r'$79.99',
+    IapProduct.noAds => r'$2.99',
   };
 }
 

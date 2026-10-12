@@ -52,9 +52,9 @@ SoundService _fakeSound(_FakePool flap) => SoundService()
 
 void main() {
   group('SoundService music', () {
-    test('musicVolume defaults to 0.6', () {
+    test('musicVolume defaults to 0.25', () {
       final sound = SoundService(enabled: false);
-      expect(sound.musicVolume, 0.6);
+      expect(sound.musicVolume, 0.25);
     });
 
     test('setMusicVolume clamps to 0..1', () async {

@@ -111,6 +111,17 @@ states" above. Everything else in this document still holds.
   the Skins and Settings back. Popup ✕ sounds are unchanged (`sk_close` on
   LEVEL UP ✕, purchase result, No-ads celebration; `click` on the No-ads
   popup).
+- **Android system back closes the menus** (DEVIATION from the Esc-only back,
+  PRD-2.2 §8, owner decision 2026-10-10). The system back (the edge swipe with
+  gesture navigation, or the 3-button back) does what the screen's own back
+  arrow / ✕ does, and only on the menus and popups: Settings, Shop, Skins,
+  LEVELS, the Home popups (NO ADS offer, LEVEL UP, purchase result, No-ads
+  celebration), Delete my data, the debug panel. Topmost first; one close per
+  gesture (a close still fading out ignores further backs). `back_gesture
+  {screen}` is logged only when something closed. On Home with nothing open,
+  in a run (every state but start, the pause settings included), on the bonus
+  and results pages and while a video ad is up it does nothing. The app never
+  closes or goes to the background on back. Esc is unchanged.
 - **"+N" coins line.** The game-over panel gains a small "+N" + coin line under
   the stats, showing the coins earned (interim rule: 1 coin per point, credited
   at game over; a fresh install starts at 0 coins).
@@ -406,7 +417,9 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
 ## Audio & persistence
 
 - shared_preferences keys: `bestScore` (int), `gamesPlayed` (int, ++ each game over),
-  `muteSound` (bool; SFX only), `musicVolume` (double 0..1, default 0.6).
+  `muteSound` (bool; SFX only), `musicVolume` (double 0..1, default 0.25:
+  DEVIATION from 0.6, PRD-2.2 §9; a stored value always wins, and "Delete my
+  data" clears the key).
   When muted: no sound effects.
 - Sound effects (`flap/point/gameover/click.mp3`) play from preloaded
   `AudioPool`s (`FlameAudio.createPool`, maxPlayers 3) — low latency, no

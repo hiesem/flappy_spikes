@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/foundation.dart';
 
+import 'config.dart';
+
 /// Sound effects used by the game (files live in assets/audio/).
 ///
 /// The first four are the 1.0 gameplay sounds; the `sk*` / `bn*` entries are
@@ -435,7 +437,7 @@ class SoundService {
   /// backend and would throw [MissingPluginException]).
   bool enabled;
 
-  double _musicVolume = 0.6;
+  double _musicVolume = Config.defaultMusicVolume;
   bool _musicStarted = false;
   bool _bgmInitialized = false;
 

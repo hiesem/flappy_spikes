@@ -1,54 +1,9 @@
 import 'dart:async';
 
-import 'package:flame_audio/flame_audio.dart' show AudioPool;
 import 'package:flappy_spikes/game/sound.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Plugin-free pool seam: the duration query and the start/stop results can be
-/// delayed or failed independently, like the real asynchronous pool.
-class _FakePool implements AudioPool {
-  _FakePool({Duration? duration}) {
-    if (duration != null) durationReady.complete(duration);
-  }
-
-  final durationReady = Completer<Duration?>();
-  Object? startError;
-  Object? stopError;
-  int starts = 0;
-  int stops = 0;
-
-  @override
-  Future<Duration?> getDuration() => durationReady.future;
-
-  @override
-  Future<Future<void> Function()> start({double volume = 1}) async {
-    starts++;
-    final error = startError;
-    if (error != null) throw error;
-    return () async {
-      stops++;
-      final stopError = this.stopError;
-      if (stopError != null) throw stopError;
-    };
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-/// Lets the warm-up's awaited futures run to their next suspension point.
-Future<void> _flush() async {
-  for (var i = 0; i < 40; i++) {
-    await Future<void>.value();
-  }
-}
-
-/// A service whose pools are all fakes: [flap] is the pool under test, every
-/// other file gets a ready fake so no real AudioPool is ever created.
-SoundService _fakeSound(_FakePool flap) => SoundService()
-  ..poolFactory = (file, legacy) async => file == 'flap.mp3'
-      ? flap
-      : _FakePool(duration: const Duration(milliseconds: 1));
+import 'p22/fake_audio.dart';
 
 void main() {
   group('SoundService music', () {
@@ -90,7 +45,7 @@ void main() {
       // preloaded low-latency pools only, no bare FlameAudio.play).
       var built = 0;
       final sound = SoundService()
-        ..poolFactory = (file, legacy) async {
+        ..voiceFactory = (file) async {
           built++;
           return null; // models a pool that never became ready
         };
@@ -109,81 +64,86 @@ void main() {
   });
 
   group('SoundService low-latency pools', () {
-    test('a pool without its stop duration is not published yet', () async {
-      // S2-11: warm-up must publish the pool and its duration TOGETHER, so a
-      // play during that window is dropped instead of dereferencing a missing
-      // duration (which would throw out of an unawaited future).
-      final pool = _FakePool();
-      final sound = _fakeSound(pool);
+    test('a pool is published with its first voice (no metadata wait)', () async {
+      // PRD-2.2 §22: the length comes from the generated table, so a pool
+      // never waits for (or dereferences) plugin metadata.
+      final audio = FakeAudio();
+      final sound = audio.service();
       final uncaught = <Object>[];
       await runZonedGuarded(() async {
         sound.play(Sfx.flap); // starts warm-up; this play is dropped
-        await _flush(); // pool created, its duration still pending
+        await flushAudio();
         sound.play(Sfx.flap);
-        await _flush();
-        expect(pool.starts, 0, reason: 'not ready: no duration, no playback');
-        pool.durationReady.complete(const Duration(milliseconds: 1));
-        await _flush();
-        sound.play(Sfx.flap); // the pair is published now
-        await _flush();
-        expect(pool.starts, 1);
+        await flushAudio();
+        expect(audio.of('flap.mp3').fold<int>(0, (n, v) => n + v.starts), 1);
       }, (error, stack) => uncaught.add(error));
       expect(uncaught, isEmpty);
+      await sound.dispose();
     });
 
-    test('a failing pool start is contained, never uncaught', () async {
+    test('a failing voice start is contained, never uncaught', () async {
       // S2-12: audio must never take the game down.
-      final pool = _FakePool(duration: const Duration(milliseconds: 1))
-        ..startError = StateError('native SoundPool start failed');
-      final sound = _fakeSound(pool);
-      final uncaught = <Object>[];
-      await runZonedGuarded(() async {
-        sound.play(Sfx.flap); // warm-up, then a rejected start
-        await _flush();
-        sound.play(Sfx.flap);
-        await _flush();
-      }, (error, stack) => uncaught.add(error));
-      expect(
-        pool.starts,
-        1,
-        reason: 'the failure must exercise the ready pool',
-      );
-      expect(uncaught, isEmpty);
-    });
-
-    test('a failing pool stop is contained, never uncaught', () async {
-      // S2-12: the deferred player-return stop Future must be contained too.
-      final pool = _FakePool(duration: const Duration(milliseconds: 1))
-        ..stopError = StateError('native SoundPool stop failed');
-      final sound = _fakeSound(pool);
+      final audio = FakeAudio();
+      final sound = audio.service();
       final uncaught = <Object>[];
       await runZonedGuarded(() async {
         sound.play(Sfx.flap); // warm-up
-        await _flush();
-        sound.play(Sfx.flap); // the stop timer is scheduled here
-        await _flush();
-        await Future<void>.delayed(const Duration(milliseconds: 130));
+        await flushAudio();
+        for (final v in audio.of('flap.mp3')) {
+          v.startError = StateError('native SoundPool start failed');
+        }
+        sound.play(Sfx.flap);
+        await flushAudio();
       }, (error, stack) => uncaught.add(error));
-      expect(pool.starts, 1);
-      expect(pool.stops, 1, reason: 'the stop timer must still fire');
+      expect(audio.of('flap.mp3').fold<int>(0, (n, v) => n + v.starts), 1);
       expect(uncaught, isEmpty);
+      await sound.dispose();
+    });
+
+    test('a failing voice stop is contained, never uncaught', () async {
+      // S2-12: the deferred stop Future must be contained too.
+      final audio = FakeAudio();
+      final sound = audio.service();
+      final uncaught = <Object>[];
+      await runZonedGuarded(() async {
+        sound.play(Sfx.flap); // warm-up
+        await flushAudio();
+        for (final v in audio.of('flap.mp3')) {
+          v.stopError = StateError('native SoundPool stop failed');
+        }
+        sound.play(Sfx.flap); // the stop timer is scheduled here
+        await flushAudio();
+        // flap.mp3 is 92 ms + the 100 ms margin.
+        await Future<void>.delayed(const Duration(milliseconds: 260));
+      }, (error, stack) => uncaught.add(error));
+      final flap = audio.of('flap.mp3');
+      expect(flap.fold<int>(0, (n, v) => n + v.starts), 1);
+      expect(
+        flap.fold<int>(0, (n, v) => n + v.stops),
+        1,
+        reason: 'the stop timer must still fire',
+      );
+      expect(uncaught, isEmpty);
+      await sound.dispose();
     });
   });
 
   group('§7 lazy pools (WP-P1int)', () {
     test('start-up warms only the core run sounds, not every cue', () async {
-      final built = <String>[];
-      final sound = SoundService()
-        ..poolFactory = (file, legacy) async {
-          built.add(file);
-          return _FakePool(duration: const Duration(milliseconds: 1));
-        };
+      final audio = FakeAudio();
+      final sound = audio.service();
       sound.play(Sfx.flap); // first sound of the session: core warm-up
-      await _flush();
-      expect(built.toSet(), {
+      await flushAudio();
+      expect(audio.voices.map((v) => v.file).toSet(), {
         for (final s in SoundService.prewarmed) SoundService.audioFiles[s],
       });
-      expect(built, hasLength(SoundService.prewarmed.length));
+      expect(
+        audio.created,
+        SoundService.prewarmed.fold<int>(
+          0,
+          (n, s) => n + SoundService.voicesFor(s),
+        ),
+      );
       expect(
         SoundService.prewarmed,
         containsAll(<Sfx>[
@@ -200,62 +160,54 @@ void main() {
         SoundService.prewarmed.length,
         lessThan(SoundService.audioFiles.length ~/ 10),
       );
+      await sound.dispose();
     });
 
     test('a cue gets its pool on first play and that play is heard', () async {
-      final pools = <String, _FakePool>{};
-      var built = 0;
-      final sound = SoundService()
-        ..poolFactory = (file, legacy) async {
-          built++;
-          return pools[file] = _FakePool(
-            duration: const Duration(milliseconds: 1),
-          );
-        };
+      final audio = FakeAudio();
+      final sound = audio.service();
       sound.play(Sfx.sawWireZap);
-      await _flush();
-      final zap = pools['saw_wire_zap.mp3']!;
-      expect(zap.starts, 1, reason: 'the first request plays once ready');
-      expect(built, SoundService.prewarmed.length + 1);
+      await flushAudio();
+      int zapStarts() =>
+          audio.of('saw_wire_zap.mp3').fold<int>(0, (n, v) => n + v.starts);
+      expect(zapStarts(), 1, reason: 'the first request plays once ready');
+      final created = audio.created;
       sound.play(Sfx.sawWireZap);
-      await _flush();
-      expect(zap.starts, 2);
-      expect(built, SoundService.prewarmed.length + 1, reason: 'one pool');
-      await Future<void>.delayed(const Duration(milliseconds: 130));
+      await flushAudio();
+      expect(zapStarts(), 2);
+      expect(audio.created, created, reason: 'one pool, no new voice');
+      await sound.dispose();
     });
 
     test('a first play whose pool comes too late is dropped', () async {
-      final slow = _FakePool();
-      final sound = SoundService()
-        ..poolFactory = (file, legacy) async => file == 'egg_hatch.mp3'
-            ? slow
-            : _FakePool(duration: const Duration(milliseconds: 1));
+      final audio = FakeAudio();
+      final gate = audio.gates['egg_hatch.mp3'] = Completer<void>();
+      final sound = audio.service();
       sound.play(Sfx.eggHatch);
-      await _flush();
+      await flushAudio();
       await Future<void>.delayed(
         SoundService.firstPlayLateLimit + const Duration(milliseconds: 50),
       );
-      slow.durationReady.complete(const Duration(milliseconds: 1));
-      await _flush();
-      expect(slow.starts, 0);
+      gate.complete();
+      await flushAudio();
+      int hatchStarts() =>
+          audio.of('egg_hatch.mp3').fold<int>(0, (n, v) => n + v.starts);
+      expect(hatchStarts(), 0);
       sound.play(Sfx.eggHatch); // ready now
-      await _flush();
-      expect(slow.starts, 1);
-      await Future<void>.delayed(const Duration(milliseconds: 130));
+      await flushAudio();
+      expect(hatchStarts(), 1);
+      await sound.dispose();
     });
 
     test('muted / disabled never create a pool', () async {
-      var built = 0;
-      final muted = SoundService(muted: true)
-        ..poolFactory = (file, legacy) async {
-          built++;
-          return null;
-        };
-      final off = SoundService(enabled: false)..poolFactory = muted.poolFactory;
+      final audio = FakeAudio();
+      final muted = audio.service(muted: true);
+      final off = audio.service(enabled: false);
       muted.play(Sfx.trailNote1);
       off.play(Sfx.trailNote1);
-      await _flush();
-      expect(built, 0);
+      muted.preload([Sfx.trailNote2]);
+      await flushAudio();
+      expect(audio.created, 0);
     });
   });
 }

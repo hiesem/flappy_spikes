@@ -36,6 +36,12 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
 - iOS work is paused; make no new iOS changes until the user reopens it. The
   later port checklist (do not edit `ios/`) is `PORT-IOS.md`.
 
+- **Sound lengths (PRD-2.2 §22).** After adding or changing any file in
+  `assets/audio/`, regenerate the stop-time table:
+  `python3 -I tool/gen_sound_durations.py` (needs `ffprobe`) →
+  `lib/game/sound_durations.g.dart`. `test/p22/s22_full_length_sounds_test.dart`
+  fails on a stale table. Audio pool rules: `docs/gameplay-v2/ARCH.md` §2.7.
+
 ### 2.1 gameplay build (PRD-2)
 
 - **Device e2e (Pixel 8 `38300DLJH004SD`).** `--dart-define=FS_E2E=true` turns on

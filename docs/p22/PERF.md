@@ -81,6 +81,68 @@ From the per-game log lines (all 20 games):
 - **Run frames slow down over the session.** Run p50 goes 9.2 → 10.1 ms and slow frames 12 → 20 % from game 2 to game 20. Home idle p90 goes 11.8 → 12.4 ms and Home CPU 80.5 → 84.4 %. Game 1 starts lower (p50 6.9 ms); the cause was not investigated.
 - **Temperature note.** `soak.json` shows a constant skin 31.27 °C because the first version of the script read Android's stale "Cached temperatures" block, so the 15 min cooling wait was wasted. The live HAL value just before the run was 25.8 °C. `tool/soak.py` now reads the live HAL block.
 
+## 2b. After the §22 / §33.4 items 1–3 audio fixes (WP-22/33b)
+
+Branch `g7-wp22` (feat/2.2 @ cc16f88 + the P22-22 commit): own fixed voice set per sound (`lib/game/sfx_pool.dart`),
+stop times from `lib/game/sound_durations.g.dart`, position updates off for every SFX / loop / music player, one global
+mixWithOthers context, idle pools evicted after 180 s (LRU above 40). Same phone, hub, brightness 128, same command:
+`python3 -I tool/soak.py --label after-audio` (start: skin 27.4 °C, battery 25.2 °C, thermal 0). The Home idle-render
+fix (§33.4 item 5, WP-33c) is **not** in this build. Raw data: [perf/after-audio/soak.csv](perf/after-audio/soak.csv),
+[logcat.txt](perf/after-audio/logcat.txt).
+
+| after game | 1 | 2 | 5 | 10 | 20 | 2.1 baseline at 20 |
+|---|---|---|---|---|---|---|
+| PSS total (MB) | 431 | 429 | 437 | 438 | 428 | 433 |
+| Native heap (MB) | 59.5 | 56.8 | 43.4 | 43.9 | 41.5 | 34.3 |
+| Graphics (MB) | 186 | 188 | 198 | 203 | 207 | 214 |
+| **Live native audio players** (created − disposed) | 66 | 66 | 71 | 75 | **76** | 78 (and growing) |
+| … owned by a pool (= live − music) | 65 | 65 | 70 | 74 | 75 | 44 (+ 34 leaked) |
+| … leaked (released, never disposed) | 0 | 0 | 0 | 0 | **0** | 34 |
+| SFX pools alive / evicted so far | 24 / 0 | 24 / 0 | 26 / 8 | 28 / 19 | 28 / 35 | 33 / – |
+| Oldest-copy steals (cumulative) | 4 | 4 | 8 | 6¹ | 14¹ | – |
+| audio_flinger tracks (active) | 9 (1) | 9 (1) | 12 (1) | 13 (1) | 13 (1) | 12 (1) |
+| Threads | 158 | 148 | 149 | 154 | 157 | 137 |
+| **Home idle CPU, 60 s (% of one core)** | 81.3 | 80.6 | 79.3 | 77.7 | **81.6** | 84.4 |
+| **Home idle `getCurrentPosition` polls/s** | **0** | **0** | **0** | **0** | **0** | 60 |
+| Home idle frames p50 / p90 (ms), slow % | 10.8 / 12.5, 10.3 | 10.9 / 12.5, 10.1 | 10.5 / 12.0, 5.4 | 10.5 / 12.3, 7.9 | 11.0 / 12.6, 11.5 | 10.6 / 12.4, 9.2 |
+| Run frames p50 / p90 / p99 (ms) | 8.8 / 13.1 / 26.5 | 10.6 / 14.4 / 18.6 | 10.2 / 14.0 / 17.7 | 10.9 / 14.4 / 17.9 | 10.7 / 13.9 / 16.2 | 10.1 / 13.7 / 17.5 |
+| Run slow % (> 12.5 ms) | 12.7 | 28.2 | 24.3 | 30.2 | 24.5 | 20.0 |
+| Post-run p90 (ms), slow % | 13.4, 17.0 | 12.3, 7.6 | 12.2, 6.9 | 12.3, 8.8 | 14.8, 47.4² | 12.9, 16.0 |
+| Thermal status | 0 | 0 | 0 | 0 | 0 | 0 |
+| Battery temperature (°C) | 25.5 | 25.7 | 25.7 | 25.7 | 25.9 | 25.3 |
+
+¹ Per live pool: the counter sums the pools alive at that moment (evicted pools take their count with them).
+² Game 20 is a plain game; its post-run window is short (538 frames) and the next hold starts on Home. One outlier.
+
+**Plays and polls.** 20 games, 1 273 plays (`resumes`), **0 position polls** (2.1: 115 408). In the game-10 trace the
+`xyz.luan/audioplayers` channel traffic on the main thread fell from **4 423 calls / 2.61 s to 120 calls / 0.11 s**,
+and the app's main-thread CPU in the 40 s window from 16.0 s to 12.9 s (−20 %). Raster thread 11.6 → 12.5 s.
+
+**§22 full length on the phone.** The FS_SOAK build logs each > 0.6 s play when its stop timer fires
+(`FS_SOAK sfx-stop`, 297 lines): `perfect_3` 160× at 2 400–2 412 ms, `perfect_2` 20× at 1 501–1 508, `perfect_1` 25×
+at 1 000–1 006, `lv_up` 2 706, `lv_claim` 1 501–1 506, `gameover` 1 426–1 432, `bn_prize_m` 1 200–1 213: every one is the
+table length + 100 ms (± 13 ms), none at 0.6 s. (A copy cut by an oldest-copy steal is not logged; steals stay rare,
+14 counted on the live pools at game 20 out of 1 273 plays.)
+
+**Against the §33.6 gate (audio part only):**
+- **Live players:** bounded and leak-free (0 leaked; 2.1 leaked 34 and kept growing). From game 2 → 20 the count is
+  66 → 76: the +10 are the lazy pools of cues first heard in later games (bonus / level-up / rare power-ups), held at
+  ≈ 28 pools by the idle eviction (35 pools disposed over the session). Between game 10 and 20 it moved by 1. The hard
+  bound is ≤ 40 pools × ≤ 6 players. The live count is higher than 2.1's early games because each pool now owns its
+  full fixed voice set up front (no player is ever created mid-play).
+- **Position polls on Home: 0/s** (was 60/s).
+- **Memory:** PSS flat (428–438 MB, game 20 ≤ game 2). Native heap is higher in games 1–2 (57–60 MB) than in 2.1 and
+  settles at 41–44 MB.
+- **Home idle CPU:** 78–82 % of a core, about 3 points under 2.1 and flat over the session (2.1 crept 80 → 84 %). The
+  rest is Flame rendering the unchanged Home at 60 fps: §33.4 item 5 (WP-33c), not audio.
+- **Run frames:** no creep over the session (slow % 28 → 24 from game 2 to 20; 2.1 went 12 → 20), but the level is
+  above 2.1: p90 13.9–14.4 ms vs 12.9–13.7 ms. The extra time sits on the raster thread (raster90 6.5–6.9 vs
+  5.7–6.2 ms; build90 is equal), which the audio change does not touch; one run each, so this needs the QA re-soak
+  after WP-33c to tell run-to-run noise from a real change. Rapid flaps / passes showed no stall: run max frame
+  61–89 ms in games 2–20 (2.1: 58–83 ms), the 141 ms in game 11 and the first-game 713 ms (shader warm-up, 2.1:
+  599 ms) are single frames.
+- **Thermal:** status 0 throughout, battery 25.2 → 25.9 °C.
+
 ## 3. Perfetto trace (game 10)
 
 The 40 s window covers about 19 s of play, then death, results and Home idle. The trace is `docs/p22/perf/baseline-2.1/trace_g10.perfetto-trace`, 99.6 MB and gitignored, so it exists only in this worktree. It was analysed with the `perfetto` Python trace processor.

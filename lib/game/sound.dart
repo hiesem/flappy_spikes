@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 
 import 'audio_counter.dart';
 import 'config.dart';
+import 'sfx_pool.dart';
+import 'sound_durations.g.dart';
 
 /// Sound effects used by the game (files live in assets/audio/).
 ///
@@ -449,36 +451,49 @@ class SoundService {
   bool _musicStarted = false;
   bool _bgmInitialized = false;
 
-  /// Low-latency pools, one per SFX. Without these, FlameAudio.play
-  /// creates a brand-new AudioPlayer (decoder + AudioTrack + audio-focus
-  /// request) for EVERY effect — that made flap sounds laggy and churned CPU
-  /// on the Pixel 8 (2026-07-22).
+  /// Low-latency pools, one per SFX ([SfxPool], `sfx_pool.dart`). Without
+  /// pools, FlameAudio.play creates a brand-new AudioPlayer (decoder +
+  /// AudioTrack + audio-focus request) for EVERY effect — that made flap
+  /// sounds laggy and churned CPU on the Pixel 8 (2026-07-22).
   ///
-  /// The pools use SoundPool mode ([PlayerMode.lowLatency]): sounds are
-  /// decoded ONCE when the pool is created and each play is a
-  /// sub-millisecond queue on an open stream. The default MediaPlayer mode
-  /// made every play open+close an audio route, which stalled frames on the
-  /// Pixel 8 (few-frame freeze on every flap, 2026-07-22). Caveat of
-  /// SoundPool mode: onPlayerComplete never fires, so [play] stops each
-  /// sound after its measured duration to return the player to the pool.
+  /// The voices use SoundPool mode ([PlayerMode.lowLatency]): sounds are
+  /// decoded ONCE and each play is a sub-millisecond queue on an open
+  /// stream. The default MediaPlayer mode made every play open+close an
+  /// audio route, which stalled frames on the Pixel 8 (2026-07-22). SoundPool
+  /// never reports completion or duration, so each play is stopped after the
+  /// file's length from the generated table (PRD-2.2 §22) + 100 ms.
+  ///
+  /// PRD-2.2 §33.4: every pool has a fixed, hard-capped voice set (oldest
+  /// copy stolen when all are busy), voices are disposed (never released)
+  /// and idle pools are evicted ([_trimPools]); [prewarmed] always stays.
   ///
   /// PRD-2 has ~170 cues, so pools are created lazily (WP-P1int): only
   /// [prewarmed] warms up at start; every other pool is created on its first
-  /// [play].
-  final Map<Sfx, AudioPool> _pools = {};
-  final Map<Sfx, Duration> _durations = {};
+  /// [play] or on [preload].
+  final Map<Sfx, SfxPool> _pools = {};
   bool _poolsStarted = false;
 
-  /// One creation per sound (also when it failed: no retry storm).
+  /// One creation per sound (also when it failed: no retry storm). An
+  /// evicted pool's entry is removed so it can be created again.
   final Map<Sfx, Future<void>> _creating = {};
 
   /// First plays of lazily created pools, waiting for their pool (when the
   /// request was made).
   final Map<Sfx, DateTime> _pendingFirst = {};
 
+  /// Monotonic clock for pool use / eviction.
+  final Stopwatch _clock = Stopwatch()..start();
+  int get _nowMs => clockMs?.call() ?? _clock.elapsedMilliseconds;
+
+  /// Test seam: replaces the monotonic ms clock (idle-eviction tests).
+  @visibleForTesting
+  int Function()? clockMs;
+  int _lastTrimMs = 0;
+
   /// The core run sounds, warmed up at start (PRD-2 §7, WP-P1int): flap,
   /// point, the rim tonk, the perfect / streak set — plus the 1.0 game-over
-  /// and the menu click, which every session plays.
+  /// and the menu click, which every session plays. Never evicted
+  /// (PRD-2.2 §33.4 item 3).
   static const Set<Sfx> prewarmed = {
     Sfx.flap,
     Sfx.point,
@@ -494,6 +509,31 @@ class SoundService {
   /// that took longer than this (a late sound is worse than none).
   static const Duration firstPlayLateLimit = Duration(milliseconds: 250);
 
+  /// PRD-2.2 §22: the designed length of [file] from the generated table
+  /// (`tool/gen_sound_durations.py`), never the plugin's `getDuration()`
+  /// (null on Android SoundPool, which cut every effect at 0.6 s). A missing
+  /// file asserts in debug and plays 1 s in release.
+  static Duration lengthOf(String file) {
+    final entry = kSoundDurations[file];
+    assert(
+      entry != null,
+      '$file is missing from kSoundDurations: run '
+      'python3 -I tool/gen_sound_durations.py',
+    );
+    return Duration(milliseconds: entry?.$1 ?? Config.sfxMissingLengthMs);
+  }
+
+  /// PRD-2.2 §22.1: the fixed number of players for [sfx] (hard cap).
+  static int voicesFor(Sfx sfx) {
+    if (_burstPool.contains(sfx)) return Config.sfxVoicesBurst;
+    if (_legacyPool.contains(sfx)) return Config.sfxVoicesLegacy;
+    final file = _files[sfx];
+    final ms = file == null ? 0 : kSoundDurations[file]?.$1 ?? 0;
+    return ms > Config.sfxLongSoundMs
+        ? Config.sfxVoicesLong
+        : Config.sfxVoicesDefault;
+  }
+
   /// Background-music volume (0..1). Independent of [muted], which only
   /// gates sound effects.
   double get musicVolume => _musicVolume;
@@ -502,12 +542,12 @@ class SoundService {
   /// false), before muting applies.
   void Function(Sfx sfx)? onPlay;
 
-  /// Test seam: builds one pool per file. Defaults to the real low-latency
-  /// [AudioPool]; a test injects a factory (e.g. one returning null, a pool
-  /// that never became ready) to exercise [play]'s drop path without the
-  /// audioplayers plugin.
+  /// Test seam: builds ONE voice for a file (called [voicesFor] times per
+  /// pool, sequentially). Defaults to the real low-latency [PlayerVoice]; a
+  /// test injects fakes (or returns null: a voice that never became ready)
+  /// to run the pool logic without the audioplayers plugin.
   @visibleForTesting
-  Future<AudioPool?> Function(String file, bool legacy)? poolFactory;
+  Future<SfxVoice?> Function(String file)? voiceFactory;
 
   void play(Sfx sfx) {
     onPlay?.call(sfx);
@@ -515,12 +555,10 @@ class SoundService {
       return;
     }
     final pool = _pools[sfx];
-    // A pool is only ready together with its stop duration (see
-    // [_createPool]); while either is missing the sound is not played now.
-    // A bare FlameAudio.play here would spawn a fresh one-shot AudioPlayer,
-    // which the project bans (CLAUDE.md: preloaded low-latency pools only).
-    final duration = _durations[sfx];
-    if (pool == null || duration == null) {
+    // While the pool is missing the sound is not played now. A bare
+    // FlameAudio.play here would spawn a fresh one-shot AudioPlayer, which
+    // the project bans (CLAUDE.md: preloaded low-latency pools only).
+    if (pool == null) {
       unawaited(_initPools());
       if (!prewarmed.contains(sfx) && !_creating.containsKey(sfx)) {
         // First request of a lazy pool: create it and play this request
@@ -530,12 +568,40 @@ class SoundService {
       }
       return;
     }
-    unawaited(_playPool(pool, duration));
+    pool.play(_nowMs);
+    if (_nowMs - _lastTrimMs >= Config.sfxTrimIntervalMs) _trimPools();
+  }
+
+  /// PRD-2.2 §18.4: creates the pools of [cues] without playing them (e.g.
+  /// a portal's ride cues when the portal spawns), so their first [play] is
+  /// heard. Marks existing pools as used (no eviction right before use).
+  void preload(Iterable<Sfx> cues) {
+    if (muted || !enabled) return;
+    unawaited(_initPools());
+    for (final sfx in cues) {
+      final pool = _pools[sfx];
+      if (pool != null) {
+        pool.lastUsedMs = _nowMs;
+      } else {
+        unawaited(_ensurePool(sfx));
+      }
+    }
   }
 
   // region P22-33 — §33.3 soak counters (debug / FS_SOAK only)
-  /// Low-latency pools created so far (they are never disposed in 2.1).
+  /// Low-latency pools alive now (bounded, §33.4 item 3).
   int get poolCount => _pools.length;
+
+  /// Players owned by the live pools.
+  int get pooledVoices =>
+      _pools.values.fold<int>(0, (n, p) => n + p.voiceCount);
+
+  /// Pools evicted so far (idle or over the cap).
+  int evictions = 0;
+
+  /// FS_SOAK diagnostics: told when a play's stop timer fires (file, ms
+  /// from play to stop). Set before the first play.
+  void Function(String file, int playedMs)? debugOnStop;
 
   /// Live native audio players (created − disposed) when the FS_SOAK
   /// counter ([CountingAudioPlatform]) is installed; null otherwise.
@@ -544,13 +610,9 @@ class SoundService {
   /// One-line counter summary for the soak log (logcat).
   String debugStats() {
     final c = CountingAudioPlatform.installed;
-    final pooled = _pools.values.fold<int>(
-      0,
-      // Read-only soak diagnostics of the plugin's pool lists.
-      // ignore: invalid_use_of_visible_for_testing_member
-      (n, p) => n + p.availablePlayers.length + p.currentPlayers.length,
-    );
-    return 'pools=${_pools.length} pooled=$pooled '
+    final steals = _pools.values.fold<int>(0, (n, p) => n + p.steals);
+    return 'pools=${_pools.length} pooled=$pooledVoices '
+        'evicted=$evictions steals=$steals '
         'loops=${activeLoops.length}'
         '${c == null ? '' : ' players=${c.live} creates=${c.creates} '
                   'disposes=${c.disposes} releases=${c.releases} '
@@ -562,26 +624,26 @@ class SoundService {
   @visibleForTesting
   bool poolRequested(Sfx sfx) => _creating.containsKey(sfx);
 
-  /// Plays one low-latency pool hit and returns the borrowed player after the
-  /// known duration — SoundPool mode never fires onPlayerComplete, so only the
-  /// timer releases it (see the `_pools` field comment).
-  ///
-  /// Both the start and the stop Future are error-contained: a native audio
-  /// failure must never take the game down (or escape as an uncaught Future).
-  Future<void> _playPool(AudioPool pool, Duration duration) async {
+  /// [sfx]'s live pool (tests / diagnostics).
+  @visibleForTesting
+  SfxPool? poolOf(Sfx sfx) => _pools[sfx];
+
+  /// Sets the one global audio context (mixWithOthers: no audio-focus
+  /// request, no AudioManager mode write per player; PERF.md §5). Awaited
+  /// before any SFX / loop player is created, so each player inherits it.
+  Future<void>? _globalContext;
+  Future<void> _ensureGlobalContext() => _globalContext ??= () async {
+    if (voiceFactory != null) return; // fake voices: no plugin
     try {
-      final stop = await pool.start();
-      Timer(duration + const Duration(milliseconds: 100), () async {
-        try {
-          await stop();
-        } catch (_) {
-          // Audio failure must never take the game down.
-        }
-      });
+      await AudioPlayer.global.setAudioContext(
+        AudioContextConfig(
+          focus: AudioContextConfigFocus.mixWithOthers,
+        ).build(),
+      );
     } catch (_) {
-      // A rejected start simply drops this sound.
+      // Audio failure must never take the game down.
     }
-  }
+  }();
 
   /// Warms up the [prewarmed] pools once. No-op when [enabled] is false
   /// (tests) and idempotent afterwards; while it runs (or after a failure)
@@ -599,40 +661,52 @@ class SoundService {
   Future<void> _ensurePool(Sfx sfx) =>
       _creating.putIfAbsent(sfx, () => _createPool(sfx));
 
-  /// Creates [sfx]'s low-latency pool (never throws).
+  Future<SfxVoice?> _newVoice(String file) async {
+    try {
+      final f = voiceFactory;
+      if (f != null) return await f(file);
+      return await PlayerVoice.create(file);
+    } catch (_) {
+      return null; // a voice that failed to load: the pool stays smaller
+    }
+  }
+
+  /// Creates [sfx]'s pool (never throws). The pool is published with its
+  /// first voice (so a first play is as quick as before); the other voices
+  /// are created right after, one by one, up to the hard cap. No voice is
+  /// ever created by [play].
   Future<void> _createPool(Sfx sfx) async {
     final file = _files[sfx];
     if (file == null) return;
+    final length = lengthOf(file);
     try {
-      final legacy = _legacyPool.contains(sfx);
-      final burst = _burstPool.contains(sfx);
-      final pool =
-          await (poolFactory?.call(file, legacy) ??
-              AudioPool.create(
-                source: AssetSource(file),
-                audioCache: FlameAudio.audioCache,
-                minPlayers: burst ? 3 : (legacy ? 2 : 1),
-                maxPlayers: burst ? 6 : (legacy ? 4 : 2),
-                playerMode: PlayerMode.lowLatency,
-                audioContext: AudioContextConfig(
-                  focus: AudioContextConfigFocus.mixWithOthers,
-                ).build(),
-              ));
-      if (pool == null) return; // never became ready: stay silent
-      // Publish the pool and its stop duration TOGETHER: until the metadata
-      // is known the pool is not ready and [play] keeps dropping the sound,
-      // so a warm-up play can never dereference a missing duration (a
-      // partially initialized pool stays silent instead).
-      final duration =
-          await pool.getDuration() ?? const Duration(milliseconds: 500);
-      _durations[sfx] = duration;
+      await _ensureGlobalContext();
+      final pool = SfxPool(
+        file: file,
+        length: length,
+        capacity: voicesFor(sfx),
+        stopMargin: const Duration(milliseconds: Config.sfxStopMarginMs),
+        nowMs: _nowMs,
+      )..onStopped = debugOnStop;
+      final first = await _newVoice(file);
+      if (first == null) return; // never became ready: stay silent
+      pool.add(first);
       _pools[sfx] = pool;
       final asked = _pendingFirst.remove(sfx);
       if (asked != null &&
           enabled &&
           !muted &&
           DateTime.now().difference(asked) <= firstPlayLateLimit) {
-        unawaited(_playPool(pool, duration));
+        pool.play(_nowMs);
+      }
+      _trimPools();
+      while (!pool.disposed && pool.voiceCount < pool.capacity) {
+        final voice = await _newVoice(file);
+        if (voice == null) break;
+        if (!pool.add(voice)) {
+          await voice.dispose(); // evicted meanwhile
+          break;
+        }
       }
     } catch (_) {
       // Audio failure must never take the game down. One bad pool must not
@@ -640,6 +714,55 @@ class SoundService {
     } finally {
       _pendingFirst.remove(sfx);
     }
+  }
+
+  /// PRD-2.2 §33.4 item 3: disposes pools not heard for
+  /// [Config.sfxPoolIdleDisposeMs], then the least recently used idle ones
+  /// while more than [Config.sfxMaxLivePools] are alive. [prewarmed] pools
+  /// and pools with a playing voice are kept.
+  void _trimPools() {
+    final now = _nowMs;
+    _lastTrimMs = now;
+    // Busy = played within its length + margin (by the same clock as
+    // lastUsedMs, so a pool is never disposed under a ringing copy).
+    bool evictable(MapEntry<Sfx, SfxPool> e) =>
+        !prewarmed.contains(e.key) &&
+        now - e.value.lastUsedMs >=
+            e.value.length.inMilliseconds + Config.sfxStopMarginMs;
+    final stale = _pools.entries
+        .where(
+          (e) =>
+              evictable(e) &&
+              now - e.value.lastUsedMs >= Config.sfxPoolIdleDisposeMs,
+        )
+        .map((e) => e.key)
+        .toList();
+    stale.forEach(_evict);
+    if (_pools.length <= Config.sfxMaxLivePools) return;
+    final lru = _pools.entries.where(evictable).toList()
+      ..sort((a, b) => a.value.lastUsedMs.compareTo(b.value.lastUsedMs));
+    for (final e in lru) {
+      if (_pools.length <= Config.sfxMaxLivePools) break;
+      _evict(e.key);
+    }
+  }
+
+  void _evict(Sfx sfx) {
+    final pool = _pools.remove(sfx);
+    if (pool == null) return;
+    _creating.remove(sfx);
+    evictions++;
+    unawaited(pool.dispose());
+  }
+
+  /// Teardown: disposes every pool and loop (never needed in a normal
+  /// session; tests and the soak use it).
+  Future<void> dispose() async {
+    final pools = List.of(_pools.values);
+    _pools.clear();
+    _creating.clear();
+    await stopAllLoops();
+    await Future.wait(pools.map((p) => p.dispose()));
   }
 
   /// Starts the looping background music. Idempotent: only the first
@@ -653,6 +776,9 @@ class SoundService {
         // Registers Bgm's WidgetsBinding observer so the music pauses when
         // the app backgrounds and resumes on foreground.
         await FlameAudio.bgm.initialize();
+        // PRD-2.2 §33.4 item 2: the music never polls its position (it
+        // polled 60×/s all session, also on Home).
+        FlameAudio.bgm.audioPlayer.positionUpdater = null;
         _bgmInitialized = true;
       }
       await FlameAudio.bgm.play(_musicFile, volume: _musicVolume);
@@ -693,7 +819,12 @@ class SoundService {
   /// returns a silent handle. Disabled (tests): a recording no-op handle.
   LoopHandle loop(SfxLoop l, {double volume = 1}) {
     onLoop?.call(l, volume);
-    final handle = _LoopPlayer(l, volume, enabled && !muted);
+    final handle = _LoopPlayer(
+      l,
+      volume,
+      enabled && !muted,
+      enabled && !muted ? _ensureGlobalContext : null,
+    );
     _loops.add(handle);
     _loops.removeWhere((x) => x.stopped && !identical(x, handle));
     if (handle.live) unawaited(handle.start());
@@ -739,7 +870,11 @@ class SoundService {
 }
 
 class _LoopPlayer implements LoopHandle {
-  _LoopPlayer(this.loop, this._volume, this.live);
+  _LoopPlayer(this.loop, this._volume, this.live, this._context);
+
+  /// Awaits the service's global audio context (PRD-2.2 §33: no
+  /// per-player context).
+  final Future<void> Function()? _context;
 
   @override
   final SfxLoop loop;
@@ -757,14 +892,13 @@ class _LoopPlayer implements LoopHandle {
 
   Future<void> start() async {
     try {
+      await _context?.call();
+      if (_stopped) return;
       final p = AudioPlayer()..audioCache = FlameAudio.audioCache;
+      // PRD-2.2 §33.4 item 2: loops never poll their position.
+      p.positionUpdater = null;
       _player = p;
       await p.setPlayerMode(PlayerMode.lowLatency);
-      await p.setAudioContext(
-        AudioContextConfig(
-          focus: AudioContextConfigFocus.mixWithOthers,
-        ).build(),
-      );
       await p.setReleaseMode(ReleaseMode.loop);
       if (_stopped) {
         await p.dispose();

@@ -1,0 +1,82 @@
+Applications Memory Usage (in Kilobytes):
+Uptime: 7125180 Realtime: 7125180
+
+** MEMINFO in pid 28648 [com.flappyspikes.flappy_spikes] **
+                   Pss  Private  Private  SwapPss      Rss     Heap     Heap     Heap
+                 Total    Dirty    Clean    Dirty    Total     Size    Alloc     Free
+                ------   ------   ------   ------   ------   ------   ------   ------
+  Native Heap    43989    43924       56    26197    45320   128720   112660    10939
+  Dalvik Heap     9206     7324     1836     3185    11484   262144    11605   250539
+ Dalvik Other    20784     8376       12      124    33540                           
+        Stack     2988     2980        8     2028     2996                           
+       Ashmem     3190     2528        0        0     4400                           
+    Other dev       48        0       44        0      400                           
+     .so mmap     9954      188     5924      618    40616                           
+    .jar mmap     1216        0       96        8    46876                           
+    .apk mmap    19712      528    15268      648    44444                           
+    .ttf mmap      134        0        0        0      276                           
+    .dex mmap     6252     4080     2156    39536     7236                           
+    .oat mmap        9        0        0        0     1880                           
+    .art mmap     4288     2624     1564     4455    16716                           
+   Other mmap      672        8      588        0     1676                           
+   EGL mtrack   114004   114004        0        0   114004                           
+    GL mtrack    88760    88760        0        0    88760                           
+      Unknown    29080    28928      128     7065    29752                           
+        TOTAL   438150   304252    27680    83864   490376   390864   124265   261478
+ 
+ App Summary
+                       Pss(KB)                        Rss(KB)
+                        ------                         ------
+           Java Heap:    11512                          28200
+         Native Heap:    43924                          45320
+                Code:    28248                         166128
+               Stack:     2980                           2996
+            Graphics:   202764                         202764
+       Private Other:    42504
+              System:   106218
+             Unknown:                                   44968
+ 
+           TOTAL PSS:   438150            TOTAL RSS:   490376       TOTAL SWAP PSS:    83864
+ 
+ Objects
+               Views:       14         ViewRootImpl:        1
+         AppContexts:       24           Activities:        1
+              Assets:       46        AssetManagers:        0
+       Local Binders:       88        Proxy Binders:      121
+       Parcel memory:       37         Parcel count:      150
+    Death Recipients:        9             WebViews:        4
+ 
+ Native Allocations
+                         Count                       Total(kB)
+                        ------                         ------
+    Other (malloced):      469                             43
+ Other (nonmalloced):      219                            138
+   Bitmap (malloced):        6                              3
+ 
+ Shared Bitmaps
+                         Count                       Size(KB)
+                        ------                         ------
+              Mapped:        0                              0
+  (Enable debug.hwui.bitmap_ashmem_long_name sysprop to count unique bitmap allocations)
+ 
+ SQL
+         MEMORY_USED:      408
+  PAGECACHE_OVERFLOW:      134          MALLOC_SIZE:       46
+ 
+ DATABASES
+      pgsz     dbsz   Lookaside(b) cache hits cache misses cache size  Dbname
+PER CONNECTION STATS
+         4       56            121    90    77    17  /data/user/0/com.flappyspikes.flappy_spikes/databases/com.google.android.datatransport.events
+         4       96            123     7    52     9  /data/user/0/com.flappyspikes.flappy_spikes/no_backup/androidx.work.workdb
+         4        8                    0     0     0    (attached) temp
+         4       96             32     2    24     3  /data/user/0/com.flappyspikes.flappy_spikes/no_backup/androidx.work.workdb (2)
+POOL STATS
+     cache hits  cache misses    cache size  Dbname
+             90            78            17  /data/user/0/com.flappyspikes.flappy_spikes/databases/com.google.android.datatransport.events
+              9            80            12  /data/user/0/com.flappyspikes.flappy_spikes/no_backup/androidx.work.workdb
+ 
+ Asset Allocations
+    : 18K
+    : 152K
+    : 49K
+ 

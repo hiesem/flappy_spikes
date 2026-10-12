@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
-import 'package:flame_audio/flame_audio.dart' show AudioPool;
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/home/menu_primitives.dart';
@@ -21,6 +20,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers.dart';
 import '../menu_screenshot_test.dart' show captureShot, loadFonts;
+import '../p22/fake_audio.dart';
 
 // S2-01/02 already name the older PRD-1/AdMob findings. Skin-shop round 2
 // starts at S2-10; those regressions are fixed (fix round 2) and pinned here.
@@ -137,27 +137,6 @@ const _dressed = <String, Object>{
 
 /// Plugin-free pool seam. A duration query and a start result can be
 /// independently delayed/failed, just like the real asynchronous pool.
-class _Pool implements AudioPool {
-  final durationReady = Completer<Duration?>();
-  Object? startError;
-  int starts = 0;
-  int stops = 0;
-
-  @override
-  Future<Duration?> getDuration() => durationReady.future;
-
-  @override
-  Future<Future<void> Function()> start({double volume = 1}) async {
-    starts++;
-    final error = startError;
-    if (error != null) throw error;
-    return () async => stops++;
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
 Future<void> _microtasks() async {
   for (var i = 0; i < 40; i++) {
     await Future<void>.value();
@@ -591,18 +570,18 @@ void main() {
   test(
     'round 2: a ready low-latency pool plays and returns its player',
     () async {
-      final pool = _Pool();
-      pool.durationReady.complete(const Duration(milliseconds: 1));
-      final sound = SoundService()
-        ..poolFactory = (file, legacy) async =>
-            file == 'flap.mp3' ? pool : null;
+      final audio = FakeAudio();
+      final sound = audio.service();
       sound.play(Sfx.flap); // dropped while the pool is warming
       await _microtasks();
       sound.play(Sfx.flap);
       await _microtasks();
-      expect(pool.starts, 1);
-      await Future<void>.delayed(const Duration(milliseconds: 130));
-      expect(pool.stops, 1);
+      final flap = audio.of('flap.mp3');
+      expect(flap.fold<int>(0, (n, v) => n + v.starts), 1);
+      // PRD-2.2 §22: flap.mp3 is 92 ms (table) + the 100 ms margin.
+      await Future<void>.delayed(const Duration(milliseconds: 260));
+      expect(flap.fold<int>(0, (n, v) => n + v.stops), 1);
+      await sound.dispose();
     },
   );
 
@@ -648,51 +627,60 @@ void main() {
     );
   });
 
-  // S2-11: a warm pool must never be published before its duration.
+  // S2-11 (PRD-2.2 §22): pools no longer wait for plugin metadata; a play
+  // during warm-up is dropped, never dereferences anything missing.
   test(
-    'S2-11 SFX waits for duration metadata before playing a warm pool',
+    'S2-11 SFX during pool warm-up is dropped without errors',
     () async {
-      final pool = _Pool();
-      final sound = SoundService()
-        ..poolFactory = (file, legacy) async =>
-            file == 'flap.mp3' ? pool : null;
+      final audio = FakeAudio();
+      final gate = audio.gates['flap.mp3'] = Completer<void>();
+      final sound = audio.service();
       final uncaught = <Object>[];
       await runZonedGuarded(() async {
         sound.play(Sfx.flap); // starts warm-up, dropped
-        await _microtasks(); // pool exists, its duration is still pending
+        await _microtasks(); // the flap voice is still loading
         sound.play(Sfx.flap);
         await _microtasks();
-        // Finish warm-up so this test leaves no pending metadata future.
-        pool.durationReady.complete(const Duration(milliseconds: 1));
+        gate.complete();
         await _microtasks();
       }, (error, stack) => uncaught.add(error));
       expect(
+        audio.of('flap.mp3').fold<int>(0, (n, v) => n + v.starts),
+        0,
+        reason: 'plays during warm-up are dropped',
+      );
+      expect(
         uncaught,
         isEmpty,
-        reason:
-            'a play during warm-up must not dereference a missing stop duration',
+        reason: 'a play during warm-up must not throw',
       );
+      await sound.dispose();
     },
   );
 
   test('S2-12 low-latency pool playback failure is contained', () async {
-    final pool = _Pool()
-      ..startError = StateError('native SoundPool start failed');
-    pool.durationReady.complete(const Duration(milliseconds: 1));
-    final sound = SoundService()
-      ..poolFactory = (file, legacy) async => file == 'flap.mp3' ? pool : null;
+    final audio = FakeAudio();
+    final sound = audio.service();
     final uncaught = <Object>[];
     await runZonedGuarded(() async {
       sound.play(Sfx.flap);
       await _microtasks();
+      for (final v in audio.of('flap.mp3')) {
+        v.startError = StateError('native SoundPool start failed');
+      }
       sound.play(Sfx.flap);
       await _microtasks();
     }, (error, stack) => uncaught.add(error));
-    expect(pool.starts, 1, reason: 'the failure must exercise the ready pool');
+    expect(
+      audio.of('flap.mp3').fold<int>(0, (n, v) => n + v.starts),
+      1,
+      reason: 'the failure must exercise the ready pool',
+    );
     expect(
       uncaught,
       isEmpty,
       reason: 'audio failure must never take the game down',
     );
+    await sound.dispose();
   });
 }

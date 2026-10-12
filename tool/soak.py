@@ -213,6 +213,7 @@ def main():
                 rec.update({f'app_{k}': v for k, v in app.items()
                             if k in ('players', 'creates', 'disposes',
                                      'releases', 'pools', 'pooled',
+                                     'evicted', 'steals',
                                      'posPolls', 'resumes')})
                 run = hold_line.get(g, {}).get('run', {})
                 rec.update({f'run_{k}': run.get(k) for k in

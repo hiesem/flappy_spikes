@@ -69,6 +69,7 @@ void main() {
       (3, .45, 'blocks'),
       (5, .18, 'flame'),
       (10, .18, 'flame'),
+      (48, .18, 'flame'), // PRD-2.2 §29 the longest name
     ]) {
       final tag = '${trail == 'flame' ? '' : '${trail}_'}${h.round()}';
       FlameTester<FlappySpikesGame>(

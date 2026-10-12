@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
@@ -17,10 +18,11 @@ import '../run_layers.dart';
 import '../run_state.dart';
 
 /// What a hoop pass is worth (PRD-2 §3.0.1 score, §3.1 rules, §3.2 coins,
-/// §5.1 pass feedback):
+/// §5.1 pass feedback; points PRD-2.2 §13):
 ///
-/// - **+1 point** per hoop passed ([RunContext.addScore] → HUD, versus
-///   timeline via [ScoreChanged]);
+/// - **points** ([pointsFor]): 1 for a non-perfect pass, max(2, streak)
+///   for a perfect one (×2 with the chick; [RunContext.addScore] → HUD,
+///   versus timeline via [ScoreChanged]);
 /// - **a coin per hoop** through the one in-run wallet path
 ///   ([RunContext.earn]: credited at once, kept if the run ends): 1 for a
 ///   pass with a rim touch ([CoinSource.hoop]), 2 for a perfect pass
@@ -38,6 +40,13 @@ class ScoringFeature extends RunFeature {
   final _popups = CoinPopup.newPool();
   final _pulses = ShockRing.newPool();
 
+  /// PRD-2.2 §13.1 the points of a pass: 1 for a non-perfect pass (graze
+  /// or clean), max(2, [streak]) for a perfect one — [streak] is the value
+  /// *after* this pass (the streak feature runs first). The chick's ×2 is
+  /// applied by [RunContext.addScore].
+  static int pointsFor({required bool perfect, required int streak}) =>
+      perfect ? math.max(2, streak) : 1;
+
   @override
   void attach(RunContext c) {
     _c = c;
@@ -50,13 +59,13 @@ class ScoringFeature extends RunFeature {
     // region WP-3b / WP-3c — versus timeline flags (§3.13): ride points (3b)
     // and Ring Train points (§3.22, 3c) skip the 0.9 s gap check
     final train = e.hoop?.plan.kind == HoopKindId.train;
+    final perfect = e.perfect;
     c.addScore(
-      1,
+      pointsFor(perfect: perfect, streak: c.s.streak),
       flags: (e.duringRide ? PointFlags.ride : PointFlags.none) |
           (train ? PointFlags.train : PointFlags.none),
     );
     // endregion WP-3b / WP-3c
-    final perfect = e.perfect;
     final coins = perfect ? 2 : 1;
     c.earn(coins, perfect ? CoinSource.perfect : CoinSource.hoop);
 

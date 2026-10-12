@@ -16,7 +16,7 @@ class FadableTextComponent extends TextComponent<TextPaint>
         _baseColor = style.color ?? const Color(0xFFFFFFFF),
         super(text: text, textRenderer: TextPaint(style: style));
 
-  final TextStyle _style;
+  TextStyle _style;
   Color _baseColor;
   double _opacity = 1;
 
@@ -31,6 +31,13 @@ class FadableTextComponent extends TextComponent<TextPaint>
 
   void setColor(Color color) {
     _baseColor = color;
+    _refresh();
+  }
+
+  /// PRD-2.2 §13.2 changes the font size (the score circle's shrink-to-fit).
+  void setFontSize(double size) {
+    if (_style.fontSize == size) return;
+    _style = _style.copyWith(fontSize: size);
     _refresh();
   }
 

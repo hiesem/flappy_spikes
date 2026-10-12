@@ -44,7 +44,8 @@ void main() {
       );
       expect(game.state, GameState.playing);
       expect(run.events.log.whereType<HoopPassed>(), hasLength(1));
-      expect(game.score, 1, reason: 'one hoop, one point');
+      // PRD-2.2 §13: a centred pass is perfect (streak 1): 2 points.
+      expect(game.score, 2, reason: 'one hoop, one perfect pass');
       // Keep flying level well past the hoop: no second point from it.
       await flyRun(
         game,
@@ -52,7 +53,7 @@ void main() {
         autopilot: false,
         onFrame: hold(game, y),
       );
-      expect(game.score, 1, reason: 'a hoop never scores twice');
+      expect(game.score, 2, reason: 'a hoop never scores twice');
       expect(run.events.log.whereType<HoopMissed>(), isEmpty);
     },
   );

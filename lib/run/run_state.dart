@@ -137,6 +137,9 @@ class RunState {
   final Map<String, int> taken = {};
   int passes = 0;
   int perfectPasses = 0;
+
+  /// PRD-2.2 §11 clean off-centre passes (no rim touch, outside the zone).
+  int cleanPasses = 0;
   int rimTouches = 0;
   final Set<ElementId> metThisRun = {};
 

@@ -33,7 +33,8 @@ import 'gift_tag.dart';
 /// [PairRewards.top] on ring 0, [PairRewards.bottom] on ring 1).
 ///
 /// A pair is **one hoop**: flying through one ring scores like a normal
-/// hoop (+1, coins, streak; perfect = no rim contact) and opens that ring's
+/// hoop (+1, coins, streak; perfect = no rim contact and centred, PRD-2.2
+/// §11) and opens that ring's
 /// box; flying through neither is a miss (`MistakeCause.pairMissed`, the
 /// generic miss path). It resolves once at the plane: the other ring, box
 /// and tag shrink to 60 % and fade out in 0.45 s.

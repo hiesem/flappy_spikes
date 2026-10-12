@@ -20,7 +20,7 @@ Firebase project **`flappy-spikes-a2b55`** (Blaze), Firestore `(default)` in **e
 | `functions/scripts/test.sh` | `npm test`: build + type-check + mocha inside the emulators |
 | `test/fixtures/versus_matching.json` | matching cases shared with the Dart matcher test (WP-5b) |
 
-Data model and the client write contract: ARCH §6.1 (one new run per write, point count == score, gift points).
+Data model and the client write contract: ARCH §6.1 (one new run per write; timeline v2 since PRD-2.2 §13.5: entry values sum to the score, bonus / gift / ride / train entries gap-exempt).
 
 ## 2. Test locally (emulators)
 
@@ -118,3 +118,15 @@ solo / old pools) without touching the app.
 `deleteMyData` (callable, region `europe-west1`) removes `players/{uid}`, `versusRate/{uid}`, the caller's entries in
 all 44 pool shards and the Firebase Auth user; it is idempotent. The client (4c/5b) also resets the Analytics ID,
 regenerates the nickname and clears the upload queue. Data-safety answers: SUBMISSION.md (4c).
+
+## PRD-2.2 §13.5 timeline v2 rollout (orchestrator, after the merge and the tests)
+
+1. Deploy the functions: `cd functions && npm run build && firebase deploy --only functions --project flappy-spikes-a2b55`.
+2. Convert the 2.1 pool runs (idempotent, logs the counts):
+   `cd functions && GCLOUD_PROJECT=flappy-spikes-a2b55 npx tsx scripts/convert_pools_v2.ts --dry-run`, then without `--dry-run`
+   (needs `gcloud auth application-default login` with an owner account).
+3. Live round trip from the Pixel 8 (debug build, App Check debug token):
+   `flutter test integration_test/release_e2e_test.dart -d 38300DLJH004SD --dart-define=FS_E2E=true --dart-define=FS_LIVE_VERSUS=true --dart-define=FS_APPCHECK_DEBUG_TOKEN=<token>`
+   (uploads a v2 run and replays every run in the level 0–2 pools, converted ones included).
+4. Seed ~5 real 2.2 runs from the test account:
+   `flutter test integration_test/seed_versus_runs_test.dart -d 38300DLJH004SD --dart-define=FS_SEED_VERSUS=true --dart-define=FS_APPCHECK_DEBUG_TOKEN=<token>`.

@@ -1002,3 +1002,68 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `test/run/screens/s3_15_bonus_screen_test.dart`,
   `test/run/items/s3_15_s3_16_collect_autopilot_test.dart`; shots in
   `test/run/shots/collect_shots_test.dart`.
+
+## PRD-2.2 scoring: perfect zone, hoop rumble, points, results ticks, streak names (WP-G1, 2026-10-12)
+
+- DEVIATION (PRD-2.2 §11, replaces PRD-2 §3.0.4 5 / §3.4 "perfect pass = no
+  rim touched"): a pass is **perfect** only when no rim was touched **and**
+  the bird's centre crosses the plane within ±min(24, 0.2 × opening) pt of the
+  passed ring's centre (`PerfectConfig`, measured in the ring's moving frame
+  at the crossing: `Hoop.passOffset`; pairs / trains per ring). Three
+  outcomes: **perfect** (+2 coins, streak +1, banner, burst, tier sound,
+  shake), **clean** (no rim, outside the zone: +1 coin, streak reset, no
+  banner and no GRAZE notice, `point` + ring pulse, one knock) and **graze**
+  (a rim was touched: +1 coin, streak reset, GRAZE notice, no rumble at the
+  pass). Ride rings stay always perfect; only a perfect FEVER pass lights
+  the fire; a bullseye is always also perfect (±12 lies inside the zone).
+  `RunSummary.cleanPasses`, `run_end.clean_passes`.
+- DEVIATION (PRD-2.2 §10, supersedes PRD-2 §3.33 on these points): a rim
+  touch **knocks at the moment of contact** (`RimTouched`; a lethal saw touch
+  or a touch in the frame of a death doesn't rumble), a graze pass adds
+  nothing, a clean pass knocks, and the perfect-pass shake is **80 ms** at
+  255 (was 45 ms). Throttle, pickups and "shake wins" unchanged. The plugin's
+  `hasVibrator` / `hasAmplitudeControl` probe is logged once in debug builds.
+- DEVIATION (PRD-2.2 §29, supersedes the PRD-2 §3.4 tier-name table and
+  its 5 banner colours): the streak banner shows **50 bird-themed names**
+  (`StreakConfig.names`: ×1 PERFECT, ×2 GREAT ×2, ×3 ON FIRE ×3, … ×50 FLAPPY
+  GOD ×50; from ×51 FLAPPY GOD ×n) in **10 rotating colours**
+  (`StreakConfig.colours`, streak n → colour ((n − 1) mod 10) + 1, white
+  text). The banner font follows the long-name rule min(34, 300 /
+  (characters × 0.72)) for every name (the approved
+  `screen_streak_names.html`; the old fixed per-tier sizes are retired).
+  Tier effects (cap 10), sounds, look, place and timing are unchanged;
+  analytics keep sending the streak number.
+- DEVIATION (PRD-2.2 §13, supersedes PRD-2 "+1 point per hoop", §3.0.4 5 /
+  §3.4): the **score is points**. A non-perfect pass (graze or clean) is 1
+  point, a perfect pass max(2, streak) with the streak *after* the pass (×3 =
+  3, ×12 = 12, no cap; FEVER and ride rings follow their streak); every coin
+  bonus (bullseye, train, pair +10, Lucky Spin, Star Trail, jar, piggy, Coin
+  Frenzy, switch, puzzle) also pays its amount in points (`RunContext.earn`,
+  `PointFlags.bonus`); the pair "+5 score" gift is +5; the chick doubles
+  points like coins (not the puzzle bonus); the versus win / draw bonus pays
+  0 points. **Coins are unchanged** (1 / 2 per hoop + bonuses). The big
+  circle shows points and counts up over 0.3 s (ease-out) with a small pop
+  for gains above 1; from 4 digits its font shrinks to 125 × 3 / digits so
+  the number keeps a 3-digit width. NEW BEST, levels, the leaderboard and
+  versus use points; colour stages, revive eligibility, the opening curve
+  and the director still count hoops. `run_end` sends `score` (points),
+  `hoops` and `max_streak`. The streak feature now runs before scoring.
+- DEVIATION (PRD-2.2 §13.5, versus timeline **v2**): one entry per score
+  change with its value (`fl` = version byte 2 + flag byte + uint16 value per
+  entry; the 11 `RunEntry` keys and the rules are unchanged); the server
+  checks sum of values == score, the 0.9 s gap per plain entry (ride / train
+  / gift / bonus exempt) and a plausibility cap per entry (pass ≤ 2 × (pass
+  entries so far + 5), bonus ≤ 250, gift ≤ 10), and rejects v1 uploads
+  (`version`); the client skips v1 pool entries. The 2.1 pool runs are
+  converted once (value 1 per entry) by `functions/scripts/convert_pools_v2.ts`.
+- DEVIATION (PRD-2.2 §14, supersedes the "—" sound at 0.45 s of the PRD-2
+  §5.10 timeline): the results count-ups play **one `sk_tick` stream** —
+  min(24, 8 + the largest running count: your points, the opponent's points,
+  YOUR REWARD), spread along the eased count (at most one per frame), and the
+  same rule on the claimed amount during the 0.9 s CLAIM count. A count of 0
+  plays none; NEXT mid-count stops them.
+- Tests: `test/p22/s14_results_ticks_test.dart`, `test/p22/s13_points_test.dart`, `test/p22/s13_versus_timeline_test.dart`,
+  `test/p22/s13_score_circle_shots_test.dart`, `functions/test/timeline.test.ts`,
+  `functions/test/convert.test.ts`, `test/p22/s11_perfect_zone_test.dart`,
+  `test/p22/s10_hoop_rumble_test.dart`, `test/run/items/s3_33_rumble_test.dart`,
+  `test/p22/s29_streak_names_test.dart`.

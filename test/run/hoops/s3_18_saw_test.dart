@@ -15,6 +15,7 @@ import 'package:flappy_spikes/run/hoops/kinds/saw/saw_kind.dart';
 import 'package:flappy_spikes/run/mistakes.dart';
 import 'package:flappy_spikes/run/physics/hoop_frame.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
+import 'package:flappy_spikes/run/items/scoring.dart';
 import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/run/run_state.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -189,7 +190,11 @@ void main() {
         final score = run.state.score, streak = run.state.streak;
         expect(await passHoopAt(game, h), isTrue);
         expect(h.takenRing, 0);
-        expect(run.state.score, score + 1);
+        // PRD-2.2 §13.1 a perfect pass: max(2, streak) points.
+        expect(
+          run.state.score,
+          score + ScoringFeature.pointsFor(perfect: true, streak: streak + 1),
+        );
         expect(run.state.streak, streak + 1);
         final passed = events.whereType<HoopPassed>().single;
         expect(passed.perfect, isTrue);

@@ -86,7 +86,9 @@ class FeverFeature extends RunFeature {
     if (e.perfect) {
       s.hoopsBurned++;
     } else {
-      _out('graze');
+      // PRD-2.2 §11.2 a clean off-centre pass is an ordinary non-perfect
+      // pass: it puts the fire out too.
+      _out(e.clean ? 'clean' : 'graze');
     }
   }
 

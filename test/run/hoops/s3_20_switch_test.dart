@@ -14,6 +14,7 @@ import 'package:flappy_spikes/run/hud/banners.dart';
 import 'package:flappy_spikes/run/mistakes.dart';
 import 'package:flappy_spikes/run/pickups/pickup.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
+import 'package:flappy_spikes/run/items/scoring.dart';
 import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/run/run_state.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -196,7 +197,16 @@ void main() {
           expect(await flyUntil(game, (_) => h.resolved), isTrue);
           expect(run.dying, isFalse);
           expect(h.takenRing, 0);
-          expect(run.state.score, score + 1);
+          // PRD-2.2 §13.1 the pass's points (1, or max(2, streak)).
+          final pass = events.whereType<HoopPassed>().last;
+          expect(
+            run.state.score,
+            score +
+                ScoringFeature.pointsFor(
+                  perfect: pass.perfect,
+                  streak: run.state.streak,
+                ),
+          );
           expect(spy.events.map((e) => e.$1), contains('switchring_passed'));
           expect(game.storage.metElements, contains('switch_ring'));
         },

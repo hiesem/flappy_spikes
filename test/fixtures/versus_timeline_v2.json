@@ -1,0 +1,289 @@
+{
+ "_doc": "PRD-2.2 §13.5 timeline format v2, shared by functions/test/timeline.test.ts (server check, replay, v1 conversion) and test/p22/s13_versus_timeline_test.dart (Dart recorder → these exact strings, Dart replay). Times are runClock seconds; cs = centiseconds; flags ride 1 | train 2 | gift 4 | bonus 8.",
+ "record": [
+  {
+   "t": 1.2,
+   "value": 1,
+   "flag": 0
+  },
+  {
+   "t": 2.4,
+   "value": 2,
+   "flag": 0
+  },
+  {
+   "t": 3.6,
+   "value": 2,
+   "flag": 0
+  },
+  {
+   "t": 4.8,
+   "value": 3,
+   "flag": 0
+  },
+  {
+   "t": 4.8,
+   "value": 3,
+   "flag": 8
+  },
+  {
+   "t": 6.0,
+   "value": 4,
+   "flag": 0
+  },
+  {
+   "t": 6.0,
+   "value": 5,
+   "flag": 4
+  },
+  {
+   "t": 7.0,
+   "value": 5,
+   "flag": 1
+  },
+  {
+   "t": 7.3,
+   "value": 6,
+   "flag": 1
+  },
+  {
+   "t": 7.6,
+   "value": 7,
+   "flag": 1
+  },
+  {
+   "t": 9.0,
+   "value": 1,
+   "flag": 2
+  },
+  {
+   "t": 9.4,
+   "value": 2,
+   "flag": 2
+  },
+  {
+   "t": 10.6,
+   "value": 25,
+   "flag": 8
+  }
+ ],
+ "endSeconds": 12.0,
+ "run": {
+  "score": 66,
+  "tl": "eAB4AHgAeAAAAHgAAABkAB4AHgCMACgAeAA=",
+  "fl": "AgABAAACAAACAAADAAgDAAAEAAQFAAEFAAEGAAEHAAIBAAICAAgZAA==",
+  "end": 140
+ },
+ "replay": [
+  [
+   0,
+   0
+  ],
+  [
+   119,
+   0
+  ],
+  [
+   120,
+   1
+  ],
+  [
+   239,
+   1
+  ],
+  [
+   240,
+   3
+  ],
+  [
+   480,
+   11
+  ],
+  [
+   600,
+   20
+  ],
+  [
+   700,
+   25
+  ],
+  [
+   760,
+   38
+  ],
+  [
+   900,
+   39
+  ],
+  [
+   1060,
+   66
+  ],
+  [
+   1200,
+   66
+  ],
+  [
+   1300,
+   66
+  ]
+ ],
+ "v1": {
+  "score": 8,
+  "tl": "eACCAF8AjAAAAAAAAABkAA==",
+  "fl": "AAAAAAQEBAE=",
+  "end": 80
+ },
+ "v1Converted": {
+  "score": 8,
+  "tl": "eACCAF8AjAAAAAAAAABkAA==",
+  "fl": "AgABAAABAAABAAABAAQBAAQBAAQBAAEBAA==",
+  "end": 80
+ },
+ "v1Replay": [
+  [
+   0,
+   0
+  ],
+  [
+   119,
+   0
+  ],
+  [
+   120,
+   1
+  ],
+  [
+   250,
+   2
+  ],
+  [
+   345,
+   3
+  ],
+  [
+   484,
+   3
+  ],
+  [
+   485,
+   7
+  ],
+  [
+   584,
+   7
+  ],
+  [
+   585,
+   8
+  ],
+  [
+   700,
+   8
+  ]
+ ],
+ "forged": [
+  {
+   "name": "a pass worth more than 2 × (passes + 5)",
+   "deltas": [
+    120,
+    120,
+    120
+   ],
+   "flags": [
+    0,
+    0,
+    0
+   ],
+   "values": [
+    1,
+    15,
+    2
+   ],
+   "expect": "count"
+  },
+  {
+   "name": "a bonus above the bonus cap",
+   "deltas": [
+    120,
+    120,
+    0
+   ],
+   "flags": [
+    0,
+    0,
+    8
+   ],
+   "values": [
+    1,
+    2,
+    251
+   ],
+   "expect": "count"
+  },
+  {
+   "name": "a gift above 2 × 5",
+   "deltas": [
+    120,
+    120,
+    0
+   ],
+   "flags": [
+    0,
+    0,
+    4
+   ],
+   "values": [
+    1,
+    2,
+    11
+   ],
+   "expect": "count"
+  },
+  {
+   "name": "values that do not sum to the score",
+   "deltas": [
+    120,
+    120,
+    120
+   ],
+   "flags": [
+    0,
+    0,
+    0
+   ],
+   "values": [
+    1,
+    2,
+    2
+   ],
+   "score": 6,
+   "expect": "count"
+  },
+  {
+   "name": "the largest plausible values pass",
+   "deltas": [
+    120,
+    120,
+    0,
+    120,
+    0
+   ],
+   "flags": [
+    0,
+    0,
+    8,
+    0,
+    4
+   ],
+   "values": [
+    12,
+    14,
+    250,
+    16,
+    10
+   ],
+   "expect": null
+  }
+ ]
+}

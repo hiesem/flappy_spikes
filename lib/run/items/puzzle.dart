@@ -13,6 +13,7 @@ import '../effects/fetch_flight.dart';
 import '../elements.dart';
 import '../hud/collect_layer.dart';
 import '../pickups/puzzle_piece_pickup.dart';
+import '../../versus/timeline.dart' show PointFlags;
 import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
@@ -152,6 +153,9 @@ class PuzzleFeature extends RunFeature {
           .then((_) => storage.endPuzzlePayout()),
     );
     c.emit(CoinsEarned(coins, CoinSource.puzzle));
+    // PRD-2.2 §13.1 the puzzle bonus pays the same amount in points (not
+    // doubled by the chick, like its coins).
+    c.addScore(coins, flags: PointFlags.bonus, chickX2: false);
   }
 
   /// §3.16 (call, S6-62) Pays the part of an interrupted 4/4 bonus the

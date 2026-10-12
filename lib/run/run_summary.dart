@@ -25,6 +25,8 @@ class RunSummary {
     this.rimTouches = 0,
     this.passes = 0,
     this.perfectPasses = 0,
+    this.cleanPasses = 0,
+    this.maxStreak = 0,
   });
 
   final int score;
@@ -51,6 +53,12 @@ class RunSummary {
   final int rimTouches;
   final int passes;
   final int perfectPasses;
+
+  /// PRD-2.2 §11 clean off-centre passes.
+  final int cleanPasses;
+
+  /// PRD-2.2 §13.6 the longest perfect streak of the run (`run_end.max_streak`).
+  final int maxStreak;
 
   bool get newBest => bestAfter > bestBefore;
 }

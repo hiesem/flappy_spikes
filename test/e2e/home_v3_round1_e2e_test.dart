@@ -666,11 +666,11 @@ void main() async {
       final inRun = game.rumble.fired.length;
       await tester.tapAt(const ui.Offset(160, 300));
       await _settle(game, tester);
-      game.run!.debugPass();
+      game.run!.debugPass(clean: true);
       killRun(game);
       await _advance(game, 2);
-      // PRD-2 §3.33 (WP-2b): a non-perfect pass knocks once; the death and
-      // the screens after it never rumble.
+      // PRD-2 §3.33 / PRD-2.2 §10–§11: a clean off-centre pass knocks once;
+      // the death and the screens after it never rumble.
       expect(
         game.rumble.fired.sublist(inRun),
         [RumbleKind.knock],

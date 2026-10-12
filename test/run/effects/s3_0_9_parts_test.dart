@@ -81,17 +81,17 @@ void main() {
   });
 
   group('§3.0.9 #7 streak banner', () {
-    test('§3.0.9 #7 ten names, fixed sizes, colours, capped at IMMORTAL ×10', () {
-      expect(StreakBanner.names, hasLength(10));
-      for (var t = 1; t <= 10; t++) {
+    test('§3.0.9 #7 / PRD-2.2 §29 names and rotating colours (no cap at '
+        '×10), font auto-sized, band at y 190', () {
+      for (var t = 1; t <= 60; t++) {
         final b = StreakBanner(t);
-        expect(b.fontSize, PartsConfig.bannerFontSizes[t - 1]);
+        expect(b.fontSize, ElementBanner.autoSize(b.text));
         expect(b.position.y, 190);
       }
       expect(StreakBanner(1).text, 'PERFECT');
-      expect(StreakBanner(5).color, const Color(0xFF7A0044));
-      expect(StreakBanner(14).text, 'IMMORTAL ×10');
-      expect(StreakBanner(14).fontSize, 30);
+      expect(StreakBanner(5).color, const Color(0xFFE8141C));
+      expect(StreakBanner(14).text, 'WINGMASTER ×14');
+      expect(StreakBanner(14).tier, 10);
     });
 
     test('§3.0.9 #7 duration 0.9 + 0.16 × min(tier, 6): 1.06 … 1.86 s', () {

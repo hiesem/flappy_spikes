@@ -12,6 +12,7 @@ import 'config/physics_config.dart';
 import 'config/revive_config.dart';
 import 'config/saw_config.dart'; // WP-3d
 import 'config/squeeze_config.dart'; // WP-3g
+import 'config/streak_config.dart' show PerfectConfig;
 import 'config/run_config.dart';
 import 'director/run_director.dart';
 import 'effects/dust_puff.dart';
@@ -437,14 +438,24 @@ class RunController extends Component {
     }
   }
 
-  /// §3.0.4 5 a pass: perfect when no rim was touched (rides: always).
+  /// §3.0.4 5 a pass. PRD-2.2 §11: perfect = no rim touched **and** the
+  /// crossing inside the perfect zone of the passed ring
+  /// ([PerfectConfig.inZone] on `Hoop.passOffset`); rides: always perfect.
+  /// A clean pass (no rim, outside the zone) is non-perfect; a graze is a
+  /// pass after a rim touch.
   void _pass(Hoop h, int ring) {
     h.resolvePass(ring);
     final ride = state.ride != null;
-    final perfect = !h.touched || ride;
+    final off = h.passOffset;
+    // A pass without a crossing offset outside a ride (none today) is
+    // judged centred, as in 2.1.
+    final inZone = off == null || PerfectConfig.inZone(off, h.opening);
+    final perfect = ride || (!h.touched && inZone);
+    final clean = !perfect && !h.touched && !ride;
     state.passes++;
     state.hoopsPassed++;
     if (perfect) state.perfectPasses++;
+    if (clean) state.cleanPasses++;
     final id = h.plan.element.storageId;
     state.taken[id] = (state.taken[id] ?? 0) + 1;
     events.emit(
@@ -452,13 +463,20 @@ class RunController extends Component {
         h,
         ring: ring,
         perfect: perfect,
+        clean: clean,
         rimTouched: h.touched,
         duringRide: ride,
       ),
     );
     h.kind.onPass(
       h,
-      PassInfo(ring: ring, perfect: perfect, rimTouched: h.touched, duringRide: ride),
+      PassInfo(
+        ring: ring,
+        perfect: perfect,
+        clean: clean,
+        rimTouched: h.touched,
+        duringRide: ride,
+      ),
       ctx,
     );
   }
@@ -536,11 +554,23 @@ class RunController extends Component {
   /// Test seam: a pass of no particular hoop (scoring, stage, coins) —
   /// replaces the 1.0 tests' `onScoreSensor(PipePair(...))`.
   @visibleForTesting
-  void debugPass({bool perfect = false}) {
+  ///
+  /// PRD-2.2 §11: [clean] makes a non-perfect pass a clean off-centre one
+  /// (no rim touched) instead of a graze.
+  void debugPass({bool perfect = false, bool clean = false}) {
+    final isClean = clean && !perfect;
     state.passes++;
     state.hoopsPassed++;
     if (perfect) state.perfectPasses++;
-    events.emit(HoopPassed(null, perfect: perfect, rimTouched: !perfect));
+    if (isClean) state.cleanPasses++;
+    events.emit(
+      HoopPassed(
+        null,
+        perfect: perfect,
+        clean: isClean,
+        rimTouched: !perfect && !isClean,
+      ),
+    );
   }
   // endregion WP-1a
 
@@ -702,6 +732,8 @@ class RunController extends Component {
       rimTouches: s.rimTouches,
       passes: s.passes,
       perfectPasses: s.perfectPasses,
+      cleanPasses: s.cleanPasses,
+      maxStreak: s.bestStreak,
     );
   }
 

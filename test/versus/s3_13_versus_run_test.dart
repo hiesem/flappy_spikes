@@ -277,9 +277,9 @@ void main() {
   );
 
   vt(
-    '§3.13 the timeline records every point on runClock: one entry per '
-    'point, a pair "+5" as gift-flagged points at the same time, ride / '
-    'train flags; the point count equals the score',
+    '§3.13 / PRD-2.2 §13.5 the timeline (v2) records every score change on '
+    'runClock: one entry with its value (a perfect pass 2, a pair gift, a '
+    'ride ring), flags kept; the values sum to the score',
     () => FakeVersusService(),
     (g, spy) async {
       final run = await startRun(g);
@@ -291,11 +291,12 @@ void main() {
       run.ctx.addScore(1, flags: PointFlags.ride);
       final tl = run.state.timeline;
       expect(tl.points, run.state.score);
-      expect(tl.points, 6);
-      expect(tl.flags, [0, 4, 4, 4, 4, 1]);
+      expect(tl.points, 7);
+      expect(tl.entries, 3);
+      expect(tl.flags, [0, 4, 1]);
+      expect(tl.values, [2, 4, 1]);
       expect(tl.cs[1], greaterThan(90));
-      expect(tl.cs.sublist(2, 5), everyElement(0));
-      expect(tl.scoreAt(run.state.runClock), 6);
+      expect(tl.scoreAt(run.state.runClock), 7);
     },
   );
 

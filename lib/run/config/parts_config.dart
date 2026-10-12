@@ -57,7 +57,9 @@ abstract final class PartsConfig {
   /// §3.0.9 #7 Letter spacing (em).
   static const double bannerLetterSpacing = .1;
 
-  /// §3.0.9 #7 Fixed font size per tier 1..10 (pt).
+  /// §3.0.9 #7 Fixed font size per tier 1..10 (pt). PRD-2.2 §29: no
+  /// longer used by the streak banner (its font is auto-sized for the 50
+  /// names); kept for reference.
   static const List<double> bannerFontSizes = [
     28, 32, 34, 30, 32, 34, 34, 32, 34, 30, //
   ];

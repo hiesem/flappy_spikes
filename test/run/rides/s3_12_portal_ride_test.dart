@@ -129,7 +129,7 @@ void main() {
         gameSize: Vector2(320, 711),
       ).testGameWidget(
         '§3.12 ${ride.name}: forced from the debug menu, runs start to '
-        'finish (12 passes, +12 score, +24 coins) and returns to normal play',
+        'finish (12 passes, points by the streak, +2 coins per ride ring) and returns to normal play',
         setUp: (game, _) async {
           await game.ready();
           await preloadImages(game);
@@ -156,8 +156,34 @@ void main() {
           expect(rideScore, 11);
           // The portal + 11 ride rings: +12 score, +24 coins (+2 per perfect
           // pass), no extra ride bonus.
-          expect(tr.coinsAfterRide - tr.coinsBefore, 24);
-          expect(tr.scoreAfterRide - tr.scoreBefore, 12);
+          // PRD-2.2 §11: the portal ring itself is judged by the perfect
+          // zone (+2 centred, +1 off-centre); the 11 ride rings are always
+          // perfect (+2 each).
+          expect(tr.coinsAfterRide - tr.coinsBefore, anyOf(23, 24));
+          // PRD-2.2 §13.1 ride rings follow the streak: max(2, streak).
+          final rideDeltas = [
+            for (final e in tr.events.whereType<ScoreChanged>())
+              if (e.flags == PointFlags.ride) e.newScore - e.oldScore,
+          ];
+          var streakNow = 0;
+          final wanted = <int>[];
+          for (final e in tr.events) {
+            if (e is StreakChanged) streakNow = e.newStreak;
+            if (e is ScoreChanged && e.flags == PointFlags.ride) {
+              wanted.add(math.max(2, streakNow));
+            }
+          }
+          expect(rideDeltas, hasLength(11));
+          expect(rideDeltas, wanted);
+          for (var k = 1; k < rideDeltas.length; k++) {
+            expect(rideDeltas[k], greaterThanOrEqualTo(rideDeltas[k - 1]));
+          }
+          // The rest is the portal ring's own pass (1, or max(2, streak)).
+          final rideSum = rideDeltas.fold(0, (a, b) => a + b);
+          expect(
+            tr.scoreAfterRide - tr.scoreBefore - rideSum,
+            inInclusiveRange(1, math.max(2, rideDeltas.first)),
+          );
           expect(
             tr.events.whereType<HoopPassed>().where(
               (e) => e.hoop?.plan.kind == HoopKindId.portal,

@@ -14,7 +14,7 @@ enum RumbleKind { knock, shake }
 /// - knock: one 15 ms pulse at amplitude 90; at most one per
 ///   [knockThrottle] — a knock inside that window (after any rumble) is
 ///   skipped.
-/// - shake: one 45 ms full-amplitude pulse; never skipped, and it starts a
+/// - shake: one 80 ms full-amplitude pulse (PRD-2.2 §10.3, was 45 ms); never skipped, and it starts a
 ///   new window, so a knock right after it is dropped (shake wins).
 ///
 /// [on] is the user's switch (`GameStorage.rumble`). [hardware] false (or
@@ -28,7 +28,8 @@ class Rumble {
 
   static const int knockMs = 15;
   static const int knockAmplitude = 90;
-  static const int shakeMs = 45;
+  /// PRD-2.2 §10.3 (was 45 ms in PRD-2 §3.33).
+  static const int shakeMs = 80;
   static const int shakeAmplitude = 255;
 
   /// Seconds: at most one knock per 90 ms.
@@ -61,7 +62,8 @@ class Rumble {
     return () => watch.elapsedMicroseconds / 1e6;
   }
 
-  /// A slight knock (menu presses, rim passes, pickups). Throttled.
+  /// A slight knock (menu presses, rim touches, clean passes, pickups).
+  /// Throttled.
   void knock() {
     if (!on) return;
     final now = _clock();
@@ -103,6 +105,12 @@ class Rumble {
     try {
       final vibrator = await Vibration.hasVibrator();
       final amplitude = vibrator && await Vibration.hasAmplitudeControl();
+      // PRD-2.2 §10.2 1: the capabilities, once, in debug builds.
+      if (kDebugMode) {
+        debugPrint(
+          'rumble: hasVibrator=$vibrator hasAmplitudeControl=$amplitude',
+        );
+      }
       return (vibrator: vibrator, amplitude: amplitude);
     } catch (_) {
       return (vibrator: false, amplitude: false);

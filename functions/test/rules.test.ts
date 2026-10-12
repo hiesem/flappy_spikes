@@ -9,7 +9,7 @@ import {
   RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import { deleteDoc, doc, getDoc, serverTimestamp, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
-import { encodeDeltas, encodeFlags } from '../src/timeline.js';
+import { encodeDeltas, encodeEntries } from '../src/timeline.js';
 import { DAY, LOOK, PROJECT, uniq } from './helpers.js';
 
 let env: RulesTestEnvironment;
@@ -27,7 +27,7 @@ function run(o: Record<string, unknown> = {}) {
     platform: 'android',
     tl: encodeDeltas([120, 120]),
     end: 80,
-    fl: encodeFlags([0, 0]),
+    fl: encodeEntries([0, 0], [1, 1]),
     ...o,
   };
 }

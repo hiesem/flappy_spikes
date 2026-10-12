@@ -25,10 +25,12 @@ import '../run_feature.dart';
 
 /// The perfect-pass streak (PRD-2 §3.4, §3.5, §3.19 FEVER hook, §5.3, §5.4).
 ///
-/// **Rules.** A perfect pass (no rim touch, every ride hoop) adds one to
+/// **Rules.** A perfect pass (no rim touch and inside the PRD-2.2 §11
+/// perfect zone; every ride hoop) adds one to
 /// `RunState.streak`; a perfect FEVER pass sets it to
 /// max([StreakConfig.feverMinStreak], streak + 1). A non-perfect pass (a
-/// graze), a saved mistake ([MistakeSaved]) and a death ([RunDied]) reset it
+/// graze, or a clean off-centre pass, PRD-2.2 §11), a saved mistake
+/// ([MistakeSaved]) and a death ([RunDied]) reset it
 /// to 0. The tier is `RunState.tier` (streak capped at 10). Every change
 /// emits [StreakChanged]; a tier change emits [TierChanged].
 ///
@@ -119,7 +121,13 @@ class StreakFeature extends RunFeature {
     if (c == null) return;
     final s = c.s;
     if (!e.perfect) {
-      _break(StreakCause.graze, notice: true);
+      // PRD-2.2 §11.1 a clean off-centre pass also resets the streak, but
+      // it is no graze: no "GRAZE · streak lost" notice.
+      if (e.clean) {
+        _break(StreakCause.clean);
+      } else {
+        _break(StreakCause.graze, notice: true);
+      }
       return;
     }
     final old = s.streak;
@@ -129,7 +137,7 @@ class StreakFeature extends RunFeature {
         : old + 1;
     _set(next, fever ? StreakCause.fever : StreakCause.pass);
     final tier = s.tier;
-    _banners?.showStreak(tier);
+    _banners?.showStreak(s.streak); // PRD-2.2 §29: the streak number
     c.sfx(StreakConfig.tierSounds[math.min(s.streak, 3) - 1]);
     final bird = c.game.runBirdPosition;
     final burst = _burst;
@@ -147,7 +155,7 @@ class StreakFeature extends RunFeature {
     final c = _c;
     if (c == null || c.s.streak >= e.value) return;
     _set(e.value, StreakCause.fever);
-    _banners?.showStreak(c.s.tier);
+    _banners?.showStreak(c.s.streak);
   }
   // endregion WP-3d
 

@@ -13,6 +13,7 @@ import 'package:flappy_spikes/run/hoops/ring_painter.dart';
 import 'package:flappy_spikes/run/hud/run_hud.dart';
 import 'package:flappy_spikes/run/mistakes.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
+import 'package:flappy_spikes/run/items/scoring.dart';
 import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/versus/timeline.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -137,7 +138,18 @@ void main() {
         expect(run.dying, isFalse);
         final passes = events.whereType<HoopPassed>().toList();
         expect(passes, hasLength(1), reason: 'one hoop, resolved once');
-        expect(run.state.score, score + 1 + (take == PairReward.score ? 5 : 0));
+        // PRD-2.2 §13.1 the pass's points, the +5 gift, and the +10 coins
+        // gift paid in points too.
+        expect(
+          run.state.score,
+          score +
+              ScoringFeature.pointsFor(
+                perfect: passes.single.perfect,
+                streak: run.state.streak,
+              ) +
+              (take == PairReward.score ? 5 : 0) +
+              (take == PairReward.coins ? 10 : 0),
+        );
         final st = PairHoopKind.stateOf(h)!;
         expect(st.picked, ring);
         for (var i = 0; i < 30; i++) {

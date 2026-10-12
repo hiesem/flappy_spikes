@@ -18,7 +18,7 @@ void main() {
     test('pulses per spec', () {
       expect(Rumble.knockMs, 15);
       expect(Rumble.knockAmplitude, 90);
-      expect(Rumble.shakeMs, 45);
+      expect(Rumble.shakeMs, 80); // PRD-2.2 §10.3
       expect(Rumble.shakeAmplitude, 255);
       expect(Rumble.knockThrottle, 0.09);
     });

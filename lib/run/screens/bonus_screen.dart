@@ -6,6 +6,7 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 
 import '../../game/flappy_game.dart';
+import '../../game/palettes.dart';
 import '../../game/sound.dart';
 import '../../menu/wallet.dart';
 import '../../services/ads_service.dart';
@@ -618,8 +619,9 @@ class BonusScreen extends PositionComponent
     ..strokeCap = StrokeCap.round
     ..strokeJoin = StrokeJoin.round;
 
-  Color get _fg => game.foregroundColor;
-  Color get _bg => game.stageBackground;
+  // PRD-2.2 §31.1: always the approved grey, whatever stage the run ended on.
+  Color get _fg => kPostRunPalette.foreground;
+  Color get _bg => kPostRunPalette.background;
   Color _mix(double p) => Color.lerp(_bg, _fg, p)!;
 
   @override

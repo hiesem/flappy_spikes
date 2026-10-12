@@ -1305,3 +1305,26 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   stickers are in the banner layer), `test/run/screens/s5_7_hud_pause_test.dart`
   (the host lives in the banner layer), `test/run/hoops/s3_20_switch_test.dart`
   (the switch banner uses the run's host).
+- DEVIATION (PRD-2.2 §31, supersedes the PRD-2 §5.10 / §5.14 page colours and
+  the §5.10 level-up rays): **the balloon bonus and the results page always
+  use the approved grey,** whatever colour stage the run ended on: background
+  `#F1F1F1`, foreground `#828282` (`kPostRunPalette` = stage 0), the spike
+  strips and the banner strip under the page included (`#828282`). The next
+  run starts on its stage colours as before; the revive page keeps the run's
+  look.
+  - **Squeeze walls never cover the pages.** While a bonus or results page is
+    up (`FlappySpikesGame.postRunPageUp`) the two run strips draw their normal
+    reach in the approved grey (`SpikeStrip.onPage`): the squeeze inset and the
+    warning flash are ignored, so no squeezed wall overlaps the page content.
+    The revive UI (viewport) stays above the walls.
+  - **Level-up rays (results only):** the same 12 gold wedges, colours, speed
+    and timing, but ≈ 280 pt long (`ResultsConfig.rayRadius`, scaled with the
+    page), not clipped to the stage rectangle, and drawn by the page just above
+    its background, so the card, banners, rank, bar, CLAIM, reward row and NEXT
+    stay on top. Each ray fades radially: 35 % at the emblem, 19 % at 45 % of the
+    length, 0 at the tip (`ResultsScreen.rayFade`).
+- Tests: `test/p22/s31_postrun_grey_test.dart` (page palette and pixels on
+  stage 30, the next run back on its stage colours, a squeeze death keeps
+  normal strips on the page, the rays' length, fade and paint placement);
+  `test/run/items/s3_3_s3_7_lives_test.dart` (the SAVED! banner goes to the
+  run's banner host, §12).

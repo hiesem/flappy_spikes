@@ -222,6 +222,9 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
 - iOS: ads route to Noop (no `GADApplicationIdentifier`; iOS paused), IAP is real.
 - Menus (home/shop/skins/dialogs/popups) always render at colour stage 0; only
   runs advance the colour stage.
+- The balloon bonus and results pages always use the approved grey (`kPostRunPalette`,
+  stage 0: #F1F1F1 / #828282), whatever stage the run ended on; the run's strips draw
+  their normal reach in that grey while such a page is up (PRD-2.2 §31).
 - Looks (2.0 skin shop, PRD-2.2 §20): the whole look (bird + gear + hat) keeps its
   true colours at every colour stage, in menus and in runs; the old 0.35 stage
   blend is gone (a pure stage modulate had made all skins grey). Only a themed

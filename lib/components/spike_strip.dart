@@ -5,6 +5,7 @@ import 'package:flame_forge2d/flame_forge2d.dart';
 
 import '../game/config.dart';
 import '../game/flappy_game.dart';
+import '../game/palettes.dart';
 import '../game/playfield.dart';
 import '../game/tintable.dart';
 import '../run/config/squeeze_config.dart';
@@ -69,6 +70,21 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame>
   Offset Function(Offset screen)? lens;
   // endregion WP-3d
 
+  // region PRD-2.2 §31.2 — the balloon bonus / results page is up
+  bool _onPage = false;
+
+  /// While a balloon bonus or results page is up the strip draws its normal
+  /// reach in the approved grey (`kPostRunPalette.foreground`): the squeeze
+  /// inset and the warning flash are ignored, so no squeezed wall overlaps
+  /// the page content.
+  bool get onPage => _onPage;
+  set onPage(bool value) {
+    _onPage = value;
+    _applyTileTint();
+  }
+
+  Color get _paintTint => _onPage ? kPostRunPalette.foreground : _tint;
+
   // region WP-3g — spike squeeze (PRD-2 §3.17, §5.16)
   /// How far the wall has moved in (pt): the solid part grows from the
   /// screen edge and the teeth ride on its edge. Follows the run's
@@ -82,7 +98,7 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame>
   /// The tooth tips' distance from the screen edge including the squeeze.
   double get squeezedReach => toothReach + squeezeInset;
 
-  Color? get _toothColor => toothFlash <= 0
+  Color? get _toothColor => toothFlash <= 0 || _onPage
       ? null
       : Color.lerp(_tint, SqueezeConfig.flashColor, toothFlash.clamp(0, 1));
   // endregion WP-3g
@@ -204,7 +220,7 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame>
     SpikeTeethPainter.paint(
       canvas,
       width: Config.worldWidth,
-      color: _tint,
+      color: _paintTint,
       reach: squeezedReach, // WP-3g
       offset: toothOffset,
       opacity: teethOpacity,
@@ -234,11 +250,12 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame>
     // The teeth move with the world: the run's camera (forward speed, the
     // rim knock-back jolt, the 0.4 s ease to a stop on a death).
     final run = game.run;
-    squeezeInset = run?.state.squeeze.inset ?? 0; // WP-3g
+    squeezeInset = _onPage ? 0 : (run?.state.squeeze.inset ?? 0); // WP-3g
     if (run == null) {
       toothFlash = 0; // WP-3g
       return;
     }
+    if (_onPage) toothFlash = 0; // PRD-2.2 §31.2
     toothOffset = -run.state.camX + rideShift;
     // The legacy sprite tiles (SpikeArt.sprite) follow the same offset.
     const w = Config.spikeTileWidth;
@@ -252,8 +269,12 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame>
   @override
   void setTint(Color color) {
     _tint = color;
+    _applyTileTint();
+  }
+
+  void _applyTileTint() {
     for (final tile in _tiles) {
-      tile.paint.colorFilter = ColorFilter.mode(color, BlendMode.modulate);
+      tile.paint.colorFilter = ColorFilter.mode(_paintTint, BlendMode.modulate);
     }
   }
 

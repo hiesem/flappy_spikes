@@ -185,10 +185,14 @@ abstract final class ResultsConfig {
   static const double screenFlashAlpha = .85;
   static const double emblemPop = .5;
 
-  /// §5.10 Rotating gold rays: 12 wedges, radius 150, 35 %, 0.6 rad/s.
+  /// §5.10 Rotating gold rays: 12 wedges, 35 %, 0.6 rad/s.
+  /// PRD-2.2 §31.3: ≈ 280 pt long (was 150), unclipped, fading radially: 35 %
+  /// at the emblem, 19 % at 45 % of the length, 0 at the tip.
   static const int rays = 12;
-  static const double rayRadius = 150;
+  static const double rayRadius = 280;
   static const double rayAlpha = .35;
+  static const double rayAlphaMid = .19;
+  static const double rayFadeMid = .45;
   static const double raySpeed = .6;
 
   /// §5.10 Rank bounce / LEVEL UP! drop-in / NEW BEST pop-out.

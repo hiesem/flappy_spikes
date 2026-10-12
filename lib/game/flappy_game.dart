@@ -2733,7 +2733,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   void _syncBannerStripColor() {
-    var c = _fgColor;
+    // PRD-2.2 §31: the empty strip under a balloon bonus or results page is
+    // the page's grey, whatever stage the run ended on.
+    var c = _postRunPage ? kPostRunPalette.foreground : _fgColor;
     for (final dim in world.children.whereType<ReviveDim>()) {
       if (dim.alpha > 0) {
         c = Color.lerp(c, ReviveConfig.dimColor, dim.alpha.clamp(0.0, 1.0))!;
@@ -3108,6 +3110,19 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   // region WP-2e — results page (PRD-2 §3.14, §5.10)
 
+  /// PRD-2.2 §31: a balloon bonus or results page is up (from its start to
+  /// the next run's start). While it is, the run's strips draw their normal
+  /// reach in the page grey and the banner strip takes it too.
+  bool _postRunPage = false;
+  bool get postRunPageUp => _postRunPage;
+
+  void _setPostRunPage(bool on) {
+    _postRunPage = on;
+    _ground.onPage = on;
+    _ceiling.onPage = on;
+    _syncBannerStripColor();
+  }
+
   /// The results page while it is up (tests, keyboard).
   ResultsScreen? get resultsScreen => _results;
 
@@ -3122,6 +3137,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     );
     _results = page;
     world.add(page);
+    _setPostRunPage(true);
     _ground.priority = groundOverMenusPriority;
     _ceiling.priority = groundOverMenusPriority;
   }
@@ -3132,6 +3148,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     page?.removeFromParent();
     _ceiling.priority = SpikeStrip.basePriority;
     _syncGroundPriority();
+    _setPostRunPage(false);
   }
 
   /// §3.14 / §7: a level reward still owed when the app was closed on the
@@ -3171,6 +3188,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     );
     _bonus = screen;
     world.add(screen);
+    _setPostRunPage(true);
     _ground.priority = groundOverMenusPriority;
     _ceiling.priority = groundOverMenusPriority;
     await screen.finished;
@@ -3182,6 +3200,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _removeBonus() {
     final screen = _bonus;
     _bonus = null;
+    if (_results == null) _setPostRunPage(false);
     if (screen == null) return;
     screen.removeFromParent();
     _ceiling.priority = SpikeStrip.basePriority;
@@ -3547,6 +3566,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     for (final tintable in _tintables) {
       tintable.setTint(_fgColor);
     }
+    _syncBannerStripColor(); // PRD-2.2 §31: the empty strip follows the fade
     _backdrop.paint.color = _bgColor;
     _hud.setScoreColor(_bgColor);
     // The watermark circle stays a lighter shade than the pipes so pipe

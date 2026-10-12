@@ -12,6 +12,7 @@ import '../../components/ui/coin_fly.dart';
 import '../../components/ui/confetti.dart';
 import '../../components/ui/live_effects.dart' show WiggleEffect;
 import '../../game/flappy_game.dart';
+import '../../game/palettes.dart';
 import '../../game/sound.dart';
 import '../../services/avatars.dart';
 import '../../levels/level_progress.dart';
@@ -337,7 +338,7 @@ class ResultsScreen extends PositionComponent
     final before = LevelBar.at(model.bestBefore);
 
     // --- card ------------------------------------------------------------
-    final card = ResultsCard(this);
+    final card = ResultsCard();
     // region WP-5b — versus parts of §5.10 (header WIN / LOSE / DRAW, the
     // opponent column with VS, WINNER tags, the +10 / +5 in the reward via
     // the run's coins). Solo (no opponent): you alone, centred.
@@ -409,7 +410,7 @@ class ResultsScreen extends PositionComponent
     barLabel = MenuText(
       before.label,
       fontSize: ResultsConfig.barLabelFontSize,
-      color: game.foregroundColor,
+      color: kPostRunPalette.foreground,
       letterSpacingEm: ResultsConfig.barLabelLetterSpacing,
       position: Vector2(160, ResultsConfig.barLabelTop),
       anchor: Anchor.topCenter,
@@ -427,7 +428,7 @@ class ResultsScreen extends PositionComponent
     final rewardLabel = MenuText(
       'YOUR REWARD',
       fontSize: ResultsConfig.rewardLabelFontSize,
-      color: game.foregroundColor,
+      color: kPostRunPalette.foreground,
       letterSpacingEm: ResultsConfig.rewardLabelLetterSpacing,
       position: Vector2(160, ResultsConfig.rewardLabelTop),
       anchor: Anchor.topCenter,
@@ -750,7 +751,7 @@ class ResultsScreen extends PositionComponent
   }
 
   void _animate() {
-    final fg = game.foregroundColor;
+    final fg = kPostRunPalette.foreground;
     // Count-ups (ease-out cubic).
     final cs = _countStart;
     if (cs != null) {
@@ -849,10 +850,74 @@ class ResultsScreen extends PositionComponent
     );
   }
 
+  // region PRD-2.2 §31.3 — the level-up rays, drawn by the page
+  static final Paint _rayGold = Paint();
+  static final Paint _rayLight = Paint();
+
+  /// The ray's alpha at [u] (0 at the emblem, 1 at the tip) as a share of
+  /// [ResultsConfig.rayAlpha]: 1 at the emblem, `rayAlphaMid / rayAlpha` at
+  /// [ResultsConfig.rayFadeMid] of the length, 0 at the tip.
+  static double rayFade(double u) {
+    if (u <= 0) return 1;
+    if (u >= 1) return 0;
+    const m = ResultsConfig.rayFadeMid;
+    const mid = ResultsConfig.rayAlphaMid / ResultsConfig.rayAlpha;
+    if (u <= m) return 1 + (mid - 1) * (u / m);
+    return mid * (1 - (u - m) / (1 - m));
+  }
+
   @override
   void render(Canvas canvas) {
-    canvas.drawRect(size.toRect(), Paint()..color = game.stageBackground);
+    canvas.drawRect(
+      size.toRect(),
+      Paint()..color = kPostRunPalette.background,
+    );
+    // Right above the background: the card, banners, rank, bar, CLAIM, the
+    // reward row and NEXT are all drawn after it and stay on top.
+    _paintRays(canvas);
   }
+
+  /// The 12 gold wedges around the emblem (`ResultsLevelStage.rays` drives
+  /// the strength): unclipped, [ResultsConfig.rayRadius] × the page scale,
+  /// with a radial fade per colour.
+  void _paintRays(Canvas canvas) {
+    final strength = stage.rays;
+    if (strength <= 0) return;
+    final k = content.scale.y;
+    final plate = content.position.toOffset() + ResultsConfig.plateCentre * k;
+    final radius = ResultsConfig.rayRadius * k;
+    final a = strength.clamp(0.0, 1.0) * ResultsConfig.rayAlpha;
+    final mid = a * ResultsConfig.rayAlphaMid / ResultsConfig.rayAlpha;
+    const stops = [0.0, ResultsConfig.rayFadeMid, 1.0];
+    _rayGold.shader = Gradient.radial(Offset.zero, radius, [
+      ResultsConfig.gold.withValues(alpha: a),
+      ResultsConfig.gold.withValues(alpha: mid),
+      ResultsConfig.gold.withValues(alpha: 0),
+    ], stops);
+    _rayLight.shader = Gradient.radial(Offset.zero, radius, [
+      ResultsConfig.goldLight.withValues(alpha: a),
+      ResultsConfig.goldLight.withValues(alpha: mid),
+      ResultsConfig.goldLight.withValues(alpha: 0),
+    ], stops);
+    final box = Rect.fromCircle(center: Offset.zero, radius: radius);
+    final t = game.reduceMotion ? 0.0 : time;
+    canvas.save();
+    canvas.translate(plate.dx, plate.dy);
+    canvas.rotate(t * ResultsConfig.raySpeed);
+    const n = ResultsConfig.rays;
+    const step = 2 * math.pi / n;
+    for (var i = 0; i < n; i++) {
+      canvas.drawPath(
+        Path()
+          ..moveTo(0, 0)
+          ..arcTo(box, i * step, step / 2, false)
+          ..close(),
+        i.isOdd ? _rayLight : _rayGold,
+      );
+    }
+    canvas.restore();
+  }
+  // endregion PRD-2.2 §31.3
 }
 
 /// A flat filled box with children.
@@ -876,21 +941,19 @@ class _Box extends PositionComponent {
 
 /// The versus card's soft panel (`fg` 14 % over the stage background).
 class ResultsCard extends PositionComponent {
-  ResultsCard(this._page)
+  ResultsCard()
     : super(
         position: ResultsConfig.card.topLeft.toVector2(),
         size: ResultsConfig.card.size.toVector2(),
       );
 
-  final ResultsScreen _page;
   final Paint _paint = Paint();
 
   @override
   void render(Canvas canvas) {
-    final g = _page.game;
     _paint.color = Color.lerp(
-      g.stageBackground,
-      g.foregroundColor,
+      kPostRunPalette.background,
+      kPostRunPalette.foreground,
       ResultsConfig.cardTint,
     )!;
     canvas.drawRect(size.toRect(), _paint);
@@ -960,7 +1023,7 @@ class ResultsPlayerColumn extends PositionComponent
       fontSize: '$score'.length >= 4
           ? ResultsConfig.scoreFontSizeLong
           : ResultsConfig.scoreFontSize,
-      color: lower ? game.foregroundColor : ResultsConfig.plum,
+      color: lower ? kPostRunPalette.foreground : ResultsConfig.plum,
       lineHeight: 1.05,
       position: Vector2(centreX, ResultsConfig.scoreTop),
       anchor: Anchor.topCenter,
@@ -996,7 +1059,7 @@ class ResultsPlayerColumn extends PositionComponent
     const s = ResultsConfig.avatarSize;
     final left = centreX - s / 2;
     final top = ResultsConfig.avatarTop;
-    _paint.color = mine ? ResultsConfig.pink : game.foregroundColor;
+    _paint.color = mine ? ResultsConfig.pink : kPostRunPalette.foreground;
     canvas.drawRect(Rect.fromLTWH(left, top, s, s), _paint);
     final picture = game.avatars.lookup(avatar);
     if (picture != null) {
@@ -1007,7 +1070,7 @@ class ResultsPlayerColumn extends PositionComponent
     canvas.save();
     canvas.translate(left + (s - g) / 2, top + (s - g) / 2);
     canvas.scale(g / 24);
-    _paint.color = mine ? ResultsConfig.soft : game.stageBackground;
+    _paint.color = mine ? ResultsConfig.soft : kPostRunPalette.background;
     canvas.drawPath(_person, _paint);
     canvas.restore();
   }
@@ -1045,7 +1108,6 @@ class ResultsLevelStage extends PositionComponent {
   double? popStart;
   final math.Random _rnd = math.Random();
 
-  static final Paint _ray = Paint();
 
   /// The mock's pop curve at [k] = t / 0.5.
   static double popScale(double k) {
@@ -1106,33 +1168,6 @@ class ResultsLevelStage extends PositionComponent {
     canvas.restore();
   }
 
-  @override
-  void render(Canvas canvas) {
-    if (rays <= 0) return;
-    final t = _page.game.reduceMotion ? 0.0 : _page.time;
-    canvas.save();
-    canvas.translate(_plate.dx, _plate.dy);
-    canvas.rotate(t * ResultsConfig.raySpeed);
-    const n = ResultsConfig.rays;
-    const step = 2 * math.pi / n;
-    final box = Rect.fromCircle(
-      center: Offset.zero,
-      radius: ResultsConfig.rayRadius,
-    );
-    final a = rays.clamp(0.0, 1.0) * ResultsConfig.rayAlpha;
-    for (var i = 0; i < n; i++) {
-      _ray.color = (i.isOdd ? ResultsConfig.goldLight : ResultsConfig.gold)
-          .withValues(alpha: a);
-      canvas.drawPath(
-        Path()
-          ..moveTo(0, 0)
-          ..arcTo(box, i * step, step / 2, false)
-          ..close(),
-        _ray,
-      );
-    }
-    canvas.restore();
-  }
 }
 
 /// The progress bar (§5.10): soft-pink track, pink fill, a white flash on
@@ -1459,7 +1494,7 @@ class ResultsHeader extends PositionComponent
     label = MenuText(
       text,
       fontSize: ResultsConfig.headerFontSize,
-      color: pink ? ResultsConfig.soft : game.stageBackground,
+      color: pink ? ResultsConfig.soft : kPostRunPalette.background,
       letterSpacingEm: ResultsConfig.headerLetterSpacing,
       lineHeight: 1,
       position: size / 2,
@@ -1470,7 +1505,7 @@ class ResultsHeader extends PositionComponent
 
   @override
   void render(Canvas canvas) {
-    _paint.color = pink ? ResultsConfig.pink : game.foregroundColor;
+    _paint.color = pink ? ResultsConfig.pink : kPostRunPalette.foreground;
     canvas.drawRect(size.toRect(), _paint);
   }
 }

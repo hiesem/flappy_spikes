@@ -40,6 +40,12 @@ int stageOf(int score) {
 /// The palette for a given stage.
 Palette paletteForStage(int stage) => kPalettes[stage] ?? kPalettes[0]!;
 
+/// PRD-2.2 §31.1: the balloon bonus and results pages always use the first
+/// stage's palette (background #F1F1F1, foreground #828282), whatever colour
+/// stage the run ended on. The spike strips and the banner strip under those
+/// pages take the foreground too.
+final Palette kPostRunPalette = kPalettes[0]!;
+
 // region WP-1a — colour stage per 10 hoops (PRD-2 §3.0.1, §3.1)
 /// The [kPalettes] keys in order: 0, 5, …, 45 and the gold stage 50 last.
 const List<int> kStageKeys = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];

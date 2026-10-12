@@ -143,6 +143,54 @@ table length + 100 ms (± 13 ms), none at 0.6 s. (A copy cut by an oldest-copy s
   599 ms) are single frames.
 - **Thermal:** status 0 throughout, battery 25.2 → 25.9 °C.
 
+## 2c. After the §33.4 items 4–6 fixes (WP-33c): idle menus at 30 fps
+
+Branch `g7-wp33c` (feat/2.2 @ e53b098 = the WP-22 audio fixes, plus the P22-33c commit). Idle menus (Home / Shop /
+Skins / Levels on top, nothing over them, settled and untouched for 2 s) stop Flame's ticker between frames and draw
+at `Config.idleMenuFps` = 30 instead of the display rate; any touch returns to 60 at once (`lib/game/idle_frames.dart`).
+Home has continuous idle motion (bird bob / idle flap, START pulse and streak, NEW tag, trophy, coin glint), so
+"no frames while nothing animates" never applies to it: the motion keeps its timing, only the frame count halves.
+Same phone, hub, brightness 128, same command: `python3 -I tool/soak.py --label after-idle` (start: skin 27.4 °C,
+battery 25.8 °C, thermal 0). Raw data: [perf/after-idle/soak.csv](perf/after-idle/soak.csv),
+[logcat.txt](perf/after-idle/logcat.txt). (A first attempt was cut off after game 1 because another builder installed
+over the app mid-hold; this is the complete rerun.)
+
+| after game | 1 | 2 | 5 | 10 | 20 | after-audio at 20 | 2.1 baseline at 20 |
+|---|---|---|---|---|---|---|---|
+| PSS total (MB) | 425 | 427 | 459 | 456 | 445 | 428 | 433 |
+| Native heap (MB) | 59.4 | 61.4 | 67.6 | 64.9 | 45.5 | 41.5 | 34.3 |
+| Graphics (MB) | 180 | 189 | 215 | 217 | 218 | 207 | 214 |
+| Live native audio players | 70 | 70 | 83 | 84 | 78 | 76 | 78 (growing) |
+| SFX pools alive / evicted so far | 24 / 0 | 24 / 0 | 30 / 8 | 30 / 20 | 28 / 37 | 28 / 35 | 33 / – |
+| audio_flinger tracks (active) | 10 (1) | 10 (1) | 10 (1) | 10 (1) | 10 (1) | 13 (1) | 12 (1) |
+| Threads | 159 | 146 | 146 | 150 | 150 | 157 | 137 |
+| **Home idle CPU, 60 s (% of one core)** | **48.0** | **48.7** | **54.4** | **51.0** | **55.2** | 81.6 | 84.4 |
+| Home idle frames in the 100 s hold | 3 038 | 3 040 | 3 037 | 3 042 | 3 039 | 5 996 | ≈ 6 000 |
+| Home idle `getCurrentPosition` polls/s | 0 | 0 | 0 | 0 | 0 | 0 | 60 |
+| Home idle frames p50 / p90 (ms), slow % | 10.8 / 12.8, 14.6 | 10.9 / 12.9, 14.8 | 11.5 / 13.6, 27.7 | 11.2 / 13.4, 22.7 | 12.1 / 14.2, 40.9 | 11.0 / 12.6, 11.5 | 10.6 / 12.4, 9.2 |
+| Run frames p50 / p90 / p99 (ms) | 7.7 / 11.4 / 46.8¹ | 8.6 / 11.8 / 19.1 | 8.6 / 11.3 / 16.1 | 9.1 / 11.8 / 18.3 | 9.2 / 13.1 / 19.7 | 10.7 / 13.9 / 16.2 | 10.1 / 13.7 / 17.5 |
+| Run slow % (> 12.5 ms) | 4.9 | 7.4 | 4.2 | 6.1 | 13.0 | 24.5 | 20.0 |
+| Run build90 / raster90 (ms) | 4.7 / 5.1 | 5.1 / 5.3 | 5.0 / 4.7 | 4.6 / 5.2 | 5.6 / 5.9 | 6.1 / 6.5 | – |
+| Post-run p90 (ms), slow % | 14.6, 26.5 | 12.3, 8.9 | 12.2, 7.6 | 12.7, 12.6 | 13.4, 23.6 | 14.8, 47.4 | 12.9, 16.0 |
+| Thermal status | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Battery temperature (°C) | 25.8 | 25.8 | 25.7 | 25.6 | 25.5 | 25.9 | 25.3 |
+
+¹ Game 1 includes the first-run shader warm-up (max 470 ms; 2.1: 599 ms, after-audio: 713 ms).
+
+**Against the §33.6 gate:**
+- **Home idle CPU: 48–55 % of a core** (2.1: 80–84 %, after-audio: 78–82 %), about −30 points. The hold draws exactly
+  30 frames/s (3 037–3 042 frames in 100 s) with 0 position polls. Per idle frame the span is ≈ 1 ms longer than at
+  60 fps (lower CPU / GPU clocks at the lower load), and it drifts up over the session (p50 10.8 → 12.1 ms, CPU 48 → 55 %);
+  the cause is not identified (temperature flat, PSS flat); QA's re-soak should show whether it is run-to-run noise.
+- **Memory:** PSS at game 20 = 445 MB, +4.3 % over game 2 (427); the peak 459 MB at game 5 is +7.6 %. Within ≤ 10 %.
+- **Live audio players:** bounded (70 → 84 → 78; the lazy pools come and go with the 180 s eviction, 37 evicted).
+- **Thermal:** status 0 throughout, battery 25.5–25.8 °C.
+- **Run frames:** better than both earlier soaks at every point (p90 11.3–13.1 ms vs 13.9–14.4 after-audio and
+  12.9–13.7 on 2.1; slow % 4–13 vs 24–30 and 12–20). Game 20 is somewhat above game 1 (p90 11.4 → 13.1 ms, slow %
+  4.9 → 13.0), with games 2–10 flat at 11.3–11.8; so "game 20 the same as game 1" is borderline on this one run, while
+  "no worse than 2.1" holds clearly. The run itself is not frame-limited (60 fps in play); the run gain is not isolated
+  (the shared scratch paints of §33.4 item 6, or run-to-run spread); one run each, QA repeats it.
+
 ## 3. Perfetto trace (game 10)
 
 The 40 s window covers about 19 s of play, then death, results and Home idle. The trace is `docs/p22/perf/baseline-2.1/trace_g10.perfetto-trace`, 99.6 MB and gitignored, so it exists only in this worktree. It was analysed with the `perfetto` Python trace processor.

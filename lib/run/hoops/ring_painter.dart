@@ -4,6 +4,7 @@ import 'dart:ui';
 import '../../skins/art/art_paint.dart';
 import '../../skins/art/hoop_painter.dart';
 import '../config/parts_config.dart';
+import '../../game/paints.dart';
 
 /// Front / back colours of a ring.
 class RingColors {
@@ -123,7 +124,7 @@ abstract final class RingPainter {
     if (layer) {
       canvas.saveLayer(
         null,
-        Paint()..color = Color.fromRGBO(0, 0, 0, opacity.clamp(0.0, 1.0)),
+        layerPaint(opacity.clamp(0.0, 1.0)),
       );
     }
     canvas.save();

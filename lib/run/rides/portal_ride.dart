@@ -21,6 +21,7 @@ import 'ride_theme.dart';
 import 'speed_lines.dart';
 import 'themes/storm.dart';
 import 'themes/themes.dart';
+import '../../game/paints.dart';
 
 /// A ride's chain before it starts: theme, path, ring stations and the
 /// preview of the first curve ring (§3.12 "the next chain ring is already
@@ -677,7 +678,7 @@ class PortalRide implements Ride {
         if (v.envA <= 0) break;
         final layer = v.envA < 1;
         if (layer) {
-          canvas.saveLayer(_screen, Paint()..color = Color.fromRGBO(0, 0, 0, v.envA));
+          canvas.saveLayer(_screen, layerPaint(v.envA));
         }
         theme.paintWorld(canvas, v, v.cam);
         if (layer) canvas.restore();

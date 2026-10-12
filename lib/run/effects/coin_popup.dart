@@ -7,6 +7,7 @@ import '../../game/config.dart';
 import '../config/parts_config.dart';
 import 'coin_icon.dart';
 import 'particle_pool.dart';
+import '../../game/paints.dart';
 
 /// Master #8 — the pass coin popup (PRD §3.0.9 #8, §5.4 `Scene.coin`): gold
 /// `#FFB529` "+N" in 28 pt Opificio followed (3 pt gap) by the 24 pt
@@ -111,7 +112,7 @@ class CoinPopup extends PooledEffect {
     canvas.translate(-w / 2, -h / 2);
     canvas.saveLayer(
       Rect.fromLTWH(-4, -4, w + 8, h + 8),
-      Paint()..color = Color.fromRGBO(0, 0, 0, alpha.clamp(0.0, 1.0)),
+      layerPaint(alpha.clamp(0.0, 1.0)),
     );
     text.paint(canvas, Offset(0, (h - text.height) / 2));
     final coinImage = this.coinImage;

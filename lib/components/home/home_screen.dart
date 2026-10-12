@@ -636,6 +636,18 @@ class CoinPill extends MenuButton
   /// Whether the number is frozen by [hold] (a coin reward in flight).
   bool get held => _held != null;
 
+  /// PRD-2.2 §33.4 item 5: a count-up, hold, pop, shake, flash or glow is
+  /// running (the menu is not idle; the idle glint does not count).
+  bool get busy =>
+      _countFrom != null ||
+      _held != null ||
+      _popT >= 0 ||
+      _pillPopT >= 0 ||
+      _shakeT >= 0 ||
+      _flashT >= 0 ||
+      glow ||
+      _glowK > 0;
+
   /// Freezes the number on what it shows now (or, mid count, on where
   /// that count ends): the wallet can be credited while the reward's coins
   /// are still flying (PRD-menu-v2 §8.3).

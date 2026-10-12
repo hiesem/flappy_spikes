@@ -9,6 +9,7 @@ import '../../game/config.dart';
 import '../../skins/catalog.dart';
 import '../../skins/look.dart';
 import 'shop_glyphs.dart';
+import '../../game/paints.dart';
 
 /// Piecewise-linear keyframe lookup: [keys] are (offset, value) pairs with
 /// ascending offsets from 0 to 1 (WAAPI keyframes).
@@ -103,10 +104,7 @@ class UnlockBanner extends PositionComponent {
     canvas.translate(0, dy + h / 2);
     canvas.rotate(rotate * math.pi / 180);
     canvas.scale(scale);
-    canvas.saveLayer(
-      null,
-      Paint()..color = Color.fromRGBO(0, 0, 0, opacity.clamp(0.0, 1.0)),
-    );
+    canvas.saveLayer(null, layerPaint(opacity.clamp(0.0, 1.0)));
     final box = Rect.fromLTWH(-w / 2, -h / 2, w, h);
     canvas.drawRect(
       box.shift(const Offset(0, 4)),
@@ -233,10 +231,7 @@ class ShopToast extends PositionComponent {
     canvas.save();
     canvas.translate(0, dy + h / 2);
     canvas.scale(scale);
-    canvas.saveLayer(
-      null,
-      Paint()..color = Color.fromRGBO(0, 0, 0, opacity.clamp(0.0, 1.0)),
-    );
+    canvas.saveLayer(null, layerPaint(opacity.clamp(0.0, 1.0)));
     canvas.drawRect(
       Rect.fromLTWH(-w / 2, -h / 2, w, h),
       Paint()..color = const Color(0xFF2B2B2B),

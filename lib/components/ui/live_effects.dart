@@ -266,6 +266,7 @@ class PulseEffect extends WiggleEffect {
 
   double _k = 0;
   final Paint _glow = Paint();
+  double _sigma = -1;
 
   double get k => _k;
   set k(double value) {
@@ -285,10 +286,14 @@ class PulseEffect extends WiggleEffect {
       draw(canvas);
       return;
     }
+    // PRD-2.2 §33.4 item 6: a new blur only when its sigma changed.
+    final sigma = glowBlur * _k / 2;
+    if (sigma != _sigma) {
+      _sigma = sigma;
+      _glow.maskFilter = MaskFilter.blur(BlurStyle.normal, sigma);
+    }
     super.apply((c) {
-      _glow
-        ..color = glowColor.withValues(alpha: glowColor.a * _k)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowBlur * _k / 2);
+      _glow.color = glowColor.withValues(alpha: glowColor.a * _k);
       c.drawRect(
         (Vector2.zero() & target.size).inflate(inflate + glowSpread * _k),
         _glow,

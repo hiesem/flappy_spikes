@@ -7,6 +7,7 @@ import 'package:flutter/animation.dart' show Curves;
 
 import '../../game/config.dart';
 import '../skins/celebration.dart' show keyframe;
+import '../../game/paints.dart';
 
 /// A card flip about the component's centre (PRD-home-v3 §7 owned flips):
 /// CSS `rotateX` ([vertical]) / `rotateY` without perspective, i.e. the
@@ -132,7 +133,7 @@ class ShrinkAway extends Decorator {
     canvas.translate(px, py);
     canvas.scale(s);
     canvas.translate(-px, -py);
-    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, 1 - k));
+    canvas.saveLayer(null, layerPaint(1 - k));
     draw(canvas);
     canvas.restore();
     canvas.restore();

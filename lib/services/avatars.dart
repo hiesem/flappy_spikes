@@ -6,6 +6,8 @@ import 'dart:ui' as ui;
 
 import 'package:flame/cache.dart';
 
+import '../game/config.dart';
+
 /// Where avatar bytes come from (PRD-2 §3.13 "Who plays", §5.8 avatars).
 /// Platform / network code stays behind this small interface (ARCH §8).
 abstract class AvatarSource {
@@ -61,13 +63,62 @@ class HttpAvatarSource implements AvatarSource {
 /// `data:` URI for the Play Games icon image), else starts one background
 /// load and returns null — the caller paints the neutral glyph meanwhile.
 /// A failed key is not retried in the same session. Never throws.
+///
+/// PRD-2.2 §33.4 item 4: images are decoded at the size they are drawn
+/// ([decodeSide]: the short side at [Config.avatarDecodePoints] times the
+/// screen's pixels per point, never upscaled), and the cache keeps at most
+/// [maxCached] avatars: the least recently drawn one is disposed first
+/// (it loads again if it is ever needed).
 class AvatarImages {
-  AvatarImages(this.images, {this.source = const NoAvatarSource()});
+  AvatarImages(
+    this.images, {
+    this.source = const NoAvatarSource(),
+    double Function()? pixelsPerPoint,
+    this.maxCached = Config.avatarCacheMax,
+  }) : _pixelsPerPoint = pixelsPerPoint ?? _defaultPixelsPerPoint;
 
   final Images images;
   final AvatarSource source;
+  final int maxCached;
+  final double Function() _pixelsPerPoint;
   final Set<String> _loading = {};
   final Set<String> _failed = {};
+
+  /// Cached avatar keys, least recently drawn first.
+  final List<String> _recent = [];
+
+  /// The avatar keys in the cache now, least recently drawn first (tests).
+  List<String> get cachedKeys => List.unmodifiable(_recent);
+
+  /// Pixels per world point when no measure is given (a 1080 px wide
+  /// phone over the 320 pt playfield).
+  static double _defaultPixelsPerPoint() => 1080 / Config.worldWidth;
+
+  /// Target length in pixels of a decoded avatar's short side.
+  int get decodeSide {
+    var ppp = 0.0;
+    try {
+      ppp = _pixelsPerPoint();
+    } catch (_) {}
+    if (!ppp.isFinite || ppp <= 0) ppp = _defaultPixelsPerPoint();
+    return (Config.avatarDecodePoints * ppp).ceil().clamp(16, 1024);
+  }
+
+  void _touch(String key) {
+    if (_recent.isNotEmpty && _recent.last == key) return;
+    _recent
+      ..remove(key)
+      ..add(key);
+  }
+
+  void _evict() {
+    while (_recent.length > maxCached) {
+      final old = _recent.removeAt(0);
+      try {
+        images.clear(old);
+      } catch (_) {}
+    }
+  }
 
   /// `data:` URI of a base64 image (the Play Games `iconImage`).
   static String dataUri(String base64) => 'data:image/png;base64,$base64';
@@ -75,7 +126,10 @@ class AvatarImages {
   ui.Image? lookup(String key) {
     if (key.isEmpty) return null;
     try {
-      if (images.containsKey(key)) return images.fromCache(key);
+      if (images.containsKey(key)) {
+        _touch(key);
+        return images.fromCache(key);
+      }
     } catch (_) {
       return null;
     }
@@ -99,10 +153,25 @@ class AvatarImages {
         _failed.add(key);
         return;
       }
-      final codec = await ui.instantiateImageCodec(bytes);
+      final side = decodeSide;
+      final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+      final codec = await ui.instantiateImageCodecWithSize(
+        buffer,
+        getTargetSize: (w, h) {
+          final short = w < h ? w : h;
+          if (short <= side) return ui.TargetImageSize();
+          final k = side / short;
+          return ui.TargetImageSize(
+            width: (w * k).round(),
+            height: (h * k).round(),
+          );
+        },
+      );
       final frame = await codec.getNextFrame();
       codec.dispose();
       images.add(key, frame.image);
+      _touch(key);
+      _evict();
     } catch (_) {
       _failed.add(key);
     } finally {

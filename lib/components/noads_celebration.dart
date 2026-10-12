@@ -11,6 +11,7 @@ import 'home/menu_primitives.dart';
 import 'skins/celebration.dart' show keyframe;
 import 'ui/live_effects.dart' show WiggleEffect;
 import 'ui/p1_popup.dart';
+import '../game/paints.dart';
 
 /// Images the celebration draws.
 const List<String> kNoAdsCelebrationImages = [
@@ -375,7 +376,7 @@ class _Header extends PositionComponent {
     canvas.rotate(degrees * math.pi / 180);
     canvas.scale(scale);
     if (alpha < 1) {
-      canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
+      canvas.saveLayer(null, layerPaint(alpha));
     }
     canvas.drawCircle(Offset.zero, s / 2 + 5, _ring);
     canvas.drawCircle(Offset.zero, s / 2, _gold);

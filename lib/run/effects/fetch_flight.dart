@@ -6,6 +6,7 @@ import 'package:flame/components.dart';
 import '../config/parts_config.dart';
 import 'easing.dart';
 import 'particle_pool.dart';
+import '../../game/paints.dart';
 
 /// Paints the flying item centred at the origin at [scale] / [rotation].
 typedef FetchArt = void Function(Canvas canvas, double scale, double rotation);
@@ -194,7 +195,7 @@ class FetchFlight extends PositionComponent {
     canvas.translate(p.dx, p.dy);
     final layer = a < 1;
     if (layer) {
-      canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, a));
+      canvas.saveLayer(null, layerPaint(a));
     }
     art(canvas, s, r);
     if (layer) canvas.restore();

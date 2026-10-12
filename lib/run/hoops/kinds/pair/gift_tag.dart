@@ -7,6 +7,7 @@ import '../../../../game/config.dart';
 import '../../../config/pair_config.dart';
 import '../../../director/plans.dart' show PairReward;
 import 'gift_box.dart';
+import '../../../../game/paints.dart';
 
 /// The §5.20 gift tag (mock `TH.gift.label`): a white luggage tag (notched
 /// left end with a punched hole), 2 pt outline in the reward's dark shade,
@@ -65,7 +66,7 @@ abstract final class GiftTag {
       ..lineTo(-w / 2 + 8, 14)
       ..lineTo(-w / 2, 6)
       ..close();
-    c.drawPath(shape, Paint()..color = const Color(0xFFFFFFFF));
+    c.drawPath(shape, fillPaint(const Color(0xFFFFFFFF)));
     c.drawPath(
       shape,
       Paint()
@@ -74,7 +75,7 @@ abstract final class GiftTag {
         ..strokeJoin = StrokeJoin.round
         ..color = st.dark,
     );
-    c.drawCircle(Offset(-w / 2 + 7, 0), 2.2, Paint()..color = st.dark);
+    c.drawCircle(Offset(-w / 2 + 7, 0), 2.2, fillPaint(st.dark));
     GiftBox.icon(c, r, Offset(-w / 2 + 22, 0), 8);
     final tp = _label(r);
     tp.paint(c, Offset(-w / 2 + 33, 1 - tp.height / 2));

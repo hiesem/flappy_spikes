@@ -35,6 +35,33 @@ class Config {
   /// still covers 30 fps devices without slowing them down.
   static const double maxFrameStep = 1 / 30;
 
+  /// PRD-2.2 §33.4 item 5: frames per second of an idle menu (Home, Shop,
+  /// Skins, Levels on top with nothing over it, settled and untouched for
+  /// [idleMenuDelay]). Home's idle motion is slow (bob, pulse, streak), so
+  /// half the display rate keeps its look and halves the CPU / GPU work.
+  /// 0 = always the display rate.
+  static const double idleMenuFps = 30;
+
+  /// PRD-2.2 §33.4 item 5: seconds a menu must be settled (no touch, no
+  /// fade, transition, count-up, coin flight or scroll glide) before
+  /// [idleMenuFps] starts. Any touch returns to the display rate at once.
+  static const double idleMenuDelay = 2;
+
+  /// PRD-2.2 §33.4 item 5: the idle-frame timer fires this many seconds
+  /// before the next idle frame is due, so the vsync after it is the right
+  /// one (a late timer would skip a whole vsync).
+  static const double idleMenuWakeLead = 0.006;
+
+  /// PRD-2.2 §33.4 item 4: versus avatars are decoded at most this many
+  /// points wide (the VS intro plate, the largest place one is drawn, is
+  /// 52 pt) times the screen's pixels per point.
+  static const double avatarDecodePoints = 52;
+
+  /// PRD-2.2 §33.4 item 4: the avatar cache keeps this many images (the
+  /// own avatar, the current and the last few opponents); the least
+  /// recently drawn one is disposed first.
+  static const int avatarCacheMax = 6;
+
   // Collision categories (mirror the original bitmasks). PRD-2 §7: hoops,
   // rims and spikes are plain math, so nothing collides in Forge2D any more.
   static const int categoryBird = 0x1;

@@ -8,6 +8,7 @@ import '../../director/plans.dart';
 import '../../effects/particle_pool.dart';
 import '../ride_path.dart';
 import '../ride_theme.dart';
+import '../../../game/paints.dart';
 
 class _Star {
   _Star(this.x, this.y, this.s, this.tw);
@@ -238,7 +239,7 @@ class SpaceTheme extends RideTheme {
     if (p == null || p.t >= 1.2) return;
     c.saveLayer(
       Rect.fromLTWH(0, 0, v.w, v.h),
-      Paint()..color = Color.fromRGBO(0, 0, 0, 1 - p.t / 1.2),
+      layerPaint(1 - p.t / 1.2),
     );
     rocket(c, Offset(p.x, p.y), .6 + p.t * 2, fire: false, t: p.t);
     c.restore();

@@ -107,6 +107,13 @@ Future<void> main() async {
     // S6-64: Play Games avatars over https on the products only.
     avatarSource: _isMobile && !kE2E && !kSoak ? HttpAvatarSource() : null,
   );
+  // PRD-2.2 §33.4 item 5: idle menus draw at Config.idleMenuFps. Not in
+  // FS_E2E builds, whose tests pump the frames themselves.
+  if (!kE2E) {
+    game.idleFrames
+      ..enabled = true
+      ..attach();
+  }
   game.onShareScore = _shareScore;
   game.onInvite = _invite;
 
@@ -219,7 +226,13 @@ Future<void> _shareScore(int score) async {
       return;
     }
     final image = await boundary.toImage(pixelRatio: 2);
-    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    // PRD-2.2 §33.4 item 6: the capture is freed as soon as it is encoded.
+    final ByteData? bytes;
+    try {
+      bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    } finally {
+      image.dispose();
+    }
     if (bytes == null) {
       await SharePlus.instance.share(ShareParams(text: text));
       return;

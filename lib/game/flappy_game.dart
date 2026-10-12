@@ -21,7 +21,7 @@ import '../components/home/menu_primitives.dart' show MenuButton;
 import '../components/levels/level_up_popup.dart';
 import '../components/levels/levels_screen.dart';
 import '../components/menu_drag_dispatcher.dart';
-import '../components/menu_screen_chrome.dart' show MenuScreen;
+import '../components/menu_screen_chrome.dart' show MenuScreen, MenuScrollArea;
 import '../components/noads_celebration.dart';
 import '../components/noads_popup.dart';
 import '../components/purchase_result_popup.dart';
@@ -45,6 +45,7 @@ import '../run/debug/autopilot.dart';
 import '../run/debug/debug_overlay.dart';
 import '../run/debug/force_menu.dart';
 import '../services/soak.dart';
+import 'idle_frames.dart';
 import '../run/director/plans.dart';
 import '../run/elements.dart';
 import '../run/items/puzzle.dart';
@@ -147,6 +148,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     maxTranslationSquared = maxTranslation * maxTranslation;
     // The knock throttle runs on game time (tests step it).
     rumble.clock = () => _clock;
+    // PRD-2.2 §33.4 item 5: the engine stops in the background and resumes
+    // on return (Flame's default, kept explicit: see lifecycleStateChange).
+    pauseWhenBackgrounded = true;
   }
 
   static double _clampViewHeight(double height) =>
@@ -187,7 +191,21 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// §3.13 / §5.8 (S6-64) the avatar image cache shared by the VS intro,
   /// the versus HUD bar and the results card (the neutral glyph while an
   /// image is missing). The network source is wired by `main.dart` only.
-  late final AvatarImages avatars = AvatarImages(images, source: _avatarSource);
+  ///
+  /// §33.4 item 4: decoded at the drawn size (the screen's pixels per
+  /// world point), at most [Config.avatarCacheMax] cached.
+  late final AvatarImages avatars = AvatarImages(
+    images,
+    source: _avatarSource,
+    pixelsPerPoint: _pixelsPerPoint,
+  );
+
+  /// Physical pixels per world point (the playfield is 320 pt wide).
+  static double _pixelsPerPoint() {
+    final views = PlatformDispatcher.instance.views;
+    if (views.isEmpty) return 0;
+    return views.first.physicalSize.width / Config.worldWidth;
+  }
 
   /// §3.13 / §5.8 / §5.10 (S6-65) the own name on the plates, the HUD chip
   /// and the results card: the Play Games display name when signed in,
@@ -467,6 +485,55 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Rewarded ads on screen right now (real or fake).
   int _adsShowing = 0;
 
+  /// PRD-2.2 §33.4 item 5: idle menus draw at [Config.idleMenuFps]. Off
+  /// unless `main.dart` enables it (tests drive frames themselves).
+  late final IdleFrameLimiter idleFrames = IdleFrameLimiter(this)
+    ..onInput = _onUserInput;
+
+  /// Seconds the current menu has been settled and untouched
+  /// ([_menuIdle]); the idle frame rate starts at [Config.idleMenuDelay].
+  double _idleQuiet = 0;
+
+  /// A touch, key or system back: the display rate comes back at once and
+  /// the idle delay starts over.
+  void _onUserInput() => _idleQuiet = 0;
+
+  /// Wakes the idle frame limiter (touch, key, system back).
+  void wakeFrames() {
+    _onUserInput();
+    idleFrames.wake();
+  }
+
+  /// PRD-2.2 §33.4 item 5: a menu screen (Home, Shop, Skins, Levels) is up
+  /// with nothing over it, nothing fading, flying, counting or gliding.
+  /// Its own idle motion (bob, pulse, streak, wiggles, glint) still runs —
+  /// only at the idle frame rate.
+  bool get _menuIdle {
+    if (state != GameState.start || !_sceneOnTop(menuScene)) return false;
+    if (_fades.isNotEmpty || _colorFadeT < 1) return false;
+    if (_popupQueue.isNotEmpty || _levelsOpenIn != null) return false;
+    if (_fakeAd != null || _adsShowing > 0 || liveMotionPaused) return false;
+    final home = _home;
+    if (menuScene == MenuScene.home &&
+        (home == null || !home.built || home.opacity < 1)) {
+      return false;
+    }
+    if (coinPill.busy) return false;
+    for (final c in descendants()) {
+      if (c is Effect ||
+          c is CoinFly ||
+          c is CoinRewardAnimation ||
+          c is ConfettiBurst ||
+          c is ServiceMessage ||
+          c is ScreenFlash ||
+          c is ScreenShake ||
+          (c is MenuScrollArea && c.isBusy)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /// PRD-menu-v2 §8.4: the idle animations of the live home / Shop pause
   /// while a dialog, popup, ad, fake ad or the debug panel is on top.
   bool get liveMotionPaused =>
@@ -691,6 +758,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   @override
   void onRemove() {
+    idleFrames.detach();
     _purchases?.dispose();
     super.onRemove();
   }
@@ -699,7 +767,19 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// settings detour): re-query store products that were still missing.
   @override
   void lifecycleStateChange(AppLifecycleState state) {
+    // PRD-2.2 §33.4 item 5: FlameGame.lifecycleStateChange pauses the
+    // engine (no update, no frames) on paused / hidden / detached and
+    // resumes it on inactive / resumed ([pauseWhenBackgrounded]); the idle
+    // frame limiter lets go of a stopped loop so the resume restarts it.
     super.lifecycleStateChange(state);
+    switch (state) {
+      case AppLifecycleState.paused ||
+          AppLifecycleState.hidden ||
+          AppLifecycleState.detached:
+        idleFrames.cancel();
+      case AppLifecycleState.resumed || AppLifecycleState.inactive:
+        wakeFrames();
+    }
     // region WP-4b — reminder notifications (PRD-2 §3.34)
     // §3.34 "Scheduling": leaving the app (background or close) cancels the
     // pending plan and schedules the next 7 days, so the reminders always
@@ -2488,6 +2568,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Returns true when something closed. The app never leaves on back: the
   /// observer in main.dart always reports the back as handled.
   bool handleSystemBack() {
+    wakeFrames();
     if (state != GameState.start || _runStarting || _fakeAd != null) {
       return false;
     }
@@ -2532,6 +2613,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (event is! KeyDownEvent) {
       return KeyEventResult.ignored;
     }
+    wakeFrames();
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.space ||
         key == LogicalKeyboardKey.enter ||
@@ -3245,6 +3327,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   @override
   void update(double dt) {
+    // §33.4 item 5: the first frame after an idle-frame restart gets the
+    // real elapsed time (Flame restarts its loop with dt = 0).
+    dt = idleFrames.frameDt(dt);
     // One clamped clock for the whole simulation (Config.maxFrameStep):
     // super.update runs the component tree (Forge2D world step, bird,
     // pipes, camera) with this same dt, and everything below uses it too,
@@ -3292,6 +3377,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onScreenTap();
     }
     // endregion WP-0b
+    // region P22-33c — idle menus draw fewer frames (§33.4 item 5)
+    if (idleFrames.enabled) {
+      _idleQuiet = _menuIdle ? _idleQuiet + dt : 0;
+      idleFrames.endFrame(idle: _idleQuiet >= Config.idleMenuDelay);
+    }
+    // endregion P22-33c
   }
 }
 

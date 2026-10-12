@@ -42,8 +42,16 @@ class Rumble {
   final bool hardware;
 
   /// Every rumble that passed the setting and the throttle, in order
-  /// (recorded with or without [hardware]).
+  /// (recorded with or without [hardware]). PRD-2.2 §33.4 item 6: a test
+  /// recorder only — a profile / release build with a vibrator records
+  /// nothing, and the list never holds more than [firedCap] (the oldest
+  /// half is dropped).
   final List<RumbleKind> fired = [];
+
+  /// PRD-2.2 §33.4 item 6: the most rumbles [fired] keeps.
+  static const int firedCap = 2000;
+
+  bool get _records => !hardware || kDebugMode;
 
   /// Seconds clock for the throttle (the game feeds its own clock).
   double Function() _clock;
@@ -81,7 +89,10 @@ class Rumble {
   }
 
   void _fire(RumbleKind kind, int ms, int amplitude) {
-    fired.add(kind);
+    if (_records) {
+      if (fired.length >= firedCap) fired.removeRange(0, firedCap ~/ 2);
+      fired.add(kind);
+    }
     if (!hardware) return;
     unawaited(_vibrate(ms, amplitude));
   }

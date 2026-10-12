@@ -1,0 +1,7 @@
+harness final start cooldown
+Performing Streamed Install
+Success
+
+Starting: Intent { cmp=com.flappyspikes.flappy_spikes/.MainActivity }
+
+foreground True

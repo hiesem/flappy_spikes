@@ -1,0 +1,73 @@
+{
+  "seq": 1791782579192192,
+  "wall": 10.687,
+  "state": "playing",
+  "menu": "home",
+  "modal": false,
+  "mode": "freeFly",
+  "debug": false,
+  "popup": null,
+  "volume": 0.25,
+  "appliedVolume": 0.25,
+  "music": false,
+  "skipped": true,
+  "suspended": false,
+  "stats": "pools=10 pooled=30 evicted=0 steals=0 loops=0 players=31 creates=31 disposes=0 releases=1 resumes=11 posPolls=0",
+  "height": 681.3333333333333,
+  "visible": 661.3333333333333,
+  "screenHeight": 711.1111111111111,
+  "bottomInset": 24.0,
+  "banner": true,
+  "bannerLoaded": true,
+  "rewardedLoaded": true,
+  "interstitialLoaded": true,
+  "interstitial": false,
+  "interstitialGuard": null,
+  "rewardedWatched": false,
+  "lastAd": null,
+  "score": 1,
+  "hoops": 1,
+  "rings": [
+    {
+      "kind": "normal",
+      "motion": null,
+      "x": -32.95240126660758,
+      "y": 340.6666564941406,
+      "opening": 118.0,
+      "resolved": true,
+      "touched": false
+    },
+    {
+      "kind": "normal",
+      "motion": null,
+      "x": 277.0475987333924,
+      "y": 367.8770446777344,
+      "opening": 117.6224,
+      "resolved": false,
+      "touched": false
+    }
+  ],
+  "streak": 0,
+  "fire": false,
+  "activity": null,
+  "ride": null,
+  "timeScale": 1.0,
+  "egg": null,
+  "eggCracks": null,
+  "birdY": 363.79534912109375,
+  "vy": -265.83251953125,
+  "rumble": "knock",
+  "runSettings": false,
+  "reviveUi": null,
+  "bonusPhase": null,
+  "bonusOffer": null,
+  "canContinue": null,
+  "start": [
+    160.0,
+    421.5
+  ],
+  "modeTap": [
+    194.5,
+    372.5
+  ]
+}

@@ -1,0 +1,265 @@
+00:00 +0: loading /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s2_mode_button_screenshot_test.dart
+00:00 +0: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s2_mode_button_screenshot_test.dart: mode screenshot 568 versus
+Sound: lifecycle resumed
+00:00 +0: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_a_ride_711
+Sound: lifecycle resumed
+00:00 +0: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s21_fire_screenshot_test.dart: §21 shot: on fire at ×3 (flame)
+Sound: lifecycle resumed
+00:00 +0: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s2_mode_button_screenshot_test.dart: mode screenshot 568 versus
+SHOT build/menu_shots/mode_568_versus@1.5x.png: 48655 bytes
+Sound: lifecycle paused
+00:00 +1: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_a_ride_711
+00:00 +1: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s2_mode_button_screenshot_test.dart: mode screenshot 568 freeFly
+Sound: lifecycle resumed
+00:00 +1: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_a_ride_711
+versus: solo (auth, 0 reads)
+00:00 +1: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s2_mode_button_screenshot_test.dart: mode screenshot 568 freeFly
+SHOT build/menu_shots/mode_568_freeFly@1.5x.png: 47522 bytes
+Sound: lifecycle paused
+00:00 +2: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_a_ride_711
+00:00 +2: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s2_mode_button_screenshot_test.dart: mode screenshot 640 versus
+Sound: lifecycle resumed
+00:00 +2: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (711 pt): the balloon bonus and the results page
+Sound: lifecycle resumed
+00:00 +2: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s2_mode_button_screenshot_test.dart: mode screenshot 640 versus
+SHOT build/menu_shots/mode_640_versus@1.5x.png: 50155 bytes
+Sound: lifecycle paused
+00:00 +3: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_a_ride_711
+00:00 +3: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s2_mode_button_screenshot_test.dart: mode screenshot 640 freeFly
+Sound: lifecycle resumed
+00:00 +3: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s21_fire_screenshot_test.dart: §21 shot: on fire at ×3 (flame)
+versus: solo (auth, 0 reads)
+00:00 +3: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s2_mode_button_screenshot_test.dart: mode screenshot 640 freeFly
+SHOT build/menu_shots/mode_640_freeFly@1.5x.png: 48981 bytes
+Sound: lifecycle paused
+00:00 +4: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_a_ride_711
+00:00 +4: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s2_mode_button_screenshot_test.dart: mode screenshot 711 versus
+Sound: lifecycle resumed
+SHOT build/menu_shots/mode_711_versus@1.5x.png: 50958 bytes
+Sound: lifecycle paused
+00:00 +5: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_a_ride_711
+00:00 +5: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s2_mode_button_screenshot_test.dart: mode screenshot 711 freeFly
+Sound: lifecycle resumed
+00:01 +5: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (711 pt): the balloon bonus and the results page
+versus: solo (auth, 0 reads)
+00:01 +5: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s2_mode_button_screenshot_test.dart: mode screenshot 711 freeFly
+SHOT build/menu_shots/mode_711_freeFly@1.5x.png: 49722 bytes
+Sound: lifecycle paused
+00:01 +6: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_a_ride_711
+SHOT build/menu_shots/p22/s18/cannon_a_ride_711.png: 107504 bytes
+Sound: lifecycle paused
+00:01 +7: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s21_fire_screenshot_test.dart: §21 shot: on fire at ×3 (flame)
+00:01 +7: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_b_exit_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+00:01 +7: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s21_fire_screenshot_test.dart: §21 shot: on fire at ×3 (flame)
+SHOT build/shots/p22/s21_fire_x3_flame.png: 87813 bytes
+Sound: lifecycle paused
+00:01 +8: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (711 pt): the balloon bonus and the results page
+00:01 +8: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s21_fire_screenshot_test.dart: §21 shot: on fire at ×5 (flame)
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+00:01 +8: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (711 pt): the balloon bonus and the results page
+SHOT build/menu_shots/p22/s31/bonus_711.png: 95085 bytes
+00:01 +8: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s21_fire_screenshot_test.dart: §21 shot: on fire at ×5 (flame)
+SHOT build/shots/p22/s21_fire_x5_flame.png: 90632 bytes
+Sound: lifecycle paused
+00:01 +9: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (711 pt): the balloon bonus and the results page
+00:01 +9: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s21_fire_screenshot_test.dart: §21 shot: on fire at ×7 (flame)
+Sound: lifecycle resumed
+00:01 +9: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_b_exit_711
+SHOT build/menu_shots/p22/s18/cannon_b_exit_711.png: 40313 bytes
+Sound: lifecycle paused
+00:01 +10: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (711 pt): the balloon bonus and the results page
+00:01 +10: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_c_fly_mid_711
+Sound: lifecycle resumed
+00:01 +10: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s21_fire_screenshot_test.dart: §21 shot: on fire at ×7 (flame)
+versus: solo (auth, 0 reads)
+00:01 +10: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (711 pt): the balloon bonus and the results page
+SHOT build/menu_shots/p22/s31/results_711.png: 152019 bytes
+00:01 +10: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_c_fly_mid_711
+versus: solo (auth, 0 reads)
+00:01 +10: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (711 pt): the balloon bonus and the results page
+Sound: lifecycle paused
+00:01 +11: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s21_fire_screenshot_test.dart: §21 shot: on fire at ×7 (flame)
+00:01 +11: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (568 pt): the balloon bonus and the results page
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s31/bonus_568.png: 74109 bytes
+00:01 +11: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s21_fire_screenshot_test.dart: §21 shot: on fire at ×7 (flame)
+SHOT build/shots/p22/s21_fire_x7_flame.png: 96683 bytes
+Sound: lifecycle paused
+00:01 +12: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_c_fly_mid_711
+00:01 +12: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s21_fire_screenshot_test.dart: §21 shot: on fire at ×7 (blue)
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+00:01 +12: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_c_fly_mid_711
+SHOT build/menu_shots/p22/s18/cannon_c_fly_mid_711.png: 52124 bytes
+Sound: lifecycle paused
+00:01 +13: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (568 pt): the balloon bonus and the results page
+00:01 +13: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_d_glide_start_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+00:01 +13: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (568 pt): the balloon bonus and the results page
+SHOT build/menu_shots/p22/s31/results_568.png: 127535 bytes
+Sound: lifecycle paused
+00:01 +14: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s21_fire_screenshot_test.dart: §21 shot: on fire at ×7 (blue)
+00:01 +14: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (524 pt): the balloon bonus and the results page
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+00:02 +14: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s21_fire_screenshot_test.dart: §21 shot: on fire at ×7 (blue)
+SHOT build/shots/p22/s21_fire_x7_blue.png: 98230 bytes
+Sound: lifecycle paused
+00:02 +15: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_d_glide_start_711
+00:02 +15: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (524 pt): the balloon bonus and the results page
+SHOT build/menu_shots/p22/s31/bonus_524.png: 69419 bytes
+00:02 +15: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 cannon_d_glide_start_711
+SHOT build/menu_shots/p22/s18/cannon_d_glide_start_711.png: 51443 bytes
+Sound: lifecycle paused
+00:02 +16: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (524 pt): the balloon bonus and the results page
+00:02 +16: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 space_a_ride_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+00:02 +16: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s31_postrun_shots_test.dart: §31 shots (524 pt): the balloon bonus and the results page
+SHOT build/menu_shots/p22/s31/results_524.png: 122166 bytes
+Sound: lifecycle paused
+00:02 +17: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 space_a_ride_711
+SHOT build/menu_shots/p22/s18/space_a_ride_711.png: 178201 bytes
+Sound: lifecycle paused
+00:02 +18: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 space_b_exit_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/space_b_exit_711.png: 78677 bytes
+Sound: lifecycle paused
+00:02 +19: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 space_c_fly_mid_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/space_c_fly_mid_711.png: 55104 bytes
+Sound: lifecycle paused
+00:02 +20: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 space_d_glide_start_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/space_d_glide_start_711.png: 49946 bytes
+Sound: lifecycle paused
+00:02 +21: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 volcano_a_ride_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/volcano_a_ride_711.png: 175567 bytes
+Sound: lifecycle paused
+00:03 +22: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 volcano_b_exit_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/volcano_b_exit_711.png: 44389 bytes
+Sound: lifecycle paused
+00:03 +23: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 volcano_c_fly_mid_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/volcano_c_fly_mid_711.png: 48498 bytes
+Sound: lifecycle paused
+00:03 +24: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 volcano_d_glide_start_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/volcano_d_glide_start_711.png: 45670 bytes
+Sound: lifecycle paused
+00:03 +25: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 sea_a_ride_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/sea_a_ride_711.png: 121406 bytes
+Sound: lifecycle paused
+00:03 +26: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 sea_b_exit_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/sea_b_exit_711.png: 68119 bytes
+Sound: lifecycle paused
+00:04 +27: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 sea_c_fly_mid_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/sea_c_fly_mid_711.png: 53712 bytes
+Sound: lifecycle paused
+00:04 +28: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 sea_d_glide_start_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/sea_d_glide_start_711.png: 50671 bytes
+Sound: lifecycle paused
+00:04 +29: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 pinball_a_ride_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/pinball_a_ride_711.png: 72157 bytes
+Sound: lifecycle paused
+00:04 +30: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 pinball_b_exit_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/pinball_b_exit_711.png: 59627 bytes
+Sound: lifecycle paused
+00:04 +31: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 pinball_c_fly_mid_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/pinball_c_fly_mid_711.png: 50183 bytes
+Sound: lifecycle paused
+00:04 +32: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 pinball_d_glide_start_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/pinball_d_glide_start_711.png: 48415 bytes
+Sound: lifecycle paused
+00:05 +33: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 storm_a_ride_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/storm_a_ride_711.png: 173850 bytes
+Sound: lifecycle paused
+00:05 +34: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 storm_b_exit_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/storm_b_exit_711.png: 116434 bytes
+Sound: lifecycle paused
+00:05 +35: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 storm_c_fly_mid_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/storm_c_fly_mid_711.png: 88090 bytes
+Sound: lifecycle paused
+00:05 +36: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 storm_d_glide_start_711
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/storm_d_glide_start_711.png: 50653 bytes
+Sound: lifecycle paused
+00:05 +37: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 volcano_a_ride_568
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/volcano_a_ride_568.png: 189843 bytes
+Sound: lifecycle paused
+00:05 +38: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 volcano_b_exit_568
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/volcano_b_exit_568.png: 40649 bytes
+Sound: lifecycle paused
+00:06 +39: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 volcano_c_fly_mid_568
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/volcano_c_fly_mid_568.png: 45397 bytes
+Sound: lifecycle paused
+00:06 +40: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 volcano_d_glide_start_568
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/volcano_d_glide_start_568.png: 43512 bytes
+Sound: lifecycle paused
+00:06 +41: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 sea_a_ride_568
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/sea_a_ride_568.png: 112448 bytes
+Sound: lifecycle paused
+00:06 +42: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 sea_b_exit_568
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/sea_b_exit_568.png: 59711 bytes
+Sound: lifecycle paused
+00:06 +43: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 sea_c_fly_mid_568
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/sea_c_fly_mid_568.png: 50484 bytes
+Sound: lifecycle paused
+00:06 +44: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: §18 sea_d_glide_start_568
+Sound: lifecycle resumed
+versus: solo (auth, 0 reads)
+SHOT build/menu_shots/p22/s18/sea_d_glide_start_568.png: 48416 bytes
+Sound: lifecycle paused
+00:07 +45: /home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/test/p22/s18_portal_rides_shots_test.dart: (tearDownAll)
+00:07 +45: All tests passed!

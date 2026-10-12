@@ -291,3 +291,43 @@ What the next WP should build in `SoundService`:
    If the wrapper still shows stalls on the Pixel 8, take the flutter_soloud spike next.
 
 The Home idle CPU (§33.4 item 5) is the larger, separate win: most of the 80 % of a core is Flame rendering an unchanging Home at 60 fps (main ≈ 38 % plus raster ≈ 28 % in the trace, plus the Vulkan helper threads).
+
+## 2d. Final merged-build device QA (2026-10-12, `g7-qadev`)
+
+Production revision `a92835f`. Same Pixel 8 / Android 17 / hub / charging / 60 Hz setup, profile `FS_SOAK`, brightness 128. Start skin **26.86 °C**, battery **25.3 °C**, thermal **0** (baseline live skin 25.8 / battery 24.0). Native game prefs remain in memory. Every game reached 10 hoops; bonus games 3/8/13/18 and CLAIM paths are in the log. Driver duration **1,215.4 s**. Brightness restored to auto (1), value 3.
+
+The merged build includes the native test banner and test interstitials. The legacy driver required the host to close interstitial × buttons: seven close taps, including end-card closes, recorded in `device/interactions.jsonl` and `device/soak_ad_watch.txt`. No ad-content, consent, billing or sign-in taps. This is an intentional test of the complete merged flow; the 2.1 baseline had no interstitial flow.
+
+Raw evidence: [CSV](perf/final-qa/soak.csv), [JSON](perf/final-qa/soak.json), [logcat](perf/final-qa/logcat.txt), [raw dumps](perf/final-qa/raw/), [commands](device/commands.md). The 40 s game-10 Perfetto trace is retained locally at `perf/final-qa/trace_g10.perfetto-trace` (gitignored). `device/soak` links to this dataset.
+
+| Metric | QA 1 | QA 2 | QA 5 | QA 10 | QA 20 | 2.1 at 20 |
+| --- | --- | --- | --- | --- | --- | --- |
+| PSS total (MB) | 439.1 | 446.0 | 491.0 | 495.3 | 509.2 | 432.7 |
+| Native heap (MB) | 62.3 | 62.6 | 60.1 | 51.3 | 51.3 | 34.3 |
+| Graphics (MB) | 187.3 | 193.1 | 220.6 | 221.9 | 227.4 | 213.5 |
+| Java heap (MB) | 20.9 | 21.7 | 26.5 | 27.7 | 30.5 | 15.7 |
+| Live native players | 70 | 76 | 82 | 94 | 96 | 78 |
+| Pool voices | 69 | 75 | 81 | 93 | 95 | 44 |
+| Pools | 24 | 26 | 28 | 34 | 35 | 33 |
+| Evictions | 0 | 0 | 15 | 24 | 44 | – |
+| Threads | 163 | 159 | 163 | 167 | 168 | 137 |
+| Home idle CPU (% of one core) | 50.0 | 55.6 | 55.8 | 50.1 | 56.5 | 84.4 |
+| Home position polls/s | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 60.0 |
+| Run p90 (ms) | 12.79 | 13.29 | 14.36 | 15.89 | 14.73 | 13.72 |
+| Run slow frames (>12.5ms, %) | 11.7 | 13.5 | 18.3 | 23.4 | 20.0 | 20.0 |
+| Thermal status | 0 | 0 | 0 | 0 | 0 | 0 |
+| Battery temperature (°C) | 25.2 | 25.3 | 25.4 | 25.9 | 26.5 | 25.3 |
+
+| §33.6 criterion | 2.1 comparison | **Final QA verdict (new gate column)** |
+| --- | --- | --- |
+| PSS ≤10% above game 2 | 419.8 →432.7 MB (+3.1%) | **FAIL:** 446.0 →509.2 MB, **+14.17%**, limit 490.6 MB. Game 5 already +10.11%, game 10 +11.07%. |
+| Native player count flat from game 2 | 38 →78, 34 leaked voices at game 20 | **FAIL literally:** **76 →82 →94 →96**. Bounded but not flat. Live = pool voices +1 music at every hold; **no unowned/leaked voices observed**. 44 pool evictions /123 native disposals. |
+| Home CPU clearly below 2.1; no audio polling | 80.5% at 2, 84.4% at 20; 60 polls/s | **PASS:** 50.0–56.5%; game 20 **56.5%** (−27.9 points), **0 polls/s** at every hold and 0 total position polls. |
+| No moderate thermal status | status 0 at every sample | **PASS:** all five samples **0**; battery 25.2–26.5 °C, final skin 28.22 °C. |
+| Game-20 p90 / slow% same as game 1 and no worse than 2.1 | 2.1: 10.57 →13.72 ms; 5.4 →20.0% slow | **FAIL as measured:** QA **12.79 →14.73 ms (+15.17%)**, **11.7 →20.0%** slow. Final p90 **+7.36%** vs baseline game 20; slow% equal to baseline. |
+
+**Release gate: FAIL (3 of 5 criteria).** No production fix in this tester work package. See `QA_DEVICE.md`, S7-19. Player-count variation follows lazy-pool warming/eviction and is not evidence of the old release-only leak. The criterion is judged literally without inventing a tolerance. One final run establishes the measured failure, not a statistical diagnosis or its cause.
+
+Flutter frame timings are the run metric. Unlike the old baseline, HWUI now reports some frames (the native banner); they are not substituted for the Flutter surface timings. At game 20 build90 /raster90 are 4.41 /5.21 ms; the greater total-span p90 is not attributed to a component without trace analysis.
+
+§22 native stop evidence in this soak: `perfect_3` **12 copies, 2,400–2,411 ms**; `perfect_2` 20, 1,500–1,506 ms; `perfect_1` 59, 1,000–1,017 ms; `lv_claim` 4, 1,500–1,504 ms. No 0.6 s truncation for these cues. Oldest-copy steals on burst pools are counted separately (327 at game 20).

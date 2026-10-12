@@ -1,0 +1,388 @@
+
+> test
+> bash scripts/test.sh
+
+npm warn install-scripts .npmrc allow-scripts setting is being ignored because --allow-scripts was passed on the command line
+i  emulators: Starting emulators: auth, functions, firestore
+i  emulators: Detected demo project ID "demo-flappy-spikes", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+i  firestore: Firestore Emulator logging to firestore-debug.log
+✔  firestore: Firestore Emulator was started in standard edition.
+✔  firestore: Firestore Emulator UI websocket is running on 9150.
+i  functions: Watching "/home/killerhis/Projects/flappyspikes/.worktrees/g7-qadev/functions" for Cloud Functions...
+⚠  functions: Your requested "node" version "22" doesn't match your global version "26". Using node@26 from host.
+Serving at port 8181
+
+✔  functions: Loaded functions definitions from source: onPlayerRunWrite, deleteMyData, sweepPools.
+✔  functions[europe-west1-onPlayerRunWrite]: firestore function initialized.
+✔  functions[europe-west1-deleteMyData]: http function initialized (http://127.0.0.1:5001/demo-flappy-spikes/europe-west1/deleteMyData).
+i  functions[europe-west1-sweepPools]: function ignored because the pubsub emulator does not exist or is not running.
+i  Running script: npm --prefix functions run --silent test:emulated -- 
+
+
+  PRD-2.2 §13.5 convertPools (emulator)
+(node:3918922) MetadataLookupWarning: received unexpected error = All promises were rejected code = ETIMEDOUT, ENOTFOUND
+(Use `node --trace-warnings ...` to show where the warning was created)
+    ✔ §13.7 converts v1 entries in place (value 1, same score, flags kept), leaves v2 alone, is idempotent (4601ms)
+    ✔ §13.5 a dry run writes nothing (455ms)
+
+  §3.13 onPlayerRunWrite (emulated trigger)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+>  {"uid":"live-mv4qdzwo-18-686697","accepted":["e2e-mv4qdzwo-19-463998"],"rejected":[],"pool":"5_3","severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 312.047772ms
+    ✔ §3.13 a client upload of a new best lands in the pool of its level (2287ms)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+>  {"uid":"cheat-mv4qe1o7-20-402801","accepted":[],"rejected":[{"runId":"e2e-mv4qe1o7-21-791761","reason":"gap"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 49.430216ms
+    ✔ §3.13 a cheated timeline (points 0.5 s apart) is rejected and never reaches a pool (274ms)
+
+  §3.13 deleteMyData (emulated callable, App Check enforced)
+i  functions: Beginning execution of "europe-west1-deleteMyData"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-deleteMyData" in 19.02231ms
+    ✔ §3.13 refuses a call without an App Check token (1053ms)
+i  functions: Beginning execution of "europe-west1-deleteMyData"
+>  {"verifications":{"app":"VALID","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-deleteMyData" in 6.307027ms
+    ✔ §3.13 refuses a call without auth (459ms)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+>  {"uid":"bye-mv4qe31u-22-536146","accepted":["e2e-mv4qe330-23-699231"],"rejected":[],"pool":"5_0","severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 36.960752ms
+i  functions: Beginning execution of "europe-west1-deleteMyData"
+>  {"verifications":{"app":"VALID","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 6.509767ms
+>  {"uid":"bye-mv4qe31u-22-536146","removed":1,"severity":"INFO","message":"deleteMyData"}
+i  functions: Finished "europe-west1-deleteMyData" in 335.438427ms
+i  functions: Beginning execution of "europe-west1-deleteMyData"
+>  {"verifications":{"app":"VALID","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+>  {"uid":"bye-mv4qe31u-22-536146","removed":0,"severity":"INFO","message":"deleteMyData"}
+i  functions: Finished "europe-west1-deleteMyData" in 80.76743ms
+    ✔ §3.13 deletes the player doc, their pool entries and the Auth user; idempotent (740ms)
+
+  §3.13 level recompute (levels.ts ↔ levels.dart)
+    ✔ §3.13 thresholds equal kLevels in lib/levels/levels.dart
+    ✔ §3.13 levelFor matches Dart levelFor at the boundaries
+
+  §3.13 matching fixture (shared with the Dart matcher)
+    ✔ §3.13 same level and below my best wins over any other run
+    ✔ §3.13 a score equal to my best is not beatable, so it is not a level match
+    ✔ §3.13 no run at my level: any stored run (other levels, higher scores)
+    ✔ §3.13 never my own runs
+    ✔ §3.13 only my own runs: solo
+    ✔ §3.13 a run met earlier this session is not repeated
+    ✔ §3.13 every candidate already met: solo
+    ✔ §3.13 empty pool (offline / not loaded): solo
+    ✔ §3.13 new player with best 0: no level match is beatable, any run is used
+    ✔ §3.13 platform is never used for matching (an iOS run matches an Android player)
+
+  PRD-2.2 §3 search order
+    ✔ §3 every shard of my level first, then the other levels nearest first (lower before higher); 44 ids, each once
+
+  PRD-2.2 §3 search fixture (shared with the Dart matcher)
+    ✔ §3 sparse pool: one run in one shard of my level is found within my level's 4 reads
+    ✔ §3 own uid only everywhere: solo after reading all 44 shards
+    ✔ §3 other-level hit: my level empty, the nearest level with a run wins (level 4 at distance 1 before level 1 at distance 2)
+    ✔ §3 at the same distance the lower level is read first
+    ✔ §3 a shard with only my own run is skipped; the next usable shard of my level is the hit
+    ✔ §3 runs met this session do not count as a hit
+    ✔ §3 level 0 player: own level, then 1, 2, … upward
+    ✔ §3 top level player: own level 10, then 9, 8, … downward
+    ✔ §3 all pools empty: solo after 44 reads
+    ✔ §3 the read cap stops a search early
+
+  §3.13 matching on server-built pools
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 4.422208ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 4.971947ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 4.648262ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 4.751506ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 5.322754ms
+    ✔ §3.13 runs land in a shard of the uploader level; all 4 shards are used; no self-match (204ms)
+
+  QA round P1
+    ✔ S6-08 a delayed write after Delete my data leaves no pool or rate data (92ms)
+
+  PRD-2.2 §13.5 QA P1 shared boundary fixtures
+    ✔ ordinary passes at the minimum gap
+    ✔ Bullseye bonus at the same time as a pass
+    ✔ bonus before a pass with two seconds between hoops
+    ✔ chick piggy payout at approved cap
+    ✔ bonus one point above approved cap
+    ✔ puzzle completion bonus doubled by the chick at its cap
+    ✔ puzzle completion bonus undoubled maximum
+    ✔ forged puzzle completion bonus above its cap
+    ✔ puzzle-sized value without the puzzle flag
+    ✔ chick pair gift at its cap
+    ✔ forged pair gift above cap
+    ✔ FEVER jump and chick values
+    ✔ forged first hoop beyond plausibility cap
+    ✔ ordinary passes below minimum gap
+    ✔ a bonus between two too-close passes does not hide the gap
+    ✔ puzzle bonus between two too-close passes does not hide the gap
+    ✔ a bonus before the first pass
+    ✔ a bonus right after a pass, next pass at the minimum gap
+
+  §3.13 onPlayerRunWrite: accept
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.668808ms
+    ✔ §3.13 a new best run goes to a shard of the server-recomputed level, newest first (49ms)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.520019ms
+    ✔ §3.13 the player older entries are removed from the shard (dedupe per uid) (61ms)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+    ✔ §3.13 a profile-only write (no new run) touches no pool
+    ✔ §3.13 a deleted player doc is a no-op
+
+  §3.13 onPlayerRunWrite: cheat filter rejects
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.554394ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.289418ms
+    ✔ §3.13 rejects: timeline length ≠ score
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.311539ms
+    ✔ §3.13 rejects: two points < 0.9 s apart
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.788913ms
+    ✔ §3.13 rejects: best < score (player)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.999888ms
+    ✔ §3.13 rejects: best < score (entry) (38ms)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.500263ms
+    ✔ §3.13 rejects: score under 3 (40ms)
+
+  §3.13 onPlayerRunWrite: upload rate (3 a day, best always)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.267877ms
+    ✔ §3.13 the 4th non-best run of a UTC day is rejected; a new best still goes; the next day resets (149ms)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.844466ms
+    ✔ §3.13 a retried event (same runId) is not counted twice (59ms)
+
+  §3.13 pool shard limits
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 4.488462ms
+    ✔ §3.13 a shard is trimmed to 150 entries, newest first (137ms)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.554444ms
+    ✔ §3.13 a shard stays under 900 KB with long timelines (133ms)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.043838ms
+    ✔ §3.13 entries older than 60 days are dropped on write (48ms)
+    ✔ §3.13 sweepPools trims > 60-day entries in every shard (113ms)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+>  {"uid":"recent-mv4qe4lg-87-562437","accepted":[],"rejected":[{"runId":"run-mv4qe4lh-89-209819","reason":"low_score"},{"runId":"run-mv4qe4lh-88-237740","reason":"low_score"}],"trimmedRecent":1,"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 2036.715387ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 4.221062ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+    ✔ §3.13 recent runs older than 60 days are trimmed from the player doc (2859ms)
+
+  §3.13 deleteMyData (data part)
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.551548ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 2.896543ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.391539ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.523536ms
+    ✔ §3.13 removes the player doc, the rate doc and the entries in every shard; idempotent (249ms)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 5.088726ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.154656ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 3.078373ms
+    ✔ S6-61 a failure inside the deletion deletes nothing; a retry completes it (169ms)
+
+  §3.13 rules: players/{uid}
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+>  {"uid":"own-mv4qe74i-98-834731","accepted":[],"rejected":[{"runId":"r-mv4qe74i-99-430037","reason":"low_score"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 27.199839ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 4.132506ms
+    ✔ §3.13 a player can create, read, update and delete their own doc (158ms)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 2.624433ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+>  {"uid":"owner-mv4qe78x-100-362117","accepted":[],"rejected":[{"runId":"r-mv4qe78y-101-536555","reason":"low_score"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 42.439848ms
+[2026-10-12T04:07:39.950Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b7996 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L115, false for 'create' @ L129, false for 'update' @ L118, false for 'update' @ L129
+[2026-10-12T04:07:39.963Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b7997 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'delete' @ L114, false for 'delete' @ L129
+    ✔ §3.13 a player cannot read or write another player doc (139ms)
+[2026-10-12T04:07:40.000Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b7998 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L115, false for 'create' @ L129, false for 'update' @ L118, false for 'update' @ L129
+    ✔ §3.13 unauthenticated clients are denied (50ms)
+[2026-10-12T04:07:40.067Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b799a error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with an unknown field (53ms)
+[2026-10-12T04:07:40.120Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b799b error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with an empty name (52ms)
+[2026-10-12T04:07:40.173Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b799c error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with a name over 32 chars (53ms)
+[2026-10-12T04:07:40.235Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b799d error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with level 11 (62ms)
+[2026-10-12T04:07:40.283Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b799e error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with an unknown platform (48ms)
+[2026-10-12T04:07:40.323Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b799f error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with a look with a missing id (39ms)
+[2026-10-12T04:07:40.360Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79a0 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L115, false for 'create' @ L129, false for 'update' @ L118, false for 'update' @ L129
+    ✔ §3.13 rejects a player doc with a client-chosen updatedAt
+[2026-10-12T04:07:40.400Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79a1 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with no expireAt (40ms)
+[2026-10-12T04:07:40.438Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79a2 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with an expireAt not ~60 days ahead (38ms)
+[2026-10-12T04:07:40.481Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79a3 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with 6 recent runs (42ms)
+[2026-10-12T04:07:40.522Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79a4 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with a bestRun that is not recent[0] (40ms)
+[2026-10-12T04:07:40.566Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79a5 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with a recent run with an extra field (44ms)
+[2026-10-12T04:07:40.614Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79a6 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with a recent run with best < score (48ms)
+[2026-10-12T04:07:40.653Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79a7 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with a recent run above the player best (39ms)
+[2026-10-12T04:07:40.693Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79a8 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with a bestRun above the player best (40ms)
+[2026-10-12T04:07:40.731Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79a9 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with a timeline over 16 KB (38ms)
+[2026-10-12T04:07:40.768Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79aa error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with flags over 8 KB
+[2026-10-12T04:07:40.806Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79ab error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with a run name over 32 chars (38ms)
+[2026-10-12T04:07:40.845Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79ac error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 rejects a player doc with a non-int score (39ms)
+    ✔ §3.13 accepts a create holding one run (bestRun == recent[0]) with a long timeline (46ms)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+>  {"uid":"full-mv4qe81a-143-459622","accepted":[],"rejected":[{"runId":"r-mv4qe81a-144-558550","reason":"version"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 24.233475ms
+[2026-10-12T04:07:40.929Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79ae error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'create' @ L115, false for 'create' @ L129
+    ✔ §3.13 one new run per write: a create with two runs is rejected
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+>  {"uid":"series-mv4qe83m-150-80237","accepted":[],"rejected":[{"runId":"r-mv4qe83m-151-460192","reason":"low_score"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 25.69456ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+>  {"uid":"series-mv4qe83m-150-80237","accepted":[],"rejected":[{"runId":"r-mv4qe84t-153-409542","reason":"low_score"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 30.215954ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+>  {"uid":"series-mv4qe83m-150-80237","accepted":[],"rejected":[{"runId":"r-mv4qe85j-155-710632","reason":"low_score"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 38.641116ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+>  {"uid":"series-mv4qe83m-150-80237","accepted":[],"rejected":[{"runId":"r-mv4qe869-157-241157","reason":"low_score"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 31.695184ms
+[2026-10-12T04:07:41.196Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79af error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'update' @ L118, false for 'update' @ L129
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+[2026-10-12T04:07:41.232Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79b0 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'update' @ L118, false for 'update' @ L129
+[2026-10-12T04:07:41.255Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79b1 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'update' @ L118, false for 'update' @ L129
+>  {"uid":"series-mv4qe83m-150-80237","accepted":[],"rejected":[{"runId":"r-mv4qe86w-159-510543","reason":"low_score"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 43.814381ms
+[2026-10-12T04:07:41.283Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79b2 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'update' @ L118, false for 'update' @ L129
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+    ✔ §3.13 a long series of single-run updates stays valid (5 recent + a best, long timelines) (378ms)
+>  {"uid":"series-mv4qe83m-150-80237","accepted":[],"rejected":[{"runId":"r-mv4qe87t-161-681245","reason":"low_score"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 41.146347ms
+[2026-10-12T04:07:41.363Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79b4 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L115:24 for 'create' @ L115, false for 'create' @ L129, evaluation error at L118:24 for 'update' @ L118, false for 'update' @ L129, false for 'update' @ L118, false for 'update' @ L129
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+    ✔ §3.13 the best score cannot go down (71ms)
+
+  §3.13 rules: pools and everything else
+>  {"uid":"series-mv4qe83m-150-80237","accepted":[],"rejected":[{"runId":"r-mv4qe88h-163-190419","reason":"low_score"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 38.102658ms
+[2026-10-12T04:07:41.443Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79b8 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L125, false for 'create' @ L129, false for 'update' @ L125, false for 'update' @ L129
+[2026-10-12T04:07:41.452Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79b9 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L125, false for 'create' @ L129, false for 'update' @ L125, false for 'update' @ L129
+[2026-10-12T04:07:41.458Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79ba error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'delete' @ L125, false for 'delete' @ L129
+    ✔ §3.13 signed-in clients can read a pool but never write one (78ms)
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+    ✔ §3.13 unauthenticated clients cannot read pools
+>  {"uid":"series-mv4qe83m-150-80237","accepted":[],"rejected":[{"runId":"r-mv4qe89a-165-163169","reason":"low_score"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 34.433539ms
+[2026-10-12T04:07:41.518Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79bd error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L129, false for 'update' @ L129
+[2026-10-12T04:07:41.525Z]  @firebase/firestore: Firestore (13.0.0): GrpcConnection RPC 'Write' stream 0x393b79be error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L129, false for 'update' @ L129
+    ✔ §3.13 the server rate docs and unknown collections are denied (41ms)
+
+  §3.13 / PRD-2.2 §13.5 timeline codec (v2)
+    ✔ §3.13 tl round-trips uint16 LE centisecond deltas through base64
+    ✔ §3.13 malformed base64 or an odd byte count does not decode
+    ✔ §13.5 fl v2 round-trips flags and uint16 values; v1 / zero values do not decode
+    ✔ §13.5 scoreAt sums the values on run time
+    ✔ §13.7 the shared fixture: the Dart-recorded v2 run validates and replays (Dart record → TS validate → Dart replay)
+
+  §3.13 / PRD-2.2 §13.5 cheat filter (checkRun)
+    ✔ §3.13 a plain run with entries ≥ 0.9 s apart passes
+    ✔ §3.13 malformed display fields are rejected (the function re-checks what the rules bound loosely)
+    ✔ §3.13 runs under score 3 are rejected (3 points)
+    ✔ §13.5 a v1 upload (one flag byte per point) is rejected
+    ✔ §13.5 sum of values ≠ score is rejected
+    ✔ §3.13 fl entry count ≠ tl entry count is rejected
+    ✔ §3.13 two plain entries < 0.9 s apart are rejected
+    ✔ §3.13 the first entry has no gap check (time from run start)
+    ✔ §3.13 / §13.5 ride / train / gift / bonus entries are exempt from the 0.9 s gap
+    ✔ §13.5 plausibility: a pass worth more than 2 × (passes + 5) → count
+    ✔ §13.5 plausibility: a bonus above the bonus cap → count
+    ✔ §13.5 plausibility: a gift above 2 × 5 → count
+    ✔ §13.5 plausibility: values that do not sum to the score → count
+    ✔ §13.5 plausibility: a bonus entry above 80 (2 × the 40-coin piggy) → count
+    ✔ §13.5 plausibility: a puzzle completion entry above 500 (2 × 250) → count
+    ✔ §13.5 plausibility: the largest plausible values pass → accepted
+    ✔ §3.13 best < score is rejected (entry best and player best)
+
+  PRD-2.2 §13.5 v1 → v2 pool conversion
+    ✔ §13.7 the fixture v1 run becomes the v2 run: value 1 per entry, same score, flags kept, same replay
+    ✔ §13.5 idempotent: a v2 run is left alone; a malformed run is skipped
+
+
+  121 passing (17s)
+
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+>  {"uid":"series-mv4qe83m-150-80237","accepted":[],"rejected":[{"runId":"r-mv4qe8dg-176-745694","reason":"low_score"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 26.916648ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+✔  Script exited successfully (code 0)
+>  {"uid":"best-mv4qe8e4-178-411909","accepted":[],"rejected":[{"runId":"r-mv4qe8e4-179-665588","reason":"low_score"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 22.313411ms
+i  functions: Beginning execution of "europe-west1-onPlayerRunWrite"
+>  {"uid":"best-mv4qe8e4-178-411909","accepted":[],"rejected":[{"runId":"r-mv4qe8fn-181-734109","reason":"low_score"}],"severity":"INFO","message":"onPlayerRunWrite"}
+i  functions: Finished "europe-west1-onPlayerRunWrite" in 21.236434ms
+i  emulators: Shutting down emulators.
+i  functions: Stopping Functions Emulator
+i  firestore: Stopping Firestore Emulator
+i  auth: Stopping Authentication Emulator
+i  eventarc: Stopping Eventarc Emulator
+i  tasks: Stopping Cloud Tasks Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator

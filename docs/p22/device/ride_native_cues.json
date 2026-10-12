@@ -1,0 +1,33 @@
+{
+  "cannon": {
+    "puCannonAim": true,
+    "puCannonShot": true
+  },
+  "pinball": {
+    "rdPinBumper": true,
+    "rdPinFlipper": true,
+    "rdPinJackpot": true,
+    "rdPinPlunger": true
+  },
+  "sea": {
+    "rdSeaBubble": true,
+    "rdSeaSplash": true,
+    "rdSeaSpout": true,
+    "rdSeaWhale": true,
+    "rdSpaceLand": true
+  },
+  "space": {
+    "rdSpaceLand": true,
+    "rdSpacePop": true,
+    "rdSpaceRocket": true
+  },
+  "storm": {
+    "rdStormThunder": true,
+    "rdStormUmbrella": true,
+    "rdStormWind": true
+  },
+  "volcano": {
+    "rdVolcErupt": true,
+    "rdVolcRumble": true
+  }
+}

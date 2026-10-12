@@ -189,11 +189,11 @@ void main() {
     });
 
     test(
-      '§7 every cue is handed to the pool path (loads through AudioPool)',
+      '§7 every cue is handed to the pool path (loads through SfxPool)',
       () async {
         final requested = <String>[];
         final sound = SoundService()
-          ..poolFactory = (file, legacy) async {
+          ..voiceFactory = (file) async {
             requested.add(file);
             return null; // never ready: stays silent, no plugin call
           };
@@ -209,9 +209,9 @@ void main() {
             reason: '$sfx was never sent to the pool factory',
           );
         }
-        // The loops never go through the [AudioPool] factory: they are owned by
+        // The loops never go through the [SfxPool] voice factory: they are owned by
         // the [_LoopPlayer] seam (asserted by the loop test below). Every one-shot
-        // cue above must, though, so nothing bypasses AudioPool.
+        // cue above must, though, so nothing bypasses the pools.
       },
     );
 

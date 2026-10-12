@@ -1125,6 +1125,39 @@ class Config {
   /// my data", which clears the stored key. A stored volume always wins.
   static const double defaultMusicVolume = 0.25;
 
+  // --- Sound pools (PRD-2.2 §22, §33.4) -------------------------------------
+
+  /// §22.1: a one-shot play is stopped (its voice returned) after the file's
+  /// length from `kSoundDurations` plus this margin.
+  static const int sfxStopMarginMs = 100;
+
+  /// §22.2: release fallback length for a file missing from
+  /// `kSoundDurations` (debug asserts instead) — never a silent 0.6 s cut.
+  static const int sfxMissingLengthMs = 1000;
+
+  /// §22.1: sounds longer than this get [sfxVoicesLong] players.
+  static const int sfxLongSoundMs = 1000;
+
+  /// §22.1 / §33.4 item 1: the fixed (hard-capped) number of players per
+  /// sound, all created up front. Default 2, > 1 s 3, the 1.0 gameplay
+  /// sounds 4, the burst cues (coin landings, ticks, piggy coins) 6. When
+  /// every player is busy the oldest copy is stopped and reused.
+  static const int sfxVoicesDefault = 2;
+  static const int sfxVoicesLong = 3;
+  static const int sfxVoicesLegacy = 4;
+  static const int sfxVoicesBurst = 6;
+
+  /// §33.4 item 3: a pool (not in `SoundService.prewarmed`) that has not
+  /// played for this long is disposed (its players too) ...
+  static const int sfxPoolIdleDisposeMs = 180000;
+
+  /// ... and at most this many pools stay alive (least recently used idle
+  /// pools go first). With ≤ 6 players each this bounds the native players.
+  static const int sfxMaxLivePools = 40;
+
+  /// §33.4 item 3: the idle check runs at most this often (from `play`).
+  static const int sfxTrimIntervalMs = 5000;
+
   /// Rows relative to the playfield centre, from the mock at 711 (centre
   /// 355.5): title line box top 140 (centre 158), SOUND EFFECTS 235, MUSIC
   /// 295, RUMBLE 355, credit top 405 (centre 414.6).

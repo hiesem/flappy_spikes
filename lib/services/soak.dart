@@ -50,6 +50,13 @@ class SoakDriver {
     void Function(String line)? log,
   }) : _log = log ?? ((l) => debugPrint(l));
 
+  /// PRD-2.2 §22 device check (`SoundService.debugOnStop`): long sounds must
+  /// run to their full length (they were cut at 0.6 s); logs every play of
+  /// > 0.6 s when its stop timer fires.
+  void onSfxStop(String file, int ms) {
+    if (ms > 600) _log('$kSoakTag sfx-stop file=$file ms=$ms');
+  }
+
   final FlappySpikesGame game;
   final int games;
   final int holdSeconds;

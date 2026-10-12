@@ -558,7 +558,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onResolved: _dismissPendingToast,
     )..start();
     sound = SoundService(muted: storage.muteSound, enabled: soundEnabled);
-    if (kSoak && soundEnabled) soak = SoakDriver(this); // P22-33 §33.3
+    if (kSoak && soundEnabled) {
+      // P22-33 §33.3 (+ the §22 stop-timing log)
+      final d = soak = SoakDriver(this);
+      sound.debugOnStop = d.onSfxStop;
+    }
     rumble.on = storage.rumble;
     // Background music: persisted volume, then start the loop (everywhere —
     // menus and gameplay). Guarded/unawaited: no-ops in headless tests.

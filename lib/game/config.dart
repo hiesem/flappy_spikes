@@ -626,9 +626,9 @@ class Config {
   /// was 28 pt shorter than the 72 pt run strip in 1.0/2.0 menus).
   static const double menuSpikeInset = 0;
 
-  /// Skin tint during runs at stages >= 5: lerp(mockColor, stageFg, this).
-  /// 0 in menus and at stage 0 (identity colours, as mocked).
-  static const double skinStageBlend = 0.35;
+  // PRD-2.2 §20: the run bird keeps its own colours at every stage, so the
+  // old stage blend (0.35 toward the stage foreground from stage 5) is gone.
+  // Only the themed death tints (`Bird.deathTint`, PRD-2 §5.17) blend a look.
 
   /// Height of the menus' short spike strips (spike tips 44 pt from the
   /// edge).

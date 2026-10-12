@@ -16,10 +16,10 @@ import 'look_component.dart';
 /// centre sits on the physics body centre — the 1.0 bird box, so the hitbox
 /// and physics are independent of the look (PRD-menu-v2 §3.1/§3.8).
 ///
-/// The look follows `menu.items` while any bird is on screen; the run bird
-/// blends 35 % toward the stage foreground from stage 5 ([LookComponent.blend],
-/// `Config.skinStageBlend`). Death keeps the look and switches to the frozen
-/// dead pose, so hat and gear tumble with the body.
+/// The look follows `menu.items` while any bird is on screen. The run bird
+/// keeps its own colours at every colour stage (PRD-2.2 §20: no stage blend);
+/// only a themed death tints it ([deathTint]). Death keeps the look and
+/// switches to the frozen dead pose, so hat and gear tumble with the body.
 ///
 /// PRD-2 (WP-1a): Forge2D only integrates the vertical motion (gravity, a
 /// flap sets vy −370, max fall 650); every contact — rim ends, pass plane,
@@ -282,13 +282,11 @@ class Bird extends BodyComponent<FlappySpikesGame>
   @override
   void update(double dt) {
     super.update(dt);
-    // Identity colours in menus / stages 0-4, blended toward the stage
-    // foreground from stage 5 (follows the colour crossfade).
-    // WP-3d: a themed death's tint (charred / frozen / X-ray) wins.
+    // The true colours at every stage (PRD-2.2 §20). A themed death's tint
+    // (charred / frozen / X-ray, WP-3d) is the only blend of the look.
     final tint = deathTint;
-    _look
-      ..blend = tint != null ? deathTintAmount : game.skinBlend
-      ..blendColor = tint ?? game.foregroundColor;
+    _look.blend = tint != null ? deathTintAmount : 0;
+    if (tint != null) _look.blendColor = tint;
     // Terminal velocity (Flappy Bird feel): cap the fall speed so dives stay
     // recoverable. The death toss is exempt — it should tumble freely.
     if (!_dead && game.state == GameState.playing) {

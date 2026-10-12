@@ -6,6 +6,9 @@ import 'package:flame/components.dart';
 abstract final class RunLayer {
   static const int backdrop = -1000;
   static const int scoreCircle = -100;
+  /// PRD-2.2 §12.2: every run banner and the collect stickers, screen-anchored
+  /// (`RunBannerLayer`): above the score circle, below the guides and the bird.
+  static const int banners = -60;
   static const int guides = -20;
   static const int hoopBack = -10;
   static const int deadBird = -7;

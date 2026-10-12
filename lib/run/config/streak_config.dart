@@ -102,8 +102,9 @@ abstract final class StreakConfig {
   /// `screen_fire_choice2.html` (trail → halo → flames → bird).
   static const int trailPriority = RunLayer.bird - 2;
 
-  /// §3.0.9 #7 / §5.4 The banner band: over every run effect, under the
-  /// HUD pills (19 / 21).
+  /// §3.0.9 #7 / §5.4 The banner band's priority inside the run's banner
+  /// layer (PRD-2.2 §12.2: the layer itself is in the world at
+  /// `RunLayer.banners`, behind the gameplay; the stickers sit under it).
   static const int bannerPriority = 18;
 
   /// §5.3 The graze notice: same band as the banners.

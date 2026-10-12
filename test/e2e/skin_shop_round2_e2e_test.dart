@@ -258,7 +258,7 @@ void main() {
       game.run!.debugPass();
     }
     stepGame(game, .55, flapBelow: game.viewHeight / 2);
-    expect(bird.lookComponent.blend, closeTo(.35, 1e-6));
+    expect(bird.lookComponent.blend, 0); // PRD-2.2 §20: no stage blend
     // A real spike collision, then the existing results REPLAY action.
     stepGame(game, 2);
     await flushAndMount(game);

@@ -8,6 +8,7 @@ import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/effects/particle_pool.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/hud/banners.dart';
+import 'package:flappy_spikes/run/hud/run_hud.dart';
 import 'package:flappy_spikes/run/items/extra_life.dart';
 import 'package:flappy_spikes/run/items/invulnerability.dart';
 import 'package:flappy_spikes/run/items/shield.dart';
@@ -291,8 +292,8 @@ void main() {
       setUp: (g, _) => boot(g),
       verify: (game, _) async {
         final run = await startRun(game);
-        final host = BannerHost();
-        game.camera.viewport.add(host);
+        // PRD-2.2 §12: the run's banner host (in the banner layer).
+        final host = RunHud.of(run)!.banners;
         await flushAndMount(game);
         run.state.shield = true;
         run.mistake(const Mistake(MistakeCause.missedHoop));

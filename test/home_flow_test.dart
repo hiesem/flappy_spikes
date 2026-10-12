@@ -604,7 +604,7 @@ void main() {
     );
 
     homeTest(
-      'run blend: 0 at stage 0, Config.skinStageBlend from stage 5',
+      'run bird keeps its true colours at stage 5 (PRD-2.2 §20)',
       prefs: const {
         'ownedItems': ['bird:robin'],
         'equippedItem.bird': 'robin',
@@ -619,16 +619,12 @@ void main() {
           game.run!.debugPass();
         }
         // 60 fps frames (a single long update is clamped to maxFrameStep).
-        stepGame(game, 0.25); // halfway through the 0.5 s crossfade
-        expect(game.skinBlend, closeTo(Config.skinStageBlend / 2, 1e-9));
-        stepGame(game, 0.5);
-        expect(game.skinBlend, Config.skinStageBlend);
+        stepGame(game, 0.75); // past the colour crossfade
+        expect(game.foregroundColor, kPalettes[5]!.foreground);
         game.update(0);
-        // The bird draws the true colours mixed Config.skinStageBlend toward
-        // the stage foreground (LookComponent applies the blend at draw
-        // time; look_visual_test checks the rendered pixels).
-        expect(bird.lookComponent.blend, Config.skinStageBlend);
-        expect(bird.lookComponent.blendColor, kPalettes[5]!.foreground);
+        // No stage blend any more: the look is drawn in its own colours
+        // (look_visual_test checks the rendered pixels).
+        expect(bird.lookComponent.blend, 0);
       },
     );
   });

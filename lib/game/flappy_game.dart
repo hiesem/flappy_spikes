@@ -416,12 +416,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   (IapProduct, ServiceMessage)? _pendingToast;
   bool _runStarting = false;
 
-  // Skin tint blend (see Config.skinStageBlend): follows the colour
-  // crossfade from _skinBlendFrom to _skinBlendTo.
-  double _skinBlend = 0;
-  double _skinBlendFrom = 0;
-  double _skinBlendTo = 0;
-
   /// Back handlers, topmost last (settings, debug panel; later the Shop,
   /// Skins and popups). Esc pops the topmost. Each returns true when it
   /// handled the back press.
@@ -601,9 +595,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// The fake rewarded-ad overlay while it is up (null otherwise).
   FakeAdOverlay? get fakeAdOverlay => _fakeAd;
-
-  /// Current skin blend toward the stage foreground (0 in menus).
-  double get skinBlend => _skinBlend;
 
   // Any letterbox slivers (only on screens beyond the viewHeight clamp, e.g.
   // tablets) are painted with the FOREGROUND tint so they read as an
@@ -1573,7 +1564,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final key = paletteKeyForStageIndex(stageIndex);
     if (key == _stage) return;
     _stage = key;
-    _startColorFade(paletteForStage(key), stage: key);
+    _startColorFade(paletteForStage(key));
   }
 
   /// §3.0.5 a death that is not saved: the bird turns into the ballistic
@@ -2873,7 +2864,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   void _syncBannerStripColor() {
-    var c = _fgColor;
+    // PRD-2.2 §31: the empty strip under a balloon bonus or results page is
+    // the page's grey, whatever stage the run ended on.
+    var c = _postRunPage ? kPostRunPalette.foreground : _fgColor;
     for (final dim in world.children.whereType<ReviveDim>()) {
       if (dim.alpha > 0) {
         c = Color.lerp(c, ReviveConfig.dimColor, dim.alpha.clamp(0.0, 1.0))!;
@@ -3255,6 +3248,19 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   // region WP-2e — results page (PRD-2 §3.14, §5.10)
 
+  /// PRD-2.2 §31: a balloon bonus or results page is up (from its start to
+  /// the next run's start). While it is, the run's strips draw their normal
+  /// reach in the page grey and the banner strip takes it too.
+  bool _postRunPage = false;
+  bool get postRunPageUp => _postRunPage;
+
+  void _setPostRunPage(bool on) {
+    _postRunPage = on;
+    _ground.onPage = on;
+    _ceiling.onPage = on;
+    _syncBannerStripColor();
+  }
+
   /// The results page while it is up (tests, keyboard).
   ResultsScreen? get resultsScreen => _results;
 
@@ -3269,6 +3275,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     );
     _results = page;
     world.add(page);
+    _setPostRunPage(true);
     _ground.priority = groundOverMenusPriority;
     _ceiling.priority = groundOverMenusPriority;
   }
@@ -3279,6 +3286,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     page?.removeFromParent();
     _ceiling.priority = SpikeStrip.basePriority;
     _syncGroundPriority();
+    _setPostRunPage(false);
   }
 
   /// §3.14 / §7: a level reward still owed when the app was closed on the
@@ -3318,6 +3326,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     );
     _bonus = screen;
     world.add(screen);
+    _setPostRunPage(true);
     _ground.priority = groundOverMenusPriority;
     _ceiling.priority = groundOverMenusPriority;
     await screen.finished;
@@ -3329,6 +3338,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _removeBonus() {
     final screen = _bonus;
     _bonus = null;
+    if (_results == null) _setPostRunPage(false);
     if (screen == null) return;
     screen.removeFromParent();
     _ceiling.priority = SpikeStrip.basePriority;
@@ -3571,7 +3581,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     score = 0;
     _stage = 0;
-    _skinBlend = _skinBlendFrom = _skinBlendTo = 0;
     _hud.setScore(0);
     _fades.removeWhere((fade) => identical(fade.target, _hud));
     _hud.opacity = 0;
@@ -3682,9 +3691,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   // --- color stages --------------------------------------------------------
 
-  void _startColorFade(Palette palette, {required int stage}) {
-    _skinBlendFrom = _skinBlend;
-    _skinBlendTo = stage == 0 ? 0 : Config.skinStageBlend;
+  /// Crossfades the background and foreground to [palette]. The bird keeps
+  /// its own colours at every stage (PRD-2.2 §20): no skin blend follows.
+  void _startColorFade(Palette palette) {
     _fadeFromBg = _bgColor;
     _fadeFromFg = _fgColor;
     _targetBg = palette.background;
@@ -3696,6 +3705,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     for (final tintable in _tintables) {
       tintable.setTint(_fgColor);
     }
+    _syncBannerStripColor(); // PRD-2.2 §31: the empty strip follows the fade
     _backdrop.paint.color = _bgColor;
     _hud.setScoreColor(_bgColor);
     // The watermark circle stays a lighter shade than the pipes so pipe
@@ -3823,8 +3833,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       );
       _bgColor = Color.lerp(_fadeFromBg, _targetBg, _colorFadeT)!;
       _fgColor = Color.lerp(_fadeFromFg, _targetFg, _colorFadeT)!;
-      _skinBlend =
-          _skinBlendFrom + (_skinBlendTo - _skinBlendFrom) * _colorFadeT;
       _applyTints();
     }
 

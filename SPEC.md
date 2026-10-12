@@ -62,10 +62,9 @@ states" above. Everything else in this document still holds.
 - **Menus always stage 0.** Home, Shop, Skins and all dialogs/popups render at
   colour stage 0; only runs advance the colour stage.
 - **Skin tint rule.** The bird is drawn from the equipped 2.0 look (bird + gear +
-  hat, `LookPainter`). In menus and at stage 0 it shows its true colours; from
-  stage 5 the whole look lerps 35 % toward the stage foreground
-  (`Config.skinStageBlend`, a colour-matrix layer) — applied to every look, the
-  default Classic included (a pure stage modulate made all skins grey). Hitbox and
+  hat, `LookPainter`) in its **true colours at every stage** (PRD-2.2 §20: the
+  stage blend of this rule is removed, see the DEVIATION at the end). Only a
+  themed death tints the look (`Bird.deathTint`, PRD-2 §5.17). Hitbox and
   physics are unchanged.
 - **Powerup slot = "watch ad → play with powerup"** (DEVIATION from PRD-1
   §3.6/§4.2, product-owner decision 2026-10-04). The gold slot always shows the
@@ -194,7 +193,9 @@ Product-owner decisions 2026-10-06/07 and implementation notes:
   `rduck` shape (head bump over a boat body with an upturned tail, blue band,
   one glossy highlight, big #FF5722 bill) so it no longer reads as the Chick.
   Shapes may set `bl` (stern x for the wind-up key; defaults to `l`).
-- **Stage blend kept** (DEVIATION from §5 "colours fixed"): see the skin tint rule.
+- **Stage blend removed** (PRD-2.2 §20, supersedes the 2.0 "stage blend kept"
+  line): the run bird keeps its own colours at every colour stage; see the
+  DEVIATION (PRD-2.2 §20) at the end of this file.
 - **Art in code:** every item is a Canvas port of `design/menu_v2/skin_art.js`
   (`lib/skins/art/`); no sprite assets. The PRD's "44 × 36 art box / 30 × 30
   body" are art units: in runs the art body centre (21, 18) sits on the physics
@@ -1297,3 +1298,69 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
 - Tests: `test/p22/s7_7_noads_test.dart`, `test/p22/s7_9_privacy_options_test.dart`,
   `test/p22/s24_revive_taps_test.dart`, `test/p22/s28_audio_test.dart`,
   `test/run/screens/s3_14_revive_test.dart`, `test/run/screens/s3_15_bonus_screen_test.dart`.
+
+## PRD-2.2 visual layering and colours (WP-V1, 2026-10-12)
+- DEVIATION (PRD-2.2 §20, supersedes the 2.0 "skin tint rule" stage blend and
+  the PRD-2 look-colour rule): **the bird keeps its own colours at every
+  colour stage.** The run look (bird, gear, hat) is no longer lerped 35 %
+  toward the stage foreground from stage 5 (`Config.skinStageBlend` and the
+  skin blend of the colour crossfade are removed). It shows its shop colours
+  in runs, portal rides, the comet, revive, results and the VS intro. Kept:
+  the gold bird of the perfect streak (tier 2+, PRD-2 §3.5) and the themed
+  death tints (charred, frozen, X-ray; PRD-2 §5.17), which are the only blend
+  of the look (`Bird.deathTint` / `deathTintAmount`). Background, spike
+  strips, score circle and HUD tints still follow the colour stage.
+- Tests: `test/p22/s20_bird_colours_test.dart` (stages 0, 1, 5, 10 with the
+  classic and an accessory look: the bird's solid pixels equal the stage-0
+  pixels; gold tier 2 and the death tint keep working); `look_visual_test.dart`,
+  `home_flow_test.dart` and `look_component_test.dart` updated to the new rule.
+- DEVIATION (PRD-2.2 §12, supersedes the PRD-2 §5.4 layer order of the run
+  banners and the collect stickers): **banners behind the gameplay.** Every
+  run banner (streak tiers, FEVER, BULLSEYE, PERFECT LINE, Ring Train, Lucky
+  Spin, jar, piggy, egg, timed power-ups, SAVED, the switch crash word) is
+  drawn by the run's banner layer: a screen-space layer in the **world** at
+  `RunLayer.banners` (−60). Order back to front: backdrop, score circle
+  (−100), banner layer (−60), guides, hoop backs, pickups, spike strips, the
+  bird, hoop fronts, hit effects (fx 15), then the HUD (viewport): top row
+  (heart, pause, versus bar), feather tray / puzzle pill with their fetch
+  flights, sparkles and rings, graze notice, timer pill, FEVER flash; then the
+  pause / revive / results / popups. The collect stickers ("BONUS UNLOCKED!",
+  "PICTURE COMPLETE") are in the banner layer. The banner band keeps real time
+  (the Hourglass does not slow it), freezes while the run is paused, stays on
+  its screen place during a camera shake, and is hidden with the HUD (settings,
+  revive shop). Positions, sizes, colours, timings and texts are unchanged.
+  **Call:** the `CollectText` labels inside the puzzle pill and its coin badge
+  (`n/4`, `+N`) stay with the pill in the HUD: they sit on the pill's opaque
+  panel, so behind it they would not show. The stickers are the collect texts
+  that float outside the pill and move.
+- Tests: `test/p22/s12_banner_layer_test.dart` (order, every banner kind in the
+  layer, the switch crash word surviving a death's clear, the top row in the
+  HUD, pause freezes a banner, the Hourglass does not slow it, the band stays
+  put under a shake, the bird in front of a COSMIC band at 568 and 711 pt);
+  `test/run/items/s3_15_feathers_test.dart` and `s3_16_puzzle_test.dart` (the
+  stickers are in the banner layer), `test/run/screens/s5_7_hud_pause_test.dart`
+  (the host lives in the banner layer), `test/run/hoops/s3_20_switch_test.dart`
+  (the switch banner uses the run's host).
+- DEVIATION (PRD-2.2 §31, supersedes the PRD-2 §5.10 / §5.14 page colours and
+  the §5.10 level-up rays): **the balloon bonus and the results page always
+  use the approved grey,** whatever colour stage the run ended on: background
+  `#F1F1F1`, foreground `#828282` (`kPostRunPalette` = stage 0), the spike
+  strips and the banner strip under the page included (`#828282`). The next
+  run starts on its stage colours as before; the revive page keeps the run's
+  look.
+  - **Squeeze walls never cover the pages.** While a bonus or results page is
+    up (`FlappySpikesGame.postRunPageUp`) the two run strips draw their normal
+    reach in the approved grey (`SpikeStrip.onPage`): the squeeze inset and the
+    warning flash are ignored, so no squeezed wall overlaps the page content.
+    The revive UI (viewport) stays above the walls.
+  - **Level-up rays (results only):** the same 12 gold wedges, colours, speed
+    and timing, but ≈ 280 pt long (`ResultsConfig.rayRadius`, scaled with the
+    page), not clipped to the stage rectangle, and drawn by the page just above
+    its background, so the card, banners, rank, bar, CLAIM, reward row and NEXT
+    stay on top. Each ray fades radially: 35 % at the emblem, 19 % at 45 % of the
+    length, 0 at the tip (`ResultsScreen.rayFade`).
+- Tests: `test/p22/s31_postrun_grey_test.dart` (page palette and pixels on
+  stage 30, the next run back on its stage colours, a squeeze death keeps
+  normal strips on the page, the rays' length, fade and paint placement);
+  `test/run/items/s3_3_s3_7_lives_test.dart` (the SAVED! banner goes to the
+  run's banner host, §12).

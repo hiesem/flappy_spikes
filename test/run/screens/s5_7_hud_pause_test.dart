@@ -43,7 +43,7 @@ void main() {
     ).testGameWidget(
       '§5.7 ($h) solo HUD: in the viewport, heart indicator (empty → ⅓ → '
       '⅔ → full + pulse), pause button at right edge 306, no versus bar, '
-      'no coin total; the banner band lives in the HUD',
+      'no coin total; the banner band lives in the run banner layer (PRD-2.2 §12)',
       setUp: (g, _) => boot(g),
       verify: (game, _) async {
         final run = await startRun(game);
@@ -71,9 +71,13 @@ void main() {
           if (hud.heart.pulse > maxPulse) maxPulse = hud.heart.pulse;
         }
         expect(maxPulse, closeTo(1.14, .01));
-        // The streak's banner host is the HUD's.
-        expect(hud.banners.parent, hud);
-        expect(game.world.descendants().whereType<BannerHost>(), isEmpty);
+        // PRD-2.2 §12: the streak's banner host lives in the run's banner
+        // layer in the world (behind the gameplay), not in the HUD.
+        expect(hud.banners.parent, hud.bannerLayer);
+        expect(hud.bannerLayer.parent, game.world);
+        expect(game.world.descendants().whereType<BannerHost>().single,
+            same(hud.banners));
+        expect(hud.descendants().whereType<BannerHost>(), isEmpty);
         // Fades out on a death.
         run.state.extraLife = false;
         killRun(game);

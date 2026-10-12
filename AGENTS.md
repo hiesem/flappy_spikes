@@ -209,6 +209,11 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   re-rolls. An armed powerup is consumed on START.
 - `AD_ID` permission: the `tools:node="remove"` block is gone (PRD-2.2 §7.13, after the
   Play declarations were saved 2026-10-12); ads may be personalised where consent allows.
+- Run banners (PRD-2.2 §12): every run banner and the collect stickers are drawn by the
+  run's `RunBannerLayer` in the world at `RunLayer.banners` (−60): behind the bird, the
+  hoops and the pickups, above the score circle. The HUD keeps the top row, the tray /
+  pill and their fetch flights. The band keeps real time (not slowed by the Hourglass),
+  freezes on pause and stays on screen during a camera shake. `RunHud.banners` is the host.
 - Gameplay banner (PRD-2.2 §7.5, WP-7a): `main.dart` is `Column(Expanded(game), BannerSlot)`;
   `game.setPlayfieldHeight` is the only resize entry point (START with a banner / Home arrival).
   In a run with a banner `viewHeight` = visible height + `Config.bannerStripDrop` (20): run layouts
@@ -217,9 +222,13 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
 - iOS: ads route to Noop (no `GADApplicationIdentifier`; iOS paused), IAP is real.
 - Menus (home/shop/skins/dialogs/popups) always render at colour stage 0; only
   runs advance the colour stage.
-- Looks (2.0 skin shop): true colours in menus and at stage 0; in runs the whole
-  look (bird + gear + hat) is `lerp(colour, stageFg, 0.35)` — a pure stage
-  modulate made all skins grey.
+- The balloon bonus and results pages always use the approved grey (`kPostRunPalette`,
+  stage 0: #F1F1F1 / #828282), whatever stage the run ended on; the run's strips draw
+  their normal reach in that grey while such a page is up (PRD-2.2 §31).
+- Looks (2.0 skin shop, PRD-2.2 §20): the whole look (bird + gear + hat) keeps its
+  true colours at every colour stage, in menus and in runs; the old 0.35 stage
+  blend is gone (a pure stage modulate had made all skins grey). Only a themed
+  death tints the look (`Bird.deathTint`).
 - Modal popups (no-ads launch, LEVEL UP, purchase result, No-ads celebration) go through one queue: never two at
   once. Menu button presses knock when RUMBLE is on (PRD-home-v3 §10).
 - Item art is drawn in code (`lib/skins/art/`, port of

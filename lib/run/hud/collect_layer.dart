@@ -14,20 +14,27 @@ import '../effects/gold_sticker.dart';
 import '../effects/particle_pool.dart';
 import '../effects/shock_ring.dart';
 import '../run_controller.dart';
+import 'banner_layer.dart';
 import 'collect_slot.dart';
 import 'run_hud.dart';
 
 /// The run HUD's collect layer (PRD-2 §3.15 / §3.16, ARCH §1.10): the one
 /// shared [CollectSlot] (feather tray / puzzle pill, one at a time, Q37 /
 /// Q42), the screen-space particle pool for the fetch trails, landing
-/// sparkles and confetti, the gold rings ([ShockRing]) and the stickers.
-/// Lives in the [RunHud] (viewport, real time); a death clears it with the
-/// other HUD parts and [ensureFor] builds a new one after a revive.
+/// sparkles and confetti, and the gold rings ([ShockRing]). Lives in the
+/// [RunHud] (viewport, real time); a death clears it with the other HUD
+/// parts and [ensureFor] builds a new one after a revive. The collect
+/// stickers ("BONUS UNLOCKED!", "PICTURE COMPLETE") are drawn in the run's
+/// banner layer instead (PRD-2.2 §12.2), behind the gameplay: [bannerLayer].
 class CollectLayer extends PositionComponent
     with HasGameReference<FlappySpikesGame> {
-  CollectLayer(this.run) : super(priority: CollectConfig.priority);
+  CollectLayer(this.run, this.bannerLayer)
+    : super(priority: CollectConfig.priority);
 
   final RunController run;
+
+  /// The run's banner layer, where the stickers are added.
+  final RunBannerLayer bannerLayer;
 
   static final Expando<CollectLayer> _layers = Expando('CollectLayer');
 
@@ -38,7 +45,7 @@ class CollectLayer extends PositionComponent
     if (existing != null && !existing.isRemoving && !existing.isRemoved) {
       return existing;
     }
-    final layer = CollectLayer(run);
+    final layer = CollectLayer(run, hud.bannerLayer);
     _layers[hud] = layer;
     hud.add(layer);
     return layer;
@@ -197,13 +204,14 @@ abstract class CollectTimeline implements CollectSlotItem {
 
   final List<GoldSticker> _stickers = [];
 
-  /// Pops a collect sticker ([GoldSticker.collect]) at [at] (layer
-  /// coordinates); it fades with the item.
+  /// Pops a collect sticker ([GoldSticker.collect]) at [at] (screen
+  /// coordinates) in the run's banner layer (PRD-2.2 §12.2); it fades with
+  /// the item.
   void sticker(CollectLayer layer, String text, Offset at) {
     final s = GoldSticker.collect(text, position: Vector2(at.dx, at.dy))
       ..priority = 1;
     _stickers.add(s);
-    layer.add(s);
+    layer.bannerLayer.add(s);
   }
 
   void fadeStickers(double alpha) {

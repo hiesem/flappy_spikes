@@ -279,6 +279,11 @@ class RunController extends Component {
   /// (the pass test's "before").
   Vector2? _prevBird;
 
+  /// PRD-2.2 §30.2 each hoop's pose at the end of the previous physics step
+  /// (the pass test's and the rim sweep's "before" pose; paired with
+  /// [_prevBird]).
+  final Map<Hoop, HoopFrame> _prevFrames = Map.identity();
+
   Bird? get _bird {
     final b = game.runBird;
     return b != null && b.isLoaded ? b : null;
@@ -291,17 +296,24 @@ class RunController extends Component {
     if (bird == null) return;
     final r = _birdR;
     var pos = geo.toTrack(bird.body.position);
+    final fresh = _prevBird == null;
     final prev = _prevBird ?? pos.clone();
+    final poses = Map<Hoop, HoopFrame>.identity();
     for (final h in List.of(spawner.hoops)) {
       h.syncMotion(state.runClock);
       if (h.resolved || h.isRemoved) continue;
       final kind = h.kind;
       var f = h.frame();
+      // PRD-2.2 §30.2 the pose of the previous step (null: first step).
+      final pf = fresh ? null : _prevFrames[h];
+      poses[h] = f;
       final mode = kind.rimMode(h, state);
       if (mode != RimMode.ignored && state.invulnerable <= 0) {
         final vy = bird.body.linearVelocity.y;
-        final res = collideRims(
+        final res = collideRimsSwept(
+          pf,
           f,
+          BirdCircle(prev, r),
           BirdCircle(pos, r),
           Vector2(state.forwardSpeed, vy),
         );
@@ -327,7 +339,12 @@ class RunController extends Component {
           f = h.frame();
         }
       }
-      final ev = testPlane(f, BirdCircle(prev, r), BirdCircle(pos, r));
+      final ev = testPlane(
+        f,
+        BirdCircle(prev, r),
+        BirdCircle(pos, r),
+        prevFrame: pf,
+      );
       if (ev != null) {
         if (state.ride == null &&
             kind.onPlane(h, ev.ring, ctx) == PlaneVerdict.mistake) {
@@ -344,6 +361,7 @@ class RunController extends Component {
           if (_dying) return;
           continue;
         }
+        h.passOffset = ev.offset;
         _pass(h, ev.ring);
         continue;
       }
@@ -369,6 +387,9 @@ class RunController extends Component {
       }
     }
     _prevBird = pos;
+    _prevFrames
+      ..clear()
+      ..addAll(poses);
   }
 
   /// §3.0.4 3 the rim "tonk". WP-3h registers `Sfx.rimTonk` (parallel
@@ -620,6 +641,7 @@ class RunController extends Component {
     _death = null;
     _cause = null;
     _prevBird = geo.toTrack(Vector2(RunConfig.birdX, birdY));
+    _prevFrames.clear();
     clock.running = true;
     state.invulnerable = ReviveConfig.invulnerable;
     events.emit(Revived(k, price));
@@ -654,6 +676,7 @@ class RunController extends Component {
   void endRideHold() {
     rideHold = false;
     _prevBird = null;
+    _prevFrames.clear();
   }
   // endregion WP-3b
 

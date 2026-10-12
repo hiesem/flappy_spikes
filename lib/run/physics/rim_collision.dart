@@ -110,6 +110,43 @@ RimResult? collideRims(
   return RimResult(pos, v, contacts);
 }
 
+/// PRD-2.2 §30.2 [collideRims] for a ring that moved from [prevFrame] to
+/// [f] during the step while the bird went [prev] → [now]. The current
+/// pose decides first (exactly [collideRims]: still rings and slow rings
+/// are unchanged). Without contact there, a fast ring
+/// ([HoopFrame.sweepSteps]) is checked at its intermediate sub-step poses
+/// against the interpolated bird, so a rim end that sweeps across the bird
+/// within one step still registers a touch (no tunnelling). Such a contact
+/// is resolved at that sub-step (push-out and reflection) and the push-out
+/// carried to [now]. Pure.
+RimResult? collideRimsSwept(
+  HoopFrame? prevFrame,
+  HoopFrame f,
+  BirdCircle prev,
+  BirdCircle now,
+  Vector2 vel, {
+  double restitution = RunConfig.rimRestitution,
+}) {
+  final hit = collideRims(f, now, vel, restitution: restitution);
+  if (hit != null || prevFrame == null) return hit;
+  final n = HoopFrame.sweepSteps(prevFrame, f, prev, now);
+  for (var k = 1; k < n; k++) {
+    final u = k / n;
+    final fk = HoopFrame.lerp(prevFrame, f, u);
+    final bk = prev.c + (now.c - prev.c) * u;
+    final res = collideRims(
+      fk,
+      BirdCircle(bk, now.r),
+      vel,
+      restitution: restitution,
+    );
+    if (res != null) {
+      return RimResult(now.c + (res.position - bk), res.velocity, res.contacts);
+    }
+  }
+  return null;
+}
+
 /// §3.0.4 3 The rim-hit spin: one full turn over 0.35 s, its direction from
 /// the bird's vertical motion (rising: counter-clockwise).
 double rimSpinVelocity(double vy) =>

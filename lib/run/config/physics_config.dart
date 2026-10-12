@@ -12,6 +12,17 @@ abstract final class PhysicsConfig {
   /// §3.0.4 3 White sparks at the contact point (count).
   static const int rimSparks = 6;
 
+  // --- PRD-2.2 §30 moving-ring pass detection --------------------------------
+
+  /// PRD-2.2 §30.2 A moving ring whose centre or rim ends move more than this
+  /// in one physics step (pt) is tested in [sweepSubsteps] sub-steps, so its
+  /// plane or a rim end can never jump over the bird.
+  static const double sweepSubstepThreshold = 2;
+
+  /// PRD-2.2 §30.2 Sub-steps for a fast-moving ring (pose and bird
+  /// interpolated).
+  static const int sweepSubsteps = 4;
+
   // --- §3.1 / §3.0.5 spike strips ---------------------------------------------
 
   /// §3.1 Spike contact: the bird circle touches a tooth line when its edge

@@ -433,6 +433,7 @@ enum GameState { start, playing, results /* the 1.0 gameOver, renamed by WP-2e *
 | `beforeRunStart` | kept as the generic hook; WP-5b does **not** use it — `_runFromHome` takes the opponent at tap time and plays the VS intro itself (§24) | 5b |
 | `lifecycleStateChange` | + reminders reschedule on paused/detached (4b), + run auto-pause (2d) | 2d / 4b |
 | keyboard | Esc while playing → pause; D (debug) also during pause | 2d / 0b |
+| system back | `handleSystemBack()` (PRD-2.2 §8): the Android back closes the menus only (topmost, one close per gesture, `back_gesture` analytics), never a run, the post-run pages or a video ad; `SystemBackObserver` (main.dart) reports every back as handled. Esc unchanged | 2.2 |
 
 ### 2.4 Events (`RunEvents`)
 

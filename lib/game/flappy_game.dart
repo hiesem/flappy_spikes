@@ -354,6 +354,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// handled the back press.
   final List<bool Function()> _backHandlers = [];
 
+  /// PRD-2.2 §8.1 "one close per gesture": game-time seconds left in which a
+  /// system back is ignored, after it closed a menu screen or popup.
+  double _systemBackLock = 0;
+
   /// Menu screens (Shop / Skins) below the one on top, bottom first: their
   /// back button returns to the last one (re-created), or home when empty.
   /// Re-opening a screen already in the trail goes back to it, so the
@@ -2427,6 +2431,40 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   bool handleBack() =>
       _backHandlers.isNotEmpty && _backHandlers.last.call();
 
+  /// PRD-2.2 §8: the Android system back (the edge swipe in gesture
+  /// navigation, or the 3-button back). It closes the menu screens and popups
+  /// exactly as their back arrow / ✕ does ([handleBack], topmost first). In a
+  /// run (every state but start, the post-run pages included), while a run is
+  /// starting and while a video ad is up it does nothing. One close per
+  /// gesture: while a close is still fading out, further backs are ignored.
+  /// Returns true when something closed. The app never leaves on back: the
+  /// observer in main.dart always reports the back as handled.
+  bool handleSystemBack() {
+    if (state != GameState.start || _runStarting || _fakeAd != null) {
+      return false;
+    }
+    if (_systemBackLock > 0 || _backHandlers.isEmpty) {
+      return false;
+    }
+    final screen = _backScreenName(_backHandlers.last);
+    if (!handleBack()) {
+      return false;
+    }
+    _systemBackLock = Config.systemBackDebounce;
+    services.track('back_gesture', {'screen': screen});
+    return true;
+  }
+
+  /// The `back_gesture` analytics name of a back handler.
+  String _backScreenName(bool Function() handler) {
+    if (handler == _settingsBack) return 'settings';
+    if (handler == _shopBack) return 'shop';
+    if (handler == _skinsBack) return 'skins';
+    if (handler == _levelsBack) return 'levels';
+    if (handler == _debugBack) return 'debug';
+    return 'popup';
+  }
+
   // Stable identities for push/popBack.
   bool _settingsBack() {
     closeSettings();
@@ -3164,6 +3202,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // spawner or fades run ahead of the bodies.
     dt = min(dt, Config.maxFrameStep);
     _clock += dt;
+    if (_systemBackLock > 0) _systemBackLock = max(0.0, _systemBackLock - dt);
     super.update(dt);
     _purchases?.update(dt);
     _drainPopups();

@@ -91,6 +91,11 @@ Future<void> main() async {
   game.onShareScore = _shareScore;
   game.onInvite = _invite;
 
+  // region PRD-2.2 §8 — the Android system back closes the menus only, and
+  // never the app (SystemBackObserver below).
+  WidgetsBinding.instance.addObserver(SystemBackObserver(game));
+  // endregion PRD-2.2 §8
+
   // region WP-4b — reminder notifications (PRD-2 §3.34)
   // Real local notifications on the mobile products only; the Linux desktop
   // target and FS_E2E builds keep the no-op default. The game asks for the
@@ -122,6 +127,21 @@ Future<void> main() async {
   // Same fire-and-forget rule: the UMP consent form may be shown here, and
   // initialize() never throws; until it lands ads are simply unavailable.
   unawaited(monetization.initialize());
+}
+
+/// PRD-2.2 §8.2: the Android system back (the gesture, or the 3-button back)
+/// reaches the game's back stack. It is always reported as handled, so
+/// Flutter never calls `SystemNavigator.pop` and the app never leaves on back.
+class SystemBackObserver extends WidgetsBindingObserver {
+  SystemBackObserver(this.game);
+
+  final FlappySpikesGame game;
+
+  @override
+  Future<bool> didPopRoute() async {
+    game.handleSystemBack();
+    return true;
+  }
 }
 
 /// Android / iOS host (where [Monetization.forPlatform] picks the real

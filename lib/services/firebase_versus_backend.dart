@@ -3,6 +3,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
 import '../run/config/versus_config.dart';
@@ -19,8 +20,18 @@ import 'versus_service.dart';
 /// `deleteMyData` callable. Only [FirebaseVersusService] calls it, and only
 /// after `Firebase.initializeApp` (done by `GameServices.initialize`).
 class FirebaseVersusBackend implements VersusBackend {
-  FirebaseAuth get _auth => FirebaseAuth.instance;
-  FirebaseFirestore get _db => FirebaseFirestore.instance;
+  /// [app] null = the default app (the game). The §13.5 seeding test passes
+  /// a separate named app so its anonymous test account never replaces the
+  /// device owner's sign-in.
+  FirebaseVersusBackend({this.app});
+
+  final FirebaseApp? app;
+
+  FirebaseAuth get _auth =>
+      app == null ? FirebaseAuth.instance : FirebaseAuth.instanceFor(app: app!);
+  FirebaseFirestore get _db => app == null
+      ? FirebaseFirestore.instance
+      : FirebaseFirestore.instanceFor(app: app!);
 
   /// S6-F01: set only AFTER an activation succeeded; a failure (e.g.
   /// `[core/no-app]` when Firebase is not initialized yet) leaves it false
@@ -232,6 +243,7 @@ class FirebaseVersusBackend implements VersusBackend {
   @override
   Future<bool> deleteMyData() async {
     final result = await FirebaseFunctions.instanceFor(
+      app: app,
       region: VersusConfig.functionsRegion,
     ).httpsCallable(VersusConfig.deleteFunction).call<Object?>();
     final data = result.data;

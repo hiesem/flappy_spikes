@@ -14,6 +14,7 @@
 import 'dart:io';
 import 'dart:math';
 
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
@@ -59,13 +60,19 @@ void main() {
   Future<FirebaseVersusBackend> ensureBackend() async {
     final existing = backend;
     if (existing != null) return existing;
-    await Firebase.initializeApp(
+    // A separate named app: its own anonymous test account, so seeding never
+    // signs the device owner's game out (their runs must stay opponents for
+    // them: the matcher skips the player's own uid).
+    final seedApp = await Firebase.initializeApp(
+      name: 'seed',
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    await FirebaseVersusBackend.activateAppCheck(
-      debugToken: kAppCheckDebugToken.isEmpty ? null : kAppCheckDebugToken,
+    await FirebaseAppCheck.instanceFor(app: seedApp).activate(
+      providerAndroid: AndroidDebugProvider(
+        debugToken: kAppCheckDebugToken.isEmpty ? null : kAppCheckDebugToken,
+      ),
     );
-    final b = FirebaseVersusBackend();
+    final b = FirebaseVersusBackend(app: seedApp);
     final uid = await b.start().timeout(const Duration(seconds: 30));
     name = generateNickname(Random(uid.hashCode));
     debugPrint('SEED uid $uid as $name');

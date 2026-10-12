@@ -192,7 +192,8 @@ class Config {
   static const double homeEmblemScale = 0.936;
   static const double homeBirdScale = 1.32;
 
-  /// Smallest stage scale: emblem 0.78 / bird 1.1 (the build76 variation).
+  /// Smallest stage scale: emblem 0.78 / bird 1.1 (the build76 variation;
+  /// below it only for [homeStartTightGap], PRD-2.2 §2.1).
   static const double homeStageMinScale = 0.78 / homeEmblemScale;
 
   /// How far the emblem's ribbon reaches below the plate centre (art units).
@@ -201,6 +202,13 @@ class Config {
   /// Smallest gap above / below the START + slot block before the emblem
   /// starts scaling down.
   static const double homeStartMinGap = 24;
+
+  /// PRD-2.2 §2.1 with the mode button row in the START block, the block no
+  /// longer fits the 568 pt band at the floor scale: there the stage shrinks
+  /// past [homeStageMinScale] just enough to keep this gap above and below
+  /// the block (clear of the slot's 3 pt outline and of the Skins NEW tag,
+  /// which sticks 6 pt above its tile; emblem ≈ 0.71 / bird ≈ 1.0 at 568).
+  static const double homeStartTightGap = 8;
 
   /// BEST / LAST flank columns: 70 wide, label 12 pt (0.18 em, 13 pt line
   /// + 2) over the number 30 pt (0.02 em, 33 pt line), centred on the
@@ -233,6 +241,61 @@ class Config {
       homeStartHeight + homeSlotGap + homeSlotHeight; // 102
   static const double homeStartLeft = (worldWidth - homeStartWidth) / 2; // 52
 
+  // --- PRD-2.2 §2.1 mode button (VERSUS / FREE FLY) + VS tag on START,
+  // approved design screen_mode_toggle3.html (drawn at 1.5x) ---------------
+
+  /// PRD-2.2 §2.1 mode button: 147 x 21, right edge = START's right edge,
+  /// 5 pt above START's top.
+  static const double homeModeWidth = 147;
+  static const double homeModeHeight = 21;
+  static const double homeModeGap = 5;
+
+  /// PRD-2.2 §2.1 the gold MODE part: 41 wide, "MODE" 8.7 pt / 0.14 em in
+  /// plum #6A0040.
+  static const double homeModePartWidth = 41;
+  static const double homeModePartFontSize = 8.7;
+  static const double homeModePartLetterSpacing = 0.14; // em
+  static const Color homeModePlum = Color(0xFF6A0040);
+
+  /// PRD-2.2 §2.1 the mode field (the rest): 12.7 pt / 0.16 em. VERSUS pink
+  /// on pale pink; FREE FLY dark teal on pale sky-teal (teal is FREE FLY's
+  /// own accent, used nowhere else).
+  static const double homeModeFieldFontSize = 12.7;
+  static const double homeModeFieldLetterSpacing = 0.16; // em
+  static const Color homeModeVersusField = menuSoft; // #FCD9EE
+  static const Color homeModeVersusText = menuPink; // #EC008C
+  static const Color homeModeFreeFlyField = Color(0xFFD6F2F5);
+  static const Color homeModeFreeFlyText = Color(0xFF0D8595);
+
+  /// PRD-2.2 §2.1 the parts swap sides in 0.22 s with the mock's
+  /// cubic-bezier(.3, 1.4, .5, 1) overshoot; the field colour cross-fades.
+  static const double homeModeSwapDuration = 0.22;
+
+  /// PRD-2.2 §2.1 press feedback: 96 % while pressed.
+  static const double homeModePressedScale = 0.96;
+
+  /// PRD-2.2 §2.2 the hit area is the whole button plus 6 pt.
+  static const double homeModeHitPadding = 6;
+
+  /// PRD-2.2 §2.1 VS tag (VERSUS only): gold, white "VS" 10.7 pt, 31 x 17,
+  /// 9 pt in from START's left edge and 8 pt above START's top (half
+  /// outside). Pops in 0.4 -> 1 over 0.22 s (mock cubic-bezier(.3, 1.6,
+  /// .5, 1)); fades out in 0.18 s.
+  static const double homeVsTagWidth = 31;
+  static const double homeVsTagHeight = 17;
+  static const double homeVsTagFontSize = 10.7;
+  static const double homeVsTagLetterSpacing = 0.06; // em
+  static const double homeVsTagInset = 9;
+  static const double homeVsTagRise = 8;
+  static const double homeVsTagPopDuration = 0.22;
+  static const double homeVsTagFadeDuration = 0.18;
+  static const double homeVsTagFromScale = 0.4;
+
+  /// PRD-2.2 §2.1 the START block that is centred between the emblem and
+  /// the tiles: the mode button row (21 + 5) above START + slot (102).
+  static const double homeStartGroupHeight =
+      homeModeHeight + homeModeGap + homeStartBlockHeight; // 128
+
   static const int homeTileCount = 4;
   static const double homeTileWidth = 70;
   static const double homeTileHeight = 92;
@@ -263,9 +326,16 @@ class Config {
     final room =
         homeTileRowTopFor(viewHeight) -
         2 * homeStartMinGap -
-        homeStartBlockHeight -
+        homeStartGroupHeight -
         homeStageTop;
-    return (room / reach).clamp(homeStageMinScale, 1.0);
+    final k = (room / reach).clamp(homeStageMinScale, 1.0);
+    final tight =
+        (homeTileRowTopFor(viewHeight) -
+            2 * homeStartTightGap -
+            homeStartGroupHeight -
+            homeStageTop) /
+        reach;
+    return tight < k ? tight : k;
   }
 
   /// The emblem + bird stage (tap area) at [viewHeight], centred on x 160.
@@ -301,12 +371,34 @@ class Config {
       homePlateCentreFor(viewHeight).dy +
       homeEmblemReach * homeEmblemScaleFor(viewHeight);
 
-  /// Top of the START button: the START + slot block centred between the
-  /// emblem bottom and the tile row, on whole points (390 at 711).
-  static double homeStartTopFor(double viewHeight) =>
+  /// Top of the START block (PRD-2.2 §2.1: the mode button's top), the
+  /// mode button + START + slot block centred between the emblem bottom and
+  /// the tile row, on whole points (377 at 711).
+  static double homeStartGroupTopFor(double viewHeight) =>
       ((homeEmblemBottomFor(viewHeight) + homeTileRowTopFor(viewHeight)) / 2 -
-              homeStartBlockHeight / 2)
+              homeStartGroupHeight / 2)
           .roundToDouble();
+
+  /// Top of the START button: below the mode button row (403 at 711; 390
+  /// before PRD-2.2 §2.1 added the mode button to the block).
+  static double homeStartTopFor(double viewHeight) =>
+      homeStartGroupTopFor(viewHeight) + homeModeHeight + homeModeGap;
+
+  /// PRD-2.2 §2.1 the mode button: right-aligned with START, 5 pt above it.
+  static Rect homeModeRectFor(double viewHeight) => Rect.fromLTWH(
+    homeStartLeft + homeStartWidth - homeModeWidth,
+    homeStartTopFor(viewHeight) - homeModeGap - homeModeHeight,
+    homeModeWidth,
+    homeModeHeight,
+  );
+
+  /// PRD-2.2 §2.1 the VS tag on START's top-left corner.
+  static Rect homeVsTagRectFor(double viewHeight) => Rect.fromLTWH(
+    homeStartLeft + homeVsTagInset,
+    homeStartTopFor(viewHeight) - homeVsTagRise,
+    homeVsTagWidth,
+    homeVsTagHeight,
+  );
 
   /// TOP-RIGHT corner of the coin pill: the pill grows leftwards with the
   /// balance, its right edge pinned to [homeRightEdge].

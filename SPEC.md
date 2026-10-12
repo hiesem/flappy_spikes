@@ -920,6 +920,20 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   identity at all). S6-64: avatars (the Play Games icon image / the uploaded
   avatar URL) are drawn from one in-memory cache on the plates, the HUD and
   the results card; the neutral glyph shows while one is missing.
+- DEVIATION (PRD-2.2 §2, P22-2): a **mode button** above START chooses
+  VERSUS (the default) or FREE FLY (remembered in `homeMode`; "Delete my
+  data" resets it to VERSUS). FREE FLY never takes the prefetched opponent:
+  no VS intro, no versus bar, no WIN / LOSE / DRAW, no win / draw bonus, the
+  solo results page; everything else (revive, bonus, level-up, collectables,
+  coins) is the same, and the run is still queued for upload under the same
+  rules. VERSUS is unchanged.
+- DEVIATION (PRD-2.2 §3, P22-2): matching reads **every shard of the own
+  level** (random order), then the other levels nearest first (lower before
+  higher at each distance), stopping at the first shard with a usable
+  opponent; ≤ 44 reads, a 6 s limit, once per Home visit (a new search after
+  each run start). The candidate rules inside a shard are unchanged.
+- NOTE (PRD-2.2 §4): a solo VERSUS START shows nothing extra; the reason is
+  logged only (`versus_solo`, logcat, debug panel).
 
 ### WP-4c — "Delete my data" and the persistence audit (PRD-2 §3.13 Q22)
 

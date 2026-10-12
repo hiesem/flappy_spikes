@@ -76,20 +76,9 @@ void main() {
       });
     }
 
-    test('§3.13 pool read plan: own level + random shard first, a random '
-        'other level on a miss (matching.ts poolReadPlan)', () {
-      for (var level = 0; level <= 10; level++) {
-        for (var s = 0; s < 30; s++) {
-          final plan = poolReadPlan(level, Random(s * 11 + level));
-          final first = plan.first.split('_').map(int.parse).toList();
-          final fb = plan.fallback.split('_').map(int.parse).toList();
-          expect(first[0], level);
-          expect(first[1], inInclusiveRange(0, 3));
-          expect(fb[0], isNot(level));
-          expect(fb[0], inInclusiveRange(0, 10));
-          expect(fb[1], inInclusiveRange(0, 3));
-        }
-      }
+    // PRD-2.2 §3: the 2.1 read plan became a search order
+    // (test/p22/s3_matcher_search_test.dart).
+    test('§3.13 pool ids are level_shard', () {
       expect(poolId(3, 2), '3_2');
     });
   });

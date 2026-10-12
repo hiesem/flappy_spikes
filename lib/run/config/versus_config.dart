@@ -45,9 +45,14 @@ abstract final class VersusConfig {
   /// §3.13 Every Firebase call is time-boxed (a failure = solo).
   static const Duration callTimeout = Duration(seconds: 10);
 
-  /// §3.13 (call) A pool read that found nothing is not retried sooner than
-  /// this (the session's candidates ran out / offline).
-  static const Duration poolRetry = Duration(seconds: 60);
+  /// PRD-2.2 §3 The opponent search's own time limit (it runs during the
+  /// Home prefetch); after it the run starts solo (`versus_solo` reason
+  /// `timeout`).
+  static const Duration searchLimit = Duration(seconds: 6);
+
+  /// PRD-2.2 §3 At most this many pool documents per search: every shard of
+  /// every level ((maxLevel + 1) × shards = 44).
+  static const int maxSearchReads = (maxLevel + 1) * shards;
 
   /// §3.13 offline rules (S6-66) A failed start-up auth is retried in the
   /// background with doubling waits from [authRetryBase] up to

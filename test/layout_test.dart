@@ -68,7 +68,7 @@ void main() {
       final home = game.world.children.query<HomeScreen>().single;
       expect(home.title.position, Config.homeTitlePositionFor(711));
       expect(home.title.anchor, Anchor.topCenter);
-      expect(home.startButton.position.y, 390);
+      expect(home.startButton.position.y, 403); // PRD-2.2 §2.1 (was 390)
       expect(home.startButton.position.y, Config.homeStartTopFor(711));
     },
   );

@@ -164,6 +164,14 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   (App Check → Apps → Manage debug tokens). Debug / e2e builds pass it with
   `--dart-define=FS_APPCHECK_DEBUG_TOKEN=…`; **release builds never use the debug
   provider** (Play Integrity).
+- **Sideloaded release builds play solo (PRD-2.2 §4).** A release APK/AAB that
+  is not installed from Google Play fails Play Integrity, so with App Check
+  enforced its versus reads and writes are refused: it always plays solo and
+  nothing uploads. This is expected and is logged as `versus_solo {reason:
+  app_check}` (logcat: `versus: solo (app_check, <n> reads)`). Test versus
+  with builds installed from the **internal-testing track**, or with debug /
+  e2e builds carrying the registered App Check debug token. Debug builds show
+  the last search in the debug panel ("Versus: last search …").
 - **Sounds** go through the preloaded low-latency `AudioPool` only (`Sfx` /
   `SfxLoop` in `lib/game/sound.dart`); never bare `FlameAudio.play`. The PRD-2
   pack (88 one-shots + 4 loops) is in `docs/gameplay-v2/SOUNDS.md`, made with

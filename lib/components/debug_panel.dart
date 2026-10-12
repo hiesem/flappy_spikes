@@ -89,6 +89,8 @@ class DebugPanel extends PositionComponent
         anchor: Anchor.center,
         position: Vector2(Config.worldWidth / 2, Config.debugRowHeight / 2),
       );
+      // Long lines (the versus search line) shrink to the row.
+      label.fitWidth(action.label(), _labelWidth);
       _labels.add(label);
       final row = MenuButton(
         position: Vector2(Config.homeMargin, y),
@@ -116,9 +118,11 @@ class DebugPanel extends PositionComponent
       return;
     }
     for (final (i, action) in actions.indexed) {
-      _labels[i].text = action.label();
+      _labels[i].fitWidth(action.label(), _labelWidth);
     }
   }
+
+  static const double _labelWidth = Config.worldWidth - 2 * Config.homeMargin - 8;
 
   /// One page of the §3.0.8 force menu plus page navigation.
   List<DebugAction> _forceActions() {
@@ -205,6 +209,10 @@ class DebugPanel extends PositionComponent
         onClose();
         game.openNoAdsPopup(reason: 'forced');
       }),
+      // PRD-2.2 §4: "Versus: last search <reason> / <reads> reads /
+      // opponent <uid-prefix>" (debug builds only, like the whole panel);
+      // a tap re-reads it.
+      DebugAction(() => game.versus.lastSearch.debugLine, () async {}),
       // §3.0.8 debug force menu (PRD-2, WP-0b).
       DebugAction(() => 'RUN DEBUG >', () async => _forcePage = 0),
       DebugAction(() => 'Close', () async => onClose()),

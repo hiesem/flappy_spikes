@@ -746,6 +746,8 @@ versusRate/{uid}                 server-only (rules deny all clients): { day 'YY
 
 Reference implementations for the 5b client live in `functions/src/` (`matching.ts`: candidates + pool read plan;
 `timeline.ts`: codec, `scoreAt`, cheat filter). The Dart matcher test must pass `test/fixtures/versus_matching.json`.
+PRD-2.2 §3: `poolReadPlan` became `poolSearchOrder` + `searchPools` in both (the fixture's `search` cases);
+§4: `FirebaseVersusBackend` wraps plugin failures in `VersusFailure(reason)` (`lib/versus/diagnostics.dart`).
 
 ### 6.4 Client interfaces
 
@@ -754,7 +756,10 @@ abstract class VersusService {                       // lib/services/versus_serv
   Future<void> initialize();                         // anon auth, App Check, profile, first prefetch; never throws
   bool get ready;
   OpponentRun? takeOpponent();                       // sync at START: a prefetched match or null (→ solo, no intro)
-  Future<void> prefetch();                           // own level + random shard, else a random other level
+  Future<void> prefetch();                           // PRD-2.2 §3 search: own level's shards, then nearest levels; ≤ 44 reads, 6 s, once per Home visit
+  void onRunStart();                                 // PRD-2.2 §3 every run start (both modes): the next prefetch searches again
+  VersusSearchInfo get lastSearch;                   // PRD-2.2 §4 state / reason / reads / level / opponent uid (debug panel)
+  VersusSoloReason get soloReason;                   // PRD-2.2 §4 why a VERSUS START without an opponent is solo now
   Future<void> submitRun(RunSummary s, Look look);   // queue + rules (best always, ≤ 3/day, score ≥ 3), retry online
   Future<bool> deleteMyData();                       // callable + local reset + FirebaseAnalytics.resetAnalyticsData();
                                                      // false = offline / refused, nothing deleted (WP-4c)

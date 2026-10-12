@@ -3,11 +3,12 @@ import 'dart:math' as math;
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../menu/home_mode.dart';
 import '../skins/look.dart';
 import 'config.dart';
 
 /// Persistence layer for bestScore / gamesPlayed / muteSound / musicVolume /
-/// rumble and the 2.0 menu state (coins, skins, powerup slot, no-ads popup,
+/// rumble / homeMode and the 2.0 menu state (coins, skins, powerup slot, no-ads popup,
 /// free coins, claimed level rewards).
 class GameStorage {
   GameStorage({DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
@@ -70,6 +71,8 @@ class GameStorage {
   static const String _notifLastSentKey = 'notifLastSent';
   static const String _notifPermissionAskedKey = 'notifPermissionAsked';
   // endregion PRD-2 keys
+  // PRD-2.2 §2.2 the Home mode button: 'versus' (default) / 'freeFly'.
+  static const String _homeModeKey = 'homeMode';
 
   /// One preference key per equipped layer (the five-key equipped map).
   static String _equippedItemKey(SkinLayer layer) =>
@@ -89,6 +92,10 @@ class GameStorage {
   int gamesPlayed = 0;
   bool muteSound = false;
   double musicVolume = Config.defaultMusicVolume;
+
+  /// PRD-2.2 §2.2 the Home mode ([HomeMode.versus] on the first start and
+  /// after "Delete my data").
+  HomeMode homeMode = HomeMode.versus;
 
   int coins = 0;
 
@@ -325,6 +332,7 @@ class GameStorage {
     notifLastSent = _decodeIntMap(prefs.getString(_notifLastSentKey));
     notifPermissionAsked = prefs.getBool(_notifPermissionAskedKey) ?? false;
     // endregion PRD-2 keys
+    homeMode = HomeMode.parse(prefs.getString(_homeModeKey));
   }
 
   // region PRD-2 keys (WP-0b) — setters
@@ -532,6 +540,7 @@ class GameStorage {
     await saveUploadsToday('', 0);
     await saveUploadsSent('', 0);
     await resetMusicVolume();
+    await resetHomeMode();
   }
   // endregion WP-4c
 
@@ -584,6 +593,21 @@ class GameStorage {
     musicVolume = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_musicVolumeKey, value);
+  }
+
+  /// PRD-2.2 §2.2 the Home mode button's choice.
+  Future<void> saveHomeMode(HomeMode value) async {
+    homeMode = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_homeModeKey, value.key);
+  }
+
+  /// PRD-2.2 §2.2: "Delete my data" puts the mode back to VERSUS (the key is
+  /// removed, so the default applies).
+  Future<void> resetHomeMode() async {
+    homeMode = HomeMode.versus;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_homeModeKey);
   }
 
   /// PRD-2.2 §9.1: "Delete my data" clears the stored music volume (the key

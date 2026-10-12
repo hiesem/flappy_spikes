@@ -11,6 +11,7 @@ import '../../game/sound.dart';
 import '../../game/config.dart';
 import '../../game/flappy_game.dart';
 import '../../game/tintable.dart';
+import '../../menu/home_mode.dart';
 import '../../menu/powerup_slot.dart';
 import '../../services/iap_service.dart';
 import '../../skins/look.dart';
@@ -20,6 +21,7 @@ import '../ui/bird_idle.dart';
 import '../ui/flip.dart';
 import '../ui/live_effects.dart';
 import 'menu_primitives.dart';
+import 'mode_button.dart';
 
 /// Images the home screen draws (all under `assets/images/`).
 const List<String> kHomeImages = [
@@ -79,6 +81,11 @@ class HomeScreen extends PositionComponent
   late final HomeStat lastStat;
   late final MenuButton startButton;
   late final PowerupSlotButton slotButton;
+
+  /// PRD-2.2 §2 the VERSUS / FREE FLY button above START and the VS tag on
+  /// START (VERSUS only).
+  late final ModeButton modeButton;
+  late final VsTag vsTag;
   late final MenuTile shopTile;
   late final MenuTile skinsTile;
   late final MenuTile inviteTile;
@@ -233,6 +240,21 @@ class HomeScreen extends PositionComponent
       onPressed: game.tapPowerupSlot,
       isActive: _isActive,
     );
+    // PRD-2.2 §2: the mode button (added before START, so START keeps the
+    // 1 pt where the button's 6 pt hit padding reaches over it) and the VS
+    // tag (after START: drawn on its corner).
+    final mode = game.homeMode;
+    _mode = mode;
+    modeButton = ModeButton(
+      rect: Config.homeModeRectFor(h),
+      mode: mode,
+      onPressed: game.toggleHomeMode,
+      isActive: _isActive,
+    );
+    vsTag = VsTag(
+      rect: Config.homeVsTagRectFor(h),
+      visible: mode == HomeMode.versus,
+    );
 
     // --- tiles ------------------------------------------------------------
     MenuTile tile(int index, String name, String label, void Function() tap) =>
@@ -284,7 +306,9 @@ class HomeScreen extends PositionComponent
       bestStat,
       lastStat,
       slotButton,
+      modeButton,
       startButton,
+      vsTag,
       ...tiles,
     ]);
     _built = true;
@@ -337,8 +361,24 @@ class HomeScreen extends PositionComponent
     }
   }
 
+  HomeMode? _mode;
+
+  /// PRD-2.2 §2.1 shows [mode] on the button and the VS tag; [animate] for
+  /// a tap (slide + pop / fade), else at once.
+  void syncMode({bool animate = true}) {
+    if (!_built) return;
+    final mode = game.homeMode;
+    if (mode == _mode) return;
+    _mode = mode;
+    modeButton.setMode(mode, animate: animate);
+    vsTag.setShown(mode == HomeMode.versus, animate: animate);
+  }
+
   void _sync({bool force = false}) {
     final menu = game.menu;
+    // PRD-2.2 §2.2 a mode change from elsewhere ("Delete my data") shows
+    // at once.
+    syncMode(animate: false);
     final hasNew = menu.items.hasNewBadge;
     if (force || hasNew != _hasNew) {
       _hasNew = hasNew;

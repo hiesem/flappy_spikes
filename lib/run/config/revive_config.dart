@@ -21,7 +21,8 @@ abstract final class ReviveConfig {
   /// §3.14 / §5.9 The heart drains from the top over this many seconds.
   static const double offerSeconds = 5;
 
-  /// §3.14 The empty heart stays this long, then the game moves on.
+  /// §3.14 The empty heart's hold (2.1). PRD-2.2 §7.15: the offer never
+  /// times out any more; kept only as a reference span for tests.
   static const double emptyHold = 1;
 
   /// §5.9 Urgency (shake, faster beat, red edge glow) starts here (s).
@@ -68,6 +69,10 @@ abstract final class ReviveConfig {
 
   /// §5.9 Red edge glow fade-out length (s).
   static const double glowOutLength = .8;
+
+  /// PRD-2.2 §7.15 the red edge glow's steady level while the empty heart
+  /// waits (fraction of the peak; the offer never times out).
+  static const double waitGlow = .35;
 
   // ---------------------------------------------------------------- layout
   /// §5.9 Dark overlay over the frozen game.

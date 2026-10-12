@@ -40,6 +40,7 @@ class SettingsPanel extends PositionComponent
     this.rumble = true,
     this.onToggleRumble,
     this.onDeleteMyData,
+    this.onPrivacyOptions,
   }) : super(priority: 20);
 
   bool muted;
@@ -63,6 +64,11 @@ class SettingsPanel extends PositionComponent
   /// dialog, runs the callable and reports the result. Hidden when null.
   final void Function()? onDeleteMyData;
 
+  /// PRD-2.2 §7.9 the "Privacy options" link under "Privacy Policy": shown
+  /// only when the UMP privacy options are required (EEA/UK); hidden when
+  /// null (not required, iOS, Linux).
+  final void Function()? onPrivacyOptions;
+
   late final FadableTextComponent _title;
   late final SpriteButton _sfxButton;
   late final FadableTextComponent _sfxLabel;
@@ -74,6 +80,13 @@ class SettingsPanel extends PositionComponent
   late final DeleteDataIcon? _deleteIcon;
   late final FadableTextComponent? _deleteLabel;
   late final TextButton _privacyLink;
+  TextButton? _privacyOptionsLink;
+
+  /// The "Privacy options" link (tests); null when hidden.
+  TextButton? get privacyOptionsLink => _privacyOptionsLink;
+
+  /// The "Privacy Policy" link (tests).
+  TextButton get privacyLink => _privacyLink;
 
   /// The back button's tap target (x 14, y 58, 38 x 38; the pink box and
   /// chevron are the game's shared corner box below the panel).
@@ -199,10 +212,31 @@ class SettingsPanel extends PositionComponent
     _privacyLink = TextButton(
       text: 'Privacy Policy',
       style: const TextStyle(fontFamily: Config.uiFont, fontSize: 18),
-      position: Config.privacyLinkPositionFor(centerY),
+      position:
+          Config.privacyLinkPositionFor(centerY) -
+          Vector2(
+            0,
+            onPrivacyOptions != null
+                ? Config.settingsPrivacyLinkLiftWithOptions
+                : 0,
+          ),
       anchor: Anchor.center,
       onPressed: onPrivacyPolicy,
     );
+    final options = onPrivacyOptions;
+    if (options != null) {
+      _privacyOptionsLink = TextButton(
+        text: 'Privacy options',
+        style: const TextStyle(
+          fontFamily: Config.uiFont,
+          fontSize: Config.settingsPrivacyOptionsFontSize,
+        ),
+        position: Config.settingsPrivacyOptionsPositionFor(centerY),
+        anchor: Anchor.center,
+        padding: Config.settingsPrivacyOptionsPadding,
+        onPressed: options,
+      );
+    }
     // First child = bottom-most: swallows every tap the buttons miss so the
     // tap catcher cannot start the game behind the open panel.
     add(_TapBlocker(size: Vector2(Config.worldWidth, game.viewHeight)));
@@ -223,6 +257,8 @@ class SettingsPanel extends PositionComponent
       addAll([deleteIcon, deleteLabel]);
     }
     add(_privacyLink);
+    final optionsLink = _privacyOptionsLink;
+    if (optionsLink != null) add(optionsLink);
     final restore = onRestorePurchases;
     if (restore != null) {
       _restoreLink = RestoreLink(
@@ -247,6 +283,7 @@ class SettingsPanel extends PositionComponent
     _deleteIcon?.opacity = _opacity;
     _deleteLabel?.opacity = _opacity;
     _privacyLink.opacity = _opacity;
+    _privacyOptionsLink?.opacity = _opacity;
     _restoreLink?.opacity = _opacity;
     _title.setColor(_tint);
     _sfxLabel.setColor(_tint);
@@ -255,6 +292,7 @@ class SettingsPanel extends PositionComponent
     _credit.setColor(_tint);
     _slider.setColor(_tint);
     _privacyLink.setColor(_tint);
+    _privacyOptionsLink?.setColor(_tint);
   }
 
   void setMuted(bool value) {
@@ -288,6 +326,7 @@ class SettingsPanel extends PositionComponent
       _credit.setColor(color);
       _slider.setColor(color);
       _privacyLink.setColor(color);
+      _privacyOptionsLink?.setColor(color);
     }
   }
 
@@ -309,6 +348,7 @@ class SettingsPanel extends PositionComponent
       _deleteIcon?.opacity = _opacity;
       _deleteLabel?.opacity = _opacity;
       _privacyLink.opacity = _opacity;
+      _privacyOptionsLink?.opacity = _opacity;
       _restoreLink?.opacity = _opacity;
     }
   }

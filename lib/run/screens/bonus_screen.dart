@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 
+import '../../game/config.dart';
 import '../../game/flappy_game.dart';
 import '../../game/sound.dart';
 import '../../menu/wallet.dart';
@@ -31,16 +32,14 @@ class BonusPage implements BonusScreenFactory {
   Future<void> show(FlappySpikesGame game, RunSummary s) => game.showBonus(s);
 }
 
-/// What the out-of-feathers offer is (§3.15).
+/// What the out-of-feathers offer is (§3.15). PRD-2.2 §7.7: the NO ADS
+/// owners' free variant is gone — everyone watches the ad.
 enum BonusOffer {
-  /// No offer: NEXT (the ad was used, or no ad can be shown).
+  /// No offer: NEXT (the ad was used, or ads are impossible here).
   none,
 
   /// The gold ▶ feather ×3 rewarded-ad button.
   ad,
-
-  /// No-ads owners: the same button without the video icon, no ad (Q2).
-  free,
 }
 
 /// The pure rules of the bonus screen (§3.15), unit-tested without Flame.
@@ -59,16 +58,14 @@ abstract final class BonusRules {
     return [for (var k = 0; k < n; k++) k < n - 1 ? each : prize - each * (n - 1)];
   }
 
-  /// §3.15 the offer when the feathers run out: once per screen; no-ads
-  /// owners get it free; without an ad to show it is skipped.
-  static BonusOffer offerFor({
-    required bool adUsed,
-    required bool noAds,
-    required bool adAvailable,
-  }) {
+  /// §3.15 the offer when the feathers run out: once per screen.
+  /// PRD-2.2 §7.7 / §7.8: NO ADS owners get the ad offer like everyone, and
+  /// it always appears when ads are possible ([adsPossible]: consent, not
+  /// Test Lab / iOS), whether or not an ad is loaded yet (the button waits
+  /// up to `Config.bonusAdWait`).
+  static BonusOffer offerFor({required bool adUsed, required bool adsPossible}) {
     if (adUsed) return BonusOffer.none;
-    if (noAds) return BonusOffer.free;
-    return adAvailable ? BonusOffer.ad : BonusOffer.none;
+    return adsPossible ? BonusOffer.ad : BonusOffer.none;
   }
 
   /// §5.14 the reference → screen transform of the column above the
@@ -189,6 +186,14 @@ class BonusScreen extends PositionComponent
 
   /// The offer shown in [BonusPhase.offer].
   BonusOffer offer = BonusOffer.none;
+
+  /// PRD-2.2 §7.8 the offer is up but no ad is loaded yet: the button
+  /// waits (loading state, no taps) up to `Config.bonusAdWait`.
+  bool adWaiting = false;
+  double _waitT = 0;
+
+  /// PRD-2.2 §7.8 no ad arrived: the offer fades out (s since; < 0 idle).
+  double _offerOutT = -1;
 
   /// Coins credited on this screen / shown in the pill.
   int credited = 0;
@@ -351,12 +356,8 @@ class BonusScreen extends PositionComponent
 
   /// §3.15 the ▶ feather ×3 button (once per screen).
   Future<void> tapOffer() async {
-    if (phase != BonusPhase.offer) return;
+    if (phase != BonusPhase.offer || adWaiting || _offerOutT >= 0) return;
     adUsed = true;
-    if (offer == BonusOffer.free) {
-      _refill();
-      return;
-    }
     phase = BonusPhase.ad;
     _ph0 = _t;
     final result = await game.showRewardedAd(AdPlacement.bonusFeathers);
@@ -373,7 +374,7 @@ class BonusScreen extends PositionComponent
 
   /// NO THANKS → straight to the results; unpopped balloons stay hidden.
   void tapNoThanks() {
-    if (!noThanksShown) return;
+    if (!noThanksShown || _offerOutT >= 0) return;
     game.services.track('bonus_declined', {'pops': pops});
     _leave();
   }
@@ -478,24 +479,68 @@ class BonusScreen extends PositionComponent
     _coins.removeWhere((c) => c.done);
 
     if (phase == BonusPhase.pick && feathers == 0 && settled) {
+      final m = game.monetization;
       offer = BonusRules.offerFor(
         adUsed: adUsed,
-        noAds: game.menu.noAds,
-        adAvailable: game.monetization.ads.isAvailable,
+        adsPossible:
+            m.consent.canRequestAds.value && !m.consent.isTestLab,
       );
       if (offer != BonusOffer.none) {
         phase = BonusPhase.offer;
         _ph0 = t;
+        _offerOutT = -1;
         game.sound.play(Sfx.bnAdBtn);
-        if (offer == BonusOffer.ad) game.services.track('bonus_ad_offered');
+        game.services.track('bonus_ad_offered');
+        if (m.ads.isAvailable) {
+          adWaiting = false;
+          _offerShown('ad', 0);
+        } else {
+          // §7.8: ask for a load now (no wait inside the service) and
+          // poll it in game time up to Config.bonusAdWait.
+          adWaiting = true;
+          _waitT = 0;
+          unawaited(m.ads.ensureLoaded());
+        }
       } else {
         // §5.14 NEXT fades in ≈ 0.3 s after the last coin lands.
         phase = BonusPhase.done;
         _ph0 = t - (BonusConfig.nextDelay - BonusConfig.nextFadeIn);
       }
     }
+    _stepAdWait(dt);
     if (phase == BonusPhase.leaving && t - _ph0 > .6) removeFromParent();
   }
+
+  /// PRD-2.2 §7.8: the waiting offer turns active when the ad arrives, or
+  /// fades out to NEXT after `Config.bonusAdWait`.
+  void _stepAdWait(double dt) {
+    if (phase != BonusPhase.offer) return;
+    if (_offerOutT >= 0) {
+      _offerOutT += dt;
+      if (_offerOutT >= BonusConfig.adWaitFadeOut) {
+        _offerOutT = -1;
+        phase = BonusPhase.done;
+        _ph0 = _t - (BonusConfig.nextDelay - BonusConfig.nextFadeIn);
+      }
+      return;
+    }
+    if (!adWaiting) return;
+    _waitT += dt;
+    if (game.monetization.ads.isAvailable) {
+      adWaiting = false;
+      _offerShown('ad', _waitT);
+    } else if (_waitT >= Config.bonusAdWait.inMicroseconds / 1e6) {
+      adWaiting = false;
+      _offerOutT = 0;
+      _offerShown('timeout', _waitT);
+    }
+  }
+
+  void _offerShown(String outcome, double waited) =>
+      game.services.track('bonus_offer_shown', {
+        'wait_ms': (waited * 1000).round(),
+        'outcome': outcome,
+      });
 
   void _ring(
     Offset at, {
@@ -855,30 +900,61 @@ class BonusScreen extends PositionComponent
 
   void _offerButton(Canvas canvas, double t) {
     final u = phaseTime;
+    // PRD-2.2 §7.8: dimmed and still while waiting for the ad; fading out
+    // when none came.
+    final waiting = adWaiting;
+    final out = _offerOutT >= 0
+        ? (1 - _offerOutT / BonusConfig.adWaitFadeOut).clamp(0.0, 1.0)
+        : 1.0;
+    final alpha = (waiting || _offerOutT >= 0 ? BonusConfig.adWaitAlpha : 1.0) * out;
     final s = Ease.outBack((u / BonusConfig.adPop).clamp(0.0, 1.0)) *
-        (1 + BonusConfig.adPulse * math.sin(t * 2 * math.pi * BonusConfig.adHz));
+        (1 +
+            (waiting
+                ? 0
+                : BonusConfig.adPulse *
+                      math.sin(t * 2 * math.pi * BonusConfig.adHz)));
     const b = BonusConfig.adButton;
+    if (alpha < 1) {
+      canvas.saveLayer(
+        b.inflate(12),
+        Paint()..color = Color.fromRGBO(0, 0, 0, alpha),
+      );
+    }
     canvas.save();
     canvas.translate(b.center.dx, b.center.dy);
     canvas.scale(s);
     final box = Rect.fromCenter(center: Offset.zero, width: b.width, height: b.height);
     canvas.drawRect(box, _fill..color = BonusConfig.gold);
-    canvas.save();
-    canvas.clipRect(box);
-    final sx = ((u % BonusConfig.shineEvery) / BonusConfig.shineEvery) * 360 - 180;
-    canvas.drawPath(
-      Path()
-        ..moveTo(sx - 14, -30)
-        ..lineTo(sx + 6, -30)
-        ..lineTo(sx - 14, 30)
-        ..lineTo(sx - 34, 30)
-        ..close(),
-      _fill..color = const Color(0x59FFFFFF),
-    );
-    canvas.restore();
-    final video = offer != BonusOffer.free;
-    final dx = video ? 0.0 : -16.0;
-    if (video) {
+    if (!waiting) {
+      // The shine sweeps only over an active button.
+      canvas.save();
+      canvas.clipRect(box);
+      final sx = ((u % BonusConfig.shineEvery) / BonusConfig.shineEvery) * 360 - 180;
+      canvas.drawPath(
+        Path()
+          ..moveTo(sx - 14, -30)
+          ..lineTo(sx + 6, -30)
+          ..lineTo(sx - 14, 30)
+          ..lineTo(sx - 34, 30)
+          ..close(),
+        _fill..color = const Color(0x59FFFFFF),
+      );
+      canvas.restore();
+    }
+    const dx = 0.0;
+    if (waiting) {
+      // The loading state: a small spinning arc where the video icon sits.
+      _stroke
+        ..color = BonusConfig.plum
+        ..strokeWidth = 3;
+      canvas.drawArc(
+        Rect.fromCircle(center: const Offset(-57, 0), radius: 8),
+        t * 2 * math.pi * 1.4,
+        math.pi * 1.4,
+        false,
+        _stroke,
+      );
+    } else {
       _fill.color = BonusConfig.plum;
       canvas.drawRect(const Rect.fromLTWH(-72, -9, 20, 18), _fill);
       canvas.drawPath(
@@ -894,7 +970,10 @@ class BonusScreen extends PositionComponent
     final x3 = CollectText.of('×3', 30, BonusConfig.plum);
     x3.paint(canvas, Offset(18 + dx, 2 - x3.height / 2));
     canvas.restore();
-    if (phase == BonusPhase.offer && u > BonusConfig.noThanksDelay) {
+    if (alpha < 1) canvas.restore();
+    if (phase == BonusPhase.offer &&
+        _offerOutT < 0 &&
+        u > BonusConfig.noThanksDelay) {
       final a = ((u - BonusConfig.noThanksDelay) / BonusConfig.noThanksFade).clamp(0.0, 1.0) * BonusConfig.noThanksAlpha;
       _text(
         canvas,

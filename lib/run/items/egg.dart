@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart' show TextPainter, TextSpan, TextStyle;
 import 'package:flutter/painting.dart' as p show TextDirection;
 
 import '../../game/config.dart';
+import '../../game/flappy_game.dart' show GameState;
 import '../../game/sound.dart';
 import '../../skins/art/look_painter.dart';
 import '../../skins/look.dart';
@@ -302,8 +303,15 @@ class _EggView extends Component {
           math.sin(_t * EggConfig.chickBobOmega) * EggConfig.chickBobAmp;
       _chickX += (tx - _chickX) * math.min(1, dt * EggConfig.chickLagX);
       _chickY += (ty - _chickY) * math.min(1, dt * EggConfig.chickLagY);
-      _peep -= dt;
-      if (_peep <= 0) {
+      // PRD-2.2 §28.1 / §28.2: the chick only peeps while the run is live
+      // (never after a death, in pause or under a full-screen ad).
+      final live =
+          c.game.state == GameState.playing &&
+          !c.run.dying &&
+          !c.run.ended &&
+          !c.game.liveMotionPaused;
+      if (live) _peep -= dt;
+      if (live && _peep <= 0) {
         _peep = EggConfig.peepEvery * (.6 + c.cosmetic.nextDouble() * .8);
         c.sfx(Sfx.eggPeep);
       }

@@ -44,6 +44,12 @@ class Config {
   static const double fakeInterstitialSeconds = 3.0;
   // endregion PRD-2.2 §7.6
 
+  // region PRD-2.2 §28 — audio around ads and other apps
+  /// §28.3: for this long after a full-screen ad ended, the "other music
+  /// playing" check is skipped (the ad's own player can still be listed).
+  static const Duration adAudioSettle = Duration(seconds: 3);
+  // endregion PRD-2.2 §28
+
   // Physics (Flappy Bird feel; an intentional, user-requested deviation from
   // the 2014 original's 1350/525 — see SPEC.md): a modest flap pop whose rise
   // is about half the final pipe gap, plus a terminal fall speed so dives
@@ -1012,6 +1018,19 @@ class Config {
   /// clear of the 44 pt menu spike strip.
   static Vector2 settingsRestoreLinkPositionFor(double centerY) =>
       Vector2(160, 2 * centerY - 58);
+
+  /// PRD-2.2 §7.9 "Privacy options" (EEA/UK only): a 14 pt text link under
+  /// "Privacy Policy" (485 at 568), clear of RESTORE PURCHASES (510).
+  static Vector2 settingsPrivacyOptionsPositionFor(double centerY) =>
+      Vector2(160, 2 * centerY - 85);
+
+  /// PRD-2.2 §7.9: "Privacy Policy" moves up this far while the options
+  /// link shows (458 at 568), so the two links never overlap.
+  static const double settingsPrivacyLinkLiftWithOptions = 18;
+
+  /// PRD-2.2 §7.9: the options link's font size and tap padding.
+  static const double settingsPrivacyOptionsFontSize = 14;
+  static final Vector2 settingsPrivacyOptionsPadding = Vector2(32, 4);
 
   // Debug panel (debug builds / Linux): a column of text buttons centred on
   // the playfield.

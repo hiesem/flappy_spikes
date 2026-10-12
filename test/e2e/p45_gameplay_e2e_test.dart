@@ -323,7 +323,8 @@ void main() {
         await stepSeconds(g, 2);
       }
       await stepSeconds(g, .5);
-      expect(b.offer, owner ? BonusOffer.free : BonusOffer.ad);
+      // PRD-2.2 §7.7: NO ADS owners watch the ad too.
+      expect(b.offer, BonusOffer.ad);
       expect(b.noThanksShown, isFalse);
       await stepSeconds(g, 3.1);
       expect(b.noThanksShown, isTrue);
@@ -332,7 +333,7 @@ void main() {
       await b.tapOffer();
       await stepSeconds(g, 1.5);
       expect(b.feathers, 3);
-      expect(ads.placements.length, calls + (owner ? 0 : 1));
+      expect(ads.placements.length, calls + 1);
       for (final i in others.skip(2).take(3)) {
         expect(b.tapTile(i), isTrue);
         await stepSeconds(g, 2);
@@ -348,7 +349,8 @@ void main() {
     }, prefs: {'feathers': 3, 'noAds': owner});
   }
 
-  journey('P45 bonus: unavailable ad leads to NEXT after three pops', (
+  journey('P45 bonus: unavailable ad: the offer waits 5 s, then NEXT '
+      '(PRD-2.2 §7.8)', (
     g,
     _,
   ) async {
@@ -362,7 +364,10 @@ void main() {
       await stepSeconds(g, 2);
     }
     await stepSeconds(g, 1);
-    expect(b.offer, BonusOffer.none);
+    expect(b.offer, BonusOffer.ad);
+    expect(b.adWaiting, isTrue);
+    await stepSeconds(g, 5.5);
+    expect(b.phase, BonusPhase.done);
     expect(b.nextShown, isTrue);
     b.tapNext();
     await flushAndMount(g);

@@ -58,11 +58,12 @@ String formatCoins(int n) {
 /// rise above it).
 ///
 /// One option per death from the [ReviveLadder]: the pink ad heart, the
-/// gold coin heart (250, 500, 1 000 …) or the grey locked heart with
-/// GET COINS ›. The whole heart is the button; it drains from the top over
-/// 5 s (urgency from 3 s: shake, faster beat, red edge glow), stays empty
-/// for 1 s, then the game moves on ([ReviveOutcome.declined]). No thanks
-/// declines at once. A watched ad or a payment starts the [PhoenixRise];
+/// gold coin heart (250, 500, 1 000 …), the grey locked heart with
+/// GET COINS › or (PRD-2.2 §7.7, NO ADS owners) the pink FREE heart. The
+/// whole heart is the button; it drains from the top over 5 s (urgency
+/// from 3 s: shake, faster beat, red edge glow). PRD-2.2 §7.15: it never
+/// times out — the empty heart keeps pulsing until the player presses it
+/// or No thanks (the only way to decline, §24). A watched ad or a payment starts the [PhoenixRise];
 /// at 1.65 s the game resumes the run and this completes with
 /// [ReviveOutcome.revived].
 class ReviveScreen extends PositionComponent
@@ -107,7 +108,7 @@ class ReviveScreen extends PositionComponent
 
   /// §5.9 the grey locked heart: a coin offer the wallet cannot pay.
   bool get locked =>
-      !offer.isAd && phase == RevivePhase.offer && balance < offer.price;
+      offer.isCoins && phase == RevivePhase.offer && balance < offer.price;
 
   /// "need N more".
   int get need => math.max(0, offer.price - balance);
@@ -187,8 +188,12 @@ class ReviveScreen extends PositionComponent
     } catch (_) {
       _coin = null; // a missing asset never blocks the offer
     }
-    final adReady = !game.menu.noAds && game.monetization.ads.isAvailable;
-    offer = ReviveLadder.offer(run.state, adReady: adReady);
+    // PRD-2.2 §7.7: NO ADS owners get the ad step free; the ladder decides.
+    offer = ReviveLadder.offer(
+      run.state,
+      adReady: game.monetization.ads.isAvailable,
+      noAds: game.menu.noAds,
+    );
     shownBalance = balance;
     dim = ReviveDim();
     game.world.add(dim);
@@ -197,7 +202,7 @@ class ReviveScreen extends PositionComponent
     add(glow);
     _fadeUi(1);
     _track('revive_offered', {
-      'offer': offer.isAd ? 'ad' : 'coins',
+      'offer': offer.kind.name,
       'price': offer.price,
       'revive_index': run.state.revivesThisGame + 1,
     });
@@ -264,7 +269,20 @@ class ReviveScreen extends PositionComponent
       return;
     }
     _popT = 0;
-    if (offer.isAd) {
+    _trackWaited();
+    if (offer.isFree) {
+      // PRD-2.2 §7.7: straight to the phoenix, no ad, no price.
+      phase = RevivePhase.paying;
+      _track('revive_free_used', {
+        'revive_index': run.state.revivesThisGame + 1,
+      });
+      ReviveLadder.record(run.state, offer);
+      _after(ReviveConfig.adHideDelay, () => _fadeUi(0));
+      _after(
+        ReviveConfig.adHideDelay + ReviveConfig.phoenixDelay,
+        () => _startPhoenix(ReviveKind.free, 0),
+      );
+    } else if (offer.isAd) {
       phase = RevivePhase.ad;
       _track('revive_ad_started');
       _after(ReviveConfig.adHideDelay, () {
@@ -352,8 +370,21 @@ class ReviveScreen extends PositionComponent
 
   void tapNoThanks() {
     if (phase != RevivePhase.offer) return;
+    _trackWaited();
     _track('revive_declined');
     _decline();
+  }
+
+  bool _waitedTracked = false;
+
+  /// PRD-2.2 §7.15 `revive_offer_waited {seconds}`: the player answered
+  /// after the heart was empty (seconds since it emptied, whole).
+  void _trackWaited() {
+    if (_waitedTracked || countdown < ReviveConfig.offerSeconds) return;
+    _waitedTracked = true;
+    _track('revive_offer_waited', {
+      'seconds': (countdown - ReviveConfig.offerSeconds).round(),
+    });
   }
 
   void _decline() {
@@ -423,15 +454,14 @@ class ReviveScreen extends PositionComponent
           : math.max(_uiTarget, ui - s);
     }
     if (phase == RevivePhase.offer) {
+      // PRD-2.2 §7.15: no auto-decline; the clock only drives the drain
+      // and the urgency envelope.
       countdown += dt;
-      if (countdown >= ReviveConfig.offerSeconds + ReviveConfig.emptyHold) {
-        _track('revive_timeout');
-        _decline();
-      }
     }
     final t = countdown;
     double sm(double x) => Ease.smooth(x.clamp(0.0, 1.0));
     final offerUp = phase == RevivePhase.offer;
+    // The shake eases out as the heart empties (§5.9) ...
     urgency = offerUp
         ? sm((t - ReviveConfig.urgencyStart) / ReviveConfig.urgencyRise) *
               (1 -
@@ -440,13 +470,15 @@ class ReviveScreen extends PositionComponent
                         ReviveConfig.urgencyOutLength,
                   ))
         : 0;
+    // ... but PRD-2.2 §7.15 the empty heart keeps pulsing at the urgent beat.
+    final beatEnv = offerUp
+        ? sm((t - ReviveConfig.urgencyStart) / ReviveConfig.urgencyRise)
+        : 0.0;
     final hz =
         ReviveConfig.beatHzFrom +
         (ReviveConfig.beatHzTo - ReviveConfig.beatHzFrom) *
             sm((t - ReviveConfig.urgencyStart) / ReviveConfig.beatRise);
-    if (offerUp && t < ReviveConfig.offerSeconds + .5) {
-      _beatPhase += dt * hz * 2 * math.pi;
-    }
+    if (offerUp) _beatPhase += dt * hz * 2 * math.pi;
     // §5.9 S6-21: the two amplitudes are the peaks themselves (idle 1.035,
     // urgent 1.06), so neither may be doubled by its waveform.
     final idle = t < ReviveConfig.urgencyStart
@@ -460,7 +492,7 @@ class ReviveScreen extends PositionComponent
         ? 1 +
               idle +
               ReviveConfig.beatAmplitude *
-                  urgency *
+                  beatEnv *
                   (1 - math.cos(_beatPhase)) /
                   2
         : 1;
@@ -468,13 +500,15 @@ class ReviveScreen extends PositionComponent
         math.sin(_clock * 2 * math.pi * ReviveConfig.shakeHz) *
         ReviveConfig.shakeAmplitude *
         urgency;
+    // PRD-2.2 §7.15: the red edge glow settles to a steady level.
     glow.intensity = offerUp
         ? sm((t - ReviveConfig.urgencyStart) / ReviveConfig.glowIn) *
               (1 -
-                  sm(
-                    (t - ReviveConfig.glowOutStart) /
-                        ReviveConfig.glowOutLength,
-                  ))
+                  (1 - ReviveConfig.waitGlow) *
+                      sm(
+                        (t - ReviveConfig.glowOutStart) /
+                            ReviveConfig.glowOutLength,
+                      ))
         : 0;
     void tick(double v, void Function(double) set, double len) {
       if (v < 0) return;
@@ -608,7 +642,9 @@ class ReviveScreen extends PositionComponent
   }
 
   (Color, Color) get _colors {
-    if (offer.isAd) return (ReviveConfig.adFill, ReviveConfig.adBorder);
+    if (offer.isAd || offer.isFree) {
+      return (ReviveConfig.adFill, ReviveConfig.adBorder);
+    }
     if (locked) return (ReviveConfig.lockFill, ReviveConfig.lockBorder);
     return (ReviveConfig.coinFill, ReviveConfig.coinBorder);
   }
@@ -672,6 +708,11 @@ class ReviveScreen extends PositionComponent
 
   void _renderLabels(Canvas canvas, Offset c, double a) {
     const white = Color(0xFFFFFFFF);
+    if (offer.isFree) {
+      // PRD-2.2 §7.7: the pink heart with REVIVE only (no video, no coin).
+      _adRevive.paintCentred(canvas, Offset(c.dx, c.dy - 6), opacity: a);
+      return;
+    }
     if (offer.isAd) {
       _videoIcon(
         canvas,

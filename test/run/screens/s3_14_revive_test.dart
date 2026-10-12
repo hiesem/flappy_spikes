@@ -320,8 +320,9 @@ void main() {
     () => createRunTestGame(services: spy),
     gameSize: Vector2(320, 568),
   ).testGameWidget(
-    '§3.14 countdown: 5 s drain + 1 s empty, then results by itself; an ad '
-    'closed early brings the offer back with the remaining time',
+    '§3.14 / PRD-2.2 §7.15 countdown: 5 s drain, then the empty heart '
+    'waits (never times out); an ad closed early brings the offer back with '
+    'the remaining time',
     setUp: (g, _) => boot(g),
     verify: (game, _) async {
       spy.events.clear();
@@ -346,15 +347,33 @@ void main() {
       );
       step(game, ReviveConfig.offerSeconds - screen.countdown + .05);
       expect(screen.drain, 1);
-      expect(
-        game.state,
-        GameState.reviving,
-        reason: 'the empty heart stays 1 s',
-      );
-      step(game, 1.5);
+      // PRD-2.2 §7.15: offerSeconds + emptyHold + 10 s later the page is
+      // still up and the empty heart still pulses.
+      final beats = <double>{};
+      for (var i = 0; i < (ReviveConfig.emptyHold + 10) * 60; i++) {
+        game.update(1 / 60);
+        if (i % 7 == 0) beats.add(screen.beat);
+      }
       await flushAndMount(game);
-      expect(game.state, GameState.results);
-      expect(analyticsLog(spy).map((e) => e.$1), contains('revive_timeout'));
+      expect(game.state, GameState.reviving);
+      expect(game.reviveScreen, same(screen));
+      expect(screen.phase, RevivePhase.offer);
+      expect(beats.any((b) => b > 1.01), isTrue, reason: 'keeps pulsing');
+      expect(screen.glow.intensity, greaterThan(0), reason: 'steady glow');
+      expect(
+        analyticsLog(spy).map((e) => e.$1),
+        isNot(contains('revive_timeout')),
+      );
+      // No thanks still works and reports how long the player thought.
+      screen.tapNoThanks();
+      step(game, 1);
+      await flushAndMount(game);
+      expect(game.state, isNot(GameState.reviving));
+      final waited = analyticsLog(
+        spy,
+      ).where((e) => e.$1 == 'revive_offer_waited').toList();
+      expect(waited, hasLength(1));
+      expect(waited.single.$2!['seconds'], inInclusiveRange(10, 12));
     },
   );
 

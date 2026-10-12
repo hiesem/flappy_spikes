@@ -1,5 +1,4 @@
 import 'package:flappy_spikes/components/bird.dart';
-import 'package:flappy_spikes/components/home/menu_primitives.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
@@ -13,64 +12,25 @@ import 'menu_e2e_test.dart';
 void main() {
   setUpAll(loadFonts);
 
-  e2e('R2 owner CLAIM ignores unavailable ads, persists cap and cooldown', (
-    initial,
+  e2e('R2 (PRD-2.2 §7.7) an owner without a loaded ad gets the dimmed GET '
+      'chip and nothing is claimed (no ad-free CLAIM any more)', (
+    g,
     r,
     t,
   ) async {
-    var g = initial;
     g.monetization.showFakeAdOverlay = true;
     r.ads.mode = FakeAdMode.unavailable;
-    for (var i = 1; i <= 5; i++) {
-      if (g.menuScene == MenuScene.home) {
-        await tap(g, t, const Offset(49, 608));
-      }
-      final row = g.shopScreen!.freeCoins;
-      expect(row.chipText, 'CLAIM');
-      expect(row.chipDimmed, isFalse);
-      expect(
-        row.descendants().whereType<MenuIcon>().where(
-          (c) => identical(c.sprite!.image, row.video.image),
-        ),
-        isEmpty,
-      );
-      await tap(g, t, const Offset(260, 228));
-      expect(g.fakeAdOverlay, isNull);
-      expect(g.menu.wallet.balance, 40 * i);
-      expect(g.menu.freeCoins.claimedToday, i);
-      expect(toast(g), '+40 coins');
-      await tap(g, t, const Offset(260, 228));
-      expect(g.menu.wallet.balance, 40 * i);
-      if (i == 1) {
-        g = await restartWithSamePrefs(r, t);
-        g.monetization.showFakeAdOverlay = true;
-        await tap(g, t, const Offset(49, 608));
-        expect(g.shopScreen!.freeCoins.chipText, '05:00');
-        expect(g.menu.freeCoins.claimedToday, 1);
-        expect(g.menu.wallet.balance, 40);
-      }
-      r.clock.now = r.clock.now.add(const Duration(minutes: 5));
-      await settle(g, t);
-    }
-    expect(g.shopScreen!.freeCoins.chipText, 'TOMORROW');
-    await tap(g, t, const Offset(260, 228));
-    expect(g.menu.wallet.balance, 200);
-    r.clock.now = r.clock.now.add(const Duration(days: 1));
-    g = await restartWithSamePrefs(r, t);
     await tap(g, t, const Offset(49, 608));
-    expect(g.noAdsPopup, isNull);
-    expect(g.shopScreen!.freeCoins.chipText, 'CLAIM');
+    final row = g.shopScreen!.freeCoins;
+    expect(row.chipText, 'GET');
+    expect(row.chipDimmed, isTrue);
+    expect(row.videoIcon, isNotNull);
     await tap(g, t, const Offset(260, 228));
-    expect(g.menu.wallet.balance, 240);
-    expect(g.menu.freeCoins.claimedToday, 1);
-    expect(r.ads.shown, 0);
-    expect(r.spy.params('ad_rewarded_shown'), isEmpty);
-    expect(r.spy.params('ad_reward_earned'), isEmpty);
-    expect(
-      r.spy.params('coins_earned'),
-      List.filled(6, {'amount': 40, 'source': 'rewarded'}),
-    );
-    await capture(g, t, 'round2_owner_claim_cooldown');
+    expect(g.fakeAdOverlay, isNull);
+    expect(g.menu.wallet.balance, 0);
+    expect(g.menu.freeCoins.claimedToday, 0);
+    expect(toast(g), 'No video available right now');
+    expect(r.spy.params('coins_earned'), isEmpty);
   }, prefs: {'noAds': true});
 
   for (final placement in [AdPlacement.homeSlot, AdPlacement.shopFreeCoins]) {

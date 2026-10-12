@@ -324,6 +324,11 @@ class FirebaseVersusService implements VersusService {
   /// PRD-2.2 §3 a search ended since the last run start: the result is
   /// cached for the Home visit (no new search until [onRunStart]).
   bool _searched = false;
+
+  /// PRD-2.2 §3 (fix S7-06) bumped by every invalidation of [_searched]
+  /// (run start, data reset): a search that started before it must not
+  /// mark the new Home visit as searched when it ends late.
+  int _searchGen = 0;
   VersusSearchInfo _search = const VersusSearchInfo();
 
   /// PRD-2.2 §4 why the last start (App Check + auth) failed.
@@ -489,7 +494,10 @@ class FirebaseVersusService implements VersusService {
   }
 
   @override
-  void onRunStart() => _searched = false;
+  void onRunStart() {
+    _searched = false;
+    _searchGen++;
+  }
 
   @override
   VersusSearchInfo get lastSearch => _search;
@@ -532,6 +540,7 @@ class FirebaseVersusService implements VersusService {
     _pickFromPool();
     if (_held != null || _loading || _searched) return;
     _loading = true;
+    final gen = _searchGen;
     final level = levelFor(storage.bestScore);
     _search = VersusSearchInfo(state: VersusSearchState.running, level: level);
     final startedAt = _clock();
@@ -586,7 +595,9 @@ class FirebaseVersusService implements VersusService {
       );
     } finally {
       _loading = false;
-      _searched = true;
+      // S7-06: a search overtaken by a run start leaves the next Home free
+      // to search again.
+      if (gen == _searchGen) _searched = true;
     }
     if (kDebugMode) {
       debugPrint('versus: search (${_search.debugLine})');
@@ -688,6 +699,7 @@ class FirebaseVersusService implements VersusService {
     _pool = const [];
     _seen.clear();
     _searched = false;
+    _searchGen++;
     _search = const VersusSearchInfo();
     _ready = false;
     // A fresh anonymous account so versus keeps working.

@@ -71,7 +71,7 @@ class RunEntry {
   final int end;
 
   /// Timeline format v2 (PRD-2.2 §13.5): base64 of the version byte 2,
-  /// then per entry the flag byte (ride 1 | train 2 | gift 4 | bonus 8) and
+  /// then per entry the flag byte (ride 1 | train 2 | gift 4 | bonus 8 | puzzle 16) and
   /// the entry's value (uint16 LE). The values sum to [score].
   final String fl;
 

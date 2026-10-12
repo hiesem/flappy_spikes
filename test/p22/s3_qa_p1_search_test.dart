@@ -46,5 +46,5 @@ void main() {
     expect(backend.poolReads, hasLength(44));
     await versus.prefetch(); // Return to Home after that run.
     expect(backend.poolReads, hasLength(88));
-  }, skip: 'S7-06');
+  });
 }

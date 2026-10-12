@@ -195,3 +195,18 @@ Validation:
   final device playtest; this round explicitly excluded device work.
 - No gameplay/module contract changed, so no new SPEC DEVIATION or ARCH edit
   is required for this test-only commit.
+
+## Fix round P1-R1 (`P22-FIX1`)
+
+All six findings fixed; every `S7-xx` skip removed.
+- S7-01: font = min(125, size at which the widest n-digit number fits the
+  183 pt circle with 12 pt per side), measured with the real font metrics.
+- S7-02: a bonus entry is gap-exempt and no longer restarts the interval
+  (TS `gapOk`, Dart `RunTimeline.check`).
+- S7-03: the chick doubles the puzzle completion payout in coins and points;
+  the recoverable payout record is unchanged (it records the paid amount).
+- S7-04: Bullseye judges `Hoop.passOffset` (the crossing), like the perfect zone.
+- S7-05: generic bonus cap 80; puzzle completion entries (flag 16 with bonus 8)
+  cap 500. Same rule in TS and Dart, shared fixture cases for both.
+- S7-06: a search-generation counter keeps a late search from marking the
+  next Home visit as searched.

@@ -18,6 +18,26 @@ abstract final class VersusConfig {
   /// DAILY_UPLOADS; the server counts per UTC day, so the client does too).
   static const int dailyUploads = 3;
 
+  /// PRD-2.2 §13.5 the 0.9 s gap rule between two plain entries,
+  /// centiseconds (schema.ts MIN_GAP_CS).
+  static const int minGapCs = 90;
+
+  /// PRD-2.2 §13.5 a pass entry is worth at most passCapMult × (pass
+  /// entries so far + passCapExtra) points (schema.ts PASS_CAP_*).
+  static const int passCapMult = 2;
+  static const int passCapExtra = 5;
+
+  /// PRD-2.2 §13.5 cap of a generic bonus entry: 2 × the 40-coin piggy
+  /// (schema.ts BONUS_CAP).
+  static const int bonusCap = 80;
+
+  /// PRD-2.2 §13.1 / §13.5 (fix S7-05) cap of a puzzle completion entry:
+  /// 2 × the largest 250 roll (schema.ts PUZZLE_BONUS_CAP).
+  static const int puzzleBonusCap = 500;
+
+  /// PRD-2.2 §13.5 cap of a pair gift entry: 2 × +5 (schema.ts GIFT_CAP).
+  static const int giftCap = 10;
+
   /// §3.13 / ARCH §6.1 `expireAt` = now + 60 days (TTL; rules accept ±1 d).
   static const Duration expireAfter = Duration(days: 60);
 

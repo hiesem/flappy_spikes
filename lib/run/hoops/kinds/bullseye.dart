@@ -100,10 +100,24 @@ class BullseyeHoopKind extends HoopKind {
     canvas.restore();
   }
 
+  /// PRD-2.2 §11.1–2 (fix S7-04) whether the crossing [offset]
+  /// (`Hoop.passOffset`, ring-local, like the perfect zone) is inside the
+  /// ±12 pt band.
+  static bool isBullseyeOffset(double offset) =>
+      offset.abs() <= BullseyeConfig.band;
+
   @override
   void onPass(Hoop h, PassInfo p, RunContext c) {
-    final bird = c.run.birdTrackPosition();
-    if (bird == null || !isBullseye(h.frame(), bird, ring: p.ring)) return;
+    // PRD-2.2 §11.1–2 (fix S7-04): judged at the crossing (the offset the
+    // controller recorded), not at the frame's end position; the frame
+    // position is only the fallback for a pass without a crossing offset.
+    final off = h.passOffset;
+    if (off != null) {
+      if (!isBullseyeOffset(off)) return;
+    } else {
+      final bird = c.run.birdTrackPosition();
+      if (bird == null || !isBullseye(h.frame(), bird, ring: p.ring)) return;
+    }
     _states[h]?.flash = BullseyeConfig.flashGrow;
     c.earn(BullseyeConfig.coins, CoinSource.bullseye);
     c.sfx(Sfx.bullThunk);

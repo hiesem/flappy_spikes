@@ -983,8 +983,8 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   **puzzle piece** — always one the player does not hold yet — floats in
   the colours of the open round. Touching it banks it (persistent 4-bit
   `puzzlePieces`). The 4th piece pays **50–250 coins** (uniform, step 5,
-  source `puzzle`) at that moment in the run — included in YOUR REWARD, not
-  doubled by the chick — and resets the mask to 0 with `puzzleRound` + 1 in
+  source `puzzle`) at that moment in the run — included in YOUR REWARD;
+  doubled by the chick since PRD-2.2 §13.1 (P22-FIX1, S7-03) — and resets the mask to 0 with `puzzleRound` + 1 in
   the same step; the next round has the next of 8 colour themes (looped).
 - DEVIATION (PRD-2 §3.0.1 / §5.14, balloon bonus; `Fix P45 R1`, S6-63): the
   bottom band (feather row, ad button, NO THANKS, NEXT — reference y ≥ 552)
@@ -1015,7 +1015,8 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   banner and no GRAZE notice, `point` + ring pulse, one knock) and **graze**
   (a rim was touched: +1 coin, streak reset, GRAZE notice, no rumble at the
   pass). Ride rings stay always perfect; only a perfect FEVER pass lights
-  the fire; a bullseye is always also perfect (±12 lies inside the zone).
+  the fire; a bullseye is always also perfect (±12 lies inside the zone) and
+  is judged on the same crossing offset (P22-FIX1, S7-04).
   `RunSummary.cleanPasses`, `run_end.clean_passes`.
 - DEVIATION (PRD-2.2 §10, supersedes PRD-2 §3.33 on these points): a rim
   touch **knocks at the moment of contact** (`RimTouched`; a lethal saw touch
@@ -1040,11 +1041,14 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   bonus (bullseye, train, pair +10, Lucky Spin, Star Trail, jar, piggy, Coin
   Frenzy, switch, puzzle) also pays its amount in points (`RunContext.earn`,
   `PointFlags.bonus`); the pair "+5 score" gift is +5; the chick doubles
-  points like coins (not the puzzle bonus); the versus win / draw bonus pays
+  points like coins (the puzzle bonus too, in coins and points: P22-FIX1,
+  S7-03); the versus win / draw bonus pays
   0 points. **Coins are unchanged** (1 / 2 per hoop + bonuses). The big
   circle shows points and counts up over 0.3 s (ease-out) with a small pop
-  for gains above 1; from 4 digits its font shrinks to 125 × 3 / digits so
-  the number keeps a 3-digit width. NEW BEST, levels, the leaderboard and
+  for gains above 1; its font is min(125 pt, the size at which the widest
+  number of that digit count, measured with the real LVDCC metrics, fits the
+  183 pt circle with a 12 pt side margin) (P22-FIX1, S7-01), so it changes
+  only with the digit count and every score fits. NEW BEST, levels, the leaderboard and
   versus use points; colour stages, revive eligibility, the opening curve
   and the director still count hoops. `run_end` sends `score` (points),
   `hoops` and `max_streak`. The streak feature now runs before scoring.
@@ -1052,8 +1056,11 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   change with its value (`fl` = version byte 2 + flag byte + uint16 value per
   entry; the 11 `RunEntry` keys and the rules are unchanged); the server
   checks sum of values == score, the 0.9 s gap per plain entry (ride / train
-  / gift / bonus exempt) and a plausibility cap per entry (pass ≤ 2 × (pass
-  entries so far + 5), bonus ≤ 250, gift ≤ 10), and rejects v1 uploads
+  / gift / bonus exempt; measured from the previous entry that is not a
+  bonus, so a bonus never restarts the interval: P22-FIX1, S7-02) and a
+  plausibility cap per entry (pass ≤ 2 × (pass entries so far + 5), bonus ≤
+  80 = 2 × the 40-coin piggy, a puzzle completion entry — flag puzzle 16
+  with bonus 8 — ≤ 500 = 2 × 250, gift ≤ 10: P22-FIX1, S7-05), and rejects v1 uploads
   (`version`); the client skips v1 pool entries. The 2.1 pool runs are
   converted once (value 1 per entry) by `functions/scripts/convert_pools_v2.ts`.
 - DEVIATION (PRD-2.2 §14, supersedes the "—" sound at 0.45 s of the PRD-2

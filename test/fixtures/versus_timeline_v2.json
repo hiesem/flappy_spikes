@@ -1,5 +1,5 @@
 {
- "_doc": "PRD-2.2 §13.5 timeline format v2, shared by functions/test/timeline.test.ts (server check, replay, v1 conversion) and test/p22/s13_versus_timeline_test.dart (Dart recorder → these exact strings, Dart replay). Times are runClock seconds; cs = centiseconds; flags ride 1 | train 2 | gift 4 | bonus 8.",
+ "_doc": "PRD-2.2 §13.5 timeline format v2, shared by functions/test/timeline.test.ts (server check, replay, v1 conversion) and test/p22/s13_versus_timeline_test.dart (Dart recorder → these exact strings, Dart replay). Times are runClock seconds; cs = centiseconds; flags ride 1 | train 2 | gift 4 | bonus 8 | puzzle 16 (PRD-2.2 §13.1, the puzzle completion bonus, always with bonus 8).",
  "record": [
   {
    "t": 1.2,
@@ -261,12 +261,51 @@
    "expect": "count"
   },
   {
+   "name": "a bonus entry above 80 (2 × the 40-coin piggy)",
+   "deltas": [
+    120,
+    120,
+    0
+   ],
+   "flags": [
+    0,
+    0,
+    8
+   ],
+   "values": [
+    1,
+    2,
+    81
+   ],
+   "expect": "count"
+  },
+  {
+   "name": "a puzzle completion entry above 500 (2 × 250)",
+   "deltas": [
+    120,
+    120,
+    0
+   ],
+   "flags": [
+    0,
+    0,
+    24
+   ],
+   "values": [
+    1,
+    2,
+    501
+   ],
+   "expect": "count"
+  },
+  {
    "name": "the largest plausible values pass",
    "deltas": [
     120,
     120,
     0,
     120,
+    0,
     0
    ],
    "flags": [
@@ -274,14 +313,16 @@
     0,
     8,
     0,
-    4
+    4,
+    24
    ],
    "values": [
     12,
     14,
-    250,
+    80,
     16,
-    10
+    10,
+    500
    ],
    "expect": null
   }

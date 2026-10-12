@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import '../run/config/versus_config.dart';
+
 /// Entry flags of a versus timeline (§3.13, ARCH §6.1; PRD-2.2 §13.5): one
 /// byte per entry. Flagged entries are exempt from the server's 0.9 s gap
 /// check.
@@ -13,6 +15,13 @@ abstract final class PointFlags {
   /// PRD-2.2 §13.6 a coin bonus paid as points (`RunContext.earn`); it can
   /// land right after a pass, so it is gap-exempt too.
   static const int bonus = 8;
+
+  /// PRD-2.2 §13.1 / §13.5 (fix S7-05) the puzzle 4/4 completion payout —
+  /// always together with [bonus]; its cap is the doubled 250 roll.
+  static const int puzzle = 16;
+
+  /// Flags exempt from the 0.9 s gap check (schema.ts GAP_EXEMPT).
+  static const int gapExempt = ride | train | gift | bonus;
 }
 
 /// A run's score timeline on `runClock` — **format v2** (PRD-2 §3.13, ARCH
@@ -164,6 +173,45 @@ class RunTimeline {
       n += values[i];
     }
     return n;
+  }
+
+  /// PRD-2.2 §13.5 the server's timeline rules (`functions/src/timeline.ts`
+  /// `plausibleValues` + `gapOk`), mirrored for the shared fixtures: `count`
+  /// when an entry's value is above its cap, `gap` when a plain entry comes
+  /// under 0.9 s after the previous entry that is not a bonus (fix S7-02: a
+  /// bonus does not restart the interval), else null.
+  String? check() {
+    var passes = 0;
+    for (var i = 0; i < values.length; i++) {
+      final f = flags[i], v = values[i];
+      if (f & PointFlags.bonus != 0) {
+        final cap = f & PointFlags.puzzle != 0
+            ? VersusConfig.puzzleBonusCap
+            : VersusConfig.bonusCap;
+        if (v > cap) return 'count';
+      } else if (f & PointFlags.gift != 0) {
+        if (v > VersusConfig.giftCap) return 'count';
+      } else {
+        passes++;
+        if (v >
+            VersusConfig.passCapMult * (passes + VersusConfig.passCapExtra)) {
+          return 'count';
+        }
+      }
+    }
+    var t = 0;
+    int? anchor;
+    for (var i = 0; i < cs.length; i++) {
+      t += cs[i];
+      final f = flags[i];
+      if (f & PointFlags.gapExempt == 0 &&
+          anchor != null &&
+          t - anchor < VersusConfig.minGapCs) {
+        return 'gap';
+      }
+      if (f & PointFlags.bonus == 0) anchor = t;
+    }
+    return null;
   }
 
   /// True once [runClock] is past the end of this timeline.

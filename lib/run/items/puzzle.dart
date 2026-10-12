@@ -17,6 +17,7 @@ import '../../versus/timeline.dart' show PointFlags;
 import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
+import '../run_state.dart';
 
 /// Puzzle pieces in the run (PRD-2 §3.16, §5.15).
 ///
@@ -32,7 +33,8 @@ import '../run_feature.dart';
 class PuzzleFeature extends RunFeature {
   RunContext? _c;
 
-  /// Bonuses paid in this run (tests: exactly once per completed picture).
+  /// Bonuses rolled in this run, before the chick's ×2 (tests: exactly
+  /// once per completed picture).
   final List<int> paid = [];
 
   @override
@@ -73,9 +75,9 @@ class PuzzleFeature extends RunFeature {
     });
     int? reward;
     if (count >= PuzzleConfig.pieces) {
-      reward = c.director.rollPuzzleBonus();
-      _complete(c, reward);
-      paid.add(reward);
+      final rolled = c.director.rollPuzzleBonus();
+      reward = _complete(c, rolled);
+      paid.add(rolled);
       c.track('puzzle_completed', {'round': round + 1, 'coins': reward});
     } else {
       unawaited(storage.savePuzzlePieces(mask));
@@ -134,17 +136,21 @@ class PuzzleFeature extends RunFeature {
   }
 
   /// §3.16 the 4/4 bonus: wallet (source `puzzle`), YOUR REWARD and
-  /// [CoinsEarned] — **not** doubled by the chick (call: the badge shows
-  /// the rolled amount; §3.16 pays "random 50 to 250").
+  /// [CoinsEarned]. PRD-2.2 §13.1 (fix S7-03): the chick doubles it like
+  /// every other row, in coins **and** points (up to 2 × 250 = 500; the
+  /// points entry carries [PointFlags.puzzle] for the server cap).
   ///
   /// (call, S6-62) Completion is recoverable, as the level-reward claim
   /// (S6-22): the payout record (the balance to reach) goes out with the
   /// mask reset + round advance *before* the coin write, and is cleared
   /// only after the coin write landed. A kill in between is paid by
   /// [settlePayout] at the next start — never lost, never paid twice.
-  static void _complete(RunContext c, int coins) {
+  /// Returns the amount paid (the doubled one with the chick).
+  static int _complete(RunContext c, int rolled) {
     final storage = c.game.storage;
     final wallet = c.game.menu.wallet;
+    final x2 = c.s.egg?.stage == EggStage.chick;
+    final coins = x2 ? rolled * 2 : rolled;
     c.s.coinsThisRun += coins;
     unawaited(storage.beginPuzzleCompletion(payout: wallet.balance + coins));
     unawaited(
@@ -152,10 +158,14 @@ class PuzzleFeature extends RunFeature {
           .add(coins, CoinSource.puzzle)
           .then((_) => storage.endPuzzlePayout()),
     );
-    c.emit(CoinsEarned(coins, CoinSource.puzzle));
-    // PRD-2.2 §13.1 the puzzle bonus pays the same amount in points (not
-    // doubled by the chick, like its coins).
-    c.addScore(coins, flags: PointFlags.bonus, chickX2: false);
+    c.emit(CoinsEarned(coins, CoinSource.puzzle, eggX2: x2));
+    // PRD-2.2 §13.1 the same (already doubled) amount in points.
+    c.addScore(
+      coins,
+      flags: PointFlags.bonus | PointFlags.puzzle,
+      chickX2: false,
+    );
+    return coins;
   }
 
   /// §3.16 (call, S6-62) Pays the part of an interrupted 4/4 bonus the
@@ -240,14 +250,13 @@ class PuzzlePillItem extends CollectTimeline {
   /// The badge's number at [t] (0 → reward over 0.8 s).
   int badgeCount(double t) {
     final r = reward ?? 0;
-    final u = ((t - badgeTime - PuzzleConfig.countStart) /
-            PuzzleConfig.countLength)
-        .clamp(0.0, 1.0);
+    final u =
+        ((t - badgeTime - PuzzleConfig.countStart) / PuzzleConfig.countLength)
+            .clamp(0.0, 1.0);
     return (r * u).round();
   }
 
-  double get _badgeY =>
-      PuzzleConfig.pillHeight / 2 + PuzzleConfig.badgeGap;
+  double get _badgeY => PuzzleConfig.pillHeight / 2 + PuzzleConfig.badgeGap;
 
   @override
   void cues(CollectLayer layer, double prev, double t) {
@@ -261,7 +270,8 @@ class PuzzlePillItem extends CollectTimeline {
         _ => Sfx.col4PuzzleSlot4,
       });
       _punch[piece] = t;
-      final p = centre +
+      final p =
+          centre +
           const Offset(PuzzleConfig.boardX, 0) +
           PuzzleArt.centreOf(piece);
       layer.ring(
@@ -393,7 +403,9 @@ class PuzzlePillItem extends CollectTimeline {
     final s = CollectText.eob(ub / PuzzleConfig.badgePop);
     final land = ub - PuzzleConfig.countStart - PuzzleConfig.countLength;
     final bump = land > 0 && land < PuzzleConfig.bumpLength
-        ? 1 + PuzzleConfig.bump * math.sin(math.pi * land / PuzzleConfig.bumpLength)
+        ? 1 +
+              PuzzleConfig.bump *
+                  math.sin(math.pi * land / PuzzleConfig.bumpLength)
         : 1.0;
     const plum = Color(0xFF7A0044);
     final full = CollectText.of('+${reward ?? 0}', 24, plum);
@@ -411,7 +423,12 @@ class PuzzlePillItem extends CollectTimeline {
       _fill..color = const Color(0xFFFFFFFF),
     );
     if (coin != null) {
-      CoinIcon.paint(canvas, coin, Offset(-bw / 2 + 17, 0), PuzzleConfig.badgeCoin);
+      CoinIcon.paint(
+        canvas,
+        coin,
+        Offset(-bw / 2 + 17, 0),
+        PuzzleConfig.badgeCoin,
+      );
     }
     text.paint(canvas, Offset(-bw / 2 + 34, 2 - text.height / 2));
     canvas.restore();

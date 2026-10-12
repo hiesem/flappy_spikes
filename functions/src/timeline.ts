@@ -5,7 +5,7 @@
  * `tl`: base64 of little-endian uint16 centisecond deltas, one per entry
  * (entry i's run time = sum of deltas 0..i on the player's runClock).
  * `fl` (v2): base64 of the version byte 2, then per entry the flag byte
- * (ride 1 | train 2 | gift 4 | bonus 8) and the entry's value (uint16 LE):
+ * (ride 1 | train 2 | gift 4 | bonus 8 | puzzle 16) and the entry's value (uint16 LE):
  * the points it added (a pass 1 / 2 / the streak, a pair gift, a coin bonus).
  * The values sum to the score. v1 (one flag byte per point, no values) is
  * rejected (`version`); old pool runs are converted by `convertV1ToV2`.
@@ -14,12 +14,14 @@ import {
   BONUS_CAP,
   FLAG_BONUS,
   FLAG_GIFT,
+  FLAG_PUZZLE,
   GAP_EXEMPT,
   GIFT_CAP,
   MIN_GAP_CS,
   MIN_SCORE,
   PASS_CAP_EXTRA,
   PASS_CAP_MULT,
+  PUZZLE_BONUS_CAP,
   RunEntry,
   TIMELINE_VERSION,
 } from './schema.js';
@@ -120,8 +122,9 @@ function isInt(v: unknown, min: number, max: number): v is number {
 
 /**
  * PRD-2.2 §13.5 the plausibility cap of each entry: a pass entry is worth at
- * most 2 × (pass entries so far + 5), a bonus at most BONUS_CAP, a gift at most
- * GIFT_CAP. Returns false when a value is outside.
+ * most 2 × (pass entries so far + 5), a bonus at most BONUS_CAP (a puzzle
+ * completion bonus, flagged FLAG_PUZZLE, at most PUZZLE_BONUS_CAP), a gift at
+ * most GIFT_CAP. Returns false when a value is outside.
  */
 export function plausibleValues(flags: number[], values: number[]): boolean {
   let passes = 0;
@@ -129,13 +132,31 @@ export function plausibleValues(flags: number[], values: number[]): boolean {
     const f = flags[i];
     const v = values[i];
     if ((f & FLAG_BONUS) !== 0) {
-      if (v > BONUS_CAP) return false;
+      if (v > ((f & FLAG_PUZZLE) !== 0 ? PUZZLE_BONUS_CAP : BONUS_CAP)) return false;
     } else if ((f & FLAG_GIFT) !== 0) {
       if (v > GIFT_CAP) return false;
     } else {
       passes++;
       if (v > PASS_CAP_MULT * (passes + PASS_CAP_EXTRA)) return false;
     }
+  }
+  return true;
+}
+
+/**
+ * PRD-2.2 §13.5 the 0.9 s gap rule: a non-exempt entry must come at least
+ * MIN_GAP_CS after the previous entry that is not a bonus. (Fix S7-02) a bonus
+ * entry is exempt *and* does not restart the interval, so a pickup bonus just
+ * before a pass can't make a legitimately spaced pass look too close.
+ */
+export function gapOk(deltas: number[], flags: number[]): boolean {
+  let t = 0;
+  let anchor: number | null = null;
+  for (let i = 0; i < deltas.length; i++) {
+    t += deltas[i];
+    const f = flags[i];
+    if ((f & GAP_EXEMPT) === 0 && anchor !== null && t - anchor < MIN_GAP_CS) return false;
+    if ((f & FLAG_BONUS) === 0) anchor = t;
   }
   return true;
 }
@@ -170,10 +191,7 @@ export function checkRun(run: RunEntry, playerBest: number): RejectReason | null
   const sum = meta.values.reduce((a, b) => a + b, 0);
   if (sum !== run.score) return 'count';
   if (!plausibleValues(meta.flags, meta.values)) return 'count';
-  for (let i = 1; i < deltas.length; i++) {
-    if ((meta.flags[i] & GAP_EXEMPT) === 0 && deltas[i] < MIN_GAP_CS) return 'gap';
-  }
-  return null;
+  return gapOk(deltas, meta.flags) ? null : 'gap';
 }
 
 /** Opponent score at run time [cs] (replay reference for the Dart client, ARCH §6.4). */

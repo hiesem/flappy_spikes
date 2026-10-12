@@ -2818,6 +2818,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   bool get bannerWanted {
     if (menu.noAds) return false;
     if (kE2E && !E2EHooks.banner) return false;
+    if (kSoakNoBanner) return false; // S7-19 soak diagnosis only
     if (!monetization.banner.canShow) return false;
     return bannerStripHeight != null;
   }

@@ -113,6 +113,14 @@ does not claim an independent auditory recording of every cue. Calls, Spotify,
   equate bounded pool warming with flat aggregate count.
 - Final merged ads are included; closing test interstitials is recorded.
   No causal diagnosis or statistical significance is invented from one run.
+- **Fix round R1-b (`g7-fin-soak`, PERF.md §2e):** session sound set pinned,
+  run-scoped pools disposed at the Home arrival. Re-soak `final-fix`: players
+  **93 at every hold** (PASS), PSS 454.9 → 499.9 MB **+9.9 %** (PASS, narrow),
+  Home CPU 49–55 % / 0 polls and thermal 0 (PASS); run p90 12.81 → 14.74 ms,
+  slow 11.7 → 25.9 % (**FAIL**). Cause: the §7.5 banner platform view redraws
+  on the main (= Dart UI) thread, ≈ 7 ms per redraw in 0.6 s bursts every 5 s;
+  a 10-game soak without the banner is flat (p90 11.4–13.3 ms, slow 3.5–13.6 %).
+  Open for the owner (banner decision).
 
 ### S7-20 — major — Android system back bypasses the menu close path
 

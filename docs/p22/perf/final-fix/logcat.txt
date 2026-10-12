@@ -1,0 +1,322 @@
+--------- beginning of main
+10-12 08:46:04.995 I/flutter (32378): The Dart VM service is listening on http://127.0.0.1:42743/Ez7-MmI_Qgs=/
+10-12 08:46:04.999 I/flutter (32378): [IMPORTANT:flutter/shell/platform/android/android_context_vk_impeller.cc(62)] Using the Impeller rendering backend (Vulkan).
+10-12 08:46:05.561 I/flutter (32378): [IAP] query 5: found 5
+10-12 08:46:11.471 I/flutter (32378): FS_SOAK begin games=20 hold=100 t=6.0 pools=33 pooled=92 evicted=0 steals=0 loops=0 players=93 creates=93 disposes=0 releases=1 resumes=1 posPolls=0
+10-12 08:46:11.472 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 08:46:12.616 I/flutter (32378): FS_SOAK start game=1 bonus=false levelup=false t=7.0 pools=33 pooled=92 evicted=0 steals=0 loops=0 players=93 creates=93 disposes=0 releases=1 resumes=3 posPolls=0
+10-12 08:46:17.620 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1000
+10-12 08:46:18.872 I/flutter (12693): NtLifecycle->scheduledWakeUp tag:KeepAlive,length:Instance of 'BluetoothHelper',Instance of 'NtWatchWorker'
+10-12 08:46:21.772 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 08:46:24.304 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1500
+10-12 08:46:28.007 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 08:46:31.540 I/flutter (32378): FS_SOAK death game=1 hoops=10 score=15 frames=1113 p50=8.26 p90=12.81 p99=45.97 max=347.1 build90=3.70 raster90=4.67 jank=11.7% t=24.9 pools=34 pooled=94 evicted=0 steals=0 loops=0 players=96 creates=96 disposes=0 releases=1 resumes=56 posPolls=0
+10-12 08:46:32.125 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 08:46:32.255 I/flutter (32378): FS_SOAK sfx-stop file=train_note2.mp3 ms=602
+10-12 08:46:32.954 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1428
+10-12 08:46:33.171 I/flutter (32378): FS_SOAK revive-declined game=1 t=26.5 pools=35 pooled=96 evicted=0 steals=0 loops=0 players=97 creates=97 disposes=0 releases=1 resumes=57 posPolls=0
+10-12 08:46:35.645 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1006
+10-12 08:46:36.695 I/flutter (32378): FS_SOAK sfx-stop file=lv_bar.mp3 ms=1603
+10-12 08:46:37.157 I/flutter (32378): FS_SOAK claim game=1 t=30.5 pools=35 pooled=96 evicted=0 steals=15 loops=0 players=97 creates=97 disposes=0 releases=1 resumes=83 posPolls=0
+10-12 08:46:38.662 I/flutter (32378): FS_SOAK sfx-stop file=lv_claim.mp3 ms=1505
+10-12 08:46:38.963 I/flutter (32378): FS_SOAK sfx-stop file=lv_up.mp3 ms=2707
+10-12 08:46:41.158 I/flutter (32378): FS_SOAK game-end game=1 postrun frames=569 p50=11.80 p90=16.24 p99=25.71 max=41.3 build90=5.04 raster90=6.81 jank=42.9% t=34.5 pools=33 pooled=92 evicted=2 steals=35 loops=0 players=93 creates=97 disposes=4 releases=5 resumes=121 posPolls=0
+10-12 08:46:41.158 I/flutter (32378): FS_SOAK hold game=1 secs=100 t=34.5 pools=33 pooled=92 evicted=2 steals=35 loops=0 players=93 creates=97 disposes=4 releases=5 resumes=121 posPolls=0
+10-12 08:48:22.561 I/flutter (32378): FS_SOAK hold-end game=1 idle frames=3041 p50=11.78 p90=13.99 p99=15.96 max=63.4 build90=6.10 raster90=6.12 jank=33.8% t=134.5 pools=33 pooled=92 evicted=2 steals=35 loops=0 players=93 creates=97 disposes=4 releases=5 resumes=121 posPolls=0
+10-12 08:48:22.606 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 08:48:23.692 I/flutter (32378): FS_SOAK start game=2 bonus=false levelup=false t=135.6 pools=33 pooled=92 evicted=2 steals=35 loops=0 players=93 creates=97 disposes=4 releases=5 resumes=123 posPolls=0
+10-12 08:48:36.150 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 08:48:38.739 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1504
+10-12 08:48:41.668 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2401
+10-12 08:48:43.388 I/flutter (32378): FS_SOAK death game=2 hoops=10 score=24 frames=1213 p50=10.22 p90=14.48 p99=24.16 max=64.3 build90=4.08 raster90=5.50 jank=25.0% t=155.1 pools=35 pooled=96 evicted=2 steals=35 loops=0 players=102 creates=106 disposes=4 releases=5 resumes=180 posPolls=0
+10-12 08:48:43.719 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2401
+10-12 08:48:44.803 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1432
+10-12 08:48:45.116 I/flutter (32378): FS_SOAK revive-declined game=2 t=156.9 pools=39 pooled=106 evicted=2 steals=35 loops=0 players=107 creates=112 disposes=5 releases=6 resumes=180 posPolls=0
+10-12 08:48:45.775 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2405
+10-12 08:48:47.569 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1001
+10-12 08:48:48.624 I/flutter (32378): FS_SOAK sfx-stop file=lv_bar.mp3 ms=1603
+10-12 08:48:52.387 I/flutter (32378): FS_SOAK game-end game=2 postrun frames=538 p50=10.81 p90=15.22 p99=20.36 max=27.1 build90=4.92 raster90=5.64 jank=29.6% t=164.2 pools=33 pooled=92 evicted=8 steals=52 loops=0 players=93 creates=112 disposes=19 releases=20 resumes=207 posPolls=0
+10-12 08:48:52.387 I/flutter (32378): FS_SOAK hold game=2 secs=100 t=164.2 pools=33 pooled=92 evicted=8 steals=52 loops=0 players=93 creates=112 disposes=19 releases=20 resumes=207 posPolls=0
+10-12 08:50:33.341 I/flutter (32378): FS_SOAK hold-end game=2 idle frames=3040 p50=11.57 p90=13.73 p99=15.66 max=18.9 build90=6.04 raster90=5.87 jank=27.7% t=264.2 pools=33 pooled=92 evicted=8 steals=52 loops=0 players=93 creates=112 disposes=19 releases=20 resumes=207 posPolls=0
+10-12 08:50:33.376 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 08:50:34.462 I/flutter (32378): FS_SOAK start game=3 bonus=true levelup=false t=265.2 pools=33 pooled=92 evicted=8 steals=52 loops=0 players=93 creates=112 disposes=19 releases=20 resumes=209 posPolls=0
+10-12 08:50:38.648 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1001
+10-12 08:50:42.852 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 08:50:49.037 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1007
+10-12 08:50:53.157 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1007
+10-12 08:50:54.267 I/flutter (32378): FS_SOAK death game=3 hoops=10 score=14 frames=1204 p50=9.89 p90=14.97 p99=23.68 max=91.0 build90=4.07 raster90=4.79 jank=23.7% t=284.8 pools=33 pooled=92 evicted=8 steals=52 loops=0 players=95 creates=114 disposes=19 releases=20 resumes=264 posPolls=0
+10-12 08:50:55.681 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1427
+10-12 08:50:56.019 I/flutter (32378): FS_SOAK revive-declined game=3 t=286.5 pools=35 pooled=98 evicted=8 steals=52 loops=0 players=99 creates=118 disposes=19 releases=20 resumes=264 posPolls=0
+10-12 08:50:57.521 I/flutter (32378): FS_SOAK sfx-stop file=col_feather_get.mp3 ms=1003
+10-12 08:50:57.958 I/flutter (32378): FS_SOAK sfx-stop file=bn_balloon_open.mp3 ms=1007
+10-12 08:50:58.452 I/flutter (32378): FS_SOAK sfx-stop file=bn_prize_s.mp3 ms=916
+10-12 08:50:58.723 I/flutter (32378): FS_SOAK sfx-stop file=col_feather_get.mp3 ms=1003
+10-12 08:50:59.161 I/flutter (32378): FS_SOAK sfx-stop file=bn_balloon_open.mp3 ms=1001
+10-12 08:50:59.926 I/flutter (32378): FS_SOAK sfx-stop file=col_feather_get.mp3 ms=1008
+10-12 08:51:00.361 I/flutter (32378): FS_SOAK sfx-stop file=bn_balloon_open.mp3 ms=1008
+10-12 08:51:00.839 I/flutter (32378): FS_SOAK sfx-stop file=bn_prize_s.mp3 ms=902
+10-12 08:51:01.039 I/flutter (32378): FS_SOAK sfx-stop file=bn_prize_big.mp3 ms=2305
+10-12 08:51:01.608 I/flutter (32378): FS_SOAK sfx-stop file=bn_adbtn.mp3 ms=707
+10-12 08:51:04.170 I/flutter (32378): FS_SOAK bonus-done game=3 pops=3 t=294.6 pools=35 pooled=98 evicted=8 steals=54 loops=0 players=99 creates=118 disposes=19 releases=20 resumes=290 posPolls=0
+10-12 08:51:05.586 I/flutter (32378): FS_SOAK game-end game=3 postrun frames=655 p50=13.04 p90=18.93 p99=26.21 max=36.9 build90=5.49 raster90=8.08 jank=54.7% t=296.0 pools=33 pooled=92 evicted=10 steals=54 loops=0 players=93 creates=118 disposes=25 releases=26 resumes=292 posPolls=0
+10-12 08:51:05.602 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 08:51:06.637 I/flutter (32378): FS_SOAK start game=4 bonus=false levelup=true t=297.1 pools=33 pooled=92 evicted=10 steals=54 loops=0 players=93 creates=118 disposes=25 releases=26 resumes=294 posPolls=0
+10-12 08:51:10.802 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1011
+10-12 08:51:13.363 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1505
+10-12 08:51:16.354 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2411
+10-12 08:51:18.480 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2402
+10-12 08:51:18.952 I/flutter (32378): FS_SOAK sfx-stop file=fever_out.mp3 ms=609
+10-12 08:51:21.223 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1011
+10-12 08:51:23.782 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1502
+10-12 08:51:26.454 I/flutter (32378): FS_SOAK death game=4 hoops=10 score=50 frames=1196 p50=10.62 p90=16.11 p99=26.72 max=76.8 build90=4.28 raster90=5.61 jank=29.8% t=316.7 pools=34 pooled=94 evicted=10 steals=54 loops=0 players=97 creates=123 disposes=26 releases=27 resumes=346 posPolls=0
+10-12 08:51:27.419 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1005
+10-12 08:51:27.844 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1427
+10-12 08:51:28.163 I/flutter (32378): FS_SOAK revive-declined game=4 t=318.4 pools=36 pooled=100 evicted=10 steals=54 loops=0 players=101 creates=127 disposes=26 releases=27 resumes=346 posPolls=0
+10-12 08:51:30.621 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1006
+10-12 08:51:31.667 I/flutter (32378): FS_SOAK sfx-stop file=lv_bar.mp3 ms=1602
+10-12 08:51:32.153 I/flutter (32378): FS_SOAK claim game=4 t=322.3 pools=36 pooled=100 evicted=10 steals=71 loops=0 players=101 creates=127 disposes=26 releases=27 resumes=373 posPolls=0
+10-12 08:51:33.653 I/flutter (32378): FS_SOAK sfx-stop file=lv_claim.mp3 ms=1501
+10-12 08:51:33.962 I/flutter (32378): FS_SOAK sfx-stop file=lv_up.mp3 ms=2703
+10-12 08:51:49.237 I/flutter (32378): FS_SOAK game-end game=4 postrun frames=1329 p50=10.36 p90=15.04 p99=23.55 max=29.3 build90=4.43 raster90=5.33 jank=26.0% t=339.4 pools=33 pooled=92 evicted=13 steals=90 loops=0 players=93 creates=127 disposes=34 releases=35 resumes=412 posPolls=0
+10-12 08:51:49.252 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 08:51:50.304 I/flutter (32378): FS_SOAK start game=5 bonus=false levelup=false t=340.4 pools=33 pooled=92 evicted=13 steals=90 loops=0 players=93 creates=127 disposes=34 releases=35 resumes=414 posPolls=0
+10-12 08:51:54.462 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 08:51:58.593 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1001
+10-12 08:52:06.897 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1000
+10-12 08:52:09.446 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1501
+10-12 08:52:10.029 I/flutter (32378): FS_SOAK death game=5 hoops=10 score=16 frames=1194 p50=10.05 p90=15.00 p99=25.68 max=80.4 build90=4.20 raster90=4.95 jank=23.1% t=360.0 pools=33 pooled=92 evicted=13 steals=90 loops=0 players=95 creates=129 disposes=34 releases=35 resumes=469 posPolls=0
+10-12 08:52:11.430 I/flutter (32378): FS_SOAK revive-declined game=5 t=361.4 pools=35 pooled=98 evicted=13 steals=90 loops=0 players=99 creates=133 disposes=34 releases=35 resumes=469 posPolls=0
+10-12 08:52:11.436 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1431
+10-12 08:52:12.406 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2402
+10-12 08:52:19.032 I/flutter (32378): FS_SOAK game-end game=5 postrun frames=525 p50=11.18 p90=15.41 p99=23.10 max=30.0 build90=5.06 raster90=4.97 jank=33.1% t=369.0 pools=33 pooled=92 evicted=15 steals=107 loops=0 players=93 creates=133 disposes=40 releases=41 resumes=494 posPolls=0
+10-12 08:52:19.033 I/flutter (32378): FS_SOAK hold game=5 secs=100 t=369.0 pools=33 pooled=92 evicted=15 steals=107 loops=0 players=93 creates=133 disposes=40 releases=41 resumes=494 posPolls=0
+10-12 08:53:59.798 I/flutter (32378): FS_SOAK hold-end game=5 idle frames=3040 p50=10.76 p90=12.81 p99=14.93 max=24.0 build90=5.80 raster90=5.79 jank=13.8% t=469.0 pools=33 pooled=92 evicted=15 steals=107 loops=0 players=93 creates=133 disposes=40 releases=41 resumes=494 posPolls=0
+10-12 08:53:59.846 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 08:54:00.899 I/flutter (32378): FS_SOAK start game=6 bonus=false levelup=false t=470.0 pools=33 pooled=92 evicted=15 steals=107 loops=0 players=93 creates=133 disposes=40 releases=41 resumes=496 posPolls=0
+10-12 08:54:05.073 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1001
+10-12 08:54:09.223 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1005
+10-12 08:54:15.452 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1001
+10-12 08:54:18.013 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1511
+10-12 08:54:20.655 I/flutter (32378): FS_SOAK death game=6 hoops=10 score=15 frames=1202 p50=10.10 p90=15.44 p99=23.04 max=68.8 build90=3.88 raster90=4.89 jank=24.2% t=489.6 pools=33 pooled=92 evicted=15 steals=107 loops=0 players=95 creates=135 disposes=40 releases=41 resumes=545 posPolls=0
+10-12 08:54:21.638 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1001
+10-12 08:54:22.070 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1431
+10-12 08:54:22.386 I/flutter (32378): FS_SOAK revive-declined game=6 t=491.3 pools=35 pooled=98 evicted=15 steals=107 loops=0 players=99 creates=139 disposes=40 releases=41 resumes=545 posPolls=0
+10-12 08:54:42.764 I/flutter (32378): FS_SOAK game-end game=6 postrun frames=1292 p50=10.48 p90=14.10 p99=20.67 max=34.8 build90=4.13 raster90=4.62 jank=23.8% t=511.7 pools=33 pooled=92 evicted=17 steals=122 loops=0 players=93 creates=139 disposes=46 releases=47 resumes=570 posPolls=0
+10-12 08:54:42.786 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 08:54:43.841 I/flutter (32378): FS_SOAK start game=7 bonus=false levelup=false t=512.7 pools=33 pooled=92 evicted=17 steals=122 loops=0 players=93 creates=139 disposes=46 releases=47 resumes=572 posPolls=0
+10-12 08:54:50.075 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1001
+10-12 08:54:56.400 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 08:55:00.506 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 08:55:03.029 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1506
+10-12 08:55:03.625 I/flutter (32378): FS_SOAK death game=7 hoops=10 score=14 frames=1210 p50=9.62 p90=14.53 p99=22.37 max=76.4 build90=4.03 raster90=4.63 jank=20.7% t=532.3 pools=33 pooled=92 evicted=17 steals=122 loops=0 players=95 creates=141 disposes=46 releases=47 resumes=627 posPolls=0
+10-12 08:55:05.028 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1431
+10-12 08:55:05.272 I/flutter (32378): FS_SOAK revive-declined game=7 t=533.9 pools=35 pooled=98 evicted=17 steals=122 loops=0 players=99 creates=145 disposes=46 releases=47 resumes=627 posPolls=0
+10-12 08:55:12.643 I/flutter (32378): FS_SOAK game-end game=7 postrun frames=528 p50=11.32 p90=15.11 p99=22.54 max=40.4 build90=4.63 raster90=4.84 jank=29.0% t=541.3 pools=33 pooled=92 evicted=19 steals=136 loops=0 players=93 creates=145 disposes=52 releases=53 resumes=650 posPolls=0
+10-12 08:55:12.654 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 08:55:13.705 I/flutter (32378): FS_SOAK start game=8 bonus=true levelup=false t=542.3 pools=33 pooled=92 evicted=19 steals=136 loops=0 players=93 creates=145 disposes=52 releases=53 resumes=652 posPolls=0
+10-12 08:55:17.843 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 08:55:20.428 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1502
+10-12 08:55:24.080 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1000
+10-12 08:55:26.045 I/flutter (32378): FS_SOAK sfx-stop file=trail_chord.mp3 ms=1201
+10-12 08:55:26.628 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1501
+10-12 08:55:29.577 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2402
+10-12 08:55:30.064 I/flutter (32378): FS_SOAK sfx-stop file=fever_out.mp3 ms=601
+10-12 08:55:32.312 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 08:55:33.377 I/flutter (32378): FS_SOAK death game=8 hoops=10 score=23 frames=1212 p50=10.22 p90=14.34 p99=21.18 max=69.2 build90=4.01 raster90=5.16 jank=22.9% t=561.9 pools=34 pooled=94 evicted=19 steals=136 loops=0 players=97 creates=150 disposes=53 releases=54 resumes=711 posPolls=0
+10-12 08:55:34.799 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1434
+10-12 08:55:34.864 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1501
+10-12 08:55:35.112 I/flutter (32378): FS_SOAK revive-declined game=8 t=563.6 pools=36 pooled=100 evicted=19 steals=136 loops=0 players=101 creates=154 disposes=53 releases=54 resumes=711 posPolls=0
+10-12 08:55:36.611 I/flutter (32378): FS_SOAK sfx-stop file=col_feather_get.mp3 ms=1001
+10-12 08:55:37.045 I/flutter (32378): FS_SOAK sfx-stop file=bn_balloon_open.mp3 ms=1001
+10-12 08:55:37.529 I/flutter (32378): FS_SOAK sfx-stop file=bn_prize_s.mp3 ms=904
+10-12 08:55:37.832 I/flutter (32378): FS_SOAK sfx-stop file=col_feather_get.mp3 ms=1005
+10-12 08:55:38.267 I/flutter (32378): FS_SOAK sfx-stop file=bn_balloon_open.mp3 ms=1006
+10-12 08:55:39.036 I/flutter (32378): FS_SOAK sfx-stop file=col_feather_get.mp3 ms=1002
+10-12 08:55:39.054 I/flutter (32378): FS_SOAK sfx-stop file=bn_prize_m.mp3 ms=1209
+10-12 08:55:39.468 I/flutter (32378): FS_SOAK sfx-stop file=bn_balloon_open.mp3 ms=1003
+10-12 08:55:40.264 I/flutter (32378): FS_SOAK sfx-stop file=bn_prize_m.mp3 ms=1201
+10-12 08:55:40.798 I/flutter (32378): FS_SOAK sfx-stop file=bn_adbtn.mp3 ms=703
+10-12 08:55:43.315 I/flutter (32378): FS_SOAK bonus-done game=8 pops=3 t=571.8 pools=36 pooled=100 evicted=19 steals=136 loops=0 players=101 creates=154 disposes=53 releases=54 resumes=734 posPolls=0
+10-12 08:55:58.729 I/flutter (32378): FS_SOAK game-end game=8 postrun frames=1517 p50=10.45 p90=15.96 p99=19.52 max=30.7 build90=4.26 raster90=6.57 jank=29.4% t=587.2 pools=33 pooled=92 evicted=22 steals=136 loops=0 players=93 creates=154 disposes=61 releases=62 resumes=737 posPolls=0
+10-12 08:55:58.743 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 08:55:59.780 I/flutter (32378): FS_SOAK start game=9 bonus=false levelup=true t=588.2 pools=33 pooled=92 evicted=22 steals=136 loops=0 players=93 creates=154 disposes=61 releases=62 resumes=739 posPolls=0
+10-12 08:56:03.900 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 08:56:10.120 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1003
+10-12 08:56:16.318 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1001
+10-12 08:56:19.447 I/flutter (32378): FS_SOAK death game=9 hoops=10 score=100 frames=1201 p50=9.99 p90=14.45 p99=22.26 max=68.3 build90=4.24 raster90=4.75 jank=20.1% t=607.8 pools=33 pooled=92 evicted=22 steals=136 loops=0 players=95 creates=156 disposes=61 releases=62 resumes=792 posPolls=0
+10-12 08:56:20.436 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1006
+10-12 08:56:20.517 I/flutter (32378): FS_SOAK revive-declined game=9 t=608.9 pools=35 pooled=98 evicted=22 steals=136 loops=0 players=99 creates=160 disposes=61 releases=62 resumes=792 posPolls=0
+10-12 08:56:20.860 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1429
+10-12 08:56:22.985 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1001
+10-12 08:56:24.034 I/flutter (32378): FS_SOAK sfx-stop file=lv_bar.mp3 ms=1604
+10-12 08:56:24.490 I/flutter (32378): FS_SOAK claim game=9 t=612.8 pools=35 pooled=98 evicted=22 steals=153 loops=0 players=99 creates=160 disposes=61 releases=62 resumes=819 posPolls=0
+10-12 08:56:25.992 I/flutter (32378): FS_SOAK sfx-stop file=lv_claim.mp3 ms=1502
+10-12 08:56:26.289 I/flutter (32378): FS_SOAK sfx-stop file=lv_up.mp3 ms=2706
+10-12 08:56:28.498 I/flutter (32378): FS_SOAK game-end game=9 postrun frames=529 p50=11.71 p90=16.91 p99=26.17 max=31.4 build90=5.12 raster90=6.40 jank=41.6% t=616.8 pools=33 pooled=92 evicted=24 steals=173 loops=0 players=93 creates=160 disposes=67 releases=68 resumes=857 posPolls=0
+10-12 08:56:28.512 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 08:56:29.580 I/flutter (32378): FS_SOAK start game=10 bonus=false levelup=false t=617.9 pools=33 pooled=92 evicted=24 steals=173 loops=0 players=93 creates=160 disposes=67 releases=68 resumes=859 posPolls=0
+10-12 08:56:35.818 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 08:56:39.991 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1000
+10-12 08:56:44.145 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1013
+10-12 08:56:46.685 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1501
+10-12 08:56:49.320 I/flutter (32378): FS_SOAK death game=10 hoops=10 score=16 frames=1187 p50=10.15 p90=15.78 p99=28.40 max=70.8 build90=3.77 raster90=5.15 jank=24.5% t=637.4 pools=33 pooled=92 evicted=24 steals=173 loops=0 players=97 creates=164 disposes=67 releases=68 resumes=907 posPolls=0
+10-12 08:56:49.616 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2400
+10-12 08:56:50.736 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1432
+10-12 08:56:50.780 I/flutter (32378): FS_SOAK revive-declined game=10 t=638.9 pools=36 pooled=100 evicted=24 steals=173 loops=0 players=101 creates=169 disposes=68 releases=69 resumes=907 posPolls=0
+10-12 08:56:58.347 I/flutter (32378): FS_SOAK game-end game=10 postrun frames=531 p50=12.11 p90=16.68 p99=23.95 max=36.3 build90=5.24 raster90=5.97 jank=46.9% t=646.4 pools=33 pooled=92 evicted=27 steals=190 loops=0 players=93 creates=169 disposes=76 releases=77 resumes=932 posPolls=0
+10-12 08:56:58.347 I/flutter (32378): FS_SOAK hold game=10 secs=100 t=646.4 pools=33 pooled=92 evicted=27 steals=190 loops=0 players=93 creates=169 disposes=76 releases=77 resumes=932 posPolls=0
+10-12 08:58:39.467 I/flutter (32378): FS_SOAK hold-end game=10 idle frames=3038 p50=11.50 p90=13.80 p99=16.05 max=38.4 build90=5.95 raster90=5.88 jank=29.2% t=746.5 pools=33 pooled=92 evicted=27 steals=190 loops=0 players=93 creates=169 disposes=76 releases=77 resumes=932 posPolls=0
+10-12 08:58:39.515 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 08:58:40.603 I/flutter (32378): FS_SOAK start game=11 bonus=false levelup=false t=747.5 pools=33 pooled=92 evicted=27 steals=190 loops=0 players=93 creates=169 disposes=76 releases=77 resumes=934 posPolls=0
+10-12 08:58:46.858 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1006
+10-12 08:58:50.988 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1003
+10-12 08:58:55.094 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1001
+10-12 08:58:59.210 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1001
+10-12 08:59:00.269 I/flutter (32378): FS_SOAK death game=11 hoops=10 score=15 frames=1193 p50=10.41 p90=15.20 p99=26.22 max=71.7 build90=4.23 raster90=5.00 jank=25.6% t=767.1 pools=33 pooled=92 evicted=27 steals=190 loops=0 players=95 creates=171 disposes=76 releases=77 resumes=990 posPolls=0
+10-12 08:59:01.688 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1430
+10-12 08:59:01.756 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1501
+10-12 08:59:02.022 I/flutter (32378): FS_SOAK revive-declined game=11 t=768.8 pools=35 pooled=98 evicted=27 steals=190 loops=0 players=99 creates=175 disposes=76 releases=77 resumes=990 posPolls=0
+10-12 08:59:26.429 I/flutter (32378): FS_SOAK game-end game=11 postrun frames=1527 p50=10.45 p90=14.70 p99=22.94 max=38.6 build90=4.16 raster90=4.54 jank=25.5% t=793.2 pools=33 pooled=92 evicted=29 steals=205 loops=0 players=93 creates=175 disposes=82 releases=83 resumes=1015 posPolls=0
+10-12 08:59:26.436 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 08:59:27.461 I/flutter (32378): FS_SOAK start game=12 bonus=false levelup=false t=794.2 pools=33 pooled=92 evicted=29 steals=205 loops=0 players=93 creates=175 disposes=82 releases=83 resumes=1017 posPolls=0
+10-12 08:59:37.826 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1001
+10-12 08:59:40.379 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1502
+10-12 08:59:43.326 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2401
+10-12 08:59:45.430 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2404
+10-12 08:59:47.203 I/flutter (32378): FS_SOAK death game=12 hoops=10 score=21 frames=1195 p50=10.91 p90=16.58 p99=25.57 max=76.5 build90=4.90 raster90=6.10 jank=32.3% t=813.8 pools=33 pooled=92 evicted=29 steals=205 loops=0 players=97 creates=179 disposes=82 releases=83 resumes=1074 posPolls=0
+10-12 08:59:47.465 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2402
+10-12 08:59:48.596 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1429
+10-12 08:59:48.912 I/flutter (32378): FS_SOAK revive-declined game=12 t=815.5 pools=36 pooled=100 evicted=29 steals=205 loops=0 players=101 creates=184 disposes=83 releases=84 resumes=1074 posPolls=0
+10-12 08:59:56.210 I/flutter (32378): FS_SOAK game-end game=12 postrun frames=526 p50=10.97 p90=15.08 p99=24.38 max=37.6 build90=4.52 raster90=4.83 jank=25.1% t=822.8 pools=33 pooled=92 evicted=32 steals=222 loops=0 players=93 creates=184 disposes=91 releases=92 resumes=1099 posPolls=0
+10-12 08:59:56.223 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 08:59:57.276 I/flutter (32378): FS_SOAK start game=13 bonus=true levelup=false t=823.8 pools=33 pooled=92 evicted=32 steals=222 loops=0 players=93 creates=184 disposes=91 releases=92 resumes=1101 posPolls=0
+10-12 09:00:03.546 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1003
+10-12 09:00:06.095 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1501
+10-12 09:00:09.068 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2402
+10-12 09:00:11.066 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2406
+10-12 09:00:13.181 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2404
+10-12 09:00:13.656 I/flutter (32378): FS_SOAK sfx-stop file=fever_out.mp3 ms=601
+10-12 09:00:15.917 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 09:00:17.016 I/flutter (32378): FS_SOAK death game=13 hoops=10 score=26 frames=1192 p50=10.85 p90=16.55 p99=27.94 max=68.6 build90=4.84 raster90=5.77 jank=32.1% t=843.4 pools=34 pooled=94 evicted=32 steals=222 loops=0 players=97 creates=189 disposes=92 releases=93 resumes=1159 posPolls=0
+10-12 09:00:18.034 I/flutter (32378): FS_SOAK sfx-stop file=bull_chord.mp3 ms=802
+10-12 09:00:18.419 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1427
+10-12 09:00:18.490 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1501
+10-12 09:00:18.743 I/flutter (32378): FS_SOAK revive-declined game=13 t=845.1 pools=36 pooled=98 evicted=32 steals=222 loops=0 players=99 creates=191 disposes=92 releases=93 resumes=1161 posPolls=0
+10-12 09:00:20.250 I/flutter (32378): FS_SOAK sfx-stop file=col_feather_get.mp3 ms=1005
+10-12 09:00:20.683 I/flutter (32378): FS_SOAK sfx-stop file=bn_balloon_open.mp3 ms=1004
+10-12 09:00:21.466 I/flutter (32378): FS_SOAK sfx-stop file=col_feather_get.mp3 ms=1004
+10-12 09:00:21.492 I/flutter (32378): FS_SOAK sfx-stop file=bn_prize_m.mp3 ms=1213
+10-12 09:00:21.905 I/flutter (32378): FS_SOAK sfx-stop file=bn_balloon_open.mp3 ms=1011
+10-12 09:00:22.418 I/flutter (32378): FS_SOAK sfx-stop file=bn_prize_s.mp3 ms=902
+10-12 09:00:22.702 I/flutter (32378): FS_SOAK sfx-stop file=col_feather_get.mp3 ms=1001
+10-12 09:00:23.148 I/flutter (32378): FS_SOAK sfx-stop file=bn_balloon_open.mp3 ms=1004
+10-12 09:00:24.679 I/flutter (32378): FS_SOAK sfx-stop file=bn_adbtn.mp3 ms=702
+10-12 09:00:25.032 I/flutter (32378): FS_SOAK sfx-stop file=bn_prize_big.mp3 ms=2305
+10-12 09:00:27.395 I/flutter (32378): FS_SOAK bonus-done game=13 pops=3 t=853.7 pools=36 pooled=98 evicted=32 steals=224 loops=0 players=99 creates=191 disposes=92 releases=93 resumes=1187 posPolls=0
+10-12 09:00:43.004 I/flutter (32378): FS_SOAK game-end game=13 postrun frames=1520 p50=11.49 p90=17.09 p99=23.51 max=27.9 build90=4.81 raster90=7.15 jank=40.5% t=869.3 pools=33 pooled=92 evicted=35 steals=224 loops=0 players=93 creates=191 disposes=98 releases=99 resumes=1191 posPolls=0
+10-12 09:00:43.010 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 09:00:44.076 I/flutter (32378): FS_SOAK start game=14 bonus=false levelup=true t=870.4 pools=33 pooled=92 evicted=35 steals=224 loops=0 players=93 creates=191 disposes=98 releases=99 resumes=1193 posPolls=0
+10-12 09:00:52.350 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1003
+10-12 09:00:54.957 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1501
+10-12 09:00:57.882 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2403
+10-12 09:00:58.214 I/flutter (32378): FS_SOAK sfx-stop file=fever_out.mp3 ms=601
+10-12 09:01:00.601 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 09:01:03.786 I/flutter (32378): FS_SOAK death game=14 hoops=10 score=200 frames=1201 p50=10.68 p90=16.10 p99=23.61 max=72.5 build90=4.65 raster90=5.17 jank=28.6% t=889.9 pools=34 pooled=94 evicted=35 steals=224 loops=0 players=97 creates=196 disposes=99 releases=100 resumes=1250 posPolls=0
+10-12 09:01:04.762 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1005
+10-12 09:01:05.186 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1427
+10-12 09:01:05.512 I/flutter (32378): FS_SOAK revive-declined game=14 t=891.7 pools=36 pooled=100 evicted=35 steals=224 loops=0 players=101 creates=200 disposes=99 releases=100 resumes=1250 posPolls=0
+10-12 09:01:08.000 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1004
+10-12 09:01:09.052 I/flutter (32378): FS_SOAK sfx-stop file=lv_bar.mp3 ms=1608
+10-12 09:01:09.497 I/flutter (32378): FS_SOAK claim game=14 t=895.7 pools=36 pooled=100 evicted=35 steals=241 loops=0 players=101 creates=200 disposes=99 releases=100 resumes=1277 posPolls=0
+10-12 09:01:10.997 I/flutter (32378): FS_SOAK sfx-stop file=lv_claim.mp3 ms=1500
+10-12 09:01:11.321 I/flutter (32378): FS_SOAK sfx-stop file=lv_up.mp3 ms=2701
+10-12 09:01:13.531 I/flutter (32378): FS_SOAK game-end game=14 postrun frames=572 p50=11.63 p90=16.81 p99=24.82 max=27.2 build90=5.25 raster90=6.51 jank=38.6% t=899.7 pools=33 pooled=92 evicted=38 steals=260 loops=0 players=93 creates=200 disposes=107 releases=108 resumes=1315 posPolls=0
+10-12 09:01:13.542 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 09:01:14.626 I/flutter (32378): FS_SOAK start game=15 bonus=false levelup=false t=900.7 pools=33 pooled=92 evicted=38 steals=260 loops=0 players=93 creates=200 disposes=107 releases=108 resumes=1317 posPolls=0
+10-12 09:01:18.613 I/flutter (12693): NtLifecycle->scheduledWakeUp tag:KeepAlive,length:Instance of 'BluetoothHelper',Instance of 'NtWatchWorker'
+10-12 09:01:18.782 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1003
+10-12 09:01:22.965 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1004
+10-12 09:01:25.534 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1502
+10-12 09:01:28.467 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2404
+10-12 09:01:30.531 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2404
+10-12 09:01:32.581 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2405
+10-12 09:01:33.024 I/flutter (32378): FS_SOAK sfx-stop file=fever_out.mp3 ms=601
+10-12 09:01:34.329 I/flutter (32378): FS_SOAK death game=15 hoops=10 score=23 frames=1219 p50=10.66 p90=15.16 p99=21.49 max=59.2 build90=4.61 raster90=5.80 jank=30.4% t=920.3 pools=34 pooled=94 evicted=38 steals=260 loops=0 players=97 creates=205 disposes=108 releases=109 resumes=1374 posPolls=0
+10-12 09:01:35.321 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1003
+10-12 09:01:35.712 I/flutter (32378): FS_SOAK revive-declined game=15 t=921.7 pools=36 pooled=100 evicted=38 steals=260 loops=0 players=101 creates=209 disposes=108 releases=109 resumes=1374 posPolls=0
+10-12 09:01:35.747 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1427
+10-12 09:01:58.615 I/flutter (32378): FS_SOAK game-end game=15 postrun frames=1444 p50=10.92 p90=14.95 p99=18.05 max=30.3 build90=4.54 raster90=5.23 jank=33.9% t=944.5 pools=33 pooled=92 evicted=41 steals=277 loops=0 players=93 creates=209 disposes=116 releases=117 resumes=1400 posPolls=0
+10-12 09:01:58.623 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 09:01:59.655 I/flutter (32378): FS_SOAK start game=16 bonus=false levelup=false t=945.6 pools=33 pooled=92 evicted=41 steals=277 loops=0 players=93 creates=209 disposes=116 releases=117 resumes=1402 posPolls=0
+10-12 09:02:07.925 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 09:02:16.208 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 09:02:18.759 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1503
+10-12 09:02:19.344 I/flutter (32378): FS_SOAK death game=16 hoops=10 score=13 frames=1221 p50=9.35 p90=12.10 p99=20.05 max=77.0 build90=5.33 raster90=5.20 jank=8.0% t=965.1 pools=33 pooled=92 evicted=41 steals=277 loops=0 players=95 creates=211 disposes=116 releases=117 resumes=1455 posPolls=0
+10-12 09:02:20.523 I/flutter (32378): FS_SOAK revive-declined game=16 t=966.3 pools=35 pooled=98 evicted=41 steals=277 loops=0 players=99 creates=215 disposes=116 releases=117 resumes=1455 posPolls=0
+10-12 09:02:20.753 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1427
+10-12 09:02:28.361 I/flutter (32378): FS_SOAK game-end game=16 postrun frames=537 p50=9.97 p90=12.05 p99=16.07 max=32.0 build90=5.29 raster90=4.84 jank=8.0% t=974.1 pools=33 pooled=92 evicted=43 steals=289 loops=0 players=93 creates=215 disposes=122 releases=123 resumes=1477 posPolls=0
+10-12 09:02:28.373 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 09:02:29.423 I/flutter (32378): FS_SOAK start game=17 bonus=false levelup=false t=975.1 pools=33 pooled=92 evicted=43 steals=289 loops=0 players=93 creates=215 disposes=122 releases=123 resumes=1479 posPolls=0
+10-12 09:02:33.559 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1003
+10-12 09:02:37.728 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1004
+10-12 09:02:44.012 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1003
+10-12 09:02:44.048 I/flutter (32378): FS_SOAK sfx-stop file=bull_chord.mp3 ms=801
+10-12 09:02:45.377 I/flutter (32378): FS_SOAK sfx-stop file=pu_heart_1.mp3 ms=952
+10-12 09:02:48.145 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1004
+10-12 09:02:49.227 I/flutter (32378): FS_SOAK death game=17 hoops=10 score=18 frames=1220 p50=9.20 p90=12.19 p99=18.73 max=90.9 build90=5.19 raster90=5.16 jank=8.8% t=994.7 pools=36 pooled=98 evicted=43 steals=289 loops=0 players=101 creates=223 disposes=122 releases=123 resumes=1528 posPolls=0
+10-12 09:02:50.636 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1426
+10-12 09:02:50.713 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1505
+10-12 09:02:50.857 I/flutter (32378): FS_SOAK revive-declined game=17 t=996.3 pools=38 pooled=104 evicted=43 steals=289 loops=0 players=105 creates=227 disposes=122 releases=123 resumes=1528 posPolls=0
+10-12 09:02:58.229 I/flutter (32378): FS_SOAK game-end game=17 postrun frames=537 p50=10.78 p90=13.35 p99=16.05 max=22.4 build90=6.26 raster90=5.51 jank=23.3% t=1003.7 pools=33 pooled=92 evicted=48 steals=306 loops=0 players=93 creates=227 disposes=134 releases=135 resumes=1553 posPolls=0
+10-12 09:02:58.241 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 09:02:59.293 I/flutter (32378): FS_SOAK start game=18 bonus=true levelup=false t=1004.7 pools=33 pooled=92 evicted=48 steals=306 loops=0 players=93 creates=227 disposes=134 releases=135 resumes=1555 posPolls=0
+10-12 09:03:03.481 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1003
+10-12 09:03:06.048 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1502
+10-12 09:03:19.081 I/flutter (32378): FS_SOAK death game=18 hoops=10 score=12 frames=1189 p50=10.31 p90=14.76 p99=24.99 max=75.4 build90=3.87 raster90=4.72 jank=21.2% t=1024.3 pools=33 pooled=92 evicted=48 steals=306 loops=0 players=95 creates=229 disposes=134 releases=135 resumes=1603 posPolls=0
+10-12 09:03:20.497 I/flutter (32378): FS_SOAK revive-declined game=18 t=1025.7 pools=35 pooled=98 evicted=48 steals=306 loops=0 players=99 creates=233 disposes=134 releases=135 resumes=1603 posPolls=0
+10-12 09:03:20.500 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1429
+10-12 09:03:22.017 I/flutter (32378): FS_SOAK sfx-stop file=col_feather_get.mp3 ms=1001
+10-12 09:03:22.455 I/flutter (32378): FS_SOAK sfx-stop file=bn_balloon_open.mp3 ms=1009
+10-12 09:03:23.231 I/flutter (32378): FS_SOAK sfx-stop file=col_feather_get.mp3 ms=1001
+10-12 09:03:23.249 I/flutter (32378): FS_SOAK sfx-stop file=bn_prize_m.mp3 ms=1202
+10-12 09:03:23.674 I/flutter (32378): FS_SOAK sfx-stop file=bn_balloon_open.mp3 ms=1006
+10-12 09:03:24.157 I/flutter (32378): FS_SOAK sfx-stop file=bn_prize_s.mp3 ms=908
+10-12 09:03:24.500 I/flutter (32378): FS_SOAK sfx-stop file=col_feather_get.mp3 ms=1003
+10-12 09:03:24.942 I/flutter (32378): FS_SOAK sfx-stop file=bn_balloon_open.mp3 ms=1003
+10-12 09:03:25.736 I/flutter (32378): FS_SOAK sfx-stop file=bn_prize_m.mp3 ms=1207
+10-12 09:03:26.264 I/flutter (32378): FS_SOAK sfx-stop file=bn_adbtn.mp3 ms=701
+10-12 09:03:28.820 I/flutter (32378): FS_SOAK bonus-done game=18 pops=3 t=1034.0 pools=35 pooled=98 evicted=48 steals=306 loops=0 players=99 creates=233 disposes=134 releases=135 resumes=1625 posPolls=0
+10-12 09:03:47.280 I/flutter (32378): FS_SOAK game-end game=18 postrun frames=1646 p50=11.22 p90=16.41 p99=23.23 max=33.9 build90=4.62 raster90=6.76 jank=36.1% t=1052.5 pools=33 pooled=92 evicted=50 steals=306 loops=0 players=93 creates=233 disposes=140 releases=141 resumes=1629 posPolls=0
+10-12 09:03:47.299 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 09:03:48.349 I/flutter (32378): FS_SOAK start game=19 bonus=false levelup=true t=1053.5 pools=33 pooled=92 evicted=50 steals=306 loops=0 players=93 creates=233 disposes=140 releases=141 resumes=1631 posPolls=0
+10-12 09:03:52.487 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1003
+10-12 09:03:56.653 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1001
+10-12 09:03:59.241 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1500
+10-12 09:04:00.708 I/flutter (32378): FS_SOAK sfx-stop file=trail_chord.mp3 ms=1201
+10-12 09:04:02.831 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1011
+10-12 09:04:06.905 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 09:04:08.004 I/flutter (32378): FS_SOAK death game=19 hoops=10 score=400 frames=1200 p50=10.60 p90=15.52 p99=24.69 max=80.3 build90=4.27 raster90=4.90 jank=25.8% t=1073.1 pools=33 pooled=92 evicted=50 steals=306 loops=0 players=95 creates=235 disposes=140 releases=141 resumes=1687 posPolls=0
+10-12 09:04:09.411 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1432
+10-12 09:04:09.478 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1501
+10-12 09:04:09.486 I/flutter (32378): FS_SOAK revive-declined game=19 t=1074.6 pools=35 pooled=98 evicted=50 steals=306 loops=0 players=99 creates=239 disposes=140 releases=141 resumes=1687 posPolls=0
+10-12 09:04:11.942 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 09:04:13.001 I/flutter (32378): FS_SOAK sfx-stop file=lv_bar.mp3 ms=1613
+10-12 09:04:13.454 I/flutter (32378): FS_SOAK claim game=19 t=1078.5 pools=35 pooled=98 evicted=50 steals=323 loops=0 players=99 creates=239 disposes=140 releases=141 resumes=1714 posPolls=0
+10-12 09:04:14.959 I/flutter (32378): FS_SOAK sfx-stop file=lv_claim.mp3 ms=1504
+10-12 09:04:15.261 I/flutter (32378): FS_SOAK sfx-stop file=lv_up.mp3 ms=2706
+10-12 09:04:17.472 I/flutter (32378): FS_SOAK game-end game=19 postrun frames=551 p50=11.92 p90=16.36 p99=25.91 max=28.1 build90=5.39 raster90=6.72 jank=41.7% t=1082.5 pools=33 pooled=92 evicted=52 steals=342 loops=0 players=93 creates=239 disposes=146 releases=147 resumes=1752 posPolls=0
+10-12 09:04:17.485 I/flutter (32378): versus: solo (auth, 0 reads)
+10-12 09:04:18.523 I/flutter (32378): FS_SOAK start game=20 bonus=false levelup=false t=1083.6 pools=33 pooled=92 evicted=52 steals=342 loops=0 players=93 creates=239 disposes=146 releases=147 resumes=1754 posPolls=0
+10-12 09:04:22.692 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1002
+10-12 09:04:26.847 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1009
+10-12 09:04:29.413 I/flutter (32378): FS_SOAK sfx-stop file=perfect_2.mp3 ms=1503
+10-12 09:04:32.359 I/flutter (32378): FS_SOAK sfx-stop file=perfect_3.mp3 ms=2403
+10-12 09:04:32.846 I/flutter (32378): FS_SOAK sfx-stop file=fever_out.mp3 ms=609
+10-12 09:04:35.095 I/flutter (32378): FS_SOAK sfx-stop file=perfect_1.mp3 ms=1005
+10-12 09:04:38.264 I/flutter (32378): FS_SOAK death game=20 hoops=10 score=16 frames=1214 p50=10.51 p90=14.74 p99=24.75 max=68.3 build90=4.22 raster90=5.14 jank=25.9% t=1103.1 pools=34 pooled=94 evicted=52 steals=342 loops=0 players=97 creates=244 disposes=147 releases=148 resumes=1813 posPolls=0
+10-12 09:04:39.660 I/flutter (32378): FS_SOAK sfx-stop file=gameover.mp3 ms=1429
+10-12 09:04:39.973 I/flutter (32378): FS_SOAK revive-declined game=20 t=1104.9 pools=36 pooled=100 evicted=52 steals=342 loops=0 players=101 creates=248 disposes=147 releases=148 resumes=1813 posPolls=0
+10-12 09:04:47.280 I/flutter (32378): FS_SOAK game-end game=20 postrun frames=538 p50=11.13 p90=14.74 p99=17.93 max=40.4 build90=4.67 raster90=5.15 jank=30.7% t=1112.1 pools=33 pooled=92 evicted=55 steals=359 loops=0 players=93 creates=248 disposes=155 releases=156 resumes=1838 posPolls=0
+10-12 09:04:47.280 I/flutter (32378): FS_SOAK hold game=20 secs=100 t=1112.1 pools=33 pooled=92 evicted=55 steals=359 loops=0 players=93 creates=248 disposes=155 releases=156 resumes=1838 posPolls=0
+10-12 09:06:27.917 I/flutter (32378): FS_SOAK hold-end game=20 idle frames=3041 p50=11.17 p90=13.30 p99=15.40 max=17.6 build90=5.91 raster90=6.16 jank=21.6% t=1212.2 pools=33 pooled=92 evicted=55 steals=359 loops=0 players=93 creates=248 disposes=155 releases=156 resumes=1838 posPolls=0
+10-12 09:06:27.917 I/flutter (32378): FS_SOAK done games=20 t=1212.2 pools=33 pooled=92 evicted=55 steals=359 loops=0 players=93 creates=248 disposes=155 releases=156 resumes=1838 posPolls=0

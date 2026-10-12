@@ -26,6 +26,7 @@ void main() {
     test('the test build has no soak (no define)', () {
       expect(kSoakFlag, isFalse);
       expect(kSoak, isFalse);
+      expect(kSoakNoBanner, isFalse, reason: 'S7-19 diagnosis flag');
       expect(kSoakGames, 20);
       expect(kSoakMeasured, {1, 2, 5, 10, 20});
     });

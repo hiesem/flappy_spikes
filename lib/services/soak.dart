@@ -26,6 +26,12 @@ bool soakEnabled({required bool flag, required bool release}) =>
 /// True in an FS_SOAK debug / profile build; always false in release.
 const bool kSoak = kSoakFlag && !kReleaseMode;
 
+/// `--dart-define=FS_SOAK_NO_BANNER=true` (S7-19 diagnosis only): a soak
+/// build without the §7.5 gameplay banner, to measure what the banner's
+/// platform view costs the run frames. Never in a release build.
+const bool kSoakNoBanner =
+    kSoak && bool.fromEnvironment('FS_SOAK_NO_BANNER');
+
 /// After these games the soak holds on Home for the host's measurements.
 const Set<int> kSoakMeasured = {1, 2, 5, 10, 20};
 

@@ -134,6 +134,8 @@ def main():
     ap.add_argument('--start-temp', type=float, default=31.0,
                     help='wait (max 15 min) until VIRTUAL-SKIN <= this')
     ap.add_argument('--trace-game', type=int, default=10)
+    ap.add_argument('--no-banner', action='store_true',
+                    help='S7-19 diagnosis: build without the gameplay banner')
     a = ap.parse_args()
 
     out = os.path.join(ROOT, 'docs', 'p22', 'perf', a.label)
@@ -146,7 +148,9 @@ def main():
     if not a.no_build:
         sh(['flutter', 'build', 'apk', '--profile', '--dart-define=FS_SOAK=true',
             f'--dart-define=FS_SOAK_GAMES={a.games}',
-            f'--dart-define=FS_SOAK_HOLD={a.hold}'], check=True, timeout=1800)
+            f'--dart-define=FS_SOAK_HOLD={a.hold}',
+            *(['--dart-define=FS_SOAK_NO_BANNER=true'] if a.no_banner else [])],
+           check=True, timeout=1800)
     r = ph.adb('install', '-r', apk, timeout=600)
     if 'Success' not in r:
         sys.exit(f'install failed: {r}')
@@ -156,6 +160,7 @@ def main():
     ph.shell('settings put system screen_brightness_mode 0')
     ph.shell(f'settings put system screen_brightness {a.brightness}')
     meta = {'label': a.label, 'serial': a.serial, 'games': a.games,
+            'no_banner': a.no_banner,
             'hold_s': a.hold, 'brightness': a.brightness,
             'old_brightness': [old_mode, old_bri],
             'stay_on': ph.shell('settings get global stay_on_while_plugged_in').strip(),

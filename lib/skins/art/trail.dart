@@ -42,6 +42,16 @@ class TrailEmitter {
   /// The free default, used when an unknown id is requested.
   static const String fallbackId = 'flame';
 
+  /// PRD-2.2 §21.1 The four flame colours (lightest → darkest) of a
+  /// flame-type trail (Classic flame, Blue flame, Toxic, Hot pink, Shadow),
+  /// or null for every other trail (and unknown ids).
+  static List<Color>? flameColors(String id) {
+    for (final def in _defs) {
+      if (def.id == id) return def.kind == _Kind.flame ? def.cols : null;
+    }
+    return null;
+  }
+
   /// Particle scale of the shop thumbnail (`skin_shop.js` draws the tile art
   /// in an 84 pt wide box with `k = w / 80`).
   static const double tileScale = 1.05;

@@ -76,9 +76,18 @@ class RunState {
   int bestStreak = 0;
   int get tier => streak.clamp(0, 10);
 
-  /// FEVER.
+  /// PRD-2.2 §21 The bird burns (lit by a ×3 perfect streak or by FEVER).
   bool onFire = false;
+
+  /// Perfect passes since the fire was lit (analytics `hoops_burned`).
   int hoopsBurned = 0;
+
+  /// PRD-2.2 §21.1 FEVER runs (the loud crackle loop, at least the ×5 fire
+  /// size): perfect passes left of FEVER; 0 = no FEVER.
+  int feverLeft = 0;
+
+  /// PRD-2.2 §21.1 Whether FEVER runs.
+  bool get fever => onFire && feverLeft > 0;
 
   // powerups
   /// Hourglass | mini | frenzy | comet.

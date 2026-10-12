@@ -31,7 +31,8 @@ enum ParticleShape {
   // region WP-3c — FEVER flames (PRD-2 §5.18)
   /// A teardrop flame [Particle.w] wide (the §5.18 fire / plasma burst):
   /// its radius shrinks to 35 % over the life; with [Particle.ramp] the
-  /// colour runs through the ramp (white → yellow → orange → red).
+  /// colour runs through the ramp (white → yellow → orange → red). The tip
+  /// points up, or along [Particle.rot] when set (PRD-2.2 §21 fire).
   flame,
   // endregion WP-3c
 
@@ -289,7 +290,19 @@ class ParticlePool extends Component {
         case ParticleShape.coin:
           break;
         case ParticleShape.flame:
-          paintFlame(canvas, _tri, Offset(p.x, p.y), w / 2 * (1 - k * .65), _paint);
+          final r = w / 2 * (1 - k * .65);
+          if (p.rot == 0) {
+            paintFlame(canvas, _tri, Offset(p.x, p.y), r, _paint);
+          } else {
+            // PRD-2.2 §21.1 the bird's fire: the tip points along the
+            // flame's motion (rot set at spawn).
+            canvas
+              ..save()
+              ..translate(p.x, p.y)
+              ..rotate(p.rot);
+            paintFlame(canvas, _tri, Offset.zero, r, _paint);
+            canvas.restore();
+          }
         case ParticleShape.heart:
           LifeIcons.paintHeart(
             canvas,

@@ -97,8 +97,10 @@ abstract final class StreakConfig {
   static const int burstPriority = RunLayer.fx;
 
   /// §5.3 The block / equipped trail is drawn right behind the bird (mock
-  /// z 9 under the bird's 10).
-  static const int trailPriority = RunLayer.bird - 1;
+  /// z 9 under the bird's 10). PRD-2.2 §21: one step lower, so the bird's
+  /// fire (`FeverConfig.firePriority`, bird − 1) draws over the trail as in
+  /// `screen_fire_choice2.html` (trail → halo → flames → bird).
+  static const int trailPriority = RunLayer.bird - 2;
 
   /// §3.0.9 #7 / §5.4 The banner band: over every run effect, under the
   /// HUD pills (19 / 21).

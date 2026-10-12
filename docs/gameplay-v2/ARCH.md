@@ -145,7 +145,7 @@ code. Paths are relative to `flappy_spikes/`.
 | `streak.dart` | 2b | streak/tier, banners, pass sounds, FEVER hook (`streak = max(5, streak+1)`), break on graze/save |
 | `rumble_router.dart` | 2b (2c folded in) | events → `Rumble.knock/shake` |
 | `comet.dart` | 3a | 10 s × 1.7, auto-pilot, rims ignored, timed-powerup slot |
-| `fever.dart` | 3c | fire on/off, crackle loop |
+| `fever.dart` | 3c, P22-V2 | FEVER + the one fire master (`FireMaster`, PRD-2.2 §21): lit by a ×3 streak (`StreakChanged`) or FEVER, size by streak, flame-trail colours, one `fever_loop` player (25 % / FEVER volume with a 0.3 s ramp) |
 | `egg.dart`, `piggy.dart`, `jar.dart`, `star_trail_feature.dart` | 3e | |
 | `hourglass.dart`, `mini_bird.dart`, `coin_frenzy.dart`, `timed_powerup.dart` | 3f | one `TimedPowerupSlot` (also used by comet) |
 | `squeeze.dart` | 3g | §3.17 scheduler + phases; drives `SpikeWalls.squeezeInset` |
@@ -274,7 +274,8 @@ class RunState {
   int streak = 0;           // perfect passes in a row
   int bestStreak = 0;
   int get tier => streak.clamp(0, 10);
-  bool onFire = false;      // FEVER
+  bool onFire = false;      // the bird burns (×3 streak or FEVER, PRD-2.2 §21)
+  int feverLeft = 0;        // FEVER: perfect passes left (loud loop, ≥ ×5 fire)
   int hoopsBurned = 0;
 
   // powerups

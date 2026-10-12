@@ -501,7 +501,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.19-3 | Feedback: FEVER! banner (≈ 1.6 s, above the tier banner) + tier banner, +2, `perfect_3` + FEVER sound, ring pass effect | 3.19 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
 | R-3.19-4 | Rim touch on the FEVER ring: normal hoop behaviour, no FEVER, no fire | 3.19 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
 | R-3.19-5 | Points by the new streak (PRD-2.2 §13.1: ≥ 5), +2 coins; no extra FEVER bonus | 3.19 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
-| R-3.19-6 | Only the FEVER ring (and FEVER gift) lights the fire; ×5 via normal passes doesn't | 3.19 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |
+| R-3.19-6 | ~~Only the FEVER ring (and FEVER gift) lights the fire~~ superseded by PRD-2.2 §21: the 3rd perfect pass in a row lights the fire (one fire master, sizes ×3 / ×5 / ×7, flame-trail colours, 2× trail, crackle loop 25 % / FEVER volume); FEVER shows the same fire at ≥ ×5 size | 3.19 / 2.2 §21 | V2 | test/p22/s21_fire_test.dart; test/run/items/s3_19_fever_test.dart | done (P22-V2) |
 | R-3.19-7 | Replaces a normal hoop; same opening, rim bounce, spacing, max jump | 3.19 | 3c | test/run/flow/s3_19_s3_22_s3_25_autopilot_test.dart | done (WP-3c) |
 | R-3.19-8 | Spawn from 15, weight 6, ≥ 20 apart; not next to a saw ring or the portal (± 3); not while on fire; never tilted/moving | 3.19 | 0b | test/run/director/s3_0_3_director_test.dart | done |
 | R-3.19-9 | Not spawned during rides; a burning fire keeps burning through a ride | 3.19 | 3c | test/run/items/s3_19_fever_test.dart | done (WP-3c) |

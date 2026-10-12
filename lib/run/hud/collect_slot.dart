@@ -19,6 +19,11 @@ abstract class CollectSlotItem {
 
   /// Called when the item has fully faded out.
   void onGone() {}
+
+  /// Called when its slot is torn down before the item faded out (the
+  /// layer left the HUD, e.g. on a death). The item drops whatever it put
+  /// outside the slot (PRD-2.2 §12.4).
+  void onDiscard() {}
 }
 
 /// The shared HUD collect slot (ARCH §1.10, PRD §3.15 / §3.16, Q37 / Q42):
@@ -74,6 +79,20 @@ class CollectSlot extends PositionComponent {
     if (banners?.busy ?? false) return;
     _item = _queue.removeFirst();
     _t = 0;
+  }
+
+  /// The slot leaves with its layer (a death clears the HUD, a replay removes
+  /// the run's). Its active and queued items drop what they put in the banner
+  /// layer, so no sticker outlives the run's collect layer (PRD-2.2 §12.4).
+  @override
+  void onRemove() {
+    final item = _item;
+    _item = null;
+    item?.onDiscard();
+    while (_queue.isNotEmpty) {
+      _queue.removeFirst().onDiscard();
+    }
+    super.onRemove();
   }
 
   @override

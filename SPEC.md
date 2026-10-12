@@ -1337,10 +1337,17 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   (the Hourglass does not slow it), freezes while the run is paused, stays on
   its screen place during a camera shake, and is hidden with the HUD (settings,
   revive shop). Positions, sizes, colours, timings and texts are unchanged.
-  **Call:** the `CollectText` labels inside the puzzle pill and its coin badge
-  (`n/4`, `+N`) stay with the pill in the HUD: they sit on the pill's opaque
-  panel, so behind it they would not show. The stickers are the collect texts
-  that float outside the pill and move.
+  **Fix P3-R1 (QA S7-14…16; supersedes the first call, which kept the labels
+  in the HUD):** the puzzle's `CollectText` labels (`n/4` and the coin badge's
+  `+N`) are drawn by the banner layer too (`CollectLabels`, a part of the collect
+  layer), at the slot's centre and fade and on the slot's clock. The pill's
+  opaque panel and the badge's white box stay in the HUD on top, each with a
+  1 pt window over its text; the banner layer paints the same colour under the
+  window (3 pt), so the text reads through the panel. The pill, its board,
+  coins, fetch flights, sparkles and rings stay in the HUD. The banner layer
+  fades as one group with the HUD row (`RunHud.rowOpacity`: in while the run
+  plays, out on a death), also in a ride's scene at 50 %. A death takes the
+  stickers of the collect slot's active and queued items with it.
 - Tests: `test/p22/s12_banner_layer_test.dart` (order, every banner kind in the
   layer, the switch crash word surviving a death's clear, the top row in the
   HUD, pause freezes a banner, the Hourglass does not slow it, the band stays
@@ -1348,7 +1355,10 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `test/run/items/s3_15_feathers_test.dart` and `s3_16_puzzle_test.dart` (the
   stickers are in the banner layer), `test/run/screens/s5_7_hud_pause_test.dart`
   (the host lives in the banner layer), `test/run/hoops/s3_20_switch_test.dart`
-  (the switch banner uses the run's host).
+  (the switch banner uses the run's host); `test/p22/s12_collect_text_test.dart`
+  (the labels in the layer, the pill's window and the badge's text in the
+  composite, the fade and the death teardown) and the unskipped S7-14…16 in
+  `test/p22/s12_s18_s20_s21_qa_p3_test.dart`.
 - DEVIATION (PRD-2.2 §31, supersedes the PRD-2 §5.10 / §5.14 page colours and
   the §5.10 level-up rays): **the balloon bonus and the results page always
   use the approved grey,** whatever colour stage the run ended on: background

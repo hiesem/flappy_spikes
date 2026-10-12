@@ -3,6 +3,7 @@ import 'dart:ui' show Canvas;
 import 'package:flame/components.dart';
 
 import '../../game/flappy_game.dart';
+import '../../game/paints.dart';
 import '../config/streak_config.dart';
 import '../run_layers.dart';
 import '../run_scaled_world.dart';
@@ -13,9 +14,9 @@ import 'run_hud.dart';
 /// world** at [RunLayer.banners] (−60). The bird, the hoops, the pickups and
 /// the spike strips draw over every banner; the big score circle (−100)
 /// stays behind it. It holds the run's one [BannerHost] (streak tiers,
-/// FEVER, element and switch banners) and the collect stickers ("BONUS
-/// UNLOCKED!", "PICTURE COMPLETE"), which are added to it by the collect
-/// layer.
+/// FEVER, element and switch banners), the collect stickers ("BONUS
+/// UNLOCKED!", "PICTURE COMPLETE") and the puzzle's collect text ("n/4",
+/// "+N"), which the collect layer adds to it.
 ///
 /// Timing (PRD-2.2 §12.2): the banners keep real time, so the Hourglass does
 /// not slow them (the world runs at `dt × timeScale`, this layer undoes it),
@@ -23,7 +24,9 @@ import 'run_hud.dart';
 /// dt 0). Position: the world is moved by the camera shake, so the layer
 /// cancels the viewfinder offset and the bands stay screen-anchored at y 190.
 /// It follows the HUD: nothing is drawn while the HUD is hidden (a settings
-/// or revive-shop screen over the run), and the layer is removed with it.
+/// or revive-shop screen over the run), the layer fades with the HUD row
+/// ([RunHud.rowOpacity]: in while the run plays, out on a death), and the
+/// layer is removed with it.
 class RunBannerLayer extends PositionComponent {
   RunBannerLayer({required this.game, required this.hud})
     : super(priority: RunLayer.banners);
@@ -57,12 +60,18 @@ class RunBannerLayer extends PositionComponent {
     // set once it is mounted, and the layer can draw before that.
     if (game.runSettingsOpen || game.reviveShopOpen) return;
     if (!identical(game.run, hud.run)) return;
+    // PRD-2.2 §12.2: the layer fades with the HUD row. One group fade covers
+    // every band and label in it, so nothing is drawn twice.
+    final fade = hud.rowOpacity;
+    if (fade <= 0) return;
     // The world is drawn through the camera's viewfinder, which the run's
     // screen shake moves; cancel that offset to keep the bands on screen.
     final offset = game.camera.viewfinder.position;
     canvas.save();
     canvas.translate(offset.x, offset.y);
+    if (fade < 1) canvas.saveLayer(null, layerPaint(fade));
     super.renderTree(canvas);
+    if (fade < 1) canvas.restore();
     canvas.restore();
   }
 }

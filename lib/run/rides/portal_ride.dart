@@ -445,8 +445,10 @@ class PortalRide implements Ride {
 
   void _paintSceneBanners(Canvas canvas) {
     final b = _banners;
-    if (b == null || (RunHud.of(c.run)?.hidden ?? false)) return;
-    b.renderInScene(canvas, bannerOpacity);
+    final hud = RunHud.of(c.run);
+    if (b == null || (hud?.hidden ?? false)) return;
+    // PRD-2.2 §12.2: the bands fade with the HUD row here as in the world.
+    b.renderInScene(canvas, bannerOpacity * (hud?.rowOpacity ?? 1));
   }
 
   void _playCue(RideCue cue) {

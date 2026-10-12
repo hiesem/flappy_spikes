@@ -23,9 +23,10 @@ import 'run_hud.dart';
 /// Q42), the screen-space particle pool for the fetch trails, landing
 /// sparkles and confetti, and the gold rings ([ShockRing]). Lives in the
 /// [RunHud] (viewport, real time); a death clears it with the other HUD
-/// parts and [ensureFor] builds a new one after a revive. The collect
-/// stickers ("BONUS UNLOCKED!", "PICTURE COMPLETE") are drawn in the run's
-/// banner layer instead (PRD-2.2 §12.2), behind the gameplay: [bannerLayer].
+/// parts and [ensureFor] builds a new one after a revive. The text parts are
+/// drawn in the run's banner layer instead (PRD-2.2 §12.1 / §12.2), behind
+/// the gameplay: the stickers ("BONUS UNLOCKED!", "PICTURE COMPLETE") and the
+/// puzzle's collect text ("n/4", "+N") through [labels] in [bannerLayer].
 class CollectLayer extends PositionComponent
     with HasGameReference<FlappySpikesGame> {
   CollectLayer(this.run, this.bannerLayer)
@@ -33,8 +34,12 @@ class CollectLayer extends PositionComponent
 
   final RunController run;
 
-  /// The run's banner layer, where the stickers are added.
+  /// The run's banner layer, where the stickers and the collect text are
+  /// drawn.
   final RunBannerLayer bannerLayer;
+
+  /// The banner-layer part of this layer's collect text (see [CollectLabels]).
+  late final CollectLabels labels = CollectLabels(this);
 
   static final Expando<CollectLayer> _layers = Expando('CollectLayer');
 
@@ -84,11 +89,20 @@ class CollectLayer extends PositionComponent
   Future<void> onLoad() async {
     add(slot);
     add(pool);
+    bannerLayer.add(labels);
     try {
       coin = await CoinIcon.load(game.images);
     } catch (_) {
       coin = null;
     }
+  }
+
+  /// The labels leave the banner layer with this layer (PRD-2.2 §12.4); the
+  /// slot's items drop their stickers in the slot's own removal.
+  @override
+  void onRemove() {
+    labels.removeFromParent();
+    super.onRemove();
   }
 
   /// A gold ring growing [from] → [to] pt (stroke [stroke], [length] s).
@@ -176,6 +190,34 @@ class CollectLayer extends PositionComponent
   }
 }
 
+/// The part of a [CollectLayer] that lives in the run's banner layer (PRD-2.2
+/// §12.1): the collect text of the item on the slot (its `paintBanner`),
+/// drawn behind the gameplay. It is drawn at the slot's centre and fade (the
+/// same place as the item in the HUD), on the slot's clock, so its timing is
+/// the pill's and it does not follow the run's Hourglass or pause.
+class CollectLabels extends PositionComponent {
+  CollectLabels(this.layer) : super(priority: 2);
+
+  final CollectLayer layer;
+
+  @override
+  void render(Canvas canvas) {
+    final slot = layer.slot;
+    final item = slot.current;
+    if (item is! CollectTimeline) return;
+    final t = slot.time;
+    final alpha = slot.alphaAt(item, t);
+    if (alpha <= 0) return;
+    canvas.save();
+    canvas.translate(
+      slot.position.x,
+      slot.position.y + CollectSlot.offsetFor(alpha),
+    );
+    item.paintBanner(canvas, alpha, t);
+    canvas.restore();
+  }
+}
+
 /// A [CollectSlotItem] with its own timeline of one-shot cues (sounds,
 /// rings, sparkles, stickers) driven by the slot's clock.
 abstract class CollectTimeline implements CollectSlotItem {
@@ -190,6 +232,11 @@ abstract class CollectTimeline implements CollectSlotItem {
 
   /// Fire the cues whose time lies in (prev, t].
   void cues(CollectLayer layer, double prev, double t);
+
+  /// PRD-2.2 §12.1: the item's collect text, drawn by the run's banner layer
+  /// ([CollectLabels]) at the slot's centre with the item's [alpha] and slot
+  /// time [t]. Nothing by default: an item without text draws none there.
+  void paintBanner(Canvas canvas, double alpha, double t) {}
 
   static bool crossed(double prev, double t, double at) =>
       prev < at && t >= at;
@@ -221,7 +268,14 @@ abstract class CollectTimeline implements CollectSlotItem {
   }
 
   @override
-  void onGone() {
+  void onGone() => _dropStickers();
+
+  /// The slot was torn down with the item on it (PRD-2.2 §12.4): its
+  /// stickers go too, so a death leaves none behind.
+  @override
+  void onDiscard() => _dropStickers();
+
+  void _dropStickers() {
     for (final s in _stickers) {
       s.removeFromParent();
     }

@@ -315,18 +315,60 @@ class PuzzlePillItem extends CollectTimeline {
   final Paint _fill = Paint();
   final Paint _stroke = Paint()..style = PaintingStyle.stroke;
 
+  /// PRD-2.2 §12.1: the "n/4" count and the badge's "+N" are drawn by the
+  /// banner layer ([paintBanner]), behind the gameplay. The pill's panel and
+  /// the badge keep a window over each text (1 pt around it), and the banner
+  /// layer paints the same colour under it (3 pt around it, so the window's
+  /// edge never shows the background).
+  static const double _windowPad = 1;
+  static const double _backingPad = 3;
+
+  static const Color _plum = Color(0xFF7A0044);
+  static const double _badgeSize = 24;
+
+  /// The "+N" text's left edge from the badge's left edge (pt).
+  static const double _badgeTextX = 34;
+
+  /// Pieces held at [t] (the landing one counts from its landing time).
+  int _held(double t) {
+    var n = 0;
+    for (var k = 0; k < 4; k++) {
+      if (have(k, t)) n++;
+    }
+    return n;
+  }
+
+  /// The "n/4" text's box at [n] held, in pill coordinates (centre 0).
+  Rect _countBox(int n) {
+    final label = CollectText.of('$n/4', PuzzleConfig.countSize, layer.fg);
+    return Rect.fromLTWH(
+      PuzzleConfig.countX - label.width / 2,
+      2 - label.height / 2,
+      label.width,
+      label.height,
+    );
+  }
+
+  /// [rect] without [window], as one path so no seam shows at the window.
+  static Path _outside(Rect rect, Rect window) => Path.combine(
+    PathOperation.difference,
+    Path()..addRect(rect),
+    Path()..addRect(window),
+  );
+
   @override
   void paint(Canvas canvas, double alpha, double t) {
     fadeStickers(alpha);
     canvas.saveLayer(null, layerPaint(alpha));
     const w = PuzzleConfig.pillWidth, h = PuzzleConfig.pillHeight;
     final rect = Rect.fromCenter(center: Offset.zero, width: w, height: h);
-    canvas.drawRect(rect, _fill..color = layer.mix(PuzzleConfig.panelMix));
     final done = _done;
     final dk = done != null && t >= done ? math.exp(-(t - done) * 3) : 0.0;
+    final panel = _outside(rect, _countBox(_held(t)).inflate(_windowPad));
+    canvas.drawPath(panel, _fill..color = layer.mix(PuzzleConfig.panelMix));
     if (dk > 0) {
       _fill.color = const Color(0xFFFFB529).withValues(alpha: dk * .85);
-      canvas.drawRect(rect, _fill);
+      canvas.drawPath(panel, _fill);
     }
     canvas.save();
     canvas.translate(PuzzleConfig.boardX, 0);
@@ -338,10 +380,8 @@ class PuzzlePillItem extends CollectTimeline {
         PuzzleArt.paintPiece(canvas, k, theme, ghost: ghost, seam: seam);
       }
     }
-    var n = 0;
     for (var k = 0; k < 4; k++) {
       if (!have(k, t)) continue;
-      n++;
       final c = PuzzleArt.centreOf(k);
       final s = CollectTimeline.punch(
         t,
@@ -369,16 +409,73 @@ class PuzzlePillItem extends CollectTimeline {
       }
     }
     canvas.restore();
+    if (complete) _paintBadge(canvas, t);
+    canvas.restore();
+  }
+
+  /// PRD-2.2 §12.1: the "n/4" count and the coin badge's "+N", drawn by the
+  /// run's banner layer ([CollectLabels]) at the slot's centre and fade, on
+  /// the backing that the HUD leaves out (see [_windowPad]).
+  @override
+  void paintBanner(Canvas canvas, double alpha, double t) {
+    canvas.saveLayer(null, layerPaint(alpha));
+    final done = _done;
+    final dk = done != null && t >= done ? math.exp(-(t - done) * 3) : 0.0;
+    final n = _held(t);
+    final box = _countBox(n);
+    final backing = box.inflate(_backingPad);
+    canvas.drawRect(backing, _fill..color = layer.mix(PuzzleConfig.panelMix));
+    if (dk > 0) {
+      _fill.color = const Color(0xFFFFB529).withValues(alpha: dk * .85);
+      canvas.drawRect(backing, _fill);
+    }
     final label = CollectText.of(
       '$n/4',
       PuzzleConfig.countSize,
-      done != null ? const Color(0xFF7A0044) : layer.fg,
+      done != null ? _plum : layer.fg,
     );
-    label.paint(
-      canvas,
-      Offset(PuzzleConfig.countX - label.width / 2, 2 - label.height / 2),
+    label.paint(canvas, box.topLeft);
+    if (complete) _paintBadgeText(canvas, t);
+    canvas.restore();
+  }
+
+  /// Width of the badge: the full reward's text plus the padding, so the
+  /// badge does not grow while the number counts up.
+  double get _badgeWidth =>
+      CollectText.of('+${reward ?? 0}', _badgeSize, _plum).width +
+      PuzzleConfig.badgePad;
+
+  /// The "+N" text's box in the badge's own coordinates (badge centre 0).
+  static Rect _badgeTextBox(double bw, double width, double height) =>
+      Rect.fromLTWH(-bw / 2 + _badgeTextX, 2 - height / 2, width, height);
+
+  /// The coin badge's scale [ub] seconds after 4/4: the pop, times the count's
+  /// bump at the end of the count.
+  static double _badgeScale(double ub) {
+    final s = CollectText.eob(ub / PuzzleConfig.badgePop);
+    final land = ub - PuzzleConfig.countStart - PuzzleConfig.countLength;
+    final bump = land > 0 && land < PuzzleConfig.bumpLength
+        ? 1 +
+              PuzzleConfig.bump *
+                  math.sin(math.pi * land / PuzzleConfig.bumpLength)
+        : 1.0;
+    return s * bump;
+  }
+
+  void _paintBadgeText(Canvas canvas, double t) {
+    final ub = t - badgeTime;
+    if (ub <= 0) return;
+    final bw = _badgeWidth;
+    final text = CollectText.of('+${badgeCount(t)}', _badgeSize, _plum);
+    canvas.save();
+    canvas.translate(0, _badgeY);
+    canvas.scale(_badgeScale(ub));
+    final box = _badgeTextBox(bw, text.width, text.height);
+    canvas.drawRect(
+      box.inflate(_backingPad),
+      _fill..color = const Color(0xFFFFFFFF),
     );
-    if (complete) _paintBadge(canvas, t);
+    text.paint(canvas, box.topLeft);
     canvas.restore();
   }
 
@@ -401,26 +498,25 @@ class PuzzlePillItem extends CollectTimeline {
       );
       CoinIcon.paint(canvas, coin, p, 14);
     }
-    final s = CollectText.eob(ub / PuzzleConfig.badgePop);
-    final land = ub - PuzzleConfig.countStart - PuzzleConfig.countLength;
-    final bump = land > 0 && land < PuzzleConfig.bumpLength
-        ? 1 +
-              PuzzleConfig.bump *
-                  math.sin(math.pi * land / PuzzleConfig.bumpLength)
-        : 1.0;
-    const plum = Color(0xFF7A0044);
-    final full = CollectText.of('+${reward ?? 0}', 24, plum);
-    final text = CollectText.of('+${badgeCount(t)}', 24, plum);
-    final bw = full.width + PuzzleConfig.badgePad;
+    final bw = _badgeWidth;
+    final text = CollectText.of('+${badgeCount(t)}', _badgeSize, _plum);
     canvas.save();
     canvas.translate(0, _badgeY);
-    canvas.scale(s * bump);
-    canvas.drawRect(
-      Rect.fromCenter(
-        center: Offset.zero,
-        width: bw,
-        height: PuzzleConfig.badgeHeight,
-      ),
+    canvas.scale(_badgeScale(ub));
+    // The white badge keeps a window over its "+N" (drawn by the banner
+    // layer, see [paintBanner]).
+    final badge = Rect.fromCenter(
+      center: Offset.zero,
+      width: bw,
+      height: PuzzleConfig.badgeHeight,
+    );
+    final window = _badgeTextBox(
+      bw,
+      text.width,
+      text.height,
+    ).inflate(_windowPad);
+    canvas.drawPath(
+      _outside(badge, window),
       _fill..color = const Color(0xFFFFFFFF),
     );
     if (coin != null) {
@@ -431,7 +527,6 @@ class PuzzlePillItem extends CollectTimeline {
         PuzzleConfig.badgeCoin,
       );
     }
-    text.paint(canvas, Offset(-bw / 2 + 34, 2 - text.height / 2));
     canvas.restore();
   }
 }

@@ -25,10 +25,6 @@ import 'package:flutter_test/flutter_test.dart';
 import '../helpers.dart';
 import '../menu_screenshot_test.dart' show captureShot, loadFonts;
 
-// Run the reported failures explicitly with --dart-define=QA3_FINDINGS=true.
-// Normal gates keep each unfixed contract regression skipped by finding ID.
-const _probe = bool.fromEnvironment('QA3_FINDINGS');
-
 FlameTester<FlappySpikesGame> _game() => FlameTester(
   () => createRunTestGame(worldHeight: 711, seed: 5),
   gameSize: Vector2(320, 711),
@@ -70,7 +66,7 @@ ui.Color _pixel(Uint8List bytes, int x, int y) {
 }
 
 void main() {
-  group('S7-14', skip: _probe ? false : 'S7-14', () {
+  group('S7-14', () {
     _game().testGameWidget(
       '§12.2 the actual banner paint fades with the HUD row opacity',
       setUp: _boot,
@@ -103,7 +99,7 @@ void main() {
     );
   });
 
-  group('S7-15', skip: _probe ? false : 'S7-15', () {
+  group('S7-15', () {
     _game().testGameWidget(
       '§12.1 the puzzle count CollectText is painted outside the HUD branch',
       setUp: _boot,
@@ -137,7 +133,7 @@ void main() {
     );
   });
 
-  group('S7-16', skip: _probe ? false : 'S7-16', () {
+  group('S7-16', () {
     _game().testGameWidget(
       '§12.4 death clears an active puzzle completion sticker from the world',
       setUp: _boot,

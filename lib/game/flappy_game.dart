@@ -678,6 +678,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // the game skips its own (SFX stay on); calls / alarms hold the audio.
     _audioFocusSub = audioFocus.interruptions.listen(sound.setInterrupted);
     unawaited(_startMusicChecked());
+    // PRD-2.2 §33.6 (S7-19): the session sound set is created once on
+    // Home and kept, so the live players stay flat game after game.
+    unawaited(sound.warmSession());
 
     final palette = paletteForStage(0);
     _bgColor = palette.background;
@@ -3578,6 +3581,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _birdAdapter = null;
     _run?.disposeRun();
     _run = null;
+    // PRD-2.2 §33.6 (S7-19): the run's own sound pools go with it.
+    sound.endRun();
     _debugBot = null;
     (world as RunScaledWorld).timeScaleSource = null;
     _removeResults();
@@ -3836,6 +3841,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (_systemBackLock > 0) _systemBackLock = max(0.0, _systemBackLock - dt);
     super.update(dt);
     _purchases?.update(dt);
+    if (_soundReady) sound.maintain();
     _drainPopups();
 
     if (_colorFadeT < 1) {

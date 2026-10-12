@@ -540,6 +540,13 @@ spike save bounce); otherwise `RunDied` → tumble → `PostRunFlow`.
     `SfxPool.lastPlayedMs`, never a preload touch). `preload(Iterable<Sfx>)` warms cues ahead (§18.4): the latest
     batch is reserved (the cap never evicts it), and a preload never goes over the cap — pools alive, being created and
     the core set count; it evicts an idle LRU pool for room, else leaves the rest of the batch to its first `play`.
+  - **Session set and run-scoped pools (§33.6, S7-19).** The game calls `warmSession()` once at load: it pins
+    `sessionWarm` (post-run count-up / coins / ticks, balloon bonus, LEVEL UP / CLAIM, feather slots, star trail) next
+    to `prewarmed` and creates those pools one by one after the core; pinned pools are never evicted. Every other pool
+    is run-scoped: `replay()` (Home arrival) calls `endRun()`, which disposes them at once, or via `maintain()` (called
+    every game frame, no work when nothing is pending) as soon as their last copy has finished. A pool played or
+    preloaded again first stays. So Home always holds exactly the session set (flat live players game after game);
+    `Config.sfxMaxLivePools` (56) = the 33 pinned pools + room for one run.
   - **Teardown is final for in-flight work.** `dispose()` bumps a generation: creations still loading publish nothing
     and dispose the voices they made; the core warm-up stops. The service can be used again afterwards.
   - Test seam: `voiceFactory` (fake voices, `test/p22/fake_audio.dart`, which also has a fake audioplayers platform for

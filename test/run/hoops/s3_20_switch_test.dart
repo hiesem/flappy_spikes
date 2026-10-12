@@ -198,15 +198,21 @@ void main() {
           expect(await flyUntil(game, (_) => h.resolved), isTrue);
           expect(run.dying, isFalse);
           expect(h.takenRing, 0);
-          // PRD-2.2 §13.1 the pass's points (1, or max(2, streak)).
+          // PRD-2.2 §13.1 the pass's points (1, or max(2, streak)), ×2 while
+          // a hatched chick (a seeded egg on the way) is active.
           final pass = events.whereType<HoopPassed>().last;
+          final passCoins = events.whereType<CoinsEarned>().lastWhere(
+            (e) =>
+                e.source == CoinSource.hoop || e.source == CoinSource.perfect,
+          );
           expect(
             run.state.score,
             score +
                 ScoringFeature.pointsFor(
-                  perfect: pass.perfect,
-                  streak: run.state.streak,
-                ),
+                      perfect: pass.perfect,
+                      streak: run.state.streak,
+                    ) *
+                    (passCoins.eggX2 ? 2 : 1),
           );
           expect(spy.events.map((e) => e.$1), contains('switchring_passed'));
           expect(game.storage.metElements, contains('switch_ring'));

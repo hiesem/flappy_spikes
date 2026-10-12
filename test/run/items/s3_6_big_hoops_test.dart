@@ -114,7 +114,11 @@ void main() {
         final b = run.state.bigHoops!;
         // (runClock, opening, index, gold, normal kind (WP-3c), spawned during a
         // ride (WP-3a: the comet boost's hoops are full size, §3.0.1 / §3.8)).
-        final spawned = <(double, double, int, bool, bool, bool)>[];
+        // The last field: the streak tier paints this hoop gold at spawn
+        // (PRD-2 §3.5 tier 2 look; it applies to special kinds too).
+        final spawned = <(double, double, int, bool, bool, bool, bool)>[];
+        bool tierGold() =>
+            RingPainter.colorsForTier(run.state.tier) == RingColors.gold;
         // The first hoop was spawned at run start (runClock 0).
         final f = run.spawner.hoops.first;
         spawned.add((
@@ -124,6 +128,7 @@ void main() {
           f.look.colors != null,
           true,
           f.plan.duringRide,
+          tierGold(),
         ));
         final sizes = <Object, double>{};
         // PRD-2.2 §15 the runClock at which each slot was planned.
@@ -139,6 +144,7 @@ void main() {
             // WP-3c: special kinds keep their own look (§3.6).
             e.plan.kind == HoopKindId.normal,
             e.plan.duringRide,
+            tierGold(),
           ));
           sizes[e.hoop] = e.hoop.opening;
         });
@@ -164,13 +170,17 @@ void main() {
         final band = h - 2 * RunConfig.stripHeight;
         final cap = band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin);
         var sawEase = false, sawPlain = false;
-        for (final (t, opening, idx, gold, normal, ride) in spawned) {
+        for (final (t, opening, idx, gold, normal, ride, tier) in spawned) {
           final m = b.mult(t);
           final base = run.director.openingFor(idx, ride: ride);
           final mp = b.mult(planned[idx] ?? t);
           expect(opening, closeTo(min(base * mp, cap), 1e-6), reason: 't=$t');
-          if (normal) expect(gold, m > 1, reason: 't=$t m=$m');
-          if (!normal) expect(gold, isFalse, reason: 'special at t=$t');
+          if (normal) expect(gold, m > 1 || tier, reason: 't=$t m=$m');
+          // Big Hoops never paints a special kind; only the streak's own
+          // tier-2 gold may (seen when the seeded course puts one at tier 2).
+          if (!normal && !tier) {
+            expect(gold, isFalse, reason: 'special at t=$t');
+          }
           if (m > 1 && m < 1.5) sawEase = true;
           if (m == 1) sawPlain = true;
         }

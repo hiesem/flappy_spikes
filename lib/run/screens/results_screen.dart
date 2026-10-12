@@ -242,6 +242,50 @@ class ResultsScreen extends PositionComponent
   bool _leaving = false;
   double? _claimEnd;
 
+  // region PRD-2.2 §14 — one `sk_tick` stream for the count-ups
+  /// The running tick stream (null = none): its start, length and total.
+  double? _tickStart;
+  double _tickLength = ResultsConfig.countDuration;
+  int _tickTotal = 0;
+  int _tickPlayed = 0;
+
+  /// PRD-2.2 §14.1 the tick count for a count of [amount]: the home
+  /// coin-pill rule min(24, 8 + amount); a count of 0 plays none.
+  static int ticksFor(int amount) =>
+      amount <= 0 ? 0 : math.min(24, 8 + amount);
+
+  /// PRD-2.2 §14 starts the one tick stream for a count of [amount] over
+  /// [length] s (replaces a running one, so counts that run together never
+  /// double the ticks).
+  void _startTicks(int amount, double length) {
+    _tickTotal = ticksFor(amount);
+    _tickPlayed = 0;
+    _tickLength = length;
+    _tickStart = _tickTotal > 0 ? _t : null;
+  }
+
+  /// PRD-2.2 §14.1 the ticks follow the eased count (ease-out cubic, like
+  /// the numbers): tick i is due once the count passed i / total, at most
+  /// one per frame, so they come quickly and slow down with the numbers.
+  void _stepTicks() {
+    final ts = _tickStart;
+    if (ts == null) return;
+    final u = ((_t - ts) / _tickLength).clamp(0.0, 1.0);
+    final e = 1 - math.pow(1 - u, 3).toDouble();
+    final due = u >= 1
+        ? _tickTotal
+        : math.min(_tickTotal, (e * _tickTotal).floor() + 1);
+    if (_tickPlayed < due) {
+      _tickPlayed++;
+      game.sound.play(Sfx.skTick);
+    }
+    if (_tickPlayed >= _tickTotal) _tickStart = null;
+  }
+
+  /// NEXT / skip: no more ticks.
+  void _stopTicks() => _tickStart = null;
+  // endregion PRD-2.2 §14
+
   /// Seconds since the page opened.
   double get time => _t;
 
@@ -508,6 +552,15 @@ class ResultsScreen extends PositionComponent
       _countFrom = 0;
       _countLength = ResultsConfig.countDuration;
       _countStart = _t;
+      // PRD-2.2 §14 one tick stream for the points (both columns) and
+      // YOUR REWARD: min(24, 8 + the largest count).
+      _startTicks(
+        math.max(
+          math.max(model.score, model.reward),
+          summary.opponent?.score ?? 0,
+        ),
+        ResultsConfig.countDuration,
+      );
     });
     if (!model.newBest) return;
     _at(ResultsConfig.newBestAt, () {
@@ -637,6 +690,9 @@ class ResultsScreen extends PositionComponent
       _countTo = model.reward + model.levelReward;
       _countLength = ResultsConfig.claimCount;
       _countStart = _t;
+      // PRD-2.2 §14.1 the claimed amount ticks too (under lv_claim and the
+      // bn_coin landings).
+      _startTicks(model.levelReward, ResultsConfig.claimCount);
     });
     _at(
       start + ResultsConfig.claimCountDelay + ResultsConfig.pillBumpAt,
@@ -665,6 +721,7 @@ class ResultsScreen extends PositionComponent
   void next() {
     if (!canContinue || _leaving) return;
     _leaving = true;
+    _stopTicks(); // PRD-2.2 §14.1 NEXT mid-count stops the ticks
     if (_claimShowing) {
       _claim(auto: true);
       _at(_claimEnd! + ResultsConfig.nextAfterClaim, game.goHome);
@@ -689,6 +746,7 @@ class ResultsScreen extends PositionComponent
       _schedule.removeAt(0).$2();
     }
     _animate();
+    _stepTicks();
   }
 
   void _animate() {

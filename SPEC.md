@@ -1029,7 +1029,13 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   entries so far + 5), bonus ≤ 250, gift ≤ 10), and rejects v1 uploads
   (`version`); the client skips v1 pool entries. The 2.1 pool runs are
   converted once (value 1 per entry) by `functions/scripts/convert_pools_v2.ts`.
-- Tests: `test/p22/s13_points_test.dart`, `test/p22/s13_versus_timeline_test.dart`,
+- DEVIATION (PRD-2.2 §14, supersedes the "—" sound at 0.45 s of the PRD-2
+  §5.10 timeline): the results count-ups play **one `sk_tick` stream** —
+  min(24, 8 + the largest running count: your points, the opponent's points,
+  YOUR REWARD), spread along the eased count (at most one per frame), and the
+  same rule on the claimed amount during the 0.9 s CLAIM count. A count of 0
+  plays none; NEXT mid-count stops them.
+- Tests: `test/p22/s14_results_ticks_test.dart`, `test/p22/s13_points_test.dart`, `test/p22/s13_versus_timeline_test.dart`,
   `test/p22/s13_score_circle_shots_test.dart`, `functions/test/timeline.test.ts`,
   `functions/test/convert.test.ts`, `test/p22/s11_perfect_zone_test.dart`,
   `test/p22/s10_hoop_rumble_test.dart`, `test/run/items/s3_33_rumble_test.dart`,

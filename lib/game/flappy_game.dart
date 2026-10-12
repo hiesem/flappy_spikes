@@ -44,6 +44,7 @@ import '../menu/wallet.dart';
 import '../run/debug/autopilot.dart';
 import '../run/debug/debug_overlay.dart';
 import '../run/debug/force_menu.dart';
+import '../services/soak.dart';
 import '../run/director/plans.dart';
 import '../run/elements.dart';
 import '../run/items/puzzle.dart';
@@ -129,14 +130,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
        storage = GameStorage(clock: clock),
        viewHeight = _clampViewHeight(worldHeight ?? Config.worldHeight),
        super(
-        world: RunScaledWorld(gravity: Vector2(0, Config.gravity)),
-        gravity: Vector2(0, Config.gravity),
-        camera: CameraComponent.withFixedResolution(
-          width: Config.worldWidth,
-          height: _clampViewHeight(worldHeight ?? Config.worldHeight),
-        ),
-        zoom: 1,
-      ) {
+         world: RunScaledWorld(gravity: Vector2(0, Config.gravity)),
+         gravity: Vector2(0, Config.gravity),
+         camera: CameraComponent.withFixedResolution(
+           width: Config.worldWidth,
+           height: _clampViewHeight(worldHeight ?? Config.worldHeight),
+         ),
+         zoom: 1,
+       ) {
     // The game uses 1 Forge2D world unit = 1 logical point (SPEC.md). The
     // engine's default per-step translation clamp (2.0 units, tuned for
     // meter-scale worlds) would otherwise cap every body at ~120 pt/s at
@@ -240,8 +241,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   Future<void> Function()? beforeRunStart;
 
   /// Debug panel availability: debug builds and the Linux desktop target.
+  /// P22-33 (§33.3): also in an FS_SOAK profile build (never release).
   static bool get debugAvailable =>
-      kDebugMode || (!kIsWeb && Platform.isLinux);
+      kDebugMode || kSoak || (!kIsWeb && Platform.isLinux);
+
+  /// P22-33 (§33.3) the FS_SOAK driver (null in every normal build).
+  SoakDriver? soak;
 
   GameState state = GameState.start;
   MenuScene menuScene = MenuScene.home;
@@ -485,7 +490,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Current skin blend toward the stage foreground (0 in menus).
   double get skinBlend => _skinBlend;
 
-
   // Any letterbox slivers (only on screens beyond the viewHeight clamp, e.g.
   // tablets) are painted with the FOREGROUND tint so they read as an
   // extension of the spike strips. The world's own background is drawn by an
@@ -502,10 +506,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final drags = MenuDragDispatcher(
       pointsToPixels: () => canvasSize.x <= 0 || canvasSize.y <= 0
           ? 1
-          : min(
-              canvasSize.x / Config.worldWidth,
-              canvasSize.y / viewHeight,
-            ),
+          : min(canvasSize.x / Config.worldWidth, canvasSize.y / viewHeight),
     );
     // Flame's own DragCallbacks registers its default dispatcher this way.
     // ignore: invalid_use_of_internal_member
@@ -557,6 +558,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onResolved: _dismissPendingToast,
     )..start();
     sound = SoundService(muted: storage.muteSound, enabled: soundEnabled);
+    if (kSoak && soundEnabled) soak = SoakDriver(this); // P22-33 §33.3
     rumble.on = storage.rumble;
     // Background music: persisted volume, then start the loop (everywhere —
     // menus and gameplay). Guarded/unawaited: no-ops in headless tests.
@@ -673,17 +675,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         state != GameState.start ||
         menuScene != MenuScene.home;
     _noAdsOfferQueued = true;
-    _queuePopup(
-      () => stale() || (_homeInteractive && _fakeAd == null),
-      () {
-        _noAdsOfferQueued = false;
-        if (stale() || _noAdsPopup != null) return;
-        final reason = menu.noAdsPopup.evaluate();
-        if (reason == null) return;
-        openNoAdsPopup(reason: reason.name);
-        if (_noAdsPopup != null) unawaited(menu.noAdsPopup.markShown());
-      },
-    );
+    _queuePopup(() => stale() || (_homeInteractive && _fakeAd == null), () {
+      _noAdsOfferQueued = false;
+      if (stale() || _noAdsPopup != null) return;
+      final reason = menu.noAdsPopup.evaluate();
+      if (reason == null) return;
+      openNoAdsPopup(reason: reason.name);
+      if (_noAdsPopup != null) unawaited(menu.noAdsPopup.markShown());
+    });
   }
 
   @override
@@ -947,7 +946,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _startRun(Powerup starter) {
     _run?.disposeRun();
     final d = runDebug;
-    final e2e = kE2E || E2EHooks.force.isNotEmpty || E2EHooks.startHoopIndex > 0;
+    final e2e =
+        kE2E || E2EHooks.force.isNotEmpty || E2EHooks.startHoopIndex > 0;
     final setup = RunSetup(
       seed: runSeed ?? (kE2E ? kE2ESeed : _random.nextInt(1 << 31)),
       starter: starter,
@@ -1710,11 +1710,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// on.
   void openFeaturedItem(SkinItem item) => _runMenuOverlayOpen
       ? null // WP-2d: no skin shop over a paused run
-      : openSkins(
-    layer: item.layer,
-    tryOnId: item.id,
-    source: 'shop_featured',
-  );
+      : openSkins(layer: item.layer, tryOnId: item.id, source: 'shop_featured');
 
   // --- Skin shop (PRD-menu-v2 §3–4) ------------------------------------------
 
@@ -1749,7 +1745,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   void _showSkins({SkinLayer? layer, String? tryOnId}) {
     menuScene = MenuScene.skins;
-    final tryOn = layer != null && tryOnId != null && !menu.items.isOwned(layer, tryOnId)
+    final tryOn =
+        layer != null && tryOnId != null && !menu.items.isOwned(layer, tryOnId)
         ? tryOnId
         : null;
     final screen = SkinShopScreen(
@@ -1823,8 +1820,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       unawaited(items.markSeen(layer, id));
     }
     if (items.isOwned(layer, id)) {
-      final wasEquipped =
-          items.isEquipped(layer, id) && screen.tryOnId == null;
+      final wasEquipped = items.isEquipped(layer, id) && screen.tryOnId == null;
       screen.clearTryOn();
       if (wasEquipped) {
         sound.play(Sfx.skTap);
@@ -1931,12 +1927,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _chromeHold = true; // replaces home: the corner box stays
     world.add(screen);
     registerTintable(screen);
-    fadeOpacity(
-      screen,
-      from: 0,
-      to: 1,
-      duration: Config.levelsEnterDuration,
-    );
+    fadeOpacity(screen, from: 0, to: 1, duration: Config.levelsEnterDuration);
     pushBack(_levelsBack);
   }
 
@@ -2482,8 +2473,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void popBack(bool Function() handler) => _backHandlers.remove(handler);
 
   /// Back (Esc): runs the topmost handler. False when nothing handled it.
-  bool handleBack() =>
-      _backHandlers.isNotEmpty && _backHandlers.last.call();
+  bool handleBack() => _backHandlers.isNotEmpty && _backHandlers.last.call();
 
   /// PRD-2.2 §8: the Android system back (the edge swipe in gesture
   /// navigation, or the 3-button back). It closes the menu screens and popups
@@ -3101,8 +3091,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // Settings) a chip above the bottom spikes; runs / game over: the 1.0
     // bottom-centre spot.
     final popup = _noAdsPopup != null;
-    final menuScreen =
-        state == GameState.start && menuScene != MenuScene.home;
+    final menuScreen = state == GameState.start && menuScene != MenuScene.home;
     final message = ServiceMessage(
       message: text,
       chip: popup || menuScreen,
@@ -3290,13 +3279,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     if (state == GameState.start) _checkLevelUp(dt);
 
+    // region P22-33 — FS_SOAK driver (§33.3)
+    soak?.update(dt);
+    // endregion P22-33
     // region WP-0b — debug / e2e autopilot
     final bot = _debugBot;
     if (bot != null && state == GameState.playing && bot.shouldFlap()) {
       onScreenTap();
     }
     // endregion WP-0b
-
   }
 }
 

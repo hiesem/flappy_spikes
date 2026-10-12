@@ -1,15 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <!-- The AD_ID permission is pulled into the merged manifest by
-         firebase_analytics and google_mobile_ads; it stays removed so the
-         current "no advertising ID" Play declaration holds. Rewarded ads
-         still work without it (non-personalized, lower eCPM).
-         TODO(before-release, PRD-1 §3.8): when the Play "contains ads" /
-         advertising-ID / data-safety declarations are updated for 2.0,
-         delete this block so AdMob can use the advertising ID. -->
-    <uses-permission
-        android:name="com.google.android.gms.permission.AD_ID"
-        tools:node="remove" />
     <!-- RUMBLE (PRD-2 §3.33): the vibration plugin's knock / shake pulses. -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Reminder notifications (PRD-2 §3.34): POST_NOTIFICATIONS is the

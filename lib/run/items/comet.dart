@@ -1,5 +1,8 @@
+import '../director/plans.dart' show RideKind;
 import '../elements.dart';
+import '../mistakes.dart';
 import '../rides/comet_ride.dart';
+import '../rides/landing_slow_mo.dart';
 import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
@@ -22,10 +25,21 @@ class CometFeature extends RunFeature {
   /// Every boost started this run (tests, debug).
   int started = 0;
 
+  /// PRD-2.2 §17 the landing's slow motion (null before [attach]).
+  LandingSlowMo? landing;
+
   @override
   void attach(RunContext c) {
     _c = c;
-    c.events.on<PickupCollected>(_onCollected);
+    landing = LandingSlowMo(c);
+    c.events
+      ..on<PickupCollected>(_onCollected)
+      ..on<RideStarted>(_onRideStarted);
+  }
+
+  /// PRD-2.2 §17.2 a portal ride starting during the landing ends it.
+  void _onRideStarted(RideStarted e) {
+    if (e.kind == RideKind.portal) landing?.stop();
   }
 
   void _onCollected(PickupCollected e) {
@@ -57,17 +71,31 @@ class CometFeature extends RunFeature {
 
   @override
   void update(double gameDt, double realDt) {
+    landing?.step(realDt);
     final r = ride;
     if (r == null) return;
+    final wasDone = r.done;
     r.update(gameDt);
+    // PRD-2.2 §17.1 control returned: the landing's slow motion starts.
+    if (!wasDone && r.done) landing?.start();
     if (r.finished) ride = null;
   }
+
+  @override
+  void onDeath(Mistake m) => landing?.stop();
+
+  @override
+  void onRevive() => landing?.stop();
 
   @override
   void detach() {
     ride?.abort();
     ride = null;
-    _c?.events.off<PickupCollected>(_onCollected);
+    landing?.stop();
+    landing = null;
+    _c?.events
+      ?..off<PickupCollected>(_onCollected)
+      ..off<RideStarted>(_onRideStarted);
     _c = null;
   }
 }

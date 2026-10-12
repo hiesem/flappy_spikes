@@ -46,8 +46,19 @@ class RunState {
   /// pt/s, the bird's forward velocity (< 0 briefly after a knock-back).
   double forwardSpeed = 0;
 
-  /// Hourglass.
+  /// Hourglass; PRD-2.2 §17 the comet landing (the lower of the two).
   double timeScale = 1;
+
+  // region WP-G3 — comet landing (PRD-2.2 §17)
+  /// PRD-2.2 §17.2 the Hourglass's own scale and the landing's own scale:
+  /// [timeScale] is the lower of the two, frame by frame.
+  double hourglassScale = 1;
+  double landingScale = 1;
+
+  /// PRD-2.2 §17 / §27 the comet's landing slow motion runs: the comet
+  /// activity lasts until it is done.
+  bool cometLanding = false;
+  // endregion WP-G3
 
   /// Mini Bird 0.52 (eased).
   double birdScale = 1;
@@ -195,7 +206,9 @@ enum RunActivity {
   static RunActivity? of(RunState s) {
     final ride = s.ride?.kind;
     if (ride == RideKind.portal) return RunActivity.portal;
-    if (ride == RideKind.comet || s.timed?.type == TimedPowerup.comet) {
+    if (ride == RideKind.comet ||
+        s.timed?.type == TimedPowerup.comet ||
+        s.cometLanding) {
       return RunActivity.comet;
     }
     if (s.piggy != null) return RunActivity.piggy;

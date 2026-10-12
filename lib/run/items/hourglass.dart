@@ -70,8 +70,11 @@ class HourglassFeature extends TimedPowerupEffect {
   void _write() {
     final ctx = c;
     if (ctx == null) return;
-    ctx.s.timeScale = scale;
-    ctx.run.clock.timeScale = scale;
+    // PRD-2.2 §17.2 a comet landing at the same time: the lower scale wins.
+    final s = ctx.s..hourglassScale = scale;
+    final v = math.min(scale, s.landingScale);
+    s.timeScale = v;
+    ctx.run.clock.timeScale = v;
   }
 
   @override

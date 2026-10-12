@@ -344,10 +344,11 @@ class RunDirector {
     if (ride || _revivePending) {
       _revivePending = false;
       final opening = cap(openingFor(i, ride: ride) * ctx.bigHoopsMult);
-      // PRD-2.2 §16.1 comet ride hoops zigzag ±70 pt around the middle.
-      final y =
-          (ride ? _zigzagY(trackX, i, ctx, opening) : null) ??
-          _layout.nextCentre(i, ctx, opening);
+      // PRD-2.2 §16.1 comet ride hoops zigzag ±70 pt around the middle
+      // (the normal draw still happens, so the course after the ride keeps
+      // its random stream).
+      final normal = _layout.nextCentre(i, ctx, opening);
+      final y = (ride ? _zigzagY(trackX, i, ctx, opening) : null) ?? normal;
       _prevKind = HoopKindId.normal;
       _count(ElementId.normalHoop.storageId);
       _nextX += spacing;

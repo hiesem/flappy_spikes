@@ -359,7 +359,9 @@ void main() {
         sfx.clear();
         game.onScreenTap();
         expect(sfx, contains(Sfx.flap.name));
-        _step(game, .7);
+        // PRD-2.2 §17: the landing runs the world at 0.5× (game time), so
+        // the 0.6 s tail takes ≈ 1.1 s of real time.
+        _step(game, 1.4);
         expect(game.sound.activeLoops, isEmpty);
         expect(_comet(run).ride, isNull);
       },

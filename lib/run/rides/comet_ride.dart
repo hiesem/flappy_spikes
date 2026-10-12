@@ -375,7 +375,8 @@ class CometRide implements Ride {
   }
 
   /// §3.8 ending: the bird pops back into its normal shape, control
-  /// returns at its current height (no invulnerability beyond the landing).
+  /// returns at its current height (no invulnerability beyond the landing)
+  /// with one automatic flap (PRD-2.2 §17).
   void _finish() {
     _done = true;
     _after = 0;
@@ -384,7 +385,11 @@ class CometRide implements Ride {
       ..cruiseMult = 1
       ..ride = null
       ..timed = null;
-    c.game.runBird?.endRide(y);
+    final bird = c.game.runBird;
+    bird?.endRide(y);
+    // PRD-2.2 §17.1 one normal flap (a tap's impulse, animation and
+    // flap.mp3); the feature starts the landing slow motion.
+    bird?.flap();
     c.director.onRideEnd(RideKind.comet);
     c.sfx(Sfx.puCometEnd);
     _loopFadeT = _loop == null ? -1 : 0;

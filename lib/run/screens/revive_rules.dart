@@ -47,6 +47,10 @@ class ReviveRulesFeature extends RunFeature {
     }
     s
       ..timeScale = 1
+      // PRD-2.2 §17.2 a death clears the comet landing's slow motion too.
+      ..hourglassScale = 1
+      ..landingScale = 1
+      ..cometLanding = false
       ..birdScale = 1;
   }
 

@@ -1192,3 +1192,20 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   - Call: a hoop less than 40 pt ahead when a curve starts (the star is
     caught just before its own hoop's plane) is flown through as it is; the
     first curve leads from the bird's height to the hoop after it.
+  - Call: the zigzag replaces only the centre; the director still makes
+    the normal layout draw for a ride slot, so the course after the ride
+    keeps its random stream.
+- DEVIATION (PRD-2.2 §17, supersedes the PRD-2 §3.8 "Ending" line on these
+  points): **comet landing.** When control returns (`CometRide._finish`,
+  every comet ride incl. the pair's COMET gift) the bird does one normal
+  flap (`Bird.flap()`: the tap impulse, animation and `flap.mp3`), and the
+  run world runs at **0.5× for 0.8 s, then eases (smoothstep) back to 1×
+  over 0.7 s** of real time (`LandingSlowMo`, `CometConfig.landing*`): it
+  slows what the Hourglass slows (`RunState.timeScale` / `RunClock`), but
+  quietly (no vignette, tick-tock, sweep or ghost trail; the music keeps its
+  pitch). No grace period; taps work at once. With the Hourglass at the same
+  time the lower scale wins frame by frame (`RunState.hourglassScale` /
+  `landingScale`); pause freezes it; a death, a revive or a portal ride ends
+  it. The comet activity (§27) lasts until the landing is done
+  (`RunState.cometLanding`). The ease-out, the pop, `pu_comet_end` and "no
+  invulnerability afterwards" are unchanged.

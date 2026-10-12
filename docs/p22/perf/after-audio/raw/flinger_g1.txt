@@ -1,0 +1,1005 @@
+Start begin: 10-12 01:24:45.539
+Start end:   10-12 01:24:49.532
+Now:         10-12 03:13:43.217
+Notification Clients:
+   pid    uid  name
+  1179   1041  audioserver
+  1340   1013  media
+  1673   1000  android.uid.system
+  2446  10240  android.uid.systemui
+  2696   1001  android.uid.phone
+  5645  10188  com.google.android.tts
+  9115  10192  com.google.android.apps.youtube.music
+  9969  10210  com.google.android.youtube
+ 12693  10410  com.nothing.smartcenter
+ 12840  10527  com.nytimes.android
+ 14791  10463  org.telegram.messenger
+ 19445  10351  com.discord
+ 28648  10547  com.flappyspikes.flappy_spikes
+Global session refs:
+  session  cnt     pid    uid  name
+      209    1   12693  10410  com.nothing.smartcenter
+      329    1    2446  10240  android.uid.systemui
+     4473    2   28648  10547  com.flappyspikes.flappy_spikes
+     4681    1   28648  10547  com.flappyspikes.flappy_spikes
+     4689    1   28648  10547  com.flappyspikes.flappy_spikes
+     4697    1   28648  10547  com.flappyspikes.flappy_spikes
+     4705    1   28648  10547  com.flappyspikes.flappy_spikes
+     4713    1   28648  10547  com.flappyspikes.flappy_spikes
+     4721    1   28648  10547  com.flappyspikes.flappy_spikes
+     4729    1   28648  10547  com.flappyspikes.flappy_spikes
+Hardware status: 0
+Vibrator infos(size=1):
+  - AudioVibratorInfo{id: 0, resonantFrequency: 142.711182, qFactor: 16.359253, maxAmplitude: 0.335000}
+Bluetooth latency modes are enabled
+
+ ## BEGIN thread dump 
+
+Output thread 0xb4000077bd55a790, name AudioOut_D, tid 1946, type 0 (MIXER):
+  I/O handle: 13
+  Standby: no
+  Sample rate: 48000 Hz
+  HAL frame count: 480
+  HAL format: 0x5 (AUDIO_FORMAT_PCM_FLOAT)
+  HAL buffer size: 3840 bytes
+  Channel count: 2
+  Channel mask: 0x00000003 (front-left, front-right)
+  Processing format: 0x5 (AUDIO_FORMAT_PCM_FLOAT)
+  Processing frame size: 8 bytes
+  Pending config events: none
+  Output devices: 0x2 (AUDIO_DEVICE_OUT_SPEAKER)
+  Input device: 0 (AUDIO_DEVICE_NONE)
+  Audio source: 0 (AUDIO_SOURCE_DEFAULT)
+  Timestamp stats: n=57456 disc=1580 cold=9 nRdy=4 err=1707 rate=0.918974 jitterMs(ave=0.153312 std=4.35595 min=-9.35579 max=275.005) localSR(42046.3, 0.00703517) correctedJitterMs(ave=0.154819 std=1.10921 min=-7.67118 max=275.005)
+  Timestamp corrected: no
+  Last write occurred (msecs): 9
+  Process time ms stats: ave=0.186207 std=0.0498303 min=0.126709 max=0.290527
+  Hal write jitter ms stats: ave=0.00238504 std=0.331522 min=-0.854248 max=0.912476
+  Threadloop write latency stats: ave=98.8242 std=15.7664 min=21.5312 max=152.796
+  Monopipe write pipe depth stats: ave=1440 std=0 min=1440 max=1440
+  Master volume: 1.000000
+  Master mute: off
+  Mixer channel Mask: 0x3 (front-left, front-right)
+  Normal frame count: 960
+  Total writes: 39215
+  Delayed writes: 0
+  Blocked in write: no
+  Suspend count: 0
+  Fast track availMask=0xf8
+  Standby delay ns=3000000000
+  Hw supports pause: no
+  Hw paused: no
+  Flush pending: no
+  AudioStreamOut: 0xb40000752a6ddf00 flags 0x6 (AUDIO_OUTPUT_FLAG_PRIMARY|AUDIO_OUTPUT_FLAG_FAST)
+  Frames written: 37646400
+  Suspended frames: 0
+  PipeSink frames written: 37646400
+  Hal stream dump:
+    === YAML START (primary-playback) ===
+    Name: primary-playback
+    Workers:
+      Periodic worker:
+        Name: pw-primary-playback
+        Force update: false
+        Linked config IDs: [100001]
+        Need to do A/V sync: true
+        Latency ms: 20
+        Supported latency modes: [FREE]
+        Current latency modes: FREE
+      Command worker:
+        Name: cw-primary-playback
+        Current state:
+          Type: ACTIVE
+          Name: StreamOutActiveState
+        Command:
+          Count: 78848
+          Last: !aidl >
+            Command{burst: 3840}
+        Last reply: !aidl >
+          Reply{status: 0, fmqByteCount: 3840, observable: Position{frames: 37765920, timeNs: 6553562699407}, hardware: Position{frames: -1, timeNs: -1}, latencyMs: 20, xrunFrames: 0, state: ACTIVE, flushFromPosition: 0}
+        Start time:
+        - Diff(us): 5348
+    Stream:
+      Name: primary-playback
+      Port config ID: 400001
+      Is started: true
+      Latency in ms: 20
+      Interfaces: []
+      #: ===============================================================================
+      #: For full logs, please see `dumpsys android.hardware.audio.core.IModule/default`
+      #: ===============================================================================
+    Playback rate: !aidl >
+      AudioPlaybackRate{speed: 1.000000, pitch: 1.000000, timestretchMode: DEFAULT, fallbackMode: MUTE}
+    Latency mode: [FREE]
+    === YAML END (primary-playback) ===
+      Signal power history (resolution: 1000.0 ms):
+       10-12 01:25:03.702: [  -67.6 ] sum(-17.8)
+       10-12 01:25:22.648: [  -42.6  -66.0  -89.9 ] sum(7.3)
+       10-12 01:25:55.690: [  -42.6  -66.0  -89.9 ] sum(7.3)
+       10-12 01:26:33.059: [  -42.6  -66.0  -89.9 ] sum(7.3)
+       10-12 01:26:43.540: [  -42.6  -66.0  -89.9 ] sum(7.3)
+       10-12 01:27:47.355: [  -42.6  -66.0  -89.9 ] sum(7.3)
+       10-12 01:32:38.905: [  -42.6  -66.0  -89.9 ] sum(7.3)
+       10-12 01:34:51.678: [  -42.6  -66.0  -89.9 ] sum(7.3)
+       10-12 01:35:09.665: [  -47.7  -49.2  -43.6  -75.4 -101.2 ] sum(8.4)
+       10-12 02:32:52.868: [  -68.0 ] sum(-18.1)
+       10-12 02:33:09.717: [  -67.6 ] sum(-17.8)
+      Signal power history (resolution: 50.0 ms):
+       10-12 01:32:40.653:    -76.7  -77.9  -79.0  -79.9  -81.5  -82.9  -83.8  -84.7  -85.7  -86.9
+       10-12 01:32:41.154:    -88.9  -91.3  -93.2  -95.6  -98.0 -100.3 -102.6 -104.3 -106.5 -111.4 ] sum(-33.7)
+       10-12 01:34:51.678: [  -77.6  -67.7  -61.7  -51.1  -43.7  -40.4  -36.1  -36.3  -38.0  -39.4
+       10-12 01:34:52.178:    -41.4  -43.4  -45.3  -47.0  -48.7  -50.2  -51.6  -52.8  -54.6  -56.2
+       10-12 01:34:52.678:    -57.6  -59.5  -61.9  -63.9  -65.3  -66.4  -67.6  -69.4  -72.4  -74.1
+       10-12 01:34:53.178:    -74.1  -74.1  -73.7  -74.0  -75.5  -76.7  -77.9  -79.0  -79.9  -81.5
+       10-12 01:34:53.678:    -82.9  -83.8  -84.7  -85.7  -86.9  -88.9  -91.3  -93.2  -95.6  -98.0
+       10-12 01:34:54.178:   -100.3 -102.6 -104.3 -106.5 -111.4 ] sum(7.3)
+       10-12 01:35:09.665: [  -39.3  -60.9  -76.4  -38.8  -44.4  -46.5  -49.0  -51.2  -53.8  -56.5
+       10-12 01:35:10.165:    -59.1  -61.8  -64.3  -67.1  -70.3  -73.5  -76.9  -80.7  -85.5  -92.4
+       10-12 01:35:10.666:   -103.9 -110.9 -129.0 ] sum(2.1)
+       10-12 01:35:11.347: [  -77.6  -67.7  -61.7  -51.1  -43.7  -40.4  -36.1  -36.3  -38.0  -39.4
+       10-12 01:35:11.847:    -41.4  -43.4  -45.3  -47.0  -48.7  -50.2  -51.6  -52.8  -54.6  -56.2
+       10-12 01:35:12.347:    -57.6  -59.5  -61.9  -63.9  -65.3  -66.4  -67.6  -69.4  -72.4  -74.1
+       10-12 01:35:12.847:    -74.1  -74.1  -73.7  -74.0  -75.5  -76.7  -77.9  -79.0  -79.9  -81.5
+       10-12 01:35:13.348:    -82.9  -83.8  -84.7  -85.7  -86.9  -88.9  -91.3  -93.2  -95.6  -98.0
+       10-12 01:35:13.848:   -100.3 -102.6 -104.3 -106.5 -111.4 ] sum(7.3)
+       10-12 02:32:52.868: [  -71.4  -56.9  -59.6 ] sum(-18.1)
+       10-12 02:33:09.717: [  -67.8  -54.8 -128.3 ] sum(-17.8)
+
+    -26.8 -|                    |                                                       |                       |                                                       |   |
+    -36.1 -|                    |     *****                                             |*  *                   |     *****                                             |   |
+    -45.4 -|                    |    *     *****                                        |    ***                |    *     *****                                        |   |
+    -54.7 -|                    |   *           ******                                  |       ****            |   *           ******                                  | * | *
+    -64.0 -|                    | **                  ******                            | *         ***         | **                  ******                            |  *|*
+    -73.3 -|*                   |*                          *********                   |  *           ***      |*                          *********                   |*  |
+    -82.6 -| *********          |                                    *********          |                 **    |                                    *********          |   |
+    -91.9 -|          ****      |                                             ****      |                   *   |                                             ****      |   |
+   -101.1 -|              ****  |                                                 ****  |                    *  |                                                 ****  |   |
+   -110.4 -|                  **|                                                     **|                     * |                                                     **|   |
+   -119.7 -|                    |                                                       |                       |                                                       |   |
+   -129.0 -|                    |                                                       |                      *|                                                       |   |  *
+   -138.3 -|                    |                                                       |                       |                                                       |   |
+   -147.6 -|                    |                                                       |                       |                                                       |   |
+           |____________________________________________________________________________________________________________________________________________________________________
+
+
+  Thread throttle time (msecs): 60
+  AudioMixer tracks: 610 611 612 613 614 615 
+  Master mono: on
+  Master balance: 0.000000 (0.000000)
+  FastMixer thread 0xb4000077bd2ec3f0 tid=1945  FastMixer command=MIX_WRITE writeSequence=157373 framesWritten=37768800
+            numTracks=1 writeErrors=0 underruns=97 overruns=2040
+            sampleRate=48000 frameCount=480 measuredWarmup=27 ms, warmupCycles=7
+            mixPeriod=10.00 ms latency=60.00 ms
+  FastMixer Timestamp stats: n=78328 disc=32 cold=0 nRdy=0 err=3 rate=0.987276 jitterMs(ave=0.147656 std=3.39207 min=-9.35579 max=433.571) localSR(46035, 0.00256422) correctedJitterMs(ave=0.105514 std=0.565737 min=-6.19218 max=405.723)
+  Simple moving statistics over last 30.3 seconds:
+    wall clock time in ms per mix cycle:
+      mean=9.81 min=0.27 max=227.02 stddev=5.33
+    raw CPU load in us per mix cycle:
+      mean=258 min=0 max=1921 stddev=90
+  Distribution of mix cycle times in ms for the tails (> ~3 stddev outliers):
+    left tail: mean=0.33 min=0.27 max=0.36 stddev=0.05
+    right tail: mean=151.97 min=64.32 max=227.02 stddev=82.08
+  Fast tracks: sMaxFastTracks=8 activeMask=0x1
+  Index Active Full Partial Empty  Recent Ready    Written
+      0    yes  604       2    27    full   960   37645440
+      1     no   20       2     9   empty     0       4860
+      2     no  756     793   246   empty     0      12108
+      3     no  435     145   717   empty     0       8872
+      4     no  512      48   199   empty     0      12108
+      5     no  144      16    69   empty     0      48796
+      6     no    0       0     0    full     0          0
+      7     no    0       0     0    full     0          0
+Bluetooth latency modes are enabled
+HAL does support Bluetooth latency modes
+Supported latency modes: { FREE }
+
+  Normal mixer raw underrun counters: partial=2 empty=27
+  8 Tracks of which 0 are active
+    Type     Id Active Client(pid/uid) Session Port Id S  Flags   Format Chn mask  SRate x ST Usg CT  G db  L dB  R dB  VS dB  PortVol dB  PortMuted   Server FrmCnt  FrmRdy F Underruns  Flushed BitPerfect InternalMute   Latency
+       S    613     no   28648/  10547    4705     592 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00006FF8  15434       0 f         0        0      false        false  113.29 k
+       S    615     no   28648/  10547    4721     594 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00003C4A  15434       0 f         0        0      false        false  112.78 k
+    F2 S    616     no   28648/  10547    4729     595 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00002F4C  12108       0 f         0        0      false        false   60.00 t
+    F1 S     66     no    2446/  10240     329      45 S  0x600 00000001 00000001  48000 1  1   d  4   -25    -6    -6     0          -19      false 000012FC   4860       0 f         0        0      false        false   60.00 t
+       S    610     no   28648/  10547    4681     589 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00006914  15434       0 f         0        0      false        false  112.88 k
+       S    612     no   28648/  10547    4697     591 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00006C86  15434       0 f         0        0      false        false  112.10 k
+       S    611     no   28648/  10547    4689     590 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00006FF8  15434       0 f         0        0      false        false  113.02 k
+       S    614     no   28648/  10547    4713     593 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00003C4A  15434       0 f         0        0      false        false  112.83 k
+  0 Effect Chains
+  Local log:
+                                                         Type     Id Active Client(pid/uid) Session Port Id S  Flags   Format Chn mask  SRate x ST Usg CT  G db  L dB  R dB  VS dB  PortVol dB  PortMuted   Server FrmCnt  FrmRdy F Underruns  Flushed BitPerfect InternalMute   Latency
+   10-12 03:13:21.108 AT::remove    (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000022A8   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:21.520 AT::add       (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000022A8   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:21.668 AT::remove    (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000033FC   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:21.971 AT::add       (0xb40000757a6d85d0)    S    593     no   28648/  10547    4545     572 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000 101429  101429 F         0        0      false        false       new
+   10-12 03:13:22.233 AT::add       (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000033FC   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:22.322 AT::remove    (0xb40000757a6ca870)    S    591     no   28648/  10547    4529     570 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00018C35 101429       0 f         0        0      false        false  113.40 k
+   10-12 03:13:22.389 AT::remove    (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00004550   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:22.808 AT::add       (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00004550   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:22.969 AT::remove    (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000056A4   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:23.386 AT::add       (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000056A4   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:23.549 AT::remove    (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000067F8   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:23.958 AT::add       (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000067F8   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:24.035 AT::add       (0xb40000757a6ca870)    S    591     no   28648/  10547    4529     570 A  0x200 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00018C35 101429       0 F         0        0      false        false  113.40 k
+   10-12 03:13:24.109 AT::remove    (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 S  0x601 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000794C   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:24.255 AT::add       (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 A  0x201 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000794C   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:24.382 AT::remove    (0xb40000757a6d85d0)    S    593     no   28648/  10547    4545     572 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00018C35 101429       0 f         0        0      false        false  113.28 k
+   10-12 03:13:24.408 AT::remove    (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00008AA0   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:24.513 AT::add       (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00008AA0   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:24.667 AT::remove    (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00009BF4   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:24.785 AT::add       (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00009BF4   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:24.948 AT::remove    (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000AD48   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:25.301 AT::add       (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000AD48   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:25.470 AT::remove    (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000BE9C   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:25.892 AT::add       (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000BE9C   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:26.049 AT::remove    (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000CFF0   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:26.083 AT::add       (0xb40000757a6d85d0)    S    593     no   28648/  10547    4545     572 A  0x200 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00018C35 101429       0 F         0        0      false        false  113.28 k
+   10-12 03:13:26.361 AT::add       (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000CFF0   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:26.441 AT::remove    (0xb40000757a6ca870)    S    591     no   28648/  10547    4529     570 S  0x601 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 0003186A 101429       0 f         0        0      false        false  114.96 k
+   10-12 03:13:26.533 AT::remove    (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000E144   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:26.540 AT::add       (0xb40000757a6cf8f0)    S    594     no   28648/  10547    4553     573 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  17640   17640 F         0        0      false        false       new
+   10-12 03:13:26.544 removeTrack_l (0xb40000757a6ca870)    S    591     no   28648/  10547    4529     570 T  0x601 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 0003186A 101429       0 f         0        0      false        false  114.96 k
+   10-12 03:13:26.902 AT::add       (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000E144   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:26.966 AT::add       (0xb40000757a6d3f60)    S    595     no   28648/  10547    4561     574 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  17640   17640 F         0        0      false        false       new
+   10-12 03:13:27.045 AT::add       (0xb40000757a6c9450)    S    596     no   28648/  10547    4569     575 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  17640   17640 F         0        0      false        false       new
+   10-12 03:13:27.057 AT::remove    (0xb40000757a6cf8f0)    S    594     no   28648/  10547    4553     573 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044E8  17640       0 f         0        0      false        false  117.85 k
+   10-12 03:13:27.057 removeTrack_l (0xb40000757a6cf8f0)    S    594     no   28648/  10547    4553     573 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044E8  17640       0 f         0        0      false        false  117.85 k
+   10-12 03:13:27.088 AT::remove    (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 T  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000F298   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:27.088 removeTrack_l (0xb40000757a6d0d10) F2 S    592     no   28648/  10547    4537     571 T  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000F298   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:27.480 AT::add       (0xb40000757a6d7bc0)    S    597     no   28648/  10547    4577     576 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  17640   17640 F         0        0      false        false       new
+   10-12 03:13:27.502 AT::remove    (0xb40000757a6d3f60)    S    595     no   28648/  10547    4561     574 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044E8  17640       0 f         0        0      false        false  117.36 k
+   10-12 03:13:27.503 removeTrack_l (0xb40000757a6d3f60)    S    595     no   28648/  10547    4561     574 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044E8  17640       0 f         0        0      false        false  117.36 k
+   10-12 03:13:27.558 AT::remove    (0xb40000757a6c9450)    S    596     no   28648/  10547    4569     575 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044E8  17640       0 f         0        0      false        false  117.91 k
+   10-12 03:13:27.594 AT::add       (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 A  0x000 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00000000   4436    4436 F         0*       0      false        false       new
+   10-12 03:13:27.596 removeTrack_l (0xb40000757a6c9450)    S    596     no   28648/  10547    4569     575 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044E8  17640       0 f         0        0      false        false  117.91 k
+   10-12 03:13:27.609 AT::add       (0xb40000757a6c9450)    S    599     no   28648/  10547    4593     578 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  17640   17640 F         0        0      false        false       new
+   10-12 03:13:27.693 AT::add       (0xb40000757a6d8fe0)    S    600     no   28648/  10547    4601     579 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  17640   17640 F         0        0      false        false       new
+   10-12 03:13:27.696 removeTrack_l (0xb40000757a6db820)    S    589     no   28648/  10547    4513     568 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 0000F12B  61739       0 f         0        0      false        false  102.88 k
+   10-12 03:13:27.748 AT::remove    (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00001154   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:28.003 AT::remove    (0xb40000757a6d7bc0)    S    597     no   28648/  10547    4577     576 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044E8  17640       0 f         0        0      false        false  117.33 k
+   10-12 03:13:28.008 AT::add       (0xb40000757a6db820)    S    601     no   28648/  10547    4609     580 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  13230   13230 F         0        0      false        false       new
+   10-12 03:13:28.011 removeTrack_l (0xb40000757a6d7bc0)    S    597     no   28648/  10547    4577     576 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044E8  17640       0 f         0        0      false        false  117.33 k
+   10-12 03:13:28.118 AT::remove    (0xb40000757a6c9450)    S    599     no   28648/  10547    4593     578 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044E8  17640       0 f         0        0      false        false  117.23 k
+   10-12 03:13:28.151 AT::add       (0xb40000757a6ca870)    S    602     no   28648/  10547    4617     581 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000 101429  101429 F         0        0      false        false       new
+   10-12 03:13:28.199 AT::remove    (0xb40000757a6d8fe0)    S    600     no   28648/  10547    4601     579 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044E8  17640       0 f         0        0      false        false  117.70 k
+   10-12 03:13:28.199 removeTrack_l (0xb40000757a6d8fe0)    S    600     no   28648/  10547    4601     579 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044E8  17640       0 f         0        0      false        false  117.70 k
+   10-12 03:13:28.325 AT::add       (0xb40000757a6d3550)    S    603     no   28648/  10547    4625     582 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  30869   30869 F         0        0      false        false       new
+   10-12 03:13:28.328 removeTrack_l (0xb40000757a6c9450)    S    599     no   28648/  10547    4593     578 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044E8  17640       0 f         0        0      false        false  117.23 k
+   10-12 03:13:28.336 AT::add       (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00001154   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:28.418 AT::remove    (0xb40000757a6db820)    S    601     no   28648/  10547    4609     580 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000033AE  13230       0 f         0        0      false        false  117.60 k
+   10-12 03:13:28.488 AT::remove    (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000022A8   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:28.500 AT::remove    (0xb40000757a6d85d0)    S    593     no   28648/  10547    4545     572 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 0003186A 101429       0 f         0        0      false        false  104.99 k
+   10-12 03:13:28.907 AT::add       (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000022A8   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:29.068 AT::remove    (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000033FC   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:29.139 AT::remove    (0xb40000757a6d3550)    S    603     no   28648/  10547    4625     582 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00007895  30869       0 f         0        0      false        false  116.66 k
+   10-12 03:13:29.477 AT::add       (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000033FC   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:29.650 AT::remove    (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00004550   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:30.061 AT::add       (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00004550   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:30.228 AT::remove    (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000056A4   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:30.243 AT::add       (0xb40000757a6d85d0)    S    593     no   28648/  10547    4545     572 A  0x200 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 0003186A 101429       0 F         0        0      false        false  104.99 k
+   10-12 03:13:30.372 AT::add       (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000056A4   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:30.531 AT::remove    (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 S  0x601 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000067F8   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:30.558 AT::remove    (0xb40000757a6ca870)    S    602     no   28648/  10547    4617     581 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00018C35 101429       0 f         0        0      false        false  117.77 k
+   10-12 03:13:30.890 AT::add       (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 A  0x201 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000067F8   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:31.047 AT::remove    (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000794C   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:31.474 AT::add       (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000794C   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:31.586 AT::add       (0xb40000757a6c9450) F3 S    604     no   28648/  10547    4633     583 A  0x000 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00000000   4436    4436 F         0*       0      false        false       new
+   10-12 03:13:31.588 removeTrack_l (0xb40000757a6d3550)    S    603     no   28648/  10547    4625     582 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00007895  30869       0 f         0        0      false        false  116.66 k
+   10-12 03:13:31.628 AT::remove    (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 S  0x601 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00008AA0   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:31.748 AT::remove    (0xb40000757a6c9450) F3 S    604     no   28648/  10547    4633     583 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00001154   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:32.320 AT::add       (0xb40000757a6ca870)    S    602     no   28648/  10547    4617     581 A  0x200 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00018C35 101429       0 F         0        0      false        false  117.77 k
+   10-12 03:13:32.334 AT::add       (0xb40000757a6c9450) F3 S    604     no   28648/  10547    4633     583 A  0x200 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00001154   4436       0 F         0*       0      false        false   60.00 t
+   10-12 03:13:32.444 AT::add       (0xb40000757a6d99f0)    S    605     no   28648/  10547    4641     584 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  22050   22050 F         0        0      false        false       new
+   10-12 03:13:32.445 removeTrack_l (0xb40000757a6dd650) F2 S    598     no   28648/  10547    4585     577 T  0x601 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00008AA0   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:32.488 AT::remove    (0xb40000757a6c9450) F3 S    604     no   28648/  10547    4633     583 S  0x601 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000022A8   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:32.662 AT::remove    (0xb40000757a6d85d0)    S    593     no   28648/  10547    4545     572 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 0004A49F 101429       0 f         0        0      false        false  114.53 k
+   10-12 03:13:32.679 AT::add       (0xb40000757a6d85d0)    S    593     no   28648/  10547    4545     572 A  0x200 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 0004A49F 101429       0 F         0        0      false        false  114.53 k
+   10-12 03:13:32.689 AT::add       (0xb40000757a6d3f60) F2 S    606     no   28648/  10547    4649     585 A  0x000 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00000000  63626   63626 F         0*       0      false        false       new
+   10-12 03:13:32.690 removeTrack_l (0xb40000757a6c9450) F3 S    604     no   28648/  10547    4633     583 T  0x601 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 000022A8   4436       0 f         0        0      false        false   60.00 t
+   10-12 03:13:32.811 AT::add       (0xb40000757a6c9450)    S    607     no   28648/  10547    4657     586 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  22050   22050 F         0        0      false        false       new
+   10-12 03:13:32.813 removeTrack_l (0xb40000757a6db820)    S    601     no   28648/  10547    4609     580 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000033AE  13230       0 f         0        0      false        false  117.60 k
+   10-12 03:13:33.061 AT::remove    (0xb40000757a6d99f0)    S    605     no   28648/  10547    4641     584 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00005622  22050       0 f         0        0      false        false  114.14 k
+   10-12 03:13:33.421 AT::remove    (0xb40000757a6c9450)    S    607     no   28648/  10547    4657     586 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00005622  22050       0 f         0        0      false        false  114.63 k
+   10-12 03:13:34.090 AT::remove    (0xb40000757a6d3f60) F2 S    606     no   28648/  10547    4649     585 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000F88A  63626       0 f         0        0      false        false   60.00 t
+   10-12 03:13:34.742 AT::remove    (0xb40000757a6ca870)    S    602     no   28648/  10547    4617     581 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 0003186A 101429       0 f         0        0      false        false  115.13 k
+   10-12 03:13:35.081 AT::remove    (0xb40000757a6d85d0)    S    593     no   28648/  10547    4545     572 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000630D4 101429       0 f         0        0      false        false  102.40 k
+   10-12 03:13:35.761 AT::add       (0xb40000757a6db820)    S    608     no   28648/  10547    4665     587 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  39690   39690 F         0        0      false        false       new
+   10-12 03:13:35.767 removeTrack_l (0xb40000757a6d85d0)    S    593     no   28648/  10547    4545     572 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000630D4 101429       0 f         0        0      false        false  102.40 k
+   10-12 03:13:36.760 AT::remove    (0xb40000757a6db820)    S    608     no   28648/  10547    4665     587 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00009B0A  39690       0 f         0        0      false        false  105.98 k
+   10-12 03:13:38.574 AT::add       (0xb40000757a6d67a0)    S    609     no   28648/  10547    4673     588 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  61739   61739 F         0        0      false        false       new
+   10-12 03:13:38.576 removeTrack_l (0xb40000757a6db820)    S    608     no   28648/  10547    4665     587 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00009B0A  39690       0 f         0        0      false        false  105.98 k
+   10-12 03:13:39.021 AT::add       (0xb40000757a6d3550)    S    610     no   28648/  10547    4681     589 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  15434   15434 F         0        0      false        false       new
+   10-12 03:13:39.023 removeTrack_l (0xb40000757a6ca870)    S    602     no   28648/  10547    4617     581 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 0003186A 101429       0 f         0        0      false        false  115.13 k
+   10-12 03:13:39.028 AT::add       (0xb40000757a6d8fe0)    S    611     no   28648/  10547    4689     590 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  15434   15434 F         0        0      false        false       new
+   10-12 03:13:39.031 removeTrack_l (0xb40000757a6d3f60) F2 S    606     no   28648/  10547    4649     585 T  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 0000F88A  63626       0 f         0        0      false        false   60.00 t
+   10-12 03:13:39.090 AT::add       (0xb40000757a6d3f60)    S    612     no   28648/  10547    4697     591 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  15434   15434 F         0        0      false        false       new
+   10-12 03:13:39.093 removeTrack_l (0xb40000757a6c9450)    S    607     no   28648/  10547    4657     586 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00005622  22050       0 f         0        0      false        false  114.63 k
+   10-12 03:13:39.135 AT::add       (0xb40000757a6c9450)    S    613     no   28648/  10547    4705     592 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  15434   15434 F         0        0      false        false       new
+   10-12 03:13:39.139 removeTrack_l (0xb40000757a6d99f0)    S    605     no   28648/  10547    4641     584 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00005622  22050       0 f         0        0      false        false  114.14 k
+   10-12 03:13:39.190 AT::add       (0xb40000757a6d99f0)    S    614     no   28648/  10547    4713     593 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  15434   15434 F         0        0      false        false       new
+   10-12 03:13:39.241 AT::add       (0xb40000757a6ca870)    S    615     no   28648/  10547    4721     594 A  0x000 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000  15434   15434 F         0        0      false        false       new
+   10-12 03:13:39.662 AT::remove    (0xb40000757a6d99f0)    S    614     no   28648/  10547    4713     593 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00003C4A  15434       0 f         0        0      false        false  112.83 k
+   10-12 03:13:39.703 AT::remove    (0xb40000757a6ca870)    S    615     no   28648/  10547    4721     594 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00003C4A  15434       0 f         0        0      false        false  112.78 k
+   10-12 03:13:39.742 AT::remove    (0xb40000757a6d3550)    S    610     no   28648/  10547    4681     589 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00006914  15434       0 f         0        0      false        false  112.88 k
+   10-12 03:13:39.803 AT::remove    (0xb40000757a6d8fe0)    S    611     no   28648/  10547    4689     590 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00006FF8  15434       0 f         0        0      false        false  113.02 k
+   10-12 03:13:39.843 AT::remove    (0xb40000757a6d3f60)    S    612     no   28648/  10547    4697     591 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00006C86  15434       0 f         0        0      false        false  112.10 k
+   10-12 03:13:39.903 AT::remove    (0xb40000757a6c9450)    S    613     no   28648/  10547    4705     592 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00006FF8  15434       0 f         0        0      false        false  113.29 k
+   10-12 03:13:40.083 AT::remove    (0xb40000757a6d67a0)    S    609     no   28648/  10547    4673     588 S  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 0000F12B  61739       0 f         0        0      false        false  103.27 k
+   10-12 03:13:41.352 AT::add       (0xb40000757a6cb280) F2 S    616     no   28648/  10547    4729     595 A  0x000 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00000000  12108   12108 F         0*       0      false        false       new
+   10-12 03:13:41.356 removeTrack_l (0xb40000757a6d67a0)    S    609     no   28648/  10547    4673     588 T  0x600 00000001 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 0000F12B  61739       0 f         0        0      false        false  103.27 k
+   10-12 03:13:41.669 AT::remove    (0xb40000757a6cb280) F2 S    616     no   28648/  10547    4729     595 S  0x600 00000001 00000003  48000 1  3   1  2  -inf     0     0     0         -inf      false 00002F4C  12108       0 f         0        0      false        false   60.00 t
+
+Output thread 0xb4000077bd278790, name AudioOut_15, tid 1959, type 0 (MIXER):
+  I/O handle: 21
+  Standby: no
+  Sample rate: 48000 Hz
+  HAL frame count: 1920
+  HAL format: 0x5 (AUDIO_FORMAT_PCM_FLOAT)
+  HAL buffer size: 15360 bytes
+  Channel count: 2
+  Channel mask: 0x00000003 (front-left, front-right)
+  Processing format: 0x5 (AUDIO_FORMAT_PCM_FLOAT)
+  Processing frame size: 8 bytes
+  Pending config events: none
+  Output devices: 0x2 (AUDIO_DEVICE_OUT_SPEAKER)
+  Input device: 0 (AUDIO_DEVICE_NONE)
+  Audio source: 0 (AUDIO_SOURCE_DEFAULT)
+  Timestamp stats: n=45011 disc=27 cold=0 nRdy=0 err=18 rate=0.988945 jitterMs(ave=0.199034 std=7.72608 min=-17.6678 max=345.35) localSR(47933.8, 1.13648e-05) correctedJitterMs(ave=0.162027 std=1.43282 min=-17.6678 max=29.9921)
+  Timestamp corrected: no
+  Last write occurred (msecs): 69
+  Process time ms stats: ave=0.967855 std=2.16758 min=0.118571 max=31.6829
+  Hal write jitter ms stats: ave=-0.204385 std=5.79648 min=-39.1584 max=54.591
+  Threadloop write latency stats: ave=187.512 std=8.79438 min=-217.954 max=195.549
+  Master volume: 1.000000
+  Master mute: off
+  Mixer channel Mask: 0x3 (front-left, front-right)
+  Normal frame count: 1920
+  Total writes: 44960
+  Delayed writes: 0
+  Blocked in write: yes
+  Suspend count: 0
+  Fast track availMask=0xfe
+  Standby delay ns=3000000000
+  Hw supports pause: no
+  Hw paused: no
+  Flush pending: no
+  AudioStreamOut: 0xb40000752a6d6cf0 flags 0x8 (AUDIO_OUTPUT_FLAG_DEEP_BUFFER)
+  Frames written: 86313600
+  Suspended frames: 0
+  Hal stream dump:
+    === YAML START (deep-buffer-playback) ===
+    Name: deep-buffer-playback
+    Workers:
+      Periodic worker:
+        Name: pw-deep-buffer-playback
+        Force update: false
+        Linked config IDs: [100001]
+        Need to do A/V sync: true
+        Latency ms: 70
+        Supported latency modes: [FREE]
+        Current latency modes: FREE
+      Command worker:
+        Name: cw-deep-buffer-playback
+        Current state:
+          Type: ACTIVE
+          Name: StreamOutActiveState
+        Command:
+          Count: 45379
+          Last: !aidl >
+            Command{burst: 15360}
+        Last reply: !aidl >
+          Reply{status: 0, fmqByteCount: 15360, observable: Position{frames: 86306400, timeNs: 6553542937688}, hardware: Position{frames: -1, timeNs: -1}, latencyMs: 70, xrunFrames: 0, state: ACTIVE, flushFromPosition: 0}
+        Start time:
+        - Diff(us): 16966
+    Stream:
+      Name: deep-buffer-playback
+      Port config ID: 400002
+      Is started: true
+      Latency in ms: 70
+      Interfaces: []
+      #: ===============================================================================
+      #: For full logs, please see `dumpsys android.hardware.audio.core.IModule/default`
+      #: ===============================================================================
+    Playback rate: !aidl >
+      AudioPlaybackRate{speed: 1.000000, pitch: 1.000000, timestretchMode: DEFAULT, fallbackMode: MUTE}
+    Latency mode: [FREE]
+    === YAML END (deep-buffer-playback) ===
+      Signal power history: (none)
+      Signal power history: (none)
+  Thread throttle time (msecs): 753
+  AudioMixer tracks: 584 
+  Master mono: on
+  Master balance: 0.000000 (balance 0 channelCount 2 volumes: 1 1)
+  No FastMixer
+Bluetooth latency modes are enabled
+HAL does support Bluetooth latency modes
+Supported latency modes: { FREE }
+
+  Normal mixer raw underrun counters: partial=0 empty=0
+  1 Tracks of which 1 are active
+    Type     Id Active Client(pid/uid) Session Port Id S  Flags   Format Chn mask  SRate x ST Usg CT  G db  L dB  R dB  VS dB  PortVol dB  PortMuted   Server FrmCnt  FrmRdy F Underruns  Flushed BitPerfect InternalMute   Latency
+            584    yes   28648/  10547    4473     563 A  0x000 00000001 00000003  44100 1  3   1  2  -inf   -12   -12     0         -inf      false 001870B0  22050   18522 A         0        0      false        false  608.77 t
+  0 Effect Chains
+  Local log:
+                                                         Type     Id Active Client(pid/uid) Session Port Id S  Flags   Format Chn mask  SRate x ST Usg CT  G db  L dB  R dB  VS dB  PortVol dB  PortMuted   Server FrmCnt  FrmRdy F Underruns  Flushed BitPerfect InternalMute   Latency
+   10-12 01:24:46.004 threadLoop_standby
+   10-12 01:24:46.050 CFG_EVENT_CREATE_AUDIO_PATCH: old device  (Empty device types) new device 0x2 (AUDIO_DEVICE_OUT_SPEAKER)
+   10-12 02:33:23.355 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x000 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 00000000  22050       0 f         0        0      false        false       new
+   10-12 02:33:26.047 AT::add       (0xb40000757a6cbc90)          68     no   21700/  10547     345      47 A  0x000 00000005 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000   3536       0 f         0        0      false        false       new
+   10-12 02:33:26.659 AT::remove    (0xb40000757a6cbc90)          68     no   21700/  10547     345      47 S  0x400 00000005 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044F0   3536       0 f         0        0      false        false  188.85 k
+   10-12 02:33:31.357 removeTrack_l (0xb40000757a6cbc90)          68     no   21700/  10547     345      47 T  0x600 00000005 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044F0   3536       0 f         0        0      false        false  188.85 k
+   10-12 02:34:56.332 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 003DF680  22050       0 f      5162        0      false        false  182.85 k
+   10-12 02:34:56.370 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 003DF680  22050       0 f      5162        0      false        false  182.85 k
+   10-12 02:36:28.989 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 007BED00  22050       0 f      7082        0      false        false  147.33 k
+   10-12 02:36:29.002 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 007BED00  22050       0 f      7082        0      false        false  147.33 k
+   10-12 02:38:01.450 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x601 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 00B9E380  22050       0 f      9002        0      false        false  184.90 k
+   10-12 02:38:01.461 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x601 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 00B9E380  22050       0 f      9002        0      false        false  184.90 k
+   10-12 02:39:33.834 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 00F7DA00  22050       0 f     10922        0      false        false  148.39 k
+   10-12 02:39:33.856 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 00F7DA00  22050       0 f     10922        0      false        false  148.39 k
+   10-12 02:41:06.253 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 0135D080  22050       0 f     12842        0      false        false  188.47 k
+   10-12 02:41:06.264 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 0135D080  22050       0 f     12842        0      false        false  188.47 k
+   10-12 02:42:38.762 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x601 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 0173C700  22050       0 f     12842        0      false        false  158.70 k
+   10-12 02:42:38.775 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x601 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 0173C700  22050       0 f     12842        0      false        false  158.70 k
+   10-12 02:44:11.181 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 01B1BD80  22050       0 f     14762        0      false        false  146.41 k
+   10-12 02:44:11.200 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 01B1BD80  22050       0 f     14762        0      false        false  146.41 k
+   10-12 02:45:43.634 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x601 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 01EFB400  22050       0 f     14762        0      false        false  168.83 k
+   10-12 02:45:43.650 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x601 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 01EFB400  22050       0 f     14762        0      false        false  168.83 k
+   10-12 02:47:16.074 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 022DAA80  22050       0 f     16682        0      false        false  187.61 k
+   10-12 02:47:16.088 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 022DAA80  22050       0 f     16682        0      false        false  187.61 k
+   10-12 02:48:48.645 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x601 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 026BA100  22050       0 f     16682        0      false        false  158.29 k
+   10-12 02:48:48.657 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x601 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 026BA100  22050       0 f     16682        0      false        false  158.29 k
+   10-12 02:50:21.082 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x601 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 02A99780  22050       0 f     18602        0      false        false  148.35 k
+   10-12 02:50:21.100 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x601 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 02A99780  22050       0 f     18602        0      false        false  148.35 k
+   10-12 02:51:53.487 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 02E78E00  22050       0 f     20522        0      false        false  142.82 k
+   10-12 02:51:53.510 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 02E78E00  22050       0 f     20522        0      false        false  142.82 k
+   10-12 02:53:25.888 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 03258480  22050       0 f     22442        0      false        false  186.28 k
+   10-12 02:53:25.901 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 03258480  22050       0 f     22442        0      false        false  186.28 k
+   10-12 02:54:58.281 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 03637B00  22050       0 f     24362        0      false        false  148.67 k
+   10-12 02:54:58.294 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 03637B00  22050       0 f     24362        0      false        false  148.67 k
+   10-12 02:56:30.681 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 I  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 03A17180  22050       0 f     26282        0      false        false  148.55 k
+   10-12 02:56:30.692 AT::add       (0xb40000757a6cb280)          67     no   21700/  10547     337      46 A  0x201 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 03A17180  22050       0 f     26282        0      false        false  148.55 k
+   10-12 02:57:54.919 AT::remove    (0xb40000757a6cb280)          67     no   21700/  10547     337      46 T  0x601 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 03DA0598  22050       0 f     26282    18522      false        false  167.87 k
+   10-12 02:57:54.920 removeTrack_l (0xb40000757a6cb280)          67     no   21700/  10547     337      46 T  0x601 00000001 00000003  44100 1  3   1  2  -inf  -4.4  -4.4     0         -inf      false 03DA0598  22050       0 f     26282    18522      false        false  167.87 k
+   10-12 02:57:57.817 threadLoop_standby
+   10-12 02:58:00.578 AT::add       (0xb40000757a6d85d0)         457     no   26128/  10547    3457     436 A  0x000 00000001 00000003  44100 1  3   1  2  -inf   -11   -11     0         -inf      false 00000000  22050       0 f         0        0      false        false       new
+   10-12 02:58:01.693 AT::remove    (0xb40000757a6d85d0)         457     no   26128/  10547    3457     436 P  0x400 00000001 00000003  44100 1  3   1  2  -inf   -11   -11     0         -inf      false 00009E7C  22050   22050 A         0        0      false        false  668.99 k
+   10-12 02:58:04.490 threadLoop_standby
+   10-12 02:58:04.661 AT::add       (0xb40000757a6db820)         458     no   26128/  10547    3465     437 A  0x000 00000005 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000   3536       0 f         0        0      false        false       new
+   10-12 02:58:05.249 AT::remove    (0xb40000757a6db820)         458     no   26128/  10547    3465     437 S  0x400 00000005 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044F0   3536       0 f         0        0      false        false  169.05 k
+   10-12 02:58:08.069 threadLoop_standby
+   10-12 02:58:09.962 removeTrack_l (0xb40000757a6db820)         458     no   26128/  10547    3465     437 T  0x600 00000005 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 000044F0   3536       0 f         0        0      false        false  169.05 k
+   10-12 03:08:23.639 removeTrack_l (0xb40000757a6d85d0)         457     no   26128/  10547    3457     436 T  0x400 00000001 00000003  44100 1  3   1  2  -inf   -11   -11     0         -inf      false 00009E7C  22050       0 f         0    22050      false        false  168.99 k
+   10-12 03:08:25.137 AT::add       (0xb40000757a6c9e60)         461     no   27096/  10547    3489     440 A  0x000 00000001 00000003  44100 1  3   1  2  -inf   -12   -12     0         -inf      false 00000000  22050       0 f         0        0      false        false       new
+   10-12 03:08:28.566 AT::add       (0xb40000757a6d85d0)         462     no   27096/  10547    3497     441 A  0x000 00000005 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000   3536       0 f         0        0      false        false       new
+   10-12 03:08:28.958 AT::remove    (0xb40000757a6d85d0)         462     no   27096/  10547    3497     441 S  0x400 00000005 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00001B98   3536       0 f         0        0      false        false  188.72 k
+   10-12 03:08:33.674 removeTrack_l (0xb40000757a6d85d0)         462     no   27096/  10547    3497     441 T  0x600 00000005 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00001B98   3536       0 f         0        0      false        false  188.72 k
+   10-12 03:09:57.404 AT::remove    (0xb40000757a6c9e60)         461     no   27096/  10547    3489     440 I  0x201 00000001 00000003  44100 1  3   1  2  -inf   -12   -12     0         -inf      false 003DF680  22050       0 f      1920        0      false        false  188.47 k
+   10-12 03:09:57.419 AT::add       (0xb40000757a6c9e60)         461     no   27096/  10547    3489     440 A  0x201 00000001 00000003  44100 1  3   1  2  -inf   -12   -12     0         -inf      false 003DF680  22050       0 f      1920        0      false        false  188.47 k
+   10-12 03:11:29.802 AT::remove    (0xb40000757a6c9e60)         461     no   27096/  10547    3489     440 I  0x201 00000001 00000003  44100 1  3   1  2  -inf   -12   -12     0         -inf      false 007BED00  22050       0 f      3840        0      false        false  148.10 k
+   10-12 03:11:29.824 AT::add       (0xb40000757a6c9e60)         461     no   27096/  10547    3489     440 A  0x201 00000001 00000003  44100 1  3   1  2  -inf   -12   -12     0         -inf      false 007BED00  22050       0 f      3840        0      false        false  148.10 k
+   10-12 03:11:55.195 AT::remove    (0xb40000757a6c9e60)         461     no   27096/  10547    3489     440 T  0x601 00000001 00000003  44100 1  3   1  2  -inf   -12   -12     0         -inf      false 008CE218  22050       0 f      3840    11466      false        false  168.98 k
+   10-12 03:11:55.195 removeTrack_l (0xb40000757a6c9e60)         461     no   27096/  10547    3489     440 T  0x601 00000001 00000003  44100 1  3   1  2  -inf   -12   -12     0         -inf      false 008CE218  22050       0 f      3840    11466      false        false  168.98 k
+   10-12 03:11:56.633 AT::add       (0xb40000757a6d67a0)         508     no   27847/  10547    3865     487 A  0x000 00000001 00000003  44100 1  3   1  2  -inf   -12   -12     0         -inf      false 00000000  22050       0 f         0        0      false        false       new
+   10-12 03:13:04.249 AT::remove    (0xb40000757a6d67a0)         508     no   27847/  10547    3865     487 T  0x600 00000001 00000003  44100 1  3   1  2  -inf   -12   -12     0         -inf      false 002A021D  22050       0 f         0    20286      false        false  168.62 k
+   10-12 03:13:04.249 removeTrack_l (0xb40000757a6d67a0)         508     no   27847/  10547    3865     487 T  0x600 00000001 00000003  44100 1  3   1  2  -inf   -12   -12     0         -inf      false 002A021D  22050       0 f         0    20286      false        false  168.62 k
+   10-12 03:13:06.537 AT::add       (0xb40000757a6c8030)         584     no   28648/  10547    4473     563 A  0x000 00000001 00000003  44100 1  3   1  2  -inf   -12   -12     0         -inf      false 00000000  22050       0 f         0        0      false        false       new
+   10-12 03:13:09.709 AT::add       (0xb40000757a6d3550)         585     no   28648/  10547    4481     564 A  0x000 00000005 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00000000   3536       0 f         0        0      false        false       new
+   10-12 03:13:10.158 AT::remove    (0xb40000757a6d3550)         585     no   28648/  10547    4481     564 S  0x400 00000005 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00002960   3536       0 f         0        0      false        false  188.53 k
+   10-12 03:13:14.862 removeTrack_l (0xb40000757a6d3550)         585     no   28648/  10547    4481     564 T  0x600 00000005 00000003  44100 1  3   1  2  -inf     0     0     0         -inf      false 00002960   3536       0 f         0        0      false        false  188.53 k
+
+Output thread 0xb4000077bcd20790, name AudioOut_25, tid 1976, type 0 (MIXER):
+  I/O handle: 37
+  Standby: yes
+  Sample rate: 48000 Hz
+  HAL frame count: 480
+  HAL format: 0x1 (AUDIO_FORMAT_PCM_16_BIT)
+  HAL buffer size: 2880 bytes
+  Channel count: 2
+  Channel mask: 0x00000003 (front-left, front-right)
+  Processing format: 0x5 (AUDIO_FORMAT_PCM_FLOAT)
+  Processing frame size: 12 bytes
+  Pending config events: none
+  Output devices: 0x2 (AUDIO_DEVICE_OUT_SPEAKER)
+  Input device: 0 (AUDIO_DEVICE_NONE)
+  Audio source: 0 (AUDIO_SOURCE_DEFAULT)
+  Timestamp stats: n=0 disc=0 cold=0 nRdy=0 err=1 jitterMs(unavail) localSR(nan, nan) correctedJitterMs(unavail)
+  Timestamp corrected: no
+  Master volume: 1.000000
+  Master mute: off
+  Mixer channel Mask: 0x3 (front-left, front-right)
+  Haptic channel mask: 0x20000000 (haptic-A)
+  Normal frame count: 960
+  Total writes: 0
+  Delayed writes: 0
+  Blocked in write: no
+  Suspend count: 0
+  Fast track availMask=0xfe
+  Standby delay ns=3000000000
+  Hw supports pause: no
+  Hw paused: no
+  Flush pending: no
+  AudioStreamOut: 0xb40000752a6e1330 flags 0 (AUDIO_OUTPUT_FLAG_NONE)
+  Frames written: 0
+  Suspended frames: 0
+  PipeSink frames written: 0
+  Hal stream dump:
+    === YAML START (haptic-playback) ===
+    Name: haptic-playback
+    Workers:
+      Periodic worker:
+        Name: pw-haptic-playback
+        Force update: false
+        Linked config IDs: []
+        Need to do A/V sync: true
+        Latency ms: -1
+        Supported latency modes: [FREE]
+        Current latency modes: FREE
+      Command worker:
+        Name: cw-haptic-playback
+        Current state:
+          Type: STANDBY
+          Name: StreamOutStandbyState
+        Command:
+          Count: 0
+          Last: !aidl >
+            Command{halReservedExit: 0}
+        Last reply: !aidl >
+          Reply{status: 0, fmqByteCount: 0, observable: Position{frames: -1, timeNs: -1}, hardware: Position{frames: -1, timeNs: -1}, latencyMs: 0, xrunFrames: 0, state: STANDBY, flushFromPosition: 0}
+        Start time:
+          []
+    Stream:
+      Name: haptic-playback
+      Port config ID: 400004
+      Is started: false
+      Latency in ms: 0
+      Interfaces: []
+      #: ===============================================================================
+      #: For full logs, please see `dumpsys android.hardware.audio.core.IModule/default`
+      #: ===============================================================================
+    Playback rate: !aidl >
+      AudioPlaybackRate{speed: 1.000000, pitch: 1.000000, timestretchMode: DEFAULT, fallbackMode: MUTE}
+    Latency mode: [FREE]
+    === YAML END (haptic-playback) ===
+      Signal power history: (none)
+      Signal power history: (none)
+  Thread throttle time (msecs): 0
+  AudioMixer tracks: 
+  Master mono: on
+  Master balance: 0.000000 (0.000000)
+  FastMixer thread 0xb4000077bc9a33f0 tid=1975  FastMixer command=COLD_IDLE writeSequence=0 framesWritten=0
+            numTracks=0 writeErrors=0 underruns=0 overruns=0
+            sampleRate=0 frameCount=0 measuredWarmup=0 ms, warmupCycles=0
+            mixPeriod=nan ms latency=0.00 ms
+  FastMixer Timestamp stats: n=0 disc=0 cold=0 nRdy=0 err=0 jitterMs(unavail) localSR(nan, nan) correctedJitterMs(unavail)
+  No FastMixer statistics available currently
+  Fast tracks: sMaxFastTracks=8 activeMask=0
+  Index Active Full Partial Empty  Recent Ready    Written
+      0     no    0       0     0    full     0          0
+      1     no    0       0     0    full     0          0
+      2     no    0       0     0    full     0          0
+      3     no    0       0     0    full     0          0
+      4     no    0       0     0    full     0          0
+      5     no    0       0     0    full     0          0
+      6     no    0       0     0    full     0          0
+      7     no    0       0     0    full     0          0
+Bluetooth latency modes are enabled
+HAL does support Bluetooth latency modes
+Supported latency modes: { FREE }
+
+  Normal mixer raw underrun counters: partial=0 empty=0
+  0 Tracks
+  0 Effect Chains
+  Local log:
+                                                         Type     Id Active Client(pid/uid) Session Port Id S  Flags   Format Chn mask  SRate x ST Usg CT  G db  L dB  R dB  VS dB  PortVol dB  PortMuted   Server FrmCnt  FrmRdy F Underruns  Flushed BitPerfect InternalMute   Latency
+   10-12 01:24:46.064 threadLoop_standby
+   10-12 01:24:46.113 CFG_EVENT_CREATE_AUDIO_PATCH: old device  (Empty device types) new device 0x2 (AUDIO_DEVICE_OUT_SPEAKER)
+
+Output thread 0xb4000077bb955790, name AudioOut_2D, tid 1986, type 0 (MIXER):
+  I/O handle: 45
+  Standby: yes
+  Sample rate: 48000 Hz
+  HAL frame count: 240
+  HAL format: 0x3 (AUDIO_FORMAT_PCM_32_BIT)
+  HAL buffer size: 1920 bytes
+  Channel count: 2
+  Channel mask: 0x00000003 (front-left, front-right)
+  Processing format: 0x5 (AUDIO_FORMAT_PCM_FLOAT)
+  Processing frame size: 8 bytes
+  Pending config events: none
+  Output devices: 0x2 (AUDIO_DEVICE_OUT_SPEAKER)
+  Input device: 0 (AUDIO_DEVICE_NONE)
+  Audio source: 0 (AUDIO_SOURCE_DEFAULT)
+  Timestamp stats: n=0 disc=0 cold=0 nRdy=0 err=1 jitterMs(unavail) localSR(nan, nan) correctedJitterMs(unavail)
+  Timestamp corrected: no
+  Master volume: 1.000000
+  Master mute: off
+  Mixer channel Mask: 0x3 (front-left, front-right)
+  Normal frame count: 960
+  Total writes: 0
+  Delayed writes: 0
+  Blocked in write: no
+  Suspend count: 0
+  Fast track availMask=0xfe
+  Standby delay ns=3000000000
+  Hw supports pause: no
+  Hw paused: no
+  Flush pending: no
+  AudioStreamOut: 0xb40000752a6e0890 flags 0x104 (AUDIO_OUTPUT_FLAG_FAST|AUDIO_OUTPUT_FLAG_RAW)
+  Frames written: 0
+  Suspended frames: 0
+  PipeSink frames written: 0
+  Hal stream dump:
+    === YAML START (raw-playback) ===
+    Name: raw-playback
+    Workers:
+      Periodic worker:
+        Name: pw-raw-playback
+        Force update: false
+        Linked config IDs: []
+        Need to do A/V sync: true
+        Latency ms: -1
+        Supported latency modes: [FREE]
+        Current latency modes: FREE
+      Command worker:
+        Name: cw-raw-playback
+        Current state:
+          Type: STANDBY
+          Name: StreamOutStandbyState
+        Command:
+          Count: 0
+          Last: !aidl >
+            Command{halReservedExit: 0}
+        Last reply: !aidl >
+          Reply{status: 0, fmqByteCount: 0, observable: Position{frames: -1, timeNs: -1}, hardware: Position{frames: -1, timeNs: -1}, latencyMs: 0, xrunFrames: 0, state: STANDBY, flushFromPosition: 0}
+        Start time:
+          []
+    Stream:
+      Name: raw-playback
+      Port config ID: 400005
+      Is started: false
+      Latency in ms: 0
+      Interfaces: [Dual mono interface]
+      #: ===============================================================================
+      #: For full logs, please see `dumpsys android.hardware.audio.core.IModule/default`
+      #: ===============================================================================
+    Playback rate: !aidl >
+      AudioPlaybackRate{speed: 1.000000, pitch: 1.000000, timestretchMode: DEFAULT, fallbackMode: MUTE}
+    Latency mode: [FREE]
+    === YAML END (raw-playback) ===
+      Signal power history: (none)
+      Signal power history: (none)
+  Thread throttle time (msecs): 0
+  AudioMixer tracks: 
+  Master mono: on
+  Master balance: 0.000000 (0.000000)
+  FastMixer thread 0xb4000077bc8653f0 tid=1985  FastMixer command=COLD_IDLE writeSequence=0 framesWritten=0
+            numTracks=0 writeErrors=0 underruns=0 overruns=0
+            sampleRate=0 frameCount=0 measuredWarmup=0 ms, warmupCycles=0
+            mixPeriod=nan ms latency=0.00 ms
+  FastMixer Timestamp stats: n=0 disc=0 cold=0 nRdy=0 err=0 jitterMs(unavail) localSR(nan, nan) correctedJitterMs(unavail)
+  No FastMixer statistics available currently
+  Fast tracks: sMaxFastTracks=8 activeMask=0
+  Index Active Full Partial Empty  Recent Ready    Written
+      0     no    0       0     0    full     0          0
+      1     no    0       0     0    full     0          0
+      2     no    0       0     0    full     0          0
+      3     no    0       0     0    full     0          0
+      4     no    0       0     0    full     0          0
+      5     no    0       0     0    full     0          0
+      6     no    0       0     0    full     0          0
+      7     no    0       0     0    full     0          0
+Bluetooth latency modes are enabled
+HAL does support Bluetooth latency modes
+Supported latency modes: { FREE }
+
+  Normal mixer raw underrun counters: partial=0 empty=0
+  0 Tracks
+  0 Effect Chains
+  Local log:
+                                                         Type     Id Active Client(pid/uid) Session Port Id S  Flags   Format Chn mask  SRate x ST Usg CT  G db  L dB  R dB  VS dB  PortVol dB  PortMuted   Server FrmCnt  FrmRdy F Underruns  Flushed BitPerfect InternalMute   Latency
+   10-12 01:24:46.118 threadLoop_standby
+   10-12 01:24:46.153 CFG_EVENT_CREATE_AUDIO_PATCH: old device  (Empty device types) new device 0x2 (AUDIO_DEVICE_OUT_SPEAKER)
+
+Output thread 0xb4000077b6999790, name AudioOut_35, tid 2002, type 0 (MIXER):
+  I/O handle: 53
+  Standby: yes
+  Sample rate: 48000 Hz
+  HAL frame count: 480
+  HAL format: 0x1 (AUDIO_FORMAT_PCM_16_BIT)
+  HAL buffer size: 1920 bytes
+  Channel count: 2
+  Channel mask: 0x00000003 (front-left, front-right)
+  Processing format: 0x5 (AUDIO_FORMAT_PCM_FLOAT)
+  Processing frame size: 8 bytes
+  Pending config events: none
+  Output devices: 0x2 (AUDIO_DEVICE_OUT_SPEAKER)
+  Input device: 0 (AUDIO_DEVICE_NONE)
+  Audio source: 0 (AUDIO_SOURCE_DEFAULT)
+  Timestamp stats: n=0 disc=0 cold=0 nRdy=0 err=1 jitterMs(unavail) localSR(nan, nan) correctedJitterMs(unavail)
+  Timestamp corrected: no
+  Master volume: 1.000000
+  Master mute: off
+  Mixer channel Mask: 0x3 (front-left, front-right)
+  Normal frame count: 960
+  Total writes: 0
+  Delayed writes: 0
+  Blocked in write: no
+  Suspend count: 0
+  Fast track availMask=0xfe
+  Standby delay ns=3000000000
+  Hw supports pause: no
+  Hw paused: no
+  Flush pending: no
+  AudioStreamOut: 0xb40000752a6df8a0 flags 0x8000 (AUDIO_OUTPUT_FLAG_VOIP_RX)
+  Frames written: 0
+  Suspended frames: 0
+  PipeSink frames written: 0
+  Hal stream dump:
+    === YAML START (voip-playback) ===
+    Name: voip-playback
+    Workers:
+      Periodic worker:
+        Name: pw-voip-playback
+        Force update: false
+        Linked config IDs: []
+        Need to do A/V sync: true
+        Latency ms: -1
+        Supported latency modes: [FREE]
+        Current latency modes: FREE
+      Command worker:
+        Name: cw-voip-playback
+        Current state:
+          Type: STANDBY
+          Name: StreamOutStandbyState
+        Command:
+          Count: 0
+          Last: !aidl >
+            Command{halReservedExit: 0}
+        Last reply: !aidl >
+          Reply{status: 0, fmqByteCount: 0, observable: Position{frames: -1, timeNs: -1}, hardware: Position{frames: -1, timeNs: -1}, latencyMs: 0, xrunFrames: 0, state: STANDBY, flushFromPosition: 0}
+        Start time:
+          []
+    Stream:
+      Name: voip-playback
+      Port config ID: 400006
+      Is started: false
+      Latency in ms: 0
+      Interfaces: [Volume control interface]
+      #: ===============================================================================
+      #: For full logs, please see `dumpsys android.hardware.audio.core.IModule/default`
+      #: ===============================================================================
+    Playback rate: !aidl >
+      AudioPlaybackRate{speed: 1.000000, pitch: 1.000000, timestretchMode: DEFAULT, fallbackMode: MUTE}
+    Latency mode: [FREE]
+    === YAML END (voip-playback) ===
+      Signal power history: (none)
+      Signal power history: (none)
+  Thread throttle time (msecs): 0
+  AudioMixer tracks: 
+  Master mono: on
+  Master balance: 0.000000 (0.000000)
+  FastMixer thread 0xb4000077b680f3f0 tid=2001  FastMixer command=COLD_IDLE writeSequence=0 framesWritten=0
+            numTracks=0 writeErrors=0 underruns=0 overruns=0
+            sampleRate=0 frameCount=0 measuredWarmup=0 ms, warmupCycles=0
+            mixPeriod=nan ms latency=0.00 ms
+  FastMixer Timestamp stats: n=0 disc=0 cold=0 nRdy=0 err=0 jitterMs(unavail) localSR(nan, nan) correctedJitterMs(unavail)
+  No FastMixer statistics available currently
+  Fast tracks: sMaxFastTracks=8 activeMask=0
+  Index Active Full Partial Empty  Recent Ready    Written
+      0     no    0       0     0    full     0          0
+      1     no    0       0     0    full     0          0
+      2     no    0       0     0    full     0          0
+      3     no    0       0     0    full     0          0
+      4     no    0       0     0    full     0          0
+      5     no    0       0     0    full     0          0
+      6     no    0       0     0    full     0          0
+      7     no    0       0     0    full     0          0
+Bluetooth latency modes are enabled
+HAL does support Bluetooth latency modes
+Supported latency modes: { FREE }
+
+  Normal mixer raw underrun counters: partial=0 empty=0
+  0 Tracks
+  0 Effect Chains
+  Local log:
+                                                         Type     Id Active Client(pid/uid) Session Port Id S  Flags   Format Chn mask  SRate x ST Usg CT  G db  L dB  R dB  VS dB  PortVol dB  PortMuted   Server FrmCnt  FrmRdy F Underruns  Flushed BitPerfect InternalMute   Latency
+   10-12 01:24:46.158 threadLoop_standby
+   10-12 01:24:46.206 CFG_EVENT_CREATE_AUDIO_PATCH: old device  (Empty device types) new device 0x2 (AUDIO_DEVICE_OUT_SPEAKER)
+
+Output thread 0xb4000077b45e4790, name AudioOut_45, tid 2018, type 0 (MIXER):
+  I/O handle: 69
+  Standby: yes
+  Sample rate: 48000 Hz
+  HAL frame count: 480
+  HAL format: 0x1 (AUDIO_FORMAT_PCM_16_BIT)
+  HAL buffer size: 1920 bytes
+  Channel count: 2
+  Channel mask: 0x00000003 (front-left, front-right)
+  Processing format: 0x5 (AUDIO_FORMAT_PCM_FLOAT)
+  Processing frame size: 8 bytes
+  Pending config events: none
+  Output devices: 0x10000 (AUDIO_DEVICE_OUT_TELEPHONY_TX)
+  Input device: 0 (AUDIO_DEVICE_NONE)
+  Audio source: 0 (AUDIO_SOURCE_DEFAULT)
+  Timestamp stats: n=0 disc=0 cold=0 nRdy=0 err=1 jitterMs(unavail) localSR(nan, nan) correctedJitterMs(unavail)
+  Timestamp corrected: no
+  Master volume: 1.000000
+  Master mute: off
+  Mixer channel Mask: 0x3 (front-left, front-right)
+  Normal frame count: 960
+  Total writes: 0
+  Delayed writes: 0
+  Blocked in write: no
+  Suspend count: 0
+  Fast track availMask=0xfe
+  Standby delay ns=3000000000
+  Hw supports pause: no
+  Hw paused: no
+  Flush pending: no
+  AudioStreamOut: 0xb40000752a6e0fc0 flags 0x10000 (AUDIO_OUTPUT_FLAG_INCALL_MUSIC)
+  Frames written: 0
+  Suspended frames: 0
+  PipeSink frames written: 0
+  Hal stream dump:
+    === YAML START (in-call-playback) ===
+    Name: in-call-playback
+    Workers:
+      Periodic worker:
+        Name: pw-in-call-playback
+        Force update: false
+        Linked config IDs: []
+        Need to do A/V sync: true
+        Latency ms: -1
+        Supported latency modes: [FREE]
+        Current latency modes: FREE
+      Command worker:
+        Name: cw-in-call-playback
+        Current state:
+          Type: STANDBY
+          Name: StreamOutStandbyState
+        Command:
+          Count: 0
+          Last: !aidl >
+            Command{halReservedExit: 0}
+        Last reply: !aidl >
+          Reply{status: 0, fmqByteCount: 0, observable: Position{frames: -1, timeNs: -1}, hardware: Position{frames: -1, timeNs: -1}, latencyMs: 0, xrunFrames: 0, state: STANDBY, flushFromPosition: 0}
+        Start time:
+          []
+    Stream:
+      Name: in-call-playback
+      Port config ID: 400008
+      Is started: false
+      Latency in ms: 0
+      Interfaces: []
+      #: ===============================================================================
+      #: For full logs, please see `dumpsys android.hardware.audio.core.IModule/default`
+      #: ===============================================================================
+    Playback rate: !aidl >
+      AudioPlaybackRate{speed: 1.000000, pitch: 1.000000, timestretchMode: DEFAULT, fallbackMode: MUTE}
+    Latency mode: [FREE]
+    === YAML END (in-call-playback) ===
+      Signal power history: (none)
+      Signal power history: (none)
+  Thread throttle time (msecs): 0
+  AudioMixer tracks: 
+  Master mono: on
+  Master balance: 0.000000 (0.000000)
+  FastMixer thread 0xb4000077b3ae23f0 tid=2017  FastMixer command=COLD_IDLE writeSequence=0 framesWritten=0
+            numTracks=0 writeErrors=0 underruns=0 overruns=0
+            sampleRate=0 frameCount=0 measuredWarmup=0 ms, warmupCycles=0
+            mixPeriod=nan ms latency=0.00 ms
+  FastMixer Timestamp stats: n=0 disc=0 cold=0 nRdy=0 err=0 jitterMs(unavail) localSR(nan, nan) correctedJitterMs(unavail)
+  No FastMixer statistics available currently
+  Fast tracks: sMaxFastTracks=8 activeMask=0
+  Index Active Full Partial Empty  Recent Ready    Written
+      0     no    0       0     0    full     0          0
+      1     no    0       0     0    full     0          0
+      2     no    0       0     0    full     0          0
+      3     no    0       0     0    full     0          0
+      4     no    0       0     0    full     0          0
+      5     no    0       0     0    full     0          0
+      6     no    0       0     0    full     0          0
+      7     no    0       0     0    full     0          0
+Bluetooth latency modes are enabled
+HAL does support Bluetooth latency modes
+Supported latency modes: { FREE }
+
+  Normal mixer raw underrun counters: partial=0 empty=0
+  0 Tracks
+  0 Effect Chains
+  Local log:
+                                                         Type     Id Active Client(pid/uid) Session Port Id S  Flags   Format Chn mask  SRate x ST Usg CT  G db  L dB  R dB  VS dB  PortVol dB  PortMuted   Server FrmCnt  FrmRdy F Underruns  Flushed BitPerfect InternalMute   Latency
+   10-12 01:24:46.240 threadLoop_standby
+   10-12 01:24:46.277 CFG_EVENT_CREATE_AUDIO_PATCH: old device  (Empty device types) new device 0x10000 (AUDIO_DEVICE_OUT_TELEPHONY_TX)
+
+ ## BEGIN setParameters dump 
+
+  Rejected setParameters:
+
+  App setParameters:
+
+  System setParameters:
+    10-12 01:24:51.691 UID  1000, 1 KVP received: BT_SCO=off
+    10-12 01:24:51.692 UID  1000, 1 KVP received: A2dpSuspended=false
+    10-12 01:24:51.692 UID  1000, 1 KVP received: LeAudioSuspended=false
+    10-12 01:24:51.856 UID  1000, 1 KVP received: rotation=0
+    10-12 01:24:51.857 UID  1000, 1 KVP received: device_folded=off
+    10-12 01:24:51.916 UID  1000, 1 KVP received: screen_state=on
+    10-12 01:24:51.924 UID  1000, 1 KVP received: screen_state=on
+    10-12 01:24:58.375 UID  1001, 1 KVP received: HACSetting=OFF
+    10-12 01:35:12.838 UID  1000, 1 KVP received: screen_state=on
+    10-12 01:35:12.848 UID  1000, 1 KVP received: rotation=270
+    10-12 01:35:14.608 UID  1000, 1 KVP received: screen_state=on
+    10-12 01:35:14.610 UID  1000, 1 KVP received: rotation=0
+    10-12 02:32:53.304 UID  1000, 1 KVP received: screen_state=off
+    10-12 02:33:07.922 UID  1000, 1 KVP received: screen_state=on
+
+ ## BEGIN misc af dump 
+
+Patches:
+  Patch 20: No software bridge (thread 0x0 => thread 0x0) thread 0xb4000077bd2bcfe8 num sinks (1) first device type 00000002
+  Patch 28: No software bridge (thread 0x0 => thread 0x0) thread 0xb4000077bcd64fe8 num sinks (1) first device type 00000002
+  Patch 36: No software bridge (thread 0x0 => thread 0x0) thread 0xb4000077bb999fe8 num sinks (1) first device type 00000002
+  Patch 44: No software bridge (thread 0x0 => thread 0x0) thread 0xb4000077b69ddfe8 num sinks (1) first device type 00000002
+  Patch 60: No software bridge (thread 0x0 => thread 0x0) thread 0xb4000077b4628fe8 num sinks (1) first device type 00010000
+  Patch 76: No software bridge (thread 0x0 => thread 0x0) thread 0xb4000077bd59efe8 num sinks (1) first device type 00000002
+  10-12 01:24:46.000 add patch 12 srcs {mix 13 id 1} sinks {dev 0x2 id 3} hal create
+  10-12 01:24:46.051 add patch 20 srcs {mix 21 id 6} sinks {dev 0x2 id 3} hal create
+  10-12 01:24:46.114 add patch 28 srcs {mix 37 id 9} sinks {dev 0x2 id 3} hal create
+  10-12 01:24:46.154 add patch 36 srcs {mix 45 id 11} sinks {dev 0x2 id 3} hal create
+  10-12 01:24:46.206 add patch 44 srcs {mix 53 id 13} sinks {dev 0x2 id 3} hal create
+  10-12 01:24:46.235 add patch 52 srcs {mix 61 id 15} sinks {dev 0x2 id 3} hal create
+  10-12 01:24:46.278 add patch 60 srcs {mix 69 id 17} sinks {dev 0x10000 id 18} hal create
+  10-12 01:24:46.389 del patch 52 srcs {mix 61 id 15} sinks {dev 0x2 id 3} reused false
+  10-12 01:35:09.559 add patch 68 srcs {mix 13 id 1} sinks {dev 0x400000 id 4} hal create
+  10-12 01:35:11.268 add patch 76 srcs {mix 13 id 1} sinks {dev 0x2 id 3} hal create
+
+Device Effects:
+
+Sound Dose:
+
+  Cached Mel Records:
+
+  Active Processors:
+    None
+
+ ## BEGIN power dump
+CP3A.260905.009
+Power Tokens:
+  Client-0:  start: 01:24:45.542 pid: 1179
+  Client-10:  start: 01:26:49.822 pid: 14791
+  Client-11:  start: 02:13:58.472 pid: 19445
+  Client-16:  start: 03:13:06.440 pid: 28648
+  Client-1:  start: 01:24:51.691 pid: 1673
+  Client-2:  start: 01:24:58.374 pid: 2696
+  Client-3:  start: 01:25:03.633 pid: 2446
+  Client-4:  start: 01:25:22.460 pid: 1340
+  Client-5:  start: 01:25:39.170 pid: 9115
+  Client-6:  start: 01:25:49.971 pid: 9969
+  Client-7:  start: 01:26:19.120 pid: 12840
+  Client-8:  start: 01:26:36.613 pid: 12693
+  Client-9:  start: 01:26:46.989 pid: 5645
+  Thread-142:  start: 03:08:23.633 ThreadBase-tid: 1959 wakeLockName: AudioMix wakeFlag: 
+  Thread-168:  start: 03:13:09.705 ThreadBase-tid: 1946 wakeLockName: AudioMix wakeFlag: 
+  Track-1604:  start: 03:13:06.537 (active) uid: 10547 com.flappyspikes.flappy_spikes  sessions: 21  actual_seconds: 1788.285246 { 28648 } { frozen-while-active: 3  last: 03:13:04.040 } 
+
+Power Clients: (some snapshots quantized in time)
+  (idle) uid: 1000 android.uid.system  sessions: 8  actual_seconds: 23.547423 { 1673 }{ { 01:25:22.497, ~:25.444} { ~:55.524, ~:58.484} { ~:26:32.896, ~:35.854} { ~:43.431, ~:46.339} { ~:27:47.174, ~:50.154} { ~:32:38.685, ~:41.702} { ~:34:51.578, ~:54.479} { ~:35:11.270, ~:14.147} }
+    Sum:    10-12 01:25:22.497 duration_boottime: 23.551001 duration_monotonic: 23.551001
+    Max:    10-12 01:32:38.685 duration_boottime: 3.017000 duration_monotonic: 3.017000
+  (idle) uid: 1001 android.uid.phone  sessions: 0  actual_seconds: 0.000000 { 2696 }{ }
+  (idle) uid: 1013 media  sessions: 0  actual_seconds: 0.000000 { 1340 }{ }
+  (idle) uid: 1041 audioserver  sessions: 0  actual_seconds: 0.000000 { 1179 }{ }
+  (idle) uid: 10188 com.google.android.tts  sessions: 0  actual_seconds: 0.000000 { 5645 }{ }
+  (idle) uid: 10192 com.google.android.apps.youtube.music  sessions: 0  actual_seconds: 0.000000 { 9115 }{ }
+  (idle) uid: 10210 com.google.android.youtube  sessions: 0  actual_seconds: 0.000000 { 9969 }{ }
+  (idle) uid: 10240 android.uid.systemui  sessions: 4  actual_seconds: 1.984808 { 2446 }{ { 01:25:03.638, ~.844} { ~:35:09.566, ~:10.830} { 02:32:52.727, ~:53.031} { ~:33:09.658, ~.869} }
+    Sum:    10-12 01:25:03.638 duration_boottime: 1.985000 duration_monotonic: 1.985000
+    Max:    10-12 01:35:09.566 duration_boottime: 1.264000 duration_monotonic: 1.264000
+  (idle) uid: 10351 com.discord  sessions: 0  actual_seconds: 0.000000 { 19445 }{ }
+  (idle) uid: 10410 com.nothing.smartcenter  sessions: 0  actual_seconds: 0.000000 { 12693 }{ }
+  (idle) uid: 10463 org.telegram.messenger  sessions: 0  actual_seconds: 0.000000 { 14791 }{ }
+  (idle) uid: 10527 com.nytimes.android  sessions: 0  actual_seconds: 0.000000 { 12840 }{ }
+  (active) uid: 10547 com.flappyspikes.flappy_spikes  sessions: 21  actual_seconds: 1788.285727 { 28648 } { frozen-while-active: 3  last: 03:13:04.040 } { { 02:56:30.692, ~:57:54.919} { ~:58:00.578, ~:01.693} { ~:04.661, ~:05.249} { ~:21.125, ~.339} { ~:22.167, ~.821} { 03:08:25.137, ~:09:57.404} { ~:09:57.419, ~:11:29.803} { ~:11:29.824, ~:55.195} { ~:11:56.634, ~:13:04.249} { ~:13:06.537, ~} }
+    Sum:    10-12 02:33:23.355 duration_boottime: 1788.290039 duration_monotonic: 1788.290039
+    Max:    10-12 02:45:43.651 duration_boottime: 277.434021 duration_monotonic: 277.434021
+Power Client History:

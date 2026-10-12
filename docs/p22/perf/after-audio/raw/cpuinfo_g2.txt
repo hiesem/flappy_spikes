@@ -1,0 +1,191 @@
+Load: 8.83 / 9.42 / 6.26
+CPU usage from 111018ms to 88567ms ago (2026-10-12 03:15:02.236 to 2026-10-12 03:15:24.687):
+  79% 28648/com.flappyspikes.flappy_spikes: 63% user + 15% kernel / faults: 711 minor 26 major
+  25% 541/surfaceflinger: 14% user + 11% kernel / faults: 1 minor
+  12% 1340/mediaserver: 6.8% user + 5.6% kernel / faults: 30 minor
+  10% 543/android.hardware.composer.hwc3-service.pixel: 4.7% user + 6% kernel / faults: 1 major
+  9.3% 1673/system_server: 4.3% user + 4.9% kernel / faults: 1285 minor 214 major
+  7.5% 1400/media.swcodec: 5% user + 2.4% kernel / faults: 59 minor
+  5.5% 635/mali-gpuq-kthread: 0% user + 5.5% kernel
+  5.5% 2446/com.android.systemui: 2.7% user + 2.8% kernel / faults: 280 minor 62 major
+  4.5% 272/decon0_kthread: 0% user + 4.5% kernel
+  3.8% 513/sugov:4: 0% user + 3.8% kernel
+  3.7% 1179/audioserver: 3.7% user + 0% kernel / faults: 7 minor
+  3.5% 1157/android.hardware.sensors-service.multihal: 1.2% user + 2.2% kernel
+  2.7% 14249/nl.rabomobiel: 1.4% user + 1.2% kernel / faults: 2127 minor 28 major
+  2.2% 100/kswapd0: 0% user + 2.2% kernel
+  2.2% 1127/android.hardware.audio.service-aidl.aoc: 0.8% user + 1.3% kernel / faults: 11 minor 11 major
+  2% 21506/kworker/u18:1-adb: 0% user + 2% kernel / faults: 2 minor
+  2% 2804/com.google.android.gms: 1.1% user + 0.8% kernel / faults: 221 minor 48 major
+  1.9% 2696/com.android.phone: 0.7% user + 1.2% kernel / faults: 1792 minor 1760 major
+  1.7% 27787/kworker/u18:4-gpu-dvfs-control: 0% user + 1.7% kernel / faults: 3 minor
+  1.5% 28709/csf_kcpu_worker: 0% user + 1.5% kernel
+  1.2% 687/android.hardware.power-service.pixel-libperfmgr: 0.5% user + 0.7% kernel / faults: 1 major
+  1.2% 512/sugov:0: 0% user + 1.2% kernel
+  1.1% 27048/kworker/u18:0-async_vote_wq: 0% user + 1.1% kernel / faults: 4 minor
+  1.1% 1383/dhd_rpm_state_thread: 0% user + 1.1% kernel
+  0.8% 23854/kworker/u19:1-ipa_ctrl_wq: 0% user + 0.8% kernel
+  0.8% 1645/com.google.usf.non_wake_up: 0% user + 0.8% kernel
+  0.8% 14640/notion.id: 0.4% user + 0.4% kernel / faults: 376 minor 1371 major
+  0.8% 493/logd: 0.2% user + 0.5% kernel / faults: 133 minor 11 major
+  0.8% 11337/com.instagram.android: 0.2% user + 0.5% kernel / faults: 753 minor 1889 major
+  0.7% 1177/vendor.google.wifi_ext-service-vendor: 0% user + 0.6% kernel / faults: 30 minor 61 major
+  0.6% 19445/com.discord: 0.4% user + 0.1% kernel / faults: 603 minor 86 major
+  0.5% 5107/com.facebook.katana: 0.1% user + 0.3% kernel / faults: 963 minor 2824 major
+  0.4% 5541/com.android.vending:background: 0.1% user + 0.3% kernel / faults: 389 minor 2215 major
+  0.4% 5534/com.google.android.googlequicksearchbox:googleapp: 0.2% user + 0.2% kernel / faults: 314 minor 54 major
+  0.4% 514/sugov:8: 0% user + 0.4% kernel
+  0.4% 1106/statsd: 0.2% user + 0.1% kernel / faults: 20 minor 42 major
+  0.4% 4030/com.google.android.inputmethod.latin: 0% user + 0.3% kernel / faults: 502 minor 3295 major
+  0.4% 8379/com.google.android.apps.docs: 0.2% user + 0.1% kernel / faults: 343 minor 50 major
+  0.4% 10096/com.airbnb.android: 0.2% user + 0.1% kernel / faults: 634 minor 150 major
+  0.4% 10816/com.google.android.apps.docs.editors.sheets: 0.2% user + 0.1% kernel / faults: 398 minor 36 major
+  0.4% 11639/com.instagram.android:fbns: 0% user + 0.3% kernel / faults: 189 minor 2671 major
+  0.4% 12018/com.linkedin.android: 0% user + 0.3% kernel / faults: 365 minor 38 major
+  0.4% 12265/com.myfitnesspal.android: 0.2% user + 0.1% kernel / faults: 157 minor 48 major
+  0.3% 127/perf_mon_update_client_task: 0% user + 0.3% kernel
+  0.3% 2658/com.shannon.imsservice: 0.1% user + 0.2% kernel / faults: 351 minor 604 major
+  0.3% 12840/com.nytimes.android: 0.1% user + 0.2% kernel / faults: 117 minor 60 major
+  0.3% 245/simpleinteractive: 0% user + 0.3% kernel
+  0.2% 2028/android.hardware.thermal-service.pixel: 0% user + 0.2% kernel
+  0.2% 4297/com.spotify.music: 0% user + 0.1% kernel / faults: 131 minor 9 major
+  0.2% 12693/com.nothing.smartcenter: 0.1% user + 0.1% kernel / faults: 14 minor 28 major
+  0.2% 13453/com.shazam.android: 0% user + 0.2% kernel / faults: 338 minor 1623 major
+  0.2% 14968/org.yoki.android.buienalarm: 0.1% user + 0.1% kernel / faults: 123 minor 18 major
+  0.2% 16890/com.google.android.webview:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0: 0% user + 0.2% kernel / faults: 421 minor 431 major
+  0.2% 27011/kworker/u19:3-alsa_pcm_period_work_1: 0% user + 0.2% kernel
+  0.2% 7458/com.facebook.orca: 0.1% user + 0% kernel / faults: 14 minor 9 major
+  0.2% 7524/com.facebook.pages.app: 0.1% user + 0% kernel / faults: 110 minor 2 major
+  0.2% 10731/com.google.android.apps.docs.editors.docs: 0.1% user + 0% kernel / faults: 53 minor 11 major
+  0.2% 13351/com.google.android.webview:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0: 0.1% user + 0% kernel / faults: 93 minor 18 major
+  0.2% 13385/com.google.android.webview:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0: 0.2% user + 0% kernel / faults: 86 minor 33 major
+  0.2% 21382/kworker/u19:0-ufs_clk_gating_0: 0% user + 0.2% kernel
+  0.1% 244/eh_comp_thread: 0% user + 0.1% kernel
+  0.1% 1105/netd: 0% user + 0% kernel / faults: 78 minor 5 major
+  0.1% 1373/rild_exynos: 0% user + 0.1% kernel / faults: 59 minor 138 major
+  0.1% 2367/wpa_supplicant: 0% user + 0.1% kernel
+  0.1% 2649/com.google.android.nfc: 0% user + 0% kernel / faults: 221 minor 315 major
+  0.1% 3516/com.google.android.apps.scone: 0% user + 0% kernel / faults: 88 minor 156 major
+  0.1% 4236/com.google.android.connectivitythermalpowermanager: 0% user + 0% kernel / faults: 111 minor 72 major
+  0.1% 4709/com.google.android.apps.messaging: 0% user + 0.1% kernel / faults: 126 minor 118 major
+  0.1% 10362/com.duolingo: 0% user + 0.1% kernel / faults: 86 minor 42 major
+  0.1% 11922/com.brave.browser: 0.1% user + 0% kernel / faults: 128 minor 96 major
+  0.1% 15146/com.google.android.webview:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0: 0.1% user + 0% kernel / faults: 90 minor 9 major
+  0.1% 27064/kworker/3:1H-events_highpri: 0% user + 0.1% kernel
+  0.1% 28642/logcat: 0% user + 0% kernel
+  0.1% 29395/kworker/0:1H-events_highpri: 0% user + 0.1% kernel
+  0.1% 29475/kworker/2:3H-events_highpri: 0% user + 0.1% kernel
+  0.1% 1147/android.hardware.health-service.zuma: 0% user + 0% kernel / faults: 1 major
+  0.1% 1334/media.extractor: 0% user + 0% kernel
+  0.1% 1415/dhd_logtrace_thread: 0% user + 0.1% kernel
+  0.1% 2570/com.google.android.bluetooth: 0% user + 0% kernel / faults: 41 minor 99 major
+  0% 2639/com.shannon.rcsservice: 0% user + 0% kernel / faults: 161 minor 220 major
+  0.1% 3034/com.google.android.iwlan: 0% user + 0% kernel / faults: 131 minor 189 major
+  0% 3136/com.android.qns: 0% user + 0% kernel / faults: 164 minor 298 major
+  0.1% 9226/com.whatsapp: 0% user + 0% kernel / faults: 121 minor 94 major
+  0.1% 9647/com.google.android.gm: 0% user + 0% kernel / faults: 139 minor 8 major
+  0.1% 13638/com.themobilecompany.Onderweg: 0% user + 0% kernel / faults: 36 minor 5 major
+  0.1% 18104/adbd: 0% user + 0% kernel / faults: 624 minor
+  0.1% 29281/kworker/1:3H-events_highpri: 0% user + 0.1% kernel
+  0% 1/init: 0% user + 0% kernel / faults: 21 minor 38 major
+  0% 14/rcu_preempt: 0% user + 0% kernel
+  0% 121/kworker/6:1-kvm-irqfd-cleanup: 0% user + 0% kernel
+  0% 530/android.system.suspend-service: 0% user + 0% kernel
+  0% 1109/iptables-restore: 0% user + 0% kernel / faults: 2 minor 6 major
+  0% 1150/android.hardware.power.stats-service.pixel: 0% user + 0% kernel / faults: 9 minor 11 major
+  0% 2544/com.android.networkstack.process: 0% user + 0% kernel / faults: 77 minor 10 major
+  0% 2589/com.google.android.pixelsystemservice: 0% user + 0% kernel / faults: 17 minor 2 major
+  0% 2987/com.android.settings: 0% user + 0% kernel / faults: 87 minor 54 major
+  0% 5474/com.azure.authenticator:auth: 0% user + 0% kernel / faults: 48 minor 19 major
+  0% 6222/com.android.chrome: 0% user + 0% kernel / faults: 65 minor 61 major
+  0% 7149/com.google.android.apps.camera.services: 0% user + 0% kernel / faults: 41 minor 103 major
+  0% 7683/com.azure.authenticator: 0% user + 0% kernel / faults: 62 minor 14 major
+  0% 7983/com.fitbit.FitbitMobile: 0% user + 0% kernel / faults: 33 minor 14 major
+  0% 8157/com.android.dynsystem:dynsystem: 0% user + 0% kernel / faults: 156 minor 192 major
+  0% 9214/com.google.android.apps.wear.companion: 0% user + 0% kernel / faults: 38 minor 12 major
+  0% 10467/com.android.DeviceAsWebcam: 0% user + 0% kernel / faults: 148 minor 289 major
+  0% 11069/com.google.android.apps.translate: 0% user + 0% kernel / faults: 8 minor 2 major
+  0% 13073/com.rectfy.birdybird: 0% user + 0% kernel / faults: 8 minor
+  0% 13143/com.revolut.revolut: 0% user + 0% kernel / faults: 8 major
+  0% 14791/org.telegram.messenger: 0% user + 0% kernel / faults: 50 minor 1 major
+  0% 16119/com.google.android.webview:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0: 0% user + 0% kernel / faults: 27 minor 13 major
+  0% 27901/kworker/7:3H-events_highpri: 0% user + 0% kernel
+  0% 28743/com.google.android.webview:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0: 0% user + 0% kernel / faults: 1 major
+  0% 15/rcuog/0: 0% user + 0% kernel
+  0% 20/migration/0: 0% user + 0% kernel
+  0% 30/rcuop/1: 0% user + 0% kernel
+  0% 33/migration/2: 0% user + 0% kernel
+  0% 37/rcuop/2: 0% user + 0% kernel
+  0% 42/kworker/3:0-rcu_gp: 0% user + 0% kernel
+  0% 44/rcuog/3: 0% user + 0% kernel
+  0% 45/rcuop/3: 0% user + 0% kernel
+  0% 49/ksoftirqd/4: 0% user + 0% kernel
+  0% 52/rcuop/4: 0% user + 0% kernel
+  0% 56/ksoftirqd/5: 0% user + 0% kernel
+  0% 71/ksoftirqd/7: 0% user + 0% kernel
+  0% 193/kworker/4:5-pm: 0% user + 0% kernel
+  0% 494/lmkd: 0% user + 0% kernel
+  0% 495/servicemanager: 0% user + 0% kernel / faults: 1 minor 11 major
+  0% 1110/ip6tables-restore: 0% user + 0% kernel / faults: 3 minor 4 major
+  0% 1158/android.hardware.usb-service: 0% user + 0% kernel / faults: 20 minor 29 major
+  0% 1308/traced: 0% user + 0% kernel / faults: 39 minor 68 major
+  0% 1338/media.metrics: 0% user + 0% kernel / faults: 20 minor 20 major
+  0% 1349/lhd: 0% user + 0% kernel
+  0% 1416/aocd: 0% user + 0% kernel / faults: 2 minor
+  0% 1936/irq/475-dhdpcie_host_wake: 0% user + 0% kernel
+  0% 2689/com.samsung.slsi.telephony.oemril: 0% user + 0% kernel / faults: 31 minor 17 major
+  0% 3302/f2fs_ckpt-254:64: 0% user + 0% kernel
+  0% 3385/pixelstats-vendor: 0% user + 0% kernel / faults: 33 minor 81 major
+  0% 3398/com.google.android.carrier: 0% user + 0% kernel / faults: 4 minor
+  0% 3564/com.google.android.apps.wellbeing: 0% user + 0% kernel / faults: 5 minor 3 major
+  0% 4151/com.google.android.apps.turbo: 0% user + 0% kernel / faults: 11 minor 16 major
+  0% 4406/android.process.media: 0% user + 0% kernel
+  0% 4469/com.microsoft.skydrive: 0% user + 0% kernel / faults: 21 minor 1 major
+  0% 4877/com.google.android.apps.weather: 0% user + 0% kernel / faults: 30 minor 4 major
+  0% 5270/com.google.android.gms.ui: 0% user + 0% kernel
+  0% 5370/com.google.android.googlequicksearchbox:search: 0% user + 0% kernel / faults: 57 minor 57 major
+  0% 5939/com.google.android.apps.bard: 0% user + 0% kernel / faults: 33 minor 15 major
+  0% 6203/com.android.vending: 0% user + 0% kernel / faults: 11 minor 6 major
+  0% 6317/com.google.android.wfcactivation: 0% user + 0% kernel
+  0% 7208/com.facebook.adsmanager: 0% user + 0% kernel / faults: 19 minor 2 major
+  0% 7318/com.google.android.rkpdapp: 0% user + 0% kernel / faults: 19 minor 13 major
+  0% 7634/com.google.android.projection.gearhead:shared: 0% user + 0% kernel / faults: 5 minor 1 major
+  0% 7636/com.google.android.turboadapter: 0% user + 0% kernel / faults: 5 minor 3 major
+  0% 8250/com.android.nfc: 0% user + 0% kernel / faults: 3 minor
+  0% 8434/com.google.android.apps.maps: 0% user + 0% kernel / faults: 14 minor
+  0% 8856/com.google.android.apps.setupwizard.searchselector: 0% user + 0% kernel / faults: 4 minor 7 major
+  0% 9115/com.google.android.apps.youtube.music: 0% user + 0% kernel / faults: 25 minor 5 major
+  0% 9421/com.google.android.calendar: 0% user + 0% kernel / faults: 15 minor 7 major
+  0% 9799/com.google.android.setupwizard: 0% user + 0% kernel / faults: 4 minor
+  0% 9969/com.google.android.youtube: 0% user + 0% kernel / faults: 42 minor 11 major
+  0% 10197/com.app.tgtg: 0% user + 0% kernel / faults: 29 minor 3 major
+  0% 10288/com.couchsurfing.mobile.android: 0% user + 0% kernel / faults: 28 minor 2 major
+  0% 10537/com.flightradar24free: 0% user + 0% kernel / faults: 31 minor 1 major
+  0% 10654/com.google.android.apps.chromecast.app: 0% user + 0% kernel / faults: 16 minor 12 major
+  0% 11142/com.google.android.apps.walletnfcrel: 0% user + 0% kernel / faults: 17 minor 8 major
+  0% 11178/com.gotgrib.dutchgym: 0% user + 0% kernel / faults: 31 minor 1 major
+  0% 11516/com.instagram.barcelona: 0% user + 0% kernel / faults: 41 minor 16 major
+  0% 11798/com.lidl.eci.lidlplus: 0% user + 0% kernel / faults: 49 minor 16 major
+  0% 12562/com.netflix.mediaclient: 0% user + 0% kernel / faults: 34 minor 5 major
+  0% 12631/com.brave.browser:privileged_process0: 0% user + 0% kernel / faults: 15 minor
+  0% 13508/com.snapchat.android: 0% user + 0% kernel / faults: 41 minor 24 major
+  0% 14383/nl.sportcity.android: 0% user + 0% kernel / faults: 24 minor
+  0% 14511/nl.tpp.mobile.android: 0% user + 0% kernel / faults: 23 minor 2 major
+  0% 14600/nl.woningnet.dak.v2: 0% user + 0% kernel / faults: 4 minor
+  0% 14876/org.thoughtcrime.securesms: 0% user + 0% kernel / faults: 46 minor 6 major
+  0% 16251/com.google.android.flipendo: 0% user + 0% kernel
+  0% 16353/com.google.android.projection.gearhead:provider: 0% user + 0% kernel / faults: 2 minor 4 major
+  0% 17573/com.android.traceur: 0% user + 0% kernel / faults: 3 minor
+  0% 17616/com.google.android.apps.pixel.support:projection: 0% user + 0% kernel / faults: 4 minor
+  0% 18108/irq/419-dwc3: 0% user + 0% kernel
+  0% 19267/kworker/5:0-mm_percpu_wq: 0% user + 0% kernel
+  0% 24952/kworker/1:1-mm_percpu_wq: 0% user + 0% kernel
+  0% 25879/kworker/8:0-mm_percpu_wq: 0% user + 0% kernel
+  0% 27909/kworker/8:4H-kverityd: 0% user + 0% kernel
+  0% 29365/kworker/5:2H-kblockd: 0% user + 0% kernel
+  0% 29412/kworker/4:4H-kblockd: 0% user + 0% kernel
+ +0% 29481/kworker/1:4H: 0% user + 0% kernel
+ +0% 29482/kworker/1:5H-kverityd: 0% user + 0% kernel
+ +0% 29586/kworker/3:1-events: 0% user + 0% kernel
+ +0% 29587/kworker/3:3: 0% user + 0% kernel
+25% TOTAL: 12% user + 9% kernel + 0% iowait + 3.1% irq + 0.8% softirq

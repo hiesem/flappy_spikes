@@ -117,17 +117,12 @@ void main() {
         );
         // Blocked until something waits.
         var k = 0;
-        while (k++ < 200 &&
-            d.waitingRing == null &&
-            d.waitingItem == null) {
+        while (k++ < 200 && d.waitingRing == null && d.waitingItem == null) {
           final ctx = DirectorContext.open(711, bigBonusOpen: true);
           final s = d.nextSlot(ctx);
           d.nextGap(ctx, s);
           // One waits at most (rule 4).
-          expect(
-            d.waitingRing != null && d.waitingItem != null,
-            isFalse,
-          );
+          expect(d.waitingRing != null && d.waitingItem != null, isFalse);
         }
         final ring = d.waitingRing, item = d.waitingItem;
         if (ring == null && item == null) continue;
@@ -199,7 +194,11 @@ void main() {
           if (!waits || (ring == null && item == null)) continue;
           for (final i in g.items) {
             if (!RunDirector.isBigItem(i.kind)) continue;
-            expect(i.kind, item, reason: 'seed $seed: a new $i while $item waits');
+            expect(
+              i.kind,
+              item,
+              reason: 'seed $seed: a new $i while $item waits',
+            );
           }
           if (RunDirector.rewardKinds.contains(s.kind) &&
               s.kind != HoopKindId.portal) {
@@ -438,8 +437,7 @@ void main() {
       });
       final ringsOnScreen = <Hoop>{};
       void watch(RunController r) {
-        bool open(Pickup p) =>
-            !p.collected && !p.escaped && !p.isRemoved;
+        bool open(Pickup p) => !p.collected && !p.escaped && !p.isRemoved;
         final star = r.spawner.pickups.any(
           (p) => p.id == ElementId.comet && open(p),
         );
@@ -536,8 +534,7 @@ void main() {
               (p) => p.id == e && !p.collected && !p.escaped,
             ) ||
             r.spawner.pendingItems.any((i) => i.kind == e);
-        together =
-            pig && planned(ElementId.heart) && planned(ElementId.shield);
+        together = pig && planned(ElementId.heart) && planned(ElementId.shield);
         return together;
       }, maxSeconds: 20);
       expect(together, isTrue);

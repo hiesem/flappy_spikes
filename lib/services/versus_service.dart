@@ -799,7 +799,12 @@ class FirebaseVersusService implements VersusService {
     var reads = 0;
     try {
       final uid = _safe(() => backend.uid) ?? '';
-      final myPg = await _ensurePg();
+      // The salt is normally known since start-up; a slow Remote Config
+      // never holds the search up for long (the VS intro waits ≤ 3 s).
+      final myPg = await _ensurePg().timeout(
+        VersusConfig.pgWait,
+        onTimeout: () => _pg,
+      );
       final found = await searchPools<PoolCandidate>(
         order: poolSearchOrder(level, _random),
         myUid: uid,

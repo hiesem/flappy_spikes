@@ -101,6 +101,10 @@ abstract final class VersusConfig {
   /// salt of the hashed Play Games id (generated at deploy, never in git).
   static const String pgSaltKey = 'versus_pg_salt';
 
+  /// PRD-2.3 §21.4 / §25.3 (call) a search waits at most this long for the
+  /// pg salt before it goes on with the pg known so far.
+  static const Duration pgWait = Duration(milliseconds: 500);
+
   /// PRD-2.2 §3 At most this many pool documents per search: every shard of
   /// every level ((maxLevel + 1) × shards = 44).
   static const int maxSearchReads = (maxLevel + 1) * shards;

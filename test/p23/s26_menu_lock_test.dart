@@ -28,24 +28,28 @@ void main() async {
   FlameTester<FlappySpikesGame> tester(
     Map<String, Object> prefs, {
     double height = 568,
-  }) => FlameTester<FlappySpikesGame>(() {
-    spy.events.clear();
-    rewarded = FakeRewardedAds();
-    return createRunTestGame(
-      prefs: prefs,
-      worldHeight: height,
-      services: spy,
-      monetization: Monetization(ads: rewarded),
-    );
-  }, gameSize: Vector2(320, height), pumpWidget: (widget, t) async {
-    // Taps are real pointer events: the view must be the game's size.
-    t.view
-      ..physicalSize = ui.Size(320, height)
-      ..devicePixelRatio = 1;
-    addTearDown(t.view.resetPhysicalSize);
-    addTearDown(t.view.resetDevicePixelRatio);
-    await t.pumpWidget(widget);
-  });
+  }) => FlameTester<FlappySpikesGame>(
+    () {
+      spy.events.clear();
+      rewarded = FakeRewardedAds();
+      return createRunTestGame(
+        prefs: prefs,
+        worldHeight: height,
+        services: spy,
+        monetization: Monetization(ads: rewarded),
+      );
+    },
+    gameSize: Vector2(320, height),
+    pumpWidget: (widget, t) async {
+      // Taps are real pointer events: the view must be the game's size.
+      t.view
+        ..physicalSize = ui.Size(320, height)
+        ..devicePixelRatio = 1;
+      addTearDown(t.view.resetPhysicalSize);
+      addTearDown(t.view.resetDevicePixelRatio);
+      await t.pumpWidget(widget);
+    },
+  );
 
   /// Starts a fresh first session (no launch popup) and lets it settle.
   Future<void> boot(FlappySpikesGame g, dynamic _) async {
@@ -153,7 +157,11 @@ void main() async {
       g.openReviveShop(onClose: () {});
       await flushAndMount(g);
       expect(g.shopScreen, isNotNull);
-      expect(g.shopScreen!.locked, isFalse, reason: 'GET COINS is never locked');
+      expect(
+        g.shopScreen!.locked,
+        isFalse,
+        reason: 'GET COINS is never locked',
+      );
     },
   );
 
@@ -182,7 +190,10 @@ void main() async {
     },
   );
 
-  tester({'bestScore': 25, 'claimedLevels': ['1']}).testGameWidget(
+  tester({
+    'bestScore': 25,
+    'claimedLevels': ['1'],
+  }).testGameWidget(
     '§26.4 unlocked: a best of 25 opens both screens with no overlay and the '
     'NEW badge is back',
     setUp: boot,
@@ -228,29 +239,36 @@ void main() async {
     },
   );
 
-  tester({
-    'bestScore': 24,
-    'claimedLevels': ['1'], // no LEVEL UP popup over the captures
-  }, height: 711).testGameWidget(
-    '§26.2 look: the locked Shop and Skins at 711 pt (visual check)',
-    setUp: boot,
-    verify: (g, t) async {
-      g.openShop();
-      await flushAndMount(g);
-      stepGame(g, 0.6); // the screens fade in
-      await flushAndMount(g);
-      await t.runAsync(() => captureShot(g, 1, 'p23_s26_shop_locked_711'));
-      g.closeShop();
-      await flushAndMount(g);
-      stepGame(g, 0.6);
-      g.openSkins();
-      await flushAndMount(g);
-      stepGame(g, 0.6);
-      await flushAndMount(g);
-      await t.runAsync(() => captureShot(g, 1, 'p23_s26_skins_locked_711'));
-      await t.pump(const Duration(milliseconds: 400));
-    },
-  );
+  // QA_P2 gap: the 568 pt capture next to the 711 one.
+  for (final h in [568.0, 711.0]) {
+    tester({
+      'bestScore': 24,
+      'claimedLevels': ['1'], // no LEVEL UP popup over the captures
+    }, height: h).testGameWidget(
+      '§26.2 look: the locked Shop and Skins at ${h.round()} pt (visual check)',
+      setUp: boot,
+      verify: (g, t) async {
+        g.openShop();
+        await flushAndMount(g);
+        stepGame(g, 0.6); // the screens fade in
+        await flushAndMount(g);
+        await t.runAsync(
+          () => captureShot(g, 1, 'p23_s26_shop_locked_${h.round()}'),
+        );
+        g.closeShop();
+        await flushAndMount(g);
+        stepGame(g, 0.6);
+        g.openSkins();
+        await flushAndMount(g);
+        stepGame(g, 0.6);
+        await flushAndMount(g);
+        await t.runAsync(
+          () => captureShot(g, 1, 'p23_s26_skins_locked_${h.round()}'),
+        );
+        await t.pump(const Duration(milliseconds: 400));
+      },
+    );
+  }
 
   FlameTester<FlappySpikesGame>(() {
     // A run start hands the tuned set to the config getters (as in a tester build).

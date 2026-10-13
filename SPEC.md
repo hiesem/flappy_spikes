@@ -1581,7 +1581,11 @@ production build has the flag off and uses these values only. Full key table:
   owed comet keep their "stays due" path and count as the waiting bonus; the comet roll
   happens before the block check so the course stream stays the same. The director
   model drops the big-bonus rate ≈ 14 %, the in-run soak (1600 runs) ≈ 18 % (target ≤ 10 %;
-  reported, PRD-2.3 §17.6).
+  reported, PRD-2.3 §17.6). Fix S8-11: a gap blocked by the activity / cool-down is
+  still drawn (nothing placed), so a big item drawn there waits too; the soak after it
+  (1600 runs) measures 6.64 vs 8.06 big / 50 hoops, a 17.6 % drop. The remaining drop
+  is the mandated "one waits, further big draws fall back to non-big" discard (about
+  40 discarded big draws per 1 600 hoops in an instrumented soak).
 - DEVIATION (PRD-2.3 §17.4, supersedes the fixed 60 pt for big bonuses): each slot's
   hoop is created at `max(60, visual reach + 8)` pt past the right edge (portal 66 + 12
   + 8; FEVER its decor-scaled beam; pair its gift tag; comet-star hoop the star's tail).

@@ -27,6 +27,14 @@ abstract final class FirstRunConfig {
   /// bottom band's bottom edge this far above the bottom strip (pt).
   static const double warningGap = 6;
 
+  /// PRD-2.3 §10.3 / §10.1 (S8-07 call): the design has no HUD row, but in
+  /// the game the heart and pause controls (y 52–90) and, in versus, the
+  /// versus bar and its name chips (to y 114) sit right under the top
+  /// strip. The top band moves down to keep this gap under the lowest of
+  /// them, so the full text and both chevrons stay readable and the pause
+  /// button stays usable (never painted over).
+  static const double warningHudGap = 6;
+
   /// §10.3 the chevrons' centre x (pt) at each end of a band.
   static const List<double> chevronX = [30, 290];
 

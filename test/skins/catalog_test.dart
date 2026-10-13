@@ -7,14 +7,15 @@ int total(List<SkinItem> items) =>
 
 void main() {
   group('kCatalog shape', () {
-    test('layer sizes: 30 / 15 / 15 / 15 / 15 and 88 collectible', () {
+    // PRD-2.3 §19.6: every layer has 30 entries (hats and gear: 29 + None).
+    test('layer sizes: 30 per layer and 148 collectible', () {
       expect(itemsFor(SkinLayer.bird).length, 30);
-      expect(itemsFor(SkinLayer.gear).length, 15);
-      expect(itemsFor(SkinLayer.hat).length, 15);
-      expect(itemsFor(SkinLayer.hoop).length, 15);
-      expect(itemsFor(SkinLayer.trail).length, 15);
-      expect(allItems.length, 90);
-      expect(kCollectibleTotal, 88);
+      expect(itemsFor(SkinLayer.gear).length, 30);
+      expect(itemsFor(SkinLayer.hat).length, 30);
+      expect(itemsFor(SkinLayer.hoop).length, 30);
+      expect(itemsFor(SkinLayer.trail).length, 30);
+      expect(allItems.length, 150);
+      expect(kCollectibleTotal, 148);
       expect(allItems.where((item) => !item.isNone).length, kCollectibleTotal);
       expect(kCatalog.keys.toSet(), SkinLayer.values.toSet());
     });
@@ -27,24 +28,34 @@ void main() {
         'zombie', 'ghost', 'pixel', 'frost', 'magma', 'galaxy', 'golden',
         'rainbow', 'phoenix',
       ]);
+      // PRD-2.3 §19.3: new items mixed in by rarity (existing first).
       expect(itemsFor(SkinLayer.gear).map((i) => i.id).toList(), [
-        'none', 'shades', 'bowtie', 'stache', 'scarf', 'bandana', 'hearts',
-        'monocle', 'sneakers', 'windup', 'carpet', 'chain', 'mask', 'patch',
-        'jetpack',
+        'none', 'shades', 'bowtie', 'stache', 'scarf', 'bandana', 'snorkel',
+        'necktie', 'bandaid', 'gum', 'lei', 'hearts', 'monocle', 'sneakers',
+        'windup', 'carpet', 'balloon', 'backpack', 'skates', 'swimring',
+        'cape', 'chain', 'mask', 'patch', 'butterfly', 'drone', 'jetpack',
+        'crystal', 'atom', 'disco',
       ]);
       expect(itemsFor(SkinLayer.hat).map((i) => i.id).toList(), [
-        'none', 'cap', 'beanie', 'party', 'band', 'bucket', 'tophat',
-        'cowboy', 'prop', 'chef', 'viking', 'pirate', 'wizard', 'crown',
-        'halo',
+        'none', 'cap', 'beanie', 'party', 'band', 'bucket', 'sprout', 'cone',
+        'egg', 'paperboat', 'phones', 'tophat', 'cowboy', 'prop', 'chef',
+        'viking', 'fishbowl', 'cupcake', 'raincloud', 'antennae', 'sharkfin',
+        'pirate', 'wizard', 'volcano', 'ufo', 'bdaycake', 'crown', 'halo',
+        'planet', 'sunburst',
       ]);
       expect(itemsFor(SkinLayer.hoop).map((i) => i.id).toList(), [
-        'pink', 'sky', 'lime', 'violet', 'night', 'candy', 'polka', 'checker',
-        'donut', 'neon', 'lava', 'ice', 'rainbow', 'galaxy', 'blackhole',
+        'pink', 'sky', 'lime', 'violet', 'night', 'sunset', 'lemon',
+        'bamboo', 'rope', 'cloud', 'candy', 'polka', 'checker', 'donut',
+        'tire', 'melon', 'zipper', 'tape', 'pearls', 'vine', 'neon', 'lava',
+        'ice', 'electric', 'water', 'cog', 'rainbow', 'galaxy', 'blackhole',
+        'aurora',
       ]);
       expect(itemsFor(SkinLayer.trail).map((i) => i.id).toList(), [
-        'flame', 'blue', 'toxic', 'hot', 'shadow', 'sparkle', 'bubbles',
-        'hearts', 'laser', 'confetti', 'bolt', 'blocks', 'notes', 'rainbow',
-        'echo',
+        'flame', 'blue', 'toxic', 'hot', 'shadow', 'sunset', 'leaves', 'snow',
+        'petals', 'ink', 'sparkle', 'bubbles', 'hearts', 'laser', 'confetti',
+        'planes', 'popcorn', 'fireworks', 'steps', 'fish', 'bolt', 'blocks',
+        'notes', 'galaxy', 'prism', 'lavadrip', 'rainbow', 'echo',
+        'supernova', 'paint',
       ]);
     });
 
@@ -115,22 +126,22 @@ void main() {
     });
 
     test('gear / hats / hoops / trails follow rarity prices', () {
-      expect(itemsFor(SkinLayer.gear).map((i) => i.price).toList(), [
-        0, 250, 250, 250, 250, 250, 750, 750, 750, 750, 750, 2000, 2000,
-        2000, 5000,
-      ]);
-      expect(itemsFor(SkinLayer.hat).map((i) => i.price).toList(), [
-        0, 250, 250, 250, 250, 250, 750, 750, 750, 750, 750, 2000, 2000,
-        5000, 5000,
-      ]);
-      expect(itemsFor(SkinLayer.hoop).map((i) => i.price).toList(), [
-        0, 250, 250, 250, 250, 750, 750, 750, 750, 2000, 2000, 2000, 5000,
-        5000, 5000,
-      ]);
-      expect(itemsFor(SkinLayer.trail).map((i) => i.price).toList(), [
-        0, 250, 250, 250, 250, 750, 750, 750, 750, 750, 2000, 2000, 2000,
-        5000, 5000,
-      ]);
+      List<int> run(int f, int c, int r, int e, int l) => [
+        for (var i = 0; i < f; i++) 0,
+        for (var i = 0; i < c; i++) 250,
+        for (var i = 0; i < r; i++) 750,
+        for (var i = 0; i < e; i++) 2000,
+        for (var i = 0; i < l; i++) 5000,
+      ];
+      // PRD-2.3 §19.1 layer totals (C / R / E / L).
+      expect(itemsFor(SkinLayer.gear).map((i) => i.price).toList(),
+          run(1, 10, 10, 5, 4));
+      expect(itemsFor(SkinLayer.hat).map((i) => i.price).toList(),
+          run(1, 10, 10, 5, 4));
+      expect(itemsFor(SkinLayer.hoop).map((i) => i.price).toList(),
+          run(1, 9, 10, 6, 4));
+      expect(itemsFor(SkinLayer.trail).map((i) => i.price).toList(),
+          run(1, 9, 10, 6, 4));
     });
 
     test('every price is 0 or matches its rarity', () {
@@ -144,13 +155,13 @@ void main() {
       }
     });
 
-    test('layer totals and the full-collection total (121 600)', () {
+    test('layer totals and the full-collection total (PRD-2.3: 204 350)', () {
       expect(total(itemsFor(SkinLayer.bird)), 40850);
-      expect(total(itemsFor(SkinLayer.gear)), 16000);
-      expect(total(itemsFor(SkinLayer.hat)), 19000);
-      expect(total(itemsFor(SkinLayer.hoop)), 25000);
-      expect(total(itemsFor(SkinLayer.trail)), 20750);
-      expect(total(allItems.toList()), 121600);
+      expect(total(itemsFor(SkinLayer.gear)), 16000 + 24000);
+      expect(total(itemsFor(SkinLayer.hat)), 19000 + 21000);
+      expect(total(itemsFor(SkinLayer.hoop)), 25000 + 16750);
+      expect(total(itemsFor(SkinLayer.trail)), 20750 + 21000);
+      expect(total(allItems.toList()), 204350);
     });
   });
 
@@ -180,24 +191,39 @@ void main() {
           'hat:band', 'hat:prop', 'hat:wizard', 'hat:crown', 'hat:halo',
           'hoop:neon', 'hoop:lava', 'hoop:ice', 'hoop:rainbow', 'hoop:galaxy',
           'hoop:blackhole',
+          // PRD-2.3 §19.2 "Animated: yes"
+          'hat:sprout', 'hat:fishbowl', 'hat:raincloud', 'hat:antennae',
+          'hat:sharkfin', 'hat:volcano', 'hat:ufo', 'hat:bdaycake',
+          'hat:planet', 'hat:sunburst',
+          'gear:gum', 'gear:balloon', 'gear:backpack', 'gear:skates',
+          'gear:swimring', 'gear:cape', 'gear:butterfly', 'gear:drone',
+          'gear:crystal', 'gear:atom', 'gear:disco',
+          'hoop:tire', 'hoop:zipper', 'hoop:pearls', 'hoop:vine',
+          'hoop:electric', 'hoop:water', 'hoop:cog', 'hoop:aurora',
+          for (final id in const [
+            'sunset', 'leaves', 'snow', 'petals', 'ink', 'planes', 'popcorn',
+            'fireworks', 'steps', 'fish', 'galaxy', 'prism', 'lavadrip',
+            'supernova', 'paint',
+          ])
+            'trail:$id',
         },
       );
       expect(itemById(SkinLayer.gear, 'windup')!.animated, isTrue);
     });
 
-    test('kNewInUpdate is the mock START_NEW set', () {
-      expect(kNewInUpdate, {
-        'bird:lemon', 'bird:toucan', 'bird:ghost',
-        'gear:carpet', 'gear:windup',
-        'hat:crown', 'hat:wizard',
-        'hoop:neon',
-        'trail:hearts', 'trail:echo',
-      });
+    test('kNewInUpdate is the 2.3 list: 60 items, the showpieces first', () {
+      expect(kNewInUpdate.length, 60);
+      expect(kNewInUpdate.take(4).toList(), [
+        'hat:sunburst', 'gear:disco', 'hoop:aurora', 'trail:supernova',
+      ]);
       for (final key in kNewInUpdate) {
         final (layerKey, id) = (key.split(':')[0], key.split(':')[1]);
         final layer = SkinLayer.fromKey(layerKey)!;
         expect(itemById(layer, id), isNotNull, reason: key);
       }
+      // The 2.0 entries left the list.
+      expect(kNewInUpdate.contains('bird:lemon'), isFalse);
+      expect(kNewInUpdate.contains('trail:echo'), isFalse);
     });
   });
 

@@ -362,19 +362,17 @@ void main() {
       'featured item = first unowned update item, else the cheapest; '
       'hidden when all are owned',
       prefs: const {
-        'ownedItems': ['bird:lemon', 'bird:toucan'],
+        'ownedItems': ['hat:sunburst'],
       },
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
-        // kNewInUpdate order: lemon, toucan (owned), then ghost.
-        expect(shop.featured.item?.key, 'bird:ghost');
-        expect(shop.featured.nameText, 'GHOST');
-        expect(shop.featured.priceText, '2 000');
+        // PRD-2.3 §19.3: kNewInUpdate order: Sunburst (owned), then the
+        // Disco ball.
+        expect(shop.featured.item?.key, 'gear:disco');
+        expect(shop.featured.nameText, 'DISCO BALL');
+        expect(shop.featured.priceText, '5 000');
         // Every update item owned: the cheapest unowned (Sky, 150).
-        await game.storage.saveOwnedItems({
-          'bird:lemon',
-          ...kNewInUpdate,
-        });
+        await game.storage.saveOwnedItems({...kNewInUpdate});
         game.update(0);
         await flushAndMount(game);
         expect(shop.featured.item?.key, 'bird:sky');
@@ -394,7 +392,8 @@ void main() {
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
         final item = shop.featured.item!;
-        expect(item.key, 'bird:lemon');
+        // PRD-2.3 §19.3: the featured item is Sunburst until owned.
+        expect(item.key, 'hat:sunburst');
         shop.featured.onPressed();
         await flushAndMount(game);
         expect(spy.last('skins_open'), {'source': 'shop_featured'});
@@ -402,9 +401,9 @@ void main() {
         stepGame(game, 0.6);
         await flushAndMount(game);
         final screen = game.skinShop!;
-        expect(screen.tab, SkinLayer.bird);
-        expect(screen.tryOnId, 'lemon');
-        expect(spy.last('item_try_on'), containsPair('id', 'lemon'));
+        expect(screen.tab, SkinLayer.hat);
+        expect(screen.tryOnId, 'sunburst');
+        expect(spy.last('item_try_on'), containsPair('id', 'sunburst'));
       },
     );
   });

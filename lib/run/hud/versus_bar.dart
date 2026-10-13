@@ -87,7 +87,13 @@ class VersusBar extends PositionComponent {
     if (mine != null) {
       AvatarImages.paint(canvas, mine, youAv, opacity: a);
     } else {
-      VersusAvatar.paintBird(canvas, youAv, hud.game.menu.items.look, opacity: a);
+      VersusAvatar.paintBird(
+        canvas,
+        youAv,
+        hud.game.menu.items.look,
+        opacity: a,
+        backdrop: VersusAvatar.ownBackdrop,
+      );
     }
     _score(
       canvas,
@@ -114,7 +120,13 @@ class VersusBar extends PositionComponent {
     if (theirs != null) {
       AvatarImages.paint(canvas, theirs, themAv, opacity: ta);
     } else if (opp != null) {
-      VersusAvatar.paintBird(canvas, themAv, opp.look, mirror: true, opacity: ta);
+      VersusAvatar.paintBird(
+        canvas,
+        themAv,
+        opp.look,
+        mirror: true,
+        opacity: ta,
+      );
     }
     _score(
       canvas,

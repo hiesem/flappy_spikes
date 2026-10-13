@@ -1000,6 +1000,7 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
         look,
         mirror: reel, // the opponent faces left
         t: intro.time,
+        backdrop: reel ? null : VersusAvatar.ownBackdrop,
       );
     } else {
       // Person glyph, 32 pt (24-unit box).

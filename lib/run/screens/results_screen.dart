@@ -1097,6 +1097,7 @@ class ResultsPlayerColumn extends PositionComponent
         Rect.fromLTWH(left, top, s, s),
         bird,
         mirror: !mine,
+        backdrop: mine ? VersusAvatar.ownBackdrop : null,
       );
       return;
     }

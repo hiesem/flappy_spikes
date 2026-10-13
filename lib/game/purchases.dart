@@ -194,16 +194,20 @@ class Purchases {
         _inFlight.remove(product);
         try {
           await _grantGift(event);
-        } finally {
-          _confirm(event);
+        } catch (e) {
+          _confirm(event, error: e);
+          rethrow;
         }
+        _confirm(event);
       case IapStatus.purchased:
         _inFlight.remove(product);
         try {
           await _grantPurchase(product, event.transactionIds);
-        } finally {
-          _confirm(event);
+        } catch (e) {
+          _confirm(event, error: e);
+          rethrow;
         }
+        _confirm(event);
       case IapStatus.restored:
         _inFlight.remove(product);
         try {
@@ -214,9 +218,11 @@ class Purchases {
           } else {
             await _grantRestore(product);
           }
-        } finally {
-          _confirm(event);
+        } catch (e) {
+          _confirm(event, error: e);
+          rethrow;
         }
+        _confirm(event);
       case IapStatus.failed:
         _inFlight.remove(product);
         final reason = event.message;
@@ -241,9 +247,19 @@ class Purchases {
 
   /// Tells the store layer the event was handled (it completes the
   /// purchase with the store next).
-  void _confirm(IapEvent event) {
+  ///
+  /// S8-05: a grant that threw completes with the [error], so the store
+  /// layer keeps the purchase (not consumed / acknowledged) for a retry.
+  void _confirm(IapEvent event, {Object? error}) {
     final granted = event.granted;
-    if (granted != null && !granted.isCompleted) granted.complete();
+    if (granted == null || granted.isCompleted) return;
+    if (error == null) {
+      granted.complete();
+    } else {
+      // Handled by the store layer; never an unhandled async error here.
+      granted.future.ignore();
+      granted.completeError(error);
+    }
   }
 
   /// Transaction ids being granted right now (a re-delivery racing the

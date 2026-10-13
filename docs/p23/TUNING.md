@@ -167,7 +167,7 @@ The table is generated from `tuning_defaults.dart` by `dart run tool/tuning_sync
 | `point_fever_streak` | integer | `5` | §14.3 | A perfect FEVER pass sets the streak to max(this, streak + 1) |
 | `point_pair_gift` | integer | `5` | §14.3 | Pair "+N score" gift |
 | `point_perfect_band` | curve | `[[0,0]]` | §14.3 | owner 2026-10-13: perfect band ±pt around the gap centre by hoop index; <= 0 = no band (any rim-free pass is perfect) |
-| `point_bullseye_band` | decimal | `12` | §14.3 | owner 2026-10-13: Bullseye hit band ±pt (hit check only; the drawing stays 12) |
+| `point_bullseye_band` | curve | `[[0,12]]` | §14.3 | owner 2026-10-13: Bullseye hit band ±pt by hoop index (hit check only; the drawing stays 12) |
 | `bonus_prizes` | intList | `[25,25,25,50,50,50,75,75,150]` | §14.2 | Balloon prizes (shuffled; the largest is the jackpot) |
 | `bonus_feather_chance` | decimal | `0.6` | §14.2 | Chance per run that the golden feather appears |
 | `bonus_feather_gaps` | intList | `[10,40]` | §14.2 | The feather spawns at a random gap in [min, max] |

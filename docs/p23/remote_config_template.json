@@ -143,10 +143,10 @@
         },
         "point_bullseye_band": {
           "defaultValue": {
-            "value": "12"
+            "value": "[[0,12]]"
           },
-          "description": "§14.3 owner 2026-10-13: Bullseye hit band ±pt (hit check only; the drawing stays 12)",
-          "valueType": "NUMBER"
+          "description": "§14.3 owner 2026-10-13: Bullseye hit band ±pt by hoop index (hit check only; the drawing stays 12)",
+          "valueType": "JSON"
         }
       }
     },

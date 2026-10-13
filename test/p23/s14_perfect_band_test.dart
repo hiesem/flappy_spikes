@@ -34,7 +34,9 @@ void main() {
       expect(defs['point_perfect_band']!.value, [
         [0, 0],
       ]);
-      expect(defs['point_bullseye_band']!.value, 12.0);
+      expect(defs['point_bullseye_band']!.value, [
+        [0, 12],
+      ]);
       expect(PerfectBandConfig.bandAt(0), 0);
       expect(PerfectBandConfig.bandAt(80), 0);
       expect(BullseyeConfig.band, 12);
@@ -113,11 +115,21 @@ void main() {
 
     test('bullseye band 8: 10 pt off is no bullseye; default 12: it is', () {
       expect(BullseyeHoopKind.isBullseyeOffset(10), isTrue);
-      useTuning({'point_bullseye_band': '8'});
+      useTuning({'point_bullseye_band': '[[0,8]]'});
       expect(BullseyeConfig.band, 8);
       expect(BullseyeConfig.drawBand, 12, reason: 'the drawing stays fixed');
       expect(BullseyeHoopKind.isBullseyeOffset(10), isFalse);
       expect(BullseyeHoopKind.isBullseyeOffset(-7.5), isTrue);
+    });
+
+    test('bullseye band curve by hoop: [[1,12],[50,10],[100,8]]', () {
+      useTuning({'point_bullseye_band': '[[1,12],[50,10],[100,8]]'});
+      expect(BullseyeConfig.bandAt(1), 12);
+      expect(BullseyeConfig.bandAt(50), 10);
+      expect(BullseyeConfig.bandAt(200), 8);
+      expect(BullseyeHoopKind.isBullseyeOffset(11, hoopIndex: 1), isTrue);
+      expect(BullseyeHoopKind.isBullseyeOffset(11, hoopIndex: 50), isFalse);
+      expect(BullseyeHoopKind.isBullseyeOffset(9, hoopIndex: 120), isFalse);
     });
   });
 
@@ -225,7 +237,7 @@ void main() {
     },
   );
 
-  for (final (band, hit) in [(null, true), ('8', false)]) {
+  for (final (band, hit) in [(null, true), ('[[0,8]]', false)]) {
     FlameTester<FlappySpikesGame>(
       () => createRunTestGame(
         prefs: {'gamesPlayed': 20},

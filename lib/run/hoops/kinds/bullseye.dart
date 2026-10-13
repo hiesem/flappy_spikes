@@ -38,8 +38,14 @@ class BullseyeHoopKind extends HoopKind {
   /// band ([BullseyeConfig.band], `point_bullseye_band`, default ±12 pt)
   /// of [f]'s ring (measured in the ring's local frame, like the pass
   /// test).
-  static bool isBullseye(HoopFrame f, Vector2 bird, {int ring = 0}) =>
-      (f.toLocal(bird).y - f.rings[ring]).abs() <= BullseyeConfig.band;
+  static bool isBullseye(
+    HoopFrame f,
+    Vector2 bird, {
+    int ring = 0,
+    int hoopIndex = 0,
+  }) =>
+      (f.toLocal(bird).y - f.rings[ring]).abs() <=
+      BullseyeConfig.bandAt(hoopIndex);
 
   /// The hit flash left on [h] (0 = none; tests).
   static double flashOf(Hoop h) => _states[h]?.flash ?? 0;
@@ -104,8 +110,8 @@ class BullseyeHoopKind extends HoopKind {
   /// PRD-2.2 §11.1–2 (fix S7-04) whether the crossing [offset]
   /// (`Hoop.passOffset`, ring-local, like the perfect band) is inside the
   /// hit band ([BullseyeConfig.band], default ±12 pt).
-  static bool isBullseyeOffset(double offset) =>
-      offset.abs() <= BullseyeConfig.band;
+  static bool isBullseyeOffset(double offset, {int hoopIndex = 0}) =>
+      offset.abs() <= BullseyeConfig.bandAt(hoopIndex);
 
   @override
   void onPass(Hoop h, PassInfo p, RunContext c) {
@@ -114,10 +120,13 @@ class BullseyeHoopKind extends HoopKind {
     // position is only the fallback for a pass without a crossing offset.
     final off = h.passOffset;
     if (off != null) {
-      if (!isBullseyeOffset(off)) return;
+      if (!isBullseyeOffset(off, hoopIndex: h.plan.index)) return;
     } else {
       final bird = c.run.birdTrackPosition();
-      if (bird == null || !isBullseye(h.frame(), bird, ring: p.ring)) return;
+      if (bird == null ||
+          !isBullseye(h.frame(), bird, ring: p.ring, hoopIndex: h.plan.index)) {
+        return;
+      }
     }
     _states[h]?.flash = BullseyeConfig.flashGrow;
     c.earn(BullseyeConfig.coins, CoinSource.bullseye);

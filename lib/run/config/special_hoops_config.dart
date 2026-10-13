@@ -13,8 +13,13 @@ abstract final class BullseyeConfig {
 
   /// §3.24 Bullseye HIT band: ± this many pt around the ring centre. Owner
   /// 2026-10-13 (PRD-2.3 §15 tuning `point_bullseye_band`, default 12):
-  /// replaces the fixed 12 pt for the hit check only.
-  static double get band => TuningValues.current.d('point_bullseye_band');
+  /// replaces the fixed 12 pt for the hit check only. Owner 2026-10-13
+  /// (2.3.0+12): a keyframe curve by hoop index, default `[[0, 12]]`.
+  static double bandAt(int hoopIndex) =>
+      TuningValues.current.curve('point_bullseye_band').at(hoopIndex);
+
+  /// The hit band at hoop 0 (the default ±12 pt with the default curve).
+  static double get band => bandAt(0);
 
   /// §3.24 Coins for a bullseye. PRD-2.3 §14.2: 1 (`coin_bullseye`; was
   /// 3).

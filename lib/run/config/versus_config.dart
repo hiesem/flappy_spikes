@@ -101,6 +101,11 @@ abstract final class VersusConfig {
   /// PRD-2.3 §21.3 the Storage path of a player's picture.
   static String avatarPath(String uid) => 'avatars/$uid.jpg';
 
+  /// PRD-2.3 §5.5 / §21.3 (S8-06): the server deletes the picture with the
+  /// player doc (≈ 60 days after the last run), so an unchanged picture is
+  /// uploaded again when its last upload is older than this.
+  static const Duration avatarRefresh = Duration(days: 30);
+
   /// PRD-2.3 §21.4 / §0 item 7 the Remote Config parameter holding the
   /// salt of the hashed Play Games id (generated at deploy, never in git).
   static const String pgSaltKey = 'versus_pg_salt';

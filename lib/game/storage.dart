@@ -351,6 +351,7 @@ class GameStorage {
     metElements = (prefs.getStringList(_metElementsKey) ?? const []).toSet();
     versusNickname = prefs.getString(_versusNicknameKey);
     versusAvatar = _parseVersusAvatar(prefs.getString(_versusAvatarKey));
+    versusAvatarAt = _parseVersusAvatarAt(prefs.getString(_versusAvatarKey));
     uploadQueue = List.of(prefs.getStringList(_uploadQueueKey) ?? const []);
     uploadsToday = prefs.getInt(_uploadsTodayKey) ?? 0;
     uploadsDay = prefs.getString(_uploadsDayKey) ?? '';
@@ -573,19 +574,42 @@ class GameStorage {
     }
   }
 
+  /// S8-06: when [versusAvatar] was last uploaded (null = unknown: a
+  /// record saved before this field). Kept in the same `versusAvatar` JSON
+  /// (`at`, ms since epoch); the server deletes a picture with its player
+  /// doc, so the client uploads it again after `VersusConfig.avatarRefresh`.
+  DateTime? versusAvatarAt;
+
   /// Saves (or with null clears) [versusAvatar].
   Future<void> saveVersusAvatar(
     ({String uid, String hash, String url})? value,
   ) async {
     versusAvatar = value;
+    versusAvatarAt = value == null ? null : now();
     final prefs = await SharedPreferences.getInstance();
     if (value == null) {
       await prefs.remove(_versusAvatarKey);
     } else {
       await prefs.setString(
         _versusAvatarKey,
-        jsonEncode({'uid': value.uid, 'hash': value.hash, 'url': value.url}),
+        jsonEncode({
+          'uid': value.uid,
+          'hash': value.hash,
+          'url': value.url,
+          'at': versusAvatarAt!.millisecondsSinceEpoch,
+        }),
       );
+    }
+  }
+
+  static DateTime? _parseVersusAvatarAt(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final m = jsonDecode(raw);
+      final at = m is Map ? m['at'] : null;
+      return at is int ? DateTime.fromMillisecondsSinceEpoch(at) : null;
+    } catch (_) {
+      return null;
     }
   }
   // endregion PRD-2.3 §21.3

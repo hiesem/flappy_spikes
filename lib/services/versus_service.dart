@@ -623,8 +623,11 @@ class FirebaseVersusService implements VersusService {
       if (icon.isEmpty || uid.isEmpty) return;
       final hash = sha256.convert(utf8.encode(icon)).toString();
       final have = storage.versusAvatar;
+      final at = storage.versusAvatarAt;
       if (have != null && have.uid == uid && have.hash == hash &&
-          have.url.isNotEmpty) {
+          have.url.isNotEmpty &&
+          at != null &&
+          storage.now().difference(at) < VersusConfig.avatarRefresh) {
         return;
       }
       final jpeg = encodeVersusAvatar(base64Decode(icon));

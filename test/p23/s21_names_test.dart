@@ -143,6 +143,12 @@ void main() {
           g.onGameResize(Vector2(320, h));
 
           // ---- the results columns
+          // §10: leave the waiting state before injecting a death. Without
+          // the first tap, killRun bypassed the run's mistake pipeline and
+          // screenshots still contained the undismissed first-run hint.
+          g.onPlayfieldTap();
+          stepGame(g, .4);
+          await flushAndMount(g);
           final run = g.run!;
           run.state.score = 30;
           run.state.invulnerable = 0;

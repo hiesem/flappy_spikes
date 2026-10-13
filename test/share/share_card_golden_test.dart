@@ -4,12 +4,14 @@
 // the two new-player cards with two looks each.
 //
 // Update with: flutter test --update-goldens test/share/share_card_golden_test.dart
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flappy_spikes/levels/levels.dart';
 import 'package:flappy_spikes/share/share_card.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show FlutterError;
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> loadCardFonts() async {
@@ -126,6 +128,16 @@ final Map<String, ShareCardData> goldens = {
   ),
 };
 
+class _RejectingComparator extends GoldenFileComparator {
+  @override
+  Future<bool> compare(Uint8List imageBytes, Uri golden) async =>
+      throw FlutterError('S8-01 deliberate comparator rejection');
+
+  @override
+  Future<void> update(Uri golden, Uint8List imageBytes) async =>
+      throw StateError('The negative control must never update a golden');
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(loadCardFonts);
@@ -135,18 +147,62 @@ void main() {
       final image = await draw(data);
       expect(image.width, 1080);
       expect(image.height, 1080);
-      await expectLater(image, matchesGoldenFile('goldens/$name.png'));
+      // S8-01: ui.Image matching uses binding.runAsync, which catches a
+      // comparator FlutterError and returns null in a plain test(). Compare
+      // PNG bytes directly so a mismatch reaches the test runner.
+      final png = await image.toByteData(format: ui.ImageByteFormat.png);
+      await expectLater(
+        png!.buffer.asUint8List(),
+        matchesGoldenFile('goldens/$name.png'),
+      );
       image.dispose();
     });
   }
 
+  test('S8-01 a changed score actually rejects the golden', () async {
+    final image = await draw(
+      card(
+        score: 8,
+        best: 8,
+        look: const Look(bird: 'sky', gear: 'shades'),
+        name: 'SpikeDodger',
+        banner: 'I DARE YOU!',
+      ),
+    );
+    final png = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    // compareLists does not write failure images or rely on the widget
+    // binding; pin that the negative control has different pixels.
+    final reference = await File(
+      'test/share/goldens/spotlight_l0_1digit.png',
+    ).readAsBytes();
+    final result = await GoldenFileComparator.compareLists(
+      png!.buffer.asUint8List(),
+      reference,
+    );
+    expect(result.passed, isFalse);
+    result.dispose();
+    final original = goldenFileComparator;
+    try {
+      goldenFileComparator = _RejectingComparator();
+      await expectLater(
+        () => expectLater(
+          png.buffer.asUint8List(),
+          matchesGoldenFile('goldens/spotlight_l0_1digit.png'),
+        ),
+        throwsA(isA<FlutterError>()),
+      );
+    } finally {
+      goldenFileComparator = original;
+    }
+  });
+
   test('§4.2 item 6 an empty username leaves out the name tag', () async {
     final withTag = await draw(card(name: 'HiesemSurak'));
     final without = await draw(card(name: ''));
-    Future<Uint8List> rgba(ui.Image i) async =>
-        (await i.toByteData(format: ui.ImageByteFormat.rawRgba))!
-            .buffer
-            .asUint8List();
+    Future<Uint8List> rgba(ui.Image i) async => (await i.toByteData(
+      format: ui.ImageByteFormat.rawRgba,
+    ))!.buffer.asUint8List();
     // The tag centre (430, 730) is white with a tag, the level plate
     // colour (level 3) without.
     int px(Uint8List b, int x, int y) => (y * 1080 + x) * 4;

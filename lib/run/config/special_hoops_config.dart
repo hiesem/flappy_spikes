@@ -21,8 +21,8 @@ abstract final class BullseyeConfig {
   /// The hit band at hoop 0 (the default ±12 pt with the default curve).
   static double get band => bandAt(0);
 
-  /// §3.24 Coins for a bullseye. PRD-2.3 §14.2: 1 (`coin_bullseye`; was
-  /// 3).
+  /// §3.24 Coins for a bullseye. Owner 2026-10-13: 2 (`coin_bullseye`;
+  /// PRD-2.3 §14.2 had 1, 2.2 had 3).
   static int get coins => TuningValues.current.i('coin_bullseye');
 
   /// §5.23 Target rings (radius pt, colour), outside in.

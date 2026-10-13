@@ -61,15 +61,18 @@ void main() {
       final moving = HoopFrame(
         centre: Vector2(400, 355),
         opening: 118,
-        velocity: Vector2(0, 100), // rim end moving down into the bird
+        velocity: Vector2(0, -100), // rim end moving up into the bird
       );
-      final b = BirdCircle(Vector2(400, 289 + 20), r); // below the top end
+      // Owner 2026-10-13: an inside hit is the soft rim bump now
+      // (test/p23/s_tweaks_test.dart), so this pins the reflection with an
+      // outside hit: the bird above the top end.
+      final b = BirdCircle(Vector2(400, 289 - 20), r);
       final res = collideRims(moving, b, Vector2.zero())!;
       expect(res.bounced, isTrue);
-      // vn = (0 − 100)·(0,1) = −100 → vy += 1.85 × 100.
+      // vn = (0 + 100)·(0,−1) = −100 → vy −= 1.85 × 100.
       expect(
         res.velocity.y,
-        closeTo((1 + RunConfig.rimRestitution) * 100, 1e-4),
+        closeTo(-(1 + RunConfig.rimRestitution) * 100, 1e-4),
       );
     });
 

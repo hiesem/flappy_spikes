@@ -40,7 +40,7 @@ void main() {
       expect(RunConfig.luckySpinSlices, [1, 2, 3, 5, 1, 2]);
       expect(StarTrailConfig.reward, 2);
       expect(StarTrailConfig.bannerSub, '8 / 8 stars · +2 coins');
-      expect(BullseyeConfig.coins, 1);
+      expect(BullseyeConfig.coins, 2); // owner 2026-10-13 (was 1)
       expect(TrainConfig.comboCoins, 1);
       expect(TrainConfig.bannerSub, 'all three rings · +1 coin');
       expect(SwitchConfig.coins, 0);

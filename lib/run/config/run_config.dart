@@ -64,6 +64,17 @@ abstract final class RunConfig {
   /// §3.0.1 / §3.0.4 Rim restitution.
   static const double rimRestitution = 0.85;
 
+  /// Owner 2026-10-13 soft rim bump: a rim hit from inside the gap (top
+  /// rim while rising, bottom rim while falling) ends with this speed away
+  /// from the rim along the ring (pt/s; top: down, bottom: up) instead of
+  /// the [rimRestitution] reflection. Forward speed is kept.
+  static const double rimSoftBump = 60;
+
+  /// Owner 2026-10-13 soft rim bump: the contact normal's component along
+  /// the ring, into the gap, must be at least this (cos 60°) for a hit to
+  /// count as "from inside"; flatter (head-on) contacts reflect as before.
+  static const double rimSoftBumpMinAxis = 0.5;
+
   /// §3.0.1 Forward recovery toward cruise after a knock-back (pt/s²).
   static const double forwardRecovery = 2000;
 

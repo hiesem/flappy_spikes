@@ -58,7 +58,9 @@ class RimResult {
 /// math, no Forge2D). On overlap the bird is pushed out along the contact
 /// normal; if it moves into the rim relative to the rim end's own velocity
 /// ([HoopFrame.velocityAt]: centre motion plus rotation) its velocity is reflected along the normal with
-/// [restitution]; the tangential part is unchanged. Ends are processed in
+/// [restitution]; the tangential part is unchanged. Owner 2026-10-13: a
+/// hit from inside the gap instead ends with [RunConfig.rimSoftBump] away
+/// from the rim along the ring (local x kept). Ends are processed in
 /// order, each against the already-corrected bird (prototype `hoopStep`).
 /// Returns null without contact. Pure.
 RimResult? collideRims(
@@ -89,9 +91,29 @@ RimResult? collideRims(
       final vn = rvx * n.x + rvy * n.y;
       final bounced = vn < 0;
       if (bounced) {
-        v
-          ..x -= (1 + restitution) * vn * n.x
-          ..y -= (1 + restitution) * vn * n.y;
+        // Owner 2026-10-13 soft rim bump: a hit from inside the gap (the
+        // top rim while rising, the bottom rim while falling) loses its
+        // along-ring speed toward the rim and gets a small push away from
+        // it instead of the hard reflection; forward speed is kept.
+        final c = math.cos(f.tilt), s = math.sin(f.tilt);
+        final nly = -n.x * s + n.y * c;
+        final rly = -rvx * s + rvy * c;
+        final soft =
+            inside &&
+            nly * -side >= RunConfig.rimSoftBumpMinAxis &&
+            rly * side > 0;
+        if (soft) {
+          final vlx = v.x * c + v.y * s;
+          final rvl = -rv.x * s + rv.y * c;
+          final vly = rvl - side * RunConfig.rimSoftBump;
+          v
+            ..x = vlx * c - vly * s
+            ..y = vlx * s + vly * c;
+        } else {
+          v
+            ..x -= (1 + restitution) * vn * n.x
+            ..y -= (1 + restitution) * vn * n.y;
+        }
       }
       (contacts ??= []).add(
         RimContact(

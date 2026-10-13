@@ -44,7 +44,7 @@ void main() {
 
   for (final (element, kind, dy, streak, bonus) in [
     (ElementId.fever, HoopKindId.fever, 20.0, 5, 0),
-    (ElementId.bullseye, HoopKindId.bullseye, 0.0, 1, 1),
+    (ElementId.bullseye, HoopKindId.bullseye, 0.0, 1, 2), // owner 2026-10-13: bullseye pays 2
     (ElementId.bullseye, HoopKindId.bullseye, 20.0, 1, 0),
   ]) {
     FlameTester<FlappySpikesGame>(

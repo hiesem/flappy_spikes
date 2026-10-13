@@ -58,6 +58,10 @@ abstract class MenuScreen extends PositionComponent
 
   bool get locked => lock != null;
 
+  /// PRD-2.3 §26.2 the lock overlay of a locked screen once built (it lives
+  /// in the world, not under this screen; removed with it).
+  MenuLockOverlay? lockOverlay;
+
   /// False once the screen starts leaving: its buttons stop hit-testing.
   bool active = true;
 
@@ -148,7 +152,8 @@ abstract class MenuScreen extends PositionComponent
       size: backRect.size.toVector2(),
       onPressed: onBack,
       isActive: isBackActive,
-      // Above the lock overlay (PRD-2.3 §26.2), which is 0.
+      // PRD-2.3 §26.2: the lock overlay (in the world, above this screen)
+      // leaves a hole over it, so it takes its taps.
       priority: 1,
     );
     titleText = MenuText(
@@ -182,25 +187,21 @@ abstract class MenuScreen extends PositionComponent
       ),
     ]);
     await buildContent();
-    // PRD-2.3 §26.2: the lock goes above the content and below the back
-    // button (which takes a higher priority), so the content is dimmed and
-    // the back button still works.
+    // PRD-2.3 §26.2 (owner 2026-10-13): the lock covers the whole
+    // playfield, both spike strips included, so it goes into the world
+    // above the screens and the ground strip ([MenuLockOverlay]); the back
+    // button shows through its hole and the coin pill is lifted above it.
     final lines = lock;
     if (lines != null) {
-      add(
-        MenuLockOverlay(
-          rect: Rect.fromLTRB(
-            0,
-            Config.menuSpikeHeight,
-            Config.worldWidth,
-            h - Config.menuSpikeHeight,
-          ),
-          lines: lines,
-          // S8-12: the shared back-button artwork (the world's corner box,
-          // under the screens) shows through at full brightness.
-          hole: backRect,
-        ),
+      final overlay = lockOverlay = MenuLockOverlay(
+        rect: Rect.fromLTRB(0, 0, Config.worldWidth, h),
+        lines: lines,
+        // S8-12: the shared back-button artwork (the world's corner box,
+        // under the screens) shows through at full brightness.
+        hole: backRect.shift(position.toOffset()),
+        source: this,
       );
+      game.world.add(overlay);
     }
     _built = true;
     if (_detached) return;
@@ -216,6 +217,7 @@ abstract class MenuScreen extends PositionComponent
 
   @override
   void onRemove() {
+    lockOverlay?.removeFromParent();
     game.menuScreenRemoved(this);
     super.onRemove();
   }

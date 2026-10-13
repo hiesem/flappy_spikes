@@ -44,8 +44,10 @@ a { color: inherit; }
 
 /* header */
 header.bar { position: sticky; top: 0; z-index: 10; background: var(--white); }
-header.bar .wrap { display: flex; align-items: center; gap: 14px; padding-block: 10px; }
-header.bar .spikes { position: absolute; left: 0; right: 0; top: 100%; }
+header.bar .wrap { display: flex; align-items: center; gap: 14px; padding-block: 8px; }
+/* the strip's top ~31 px is solid (only the bottom ~13 px are teeth): tuck the solid part under the bar so the header
+   hugs its contents instead of showing a wide white band below them */
+header.bar .spikes { position: absolute; left: 0; right: 0; top: calc(100% - 26px); z-index: -1; }
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; min-width: 0; color: var(--plum); }
 .brand img { width: 40px; height: 40px; border-radius: 10px; }
 .brand span { font-family: var(--display); font-size: 26px; white-space: nowrap; color: #6F6F6F; }

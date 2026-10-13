@@ -1,22 +1,35 @@
 {{> content_head}}
 <main id="top">
-  <section class="zone page-hero first p-phoenix">
+  <section class="zone page-hero first p-phoenix" data-rays-at="hero-art">
     <div class="wrap">
       <div class="hero-text">
         <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a> › Birds, skins and ranks</nav>
         <span class="eyebrow">Birds &amp; skins</span>
         <h1>Birds, skins and ranks</h1>
+        <span class="banner">DRESS UP YOUR BIRD</span>
         <p class="lead">30 birds, from a rubber duck to a phoenix, and 30 hats, gear, hoops and trails to go with them. Here is every bird, a look at the skins, and the ten ranks from Egg to Legend.</p>
+        <nav class="jump" aria-label="On this page"><a href="#birds">Birds</a><a href="#skins">Hats &amp; gear</a><a href="#ranks">Ranks</a><a href="#coins">Coins</a></nav>
       </div>
-      <div class="art"><canvas data-paint="bird:phoenix" width="320" height="320" aria-label="The Phoenix bird">The Phoenix, a legendary bird.</canvas></div>
+      <div class="art" id="hero-art">
+        <div class="sticker"><b>30</b><span>BIRDS</span></div>
+        <div class="disc"><canvas data-paint="bird:phoenix" width="320" height="320" aria-label="The Phoenix bird">The Phoenix, a legendary bird.</canvas></div>
+      </div>
     </div>
   </section>
 
-  <section class="zone prose p-falcon" style="--from: #FFD3A8" id="birds">
+  <section class="zone parade-band p-phoenix" style="--from: #FFD3A8; --rx: 50%; --ry: 50%" aria-label="A parade of birds">
+    <canvas data-paint="parade" width="1200" height="260" aria-label="A parade of Flappy Spikes birds in hats and gear">Birds in hats and gear: a rubber duck, a penguin, a phoenix, a robot and more.</canvas>
+  </section>
+
+  <section class="zone sec p-falcon" style="--from: #FFD3A8; --rx: 50%; --ry: 20%" id="birds">
     <div class="wrap">
-      <h2>Birds by rarity</h2>
-      <p>Every Flappy Spikes player starts with the Classic pink bird, the same bird that flew in 2014. The other 29 birds are unlocked with coins in the Skins screen, sorted by rarity. Many of the epic and legendary birds are animated: the Ghost flickers, the Magma bird glows and the Galaxy bird twinkles.</p>
-      <div class="rar"><h3>Common <small>10 birds · 150 coins each, Classic is free</small></h3><div class="cards mini">
+      <div class="sticker pink"><b>4</b><span>RARITIES</span></div>
+      <div class="sec-head">
+        <span class="eyebrow"><b>01</b>The flock</span>
+        <h2>Birds by rarity</h2>
+        <p>Every Flappy Spikes player starts with the Classic pink bird, the same bird that flew in 2014. The other 29 birds are unlocked with coins in the Skins screen, sorted by rarity. Many of the epic and legendary birds are animated: the Ghost flickers, the Magma bird glows and the Galaxy bird twinkles.</p>
+      </div>
+      <div class="rar"><h3><span class="pill">Common</span> <small>10 birds · 150 coins each, Classic is free</small></h3><div class="cards mini">
         <div class="card"><canvas data-paint="bird:classic" width="96" height="96" aria-label="Classic">Classic</canvas><b>Classic</b></div>
         <div class="card"><canvas data-paint="bird:sky" width="96" height="96" aria-label="Sky">Sky</canvas><b>Sky</b></div>
         <div class="card"><canvas data-paint="bird:lime" width="96" height="96" aria-label="Lime">Lime</canvas><b>Lime</b></div>
@@ -28,7 +41,7 @@
         <div class="card"><canvas data-paint="bird:coral" width="96" height="96" aria-label="Coral dots">Coral dots</canvas><b>Coral dots</b></div>
         <div class="card"><canvas data-paint="bird:snow" width="96" height="96" aria-label="Snow">Snow</canvas><b>Snow</b></div>
       </div></div>
-      <div class="rar"><h3>Rare <small>10 birds · 750 coins each</small></h3><div class="cards mini">
+      <div class="rar rare"><h3><span class="pill">Rare</span> <small>10 birds · 750 coins each</small></h3><div class="cards mini">
         <div class="card"><canvas data-paint="bird:robin" width="96" height="96" aria-label="Robin">Robin</canvas><b>Robin</b></div>
         <div class="card"><canvas data-paint="bird:toucan" width="96" height="96" aria-label="Toucan">Toucan</canvas><b>Toucan</b></div>
         <div class="card"><canvas data-paint="bird:chick" width="96" height="96" aria-label="Chick">Chick</canvas><b>Chick</b></div>
@@ -40,7 +53,7 @@
         <div class="card"><canvas data-paint="bird:zebra" width="96" height="96" aria-label="Zebra">Zebra</canvas><b>Zebra</b></div>
         <div class="card"><canvas data-paint="bird:buzz" width="96" height="96" aria-label="Buzz">Buzz</canvas><b>Buzz</b></div>
       </div></div>
-      <div class="rar"><h3>Epic <small>6 birds · 2,000 coins each</small></h3><div class="cards mini">
+      <div class="rar epic"><h3><span class="pill">Epic</span> <small>6 birds · 2,000 coins each</small></h3><div class="cards mini">
         <div class="card"><canvas data-paint="bird:robo" width="96" height="96" aria-label="Robo">Robo</canvas><b>Robo</b></div>
         <div class="card"><canvas data-paint="bird:zombie" width="96" height="96" aria-label="Zombie">Zombie</canvas><b>Zombie</b></div>
         <div class="card"><canvas data-paint="bird:ghost" width="96" height="96" aria-label="Ghost">Ghost</canvas><b>Ghost</b></div>
@@ -48,7 +61,7 @@
         <div class="card"><canvas data-paint="bird:frost" width="96" height="96" aria-label="Frost">Frost</canvas><b>Frost</b></div>
         <div class="card"><canvas data-paint="bird:magma" width="96" height="96" aria-label="Magma">Magma</canvas><b>Magma</b></div>
       </div></div>
-      <div class="rar"><h3>Legendary <small>4 birds · 5,000 coins each</small></h3><div class="cards mini">
+      <div class="rar legendary"><h3><span class="pill">Legendary</span> <small>4 birds · 5,000 coins each</small></h3><div class="cards mini">
         <div class="card"><canvas data-paint="bird:galaxy" width="96" height="96" aria-label="Galaxy">Galaxy</canvas><b>Galaxy</b></div>
         <div class="card"><canvas data-paint="bird:golden" width="96" height="96" aria-label="Golden">Golden</canvas><b>Golden</b></div>
         <div class="card"><canvas data-paint="bird:rainbow" width="96" height="96" aria-label="Rainbow">Rainbow</canvas><b>Rainbow</b></div>
@@ -58,11 +71,17 @@
     </div>
   </section>
 
-  <section class="zone prose p-glider" style="--from: #FCD9EE" id="skins">
+  <section class="zone sec p-glider" style="--from: #FCD9EE; --rx: 80%; --ry: 12%" id="skins">
     <div class="wrap">
-      <h2>Hats, gear, hoops and trails</h2>
-      <p>On top of the bird there are four more layers, each with 30 choices: <strong>hats</strong> from a cap to a crown, <strong>gear</strong> from shades to a jetpack, <strong>hoops</strong> that replace the pink rings you fly through, and <strong>trails</strong> that stream behind your bird while it's on fire or on a ride. Accessories cost 250 coins (common), 750 (rare), 2,000 (epic) or 5,000 (legendary). Mix them however you like: your look also shows in Versus, so other players race against your style. A few of them:</p>
-      <h3>Hats</h3>
+      <div class="sticker"><b>{{total}}</b><span>ITEMS</span></div>
+      <div class="sec-head">
+        <span class="eyebrow"><b>02</b>The wardrobe</span>
+        <h2>Hats, gear, hoops and trails</h2>
+      </div>
+      <div class="panel">
+        <p>On top of the bird there are four more layers, each with 30 choices: <strong>hats</strong> from a cap to a crown, <strong>gear</strong> from shades to a jetpack, <strong>hoops</strong> that replace the pink rings you fly through, and <strong>trails</strong> that stream behind your bird while it's on fire or on a ride. Accessories cost 250 coins (common), 750 (rare), 2,000 (epic) or 5,000 (legendary). Mix them however you like: your look also shows in Versus, so other players race against your style. A few of them:</p>
+      </div>
+      <div class="group"><h3><span class="pill">Hats</span></h3>
       <div class="cards mini">
           <div class="card"><canvas data-paint="hat:cap" width="96" height="96" aria-label="Cap">Cap</canvas><b>Cap</b></div>
           <div class="card"><canvas data-paint="hat:party" width="96" height="96" aria-label="Party hat">Party hat</canvas><b>Party hat</b></div>
@@ -72,8 +91,8 @@
           <div class="card"><canvas data-paint="hat:pirate" width="96" height="96" aria-label="Pirate">Pirate</canvas><b>Pirate</b></div>
           <div class="card"><canvas data-paint="hat:wizard" width="96" height="96" aria-label="Wizard">Wizard</canvas><b>Wizard</b></div>
           <div class="card"><canvas data-paint="hat:crown" width="96" height="96" aria-label="Crown">Crown</canvas><b>Crown</b></div>
-      </div>
-      <h3>Gear</h3>
+      </div></div>
+      <div class="group"><h3><span class="pill">Gear</span></h3>
       <div class="cards mini">
           <div class="card"><canvas data-paint="acc:shades" width="96" height="96" aria-label="Shades">Shades</canvas><b>Shades</b></div>
           <div class="card"><canvas data-paint="acc:bowtie" width="96" height="96" aria-label="Bow tie">Bow tie</canvas><b>Bow tie</b></div>
@@ -83,8 +102,8 @@
           <div class="card"><canvas data-paint="acc:chain" width="96" height="96" aria-label="Gold chain">Gold chain</canvas><b>Gold chain</b></div>
           <div class="card"><canvas data-paint="acc:mask" width="96" height="96" aria-label="Hero mask">Hero mask</canvas><b>Hero mask</b></div>
           <div class="card"><canvas data-paint="acc:jetpack" width="96" height="96" aria-label="Jetpack">Jetpack</canvas><b>Jetpack</b></div>
-      </div>
-      <h3>Hoops</h3>
+      </div></div>
+      <div class="group"><h3><span class="pill">Hoops</span></h3>
       <div class="cards mini">
           <div class="card"><canvas data-paint="hoop:pink" width="96" height="96" aria-label="Classic">Classic</canvas><b>Classic</b></div>
           <div class="card"><canvas data-paint="hoop:candy" width="96" height="96" aria-label="Candy cane">Candy cane</canvas><b>Candy cane</b></div>
@@ -94,8 +113,8 @@
           <div class="card"><canvas data-paint="hoop:lava" width="96" height="96" aria-label="Lava">Lava</canvas><b>Lava</b></div>
           <div class="card"><canvas data-paint="hoop:rainbow" width="96" height="96" aria-label="Rainbow">Rainbow</canvas><b>Rainbow</b></div>
           <div class="card"><canvas data-paint="hoop:blackhole" width="96" height="96" aria-label="Black hole">Black hole</canvas><b>Black hole</b></div>
-      </div>
-      <h3>Trails</h3>
+      </div></div>
+      <div class="group"><h3><span class="pill">Trails</span></h3>
       <div class="cards mini">
           <div class="card"><canvas data-paint="trail:flame" width="96" height="96" aria-label="Classic flame">Classic flame</canvas><b>Classic flame</b></div>
           <div class="card"><canvas data-paint="trail:blue" width="96" height="96" aria-label="Blue flame">Blue flame</canvas><b>Blue flame</b></div>
@@ -105,44 +124,48 @@
           <div class="card"><canvas data-paint="trail:bolt" width="96" height="96" aria-label="Lightning">Lightning</canvas><b>Lightning</b></div>
           <div class="card"><canvas data-paint="trail:notes" width="96" height="96" aria-label="Music">Music</canvas><b>Music</b></div>
           <div class="card"><canvas data-paint="trail:rainbow" width="96" height="96" aria-label="Rainbow">Rainbow</canvas><b>Rainbow</b></div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="zone sec p-legend" style="--from: #EBD3F5; --rx: 50%; --ry: 55%" id="ranks">
+    <div class="wrap">
+      <div class="sticker pink"><b>10</b><span>RANKS</span></div>
+      <div class="sec-head">
+        <span class="eyebrow"><b>03</b>Egg to Legend</span>
+        <h2>The 10 ranks</h2>
+        <p>Your rank comes from your best score. Score 10 in a run and you hatch as an Egg; reach 5,000 and you are a Legend. Each new rank pays a one-time coin reward and gives you a bigger emblem on the Levels screen.</p>
       </div>
+      <ol class="ladder">
+        <li><span class="lv" aria-hidden="true">1</span><canvas data-paint="emblem:1" width="170" height="170" aria-label="The Egg emblem">The Egg emblem</canvas><b>EGG</b><span>Best score <em>10</em></span></li>
+        <li><span class="lv" aria-hidden="true">2</span><canvas data-paint="emblem:2" width="170" height="170" aria-label="The Chick emblem">The Chick emblem</canvas><b>CHICK</b><span>Best score <em>50</em></span></li>
+        <li><span class="lv" aria-hidden="true">3</span><canvas data-paint="emblem:3" width="170" height="170" aria-label="The Fledgling emblem">The Fledgling emblem</canvas><b>FLEDGLING</b><span>Best score <em>100</em></span></li>
+        <li><span class="lv" aria-hidden="true">4</span><canvas data-paint="emblem:4" width="170" height="170" aria-label="The Flapper emblem">The Flapper emblem</canvas><b>FLAPPER</b><span>Best score <em>200</em></span></li>
+        <li><span class="lv" aria-hidden="true">5</span><canvas data-paint="emblem:5" width="170" height="170" aria-label="The Glider emblem">The Glider emblem</canvas><b>GLIDER</b><span>Best score <em>400</em></span></li>
+        <li><span class="lv" aria-hidden="true">6</span><canvas data-paint="emblem:6" width="170" height="170" aria-label="The Falcon emblem">The Falcon emblem</canvas><b>FALCON</b><span>Best score <em>600</em></span></li>
+        <li><span class="lv" aria-hidden="true">7</span><canvas data-paint="emblem:7" width="170" height="170" aria-label="The Hawk emblem">The Hawk emblem</canvas><b>HAWK</b><span>Best score <em>800</em></span></li>
+        <li><span class="lv" aria-hidden="true">8</span><canvas data-paint="emblem:8" width="170" height="170" aria-label="The Spike Ace emblem">The Spike Ace emblem</canvas><b>SPIKE ACE</b><span>Best score <em>1,000</em></span></li>
+        <li><span class="lv" aria-hidden="true">9</span><canvas data-paint="emblem:9" width="170" height="170" aria-label="The Phoenix emblem">The Phoenix emblem</canvas><b>PHOENIX</b><span>Best score <em>2,000</em></span></li>
+        <li><span class="lv" aria-hidden="true">10</span><canvas data-paint="emblem:10" width="170" height="170" aria-label="The Legend emblem">The Legend emblem</canvas><b>LEGEND</b><span>Best score <em>5,000</em></span></li>
+      </ol>
     </div>
   </section>
 
-  <section class="zone prose p-legend" style="--from: #EBD3F5" id="ranks">
+  <section class="zone sec p-fledge" style="--from: #2A1260; --rx: 70%; --ry: 40%" id="coins">
     <div class="wrap">
-      <h2>The 10 ranks</h2>
-      <p>Your rank comes from your best score. Score 10 in a run and you hatch as an Egg; reach 5,000 and you are a Legend. Each new rank pays a one-time coin reward and gives you a bigger emblem on the Levels screen.</p>
-      <table class="ranktable">
-        <thead><tr><th scope="col">Emblem</th><th scope="col">Rank</th><th scope="col">Best score</th></tr></thead>
-        <tbody>
-          <tr><td><canvas data-paint="emblem:1" width="72" height="72" aria-label="The Egg emblem">The Egg emblem</canvas></td><td class="n">EGG</td><td>10</td></tr>
-          <tr><td><canvas data-paint="emblem:2" width="72" height="72" aria-label="The Chick emblem">The Chick emblem</canvas></td><td class="n">CHICK</td><td>50</td></tr>
-          <tr><td><canvas data-paint="emblem:3" width="72" height="72" aria-label="The Fledgling emblem">The Fledgling emblem</canvas></td><td class="n">FLEDGLING</td><td>100</td></tr>
-          <tr><td><canvas data-paint="emblem:4" width="72" height="72" aria-label="The Flapper emblem">The Flapper emblem</canvas></td><td class="n">FLAPPER</td><td>200</td></tr>
-          <tr><td><canvas data-paint="emblem:5" width="72" height="72" aria-label="The Glider emblem">The Glider emblem</canvas></td><td class="n">GLIDER</td><td>400</td></tr>
-          <tr><td><canvas data-paint="emblem:6" width="72" height="72" aria-label="The Falcon emblem">The Falcon emblem</canvas></td><td class="n">FALCON</td><td>600</td></tr>
-          <tr><td><canvas data-paint="emblem:7" width="72" height="72" aria-label="The Hawk emblem">The Hawk emblem</canvas></td><td class="n">HAWK</td><td>800</td></tr>
-          <tr><td><canvas data-paint="emblem:8" width="72" height="72" aria-label="The Spike Ace emblem">The Spike Ace emblem</canvas></td><td class="n">SPIKE ACE</td><td>1,000</td></tr>
-          <tr><td><canvas data-paint="emblem:9" width="72" height="72" aria-label="The Phoenix emblem">The Phoenix emblem</canvas></td><td class="n">PHOENIX</td><td>2,000</td></tr>
-          <tr><td><canvas data-paint="emblem:10" width="72" height="72" aria-label="The Legend emblem">The Legend emblem</canvas></td><td class="n">LEGEND</td><td>5,000</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <section class="zone prose p-fledge" style="--from: #2A1260" id="coins">
-    <div class="wrap">
-      <h2>How to earn coins</h2>
-      <ul>
-        <li><strong>Fly.</strong> Every hoop pays 1 coin, a perfect pays 2.</li>
-        <li><strong>Grab the bonuses.</strong> The Piggy Bank, the Firefly Jar, the Star Trail, the balloon bonus and the puzzle all pay coins. <a href="/how-to-play">How to play</a> explains each one.</li>
-        <li><strong>Win in Versus.</strong> A win pays 10 coins, a draw 5. See <a href="/versus">how Versus works</a>.</li>
-        <li><strong>Rank up.</strong> Every new rank pays a one-time reward, from 50 coins for Egg to 5,000 for Legend.</li>
-        <li><strong>Free coins.</strong> The Shop has free coins for watching a short video, a few times a day.</li>
-        <li><strong>Coin packs.</strong> If you want a shortcut, the Shop sells coin packs.</li>
+      <div class="sec-head">
+        <span class="eyebrow"><b>04</b>Coins</span>
+        <h2>How to earn coins</h2>
+      </div>
+      <ul class="cards icons">
+        <li class="card"><span class="ico" aria-hidden="true">+2</span><p><strong>Fly.</strong> Every hoop pays 1 coin, a perfect pays 2.</p></li>
+        <li class="card"><span class="ico pink" aria-hidden="true">$</span><p><strong>Grab the bonuses.</strong> The Piggy Bank, the Firefly Jar, the Star Trail, the balloon bonus and the puzzle all pay coins. <a href="/how-to-play">How to play</a> explains each one.</p></li>
+        <li class="card"><span class="ico purple" aria-hidden="true">+10</span><p><strong>Win in Versus.</strong> A win pays 10 coins, a draw 5. See <a href="/versus">how Versus works</a>.</p></li>
+        <li class="card"><span class="ico orange" aria-hidden="true">UP</span><p><strong>Rank up.</strong> Every new rank pays a one-time reward, from 50 coins for Egg to 5,000 for Legend.</p></li>
+        <li class="card"><span class="ico teal s" aria-hidden="true">FREE</span><p><strong>Free coins.</strong> The Shop has free coins for watching a short video, a few times a day.</p></li>
+        <li class="card"><span class="ico blue s" aria-hidden="true">PACK</span><p><strong>Coin packs.</strong> If you want a shortcut, the Shop sells coin packs.</p></li>
       </ul>
-      <p>The Classic bird has been around since the start: read <a href="/story">the Flappy Spikes story</a>.</p>
+      <div class="panel"><p>The Classic bird has been around since the start: read <a href="/story">the Flappy Spikes story</a>.</p></div>
     </div>
   </section>
 

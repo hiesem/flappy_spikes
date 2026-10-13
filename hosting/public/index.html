@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Flappy Spikes - Flap Fast, Fly Far</title>
-<meta name="description" content="Flap fast, fly far. Fly through the hoops, race real players and unlock 148 birds, hats and gear. Free on Google Play.">
+<meta name="description" content="Flap fast, fly far. Fly through the hoops, race real players and unlock 148 birds, hats and gear. Free on Android and iPhone.">
 <link rel="canonical" href="https://flappyspikes.com/">
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
 <link rel="icon" type="image/png" sizes="48x48" href="/icon-48.png">
@@ -40,12 +40,13 @@
    "@id": "https://flappyspikes.com/#game",
    "name": "Flappy Spikes",
    "alternateName": "Flappy Spikes – Flap Fast, Fly Far",
-   "description": "Flappy Spikes is a free one-tap flying game for Android, coming to iPhone. Tap to flap, fly your bird through the hoops and stay clear of the spikes. First released on iPhone in 2014 and rebuilt in 2026, it now has versus races against real players, power-ups, portal rides, 30 birds to unlock and 10 ranks from Egg to Legend. Flap fast, fly far.",
+   "description": "Flappy Spikes is a free one-tap flying game for Android, iPhone and iPad. Tap to flap, fly your bird through the hoops and stay clear of the spikes. First released on iPhone in 2014 and rebuilt in 2026, it now has versus races against real players, power-ups, portal rides, 30 birds to unlock and 10 ranks from Egg to Legend. Flap fast, fly far.",
    "applicationCategory": "GameApplication",
    "genre": "Arcade",
-   "operatingSystem": "Android",
+   "operatingSystem": "Android, iOS",
    "gamePlatform": [
-    "Android"
+    "Android",
+    "iOS"
    ],
    "offers": {
     "@type": "Offer",
@@ -134,8 +135,10 @@ a { color: inherit; }
 
 /* header */
 header.bar { position: sticky; top: 0; z-index: 10; background: var(--white); }
-header.bar .wrap { display: flex; align-items: center; gap: 14px; padding-block: 10px; }
-header.bar .spikes { position: absolute; left: 0; right: 0; top: 100%; }
+header.bar .wrap { display: flex; align-items: center; gap: 14px; padding-block: 8px; }
+/* the strip's top ~31 px is solid (only the bottom ~13 px are teeth): tuck the solid part under the bar so the header
+   hugs its contents instead of showing a wide white band below them */
+header.bar .spikes { position: absolute; left: 0; right: 0; top: calc(100% - 26px); z-index: -1; }
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; min-width: 0; color: var(--plum); }
 .brand img { width: 40px; height: 40px; border-radius: 10px; }
 .brand span { font-family: var(--display); font-size: 26px; white-space: nowrap; color: #6F6F6F; }
@@ -247,39 +250,51 @@ footer .fine { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px 18px; 
 footer .fine p { margin: 0; }
 footer .fine a { color: #FFFFFF; }
 footer noscript img { vertical-align: middle; }
-body.has-bar footer .wrap { padding-bottom: 104px; }
 /* PRD-2.3 §11.4 homepage additions, in the approved design's styles (no new artwork) */
-.intro { font-size: 16px; line-height: 1.5; max-width: 44ch; margin: 0; font-weight: 600; }
-.intro a, .more { color: var(--acc); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.more { color: var(--acc); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .p-legend .more { color: var(--gold); }
 .more { font-size: 17px; justify-self: start; }
 .step .more { justify-self: center; font-size: 15px; }
-@media (max-width: 860px) { .hero .intro { margin-inline: auto; } }
-.facts { width: min(600px, 100%); margin: 8px 0 0; background: var(--white); border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 22px 26px; text-align: left; font-size: 16px; line-height: 1.4; }
-.facts dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; }
-.facts h3 { margin: 0 0 10px; font-family: var(--display); font-weight: 400; font-size: 26px; color: var(--plum); }
-.facts dt { color: var(--pink); }
-.facts dd { margin: 0; }
-@media (max-width: 520px) { .facts dl { grid-template-columns: 1fr; gap: 2px; } .facts dd { margin-bottom: 8px; } }
 .faq { --rx: 50%; --ry: 30%; }
 .faq .wrap { padding-block: 0 50px; }
 .faq-list { display: grid; gap: 14px; max-width: 760px; }
 .faq details { background: var(--white); border-radius: 18px; box-shadow: 6px 6px 0 var(--plum); padding: 16px 22px; }
-.faq summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 12px; }
+.faq summary { position: relative; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 12px; -webkit-tap-highlight-color: transparent; }
 .faq summary::-webkit-details-marker { display: none; }
-.faq summary::before { content: '+'; flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--pink); color: var(--white); font-size: 22px; line-height: 1; }
-.faq details[open] summary::before { content: '\2212'; }
+.faq summary:focus-visible { outline: 3px solid var(--gold); outline-offset: 6px; border-radius: 8px; }
+/* the marker: a pink disc with a white plus; its upright bar turns flat (a minus) while the question is open */
+.faq summary::before { content: ''; flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--pink) linear-gradient(var(--white), var(--white)) center / 14px 3px no-repeat; transition: transform .32s cubic-bezier(.65, 0, .35, 1); }
+.faq summary::after { content: ''; position: absolute; left: 13.5px; top: calc(50% - 7px); width: 3px; height: 14px; border-radius: 2px; background: var(--white); transition: transform .32s cubic-bezier(.65, 0, .35, 1); }
+.faq details[open]:not(.closing) summary::before { transform: rotate(180deg); }
+.faq details[open]:not(.closing) summary::after { transform: rotate(90deg); }
+@media (hover: hover) { .faq summary:hover::before { box-shadow: 0 0 0 4px rgba(236, 0, 140, .18); } }
 .faq h3 { margin: 0; font-size: 19px; font-weight: 600; font-family: var(--body); color: var(--plum); }
 .faq details p { margin: 10px 0 2px 42px; font-size: 17px; line-height: 1.5; }
 .faq details a { color: var(--pink); }
-/* the sticky store bar on phones: only below 720 px, once the hero badges have scrolled away; it can be closed */
-.storebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: none; align-items: center; justify-content: center; gap: 12px; padding: 10px 56px calc(10px + env(safe-area-inset-bottom)) 16px; background: var(--white); box-shadow: 0 -4px 0 var(--plum); transform: translateY(110%); transition: transform .25s; }
-.storebar .badge img { height: 48px; width: auto; }
-.storebar span { font-family: var(--display); font-size: 18px; color: var(--plum); }
-.storebar button { position: absolute; right: 8px; top: 50%; translate: 0 -50%; width: 44px; height: 44px; border: 0; background: transparent; color: var(--plum); font-size: 28px; line-height: 1; cursor: pointer; }
-@media (max-width: 719.98px) { .storebar { display: flex; } .storebar.show { transform: none; } }
-@media (max-width: 380px) { .storebar span { display: none; } }
-@media (prefers-reduced-motion: reduce) { .storebar { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .faq summary::before, .faq summary::after { transition: none; } }
+/* the sticky "get the game" card on phones and tablets: storebar.js sets data-os (android / ios) from the user agent,
+   so desktops never show it; it slides up once the hero badges have scrolled away, and hides again over the closing
+   call to action and the footer. It can be closed (for the session). */
+.storebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: none; justify-content: center; padding: 0 12px calc(12px + env(safe-area-inset-bottom)); pointer-events: none;
+  transform: translateY(calc(100% + 24px)); transition: transform .26s cubic-bezier(.4, 0, 1, 1), visibility 0s .26s; visibility: hidden; }
+.storebar[data-os] { display: flex; }
+.storebar.show { transform: none; visibility: visible; transition: transform .38s cubic-bezier(.16, 1, .3, 1), visibility 0s; }
+.storebar .card { pointer-events: auto; position: relative; width: min(100%, 520px); display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 14px; padding: 14px 16px 14px 14px;
+  background: var(--white); border-radius: 24px; box-shadow: 6px 6px 0 var(--plum), 0 10px 30px rgba(122, 0, 68, .28); overflow: hidden; isolation: isolate; }
+/* a corner of the site's slow rays behind the icon */
+.storebar .card::before { content: ''; position: absolute; z-index: -1; left: -110px; top: calc(50% - 150px); width: 300px; height: 300px; border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(236, 0, 140, .13) 0 11.25deg, transparent 11.25deg 22.5deg); -webkit-mask: radial-gradient(closest-side, #000 40%, transparent); mask: radial-gradient(closest-side, #000 40%, transparent); }
+.storebar .icon { grid-row: span 2; width: 72px; height: 72px; border-radius: 18px; display: block; box-shadow: 4px 4px 0 var(--plum); transform: rotate(-4deg); }
+.storebar .name { display: grid; gap: 2px; min-width: 0; padding-right: 30px; }
+.storebar .name b { font-family: var(--display); font-weight: 400; font-size: 24px; line-height: 1.05; color: var(--plum); white-space: nowrap; }
+.storebar .name small { font-size: 14px; color: var(--pink); letter-spacing: .02em; }
+.storebar .badge { justify-self: start; }
+.storebar .badge img { height: 46px; width: auto; }
+.storebar[data-os="android"] .as, .storebar[data-os="ios"] .gp { display: none; }
+.storebar button { position: absolute; right: 6px; top: 6px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--plum); font: 600 26px/1 var(--body); cursor: pointer; display: grid; place-items: center; }
+@media (hover: hover) { .storebar button:hover { background: #FCD9EE; } }
+.storebar button:focus-visible { outline: 3px solid var(--gold); }
+@media (prefers-reduced-motion: reduce) { .storebar, .storebar.show { transition: none; } }
 </style>
 </head>
 <body>
@@ -310,8 +325,7 @@ body.has-bar footer .wrap { padding-bottom: 104px; }
           <a class="badge" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dlanding"><img src="/a/gp.9e62107f39.webp" width="196" height="58" alt="Get it on Google Play"></a>
           <a class="badge" href="#appstore"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
         </div>
-        <div class="free">Free to play on Android. Coming to iPhone.</div>
-        <p class="intro">Flappy Spikes is a free one-tap flying game for Android, coming to iPhone. Tap to flap, fly your bird through the hoops and stay clear of the spikes. <a href="/story">First released on iPhone in 2014 and rebuilt in 2026</a>, it now has versus races against real players, power-ups, portal rides, 30 birds to unlock and 10 ranks from Egg to Legend. Flap fast, fly far.</p>
+        <div class="free">Free to play on Android and iPhone/iPad.</div>
       </div>
       <div class="play-col">
         <div class="sticker long"><b>FREE</b><span>TO PLAY</span></div>
@@ -392,18 +406,6 @@ body.has-bar footer .wrap { padding-bottom: 104px; }
         <a class="badge" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dlanding"><img src="/a/gp.9e62107f39.webp" width="196" height="58" alt="Get it on Google Play"></a>
           <a class="badge" id="appstore" href="#appstore"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
       </div>
-      <div class="facts">
-        <h3>Flappy Spikes facts</h3>
-        <dl>
-        <dt>Developer</dt><dd>Duo Leads</dd>
-        <dt>Released</dt><dd>2014 (iPhone), 2026 (Android, rebuilt)</dd>
-        <dt>Price</dt><dd>Free, with ads. Optional No Ads and coin packs.</dd>
-        <dt>Modes</dt><dd>Versus (race a real player's run) and Free Fly</dd>
-        <dt>To unlock</dt><dd>30 birds, plus hats, gear, hoops and trails</dd>
-        <dt>Ranks</dt><dd>10, from Egg to Legend</dd>
-        <dt>Leaderboard</dt><dd>Google Play Games</dd>
-      </dl>
-      </div>
     </div>
   </section>
 
@@ -415,7 +417,7 @@ body.has-bar footer .wrap { padding-bottom: 104px; }
       </div>
       <div class="faq-list">
         <details><summary><h3>Is Flappy Spikes free?</h3></summary><p>Yes. Flappy Spikes is free to play, with ads. An optional No Ads purchase removes them.</p></details>
-        <details><summary><h3>Is Flappy Spikes on iPhone?</h3></summary><p>Not yet. Flappy Spikes is on Google Play now and is coming to iPhone.</p></details>
+        <details><summary><h3>Is Flappy Spikes on iPhone?</h3></summary><p>Yes. Flappy Spikes is free on the App Store for iPhone and iPad, and on Google Play for Android.</p></details>
         <details><summary><h3>How do you play Flappy Spikes?</h3></summary><p>Three rules: tap to fly, fly through the hoops, and stay clear of the spikes. <a href="/how-to-play">Read the full guide to playing Flappy Spikes</a>.</p></details>
         <details><summary><h3>What is Versus?</h3></summary><p>In Versus you race a real player's recorded run. Their score climbs at the top of your screen while you fly; beat it to win. <a href="/versus">More about Versus</a>.</p></details>
         <details><summary><h3>Is this the original Flappy Spikes from 2014?</h3></summary><p>Yes. It is the same game that first flew on iPhone in 2014, rebuilt from scratch in 2026. <a href="/story">Read the Flappy Spikes story</a>.</p></details>
@@ -437,9 +439,13 @@ body.has-bar footer .wrap { padding-bottom: 104px; }
 </footer>
 
 <div class="storebar" id="storebar" aria-hidden="true">
-  <span>Get the game</span>
-  <a class="badge" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dlanding" tabindex="-1"><img src="/a/gp.9e62107f39.webp" width="162" height="48" alt="Get it on Google Play"></a>
-  <button type="button" id="storebar-close" aria-label="Close" tabindex="-1">×</button>
+  <div class="card" role="complementary" aria-label="Get Flappy Spikes">
+    <img class="icon" src="/a/icon-80.af916cc3af.webp" srcset="/a/icon-80.af916cc3af.webp 80w, /a/icon-192.713e1fce8d.png 192w" sizes="72px" width="72" height="72" alt="">
+    <div class="name"><b>Flappy Spikes</b><small>Free · Tap to flap</small></div>
+    <a class="badge gp" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dlanding" tabindex="-1"><img src="/a/gp.9e62107f39.webp" width="196" height="58" alt="Get it on Google Play"></a>
+    <a class="badge as" href="#appstore" tabindex="-1"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
+    <button type="button" id="storebar-close" aria-label="Close" tabindex="-1">×</button>
+  </div>
 </div>
 
 <script defer src="/a/skin_art.52c6894d79.js"></script>
@@ -467,21 +473,78 @@ body.has-bar footer .wrap { padding-bottom: 104px; }
 })();
 
 (() => {
-  // PRD-2.3 §11.4: the sticky store bar on phones. Same HTML for everyone; CSS shows it only below 720 px wide.
+  // The sticky "get the game" card, on phones and tablets only: Android gets the Google Play badge, iPhone / iPad the
+  // App Store badge (iPadOS reports a Mac user agent, so a Mac with a touch screen counts as an iPad). No card on
+  // desktops. It shows once the hero badges have scrolled off the top and hides while the closing call to action
+  // (which has both badges) or the footer is on screen.
   const bar = document.getElementById('storebar'), hero = document.getElementById('hero-badges');
   if (!bar || !hero || !('IntersectionObserver' in window)) return;
-  let closed = false;
+  const ua = navigator.userAgent;
+  const os = /Android/i.test(ua) ? 'android'
+    : (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) ? 'ios' : null;
+  if (!os) return;
+  bar.dataset.os = os;
+  bar.querySelector(os === 'ios' ? '.gp' : '.as').remove();
+  let closed = false, past = false;
+  const covers = new Set();
   try { closed = sessionStorage.getItem('fs-storebar') === 'closed'; } catch (e) {}
-  const set = (show) => {
-    show = show && !closed;
+  const set = () => {
+    const show = past && !covers.size && !closed;
     bar.classList.toggle('show', show); bar.setAttribute('aria-hidden', String(!show));
     bar.querySelectorAll('a, button').forEach((el) => { el.tabIndex = show ? 0 : -1; });
-    document.body.classList.toggle('has-bar', show && matchMedia('(max-width: 719.98px)').matches);
   };
-  new IntersectionObserver(([e]) => set(!e.isIntersecting && e.boundingClientRect.top < 0)).observe(hero);
+  new IntersectionObserver(([e]) => { past = !e.isIntersecting && e.boundingClientRect.top < 0; set(); }).observe(hero);
+  const io = new IntersectionObserver((es) => { es.forEach((e) => covers[e.isIntersecting ? 'add' : 'delete'](e.target)); set(); });
+  document.querySelectorAll('.cta .badges, footer').forEach((el) => io.observe(el));
   document.getElementById('storebar-close').addEventListener('click', () => {
-    closed = true; set(false);
+    closed = true; set();
     try { sessionStorage.setItem('fs-storebar', 'closed'); } catch (e) {}
+  });
+})();
+
+(() => {
+  // The FAQ accordions (<details>) open and close with a short ease-in-out: the card (and so the whole FAQ section)
+  // grows or shrinks to its new height while the answer fades and slides in or out. Without JS, or with reduced
+  // motion, the plain <details> behaviour stays.
+  if (!('animate' in Element.prototype) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const EASE = 'cubic-bezier(.65, 0, .35, 1)', OPEN_MS = 340, CLOSE_MS = 280;
+  document.querySelectorAll('.faq details').forEach((d) => {
+    const s = d.querySelector('summary');
+    if (!s) return;
+    const body = [...d.children].filter((c) => c !== s);
+    let grow = null, fades = [];
+    s.addEventListener('click', (e) => {
+      e.preventDefault();
+      const opening = !d.open || d.classList.contains('closing');
+      const from = d.getBoundingClientRect().height;   // mid-animation too: the height on screen right now
+      if (grow) grow.cancel();
+      fades.forEach((a) => a.cancel());
+      let to;
+      if (opening) {
+        d.classList.remove('closing');
+        d.open = true;
+        to = d.getBoundingClientRect().height;
+      } else {
+        d.classList.add('closing');                      // turns the marker back to a plus right away
+        const cs = getComputedStyle(d);
+        to = s.getBoundingClientRect().height + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) +
+             parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+      }
+      const ms = opening ? OPEN_MS : CLOSE_MS;
+      d.style.overflow = 'hidden';
+      grow = d.animate({ height: [from + 'px', to + 'px'] }, { duration: ms, easing: EASE });
+      fades = body.map((el) => el.animate(opening
+        ? { opacity: [0, 1], transform: ['translateY(-8px)', 'none'] }
+        : { opacity: [1, 0], transform: ['none', 'translateY(-6px)'] },
+        { duration: opening ? ms : ms * .7, delay: opening ? ms * .15 : 0, easing: EASE, fill: 'both' }));
+      const g = grow;
+      g.onfinish = () => {
+        if (grow !== g) return;
+        grow = null; d.style.overflow = '';
+        if (!opening) { d.open = false; d.classList.remove('closing'); }
+        fades.forEach((a) => a.cancel()); fades = [];
+      };
+    });
   });
 })();
 </script>

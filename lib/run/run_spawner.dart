@@ -19,6 +19,7 @@ import 'effects/collect_fx.dart';
 import 'elements.dart';
 import 'hoops/hoop.dart';
 import 'hoops/kinds/fever.dart';
+import 'hoops/kinds/pair/gift_tag.dart';
 import 'hoops/kinds/registry.dart';
 import 'hoops/ring_painter.dart';
 import 'pickups/pickup.dart';
@@ -517,13 +518,25 @@ class RunSpawner {
     var r = switch (p.kind) {
       HoopKindId.portal => PortalConfig.visualReach,
       HoopKindId.fever => FeverRingPainter.visualReach(p.opening),
-      HoopKindId.pair => PairConfig.visualReach,
+      HoopKindId.pair => _pairReach(p),
       HoopKindId.luckySpin => LuckySpinConfig.visualReach,
       _ => 0.0,
     };
     for (final a in p.attached) {
       if (!RunDirector.isBigItem(a.kind)) continue;
       r = math.max(r, itemReach(a.kind) - (a.trackX - p.trackX));
+    }
+    return r;
+  }
+
+  /// PRD-2.3 §17.2 a pair's reach: its wider gift tag (centred on the
+  /// plane) or its gift boxes.
+  static double _pairReach(SlotPlan p) {
+    var r = PairConfig.boxReach;
+    if (p.extra case final PairRewards g) {
+      for (final w in [g.top, g.bottom]) {
+        r = math.max(r, GiftTag.width(w) / 2 + PairConfig.tagReachExtra);
+      }
     }
     return r;
   }

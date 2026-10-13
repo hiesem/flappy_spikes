@@ -35,8 +35,32 @@ class TapCatcher extends PositionComponent
   @override
   void onPlayfieldResize(double viewHeight) => size.y = viewHeight;
 
+  /// Pointer ids whose pointer-down fell on a waiting run (PRD-2.3 §10.1):
+  /// they start it on tap-up, not on pointer-down.
+  final Set<int> _pendingFirstTaps = {};
+
   @override
   void onTapDown(TapDownEvent event) {
+    // S8-14 (PRD-2.3 §10.1 / PRD-2.2 §8): an Android back edge swipe first
+    // delivers a pointer-down, then the OS cancels the pointer. The first
+    // tap of a waiting run can't be undone, so it waits for a confirmed tap
+    // (tap-up); a cancelled pointer (back gesture, a drag past the touch
+    // slop) leaves the run waiting. Mid-run flaps stay on pointer-down: no
+    // added latency.
+    if (game.runWaitingForFirstTap) {
+      _pendingFirstTaps.add(event.pointerId);
+      return;
+    }
     game.onPlayfieldTap();
+  }
+
+  @override
+  void onTapUp(TapUpEvent event) {
+    if (_pendingFirstTaps.remove(event.pointerId)) game.onPlayfieldTap();
+  }
+
+  @override
+  void onTapCancel(TapCancelEvent event) {
+    _pendingFirstTaps.remove(event.pointerId);
   }
 }

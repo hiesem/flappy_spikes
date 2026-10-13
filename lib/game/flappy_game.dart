@@ -1041,6 +1041,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
   }
 
+  /// S8-14 (PRD-2.3 §10.1): the run is open and waits for its first tap.
+  /// The [TapCatcher] then starts it on tap-up, so a pointer the OS cancels
+  /// (the Android back edge swipe) cannot start it.
+  bool get runWaitingForFirstTap =>
+      state == GameState.playing && (_run?.waiting ?? false);
+
   /// A real tap that no button consumed (TapCatcher): flaps while playing.
   /// Menus never start a run on a stray tap — only the START button does
   /// (PRD-1 §4.2).

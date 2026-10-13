@@ -1549,6 +1549,14 @@ production build has the flag off and uses these values only. Full key table:
   in over 0.3 s (once per wait; a pause holds the count and hides it); the tap fades it
   out over 0.2 s. Analytics `tap_reminder_shown {mode}`.
 - Tests: `test/p23/s10_waiting_start_test.dart` (+ goldens in `test/p23/goldens/`).
+- DEVIATION (S8-14 device QA, PRD-2.3 §10.1 / PRD-2.2 §8, 2026-10-13): the **first
+  tap of a waiting run fires on tap-up**, not on pointer-down. An Android back edge
+  swipe first delivers a pointer-down and then cancels the pointer, and the first tap
+  can't be undone; a cancelled pointer (back gesture, a drag past the touch slop) now
+  leaves the run waiting (clock 0, no `run_start`, `firstRunHintSeen` unchanged).
+  `TapCatcher` checks `game.runWaitingForFirstTap` on pointer-down. Every later flap
+  stays on pointer-down (no added latency); Space / Enter and `onScreenTap` are
+  unchanged. Tests: `test/p23/s10_back_gesture_test.dart`.
 
 - DEVIATION (PRD-2.3 §25.3, supersedes the PRD-2.2 "START never waits; solo
   without an intro" rule): **in VERSUS every START shows the VS intro.** With an

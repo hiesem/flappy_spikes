@@ -162,7 +162,10 @@ Future<RunController> _start(WidgetTester tester, FlappySpikesGame g) async {
     }
     await tester.pump(const Duration(milliseconds: 250));
   }
-  expect(g.state, GameState.playing, reason: 'START began a run');
+  expect(g.state, GameState.playing, reason: 'START opened a run');
+  // PRD-2.3 §10.1: START opens the waiting scene; only the first
+  // playfield tap starts physics and the bot's course clock.
+  if (g.run!.waiting) g.onPlayfieldTap();
   return g.run!;
 }
 
@@ -1044,6 +1047,7 @@ void main() {
       isTrue,
     );
     final run = g.run!;
+    if (run.waiting) g.onPlayfieldTap();
     expect(run.setup.opponent, isNotNull);
     expect(g.runHud?.versus, isNotNull, reason: 'the versus bar');
     g.runDebug.god = true;

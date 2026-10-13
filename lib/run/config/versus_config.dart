@@ -101,6 +101,11 @@ abstract final class VersusConfig {
   /// PRD-2.3 §21.3 the Storage path of a player's picture.
   static String avatarPath(String uid) => 'avatars/$uid.jpg';
 
+  /// PRD-2.3 §5.5 / §21.3 (S8-06): the server deletes the picture with the
+  /// player doc (≈ 60 days after the last run), so an unchanged picture is
+  /// uploaded again when its last upload is older than this.
+  static const Duration avatarRefresh = Duration(days: 30);
+
   /// PRD-2.3 §21.4 / §0 item 7 the Remote Config parameter holding the
   /// salt of the hashed Play Games id (generated at deploy, never in git).
   static const String pgSaltKey = 'versus_pg_salt';
@@ -173,7 +178,12 @@ abstract final class VersusConfig {
   static const Rect oppPlate = Rect.fromLTWH(44, 80, 232, 52);
   static const Rect youPlate = Rect.fromLTWH(44, 584, 232, 52);
   static const double plateSlot = 52;
-  static const double plateNameSize = 22;
+
+  /// §5.8 the plate name size; PRD-2.3 §21.2 (S8-08 call): 18 pt in the
+  /// name font (Fredoka SemiBold, like every other name tag) instead of
+  /// 22 pt Opificio, so every generated nickname (the longest: 14 letters
+  /// + 3 digits) fits the room before the emblem at 70 % with its digits.
+  static const double plateNameSize = 18;
   static const double plateNameLeft = 12;
 
   /// PRD-2.3 §21.2 the emblem's half width on the plate (the widest emblem,

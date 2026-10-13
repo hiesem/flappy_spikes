@@ -77,6 +77,19 @@ class FirstRunHint extends PositionComponent
   /// The current group opacity (0..1).
   double get opacity => _opacity;
 
+  /// S8-07 the top AVOID THE SPIKES band in HUD coordinates (tests); null
+  /// in the reminder mode.
+  Rect? get topBandRect {
+    final b = _topBand;
+    if (b == null) return null;
+    return Rect.fromLTWH(
+      position.x + b.position.x,
+      position.y + b.position.y,
+      Config.worldWidth,
+      b.bandHeight,
+    );
+  }
+
   /// The hint is on screen (the first-run instructions from the start; the
   /// reminder once its count ran out).
   bool get shown => _shown;
@@ -95,7 +108,17 @@ class FirstRunHint extends PositionComponent
       final strip = run.geo.stripHeight;
       final top = _topBand = _WarningBand(up: true);
       final bottom = _bottomBand = _WarningBand(up: false);
-      top.position.setValues(0, strip + FirstRunConfig.warningGap);
+      // S8-07: under the HUD row (and the versus name chips), not over it.
+      final hudBottom = run.setup.opponent != null
+          ? HudConfig.chipTop + HudConfig.chipHeight
+          : HudConfig.rowTop + HudConfig.rowHeight;
+      top.position.setValues(
+        0,
+        math.max(
+          strip + FirstRunConfig.warningGap,
+          hudBottom + FirstRunConfig.warningHudGap,
+        ),
+      );
       bottom.position.setValues(
         0,
         run.state.viewHeight -

@@ -10,7 +10,7 @@ import { setGlobalOptions, logger } from 'firebase-functions/v2';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { deletePlayerData, processPlayerWrite, sweepAllPools } from './pools.js';
+import { deletePlayerData, processPlayerWrite, sweepAllPools, sweepStaleAvatars } from './pools.js';
 import type { PlayerDoc } from './schema.js';
 import { avatarBucketName, avatarPath } from './avatars.js';
 
@@ -33,7 +33,7 @@ export const onPlayerRunWrite = onDocumentWritten(
     const after = event.data?.after.data() as PlayerDoc | undefined;
     try {
       const r = await processPlayerWrite(getFirestore(), uid, before, after);
-      if (r.accepted.length || r.rejected.length || r.trimmedRecent) {
+      if (r.accepted.length || r.rejected.length || r.trimmedRecent || r.avatarDeleted) {
         logger.info('onPlayerRunWrite', { uid, ...r });
       }
     } catch (err) {
@@ -90,8 +90,17 @@ export const deleteMyData = onCall({ enforceAppCheck: true, consumeAppCheckToken
   return { ok: true, removed };
 });
 
-/** Daily retention sweep of the pool shards (ARCH §6.2: entries > 60 d). */
+/**
+ * Daily retention sweep of the pool shards (ARCH §6.2: entries > 60 d) and
+ * of the versus pictures whose player doc is gone (PRD-2.3 §5.5, S8-06).
+ */
 export const sweepPools = onSchedule({ schedule: 'every 24 hours', timeZone: 'Etc/UTC' }, async () => {
   const removed = await sweepAllPools(getFirestore());
-  logger.info('sweepPools', { removed });
+  let avatars = 0;
+  try {
+    avatars = await sweepStaleAvatars(getFirestore());
+  } catch (err) {
+    logger.error('sweepPools: picture sweep failed', { err: String(err) });
+  }
+  logger.info('sweepPools', { removed, avatars });
 });

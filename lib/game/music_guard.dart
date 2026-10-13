@@ -16,7 +16,8 @@ import 'sound.dart';
 ///   for an interruption or a notification, so a finished player that stays
 ///   listed never keeps the music off;
 /// - lets a media sound that started in the foreground count as the
-///   player's own music only after [Config.musicMediaSoundOwnAfter];
+///   player's own music only after [Config.musicMediaSoundOwnAfter], and
+///   then only with the two "yes" answers below (S8-04);
 /// - confirms "own music" with two "yes" answers
 ///   [Config.musicOwnConfirmGap] apart (launch, return to the foreground);
 /// - re-checks skipped music every [Config.musicOwnRecheckInterval] on a
@@ -223,12 +224,27 @@ class MusicGuard {
   void _transient(double dt) {
     if (_mediaHolds && !sound.otherSound) apply(_last);
     final since = _mediaSince;
-    if (since != null && _t - since >= Config.musicMediaSoundOwnAfter) {
-      // A media sound that keeps playing is the player's own music.
-      _mediaSince = null;
-      _pendingSource = _context;
-      sound.setOtherMusicActive(true);
-      apply(_last);
+    if (since != null &&
+        _t - since >=
+            Config.musicMediaSoundOwnAfter - Config.musicOwnConfirmGap &&
+        _confirm == null) {
+      // A media sound that keeps playing may be the player's own music,
+      // but only with two real "yes" answers from the CURRENT playback
+      // (S8-04: the last snapshot can still list a ding that just ended),
+      // the second one at [Config.musicMediaSoundOwnAfter]: only audio
+      // still playing then can trigger the skip (§13.4).
+      confirmOwnMusic(
+        _context,
+        then: () {
+          if (sound.ownMusicSkipped) {
+            _mediaSince = null;
+          } else if (_mediaSince != null) {
+            // Not own music: look again after another full window.
+            _mediaSince = _t;
+          }
+          apply(_last);
+        },
+      );
     }
     final held =
         sound.interrupted ||

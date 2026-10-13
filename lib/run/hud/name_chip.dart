@@ -4,7 +4,8 @@ import '../config/hud_config.dart';
 import 'run_hud.dart';
 
 /// §5.7 a name chip under a versus box: 90 × 22 at y 92, white, plum
-/// Fredoka SemiBold 15 pt (the own name / the opponent's display name).
+/// Fredoka SemiBold (the own name / the opponent's display name), 14 pt
+/// since S8-08 ([HudConfig.chipNameSize]).
 /// PRD-2.3 §21.2: the name follows the one name rule ([HudText.name]:
 /// shrunk to fit the chip minus its padding down to 70 %, then "…").
 /// Drawn by the [VersusBar].
@@ -13,9 +14,9 @@ class NameChip {
     : _text = HudText.name(
         name,
         maxWidth: HudConfig.boxWidth - 2 * HudConfig.chipPad,
-        size: HudConfig.chipFont,
+        size: HudConfig.chipNameSize,
         color: HudConfig.plum,
-        spacing: .02,
+        spacing: HudConfig.chipNameSpacing,
         font: HudConfig.nameFont,
       );
 

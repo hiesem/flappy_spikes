@@ -406,6 +406,10 @@ class FirebaseVersusService implements VersusService {
   int _failures = 0;
   Future<int>? _flushing;
   OpponentRun? _held;
+
+  /// The pool entry behind [_held] (S8-03: its uid and `pg` are checked
+  /// again whenever my identity changes and at every take).
+  PoolEntry? _heldEntry;
   List<PoolEntry> _pool = const [];
 
   /// PRD-2.3 §25.2 the run ids met (taken at a START), oldest first, at
@@ -578,7 +582,9 @@ class FirebaseVersusService implements VersusService {
   /// PRD-2.3 §21.3 / §21.4 the player or the uid changed: the pg hash and
   /// the picture upload follow.
   void _identityChanged() {
-    unawaited(_ensurePg());
+    // S8-03: a held opponent picked under the old uid / pg may now be me.
+    _dropHeldIfMine();
+    unawaited(_ensurePg().then((_) => _dropHeldIfMine()));
     if (_ready) _avatarSync ??= _syncAvatar().whenComplete(() => _avatarSync = null);
   }
 
@@ -617,8 +623,11 @@ class FirebaseVersusService implements VersusService {
       if (icon.isEmpty || uid.isEmpty) return;
       final hash = sha256.convert(utf8.encode(icon)).toString();
       final have = storage.versusAvatar;
+      final at = storage.versusAvatarAt;
       if (have != null && have.uid == uid && have.hash == hash &&
-          have.url.isNotEmpty) {
+          have.url.isNotEmpty &&
+          at != null &&
+          storage.now().difference(at) < VersusConfig.avatarRefresh) {
         return;
       }
       final jpeg = encodeVersusAvatar(base64Decode(icon));
@@ -667,10 +676,26 @@ class FirebaseVersusService implements VersusService {
     }
   }
 
+  /// PRD-2.3 §21.4 (S8-03) drops the held opponent when it belongs to my
+  /// CURRENT uid or hashed Play Games id (a sign-in or account switch
+  /// after it was picked), then holds another match from the loaded pool,
+  /// which [pickOpponent] filters with the current identity.
+  void _dropHeldIfMine() {
+    final e = _heldEntry;
+    if (e == null || _held == null) return;
+    final uid = _safe(() => backend.uid) ?? '';
+    if (isOtherPlayer(PoolCandidate(e), myUid: uid, myPg: _pg)) return;
+    _held = null;
+    _heldEntry = null;
+    _pickFromPool();
+  }
+
   @override
   OpponentRun? takeOpponent() {
+    _dropHeldIfMine();
     final o = _held;
     _held = null;
+    _heldEntry = null;
     if (o != null) {
       _meet(o.runId);
       // The next unmet match from the same shard, held for the next START;
@@ -700,6 +725,12 @@ class FirebaseVersusService implements VersusService {
   @override
   Future<bool> searchForStart() async {
     try {
+      // S8-03: the pg of a just-arrived Play Games identity is known
+      // before the held run is trusted.
+      if (_held != null) {
+        await _ensurePg().timeout(VersusConfig.pgWait, onTimeout: () => _pg);
+        _dropHeldIfMine();
+      }
       if (_held != null) return true;
       if (!_ready) {
         // A failed start-up is retried (initialize ends with a search).
@@ -767,6 +798,7 @@ class FirebaseVersusService implements VersusService {
       r: _random,
     );
     if (c == null) return;
+    _heldEntry = c.entry;
     _held = c.entry.toOpponent();
   }
 
@@ -964,6 +996,7 @@ class FirebaseVersusService implements VersusService {
       _log('local reset', e);
     }
     _held = null;
+    _heldEntry = null;
     _pool = const [];
     _met.clear();
     _searched = false;

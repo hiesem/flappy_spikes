@@ -15,6 +15,7 @@ import '../../skins/art/bird_art.dart';
 import '../../skins/look.dart';
 import '../../versus/opponent.dart';
 import '../config/versus_config.dart';
+import '../config/hud_config.dart';
 import '../effects/easing.dart';
 import '../effects/fireworks.dart';
 import '../effects/particle_pool.dart';
@@ -927,6 +928,7 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
         maxWidth: room,
         size: VersusConfig.plateNameSize,
         color: _plum,
+        font: HudConfig.nameFont,
       ),
     );
   }

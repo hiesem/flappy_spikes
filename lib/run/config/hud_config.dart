@@ -60,7 +60,16 @@ abstract final class HudConfig {
   static const double nameMinScale = .7;
 
   /// PRD-2.3 §21.2 the padding on each side of a name chip's text (pt).
-  static const double chipPad = 4;
+  /// S8-08: 2 (was 4), so with [chipNameSize] every generated nickname
+  /// (the longest: 14 letters + 3 digits) fits at 70 % with its digits.
+  static const double chipPad = 2;
+
+  /// PRD-2.3 §21.2 (S8-08) a name chip's normal name size (pt) and letter
+  /// spacing (em): 14 / 0 (§5.7 was 15 / .02, which cut the digits of the
+  /// longest generated nicknames even at 70 %). The VS label keeps
+  /// [chipFont].
+  static const double chipNameSize = 14;
+  static const double chipNameSpacing = 0;
   static const Color plum = Color(0xFF7A0044);
   static const String nameFont = 'Fredoka';
 

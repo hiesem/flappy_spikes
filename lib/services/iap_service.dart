@@ -527,8 +527,8 @@ class StoreIapService implements IapService {
     this.grantTimeout = const Duration(seconds: 5),
   }) : _store = store ?? PluginIapStore();
 
-  /// Upper bound for waiting on [IapEvent.granted] before the purchase is
-  /// completed with the store anyway.
+  /// Upper bound for waiting on [IapEvent.granted]; an unconfirmed grant
+  /// leaves the purchase with the store (S8-05), never completes it.
   final Duration grantTimeout;
 
   final IapStore _store;
@@ -737,13 +737,23 @@ class StoreIapService implements IapService {
           );
           // Grant before completing (S1-71): if the app dies first, the
           // store re-delivers and the persisted id stops a double grant.
+          // S8-05 (PRD-2.3 §22.2): consume / acknowledge ONLY after the
+          // listener confirmed the grant was credited and saved. With no
+          // listener yet (a delivery during start-up), a failed grant or a
+          // timeout, the purchase is left with the store: the launch sync
+          // (or the next one) delivers it again.
+          var confirmed = false;
           if (hasListener) {
             try {
               await granted.future.timeout(grantTimeout);
+              confirmed = true;
             } catch (_) {
               iapLog('grant of ${product.storeId} not confirmed in time');
             }
+          } else {
+            iapLog('grant of ${product.storeId}: no listener yet, kept');
           }
+          if (!confirmed) continue;
         } else {
           _events.add(IapEvent(product, status));
         }

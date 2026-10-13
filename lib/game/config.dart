@@ -213,8 +213,10 @@ class Config {
   static const String deleteDataUrl = 'https://flappyspikes.com/delete-data';
 
   // PRD-2.3 §22.2: Settings → Redeem code opens the Play Store's redeem
-  // screen.
-  static const String redeemCodeUrl = 'https://play.google.com/redeem';
+  // screen. Owner 2026-10-13: the bare `/redeem` link makes the Play app
+  // hand it on to the browser (wrong account possible); with an empty
+  // `code` it opens Play's own Redeem code screen for the Play account.
+  static const String redeemCodeUrl = 'https://play.google.com/redeem?code=';
 
   // PRD-2.3 §22.2: the purchase sync (launch, every resume) runs at most
   // this often.

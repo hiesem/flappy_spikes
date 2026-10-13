@@ -283,6 +283,13 @@
           "description": "§14.4 Moving-hoop chance by hoop index",
           "valueType": "JSON"
         },
+        "curve_rim_soft_bump": {
+          "defaultValue": {
+            "value": "20"
+          },
+          "description": "§14.4 owner 2026-10-13: speed (pt/s) a rim hit from inside the opening ends with, away from that rim (top: down, bottom: up); hits from outside keep the hard bounce",
+          "valueType": "NUMBER"
+        },
         "curve_tilt": {
           "defaultValue": {
             "value": "[[9,0],[10,0.3],[19,0.3],[20,0.5],[34,0.5],[35,0.6],[44,0.6],[45,0.78]]"

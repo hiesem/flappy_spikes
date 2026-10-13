@@ -338,7 +338,7 @@ void main() async {
     expect(Config.privacyPolicyUrl, 'https://flappyspikes.com/privacy');
     expect(Config.deleteDataUrl, 'https://flappyspikes.com/delete-data');
     expect(Config.siteUrl, 'https://flappyspikes.com');
-    expect(Config.redeemCodeUrl, 'https://play.google.com/redeem');
+    expect(Config.redeemCodeUrl, 'https://play.google.com/redeem?code=');
   });
 
   FlameTester<FlappySpikesGame>(
@@ -372,7 +372,7 @@ void main() async {
       expect(opened.map((u) => u.toString()), [
         'https://flappyspikes.com/support',
         'https://flappyspikes.com/privacy',
-        'https://play.google.com/redeem',
+        'https://play.google.com/redeem?code=',
       ]);
       expect(spy.events.map((e) => e.$1), contains('redeem_code_opened'));
 

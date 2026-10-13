@@ -4357,6 +4357,17 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   static Future<void> _launchExternal(Uri uri) async {
     try {
+      // Play links (Redeem code) go to the Play Store app itself, never a
+      // browser; the browser is only the fallback (no Play Store).
+      if (uri.host == 'play.google.com' &&
+          await launchUrl(
+            uri,
+            mode: LaunchMode.externalNonBrowserApplication,
+          )) {
+        return;
+      }
+    } catch (_) {}
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
       // No usable browser (or plugin unavailable in tests): ignore.

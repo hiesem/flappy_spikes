@@ -96,12 +96,15 @@ RimResult? collideRims(
         // along-ring speed toward the rim and gets a small push away from
         // it instead of the hard reflection; forward speed is kept.
         final c = math.cos(f.tilt), s = math.sin(f.tilt);
-        final nly = -n.x * s + n.y * c;
+        final nlx = n.x * c + n.y * s;
+        final nla = (-n.x * s + n.y * c) * -side; // into the gap
         final rly = -rvx * s + rvy * c;
-        final soft =
-            inside &&
-            nly * -side >= RunConfig.rimSoftBumpMinAxis &&
-            rly * side > 0;
+        // Owner 2026-10-13 (2.3.0 (14)): every hit from inside the gap is
+        // soft, slanted ones too; only a head-on hit (the normal pointing
+        // back more than 45°, the bird in front of the rim end) and hits
+        // from outside keep the hard reflection.
+        final headOn = nlx < 0 && -nlx > nla;
+        final soft = inside && nla > 0 && !headOn && rly * side > 0;
         if (soft) {
           final vlx = v.x * c + v.y * s;
           final rvl = -rv.x * s + rv.y * c;

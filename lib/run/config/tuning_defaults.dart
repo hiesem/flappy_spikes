@@ -54,6 +54,7 @@ const List<TuningDef> kTuningDefaults = [
   TuningDef('curve_speed', TuningType.curve, [[0, 150], [50, 172.5], [150, 187.5]], '14.4', 'Cruise speed (pt/s) by hoop index'),
   TuningDef('curve_opening', TuningType.curve, [[1, 88], [100, 66]], '14.4', 'Opening (pt) by hoop index from hoop 1 (hoop 0 is always 118)'),
   TuningDef('curve_moving', TuningType.curve, [[19, 0], [20, 0.15], [35, 0.4], [60, 0.6], [80, 0.75]], '14.4', 'Moving-hoop chance by hoop index'),
+  TuningDef('curve_rim_soft_bump', TuningType.decimal, 20.0, '14.4', 'owner 2026-10-13: speed (pt/s) a rim hit from inside the opening ends with, away from that rim (top: down, bottom: up); hits from outside keep the hard bounce'),
   TuningDef('curve_tilt', TuningType.curve, [[9, 0], [10, 0.3], [19, 0.3], [20, 0.5], [34, 0.5], [35, 0.6], [44, 0.6], [45, 0.78]], '14.4', 'Tilted-hoop chance by hoop index'),
   TuningDef('squeeze_first', TuningType.intList, [25, 40], '14.4', 'First squeeze at a random hoop in [min, max]'),
   TuningDef('squeeze_hold', TuningType.intList, [5, 10], '14.4', 'Squeeze hold (hoops) in [min, max]'),

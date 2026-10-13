@@ -184,7 +184,7 @@ void main() {
     final f = HoopFrame(centre: Vector2(400, 355), opening: 118);
     // Rim ends at y 289 (top) and 421 (bottom); contact distance 21.75.
 
-    test('a rising bird on the top rim from inside ends with vy ≈ +60', () {
+    test('a rising bird on the top rim from inside ends with vy ≈ +bump', () {
       final res = collideRims(
         f,
         BirdCircle(Vector2(402, 289 + 20), r),
@@ -196,7 +196,7 @@ void main() {
       expect(res.velocity.x, closeTo(180, 1e-6), reason: 'forward kept');
     });
 
-    test('a falling bird on the bottom rim from inside ends with vy ≈ −60', () {
+    test('a falling bird on the bottom rim from inside ends with vy ≈ −bump', () {
       final res = collideRims(
         f,
         BirdCircle(Vector2(398, 421 - 20), r),
@@ -227,6 +227,23 @@ void main() {
       );
       expect(local.y, closeTo(RunConfig.rimSoftBump, 1e-3));
       expect(local.x, closeTo(0, 1e-3));
+    });
+
+    test('a slanted hit from inside (70° off the axis) is soft too', () {
+      // Bird behind and below the top rim end: the normal points forward
+      // and into the gap, far more than 60° off the ring axis.
+      final res = collideRims(
+        f,
+        BirdCircle(Vector2(400 + 20.4, 289 + 7.4), r),
+        Vector2(0, -350),
+      )!;
+      expect(res.bounced, isTrue);
+      expect(res.velocity.y, closeTo(RunConfig.rimSoftBump, 1e-6));
+      expect(res.velocity.x, closeTo(0, 1e-6));
+    });
+
+    test('the bump is remote (curve_rim_soft_bump, default 20)', () {
+      expect(RunConfig.rimSoftBump, 20);
     });
 
     test('an outside hit (from above the top rim) is unchanged', () {

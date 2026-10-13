@@ -3588,8 +3588,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     );
     _ratingSettle = 0;
     // endregion PRD-2.3 §23.2
-    // PRD-2.3 §18.3: the playtime is saved at run end.
-    unawaited(playtime.flush());
     // region WP-2e — results page (PRD-2 §3.14, §7)
     // A new level's reward is owed from now on: kept until CLAIM / NEXT so
     // an app kill never loses it (credited at the next app start).
@@ -3940,6 +3938,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     menu.slot.rollForArrival();
     replay();
     _logSlotShown();
+    // PRD-2.3 §18.3: the run's playtime is saved when the Home arrives (the
+    // results page does no I/O of its own).
+    unawaited(playtime.flush());
     // PRD-2.3 §24.2: the No-Ads popup is checked on every Home arrival after
     // a run (after the interstitial, which is over by now). The check waits
     // for the arrival's storage reload, so a reload that lands late can never
@@ -4277,7 +4278,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // second, so a long stall adds no more than that), outside full-screen
     // ads and only while resumed; the clamped step below is for the game.
     if (_resumed && !_inBackground && _adsShowing == 0 && !_interstitialBusy) {
-      playtime.advance(min(dt, 1.0));
+      playtime.advance(min(dt, 1.0), mayWrite: state == GameState.start);
     }
     // One clamped clock for the whole simulation (Config.maxFrameStep):
     // super.update runs the component tree (Forge2D world step, bird,

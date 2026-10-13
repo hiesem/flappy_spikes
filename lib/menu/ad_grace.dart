@@ -36,8 +36,8 @@ class PlaytimeCounter {
   /// Counted seconds since the last write.
   double _sinceSave = 0;
 
-  /// The last value written (no write when nothing changed).
-  int _saved = -1;
+  /// Counted since the last write (no write when nothing changed).
+  bool _dirty = false;
 
   /// Whether time still counts (the new-player grace has not ended).
   bool get counting => AdGrace.active(
@@ -46,7 +46,10 @@ class PlaytimeCounter {
   );
 
   /// Adds [dt] seconds of foreground time (no-op once the grace has ended).
-  void advance(double dt) {
+  /// The periodic write (every [saveEvery] counted seconds) happens only when
+  /// [mayWrite]: the game passes false during a run, where the write waits for
+  /// the run's end (see the DEVIATION in SPEC.md, PRD-2.3 §18.3).
+  void advance(double dt, {bool mayWrite = true}) {
     if (dt <= 0 || !counting) return;
     _fraction += dt;
     _sinceSave += dt;
@@ -54,19 +57,20 @@ class PlaytimeCounter {
       final whole = _fraction.floor();
       _fraction -= whole;
       _storage.playtimeSeconds += whole;
+      _dirty = true;
     }
-    if (_sinceSave >= saveEvery) {
+    if (_sinceSave >= saveEvery && mayWrite) {
       _sinceSave = 0;
       unawaited(flush());
     }
   }
 
-  /// Writes the current value (background, run end, every [saveEvery]).
+  /// Writes the current value when it changed (background, the Home arrival
+  /// after a run, every [saveEvery] on the menus).
   Future<void> flush() {
     _sinceSave = 0;
-    final value = _storage.playtimeSeconds;
-    if (value == _saved) return Future.value();
-    _saved = value;
-    return _storage.savePlaytimeSeconds(value);
+    if (!_dirty) return Future.value();
+    _dirty = false;
+    return _storage.savePlaytimeSeconds(_storage.playtimeSeconds);
   }
 }

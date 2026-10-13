@@ -1549,7 +1549,8 @@ the chick's ×2, the perfect zone) are superseded by PRD-2.3 §14; `SPEC.md` has
   is the one rule (`runs < ads_grace_runs && playtime < ads_grace_seconds`); `interstitialSkipReason()`
   returns `InterstitialSkip.newPlayer` while it holds, and `_onFirstFlight` preloads only when it does not
   hold for the run that starts. `PlaytimeCounter` (same file) is driven from `FlappySpikesGame.update` with the
-  real frame time (≤ 1 s) only while resumed and no full-screen ad is up; it flushes on background and at run end.
+  real frame time (≤ 1 s) only while resumed and no full-screen ad is up; it flushes on background and at run end,
+  and writes every 10 s on the menus only (`mayWrite`; SPEC DEVIATION §18.3).
 - **Rating prompt (§23):** `lib/services/rating_prompt.dart`. `RatingPrompt` (no backend = never available,
   every call try/caught) is injected through `FlappySpikesGame(rating:)`; `main.dart` builds it with
   `InAppReviewBackend` on the mobile products and calls `prepare()` after `runApp`. The game decides with

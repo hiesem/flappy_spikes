@@ -1124,8 +1124,12 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   playtime since install**, whichever comes first (`ads_grace_runs`,
   `ads_grace_seconds`); no best-score gate. Nothing preloads during it. The
   playtime counts only while resumed and outside full-screen ads, is saved
-  every 10 s, on going to the background and at run end, and is kept by
-  "Delete my data". Skip reason `new_player` replaces `first_runs`.
+  every 10 s on the menus, on going to the background and at run end, and is
+  kept by "Delete my data". Skip reason `new_player` replaces `first_runs`.
+  DEVIATION within §18.3: during a run and on its results page the 10 s write
+  waits; the run's time is saved when the Home arrives (a run is one flight of
+  at most a few minutes, and the grace ends after 5 runs). A crash mid-run
+  loses at most that run's time instead of 10 s.
 - DEVIATION (PRD-2.3 §23, rating prompt): a run whose results page requests
   the store's rating sheet (run 5 — `rate_min_runs` — or a new best after it)
   has **no interstitial** (skip reason `rating`). The request waits 1.5 s

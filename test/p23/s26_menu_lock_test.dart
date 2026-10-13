@@ -252,6 +252,39 @@ void main() async {
     },
   );
 
+  FlameTester<FlappySpikesGame>(() {
+    // A run start hands the tuned set to the config getters (as in a tester build).
+    Tuning.instance = Tuning(
+      active: TuningValues.resolve({'ui_unlock_best': '10'}),
+    );
+    Tuning.instance.beginRun();
+    return createRunTestGame(
+      prefs: const {'bestScore': 9},
+      worldHeight: 568,
+      services: spy,
+      monetization: Monetization(ads: FakeRewardedAds()),
+    );
+  }, gameSize: Vector2(320, 568)).testGameWidget(
+    '§26.1 tuning: ui_unlock_best = 10 moves the threshold and the number in '
+    'the text (best 9 is locked, the text says 10)',
+    setUp: boot,
+    verify: (g, t) async {
+      try {
+        expect(Config.menuUnlockBest, 10);
+        g.openShop();
+        await flushAndMount(g);
+        expect(g.shopScreen!.locked, isTrue);
+        expect(overlayLines(g.shopScreen!), [
+          'SCORE 10 POINTS',
+          'TO UNLOCK THE SHOP',
+        ]);
+      } finally {
+        Tuning.instance = Tuning();
+        TuningValues.current = TuningValues.defaults();
+      }
+    },
+  );
+
   group('§26.1 tuning', () {
     setUp(() {
       Tuning.instance = Tuning(

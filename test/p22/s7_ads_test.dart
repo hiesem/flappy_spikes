@@ -346,6 +346,9 @@ void main() {
         }
         expect(states, {BannerState.reservedEmpty});
         expect(g.state, GameState.playing);
+        // PRD-2.3 §10.1 the bird flies with the first tap.
+        expect(g.bannerState.value, BannerState.reservedEmpty);
+        g.onPlayfieldTap();
         expect(g.bannerState.value, BannerState.showing);
       },
     );

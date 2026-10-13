@@ -227,6 +227,7 @@ void main() {
     expect(r.spy.leaderboardCalls, 1);
     await tap(g, t, const Offset(189, 423.5), fade: false);
     expect(g.state, GameState.playing);
+    g.onPlayfieldTap(); // PRD-2.3 §10.1 the first tap flaps
     expect(
       g.world.children.query<Bird>().single.body.linearVelocity.y,
       lessThan(-200),

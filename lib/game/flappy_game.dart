@@ -1028,10 +1028,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// [beforeRunStart] if set; synchronous when it is null.
   Future<void> startRun() async {
     if (!_homeInteractive) return;
-    // §8.2: the home bird hops with flap.mp3 as the run starts. The run's
-    // first flap plays flap.mp3 in this same frame, so it is only played
-    // here when [beforeRunStart] delays the run.
-    if (beforeRunStart != null) sound.play(Sfx.flap);
+    // §8.2: the home bird hops with flap.mp3 as the run starts. PRD-2.3
+    // §10.1: START no longer flaps the run's bird (the run waits for the
+    // first tap), so the hop always plays it here.
+    sound.play(Sfx.flap);
     _home?.bird.hop(HomeBird.startHop);
     await _runFromHome();
   }

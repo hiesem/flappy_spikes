@@ -214,6 +214,15 @@ Future<RunController> startRun(
   return g.run!;
 }
 
+/// PRD-2.3 §10.1 START (Space / Enter) plus the harness's synthetic first
+/// tap: the run starts and the bird flaps at once, as START did before 2.3.
+void startAndTap(FlappySpikesGame g) {
+  g.onScreenTap();
+  if (g.state == GameState.playing && (g.run?.waiting ?? false)) {
+    g.onScreenTap();
+  }
+}
+
 /// PRD-2.3 §10.1 opens a run from the home screen and leaves it waiting for
 /// the first tap (no synthetic tap; [startRun] does the tap).
 Future<RunController> openRun(FlappySpikesGame g) async {

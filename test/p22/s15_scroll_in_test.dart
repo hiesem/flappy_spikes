@@ -38,7 +38,10 @@ class _OnScreenWatch {
       // at camX 0, 60 pt off screen) may swing its art into view: real runs
       // begin at hoop 0, which never moves (PRD-2.3 §14.4 curve_moving), so
       // only its count is kept.
-      if (h.plan.motion != null) {
+      // PRD-2.3 §10.2 hoop 0 stands on screen before the first tap (x 290)
+      // by design: §15.4 holds for every later item.
+      if (h.plan.motion != null ||
+          (h.plan.index == 0 && run.setup.startHoopIndex == 0)) {
         hoops++;
         continue;
       }

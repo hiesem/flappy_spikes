@@ -242,7 +242,10 @@ void main() {
       // Chase the own-gap field until a couple of bank coins are caught and
       // at least two are still ahead (the mock shows both).
       var frames = 0;
+      // PRD-2.3 §10.2 moved the course 90 pt: the hand-flown chase now
+      // meets hoop 1's rim; fly through the rims (no rim knocks) for it.
       while (frames++ < 360) {
+        run.state.invulnerable = 1;
         final field = pickupsOf(game).whereType<PiggyCoin>().firstOrNull;
         double? ty;
         var ahead = 0;
@@ -266,6 +269,7 @@ void main() {
         if (frames % 10 == 0) await flushAndMount(game);
       }
       expect(run.state.piggy!.caught, greaterThanOrEqualTo(2));
+      run.state.invulnerable = 0;
       await _clean(game, run);
       await tester.runAsync(() => _shot(game, 1.5, 'collect_piggy_711'));
     },

@@ -37,16 +37,16 @@ void main() {
     );
 
     tester.testGameWidget(
-      '§3.0.1 ($h) the first hoop spawns 60 pt past the right edge at the '
-      'first tap, at the exact centre, normal kind, and reaches the bird '
-      '≈ 2.1 s later',
+      '§3.0.1 / PRD-2.3 §10.2 ($h) the first hoop stands at x 290, 16 pt '
+      'below the centre, normal kind, and reaches the bird ≈ 1.47 s after '
+      'the first tap',
       setUp: (g, _) => boot(g),
       verify: (game, _) async {
         final run = await startRun(game);
         final hoop = firstHoop(run);
         expect(hoop.kind, isA<NormalHoopKind>());
-        expect(hoop.planeX - run.state.camX, closeTo(320 + 60, 3));
-        expect(hoop.position.y, closeTo(h / 2, 1e-6));
+        expect(hoop.planeX - run.state.camX, closeTo(RunConfig.hoop0X, 3));
+        expect(hoop.position.y, closeTo(h / 2 + 16, 1e-6));
         expect(hoop.opening, RunConfig.opening0);
         // Hold level at the centre: the pass comes ≈ 310 / 150 s later.
         run.events.recordLog = true;
@@ -56,7 +56,7 @@ void main() {
           game.update(1 / 60);
           t += 1 / 60;
         }
-        expect(t, closeTo(310 / 150, 0.1));
+        expect(t, closeTo((290 - 70) / 150, 0.1));
         // §3.0.1 the world scrolls at the bird's forward speed (cruise).
         expect(
           run.state.forwardSpeed,

@@ -283,11 +283,13 @@ void main() {
     () => FakeVersusService(),
     (g, spy) async {
       final run = await startRun(g);
-      hold(g, .3);
+      // PRD-2.3 §10.2 hoop 0 stands at x 290 (≈ 1.47 s away): the holds stay
+      // short of it so only the scripted changes score.
+      hold(g, .2);
       run.debugPass(perfect: true);
-      hold(g, .95);
+      hold(g, 1.0);
       run.ctx.addScore(4, flags: PointFlags.gift);
-      hold(g, .3);
+      hold(g, .1);
       run.ctx.addScore(1, flags: PointFlags.ride);
       final tl = run.state.timeline;
       expect(tl.points, run.state.score);

@@ -154,8 +154,8 @@ void main() {
     );
 
     tester.testGameWidget(
-      '§3.0.1 the first hoop spawns 60 pt past the right edge at the first '
-      'tap; the next ones every 310 pt; layers follow the camera; met '
+      '§3.0.1 / PRD-2.3 §10.2 the first hoop stands at x 290 before the '
+      'first tap; the next ones every 310 pt; layers follow the camera; met '
       'elements are stored when they come on screen',
       setUp: (game, _) => boot(game),
       verify: (game, _) async {
@@ -163,11 +163,17 @@ void main() {
         game.runDebug.god = true; // the test kinds have no visuals
         final run = await startRun(game);
         expect(run.spawner.live, isTrue);
-        expect(run.state.forwardSpeed, RunConfig.cruiseSpeed);
+        // PRD-2.3 §10.2 hoop 0 is spawned (and hoop 1 planned) before the
+        // tap, so the run starts at hoop 1's cruise (150.45).
+        expect(
+          run.state.forwardSpeed,
+          RunConfig.cruise(run.state.hoopIndex),
+        );
         final first = hoopsOf(game).single;
-        expect(first.planeX, 380);
-        expect(first.position.y, 711 / 2);
-        expect(game.storage.metElements, isEmpty, reason: 'not on screen yet');
+        expect(first.planeX, RunConfig.hoop0X);
+        expect(first.position.y, 711 / 2 + 16);
+        // Hoop 0 is on screen from the start (PRD-2.3 §10.2).
+        expect(game.storage.metElements, contains('normal_hoop'));
 
         await flyRun(game, maxSeconds: 3.5);
         final hoops = hoopsOf(game).toList();
@@ -224,7 +230,9 @@ void main() {
         game.debugForceElement(ElementId.saw);
         expect(game.runDebug.force, [ElementId.saw]);
         await startRun(game, force: game.runDebug.force.toList());
-        expect(hoopsOf(game).first.plan.kind, HoopKindId.saw);
+        // PRD-2.3 §10.2 hoop 0 stays plain: the forced saw is hoop 1.
+        expect(hoopsOf(game).first.plan.kind, HoopKindId.normal);
+        expect(game.run!.spawner.plannedAhead!.kind, HoopKindId.saw);
         expect(game.runDebug.force, isEmpty, reason: 'consumed by the run');
       },
     );

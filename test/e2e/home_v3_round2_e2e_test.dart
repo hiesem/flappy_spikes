@@ -462,6 +462,7 @@ void main() async {
       expect(game.menu.noAds, isTrue);
       expect(game.noAdsCelebration, isNull);
       expect(game.queuedPopups, 1);
+      game.onPlayfieldTap(); // PRD-2.3 §10.1 the first tap
       await run(game, 2);
       expect(game.state, GameState.results);
       final panel = game.world.children.query<ResultsScreen>().single;

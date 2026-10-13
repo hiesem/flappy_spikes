@@ -27,10 +27,13 @@ if [ "$MODE" = cf ]; then
   ok "$(hdr "$DC" "https://www.$HOST/")" "301 $B/" "www / -> 301 /"
   ok "$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "http://$HOST/")" "301 $B/" "http -> https"
 fi
-ref=$(curl -s -A "$DC" "$B/" | md5sum)
+# Cloudflare's email obfuscation re-keys the encoded address on every response, so the
+# HTML is compared with those per-response keys blanked out.
+page() { curl -s -A "$1" "$B/" | sed -E 's/data-cfemail="[0-9a-f]+"/data-cfemail=""/g; s/email-protection#[0-9a-f]+/email-protection#/g' | md5sum; }
+ref=$(page "$DC")
 for ua in "$A" "$I" "$DC" "$GB"; do
   ok "$(curl -s -o /dev/null -A "$ua" -w '%{http_code}' "$B/")" 200 "/ 200 for ${ua:0:40}"
-  ok "$(curl -s -A "$ua" "$B/" | md5sum)" "$ref" "/ identical HTML for ${ua:0:40}"
+  ok "$(page "$ua")" "$ref" "/ identical HTML for ${ua:0:40}"
 done
 for t in og:title og:description og:image og:url twitter:card; do
   curl -s "$B/" | grep -q "property=\"$t\"\|name=\"$t\"" && echo "PASS  / has $t" || { echo "FAIL  / lacks $t"; fails=$((fails + 1)); }

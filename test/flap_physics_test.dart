@@ -22,7 +22,7 @@ void main() {
       await game.ready();
       game.sound.enabled = false;
       await preloadImages(game);
-      game.onScreenTap(); // start -> playing
+      startAndTap(game); // start -> playing (PRD-2.3 §10.1 + the first tap)
     },
     verify: (game, tester) async {
       final b = bird(game);
@@ -56,7 +56,7 @@ void main() {
       await game.ready();
       game.sound.enabled = false;
       await preloadImages(game);
-      game.onScreenTap(); // start -> playing (performs the first flap)
+      startAndTap(game); // start -> playing (performs the first flap) (PRD-2.3 §10.1 + the first tap)
     },
     verify: (game, tester) async {
       final b = bird(game);
@@ -96,7 +96,7 @@ void main() {
       await game.ready();
       game.sound.enabled = false;
       await preloadImages(game);
-      game.onScreenTap(); // start -> playing (+ first flap)
+      startAndTap(game); // start -> playing (+ first flap) (PRD-2.3 §10.1 + the first tap)
       game.update(1 / 60);
       // PRD-2 §3.0.1: the clamp is now 650 pt/s (hoops never collide with
       // a level-falling bird before it reaches the floor spikes).

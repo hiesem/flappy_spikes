@@ -612,6 +612,18 @@
           "valueType": "NUMBER"
         }
       }
+    },
+    "ui": {
+      "description": "PRD-2.3 §15.3 group ui_",
+      "parameters": {
+        "ui_tap_reminder_s": {
+          "defaultValue": {
+            "value": "4"
+          },
+          "description": "§10.3b Tap reminder after this many seconds without a tap",
+          "valueType": "NUMBER"
+        }
+      }
     }
   }
 }

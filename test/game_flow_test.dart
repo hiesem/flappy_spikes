@@ -28,9 +28,12 @@ void main() {
       expect(game.world.children.query<HomeScreen>(), hasLength(1));
       expect(game.world.children.query<Bird>(), hasLength(1));
 
-      // start -> playing (+ immediate flap).
+      // start -> playing, waiting (PRD-2.3 §10.1); the first tap flaps.
       game.onScreenTap();
       expect(game.state, GameState.playing);
+      expect(game.run!.waiting, isTrue);
+      game.onScreenTap();
+      expect(game.run!.started, isTrue);
       final bird = game.world.children.query<Bird>().single;
       expect(
         bird.body.linearVelocity.y,
@@ -108,6 +111,8 @@ void main() {
       await tester.tapAt(screenOf(start.center.toVector2()));
       await tester.pump(const Duration(milliseconds: 100));
       expect(game.state, GameState.playing);
+      // PRD-2.3 §10.1 the run waits for the first playfield tap.
+      game.onPlayfieldTap();
 
       // --- simulate ~1 s of flapping ---------------------------------------
       stepGame(game, 1.0, flapBelow: 320);

@@ -195,7 +195,7 @@ void main() async {
     },
     verify: (game, tester) async {
       await tester.runAsync(() async {
-        game.onScreenTap(); // START
+        startAndTap(game); // START + the first tap (PRD-2.3 §10.1)
         await flushAndMount(game);
         stepGame(game, 0.6); // let the menu fade out
         _pinBird(game);

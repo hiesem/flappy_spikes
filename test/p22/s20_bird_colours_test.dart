@@ -151,6 +151,12 @@ void _expectSameColours(
 /// Drives the run to each stage in [_stageHoops] and checks the bird there.
 Future<void> _sweepStages(FlappySpikesGame game) async {
   final run = game.run!;
+  // PRD-2.3 §10.2 hoop 0 stands at x 290 from the start: take it away, so
+  // the pinned bird never flies through it (pass effects over the bird).
+  for (final h in hoopsOf(game).toList()) {
+    h.removeFromRun();
+  }
+  await flushAndMount(game);
   final stage0 = await _onAndOff(game);
   final solid = _solidBirdPixels(stage0.on, stage0.off, game.viewHeight / 2);
   expect(

@@ -207,6 +207,27 @@ Future<RunController> startRun(
   // region WP-5b — a prefetched opponent plays the VS intro first (§5.8)
   await finishVersusIntro(g);
   // endregion WP-5b
+  // PRD-2.3 §10.1 START only opens the run (waiting); the harness gives it
+  // one synthetic first tap so existing tests keep their timing.
+  if (g.run?.waiting ?? false) g.onScreenTap();
+  await flushAndMount(g);
+  return g.run!;
+}
+
+/// PRD-2.3 §10.1 START (Space / Enter) plus the harness's synthetic first
+/// tap: the run starts and the bird flaps at once, as START did before 2.3.
+void startAndTap(FlappySpikesGame g) {
+  g.onScreenTap();
+  if (g.state == GameState.playing && (g.run?.waiting ?? false)) {
+    g.onScreenTap();
+  }
+}
+
+/// PRD-2.3 §10.1 opens a run from the home screen and leaves it waiting for
+/// the first tap (no synthetic tap; [startRun] does the tap).
+Future<RunController> openRun(FlappySpikesGame g) async {
+  g.onScreenTap();
+  await finishVersusIntro(g);
   await flushAndMount(g);
   return g.run!;
 }

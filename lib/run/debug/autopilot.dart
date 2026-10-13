@@ -4,6 +4,7 @@ import 'dart:ui' show Offset;
 import 'package:flame/components.dart';
 
 import '../../game/config.dart';
+import '../../game/flappy_game.dart' show GameState;
 import '../config/run_config.dart';
 import '../director/plans.dart' show MotionType;
 import '../hoops/hoop.dart';
@@ -144,6 +145,8 @@ class Autopilot {
   }
 
   bool shouldFlap() {
+    // PRD-2.3 §10.1 the bot gives a waiting run its first tap.
+    if (run.waiting && run.game.state == GameState.playing) return true;
     final s = run.state;
     if (!run.isScrolling || s.flapLock > 0 || s.ride != null) return false;
     final bird = run.game.runBirdPosition;

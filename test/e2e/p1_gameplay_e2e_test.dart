@@ -333,7 +333,14 @@ void main() {
       verify: (g, _) async {
         final run = await startRun(g, force: [ElementId.angledRing]);
         g.update(.02);
-        final hoop = run.spawner.hoops.first;
+        // PRD-2.3 §10.2 hoop 0 stays plain: the forced tilted ring is the
+        // next slot; check it on the frame it spawns.
+        g.runDebug.god = true;
+        await flyUntil(
+          g,
+          (r) => r.spawner.hoops.any((h) => h.plan.tiltDeg != 0),
+        );
+        final hoop = run.spawner.hoops.firstWhere((h) => h.plan.tiltDeg != 0);
         final f = hoop.frame();
         // Even an intentionally generous 24 pt horizontal art allowance is offscreen.
         final left =

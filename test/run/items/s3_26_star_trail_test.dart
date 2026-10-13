@@ -167,6 +167,8 @@ void main() {
       spy.events.clear();
       final run = await startRun(game);
       game.runDebug.god = true; // the bird is hand-flown along the arc
+      // PRD-2.3 §10.2 hoop 0 stands on screen now: pass it first.
+      await flyUntil(game, (r) => r.state.hoopsPassed >= 1);
       final sfx = sfxLog(game);
       final coins0 = run.state.coinsThisRun;
       final bySource = <CoinSource, int>{};

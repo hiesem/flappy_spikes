@@ -104,6 +104,49 @@ class Bird extends BodyComponent<FlappySpikesGame>
     body.gravityScale = Vector2.all(1);
   }
 
+  // region P23-10 — the waiting hover (PRD-2.3 §10.1)
+  bool _hovering = false;
+  double _hoverT = 0;
+
+  /// PRD-2.3 §10.1 the bird floats at its spawn point while the run waits
+  /// for the first tap (gravity off).
+  bool get hovering => _hovering;
+
+  /// PRD-2.3 §10.1 starts the waiting hover: ±[Config.waitHoverAmp] pt at
+  /// [Config.waitHoverOmega] rad/s around the playfield's middle, a wing
+  /// beat every [Config.waitWingBeatPeriod] s (the approved design's idle).
+  void startHover() {
+    _hovering = true;
+    _hoverT = 0;
+  }
+
+  /// Ends the hover: back on the spawn point (x 70, the middle), at rest,
+  /// so the first flap starts where it always did.
+  void stopHover() {
+    if (!_hovering) return;
+    _hovering = false;
+    if (!isLoaded) return;
+    body
+      ..setTransform(Vector2(Config.birdX, game.viewHeight / 2), 0)
+      ..linearVelocity.setZero();
+  }
+
+  void _stepHover(double dt) {
+    if (!_hovering || _dead || !isLoaded) return;
+    final before = (_hoverT / Config.waitWingBeatPeriod).floor();
+    _hoverT += dt;
+    final y =
+        game.viewHeight / 2 +
+        Config.waitHoverAmp * math.sin(Config.waitHoverOmega * _hoverT);
+    body
+      ..setTransform(Vector2(Config.birdX, y), 0)
+      ..linearVelocity.setZero();
+    if ((_hoverT / Config.waitWingBeatPeriod).floor() != before) {
+      _look.playFlap();
+    }
+  }
+  // endregion P23-10
+
   /// Zero the velocity, then apply an upward impulse giving ~370 pt/s delta-v.
   void flap() {
     if (_dead || game.state != GameState.playing) {
@@ -299,5 +342,6 @@ class Bird extends BodyComponent<FlappySpikesGame>
       if (body.linearVelocity.x != 0) body.linearVelocity.x = 0;
     }
     _stepSpin(dt);
+    _stepHover(dt);
   }
 }

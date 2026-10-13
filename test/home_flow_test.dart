@@ -127,7 +127,7 @@ void main() {
     );
 
     homeTest(
-      'the START button starts the run (real tap) and flaps at once',
+      'the START button opens the run (real tap); the first tap flaps (PRD-2.3 §10.1)',
       exactSurface: true,
       verify: (game, spy, ads, tester) async {
         final start = Config.homeStartRectFor(game.viewHeight);
@@ -135,15 +135,20 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
         expect(game.state, GameState.playing);
         final bird = game.world.children.query<Bird>().single;
-        // Flapped on START (the pump then ran 0.1 s of gravity).
-        expect(bird.body.linearVelocity.y, lessThan(-200));
-        expect(spy.names, contains('game_start'));
+        // PRD-2.3 §10.1 START no longer flaps: the run waits, the bird
+        // hovers, game_start comes with the first tap.
+        expect(game.run!.waiting, isTrue);
+        expect(bird.body.linearVelocity.y, 0);
+        expect(spy.names, isNot(contains('game_start')));
 
-        // A tap where START was now flaps (the fading home lets it through).
+        // A tap where START was is the first tap: it starts and flaps (the
+        // fading home lets it through).
         stepGame(game, 0.3);
         await tester.tapAt(start.center);
         await tester.pump(const Duration(milliseconds: 100));
         // (The pump advanced 0.1 s of gravity after the flap.)
+        expect(game.run!.started, isTrue);
+        expect(spy.names, contains('game_start'));
         expect(bird.body.linearVelocity.y, lessThan(-200),
             reason: 'the fading START button must not eat the flap');
 
@@ -233,6 +238,7 @@ void main() {
         expect(spy.last('ad_rewarded_shown'), {'placement': 'home_slot'});
         expect(game.state, GameState.playing);
         expect(spy.names, contains(usedEvent(offered)));
+        game.onPlayfieldTap(); // PRD-2.3 §10.1 the first tap
         expect(spy.names.where((n) => n == 'game_start'), hasLength(1));
         expect(game.menu.slot.armed, Powerup.none, reason: 'consumed');
         await flushPrefs();
@@ -343,6 +349,7 @@ void main() {
         await tap;
         await flushAndMount(game);
         expect(game.state, GameState.playing);
+        game.onPlayfieldTap(); // PRD-2.3 §10.1 the first tap
         expect(spy.names.where((n) => n == 'game_start'), hasLength(1));
         expect(spy.names, contains(usedEvent(game.menu.slot.offered)));
       },

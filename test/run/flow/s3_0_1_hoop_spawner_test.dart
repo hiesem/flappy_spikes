@@ -57,9 +57,12 @@ void main() {
           expect(plan.index, i);
           // Never pops into view (one frame of scrolling at most; WP-3a:
           // up to 1.7 × cruise ≈ 4.5 pt per frame in a comet boost).
+          // PRD-2.3 §10.2 hoop 0 stands at x 290 before the first tap.
           expect(
             plan.trackX - cam,
-            greaterThanOrEqualTo(320 + 60 - (plan.duringRide ? 5 : 4)),
+            i == 0
+                ? RunConfig.hoop0X
+                : greaterThanOrEqualTo(320 + 60 - (plan.duringRide ? 5 : 4)),
             reason: 'hoop $i spawned at ${plan.trackX - cam} on screen',
           );
           if (i > 0) {
@@ -92,8 +95,9 @@ void main() {
             reason: 'hoop $i too close to the floor tooth line',
           );
         }
-        // Hoops 0–2 sit at 0.45–0.55 of the band, hoop 0 at exactly 0.5.
-        expect(spawns.first.$2.centreY, closeTo(h / 2, 1e-6));
+        // Hoops 0–2 sit at 0.45–0.55 of the band; PRD-2.3 §10.2 hoop 0 at
+        // the middle + 16.
+        expect(spawns.first.$2.centreY, closeTo(h / 2 + 16, 1e-6));
       },
     );
   }

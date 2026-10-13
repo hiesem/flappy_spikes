@@ -1,5 +1,6 @@
 
 import 'package:flame/extensions.dart';
+import '../run/config/tuning_values.dart';
 
 /// All gameplay constants from SPEC.md, in logical points on the original
 /// 320x568 iPhone canvas (1 point = 1 Forge2D world unit).
@@ -1402,4 +1403,32 @@ class Config {
   static const double settingsFooterFontSize = 10.5;
   static const double settingsFooterLine = 16.8;
   static const double settingsFooterGap = 8;
+
+  // region PRD-2.3 §10 — the waiting start and the tap reminder
+  /// §10.1 the waiting bird's hover: ±6 pt (the approved design's idle).
+  static const double waitHoverAmp = 6;
+
+  /// §10.1 hover speed (rad/s; 3 rad/s ≈ 0.5 Hz, `sin(t × 3)` in the design).
+  static const double waitHoverOmega = 3;
+
+  /// §10.1 a wing beat every this many seconds while hovering (the design's
+  /// `(t × 2.5) % 1`).
+  static const double waitWingBeatPeriod = 0.4;
+
+  /// §10.3b the tap reminder shows after this long without a tap (s).
+  /// Remote tuning key `ui_tap_reminder_s` (PRD-2.3 §0 item 5, §15); 4.0 by
+  /// default.
+  static double get tapReminderDelay =>
+      TuningValues.current.d('ui_tap_reminder_s');
+
+  /// §10.3 / PRD-2.3 §0 item 4 the first-run instructions fade out over
+  /// this on the first tap (s; the design file's 0.35 s).
+  static const double firstRunHintFadeOut = 0.35;
+
+  /// §10.3b / §0 item 4 the tap reminder fades in (ease-out) over this (s).
+  static const double tapReminderFadeIn = 0.3;
+
+  /// §10.3b / §0 item 4 the tap reminder fades out (ease-in) on the tap (s).
+  static const double tapReminderFadeOut = 0.2;
+  // endregion PRD-2.3 §10
 }

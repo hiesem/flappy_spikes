@@ -24,7 +24,7 @@ void main() {
       await game.ready();
       game.sound.enabled = false;
       await preloadImages(game);
-      game.onScreenTap(); // start -> playing
+      startAndTap(game); // start -> playing (PRD-2.3 §10.1 + the first tap)
       game.update(1 / 60);
       await game.ready(); // mount the first hoop
     },

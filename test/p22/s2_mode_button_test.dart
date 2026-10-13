@@ -306,6 +306,7 @@ void main() {
         expect(run.setup.opponent, isNull);
         expect(g.runHud!.versus, isNull);
         expect(versus.pool, hasLength(1), reason: 'not taken in FREE FLY');
+        g.onPlayfieldTap(); // PRD-2.3 §10.1 the first tap: run_start
         expect(versus.runStarts, 1);
         final events = analyticsLog(spy);
         expect(events.where((e) => e.$1 == 'run_start').single.$2, {
@@ -360,6 +361,7 @@ void main() {
         g.onScreenTap();
         expect(g.state, GameState.playing);
         expect(g.versusIntro, isNull);
+        g.onPlayfieldTap(); // PRD-2.3 §10.1 the first tap: run_start
         final events = analyticsLog(spy);
         expect(events.where((e) => e.$1 == 'versus_solo').single.$2, {
           'reason': 'app_check',

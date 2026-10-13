@@ -18,11 +18,12 @@ import '../../helpers.dart';
 
 /// WP-3c: Lucky Spin (PRD-2 §3.25, §5.24).
 void main() {
-  test('§3.25 slices +2, +5, +10, +3, +20, +5 (equal chance, average ≈ 7.5); '
+  test('§3.25 slices (PRD-2.3 §14.2: +1, +2, +3, +5, +1, +2, equal chance, '
+      'average ≈ 2.33); '
       '§5.24 colours, r 24, 36 pt above, 7 rad/s, 8 rad/s²', () {
-    expect(RunConfig.luckySpinSlices, [2, 5, 10, 3, 20, 5]);
+    expect(RunConfig.luckySpinSlices, [1, 2, 3, 5, 1, 2]);
     final avg = RunConfig.luckySpinSlices.reduce((a, b) => a + b) / 6;
-    expect(avg, closeTo(7.5, 1e-9));
+    expect(avg, closeTo(14 / 6, 1e-9));
     expect(LuckySpinConfig.sliceColors.map((c) => c.toARGB32()), [
       0xFFEC008C,
       0xFFFFB529,

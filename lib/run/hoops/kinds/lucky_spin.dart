@@ -179,7 +179,7 @@ class LuckyWheel extends Component {
     stopAngle =
         -math.pi / 2 - (prize.slice + .5 + jitter) * LuckySpinHoopKind.seg;
     _approachAngle = stopAngle - LuckySpinHoopKind.stopDistance;
-    _speedRef = RunConfig.cruise(c.s.runClock);
+    _speedRef = RunConfig.cruise(c.s.hoopIndex);
     angle = _angleAt(_distance());
   }
 

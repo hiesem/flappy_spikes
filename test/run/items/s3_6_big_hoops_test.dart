@@ -59,11 +59,14 @@ void main() {
         final b = run.state.bigHoops!;
         expect(b.start, 0);
         expect(b.duration, inInclusiveRange(30, 40));
-        // The first hoop (opening 118) is 1.5× and gold.
+        // PRD-2.3 §0 item 3: the first hoop stays 118 (the fixed easy
+        // hoop 0) but is gold; from hoop 1 the opening is 1.5× (132).
         final first = run.spawner.hoops.first;
-        expect(first.opening, closeTo(RunConfig.opening0 * 1.5, 1e-9));
+        expect(first.opening, RunConfig.opening0);
         expect(first.look.colors, RingColors.gold);
         expect(BigHoopsFeature.isGold(first), isTrue);
+        final second = run.spawner.slotLog.firstWhere((p) => p.index == 1);
+        expect(second.opening, closeTo(RunConfig.openingFor(1) * 1.5, 1e-9));
         // The next run (nothing armed) is plain.
         killRun(game);
         await flushAndMount(game);
@@ -173,7 +176,8 @@ void main() {
         for (final (t, opening, idx, gold, normal, ride, tier) in spawned) {
           final m = b.mult(t);
           final base = run.director.openingFor(idx, ride: ride);
-          final mp = b.mult(planned[idx] ?? t);
+          // PRD-2.3 §0 item 3: hoop 0 stays 118 with Big Hoops.
+          final mp = idx == 0 ? 1.0 : b.mult(planned[idx] ?? t);
           expect(opening, closeTo(min(base * mp, cap), 1e-6), reason: 't=$t');
           if (normal) expect(gold, m > 1 || tier, reason: 't=$t m=$m');
           // Big Hoops never paints a special kind; only the streak's own

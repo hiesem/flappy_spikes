@@ -22,10 +22,10 @@ import '../../helpers.dart';
 
 /// WP-3d: pairs of two powerup rings, "Gift Box" (PRD-2 §3.21, §5.20).
 void main() {
-  test('§3.21 gifts: +10 coins, +5 score, FEVER sets the streak to ≥ ×5; '
+  test('§3.21 gifts: +3 coins (PRD-2.3 §14.2, was +10), +5 score, FEVER sets the streak to ≥ ×5; '
       '§5.20 reward colours and words; the skipped ring fades to 60 % in '
       '0.45 s', () {
-    expect(PairConfig.coins, 10);
+    expect(PairConfig.coins, 3);
     expect(PairConfig.score, 5);
     expect(PairConfig.feverStreak, 5);
     expect(PairConfig.skipFade, .45);
@@ -45,7 +45,7 @@ void main() {
     expect(PairReward.values.map((r) => PairConfig.style(r).tag), [
       'SHIELD',
       'COMET',
-      '+10 COINS',
+      '+3 COINS',
       '+5 SCORE',
       'FEVER',
     ]);
@@ -138,8 +138,8 @@ void main() {
         expect(run.dying, isFalse);
         final passes = events.whereType<HoopPassed>().toList();
         expect(passes, hasLength(1), reason: 'one hoop, resolved once');
-        // PRD-2.2 §13.1 the pass's points, the +5 gift, and the +10 coins
-        // gift paid in points too.
+        // PRD-2.2 §13.1 the pass's points, the +5 gift, and the coins gift
+        // (PRD-2.3 §14.2: +3) paid in points too.
         expect(
           run.state.score,
           score +
@@ -148,7 +148,8 @@ void main() {
                 streak: run.state.streak,
               ) +
               (take == PairReward.score ? 5 : 0) +
-              (take == PairReward.coins ? 10 : 0),
+              (take == PairReward.coins ? 3 : 0) +
+              ScoringFeature.chickBonus(run.state),
         );
         final st = PairHoopKind.stateOf(h)!;
         expect(st.picked, ring);
@@ -219,7 +220,7 @@ void main() {
             expect(c.element, ElementId.comet);
             expect(c.pickup, isNull, reason: "WP-3a's pair-gift contract");
           case PairReward.coins:
-            expect(run.state.coinsThisRun, coins + 10);
+            expect(run.state.coinsThisRun, coins + 3);
             expect(
               events.whereType<CoinsEarned>().single.source,
               CoinSource.pair,

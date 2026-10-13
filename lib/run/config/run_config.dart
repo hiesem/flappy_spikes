@@ -1,3 +1,5 @@
+import 'tuning_values.dart';
+
 /// PRD-2 core tuning (§3.0.1) and the director's placement constants
 /// (§3.0.2 / §3.0.3 / §3.0.8). Every member's doc starts with its PRD
 /// section (ARCH §4). Pure Dart.
@@ -10,11 +12,11 @@ abstract final class RunConfig {
   /// §3.0.1 Screen height the PRD specifies layouts at (pt).
   static const double designHeight = 711;
 
-  /// §3.0.1 Cruise (scroll) speed at runClock 0 (pt/s).
+  /// §3.0.1 Cruise (scroll) speed at hoop 0 (pt/s). PRD-2.3 §14.4: the
+  /// run's speed is the `curve_speed` keyframe table by hoop index ([cruise];
+  /// 150 → 172.5 at hoop 50 → 187.5 from hoop 150), replacing the 2.2
+  /// +3.5 %-per-minute ramp. This is the design reference value only.
   static const double cruiseSpeed = 150;
-
-  /// §3.0.1 Cruise rise per minute of runClock (fraction: 0.035 = +3.5 %).
-  static const double cruiseRampPerMinute = 0.035;
 
   /// §3.0.1 Hoop spacing, plane to plane (pt). Constant.
   static const double spacing = 310;
@@ -41,14 +43,10 @@ abstract final class RunConfig {
   /// §3.0.1 / §3.31 Mini Bird scale.
   static const double miniBirdScale = 0.52;
 
-  /// §3.0.1 Opening at hoop 0 (pt).
+  /// §3.0.1 Opening at hoop 0 (pt). PRD-2.3 §14.4 / §0 item 3 / §10.2:
+  /// hoop 0 always stays 118 (also with Big Hoops' cap), and ride hoops
+  /// are 118 too. Not tunable.
   static const double opening0 = 118;
-
-  /// §3.0.1 Opening shrink per hoop index (fraction of [opening0]).
-  static const double openingShrinkPerHoop = 0.0032;
-
-  /// §3.0.1 Opening floor (fraction of [opening0]: 78 % = 92 pt).
-  static const double openingFloor = 0.78;
 
   /// §3.0.1 / §3.0.4 Rim-end circle radius (pt).
   static const double rimRadius = 7;
@@ -213,8 +211,10 @@ abstract final class RunConfig {
   /// §3.0.8 First-meet: force within this many slots / gaps.
   static const int firstMeetWithin = 5;
 
-  /// §3.25 Lucky Spin slices (coins), equal chance.
-  static const List<int> luckySpinSlices = [2, 5, 10, 3, 20, 5];
+  /// §3.25 Lucky Spin slices (coins), equal chance. PRD-2.3 §14.2:
+  /// [1, 2, 3, 5, 1, 2] (`coin_spin_slices`; was [2, 5, 10, 3, 20, 5]).
+  static List<int> get luckySpinSlices =>
+      TuningValues.current.ints('coin_spin_slices');
 
   // --- §3.11 motion parameters the director rolls ----------------------------
 
@@ -251,17 +251,10 @@ abstract final class RunConfig {
 
   // --- §3.17 / §3.6 / §3.16 timing-stream rolls ----------------------------
 
-  /// §3.17 First squeeze at runClock 60–120 s; again 60–120 s after it opens.
-  static const double squeezeGapMin = 60;
-
-  /// §3.17 First squeeze at runClock 60–120 s; again 60–120 s after it opens.
-  static const double squeezeGapMax = 120;
-
-  /// §3.17 Squeeze hold duration range (s).
-  static const double squeezeHoldMin = 10;
-
-  /// §3.17 Squeeze hold duration range (s).
-  static const double squeezeHoldMax = 20;
+  // PRD-2.3 §14.4 the squeeze schedule is counted in hoops now
+  // (`squeeze_first` 25–40, `squeeze_hold` 5–10, `squeeze_gap` 25–45 hoops;
+  // `RunDirector.rollSqueezeAt` / `rollSqueezeHold`), replacing the 2.2
+  // runClock knobs (60–120 s, hold 10–20 s).
 
   /// §3.17 Squeeze window starts this long before the warning (s).
   static const double squeezeWindowLead = 3;
@@ -278,14 +271,15 @@ abstract final class RunConfig {
   /// §3.6 Big Hoops opening multiplier.
   static const double bigHoopsMult = 1.5;
 
-  /// §3.16 Puzzle completion bonus range (coins) and step.
-  static const int puzzleBonusMin = 50;
+  /// §3.16 Puzzle completion bonus range (coins) and step. PRD-2.3 §14.2:
+  /// 50–150 in steps of 5 (`puzzle_reward` = [min, max, step]; was 50–250).
+  static int get puzzleBonusMin => TuningValues.current.ints('puzzle_reward')[0];
 
-  /// §3.16 Puzzle completion bonus range (coins) and step.
-  static const int puzzleBonusMax = 250;
+  /// §3.16 / PRD-2.3 §14.2 See [puzzleBonusMin].
+  static int get puzzleBonusMax => TuningValues.current.ints('puzzle_reward')[1];
 
-  /// §3.16 Puzzle completion bonus range (coins) and step.
-  static const int puzzleBonusStep = 5;
+  /// §3.16 / PRD-2.3 §14.2 See [puzzleBonusMin].
+  static int get puzzleBonusStep => TuningValues.current.ints('puzzle_reward')[2];
 
   /// §3.30 Hourglass duration range (s).
   static const double hourglassMin = 10;
@@ -295,16 +289,30 @@ abstract final class RunConfig {
 
   // --- helpers ---------------------------------------------------------------
 
-  /// §3.0.1 Cruise at [runClock] seconds: 150 pt/s, +3.5 % per minute.
-  static double cruise(double runClock) =>
-      cruiseSpeed * (1 + cruiseRampPerMinute * runClock / 60);
+  /// PRD-2.3 §14.4 Cruise at [hoopIndex] (pt/s): the `curve_speed`
+  /// keyframe table (150 at hoop 0, 172.5 at 50, 187.5 from 150). A revive
+  /// keeps the current speed (the hoop index is not reset).
+  static double cruise(int hoopIndex) =>
+      TuningValues.current.curve('curve_speed').at(hoopIndex);
 
-  /// §3.0.1 Opening at [hoopIndex] (rides: full size).
+  /// PRD-2.3 §14.4 the runClock seconds [hoops] hoops take from
+  /// [fromHoop] at the cruise of each hoop (spacing / cruise per hoop): the
+  /// squeeze schedule counted in hoops.
+  static double secondsForHoops(int fromHoop, int hoops) {
+    var t = 0.0;
+    for (var k = 0; k < hoops; k++) {
+      t += spacing / cruise(fromHoop + k);
+    }
+    return t;
+  }
+
+  /// §3.0.1 / PRD-2.3 §14.4 Opening at [hoopIndex]: hoop 0 is 118 (the
+  /// fixed easy first hoop, §10.2), from hoop 1 the `curve_opening`
+  /// keyframe table (88 → 66 at hoop 100, then flat); rides: full size
+  /// (118). Replaces the 2.2 118 − 0.32 %/hoop → 92.
   static double openingFor(int hoopIndex, {bool ride = false}) {
-    if (ride) return opening0;
-    final shrunk = opening0 * (1 - openingShrinkPerHoop * hoopIndex);
-    final floor = opening0 * openingFloor;
-    return shrunk < floor ? floor : shrunk;
+    if (ride || hoopIndex <= 0) return opening0;
+    return TuningValues.current.curve('curve_opening').at(hoopIndex);
   }
 
   /// §3.0.1 Colour stage for [hoopsPassed].

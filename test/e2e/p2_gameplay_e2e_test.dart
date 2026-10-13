@@ -10,6 +10,7 @@ import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
 import 'package:flappy_spikes/menu/wallet.dart';
 import 'package:flappy_spikes/levels/level_progress.dart';
+import 'package:flappy_spikes/levels/levels.dart';
 import 'package:flappy_spikes/run/config/results_config.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/mistakes.dart';
@@ -160,16 +161,23 @@ void main() {
         final page = g.resultsScreen!;
         expect(page.model.reward, earned);
         expect(g.storage.gamesPlayed, played + 1);
-        expect(g.storage.unclaimedLevelReward, 50);
+        // PRD-2.3 §14.3: every rim-free pass is perfect, so 12 bot hoops
+        // can reach level 2 (EGG 50 + FLEDGLING 100): the owed reward is
+        // every level up to the run's score.
+        final owed = kLevels
+            .where((l) => l.level <= levelFor(g.storage.bestScore))
+            .fold<int>(0, (a, l) => a + l.reward);
+        expect(owed, greaterThanOrEqualTo(50));
+        expect(g.storage.unclaimedLevelReward, owed);
         stepGame(g, 4.2);
         await flushAndMount(g);
         expect(page.claimShowing, isTrue);
         page.claimButton.button.onPressed();
         await flushAndMount(g);
-        expect(g.menu.wallet.balance, before - spent + 50);
+        expect(g.menu.wallet.balance, before - spent + owed);
         expect(g.storage.unclaimedLevelReward, 0);
         stepGame(g, 1.6);
-        expect(page.shownReward, earned + 50);
+        expect(page.shownReward, earned + owed);
         page.next();
         await flushAndMount(g);
         expect(g.state, GameState.start);

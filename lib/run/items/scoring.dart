@@ -7,6 +7,7 @@ import '../../game/sound.dart';
 import '../../menu/wallet.dart';
 import '../../versus/timeline.dart' show PointFlags;
 import '../config/run_config.dart';
+import '../config/tuning_values.dart';
 import '../director/plans.dart' show HoopKindId, RideKind;
 import '../effects/coin_popup.dart';
 import '../effects/shock_ring.dart';
@@ -21,12 +22,14 @@ import '../run_state.dart';
 /// §5.1 pass feedback; points PRD-2.2 §13):
 ///
 /// - **points** ([pointsFor]): 1 for a non-perfect pass, max(2, streak)
-///   for a perfect one (×2 with the chick; [RunContext.addScore] → HUD,
-///   versus timeline via [ScoreChanged]);
+///   for a perfect one, +1 while the chick flies (PRD-2.3 §14.3,
+///   [chickBonus]; [RunContext.addScore] → HUD, versus timeline via
+///   [ScoreChanged]);
 /// - **a coin per hoop** through the one in-run wallet path
 ///   ([RunContext.earn]: credited at once, kept if the run ends): 1 for a
-///   pass with a rim touch ([CoinSource.hoop]), 2 for a perfect pass
-///   ([CoinSource.perfect]); shown by master #8 ([CoinPopup]) at the hoop;
+///   pass with a rim touch ([CoinSource.hoop]), 2 for a perfect pass —
+///   PRD-2.3 §14.3: any pass with no rim touch ([CoinSource.perfect]);
+///   shown by master #8 ([CoinPopup]) at the hoop;
 /// - the **colour stage** every 10 hoops passed
 ///   (`RunConfig.stageForHoops`, palettes in order, gold last);
 /// - a **non-perfect** pass plays `point.mp3` and the §5.1 ring-outline
@@ -40,12 +43,26 @@ class ScoringFeature extends RunFeature {
   final _popups = CoinPopup.newPool();
   final _pulses = ShockRing.newPool();
 
-  /// PRD-2.2 §13.1 the points of a pass: 1 for a non-perfect pass (graze
-  /// or clean), max(2, [streak]) for a perfect one — [streak] is the value
-  /// *after* this pass (the streak feature runs first). The chick's ×2 is
-  /// applied by [RunContext.addScore].
+  /// PRD-2.2 §13.1 the points of a pass: 1 for a non-perfect pass
+  /// (`point_pass`), max(2, [streak]) for a perfect one
+  /// (`point_perfect_min`) — [streak] is the value *after* this pass (the
+  /// streak feature runs first). No streak cap (PRD-2.3 §14.3).
   static int pointsFor({required bool perfect, required int streak}) =>
-      perfect ? math.max(2, streak) : 1;
+      perfect
+      ? math.max(TuningValues.current.i('point_perfect_min'), streak)
+      : TuningValues.current.i('point_pass');
+
+  /// PRD-2.3 §14.3 the chick's extra points per hoop passed (`point_chick`,
+  /// +1), 0 without a hatched chick.
+  static int chickBonus(RunState s) => s.egg?.stage == EggStage.chick
+      ? TuningValues.current.i('point_chick')
+      : 0;
+
+  /// PRD-2.3 §14.2 the coins of a pass: 1 (`coin_hoop`), 2 for a perfect
+  /// pass and every ride hoop (`coin_perfect`).
+  static int coinsFor({required bool perfect}) => perfect
+      ? TuningValues.current.i('coin_perfect')
+      : TuningValues.current.i('coin_hoop');
 
   @override
   void attach(RunContext c) {
@@ -60,13 +77,15 @@ class ScoringFeature extends RunFeature {
     // and Ring Train points (§3.22, 3c) skip the 0.9 s gap check
     final train = e.hoop?.plan.kind == HoopKindId.train;
     final perfect = e.perfect;
+    // PRD-2.3 §14.3 the chick adds +1 point per hoop passed (one score
+    // change with the pass, so the versus timeline keeps one entry).
     c.addScore(
-      pointsFor(perfect: perfect, streak: c.s.streak),
+      pointsFor(perfect: perfect, streak: c.s.streak) + chickBonus(c.s),
       flags: (e.duringRide ? PointFlags.ride : PointFlags.none) |
           (train ? PointFlags.train : PointFlags.none),
     );
     // endregion WP-3b / WP-3c
-    final coins = perfect ? 2 : 1;
+    final coins = coinsFor(perfect: perfect);
     c.earn(coins, perfect ? CoinSource.perfect : CoinSource.hoop);
 
     // Where: the ring centre that was passed (or the bird for a seam pass).
@@ -95,11 +114,7 @@ class ScoringFeature extends RunFeature {
     }
     // endregion WP-3b
     fx.add(
-      popup..play(
-        Offset(at.x, at.y),
-        coins,
-        doubled: c.s.egg?.stage == EggStage.chick,
-      ),
+      popup..play(Offset(at.x, at.y), coins),
     );
     if (!perfect) {
       c.sfx(Sfx.point);

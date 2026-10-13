@@ -506,8 +506,10 @@ class SwitchPickup extends Pickup {
         random: c.cosmetic,
       ),
     );
-    c.layers.fx.add(_popups.obtain().play(at, SwitchConfig.coins));
-    c.earn(SwitchConfig.coins, CoinSource.switchRing);
+    // PRD-2.3 §14.2 the switch pays 0 by default: no coin popup then.
+    final coins = SwitchConfig.coins;
+    if (coins > 0) c.layers.fx.add(_popups.obtain().play(at, coins));
+    c.earn(coins, CoinSource.switchRing);
     c.sfx(SwitchConfig.touchSound(design));
     c.track('switchring_switch_taken', {
       'design': SwitchRingKind.storageName(design),

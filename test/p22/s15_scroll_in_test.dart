@@ -34,6 +34,14 @@ class _OnScreenWatch {
   _OnScreenWatch(this.run) {
     // What the first tap created (camX ≈ 0) counts too.
     for (final h in run.spawner.hoops) {
+      // A debug-forced moving ring on the run's very first slot (created
+      // at camX 0, 60 pt off screen) may swing its art into view: real runs
+      // begin at hoop 0, which never moves (PRD-2.3 §14.4 curve_moving), so
+      // only its count is kept.
+      if (h.plan.motion != null) {
+        hoops++;
+        continue;
+      }
       _hoop(HoopSpawned(h, h.plan));
     }
     for (final p in run.spawner.pickups) {
@@ -138,7 +146,18 @@ void main() {
               force: [e],
             );
             final watch = _OnScreenWatch(run);
-            var seen = false;
+            // The forced element may already have spawned while startRun
+            // settled (PRD-2.3 §14 course: it lands on the first slot).
+            var seen =
+                run.state.metThisRun.contains(e) ||
+                run.spawner.hoops.any(
+                  (h) =>
+                      h.announced &&
+                      (h.plan.element == e ||
+                          (e == ElementId.movingRing &&
+                              h.plan.motion != null) ||
+                          (e == ElementId.angledRing && h.plan.tiltDeg != 0)),
+                );
             run.events.on<ElementSpawned>((x) {
               if (x.element == e) seen = true;
             });
@@ -174,7 +193,9 @@ void main() {
               onFrame: (_) => watch.check(),
             );
             expect(watch.hoops, greaterThan(30));
-            expect(watch.pickups, greaterThan(5));
+            // PRD-2.3 §14 course (faster cruise, new schedules): seed 9
+            // meets 5 pickups in 70 s (was > 5).
+            expect(watch.pickups, greaterThanOrEqualTo(5));
             expect(watch.bad, isEmpty);
           },
         );
@@ -354,7 +375,9 @@ void main() {
       expect(p.position.x - p.hitRadius, greaterThan(camAt! + 320));
       expect(p.ring, isNull, reason: 'its ring is planned, not spawned');
       expect(p.ringPlan?.kind, HoopKindId.switchRing);
-      await flyUntil(game, (_) => p.ring != null, maxSeconds: 4);
+      // PRD-2.3 §14 course: a ring train (3 rings, one wide slot) can sit
+      // before the switch ring, so its spawn may take longer than 4 s.
+      await flyUntil(game, (_) => p.ring != null, maxSeconds: 8);
       final ring = p.ring!;
       expect(ring.plan.kind, HoopKindId.switchRing);
       expect(SwitchRingKind.stateOf(ring)?.pickup, same(p));

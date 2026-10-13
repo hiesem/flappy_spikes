@@ -99,12 +99,12 @@ void main() {
   }
 
   group('§3.26 / §5.25 Star Trail rules (pure)', () {
-    test('§3.26 8 stars at u = (i+1)/9, all 8 → +5 coins', () {
+    test('§3.26 8 stars at u = (i+1)/9, all 8 → +2 coins (PRD-2.3 §14.2)', () {
       expect(StarTrailConfig.stars, 8);
       expect(RunConfig.starTrailStars, 8);
       expect(StarTrailConfig.u(0), closeTo(1 / 9, 1e-9));
       expect(StarTrailConfig.u(7), closeTo(8 / 9, 1e-9));
-      expect(StarTrailConfig.reward, 5);
+      expect(StarTrailConfig.reward, 2);
       expect(RunConfig.starTrailBulge, 40);
       expect(RunConfig.starTrailInset, 40);
       expect(ElementId.starTrail.firstPossible, 5);
@@ -123,7 +123,7 @@ void main() {
       expect(StarTrailConfig.lineDashes, [2, 6]);
       expect(StarTrailConfig.lineAlpha, .45);
       expect(StarTrailConfig.bannerText, 'PERFECT LINE');
-      expect(StarTrailConfig.bannerSub, '8 / 8 stars · +5 coins');
+      expect(StarTrailConfig.bannerSub, '8 / 8 stars · +2 coins');
       expect(StarTrailConfig.popColor, const Color(0xFFB87F00));
       expect(StarTrailConfig.sparkleSize, 12);
       expect(StarTrailConfig.sparkleLife, .4);
@@ -160,7 +160,7 @@ void main() {
     () => createRunTestGame(worldHeight: 711, seed: 5, services: spy),
     gameSize: Vector2(320, 711),
   ).testGameWidget(
-    '§3.26 all 8 stars: PERFECT LINE, +5 coins (star_trail), the 8 notes and '
+    '§3.26 all 8 stars: PERFECT LINE, +2 coins (star_trail), the 8 notes and '
     'the chord, no "n / 8" pop',
     setUp: (g, _) => boot(g),
     verify: (game, _) async {
@@ -185,7 +185,7 @@ void main() {
       expect(run.state.trails.caught[trail.trailId], 8);
       // Only the trail's own payout (the glide also grazes normal hoops).
       expect(bySource[CoinSource.starTrail], StarTrailConfig.reward);
-      expect(run.state.coinsThisRun - coins0, greaterThanOrEqualTo(5));
+      expect(run.state.coinsThisRun - coins0, greaterThanOrEqualTo(2));
       expect(
         sfx.where((n) => n.startsWith('trailNote')).toList(),
         [
@@ -215,7 +215,7 @@ void main() {
       expect(banner!.text, 'PERFECT LINE');
       // The wallet got the payout.
       await flushAndMount(game);
-      expect(game.menu.wallet.balance, greaterThanOrEqualTo(5));
+      expect(game.menu.wallet.balance, greaterThanOrEqualTo(StarTrailConfig.reward));
       expect(run.ended, isFalse);
     },
   );

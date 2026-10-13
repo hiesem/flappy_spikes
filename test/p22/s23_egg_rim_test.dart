@@ -166,7 +166,7 @@ void main() {
   );
 
   tester().testGameWidget(
-    '§23.3 after hatching a rim touch still loses the chick with ×2 LOST',
+    '§23.3 after hatching a rim touch still loses the chick with +1 LOST (PRD-2.3 §14.3)',
     setUp: (g, _) => boot(g),
     verify: (game, _) async {
       final run = await startRun(game);
@@ -177,7 +177,7 @@ void main() {
         RimTouched(fakeHoop(), Vector2(200, 300), Vector2(0, 1)),
       );
       expect(run.state.egg, isNull);
-      expect(RunHud.ensureFor(run).banners.current?.text, '×2 LOST');
+      expect(RunHud.ensureFor(run).banners.current?.text, '+1 LOST');
       expect(featureOf(run).broken, 0);
     },
   );

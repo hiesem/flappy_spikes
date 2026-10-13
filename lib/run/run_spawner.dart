@@ -342,6 +342,7 @@ class RunSpawner {
         run.birdTrackPosition()?.x ?? run.state.camX + RunConfig.birdX;
     _hoops.removeWhere((h) {
       if (h.planeX <= birdX) return false;
+      _dropPortal(h.plan);
       _fading
         ..add((h, fade, fade))
         ..add((h.front, fade, fade));
@@ -368,8 +369,17 @@ class RunSpawner {
     _pending.clear();
     // PRD-2.2 §15 the planned-ahead slot goes too (its attached items were
     // cleared with the pickups above).
+    final ahead = _ahead;
+    if (ahead != null) _dropPortal(ahead);
     _ahead = null;
     _aheadItems.clear();
+  }
+
+  /// §3.12 a portal planned or spawned ahead and never flown does not count
+  /// as the last ride (never the same ride twice in a row).
+  void _dropPortal(SlotPlan p) {
+    if (p.kind != HoopKindId.portal) return;
+    if (p.extra case final RideId ride) run.director.portalDropped(ride);
   }
 
   // region WP-G2 — one bonus at a time (PRD-2.2 §27)
@@ -494,6 +504,11 @@ class RunSpawner {
   /// §3.12 the way back: the old course (passed hoops, the portal) goes;
   /// nothing of it is judged.
   void clearAll() {
+    for (final h in _hoops) {
+      if (!h.resolved) _dropPortal(h.plan);
+    }
+    final ahead = _ahead;
+    if (ahead != null) _dropPortal(ahead);
     for (final h in _hoops) {
       h.removeFromRun();
     }

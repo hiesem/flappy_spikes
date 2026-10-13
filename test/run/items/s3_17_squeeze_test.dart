@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/components/score_hud.dart';
 import 'package:flappy_spikes/components/spike_strip.dart';
 import 'package:flappy_spikes/game/config.dart';
@@ -61,12 +62,13 @@ void main() {
       expect(SqueezeConfig.openFor(9, 568), 230);
     });
 
-    test('§3.17 schedule knobs: 60–120 s, hold 10–20 s, window 3 s before '
+    test('§3.17 schedule knobs (PRD-2.3 §14.4: in hoops — first 25–40, '
+        'hold 5–10, next 25–45 after the previous ended), window 3 s before '
         'the warning, waits until a ride / revive ends + 2 s', () {
-      expect(RunConfig.squeezeGapMin, 60);
-      expect(RunConfig.squeezeGapMax, 120);
-      expect(RunConfig.squeezeHoldMin, 10);
-      expect(RunConfig.squeezeHoldMax, 20);
+      final t = TuningValues.current;
+      expect(t.range('squeeze_first'), (25, 40));
+      expect(t.range('squeeze_hold'), (5, 10));
+      expect(t.range('squeeze_gap'), (25, 45));
       expect(RunConfig.squeezeWindowLead, 3);
       expect(SqueezeConfig.waitAfter, 2);
     });
@@ -170,10 +172,11 @@ void main() {
       () => createRunTestGame(worldHeight: h, services: spy),
       gameSize: Vector2(320, h),
     ).testGameWidget(
-      '§3.17 a squeeze from start to open (${h.toInt()} pt): moment 60–120 s, '
-      'warning 1.5 s → closing 3 s → lock → hold 10–20 s with 3 ticks → '
-      'opening 3 s; walls = the strips; sounds, loop, shake, flash, bits, '
-      'dust, met, analytics; the next one 60–120 s later and tighter',
+      '§3.17 a squeeze from start to open (${h.toInt()} pt): moment at hoop '
+      '25–40, warning 1.5 s → closing 3 s → lock → hold 5–10 hoops with 3 '
+      'ticks → opening 3 s; walls = the strips; sounds, loop, shake, flash, '
+      'bits, dust, met, analytics; the next one 25–45 hoops later and tighter '
+      '(PRD-2.3 §14.4: the schedule counts hoops)',
       setUp: (g, _) => boot(g),
       verify: (game, _) async {
         game.runDebug.god = true;
@@ -182,7 +185,13 @@ void main() {
         final sq = s.squeeze;
         final f = feature(run);
         expect(sq.phase, SqueezePhase.idle);
-        expect(sq.nextAt, inInclusiveRange(60, 120));
+        expect(
+          sq.nextAt,
+          inInclusiveRange(
+            RunConfig.secondsForHoops(0, 25) - 1e-9,
+            RunConfig.secondsForHoops(0, 40) + 1e-9,
+          ),
+        );
         final sfx = sfxLog(game);
         final loops = <SfxLoop>[];
         game.sound.onLoop = (l, v) => loops.add(l);
@@ -236,8 +245,15 @@ void main() {
         expect(sfx, contains(Sfx.sqLock.name));
         expect(f.pool!.alive, greaterThanOrEqualTo(SqueezeConfig.dustCount));
         expect(f.shake.amplitude, greaterThan(5));
-        expect(sq.holdS, inInclusiveRange(10, 20));
-        expect(loops, [SfxLoop.sqHold]);
+        expect(
+          sq.holdS,
+          inInclusiveRange(
+            RunConfig.secondsForHoops(s.hoopIndex, 5) - 1e-9,
+            RunConfig.secondsForHoops(s.hoopIndex, 10) + .5,
+          ),
+        );
+        // Other loops (a FEVER hoop on the way) may play too.
+        expect(loops.where((l) => l == SfxLoop.sqHold), hasLength(1));
         expect(
           game.sound.activeLoops.map((l) => l.loop),
           contains(SfxLoop.sqHold),
@@ -265,7 +281,13 @@ void main() {
         );
         expect(sq.inset, 0);
         expect(sq.index, 1);
-        expect(sq.nextAt - s.runClock, inInclusiveRange(60, 120));
+        expect(
+          sq.nextAt - s.runClock,
+          inInclusiveRange(
+            RunConfig.secondsForHoops(s.hoopIndex, 25) - 1e-9,
+            RunConfig.secondsForHoops(s.hoopIndex, 45) + .5,
+          ),
+        );
         await flyUntil(game, (_) => false, maxSeconds: 1);
         expect((game.camera.viewfinder.position - vf0).length, lessThan(1e-3));
         expect(run.ended, isFalse);
@@ -332,7 +354,7 @@ void main() {
       expect(run.directorContext().squeezeWindow, isFalse);
       run.debugForce(ElementId.squeeze);
       final birdX = run.birdTrackPosition()!.x;
-      final cruise = RunConfig.cruise(s.runClock);
+      final cruise = RunConfig.cruise(s.hoopIndex);
       for (final h in run.spawner.hoops) {
         final cross = s.runClock + (h.planeX - birdX) / cruise;
         expect(cross, lessThanOrEqualTo(s.squeeze.nextAt - 3));

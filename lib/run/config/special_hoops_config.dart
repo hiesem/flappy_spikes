@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'tuning_values.dart';
+
 /// Bullseye Ring (PRD-2 §3.24, §5.23). Every member's doc starts with its
 /// PRD section.
 abstract final class BullseyeConfig {
@@ -7,8 +9,9 @@ abstract final class BullseyeConfig {
   /// openings shrink, Q63).
   static const double band = 12;
 
-  /// §3.24 Coins for a bullseye.
-  static const int coins = 3;
+  /// §3.24 Coins for a bullseye. PRD-2.3 §14.2: 1 (`coin_bullseye`; was
+  /// 3).
+  static int get coins => TuningValues.current.i('coin_bullseye');
 
   /// §5.23 Target rings (radius pt, colour), outside in.
   static const List<(double, Color)> target = [
@@ -56,8 +59,9 @@ abstract final class TrainConfig {
   /// §3.22 Rings in a train.
   static const int rings = 3;
 
-  /// §3.22 Combo coins for all three rings.
-  static const int comboCoins = 3;
+  /// §3.22 Combo coins for all three rings. PRD-2.3 §14.2: 1
+  /// (`coin_train`; was 3).
+  static int get comboCoins => TuningValues.current.i('coin_train');
 
   /// §5.21 Track: from this far before the first ring to this far after
   /// the last (pt).
@@ -85,7 +89,8 @@ abstract final class TrainConfig {
   static const String bannerText = 'TRAIN ×3';
 
   /// §5.21 Banner subtitle.
-  static const String bannerSub = 'all three rings · +3 coins';
+  static String get bannerSub =>
+      'all three rings · +$comboCoins ${comboCoins == 1 ? 'coin' : 'coins'}';
 }
 
 /// Spring Ring (PRD-2 §3.23, §5.22). The 240 pt jump lives in

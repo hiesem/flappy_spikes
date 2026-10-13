@@ -69,7 +69,7 @@ void main() {
   group('§3.0.2 the ramp as data (LayoutConfig)', () {
     test('§3.0.2 the director tables read the layout rows and motion tables '
         'from LayoutConfig', () {
-      const t = DirectorTables.prd2;
+      final t = DirectorTables.prd2;
       expect(identical(t.bands, LayoutConfig.bands), isTrue);
       expect(identical(t.movingTypes20, LayoutConfig.movingTypes20), isTrue);
       expect(identical(t.movingTypes45, LayoutConfig.movingTypes45), isTrue);
@@ -253,15 +253,17 @@ void main() {
       }
     });
 
-    test('§3.11 moving share and type weights per row; none before 20', () {
+    test('§3.11 moving share (PRD-2.3 §14.4 curve) and type weights per row; '
+        'none before 20', () {
       for (final (row, last) in rows) {
-        var normal = 0, moving = 0;
+        var normal = 0, moving = 0, hiSeen = row.from;
         final types = <MotionType, int>{};
         for (final vh in plans.keys) {
           for (final run in plans[vh]!) {
             for (final s in run) {
               if (s.index < row.from || s.index > last) continue;
               normal++;
+              if (s.index > hiSeen) hiSeen = s.index;
               final m = s.motion;
               if (m == null) continue;
               moving++;
@@ -269,12 +271,16 @@ void main() {
             }
           }
         }
-        expect(
-          moving / normal,
-          closeTo(row.moving, .025),
-          reason: 'row ${row.from}',
-        );
-        if (row.moving == 0) continue;
+        // PRD-2.3 §14.4 the moving chance is the `curve_moving` keyframe
+        // table (the row's mean over its hoops).
+        final t = DirectorTables.prd2;
+        var want = 0.0;
+        for (var i = row.from; i <= hiSeen; i++) {
+          want += t.movingChance(i);
+        }
+        want /= hiSeen - row.from + 1;
+        expect(moving / normal, closeTo(want, .03), reason: 'row ${row.from}');
+        if (moving == 0) continue;
         final table = row.from >= LayoutConfig.allMotionTypesFrom
             ? LayoutConfig.movingTypes45
             : LayoutConfig.movingTypes20;

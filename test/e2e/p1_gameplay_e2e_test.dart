@@ -278,7 +278,9 @@ void main() {
       verify: (g, _) async {
         final run = await startRun(g, starter: Powerup.bigHoops);
         expect(g.storage.armedPowerup, 'none');
-        expect(run.spawner.hoops.first.opening, 177);
+        // PRD-2.3 §0 item 3: hoop 0 stays 118 also with Big Hoops (was
+        // 118 × 1.5 = 177); from hoop 1 the ×1.5 applies (§14.4).
+        expect(run.spawner.hoops.first.opening, 118);
         expect(run.spawner.hoops.first.look.colors, RingColors.gold);
       },
     );

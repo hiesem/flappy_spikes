@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'hud_config.dart';
+import 'tuning_values.dart';
 
 /// Piggy Bank (PRD-2 §3.28, §5.27; `design/menu_v2/lab2_collect.js`
 /// `IDEAS.piggy` / `piggy2` + `lab3_collect.js` `IDEAS.piggy3`). The spawn
@@ -10,7 +11,8 @@ import 'hud_config.dart';
 abstract final class PiggyConfig {
   // --- §3.28 the bank -------------------------------------------------------
 
-  /// §3.28 Exactly 20 coins appear; the piggy pays ×2 of what you caught.
+  /// §3.28 Exactly 20 coins appear. PRD-2.3 §14.2: every 2 caught pay 1
+  /// (rounded down; max 10), was ×2 of what you caught.
   static const int total = 20;
 
   /// §3.28 One coin field is placed in the piggy's own gap (2.0.0 G6: the
@@ -32,8 +34,15 @@ abstract final class PiggyConfig {
   static const double coinSpinRate = 4;
   static const double coinSpinPhase = .05;
 
-  /// §3.28 The smash pays this multiple of what was caught.
-  static const int payoutMult = 2;
+  /// PRD-2.3 §14.2 The smash pays 1 coin for every this many caught,
+  /// rounded down (`coin_piggy_per`, 2: 20 caught = 10; was ×2 of caught).
+  static int get coinsPer => TuningValues.current.i('coin_piggy_per');
+
+  /// PRD-2.3 §14.2 The smash pay-out for [caught] coins caught.
+  static int payoutFor(int caught) {
+    final per = coinsPer;
+    return per <= 0 ? 0 : caught ~/ per;
+  }
 
   // --- §5.27 the pig (mock `pig()`, ~32 pt as a pickup) ---------------------
 
@@ -73,11 +82,14 @@ abstract final class PiggyConfig {
 
   /// §3.28 "PIGGY BANK" banner and its one-line explanation.
   static const String bannerText = 'PIGGY BANK';
-  static const String bannerSub =
-      '20 coins appear · catch them all for the full ×2';
+  /// PRD-2.3 §14.2 (call) the texts say the new rate (was "… for the full
+  /// ×2" / "pays ×2").
+  static String get bannerSub =>
+      '20 coins appear · every $coinsPer caught pay 1';
 
-  /// §3.28 The pay-out banner: title "+N", subtitle "n / 20 coins · pays ×2".
-  static const String payoutSub = ' / 20 coins · pays ×2';
+  /// §3.28 The pay-out banner: title "+N", subtitle "n / 20 coins · 2 per
+  /// coin".
+  static String get payoutSub => ' / 20 coins · $coinsPer per coin';
 
   /// §5.27 The smash burst: 22 pink / gold / white pieces at 200 pt/s.
   static const List<Color> smashColors = [

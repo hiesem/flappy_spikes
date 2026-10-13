@@ -63,7 +63,7 @@ class ReviveRulesFeature extends RunFeature {
     if (sq.phase != SqueezePhase.idle || sq.inset > 0) {
       final was = sq.phase;
       sq.phase = SqueezePhase.idle;
-      sq.nextAt = c.director.rollSqueezeAt(c.s.runClock);
+      sq.nextAt = c.director.rollSqueezeAt(c.s.runClock, hoop: c.s.hoopIndex);
       if (was != SqueezePhase.idle) {
         c.emit(SqueezePhaseChanged(sq.phase, sq.index));
       }

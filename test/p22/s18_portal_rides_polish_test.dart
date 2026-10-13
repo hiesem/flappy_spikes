@@ -92,10 +92,11 @@ void main() {
 
     test('§18.3 the first ring 2 s after control returns', () {
       expect(PortalConfig.firstRingAfterControl, 2.0);
-      // 3.1 s of glide + settle and 2 s at cruise from runClock 60.
+      // 3.1 s of glide + settle and 2 s at cruise. PRD-2.3 §14.4: the
+      // cruise follows the hoop index (hoop 60 here).
       expect(
         PortalRide.cruiseDistance(60, 5.1),
-        closeTo(RunConfig.cruise(62.55) * 5.1, .5),
+        closeTo(RunConfig.cruise(60) * 5.1, .5),
       );
     });
 
@@ -233,7 +234,11 @@ void main() {
             } else {
               await flushAndMount(game);
               game.update(1 / 60);
-              final next = run.spawner.slotLog.last;
+              // PRD-2.3 §14.4 the faster cruise plans further ahead in the
+              // 2 s: take the slot right after the first one.
+              final next = run.spawner.slotLog.firstWhere(
+                (p) => p.index == first.index + 1,
+              );
               expect(next.trackX - first.trackX,
                   closeTo(run.director.spacing, 1e-6));
             }

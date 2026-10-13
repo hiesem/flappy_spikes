@@ -166,7 +166,8 @@ void main() {
             expect(g.storage.puzzleRound, 7);
           } else {
             expect(paid, hasLength(1));
-            expect(paid.single, inInclusiveRange(50, 250));
+            // PRD-2.3 §14.2: 50–150 (was 50–250).
+            expect(paid.single, inInclusiveRange(50, 150));
             expect(paid.single % 5, 0);
             expect(r.state.coinsThisRun, greaterThanOrEqualTo(paid.single));
             expect(g.storage.puzzlePieces, 0);
@@ -275,51 +276,56 @@ void main() {
     },
   );
 
-  // PRD-2.2 §19.3: the feather and the piece come in ≈ 60 % of runs each
-  // (gap 3–40): a seed whose run has both, before the held windows end.
-  final bothSeed = [for (var s = 1; s < 300; s++) s].firstWhere((s) {
-    final d = RunDirector(
-      seed: s,
-      enabled: const {},
-      met: const {},
-      startHoopIndex: 2,
+  // PRD-2.2 §19.3 / PRD-2.3 §14.2: the feather and the piece come in
+  // ≈ 60 % of runs each (gap 10–40) and never in the same run (the feather
+  // wins): one seed per item whose run has it before the held window ends.
+  int seedWith({required bool feather}) =>
+      [for (var s = 1; s < 300; s++) s].firstWhere((s) {
+        final d = RunDirector(
+          seed: s,
+          enabled: const {},
+          met: const {},
+          startHoopIndex: 2,
+        );
+        return feather
+            ? d.featherThisRun && d.featherAt <= 25
+            : d.pieceThisRun && d.pieceAt <= 25;
+      });
+  for (final feather in [true, false]) {
+    final what = feather ? 'feather' : 'piece';
+    journey(
+      'P45 squeeze: the $what remains scheduled until the walls reopen',
+      seed: seedWith(feather: feather),
+      (g, _) async {
+        final r = await startRun(g, startHoopIndex: 2);
+        g.runDebug.god = true;
+        // Suppress its gap through the whole scheduled window.
+        r.features.whereType<SqueezeFeature>().single.phaseT = -1000;
+        r.state.squeeze.phase = SqueezePhase.hold;
+        r.state.squeeze.inset = 100;
+        expect(
+          await flyUntil(g, (r) => r.state.hoopIndex >= 28, maxSeconds: 80),
+          isTrue,
+        );
+        expect(r.state.featherSpawned, isFalse);
+        expect(r.state.pieceSpawned, isFalse);
+        r.state.squeeze.phase = SqueezePhase.idle;
+        r.state.squeeze.inset = 0;
+        r.state.squeeze.nextAt = 10000;
+        expect(
+          await flyUntil(
+            g,
+            (r) => feather ? r.state.featherSpawned : r.state.pieceSpawned,
+            // PRD-2.2 §27: an activity on the way makes it wait.
+            maxSeconds: 60,
+          ),
+          isTrue,
+        );
+        // PRD-2.3 §14.2 never both in one run.
+        expect(r.state.featherSpawned && r.state.pieceSpawned, isFalse);
+      },
     );
-    return d.featherThisRun &&
-        d.pieceThisRun &&
-        d.featherAt <= 25 &&
-        d.pieceAt <= 25;
-  });
-  journey(
-    'P45 squeeze: feather and piece remain scheduled until the walls reopen',
-    seed: bothSeed,
-    (g, _) async {
-      final r = await startRun(g, startHoopIndex: 2);
-      g.runDebug.god = true;
-      // Suppress their gaps through the whole two scheduled windows.
-      r.features.whereType<SqueezeFeature>().single.phaseT = -1000;
-      r.state.squeeze.phase = SqueezePhase.hold;
-      r.state.squeeze.inset = 100;
-      expect(
-        await flyUntil(g, (r) => r.state.hoopIndex >= 28, maxSeconds: 80),
-        isTrue,
-      );
-      expect(r.state.featherSpawned, isFalse);
-      expect(r.state.pieceSpawned, isFalse);
-      r.state.squeeze.phase = SqueezePhase.idle;
-      r.state.squeeze.inset = 0;
-      r.state.squeeze.nextAt = 10000;
-      expect(
-        await flyUntil(
-          g,
-          (r) => r.state.featherSpawned && r.state.pieceSpawned,
-          // PRD-2.2 §19.3 / §27: never in neighbouring gaps, and an
-          // activity on the way makes them wait.
-          maxSeconds: 60,
-        ),
-        isTrue,
-      );
-    },
-  );
+  }
 
   for (final owner in [false, true]) {
     journey('P45 bonus: jackpot and one refill (${owner ? 'owner' : 'ad'})', (
@@ -331,9 +337,15 @@ void main() {
       await flushAndMount(g);
       final b = g.bonusScreen!;
       final before = g.menu.wallet.balance;
-      final jackpot = b.prizes.indexOf(250);
+      // PRD-2.3 §14.2 the jackpot is 150 (was 250).
+      final jackpot = b.prizes.indexOf(BonusConfig.jackpot);
+      expect(BonusConfig.jackpot, 150);
       expect(b.tapTile(jackpot), isTrue);
-      expect(g.menu.wallet.balance, before + 250, reason: 'credit at tap');
+      expect(
+        g.menu.wallet.balance,
+        before + BonusConfig.jackpot,
+        reason: 'credit at tap',
+      );
       await stepSeconds(g, 2);
       final others = List.generate(9, (i) => i)..remove(jackpot);
       for (final i in others.take(2)) {

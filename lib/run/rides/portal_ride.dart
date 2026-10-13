@@ -650,7 +650,7 @@ class PortalRide implements Ride {
     // Back to the normal course: camY 0, the old track cleared, the next
     // hoop placed to reach the bird ≈ 1 s after the landing (§3.12).
     final s = c.s;
-    final cruise = RunConfig.cruise(s.runClock);
+    final cruise = RunConfig.cruise(s.hoopIndex);
     s
       ..camY = 0
       ..forwardSpeed = cruise;
@@ -665,7 +665,7 @@ class PortalRide implements Ride {
       _glideCamX +
           RunConfig.birdX +
           cruiseDistance(
-            s.runClock,
+            s.hoopIndex,
             PortalConfig.glideTime +
                 PortalConfig.settleTime +
                 PortalConfig.firstRingAfterControl,
@@ -674,24 +674,18 @@ class PortalRide implements Ride {
     _stepGlide(0);
   }
 
-  /// PRD-2.2 §18.3 the track the bird covers at cruise in [seconds] from
-  /// [runClock] (the cruise grows 3.5 % per minute).
-  static double cruiseDistance(double runClock, double seconds) {
-    var x = 0.0;
-    const step = 1 / 60;
-    for (var t = 0.0; t < seconds - 1e-12; t += step) {
-      final h = math.min(step, seconds - t);
-      x += RunConfig.cruise(runClock + t + h / 2) * h;
-    }
-    return x;
-  }
+  /// PRD-2.2 §18.3 the track the bird covers at cruise in [seconds] at
+  /// hoop [hoopIndex] (PRD-2.3 §14.4: the cruise follows the hoop index,
+  /// which does not change while no hoop spawns).
+  static double cruiseDistance(int hoopIndex, double seconds) =>
+      RunConfig.cruise(hoopIndex) * seconds;
 
   void _stepGlide(double dt) {
     final v = view;
     v.gt += dt;
     final gt = v.gt;
     final s = c.s;
-    s.forwardSpeed = RunConfig.cruise(s.runClock);
+    s.forwardSpeed = RunConfig.cruise(s.hoopIndex);
     s.camX += s.forwardSpeed * dt;
     v.envA = 1 - sm(gt / PortalConfig.tintFadeOut);
     final k = math.min(1.0, gt / PortalConfig.glideTime);

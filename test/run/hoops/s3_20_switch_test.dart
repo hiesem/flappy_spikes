@@ -38,7 +38,7 @@ void main() {
         );
       }
       expect(SwitchConfig.openMax, .8);
-      expect(SwitchConfig.coins, 1);
+      expect(SwitchConfig.coins, 0, reason: 'PRD-2.3 §14.2 (was 1)');
       expect(SwitchConfig.openWord(SwitchDesign.lockdown), isNull);
       expect(SwitchConfig.openWord(SwitchDesign.laserGate)!.$1, 'POWER OFF');
       expect(SwitchConfig.openWord(SwitchDesign.powerIris)!.$1, 'POWER ON');
@@ -158,7 +158,7 @@ void main() {
       tester().testGameWidget(
         '§3.20 ${design.name}: spawns closed with its switch in the gap before '
         '(1.0 s × scroll ≥ 150 pt, 70–100 pt off the centre); the autopilot '
-        'takes the switch first: +1 coin (switch), the ring opens at once '
+        'takes the switch first: no coin (PRD-2.3 §14.2), the ring opens at once '
         '(animation ≤ 0.8 s), the streak is unchanged; then a normal pass',
         setUp: (g, _) => prepare(g),
         verify: (game, _) async {
@@ -189,10 +189,13 @@ void main() {
             streak,
             reason: 'the switch keeps the streak',
           );
-          final coins = events.whereType<CoinsEarned>().toList();
-          // A hatched chick (a seeded egg on the way) doubles it.
-          expect(coins.single.amount, coins.single.eggX2 ? 2 : 1);
-          expect(coins.single.source, CoinSource.switchRing);
+          // PRD-2.3 §14.2 the switch pays 0 coins (was 1).
+          expect(
+            events.whereType<CoinsEarned>().where(
+              (e) => e.source == CoinSource.switchRing,
+            ),
+            isEmpty,
+          );
           expect(sfx, contains(SwitchConfig.touchSound(design).name));
           expect(h.kind.autopilotTarget(h, run.state, 0).preTarget, isNull);
           expect(
@@ -207,21 +210,17 @@ void main() {
           expect(await flyUntil(game, (_) => h.resolved), isTrue);
           expect(run.dying, isFalse);
           expect(h.takenRing, 0);
-          // PRD-2.2 §13.1 the pass's points (1, or max(2, streak)), ×2 while
-          // a hatched chick (a seeded egg on the way) is active.
+          // PRD-2.2 §13.1 the pass's points (1, or max(2, streak)); PRD-2.3
+          // §14.3 +1 while a hatched chick (a seeded egg on the way) flies.
           final pass = events.whereType<HoopPassed>().last;
-          final passCoins = events.whereType<CoinsEarned>().lastWhere(
-            (e) =>
-                e.source == CoinSource.hoop || e.source == CoinSource.perfect,
-          );
           expect(
             run.state.score,
             score +
                 ScoringFeature.pointsFor(
-                      perfect: pass.perfect,
-                      streak: run.state.streak,
-                    ) *
-                    (passCoins.eggX2 ? 2 : 1),
+                  perfect: pass.perfect,
+                  streak: run.state.streak,
+                ) +
+                ScoringFeature.chickBonus(run.state),
           );
           expect(spy.events.map((e) => e.$1), contains('switchring_passed'));
           expect(game.storage.metElements, contains('switch_ring'));

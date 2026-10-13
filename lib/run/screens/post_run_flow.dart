@@ -17,7 +17,7 @@ class PostRunFlow {
   final FlappySpikesGame game;
 
   /// §3.14 the revive offer needs at least this many hoops passed.
-  static const int reviveMinHoops = ReviveConfig.minHoops;
+  static int get reviveMinHoops => ReviveConfig.minHoops;
 
   /// After the run has ended (WP-2d: the revive offer comes *before* the
   /// run ends — `FlappySpikesGame.runDeathSettled` — so persistence and the

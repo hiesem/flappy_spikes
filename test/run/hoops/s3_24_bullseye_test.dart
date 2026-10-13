@@ -20,7 +20,7 @@ void main() {
   test('§3.24 the bullseye band is ±12 pt around the ring centre, fixed as '
       'openings shrink (Q63)', () {
     expect(BullseyeConfig.band, 12);
-    expect(BullseyeConfig.coins, 3);
+    expect(BullseyeConfig.coins, 1, reason: 'PRD-2.3 §14.2 (was 3)');
     for (final opening in [118.0, 100.0, 92.0]) {
       final f = HoopFrame(centre: Vector2(400, 300), opening: opening);
       for (final (dy, hit) in [
@@ -66,10 +66,10 @@ void main() {
     await preloadImages(g);
   }
 
-  for (final (dy, hit) in [(0.0, true), (28.0, false)]) {
+  for (final (dy, hit) in [(0.0, true), (20.0, false)]) {
     tester.testGameWidget(
       hit
-          ? '§3.24 a pass with the bird centre in the band is a BULLSEYE: +3 '
+          ? '§3.24 a pass with the bird centre in the band is a BULLSEYE: +1 '
                 'coins (bullseye), banner, flash, thunk + chord, bullseye_hit'
           : '§3.24 a pass outside the band is a normal pass (no bonus)',
       setUp: (g, _) => prepare(g),
@@ -95,10 +95,10 @@ void main() {
         final scoreBefore = run.state.score;
         expect(await passHoopAt(game, h, dy: dy), isTrue);
         expect(h.takenRing, 0, reason: 'passed, not missed');
-        // PRD-2.2 §11 / §13.1: a bullseye is a perfect pass (2 points at
-        // streak 1) plus the +3 bonus in points; outside the band at 28 pt
-        // it is a clean off-centre pass (1 point).
-        expect(run.state.score, scoreBefore + (hit ? 2 + 3 : 1));
+        // PRD-2.2 §13.1: a bullseye is a perfect pass (2 points at streak
+        // 1) plus the bonus in points (PRD-2.3 §14.2: +1); outside the band
+        // at 20 pt it is still perfect (PRD-2.3 §14.3: no rim touch).
+        expect(run.state.score, scoreBefore + (hit ? 2 + 1 : 2));
         final bonus = events
             .whereType<CoinsEarned>()
             .where((e) => e.source == CoinSource.bullseye)
@@ -106,10 +106,10 @@ void main() {
         final banner = RunHud.of(run)?.banners.current;
         final names = spy.events.map((e) => e.$1).toList();
         if (hit) {
-          expect(bonus.single.amount, 3);
+          expect(bonus.single.amount, 1);
           expect(banner, isA<ElementBanner>());
           expect((banner! as ElementBanner).text, 'BULLSEYE!');
-          expect(banner.subtitle, '+3 coins');
+          expect(banner.subtitle, '+1 coin');
           expect(sfx, containsAll(['bullThunk', 'bullChord']));
           expect(names, contains('bullseye_hit'));
           expect(BullseyeHoopKind.flashOf(h), greaterThan(0));

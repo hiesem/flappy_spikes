@@ -104,10 +104,11 @@ void main() {
         expect(flight.hoops, greaterThanOrEqualTo(2));
         expect(run.state.score, game.score);
         expect(run.clock.t, greaterThan(2));
-        // §3.0.1 the camera is the bird's forward motion (cruise + ramp).
+        // §3.0.1 the camera is the bird's forward motion. PRD-2.3 §14.4:
+        // the cruise follows the hoop index (150 → 150.9 over hoops 0–2).
         expect(
           run.state.camX,
-          closeTo(run.clock.t * RunConfig.cruise(run.clock.t / 2), 2),
+          closeTo(run.clock.t * RunConfig.cruise(run.state.hoopIndex), 5),
         );
 
         killRun(game, MistakeCause.spikes);
@@ -268,7 +269,7 @@ void main() {
     );
 
     tester.testGameWidget(
-      '§2.7 ctx.earn: the chick doubles, the wallet is credited at once, '
+      '§2.7 ctx.earn (2.3 §14.3: the chick doubles no coins), the wallet is credited at once, '
       'in-run coins_earned is aggregated per source at run end',
       setUp: (game, _) => boot(game),
       verify: (game, _) async {
@@ -281,22 +282,35 @@ void main() {
         run.state.egg = EggState()..stage = EggStage.chick;
         run.ctx.earn(2, CoinSource.perfect);
         await flushAndMount(game);
-        expect(game.menu.wallet.balance, before + 1 + 2 + 4);
-        expect(run.state.coinsThisRun, 7);
+        expect(game.menu.wallet.balance, before + 1 + 2 + 2);
+        expect(run.state.coinsThisRun, 5);
         final earned = run.events.log.whereType<CoinsEarned>().toList();
-        expect(earned.map((e) => e.amount), [1, 2, 4]);
-        expect(earned.last.eggX2, isTrue);
+        expect(earned.map((e) => e.amount), [1, 2, 2]);
+        expect(earned.last.eggX2, isFalse);
         expect(analyticsLog(spy).where((e) => e.$1 == 'coins_earned'), isEmpty);
 
         killRun(game);
         await flushAndMount(game);
-        final coins = analyticsLog(spy)
-            .where((e) => e.$1 == 'coins_earned')
-            .map((e) => e.$2!)
-            .toList();
-        expect(coins, contains(allOf(containsPair('source', 'hoop'), containsPair('amount', 1))));
-        expect(coins, contains(allOf(containsPair('source', 'perfect'), containsPair('egg_x2', 0), containsPair('amount', 2))));
-        expect(coins, contains(allOf(containsPair('source', 'perfect'), containsPair('egg_x2', 1), containsPair('amount', 4))));
+        final coins = analyticsLog(
+          spy,
+        ).where((e) => e.$1 == 'coins_earned').map((e) => e.$2!).toList();
+        expect(
+          coins,
+          contains(
+            allOf(containsPair('source', 'hoop'), containsPair('amount', 1)),
+          ),
+        );
+        expect(
+          coins,
+          contains(
+            allOf(
+              containsPair('source', 'perfect'),
+              containsPair('egg_x2', 0),
+              containsPair('amount', 4),
+            ),
+          ),
+        );
+        expect(coins.where((c) => c['egg_x2'] == 1), isEmpty);
         // PRD-2 §3.2: no 1.0 "1 coin per point" credit at game over.
         expect(coins.where((c) => c['source'] == 'play'), isEmpty);
       },

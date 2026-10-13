@@ -109,14 +109,14 @@ void main() {
     });
 
     test('§3.31 Mini Bird: 52 % for 8 s, 0.15 s ease; §3.32 Coin Frenzy: '
-        '+5 per ring for 6 s', () {
+        '+1 per ring (PRD-2.3 §14.2, was +5) for 6 s', () {
       expect(RunConfig.miniBirdScale, .52);
       expect(CapsuleConfig.miniDuration, 8);
       expect(CapsuleConfig.miniShrink, .15);
       expect(CapsuleConfig.mini, const Color(0xFF2EBD6B));
       expect(CapsuleConfig.potionPurple, const Color(0xFFC9A6FF));
       expect(CapsuleConfig.frenzyDuration, 6);
-      expect(CapsuleConfig.frenzyCoins, 5);
+      expect(CapsuleConfig.frenzyCoins, 1);
       expect(CapsuleConfig.frenzy, const Color(0xFFFFB529));
       expect(CapsuleConfig.frenzyRingFront, const Color(0xFFFFD54A));
       expect(CapsuleConfig.frenzyRingBack, const Color(0xFFD48A00));
@@ -321,6 +321,9 @@ void main() {
             startHoopIndex: ElementId.capsule.firstPossible!,
             force: [type.element],
           );
+          // PRD-2.3 §14.4 the smaller hoops: the hand-flown approach may
+          // touch a rim on the way to the capsule (not what this tests).
+          game.runDebug.god = true;
           CapsulePickup? cap() =>
               pickupsOf(game).whereType<CapsulePickup>().firstOrNull;
           await _fly(game, run, 20, until: () => cap()?.announced ?? false);
@@ -391,7 +394,7 @@ void main() {
         // start → ≈ 90 pt per real second).
         final camX0 = run.state.camX;
         await _fly(game, run, 1);
-        final cruise = RunConfig.cruise(run.state.runClock);
+        final cruise = RunConfig.cruise(run.state.hoopIndex);
         expect(run.state.camX - camX0, closeTo(cruise * .45, cruise * .08));
         // Ticks ≈ every 0.6 s of real time; ghosts trail the bird.
         expect(
@@ -463,8 +466,9 @@ void main() {
 
   group('§3.32 Coin Frenzy', () {
     _tester().testGameWidget(
-      '§3.32 every ring passed pays +5 on top of the normal ring coins for '
-      '6 s (source frenzy); rings not yet passed are coin rings',
+      '§3.32 every ring passed pays +1 (PRD-2.3 §14.2) on top of the normal '
+      'ring coins for 6 s (source frenzy); rings not yet passed are coin '
+      'rings',
       setUp: _setUp,
       verify: (game, _) async {
         final sfx = sfxLog(game);
@@ -480,11 +484,11 @@ void main() {
         }
         expect(frenzy.border, isNotNull);
         final coins0 = run.state.coinsThisRun;
-        run.debugPass(); // non-perfect: 1 + 5
-        expect(run.state.coinsThisRun - coins0, 6);
+        run.debugPass(); // non-perfect: 1 + 1
+        expect(run.state.coinsThisRun - coins0, 2);
         expect(
           earned.where((e) => e.source == CoinSource.frenzy).single.amount,
-          5,
+          1,
         );
         expect(sfx, contains('frenzyRing'));
         // A ride ring pays nothing extra (the ride pauses the frenzy).
@@ -495,7 +499,7 @@ void main() {
         expect(sfx, contains('frenzyEnd'));
         expect(frenzy.border, isNull);
         final coins1 = run.state.coinsThisRun;
-        run.debugPass(perfect: true); // 2, no +5 any more
+        run.debugPass(perfect: true); // 2, no +1 any more
         expect(run.state.coinsThisRun - coins1, 2);
       },
     );

@@ -88,7 +88,7 @@ void main() {
 
   tester.testGameWidget(
     '§3.22 / §5.21 each ring is a normal hoop (points, coins, streak); '
-    'notes C5 / E5 / G5, passed rings gold; all three → +3 coins (train), '
+    'notes C5 / E5 / G5, passed rings gold; all three → +1 coin (train, PRD-2.3), '
     'TRAIN ×3, the rising finish, train_completed; points flagged train',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
@@ -106,7 +106,7 @@ void main() {
       expect(g.passedRings, {0, 1, 2});
       expect(g.completed, isTrue);
       // PRD-2.2 §13.1 perfect 2 + graze 1 + perfect 2 (streak 1 again), plus
-      // the +3 combo coins paid in points.
+      // the combo coins (PRD-2.3 §14.2: +1) paid in points.
       expect(run.state.score, score0 + 2 + 1 + 2 + TrainConfig.comboCoins);
       final passes = events.whereType<HoopPassed>().where(
         (e) => e.hoop?.plan.kind == HoopKindId.train,
@@ -127,7 +127,7 @@ void main() {
       expect(combo.single.amount, TrainConfig.comboCoins);
       final banner = RunHud.of(run)!.banners.current! as ElementBanner;
       expect(banner.text, 'TRAIN ×3');
-      expect(banner.subtitle, 'all three rings · +3 coins');
+      expect(banner.subtitle, 'all three rings · +1 coin');
       expect(spy.events.map((e) => e.$1), contains('train_completed'));
       final flags = events
           .whereType<ScoreChanged>()

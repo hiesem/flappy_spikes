@@ -93,7 +93,8 @@ void main() {
   );
 
   gameCase(
-    '§13.1 chick doubles the actual puzzle completion coins and points',
+    // PRD-2.3 §14.3: the chick no longer doubles puzzle coins or points.
+    '§13.1 / 2.3 §14.3 the chick leaves the puzzle completion coins and points undoubled',
     setUp: (g, _) => prepare(g),
     verify: (g, _) async {
       final run = await startRun(g);
@@ -102,8 +103,8 @@ void main() {
       final coins0 = run.state.coinsThisRun, points0 = run.state.score;
       run.events.emit(const PickupCollected(ElementId.puzzlePiece, null));
       final rolled = run.features.whereType<PuzzleFeature>().single.paid.single;
-      expect(run.state.coinsThisRun - coins0, rolled * 2);
-      expect(run.state.score - points0, rolled * 2);
+      expect(run.state.coinsThisRun - coins0, rolled);
+      expect(run.state.score - points0, rolled);
       expect(run.state.timeline.points, run.state.score);
     },
   );
@@ -132,7 +133,9 @@ void main() {
         expect(h.resolved, isTrue);
         expect(h.touched, isFalse);
         expect(h.passOffset!.abs(), hit ? lessThan(12) : greaterThan(24));
-        expect(passed.single.perfect, hit);
+        // PRD-2.3 §14.3: perfect = no rim touch; only the Bullseye coin
+        // keeps the ±12 pt band.
+        expect(passed.single.perfect, isTrue);
         expect(
           earned.where((e) => e.source == CoinSource.bullseye),
           hasLength(hit ? 1 : 0),

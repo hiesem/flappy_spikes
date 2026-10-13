@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'tuning_values.dart';
+
 /// Revive offer, price ladder and phoenix rise knobs (PRD-2 §3.14, §5.9;
 /// mock `design/menu_v2/screen_revive4.html`, 320 × 711). Positions are
 /// screen points; "centre offset" values are relative to viewHeight / 2
@@ -7,15 +9,19 @@ import 'dart:ui';
 abstract final class ReviveConfig {
   // ------------------------------------------------------------- the rule
   /// §3.14 The offer needs at least this many hoops passed (gifts don't
-  /// count, ride hoops do); ≤ 5 → no offer and no ladder step.
-  static const int minHoops = 6;
+  /// count, ride hoops do); ≤ 5 → no offer and no ladder step
+  /// (`revive_min_hoops`).
+  static int get minHoops => TuningValues.current.i('revive_min_hoops');
 
   // ----------------------------------------------------------- the ladder
-  /// §3.14 The first coin step (2nd revive, or the 1st without an ad).
-  static const int firstCoinPrice = 250;
+  /// §3.14 The coin steps after the ad step. PRD-2.3 §14.2: 250, 500,
+  /// 1000, 2000, 4000, 8000 (`revive_ladder`); after the last one there is
+  /// no more revive that run (7 at most with the ad one; was: doubling, no
+  /// cap).
+  static List<int> get coinLadder => TuningValues.current.ints('revive_ladder');
 
-  /// §3.14 Each coin step doubles the previous one (no cap).
-  static const int priceFactor = 2;
+  /// §3.14 The first coin step (2nd revive, or the 1st without an ad).
+  static int get firstCoinPrice => coinLadder.first;
 
   // ------------------------------------------------------------ countdown
   /// §3.14 / §5.9 The heart drains from the top over this many seconds.

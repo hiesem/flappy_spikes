@@ -289,7 +289,7 @@ void main() {
         _step(game, .6);
         expect(
           s.forwardSpeed,
-          closeTo(RunConfig.cruise(s.runClock) * 1.7, .5),
+          closeTo(RunConfig.cruise(s.hoopIndex) * 1.7, .5),
         );
         _step(game, 7.5);
         await flushAndMount(game);
@@ -345,7 +345,7 @@ void main() {
         expect(s.timed, isNull);
         expect(s.cruiseMult, 1);
         expect(run.director.ride, isNull);
-        expect(s.forwardSpeed, closeTo(RunConfig.cruise(s.runClock), 1));
+        expect(s.forwardSpeed, closeTo(RunConfig.cruise(s.hoopIndex), 1));
         expect(game.runBird!.inRide, isFalse);
         expect(s.invulnerable, 0);
         expect(s.streak, greaterThanOrEqualTo(streakBefore));

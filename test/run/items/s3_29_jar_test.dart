@@ -61,12 +61,12 @@ void main() {
 
   group('§3.29 / §5.28 Firefly Jar rules (pure)', () {
     test(
-      '§3.29 20 caught fills the jar (+25), 3 escapes break it; gap 15 '
+      '§3.29 20 caught fills the jar (PRD-2.3 §14.2: +8), 3 escapes break it; gap 15 '
       'weight 10 ≥ 30 apart; catch radius 16',
       () {
         expect(JarConfig.total, 20);
         expect(JarConfig.maxEscapes, 3);
-        expect(JarConfig.reward, 25);
+        expect(JarConfig.reward, 8);
         expect(RunConfig.fireflySwarm, 7);
         expect(JarConfig.catchRadius, 16);
         expect(ElementId.jar.firstPossible, 15);
@@ -88,7 +88,7 @@ void main() {
         expect(JarConfig.bannerText, 'FIREFLY JAR');
         expect(JarConfig.bannerSub, 'catch 20 · let 3 escape and it breaks');
         expect(JarConfig.fullText, 'JAR FULL!');
-        expect(JarConfig.fullSub, '20 fireflies · +25 coins');
+        expect(JarConfig.fullSub, '20 fireflies · +8 coins');
         expect(JarConfig.brokeText, 'JAR BROKE');
         expect(JarConfig.brokeSub, '3 fireflies got away');
       },
@@ -234,7 +234,7 @@ void main() {
   );
 
   tester(worldHeight: 568, seed: 29).testGameWidget(
-    '§3.29 20 caught = JAR FULL: +25 coins (jar), jarFull, the banner and '
+    '§3.29 20 caught = JAR FULL: +8 coins (jar, PRD-2.3 §14.2), jarFull, the banner and '
     'the badge gone',
     setUp: (g, _) => boot(g),
     verify: (game, _) async {
@@ -249,9 +249,9 @@ void main() {
         run.events.emit(PickupCollected(ElementId.fireflySwarm, null));
       }
       expect(run.state.jar, isNull);
-      expect(run.state.coinsThisRun - coins0, 25);
-      expect(game.menu.wallet.balance - wallet0, 25);
-      expect(earned.single.amount, 25);
+      expect(run.state.coinsThisRun - coins0, 8);
+      expect(game.menu.wallet.balance - wallet0, 8);
+      expect(earned.single.amount, 8);
       expect(earned.single.source, CoinSource.jar);
       expect(featureOf(run).fullJars, 1);
       expect(featureOf(run).brokenJars, 0);
@@ -361,7 +361,7 @@ void main() {
         run.events.emit(PickupCollected(ElementId.fireflySwarm, null));
       }
       expect(run.state.jar, isNull);
-      expect(run.state.coinsThisRun - coins0, 25);
+      expect(run.state.coinsThisRun - coins0, 8);
       expect(featureOf(run).fullJars, 1);
     },
   );

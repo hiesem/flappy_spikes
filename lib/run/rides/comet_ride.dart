@@ -229,12 +229,11 @@ class CometRide implements Ride {
     var x = s.camX + RunConfig.birdX;
     const step = 1 / 60;
     var tau = t;
-    var clock = s.runClock;
+    final cruise = RunConfig.cruise(s.hoopIndex);
     while (tau < CometConfig.duration) {
       final h = math.min(step, CometConfig.duration - tau);
-      x += RunConfig.cruise(clock) * cruiseMultAt(tau + h / 2) * h;
+      x += cruise * cruiseMultAt(tau + h / 2) * h;
       tau += h;
-      clock += h;
     }
     return x;
   }

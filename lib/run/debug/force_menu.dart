@@ -8,6 +8,12 @@ import '../elements.dart';
 /// choices are queued into the next run's `RunSetup`; during a run (the
 /// pause screen, WP-2d) they go straight to `RunController.debugForce`.
 abstract final class ForceMenu {
+  /// PRD-2.3 §14.6 the "Runs" row: +5 per tap …
+  static const int runsStep = 5;
+
+  /// … and from this value (the highest gate) back to 0.
+  static const int runsTop = 20;
+
   /// The "start at hoop N" steps the row cycles through.
   static const List<int> startSteps = [0, 6, 10, 15, 20, 25, 35, 45, 60];
 
@@ -31,6 +37,16 @@ abstract final class ForceMenu {
         () async {
           final i = startSteps.indexOf(d.startHoopIndex);
           d.startHoopIndex = startSteps[(i + 1) % startSteps.length];
+        },
+      ),
+      // PRD-2.3 §14.6 "Runs: N (+5 / 0)": sets `gamesPlayed` to test the
+      // lifetime unlock gates (+5 per tap; from 20 — every gate open — the
+      // next tap goes back to 0).
+      DebugAction(
+        () => 'Runs: ${game.storage.gamesPlayed} (+5 / 0)',
+        () async {
+          final g = game.storage.gamesPlayed;
+          await game.storage.saveGamesPlayed(g >= runsTop ? 0 : g + runsStep);
         },
       ),
       DebugAction(
@@ -76,4 +92,8 @@ class RunDebugState {
   bool bot = false;
   bool god = false;
   bool overlay = false;
+
+  /// PRD-2.3 §14.6 tests: runs ignore the lifetime unlock gates (the test
+  /// harness sets it; the gates have their own tests).
+  bool ignoreGates = false;
 }

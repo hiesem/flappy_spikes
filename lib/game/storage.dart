@@ -71,6 +71,10 @@ class GameStorage {
   static const String _notifLastSentKey = 'notifLastSent';
   static const String _notifPermissionAskedKey = 'notifPermissionAsked';
   // endregion PRD-2 keys
+  // PRD-2.3 §14.2 the gamesPlayed of the run that last showed a golden
+  // feather / puzzle piece (−1 = never; never in two runs in a row).
+  static const String _lastFeatherRunKey = 'lastFeatherRun';
+  static const String _lastPieceRunKey = 'lastPieceRun';
   // PRD-2.2 §2.2 the Home mode button: 'versus' (default) / 'freeFly'.
   static const String _homeModeKey = 'homeMode';
 
@@ -160,6 +164,13 @@ class GameStorage {
   /// coin packs already granted, so a store re-delivery of the same
   /// transaction never pays twice. Bounded to [maxGrantedPurchases].
   List<String> grantedPurchases = [];
+
+  /// PRD-2.3 §14.2 the `gamesPlayed` of the run that last showed a golden
+  /// feather (−1 = never): never a feather in two runs in a row.
+  int lastFeatherRun = -1;
+
+  /// PRD-2.3 §14.2 the same for the puzzle piece.
+  int lastPieceRun = -1;
 
   // region PRD-2 keys (WP-0b)
   /// §3.15 Golden feathers held (0–3).
@@ -309,6 +320,8 @@ class GameStorage {
     grantedPurchases = _capGranted(
       prefs.getStringList(_grantedPurchasesKey) ?? const [],
     );
+    lastFeatherRun = prefs.getInt(_lastFeatherRunKey) ?? -1;
+    lastPieceRun = prefs.getInt(_lastPieceRunKey) ?? -1;
     // region PRD-2 keys (WP-0b)
     feathers = (prefs.getInt(_feathersKey) ?? 0).clamp(0, 3);
     puzzlePieces = (prefs.getInt(_puzzlePiecesKey) ?? 0) & 0xF;
@@ -581,6 +594,27 @@ class GameStorage {
     gamesPlayed++;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_gamesPlayedKey, gamesPlayed);
+  }
+
+  /// PRD-2.3 §14.6 the RUN DEBUG "Runs: N (+5 / 0)" row sets it directly.
+  Future<void> saveGamesPlayed(int value) async {
+    gamesPlayed = value < 0 ? 0 : value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_gamesPlayedKey, gamesPlayed);
+  }
+
+  /// PRD-2.3 §14.2 [lastFeatherRun].
+  Future<void> saveLastFeatherRun(int value) async {
+    lastFeatherRun = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_lastFeatherRunKey, value);
+  }
+
+  /// PRD-2.3 §14.2 [lastPieceRun].
+  Future<void> saveLastPieceRun(int value) async {
+    lastPieceRun = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_lastPieceRunKey, value);
   }
 
   Future<void> saveMuteSound(bool value) async {

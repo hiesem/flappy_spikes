@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../game/sound.dart';
 import '../director/plans.dart' show SwitchDesign;
+import 'tuning_values.dart';
 
 /// Rings with an on/off switch — Lockdown, Laser Gate, Power Iris, Snoozer,
 /// Gift Wrap (PRD-2 §3.20, §5.19; mock `screen_switch_rings.html`, builder
@@ -11,7 +12,8 @@ import '../director/plans.dart' show SwitchDesign;
 /// PRD section (ARCH §4).
 abstract final class SwitchConfig {
   /// §3.20 Touching the switch gives this many coins ("+1 ●", Q53).
-  static const int coins = 1;
+  /// PRD-2.3 §14.2: 0 (`coin_switch`; was 1).
+  static int get coins => TuningValues.current.i('coin_switch');
 
   /// §3.20 Every design's open animation ends within this time (s).
   static const double openMax = .8;

@@ -332,13 +332,13 @@ void main() {
         // Fly the hoop-aware bot until the director's first heart (PRD-2.2
         // §19.1: a random gap 5–27) is there, then steer into it.
         HeartPickup? p;
-        await flyRun(
+        // (A heart whose gap is taken waits for the next free gap.)
+        await flyUntil(
           game,
-          maxSeconds: 60,
-          onFrame: (r) {
-            p ??= pickupsOf(game).whereType<HeartPickup>().firstOrNull;
-          },
-          untilHoops: run.director.heartAt + 3,
+          (r) =>
+              (p ??= pickupsOf(game).whereType<HeartPickup>().firstOrNull) !=
+              null,
+          maxSeconds: 120,
         );
         expect(p, isNotNull);
         for (var i = 0; i < 400 && !p!.collected && !p!.escaped; i++) {

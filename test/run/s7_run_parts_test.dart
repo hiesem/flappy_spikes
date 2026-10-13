@@ -150,7 +150,10 @@ void main() {
 
     test('§3.0.1 cruise ramp and colour stage', () {
       expect(RunConfig.cruise(0), 150);
-      expect(RunConfig.cruise(60), closeTo(155.25, 1e-9));
+      // PRD-2.3 §14.4: by hoop index, [[0,150],[50,172.5],[150,187.5]].
+      expect(RunConfig.cruise(50), closeTo(172.5, 1e-9));
+      expect(RunConfig.cruise(150), closeTo(187.5, 1e-9));
+      expect(RunConfig.cruise(300), closeTo(187.5, 1e-9));
       expect(RunConfig.stageForHoops(9), 0);
       expect(RunConfig.stageForHoops(10), 1);
       expect(RunConfig.stageForHoops(109), 10);

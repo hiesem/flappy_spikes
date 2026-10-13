@@ -47,7 +47,8 @@ enum ElementId {
   fever('fever', ElementKind.slot, 15, true),
   luckySpin('lucky_spin', ElementKind.slot, 15, true),
   saw('saw', ElementKind.slot, 20, true),
-  portal('portal', ElementKind.schedule, 25, true),
+  // PRD-2.3 §14.5 the portal comes first at hoop 40–60 (was 25–50).
+  portal('portal', ElementKind.schedule, 40, true),
   comet('comet', ElementKind.schedule, 10, true),
   heart('heart', ElementKind.gap, 3, false),
   shield('shield', ElementKind.gap, 12, true),
@@ -59,8 +60,9 @@ enum ElementId {
   egg('egg', ElementKind.gap, 10, true),
   piggy('piggy', ElementKind.gap, 12, true),
   jar('jar', ElementKind.gap, 15, true),
-  feather('feather', ElementKind.gap, 3, false),
-  puzzlePiece('puzzle_piece', ElementKind.gap, 14, false),
+  // PRD-2.3 §14.2 the feather and the piece come at gap 10–40.
+  feather('feather', ElementKind.gap, 10, false),
+  puzzlePiece('puzzle_piece', ElementKind.gap, 10, false),
   squeeze('squeeze', ElementKind.event, null, false),
   bigHoops('big_hoops', ElementKind.starter, null, false),
   perfectStreak('perfect_streak', ElementKind.meta, null, false),

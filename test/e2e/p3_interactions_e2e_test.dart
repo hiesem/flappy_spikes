@@ -307,7 +307,8 @@ void main() {
         if (!e.perfect) cleanOrGraze = true;
       });
       await flyRun(g, maxSeconds: 7);
-      expect(frenzyCoins, greaterThanOrEqualTo(5));
+      // PRD-2.3 §14.2: the frenzy pays +1 per ring (was +5).
+      expect(frenzyCoins, greaterThanOrEqualTo(2));
       expect(run.state.timed, isNull);
       // PRD-2.2 §11: the bot's off-centre (clean) passes now put the fire
       // out; it burns on as long as every pass was perfect.

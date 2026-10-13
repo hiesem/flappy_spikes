@@ -1,0 +1,246 @@
+import 'package:flappy_spikes/run/config/director_tables.dart';
+import 'package:flappy_spikes/run/config/run_config.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
+import 'package:flappy_spikes/run/director/run_director.dart';
+import 'package:flappy_spikes/run/elements.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+/// Every element switched on and already met (no first-meet forcing).
+final Set<ElementId> all = ElementId.values.toSet();
+
+RunDirector director({
+  int seed = 7,
+  Set<ElementId>? enabled,
+  Set<ElementId>? met,
+  int startHoopIndex = 0,
+}) => RunDirector(
+  seed: seed,
+  enabled: enabled ?? all,
+  met: met ?? all,
+  startHoopIndex: startHoopIndex,
+);
+
+List<(SlotPlan, GapPlan)> fly(
+  RunDirector d,
+  int n, {
+  DirectorContext Function(int i)? ctxFor,
+}) {
+  final out = <(SlotPlan, GapPlan)>[];
+  for (var k = 0; k < n; k++) {
+    final ctx = ctxFor?.call(d.hoopIndex) ?? DirectorContext.open(711);
+    final s = d.nextSlot(ctx);
+    out.add((s, d.nextGap(ctx, s)));
+  }
+  return out;
+}
+
+/// PRD-2.3 §14.4 difficulty and §14.5 rides (all by hoop index).
+void main() {
+  group('§14.4 curves', () {
+    test('opening 118 at hoop 0, 88 at hoop 1, 77 at hoop 50 and 66 from '
+        'hoop 100; rides 118', () {
+      expect(RunConfig.openingFor(0), 118);
+      expect(RunConfig.openingFor(1), 88);
+      expect(RunConfig.openingFor(50), closeTo(77, .2));
+      expect(RunConfig.openingFor(100), 66);
+      expect(RunConfig.openingFor(300), 66);
+      expect(RunConfig.openingFor(70, ride: true), 118);
+    });
+
+    test('speed 150, 172.5 and 187.5 at hoops 0, 50 and 150, and 187.5 at '
+        'hoop 300', () {
+      expect(RunConfig.cruise(0), 150);
+      expect(RunConfig.cruise(50), 172.5);
+      expect(RunConfig.cruise(150), 187.5);
+      expect(RunConfig.cruise(300), 187.5);
+      expect(RunConfig.cruise(100), closeTo(180, 1e-9));
+    });
+
+    test('the moving-hoop chance at every key (a jump at hoop 20, then a '
+        'ramp); tilt keeps the 2.2 rows', () {
+      final t = DirectorTables.prd2;
+      expect(t.movingChance(0), 0);
+      expect(t.movingChance(19), 0);
+      expect(t.movingChance(20), .15);
+      expect(t.movingChance(35), .40);
+      expect(t.movingChance(60), .60);
+      expect(t.movingChance(80), .75);
+      expect(t.movingChance(200), .75);
+      expect(t.movingChance(47), closeTo(.40 + .20 * 12 / 25, 1e-9));
+      for (final (i, v) in [(0, 0.0), (9, 0.0), (10, .30), (19, .30), (20, .50), (34, .50), (35, .60), (44, .60), (45, .78), (99, .78)]) {
+        expect(t.tiltChance(i), v, reason: 'hoop $i');
+        expect(t.tiltChance(i), t.bandFor(i).tilt, reason: 'hoop $i');
+      }
+    });
+
+    test('the director uses the curves: hoop 0 at 118, then the opening '
+        'curve; Big Hoops ×1.5 from hoop 1 (132 at hoop 1), hoop 0 stays '
+        '118 (§0 item 3)', () {
+      final plain = fly(director(), 60);
+      expect(plain[0].$1.opening, 118);
+      expect(plain[1].$1.opening, 88);
+      for (final (s, _) in plain.skip(1)) {
+        if (s.kind != HoopKindId.normal || s.duringRide) continue;
+        expect(s.opening, closeTo(RunConfig.openingFor(s.index), 1e-9));
+      }
+      final big = fly(
+        director(),
+        2,
+        ctxFor: (_) => DirectorContext.open(711, bigHoopsMult: 1.5),
+      );
+      expect(big[0].$1.opening, 118);
+      expect(big[1].$1.opening, closeTo(132, 1e-9));
+    });
+
+    test('over seeded runs the moving rate follows the curve (none before '
+        'hoop 20)', () {
+      var early = 0, mid = 0, midN = 0;
+      for (var seed = 1; seed <= 120; seed++) {
+        for (final (s, _) in fly(director(seed: seed), 34)) {
+          if (s.kind != HoopKindId.normal || s.cometHang) continue;
+          if (s.index < 20 && s.motion != null) early++;
+          if (s.index >= 20 && s.index < 35) {
+            midN++;
+            if (s.motion != null) mid++;
+          }
+        }
+      }
+      expect(early, 0);
+      // 0.15 → 0.40 over hoops 20–34 (≈ 0.26 on average).
+      expect(mid / midN, inInclusiveRange(.18, .34));
+    });
+  });
+
+  group('§14.4 squeeze in hoops', () {
+    test('first at a random hoop 25–40, hold 5–10 hoops, next 25–45 hoops '
+        'after the previous ended (the hoops at their cruise)', () {
+      final d = director();
+      final firsts = <double>{}, holds = <double>{}, gaps = <double>{};
+      for (var k = 0; k < 300; k++) {
+        final f = d.rollSqueezeAt(0, hoop: 0, first: true);
+        expect(
+          f,
+          inInclusiveRange(
+            RunConfig.secondsForHoops(0, 25) - 1e-9,
+            RunConfig.secondsForHoops(0, 40) + 1e-9,
+          ),
+        );
+        firsts.add(f);
+        final h = d.rollSqueezeHold(hoop: 60);
+        expect(
+          h,
+          inInclusiveRange(
+            RunConfig.secondsForHoops(60, 5) - 1e-9,
+            RunConfig.secondsForHoops(60, 10) + 1e-9,
+          ),
+        );
+        holds.add(h);
+        final g = d.rollSqueezeAt(100, hoop: 70);
+        expect(
+          g - 100,
+          inInclusiveRange(
+            RunConfig.secondsForHoops(70, 25) - 1e-9,
+            RunConfig.secondsForHoops(70, 45) + 1e-9,
+          ),
+        );
+        gaps.add(g);
+      }
+      // Every whole hoop count comes up.
+      expect(firsts.length, 16);
+      expect(holds.length, 6);
+      expect(gaps.length, 21);
+      // A steady rhythm: the cooldown is the same hoop count later in the
+      // run (only the seconds shrink as the speed grows).
+      expect(
+        RunConfig.secondsForHoops(200, 30),
+        closeTo(30 * 310 / 187.5, 1e-9),
+      );
+    });
+  });
+
+  group('§14.5 rides', () {
+    test('over 200 seeded runs the comet comes with ≈ 2 % per eligible '
+        'normal hoop from hoop 10, never within 25 hoops of the previous '
+        'comet', () {
+      var comets = 0, eligible = 0;
+      for (var seed = 1; seed <= 200; seed++) {
+        final d = director(seed: seed);
+        var last = -99;
+        var lastPortal = -99;
+        final plans = fly(d, 200);
+        final portals = [
+          for (final (s, _) in plans)
+            if (s.kind == HoopKindId.portal) s.index,
+        ];
+        for (final (s, _) in plans) {
+          if (s.kind == HoopKindId.portal) lastPortal = s.index;
+          if (s.cometHang) {
+            expect(s.index, greaterThanOrEqualTo(10));
+            expect(s.index - last, greaterThanOrEqualTo(25),
+                reason: 'seed $seed');
+          }
+          // Eligible: a normal slot from 10, ≥ 25 after the last comet, not
+          // within 10 hoops of a portal.
+          final nextPortal = portals.firstWhere(
+            (p) => p > s.index,
+            orElse: () => 1 << 30,
+          );
+          final ok =
+              s.kind == HoopKindId.normal &&
+              !s.duringRide &&
+              s.index >= 10 &&
+              s.index - last >= 25 &&
+              s.index - lastPortal >= RunConfig.cometPortalDistance &&
+              nextPortal - s.index >= RunConfig.cometPortalDistance;
+          if (ok) eligible++;
+          if (s.cometHang) {
+            comets++;
+            last = s.index;
+          }
+        }
+      }
+      final rate = comets / eligible;
+      expect(rate, closeTo(.02, .006), reason: '$comets / $eligible');
+    });
+
+    test('the portal: first at hoop 40–60, then every 60–80', () {
+      final firsts = <int>[];
+      for (var seed = 1; seed <= 200; seed++) {
+        final d = director(seed: seed);
+        expect(d.portalAt, inInclusiveRange(40, 60));
+        final portals = [
+          for (final (s, _) in fly(d, 260))
+            if (s.kind == HoopKindId.portal) s.index,
+        ];
+        expect(portals, isNotEmpty);
+        // A portal may wait (comet distance, the squeeze, an activity), so
+        // it is never earlier than its schedule.
+        expect(portals.first, greaterThanOrEqualTo(40));
+        firsts.add(portals.first);
+        for (var k = 1; k < portals.length; k++) {
+          expect(portals[k] - portals[k - 1], greaterThanOrEqualTo(60));
+        }
+      }
+      expect(firsts.where((f) => f <= 60).length, greaterThan(150));
+      expect(firsts.toSet().length, greaterThan(15));
+    });
+
+    test('tuning: a remote comet chance and portal schedule reach the '
+        'director', () {
+      TuningValues.current = TuningValues.resolve({
+        'ride_comet_chance': '1',
+        'ride_comet_spacing': '30',
+        'ride_portal_first': '[100,100]',
+      });
+      addTearDown(() => TuningValues.current = TuningValues.defaults());
+      final d = director();
+      expect(d.portalAt, 100);
+      final comets = [
+        for (final (s, _) in fly(d, 80))
+          if (s.cometHang) s.index,
+      ];
+      expect(comets.first, inInclusiveRange(10, 15));
+      expect(comets[1] - comets[0], greaterThanOrEqualTo(30));
+    });
+  });
+}

@@ -107,9 +107,11 @@ void main() {
       expect(BirdMotion.recover(-100, 150, .05), closeTo(0, 1e-4));
       expect(BirdMotion.recover(140, 150, .05), 150);
       expect(BirdMotion.recover(400, 150, .05), closeTo(300, 1e-4));
-      // §3.0.1 cruise ramp: +3.5 % per minute of runClock.
+      // PRD-2.3 §14.4: the cruise is the curve_speed table by hoop index
+      // (replaces the 2.2 +3.5 %/min ramp).
       expect(BirdMotion.cruise(0), 150);
-      expect(BirdMotion.cruise(60), closeTo(155.25, 1e-4));
+      expect(BirdMotion.cruise(50), closeTo(172.5, 1e-4));
+      expect(BirdMotion.cruise(60), closeTo(174.0, 1e-4));
     });
   });
 }

@@ -82,6 +82,9 @@ FlappySpikesGame createTestGame(
   // A fixed run seed (the director's course, same as e2e builds), so
   // journeys that fly the autopilot meet the same hoops every run.
   game.runSeed = _pipeSeed;
+  // PRD-2.3 §14.6 tests fly with every element unlocked; the lifetime
+  // gates have their own tests (test/p23/s14_6_gates_test.dart).
+  game.runDebug.ignoreGates = true;
   return game;
 }
 
@@ -178,6 +181,8 @@ FlappySpikesGame createRunTestGame({
     clock: clock,
   );
   game.runSeed = seed;
+  // PRD-2.3 §14.6 see [createTestGame].
+  game.runDebug.ignoreGates = true;
   return game;
 }
 

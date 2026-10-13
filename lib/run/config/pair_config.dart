@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../game/sound.dart';
 import '../director/plans.dart' show PairReward;
+import 'tuning_values.dart';
 
 /// One reward's colours, tag word and pick word (§5.20 table).
 class PairRewardStyle {
@@ -29,11 +30,12 @@ class PairRewardStyle {
 /// in `RunConfig` (the director places the pair); the reward weights in
 /// `DirectorTables.prd2`. Every member's doc starts with its PRD section.
 abstract final class PairConfig {
-  /// §3.21 +10 COINS gift.
-  static const int coins = 10;
+  /// §3.21 +N COINS gift. PRD-2.3 §14.2: +3 (`coin_pair_gift`; was +10).
+  static int get coins => TuningValues.current.i('coin_pair_gift');
 
-  /// §3.21 +5 SCORE gift (five points flagged `gift`, ARCH §6.1).
-  static const int score = 5;
+  /// §3.21 +5 SCORE gift (five points flagged `gift`, ARCH §6.1;
+  /// `point_pair_gift`).
+  static int get score => TuningValues.current.i('point_pair_gift');
 
   /// §3.21 FEVER gift: the streak is set to at least this (×5).
   static const int feverStreak = 5;
@@ -91,20 +93,21 @@ abstract final class PairConfig {
       word: 'COMET!',
       sound: Sfx.pairComet,
     ),
-    PairReward.coins => const PairRewardStyle(
-      main: Color(0xFFFFB529),
-      dark: Color(0xFFB87F00),
-      light: Color(0xFFFFE6A8),
-      tag: '+10 COINS',
-      word: '+10 COINS',
+    // PRD-2.3 §14.2 the gift says its tuned amount ("+3 COINS").
+    PairReward.coins => PairRewardStyle(
+      main: const Color(0xFFFFB529),
+      dark: const Color(0xFFB87F00),
+      light: const Color(0xFFFFE6A8),
+      tag: '+$coins COINS',
+      word: '+$coins COINS',
       sound: Sfx.pairCoins,
     ),
-    PairReward.score => const PairRewardStyle(
-      main: Color(0xFF8E5CFF),
-      dark: Color(0xFF4B2BB8),
-      light: Color(0xFFD7C6FF),
-      tag: '+5 SCORE',
-      word: '+5 SCORE',
+    PairReward.score => PairRewardStyle(
+      main: const Color(0xFF8E5CFF),
+      dark: const Color(0xFF4B2BB8),
+      light: const Color(0xFFD7C6FF),
+      tag: '+$score SCORE',
+      word: '+$score SCORE',
       sound: Sfx.pairScore,
     ),
     PairReward.fever => const PairRewardStyle(

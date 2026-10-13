@@ -82,6 +82,7 @@ import '../services/game_services.dart';
 import '../services/iap_service.dart';
 import '../services/monetization.dart';
 import '../services/reminders.dart';
+import '../services/tuning.dart';
 import '../skins/catalog.dart';
 import '../skins/item_store.dart';
 import '../skins/look.dart';
@@ -322,8 +323,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// Debug panel availability: debug builds and the Linux desktop target.
   /// P22-33 (§33.3): also in an FS_SOAK profile build (never release).
+  /// PRD-2.3 §15.4: also in FS_TUNING tester builds (the TUNING page and the
+  /// RUN DEBUG "Runs" row); never in the production build.
   static bool get debugAvailable =>
-      kDebugMode || kSoak || (!kIsWeb && Platform.isLinux);
+      kDebugMode || kSoak || kTuning || (!kIsWeb && Platform.isLinux);
 
   /// P22-33 (§33.3) the FS_SOAK driver (null in every normal build).
   SoakDriver? soak;
@@ -645,6 +648,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           'source': source.analyticsName,
         });
       },
+      // PRD-2.3 §14.8 every spend: `coins_spent {amount, reason}`.
+      onSpent: (amount, reason) => services.track('coins_spent', {
+        'amount': amount,
+        'reason': reason,
+      }),
     );
     // The slot arms a powerup only right before it starts the run, which
     // consumes it: anything still armed here is stale (an app killed
@@ -1140,6 +1148,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _audioSceneChange(); // PRD-2.2 §28
     if (_soundReady) musicGuard.onRunStart(); // PRD-2.3 §13.3
     final d = runDebug;
+    // PRD-2.3 §15.2 the tuning values are read once per run, at run start.
+    Tuning.instance.beginRun();
     final e2e =
         kE2E || E2EHooks.force.isNotEmpty || E2EHooks.startHoopIndex > 0;
     final setup = RunSetup(
@@ -1154,6 +1164,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       forced: [...d.force, if (e2e) ...E2EHooks.force],
       forcedRide: d.forcedRide ?? (e2e ? E2EHooks.forcedRide : null),
       viewHeight: viewHeight,
+      // PRD-2.3 §14.6 the gates hold in every real run; the test harness,
+      // FS_E2E and FS_SOAK builds fly with every element.
+      ignoreGates: d.ignoreGates || kE2E || kSoak,
     );
     d.force.clear();
     d.forcedRide = null;
@@ -3378,6 +3391,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
     final previousBest = storage.bestScore;
     final previousLevel = menu.levels.level;
+    // region P23-14 — PRD-2.3 §14.2 the run that showed a feather / piece
+    // (never in two runs in a row), recorded before gamesPlayed counts it.
+    final shown = _run?.state;
+    if (shown != null && shown.featherSpawned) {
+      unawaited(storage.saveLastFeatherRun(storage.gamesPlayed));
+    }
+    if (shown != null && shown.pieceSpawned) {
+      unawaited(storage.saveLastPieceRun(storage.gamesPlayed));
+    }
+    // endregion P23-14
     storage.incrementGamesPlayed();
     unawaited(storage.saveLastScore(score));
     if (score > storage.bestScore) {

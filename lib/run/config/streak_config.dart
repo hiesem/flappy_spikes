@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../game/sound.dart';
 import '../run_layers.dart';
+import 'tuning_values.dart';
 
 /// Perfect-pass streak, ring tier reactions and the graze notice (PRD-2
 /// §3.4, §3.5, §3.19 FEVER hook, §5.3, §5.4). The look of every effect is a
@@ -65,8 +66,10 @@ abstract final class StreakConfig {
   /// §3.5 / §5.3 The bird leaves its trail from this tier.
   static const int trailTier = 3;
 
-  /// §3.19 A perfect FEVER pass sets the streak to max(this, streak + 1).
-  static const int feverMinStreak = 5;
+  /// §3.19 A perfect FEVER pass sets the streak to max(this, streak + 1)
+  /// (PRD-2.3 §14.3 unchanged; tunable `point_fever_streak`).
+  static int get feverMinStreak =>
+      TuningValues.current.i('point_fever_streak');
 
   /// §3.4 Tier sounds: streak 1, 2 and 3+ (index = min(streak, 3) − 1).
   static const List<Sfx> tierSounds = [
@@ -114,27 +117,6 @@ abstract final class StreakConfig {
   static const Color grazeFallback = Color(0xFF828282);
 }
 
-/// PRD-2.2 §11 The perfect zone: a pass is perfect only when no rim was
-/// touched **and** the bird's centre crosses the plane within ±[halfWidth]
-/// of the passed ring's centre (measured in the ring's own moving frame,
-/// `PlaneEvent.offset` / `Hoop.passOffset`). Ride rings stay always perfect.
-abstract final class PerfectConfig {
-  /// PRD-2.2 §11.1 Zone half-width = [zoneFactor] × the ring's opening …
-  static const double zoneFactor = 0.2;
-
-  /// PRD-2.2 §11.1 … capped at this many pt (Big Hoops and saw openings
-  /// make passing easier, not perfects).
-  static const double zoneMax = 24;
-
-  /// PRD-2.2 §11.1 The zone half-width (pt) for a ring of [opening] pt:
-  /// ±23.6 at 118, ±18.4 at 92, ±24 from 120 up.
-  static double halfWidth(double opening) {
-    final w = zoneFactor * opening;
-    return w < zoneMax ? w : zoneMax;
-  }
-
-  /// PRD-2.2 §11.1 Whether a crossing [offset] pt from the ring centre is
-  /// inside the zone of a ring of [opening] pt (the edge counts as inside).
-  static bool inZone(double offset, double opening) =>
-      offset.abs() <= halfWidth(opening) + 1e-9;
-}
+// PRD-2.3 §14.3 the PRD-2.2 §11 perfect zone (`PerfectConfig`: ±0.2 × the
+// opening, max 24 pt) is retired: a perfect is any pass with no rim touch.
+// The Bullseye keeps its own ±12 pt band (`BullseyeConfig.band`).

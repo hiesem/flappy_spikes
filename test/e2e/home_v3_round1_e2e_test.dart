@@ -175,9 +175,15 @@ List<String> _claimed(int upTo) => [for (var n = 1; n <= upTo; n++) '$n'];
 // controller. No score, best, wallet or claimed-level writes in this run.
 Future<void> _flyToEgg(FlappySpikesGame game) async {
   // WP-1a: the hoop-aware acceptance bot (PRD-2 §7) flies the real course.
-  final flight = await flyRun(game, maxSeconds: 75, untilHoops: 12);
-  expect(game.score, greaterThanOrEqualTo(12),
-      reason: 'actual hoop scoring\n${flight.trace.reversed.take(5).join('\n')}');
+  // PRD-2.3 §14.3: every rim-free pass is perfect, so the bot's points
+  // grow with the uncapped streak (12 hoops ≈ 79 points = level 2). 8 hoops
+  // (≥ 6 for the revive offer) keep this journey at EGG · LV 1 (10–49).
+  final flight = await flyRun(game, maxSeconds: 75, untilHoops: 8);
+  expect(
+    game.score,
+    inInclusiveRange(10, 49),
+    reason: 'actual hoop scoring\n${flight.trace.reversed.take(5).join('\n')}',
+  );
   // WP-3a: a comet boost (first met at hoop 10) flies itself; finish it.
   await flyOutOfRide(game);
 }
@@ -234,10 +240,11 @@ void main() async {
       expect(game.levelUpPopup, isNull, reason: 'no popup at game over');
       final score = game.storage.lastScore!;
       final earned = game.menu.wallet.balance;
-      expect(score, greaterThanOrEqualTo(12));
+      expect(score, greaterThanOrEqualTo(10));
       // PRD-2 §3.2: 1 coin per hoop, 2 for a perfect pass, at the pass.
+      // PRD-2.3 §14.3: points (streak) now outgrow the coins.
       expect(earned, game.run!.state.coinsThisRun);
-      expect(earned, greaterThanOrEqualTo(score));
+      expect(earned, greaterThanOrEqualTo(game.run!.state.hoopsPassed));
       // PRD-2 §3.14: the level up is celebrated and claimed on the results
       // page (it replaces the home LEVEL UP popup).
       final panel = game.world.children.query<ResultsScreen>().single;

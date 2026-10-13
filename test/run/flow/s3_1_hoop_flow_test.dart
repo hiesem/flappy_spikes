@@ -58,7 +58,10 @@ void main() {
         }
         expect(t, closeTo(310 / 150, 0.1));
         // §3.0.1 the world scrolls at the bird's forward speed (cruise).
-        expect(run.state.forwardSpeed, closeTo(RunConfig.cruise(t), .5));
+        expect(
+          run.state.forwardSpeed,
+          closeTo(RunConfig.cruise(run.state.hoopIndex), .5),
+        );
       },
     );
 
@@ -97,7 +100,7 @@ void main() {
         stepGame(game, .3, flapBelow: h / 2);
         expect(
           run.state.forwardSpeed,
-          closeTo(RunConfig.cruise(run.state.runClock), .5),
+          closeTo(RunConfig.cruise(run.state.hoopIndex), .5),
         );
       },
     );

@@ -14,8 +14,9 @@ class MenuState {
     this.storage, {
     Random? random,
     void Function(int, CoinSource)? onEarned,
+    void Function(int, String)? onSpent,
   }) {
-    wallet = Wallet(storage, onEarned: onEarned);
+    wallet = Wallet(storage, onEarned: onEarned, onSpent: onSpent);
     items = ItemStore(storage, wallet);
     slot = PowerupSlot(storage, random: random);
     noAdsPopup = NoAdsPopupPolicy(storage);

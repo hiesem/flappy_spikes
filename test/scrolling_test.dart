@@ -45,7 +45,7 @@ void main() {
       final speed = (x0 - x1) / 0.7;
       expect(
         speed,
-        closeTo(RunConfig.cruise(run.state.runClock), 0.5),
+        closeTo(RunConfig.cruise(run.state.hoopIndex), 0.5),
         reason: 'measured scroll speed $speed pt/s',
       );
       expect(x1, lessThan(x0), reason: 'world must scroll leftward');

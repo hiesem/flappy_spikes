@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 
 import '../../game/config.dart';
 import '../config/run_config.dart';
+import '../director/plans.dart' show MotionType;
 import '../hoops/hoop.dart';
 import '../hoops/hoop_kind.dart';
 import '../hoops/kinds/saw/saw_kind.dart'; // WP-3d
@@ -93,6 +94,12 @@ class Autopilot {
   /// arc top too), and a flap toward one that close overshoots into the
   /// squeezed teeth.
   static const double chaseClearance = 60;
+
+  /// PRD-2.3 §14.4 (P23-14) the handover comes earlier the further the bird
+  /// is from the next hoop's height: [chaseHandover] + that distance ÷ this
+  /// climb rate (pt/s). With the faster 2.3 cruise a greedy chase near the
+  /// floor left too little time to climb to a ring near the top.
+  static const double chaseClimbRate = 300;
   // endregion WP-3e
 
   _Plan? _plan;
@@ -253,7 +260,7 @@ class Autopilot {
       s.clock += simDt;
       s.forward = BirdMotion.recover(
         s.forward,
-        BirdMotion.cruise(s.clock),
+        BirdMotion.cruise(run.state.hoopIndex),
         simDt,
       );
       s.x += s.forward * simDt;
@@ -349,7 +356,24 @@ class Autopilot {
     final pos = run.birdTrackPosition();
     if (pos == null) return true;
     final v = run.state.forwardSpeed <= 1 ? 1.0 : run.state.forwardSpeed;
-    return (h.planeX - pos.x) / v > chaseHandover;
+    final climb = (pos.y - h.position.y).abs() / chaseClimbRate;
+    // A ring that slides / swings sideways may come up to its reach closer.
+    return (h.planeX - _reachX(h) - pos.x) / v > chaseHandover + climb;
+  }
+
+  /// PRD-2.3 (P23-14) how far a moving ring's plane can come toward the
+  /// bird (pt): a swing's sideways arc, a slide's x travel, an orbit's x
+  /// radius.
+  static double _reachX(Hoop h) {
+    final m = h.plan.motion;
+    if (m == null) return 0;
+    return switch (m.type) {
+      MotionType.swing => m.rope * math.sin(m.amplitudeDeg * math.pi / 180).abs(),
+      MotionType.rail || MotionType.horizontal || MotionType.diagonal =>
+        m.halfTravel * math.sin(m.axisDeg * math.pi / 180).abs(),
+      MotionType.orbit => m.rx,
+      MotionType.rock => 0,
+    };
   }
   // endregion WP-3e
 
@@ -439,7 +463,7 @@ class Autopilot {
         s.clock += simDt;
         s.forward = BirdMotion.recover(
           s.forward,
-          BirdMotion.cruise(s.clock),
+          BirdMotion.cruise(run.state.hoopIndex),
           simDt,
         );
         s.x += s.forward * simDt;

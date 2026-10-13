@@ -190,7 +190,7 @@ class PiggyFeature extends RunFeature {
   void _check(RunContext c, PiggyState bank) {
     if (bank.caught + bank.missed < PiggyConfig.total) return;
     final caught = bank.caught;
-    final payout = caught * PiggyConfig.payoutMult;
+    final payout = PiggyConfig.payoutFor(caught);
     c.s.piggy = null;
     _dropBadge();
     paid++;

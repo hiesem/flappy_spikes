@@ -121,9 +121,9 @@ void main() {
       expect(EggConfig.hatchText, 'HATCHED!');
       expect(
         EggConfig.hatchSub,
-        '×2 on every coin while the chick flies with you',
+        '+1 point on every hoop while the chick flies with you',
       );
-      expect(EggConfig.lostText, '×2 LOST');
+      expect(EggConfig.lostText, '+1 LOST'); // PRD-2.3 §14.3
       expect(EggConfig.lostSub, 'you touched a rim · the chick flew off');
       expect(EggConfig.lostGrey, const Color(0xFF9E9E9E));
     });
@@ -224,8 +224,9 @@ void main() {
   );
 
   tester().testGameWidget(
-    '§3.27 the chick doubles every coin earned (ring coins and every bonus), '
-    'and the extra half is what the analytics call coins_doubled',
+    'PRD-2.3 §14.3 the chick doubles no coins (ring coins and every bonus '
+    'pay their own amount) and adds +1 point per hoop passed '
+    '(chick_lost points_added)',
     setUp: (g, _) => boot(g),
     verify: (game, _) async {
       final run = await startRun(game);
@@ -236,6 +237,7 @@ void main() {
       for (var i = 0; i < EggConfig.rings; i++) {
         run.events.emit(HoopPassed(null, perfect: true));
       }
+      expect(run.state.egg!.stage, EggStage.chick);
       final feature = featureOf(run);
       final earned = <CoinsEarned>[];
       run.events.on<CoinsEarned>(earned.add);
@@ -244,33 +246,30 @@ void main() {
       for (final (n, source) in [
         (1, CoinSource.hoop),
         (2, CoinSource.perfect),
-        (5, CoinSource.starTrail),
-        (40, CoinSource.piggy),
-        (25, CoinSource.jar),
+        (2, CoinSource.starTrail),
+        (10, CoinSource.piggy),
+        (8, CoinSource.jar),
       ]) {
         run.ctx.earn(n, source);
       }
-      expect(run.state.coinsThisRun - coins0, 2 * (1 + 2 + 5 + 40 + 25));
-      expect(game.menu.wallet.balance - wallet0, 2 * (1 + 2 + 5 + 40 + 25));
-      expect(earned.map((e) => e.amount).toList(), [2, 4, 10, 80, 50]);
-      expect(earned.every((e) => e.eggX2), isTrue);
-      expect(
-        earned.map((e) => e.source).toList(),
-        [
-          CoinSource.hoop,
-          CoinSource.perfect,
-          CoinSource.starTrail,
-          CoinSource.piggy,
-          CoinSource.jar,
-        ],
-      );
-      expect(feature.doubledCoins, 1 + 2 + 5 + 40 + 25);
+      expect(run.state.coinsThisRun - coins0, 1 + 2 + 2 + 10 + 8);
+      expect(game.menu.wallet.balance - wallet0, 1 + 2 + 2 + 10 + 8);
+      expect(earned.map((e) => e.amount).toList(), [1, 2, 2, 10, 8]);
+      expect(earned.any((e) => e.eggX2), isFalse);
+      // +1 point per hoop passed while the chick flies: a non-perfect pass
+      // scores 1 + 1.
+      final score0 = run.state.score;
+      run.events.emit(HoopPassed(null, perfect: false));
+      expect(run.state.score - score0, 2);
+      run.events.emit(HoopPassed(null, perfect: true));
+      expect(feature.pointsAdded, 2);
     },
   );
 
   tester().testGameWidget(
-    '§3.27 a rim touch scares the chick away: "bye!", the ×2 LOST banner, '
-    'egg_bye and chick_lost(rim) with coins_doubled; no ×2 after',
+    '§3.27 a rim touch scares the chick away: "bye!", the +1 LOST banner '
+    '(PRD-2.3 §14.3), egg_bye and chick_lost(rim) with points_added; no '
+    '+1 after',
     setUp: (g, _) => boot(g),
     verify: (game, _) async {
       final run = await startRun(game);
@@ -283,7 +282,7 @@ void main() {
         run.events.emit(HoopPassed(null, perfect: true));
       }
       expect(run.state.egg!.stage, EggStage.chick);
-      run.ctx.earn(4, CoinSource.hoop); // 8 coins while doubled
+      run.events.emit(HoopPassed(null, perfect: true)); // +1 point
       run.events.emit(
         RimTouched(fakeHoop(), Vector2(200, 300), Vector2(0, 1)),
       );
@@ -291,17 +290,17 @@ void main() {
       expect(sfx, contains('eggBye'));
       final banner = RunHud.ensureFor(run).banners.current;
       expect(banner, isNotNull);
-      expect(banner!.text, '×2 LOST');
+      expect(banner!.text, '+1 LOST');
       expect(banner.color, EggConfig.lostGrey);
       final lost = analyticsLog(
         spy,
       ).where((e) => e.$1 == 'chick_lost').toList();
       expect(lost, hasLength(1));
-      expect(lost.single.$2, equals({'cause': 'rim', 'coins_doubled': 4}));
-      // The chick is gone: the ×2 is off.
-      final coins0 = run.state.coinsThisRun;
-      run.ctx.earn(1, CoinSource.hoop);
-      expect(run.state.coinsThisRun - coins0, 1);
+      expect(lost.single.$2, equals({'cause': 'rim', 'points_added': 1}));
+      // The chick is gone: no +1 any more.
+      final score0 = run.state.score;
+      run.events.emit(HoopPassed(null, perfect: false));
+      expect(run.state.score - score0, 1);
     },
   );
 
@@ -354,7 +353,7 @@ void main() {
       expect(run.state.egg, isNull);
       expect(
         analyticsLog(spy).where((e) => e.$1 == 'chick_lost').single.$2,
-        equals({'cause': 'crash', 'coins_doubled': 0}),
+        equals({'cause': 'crash', 'points_added': 0}),
       );
       // A fresh chick, then a death with ≥ 6 hoops: the offer comes up and
       // the chick is already gone; reviving does not bring it back.

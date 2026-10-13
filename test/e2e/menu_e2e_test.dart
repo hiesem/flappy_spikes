@@ -436,11 +436,7 @@ void main() {
   });
 
   e2e('S1-01 (PRD-2.2 §7.7) no-ads owners watch the Shop free-coins ad '
-      'like everyone', (
-    g,
-    r,
-    t,
-  ) async {
+      'like everyone', (g, r, t) async {
     await tap(g, t, const Offset(49, 608));
     await tap(g, t, const Offset(260, 228));
     expect(
@@ -571,7 +567,7 @@ void main() {
       await tap(g, t, const Offset(49, 608));
       await tap(g, t, const Offset(160, 616));
       expect(g.menuScene, MenuScene.skins);
-      expect(g.skinShop!.tryOnId, 'lemon');
+      expect(g.skinShop!.tryOnId, 'sunburst'); // PRD-2.3 §19.3 featured
       g.onKeyEvent(key(LogicalKeyboardKey.escape), {});
       await settle(g, t, fade: true);
       expect(g.menuScene, MenuScene.shop);
@@ -932,10 +928,7 @@ void main() {
               90 * Config.homeEmblemScaleFor(height),
         ),
       );
-      expect(
-        Config.homeEmblemBottomFor(height),
-        lessThan(home.startButton.y),
-      );
+      expect(Config.homeEmblemBottomFor(height), lessThan(home.startButton.y));
       for (final c in [
         home.coinPill,
         home.gearButton,

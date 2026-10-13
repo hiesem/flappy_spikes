@@ -1473,6 +1473,8 @@ regression in `test/e2e/p2_gameplay_e2e_test.dart` (S6-20 … S6-24).
   Home, run, results, share card, versus) still has one master per layer.
   They draw through `Ctx2D` (`ctx2d.dart`), a Canvas2D-shaped facade with a
   pooled path set, one reused `Paint` and a keyed gradient cache.
+  `Ctx2D.glowLayer` draws many same-blur canvas shadows as one blurred
+  layer (Aurora hoop: 22 segment glows per half → 1 blur; Pixel frame budget).
 - `TrailEmitter.paint` takes an optional `head` (the Supernova core glow;
   defaults to the last emit point while emitting). `TrailEmitter.ids` /
   `HoopPainter.ids` / `HatArt.ids` / `GearArt.ids` are the full grid order.

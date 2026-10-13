@@ -484,33 +484,34 @@ void main() {
     },
   );
 
-  _journey(
-    'S2-50 the same flick travels equally at 30, 60 and 120 fps',
-    (game, events, tester) async {
-      final screen = await _skins(game, tester);
-      Future<double> distanceAt(int fps) async {
-        screen.scroll.offset = 0;
-        await _flick(tester, screen.scroll);
-        final start = screen.scroll.offset;
-        for (var frame = 0; frame < fps; frame++) {
-          game.update(1 / fps);
-        }
-        expect(screen.scroll.isGliding, isTrue);
-        expect(screen.scroll.isOverScrolled, isFalse);
-        return screen.scroll.offset - start;
+  _journey('S2-50 the same flick travels equally at 30, 60 and 120 fps', (
+    game,
+    events,
+    tester,
+  ) async {
+    final screen = await _skins(game, tester);
+    Future<double> distanceAt(int fps) async {
+      screen.scroll.offset = 0;
+      await _flick(tester, screen.scroll);
+      final start = screen.scroll.offset;
+      for (var frame = 0; frame < fps; frame++) {
+        game.update(1 / fps);
       }
+      expect(screen.scroll.isGliding, isTrue);
+      expect(screen.scroll.isOverScrolled, isFalse);
+      return screen.scroll.offset - start;
+    }
 
-      final at30 = await distanceAt(30);
-      final at60 = await distanceAt(60);
-      final at120 = await distanceAt(120);
-      expect(
-        at30,
-        closeTo(at120, 1),
-        reason: 'same input and elapsed time: 30=$at30, 60=$at60, 120=$at120',
-      );
-      expect(at60, closeTo(at120, 1));
-    },
-  );
+    final at30 = await distanceAt(30);
+    final at60 = await distanceAt(60);
+    final at120 = await distanceAt(120);
+    expect(
+      at30,
+      closeTo(at120, 1),
+      reason: 'same input and elapsed time: 30=$at30, 60=$at60, 120=$at120',
+    );
+    expect(at60, closeTo(at120, 1));
+  });
 
   _journey(
     'v2 buy Rubber duck → equip all 14 gear and all 14 hats → saved home look',
@@ -532,7 +533,7 @@ void main() {
       for (final layer in [SkinLayer.gear, SkinLayer.hat]) {
         await _tab(game, tester, layer);
         final ids = layer == SkinLayer.gear ? GearArt.ids : HatArt.ids;
-        expect(ids, hasLength(14));
+        expect(ids, hasLength(29)); // PRD-2.3 §19: +15 per layer
         for (final id in ids) {
           screen.scrollToItem(id);
           await _tap(game, tester, screen.tileFor(id));
@@ -547,7 +548,7 @@ void main() {
         }
       }
       expect(events.count('item_purchase'), 1);
-      expect(events.count('item_equip'), 29); // purchase auto-equips too
+      expect(events.count('item_equip'), 59); // purchase auto-equips too
       final saved = GameStorage();
       await saved.load();
       expect(saved.equippedItems[SkinLayer.bird], 'duck');

@@ -3,13 +3,22 @@ import 'dart:ui' show Color, Offset;
 
 import 'package:flame/components.dart';
 
+import 'config/capsule_config.dart';
+import 'config/comet_config.dart';
+import 'config/egg_config.dart';
+import 'config/jar_config.dart';
+import 'config/pair_config.dart';
 import 'config/piggy_config.dart';
+import 'config/portal_config.dart';
 import 'config/run_config.dart';
+import 'config/special_hoops_config.dart';
+import 'config/star_trail_config.dart';
 import 'director/run_director.dart';
 import 'effects/clear_fade.dart';
 import 'effects/collect_fx.dart';
 import 'elements.dart';
 import 'hoops/hoop.dart';
+import 'hoops/kinds/fever.dart';
 import 'hoops/kinds/registry.dart';
 import 'hoops/ring_painter.dart';
 import 'pickups/pickup.dart';
@@ -31,8 +40,13 @@ import 'run_state.dart';
 /// into view. The planned-ahead slot ([plannedAhead]) has no hoop yet.
 ///
 /// PRD-2.2 §27 one bonus at a time: it keeps `RunState.activity` in sync
-/// ([RunActivity.of]); when an activity starts, the reward items ahead fade
-/// out ([clearRewardsAhead]).
+/// ([RunActivity.of]); when an activity starts, the reward items ahead that
+/// are not visible yet are cleared ([clearRewardsAhead], PRD-2.3 §17.5).
+///
+/// PRD-2.3 §17 one big bonus on screen: it tells the director whether a big
+/// bonus is open ([bigBonusOpen]) and creates each slot's hoop at its own
+/// edge ([creationEdge]) so a big bonus's halo / beam scrolls in from the
+/// right.
 class RunSpawner {
   RunSpawner(this.run);
 
@@ -98,8 +112,9 @@ class RunSpawner {
     if (!live) return;
     syncActivity();
     final s = run.state;
-    final edge =
-        s.camX + RunConfig.worldWidth + RunConfig.firstHoopOffscreen + 1e-6;
+    // PRD-2.3 §17.4 the creation edge is per slot: 60 pt, or the slot's
+    // visual reach + 8 pt if that is larger.
+    final right = s.camX + RunConfig.worldWidth + 1e-6;
     var guard = 0;
     while (!hold && guard++ < 16) {
       final ahead = _ahead;
@@ -107,7 +122,7 @@ class RunSpawner {
         _planSlot();
         continue;
       }
-      if (ahead.trackX > edge) break;
+      if (ahead.trackX > right + creationEdge(ahead)) break;
       _spawnAhead();
     }
     _announce();
@@ -418,7 +433,10 @@ class RunSpawner {
     _pickups.removeWhere((p) {
       if (p.collected || p.escaped || p.position.x <= birdX) return false;
       if (!RunDirector.isRewardItem(p.id)) return false;
+      // PRD-2.3 §17.5 anything visible (a part of its halo included) stays.
+      if (isVisible(p)) return false;
       _owe(p.id);
+      if (p.id == ElementId.comet) run.director.oweComet();
       final plan = p.plan;
       if (p.id == ElementId.comet && plan != null) starsGone.add(plan);
       run.events.emit(PickupCleared(p.id, p));
@@ -457,7 +475,11 @@ class RunSpawner {
     }
     _hoops.removeWhere((h) {
       if (h.resolved || h.planeX <= birdX) return false;
+      // PRD-2.3 §17.5 a visible ring keeps its reward (no portal fade, no
+      // reward fade); only a hoop still beyond the right edge is cleared.
+      if (hoopVisible(h)) return false;
       if (h.plan.kind == HoopKindId.portal) {
+        run.director.oweSlot(h.plan);
         _fading
           ..add((h, fade, fade))
           ..add((h.front, fade, fade));
@@ -471,6 +493,105 @@ class RunSpawner {
       return false;
     });
   }
+
+  // region WP-BONUS — one big bonus on screen (PRD-2.3 §17)
+  /// PRD-2.3 §17.2 the visual reach of item [e] (pt its drawing extends to
+  /// the left of its x; for the Star Trail, left of its first star). Big
+  /// items only; 0 for the others.
+  static double itemReach(ElementId e) => switch (e) {
+    ElementId.piggy => PiggyConfig.visualReach,
+    ElementId.jar => JarConfig.visualReach,
+    ElementId.comet => CometConfig.visualReach,
+    ElementId.egg => EggConfig.visualReach,
+    ElementId.capsule ||
+    ElementId.hourglass ||
+    ElementId.miniBird ||
+    ElementId.coinFrenzy => CapsuleConfig.visualReach,
+    ElementId.starTrail => StarTrailConfig.visualReach,
+    _ => 0,
+  };
+
+  /// PRD-2.3 §17.2 the visual reach of [p]'s hoop and its attached big
+  /// items, measured from the slot's plane (0 for a plain hoop).
+  static double slotReach(SlotPlan p) {
+    var r = switch (p.kind) {
+      HoopKindId.portal => PortalConfig.visualReach,
+      HoopKindId.fever => FeverRingPainter.visualReach(p.opening),
+      HoopKindId.pair => PairConfig.visualReach,
+      HoopKindId.luckySpin => LuckySpinConfig.visualReach,
+      _ => 0.0,
+    };
+    for (final a in p.attached) {
+      if (!RunDirector.isBigItem(a.kind)) continue;
+      r = math.max(r, itemReach(a.kind) - (a.trackX - p.trackX));
+    }
+    return r;
+  }
+
+  /// PRD-2.3 §17.4 how far beyond the right screen edge [p]'s hoop is
+  /// created: [RunConfig.firstHoopOffscreen], or its visual reach +
+  /// [RunConfig.bigBonusEdgeMargin] if that is larger.
+  static double creationEdge(SlotPlan p) => math.max(
+    RunConfig.firstHoopOffscreen,
+    slotReach(p) + RunConfig.bigBonusEdgeMargin,
+  );
+
+  /// PRD-2.3 §17.2 the leftmost track x of [p]'s drawing (body, halo,
+  /// glow, tail).
+  static double visualLeftX(Pickup p) {
+    final reach = itemReach(p.id);
+    // One pickup spans the whole Star Trail (its hit radius covers the arc).
+    if (p.id == ElementId.starTrail) return p.position.x - p.hitRadius - reach;
+    return math.min(
+      p.position.x - math.max(p.hitRadius, reach),
+      p.toRect().left,
+    );
+  }
+
+  /// PRD-2.3 §17.2 the leftmost track x of [h]'s drawing (ring art, beam,
+  /// halo, wheel, tags).
+  static double hoopVisualLeftX(Hoop h) =>
+      math.min(artLeftX(h), h.planeX - slotReach(h.plan));
+
+  double get _right => run.state.camX + RunConfig.worldWidth;
+
+  /// PRD-2.3 §17.2 any part of [p]'s drawing is inside the screen.
+  bool isVisible(Pickup p) => visualLeftX(p) < _right;
+
+  /// PRD-2.3 §17.2 any part of [h]'s drawing is inside the screen.
+  bool hoopVisible(Hoop h) => hoopVisualLeftX(h) < _right;
+
+  /// PRD-2.3 §17.2 the open big bonuses: the planned-ahead reward ring, big
+  /// line items waiting for their line, reward rings and portals not yet
+  /// flown through or passed, and big pickups not yet collected or passed.
+  /// (A comet-star hoop counts once, through its star.)
+  int get openBigCount {
+    final birdX =
+        run.birdTrackPosition()?.x ?? run.state.camX + RunConfig.birdX;
+    final r = RunConfig.birdRadius * run.state.birdScale;
+    var n = 0;
+    final a = _ahead;
+    if (a != null && RunDirector.rewardKinds.contains(a.kind)) n++;
+    for (final (item, _) in _pending) {
+      if (RunDirector.isBigItem(item.kind)) n++;
+    }
+    for (final h in _hoops) {
+      if (h.resolved || h.planeX <= birdX) continue;
+      if (RunDirector.rewardKinds.contains(h.plan.kind)) n++;
+    }
+    for (final p in _pickups) {
+      if (!RunDirector.isBigItem(p.id)) continue;
+      if (p.collected || p.escaped || p.isRemoved || p.isPast(birdX, r)) {
+        continue;
+      }
+      n++;
+    }
+    return n;
+  }
+
+  /// PRD-2.3 §17.3 rule 1: a big bonus is open (the director plans none).
+  bool get bigBonusOpen => openBigCount > 0;
+  // endregion WP-BONUS
 
   void _owe(ElementId e) {
     if (e == ElementId.feather) {

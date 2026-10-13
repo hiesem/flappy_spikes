@@ -177,6 +177,15 @@ abstract final class RunConfig {
   /// activity starts.
   static const double rewardClearFade = 0.2;
 
+  /// PRD-2.3 §17.3 one big bonus on screen: while a big bonus is open the
+  /// planner plans no other; a blocked one waits (rule 4). Tests turn it
+  /// off (`RunSetup.oneBigBonus`) only for the §17.6 count baseline.
+  static const bool oneBigBonus = true;
+
+  /// PRD-2.3 §17.4 a big bonus (its hoop included) is created when its left
+  /// visual edge is at least this far beyond the right screen edge (pt).
+  static const double bigBonusEdgeMargin = 8;
+
   /// PRD-2.2 §15.1 Pop-in of a feature follow-up created inside the
   /// screen: scale 0 → [popInOvershoot] → 1 over this long (s).
   static const double popInTime = 0.25;

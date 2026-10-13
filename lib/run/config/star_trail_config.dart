@@ -36,6 +36,10 @@ abstract final class StarTrailConfig {
   /// §5.25 Soft gold halo (r 16, `rgba(255,213,74,·)` at α 0.45).
   static const Color halo = Color(0xFFFFD54A);
   static const double haloR = 16;
+
+  /// PRD-2.3 §17.2 visual reach of the Star Trail (left of its first
+  /// star): the halo r 16.
+  static const double visualReach = haloR;
   static const double haloAlpha = .45;
 
   /// §5.25 Dotted gold line (2 pt, 2 on / 6 off, `rgba(255,181,41,·)` 0.45).

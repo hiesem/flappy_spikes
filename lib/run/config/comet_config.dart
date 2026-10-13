@@ -86,6 +86,10 @@ abstract final class CometConfig {
   static const double tailGoldBaseX = -4;
   static const double tailGoldHalf = 22;
   static const double tailGoldTipX = -104;
+
+  /// PRD-2.3 §17.2 visual reach of the comet star (measured from the
+  /// painter): the gold tail's tip [tailGoldTipX] plus the star pulse.
+  static const double visualReach = -tailGoldTipX + 4;
   static const double tailGoldAlpha = .45;
   static const double tailPinkBaseX = -4;
   static const double tailPinkHalf = 15;

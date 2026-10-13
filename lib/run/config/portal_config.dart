@@ -147,6 +147,12 @@ abstract final class PortalConfig {
   static const double portalInnerStroke = 3;
   static const double portalBeam = 66;
 
+  /// PRD-2.3 §17.2 visual reach: how far the portal's drawing extends to
+  /// the left of its plane — the 66 pt beam plus the ring half width
+  /// (`RingPainter.rx` = 12). §17.4 the portal hoop is created once its
+  /// left visual edge is ≥ `RunConfig.bigBonusEdgeMargin` past the edge.
+  static const double visualReach = portalBeam + 12;
+
   /// §5.12b Portal colours.
   static const Color portalFront = Color(0xFF7C4DFF);
   static const Color portalBack = Color(0xFF4B2BB8);

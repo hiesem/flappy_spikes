@@ -107,8 +107,10 @@ void main() {
           game,
           (r) {
             // Rewards are forced all along (they must wait); obstacles
-            // too (rides keep "no specials" — §3.0.3).
-            for (final e in [ElementId.heart, ElementId.pair, ElementId.saw]) {
+            // too (rides keep "no specials" — §3.0.3). PRD-2.3 §17.3 rule 4
+            // a blocked ring drawn now waits and the slot is drawn again,
+            // so the saw goes first in the queue (the head slot element).
+            for (final e in [ElementId.saw, ElementId.heart, ElementId.pair]) {
               if (!r.director.forcedQueue.contains(e)) r.debugForce(e);
             }
             return watch.ended.isNotEmpty;
@@ -176,9 +178,12 @@ void main() {
     return (run, item!);
   }
 
+  // PRD-2.3 §17.5 (changes PRD-2.2 §27.3): an item already visible when an
+  // activity starts is never cleared; only what is not visible yet goes
+  // (that part: test/p23/s17_one_big_bonus_test.dart).
   _tester().testGameWidget(
-    '§27.5 a feather ahead when a comet starts fades out (0.2 s) and is '
-    'placed again after the landing + 2 hoops',
+    '§27.5 / PRD-2.3 §17.5 a feather on screen when a comet starts stays '
+    '(it is not cleared, owed or faded)',
     setUp: (g, _) => _boot(g),
     verify: (game, _) async {
       final (run, feather) = await cometWith(game, ElementId.feather);
@@ -187,76 +192,48 @@ void main() {
       run.events.on<PickupCleared>((e) => cleared.add(e.pickup));
       await flyUntil(game, (_) => watch.started.isNotEmpty, maxSeconds: 20);
       expect(watch.started.single, RunActivity.comet);
-      expect(cleared, contains(feather));
-      expect(feather.escaped, isTrue);
-      expect(run.spawner.pickups, isNot(contains(feather)));
-      expect(run.state.featherSpawned, isFalse);
-      // It fades over 0.2 s, then is gone.
-      for (var i = 0; i < 6; i++) {
-        game.update(1 / 60);
-      }
-      expect(feather.clearAlpha, inExclusiveRange(0, 1));
-      for (var i = 0; i < 10; i++) {
-        game.update(1 / 60);
-      }
-      await flushAndMount(game);
-      expect(feather.isMounted, isFalse);
-      // Placed again after the landing + 2 hoops.
-      Pickup? again;
-      run.events.on<PickupSpawned>((e) {
-        if (e.pickup.id == ElementId.feather) again ??= e.pickup;
-      });
-      await flyUntil(game, (_) => again != null, maxSeconds: 40);
-      expect(again, isNotNull);
-      expect(watch.ended, contains(RunActivity.comet));
-      expect(watch.bad, isEmpty);
+      expect(run.spawner.isVisible(feather), isTrue);
+      expect(cleared, isNot(contains(feather)));
+      expect(run.spawner.pickups, contains(feather));
       expect(run.state.featherSpawned, isTrue);
+      for (var i = 0; i < 16; i++) {
+        game.update(1 / 60);
+      }
+      expect(feather.clearAlpha, 1);
     },
   );
 
   _tester().testGameWidget(
-    '§27.5 a heart ahead fades and comes back at the next scheduled heart '
-    'gap',
+    '§27.5 / PRD-2.3 §17.5 a heart on screen when a comet starts stays; the '
+    'heart schedule is kept',
     setUp: (g, _) => _boot(g),
     verify: (game, _) async {
       final (run, heart) = await cometWith(game, ElementId.heart);
       final watch = _Watch(run);
       final heartAt = run.director.heartAt;
       await flyUntil(game, (_) => watch.started.isNotEmpty, maxSeconds: 20);
-      expect(heart.escaped, isTrue);
-      expect(run.spawner.pickups, isNot(contains(heart)));
+      expect(run.spawner.pickups, contains(heart));
+      expect(heart.clearAlpha, 1);
       expect(run.director.heartAt, heartAt, reason: 'the schedule is kept');
-      // Not owed: the next heart comes at its scheduled gap, not earlier.
-      final later = <int>[];
-      run.events.on<PickupSpawned>((e) {
-        if (e.pickup.id != ElementId.heart) return;
-        final x = e.pickup.position.x;
-        later.add(
-          run.spawner.slotLog.lastWhere((s) => s.lastRingX < x).index,
-        );
-      });
-      await flyUntil(game, (_) => watch.ended.isNotEmpty, maxSeconds: 20);
-      await flyRun(game, maxSeconds: 6);
-      expect(later.every((g) => g >= heartAt), isTrue, reason: '$later');
     },
   );
 
   _tester().testGameWidget(
-    '§27.5 a shield ahead fades out when a comet starts',
+    '§27.5 / PRD-2.3 §17.5 a shield on screen when a comet starts stays',
     setUp: (g, _) => _boot(g),
     verify: (game, _) async {
       final (run, shield) = await cometWith(game, ElementId.shield);
       final watch = _Watch(run);
       await flyUntil(game, (_) => watch.started.isNotEmpty, maxSeconds: 20);
-      expect(shield.escaped, isTrue);
-      expect(run.spawner.pickups, isNot(contains(shield)));
+      expect(run.spawner.pickups, contains(shield));
+      expect(shield.clearAlpha, 1);
       expect(run.director.forcedQueue, isNot(contains(ElementId.shield)));
     },
   );
 
   _tester().testGameWidget(
-    '§27.5 a pair already on screen when a jar run starts loses its gift '
-    'boxes (0.2 s) and passes as a normal ring',
+    '§27.5 / PRD-2.3 §17.5 a pair already on screen when a jar run starts '
+    'keeps its gift boxes and passes as a pair',
     setUp: (g, _) => _boot(g),
     verify: (game, _) async {
       game.runDebug.god = true;
@@ -286,7 +263,6 @@ void main() {
         GapItemPlan(kind: ElementId.jar, trackX: bird.x + 70, y: bird.y),
       );
       final p = pair!;
-      final shield0 = run.state.shield;
       final picked = <String>[];
       run.events.on<HoopPassed>((e) {
         if (identical(e.hoop, p)) picked.add(e.hoop!.plan.kind.name);
@@ -295,23 +271,15 @@ void main() {
       expect(got, isNotNull);
       game.update(1 / 60); // the activity is seen
       expect(run.state.activity, RunActivity.jar);
-      expect(
-        p.rewardStripped,
-        isTrue,
-        reason:
-            'pair ${p.planeX} resolved ${p.resolved} bird '
-            '${run.birdTrackPosition()?.x} jar ${got!.position.x}',
-      );
-      expect(p.plan.kind, HoopKindId.normal);
-      expect(p.rings, hasLength(2), reason: 'still the two rings');
+      expect(p.rewardStripped, isFalse);
+      expect(p.plan.kind, HoopKindId.pair);
       for (var i = 0; i < 15; i++) {
         game.update(1 / 60);
       }
-      expect(p.rewardAlpha, 0);
+      expect(p.rewardAlpha, 1);
       expect(PairHoopKind.stateOf(p), isNotNull);
       await flyUntil(game, (_) => p.resolved, maxSeconds: 6);
-      expect(picked, ['normal']);
-      expect(run.state.shield, shield0, reason: 'no gift');
+      expect(picked, ['pair']);
     },
   );
 

@@ -66,6 +66,9 @@ abstract final class PiggyConfig {
   static const double bobOmega = 3;
   static const Color haloColor = Color(0xFFFF8AC4);
   static const double haloR = 26;
+
+  /// PRD-2.3 §17.2 visual reach of the Piggy Bank: its halo r 26.
+  static const double visualReach = haloR;
   static const double haloAlpha = .5;
 
   // --- §5.27 the coins ------------------------------------------------------

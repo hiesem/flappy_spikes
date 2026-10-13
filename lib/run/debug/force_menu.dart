@@ -96,4 +96,8 @@ class RunDebugState {
   /// PRD-2.3 §14.6 tests: runs ignore the lifetime unlock gates (the test
   /// harness sets it; the gates have their own tests).
   bool ignoreGates = false;
+
+  /// PRD-2.3 §17.6 tests: false flies the planner without the one-big-bonus
+  /// rule (the bonus-count baseline). Always true in real runs.
+  bool oneBigBonus = true;
 }

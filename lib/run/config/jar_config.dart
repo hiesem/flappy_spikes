@@ -41,6 +41,9 @@ abstract final class JarConfig {
   static const Color haloColor = Color(0xFFD6FF50);
   static const double haloR = 34;
   static const double haloPulse = 6;
+
+  /// PRD-2.3 §17.2 visual reach of the jar: halo r 34 + 6 (pulse).
+  static const double visualReach = haloR + haloPulse;
   static const double haloPulseOmega = 4;
   static const double haloAlpha = .45;
   static const double haloAlphaPulse = .3;

@@ -1,5 +1,6 @@
 import '../menu/powerup_slot.dart';
 import '../versus/opponent.dart';
+import 'config/run_config.dart';
 import 'director/plans.dart';
 import 'elements.dart';
 
@@ -15,6 +16,7 @@ class RunSetup {
     required this.viewHeight,
     this.enabledOverride,
     this.ignoreGates = false,
+    this.oneBigBonus = RunConfig.oneBigBonus,
   });
 
   /// Per-run seed (§3.0.3; tests fix it, e2e uses `kE2ESeed`).
@@ -43,4 +45,8 @@ class RunSetup {
   /// PRD-2.3 §14.6 tests / e2e / soak: every element regardless of the
   /// lifetime unlock gates (`GatesConfig`). Off in every real run.
   final bool ignoreGates;
+
+  /// PRD-2.3 §17.3 the one-big-bonus planner rule; tests turn it off only
+  /// for the §17.6 bonus-count baseline.
+  final bool oneBigBonus;
 }

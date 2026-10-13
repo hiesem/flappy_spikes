@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Games Like Flappy Bird &amp; Don&#x27;t Touch the Spikes</title>
-<meta name="description" content="Love one-tap flying games? See how Flappy Spikes compares to Flappy Bird, Flappy Dunk, Flappy Dragon and Don&#x27;t Touch the Spikes. Free on Android.">
+<meta name="description" content="Love one-tap flying games? See how Flappy Spikes compares to Flappy Bird, Flappy Dunk, Flappy Dragon and Don&#x27;t Touch the Spikes. Free on Android and iOS.">
 <link rel="canonical" href="https://flappyspikes.com/games-like-flappy-bird">
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
 <link rel="icon" type="image/png" sizes="48x48" href="/icon-48.png">
@@ -15,7 +15,7 @@
 <link rel="preload" href="/a/fredoka.3014c26fce.woff2" as="font" type="font/woff2" crossorigin>
 <meta name="theme-color" content="#EC008C">
 <meta property="og:title" content="Games Like Flappy Bird &amp; Don&#x27;t Touch the Spikes">
-<meta property="og:description" content="Love one-tap flying games? See how Flappy Spikes compares to Flappy Bird, Flappy Dunk, Flappy Dragon and Don&#x27;t Touch the Spikes. Free on Android.">
+<meta property="og:description" content="Love one-tap flying games? See how Flappy Spikes compares to Flappy Bird, Flappy Dunk, Flappy Dragon and Don&#x27;t Touch the Spikes. Free on Android and iOS.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Flappy Spikes">
 <meta property="og:image" content="https://flappyspikes.com/og.png">
@@ -26,7 +26,7 @@
 <meta property="og:url" content="https://flappyspikes.com/games-like-flappy-bird">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Games Like Flappy Bird &amp; Don&#x27;t Touch the Spikes">
-<meta name="twitter:description" content="Love one-tap flying games? See how Flappy Spikes compares to Flappy Bird, Flappy Dunk, Flappy Dragon and Don&#x27;t Touch the Spikes. Free on Android.">
+<meta name="twitter:description" content="Love one-tap flying games? See how Flappy Spikes compares to Flappy Bird, Flappy Dunk, Flappy Dragon and Don&#x27;t Touch the Spikes. Free on Android and iOS.">
 <meta name="twitter:image" content="https://flappyspikes.com/og.png">
 <script type="application/ld+json">
 {
@@ -37,7 +37,7 @@
    "@id": "https://flappyspikes.com/games-like-flappy-bird#webpage",
    "url": "https://flappyspikes.com/games-like-flappy-bird",
    "name": "Games Like Flappy Bird & Don't Touch the Spikes",
-   "description": "Love one-tap flying games? See how Flappy Spikes compares to Flappy Bird, Flappy Dunk, Flappy Dragon and Don't Touch the Spikes. Free on Android.",
+   "description": "Love one-tap flying games? See how Flappy Spikes compares to Flappy Bird, Flappy Dunk, Flappy Dragon and Don't Touch the Spikes. Free on Android and iOS.",
    "isPartOf": {
     "@id": "https://flappyspikes.com/#website"
    },
@@ -115,8 +115,10 @@ a { color: inherit; }
 
 /* header */
 header.bar { position: sticky; top: 0; z-index: 10; background: var(--white); }
-header.bar .wrap { display: flex; align-items: center; gap: 14px; padding-block: 10px; }
-header.bar .spikes { position: absolute; left: 0; right: 0; top: 100%; }
+header.bar .wrap { display: flex; align-items: center; gap: 14px; padding-block: 8px; }
+/* the strip's top ~31 px is solid (only the bottom ~13 px are teeth): tuck the solid part under the bar so the header
+   hugs its contents instead of showing a wide white band below them */
+header.bar .spikes { position: absolute; left: 0; right: 0; top: calc(100% - 26px); z-index: -1; }
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; min-width: 0; color: var(--plum); }
 .brand img { width: 40px; height: 40px; border-radius: 10px; }
 .brand span { font-family: var(--display); font-size: 26px; white-space: nowrap; color: #6F6F6F; }
@@ -228,66 +230,236 @@ footer .fine { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px 18px; 
 footer .fine p { margin: 0; }
 footer .fine a { color: #FFFFFF; }
 footer noscript img { vertical-align: middle; }
-body.has-bar footer .wrap { padding-bottom: 104px; }
-/* PRD-2.3 §11.5 content pages and the 404 page: the homepage's header, zones, rays, stickers, banners and footer,
-   plus a reading column, white cards (like the privacy page's card) and the rank table. No new artwork. */
+/* PRD-2.3 §11.5 content pages and the 404 page, in the homepage's vocabulary: rank-palette zones with turning rays,
+   gold / pink stickers with the plum drop shadow, tilted pink banners, white cards with the offset plum shadow, the
+   game's own painters (pages.js) for every picture, and a short scroll-in reveal (reveal.js; nothing is hidden
+   without JS, and nothing above the fold is ever hidden). */
+:root { --text: #2E2A2D; }
+
+/* ---------- hero ---------- */
 .page-hero { --rx: 76%; --ry: 55%; }
-.page-hero .wrap { display: grid; grid-template-columns: 1.15fr .85fr; gap: 36px; align-items: center; padding-block: 56px 70px; }
-.page-hero .hero-text { display: grid; gap: 18px; }
-.page-hero h1 { font-size: clamp(46px, 7.2vw, 96px); line-height: .95; }
-.page-hero .art { justify-self: center; position: relative; }
-.page-hero .art canvas { width: min(320px, 78vw); aspect-ratio: 1; display: block; }
-.page-hero .art canvas.wide { width: min(460px, 90vw); aspect-ratio: 460 / 300; }
+.page-hero .wrap { display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; padding-block: 60px 84px; }
+.page-hero .hero-text { display: grid; gap: 20px; }
+.page-hero h1 { font-size: clamp(48px, 7.2vw, 100px); line-height: .94; }
+.page-hero .lead { max-width: 40ch; }
+.page-hero .free { margin: -4px 0 0; }
+.page-hero .art { justify-self: center; position: relative; display: grid; place-items: center; }
 .crumbs { font-size: 15px; color: var(--acc); }
 .crumbs a { color: inherit; }
+.page-hero .art .sticker { --s: 128px; top: -30px; right: -34px; }
+.page-hero .art .sticker.pink b { font-family: var(--body); font-weight: 600; }
 @media (max-width: 860px) {
   .page-hero { --rx: 50%; --ry: 78%; }
-  .page-hero .wrap { grid-template-columns: 1fr; text-align: center; padding-block: 44px 56px; }
+  .page-hero .wrap { grid-template-columns: 1fr; text-align: center; padding-block: 44px 64px; gap: 48px; }
   .page-hero .hero-text { justify-items: center; } .page-hero .lead { margin-inline: auto; } .page-hero .banner { justify-self: center; }
+  .page-hero .badges { justify-content: center; }
+  .page-hero .art .sticker { --s: 100px; right: -6px; top: -36px; }
 }
-section.zone.prose { padding-block: 84px; }
-.prose .wrap { display: grid; gap: 22px; }
-.prose h2 { font-size: clamp(38px, 5.4vw, 64px); max-width: 18ch; }
-.prose h3 { font-family: var(--display); font-weight: 400; font-size: 28px; line-height: 1.05; margin: 0; color: var(--acc); }
-.p-legend.prose h3 { color: var(--gold); }
-.prose p, .prose li { font-size: 19px; line-height: 1.6; max-width: 66ch; margin: 0; }
-.prose ul, .prose ol { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 66ch; }
-.prose p a, .prose li a { color: var(--acc); text-decoration-thickness: 2px; text-underline-offset: 3px; }
-.p-legend.prose p a, .p-legend.prose li a { color: var(--gold); }
-.split2 { display: grid; grid-template-columns: 1fr minmax(0, 360px); gap: 40px; align-items: center; }
-.split2 .art { justify-self: center; }
-.split2 .art canvas { width: min(320px, 80vw); aspect-ratio: 1; display: block; }
-.split2 .art canvas.lane { width: min(320px, 82vw); aspect-ratio: 320 / 520; border-radius: 26px; box-shadow: 12px 12px 0 var(--acc); }
-.split2 .copy { display: grid; gap: 18px; }
-@media (max-width: 860px) { .split2 { grid-template-columns: 1fr; } }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 22px; }
-.card { background: var(--white); color: #2E2A2D; border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 18px 20px 20px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+
+/* the art plates: a white disc with the zone's rim colour (birds, pickups), and the dark phone frame of the hero demo */
+.disc { position: relative; width: min(340px, 76vw); aspect-ratio: 1; border-radius: 50%; background: var(--white); border: 10px solid rgb(var(--rim)); box-shadow: 12px 14px 0 var(--plum); display: grid; place-items: center; overflow: hidden; }
+.disc canvas { width: 100%; height: 100%; display: block; }
+.disc.sm { width: min(260px, 70vw); border-width: 8px; box-shadow: 9px 10px 0 var(--plum); }
+.frame { position: relative; border-radius: 30px; background: #2B2629; padding: 9px; box-shadow: 14px 16px 0 var(--plum); transform: rotate(var(--r, 2deg)); }
+.frame canvas { display: block; border-radius: 22px; width: 100%; height: auto; }
+.frame.sq { width: min(340px, 78vw); } .frame.sq canvas { aspect-ratio: 1; }
+.frame.tall { width: min(300px, 72vw); } .frame.tall canvas { aspect-ratio: 320 / 520; }
+.frame.wide { width: min(460px, 88vw); } .frame.wide canvas { aspect-ratio: 2 / 1; }
+.frame.light { background: var(--white); }
+
+/* ---------- jump bar: the page's sections as chips ---------- */
+.jump { display: flex; flex-wrap: wrap; gap: 10px; }
+.jump a { text-decoration: none; font-size: 16px; color: var(--plum); background: var(--white); padding: 7px 15px; border-radius: 999px; box-shadow: 4px 4px 0 var(--plum); transition: transform .15s, background .15s, color .15s; }
+.jump a:hover, .jump a:focus-visible { transform: translateY(-2px) rotate(-2deg); background: var(--pink); color: var(--white); outline: none; }
+@media (max-width: 860px) { .jump { justify-content: center; } }
+
+/* ---------- sections ---------- */
+section.zone.sec { padding-block: 92px; }
+.sec .wrap { position: relative; display: grid; gap: 30px; }
+.sec-head { display: grid; gap: 14px; max-width: 760px; }
+.sec-head p { margin: 0; font-size: 20px; line-height: 1.5; max-width: 60ch; }
+.sec h2 { font-size: clamp(40px, 5.8vw, 72px); line-height: .98; max-width: 16ch; }
+.sec h3 { font-family: var(--display); font-weight: 400; font-size: 28px; line-height: 1.05; margin: 0; color: var(--acc); }
+.p-legend.sec h3 { color: var(--gold); }
+.sec p a, .sec li a, .sec dd a { color: var(--acc); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.p-legend.sec .sec-head a { color: var(--gold); }
+.sec-head .eyebrow b { font-family: var(--score); font-weight: 400; letter-spacing: 0; font-size: 20px; margin-right: 8px; }
+.sec > .wrap > .sticker, .sec .sec-sticker { --s: 130px; top: -20px; right: 20px; }
+@media (max-width: 860px) { section.zone.sec { padding-block: 76px; } .sec > .wrap > .sticker, .sec .sec-sticker { --s: 92px; top: -44px; right: 14px; }
+  .sec .wrap > .sticker + .sec-head > .eyebrow, .sec .wrap > .sticker + .sec-head > h2 { padding-right: 84px; } }
+
+/* a reading card: white, rounded, the plum offset shadow (the homepage's facts card) */
+.panel { background: var(--white); color: var(--text); border-radius: 26px; box-shadow: 8px 8px 0 var(--plum); padding: 26px 30px; display: grid; gap: 14px; align-content: start; max-width: 780px; min-width: 0; }
+.panel p, .panel li { font-size: 18px; line-height: 1.6; margin: 0; }
+.panel a { color: var(--pink) !important; }
+.panel strong { color: var(--plum); }
+.panel h3 { color: var(--pink) !important; }
+@media (max-width: 520px) { .panel { padding: 20px 20px; border-radius: 22px; } .panel p, .panel li { font-size: 17px; } }
+
+/* copy + art, side by side */
+.duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 400px); gap: 48px; align-items: center; }
+.duo.flip { grid-template-columns: minmax(0, 400px) minmax(0, 1fr); }
+.duo.flip > .art { order: -1; }
+.duo > .art { justify-self: center; position: relative; }
+.duo > .copy { display: grid; gap: 22px; min-width: 0; }
+@media (max-width: 860px) { .duo, .duo.flip { grid-template-columns: 1fr; gap: 40px; } .duo > .art, .duo.flip > .art { order: 1; } }
+/* on the story timeline the copy starts next to its heading instead of floating mid-way down a tall picture */
+.tl .duo { align-items: start; }
+
+/* the tilted pink label (the homepage's step label) */
+.tag-label { justify-self: start; display: inline-block; font-size: 21px; color: var(--white); background: var(--pink); padding: 6px 16px; transform: rotate(-3deg); box-shadow: 6px 6px 0 var(--plum); }
+
+/* ---------- cards ---------- */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; }
+.card { position: relative; background: var(--white); color: var(--text); border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 20px 22px 22px; display: grid; gap: 8px; align-content: start; min-width: 0; transition: transform .2s ease-out, box-shadow .2s ease-out; }
+@media (hover: hover) { .card:hover { transform: translateY(-4px) rotate(-.6deg); box-shadow: 10px 12px 0 var(--plum); } }
 .card canvas { width: 140px; height: 140px; justify-self: center; display: block; }
 .card h3 { color: var(--pink) !important; font-size: 26px; }
-.card p { font-size: 16px; line-height: 1.5; }
+.card p { font-size: 16px; line-height: 1.5; margin: 0; }
 .card .tag { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #8A8A8A; }
-.cards.mini { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 14px; }
+.card .num { position: absolute; top: -14px; left: -10px; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: var(--pink); color: var(--white); border: 4px solid var(--white); box-shadow: 4px 4px 0 var(--plum); font-family: var(--score); font-size: 20px; transform: rotate(-8deg); }
+.card.ring { padding-top: 12px; }
+.card.ring canvas { width: 120px; height: 120px; }
+.card .ico { width: 64px; height: 64px; border-radius: 50%; background: var(--sc, var(--gold)); color: var(--white); display: grid; place-items: center; font-family: var(--score); font-size: 20px; border: 4px solid var(--white); box-shadow: 4px 5px 0 var(--plum); transform: rotate(-6deg); }
+.card .ico.pink { --sc: var(--pink); } .card .ico.teal { --sc: #13B48D; } .card .ico.blue { --sc: #1E9BE0; } .card .ico.purple { --sc: #9B30D9; } .card .ico.orange { --sc: #FF7A1A; }
+
+/* the mini item cards (birds, hats, gear, hoops, trails) */
+.cards.mini { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 14px; }
 .cards.mini .card { padding: 10px 8px 12px; border-radius: 18px; box-shadow: 5px 5px 0 var(--plum); text-align: center; gap: 2px; }
+@media (hover: hover) { .cards.mini .card:hover { transform: translateY(-4px) rotate(-2deg); box-shadow: 6px 8px 0 var(--plum); } }
 .cards.mini canvas { width: 84px; height: 84px; justify-self: center; }
 .cards.mini b { font-size: 15px; color: var(--plum); font-weight: 600; }
 .cards.mini small { font-size: 13px; color: #6F6F6F; }
-.rar { display: grid; gap: 14px; }
-.rar h3 { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.rar h3 small { font-family: var(--body); font-size: 16px; color: inherit; opacity: .85; letter-spacing: 0; }
-.ranktable { width: 100%; max-width: 760px; border-collapse: separate; border-spacing: 0; background: var(--white); color: #2E2A2D; border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); overflow: hidden; font-size: 18px; }
-.ranktable th, .ranktable td { padding: 8px 18px; text-align: left; border-bottom: 2px solid #F3E3EC; }
-.ranktable th { font-family: var(--display); font-weight: 400; letter-spacing: .1em; font-size: 15px; color: var(--pink); background: #FFF6FB; }
-.ranktable tr:last-child td { border-bottom: 0; }
-.ranktable canvas { width: 72px; height: 72px; display: block; }
-.ranktable td.n { font-family: var(--display); letter-spacing: .1em; color: var(--plum); }
-.press { background: var(--white); color: #2E2A2D; border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 22px 26px; display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; max-width: 640px; font-size: 17px; }
+
+/* rarity groups: each with its own colour (common teal, rare blue, epic purple, legendary gold) */
+.rar { --rc: #13B48D; display: grid; gap: 16px; }
+.rar.rare { --rc: #1E9BE0; } .rar.epic { --rc: #9B30D9; } .rar.legendary { --rc: #FFB529; }
+.rar h3 { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.rar h3 .pill { font-family: var(--display); font-size: 24px; color: var(--white); background: var(--rc); padding: 4px 16px 6px; border-radius: 999px; box-shadow: 5px 5px 0 var(--plum); transform: rotate(-2deg); }
+.rar h3 small { font-family: var(--body); font-size: 17px; color: var(--plum); letter-spacing: 0; }
+.rar .cards.mini .card { border-top: 6px solid var(--rc); }
+.rar.legendary .cards.mini .card { background: linear-gradient(160deg, #FFFFFF 55%, #FFF1C9); }
+.group { display: grid; gap: 14px; }
+.group h3 .pill { font-family: var(--display); font-size: 24px; color: var(--white); background: var(--pink); padding: 4px 16px 6px; border-radius: 999px; box-shadow: 5px 5px 0 var(--plum); display: inline-block; transform: rotate(-2deg); }
+
+/* the parade band under a hero */
+section.zone.parade-band { position: relative; padding-block: 0; }
+.parade-band canvas { width: 100%; height: 240px; display: block; }
+
+/* ---------- rank ladder (birds page): emblem cards, as on the homepage ---------- */
+.ladder { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 22px 16px; }
+.ladder li { position: relative; display: grid; justify-items: center; gap: 4px; text-align: center; min-width: 0; padding: 10px 6px 16px; border-radius: 22px; background: rgba(255, 255, 255, .07); border: 2px solid rgba(255, 255, 255, .12); transition: transform .2s ease-out, background .2s; }
+@media (hover: hover) { .ladder li:hover { transform: translateY(-4px); background: rgba(255, 255, 255, .13); } }
+.ladder canvas { width: 100%; max-width: 170px; aspect-ratio: 1; display: block; }
+.ladder b { font-family: var(--display); font-weight: 400; letter-spacing: .14em; font-size: 17px; color: var(--white); }
+.ladder span { font-size: 15px; color: var(--gold); }
+.ladder span em { font-style: normal; font-family: var(--score); font-size: 19px; }
+.ladder .lv { position: absolute; top: 8px; left: 10px; font-family: var(--score); font-size: 16px; color: rgba(255, 255, 255, .55); }
+@media (max-width: 860px) { .ladder { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- steps (how a race works, the three rules) ---------- */
+.steps3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; counter-reset: st; }
+.steps3 > li, .steps3 > div { list-style: none; position: relative; display: grid; gap: 12px; justify-items: center; text-align: center; align-content: start; min-width: 0; background: var(--white); color: var(--text); border-radius: 26px; box-shadow: 8px 8px 0 var(--plum); padding: 18px 20px 24px; }
+.steps3 { padding: 0; margin: 0; }
+.steps3 canvas { width: 100%; max-width: 240px; aspect-ratio: 1; display: block; }
+.steps3 .tag-label { justify-self: center; font-size: 20px; }
+.steps3 p { margin: 0; font-size: 17px; line-height: 1.5; }
+.steps3 strong { color: var(--plum); }
+.steps3 .sticker { --s: 64px; --sc: var(--pink); top: -16px; left: -10px; --r: -8deg; box-shadow: 4px 5px 0 var(--plum); border-width: 5px; }
+.steps3 .sticker b { font-size: 26px; }
+@media (max-width: 860px) { .steps3 { grid-template-columns: 1fr; gap: 34px; } }
+
+/* points scale (perfects): chips in the score font */
+.scale { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.scale div { display: grid; justify-items: center; gap: 6px; background: var(--white); border-radius: 18px; box-shadow: 5px 5px 0 var(--plum); padding: 10px 14px; min-width: 92px; }
+.scale b { font-family: var(--score); font-weight: 400; font-size: 34px; line-height: 1; color: var(--pink); }
+.scale div:nth-child(3) b { color: #FF7A1A; } .scale div:nth-child(4) b { color: #E8141C; } .scale div:nth-child(5) b { color: #9B30D9; }
+.scale span { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--plum); }
+
+/* chips (what stayed, the rides) */
+.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 12px; }
+.chips li { background: var(--white); color: var(--text); border-radius: 999px; padding: 9px 18px 9px 12px; box-shadow: 5px 5px 0 var(--plum); font-size: 17px; line-height: 1.35; display: flex; gap: 10px; align-items: center; }
+.chips li::before { content: ''; flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--pink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 18px no-repeat; }
+.chips li strong { color: var(--plum); }
+.chips.plain li { padding: 7px 16px; transform: rotate(var(--r, -2deg)); }
+.chips.plain li::before { content: none; }
+.chips.plain li:nth-child(even) { --r: 2deg; }
+@media (max-width: 520px) { .chips:not(.plain) li { border-radius: 18px; } }
+
+/* ---------- timeline (story) ---------- */
+.timeline { position: relative; display: grid; gap: 54px; padding-left: 112px; }
+.timeline::before { content: ''; position: absolute; left: 44px; top: 20px; bottom: 20px; width: 8px; border-radius: 4px; background: repeating-linear-gradient(to bottom, var(--pink) 0 22px, transparent 22px 34px); }
+.tl { position: relative; display: grid; gap: 18px; }
+.tl > .year { position: absolute; left: -112px; top: -6px; width: 96px; aspect-ratio: 1; border-radius: 50%; background: var(--sc, var(--gold)); border: 6px solid var(--white); box-shadow: 6px 7px 0 var(--plum); display: grid; place-content: center; text-align: center; transform: rotate(-8deg); font-family: var(--score); font-size: 26px; color: var(--white); line-height: 1; }
+.tl > .year small { font-family: var(--display); font-size: 11px; letter-spacing: .14em; color: var(--plum); margin-top: 3px; }
+.tl > .year.pink { --sc: var(--pink); } .tl > .year.pink small { color: var(--white); }
+.old-bird { image-rendering: pixelated; width: 93px; height: 59px; }
+.then-now { display: grid; grid-template-columns: auto auto 1fr; gap: 18px; align-items: center; }
+@media (max-width: 640px) {
+  .timeline { padding-left: 0; gap: 64px; } .timeline::before { content: none; }
+  .tl > .year { position: relative; left: auto; top: auto; width: 84px; font-size: 22px; margin-bottom: -4px; }
+  .tl > .year.w { font-size: 20px; }
+}
+
+/* press facts */
+.press { background: var(--white); color: var(--text); border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 22px 26px; display: grid; grid-template-columns: max-content 1fr; gap: 10px 22px; max-width: 680px; font-size: 17px; margin: 0; }
 .press dt { color: var(--pink); }
 .press dd { margin: 0; }
 .press a { color: var(--pink); }
 @media (max-width: 520px) { .press { grid-template-columns: 1fr; gap: 2px; } .press dd { margin-bottom: 8px; } }
-.note { font-size: 15px !important; opacity: .85; }
+.note { font-size: 15px !important; opacity: .85; margin: 0; }
+
+/* ---------- versus page ---------- */
+.vsbar { --w: min(560px, 100%); width: var(--w); display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; gap: 0 12px; padding: 22px 22px 18px; background: #E6EFF5; border-radius: 26px; box-shadow: 10px 10px 0 var(--plum); }
+.vsbar .side { display: grid; gap: 8px; }
+.vsbar .box { display: grid; grid-template-columns: 54px 1fr; height: 56px; background: var(--pink); color: var(--white); border-radius: 4px; overflow: hidden; }
+.vsbar .box i { display: grid; place-items: center; background: #C40073; }
+.vsbar .box i::before { content: ''; width: 26px; height: 26px; background: currentColor; -webkit-mask: radial-gradient(circle at 50% 30%, #000 5.5px, transparent 6px), radial-gradient(ellipse 11px 9px at 50% 100%, #000 99%, transparent); mask: radial-gradient(circle at 50% 30%, #000 5.5px, transparent 6px), radial-gradient(ellipse 11px 9px at 50% 100%, #000 99%, transparent); }
+.vsbar .box b { display: grid; place-items: center; font-family: var(--score); font-weight: 400; font-size: 34px; }
+.vsbar .them .box { grid-template-columns: 1fr 54px; background: #6B7C88; color: #E6EFF5; }
+.vsbar .them .box i { background: #4B5760; order: 2; }
+.vsbar .them .box.flash { box-shadow: inset 0 0 0 4px var(--gold); }
+.vsbar .name { background: var(--white); color: var(--plum); text-align: center; font-size: 15px; padding: 3px 6px; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vsbar .vs { font-family: var(--body); font-size: 22px; color: var(--plum); align-self: center; margin-top: -26px; }
+.vsbar-wrap { display: grid; gap: 16px; justify-items: start; }
+.vsbar-wrap .note { color: var(--acc); opacity: 1; }
+@media (max-width: 520px) { .vsbar { padding: 16px 14px 14px; gap: 0 8px; } .vsbar .box { grid-template-columns: 40px 1fr; height: 46px; } .vsbar .them .box { grid-template-columns: 1fr 40px; } .vsbar .box b { font-size: 28px; } .vsbar .name { font-size: 13px; } }
+
+.results3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.results3 > div { display: grid; justify-items: center; gap: 8px; text-align: center; padding: 22px 16px 20px; border-radius: 22px; background: var(--white); color: var(--text); box-shadow: 8px 8px 0 #12062E; }
+.results3 .word { font-family: var(--display); font-size: clamp(26px, 3vw, 36px); color: var(--white); background: #FF4FB7; padding: 4px 16px 6px; transform: rotate(-3deg); box-shadow: 5px 5px 0 var(--plum); }
+.results3 .draw .word { background: #9B30D9; } .results3 .lose .word { background: #6B7C88; }
+.results3 b { font-family: var(--score); font-weight: 400; font-size: 44px; line-height: 1; color: var(--gold); -webkit-text-stroke: 0; }
+.results3 span { font-size: 15px; color: var(--plum); }
+@media (max-width: 640px) { .results3 { grid-template-columns: 1fr; } }
+
+.flow { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: fl; max-width: 780px; }
+.flow li { counter-increment: fl; display: grid; grid-template-columns: 46px 1fr; gap: 14px; align-items: center; background: var(--white); color: var(--text); border-radius: 18px; box-shadow: 5px 5px 0 var(--plum); padding: 10px 18px 10px 12px; font-size: 17px; line-height: 1.45; }
+.flow li::before { content: counter(fl); display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: #FF5722; color: var(--white); font-family: var(--score); font-size: 20px; }
+
+.nick { display: inline-flex; align-items: center; gap: 12px; background: var(--white); border-radius: 999px; padding: 8px 20px 8px 8px; box-shadow: 6px 6px 0 var(--plum); font-size: 22px; color: var(--plum); min-width: 0; }
+.nick i { width: 40px; height: 40px; border-radius: 50%; background: var(--pink); display: block; flex: none; }
+.nick span { min-width: 15ch; }
+
+/* ---------- comparison (games like) ---------- */
+.compare-wrap { overflow-x: auto; border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); background: var(--white); max-width: 100%; }
+.compare { width: 100%; min-width: 640px; border-collapse: collapse; color: var(--text); font-size: 16px; line-height: 1.4; }
+.compare th, .compare td { padding: 12px 16px; text-align: left; vertical-align: top; border-bottom: 2px solid #F3E3EC; }
+.compare thead th { font-family: var(--display); font-weight: 400; letter-spacing: .1em; font-size: 14px; text-transform: uppercase; color: var(--pink); background: #FFF6FB; }
+.compare tbody th { color: var(--plum); font-weight: 600; white-space: nowrap; }
+.compare tr.us th, .compare tr.us td { background: #FCD9EE; }
+.compare tr.us th { color: var(--pink); }
+.compare tr:last-child th, .compare tr:last-child td { border-bottom: 0; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 0; align-items: center; }
+.pair .panel { height: 100%; }
+.pair .panel.us { background: #FFF6FB; border: 4px solid var(--pink); }
+.pair .arrow { position: relative; z-index: 2; width: 70px; height: 70px; margin-inline: -14px; border-radius: 50%; background: var(--gold); border: 5px solid var(--white); box-shadow: 5px 6px 0 var(--plum); display: grid; place-items: center; transform: rotate(-8deg); font-family: var(--body); font-size: 24px; color: var(--white); }
+.pair .lbl { font-family: var(--display); letter-spacing: .16em; font-size: 14px; text-transform: uppercase; color: #8A8A8A; }
+.pair .us .lbl { color: var(--pink); }
+@media (max-width: 760px) { .pair { grid-template-columns: 1fr; justify-items: stretch; } .pair .arrow { justify-self: center; margin: -14px 0; transform: rotate(82deg); } }
+
+/* ---------- call to action, 404 ---------- */
 .cta .free { margin: 0; }
-/* 404 */
 .lost { --rx: 50%; --ry: 46%; text-align: center; min-height: 62vh; }
 .lost .wrap { display: grid; justify-items: center; gap: 20px; padding-block: 50px 80px; }
 .lost canvas { width: min(480px, 92vw); aspect-ratio: 480 / 340; display: block; }
@@ -297,6 +469,67 @@ a.banner { text-decoration: none; }
 a.banner:hover { transform: rotate(-3deg) translateY(-2px); }
 a.banner:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
 .lost .banner { justify-self: center; }
+
+/* ---------- motion ---------- */
+/* the stickers bob gently, each on its own beat (translate, so the sticker's own rotate stays) */
+@keyframes bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+.sticker, .tl > .year, .pair .arrow { animation: bob 3.6s ease-in-out infinite; }
+.sec .sticker { animation-delay: -1.2s; } .tl:nth-child(even) > .year { animation-delay: -1.8s; }
+.steps3 > :nth-child(2) .sticker { animation-delay: -.9s; } .steps3 > :nth-child(3) .sticker { animation-delay: -1.8s; }
+/* scroll-in reveal: reveal.js adds .rv-on to <html> and .rv to blocks that start below the fold */
+.rv-on .rv { opacity: 0; translate: 0 28px; scale: .98; transition: opacity .55s ease-out, translate .6s cubic-bezier(.2, .8, .3, 1.2), scale .6s ease-out; transition-delay: var(--d, 0s); }
+.rv-on .rv.in { opacity: 1; translate: none; scale: none; }
+@media (prefers-reduced-motion: reduce) {
+  .sticker, .tl > .year, .pair .arrow { animation: none; }
+  .rv-on .rv { opacity: 1; translate: none; scale: none; transition: none; }
+  .card, .jump a, .ladder li { transition: none; }
+}
+ul.cards, ol.cards { list-style: none; margin: 0; padding: 0; }
+.card .ico.s { font-size: 14px; }
+.cards.icons .card { grid-template-columns: 64px minmax(0, 1fr); column-gap: 16px; row-gap: 10px; align-items: center; }
+.cards.icons .card > h3 { grid-column: 2; }
+.cards.icons .card > h3 + p { grid-column: 1 / -1; }
+.cards.icons .card > .ico + p { grid-column: 2; }
+.card .ico { font-family: var(--body); font-weight: 600; font-size: 22px; }
+.card .ico.s { font-size: 14px; letter-spacing: .04em; }
+.card:has(> .num) { padding-top: 34px; }
+.cards.icons { grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
+.tl h2 { font-size: clamp(32px, 4.4vw, 54px); max-width: 20ch; }
+.tl > p { margin: 0; font-size: 19px; line-height: 1.55; max-width: 66ch; }
+.pair + .pair { margin-top: 26px; }
+.sec h2.ph { font-size: clamp(30px, 3.6vw, 44px); line-height: 1; color: var(--plum); max-width: none; }
+.p-legend .sec-head .eyebrow, .p-legend .eyebrow { color: var(--gold); }
+.tl > .year.w { font-family: var(--body); font-weight: 600; font-size: 24px; }
+.card strong { color: var(--plum); }
+.pair .arrow::before { content: ''; width: 0; height: 0; border-block: 11px solid transparent; border-left: 16px solid var(--white); margin-left: 5px; }
+.nick { justify-self: start; }
+@media (max-width: 860px) { .nick { justify-self: center; } }
+@media (max-width: 640px) {
+  .compare-wrap { overflow: visible; background: transparent; box-shadow: none; border-radius: 0; }
+  .compare { min-width: 0; display: block; }
+  .compare thead { display: none; }
+  .compare tbody { display: grid; gap: 16px; }
+  .compare tr { display: grid; background: var(--white); border-radius: 20px; box-shadow: 6px 6px 0 var(--plum); padding: 6px 0; }
+  .compare th, .compare td { border: 0; padding: 4px 18px; }
+  .compare tbody th { font-family: var(--display); font-weight: 400; font-size: 24px; white-space: normal; padding-top: 10px; }
+  .compare td::before { content: attr(data-label); display: block; font-family: var(--display); letter-spacing: .1em; font-size: 12px; text-transform: uppercase; color: var(--pink); }
+  .compare tr.us { background: #FCD9EE; }
+  .compare tr.us th, .compare tr.us td { background: transparent; }
+}
+@media (max-width: 520px) {
+  .cards.mini { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 10px; }
+  .cards.mini .card { padding: 8px 4px 10px; border-radius: 14px; box-shadow: 4px 4px 0 var(--plum); }
+  .cards.mini canvas { width: 64px; height: 64px; }
+  .cards.mini b { font-size: 13px; line-height: 1.2; }
+}
+@media (max-width: 860px) { section.zone.page-hero { padding-block: 40px 24px; } }
+@media (max-width: 520px) {
+  div.cards:not(.mini):not(.icons) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 14px; }
+  div.cards:not(.mini):not(.icons) > .card { padding: 12px 12px 16px; border-radius: 18px; box-shadow: 5px 5px 0 var(--plum); gap: 6px; }
+  div.cards:not(.mini):not(.icons) canvas { width: 96px; height: 96px; }
+  div.cards:not(.mini):not(.icons) h3 { font-size: 21px; }
+  div.cards:not(.mini):not(.icons) p { font-size: 14.5px; line-height: 1.45; }
+}
 </style>
 </head>
 <body>
@@ -306,75 +539,149 @@ a.banner:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
     <div class="grow"></div>
     <div class="mini-badges">
       <a class="badge" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dgames-like-flappy-bird"><img src="/a/gp.9e62107f39.webp" width="196" height="58" alt="Get it on Google Play"></a>
-          <a class="badge" href="#appstore"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
+          <a class="badge" href="#appstore" onclick="return false"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
     </div>
   </div>
   <div class="spikes up" style="--c: #FFFFFF"></div>
 </header>
 <main id="top">
-  <section class="zone page-hero first p-falcon">
+  <section class="zone page-hero first p-falcon" data-rays-at="hero-art">
     <div class="wrap">
       <div class="hero-text">
         <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a> › Games like Flappy Bird</nav>
         <span class="eyebrow">One-tap flying games</span>
         <h1>Games like Flappy Bird, with spikes and hoops</h1>
-        <p class="lead">Love one-tap flying games? Here is what makes them work, how a few well-known ones play, and what Flappy Spikes, a free one-tap game for Android, adds to the idea.</p>
+        <span class="banner">ONE TAP. ONE MORE GO.</span>
+        <p class="lead">Love one-tap flying games? Here is what makes them work, how a few well-known ones play, and what Flappy Spikes, a free one-tap game for Android and iPhone, adds to the idea.</p>
+        <nav class="jump" aria-label="On this page"><a href="#at-a-glance">At a glance</a><a href="#flappy-bird">Flappy Bird</a><a href="#dont-touch-the-spikes">Spikes</a><a href="#flappy-dunk">Flappy Dunk</a><a href="#flappy-dragon">Flappy Dragon</a><a href="#what-flappy-spikes-adds">What's new</a></nav>
       </div>
-      <div class="art"><canvas data-paint="perfect" width="320" height="320" aria-label="The Flappy Spikes bird flying through a pink hoop">The Flappy Spikes bird flying through a hoop.</canvas></div>
+      <div class="art" id="hero-art">
+        <div class="sticker"><b>1</b><span>TAP</span></div>
+        <div class="disc"><canvas data-paint="perfect" width="320" height="320" aria-label="The Flappy Spikes bird flying through a pink hoop">The Flappy Spikes bird flying through a hoop.</canvas></div>
+      </div>
     </div>
   </section>
 
-  <section class="zone prose p-fledge" style="--from: #FCD9EE" id="one-tap">
-    <div class="wrap">
-      <h2>What makes a one-tap flying game</h2>
-      <p>A one-tap flying game has one control: tap and your character jumps or flaps, let go and gravity pulls it down. The whole skill is timing. Runs are short, a mistake ends them, and "one more go" is always a tap away. The best games in the genre are easy to learn, hard to master and fair: when you crash, you know it was your tap.</p>
-      <p>Flappy Spikes has been one of them since 2014: tap to fly, thread the bird through the hoops and stay clear of the spikes on the top and the bottom of the screen. The <a href="/how-to-play">how to play guide</a> covers the details.</p>
+  <section class="zone sec p-fledge" style="--from: #FCD9EE; --rx: 80%; --ry: 45%" id="one-tap">
+    <div class="wrap duo">
+      <div class="copy">
+        <div class="sec-head">
+          <span class="eyebrow"><b>01</b>The genre</span>
+          <h2>What makes a one-tap flying game</h2>
+        </div>
+        <div class="panel">
+          <p>A one-tap flying game has one control: tap and your character jumps or flaps, let go and gravity pulls it down. The whole skill is timing. Runs are short, a mistake ends them, and "one more go" is always a tap away. The best games in the genre are easy to learn, hard to master and fair: when you crash, you know it was your tap.</p>
+          <p>Flappy Spikes has been one of them since 2014: tap to fly, thread the bird through the hoops and stay clear of the spikes on the top and the bottom of the screen. The <a href="/how-to-play">how to play guide</a> covers the details.</p>
+        </div>
+      </div>
+      <div class="art"><div class="disc"><canvas data-paint="flap:classic" width="320" height="320" aria-label="The bird flapping once per tap">The bird flaps once per tap.</canvas></div></div>
     </div>
   </section>
 
-  <section class="zone prose p-glider" style="--from: #B9F3E1" id="flappy-bird">
+  <section class="zone sec p-glider" style="--from: #B9F3E1; --rx: 50%; --ry: 30%" id="at-a-glance">
     <div class="wrap">
-      <h2>If you like Flappy Bird</h2>
-      <p>Flappy Bird, released in 2013, is the game that made one-tap flying famous: you guide a small bird through gaps between pipes.</p>
-      <p>Flappy Spikes started the same way, with pipes, in 2014. Today the pipes are hoops: you fly through rings instead of between pipes, a rim touch bounces you off instead of ending the run, and clean passes build a perfect streak that sets your bird on fire. The bird still flaps with one tap, and the spike strips on the top and the bottom are still deadly.</p>
+      <div class="sticker pink"><b>5</b><span>GAMES</span></div>
+      <div class="sec-head">
+        <span class="eyebrow"><b>02</b>Side by side</span>
+        <h2>At a glance</h2>
+      </div>
+      <div class="compare-wrap" tabindex="0" role="region" aria-label="One-tap flying games compared">
+        <table class="compare">
+          <thead><tr><th scope="col">Game</th><th scope="col">You fly</th><th scope="col">Through or past</th><th scope="col">The twist</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Flappy Bird</th><td data-label="You fly">A small bird</td><td data-label="Through or past">Gaps between pipes</td><td data-label="The twist">Made one-tap flying famous in 2013</td></tr>
+            <tr><th scope="row">Don't Touch the Spikes</th><td data-label="You fly">A bird bouncing wall to wall</td><td data-label="Through or past">Spikes along the sides</td><td data-label="The twist">Side to side instead of forward</td></tr>
+            <tr><th scope="row">Flappy Dunk</th><td data-label="You fly">A winged basketball</td><td data-label="Through or past">Hoops</td><td data-label="The twist">Bonus points for clean shots</td></tr>
+            <tr><th scope="row">Flappy Dragon</th><td data-label="You fly">A small dragon</td><td data-label="Through or past">Obstacles</td><td data-label="The twist">A fantasy setting</td></tr>
+            <tr class="us"><th scope="row">Flappy Spikes</th><td data-label="You fly">30 birds to unlock</td><td data-label="Through or past">Hoops, between two spike strips</td><td data-label="The twist">Perfect streaks, fire, versus races, power-ups and rides</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
 
-  <section class="zone prose p-phoenix" style="--from: #EBD3F5" id="dont-touch-the-spikes">
+  <section class="zone sec p-phoenix" style="--from: #EBD3F5; --rx: 50%; --ry: 50%">
     <div class="wrap">
-      <h2>If you like Don't Touch the Spikes</h2>
-      <p>Don't Touch the Spikes, by Ketchapp, has you bounce a bird between two walls while spikes appear along the sides.</p>
-      <p>Flappy Spikes keeps the spikes but sends you forward instead of side to side: the screen scrolls, the spike strips run along the top and the bottom, and the hoops come at you one after another. The colours change every 10 hoops, and the game gets faster the further you fly.</p>
+      <div class="sec-head">
+        <span class="eyebrow"><b>03</b>If you like…</span>
+      </div>
+      <div class="pair" id="flappy-bird">
+        <div class="panel">
+          <span class="lbl">The classic</span>
+          <h2 class="ph">If you like Flappy Bird</h2>
+          <p>Flappy Bird, released in 2013, is the game that made one-tap flying famous: you guide a small bird through gaps between pipes.</p>
+        </div>
+        <span class="arrow" aria-hidden="true"></span>
+        <div class="panel us">
+          <span class="lbl">In Flappy Spikes</span>
+          <p>Flappy Spikes started the same way, with pipes, in 2014. Today the pipes are hoops: you fly through rings instead of between pipes, a rim touch bounces you off instead of ending the run, and clean passes build a perfect streak that sets your bird on fire. The bird still flaps with one tap, and the spike strips on the top and the bottom are still deadly.</p>
+        </div>
+      </div>
+      <div class="pair" id="dont-touch-the-spikes">
+        <div class="panel">
+          <span class="lbl">The wall bouncer</span>
+          <h2 class="ph">If you like Don't Touch the Spikes</h2>
+          <p>Don't Touch the Spikes, by Ketchapp, has you bounce a bird between two walls while spikes appear along the sides.</p>
+        </div>
+        <span class="arrow" aria-hidden="true"></span>
+        <div class="panel us">
+          <span class="lbl">In Flappy Spikes</span>
+          <p>Flappy Spikes keeps the spikes but sends you forward instead of side to side: the screen scrolls, the spike strips run along the top and the bottom, and the hoops come at you one after another. The colours change every 10 hoops, and the game gets faster the further you fly.</p>
+        </div>
+      </div>
     </div>
   </section>
 
-  <section class="zone prose p-legend" style="--from: #FFD3A8" id="flappy-dunk">
+  <section class="zone sec p-legend" style="--from: #FFD3A8; --rx: 50%; --ry: 50%">
     <div class="wrap">
-      <h2>If you like Flappy Dunk</h2>
-      <p>Flappy Dunk, by Voodoo, has you flap a winged basketball through hoops, with bonus points for clean shots.</p>
-      <p>In Flappy Spikes you thread a bird through hoops too, and a pass without touching the rim is a perfect. Perfects in a row score more and more points, and the third one lights the fire. On top of the hoops there are special rings: springs, switches, saws, ring trains and portals to rides.</p>
+      <div class="pair" id="flappy-dunk">
+        <div class="panel">
+          <span class="lbl">The hoop shooter</span>
+          <h2 class="ph">If you like Flappy Dunk</h2>
+          <p>Flappy Dunk, by Voodoo, has you flap a winged basketball through hoops, with bonus points for clean shots.</p>
+        </div>
+        <span class="arrow" aria-hidden="true"></span>
+        <div class="panel us">
+          <span class="lbl">In Flappy Spikes</span>
+          <p>In Flappy Spikes you thread a bird through hoops too, and a pass without touching the rim is a perfect. Perfects in a row score more and more points, and the third one lights the fire. On top of the hoops there are special rings: springs, switches, saws, ring trains and portals to rides.</p>
+        </div>
+      </div>
+      <div class="pair" id="flappy-dragon">
+        <div class="panel">
+          <span class="lbl">The fantasy flyer</span>
+          <h2 class="ph">If you like Flappy Dragon</h2>
+          <p>Flappy Dragon puts the one-tap flying idea in a fantasy setting, with a small dragon flapping past obstacles.</p>
+        </div>
+        <span class="arrow" aria-hidden="true"></span>
+        <div class="panel us">
+          <span class="lbl">In Flappy Spikes</span>
+          <p>Flappy Spikes has its own flock instead of one hero: 30 birds to unlock, from a rubber duck to a phoenix, plus hats, gear, hoops and trails. See them all on the <a href="/birds">birds and skins page</a>.</p>
+        </div>
+      </div>
     </div>
   </section>
 
-  <section class="zone prose p-fledge" style="--from: #2A1260" id="flappy-dragon">
-    <div class="wrap">
-      <h2>If you like Flappy Dragon</h2>
-      <p>Flappy Dragon puts the one-tap flying idea in a fantasy setting, with a small dragon flapping past obstacles.</p>
-      <p>Flappy Spikes has its own flock instead of one hero: 30 birds to unlock, from a rubber duck to a phoenix, plus hats, gear, hoops and trails. See them all on the <a href="/birds">birds and skins page</a>.</p>
-    </div>
+  <section class="zone parade-band p-legend" style="--from: #2A1260" aria-label="A parade of birds">
+    <canvas data-paint="parade" width="1200" height="240" aria-label="A parade of Flappy Spikes birds in hats and gear">Birds in hats and gear: a rubber duck, a penguin, a phoenix, a robot and more.</canvas>
   </section>
 
-  <section class="zone prose p-glider" style="--from: #B9F3E1" id="what-flappy-spikes-adds">
+  <section class="zone sec p-glider" style="--from: #2A1260; --rx: 50%; --ry: 30%" id="what-flappy-spikes-adds">
     <div class="wrap">
-      <h2>What Flappy Spikes adds</h2>
-      <ul>
-        <li><strong>Versus races.</strong> Race a real player's recorded run and watch their score climb next to yours; or switch to Free Fly. <a href="/versus">How Versus works</a>.</li>
-        <li><strong>Rides.</strong> Portals launch you into a cannon shot, a space trip, a volcano eruption, a deep sea dive, a pinball machine or a storm.</li>
-        <li><strong>Power-ups.</strong> Shields, hearts for an extra life, the comet and capsules that slow the world down or shrink your bird.</li>
-        <li><strong>Unlockables.</strong> 30 birds plus hats, gear, hoops and trails, bought with the coins you earn in runs.</li>
-        <li><strong>Ranks.</strong> Ten ranks from Egg to Legend, set by your best score, and a Google Play Games leaderboard.</li>
+      <div class="sticker pink"><b>+5</b><span>EXTRAS</span></div>
+      <div class="sec-head">
+        <span class="eyebrow"><b>04</b>On top</span>
+        <h2>What Flappy Spikes adds</h2>
+      </div>
+      <ul class="cards icons">
+        <li class="card"><span class="ico pink" aria-hidden="true">VS</span><p><strong>Versus races.</strong> Race a real player's recorded run and watch their score climb next to yours; or switch to Free Fly. <a href="/versus">How Versus works</a>.</p></li>
+        <li class="card"><span class="ico purple" aria-hidden="true">6</span><p><strong>Rides.</strong> Portals launch you into a cannon shot, a space trip, a volcano eruption, a deep sea dive, a pinball machine or a storm.</p></li>
+        <li class="card"><span class="ico" aria-hidden="true">4</span><p><strong>Power-ups.</strong> Shields, hearts for an extra life, the comet and capsules that slow the world down or shrink your bird.</p></li>
+        <li class="card"><span class="ico teal" aria-hidden="true">30</span><p><strong>Unlockables.</strong> 30 birds plus hats, gear, hoops and trails, bought with the coins you earn in runs.</p></li>
+        <li class="card"><span class="ico orange" aria-hidden="true">10</span><p><strong>Ranks.</strong> Ten ranks from Egg to Legend, set by your best score, and a Google Play Games leaderboard.</p></li>
       </ul>
-      <p>Flappy Spikes is free on Google Play and coming to iPhone. It is the original game from 2014, rebuilt in 2026: <a href="/story">read the story</a>.</p>
+      <div class="panel">
+        <p>Flappy Spikes is free on Google Play and the App Store. It is the original game from 2014, rebuilt in 2026: <a href="/story">read the story</a>.</p>
+      </div>
     </div>
   </section>
 
@@ -386,9 +693,9 @@ a.banner:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
       <span class="banner" style="justify-self: center">BEAT MY SCORE!</span>
       <div class="badges">
         <a class="badge" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dgames-like-flappy-bird"><img src="/a/gp.9e62107f39.webp" width="196" height="58" alt="Get it on Google Play"></a>
-          <a class="badge" id="appstore" href="#appstore"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
+          <a class="badge" id="appstore" href="#appstore" onclick="return false"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
       </div>
-      <p class="free">Free to play on Android. Coming to iPhone.</p>
+      <p class="free">Free to play on Android and iPhone/iPad.</p>
     </div>
   </section>
 </main>
@@ -423,10 +730,36 @@ a.banner:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
   if (document.fonts) document.fonts.ready.then(place);
   if ('ResizeObserver' in window) { const ro = new ResizeObserver(place); zones.forEach((z) => ro.observe(z)); }
 })();
+
+(() => {
+  // Scroll-in reveal on the content pages. Runs inline at the end of <body>: only blocks that start below the first
+  // screen are hidden (so nothing visible ever blinks and the hero is never delayed), and without JS, without
+  // IntersectionObserver or with reduced motion nothing is hidden at all. Siblings come in with a short stagger.
+  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const SEL = ['.sec-head', '.sec .panel', '.cards > .card', '.steps3 > *', '.ladder > li', '.duo > .art', '.scale > div', '.chips > li',
+    '.tl', '.results3 > div', '.flow > li', '.compare-wrap', '.vsbar-wrap', '.pair', '.rar > h3', '.group > h3', '.press', '.sec .note'].join(',');
+  const fold = innerHeight;
+  const els = [...document.querySelectorAll('main .zone:not(.first) ' + SEL.split(',').join(', main .zone:not(.first) '))]
+    .filter((e) => e.getBoundingClientRect().top > fold - 20);
+  if (!els.length) return;
+  const order = new Map();
+  els.forEach((e) => {
+    const p = e.parentElement, i = order.get(p) || 0; order.set(p, i + 1);
+    e.style.setProperty('--d', Math.min(i, 8) * 0.06 + 's');
+    e.classList.add('rv');
+  });
+  document.documentElement.classList.add('rv-on');
+  const io = new IntersectionObserver((es) => es.forEach((en) => {
+    if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+  }), { rootMargin: '0px 0px -8% 0px' });
+  els.forEach((e) => io.observe(e));
+  // a safety net: a print, a jump to an anchor far down or a very fast scroll never leaves a block hidden
+  addEventListener('beforeprint', () => els.forEach((e) => e.classList.add('in')));
+})();
 </script>
 <script defer src="/a/skin_art.52c6894d79.js"></script>
 <script defer src="/a/emblem_art.1c8be34be5.js"></script>
 <script defer src="/a/paint.80f5d32650.js"></script>
-<script defer src="/a/pages.b169a3d540.js"></script>
+<script defer src="/a/pages.dfd1c915cf.js"></script>
 </body>
 </html>

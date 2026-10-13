@@ -10,4 +10,3 @@ footer .fine { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px 18px; 
 footer .fine p { margin: 0; }
 footer .fine a { color: #FFFFFF; }
 footer noscript img { vertical-align: middle; }
-body.has-bar footer .wrap { padding-bottom: 104px; }

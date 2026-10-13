@@ -3,9 +3,9 @@
 :root { --pink: #EC008C; --plum: #7A0044; --plate: #FCD9EE; --ink: #2E2A2D; --soft: #5E585C; color-scheme: light; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--plate); color: var(--ink); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
-.hspikes { height: 44px; background: #FFFFFF; transform: scaleY(-1); -webkit-mask: url({{a:@images/ground_spikes.png}}) repeat-x left top / auto 100%; mask: url({{a:@images/ground_spikes.png}}) repeat-x left top / auto 100%; }
-header { background: #FFFFFF; }
-header .wrap { max-width: 760px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 12px; }
+.hspikes { height: 44px; background: #FFFFFF; transform: scaleY(-1); -webkit-mask: url({{a:@images/ground_spikes.png}}) repeat-x left top / auto 100%; mask: url({{a:@images/ground_spikes.png}}) repeat-x left top / auto 100%; margin-top: -26px; }
+header { position: relative; z-index: 1; background: #FFFFFF; }
+header .wrap { max-width: 760px; margin: 0 auto; padding: 8px 20px; display: flex; align-items: center; gap: 12px; }
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: #6F6F6F; font-family: 'Opificio Neue', sans-serif; font-size: 24px; }
 .brand img { width: 40px; height: 40px; border-radius: 10px; }
 .grow { flex: 1; }
@@ -24,4 +24,4 @@ article li { margin: 4px 0; }
 .mailbtn:focus-visible, .back:focus-visible { outline: 3px solid #FFB529; outline-offset: 4px; }
 .addr { font-weight: 600; }
 .box { background: #FFF6FB; border: 2px solid #F7C9E2; border-radius: 16px; padding: 14px 18px; margin: 18px 0; }
-@media (max-width: 420px) { .brand { font-size: 20px; white-space: nowrap; } .brand img { width: 34px; height: 34px; } }
+@media (max-width: 420px) { header .wrap { padding-inline: 16px; gap: 8px; } .brand { font-size: 20px; white-space: nowrap; gap: 10px; } .brand img { width: 34px; height: 34px; } }

@@ -35,9 +35,9 @@ ORG = {'@type': 'Organization', '@id': f'{SITE}/#org', 'name': 'Duo Leads', 'url
 GAME_NODE = {
     '@type': ['VideoGame', 'MobileApplication'], '@id': f'{SITE}/#game',
     'name': 'Flappy Spikes', 'alternateName': 'Flappy Spikes – Flap Fast, Fly Far',
-    'description': None,  # the homepage intro text, filled in below
+    'description': None,  # INTRO, filled in below
     'applicationCategory': 'GameApplication', 'genre': 'Arcade',
-    'operatingSystem': 'Android', 'gamePlatform': ['Android'],
+    'operatingSystem': 'Android, iOS', 'gamePlatform': ['Android', 'iOS'],
     'offers': {'@type': 'Offer', 'price': '0', 'priceCurrency': 'EUR'},
     'datePublished': '2014',
     'publisher': {'@id': f'{SITE}/#org'}, 'author': {'@id': f'{SITE}/#org'},
@@ -52,7 +52,7 @@ COMPETITOR_NOTE = (' Flappy Bird, Don\'t Touch the Spikes, Flappy Dunk and Flapp
 PAGES = [
     dict(slug='', src='index_src.html', out='index.html',
          title='Flappy Spikes - Flap Fast, Fly Far',
-         description=f'Flap fast, fly far. Fly through the hoops, race real players and unlock {TOTAL} birds, hats and gear. Free on Google Play.',
+         description=f'Flap fast, fly far. Fly through the hoops, race real players and unlock {TOTAL} birds, hats and gear. Free on Android and iPhone.',
          og_title='Flappy Spikes', og_description='Flap fast, fly far. Fly through the hoops and race real players.'),
     dict(slug='how-to-play', cta_from='#EBD3F5', src='pages/how-to-play.html', name='How to play',
          title='How to Play Flappy Spikes: Tips & Power-ups',
@@ -65,7 +65,7 @@ PAGES = [
          description='Flappy Spikes first flew on iPhone in 2014. In 2026 Duo Leads rebuilt it with hoops, versus races and new birds. Here is how.'),
     dict(slug='games-like-flappy-bird', cta_from='#EBD3F5', src='pages/games-like-flappy-bird.html', name='Games like Flappy Bird',
          title="Games Like Flappy Bird & Don't Touch the Spikes",
-         description='Love one-tap flying games? See how Flappy Spikes compares to Flappy Bird, Flappy Dunk, Flappy Dragon and Don\'t Touch the Spikes. Free on Android.',
+         description='Love one-tap flying games? See how Flappy Spikes compares to Flappy Bird, Flappy Dunk, Flappy Dragon and Don\'t Touch the Spikes. Free on Android and iOS.',
          trademark_extra=COMPETITOR_NOTE),
     dict(slug='versus', cta_from='#B9F3E1', src='pages/versus.html', name='Versus',
          title='Flappy Spikes Versus: Race Real Players',
@@ -83,7 +83,10 @@ PAGES = [
          title='Page Not Found | Flappy Spikes', description='This page flew off. Head back to the Flappy Spikes homepage.'),
 ]
 CONTENT = {'how-to-play', 'birds', 'story', 'games-like-flappy-bird', 'versus'}
-INTRO = None  # read from the built homepage
+# the VideoGame node's description (the homepage's visible intro paragraph was removed in site v2)
+INTRO = ('Flappy Spikes is a free one-tap flying game for Android, iPhone and iPad. Tap to flap, fly your bird through the hoops '
+         'and stay clear of the spikes. First released on iPhone in 2014 and rebuilt in 2026, it now has versus races against '
+         'real players, power-ups, portal rides, 30 birds to unlock and 10 ranks from Egg to Legend. Flap fast, fly far.')
 
 
 def page_url(slug):
@@ -164,7 +167,7 @@ def paint_js():
 def badges(campaign, appstore_id=False):
     a_id = ' id="appstore"' if appstore_id else ''
     return (f'<a class="badge" href="{html.escape(play_url(campaign))}"><img src="{asset("gen/gp.webp")}" width="196" height="58" alt="Get it on Google Play"></a>\n'
-            f'          <a class="badge"{a_id} href="#appstore"><img src="{asset("gen/as.webp")}" width="196" height="58" alt="Download on the App Store"></a>')
+            f'          <a class="badge"{a_id} href="#appstore" onclick="return false"><img src="{asset("gen/as.webp")}" width="196" height="58" alt="Download on the App Store"></a>')
 
 
 def brand(href):
@@ -218,12 +221,9 @@ def render(text, page):
 
 # ------------------------------------------------------------------------------------------------ build
 def build():
-    global INTRO
     if OUT.exists():
         shutil.rmtree(OUT)
     OUT.mkdir(parents=True)
-    src_home = (SRC / 'index_src.html').read_text()
-    INTRO = re.sub(r'<[^>]+>', '', re.search(r'<p class="intro">(.*?)</p>', src_home, re.S).group(1)).strip()
     for p in PAGES:
         slug = p['slug']
         page = dict(p)

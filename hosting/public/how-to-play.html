@@ -115,8 +115,10 @@ a { color: inherit; }
 
 /* header */
 header.bar { position: sticky; top: 0; z-index: 10; background: var(--white); }
-header.bar .wrap { display: flex; align-items: center; gap: 14px; padding-block: 10px; }
-header.bar .spikes { position: absolute; left: 0; right: 0; top: 100%; }
+header.bar .wrap { display: flex; align-items: center; gap: 14px; padding-block: 8px; }
+/* the strip's top ~31 px is solid (only the bottom ~13 px are teeth): tuck the solid part under the bar so the header
+   hugs its contents instead of showing a wide white band below them */
+header.bar .spikes { position: absolute; left: 0; right: 0; top: calc(100% - 26px); z-index: -1; }
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; min-width: 0; color: var(--plum); }
 .brand img { width: 40px; height: 40px; border-radius: 10px; }
 .brand span { font-family: var(--display); font-size: 26px; white-space: nowrap; color: #6F6F6F; }
@@ -228,66 +230,236 @@ footer .fine { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px 18px; 
 footer .fine p { margin: 0; }
 footer .fine a { color: #FFFFFF; }
 footer noscript img { vertical-align: middle; }
-body.has-bar footer .wrap { padding-bottom: 104px; }
-/* PRD-2.3 §11.5 content pages and the 404 page: the homepage's header, zones, rays, stickers, banners and footer,
-   plus a reading column, white cards (like the privacy page's card) and the rank table. No new artwork. */
+/* PRD-2.3 §11.5 content pages and the 404 page, in the homepage's vocabulary: rank-palette zones with turning rays,
+   gold / pink stickers with the plum drop shadow, tilted pink banners, white cards with the offset plum shadow, the
+   game's own painters (pages.js) for every picture, and a short scroll-in reveal (reveal.js; nothing is hidden
+   without JS, and nothing above the fold is ever hidden). */
+:root { --text: #2E2A2D; }
+
+/* ---------- hero ---------- */
 .page-hero { --rx: 76%; --ry: 55%; }
-.page-hero .wrap { display: grid; grid-template-columns: 1.15fr .85fr; gap: 36px; align-items: center; padding-block: 56px 70px; }
-.page-hero .hero-text { display: grid; gap: 18px; }
-.page-hero h1 { font-size: clamp(46px, 7.2vw, 96px); line-height: .95; }
-.page-hero .art { justify-self: center; position: relative; }
-.page-hero .art canvas { width: min(320px, 78vw); aspect-ratio: 1; display: block; }
-.page-hero .art canvas.wide { width: min(460px, 90vw); aspect-ratio: 460 / 300; }
+.page-hero .wrap { display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; padding-block: 60px 84px; }
+.page-hero .hero-text { display: grid; gap: 20px; }
+.page-hero h1 { font-size: clamp(48px, 7.2vw, 100px); line-height: .94; }
+.page-hero .lead { max-width: 40ch; }
+.page-hero .free { margin: -4px 0 0; }
+.page-hero .art { justify-self: center; position: relative; display: grid; place-items: center; }
 .crumbs { font-size: 15px; color: var(--acc); }
 .crumbs a { color: inherit; }
+.page-hero .art .sticker { --s: 128px; top: -30px; right: -34px; }
+.page-hero .art .sticker.pink b { font-family: var(--body); font-weight: 600; }
 @media (max-width: 860px) {
   .page-hero { --rx: 50%; --ry: 78%; }
-  .page-hero .wrap { grid-template-columns: 1fr; text-align: center; padding-block: 44px 56px; }
+  .page-hero .wrap { grid-template-columns: 1fr; text-align: center; padding-block: 44px 64px; gap: 48px; }
   .page-hero .hero-text { justify-items: center; } .page-hero .lead { margin-inline: auto; } .page-hero .banner { justify-self: center; }
+  .page-hero .badges { justify-content: center; }
+  .page-hero .art .sticker { --s: 100px; right: -6px; top: -36px; }
 }
-section.zone.prose { padding-block: 84px; }
-.prose .wrap { display: grid; gap: 22px; }
-.prose h2 { font-size: clamp(38px, 5.4vw, 64px); max-width: 18ch; }
-.prose h3 { font-family: var(--display); font-weight: 400; font-size: 28px; line-height: 1.05; margin: 0; color: var(--acc); }
-.p-legend.prose h3 { color: var(--gold); }
-.prose p, .prose li { font-size: 19px; line-height: 1.6; max-width: 66ch; margin: 0; }
-.prose ul, .prose ol { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 66ch; }
-.prose p a, .prose li a { color: var(--acc); text-decoration-thickness: 2px; text-underline-offset: 3px; }
-.p-legend.prose p a, .p-legend.prose li a { color: var(--gold); }
-.split2 { display: grid; grid-template-columns: 1fr minmax(0, 360px); gap: 40px; align-items: center; }
-.split2 .art { justify-self: center; }
-.split2 .art canvas { width: min(320px, 80vw); aspect-ratio: 1; display: block; }
-.split2 .art canvas.lane { width: min(320px, 82vw); aspect-ratio: 320 / 520; border-radius: 26px; box-shadow: 12px 12px 0 var(--acc); }
-.split2 .copy { display: grid; gap: 18px; }
-@media (max-width: 860px) { .split2 { grid-template-columns: 1fr; } }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 22px; }
-.card { background: var(--white); color: #2E2A2D; border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 18px 20px 20px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+
+/* the art plates: a white disc with the zone's rim colour (birds, pickups), and the dark phone frame of the hero demo */
+.disc { position: relative; width: min(340px, 76vw); aspect-ratio: 1; border-radius: 50%; background: var(--white); border: 10px solid rgb(var(--rim)); box-shadow: 12px 14px 0 var(--plum); display: grid; place-items: center; overflow: hidden; }
+.disc canvas { width: 100%; height: 100%; display: block; }
+.disc.sm { width: min(260px, 70vw); border-width: 8px; box-shadow: 9px 10px 0 var(--plum); }
+.frame { position: relative; border-radius: 30px; background: #2B2629; padding: 9px; box-shadow: 14px 16px 0 var(--plum); transform: rotate(var(--r, 2deg)); }
+.frame canvas { display: block; border-radius: 22px; width: 100%; height: auto; }
+.frame.sq { width: min(340px, 78vw); } .frame.sq canvas { aspect-ratio: 1; }
+.frame.tall { width: min(300px, 72vw); } .frame.tall canvas { aspect-ratio: 320 / 520; }
+.frame.wide { width: min(460px, 88vw); } .frame.wide canvas { aspect-ratio: 2 / 1; }
+.frame.light { background: var(--white); }
+
+/* ---------- jump bar: the page's sections as chips ---------- */
+.jump { display: flex; flex-wrap: wrap; gap: 10px; }
+.jump a { text-decoration: none; font-size: 16px; color: var(--plum); background: var(--white); padding: 7px 15px; border-radius: 999px; box-shadow: 4px 4px 0 var(--plum); transition: transform .15s, background .15s, color .15s; }
+.jump a:hover, .jump a:focus-visible { transform: translateY(-2px) rotate(-2deg); background: var(--pink); color: var(--white); outline: none; }
+@media (max-width: 860px) { .jump { justify-content: center; } }
+
+/* ---------- sections ---------- */
+section.zone.sec { padding-block: 92px; }
+.sec .wrap { position: relative; display: grid; gap: 30px; }
+.sec-head { display: grid; gap: 14px; max-width: 760px; }
+.sec-head p { margin: 0; font-size: 20px; line-height: 1.5; max-width: 60ch; }
+.sec h2 { font-size: clamp(40px, 5.8vw, 72px); line-height: .98; max-width: 16ch; }
+.sec h3 { font-family: var(--display); font-weight: 400; font-size: 28px; line-height: 1.05; margin: 0; color: var(--acc); }
+.p-legend.sec h3 { color: var(--gold); }
+.sec p a, .sec li a, .sec dd a { color: var(--acc); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.p-legend.sec .sec-head a { color: var(--gold); }
+.sec-head .eyebrow b { font-family: var(--score); font-weight: 400; letter-spacing: 0; font-size: 20px; margin-right: 8px; }
+.sec > .wrap > .sticker, .sec .sec-sticker { --s: 130px; top: -20px; right: 20px; }
+@media (max-width: 860px) { section.zone.sec { padding-block: 76px; } .sec > .wrap > .sticker, .sec .sec-sticker { --s: 92px; top: -44px; right: 14px; }
+  .sec .wrap > .sticker + .sec-head > .eyebrow, .sec .wrap > .sticker + .sec-head > h2 { padding-right: 84px; } }
+
+/* a reading card: white, rounded, the plum offset shadow (the homepage's facts card) */
+.panel { background: var(--white); color: var(--text); border-radius: 26px; box-shadow: 8px 8px 0 var(--plum); padding: 26px 30px; display: grid; gap: 14px; align-content: start; max-width: 780px; min-width: 0; }
+.panel p, .panel li { font-size: 18px; line-height: 1.6; margin: 0; }
+.panel a { color: var(--pink) !important; }
+.panel strong { color: var(--plum); }
+.panel h3 { color: var(--pink) !important; }
+@media (max-width: 520px) { .panel { padding: 20px 20px; border-radius: 22px; } .panel p, .panel li { font-size: 17px; } }
+
+/* copy + art, side by side */
+.duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 400px); gap: 48px; align-items: center; }
+.duo.flip { grid-template-columns: minmax(0, 400px) minmax(0, 1fr); }
+.duo.flip > .art { order: -1; }
+.duo > .art { justify-self: center; position: relative; }
+.duo > .copy { display: grid; gap: 22px; min-width: 0; }
+@media (max-width: 860px) { .duo, .duo.flip { grid-template-columns: 1fr; gap: 40px; } .duo > .art, .duo.flip > .art { order: 1; } }
+/* on the story timeline the copy starts next to its heading instead of floating mid-way down a tall picture */
+.tl .duo { align-items: start; }
+
+/* the tilted pink label (the homepage's step label) */
+.tag-label { justify-self: start; display: inline-block; font-size: 21px; color: var(--white); background: var(--pink); padding: 6px 16px; transform: rotate(-3deg); box-shadow: 6px 6px 0 var(--plum); }
+
+/* ---------- cards ---------- */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; }
+.card { position: relative; background: var(--white); color: var(--text); border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 20px 22px 22px; display: grid; gap: 8px; align-content: start; min-width: 0; transition: transform .2s ease-out, box-shadow .2s ease-out; }
+@media (hover: hover) { .card:hover { transform: translateY(-4px) rotate(-.6deg); box-shadow: 10px 12px 0 var(--plum); } }
 .card canvas { width: 140px; height: 140px; justify-self: center; display: block; }
 .card h3 { color: var(--pink) !important; font-size: 26px; }
-.card p { font-size: 16px; line-height: 1.5; }
+.card p { font-size: 16px; line-height: 1.5; margin: 0; }
 .card .tag { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #8A8A8A; }
-.cards.mini { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 14px; }
+.card .num { position: absolute; top: -14px; left: -10px; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: var(--pink); color: var(--white); border: 4px solid var(--white); box-shadow: 4px 4px 0 var(--plum); font-family: var(--score); font-size: 20px; transform: rotate(-8deg); }
+.card.ring { padding-top: 12px; }
+.card.ring canvas { width: 120px; height: 120px; }
+.card .ico { width: 64px; height: 64px; border-radius: 50%; background: var(--sc, var(--gold)); color: var(--white); display: grid; place-items: center; font-family: var(--score); font-size: 20px; border: 4px solid var(--white); box-shadow: 4px 5px 0 var(--plum); transform: rotate(-6deg); }
+.card .ico.pink { --sc: var(--pink); } .card .ico.teal { --sc: #13B48D; } .card .ico.blue { --sc: #1E9BE0; } .card .ico.purple { --sc: #9B30D9; } .card .ico.orange { --sc: #FF7A1A; }
+
+/* the mini item cards (birds, hats, gear, hoops, trails) */
+.cards.mini { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 14px; }
 .cards.mini .card { padding: 10px 8px 12px; border-radius: 18px; box-shadow: 5px 5px 0 var(--plum); text-align: center; gap: 2px; }
+@media (hover: hover) { .cards.mini .card:hover { transform: translateY(-4px) rotate(-2deg); box-shadow: 6px 8px 0 var(--plum); } }
 .cards.mini canvas { width: 84px; height: 84px; justify-self: center; }
 .cards.mini b { font-size: 15px; color: var(--plum); font-weight: 600; }
 .cards.mini small { font-size: 13px; color: #6F6F6F; }
-.rar { display: grid; gap: 14px; }
-.rar h3 { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.rar h3 small { font-family: var(--body); font-size: 16px; color: inherit; opacity: .85; letter-spacing: 0; }
-.ranktable { width: 100%; max-width: 760px; border-collapse: separate; border-spacing: 0; background: var(--white); color: #2E2A2D; border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); overflow: hidden; font-size: 18px; }
-.ranktable th, .ranktable td { padding: 8px 18px; text-align: left; border-bottom: 2px solid #F3E3EC; }
-.ranktable th { font-family: var(--display); font-weight: 400; letter-spacing: .1em; font-size: 15px; color: var(--pink); background: #FFF6FB; }
-.ranktable tr:last-child td { border-bottom: 0; }
-.ranktable canvas { width: 72px; height: 72px; display: block; }
-.ranktable td.n { font-family: var(--display); letter-spacing: .1em; color: var(--plum); }
-.press { background: var(--white); color: #2E2A2D; border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 22px 26px; display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; max-width: 640px; font-size: 17px; }
+
+/* rarity groups: each with its own colour (common teal, rare blue, epic purple, legendary gold) */
+.rar { --rc: #13B48D; display: grid; gap: 16px; }
+.rar.rare { --rc: #1E9BE0; } .rar.epic { --rc: #9B30D9; } .rar.legendary { --rc: #FFB529; }
+.rar h3 { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.rar h3 .pill { font-family: var(--display); font-size: 24px; color: var(--white); background: var(--rc); padding: 4px 16px 6px; border-radius: 999px; box-shadow: 5px 5px 0 var(--plum); transform: rotate(-2deg); }
+.rar h3 small { font-family: var(--body); font-size: 17px; color: var(--plum); letter-spacing: 0; }
+.rar .cards.mini .card { border-top: 6px solid var(--rc); }
+.rar.legendary .cards.mini .card { background: linear-gradient(160deg, #FFFFFF 55%, #FFF1C9); }
+.group { display: grid; gap: 14px; }
+.group h3 .pill { font-family: var(--display); font-size: 24px; color: var(--white); background: var(--pink); padding: 4px 16px 6px; border-radius: 999px; box-shadow: 5px 5px 0 var(--plum); display: inline-block; transform: rotate(-2deg); }
+
+/* the parade band under a hero */
+section.zone.parade-band { position: relative; padding-block: 0; }
+.parade-band canvas { width: 100%; height: 240px; display: block; }
+
+/* ---------- rank ladder (birds page): emblem cards, as on the homepage ---------- */
+.ladder { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 22px 16px; }
+.ladder li { position: relative; display: grid; justify-items: center; gap: 4px; text-align: center; min-width: 0; padding: 10px 6px 16px; border-radius: 22px; background: rgba(255, 255, 255, .07); border: 2px solid rgba(255, 255, 255, .12); transition: transform .2s ease-out, background .2s; }
+@media (hover: hover) { .ladder li:hover { transform: translateY(-4px); background: rgba(255, 255, 255, .13); } }
+.ladder canvas { width: 100%; max-width: 170px; aspect-ratio: 1; display: block; }
+.ladder b { font-family: var(--display); font-weight: 400; letter-spacing: .14em; font-size: 17px; color: var(--white); }
+.ladder span { font-size: 15px; color: var(--gold); }
+.ladder span em { font-style: normal; font-family: var(--score); font-size: 19px; }
+.ladder .lv { position: absolute; top: 8px; left: 10px; font-family: var(--score); font-size: 16px; color: rgba(255, 255, 255, .55); }
+@media (max-width: 860px) { .ladder { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- steps (how a race works, the three rules) ---------- */
+.steps3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; counter-reset: st; }
+.steps3 > li, .steps3 > div { list-style: none; position: relative; display: grid; gap: 12px; justify-items: center; text-align: center; align-content: start; min-width: 0; background: var(--white); color: var(--text); border-radius: 26px; box-shadow: 8px 8px 0 var(--plum); padding: 18px 20px 24px; }
+.steps3 { padding: 0; margin: 0; }
+.steps3 canvas { width: 100%; max-width: 240px; aspect-ratio: 1; display: block; }
+.steps3 .tag-label { justify-self: center; font-size: 20px; }
+.steps3 p { margin: 0; font-size: 17px; line-height: 1.5; }
+.steps3 strong { color: var(--plum); }
+.steps3 .sticker { --s: 64px; --sc: var(--pink); top: -16px; left: -10px; --r: -8deg; box-shadow: 4px 5px 0 var(--plum); border-width: 5px; }
+.steps3 .sticker b { font-size: 26px; }
+@media (max-width: 860px) { .steps3 { grid-template-columns: 1fr; gap: 34px; } }
+
+/* points scale (perfects): chips in the score font */
+.scale { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.scale div { display: grid; justify-items: center; gap: 6px; background: var(--white); border-radius: 18px; box-shadow: 5px 5px 0 var(--plum); padding: 10px 14px; min-width: 92px; }
+.scale b { font-family: var(--score); font-weight: 400; font-size: 34px; line-height: 1; color: var(--pink); }
+.scale div:nth-child(3) b { color: #FF7A1A; } .scale div:nth-child(4) b { color: #E8141C; } .scale div:nth-child(5) b { color: #9B30D9; }
+.scale span { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--plum); }
+
+/* chips (what stayed, the rides) */
+.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 12px; }
+.chips li { background: var(--white); color: var(--text); border-radius: 999px; padding: 9px 18px 9px 12px; box-shadow: 5px 5px 0 var(--plum); font-size: 17px; line-height: 1.35; display: flex; gap: 10px; align-items: center; }
+.chips li::before { content: ''; flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--pink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 18px no-repeat; }
+.chips li strong { color: var(--plum); }
+.chips.plain li { padding: 7px 16px; transform: rotate(var(--r, -2deg)); }
+.chips.plain li::before { content: none; }
+.chips.plain li:nth-child(even) { --r: 2deg; }
+@media (max-width: 520px) { .chips:not(.plain) li { border-radius: 18px; } }
+
+/* ---------- timeline (story) ---------- */
+.timeline { position: relative; display: grid; gap: 54px; padding-left: 112px; }
+.timeline::before { content: ''; position: absolute; left: 44px; top: 20px; bottom: 20px; width: 8px; border-radius: 4px; background: repeating-linear-gradient(to bottom, var(--pink) 0 22px, transparent 22px 34px); }
+.tl { position: relative; display: grid; gap: 18px; }
+.tl > .year { position: absolute; left: -112px; top: -6px; width: 96px; aspect-ratio: 1; border-radius: 50%; background: var(--sc, var(--gold)); border: 6px solid var(--white); box-shadow: 6px 7px 0 var(--plum); display: grid; place-content: center; text-align: center; transform: rotate(-8deg); font-family: var(--score); font-size: 26px; color: var(--white); line-height: 1; }
+.tl > .year small { font-family: var(--display); font-size: 11px; letter-spacing: .14em; color: var(--plum); margin-top: 3px; }
+.tl > .year.pink { --sc: var(--pink); } .tl > .year.pink small { color: var(--white); }
+.old-bird { image-rendering: pixelated; width: 93px; height: 59px; }
+.then-now { display: grid; grid-template-columns: auto auto 1fr; gap: 18px; align-items: center; }
+@media (max-width: 640px) {
+  .timeline { padding-left: 0; gap: 64px; } .timeline::before { content: none; }
+  .tl > .year { position: relative; left: auto; top: auto; width: 84px; font-size: 22px; margin-bottom: -4px; }
+  .tl > .year.w { font-size: 20px; }
+}
+
+/* press facts */
+.press { background: var(--white); color: var(--text); border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 22px 26px; display: grid; grid-template-columns: max-content 1fr; gap: 10px 22px; max-width: 680px; font-size: 17px; margin: 0; }
 .press dt { color: var(--pink); }
 .press dd { margin: 0; }
 .press a { color: var(--pink); }
 @media (max-width: 520px) { .press { grid-template-columns: 1fr; gap: 2px; } .press dd { margin-bottom: 8px; } }
-.note { font-size: 15px !important; opacity: .85; }
+.note { font-size: 15px !important; opacity: .85; margin: 0; }
+
+/* ---------- versus page ---------- */
+.vsbar { --w: min(560px, 100%); width: var(--w); display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; gap: 0 12px; padding: 22px 22px 18px; background: #E6EFF5; border-radius: 26px; box-shadow: 10px 10px 0 var(--plum); }
+.vsbar .side { display: grid; gap: 8px; }
+.vsbar .box { display: grid; grid-template-columns: 54px 1fr; height: 56px; background: var(--pink); color: var(--white); border-radius: 4px; overflow: hidden; }
+.vsbar .box i { display: grid; place-items: center; background: #C40073; }
+.vsbar .box i::before { content: ''; width: 26px; height: 26px; background: currentColor; -webkit-mask: radial-gradient(circle at 50% 30%, #000 5.5px, transparent 6px), radial-gradient(ellipse 11px 9px at 50% 100%, #000 99%, transparent); mask: radial-gradient(circle at 50% 30%, #000 5.5px, transparent 6px), radial-gradient(ellipse 11px 9px at 50% 100%, #000 99%, transparent); }
+.vsbar .box b { display: grid; place-items: center; font-family: var(--score); font-weight: 400; font-size: 34px; }
+.vsbar .them .box { grid-template-columns: 1fr 54px; background: #6B7C88; color: #E6EFF5; }
+.vsbar .them .box i { background: #4B5760; order: 2; }
+.vsbar .them .box.flash { box-shadow: inset 0 0 0 4px var(--gold); }
+.vsbar .name { background: var(--white); color: var(--plum); text-align: center; font-size: 15px; padding: 3px 6px; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vsbar .vs { font-family: var(--body); font-size: 22px; color: var(--plum); align-self: center; margin-top: -26px; }
+.vsbar-wrap { display: grid; gap: 16px; justify-items: start; }
+.vsbar-wrap .note { color: var(--acc); opacity: 1; }
+@media (max-width: 520px) { .vsbar { padding: 16px 14px 14px; gap: 0 8px; } .vsbar .box { grid-template-columns: 40px 1fr; height: 46px; } .vsbar .them .box { grid-template-columns: 1fr 40px; } .vsbar .box b { font-size: 28px; } .vsbar .name { font-size: 13px; } }
+
+.results3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.results3 > div { display: grid; justify-items: center; gap: 8px; text-align: center; padding: 22px 16px 20px; border-radius: 22px; background: var(--white); color: var(--text); box-shadow: 8px 8px 0 #12062E; }
+.results3 .word { font-family: var(--display); font-size: clamp(26px, 3vw, 36px); color: var(--white); background: #FF4FB7; padding: 4px 16px 6px; transform: rotate(-3deg); box-shadow: 5px 5px 0 var(--plum); }
+.results3 .draw .word { background: #9B30D9; } .results3 .lose .word { background: #6B7C88; }
+.results3 b { font-family: var(--score); font-weight: 400; font-size: 44px; line-height: 1; color: var(--gold); -webkit-text-stroke: 0; }
+.results3 span { font-size: 15px; color: var(--plum); }
+@media (max-width: 640px) { .results3 { grid-template-columns: 1fr; } }
+
+.flow { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: fl; max-width: 780px; }
+.flow li { counter-increment: fl; display: grid; grid-template-columns: 46px 1fr; gap: 14px; align-items: center; background: var(--white); color: var(--text); border-radius: 18px; box-shadow: 5px 5px 0 var(--plum); padding: 10px 18px 10px 12px; font-size: 17px; line-height: 1.45; }
+.flow li::before { content: counter(fl); display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: #FF5722; color: var(--white); font-family: var(--score); font-size: 20px; }
+
+.nick { display: inline-flex; align-items: center; gap: 12px; background: var(--white); border-radius: 999px; padding: 8px 20px 8px 8px; box-shadow: 6px 6px 0 var(--plum); font-size: 22px; color: var(--plum); min-width: 0; }
+.nick i { width: 40px; height: 40px; border-radius: 50%; background: var(--pink); display: block; flex: none; }
+.nick span { min-width: 15ch; }
+
+/* ---------- comparison (games like) ---------- */
+.compare-wrap { overflow-x: auto; border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); background: var(--white); max-width: 100%; }
+.compare { width: 100%; min-width: 640px; border-collapse: collapse; color: var(--text); font-size: 16px; line-height: 1.4; }
+.compare th, .compare td { padding: 12px 16px; text-align: left; vertical-align: top; border-bottom: 2px solid #F3E3EC; }
+.compare thead th { font-family: var(--display); font-weight: 400; letter-spacing: .1em; font-size: 14px; text-transform: uppercase; color: var(--pink); background: #FFF6FB; }
+.compare tbody th { color: var(--plum); font-weight: 600; white-space: nowrap; }
+.compare tr.us th, .compare tr.us td { background: #FCD9EE; }
+.compare tr.us th { color: var(--pink); }
+.compare tr:last-child th, .compare tr:last-child td { border-bottom: 0; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 0; align-items: center; }
+.pair .panel { height: 100%; }
+.pair .panel.us { background: #FFF6FB; border: 4px solid var(--pink); }
+.pair .arrow { position: relative; z-index: 2; width: 70px; height: 70px; margin-inline: -14px; border-radius: 50%; background: var(--gold); border: 5px solid var(--white); box-shadow: 5px 6px 0 var(--plum); display: grid; place-items: center; transform: rotate(-8deg); font-family: var(--body); font-size: 24px; color: var(--white); }
+.pair .lbl { font-family: var(--display); letter-spacing: .16em; font-size: 14px; text-transform: uppercase; color: #8A8A8A; }
+.pair .us .lbl { color: var(--pink); }
+@media (max-width: 760px) { .pair { grid-template-columns: 1fr; justify-items: stretch; } .pair .arrow { justify-self: center; margin: -14px 0; transform: rotate(82deg); } }
+
+/* ---------- call to action, 404 ---------- */
 .cta .free { margin: 0; }
-/* 404 */
 .lost { --rx: 50%; --ry: 46%; text-align: center; min-height: 62vh; }
 .lost .wrap { display: grid; justify-items: center; gap: 20px; padding-block: 50px 80px; }
 .lost canvas { width: min(480px, 92vw); aspect-ratio: 480 / 340; display: block; }
@@ -297,6 +469,67 @@ a.banner { text-decoration: none; }
 a.banner:hover { transform: rotate(-3deg) translateY(-2px); }
 a.banner:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
 .lost .banner { justify-self: center; }
+
+/* ---------- motion ---------- */
+/* the stickers bob gently, each on its own beat (translate, so the sticker's own rotate stays) */
+@keyframes bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+.sticker, .tl > .year, .pair .arrow { animation: bob 3.6s ease-in-out infinite; }
+.sec .sticker { animation-delay: -1.2s; } .tl:nth-child(even) > .year { animation-delay: -1.8s; }
+.steps3 > :nth-child(2) .sticker { animation-delay: -.9s; } .steps3 > :nth-child(3) .sticker { animation-delay: -1.8s; }
+/* scroll-in reveal: reveal.js adds .rv-on to <html> and .rv to blocks that start below the fold */
+.rv-on .rv { opacity: 0; translate: 0 28px; scale: .98; transition: opacity .55s ease-out, translate .6s cubic-bezier(.2, .8, .3, 1.2), scale .6s ease-out; transition-delay: var(--d, 0s); }
+.rv-on .rv.in { opacity: 1; translate: none; scale: none; }
+@media (prefers-reduced-motion: reduce) {
+  .sticker, .tl > .year, .pair .arrow { animation: none; }
+  .rv-on .rv { opacity: 1; translate: none; scale: none; transition: none; }
+  .card, .jump a, .ladder li { transition: none; }
+}
+ul.cards, ol.cards { list-style: none; margin: 0; padding: 0; }
+.card .ico.s { font-size: 14px; }
+.cards.icons .card { grid-template-columns: 64px minmax(0, 1fr); column-gap: 16px; row-gap: 10px; align-items: center; }
+.cards.icons .card > h3 { grid-column: 2; }
+.cards.icons .card > h3 + p { grid-column: 1 / -1; }
+.cards.icons .card > .ico + p { grid-column: 2; }
+.card .ico { font-family: var(--body); font-weight: 600; font-size: 22px; }
+.card .ico.s { font-size: 14px; letter-spacing: .04em; }
+.card:has(> .num) { padding-top: 34px; }
+.cards.icons { grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
+.tl h2 { font-size: clamp(32px, 4.4vw, 54px); max-width: 20ch; }
+.tl > p { margin: 0; font-size: 19px; line-height: 1.55; max-width: 66ch; }
+.pair + .pair { margin-top: 26px; }
+.sec h2.ph { font-size: clamp(30px, 3.6vw, 44px); line-height: 1; color: var(--plum); max-width: none; }
+.p-legend .sec-head .eyebrow, .p-legend .eyebrow { color: var(--gold); }
+.tl > .year.w { font-family: var(--body); font-weight: 600; font-size: 24px; }
+.card strong { color: var(--plum); }
+.pair .arrow::before { content: ''; width: 0; height: 0; border-block: 11px solid transparent; border-left: 16px solid var(--white); margin-left: 5px; }
+.nick { justify-self: start; }
+@media (max-width: 860px) { .nick { justify-self: center; } }
+@media (max-width: 640px) {
+  .compare-wrap { overflow: visible; background: transparent; box-shadow: none; border-radius: 0; }
+  .compare { min-width: 0; display: block; }
+  .compare thead { display: none; }
+  .compare tbody { display: grid; gap: 16px; }
+  .compare tr { display: grid; background: var(--white); border-radius: 20px; box-shadow: 6px 6px 0 var(--plum); padding: 6px 0; }
+  .compare th, .compare td { border: 0; padding: 4px 18px; }
+  .compare tbody th { font-family: var(--display); font-weight: 400; font-size: 24px; white-space: normal; padding-top: 10px; }
+  .compare td::before { content: attr(data-label); display: block; font-family: var(--display); letter-spacing: .1em; font-size: 12px; text-transform: uppercase; color: var(--pink); }
+  .compare tr.us { background: #FCD9EE; }
+  .compare tr.us th, .compare tr.us td { background: transparent; }
+}
+@media (max-width: 520px) {
+  .cards.mini { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 10px; }
+  .cards.mini .card { padding: 8px 4px 10px; border-radius: 14px; box-shadow: 4px 4px 0 var(--plum); }
+  .cards.mini canvas { width: 64px; height: 64px; }
+  .cards.mini b { font-size: 13px; line-height: 1.2; }
+}
+@media (max-width: 860px) { section.zone.page-hero { padding-block: 40px 24px; } }
+@media (max-width: 520px) {
+  div.cards:not(.mini):not(.icons) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 14px; }
+  div.cards:not(.mini):not(.icons) > .card { padding: 12px 12px 16px; border-radius: 18px; box-shadow: 5px 5px 0 var(--plum); gap: 6px; }
+  div.cards:not(.mini):not(.icons) canvas { width: 96px; height: 96px; }
+  div.cards:not(.mini):not(.icons) h3 { font-size: 21px; }
+  div.cards:not(.mini):not(.icons) p { font-size: 14.5px; line-height: 1.45; }
+}
 </style>
 </head>
 <body>
@@ -306,132 +539,190 @@ a.banner:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
     <div class="grow"></div>
     <div class="mini-badges">
       <a class="badge" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dhow-to-play"><img src="/a/gp.9e62107f39.webp" width="196" height="58" alt="Get it on Google Play"></a>
-          <a class="badge" href="#appstore"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
+          <a class="badge" href="#appstore" onclick="return false"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
     </div>
   </div>
   <div class="spikes up" style="--c: #FFFFFF"></div>
 </header>
 <main id="top">
-  <section class="zone page-hero first p-fledge">
+  <section class="zone page-hero first p-fledge" data-rays-at="hero-art">
     <div class="wrap">
       <div class="hero-text">
         <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a> › How to play</nav>
         <span class="eyebrow">Guide</span>
         <h1>How to play Flappy Spikes</h1>
+        <span class="banner">ONE TAP, ONE FLAP</span>
         <p class="lead">One tap, one flap. Here is everything in a Flappy Spikes run: the rules, perfects and fire, the special rings, the power-ups, the portal rides and the tips that beat your best.</p>
+        <nav class="jump" aria-label="On this page">
+          <a href="#rules">Rules</a><a href="#perfects">Perfects</a><a href="#rings">Rings</a><a href="#power-ups">Power-ups</a><a href="#rides">Rides</a><a href="#collectibles">Collectibles</a><a href="#coins">Coins</a><a href="#tips">Tips</a>
+        </nav>
       </div>
-      <div class="art"><canvas data-paint="flap" width="320" height="320" aria-label="The bird flapping in the air">The bird flaps once per tap.</canvas></div>
+      <div class="art" id="hero-art">
+        <div class="sticker pink"><b>1</b><span>TAP</span></div>
+        <div class="disc"><canvas data-paint="flap" width="320" height="320" aria-label="The bird flapping in the air">The bird flaps once per tap.</canvas></div>
+      </div>
     </div>
   </section>
 
-  <section class="zone prose p-falcon" style="--from: #B9F3E1" id="rules">
+  <section class="zone sec p-falcon" style="--from: #B9F3E1; --rx: 50%; --ry: 70%" id="rules">
     <div class="wrap">
-      <h2>The three rules</h2>
-      <ol>
-        <li><strong>Tap to fly.</strong> Every tap is one flap. Let go and gravity takes over. A run waits for your first tap, so take your time at the start.</li>
-        <li><strong>Fly through the hoops.</strong> Every hoop you pass scores. Touching a rim doesn't end the run: the bird bounces off, but your streak is gone.</li>
-        <li><strong>Stay clear of the spikes.</strong> Spikes line the top and the bottom of the screen. One touch, or a missed hoop, ends the run unless something saves you.</li>
+      <div class="sticker"><b>3</b><span>RULES</span></div>
+      <div class="sec-head">
+        <span class="eyebrow"><b>01</b>Rules</span>
+        <h2>The three rules</h2>
+      </div>
+      <ol class="steps3">
+        <li><div class="sticker"><b>1</b></div><canvas data-paint="flap" width="240" height="240" aria-label="The bird flapping in the air">The bird flaps once per tap.</canvas><span class="tag-label">Tap to fly</span><p><strong>Tap to fly.</strong> Every tap is one flap. Let go and gravity takes over. A run waits for your first tap, so take your time at the start.</p></li>
+        <li><div class="sticker"><b>2</b></div><canvas data-paint="perfect" width="240" height="240" aria-label="The bird flying through a pink hoop">The bird flies through a hoop.</canvas><span class="tag-label">Fly through the hoops</span><p><strong>Fly through the hoops.</strong> Every hoop you pass scores. Touching a rim doesn't end the run: the bird bounces off, but your streak is gone.</p></li>
+        <li><div class="sticker"><b>3</b></div><canvas data-paint="crash:strip" width="240" height="240" aria-label="The bird hitting the top spikes and tumbling down">One touch of the spikes ends the run.</canvas><span class="tag-label">Stay clear of the spikes</span><p><strong>Stay clear of the spikes.</strong> Spikes line the top and the bottom of the screen. One touch, or a missed hoop, ends the run unless something saves you.</p></li>
       </ol>
-      <p>Every 10 hoops the colours change to a new stage, from soft grey through teal, green and blue to gold. The hoops slowly get smaller and the game gets faster the further you fly. The first hoop always stands at the same easy spot.</p>
+      <div class="panel">
+        <p>Every 10 hoops the colours change to a new stage, from soft grey through teal, green and blue to gold. The hoops slowly get smaller and the game gets faster the further you fly. The first hoop always stands at the same easy spot.</p>
+      </div>
     </div>
   </section>
 
-  <section class="zone prose p-glider" style="--from: #FCD9EE" id="perfects">
-    <div class="wrap split2">
+  <section class="zone sec p-glider" style="--from: #FCD9EE; --rx: 78%; --ry: 50%" id="perfects">
+    <div class="wrap duo">
       <div class="copy">
-        <h2>Perfects and catching fire</h2>
-        <p>Fly through a hoop without touching the rim and it's a <strong>perfect</strong>. A normal pass scores 1 point; a perfect scores at least 2, and a streak of perfects scores its length: the 5th perfect in a row is worth 5, the 12th is worth 12. There is no cap.</p>
-        <p>Three perfects in a row and your bird <strong>catches fire</strong>. The fire burns until the streak breaks: a rim touch, a save or a crash. Long streaks get their own banners, from GREAT and ON FIRE up to MIGHTY ROC.</p>
-        <p>A normal pass pays 1 coin, a perfect pays 2.</p>
+        <div class="sec-head">
+          <span class="eyebrow"><b>02</b>Streaks</span>
+          <h2>Perfects and catching fire</h2>
+        </div>
+        <div class="panel">
+          <p>Fly through a hoop without touching the rim and it's a <strong>perfect</strong>. A normal pass scores 1 point; a perfect scores at least 2, and a streak of perfects scores its length: the 5th perfect in a row is worth 5, the 12th is worth 12. There is no cap.</p>
+          <p>Three perfects in a row and your bird <strong>catches fire</strong>. The fire burns until the streak breaks: a rim touch, a save or a crash. Long streaks get their own banners, from GREAT and ON FIRE up to MIGHTY ROC.</p>
+          <p>A normal pass pays 1 coin, a perfect pays 2.</p>
+        </div>
+        <div class="scale" aria-label="Points per hoop">
+          <div><b>1</b><span>Pass</span></div>
+          <div><b>2</b><span>Perfect</span></div>
+          <div><b>3</b><span>On fire</span></div>
+          <div><b>5</b><span>5th in a row</span></div>
+          <div><b>12</b><span>12th in a row</span></div>
+        </div>
       </div>
-      <div class="art"><canvas data-paint="perfect" width="320" height="320" aria-label="The bird flying through a hoop, a streak banner and the fire">A perfect streak and the fire.</canvas></div>
+      <div class="art"><div class="frame sq light" style="--r: 2deg"><canvas data-paint="perfect" width="320" height="320" aria-label="The bird flying through a hoop, a streak banner and the fire">A perfect streak and the fire.</canvas></div></div>
     </div>
   </section>
 
-  <section class="zone prose p-phoenix" style="--from: #EBD3F5" id="rings">
+  <section class="zone sec p-phoenix" style="--from: #EBD3F5; --rx: 20%; --ry: 30%" id="rings">
     <div class="wrap">
-      <h2>Special rings</h2>
-      <p>New ring types appear as you play more runs. Each one has its own trick:</p>
+      <div class="sticker pink"><b>9</b><span>RINGS</span></div>
+      <div class="sec-head">
+        <span class="eyebrow"><b>03</b>Rings</span>
+        <h2>Special rings</h2>
+        <p>New ring types appear as you play more runs. Each one has its own trick:</p>
+      </div>
       <div class="cards">
-        <div class="card"><h3>Bullseye</h3><p>A target ring. Cross close to its centre for bonus coins.</p></div>
-        <div class="card"><h3>Ring Train</h3><p>Three rings in a row. Pass all three for a bonus.</p></div>
-        <div class="card"><h3>Spring</h3><p>Launches the bird hard up or down. BOING! Your taps don't count for a moment, so get ready to catch it.</p></div>
-        <div class="card"><h3>Switch</h3><p>Starts closed. Touch its switch to open it before you get there; reaching it closed counts as a miss.</p></div>
-        <div class="card"><h3>Saw</h3><p>A deadly rim: a live wire, a frost ring or a black hole that pulls you toward it. Go through the middle.</p></div>
-        <div class="card"><h3>Pair</h3><p>Two rings, each with a gift box. Pick one: a shield, a comet, coins, points or FEVER.</p></div>
-        <div class="card"><h3>FEVER</h3><p>The red ring. A perfect pass sets your streak to at least ×5 and lights the fire.</p></div>
-        <div class="card"><h3>Lucky Spin</h3><p>A wheel spins after you pass and pays a few coins.</p></div>
-        <div class="card"><h3>Portal</h3><p>Fly in and a ride begins. See the portal rides below.</p></div>
+        <div class="card ring"><canvas data-paint="ring:bullseye" width="120" height="120" aria-label="The Bullseye ring">Bullseye</canvas><h3>Bullseye</h3><p>A target ring. Cross close to its centre for bonus coins.</p></div>
+        <div class="card ring"><canvas data-paint="ring:train" width="120" height="120" aria-label="The Ring Train">Ring Train</canvas><h3>Ring Train</h3><p>Three rings in a row. Pass all three for a bonus.</p></div>
+        <div class="card ring"><canvas data-paint="ring:spring" width="120" height="120" aria-label="The Spring ring">Spring</canvas><h3>Spring</h3><p>Launches the bird hard up or down. BOING! Your taps don't count for a moment, so get ready to catch it.</p></div>
+        <div class="card ring"><canvas data-paint="ring:switch" width="120" height="120" aria-label="The Switch ring">Switch</canvas><h3>Switch</h3><p>Starts closed. Touch its switch to open it before you get there; reaching it closed counts as a miss.</p></div>
+        <div class="card ring"><canvas data-paint="ring:saw" width="120" height="120" aria-label="The Saw ring">Saw</canvas><h3>Saw</h3><p>A deadly rim: a live wire, a frost ring or a black hole that pulls you toward it. Go through the middle.</p></div>
+        <div class="card ring"><canvas data-paint="ring:pair" width="120" height="120" aria-label="The Pair rings with gift boxes">Pair</canvas><h3>Pair</h3><p>Two rings, each with a gift box. Pick one: a shield, a comet, coins, points or FEVER.</p></div>
+        <div class="card ring"><canvas data-paint="ring:fever" width="120" height="120" aria-label="The red FEVER ring">FEVER</canvas><h3>FEVER</h3><p>The red ring. A perfect pass sets your streak to at least ×5 and lights the fire.</p></div>
+        <div class="card ring"><canvas data-paint="ring:spin" width="120" height="120" aria-label="The Lucky Spin wheel">Lucky Spin</canvas><h3>Lucky Spin</h3><p>A wheel spins after you pass and pays a few coins.</p></div>
+        <div class="card ring"><canvas data-paint="ring:portal" width="120" height="120" aria-label="A portal">Portal</canvas><h3>Portal</h3><p>Fly in and a ride begins. See the portal rides below.</p></div>
       </div>
-      <p>Some rings also move: on a rail, swinging, sliding, orbiting or rocking. And watch for the <strong>spike squeeze</strong>, when both spike walls close in for a moment.</p>
+      <div class="panel">
+        <p>Some rings also move: on a rail, swinging, sliding, orbiting or rocking. And watch for the <strong>spike squeeze</strong>, when both spike walls close in for a moment.</p>
+      </div>
     </div>
   </section>
 
-  <section class="zone prose p-legend" style="--from: #FFD3A8" id="power-ups">
+  <section class="zone sec p-legend" style="--from: #FFD3A8; --rx: 50%; --ry: 30%" id="power-ups">
     <div class="wrap">
-      <h2>Power-ups</h2>
+      <div class="sticker"><b>4</b><span>POWER-UPS</span></div>
+      <div class="sec-head">
+        <span class="eyebrow"><b>04</b>Pickups</span>
+        <h2>Power-ups</h2>
+      </div>
       <div class="cards">
         <div class="card"><canvas data-paint="pickup:shield" width="140" height="140" aria-label="The shield pickup">Shield</canvas><h3>Shield</h3><p>Absorbs one mistake: a spike touch or a missed hoop. The bird blinks and is safe for 2 seconds.</p></div>
         <div class="card"><canvas data-paint="pickup:heart" width="140" height="140" aria-label="The heart pickup">Heart</canvas><h3>Hearts</h3><p>Collect 3 hearts for an extra life. The extra life saves you once, like a shield.</p></div>
         <div class="card"><canvas data-paint="pickup:comet" width="140" height="140" aria-label="The comet star pickup">Comet</canvas><h3>Comet</h3><p>A 10 second boost. The bird flies itself at high speed and every hoop counts as a perfect.</p></div>
         <div class="card"><canvas data-paint="pickup:capsule" width="140" height="140" aria-label="The hourglass capsule">Hourglass capsule</canvas><h3>Capsules</h3><p>The Hourglass slows the world down, the Mini Bird shrinks you for 8 seconds, and Coin Frenzy adds coins to every ring.</p></div>
       </div>
-      <div class="split2">
+      <div class="duo flip">
+        <div class="art"><div class="disc sm"><canvas data-paint="shielded" width="320" height="320" aria-label="The bird inside the shield circle">The bird with a shield.</canvas></div></div>
         <div class="copy">
-          <h3>Saved!</h3>
-          <p>With a shield or an extra life, a mistake doesn't end the run: it breaks with a burst and you fly on, but your streak starts again. On the Home screen you can also take a shield or Big Hoops into your next run.</p>
+          <div class="panel">
+            <h3>Saved!</h3>
+            <p>With a shield or an extra life, a mistake doesn't end the run: it breaks with a burst and you fly on, but your streak starts again. On the Home screen you can also take a shield or Big Hoops into your next run.</p>
+          </div>
         </div>
-        <div class="art"><canvas data-paint="shielded" width="320" height="320" aria-label="The bird inside the shield circle">The bird with a shield.</canvas></div>
       </div>
     </div>
   </section>
 
-  <section class="zone prose p-glider" style="--from: #2A1260" id="rides">
-    <div class="wrap split2">
+  <section class="zone sec p-glider" style="--from: #2A1260; --rx: 74%; --ry: 55%" id="rides">
+    <div class="wrap duo">
       <div class="copy">
-        <h2>Portal rides</h2>
-        <p>Fly into a portal and you're off on a ride: a <strong>cannon</strong> shot, a <strong>space trip</strong>, a <strong>volcano eruption</strong>, a <strong>deep sea dive</strong>, a <strong>pinball machine</strong> or a <strong>storm and tornado</strong>. The ride is picked at random and is never the same twice in a row.</p>
-        <p>Rides fly themselves and are completely safe. Every ring on the way counts as a perfect, so a ride is a great way to build a streak. The comet works the same way: sit back and count the points.</p>
+        <div class="sec-head">
+          <span class="eyebrow"><b>05</b>Portals</span>
+          <h2>Portal rides</h2>
+        </div>
+        <ul class="chips plain" aria-hidden="true">
+          <li>Cannon</li><li>Space trip</li><li>Volcano</li><li>Deep sea</li><li>Pinball</li><li>Storm</li>
+        </ul>
+        <div class="panel">
+          <p>Fly into a portal and you're off on a ride: a <strong>cannon</strong> shot, a <strong>space trip</strong>, a <strong>volcano eruption</strong>, a <strong>deep sea dive</strong>, a <strong>pinball machine</strong> or a <strong>storm and tornado</strong>. The ride is picked at random and is never the same twice in a row.</p>
+          <p>Rides fly themselves and are completely safe. Every ring on the way counts as a perfect, so a ride is a great way to build a streak. The comet works the same way: sit back and count the points.</p>
+        </div>
       </div>
-      <div class="art"><canvas data-paint="comet" width="320" height="320" aria-label="The bird riding the comet with its countdown ring">The comet ride.</canvas></div>
+      <div class="art"><div class="disc"><canvas data-paint="comet" width="320" height="320" aria-label="The bird riding the comet with its countdown ring">The comet ride.</canvas></div></div>
     </div>
   </section>
 
-  <section class="zone prose p-fledge" style="--from: #EBD3F5" id="collectibles">
+  <section class="zone sec p-fledge" style="--from: #EBD3F5; --rx: 30%; --ry: 40%" id="collectibles">
     <div class="wrap">
-      <h2>Collectibles</h2>
-      <div class="cards">
-        <div class="card"><h3>Egg</h3><p>Carry it through 5 clean rings and it hatches into a chick that adds a point to every hoop. A rim touch breaks the egg or scares the chick away.</p></div>
-        <div class="card"><h3>Piggy Bank</h3><p>A shower of coins appears. Catch them and the piggy bank pays out.</p></div>
-        <div class="card"><h3>Firefly Jar</h3><p>Catch 20 fireflies for a bonus. Let three escape and the jar breaks.</p></div>
-        <div class="card"><h3>Star Trail</h3><p>Eight stars in a line. Collect all eight for coins.</p></div>
-        <div class="card"><h3>Golden feather</h3><p>Kept between runs. Three feathers open the balloon bonus: pop balloons for prizes.</p></div>
-        <div class="card"><h3>Puzzle piece</h3><p>Kept between runs. The fourth piece completes the puzzle and pays a coin prize.</p></div>
+      <div class="sticker pink"><b>6</b><span>TO FIND</span></div>
+      <div class="sec-head">
+        <span class="eyebrow"><b>06</b>Bonuses</span>
+        <h2>Collectibles</h2>
+      </div>
+      <div class="cards icons">
+        <div class="card"><span class="ico" aria-hidden="true">5</span><h3>Egg</h3><p>Carry it through 5 clean rings and it hatches into a chick that adds a point to every hoop. A rim touch breaks the egg or scares the chick away.</p></div>
+        <div class="card"><span class="ico pink" aria-hidden="true">$</span><h3>Piggy Bank</h3><p>A shower of coins appears. Catch them and the piggy bank pays out.</p></div>
+        <div class="card"><span class="ico teal" aria-hidden="true">20</span><h3>Firefly Jar</h3><p>Catch 20 fireflies for a bonus. Let three escape and the jar breaks.</p></div>
+        <div class="card"><span class="ico blue" aria-hidden="true">8</span><h3>Star Trail</h3><p>Eight stars in a line. Collect all eight for coins.</p></div>
+        <div class="card"><span class="ico orange" aria-hidden="true">3</span><h3>Golden feather</h3><p>Kept between runs. Three feathers open the balloon bonus: pop balloons for prizes.</p></div>
+        <div class="card"><span class="ico purple" aria-hidden="true">4</span><h3>Puzzle piece</h3><p>Kept between runs. The fourth piece completes the puzzle and pays a coin prize.</p></div>
       </div>
     </div>
   </section>
 
-  <section class="zone prose p-falcon" style="--from: #B9F3E1" id="coins">
-    <div class="wrap split2">
+  <section class="zone sec p-falcon" style="--from: #B9F3E1; --rx: 76%; --ry: 50%" id="coins">
+    <div class="wrap duo">
       <div class="copy">
-        <h2>Coins and revives</h2>
-        <p>Coins come from every hoop (1, or 2 for a perfect), from the bonuses above, from a versus win (10) or draw (5), from the free coins in the Shop and from reaching a new rank. Spend them on birds, hats, gear, hoops and trails; see <a href="/birds">every bird and skin</a>.</p>
-        <p>Crashed after the 6th hoop? You can <strong>revive</strong> and fly on from where you were. The first revive of a run is a short video (free with NO ADS); after that a revive costs coins, doubling each time from 250, up to six paid revives per run.</p>
+        <div class="sec-head">
+          <span class="eyebrow"><b>07</b>Coins</span>
+          <h2>Coins and revives</h2>
+        </div>
+        <div class="panel">
+          <p>Coins come from every hoop (1, or 2 for a perfect), from the bonuses above, from a versus win (10) or draw (5), from the free coins in the Shop and from reaching a new rank. Spend them on birds, hats, gear, hoops and trails; see <a href="/birds">every bird and skin</a>.</p>
+          <p>Crashed after the 6th hoop? You can <strong>revive</strong> and fly on from where you were. The first revive of a run is a short video (free with NO ADS); after that a revive costs coins, doubling each time from 250, up to six paid revives per run.</p>
+        </div>
       </div>
-      <div class="art"><canvas data-paint="coins" width="320" height="320" aria-label="Coins popping up as the bird passes a hoop">+1 and +2 coins.</canvas></div>
+      <div class="art"><div class="disc"><canvas data-paint="coins" width="320" height="320" aria-label="Coins popping up as the bird passes a hoop">+1 and +2 coins.</canvas></div></div>
     </div>
   </section>
 
-  <section class="zone prose p-glider" style="--from: #FCD9EE" id="tips">
+  <section class="zone sec p-glider" style="--from: #FCD9EE; --rx: 50%; --ry: 60%" id="tips">
     <div class="wrap">
-      <h2>Tips to beat your best</h2>
-      <ul>
-        <li><strong>Tap in a rhythm.</strong> Short, even taps keep the bird level. Panic tapping sends it into the top spikes.</li>
-        <li><strong>Aim for the middle.</strong> The rim doesn't kill you, but every touch breaks your streak, and streaks are where the points are.</li>
-        <li><strong>Look one hoop ahead.</strong> Start climbing or dropping before you pass the current hoop.</li>
-        <li><strong>Save your shield for later.</strong> Take one from the Home screen when you're chasing a best.</li>
-        <li><strong>Race someone.</strong> A rival's score climbing at the top of the screen is the best motivation there is. Read <a href="/versus">how Versus works</a>.</li>
-        <li><strong>Learn the story.</strong> The game has been flying since 2014: <a href="/story">the Flappy Spikes story</a>.</li>
+      <div class="sticker"><b>6</b><span>TIPS</span></div>
+      <div class="sec-head">
+        <span class="eyebrow"><b>08</b>Get better</span>
+        <h2>Tips to beat your best</h2>
+      </div>
+      <ul class="cards">
+        <li class="card"><span class="num" aria-hidden="true">1</span><p><strong>Tap in a rhythm.</strong> Short, even taps keep the bird level. Panic tapping sends it into the top spikes.</p></li>
+        <li class="card"><span class="num" aria-hidden="true">2</span><p><strong>Aim for the middle.</strong> The rim doesn't kill you, but every touch breaks your streak, and streaks are where the points are.</p></li>
+        <li class="card"><span class="num" aria-hidden="true">3</span><p><strong>Look one hoop ahead.</strong> Start climbing or dropping before you pass the current hoop.</p></li>
+        <li class="card"><span class="num" aria-hidden="true">4</span><p><strong>Save your shield for later.</strong> Take one from the Home screen when you're chasing a best.</p></li>
+        <li class="card"><span class="num" aria-hidden="true">5</span><p><strong>Race someone.</strong> A rival's score climbing at the top of the screen is the best motivation there is. Read <a href="/versus">how Versus works</a>.</p></li>
+        <li class="card"><span class="num" aria-hidden="true">6</span><p><strong>Learn the story.</strong> The game has been flying since 2014: <a href="/story">the Flappy Spikes story</a>.</p></li>
       </ul>
     </div>
   </section>
@@ -444,9 +735,9 @@ a.banner:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
       <span class="banner" style="justify-self: center">BEAT MY SCORE!</span>
       <div class="badges">
         <a class="badge" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dhow-to-play"><img src="/a/gp.9e62107f39.webp" width="196" height="58" alt="Get it on Google Play"></a>
-          <a class="badge" id="appstore" href="#appstore"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
+          <a class="badge" id="appstore" href="#appstore" onclick="return false"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
       </div>
-      <p class="free">Free to play on Android. Coming to iPhone.</p>
+      <p class="free">Free to play on Android and iPhone/iPad.</p>
     </div>
   </section>
 </main>
@@ -481,10 +772,36 @@ a.banner:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
   if (document.fonts) document.fonts.ready.then(place);
   if ('ResizeObserver' in window) { const ro = new ResizeObserver(place); zones.forEach((z) => ro.observe(z)); }
 })();
+
+(() => {
+  // Scroll-in reveal on the content pages. Runs inline at the end of <body>: only blocks that start below the first
+  // screen are hidden (so nothing visible ever blinks and the hero is never delayed), and without JS, without
+  // IntersectionObserver or with reduced motion nothing is hidden at all. Siblings come in with a short stagger.
+  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const SEL = ['.sec-head', '.sec .panel', '.cards > .card', '.steps3 > *', '.ladder > li', '.duo > .art', '.scale > div', '.chips > li',
+    '.tl', '.results3 > div', '.flow > li', '.compare-wrap', '.vsbar-wrap', '.pair', '.rar > h3', '.group > h3', '.press', '.sec .note'].join(',');
+  const fold = innerHeight;
+  const els = [...document.querySelectorAll('main .zone:not(.first) ' + SEL.split(',').join(', main .zone:not(.first) '))]
+    .filter((e) => e.getBoundingClientRect().top > fold - 20);
+  if (!els.length) return;
+  const order = new Map();
+  els.forEach((e) => {
+    const p = e.parentElement, i = order.get(p) || 0; order.set(p, i + 1);
+    e.style.setProperty('--d', Math.min(i, 8) * 0.06 + 's');
+    e.classList.add('rv');
+  });
+  document.documentElement.classList.add('rv-on');
+  const io = new IntersectionObserver((es) => es.forEach((en) => {
+    if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+  }), { rootMargin: '0px 0px -8% 0px' });
+  els.forEach((e) => io.observe(e));
+  // a safety net: a print, a jump to an anchor far down or a very fast scroll never leaves a block hidden
+  addEventListener('beforeprint', () => els.forEach((e) => e.classList.add('in')));
+})();
 </script>
 <script defer src="/a/skin_art.52c6894d79.js"></script>
 <script defer src="/a/emblem_art.1c8be34be5.js"></script>
 <script defer src="/a/paint.80f5d32650.js"></script>
-<script defer src="/a/pages.b169a3d540.js"></script>
+<script defer src="/a/pages.dfd1c915cf.js"></script>
 </body>
 </html>

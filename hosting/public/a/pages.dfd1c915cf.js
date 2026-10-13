@@ -97,9 +97,14 @@
   };
   // coins: a pass pays +1, a perfect +2 (coin_popup.dart)
   P.coins = (s, dt) => {
-    const st = s.st || (s.st = { list: [], next: 0, k: 0 });
-    st.next -= dt; if (st.next <= 0) { st.next = 1.2; st.k ^= 1; st.list.push({ x: s.w / 2 - 20, y: s.h / 2 + 30, t: 0, n: st.k ? 2 : 1 }); }
-    s.clear(); ringHalf(s.x, s.w / 2, s.h / 2 + 30, 92, false); ringHalf(s.x, s.w / 2, s.h / 2 + 30, 92, true); coinPopups(s.x, st.list, dt);
+    const st = s.st || (s.st = { list: [], fx: Pool(), last: -1, k: 0 });
+    const period = 1.5, cyc = Math.floor(s.t / period), u = (s.t % period) / period, cx = s.w / 2, cy = s.h / 2 + 18, bx = -30 + u * (s.w + 60);
+    if (cyc !== st.last && bx >= cx) { st.last = cyc; st.k ^= 1; st.list.push({ x: cx, y: cy - 20, t: 0, n: st.k ? 2 : 1 }); if (st.k) perfectBurst(st.fx, cx, cy, 1); }
+    s.clear(); poolStep(st.fx, dt);
+    ringHalf(s.x, cx, cy, 130, false, RING_PINK, 9);
+    birdAt(s.x, { bird: 'golden' }, bx, cy + (st.k ? 0 : 0), 2 * LOOK_SCALE, s.t, (s.t * 3) % 1 < .2);
+    ringHalf(s.x, cx, cy, 130, true, RING_PINK, 9);
+    poolDraw(s.x, st.fx); coinPopups(s.x, st.list, dt);
   };
   // a skin item: a bird, a hat / gear on the classic bird, a hoop around the bird, a trail behind it
   P.bird = (s) => { s.clear(); s.x.save(); s.x.translate(s.w / 2, s.h / 2 + 4); birdAt(s.x, { bird: s.arg }, 0, 0, s.w / 56, s.t + s.seed, ((s.t + s.seed) * 1.3) % 1 < .18); s.x.restore(); };
@@ -204,32 +209,142 @@
       x.save(); x.globalAlpha = k; x.fillStyle = '#FF4FB7'; x.fillRect(16, 330, 288, 62); txt(x, won ? 'YOU WIN!' : 'YOU LOSE', 160, 362, 36, '#FFFFFF', 'ui', 'center', 4); x.restore();
     }
   };
-  // 2014 and 2026 side by side: the original bird between the original pipes, and today's bird in a hoop
-  P.then = (s, dt) => {
-    const st = s.st || (s.st = { px: 0 });
-    const x = s.x, W = s.w, H = s.h, half = W / 2, [bg, fg] = STAGES[0];
-    s.clear();
-    x.fillStyle = bg; x.fillRect(0, 0, W, H);
-    x.save(); x.beginPath(); x.rect(0, 0, half - 3, H); x.clip();
-    const gap = 105, gy = H / 2 + 6, pw = 88, ph = 513.5, px = ((half + 40) - (s.t * 60) % (half + 140)) + 10;
+  // 2014 and 2026 side by side: the original bird between the original pipes, and today's bird in a hoop.
+  // data-paint="then" shows both halves; "then:old" and "then:new" show one of them on the whole canvas.
+  function scene2014(x, s, x0, W, H, fg) {
+    const gap = 105, gy = H / 2 + 6, pw = 88, ph = 513.5, px = x0 + ((W + 40) - (s.t * 60) % (W + 140)) + 10;
     const pt = tinted(OLD.top, fg, pw, ph), pb = tinted(OLD.bottom, fg, pw, ph);
     if (pt) x.drawImage(pt, px, gy - gap / 2 - ph, pw, ph);
     if (pb) x.drawImage(pb, px, gy + gap / 2, pw, ph);
     const fl = (s.t * 2.5) % 1 < .2, oi = fl ? OLD.flap : OLD.bird;
-    if (oi.complete) x.drawImage(oi, half * .32 - 23, gy - 15 + 10 * Math.sin(s.t * 2.5), 46.5, 29.5);
-    spikeStrip(x, half, 0, fg, true); spikeStrip(x, half, H - SPIKE_H, fg, false);
-    txt(x, '2014', half / 2, H - SPIKE_H - 22, 22, PINK);
-    x.restore();
-    x.fillStyle = PLUM; x.fillRect(half - 3, 0, 6, H);
-    x.save(); x.beginPath(); x.rect(half + 3, 0, half - 3, H); x.clip();
-    const hx = half + half * .5, hy = H / 2 + 6;
+    if (oi.complete) x.drawImage(oi, x0 + W * .32 - 23, gy - 15 + 10 * Math.sin(s.t * 2.5), 46.5, 29.5);
+    spikeStrip(x, x0 + W, 0, fg, true); spikeStrip(x, x0 + W, H - SPIKE_H, fg, false);
+    txt(x, '2014', x0 + W / 2, H - SPIKE_H - 22, 22, PINK);
+  }
+  function scene2026(x, s, x0, W, H, fg) {
+    const hx = x0 + W * .5, hy = H / 2 + 6;
     ringHalf(x, hx, hy, 92, false);
     birdAt(x, { bird: 'classic' }, hx - 4 + 10 * Math.sin(s.t * 1.3), hy + 8 * Math.sin(s.t * 2.5), LOOK_SCALE * 1.15, s.t, (s.t * 2.5) % 1 < .2);
     ringHalf(x, hx, hy, 92, true);
-    spikeStrip(x, W, 0, fg, true); spikeStrip(x, W, H - SPIKE_H, fg, false);
-    txt(x, '2026', half + half / 2, H - SPIKE_H - 22, 22, PINK);
-    x.restore();
+    spikeStrip(x, x0 + W, 0, fg, true); spikeStrip(x, x0 + W, H - SPIKE_H, fg, false);
+    txt(x, '2026', x0 + W / 2, H - SPIKE_H - 22, 22, PINK);
+  }
+  P.then = (s) => {
+    const x = s.x, W = s.w, H = s.h, half = W / 2, [bg, fg] = STAGES[0];
+    s.clear();
+    x.fillStyle = bg; x.fillRect(0, 0, W, H);
+    if (s.arg === 'old') { scene2014(x, s, 0, W, H, fg); return; }
+    if (s.arg === 'new') { scene2026(x, s, 0, W, H, fg); return; }
+    x.save(); x.beginPath(); x.rect(0, 0, half - 3, H); x.clip(); scene2014(x, s, 0, half, H, fg); x.restore();
+    x.fillStyle = PLUM; x.fillRect(half - 3, 0, 6, H);
+    x.save(); x.beginPath(); x.rect(half + 3, 0, half - 3, H); x.clip(); x.translate(0, 0); scene2026(x, s, half, half, H, fg); x.restore();
   };
+
+  // the special rings, one small loop each (how to play): the bird flies through, the ring does its trick
+  const RING_RED = ['#E8141C', '#A00010'], RING_GREY = ['#9AA5AD', '#6B7C88'], RING_VIOLET = ['#9B30D9', '#5E1A8C'];
+  function flyBy(s, period = 2.2) { const u = (s.t % period) / period; return { u, bx: -24 + u * (s.w + 48) }; }
+  const RINGS = {
+    bullseye(s, x, cx, cy) {
+      const { bx } = flyBy(s), pulse = 1 + .12 * Math.sin(s.t * 6);
+      ringHalf(x, cx, cy, 70, false);
+      x.fillStyle = '#FFFFFF'; x.beginPath(); x.ellipse(cx, cy, 7 * pulse, 24 * pulse, 0, 0, TAU); x.fill();
+      x.fillStyle = PINK; x.beginPath(); x.ellipse(cx, cy, 4 * pulse, 13 * pulse, 0, 0, TAU); x.fill();
+      x.fillStyle = GOLD; x.beginPath(); x.ellipse(cx, cy, 2, 5, 0, 0, TAU); x.fill();
+      birdAt(x, { bird: 'classic' }, bx, cy, LOOK_SCALE * .62, s.t, (s.t * 3) % 1 < .2);
+      ringHalf(x, cx, cy, 70, true);
+    },
+    train(s, x, cx, cy) {
+      const { bx } = flyBy(s, 2.6);
+      [-34, 0, 34].forEach((d) => ringHalf(x, cx + d, cy, 52, false, RING_PINK, 6));
+      birdAt(x, { bird: 'classic' }, bx, cy, LOOK_SCALE * .55, s.t, (s.t * 3) % 1 < .2);
+      [-34, 0, 34].forEach((d) => ringHalf(x, cx + d, cy, 52, true, RING_PINK, 6));
+    },
+    spring(s, x, cx, cy) {
+      const u = (s.t % 1.8) / 1.8, sq = u < .25 ? Math.sin(u / .25 * Math.PI) : 0, ry = cy - 8 + sq * 10;
+      x.strokeStyle = '#13B48D'; x.lineWidth = 4; x.lineJoin = 'round'; x.beginPath();
+      for (let i = 0; i <= 6; i++) x.lineTo(cx + (i % 2 ? 9 : -9), ry + 44 + i * (5 - sq * 2)); x.stroke();
+      ringHalf(x, cx, ry, 62, false, ['#13B48D', '#00695C']);
+      const by = u < .25 ? ry : ry - Math.sin((u - .25) / .75 * Math.PI) * 46;
+      birdAt(x, { bird: 'classic' }, cx, by, LOOK_SCALE * .6, s.t, false, -.3 * Math.sin((u - .25) / .75 * Math.PI));
+      ringHalf(x, cx, ry, 62, true, ['#13B48D', '#00695C']);
+      if (u > .2 && u < .7) { x.save(); x.globalAlpha = 1 - (u - .2) / .5; txt(x, 'BOING!', cx, 18, 15, '#13B48D'); x.restore(); }
+    },
+    switch(s, x, cx, cy) {
+      const open = (s.t % 3) > 1.3, cols = open ? RING_PINK : RING_GREY;
+      ringHalf(x, cx, cy, 70, false, cols, 7, open ? null : [5, 5]);
+      x.fillStyle = open ? GOLD : '#6B7C88'; x.beginPath(); x.arc(cx, cy - 50, 8, 0, TAU); x.fill();
+      x.strokeStyle = '#FFFFFF'; x.lineWidth = 2.5; x.stroke();
+      if (!open) { x.strokeStyle = '#6B7C88'; x.lineWidth = 4; x.beginPath(); x.moveTo(cx, cy - 34); x.lineTo(cx, cy + 34); x.stroke(); }
+      if (open) { const k = ((s.t % 3) - 1.3) / 1.7; birdAt(x, { bird: 'classic' }, -20 + k * (s.w + 40), cy, LOOK_SCALE * .62, s.t, (s.t * 3) % 1 < .2); }
+      else birdAt(x, { bird: 'classic' }, 22, cy + 6 * Math.sin(s.t * 4), LOOK_SCALE * .62, s.t, (s.t * 3) % 1 < .2);
+      ringHalf(x, cx, cy, 70, true, cols, 7, open ? null : [5, 5]);
+    },
+    saw(s, x, cx, cy) {
+      const { bx } = flyBy(s, 2.4), ry = 42, n = 14;
+      ringHalf(x, cx, cy, 70, false, ['#FFD54A', '#E0A800']);
+      birdAt(x, { bird: 'classic' }, bx, cy, LOOK_SCALE * .55, s.t, (s.t * 3) % 1 < .2);
+      ringHalf(x, cx, cy, 70, true, ['#FFD54A', '#E0A800']);
+      x.fillStyle = '#FFB529';
+      for (let i = 0; i < n; i++) {
+        const a = i / n * TAU + s.t * 2.2, px = cx + Math.cos(a) * 12, py = cy + Math.sin(a) * ry, ox = Math.cos(a) * 9, oy = Math.sin(a) * 9;
+        x.beginPath(); x.moveTo(px - oy * .4, py + ox * .4); x.lineTo(px + ox, py + oy); x.lineTo(px + oy * .4, py - ox * .4); x.fill();
+      }
+      if ((s.t * 5) % 1 < .5) { x.strokeStyle = '#FFFFFF'; x.lineWidth = 2; x.beginPath(); x.moveTo(cx - 10, cy - 50); x.lineTo(cx - 2, cy - 44); x.lineTo(cx - 8, cy - 40); x.stroke(); }
+    },
+    pair(s, x, cx, cy) {
+      const pick = Math.floor(s.t / 2.4) % 2, { u } = flyBy(s, 2.4), lx = cx - 26, rx = cx + 26;
+      [lx, rx].forEach((px, i) => {
+        ringHalf(x, px, cy + 8, 46, false, RING_PINK, 6);
+        const gy = cy - 40 + 3 * Math.sin(s.t * 3 + i);
+        x.fillStyle = i ? '#1E9BE0' : PINK; x.fillRect(px - 9, gy - 8, 18, 16); x.fillStyle = GOLD; x.fillRect(px - 2, gy - 8, 4, 16); x.fillRect(px - 9, gy - 2, 18, 4);
+        x.beginPath(); x.arc(px - 4, gy - 11, 4, 0, TAU); x.arc(px + 4, gy - 11, 4, 0, TAU); x.fill();
+      });
+      const tx = pick ? rx : lx, bx = -20 + u * (s.w + 40), by = cy + 8 + (bx < tx ? (tx - lx) * 0 : 0);
+      birdAt(x, { bird: 'classic' }, bx, by, LOOK_SCALE * .5, s.t, (s.t * 3) % 1 < .2);
+      [lx, rx].forEach((px) => ringHalf(x, px, cy + 8, 46, true, RING_PINK, 6));
+    },
+    fever(s, x, cx, cy) {
+      const { bx } = flyBy(s), g = .5 + .5 * Math.sin(s.t * 7);
+      x.save(); x.shadowColor = '#FF3B30'; x.shadowBlur = 10 + 10 * g; ringHalf(x, cx, cy, 74, false, RING_RED, 8); x.restore();
+      birdAt(x, { bird: 'classic' }, bx, cy, LOOK_SCALE * .6, s.t, (s.t * 3) % 1 < .2);
+      x.save(); x.shadowColor = '#FF3B30'; x.shadowBlur = 10 + 10 * g; ringHalf(x, cx, cy, 74, true, RING_RED, 8); x.restore();
+    },
+    spin(s, x, cx, cy) {
+      const a = s.t * 3.2, r = 38, cols = [PINK, GOLD, '#1E9BE0', '#13B48D', '#9B30D9', '#FF7A1A'];
+      for (let i = 0; i < 6; i++) { x.fillStyle = cols[i]; x.beginPath(); x.moveTo(cx, cy + 6); x.arc(cx, cy + 6, r, a + i * TAU / 6, a + (i + 1) * TAU / 6); x.fill(); }
+      x.strokeStyle = '#FFFFFF'; x.lineWidth = 4; x.beginPath(); x.arc(cx, cy + 6, r, 0, TAU); x.stroke();
+      x.fillStyle = '#FFFFFF'; x.beginPath(); x.arc(cx, cy + 6, 8, 0, TAU); x.fill();
+      x.fillStyle = PLUM; x.beginPath(); x.moveTo(cx - 8, cy - 40); x.lineTo(cx + 8, cy - 40); x.lineTo(cx, cy - 26); x.fill();
+    },
+    portal(s, x, cx, cy) {
+      const { bx } = flyBy(s, 2.4);
+      for (let i = 5; i >= 0; i--) {
+        const k = ((i / 6) + s.t * .5) % 1;
+        x.fillStyle = rgba(i % 2 ? '#9B30D9' : '#7C4DFF', .25 + .5 * (1 - k)); x.beginPath(); x.ellipse(cx, cy, 6 + 10 * k, 12 + 34 * k, 0, 0, TAU); x.fill();
+      }
+      ringHalf(x, cx, cy, 72, false, RING_VIOLET);
+      if (bx < cx) birdAt(x, { bird: 'classic' }, bx, cy, LOOK_SCALE * .6 * clamp((cx - bx) / 40, .1, 1), s.t, (s.t * 3) % 1 < .2);
+      ringHalf(x, cx, cy, 72, true, RING_VIOLET);
+    },
+  };
+  P.ring = (s) => { s.clear(); RINGS[s.arg](s, s.x, s.w / 2, s.h / 2 + 4); };
+
+  // ---------- the versus bar mock-up and the nickname: plain HTML that counts and changes ----------
+  function stepper(fn, every) { if (REDUCED) return; let on = true; document.addEventListener('visibilitychange', () => { on = !document.hidden; }); setInterval(() => on && fn(), every); }
+  document.querySelectorAll('[data-vsbar]').forEach((bar) => {
+    const me = bar.querySelector('.you b'), them = bar.querySelector('.them b'), box = bar.querySelector('.them .box');
+    let a = +me.textContent, b = +them.textContent, k = 0;
+    stepper(() => {
+      k++;
+      if (a >= 40 || b >= 40) { a = 0; b = 0; }
+      if (k % 2) { a += Math.random() < .5 ? 2 : 1; me.textContent = a; }
+      else { b += Math.random() < .45 ? 2 : 1; them.textContent = b; box.classList.add('flash'); setTimeout(() => box.classList.remove('flash'), 450); }
+    }, 900);
+  });
+  const ADJ = ['Rapid', 'Brave', 'Lucky', 'Swift', 'Mighty', 'Happy', 'Sunny', 'Zippy'], BIRD = ['Parrot', 'Falcon', 'Robin', 'Toucan', 'Owl', 'Puffin', 'Finch', 'Heron'];
+  document.querySelectorAll('[data-nick]').forEach((el) => {
+    stepper(() => { el.textContent = ADJ[Math.floor(Math.random() * ADJ.length)] + BIRD[Math.floor(Math.random() * BIRD.length)] + (100 + Math.floor(Math.random() * 900)); }, 1600);
+  });
 
   // ---------- plumbing: only visible canvases animate; reduced motion draws one frame ----------
   const all = [...document.querySelectorAll('canvas[data-paint]')].map((c, i) => {

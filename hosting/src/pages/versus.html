@@ -1,64 +1,133 @@
 {{> content_head}}
 <main id="top">
-  <section class="zone page-hero first p-glider">
+  <section class="zone page-hero first p-glider" data-rays-at="hero-art">
     <div class="wrap">
       <div class="hero-text">
         <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a> › Versus</nav>
         <span class="eyebrow">Versus</span>
         <h1>Versus: race real players</h1>
+        <span class="banner">BEAT MY SCORE!</span>
         <p class="lead">Every Flappy Spikes run can be a race. In Versus you fly against a real player's recorded run, and their score climbs next to yours while you fly. Beat it to win.</p>
+        <nav class="jump" aria-label="On this page"><a href="#how-it-works">How it works</a><a href="#versus-bar">The bar</a><a href="#matching">Matching</a><a href="#results">Results</a><a href="#free-fly">Free Fly</a><a href="#your-data">Your data</a></nav>
       </div>
-      <div class="art"><canvas class="lane" data-paint="vs" width="320" height="520" style="width: min(300px, 78vw); aspect-ratio: 320 / 520; border-radius: 26px; box-shadow: 12px 12px 0 var(--acc);" aria-label="A versus race: your score and the other player's score in the versus bar">A versus race: your score against a real player's recorded run.</canvas></div>
+      <div class="art" id="hero-art">
+        <div class="sticker pink"><b>VS</b></div>
+        <div class="frame tall" style="--r: 2deg"><canvas data-paint="vs" width="320" height="520" aria-label="A versus race: your score and the other player's score in the versus bar">A versus race: your score against a real player's recorded run.</canvas></div>
+      </div>
     </div>
   </section>
 
-  <section class="zone prose p-falcon" style="--from: #EBD3F5" id="how-it-works">
+  <section class="zone sec p-falcon" style="--from: #EBD3F5; --rx: 50%; --ry: 75%" id="how-it-works">
     <div class="wrap">
-      <h2>How a race works</h2>
-      <p>Versus is the default mode on the Home screen. Tap START and the VS screen finds you a rival while it spins up: another player's name, picture or bird, and their look. Then your run starts as usual, and you wait for your first tap.</p>
-      <p>Your rival isn't flying live. You race a <strong>recorded run</strong>: when that player flew, the game saved when each of their points came in. During your run their score replays on the same clock, point by point, so it feels like they're flying right next to you. Recorded runs mean there is always someone to race, any time, with no waiting for a lobby and no lag.</p>
+      <div class="sticker"><b>3</b><span>STEPS</span></div>
+      <div class="sec-head">
+        <span class="eyebrow"><b>01</b>The race</span>
+        <h2>How a race works</h2>
+      </div>
+      <div class="steps3">
+        <div><div class="sticker"><b>1</b></div><span class="tag-label">Tap START</span><p>Versus is the default mode on the Home screen. Tap START and the VS screen finds you a rival while it spins up: another player's name, picture or bird, and their look. Then your run starts as usual, and you wait for your first tap.</p></div>
+        <div><div class="sticker"><b>2</b></div><span class="tag-label">Race a recorded run</span><p>Your rival isn't flying live. You race a <strong>recorded run</strong>: when that player flew, the game saved when each of their points came in. During your run their score replays on the same clock, point by point, so it feels like they're flying right next to you.</p></div>
+        <div><div class="sticker"><b>3</b></div><span class="tag-label">No waiting</span><p>Recorded runs mean there is always someone to race, any time, with no waiting for a lobby and no lag.</p></div>
+      </div>
     </div>
   </section>
 
-  <section class="zone prose p-fledge" style="--from: #FCD9EE" id="versus-bar">
-    <div class="wrap">
-      <h2>The versus bar</h2>
-      <p>At the top of the screen, the versus bar shows the race: your score in the pink box on the left, theirs on the right, with VS in the middle and both names underneath. Their box flashes gold every time their score goes up, and dims once their recorded run has ended. Then it's just you against their final score.</p>
+  <section class="zone sec p-fledge" style="--from: #FCD9EE; --rx: 70%; --ry: 55%" id="versus-bar">
+    <div class="wrap duo">
+      <div class="copy">
+        <div class="sec-head">
+          <span class="eyebrow"><b>02</b>On screen</span>
+          <h2>The versus bar</h2>
+        </div>
+        <div class="panel">
+          <p>At the top of the screen, the versus bar shows the race: your score in the pink box on the left, theirs on the right, with VS in the middle and both names underneath. Their box flashes gold every time their score goes up, and dims once their recorded run has ended. Then it's just you against their final score.</p>
+        </div>
+      </div>
+      <div class="art vsbar-wrap">
+        <div class="vsbar" data-vsbar aria-hidden="true">
+          <div class="side you"><div class="box"><i></i><b>12</b></div><div class="name">You</div></div>
+          <div class="vs">VS</div>
+          <div class="side them"><div class="box"><b>9</b><i></i></div><div class="name">RapidParrot411</div></div>
+        </div>
+        <p class="note">Your score on the left, your rival's on the right.</p>
+      </div>
     </div>
   </section>
 
-  <section class="zone prose p-phoenix" style="--from: #B9F3E1" id="matching">
+  <section class="zone sec p-phoenix" style="--from: #B9F3E1; --rx: 20%; --ry: 40%" id="matching">
     <div class="wrap">
-      <h2>Matching</h2>
-      <p>The game first looks for a run from a player at your rank that scored less than your best, so the race is one you can win; if there is none, any recent run will do. Players you haven't met for a while come first, and you are never matched against your own runs. If no rival turns up within a few seconds, the VS screen says <strong>NO RIVAL FOUND</strong> and you fly solo; the next run tries again.</p>
+      <div class="sticker pink"><b>1</b><span>RIVAL</span></div>
+      <div class="sec-head">
+        <span class="eyebrow"><b>03</b>Your rival</span>
+        <h2>Matching</h2>
+      </div>
+      <div class="panel">
+        <p>The game first looks for a run from a player at your rank that scored less than your best, so the race is one you can win; if there is none, any recent run will do. Players you haven't met for a while come first, and you are never matched against your own runs. If no rival turns up within a few seconds, the VS screen says <strong>NO RIVAL FOUND</strong> and you fly solo; the next run tries again.</p>
+      </div>
+      <ol class="flow" aria-label="The order the game looks for a rival in">
+        <li>A player at your rank who scored less than your best</li>
+        <li>Any recent run, players you haven't met for a while first</li>
+        <li>NO RIVAL FOUND: you fly solo, the next run tries again</li>
+      </ol>
     </div>
   </section>
 
-  <section class="zone prose p-legend" style="--from: #FFD3A8" id="results">
+  <section class="zone sec p-legend" style="--from: #FFD3A8; --rx: 50%; --ry: 70%" id="results">
     <div class="wrap">
-      <h2>Win, lose or draw</h2>
-      <p>When your run ends, the results page compares the two final scores. A higher score wins and pays <strong>10 coins</strong>; the same score is a draw and pays <strong>5 coins</strong>. Lose and you still keep everything you earned in the run. Every run, won or lost, also counts toward your best score and your <a href="/birds#ranks">rank</a>.</p>
+      <div class="sec-head">
+        <span class="eyebrow"><b>04</b>The results</span>
+        <h2>Win, lose or draw</h2>
+        <p>When your run ends, the results page compares the two final scores. A higher score wins and pays <strong>10 coins</strong>; the same score is a draw and pays <strong>5 coins</strong>. Lose and you still keep everything you earned in the run. Every run, won or lost, also counts toward your best score and your <a href="/birds#ranks">rank</a>.</p>
+      </div>
+      <div class="results3" aria-hidden="true">
+        <div class="win"><span class="word">YOU WIN!</span><b>+10</b><span>coins</span></div>
+        <div class="draw"><span class="word">DRAW</span><b>+5</b><span>coins</span></div>
+        <div class="lose"><span class="word">YOU LOSE</span><b>+0</b><span>keep what you earned</span></div>
+      </div>
     </div>
   </section>
 
-  <section class="zone prose p-glider" style="--from: #2A1260" id="free-fly">
-    <div class="wrap">
-      <h2>Free Fly if you'd rather fly solo</h2>
-      <p>Not in the mood for a race? The mode button above START switches between <strong>VERSUS</strong> and <strong>FREE FLY</strong>. Free Fly is the classic game: no rival, no VS screen, just you, the hoops and the spikes. The <a href="/how-to-play">how to play guide</a> covers everything that happens in a run.</p>
+  <section class="zone sec p-glider" style="--from: #2A1260; --rx: 78%; --ry: 50%" id="free-fly">
+    <div class="wrap duo">
+      <div class="copy">
+        <div class="sec-head">
+          <span class="eyebrow"><b>05</b>Solo</span>
+          <h2>Free Fly if you'd rather fly solo</h2>
+        </div>
+        <div class="panel">
+          <p>Not in the mood for a race? The mode button above START switches between <strong>VERSUS</strong> and <strong>FREE FLY</strong>. Free Fly is the classic game: no rival, no VS screen, just you, the hoops and the spikes. The <a href="/how-to-play">how to play guide</a> covers everything that happens in a run.</p>
+        </div>
+      </div>
+      <div class="art"><div class="disc"><canvas data-paint="perfect" width="320" height="320" aria-label="The bird flying solo through a hoop">The bird flying solo through a hoop.</canvas></div></div>
     </div>
   </section>
 
-  <section class="zone prose p-falcon" style="--from: #EBD3F5" id="nickname">
-    <div class="wrap">
-      <h2>Your nickname</h2>
-      <p>Other players see you under a nickname the game makes up for you, like RapidParrot411: an adjective, a bird and three digits, so there is never any free text. If you sign in to Google Play Games, your Play Games name and picture are used instead. Your rivals also see your bird in the hats, gear and trail you picked, so <a href="/birds">dress it up</a>.</p>
+  <section class="zone sec p-falcon" style="--from: #EBD3F5; --rx: 25%; --ry: 50%" id="nickname">
+    <div class="wrap duo flip">
+      <div class="art"><div class="disc sm"><canvas data-paint="bird:toucan" width="320" height="320" aria-label="A Toucan bird, as a rival might fly it">A Toucan bird.</canvas></div></div>
+      <div class="copy">
+        <div class="sec-head">
+          <span class="eyebrow"><b>06</b>Who you are</span>
+          <h2>Your nickname</h2>
+        </div>
+        <span class="nick" aria-hidden="true"><i></i><span data-nick>RapidParrot411</span></span>
+        <div class="panel">
+          <p>Other players see you under a nickname the game makes up for you, like RapidParrot411: an adjective, a bird and three digits, so there is never any free text. If you sign in to Google Play Games, your Play Games name and picture are used instead. Your rivals also see your bird in the hats, gear and trail you picked, so <a href="/birds">dress it up</a>.</p>
+        </div>
+      </div>
     </div>
   </section>
 
-  <section class="zone prose p-fledge" style="--from: #FCD9EE" id="your-data">
+  <section class="zone sec p-fledge" style="--from: #FCD9EE; --rx: 50%; --ry: 40%" id="your-data">
     <div class="wrap">
-      <h2>Your data</h2>
-      <p>To be raced, some of your runs are stored on our server with an anonymous account: your nickname, your look, your score and the replay of the run. Versus data is deleted automatically about 60 days after your last run, and you can delete it any time from Settings, or by email. Everything is explained on the <a href="/delete-data">delete your data</a> page and in the <a href="/privacy">privacy policy</a>.</p>
+      <div class="sticker"><b>60</b><span>DAYS</span></div>
+      <div class="sec-head">
+        <span class="eyebrow"><b>07</b>Privacy</span>
+        <h2>Your data</h2>
+      </div>
+      <div class="panel">
+        <p>To be raced, some of your runs are stored on our server with an anonymous account: your nickname, your look, your score and the replay of the run. Versus data is deleted automatically about 60 days after your last run, and you can delete it any time from Settings, or by email. Everything is explained on the <a href="/delete-data">delete your data</a> page and in the <a href="/privacy">privacy policy</a>.</p>
+      </div>
     </div>
   </section>
 

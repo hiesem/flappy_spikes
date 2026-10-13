@@ -1,32 +1,45 @@
 /* PRD-2.3 §11.4 homepage additions, in the approved design's styles (no new artwork) */
-.intro { font-size: 16px; line-height: 1.5; max-width: 44ch; margin: 0; font-weight: 600; }
-.intro a, .more { color: var(--acc); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.more { color: var(--acc); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .p-legend .more { color: var(--gold); }
 .more { font-size: 17px; justify-self: start; }
 .step .more { justify-self: center; font-size: 15px; }
-@media (max-width: 860px) { .hero .intro { margin-inline: auto; } }
-.facts { width: min(600px, 100%); margin: 8px 0 0; background: var(--white); border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 22px 26px; text-align: left; font-size: 16px; line-height: 1.4; }
-.facts dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; }
-.facts h3 { margin: 0 0 10px; font-family: var(--display); font-weight: 400; font-size: 26px; color: var(--plum); }
-.facts dt { color: var(--pink); }
-.facts dd { margin: 0; }
-@media (max-width: 520px) { .facts dl { grid-template-columns: 1fr; gap: 2px; } .facts dd { margin-bottom: 8px; } }
 .faq { --rx: 50%; --ry: 30%; }
 .faq .wrap { padding-block: 0 50px; }
 .faq-list { display: grid; gap: 14px; max-width: 760px; }
 .faq details { background: var(--white); border-radius: 18px; box-shadow: 6px 6px 0 var(--plum); padding: 16px 22px; }
-.faq summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 12px; }
+.faq summary { position: relative; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 12px; -webkit-tap-highlight-color: transparent; }
 .faq summary::-webkit-details-marker { display: none; }
-.faq summary::before { content: '+'; flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--pink); color: var(--white); font-size: 22px; line-height: 1; }
-.faq details[open] summary::before { content: '\2212'; }
+.faq summary:focus-visible { outline: 3px solid var(--gold); outline-offset: 6px; border-radius: 8px; }
+/* the marker: a pink disc with a white plus; its upright bar turns flat (a minus) while the question is open */
+.faq summary::before { content: ''; flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--pink) linear-gradient(var(--white), var(--white)) center / 14px 3px no-repeat; transition: transform .32s cubic-bezier(.65, 0, .35, 1); }
+.faq summary::after { content: ''; position: absolute; left: 13.5px; top: calc(50% - 7px); width: 3px; height: 14px; border-radius: 2px; background: var(--white); transition: transform .32s cubic-bezier(.65, 0, .35, 1); }
+.faq details[open]:not(.closing) summary::before { transform: rotate(180deg); }
+.faq details[open]:not(.closing) summary::after { transform: rotate(90deg); }
+@media (hover: hover) { .faq summary:hover::before { box-shadow: 0 0 0 4px rgba(236, 0, 140, .18); } }
 .faq h3 { margin: 0; font-size: 19px; font-weight: 600; font-family: var(--body); color: var(--plum); }
 .faq details p { margin: 10px 0 2px 42px; font-size: 17px; line-height: 1.5; }
 .faq details a { color: var(--pink); }
-/* the sticky store bar on phones: only below 720 px, once the hero badges have scrolled away; it can be closed */
-.storebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: none; align-items: center; justify-content: center; gap: 12px; padding: 10px 56px calc(10px + env(safe-area-inset-bottom)) 16px; background: var(--white); box-shadow: 0 -4px 0 var(--plum); transform: translateY(110%); transition: transform .25s; }
-.storebar .badge img { height: 48px; width: auto; }
-.storebar span { font-family: var(--display); font-size: 18px; color: var(--plum); }
-.storebar button { position: absolute; right: 8px; top: 50%; translate: 0 -50%; width: 44px; height: 44px; border: 0; background: transparent; color: var(--plum); font-size: 28px; line-height: 1; cursor: pointer; }
-@media (max-width: 719.98px) { .storebar { display: flex; } .storebar.show { transform: none; } }
-@media (max-width: 380px) { .storebar span { display: none; } }
-@media (prefers-reduced-motion: reduce) { .storebar { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .faq summary::before, .faq summary::after { transition: none; } }
+/* the sticky "get the game" card on phones and tablets: storebar.js sets data-os (android / ios) from the user agent,
+   so desktops never show it; it slides up once the hero badges have scrolled away, and hides again over the closing
+   call to action and the footer. It can be closed (for the session). */
+.storebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: none; justify-content: center; padding: 0 12px calc(12px + env(safe-area-inset-bottom)); pointer-events: none;
+  transform: translateY(calc(100% + 24px)); transition: transform .26s cubic-bezier(.4, 0, 1, 1), visibility 0s .26s; visibility: hidden; }
+.storebar[data-os] { display: flex; }
+.storebar.show { transform: none; visibility: visible; transition: transform .38s cubic-bezier(.16, 1, .3, 1), visibility 0s; }
+.storebar .card { pointer-events: auto; position: relative; width: min(100%, 520px); display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 14px; padding: 14px 16px 14px 14px;
+  background: var(--white); border-radius: 24px; box-shadow: 6px 6px 0 var(--plum), 0 10px 30px rgba(122, 0, 68, .28); overflow: hidden; isolation: isolate; }
+/* a corner of the site's slow rays behind the icon */
+.storebar .card::before { content: ''; position: absolute; z-index: -1; left: -110px; top: calc(50% - 150px); width: 300px; height: 300px; border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(236, 0, 140, .13) 0 11.25deg, transparent 11.25deg 22.5deg); -webkit-mask: radial-gradient(closest-side, #000 40%, transparent); mask: radial-gradient(closest-side, #000 40%, transparent); }
+.storebar .icon { grid-row: span 2; width: 72px; height: 72px; border-radius: 18px; display: block; box-shadow: 4px 4px 0 var(--plum); transform: rotate(-4deg); }
+.storebar .name { display: grid; gap: 2px; min-width: 0; padding-right: 30px; }
+.storebar .name b { font-family: var(--display); font-weight: 400; font-size: 24px; line-height: 1.05; color: var(--plum); white-space: nowrap; }
+.storebar .name small { font-size: 14px; color: var(--pink); letter-spacing: .02em; }
+.storebar .badge { justify-self: start; }
+.storebar .badge img { height: 46px; width: auto; }
+.storebar[data-os="android"] .as, .storebar[data-os="ios"] .gp { display: none; }
+.storebar button { position: absolute; right: 6px; top: 6px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--plum); font: 600 26px/1 var(--body); cursor: pointer; display: grid; place-items: center; }
+@media (hover: hover) { .storebar button:hover { background: #FCD9EE; } }
+.storebar button:focus-visible { outline: 3px solid var(--gold); }
+@media (prefers-reduced-motion: reduce) { .storebar, .storebar.show { transition: none; } }

@@ -65,7 +65,11 @@ class RunDirector {
       tables.pieceWindow.$1,
       tables.pieceWindow.$2,
     );
-    _heartAt = RunRandom.rangeInt(r, tables.heart.first.$1, tables.heart.first.$2);
+    _heartAt = RunRandom.rangeInt(
+      r,
+      tables.heart.first.$1,
+      tables.heart.first.$2,
+    );
     // PRD-2.2 §19.3 the feather and the piece come in ≈ 60 % of runs each
     // (rolled at run start, on the timing stream so the course itself is
     // not shifted by the rolls).
@@ -251,11 +255,8 @@ class RunDirector {
   }
 
   /// §3.6 Big Hoops D: 30..40 s.
-  double rollBigHoopsDuration() => RunRandom.range(
-    rng.timing,
-    RunConfig.bigHoopsMin,
-    RunConfig.bigHoopsMax,
-  );
+  double rollBigHoopsDuration() =>
+      RunRandom.range(rng.timing, RunConfig.bigHoopsMin, RunConfig.bigHoopsMax);
 
   /// §3.16 Puzzle bonus. PRD-2.3 §14.2: 50..150 step 5
   /// (`puzzle_reward`; was 50..250).
@@ -330,7 +331,9 @@ class RunDirector {
     final end = _zigEndX;
     if (end == null || _zigSide == 0 || trackX > end) return null;
     final (lo, hi) = _layout.limits(i, ctx, opening, useTable: false);
-    final y = (ctx.viewHeight / 2 + _zigSide * _zigAmp).clamp(lo, hi).toDouble();
+    final y = (ctx.viewHeight / 2 + _zigSide * _zigAmp)
+        .clamp(lo, hi)
+        .toDouble();
     _layout
       ..lastSign = _zigSide.toDouble()
       ..lastY = y;
@@ -379,8 +382,10 @@ class RunDirector {
     final ride = ctx.rideActive || _ride != null;
     final band = ctx.band;
 
-    double cap(double opening, [double extra = 0]) =>
-        min(opening, band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin + extra));
+    double cap(double opening, [double extra = 0]) => min(
+      opening,
+      band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin + extra),
+    );
 
     // PRD-2.3 §10.2 hoop 0 of a run: plain (no special kind, no motion, no
     // tilt, nothing attached), opening 118 (also with Big Hoops, §0 item 3),
@@ -415,7 +420,15 @@ class RunDirector {
       final y = (ride ? _zigzagY(trackX, i, ctx, opening) : null) ?? normal;
       _prevKind = HoopKindId.normal;
       _count(ElementId.normalHoop.storageId);
-      _nextX += spacing;
+      // Owner 2026-10-14 (2.3.0 (19)): during a comet the next hoop sits
+      // `ride_comet_hoop_gap` ahead (fewer hoops per comet, same ride),
+      // unless it would be reached after the ride: then the normal spacing.
+      final zigEnd = _zigEndX;
+      final gap = RunConfig.cometHoopGap;
+      final advance = ride && zigEnd != null && trackX + gap <= zigEnd
+          ? max(spacing, gap)
+          : spacing;
+      _nextX += advance;
       return SlotPlan(
         index: i,
         kind: HoopKindId.normal,
@@ -423,7 +436,7 @@ class RunDirector {
         trackX: trackX,
         centreY: y,
         opening: opening,
-        advance: spacing,
+        advance: advance,
         duringRide: ride,
       );
     }
@@ -444,7 +457,8 @@ class RunDirector {
         ok = _specialAllowed(special, i, ctx, ignoreUnlock: true);
         if (ok) kind = special;
       } else if (e == ElementId.portal) {
-        ok = _on(e) &&
+        ok =
+            _on(e) &&
             !ctx.squeezeWindow &&
             !_rewardsBlocked(i, ctx) &&
             !_bigOpen(ctx);
@@ -549,7 +563,8 @@ class RunDirector {
       }
     }
     if (!forced && due == ElementId.comet) cometMode = 1;
-    if (!forced && (due == ElementId.angledRing || due == ElementId.movingRing)) {
+    if (!forced &&
+        (due == ElementId.angledRing || due == ElementId.movingRing)) {
       forceMod = due;
     }
     // PRD-2.2 §19.2 the angled ring may come from index 4 here.
@@ -592,7 +607,8 @@ class RunDirector {
     // (`RunConfig.portalOpening` == `PortalConfig.ringOpening`; the director
     // stays free of Flame imports.)
     if (kind == HoopKindId.portal) opening = RunConfig.portalOpening;
-    final pairO = RunConfig.pairOffsetAt711 * ctx.viewHeight / RunConfig.designHeight;
+    final pairO =
+        RunConfig.pairOffsetAt711 * ctx.viewHeight / RunConfig.designHeight;
     if (kind == HoopKindId.pair) extraMargin = pairO / 2;
     // PRD-2.3 §0 item 3 / §10.2: hoop 0 stays 118, also with Big Hoops.
     opening = cap(opening * _bigMult(i, ctx), extraMargin);
@@ -645,8 +661,15 @@ class RunDirector {
         forced = false;
       }
     } else if (kind == HoopKindId.pair) {
-      final minY = ctx.hudBottom + pairO / 2 + opening / 2 + RunConfig.rimRadius;
-      final (lo, hi) = _layout.limits(i, ctx, opening, extra: extraMargin, useTable: false);
+      final minY =
+          ctx.hudBottom + pairO / 2 + opening / 2 + RunConfig.rimRadius;
+      final (lo, hi) = _layout.limits(
+        i,
+        ctx,
+        opening,
+        extra: extraMargin,
+        useTable: false,
+      );
       if (y < minY) y = min(minY, hi);
       final reach = prevY == null
           ? 0
@@ -718,14 +741,18 @@ class RunDirector {
         final ride =
             _forcedRide ??
             () {
-              final options = RideId.values.where((x) => x != _lastRide).toList();
+              final options = RideId.values
+                  .where((x) => x != _lastRide)
+                  .toList();
               return options[r.nextInt(options.length)];
             }();
         _forcedRide = null;
         _rideBefore = _lastRide;
         _lastRide = ride;
         extra = ride;
-        _portalAt = i + RunRandom.rangeInt(r, tables.portal.then.$1, tables.portal.then.$2);
+        _portalAt =
+            i +
+            RunRandom.rangeInt(r, tables.portal.then.$1, tables.portal.then.$2);
         _lastPortal = i;
         _portalWaiting = false;
       default:
@@ -835,8 +862,7 @@ class RunDirector {
       return false;
     }
     if (ctx.squeezeWindow && !rule.allowedInSqueeze) return false;
-    if (k == HoopKindId.fever &&
-        (ctx.fever || _prevKind == HoopKindId.saw)) {
+    if (k == HoopKindId.fever && (ctx.fever || _prevKind == HoopKindId.saw)) {
       return false;
     }
     if (k == HoopKindId.saw && _prevKind == HoopKindId.fever) return false;
@@ -862,8 +888,7 @@ class RunDirector {
     // PRD-2.2 §27.2 the comet hoop waits for the activity + cool-down.
     if (_rewardsBlocked(i, ctx)) return false;
     final rule = tables.comet;
-    if (mode == 0 &&
-        (i < rule.from || i - _lastComet < rule.spacing)) {
+    if (mode == 0 && (i < rule.from || i - _lastComet < rule.spacing)) {
       return false;
     }
     if (ctx.timedPowerupRunning || ctx.squeezeWindow || ctx.rideActive) {
@@ -1361,7 +1386,8 @@ class RunDirector {
     // 2. Fixed schedules: heart, feather, piece (taken gap → next free gap).
     if (!used && !blocked && g >= _heartAt && _on(ElementId.heart)) {
       if (!ctx.extraLifeActive) put(_heart(g, ctx, slot));
-      _heartAt = g + RunRandom.rangeInt(r, tables.heart.then.$1, tables.heart.then.$2);
+      _heartAt =
+          g + RunRandom.rangeInt(r, tables.heart.then.$1, tables.heart.then.$2);
     }
     // §3.17: in the squeeze window only scheduled hearts (and star trails)
     // spawn; the feather and the piece wait for the next free gap.
@@ -1558,7 +1584,8 @@ class RunDirector {
       if (g - (_lastGapOf[key] ?? -99) < rule.minSince) return false;
       final maxN = rule.maxPerRun;
       if (maxN != null) {
-        final n = (_runCount[key] ?? 0) +
+        final n =
+            (_runCount[key] ?? 0) +
             (key == ElementId.shield ? ctx.shieldPickupsThisRun : 0);
         if (n >= maxN) return false;
       }

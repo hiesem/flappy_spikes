@@ -356,6 +356,13 @@
           "description": "§14.5 Comet from this hoop index",
           "valueType": "NUMBER"
         },
+        "ride_comet_hoop_gap": {
+          "defaultValue": {
+            "value": "560"
+          },
+          "description": "§14.5 owner 2026-10-14: hoop spacing (pt) while a comet flies (normal 310; 560 = about 5-6 hoops per comet instead of 8-10)",
+          "valueType": "NUMBER"
+        },
         "ride_comet_spacing": {
           "defaultValue": {
             "value": "25"

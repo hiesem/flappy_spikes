@@ -88,6 +88,12 @@ abstract final class RunConfig {
   /// over this time (s) after the hang.
   static const double rimHangEase = 0.1;
 
+  /// Owner 2026-10-14 (2.3.0 (19)): hoop spacing during a comet ride (pt,
+  /// plane to plane; at least [spacing]). Remote (`ride_comet_hoop_gap`,
+  /// default 560: about 5–6 hoops per 10 s comet instead of 8–10).
+  static double get cometHoopGap =>
+      TuningValues.current.d('ride_comet_hoop_gap');
+
   /// §3.0.1 Forward recovery toward cruise after a knock-back (pt/s²).
   static const double forwardRecovery = 2000;
 

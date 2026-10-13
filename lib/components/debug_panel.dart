@@ -277,6 +277,18 @@ class DebugPanel extends PositionComponent
           game.showToast('All items granted');
         },
       ),
+      // Owner 2026-10-14 (2.3.0 (19)): switch an owned No Ads off again on
+      // this phone (testing ads after a test purchase; refund + revoke the
+      // order in Play first, or the next sync / restore turns it back on).
+      DebugAction(
+        () => menu.noAds ? 'No Ads: ON (tap = off)' : 'No Ads: off',
+        () async {
+          if (!menu.noAds) return;
+          await menu.setNoAds(false);
+          game.refreshHome();
+          game.showToast('No Ads off on this phone');
+        },
+      ),
       DebugAction(() => 'NO-ADS POPUP: force', () async {
         // Bypasses the PRD-menu-v4 §8 schedule (no bookkeeping either).
         onClose();

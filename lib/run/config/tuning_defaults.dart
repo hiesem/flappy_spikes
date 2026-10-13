@@ -63,6 +63,7 @@ const List<TuningDef> kTuningDefaults = [
   TuningDef('squeeze_gap', TuningType.intList, [25, 45], '14.4', 'Next squeeze this many hoops after the previous ended, [min, max]'),
   TuningDef('ride_comet_chance', TuningType.decimal, 0.02, '14.5', 'Comet chance per eligible normal hoop'),
   TuningDef('ride_comet_from', TuningType.integer, 10, '14.5', 'Comet from this hoop index'),
+  TuningDef('ride_comet_hoop_gap', TuningType.decimal, 560.0, '14.5', 'owner 2026-10-14: hoop spacing (pt) while a comet flies (normal 310; 560 = about 5-6 hoops per comet instead of 8-10)'),
   TuningDef('ride_comet_spacing', TuningType.integer, 25, '14.5', 'Comet at least this many hoops after the previous comet'),
   TuningDef('ride_portal_first', TuningType.intList, [40, 60], '14.5', 'First portal at a random hoop in [min, max]'),
   TuningDef('ride_portal_then', TuningType.intList, [60, 80], '14.5', 'Next portal this many hoops after the previous, [min, max]'),

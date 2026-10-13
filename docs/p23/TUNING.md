@@ -192,6 +192,7 @@ The table is generated from `tuning_defaults.dart` by `dart run tool/tuning_sync
 | `squeeze_gap` | intList | `[25,45]` | §14.4 | Next squeeze this many hoops after the previous ended, [min, max] |
 | `ride_comet_chance` | decimal | `0.02` | §14.5 | Comet chance per eligible normal hoop |
 | `ride_comet_from` | integer | `10` | §14.5 | Comet from this hoop index |
+| `ride_comet_hoop_gap` | decimal | `560` | §14.5 | owner 2026-10-14: hoop spacing (pt) while a comet flies (normal 310; 560 = about 5-6 hoops per comet instead of 8-10) |
 | `ride_comet_spacing` | integer | `25` | §14.5 | Comet at least this many hoops after the previous comet |
 | `ride_portal_first` | intList | `[40,60]` | §14.5 | First portal at a random hoop in [min, max] |
 | `ride_portal_then` | intList | `[60,80]` | §14.5 | Next portal this many hoops after the previous, [min, max] |

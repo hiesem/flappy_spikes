@@ -12,6 +12,7 @@ import 'package:flappy_spikes/run/items/comet.dart';
 import 'package:flappy_spikes/run/rides/comet_ride.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
 import 'package:flappy_spikes/run/run_events.dart';
+import 'package:flappy_spikes/services/tuning.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -66,16 +67,17 @@ class _BoostTrace {
   bool afterRideNormal = false;
 }
 
-Future<_BoostTrace> _boost(
-  FlappySpikesGame game, {
-  bool pair = false,
-}) async {
+Future<_BoostTrace> _boost(FlappySpikesGame game, {bool pair = false}) async {
   final tr = _BoostTrace();
   late RunController run;
   if (pair) {
     run = await startRun(game, startHoopIndex: 12);
-    await _flyUntil(game, run, () => run.spawner.hoops.length >= 2,
-        maxSeconds: 6);
+    await _flyUntil(
+      game,
+      run,
+      () => run.spawner.hoops.length >= 2,
+      maxSeconds: 6,
+    );
     tr.starY = game.runBirdPosition!.y;
     run.events.emit(const PickupCollected(ElementId.comet, null));
   } else {
@@ -167,7 +169,57 @@ void _expectZigzag(_BoostTrace tr) {
 }
 
 void main() {
+  void useTuning(Map<String, String> extra) {
+    Tuning.instance = Tuning(
+      active: TuningValues.resolve({'ui_unlock_best': '0', ...extra}),
+    );
+    TuningValues.current = Tuning.instance.active;
+  }
+
+  group('2.3.0 (19) comet hoop gap', () {
+    tearDown(() => useTuning(const {}));
+    test('default 560: ride hoops 560 pt apart; the last one before the '
+        'ride end leads on at the normal spacing', () {
+      expect(RunConfig.cometHoopGap, 560);
+      final d = RunDirector(
+        seed: 7,
+        enabled: _all,
+        met: _all,
+        startHoopIndex: 20,
+      );
+      final ctx = DirectorContext.open(711);
+      for (var i = 0; i < 3; i++) {
+        d.nextGap(ctx, d.nextSlot(ctx));
+      }
+      d
+        ..onRideStart(RideKind.comet)
+        ..onCometStart(
+          fromY: 300,
+          endTrackX: d.nextTrackX + 2799,
+          viewHeight: 711,
+          amplitude: CometConfig.zigzagAmp,
+        );
+      final ride = DirectorContext.open(
+        711,
+        rideActive: true,
+        ride: RideKind.comet,
+      );
+      final plans = [for (var i = 0; i < 6; i++) d.nextSlot(ride)];
+      for (var i = 0; i < 4; i++) {
+        expect(plans[i + 1].trackX - plans[i].trackX, closeTo(560, 1e-9));
+      }
+      expect(
+        plans[5].trackX - plans[4].trackX,
+        closeTo(RunConfig.spacing, 1e-9),
+      );
+    });
+  });
+
   group('§16.4 director (pure)', () {
+    // The zigzag rules at the normal spacing (pinned; the 2.3.0 (19) comet
+    // gap is tested above).
+    setUp(() => useTuning({'ride_comet_hoop_gap': '310'}));
+    tearDown(() => useTuning(const {}));
     for (final h in [524.0, 568.0, 711.0]) {
       for (final starAbove in [true, false]) {
         test('§16.1 at $h pt (star ${starAbove ? 'above' : 'below'} the '
@@ -200,9 +252,7 @@ void main() {
             rideActive: true,
             ride: RideKind.comet,
           );
-          final plans = [
-            for (var i = 0; i < 7; i++) d.nextSlot(ride),
-          ];
+          final plans = [for (var i = 0; i < 7; i++) d.nextSlot(ride)];
           final zig = plans.take(5).map((p) => p.centreY - mid).toList();
           expect(zig.first, starAbove ? 70 : -70);
           for (var i = 0; i < zig.length; i++) {
@@ -215,10 +265,14 @@ void main() {
             expect(p.tiltDeg, 0);
             expect(p.motion, isNull);
             // Far inside the band (items keep their edge margin).
-            expect(p.centreY - p.opening / 2,
-                greaterThan(RunConfig.stripHeight + RunConfig.itemEdgeMargin));
-            expect(p.centreY + p.opening / 2,
-                lessThan(h - RunConfig.stripHeight - RunConfig.itemEdgeMargin));
+            expect(
+              p.centreY - p.opening / 2,
+              greaterThan(RunConfig.stripHeight + RunConfig.itemEdgeMargin),
+            );
+            expect(
+              p.centreY + p.opening / 2,
+              lessThan(h - RunConfig.stripHeight - RunConfig.itemEdgeMargin),
+            );
           }
           // After the predicted end: the normal layout again.
           for (final p in plans.skip(5)) {

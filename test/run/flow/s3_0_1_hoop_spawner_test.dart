@@ -66,10 +66,21 @@ void main() {
             reason: 'hoop $i spawned at ${plan.trackX - cam} on screen',
           );
           if (i > 0) {
-            expect(
-              plan.trackX - spawns[i - 1].$2.lastRingX,
-              closeTo(RunConfig.spacing, 1e-6),
-            );
+            // 2.3.0 (19): after a comet ride hoop the next one may sit at
+            // the comet gap (`ride_comet_hoop_gap`).
+            final prev = spawns[i - 1].$2;
+            final gap = plan.trackX - prev.lastRingX;
+            if (prev.duringRide) {
+              expect(
+                gap,
+                anyOf(
+                  closeTo(RunConfig.spacing, 1e-6),
+                  closeTo(RunConfig.cometHoopGap, 1e-6),
+                ),
+              );
+            } else {
+              expect(gap, closeTo(RunConfig.spacing, 1e-6));
+            }
           }
           // WP-3a: hoops spawned during the comet boost (a ride) are full
           // size (§3.0.1 "Rides", §3.8); WP-3d: a saw ring's opening is

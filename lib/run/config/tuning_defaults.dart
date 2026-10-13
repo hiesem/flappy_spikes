@@ -98,4 +98,5 @@ const List<TuningDef> kTuningDefaults = [
   TuningDef('gate_fever', TuningType.integer, 15, '14.6', 'FEVER from gamesPlayed >= N'),
   TuningDef('gate_lucky_spin', TuningType.integer, 15, '14.6', 'Lucky spin from gamesPlayed >= N'),
   TuningDef('gate_saw', TuningType.integer, 20, '14.6', 'Saw from gamesPlayed >= N'),
+  TuningDef('ui_tap_reminder_s', TuningType.decimal, 4.0, '10.3b', 'Tap reminder after this many seconds without a tap'),
 ];

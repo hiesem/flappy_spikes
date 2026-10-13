@@ -1482,3 +1482,34 @@ production build has the flag off and uses these values only. Full key table:
   `test/run/config/tables_mirror_test.dart` (+ `test/fixtures/spawn_tables.json`),
   `test/run/director/s3_0_3_director_test.dart` and others listed in
   `docs/p23/REPORT_tune.md`.
+
+## PRD-2.3 §10: the waiting start, the fixed first hoop, first-run instructions (P23-10)
+
+- DEVIATION (PRD-2.3 §10.1, supersedes PRD-2 §3.0.1 "START = first tap"): **every new
+  run waits for the first tap** (START on Home in VERSUS and FREE FLY, a run after the
+  results). START only opens the run: the bird floats at its spawn point (x 70, the
+  middle, gravity off) with a ±6 pt hover (`sin(t × 3)`) and a wing beat every 0.4 s;
+  the clock stands still (`clock.running = false`), the world does not scroll, the score
+  circle shows 0, hoop 0 already stands at its spot, the HUD row (versus bar, pause) is
+  up. The **first playfield tap** does what START did: the banner ad (PRD-2.2 §7.4),
+  `logGameStart`, `run_start`, `versus.onRunStart`, gravity on, the first flap (with
+  `flap.mp3`), then `RunController.start()` (clock on, `RunStarted`). A tap on the pause
+  button does not start it; back / pause while waiting work as in a run. Revive,
+  phoenix and rides are unchanged. The test harness (`startRun`), `flyRun` and the
+  autopilot give a waiting run one synthetic first tap.
+- DEVIATION (PRD-2.3 §10.2, supersedes PRD-2.2 §15 "the first hoop scrolls in" for
+  hoop 0 only): **hoop 0** of every run (not a `startHoopIndex` debug / e2e run) is
+  placed at track x **290**, centre **`viewHeight / 2 + 16`**, opening **118** (also with
+  Big Hoops), a plain still normal ring with nothing attached, before the first tap.
+  Debug-forced slot elements wait for hoop 1. Hoop 1 follows at 310 (x 600); every later
+  item still scrolls in. Reaching hoop 0 takes ≈ 0.6 s less than before (accepted; the
+  versus timelines play on `runClock`, which starts at the tap for both sides).
+- PRD-2.3 §10.3 the **first-run instructions** (design D) show on the very first run
+  only (`Storage.firstRunHintSeen`, saved at its first tap; a save that has played
+  before counts as seen); the first tap fades them out over 0.35 s.
+- PRD-2.3 §10.3b the **tap reminder**: on every later run, if there is no tap
+  `Config.tapReminderDelay` (4.0 s, remote key `ui_tap_reminder_s`) after the bird
+  starts waiting (versus: after the VS screen), the hand and the TAP TO FLAP! banner fade
+  in over 0.3 s (once per wait; a pause holds the count and hides it); the tap fades it
+  out over 0.2 s. Analytics `tap_reminder_shown {mode}`.
+- Tests: `test/p23/s10_waiting_start_test.dart` (+ goldens in `test/p23/goldens/`).

@@ -25,6 +25,16 @@ abstract final class RunConfig {
   /// first tap and scrolls in (json "1.3 s" is overridden by the PRD).
   static const double firstHoopOffscreen = 60;
 
+  /// PRD-2.3 §10.2 Hoop 0's plane x (pt, of the 320 pt playfield): it
+  /// stands on screen while the bird waits for the first tap (replaces
+  /// [firstHoopOffscreen] for hoop 0 only). Hoop 1 follows at [spacing]
+  /// (x 600). Not tunable.
+  static const double hoop0X = 290;
+
+  /// PRD-2.3 §10.2 Hoop 0's centre is this far below the playfield's middle
+  /// (pt): `viewHeight / 2 + 16`. Not tunable.
+  static const double hoop0DropY = 16;
+
   /// §3.0.1 Gravity (pt/s²).
   static const double gravity = 1250;
 

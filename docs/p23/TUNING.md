@@ -217,4 +217,5 @@ The table is generated from `tuning_defaults.dart` by `dart run tool/tuning_sync
 | `gate_fever` | integer | `15` | §14.6 | FEVER from gamesPlayed >= N |
 | `gate_lucky_spin` | integer | `15` | §14.6 | Lucky spin from gamesPlayed >= N |
 | `gate_saw` | integer | `20` | §14.6 | Saw from gamesPlayed >= N |
+| `ui_tap_reminder_s` | decimal | `4` | §10.3b | Tap reminder after this many seconds without a tap |
 <!-- KEYS:END -->

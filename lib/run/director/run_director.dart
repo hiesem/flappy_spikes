@@ -32,6 +32,7 @@ class RunDirector {
     List<ElementId> forced = const [],
     RideId? forcedRide,
     double firstTrackX = RunConfig.worldWidth + RunConfig.firstHoopOffscreen,
+    this.fixedFirstHoop = false,
     this.spacing = RunConfig.spacing,
     bool featherAllowed = true,
     bool pieceAllowed = true,
@@ -105,6 +106,13 @@ class RunDirector {
   final DirectorTables tables;
   final RunRandom rng;
   final double spacing;
+
+  /// PRD-2.3 §10.2 hoop 0 stands at its fixed easy spot (track x
+  /// [RunConfig.hoop0X], y = middle + [RunConfig.hoop0DropY], opening 118,
+  /// plain). The run controller sets it for every run that starts at hoop 0
+  /// (not a `startHoopIndex` debug / e2e run); the caller passes
+  /// `firstTrackX: RunConfig.hoop0X` with it.
+  final bool fixedFirstHoop;
 
   /// Registered elements (hoop + pickup registries, features).
   final Set<ElementId> enabled;
@@ -368,6 +376,27 @@ class RunDirector {
 
     double cap(double opening, [double extra = 0]) =>
         min(opening, band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin + extra));
+
+    // PRD-2.3 §10.2 hoop 0 of a run: plain (no special kind, no motion, no
+    // tilt, nothing attached), opening 118 (also with Big Hoops, §0 item 3),
+    // centre 16 pt below the middle. Debug-forced slot elements wait for
+    // hoop 1.
+    if (fixedFirstHoop && i == 0 && _startIndex == 0) {
+      final y = ctx.viewHeight / 2 + RunConfig.hoop0DropY;
+      _layout.lastY = y;
+      _prevKind = HoopKindId.normal;
+      _count(ElementId.normalHoop.storageId);
+      _nextX += spacing;
+      return SlotPlan(
+        index: i,
+        kind: HoopKindId.normal,
+        element: ElementId.normalHoop,
+        trackX: trackX,
+        centreY: y,
+        opening: RunConfig.opening0,
+        advance: spacing,
+      );
+    }
 
     // 1. Ride active: normal, full size, upright, still; no items.
     // 2. First slot after a revive: normal (call: plain — upright, still).

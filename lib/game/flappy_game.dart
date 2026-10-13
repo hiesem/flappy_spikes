@@ -58,6 +58,7 @@ import '../run/run_setup.dart';
 import '../run/run_summary.dart';
 import '../run/screens/post_run_flow.dart';
 import '../run/config/revive_config.dart';
+import '../run/hud/first_run_hint.dart';
 import '../run/hud/run_hud.dart';
 import '../run/run_events.dart' show ReviveKind;
 import '../run/screens/pause_screen.dart';
@@ -983,6 +984,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           startRun();
         }
       case GameState.playing:
+        // PRD-2.3 §10.1 the first tap starts the waiting run.
+        if (_run?.waiting ?? false) {
+          _firstTap();
+          break;
+        }
         // region WP-3c — §3.23 flap input is ignored during a spring launch
         if (_run?.flapLocked ?? false) break;
         // endregion WP-3c
@@ -1003,6 +1009,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// (PRD-1 §4.2).
   void onPlayfieldTap() {
     if (state == GameState.playing) {
+      // PRD-2.3 §10.1 the first playfield tap starts the waiting run (a tap
+      // on the pause button never gets here).
+      if (_run?.waiting ?? false) {
+        _firstTap();
+        return;
+      }
       // region WP-3c — §3.23 flap input is ignored during a spring launch
       if (_run?.flapLocked ?? false) return;
       // endregion WP-3c
@@ -1103,19 +1115,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     state = GameState.playing;
     _runsThisSession++;
     _giftThisHomeVisit = false; // PRD-2.3 §0 item 2: a new Home visit next
-    // PRD-2.2 §7.4: the bird starts flying — banner in, interstitial load.
-    _onFirstFlight();
-    services.logGameStart();
-    // PRD-2.2 §2.3 run_start {mode, opponent (VERSUS only)}; §3 the next
-    // Home visit searches again.
-    final mode = homeMode;
-    services.track('run_start', {
-      'mode': mode.analytics,
-      if (mode == HomeMode.versus) 'opponent': _runOpponent != null ? 1 : 0,
-    });
-    try {
-      versus.onRunStart();
-    } catch (_) {}
+    // PRD-2.3 §10.1: START only opens the run, waiting for the first tap;
+    // the banner, logGameStart, run_start and versus.onRunStart move to
+    // [_firstTap] (the opponent is decided now, so remember it).
+    _runHadOpponent = _runOpponent != null;
     _leaveHome();
     final adapter = _birdAdapter;
     if (adapter != null) {
@@ -1133,12 +1136,79 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       to: 0,
       duration: Config.gameplayFadeDuration,
     );
-    _bird!
-      ..enableGravity()
-      ..flap();
+    // PRD-2.3 §10.1 the bird floats at its spawn point (gravity off).
+    _bird!.startHover();
     fadeOpacity(_hud, from: 0, to: 1, duration: Config.gameplayFadeDuration);
     _startRun(starter);
+    // PRD-2.3 §10.3b the bird is floating and tappable now: the reminder
+    // count starts. The VS intro has already finished here; PRD-2.3 §25.3
+    // (the VS screen as the loading screen) must call `beginWaiting` when
+    // that screen hands over instead.
+    _run?.beginWaiting();
   }
+
+  // region P23-10 — the waiting start (PRD-2.3 §10)
+  /// The run being opened had a versus opponent (`run_start.opponent`).
+  bool _runHadOpponent = false;
+
+  /// PRD-2.3 §10.3 / §10.3b the first-run instructions / tap reminder of
+  /// the waiting run (null once dismissed and gone).
+  FirstRunHint? get firstRunHint {
+    final h = _firstRunHint;
+    return h == null || h.isRemoved ? null : h;
+  }
+
+  FirstRunHint? _firstRunHint;
+
+  /// PRD-2.3 §10.1 the first playfield tap of a waiting run: everything
+  /// START used to do at once — the banner (PRD-2.2 §7.4), logGameStart,
+  /// `run_start`, versus.onRunStart, gravity and the first flap, then
+  /// `RunController.start()` (the clock runs, `RunStarted`). The hint
+  /// fades out; the very first run saves `firstRunHintSeen`.
+  void _firstTap() {
+    final run = _run;
+    if (run == null || !run.waiting) return;
+    final hint = _firstRunHint;
+    _firstRunHint = null;
+    if (hint != null) {
+      if (hint.mode == FirstRunHintMode.firstRun) {
+        unawaited(storage.saveFirstRunHintSeen(true));
+      }
+      hint.dismiss();
+    }
+    // PRD-2.2 §7.4: the bird starts flying — banner in, interstitial load.
+    _onFirstFlight();
+    services.logGameStart();
+    // PRD-2.2 §2.3 run_start {mode, opponent (VERSUS only)}; §3 the next
+    // Home visit searches again.
+    final mode = homeMode;
+    services.track('run_start', {
+      'mode': mode.analytics,
+      if (mode == HomeMode.versus) 'opponent': _runHadOpponent ? 1 : 0,
+    });
+    try {
+      versus.onRunStart();
+    } catch (_) {}
+    _bird!
+      ..stopHover()
+      ..enableGravity()
+      ..flap();
+    run.start();
+  }
+
+  /// PRD-2.3 §10.3 / §10.3b adds the waiting run's hint: the full
+  /// instructions on the very first run ever, else the tap reminder.
+  void _addFirstRunHint(RunController run, RunHud hud) {
+    final hint = FirstRunHint(
+      run: run,
+      mode: storage.firstRunHintSeen
+          ? FirstRunHintMode.reminder
+          : FirstRunHintMode.firstRun,
+    );
+    _firstRunHint = hint;
+    hud.add(hint);
+  }
+  // endregion P23-10
 
   // region WP-0b — run plumbing (ARCH §2.3)
   /// Builds the [RunSetup] (seed, starter, versus opponent, debug / e2e
@@ -1174,13 +1244,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _run = run;
     (world as RunScaledWorld).timeScaleSource = () => run.state.timeScale;
     world.add(run);
-    run.start();
+    // PRD-2.3 §10.1 / §10.2 the run opens waiting for the first tap, hoop 0
+    // already at its spot.
+    run.open();
     _debugBot = debugAvailable && (d.bot || E2EHooks.autopilot)
         ? Autopilot(run)
         : null;
     if (debugAvailable && d.overlay) run.layers.fx.add(RunDebugOverlay(run));
     // region WP-2d — run HUD (viewport, real time) + pause freeze
-    RunHud.ensureFor(run);
+    _addFirstRunHint(run, RunHud.ensureFor(run));
     (world as RunScaledWorld).frozenSource = () => state == GameState.paused;
     // endregion WP-2d
   }
@@ -1407,7 +1479,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void pause() {
     if (state != GameState.playing) return;
     final run = _run;
-    if (run == null || !run.started || run.dying || run.ended) return;
+    // PRD-2.3 §10.1 a waiting run pauses like a running one.
+    if (run == null || run.dying || run.ended) return;
     state = GameState.paused;
     run.pause();
     final screen = PauseScreen();

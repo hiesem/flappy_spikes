@@ -82,6 +82,12 @@ class RunController extends Component {
       lastPortalRide: RideId.fromStorageId(storage.lastPortalRide),
       forced: setup.forced,
       forcedRide: setup.forcedRide,
+      // PRD-2.3 §10.2 hoop 0 stands at its fixed spot, already there while
+      // the bird waits (not in a startHoopIndex debug / e2e run).
+      fixedFirstHoop: setup.startHoopIndex == 0,
+      firstTrackX: setup.startHoopIndex == 0
+          ? RunConfig.hoop0X
+          : RunConfig.worldWidth + RunConfig.firstHoopOffscreen,
       // PRD-2.3 §14.2 never in two runs in a row.
       featherAllowed:
           setup.forced.contains(ElementId.feather) ||
@@ -157,20 +163,59 @@ class RunController extends Component {
     super.onRemove();
   }
 
-  /// First tap (§3.0.1): flap (by the game) + the first hoop scheduled 60 pt
-  /// past the right edge, scrolling in at cruise.
-  void start() {
-    if (_started) return;
-    _started = true;
-    clock.running = true;
-    state.forwardSpeed = BirdMotion.cruise(state.hoopIndex);
+  // region P23-10 — the waiting start (PRD-2.3 §10.1)
+  bool _opened = false;
+  bool _waitBegun = false;
+  double _waitClock = 0;
+
+  /// PRD-2.3 §10.1 the run is open and the bird waits for the first tap
+  /// (the clock stands still, the world does not scroll).
+  bool get waiting => !_started && !_ended;
+
+  /// PRD-2.3 §10.3b the bird floats and is tappable: the tap-reminder count
+  /// runs ([beginWaiting]).
+  bool get waitingBegun => _waitBegun;
+
+  /// PRD-2.3 §10.3b seconds the bird has waited since [beginWaiting]
+  /// (stands still while paused; the world passes dt 0).
+  double get waitClock => _waitClock;
+
+  /// PRD-2.3 §10.1 / §10.2 opens the run in the waiting state: the features
+  /// attach and hoop 0 is placed at its fixed spot, before the first tap.
+  /// Called by the game right after the controller is added; [start] calls
+  /// it too if nobody did.
+  void open() {
+    if (_opened) return;
+    _opened = true;
     if (setup.starter == Powerup.shield) state.shield = true;
     for (final f in features) {
       f.attach(ctx);
     }
+    spawner.update(0);
+  }
+
+  /// PRD-2.3 §10.3b the bird is floating and tappable now: the tap-reminder
+  /// count starts. Solo runs call it at START; in versus the game calls it
+  /// when the VS screen has finished (PRD-2.3 §25.3 makes that screen the
+  /// loading screen: call this when it hands over, not at START).
+  void beginWaiting() {
+    if (_waitBegun) return;
+    _waitBegun = true;
+    _waitClock = 0;
+  }
+
+  /// The first playfield tap (PRD-2.3 §10.1; §3.0.1): the clock runs,
+  /// `RunStarted` is emitted; the game switches gravity on and flaps.
+  void start() {
+    if (_started) return;
+    open();
+    _started = true;
+    clock.running = true;
+    state.forwardSpeed = BirdMotion.cruise(state.hoopIndex);
     events.emit(RunStarted(setup));
     spawner.update(0);
   }
+  // endregion P23-10
 
   /// A tap while playing. WP-0b: the game flaps the bird itself; later WPs
   /// gate it (rides, flap lock, tumble).
@@ -253,6 +298,7 @@ class RunController extends Component {
   @override
   void update(double dt) {
     super.update(dt);
+    if (!_started && _waitBegun && !_paused && !_ended) _waitClock += dt;
     if (!_started || _frozen) return;
     final gameDt = dt;
     if (tumble != null) {

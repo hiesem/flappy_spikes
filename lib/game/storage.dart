@@ -75,6 +75,9 @@ class GameStorage {
   // feather / puzzle piece (−1 = never; never in two runs in a row).
   static const String _lastFeatherRunKey = 'lastFeatherRun';
   static const String _lastPieceRunKey = 'lastPieceRun';
+  // PRD-2.3 §10.3 the first-run instructions were shown (saved at that
+  // run's first tap). Local progress: "Delete my data" keeps it.
+  static const String _firstRunHintSeenKey = 'firstRunHintSeen';
   // PRD-2.2 §2.2 the Home mode button: 'versus' (default) / 'freeFly'.
   static const String _homeModeKey = 'homeMode';
 
@@ -171,6 +174,11 @@ class GameStorage {
 
   /// PRD-2.3 §14.2 the same for the puzzle piece.
   int lastPieceRun = -1;
+
+  /// PRD-2.3 §10.3 the first-run instructions were shown. A save without
+  /// the key that has played before (a 1.x / 2.x upgrade) counts as seen:
+  /// those players are not on their very first run.
+  bool firstRunHintSeen = false;
 
   // region PRD-2 keys (WP-0b)
   /// §3.15 Golden feathers held (0–3).
@@ -322,6 +330,8 @@ class GameStorage {
     );
     lastFeatherRun = prefs.getInt(_lastFeatherRunKey) ?? -1;
     lastPieceRun = prefs.getInt(_lastPieceRunKey) ?? -1;
+    firstRunHintSeen =
+        prefs.getBool(_firstRunHintSeenKey) ?? (gamesPlayed > 0);
     // region PRD-2 keys (WP-0b)
     feathers = (prefs.getInt(_feathersKey) ?? 0).clamp(0, 3);
     puzzlePieces = (prefs.getInt(_puzzlePiecesKey) ?? 0) & 0xF;
@@ -615,6 +625,13 @@ class GameStorage {
     lastPieceRun = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_lastPieceRunKey, value);
+  }
+
+  /// PRD-2.3 §10.3 [firstRunHintSeen].
+  Future<void> saveFirstRunHintSeen(bool value) async {
+    firstRunHintSeen = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_firstRunHintSeenKey, value);
   }
 
   Future<void> saveMuteSound(bool value) async {

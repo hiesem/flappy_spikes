@@ -3281,16 +3281,31 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _onFirstFlight() {
     _rewardedWatchedThisRun = false;
     _ratingRequestedThisRun = false;
-    // PRD-2.3 §18.2: nothing loads during the new-player grace (this run is
-    // the run after the finished ones).
-    if (!menu.noAds &&
-        !AdGrace.active(
-          runs: storage.gamesPlayed + 1,
-          playtimeSeconds: storage.playtimeSeconds,
-        )) {
-      monetization.interstitial.preload();
-    }
+    // PRD-2.3 §18.2/§18.5: nothing loads during the new-player grace, by the
+    // same predicate as the show (finished runs only; the run just started
+    // is not finished). A grace that ends during or at the end of this run
+    // loads at run end ([_preloadInterstitialAfterGrace]).
+    _interstitialPreloadedThisRun = false;
+    _preloadInterstitialAfterGrace();
     if (_runBanner) _bannerState.value = BannerState.showing;
+  }
+
+  /// PRD-2.3 §18.5 (S8-10): whether this run already asked for the
+  /// interstitial.
+  bool _interstitialPreloadedThisRun = false;
+
+  /// PRD-2.3 §18.2/§18.5: loads the interstitial once per run when the
+  /// new-player grace (finished runs, playtime) no longer covers it.
+  void _preloadInterstitialAfterGrace() {
+    if (_interstitialPreloadedThisRun || menu.noAds) return;
+    if (AdGrace.active(
+      runs: storage.gamesPlayed,
+      playtimeSeconds: storage.playtimeSeconds,
+    )) {
+      return;
+    }
+    _interstitialPreloadedThisRun = true;
+    monetization.interstitial.preload();
   }
 
   /// §7.5.2 grow on the Home arrival: full height, no strip; the used
@@ -3748,6 +3763,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     // endregion P23-14
     storage.incrementGamesPlayed();
+    // PRD-2.3 §18.3 (S8-09): the run's playtime is saved at run end; §18.5
+    // (S8-10): a grace that ended with this finished run loads now.
+    unawaited(playtime.flush());
+    _preloadInterstitialAfterGrace();
     unawaited(storage.saveLastScore(score));
     if (score > storage.bestScore) {
       storage.saveBestScore(score);
@@ -4451,7 +4470,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // second, so a long stall adds no more than that), outside full-screen
     // ads and only while resumed; the clamped step below is for the game.
     if (_resumed && !_inBackground && _adsShowing == 0 && !_interstitialBusy) {
-      playtime.advance(min(dt, 1.0), mayWrite: state == GameState.start);
+      playtime.advance(min(dt, 1.0));
     }
     // One clamped clock for the whole simulation (Config.maxFrameStep):
     // super.update runs the component tree (Forge2D world step, bird,

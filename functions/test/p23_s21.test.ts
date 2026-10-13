@@ -156,8 +156,8 @@ describe('PRD-2.3 §21.5 storage rules: avatars/{uid}.jpg', () => {
   it('§21.3 a player writes, replaces and deletes their own picture; anyone reads it', async () => {
     const uid = uniq('pic');
     const ref = env.authenticatedContext(uid).storage(`gs://${BUCKET}`).ref(avatarPath(uid));
-    await assertSucceeds(ref.put(jpeg(2000), meta));
-    await assertSucceeds(ref.put(jpeg(30 * 1024), meta));
+    await assertSucceeds(ref.put(jpeg(2000), meta).then());
+    await assertSucceeds(ref.put(jpeg(30 * 1024), meta).then());
     await assertSucceeds(env.unauthenticatedContext().storage(`gs://${BUCKET}`).ref(avatarPath(uid)).getMetadata());
     await assertSucceeds(env.authenticatedContext(uniq('x')).storage(`gs://${BUCKET}`).ref(avatarPath(uid)).getMetadata());
     await assertSucceeds(ref.delete());
@@ -166,21 +166,21 @@ describe('PRD-2.3 §21.5 storage rules: avatars/{uid}.jpg', () => {
   it('§21.5 another uid cannot write or delete your picture', async () => {
     const uid = uniq('own');
     await assertSucceeds(
-      env.authenticatedContext(uid).storage(`gs://${BUCKET}`).ref(avatarPath(uid)).put(jpeg(1000), meta),
+      env.authenticatedContext(uid).storage(`gs://${BUCKET}`).ref(avatarPath(uid)).put(jpeg(1000), meta).then(),
     );
     const other = env.authenticatedContext(uniq('other')).storage(`gs://${BUCKET}`).ref(avatarPath(uid));
-    await assertFails(other.put(jpeg(1000), meta));
+    await assertFails(other.put(jpeg(1000), meta).then());
     await assertFails(other.delete());
-    await assertFails(env.unauthenticatedContext().storage(`gs://${BUCKET}`).ref(avatarPath(uid)).put(jpeg(1000), meta));
+    await assertFails(env.unauthenticatedContext().storage(`gs://${BUCKET}`).ref(avatarPath(uid)).put(jpeg(1000), meta).then());
   });
 
   it('§21.5 a non-image or a file over 30 KB is refused; other paths are denied', async () => {
     const uid = uniq('big');
     const s = env.authenticatedContext(uid).storage(`gs://${BUCKET}`);
-    await assertFails(s.ref(avatarPath(uid)).put(jpeg(30 * 1024 + 1), meta));
-    await assertFails(s.ref(avatarPath(uid)).put(jpeg(1000), { contentType: 'text/plain' }));
-    await assertFails(s.ref(`avatars/${uid}.png`).put(jpeg(1000), { contentType: 'image/png' }));
-    await assertFails(s.ref(`other/${uid}.jpg`).put(jpeg(1000), meta));
+    await assertFails(s.ref(avatarPath(uid)).put(jpeg(30 * 1024 + 1), meta).then());
+    await assertFails(s.ref(avatarPath(uid)).put(jpeg(1000), { contentType: 'text/plain' }).then());
+    await assertFails(s.ref(`avatars/${uid}.png`).put(jpeg(1000), { contentType: 'image/png' }).then());
+    await assertFails(s.ref(`other/${uid}.jpg`).put(jpeg(1000), meta).then());
   });
 });
 

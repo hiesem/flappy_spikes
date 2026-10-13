@@ -206,7 +206,7 @@ void main() {
         expect(sounds, contains(jingles[i]));
       }
       expect(balance, 128000);
-      expect(packsStore.completed, hasLength(4));
+      expect(packsStore.consumed, hasLength(4));
       expect(packsStore.nonConsumables, isEmpty);
       final persisted = GameStorage(clock: rig.clock.call);
       await persisted.load();

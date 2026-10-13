@@ -204,7 +204,8 @@ void main() {
       expect(events, isEmpty, reason: 'no failure');
       expect(iap.priceOf(IapProduct.coins10000), 'CHF coins_10000');
 
-      // Purchase completes on the stream: granted + acknowledged.
+      // Purchase completes on the stream: granted, then consumed by the
+      // service (2.3.0 (17): no plugin auto-consume; consuming acknowledges).
       store.emit(
         'coins_10000',
         PurchaseStatus.purchased,
@@ -213,7 +214,7 @@ void main() {
       await pump();
       expect(events.single.status, IapStatus.purchased);
       expect(events.single.product, IapProduct.coins10000);
-      expect(store.completed, hasLength(1));
+      expect(store.consumed, hasLength(1));
 
       // Everything known now: a further buy does not query again.
       await iap.buy(IapProduct.coins1000);
@@ -562,7 +563,7 @@ void main() {
     });
 
     test(
-      'same transaction re-delivered: one grant, completed both times',
+      'same transaction re-delivered: one grant, consumed both times',
       () async {
         final r = receipt('coins_10000', id: 'GPA.7', token: 'tok-7');
         store.purchases.add([r]);
@@ -570,7 +571,7 @@ void main() {
         store.purchases.add([r]);
         await pump();
         expect(menu.wallet.balance, 10000);
-        expect(store.completed, hasLength(2));
+        expect(store.consumed, hasLength(2));
         expect(spy.events.where((e) => e.$1 == 'iap_purchase'), hasLength(1));
         expect(storage.grantedPurchases, ['id:GPA.7', 'token:tok-7']);
       },
@@ -623,6 +624,33 @@ void main() {
       p.dispose();
     });
 
+    test('2.3.0 (17): a resume sync during an open purchase flow is skipped, '
+        'and a refused consume is no "Purchase failed"', () async {
+      await iap.buy(IapProduct.coins1000);
+      final before = store.restoreCalls;
+      await iap.syncPurchases();
+      expect(store.restoreCalls, before, reason: 'skipped while buying');
+      store.emit('coins_1000', PurchaseStatus.purchased, pendingComplete: true);
+      await pump();
+      expect(menu.wallet.balance, 1000);
+      // The plugin reporting a consume Play refused.
+      store.emit(
+        'coins_1000',
+        PurchaseStatus.error,
+        error: IAPError(
+          source: 'google_play',
+          code: kConsumeFailedCode,
+          message: 'BillingResponse.serviceUnavailable',
+        ),
+      );
+      await pump();
+      expect(
+        events.where((e) => e.status == IapStatus.failed),
+        isEmpty,
+        reason: 'paid and granted: no failure popup',
+      );
+    });
+
     test('ledger is bounded', () async {
       for (var i = 0; i < GameStorage.maxGrantedPurchases + 10; i++) {
         await storage.saveGrantedPurchase(['id:$i']);
@@ -649,5 +677,12 @@ class _GatedStore extends FakeStore {
   Future<void> completePurchase(PurchaseDetails purchase) async {
     onComplete();
     return super.completePurchase(purchase);
+  }
+
+  // 2.3.0 (17): coin packs are consumed (not completed) after the grant.
+  @override
+  Future<bool> consumePurchase(PurchaseDetails purchase) async {
+    onComplete();
+    return super.consumePurchase(purchase);
   }
 }

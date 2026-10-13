@@ -92,6 +92,10 @@ final List<IapProduct> kShopProducts = [
 /// Bonus coins granted together with the No-ads purchase (PRD-1 §3.5).
 const int kNoAdsBonusCoins = 1000;
 
+/// The plugin's error code for a consume Play refused
+/// (`in_app_purchase_android` `kConsumptionFailedErrorCode`).
+const String kConsumeFailedCode = 'consume_purchase_failed';
+
 IapProduct? _productForStoreId(String id) {
   for (final p in IapProduct.values) {
     if (p.storeId == id) return p;
@@ -400,7 +404,11 @@ class PluginIapStore implements IapStore {
 
   @override
   Future<bool> buyConsumable(PurchaseParam param) =>
-      _iap.buyConsumable(purchaseParam: param, autoConsume: true);
+      // Owner 2026-10-13 (2.3.0 (17)): the game consumes coin packs itself,
+      // once, after the grant ([StoreIapService]); the plugin's auto-consume
+      // raced a resume sync that had already consumed the purchase and
+      // turned a paid, credited pack into "Purchase failed".
+      _iap.buyConsumable(purchaseParam: param, autoConsume: false);
 
   @override
   Future<bool> buyNonConsumable(PurchaseParam param) =>
@@ -509,7 +517,8 @@ String _short(String text) =>
 /// in [initialize], i.e. at launch, so purchases completed while the app was
 /// closed are delivered), maps each update to an [IapEvent] and acknowledges
 /// it with `completePurchase`. Coin packs are bought with
-/// `buyConsumable(autoConsume: true)`, No ads with `buyNonConsumable`.
+/// `buyConsumable(autoConsume: false)` and consumed by this service after the
+/// grant, No ads with `buyNonConsumable`.
 ///
 /// Product details are queried at launch and re-queried when still missing:
 /// on [refresh] (app resume, Shop open) and right before a [buy] — new Play
@@ -730,7 +739,11 @@ class StoreIapService implements IapService {
         if (status != IapStatus.pending && product == _buying) {
           _buying = null;
         }
-        if (status == IapStatus.failed) {
+        if (status == IapStatus.failed && error?.code == kConsumeFailedCode) {
+          // 2.3.0 (17): a consume Play refused (already consumed by a sync)
+          // is no purchase failure: the purchase was paid and granted.
+          iapLog('consume refused for ${product.storeId}: ignored');
+        } else if (status == IapStatus.failed) {
           _fail(
             product,
             error == null
@@ -780,9 +793,10 @@ class StoreIapService implements IapService {
       // consume failed and that a sync brought back) is consumed now, so
       // the same player can redeem another code for it; consuming also
       // acknowledges it on Google Play.
+      // 2.3.0 (17): every granted consumable is consumed here (the plugin
+      // no longer auto-consumes coin packs).
       if (product != null &&
           product.consumable &&
-          (product.isGift || status == IapStatus.restored) &&
           (status == IapStatus.purchased || status == IapStatus.restored)) {
         try {
           if (await _store.consumePurchase(purchase)) continue;
@@ -876,6 +890,13 @@ class StoreIapService implements IapService {
     if (!_available) {
       await _queryMissing();
       if (!_available) return;
+    }
+    // 2.3.0 (17): never while a purchase flow is open: its own result
+    // grants and consumes it; a sync on the resume that closes the Play
+    // sheet raced it (double consume → a false "Purchase failed").
+    if (_buying != null) {
+      iapLog('sync skipped: purchase in progress');
+      return;
     }
     try {
       iapLog('sync');

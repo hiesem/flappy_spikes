@@ -82,7 +82,7 @@ void main() {
         await v4Settle(restarted, tester);
         expect(restarted.menu.wallet.balance, product.coins);
         expect(restarted.coinReward!.amount, product.coins);
-        expect(store.completed, hasLength(1));
+        expect(store.consumed, hasLength(1));
         await run(restarted, 6);
         final again = await v4Restart(restarted, rig, tester);
         expect(again.menu.wallet.balance, product.coins);
@@ -115,7 +115,7 @@ void main() {
           expect(game.menu.wallet.balance, product.coins * (n + 1));
           await run(game, 6);
         }
-        expect(repeatStore.completed, hasLength(2));
+        expect(repeatStore.consumed, hasLength(2));
         expect(rig.events.count('iap_purchase'), 2);
       },
     );

@@ -220,6 +220,11 @@ class Config {
   // this often.
   static const Duration iapSyncInterval = Duration(seconds: 5);
 
+  // PRD-2.3 §24.3 (QA S8-13): a restore / redeem at launch applies before
+  // the first run. The session's first START waits at most this long (game
+  // seconds) for the launch purchase sync still running, then starts anyway.
+  static const double launchOwnershipStartWait = 1.5;
+
   // The Play listing. PRD-2.3 §5.6: no longer shared anywhere; kept for a
   // direct store link the app opens itself.
   static const String storeListingUrl =

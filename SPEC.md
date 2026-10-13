@@ -1142,10 +1142,18 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   fallback 3 h. Never on the arrival of a run that requested the rating sheet
   or when a gift came up on that visit (PRD-2.3 §0 item 2); at most one offer
   per arrival.
+- DEVIATION (PRD-2.3 §24.3, launch ownership; fix S8-13): the session's
+  first START waits for the launch purchase sync still running (its grants
+  applied), at most `Config.launchOwnershipStartWait` (1.5 s of game time),
+  so a No Ads restored or redeemed at launch removes even the first run's
+  banner. Once the sync has settled, START is immediate as before; a No Ads
+  bought during a run still applies from the next run.
 - DEVIATION (PRD-2.3 §26, Shop and Skins lock): below a best of
   `ui_unlock_best` (25) the Shop and Skins screens open dimmed under a lock
   overlay (#000000 at 72 %, two centred lines); only the back button and the
-  coin pill work. The Home tiles show a lock badge and no NEW tag while
+  coin pill work; the overlay leaves the back button's box undimmed (its
+  artwork is the shared corner box below the screens, fix S8-12). The Home
+  tiles show a lock badge and no NEW tag while
   locked. The revive shop's GET COINS is never locked. Unlocking is silent.
 - Tests: `test/p22/s7_ads_test.dart`, `test/p22/s7_banner_layout_test.dart`
   (autopilot gate + run screens at 663 / 596 / 524); shots

@@ -196,6 +196,9 @@ abstract class MenuScreen extends PositionComponent
             h - Config.menuSpikeHeight,
           ),
           lines: lines,
+          // S8-12: the shared back-button artwork (the world's corner box,
+          // under the screens) shows through at full brightness.
+          hole: backRect,
         ),
       );
     }

@@ -72,13 +72,14 @@ void main() {
       await flushAndMount(game);
     }
 
-    double sliderValue(FlappySpikesGame game) => game.world.children
-        .query<SettingsPanel>()
-        .single
-        .children
-        .whereType<VolumeSlider>()
-        .single
-        .value;
+    // PRD-2.3 §20.2: the 8-bar volume shows the nearest of the 9 steps.
+    double sliderValue(FlappySpikesGame game) =>
+        game.world.children
+            .query<SettingsPanel>()
+            .single
+            .volumeBars
+            .level /
+        8;
 
     gameWith({}).testGameWidget(
       'a fresh install plays and shows the music at 25 %',
@@ -86,7 +87,7 @@ void main() {
       verify: (game, tester) async {
         expect(game.sound.musicVolume, 0.25);
         await openSettings(game);
-        expect(sliderValue(game), 0.25);
+        expect(sliderValue(game), 2 / 8);
       },
     );
 
@@ -97,7 +98,7 @@ void main() {
       verify: (game, tester) async {
         await openSettings(game);
         expect(game.sound.musicVolume, 0.9);
-        expect(sliderValue(game), 0.9);
+        expect(sliderValue(game), 7 / 8); // 0.9 -> nearest step 7
 
         game.openDeleteDataConfirm();
         await flushAndMount(game);
@@ -107,7 +108,7 @@ void main() {
         expect(versus.deleteCalls, 1);
         expect(game.storage.musicVolume, 0.25);
         expect(game.sound.musicVolume, 0.25);
-        expect(sliderValue(game), 0.25);
+        expect(sliderValue(game), 2 / 8);
         expect(game.storage.muteSound, isTrue);
         final prefs = await SharedPreferences.getInstance();
         expect(prefs.containsKey('musicVolume'), isFalse);

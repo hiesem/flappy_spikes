@@ -54,6 +54,10 @@ class DeleteDataPopup extends P1Popup {
       'Your runs, your profile and your account are gone. Coins, skins and '
       'levels on this phone are kept.';
   static const String doneSmall = 'A fresh player profile starts from here.';
+  /// PRD-2.3 §20.2: the confirm face names the website's request page.
+  static final String confirmWeb =
+      'You can also request this at '
+      '${Config.deleteDataUrl.replaceFirst('https://', '')}.';
   static const String failedTitle = "COULDN'T DELETE";
   static const String failedMessage =
       "You're offline, so nothing was deleted. Your online data is still "
@@ -67,6 +71,9 @@ class DeleteDataPopup extends P1Popup {
   late final MenuText titleText;
   late final MenuParagraph messageText;
   late final MenuParagraph smallText;
+
+  /// PRD-2.3 §20.2 the confirm face's website line (null on the results).
+  MenuParagraph? webText;
 
   late final TrashGlyph _icon;
 
@@ -144,7 +151,20 @@ class DeleteDataPopup extends P1Popup {
       maxWidth: w - 2 * pad,
       position: Vector2(pad, y),
     );
-    y += smallText.height + Config.purchasePopupOkGap;
+    y += smallText.height;
+    final web = step == DeleteDataStep.confirm
+        ? MenuParagraph(
+            confirmWeb,
+            fontSize: Config.purchasePopupSmallFontSize,
+            color: Config.p1PopupSmallText,
+            letterSpacingEm: 0.03,
+            maxWidth: w - 2 * pad,
+            position: Vector2(pad, y + Config.purchasePopupSmallGap),
+          )
+        : null;
+    webText = web;
+    if (web != null) y += Config.purchasePopupSmallGap + web.height;
+    y += Config.purchasePopupOkGap;
     if (result) {
       confirmButton = MenuButton(
         color: Config.menuGold,
@@ -195,6 +215,7 @@ class DeleteDataPopup extends P1Popup {
       titleBand,
       messageText,
       smallText,
+      ?web,
       ?cancelButton,
       confirmButton,
     ]);

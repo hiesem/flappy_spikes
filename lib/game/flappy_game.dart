@@ -91,6 +91,7 @@ import 'palettes.dart';
 import 'playfield.dart';
 import 'playfield_viewport.dart';
 import 'purchases.dart';
+import '../services/app_info.dart';
 import '../share/share_card.dart' show ShareCardData; // PRD-2.3 §2
 import '../share/share_content.dart'; // PRD-2.3 §2
 import '../versus/nickname.dart' show generateNickname; // PRD-2.3 §2.2
@@ -675,7 +676,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         _pendingToast = (product, _message!);
       },
       onResolved: _dismissPendingToast,
+      onGift: _onGiftGranted,
+      clock: storage.now,
     )..start();
+    // PRD-2.3 §22.2: gift codes redeemed outside the game arrive on launch.
+    _purchases!.sync();
     sound = SoundService(muted: storage.muteSound, enabled: soundEnabled);
     _soundReady = true;
     if (kSoak && soundEnabled) {
@@ -823,6 +828,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (menu.noAdsPopup.evaluate() == null) return;
     bool stale() =>
         _runsThisSession > 0 ||
+        giftThisHomeVisit ||
         menu.noAds ||
         state != GameState.start ||
         menuScene != MenuScene.home;
@@ -895,6 +901,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         _backgroundSince ??= storage.now();
       case AppLifecycleState.resumed:
         unawaited(monetization.iap.refresh());
+        // PRD-2.3 §22.2: ... and on every return (≤ once per 5 s).
+        _purchases?.sync();
         // §3.13 (S6-66) a failed versus start recovers; the queue retries.
         unawaited(versus.onResume());
         final since = _backgroundSince;
@@ -1086,6 +1094,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _startGame([Powerup starter = Powerup.none]) {
     state = GameState.playing;
     _runsThisSession++;
+    _giftThisHomeVisit = false; // PRD-2.3 §0 item 2: a new Home visit next
     // PRD-2.2 §7.4: the bird starts flying — banner in, interstitial load.
     _onFirstFlight();
     services.logGameStart();
@@ -1434,6 +1443,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onToggleRumble: () => setRumble(!rumble.on),
       onDeleteMyData: openDeleteDataConfirm,
       onPrivacyOptions: privacyOptionsShown ? openPrivacyOptions : null,
+      onSupport: openSupport,
+      onRedeemCode: openRedeemCode,
     );
     _settingsPanel = settings;
     _runSettingsOpen = true;
@@ -2425,19 +2436,61 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _queuePopup(() => _menusUp, openNoAdsCelebration);
   }
 
+  // region PRD-2.3 §22 — gift codes
+
+  /// PRD-2.3 §0 item 2 (several popups on one Home visit): true from the
+  /// moment a gift is granted until the next run starts. The gift popup
+  /// goes first, then the LEVEL UP reward (it waits for an empty popup
+  /// queue); the No-Ads popup is skipped for the rest of this visit — every
+  /// No-Ads popup trigger (the session start here, PRD-2.3 §24's
+  /// after-run check) must read this flag.
+  bool get giftThisHomeVisit => _giftThisHomeVisit;
+  bool _giftThisHomeVisit = false;
+
+  /// Gift popups granted but not shown yet (tests).
+  int get pendingGiftPopups => _pendingGiftPopups;
+  int _pendingGiftPopups = 0;
+
+  /// PRD-2.3 §22.2 item 4: a gift code was granted (called right before
+  /// the coins / No Ads are credited). The pill keeps its number and the
+  /// owned looks wait; the gift popup opens the next time a menu is up
+  /// (never mid-run), one per code, one after the other.
+  void _onGiftGranted(GiftGrant gift) {
+    _giftThisHomeVisit = true;
+    _pendingGiftPopups++;
+    if (gift.noAds) {
+      _noAdsRevealHeld = true;
+      _noAdsVideoHeld = true;
+    }
+    _coinPill
+      ..hold()
+      ..reserve(gift.coins);
+    _queuePopup(() => _menusUp && _fakeAd == null && _adsShowing == 0, () {
+      _pendingGiftPopups--;
+      openNoAdsCelebration(gift: gift);
+    });
+  }
+  // endregion PRD-2.3 §22
+
   /// The celebration itself (also the debug panel's preview): `noads_unlock`,
   /// a white flash and a short shake (not under reduce motion), the popup,
   /// and at 0.43 s a confetti burst from the card plus a rain over the
   /// screen.
-  void openNoAdsCelebration() {
+  void openNoAdsCelebration({GiftGrant? gift}) {
     if (_noAdsCelebration != null) return;
-    services.logNoAdsCelebrationShown(_noAdsSource);
+    if (gift == null) services.logNoAdsCelebrationShown(_noAdsSource);
     sound.play(Sfx.noadsUnlock);
     final motion = !reduceMotion;
-    final popup = NoAdsCelebration(
-      onClaim: () => _claimNoAdsBonus(claimed: true),
-      onDismiss: () => _claimNoAdsBonus(claimed: false),
-    );
+    final popup = gift != null
+        ? NoAdsCelebration.gift(
+            gift,
+            onClaim: () => _claimNoAdsBonus(claimed: true),
+            onDismiss: () => _claimNoAdsBonus(claimed: false),
+          )
+        : NoAdsCelebration(
+            onClaim: () => _claimNoAdsBonus(claimed: true),
+            onDismiss: () => _claimNoAdsBonus(claimed: false),
+          );
     _noAdsCelebration = popup;
     world.add(popup);
     fadeOpacity(popup, from: 0, to: 1, duration: 0.16);
@@ -2523,11 +2576,19 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       duration: Config.noAdsCelebrationFadeOut,
       removeOnDone: true,
     );
-    final reservation = _noAdsBonusReserved ? kNoAdsBonusCoins : 0;
-    _noAdsBonusReserved = false;
+    final gift = popup.gift;
+    final int reservation;
+    if (gift != null) {
+      // PRD-2.3 §22.2: the gift's coins were reserved when it was granted.
+      reservation = gift.coins;
+    } else {
+      reservation = _noAdsBonusReserved ? kNoAdsBonusCoins : 0;
+      _noAdsBonusReserved = false;
+    }
     playCoinReward(
       CoinRewardAnimation.noAdsBonus(
         from: from,
+        amount: popup.bonusCoins,
         reservation: reservation,
         onDone: () => _after(Config.noAdsFlipDelay, _flipNoAdsOwned),
       ),
@@ -3516,6 +3577,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onToggleRumble: () => setRumble(!rumble.on),
       onDeleteMyData: openDeleteDataConfirm,
       onPrivacyOptions: privacyOptionsShown ? openPrivacyOptions : null,
+      onSupport: openSupport,
+      onRedeemCode: openRedeemCode,
     );
     _settingsPanel = settings;
     // PRD-home-v3 §8: the settings back button is the shared corner box
@@ -3819,18 +3882,50 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     world.add(message);
   }
 
-  /// Privacy-policy link on the start scene: opens the policy in the browser.
-  Future<void> openPrivacyPolicy() async {
-    sound.play(Sfx.click);
+  /// Settings → Privacy policy: opens `Config.privacyPolicyUrl` (§20.3).
+  Future<void> openPrivacyPolicy() => _openLink(Config.privacyPolicyUrl);
+
+  // region PRD-2.3 §20 / §22 — Settings links
+
+  /// Opens [uri] outside the game (browser / Play Store). Tests replace it
+  /// to record the links; the default never throws.
+  Future<void> Function(Uri uri) urlOpener = _launchExternal;
+
+  static Future<void> _launchExternal(Uri uri) async {
     try {
-      await launchUrl(
-        Uri.parse(Config.privacyPolicyUrl),
-        mode: LaunchMode.externalApplication,
-      );
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
       // No usable browser (or plugin unavailable in tests): ignore.
     }
   }
+
+  Future<void> _openLink(String url) async {
+    sound.play(Sfx.click);
+    try {
+      await urlOpener(Uri.parse(url));
+    } catch (_) {}
+  }
+
+  /// Settings → Support: `Config.supportUrl` (§20.3).
+  Future<void> openSupport() => _openLink(Config.supportUrl);
+
+  /// Settings → Redeem code (PRD-2.3 §22.2): the Play Store's redeem
+  /// screen; the gift arrives through the purchase sync on return.
+  Future<void> openRedeemCode() {
+    services.track('redeem_code_opened');
+    return _openLink(Config.redeemCodeUrl);
+  }
+
+  /// The Settings footer's version source (PRD-2.3 §20.2; `main.dart`
+  /// installs `PluginAppInfo`, tests a fake).
+  AppInfo appInfo = const NoAppInfo();
+
+  /// Whether the sound service exists yet (the Settings tiles' click).
+  bool get soundReady => _soundReady;
+
+  /// A Restore purchases is waiting for the store (the Settings spinner).
+  bool get purchasesRestoring => _purchases?.restoring ?? false;
+  // endregion PRD-2.3 §20 / §22
 
   // --- color stages --------------------------------------------------------
 

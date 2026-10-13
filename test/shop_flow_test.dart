@@ -780,20 +780,17 @@ void main() {
     );
 
     shopTest(
-      'Settings has a RESTORE PURCHASES link below the privacy link',
+      'Settings has a Restore purchases row in the GAME card',
       height: 568,
       verify: (game, spy, ads, iap, tester) async {
         game.openSettings();
         await flushAndMount(game);
         final panel = game.world.children.query<SettingsPanel>().single;
-        final link = panel.restoreLink!;
-        expect(
-          link.center,
-          Config.settingsRestoreLinkPositionFor(284),
-        );
-        expect(link.center.y, greaterThan(Config.privacyLinkPositionFor(284).y));
-        expect(link.toRect().bottom, lessThanOrEqualTo(568 - 44));
-        link.button.onPressed();
+        // PRD-2.3 §20.2: the GAME card's Restore purchases row.
+        final link = panel.restoreRow!;
+        expect(panel.gameCard.rows, contains(link));
+        expect(link.toAbsoluteRect().bottom, lessThanOrEqualTo(568 - 44));
+        link.onPressed();
         await settle(game);
         expect(game.purchases.restoring, isTrue);
         stepGame(game, Config.restoreTimeout + 0.1);

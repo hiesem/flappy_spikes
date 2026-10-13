@@ -87,8 +87,28 @@ class FakeStore implements IapStore {
   Future<void> completePurchase(PurchaseDetails purchase) async =>
       completed.add(purchase);
 
+  int restoreCalls = 0;
+
+  /// Purchases [restorePurchases] re-emits as `restored` (PRD-2.3 §22).
+  final List<PurchaseDetails> owned = [];
+
   @override
-  Future<void> restorePurchases() async {}
+  Future<void> restorePurchases() async {
+    restoreCalls++;
+    if (owned.isNotEmpty) purchases.add(List.of(owned));
+  }
+
+  /// PRD-2.3 §22.2: consumed purchases; [consumeApplies] false = not
+  /// Google Play (the caller completes instead).
+  final List<PurchaseDetails> consumed = [];
+  bool consumeApplies = true;
+
+  @override
+  Future<bool> consumePurchase(PurchaseDetails purchase) async {
+    if (!consumeApplies) return false;
+    consumed.add(purchase);
+    return true;
+  }
 
   /// A purchase-stream update like the Android plugin emits it (flow
   /// errors / cancels come with an empty product id).

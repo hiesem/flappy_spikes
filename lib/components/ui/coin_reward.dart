@@ -88,10 +88,13 @@ class CoinRewardAnimation extends Component
   }) {
     final (coins, count, confetti, jingle) = switch (product) {
       IapProduct.coins1000 => (6, 0.9, 40, Sfx.skBuyCommon),
-      IapProduct.coins10000 => (9, 1.2, 70, Sfx.skBuyRare),
+      IapProduct.coins10000 ||
+      IapProduct.giftCoins10000 => (9, 1.2, 70, Sfx.skBuyRare),
       IapProduct.coins17000 => (12, 1.5, 100, Sfx.skBuyEpic),
       IapProduct.coins100000 => (16, 1.9, 150, Sfx.skBuyLegendary),
-      IapProduct.noAds => throw ArgumentError('No ads is not a coin pack'),
+      IapProduct.noAds || IapProduct.giftNoAdsCoins10000 => throw ArgumentError(
+        'No ads is not a coin pack',
+      ),
     };
     final big = product.coins >= 17000;
     return CoinRewardAnimation(
@@ -151,13 +154,17 @@ class CoinRewardAnimation extends Component
   /// ticks, 50 confetti with stars. The bonus was credited (and reserved
   /// on the pill) at purchase: [reservation] is what this count takes over
   /// (0 for the debug preview, which credits nothing).
+  ///
+  /// PRD-2.3 §22.2: the gift popup's CLAIM uses it too, with the gift's
+  /// coins as [amount].
   factory CoinRewardAnimation.noAdsBonus({
     required Rect from,
+    int amount = kNoAdsBonusCoins,
     int reservation = kNoAdsBonusCoins,
     void Function()? onDone,
     math.Random? random,
   }) => CoinRewardAnimation(
-    amount: kNoAdsBonusCoins,
+    amount: amount,
     from: from,
     coins: 12,
     flyDuration: 0.75,

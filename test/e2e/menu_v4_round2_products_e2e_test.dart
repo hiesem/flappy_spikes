@@ -62,7 +62,7 @@ void main() {
     },
   );
 
-  for (final product in IapProduct.values.where((p) => p.consumable)) {
+  for (final product in kShopProducts.where((p) => p.consumable)) {
     final store = FakeStore()..goLive(IapProduct.values);
     v4Journey(
       'v4 R2: ${product.storeId} pending -> restart -> late exact grant',
@@ -147,7 +147,7 @@ void main() {
   );
 
   group('S1-71', () {
-    for (final product in IapProduct.values.where((p) => p.consumable)) {
+    for (final product in kShopProducts.where((p) => p.consumable)) {
       final store = FakeStore()..goLive(IapProduct.values);
       v4Journey(
         '${product.storeId}: redelivery of the same transaction grants once',

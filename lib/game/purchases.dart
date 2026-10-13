@@ -35,6 +35,13 @@ import 'config.dart';
 /// completes it so it stops re-delivering). After handling a `purchased` /
 /// `restored` event, [IapEvent.granted] is completed.
 ///
+/// PRD-2.3 §22 gift codes: [sync] (launch and every resume, at most once
+/// per [Config.iapSyncInterval]) asks the store for purchases made outside
+/// the game. A gift product, or a `no_ads` the player did not start here
+/// and the store has not acknowledged yet (a promo code), is granted once
+/// per purchase id and reported through [onGift]; a re-delivery of an
+/// already granted / acknowledged one only restores No Ads, silently.
+///
 /// Plain Dart (no Flame), so it is unit-testable on its own; the game owns
 /// one, [start]s it in onLoad, [dispose]s it in onRemove and drives the
 /// restore timeout from its update loop ([update]).
@@ -50,7 +57,15 @@ class Purchases {
     this.onPurchaseProblem,
     this.pendingToast,
     this.onResolved,
-  });
+    this.onGift,
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now;
+
+  final DateTime Function() _clock;
+
+  /// PRD-2.3 §22.2 item 4: a gift code was granted (coins credited / No
+  /// Ads on, already persisted): the game queues the gift popup.
+  final void Function(GiftGrant gift)? onGift;
 
   final IapService iap;
   final MenuState menu;
@@ -123,6 +138,21 @@ class Purchases {
     await iap.buy(product);
   }
 
+  DateTime? _lastSync;
+
+  /// PRD-2.3 §22.2: [IapService.syncPurchases], at most once per
+  /// [Config.iapSyncInterval]. Returns whether it ran.
+  bool sync() {
+    final now = _clock();
+    final last = _lastSync;
+    if (last != null && now.difference(last) < Config.iapSyncInterval) {
+      return false;
+    }
+    _lastSync = now;
+    unawaited(iap.syncPurchases());
+    return true;
+  }
+
   /// Restore purchases: an owned No ads comes back as a `restored` event;
   /// if nothing arrives within [Config.restoreTimeout] the player is told
   /// there was nothing to restore.
@@ -159,6 +189,14 @@ class Purchases {
         } else {
           toast(text);
         }
+      case IapStatus.purchased || IapStatus.restored
+          when product.isGift || _isPromoNoAds(event):
+        _inFlight.remove(product);
+        try {
+          await _grantGift(event);
+        } finally {
+          _confirm(event);
+        }
       case IapStatus.purchased:
         _inFlight.remove(product);
         try {
@@ -169,7 +207,13 @@ class Purchases {
       case IapStatus.restored:
         _inFlight.remove(product);
         try {
-          await _grantRestore(product);
+          // A consumable a sync brought back (its consume failed) is a
+          // purchase not granted yet: once per id, like a fresh one.
+          if (product.consumable && event.transactionIds.isNotEmpty) {
+            await _grantPurchase(product, event.transactionIds);
+          } else {
+            await _grantRestore(product);
+          }
         } finally {
           _confirm(event);
         }
@@ -261,15 +305,93 @@ class Purchases {
   }
 
   Future<void> _grantRestore(IapProduct product) async {
-    if (product != IapProduct.noAds) return; // consumables never restore
+    if (!product.grantsNoAds) return; // consumables never restore
+    // PRD-2.3 §22.2: a restore the player did not ask for (the launch /
+    // resume sync) is silent.
+    final asked = restoring;
     _restoreGotEvent = true;
     _restoreRemaining = null;
     if (!menu.noAds) {
       await menu.setNoAds(true); // no bonus on restore
       onNoAdsGranted?.call();
     }
-    toast('Purchases restored');
+    if (asked) toast('Purchases restored');
   }
+
+  // region PRD-2.3 §22 — gift codes
+
+  /// A `no_ads` purchase the player did not start in this session, that
+  /// the store has not acknowledged yet, on a phone without No Ads: a
+  /// promo code redeemed in the store (§22.2 "no_ads from a code": the
+  /// normal No Ads path with its 1 000 bonus coins).
+  bool _isPromoNoAds(IapEvent event) =>
+      event.product == IapProduct.noAds &&
+      !_noAdsBuyStarted &&
+      event.acknowledged == false &&
+      !menu.noAds &&
+      !menu.storage.isPurchaseGranted(event.transactionIds);
+
+  Future<void> _grantGift(IapEvent event) async {
+    final product = event.product;
+    final ids = event.transactionIds;
+    final storage = menu.storage;
+    final redelivery =
+        ids.any(_granting.contains) ||
+        storage.isPurchaseGranted(ids) ||
+        // One-time gifts the store already acknowledged were granted
+        // before (a reinstall wiped the ids): No Ads only, never coins.
+        (!product.consumable && event.acknowledged == true);
+    if (redelivery) {
+      if (product.grantsNoAds) await _grantRestore(product);
+      return;
+    }
+    _granting.addAll(ids);
+    try {
+      final coins = product == IapProduct.noAds
+          ? kNoAdsBonusCoins
+          : product.coins;
+      final noAds = product.grantsNoAds && !menu.noAds;
+      services.track('gift_redeemed', {
+        'product': product.storeId,
+        'source': 'promo',
+      });
+      // Like the packs: the popup hook runs right BEFORE the credit, so the
+      // pill and the No Ads looks hold from the start.
+      final gift = GiftGrant(product, coins: coins, noAds: noAds);
+      final hook = onGift;
+      hook?.call(gift);
+      if (noAds) await menu.setNoAds(true);
+      await menu.wallet.add(
+        coins,
+        product == IapProduct.noAds ? CoinSource.noadsBonus : CoinSource.gift,
+      );
+      // Coins first, then the id (as the packs).
+      if (ids.isNotEmpty) await storage.saveGrantedPurchase(ids);
+      if (noAds) onNoAdsGranted?.call();
+      if (hook == null) {
+        toast('A gift for you! +${formatAmount(coins)} coins');
+      }
+    } finally {
+      _granting.removeAll(ids);
+    }
+  }
+  // endregion PRD-2.3 §22
+}
+
+/// PRD-2.3 §22.2 item 4: one granted gift code — what its popup shows.
+class GiftGrant {
+  const GiftGrant(this.product, {required this.coins, required this.noAds});
+
+  final IapProduct product;
+
+  /// Coins credited with it (already in the wallet).
+  final int coins;
+
+  /// Whether it turned No Ads on.
+  final bool noAds;
+
+  @override
+  String toString() => 'GiftGrant(${product.storeId}, $coins, noAds: $noAds)';
 }
 
 /// Why a store purchase did not complete (PRD-home-v3 §6).

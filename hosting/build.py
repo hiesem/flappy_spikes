@@ -167,7 +167,7 @@ def paint_js():
 def badges(campaign, appstore_id=False):
     a_id = ' id="appstore"' if appstore_id else ''
     return (f'<a class="badge" href="{html.escape(play_url(campaign))}"><img src="{asset("gen/gp.webp")}" width="196" height="58" alt="Get it on Google Play"></a>\n'
-            f'          <a class="badge"{a_id} href="#appstore"><img src="{asset("gen/as.webp")}" width="196" height="58" alt="Download on the App Store"></a>')
+            f'          <a class="badge"{a_id} href="#appstore" onclick="return false"><img src="{asset("gen/as.webp")}" width="196" height="58" alt="Download on the App Store"></a>')
 
 
 def brand(href):

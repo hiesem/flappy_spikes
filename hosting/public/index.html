@@ -115,13 +115,18 @@ a { color: inherit; }
 /* a section: its plate colour fading in from the previous one, rays burst from --rx / --ry */
 .zone { position: relative; color: var(--ink); background: linear-gradient(to bottom, var(--from, var(--plate)) 0, var(--plate) 180px); overflow: hidden; isolation: isolate; }
 /* the rays turn slowly: one ray period (22.5°) every 9 s = one full turn every 2 minutes */
-@property --spin { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-@keyframes rays-spin { to { --spin: 22.5deg; } }
-.zone::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: repeating-conic-gradient(from var(--spin) at var(--rx, 70%) var(--ry, 50%), rgba(var(--rim), .26) 0 11.25deg, transparent 11.25deg 22.5deg);
-  animation: rays-spin 9s linear infinite;
-  -webkit-mask: linear-gradient(to bottom, transparent 0, #000 200px); mask: linear-gradient(to bottom, transparent 0, #000 200px); }
-.zone.first::before { -webkit-mask: none; mask: none; }
+/* PRD-2.3 §11.3 performance: the same rays, turned by the compositor. A layer much larger than the zone, centred on
+   (--rx, --ry; rays.js turns them into a translate so no section resize is a layout shift), rotates with transform (no repaint per frame; the approved design animated the conic gradient's angle,
+   which repainted every section on every frame). The fade-in at the top of each section, which the design did with a
+   mask, is an overlay of the section's own background colour with the inverse alpha: the same pixels. */
+@keyframes rays-spin { to { transform: rotate(22.5deg); } }
+.zone::before { content: ''; position: absolute; z-index: -1; pointer-events: none; width: 340vmax; height: 340vmax;
+  left: calc(var(--rx, 70%) - 170vmax); top: -170vmax; translate: var(--tx, 0px) var(--ty, 400px);
+  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(var(--rim), .26) 0 11.25deg, transparent 11.25deg 22.5deg);
+  animation: rays-spin 9s linear infinite; will-change: transform; }
+.zone::after { content: ''; position: absolute; inset: 0 0 auto; height: 200px; z-index: -1; pointer-events: none;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--from, var(--plate)) 100%, transparent) 0, color-mix(in srgb, color-mix(in srgb, var(--from, var(--plate)) 75%, var(--plate)) 77.5%, transparent) 45px, color-mix(in srgb, color-mix(in srgb, var(--from, var(--plate)) 50%, var(--plate)) 55%, transparent) 90px, color-mix(in srgb, color-mix(in srgb, var(--from, var(--plate)) 25%, var(--plate)) 32.5%, transparent) 135px, color-mix(in srgb, var(--plate) 10%, transparent) 180px, color-mix(in srgb, var(--plate) 0%, transparent) 200px); }
+.zone.first::after { content: none; }
 
 /* spike strips (header and footer only) */
 .spikes { height: 44px; background: var(--c, var(--pink)); -webkit-mask: url(/a/ground_spikes.44c9981c48.png) repeat-x left top / auto 100%; mask: url(/a/ground_spikes.44c9981c48.png) repeat-x left top / auto 100%; }
@@ -250,11 +255,12 @@ body.has-bar footer .wrap { padding-bottom: 104px; }
 .more { font-size: 17px; justify-self: start; }
 .step .more { justify-self: center; font-size: 15px; }
 @media (max-width: 860px) { .hero .intro { margin-inline: auto; } }
-.facts { width: min(600px, 100%); margin: 8px 0 0; background: var(--white); border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 22px 26px; display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; text-align: left; font-size: 16px; line-height: 1.4; }
-.facts h3 { grid-column: 1 / -1; margin: 0 0 4px; font-family: var(--display); font-weight: 400; font-size: 26px; color: var(--plum); }
+.facts { width: min(600px, 100%); margin: 8px 0 0; background: var(--white); border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 22px 26px; text-align: left; font-size: 16px; line-height: 1.4; }
+.facts dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; }
+.facts h3 { margin: 0 0 10px; font-family: var(--display); font-weight: 400; font-size: 26px; color: var(--plum); }
 .facts dt { color: var(--pink); }
 .facts dd { margin: 0; }
-@media (max-width: 520px) { .facts { grid-template-columns: 1fr; gap: 2px; } .facts dd { margin-bottom: 8px; } }
+@media (max-width: 520px) { .facts dl { grid-template-columns: 1fr; gap: 2px; } .facts dd { margin-bottom: 8px; } }
 .faq { --rx: 50%; --ry: 30%; }
 .faq .wrap { padding-block: 0 50px; }
 .faq-list { display: grid; gap: 14px; max-width: 760px; }
@@ -294,7 +300,7 @@ body.has-bar footer .wrap { padding-bottom: 104px; }
 </header>
 
 <main id="top">
-  <section class="zone hero first p-falcon">
+  <section class="zone hero first p-falcon" data-rays-at="play-frame">
     <div class="wrap">
       <div class="hero-text">
         <h1>Flappy Spikes</h1>
@@ -334,7 +340,7 @@ body.has-bar footer .wrap { padding-bottom: 104px; }
     </div>
   </section>
 
-  <section class="zone versus p-glider" style="--from: #B9F3E1" id="versus">
+  <section class="zone versus p-glider" style="--from: #B9F3E1" id="versus" data-rays-at="vs">
     <div class="wrap split">
       <div class="head">
         <span class="eyebrow">Versus</span>
@@ -386,8 +392,9 @@ body.has-bar footer .wrap { padding-bottom: 104px; }
         <a class="badge" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dlanding"><img src="/a/gp.9e62107f39.webp" width="196" height="58" alt="Get it on Google Play"></a>
           <a class="badge" id="appstore" href="#appstore"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
       </div>
-      <dl class="facts">
+      <div class="facts">
         <h3>Flappy Spikes facts</h3>
+        <dl>
         <dt>Developer</dt><dd>Duo Leads</dd>
         <dt>Released</dt><dd>2014 (iPhone), 2026 (Android, rebuilt)</dd>
         <dt>Price</dt><dd>Free, with ads. Optional No Ads and coin packs.</dd>
@@ -396,6 +403,7 @@ body.has-bar footer .wrap { padding-bottom: 104px; }
         <dt>Ranks</dt><dd>10, from Egg to Legend</dd>
         <dt>Leaderboard</dt><dd>Google Play Games</dd>
       </dl>
+      </div>
     </div>
   </section>
 
@@ -436,8 +444,29 @@ body.has-bar footer .wrap { padding-bottom: 104px; }
 
 <script defer src="/a/skin_art.52c6894d79.js"></script>
 <script defer src="/a/emblem_art.1c8be34be5.js"></script>
-<script defer src="/a/game.2e3e9d8942.js"></script>
+<script defer src="/a/game.5768e2653e.js"></script>
 <script>(() => {
+  // PRD-2.3 §11.3 (CLS): every section's rays layer is placed with a translate, never with top / left, so a section
+  // that grows (a web font swapping in) doesn't count as a layout shift. The centre is (--rx, --ry) of the section, or
+  // the centre of the element named by data-rays-at (the phone in the hero and versus sections, as in the design).
+  const zones = [...document.querySelectorAll('.zone')];
+  const px = (v, size) => { v = (v || '').trim(); return v.endsWith('%') ? parseFloat(v) / 100 * size : parseFloat(v) || 0; };
+  function place() {
+    for (const z of zones) {
+      const r = z.getBoundingClientRect(), cs = getComputedStyle(z), at = z.dataset.raysAt && document.getElementById(z.dataset.raysAt);
+      let x = px(cs.getPropertyValue('--rx') || '70%', r.width), y = px(cs.getPropertyValue('--ry') || '50%', r.height);
+      if (at) { const f = at.getBoundingClientRect(); x = f.left + f.width / 2 - r.left; y = f.top + f.height / 2 - r.top; }
+      z.style.setProperty('--tx', (x - px(cs.getPropertyValue('--rx') || '70%', r.width)) + 'px');
+      z.style.setProperty('--ty', y + 'px');
+    }
+  }
+  place();
+  addEventListener('load', place); addEventListener('resize', place);
+  if (document.fonts) document.fonts.ready.then(place);
+  if ('ResizeObserver' in window) { const ro = new ResizeObserver(place); zones.forEach((z) => ro.observe(z)); }
+})();
+
+(() => {
   // PRD-2.3 §11.4: the sticky store bar on phones. Same HTML for everyone; CSS shows it only below 720 px wide.
   const bar = document.getElementById('storebar'), hero = document.getElementById('hero-badges');
   if (!bar || !hero || !('IntersectionObserver' in window)) return;

@@ -4,7 +4,7 @@
   // with their constants; file references in the comments. Nothing here is a new design.
   const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const IMG = {};
-  ['spikes:{{a:@images/ground_spikes.png}}', 'coin:{{a:@images/menu/coin.png}}', 'circle:{{a:@images/background_score.png}}', 'sound:{{a:@images/soundbutton.png}}', 'mute:{{a:@images/mutebutton.png}}']
+  ['spikes:/a/ground_spikes.44c9981c48.png', 'coin:/a/coin.b02efd97f6.png', 'circle:/a/background_score.aff0698d91.png', 'sound:/a/soundbutton.be744432b2.png', 'mute:/a/mutebutton.5455abd43c.png']
     .forEach((s) => { const [k, d] = s.split(':'); const i = new Image(); i.src = d; IMG[k] = i; });
   const PINK = '#EC008C', PLUM = '#7A0044', GOLD = '#FFB529', SOFT = '#FCD9EE', ACCENT = '#FF4FB7', TAU = Math.PI * 2;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));

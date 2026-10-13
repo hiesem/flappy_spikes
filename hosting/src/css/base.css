@@ -25,13 +25,18 @@ a { color: inherit; }
 /* a section: its plate colour fading in from the previous one, rays burst from --rx / --ry */
 .zone { position: relative; color: var(--ink); background: linear-gradient(to bottom, var(--from, var(--plate)) 0, var(--plate) 180px); overflow: hidden; isolation: isolate; }
 /* the rays turn slowly: one ray period (22.5°) every 9 s = one full turn every 2 minutes */
-@property --spin { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-@keyframes rays-spin { to { --spin: 22.5deg; } }
-.zone::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: repeating-conic-gradient(from var(--spin) at var(--rx, 70%) var(--ry, 50%), rgba(var(--rim), .26) 0 11.25deg, transparent 11.25deg 22.5deg);
-  animation: rays-spin 9s linear infinite;
-  -webkit-mask: linear-gradient(to bottom, transparent 0, #000 200px); mask: linear-gradient(to bottom, transparent 0, #000 200px); }
-.zone.first::before { -webkit-mask: none; mask: none; }
+/* PRD-2.3 §11.3 performance: the same rays, turned by the compositor. A layer much larger than the zone, centred on
+   (--rx, --ry; rays.js turns them into a translate so no section resize is a layout shift), rotates with transform (no repaint per frame; the approved design animated the conic gradient's angle,
+   which repainted every section on every frame). The fade-in at the top of each section, which the design did with a
+   mask, is an overlay of the section's own background colour with the inverse alpha: the same pixels. */
+@keyframes rays-spin { to { transform: rotate(22.5deg); } }
+.zone::before { content: ''; position: absolute; z-index: -1; pointer-events: none; width: 340vmax; height: 340vmax;
+  left: calc(var(--rx, 70%) - 170vmax); top: -170vmax; translate: var(--tx, 0px) var(--ty, 400px);
+  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(var(--rim), .26) 0 11.25deg, transparent 11.25deg 22.5deg);
+  animation: rays-spin 9s linear infinite; will-change: transform; }
+.zone::after { content: ''; position: absolute; inset: 0 0 auto; height: 200px; z-index: -1; pointer-events: none;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--from, var(--plate)) 100%, transparent) 0, color-mix(in srgb, color-mix(in srgb, var(--from, var(--plate)) 75%, var(--plate)) 77.5%, transparent) 45px, color-mix(in srgb, color-mix(in srgb, var(--from, var(--plate)) 50%, var(--plate)) 55%, transparent) 90px, color-mix(in srgb, color-mix(in srgb, var(--from, var(--plate)) 25%, var(--plate)) 32.5%, transparent) 135px, color-mix(in srgb, var(--plate) 10%, transparent) 180px, color-mix(in srgb, var(--plate) 0%, transparent) 200px); }
+.zone.first::after { content: none; }
 
 /* spike strips (header and footer only) */
 .spikes { height: 44px; background: var(--c, var(--pink)); -webkit-mask: url({{a:@images/ground_spikes.png}}) repeat-x left top / auto 100%; mask: url({{a:@images/ground_spikes.png}}) repeat-x left top / auto 100%; }

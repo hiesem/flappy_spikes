@@ -32,16 +32,7 @@
   });
   sndImg.style.setProperty('--icon', 'url(' + IMG.mute.src + ')');
 
-  // ---------- hero and versus rays: centred behind the phone at every width ----------
-  const rayCentres = [[document.querySelector('.hero'), document.getElementById('play-frame')], [document.getElementById('versus'), document.getElementById('vs')]];
-  function centreRays() {
-    for (const [zone, phone] of rayCentres) {
-      const z = zone.getBoundingClientRect(), f = phone.getBoundingClientRect();
-      zone.style.setProperty('--rx', (f.left + f.width / 2 - z.left) + 'px');
-      zone.style.setProperty('--ry', (f.top + f.height / 2 - z.top) + 'px');
-    }
-  }
-  addEventListener('resize', centreRays); addEventListener('load', centreRays); document.fonts.ready.then(centreRays); centreRays();
+  // ---------- hero and versus rays: centred behind the phone at every width (now in rays.js, PRD-2.3 §11.3 CLS) ----------
 
   // ---------- palettes.dart colour stages; streak_config.dart names + colours ----------
   const STAGES = [

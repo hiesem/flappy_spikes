@@ -5,11 +5,12 @@
 .more { font-size: 17px; justify-self: start; }
 .step .more { justify-self: center; font-size: 15px; }
 @media (max-width: 860px) { .hero .intro { margin-inline: auto; } }
-.facts { width: min(600px, 100%); margin: 8px 0 0; background: var(--white); border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 22px 26px; display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; text-align: left; font-size: 16px; line-height: 1.4; }
-.facts h3 { grid-column: 1 / -1; margin: 0 0 4px; font-family: var(--display); font-weight: 400; font-size: 26px; color: var(--plum); }
+.facts { width: min(600px, 100%); margin: 8px 0 0; background: var(--white); border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 22px 26px; text-align: left; font-size: 16px; line-height: 1.4; }
+.facts dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; }
+.facts h3 { margin: 0 0 10px; font-family: var(--display); font-weight: 400; font-size: 26px; color: var(--plum); }
 .facts dt { color: var(--pink); }
 .facts dd { margin: 0; }
-@media (max-width: 520px) { .facts { grid-template-columns: 1fr; gap: 2px; } .facts dd { margin-bottom: 8px; } }
+@media (max-width: 520px) { .facts dl { grid-template-columns: 1fr; gap: 2px; } .facts dd { margin-bottom: 8px; } }
 .faq { --rx: 50%; --ry: 30%; }
 .faq .wrap { padding-block: 0 50px; }
 .faq-list { display: grid; gap: 14px; max-width: 760px; }

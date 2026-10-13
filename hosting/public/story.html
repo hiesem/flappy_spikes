@@ -139,13 +139,18 @@ a { color: inherit; }
 /* a section: its plate colour fading in from the previous one, rays burst from --rx / --ry */
 .zone { position: relative; color: var(--ink); background: linear-gradient(to bottom, var(--from, var(--plate)) 0, var(--plate) 180px); overflow: hidden; isolation: isolate; }
 /* the rays turn slowly: one ray period (22.5°) every 9 s = one full turn every 2 minutes */
-@property --spin { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-@keyframes rays-spin { to { --spin: 22.5deg; } }
-.zone::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: repeating-conic-gradient(from var(--spin) at var(--rx, 70%) var(--ry, 50%), rgba(var(--rim), .26) 0 11.25deg, transparent 11.25deg 22.5deg);
-  animation: rays-spin 9s linear infinite;
-  -webkit-mask: linear-gradient(to bottom, transparent 0, #000 200px); mask: linear-gradient(to bottom, transparent 0, #000 200px); }
-.zone.first::before { -webkit-mask: none; mask: none; }
+/* PRD-2.3 §11.3 performance: the same rays, turned by the compositor. A layer much larger than the zone, centred on
+   (--rx, --ry; rays.js turns them into a translate so no section resize is a layout shift), rotates with transform (no repaint per frame; the approved design animated the conic gradient's angle,
+   which repainted every section on every frame). The fade-in at the top of each section, which the design did with a
+   mask, is an overlay of the section's own background colour with the inverse alpha: the same pixels. */
+@keyframes rays-spin { to { transform: rotate(22.5deg); } }
+.zone::before { content: ''; position: absolute; z-index: -1; pointer-events: none; width: 340vmax; height: 340vmax;
+  left: calc(var(--rx, 70%) - 170vmax); top: -170vmax; translate: var(--tx, 0px) var(--ty, 400px);
+  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(var(--rim), .26) 0 11.25deg, transparent 11.25deg 22.5deg);
+  animation: rays-spin 9s linear infinite; will-change: transform; }
+.zone::after { content: ''; position: absolute; inset: 0 0 auto; height: 200px; z-index: -1; pointer-events: none;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--from, var(--plate)) 100%, transparent) 0, color-mix(in srgb, color-mix(in srgb, var(--from, var(--plate)) 75%, var(--plate)) 77.5%, transparent) 45px, color-mix(in srgb, color-mix(in srgb, var(--from, var(--plate)) 50%, var(--plate)) 55%, transparent) 90px, color-mix(in srgb, color-mix(in srgb, var(--from, var(--plate)) 25%, var(--plate)) 32.5%, transparent) 135px, color-mix(in srgb, var(--plate) 10%, transparent) 180px, color-mix(in srgb, var(--plate) 0%, transparent) 200px); }
+.zone.first::after { content: none; }
 
 /* spike strips (header and footer only) */
 .spikes { height: 44px; background: var(--c, var(--pink)); -webkit-mask: url(/a/ground_spikes.44c9981c48.png) repeat-x left top / auto 100%; mask: url(/a/ground_spikes.44c9981c48.png) repeat-x left top / auto 100%; }
@@ -304,9 +309,9 @@ section.zone.prose { padding-block: 84px; }
 .card h3 { color: var(--pink) !important; font-size: 26px; }
 .card p { font-size: 16px; line-height: 1.5; }
 .card .tag { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #8A8A8A; }
-.cards.mini { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 14px; }
+.cards.mini { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 14px; }
 .cards.mini .card { padding: 10px 8px 12px; border-radius: 18px; box-shadow: 5px 5px 0 var(--plum); text-align: center; gap: 2px; }
-.cards.mini canvas { width: 96px; height: 96px; }
+.cards.mini canvas { width: 84px; height: 84px; justify-self: center; }
 .cards.mini b { font-size: 15px; color: var(--plum); font-weight: 600; }
 .cards.mini small { font-size: 13px; color: #6F6F6F; }
 .rar { display: grid; gap: 14px; }
@@ -328,12 +333,13 @@ section.zone.prose { padding-block: 84px; }
 /* 404 */
 .lost { --rx: 50%; --ry: 46%; text-align: center; min-height: 62vh; }
 .lost .wrap { display: grid; justify-items: center; gap: 20px; padding-block: 50px 80px; }
-.lost canvas { width: min(300px, 80vw); aspect-ratio: 300 / 340; display: block; }
+.lost canvas { width: min(480px, 92vw); aspect-ratio: 480 / 340; display: block; }
 .lost h1 { font-size: clamp(50px, 8vw, 100px); }
 .lost .badges { justify-content: center; }
 a.banner { text-decoration: none; }
 a.banner:hover { transform: rotate(-3deg) translateY(-2px); }
 a.banner:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+.lost .banner { justify-self: center; }
 </style>
 </head>
 <body>
@@ -456,9 +462,30 @@ a.banner:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
     </div>
   </div>
 </footer>
+<script>(() => {
+  // PRD-2.3 §11.3 (CLS): every section's rays layer is placed with a translate, never with top / left, so a section
+  // that grows (a web font swapping in) doesn't count as a layout shift. The centre is (--rx, --ry) of the section, or
+  // the centre of the element named by data-rays-at (the phone in the hero and versus sections, as in the design).
+  const zones = [...document.querySelectorAll('.zone')];
+  const px = (v, size) => { v = (v || '').trim(); return v.endsWith('%') ? parseFloat(v) / 100 * size : parseFloat(v) || 0; };
+  function place() {
+    for (const z of zones) {
+      const r = z.getBoundingClientRect(), cs = getComputedStyle(z), at = z.dataset.raysAt && document.getElementById(z.dataset.raysAt);
+      let x = px(cs.getPropertyValue('--rx') || '70%', r.width), y = px(cs.getPropertyValue('--ry') || '50%', r.height);
+      if (at) { const f = at.getBoundingClientRect(); x = f.left + f.width / 2 - r.left; y = f.top + f.height / 2 - r.top; }
+      z.style.setProperty('--tx', (x - px(cs.getPropertyValue('--rx') || '70%', r.width)) + 'px');
+      z.style.setProperty('--ty', y + 'px');
+    }
+  }
+  place();
+  addEventListener('load', place); addEventListener('resize', place);
+  if (document.fonts) document.fonts.ready.then(place);
+  if ('ResizeObserver' in window) { const ro = new ResizeObserver(place); zones.forEach((z) => ro.observe(z)); }
+})();
+</script>
 <script defer src="/a/skin_art.52c6894d79.js"></script>
 <script defer src="/a/emblem_art.1c8be34be5.js"></script>
-<script defer src="/a/paint.624ca7b449.js"></script>
+<script defer src="/a/paint.80f5d32650.js"></script>
 <script defer src="/a/pages.b169a3d540.js"></script>
 </body>
 </html>

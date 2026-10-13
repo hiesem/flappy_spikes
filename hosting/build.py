@@ -137,7 +137,7 @@ def asset(ref):
     if ref in _assets:
         return _assets[ref]
     if ref == 'js/paint.js':
-        data = paint_js().encode()
+        data = render(paint_js(), {}).encode()
     else:
         p = resolve(ref)
         data = p.read_bytes()

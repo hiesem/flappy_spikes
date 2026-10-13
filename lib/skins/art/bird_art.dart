@@ -25,6 +25,7 @@ class BirdShape {
     this.px = false,
     double? bl,
   }) : _bodyBuilder = body,
+       hasBl = bl != null,
        bl = bl ?? l;
 
   /// JS shape key (`sq`, `round`, `tall`, `chick`, `peng`, `owl`, `puff`,
@@ -46,6 +47,10 @@ class BirdShape {
   /// Back edge of the lower body (wind-up key); [l] unless the head sits
   /// well forward of the body (the rubber duck: JS `bl`).
   final double bl;
+
+  /// Whether the shape sets its own [bl] (JS `s.bl != null`: the rubber
+  /// duck). The PRD-2.3 §19 gear uses it to anchor at the stern.
+  final bool hasBl;
 
   /// Pixel-art shape (blocky wing).
   final bool px;

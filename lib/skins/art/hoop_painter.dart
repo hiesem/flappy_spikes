@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'art_paint.dart';
+import 'hoop_art_v23.dart';
 
 /// Canvas port of `hoopHalf` from `design/menu_v2/skin_art.js` (PRD-menu-v2
 /// §5.4). A hoop is a vertical ring drawn as an ellipse: the **back** half is
@@ -13,23 +14,15 @@ import 'art_paint.dart';
 class HoopPainter {
   HoopPainter._();
 
-  /// Hoop ids in catalogue order (PRD-menu-v2 §5.4).
+  /// Hoop ids in catalogue order (PRD-menu-v2 §5.4; PRD-2.3 §19.3: the 2.3
+  /// hoops of [HoopArtV23] mixed in by rarity).
   static const List<String> ids = [
-    'pink',
-    'sky',
-    'lime',
-    'violet',
-    'night',
-    'candy',
-    'polka',
-    'checker',
-    'donut',
-    'neon',
-    'lava',
-    'ice',
-    'rainbow',
-    'galaxy',
-    'blackhole',
+    'pink', 'sky', 'lime', 'violet', 'night', //
+    'sunset', 'lemon', 'bamboo', 'rope', 'cloud',
+    'candy', 'polka', 'checker', 'donut',
+    'tire', 'melon', 'zipper', 'tape', 'pearls', 'vine',
+    'neon', 'lava', 'ice', 'electric', 'water', 'cog',
+    'rainbow', 'galaxy', 'blackhole', 'aurora',
   ];
 
   /// The free default, used when an unknown id is requested.
@@ -64,6 +57,18 @@ class HoopPainter {
     double? rx,
   }) {
     if (ry <= 0 || lineWidth <= 0) return;
+    if (paintHoopV23(
+      canvas,
+      hoopId,
+      center,
+      ry,
+      t,
+      front: front,
+      lineWidth: lineWidth,
+      rx: rx,
+    )) {
+      return;
+    }
     final def = _byId(hoopId);
     final lw = lineWidth;
     rx ??= ry * .26;

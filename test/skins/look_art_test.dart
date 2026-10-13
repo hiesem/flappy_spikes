@@ -49,8 +49,9 @@ void main() {
 
   test('catalogue sizes match PRD section 5', () {
     expect(BirdArt.ids, hasLength(30));
-    expect(GearArt.ids, hasLength(14));
-    expect(HatArt.ids, hasLength(14));
+    // PRD-2.3 §19: 29 each (+ None).
+    expect(GearArt.ids, hasLength(29));
+    expect(HatArt.ids, hasLength(29));
     expect(GearArt.ids, contains('windup'));
     expect(GearArt.ids, isNot(contains('buddy')));
     expect(BirdArt.ids.first, 'classic');

@@ -32,6 +32,12 @@ abstract final class LookPainter {
     'cap': 9.75, 'beanie': 13.5, 'party': 21.25, 'band': 6, //
     'bucket': 9, 'tophat': 16, 'cowboy': 14, 'prop': 16, 'chef': 19.5,
     'viking': 15, 'pirate': 15, 'wizard': 26, 'crown': 15, 'halo': 16.5,
+    // PRD-2.3 §19 (measured over 40 frames on every shape, +.5 on the
+    // animated ones)
+    'sprout': 12.5, 'cone': 20, 'egg': 9.5, 'paperboat': 19, 'phones': 7,
+    'fishbowl': 21, 'cupcake': 24, 'raincloud': 24, 'antennae': 21.5,
+    'sharkfin': 18.5, 'volcano': 24, 'ufo': 22.5, 'bdaycake': 28.5,
+    'planet': 23, 'sunburst': 26,
   };
 
   /// How far each gear reaches below the body bottom (`shape.bot`), art
@@ -40,6 +46,16 @@ abstract final class LookPainter {
   static const Map<String, double> gearDrop = {
     'scarf': 1.75, 'bandana': 1.75, 'chain': 1.25, //
     'sneakers': 9.25, 'carpet': 6, 'jetpack': 8.5,
+    // PRD-2.3 §19
+    'necktie': 2.5, 'skates': 13, 'swimring': 2, 'crystal': 1.5, 'atom': 11.5,
+  };
+
+  /// PRD-2.3 §19: how far the gear that floats above the bird reaches above
+  /// the head anchor (`shape.top`), art units (largest over all shapes and
+  /// frames).
+  static const Map<String, double> gearRise = {
+    'snorkel': 10.5, 'balloon': 12.5, 'butterfly': 13.5, 'drone': 15.5, //
+    'crystal': 22, 'atom': 9, 'disco': 19, 'cape': 2,
   };
 
   /// Body parts above the head anchor (robot antenna, phoenix crest, chick
@@ -55,6 +71,8 @@ abstract final class LookPainter {
     final s = b.shape;
     final head = s.top - 18;
     var top = head - (_crest[b.id] ?? 0) - (look.gear == 'patch' ? .5 : 0);
+    final lift = gearRise[look.gear];
+    if (lift != null && head - lift < top) top = head - lift;
     final rise = hatRise[look.hat];
     if (rise != null && head - rise < top) top = head - rise;
     final bottom = s.bot - 18 + .5 + (gearDrop[look.gear] ?? 0);

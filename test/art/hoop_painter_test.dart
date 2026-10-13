@@ -1,6 +1,8 @@
 import 'dart:ui' as ui;
 
 import 'package:flappy_spikes/skins/art/hoop_painter.dart';
+import 'package:flappy_spikes/skins/catalog.dart';
+import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'art_render.dart';
@@ -12,23 +14,9 @@ void main() {
   final centre = const ui.Offset(30, 30);
 
   test('ids match the PRD 5.4 catalogue in display order', () {
-    expect(HoopPainter.ids, [
-      'pink',
-      'sky',
-      'lime',
-      'violet',
-      'night',
-      'candy',
-      'polka',
-      'checker',
-      'donut',
-      'neon',
-      'lava',
-      'ice',
-      'rainbow',
-      'galaxy',
-      'blackhole',
-    ]);
+    // PRD-2.3 §19.3: the catalogue's grid order (30 items).
+    expect(HoopPainter.ids, [for (final i in itemsFor(SkinLayer.hoop)) i.id]);
+    expect(HoopPainter.ids, hasLength(30));
     expect(HoopPainter.fallbackId, 'pink');
   });
 

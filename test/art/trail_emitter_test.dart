@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flappy_spikes/skins/art/trail.dart';
+import 'package:flappy_spikes/skins/catalog.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -29,23 +30,9 @@ void main() {
       capture(tester, canvasWidth, canvasHeight, (canvas) => e.paint(canvas));
 
   test('ids match the PRD 5.5 catalogue in display order', () {
-    expect(TrailEmitter.ids, [
-      'flame',
-      'blue',
-      'toxic',
-      'hot',
-      'shadow',
-      'sparkle',
-      'bubbles',
-      'hearts',
-      'laser',
-      'confetti',
-      'bolt',
-      'blocks',
-      'notes',
-      'rainbow',
-      'echo',
-    ]);
+    // PRD-2.3 §19.3: the catalogue's grid order (30 items).
+    expect(TrailEmitter.ids, [for (final i in itemsFor(SkinLayer.trail)) i.id]);
+    expect(TrailEmitter.ids, hasLength(30));
     expect(TrailEmitter.fallbackId, 'flame');
   });
 

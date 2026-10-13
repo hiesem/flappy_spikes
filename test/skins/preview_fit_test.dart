@@ -45,7 +45,11 @@ PreviewStage _stage(Look Function() look) => PreviewStage(
   reduceMotion: () => false,
 );
 
-const _tallHats = ['wizard', 'chef', 'party', 'tophat', 'prop', 'halo'];
+const _tallHats = [
+  'wizard', 'chef', 'party', 'tophat', 'prop', 'halo', //
+  // PRD-2.3 §19: the tallest new hats
+  'bdaycake', 'sunburst', 'cupcake', 'raincloud', 'volcano', 'planet',
+];
 
 void main() {
   // QA S2-51: the extent table the preview places the bird by must cover

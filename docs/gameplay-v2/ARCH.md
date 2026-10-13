@@ -1515,3 +1515,27 @@ the chick's ×2, the perfect zone) are superseded by PRD-2.3 §14; `SPEC.md` has
 | Debug | `DebugPanel` **TUNING >** page (read-only: key = value [remote / default / default*], last fetch); RUN DEBUG **Runs: N (+5 / 0)**; `FlappySpikesGame.debugAvailable` includes `kTuning` | §15.4, §14.6 |
 | Autopilot | `_farFromPlane` hands a chase back earlier: + abs(bird y − hoop y) ÷ 300 pt/s, and a moving ring's sideways reach (`_reachX`) | gate, §14.4 |
 
+
+## PRD-2.3 WP-SKINS contract changes (§19, 2026-10-13)
+
+- **Catalogue:** every layer has 30 entries (`kCollectibleTotal` 148); the 60
+  new items are mixed into the grid by rarity; `kNewInUpdate` is the 2.3 list
+  (60 keys, the showpieces Sunburst, Disco ball, Aurora, Supernova first; the
+  Shop's `featuredItemFor` reads it). No new storage key.
+- **Art:** the new painters are 1:1 ports of `design/skins_v23/parts/*.js`
+  in `lib/skins/art/{hat,gear,hoop}_art_v23.dart` and `trail_v23.dart`,
+  dispatched from the existing masters (`paintHat`, `paintGearBack/Front`,
+  `HoopPainter.paintHalf`, `TrailEmitter`) so every surface (tiles, preview,
+  Home, run, results, share card, versus) still has one master per layer.
+  They draw through `Ctx2D` (`ctx2d.dart`), a Canvas2D-shaped facade with a
+  pooled path set, one reused `Paint` and a keyed gradient cache.
+  `Ctx2D.glowLayer` draws many same-blur canvas shadows as one blurred
+  layer (Aurora hoop: 22 segment glows per half → 1 blur; Pixel frame budget).
+- `TrailEmitter.paint` takes an optional `head` (the Supernova core glow;
+  defaults to the last emit point while emitting). `TrailEmitter.ids` /
+  `HoopPainter.ids` / `HatArt.ids` / `GearArt.ids` are the full grid order.
+- `LookPainter.extentOf` knows the new hats (`hatRise`), the gear that floats
+  above the head (`gearRise`, new) and below the body (`gearDrop`).
+- `BirdShape.hasBl` (JS `s.bl != null`) anchors stern gear on the duck.
+- Port check: `tool/skins_port/render_js.mjs` + `test/skins/p23_skins_port_test.dart`
+  → `docs/p23/SKINS_PORT.png` (page left, Flutter right, H1…T15).

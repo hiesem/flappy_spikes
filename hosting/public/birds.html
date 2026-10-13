@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Flappy Spikes Birds, Skins &amp; Ranks</title>
+<meta name="description" content="All 30 birds plus hats, gear, hoops and trails. See every rank from Egg to Legend and the score that unlocks it.">
+<link rel="canonical" href="https://flappyspikes.com/birds">
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" type="image/png" sizes="48x48" href="/icon-48.png">
+<link rel="icon" type="image/png" sizes="96x96" href="/icon-96.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="preload" href="/a/opificio.3b80740a53.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/a/fredoka.3014c26fce.woff2" as="font" type="font/woff2" crossorigin>
+<meta name="theme-color" content="#EC008C">
+<meta property="og:title" content="Flappy Spikes Birds, Skins &amp; Ranks">
+<meta property="og:description" content="All 30 birds plus hats, gear, hoops and trails. See every rank from Egg to Legend and the score that unlocks it.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Flappy Spikes">
+<meta property="og:image" content="https://flappyspikes.com/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Flappy Spikes bird on fire flying through a pink hoop, with the title and the Google Play and App Store badges">
+<meta property="og:url" content="https://flappyspikes.com/birds">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Flappy Spikes Birds, Skins &amp; Ranks">
+<meta name="twitter:description" content="All 30 birds plus hats, gear, hoops and trails. See every rank from Egg to Legend and the score that unlocks it.">
+<meta name="twitter:image" content="https://flappyspikes.com/og.png">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "WebPage",
+   "@id": "https://flappyspikes.com/birds#webpage",
+   "url": "https://flappyspikes.com/birds",
+   "name": "Flappy Spikes Birds, Skins & Ranks",
+   "description": "All 30 birds plus hats, gear, hoops and trails. See every rank from Egg to Legend and the score that unlocks it.",
+   "isPartOf": {
+    "@id": "https://flappyspikes.com/#website"
+   },
+   "publisher": {
+    "@id": "https://flappyspikes.com/#org"
+   }
+  },
+  {
+   "@type": "BreadcrumbList",
+   "itemListElement": [
+    {
+     "@type": "ListItem",
+     "position": 1,
+     "name": "Home",
+     "item": "https://flappyspikes.com/"
+    },
+    {
+     "@type": "ListItem",
+     "position": 2,
+     "name": "Birds, skins and ranks",
+     "item": "https://flappyspikes.com/birds"
+    }
+   ]
+  }
+ ]
+}
+</script>
+<style>
+@font-face { font-family: 'Opificio Neue'; src: url(/a/opificio.3b80740a53.woff2) format('woff2'); font-display: block; }
+@font-face { font-family: 'Fredoka'; font-weight: 600; src: url(/a/fredoka.3014c26fce.woff2) format('woff2'); font-display: swap; }
+@font-face { font-family: 'LVDC Common2'; src: url(/a/lvdc.3d6e6ea55d.woff2) format('woff2'); font-display: swap; }
+/* Layout: one long flight through the rank colours. Every section is a bold rank palette
+   (plate + rays, like the Spotlight share card), blending into the next; spikes only on the header and footer. */
+:root {
+  --pink: #EC008C; --plum: #7A0044; --gold: #FFB529; --white: #FFFFFF; --ink: #2E2A2D;
+  --display: 'Opificio Neue', 'Fredoka', system-ui, sans-serif;
+  --body: 'Fredoka', system-ui, sans-serif;
+  --score: 'LVDC Common2', 'Fredoka', monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .zone::before { animation: none; } }
+body { margin: 0; background: #FCD9EE; color: var(--ink); font-family: var(--body); font-weight: 600; overflow-x: hidden; }
+a { color: inherit; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-inline: 20px; }
+
+/* rank palettes (emblem_art.js LEVELS: plate / rim / accent) */
+.p-falcon  { --plate: #FCD9EE; --rim: 236, 0, 140;  --acc: #7A0044; }
+.p-fledge  { --plate: #B9F3E1; --rim: 19, 180, 141; --acc: #00695C; }
+.p-glider  { --plate: #EBD3F5; --rim: 155, 48, 217; --acc: #5E1A8C; }
+.p-phoenix { --plate: #FFD3A8; --rim: 255, 87, 34;  --acc: #B23000; }
+.p-legend  { --plate: #2A1260; --rim: 124, 77, 255; --acc: #FFB529; --ink: #FFFFFF; }
+.p-ace     { --plate: #FFF1C9; --rim: 255, 181, 41; --acc: #8A5E00; }
+
+/* a section: its plate colour fading in from the previous one, rays burst from --rx / --ry */
+.zone { position: relative; color: var(--ink); background: linear-gradient(to bottom, var(--from, var(--plate)) 0, var(--plate) 180px); overflow: hidden; isolation: isolate; }
+/* the rays turn slowly: one ray period (22.5°) every 9 s = one full turn every 2 minutes */
+@property --spin { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes rays-spin { to { --spin: 22.5deg; } }
+.zone::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: repeating-conic-gradient(from var(--spin) at var(--rx, 70%) var(--ry, 50%), rgba(var(--rim), .26) 0 11.25deg, transparent 11.25deg 22.5deg);
+  animation: rays-spin 9s linear infinite;
+  -webkit-mask: linear-gradient(to bottom, transparent 0, #000 200px); mask: linear-gradient(to bottom, transparent 0, #000 200px); }
+.zone.first::before { -webkit-mask: none; mask: none; }
+
+/* spike strips (header and footer only) */
+.spikes { height: 44px; background: var(--c, var(--pink)); -webkit-mask: url(/a/ground_spikes.44c9981c48.png) repeat-x left top / auto 100%; mask: url(/a/ground_spikes.44c9981c48.png) repeat-x left top / auto 100%; }
+.spikes.up { transform: scaleY(-1); }
+
+/* header */
+header.bar { position: sticky; top: 0; z-index: 10; background: var(--white); }
+header.bar .wrap { display: flex; align-items: center; gap: 14px; padding-block: 10px; }
+header.bar .spikes { position: absolute; left: 0; right: 0; top: 100%; }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; min-width: 0; color: var(--plum); }
+.brand img { width: 40px; height: 40px; border-radius: 10px; }
+.brand span { font-family: var(--display); font-size: 26px; white-space: nowrap; color: #6F6F6F; }
+.bar .grow { flex: 1; }
+/* the settings panel's soundbutton.png / mutebutton.png, as they are */
+.iconbtn { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; padding: 0; cursor: pointer; background: transparent; }
+#snd-img { width: 44px; height: 44px; background: var(--icon) center / contain no-repeat; }
+.iconbtn:focus-visible, .badge:focus-visible, .play-frame:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.bar .mini-badges { display: flex; gap: 8px; }
+.bar .mini-badges img { height: 38px; width: auto; display: block; }
+@media (max-width: 720px) { .bar .mini-badges { display: none; } .brand span { font-size: 22px; } }
+
+/* shared type */
+.eyebrow { font-family: var(--display); letter-spacing: .2em; font-size: 16px; text-transform: uppercase; color: var(--acc); }
+.p-legend .eyebrow { color: var(--gold); }
+h1, h2 { font-family: var(--display); font-weight: 400; margin: 0; text-wrap: balance; color: var(--acc); }
+h1 { font-size: clamp(60px, 9.5vw, 124px); line-height: .92; letter-spacing: -.01em; }
+h2 { font-size: clamp(46px, 7vw, 92px); line-height: .95; }
+.p-legend h2 { color: var(--white); }
+.lead { font-size: clamp(18px, 2vw, 22px); line-height: 1.45; max-width: 36ch; margin: 0; }
+.banner { display: inline-block; justify-self: start; font-size: clamp(22px, 3vw, 32px); color: var(--white); background: var(--pink); padding: 8px 22px; transform: rotate(-3deg); box-shadow: 8px 8px 0 var(--plum); letter-spacing: .02em; }
+.sticker { position: absolute; z-index: 3; width: var(--s, 150px); aspect-ratio: 1; border-radius: 50%; background: var(--sc, var(--gold)); border: calc(var(--s, 150px) * .07) solid var(--white); box-shadow: 8px 10px 0 var(--plum);
+  display: grid; place-content: center; text-align: center; transform: rotate(var(--r, 9deg)); pointer-events: none; }
+.sticker b { font-family: var(--score); font-weight: 400; font-size: calc(var(--s, 150px) * .3); line-height: 1; color: var(--white); }
+.sticker span { font-family: var(--display); letter-spacing: .18em; font-size: calc(var(--s, 150px) * .1); color: var(--plum); margin-top: 4px; }
+.sticker.pink { --sc: var(--pink); }
+.sticker.pink span { color: var(--white); }
+.sticker.long b { font-size: calc(var(--s, 150px) * .22); }
+.badges { display: flex; flex-wrap: wrap; gap: 14px; }
+.badge img { height: 58px; width: auto; display: block; }
+.badge { display: inline-block; border-radius: 10px; transition: transform .15s; }
+.badge:hover { transform: translateY(-3px) rotate(-1deg); }
+
+/* hero */
+.hero { --rx: 74%; --ry: 52%; }
+.hero .wrap { display: grid; grid-template-columns: 1.05fr .95fr; gap: 40px; align-items: center; padding-block: 76px 90px; }
+.hero-text { display: grid; gap: 22px; }
+.free { font-size: 15px; color: var(--acc); }
+.play-col { position: relative; display: grid; justify-items: center; gap: 16px; }
+.play-frame { position: relative; width: min(350px, 82vw); aspect-ratio: 320 / 568; border-radius: 34px; background: #2B2629; padding: 10px; box-shadow: 14px 16px 0 var(--plum); transform: rotate(2deg); cursor: pointer; touch-action: manipulation; }
+.play-frame canvas { width: 100%; height: 100%; display: block; border-radius: 25px; }
+.play-col .sticker { --s: 132px; top: -24px; right: max(0px, calc(50% - 230px)); }
+.play-hint { font-family: var(--display); letter-spacing: .14em; font-size: 14px; text-transform: uppercase; color: var(--acc); text-align: center; }
+.play-hint b { color: var(--pink); font-weight: 400; }
+@media (max-width: 860px) {
+  .hero { --rx: 50%; --ry: 74%; }
+  .hero .wrap { grid-template-columns: 1fr; text-align: center; padding-block: 56px 64px; gap: 44px; }
+  .hero-text { justify-items: center; } .lead { margin-inline: auto; } .badges { justify-content: center; } .banner { justify-self: center; }
+  .play-col .sticker { right: 0; --s: 110px; }
+}
+
+/* sections */
+section.zone { padding-block: 96px; }
+.head { display: grid; gap: 18px; max-width: 46ch; margin-bottom: 44px; }
+.head p { margin: 0; font-size: 20px; line-height: 1.45; }
+.how { --rx: 50%; --ry: 64%; }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.step { position: relative; display: grid; gap: 10px; justify-items: center; text-align: center; min-width: 0; }
+.step canvas { width: 100%; max-width: 360px; aspect-ratio: 1; display: block; }
+.step .label { font-size: 23px; color: var(--white); background: var(--pink); padding: 6px 16px; transform: rotate(-3deg); box-shadow: 6px 6px 0 var(--plum); }
+.step p { margin: 6px 0 0; font-size: 17px; line-height: 1.4; max-width: 26ch; }
+.step .sticker { --s: 70px; --sc: var(--pink); top: 4%; left: 8%; --r: -8deg; box-shadow: 5px 6px 0 var(--plum); }
+.step .sticker b { font-size: 30px; }
+.how .head-sticker { --s: 140px; top: 70px; right: max(20px, calc(50% - 560px)); }
+@media (max-width: 820px) { .steps { grid-template-columns: 1fr; gap: 56px; } .how .head-sticker { display: none; } }
+
+.versus { --rx: 72%; --ry: 55%; }
+.split { display: grid; grid-template-columns: .85fr 1.15fr; gap: 48px; align-items: center; }
+.lane { position: relative; }
+.lane { justify-self: center; width: min(340px, 86vw); }
+.lane canvas { width: 100%; aspect-ratio: 320 / 520; display: block; border-radius: 26px; box-shadow: 12px 12px 0 var(--acc); }
+.lane .sticker { --s: 130px; --sc: var(--pink); top: -46px; right: -14px; }
+.lane .sticker b { font-family: var(--body); font-size: 50px; }
+@media (max-width: 860px) { .split { grid-template-columns: 1fr; gap: 64px; } .lane .sticker { --s: 100px; top: -40px; right: 0; } }
+
+.skins { --rx: 50%; --ry: 76%; }
+.skins .head { position: relative; }
+.parade { width: 100%; height: 330px; display: block; }
+.skins .wrap.top { position: relative; }
+.skins .sticker { --s: 150px; right: 20px; top: 0; }
+@media (max-width: 720px) { .skins .sticker { --s: 104px; top: auto; bottom: -70px; right: 10px; } }
+
+.ranks { --rx: 50%; --ry: 60%; }
+.rank-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 26px 14px; }
+.rank { display: grid; justify-items: center; gap: 6px; text-align: center; min-width: 0; }
+.rank canvas { width: 100%; max-width: 200px; aspect-ratio: 1; display: block; }
+.rank b { font-family: var(--display); font-weight: 400; letter-spacing: .14em; font-size: 16px; color: var(--white); }
+.rank small { font-size: 13px; color: var(--gold); }
+.ranks .wrap { position: relative; }
+.ranks .sticker { --s: 140px; top: -10px; right: 20px; }
+@media (max-width: 760px) { .rank-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ranks .sticker { --s: 100px; top: -30px; } }
+
+.cta { --rx: 50%; --ry: 36%; text-align: center; }
+.cta .wrap { position: relative; display: grid; justify-items: center; gap: 22px; padding-block: 20px 30px; }
+.cta canvas { width: min(520px, 92vw); aspect-ratio: 2 / 1; display: block; }
+.cta .badges { justify-content: center; }
+.cta .sticker { --s: 130px; top: 0; right: max(10px, calc(50% - 330px)); }
+@media (max-width: 600px) { .cta .sticker { --s: 96px; } }
+
+/* footer: shared by every page (approved homepage footer + the PRD-2.3 §11.4 links, §5.12 identity, trademark line) */
+footer { background: #7A0044; color: #FFFFFF; font: 600 15px 'Fredoka', system-ui, sans-serif; }
+footer .spikes { height: 44px; background: #7A0044; margin-top: -44px; position: relative; -webkit-mask: url(/a/ground_spikes.44c9981c48.png) repeat-x left top / auto 100%; mask: url(/a/ground_spikes.44c9981c48.png) repeat-x left top / auto 100%; }
+footer .wrap { max-width: 1160px; margin: 0 auto; padding-inline: 20px; display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; justify-content: space-between; padding-block: 26px 40px; }
+footer nav { display: flex; flex-wrap: wrap; gap: 10px 20px; }
+footer a { color: inherit; text-decoration: none; border-bottom: 2px solid currentColor; }
+footer .copy { display: flex; align-items: center; gap: 10px; }
+footer .copy img { width: 28px; height: 28px; border-radius: 7px; }
+footer .fine { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; font-size: 13px; font-weight: 600; color: #F7C9E2; border-top: 2px solid rgba(255, 255, 255, .18); padding-top: 14px; }
+footer .fine p { margin: 0; }
+footer .fine a { color: #FFFFFF; }
+footer noscript img { vertical-align: middle; }
+body.has-bar footer .wrap { padding-bottom: 104px; }
+/* PRD-2.3 §11.5 content pages and the 404 page: the homepage's header, zones, rays, stickers, banners and footer,
+   plus a reading column, white cards (like the privacy page's card) and the rank table. No new artwork. */
+.page-hero { --rx: 76%; --ry: 55%; }
+.page-hero .wrap { display: grid; grid-template-columns: 1.15fr .85fr; gap: 36px; align-items: center; padding-block: 56px 70px; }
+.page-hero .hero-text { display: grid; gap: 18px; }
+.page-hero h1 { font-size: clamp(46px, 7.2vw, 96px); line-height: .95; }
+.page-hero .art { justify-self: center; position: relative; }
+.page-hero .art canvas { width: min(320px, 78vw); aspect-ratio: 1; display: block; }
+.page-hero .art canvas.wide { width: min(460px, 90vw); aspect-ratio: 460 / 300; }
+.crumbs { font-size: 15px; color: var(--acc); }
+.crumbs a { color: inherit; }
+@media (max-width: 860px) {
+  .page-hero { --rx: 50%; --ry: 78%; }
+  .page-hero .wrap { grid-template-columns: 1fr; text-align: center; padding-block: 44px 56px; }
+  .page-hero .hero-text { justify-items: center; } .page-hero .lead { margin-inline: auto; } .page-hero .banner { justify-self: center; }
+}
+section.zone.prose { padding-block: 84px; }
+.prose .wrap { display: grid; gap: 22px; }
+.prose h2 { font-size: clamp(38px, 5.4vw, 64px); max-width: 18ch; }
+.prose h3 { font-family: var(--display); font-weight: 400; font-size: 28px; line-height: 1.05; margin: 0; color: var(--acc); }
+.p-legend.prose h3 { color: var(--gold); }
+.prose p, .prose li { font-size: 19px; line-height: 1.6; max-width: 66ch; margin: 0; }
+.prose ul, .prose ol { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 66ch; }
+.prose p a, .prose li a { color: var(--acc); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.p-legend.prose p a, .p-legend.prose li a { color: var(--gold); }
+.split2 { display: grid; grid-template-columns: 1fr minmax(0, 360px); gap: 40px; align-items: center; }
+.split2 .art { justify-self: center; }
+.split2 .art canvas { width: min(320px, 80vw); aspect-ratio: 1; display: block; }
+.split2 .art canvas.lane { width: min(320px, 82vw); aspect-ratio: 320 / 520; border-radius: 26px; box-shadow: 12px 12px 0 var(--acc); }
+.split2 .copy { display: grid; gap: 18px; }
+@media (max-width: 860px) { .split2 { grid-template-columns: 1fr; } }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 22px; }
+.card { background: var(--white); color: #2E2A2D; border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 18px 20px 20px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.card canvas { width: 140px; height: 140px; justify-self: center; display: block; }
+.card h3 { color: var(--pink) !important; font-size: 26px; }
+.card p { font-size: 16px; line-height: 1.5; }
+.card .tag { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #8A8A8A; }
+.cards.mini { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 14px; }
+.cards.mini .card { padding: 10px 8px 12px; border-radius: 18px; box-shadow: 5px 5px 0 var(--plum); text-align: center; gap: 2px; }
+.cards.mini canvas { width: 96px; height: 96px; }
+.cards.mini b { font-size: 15px; color: var(--plum); font-weight: 600; }
+.cards.mini small { font-size: 13px; color: #6F6F6F; }
+.rar { display: grid; gap: 14px; }
+.rar h3 { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.rar h3 small { font-family: var(--body); font-size: 16px; color: inherit; opacity: .85; letter-spacing: 0; }
+.ranktable { width: 100%; max-width: 760px; border-collapse: separate; border-spacing: 0; background: var(--white); color: #2E2A2D; border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); overflow: hidden; font-size: 18px; }
+.ranktable th, .ranktable td { padding: 8px 18px; text-align: left; border-bottom: 2px solid #F3E3EC; }
+.ranktable th { font-family: var(--display); font-weight: 400; letter-spacing: .1em; font-size: 15px; color: var(--pink); background: #FFF6FB; }
+.ranktable tr:last-child td { border-bottom: 0; }
+.ranktable canvas { width: 72px; height: 72px; display: block; }
+.ranktable td.n { font-family: var(--display); letter-spacing: .1em; color: var(--plum); }
+.press { background: var(--white); color: #2E2A2D; border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 22px 26px; display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; max-width: 640px; font-size: 17px; }
+.press dt { color: var(--pink); }
+.press dd { margin: 0; }
+.press a { color: var(--pink); }
+@media (max-width: 520px) { .press { grid-template-columns: 1fr; gap: 2px; } .press dd { margin-bottom: 8px; } }
+.note { font-size: 15px !important; opacity: .85; }
+.cta .free { margin: 0; }
+/* 404 */
+.lost { --rx: 50%; --ry: 46%; text-align: center; min-height: 62vh; }
+.lost .wrap { display: grid; justify-items: center; gap: 20px; padding-block: 50px 80px; }
+.lost canvas { width: min(300px, 80vw); aspect-ratio: 300 / 340; display: block; }
+.lost h1 { font-size: clamp(50px, 8vw, 100px); }
+.lost .badges { justify-content: center; }
+a.banner { text-decoration: none; }
+a.banner:hover { transform: rotate(-3deg) translateY(-2px); }
+a.banner:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/a/icon-40.0137829895.webp" srcset="/a/icon-40.0137829895.webp 1x, /a/icon-80.af916cc3af.webp 2x" width="40" height="40" alt=""><span>Flappy Spikes</span></a>
+    <div class="grow"></div>
+    <div class="mini-badges">
+      <a class="badge" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dbirds"><img src="/a/gp.9e62107f39.webp" width="196" height="58" alt="Get it on Google Play"></a>
+          <a class="badge" href="#appstore"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
+    </div>
+  </div>
+  <div class="spikes up" style="--c: #FFFFFF"></div>
+</header>
+<main id="top">
+  <section class="zone page-hero first p-phoenix">
+    <div class="wrap">
+      <div class="hero-text">
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a> › Birds, skins and ranks</nav>
+        <span class="eyebrow">Birds &amp; skins</span>
+        <h1>Birds, skins and ranks</h1>
+        <p class="lead">30 birds, from a rubber duck to a phoenix, and 30 hats, gear, hoops and trails to go with them. Here is every bird, a look at the skins, and the ten ranks from Egg to Legend.</p>
+      </div>
+      <div class="art"><canvas data-paint="bird:phoenix" width="320" height="320" aria-label="The Phoenix bird">The Phoenix, a legendary bird.</canvas></div>
+    </div>
+  </section>
+
+  <section class="zone prose p-falcon" style="--from: #FFD3A8" id="birds">
+    <div class="wrap">
+      <h2>Birds by rarity</h2>
+      <p>Every Flappy Spikes player starts with the Classic pink bird, the same bird that flew in 2014. The other 29 birds are unlocked with coins in the Skins screen, sorted by rarity. Many of the epic and legendary birds are animated: the Ghost flickers, the Magma bird glows and the Galaxy bird twinkles.</p>
+      <div class="rar"><h3>Common <small>10 birds · 150 coins each, Classic is free</small></h3><div class="cards mini">
+        <div class="card"><canvas data-paint="bird:classic" width="96" height="96" aria-label="Classic">Classic</canvas><b>Classic</b></div>
+        <div class="card"><canvas data-paint="bird:sky" width="96" height="96" aria-label="Sky">Sky</canvas><b>Sky</b></div>
+        <div class="card"><canvas data-paint="bird:lime" width="96" height="96" aria-label="Lime">Lime</canvas><b>Lime</b></div>
+        <div class="card"><canvas data-paint="bird:grape" width="96" height="96" aria-label="Grape">Grape</canvas><b>Grape</b></div>
+        <div class="card"><canvas data-paint="bird:tangerine" width="96" height="96" aria-label="Tangerine">Tangerine</canvas><b>Tangerine</b></div>
+        <div class="card"><canvas data-paint="bird:mint" width="96" height="96" aria-label="Mint">Mint</canvas><b>Mint</b></div>
+        <div class="card"><canvas data-paint="bird:lemon" width="96" height="96" aria-label="Lemonade">Lemonade</canvas><b>Lemonade</b></div>
+        <div class="card"><canvas data-paint="bird:slate" width="96" height="96" aria-label="Camo">Camo</canvas><b>Camo</b></div>
+        <div class="card"><canvas data-paint="bird:coral" width="96" height="96" aria-label="Coral dots">Coral dots</canvas><b>Coral dots</b></div>
+        <div class="card"><canvas data-paint="bird:snow" width="96" height="96" aria-label="Snow">Snow</canvas><b>Snow</b></div>
+      </div></div>
+      <div class="rar"><h3>Rare <small>10 birds · 750 coins each</small></h3><div class="cards mini">
+        <div class="card"><canvas data-paint="bird:robin" width="96" height="96" aria-label="Robin">Robin</canvas><b>Robin</b></div>
+        <div class="card"><canvas data-paint="bird:toucan" width="96" height="96" aria-label="Toucan">Toucan</canvas><b>Toucan</b></div>
+        <div class="card"><canvas data-paint="bird:chick" width="96" height="96" aria-label="Chick">Chick</canvas><b>Chick</b></div>
+        <div class="card"><canvas data-paint="bird:penguin" width="96" height="96" aria-label="Penguin">Penguin</canvas><b>Penguin</b></div>
+        <div class="card"><canvas data-paint="bird:owl" width="96" height="96" aria-label="Owl">Owl</canvas><b>Owl</b></div>
+        <div class="card"><canvas data-paint="bird:duck" width="96" height="96" aria-label="Rubber duck">Rubber duck</canvas><b>Rubber duck</b></div>
+        <div class="card"><canvas data-paint="bird:flamingo" width="96" height="96" aria-label="Flamingo">Flamingo</canvas><b>Flamingo</b></div>
+        <div class="card"><canvas data-paint="bird:puffer" width="96" height="96" aria-label="Puffer">Puffer</canvas><b>Puffer</b></div>
+        <div class="card"><canvas data-paint="bird:zebra" width="96" height="96" aria-label="Zebra">Zebra</canvas><b>Zebra</b></div>
+        <div class="card"><canvas data-paint="bird:buzz" width="96" height="96" aria-label="Buzz">Buzz</canvas><b>Buzz</b></div>
+      </div></div>
+      <div class="rar"><h3>Epic <small>6 birds · 2,000 coins each</small></h3><div class="cards mini">
+        <div class="card"><canvas data-paint="bird:robo" width="96" height="96" aria-label="Robo">Robo</canvas><b>Robo</b></div>
+        <div class="card"><canvas data-paint="bird:zombie" width="96" height="96" aria-label="Zombie">Zombie</canvas><b>Zombie</b></div>
+        <div class="card"><canvas data-paint="bird:ghost" width="96" height="96" aria-label="Ghost">Ghost</canvas><b>Ghost</b></div>
+        <div class="card"><canvas data-paint="bird:pixel" width="96" height="96" aria-label="8-Bit">8-Bit</canvas><b>8-Bit</b></div>
+        <div class="card"><canvas data-paint="bird:frost" width="96" height="96" aria-label="Frost">Frost</canvas><b>Frost</b></div>
+        <div class="card"><canvas data-paint="bird:magma" width="96" height="96" aria-label="Magma">Magma</canvas><b>Magma</b></div>
+      </div></div>
+      <div class="rar"><h3>Legendary <small>4 birds · 5,000 coins each</small></h3><div class="cards mini">
+        <div class="card"><canvas data-paint="bird:galaxy" width="96" height="96" aria-label="Galaxy">Galaxy</canvas><b>Galaxy</b></div>
+        <div class="card"><canvas data-paint="bird:golden" width="96" height="96" aria-label="Golden">Golden</canvas><b>Golden</b></div>
+        <div class="card"><canvas data-paint="bird:rainbow" width="96" height="96" aria-label="Rainbow">Rainbow</canvas><b>Rainbow</b></div>
+        <div class="card"><canvas data-paint="bird:phoenix" width="96" height="96" aria-label="Phoenix">Phoenix</canvas><b>Phoenix</b></div>
+      </div></div>
+      <p class="note">The Shop and Skins open once you have scored 25 points in a run.</p>
+    </div>
+  </section>
+
+  <section class="zone prose p-glider" style="--from: #FCD9EE" id="skins">
+    <div class="wrap">
+      <h2>Hats, gear, hoops and trails</h2>
+      <p>On top of the bird there are four more layers, each with 30 choices: <strong>hats</strong> from a cap to a crown, <strong>gear</strong> from shades to a jetpack, <strong>hoops</strong> that replace the pink rings you fly through, and <strong>trails</strong> that stream behind your bird while it's on fire or on a ride. Accessories cost 250 coins (common), 750 (rare), 2,000 (epic) or 5,000 (legendary). Mix them however you like: your look also shows in Versus, so other players race against your style. A few of them:</p>
+      <h3>Hats</h3>
+      <div class="cards mini">
+          <div class="card"><canvas data-paint="hat:cap" width="96" height="96" aria-label="Cap">Cap</canvas><b>Cap</b></div>
+          <div class="card"><canvas data-paint="hat:party" width="96" height="96" aria-label="Party hat">Party hat</canvas><b>Party hat</b></div>
+          <div class="card"><canvas data-paint="hat:tophat" width="96" height="96" aria-label="Top hat">Top hat</canvas><b>Top hat</b></div>
+          <div class="card"><canvas data-paint="hat:cowboy" width="96" height="96" aria-label="Cowboy">Cowboy</canvas><b>Cowboy</b></div>
+          <div class="card"><canvas data-paint="hat:viking" width="96" height="96" aria-label="Viking">Viking</canvas><b>Viking</b></div>
+          <div class="card"><canvas data-paint="hat:pirate" width="96" height="96" aria-label="Pirate">Pirate</canvas><b>Pirate</b></div>
+          <div class="card"><canvas data-paint="hat:wizard" width="96" height="96" aria-label="Wizard">Wizard</canvas><b>Wizard</b></div>
+          <div class="card"><canvas data-paint="hat:crown" width="96" height="96" aria-label="Crown">Crown</canvas><b>Crown</b></div>
+      </div>
+      <h3>Gear</h3>
+      <div class="cards mini">
+          <div class="card"><canvas data-paint="acc:shades" width="96" height="96" aria-label="Shades">Shades</canvas><b>Shades</b></div>
+          <div class="card"><canvas data-paint="acc:bowtie" width="96" height="96" aria-label="Bow tie">Bow tie</canvas><b>Bow tie</b></div>
+          <div class="card"><canvas data-paint="acc:scarf" width="96" height="96" aria-label="Scarf">Scarf</canvas><b>Scarf</b></div>
+          <div class="card"><canvas data-paint="acc:hearts" width="96" height="96" aria-label="Heart shades">Heart shades</canvas><b>Heart shades</b></div>
+          <div class="card"><canvas data-paint="acc:monocle" width="96" height="96" aria-label="Monocle">Monocle</canvas><b>Monocle</b></div>
+          <div class="card"><canvas data-paint="acc:chain" width="96" height="96" aria-label="Gold chain">Gold chain</canvas><b>Gold chain</b></div>
+          <div class="card"><canvas data-paint="acc:mask" width="96" height="96" aria-label="Hero mask">Hero mask</canvas><b>Hero mask</b></div>
+          <div class="card"><canvas data-paint="acc:jetpack" width="96" height="96" aria-label="Jetpack">Jetpack</canvas><b>Jetpack</b></div>
+      </div>
+      <h3>Hoops</h3>
+      <div class="cards mini">
+          <div class="card"><canvas data-paint="hoop:pink" width="96" height="96" aria-label="Classic">Classic</canvas><b>Classic</b></div>
+          <div class="card"><canvas data-paint="hoop:candy" width="96" height="96" aria-label="Candy cane">Candy cane</canvas><b>Candy cane</b></div>
+          <div class="card"><canvas data-paint="hoop:checker" width="96" height="96" aria-label="Finish line">Finish line</canvas><b>Finish line</b></div>
+          <div class="card"><canvas data-paint="hoop:donut" width="96" height="96" aria-label="Donut">Donut</canvas><b>Donut</b></div>
+          <div class="card"><canvas data-paint="hoop:neon" width="96" height="96" aria-label="Neon">Neon</canvas><b>Neon</b></div>
+          <div class="card"><canvas data-paint="hoop:lava" width="96" height="96" aria-label="Lava">Lava</canvas><b>Lava</b></div>
+          <div class="card"><canvas data-paint="hoop:rainbow" width="96" height="96" aria-label="Rainbow">Rainbow</canvas><b>Rainbow</b></div>
+          <div class="card"><canvas data-paint="hoop:blackhole" width="96" height="96" aria-label="Black hole">Black hole</canvas><b>Black hole</b></div>
+      </div>
+      <h3>Trails</h3>
+      <div class="cards mini">
+          <div class="card"><canvas data-paint="trail:flame" width="96" height="96" aria-label="Classic flame">Classic flame</canvas><b>Classic flame</b></div>
+          <div class="card"><canvas data-paint="trail:blue" width="96" height="96" aria-label="Blue flame">Blue flame</canvas><b>Blue flame</b></div>
+          <div class="card"><canvas data-paint="trail:sparkle" width="96" height="96" aria-label="Sparkles">Sparkles</canvas><b>Sparkles</b></div>
+          <div class="card"><canvas data-paint="trail:bubbles" width="96" height="96" aria-label="Bubbles">Bubbles</canvas><b>Bubbles</b></div>
+          <div class="card"><canvas data-paint="trail:hearts" width="96" height="96" aria-label="Hearts">Hearts</canvas><b>Hearts</b></div>
+          <div class="card"><canvas data-paint="trail:bolt" width="96" height="96" aria-label="Lightning">Lightning</canvas><b>Lightning</b></div>
+          <div class="card"><canvas data-paint="trail:notes" width="96" height="96" aria-label="Music">Music</canvas><b>Music</b></div>
+          <div class="card"><canvas data-paint="trail:rainbow" width="96" height="96" aria-label="Rainbow">Rainbow</canvas><b>Rainbow</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="zone prose p-legend" style="--from: #EBD3F5" id="ranks">
+    <div class="wrap">
+      <h2>The 10 ranks</h2>
+      <p>Your rank comes from your best score. Score 10 in a run and you hatch as an Egg; reach 5,000 and you are a Legend. Each new rank pays a one-time coin reward and gives you a bigger emblem on the Levels screen.</p>
+      <table class="ranktable">
+        <thead><tr><th scope="col">Emblem</th><th scope="col">Rank</th><th scope="col">Best score</th></tr></thead>
+        <tbody>
+          <tr><td><canvas data-paint="emblem:1" width="72" height="72" aria-label="The Egg emblem">The Egg emblem</canvas></td><td class="n">EGG</td><td>10</td></tr>
+          <tr><td><canvas data-paint="emblem:2" width="72" height="72" aria-label="The Chick emblem">The Chick emblem</canvas></td><td class="n">CHICK</td><td>50</td></tr>
+          <tr><td><canvas data-paint="emblem:3" width="72" height="72" aria-label="The Fledgling emblem">The Fledgling emblem</canvas></td><td class="n">FLEDGLING</td><td>100</td></tr>
+          <tr><td><canvas data-paint="emblem:4" width="72" height="72" aria-label="The Flapper emblem">The Flapper emblem</canvas></td><td class="n">FLAPPER</td><td>200</td></tr>
+          <tr><td><canvas data-paint="emblem:5" width="72" height="72" aria-label="The Glider emblem">The Glider emblem</canvas></td><td class="n">GLIDER</td><td>400</td></tr>
+          <tr><td><canvas data-paint="emblem:6" width="72" height="72" aria-label="The Falcon emblem">The Falcon emblem</canvas></td><td class="n">FALCON</td><td>600</td></tr>
+          <tr><td><canvas data-paint="emblem:7" width="72" height="72" aria-label="The Hawk emblem">The Hawk emblem</canvas></td><td class="n">HAWK</td><td>800</td></tr>
+          <tr><td><canvas data-paint="emblem:8" width="72" height="72" aria-label="The Spike Ace emblem">The Spike Ace emblem</canvas></td><td class="n">SPIKE ACE</td><td>1,000</td></tr>
+          <tr><td><canvas data-paint="emblem:9" width="72" height="72" aria-label="The Phoenix emblem">The Phoenix emblem</canvas></td><td class="n">PHOENIX</td><td>2,000</td></tr>
+          <tr><td><canvas data-paint="emblem:10" width="72" height="72" aria-label="The Legend emblem">The Legend emblem</canvas></td><td class="n">LEGEND</td><td>5,000</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="zone prose p-fledge" style="--from: #2A1260" id="coins">
+    <div class="wrap">
+      <h2>How to earn coins</h2>
+      <ul>
+        <li><strong>Fly.</strong> Every hoop pays 1 coin, a perfect pays 2.</li>
+        <li><strong>Grab the bonuses.</strong> The Piggy Bank, the Firefly Jar, the Star Trail, the balloon bonus and the puzzle all pay coins. <a href="/how-to-play">How to play</a> explains each one.</li>
+        <li><strong>Win in Versus.</strong> A win pays 10 coins, a draw 5. See <a href="/versus">how Versus works</a>.</li>
+        <li><strong>Rank up.</strong> Every new rank pays a one-time reward, from 50 coins for Egg to 5,000 for Legend.</li>
+        <li><strong>Free coins.</strong> The Shop has free coins for watching a short video, a few times a day.</li>
+        <li><strong>Coin packs.</strong> If you want a shortcut, the Shop sells coin packs.</li>
+      </ul>
+      <p>The Classic bird has been around since the start: read <a href="/story">the Flappy Spikes story</a>.</p>
+    </div>
+  </section>
+
+  <section class="zone cta p-ace" style="--from: #B9F3E1">
+    <div class="wrap">
+      <div class="sticker long"><b>FREE</b><span>TO PLAY</span></div>
+      <canvas data-paint="cta" width="520" height="260" aria-label="The bird on fire flying through a hoop">The bird on fire flying through a hoop.</canvas>
+      <h2>Ready to fly?</h2>
+      <span class="banner" style="justify-self: center">BEAT MY SCORE!</span>
+      <div class="badges">
+        <a class="badge" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dbirds"><img src="/a/gp.9e62107f39.webp" width="196" height="58" alt="Get it on Google Play"></a>
+          <a class="badge" id="appstore" href="#appstore"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
+      </div>
+      <p class="free">Free to play on Android. Coming to iPhone.</p>
+    </div>
+  </section>
+</main>
+<footer>
+  <div class="spikes"></div>
+  <div class="wrap">
+    <div class="copy"><img src="/a/icon-28.4b7efa7d1e.webp" srcset="/a/icon-28.4b7efa7d1e.webp 1x, /a/icon-56.895002a512.webp 2x" width="28" height="28" alt="">Flappy Spikes by Duo Leads</div>
+    <nav aria-label="Site"><a href="/how-to-play">How to play</a><a href="/birds">Birds &amp; ranks</a><a href="/story">The story</a><a href="/versus">Versus</a><a href="/games-like-flappy-bird">Games like Flappy Bird</a><a href="/support">Support</a><a href="/privacy">Privacy policy</a><a href="/delete-data">Delete data</a></nav>
+    <div class="fine">
+      <p>© 2026 Flappy Spikes · Duo Leads · <a href="mailto:hello@duoleads.com">hello@duoleads.com</a><noscript> (<img src="/a/contact.de99f8952e.svg" width="140" height="19" alt="our email address, as an image">)</noscript></p>
+      <p>Google Play and the Google Play logo are trademarks of Google LLC. App Store is a trademark of Apple Inc.</p>
+    </div>
+  </div>
+</footer>
+<script defer src="/a/skin_art.52c6894d79.js"></script>
+<script defer src="/a/emblem_art.1c8be34be5.js"></script>
+<script defer src="/a/paint.624ca7b449.js"></script>
+<script defer src="/a/pages.b169a3d540.js"></script>
+</body>
+</html>

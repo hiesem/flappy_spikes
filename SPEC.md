@@ -1544,7 +1544,7 @@ production build has the flag off and uses these values only. Full key table:
   draw while one waits) is drawn again from the non-big elements. A due portal and an
   owed comet keep their "stays due" path and count as the waiting bonus; the comet roll
   happens before the block check so the course stream stays the same. The director
-  model drops the big-bonus rate ≈ 14 %, the in-run soak ≈ 15 % (target ≤ 10 %;
+  model drops the big-bonus rate ≈ 14 %, the in-run soak (1600 runs) ≈ 18 % (target ≤ 10 %;
   reported, PRD-2.3 §17.6).
 - DEVIATION (PRD-2.3 §17.4, supersedes the fixed 60 pt for big bonuses): each slot's
   hoop is created at `max(60, visual reach + 8)` pt past the right edge (portal 66 + 12

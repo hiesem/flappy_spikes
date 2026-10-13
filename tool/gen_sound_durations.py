@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """PRD-2.2 §22.2: write lib/game/sound_durations.g.dart.
 
-Reads every file in assets/audio (sound effects and loops; the music file is
-skipped) with ffprobe and writes a const Dart table
+Reads every file in assets/audio (sound effects and loops; the music files
+are skipped) with ffprobe and writes a const Dart table
 `file -> (duration ms, file size bytes)`. SoundService stops each one-shot
 play after that length + 100 ms (Android SoundPool cannot report a duration).
 
@@ -21,7 +21,9 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 AUDIO = ROOT / "assets" / "audio"
 OUT = ROOT / "lib" / "game" / "sound_durations.g.dart"
-MUSIC = "HappyBeat_8-Bit_Retro_Game_Loop.mp3"
+# The music files are skipped (PRD-2.3 §16.3: the OGG loop plays on Android
+# and Linux, the MP3 stays for iOS).
+MUSIC = {"HappyBeat_8-Bit_Retro_Game_Loop.mp3", "HappyBeat_loop_56bars.ogg"}
 
 
 def duration_ms(path: pathlib.Path) -> int:
@@ -38,9 +40,9 @@ def duration_ms(path: pathlib.Path) -> int:
 def main() -> int:
     rows = []
     for f in sorted(AUDIO.iterdir()):
-        if not f.is_file() or f.name == MUSIC:
+        if not f.is_file() or f.name in MUSIC:
             continue
-        if f.suffix.lower() not in (".mp3", ".wav"):
+        if f.suffix.lower() not in (".mp3", ".wav", ".ogg"):
             continue
         rows.append((f.name, duration_ms(f), f.stat().st_size))
     lines = [

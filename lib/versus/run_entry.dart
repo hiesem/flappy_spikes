@@ -10,7 +10,8 @@ import 'timeline.dart';
 
 /// One run as the client stores it in `players/{uid}` and the server copies
 /// into a pool (PRD-2 §3.13, ARCH §6.1 `RunEntry`; mirrors
-/// `functions/src/schema.ts`). Exactly the 11 keys the rules accept.
+/// `functions/src/schema.ts`). Exactly the 12 keys the rules accept
+/// (PRD-2.3 §21.4 adds `pg`; runs stored without it still read).
 ///
 /// `ts` is a plain [DateTime] here; the Firestore backend converts it to a
 /// `Timestamp` on write and back on read (this file stays plugin-free).
@@ -27,6 +28,7 @@ class RunEntry {
     required this.tl,
     required this.end,
     required this.fl,
+    this.pg = '',
   });
 
   /// §3.13 the entry for a finished run: `best` = the player's best at
@@ -39,6 +41,7 @@ class RunEntry {
     Look look = Look.defaults,
     String platform = 'android',
     required DateTime ts,
+    String pg = '',
   }) => RunEntry(
     runId: runId,
     score: s.score,
@@ -51,6 +54,7 @@ class RunEntry {
     tl: s.timeline.encodeTl(),
     end: s.timeline.endCs.clamp(0, 0xFFFF),
     fl: s.timeline.encodeFlags(),
+    pg: isValidPg(pg) ? pg : '',
   );
 
   final String runId;
@@ -75,6 +79,15 @@ class RunEntry {
   /// the entry's value (uint16 LE). The values sum to [score].
   final String fl;
 
+  /// PRD-2.3 §21.4 the hashed Play Games id: SHA-256 hex (64 characters)
+  /// of the Play Games player id plus the app salt; '' without Play Games.
+  /// Matching never pairs two runs with the same non-empty `pg`.
+  final String pg;
+
+  /// PRD-2.3 §21.4 the rules' shape of `pg`: '' or 64 lowercase hex.
+  static bool isValidPg(String pg) =>
+      pg.isEmpty || RegExp(r'^[0-9a-f]{64}$').hasMatch(pg);
+
   RunTimeline get timeline => RunTimeline.decode(tl, fl, end);
 
   /// The rules' size limits (ARCH §6.1): a longer timeline cannot be
@@ -85,7 +98,7 @@ class RunEntry {
       tl.length <= VersusConfig.tlMax &&
       fl.length <= VersusConfig.flMax;
 
-  /// The 11 fields; [ts] is written as given ([DateTime] by default; the
+  /// The 12 fields; [ts] is written as given ([DateTime] by default; the
   /// backend passes a `Timestamp`, the queue JSON passes epoch ms).
   Map<String, Object?> toMap({Object? ts}) => {
     'runId': runId,
@@ -99,6 +112,7 @@ class RunEntry {
     'tl': tl,
     'end': end,
     'fl': fl,
+    'pg': pg,
   };
 
   /// Reads a stored / pooled entry; null when the shape is wrong or the
@@ -129,6 +143,10 @@ class RunEntry {
         tl: tl,
         end: end,
         fl: fl,
+        pg: switch (m['pg']) {
+          final String v when isValidPg(v) => v,
+          _ => '',
+        },
       );
     } catch (_) {
       return null;

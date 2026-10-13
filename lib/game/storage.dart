@@ -73,6 +73,8 @@ class GameStorage {
   // endregion PRD-2 keys
   // PRD-2.2 §2.2 the Home mode button: 'versus' (default) / 'freeFly'.
   static const String _homeModeKey = 'homeMode';
+  // PRD-2.3 §21.3 the last uploaded versus picture: JSON {uid, hash, url}.
+  static const String _versusAvatarKey = 'versusAvatar';
 
   /// One preference key per equipped layer (the five-key equipped map).
   static String _equippedItemKey(SkinLayer layer) =>
@@ -198,6 +200,12 @@ class GameStorage {
   /// §3.13 Versus nickname (generated once by WP-5b); null = not yet.
   String? versusNickname;
 
+  /// PRD-2.3 §21.3 the last uploaded versus picture `(uid, hash, url)`:
+  /// the Firebase uid it was uploaded for, the hash of the Play Games
+  /// picture it was made from (re-upload when it differs) and its download
+  /// URL (the run's `avatar`); null = none uploaded.
+  ({String uid, String hash, String url})? versusAvatar;
+
   /// §3.13 Pending versus uploads (JSON run entries).
   List<String> uploadQueue = [];
 
@@ -319,6 +327,7 @@ class GameStorage {
     puzzlePayout = prefs.getInt(_puzzlePayoutKey) ?? 0;
     metElements = (prefs.getStringList(_metElementsKey) ?? const []).toSet();
     versusNickname = prefs.getString(_versusNicknameKey);
+    versusAvatar = _parseVersusAvatar(prefs.getString(_versusAvatarKey));
     uploadQueue = List.of(prefs.getStringList(_uploadQueueKey) ?? const []);
     uploadsToday = prefs.getInt(_uploadsTodayKey) ?? 0;
     uploadsDay = prefs.getString(_uploadsDayKey) ?? '';
@@ -525,6 +534,39 @@ class GameStorage {
   }
   // endregion PRD-2 keys
 
+  // region PRD-2.3 §21.3 — the uploaded versus picture
+  static ({String uid, String hash, String url})? _parseVersusAvatar(
+    String? raw,
+  ) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final m = jsonDecode(raw);
+      if (m is! Map) return null;
+      final uid = m['uid'], hash = m['hash'], url = m['url'];
+      if (uid is! String || hash is! String || url is! String) return null;
+      return (uid: uid, hash: hash, url: url);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Saves (or with null clears) [versusAvatar].
+  Future<void> saveVersusAvatar(
+    ({String uid, String hash, String url})? value,
+  ) async {
+    versusAvatar = value;
+    final prefs = await SharedPreferences.getInstance();
+    if (value == null) {
+      await prefs.remove(_versusAvatarKey);
+    } else {
+      await prefs.setString(
+        _versusAvatarKey,
+        jsonEncode({'uid': value.uid, 'hash': value.hash, 'url': value.url}),
+      );
+    }
+  }
+  // endregion PRD-2.3 §21.3
+
   // region WP-4c — "Delete my data" local reset (PRD-2 §3.13 Q22, ARCH §5)
   /// Q22: "Delete my data" resets the versus install state — the generated
   /// nickname (cleared; a new one is made at the next use), the upload queue
@@ -536,6 +578,7 @@ class GameStorage {
     versusNickname = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_versusNicknameKey);
+    await saveVersusAvatar(null); // PRD-2.3 §21.3
     await saveUploadQueue(const []);
     await saveUploadsToday('', 0);
     await saveUploadsSent('', 0);

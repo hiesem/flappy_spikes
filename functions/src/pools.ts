@@ -181,6 +181,8 @@ export async function processPlayerWrite(
           tl: chosen.tl,
           end: chosen.end,
           fl: chosen.fl,
+          // PRD-2.3 §21.4 the self-match guard's hashed Play Games id.
+          pg: typeof chosen.pg === 'string' ? chosen.pg : '',
         };
         const pool = poolSnap.data() as PoolDoc | undefined;
         const { entries } = mergePool(poolRef.path, pool, entry, uid, nowMs);

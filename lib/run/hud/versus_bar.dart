@@ -4,6 +4,7 @@ import 'package:flame/components.dart';
 
 import '../config/hud_config.dart';
 import '../config/versus_config.dart';
+import '../../components/versus_avatar.dart';
 import '../../services/avatars.dart';
 import 'name_chip.dart';
 import 'run_hud.dart';
@@ -100,7 +101,15 @@ class VersusBar extends PositionComponent {
       Color.lerp(const Color(0xFF000000), fg, HudConfig.themAvatarMix)!,
       ta,
     );
-    _avatar(canvas, themAv, bg, ta, hud.run.setup.opponent?.avatarUrl ?? '');
+    // PRD-2.3 §21.3 their picture, else their own bird in their look
+    // (never the grey person icon).
+    final opp = hud.run.setup.opponent;
+    final theirs = hud.game.avatars.lookup(opp?.avatarUrl ?? '');
+    if (theirs != null) {
+      AvatarImages.paint(canvas, theirs, themAv, opacity: ta);
+    } else if (opp != null) {
+      VersusAvatar.paintBird(canvas, themAv, opp.look, mirror: true, opacity: ta);
+    }
     _score(
       canvas,
       '$theirScore',

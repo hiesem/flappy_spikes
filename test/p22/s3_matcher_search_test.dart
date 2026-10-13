@@ -13,7 +13,8 @@ class _E implements Matchable {
     : uid = m['uid']! as String,
       runId = m['runId']! as String,
       score = (m['score']! as num).toInt(),
-      level = (m['level']! as num).toInt();
+      level = (m['level']! as num).toInt(),
+      pg = (m['pg'] as String?) ?? '';
   @override
   final String uid;
   @override
@@ -22,6 +23,8 @@ class _E implements Matchable {
   final int score;
   @override
   final int level;
+  @override
+  final String pg;
 }
 
 int _levelOf(String id) => int.parse(id.split('_').first);
@@ -96,7 +99,9 @@ void main() {
         final me = c['me']! as Map<String, Object?>;
         final myUid = me['uid']! as String;
         final level = (me['level']! as num).toInt();
-        final seen = {...(c['seen']! as List).cast<String>()};
+        // PRD-2.3 §25.2 the ordered met list (oldest first).
+        final seen = (c['seen']! as List).cast<String>();
+        final myPg = (me['pg'] as String?) ?? '';
         final byId = pools(c['pools']! as Map<String, Object?>);
         final ex = c['expect']! as Map<String, Object?>;
         for (var seed = 0; seed < 12; seed++) {
@@ -108,7 +113,8 @@ void main() {
               return byId[id] ?? const [];
             },
             myUid: myUid,
-            seen: seen,
+            met: seen,
+            myPg: myPg,
           );
           expect(r.poolId, ex['pool']);
           expect(r.reads, reads.length);
@@ -116,14 +122,18 @@ void main() {
             r.reads,
             inInclusiveRange(ex['minReads']! as int, ex['maxReads']! as int),
           );
-          // Stops at the first hit: the hit is the last read.
-          if (r.found) expect(reads.last, r.poolId);
+          // PRD-2.3 §25.2 reads go by rounds of 4 (one level's shards); a
+          // fresh hit is in the last round read.
+          if (r.found && ex['tier'] != 'rematch') {
+            expect(reads.sublist(reads.length - 4), contains(r.poolId));
+          }
           final (tier, cands) = matchCandidates(
             r.pool,
             myLevel: level,
             myBest: (me['best']! as num).toInt(),
             myUid: myUid,
-            seen: seen,
+            met: seen,
+            myPg: myPg,
           );
           expect(tier.name, ex['tier']);
           expect(cands.map((e) => e.runId).toSet(), {
@@ -157,7 +167,7 @@ void main() {
       expect(capped.found, isFalse);
     });
 
-    test('§3 the time limit: an expired search stops before the next read',
+    test('§3 the time limit: an expired search stops before the next round',
         () async {
       var reads = 0;
       final r = await searchPools<_E>(
@@ -169,9 +179,10 @@ void main() {
         myUid: 'me',
         expired: () => reads >= 7,
       );
+      // PRD-2.3 §25.2 checked between rounds of 4: 8 reads were issued.
       expect(r.timedOut, isTrue);
       expect(r.found, isFalse);
-      expect(r.reads, 7);
+      expect(r.reads, 8);
     });
 
     test('§3 a failing read ends the search with its error', () async {

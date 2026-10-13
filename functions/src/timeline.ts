@@ -24,6 +24,7 @@ import {
   PUZZLE_BONUS_CAP,
   RunEntry,
   TIMELINE_VERSION,
+  validPg,
 } from './schema.js';
 
 const B64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
@@ -112,7 +113,9 @@ function validDisplay(run: RunEntry): boolean {
     look !== null &&
     typeof look === 'object' &&
     Object.keys(look).length === LOOK_KEYS.length &&
-    LOOK_KEYS.every((k) => isStr(look[k], 0, 40))
+    LOOK_KEYS.every((k) => isStr(look[k], 0, 40)) &&
+    // PRD-2.3 §21.4 the optional hashed Play Games id.
+    validPg(run.pg)
   );
 }
 

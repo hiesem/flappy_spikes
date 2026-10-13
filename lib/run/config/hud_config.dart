@@ -54,6 +54,13 @@ abstract final class HudConfig {
   static const double chipTop = 92;
   static const double chipHeight = 22;
   static const double chipFont = 15;
+
+  /// PRD-2.3 §21.2 a name tag shrinks to fit its room down to 70 % of its
+  /// normal size, then it is cut with "…" (`fitName`).
+  static const double nameMinScale = .7;
+
+  /// PRD-2.3 §21.2 the padding on each side of a name chip's text (pt).
+  static const double chipPad = 4;
   static const Color plum = Color(0xFF7A0044);
   static const String nameFont = 'Fredoka';
 

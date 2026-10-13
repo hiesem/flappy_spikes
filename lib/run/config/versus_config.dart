@@ -70,6 +70,37 @@ abstract final class VersusConfig {
   /// `timeout`).
   static const Duration searchLimit = Duration(seconds: 6);
 
+  /// PRD-2.3 §25.2 each pool read of the search is time-boxed to 4 s (was
+  /// the 10 s [callTimeout]).
+  static const Duration readTimeout = Duration(seconds: 4);
+
+  /// PRD-2.3 §25.2 the "met at" list keeps the last 100 run ids met
+  /// (oldest dropped first).
+  static const int metCap = 100;
+
+  /// PRD-2.3 §25.3 a VERSUS START without a held opponent: the VS intro
+  /// waits up to 3 s (after START) for the running search, then lands on
+  /// "NO RIVAL FOUND".
+  static const double introWait = 3;
+
+  /// PRD-2.3 §25.3 (call) after landing on NO RIVAL FOUND the FLY SOLO
+  /// banner shows this long after the plate flash, then the white fade.
+  static const double soloBannerAt = .3;
+  static const double soloBanner = 1.3;
+
+  /// PRD-2.3 §21.3 the uploaded picture: 96 × 96 JPEG ≤ 30 KB (the
+  /// `storage.rules` cap), the qualities tried from best down.
+  static const int avatarSide = 96;
+  static const int avatarMaxBytes = 30 * 1024;
+  static const List<int> avatarQualities = [88, 80, 70, 60, 50, 40, 30];
+
+  /// PRD-2.3 §21.3 the Storage path of a player's picture.
+  static String avatarPath(String uid) => 'avatars/$uid.jpg';
+
+  /// PRD-2.3 §21.4 / §0 item 7 the Remote Config parameter holding the
+  /// salt of the hashed Play Games id (generated at deploy, never in git).
+  static const String pgSaltKey = 'versus_pg_salt';
+
   /// PRD-2.2 §3 At most this many pool documents per search: every shard of
   /// every level ((maxLevel + 1) × shards = 44).
   static const int maxSearchReads = (maxLevel + 1) * shards;
@@ -136,6 +167,17 @@ abstract final class VersusConfig {
   static const double plateSlot = 52;
   static const double plateNameSize = 22;
   static const double plateNameLeft = 12;
+
+  /// PRD-2.3 §21.2 the emblem's half width on the plate (the widest emblem,
+  /// levels 9–10, is 98 art units each side × [emblemScale] ≈ 31.4 pt), and
+  /// the gap kept between the name and the emblem.
+  static const double plateEmblemHalf = 32;
+  static const double plateNameGap = 4;
+
+  /// PRD-2.3 §25.3 / §0 item 11 the texts of the no-rival landing (written
+  /// in the game's tone; listed in the report for the owner's review).
+  static const String noRivalText = 'NO RIVAL FOUND';
+  static const String flySoloText = 'FLY SOLO';
 
   /// §5.8 Level emblem on the plate: 0.32 × art scale, centred on the slot.
   static const double emblemScale = .32;

@@ -58,6 +58,12 @@ abstract final class ResultsConfig {
   static const double avatarTop = 144;
   static const double nameTop = 188;
   static const double nameFontSize = 15;
+
+  /// PRD-2.3 §21.2 the room of a name under its avatar: a versus column
+  /// (between the card edge and the VS) and the solo column (the card
+  /// minus its padding). Names follow `fitName`.
+  static const double nameRoomVersus = 116;
+  static const double nameRoomSolo = 260;
   static const double scoreTop = 205;
   static const double scoreFontSize = 42;
   static const double scoreFontSizeLong = 36;

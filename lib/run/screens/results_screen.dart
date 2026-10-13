@@ -8,6 +8,7 @@ import 'package:flame/extensions.dart';
 import '../../components/home/menu_primitives.dart';
 import '../../components/levels/emblem_view.dart';
 import '../../components/look_component.dart';
+import '../../components/versus_avatar.dart'; // PRD-2.3 §21.3
 import '../../components/ui/coin_fly.dart';
 import '../../components/ui/confetti.dart';
 import '../../components/ui/live_effects.dart' show WiggleEffect;
@@ -17,8 +18,10 @@ import '../../game/sound.dart';
 import '../../services/avatars.dart';
 import '../../levels/level_progress.dart';
 import '../../levels/levels.dart';
+import '../../skins/look.dart';
 import '../config/results_config.dart';
 import '../effects/coin_icon.dart';
+import '../hud/fit_name.dart'; // PRD-2.3 §21.2
 import '../effects/easing.dart';
 import '../effects/fireworks.dart';
 import '../effects/gold_sticker.dart';
@@ -369,6 +372,7 @@ class ResultsScreen extends PositionComponent
         centreX: ResultsConfig.opponentColumnX,
         mine: false,
         avatar: opp.avatarUrl,
+        look: opp.look,
         lower: duel == DuelResult.win,
         winner: duel == DuelResult.lose,
       );
@@ -975,10 +979,14 @@ class ResultsPlayerColumn extends PositionComponent
     this.lower = false,
     this.winner = false,
     this.avatar = '',
+    this.look,
   });
 
   final String name;
   final int score;
+
+  /// PRD-2.3 §21.3 the opponent's look: their avatar fallback.
+  final Look? look;
   final double centreX;
 
   /// The avatar's `AvatarImages` key ('' / not cached yet = the neutral
@@ -993,6 +1001,9 @@ class ResultsPlayerColumn extends PositionComponent
   final bool winner;
 
   late final MenuText scoreText;
+
+  /// PRD-2.3 §21.2 the fitted name (tests).
+  late final MenuText nameText;
   int _shown = 0;
 
   /// The score as counted up so far.
@@ -1006,18 +1017,29 @@ class ResultsPlayerColumn extends PositionComponent
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    add(
-      MenuText(
-        name,
-        fontSize: ResultsConfig.nameFontSize,
-        color: ResultsConfig.plum,
-        fontFamily: 'Fredoka',
-        fontWeight: FontWeight.w600,
-        lineHeight: 1,
-        position: Vector2(centreX, ResultsConfig.nameTop),
-        anchor: Anchor.topCenter,
-      ),
+    // PRD-2.3 §21.2 the one name rule (shrink to 70 %, then "…").
+    final fitted = fitName(
+      name,
+      centreX == ResultsConfig.soloColumnX
+          ? ResultsConfig.nameRoomSolo
+          : ResultsConfig.nameRoomVersus,
+      ResultsConfig.nameFontSize,
+      measureName(fontFamily: 'Fredoka', fontWeight: FontWeight.w600),
     );
+    nameText = MenuText(
+      fitted.text,
+      fontSize: fitted.size,
+      color: ResultsConfig.plum,
+      fontFamily: 'Fredoka',
+      fontWeight: FontWeight.w600,
+      lineHeight: 1,
+      position: Vector2(
+        centreX,
+        ResultsConfig.nameTop + (ResultsConfig.nameFontSize - fitted.size) / 2,
+      ),
+      anchor: Anchor.topCenter,
+    );
+    add(nameText);
     scoreText = MenuText(
       '0',
       fontSize: '$score'.length >= 4
@@ -1064,6 +1086,17 @@ class ResultsPlayerColumn extends PositionComponent
     final picture = game.avatars.lookup(avatar);
     if (picture != null) {
       AvatarImages.paint(canvas, picture, Rect.fromLTWH(left, top, s, s));
+      return;
+    }
+    // PRD-2.3 §21.3 an opponent without a picture shows their own bird.
+    final bird = look;
+    if (!mine && bird != null) {
+      VersusAvatar.paintBird(
+        canvas,
+        Rect.fromLTWH(left, top, s, s),
+        bird,
+        mirror: true,
+      );
       return;
     }
     const g = ResultsConfig.avatarGlyph;

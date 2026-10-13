@@ -8,6 +8,7 @@ import 'package:flutter/services.dart' show AssetBundle, rootBundle;
 import '../game/config.dart';
 import '../levels/emblem_painter.dart';
 import '../levels/levels.dart';
+import '../run/hud/fit_name.dart';
 import '../skins/art/look_painter.dart';
 import '../skins/look.dart';
 
@@ -424,7 +425,14 @@ abstract final class ShareCardPainter {
       ),
       Paint()..color = white,
     );
-    _text(c, name, 0, 2, family: _body, size: 40, color: plum, maxWidth: 380);
+    // PRD-2.3 §21.2 the one name rule: shrink to 70 %, then "…".
+    final f = fitName(
+      name,
+      380,
+      40,
+      measureName(fontFamily: _body, fontWeight: FontWeight.w600),
+    );
+    _text(c, f.text, 0, 2, family: _body, size: f.size, color: plum);
     c.restore();
   }
 

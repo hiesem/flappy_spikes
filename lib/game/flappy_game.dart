@@ -1034,21 +1034,26 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // and the run scene are built.
     _reserveRunBanner();
     final hook = beforeRunStart;
-    // region WP-5b — §3.13 / §5.8 the opponent is taken at tap time: the
-    // VS intro plays only when one is already prefetched, else START goes
-    // straight into a solo run (no intro, no waiting)
+    // region WP-5b — §3.13 / §5.8 the opponent is taken at tap time.
+    // PRD-2.3 §25.3: in VERSUS every START shows the VS intro, also when
+    // nothing is held yet (the intro is the loading screen: it waits up to
+    // 3 s for the search, then lands on the opponent or on NO RIVAL FOUND).
+    // A service without a backend ([VersusService.loadingIntro] false)
+    // keeps the 2.2 solo START without an intro.
     // PRD-2.2 §2.2: FREE FLY never takes the opponent (no intro, no bar,
     // no versus result); the held one stays ready for a later VERSUS.
-    final opponent = homeMode == HomeMode.versus ? _takeRunOpponent() : null;
-    if (homeMode == HomeMode.freeFly) _runOpponent = null;
+    final versusStart = homeMode == HomeMode.versus;
+    final waitIntro = versusStart && !_hasHeldOpponent() && _versusLoadingIntro;
+    final opponent = versusStart && !waitIntro ? _takeRunOpponent() : null;
+    if (!versusStart || waitIntro) _runOpponent = null;
     // endregion WP-5b
-    if (withPowerup || hook != null || opponent != null) {
+    if (withPowerup || hook != null || opponent != null || waitIntro) {
       _runStarting = true;
       try {
         if (withPowerup) await menu.slot.armOffered();
         if (hook != null) await hook();
         // region WP-5b
-        if (opponent != null) await _playVersusIntro(opponent);
+        if (opponent != null || waitIntro) await _playVersusIntro(opponent);
         // endregion WP-5b
       } finally {
         _runStarting = false;
@@ -1154,9 +1159,34 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   VersusIntro? get versusIntro => _versusIntro;
   VersusIntro? _versusIntro;
 
+  /// PRD-2.3 §25.3 whether the service shows the loading intro.
+  bool get _versusLoadingIntro {
+    try {
+      return versus.loadingIntro;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// PRD-2.3 §25.3 an opponent is held for START.
+  bool _hasHeldOpponent() {
+    try {
+      return versus.holdsOpponent;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// PRD-2.3 §10 hook for the waiting start: called once the VS intro has
+  /// finished (its white fade covers the screen), right before the run
+  /// starts — `versus` true when the run has an opponent, false when the
+  /// intro landed on NO RIVAL FOUND (a solo run). Null = nothing to do.
+  void Function({required bool versus})? onVersusIntroFinished;
+
   /// §3.13 takes the prefetched opponent (sync, never waits) and logs
   /// `versus_matched` / `versus_skipped {reason: no_opponent}` (§6).
-  OpponentRun? _takeRunOpponent() {
+  /// PRD-2.3 §25.3 [waitedMs] is how long the VS intro waited for it.
+  OpponentRun? _takeRunOpponent({int waitedMs = 0}) {
     OpponentRun? o;
     try {
       o = versus.takeOpponent();
@@ -1166,7 +1196,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _runOpponent = o;
     if (o == null) {
       services.track('versus_skipped', {'reason': 'no_opponent'});
-      _logVersusSolo();
+      _logVersusSolo(waitedMs: waitedMs);
     } else {
       services.track('versus_matched', {
         'opp_level': o.level,
@@ -1180,7 +1210,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// PRD-2.2 §4 a VERSUS START went solo: why, for us only (analytics
   /// `versus_solo {reason, reads, level}` and a logcat line; the debug panel
   /// shows [VersusService.lastSearch]). The player sees nothing.
-  void _logVersusSolo() {
+  void _logVersusSolo({int waitedMs = 0}) {
     VersusSoloReason reason;
     int reads;
     try {
@@ -1194,6 +1224,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       'reason': reason.code,
       'reads': reads,
       'level': menu.levels.level,
+      'waited_ms': waitedMs, // PRD-2.3 §25.3
     });
     debugPrint(versusSoloLogLine(reason, reads));
   }
@@ -1237,11 +1268,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// §5.8 plays the VS intro over the home screen (state `versusIntro`,
   /// taps do nothing) and returns when its white fade has covered the
   /// screen; the run then starts under the white, which fades out (0.3 s).
-  Future<void> _playVersusIntro(OpponentRun opponent) async {
+  ///
+  /// PRD-2.3 §25.3 [opponent] null: the intro is the loading screen. The
+  /// search ([VersusService.searchForStart]) runs while the reel cycles; a
+  /// result inside the 3 s is taken and handed to the reel
+  /// ([VersusIntro.resolve]); a later one stays held for the next START.
+  Future<void> _playVersusIntro(OpponentRun? opponent) async {
     state = GameState.versusIntro;
     // S6-64: start both avatar loads now; they land in the cache before
-    // the reel locks (≈ 3.9 s), else the neutral glyph stays.
-    avatars.lookup(opponent.avatarUrl);
+    // the reel locks (≈ 3.9 s), else the opponent's bird shows.
+    if (opponent != null) avatars.lookup(opponent.avatarUrl);
     avatars.lookup(myAvatarKey);
     final intro = VersusIntro(
       opponent: opponent,
@@ -1253,6 +1289,27 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     );
     _versusIntro = intro;
     world.add(intro);
+    if (opponent == null) {
+      Future<bool> search;
+      try {
+        search = versus.searchForStart();
+      } catch (_) {
+        search = Future.value(false);
+      }
+      unawaited(
+        search.catchError((_) => false).then((found) {
+          if (!intro.waiting || _versusIntro != intro) return;
+          OpponentRun? o;
+          if (found) {
+            try {
+              o = versus.takeOpponent();
+            } catch (_) {}
+          }
+          if (o != null) avatars.lookup(o.avatarUrl);
+          intro.resolve(o);
+        }),
+      );
+    }
     _ground.priority = groundOverMenusPriority;
     _ceiling.priority = groundOverMenusPriority;
     // The panels slide over the home screen *and* its coin pill.
@@ -1263,6 +1320,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         intro.finishNow();
       }
       await intro.done;
+      if (intro.waited) _afterLoadingIntro(intro);
+      onVersusIntroFinished?.call(versus: _runOpponent != null);
     } finally {
       if (state == GameState.versusIntro) state = GameState.start;
       _versusIntro = null;
@@ -1284,6 +1343,29 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         duration: VersusConfig.whiteFade,
         removeOnDone: true,
       );
+    }
+  }
+  /// PRD-2.3 §25.3 the loading intro ended: its opponent (if the reel
+  /// landed on one) becomes the run's, logged like a held one; NO RIVAL
+  /// FOUND logs `versus_solo` with `waited_ms`. Either way
+  /// `versus_intro_wait {waited_ms, found}`.
+  void _afterLoadingIntro(VersusIntro intro) {
+    final o = intro.opponent;
+    final waited = intro.waitedMs;
+    services.track('versus_intro_wait', {
+      'waited_ms': waited,
+      'found': o != null ? 1 : 0,
+    });
+    _runOpponent = o;
+    if (o == null) {
+      services.track('versus_skipped', {'reason': 'no_opponent'});
+      _logVersusSolo(waitedMs: waited);
+    } else {
+      services.track('versus_matched', {
+        'opp_level': o.level,
+        'opp_score': o.score,
+        'level': menu.levels.level,
+      });
     }
   }
   // endregion WP-5b

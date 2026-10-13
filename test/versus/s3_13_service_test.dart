@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flappy_spikes/game/storage.dart';
@@ -58,10 +59,48 @@ class FakeBackend implements VersusBackend {
     return verdict?.call(run) ?? UploadWrite.done;
   }
 
+  /// PRD-2.3 §21.4 scripted `credential-already-in-use`: the link switches
+  /// to [switchTo] (the uid owning the Play Games id), calling
+  /// `beforeSwitch` first while still signed in as the anonymous uid.
+  String? switchTo;
+  final List<String> deletedOnlineUids = [];
+  bool deleteOnlineFails = false;
+
   @override
-  Future<void> link(PlatformIdentity identity) async {
+  Future<void> link(
+    PlatformIdentity identity, {
+    Future<void> Function()? beforeSwitch,
+  }) async {
     links++;
+    final to = switchTo;
+    if (to != null) {
+      if (beforeSwitch != null) {
+        try {
+          await beforeSwitch();
+        } catch (_) {}
+      }
+      myUid = to;
+    }
     linked = true;
+  }
+
+  @override
+  Future<bool> deleteOnline() async {
+    if (deleteOnlineFails) throw StateError('unavailable');
+    deletedOnlineUids.add(myUid);
+    pools.updateAll(
+      (_, v) => [for (final e in v) if (e.uid != myUid) e],
+    );
+    return true;
+  }
+
+  /// PRD-2.3 §21.3 uploads (uid, bytes).
+  final List<(String, Uint8List)> avatarUploads = [];
+
+  @override
+  Future<String> uploadAvatar(Uint8List jpeg) async {
+    avatarUploads.add((myUid, jpeg));
+    return 'https://storage.example/avatars/$myUid.jpg?v=${avatarUploads.length}';
   }
 
   @override

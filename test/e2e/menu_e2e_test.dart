@@ -218,7 +218,7 @@ void main() {
     expect(r.spy.params('shop_open').last, {'source': 'pill'});
     await tap(g, t, const Offset(33, 77));
     var invites = 0;
-    g.onInvite = () => invites++;
+    g.onInvite = (_) => invites++;
     await tap(g, t, const Offset(197, 608));
     expect(invites, 1);
     expect(g.menu.wallet.balance, 0);

@@ -34,10 +34,13 @@ enum BannerState {
 }
 
 /// PRD-2.2 §7.6: why the video ad after a run was skipped
-/// (`ad_interstitial_skipped.reason`).
+/// (`ad_interstitial_skipped.reason`). PRD-2.3 §18.4 / §23.2: `new_player`
+/// replaces `first_runs` (the new-player grace), `rating` is a run that
+/// asked for the store's rating sheet.
 enum InterstitialSkip {
   noAds('no_ads'),
-  firstRuns('first_runs'),
+  newPlayer('new_player'),
+  rating('rating'),
   rewardedThisRun('rewarded_this_run'),
   cooldown('cooldown'),
   notLoaded('not_loaded'),

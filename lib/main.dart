@@ -16,6 +16,7 @@ import 'services/e2e.dart';
 import 'services/ads_service.dart';
 import 'services/audio_focus.dart';
 import 'services/monetization.dart';
+import 'services/rating_prompt.dart';
 import 'services/reminders.dart';
 import 'services/soak.dart';
 import 'services/tuning.dart';
@@ -147,6 +148,13 @@ Future<void> main() async {
       : NoopVersusService();
   // endregion WP-5b
 
+  // PRD-2.3 §23.4: the store's own rating sheet (Google Play's in-app review,
+  // Apple's prompt) on the mobile products only; the Linux desktop target and
+  // FS_E2E / soak builds never request it.
+  final rating = RatingPrompt(
+    backend: _isMobile && !kE2E && !kSoak ? const InAppReviewBackend() : null,
+  );
+
   game = FlappySpikesGame(
     worldHeight: worldHeight,
     services: services,
@@ -154,6 +162,7 @@ Future<void> main() async {
     versus: versus,
     // S6-64: Play Games avatars over https on the products only.
     avatarSource: _isMobile && !kE2E && !kSoak ? HttpAvatarSource() : null,
+    rating: rating,
   );
   // PRD-2.2 §33.4 item 5: idle menus draw at Config.idleMenuFps. Not in
   // FS_E2E builds, whose tests pump the frames themselves.
@@ -211,6 +220,8 @@ Future<void> main() async {
     // versus.initialize() waits for Firebase + storage itself (startAfter).
     unawaited(versus.initialize());
     // endregion WP-5b
+    // PRD-2.3 §23.4: asks the platform once whether the rating sheet can show.
+    unawaited(rating.prepare());
   }
   // Same fire-and-forget rule: the UMP consent form may be shown here, and
   // initialize() never throws; until it lands ads are simply unavailable.

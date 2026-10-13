@@ -17,6 +17,7 @@ import '../game/tintable.dart';
 import 'home/home_screen.dart';
 import 'home/menu_primitives.dart';
 import 'menu_drag_dispatcher.dart';
+import 'menu_lock_overlay.dart';
 
 /// Images of the shared menu chrome the game owns ([CoinPill],
 /// [MenuCornerBox]).
@@ -43,15 +44,29 @@ const List<String> kMenuChromeImages = [
 abstract class MenuScreen extends PositionComponent
     with HasGameReference<FlappySpikesGame>, GroupOpacity
     implements Tintable {
-  MenuScreen({required this.title, required this.onBack}) : super(priority: 20);
+  MenuScreen({required this.title, required this.onBack, this.lock})
+    : super(priority: 20);
 
   /// Uppercase title text.
   final String title;
   final void Function() onBack;
 
+  /// PRD-2.3 §26.2: the two lines of the lock overlay when the screen is
+  /// locked (null = open). A locked screen shows its content dimmed and takes
+  /// no input but the back button (and the coin pill, which the game draws).
+  final List<String>? lock;
+
+  bool get locked => lock != null;
+
   /// False once the screen starts leaving: its buttons stop hit-testing.
   bool active = true;
-  bool isActive() => active;
+
+  /// The content's hit test: off once the screen leaves and while it is
+  /// locked (every button, tile, tab and the scroll list use it).
+  bool isActive() => active && !locked;
+
+  /// The back button's hit test: it works on a locked screen too.
+  bool isBackActive() => active;
 
   /// The game's shared coin pill (drawn above this screen; it stays put
   /// across home / Shop / Skins transitions).
@@ -132,7 +147,9 @@ abstract class MenuScreen extends PositionComponent
       position: backRect.topLeft.toVector2(),
       size: backRect.size.toVector2(),
       onPressed: onBack,
-      isActive: isActive,
+      isActive: isBackActive,
+      // Above the lock overlay (PRD-2.3 §26.2), which is 0.
+      priority: 1,
     );
     titleText = MenuText(
       title,
@@ -165,6 +182,23 @@ abstract class MenuScreen extends PositionComponent
       ),
     ]);
     await buildContent();
+    // PRD-2.3 §26.2: the lock goes above the content and below the back
+    // button (which takes a higher priority), so the content is dimmed and
+    // the back button still works.
+    final lines = lock;
+    if (lines != null) {
+      add(
+        MenuLockOverlay(
+          rect: Rect.fromLTRB(
+            0,
+            Config.menuSpikeHeight,
+            Config.worldWidth,
+            h - Config.menuSpikeHeight,
+          ),
+          lines: lines,
+        ),
+      );
+    }
     _built = true;
     if (_detached) return;
     sync(force: true);

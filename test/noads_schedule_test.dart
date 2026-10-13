@@ -131,6 +131,7 @@ void main() async {
     expect(events.params('noads_popup_shown').single, {
       'trigger': 'launch',
       'reason': 'fallback',
+      'check': 'session',
     });
     await _flush(game);
     expect(game.storage.noAdsPopupLastMs, clock.now.millisecondsSinceEpoch);
@@ -164,11 +165,22 @@ void main() async {
       }
       await background(game, clock, const Duration(hours: 1));
       expect(game.noAdsPopup, isNull, reason: '9 runs on install day');
+      // PRD-2.3 §24.2: the 10th run's Home arrival checks the popup.
       await run(game, 8);
-      expect(game.noAdsPopup, isNull, reason: 'never between runs');
+      expect(game.noAdsPopup, isNotNull, reason: 'after-run check');
+      expect(events.params('noads_popup_shown').single, {
+        'trigger': 'launch',
+        'reason': 'fallback',
+        'check': 'after_run',
+      });
+      // One offer per arrival; the 1 h gap runs from that show.
+      game.closeNoAdsPopup();
+      await _flush(game);
       await background(game, clock, const Duration(hours: 1));
-      expect(game.noAdsPopup, isNotNull);
-      expect(events.params('noads_popup_shown').single!['reason'], 'fallback');
+      expect(game.noAdsPopup, isNull, reason: '1 h after the show, no fallback yet');
+      await background(game, clock, const Duration(hours: 2));
+      expect(game.noAdsPopup, isNotNull, reason: 'the 3 h fallback');
+      expect(events.params('noads_popup_shown').last!['check'], 'session');
     },
   );
 
@@ -352,6 +364,7 @@ void main() async {
     expect(events.params('noads_popup_shown').last, {
       'trigger': 'launch',
       'reason': 'forced',
+      'check': 'session',
     });
   });
 }

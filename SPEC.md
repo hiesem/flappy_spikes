@@ -1119,6 +1119,34 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   interstitial before Home unless: NO ADS, `gamesPlayed <= 3`, a rewarded ad was
   displayed in the run, < 60 s since the last full-screen ad closed, none
   loaded, or the app is in the background.
+- DEVIATION (PRD-2.3 §18, supersedes the `gamesPlayed <= 3` guard above): the
+  new-player grace lasts until **5 finished runs or 300 s of foreground
+  playtime since install**, whichever comes first (`ads_grace_runs`,
+  `ads_grace_seconds`); no best-score gate. Nothing preloads during it. The
+  playtime counts only while resumed and outside full-screen ads, is saved
+  every 10 s on the menus, on going to the background and at run end, and is
+  kept by "Delete my data". Skip reason `new_player` replaces `first_runs`.
+  DEVIATION within §18.3: during a run and on its results page the 10 s write
+  waits; the run's time is saved when the Home arrives (a run is one flight of
+  at most a few minutes, and the grace ends after 5 runs). A crash mid-run
+  loses at most that run's time instead of 10 s.
+- DEVIATION (PRD-2.3 §23, rating prompt): a run whose results page requests
+  the store's rating sheet (run 5 — `rate_min_runs` — or a new best after it)
+  has **no interstitial** (skip reason `rating`). The request waits 1.5 s
+  after the results page has settled, with no overlay open; NEXT before that
+  means no request and no cooldown. At most once per 30 days
+  (`lastRatingRequestAt`). Native sheet only (`in_app_review`).
+- DEVIATION (PRD-2.3 §24, No-Ads popup): the schedule checks every Home
+  arrival after a run as well as the session start; the gap is 1 h from the
+  last show (closing no longer restarts it), the cap is 5 a local day and the
+  fallback 3 h. Never on the arrival of a run that requested the rating sheet
+  or when a gift came up on that visit (PRD-2.3 §0 item 2); at most one offer
+  per arrival.
+- DEVIATION (PRD-2.3 §26, Shop and Skins lock): below a best of
+  `ui_unlock_best` (25) the Shop and Skins screens open dimmed under a lock
+  overlay (#000000 at 72 %, two centred lines); only the back button and the
+  coin pill work. The Home tiles show a lock badge and no NEW tag while
+  locked. The revive shop's GET COINS is never locked. Unlocking is silent.
 - Tests: `test/p22/s7_ads_test.dart`, `test/p22/s7_banner_layout_test.dart`
   (autopilot gate + run screens at 663 / 596 / 524); shots
   `test/p22/s7_banner_shots_test.dart` → `build/p22_banner_shots/`.

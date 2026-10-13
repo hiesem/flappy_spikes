@@ -78,6 +78,13 @@ class GameStorage {
   // PRD-2.3 §10.3 the first-run instructions were shown (saved at that
   // run's first tap). Local progress: "Delete my data" keeps it.
   static const String _firstRunHintSeenKey = 'firstRunHintSeen';
+  // PRD-2.3 §18.3 foreground seconds since install (kept by "Delete my data").
+  static const String _playtimeSecondsKey = 'playtimeSeconds';
+  // PRD-2.3 §18.4 the one-time `first_interstitial` event has been sent.
+  static const String _firstInterstitialShownKey = 'firstInterstitialShown';
+  // PRD-2.3 §23.2 the last rating-sheet request, in seconds since the epoch
+  // (0 = never; kept by "Delete my data").
+  static const String _lastRatingRequestAtKey = 'lastRatingRequestAt';
   // PRD-2.2 §2.2 the Home mode button: 'versus' (default) / 'freeFly'.
   static const String _homeModeKey = 'homeMode';
   // PRD-2.3 §21.3 the last uploaded versus picture: JSON {uid, hash, url}.
@@ -181,6 +188,18 @@ class GameStorage {
   /// the key that has played before (a 1.x / 2.x upgrade) counts as seen:
   /// those players are not on their very first run.
   bool firstRunHintSeen = false;
+  /// PRD-2.3 §18.3 foreground seconds since install (counted while the app
+  /// is resumed, outside full-screen ads, until the new-player grace ends).
+  /// Kept by "Delete my data".
+  int playtimeSeconds = 0;
+
+  /// PRD-2.3 §18.4: the first interstitial ever was shown (its one-time
+  /// `first_interstitial` event went out).
+  bool firstInterstitialShown = false;
+
+  /// PRD-2.3 §23.2 wall-clock seconds of the last rating-sheet request
+  /// (0 = never). Kept by "Delete my data".
+  int lastRatingRequestAt = 0;
 
   // region PRD-2 keys (WP-0b)
   /// §3.15 Golden feathers held (0–3).
@@ -340,6 +359,9 @@ class GameStorage {
     lastPieceRun = prefs.getInt(_lastPieceRunKey) ?? -1;
     firstRunHintSeen =
         prefs.getBool(_firstRunHintSeenKey) ?? (gamesPlayed > 0);
+    playtimeSeconds = prefs.getInt(_playtimeSecondsKey) ?? 0;
+    firstInterstitialShown = prefs.getBool(_firstInterstitialShownKey) ?? false;
+    lastRatingRequestAt = prefs.getInt(_lastRatingRequestAtKey) ?? 0;
     // region PRD-2 keys (WP-0b)
     feathers = (prefs.getInt(_feathersKey) ?? 0).clamp(0, 3);
     puzzlePieces = (prefs.getInt(_puzzlePiecesKey) ?? 0) & 0xF;
@@ -912,6 +934,28 @@ class GameStorage {
     final flag = prefs.setInt(_unclaimedLevelRewardKey, 0);
     await record;
     await flag;
+  }
+
+  /// PRD-2.3 §18.3 the playtime counter (written every 10 s in the
+  /// foreground, on going to the background and at run end).
+  Future<void> savePlaytimeSeconds(int value) async {
+    playtimeSeconds = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(_playtimeSecondsKey, value);
+  }
+
+  /// PRD-2.3 §18.4 the first interstitial's one-time event went out.
+  Future<void> saveFirstInterstitialShown() async {
+    firstInterstitialShown = true;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setBool(_firstInterstitialShownKey, true);
+  }
+
+  /// PRD-2.3 §23.2 the wall-clock second of a rating-sheet request.
+  Future<void> saveLastRatingRequestAt(int seconds) async {
+    lastRatingRequestAt = seconds;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(_lastRatingRequestAtKey, seconds);
   }
 
   Future<void> saveRumble(bool value) async {

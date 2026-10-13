@@ -67,6 +67,7 @@ dependencies:
   # (PRD-2.3 §22.2: InAppPurchaseAndroidPlatformAddition.consumePurchase)
   package_info_plus: ^10.2.2
   in_app_purchase_android: ^0.5.3
+  in_app_review: ^2.0.12
   # endregion P23-20/22
   # region PRD-2.3 §21 — versus pictures (Firebase Storage), resize, pg hash
   firebase_storage: ^13.6.0

@@ -937,11 +937,12 @@ void main() {
         expect(spy.last('noads_popup_shown'), {
           'trigger': 'launch',
           'reason': 'fallback',
+          'check': 'session', // PRD-2.3 §24.4
         });
         await settle(game);
         expect(game.storage.noAdsPopupLastDay, day2.today);
         expect(game.storage.noAdsPopupShowsToday, 1);
-        expect(game.menu.noAdsPopup.evaluate(), isNull, reason: '4 h gap');
+        expect(game.menu.noAdsPopup.evaluate(), isNull, reason: '1 h gap');
         game.handleBack();
         await settle(game);
         expect(game.storage.noAdsPopupDismissals, 1);

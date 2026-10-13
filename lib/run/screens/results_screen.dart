@@ -309,6 +309,20 @@ class ResultsScreen extends PositionComponent
   /// faded in, so a flap tap at the moment of death never lands on them.
   bool get canContinue => _built && _t >= ResultsConfig.pageFadeIn;
 
+  /// PRD-2.3 §23.2 "settled": the §5.10 sequence has played out (every
+  /// scheduled step ran, the count-ups and the bar with its fades have
+  /// finished) and no CLAIM waits. The rating sheet's 1.5 s count starts here.
+  bool get settled {
+    if (!canContinue || _leaving || _claimShowing || _schedule.isNotEmpty) {
+      return false;
+    }
+    bool done(double? start, double length) =>
+        start == null || _t >= start + length;
+    return done(_countStart, _countLength) &&
+        done(_barStart, _barLength) &&
+        done(_barFadeStart, _barFadeLength);
+  }
+
   bool _active() => canContinue && !_leaving;
 
   void _at(double time, void Function() f) => _schedule.add((time, f));

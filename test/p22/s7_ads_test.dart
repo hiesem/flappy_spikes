@@ -534,14 +534,18 @@ void main() {
     );
 
     tester({'gamesPlayed': 2}).testGameWidget(
-      'guard 2: the first 3 runs (gamesPlayed <= 3), then the 4th shows',
+      'guard 2 (PRD-2.3 §18.2): the new-player grace covers runs 3 and 4, '
+      'run 5 shows',
       setUp: (g, _) async => g.ready(),
       verify: (g, _) async {
         await toResults(g);
         expect(g.storage.gamesPlayed, 3);
-        expect(await next(g), 'first_runs');
+        expect(await next(g), 'new_player');
         await toResults(g);
         expect(g.storage.gamesPlayed, 4);
+        expect(await next(g), 'new_player');
+        await toResults(g);
+        expect(g.storage.gamesPlayed, 5);
         expect(await next(g), isNull);
       },
     );

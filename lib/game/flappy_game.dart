@@ -95,6 +95,7 @@ import '../share/share_card.dart' show ShareCardData; // PRD-2.3 §2
 import '../share/share_content.dart'; // PRD-2.3 §2
 import '../versus/nickname.dart' show generateNickname; // PRD-2.3 §2.2
 import 'rumble.dart';
+import 'music_guard.dart';
 import 'sound.dart';
 import 'storage.dart';
 import 'tintable.dart';
@@ -284,7 +285,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// PRD-2.2 §28.3 other apps' audio (calls, alarms, the player's music).
   /// No-op by default (tests, Linux); `main.dart` sets the Android one.
   AudioFocus audioFocus = const NoopAudioFocus();
-  StreamSubscription<bool>? _audioFocusSub;
+
+  /// PRD-2.3 §13.4: the music never stays silent without a reason (built
+  /// in [onLoad] with [sound]).
+  late final MusicGuard musicGuard;
 
   /// Rewarded ads + in-app purchases. In-memory fakes unless main() passes
   /// `Monetization.forPlatform()`.
@@ -685,7 +689,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     unawaited(sound.setMusicVolume(storage.musicVolume));
     // PRD-2.2 §28.3: the player's own music already playing at launch →
     // the game skips its own (SFX stay on); calls / alarms hold the audio.
-    _audioFocusSub = audioFocus.interruptions.listen(sound.setInterrupted);
+    // PRD-2.3 §13: the music guard turns the playback changes into holds
+    // and re-checks them; the diagnostic log goes to logcat (FS-Music).
+    sound.musicLog.sink = audioFocus.log;
+    musicGuard = MusicGuard(
+      sound: sound,
+      focus: audioFocus,
+      onMenu: () => state == GameState.start || state == GameState.results,
+      adShowing: () => _adsShowing > 0,
+      adJustEnded: () => _adJustEnded,
+      otherMusicNow: _otherMusicNow,
+      track: services.track,
+    )..attach();
     unawaited(_startMusicChecked());
     // PRD-2.2 §33.6 (S7-19): the session sound set is created once on
     // Home and kept, so the live players stay flat game after game.
@@ -824,7 +839,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   @override
   void onRemove() {
-    unawaited(_audioFocusSub?.cancel());
+    unawaited(musicGuard.dispose());
     monetization.consent.canRequestAds.removeListener(_preloadBanner);
     idleFrames.detach();
     _purchases?.dispose();
@@ -897,6 +912,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   void _setupStartScene() {
     _audioSceneChange(); // PRD-2.2 §28
+    if (_soundReady) musicGuard.onHomeArrival(); // PRD-2.3 §13.3
     state = GameState.start;
     menuScene = MenuScene.home;
     _menuTrail.clear();
@@ -1113,6 +1129,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _startRun(Powerup starter) {
     _run?.disposeRun();
     _audioSceneChange(); // PRD-2.2 §28
+    if (_soundReady) musicGuard.onRunStart(); // PRD-2.3 §13.3
     final d = runDebug;
     final e2e =
         kE2E || E2EHooks.force.isNotEmpty || E2EHooks.startHoopIndex > 0;
@@ -2550,10 +2567,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   // region PRD-2.2 §28 — game audio around ads, death and other apps
 
-  /// Bumped on every lifecycle change: a foreground check that finishes
-  /// after the app left again is dropped.
-  int _foregroundGen = 0;
-
   /// [sound] exists (lifecycle events can arrive before onLoad made it).
   bool _soundReady = false;
 
@@ -2574,40 +2587,51 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// "yes" is confirmed by the playback list alone, so the game's flaps
   /// never count as other music (docs/p22/ADS.md).
   Future<bool> _otherMusicNow() async {
+    // PRD-2.3 §13.4: while the game's own music plays, isMusicActive() is
+    // always true; only the playback list can answer.
+    if (sound.musicPlaying) return audioFocus.isOtherMediaListed();
     if (!await audioFocus.isOtherMusicActive()) return false;
     if (!sound.ownSoundRecent) return true;
     return audioFocus.isOtherMediaListed();
   }
 
   Future<void> _startMusicChecked() async {
-    if (await _otherMusicNow()) {
-      sound.setOtherMusicActive(true);
-    }
-    await sound.startMusic();
+    // PRD-2.3 §13.4: "own music" only after two "yes" answers 1 s apart.
+    musicGuard.confirmOwnMusic(
+      'launch',
+      then: () => unawaited(sound.startMusic()),
+    );
   }
 
   /// §28.2 / §28.3: the music pauses whenever the app is not in the
   /// foreground; coming back, a stale ad suspend is cleared and the
   /// player's own music (if it plays now) keeps the game music off.
+  ///
+  /// PRD-2.3 §13.4: `inactive` (a heads-up banner, the notification shade,
+  /// a system sheet) is not the background: the music keeps playing. On a
+  /// real return the check runs [Config.musicForegroundCheckDelay] after
+  /// it and needs two "yes" answers; the music stays held until then.
   void _audioLifecycle(AppLifecycleState state) {
-    final gen = ++_foregroundGen;
     if (kDebugMode) debugPrint('Sound: lifecycle ${state.name}');
     if (!_soundReady) return;
+    if (state == AppLifecycleState.inactive) return;
     if (state != AppLifecycleState.resumed) {
+      musicGuard.onBackground();
       sound.setBackground(true);
       return;
     }
+    musicGuard.onForeground();
     if (_adsShowing == 0) sound.clearSuspend();
+    if (!sound.background) return;
     if (_adsShowing > 0 || _adJustEnded) {
       sound.setBackground(false);
       return;
     }
-    unawaited(() async {
-      final other = await _otherMusicNow();
-      if (gen != _foregroundGen) return;
-      if (other) sound.setOtherMusicActive(true);
-      sound.setBackground(false);
-    }());
+    musicGuard.confirmOwnMusic(
+      'foreground',
+      delay: Config.musicForegroundCheckDelay,
+      then: () => sound.setBackground(false),
+    );
   }
 
   /// §28.2 / §28.3 at a scene change (Home arrival, run start): a stale
@@ -3944,7 +3968,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _syncSystemBackWanted();
     super.update(dt);
     _purchases?.update(dt);
-    if (_soundReady) sound.maintain();
+    if (_soundReady) {
+      sound.maintain();
+      musicGuard.update(dt); // PRD-2.3 §13.4
+    }
     _drainPopups();
 
     if (_colorFadeT < 1) {

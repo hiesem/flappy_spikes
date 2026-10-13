@@ -54,6 +54,56 @@ class Config {
   static const double ownMusicRecheckDelay = .6;
   // endregion PRD-2.2 §28
 
+  // region PRD-2.3 §13 — the music never stays silent without a reason
+  /// §13.3 item 1: entries kept by the music diagnostic log.
+  static const int musicLogSize = 50;
+
+  /// §13.3 item 2: `music_held` is sent once per Home visit after the music
+  /// has been held this long (s) with the music setting on.
+  static const double musicHeldReportAfter = 10;
+
+  /// §13.4: while the music is held for "own music" on a menu, the game
+  /// re-checks this often (s).
+  static const double musicOwnRecheckInterval = 2;
+
+  /// §13.4: "own music" needs two "yes" answers at least this far apart (s).
+  static const double musicOwnConfirmGap = 1;
+
+  /// §13.4: the "own music" check on return to the foreground runs this long
+  /// (s) after the return, so the previous app has finished pausing.
+  static const double musicForegroundCheckDelay = 1;
+
+  /// §13.4: while the music is held for an interruption or a notification,
+  /// the game re-checks this often (s), not only on playback callbacks.
+  static const double musicTransientPoll = .5;
+
+  /// §13.4: a media sound that started while the game is in the foreground
+  /// counts as the player's own music only once it has played this long (s):
+  /// a notification ding of 1–2 s never does.
+  static const double musicMediaSoundOwnAfter = 2;
+
+  /// §13.4: a foreground media player must play this long (s) before it
+  /// pauses the music (measured 2026-10-13 on the Pixel 6: a media player
+  /// of another component opened and closed within 11 ms at launch).
+  static const double musicMediaSoundDebounce = .3;
+
+  /// §13.4: an ad suspend with no ad showing for longer than this (s) is
+  /// cleared on any screen.
+  static const double musicSuspendTimeout = 5;
+
+  /// §13.4 music watchdog: how often (s) a menu checks the music player.
+  static const double musicWatchdogInterval = 5;
+
+  /// §13.4 watchdog: a player told to start / resume less than this long
+  /// (s) ago is not judged yet (its state is still settling).
+  static const double musicWatchdogGrace = 1;
+
+  /// §13.4: where the platform cannot give a player's state, a listed
+  /// notification player stops holding the music after this long (s): any
+  /// ding has ended by then, so it can only be a finished, unreleased one.
+  static const double musicUnknownNotificationMaxHold = 5;
+  // endregion PRD-2.3 §13
+
   // Physics (Flappy Bird feel; an intentional, user-requested deviation from
   // the 2014 original's 1350/525 — see SPEC.md): a modest flap pop whose rise
   // is about half the final pipe gap, plus a terminal fall speed so dives

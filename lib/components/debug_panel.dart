@@ -45,6 +45,9 @@ class DebugPanel extends PositionComponent
   /// null = the main page; else the force-menu page index.
   int? _forcePage;
 
+  /// PRD-2.3 §13.3: the MUSIC LOG page is up.
+  bool _musicPage = false;
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
@@ -78,7 +81,11 @@ class DebugPanel extends PositionComponent
     }
     _rows.clear();
     _labels.clear();
-    actions = _forcePage == null ? _buildActions() : _forceActions();
+    actions = _musicPage
+        ? _musicActions()
+        : _forcePage == null
+        ? _buildActions()
+        : _forceActions();
     final top = Config.debugPanelTopFor(game.viewHeight);
     for (final (i, action) in actions.indexed) {
       final y = top.y + (i + 1) * Config.debugRowHeight + 6;
@@ -112,8 +119,9 @@ class DebugPanel extends PositionComponent
 
   Future<void> _run(int index) async {
     final page = _forcePage;
+    final music = _musicPage;
     await actions[index].run();
-    if (page != _forcePage) {
+    if (page != _forcePage || music != _musicPage || _musicPage) {
       _rebuild();
       return;
     }
@@ -136,6 +144,20 @@ class DebugPanel extends PositionComponent
         _forcePage = (page + 1) % pages;
       }),
       DebugAction(() => '< Back', () async => _forcePage = null),
+    ];
+  }
+
+  /// PRD-2.3 §13.3: the newest music diagnostic log entries (the whole
+  /// log is in logcat, tag FS-Music); any row re-reads it.
+  List<DebugAction> _musicActions() {
+    final entries = game.sound.musicLog.entries;
+    final rows = (_rowsPerPage - 1).clamp(4, 40);
+    final shown = entries.reversed.take(rows).toList();
+    return [
+      for (final e in shown)
+        DebugAction(() => '${e.event} ${e.flags} ${e.player}', () async {}),
+      if (shown.isEmpty) DebugAction(() => '(no music events yet)', () async {}),
+      DebugAction(() => '< Back', () async => _musicPage = false),
     ];
   }
 
@@ -213,6 +235,8 @@ class DebugPanel extends PositionComponent
       // opponent <uid-prefix>" (debug builds only, like the whole panel);
       // a tap re-reads it.
       DebugAction(() => game.versus.lastSearch.debugLine, () async {}),
+      // PRD-2.3 §13.3: the music diagnostic log.
+      DebugAction(() => 'MUSIC LOG >', () async => _musicPage = true),
       // §3.0.8 debug force menu (PRD-2, WP-0b).
       DebugAction(() => 'RUN DEBUG >', () async => _forcePage = 0),
       DebugAction(() => 'Close', () async => onClose()),

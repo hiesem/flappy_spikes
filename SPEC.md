@@ -432,6 +432,13 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   `FlameAudio.bgm` (auto pause on app background, resume on foreground).
   Volume = `musicVolume`, adjustable on the settings screen; independent of
   the SFX mute.
+- DEVIATION (PRD-2.3 §16, 2026-10-13): Android and the Linux desktop play
+  `HappyBeat_loop_56bars.ogg` instead: the MP3 cut to exactly 56 bars at
+  146 BPM (4 059 616 samples, 5 ms crossfade at the seam;
+  `tool/make_music_loop.py`). On Android the music player is just_audio
+  (ExoPlayer, `LoopMode.one`, `USAGE_GAME`, no audio focus): audioplayers'
+  `MediaPlayer` loop left a 250–265 ms gap at every wrap (docs/p23/MUSIC.md).
+  iOS (paused) keeps the MP3 on `FlameAudio.bgm`.
 - Share button: capture screenshot of the game + share text
   `OMG! I got N points in Flappy Spikes!` via share_plus.
 
@@ -1303,6 +1310,18 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   and mutes the SFX until it ends; the player's own music keeps mixing, and if
   it plays at launch / on foreground the game music stays off until a scene
   change finds it quiet (`docs/p22/ADS.md` "§28 audio focus").
+- DEVIATION (PRD-2.3 §13, 2026-10-13): the music never stays silent on a
+  menu without a reason that still holds (`lib/game/music_guard.dart`). A
+  notification sound (any `NOTIFICATION*` usage, or a media sound that
+  starts in the foreground) pauses only the music, which resumes within 1 s
+  after it ends (SFX keep playing). "Own music" needs two "yes" answers 1 s
+  apart (the foreground check runs 1 s after the return) and is re-checked
+  every 2 s on a menu (still never mid-run). A held interruption / notification
+  is re-checked every 0.5 s and only playing players count. An ad suspend
+  with no ad showing clears after 5 s; a dead music player restarts within
+  5 s on a menu. `inactive` (heads-up banner, shade, system sheet) no longer
+  pauses the music; only `hidden` / `paused` do. Tests:
+  `test/p23/s13_music_test.dart`.
 - Tests: `test/p22/s7_7_noads_test.dart`, `test/p22/s7_9_privacy_options_test.dart`,
   `test/p22/s24_revive_taps_test.dart`, `test/p22/s28_audio_test.dart`,
   `test/run/screens/s3_14_revive_test.dart`, `test/run/screens/s3_15_bonus_screen_test.dart`.

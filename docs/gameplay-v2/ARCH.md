@@ -566,6 +566,17 @@ spike save bounce); otherwise `RunDied` → tumble → `PostRunFlow`.
   `AudioWatch` can tell the game's players from other apps'. `RunController._die` stops all loops at the moment of
   death; features restart their own loops after a revive. Test seams: `onAudible` (passed every gate), `onMusic`
   (`start` / `pause` / `resume`), `droppedPlays`, `stopAllLoopsCalls`.
+- **Music guard and backend (PRD-2.3 §13, §16).** `lib/game/music_guard.dart` (`FlappySpikesGame.musicGuard`,
+  stepped from `update`) owns every re-check: it listens to `AudioFocus.changes` (an `AudioWatchState`: interrupted /
+  notification / media / `isMusicActive` / the raw playback list), polls `AudioFocus.snapshot()` every 0.5 s while
+  the music is held for an interruption or a notification, confirms "own music" with two answers 1 s apart
+  (`confirmOwnMusic`: launch, 1 s after a foreground return), re-checks skipped music every 2 s on a menu, clears a
+  stale ad suspend after 5 s, runs the 5 s music watchdog (`SoundService.restartMusic`, `player_dead`) and sends
+  `music_held` once per Home visit. `SoundService.setOtherSound` is the notification hold (music only).
+  `SoundService.musicLog` (`lib/game/music_log.dart`) is the 50-entry diagnostic log (logcat `FS-Music`, debug
+  panel MUSIC LOG). The plugin calls go through `MusicBackend` (`lib/game/music_backend.dart`): `JustAudioMusic` on
+  Android (ExoPlayer `LoopMode.one`, `USAGE_GAME`, no focus, no position stream), `AudioplayersMusic`
+  (`FlameAudio.bgm`) on Linux / iOS. Test seams: `musicBackend`, `musicStateProbe`, `FakeAudioFocus.push`.
 - **Rumble.** `Rumble` exists (throttle, setting). Only `rumble_router.dart` (2c) calls `knock()/shake()` for run
   events; no rumble outside `playing` (paused/revive/bonus/results never rumble).
 - **Analytics.** `ctx.track(name, params)` → `GameServices.track`. Element events are sent by the owning feature at the

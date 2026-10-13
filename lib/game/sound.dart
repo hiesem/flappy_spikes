@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import 'audio_counter.dart';
 import 'config.dart';
+import 'music_backend.dart';
 import 'music_log.dart';
 import 'sfx_pool.dart';
 import 'sound_durations.g.dart';
@@ -466,7 +467,6 @@ class SoundService {
 
   double _musicVolume = Config.defaultMusicVolume;
   bool _musicStarted = false;
-  bool _bgmInitialized = false;
 
   /// Low-latency pools, one per SFX ([SfxPool], `sfx_pool.dart`). Without
   /// pools, FlameAudio.play creates a brand-new AudioPlayer (decoder +
@@ -1085,13 +1085,25 @@ class SoundService {
   String get musicPlayerState {
     final probe = musicStateProbe;
     if (probe != null) return probe();
-    if (!enabled || !_bgmInitialized) return 'none';
+    if (!enabled || !_musicStarted) return 'none';
     try {
-      return FlameAudio.bgm.audioPlayer.state.name;
+      return musicBackend.state;
     } catch (_) {
       return 'none';
     }
   }
+
+  MusicBackend? _musicBackend;
+
+  /// PRD-2.3 §16.4: the music player (Android: just_audio; Linux / iOS:
+  /// audioplayers' `FlameAudio.bgm`). Replaceable in tests.
+  MusicBackend get musicBackend => _musicBackend ??= MusicBackend.forPlatform(
+    audioContext: () =>
+        FlameAudio.bgm.audioPlayer.setAudioContext(gameAudioContext()),
+  );
+
+  @visibleForTesting
+  set musicBackend(MusicBackend backend) => _musicBackend = backend;
 
   /// PRD-2.3 §13.2 `music_held` reason of the current hold (null = not
   /// held). Background first, then an ad, an interruption or a
@@ -1305,28 +1317,23 @@ class SoundService {
 
   Future<void> _musicCall(String event) async {
     try {
-      final bgm = FlameAudio.bgm;
+      // PRD-2.3 §16.4: the plugin calls go through the music backend.
+      final music = musicBackend;
       switch (event) {
         case 'start':
-          if (!_bgmInitialized) {
-            // §28.3 mixWithOthers (the player's own music keeps playing);
-            // no Bgm lifecycle observer: [setBackground] pauses / resumes.
-            await bgm.audioPlayer.setAudioContext(gameAudioContext());
-            // PRD-2.2 §33.4 item 2: the music never polls its position (it
-            // polled 60×/s all session, also on Home).
-            bgm.audioPlayer.positionUpdater = null;
-            _bgmInitialized = true;
-          }
-          await bgm.play(_musicFile, volume: _musicVolume * _musicDuck);
           _musicStarted = true;
-          if (_musicRate != 1) await bgm.audioPlayer.setPlaybackRate(_musicRate);
+          await music.start(
+            _musicFile,
+            volume: _musicVolume * _musicDuck,
+            rate: _musicRate,
+          );
         case 'pause':
-          await bgm.pause();
+          await music.pause();
         case 'resume':
-          await bgm.resume();
+          await music.resume();
         case 'stop':
           // PRD-2.3 §13.4 watchdog: the next 'start' plays from the top.
-          await bgm.stop();
+          await music.stop();
       }
     } catch (_) {
       // Audio failure must never take the game down.
@@ -1342,7 +1349,7 @@ class SoundService {
       return;
     }
     try {
-      await FlameAudio.bgm.audioPlayer.setVolume(_musicVolume);
+      await musicBackend.setVolume(_musicVolume * _musicDuck);
     } catch (_) {
       // Audio failure must never take the game down.
     }
@@ -1408,7 +1415,7 @@ class SoundService {
     _musicRate = rate;
     if (!enabled || !_musicStarted) return;
     try {
-      await FlameAudio.bgm.audioPlayer.setPlaybackRate(rate);
+      await musicBackend.setRate(rate);
     } catch (_) {
       // Audio failure must never take the game down.
     }
@@ -1419,7 +1426,7 @@ class SoundService {
     _musicDuck = factor.clamp(0.0, 1.0).toDouble();
     if (!enabled || !_musicStarted) return;
     try {
-      await FlameAudio.bgm.audioPlayer.setVolume(_musicVolume * _musicDuck);
+      await musicBackend.setVolume(_musicVolume * _musicDuck);
     } catch (_) {
       // Audio failure must never take the game down.
     }

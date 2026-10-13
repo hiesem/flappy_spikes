@@ -34,6 +34,7 @@ const List<String> kHomeImages = [
   'menu/invite.png',
   'menu/noads.png',
   'menu/trophy.png',
+  'menu/lock.png',
 ];
 
 /// The 2.0 home screen, v3 layout (PRD-home-v3 §3, approved design
@@ -264,6 +265,7 @@ class HomeScreen extends PositionComponent
           label: label,
           onPressed: tap,
           check: icon('check'),
+          lock: icon('lock'),
           isActive: _isActive,
         );
     // §8.2: tiles press with `sk_tap`.
@@ -328,6 +330,7 @@ class HomeScreen extends PositionComponent
   // --- state sync ------------------------------------------------------------
 
   bool? _hasNew;
+  bool _locked = false; // PRD-2.3 §26: the Shop / Skins lock shown on the tiles
   bool? _noAds;
   bool? _noAdsPending;
   int? _best;
@@ -380,9 +383,15 @@ class HomeScreen extends PositionComponent
     // at once.
     syncMode(animate: false);
     final hasNew = menu.items.hasNewBadge;
-    if (force || hasNew != _hasNew) {
+    // PRD-2.3 §26.2: below the unlock best the SHOP and SKINS tiles show a
+    // lock badge, and the NEW badge is hidden (no nagging before the unlock).
+    final locked = menu.locked;
+    if (force || hasNew != _hasNew || locked != _locked) {
       _hasNew = hasNew;
-      skinsTile.tag = hasNew ? 'NEW' : null;
+      _locked = locked;
+      skinsTile.tag = hasNew && !locked ? 'NEW' : null;
+      shopTile.locked = locked;
+      skinsTile.locked = locked;
     }
     // PRD-home-v3 §7: after a fresh purchase the owned looks wait for the
     // celebration's flips.
@@ -1334,10 +1343,12 @@ class MenuTile extends MenuButton {
     required String label,
     required super.onPressed,
     Sprite? check,
+    Sprite? lock,
     super.isActive,
   }) : _iconSprite = icon,
        _labelText = label,
        _checkSprite = check,
+       _lockSprite = lock,
        super(
          color: Config.menuPink,
          position: rect.topLeft.toVector2(),
@@ -1350,6 +1361,22 @@ class MenuTile extends MenuButton {
   final Sprite _iconSprite;
   final String _labelText;
   final Sprite? _checkSprite;
+  final Sprite? _lockSprite;
+
+  bool _locked = false;
+  _LockBadge? _lockBadge;
+
+  /// PRD-2.3 §26.2: the lock badge while the screen behind this tile is
+  /// locked (the tile still opens it).
+  bool get locked => _locked;
+  set locked(bool value) {
+    if (_locked == value) return;
+    _locked = value;
+    if (isLoaded) _applyLock();
+  }
+
+  /// The lock badge while it is shown (tests).
+  PositionComponent? get lockBadgeComponent => _lockBadge;
 
   late final MenuIcon icon;
   late final MenuText label;
@@ -1419,6 +1446,17 @@ class MenuTile extends MenuButton {
     addAll([icon, label]);
     _applyLabel();
     _applyTag();
+    _applyLock();
+  }
+
+  void _applyLock() {
+    _lockBadge?.removeFromParent();
+    _lockBadge = null;
+    final sprite = _lockSprite;
+    if (!_locked || sprite == null) return;
+    final badge = _LockBadge(sprite, tileWidth: width);
+    _lockBadge = badge;
+    add(badge);
   }
 
   void _applyLabel() {
@@ -1465,6 +1503,33 @@ class MenuTile extends MenuButton {
 
   /// Exposed for tests.
   PositionComponent? get tagComponent => _tag;
+}
+
+/// PRD-2.3 §26.2: the lock badge of a locked Home tile: a small gold square
+/// with the padlock, in the corner where the NEW tag sits.
+class _LockBadge extends PositionComponent {
+  _LockBadge(this.sprite, {required this.tileWidth}) : super(priority: 10);
+
+  final Sprite sprite;
+  final double tileWidth;
+  final Paint _paint = Paint()..color = Config.menuGold;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    size = Vector2.all(Config.homeLockBadgeSize);
+    position = Vector2(tileWidth + 5 - size.x, -6);
+    add(
+      MenuIcon(
+        sprite,
+        size: Vector2.all(Config.homeLockIconSize),
+        position: Vector2.all((Config.homeLockBadgeSize - Config.homeLockIconSize) / 2),
+      ),
+    );
+  }
+
+  @override
+  void render(Canvas canvas) => canvas.drawRect(size.toRect(), _paint);
 }
 
 /// A [MenuTag] anchored by its top-right corner 5 pt right / 6 pt above the

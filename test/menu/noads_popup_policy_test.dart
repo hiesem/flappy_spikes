@@ -102,8 +102,9 @@ void main() {
   });
 
   group('gap and daily cap', () {
-    test('4 h gap: blocked just before, open at exactly 4 h', () async {
+    test('1 h gap (PRD-2.3 §24.2): blocked just before, open at exactly 1 h', () async {
       final (storage, policy) = await build();
+      expect(Config.noAdsPopupMinGap, const Duration(hours: 1));
       await policy.markShown();
       await storage.saveNoAdsPopupVideos(Config.noAdsPopupVideos);
       now = start.add(Config.noAdsPopupMinGap - const Duration(seconds: 1));
@@ -112,31 +113,46 @@ void main() {
       expect(policy.evaluate(), NoAdsPopupReason.videos);
     });
 
-    test('max 2 per local day; the count resets at the rollover', () async {
+    test('closing does not restart the gap: it runs from the last show', () async {
       final (storage, policy) = await build();
-      now = DateTime(2026, 5, 10, 8);
+      await storage.saveNoAdsPopupVideos(3);
+      expect(policy.evaluate(), NoAdsPopupReason.videos);
       await policy.markShown();
-      now = DateTime(2026, 5, 10, 12);
-      await storage.saveLastRunMood(RunMood.best);
-      expect(policy.evaluate(), NoAdsPopupReason.best);
-      await policy.markShown();
-      expect(policy.showsToday, 2);
+      await policy.markDismissed();
+      now = start.add(const Duration(minutes: 59));
+      await storage.saveNoAdsPopupVideos(3);
+      expect(policy.evaluate(), isNull, reason: 'closed, but 59 min since the show');
+      now = start.add(Config.noAdsPopupMinGap);
+      expect(policy.evaluate(), NoAdsPopupReason.videos);
+    });
+
+    test('max 5 per local day (PRD-2.3 §24.2); the count resets at the rollover', () async {
+      final (storage, policy) = await build();
+      expect(Config.noAdsPopupMaxPerDay, 5);
+      // Five shows on 10 May, an hour apart (each with a good moment).
+      for (var h = 8; h < 13; h++) {
+        now = DateTime(2026, 5, 10, h);
+        await storage.saveNoAdsPopupVideos(3);
+        expect(policy.evaluate(), NoAdsPopupReason.videos, reason: 'show ${h - 7}');
+        await policy.markShown();
+      }
+      expect(policy.showsToday, 5);
       now = DateTime(2026, 5, 10, 20);
       await storage.saveNoAdsPopupVideos(5);
-      expect(policy.evaluate(), isNull, reason: 'two today');
+      expect(policy.evaluate(), isNull, reason: 'five today');
       now = DateTime(2026, 5, 11, 0, 30);
       expect(policy.showsToday, 0);
       expect(policy.evaluate(), NoAdsPopupReason.videos);
     });
 
-    test('day rollover alone does not bypass the 4 h gap', () async {
+    test('day rollover alone does not bypass the 1 h gap', () async {
       final (storage, policy) = await build();
-      now = DateTime(2026, 5, 10, 23);
+      now = DateTime(2026, 5, 10, 23, 30);
       await policy.markShown();
       await storage.saveNoAdsPopupVideos(3);
-      now = DateTime(2026, 5, 11, 2, 59);
+      now = DateTime(2026, 5, 11, 0, 29);
       expect(policy.evaluate(), isNull);
-      now = DateTime(2026, 5, 11, 3);
+      now = DateTime(2026, 5, 11, 0, 30);
       expect(policy.evaluate(), NoAdsPopupReason.videos);
     });
 
@@ -153,10 +169,10 @@ void main() {
     test('videos: 3 since the last show, reset by the show', () async {
       final (storage, policy) = await build();
       await policy.markShown();
-      now = start.add(const Duration(hours: 5));
+      now = start.add(const Duration(hours: 2));
       await policy.recordRewardedVideo();
       await policy.recordRewardedVideo();
-      expect(policy.evaluate(), isNull, reason: 'two videos, < 24 h');
+      expect(policy.evaluate(), isNull, reason: 'two videos, < 3 h');
       await policy.recordRewardedVideo();
       expect(storage.noAdsPopupVideos, 3);
       expect(policy.evaluate(), NoAdsPopupReason.videos);
@@ -167,7 +183,7 @@ void main() {
     test('best and level from the previous run; level wins', () async {
       final (storage, policy) = await build();
       await policy.markShown();
-      now = start.add(const Duration(hours: 4));
+      now = start.add(const Duration(hours: 2));
       await policy.recordRun(newBest: true, newLevel: false);
       expect(policy.evaluate(), NoAdsPopupReason.best);
       await policy.recordRun(newBest: true, newLevel: true);
@@ -186,10 +202,11 @@ void main() {
       expect(policy.evaluate(), NoAdsPopupReason.videos);
     });
 
-    test('24 h fallback: not at 23:59, yes at exactly 24 h', () async {
+    test('3 h fallback (PRD-2.3 §24.2): not at 2:59, yes at exactly 3 h', () async {
       final (_, policy) = await build();
+      expect(Config.noAdsPopupFallback, const Duration(hours: 3));
       await policy.markShown();
-      now = start.add(const Duration(hours: 23, minutes: 59));
+      now = start.add(const Duration(hours: 2, minutes: 59));
       expect(policy.evaluate(), isNull);
       now = start.add(Config.noAdsPopupFallback);
       expect(policy.evaluate(), NoAdsPopupReason.fallback);
@@ -208,13 +225,14 @@ void main() {
   group('closing', () {
     test('dismissals only count; no limit, no back-off', () async {
       final (storage, policy) = await build();
-      for (var i = 0; i < 10; i++) {
+      for (var i = 0; i < 4; i++) {
         expect(policy.evaluate(), isNotNull, reason: 'show $i');
         await policy.markShown();
         await policy.markDismissed();
         now = now.add(Config.noAdsPopupFallback);
       }
-      expect(storage.noAdsPopupDismissals, 10);
+      expect(storage.noAdsPopupDismissals, 4);
+      // The 3 h fallback is due again, on the next day (the cap is per day).
       expect(policy.evaluate(), NoAdsPopupReason.fallback);
     });
 

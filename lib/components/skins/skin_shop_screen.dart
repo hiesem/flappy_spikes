@@ -30,6 +30,7 @@ class SkinShopScreen extends MenuScreen {
     required super.onBack,
     SkinLayer initialTab = SkinLayer.bird,
     this.initialTryOn,
+    super.lock,
   }) : _tab = initialTab,
        super(title: '');
 

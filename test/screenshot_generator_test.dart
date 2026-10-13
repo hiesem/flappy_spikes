@@ -45,7 +45,8 @@ void main() async {
 
   final withGame = FlameTester<FlappySpikesGame>(
     () => createTestGame({
-      'bestScore': 12,
+      // PRD-2.3 §26.3: a best of 25 or more keeps the Shop and Skins open.
+      'bestScore': 25,
       'gamesPlayed': 34,
       // EGG already claimed: no LEVEL UP popup over the captures.
       'claimedLevels': ['1'],

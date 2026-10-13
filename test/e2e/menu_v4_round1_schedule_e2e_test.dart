@@ -66,7 +66,7 @@ void main() {
   );
 
   v4Journey(
-    'v4: day 1 needs 10 finished runs, then a new session; never between runs',
+    'v4: day 1 needs 10 finished runs, then the 10th run\'s arrival checks; never before',
     prefs: (rig) => {'installDay': rig.clock.day, 'firstSessionDone': true},
     (game, rig, tester) async {
       for (var i = 0; i < 9; i++) {
@@ -75,12 +75,12 @@ void main() {
       }
       await v4Background(game, rig, tester, v4SessionGap);
       expect(game.noAdsPopup, isNull);
+      // PRD-2.3 §24.2: the 10th run's Home arrival checks the popup.
       await v4FinishRun(game, tester, 6);
       expect(game.storage.gamesPlayed, 10);
-      expect(game.noAdsPopup, isNull);
-      await v4Background(game, rig, tester, v4SessionGap);
       expect(game.noAdsPopup, isNotNull);
       expect(rig.events.last('noads_popup_shown')!['reason'], 'fallback');
+      expect(rig.events.last('noads_popup_shown')!['check'], 'after_run');
     },
   );
 
@@ -180,76 +180,99 @@ void main() {
   );
 
   v4Journey(
-    'v4: 4-hour boundary is exact across real resume events',
+    'v4: 1-hour boundary is exact across real resume events',
     eligible: true,
     (game, rig, tester) async {
       game.handleBack();
       await v4Settle(game, tester);
       await v4Videos(game, tester, 3);
-      rig.clock.now = DateTime(2026, 10, 7, 11, 29, 59);
+      rig.clock.now = DateTime(2026, 10, 7, 8, 29, 59);
       await v4Background(game, rig, tester, v4SessionGap);
-      expect(game.noAdsPopup, isNull, reason: '3:59:59 since shown');
-      rig.clock.now = DateTime(2026, 10, 7, 11, 30);
+      expect(game.noAdsPopup, isNull, reason: '59:59 since shown');
+      rig.clock.now = DateTime(2026, 10, 7, 8, 30);
       await v4Background(game, rig, tester, v4SessionGap);
-      expect(game.noAdsPopup, isNotNull, reason: 'exactly 4 hours');
+      expect(game.noAdsPopup, isNotNull, reason: 'exactly 1 hour');
     },
   );
 
   v4Journey(
-    'v4: two per day, restart retains the cap, local midnight resets it',
+    'v4: five per day (PRD-2.3 §24.2), restart retains the count, local midnight resets it',
     eligible: true,
     (game, rig, tester) async {
       game.handleBack();
       await v4Settle(game, tester);
       await v4Videos(game, tester, 3);
-      rig.clock.now = DateTime(2026, 10, 7, 11, 30);
+      rig.clock.now = DateTime(2026, 10, 7, 11);
       await v4Background(game, rig, tester, v4SessionGap);
       expect(game.storage.noAdsPopupShowsToday, 2);
       game.handleBack();
       await v4Settle(game, tester);
       await v4Videos(game, tester, 3);
-      rig.clock.now = DateTime(2026, 10, 7, 16);
+      rig.clock.now = DateTime(2026, 10, 7, 15, 30);
       final restarted = await v4Restart(game, rig, tester);
-      expect(restarted.noAdsPopup, isNull);
-      expect(restarted.storage.noAdsPopupShowsToday, 2);
-      expect(restarted.storage.noAdsPopupVideos, 3);
-      rig.clock.now = DateTime(2026, 10, 7, 23, 30);
+      expect(restarted.noAdsPopup, isNotNull, reason: 'the third show of the day');
+      expect(restarted.storage.noAdsPopupShowsToday, 3);
+      expect(restarted.storage.noAdsPopupVideos, 0);
+      restarted.handleBack();
+      await v4Settle(restarted, tester);
+      await v4Videos(restarted, tester, 3);
+      rig.clock.now = DateTime(2026, 10, 7, 23);
       await v4Background(restarted, rig, tester, v4SessionGap);
       expect(restarted.noAdsPopup, isNotNull);
+      expect(restarted.storage.noAdsPopupShowsToday, 4);
+      restarted.handleBack();
+      await v4Settle(restarted, tester);
+      await v4Videos(restarted, tester, 3);
+      rig.clock.now = DateTime(2026, 10, 8, 0, 15);
+      await v4Background(restarted, rig, tester, v4SessionGap);
+      expect(restarted.noAdsPopup, isNotNull, reason: 'a new local day');
       expect(restarted.storage.noAdsPopupShowsToday, 1);
       expect(restarted.storage.noAdsPopupLastDay, rig.clock.day);
-      expect(rig.events.count('noads_popup_shown'), 3);
+      expect(rig.events.count('noads_popup_shown'), 5);
     },
   );
 
   v4Journey(
-    'v4: midnight does not bypass 4 hours; fallback is exact at 24 hours',
+    'v4: 1 h gap across restarts; fallback is exact at 3 h from the show',
     prefs: (rig) => {
       ...rig.eligible,
-      'noAdsPopupLastMs': DateTime(2026, 10, 6, 23).millisecondsSinceEpoch,
-      'noAdsPopupLastDay': rig.clock.day - 1,
-      'noAdsPopupShowsToday': 2,
+      // The last show was 30 minutes before the 08:00 start.
+      'noAdsPopupLastMs': DateTime(2026, 10, 7, 7, 30).millisecondsSinceEpoch,
+      'noAdsPopupLastDay': rig.clock.day,
+      'noAdsPopupShowsToday': 1,
     },
     (game, rig, tester) async {
-      // At 08:00 the gap is open, but there is no trigger and not yet 24 h.
-      expect(game.noAdsPopup, isNull);
-      rig.clock.now = DateTime(2026, 10, 7, 22, 59, 59);
+      expect(game.noAdsPopup, isNull, reason: '30 min after the show');
+      rig.clock.now = DateTime(2026, 10, 7, 8, 29, 59);
       var restarted = await v4Restart(game, rig, tester);
-      expect(restarted.noAdsPopup, isNull);
-      rig.clock.now = DateTime(2026, 10, 7, 23);
+      expect(restarted.noAdsPopup, isNull, reason: '59:59 after the show');
+      rig.clock.now = DateTime(2026, 10, 7, 8, 30);
       restarted = await v4Restart(restarted, rig, tester);
-      expect(restarted.noAdsPopup, isNotNull);
+      expect(restarted.noAdsPopup, isNull, reason: 'the gap is over, no trigger, < 3 h');
+      rig.clock.now = DateTime(2026, 10, 7, 10, 29, 59);
+      restarted = await v4Restart(restarted, rig, tester);
+      expect(restarted.noAdsPopup, isNull, reason: '2 h 59 min 59 s after the show');
+      rig.clock.now = DateTime(2026, 10, 7, 10, 30);
+      restarted = await v4Restart(restarted, rig, tester);
+      expect(restarted.noAdsPopup, isNotNull, reason: 'the 3 h fallback');
       expect(rig.events.last('noads_popup_shown')!['reason'], 'fallback');
       restarted.handleBack();
       await v4Settle(restarted, tester);
       await v4Videos(restarted, tester, 3);
-      rig.clock.now = DateTime(2026, 10, 8, 2, 29, 59);
-      await v4Background(restarted, rig, tester, v4SessionGap);
-      expect(restarted.noAdsPopup, isNull);
-      rig.clock.now = DateTime(2026, 10, 8, 2, 30);
+      // The background adds 30 min: back at 23:50.
+      rig.clock.now = DateTime(2026, 10, 7, 23, 20);
       await v4Background(restarted, rig, tester, v4SessionGap);
       expect(restarted.noAdsPopup, isNotNull);
       expect(rig.events.last('noads_popup_shown')!['reason'], 'videos');
+      expect(restarted.storage.noAdsPopupShowsToday, 3);
+      restarted.handleBack();
+      await v4Settle(restarted, tester);
+      await v4Videos(restarted, tester, 3);
+      // The last show was at 23:50: back at 00:55, 65 min later.
+      rig.clock.now = DateTime(2026, 10, 8, 0, 25);
+      await v4Background(restarted, rig, tester, v4SessionGap);
+      expect(restarted.noAdsPopup, isNotNull, reason: 'midnight resets the cap');
+      expect(restarted.storage.noAdsPopupShowsToday, 1);
     },
   );
 
@@ -531,7 +554,9 @@ void main() {
       await v4Settle(game, tester);
       game.goHome();
       await run(game, .3);
-      expect(game.noAdsPopup, isNull);
+      // PRD-2.3 §24.2: the Home arrival after the run checks the window again.
+      expect(game.noAdsPopup, isNotNull);
+      expect(rig.events.last('noads_popup_shown')!['check'], 'after_run');
     },
   );
 
@@ -585,9 +610,9 @@ void main() {
         }
         expect(
           game.storage.noAdsPopupShowsToday,
-          1,
+          2,
           reason:
-              'the three queued arrivals must not become three same-day shows',
+              'the show before plus ONE from the three queued arrivals (not three)',
         );
         expect(
           game.noAdsPopup,
@@ -642,22 +667,19 @@ void main() {
 
   group('S2-70', () {
     v4Journey(
-      'closing a long-open offer starts the four-hour gap (PRD §8.5)',
+      'closing a long-open offer does not restart the gap (PRD-2.3 §24.2)',
       eligible: true,
       (game, rig, tester) async {
-        // Keep the card open in the foreground: no new session/queued copy.
-        rig.clock.now = rig.clock.now.add(const Duration(hours: 1));
+        // The launch show is at 08:00; the card is closed at 08:30.
+        rig.clock.now = rig.clock.now.add(const Duration(minutes: 30));
         game.handleBack();
         await v4Settle(game, tester);
         await v4Videos(game, tester, 3);
-        rig.clock.now = rig.clock.now.add(const Duration(hours: 3));
+        // 60 min after the show is enough: the closing started no gap.
         await v4Background(game, rig, tester, v4SessionGap);
-        expect(
-          game.noAdsPopup,
-          isNull,
-          reason:
-              'only 3 h 30 min since dismissal; four-hour closing gap still active',
-        );
+        expect(game.noAdsPopup, isNotNull);
+        expect(rig.events.last('noads_popup_shown')!['reason'], 'videos');
+        expect(game.storage.noAdsPopupShowsToday, 2);
       },
     );
   });

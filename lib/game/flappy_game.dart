@@ -37,6 +37,7 @@ import '../components/ui/coin_fly.dart';
 import '../components/ui/coin_reward.dart';
 import '../components/ui/confetti.dart';
 import '../components/ui/service_message.dart';
+import '../menu/ad_grace.dart'; // PRD-2.3 §18
 import '../menu/free_coins_policy.dart';
 import '../menu/home_mode.dart';
 import '../menu/menu_state.dart';
@@ -45,6 +46,7 @@ import '../menu/wallet.dart';
 import '../run/debug/autopilot.dart';
 import '../run/debug/debug_overlay.dart';
 import '../run/debug/force_menu.dart';
+import '../services/rating_prompt.dart'; // PRD-2.3 §23
 import '../services/soak.dart';
 import '../services/redact.dart';
 import 'idle_frames.dart';
@@ -135,9 +137,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     bool? rumbleEnabled,
     VersusService? versus,
     AvatarSource? avatarSource,
+    RatingPrompt? rating,
   }) : services = services ?? GameServices(),
        _avatarSource = avatarSource ?? const NoAvatarSource(),
        versus = versus ?? NoopVersusService(),
+       rating = rating ?? RatingPrompt(),
        reminders = reminders ?? const NoopReminders(),
        rumble = Rumble(hardware: rumbleEnabled ?? soundEnabled),
        monetization = monetization ?? Monetization(),
@@ -236,6 +240,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// Versus backend (PRD-2 §3.13). No-op unless main() passes one (WP-5b).
   final VersusService versus;
+
+  /// PRD-2.3 §23.4 the store's rating sheet (no-op unless main() passes a
+  /// backend: the default never requests).
+  final RatingPrompt rating;
+
+  /// PRD-2.3 §18.3 the foreground playtime counter (kept by the storage).
+  late final PlaytimeCounter playtime = PlaytimeCounter(storage);
+
+  /// Whether the app is resumed (PRD-2.3 §18.3: only resumed time counts).
+  bool _resumed = true;
 
   final AvatarSource _avatarSource;
 
@@ -833,23 +847,38 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     await menu.noAdsPopup.startSession();
     _runsThisSession = 0;
     if (state != GameState.start || menuScene != MenuScene.home) return;
+    _queueNoAdsOffer(
+      check: 'session',
+      stale: () =>
+          _runsThisSession > 0 ||
+          giftThisHomeVisit ||
+          menu.noAds ||
+          state != GameState.start ||
+          menuScene != MenuScene.home,
+    );
+  }
+
+  /// Queues the No-ads offer through the popup queue (at most one at a
+  /// time, QA S1-70): the window is re-checked the moment it would show, and
+  /// the offer is dropped when [stale] by then.
+  void _queueNoAdsOffer({
+    required String check,
+    required bool Function() stale,
+  }) {
     if (_noAdsOfferQueued || _noAdsPopup != null) return;
     if (menu.noAdsPopup.evaluate() == null) return;
-    bool stale() =>
-        _runsThisSession > 0 ||
-        giftThisHomeVisit ||
-        menu.noAds ||
-        state != GameState.start ||
-        menuScene != MenuScene.home;
     _noAdsOfferQueued = true;
-    _queuePopup(() => stale() || (_homeInteractive && _fakeAd == null), () {
-      _noAdsOfferQueued = false;
-      if (stale() || _noAdsPopup != null) return;
-      final reason = menu.noAdsPopup.evaluate();
-      if (reason == null) return;
-      openNoAdsPopup(reason: reason.name);
-      if (_noAdsPopup != null) unawaited(menu.noAdsPopup.markShown());
-    });
+    _queuePopup(
+      () => stale() || (_homeInteractive && _fakeAd == null && _adsShowing == 0),
+      () {
+        _noAdsOfferQueued = false;
+        if (stale() || _noAdsPopup != null) return;
+        final reason = menu.noAdsPopup.evaluate();
+        if (reason == null) return;
+        openNoAdsPopup(reason: reason.name, check: check);
+        if (_noAdsPopup != null) unawaited(menu.noAdsPopup.markShown());
+      },
+    );
   }
 
   @override
@@ -904,6 +933,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached;
+    // PRD-2.3 §18.3: only resumed time counts, and the counter is saved when
+    // the app leaves the foreground.
+    _resumed = state == AppLifecycleState.resumed;
+    if (!_resumed) unawaited(playtime.flush());
     // endregion PRD-2.2 §7.6
     switch (state) {
       case AppLifecycleState.paused || AppLifecycleState.hidden:
@@ -1665,7 +1698,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     unawaited(sound.duckMusic(ReviveConfig.shopMusicDuck));
     _menuTrail.clear();
     sound.play(Sfx.click);
-    _showShop();
+    // PRD-2.3 §26.2: GET COINS is never locked.
+    _showShop(allowLock: false);
   }
 
   void _closeReviveShop() {
@@ -1883,7 +1917,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (_sceneOnTop(MenuScene.shop)) {
       if (scrollToCoins) {
         sound.play(sfx);
-        _shop?.scrollToCoins();
+        // PRD-2.3 §26.2: nothing under the lock scrolls.
+        if (!(_shop?.locked ?? false)) _shop?.scrollToCoins();
       }
       return;
     }
@@ -1906,9 +1941,20 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _showShop(scrollToCoins: scrollToCoins);
   }
 
-  void _showShop({bool scrollToCoins = false}) {
+  void _showShop({bool scrollToCoins = false, bool allowLock = true}) {
     menuScene = MenuScene.shop;
-    final shop = ShopScreen(onBack: closeShop);
+    // PRD-2.3 §26: the Shop opens dimmed below the unlock best (from Home,
+    // the coin pill or Skins; never the revive shop, [allowLock] false).
+    final lock = allowLock && menu.locked
+        ? ['SCORE ${Config.menuUnlockBest} POINTS', 'TO UNLOCK THE SHOP']
+        : null;
+    if (lock != null) {
+      services.track('menu_locked_view', {
+        'screen': 'shop',
+        'best': storage.bestScore,
+      });
+    }
+    final shop = ShopScreen(onBack: closeShop, lock: lock);
     _shop = shop;
     _chromeHosts.add(shop);
     _chromeHold = true; // always replaces home / Skins
@@ -2159,10 +2205,21 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         layer != null && tryOnId != null && !menu.items.isOwned(layer, tryOnId)
         ? tryOnId
         : null;
+    // PRD-2.3 §26: the Skins open dimmed below the unlock best.
+    final lock = menu.locked
+        ? ['SCORE ${Config.menuUnlockBest} POINTS', 'TO UNLOCK SKINS']
+        : null;
+    if (lock != null) {
+      services.track('menu_locked_view', {
+        'screen': 'skins',
+        'best': storage.bestScore,
+      });
+    }
     final screen = SkinShopScreen(
       onBack: closeSkins,
       initialTab: layer ?? SkinLayer.bird,
       initialTryOn: tryOn,
+      lock: lock,
     );
     _skinShop = screen;
     _chromeHosts.add(screen);
@@ -2454,6 +2511,98 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     return true;
   }
 
+  // region PRD-2.3 §23 — rating prompt
+
+  /// The storage reload that the latest [replay] started (PRD-2.3 §24.2).
+  Future<void>? _homeReload;
+
+  /// The rating trigger of the results page on screen (`run5` / `new_best`),
+  /// or null. Set by [endRun]; cleared once the request goes out, or when
+  /// Home comes back.
+  String? _ratingTrigger;
+
+  /// Seconds the results page has been settled with no overlay open (the
+  /// §23.2 item 4 count).
+  double _ratingSettle = 0;
+
+  /// The sheet was requested during this run's results: its NEXT skips the
+  /// interstitial (reason `rating`) and its Home arrival skips the No-Ads
+  /// popup (PRD-2.3 §24.2). Reset when the next run starts.
+  bool _ratingRequestedThisRun = false;
+
+  /// §23.2 item 4: the request is due once the results page has settled for
+  /// [Config.ratingDelaySeconds] with no overlay open. The count starts again
+  /// after an overlay closes. A NEXT before that cancels it (no request and
+  /// no cooldown, §23.2 item 5).
+  void _checkRatingPrompt(double dt) {
+    final trigger = _ratingTrigger;
+    final page = _results;
+    if (trigger == null || page == null || state != GameState.results) {
+      _ratingSettle = 0;
+      return;
+    }
+    final ready =
+        page.settled &&
+        !page.leaving &&
+        !modalPopupOpen &&
+        _debugPanel == null &&
+        _fakeAd == null &&
+        _adsShowing == 0 &&
+        !_interstitialBusy;
+    if (!ready) {
+      _ratingSettle = 0;
+      return;
+    }
+    _ratingSettle += dt;
+    if (_ratingSettle < Config.ratingDelaySeconds) return;
+    _ratingTrigger = null;
+    _ratingSettle = 0;
+    _requestRating(trigger);
+  }
+
+  /// §23.2: writes the cooldown, then asks the store for its sheet. Nothing
+  /// happens (no request, no cooldown) when the sheet is not available here
+  /// (§23.4) or when a request went out in the last [Config.ratingCooldown].
+  void _requestRating(String trigger) {
+    if (!rating.available) return;
+    final now = storage.now();
+    if (!RatingRules.cooldownOver(
+      lastRequestAt: storage.lastRatingRequestAt,
+      now: now,
+      cooldown: Config.ratingCooldown,
+    )) {
+      return;
+    }
+    _ratingRequestedThisRun = true;
+    unawaited(
+      storage.saveLastRatingRequestAt(now.millisecondsSinceEpoch ~/ 1000),
+    );
+    services.track('rate_requested', {
+      'trigger': trigger,
+      'runs': storage.gamesPlayed,
+      'best': storage.bestScore,
+    });
+    unawaited(rating.request());
+  }
+  // endregion PRD-2.3 §23
+
+  // region PRD-2.3 §24 — the No-Ads popup after a run
+  /// PRD-2.3 §24.2: the No-Ads offer on a Home arrival after a run. Never on
+  /// the arrival of a run that requested the rating sheet (item 3), and not
+  /// when a gift came up on this visit (PRD-2.3 §0 item 2).
+  void _offerNoAdsAfterRun() {
+    if (_ratingRequestedThisRun || giftThisHomeVisit) return;
+    _queueNoAdsOffer(
+      check: 'after_run',
+      stale: () =>
+          giftThisHomeVisit ||
+          menu.noAds ||
+          state != GameState.start ||
+          menuScene != MenuScene.home,
+    );
+  }
+  // endregion PRD-2.3 §24
+
   // --- No-ads popup (PRD-1 §5.1) ------------------------------------------
 
   /// The automatic session-start upsell (PO change 2026-10-05: the
@@ -2463,7 +2612,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// debug force passes `forced`). No-op during a run, over another
   /// popup / the debug panel / a fake ad, or while the menus are
   /// transitioning; owners get a toast instead.
-  void openNoAdsPopup({String? reason}) {
+  void openNoAdsPopup({String? reason, String check = 'session'}) {
     if (_noAdsPopup == null && modalPopupOpen) {
       // Another popup is up: the upsell takes its turn after it (only one
       // offer ever waits).
@@ -2471,7 +2620,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       _noAdsOfferQueued = true;
       _queuePopup(() => true, () {
         _noAdsOfferQueued = false;
-        openNoAdsPopup(reason: reason);
+        openNoAdsPopup(reason: reason, check: check);
       });
       return;
     }
@@ -2489,6 +2638,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     services.track('noads_popup_shown', {
       'trigger': _launchTrigger,
       'reason': ?reason,
+      // PRD-2.3 §24.4: session (app launch / return) or after_run.
+      'check': check,
     });
     final popup = NoAdsPopup(
       onDismiss: () => closeNoAdsPopup(),
@@ -3127,8 +3278,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// interstitial starts loading.
   void _onFirstFlight() {
     _rewardedWatchedThisRun = false;
+    _ratingRequestedThisRun = false;
+    // PRD-2.3 §18.2: nothing loads during the new-player grace (this run is
+    // the run after the finished ones).
     if (!menu.noAds &&
-        storage.gamesPlayed + 1 > Config.interstitialFreeRuns) {
+        !AdGrace.active(
+          runs: storage.gamesPlayed + 1,
+          playtimeSeconds: storage.playtimeSeconds,
+        )) {
       monetization.interstitial.preload();
     }
     if (_runBanner) _bannerState.value = BannerState.showing;
@@ -3186,9 +3343,17 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// §7.6: why NEXT goes straight Home, or null when the video ad plays.
   InterstitialSkip? interstitialSkipReason() {
     if (menu.noAds) return InterstitialSkip.noAds;
-    if (storage.gamesPlayed <= Config.interstitialFreeRuns) {
-      return InterstitialSkip.firstRuns;
+    // PRD-2.3 §18.2: the new-player grace (5 runs or 5 min) replaces the
+    // PRD-2.2 "first 3 runs" rule.
+    if (AdGrace.active(
+      runs: storage.gamesPlayed,
+      playtimeSeconds: storage.playtimeSeconds,
+    )) {
+      return InterstitialSkip.newPlayer;
     }
+    // PRD-2.3 §23.2 / §0 item 1: a run that asked for the rating sheet
+    // has no interstitial (NEXT goes straight Home).
+    if (_ratingRequestedThisRun) return InterstitialSkip.rating;
     if (_rewardedWatchedThisRun) return InterstitialSkip.rewardedThisRun;
     final last = _lastFullScreenAdClosedAt;
     if (last != null &&
@@ -3215,6 +3380,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       shown = true;
       suspendAudio();
       services.track('ad_interstitial_shown');
+      // PRD-2.3 §18.4: the first interstitial ever, once.
+      if (!storage.firstInterstitialShown) {
+        services.track('first_interstitial', {
+          'runs': storage.gamesPlayed,
+          'playtime_s': storage.playtimeSeconds,
+        });
+        unawaited(storage.saveFirstInterstitialShown());
+      }
       // §7.6: a displayed video ad feeds the NO ADS upsell trigger.
       if (isLoaded) unawaited(menu.noAdsPopup.recordRewardedVideo());
     }
@@ -3577,6 +3750,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (score > storage.bestScore) {
       storage.saveBestScore(score);
     }
+    // region PRD-2.3 §23.2 — the results page's rating trigger (run 5, or a
+    // new best after it); the request itself waits for the settled page.
+    _ratingTrigger = RatingRules.trigger(
+      runs: storage.gamesPlayed,
+      newBest: score > previousBest,
+      minRuns: Config.ratingMinRuns,
+    );
+    _ratingSettle = 0;
+    // endregion PRD-2.3 §23.2
     // region WP-2e — results page (PRD-2 §3.14, §7)
     // A new level's reward is owed from now on: kept until CLAIM / NEXT so
     // an app kill never loses it (credited at the next app start).
@@ -3927,6 +4109,21 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     menu.slot.rollForArrival();
     replay();
     _logSlotShown();
+    // PRD-2.3 §18.3: the run's playtime is saved when the Home arrives (the
+    // results page does no I/O of its own).
+    unawaited(playtime.flush());
+    // PRD-2.3 §24.2: the No-Ads popup is checked on every Home arrival after
+    // a run (after the interstitial, which is over by now). The check waits
+    // for the arrival's storage reload, so a reload that lands late can never
+    // revert a show that was recorded in the meantime.
+    final reload = _homeReload;
+    if (reload == null) {
+      _offerNoAdsAfterRun();
+    } else {
+      unawaited(
+        reload.catchError((Object _) {}).then((_) => _offerNoAdsAfterRun()),
+      );
+    }
   }
 
   /// Full scene reset with a 0.3 s white fade, ending on the home screen at
@@ -3949,6 +4146,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _debugBot = null;
     (world as RunScaledWorld).timeScaleSource = null;
     _removeResults();
+    _ratingTrigger = null; // PRD-2.3 §23.2: a request needs the results page
+    _ratingSettle = 0;
     // region WP-4a — drop a bonus screen still up
     _removeBonus();
     // endregion WP-4a
@@ -3974,7 +4173,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
     // Best/games/mute reloaded from persistence.
     // (Home polls best / last / level from the storage.)
-    storage.load().then((_) {
+    _homeReload = storage.load().then((_) {
       sound.muted = storage.muteSound;
     });
 
@@ -4246,6 +4445,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // §33.4 item 5: the first frame after an idle-frame restart gets the
     // real elapsed time (Flame restarts its loop with dt = 0).
     dt = idleFrames.frameDt(dt);
+    // PRD-2.3 §18.3: the playtime counts the real frame time (at most a
+    // second, so a long stall adds no more than that), outside full-screen
+    // ads and only while resumed; the clamped step below is for the game.
+    if (_resumed && !_inBackground && _adsShowing == 0 && !_interstitialBusy) {
+      playtime.advance(min(dt, 1.0), mayWrite: state == GameState.start);
+    }
     // One clamped clock for the whole simulation (Config.maxFrameStep):
     // super.update runs the component tree (Forge2D world step, bird,
     // pipes, camera) with this same dt, and everything below uses it too,
@@ -4286,6 +4491,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       if (_levelsOpenIn! <= 0) openLevels();
     }
     if (state == GameState.start) _checkLevelUp(dt);
+    _checkRatingPrompt(dt);
     if (_bannerState.value != BannerState.off) _syncBannerStripColor();
 
     // region P22-33 — FS_SOAK driver (§33.3)

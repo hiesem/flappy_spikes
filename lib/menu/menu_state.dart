@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../game/config.dart';
 import '../game/storage.dart';
 import '../levels/level_progress.dart';
 import '../skins/item_store.dart';
@@ -35,6 +36,11 @@ class MenuState {
   late final LevelProgress levels;
 
   bool get noAds => storage.noAds;
+
+  /// PRD-2.3 §26.1: the Shop and Skins are locked until the best score
+  /// reaches [Config.menuUnlockBest] (one check for both screens and the Home
+  /// tiles; the best is shared by every mode).
+  bool get locked => storage.bestScore < Config.menuUnlockBest;
 
   Future<void> setNoAds(bool value) => storage.saveNoAds(value);
 }

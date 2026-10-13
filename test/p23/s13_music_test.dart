@@ -171,7 +171,9 @@ void main() {
       midRun.otherMusic = true;
       midRun.push(const AudioWatchState(media: true, players: ['1:1']));
       await flushAndMount(g);
-      expect(g.sound.musicPlaying, isFalse, reason: 'paused at once');
+      expect(g.sound.musicPlaying, isTrue, reason: 'a few-ms blip is ignored');
+      await advance(g, Config.musicMediaSoundDebounce + .1);
+      expect(g.sound.musicPlaying, isFalse, reason: 'paused while it plays');
       await advance(g, Config.musicMediaSoundOwnAfter + .2);
       expect(g.sound.ownMusicSkipped, isTrue, reason: 'it kept playing');
       // It stops mid-run: the music stays off until the run ends.
@@ -328,11 +330,10 @@ void main() {
       ding.otherMusic = true; // listed as another app's media player
       ding.push(const AudioWatchState(media: true, players: ['1:1']));
       g.lifecycleStateChange(AppLifecycleState.inactive);
-      await flushAndMount(g);
+      await advance(g, Config.musicMediaSoundDebounce + .1);
       expect(g.sound.musicPlaying, isFalse, reason: 'paused for the ding');
-      await advance(g, .2);
       g.lifecycleStateChange(AppLifecycleState.resumed);
-      await advance(g, 1.3);
+      await advance(g, 1.1);
       ding.otherMusic = false;
       ding.push(const AudioWatchState(players: ['1:0']), notify: false);
       final t = await until(g, () => g.sound.musicPlaying);

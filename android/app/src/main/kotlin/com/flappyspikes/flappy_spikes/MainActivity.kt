@@ -92,6 +92,22 @@ class MainActivity : FlutterActivity() {
                     try {
                         if (intent.action == "com.flappyspikes.DEBUG_NOTIFICATION") {
                             postDebugNotification(context)
+                            // The test phone keeps its ring / notification
+                            // streams muted, so the system plays no ding.
+                            // `--es player notification|media` plays the
+                            // notification tone itself for `--ei ms` (1500)
+                            // and keeps the stopped player listed until
+                            // `--ei linger` (8000) before releasing it: a
+                            // ding, then a finished, unreleased player.
+                            val kind = intent.getStringExtra("player")
+                            if (kind != null) {
+                                debugDing(
+                                    context,
+                                    media = kind == "media",
+                                    ms = intent.getIntExtra("ms", 1500).toLong(),
+                                    linger = intent.getIntExtra("linger", 8000).toLong(),
+                                )
+                            }
                             return
                         }
                         // DEBUG_MEDIA: the same tone as "someone else's
@@ -185,6 +201,44 @@ class MainActivity : FlutterActivity() {
     }
 
     private var debugNotificationCount = 0
+    private var debugDingPlayer: android.media.MediaPlayer? = null
+
+    /** PRD-2.3 §13.3 (debug only): a notification-like sound of [ms]. */
+    private fun debugDing(context: Context, media: Boolean, ms: Long, linger: Long) {
+        try {
+            val mp = android.media.MediaPlayer()
+            mp.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(
+                        if (media) AudioAttributes.USAGE_MEDIA
+                        else AudioAttributes.USAGE_NOTIFICATION
+                    )
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+            mp.setDataSource(
+                context,
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+            )
+            mp.isLooping = true
+            mp.prepare()
+            mp.start()
+            debugDingPlayer = mp
+            Log.i("FS-Music", "debug ding started (media=$media, ${ms}ms, linger ${linger}ms)")
+            val h = Handler(Looper.getMainLooper())
+            h.postDelayed({
+                try { mp.pause() } catch (_: Exception) {}
+                Log.i("FS-Music", "debug ding ended (player still listed)")
+            }, ms)
+            h.postDelayed({
+                try { mp.stop(); mp.release() } catch (_: Exception) {}
+                if (debugDingPlayer === mp) debugDingPlayer = null
+                Log.i("FS-Music", "debug ding released")
+            }, ms + linger)
+        } catch (e: Exception) {
+            Log.i("FS-Music", "debug ding failed: $e")
+        }
+    }
 
     override fun onDestroy() {
         audioWatch?.onCancel(null)

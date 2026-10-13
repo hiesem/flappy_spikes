@@ -82,6 +82,11 @@ class Config {
   /// a notification ding of 1–2 s never does.
   static const double musicMediaSoundOwnAfter = 2;
 
+  /// §13.4: a foreground media player must play this long (s) before it
+  /// pauses the music (measured 2026-10-13 on the Pixel 6: a media player
+  /// of another component opened and closed within 11 ms at launch).
+  static const double musicMediaSoundDebounce = .3;
+
   /// §13.4: an ad suspend with no ad showing for longer than this (s) is
   /// cleared on any screen.
   static const double musicSuspendTimeout = 5;

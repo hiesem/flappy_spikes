@@ -140,7 +140,15 @@ class MusicGuard {
         _t - since >= Config.musicUnknownNotificationMaxHold) {
       notification = false;
     }
-    sound.setOtherSound(notification || _mediaSince != null);
+    sound.setOtherSound(notification || _mediaHolds);
+  }
+
+  /// A foreground media sound holds the music once it has played
+  /// [Config.musicMediaSoundDebounce] (ad web views open and close media
+  /// players for a few ms).
+  bool get _mediaHolds {
+    final since = _mediaSince;
+    return since != null && _t - since >= Config.musicMediaSoundDebounce;
   }
 
   // ------------------------------------------------------------ the game
@@ -213,6 +221,7 @@ class MusicGuard {
   }
 
   void _transient(double dt) {
+    if (_mediaHolds && !sound.otherSound) apply(_last);
     final since = _mediaSince;
     if (since != null && _t - since >= Config.musicMediaSoundOwnAfter) {
       // A media sound that keeps playing is the player's own music.

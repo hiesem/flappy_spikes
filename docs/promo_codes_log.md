@@ -9,3 +9,4 @@ stop working at the end of the quarter they were made in.
 
 | Date | Product | Quantity | Promotion name | Reason | Asked by |
 |---|---|---|---|---|---|
+| 2026-10-13 | gift_coins_10000 | 1 | Owner test – gift coins (2026-10-13) | owner test of Redeem code on Pixel 8 | owner |

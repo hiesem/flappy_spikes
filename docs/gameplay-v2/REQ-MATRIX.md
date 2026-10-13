@@ -207,7 +207,7 @@ frenzy · 3g squeeze · 3h sound pack · 4a feathers / balloon / puzzle · 4b re
 | R-3.1-12 | Tint registry no longer applies to obstacles; pipe sprites dropped | 3.1 | 1a | test/color_state_test.dart (hoops are not Tintable) | done |
 | R-3.1-13 | SPEC.md DEVIATION: obstacle, score trigger, miss rule, 2.0 physics | 3.1, 7 | 1a | SPEC.md "PRD-2 hoops replace pipes (WP-1a)" | done |
 | R-3.1-14 | Tests updated: autopilot, gap-variance, layout, collision; plane-crossing suite (see R-7-T1) | 3.1 | 1a | test/autopilot_test.dart; test/collision_test.dart; test/run/flow/s3_0_1_hoop_spawner_test.dart (replaces pipe_spawner / gap_variance); test/layout_test.dart; test/run/physics/s3_0_4_pass_test.dart | done |
-| R-3.1-15 | Home/store copy "Don't touch the spikes" unchanged | 3.1 | 1a | lib/components/home/home_screen.dart unchanged | done |
+| R-3.1-15 | Home/store copy "Don't touch the spikes" unchanged (superseded by PRD-2.3 §12: the home subtitle is FLAP FAST, FLY FAR) | 3.1 | 1a | lib/components/home/home_screen.dart | done |
 
 ## 3.2 Coin earning
 

@@ -1109,28 +1109,41 @@ void _aurora(
     lw * 1.12,
     front ? const Color(0xFF0E1A4A) : const Color(0xFF08102E),
   );
-  // glowing colour band, one segment at a time
-  c.shadowBlur = lw * .9;
+  // glowing colour band, one segment at a time. The page gives every
+  // segment shadowColor = its colour and shadowBlur = lw * .9; the port
+  // draws those 22 shadows into ONE blurred layer, then the crisp segments
+  // (same look, one blur instead of 22 — the §19.6 Pixel frame budget).
   c.lineWidth = lw * .62;
-  for (var i = 0; i < m; i++) {
-    final u0 = i / m, u1 = (i + 1.08) / m;
-    final s = front ? .5 + (i + .5) / m / 2 : (i + .5) / m / 2;
-    final col = _aurC(s * 4 - t * .5);
-    c.strokeStyle = col;
-    c.shadowColor = col;
-    c.globalAlpha = front ? 1 : .85;
-    c.beginPath();
-    c.ellipse(
-      x,
-      y,
-      rx,
-      ry,
-      0,
-      _ang(u0, front),
-      math.min(_ang(1, front), _ang(u1, front)),
-    );
-    c.stroke();
+  void segments() {
+    for (var i = 0; i < m; i++) {
+      final u0 = i / m, u1 = (i + 1.08) / m;
+      final s = front ? .5 + (i + .5) / m / 2 : (i + .5) / m / 2;
+      c.strokeStyle = _aurC(s * 4 - t * .5);
+      c.globalAlpha = front ? 1 : .85;
+      c.beginPath();
+      c.ellipse(
+        x,
+        y,
+        rx,
+        ry,
+        0,
+        _ang(u0, front),
+        math.min(_ang(1, front), _ang(u1, front)),
+      );
+      c.stroke();
+    }
   }
+
+  c.glowLayer(
+    lw * .9,
+    Rect.fromCenter(
+      center: Offset(x, y),
+      width: 2 * rx + lw,
+      height: 2 * ry + lw,
+    ),
+    segments,
+  );
+  segments();
   c.shadowBlur = 0;
   c.globalAlpha = .7;
   _band(c, x, y, rx, ry, front, -lw * .12, lw * .12, _white);

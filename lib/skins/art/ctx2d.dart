@@ -398,6 +398,29 @@ final class Ctx2D {
     canvas.drawPath(path, _paint);
   }
 
+  /// Performance helper (§19.4 budget, not a canvas call): runs [draw] —
+  /// strokes / fills drawn WITHOUT `shadowBlur` — into one layer that is
+  /// blurred once with the canvas shadow sigma for [blur] (screen units, as
+  /// `shadowBlur`), limited to [bounds]. Equivalent to giving every one of
+  /// those draws `shadowColor = its own colour` and `shadowBlur = blur`, but
+  /// costs one blur instead of one per draw. Callers then draw the crisp
+  /// shapes on top.
+  void glowLayer(double blur, Rect bounds, void Function() draw) {
+    final sigma = blur / 2 / _scaleNow();
+    final savedBlur = shadowBlur;
+    shadowBlur = 0;
+    canvas.saveLayer(
+      bounds.inflate(sigma * 3),
+      Paint()..imageFilter = ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+    );
+    try {
+      draw();
+    } finally {
+      canvas.restore();
+      shadowBlur = savedBlur;
+    }
+  }
+
   /// `ctx.clip()` / `ctx.clip(path)`.
   void clip([Path? p]) => canvas.clipPath(p ?? _path);
 

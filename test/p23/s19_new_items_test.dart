@@ -171,8 +171,7 @@ void main() {
       }
     });
 
-    test('ids unique within each layer; the hoop and trail sunset coexist',
-        () {
+    test('ids unique within each layer; the hoop and trail sunset coexist', () {
       for (final layer in SkinLayer.values) {
         final ids = [for (final i in itemsFor(layer)) i.id];
         expect(ids.toSet(), hasLength(ids.length), reason: layer.key);
@@ -195,8 +194,10 @@ void main() {
           ];
           // the group is contiguous
           final first = rest.indexWhere((i) => i.rarity == rarity);
-          expect(rest.sublist(first, first + group.length).map((i) => i.id),
-              group);
+          expect(
+            rest.sublist(first, first + group.length).map((i) => i.id),
+            group,
+          );
           final olds = group.where((id) => !newIds.contains(id)).toList();
           final news = group.where(newIds.contains).toList();
           expect(group, [...olds, ...news], reason: '${layer.key} $rarity');
@@ -214,13 +215,20 @@ void main() {
       expect(kNewInUpdate, hasLength(60));
       expect(kNewInUpdate.toSet(), _newKeys);
       expect(kNewInUpdate.take(4), [
-        'hat:sunburst', 'gear:disco', 'hoop:aurora', 'trail:supernova',
+        'hat:sunburst',
+        'gear:disco',
+        'hoop:aurora',
+        'trail:supernova',
       ]);
       final rest = kNewInUpdate.skip(4).toList();
       final tagOrder = [
         for (final k in _newKeys)
-          if (!{'hat:sunburst', 'gear:disco', 'hoop:aurora', 'trail:supernova'}
-              .contains(k))
+          if (!{
+            'hat:sunburst',
+            'gear:disco',
+            'hoop:aurora',
+            'trail:supernova',
+          }.contains(k))
             k,
       ];
       expect(rest, tagOrder);
@@ -237,10 +245,12 @@ void main() {
   group('§19.6 shop', () {
     test('NEW on all 60 for a 2.2 save (none seen), whatever the balance; '
         'cleared when seen', () async {
-      final (_, _, items) = await _store(seen: {
-        for (final i in allItems)
-          if (!kNewInUpdate.contains(i.key)) i.key,
-      });
+      final (_, _, items) = await _store(
+        seen: {
+          for (final i in allItems)
+            if (!kNewInUpdate.contains(i.key)) i.key,
+        },
+      );
       for (final key in kNewInUpdate) {
         final [l, id] = key.split(':');
         expect(items.isNew(SkinLayer.fromKey(l)!, id), isTrue, reason: key);
@@ -355,18 +365,35 @@ void main() {
       for (final t in const [0.0, .37, 1.3, 2.81, 7.9, 61.2]) {
         for (final bird in BirdArt.ids) {
           for (final h in HatArtV23.ids) {
-            LookPainter.paint(c, Look(bird: bird, hat: h), t: t);
+            LookPainter.paint(
+              c,
+              Look(bird: bird, hat: h),
+              t: t,
+            );
           }
           for (final g in GearArtV23.ids) {
-            LookPainter.paint(c, Look(bird: bird, gear: g), t: t, flap: true);
+            LookPainter.paint(
+              c,
+              Look(bird: bird, gear: g),
+              t: t,
+              flap: true,
+            );
             LookPainter.paintOnMannequin(c, SkinLayer.gear, g, t: t);
           }
         }
         for (final id in HoopArtV23.ids) {
           for (final ry in const [20.0, 44.0, 59.0]) {
             HoopPainter.paintHalf(c, id, ui.Offset.zero, ry, t, front: false);
-            HoopPainter.paintHalf(c, id, ui.Offset.zero, ry, t,
-                front: true, lineWidth: 24, rx: 12);
+            HoopPainter.paintHalf(
+              c,
+              id,
+              ui.Offset.zero,
+              ry,
+              t,
+              front: true,
+              lineWidth: 24,
+              rx: 12,
+            );
           }
           HoopPainter.paintHoopTile(c, id, ui.Offset.zero, 30, t);
         }
@@ -416,8 +443,11 @@ void main() {
           const Look(bird: 'classic', hat: 'planet', gear: 'butterfly'),
           t: t,
         );
-        LookPainter.paint(c, const Look(bird: 'classic', hat: 'sunburst'),
-            t: t);
+        LookPainter.paint(
+          c,
+          const Look(bird: 'classic', hat: 'sunburst'),
+          t: t,
+        );
         HoopPainter.paintHalf(c, 'cog', ui.Offset.zero, 44, t, front: true);
       }
       rec.endRecording().dispose();

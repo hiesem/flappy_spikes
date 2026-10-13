@@ -1459,3 +1459,25 @@ regression in `test/e2e/p2_gameplay_e2e_test.dart` (S6-20 … S6-24).
 | Banners | `BannerHost.drawnByScene` (its own render pass draws nothing) + `renderInScene(canvas, opacity)`: a portal ride's scene banner layer draws the host at 1 − 0.5 · mix. Since PRD-2.2 §12 the host lives in the run's `RunBannerLayer` (world, −60); both members are kept and the ride layer keeps drawing it into the scene | §18.1 |
 | Portal end | `PortalRide._finish` flaps the bird; `resumeAt` = glide start + `PortalRide.cruiseDistance(runClock, glide + settle + PortalConfig.firstRingAfterControl)` (`resumeAfterLanding` is gone) | §18.2 / §18.3 |
 | Sound preload | `items/sound_preload.dart` `SoundPreloadFeature` (features region WP-G3): `HoopSpawned(portal)` → `SoundService.preload(portalCues(theme))` (`pu_portal`, `pu_land`, `flap`, the theme's cues); `PickupSpawned` comet star → `pu_comet_get/end`; capsule → its power-up's cues. `requests` (tests) | §18.4 |
+
+## PRD-2.3 WP-SKINS contract changes (§19, 2026-10-13)
+
+- **Catalogue:** every layer has 30 entries (`kCollectibleTotal` 148); the 60
+  new items are mixed into the grid by rarity; `kNewInUpdate` is the 2.3 list
+  (60 keys, the showpieces Sunburst, Disco ball, Aurora, Supernova first; the
+  Shop's `featuredItemFor` reads it). No new storage key.
+- **Art:** the new painters are 1:1 ports of `design/skins_v23/parts/*.js`
+  in `lib/skins/art/{hat,gear,hoop}_art_v23.dart` and `trail_v23.dart`,
+  dispatched from the existing masters (`paintHat`, `paintGearBack/Front`,
+  `HoopPainter.paintHalf`, `TrailEmitter`) so every surface (tiles, preview,
+  Home, run, results, share card, versus) still has one master per layer.
+  They draw through `Ctx2D` (`ctx2d.dart`), a Canvas2D-shaped facade with a
+  pooled path set, one reused `Paint` and a keyed gradient cache.
+- `TrailEmitter.paint` takes an optional `head` (the Supernova core glow;
+  defaults to the last emit point while emitting). `TrailEmitter.ids` /
+  `HoopPainter.ids` / `HatArt.ids` / `GearArt.ids` are the full grid order.
+- `LookPainter.extentOf` knows the new hats (`hatRise`), the gear that floats
+  above the head (`gearRise`, new) and below the body (`gearDrop`).
+- `BirdShape.hasBl` (JS `s.bl != null`) anchors stern gear on the duck.
+- Port check: `tool/skins_port/render_js.mjs` + `test/skins/p23_skins_port_test.dart`
+  → `docs/p23/SKINS_PORT.png` (page left, Flutter right, H1…T15).

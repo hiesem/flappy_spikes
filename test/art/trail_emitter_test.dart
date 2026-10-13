@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flappy_spikes/skins/art/trail.dart';
-import 'package:flappy_spikes/skins/look.dart';
 import 'package:flappy_spikes/skins/catalog.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter_test/flutter_test.dart';

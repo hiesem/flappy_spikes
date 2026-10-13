@@ -172,14 +172,19 @@ void _necktie(Ctx2D c, BirdShape s, double t, bool flap) {
   c.fillStyle = artGold;
   for (var i = 0; i < 5; i++) {
     final yy = y + 2.4 + i * 3.4;
-    c.fill(c.poly([
-      x - 5, yy + 2, x + 5, yy - 1.4, x + 5, yy + .2, x - 5, yy + 3.6, //
-    ]));
+    c.fill(
+      c.poly([
+        x - 5, yy + 2, x + 5, yy - 1.4, x + 5, yy + .2, x - 5, yy + 3.6, //
+      ]),
+    );
   }
   c.restore();
-  c.fp(const Color(0xFF12408F), c.poly([
-    x - 2.8, y - 1.6, x + 2.8, y - 1.6, x + 2, y + 2.4, x - 2, y + 2.4, //
-  ]));
+  c.fp(
+    const Color(0xFF12408F),
+    c.poly([
+      x - 2.8, y - 1.6, x + 2.8, y - 1.6, x + 2, y + 2.4, x - 2, y + 2.4, //
+    ]),
+  );
   c.fillStyle = rgba(255, 255, 255, .5);
   c.fillRect(x - 1.4, y - .9, 1.2, 1.2);
 }
@@ -236,8 +241,12 @@ void _gum(Ctx2D c, BirdShape s, double t, bool flap) {
     c.globalAlpha = 1 - v * .6;
     for (var i = 0; i < 7; i++) {
       final a = i / 7 * _tau + .4;
-      c.circ(cx + math.cos(a) * R * .85, y0 + math.sin(a) * R * .85,
-          1.5 - v * .6, pink);
+      c.circ(
+        cx + math.cos(a) * R * .85,
+        y0 + math.sin(a) * R * .85,
+        1.5 - v * .6,
+        pink,
+      );
     }
     c.strokeStyle = _white;
     c.lineWidth = 1;
@@ -253,8 +262,15 @@ void _gum(Ctx2D c, BirdShape s, double t, bool flap) {
     final v = (u - .84) / .16;
     c.fillStyle = pink;
     c.beginPath();
-    c.ellipse(x0 + 1.2, y0 + .6, 3 * (1 - v * .5), 1.8 * (1 - v * .3), .2, 0,
-        _tau);
+    c.ellipse(
+      x0 + 1.2,
+      y0 + .6,
+      3 * (1 - v * .5),
+      1.8 * (1 - v * .3),
+      .2,
+      0,
+      _tau,
+    );
     c.fill();
     c.circ(x0 - .6, y0 + 2.2, 1 * (1 - v), pink);
   }
@@ -271,8 +287,13 @@ void _flower(Ctx2D c, double x, double y, double r, Color col) {
   for (var i = 0; i < 5; i++) {
     final a = i / 5 * _tau - .3;
     c.beginPath();
-    c.arc(x + math.cos(a) * r * .62, y + math.sin(a) * r * .62, r * .48, 0,
-        _tau);
+    c.arc(
+      x + math.cos(a) * r * .62,
+      y + math.sin(a) * r * .62,
+      r * .48,
+      0,
+      _tau,
+    );
     c.fill();
   }
   c.circ(
@@ -312,14 +333,22 @@ void _balloonBack(Ctx2D c, BirdShape s, double t, bool flap) {
   c.lineWidth = 1.1;
   c.beginPath();
   c.moveTo(ax, ay);
-  c.bezierCurveTo(ax - 6, ay - 2 + sw, bx + 2 - sw * 2, by + ry + 6, bx,
-      by + ry + 1.5);
+  c.bezierCurveTo(
+    ax - 6,
+    ay - 2 + sw,
+    bx + 2 - sw * 2,
+    by + ry + 6,
+    bx,
+    by + ry + 1.5,
+  );
   c.stroke();
   c.save();
   c.translate(bx, by);
   c.rotate(sw * .12);
-  c.fp(const Color(0xFFB71C1C),
-      c.poly([-1.6, ry + 2.2, 0, ry - .5, 1.6, ry + 2.2]));
+  c.fp(
+    const Color(0xFFB71C1C),
+    c.poly([-1.6, ry + 2.2, 0, ry - .5, 1.6, ry + 2.2]),
+  );
   c.fillStyle = const Color(0xFFE53935);
   c.beginPath();
   c.ellipse(0, 0, rx, ry, 0, 0, _tau);
@@ -384,10 +413,13 @@ void _backpackBack(Ctx2D c, BirdShape s, double t, bool flap) {
 void _backpackFront(Ctx2D c, BirdShape s, double t, bool flap) {
   final (px, p0) = _packPos(s);
   final py = s.hasBl ? p0 + 5 : p0, L = s.hasBl ? 9.0 : 13.6, k = L / 13.6;
-  c.fp(const Color(0xFFC43E00), c.poly([
-    px - 2.4, py + 1, px + 1.6, py + 1, px + 1.6 + 5.6 * k, py + L, //
-    px - 2.4 + 6.4 * k, py + L + .6,
-  ]));
+  c.fp(
+    const Color(0xFFC43E00),
+    c.poly([
+      px - 2.4, py + 1, px + 1.6, py + 1, px + 1.6 + 5.6 * k, py + L, //
+      px - 2.4 + 6.4 * k, py + L + .6,
+    ]),
+  );
   final bx = px + .2 + 2.8 * k, by = py + 1 + 5.8 * k;
   c.fillStyle = const Color(0xFFFFB529);
   c.fillRect(bx - 1.6, by - 1.2, 3.2, 2.4);
@@ -443,8 +475,15 @@ void _ringHalf(Ctx2D c, BirdShape s, double t, bool front) {
         ? (red ? const Color(0xFFE53935) : _white)
         : (red ? const Color(0xFFB71C1C) : const Color(0xFFE0E0E0));
     c.beginPath();
-    c.ellipse(cx, cy, rx, ry, 0, a0 + i * _tau / n - .01,
-        a0 + (i + 1) * _tau / n + .01);
+    c.ellipse(
+      cx,
+      cy,
+      rx,
+      ry,
+      0,
+      a0 + i * _tau / n - .01,
+      a0 + (i + 1) * _tau / n + .01,
+    );
     c.stroke();
   }
   if (front) {
@@ -522,12 +561,32 @@ void _capeBack(Ctx2D c, BirdShape s, double t, bool flap) {
 void _capeFront(Ctx2D c, BirdShape s, double t, bool flap) {
   final (cx, y0) = _capeAt(s);
   final ax = cx - 2;
-  c.fp(const Color(0xFF6A1B9A), c.poly([
-    ax - 1, y0 - .5, ax + 3.5, y0 + 1.5, ax + 2.5, y0 + 5.5, ax - 1, y0 + 6, //
-  ]));
-  c.fp(artGold, c.poly([
-    ax + 2.2, y0 + 1.4, ax + 3.6, y0 + 3.2, ax + 2.2, y0 + 5, ax + .8, y0 + 3.2, //
-  ]));
+  c.fp(
+    const Color(0xFF6A1B9A),
+    c.poly([
+      ax - 1,
+      y0 - .5,
+      ax + 3.5,
+      y0 + 1.5,
+      ax + 2.5,
+      y0 + 5.5,
+      ax - 1,
+      y0 + 6, //
+    ]),
+  );
+  c.fp(
+    artGold,
+    c.poly([
+      ax + 2.2,
+      y0 + 1.4,
+      ax + 3.6,
+      y0 + 3.2,
+      ax + 2.2,
+      y0 + 5,
+      ax + .8,
+      y0 + 3.2, //
+    ]),
+  );
 }
 
 // ---------------- G11 butterfly wings ----------------
@@ -643,16 +702,25 @@ void _crystalWing(Ctx2D c, double t, bool far) {
   for (var i = _shards.length ~/ 2 - 1; i >= 0; i--) {
     final tx = _shards[i * 2], ty = _shards[i * 2 + 1];
     final len = math.sqrt(tx * tx + ty * ty);
-    final nx = -ty / len * 3.4, ny = tx / len * 3.4, mx = tx * .55, my = ty * .55;
-    c.fp(i.isOdd ? const Color(0xFF7C4DFF) : const Color(0xFF4DD0E1),
-        c.poly([0, 0, mx + nx, my + ny, tx, ty, mx, my]));
-    c.fp(i.isOdd ? const Color(0xFFB388FF) : const Color(0xFFB2EBF2),
-        c.poly([0, 0, mx - nx, my - ny, tx, ty, mx, my]));
+    final nx = -ty / len * 3.4,
+        ny = tx / len * 3.4,
+        mx = tx * .55,
+        my = ty * .55;
+    c.fp(
+      i.isOdd ? const Color(0xFF7C4DFF) : const Color(0xFF4DD0E1),
+      c.poly([0, 0, mx + nx, my + ny, tx, ty, mx, my]),
+    );
+    c.fp(
+      i.isOdd ? const Color(0xFFB388FF) : const Color(0xFFB2EBF2),
+      c.poly([0, 0, mx - nx, my - ny, tx, ty, mx, my]),
+    );
     c.fillStyle = rgba(255, 255, 255, .8);
-    c.fill(c.poly([
-      mx * .4 - nx * .2, my * .4 - ny * .2, mx - nx * .7, my - ny * .7, //
-      mx - nx * .45, my - ny * .45,
-    ]));
+    c.fill(
+      c.poly([
+        mx * .4 - nx * .2, my * .4 - ny * .2, mx - nx * .7, my - ny * .7, //
+        mx - nx * .45, my - ny * .45,
+      ]),
+    );
   }
   c.restore();
 }
@@ -674,8 +742,13 @@ void _crystalBack(Ctx2D c, BirdShape s, double t, bool flap) {
   for (var i = 0; i < _shards.length ~/ 2; i++) {
     final tw = math.sin(t * 3.2 + i * 1.7);
     if (tw > .1) {
-      c.star(_shards[i * 2], _shards[i * 2 + 1], 1.2 + tw * 2.6, _white,
-          t * 2 + i);
+      c.star(
+        _shards[i * 2],
+        _shards[i * 2 + 1],
+        1.2 + tw * 2.6,
+        _white,
+        t * 2 + i,
+      );
     }
   }
   c.restore();
@@ -753,7 +826,8 @@ void _disco(Ctx2D c, BirdShape s, double t, bool flap) {
   for (var i = 0; i < 5; i++) {
     final u = (t * .3 + i / 5) % 1;
     P[i * 2] = s.l - 4 + u * (s.r - s.l + 8);
-    P[i * 2 + 1] = s.top +
+    P[i * 2 + 1] =
+        s.top +
         6 +
         (((i * 3) % 5) / 4) * (s.bot - s.top - 12) +
         math.sin(t * 2 + i) * 2;
@@ -839,7 +913,12 @@ void _disco(Ctx2D c, BirdShape s, double t, bool flap) {
   c.star(bx - 2.6, by - 2.8, 1.3 + tw * 2.2, _white, t);
   final k = (t * 1.8).floor(), u = t * 1.8 - k;
   if (u < .5) {
-    c.star(bx + (artHash(k) - .5) * 9, by + (artHash(k + 3) - .5) * 9,
-        math.sin(u / .5 * math.pi) * 2.4, _white, u);
+    c.star(
+      bx + (artHash(k) - .5) * 9,
+      by + (artHash(k + 3) - .5) * 9,
+      math.sin(u / .5 * math.pi) * 2.4,
+      _white,
+      u,
+    );
   }
 }

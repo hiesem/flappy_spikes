@@ -25,8 +25,17 @@ abstract final class HoopArtV23 {
   static bool has(String id) => _set.contains(id);
 }
 
-typedef _Hoop = void Function(Ctx2D c, double x, double y, double rx,
-    double ry, double t, bool front, double lw);
+typedef _Hoop =
+    void Function(
+      Ctx2D c,
+      double x,
+      double y,
+      double rx,
+      double ry,
+      double t,
+      bool front,
+      double lw,
+    );
 
 /// Paints one half of 2.3 hoop [id]; false when [id] is not a 2.3 hoop.
 bool paintHoopV23(
@@ -114,8 +123,15 @@ double _inHalf(double s, bool front) {
 }
 
 /// translate + rotate so local +x = direction of travel, local -y = outward
-void _at(Ctx2D c, double x, double y, double rx, double ry, double a,
-    [double d = 0]) {
+void _at(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double a, [
+  double d = 0,
+]) {
   final co = math.cos(a), sn = math.sin(a);
   var nx = co * ry, ny = sn * rx;
   var nl = math.sqrt(nx * nx + ny * ny);
@@ -126,8 +142,17 @@ void _at(Ctx2D c, double x, double y, double rx, double ry, double a,
   c.rotate(math.atan2(co * ry, -sn * rx));
 }
 
-void _band(Ctx2D c, double x, double y, double rx, double ry, bool front,
-    double d, double w, Object col) {
+void _band(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  bool front,
+  double d,
+  double w,
+  Object col,
+) {
   c.lineWidth = w;
   c.strokeStyle = col;
   final a0 = front ? _pi / 2 : -_pi / 2;
@@ -167,14 +192,26 @@ const List<Color> _sun = [
   Color(0xFFEC2F7B), Color(0xFF8E2A8C),
 ];
 
-void _sunset(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
+void _sunset(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
   final top = y - ry - lw, H = (ry + lw) * 2;
   for (var i = 0; i < 5; i++) {
     c.save();
     c.beginPath();
-    c.rect(x - rx - lw * 2, top + H * i / 5 - (i != 0 ? .5 : 0), rx * 2 + lw * 4,
-        H / 5 + (i < 4 ? 1 : 0));
+    c.rect(
+      x - rx - lw * 2,
+      top + H * i / 5 - (i != 0 ? .5 : 0),
+      rx * 2 + lw * 4,
+      H / 5 + (i < 4 ? 1 : 0),
+    );
     c.clip();
     _band(c, x, y, rx, ry, front, 0, lw, _sun[i]);
     c.restore();
@@ -192,15 +229,50 @@ void _sunset(Ctx2D c, double x, double y, double rx, double ry, double t,
 }
 
 // O2 lemon
-void _lemon(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
-  _band(c, x, y, rx, ry, front, lw * .12, lw * 1.2,
-      front ? const Color(0xFFF2B705) : const Color(0xFFD99A00));
-  _band(c, x, y, rx, ry, front, lw * .2, lw * .6,
-      front ? const Color(0xFFFFDA1F) : const Color(0xFFF2C200));
+void _lemon(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    lw * .12,
+    lw * 1.2,
+    front ? const Color(0xFFF2B705) : const Color(0xFFD99A00),
+  );
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    lw * .2,
+    lw * .6,
+    front ? const Color(0xFFFFDA1F) : const Color(0xFFF2C200),
+  );
   _band(c, x, y, rx, ry, front, -lw * .12, lw * .16, const Color(0xFFFFFDE7));
-  _band(c, x, y, rx, ry, front, -lw * .38, lw * .38,
-      front ? const Color(0xFFFFF176) : const Color(0xFFF5E04E));
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    -lw * .38,
+    lw * .38,
+    front ? const Color(0xFFFFF176) : const Color(0xFFF5E04E),
+  );
   final n = _cnt(ry, lw * 1.25);
   c.fillStyle = const Color(0xFFFFFDE7);
   for (var i = 0; i < n; i++) {
@@ -219,12 +291,38 @@ void _lemon(Ctx2D c, double x, double y, double rx, double ry, double t,
 }
 
 // O3 bamboo
-void _bamboo(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
-  _band(c, x, y, rx, ry, front, 0, lw,
-      front ? const Color(0xFF8BC34A) : const Color(0xFF689F38));
-  _band(c, x, y, rx, ry, front, -lw * .22, lw * .2,
-      front ? const Color(0xFFC5E1A5) : const Color(0xFF9CCC65));
+void _bamboo(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    0,
+    lw,
+    front ? const Color(0xFF8BC34A) : const Color(0xFF689F38),
+  );
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    -lw * .22,
+    lw * .2,
+    front ? const Color(0xFFC5E1A5) : const Color(0xFF9CCC65),
+  );
   final n = math.max(3, _cnt(ry, lw * 2.6));
   for (var i = 0; i < n; i++) {
     c.save();
@@ -250,12 +348,38 @@ void _bamboo(Ctx2D c, double x, double y, double rx, double ry, double t,
 }
 
 // O4 rope
-void _rope(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
-  _band(c, x, y, rx, ry, front, 0, lw * 1.08,
-      front ? const Color(0xFF8D5E2A) : const Color(0xFF6E4620));
-  _band(c, x, y, rx, ry, front, 0, lw * .86,
-      front ? const Color(0xFFD9A55C) : const Color(0xFFB9874A));
+void _rope(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    0,
+    lw * 1.08,
+    front ? const Color(0xFF8D5E2A) : const Color(0xFF6E4620),
+  );
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    0,
+    lw * .86,
+    front ? const Color(0xFFD9A55C) : const Color(0xFFB9874A),
+  );
   final n = _cnt(ry, lw * .62);
   c.lineCap = StrokeCap.round;
   for (var i = 0; i < n; i++) {
@@ -278,8 +402,16 @@ void _rope(Ctx2D c, double x, double y, double rx, double ry, double t,
 }
 
 // O5 cloud
-void _cloud(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
+void _cloud(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
   final n = _cnt(ry, lw * .95);
   for (var pass = 0; pass < 2; pass++) {
     for (var i = 0; i < n; i++) {
@@ -305,8 +437,16 @@ void _cloud(Ctx2D c, double x, double y, double rx, double ry, double t,
 }
 
 // O6 tire
-void _tire(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
+void _tire(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
   final n = _cnt(ry, lw * .85) * 2, off = t * .04;
   c.fillStyle = front ? const Color(0xFF1B1B1B) : const Color(0xFF111111);
   for (var i = 0; i < n; i++) {
@@ -317,10 +457,28 @@ void _tire(Ctx2D c, double x, double y, double rx, double ry, double t,
     c.fillRect(-lw * .22, -lw * .78, lw * .44, lw * .3);
     c.restore();
   }
-  _band(c, x, y, rx, ry, front, 0, lw * 1.12,
-      front ? const Color(0xFF3A3A3A) : const Color(0xFF262626));
-  _band(c, x, y, rx, ry, front, -lw * .28, lw * .13,
-      front ? rgba(255, 255, 255, .75) : rgba(255, 255, 255, .4));
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    0,
+    lw * 1.12,
+    front ? const Color(0xFF3A3A3A) : const Color(0xFF262626),
+  );
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    -lw * .28,
+    lw * .13,
+    front ? rgba(255, 255, 255, .75) : rgba(255, 255, 255, .4),
+  );
   c.strokeStyle = front ? const Color(0xFF555555) : const Color(0xFF3A3A3A);
   c.lineWidth = lw * .12;
   c.lineCap = StrokeCap.round;
@@ -339,23 +497,65 @@ void _tire(Ctx2D c, double x, double y, double rx, double ry, double t,
 }
 
 // O7 watermelon
-void _melon(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
-  _band(c, x, y, rx, ry, front, lw * .32, lw * .42,
-      front ? const Color(0xFF2E7D32) : const Color(0xFF1B5E20));
+void _melon(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    lw * .32,
+    lw * .42,
+    front ? const Color(0xFF2E7D32) : const Color(0xFF1B5E20),
+  );
   c.save();
   c.setLineDash([lw * .6, lw * .7]);
-  _band(c, x, y, rx, ry, front, lw * .32, lw * .42,
-      front ? const Color(0xFF66BB6A) : const Color(0xFF43A047));
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    lw * .32,
+    lw * .42,
+    front ? const Color(0xFF66BB6A) : const Color(0xFF43A047),
+  );
   c.restore();
   _band(c, x, y, rx, ry, front, lw * .06, lw * .14, const Color(0xFFE8F5C8));
-  _band(c, x, y, rx, ry, front, -lw * .25, lw * .56,
-      front ? const Color(0xFFFF4D5E) : const Color(0xFFD9304A));
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    -lw * .25,
+    lw * .56,
+    front ? const Color(0xFFFF4D5E) : const Color(0xFFD9304A),
+  );
   final n = _cnt(ry, lw * 1.4);
   for (var i = 0; i < n; i++) {
     c.save();
-    _at(c, x, y, rx, ry, _ang((i + .5) / n, front),
-        -lw * .25 + (i.isOdd ? -.08 : .08) * lw);
+    _at(
+      c,
+      x,
+      y,
+      rx,
+      ry,
+      _ang((i + .5) / n, front),
+      -lw * .25 + (i.isOdd ? -.08 : .08) * lw,
+    );
     c.fillStyle = const Color(0xFF2B1B1B);
     c.beginPath();
     c.ellipse(0, 0, lw * .16, lw * .09, 0, 0, _tau);
@@ -367,12 +567,38 @@ void _melon(Ctx2D c, double x, double y, double rx, double ry, double t,
 }
 
 // O8 zipper
-void _zipper(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
-  _band(c, x, y, rx, ry, front, 0, lw * 1.1,
-      front ? artPink : const Color(0xFFB0006B));
-  _band(c, x, y, rx, ry, front, 0, lw * .42,
-      front ? artPlum : const Color(0xFF55002F));
+void _zipper(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    0,
+    lw * 1.1,
+    front ? artPink : const Color(0xFFB0006B),
+  );
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    0,
+    lw * .42,
+    front ? artPlum : const Color(0xFF55002F),
+  );
   final n = _cnt(ry, lw * .36);
   c.fillStyle = front ? artGold : const Color(0xFFD99412);
   for (var i = 0; i < n; i++) {
@@ -403,12 +629,38 @@ void _zipper(Ctx2D c, double x, double y, double rx, double ry, double t,
 }
 
 // O9 tape measure
-void _tape(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
-  _band(c, x, y, rx, ry, front, 0, lw * 1.05,
-      front ? const Color(0xFFD9A400) : const Color(0xFFB88A00));
-  _band(c, x, y, rx, ry, front, 0, lw * .85,
-      front ? const Color(0xFFFFD600) : const Color(0xFFE6C000));
+void _tape(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    0,
+    lw * 1.05,
+    front ? const Color(0xFFD9A400) : const Color(0xFFB88A00),
+  );
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    0,
+    lw * .85,
+    front ? const Color(0xFFFFD600) : const Color(0xFFE6C000),
+  );
   final n = _cnt(ry, lw * .4);
   for (var i = 0; i < n; i++) {
     final k = front ? i + n : i;
@@ -435,8 +687,16 @@ void _tape(Ctx2D c, double x, double y, double rx, double ry, double t,
 }
 
 // O10 pearls
-void _pearls(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
+void _pearls(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
   final n = _cnt(ry, lw * .98);
   _band(c, x, y, rx, ry, front, 0, lw * .14, const Color(0xFFC98A00));
   final g = (t * .35) % 1;
@@ -446,16 +706,32 @@ void _pearls(Ctx2D c, double x, double y, double rx, double ry, double t,
     final p = _pt(x, y, rx, ry, a);
     final px = p.x, py = p.y;
     final r = lw * .5, pk = (i + (front ? 1 : 0)) % 5 == 0;
-    c.circ(px, py, r + lw * .06, front
-        ? (pk ? const Color(0xFFC2185B) : const Color(0xFFB79E86))
-        : (pk ? const Color(0xFF9C1450) : const Color(0xFF9C836C)));
-    c.circ(px, py, r, front
-        ? (pk ? const Color(0xFFF8A5CE) : const Color(0xFFF3E6D6))
-        : (pk ? const Color(0xFFE57FB0) : const Color(0xFFDDCDBA)));
-    c.circ(px - r * .18, py - r * .2, r * .62, front
-        ? (pk ? const Color(0xFFFFD3E8) : const Color(0xFFFFFBF3))
-        : (pk ? const Color(0xFFF6B2D2) : const Color(0xFFF0E5D8)));
-    final dd = (((s - g + 1.5) % 1) - .5).abs(), gl = math.max(0.0, 1 - dd * 14);
+    c.circ(
+      px,
+      py,
+      r + lw * .06,
+      front
+          ? (pk ? const Color(0xFFC2185B) : const Color(0xFFB79E86))
+          : (pk ? const Color(0xFF9C1450) : const Color(0xFF9C836C)),
+    );
+    c.circ(
+      px,
+      py,
+      r,
+      front
+          ? (pk ? const Color(0xFFF8A5CE) : const Color(0xFFF3E6D6))
+          : (pk ? const Color(0xFFE57FB0) : const Color(0xFFDDCDBA)),
+    );
+    c.circ(
+      px - r * .18,
+      py - r * .2,
+      r * .62,
+      front
+          ? (pk ? const Color(0xFFFFD3E8) : const Color(0xFFFFFBF3))
+          : (pk ? const Color(0xFFF6B2D2) : const Color(0xFFF0E5D8)),
+    );
+    final dd = (((s - g + 1.5) % 1) - .5).abs(),
+        gl = math.max(0.0, 1 - dd * 14);
     c.circ(px - r * .35, py - r * .38, r * (.2 + .12 * gl), _white);
     if (gl > .5) {
       c.star(px - r * .35, py - r * .38, lw * (.5 + .5 * gl), _white, t * 2);
@@ -464,11 +740,28 @@ void _pearls(Ctx2D c, double x, double y, double rx, double ry, double t,
 }
 
 // O11 vine
-void _vine(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
+void _vine(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
   final n = _cnt(ry, lw * 1.05);
-  _band(c, x, y, rx, ry, front, 0, lw * .42,
-      front ? const Color(0xFF558B2F) : const Color(0xFF3E6B20));
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    0,
+    lw * .42,
+    front ? const Color(0xFF558B2F) : const Color(0xFF3E6B20),
+  );
   for (var i = 0; i < n; i++) {
     final k = i + (front ? n : 0);
     if (k % 4 == 1) continue;
@@ -496,21 +789,51 @@ void _vine(Ctx2D c, double x, double y, double rx, double ry, double t,
     final px = p.x, py = p.y, r = lw * .24, rot = t * .6 + k;
     for (var j = 0; j < 5; j++) {
       final b = rot + j * _tau / 5;
-      c.circ(px + math.cos(b) * r, py + math.sin(b) * r, r * .85,
-          front ? const Color(0xFFF06292) : const Color(0xFFC2185B));
+      c.circ(
+        px + math.cos(b) * r,
+        py + math.sin(b) * r,
+        r * .85,
+        front ? const Color(0xFFF06292) : const Color(0xFFC2185B),
+      );
     }
     c.circ(px, py, r * .7, const Color(0xFFFFD54F));
   }
 }
 
 // O12 electric
-void _electric(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
+void _electric(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
   final seed = (t * 16).floor();
-  _band(c, x, y, rx, ry, front, 0, lw,
-      front ? const Color(0xFF1A1F5C) : const Color(0xFF0F1240));
-  _band(c, x, y, rx, ry, front, 0, lw * .3,
-      front ? const Color(0xFF3D5AFE) : const Color(0xFF283593));
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    0,
+    lw,
+    front ? const Color(0xFF1A1F5C) : const Color(0xFF0F1240),
+  );
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    0,
+    lw * .3,
+    front ? const Color(0xFF3D5AFE) : const Color(0xFF283593),
+  );
   final m = math.max(8, _cnt(ry, lw * .9));
   c.lineJoin = StrokeJoin.round;
   c.lineCap = StrokeCap.round;
@@ -542,7 +865,10 @@ void _electric(Ctx2D c, double x, double y, double rx, double ry, double t,
     c.moveTo(px, py);
     for (var q = 1; q <= 3; q++) {
       final sx = (artHash(seed + q * 31 + s) - .5) * lw * .9;
-      c.lineTo(px + ox * lw * .55 * q - oy * sx, py + oy * lw * .55 * q + ox * sx);
+      c.lineTo(
+        px + ox * lw * .55 * q - oy * sx,
+        py + oy * lw * .55 * q + ox * sx,
+      );
     }
     c.stroke();
   }
@@ -550,18 +876,53 @@ void _electric(Ctx2D c, double x, double y, double rx, double ry, double t,
 }
 
 // O13 water
-void _water(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
-  _band(c, x, y, rx, ry, front, 0, lw * 1.1,
-      front ? const Color(0xFF1565C0) : const Color(0xFF0D47A1));
-  _band(c, x, y, rx, ry, front, 0, lw * .82,
-      front ? const Color(0xFF1E88E5) : const Color(0xFF1565C0));
+void _water(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    0,
+    lw * 1.1,
+    front ? const Color(0xFF1565C0) : const Color(0xFF0D47A1),
+  );
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    0,
+    lw * .82,
+    front ? const Color(0xFF1E88E5) : const Color(0xFF1565C0),
+  );
   c.save();
   c.lineCap = StrokeCap.round;
   c.setLineDash([lw * 1.6, lw * 1.1]);
   c.lineDashOffset = -t * lw * 4;
-  _band(c, x, y, rx, ry, front, -lw * .1, lw * .34,
-      front ? const Color(0xFF64B5F6) : const Color(0xFF42A5F5));
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    -lw * .1,
+    lw * .34,
+    front ? const Color(0xFF64B5F6) : const Color(0xFF42A5F5),
+  );
   c.setLineDash([lw * .7, lw * 2.4]);
   c.lineDashOffset = -t * lw * 6;
   _band(c, x, y, rx, ry, front, lw * .22, lw * .16, rgba(255, 255, 255, .9));
@@ -572,8 +933,14 @@ void _water(Ctx2D c, double x, double y, double rx, double ry, double t,
     if (u < 0) continue;
     final wob = math.sin(t * 3 + i * 2) * lw * .25;
     final r = lw * (.17 + .15 * artHash(i + 9));
-    final p = _pt(x, y, rx, ry, _ang(u, front),
-        wob + (artHash(i + 3) - .5) * lw * .4);
+    final p = _pt(
+      x,
+      y,
+      rx,
+      ry,
+      _ang(u, front),
+      wob + (artHash(i + 3) - .5) * lw * .4,
+    );
     final px = p.x, py = p.y;
     c.strokeStyle = rgba(255, 255, 255, .95);
     c.lineWidth = math.max(1.2, lw * .1);
@@ -595,8 +962,16 @@ void _water(Ctx2D c, double x, double y, double rx, double ry, double t,
 }
 
 // O14 cogwheel
-void _cog(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
+void _cog(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
   final n = _cnt(ry, lw * 1.45) * 2, off = t * .035;
   c.fillStyle = front ? const Color(0xFFB87800) : const Color(0xFF8C5A00);
   for (var i = 0; i < n; i++) {
@@ -636,17 +1011,34 @@ void _cog(Ctx2D c, double x, double y, double rx, double ry, double t,
   c.translate(x, y);
   _band(c, 0, 0, rx, ry, front, 0, lw * 1.05, g);
   c.restore();
-  _band(c, x, y, rx, ry, front, -lw * .3, lw * .16,
-      front ? const Color(0xFFB87800) : const Color(0xFF7A4E00));
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    -lw * .3,
+    lw * .16,
+    front ? const Color(0xFFB87800) : const Color(0xFF7A4E00),
+  );
   for (var i = 0; i < n; i += 3) {
     final u = _inHalf(i / n + off + .5 / n, front);
     if (u < 0) continue;
     final p = _pt(x, y, rx, ry, _ang(u, front), lw * .08);
     final px = p.x, py = p.y;
-    c.circ(px, py, lw * .2,
-        front ? const Color(0xFF8C5A00) : const Color(0xFF6A4300));
-    c.circ(px - lw * .06, py - lw * .06, lw * .08,
-        front ? const Color(0xFFFFE7A8) : const Color(0xFFC9A04A));
+    c.circ(
+      px,
+      py,
+      lw * .2,
+      front ? const Color(0xFF8C5A00) : const Color(0xFF6A4300),
+    );
+    c.circ(
+      px - lw * .06,
+      py - lw * .06,
+      lw * .08,
+      front ? const Color(0xFFFFE7A8) : const Color(0xFFC9A04A),
+    );
   }
   if (front) {
     c.save();
@@ -671,8 +1063,16 @@ Color _aurC(double v) {
   return lerpC(_aur[i], _aur[(i + 1) % 4], v - i);
 }
 
-void _aurora(Ctx2D c, double x, double y, double rx, double ry, double t,
-    bool front, double lw) {
+void _aurora(
+  Ctx2D c,
+  double x,
+  double y,
+  double rx,
+  double ry,
+  double t,
+  bool front,
+  double lw,
+) {
   const m = 22;
   // curtains: three soft bands outside the ring whose brightness ripples
   for (var k = 0; k < 3; k++) {
@@ -684,15 +1084,31 @@ void _aurora(Ctx2D c, double x, double y, double rx, double ry, double t,
       c.globalAlpha = (.1 + .38 * f * f) * (1 - k * .28);
       c.strokeStyle = _aurC(s * 4 - t * .5 + k * .5);
       c.beginPath();
-      c.ellipse(x, y, rx + d, ry + d, 0, _ang(i / m, front),
-          math.min(_ang(1, front), _ang((i + 1.08) / m, front)));
+      c.ellipse(
+        x,
+        y,
+        rx + d,
+        ry + d,
+        0,
+        _ang(i / m, front),
+        math.min(_ang(1, front), _ang((i + 1.08) / m, front)),
+      );
       c.stroke();
     }
   }
   c.globalAlpha = 1;
   c.lineCap = StrokeCap.butt;
-  _band(c, x, y, rx, ry, front, 0, lw * 1.12,
-      front ? const Color(0xFF0E1A4A) : const Color(0xFF08102E));
+  _band(
+    c,
+    x,
+    y,
+    rx,
+    ry,
+    front,
+    0,
+    lw * 1.12,
+    front ? const Color(0xFF0E1A4A) : const Color(0xFF08102E),
+  );
   // glowing colour band, one segment at a time
   c.shadowBlur = lw * .9;
   c.lineWidth = lw * .62;
@@ -704,8 +1120,15 @@ void _aurora(Ctx2D c, double x, double y, double rx, double ry, double t,
     c.shadowColor = col;
     c.globalAlpha = front ? 1 : .85;
     c.beginPath();
-    c.ellipse(x, y, rx, ry, 0, _ang(u0, front),
-        math.min(_ang(1, front), _ang(u1, front)));
+    c.ellipse(
+      x,
+      y,
+      rx,
+      ry,
+      0,
+      _ang(u0, front),
+      math.min(_ang(1, front), _ang(u1, front)),
+    );
     c.stroke();
   }
   c.shadowBlur = 0;
@@ -717,7 +1140,14 @@ void _aurora(Ctx2D c, double x, double y, double rx, double ry, double t,
     final u = _inHalf(artHash(i + 70) + t * .04 * (1 + artHash(i)), front);
     if (u < 0) continue;
     final tw = math.sin(t * 3 + i * 1.7).abs();
-    final p = _pt(x, y, rx, ry, _ang(u, front), (artHash(i + 5) - .35) * lw * 2.2);
+    final p = _pt(
+      x,
+      y,
+      rx,
+      ry,
+      _ang(u, front),
+      (artHash(i + 5) - .35) * lw * 2.2,
+    );
     if (i.isEven) {
       c.star(p.x, p.y, lw * (.3 + .35 * tw), _white, t * .8 + i);
     } else {

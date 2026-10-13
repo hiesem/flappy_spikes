@@ -257,7 +257,9 @@ final class TrailV23 {
         for (var n = _every(1, .035, dt); n > 0; n--) {
           final px = x + _r(-2, 1) * k, py = y + _r(-2, 2) * k;
           final a = _r(-20, 0) * u, b = _r(-10, 10) * u, s = _r(1.4, 2.2) * u;
-          final c = _random.nextDouble() < .6 ? artGold : const Color(0xFFFF9100);
+          final c = _random.nextDouble() < .6
+              ? artGold
+              : const Color(0xFFFF9100);
           _spawn(px, py)?.set(vx: a, vy: b, max: .35, s: s)
             ?..kind = _kS
             ..g = 60 * u
@@ -266,11 +268,12 @@ final class TrailV23 {
       case 'steps':
         for (var n = _every(0, .14, dt); n > 0; n--) {
           _f = !_f;
-          _spawn(x - 2 * k, y + (_f ? -4 : 4) * k)?.set(
-            max: 1.15,
-            s: 7 * u,
-            rot: _f ? -.22 : .22,
-          ).c0 = _f ? artPlum : artPink;
+          _spawn(
+            x - 2 * k,
+            y + (_f ? -4 : 4) * k,
+          )?.set(max: 1.15, s: 7 * u, rot: _f ? -.22 : .22).c0 = _f
+              ? artPlum
+              : artPink;
         }
       case 'fish':
         for (var i = 0; i < _alive; i++) {
@@ -330,11 +333,12 @@ final class TrailV23 {
             final v = _r(60, 110) * u;
             final m = _r(.35, .55), s = _r(1.8, 2.8) * u, ph = _r(0, tau);
             _spawn(qx, qy)?.set(
-              vx: math.cos(a) * v + 60 * u,
-              vy: math.sin(a) * v,
-              max: m,
-              s: s,
-            )?..c0 = _spec[ci]
+                vx: math.cos(a) * v + 60 * u,
+                vy: math.sin(a) * v,
+                max: m,
+                s: s,
+              )
+              ?..c0 = _spec[ci]
               ..ph = ph;
           }
         }
@@ -374,12 +378,13 @@ final class TrailV23 {
             final m = _r(.6, .8), s = _r(4.2, 5.8) * u, vr = _r(-6, 6);
             final c = _pick(_novaStars);
             _spawn(bx, by)?.set(
-              vx: math.cos(a) * v - 10 * u,
-              vy: math.sin(a) * v,
-              max: m,
-              s: s,
-              vr: vr,
-            )?..kind = _kS
+                vx: math.cos(a) * v - 10 * u,
+                vy: math.sin(a) * v,
+                max: m,
+                s: s,
+                vr: vr,
+              )
+              ?..kind = _kS
               ..dr = 3
               ..c0 = c;
           }
@@ -465,14 +470,9 @@ final class TrailV23 {
     });
   }
 
-  Iterable<_P> get _live sync* {
-    for (var i = 0; i < _alive; i++) {
-      yield _pool[i];
-    }
-  }
-
   void _drawSunset(Ctx2D c) {
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       final u = p.life / p.max;
       final col = u < .25
           ? lerpC(_sun[0], _sun[1], u / .25)
@@ -485,7 +485,8 @@ final class TrailV23 {
   }
 
   void _drawLeaves(Ctx2D c) {
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       final u = p.life / p.max, s = p.s;
       c.save();
       c.translate(p.x, p.y);
@@ -510,7 +511,8 @@ final class TrailV23 {
 
   void _drawSnow(Ctx2D c) {
     c.lineCap = StrokeCap.round;
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       final u = p.life / p.max, s = p.s;
       c.save();
       c.translate(p.x, p.y);
@@ -545,7 +547,8 @@ final class TrailV23 {
   }
 
   void _drawPetals(Ctx2D c) {
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       final u = p.life / p.max, s = p.s;
       c.save();
       c.translate(p.x, p.y);
@@ -577,7 +580,8 @@ final class TrailV23 {
   }
 
   void _drawInk(Ctx2D c, double k) {
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       final u = p.life / p.max, s = p.s * (1 - u * .25);
       final st2 = 1.0 + math.min<double>(.9, math.max(0.0, p.vy) / (130 * k));
       c.save();
@@ -593,7 +597,8 @@ final class TrailV23 {
   }
 
   void _drawPlanes(Ctx2D c) {
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       final u = p.life / p.max, s = p.s;
       c.save();
       c.translate(p.x, p.y);
@@ -626,7 +631,8 @@ final class TrailV23 {
   }
 
   void _drawPopcorn(Ctx2D c, double k) {
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       final u = p.life / p.max, s = p.s;
       c.save();
       c.translate(p.x, p.y);
@@ -644,8 +650,13 @@ final class TrailV23 {
         c.fillStyle = const Color(0xFFE8961A);
         for (var i = 0; i < _pop.length; i += 3) {
           c.beginPath();
-          c.arc(_pop[i] * r, _pop[i + 1] * r,
-              _pop[i + 2] * r + math.max(.9, k * .45), 0, tau);
+          c.arc(
+            _pop[i] * r,
+            _pop[i + 1] * r,
+            _pop[i + 2] * r + math.max(.9, k * .45),
+            0,
+            tau,
+          );
           c.fill();
         }
         c.fillStyle = const Color(0xFFFFFBEA);
@@ -663,7 +674,8 @@ final class TrailV23 {
 
   void _drawFireworks(Ctx2D c, double k) {
     c.lineCap = StrokeCap.round;
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       final u = p.life / p.max;
       if (p.kind == _kS) {
         c.globalAlpha = 1 - u;
@@ -703,8 +715,11 @@ final class TrailV23 {
   void _drawSteps(Ctx2D c) {
     c.lineCap = StrokeCap.round;
     c.lineJoin = StrokeJoin.round;
-    for (final p in _live) {
-      final u = p.life / p.max, s = p.s, z = u < .08 ? 1.35 - u / .08 * .35 : 1.0;
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
+      final u = p.life / p.max,
+          s = p.s,
+          z = u < .08 ? 1.35 - u / .08 * .35 : 1.0;
       c.save();
       c.translate(p.x, p.y);
       c.rotate(p.rot);
@@ -726,7 +741,8 @@ final class TrailV23 {
   }
 
   void _drawFish(Ctx2D c, double k) {
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       final u = p.life / p.max, s = p.s;
       c.save();
       c.translate(p.x, p.y);
@@ -775,7 +791,8 @@ final class TrailV23 {
   }
 
   void _drawGalaxy(Ctx2D c) {
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       final u = p.life / p.max;
       if (p.kind == _kN) {
         final a = math.sin(math.pi * math.min(1, u * 1.3 + .15));
@@ -785,7 +802,8 @@ final class TrailV23 {
         c.circ(p.x, p.y, p.s * (1 + u * 1.4) * .8, p.c0);
       }
     }
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       final u = p.life / p.max;
       if (p.kind == _kS) {
         final tw = .55 + .45 * math.sin(p.life * 14 + p.ph);
@@ -813,7 +831,8 @@ final class TrailV23 {
     final bx = _hx[_hi(q + 2)], by = _hy[_hi(q + 2)];
     // spectrum fan: six wedges opening backwards from the prism
     final base =
-        math.pi - math.max(-.35, math.min(.35, math.atan2(by - py, px - bx) * .45));
+        math.pi -
+        math.max(-.35, math.min(.35, math.atan2(by - py, px - bx) * .45));
     final da = .13 * (1 + .12 * math.sin(T * 7)), L = 38 * k;
     for (final (f, a) in const [(1.0, .28), (.68, .35), (.36, .55)]) {
       c.globalAlpha = a;
@@ -835,7 +854,9 @@ final class TrailV23 {
     c.lineJoin = StrokeJoin.round;
     c.beginPath();
     for (var i = 0; i <= q; i++) {
-      i == 0 ? c.moveTo(_hx[_hi(i)], _hy[_hi(i)]) : c.lineTo(_hx[_hi(i)], _hy[_hi(i)]);
+      i == 0
+          ? c.moveTo(_hx[_hi(i)], _hy[_hi(i)])
+          : c.lineTo(_hx[_hi(i)], _hy[_hi(i)]);
     }
     c.strokeStyle = rgba(179, 136, 255, .6);
     c.lineWidth = 3.8 * k;
@@ -869,7 +890,8 @@ final class TrailV23 {
     c.closePath();
     c.fill();
     c.restore();
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       final u = p.life / p.max;
       c.globalAlpha = 1 - u;
       c.save();
@@ -881,14 +903,17 @@ final class TrailV23 {
   }
 
   void _drawLava(Ctx2D c, double k) {
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       final u = p.life / p.max;
       if (p.kind == _kE) {
         c.globalAlpha = 1 - u;
         c.save();
         c.translate(p.x, p.y);
         c.rotate(p.rot);
-        c.fillStyle = u < .4 ? const Color(0xFFFFE57F) : const Color(0xFFFF6D00);
+        c.fillStyle = u < .4
+            ? const Color(0xFFFFE57F)
+            : const Color(0xFFFF6D00);
         c.fillRect(-p.s, -p.s, p.s * 2, p.s * 2);
         c.restore();
         continue;
@@ -897,14 +922,26 @@ final class TrailV23 {
       final col = u < .3
           ? lerpC(const Color(0xFFFFE57F), const Color(0xFFFF9100), u / .3)
           : u < .65
-          ? lerpC(const Color(0xFFFF9100), const Color(0xFFE53935), (u - .3) / .35)
-          : lerpC(const Color(0xFFE53935), const Color(0xFF4E1A10), (u - .65) / .35);
+          ? lerpC(
+              const Color(0xFFFF9100),
+              const Color(0xFFE53935),
+              (u - .3) / .35,
+            )
+          : lerpC(
+              const Color(0xFFE53935),
+              const Color(0xFF4E1A10),
+              (u - .65) / .35,
+            );
       c.save();
       c.translate(p.x, p.y);
       c.globalAlpha = u > .8 ? (1 - u) / .2 : 1;
       if (hot > 0) {
-        c.fillStyle =
-            rgba(255, 109, 0, double.parse((.32 * hot).toStringAsFixed(3)));
+        c.fillStyle = rgba(
+          255,
+          109,
+          0,
+          double.parse((.32 * hot).toStringAsFixed(3)),
+        );
         c.beginPath();
         c.arc(0, 0, s * 2.1, 0, tau);
         c.fill();
@@ -920,8 +957,11 @@ final class TrailV23 {
         s * .45,
         u < .5
             ? const Color(0xFFFFF8E1)
-            : lerpC(const Color(0xFFFFB529), const Color(0xFF8D2A12),
-                math.min(1, (u - .5) * 2)),
+            : lerpC(
+                const Color(0xFFFFB529),
+                const Color(0xFF8D2A12),
+                math.min(1, (u - .5) * 2),
+              ),
       );
       c.restore();
     }
@@ -937,7 +977,8 @@ final class TrailV23 {
       c.globalAlpha = .3;
       c.circ(hd.dx, hd.dy, 7 * k, const Color(0xFFFFE57F));
     }
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       if (p.kind == _kC) {
         final u = p.life / p.max;
         c.globalAlpha = 1 - u * u;
@@ -946,7 +987,8 @@ final class TrailV23 {
     }
     c.shadowColor = const Color(0xFFFF4FB7);
     c.shadowBlur = 10;
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       if (p.kind == _kR) {
         final u = p.life / p.max;
         final e = 1 - (1 - u) * (1 - u) * (1 - u), r = p.s * (.12 + e);
@@ -960,7 +1002,8 @@ final class TrailV23 {
       }
     }
     c.shadowBlur = 0;
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       if (p.kind == _kS) {
         final u = p.life / p.max;
         c.globalAlpha = 1 - u * u;
@@ -1007,7 +1050,8 @@ final class TrailV23 {
       c.stroke();
     }
     c.globalAlpha = 1;
-    for (final p in _live) {
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
       final u = p.life / p.max;
       c.globalAlpha = u > .7 ? (1 - u) / .3 : 1;
       c.circ(p.x, p.y, p.s, p.c0);
@@ -1084,7 +1128,20 @@ const List<(Color, Color)> _pln = [
   (Color(0xFFF48FB1), Color(0xFFC2185B)),
   (Color(0xFFB39DDB), Color(0xFF5E35B1)),
 ];
-const List<double> _pop = [-.7, 0, .7, .56, -.28, .62, .1, -.7, .6, .2, .49, .6];
+const List<double> _pop = [
+  -.7,
+  0,
+  .7,
+  .56,
+  -.28,
+  .62,
+  .1,
+  -.7,
+  .6,
+  .2,
+  .49,
+  .6,
+];
 const List<Color> _fw = [
   artPink, artGold, Color(0xFF00B8D4), Color(0xFF64DD17), //
   Color(0xFFFF5722), Color(0xFF9B30D9),

@@ -26,19 +26,29 @@ final List<(SkinLayer, String)> p23Items = [
 /// `tool/skins_port/harness.html` draws it: the item on the Classic bird,
 /// the hoop around it, the trail behind it after 90 seeded 1/60 s steps.
 void paintPortCell(Canvas c, SkinLayer layer, String id, double t) {
-  c.drawRect(const Rect.fromLTWH(0, 0, 160, 110),
-      Paint()..color = const Color(0xFFFCD9EE));
+  c.drawRect(
+    const Rect.fromLTWH(0, 0, 160, 110),
+    Paint()..color = const Color(0xFFFCD9EE),
+  );
   c.save();
   c.clipRect(const Rect.fromLTWH(0, 0, 160, 110));
   switch (layer) {
     case SkinLayer.hat:
       c.translate(80, 72);
       c.scale(1.7);
-      LookPainter.paint(c, Look(bird: 'classic', hat: id), t: t);
+      LookPainter.paint(
+        c,
+        Look(bird: 'classic', hat: id),
+        t: t,
+      );
     case SkinLayer.gear:
       c.translate(84, 58);
       c.scale(1.7);
-      LookPainter.paint(c, Look(bird: 'classic', gear: id), t: t);
+      LookPainter.paint(
+        c,
+        Look(bird: 'classic', gear: id),
+        t: t,
+      );
     case SkinLayer.hoop:
       HoopPainter.paintHalf(c, id, const Offset(80, 55), 42, t, front: false);
       c.save();
@@ -81,8 +91,10 @@ Future<ui.Image> renderGrid(
   final pw = (cols * w * scale).round(), ph = (rows * h * scale).round();
   final rec = ui.PictureRecorder();
   final canvas = Canvas(rec)
-    ..drawRect(Rect.fromLTWH(0, 0, pw.toDouble(), ph.toDouble()),
-        Paint()..color = background)
+    ..drawRect(
+      Rect.fromLTWH(0, 0, pw.toDouble(), ph.toDouble()),
+      Paint()..color = background,
+    )
     ..scale(scale);
   for (var i = 0; i < cells.length; i++) {
     canvas

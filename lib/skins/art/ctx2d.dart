@@ -233,9 +233,14 @@ final class Ctx2D {
     roundRect(x, y, w, h, r);
   }
 
-  void arc(double x, double y, double r, double a0, double a1,
-          [bool ccw = false]) =>
-      ellipse(x, y, r, r, 0, a0, a1, ccw);
+  void arc(
+    double x,
+    double y,
+    double r,
+    double a0,
+    double a1, [
+    bool ccw = false,
+  ]) => ellipse(x, y, r, r, 0, a0, a1, ccw);
 
   static double _sweep(double a0, double a1, bool ccw) {
     const t = ArtPaint.tau;
@@ -266,8 +271,13 @@ final class Ctx2D {
     if (rx < 0 || ry < 0) return;
     final sweep = _sweep(a0, a1, ccw);
     if (rot == 0) {
-      _arcInto(_path, Rect.fromLTRB(x - rx, y - ry, x + rx, y + ry), a0, sweep,
-          !_hasPoint);
+      _arcInto(
+        _path,
+        Rect.fromLTRB(x - rx, y - ry, x + rx, y + ry),
+        a0,
+        sweep,
+        !_hasPoint,
+      );
     } else {
       _tmp.reset();
       _arcInto(_tmp, Rect.fromLTRB(-rx, -ry, rx, ry), a0, sweep, true);
@@ -347,7 +357,8 @@ final class Ctx2D {
 
   void _withShadow(Object style, void Function(Paint) draw) {
     if (shadowBlur <= 0 || shadowColor.a == 0) return;
-    final sa = shadowColor.a *
+    final sa =
+        shadowColor.a *
         globalAlpha.clamp(0.0, 1.0) *
         (style is Color ? style.a : 1);
     if (sa <= 0) return;

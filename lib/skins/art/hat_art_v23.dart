@@ -100,15 +100,26 @@ void _sprout(Ctx2D c, BirdShape s, double t) {
 // H2 traffic cone
 void _cone(Ctx2D c, BirdShape s, double t) {
   final x = s.hx, y = s.top;
-  final cone = c.poly([x - 9, y - 1, x - 2.6, y - 20, x + 2.6, y - 20, x + 9, y - 1]);
+  final cone = c.poly([
+    x - 9,
+    y - 1,
+    x - 2.6,
+    y - 20,
+    x + 2.6,
+    y - 20,
+    x + 9,
+    y - 1,
+  ]);
   c.fp(const Color(0xFFFF7A1A), cone);
   c.save();
   c.clip(cone);
   c.fillStyle = const Color(0xFFFFFFFF);
   c.fillRect(x - 12, y - 14.5, 24, 3.6);
   c.fillRect(x - 12, y - 7.5, 24, 3.6);
-  c.fp(rgba(196, 62, 0, .45),
-      c.poly([x + 1.5, y - 20, x + 3, y - 20, x + 10, y, x + 3, y]));
+  c.fp(
+    rgba(196, 62, 0, .45),
+    c.poly([x + 1.5, y - 20, x + 3, y - 20, x + 10, y, x + 3, y]),
+  );
   c.restore();
   c.fillStyle = const Color(0xFFC43E00);
   c.rr(x - 13, y - 1.5, 26, 3.6, 1.2);
@@ -151,13 +162,23 @@ void _paperboat(Ctx2D c, BirdShape s, double t) {
   final x = s.hx, y = s.top;
   c.fp(const Color(0xFFD9D6C8), c.poly([x - 8, y - 6, x, y - 19, x, y - 6]));
   c.fp(const Color(0xFFF4F2E8), c.poly([x, y - 19, x + 8, y - 6, x, y - 6]));
-  final hull =
-      c.poly([x - 15, y - 7, x + 15, y - 7, x + 10, y + 1, x - 10, y + 1]);
+  final hull = c.poly([
+    x - 15,
+    y - 7,
+    x + 15,
+    y - 7,
+    x + 10,
+    y + 1,
+    x - 10,
+    y + 1,
+  ]);
   c.fp(const Color(0xFFF4F2E8), hull);
   c.save();
   c.clip(hull);
-  c.fp(const Color(0xFFD9D6C8),
-      c.poly([x - 15, y - 7, x - 6, y - 7, x - 8, y + 1, x - 12, y + 1]));
+  c.fp(
+    const Color(0xFFD9D6C8),
+    c.poly([x - 15, y - 7, x - 6, y - 7, x - 8, y + 1, x - 12, y + 1]),
+  );
   c.fillStyle = const Color(0xFF8A8A8A);
   for (var j = 0; j < 3; j++) {
     c.fillRect(x - 4, y - 4.8 + j * 2.2, 13.0 - j * 2, 1.1);
@@ -221,8 +242,10 @@ void _fishbowl(Ctx2D c, BirdShape s, double t) {
   c.translate(fx, fy);
   c.scale(dir, 1);
   final wg = math.sin(t * 12) * 1.1;
-  c.fp(const Color(0xFFFF7A1A),
-      c.poly([-3.4, 0, -6.4, -2.6 + wg * .4, -6.4, 2.6 + wg * .4]));
+  c.fp(
+    const Color(0xFFFF7A1A),
+    c.poly([-3.4, 0, -6.4, -2.6 + wg * .4, -6.4, 2.6 + wg * .4]),
+  );
   c.fillStyle = const Color(0xFFFF7A1A);
   c.beginPath();
   c.ellipse(0, 0, 3.8, 2.5, 0, 0, _tau);
@@ -259,10 +282,14 @@ void _fishbowl(Ctx2D c, BirdShape s, double t) {
 
 // H7 cupcake
 const List<(double, double, Color)> _sprinkles = [
-  (-7, -7.7, Color(0xFFFFEB3B)), (-2, -8.2, Color(0xFF4CAF50)),
-  (4, -7.5, Color(0xFF7E57C2)), (7, -8.2, Color(0xFFFFEB3B)),
-  (-5, -11.6, Color(0xFF7E57C2)), (1, -11.8, Color(0xFF29B6F6)),
-  (5, -11.4, Color(0xFF4CAF50)), (-2, -15, Color(0xFFFFEB3B)),
+  (-7, -7.7, Color(0xFFFFEB3B)),
+  (-2, -8.2, Color(0xFF4CAF50)),
+  (4, -7.5, Color(0xFF7E57C2)),
+  (7, -8.2, Color(0xFFFFEB3B)),
+  (-5, -11.6, Color(0xFF7E57C2)),
+  (1, -11.8, Color(0xFF29B6F6)),
+  (5, -11.4, Color(0xFF4CAF50)),
+  (-2, -15, Color(0xFFFFEB3B)),
   (3, -14.8, Color(0xFF29B6F6)),
 ];
 
@@ -274,10 +301,12 @@ void _cupcake(Ctx2D c, BirdShape s, double t) {
   c.clip(wrap);
   c.fillStyle = const Color(0xFF0288D1);
   for (var i = -4; i <= 4; i += 2) {
-    c.fill(c.poly([
-      x + i * 1.9 - .6, y - 6, x + i * 1.9 + .6, y - 6, //
-      x + i * 1.5 + .5, y + 1, x + i * 1.5 - .5, y + 1,
-    ]));
+    c.fill(
+      c.poly([
+        x + i * 1.9 - .6, y - 6, x + i * 1.9 + .6, y - 6, //
+        x + i * 1.5 + .5, y + 1, x + i * 1.5 - .5, y + 1,
+      ]),
+    );
   }
   c.restore();
   c.fillStyle = const Color(0xFFF8BBD9);
@@ -308,7 +337,20 @@ void _cupcake(Ctx2D c, BirdShape s, double t) {
 }
 
 // H8 rain cloud: bobbing cloud, drops fall onto the head and splash
-const List<double> _cloudPuffs = [-7, 1.3, 4, -2, -1.2, 5, 4, -.2, 4.6, 8, 1.6, 3.4];
+const List<double> _cloudPuffs = [
+  -7,
+  1.3,
+  4,
+  -2,
+  -1.2,
+  5,
+  4,
+  -.2,
+  4.6,
+  8,
+  1.6,
+  3.4,
+];
 
 void _raincloud(Ctx2D c, BirdShape s, double t) {
   final x = s.hx, y = s.top, cy = y - 16 + math.sin(t * 2) * 1;
@@ -396,8 +438,10 @@ void _sharkfin(Ctx2D c, BirdShape s, double t) {
   c.fp(const Color(0xFF607D8B), fin);
   c.save();
   c.clip(fin);
-  c.fp(const Color(0xFF90A4AE),
-      c.poly([fx - 9, y - 18, fx - 4, y - 18, fx - 1, y, fx - 9, y]));
+  c.fp(
+    const Color(0xFF90A4AE),
+    c.poly([fx - 9, y - 18, fx - 4, y - 18, fx - 1, y, fx - 9, y]),
+  );
   c.restore();
   _hi(c, fx - 5, y - 14 + bob, 1.3, 2.6);
   final w = c.newPath(), o = (t * 8) % 6;
@@ -431,25 +475,42 @@ void _volcano(Ctx2D c, BirdShape s, double t) {
     final px = x + math.sin(p * 5 + i) * 2 + p * 3, py = y - 14 - p * 6.5;
     final r = 1.5 + p * 2.6;
     c.globalAlpha = (1 - p) * .9;
-    c.circ(px, py, r,
-        i.isOdd ? const Color(0xFF90A4AE) : const Color(0xFFB0BEC5));
+    c.circ(
+      px,
+      py,
+      r,
+      i.isOdd ? const Color(0xFF90A4AE) : const Color(0xFFB0BEC5),
+    );
     c.circ(px - r * .3, py - r * .3, r * .45, rgba(255, 255, 255, .55));
   }
   c.globalAlpha = 1;
-  final cone = c.poly([x - 13, y + 1, x - 4, y - 13, x + 4, y - 13, x + 13, y + 1]);
+  final cone = c.poly([
+    x - 13,
+    y + 1,
+    x - 4,
+    y - 13,
+    x + 4,
+    y - 13,
+    x + 13,
+    y + 1,
+  ]);
   c.fp(const Color(0xFF6D4C41), cone);
   c.save();
   c.clip(cone);
-  c.fp(const Color(0xFF4E342E),
-      c.poly([x + 1, y - 13, x + 5, y - 13, x + 14, y + 2, x + 4, y + 2]));
+  c.fp(
+    const Color(0xFF4E342E),
+    c.poly([x + 1, y - 13, x + 5, y - 13, x + 14, y + 2, x + 4, y + 2]),
+  );
   final g = .6 + .4 * math.sin(t * 5);
   c.save();
   c.shadowColor = rgba(255, 109, 0, .9);
   c.shadowBlur = 4 + g * 3;
   c.fillStyle = const Color(0xFFFF6D00);
-  c.fill(c.poly([
-    x - 4.4, y - 13, x + 4.4, y - 13, x + 3.2, y - 10.6, x - 3.2, y - 10.6, //
-  ]));
+  c.fill(
+    c.poly([
+      x - 4.4, y - 13, x + 4.4, y - 13, x + 3.2, y - 10.6, x - 3.2, y - 10.6, //
+    ]),
+  );
   for (final (d, ph, len) in const [
     (-2.6, 0.0, 6.0),
     (1.8, .45, 8.5),
@@ -480,17 +541,23 @@ void _ufo(Ctx2D c, BirdShape s, double t) {
   // gradient runs over the unit 0..1 (so it is cached; the beam alpha bf is
   // quantised to 1/64).
   final span = y + 2 - cy, q = (bf * 64).round() / 64;
-  final g = Ctx2D.linearGradient(('ufo', q), 0, 0, 0, 1, [
-    (0, rgba(118, 255, 3, .85 * q)),
-    (1, rgba(118, 255, 3, .18)),
-  ]);
+  final g = Ctx2D.linearGradient(
+    ('ufo', q),
+    0,
+    0,
+    0,
+    1,
+    [(0, rgba(118, 255, 3, .85 * q)), (1, rgba(118, 255, 3, .18))],
+  );
   c.save();
   c.translate(0, cy);
   c.scale(1, span);
   c.fillStyle = g;
-  c.fill(c.poly([
-    x - 4, 2 / span, x + 4, 2 / span, x + 10, 1, x - 10, 1, //
-  ]));
+  c.fill(
+    c.poly([
+      x - 4, 2 / span, x + 4, 2 / span, x + 10, 1, x - 10, 1, //
+    ]),
+  );
   c.restore();
   c.fillStyle = rgba(255, 255, 255, .5 * bf);
   for (var i = 0; i < 3; i++) {
@@ -588,7 +655,12 @@ void _bdaycake(Ctx2D c, BirdShape s, double t) {
     c.fillStyle = const Color(0xFFFF9800);
     c.beginPath();
     c.moveTo(cx - 1.7, y - 20);
-    c.quadraticCurveTo(cx - 1.7, y - 22.2 * f + (f - 1) * -2, cx + sw, y - 19 - 5 * f);
+    c.quadraticCurveTo(
+      cx - 1.7,
+      y - 22.2 * f + (f - 1) * -2,
+      cx + sw,
+      y - 19 - 5 * f,
+    );
     c.quadraticCurveTo(cx + 1.7, y - 22, cx + 1.7, y - 20);
     c.quadraticCurveTo(cx, y - 18.7, cx - 1.7, y - 20);
     c.fill();
@@ -635,8 +707,13 @@ void _planet(Ctx2D c, BirdShape s, double t) {
 
   for (var i = 0; i < 4; i++) {
     final tw = math.sin(t * 2.2 + i * 1.9).abs();
-    c.star(x + _planetStarsX[i], cy + _planetStarsY[i], .8 + tw * 1.3,
-        const Color(0xFFFFF59D), t * .5 + i);
+    c.star(
+      x + _planetStarsX[i],
+      cy + _planetStarsY[i],
+      .8 + tw * 1.3,
+      const Color(0xFFFFF59D),
+      t * .5 + i,
+    );
   }
   if (mBack) moon();
   ring(false);

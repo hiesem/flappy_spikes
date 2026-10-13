@@ -24,27 +24,24 @@ const double _t1 = 1.3, _t2 = 2.75;
 const _bg = Color(0xFFFCD9EE);
 const _tileBg = Color(0xFFFFFFFF);
 
-void _cellBg(Canvas c, double w, double h, Color col) => c.drawRect(
-  Rect.fromLTWH(1, 1, w - 2, h - 2),
-  Paint()..color = col,
-);
+void _cellBg(Canvas c, double w, double h, Color col) =>
+    c.drawRect(Rect.fromLTWH(1, 1, w - 2, h - 2), Paint()..color = col);
 
 /// A tile cell: the real shop-grid art ([ItemArt]) in its 84 x 68 box.
-void Function(Canvas) _tile(SkinItem item, double t, {TrailEmitter? e}) =>
-    (c) {
-      _cellBg(c, 90, 74, _tileBg);
-      c.save();
-      c.translate(3, 3);
-      if (e != null) {
-        for (var i = 0; i < 60; i++) {
-          ItemArt.advanceTrail(e, i / 60, 1 / 60);
-        }
-        ItemArt.paint(c, item, t: 1, emitter: e);
-      } else {
-        ItemArt.paint(c, item, t: t);
-      }
-      c.restore();
-    };
+void Function(Canvas) _tile(SkinItem item, double t, {TrailEmitter? e}) => (c) {
+  _cellBg(c, 90, 74, _tileBg);
+  c.save();
+  c.translate(3, 3);
+  if (e != null) {
+    for (var i = 0; i < 60; i++) {
+      ItemArt.advanceTrail(e, i / 60, 1 / 60);
+    }
+    ItemArt.paint(c, item, t: 1, emitter: e);
+  } else {
+    ItemArt.paint(c, item, t: t);
+  }
+  c.restore();
+};
 
 /// A look cell: [look] at 1.6 px per art unit, centred low (hats rise).
 void Function(Canvas) _look(Look look, double t) => (c) {
@@ -66,8 +63,14 @@ Future<void> _golden(
 }) async {
   ui.Image? image;
   await tester.runAsync(() async {
-    image = await renderGrid(cells, w: w, h: h, cols: cols, scale: 2,
-        background: const Color(0xFF7A0044));
+    image = await renderGrid(
+      cells,
+      w: w,
+      h: h,
+      cols: cols,
+      scale: 2,
+      background: const Color(0xFF7A0044),
+    );
   });
   await expectLater(image!, matchesGoldenFile('goldens/$name.png'));
   image!.dispose();
@@ -79,7 +82,9 @@ void main() {
   SkinItem item(SkinLayer l, String id) => itemById(l, id)!;
 
   for (final (name, t) in [('t1', _t1), ('t2', _t2)]) {
-    testWidgets('hats: tile (mannequin) + Classic bird at $name', (tester) async {
+    testWidgets('hats: tile (mannequin) + Classic bird at $name', (
+      tester,
+    ) async {
       await _golden(tester, 'p23_hats_$name', [
         for (final id in HatArtV23.ids) _tile(item(SkinLayer.hat, id), t),
         for (final id in HatArtV23.ids)
@@ -87,7 +92,9 @@ void main() {
       ]);
     });
 
-    testWidgets('gear: tile (mannequin) + Classic bird at $name', (tester) async {
+    testWidgets('gear: tile (mannequin) + Classic bird at $name', (
+      tester,
+    ) async {
       await _golden(tester, 'p23_gear_$name', [
         for (final id in GearArtV23.ids) _tile(item(SkinLayer.gear, id), t),
         for (final id in GearArtV23.ids)
@@ -95,8 +102,9 @@ void main() {
       ]);
     });
 
-    testWidgets('hoops: tile ring + in-run back / front halves at $name',
-        (tester) async {
+    testWidgets('hoops: tile ring + in-run back / front halves at $name', (
+      tester,
+    ) async {
       await _golden(tester, 'p23_hoops_$name', [
         for (final id in HoopArtV23.ids) _tile(item(SkinLayer.hoop, id), t),
         for (final id in HoopArtV23.ids)
@@ -106,26 +114,42 @@ void main() {
             c.translate(45, 37);
             c.scale(.55);
             const centre = Offset.zero;
-            RingPainter.paintHalf(c,
-                centre: centre, opening: 92, front: false, skinId: id, t: t);
+            RingPainter.paintHalf(
+              c,
+              centre: centre,
+              opening: 92,
+              front: false,
+              skinId: id,
+              t: t,
+            );
             c.save();
             c.scale(1.6);
             LookPainter.paint(c, const Look(bird: 'classic'), t: t);
             c.restore();
-            RingPainter.paintHalf(c,
-                centre: centre, opening: 92, front: true, skinId: id, t: t);
+            RingPainter.paintHalf(
+              c,
+              centre: centre,
+              opening: 92,
+              front: true,
+              skinId: id,
+              t: t,
+            );
             c.restore();
           },
       ]);
     });
   }
 
-  testWidgets('trails after a fixed number of seeded steps (tile + run)',
-      (tester) async {
+  testWidgets('trails after a fixed number of seeded steps (tile + run)', (
+    tester,
+  ) async {
     await _golden(tester, 'p23_trails', [
       for (final id in TrailV23.ids)
-        _tile(item(SkinLayer.trail, id), 1,
-            e: TrailEmitter(id, random: math.Random(7))),
+        _tile(
+          item(SkinLayer.trail, id),
+          1,
+          e: TrailEmitter(id, random: math.Random(7)),
+        ),
       for (final id in TrailV23.ids)
         (c) {
           _cellBg(c, 90, 74, _bg);
@@ -141,8 +165,7 @@ void main() {
     testWidgets('every new hat and gear on the $bird', (tester) async {
       await _golden(tester, 'p23_shape_$bird', [
         for (final id in HatArtV23.ids) _look(Look(bird: bird, hat: id), _t1),
-        for (final id in GearArtV23.ids)
-          _look(Look(bird: bird, gear: id), _t1),
+        for (final id in GearArtV23.ids) _look(Look(bird: bird, gear: id), _t1),
       ]);
     });
   }

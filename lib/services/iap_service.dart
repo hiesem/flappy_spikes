@@ -675,10 +675,21 @@ class StoreIapService implements IapService {
   }
 
   Future<void> _onPurchases(List<PurchaseDetails> purchases) async {
+    // Owner 2026-10-13 (2.3.0 (16)) gift diagnosis: every delivery from the
+    // store, also an empty one, with each purchase's product, plugin status,
+    // Play state and acknowledgement (never tokens or order ids).
+    iapLog('purchases ${purchases.length}');
     for (final purchase in purchases) {
       final playState = purchase is GooglePlayPurchaseDetails
           ? purchase.billingClientPurchase.purchaseState
           : null;
+      iapLog(
+        'purchase ${purchase.productID.isEmpty ? '(none)' : purchase.productID}'
+        ' status=${purchase.status.name}'
+        ' play=${playState?.name ?? '-'}'
+        ' ack=${purchase is GooglePlayPurchaseDetails ? purchase.billingClientPurchase.isAcknowledged : '-'}'
+        ' complete=${purchase.pendingCompletePurchase}',
+      );
       // PRD-2.3 §22.2: the plugin's restorePurchases (our sync) marks
       // every owned purchase `restored`, also one still waiting for
       // payment: that one is pending, never granted.
@@ -693,6 +704,7 @@ class StoreIapService implements IapService {
             };
       if (status == IapStatus.pending && playState != null) {
         // Nothing to grant or acknowledge until it is paid.
+        iapLog('pending ${purchase.productID}: skipped until paid');
         if (_productForStoreId(purchase.productID) case final p?) {
           if (purchase.status != PurchaseStatus.restored) {
             _events.add(IapEvent(p, IapStatus.pending));

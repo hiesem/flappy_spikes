@@ -475,7 +475,9 @@ class RunDirector {
       if (early != null) _earlyPicks[i] = early;
       // §27.2 the early pool waits during an activity (its rewards).
       if (early == EarlyPick.starTrail && _rewardsBlocked(i, ctx, gap: true)) {
-        _earlyPicks.remove(i);
+        // PRD-2.3 §17.3 rule 4 (S8-11): with the one-big-bonus rule the pick
+        // is kept for the gap, which makes it wait ([_drawWhileBlocked]).
+        if (!oneBigBonus) _earlyPicks.remove(i);
         early = null;
       }
     }
@@ -1402,6 +1404,13 @@ class RunDirector {
 
     // 4. Optional item: first-meet (never-met element, ignores the budget)
     // or the budget roll.
+    if (!used && blocked && oneBigBonus) {
+      // PRD-2.3 §17.3 rule 4 (S8-11): during an activity and its cool-down
+      // nothing is placed, but the gap is still drawn, so a big bonus picked
+      // here waits (at most one) and takes the first allowed gap; §17.3
+      // rule 5 keeps §14's frequency that way.
+      _drawWhileBlocked(g, ctx);
+    }
     if (!used && !blocked) {
       final due = firstMeet.dueGap(g);
       final pool = tables.earlyPool;
@@ -1481,6 +1490,32 @@ class RunDirector {
       }
     }
     return GapPlan(index: g, items: items);
+  }
+
+  /// PRD-2.3 §17.3 rule 4 (S8-11) the gap draw of a gap that the activity
+  /// cool-down ([_rewardsBlocked]) blocks: the early pool's Star Trail or the
+  /// budget roll, as in an open gap; a drawn big item becomes the waiting
+  /// item (if none waits yet), anything else is dropped. Places nothing.
+  void _drawWhileBlocked(int g, DirectorContext ctx) {
+    final r = rng.layout;
+    ElementId? pick;
+    final pool = tables.earlyPool;
+    if (firstMeet.dueGap(g) != null) return; // stays due by itself
+    if (pool != null && pool.covers(g)) {
+      if (_earlyPicks[g] == EarlyPick.starTrail) pick = ElementId.starTrail;
+    } else if (r.nextDouble() < tables.budgetFor(g).gap) {
+      final w = <ElementId, int>{
+        for (final e in tables.gapItems.entries)
+          if (_gapAllowed(e.key, g, ctx, ignoreOpen: true))
+            e.key: e.value.weight,
+      };
+      pick = RunRandom.pickWeighted<ElementId>(r, w);
+    }
+    if (pick == null || _bonusWaits || !isBigItem(pick)) return;
+    if (!_gapAllowed(pick, g, ctx, ignoreOpen: true, ignoreFrom: true)) {
+      return;
+    }
+    _waitItem = pick;
   }
 
   /// §3.0.3 heart. PRD-2.2 §19.4: a single pickup (random spot in the

@@ -110,7 +110,41 @@ class Purchases {
 
   /// Subscribes to the store's purchase updates (idempotent).
   void start() {
-    _sub ??= iap.events.listen(_onEvent);
+    _sub ??= iap.events.listen(_track);
+  }
+
+  /// PRD-2.3 §24.3 (S8-13): the events being handled right now (grants
+  /// still persisting).
+  final Set<Future<void>> _handling = {};
+
+  void _track(IapEvent event) {
+    final f = _onEvent(event);
+    _handling.add(f);
+    // An error stays unhandled here, as with the plain listener before.
+    unawaited(f.whenComplete(() => _handling.remove(f)));
+  }
+
+  /// The first [sync] of the session (the launch sync) until its store query
+  /// has answered and the events it delivered are granted; null before.
+  /// Never completes with an error.
+  Future<void>? get launchSync => _launchSync;
+  Future<void>? _launchSync;
+
+  Future<void> _settle(Future<void> query) async {
+    try {
+      await query;
+    } catch (_) {
+      // The store layer logs its own failures.
+    }
+    // Events added during the query are delivered on later microtasks.
+    await Future<void>.microtask(() {});
+    while (_handling.isNotEmpty) {
+      try {
+        await Future.wait(List.of(_handling));
+      } catch (_) {
+        // A failed grant is reported by its own handler.
+      }
+    }
   }
 
   void dispose() {
@@ -149,7 +183,9 @@ class Purchases {
       return false;
     }
     _lastSync = now;
-    unawaited(iap.syncPurchases());
+    final query = iap.syncPurchases();
+    _launchSync ??= _settle(query);
+    unawaited(query.catchError((Object _) {}));
     return true;
   }
 

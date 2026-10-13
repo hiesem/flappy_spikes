@@ -46,10 +46,9 @@ class PlaytimeCounter {
   );
 
   /// Adds [dt] seconds of foreground time (no-op once the grace has ended).
-  /// The periodic write (every [saveEvery] counted seconds) happens only when
-  /// [mayWrite]: the game passes false during a run, where the write waits for
-  /// the run's end (see the DEVIATION in SPEC.md, PRD-2.3 §18.3).
-  void advance(double dt, {bool mayWrite = true}) {
+  /// Writes every [saveEvery] counted seconds in every counted state, runs
+  /// and results included (PRD-2.3 §18.3, S8-09).
+  void advance(double dt) {
     if (dt <= 0 || !counting) return;
     _fraction += dt;
     _sinceSave += dt;
@@ -59,14 +58,14 @@ class PlaytimeCounter {
       _storage.playtimeSeconds += whole;
       _dirty = true;
     }
-    if (_sinceSave >= saveEvery && mayWrite) {
+    if (_sinceSave >= saveEvery) {
       _sinceSave = 0;
       unawaited(flush());
     }
   }
 
-  /// Writes the current value when it changed (background, the Home arrival
-  /// after a run, every [saveEvery] on the menus).
+  /// Writes the current value when it changed (background, run end, the Home
+  /// arrival after a run, every [saveEvery] counted seconds).
   Future<void> flush() {
     _sinceSave = 0;
     if (!_dirty) return Future.value();

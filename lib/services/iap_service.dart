@@ -596,6 +596,11 @@ class StoreIapService implements IapService {
       _syncWanted = false;
       await syncPurchases();
     }
+    // PRD-2.3 §24.3 (S8-13): a sync asked for before initialization
+    // completes once the deferred sync has run.
+    final deferred = _deferredSync;
+    _deferredSync = null;
+    if (deferred != null && !deferred.isCompleted) deferred.complete();
   }
 
   @override
@@ -847,11 +852,14 @@ class StoreIapService implements IapService {
   /// right after it.
   bool _syncWanted = false;
 
+  /// Completes when the sync deferred until [initialize] has run.
+  Completer<void>? _deferredSync;
+
   @override
   Future<void> syncPurchases() async {
     if (!_initialized) {
       _syncWanted = true;
-      return;
+      return (_deferredSync ??= Completer<void>()).future;
     }
     if (!_available) {
       await _queryMissing();

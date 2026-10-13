@@ -138,15 +138,25 @@ void main() {
       await finishRun();
       expect(await next(g), 'new_player');
       await startRun(g); // run 5
-      expect(interstitial.preloads, 1, reason: 'run 5 is past the grace');
+      expect(interstitial.preloads, 0, reason: 'run 5 has not finished');
+      await finishRun();
+      expect(interstitial.preloads, 1, reason: '5 finished runs end it');
+      await next(g);
+      await startRun(g); // run 6
+      expect(interstitial.preloads, 2, reason: 'run 6 is past the grace');
     },
   );
 
+  // S8-10: the preload uses the finished-run predicate of the show.
   tester({'gamesPlayed': 4}).testGameWidget(
-    '§18.5 preload: the run that becomes run 5 loads the interstitial',
+    '§18.5 preload: the run that becomes run 5 loads at its end',
     setUp: (g, _) async => g.ready(),
     verify: (g, _) async {
       await startRun(g);
+      expect(interstitial.preloads, 0);
+      killRunThroughSaves(g);
+      await declineRevive(g);
+      await flushAndMount(g);
       expect(interstitial.preloads, 1);
     },
   );

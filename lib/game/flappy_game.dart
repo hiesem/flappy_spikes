@@ -704,6 +704,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     )..start();
     // PRD-2.3 §22.2: gift codes redeemed outside the game arrive on launch.
     _purchases!.sync();
+    // PRD-2.3 §24.3 (S8-13): until the launch sync has settled, the first
+    // START waits for it (bounded), so launch ownership reaches the first
+    // run's banner decision.
+    _purchases!.launchSync?.whenComplete(() => _launchSyncSettled = true);
     sound = SoundService(muted: storage.muteSound, enabled: soundEnabled);
     _soundReady = true;
     if (kSoak && soundEnabled) {
@@ -1107,6 +1111,20 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// armed powerup (the 1.0 run ignores its effect; part 2 reads it) and
   /// starts the run. Synchronous for a plain START without a hook.
   Future<void> _runFromHome({bool withPowerup = false}) async {
+    // PRD-2.3 §24.3 (S8-13): a restore / redeem at launch applies before the
+    // first run: the session's first START waits (at most
+    // [Config.launchOwnershipStartWait]) for the launch sync still running.
+    if (_runsThisSession == 0 &&
+        !_launchSyncSettled &&
+        _purchases?.launchSync != null) {
+      _runStarting = true;
+      try {
+        await _awaitLaunchOwnership();
+      } finally {
+        _runStarting = false;
+      }
+      if (state != GameState.start || menuScene != MenuScene.home) return;
+    }
     // PRD-2.2 §7.5.2: the playfield shrinks at START, before the VS intro
     // and the run scene are built.
     _reserveRunBanner();
@@ -1148,6 +1166,32 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     _startGame(starter);
   }
+
+  // region PRD-2.3 §24.3 (S8-13) — launch ownership before the first run
+  /// The launch purchase sync has settled (its grants are applied).
+  bool _launchSyncSettled = false;
+
+  /// The first START waiting for the launch sync, and its game-time budget.
+  Completer<void>? _launchOwnershipWait;
+  double _launchOwnershipLeft = 0;
+
+  Future<void> _awaitLaunchOwnership() {
+    final c = Completer<void>();
+    _launchOwnershipWait = c;
+    _launchOwnershipLeft = Config.launchOwnershipStartWait;
+    _purchases?.launchSync?.whenComplete(() {
+      if (!c.isCompleted) c.complete();
+    });
+    return c.future.whenComplete(() => _launchOwnershipWait = null);
+  }
+
+  void _tickLaunchOwnershipWait(double dt) {
+    final c = _launchOwnershipWait;
+    if (c == null || c.isCompleted) return;
+    _launchOwnershipLeft -= dt;
+    if (_launchOwnershipLeft <= 0) c.complete();
+  }
+  // endregion
 
   void _startGame([Powerup starter = Powerup.none]) {
     state = GameState.playing;
@@ -3281,16 +3325,31 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _onFirstFlight() {
     _rewardedWatchedThisRun = false;
     _ratingRequestedThisRun = false;
-    // PRD-2.3 §18.2: nothing loads during the new-player grace (this run is
-    // the run after the finished ones).
-    if (!menu.noAds &&
-        !AdGrace.active(
-          runs: storage.gamesPlayed + 1,
-          playtimeSeconds: storage.playtimeSeconds,
-        )) {
-      monetization.interstitial.preload();
-    }
+    // PRD-2.3 §18.2/§18.5: nothing loads during the new-player grace, by the
+    // same predicate as the show (finished runs only; the run just started
+    // is not finished). A grace that ends during or at the end of this run
+    // loads at run end ([_preloadInterstitialAfterGrace]).
+    _interstitialPreloadedThisRun = false;
+    _preloadInterstitialAfterGrace();
     if (_runBanner) _bannerState.value = BannerState.showing;
+  }
+
+  /// PRD-2.3 §18.5 (S8-10): whether this run already asked for the
+  /// interstitial.
+  bool _interstitialPreloadedThisRun = false;
+
+  /// PRD-2.3 §18.2/§18.5: loads the interstitial once per run when the
+  /// new-player grace (finished runs, playtime) no longer covers it.
+  void _preloadInterstitialAfterGrace() {
+    if (_interstitialPreloadedThisRun || menu.noAds) return;
+    if (AdGrace.active(
+      runs: storage.gamesPlayed,
+      playtimeSeconds: storage.playtimeSeconds,
+    )) {
+      return;
+    }
+    _interstitialPreloadedThisRun = true;
+    monetization.interstitial.preload();
   }
 
   /// §7.5.2 grow on the Home arrival: full height, no strip; the used
@@ -3748,6 +3807,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     // endregion P23-14
     storage.incrementGamesPlayed();
+    // PRD-2.3 §18.3 (S8-09): the run's playtime is saved at run end; §18.5
+    // (S8-10): a grace that ended with this finished run loads now.
+    unawaited(playtime.flush());
+    _preloadInterstitialAfterGrace();
     unawaited(storage.saveLastScore(score));
     if (score > storage.bestScore) {
       storage.saveBestScore(score);
@@ -4451,7 +4514,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // second, so a long stall adds no more than that), outside full-screen
     // ads and only while resumed; the clamped step below is for the game.
     if (_resumed && !_inBackground && _adsShowing == 0 && !_interstitialBusy) {
-      playtime.advance(min(dt, 1.0), mayWrite: state == GameState.start);
+      playtime.advance(min(dt, 1.0));
     }
     // One clamped clock for the whole simulation (Config.maxFrameStep):
     // super.update runs the component tree (Forge2D world step, bird,
@@ -4464,6 +4527,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _syncSystemBackWanted();
     super.update(dt);
     _purchases?.update(dt);
+    _tickLaunchOwnershipWait(dt);
     if (_soundReady) {
       sound.maintain();
       musicGuard.update(dt); // PRD-2.3 §13.4

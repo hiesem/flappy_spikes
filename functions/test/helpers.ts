@@ -18,7 +18,11 @@ export const auth = getAuth();
 
 export const DAY = 24 * 3600 * 1000;
 
-export const LOOK: Look = { bird: 'classic', gear: 'none', hat: 'none', hoop: 'classic', trail: 'none' };
+/** The free default look with the real skin-shop ids (`Look.defaults`, PRD-2.3 §21.5). */
+export const LOOK: Look = { bird: 'classic', gear: 'none', hat: 'none', hoop: 'pink', trail: 'flame' };
+
+/** PRD-2.3 §21.5 a non-default look in all five layers (Grape, Shades, Cap, Neon, Bubbles). */
+export const LOOK_FANCY: Look = { bird: 'grape', gear: 'shades', hat: 'cap', hoop: 'neon', trail: 'bubbles' };
 
 let counter = 0;
 export function uniq(prefix: string): string {
@@ -38,6 +42,10 @@ export interface RunOpts {
   name?: string;
   platform?: 'android' | 'ios';
   end?: number;
+  /** PRD-2.3 §21.5 the run's look (default [LOOK]). */
+  look?: Look;
+  /** PRD-2.3 §21.4 the hashed Play Games id (absent = an older run). */
+  pg?: string;
 }
 
 /** A plain plausible v2 run: one entry of value 1 per point, 1.2 s apart, no flags. */
@@ -53,11 +61,12 @@ export function makeRun(o: RunOpts = {}): RunEntry {
     ts: Timestamp.fromMillis(o.tsMs ?? Date.now()),
     name: o.name ?? 'SwiftKiwi482',
     avatar: '',
-    look: LOOK,
+    look: o.look ?? LOOK,
     platform: o.platform ?? 'android',
     tl: encodeDeltas(deltas),
     end: o.end ?? 80,
     fl: encodeEntries(flags, values),
+    ...(o.pg === undefined ? {} : { pg: o.pg }),
   };
 }
 

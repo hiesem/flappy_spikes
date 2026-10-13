@@ -34,6 +34,14 @@ Future<void> stepUntil(
   }
 }
 
+/// A screenshot (real async, outside the fake clock), then the game's own
+/// size again.
+Future<void> snap(FlappySpikesGame g, WidgetTester tester, String name) async {
+  final size = g.size.clone();
+  await tester.runAsync(() => shots.shot(g, 1.5, name));
+  g.onGameResize(size);
+}
+
 /// PRD-2.3 §25.3 / §25.4 the VS screen is the loading screen.
 void main() {
   setUpAll(_fonts);
@@ -42,7 +50,12 @@ void main() {
   void vt(
     String name,
     FakeVersusService Function() versus,
-    Future<void> Function(FlappySpikesGame g, AnalyticsSpy spy, FakeVersusService v)
+    Future<void> Function(
+      FlappySpikesGame g,
+      AnalyticsSpy spy,
+      FakeVersusService v,
+      WidgetTester tester,
+    )
     body, {
     double h = 711,
   }) {
@@ -58,14 +71,14 @@ void main() {
         await g.ready();
         await preloadImages(g);
       },
-      verify: (g, _) => body(g, spy, v),
+      verify: (g, tester) => body(g, spy, v, tester),
     );
   }
 
   vt(
     '§25.4 opponent held → today\'s intro (no wait, no versus_intro_wait)',
     () => FakeVersusService(pool: [shots.rival()], loadingIntro: true),
-    (g, spy, v) async {
+    (g, spy, v, tester) async {
       g.onScreenTap();
       await flushAndMount(g);
       final intro = g.versusIntro!;
@@ -94,14 +107,14 @@ void main() {
           onSearch: () => search.future,
         );
       },
-      (g, spy, v) async {
+      (g, spy, v, tester) async {
         g.onScreenTap();
         expect(g.state, GameState.versusIntro, reason: 'every START shows it');
         await flushAndMount(g);
         final intro = g.versusIntro!;
         expect(intro.waiting, isTrue);
         await stepUntil(g, () => intro.time >= .5);
-        await shots.shot(g, 1.5, 's25_wait_0.5s_$tag');
+        await snap(g, tester, 's25_wait_0.5s_$tag');
         await stepUntil(g, () => intro.time >= 1.2);
         expect(intro.waiting, isTrue);
         expect(intro.reelName, isNotEmpty, reason: 'fillers spin');
@@ -127,7 +140,7 @@ void main() {
         expect(intro.oppPlate.name, 'RapidParrot123');
         expect(intro.noRival, isFalse);
         await stepUntil(g, () => intro.time >= intro.lockAt + .5);
-        await shots.shot(g, 1.5, 's25_landed_$tag');
+        await snap(g, tester, 's25_landed_$tag');
         await finishVersusIntro(g);
         expect(g.run!.setup.opponent!.name, 'RapidParrot123');
         final wait = analyticsLog(spy)
@@ -151,7 +164,7 @@ void main() {
           onSearch: () => search.future,
         );
       },
-      (g, spy, v) async {
+      (g, spy, v, tester) async {
         g.onScreenTap();
         await flushAndMount(g);
         final intro = g.versusIntro!;
@@ -166,7 +179,7 @@ void main() {
         await stepUntil(g, () => intro.soloBanner != null);
         expect(intro.soloBanner!.text, VersusConfig.flySoloText);
         g.update(.4);
-        await shots.shot(g, 1.5, 's25_no_rival_$tag');
+        await snap(g, tester, 's25_no_rival_$tag');
         // The search ends late: the opponent stays held for the next START.
         fake.pool.add(shots.rival());
         search.complete(true);
@@ -189,7 +202,7 @@ void main() {
     '§25.4 no-rival known at once: it slows to NO RIVAL FOUND without '
     'waiting the full 3 s',
     () => FakeVersusService(loadingIntro: true),
-    (g, spy, v) async {
+    (g, spy, v, tester) async {
       g.onScreenTap();
       await flushAndMount(g);
       final intro = g.versusIntro!;
@@ -211,7 +224,7 @@ void main() {
   vt(
     '§25.3 FREE FLY is unchanged: no VS screen, no search',
     () => FakeVersusService(loadingIntro: true),
-    (g, spy, v) async {
+    (g, spy, v, tester) async {
       g.toggleHomeMode();
       g.onScreenTap();
       expect(g.state, GameState.playing);

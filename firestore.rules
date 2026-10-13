@@ -42,7 +42,12 @@ service cloud.firestore {
     function validRun(r, best) {
       // size() == 11 plus the 11 typed fields below = exactly these keys, without a
       // key-list literal (rules stop at 1 000 evaluated expressions per request).
-      return r is map && r.size() == 11
+      // PRD-2.3 §21.4: a 12th key `pg` (the hashed Play Games id: '' or 64 hex) is
+      // accepted; runs without it stay valid.
+      return r is map
+        && (r.size() == 11
+            || (r.size() == 12 && r.pg is string
+                && (r.pg.size() == 0 || r.pg.matches('^[0-9a-f]{64}$'))))
         && r.runId is string && r.runId.size() > 0 && r.runId.size() <= 64
         && r.score is int && r.score >= 0
         && r.best is int && r.best >= r.score && best >= r.best

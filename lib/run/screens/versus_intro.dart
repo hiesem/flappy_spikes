@@ -306,7 +306,7 @@ class VersusIntro extends PositionComponent
       glyph: _soft,
       level: myLevel,
       image: myAvatar,
-    );
+    )..bird = myLook; // PRD-2.3 §21.3 your bird when you have no picture
     _bottom.addAll([youBird, youPlate]);
 
     // Top panel (opponent): fg 26 % over bg, 45° stripes drifting left,
@@ -869,8 +869,9 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
   /// also the glyph while the image is not cached yet, S6-64).
   String image;
 
-  /// PRD-2.3 §21.3 the opponent's look: their bird fills the avatar square
-  /// while their picture loads, when it fails or when they have none.
+  /// PRD-2.3 §21.3 the player's look: their bird fills the avatar square
+  /// while their picture loads, when it fails or when they have none (the
+  /// opponent's plate and, without a Play Games picture, your own).
   Look? bird;
 
   /// PRD-2.3 §25.3 the NO RIVAL FOUND plate: the grey person icon, no
@@ -997,7 +998,7 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
         canvas,
         const Rect.fromLTWH(0, 0, slot, slot),
         look,
-        mirror: true,
+        mirror: reel, // the opponent faces left
         t: intro.time,
       );
     } else {

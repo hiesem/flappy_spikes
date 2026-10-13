@@ -12,5 +12,5 @@ if [[ -n "${FIRESTORE_EMULATOR_HOST:-}" ]]; then
   exec npx mocha "$@"
 fi
 cd "$here/.."
-exec firebase emulators:exec --project demo-flappy-spikes --only auth,firestore,functions \
+exec firebase emulators:exec --project demo-flappy-spikes --only auth,firestore,functions,storage \
   "npm --prefix functions run --silent test:emulated -- $*"

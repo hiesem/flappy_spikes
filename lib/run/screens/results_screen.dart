@@ -363,6 +363,7 @@ class ResultsScreen extends PositionComponent
         centreX: ResultsConfig.youColumnX,
         mine: true,
         avatar: game.myAvatarKey,
+        look: game.menu.items.look, // PRD-2.3 §21.3
         lower: duel == DuelResult.lose,
         winner: duel == DuelResult.win,
       );
@@ -985,7 +986,7 @@ class ResultsPlayerColumn extends PositionComponent
   final String name;
   final int score;
 
-  /// PRD-2.3 §21.3 the opponent's look: their avatar fallback.
+  /// PRD-2.3 §21.3 the player's look: the avatar fallback.
   final Look? look;
   final double centreX;
 
@@ -1088,14 +1089,14 @@ class ResultsPlayerColumn extends PositionComponent
       AvatarImages.paint(canvas, picture, Rect.fromLTWH(left, top, s, s));
       return;
     }
-    // PRD-2.3 §21.3 an opponent without a picture shows their own bird.
+    // PRD-2.3 §21.3 a player without a picture shows their own bird.
     final bird = look;
-    if (!mine && bird != null) {
+    if (bird != null) {
       VersusAvatar.paintBird(
         canvas,
         Rect.fromLTWH(left, top, s, s),
         bird,
-        mirror: true,
+        mirror: !mine,
       );
       return;
     }

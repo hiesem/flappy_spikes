@@ -61,6 +61,13 @@ abstract final class PairConfig {
   /// §5.20 Tag text size (Opificio) and outline (pt).
   static const double tagFont = 14, tagOutline = 2;
 
+  /// PRD-2.3 §17.2 visual reach of a pair ring (measured from the
+  /// painter): half the wider gift tag (`GiftTag.width`, the word + 40)
+  /// plus this much for its ±0.12 rad tilt / sway (14 · sin 0.12) and its
+  /// outline; at least the gift boxes ([boxHalf] · [boxScale] + 2).
+  static const double tagReachExtra = 5;
+  static const double boxReach = boxHalf * boxScale + 2;
+
   /// §5.20 Pick: confetti squares and strips.
   static const int confetti = 22;
 

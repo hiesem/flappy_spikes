@@ -228,6 +228,17 @@ abstract final class FeverRingPainter {
       RingPainter.ryFor(opening) +
       FeverConfig.haloExtra * decorScaleFor(opening);
 
+  /// PRD-2.3 §17.2 the visual reach (pt left of the plane) of a FEVER ring
+  /// with [opening] before it is passed (flare 0): the beam with its
+  /// streaks, at least the halo.
+  static double visualReach(double opening) {
+    final d = decorScaleFor(opening);
+    return math.max(
+      (FeverConfig.beamLength + FeverConfig.beamReachExtra) * d,
+      RingPainter.ryFor(opening) + FeverConfig.haloExtra * d,
+    );
+  }
+
   /// The mock's deterministic `rnd(n)` (cosmetic only).
   static double rnd(num n) {
     final v = math.sin(n * 12.9898 + 78.233) * 43758.5453;

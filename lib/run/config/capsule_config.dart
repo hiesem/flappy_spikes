@@ -38,6 +38,10 @@ abstract final class CapsuleConfig {
   /// §5.29 The pulsing ring round the capsule: radius 25 pt, stroke 3 pt.
   static const double ringRadius = 25;
 
+  /// PRD-2.3 §17.2 visual reach of a capsule (measured from the painter):
+  /// the pulsing ring ([ringRadius], up to 1.1× with its 3 pt stroke).
+  static const double visualReach = 30;
+
   /// §5.29 Pulsing ring stroke (pt).
   static const double ringStroke = 3;
 

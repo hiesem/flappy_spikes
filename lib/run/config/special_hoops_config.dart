@@ -173,6 +173,11 @@ abstract final class LuckySpinConfig {
   /// §5.24 Wheel centre above the top rim (pt).
   static const double above = 36;
 
+  /// PRD-2.3 §17.2 visual reach of the Lucky Spin ring (measured from the
+  /// painter): the wheel ([radius]) and its rim stroke, centred on the
+  /// ring's plane; the ring itself is narrower.
+  static const double visualReach = radius + 4;
+
   /// §5.24 Post width (pt).
   static const double postWidth = 3;
 

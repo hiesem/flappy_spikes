@@ -64,6 +64,9 @@ abstract final class EggConfig {
   /// §5.26 Warm halo r 22, `rgba(255,220,140,·)` at α 0.6.
   static const Color haloColor = Color(0xFFFFDC8C);
   static const double haloR = 22;
+
+  /// PRD-2.3 §17.2 visual reach of the Egg: its halo r 22.
+  static const double visualReach = haloR;
   static const double haloAlpha = .6;
 
   /// §5.26 On the bird it sits ≈ 22 pt above the centre, 2 pt behind.

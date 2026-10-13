@@ -32,6 +32,7 @@ class DirectorContext {
     this.puzzleMask = 0,
     this.activity = false,
     this.activityEndedAtSlot = -99,
+    this.bigBonusOpen = false,
   }) : squeezeTopTooth = squeezeTopTooth ?? topTooth,
        squeezeFloorTooth = squeezeFloorTooth ?? floorTooth;
 
@@ -57,6 +58,7 @@ class DirectorContext {
     int puzzleMask = 0,
     bool activity = false,
     int activityEndedAtSlot = -99,
+    bool bigBonusOpen = false,
   }) {
     const top = RunConfig.stripHeight;
     final floor = viewHeight - RunConfig.stripHeight;
@@ -84,6 +86,7 @@ class DirectorContext {
       puzzleMask: puzzleMask,
       activity: activity,
       activityEndedAtSlot: activityEndedAtSlot,
+      bigBonusOpen: bigBonusOpen,
     );
   }
 
@@ -150,6 +153,11 @@ class DirectorContext {
   /// PRD-2.2 §27.2 the director's next slot index when the last activity
   /// ended (the 2-hoop cool-down counts from it); −99 = none.
   final int activityEndedAtSlot;
+
+  /// PRD-2.3 §17.2 a big bonus is open: planned (the planned-ahead slot,
+  /// a line item waiting, a hoop or a pickup ahead) and not yet resolved
+  /// (collected, flown through, or passed by the bird).
+  final bool bigBonusOpen;
 
   double get band => floorTooth - topTooth;
 }

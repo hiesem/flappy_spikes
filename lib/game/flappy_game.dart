@@ -1288,6 +1288,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       // PRD-2.3 §14.6 the gates hold in every real run; the test harness,
       // FS_E2E and FS_SOAK builds fly with every element.
       ignoreGates: d.ignoreGates || kE2E || kSoak,
+      // PRD-2.3 §17.6 only the test baseline turns the rule off.
+      oneBigBonus: d.oneBigBonus,
     );
     d.force.clear();
     d.forcedRide = null;

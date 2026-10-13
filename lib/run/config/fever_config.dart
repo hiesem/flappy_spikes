@@ -88,6 +88,12 @@ abstract final class FeverConfig {
   /// §5.18 White light streaks drifting through the beam.
   static const int beamStreaks = 8;
 
+  /// PRD-2.3 §17.2 visual reach of the FEVER ring beyond [beamLength]
+  /// (decor scale 1): the streaks start 6 pt in front of the ring and are
+  /// up to 20 pt long. The reach (`FeverRingPainter.visualReach`) is
+  /// `(beamLength + beamReachExtra) · decorScale`, at least the halo.
+  static const double beamReachExtra = 26;
+
   /// PRD-2.2 §25 The halo, beam, loops, sparkles and embers were designed
   /// at the full-size opening 118 pt; every decoration size / offset is
   /// multiplied by `ry / ryDesign` (`FeverRingPainter.decorScaleFor`). The

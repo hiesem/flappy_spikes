@@ -36,6 +36,7 @@ class RunDirector {
     this.spacing = RunConfig.spacing,
     bool featherAllowed = true,
     bool pieceAllowed = true,
+    this.oneBigBonus = RunConfig.oneBigBonus,
   }) : tables = tables ?? DirectorTables.prd2,
        rng = RunRandom(seed),
        enabled = {...enabled},
@@ -113,6 +114,10 @@ class RunDirector {
   /// (not a `startHoopIndex` debug / e2e run); the caller passes
   /// `firstTrackX: RunConfig.hoop0X` with it.
   final bool fixedFirstHoop;
+
+  /// PRD-2.3 §17.3 the one-big-bonus rule (off only for the §17.6 count
+  /// baseline in tests).
+  final bool oneBigBonus;
 
   /// Registered elements (hoop + pickup registries, features).
   final Set<ElementId> enabled;
@@ -439,7 +444,10 @@ class RunDirector {
         ok = _specialAllowed(special, i, ctx, ignoreUnlock: true);
         if (ok) kind = special;
       } else if (e == ElementId.portal) {
-        ok = _on(e) && !ctx.squeezeWindow && !_rewardsBlocked(i, ctx);
+        ok = _on(e) &&
+            !ctx.squeezeWindow &&
+            !_rewardsBlocked(i, ctx) &&
+            !_bigOpen(ctx);
         if (ok) kind = HoopKindId.portal;
       } else if (e == ElementId.comet) {
         ok = _cometAllowed(i, ctx, mode: 2);
@@ -474,13 +482,19 @@ class RunDirector {
 
     // 3. Portal (fixed schedule; first-meet pulls it forward). PRD-2.2
     // §27.2: during an activity and its cool-down it waits.
-    if (kind == null && !forced && _portalOn && !_rewardsBlocked(i, ctx)) {
-      if (due == ElementId.portal) _portalAt = min(_portalAt, i);
-      if (i >= _portalAt &&
-          !ctx.squeezeWindow &&
-          i - _lastComet >= RunConfig.cometPortalDistance) {
-        kind = HoopKindId.portal;
-        forced = due == ElementId.portal;
+    // PRD-2.3 §17.3 rules 1 / 4: while a big bonus is open it waits too
+    // (the "stays due" path of `_portalAt`).
+    if (kind == null && !forced && _portalOn) {
+      if (!_rewardsBlocked(i, ctx) && !_bigOpen(ctx)) {
+        if (due == ElementId.portal) _portalAt = min(_portalAt, i);
+        if (i >= _portalAt &&
+            !ctx.squeezeWindow &&
+            i - _lastComet >= RunConfig.cometPortalDistance) {
+          kind = HoopKindId.portal;
+          forced = due == ElementId.portal;
+        }
+      } else if (oneBigBonus && i >= _portalAt) {
+        _portalWaiting = true;
       }
     }
 
@@ -488,7 +502,12 @@ class RunDirector {
     final cooling = i - _lastSpecial <= _cdLeft;
     if (kind == null && !forced && !cooling) {
       final dueSpecial = due == null ? null : HoopKindId.specialFor(due);
-      if (dueSpecial != null && _specialAllowed(dueSpecial, i, ctx)) {
+      final waiting = _waitRing;
+      if (waiting != null && _specialAllowed(waiting, i, ctx)) {
+        // PRD-2.3 §17.3 rule 4 the waiting reward ring comes first.
+        kind = waiting;
+        _waitRing = null;
+      } else if (dueSpecial != null && _specialAllowed(dueSpecial, i, ctx)) {
         kind = dueSpecial;
         forced = true;
       } else if (early != null) {
@@ -503,11 +522,27 @@ class RunDirector {
         if (rng.layout.nextDouble() < budget) {
           final w = <HoopKindId, int>{};
           for (final e in tables.specials.entries) {
-            if (_specialAllowed(e.key, i, ctx)) {
+            // PRD-2.3 §17.3 rule 4: a reward ring that only rule 1 or the
+            // cool-down blocks stays in the draw (and waits if drawn).
+            if (_specialAllowed(e.key, i, ctx) ||
+                (oneBigBonus &&
+                    rewardKinds.contains(e.key) &&
+                    _specialAllowed(e.key, i, ctx, ignoreBig: true))) {
               w[e.key] = e.value.weightAt(i);
             }
           }
           kind = RunRandom.pickWeighted<HoopKindId>(rng.layout, w);
+          if (oneBigBonus && kind != null && rewardKinds.contains(kind)) {
+            final blocked = !_specialAllowed(kind, i, ctx);
+            if (blocked || _bonusWaits) {
+              // A blocked ring waits (if none waits yet); the slot is drawn
+              // again from the non-big elements, so the course keeps its
+              // density (as when blocked rings were not in the draw).
+              if (blocked && !_bonusWaits) _waitRing = kind;
+              w.removeWhere((k, _) => rewardKinds.contains(k));
+              kind = RunRandom.pickWeighted<HoopKindId>(rng.layout, w);
+            }
+          }
         }
       }
     }
@@ -690,6 +725,7 @@ class RunDirector {
         extra = ride;
         _portalAt = i + RunRandom.rangeInt(r, tables.portal.then.$1, tables.portal.then.$2);
         _lastPortal = i;
+        _portalWaiting = false;
       default:
         break;
     }
@@ -780,6 +816,7 @@ class RunDirector {
     DirectorContext ctx, {
     bool ignoreUnlock = false,
     bool ignoreFrom = false,
+    bool ignoreBig = false,
   }) {
     final rule = tables.specials[k];
     if (rule == null || !_on(k.element)) return false;
@@ -788,7 +825,13 @@ class RunDirector {
       if (i - (_lastOf[k] ?? -99) < rule.minSince) return false;
     }
     // PRD-2.2 §27.2 reward rings wait for the activity + cool-down.
-    if (rewardKinds.contains(k) && _rewardsBlocked(i, ctx)) return false;
+    // PRD-2.3 §17.3 rule 1 and while one waits ([ignoreBig]: the draw of
+    // rule 4 asks whether only these block it).
+    if (rewardKinds.contains(k) &&
+        !ignoreBig &&
+        (_rewardsBlocked(i, ctx) || _bigOpen(ctx))) {
+      return false;
+    }
     if (ctx.squeezeWindow && !rule.allowedInSqueeze) return false;
     if (k == HoopKindId.fever &&
         (ctx.fever || _prevKind == HoopKindId.saw)) {
@@ -833,6 +876,18 @@ class RunDirector {
     if (mode == 0 && !_cometOwed && rng.layout.nextDouble() >= rule.chance) {
       return false;
     }
+    // PRD-2.3 §17.3 (after the roll, so the course stream stays the same):
+    // rule 1 — a comet drawn while a big bonus is open waits (owed, rule 4)
+    // unless another bonus waits already; rule 4 — while another waits no
+    // new comet is drawn.
+    if (_bigOpen(ctx)) {
+      if (mode == 0 && !_bonusWaits) {
+        _cometOwed = true;
+        _lastComet = -99;
+      }
+      return false;
+    }
+    if (mode == 0 && oneBigBonus && !_cometOwed && _bonusWaits) return false;
     return true;
   }
 
@@ -966,6 +1021,49 @@ class RunDirector {
   static bool isRewardSlot(SlotPlan p) =>
       rewardKinds.contains(p.kind) || p.cometHang;
 
+  // region WP-BONUS — one big bonus on screen (PRD-2.3 §17)
+  /// PRD-2.3 §17.2 the big items: Piggy Bank, Firefly Jar, comet star, Egg,
+  /// the capsules (Hourglass, Mini Bird, Coin Frenzy) and Star Trail. (The
+  /// big rings are [rewardKinds]: pair, Lucky Spin, FEVER and the portal.)
+  static bool isBigItem(ElementId e) => switch (e) {
+    ElementId.piggy ||
+    ElementId.jar ||
+    ElementId.comet ||
+    ElementId.egg ||
+    ElementId.capsule ||
+    ElementId.hourglass ||
+    ElementId.miniBird ||
+    ElementId.coinFrenzy ||
+    ElementId.starTrail => true,
+    _ => false,
+  };
+
+  /// PRD-2.3 §17.2 a slot that is (or carries) a big bonus.
+  static bool isBigSlot(SlotPlan p) =>
+      isRewardSlot(p) || p.attached.any((a) => isBigItem(a.kind));
+
+  /// PRD-2.3 §17.3 rule 4 the one waiting big bonus drawn while blocked: a
+  /// reward ring ([_waitRing]) or a big gap item ([_waitItem]). A due
+  /// portal ([_portalWaiting]) or an owed comet follows the "stays due"
+  /// path and counts as waiting too.
+  HoopKindId? _waitRing;
+  ElementId? _waitItem;
+  bool _portalWaiting = false;
+
+  /// The waiting reward ring / big item (tests, debug overlay).
+  HoopKindId? get waitingRing => _waitRing;
+  ElementId? get waitingItem => _waitItem;
+
+  /// A big bonus waits (rule 4: at most one; further big draws fall back to
+  /// the non-big elements).
+  bool get bonusWaits => _bonusWaits;
+  bool get _bonusWaits =>
+      _waitRing != null || _waitItem != null || _portalWaiting || _cometOwed;
+
+  /// PRD-2.3 §17.3 rule 1: a big bonus is open, so no other is planned.
+  bool _bigOpen(DirectorContext ctx) => oneBigBonus && ctx.bigBonusOpen;
+  // endregion WP-BONUS
+
   /// PRD-2.2 §27.2 no reward item at [index] while an activity runs and for
   /// [RunConfig.activityCooldownHoops] hoops after it. The planner works
   /// one slot ahead of the screen (§15), so at the end the next slot to be
@@ -1003,6 +1101,7 @@ class RunDirector {
     if (p.kind == HoopKindId.portal) {
       _portalAt = p.index;
       _lastPortal = -99;
+      if (oneBigBonus) _portalWaiting = true;
       _forcedRide ??= p.extra is RideId ? p.extra! as RideId : null;
     }
     if (p.cometHang) {
@@ -1048,6 +1147,24 @@ class RunDirector {
     final v = _revivePending;
     _revivePending = false;
     return v;
+  }
+
+  /// PRD-2.3 §17.5 a comet star still off-screen was cleared by an
+  /// activity: it is owed (§14.5) and comes at the next allowed slot.
+  void oweComet() {
+    _cometOwed = true;
+    _lastComet = -99;
+  }
+
+  /// PRD-2.3 §17.5 a portal hoop still off-screen was cleared by an
+  /// activity: like a planned-ahead portal ([plainSlot]) it stays due with
+  /// the same ride.
+  void oweSlot(SlotPlan p) {
+    if (p.kind != HoopKindId.portal) return;
+    _portalAt = min(_portalAt, _i);
+    _lastPortal = -99;
+    _forcedRide ??= p.extra is RideId ? p.extra! as RideId : null;
+    if (oneBigBonus) _portalWaiting = true;
   }
 
   /// PRD-2.2 §27.3 a golden feather ahead was cleared by an activity: it
@@ -1290,7 +1407,12 @@ class RunDirector {
       final pool = tables.earlyPool;
       ElementId? pick;
       CapsuleType? capsule;
-      if (due != null && _gapAllowed(due, g, ctx)) {
+      final waiting = _waitItem;
+      if (waiting != null && _gapAllowed(waiting, g, ctx)) {
+        // PRD-2.3 §17.3 rule 4 the waiting big item comes first.
+        pick = waiting;
+        _waitItem = null;
+      } else if (due != null && _gapAllowed(due, g, ctx)) {
         pick = due.isCapsuleType ? ElementId.capsule : due;
         if (due.isCapsuleType) {
           capsule = CapsuleType.values.firstWhere((c) => c.element == due);
@@ -1298,16 +1420,44 @@ class RunDirector {
       } else if (pool != null && pool.covers(g)) {
         // PRD-2.2 §19.2 the early pool's Star Trail (drawn with the slot);
         // it may come from index 4 (its min distance still holds).
-        if (_earlyPicks[g] == EarlyPick.starTrail &&
-            _gapAllowed(ElementId.starTrail, g, ctx, ignoreFrom: true)) {
-          pick = ElementId.starTrail;
+        if (_earlyPicks[g] == EarlyPick.starTrail) {
+          if (_gapAllowed(ElementId.starTrail, g, ctx, ignoreFrom: true)) {
+            pick = ElementId.starTrail;
+          } else if (oneBigBonus &&
+              !_bonusWaits &&
+              _gapAllowed(
+                ElementId.starTrail,
+                g,
+                ctx,
+                ignoreFrom: true,
+                ignoreOpen: true,
+              )) {
+            _waitItem = ElementId.starTrail; // PRD-2.3 §17.3 rule 4
+          }
         }
       } else if (r.nextDouble() < tables.budgetFor(g).gap) {
         final w = <ElementId, int>{};
         for (final e in tables.gapItems.entries) {
-          if (_gapAllowed(e.key, g, ctx)) w[e.key] = e.value.weight;
+          // PRD-2.3 §17.3 rule 4: a big item that only rule 1 blocks stays
+          // in the draw (and waits if drawn).
+          if (_gapAllowed(e.key, g, ctx) ||
+              (oneBigBonus &&
+                  isBigItem(e.key) &&
+                  _gapAllowed(e.key, g, ctx, ignoreOpen: true))) {
+            w[e.key] = e.value.weight;
+          }
         }
         pick = RunRandom.pickWeighted<ElementId>(r, w);
+        if (oneBigBonus && pick != null && isBigItem(pick)) {
+          final blocked = !_gapAllowed(pick, g, ctx);
+          if (blocked || _bonusWaits) {
+            // A blocked item waits (if none waits yet); the gap is drawn
+            // again from the non-big elements.
+            if (blocked && !_bonusWaits) _waitItem = pick;
+            w.removeWhere((k, _) => isBigItem(k));
+            pick = RunRandom.pickWeighted<ElementId>(r, w);
+          }
+        }
       }
       if (pick != null) {
         if (pick == ElementId.capsule && capsule == null) {
@@ -1356,8 +1506,11 @@ class RunDirector {
     DirectorContext ctx, {
     bool ignoreUnlock = false,
     bool ignoreFrom = false,
+    bool ignoreOpen = false,
   }) {
     final key = k.isCapsuleType ? ElementId.capsule : k;
+    // PRD-2.3 §17.3 rule 1 at most one open big bonus.
+    if (!ignoreOpen && isBigItem(key) && _bigOpen(ctx)) return false;
     final rule = tables.gapItems[key];
     if (rule == null || !_on(key)) return false;
     if (k.isCapsuleType && !_on(k)) return false;

@@ -95,6 +95,7 @@ class RunController extends Component {
       pieceAllowed:
           setup.forced.contains(ElementId.puzzlePiece) ||
           !GatesConfig.shownLastRun(storage.lastPieceRun, games),
+      oneBigBonus: setup.oneBigBonus,
     );
     state.hoopIndex = setup.startHoopIndex;
     geo = RunGeometry(state);
@@ -292,6 +293,8 @@ class RunController extends Component {
       activity: s.activity != null || RunActivity.of(s) != null,
       activityEndedAtSlot: s.activityEndedAtSlot,
       // endregion WP-G2
+      // PRD-2.3 §17.3 rule 1 at most one open big bonus.
+      bigBonusOpen: spawner.bigBonusOpen,
     );
   }
 

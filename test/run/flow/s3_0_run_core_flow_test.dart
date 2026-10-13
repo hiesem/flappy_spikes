@@ -175,7 +175,9 @@ void main() {
         // Hoop 0 is on screen from the start (PRD-2.3 §10.2).
         expect(game.storage.metElements, contains('normal_hoop'));
 
-        await flyRun(game, maxSeconds: 3.5);
+        // PRD-2.3 §10.2 the course sits 90 pt earlier: hoop 0 is culled by
+        // 3.5 s, so fly until hoop 2 has spawned (≈ 3.6 s).
+        await flyRun(game, maxSeconds: 4);
         final hoops = hoopsOf(game).toList();
         expect(hoops.length, greaterThanOrEqualTo(2));
         for (var k = 1; k < hoops.length; k++) {

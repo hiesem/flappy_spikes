@@ -1,0 +1,27 @@
+/* the privacy page's layout (approved design/landing_v23/privacy_src.html): header, a white card on pink, the plum footer.
+   Also /support and /delete-data (PRD-2.3 §5.8, §5.9). */
+:root { --pink: #EC008C; --plum: #7A0044; --plate: #FCD9EE; --ink: #2E2A2D; --soft: #5E585C; color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--plate); color: var(--ink); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+.hspikes { height: 44px; background: #FFFFFF; transform: scaleY(-1); -webkit-mask: url({{a:@images/ground_spikes.png}}) repeat-x left top / auto 100%; mask: url({{a:@images/ground_spikes.png}}) repeat-x left top / auto 100%; }
+header { background: #FFFFFF; }
+header .wrap { max-width: 760px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: #6F6F6F; font-family: 'Opificio Neue', sans-serif; font-size: 24px; }
+.brand img { width: 40px; height: 40px; border-radius: 10px; }
+.grow { flex: 1; }
+.back { font: 600 14px 'Fredoka', sans-serif; text-decoration: none; color: #FFFFFF; background: var(--pink); padding: 9px 14px; border-radius: 999px; box-shadow: 3px 3px 0 var(--plum); white-space: nowrap; }
+main { max-width: 760px; margin: 0 auto; padding: 56px 20px 72px; }
+article { background: #FFFFFF; border-radius: 22px; box-shadow: 10px 10px 0 var(--plum); padding: clamp(24px, 5vw, 48px); font-size: 17px; line-height: 1.65; }
+h1 { font-family: 'Opificio Neue', sans-serif; font-weight: 400; font-size: clamp(42px, 7vw, 64px); line-height: 1; color: var(--plum); margin: 0 0 6px; }
+h2 { font-family: 'Fredoka', sans-serif; font-size: 22px; color: var(--pink); margin: 36px 0 6px; }
+h3 { font-family: 'Fredoka', sans-serif; font-size: 18px; color: var(--plum); margin: 22px 0 4px; }
+.updated { color: var(--soft); font-size: 14px; margin-top: 0; }
+article a { color: var(--pink); }
+article ul { padding-left: 1.2em; }
+article li { margin: 4px 0; }
+.mailbtn { display: inline-block; margin: 8px 0 4px; font: 400 clamp(22px, 4vw, 30px) 'Opificio Neue', sans-serif; letter-spacing: .02em; color: #FFFFFF !important; background: var(--pink); padding: 10px 26px; transform: rotate(-3deg); box-shadow: 8px 8px 0 var(--plum); text-decoration: none; }
+.mailbtn:hover { transform: rotate(-3deg) translateY(-2px); }
+.mailbtn:focus-visible, .back:focus-visible { outline: 3px solid #FFB529; outline-offset: 4px; }
+.addr { font-weight: 600; }
+.box { background: #FFF6FB; border: 2px solid #F7C9E2; border-radius: 16px; padding: 14px 18px; margin: 18px 0; }
+@media (max-width: 420px) { .brand { font-size: 20px; white-space: nowrap; } .brand img { width: 34px; height: 34px; } }

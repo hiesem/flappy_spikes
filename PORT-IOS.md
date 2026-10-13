@@ -50,6 +50,9 @@ which of the items below are build blockers.
 - [ ] **App icon / splash.** `flutter_launcher_icons` and `flutter_native_splash` have `ios: true`
       (`pubspec.yaml:113/122`); re-run both after `ios/` is touched and check
       `Assets.xcassets/AppIcon.appiconset` has no alpha in the 1024 icon.
+      **2.3:** the iOS app icon (`AppIcon.appiconset`, `remove_alpha_ios: true`) and the launch
+      image are already the 17C icon (PRD-2.3 §9.3/9.4, owner exception to the iOS pause);
+      `tool/render_app_icon.py` re-renders the sources.
 
 ## 2. Accounts and stores
 

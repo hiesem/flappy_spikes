@@ -109,7 +109,10 @@ class Tuning {
         'Tuning: $key = "$raw" rejected (wrong type / broken JSON): default',
       ),
     );
-    TuningValues.current = _active;
+    // S8-02: a run that already began (startup activation was slower than
+    // the first tap) keeps the set it pinned at its start; the activated
+    // set reaches the NEXT run through [beginRun].
+    if (!_runBegun) TuningValues.current = _active;
     _initialized = true;
     _fetch = () async {
       try {
@@ -120,6 +123,14 @@ class Tuning {
     }();
   }
 
-  /// §15.2 values are read once per run, at run start.
-  void beginRun() => TuningValues.current = _active;
+  /// Whether a run has begun in this session (S8-02).
+  bool _runBegun = false;
+
+  /// §15.2 values are read once per run, at run start: the run pins the
+  /// active set; nothing replaces `TuningValues.current` until the next
+  /// [beginRun].
+  void beginRun() {
+    _runBegun = true;
+    TuningValues.current = _active;
+  }
 }

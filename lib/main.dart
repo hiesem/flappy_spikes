@@ -89,7 +89,16 @@ Future<void> main() async {
     Tuning.instance = Tuning(
       backend: FirebaseTuningBackend(ensureFirebase: services.ensureFirebase),
     );
-    unawaited(Tuning.instance.initialize());
+    // S8-02: wait for activation (bounded: Firebase.initializeApp has no
+    // timeout) so it lands before the first run can start. A slower
+    // activation still never changes a begun run (Tuning.beginRun pins).
+    try {
+      await Tuning.instance.initialize().timeout(
+        const Duration(seconds: 3),
+      );
+    } on TimeoutException {
+      debugPrint('Tuning: activation still pending after 3 s');
+    }
   }
   // endregion P23-15
 

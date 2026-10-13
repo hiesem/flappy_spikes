@@ -37,5 +37,5 @@ void main() {
     }
     expect(sound.ownMusicSkipped, isFalse);
     expect(sound.musicPlaying, isTrue);
-  }, skip: 'S8-04');
+  });
 }

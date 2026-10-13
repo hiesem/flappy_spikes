@@ -55,7 +55,6 @@ void main() {
           reason: 'the held run now belongs to my uid or my pg',
         );
       },
-      skip: 'S8-03',
     );
   }
 }

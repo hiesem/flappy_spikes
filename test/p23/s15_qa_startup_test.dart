@@ -41,7 +41,6 @@ void main() {
         reason: '§15: values never change during a run',
       );
     },
-    skip: 'S8-02',
   );
 
   test(

@@ -195,6 +195,8 @@ The table is generated from `tuning_defaults.dart` by `dart run tool/tuning_sync
 | `ride_comet_spacing` | integer | `25` | §14.5 | Comet at least this many hoops after the previous comet |
 | `ride_portal_first` | intList | `[40,60]` | §14.5 | First portal at a random hoop in [min, max] |
 | `ride_portal_then` | intList | `[60,80]` | §14.5 | Next portal this many hoops after the previous, [min, max] |
+| `spawn_special_chance` | curve | `[[0,0],[7,0],[8,0.25],[19,0.25],[20,0.35],[34,0.35],[35,0.45],[49,0.45],[50,0.6]]` | §15.3 | owner 2026-10-14: chance a hoop slot is a special hoop, by hoop index (linear between keys; the default reproduces the 2.3 steps) |
+| `spawn_item_chance` | curve | `[[0,0],[4,0],[5,0.25],[19,0.25],[20,0.33]]` | §15.3 | owner 2026-10-14: chance a gap gets an optional item, by gap index (linear between keys; the default reproduces the 2.3 steps) |
 | `spawn_bullseye` | object | `{"from":6,"weight":20,"min_since":6,"cooldown":1}` | §15.3 | Special hoop row: from hoop, weight, min hoops since the same, cooldown |
 | `spawn_train` | object | `{"from":8,"weight":14,"min_since":10,"cooldown":2}` | §15.3 | Special hoop row |
 | `spawn_spring` | object | `{"from":10,"weight":12,"min_since":10,"cooldown":2}` | §15.3 | Special hoop row |

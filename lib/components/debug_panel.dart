@@ -138,7 +138,8 @@ class DebugPanel extends PositionComponent
     }
   }
 
-  static const double _labelWidth = Config.worldWidth - 2 * Config.homeMargin - 8;
+  static const double _labelWidth =
+      Config.worldWidth - 2 * Config.homeMargin - 8;
 
   /// One page of the §3.0.8 force menu plus page navigation.
   List<DebugAction> _forceActions() {
@@ -170,9 +171,13 @@ class DebugPanel extends PositionComponent
         () => 'Fetch: ${t.lastFetchStatus} · ${when(t.lastFetchTime)}',
         () async {},
       ),
+      // 2.3.0 (18) gameplay tuning: the current / last run.
+      DebugAction(() => game.runStats?.economyLine ?? 'Run: -', () async {}),
+      DebugAction(() => game.runStats?.funLine ?? 'Specials -', () async {}),
       for (final d in v.defs)
         DebugAction(
-          () => '${d.key} = ${d.type.encode(v.raw(d.key))} '
+          () =>
+              '${d.key} = ${d.type.encode(v.raw(d.key))} '
               '[${v.sourceOf(d.key).label}]',
           () async {},
         ),
@@ -200,7 +205,8 @@ class DebugPanel extends PositionComponent
     return [
       for (final e in shown)
         DebugAction(() => '${e.event} ${e.flags} ${e.player}', () async {}),
-      if (shown.isEmpty) DebugAction(() => '(no music events yet)', () async {}),
+      if (shown.isEmpty)
+        DebugAction(() => '(no music events yet)', () async {}),
       DebugAction(() => '< Back', () async => _musicPage = false),
     ];
   }
@@ -246,7 +252,8 @@ class DebugPanel extends PositionComponent
               .values[(iap.mode.index + 1) % FakeIapMode.values.length];
         }),
       DebugAction(
-        () => 'LEVEL UP (best ${menu.storage.bestScore}, '
+        () =>
+            'LEVEL UP (best ${menu.storage.bestScore}, '
             'lv ${menu.levels.level})',
         () async {
           // PRD-home-v3 Q-H1 interim: raise the best to the next level,

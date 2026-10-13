@@ -60,6 +60,7 @@ import '../run/run_setup.dart';
 import '../run/run_summary.dart';
 import '../run/screens/post_run_flow.dart';
 import '../run/config/revive_config.dart';
+import '../run/debug/run_stats.dart';
 import '../run/hud/first_run_hint.dart';
 import '../run/hud/run_hud.dart';
 import '../run/run_events.dart' show ReviveKind;
@@ -149,21 +150,21 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
        screenHeight = worldHeight ?? Config.worldHeight,
        _viewHeight = _clampViewHeight(worldHeight ?? Config.worldHeight),
        super(
-        world: RunScaledWorld(gravity: Vector2(0, Config.gravity)),
-        gravity: Vector2(0, Config.gravity),
-        // PRD-2.2 §7.5.2: a fixed 320 pt wide window whose height follows
-        // setPlayfieldHeight (FixedResolutionViewport with a settable
-        // resolution).
-        camera: CameraComponent(
-          viewport: PlayfieldViewport(
-            resolution: Vector2(
-              Config.worldWidth,
-              _clampViewHeight(worldHeight ?? Config.worldHeight),
-            ),
-          ),
-        ),
-        zoom: 1,
-      ) {
+         world: RunScaledWorld(gravity: Vector2(0, Config.gravity)),
+         gravity: Vector2(0, Config.gravity),
+         // PRD-2.2 §7.5.2: a fixed 320 pt wide window whose height follows
+         // setPlayfieldHeight (FixedResolutionViewport with a settable
+         // resolution).
+         camera: CameraComponent(
+           viewport: PlayfieldViewport(
+             resolution: Vector2(
+               Config.worldWidth,
+               _clampViewHeight(worldHeight ?? Config.worldHeight),
+             ),
+           ),
+         ),
+         zoom: 1,
+       ) {
     // The game uses 1 Forge2D world unit = 1 logical point (SPEC.md). The
     // engine's default per-step translation clamp (2.0 units, tuned for
     // meter-scale worlds) would otherwise cap every body at ~120 pt/s at
@@ -664,10 +665,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         });
       },
       // PRD-2.3 §14.8 every spend: `coins_spent {amount, reason}`.
-      onSpent: (amount, reason) => services.track('coins_spent', {
-        'amount': amount,
-        'reason': reason,
-      }),
+      onSpent: (amount, reason) =>
+          services.track('coins_spent', {'amount': amount, 'reason': reason}),
     );
     // The slot arms a powerup only right before it starts the run, which
     // consumes it: anything still armed here is stale (an app killed
@@ -873,7 +872,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (menu.noAdsPopup.evaluate() == null) return;
     _noAdsOfferQueued = true;
     _queuePopup(
-      () => stale() || (_homeInteractive && _fakeAd == null && _adsShowing == 0),
+      () =>
+          stale() || (_homeInteractive && _fakeAd == null && _adsShowing == 0),
       () {
         _noAdsOfferQueued = false;
         if (stale() || _noAdsPopup != null) return;
@@ -1261,6 +1261,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   FirstRunHint? _firstRunHint;
 
+  /// Owner 2026-10-14 (2.3.0 (18)): the current / last run's counts for
+  /// the debug TUNING page.
+  RunStats? runStats;
+
   /// PRD-2.3 §10.1 the first playfield tap of a waiting run: everything
   /// START used to do at once — the banner (PRD-2.2 §7.4), logGameStart,
   /// `run_start`, versus.onRunStart, gravity and the first flap, then
@@ -1344,6 +1348,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     d.force.clear();
     d.forcedRide = null;
     final run = RunController(setup: setup, game: this);
+    runStats = RunStats(run); // 2.3.0 (18) debug TUNING page
     _run = run;
     (world as RunScaledWorld).timeScaleSource = () => run.state.timeScale;
     world.add(run);
@@ -1557,6 +1562,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       );
     }
   }
+
   /// PRD-2.3 §25.3 the loading intro ended: its opponent (if the reel
   /// landed on one) becomes the run's, logged like a held one; NO RIVAL
   /// FOUND logs `versus_solo` with `waited_ms`. Either way
@@ -3024,8 +3030,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   bool get _adJustEnded {
     final t = _lastAdEndedAt;
-    return t != null &&
-        storage.now().difference(t) < Config.adAudioSettle;
+    return t != null && storage.now().difference(t) < Config.adAudioSettle;
   }
 
   /// PRD-2.2 §28.3 (S7-13): is the player's own music playing? The full
@@ -3540,7 +3545,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         look: menu.items.look,
         name: await shareName(),
       );
-      services.track('invite', {'card': data.kind.analytics, ...data.analytics});
+      services.track('invite', {
+        'card': data.kind.analytics,
+        ...data.analytics,
+      });
       await share(data);
     } catch (e) {
       debugPrint('invite failed: $e');

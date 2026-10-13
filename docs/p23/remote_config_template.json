@@ -382,6 +382,20 @@
     "spawn": {
       "description": "PRD-2.3 §15.3 group spawn_",
       "parameters": {
+        "spawn_special_chance": {
+          "defaultValue": {
+            "value": "[[0,0],[7,0],[8,0.25],[19,0.25],[20,0.35],[34,0.35],[35,0.45],[49,0.45],[50,0.6]]"
+          },
+          "description": "§15.3 owner 2026-10-14: chance a hoop slot is a special hoop, by hoop index (linear between keys; the default reproduces the 2.3 steps)",
+          "valueType": "JSON"
+        },
+        "spawn_item_chance": {
+          "defaultValue": {
+            "value": "[[0,0],[4,0],[5,0.25],[19,0.25],[20,0.33]]"
+          },
+          "description": "§15.3 owner 2026-10-14: chance a gap gets an optional item, by gap index (linear between keys; the default reproduces the 2.3 steps)",
+          "valueType": "JSON"
+        },
         "spawn_bullseye": {
           "defaultValue": {
             "value": "{\"from\":6,\"weight\":20,\"min_since\":6,\"cooldown\":1}"

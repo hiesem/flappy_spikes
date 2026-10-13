@@ -66,6 +66,8 @@ const List<TuningDef> kTuningDefaults = [
   TuningDef('ride_comet_spacing', TuningType.integer, 25, '14.5', 'Comet at least this many hoops after the previous comet'),
   TuningDef('ride_portal_first', TuningType.intList, [40, 60], '14.5', 'First portal at a random hoop in [min, max]'),
   TuningDef('ride_portal_then', TuningType.intList, [60, 80], '14.5', 'Next portal this many hoops after the previous, [min, max]'),
+  TuningDef('spawn_special_chance', TuningType.curve, [[0, 0], [7, 0], [8, 0.25], [19, 0.25], [20, 0.35], [34, 0.35], [35, 0.45], [49, 0.45], [50, 0.6]], '15.3', 'owner 2026-10-14: chance a hoop slot is a special hoop, by hoop index (linear between keys; the default reproduces the 2.3 steps)'),
+  TuningDef('spawn_item_chance', TuningType.curve, [[0, 0], [4, 0], [5, 0.25], [19, 0.25], [20, 0.33]], '15.3', 'owner 2026-10-14: chance a gap gets an optional item, by gap index (linear between keys; the default reproduces the 2.3 steps)'),
   TuningDef('spawn_bullseye', TuningType.object, {'from': 6, 'weight': 20, 'min_since': 6, 'cooldown': 1}, '15.3', 'Special hoop row: from hoop, weight, min hoops since the same, cooldown'),
   TuningDef('spawn_train', TuningType.object, {'from': 8, 'weight': 14, 'min_since': 10, 'cooldown': 2}, '15.3', 'Special hoop row'),
   TuningDef('spawn_spring', TuningType.object, {'from': 10, 'weight': 12, 'min_since': 10, 'cooldown': 2}, '15.3', 'Special hoop row'),

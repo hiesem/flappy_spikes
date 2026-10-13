@@ -164,6 +164,8 @@ class DirectorTables {
     this.earlyPool,
     this.tiltCurve,
     this.movingCurve,
+    this.specialCurve,
+    this.itemCurve,
     required this.pairWeights,
     required this.capsuleWeights,
     required this.movingTypes20,
@@ -223,6 +225,14 @@ class DirectorTables {
   /// = the layout row's [LayoutBand.moving].
   final Keyframes? movingCurve;
 
+  /// Owner 2026-10-14 (2.3.0 (18)): the special-hoop chance per slot by
+  /// hoop index (`spawn_special_chance`); null = the [budget] rows.
+  final Keyframes? specialCurve;
+
+  /// Owner 2026-10-14 (2.3.0 (18)): the optional gap-item chance per gap
+  /// by gap index (`spawn_item_chance`); null = the [budget] rows.
+  final Keyframes? itemCurve;
+
   /// §3.0.2 / PRD-2.3 §14.4 the chance a normal hoop at [hoopIndex] is
   /// tilted.
   double tiltChance(int hoopIndex) =>
@@ -263,7 +273,13 @@ class DirectorTables {
     for (final x in budget) {
       if (hoopIndex >= x.from) b = x;
     }
-    return b;
+    final sc = specialCurve, ic = itemCurve;
+    if (sc == null && ic == null) return b;
+    return BudgetRow(
+      hoopIndex,
+      sc?.at(hoopIndex) ?? b.special,
+      ic?.at(hoopIndex) ?? b.gap,
+    );
   }
 
   /// §3.0.2 / §3.0.3 The run's tables: the PRD-2 launch tables with the
@@ -342,6 +358,8 @@ class DirectorTables {
       earlyPool: _earlyPool,
       tiltCurve: t.curve('curve_tilt'),
       movingCurve: t.curve('curve_moving'),
+      specialCurve: t.curve('spawn_special_chance'),
+      itemCurve: t.curve('spawn_item_chance'),
       pairWeights: {
         PairReward.shield: pair['shield']!.toInt(),
         PairReward.comet: pair['comet']!.toInt(),
@@ -377,7 +395,8 @@ class DirectorTables {
     'spawn_saw',
   };
 
-  /// §3.0.3 Budget rows (not tunable).
+  /// §3.0.3 Budget rows: the defaults of `spawn_special_chance` /
+  /// `spawn_item_chance` (2.3.0 (18): tunable through those curves).
   static const List<BudgetRow> _budget = [
     BudgetRow(0, 0, 0),
     BudgetRow(5, 0, 0.25),
@@ -421,7 +440,11 @@ enum EarlyPick {
 /// index [from] here (their normal unlocks stay for the regular tables);
 /// the usual exclusivity and cooldowns still apply.
 class EarlyPool {
-  const EarlyPool({required this.from, required this.to, required this.weights});
+  const EarlyPool({
+    required this.from,
+    required this.to,
+    required this.weights,
+  });
 
   /// PRD-2.2 §19.2 First index of the pool (4).
   final int from;

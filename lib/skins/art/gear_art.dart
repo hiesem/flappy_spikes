@@ -3,16 +3,21 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'bird_art.dart';
+import 'gear_art_v23.dart';
 import 'shapes.dart';
 
 /// Port of the accessories (gear) of `design/menu_v2/skin_art.js`
 /// (`accBack` / `accFront`). The JS `angel` branch is dead code and skipped.
 abstract final class GearArt {
-  /// All gear ids in grid order (without `none`).
+  /// All gear ids in grid order (without `none`; PRD-2.3 §19.3: the 2.3
+  /// items of [GearArtV23] mixed in by rarity).
   static const List<String> ids = [
     'shades', 'bowtie', 'stache', 'scarf', 'bandana', //
+    'snorkel', 'necktie', 'bandaid', 'gum', 'lei',
     'hearts', 'monocle', 'sneakers', 'windup', 'carpet',
-    'chain', 'mask', 'patch', 'jetpack',
+    'balloon', 'backpack', 'skates', 'swimring', 'cape',
+    'chain', 'mask', 'patch', 'butterfly', 'drone',
+    'jetpack', 'crystal', 'atom', 'disco',
   ];
 }
 
@@ -87,6 +92,7 @@ const _heartRows = [
 
 /// Gear drawn behind the bird (wind-up key, jetpack, scarf tails).
 void paintGearBack(Canvas c, String id, BirdShape s, double t, bool flap) {
+  if (paintGearBackV23(c, id, s, t, flap)) return;
   switch (id) {
     case 'windup':
       // Clockwork half-turns: turn 40 % of each 1/1.2 s beat, rest 60 %.
@@ -150,6 +156,7 @@ void paintGearFront(
   bool flap, {
   bool dead = false,
 }) {
+  if (paintGearFrontV23(c, id, s, t, flap)) return;
   final ex = s.eye.dx, ey = s.eye.dy;
   switch (id) {
     case 'carpet':

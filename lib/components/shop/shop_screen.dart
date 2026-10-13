@@ -41,7 +41,7 @@ const List<String> kShopImages = [
 ];
 
 /// The Shop's featured item (PRD-menu-v2 §4 / WP-C): the first item of the
-/// 2.0 update ([kNewInUpdate], in its order) not owned yet, else the
+/// 2.3 update ([kNewInUpdate], in its order; PRD-2.3 §19.3) not owned yet, else the
 /// cheapest item not owned (catalogue order breaks ties), or null when
 /// everything is owned.
 SkinItem? featuredItemFor(ItemStore items) {

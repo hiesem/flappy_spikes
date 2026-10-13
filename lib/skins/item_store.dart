@@ -91,7 +91,7 @@ class ItemStore extends ChangeNotifier {
   int totalFor(SkinLayer layer) =>
       itemsFor(layer).where((item) => !item.isNone).length;
 
-  /// NEW badge (§3.3): not owned, not seen, and either in the 2.0 update list
+  /// NEW badge (§3.3): not owned, not seen, and either in the 2.3 update list
   /// or affordable right now.
   bool isNew(SkinLayer layer, String id) {
     final item = itemById(layer, id);

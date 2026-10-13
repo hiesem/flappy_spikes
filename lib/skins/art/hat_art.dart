@@ -2,17 +2,22 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'bird_art.dart';
+import 'hat_art_v23.dart';
 import 'shapes.dart';
 
 /// Port of the hats of `design/menu_v2/skin_art.js` (`hat`). Every hat is
 /// anchored at the shape's head top (`hx`, `top`); the paths below are in
 /// that local frame and cached once. The JS `astro` branch is dead code.
 abstract final class HatArt {
-  /// All hat ids in grid order (without `none`).
+  /// All hat ids in grid order (without `none`; PRD-2.3 §19.3: the 2.3
+  /// hats of [HatArtV23] mixed in by rarity).
   static const List<String> ids = [
     'cap', 'beanie', 'party', 'band', 'bucket', //
+    'sprout', 'cone', 'egg', 'paperboat', 'phones',
     'tophat', 'cowboy', 'prop', 'chef', 'viking',
-    'pirate', 'wizard', 'crown', 'halo',
+    'fishbowl', 'cupcake', 'raincloud', 'antennae', 'sharkfin',
+    'pirate', 'wizard', 'volcano', 'ufo', 'bdaycake',
+    'crown', 'halo', 'planet', 'sunburst',
   ];
 }
 
@@ -125,6 +130,7 @@ final Path _scratch = Path();
 
 /// Hat [id] on shape [s]; unknown ids (and `none`) draw nothing.
 void paintHat(Canvas c, String id, BirdShape s, double t) {
+  if (paintHatV23(c, id, s, t)) return;
   c.save();
   c.translate(s.hx, s.top);
   // Shape edges relative to the hat anchor (sweatband).

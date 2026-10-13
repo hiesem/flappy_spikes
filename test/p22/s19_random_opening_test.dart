@@ -147,8 +147,8 @@ void main() {
     }
   });
 
-  test('§19.3 feather in 55–65 % of runs at gaps 3–40, piece the same, never '
-      'in the same or neighbouring gaps', () {
+  test('§19.3 feather in 55–65 % of runs; PRD-2.3 §14.2: at gaps 10–40, the '
+      'piece never in the same run (both roll → the feather wins: ≈ 24 %)', () {
     var feathers = 0, pieces = 0;
     for (var seed = 1; seed <= seeds; seed++) {
       final d = director(seed);
@@ -168,16 +168,14 @@ void main() {
       expect(f != null, d.featherThisRun, reason: 'seed $seed');
       expect(p != null, d.pieceThisRun, reason: 'seed $seed');
       // A taken gap pushes it on a little.
-      if (f != null) expect(f, inInclusiveRange(3, 44));
-      if (p != null) expect(p, inInclusiveRange(3, 44));
-      if (f != null && p != null) {
-        expect((f - p).abs(), greaterThan(1), reason: 'seed $seed');
-      }
+      if (f != null) expect(f, inInclusiveRange(10, 44));
+      if (p != null) expect(p, inInclusiveRange(10, 44));
+      expect(f != null && p != null, isFalse, reason: 'seed $seed');
       if (f != null) feathers++;
       if (p != null) pieces++;
     }
     expect(feathers / seeds, inInclusiveRange(.55, .65));
-    expect(pieces / seeds, inInclusiveRange(.55, .65));
+    expect(pieces / seeds, inInclusiveRange(.18, .30));
   });
 
   test('§19.5 determinism: the same seed gives the same opening', () {

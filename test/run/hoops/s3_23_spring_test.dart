@@ -50,7 +50,17 @@ void main() {
           springs++;
           final next = plans[s.index + 1];
           final dir = s.extra == SpringDir.up ? -1 : 1;
-          expect(next.centreY - s.centreY, closeTo(dir * 240, 1e-6));
+          // A portal ring after it keeps its fixed 118 pt (PRD-2.2 §25.1) and
+          // is clamped into the band for that size: the launch still lands
+          // inside its opening (PRD-2.3 moved the portal to hoop 40+).
+          final tol = next.kind == HoopKindId.portal
+              ? next.opening / 2 - RunConfig.birdRadius
+              : 1e-6;
+          expect(
+            next.centreY - s.centreY,
+            closeTo(dir * 240, tol),
+            reason: '$next',
+          );
           final ctx = DirectorContext.open(vh);
           final m =
               next.opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin;

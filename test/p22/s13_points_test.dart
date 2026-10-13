@@ -140,27 +140,27 @@ void main() {
   );
 
   tester().testGameWidget(
-    '§13.7 chick: doubles points and coins for a pass, a bonus and the pair '
-    'gift',
+    'PRD-2.3 §14.3 chick: +1 point per hoop passed; it doubles no coins, no '
+    'bonus and no pair gift',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(game);
       final s = run.state;
       s.egg = EggState()..stage = EggStage.chick;
       var p0 = s.score, c0 = s.coinsThisRun;
-      run.debugPass(perfect: true); // streak 1 → 2 points, 2 coins
-      expect(s.score - p0, 4);
-      expect(s.coinsThisRun - c0, 4);
+      run.debugPass(perfect: true); // streak 1 → 2 points + 1, 2 coins
+      expect(s.score - p0, 3);
+      expect(s.coinsThisRun - c0, 2);
       p0 = s.score;
       c0 = s.coinsThisRun;
       run.ctx.earn(3, CoinSource.bullseye);
-      expect(s.coinsThisRun - c0, 6);
-      expect(s.score - p0, 6);
+      expect(s.coinsThisRun - c0, 3);
+      expect(s.score - p0, 3);
       p0 = s.score;
       run.ctx.addScore(5, flags: PointFlags.gift);
-      expect(s.score - p0, 10);
+      expect(s.score - p0, 5);
       p0 = s.score;
-      run.debugPass(); // a graze: 1 point × 2
+      run.debugPass(); // a graze: 1 point + 1
       expect(s.score - p0, 2);
       expect(s.timeline.points, s.score);
     },

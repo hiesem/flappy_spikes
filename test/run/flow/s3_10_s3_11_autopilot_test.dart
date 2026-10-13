@@ -3,7 +3,6 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/elements.dart';
-import 'package:flappy_spikes/run/hoops/hoop_kind.dart';
 import 'package:flappy_spikes/run/hoops/kinds/registry.dart';
 import 'package:flutter_test/flutter_test.dart';
 

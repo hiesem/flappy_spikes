@@ -94,6 +94,8 @@ code. Paths are relative to `flappy_spikes/`.
 | `run_config.dart` | 0b | §3.0.1 core tuning (`RunConfig`) |
 | `director_tables.dart` | 0b | §3.0.2 / §3.0.3 tables (`DirectorTables.prd2`) mirroring `spawn_tables.json` |
 | `<feature>_config.dart` | feature WP | one file per feature (e.g. `squeeze_config.dart`, `comet_config.dart`, `revive_config.dart`) |
+| `tuning_types.dart`, `tuning_values.dart`, `tuning_defaults.dart` (generated), `tuning_codegen.dart` | P23-15 | **2.3:** the remote tuning layer (PRD-2.3 §15). Every §14 value is a `TuningDef` key in `tuning_defaults.dart`; config getters read `TuningValues.current` (set at startup and at every run start). See §33 below and `docs/p23/TUNING.md` |
+| `gates_config.dart` | P23-14 | **2.3:** lifetime unlock gates (PRD-2.3 §14.6, `gate_*` keys) |
 
 ### 1.4 `lib/run/physics/` (WP-1a; squeeze walls API used by WP-3g)
 
@@ -724,6 +726,9 @@ default). Later WPs only read/write them.
 | `notifPosition` | int 0 | `notifPosition` | `saveNotifPosition(int)` | 4b |
 | `notifLastSent` | Map\<int,String\> (JSON string) empty | `notifLastSent` | `saveNotifLastSent(Map<int,String>)` | 4b |
 | `notifPermissionAsked` | bool false | `notifPermissionAsked` | `saveNotifPermissionAsked(bool)` | 4b |
+| `lastFeatherRun` | int −1 | `lastFeatherRun` | `saveLastFeatherRun(int)` | **PRD-2.3 §14.2** (P23-14): the `gamesPlayed` of the run that last showed a golden feather (written in `FlappySpikesGame.endRun` before the increment); never a feather in two runs in a row (`GatesConfig.shownLastRun`) |
+| `lastPieceRun` | int −1 | `lastPieceRun` | `saveLastPieceRun(int)` | **PRD-2.3 §14.2**: the same for the puzzle piece |
+| `gamesPlayed` (2.3) | — | — | `saveGamesPlayed(int)` | **PRD-2.3 §14.6**: the RUN DEBUG "Runs: N (+5 / 0)" row; drives the lifetime gates |
 
 The Firebase uid lives in Firebase Auth. Saw/switch "never twice in a row" is per run (`RunState`), not stored.
 "Delete my data" (WP-4c) clears `versusNickname` (regenerated), `uploadQueue`, `uploadsToday/Day`; it does not touch
@@ -1459,3 +1464,27 @@ regression in `test/e2e/p2_gameplay_e2e_test.dart` (S6-20 … S6-24).
 | Banners | `BannerHost.drawnByScene` (its own render pass draws nothing) + `renderInScene(canvas, opacity)`: a portal ride's scene banner layer draws the host at 1 − 0.5 · mix. Since PRD-2.2 §12 the host lives in the run's `RunBannerLayer` (world, −60); both members are kept and the ride layer keeps drawing it into the scene | §18.1 |
 | Portal end | `PortalRide._finish` flaps the bird; `resumeAt` = glide start + `PortalRide.cruiseDistance(runClock, glide + settle + PortalConfig.firstRingAfterControl)` (`resumeAfterLanding` is gone) | §18.2 / §18.3 |
 | Sound preload | `items/sound_preload.dart` `SoundPreloadFeature` (features region WP-G3): `HoopSpawned(portal)` → `SoundService.preload(portalCues(theme))` (`pu_portal`, `pu_land`, `flap`, the theme's cues); `PickupSpawned` comet star → `pu_comet_get/end`; capsule → its power-up's cues. `requests` (tests) | §18.4 |
+
+## 33. PRD-2.3 §14 / §15 contract notes (P23-14 / P23-15, as built 2026-10-13)
+
+The 2.2 numbers above (cruise +3.5 %/min, opening 118 → 92, comet / portal schedules, coin amounts,
+the chick's ×2, the perfect zone) are superseded by PRD-2.3 §14; `SPEC.md` has the DEVIATION list.
+
+| Contract | As built | PRD-2.3 |
+|---|---|---|
+| Tuning layer | `TuningValues.current` (pure Dart, `run/config/tuning_values.dart`) is what every tunable getter reads: `tuning.i/d/b/ints/range/curve/obj('<key>')`. `Tuning.instance` (`services/tuning.dart`): no-op by default; with `--dart-define=FS_TUNING=true` (`kTuning`) `main.dart` installs `FirebaseTuningBackend`, `initialize()` = setUp → `activate()` → resolve (fallback only, `default*`) → `TuningValues.current` → background `fetch()` for the next start. `FlappySpikesGame._startRun` calls `Tuning.instance.beginRun()` before the `RunController` (values fixed per run) | §15.2 |
+| Adding a key | One `TuningDef(key, type, default, section, doc)` line in `tuning_defaults.dart` + a config getter; `dart run tool/tuning_sync.dart format` + `export`. Groups `kTuningGroups` include `ads_`, `rate_`, `noads_`, `ui_` (§0 item 5) | §15.3 |
+| Keyframes | `Keyframes([[hoop, value], …]).at(x)`: linear between keys, flat outside | §15.3 |
+| `DirectorTables.prd2` | Now a getter: `DirectorTables.fromTuning(TuningValues.current)` (spawn rows `spawn_*`, heart, feather / piece windows and chances, `CometRule comet` {chance, from, spacing} replacing the comet `Schedule`, portal `Schedule` 40–60 / 60–80, pair / capsule weights, `tiltCurve` / `movingCurve` → `tiltChance(i)` / `movingChance(i)`). `RunDirector({DirectorTables? tables})` defaults to it. Budget rows and the early pool stay const | §14.4, §14.5, §15.3 |
+| Speed / opening | `RunConfig.cruise(int hoopIndex)` (`curve_speed`; callers pass `RunState.hoopIndex`, so a revive keeps the speed); `RunConfig.openingFor(i)` = 118 at hoop 0 (also with Big Hoops: `RunDirector._bigMult`), then `curve_opening`; `RunConfig.secondsForHoops(from, n)` turns hoop counts into runClock | §14.4, §0 item 3 |
+| Squeeze | `RunDirector.rollSqueezeAt(now, {hoop, first})` / `rollSqueezeHold({hoop})`: hoop counts (`squeeze_first` / `_hold` / `_gap`) at the cruise of those hoops | §14.4 |
+| Comet | `_cometAllowed` mode 0: from `ride_comet_from`, ≥ `ride_comet_spacing` after the last comet, then a `ride_comet_chance` roll on the layout stream (only for an otherwise eligible normal hoop); a planned comet turned plain is owed (no roll); `cometAt` = the first hoop it may come | §14.5 |
+| Feather / piece | `RunDirector(featherAllowed:, pieceAllowed:)` (the controller: `!GatesConfig.shownLastRun(storage.last…Run, gamesPlayed)`, or forced); both roll → the feather wins | §14.2 |
+| Gates | `RunController` filters `enabled` through `GatesConfig.filter(all, gamesPlayed, keep: forced)` unless `RunSetup.ignoreGates` (`RunDebugState.ignoreGates`: the test harness; FS_E2E and FS_SOAK builds) | §14.6 |
+| Scoring | Perfect = no rim touch (`RunController._pass`; `PerfectConfig` removed). `RunContext.earn` / `addScore` no longer double anything; `ScoringFeature.chickBonus(state)` (+`point_chick`) is added to the pass's points; `EggFeature.pointsAdded` → `chick_lost {points_added}` | §14.3 |
+| Revive | `ReviveConfig.coinLadder` (`revive_ladder`); `ReviveLadder.eligible` is false once `coinRevives ≥ ladder.length` | §14.2 |
+| Analytics | `run_end` + `coins_per_hoop`, `perfect_rate`, `opening_end`, `speed_end`, `games_played`; `Wallet(onSpent:)` → `coins_spent {amount, reason}` (`Wallet.spendReason`: `item:*` → `skin`) | §14.8 |
+| Portal rides | `RunDirector.portalDropped(ride)`: a portal planned / spawned ahead and cleared by a ride (`RunSpawner.clearAhead` / `clearAll`) does not count as the last ride | §3.12 (kept) |
+| Debug | `DebugPanel` **TUNING >** page (read-only: key = value [remote / default / default*], last fetch); RUN DEBUG **Runs: N (+5 / 0)**; `FlappySpikesGame.debugAvailable` includes `kTuning` | §15.4, §14.6 |
+| Autopilot | `_farFromPlane` hands a chase back earlier: + abs(bird y − hoop y) ÷ 300 pt/s, and a moving ring's sideways reach (`_reachX`) | gate, §14.4 |
+

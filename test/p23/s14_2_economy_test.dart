@@ -42,7 +42,7 @@ void main() {
       expect(StarTrailConfig.bannerSub, '8 / 8 stars · +2 coins');
       expect(BullseyeConfig.coins, 1);
       expect(TrainConfig.comboCoins, 1);
-      expect(TrainConfig.bannerSub, 'all three rings · +1 coins');
+      expect(TrainConfig.bannerSub, 'all three rings · +1 coin');
       expect(SwitchConfig.coins, 0);
       expect(PairConfig.coins, 3);
       expect(PairConfig.style(PairReward.coins).tag, '+3 COINS');

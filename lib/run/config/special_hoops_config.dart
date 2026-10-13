@@ -89,7 +89,8 @@ abstract final class TrainConfig {
   static const String bannerText = 'TRAIN ×3';
 
   /// §5.21 Banner subtitle.
-  static String get bannerSub => 'all three rings · +$comboCoins coins';
+  static String get bannerSub =>
+      'all three rings · +$comboCoins ${comboCoins == 1 ? 'coin' : 'coins'}';
 }
 
 /// Spring Ring (PRD-2 §3.23, §5.22). The 240 pt jump lives in

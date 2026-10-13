@@ -126,7 +126,9 @@ class BullseyeHoopKind extends HoopKind {
       ElementBanner(
         'BULLSEYE!',
         color: BullseyeConfig.red,
-        subtitle: '+${BullseyeConfig.coins} coins',
+        subtitle: BullseyeConfig.coins == 1
+            ? '+1 coin'
+            : '+${BullseyeConfig.coins} coins',
       ),
     );
     final at = h.frame().toWorld(Vector2(0, h.rings[p.ring]));

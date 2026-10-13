@@ -79,7 +79,7 @@ void main() {
 
     test('§3.16 / §5.15 knobs', () {
       expect(RunConfig.puzzleBonusMin, 50);
-      expect(RunConfig.puzzleBonusMax, 250);
+      expect(RunConfig.puzzleBonusMax, 150, reason: 'PRD-2.3 §14.2');
       expect(RunConfig.puzzleBonusStep, 5);
       expect(PuzzleConfig.pickupScale, 2.1);
       expect(PuzzleConfig.glowRadius, 46);

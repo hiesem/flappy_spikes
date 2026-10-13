@@ -121,9 +121,9 @@ void main() {
       expect(EggConfig.hatchText, 'HATCHED!');
       expect(
         EggConfig.hatchSub,
-        '×2 on every coin while the chick flies with you',
+        '+1 point on every hoop while the chick flies with you',
       );
-      expect(EggConfig.lostText, '×2 LOST');
+      expect(EggConfig.lostText, '+1 LOST'); // PRD-2.3 §14.3
       expect(EggConfig.lostSub, 'you touched a rim · the chick flew off');
       expect(EggConfig.lostGrey, const Color(0xFF9E9E9E));
     });
@@ -353,7 +353,7 @@ void main() {
       expect(run.state.egg, isNull);
       expect(
         analyticsLog(spy).where((e) => e.$1 == 'chick_lost').single.$2,
-        equals({'cause': 'crash', 'coins_doubled': 0}),
+        equals({'cause': 'crash', 'points_added': 0}),
       );
       // A fresh chick, then a death with ≥ 6 hoops: the offer comes up and
       // the chick is already gone; reviving does not bring it back.

@@ -22,12 +22,14 @@ import '../run_state.dart';
 /// §5.1 pass feedback; points PRD-2.2 §13):
 ///
 /// - **points** ([pointsFor]): 1 for a non-perfect pass, max(2, streak)
-///   for a perfect one (×2 with the chick; [RunContext.addScore] → HUD,
-///   versus timeline via [ScoreChanged]);
+///   for a perfect one, +1 while the chick flies (PRD-2.3 §14.3,
+///   [chickBonus]; [RunContext.addScore] → HUD, versus timeline via
+///   [ScoreChanged]);
 /// - **a coin per hoop** through the one in-run wallet path
 ///   ([RunContext.earn]: credited at once, kept if the run ends): 1 for a
-///   pass with a rim touch ([CoinSource.hoop]), 2 for a perfect pass
-///   ([CoinSource.perfect]); shown by master #8 ([CoinPopup]) at the hoop;
+///   pass with a rim touch ([CoinSource.hoop]), 2 for a perfect pass —
+///   PRD-2.3 §14.3: any pass with no rim touch ([CoinSource.perfect]);
+///   shown by master #8 ([CoinPopup]) at the hoop;
 /// - the **colour stage** every 10 hoops passed
 ///   (`RunConfig.stageForHoops`, palettes in order, gold last);
 /// - a **non-perfect** pass plays `point.mp3` and the §5.1 ring-outline

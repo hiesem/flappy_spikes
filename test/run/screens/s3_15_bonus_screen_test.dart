@@ -20,15 +20,20 @@ import '../../helpers.dart';
 /// 6 pops, no reveal of unpopped balloons, YOUR REWARD without it.
 void main() {
   group('§3.15 bonus rules (pure)', () {
-    test('§3.15 / Q35 prizes 25, 25, 50, 50, 75, 75, 100, 150, 250 shuffled', () {
-      expect(BonusConfig.prizes, [25, 25, 50, 50, 75, 75, 100, 150, 250]);
-      expect(BonusConfig.jackpot, 250);
-      final a = BonusRules.shuffledPrizes(math.Random(1));
-      final b = BonusRules.shuffledPrizes(math.Random(2));
-      expect(List.of(a)..sort(), BonusConfig.prizes);
-      expect(List.of(b)..sort(), BonusConfig.prizes);
-      expect(a, isNot(equals(b)));
-    });
+    // PRD-2.3 §14.2: the 2.2 set [25,25,50,50,75,75,100,150,250] became
+    // [25,25,25,50,50,50,75,75,150], jackpot 150.
+    test(
+      '§3.15 / 2.3 §14.2 prizes 25, 25, 25, 50, 50, 50, 75, 75, 150 shuffled',
+      () {
+        expect(BonusConfig.prizes, [25, 25, 25, 50, 50, 50, 75, 75, 150]);
+        expect(BonusConfig.jackpot, 150);
+        final a = BonusRules.shuffledPrizes(math.Random(1));
+        final b = BonusRules.shuffledPrizes(math.Random(2));
+        expect(List.of(a)..sort(), BonusConfig.prizes);
+        expect(List.of(b)..sort(), BonusConfig.prizes);
+        expect(a, isNot(equals(b)));
+      },
+    );
 
     test('§5.14 3–8 coins fly per prize and add up to it', () {
       expect(BonusRules.coinsFor(25), 3);

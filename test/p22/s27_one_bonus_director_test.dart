@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/run_state.dart';
@@ -182,7 +183,15 @@ void main() {
         portals++;
         // The comet hoop: due during the run, after it at the first
         // allowed slot (≥ n + 1; it also keeps 10 hoops from the portal).
-        final c = RunDirector(seed: seed, enabled: all..remove(ElementId.portal), met: all);
+        // PRD-2.3 §14.5 the comet is a per-hoop chance now: at chance 1 it
+        // is due at every allowed hoop, as the 2.2 schedule was here.
+        TuningValues.current = TuningValues.resolve({'ride_comet_chance': '1'});
+        final c = RunDirector(
+          seed: seed,
+          enabled: all..remove(ElementId.portal),
+          met: all,
+        );
+        TuningValues.current = TuningValues.defaults();
         all.add(ElementId.portal);
         final cd = c.cometAt;
         for (; c.hoopIndex <= cd + 2;) {

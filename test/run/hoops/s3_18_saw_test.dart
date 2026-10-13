@@ -350,6 +350,11 @@ void main() {
                   ))!,
                 );
           run.state.invulnerable = 0;
+          // No save on the way (a seeded shield / extra life would absorb
+          // the death; the PRD-2.3 course meets one here).
+          run.state
+            ..shield = false
+            ..extraLife = false;
           for (var i = 0; i < 6; i++) {
             run.debugPass(perfect: true);
           }
@@ -359,7 +364,11 @@ void main() {
             h,
             h.position.y + ry,
             seconds: .3,
-            until: (r) => r.dying,
+            // A shield picked up on the approach would save it.
+            until: (r) {
+              r.state.shield = false;
+              return r.dying;
+            },
           );
           expect(run.lastDeath!.themed!.noBody, design == SawDesign.blackHole);
           var t = 0.0;

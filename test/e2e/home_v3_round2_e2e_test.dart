@@ -145,9 +145,15 @@ List<String> _claimed(int n) => [for (var i = 1; i <= n; i++) '$i'];
 // presses flap; it never writes score, best, wallet or claimed levels.
 Future<void> _flyToEgg(FlappySpikesGame game) async {
   // WP-1a: the hoop-aware acceptance bot (PRD-2 §7) flies the real course.
-  final flight = await flyRun(game, maxSeconds: 75, untilHoops: 12);
-  expect(game.score, greaterThanOrEqualTo(12),
-      reason: 'actual hoop scoring\n${flight.trace.reversed.take(5).join('\n')}');
+  // PRD-2.3 §14.3: every rim-free pass is perfect, so the bot's points
+  // grow with the uncapped streak (12 hoops ≈ 79 points = level 2). 8 hoops
+  // (≥ 6 for the revive offer) keep this journey at EGG · LV 1 (10–49).
+  final flight = await flyRun(game, maxSeconds: 75, untilHoops: 8);
+  expect(
+    game.score,
+    inInclusiveRange(10, 49),
+    reason: 'actual hoop scoring\n${flight.trace.reversed.take(5).join('\n')}',
+  );
   // WP-3a: a comet boost (first met at hoop 10) flies itself; finish it.
   await flyOutOfRide(game);
 }

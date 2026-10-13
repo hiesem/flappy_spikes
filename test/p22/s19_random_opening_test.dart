@@ -41,14 +41,14 @@ void main() {
   const seeds = 500;
 
   test('§19.5 tables: heart (5–27, then 17–27), early pool 4–9 with four '
-      'equal options, feather / piece 60 % in 3–40', () {
-    const t = DirectorTables.prd2;
+      'equal options, feather / piece 60 % (PRD-2.3 §14.2: in 10–40)', () {
+    final t = DirectorTables.prd2;
     expect(t.heart.first, (5, 27));
     expect(t.heart.then, (17, 27));
     expect(t.featherChance, 0.6);
-    expect(t.featherWindow, (3, 40));
+    expect(t.featherWindow, (10, 40));
     expect(t.pieceChance, 0.6);
-    expect(t.pieceWindow, (3, 40));
+    expect(t.pieceWindow, (10, 40));
     expect(t.earlyPool!.from, 4);
     expect(t.earlyPool!.to, 9);
     expect(t.earlyPool!.weights.values.toSet(), {1});

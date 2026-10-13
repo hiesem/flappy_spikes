@@ -8,6 +8,8 @@ library;
 import '../director/plans.dart';
 import '../elements.dart';
 import 'layout_config.dart';
+import 'tuning_types.dart';
+import 'tuning_values.dart';
 
 /// §3.0.2 One row of the hoop layout ramp (fractions of the band).
 class LayoutBand {
@@ -124,6 +126,27 @@ class Schedule {
   final (int, int) then;
 }
 
+/// PRD-2.3 §14.5 the comet: a [chance] per eligible normal hoop from hoop
+/// [from], at least [spacing] hoops after the previous comet (replaces the
+/// 2.2 schedule "first at 10–30, then every 45–60").
+class CometRule {
+  const CometRule({
+    required this.chance,
+    required this.from,
+    required this.spacing,
+  });
+
+  /// PRD-2.3 §14.5 chance per eligible normal hoop (`ride_comet_chance`).
+  final double chance;
+
+  /// PRD-2.3 §14.5 first hoop index (`ride_comet_from`).
+  final int from;
+
+  /// PRD-2.3 §14.5 min hoops after the previous comet
+  /// (`ride_comet_spacing`).
+  final int spacing;
+}
+
 /// §3.0.2 / §3.0.3 All director tables.
 class DirectorTables {
   const DirectorTables({
@@ -139,6 +162,8 @@ class DirectorTables {
     this.featherChance = 1,
     this.pieceChance = 1,
     this.earlyPool,
+    this.tiltCurve,
+    this.movingCurve,
     required this.pairWeights,
     required this.capsuleWeights,
     required this.movingTypes20,
@@ -159,11 +184,13 @@ class DirectorTables {
   /// §3.0.3 Optional gap items (insertion order = weighted pick order).
   final Map<ElementId, GapItemRule> gapItems;
 
-  /// §3.0.3 Portal schedule (25–50, then +40–60).
+  /// §3.0.3 Portal schedule. PRD-2.3 §14.5: first at 40–60, then +60–80
+  /// (`ride_portal_first` / `ride_portal_then`; was 25–50, then +40–60).
   final Schedule portal;
 
-  /// §3.0.3 Comet hoop schedule (10–30, then +45–60).
-  final Schedule comet;
+  /// §3.0.3 Comet hoop. PRD-2.3 §14.5: 2 % per eligible normal hoop from
+  /// hoop 10, ≥ 25 hoops apart (was the schedule 10–30, then +45–60).
+  final CometRule comet;
 
   /// §3.0.3 Heart schedule. PRD-2.2 §19.1: first at a random gap 5–27,
   /// then every 17–27 gaps (was: exactly gap 3).
@@ -187,6 +214,23 @@ class DirectorTables {
 
   /// PRD-2.2 §19.2 The early random pool (indices 4–9); null = none.
   final EarlyPool? earlyPool;
+
+  /// PRD-2.3 §14.4 tilted-hoop chance by hoop index (`curve_tilt`); null =
+  /// the layout row's [LayoutBand.tilt].
+  final Keyframes? tiltCurve;
+
+  /// PRD-2.3 §14.4 moving-hoop chance by hoop index (`curve_moving`); null
+  /// = the layout row's [LayoutBand.moving].
+  final Keyframes? movingCurve;
+
+  /// §3.0.2 / PRD-2.3 §14.4 the chance a normal hoop at [hoopIndex] is
+  /// tilted.
+  double tiltChance(int hoopIndex) =>
+      tiltCurve?.at(hoopIndex) ?? bandFor(hoopIndex).tilt;
+
+  /// §3.0.2 / PRD-2.3 §14.4 the chance a normal hoop at [hoopIndex] moves.
+  double movingChance(int hoopIndex) =>
+      movingCurve?.at(hoopIndex) ?? bandFor(hoopIndex).moving;
 
   /// §3.21 Pair gift weights.
   final Map<PairReward, int> pairWeights;
@@ -222,127 +266,137 @@ class DirectorTables {
     return b;
   }
 
-  /// §3.0.2 / §3.0.3 The PRD-2 launch tables (the §3.0.2 layout rows and
-  /// the §3.11 motion tables come from `LayoutConfig`, WP-1b).
-  static const DirectorTables prd2 = DirectorTables(
-    bands: LayoutConfig.bands,
-    budget: [
-      BudgetRow(0, 0, 0),
-      BudgetRow(5, 0, 0.25),
-      BudgetRow(8, 0.25, 0.25),
-      BudgetRow(20, 0.35, 0.33),
-      BudgetRow(35, 0.45, 0.33),
-      BudgetRow(50, 0.60, 0.33),
-    ],
-    specials: {
-      HoopKindId.bullseye: SpecialRule(
-        from: 6,
-        weight: 20,
-        minSince: 6,
-        cooldown: 1,
-        allowedInSqueeze: true,
-      ),
-      HoopKindId.train: SpecialRule(
-        from: 8,
-        weight: 14,
-        minSince: 10,
-        cooldown: 2,
-      ),
-      HoopKindId.spring: SpecialRule(
-        from: 10,
-        weight: 12,
-        minSince: 10,
-        cooldown: 2,
-      ),
-      HoopKindId.switchRing: SpecialRule(
-        from: 12,
-        weight: 14,
-        minSince: 8,
-        cooldown: 1,
-        blockedNearPortal: 3,
-      ),
-      HoopKindId.pair: SpecialRule(
-        from: 12,
-        weight: 10,
-        minSince: 15,
-        cooldown: 2,
-      ),
-      HoopKindId.fever: SpecialRule(
-        from: 15,
-        weight: 6,
-        minSince: 20,
-        cooldown: 1,
-        allowedInSqueeze: true,
-        blockedNearPortal: 3,
-      ),
-      HoopKindId.luckySpin: SpecialRule(
-        from: 15,
-        weight: 8,
-        minSince: 18,
-        cooldown: 1,
-      ),
-      HoopKindId.saw: SpecialRule(
-        from: 20,
-        weight: 18,
-        weightFrom45: 26,
-        minSince: 3,
-        cooldown: 1,
-        allowedInSqueeze: true,
-        blockedNearPortal: 3,
-      ),
-    },
-    gapItems: {
-      ElementId.starTrail: GapItemRule(
-        from: 5,
-        weight: 30,
-        minSince: 8,
-        allowedInSqueeze: true,
-      ),
-      ElementId.capsule: GapItemRule(from: 10, weight: 20, minSince: 20),
-      ElementId.egg: GapItemRule(from: 10, weight: 12, minSince: 15),
-      ElementId.piggy: GapItemRule(from: 12, weight: 10, minSince: 30),
-      ElementId.jar: GapItemRule(from: 15, weight: 10, minSince: 30),
-      ElementId.shield: GapItemRule(
-        from: 12,
-        weight: 6,
-        minSince: 0,
-        maxPerRun: 1,
-      ),
-    },
-    portal: Schedule(first: (25, 50), then: (40, 60)),
-    comet: Schedule(first: (10, 30), then: (45, 60)),
-    // PRD-2.2 §19 (supersedes the PRD-2 §3.0.3 / §3.15 / §3.16 values).
-    heart: Schedule(first: (5, 27), then: (17, 27)),
-    featherWindow: (3, 40),
-    pieceWindow: (3, 40),
-    featherChance: 0.6,
-    pieceChance: 0.6,
-    earlyPool: EarlyPool(
-      from: 4,
-      to: 9,
-      weights: {
-        EarlyPick.starTrail: 1,
-        EarlyPick.bullseye: 1,
-        EarlyPick.angled: 1,
-        EarlyPick.nothing: 1,
+  /// §3.0.2 / §3.0.3 The run's tables: the PRD-2 launch tables with the
+  /// PRD-2.2 §19 changes and the PRD-2.3 §14 / §15 values, read from the
+  /// tuning layer ([TuningValues.current], set at run start). The §3.0.2
+  /// layout rows and the §3.11 motion tables come from `LayoutConfig`.
+  static DirectorTables get prd2 => fromTuning(TuningValues.current);
+
+  /// PRD-2.3 §15.3 the tables for the tuning set [t] (spawn rows, heart,
+  /// feather / piece, comet, portal, pair and capsule weights, tilt and
+  /// moving curves).
+  static DirectorTables fromTuning(TuningValues t) {
+    SpecialRule special(String key) {
+      final o = t.obj(key);
+      return SpecialRule(
+        from: o['from']!.toInt(),
+        weight: o['weight']!.toInt(),
+        weightFrom45: o['weight_from_45']?.toInt(),
+        minSince: o['min_since']!.toInt(),
+        cooldown: o['cooldown']!.toInt(),
+        allowedInSqueeze: _specialInSqueeze.contains(key),
+        blockedNearPortal: _specialNearPortal.contains(key) ? 3 : 0,
+      );
+    }
+
+    GapItemRule gap(String key) {
+      final o = t.obj(key);
+      return GapItemRule(
+        from: o['from']!.toInt(),
+        weight: o['weight']!.toInt(),
+        minSince: o['min_since']!.toInt(),
+        maxPerRun: o['max_per_run']?.toInt(),
+        allowedInSqueeze: key == 'spawn_star_trail',
+      );
+    }
+
+    Schedule schedule(String first, String then) =>
+        Schedule(first: t.range(first), then: t.range(then));
+
+    final pair = t.obj('spawn_pair_gifts');
+    final caps = t.obj('spawn_capsules');
+    return DirectorTables(
+      bands: LayoutConfig.bands,
+      budget: _budget,
+      specials: {
+        HoopKindId.bullseye: special('spawn_bullseye'),
+        HoopKindId.train: special('spawn_train'),
+        HoopKindId.spring: special('spawn_spring'),
+        HoopKindId.switchRing: special('spawn_switch'),
+        HoopKindId.pair: special('spawn_pair'),
+        HoopKindId.fever: special('spawn_fever'),
+        HoopKindId.luckySpin: special('spawn_lucky_spin'),
+        HoopKindId.saw: special('spawn_saw'),
       },
-    ),
-    pairWeights: {
-      PairReward.shield: 25,
-      PairReward.comet: 20,
-      PairReward.coins: 25,
-      PairReward.score: 15,
-      PairReward.fever: 15,
+      gapItems: {
+        ElementId.starTrail: gap('spawn_star_trail'),
+        ElementId.capsule: gap('spawn_capsule'),
+        ElementId.egg: gap('spawn_egg'),
+        ElementId.piggy: gap('spawn_piggy'),
+        ElementId.jar: gap('spawn_jar'),
+        ElementId.shield: gap('spawn_shield'),
+      },
+      portal: schedule('ride_portal_first', 'ride_portal_then'),
+      comet: CometRule(
+        chance: t.d('ride_comet_chance'),
+        from: t.i('ride_comet_from'),
+        spacing: t.i('ride_comet_spacing'),
+      ),
+      // PRD-2.2 §19 (supersedes the PRD-2 §3.0.3 / §3.15 / §3.16 values);
+      // PRD-2.3 §14.2: the feather and the piece from gap 10.
+      heart: schedule('spawn_heart_first', 'spawn_heart_then'),
+      featherWindow: t.range('bonus_feather_gaps'),
+      pieceWindow: t.range('puzzle_gaps'),
+      featherChance: t.d('bonus_feather_chance'),
+      pieceChance: t.d('puzzle_chance'),
+      earlyPool: _earlyPool,
+      tiltCurve: t.curve('curve_tilt'),
+      movingCurve: t.curve('curve_moving'),
+      pairWeights: {
+        PairReward.shield: pair['shield']!.toInt(),
+        PairReward.comet: pair['comet']!.toInt(),
+        PairReward.coins: pair['coins']!.toInt(),
+        PairReward.score: pair['score']!.toInt(),
+        PairReward.fever: pair['fever']!.toInt(),
+      },
+      capsuleWeights: {
+        CapsuleType.hourglass: caps['hourglass']!.toInt(),
+        CapsuleType.miniBird: caps['mini_bird']!.toInt(),
+        CapsuleType.coinFrenzy: caps['coin_frenzy']!.toInt(),
+      },
+      movingTypes20: LayoutConfig.movingTypes20,
+      movingTypes45: LayoutConfig.movingTypes45,
+      rail: LayoutConfig.rail,
+      swing: LayoutConfig.swing,
+    );
+  }
+
+  /// §3.0.3 Special hoops allowed in the squeeze window (bullseye, FEVER,
+  /// saw) — a rule, not a tuning value.
+  static const Set<String> _specialInSqueeze = {
+    'spawn_bullseye',
+    'spawn_fever',
+    'spawn_saw',
+  };
+
+  /// §3.0.3 Special hoops not within 3 hoops of the portal (switch, FEVER,
+  /// saw) — a rule, not a tuning value.
+  static const Set<String> _specialNearPortal = {
+    'spawn_switch',
+    'spawn_fever',
+    'spawn_saw',
+  };
+
+  /// §3.0.3 Budget rows (not tunable).
+  static const List<BudgetRow> _budget = [
+    BudgetRow(0, 0, 0),
+    BudgetRow(5, 0, 0.25),
+    BudgetRow(8, 0.25, 0.25),
+    BudgetRow(20, 0.35, 0.33),
+    BudgetRow(35, 0.45, 0.33),
+    BudgetRow(50, 0.60, 0.33),
+  ];
+
+  /// PRD-2.2 §19.2 the early random pool (not tunable).
+  static const EarlyPool _earlyPool = EarlyPool(
+    from: 4,
+    to: 9,
+    weights: {
+      EarlyPick.starTrail: 1,
+      EarlyPick.bullseye: 1,
+      EarlyPick.angled: 1,
+      EarlyPick.nothing: 1,
     },
-    capsuleWeights: {
-      CapsuleType.hourglass: 35,
-      CapsuleType.miniBird: 35,
-      CapsuleType.coinFrenzy: 30,
-    },
-    movingTypes20: LayoutConfig.movingTypes20,
-    movingTypes45: LayoutConfig.movingTypes45,
-    rail: LayoutConfig.rail,
-    swing: LayoutConfig.swing,
   );
 }
 

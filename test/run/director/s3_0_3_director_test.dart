@@ -62,7 +62,7 @@ void main() {
       final d = director(seed: 5);
       final mixed = <(SlotPlan, GapPlan)>[];
       for (var k = 0; k < 80; k++) {
-        d.rollSqueezeAt(k.toDouble());
+        d.rollSqueezeAt(k.toDouble(), hoop: k);
         d.rollBigHoopsDuration();
         d.rollPuzzleBonus();
         mixed.addAll(fly(d, 1));
@@ -80,12 +80,14 @@ void main() {
   });
 
   group('§3.0.1 opening ramp', () {
-    test('§3.0.1 118 pt at hoop 0, −0.32 %/hoop, floor 92 pt; rides 118', () {
+    test('§3.0.1 / PRD-2.3 §14.4 118 pt at hoop 0, then 88 → 66 at hoop '
+        '100; rides 118', () {
       final d = director();
       expect(d.openingFor(0, ride: false), 118);
-      expect(d.openingFor(10, ride: false), closeTo(118 * (1 - 0.032), 1e-9));
-      expect(d.openingFor(69, ride: false), closeTo(92.04, 0.01));
-      expect(d.openingFor(200, ride: false), closeTo(92.04, 0.01));
+      expect(d.openingFor(1, ride: false), 88);
+      expect(d.openingFor(10, ride: false), closeTo(88 - 22 * 9 / 99, 1e-9));
+      expect(d.openingFor(100, ride: false), 66);
+      expect(d.openingFor(200, ride: false), 66);
       expect(d.openingFor(80, ride: true), 118);
     });
 
@@ -240,14 +242,17 @@ void main() {
       }
     });
 
-    test('§3.0.3 3. portal first at 25–50, then +40–60; never the same ride '
-        'twice in a row (also across runs); cooldown 3 after it', () {
+    test('§3.0.3 3. portal first at 40–60 (PRD-2.3 §14.5), then +60–80; '
+        'never the same ride twice in a row (also across runs); cooldown 3 '
+        'after it', () {
       for (var seed = 1; seed <= 60; seed++) {
         final d = director(seed: seed, lastPortalRide: RideId.space);
-        final plans = fly(d, 200).map((e) => e.$1).toList();
+        final plans = fly(d, 260).map((e) => e.$1).toList();
         final portals = plans.where((s) => s.kind == HoopKindId.portal).toList();
         expect(portals, isNotEmpty);
-        expect(portals.first.index, inInclusiveRange(25, 50));
+        // It may wait (comet hoop < 10 back), never come early.
+        expect(d.portalAt, greaterThan(portals.first.index));
+        expect(portals.first.index, inInclusiveRange(40, 70));
         var lastRide = RideId.space;
         for (var k = 0; k < portals.length; k++) {
           final ride = portals[k].extra! as RideId;
@@ -255,7 +260,7 @@ void main() {
           lastRide = ride;
           if (k > 0) {
             // It may wait (comet hoop < 10 back), never come early.
-            expect(portals[k].index - portals[k - 1].index, greaterThanOrEqualTo(40));
+            expect(portals[k].index - portals[k - 1].index, greaterThanOrEqualTo(60));
           }
           for (var c = 1; c <= 3 && portals[k].index + c < plans.length; c++) {
             expect(plans[portals[k].index + c].kind, HoopKindId.normal);
@@ -300,17 +305,21 @@ void main() {
       }
     });
 
-    test('§3.0.3 6. comet hoop first at 10–30 then +45–60, upright and still, '
-        'star 20 pt past the plane; never while a timed powerup runs', () {
+    test('§3.0.3 6. comet hoop (PRD-2.3 §14.5: 2 % per eligible hoop from '
+        '10, ≥ 25 apart), upright and still, star 20 pt past the plane; never '
+        'while a timed powerup runs', () {
+      var runsWithComet = 0;
       for (var seed = 1; seed <= 60; seed++) {
         final comets = fly(director(seed: seed), 150)
             .map((e) => e.$1)
             .where((s) => s.cometHang)
             .toList();
-        expect(comets, isNotEmpty);
-        expect(comets.first.index, greaterThanOrEqualTo(10));
+        if (comets.isNotEmpty) runsWithComet++;
+        if (comets.isNotEmpty) {
+          expect(comets.first.index, greaterThanOrEqualTo(10));
+        }
         for (var k = 1; k < comets.length; k++) {
-          expect(comets[k].index - comets[k - 1].index, greaterThanOrEqualTo(45));
+          expect(comets[k].index - comets[k - 1].index, greaterThanOrEqualTo(25));
         }
         for (final c in comets) {
           final star = c.attached.single;
@@ -320,6 +329,7 @@ void main() {
           expect(c.motion, isNull);
         }
       }
+      expect(runsWithComet, greaterThan(40));
       final busy = fly(
         director(),
         120,
@@ -485,7 +495,8 @@ void main() {
           spins.add(p.coins);
         }
       }
-      expect(spins, containsAll([2, 5, 10, 3, 20]));
+      // PRD-2.3 §14.2 the slices are [1, 2, 3, 5, 1, 2].
+      expect(spins, {1, 2, 3, 5});
     });
   });
 
@@ -809,11 +820,22 @@ void main() {
     test('§3.17 / §3.6 / §3.16 / §3.30 ranges', () {
       final d = director();
       for (var k = 0; k < 200; k++) {
-        expect(d.rollSqueezeAt(10), inInclusiveRange(70, 130));
-        expect(d.rollSqueezeHold(), inInclusiveRange(10, 20));
+        // PRD-2.3 §14.4 the squeeze in hoops: the next 25–45 hoops on
+        // (at 150 pt/s from hoop 0: 310 / 150 s per hoop, a little less as
+        // the speed grows), the hold 5–10 hoops.
+        const perHoop = 310 / 150;
+        expect(
+          d.rollSqueezeAt(10, hoop: 0),
+          inInclusiveRange(10 + 25 * perHoop * .9, 10 + 45 * perHoop),
+        );
+        expect(
+          d.rollSqueezeHold(hoop: 0),
+          inInclusiveRange(5 * perHoop * .99, 10 * perHoop),
+        );
         expect(d.rollBigHoopsDuration(), inInclusiveRange(30, 40));
         final bonus = d.rollPuzzleBonus();
-        expect(bonus, inInclusiveRange(50, 250));
+        // PRD-2.3 §14.2 the puzzle reward is 50–150 (was 50–250).
+        expect(bonus, inInclusiveRange(50, 150));
         expect(bonus % 5, 0);
         expect(d.rollHourglassDuration(), inInclusiveRange(10, 20));
       }

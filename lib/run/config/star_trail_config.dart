@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../game/sound.dart';
+import 'tuning_values.dart';
 
 /// Star Trail (PRD-2 §3.26, §5.25; `design/menu_v2/lab_collect.js` `IDEAS.trail`).
 /// The spawn rules (gap 5, weight 30, ≥ 8 gaps apart, inset 40, bulge 40,
@@ -15,8 +16,9 @@ abstract final class StarTrailConfig {
   /// §3.26 Star i sits at u = (i + 1) / 9 along the arc.
   static double u(int i) => (i + 1) / (stars + 1);
 
-  /// §3.26 Collecting all 8 pays +5 coins (PERFECT LINE).
-  static const int reward = 5;
+  /// §3.26 Collecting all 8 pays coins (PERFECT LINE). PRD-2.3 §14.2: +2
+  /// (`coin_star_trail`; was +5).
+  static int get reward => TuningValues.current.i('coin_star_trail');
 
   // --- §5.25 the stars ------------------------------------------------------
 
@@ -61,7 +63,7 @@ abstract final class StarTrailConfig {
   /// §5.25 The PERFECT LINE banner and its one-line explanation (mock
   /// `banner('PERFECT LINE', '#FFB529', '8 / 8 stars · +5 coins')`).
   static const String bannerText = 'PERFECT LINE';
-  static const String bannerSub = '8 / 8 stars · +5 coins';
+  static String get bannerSub => '8 / 8 stars · +$reward coins';
 
   /// §5.25 Each star plays the next note of C major (C5 → C6); all 8 a chord.
   static const List<Sfx> notes = [

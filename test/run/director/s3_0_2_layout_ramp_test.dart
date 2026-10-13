@@ -69,7 +69,7 @@ void main() {
   group('§3.0.2 the ramp as data (LayoutConfig)', () {
     test('§3.0.2 the director tables read the layout rows and motion tables '
         'from LayoutConfig', () {
-      const t = DirectorTables.prd2;
+      final t = DirectorTables.prd2;
       expect(identical(t.bands, LayoutConfig.bands), isTrue);
       expect(identical(t.movingTypes20, LayoutConfig.movingTypes20), isTrue);
       expect(identical(t.movingTypes45, LayoutConfig.movingTypes45), isTrue);

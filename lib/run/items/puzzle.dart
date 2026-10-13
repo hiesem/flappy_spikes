@@ -17,7 +17,6 @@ import '../../versus/timeline.dart' show PointFlags;
 import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
-import '../run_state.dart';
 import '../../game/paints.dart';
 
 /// Puzzle pieces in the run (PRD-2 §3.16, §5.15).
@@ -137,21 +136,20 @@ class PuzzleFeature extends RunFeature {
   }
 
   /// §3.16 the 4/4 bonus: wallet (source `puzzle`), YOUR REWARD and
-  /// [CoinsEarned]. PRD-2.2 §13.1 (fix S7-03): the chick doubles it like
-  /// every other row, in coins **and** points (up to 2 × 250 = 500; the
-  /// points entry carries [PointFlags.puzzle] for the server cap).
+  /// [CoinsEarned], and the same amount in points (the points entry
+  /// carries [PointFlags.puzzle] for the server cap). PRD-2.3 §14.3: the
+  /// chick no longer doubles it (was PRD-2.2 §13.1 / S7-03).
   ///
   /// (call, S6-62) Completion is recoverable, as the level-reward claim
   /// (S6-22): the payout record (the balance to reach) goes out with the
   /// mask reset + round advance *before* the coin write, and is cleared
   /// only after the coin write landed. A kill in between is paid by
   /// [settlePayout] at the next start — never lost, never paid twice.
-  /// Returns the amount paid (the doubled one with the chick).
+  /// Returns the amount paid.
   static int _complete(RunContext c, int rolled) {
     final storage = c.game.storage;
     final wallet = c.game.menu.wallet;
-    final x2 = c.s.egg?.stage == EggStage.chick;
-    final coins = x2 ? rolled * 2 : rolled;
+    final coins = rolled;
     c.s.coinsThisRun += coins;
     unawaited(storage.beginPuzzleCompletion(payout: wallet.balance + coins));
     unawaited(
@@ -159,13 +157,9 @@ class PuzzleFeature extends RunFeature {
           .add(coins, CoinSource.puzzle)
           .then((_) => storage.endPuzzlePayout()),
     );
-    c.emit(CoinsEarned(coins, CoinSource.puzzle, eggX2: x2));
-    // PRD-2.2 §13.1 the same (already doubled) amount in points.
-    c.addScore(
-      coins,
-      flags: PointFlags.bonus | PointFlags.puzzle,
-      chickX2: false,
-    );
+    c.emit(CoinsEarned(coins, CoinSource.puzzle));
+    // PRD-2.2 §13.1 the same amount in points.
+    c.addScore(coins, flags: PointFlags.bonus | PointFlags.puzzle);
     return coins;
   }
 

@@ -14,7 +14,8 @@ void main() {
   final json =
       jsonDecode(File('test/fixtures/spawn_tables.json').readAsStringSync())
           as Map<String, dynamic>;
-  const t = DirectorTables.prd2;
+  // PRD-2.3 §15: the tables are built from the tuning defaults.
+  final t = DirectorTables.prd2;
 
   test('§3.0.2 layout bands mirror spawn_tables.json', () {
     final bands = json['bands'] as List;
@@ -128,15 +129,17 @@ void main() {
     List<int> pair((int, int) r) => [r.$1, r.$2];
     expect(pair(t.portal.first), s['portal']['first']);
     expect(pair(t.portal.then), s['portal']['then']);
-    expect(pair(t.comet.first), s['comet_hoop']['first']);
-    expect(pair(t.comet.then), s['comet_hoop']['then']);
-    // PRD-2.2 §19 supersedes the PRD-2 heart / feather / piece values the
-    // fixture holds (heart 3, feather 3–12, piece 14–25).
+    // PRD-2.3 §14.5 the comet: 2 % per eligible hoop from 10, ≥ 25 apart.
+    expect(t.comet.chance, s['comet_hoop']['chance']);
+    expect(t.comet.from, s['comet_hoop']['from']);
+    expect(t.comet.spacing, s['comet_hoop']['min_since_previous']);
+    // PRD-2.2 §19 supersedes the PRD-2 heart value the fixture holds
+    // (heart 3); PRD-2.3 §14.2 the feather / piece windows (10–40).
     expect(s['heart']['first'], 3);
     expect(t.heart.first, (5, 27));
     expect(pair(t.heart.then), s['heart']['then']);
-    expect(pair(t.featherWindow), [3, 40]);
-    expect(pair(t.pieceWindow), [3, 40]);
+    expect(pair(t.featherWindow), s['feather']['window']);
+    expect(pair(t.pieceWindow), s['puzzle_piece']['window']);
     expect(t.featherChance, 0.6);
     expect(t.pieceChance, 0.6);
     expect(t.earlyPool!.from, 4);
@@ -172,7 +175,10 @@ void main() {
   test('§3.0.1 core tuning mirrors the json', () {
     final c = json['core'] as Map<String, dynamic>;
     expect(RunConfig.cruiseSpeed, c['scroll_pt_s']);
-    expect(RunConfig.cruiseRampPerMinute * 100, closeTo(c['scroll_ramp_pct_per_min'] as num, 1e-9));
+    // PRD-2.3 §14.4 the speed curve by hoop index (replaces the ramp).
+    for (final k in c['speed_curve'] as List) {
+      expect(RunConfig.cruise(k[0] as int), k[1]);
+    }
     expect(RunConfig.spacing, c['spacing_pt']);
     expect(RunConfig.gravity, c['gravity']);
     expect(RunConfig.flapVelocity, c['flap_sets_vy']);
@@ -185,8 +191,18 @@ void main() {
     expect(RunConfig.stageEveryHoops, c['colour_stage_every_hoops']);
     final o = json['opening'] as Map<String, dynamic>;
     expect(RunConfig.opening0, o['at_hoop_0_pt']);
-    expect(RunConfig.openingShrinkPerHoop * 100, closeTo(o['shrink_pct_per_hoop'] as num, 1e-9));
-    expect(RunConfig.openingFloor * 100, closeTo(o['floor_pct_of_start'] as num, 1e-9));
+    expect(RunConfig.openingFor(0), o['at_hoop_0_pt']);
+    // PRD-2.3 §14.4 the opening curve from hoop 1.
+    for (final k in o['curve_from_hoop_1'] as List) {
+      expect(RunConfig.openingFor(k[0] as int), k[1]);
+    }
+    final m = json['moving'] as Map<String, dynamic>;
+    for (final k in m['chance_curve'] as List) {
+      expect(t.movingChance(k[0] as int), k[1]);
+    }
+    for (final k in m['tilt_curve'] as List) {
+      expect(t.tiltChance(k[0] as int), k[1]);
+    }
     // PRD-2.2 §25 overrides the json's saw_extra_pt (see the group below).
     expect(o['saw_extra_pt'], 28);
     final comet = json['comet'] as Map<String, dynamic>;

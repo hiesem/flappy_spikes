@@ -62,7 +62,8 @@ class ReviveOffer {
 /// | 2nd | 250 |
 /// | 3rd | 500 |
 /// | 4th | 1 000 |
-/// | next | doubles again, no cap |
+/// | 5th–7th | 2 000, 4 000, 8 000 |
+/// | then | no more revives this run (PRD-2.3 §14.2, `revive_ladder`) |
 ///
 /// No ad available (no fill, offline) on the 1st offer: the ad step is
 /// skipped for the game — "NO AD AVAILABLE" over a 250 heart, then 500,
@@ -70,14 +71,17 @@ class ReviveOffer {
 /// (whatever the ad availability), then 250, 500 … A death with ≤ 5 hoops
 /// never asks the ladder (no step used).
 abstract final class ReviveLadder {
-  /// The coin price after [coinRevives] coin revives this game.
+  /// The coin price after [coinRevives] coin revives this game
+  /// (PRD-2.3 §14.2: the `revive_ladder` step; past the end, the last).
   static int coinPrice(int coinRevives) {
-    var p = ReviveConfig.firstCoinPrice;
-    for (var i = 0; i < coinRevives; i++) {
-      p *= ReviveConfig.priceFactor;
-    }
-    return p;
+    final ladder = ReviveConfig.coinLadder;
+    return ladder[coinRevives.clamp(0, ladder.length - 1)];
   }
+
+  /// PRD-2.3 §14.2 the ladder is used up: [ReviveConfig.coinLadder] paid
+  /// revives were bought this run, so no revive is offered any more.
+  static bool exhausted(RunState s) =>
+      s.coinRevives >= ReviveConfig.coinLadder.length;
 
   /// The offer for this death. [adReady] = a rewarded ad can be shown now.
   /// [noAds] = the player owns NO ADS (PRD-2.2 §7.7: the ad step is free).
@@ -106,6 +110,8 @@ abstract final class ReviveLadder {
     }
   }
 
-  /// §3.14 the offer is only made from [ReviveConfig.minHoops] hoops passed.
-  static bool eligible(RunState s) => s.hoopsPassed >= ReviveConfig.minHoops;
+  /// §3.14 the offer is only made from [ReviveConfig.minHoops] hoops
+  /// passed, and (PRD-2.3 §14.2) never after the last paid step.
+  static bool eligible(RunState s) =>
+      s.hoopsPassed >= ReviveConfig.minHoops && !exhausted(s);
 }

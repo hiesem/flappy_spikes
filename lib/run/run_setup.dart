@@ -14,6 +14,7 @@ class RunSetup {
     this.forcedRide,
     required this.viewHeight,
     this.enabledOverride,
+    this.ignoreGates = false,
   });
 
   /// Per-run seed (§3.0.3; tests fix it, e2e uses `kE2ESeed`).
@@ -38,4 +39,8 @@ class RunSetup {
 
   /// Tests: the elements the director may offer, instead of the registries.
   final Set<ElementId>? enabledOverride;
+
+  /// PRD-2.3 §14.6 tests / e2e / soak: every element regardless of the
+  /// lifetime unlock gates (`GatesConfig`). Off in every real run.
+  final bool ignoreGates;
 }

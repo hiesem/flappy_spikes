@@ -1,6 +1,7 @@
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/hoops/hoop_kind.dart';
 import 'package:flappy_spikes/run/hoops/kinds/registry.dart';
@@ -44,25 +45,43 @@ void main() {
           await preloadImages(game);
         },
         verify: (game, _) async {
+          // Two forces: the first two slots are planned at once (PRD-2.2
+          // §15 one slot ahead), before the first onFrame refill.
           final run = await startRun(
             game,
             startHoopIndex: start,
-            force: [element],
+            force: [element, element],
           );
-          var modified = 0;
+          var modified = 0, eligible = 0;
           final seen = <int>{};
           final flight = await flyRun(
             game,
             maxSeconds: 60,
             untilHoops: 12,
             onFrame: (r) {
-              if (!r.director.forcedQueue.contains(element)) {
+              // Two in the queue (PRD-2.3: the faster cruise can plan two
+              // slots in one frame), so every slot takes the modifier.
+              while (r.director.forcedQueue.where((e) => e == element).length <
+                  2) {
                 r.debugForce(element);
               }
               for (final h in hoopsOf(game)) {
                 if (!seen.add(h.plan.index)) continue;
+                // PRD-2.3 §14.5 a comet may come on any hoop (2 %): its
+                // star hoop and the ride's hoops stay plain, as do special
+                // kinds (a first-meet).
+                if (h.plan.cometHang ||
+                    h.plan.duringRide ||
+                    h.plan.kind != HoopKindId.normal) {
+                  continue;
+                }
+                eligible++;
+                // §3.11 a swinging ring hangs upright: a forced tilt that a
+                // swing replaced still counts (PRD-2.3 §14.4 moves more
+                // hoops from hoop 20).
                 if (element == ElementId.angledRing
-                    ? h.plan.tiltDeg != 0
+                    ? h.plan.tiltDeg != 0 ||
+                          h.plan.motion?.type == MotionType.swing
                     : h.plan.motion != null) {
                   modified++;
                 }
@@ -74,7 +93,10 @@ void main() {
             greaterThanOrEqualTo(12),
             reason: flight.trace.join('\n'),
           );
-          expect(modified, greaterThanOrEqualTo(10));
+          // Every plain slot takes the modifier (one may be stripped when an
+          // activity starts, PRD-2.2 §27.3).
+          expect(eligible, greaterThanOrEqualTo(6));
+          expect(modified, greaterThanOrEqualTo(eligible - 1));
           expect(run.ended, isFalse);
         },
       );

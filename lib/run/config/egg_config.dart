@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'hud_config.dart';
+import 'tuning_values.dart';
 
 /// Egg / chick (PRD-2 §3.27, §5.26; `design/menu_v2/lab2_collect.js`
 /// `IDEAS.egg2` + `lab3_collect.js` `IDEAS.egg3`). Every member's doc starts
@@ -130,11 +131,14 @@ abstract final class EggConfig {
 
   /// §5.26 "HATCHED!" (gold) with the ×2 explanation.
   static const String hatchText = 'HATCHED!';
-  static const String hatchSub =
-      '×2 on every coin while the chick flies with you';
+  /// PRD-2.3 §14.3 the chick adds +1 point per hoop (no more ×2 coins).
+  static String get hatchSub =>
+      '+${TuningValues.current.i('point_chick')} point on every hoop '
+      'while the chick flies with you';
 
   /// §5.26 "×2 LOST" (grey) after a rim touch.
-  static const String lostText = '×2 LOST';
+  /// PRD-2.3 §14.3 (call) "+1 LOST" (was "×2 LOST").
+  static String get lostText => '+${TuningValues.current.i('point_chick')} LOST';
   static const String lostSub = 'you touched a rim · the chick flew off';
 
   /// §5.26 The chick's leave: it flies up and away (190 / 150 pt/s) with a

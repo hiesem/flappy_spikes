@@ -104,10 +104,11 @@ void main() {
         expect(flight.hoops, greaterThanOrEqualTo(2));
         expect(run.state.score, game.score);
         expect(run.clock.t, greaterThan(2));
-        // §3.0.1 the camera is the bird's forward motion (cruise + ramp).
+        // §3.0.1 the camera is the bird's forward motion. PRD-2.3 §14.4:
+        // the cruise follows the hoop index (150 → 150.9 over hoops 0–2).
         expect(
           run.state.camX,
-          closeTo(run.clock.t * RunConfig.cruise(run.clock.t / 2), 2),
+          closeTo(run.clock.t * RunConfig.cruise(run.state.hoopIndex), 5),
         );
 
         killRun(game, MistakeCause.spikes);

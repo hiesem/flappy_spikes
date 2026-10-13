@@ -25,9 +25,12 @@ void main() {
       expect(Config.maxFallSpeed, greaterThan(Config.flapVelocity));
     });
 
-    test('§3.0.1 the world scrolls at the cruise: 150 pt/s + 3.5 %/min', () {
+    test('§3.0.1 the world scrolls at the cruise; PRD-2.3 §14.4: by hoop '
+        'index, 150 → 172.5 at hoop 50 → 187.5 from hoop 150', () {
       expect(RunConfig.cruise(0), 150);
-      expect(RunConfig.cruise(120), closeTo(160.5, 1e-9));
+      expect(RunConfig.cruise(50), 172.5);
+      expect(RunConfig.cruise(150), 187.5);
+      expect(RunConfig.cruise(300), 187.5);
     });
 
     test('collision categories mirror the original bitmasks', () {
@@ -52,11 +55,13 @@ void main() {
   });
 
   group('PRD-2 hoop course (WP-1a: replaces the pipe math)', () {
-    test('§3.0.1 opening 118 at hoop 0, −0.32 % per hoop, floor 92 pt', () {
+    test('§3.0.1 / PRD-2.3 §14.4 opening 118 at hoop 0, then 88 → 66 at '
+        'hoop 100, flat after', () {
       expect(RunConfig.openingFor(0), 118);
-      expect(RunConfig.openingFor(10), closeTo(118 * (1 - .032), 1e-9));
-      expect(RunConfig.openingFor(69), closeTo(92.04, .05));
-      expect(RunConfig.openingFor(200), closeTo(118 * .78, 1e-9));
+      expect(RunConfig.openingFor(1), 88);
+      expect(RunConfig.openingFor(50), closeTo(77, .2));
+      expect(RunConfig.openingFor(100), 66);
+      expect(RunConfig.openingFor(200), 66);
       expect(RunConfig.openingFor(200, ride: true), 118);
     });
 

@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import '../run/config/tuning_values.dart';
+
 /// One bird rank of PRD-home-v3 §4.1, reached on the best score, with its
 /// emblem colours from §4.2 / `design/menu_v2/emblem_art.js` (LEVELS).
 class LevelDef {
@@ -7,12 +9,12 @@ class LevelDef {
     required this.level,
     required this.name,
     required this.threshold,
-    required this.reward,
+    required int reward,
     required this.plate,
     required this.rim,
     required this.accent,
     this.plateGradient,
-  });
+  }) : defaultReward = reward;
 
   /// 1..10.
   final int level;
@@ -23,8 +25,15 @@ class LevelDef {
   /// Lowest best score that reaches this level.
   final int threshold;
 
-  /// One-time coin reward for reaching it.
-  final int reward;
+  /// The in-app default of [reward] (PRD-home-v3 §4.1).
+  final int defaultReward;
+
+  /// One-time coin reward for reaching it (PRD-2.3 §15.1: tunable,
+  /// `level_rewards[level − 1]`; the defaults are unchanged, §14.2).
+  int get reward {
+    final l = TuningValues.current.ints('level_rewards');
+    return level - 1 < l.length ? l[level - 1] : defaultReward;
+  }
 
   /// Flat plate colour (`plate` in emblem_art.js; the fallback / LEVELS
   /// list tint for the gradient plates).

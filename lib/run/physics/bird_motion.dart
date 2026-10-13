@@ -9,8 +9,8 @@ import '../run_state.dart';
 /// and the camera follows it (the world scrolls at the bird's forward
 /// speed, PRD §7).
 abstract final class BirdMotion {
-  /// §3.0.1 cruise: 150 pt/s, +3.5 % per minute of runClock.
-  static double cruise(double runClock) => RunConfig.cruise(runClock);
+  /// §3.0.1 / PRD-2.3 §14.4 cruise by hoop index (`curve_speed`).
+  static double cruise(int hoopIndex) => RunConfig.cruise(hoopIndex);
 
   /// §3.0.4 4 the forward speed moves toward [cruise] at 2000 pt/s² (after a
   /// knock-back it recovers; above cruise it settles back).
@@ -22,13 +22,13 @@ abstract final class BirdMotion {
   }
 
   /// One step of the forward motion: recovery toward the cruise of the
-  /// current runClock, then the camera advance. Returns the distance moved.
+  /// current hoop index (PRD-2.3 §14.4), then the camera advance. Returns the distance moved.
   static double step(RunState s, double dt) {
     // region WP-3c — §3.23 the spring's flap lock runs out with game time
     if (s.flapLock > 0) s.flapLock = math.max(0, s.flapLock - dt);
     // endregion WP-3c
     // region WP-3a — the comet boost scales the cruise (PRD-2 §3.8)
-    final target = cruise(s.runClock) * s.cruiseMult;
+    final target = cruise(s.hoopIndex) * s.cruiseMult;
     // endregion WP-3a
     s.forwardSpeed = recover(s.forwardSpeed, target, dt);
     final dx = s.forwardSpeed * dt;

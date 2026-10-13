@@ -1382,3 +1382,84 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   normal strips on the page, the rays' length, fade and paint placement);
   `test/run/items/s3_3_s3_7_lives_test.dart` (the SAVED! banner goes to the
   run's banner host, §12).
+
+## PRD-2.3 §14 / §15: economy, scoring and difficulty rebalance; remote tuning
+
+Every value below is a tuning value of PRD-2.3 §15 (`lib/run/config/tuning_defaults.dart`,
+key in backticks); the numbers are the in-app defaults. Tester builds
+(`--dart-define=FS_TUNING=true`) can change them from Firebase Remote Config; the
+production build has the flag off and uses these values only. Full key table:
+`docs/p23/TUNING.md`.
+
+- DEVIATION (PRD-2.3 §14.2, supersedes PRD-2 §3.15–§3.32 / PRD-2.2 coin values):
+  **fewer coins.** Hoop 1 / perfect 2 (unchanged, `coin_hoop` / `coin_perfect`);
+  Piggy Bank: still 20 coins on screen, **every 2 caught pay 1** (max 10, was ×2 =
+  max 40, `coin_piggy_per`); Firefly Jar **8** (was 25, `coin_jar`); Lucky Spin
+  slices **[1, 2, 3, 5, 1, 2]** (was [2, 5, 10, 3, 20, 5], `coin_spin_slices`);
+  Star Trail **2** (was 5); Bullseye **1** (was 3); Ring Train **1** (was 3); switch
+  **0** (was 1); pair gift **"+3 COINS"** (was +10, `coin_pair_gift`); Coin Frenzy
+  **+1 per ring** (was +5). Versus win / draw 10 / 5, the shop ad (40, 5 a day, 5 min)
+  and the level ladder (10,350) are unchanged. Items still add their coin amount as
+  points (`RunContext.earn`). The banner subtitles say the new amounts.
+- DEVIATION (PRD-2.3 §14.2, golden feather / balloon bonus / puzzle): the feather and
+  the piece spawn at a random **gap 10–40** (was 3–40), 60 % per run each, at most one
+  per run, **never in two runs in a row** (`Storage.lastFeatherRun` /
+  `lastPieceRun` = the `gamesPlayed` of the run that showed one, recorded at the run's
+  end) and **never in the same run** (both roll → the feather wins). Balloon prizes
+  **[25, 25, 25, 50, 50, 50, 75, 75, 150]** (jackpot 150, was 250). Puzzle reward
+  **50–150** step 5 (was 50–250).
+- DEVIATION (PRD-2.3 §14.2, revive): the ad revive (free for No-Ads owners), then
+  **250, 500, 1000, 2000, 4000, 8000** coins (`revive_ladder`); **after 6 paid
+  revives no revive is offered that run** (was: doubling without a cap). From 6 hoops
+  as before.
+- DEVIATION (PRD-2.3 §14.3, supersedes PRD-2.2 §11 "perfect zone"): **perfect = a
+  pass with no rim touch, anywhere in the gap.** `PerfectConfig` (±0.2 × opening, max
+  24 pt) is retired; a "clean" off-centre pass no longer exists. Points are unchanged
+  (1, perfect `max(2, streak)`, no streak cap); the Bullseye keeps its ±12 pt band;
+  rides stay always perfect.
+- DEVIATION (PRD-2.3 §14.3, supersedes PRD-2 §3.27 / PRD-2.2 §13.1 chick ×2): **the
+  chick no longer doubles coins or points** (puzzle and piggy included). While it flies
+  every hoop passed scores **+1 point** (`point_chick`, added with the pass, one
+  timeline entry). `chick_lost {coins_doubled}` → `chick_lost {points_added}`; the HUD
+  pill shows "+1", the banners "+1 point on every hoop …" / "+1 LOST".
+- DEVIATION (PRD-2.3 §14.4, supersedes PRD-2 §3.0.1 speed / opening and PRD-2.2):
+  **difficulty by hoop index.** Cruise speed is the keyframe table `curve_speed`
+  `[[0,150],[50,172.5],[150,187.5]]` (replaces +3.5 % per minute of runClock; read at
+  `RunState.hoopIndex`, so a revive keeps the speed). Opening: **hoop 0 is always 118**
+  (also with Big Hoops, PRD-2.3 §0 item 3), from hoop 1 `curve_opening`
+  `[[1,88],[100,66]]` (was 118 − 0.32 %/hoop → 92). Big Hoops ×1.5 from hoop 1 (132 at
+  hoop 1); ride hoops and the portal ring 118; saw +0; every opening capped to the band.
+  Moving-hoop chance `curve_moving` `[[19,0],[20,0.15],[35,0.40],[60,0.60],[80,0.75]]`
+  (was .06 / .15 / .40 by row); tilt chance `curve_tilt` = the 2.2 rows as a step
+  table. Spacing 310 unchanged (not tunable).
+- DEVIATION (PRD-2.3 §14.4, squeeze, supersedes PRD-2 §3.17 timing): **counted in
+  hoops**: the first at a random hoop **25–40**, each hold **5–10 hoops**, the next
+  **25–45 hoops** after the previous one ended (no growing cooldown). A hoop count
+  becomes runClock seconds at the cruise of those hoops (`RunConfig.secondsForHoops`:
+  310 / cruise per hoop); the open-space steps (.50 → .35, min 230) and the phases are
+  unchanged.
+- DEVIATION (PRD-2.3 §14.5, rides): the comet comes with a **2 % chance per eligible
+  normal hoop** from hoop 10, **at least 25 hoops** after the previous comet (layout
+  stream; was the schedule 10–30, then every 45–60). The portal first at hoop **40–60**,
+  then every **60–80** (was 25–50 / 40–60). The exclusions stay (no portal within 10
+  hoops of a comet, the cool-downs). `ElementId.portal.firstPossible` is 40.
+- DEVIATION (PRD-2.3 §14.6, new): **lifetime unlock gates.** An element can appear only
+  once `Storage.gamesPlayed` reaches its gate (`gate_*`): 0 normal hoops, heart, star
+  trail, bullseye; 3 switch, ring train; 5 comet, portal, capsules, shield; 8 spring,
+  pair, egg; 10 golden feather / balloon bonus, puzzle, piggy, jar; 15 FEVER, lucky
+  spin; 20 saw (`GatesConfig`). The director only sees open elements, so first-meet
+  fires the first time a gate is open; a debug force ignores the gate. Not gated:
+  difficulty, the squeeze, the home slot. RUN DEBUG has a "Runs: N (+5 / 0)" row.
+  Tests, FS_E2E and FS_SOAK builds fly with every element (`RunSetup.ignoreGates`).
+- DEVIATION (PRD-2.3 §14.8, analytics): `run_end` gets `coins_per_hoop`,
+  `perfect_rate` (2 decimals), `opening_end`, `speed_end` and `games_played`; new event
+  `coins_spent {amount, reason}` from `Wallet.spend` (`skin` for a shop item, `revive`, …).
+- PRD-2.3 §15 remote tuning: the debug panel (now also in FS_TUNING tester builds) has
+  a read-only **TUNING >** page: every key, its active value and its source (`remote`,
+  `default`, `default*` = a rejected remote value), and the last fetch.
+- Tests: `test/p23/s14_2_economy_test.dart`, `s14_4_difficulty_test.dart`,
+  `s14_6_gates_test.dart`, `s15_tuning_test.dart`; rewritten
+  `test/p22/s11_perfect_zone_test.dart`; updated 2.2 pins in
+  `test/run/config/tables_mirror_test.dart` (+ `test/fixtures/spawn_tables.json`),
+  `test/run/director/s3_0_3_director_test.dart` and others listed in
+  `docs/p23/REPORT_tune.md`.

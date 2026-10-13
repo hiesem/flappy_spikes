@@ -1,14 +1,18 @@
 import 'dart:ui';
 
+import 'tuning_values.dart';
+
 /// Balloon bonus screen knobs (PRD-2 §3.15, §5.14; mock engine
 /// `design/menu_v2/bonus.js` with `BONUS_OPT = {final: true, label: 'POP THE
 /// JACKPOT!'}`). Geometry in the 320 × 711 reference; times in seconds.
 abstract final class BonusConfig {
-  /// §3.15 / Q35 The nine prizes (coins), shuffled per screen.
-  static const List<int> prizes = [25, 25, 50, 50, 75, 75, 100, 150, 250];
+  /// §3.15 / Q35 The nine prizes (coins), shuffled per screen. PRD-2.3
+  /// §14.2: [25, 25, 25, 50, 50, 50, 75, 75, 150] (`bonus_prizes`; 525 per
+  /// set; was [25, 25, 50, 50, 75, 75, 100, 150, 250]).
+  static List<int> get prizes => TuningValues.current.ints('bonus_prizes');
 
-  /// §3.15 The jackpot prize.
-  static const int jackpot = 250;
+  /// §3.15 The jackpot prize: the largest prize (PRD-2.3 §14.2: 150).
+  static int get jackpot => prizes.fold(0, (a, b) => b > a ? b : a);
 
   /// §3.15 Feathers per round of pops, and the ad's extra feathers (once).
   static const int feathers = 3;

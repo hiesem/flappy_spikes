@@ -25,8 +25,8 @@ void main() {
   group('§3.14 price ladder', () {
     RunState fresh() => RunState(seed: 1, viewHeight: 711);
 
-    test('§3.14 ad → 250 → 500 → 1 000 → 2 000 → 4 000 (doubling, no '
-        'cap) within one game', () {
+    test('§3.14 ad → 250 → 500 → 1 000 → 2 000 → 4 000 → 8 000 within one '
+        'game; PRD-2.3 §14.2: then no more (the ladder ends)', () {
       final s = fresh();
       final seen = <String>[];
       for (var i = 0; i < 6; i++) {
@@ -35,7 +35,8 @@ void main() {
         ReviveLadder.record(s, o);
       }
       expect(seen, ['ad', '250', '500', '1000', '2000', '4000']);
-      expect(ReviveLadder.coinPrice(10), 250 * 1024);
+      expect(ReviveLadder.coinPrice(5), 8000);
+      expect(ReviveLadder.coinPrice(10), 8000, reason: 'the last step');
     });
 
     test('§3.14 the ladder resets with every new game', () {
@@ -419,7 +420,14 @@ void main() {
         await flushAndMount(game);
       }
       expect(s.squeeze.phase, SqueezePhase.idle);
-      expect(s.squeeze.nextAt - s.runClock, inInclusiveRange(60, 120));
+      // PRD-2.3 §14.4 the next squeeze 25–45 hoops on (at their cruise).
+      expect(
+        s.squeeze.nextAt - s.runClock,
+        inInclusiveRange(
+          RunConfig.secondsForHoops(s.hoopIndex, 25) - 1e-6,
+          RunConfig.secondsForHoops(s.hoopIndex, 45) + 1e-6,
+        ),
+      );
       step(game, .25);
       expect(s.squeeze.inset, inExclusiveRange(0, 40));
       step(game, .3);

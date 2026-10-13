@@ -2,6 +2,7 @@ import 'dart:math';
 
 import '../config/director_tables.dart';
 import '../config/run_config.dart';
+import '../config/tuning_values.dart';
 import '../elements.dart';
 import 'director_context.dart';
 import 'first_meet.dart';
@@ -23,7 +24,7 @@ export 'rng.dart';
 class RunDirector {
   RunDirector({
     required int seed,
-    this.tables = DirectorTables.prd2,
+    DirectorTables? tables,
     required Set<ElementId> enabled,
     required Set<ElementId> met,
     int startHoopIndex = 0,
@@ -32,7 +33,10 @@ class RunDirector {
     RideId? forcedRide,
     double firstTrackX = RunConfig.worldWidth + RunConfig.firstHoopOffscreen,
     this.spacing = RunConfig.spacing,
-  }) : rng = RunRandom(seed),
+    bool featherAllowed = true,
+    bool pieceAllowed = true,
+  }) : tables = tables ?? DirectorTables.prd2,
+       rng = RunRandom(seed),
        enabled = {...enabled},
        _i = startHoopIndex,
        _startIndex = startHoopIndex,
@@ -41,9 +45,9 @@ class RunDirector {
        _forcedRide = forcedRide,
        _forced = [...forced] {
     firstMeet = FirstMeet(met, this.enabled);
+    final tables = this.tables;
     _layout = LayoutSampler(tables, rng.layout);
     final r = rng.layout;
-    _cometAt = RunRandom.rangeInt(r, tables.comet.first.$1, tables.comet.first.$2);
     _portalAt = RunRandom.rangeInt(
       r,
       tables.portal.first.$1,
@@ -63,8 +67,15 @@ class RunDirector {
     // PRD-2.2 §19.3 the feather and the piece come in ≈ 60 % of runs each
     // (rolled at run start, on the timing stream so the course itself is
     // not shifted by the rolls).
-    _featherOn = rng.timing.nextDouble() < tables.featherChance;
-    _pieceOn = rng.timing.nextDouble() < tables.pieceChance;
+    // PRD-2.3 §14.2 at most one per run, never in two runs in a row
+    // ([featherAllowed] / [pieceAllowed]: `lastFeatherRun` /
+    // `lastPieceRun`), and never together: if both roll, the feather wins
+    // and the piece waits for a later run. (Both rolls always happen, so
+    // the timing stream stays the same.)
+    final featherRoll = rng.timing.nextDouble() < tables.featherChance;
+    final pieceRoll = rng.timing.nextDouble() < tables.pieceChance;
+    _featherOn = featherRoll && featherAllowed;
+    _pieceOn = pieceRoll && pieceAllowed && !_featherOn;
     if (!_featherOn) _featherDone = true;
     if (!_pieceOn) _pieceDone = true;
     if (forcedRide != null && !_forced.contains(ElementId.portal)) {
@@ -75,7 +86,6 @@ class RunDirector {
     // piece and the heart come at the start instead.
     final s = startHoopIndex;
     if (s > 0) {
-      if (_cometAt < s) _cometAt = s + (_cometAt - tables.comet.first.$1);
       if (_portalAt < s) _portalAt = s + (_portalAt - tables.portal.first.$1);
       _heartAt = max(_heartAt, s);
       _featherAt = max(_featherAt, s);
@@ -107,7 +117,10 @@ class RunDirector {
   /// The run's first slot (PRD-2.2 §15: no switch ring there).
   final int _startIndex;
 
-  late int _cometAt;
+  /// PRD-2.3 §14.5 a comet hoop that was planned but turned plain (an
+  /// activity started, §27.3) is owed: it comes at the next allowed normal
+  /// slot without a roll.
+  bool _cometOwed = false;
   late int _portalAt;
   late int _heartAt;
   late int _featherAt;
@@ -136,6 +149,9 @@ class RunDirector {
   SawDesign? _lastSaw;
   SwitchDesign? _lastSwitch;
   RideId? _lastRide;
+
+  /// The last ride before [_lastRide] (a dropped portal restores it).
+  RideId? _rideBefore;
   RideId? _forcedRide;
   SwitchDesign? _forcedSwitch;
   final List<ElementId> _forced;
@@ -164,7 +180,12 @@ class RunDirector {
 
   /// The schedules (tests, debug overlay).
   int get portalAt => _portalAt;
-  int get cometAt => _cometAt;
+
+  /// PRD-2.3 §14.5 the first hoop the next comet may hang in (chance-based
+  /// from there; `ride_comet_from`, ≥ `ride_comet_spacing` after the last).
+  int get cometAt => _cometOwed
+      ? _i
+      : max(tables.comet.from, _lastComet + tables.comet.spacing);
   int get heartAt => _heartAt;
   int get featherAt => _featherAt;
   int get pieceAt => _pieceAt;
@@ -182,29 +203,39 @@ class RunDirector {
   Map<String, int> get spawnedCounts => Map.unmodifiable(_spawned);
 
   bool _on(ElementId e) => enabled.contains(e);
+
+  /// §3.6 the Big Hoops multiplier for slot [i]. PRD-2.3 §0 item 3: hoop 0
+  /// always stays at 118 (§10.2 wins over §14.4), also with Big Hoops.
+  double _bigMult(int i, DirectorContext ctx) => i == 0 ? 1 : ctx.bigHoopsMult;
   bool get _portalOn => _on(ElementId.portal);
 
-  /// §3.0.1 opening at [hoopIndex]: 118 → −0.32 %/hoop → floor 92; ride 118.
+  /// §3.0.1 / PRD-2.3 §14.4 opening at [hoopIndex]: 118 at hoop 0, then
+  /// `curve_opening` (88 → 66); ride 118.
   double openingFor(int hoopIndex, {required bool ride}) =>
       RunConfig.openingFor(hoopIndex, ride: ride);
 
   // --- timing-stream rolls (§3.0.3 "timing") --------------------------------
 
-  /// §3.17 Next squeeze moment: [now] + 60..120 s.
-  double rollSqueezeAt(double now) =>
-      now +
-      RunRandom.range(
-        rng.timing,
-        RunConfig.squeezeGapMin,
-        RunConfig.squeezeGapMax,
-      );
+  /// §3.17 / PRD-2.3 §14.4 the next squeeze moment, counted in hoops: the
+  /// first at a random hoop 25–40 ([first]: `squeeze_first`), the next
+  /// 25–45 hoops after the previous one ended (`squeeze_gap`). The hoop
+  /// count turns into runClock at the cruise of the hoops ahead
+  /// ([RunConfig.secondsForHoops] from [hoop], the bird's hoop now).
+  double rollSqueezeAt(double now, {required int hoop, bool first = false}) {
+    final (a, b) = TuningValues.current.range(
+      first ? 'squeeze_first' : 'squeeze_gap',
+    );
+    final n = RunRandom.rangeInt(rng.timing, a, b);
+    return now + RunConfig.secondsForHoops(hoop, n);
+  }
 
-  /// §3.17 Hold 10..20 s.
-  double rollSqueezeHold() => RunRandom.range(
-    rng.timing,
-    RunConfig.squeezeHoldMin,
-    RunConfig.squeezeHoldMax,
-  );
+  /// §3.17 / PRD-2.3 §14.4 the hold: 5–10 hoops (`squeeze_hold`) from
+  /// [hoop], in runClock seconds.
+  double rollSqueezeHold({required int hoop}) {
+    final (a, b) = TuningValues.current.range('squeeze_hold');
+    final n = RunRandom.rangeInt(rng.timing, a, b);
+    return RunConfig.secondsForHoops(hoop, n);
+  }
 
   /// §3.6 Big Hoops D: 30..40 s.
   double rollBigHoopsDuration() => RunRandom.range(
@@ -213,13 +244,12 @@ class RunDirector {
     RunConfig.bigHoopsMax,
   );
 
-  /// §3.16 Puzzle bonus 50..250 step 5.
+  /// §3.16 Puzzle bonus. PRD-2.3 §14.2: 50..150 step 5
+  /// (`puzzle_reward`; was 50..250).
   int rollPuzzleBonus() {
-    const steps =
-        (RunConfig.puzzleBonusMax - RunConfig.puzzleBonusMin) ~/
-        RunConfig.puzzleBonusStep;
-    return RunConfig.puzzleBonusMin +
-        RunConfig.puzzleBonusStep * rng.timing.nextInt(steps + 1);
+    final min = RunConfig.puzzleBonusMin, step = RunConfig.puzzleBonusStep;
+    final steps = (RunConfig.puzzleBonusMax - min) ~/ step;
+    return min + step * rng.timing.nextInt(steps + 1);
   }
 
   /// §3.30 Hourglass duration 10..20 s.
@@ -343,7 +373,7 @@ class RunDirector {
     // 2. First slot after a revive: normal (call: plain — upright, still).
     if (ride || _revivePending) {
       _revivePending = false;
-      final opening = cap(openingFor(i, ride: ride) * ctx.bigHoopsMult);
+      final opening = cap(openingFor(i, ride: ride) * _bigMult(i, ctx));
       // PRD-2.2 §16.1 comet ride hoops zigzag ±70 pt around the middle
       // (the normal draw still happens, so the course after the ride keeps
       // its random stream).
@@ -498,7 +528,8 @@ class RunDirector {
     if (kind == HoopKindId.portal) opening = RunConfig.portalOpening;
     final pairO = RunConfig.pairOffsetAt711 * ctx.viewHeight / RunConfig.designHeight;
     if (kind == HoopKindId.pair) extraMargin = pairO / 2;
-    opening = cap(opening * ctx.bigHoopsMult, extraMargin);
+    // PRD-2.3 §0 item 3 / §10.2: hoop 0 stays 118, also with Big Hoops.
+    opening = cap(opening * _bigMult(i, ctx), extraMargin);
     var y = _layout.nextCentre(i, ctx, opening, extra: extraMargin);
     final maxJump = tables.bandFor(i).dy.$3 * band;
 
@@ -575,8 +606,9 @@ class RunDirector {
         advance = spacing + 2 * RunConfig.trainDx;
         _layout.lastY = y + d * 2 * RunConfig.trainDy;
       case HoopKindId.luckySpin:
-        final slice = r.nextInt(RunConfig.luckySpinSlices.length);
-        extra = SpinPrize(slice, RunConfig.luckySpinSlices[slice]);
+        final slices = RunConfig.luckySpinSlices;
+        final slice = r.nextInt(slices.length);
+        extra = SpinPrize(slice, slices[slice]);
       case HoopKindId.saw:
         final options = SawDesign.values.where((d) => d != _lastSaw).toList();
         final d = options[r.nextInt(options.length)];
@@ -624,6 +656,7 @@ class RunDirector {
               return options[r.nextInt(options.length)];
             }();
         _forcedRide = null;
+        _rideBefore = _lastRide;
         _lastRide = ride;
         extra = ride;
         _portalAt = i + RunRandom.rangeInt(r, tables.portal.then.$1, tables.portal.then.$2);
@@ -639,7 +672,7 @@ class RunDirector {
       // 6. Comet hoop (fixed schedule; first-meet / debug pull it forward).
       if (_cometAllowed(i, ctx, mode: cometMode)) {
         cometHang = true;
-        _cometAt = i + RunRandom.rangeInt(r, tables.comet.then.$1, tables.comet.then.$2);
+        _cometOwed = false;
         _lastComet = i;
         attached.add(
           GapItemPlan(
@@ -744,13 +777,21 @@ class RunDirector {
   }
 
   /// §3.0.3 slot order 6: the comet star may hang in this normal hoop.
-  /// [mode]: 0 = schedule, 1 = first-meet (ignores the schedule), 2 = debug
-  /// (also ignores the portal distance; exclusivity still applies).
+  /// [mode]: 0 = the PRD-2.3 §14.5 roll (from `ride_comet_from`, ≥
+  /// `ride_comet_spacing` hoops after the previous comet, then a
+  /// `ride_comet_chance` roll on the layout stream — only for an otherwise
+  /// eligible hoop; an owed comet skips the roll), 1 = first-meet (ignores
+  /// the roll), 2 = debug (also ignores the portal distance; exclusivity
+  /// still applies).
   bool _cometAllowed(int i, DirectorContext ctx, {int mode = 0}) {
     if (!_on(ElementId.comet)) return false;
     // PRD-2.2 §27.2 the comet hoop waits for the activity + cool-down.
     if (_rewardsBlocked(i, ctx)) return false;
-    if (mode == 0 && i < _cometAt) return false;
+    final rule = tables.comet;
+    if (mode == 0 &&
+        (i < rule.from || i - _lastComet < rule.spacing)) {
+      return false;
+    }
     if (ctx.timedPowerupRunning || ctx.squeezeWindow || ctx.rideActive) {
       return false;
     }
@@ -758,6 +799,9 @@ class RunDirector {
         _portalOn &&
         (i - _lastPortal < RunConfig.cometPortalDistance ||
             _portalAt - i < RunConfig.cometPortalDistance)) {
+      return false;
+    }
+    if (mode == 0 && !_cometOwed && rng.layout.nextDouble() >= rule.chance) {
       return false;
     }
     return true;
@@ -933,12 +977,12 @@ class RunDirector {
       _forcedRide ??= p.extra is RideId ? p.extra! as RideId : null;
     }
     if (p.cometHang) {
-      _cometAt = p.index;
+      _cometOwed = true;
       _lastComet = -99;
     }
     final band = ctx.band;
     final opening = min(
-      openingFor(p.index, ride: ride) * ctx.bigHoopsMult,
+      openingFor(p.index, ride: ride) * _bigMult(p.index, ctx),
       band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
     );
     final m = opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin;
@@ -1097,6 +1141,14 @@ class RunDirector {
   }
 
   // --- gaps -------------------------------------------------------------------
+
+  /// §3.12 a planned portal with [ride] was dropped before it was flown (a
+  /// portal ride clears the track ahead): its ride is not the last one, so
+  /// the next portal may take any other than the one really flown (never
+  /// the same ride twice in a row).
+  void portalDropped(RideId ride) {
+    if (_lastRide == ride) _lastRide = _rideBefore;
+  }
 
   /// §3.0.3 / §3.28 a portal ride cleared [coins] bank coins unjudged: they
   /// are neither caught nor missed, so the bank places them again in the

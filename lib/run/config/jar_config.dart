@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'hud_config.dart';
+import 'tuning_values.dart';
 
 /// Firefly Jar (PRD-2 §3.29, §5.28; `design/menu_v2/lab2_collect.js`
 /// `IDEAS.flies` / `flies2` + `lab3_collect.js` `IDEAS.flies3`). The spawn
@@ -14,8 +15,8 @@ abstract final class JarConfig {
   static const int total = 20;
   static const int maxEscapes = 3;
 
-  /// §3.29 JAR FULL pays +25 coins.
-  static const int reward = 25;
+  /// §3.29 JAR FULL pays coins. PRD-2.3 §14.2: +8 (`coin_jar`; was +25).
+  static int get reward => TuningValues.current.i('coin_jar');
 
   // --- §5.28 the animated jar pickup ---------------------------------------
 
@@ -76,7 +77,7 @@ abstract final class JarConfig {
   static const String bannerText = 'FIREFLY JAR';
   static const String bannerSub = 'catch 20 · let 3 escape and it breaks';
   static const String fullText = 'JAR FULL!';
-  static const String fullSub = '20 fireflies · +25 coins';
+  static String get fullSub => '20 fireflies · +$reward coins';
   static const String brokeText = 'JAR BROKE';
   static const String brokeSub = '3 fireflies got away';
 

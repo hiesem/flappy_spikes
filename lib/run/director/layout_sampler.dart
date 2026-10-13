@@ -121,7 +121,8 @@ class LayoutSampler {
   double tilt(int hoopIndex, {bool force = false}) {
     final b = tables.bandFor(hoopIndex);
     final roll = random.nextDouble();
-    if (!force && roll >= b.tilt) return 0;
+    // PRD-2.3 §14.4 the tilt chance by hoop index (`curve_tilt`).
+    if (!force && roll >= tables.tiltChance(hoopIndex)) return 0;
     final weights = b.tiltWeights.isNotEmpty
         ? b.tiltWeights
         : tables.bandFor(10).tiltWeights;
@@ -139,9 +140,9 @@ class LayoutSampler {
     bool force = false,
   }) {
     if (ctx.squeezeWindow) return null;
-    final b = tables.bandFor(hoopIndex);
     final roll = random.nextDouble();
-    if (!force && roll >= b.moving) return null;
+    // PRD-2.3 §14.4 the moving chance by hoop index (`curve_moving`).
+    if (!force && roll >= tables.movingChance(hoopIndex)) return null;
     final (lo, hi) = limits(hoopIndex, ctx, opening);
     final room = max(0.0, min(centre - lo, hi - centre));
     // The band rule (not the row's centre range) bounds a slide's travel.

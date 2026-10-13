@@ -11,6 +11,7 @@ import '../../game/sound.dart';
 import '../../skins/art/look_painter.dart';
 import '../../skins/look.dart';
 import '../config/egg_config.dart';
+import '../config/tuning_values.dart';
 import '../elements.dart';
 import '../effects/collect_fx.dart';
 import '../effects/particle_pool.dart';
@@ -31,11 +32,11 @@ import '../run_state.dart';
 /// Picking the egg up puts it on the bird's back ("EGG! hatches in 5
 /// rings"); every ring passed — not ride rings (PRD-2.2 §23) — cracks it (countdown
 /// 4…1, a wobble), and after 5 it hatches into a `golden` chick that flies
-/// behind the bird. While the chick is alive **every** coin earned in the
-/// run counts double: `RunContext.earn` already applies that from
-/// `RunState.egg.stage`, so nothing else has to know. A rim touch while
+/// behind the bird. PRD-2.3 §14.3: while the chick is alive every hoop
+/// passed scores +1 point (`ScoringFeature.chickBonus`); it no longer
+/// doubles coins or other points. A rim touch while
 /// still an egg breaks it quietly (PRD-2.2 §23); after hatching it scares
-/// the chick away ("bye!", "×2 LOST"); a crash (death or a shield / extra
+/// the chick away ("bye!", "+1 LOST"); a crash (death or a shield / extra
 /// life save) loses the egg or chick silently, and a death that brings up
 /// the revive offer loses it even if the player revives (the WP-2d
 /// `ReviveRulesFeature` clears `RunState.egg`).
@@ -45,8 +46,9 @@ class EggFeature extends RunFeature {
   CollectBursts? _bursts;
   EggBadge? _badge;
 
-  /// Coins the chick added on top (the analytics `coins_doubled`).
-  int doubledCoins = 0;
+  /// PRD-2.3 §14.8 points the chick added (the analytics `chick_lost
+  /// {points_added}`; was `coins_doubled`).
+  int pointsAdded = 0;
 
   @override
   void attach(RunContext c) {
@@ -56,8 +58,7 @@ class EggFeature extends RunFeature {
       ..on<HoopPassed>(_onPassed)
       ..on<RimTouched>(_onRim)
       ..on<MistakeSaved>(_onSaved)
-      ..on<RunDied>(_onDied)
-      ..on<CoinsEarned>(_onCoins);
+      ..on<RunDied>(_onDied);
     _view = _EggView(c);
     c.game.world.add(_view!);
     _bursts = CollectBursts();
@@ -92,6 +93,12 @@ class EggFeature extends RunFeature {
     final c = _c;
     if (c == null) return;
     final egg = c.s.egg;
+    if (egg?.stage == EggStage.chick) {
+      // PRD-2.3 §14.3 the chick's +1 per hoop (added with the pass by
+      // `ScoringFeature`; counted here for `chick_lost`).
+      pointsAdded += TuningValues.current.i('point_chick');
+      return;
+    }
     if (egg == null || egg.stage != EggStage.egg) return;
     // PRD-2.2 §23 ride rings (portal and comet) no longer crack the egg;
     // the hoop whose rim broke an egg never cracks the next one.
@@ -203,12 +210,6 @@ class EggFeature extends RunFeature {
 
   void _onDied(RunDied e) => _lose(_c, 'crash');
 
-  void _onCoins(CoinsEarned e) {
-    if (!e.eggX2) return;
-    // `earn` doubled the amount, so the extra half is what the chick added.
-    doubledCoins += e.amount - e.amount ~/ 2;
-  }
-
   /// Drops the egg / chick. [cause] is the analytics `chick_lost` cause
   /// (`rim` / `crash`); a rim touch also shows the "×2 LOST" banner.
   void _lose(RunContext? c, String cause) {
@@ -222,7 +223,7 @@ class EggFeature extends RunFeature {
       _view?.reset();
       return;
     }
-    c.track('chick_lost', {'cause': cause, 'coins_doubled': doubledCoins});
+    c.track('chick_lost', {'cause': cause, 'points_added': pointsAdded});
     _view?.leave();
     if (cause == 'rim') {
       c.sfx(Sfx.eggBye);
@@ -268,8 +269,7 @@ class EggFeature extends RunFeature {
       ..off<HoopPassed>(_onPassed)
       ..off<RimTouched>(_onRim)
       ..off<MistakeSaved>(_onSaved)
-      ..off<RunDied>(_onDied)
-      ..off<CoinsEarned>(_onCoins);
+      ..off<RunDied>(_onDied);
     _dropBadge();
     _view?.removeFromParent();
     _bursts?.removeFromParent();

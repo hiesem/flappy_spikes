@@ -1,0 +1,617 @@
+{
+  "parameterGroups": {
+    "coin": {
+      "description": "PRD-2.3 §15.3 group coin_",
+      "parameters": {
+        "coin_hoop": {
+          "defaultValue": {
+            "value": "1"
+          },
+          "description": "§14.2 Coins for a hoop pass that is not perfect",
+          "valueType": "NUMBER"
+        },
+        "coin_perfect": {
+          "defaultValue": {
+            "value": "2"
+          },
+          "description": "§14.2 Coins for a perfect pass (and every ride hoop)",
+          "valueType": "NUMBER"
+        },
+        "coin_piggy_per": {
+          "defaultValue": {
+            "value": "2"
+          },
+          "description": "§14.2 Piggy Bank: every this many caught coins pay 1 (rounded down; 20 on screen = max 10)",
+          "valueType": "NUMBER"
+        },
+        "coin_jar": {
+          "defaultValue": {
+            "value": "8"
+          },
+          "description": "§14.2 Firefly jar full (20 caught)",
+          "valueType": "NUMBER"
+        },
+        "coin_spin_slices": {
+          "defaultValue": {
+            "value": "[1,2,3,5,1,2]"
+          },
+          "description": "§14.2 Lucky spin slices (equal chance)",
+          "valueType": "JSON"
+        },
+        "coin_star_trail": {
+          "defaultValue": {
+            "value": "2"
+          },
+          "description": "§14.2 Star trail 8/8",
+          "valueType": "NUMBER"
+        },
+        "coin_bullseye": {
+          "defaultValue": {
+            "value": "1"
+          },
+          "description": "§14.2 Bullseye hit",
+          "valueType": "NUMBER"
+        },
+        "coin_train": {
+          "defaultValue": {
+            "value": "1"
+          },
+          "description": "§14.2 Ring train 3/3",
+          "valueType": "NUMBER"
+        },
+        "coin_switch": {
+          "defaultValue": {
+            "value": "0"
+          },
+          "description": "§14.2 Switch touched",
+          "valueType": "NUMBER"
+        },
+        "coin_pair_gift": {
+          "defaultValue": {
+            "value": "3"
+          },
+          "description": "§14.2 Pair \"+N coins\" gift",
+          "valueType": "NUMBER"
+        },
+        "coin_frenzy_ring": {
+          "defaultValue": {
+            "value": "1"
+          },
+          "description": "§14.2 Coin frenzy capsule: coins per ring",
+          "valueType": "NUMBER"
+        },
+        "coin_versus_win": {
+          "defaultValue": {
+            "value": "10"
+          },
+          "description": "§14.2 Versus win bonus",
+          "valueType": "NUMBER"
+        },
+        "coin_versus_draw": {
+          "defaultValue": {
+            "value": "5"
+          },
+          "description": "§14.2 Versus draw bonus",
+          "valueType": "NUMBER"
+        }
+      }
+    },
+    "point": {
+      "description": "PRD-2.3 §15.3 group point_",
+      "parameters": {
+        "point_pass": {
+          "defaultValue": {
+            "value": "1"
+          },
+          "description": "§14.3 Points for a pass that is not perfect",
+          "valueType": "NUMBER"
+        },
+        "point_perfect_min": {
+          "defaultValue": {
+            "value": "2"
+          },
+          "description": "§14.3 Points for a perfect pass: max(this, streak)",
+          "valueType": "NUMBER"
+        },
+        "point_chick": {
+          "defaultValue": {
+            "value": "1"
+          },
+          "description": "§14.3 Chick: extra points per hoop passed",
+          "valueType": "NUMBER"
+        },
+        "point_fever_streak": {
+          "defaultValue": {
+            "value": "5"
+          },
+          "description": "§14.3 A perfect FEVER pass sets the streak to max(this, streak + 1)",
+          "valueType": "NUMBER"
+        },
+        "point_pair_gift": {
+          "defaultValue": {
+            "value": "5"
+          },
+          "description": "§14.3 Pair \"+N score\" gift",
+          "valueType": "NUMBER"
+        }
+      }
+    },
+    "bonus": {
+      "description": "PRD-2.3 §15.3 group bonus_",
+      "parameters": {
+        "bonus_prizes": {
+          "defaultValue": {
+            "value": "[25,25,25,50,50,50,75,75,150]"
+          },
+          "description": "§14.2 Balloon prizes (shuffled; the largest is the jackpot)",
+          "valueType": "JSON"
+        },
+        "bonus_feather_chance": {
+          "defaultValue": {
+            "value": "0.6"
+          },
+          "description": "§14.2 Chance per run that the golden feather appears",
+          "valueType": "NUMBER"
+        },
+        "bonus_feather_gaps": {
+          "defaultValue": {
+            "value": "[10,40]"
+          },
+          "description": "§14.2 The feather spawns at a random gap in [min, max]",
+          "valueType": "JSON"
+        }
+      }
+    },
+    "puzzle": {
+      "description": "PRD-2.3 §15.3 group puzzle_",
+      "parameters": {
+        "puzzle_chance": {
+          "defaultValue": {
+            "value": "0.6"
+          },
+          "description": "§14.2 Chance per run that a puzzle piece appears",
+          "valueType": "NUMBER"
+        },
+        "puzzle_gaps": {
+          "defaultValue": {
+            "value": "[10,40]"
+          },
+          "description": "§14.2 The piece spawns at a random gap in [min, max]",
+          "valueType": "JSON"
+        },
+        "puzzle_reward": {
+          "defaultValue": {
+            "value": "[50,150,5]"
+          },
+          "description": "§14.2 Puzzle completion reward [min, max, step]",
+          "valueType": "JSON"
+        }
+      }
+    },
+    "revive": {
+      "description": "PRD-2.3 §15.3 group revive_",
+      "parameters": {
+        "revive_ladder": {
+          "defaultValue": {
+            "value": "[250,500,1000,2000,4000,8000]"
+          },
+          "description": "§14.2 Coin revive prices after the ad revive; no revive after the last",
+          "valueType": "JSON"
+        },
+        "revive_min_hoops": {
+          "defaultValue": {
+            "value": "6"
+          },
+          "description": "§14.2 A revive is offered from this many hoops passed",
+          "valueType": "NUMBER"
+        }
+      }
+    },
+    "level": {
+      "description": "PRD-2.3 §15.3 group level_",
+      "parameters": {
+        "level_rewards": {
+          "defaultValue": {
+            "value": "[50,100,150,250,400,600,800,1000,2000,5000]"
+          },
+          "description": "§14.2 One-time coin reward of levels 1-10",
+          "valueType": "JSON"
+        }
+      }
+    },
+    "shop": {
+      "description": "PRD-2.3 §15.3 group shop_",
+      "parameters": {
+        "shop_ad_coins": {
+          "defaultValue": {
+            "value": "40"
+          },
+          "description": "§14.2 Shop free-coins ad: coins per ad",
+          "valueType": "NUMBER"
+        },
+        "shop_ad_per_day": {
+          "defaultValue": {
+            "value": "5"
+          },
+          "description": "§14.2 Shop free-coins ad: ads per day",
+          "valueType": "NUMBER"
+        },
+        "shop_ad_cooldown_s": {
+          "defaultValue": {
+            "value": "300"
+          },
+          "description": "§14.2 Shop free-coins ad: cooldown (s)",
+          "valueType": "NUMBER"
+        }
+      }
+    },
+    "curve": {
+      "description": "PRD-2.3 §15.3 group curve_",
+      "parameters": {
+        "curve_speed": {
+          "defaultValue": {
+            "value": "[[0,150],[50,172.5],[150,187.5]]"
+          },
+          "description": "§14.4 Cruise speed (pt/s) by hoop index",
+          "valueType": "JSON"
+        },
+        "curve_opening": {
+          "defaultValue": {
+            "value": "[[1,88],[100,66]]"
+          },
+          "description": "§14.4 Opening (pt) by hoop index from hoop 1 (hoop 0 is always 118)",
+          "valueType": "JSON"
+        },
+        "curve_moving": {
+          "defaultValue": {
+            "value": "[[19,0],[20,0.15],[35,0.4],[60,0.6],[80,0.75]]"
+          },
+          "description": "§14.4 Moving-hoop chance by hoop index",
+          "valueType": "JSON"
+        },
+        "curve_tilt": {
+          "defaultValue": {
+            "value": "[[9,0],[10,0.3],[19,0.3],[20,0.5],[34,0.5],[35,0.6],[44,0.6],[45,0.78]]"
+          },
+          "description": "§14.4 Tilted-hoop chance by hoop index",
+          "valueType": "JSON"
+        }
+      }
+    },
+    "squeeze": {
+      "description": "PRD-2.3 §15.3 group squeeze_",
+      "parameters": {
+        "squeeze_first": {
+          "defaultValue": {
+            "value": "[25,40]"
+          },
+          "description": "§14.4 First squeeze at a random hoop in [min, max]",
+          "valueType": "JSON"
+        },
+        "squeeze_hold": {
+          "defaultValue": {
+            "value": "[5,10]"
+          },
+          "description": "§14.4 Squeeze hold (hoops) in [min, max]",
+          "valueType": "JSON"
+        },
+        "squeeze_gap": {
+          "defaultValue": {
+            "value": "[25,45]"
+          },
+          "description": "§14.4 Next squeeze this many hoops after the previous ended, [min, max]",
+          "valueType": "JSON"
+        }
+      }
+    },
+    "ride": {
+      "description": "PRD-2.3 §15.3 group ride_",
+      "parameters": {
+        "ride_comet_chance": {
+          "defaultValue": {
+            "value": "0.02"
+          },
+          "description": "§14.5 Comet chance per eligible normal hoop",
+          "valueType": "NUMBER"
+        },
+        "ride_comet_from": {
+          "defaultValue": {
+            "value": "10"
+          },
+          "description": "§14.5 Comet from this hoop index",
+          "valueType": "NUMBER"
+        },
+        "ride_comet_spacing": {
+          "defaultValue": {
+            "value": "25"
+          },
+          "description": "§14.5 Comet at least this many hoops after the previous comet",
+          "valueType": "NUMBER"
+        },
+        "ride_portal_first": {
+          "defaultValue": {
+            "value": "[40,60]"
+          },
+          "description": "§14.5 First portal at a random hoop in [min, max]",
+          "valueType": "JSON"
+        },
+        "ride_portal_then": {
+          "defaultValue": {
+            "value": "[60,80]"
+          },
+          "description": "§14.5 Next portal this many hoops after the previous, [min, max]",
+          "valueType": "JSON"
+        }
+      }
+    },
+    "spawn": {
+      "description": "PRD-2.3 §15.3 group spawn_",
+      "parameters": {
+        "spawn_bullseye": {
+          "defaultValue": {
+            "value": "{\"from\":6,\"weight\":20,\"min_since\":6,\"cooldown\":1}"
+          },
+          "description": "§15.3 Special hoop row: from hoop, weight, min hoops since the same, cooldown",
+          "valueType": "JSON"
+        },
+        "spawn_train": {
+          "defaultValue": {
+            "value": "{\"from\":8,\"weight\":14,\"min_since\":10,\"cooldown\":2}"
+          },
+          "description": "§15.3 Special hoop row",
+          "valueType": "JSON"
+        },
+        "spawn_spring": {
+          "defaultValue": {
+            "value": "{\"from\":10,\"weight\":12,\"min_since\":10,\"cooldown\":2}"
+          },
+          "description": "§15.3 Special hoop row",
+          "valueType": "JSON"
+        },
+        "spawn_switch": {
+          "defaultValue": {
+            "value": "{\"from\":12,\"weight\":14,\"min_since\":8,\"cooldown\":1}"
+          },
+          "description": "§15.3 Special hoop row",
+          "valueType": "JSON"
+        },
+        "spawn_pair": {
+          "defaultValue": {
+            "value": "{\"from\":12,\"weight\":10,\"min_since\":15,\"cooldown\":2}"
+          },
+          "description": "§15.3 Special hoop row",
+          "valueType": "JSON"
+        },
+        "spawn_fever": {
+          "defaultValue": {
+            "value": "{\"from\":15,\"weight\":6,\"min_since\":20,\"cooldown\":1}"
+          },
+          "description": "§15.3 Special hoop row",
+          "valueType": "JSON"
+        },
+        "spawn_lucky_spin": {
+          "defaultValue": {
+            "value": "{\"from\":15,\"weight\":8,\"min_since\":18,\"cooldown\":1}"
+          },
+          "description": "§15.3 Special hoop row",
+          "valueType": "JSON"
+        },
+        "spawn_saw": {
+          "defaultValue": {
+            "value": "{\"from\":20,\"weight\":18,\"weight_from_45\":26,\"min_since\":3,\"cooldown\":1}"
+          },
+          "description": "§15.3 Special hoop row (weight from hoop 45)",
+          "valueType": "JSON"
+        },
+        "spawn_star_trail": {
+          "defaultValue": {
+            "value": "{\"from\":5,\"weight\":30,\"min_since\":8}"
+          },
+          "description": "§15.3 Gap item row: from gap, weight, min gaps since the same",
+          "valueType": "JSON"
+        },
+        "spawn_capsule": {
+          "defaultValue": {
+            "value": "{\"from\":10,\"weight\":20,\"min_since\":20}"
+          },
+          "description": "§15.3 Gap item row",
+          "valueType": "JSON"
+        },
+        "spawn_egg": {
+          "defaultValue": {
+            "value": "{\"from\":10,\"weight\":12,\"min_since\":15}"
+          },
+          "description": "§15.3 Gap item row",
+          "valueType": "JSON"
+        },
+        "spawn_piggy": {
+          "defaultValue": {
+            "value": "{\"from\":12,\"weight\":10,\"min_since\":30}"
+          },
+          "description": "§15.3 Gap item row",
+          "valueType": "JSON"
+        },
+        "spawn_jar": {
+          "defaultValue": {
+            "value": "{\"from\":15,\"weight\":10,\"min_since\":30}"
+          },
+          "description": "§15.3 Gap item row",
+          "valueType": "JSON"
+        },
+        "spawn_shield": {
+          "defaultValue": {
+            "value": "{\"from\":12,\"weight\":6,\"min_since\":0,\"max_per_run\":1}"
+          },
+          "description": "§15.3 Gap item row (max per run)",
+          "valueType": "JSON"
+        },
+        "spawn_heart_first": {
+          "defaultValue": {
+            "value": "[5,27]"
+          },
+          "description": "§15.3 First heart at a random gap in [min, max]",
+          "valueType": "JSON"
+        },
+        "spawn_heart_then": {
+          "defaultValue": {
+            "value": "[17,27]"
+          },
+          "description": "§15.3 Next heart this many gaps later, [min, max]",
+          "valueType": "JSON"
+        },
+        "spawn_pair_gifts": {
+          "defaultValue": {
+            "value": "{\"shield\":25,\"comet\":20,\"coins\":25,\"score\":15,\"fever\":15}"
+          },
+          "description": "§15.3 Pair gift weights",
+          "valueType": "JSON"
+        },
+        "spawn_capsules": {
+          "defaultValue": {
+            "value": "{\"hourglass\":35,\"mini_bird\":35,\"coin_frenzy\":30}"
+          },
+          "description": "§15.3 Capsule type weights",
+          "valueType": "JSON"
+        }
+      }
+    },
+    "gate": {
+      "description": "PRD-2.3 §15.3 group gate_",
+      "parameters": {
+        "gate_heart": {
+          "defaultValue": {
+            "value": "0"
+          },
+          "description": "§14.6 Heart from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_star_trail": {
+          "defaultValue": {
+            "value": "0"
+          },
+          "description": "§14.6 Star trail from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_bullseye": {
+          "defaultValue": {
+            "value": "0"
+          },
+          "description": "§14.6 Bullseye from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_switch": {
+          "defaultValue": {
+            "value": "3"
+          },
+          "description": "§14.6 Switch ring from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_train": {
+          "defaultValue": {
+            "value": "3"
+          },
+          "description": "§14.6 Ring train from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_comet": {
+          "defaultValue": {
+            "value": "5"
+          },
+          "description": "§14.6 Comet from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_portal": {
+          "defaultValue": {
+            "value": "5"
+          },
+          "description": "§14.6 Portal from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_capsule": {
+          "defaultValue": {
+            "value": "5"
+          },
+          "description": "§14.6 Capsules (hourglass, mini bird, coin frenzy) from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_shield": {
+          "defaultValue": {
+            "value": "5"
+          },
+          "description": "§14.6 Shield pickup from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_spring": {
+          "defaultValue": {
+            "value": "8"
+          },
+          "description": "§14.6 Spring from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_pair": {
+          "defaultValue": {
+            "value": "8"
+          },
+          "description": "§14.6 Pair from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_egg": {
+          "defaultValue": {
+            "value": "8"
+          },
+          "description": "§14.6 Egg from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_feather": {
+          "defaultValue": {
+            "value": "10"
+          },
+          "description": "§14.6 Golden feather and balloon bonus from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_puzzle": {
+          "defaultValue": {
+            "value": "10"
+          },
+          "description": "§14.6 Puzzle piece from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_piggy": {
+          "defaultValue": {
+            "value": "10"
+          },
+          "description": "§14.6 Piggy bank from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_jar": {
+          "defaultValue": {
+            "value": "10"
+          },
+          "description": "§14.6 Firefly jar from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_fever": {
+          "defaultValue": {
+            "value": "15"
+          },
+          "description": "§14.6 FEVER from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_lucky_spin": {
+          "defaultValue": {
+            "value": "15"
+          },
+          "description": "§14.6 Lucky spin from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        },
+        "gate_saw": {
+          "defaultValue": {
+            "value": "20"
+          },
+          "description": "§14.6 Saw from gamesPlayed >= N",
+          "valueType": "NUMBER"
+        }
+      }
+    }
+  }
+}

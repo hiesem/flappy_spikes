@@ -74,12 +74,22 @@ extension CoinSourceName on CoinSource {
 
 /// Coin balance persisted through [GameStorage].
 class Wallet extends ChangeNotifier {
-  Wallet(this._storage, {this.onEarned});
+  Wallet(this._storage, {this.onEarned, this.onSpent});
 
   final GameStorage _storage;
 
   /// Called after coins are added, with the amount and its source.
   final void Function(int amount, CoinSource source)? onEarned;
+
+  /// PRD-2.3 §14.8 called after coins are spent, with the amount and the
+  /// analytics reason ([spendReason]): the `coins_spent` event.
+  final void Function(int amount, String reason)? onSpent;
+
+  /// PRD-2.3 §14.8 the `coins_spent` reason for a [spend] reason: `skin`
+  /// for a shop item (`item:<layer>:<id>`), else the reason itself
+  /// (`revive`, …).
+  static String spendReason(String reason) =>
+      reason.startsWith('item:') ? 'skin' : reason;
 
   int get balance => _storage.coins;
 
@@ -98,6 +108,7 @@ class Wallet extends ChangeNotifier {
     if (amount == 0) return true;
     await _storage.saveCoins(_storage.coins - amount);
     notifyListeners();
+    onSpent?.call(amount, spendReason(reason));
     return true;
   }
 }

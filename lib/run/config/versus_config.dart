@@ -1,15 +1,19 @@
 import 'dart:ui';
 
+import 'tuning_values.dart';
+
 /// Versus tuning (PRD-2 §3.13 rules + backend, §5.7 HUD out state, §5.8 VS
 /// intro, §5.10 results). WP-5b. Every member's doc starts with its PRD
 /// section. The backend limits mirror `functions/src/schema.ts` (WP-5a).
 abstract final class VersusConfig {
   // ------------------------------------------------------------ rules
-  /// §3.13 Win bonus (coins, source `win_bonus`).
-  static const int winBonus = 10;
+  /// §3.13 Win bonus (coins, source `win_bonus`; PRD-2.3 §14.2 unchanged,
+  /// tunable `coin_versus_win`).
+  static int get winBonus => TuningValues.current.i('coin_versus_win');
 
-  /// §3.13 A draw pays half (coins, source `win_bonus`).
-  static const int drawBonus = 5;
+  /// §3.13 A draw pays half (coins, source `win_bonus`; tunable
+  /// `coin_versus_draw`).
+  static int get drawBonus => TuningValues.current.i('coin_versus_draw');
 
   /// §3.13 Runs under this score are never uploaded (schema.ts MIN_SCORE).
   static const int minUploadScore = 3;

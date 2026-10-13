@@ -218,7 +218,6 @@ class CoinFrenzyFeature extends TimedPowerupEffect {
       _popups.obtain()..play(
         Offset(at.x + shift.dx, at.y + shift.dy),
         CapsuleConfig.frenzyCoins,
-        doubled: ctx.s.egg?.stage == EggStage.chick,
         delay: CapsuleConfig.frenzyPopupDelay,
       ),
     );

@@ -1,4 +1,5 @@
 import '../../menu/wallet.dart';
+import '../config/run_config.dart';
 import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
@@ -48,9 +49,18 @@ class AnalyticsRouter extends RunFeature {
     // endregion anchors
   ];
 
+  /// `gamesPlayed` when the run started (PRD-2.3 §14.8 `games_played`
+  /// counts this run too).
+  int _gamesAtStart = 0;
+
+  /// PRD-2.3 §14.8 a ratio with 2 decimals.
+  static double ratio2(num a, num b) =>
+      ((b <= 0 ? 0 : a / b) * 100).roundToDouble() / 100;
+
   @override
   void attach(RunContext c) {
     _c = c;
+    _gamesAtStart = c.game.storage.gamesPlayed;
     c.events.on<CoinsEarned>(_onCoins);
     c.events.on<RunEnded>(_onEnded);
   }
@@ -81,6 +91,12 @@ class AnalyticsRouter extends RunFeature {
       // PRD-2.2 §19.3 the feather / piece came this run (0 / 1).
       'feather': c.s.featherSpawned ? 1 : 0,
       'piece': c.s.pieceSpawned ? 1 : 0,
+      // PRD-2.3 §14.8 the budget and difficulty checks.
+      'coins_per_hoop': ratio2(s.coins, s.hoopsPassed < 1 ? 1 : s.hoopsPassed),
+      'perfect_rate': ratio2(s.perfectPasses, s.passes),
+      'opening_end': RunConfig.openingFor(s.hoopIndex).round(),
+      'speed_end': RunConfig.cruise(c.s.hoopIndex).round(),
+      'games_played': _gamesAtStart + 1,
     });
     c.track('run_director_hoops', {
       for (final k in hoopKeys) k: s.spawned[k] ?? 0,

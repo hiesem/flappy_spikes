@@ -77,7 +77,11 @@ class SqueezeFeature extends RunFeature {
   void attach(RunContext c) {
     _c = c;
     final sq = c.s.squeeze;
-    sq.nextAt = c.director.rollSqueezeAt(c.s.runClock);
+    sq.nextAt = c.director.rollSqueezeAt(
+      c.s.runClock,
+      hoop: c.s.hoopIndex,
+      first: true,
+    );
     c.events
       ..on<DebugForced>(_onForced)
       ..on<RideEnded>(_onRideEnded)
@@ -114,7 +118,7 @@ class SqueezeFeature extends RunFeature {
     // band too.
     final planned = c.run.spawner.plannedAhead;
     if (planned != null) ahead = math.max(ahead, planned.lastRingX - birdX);
-    final lead = ahead / RunConfig.cruise(s.runClock);
+    final lead = ahead / RunConfig.cruise(s.hoopIndex);
     _sq.nextAt = s.runClock + RunConfig.squeezeWindowLead + lead + .05;
   }
 
@@ -153,7 +157,7 @@ class SqueezeFeature extends RunFeature {
     final c = _c!;
     final sq = _sq;
     depth = SqueezeConfig.insetFor(sq.index, c.viewHeight);
-    sq.holdS = c.director.rollSqueezeHold();
+    sq.holdS = c.director.rollSqueezeHold(hoop: c.s.hoopIndex);
     _ticks = 0;
     started++;
     _enter(SqueezePhase.warning);
@@ -256,7 +260,7 @@ class SqueezeFeature extends RunFeature {
     shake.sustain = 0;
     c.track('squeeze_survived', {'index': sq.index + 1});
     sq.index++;
-    sq.nextAt = c.director.rollSqueezeAt(c.s.runClock);
+    sq.nextAt = c.director.rollSqueezeAt(c.s.runClock, hoop: c.s.hoopIndex);
     _enter(SqueezePhase.idle);
   }
 

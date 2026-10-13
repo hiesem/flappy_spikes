@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'tuning_values.dart';
+
 /// Powerup capsules and the timed powerups they start: Hourglass, Mini
 /// Bird, Coin Frenzy (PRD-2 §3.30–§3.32, §5.29–§5.31; idea lab round 3
 /// `screen_lab3_powerups.html`, `lab_power.js` / `lab2_power.js`). Every
@@ -208,8 +210,9 @@ abstract final class CapsuleConfig {
   /// §3.32 Coin Frenzy lasts 6 s.
   static const double frenzyDuration = 6;
 
-  /// §3.32 Each ring passed pays +5 coins on top of the normal ring coins.
-  static const int frenzyCoins = 5;
+  /// §3.32 Each ring passed pays coins on top of the normal ring coins.
+  /// PRD-2.3 §14.2: +1 (`coin_frenzy_ring`; was +5).
+  static int get frenzyCoins => TuningValues.current.i('coin_frenzy_ring');
 
   /// §5.31 Coin ring front colour.
   static const Color frenzyRingFront = Color(0xFFFFD54A);

@@ -6,6 +6,7 @@ import '../../game/config.dart';
 import '../../skins/art/look_painter.dart';
 import '../../skins/look.dart';
 import '../config/egg_config.dart';
+import '../config/tuning_values.dart';
 import '../config/jar_config.dart';
 import '../config/piggy_config.dart';
 import '../effects/collect_art.dart';
@@ -61,8 +62,9 @@ class EggBadge extends PositionComponent {
       t: _t * EggConfig.chickArtRate,
     );
     canvas.restore();
+    // PRD-2.3 §14.3 (call) the pill shows the chick's "+1" (was "×2").
     HudText(
-      '×2',
+      '+${TuningValues.current.i('point_chick')}',
       size: EggConfig.hudTextSize,
       color: const Color(0xFFFFFFFF),
     ).paintCentred(canvas, const Offset(EggConfig.hudTextX, EggConfig.hudTextY));

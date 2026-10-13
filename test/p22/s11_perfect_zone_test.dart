@@ -3,7 +3,6 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/rumble.dart';
 import 'package:flappy_spikes/menu/wallet.dart';
-import 'package:flappy_spikes/run/config/streak_config.dart';
 import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/hoops/hoop.dart';
@@ -16,32 +15,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
 
-/// PRD-2.2 §11.5 the perfect zone: perfect = no rim touch **and** the
-/// crossing within min(24, 0.2 × opening) of the passed ring's centre.
+/// PRD-2.3 §14.3 (rewrites the PRD-2.2 §11.5 perfect-zone tests): perfect
+/// = a pass with **no rim touch**, anywhere in the gap (Flappy Dunk's
+/// swish). The centre zone is retired; the Bullseye keeps its own ±12 pt
+/// band; rides stay always perfect.
 void main() {
-  group('§11.5 zone half-width', () {
-    test('23.6 at opening 118, 18.4 at 92, capped at 24 above 120', () {
-      expect(PerfectConfig.halfWidth(118), closeTo(23.6, 1e-9));
-      expect(PerfectConfig.halfWidth(92), closeTo(18.4, 1e-9));
-      expect(PerfectConfig.halfWidth(120), 24);
-      expect(PerfectConfig.halfWidth(177), 24, reason: 'Big Hoops ×1.5');
-      expect(PerfectConfig.halfWidth(146), 24, reason: 'saw +28');
-      expect(PerfectConfig.zoneFactor, .2);
-      expect(PerfectConfig.zoneMax, 24);
-    });
-    test('the edge is inside; just past it is outside', () {
-      expect(PerfectConfig.inZone(23.6, 118), isTrue);
-      expect(PerfectConfig.inZone(-23.6, 118), isTrue);
-      expect(PerfectConfig.inZone(23.7, 118), isFalse);
-      expect(PerfectConfig.inZone(-18.5, 92), isFalse);
-    });
-    test('the bullseye band ±12 lies inside the zone at every opening', () {
-      for (var o = 92.0; o <= 200; o += 1) {
-        expect(PerfectConfig.halfWidth(o), greaterThan(12));
-      }
-    });
-  });
-
   late AnalyticsSpy spy;
   final tester = FlameTester<FlappySpikesGame>(() {
     spy = AnalyticsSpy();
@@ -66,11 +44,11 @@ void main() {
     return (run, run.spawner.nextHoopAhead()!, events);
   }
 
-  // Gravity pulls the gliding bird down by ≈ 2 pt before the plane, so the
-  // offsets keep a margin from the zone edge (±23.6 at hoop 0).
-  for (final dy in [0.0, 18.0, -20.0]) {
+  // PRD-2.3 §14.3 every rim-free pass is perfect, centred or not (the
+  // offsets reach ±30 pt of the 118 pt hoop 0 without touching a rim).
+  for (final dy in [0.0, 18.0, -20.0, 30.0, -28.0]) {
     tester.testGameWidget(
-      '§11.5 offset $dy (inside the zone) → perfect: +2 coins, streak +1, '
+      '§14.3 offset $dy, no rim touch → perfect: +2 coins, streak +1, '
       'banner, shake',
       setUp: (g, _) => prepare(g),
       verify: (game, _) async {
@@ -80,14 +58,12 @@ void main() {
         rumbleLog(game).clear();
         expect(await passHoopAt(game, h, dy: dy), isTrue);
         expect(h.takenRing, 0);
+        expect(h.touched, isFalse);
         expect(h.passOffset, isNotNull);
-        expect(
-          h.passOffset!.abs(),
-          lessThanOrEqualTo(PerfectConfig.halfWidth(h.opening)),
-        );
         final passed = events.whereType<HoopPassed>().single;
         expect(passed.perfect, isTrue);
         expect(passed.clean, isFalse);
+        expect(passed.rimTouched, isFalse);
         expect(run.state.streak, streak0 + 1);
         final coins = events.whereType<CoinsEarned>().single;
         expect(coins.source, CoinSource.perfect);
@@ -100,52 +76,19 @@ void main() {
     );
   }
 
-  for (final dy in [30.0, -28.0]) {
-    tester.testGameWidget(
-      '§11.5 offset $dy (outside the zone, no rim touch) → clean: +1 coin, '
-      'streak reset, no banner, point sound, one knock',
-      setUp: (g, _) => prepare(g),
-      verify: (game, _) async {
-        final (run, h, events) = await firstHoop(game);
-        run.state.streak = 3; // a streak running
-        final sfx = sfxLog(game);
-        rumbleLog(game).clear();
-        expect(await passHoopAt(game, h, dy: dy), isTrue);
-        expect(h.takenRing, 0);
-        expect(h.touched, isFalse);
-        expect(
-          h.passOffset!.abs(),
-          greaterThan(PerfectConfig.halfWidth(h.opening)),
-        );
-        final passed = events.whereType<HoopPassed>().single;
-        expect(passed.perfect, isFalse);
-        expect(passed.clean, isTrue);
-        expect(passed.rimTouched, isFalse);
-        expect(run.state.streak, 0);
-        final coins = events.whereType<CoinsEarned>().single;
-        expect(coins.source, CoinSource.hoop);
-        expect(coins.amount, 1);
-        expect(RunHud.of(run)!.banners.current, isNot(isA<StreakBanner>()));
-        expect(sfx, contains('point'));
-        expect(sfx.where((s) => s.startsWith('perfect')), isEmpty);
-        expect(rumbleLog(game), [RumbleKind.knock]);
-        expect(run.state.cleanPasses, 1);
-        expect(run.state.perfectPasses, 0);
-      },
-    );
-  }
-
   tester.testGameWidget(
-    '§11.5 a rim touch then a centred pass → graze (non-perfect, not '
-    'clean): +1 coin, no knock at the pass',
+    '§14.3 a rim touch then a centred pass → graze (not perfect): +1 '
+    'coin, streak reset, no knock at the pass',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final (run, h, events) = await firstHoop(game);
+      run.state.streak = 3; // a streak running
       h.touched = true; // the rim was touched earlier on this hoop
       rumbleLog(game).clear();
       expect(await passHoopAt(game, h), isTrue);
       final passed = events.whereType<HoopPassed>().single;
       expect(passed.perfect, isFalse);
+      expect(run.state.streak, 0);
       expect(passed.clean, isFalse);
       expect(passed.rimTouched, isTrue);
       expect(events.whereType<CoinsEarned>().single.amount, 1);
@@ -155,7 +98,7 @@ void main() {
   );
 
   tester.testGameWidget(
-    '§11.5 rides: a ride ring passed far off-centre is still perfect',
+    '§14.3 rides: a ride ring passed far off-centre is perfect',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final (run, h, events) = await firstHoop(game);
@@ -169,7 +112,8 @@ void main() {
   );
 
   tester.testGameWidget(
-    '§11.5 FEVER: a clean off-centre pass does not set the streak to 5',
+    '§14.3 FEVER: a rim-free off-centre pass is perfect and sets the '
+    'streak to 5',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(
@@ -179,15 +123,16 @@ void main() {
       );
       await flyUntil(game, (_) => firstHoopOf(game, HoopKindId.fever) != null);
       final h = firstHoopOf(game, HoopKindId.fever)!;
-      expect(await passHoopAt(game, h, dy: 30), isTrue);
+      expect(await passHoopAt(game, h, dy: 24), isTrue);
       expect(h.takenRing, 0);
-      expect(run.state.streak, 0);
-      expect(run.state.onFire, isFalse);
+      expect(h.touched, isFalse);
+      expect(run.state.streak, 5);
+      expect(run.state.onFire, isTrue);
     },
   );
 
   tester.testGameWidget(
-    '§11.5 FEVER: a centred pass sets the streak to 5',
+    '§14.3 FEVER: a centred pass sets the streak to 5',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(
@@ -204,7 +149,8 @@ void main() {
   );
 
   tester.testGameWidget(
-    '§11.5 Bullseye: a centred pass is perfect and pays +2 and +3',
+    '§14.3 Bullseye: a centred pass is perfect and pays +2 and the '
+    'bullseye +1 (PRD-2.3 §14.2)',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(
@@ -225,7 +171,7 @@ void main() {
           .map((e) => (e.source, e.amount))
           .toList();
       expect(sources, contains((CoinSource.perfect, 2)));
-      expect(sources, contains((CoinSource.bullseye, 3)));
+      expect(sources, contains((CoinSource.bullseye, 1)));
       expect(
         events.whereType<HoopPassed>().where((e) => e.hoop == h).single.perfect,
         isTrue,
@@ -234,7 +180,7 @@ void main() {
   );
 
   tester.testGameWidget(
-    '§11.5 pairs are judged per ring: the passed ring\'s own centre counts',
+    '§14.3 pairs: a rim-free pass through either ring is perfect',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(
@@ -256,7 +202,7 @@ void main() {
         seconds: 2,
       );
       expect(h.takenRing, 1);
-      expect(h.passOffset!.abs(), lessThan(PerfectConfig.halfWidth(h.opening)));
+      expect(h.touched, isFalse);
       final p = events.whereType<HoopPassed>().where((e) => e.hoop == h);
       expect(p.single.perfect, isTrue);
     },
@@ -264,7 +210,8 @@ void main() {
 
   tester.testGameWidget(
     '§11.5 summary / analytics: cleanPasses counts and run_end.clean_passes '
-    'is sent (plus score and max_streak, §13.6)',
+    'is sent (plus score and max_streak, §13.6, and the PRD-2.3 §14.8 '
+    'perfect_rate / coins_per_hoop)',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(game);
@@ -282,6 +229,8 @@ void main() {
       expect(end['max_streak'], 2);
       expect(end['score'], run.state.score);
       expect(end['hoops'], 5);
+      expect(end['perfect_rate'], .4);
+      expect(end['coins_per_hoop'], closeTo(s.coins / 5, .006));
     },
   );
 }

@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/components/score_hud.dart';
 import 'package:flappy_spikes/components/spike_strip.dart';
 import 'package:flappy_spikes/game/config.dart';
@@ -61,12 +62,13 @@ void main() {
       expect(SqueezeConfig.openFor(9, 568), 230);
     });
 
-    test('§3.17 schedule knobs: 60–120 s, hold 10–20 s, window 3 s before '
+    test('§3.17 schedule knobs (PRD-2.3 §14.4: in hoops — first 25–40, '
+        'hold 5–10, next 25–45 after the previous ended), window 3 s before '
         'the warning, waits until a ride / revive ends + 2 s', () {
-      expect(RunConfig.squeezeGapMin, 60);
-      expect(RunConfig.squeezeGapMax, 120);
-      expect(RunConfig.squeezeHoldMin, 10);
-      expect(RunConfig.squeezeHoldMax, 20);
+      final t = TuningValues.current;
+      expect(t.range('squeeze_first'), (25, 40));
+      expect(t.range('squeeze_hold'), (5, 10));
+      expect(t.range('squeeze_gap'), (25, 45));
       expect(RunConfig.squeezeWindowLead, 3);
       expect(SqueezeConfig.waitAfter, 2);
     });
@@ -332,7 +334,7 @@ void main() {
       expect(run.directorContext().squeezeWindow, isFalse);
       run.debugForce(ElementId.squeeze);
       final birdX = run.birdTrackPosition()!.x;
-      final cruise = RunConfig.cruise(s.runClock);
+      final cruise = RunConfig.cruise(s.hoopIndex);
       for (final h in run.spawner.hoops) {
         final cross = s.runClock + (h.planeX - birdX) / cruise;
         expect(cross, lessThanOrEqualTo(s.squeeze.nextAt - 3));

@@ -8,11 +8,11 @@ import '../components/bird.dart';
 import '../game/flappy_game.dart';
 import '../game/sound.dart';
 import '../menu/powerup_slot.dart';
+import 'config/gates_config.dart';
 import 'config/physics_config.dart';
 import 'config/revive_config.dart';
 import 'config/saw_config.dart'; // WP-3d
 import 'config/squeeze_config.dart'; // WP-3g
-import 'config/streak_config.dart' show PerfectConfig;
 import 'config/run_config.dart';
 import 'director/run_director.dart';
 import 'effects/dust_puff.dart';
@@ -62,9 +62,18 @@ class RunController extends Component {
         for (final id in storage.metElements) ?ElementId.fromStorageId(id),
       },
     );
-    enabled =
+    final all =
         setup.enabledOverride ??
         {...registeredElements(), ...registeredPickupElements()};
+    // PRD-2.3 §14.6 lifetime unlock gates (a debug force ignores them).
+    final games = storage.gamesPlayed;
+    enabled = setup.ignoreGates
+        ? all
+        : GatesConfig.filter(
+            all,
+            games,
+            keep: [...setup.forced, if (setup.forcedRide != null) ElementId.portal],
+          );
     director = RunDirector(
       seed: setup.seed,
       enabled: enabled,
@@ -73,6 +82,13 @@ class RunController extends Component {
       lastPortalRide: RideId.fromStorageId(storage.lastPortalRide),
       forced: setup.forced,
       forcedRide: setup.forcedRide,
+      // PRD-2.3 §14.2 never in two runs in a row.
+      featherAllowed:
+          setup.forced.contains(ElementId.feather) ||
+          !GatesConfig.shownLastRun(storage.lastFeatherRun, games),
+      pieceAllowed:
+          setup.forced.contains(ElementId.puzzlePiece) ||
+          !GatesConfig.shownLastRun(storage.lastPieceRun, games),
     );
     state.hoopIndex = setup.startHoopIndex;
     geo = RunGeometry(state);
@@ -147,7 +163,7 @@ class RunController extends Component {
     if (_started) return;
     _started = true;
     clock.running = true;
-    state.forwardSpeed = BirdMotion.cruise(state.runClock);
+    state.forwardSpeed = BirdMotion.cruise(state.hoopIndex);
     if (setup.starter == Powerup.shield) state.shield = true;
     for (final f in features) {
       f.attach(ctx);
@@ -185,7 +201,7 @@ class RunController extends Component {
   /// The director's per-decision snapshot (ARCH §2.2).
   DirectorContext directorContext() {
     final s = state;
-    final cruise = RunConfig.cruise(s.runClock);
+    final cruise = RunConfig.cruise(s.hoopIndex);
     final birdX = birdTrackPosition()?.x ?? s.camX + RunConfig.birdX;
     final lead = (director.nextTrackX - birdX) / cruise;
     final sq = s.squeeze;
@@ -443,19 +459,15 @@ class RunController extends Component {
     }
   }
 
-  /// §3.0.4 5 a pass. PRD-2.2 §11: perfect = no rim touched **and** the
-  /// crossing inside the perfect zone of the passed ring
-  /// ([PerfectConfig.inZone] on `Hoop.passOffset`); rides: always perfect.
-  /// A clean pass (no rim, outside the zone) is non-perfect; a graze is a
-  /// pass after a rim touch.
+  /// §3.0.4 5 a pass. PRD-2.3 §14.3: perfect = a pass with no rim touch,
+  /// anywhere in the gap (Flappy Dunk's swish; the PRD-2.2 §11 centre zone
+  /// is retired); rides: always perfect. A graze is a pass after a rim
+  /// touch. ([HoopPassed.clean], a rim-free pass outside the old zone, no
+  /// longer happens.)
   void _pass(Hoop h, int ring) {
     h.resolvePass(ring);
     final ride = state.ride != null;
-    final off = h.passOffset;
-    // A pass without a crossing offset outside a ride (none today) is
-    // judged centred, as in 2.1.
-    final inZone = off == null || PerfectConfig.inZone(off, h.opening);
-    final perfect = ride || (!h.touched && inZone);
+    final perfect = ride || !h.touched;
     final clean = !perfect && !h.touched && !ride;
     state.passes++;
     state.hoopsPassed++;

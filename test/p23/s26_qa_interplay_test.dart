@@ -137,7 +137,7 @@ void main() async {
         },
       );
     }
-  }, skip: 'S8-12');
+  });
 
   tester(711).testGameWidget(
     '§26 locked Skins blocks pointer tabs, try-on and dragging; '
@@ -285,5 +285,5 @@ void main() async {
         expect(g.runHasBanner, isFalse, reason: 'launch ownership, first run');
       },
     );
-  }, skip: 'S8-13');
+  });
 }

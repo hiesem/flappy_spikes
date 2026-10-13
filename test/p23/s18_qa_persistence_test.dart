@@ -65,7 +65,7 @@ void main() {
         expect(prefs.getInt('playtimeSeconds'), g.storage.playtimeSeconds);
       },
     );
-  }, skip: 'S8-09');
+  });
 
   group('S8-10 preload', () {
     tester(runs: 4).testGameWidget(
@@ -78,7 +78,7 @@ void main() {
         expect(ads.preloads, 0, reason: 'the fifth run has not finished');
       },
     );
-  }, skip: 'S8-10');
+  });
 
   tester(runs: 4).testGameWidget(
     '§18 × §10 a waiting run counts foreground time but no finished run',

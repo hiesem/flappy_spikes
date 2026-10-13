@@ -554,9 +554,15 @@ void main() async {
     test('a sync asked for before initialize runs right after it', () async {
       final store = FakeStore()..goLive(IapProduct.values);
       final service = StoreIapService(store: store);
-      await service.syncPurchases();
+      // S8-13: the early sync's future completes once the deferred sync ran
+      // (the game's first START waits for it, PRD-2.3 §24.3).
+      var done = false;
+      final early = service.syncPurchases().then((_) => done = true);
+      await Future<void>.delayed(Duration.zero);
       expect(store.restoreCalls, 0);
+      expect(done, isFalse);
       await service.initialize();
+      await early;
       expect(store.restoreCalls, 1);
     });
   });

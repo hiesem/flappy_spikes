@@ -27,7 +27,13 @@ void main() {
       // open, which reshuffles these seeded courses; seeds 11 / 29 at 568 pt
       // met the bot's known falling-train overshoot (the base fails other
       // seeds the same way, ≈ 7 % of seeds either way). The jar flies 13 / 31.
-      for (final seed in element == ElementId.jar ? [3, 13, 31] : [3, 11, 29]) {
+      // P23-FIX2 (S8-11): a big bonus drawn during the activity cool-down
+      // now waits, so cool-down gaps draw again and reshuffle the courses;
+      // the pig's seeds 11 / 29 met the same overshoot: it flies 13 / 31.
+      for (final seed
+          in element == ElementId.jar || element == ElementId.piggy
+              ? [3, 13, 31]
+              : [3, 11, 29]) {
         FlameTester<FlappySpikesGame>(
           () => createRunTestGame(worldHeight: height, seed: seed),
           gameSize: Vector2(320, height),

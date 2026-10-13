@@ -1124,12 +1124,12 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   playtime since install**, whichever comes first (`ads_grace_runs`,
   `ads_grace_seconds`); no best-score gate. Nothing preloads during it. The
   playtime counts only while resumed and outside full-screen ads, is saved
-  every 10 s on the menus, on going to the background and at run end, and is
-  kept by "Delete my data". Skip reason `new_player` replaces `first_runs`.
-  DEVIATION within §18.3: during a run and on its results page the 10 s write
-  waits; the run's time is saved when the Home arrives (a run is one flight of
-  at most a few minutes, and the grace ends after 5 runs). A crash mid-run
-  loses at most that run's time instead of 10 s.
+  every 10 s in every foreground state (menus, waiting, flight, results), on
+  going to the background and at run end, and is kept by "Delete my data"; a
+  crash loses at most 10 s. The interstitial preload uses the same finished-run
+  predicate as the show: a grace that ends with a run's finish loads at that
+  run's end. Skip reason `new_player` replaces `first_runs`. (The earlier
+  "write waits until Home" deviation was withdrawn by fix S8-09.)
 - DEVIATION (PRD-2.3 §23, rating prompt): a run whose results page requests
   the store's rating sheet (run 5 — `rate_min_runs` — or a new best after it)
   has **no interstitial** (skip reason `rating`). The request waits 1.5 s
@@ -1142,10 +1142,18 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   fallback 3 h. Never on the arrival of a run that requested the rating sheet
   or when a gift came up on that visit (PRD-2.3 §0 item 2); at most one offer
   per arrival.
+- DEVIATION (PRD-2.3 §24.3, launch ownership; fix S8-13): the session's
+  first START waits for the launch purchase sync still running (its grants
+  applied), at most `Config.launchOwnershipStartWait` (1.5 s of game time),
+  so a No Ads restored or redeemed at launch removes even the first run's
+  banner. Once the sync has settled, START is immediate as before; a No Ads
+  bought during a run still applies from the next run.
 - DEVIATION (PRD-2.3 §26, Shop and Skins lock): below a best of
   `ui_unlock_best` (25) the Shop and Skins screens open dimmed under a lock
   overlay (#000000 at 72 %, two centred lines); only the back button and the
-  coin pill work. The Home tiles show a lock badge and no NEW tag while
+  coin pill work; the overlay leaves the back button's box undimmed (its
+  artwork is the shared corner box below the screens, fix S8-12). The Home
+  tiles show a lock badge and no NEW tag while
   locked. The revive shop's GET COINS is never locked. Unlocking is silent.
 - Tests: `test/p22/s7_ads_test.dart`, `test/p22/s7_banner_layout_test.dart`
   (autopilot gate + run screens at 663 / 596 / 524); shots
@@ -1573,7 +1581,11 @@ production build has the flag off and uses these values only. Full key table:
   owed comet keep their "stays due" path and count as the waiting bonus; the comet roll
   happens before the block check so the course stream stays the same. The director
   model drops the big-bonus rate ≈ 14 %, the in-run soak (1600 runs) ≈ 18 % (target ≤ 10 %;
-  reported, PRD-2.3 §17.6).
+  reported, PRD-2.3 §17.6). Fix S8-11: a gap blocked by the activity / cool-down is
+  still drawn (nothing placed), so a big item drawn there waits too; the soak after it
+  (1600 runs) measures 6.64 vs 8.06 big / 50 hoops, a 17.6 % drop. The remaining drop
+  is the mandated "one waits, further big draws fall back to non-big" discard (about
+  40 discarded big draws per 1 600 hoops in an instrumented soak).
 - DEVIATION (PRD-2.3 §17.4, supersedes the fixed 60 pt for big bonuses): each slot's
   hoop is created at `max(60, visual reach + 8)` pt past the right edge (portal 66 + 12
   + 8; FEVER its decor-scaled beam; pair its gift tag; comet-star hoop the star's tail).

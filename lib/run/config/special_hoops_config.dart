@@ -5,9 +5,16 @@ import 'tuning_values.dart';
 /// Bullseye Ring (PRD-2 §3.24, §5.23). Every member's doc starts with its
 /// PRD section.
 abstract final class BullseyeConfig {
-  /// §3.24 Bullseye band: ± this many pt around the ring centre (fixed as
-  /// openings shrink, Q63).
-  static const double band = 12;
+  /// §3.24 Bullseye band DRAWING: the guide lines sit at ± this many pt
+  /// around the ring centre (fixed as openings shrink, Q63). Owner
+  /// 2026-10-13: the drawing stays fixed; only the hit check is remote
+  /// ([band]).
+  static const double drawBand = 12;
+
+  /// §3.24 Bullseye HIT band: ± this many pt around the ring centre. Owner
+  /// 2026-10-13 (PRD-2.3 §15 tuning `point_bullseye_band`, default 12):
+  /// replaces the fixed 12 pt for the hit check only.
+  static double get band => TuningValues.current.d('point_bullseye_band');
 
   /// §3.24 Coins for a bullseye. PRD-2.3 §14.2: 1 (`coin_bullseye`; was
   /// 3).

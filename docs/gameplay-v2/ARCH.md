@@ -145,7 +145,7 @@ code. Paths are relative to `flappy_spikes/`.
 | `scoring.dart` | 1a | points per pass (PRD-2.2 §13: 1, perfect max(2, streak); attached **after** `StreakFeature` so it reads the new streak), coin per pass (1 / 2 perfect), colour stage per 10 hoops, `point.mp3` on non-perfect |
 | `extra_life.dart`, `shield.dart`, `invulnerability.dart` | 2a | `MistakeInterceptor`s (shield order 10, extra life order 20), 2 s invulnerability, flash (`InvulnerabilityFeature`, §14) |
 | `big_hoops.dart` | 2a | D = 30–40 s (`timing` stream), mult 1.5 eased over last 8 s, gold look, cap to band |
-| `streak.dart` | 2b | streak/tier, banners, pass sounds, FEVER hook (`streak = max(5, streak+1)`), break on graze/save |
+| `streak.dart` | 2b | streak/tier, banners, pass sounds, FEVER hook (`streak = max(5, streak+1)`), break on graze/save/clean. Perfect is decided in `RunController._pass` via `PerfectBandConfig.isPerfect` (`config/streak_config.dart`): no rim touch, plus — when the remote `point_perfect_band` curve is > 0 at the hoop index (owner 2026-10-13) — the crossing offset within ±band; rides always perfect |
 | `rumble_router.dart` | 2b (2c folded in) | events → `Rumble.knock/shake` |
 | `comet.dart` | 3a | 10 s × 1.7, auto-pilot, rims ignored, timed-powerup slot |
 | `fever.dart` | 3c, P22-V2 | FEVER + the one fire master (`FireMaster`, PRD-2.2 §21): lit by a ×3 streak (`StreakChanged`) or FEVER, size by streak, flame-trail colours, one `fever_loop` player (25 % / FEVER volume with a 0.3 s ramp) |

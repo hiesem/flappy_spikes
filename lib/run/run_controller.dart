@@ -14,6 +14,7 @@ import 'config/revive_config.dart';
 import 'config/saw_config.dart'; // WP-3d
 import 'config/squeeze_config.dart'; // WP-3g
 import 'config/run_config.dart';
+import 'config/streak_config.dart'; // owner 2026-10-13 perfect band
 import 'director/run_director.dart';
 import 'effects/dust_puff.dart';
 import 'effects/miss_flash.dart';
@@ -512,11 +513,19 @@ class RunController extends Component {
   /// anywhere in the gap (Flappy Dunk's swish; the PRD-2.2 §11 centre zone
   /// is retired); rides: always perfect. A graze is a pass after a rim
   /// touch. ([HoopPassed.clean], a rim-free pass outside the old zone, no
-  /// longer happens.)
+  /// longer happens.) Owner 2026-10-13: with a remote `point_perfect_band`
+  /// > 0 a rim-free pass must also cross within that band
+  /// ([PerfectBandConfig]); a rim-free pass outside it is [HoopPassed.clean].
   void _pass(Hoop h, int ring) {
     h.resolvePass(ring);
     final ride = state.ride != null;
-    final perfect = ride || !h.touched;
+    final perfect =
+        ride ||
+        PerfectBandConfig.isPerfect(
+          touched: h.touched,
+          hoopIndex: h.plan.index,
+          offset: h.passOffset,
+        );
     final clean = !perfect && !h.touched && !ride;
     state.passes++;
     state.hoopsPassed++;

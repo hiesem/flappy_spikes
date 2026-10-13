@@ -119,4 +119,29 @@ abstract final class StreakConfig {
 
 // PRD-2.3 §14.3 the PRD-2.2 §11 perfect zone (`PerfectConfig`: ±0.2 × the
 // opening, max 24 pt) is retired: a perfect is any pass with no rim touch.
-// The Bullseye keeps its own ±12 pt band (`BullseyeConfig.band`).
+// The Bullseye keeps its own band (`BullseyeConfig.band`, remote
+// `point_bullseye_band`, owner 2026-10-13).
+
+/// Owner 2026-10-13 (PRD-2.3 §14.3 + §15): the optional remote perfect band.
+abstract final class PerfectBandConfig {
+  /// Owner 2026-10-13: the perfect band (± pt around the gap centre) at
+  /// [hoopIndex], from the `point_perfect_band` keyframe curve (default
+  /// `[[0, 0]]`). A value ≤ 0 means no band (the §14.3 rule).
+  static double bandAt(int hoopIndex) =>
+      TuningValues.current.curve('point_perfect_band').at(hoopIndex);
+
+  /// Owner 2026-10-13: whether a non-ride pass is perfect. A rim touch is
+  /// never perfect. With a band v > 0 the bird centre's crossing [offset]
+  /// (ring-local, `Hoop.passOffset`, measured like the Bullseye) must also
+  /// be within ±v pt; a null [offset] (no crossing recorded) skips the band.
+  static bool isPerfect({
+    required bool touched,
+    required int hoopIndex,
+    double? offset,
+  }) {
+    if (touched) return false;
+    final v = bandAt(hoopIndex);
+    if (v <= 0 || offset == null) return true;
+    return offset.abs() <= v;
+  }
+}

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+{{> head}}
+<style>
+{{css:fonts.css}}{{css:base.css}}{{css:footer.css}}{{css:home.css}}</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    {{brand:#top}}
+    <div class="grow"></div>
+    <div class="mini-badges">
+      {{badges:landing}}
+    </div>
+    <button class="iconbtn" id="sound" type="button" aria-pressed="false" aria-label="Sound off">
+      <span id="snd-img" aria-hidden="true"></span>
+    </button>
+  </div>
+  <div class="spikes up" style="--c: #FFFFFF"></div>
+</header>
+
+<main id="top">
+  <section class="zone hero first p-falcon" data-rays-at="play-frame">
+    <div class="wrap">
+      <div class="hero-text">
+        <h1>Flappy Spikes</h1>
+        <span class="banner">FLAP FAST, FLY FAR</span>
+        <p class="lead">Tap to fly. Thread the bird through the hoops, catch fire on a perfect streak and grab the power-ups. One touch of the spikes and the run is over.</p>
+        <div class="badges" id="hero-badges">
+          {{badges:landing}}
+        </div>
+        <div class="free">Free to play on Android. Coming to iPhone.</div>
+        <p class="intro">Flappy Spikes is a free one-tap flying game for Android, coming to iPhone. Tap to flap, fly your bird through the hoops and stay clear of the spikes. <a href="/story">First released on iPhone in 2014 and rebuilt in 2026</a>, it now has versus races against real players, power-ups, portal rides, 30 birds to unlock and 10 ranks from Egg to Legend. Flap fast, fly far.</p>
+      </div>
+      <div class="play-col">
+        <div class="sticker long"><b>FREE</b><span>TO PLAY</span></div>
+        <div class="play-frame" id="play-frame" tabindex="0" role="application" aria-label="Playable Flappy Spikes demo. Click, tap or press space to flap.">
+          <canvas id="demo" width="320" height="568" aria-label="A Flappy Spikes run: the bird flies through pink hoops between two spike strips.">A Flappy Spikes run: tap to flap through the hoops between the spikes.</canvas>
+        </div>
+        <div class="play-hint" id="play-hint"><b>Click</b> or press <b>space</b> to take over</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="zone how p-fledge" style="--from: #FCD9EE" id="how">
+    <div class="sticker pink head-sticker"><b>3</b><span>RULES</span></div>
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">How to play</span>
+        <h2>Three rules. That's it.</h2>
+        <p>Flappy Spikes is a one-tap flying game with hoops and spikes. Tap to fly, keep your bird in the air and thread it through every hoop.</p>
+        <a class="more" href="/how-to-play">How to play, power-ups and tips</a>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="sticker"><b>1</b></div><canvas id="how1" width="320" height="320" aria-label="The bird flapping in the air">The bird flaps once per tap.</canvas><span class="label">Tap to fly</span><p>Every tap is one flap. Let go and gravity takes over.</p></div>
+        <div class="step"><div class="sticker"><b>2</b></div><canvas id="how2" width="320" height="320" aria-label="The bird flying through a pink hoop and catching fire on a perfect streak">The bird flies through a hoop for a perfect.</canvas><span class="label">Fly through the hoops</span><p>Fly through without touching the rim for a perfect. Three perfects in a row and your bird catches fire.</p></div>
+        <div class="step"><div class="sticker"><b>3</b></div><canvas id="how3" width="320" height="320" aria-label="The bird hitting the top spikes and tumbling down">One touch of the spikes ends the run.</canvas><span class="label">Flap fast, fly far</span><p>Stay clear of the spikes, top or bottom: one touch ends the run. A shield or a heart saves you once.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="zone versus p-glider" style="--from: #B9F3E1" id="versus" data-rays-at="vs">
+    <div class="wrap split">
+      <div class="head">
+        <span class="eyebrow">Versus</span>
+        <h2>Race real players.</h2>
+        <p>Fly against a real player's run. Their score climbs live at the top of your screen as their recorded run plays back. Beat it to win.</p>
+        <p>Race real players every run, or switch to Free Fly, and chase the top of the Google Play Games leaderboard.</p>
+        <a class="more" href="/versus">How versus races work</a>
+      </div>
+      <div class="lane">
+        <div class="sticker"><b>VS</b></div>
+        <canvas id="vs" width="320" height="520" aria-label="A versus race: your score and the other player's score side by side in the versus bar">A versus race: your score against a real player's recorded run.</canvas>
+      </div>
+    </div>
+  </section>
+
+  <section class="zone skins p-phoenix" style="--from: #EBD3F5" id="skins">
+    <div class="wrap top">
+      <div class="sticker"><b>{{total}}</b><span>ITEMS</span></div>
+      <div class="head">
+        <span class="eyebrow">Birds &amp; skins</span>
+        <h2>Dress up your bird.</h2>
+        <p>Birds, hats, gear, hoops and trails to unlock. From a rubber duck to a phoenix: 30 bird skins, each with hats and trails to match.</p>
+        <a class="more" href="/birds">See every bird and skin</a>
+      </div>
+    </div>
+    <canvas class="parade" id="parade" width="1200" height="330" aria-label="A parade of Flappy Spikes birds in hats and gear">Birds in hats and gear: a rubber duck, a penguin, a phoenix, a robot and more.</canvas>
+  </section>
+
+  <section class="zone ranks p-legend" style="--from: #FFD3A8" id="ranks">
+    <div class="wrap">
+      <div class="sticker pink"><b>10</b><span>RANKS</span></div>
+      <div class="head">
+        <span class="eyebrow">Ranks</span>
+        <h2>From Egg to Legend.</h2>
+        <p>Your best score sets your rank. Ten emblems, each one bigger than the last.</p>
+        <a class="more" href="/birds#ranks">The ranks and the score for each</a>
+      </div>
+      <div class="rank-grid" id="rank-grid" role="img" aria-label="The 10 ranks: Egg, Chick, Fledgling, Flapper, Glider, Falcon, Hawk, Spike Ace, Phoenix, Legend."><noscript><p>The 10 ranks: Egg, Chick, Fledgling, Flapper, Glider, Falcon, Hawk, Spike Ace, Phoenix, Legend.</p></noscript></div>
+    </div>
+  </section>
+
+  <section class="zone cta p-ace" style="--from: #2A1260">
+    <div class="wrap">
+      <div class="sticker long"><b>FREE</b><span>TO PLAY</span></div>
+      <canvas id="cta" width="520" height="260" aria-label="The bird on fire flying through a hoop">The bird on fire flying through a hoop.</canvas>
+      <h2>Ready to fly?</h2>
+      <span class="banner" style="justify-self: center">BEAT MY SCORE!</span>
+      <div class="badges">
+        {{badges:landing:appstore}}
+      </div>
+      {{> facts}}
+    </div>
+  </section>
+
+  {{> faq}}
+</main>
+
+{{> footer}}
+
+{{> storebar}}
+
+<script defer src="{{a:js/skin_art.js}}"></script>
+<script defer src="{{a:js/emblem_art.js}}"></script>
+<script defer src="{{a:js/game.js}}"></script>
+<script>{{js:rays.js}}
+{{js:storebar.js}}</script>
+</body>
+</html>

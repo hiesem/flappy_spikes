@@ -54,6 +54,56 @@ class Config {
   static const double ownMusicRecheckDelay = .6;
   // endregion PRD-2.2 §28
 
+  // region PRD-2.3 §13 — the music never stays silent without a reason
+  /// §13.3 item 1: entries kept by the music diagnostic log.
+  static const int musicLogSize = 50;
+
+  /// §13.3 item 2: `music_held` is sent once per Home visit after the music
+  /// has been held this long (s) with the music setting on.
+  static const double musicHeldReportAfter = 10;
+
+  /// §13.4: while the music is held for "own music" on a menu, the game
+  /// re-checks this often (s).
+  static const double musicOwnRecheckInterval = 2;
+
+  /// §13.4: "own music" needs two "yes" answers at least this far apart (s).
+  static const double musicOwnConfirmGap = 1;
+
+  /// §13.4: the "own music" check on return to the foreground runs this long
+  /// (s) after the return, so the previous app has finished pausing.
+  static const double musicForegroundCheckDelay = 1;
+
+  /// §13.4: while the music is held for an interruption or a notification,
+  /// the game re-checks this often (s), not only on playback callbacks.
+  static const double musicTransientPoll = .5;
+
+  /// §13.4: a media sound that started while the game is in the foreground
+  /// counts as the player's own music only once it has played this long (s):
+  /// a notification ding of 1–2 s never does.
+  static const double musicMediaSoundOwnAfter = 2;
+
+  /// §13.4: a foreground media player must play this long (s) before it
+  /// pauses the music (measured 2026-10-13 on the Pixel 6: a media player
+  /// of another component opened and closed within 11 ms at launch).
+  static const double musicMediaSoundDebounce = .3;
+
+  /// §13.4: an ad suspend with no ad showing for longer than this (s) is
+  /// cleared on any screen.
+  static const double musicSuspendTimeout = 5;
+
+  /// §13.4 music watchdog: how often (s) a menu checks the music player.
+  static const double musicWatchdogInterval = 5;
+
+  /// §13.4 watchdog: a player told to start / resume less than this long
+  /// (s) ago is not judged yet (its state is still settling).
+  static const double musicWatchdogGrace = 1;
+
+  /// §13.4: where the platform cannot give a player's state, a listed
+  /// notification player stops holding the music after this long (s): any
+  /// ding has ended by then, so it can only be a finished, unreleased one.
+  static const double musicUnknownNotificationMaxHold = 5;
+  // endregion PRD-2.3 §13
+
   // Physics (Flappy Bird feel; an intentional, user-requested deviation from
   // the 2014 original's 1350/525 — see SPEC.md): a modest flap pop whose rise
   // is about half the final pipe gap, plus a terminal fall speed so dives
@@ -139,14 +189,63 @@ class Config {
   static final Vector2 gameCenterGameoverButtonSize = Vector2(60, 60);
   static final Vector2 scoreCircleSize = Vector2(183, 183);
 
-  // Privacy policy, hosted on GitHub Pages (docs/index.html; see
-  // SUBMISSION.md). Linked from the start scene and both store listings.
-  static const String privacyPolicyUrl =
-      'https://hiesem.github.io/flappy_spikes/';
+  // PRD-2.3 §5.5: the privacy policy moved to flappyspikes.com (the GitHub
+  // Pages copy only points here now). Linked from Settings.
+  static const String privacyPolicyUrl = 'https://flappyspikes.com/privacy';
 
-  // Store listing shared by the home Invite tile (PRD-1 §3.4).
+  // PRD-2.3 §5.6: the website, and the one share link of every share and
+  // invite text (written without https://; /get redirects per device).
+  static const String siteUrl = 'https://flappyspikes.com';
+  static const String shareUrl = 'flappyspikes.com/get';
+
+  // PRD-2.3 §20.3: the Settings links (no URL is written inline in a
+  // component).
+  static const String supportUrl = 'https://flappyspikes.com/support';
+  static const String deleteDataUrl = 'https://flappyspikes.com/delete-data';
+
+  // PRD-2.3 §22.2: Settings → Redeem code opens the Play Store's redeem
+  // screen.
+  static const String redeemCodeUrl = 'https://play.google.com/redeem';
+
+  // PRD-2.3 §22.2: the purchase sync (launch, every resume) runs at most
+  // this often.
+  static const Duration iapSyncInterval = Duration(seconds: 5);
+
+  // The Play listing. PRD-2.3 §5.6: no longer shared anywhere; kept for a
+  // direct store link the app opens itself.
   static const String storeListingUrl =
       'https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes';
+
+  // region PRD-2.3 §3 approved share texts (2026-10-12). The analytics ids
+  // (§2.1 `text_id` / `banner_id`) are the 1-based positions in these lists.
+  /// §3.1 share texts; `{score}` = the run's points on the card's sticker.
+  static const List<String> shareTexts = [
+    'I scored {score} points in Flappy Spikes 🐦 Think you can beat me? $shareUrl',
+    '{score} points in Flappy Spikes. Beat that, I dare you 😏 $shareUrl',
+    'Just hit {score} points in Flappy Spikes 🐦 Your move. $shareUrl',
+    "{score} points in Flappy Spikes. Bet you can't top it 😎 $shareUrl",
+    'I got {score} points in Flappy Spikes 🔥 Can you do better? $shareUrl',
+  ];
+
+  /// §3.2 banner texts on the share cards.
+  static const List<String> shareBanners = [
+    'BEAT MY SCORE!',
+    'TRY TO BEAT ME!',
+    'I DARE YOU!',
+    'CAN YOU BEAT IT?',
+    'THINK YOU CAN WIN?',
+  ];
+
+  /// §3.3 new-player invite texts (Invite tile, best = 0; no score).
+  static const List<String> inviteTexts = [
+    'Can you beat me at Flappy Spikes? $shareUrl',
+    "Bet you can't beat me at Flappy Spikes! $shareUrl",
+    'Come play Flappy Spikes with me, I dare you! $shareUrl',
+  ];
+
+  /// §12 the tagline (home subtitle, share-card logo bar), in capitals.
+  static const String tagline = 'FLAP FAST, FLY FAR';
+  // endregion PRD-2.3 §3
 
   // UI positions. The helpers take the playfield center Y (viewHeight / 2)
   // and reproduce the original 320x568 layout exactly at centerY = 284
@@ -1043,26 +1142,6 @@ class Config {
   static const double fakeAdMessageFontSize = 20;
   static const double fakeAdHintFontSize = 11;
 
-  // --- Settings -------------------------------------------------------------
-
-  /// "RESTORE PURCHASES" link below the privacy link (centre; 510 at 568),
-  /// clear of the 44 pt menu spike strip.
-  static Vector2 settingsRestoreLinkPositionFor(double centerY) =>
-      Vector2(160, 2 * centerY - 58);
-
-  /// PRD-2.2 §7.9 "Privacy options" (EEA/UK only): a 14 pt text link under
-  /// "Privacy Policy" (485 at 568), clear of RESTORE PURCHASES (510).
-  static Vector2 settingsPrivacyOptionsPositionFor(double centerY) =>
-      Vector2(160, 2 * centerY - 85);
-
-  /// PRD-2.2 §7.9: "Privacy Policy" moves up this far while the options
-  /// link shows (458 at 568), so the two links never overlap.
-  static const double settingsPrivacyLinkLiftWithOptions = 18;
-
-  /// PRD-2.2 §7.9: the options link's font size and tap padding.
-  static const double settingsPrivacyOptionsFontSize = 14;
-  static final Vector2 settingsPrivacyOptionsPadding = Vector2(32, 4);
-
   // Debug panel (debug builds / Linux): a column of text buttons centred on
   // the playfield.
   static const double debugRowHeight = 30;
@@ -1240,20 +1319,87 @@ class Config {
   /// §33.4 item 3: the idle check runs at most this often (from `play`).
   static const int sfxTrimIntervalMs = 5000;
 
-  /// Rows relative to the playfield centre, from the mock at 711 (centre
-  /// 355.5): title line box top 140 (centre 158), SOUND EFFECTS 235, MUSIC
-  /// 295, RUMBLE 355, credit top 405 (centre 414.6).
-  static const double settingsTitleDy = -197.5;
-  static const double settingsSfxRowDy = -120.5;
-  static const double settingsMusicRowDy = -60.5;
-  static const double settingsRumbleRowDy = -0.5;
-  static const double settingsCreditDy = 59.1;
-
-  /// 30 pt icon squares centred at x 85; labels / slider from x 130 (mock
-  /// `.srow` left 70 + 30 pt icon + 30 pt margin).
-  static const double settingsIconX = 85;
-  static const double settingsContentX = 130;
-
   /// The RUMBLE icon's buzz when switched on (s).
   static const double settingsRumbleBuzz = 0.32;
+
+  // --- Settings 2.3 (PRD-2.3 §20.2, design/settings_v23/final_src.html) -----
+  // The page's CSS at 711 pt; `SettingsLayout` stacks these top-down and,
+  // when they don't fit (568 pt), shrinks them in the §20.2 order.
+
+  /// §20.2 colours: ink (title, rows), caption grey, footer grey, the
+  /// row dividers, the volume bars' off grey, the delete row's red and its
+  /// pale chevron, the row chevron grey.
+  static const Color settingsInk = Color(0xFF7A7A7A);
+  static const Color settingsCaption = Color(0xFF9A9A9A);
+  static const Color settingsFooter = Color(0xFFA0A0A0);
+  static const Color settingsLine = Color(0xFFE2E2E2);
+  static const Color settingsBarOff = Color(0xFFDADADA);
+  static const Color settingsRed = Color(0xFFD32F2F);
+  static const Color settingsRedChevron = Color(0xFFE5A3A3);
+  static const Color settingsChevron = Color(0xFFB5B5B5);
+  static const Color settingsRowPressed = Color(0xFFFAFAFA);
+
+  /// §20.2 title `SETTINGS` (Opificio 30, .06 em), centred on the back
+  /// box's row (page: top 62).
+  static const double settingsTitleCenterY = 80;
+  static const double settingsTitleFontSize = 30;
+
+  /// §20.2 body: 14 pt side margins (292 pt wide), top 114, bottom inset 50.
+  static const double settingsBodyLeft = 14;
+  static const double settingsBodyWidth = 292;
+  static const double settingsBodyTop = 114;
+  static const double settingsBottomInset = 50;
+
+  /// §20.2 captions: 10.5 pt, .22 em, a 15 pt line, 6 pt under it.
+  static const double settingsCaptionFontSize = 10.5;
+  static const double settingsCaptionHeight = 15;
+  static const double settingsCaptionGap = 6;
+
+  /// §20.2 tiles: 3 in a row, 8 pt gaps, 100 pt tall, 40 pt icon, label
+  /// 11 pt (.14 em), ON / OFF tag 9 pt (.1 em) 6 pt from the top right.
+  static const double settingsTileHeight = 100;
+  static const double settingsTileGap = 8;
+  static const double settingsTileIcon = 40;
+  static const double settingsTileIconGap = 7;
+  static const double settingsTileLabelFontSize = 11;
+  static const double settingsTileTagFontSize = 9;
+
+  /// §20.2 music volume card (8 pt under the tiles): padding 10 / 12 / 9,
+  /// header line 17 + 6, 8 bars 30 pt tall with 5 pt gaps, rising from
+  /// 32 % to 100 %.
+  static const double settingsVolumeGap = 8;
+  static const double settingsVolumePadTop = 10;
+  static const double settingsVolumePadX = 12;
+  static const double settingsVolumePadBottom = 9;
+  static const double settingsVolumeHeadHeight = 17;
+  static const double settingsVolumeHeadGap = 6;
+  static const double settingsBarsHeight = 30;
+  static const double settingsBarGap = 5;
+  static const int settingsVolumeLevels = 8;
+  static const double settingsBarMinHeight = 0.32;
+
+  /// §20.2 a tap on the MUSIC tile at volume 0 with nothing remembered
+  /// restores this level (5 of 8).
+  static const int settingsMusicRestoreLevel = 5;
+
+  /// §20.2 the bar pop on a new step: scaleY 1.12 over 0.15 s.
+  static const double settingsBarPopScale = 1.12;
+  static const double settingsBarPop = 0.15;
+
+  /// §20.2 cards (GAME, PRIVACY & DATA): 10 pt apart, padding 2 / 12,
+  /// caption 9 pt from the top, rows 37 pt (13 pt uppercase, .1 em, a
+  /// 16 pt chevron).
+  static const double settingsCardGap = 10;
+  static const double settingsCardPadY = 2;
+  static const double settingsCardPadX = 12;
+  static const double settingsCardCaptionTop = 9;
+  static const double settingsRowHeight = 37;
+  static const double settingsRowFontSize = 13;
+  static const double settingsChevronSize = 16;
+
+  /// §20.2 footer: 10.5 pt (.08 em), two 16.8 pt lines, at least 8 pt
+  /// under the last card.
+  static const double settingsFooterFontSize = 10.5;
+  static const double settingsFooterLine = 16.8;
+  static const double settingsFooterGap = 8;
 }

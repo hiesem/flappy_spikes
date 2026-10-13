@@ -1,34 +1,19 @@
-import 'package:flame/components.dart';
-import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
-import 'package:flappy_spikes/components/ui/fadable_text.dart';
-import 'package:flappy_spikes/components/ui/sprite_button.dart';
-import 'package:flappy_spikes/components/ui/text_button.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/rumble.dart';
-import 'package:flutter/gestures.dart' show PointerDeviceKind, TapDownDetails;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'helpers.dart';
 
-/// Settings v3 layout contract (PRD-home-v3 §8, the mock's rows at 711:
-/// title top 140, SOUND EFFECTS 235, MUSIC 295, RUMBLE 355, credit 405;
-/// pinned here so layout regressions fail loudly).
-const iconX = 85.0;
-const contentX = 130.0;
-const titleDy = -197.5;
-const sfxRowDy = -120.5;
-const musicRowDy = -60.5;
-const rumbleRowDy = -0.5;
-const creditDy = 59.1;
-
+/// Settings behaviour (PRD-home-v3 §8, rebuilt by PRD-2.3 §20; the 2.3
+/// layout and its own tests live in test/p23/s20_settings_test.dart).
 /// Lets fire-and-forget persistence writes (unawaited Futures completing on
 /// microtasks) land before reading the mock store back.
 Future<void> flushPrefs() async {
@@ -41,10 +26,6 @@ void main() {
   final withGame = FlameTester<FlappySpikesGame>(
     createTestGame,
     gameSize: Vector2(Config.worldWidth, Config.worldHeight),
-  );
-  final withTallGame = FlameTester<FlappySpikesGame>(
-    () => createTestGame(const {}, 711),
-    gameSize: Vector2(Config.worldWidth, 711),
   );
   final withUnmutedGame = FlameTester<FlappySpikesGame>(
     () => createTestGame({'muteSound': false}),
@@ -71,131 +52,6 @@ void main() {
     game.openSettings();
     await flushAndMount(game);
   }
-
-  withGame.testGameWidget(
-    'settings panel builds fully at the 568 design height',
-    setUp: (game, tester) async {
-      await game.ready();
-      game.sound.enabled = false;
-      await preloadImages(game);
-      await flushAndMount(game);
-      await openSettings(game);
-    },
-    verify: (game, tester) async {
-      const centerY = 284.0;
-      final panel = game.world.children.query<SettingsPanel>().single;
-
-      final texts = panel.children.whereType<FadableTextComponent>().toList();
-      expect(
-        texts.map((t) => t.text),
-        containsAll([
-          'SETTINGS',
-          'SOUND EFFECTS',
-          'RUMBLE',
-          'Music by ElectroBaptist',
-        ]),
-      );
-      final title = texts.singleWhere((t) => t.text == 'SETTINGS');
-      expect(title.position.x, 160);
-      expect(title.position.y, centerY + titleDy);
-
-      // SFX row: 30x30 speaker button + label; MUSIC row: note icon + slider.
-      final buttons = panel.children.whereType<SpriteButton>().toList();
-      expect(buttons, hasLength(1), reason: 'sfx toggle (the 1.0 back '
-          'arrow is gone)');
-      final sfxButton = buttons.singleWhere((b) => b.position.x == iconX);
-      expect(sfxButton.position.y, centerY + sfxRowDy);
-      expect(sfxButton.size.x, Config.settingsButtonSize.x);
-
-      final musicIcons = panel.children
-          .whereType<SpriteComponent>()
-          .where((c) => c is! SpriteButton)
-          .toList();
-      expect(musicIcons, hasLength(1));
-      expect(musicIcons.single.position.x, iconX);
-      expect(musicIcons.single.position.y, centerY + musicRowDy);
-
-      final slider = panel.children.whereType<VolumeSlider>().single;
-      expect(slider.position.x, contentX);
-      expect(slider.position.y, centerY + musicRowDy - 12);
-      expect(slider.size.x, VolumeSlider.trackWidth);
-      expect(slider.value, 0.25, reason: 'default music volume');
-
-      // RUMBLE row: 30x30 toggle + label.
-      final rumble = panel.rumbleButton;
-      expect(rumble.position, Vector2(iconX, centerY + rumbleRowDy));
-      expect(rumble.size, Vector2.all(30));
-      final rumbleLabel = texts.singleWhere((t) => t.text == 'RUMBLE');
-      expect(rumbleLabel.position, Vector2(contentX, centerY + rumbleRowDy));
-      expect(
-        texts.singleWhere((t) => t.text == 'SOUND EFFECTS').position.x,
-        contentX,
-      );
-      expect(
-        texts.singleWhere((t) => t.text.startsWith('Music by')).position.y,
-        closeTo(centerY + creditDy, 1e-3),
-      );
-
-      // Back: the shared top-left spot (x 14, y 58, 38 x 38).
-      expect(panel.backButton.toRect(), const Rect.fromLTWH(14, 58, 38, 38));
-
-      final link = panel.children.whereType<TextButton>().single;
-      expect(link.label.text, 'Privacy Policy');
-      expect(link.position, Config.privacyLinkPosition);
-      expect(panel.restoreLink, isNotNull);
-
-      // Everything sits in the safe band between the spike strips.
-      expect(title.position.y - 14, greaterThan(Config.spikeHeight));
-      expect(
-        centerY + creditDy + 10,
-        lessThan(link.position.y - 10),
-      );
-    },
-  );
-
-  withTallGame.testGameWidget(
-    'settings panel lays out within the safe band at 711',
-    setUp: (game, tester) async {
-      await game.ready();
-      game.sound.enabled = false;
-      await preloadImages(game);
-      await flushAndMount(game);
-      await openSettings(game);
-    },
-    verify: (game, tester) async {
-      const centerY = 711 / 2;
-      final panel = game.world.children.query<SettingsPanel>().single;
-
-      final texts = panel.children.whereType<FadableTextComponent>().toList();
-      expect(texts.singleWhere((t) => t.text == 'SETTINGS').position.y,
-          centerY + titleDy);
-
-      // The mock's rows at 711.
-      final title = texts.singleWhere((t) => t.text == 'SETTINGS');
-      expect(title.position.y - 28 * 1.284 / 2, closeTo(140, 0.1));
-      final buttons = panel.children.whereType<SpriteButton>().toList();
-      final sfxButton = buttons.singleWhere((b) => b.position.x == iconX);
-      expect(sfxButton.position.y, 235);
-      expect(
-        panel.children.whereType<VolumeSlider>().single.center.y,
-        295,
-      );
-      expect(panel.rumbleButton.position.y, 355);
-      expect(panel.backButton.toRect(), const Rect.fromLTWH(14, 58, 38, 38));
-
-      final slider = panel.children.whereType<VolumeSlider>().single;
-      expect(slider.position.y, centerY + musicRowDy - 12);
-
-      final link = panel.children.whereType<TextButton>().single;
-      expect(link.position, Config.privacyLinkPositionFor(centerY));
-
-      expect(centerY + titleDy - 14, greaterThan(Config.spikeHeight));
-      expect(
-        centerY + creditDy + 10,
-        lessThan(link.position.y - 10),
-      );
-    },
-  );
 
   withExactSurface.testGameWidget(
     'gear button opens settings; no tap leaks to gameplay while open',
@@ -256,7 +112,7 @@ void main() {
   );
 
   withUnmutedGame.testGameWidget(
-    'SOUND EFFECTS row toggles mute and persists it',
+    'SOUND tile toggles mute and persists it',
     setUp: (game, tester) async {
       await game.ready();
       game.sound.enabled = false;
@@ -266,14 +122,13 @@ void main() {
     },
     verify: (game, tester) async {
       final panel = game.world.children.query<SettingsPanel>().single;
-      final sfxButton = panel.children
-          .whereType<SpriteButton>()
-          .singleWhere((b) => b.position.x == iconX);
+      final sfxButton = panel.soundTile;
 
       expect(game.sound.muted, isFalse);
       sfxButton.onPressed();
       expect(game.sound.muted, isTrue);
-      expect(panel.muted, isTrue, reason: 'row icon swaps to the mute sprite');
+      expect(panel.muted, isTrue, reason: 'tile icon swaps to the mute sprite');
+      expect(panel.soundTile.on, isFalse);
       await flushPrefs();
       var prefs = await SharedPreferences.getInstance();
       expect(prefs.getBool('muteSound'), isTrue);
@@ -289,7 +144,7 @@ void main() {
   );
 
   withExactSurface.testGameWidget(
-    'music slider sets the volume by tap and drag and persists it',
+    'music volume bars set the volume by tap and drag and persist it',
     setUp: (game, tester) async {
       await game.ready();
       game.sound.enabled = false;
@@ -299,39 +154,38 @@ void main() {
     },
     verify: (game, tester) async {
       final panel = game.world.children.query<SettingsPanel>().single;
-      final slider = panel.children.whereType<VolumeSlider>().single;
-      // Slider world rect: x 130..270, track centre y = 284 - 60.5.
-      const trackY = 284 + musicRowDy;
-      double worldX(double localX) => contentX + localX;
+      final bars = panel.volumeBars;
+      Offset barCentre(int i) {
+        final r = bars.barRect(i).shift(bars.absolutePosition.toOffset());
+        return Offset(r.center.dx, bars.absolutePosition.y + bars.height / 2);
+      }
 
-      // Tap at local x=35 -> 0.25.
-      await tester.tapAt(Offset(worldX(35), trackY));
+      // Tap bar 2 (0-based) -> level 3 = 3 / 8.
+      await tester.tapAt(barCentre(2));
       await tester.pump(const Duration(milliseconds: 100));
-      expect(game.sound.musicVolume, closeTo(0.25, 1e-9));
-      expect(slider.value, closeTo(0.25, 1e-9));
+      expect(game.sound.musicVolume, closeTo(3 / 8, 1e-9));
+      expect(bars.level, 3);
       await flushPrefs();
       var prefs = await SharedPreferences.getInstance();
-      expect(prefs.getDouble('musicVolume'), closeTo(0.25, 1e-9));
+      expect(prefs.getDouble('musicVolume'), closeTo(3 / 8, 1e-9));
 
-      // Drag from local x=35 to local x=119 -> 0.85. Driven with explicit
-      // moveTo (dragFrom's slop-compensation sends extra intermediate moves).
-      final gesture = await tester.startGesture(Offset(worldX(35), trackY));
-      await gesture.moveTo(Offset(worldX(119), trackY));
+      // Drag to the last bar -> 8 / 8.
+      final gesture = await tester.startGesture(barCentre(2));
+      await gesture.moveTo(barCentre(7));
       await gesture.up();
       await tester.pump(const Duration(milliseconds: 100));
-      expect(game.sound.musicVolume, closeTo(0.85, 1e-9));
-      expect(slider.value, closeTo(0.85, 1e-9));
+      expect(game.sound.musicVolume, closeTo(1, 1e-9));
       await flushPrefs();
       prefs = await SharedPreferences.getInstance();
-      expect(prefs.getDouble('musicVolume'), closeTo(0.85, 1e-9));
+      expect(prefs.getDouble('musicVolume'), closeTo(1, 1e-9));
 
-      // Tap the very left edge -> 0.0 (music off); volume stays in [0, 1].
-      await tester.tapAt(Offset(worldX(0), trackY));
+      // The card's far left -> 0 (music off).
+      await tester.tapAt(Offset(bars.absolutePosition.x + 2, barCentre(0).dy));
       await tester.pump(const Duration(milliseconds: 100));
       expect(game.sound.musicVolume, 0.0);
-      expect(game.sound.musicVolume, inInclusiveRange(0.0, 1.0));
+      expect(panel.musicTile.on, isFalse);
 
-      expect(game.state, GameState.start, reason: 'slider taps must not leak');
+      expect(game.state, GameState.start, reason: 'bar taps must not leak');
     },
   );
 
@@ -354,14 +208,17 @@ void main() {
       expect(game.world.children.query<SettingsPanel>(), isEmpty);
       final home = game.world.children.query<HomeScreen>().single;
       expect(home.opacity, 1);
-      expect(game.world.children.query<Bird>(), hasLength(1),
-          reason: 'closing settings must not add a second bird');
+      expect(
+        game.world.children.query<Bird>(),
+        hasLength(1),
+        reason: 'closing settings must not add a second bird',
+      );
       expect(game.state, GameState.start);
     },
   );
 
   withGame.testGameWidget(
-    'privacy link on the settings panel stays a guarded no-op',
+    'Privacy policy row stays a guarded no-op without a browser',
     setUp: (game, tester) async {
       await game.ready();
       game.sound.enabled = false;
@@ -371,15 +228,15 @@ void main() {
     },
     verify: (game, tester) async {
       final panel = game.world.children.query<SettingsPanel>().single;
-      final link = panel.children.whereType<TextButton>().single;
-      expect(link.label.text, 'Privacy Policy');
+      final link = panel.privacyRow;
+      expect(link.labelText.text, 'PRIVACY POLICY');
       link.onPressed(); // no browser in tests: guarded no-op, and no tap leak
       expect(game.state, GameState.start);
     },
   );
 
   withGame.testGameWidget(
-    'RUMBLE row: off is silent, on knocks once and buzzes; persists',
+    'RUMBLE tile: off is silent, on knocks once and buzzes; persists',
     setUp: (game, tester) async {
       await game.ready();
       game.sound.enabled = false;
@@ -396,10 +253,9 @@ void main() {
       game.rumble.fired.clear();
 
       // Off: silent, no buzz.
-      toggle.onTapDown(
-        TapDownEvent(1, game, TapDownDetails(kind: PointerDeviceKind.touch)),
-      );
+      panel.rumbleTile.onPressed();
       expect(game.rumble.on, isFalse);
+      expect(panel.rumbleTile.on, isFalse);
       expect(toggle.on, isFalse);
       expect(toggle.buzzing, isFalse);
       expect(game.rumble.fired, isEmpty);
@@ -409,10 +265,9 @@ void main() {
 
       // On: exactly one knock (the press knock is throttled away), buzz.
       stepGame(game, 0.2);
-      toggle.onTapDown(
-        TapDownEvent(1, game, TapDownDetails(kind: PointerDeviceKind.touch)),
-      );
+      panel.rumbleTile.onPressed();
       expect(game.rumble.on, isTrue);
+      expect(panel.rumbleTile.on, isTrue);
       expect(toggle.on, isTrue);
       expect(toggle.buzzing, isTrue);
       expect(game.rumble.fired, [RumbleKind.knock]);

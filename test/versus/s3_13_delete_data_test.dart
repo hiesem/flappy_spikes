@@ -1,15 +1,11 @@
 import 'package:flame/components.dart';
-import 'package:flame/events.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/delete_data_popup.dart';
 import 'package:flappy_spikes/components/settings_panel.dart';
-import 'package:flappy_spikes/components/ui/fadable_text.dart';
-import 'package:flappy_spikes/components/ui/text_button.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/services/versus_service.dart';
-import 'package:flutter/gestures.dart' show PointerDeviceKind, TapDownDetails;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,19 +32,9 @@ void main() {
     await flushAndMount(game);
   }
 
-  /// The row's tap (fires on tap-down, as the SOUND / RUMBLE rows do).
+  /// The row's tap (PRD-2.3 §20.2: the PRIVACY & DATA card's row).
   void tapRow(FlappySpikesGame game) {
-    game.world.children
-        .query<SettingsPanel>()
-        .single
-        .deleteIcon!
-        .onTapDown(
-          TapDownEvent(
-            1,
-            game,
-            TapDownDetails(kind: PointerDeviceKind.touch),
-          ),
-        );
+    game.world.children.query<SettingsPanel>().single.deleteRow!.onPressed();
   }
 
   FlameTester<FlappySpikesGame> at(double height) =>
@@ -63,65 +49,28 @@ void main() {
         gameSize: Vector2(320, height),
       );
 
-  at(568).testGameWidget(
-    '§3.13 the Settings row sits in the free band, clear of the bottom '
-    'spike strip at 568',
-    setUp: (game, _) async {
-      await boot(game);
-      await openSettings(game);
-    },
-    verify: (game, _) async {
-      const centerY = 284.0;
-      final panel = game.world.children.query<SettingsPanel>().single;
-      final icon = panel.deleteIcon;
-      final label = panel.deleteLabel;
-      expect(icon, isNotNull);
-      expect(label, isNotNull);
-      expect(label!.text, 'DELETE MY DATA');
-      expect(icon!.position, SettingsPanel.deleteRowPositionFor(centerY));
-      expect(label.position.x, Config.settingsContentX);
-      expect(label.position.y, icon.position.y);
-
-      // Below the rumble rows / music credit, above the privacy link, and
-      // fully inside the safe band between the 44 pt spike strips.
-      final credit = panel.children
-          .whereType<FadableTextComponent>()
-          .singleWhere((t) => t.text.startsWith('Music by'));
-      expect(icon.position.y - 15, greaterThan(credit.position.y + 10));
-      final link = panel.children.whereType<TextButton>().single;
-      expect(icon.position.y + 15, lessThan(link.position.y - link.size.y / 2));
-      expect(
-        icon.position.y + 15,
-        lessThan(game.viewHeight - Config.menuSpikeHeight),
-      );
-      expect(icon.position.y - 15, greaterThan(Config.menuSpikeHeight));
-      expect(game.deleteDataPopup, isNull);
-    },
-  );
-
-  at(711).testGameWidget(
-    '§3.13 the row is in the same band at 711 (mock settings_v3 layout '
-    'untouched)',
-    setUp: (game, _) async {
-      await boot(game);
-      await openSettings(game);
-    },
-    verify: (game, _) async {
-      const centerY = 355.5;
-      final panel = game.world.children.query<SettingsPanel>().single;
-      final icon = panel.deleteIcon!;
-      expect(icon.position, SettingsPanel.deleteRowPositionFor(centerY));
-      expect(panel.rumbleButton.position.y, centerY + Config.settingsRumbleRowDy);
-      expect(
-        panel.children.whereType<TextButton>().single.position.y,
-        Config.privacyLinkPositionFor(centerY).y,
-      );
-      expect(
-        icon.position.y + 15,
-        lessThan(game.viewHeight - Config.menuSpikeHeight),
-      );
-    },
-  );
+  for (final h in [568.0, 711.0]) {
+    at(h).testGameWidget(
+      '§3.13 / PRD-2.3 §20.2 ($h): Delete my data is the last row of the '
+      'PRIVACY & DATA card, red, clear of the bottom spike strip',
+      setUp: (game, _) async {
+        await boot(game);
+        await openSettings(game);
+      },
+      verify: (game, _) async {
+        final panel = game.world.children.query<SettingsPanel>().single;
+        final row = panel.deleteRow!;
+        expect(row.labelText.text, 'DELETE MY DATA');
+        expect(row.labelText.color, Config.settingsRed);
+        expect(panel.privacyCard.rows.last, row);
+        expect(
+          row.toAbsoluteRect().bottom,
+          lessThan(game.viewHeight - Config.menuSpikeHeight),
+        );
+        expect(game.deleteDataPopup, isNull);
+      },
+    );
+  }
 
   at(711).testGameWidget(
     '§3.13 the row opens the confirm dialog with the PRD wording; CANCEL, '

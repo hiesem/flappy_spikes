@@ -49,8 +49,11 @@ class DebugPanel extends PositionComponent
   /// PRD-2.3 §15.4 null = not on the TUNING page; else its page index.
   int? _tuningPage;
 
-  /// The open page (main / RUN DEBUG page / TUNING page).
-  (int?, int?) get _page => (_forcePage, _tuningPage);
+  /// PRD-2.3 §13.3: the MUSIC LOG page is up.
+  bool _musicPage = false;
+
+  /// The open page (main / RUN DEBUG page / TUNING page / MUSIC LOG).
+  (int?, int?, bool) get _page => (_forcePage, _tuningPage, _musicPage);
 
   @override
   Future<void> onLoad() async {
@@ -87,6 +90,8 @@ class DebugPanel extends PositionComponent
     _labels.clear();
     actions = _tuningPage != null
         ? _tuningActions()
+        : _musicPage
+        ? _musicActions()
         : _forcePage == null
         ? _buildActions()
         : _forceActions();
@@ -124,7 +129,7 @@ class DebugPanel extends PositionComponent
   Future<void> _run(int index) async {
     final page = _page;
     await actions[index].run();
-    if (page != _page) {
+    if (page != _page || _musicPage) {
       _rebuild();
       return;
     }
@@ -185,6 +190,20 @@ class DebugPanel extends PositionComponent
   }
 
   static String _two(int n) => n.toString().padLeft(2, '0');
+
+  /// PRD-2.3 §13.3: the newest music diagnostic log entries (the whole
+  /// log is in logcat, tag FS-Music); any row re-reads it.
+  List<DebugAction> _musicActions() {
+    final entries = game.sound.musicLog.entries;
+    final rows = (_rowsPerPage - 1).clamp(4, 40);
+    final shown = entries.reversed.take(rows).toList();
+    return [
+      for (final e in shown)
+        DebugAction(() => '${e.event} ${e.flags} ${e.player}', () async {}),
+      if (shown.isEmpty) DebugAction(() => '(no music events yet)', () async {}),
+      DebugAction(() => '< Back', () async => _musicPage = false),
+    ];
+  }
 
   List<DebugAction> _buildActions() {
     final menu = game.menu;
@@ -262,6 +281,8 @@ class DebugPanel extends PositionComponent
       DebugAction(() => game.versus.lastSearch.debugLine, () async {}),
       // PRD-2.3 §15.4 the read-only TUNING page.
       DebugAction(() => 'TUNING >', () async => _tuningPage = 0),
+      // PRD-2.3 §13.3: the music diagnostic log.
+      DebugAction(() => 'MUSIC LOG >', () async => _musicPage = true),
       // §3.0.8 debug force menu (PRD-2, WP-0b).
       DebugAction(() => 'RUN DEBUG >', () async => _forcePage = 0),
       DebugAction(() => 'Close', () async => onClose()),

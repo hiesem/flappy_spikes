@@ -165,7 +165,7 @@ class HomeScreen extends PositionComponent
       anchor: Anchor.topCenter,
     );
     subtitle = MenuText(
-      'DON’T TOUCH THE SPIKES',
+      Config.tagline, // PRD-2.3 §12
       fontSize: Config.homeSubtitleFontSize,
       color: _tint,
       letterSpacingEm: Config.homeSubtitleLetterSpacing,

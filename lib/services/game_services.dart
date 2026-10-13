@@ -145,7 +145,9 @@ class GameServices {
 
   void logNewBest(int score) => logEvent('new_best', {'score': score});
 
-  void logShareScore(int score) => logEvent('share_score', {'score': score});
+  /// PRD-2.3 §2.1: [extra] = `text_id`, `banner_id` and `level`.
+  void logShareScore(int score, [Map<String, Object> extra = const {}]) =>
+      logEvent('share_score', {'score': score, ...extra});
 
   /// PRD-menu-v2 §7.3: layer-aware skin-shop events (they replaced the PRD-1
   /// `skin_*` ones).

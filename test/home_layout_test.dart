@@ -174,7 +174,7 @@ void main() async {
         final subtitle = rectOf(home.subtitle);
         expect(subtitle.top, 142);
         expect(subtitle.center.dx, closeTo(160, 1e-9));
-        expect(home.subtitle.text, 'DON’T TOUCH THE SPIKES');
+        expect(home.subtitle.text, 'FLAP FAST, FLY FAR'); // PRD-2.3 §12
 
         // BEST / LAST: label + number, BEST gold, LAST the stage fg.
         expect(home.bestStat.value, '640');

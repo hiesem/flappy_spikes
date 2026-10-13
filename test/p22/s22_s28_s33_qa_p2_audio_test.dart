@@ -122,7 +122,8 @@ void main() {
         await preloadImages(g);
       },
       verify: (g, _) async {
-        await flushAndMount(g);
+        // PRD-2.3 §13.4: own music needs two yes answers 1 s apart.
+        await settleMusicChecks(g);
         expect(g.sound.ownMusicSkipped, isTrue);
         focus.externalMedia = false;
         g.sound.onAudible = (sfx) {

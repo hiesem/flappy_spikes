@@ -12,13 +12,18 @@ import 'fake_audio.dart';
 /// the generated table), long sounds get 3 players, and a fully busy pool
 /// steals its oldest copy instead of creating a player.
 void main() {
-  const music = 'HappyBeat_8-Bit_Retro_Game_Loop.mp3';
+  // PRD-2.3 §16.3: two music files (the OGG loop for Android / Linux, the
+  // MP3 for iOS), both outside the one-shot table.
+  const musicFiles = {
+    'HappyBeat_8-Bit_Retro_Game_Loop.mp3',
+    'HappyBeat_loop_56bars.ogg',
+  };
 
   group('§22.4 the duration table is current', () {
     final files = Directory('assets/audio')
         .listSync()
         .whereType<File>()
-        .where((f) => !f.path.endsWith(music))
+        .where((f) => !musicFiles.contains(f.uri.pathSegments.last))
         .toList();
 
     test('every file in assets/audio is in kSoundDurations with its size', () {
@@ -42,7 +47,34 @@ void main() {
         expect(entry.$1, greaterThan(0), reason: name);
       }
       expect(kSoundDurations.length, files.length, reason: 'no stale rows');
-      expect(kSoundDurations.containsKey(music), isFalse);
+      for (final music in musicFiles) {
+        expect(kSoundDurations.containsKey(music), isFalse, reason: music);
+      }
+    });
+
+    test('PRD-2.3 §16.3 the shipped music loop is 92.055 s (56 bars at '
+        '146 BPM) and the music file is not in the table', () {
+      final ogg = File('assets/audio/HappyBeat_loop_56bars.ogg');
+      expect(ogg.existsSync(), isTrue);
+      final bytes = ogg.readAsBytesSync();
+      // The last Ogg page's granule position = the sample count.
+      var i = bytes.length - 4;
+      while (i >= 0 &&
+          !(bytes[i] == 0x4F &&
+              bytes[i + 1] == 0x67 &&
+              bytes[i + 2] == 0x67 &&
+              bytes[i + 3] == 0x53)) {
+        i--;
+      }
+      var granule = 0;
+      for (var k = 7; k >= 0; k--) {
+        granule = granule * 256 + bytes[i + 6 + k];
+      }
+      expect(granule / 44100, closeTo(92.055, 0.0005));
+      expect(
+        SoundService.musicFileFor(isIOS: false),
+        ogg.uri.pathSegments.last,
+      );
     });
 
     test('every Sfx and SfxLoop file is in the table', () {

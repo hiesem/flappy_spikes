@@ -218,7 +218,7 @@ void main() {
     expect(r.spy.params('shop_open').last, {'source': 'pill'});
     await tap(g, t, const Offset(33, 77));
     var invites = 0;
-    g.onInvite = () => invites++;
+    g.onInvite = (_) => invites++;
     await tap(g, t, const Offset(197, 608));
     expect(invites, 1);
     expect(g.menu.wallet.balance, 0);
@@ -495,8 +495,9 @@ void main() {
     await tap(g, t, const Offset(33, 77));
     await tap(g, t, const Offset(33, 77));
     final settings = g.world.children.query<SettingsPanel>().single;
-    expect(settings.restoreLink, isNotNull);
-    await tap(g, t, const Offset(160, 653));
+    expect(settings.restoreRow, isNotNull);
+    // PRD-2.3 §20.2: GAME → Restore purchases (row 388..425 at 711).
+    await tap(g, t, const Offset(160, 406));
     expect(toast(g), 'Purchases restored');
   });
 
@@ -519,7 +520,7 @@ void main() {
   e2e('QA empty restore times out with feedback', (g, r, t) async {
     g.openSettings();
     await settle(g, t, fade: true);
-    await tap(g, t, const Offset(160, 653));
+    await tap(g, t, const Offset(160, 406)); // PRD-2.3 §20.2 Restore row
     stepGame(g, 12);
     await flushAndMount(g);
     expect(toast(g), 'Nothing to restore');
@@ -631,10 +632,10 @@ void main() {
     t,
   ) async {
     await tap(g, t, const Offset(33, 77));
-    // Settings v3 rows (PRD-home-v3 §8): SOUND at y 235, the slider at
-    // y 295 from x 130.
-    await tap(g, t, const Offset(85, 235));
-    await tap(g, t, const Offset(165, 295));
+    // PRD-2.3 §20.2 at 711: the SOUND tile (14..106 x 135..235), then the
+    // 2nd volume bar (bars from x 26, 268 wide; y 276..306) = 2 / 8.
+    await tap(g, t, const Offset(60, 185));
+    await tap(g, t, const Offset(80, 300));
     expect(g.storage.muteSound, isTrue);
     expect(g.storage.musicVolume, closeTo(0.25, 0.01));
     g.onKeyEvent(key(LogicalKeyboardKey.escape), {});

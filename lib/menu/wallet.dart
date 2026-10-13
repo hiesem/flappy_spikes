@@ -26,6 +26,9 @@ enum CoinSource {
   jar,
   frenzy,
   // endregion WP-0b
+  // PRD-2.3 §22.2: a gift-code product (gift_coins_10000 /
+  // gift_noads_coins_10000).
+  gift,
 }
 
 extension CoinSourceName on CoinSource {
@@ -51,6 +54,7 @@ extension CoinSourceName on CoinSource {
         CoinSource.piggy => 'piggy',
         CoinSource.jar => 'jar',
         CoinSource.frenzy => 'frenzy',
+        CoinSource.gift => 'gift',
       };
 
   /// In-run sources: `coins_earned` for these is aggregated per source by

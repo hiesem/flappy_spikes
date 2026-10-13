@@ -33,8 +33,12 @@ class CountingAudioPlatform extends AudioplayersPlatformInterface {
   int positionPolls = 0;
   int starts = 0;
 
-  /// Native players alive now (created, not yet disposed).
-  int get live => creates - disposes;
+  /// PRD-2.3 §16.4: the just_audio music player (Android), one player.
+  int musicPlayers = 0;
+
+  /// Native players alive now (created, not yet disposed), the just_audio
+  /// music player included.
+  int get live => creates - disposes + musicPlayers;
 
   @override
   Future<void> create(String playerId) {

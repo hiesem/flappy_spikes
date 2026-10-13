@@ -92,7 +92,12 @@ import 'palettes.dart';
 import 'playfield.dart';
 import 'playfield_viewport.dart';
 import 'purchases.dart';
+import '../services/app_info.dart';
+import '../share/share_card.dart' show ShareCardData; // PRD-2.3 §2
+import '../share/share_content.dart'; // PRD-2.3 §2
+import '../versus/nickname.dart' show generateNickname; // PRD-2.3 §2.2
 import 'rumble.dart';
+import 'music_guard.dart';
 import 'sound.dart';
 import 'storage.dart';
 import 'tintable.dart';
@@ -282,7 +287,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// PRD-2.2 §28.3 other apps' audio (calls, alarms, the player's music).
   /// No-op by default (tests, Linux); `main.dart` sets the Android one.
   AudioFocus audioFocus = const NoopAudioFocus();
-  StreamSubscription<bool>? _audioFocusSub;
+
+  /// PRD-2.3 §13.4: the music never stays silent without a reason (built
+  /// in [onLoad] with [sound]).
+  late final MusicGuard musicGuard;
 
   /// Rewarded ads + in-app purchases. In-memory fakes unless main() passes
   /// `Monetization.forPlatform()`.
@@ -297,12 +305,17 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   Purchases get purchases => _purchases!;
   Purchases? _purchases;
 
-  /// Called when the share button is pressed (wired up by the app shell).
-  void Function(int score)? onShareScore;
+  /// PRD-2.3 §2.0: called when the results-page share button is pressed,
+  /// with the Spotlight card data and the picked text (wired up by the app
+  /// shell to the card painter and the share sheet).
+  FutureOr<void> Function(ShareCardData data)? onShareScore;
 
-  /// Called by the home Invite tile (wired up by the app shell to the share
-  /// sheet with the store link).
-  void Function()? onInvite;
+  /// PRD-2.3 §2.2: called by the home Invite tile with its card (the
+  /// Spotlight card of the last run, or a new-player card).
+  FutureOr<void> Function(ShareCardData data)? onInvite;
+
+  /// PRD-2.3 §2 the random share picks (injectable for tests).
+  ShareContent shareContent = ShareContent();
 
   /// Awaited between the START press and the run (PRD-1 §9: part 2 inserts
   /// the versus intro here). Null = the run starts synchronously.
@@ -671,7 +684,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         _pendingToast = (product, _message!);
       },
       onResolved: _dismissPendingToast,
+      onGift: _onGiftGranted,
+      clock: storage.now,
     )..start();
+    // PRD-2.3 §22.2: gift codes redeemed outside the game arrive on launch.
+    _purchases!.sync();
     sound = SoundService(muted: storage.muteSound, enabled: soundEnabled);
     _soundReady = true;
     if (kSoak && soundEnabled) {
@@ -685,7 +702,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     unawaited(sound.setMusicVolume(storage.musicVolume));
     // PRD-2.2 §28.3: the player's own music already playing at launch →
     // the game skips its own (SFX stay on); calls / alarms hold the audio.
-    _audioFocusSub = audioFocus.interruptions.listen(sound.setInterrupted);
+    // PRD-2.3 §13: the music guard turns the playback changes into holds
+    // and re-checks them; the diagnostic log goes to logcat (FS-Music).
+    sound.musicLog.sink = audioFocus.log;
+    musicGuard = MusicGuard(
+      sound: sound,
+      focus: audioFocus,
+      onMenu: () => state == GameState.start || state == GameState.results,
+      adShowing: () => _adsShowing > 0,
+      adJustEnded: () => _adJustEnded,
+      otherMusicNow: _otherMusicNow,
+      track: services.track,
+    )..attach();
     unawaited(_startMusicChecked());
     // PRD-2.2 §33.6 (S7-19): the session sound set is created once on
     // Home and kept, so the live players stay flat game after game.
@@ -808,6 +836,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (menu.noAdsPopup.evaluate() == null) return;
     bool stale() =>
         _runsThisSession > 0 ||
+        giftThisHomeVisit ||
         menu.noAds ||
         state != GameState.start ||
         menuScene != MenuScene.home;
@@ -824,7 +853,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   @override
   void onRemove() {
-    unawaited(_audioFocusSub?.cancel());
+    unawaited(musicGuard.dispose());
     monetization.consent.canRequestAds.removeListener(_preloadBanner);
     idleFrames.detach();
     _purchases?.dispose();
@@ -880,6 +909,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         _backgroundSince ??= storage.now();
       case AppLifecycleState.resumed:
         unawaited(monetization.iap.refresh());
+        // PRD-2.3 §22.2: ... and on every return (≤ once per 5 s).
+        _purchases?.sync();
         // §3.13 (S6-66) a failed versus start recovers; the queue retries.
         unawaited(versus.onResume());
         final since = _backgroundSince;
@@ -897,6 +928,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   void _setupStartScene() {
     _audioSceneChange(); // PRD-2.2 §28
+    if (_soundReady) musicGuard.onHomeArrival(); // PRD-2.3 §13.3
     state = GameState.start;
     menuScene = MenuScene.home;
     _menuTrail.clear();
@@ -1070,6 +1102,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _startGame([Powerup starter = Powerup.none]) {
     state = GameState.playing;
     _runsThisSession++;
+    _giftThisHomeVisit = false; // PRD-2.3 §0 item 2: a new Home visit next
     // PRD-2.2 §7.4: the bird starts flying — banner in, interstitial load.
     _onFirstFlight();
     services.logGameStart();
@@ -1113,6 +1146,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _startRun(Powerup starter) {
     _run?.disposeRun();
     _audioSceneChange(); // PRD-2.2 §28
+    if (_soundReady) musicGuard.onRunStart(); // PRD-2.3 §13.3
     final d = runDebug;
     // PRD-2.3 §15.2 the tuning values are read once per run, at run start.
     Tuning.instance.beginRun();
@@ -1422,6 +1456,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onToggleRumble: () => setRumble(!rumble.on),
       onDeleteMyData: openDeleteDataConfirm,
       onPrivacyOptions: privacyOptionsShown ? openPrivacyOptions : null,
+      onSupport: openSupport,
+      onRedeemCode: openRedeemCode,
     );
     _settingsPanel = settings;
     _runSettingsOpen = true;
@@ -2413,19 +2449,61 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _queuePopup(() => _menusUp, openNoAdsCelebration);
   }
 
+  // region PRD-2.3 §22 — gift codes
+
+  /// PRD-2.3 §0 item 2 (several popups on one Home visit): true from the
+  /// moment a gift is granted until the next run starts. The gift popup
+  /// goes first, then the LEVEL UP reward (it waits for an empty popup
+  /// queue); the No-Ads popup is skipped for the rest of this visit — every
+  /// No-Ads popup trigger (the session start here, PRD-2.3 §24's
+  /// after-run check) must read this flag.
+  bool get giftThisHomeVisit => _giftThisHomeVisit;
+  bool _giftThisHomeVisit = false;
+
+  /// Gift popups granted but not shown yet (tests).
+  int get pendingGiftPopups => _pendingGiftPopups;
+  int _pendingGiftPopups = 0;
+
+  /// PRD-2.3 §22.2 item 4: a gift code was granted (called right before
+  /// the coins / No Ads are credited). The pill keeps its number and the
+  /// owned looks wait; the gift popup opens the next time a menu is up
+  /// (never mid-run), one per code, one after the other.
+  void _onGiftGranted(GiftGrant gift) {
+    _giftThisHomeVisit = true;
+    _pendingGiftPopups++;
+    if (gift.noAds) {
+      _noAdsRevealHeld = true;
+      _noAdsVideoHeld = true;
+    }
+    _coinPill
+      ..hold()
+      ..reserve(gift.coins);
+    _queuePopup(() => _menusUp && _fakeAd == null && _adsShowing == 0, () {
+      _pendingGiftPopups--;
+      openNoAdsCelebration(gift: gift);
+    });
+  }
+  // endregion PRD-2.3 §22
+
   /// The celebration itself (also the debug panel's preview): `noads_unlock`,
   /// a white flash and a short shake (not under reduce motion), the popup,
   /// and at 0.43 s a confetti burst from the card plus a rain over the
   /// screen.
-  void openNoAdsCelebration() {
+  void openNoAdsCelebration({GiftGrant? gift}) {
     if (_noAdsCelebration != null) return;
-    services.logNoAdsCelebrationShown(_noAdsSource);
+    if (gift == null) services.logNoAdsCelebrationShown(_noAdsSource);
     sound.play(Sfx.noadsUnlock);
     final motion = !reduceMotion;
-    final popup = NoAdsCelebration(
-      onClaim: () => _claimNoAdsBonus(claimed: true),
-      onDismiss: () => _claimNoAdsBonus(claimed: false),
-    );
+    final popup = gift != null
+        ? NoAdsCelebration.gift(
+            gift,
+            onClaim: () => _claimNoAdsBonus(claimed: true),
+            onDismiss: () => _claimNoAdsBonus(claimed: false),
+          )
+        : NoAdsCelebration(
+            onClaim: () => _claimNoAdsBonus(claimed: true),
+            onDismiss: () => _claimNoAdsBonus(claimed: false),
+          );
     _noAdsCelebration = popup;
     world.add(popup);
     fadeOpacity(popup, from: 0, to: 1, duration: 0.16);
@@ -2511,11 +2589,19 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       duration: Config.noAdsCelebrationFadeOut,
       removeOnDone: true,
     );
-    final reservation = _noAdsBonusReserved ? kNoAdsBonusCoins : 0;
-    _noAdsBonusReserved = false;
+    final gift = popup.gift;
+    final int reservation;
+    if (gift != null) {
+      // PRD-2.3 §22.2: the gift's coins were reserved when it was granted.
+      reservation = gift.coins;
+    } else {
+      reservation = _noAdsBonusReserved ? kNoAdsBonusCoins : 0;
+      _noAdsBonusReserved = false;
+    }
     playCoinReward(
       CoinRewardAnimation.noAdsBonus(
         from: from,
+        amount: popup.bonusCoins,
         reservation: reservation,
         onDone: () => _after(Config.noAdsFlipDelay, _flipNoAdsOwned),
       ),
@@ -2555,10 +2641,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   // region PRD-2.2 §28 — game audio around ads, death and other apps
 
-  /// Bumped on every lifecycle change: a foreground check that finishes
-  /// after the app left again is dropped.
-  int _foregroundGen = 0;
-
   /// [sound] exists (lifecycle events can arrive before onLoad made it).
   bool _soundReady = false;
 
@@ -2579,40 +2661,51 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// "yes" is confirmed by the playback list alone, so the game's flaps
   /// never count as other music (docs/p22/ADS.md).
   Future<bool> _otherMusicNow() async {
+    // PRD-2.3 §13.4: while the game's own music plays, isMusicActive() is
+    // always true; only the playback list can answer.
+    if (sound.musicPlaying) return audioFocus.isOtherMediaListed();
     if (!await audioFocus.isOtherMusicActive()) return false;
     if (!sound.ownSoundRecent) return true;
     return audioFocus.isOtherMediaListed();
   }
 
   Future<void> _startMusicChecked() async {
-    if (await _otherMusicNow()) {
-      sound.setOtherMusicActive(true);
-    }
-    await sound.startMusic();
+    // PRD-2.3 §13.4: "own music" only after two "yes" answers 1 s apart.
+    musicGuard.confirmOwnMusic(
+      'launch',
+      then: () => unawaited(sound.startMusic()),
+    );
   }
 
   /// §28.2 / §28.3: the music pauses whenever the app is not in the
   /// foreground; coming back, a stale ad suspend is cleared and the
   /// player's own music (if it plays now) keeps the game music off.
+  ///
+  /// PRD-2.3 §13.4: `inactive` (a heads-up banner, the notification shade,
+  /// a system sheet) is not the background: the music keeps playing. On a
+  /// real return the check runs [Config.musicForegroundCheckDelay] after
+  /// it and needs two "yes" answers; the music stays held until then.
   void _audioLifecycle(AppLifecycleState state) {
-    final gen = ++_foregroundGen;
     if (kDebugMode) debugPrint('Sound: lifecycle ${state.name}');
     if (!_soundReady) return;
+    if (state == AppLifecycleState.inactive) return;
     if (state != AppLifecycleState.resumed) {
+      musicGuard.onBackground();
       sound.setBackground(true);
       return;
     }
+    musicGuard.onForeground();
     if (_adsShowing == 0) sound.clearSuspend();
+    if (!sound.background) return;
     if (_adsShowing > 0 || _adJustEnded) {
       sound.setBackground(false);
       return;
     }
-    unawaited(() async {
-      final other = await _otherMusicNow();
-      if (gen != _foregroundGen) return;
-      if (other) sound.setOtherMusicActive(true);
-      sound.setBackground(false);
-    }());
+    musicGuard.confirmOwnMusic(
+      'foreground',
+      delay: Config.musicForegroundCheckDelay,
+      then: () => sound.setBackground(false),
+    );
   }
 
   /// §28.2 / §28.3 at a scene change (Home arrival, run start): a stale
@@ -3012,8 +3105,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
   // endregion PRD-2.2 §7.4–§7.6
 
-  /// Invite tile: system share sheet with the store link (PRD-1 §3.4, no
-  /// reward).
+  /// Invite tile: the share sheet with a card and a text (PRD-2.3 §2.2; no
+  /// reward, PRD-1 §3.4).
   void invite() {
     if (!_homeInteractive) return;
     sound.play(Sfx.skTap);
@@ -3022,7 +3115,51 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (share == null) {
       showToast('Coming soon');
     } else {
-      share();
+      unawaited(_invite(share));
+    }
+  }
+
+  Future<void> _invite(FutureOr<void> Function(ShareCardData) share) async {
+    if (_sharing) return;
+    _sharing = true;
+    try {
+      final data = shareContent.invite(
+        best: storage.bestScore,
+        lastScore: storage.lastScore,
+        look: menu.items.look,
+        name: await shareName(),
+      );
+      services.track('invite', {'card': data.kind.analytics, ...data.analytics});
+      await share(data);
+    } catch (e) {
+      debugPrint('invite failed: $e');
+    } finally {
+      _sharing = false;
+    }
+  }
+
+  /// True while a share or invite is being prepared (a second tap waits).
+  bool _sharing = false;
+
+  /// PRD-2.3 §2.2 the username on the card: the Play Games name or the
+  /// versus nickname, created first when there is none ('' only when that
+  /// fails: the card then has no name tag).
+  Future<String> shareName() async {
+    try {
+      final n = versus.me.name.trim();
+      if (n.isNotEmpty) return n;
+    } catch (_) {}
+    try {
+      final nick = await storage.ensureVersusNickname(
+        () => generateNickname(Random()),
+      );
+      try {
+        final n = versus.me.name.trim();
+        if (n.isNotEmpty) return n;
+      } catch (_) {}
+      return nick.trim();
+    } catch (_) {
+      return '';
     }
   }
 
@@ -3463,6 +3600,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onToggleRumble: () => setRumble(!rumble.on),
       onDeleteMyData: openDeleteDataConfirm,
       onPrivacyOptions: privacyOptionsShown ? openPrivacyOptions : null,
+      onSupport: openSupport,
+      onRedeemCode: openRedeemCode,
     );
     _settingsPanel = settings;
     // PRD-home-v3 §8: the settings back button is the shared corner box
@@ -3691,10 +3830,30 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     );
   }
 
+  /// PRD-2.3 §2.0 the results-page share button: the Spotlight card of this
+  /// run (the sharer's own score and best, never an opponent's).
   void shareScore() {
     sound.play(Sfx.click);
-    services.logShareScore(score);
-    onShareScore?.call(score);
+    unawaited(_shareScore(score));
+  }
+
+  Future<void> _shareScore(int points) async {
+    if (_sharing) return;
+    _sharing = true;
+    try {
+      final data = shareContent.spotlight(
+        score: points,
+        best: storage.bestScore,
+        look: menu.items.look,
+        name: await shareName(),
+      );
+      services.logShareScore(points, data.analytics);
+      await onShareScore?.call(data);
+    } catch (e) {
+      debugPrint('share failed: $e');
+    } finally {
+      _sharing = false;
+    }
   }
 
   /// Leaderboard button (start + game-over scenes): opens the platform's
@@ -3746,18 +3905,50 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     world.add(message);
   }
 
-  /// Privacy-policy link on the start scene: opens the policy in the browser.
-  Future<void> openPrivacyPolicy() async {
-    sound.play(Sfx.click);
+  /// Settings → Privacy policy: opens `Config.privacyPolicyUrl` (§20.3).
+  Future<void> openPrivacyPolicy() => _openLink(Config.privacyPolicyUrl);
+
+  // region PRD-2.3 §20 / §22 — Settings links
+
+  /// Opens [uri] outside the game (browser / Play Store). Tests replace it
+  /// to record the links; the default never throws.
+  Future<void> Function(Uri uri) urlOpener = _launchExternal;
+
+  static Future<void> _launchExternal(Uri uri) async {
     try {
-      await launchUrl(
-        Uri.parse(Config.privacyPolicyUrl),
-        mode: LaunchMode.externalApplication,
-      );
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
       // No usable browser (or plugin unavailable in tests): ignore.
     }
   }
+
+  Future<void> _openLink(String url) async {
+    sound.play(Sfx.click);
+    try {
+      await urlOpener(Uri.parse(url));
+    } catch (_) {}
+  }
+
+  /// Settings → Support: `Config.supportUrl` (§20.3).
+  Future<void> openSupport() => _openLink(Config.supportUrl);
+
+  /// Settings → Redeem code (PRD-2.3 §22.2): the Play Store's redeem
+  /// screen; the gift arrives through the purchase sync on return.
+  Future<void> openRedeemCode() {
+    services.track('redeem_code_opened');
+    return _openLink(Config.redeemCodeUrl);
+  }
+
+  /// The Settings footer's version source (PRD-2.3 §20.2; `main.dart`
+  /// installs `PluginAppInfo`, tests a fake).
+  AppInfo appInfo = const NoAppInfo();
+
+  /// Whether the sound service exists yet (the Settings tiles' click).
+  bool get soundReady => _soundReady;
+
+  /// A Restore purchases is waiting for the store (the Settings spinner).
+  bool get purchasesRestoring => _purchases?.restoring ?? false;
+  // endregion PRD-2.3 §20 / §22
 
   // --- color stages --------------------------------------------------------
 
@@ -3895,7 +4086,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _syncSystemBackWanted();
     super.update(dt);
     _purchases?.update(dt);
-    if (_soundReady) sound.maintain();
+    if (_soundReady) {
+      sound.maintain();
+      musicGuard.update(dt); // PRD-2.3 §13.4
+    }
     _drainPopups();
 
     if (_colorFadeT < 1) {

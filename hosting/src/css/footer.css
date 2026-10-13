@@ -1,0 +1,13 @@
+/* footer: shared by every page (approved homepage footer + the PRD-2.3 §11.4 links, §5.12 identity, trademark line) */
+footer { background: #7A0044; color: #FFFFFF; font: 600 15px 'Fredoka', system-ui, sans-serif; }
+footer .spikes { height: 44px; background: #7A0044; margin-top: -44px; position: relative; -webkit-mask: url({{a:@images/ground_spikes.png}}) repeat-x left top / auto 100%; mask: url({{a:@images/ground_spikes.png}}) repeat-x left top / auto 100%; }
+footer .wrap { max-width: 1160px; margin: 0 auto; padding-inline: 20px; display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; justify-content: space-between; padding-block: 26px 40px; }
+footer nav { display: flex; flex-wrap: wrap; gap: 10px 20px; }
+footer a { color: inherit; text-decoration: none; border-bottom: 2px solid currentColor; }
+footer .copy { display: flex; align-items: center; gap: 10px; }
+footer .copy img { width: 28px; height: 28px; border-radius: 7px; }
+footer .fine { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; font-size: 13px; font-weight: 600; color: #F7C9E2; border-top: 2px solid rgba(255, 255, 255, .18); padding-top: 14px; }
+footer .fine p { margin: 0; }
+footer .fine a { color: #FFFFFF; }
+footer noscript img { vertical-align: middle; }
+body.has-bar footer .wrap { padding-bottom: 104px; }

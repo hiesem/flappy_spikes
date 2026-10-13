@@ -470,7 +470,8 @@ void main() {
     'starts at the next scene change after the other music stopped',
     setUp: boot,
     verify: (g, _) async {
-      await flushAndMount(g);
+      // PRD-2.3 §13.4: own music needs two yes answers 1 s apart.
+      await settleMusicChecks(g);
       expect(g.sound.ownMusicSkipped, isTrue);
       expect(g.sound.musicPlaying, isFalse);
       final log = audibleLog(g);
@@ -505,6 +506,12 @@ void main() {
       g.lifecycleStateChange(AppLifecycleState.paused);
       g.lifecycleStateChange(AppLifecycleState.resumed);
       await flushAndMount(g);
+      expect(g.sound.musicPlaying, isFalse);
+      // PRD-2.3 §13.4: the check runs 1 s after the return and needs a
+      // second yes 1 s later; the music stays off the whole time.
+      stepGame(g, Config.musicForegroundCheckDelay + .05);
+      await settleMusicChecks(g);
+      expect(g.sound.ownMusicSkipped, isTrue);
       expect(g.sound.musicPlaying, isFalse);
     },
   );

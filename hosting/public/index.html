@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Flappy Spikes - Flap Fast, Fly Far</title>
+<meta name="description" content="Flap fast, fly far. Fly through the hoops, race real players and unlock 148 birds, hats and gear. Free on Google Play.">
+<link rel="canonical" href="https://flappyspikes.com/">
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" type="image/png" sizes="48x48" href="/icon-48.png">
+<link rel="icon" type="image/png" sizes="96x96" href="/icon-96.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="preload" href="/a/opificio.3b80740a53.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/a/fredoka.3014c26fce.woff2" as="font" type="font/woff2" crossorigin>
+<meta name="theme-color" content="#EC008C">
+<meta property="og:title" content="Flappy Spikes">
+<meta property="og:description" content="Flap fast, fly far. Fly through the hoops and race real players.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Flappy Spikes">
+<meta property="og:image" content="https://flappyspikes.com/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Flappy Spikes bird on fire flying through a pink hoop, with the title and the Google Play and App Store badges">
+<meta property="og:url" content="https://flappyspikes.com/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Flappy Spikes">
+<meta name="twitter:description" content="Flap fast, fly far. Fly through the hoops and race real players.">
+<meta name="twitter:image" content="https://flappyspikes.com/og.png">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": [
+    "VideoGame",
+    "MobileApplication"
+   ],
+   "@id": "https://flappyspikes.com/#game",
+   "name": "Flappy Spikes",
+   "alternateName": "Flappy Spikes – Flap Fast, Fly Far",
+   "description": "Flappy Spikes is a free one-tap flying game for Android, coming to iPhone. Tap to flap, fly your bird through the hoops and stay clear of the spikes. First released on iPhone in 2014 and rebuilt in 2026, it now has versus races against real players, power-ups, portal rides, 30 birds to unlock and 10 ranks from Egg to Legend. Flap fast, fly far.",
+   "applicationCategory": "GameApplication",
+   "genre": "Arcade",
+   "operatingSystem": "Android",
+   "gamePlatform": [
+    "Android"
+   ],
+   "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "EUR"
+   },
+   "datePublished": "2014",
+   "publisher": {
+    "@id": "https://flappyspikes.com/#org"
+   },
+   "author": {
+    "@id": "https://flappyspikes.com/#org"
+   },
+   "url": "https://flappyspikes.com/",
+   "image": "https://flappyspikes.com/og.png",
+   "sameAs": [
+    "https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes"
+   ]
+  },
+  {
+   "@type": "Organization",
+   "@id": "https://flappyspikes.com/#org",
+   "name": "Duo Leads",
+   "url": "https://flappyspikes.com/",
+   "logo": "https://flappyspikes.com/icon-512.png"
+  },
+  {
+   "@type": "WebSite",
+   "@id": "https://flappyspikes.com/#website",
+   "name": "Flappy Spikes",
+   "url": "https://flappyspikes.com/",
+   "publisher": {
+    "@id": "https://flappyspikes.com/#org"
+   }
+  }
+ ]
+}
+</script>
+<style>
+@font-face { font-family: 'Opificio Neue'; src: url(/a/opificio.3b80740a53.woff2) format('woff2'); font-display: block; }
+@font-face { font-family: 'Fredoka'; font-weight: 600; src: url(/a/fredoka.3014c26fce.woff2) format('woff2'); font-display: swap; }
+@font-face { font-family: 'LVDC Common2'; src: url(/a/lvdc.3d6e6ea55d.woff2) format('woff2'); font-display: swap; }
+/* Layout: one long flight through the rank colours. Every section is a bold rank palette
+   (plate + rays, like the Spotlight share card), blending into the next; spikes only on the header and footer. */
+:root {
+  --pink: #EC008C; --plum: #7A0044; --gold: #FFB529; --white: #FFFFFF; --ink: #2E2A2D;
+  --display: 'Opificio Neue', 'Fredoka', system-ui, sans-serif;
+  --body: 'Fredoka', system-ui, sans-serif;
+  --score: 'LVDC Common2', 'Fredoka', monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .zone::before { animation: none; } }
+body { margin: 0; background: #FCD9EE; color: var(--ink); font-family: var(--body); font-weight: 600; overflow-x: hidden; }
+a { color: inherit; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-inline: 20px; }
+
+/* rank palettes (emblem_art.js LEVELS: plate / rim / accent) */
+.p-falcon  { --plate: #FCD9EE; --rim: 236, 0, 140;  --acc: #7A0044; }
+.p-fledge  { --plate: #B9F3E1; --rim: 19, 180, 141; --acc: #00695C; }
+.p-glider  { --plate: #EBD3F5; --rim: 155, 48, 217; --acc: #5E1A8C; }
+.p-phoenix { --plate: #FFD3A8; --rim: 255, 87, 34;  --acc: #B23000; }
+.p-legend  { --plate: #2A1260; --rim: 124, 77, 255; --acc: #FFB529; --ink: #FFFFFF; }
+.p-ace     { --plate: #FFF1C9; --rim: 255, 181, 41; --acc: #8A5E00; }
+
+/* a section: its plate colour fading in from the previous one, rays burst from --rx / --ry */
+.zone { position: relative; color: var(--ink); background: linear-gradient(to bottom, var(--from, var(--plate)) 0, var(--plate) 180px); overflow: hidden; isolation: isolate; }
+/* the rays turn slowly: one ray period (22.5°) every 9 s = one full turn every 2 minutes */
+/* PRD-2.3 §11.3 performance: the same rays, turned by the compositor. A layer much larger than the zone, centred on
+   (--rx, --ry; rays.js turns them into a translate so no section resize is a layout shift), rotates with transform (no repaint per frame; the approved design animated the conic gradient's angle,
+   which repainted every section on every frame). The fade-in at the top of each section, which the design did with a
+   mask, is an overlay of the section's own background colour with the inverse alpha: the same pixels. */
+@keyframes rays-spin { to { transform: rotate(22.5deg); } }
+.zone::before { content: ''; position: absolute; z-index: -1; pointer-events: none; width: 340vmax; height: 340vmax;
+  left: calc(var(--rx, 70%) - 170vmax); top: -170vmax; translate: var(--tx, 0px) var(--ty, 400px);
+  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(var(--rim), .26) 0 11.25deg, transparent 11.25deg 22.5deg);
+  animation: rays-spin 9s linear infinite; will-change: transform; }
+.zone::after { content: ''; position: absolute; inset: 0 0 auto; height: 200px; z-index: -1; pointer-events: none;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--from, var(--plate)) 100%, transparent) 0, color-mix(in srgb, color-mix(in srgb, var(--from, var(--plate)) 75%, var(--plate)) 77.5%, transparent) 45px, color-mix(in srgb, color-mix(in srgb, var(--from, var(--plate)) 50%, var(--plate)) 55%, transparent) 90px, color-mix(in srgb, color-mix(in srgb, var(--from, var(--plate)) 25%, var(--plate)) 32.5%, transparent) 135px, color-mix(in srgb, var(--plate) 10%, transparent) 180px, color-mix(in srgb, var(--plate) 0%, transparent) 200px); }
+.zone.first::after { content: none; }
+
+/* spike strips (header and footer only) */
+.spikes { height: 44px; background: var(--c, var(--pink)); -webkit-mask: url(/a/ground_spikes.44c9981c48.png) repeat-x left top / auto 100%; mask: url(/a/ground_spikes.44c9981c48.png) repeat-x left top / auto 100%; }
+.spikes.up { transform: scaleY(-1); }
+
+/* header */
+header.bar { position: sticky; top: 0; z-index: 10; background: var(--white); }
+header.bar .wrap { display: flex; align-items: center; gap: 14px; padding-block: 10px; }
+header.bar .spikes { position: absolute; left: 0; right: 0; top: 100%; }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; min-width: 0; color: var(--plum); }
+.brand img { width: 40px; height: 40px; border-radius: 10px; }
+.brand span { font-family: var(--display); font-size: 26px; white-space: nowrap; color: #6F6F6F; }
+.bar .grow { flex: 1; }
+/* the settings panel's soundbutton.png / mutebutton.png, as they are */
+.iconbtn { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; padding: 0; cursor: pointer; background: transparent; }
+#snd-img { width: 44px; height: 44px; background: var(--icon) center / contain no-repeat; }
+.iconbtn:focus-visible, .badge:focus-visible, .play-frame:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.bar .mini-badges { display: flex; gap: 8px; }
+.bar .mini-badges img { height: 38px; width: auto; display: block; }
+@media (max-width: 720px) { .bar .mini-badges { display: none; } .brand span { font-size: 22px; } }
+
+/* shared type */
+.eyebrow { font-family: var(--display); letter-spacing: .2em; font-size: 16px; text-transform: uppercase; color: var(--acc); }
+.p-legend .eyebrow { color: var(--gold); }
+h1, h2 { font-family: var(--display); font-weight: 400; margin: 0; text-wrap: balance; color: var(--acc); }
+h1 { font-size: clamp(60px, 9.5vw, 124px); line-height: .92; letter-spacing: -.01em; }
+h2 { font-size: clamp(46px, 7vw, 92px); line-height: .95; }
+.p-legend h2 { color: var(--white); }
+.lead { font-size: clamp(18px, 2vw, 22px); line-height: 1.45; max-width: 36ch; margin: 0; }
+.banner { display: inline-block; justify-self: start; font-size: clamp(22px, 3vw, 32px); color: var(--white); background: var(--pink); padding: 8px 22px; transform: rotate(-3deg); box-shadow: 8px 8px 0 var(--plum); letter-spacing: .02em; }
+.sticker { position: absolute; z-index: 3; width: var(--s, 150px); aspect-ratio: 1; border-radius: 50%; background: var(--sc, var(--gold)); border: calc(var(--s, 150px) * .07) solid var(--white); box-shadow: 8px 10px 0 var(--plum);
+  display: grid; place-content: center; text-align: center; transform: rotate(var(--r, 9deg)); pointer-events: none; }
+.sticker b { font-family: var(--score); font-weight: 400; font-size: calc(var(--s, 150px) * .3); line-height: 1; color: var(--white); }
+.sticker span { font-family: var(--display); letter-spacing: .18em; font-size: calc(var(--s, 150px) * .1); color: var(--plum); margin-top: 4px; }
+.sticker.pink { --sc: var(--pink); }
+.sticker.pink span { color: var(--white); }
+.sticker.long b { font-size: calc(var(--s, 150px) * .22); }
+.badges { display: flex; flex-wrap: wrap; gap: 14px; }
+.badge img { height: 58px; width: auto; display: block; }
+.badge { display: inline-block; border-radius: 10px; transition: transform .15s; }
+.badge:hover { transform: translateY(-3px) rotate(-1deg); }
+
+/* hero */
+.hero { --rx: 74%; --ry: 52%; }
+.hero .wrap { display: grid; grid-template-columns: 1.05fr .95fr; gap: 40px; align-items: center; padding-block: 76px 90px; }
+.hero-text { display: grid; gap: 22px; }
+.free { font-size: 15px; color: var(--acc); }
+.play-col { position: relative; display: grid; justify-items: center; gap: 16px; }
+.play-frame { position: relative; width: min(350px, 82vw); aspect-ratio: 320 / 568; border-radius: 34px; background: #2B2629; padding: 10px; box-shadow: 14px 16px 0 var(--plum); transform: rotate(2deg); cursor: pointer; touch-action: manipulation; }
+.play-frame canvas { width: 100%; height: 100%; display: block; border-radius: 25px; }
+.play-col .sticker { --s: 132px; top: -24px; right: max(0px, calc(50% - 230px)); }
+.play-hint { font-family: var(--display); letter-spacing: .14em; font-size: 14px; text-transform: uppercase; color: var(--acc); text-align: center; }
+.play-hint b { color: var(--pink); font-weight: 400; }
+@media (max-width: 860px) {
+  .hero { --rx: 50%; --ry: 74%; }
+  .hero .wrap { grid-template-columns: 1fr; text-align: center; padding-block: 56px 64px; gap: 44px; }
+  .hero-text { justify-items: center; } .lead { margin-inline: auto; } .badges { justify-content: center; } .banner { justify-self: center; }
+  .play-col .sticker { right: 0; --s: 110px; }
+}
+
+/* sections */
+section.zone { padding-block: 96px; }
+.head { display: grid; gap: 18px; max-width: 46ch; margin-bottom: 44px; }
+.head p { margin: 0; font-size: 20px; line-height: 1.45; }
+.how { --rx: 50%; --ry: 64%; }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.step { position: relative; display: grid; gap: 10px; justify-items: center; text-align: center; min-width: 0; }
+.step canvas { width: 100%; max-width: 360px; aspect-ratio: 1; display: block; }
+.step .label { font-size: 23px; color: var(--white); background: var(--pink); padding: 6px 16px; transform: rotate(-3deg); box-shadow: 6px 6px 0 var(--plum); }
+.step p { margin: 6px 0 0; font-size: 17px; line-height: 1.4; max-width: 26ch; }
+.step .sticker { --s: 70px; --sc: var(--pink); top: 4%; left: 8%; --r: -8deg; box-shadow: 5px 6px 0 var(--plum); }
+.step .sticker b { font-size: 30px; }
+.how .head-sticker { --s: 140px; top: 70px; right: max(20px, calc(50% - 560px)); }
+@media (max-width: 820px) { .steps { grid-template-columns: 1fr; gap: 56px; } .how .head-sticker { display: none; } }
+
+.versus { --rx: 72%; --ry: 55%; }
+.split { display: grid; grid-template-columns: .85fr 1.15fr; gap: 48px; align-items: center; }
+.lane { position: relative; }
+.lane { justify-self: center; width: min(340px, 86vw); }
+.lane canvas { width: 100%; aspect-ratio: 320 / 520; display: block; border-radius: 26px; box-shadow: 12px 12px 0 var(--acc); }
+.lane .sticker { --s: 130px; --sc: var(--pink); top: -46px; right: -14px; }
+.lane .sticker b { font-family: var(--body); font-size: 50px; }
+@media (max-width: 860px) { .split { grid-template-columns: 1fr; gap: 64px; } .lane .sticker { --s: 100px; top: -40px; right: 0; } }
+
+.skins { --rx: 50%; --ry: 76%; }
+.skins .head { position: relative; }
+.parade { width: 100%; height: 330px; display: block; }
+.skins .wrap.top { position: relative; }
+.skins .sticker { --s: 150px; right: 20px; top: 0; }
+@media (max-width: 720px) { .skins .sticker { --s: 104px; top: auto; bottom: -70px; right: 10px; } }
+
+.ranks { --rx: 50%; --ry: 60%; }
+.rank-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 26px 14px; }
+.rank { display: grid; justify-items: center; gap: 6px; text-align: center; min-width: 0; }
+.rank canvas { width: 100%; max-width: 200px; aspect-ratio: 1; display: block; }
+.rank b { font-family: var(--display); font-weight: 400; letter-spacing: .14em; font-size: 16px; color: var(--white); }
+.rank small { font-size: 13px; color: var(--gold); }
+.ranks .wrap { position: relative; }
+.ranks .sticker { --s: 140px; top: -10px; right: 20px; }
+@media (max-width: 760px) { .rank-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ranks .sticker { --s: 100px; top: -30px; } }
+
+.cta { --rx: 50%; --ry: 36%; text-align: center; }
+.cta .wrap { position: relative; display: grid; justify-items: center; gap: 22px; padding-block: 20px 30px; }
+.cta canvas { width: min(520px, 92vw); aspect-ratio: 2 / 1; display: block; }
+.cta .badges { justify-content: center; }
+.cta .sticker { --s: 130px; top: 0; right: max(10px, calc(50% - 330px)); }
+@media (max-width: 600px) { .cta .sticker { --s: 96px; } }
+
+/* footer: shared by every page (approved homepage footer + the PRD-2.3 §11.4 links, §5.12 identity, trademark line) */
+footer { background: #7A0044; color: #FFFFFF; font: 600 15px 'Fredoka', system-ui, sans-serif; }
+footer .spikes { height: 44px; background: #7A0044; margin-top: -44px; position: relative; -webkit-mask: url(/a/ground_spikes.44c9981c48.png) repeat-x left top / auto 100%; mask: url(/a/ground_spikes.44c9981c48.png) repeat-x left top / auto 100%; }
+footer .wrap { max-width: 1160px; margin: 0 auto; padding-inline: 20px; display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; justify-content: space-between; padding-block: 26px 40px; }
+footer nav { display: flex; flex-wrap: wrap; gap: 10px 20px; }
+footer a { color: inherit; text-decoration: none; border-bottom: 2px solid currentColor; }
+footer .copy { display: flex; align-items: center; gap: 10px; }
+footer .copy img { width: 28px; height: 28px; border-radius: 7px; }
+footer .fine { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; font-size: 13px; font-weight: 600; color: #F7C9E2; border-top: 2px solid rgba(255, 255, 255, .18); padding-top: 14px; }
+footer .fine p { margin: 0; }
+footer .fine a { color: #FFFFFF; }
+footer noscript img { vertical-align: middle; }
+body.has-bar footer .wrap { padding-bottom: 104px; }
+/* PRD-2.3 §11.4 homepage additions, in the approved design's styles (no new artwork) */
+.intro { font-size: 16px; line-height: 1.5; max-width: 44ch; margin: 0; font-weight: 600; }
+.intro a, .more { color: var(--acc); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.p-legend .more { color: var(--gold); }
+.more { font-size: 17px; justify-self: start; }
+.step .more { justify-self: center; font-size: 15px; }
+@media (max-width: 860px) { .hero .intro { margin-inline: auto; } }
+.facts { width: min(600px, 100%); margin: 8px 0 0; background: var(--white); border-radius: 22px; box-shadow: 8px 8px 0 var(--plum); padding: 22px 26px; text-align: left; font-size: 16px; line-height: 1.4; }
+.facts dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; }
+.facts h3 { margin: 0 0 10px; font-family: var(--display); font-weight: 400; font-size: 26px; color: var(--plum); }
+.facts dt { color: var(--pink); }
+.facts dd { margin: 0; }
+@media (max-width: 520px) { .facts dl { grid-template-columns: 1fr; gap: 2px; } .facts dd { margin-bottom: 8px; } }
+.faq { --rx: 50%; --ry: 30%; }
+.faq .wrap { padding-block: 0 50px; }
+.faq-list { display: grid; gap: 14px; max-width: 760px; }
+.faq details { background: var(--white); border-radius: 18px; box-shadow: 6px 6px 0 var(--plum); padding: 16px 22px; }
+.faq summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 12px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::before { content: '+'; flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--pink); color: var(--white); font-size: 22px; line-height: 1; }
+.faq details[open] summary::before { content: '\2212'; }
+.faq h3 { margin: 0; font-size: 19px; font-weight: 600; font-family: var(--body); color: var(--plum); }
+.faq details p { margin: 10px 0 2px 42px; font-size: 17px; line-height: 1.5; }
+.faq details a { color: var(--pink); }
+/* the sticky store bar on phones: only below 720 px, once the hero badges have scrolled away; it can be closed */
+.storebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: none; align-items: center; justify-content: center; gap: 12px; padding: 10px 56px calc(10px + env(safe-area-inset-bottom)) 16px; background: var(--white); box-shadow: 0 -4px 0 var(--plum); transform: translateY(110%); transition: transform .25s; }
+.storebar .badge img { height: 48px; width: auto; }
+.storebar span { font-family: var(--display); font-size: 18px; color: var(--plum); }
+.storebar button { position: absolute; right: 8px; top: 50%; translate: 0 -50%; width: 44px; height: 44px; border: 0; background: transparent; color: var(--plum); font-size: 28px; line-height: 1; cursor: pointer; }
+@media (max-width: 719.98px) { .storebar { display: flex; } .storebar.show { transform: none; } }
+@media (max-width: 380px) { .storebar span { display: none; } }
+@media (prefers-reduced-motion: reduce) { .storebar { transition: none; } }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="/a/icon-40.0137829895.webp" srcset="/a/icon-40.0137829895.webp 1x, /a/icon-80.af916cc3af.webp 2x" width="40" height="40" alt=""><span>Flappy Spikes</span></a>
+    <div class="grow"></div>
+    <div class="mini-badges">
+      <a class="badge" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dlanding"><img src="/a/gp.9e62107f39.webp" width="196" height="58" alt="Get it on Google Play"></a>
+          <a class="badge" href="#appstore"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
+    </div>
+    <button class="iconbtn" id="sound" type="button" aria-pressed="false" aria-label="Sound off">
+      <span id="snd-img" aria-hidden="true"></span>
+    </button>
+  </div>
+  <div class="spikes up" style="--c: #FFFFFF"></div>
+</header>
+
+<main id="top">
+  <section class="zone hero first p-falcon" data-rays-at="play-frame">
+    <div class="wrap">
+      <div class="hero-text">
+        <h1>Flappy Spikes</h1>
+        <span class="banner">FLAP FAST, FLY FAR</span>
+        <p class="lead">Tap to fly. Thread the bird through the hoops, catch fire on a perfect streak and grab the power-ups. One touch of the spikes and the run is over.</p>
+        <div class="badges" id="hero-badges">
+          <a class="badge" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dlanding"><img src="/a/gp.9e62107f39.webp" width="196" height="58" alt="Get it on Google Play"></a>
+          <a class="badge" href="#appstore"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
+        </div>
+        <div class="free">Free to play on Android. Coming to iPhone.</div>
+        <p class="intro">Flappy Spikes is a free one-tap flying game for Android, coming to iPhone. Tap to flap, fly your bird through the hoops and stay clear of the spikes. <a href="/story">First released on iPhone in 2014 and rebuilt in 2026</a>, it now has versus races against real players, power-ups, portal rides, 30 birds to unlock and 10 ranks from Egg to Legend. Flap fast, fly far.</p>
+      </div>
+      <div class="play-col">
+        <div class="sticker long"><b>FREE</b><span>TO PLAY</span></div>
+        <div class="play-frame" id="play-frame" tabindex="0" role="application" aria-label="Playable Flappy Spikes demo. Click, tap or press space to flap.">
+          <canvas id="demo" width="320" height="568" aria-label="A Flappy Spikes run: the bird flies through pink hoops between two spike strips.">A Flappy Spikes run: tap to flap through the hoops between the spikes.</canvas>
+        </div>
+        <div class="play-hint" id="play-hint"><b>Click</b> or press <b>space</b> to take over</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="zone how p-fledge" style="--from: #FCD9EE" id="how">
+    <div class="sticker pink head-sticker"><b>3</b><span>RULES</span></div>
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">How to play</span>
+        <h2>Three rules. That's it.</h2>
+        <p>Flappy Spikes is a one-tap flying game with hoops and spikes. Tap to fly, keep your bird in the air and thread it through every hoop.</p>
+        <a class="more" href="/how-to-play">How to play, power-ups and tips</a>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="sticker"><b>1</b></div><canvas id="how1" width="320" height="320" aria-label="The bird flapping in the air">The bird flaps once per tap.</canvas><span class="label">Tap to fly</span><p>Every tap is one flap. Let go and gravity takes over.</p></div>
+        <div class="step"><div class="sticker"><b>2</b></div><canvas id="how2" width="320" height="320" aria-label="The bird flying through a pink hoop and catching fire on a perfect streak">The bird flies through a hoop for a perfect.</canvas><span class="label">Fly through the hoops</span><p>Fly through without touching the rim for a perfect. Three perfects in a row and your bird catches fire.</p></div>
+        <div class="step"><div class="sticker"><b>3</b></div><canvas id="how3" width="320" height="320" aria-label="The bird hitting the top spikes and tumbling down">One touch of the spikes ends the run.</canvas><span class="label">Flap fast, fly far</span><p>Stay clear of the spikes, top or bottom: one touch ends the run. A shield or a heart saves you once.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="zone versus p-glider" style="--from: #B9F3E1" id="versus" data-rays-at="vs">
+    <div class="wrap split">
+      <div class="head">
+        <span class="eyebrow">Versus</span>
+        <h2>Race real players.</h2>
+        <p>Fly against a real player's run. Their score climbs live at the top of your screen as their recorded run plays back. Beat it to win.</p>
+        <p>Race real players every run, or switch to Free Fly, and chase the top of the Google Play Games leaderboard.</p>
+        <a class="more" href="/versus">How versus races work</a>
+      </div>
+      <div class="lane">
+        <div class="sticker"><b>VS</b></div>
+        <canvas id="vs" width="320" height="520" aria-label="A versus race: your score and the other player's score side by side in the versus bar">A versus race: your score against a real player's recorded run.</canvas>
+      </div>
+    </div>
+  </section>
+
+  <section class="zone skins p-phoenix" style="--from: #EBD3F5" id="skins">
+    <div class="wrap top">
+      <div class="sticker"><b>148</b><span>ITEMS</span></div>
+      <div class="head">
+        <span class="eyebrow">Birds &amp; skins</span>
+        <h2>Dress up your bird.</h2>
+        <p>Birds, hats, gear, hoops and trails to unlock. From a rubber duck to a phoenix: 30 bird skins, each with hats and trails to match.</p>
+        <a class="more" href="/birds">See every bird and skin</a>
+      </div>
+    </div>
+    <canvas class="parade" id="parade" width="1200" height="330" aria-label="A parade of Flappy Spikes birds in hats and gear">Birds in hats and gear: a rubber duck, a penguin, a phoenix, a robot and more.</canvas>
+  </section>
+
+  <section class="zone ranks p-legend" style="--from: #FFD3A8" id="ranks">
+    <div class="wrap">
+      <div class="sticker pink"><b>10</b><span>RANKS</span></div>
+      <div class="head">
+        <span class="eyebrow">Ranks</span>
+        <h2>From Egg to Legend.</h2>
+        <p>Your best score sets your rank. Ten emblems, each one bigger than the last.</p>
+        <a class="more" href="/birds#ranks">The ranks and the score for each</a>
+      </div>
+      <div class="rank-grid" id="rank-grid" role="img" aria-label="The 10 ranks: Egg, Chick, Fledgling, Flapper, Glider, Falcon, Hawk, Spike Ace, Phoenix, Legend."><noscript><p>The 10 ranks: Egg, Chick, Fledgling, Flapper, Glider, Falcon, Hawk, Spike Ace, Phoenix, Legend.</p></noscript></div>
+    </div>
+  </section>
+
+  <section class="zone cta p-ace" style="--from: #2A1260">
+    <div class="wrap">
+      <div class="sticker long"><b>FREE</b><span>TO PLAY</span></div>
+      <canvas id="cta" width="520" height="260" aria-label="The bird on fire flying through a hoop">The bird on fire flying through a hoop.</canvas>
+      <h2>Ready to fly?</h2>
+      <span class="banner" style="justify-self: center">BEAT MY SCORE!</span>
+      <div class="badges">
+        <a class="badge" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dlanding"><img src="/a/gp.9e62107f39.webp" width="196" height="58" alt="Get it on Google Play"></a>
+          <a class="badge" id="appstore" href="#appstore"><img src="/a/as.75a235080a.webp" width="196" height="58" alt="Download on the App Store"></a>
+      </div>
+      <div class="facts">
+        <h3>Flappy Spikes facts</h3>
+        <dl>
+        <dt>Developer</dt><dd>Duo Leads</dd>
+        <dt>Released</dt><dd>2014 (iPhone), 2026 (Android, rebuilt)</dd>
+        <dt>Price</dt><dd>Free, with ads. Optional No Ads and coin packs.</dd>
+        <dt>Modes</dt><dd>Versus (race a real player's run) and Free Fly</dd>
+        <dt>To unlock</dt><dd>30 birds, plus hats, gear, hoops and trails</dd>
+        <dt>Ranks</dt><dd>10, from Egg to Legend</dd>
+        <dt>Leaderboard</dt><dd>Google Play Games</dd>
+      </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="zone faq p-falcon" style="--from: #FFF1C9" id="faq">
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">FAQ</span>
+        <h2>Questions?</h2>
+      </div>
+      <div class="faq-list">
+        <details><summary><h3>Is Flappy Spikes free?</h3></summary><p>Yes. Flappy Spikes is free to play, with ads. An optional No Ads purchase removes them.</p></details>
+        <details><summary><h3>Is Flappy Spikes on iPhone?</h3></summary><p>Not yet. Flappy Spikes is on Google Play now and is coming to iPhone.</p></details>
+        <details><summary><h3>How do you play Flappy Spikes?</h3></summary><p>Three rules: tap to fly, fly through the hoops, and stay clear of the spikes. <a href="/how-to-play">Read the full guide to playing Flappy Spikes</a>.</p></details>
+        <details><summary><h3>What is Versus?</h3></summary><p>In Versus you race a real player's recorded run. Their score climbs at the top of your screen while you fly; beat it to win. <a href="/versus">More about Versus</a>.</p></details>
+        <details><summary><h3>Is this the original Flappy Spikes from 2014?</h3></summary><p>Yes. It is the same game that first flew on iPhone in 2014, rebuilt from scratch in 2026. <a href="/story">Read the Flappy Spikes story</a>.</p></details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="spikes"></div>
+  <div class="wrap">
+    <div class="copy"><img src="/a/icon-28.4b7efa7d1e.webp" srcset="/a/icon-28.4b7efa7d1e.webp 1x, /a/icon-56.895002a512.webp 2x" width="28" height="28" alt="">Flappy Spikes by Duo Leads</div>
+    <nav aria-label="Site"><a href="/how-to-play">How to play</a><a href="/birds">Birds &amp; ranks</a><a href="/story">The story</a><a href="/versus">Versus</a><a href="/games-like-flappy-bird">Games like Flappy Bird</a><a href="/support">Support</a><a href="/privacy">Privacy policy</a><a href="/delete-data">Delete data</a></nav>
+    <div class="fine">
+      <p>© 2026 Flappy Spikes · Duo Leads · <a href="mailto:hello@duoleads.com">hello@duoleads.com</a><noscript> (<img src="/a/contact.de99f8952e.svg" width="140" height="19" alt="our email address, as an image">)</noscript></p>
+      <p>Google Play and the Google Play logo are trademarks of Google LLC. App Store is a trademark of Apple Inc.</p>
+    </div>
+  </div>
+</footer>
+
+<div class="storebar" id="storebar" aria-hidden="true">
+  <span>Get the game</span>
+  <a class="badge" href="https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes&amp;referrer=utm_source%3Dflappyspikes.com%26utm_medium%3Dweb_link%26utm_campaign%3Dlanding" tabindex="-1"><img src="/a/gp.9e62107f39.webp" width="162" height="48" alt="Get it on Google Play"></a>
+  <button type="button" id="storebar-close" aria-label="Close" tabindex="-1">×</button>
+</div>
+
+<script defer src="/a/skin_art.52c6894d79.js"></script>
+<script defer src="/a/emblem_art.1c8be34be5.js"></script>
+<script defer src="/a/game.5768e2653e.js"></script>
+<script>(() => {
+  // PRD-2.3 §11.3 (CLS): every section's rays layer is placed with a translate, never with top / left, so a section
+  // that grows (a web font swapping in) doesn't count as a layout shift. The centre is (--rx, --ry) of the section, or
+  // the centre of the element named by data-rays-at (the phone in the hero and versus sections, as in the design).
+  const zones = [...document.querySelectorAll('.zone')];
+  const px = (v, size) => { v = (v || '').trim(); return v.endsWith('%') ? parseFloat(v) / 100 * size : parseFloat(v) || 0; };
+  function place() {
+    for (const z of zones) {
+      const r = z.getBoundingClientRect(), cs = getComputedStyle(z), at = z.dataset.raysAt && document.getElementById(z.dataset.raysAt);
+      let x = px(cs.getPropertyValue('--rx') || '70%', r.width), y = px(cs.getPropertyValue('--ry') || '50%', r.height);
+      if (at) { const f = at.getBoundingClientRect(); x = f.left + f.width / 2 - r.left; y = f.top + f.height / 2 - r.top; }
+      z.style.setProperty('--tx', (x - px(cs.getPropertyValue('--rx') || '70%', r.width)) + 'px');
+      z.style.setProperty('--ty', y + 'px');
+    }
+  }
+  place();
+  addEventListener('load', place); addEventListener('resize', place);
+  if (document.fonts) document.fonts.ready.then(place);
+  if ('ResizeObserver' in window) { const ro = new ResizeObserver(place); zones.forEach((z) => ro.observe(z)); }
+})();
+
+(() => {
+  // PRD-2.3 §11.4: the sticky store bar on phones. Same HTML for everyone; CSS shows it only below 720 px wide.
+  const bar = document.getElementById('storebar'), hero = document.getElementById('hero-badges');
+  if (!bar || !hero || !('IntersectionObserver' in window)) return;
+  let closed = false;
+  try { closed = sessionStorage.getItem('fs-storebar') === 'closed'; } catch (e) {}
+  const set = (show) => {
+    show = show && !closed;
+    bar.classList.toggle('show', show); bar.setAttribute('aria-hidden', String(!show));
+    bar.querySelectorAll('a, button').forEach((el) => { el.tabIndex = show ? 0 : -1; });
+    document.body.classList.toggle('has-bar', show && matchMedia('(max-width: 719.98px)').matches);
+  };
+  new IntersectionObserver(([e]) => set(!e.isIntersecting && e.boundingClientRect.top < 0)).observe(hero);
+  document.getElementById('storebar-close').addEventListener('click', () => {
+    closed = true; set(false);
+    try { sessionStorage.setItem('fs-storebar', 'closed'); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

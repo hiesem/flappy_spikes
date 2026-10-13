@@ -228,6 +228,7 @@ the HUD" ease). Details and owners in §3 and §21.
 | `lib/game/playfield.dart`, `lib/game/playfield_viewport.dart` | P22-7 | PRD-2.2 §7.5.2: `PlayfieldResizable { onPlayfieldResize(h) }` registry (`game.registerResizable`), `BannerState`, `InterstitialSkip`; `PlayfieldViewport` = FixedResolutionViewport with `setResolution`. `game.setPlayfieldHeight(visible, {stripDrop})` is the ONLY resize entry point; `viewHeight` = visible + stripDrop, `visibleHeight`, `bottomStripInset` (24 / 44) | `CameraComponent.withFixedResolution` |
 | `lib/services/ads_service.dart`, `ads_consent.dart`, `lib/components/banner_slot.dart` | P22-7 | §7.10: `AdsConsent` (once, shared), `RewardedAds` (+`ensureLoaded`), `InterstitialAds`, `BannerAds` — Noop / Fake / AdMob each; `Monetization.{ads, interstitial, banner, consent}`; `BannerSlot` under the `GameWidget` | — |
 | `lib/components/score_hud.dart` | 3g adds white-when-covered | master #2 | — |
+| `lib/share/share_card.dart`, `share_content.dart`, `share_flow.dart`, `lib/services/share_sheet.dart` | P23-4 | PRD-2.3 §2/§4: `ShareCardPainter` (pure `dart:ui`, 1080², one master per card part: rays, sticker, banner, name tag, spike strips, logo bar; emblem = `EmblemPainter`, birds = `LookPainter`), `ShareCardData`, `ShareContent` (random picks, injectable `Random`), `ShareFlow` (PNG + text, text-only fallback) behind `ShareSheet`. `game.onShareScore` / `game.onInvite` take a `ShareCardData` (was `int score` / no args); the game makes the versus nickname first (`shareName()`) | `SharePlus` |
 | `lib/components/bird.dart` | 1a | flight + kinematic tumble mode; `Bird.scale` (Mini), `Bird.goldTier`, `Bird.onFire` flags read by painters | 1.0 death impulse/spin |
 | `lib/components/look_component.dart`, `lib/skins/art/look_painter.dart` | 0c | gold tier (#5), white X-eyes (#6) | — |
 | `lib/components/gameover_panel.dart` | deleted by 2e | — | — |
@@ -567,6 +568,17 @@ spike save bounce); otherwise `RunDied` → tumble → `PostRunFlow`.
   `AudioWatch` can tell the game's players from other apps'. `RunController._die` stops all loops at the moment of
   death; features restart their own loops after a revive. Test seams: `onAudible` (passed every gate), `onMusic`
   (`start` / `pause` / `resume`), `droppedPlays`, `stopAllLoopsCalls`.
+- **Music guard and backend (PRD-2.3 §13, §16).** `lib/game/music_guard.dart` (`FlappySpikesGame.musicGuard`,
+  stepped from `update`) owns every re-check: it listens to `AudioFocus.changes` (an `AudioWatchState`: interrupted /
+  notification / media / `isMusicActive` / the raw playback list), polls `AudioFocus.snapshot()` every 0.5 s while
+  the music is held for an interruption or a notification, confirms "own music" with two answers 1 s apart
+  (`confirmOwnMusic`: launch, 1 s after a foreground return), re-checks skipped music every 2 s on a menu, clears a
+  stale ad suspend after 5 s, runs the 5 s music watchdog (`SoundService.restartMusic`, `player_dead`) and sends
+  `music_held` once per Home visit. `SoundService.setOtherSound` is the notification hold (music only).
+  `SoundService.musicLog` (`lib/game/music_log.dart`) is the 50-entry diagnostic log (logcat `FS-Music`, debug
+  panel MUSIC LOG). The plugin calls go through `MusicBackend` (`lib/game/music_backend.dart`): `JustAudioMusic` on
+  Android (ExoPlayer `LoopMode.one`, `USAGE_GAME`, no focus, no position stream), `AudioplayersMusic`
+  (`FlameAudio.bgm`) on Linux / iOS. Test seams: `musicBackend`, `musicStateProbe`, `FakeAudioFocus.push`.
 - **Rumble.** `Rumble` exists (throttle, setting). Only `rumble_router.dart` (2c) calls `knock()/shake()` for run
   events; no rumble outside `playing` (paused/revive/bonus/results never rumble).
 - **Analytics.** `ctx.track(name, params)` → `GameServices.track`. Element events are sent by the owning feature at the
@@ -1464,6 +1476,21 @@ regression in `test/e2e/p2_gameplay_e2e_test.dart` (S6-20 … S6-24).
 | Banners | `BannerHost.drawnByScene` (its own render pass draws nothing) + `renderInScene(canvas, opacity)`: a portal ride's scene banner layer draws the host at 1 − 0.5 · mix. Since PRD-2.2 §12 the host lives in the run's `RunBannerLayer` (world, −60); both members are kept and the ride layer keeps drawing it into the scene | §18.1 |
 | Portal end | `PortalRide._finish` flaps the bird; `resumeAt` = glide start + `PortalRide.cruiseDistance(runClock, glide + settle + PortalConfig.firstRingAfterControl)` (`resumeAfterLanding` is gone) | §18.2 / §18.3 |
 | Sound preload | `items/sound_preload.dart` `SoundPreloadFeature` (features region WP-G3): `HoopSpawned(portal)` → `SoundService.preload(portalCues(theme))` (`pu_portal`, `pu_land`, `flap`, the theme's cues); `PickupSpawned` comet star → `pu_comet_get/end`; capsule → its power-up's cues. `requests` (tests) | §18.4 |
+
+## PRD-2.3 WP-SET contract changes (Settings §20, gift codes §22; 2026-10-13)
+
+| Contract | Change | PRD-2.3 |
+|---|---|---|
+| Settings screen | `SettingsPanel` rebuilt in place (`lib/components/settings_panel.dart`): `SettingsTile` ×3 (SOUND / MUSIC / RUMBLE; `on`, `tag`), `VolumeBars` (8 levels, tap / drag, `levelAt(x)`, `barRect(i)`), `SettingsCard` + `SettingsRow` (GAME: Support, Restore purchases (spinner while `game.purchasesRestoring`), Redeem code; PRIVACY & DATA: Privacy policy, Privacy options (only when `privacyOptionsShown`), Delete my data), footer (`creditText`, `versionText`). Callbacks unchanged plus `onSupport`, `onRedeemCode`. Geometry: `SettingsLayout.fit(viewHeight, gameRows, privacyRows)` from the `Config.settings*` knobs (the page at 711; shrink order at 568: card gaps → rows 34 → tiles 88 → then, a call, top band / rows 30 / tiles 64 / paddings / bottom inset). Removed: `DeleteDataIcon`, `VolumeSlider`, `RestoreLink`, the old `settings*Dy` row layout use. `RumbleToggle(interactive: false)` sits inside the RUMBLE tile | §20.2, §20.4 |
+| Volume | Shown as `SettingsPanel.levelFor(volume)` (nearest of 0–8); a change stores `level / 8` through the unchanged `onMusicVolume` → `game.setMusicVolume`. The MUSIC tile remembers the last level for the app session (`SettingsPanel._lastMusicLevel`; from 0 with none: `Config.settingsMusicRestoreLevel` = 5) | §20.2 |
+| Links | `game.urlOpener` (default `launchUrl` external; tests record) behind `openPrivacyPolicy`, `openSupport` (`Config.supportUrl`), `openRedeemCode` (`Config.redeemCodeUrl`, logs `redeem_code_opened`). `Config.deleteDataUrl` is named in the Delete dialog's confirm face (`DeleteDataPopup.webText`) | §20.3, §22.2 |
+| Version | `lib/services/app_info.dart`: `AppInfo` (`NoAppInfo` default, `FixedAppInfo` tests, `PluginAppInfo` = `package_info_plus`, try/caught, wired in `main.dart`) → `game.appInfo` | §20.2, §20.4 |
+| Gift products | `IapProduct.giftCoins10000` (`gift_coins_10000`, consumable, 10 000) and `giftNoAdsCoins10000` (`gift_noads_coins_10000`, one-time, No Ads + 10 000); `isGift`, `grantsNoAds`; `kShopProducts` = everything sold / price-queried (gifts excluded; `StoreIapService` queries only these) | §22.1, §22.2 item 5 |
+| Sync | `IapService.syncPurchases()` (Store: `restorePurchases` = Play `queryPurchases`; a call before `initialize` runs right after it). `Purchases.sync()` throttles to `Config.iapSyncInterval` (5 s) on the game clock; the game calls it after creating `Purchases` (launch) and on every `resumed` | §22.2 item 2 |
+| Store layer | `IapEvent.acknowledged` (Play `Purchase.isAcknowledged`, null elsewhere). A Play purchase whose `purchaseState` is pending is never granted or completed (the plugin labels it `restored`). A granted consumable that is a gift, or a consumable brought back `restored`, is consumed with `IapStore.consumePurchase` (`InAppPurchaseAndroidPlatformAddition.consumePurchase`; false off Play → `completePurchase`) | §22.2 item 3 |
+| Granting | `Purchases._grantGift`: a gift product, or a `no_ads` not started this session with `acknowledged == false` and not yet granted (a promo code), is granted once per persisted purchase id (`GameStorage.grantedPurchases`, no new key); an already granted or store-acknowledged one-time gift only restores No Ads (never coins). Coins `CoinSource.gift` (promo `no_ads`: its 1 000 as `noadsBonus`); `gift_redeemed {product, source: promo}`; `onGift(GiftGrant)`. A restored consumable with ids is granted like a purchase. A `restored` No Ads toasts "Purchases restored" only while the player's own restore runs (the sync is silent) | §22.2 items 3, 6 |
+| Gift popup | `game._onGiftGranted`: holds the pill (`reserve(coins)`), holds the No Ads looks, queues `openNoAdsCelebration(gift:)` (`NoAdsCelebration.gift`: "A GIFT FOR YOU!", the item, the gift's coins; CLAIM flies them in via `CoinRewardAnimation.noAdsBonus(amount:)`) for `_menusUp` (any menu, never mid-run / results), one per code. `pendingGiftPopups` (tests) | §22.2 item 4 |
+| Popup order hook | **`game.giftThisHomeVisit`**: true from a gift grant until the next run starts. Gift popups queue first; LEVEL UP waits for an empty popup queue; every No-Ads popup trigger must skip while it is true — the session-start offer (`_startSession`) reads it; PRD-2.3 §24's after-run check must read it too | PRD-2.3 §0 item 2 |
 
 ## 33. PRD-2.3 §14 / §15 contract notes (P23-14 / P23-15, as built 2026-10-13)
 

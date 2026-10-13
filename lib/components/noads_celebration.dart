@@ -6,7 +6,8 @@ import 'package:flame/extensions.dart';
 import 'package:flutter/animation.dart' show Cubic, Curves;
 
 import '../game/config.dart';
-import '../services/iap_service.dart' show kNoAdsBonusCoins;
+import '../game/purchases.dart' show GiftGrant, formatAmount;
+import '../services/iap_service.dart' show IapProduct, kNoAdsBonusCoins;
 import 'home/menu_primitives.dart';
 import 'skins/celebration.dart' show keyframe;
 import 'ui/live_effects.dart' show WiggleEffect;
@@ -35,10 +36,67 @@ const List<String> kNoAdsCelebrationImages = [
 /// whole screen); CLAIM calls [onClaim], ✕ / dim / Esc [onDismiss] — both
 /// collect the bonus. Reduce motion: no swing, wobble or stamp slam, the
 /// rays and sparkles stand still.
+///
+/// PRD-2.3 §22.2 item 4: the same card is the gift popup
+/// ([NoAdsCelebration.gift]): "A GIFT FOR YOU!" with the item — the
+/// crossed-AD icon for a No Ads gift, the coin for the coins gift — and the
+/// gift's coins on the chip and CLAIM.
 class NoAdsCelebration extends P1Popup {
-  NoAdsCelebration({required this.onClaim, required super.onDismiss});
+  NoAdsCelebration({
+    required this.onClaim,
+    required super.onDismiss,
+    this.title = "YOU'RE AD-FREE!",
+    this.message = 'No more forced ads.',
+    this.thanks = 'Thanks for supporting Flappy Spikes!',
+    this.bonusCoins = kNoAdsBonusCoins,
+    this.chipLabel = 'BONUS COINS',
+    this.iconImage = 'menu/noads.png',
+    this.gift,
+  });
+
+  /// PRD-2.3 §22.2 item 4: the gift popup for [grant] (texts: PRD §0
+  /// item 11, written in the game's tone, listed in the build report).
+  factory NoAdsCelebration.gift(
+    GiftGrant grant, {
+    required void Function() onClaim,
+    required void Function() onDismiss,
+  }) {
+    final coins = formatAmount(grant.coins);
+    return NoAdsCelebration(
+      onClaim: onClaim,
+      onDismiss: onDismiss,
+      title: giftTitle,
+      message: switch (grant.product) {
+        IapProduct.noAds when grant.noAds => 'No Ads',
+        _ when grant.noAds => 'No Ads + $coins coins',
+        _ => '$coins coins',
+      },
+      thanks: grant.noAds
+          ? 'No more forced ads. Enjoy!'
+          : 'Enjoy, and happy flapping!',
+      bonusCoins: grant.coins,
+      chipLabel: grant.noAds ? 'BONUS COINS' : 'COINS',
+      iconImage: grant.noAds ? 'menu/noads.png' : 'menu/coin.png',
+      gift: grant,
+    );
+  }
+
+  /// PRD-2.3 §22.2 item 4.
+  static const String giftTitle = 'A GIFT FOR YOU!';
 
   final void Function() onClaim;
+
+  final String title;
+  final String message;
+  final String thanks;
+
+  /// The coins on the chip and the CLAIM button.
+  final int bonusCoins;
+  final String chipLabel;
+  final String iconImage;
+
+  /// The gift this popup shows (null: a bought No Ads).
+  final GiftGrant? gift;
 
   late final MenuButton closeButton;
   late final MenuButton claimButton;
@@ -72,7 +130,7 @@ class NoAdsCelebration extends P1Popup {
   @override
   Future<void> buildCard(PositionComponent card) async {
     final images = game.images;
-    final noAds = Sprite(await images.load('menu/noads.png'));
+    final noAds = Sprite(await images.load(iconImage));
     final close = Sprite(await images.load('menu/close.png'));
     final coin = Sprite(await images.load('menu/coin.png'));
     const w = Config.p1PopupWidth;
@@ -82,7 +140,7 @@ class NoAdsCelebration extends P1Popup {
     _header = _Header(icon: noAds, motion: !game.reduceMotion);
     closeButton = closeBox(close, onDismiss);
     titleText = MenuText(
-      "YOU'RE AD-FREE!",
+      title,
       fontSize: Config.noAdsCelebrationTitleFontSize,
       color: Config.menuPink,
       letterSpacingEm: 0.1,
@@ -98,7 +156,7 @@ class NoAdsCelebration extends P1Popup {
 
     var y = headerH + titleH + pad;
     final message = MenuText(
-      'No more forced ads.',
+      this.message,
       fontSize: 18,
       color: Config.menuPlum,
       letterSpacingEm: 0.02,
@@ -107,7 +165,7 @@ class NoAdsCelebration extends P1Popup {
     );
     y += message.height + 6;
     final thanks = MenuParagraph(
-      'Thanks for supporting Flappy Spikes!',
+      this.thanks,
       fontSize: 13,
       color: Config.p1PopupSmallText,
       letterSpacingEm: 0.02,
@@ -119,7 +177,7 @@ class NoAdsCelebration extends P1Popup {
 
     // "+1 000 BONUS COINS" chip: gold 22 % over the card, 6 / 12 padding.
     final chipText = MenuText(
-      '+${formatCoins(kNoAdsBonusCoins)} BONUS COINS',
+      '+${formatCoins(bonusCoins)} $chipLabel',
       fontSize: 15,
       color: Config.menuPlum,
       letterSpacingEm: 0.08,
@@ -151,7 +209,7 @@ class NoAdsCelebration extends P1Popup {
       ),
       MenuIcon(coin, size: Vector2.all(22)),
       MenuText(
-        '+${formatCoins(kNoAdsBonusCoins)}',
+        '+${formatCoins(bonusCoins)}',
         fontSize: 22,
         color: Config.menuPlum,
         letterSpacingEm: 0.1,

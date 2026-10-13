@@ -118,10 +118,9 @@ void main() async {
   homeShot('home_711_shield', height: 711, slot: Powerup.shield);
   homeShot('home_568', height: 568, slot: Powerup.bigHoops);
 
-  /// WP-4c: the Settings panel incl. the PRD-2 §3.13 DELETE MY DATA row and
-  /// the confirm dialog (compare the panel with design/menu_v2/
-  /// settings_v3.png; the row must stay in the free band above the bottom
-  /// strip on both heights).
+  /// WP-4c / PRD-2.3 §20: the Settings screen and the Delete my data
+  /// dialog faces (compare the screen with design/settings_v23/
+  /// settings_final.html).
   void settingsShot(String name, {required double height}) {
     late FakeVersusService versus;
     FlameTester<FlappySpikesGame>(
@@ -148,8 +147,8 @@ void main() async {
       verify: (game, tester) async {
         expect(game.state, GameState.start);
         final panel = game.world.children.query<SettingsPanel>().single;
-        expect(panel.deleteIcon, isNotNull);
-        expect(panel.deleteLabel?.text, 'DELETE MY DATA');
+        // PRD-2.3 §20: the Delete my data row of the PRIVACY & DATA card.
+        expect(panel.deleteRow?.labelText.text, 'DELETE MY DATA');
         await tester.runAsync(() => capture(game, 2, name));
         game.openDeleteDataConfirm();
         stepGame(game, 0.4);

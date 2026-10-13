@@ -1,19 +1,16 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'game/audio_counter.dart';
 import 'components/banner_slot.dart';
-import 'game/config.dart';
 import 'game/flappy_game.dart';
+import 'services/app_info.dart';
 import 'services/game_services.dart';
 import 'services/e2e.dart';
 import 'services/ads_service.dart';
@@ -26,10 +23,11 @@ import 'services/tuning_firebase.dart';
 import 'run/config/versus_config.dart';
 import 'services/avatars.dart';
 import 'services/versus_service.dart';
+import 'share/share_flow.dart';
 
-/// Key on the [RepaintBoundary] wrapping the game, used to capture a
-/// screenshot of the game area for sharing.
-final GlobalKey _gameBoundaryKey = GlobalKey();
+/// PRD-2.3 §2: the share card painter and the share sheet (results share
+/// button and the Invite tile).
+final ShareFlow _shareFlow = ShareFlow();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -155,10 +153,12 @@ Future<void> main() async {
       ..enabled = true
       ..attach();
   }
-  game.onShareScore = _shareScore;
-  game.onInvite = _invite;
+  game.onShareScore = _shareFlow.share;
+  game.onInvite = _shareFlow.share;
   // PRD-2.2 §28.3: other apps' calls / alarms / music (Android; iOS later).
   if (_isAndroid) game.audioFocus = PlatformAudioFocus();
+  // PRD-2.3 §20.2: the Settings footer's version (package_info_plus).
+  game.appInfo = PluginAppInfo();
 
   // region PRD-2.2 §8 — the Android system back closes the menus only, and
   // never the app (SystemBackObserver below).
@@ -174,9 +174,8 @@ Future<void> main() async {
   }
   // endregion WP-4b
 
-  // PRD-2.2 §7.5.2: the game over the banner slot. The share capture keeps
-  // using the RepaintBoundary around the game only, so the ad is never in a
-  // shared image.
+  // PRD-2.2 §7.5.2: the game over the banner slot. PRD-2.3 §2.0: shares are
+  // a drawn card, never a screen capture.
   runApp(
     Directionality(
       textDirection: TextDirection.ltr,
@@ -184,10 +183,7 @@ Future<void> main() async {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: RepaintBoundary(
-              key: _gameBoundaryKey,
-              child: GameWidget(game: game),
-            ),
+            child: RepaintBoundary(child: GameWidget(game: game)),
           ),
           BannerSlot(game: game),
         ],
@@ -316,50 +312,3 @@ Future<double> _worldHeight(bool isLinux) async {
   return height ?? _fallbackWorldHeight;
 }
 
-/// Home Invite tile: share sheet with the store link (no reward, PRD-1
-/// §3.4).
-Future<void> _invite() async {
-  try {
-    await SharePlus.instance.share(
-      ShareParams(
-        text: 'Can you beat me at Flappy Spikes? ${Config.storeListingUrl}',
-      ),
-    );
-  } catch (_) {
-    // No share sheet available (desktop): ignore.
-  }
-}
-
-Future<void> _shareScore(int score) async {
-  final text = 'OMG! I got $score points in Flappy Spikes!';
-  try {
-    final boundary = _gameBoundaryKey.currentContext?.findRenderObject();
-    if (boundary is! RenderRepaintBoundary) {
-      await SharePlus.instance.share(ShareParams(text: text));
-      return;
-    }
-    final image = await boundary.toImage(pixelRatio: 2);
-    // PRD-2.2 §33.4 item 6: the capture is freed as soon as it is encoded.
-    final ByteData? bytes;
-    try {
-      bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    } finally {
-      image.dispose();
-    }
-    if (bytes == null) {
-      await SharePlus.instance.share(ShareParams(text: text));
-      return;
-    }
-    final file = File('${Directory.systemTemp.path}/flappy_spikes_score.png');
-    await file.writeAsBytes(bytes.buffer.asUint8List());
-    await SharePlus.instance.share(
-      ShareParams(
-        text: text,
-        files: [XFile(file.path, mimeType: 'image/png')],
-      ),
-    );
-  } catch (_) {
-    // Fall back to sharing just the text.
-    await SharePlus.instance.share(ShareParams(text: text));
-  }
-}

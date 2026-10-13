@@ -599,7 +599,7 @@ void main() async {
       await _tap(game, tester, game.homeScreen!.gearButton);
       await _advance(game, .6);
       final settings = game.world.children.query<SettingsPanel>().single;
-      await _tap(game, tester, settings.restoreLink!.button);
+      await _tap(game, tester, settings.restoreRow!);
       await _advance(game, .3);
       expect(game.menu.noAds, isTrue);
       expect(game.noAdsCelebration, isNull);
@@ -648,7 +648,7 @@ void main() async {
         settings.backButton.toRect(),
         const ui.Rect.fromLTWH(14, 58, 38, 38),
       );
-      expect(settings.restoreLink, isNotNull);
+      expect(settings.restoreRow, isNotNull);
       final previous = game.rumble.fired.length;
       await _tap(game, tester, settings.rumbleButton);
       expect(game.rumble.on, isFalse);

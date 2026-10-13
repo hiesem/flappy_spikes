@@ -27,6 +27,16 @@ void main() {
         'coins_17000',
         'coins_100000',
         'no_ads',
+        // PRD-2.3 §22.1: the gift-only products.
+        'gift_coins_10000',
+        'gift_noads_coins_10000',
+      ]);
+      expect(kShopProducts, [
+        IapProduct.coins1000,
+        IapProduct.coins10000,
+        IapProduct.coins17000,
+        IapProduct.coins100000,
+        IapProduct.noAds,
       ]);
     });
 
@@ -37,11 +47,15 @@ void main() {
         17000,
         100000,
         0,
+        10000,
+        10000,
       ]);
       expect(IapProduct.values.map((p) => p.consumable), [
         true,
         true,
         true,
+        true,
+        false,
         true,
         false,
       ]);
@@ -52,6 +66,8 @@ void main() {
         r'$14.99',
         r'$79.99',
         r'$2.99',
+        '',
+        '',
       ]);
       expect(kNoAdsBonusCoins, 1000);
     });

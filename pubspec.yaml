@@ -60,6 +60,11 @@ dependencies:
   cloud_functions: ^6.5.0
   gma_mediation_unity: ^1.11.1
   # endregion WP-5b
+  # region P23-20/22 — Settings footer version (PRD-2.3 §20.2), gift consume
+  # (PRD-2.3 §22.2: InAppPurchaseAndroidPlatformAddition.consumePurchase)
+  package_info_plus: ^10.2.2
+  in_app_purchase_android: ^0.5.3
+  # endregion P23-20/22
 
 dev_dependencies:
   flutter_test:

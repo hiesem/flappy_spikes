@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'game/audio_counter.dart';
 import 'components/banner_slot.dart';
 import 'game/flappy_game.dart';
+import 'services/app_info.dart';
 import 'services/game_services.dart';
 import 'services/e2e.dart';
 import 'services/ads_service.dart';
@@ -141,6 +142,8 @@ Future<void> main() async {
   game.onInvite = _shareFlow.share;
   // PRD-2.2 §28.3: other apps' calls / alarms / music (Android; iOS later).
   if (_isAndroid) game.audioFocus = PlatformAudioFocus();
+  // PRD-2.3 §20.2: the Settings footer's version (package_info_plus).
+  game.appInfo = PluginAppInfo();
 
   // region PRD-2.2 §8 — the Android system back closes the menus only, and
   // never the app (SystemBackObserver below).

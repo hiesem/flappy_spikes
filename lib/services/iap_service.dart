@@ -3,12 +3,28 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/billing_client_wrappers.dart'
+    show BillingResponse, PurchaseStateWrapper;
+import 'package:in_app_purchase_android/in_app_purchase_android.dart'
+    show GooglePlayPurchaseDetails, InAppPurchaseAndroidPlatformAddition;
 
 import 'redact.dart';
 
 /// Store products (Play Console / App Store Connect product IDs in
 /// [IapProductInfo.storeId]).
-enum IapProduct { coins1000, coins10000, coins17000, coins100000, noAds }
+///
+/// PRD-2.3 §22.1: [giftCoins10000] and [giftNoAdsCoins10000] are gift-only
+/// products, handed out with store promo codes. The game never sells or
+/// shows them ([IapProductInfo.isGift]); it only knows them to grant them.
+enum IapProduct {
+  coins1000,
+  coins10000,
+  coins17000,
+  coins100000,
+  noAds,
+  giftCoins10000,
+  giftNoAdsCoins10000,
+}
 
 extension IapProductInfo on IapProduct {
   /// Store product ID.
@@ -18,20 +34,37 @@ extension IapProductInfo on IapProduct {
     IapProduct.coins17000 => 'coins_17000',
     IapProduct.coins100000 => 'coins_100000',
     IapProduct.noAds => 'no_ads',
+    IapProduct.giftCoins10000 => 'gift_coins_10000',
+    IapProduct.giftNoAdsCoins10000 => 'gift_noads_coins_10000',
   };
 
-  /// Coins granted by a coin pack (0 for No ads — its bonus is
-  /// [kNoAdsBonusCoins]).
+  /// Coins granted by a coin pack or gift (0 for No ads — its bonus is
+  /// [kNoAdsBonusCoins]). The No Ads gift's 10 000 are paid once, ever
+  /// (PRD-2.3 §22.2).
   int get coins => switch (this) {
     IapProduct.coins1000 => 1000,
     IapProduct.coins10000 => 10000,
     IapProduct.coins17000 => 17000,
     IapProduct.coins100000 => 100000,
     IapProduct.noAds => 0,
+    IapProduct.giftCoins10000 => 10000,
+    IapProduct.giftNoAdsCoins10000 => 10000,
   };
 
-  /// Coin packs are consumable; No ads is a one-time (restorable) purchase.
-  bool get consumable => this != IapProduct.noAds;
+  /// Coin packs and the coins gift are consumable; No ads and the No Ads
+  /// gift are one-time (restorable) purchases.
+  bool get consumable =>
+      this != IapProduct.noAds && this != IapProduct.giftNoAdsCoins10000;
+
+  /// PRD-2.3 §22.1: a gift-only product (promo codes; never in the Shop,
+  /// never in a price query).
+  bool get isGift =>
+      this == IapProduct.giftCoins10000 ||
+      this == IapProduct.giftNoAdsCoins10000;
+
+  /// Whether owning it turns No Ads on.
+  bool get grantsNoAds =>
+      this == IapProduct.noAds || this == IapProduct.giftNoAdsCoins10000;
 
   /// Shown until (or unless) the store returns the localized price
   /// (PRD-menu-v4 §3; the values are PRD-2.2 §32.5's): a US-dollar
@@ -43,8 +76,18 @@ extension IapProductInfo on IapProduct {
     IapProduct.coins17000 => r'$14.99',
     IapProduct.coins100000 => r'$79.99',
     IapProduct.noAds => r'$2.99',
+    // Never shown (gift-only, PRD-2.3 §22.1).
+    IapProduct.giftCoins10000 => '',
+    IapProduct.giftNoAdsCoins10000 => '',
   };
 }
+
+/// The products the Shop sells and whose prices are queried for display
+/// (PRD-2.3 §22.2 item 5: the gift products are left out).
+final List<IapProduct> kShopProducts = [
+  for (final p in IapProduct.values)
+    if (!p.isGift) p,
+];
 
 /// Bonus coins granted together with the No-ads purchase (PRD-1 §3.5).
 const int kNoAdsBonusCoins = 1000;
@@ -63,7 +106,8 @@ enum IapStatus { pending, purchased, restored, failed, canceled }
 class IapEvent {
   const IapEvent(this.product, this.status, [this.message, this.code])
     : transactionIds = const [],
-      granted = null;
+      granted = null,
+      acknowledged = null;
 
   /// A store purchase update carrying the transaction identity.
   const IapEvent.store(
@@ -71,8 +115,17 @@ class IapEvent {
     this.status, {
     this.transactionIds = const [],
     this.granted,
+    this.acknowledged,
   }) : message = null,
        code = null;
+
+  /// PRD-2.3 §22.2: whether the store says this purchase was acknowledged
+  /// (granted) before — on Google Play `Purchase.isAcknowledged`; null when
+  /// the store does not tell (iOS, fakes). An acknowledged one-time
+  /// purchase is a re-delivery (restore, reinstall): it restores
+  /// ownership, never coins. `false` on a purchase the player did not
+  /// start in this session = a promo code redeemed in the store.
+  final bool? acknowledged;
 
   final IapProduct product;
   final IapStatus status;
@@ -133,6 +186,14 @@ abstract class IapService {
   /// Restores owned non-consumables: an owned No ads arrives as
   /// `IapEvent(noAds, restored)`. Never throws.
   Future<void> restore();
+
+  /// PRD-2.3 §22.2: looks for purchases made outside the game (promo codes
+  /// redeemed in the Play Store) and for ones not yet granted or consumed;
+  /// they arrive on [events] as `restored` and go through the normal
+  /// granting (once per purchase id). Silent; the game calls it on launch
+  /// and on every resume, at most once per [Config.iapSyncInterval] (the
+  /// throttle lives in `Purchases.sync`). Never throws.
+  Future<void> syncPurchases();
 }
 
 /// Purchases disabled: every [buy] fails immediately.
@@ -162,6 +223,18 @@ class NoopIapService implements IapService {
 
   @override
   Future<void> restore() async {}
+
+  @override
+  Future<void> syncPurchases() async {}
+}
+
+/// A purchase the [FakeIapService] "store" holds (PRD-2.3 §22.6 tests): a
+/// redeemed promo code until it is consumed / acknowledged.
+class FakeHeldPurchase {
+  FakeHeldPurchase(this.product, this.id, {this.acknowledged = false});
+  final IapProduct product;
+  final String id;
+  bool acknowledged;
 }
 
 /// Behaviour of [FakeIapService.buy].
@@ -236,7 +309,59 @@ class FakeIapService implements IapService {
     if (_ownsNoAds) {
       _events.add(const IapEvent(IapProduct.noAds, IapStatus.restored));
     }
+    _deliverHeld();
   }
+
+  // region PRD-2.3 §22 — gift codes (fake store side)
+
+  /// Purchases the fake store holds: promo codes redeemed with [redeem],
+  /// until a consumable is consumed (it then leaves the list) — one-time
+  /// products stay (acknowledged) and come back on every sync / restore.
+  final List<FakeHeldPurchase> held = [];
+
+  /// Ids of consumed purchases, in order.
+  final List<String> consumed = [];
+
+  /// Number of [syncPurchases] calls.
+  int syncs = 0;
+
+  /// A promo code for [product] redeemed in the store with purchase [id]
+  /// (outside the game: it arrives on the next [syncPurchases]).
+  void redeem(IapProduct product, String id) =>
+      held.add(FakeHeldPurchase(product, id));
+
+  /// Pushes [event] onto the purchase stream as the store would.
+  void deliver(IapEvent event) => _events.add(event);
+
+  @override
+  Future<void> syncPurchases() async {
+    syncs++;
+    _deliverHeld();
+  }
+
+  void _deliverHeld() {
+    for (final h in List.of(held)) {
+      final granted = Completer<void>();
+      _events.add(
+        IapEvent.store(
+          h.product,
+          IapStatus.restored,
+          transactionIds: ['id:${h.id}'],
+          granted: granted,
+          acknowledged: h.acknowledged,
+        ),
+      );
+      // Like StoreIapService: grant first, then consume / acknowledge.
+      granted.future.then((_) {
+        if (h.product.consumable) {
+          if (held.remove(h)) consumed.add(h.id);
+        } else {
+          h.acknowledged = true;
+        }
+      });
+    }
+  }
+  // endregion PRD-2.3 §22
 }
 
 /// The slice of `in_app_purchase` that [StoreIapService] uses. The default
@@ -250,6 +375,12 @@ abstract class IapStore {
   Future<bool> buyNonConsumable(PurchaseParam param);
   Future<void> completePurchase(PurchaseDetails purchase);
   Future<void> restorePurchases();
+
+  /// PRD-2.3 §22.2: consumes a consumable purchase the game granted itself
+  /// (the coins gift; `completePurchase` alone only acknowledges it on
+  /// Android). Returns false where consuming does not apply (not Google
+  /// Play): the caller completes the purchase instead.
+  Future<bool> consumePurchase(PurchaseDetails purchase);
 }
 
 /// [IapStore] backed by the real plugin. `InAppPurchase.instance` is only
@@ -281,6 +412,18 @@ class PluginIapStore implements IapStore {
 
   @override
   Future<void> restorePurchases() => _iap.restorePurchases();
+
+  @override
+  Future<bool> consumePurchase(PurchaseDetails purchase) async {
+    if (purchase is! GooglePlayPurchaseDetails) return false;
+    final addition = _iap
+        .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
+    final result = await addition.consumePurchase(purchase);
+    if (result.responseCode != BillingResponse.ok) {
+      iapLog('consume ${purchase.productID}: ${result.responseCode}');
+    }
+    return true;
+  }
 }
 
 /// IAP diagnostics. Plain `print` on purpose: unlike `dart:developer`'s
@@ -432,7 +575,7 @@ class StoreIapService implements IapService {
   @override
   String priceOf(IapProduct p) => _details[p]?.price ?? p.placeholderPrice;
 
-  bool get _complete => _details.length == IapProduct.values.length;
+  bool get _complete => _details.length == kShopProducts.length;
 
   @override
   Future<void> initialize() async {
@@ -449,6 +592,10 @@ class StoreIapService implements IapService {
       iapLog('purchaseStream failed: $e');
     }
     await _queryMissing();
+    if (_syncWanted) {
+      _syncWanted = false;
+      await syncPurchases();
+    }
   }
 
   @override
@@ -482,8 +629,9 @@ class StoreIapService implements IapService {
       );
       return;
     }
+    // PRD-2.3 §22.2 item 5: never the gift products.
     final ids = {
-      for (final p in IapProduct.values)
+      for (final p in kShopProducts)
         if (!_details.containsKey(p)) p.storeId,
     };
     if (ids.isEmpty) {
@@ -523,13 +671,30 @@ class StoreIapService implements IapService {
 
   Future<void> _onPurchases(List<PurchaseDetails> purchases) async {
     for (final purchase in purchases) {
-      final status = switch (purchase.status) {
-        PurchaseStatus.pending => IapStatus.pending,
-        PurchaseStatus.purchased => IapStatus.purchased,
-        PurchaseStatus.restored => IapStatus.restored,
-        PurchaseStatus.error => IapStatus.failed,
-        PurchaseStatus.canceled => IapStatus.canceled,
-      };
+      final playState = purchase is GooglePlayPurchaseDetails
+          ? purchase.billingClientPurchase.purchaseState
+          : null;
+      // PRD-2.3 §22.2: the plugin's restorePurchases (our sync) marks
+      // every owned purchase `restored`, also one still waiting for
+      // payment: that one is pending, never granted.
+      final status = playState == PurchaseStateWrapper.pending
+          ? IapStatus.pending
+          : switch (purchase.status) {
+              PurchaseStatus.pending => IapStatus.pending,
+              PurchaseStatus.purchased => IapStatus.purchased,
+              PurchaseStatus.restored => IapStatus.restored,
+              PurchaseStatus.error => IapStatus.failed,
+              PurchaseStatus.canceled => IapStatus.canceled,
+            };
+      if (status == IapStatus.pending && playState != null) {
+        // Nothing to grant or acknowledge until it is paid.
+        if (_productForStoreId(purchase.productID) case final p?) {
+          if (purchase.status != PurchaseStatus.restored) {
+            _events.add(IapEvent(p, IapStatus.pending));
+          }
+        }
+        continue;
+      }
       final error = purchase.error;
       iapLog(
         'update ${purchase.productID.isEmpty ? '(none)' : purchase.productID}'
@@ -565,6 +730,9 @@ class StoreIapService implements IapService {
               status,
               transactionIds: transactionIdsOf(purchase),
               granted: granted,
+              acknowledged: purchase is GooglePlayPurchaseDetails
+                  ? purchase.billingClientPurchase.isAcknowledged
+                  : null,
             ),
           );
           // Grant before completing (S1-71): if the app dies first, the
@@ -578,6 +746,21 @@ class StoreIapService implements IapService {
           }
         } else {
           _events.add(IapEvent(product, status));
+        }
+      }
+      // PRD-2.3 §22.2: a granted consumable that the plugin did not
+      // auto-consume (a coins gift from a promo code, or a pack whose
+      // consume failed and that a sync brought back) is consumed now, so
+      // the same player can redeem another code for it; consuming also
+      // acknowledges it on Google Play.
+      if (product != null &&
+          product.consumable &&
+          (product.isGift || status == IapStatus.restored) &&
+          (status == IapStatus.purchased || status == IapStatus.restored)) {
+        try {
+          if (await _store.consumePurchase(purchase)) continue;
+        } catch (e) {
+          iapLog('consumePurchase failed: $e');
         }
       }
       // Acknowledge even unknown products: un-acknowledged Play purchases
@@ -647,6 +830,28 @@ class StoreIapService implements IapService {
       await _store.restorePurchases();
     } catch (e) {
       iapLog('restore failed: $e');
+    }
+  }
+
+  /// A sync asked for before [initialize] subscribed to the stream: runs
+  /// right after it.
+  bool _syncWanted = false;
+
+  @override
+  Future<void> syncPurchases() async {
+    if (!_initialized) {
+      _syncWanted = true;
+      return;
+    }
+    if (!_available) {
+      await _queryMissing();
+      if (!_available) return;
+    }
+    try {
+      iapLog('sync');
+      await _store.restorePurchases();
+    } catch (e) {
+      iapLog('sync failed: $e');
     }
   }
 }

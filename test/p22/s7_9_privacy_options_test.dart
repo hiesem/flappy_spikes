@@ -12,7 +12,7 @@ import '../menu_screenshot_test.dart' show captureShot, loadFonts;
 
 /// PRD-2.2 §7.9 the "Privacy options" row in Settings (Google's EU consent
 /// policy): shown only when the UMP privacy options are required, under
-/// "Privacy Policy", clear of RESTORE PURCHASES and DELETE MY DATA at 568.
+/// "Privacy policy" (PRD-2.3 §20.2: a row of the PRIVACY & DATA card).
 void main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
   await loadFonts();
@@ -51,8 +51,9 @@ void main() async {
     verify: (g, _) async {
       final panel = await open(g);
       expect(g.privacyOptionsShown, isFalse);
-      expect(panel.privacyOptionsLink, isNull);
-      expect(panel.privacyLink.position, Config.privacyLinkPositionFor(355.5));
+      // PRD-2.3 §20.2: the PRIVACY & DATA card has two rows.
+      expect(panel.privacyOptionsRow, isNull);
+      expect(panel.privacyCard.rows, hasLength(2));
     },
   );
 
@@ -66,23 +67,23 @@ void main() async {
       setUp: boot,
       verify: (g, tester) async {
         final panel = await open(g);
-        final options = panel.privacyOptionsLink!;
-        expect(options.label.text, 'Privacy options');
-        final policy = panel.privacyLink.toRect();
-        final opt = options.toRect();
-        final restore = panel.restoreLink!.toRect();
-        final delete = panel.deleteIcon!.toRect();
-        expect(opt.top, greaterThan(panel.privacyLink.position.y));
-        expect(opt.center.dy, greaterThan(policy.center.dy));
-        expect(opt.bottom, lessThanOrEqualTo(restore.top));
-        // The glyphs never overlap (the tap boxes may touch).
-        final optText = options.label.toAbsoluteRect();
-        final policyText = panel.privacyLink.label.toAbsoluteRect();
-        expect(optText.top, greaterThan(policyText.bottom));
-        expect(optText.bottom, lessThan(restore.top + 6));
-        expect(policyText.top, greaterThan(delete.bottom));
-        // Clear of the bottom spike strip.
-        expect(restore.bottom, lessThanOrEqualTo(h - Config.spikeHeight + 1));
+        // PRD-2.3 §20.2: a row of the PRIVACY & DATA card, between
+        // Privacy policy and Delete my data, inside the screen.
+        final options = panel.privacyOptionsRow!;
+        expect(options.labelText.text, 'PRIVACY OPTIONS');
+        expect(panel.privacyCard.rows, [
+          panel.privacyRow,
+          options,
+          panel.deleteRow,
+        ]);
+        expect(
+          options.toAbsoluteRect().top,
+          greaterThanOrEqualTo(panel.privacyRow.toAbsoluteRect().bottom),
+        );
+        expect(
+          panel.privacyCard.toAbsoluteRect().bottom,
+          lessThanOrEqualTo(h - Config.spikeHeight),
+        );
         await tester.runAsync(
           () => captureShot(g, 2, 'p22_s7_9_privacy_options_${h.toInt()}'),
         );

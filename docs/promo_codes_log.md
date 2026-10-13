@@ -11,3 +11,4 @@ stop working at the end of the quarter they were made in.
 |---|---|---|---|---|---|
 | 2026-10-13 | gift_coins_10000 | 1 | Owner test – gift coins (2026-10-13) | owner test of Redeem code on Pixel 8 | owner |
 | 2026-10-13 | gift_coins_10000 | 1 | Owner gift coins 2 (2026-10-13) | owner test of the in-app Redeem code (Play screen, 2.3.0 (14)+) | owner |
+| 2026-10-13 | gift_coins_10000 | 1 | Owner test gift coins 3 (2026-10-13) | owner redeem test with license testing on | owner |

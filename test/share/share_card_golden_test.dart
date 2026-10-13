@@ -183,7 +183,9 @@ void main() {
     expect(result.passed, isFalse);
     result.dispose();
     final original = goldenFileComparator;
+    final wasUpdating = autoUpdateGoldenFiles;
     try {
+      autoUpdateGoldenFiles = false; // the negative control must compare
       goldenFileComparator = _RejectingComparator();
       await expectLater(
         () => expectLater(
@@ -194,6 +196,7 @@ void main() {
       );
     } finally {
       goldenFileComparator = original;
+      autoUpdateGoldenFiles = wasUpdating;
     }
   });
 

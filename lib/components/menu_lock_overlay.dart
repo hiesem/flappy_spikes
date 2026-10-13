@@ -1,34 +1,53 @@
 import 'dart:ui' show Canvas, Color, Paint, Path, PathFillType, Rect;
 
 import 'package:flame/components.dart';
+import 'package:flame/effects.dart' show OpacityProvider;
 import 'package:flame/events.dart';
 import 'package:flame/extensions.dart';
 
 import '../game/config.dart';
+import '../game/flappy_game.dart';
 import 'home/menu_primitives.dart';
 
 /// PRD-2.3 §26.2: the lock over a Shop or Skins screen that the player has
 /// not unlocked yet (best score below [Config.menuUnlockBest]). It dims the
-/// content area between the spike strips (#000000 at 72 %) and shows two
-/// centred lines of text. It sits above the content and below the back
-/// button and the coin pill (the screen gives those a higher priority), and
-/// it swallows every tap on it, so nothing under it reacts: no sound, no
-/// knock, no scroll.
-class MenuLockOverlay extends PositionComponent with TapCallbacks {
-  MenuLockOverlay({required Rect rect, required this.lines, Rect? hole})
-    : _hole = hole?.shift(-rect.topLeft),
-      super(position: rect.topLeft.toVector2(), size: rect.size.toVector2());
+/// whole playfield edge to edge, both spike strips included
+/// ([Config.menuLockDimColor], #000000 at 90 %; owner 2026-10-13), and shows
+/// two centred lines of text. It lives in the world at
+/// [Config.menuLockOverlayPriority] (above the screens and the ground strip
+/// the game draws over them) and follows its screen's fade ([source]). The
+/// back button stays bright through a hole (its artwork is the shared
+/// corner box below the screens; QA S8-12) and the coin pill is lifted above
+/// the overlay while it is up ([Config.menuLockPillPriority]). It swallows
+/// every other tap, so nothing under it reacts: no sound, no knock, no
+/// scroll.
+class MenuLockOverlay extends PositionComponent
+    with TapCallbacks, GroupOpacity, HasGameReference<FlappySpikesGame> {
+  MenuLockOverlay({
+    required Rect rect,
+    required this.lines,
+    Rect? hole,
+    this.source,
+  }) : _hole = hole?.shift(-rect.topLeft),
+       super(
+         position: rect.topLeft.toVector2(),
+         size: rect.size.toVector2(),
+         priority: Config.menuLockOverlayPriority,
+       );
 
-  /// The back button's box (in the screen's coordinates), left undimmed:
-  /// its artwork is the shared corner box below the screens, which must stay
+  /// The back button's box (in world coordinates), left undimmed: its
+  /// artwork is the shared corner box below the screens, which must stay
   /// fully bright (PRD-2.3 §26.2, QA S8-12). Stored in local coordinates.
   final Rect? _hole;
 
   /// The text lines, top to bottom (`SCORE 25 POINTS` / `TO UNLOCK THE SHOP`).
   final List<String> lines;
 
-  /// #000000 at 72 % (PRD-2.3 §26.2).
-  static const Color dimColor = Color(0xB8000000);
+  /// The locked screen whose opacity (crossfades) the overlay follows.
+  final OpacityProvider? source;
+
+  /// #000000 at 90 % (PRD-2.3 §26.2, owner 2026-10-13).
+  static const Color dimColor = Config.menuLockDimColor;
 
   final Paint _paint = Paint()..color = dimColor;
 
@@ -54,6 +73,34 @@ class MenuLockOverlay extends PositionComponent with TapCallbacks {
   }
 
   @override
+  void onMount() {
+    super.onMount();
+    final pill = game.coinPill;
+    if (pill.priority < Config.menuLockPillPriority) {
+      pill.priority = Config.menuLockPillPriority;
+    }
+  }
+
+  @override
+  void onRemove() {
+    final others = parent?.children
+        .whereType<MenuLockOverlay>()
+        .any((o) => o != this && !o.isRemoving);
+    final pill = game.coinPill;
+    if (others != true && pill.priority == Config.menuLockPillPriority) {
+      pill.priority = FlappySpikesGame.groundOverMenusPriority;
+    }
+    super.onRemove();
+  }
+
+  @override
+  void renderTree(Canvas canvas) {
+    final s = source;
+    if (s != null) opacity = s.opacity;
+    super.renderTree(canvas);
+  }
+
+  @override
   void render(Canvas canvas) {
     final hole = _hole;
     if (hole == null) {
@@ -69,7 +116,7 @@ class MenuLockOverlay extends PositionComponent with TapCallbacks {
     );
   }
 
-  /// The hole belongs to the back button above (it takes its own taps).
+  /// The hole belongs to the back button below (it takes its own taps).
   @override
   bool containsLocalPoint(Vector2 point) =>
       super.containsLocalPoint(point) &&

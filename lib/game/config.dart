@@ -793,6 +793,20 @@ class Config {
   static const double menuLockLetterSpacing = 0.06; // em
   static const double menuLockLineHeight = 31;
 
+  /// PRD-2.3 §26.2 the lock overlay's dim: #000000 at 90 % (owner
+  /// 2026-10-13; was 72 %), over the whole playfield edge to edge,
+  /// including both spike strips.
+  static const Color menuLockDimColor = Color(0xE6000000);
+
+  /// PRD-2.3 §26.2 (owner 2026-10-13) the lock overlay's world priority:
+  /// above the menu screens (20) and the ground strip over them (21), below
+  /// popups, toasts and flashes (25+).
+  static const int menuLockOverlayPriority = 22;
+
+  /// PRD-2.3 §26.2 (owner 2026-10-13) the coin pill's priority while a lock
+  /// overlay is up: above it, so the pill stays bright and tappable.
+  static const int menuLockPillPriority = 23;
+
   /// The gold lock badge on a Home tile (in the corner where the NEW tag sits)
   /// and the lock icon inside it (pt).
   static const double homeLockBadgeSize = 20;

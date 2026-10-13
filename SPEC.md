@@ -1615,3 +1615,23 @@ production build has the flag off and uses these values only. Full key table:
   a part of its drawing on screen stays and can be collected or flown through; the
   portal-on-screen fade and the reward-ring fade are gone for visible rings. The portal
   ride's own clear (`clearAhead` / `clearAll`) is unchanged.
+
+### Owner requests 2026-10-13 (2.3.0+13)
+
+- DEVIATION (owner 2026-10-13, supersedes the PRD-2.3 §14.2 Bullseye value): a Bullseye
+  hit pays **2** coins (`coin_bullseye` default 2, was 1) and so +2 points via
+  `RunContext.earn`; the banner reads "+2 coins".
+- DEVIATION (owner 2026-10-13, amends PRD-2 §3.0.4 rim bounce): **soft rim bump from
+  inside the hoop.** When the bird hits a rim end from inside the gap (the bird's centre
+  between the two rim-end centres along the ring, the contact normal at least 60° from
+  the ring plane — `RunConfig.rimSoftBumpMinAxis` 0.5 — pointing into the gap, and the
+  bird moving toward that rim along the ring: the top rim while rising, the bottom rim
+  while falling), the along-ring velocity toward the rim is replaced by
+  `RunConfig.rimSoftBump` (60 pt/s) away from it (relative to the rim's own along-ring
+  speed); the forward (local x) speed is kept, gravity and the forward recovery continue
+  as normal. Hits from outside the gap and flat / head-on contacts keep the 0.85
+  reflection. It is still a rim touch (no perfect, streak reset, tonk, spin, sparks).
+  The autopilot uses the same `collideRims`, so its rollouts match.
+- PRD-2.3 §26.2 (owner 2026-10-13): the Shop / Skins lock overlay covers the whole
+  playfield incl. both spike strips at #000000 90 % (was 72 % between the strips);
+  the back button and the coin pill stay bright above it.

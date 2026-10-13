@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
-import 'package:flappy_spikes/components/menu_lock_overlay.dart';
+import 'package:flappy_spikes/components/menu_screen_chrome.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/run/config/tuning_defaults.dart';
@@ -69,13 +69,15 @@ void main() async {
     await flushAndMount(g);
   }
 
-  List<String> overlayLines(PositionComponent screen) {
-    final overlays = screen.children.query<MenuLockOverlay>();
-    return overlays.isEmpty ? const [] : overlays.single.lines;
-  }
+  // Owner 2026-10-13: the overlay lives in the world (above the strips),
+  // owned by its screen.
+  List<String> overlayLines(MenuScreen screen) =>
+      screen.lockOverlay?.lines ?? const [];
 
-  bool hasOverlay(PositionComponent screen) =>
-      screen.children.query<MenuLockOverlay>().isNotEmpty;
+  bool hasOverlay(MenuScreen screen) {
+    final o = screen.lockOverlay;
+    return o != null && o.isMounted;
+  }
 
   tester({'bestScore': 24}).testGameWidget(
     '§26.4 best 24: Home → SHOP opens the dimmed Shop with its lock text',

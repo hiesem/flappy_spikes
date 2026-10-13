@@ -1472,6 +1472,17 @@ production build has the flag off and uses these values only. Full key table:
   24 pt) is retired; a "clean" off-centre pass no longer exists. Points are unchanged
   (1, perfect `max(2, streak)`, no streak cap); the Bullseye keeps its ±12 pt band;
   rides stay always perfect.
+- DEVIATION (owner 2026-10-13, after the 2.3 release; PRD-2.3 §14.3 + §15 remote
+  tuning): **optional remote perfect band.** `point_perfect_band` (keyframe curve by
+  hoop index, default `[[0,0]]`): v ≤ 0 → the §14.3 rule above, unchanged; v > 0 → a
+  pass is perfect only with no rim touch **and** the bird centre crossing the hoop plane
+  within ±v pt of the gap centre (ring-local, `Hoop.passOffset`, measured like the
+  Bullseye); a rim-free pass outside the band is a "clean" pass again (streak reset, no
+  graze notice). A rim touch is never perfect; rides stay always perfect.
+  `point_bullseye_band` (number, default 12) replaces the fixed ±12 pt for the Bullseye
+  **hit check only**; the guide lines / target stay drawn at ±12 pt
+  (`BullseyeConfig.drawBand`). Both are read once per run (`Tuning.beginRun`).
+  Tests: `test/p23/s14_perfect_band_test.dart`.
 - DEVIATION (PRD-2.3 §14.3, supersedes PRD-2 §3.27 / PRD-2.2 §13.1 chick ×2): **the
   chick no longer doubles coins or points** (puzzle and piggy included). While it flies
   every hoop passed scores **+1 point** (`point_chick`, added with the pass, one

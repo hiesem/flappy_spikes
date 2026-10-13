@@ -34,8 +34,9 @@ class BullseyeHoopKind extends HoopKind {
 
   static final Expando<_BullState> _states = Expando('bullseye');
 
-  /// §3.24 The bird centre [bird] (track coordinates) is inside the ±12 pt
-  /// band of [f]'s ring (measured in the ring's local frame, like the pass
+  /// §3.24 The bird centre [bird] (track coordinates) is inside the hit
+  /// band ([BullseyeConfig.band], `point_bullseye_band`, default ±12 pt)
+  /// of [f]'s ring (measured in the ring's local frame, like the pass
   /// test).
   static bool isBullseye(HoopFrame f, Vector2 bird, {int ring = 0}) =>
       (f.toLocal(bird).y - f.rings[ring]).abs() <= BullseyeConfig.band;
@@ -79,7 +80,7 @@ class BullseyeHoopKind extends HoopKind {
   }) {
     final color = guide.withValues(alpha: guide.a * BullseyeConfig.guideAlpha);
     for (final s in const [-1.0, 1.0]) {
-      final y = centre.dy + s * BullseyeConfig.band;
+      final y = centre.dy + s * BullseyeConfig.drawBand;
       DashedPathPainter.line(
         canvas,
         Offset(centre.dx - BullseyeConfig.guideFrom, y),
@@ -101,8 +102,8 @@ class BullseyeHoopKind extends HoopKind {
   }
 
   /// PRD-2.2 §11.1–2 (fix S7-04) whether the crossing [offset]
-  /// (`Hoop.passOffset`, ring-local, like the perfect zone) is inside the
-  /// ±12 pt band.
+  /// (`Hoop.passOffset`, ring-local, like the perfect band) is inside the
+  /// hit band ([BullseyeConfig.band], default ±12 pt).
   static bool isBullseyeOffset(double offset) =>
       offset.abs() <= BullseyeConfig.band;
 

@@ -133,6 +133,20 @@
           },
           "description": "§14.3 Pair \"+N score\" gift",
           "valueType": "NUMBER"
+        },
+        "point_perfect_band": {
+          "defaultValue": {
+            "value": "[[0,0]]"
+          },
+          "description": "§14.3 owner 2026-10-13: perfect band ±pt around the gap centre by hoop index; <= 0 = no band (any rim-free pass is perfect)",
+          "valueType": "JSON"
+        },
+        "point_bullseye_band": {
+          "defaultValue": {
+            "value": "12"
+          },
+          "description": "§14.3 owner 2026-10-13: Bullseye hit band ±pt (hit check only; the drawing stays 12)",
+          "valueType": "NUMBER"
         }
       }
     },

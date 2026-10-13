@@ -105,3 +105,13 @@ Eight findings: six major, two minor. S8-01 is fixed in this QA commit; the seve
 - No phone work, emulator device, public deployment, account/settings write or review/release click. Functions tests use local Firebase service emulators; Java is the system ≥21 runtime (`unset JAVA_HOME`).
 - Full-suite success intentionally does not resolve the six skipped Dart reproductions or one skipped backend reproduction. Fix owners should remove each skip and run its case, then the required gates.
 - Evidence (not in git): `/home/killerhis/Projects/flappyspikes/.worktrees/briefs8/evidence/qa1/`. Includes raw live pages, approved-design captures, app captures, negative-control output and failure logs. No secret or code lists.
+
+## Fixes (P23-FIX1, branch `p23-fix1`)
+
+- **S8-02:** `main.dart` awaits tuning activation (bounded to 3 s, since `Firebase.initializeApp` has no timeout); `Tuning.beginRun` pins the set and a late activation never replaces `TuningValues.current` once a run began (it reaches the next run).
+- **S8-03:** `FirebaseVersusService` keeps the held run's pool entry and drops it when its uid or `pg` matches the current identity: after every identity change (once the new pg is known), at `searchForStart` and at `takeOpponent`; another match is then picked from the loaded pool with the current identity.
+- **S8-04:** the 2 s media promotion runs the two-"yes" confirmation against the current playback (first check at 1 s, second at 2 s), so a ding that ended before the second check never latches "own music".
+- **S8-05:** `StoreIapService` consumes / acknowledges a purchase only after the listener confirmed a successful grant; no listener, a timeout or a failed grant leave it with the store for the launch sync. `Purchases` completes the grant with an error when the grant throws.
+- **S8-06:** `onPlayerRunWrite` deletes `avatars/{uid}.jpg` when `players/{uid}` is deleted (TTL or Delete my data) and still gone; the daily `sweepPools` also deletes pictures not updated for 60 days whose player doc is gone (retry). The client uploads an unchanged picture again after 30 days (`VersusConfig.avatarRefresh`). Needs a functions redeploy (owner / deploy step).
+- **S8-07:** the top AVOID THE SPIKES band sits 6 pt under the HUD row (y 96) in solo, under the name chips (y 120) in versus; goldens updated.
+- **S8-08:** HUD name chips use 14 pt, no letter spacing, 2 pt padding; the VS intro plate names use Fredoka SemiBold 18 pt. Every valid generated nickname now fits whole (digits included) on chips, plates, results and the share card.

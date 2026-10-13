@@ -40,5 +40,5 @@ void main() {
       );
     }
     expect(eligibleDraws, greaterThan(0));
-  }, skip: 'S8-11');
+  });
 }

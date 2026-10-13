@@ -68,6 +68,11 @@ dependencies:
   package_info_plus: ^10.2.2
   in_app_purchase_android: ^0.5.3
   # endregion P23-20/22
+  # region PRD-2.3 §21 — versus pictures (Firebase Storage), resize, pg hash
+  firebase_storage: ^13.6.0
+  image: ^4.9.1
+  crypto: ^3.0.7
+  # endregion PRD-2.3 §21
 
 dev_dependencies:
   flutter_test:

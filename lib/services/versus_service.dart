@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
+
+import 'package:crypto/crypto.dart';
 
 import 'package:flutter/foundation.dart';
 
@@ -14,9 +17,11 @@ import '../versus/nickname.dart';
 import '../versus/opponent.dart';
 import '../versus/run_entry.dart';
 import '../versus/upload_queue.dart';
+import 'avatar_upload.dart';
 import 'avatars.dart';
 import 'firebase_versus_backend.dart';
 import 'identity.dart';
+import 'pg_salt.dart';
 import 'redact.dart';
 
 /// The player's own versus identity (§3.13).
@@ -51,8 +56,24 @@ abstract class VersusService {
 
   bool get ready;
 
-  /// Sync at START: a prefetched match, or null (→ solo, no intro).
+  /// Sync at START: a prefetched match, or null.
   OpponentRun? takeOpponent();
+
+  /// PRD-2.3 §25.3 an opponent is held for the next START (no wait).
+  bool get holdsOpponent;
+
+  /// PRD-2.3 §25.3 whether a VERSUS START without a held opponent still
+  /// shows the VS intro as the loading screen ([searchForStart]); false =
+  /// the 2.2 behaviour (solo at once, no intro: no backend wired).
+  bool get loadingIntro;
+
+  /// PRD-2.3 §25.3 a VERSUS START found nothing held: waits for the running
+  /// search, or starts one (a failed start-up is retried first). True when
+  /// an opponent is held afterwards ([takeOpponent] hands it out). Completes
+  /// at once with false when this Home visit's search already found no
+  /// rival. The caller applies its own 3 s limit; a later result stays held
+  /// for the next START. Never throws.
+  Future<bool> searchForStart();
 
   /// PRD-2.2 §3 the opponent search (Home prefetch): every shard of the own
   /// level, then the other levels nearest first, stopping at the first
@@ -60,8 +81,9 @@ abstract class VersusService {
   /// only after [onRunStart]).
   Future<void> prefetch();
 
-  /// PRD-2.2 §3 a run starts (VERSUS or FREE FLY): the next Home prefetch
-  /// searches again.
+  /// PRD-2.2 §3 / PRD-2.3 §25.2 a run starts (VERSUS or FREE FLY): the
+  /// search for the next opponent starts now (the Home prefetch stays as a
+  /// backup when nothing is held).
   void onRunStart();
 
   /// PRD-2.2 §4 the latest search (debug panel).
@@ -100,6 +122,15 @@ class NoopVersusService implements VersusService {
   OpponentRun? takeOpponent() => null;
 
   @override
+  bool get holdsOpponent => false;
+
+  @override
+  bool get loadingIntro => false;
+
+  @override
+  Future<bool> searchForStart() async => false;
+
+  @override
   Future<void> prefetch() async {}
 
   @override
@@ -130,8 +161,36 @@ class NoopVersusService implements VersusService {
 
 /// Tests / `FS_E2E`: a scripted opponent pool; records submissions.
 class FakeVersusService implements VersusService {
-  FakeVersusService({List<OpponentRun>? pool, this.profile = const VersusProfile()})
-    : pool = pool ?? [];
+  FakeVersusService({
+    List<OpponentRun>? pool,
+    this.profile = const VersusProfile(),
+    this.loadingIntro = false,
+    this.onSearch,
+  }) : pool = pool ?? [];
+
+  /// PRD-2.3 §25.3 opt-in: older tests keep the 2.2 solo START (no intro)
+  /// when the pool is empty.
+  @override
+  final bool loadingIntro;
+
+  /// PRD-2.3 §25.3 the scripted search of [searchForStart] when the pool is
+  /// empty (null = no rival at once). It may add to [pool] before it
+  /// completes with true.
+  Future<bool> Function()? onSearch;
+  int searchForStartCalls = 0;
+
+  @override
+  Future<bool> searchForStart() async {
+    searchForStartCalls++;
+    if (pool.isNotEmpty) return true;
+    final f = onSearch;
+    if (f == null) return false;
+    try {
+      return await f() && pool.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
 
   /// Opponents handed out in order by [takeOpponent] (null when empty).
   final List<OpponentRun> pool;
@@ -154,6 +213,9 @@ class FakeVersusService implements VersusService {
 
   @override
   OpponentRun? takeOpponent() => pool.isEmpty ? null : pool.removeAt(0);
+
+  @override
+  bool get holdsOpponent => pool.isNotEmpty;
 
   @override
   Future<void> prefetch() async => prefetchCalls++;
@@ -224,11 +286,28 @@ abstract class VersusBackend {
   /// Links the platform credential (anonymous user → `linkWithCredential`;
   /// `credential-already-in-use` → sign in with it: the account that
   /// already owns the Play Games id wins, ARCH §6.4).
-  Future<void> link(PlatformIdentity identity);
+  ///
+  /// PRD-2.3 §21.4: in the `credential-already-in-use` case, while still
+  /// signed in as the old **anonymous** uid, [beforeSwitch] runs first (the
+  /// service deletes that uid's versus data). It never blocks the switch:
+  /// the backend catches whatever it throws.
+  Future<void> link(
+    PlatformIdentity identity, {
+    Future<void> Function()? beforeSwitch,
+  });
 
   /// The `deleteMyData` callable, then sign out. True when the server
   /// confirmed.
   Future<bool> deleteMyData();
+
+  /// PRD-2.3 §21.4 the `deleteMyData` callable for the signed-in uid
+  /// without signing out (the account switch signs in with the Play Games
+  /// credential right after). True when the server confirmed.
+  Future<bool> deleteOnline();
+
+  /// PRD-2.3 §21.3 uploads [jpeg] (96 × 96, ≤ 30 KB) to
+  /// `avatars/{uid}.jpg` in Firebase Storage and returns its download URL.
+  Future<String> uploadAvatar(Uint8List jpeg);
 
   /// `FirebaseAnalytics.resetAnalyticsData()`.
   Future<void> resetAnalytics();
@@ -282,8 +361,11 @@ class FirebaseVersusService implements VersusService {
     this.retryBase,
     this.retryMax = VersusConfig.authRetryMax,
     this.startAfter,
+    PgSaltSource? pgSalt,
+    this.readTimeout = VersusConfig.readTimeout,
   }) : identity = identity ?? PlayGamesIdentity(),
        backend = backend ?? FirebaseVersusBackend(),
+       pgSalt = pgSalt ?? RemoteConfigPgSalt(),
        _random = random ?? Random(),
        _clock = clock ?? DateTime.now;
 
@@ -295,6 +377,12 @@ class FirebaseVersusService implements VersusService {
   final Random _random;
   final DateTime Function() _clock;
   final Duration timeout;
+
+  /// PRD-2.3 §21.4 the salt of the hashed Play Games id (`pg`).
+  final PgSaltSource pgSalt;
+
+  /// PRD-2.3 §25.2 the time box of one pool read (4 s).
+  final Duration readTimeout;
 
   /// PRD-2.2 §3 the search's own time limit (6 s).
   final Duration searchLimit;
@@ -319,8 +407,21 @@ class FirebaseVersusService implements VersusService {
   Future<int>? _flushing;
   OpponentRun? _held;
   List<PoolEntry> _pool = const [];
-  final Set<String> _seen = {};
+
+  /// PRD-2.3 §25.2 the run ids met (taken at a START), oldest first, at
+  /// most [VersusConfig.metCap]: a preference, not a block.
+  final List<String> _met = [];
   bool _loading = false;
+
+  /// The search in flight (PRD-2.3 §25.3: a START waits for it).
+  Future<void>? _searching;
+
+  /// PRD-2.3 §21.4 my hashed Play Games id ('' = none / not known yet).
+  String _pg = '';
+  String _pgFor = '';
+
+  /// PRD-2.3 §21.3 the picture upload in flight.
+  Future<void>? _avatarSync;
 
   /// PRD-2.2 §3 a search ended since the last run start: the result is
   /// cached for the Home visit (no new search until [onRunStart]).
@@ -344,8 +445,20 @@ class FirebaseVersusService implements VersusService {
   /// The opponent held for the next START (tests).
   OpponentRun? get held => _held;
 
-  /// Run ids met this session (tests).
-  Set<String> get seen => _seen;
+  /// Run ids met (tests; [met] keeps the order).
+  Set<String> get seen => _met.toSet();
+
+  /// PRD-2.3 §25.2 the met list, oldest first (tests).
+  List<String> get met => List.unmodifiable(_met);
+
+  /// PRD-2.3 §21.4 my hashed Play Games id now (tests).
+  String get pg => _pg;
+
+  /// PRD-2.3 §21.3 / §21.4 settles the pg and the picture upload (tests).
+  Future<void> settleIdentity() async {
+    await _ensurePg();
+    await (_avatarSync ?? Future<void>.value());
+  }
 
   /// What the upload queue decided for the last submitted run (tests and
   /// the device e2e: PRD-2.2 §2.2 FREE FLY runs are queued too).
@@ -426,6 +539,7 @@ class FirebaseVersusService implements VersusService {
       _failures = 0;
       _retry?.cancel();
       _retry = null;
+      _identityChanged(); // PRD-2.3 §21.3 / §21.4
       try {
         _playerSub ??= identity.player.listen(_onPlayer, onError: (_) {});
       } catch (e) {
@@ -456,14 +570,84 @@ class FirebaseVersusService implements VersusService {
     _player = p;
     if (p != null && _ready && !backend.linkedToPlatform) {
       unawaited(onPlatformSignIn());
+    } else {
+      _identityChanged();
     }
+  }
+
+  /// PRD-2.3 §21.3 / §21.4 the player or the uid changed: the pg hash and
+  /// the picture upload follow.
+  void _identityChanged() {
+    unawaited(_ensurePg());
+    if (_ready) _avatarSync ??= _syncAvatar().whenComplete(() => _avatarSync = null);
+  }
+
+  /// PRD-2.3 §21.4 `pg` = SHA-256(Play Games id + salt), '' without Play
+  /// Games or without the salt. Never throws.
+  Future<String> _ensurePg() async {
+    final id = _player?.id ?? '';
+    if (id.isEmpty) {
+      _pg = '';
+      _pgFor = '';
+      return '';
+    }
+    if (_pgFor == id && _pg.isNotEmpty) return _pg;
+    try {
+      final salt = await pgSalt.salt().timeout(timeout);
+      final pg = hashPlayGamesId(id, salt);
+      if ((_player?.id ?? '') == id) {
+        _pg = pg;
+        _pgFor = pg.isEmpty ? '' : id;
+      }
+      return pg;
+    } catch (e) {
+      _log('pg salt', e);
+      return '';
+    }
+  }
+
+  /// PRD-2.3 §21.3 uploads the Play Games picture (96 × 96 JPEG ≤ 30 KB)
+  /// once per picture change and uid; the download URL becomes the run's
+  /// `avatar`. Players without a Play Games picture upload nothing. A
+  /// failure leaves the last record (or none: `avatar` stays empty).
+  Future<void> _syncAvatar() async {
+    try {
+      final icon = _player?.iconImage ?? '';
+      final uid = _safe(() => backend.uid) ?? '';
+      if (icon.isEmpty || uid.isEmpty) return;
+      final hash = sha256.convert(utf8.encode(icon)).toString();
+      final have = storage.versusAvatar;
+      if (have != null && have.uid == uid && have.hash == hash &&
+          have.url.isNotEmpty) {
+        return;
+      }
+      final jpeg = encodeVersusAvatar(base64Decode(icon));
+      if (jpeg == null) return;
+      final url = await _call(backend.uploadAvatar(jpeg));
+      if (url.isEmpty || url.length > VersusConfig.avatarMax) return;
+      if ((_safe(() => backend.uid) ?? '') != uid) return;
+      await storage.saveVersusAvatar((uid: uid, hash: hash, url: url));
+    } catch (e) {
+      _log('avatar upload', e);
+    }
+  }
+
+  /// PRD-2.3 §21.3 the uploaded picture's URL for the signed-in uid, else
+  /// the Firebase user's photo URL ('' = none).
+  String get _avatarUrl {
+    final uid = _safe(() => backend.uid) ?? '';
+    final a = storage.versusAvatar;
+    if (a != null && uid.isNotEmpty && a.uid == uid && a.url.isNotEmpty) {
+      return a.url;
+    }
+    return _safe(() => backend.photoUrl) ?? '';
   }
 
   @override
   VersusProfile get me {
     final s = storage;
     final pgs = _player?.displayName ?? '';
-    final url = _safe(() => backend.photoUrl) ?? '';
+    final url = _avatarUrl;
     final icon = _player?.iconImage ?? '';
     return VersusProfile(
       name: pgs.trim().isNotEmpty
@@ -488,18 +672,66 @@ class FirebaseVersusService implements VersusService {
     final o = _held;
     _held = null;
     if (o != null) {
-      _seen.add(o.runId);
-      // The next match from the same shard, held for the next START; a new
-      // search only runs on the next Home visit (PRD-2.2 §3).
-      _pickFromPool();
+      _meet(o.runId);
+      // The next unmet match from the same shard, held for the next START;
+      // otherwise the run-start search looks further (PRD-2.3 §25.2).
+      _pickFromPool(freshOnly: true);
     }
     return o;
+  }
+
+  /// PRD-2.3 §25.2 records a met run (most recent last, capped).
+  void _meet(String runId) {
+    if (runId.isEmpty) return;
+    _met
+      ..remove(runId)
+      ..add(runId);
+    while (_met.length > VersusConfig.metCap) {
+      _met.removeAt(0);
+    }
+  }
+
+  @override
+  bool get loadingIntro => true;
+
+  @override
+  bool get holdsOpponent => _held != null;
+
+  @override
+  Future<bool> searchForStart() async {
+    try {
+      if (_held != null) return true;
+      if (!_ready) {
+        // A failed start-up is retried (initialize ends with a search).
+        await _recover();
+        final s = _searching;
+        if (s != null) await s;
+        return _held != null;
+      }
+      final running = _searching;
+      if (running != null) {
+        await running;
+        return _held != null;
+      }
+      // This Home visit already searched and found no rival: known at once.
+      if (_searched && _search.reason == VersusSoloReason.noRival) {
+        return false;
+      }
+      _searched = false;
+      await prefetch();
+      return _held != null;
+    } catch (e) {
+      _log('search for start', e);
+      return false;
+    }
   }
 
   @override
   void onRunStart() {
     _searched = false;
     _searchGen++;
+    // PRD-2.3 §25.2 the next opponent is searched during the run.
+    unawaited(prefetch());
   }
 
   @override
@@ -513,21 +745,28 @@ class FirebaseVersusService implements VersusService {
     return _search.reason ?? VersusSoloReason.noRival;
   }
 
-  /// Holds a random match from the loaded pool (§3.13 matching).
-  void _pickFromPool() {
+  /// Holds a random match from the loaded pool (§3.13 matching, PRD-2.3
+  /// §25.2 met longest ago when only met runs are left). [freshOnly]: only
+  /// a run not met yet (after a START the search looks further first).
+  void _pickFromPool({bool freshOnly = false}) {
     if (_held != null || _pool.isEmpty) return;
     final uid = _safe(() => backend.uid) ?? '';
     final best = storage.bestScore;
+    final pool = _pool.map(PoolCandidate.new);
+    if (freshOnly &&
+        !hasFreshOpponent(pool, myUid: uid, myPg: _pg, met: _met)) {
+      return;
+    }
     final c = pickOpponent(
-      _pool.map(PoolCandidate.new),
+      pool,
       myLevel: levelFor(best),
       myBest: best,
       myUid: uid,
-      seen: _seen,
+      myPg: _pg,
+      met: _met,
       r: _random,
     );
     if (c == null) return;
-    _seen.add(c.runId);
     _held = c.entry.toOpponent();
   }
 
@@ -540,8 +779,12 @@ class FirebaseVersusService implements VersusService {
       return;
     }
     if (_held != null) return;
-    _pickFromPool();
+    // PRD-2.3 §25.2 the loaded shard only serves a run not met yet; for a
+    // rematch the search looks at every pool first.
+    _pickFromPool(freshOnly: true);
     if (_held != null || _loading || _searched) return;
+    final done = Completer<void>();
+    _searching = done.future;
     _loading = true;
     final gen = _searchGen;
     final level = levelFor(storage.bestScore);
@@ -556,17 +799,35 @@ class FirebaseVersusService implements VersusService {
     var reads = 0;
     try {
       final uid = _safe(() => backend.uid) ?? '';
+      // The salt is normally known since start-up; a slow Remote Config
+      // never holds the search up for long (the VS intro waits ≤ 3 s).
+      final myPg = await _ensurePg().timeout(
+        VersusConfig.pgWait,
+        onTimeout: () => _pg,
+      );
       final found = await searchPools<PoolCandidate>(
         order: poolSearchOrder(level, _random),
         myUid: uid,
-        seen: _seen,
+        myPg: myPg,
+        met: List.of(_met),
         expired: () => elapsed() >= searchLimit,
-        onRead: (n) => reads = n,
+        // PRD-2.3 §25.2 item 4: every read counts as it happens.
+        onRead: (n) {
+          reads = n;
+          if (gen == _searchGen && _loading) {
+            _search = VersusSearchInfo(
+              state: VersusSearchState.running,
+              reads: n,
+              level: level,
+            );
+          }
+        },
         read: (id) async {
           final left = searchLimit - elapsed();
+          final box = left < readTimeout ? left : readTimeout;
           final entries = await backend
               .readPool(id)
-              .timeout(left < timeout ? left : timeout);
+              .timeout(box.isNegative ? Duration.zero : box);
           return entries.map(PoolCandidate.new).toList();
         },
       );
@@ -601,6 +862,8 @@ class FirebaseVersusService implements VersusService {
       // S7-06: a search overtaken by a run start leaves the next Home free
       // to search again.
       if (gen == _searchGen) _searched = true;
+      _searching = null;
+      done.complete();
     }
     if (kDebugMode) {
       debugPrint('versus: search (${_search.debugLine})');
@@ -611,8 +874,10 @@ class FirebaseVersusService implements VersusService {
   Future<void> submitRun(RunSummary s, Look look) async {
     try {
       final p = me;
+      final pg = await _ensurePg();
       final entry = RunEntry.fromSummary(
         s,
+        pg: pg,
         runId: _newRunId(),
         name: p.name.isEmpty ? await ensureNickname() : p.name,
         avatar: p.avatarUrl,
@@ -700,7 +965,7 @@ class FirebaseVersusService implements VersusService {
     }
     _held = null;
     _pool = const [];
-    _seen.clear();
+    _met.clear();
     _searched = false;
     _searchGen++;
     _search = const VersusSearchInfo();
@@ -714,10 +979,29 @@ class FirebaseVersusService implements VersusService {
   Future<void> onPlatformSignIn() async {
     if (!_ready) return;
     try {
-      await _call(backend.link(identity));
+      await _call(
+        backend.link(identity, beforeSwitch: _cleanUpAnonymousAccount),
+      );
     } catch (e) {
       _log('link', e);
     }
+    _identityChanged();
+  }
+
+  /// PRD-2.3 §21.4 the link met `credential-already-in-use`: before the
+  /// switch to the uid that owns the Play Games id, the old anonymous
+  /// uid's versus data (runs, pool entries, picture) is deleted while still
+  /// signed in as it. Never throws and never blocks the switch.
+  Future<void> _cleanUpAnonymousAccount() async {
+    try {
+      final ok = await _call(backend.deleteOnline());
+      if (kDebugMode) debugPrint('versus: old anonymous account deleted: $ok');
+    } catch (e) {
+      _log('anonymous clean-up', e);
+    }
+    try {
+      await storage.saveVersusAvatar(null);
+    } catch (_) {}
   }
 }
 // endregion WP-5b

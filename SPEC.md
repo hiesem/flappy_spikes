@@ -1482,3 +1482,18 @@ production build has the flag off and uses these values only. Full key table:
   `test/run/config/tables_mirror_test.dart` (+ `test/fixtures/spawn_tables.json`),
   `test/run/director/s3_0_3_director_test.dart` and others listed in
   `docs/p23/REPORT_tune.md`.
+- DEVIATION (PRD-2.3 §25.3, supersedes the PRD-2.2 "START never waits; solo
+  without an intro" rule): **in VERSUS every START shows the VS intro.** With an
+  opponent held it is unchanged. Without one the intro is the loading screen:
+  the reel cycles filler names for up to 3 s while the search runs, then lands
+  on the found opponent, or on a NO RIVAL FOUND plate (grey person icon, no
+  emblem) and a FLY SOLO banner, and the run starts solo. FREE FLY is
+  unchanged (no intro). "Already met" opponents are a preference (met longest
+  ago), not a block (§25.2).
+- DEVIATION (PRD-2.3 §21.2/§21.3): every versus name tag follows one rule
+  (shrink to 70 %, then "…"); avatar squares show the player's picture, else
+  their own bird in their look (never the grey person icon for an opponent).
+- Tests: `test/p23/s25_versus_matching_test.dart`,
+  `test/p23/s25_vs_loading_screen_test.dart`, `test/p23/s21_names_test.dart`,
+  `test/p23/s21_avatar_display_test.dart`,
+  `test/p23/s21_versus_identity_test.dart`, `functions/test/p23_s21.test.ts`.

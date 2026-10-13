@@ -87,9 +87,12 @@ void main() {
       await versus.initialize();
       final reads = backend.poolReads;
       expect(reads.take(4), everyElement(startsWith('3_')));
-      expect(reads.last, '4_2', reason: 'stopped at the first hit');
+      // PRD-2.3 §25.2 a level's 4 shards are one parallel round: the hit
+      // is in the last round read (levels 3, 2, 4).
+      expect(reads.sublist(reads.length - 4), contains('4_2'),
+          reason: 'stopped after the round of the first hit');
       expect(reads, isNot(contains('5_0')));
-      expect(reads.length, inInclusiveRange(9, 12));
+      expect(reads.length, 12);
       final s = versus.lastSearch;
       expect(s.state, VersusSearchState.found);
       expect(s.reads, reads.length);
@@ -107,7 +110,9 @@ void main() {
       }
       backend.pools['2_1'] = [fixture.pooled('c', 'c1', 60, 2)];
       await versus.initialize();
-      expect(backend.poolReads.last, '2_1');
+      // PRD-2.3 §25.2 the round of level 2 (after level 3's) holds the hit.
+      expect(backend.poolReads, hasLength(8));
+      expect(backend.poolReads.skip(4), contains('2_1'));
       expect(versus.takeOpponent()!.uid, 'c');
     });
 
@@ -127,13 +132,13 @@ void main() {
       // Back on Home (e.g. from the Shop): no new search.
       await versus.prefetch();
       expect(backend.poolReads, hasLength(44));
-      // A run starts (solo); the next Home prefetch searches again.
+      // A run starts (solo); PRD-2.3 §25.2 the run start searches again.
       expect(versus.takeOpponent(), isNull);
-      versus.onRunStart();
       backend.pools['7_3'] = [fixture.pooled('d', 'd1', 900, 7)];
-      await versus.prefetch();
+      versus.onRunStart();
+      await versus.searchForStart();
       expect(backend.poolReads.length, greaterThan(44));
-      expect(backend.poolReads.last, '7_3');
+      expect(backend.poolReads.skip(44), contains('7_3'));
       expect(versus.lastSearch.state, VersusSearchState.found);
     });
 
@@ -142,7 +147,9 @@ void main() {
       await build();
       backend.onRead = () => now = now.add(const Duration(seconds: 1));
       await versus.initialize();
-      expect(versus.lastSearch.reads, 6, reason: '6 reads of 1 s each');
+      // PRD-2.3 §25.2 rounds of 4 parallel reads: the limit is checked
+      // before each round (4 s after the first, 8 s after the second).
+      expect(versus.lastSearch.reads, 8, reason: '2 rounds of 4 reads, 1 s each');
       expect(versus.soloReason, VersusSoloReason.timeout);
       expect(versus.lastSearch.reason, VersusSoloReason.timeout);
     });
@@ -151,7 +158,8 @@ void main() {
       await build(searchLimit: const Duration(milliseconds: 40));
       backend.hang = true;
       await versus.initialize();
-      expect(versus.lastSearch.reads, 1);
+      // PRD-2.3 §25.2 the first round's 4 reads, counted as they happen.
+      expect(versus.lastSearch.reads, 4);
       expect(versus.soloReason, VersusSoloReason.timeout);
     });
 
@@ -182,7 +190,8 @@ void main() {
         await versus.initialize();
         expect(versus.ready, isTrue);
         expect(versus.soloReason, r);
-        expect(versus.lastSearch.reads, 1, reason: 'the search stops');
+        expect(versus.lastSearch.reads, 4,
+            reason: 'the search stops after its first round (PRD-2.3 §25.2)');
         expect(versus.lastSearch.reason, r);
       });
     }

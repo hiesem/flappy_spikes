@@ -746,7 +746,8 @@ void main() {
     r,
     t,
   ) async {
-    // PRD-menu-v4 §8. Day 1, first session: never.
+    // PRD-2.3 §24 (replaces the PRD-menu-v4 §8 numbers). Day 1, first
+    // session: never.
     expect(initial.noAdsPopup, isNull);
     // Day 1, second session, 0 runs: still too early.
     var g = await restartWithSamePrefs(r, t);
@@ -757,17 +758,22 @@ void main() {
     expect(r.spy.params('noads_popup_shown').last, {
       'trigger': 'launch',
       'reason': 'fallback',
+      'check': 'session',
     });
     expect(g.storage.noAdsPopupLastDay, r.clock.day);
     await tap(g, t, const Offset(281, 209));
     expect(g.noAdsPopup, isNull);
     expect(g.storage.noAdsPopupDismissals, 1);
     g = await restartWithSamePrefs(r, t);
-    expect(g.noAdsPopup, isNull, reason: '4 h gap');
-    // 16:00: the gap is over, but no trigger and < 24 h.
-    r.clock.now = r.clock.now.add(const Duration(hours: 4));
+    expect(g.noAdsPopup, isNull, reason: '1 h gap from the show');
+    // 12:30: the gap still runs (closing did not restart it, it is the show).
+    r.clock.now = r.clock.now.add(const Duration(minutes: 30));
     g = await restartWithSamePrefs(r, t);
-    expect(g.noAdsPopup, isNull, reason: 'no good moment, < 24 h');
+    expect(g.noAdsPopup, isNull, reason: '30 min after the show');
+    // 13:00: the gap is over, but no trigger and < 3 h since the show.
+    r.clock.now = r.clock.now.add(const Duration(minutes: 30));
+    g = await restartWithSamePrefs(r, t);
+    expect(g.noAdsPopup, isNull, reason: 'no good moment, < 3 h');
     for (var i = 0; i < 3; i++) {
       await g.menu.noAdsPopup.recordRewardedVideo();
     }
@@ -775,19 +781,30 @@ void main() {
     expect(r.spy.params('noads_popup_shown').last!['reason'], 'videos');
     g.handleBack();
     await settle(g, t);
-    // 20:00 with three more videos: the day's two shows are used up.
-    r.clock.now = r.clock.now.add(const Duration(hours: 4));
+    // 14:00, 15:00 and 16:00: three more shows (the cap is 5 a local day).
+    for (var show = 3; show <= 5; show++) {
+      r.clock.now = r.clock.now.add(const Duration(hours: 1));
+      for (var i = 0; i < 3; i++) {
+        await g.menu.noAdsPopup.recordRewardedVideo();
+      }
+      g = await restartWithSamePrefs(r, t);
+      expect(g.noAdsPopup, isNotNull, reason: 'show $show of the day');
+      g.handleBack();
+      await settle(g, t);
+    }
+    // 17:00 with three more videos: the day's five shows are used up.
+    r.clock.now = r.clock.now.add(const Duration(hours: 1));
     for (var i = 0; i < 3; i++) {
       await g.menu.noAdsPopup.recordRewardedVideo();
     }
     g = await restartWithSamePrefs(r, t);
-    expect(g.noAdsPopup, isNull, reason: 'max 2 per day');
+    expect(g.noAdsPopup, isNull, reason: 'max 5 per day');
     // Day 3 00:30: the videos still count.
-    r.clock.now = r.clock.now.add(const Duration(hours: 4, minutes: 30));
+    r.clock.now = r.clock.now.add(const Duration(hours: 7, minutes: 30));
     g = await restartWithSamePrefs(r, t);
     expect(g.noAdsPopup, isNotNull);
     expect(r.spy.params('noads_popup_shown').last!['reason'], 'videos');
-    expect(r.spy.params('noads_popup_shown').length, 3);
+    expect(r.spy.params('noads_popup_shown').length, 6);
   });
 
   e2e('S1-04 dismissals never stop the launch upsell (PRD-menu-v4 §8)', (

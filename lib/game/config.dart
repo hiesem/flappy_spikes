@@ -1,6 +1,8 @@
 
 import 'package:flame/extensions.dart';
 
+import '../run/config/tuning_values.dart';
+
 /// All gameplay constants from SPEC.md, in logical points on the original
 /// 320x568 iPhone canvas (1 point = 1 Forge2D world unit).
 class Config {
@@ -29,12 +31,20 @@ class Config {
   // endregion PRD-2.2 §7.5
 
   // region PRD-2.2 §7.6 — interstitial after each run
-  /// §7.6 guard 4: no interstitial within this long after the previous
-  /// full-screen ad (rewarded or interstitial) closed.
-  static const Duration interstitialMinGap = Duration(seconds: 60);
+  /// §7.6 guard 4 (PRD-2.3 §18.4 `ads_interstitial_min_gap_s`): no
+  /// interstitial within this long after the previous full-screen ad
+  /// (rewarded or interstitial) closed.
+  static Duration get interstitialMinGap => Duration(
+    seconds: TuningValues.current.i('ads_interstitial_min_gap_s'),
+  );
 
-  /// §7.6 guard 2: a new player's first runs (`gamesPlayed <= 3`) get none.
-  static const int interstitialFreeRuns = 3;
+  /// PRD-2.3 §18.2 (`ads_grace_runs`, replaces PRD-2.2's `interstitialFreeRuns`
+  /// = 3): the new-player grace ends after this many finished runs …
+  static int get adsGraceRuns => TuningValues.current.i('ads_grace_runs');
+
+  /// … or after this much foreground playtime since install (s, §18.3;
+  /// `ads_grace_seconds`), whichever comes first.
+  static int get adsGraceSeconds => TuningValues.current.i('ads_grace_seconds');
 
   /// §7.8: how long the balloon bonus "▶ feather ×3" offer waits for a
   /// rewarded ad to load (WP-7b).
@@ -771,6 +781,19 @@ class Config {
   /// at this opacity over the background (mock `color-mix(fg 14%, bg)`).
   static const double menuCardMix = 0.14;
 
+  // --- Shop and Skins lock (PRD-2.3 §26.2) ----------------------------------
+
+  /// The lock overlay's text: 24 pt Opificio, .06 em, two centred lines
+  /// [menuLockLineHeight] apart.
+  static const double menuLockFontSize = 24;
+  static const double menuLockLetterSpacing = 0.06; // em
+  static const double menuLockLineHeight = 31;
+
+  /// The gold lock badge on a Home tile (in the corner where the NEW tag sits)
+  /// and the lock icon inside it (pt).
+  static const double homeLockBadgeSize = 20;
+  static const double homeLockIconSize = 12;
+
   // --- Menu list momentum scrolling (product decision 2026-10-07) ----------
   //
   // Every menu scroll list (skin shop grid, Shop, LEVELS, any
@@ -1068,11 +1091,15 @@ class Config {
   /// session (the popup may show on that home arrival).
   static const Duration sessionGap = Duration(minutes: 30);
 
-  /// Minimum wall-clock gap since the popup was last shown.
-  static const Duration noAdsPopupMinGap = Duration(hours: 4);
+  /// PRD-2.3 §24.2 (`noads_gap_min`, was 4 h): minimum wall-clock gap since
+  /// the popup was last SHOWN (closing no longer restarts it).
+  static Duration get noAdsPopupMinGap => Duration(
+    minutes: TuningValues.current.i('noads_gap_min'),
+  );
 
-  /// At most this many shows per local calendar day.
-  static const int noAdsPopupMaxPerDay = 2;
+  /// PRD-2.3 §24.2 (`noads_max_per_day`, was 2): shows per local calendar day.
+  static int get noAdsPopupMaxPerDay =>
+      TuningValues.current.i('noads_max_per_day');
 
   /// Eligible from install day 2 OR after this many finished runs.
   static const int noAdsPopupMinRuns = 10;
@@ -1080,8 +1107,29 @@ class Config {
   /// Rewarded videos watched since the last show that trigger the popup.
   static const int noAdsPopupVideos = 3;
 
-  /// Without a good-moment trigger, shown once this long has passed.
-  static const Duration noAdsPopupFallback = Duration(hours: 24);
+  /// PRD-2.3 §24.2 (`noads_fallback_h`, was 24 h): without a good-moment
+  /// trigger, shown once this long has passed since the last show.
+  static Duration get noAdsPopupFallback => Duration(
+    milliseconds: (TuningValues.current.d('noads_fallback_h') * 3600000)
+        .round(),
+  );
+
+  /// PRD-2.3 §23.2 (`rate_min_runs`): the run that reaches this many finished
+  /// runs requests the store's rating sheet (any later run only on a new best).
+  static int get ratingMinRuns => TuningValues.current.i('rate_min_runs');
+
+  /// PRD-2.3 §23.2 (`rate_cooldown_days`): at most one request in this long.
+  static Duration get ratingCooldown =>
+      Duration(days: TuningValues.current.i('rate_cooldown_days'));
+
+  /// PRD-2.3 §23.2 (`rate_delay_s`): seconds after the results page has
+  /// settled (and no overlay is open) before the request.
+  static double get ratingDelaySeconds =>
+      TuningValues.current.d('rate_delay_s');
+
+  /// PRD-2.3 §26.1 (`ui_unlock_best`): the Shop and Skins screens unlock at
+  /// this best score (25). Shown in the lock text, so a tuned value reads true.
+  static int get menuUnlockBest => TuningValues.current.i('ui_unlock_best');
 
   /// A previous run below this score suppresses the popup ("frustrating
   /// death").

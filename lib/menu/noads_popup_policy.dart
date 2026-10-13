@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import '../game/config.dart';
 import '../game/storage.dart';
 
@@ -25,19 +23,20 @@ abstract final class RunMood {
   static const String level = 'level';
 }
 
-/// PRD-menu-v4 §8: when the No-ads upsell may show. Only asked at the
-/// session-start home arrival (app launch, or a return after
-/// >= [Config.sessionGap] in the background — the game tracks that).
+/// PRD-menu-v4 §8 / PRD-2.3 §24: when the No-ads upsell may show. Asked at
+/// the session-start home arrival (app launch, or a return after
+/// >= [Config.sessionGap] in the background — the game tracks that) and on
+/// every Home arrival after a run (PRD-2.3 §24.2).
 ///
 /// The window: not to owners, never in the first session, from install
 /// day 2 or after [Config.noAdsPopupMinRuns] finished runs, >=
-/// [Config.noAdsPopupMinGap] since the later of the last show and the
-/// last close, at most [Config.noAdsPopupMaxPerDay] shows per local day,
-/// and never right after a run below [Config.noAdsPopupMinScore]. Inside
-/// it: a good moment (videos, then level, then best — a new level is
-/// always a new best too, so the more specific one wins), else the 24 h
-/// fallback (from the last show). Dismissals are counted for analytics
-/// only (no limit); closing restarts the gap.
+/// [Config.noAdsPopupMinGap] since the last SHOW (PRD-2.3 §24.2: closing no
+/// longer restarts the gap), at most [Config.noAdsPopupMaxPerDay] shows per
+/// local day, and never right after a run below [Config.noAdsPopupMinScore].
+/// Inside it: a good moment (videos, then level, then best — a new level is
+/// always a new best too, so the more specific one wins), else the fallback
+/// ([Config.noAdsPopupFallback] since the last show). Dismissals are counted
+/// for analytics only (no limit).
 ///
 /// The wall clock is [GameStorage.now] shifted by the debug day offset, so
 /// the debug panel's "Next day" also moves the hour gaps on.
@@ -91,11 +90,9 @@ class NoAdsPopupPolicy {
     if (last != null && last < Config.noAdsPopupMinScore) return null;
     final lastMs = _storage.noAdsPopupLastMs;
     final sinceMs = lastMs == 0 ? null : _nowMs - lastMs;
-    // §8.2 / §8.5: the 4 h gap runs from the later of the last show and
-    // the last close; the 24 h fallback stays anchored to the show.
-    final gapFromMs = math.max(lastMs, _storage.noAdsPopupClosedMs);
-    if (gapFromMs != 0 &&
-        _nowMs - gapFromMs < Config.noAdsPopupMinGap.inMilliseconds) {
+    // PRD-2.3 §24.2: the gap and the fallback both run from the last show.
+    if (sinceMs != null &&
+        sinceMs < Config.noAdsPopupMinGap.inMilliseconds) {
       return null;
     }
     if (showsToday >= Config.noAdsPopupMaxPerDay) return null;
@@ -138,8 +135,8 @@ class NoAdsPopupPolicy {
       );
 
   /// ✕ / dim / back / Esc: counts the dismissal (analytics only — no
-  /// limit) and restarts the 4 h gap from now (§8.5 "closing simply starts
-  /// the 4-hour gap").
+  /// limit since PRD-menu-v4 §8). PRD-2.3 §24.2: it no longer restarts the
+  /// gap, which runs from the last show.
   Future<void> markDismissed() async {
     await _storage.saveNoAdsPopupClosedMs(_nowMs);
     await _storage.saveNoAdsPopupDismissals(_storage.noAdsPopupDismissals + 1);

@@ -20,6 +20,7 @@ import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/services/monetization.dart';
+import 'package:flappy_spikes/services/rating_prompt.dart';
 import 'package:flappy_spikes/services/reminders.dart';
 import 'package:flappy_spikes/services/versus_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -170,6 +171,7 @@ FlappySpikesGame createRunTestGame({
   int seed = 7,
   VersusService? versus,
   DateTime Function()? clock,
+  RatingPrompt? rating,
 }) {
   SharedPreferences.setMockInitialValues(prefs);
   final game = FlappySpikesGame(
@@ -179,6 +181,7 @@ FlappySpikesGame createRunTestGame({
     soundEnabled: false,
     versus: versus,
     clock: clock,
+    rating: rating,
   );
   game.runSeed = seed;
   // PRD-2.3 §14.6 see [createTestGame].

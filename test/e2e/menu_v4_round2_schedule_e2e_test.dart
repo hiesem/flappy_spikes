@@ -21,12 +21,12 @@ void main() {
 
   for (final close in ['cross', 'dim', 'back', 'Esc']) {
     v4Journey(
-      'v4 R2: $close closing cooldown survives restart at exact boundary',
+      'v4 R2: $close close keeps the show\'s 1 h gap across restart (PRD-2.3 §24.2)',
       eligible: true,
       (game, rig, tester) async {
         await run(game, .3);
         final shown = game.storage.noAdsPopupLastMs;
-        rig.clock.now = rig.clock.now.add(const Duration(hours: 1));
+        rig.clock.now = rig.clock.now.add(const Duration(minutes: 30));
         final closed = rig.clock.now.millisecondsSinceEpoch;
         switch (close) {
           case 'cross':
@@ -44,15 +44,15 @@ void main() {
         expect(next.storage.noAdsPopupLastMs, shown);
         expect(next.storage.noAdsPopupClosedMs, closed);
         expect(next.storage.noAdsPopupDismissals, 1);
-        expect(next.noAdsPopup, isNull);
+        expect(next.noAdsPopup, isNull, reason: '30 min after the show');
         rig.clock.now = rig.clock.now.add(
-          Config.noAdsPopupMinGap - const Duration(seconds: 1),
+          const Duration(minutes: 29, seconds: 59),
         );
         next = await v4Restart(next, rig, tester);
-        expect(next.noAdsPopup, isNull, reason: '3:59:59 since close');
+        expect(next.noAdsPopup, isNull, reason: '59:59 after the show');
         rig.clock.now = rig.clock.now.add(const Duration(seconds: 1));
         next = await v4Restart(next, rig, tester);
-        expect(next.noAdsPopup, isNotNull, reason: '4:00:00 since close');
+        expect(next.noAdsPopup, isNotNull, reason: '1:00:00 after the show');
         expect(next.storage.noAdsPopupShowsToday, 2);
         expect(rig.events.last('noads_popup_shown')!['reason'], 'videos');
       },
@@ -60,13 +60,14 @@ void main() {
   }
 
   v4Journey(
-    'v4 R2: last-show fallback stays anchored to show after a later close',
+    'v4 R2: last-show fallback (3 h) stays anchored to the show after a later close',
     eligible: true,
     (game, rig, tester) async {
-      rig.clock.now = rig.clock.now.add(const Duration(hours: 3));
+      // The launch show is at 08:00; the close at 10:00 must not move it.
+      rig.clock.now = rig.clock.now.add(const Duration(hours: 2));
       game.handleBack();
       await v4Settle(game, tester);
-      rig.clock.now = DateTime(2026, 10, 8, 7, 59, 59);
+      rig.clock.now = DateTime(2026, 10, 7, 10, 59, 59);
       var next = await v4Restart(game, rig, tester);
       expect(next.noAdsPopup, isNull);
       rig.clock.now = rig.clock.now.add(const Duration(seconds: 1));
@@ -167,12 +168,12 @@ void main() {
         await v4Videos(game, tester, videos);
         rig.clock.now = rig.clock.now.add(Config.noAdsPopupFallback);
         final next = await v4Restart(game, rig, tester);
-        expect(next.noAdsPopup, isNull);
+        expect(next.noAdsPopup, isNull, reason: 'the last run scored 5');
         expect(next.storage.lastScore, 5);
+        // PRD-2.3 §24.2: the next run's Home arrival checks the popup.
         await v4FinishRun(next, tester, 6);
-        expect(next.noAdsPopup, isNull, reason: 'no offer between runs');
-        await v4Background(next, rig, tester, Config.sessionGap);
         expect(next.noAdsPopup, isNotNull);
+        expect(rig.events.last('noads_popup_shown')!['check'], 'after_run');
         expect(
           rig.events.last('noads_popup_shown')!['reason'],
           videos == 3 ? 'videos' : 'best',
@@ -200,7 +201,7 @@ void main() {
   );
 
   v4Journey(
-    'v4 R2: many historical dismissals impose no cap across consecutive days',
+    'v4 R2: many historical dismissals impose no cap (5 shows a local day)',
     prefs: (rig) => {...rig.eligible, 'noAdsPopupDismissals': 999},
     (game, rig, tester) async {
       for (var i = 0; i < 4; i++) {
@@ -209,7 +210,7 @@ void main() {
         await v4Settle(game, tester);
         expect(game.storage.noAdsPopupDismissals, 1000 + i);
         await v4Background(game, rig, tester, Config.noAdsPopupFallback);
-        expect(game.storage.noAdsPopupShowsToday, 1);
+        expect(game.storage.noAdsPopupShowsToday, i + 2);
       }
       expect(rig.events.count('noads_popup_shown'), 5);
     },

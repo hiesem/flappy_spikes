@@ -67,7 +67,7 @@ SkinItem? featuredItemFor(ItemStore items) {
 /// routes to a game method; the screen polls the menu / store state each
 /// frame (prices, pending purchases, cooldown, No-ads ownership).
 class ShopScreen extends MenuScreen {
-  ShopScreen({required super.onBack}) : super(title: 'SHOP');
+  ShopScreen({required super.onBack, super.lock}) : super(title: 'SHOP');
 
   late final ShopBanner banner;
   late final FreeCoinsRow freeCoins;

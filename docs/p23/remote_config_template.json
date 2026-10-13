@@ -612,6 +612,96 @@
           "valueType": "NUMBER"
         }
       }
+    },
+    "ads": {
+      "description": "PRD-2.3 §15.3 group ads_",
+      "parameters": {
+        "ads_grace_runs": {
+          "defaultValue": {
+            "value": "5"
+          },
+          "description": "§18.4 New-player grace: no interstitial until this many finished runs (or ads_grace_seconds of playtime)",
+          "valueType": "NUMBER"
+        },
+        "ads_grace_seconds": {
+          "defaultValue": {
+            "value": "300"
+          },
+          "description": "§18.4 New-player grace: foreground playtime since install (s) that ends it",
+          "valueType": "NUMBER"
+        },
+        "ads_interstitial_min_gap_s": {
+          "defaultValue": {
+            "value": "60"
+          },
+          "description": "§18.4 Interstitial: minimum gap (s) after the previous full-screen ad closed",
+          "valueType": "NUMBER"
+        }
+      }
+    },
+    "rate": {
+      "description": "PRD-2.3 §15.3 group rate_",
+      "parameters": {
+        "rate_min_runs": {
+          "defaultValue": {
+            "value": "5"
+          },
+          "description": "§23.3 Rating prompt: the run that reaches this many finished runs asks; later only a new best",
+          "valueType": "NUMBER"
+        },
+        "rate_cooldown_days": {
+          "defaultValue": {
+            "value": "30"
+          },
+          "description": "§23.3 Rating prompt: at most one request in this many days",
+          "valueType": "NUMBER"
+        },
+        "rate_delay_s": {
+          "defaultValue": {
+            "value": "1.5"
+          },
+          "description": "§23.3 Rating prompt: seconds after the results page has settled (no overlay open)",
+          "valueType": "NUMBER"
+        }
+      }
+    },
+    "noads": {
+      "description": "PRD-2.3 §15.3 group noads_",
+      "parameters": {
+        "noads_gap_min": {
+          "defaultValue": {
+            "value": "60"
+          },
+          "description": "§24.4 No-Ads popup: minimum minutes between two shows (from the last show)",
+          "valueType": "NUMBER"
+        },
+        "noads_max_per_day": {
+          "defaultValue": {
+            "value": "5"
+          },
+          "description": "§24.4 No-Ads popup: shows per local calendar day",
+          "valueType": "NUMBER"
+        },
+        "noads_fallback_h": {
+          "defaultValue": {
+            "value": "3"
+          },
+          "description": "§24.4 No-Ads popup: hours since the last show before the fallback shows it without a good moment",
+          "valueType": "NUMBER"
+        }
+      }
+    },
+    "ui": {
+      "description": "PRD-2.3 §15.3 group ui_",
+      "parameters": {
+        "ui_unlock_best": {
+          "defaultValue": {
+            "value": "25"
+          },
+          "description": "§26.1 Shop and Skins unlock at this best score",
+          "valueType": "NUMBER"
+        }
+      }
     }
   }
 }

@@ -741,6 +741,9 @@ default). Later WPs only read/write them.
 | `lastFeatherRun` | int −1 | `lastFeatherRun` | `saveLastFeatherRun(int)` | **PRD-2.3 §14.2** (P23-14): the `gamesPlayed` of the run that last showed a golden feather (written in `FlappySpikesGame.endRun` before the increment); never a feather in two runs in a row (`GatesConfig.shownLastRun`) |
 | `lastPieceRun` | int −1 | `lastPieceRun` | `saveLastPieceRun(int)` | **PRD-2.3 §14.2**: the same for the puzzle piece |
 | `gamesPlayed` (2.3) | — | — | `saveGamesPlayed(int)` | **PRD-2.3 §14.6**: the RUN DEBUG "Runs: N (+5 / 0)" row; drives the lifetime gates |
+| `playtimeSeconds` | int 0 | `playtimeSeconds` | `savePlaytimeSeconds(int)` | **PRD-2.3 §18.3**: foreground seconds since install (resumed, outside full-screen ads) until the new-player grace ends; written every 10 s, on going to the background and at run end; kept by "Delete my data" |
+| `firstInterstitialShown` | bool false | `firstInterstitialShown` | `saveFirstInterstitialShown()` | **PRD-2.3 §18.4**: the one-time `first_interstitial` event went out |
+| `lastRatingRequestAt` | int 0 (seconds since the epoch) | `lastRatingRequestAt` | `saveLastRatingRequestAt(int)` | **PRD-2.3 §23.2**: the last request of the store's rating sheet (30-day cooldown); kept by "Delete my data" |
 
 The Firebase uid lives in Firebase Auth. Saw/switch "never twice in a row" is per run (`RunState`), not stored.
 "Delete my data" (WP-4c) clears `versusNickname` (regenerated), `uploadQueue`, `uploadsToday/Day`; it does not touch
@@ -1539,3 +1542,31 @@ the chick's ×2, the perfect zone) are superseded by PRD-2.3 §14; `SPEC.md` has
 - `BirdShape.hasBl` (JS `s.bl != null`) anchors stern gear on the duck.
 - Port check: `tool/skins_port/render_js.mjs` + `test/skins/p23_skins_port_test.dart`
   → `docs/p23/SKINS_PORT.png` (page left, Flutter right, H1…T15).
+
+## 27. PRD-2.3 WP-ADS contract notes (as built, 2026-10-13)
+
+- **Ad grace (§18):** `lib/menu/ad_grace.dart`. `AdGrace.active({runs, playtimeSeconds})`
+  is the one rule (`runs < ads_grace_runs && playtime < ads_grace_seconds`); `interstitialSkipReason()`
+  returns `InterstitialSkip.newPlayer` while it holds, and `_onFirstFlight` preloads only when it does not
+  hold for the run that starts. `PlaytimeCounter` (same file) is driven from `FlappySpikesGame.update` with the
+  real frame time (≤ 1 s) only while resumed and no full-screen ad is up; it flushes on background and at run end.
+- **Rating prompt (§23):** `lib/services/rating_prompt.dart`. `RatingPrompt` (no backend = never available,
+  every call try/caught) is injected through `FlappySpikesGame(rating:)`; `main.dart` builds it with
+  `InAppReviewBackend` on the mobile products and calls `prepare()` after `runApp`. The game decides with
+  `RatingRules.trigger` at `endRun`, asks in `_checkRatingPrompt(dt)` (the results page's `settled` getter,
+  no modal, no debug panel, no ad) and writes `lastRatingRequestAt` before `request()`. The interstitial reads
+  `_ratingRequestedThisRun` (skip reason `rating`) and the Home arrival skips the No-Ads check on it.
+- **No-Ads after a run (§24):** `_arriveHome()` queues the offer through `_queueNoAdsOffer(check:, stale:)`
+  (shared with the session start) **after the arrival's storage reload** (`_homeReload`): `GameStorage.load()`
+  reverts in-memory state with what the preferences hold, so a reload that lands after a show was recorded
+  would undo it. The popup's `noads_popup_shown` carries `check: session | after_run`.
+- **Shop / Skins lock (§26):** `MenuScreen(lock: [line1, line2])` (null = open). A locked screen's
+  `isActive()` is false, so every content control (buttons, tiles, tabs, scroll) stops hit-testing, and
+  `MenuLockOverlay` (`lib/components/menu_lock_overlay.dart`) sits above the content and swallows taps; the back
+  button keeps `isBackActive()` and a higher priority. `MenuState.locked` (`bestScore < Config.menuUnlockBest`)
+  is the one check; the revive shop opens with `allowLock: false`. The Home tiles show `MenuTile.locked`
+  (a gold lock badge in the NEW tag's corner) and no NEW tag while locked.
+- **Tuning:** `ads_*`, `rate_*`, `noads_*` and `ui_unlock_best` are read through the `Config` getters
+  (`interstitialMinGap`, `adsGraceRuns`, `adsGraceSeconds`, `ratingMinRuns`, `ratingCooldown`,
+  `ratingDelaySeconds`, `noAdsPopupMinGap`, `noAdsPopupMaxPerDay`, `noAdsPopupFallback`, `menuUnlockBest`).
+

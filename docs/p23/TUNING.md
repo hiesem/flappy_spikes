@@ -217,4 +217,14 @@ The table is generated from `tuning_defaults.dart` by `dart run tool/tuning_sync
 | `gate_fever` | integer | `15` | §14.6 | FEVER from gamesPlayed >= N |
 | `gate_lucky_spin` | integer | `15` | §14.6 | Lucky spin from gamesPlayed >= N |
 | `gate_saw` | integer | `20` | §14.6 | Saw from gamesPlayed >= N |
+| `ads_grace_runs` | integer | `5` | §18.4 | New-player grace: no interstitial until this many finished runs (or ads_grace_seconds of playtime) |
+| `ads_grace_seconds` | integer | `300` | §18.4 | New-player grace: foreground playtime since install (s) that ends it |
+| `ads_interstitial_min_gap_s` | integer | `60` | §18.4 | Interstitial: minimum gap (s) after the previous full-screen ad closed |
+| `rate_min_runs` | integer | `5` | §23.3 | Rating prompt: the run that reaches this many finished runs asks; later only a new best |
+| `rate_cooldown_days` | integer | `30` | §23.3 | Rating prompt: at most one request in this many days |
+| `rate_delay_s` | decimal | `1.5` | §23.3 | Rating prompt: seconds after the results page has settled (no overlay open) |
+| `noads_gap_min` | integer | `60` | §24.4 | No-Ads popup: minimum minutes between two shows (from the last show) |
+| `noads_max_per_day` | integer | `5` | §24.4 | No-Ads popup: shows per local calendar day |
+| `noads_fallback_h` | decimal | `3` | §24.4 | No-Ads popup: hours since the last show before the fallback shows it without a good moment |
+| `ui_unlock_best` | integer | `25` | §26.1 | Shop and Skins unlock at this best score |
 <!-- KEYS:END -->

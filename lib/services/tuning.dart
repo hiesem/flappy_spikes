@@ -43,7 +43,10 @@ abstract class TuningBackend {
 /// set to the run (`TuningValues.current`), so a value never changes during
 /// a run.
 class Tuning {
-  Tuning({this.backend});
+  /// [active] is the set a run hands to `TuningValues.current` when there is
+  /// no backend (tests give a fixed set; the default is the in-app defaults).
+  Tuning({this.backend, TuningValues? active})
+    : _active = active ?? TuningValues.defaults();
 
   /// The app-wide service (no-op until `main.dart` replaces it).
   static Tuning instance = Tuning();
@@ -54,7 +57,7 @@ class Tuning {
   /// The values activated at startup (defaults until then / without a
   /// backend).
   TuningValues get active => _active;
-  TuningValues _active = TuningValues.defaults();
+  TuningValues _active;
 
   /// Whether [initialize] has run (TUNING page).
   bool get initialized => _initialized;

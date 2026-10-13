@@ -191,8 +191,8 @@ class _RideLayer extends Component {
 
 /// The portal ride engine (PRD-2 §3.12, §5.12b, §7; `rides84.js`): one
 /// engine for the cannon and the five themed rides. Path from arc / line
-/// segments or a sampled curve, 11 rings at equal arc length (+ the portal
-/// = 12 passes), the ride camera starting at the live scroll speed, then
+/// segments or a sampled curve, [PortalConfig.rideRings] rings at equal arc length (+ the
+/// portal = 6 passes), the ride camera starting at the live scroll speed, then
 /// the theme's exit moment → launch flight (560 / −640 pt/s, g 520, 1.7 s)
 /// → glide home (2.5 s + 0.6 s settle). Input is ignored and the run cannot
 /// end while it runs; the run clock keeps running.
@@ -229,7 +229,7 @@ class PortalRide implements Ride {
   final Set<int> _added = {};
   final Set<int> _passed = {};
 
-  /// Passes made by the ride (the 11 ride rings).
+  /// Passes made by the ride (the [PortalConfig.rideRings] ride rings).
   int get ringsPassed => _passed.length;
 
   @override

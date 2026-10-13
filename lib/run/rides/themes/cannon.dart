@@ -12,7 +12,8 @@ import '../ride_theme.dart';
 
 /// The cannon ride (PRD-2 §3.12, §5.12b `portal_1…6.png`; mock
 /// `screen_portal.html`): curve up (r 180), climb 1 600 pt, loop over the
-/// top (r 220), dive 2 000 pt; rings every 380 pt from 190; purple / cyan
+/// top (r 220), dive 2 000 pt; 5 rings every 950 pt from 190 (owner
+/// 2026-10-13; was 11 every 380, same span); purple / cyan
 /// tint and vertical speed lines; the ground rises into view with the
 /// blocky spiked cannon; the bird drops into the muzzle, the barrel tilts
 /// 38° right with a shake and fires (flash, smoke, confetti); the cannon

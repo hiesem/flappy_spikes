@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import '../look.dart';
 import 'art_paint.dart';
+import 'trail_v23.dart';
 
 /// Paints a complete [Look] centred on the origin, one art unit per canvas
 /// unit, inside the 44 x 36 bird box — the `drawLook` contract of
@@ -30,14 +31,35 @@ class TrailEmitter {
     for (var i = 0; i < capacity; i++) {
       _pool.add(_Particle());
     }
+    _syncV23();
+  }
+
+  /// PRD-2.3 §19: the engine of a 2.3 trail (null for the 2.0 trails).
+  TrailV23? _v23;
+
+  /// Where the last [emit] put the head, and how long ago (the Supernova
+  /// core glow is drawn at the head while the trail is emitting).
+  Offset? _lastHead;
+  double _sinceEmit = double.infinity;
+
+  void _syncV23() {
+    _v23 = TrailV23.has(_trailId) ? TrailV23(_trailId, _random) : null;
   }
 
   /// Maximum live particles. When the pool is full new emissions are dropped,
   /// so memory and per-frame cost stay bounded however long the trail runs.
   static const int capacity = 512;
 
-  /// Trail ids in catalogue order (PRD-menu-v2 §5.5).
-  static List<String> get ids => [for (final def in _defs) def.id];
+  /// Trail ids in catalogue order (PRD-menu-v2 §5.5; PRD-2.3 §19.3: the 2.3
+  /// trails of [TrailV23] mixed in by rarity).
+  static const List<String> ids = [
+    'flame', 'blue', 'toxic', 'hot', 'shadow', //
+    'sunset', 'leaves', 'snow', 'petals', 'ink',
+    'sparkle', 'bubbles', 'hearts', 'laser', 'confetti',
+    'planes', 'popcorn', 'fireworks', 'steps', 'fish',
+    'bolt', 'blocks', 'notes', 'galaxy', 'prism', 'lavadrip',
+    'rainbow', 'echo', 'supernova', 'paint',
+  ];
 
   /// The free default, used when an unknown id is requested.
   static const String fallbackId = 'flame';
@@ -96,14 +118,17 @@ class TrailEmitter {
     if (value == _trailId) return;
     _trailId = value;
     clear();
+    _syncV23();
   }
 
   /// Live particle count (history points are tracked separately).
-  int get particleCount => _alive;
+  int get particleCount => _v23?.particleCount ?? _alive;
 
   /// Colour of the dot the shop thumbnail puts at the head of the trail
   /// (`drawThumb`: the second flame colour, or the per-kind fallback).
   Color get orbColor {
+    final v23 = TrailV23.dots[_trailId];
+    if (v23 != null) return v23;
     final def = _def;
     final cols = def.cols;
     if (cols != null) return cols[1];
@@ -127,6 +152,13 @@ class TrailEmitter {
   /// -90 in the shop thumbnail) and moves the whole trail left with the world.
   void emit(Offset head, double dt, {double k = 1, double vx = -140}) {
     if (dt <= 0) return;
+    final v23 = _v23;
+    if (v23 != null) {
+      v23.emit(head.dx, head.dy, dt, k, vx);
+      _lastHead = head;
+      _sinceEmit = 0;
+      return;
+    }
     final def = _def;
     final x = head.dx;
     final y = head.dy;
@@ -244,6 +276,12 @@ class TrailEmitter {
   void step(double dt) {
     if (dt <= 0) return;
     _time += dt;
+    final v23 = _v23;
+    if (v23 != null) {
+      _sinceEmit += dt;
+      v23.step(dt);
+      return;
+    }
     var write = 0;
     for (var read = 0; read < _alive; read++) {
       final p = _pool[read];
@@ -262,7 +300,14 @@ class TrailEmitter {
   }
 
   /// Draws the current trail. [k] is pixels per art unit (as in [emit]).
-  void paint(Canvas canvas, {double k = 1}) {
+  /// [head] is the bird's trail point (the page's `head`); it defaults to
+  /// the last emit point while the trail is emitting.
+  void paint(Canvas canvas, {double k = 1, Offset? head}) {
+    final v23 = _v23;
+    if (v23 != null) {
+      v23.paint(canvas, k, head ?? (_sinceEmit < .1 ? _lastHead : null));
+      return;
+    }
     final def = _def;
     if (def.kind == _Kind.ribbon) {
       _paintRibbon(canvas, k);
@@ -276,6 +321,7 @@ class TrailEmitter {
 
   /// Drops every particle and the path history. The clock keeps running.
   void clear() {
+    _v23?.clear();
     _alive = 0;
     _acc = 0;
     _histCount = 0;
@@ -286,6 +332,7 @@ class TrailEmitter {
   /// particles fade out — the shop preview's `trail.hist.length = 0` when the
   /// trail switches off between hoop passes.
   void resetPath() {
+    _v23?.resetPath();
     _histCount = 0;
     _histHead = 0;
   }
@@ -306,7 +353,7 @@ class TrailEmitter {
       e.emit(orb, dt, k: tileScale, vx: -90);
       e.step(dt);
     }
-    e.paint(c, k: tileScale);
+    e.paint(c, k: tileScale, head: orb);
     ArtPaint.circ(c, orb.dx, orb.dy, 4.2 * tileScale, e.orbColor);
     ArtPaint.circ(
       c,

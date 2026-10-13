@@ -125,9 +125,10 @@ void main() {
         expect(screen.tileFor('classic').animatesArt, isTrue); // flaps
         // Affordable + unseen, and the update's items, are NEW.
         expect(screen.tileFor('sky').current.isNew, isTrue);
-        expect(screen.tileFor('ghost').current.isNew, isTrue);
+        // PRD-2.3 §19.3: the 2.0 update items follow the normal rule now.
+        expect(screen.tileFor('ghost').current.isNew, isFalse);
         expect(screen.tileFor('robin').current.isNew, isFalse);
-        expect(screen.bar.labelText, '3 / 88'); // the free defaults
+        expect(screen.bar.labelText, '3 / 148'); // the free defaults
         expect(screen.tabBar.tabFor(SkinLayer.bird).countText, '1/30');
         // Static art is drawn once (cached pictures).
         expect(screen.tileFor('sky').animatesArt, isFalse);
@@ -242,22 +243,27 @@ void main() {
       'NEW tags: snapshot at open, cleared per item when tapped',
       prefs: prefsWith(coins: 0),
       verify: (game, spy, ads, iap, tester) async {
+        // PRD-2.3 §19.3: the 2.3 items are NEW whatever the balance.
         var screen = await openSkinShop(game);
-        expect(screen.tileFor('lemon').current.isNew, isTrue);
-        expect(screen.tileFor('toucan').current.isNew, isTrue);
-        game.tapItem(SkinLayer.bird, 'lemon');
+        game.selectSkinTab(SkinLayer.hat);
+        await flushAndMount(game);
+        expect(screen.tileFor('sprout').current.isNew, isTrue);
+        expect(screen.tileFor('sunburst').current.isNew, isTrue);
+        game.tapItem(SkinLayer.hat, 'sprout');
         await flushAndMount(game);
         game.update(0);
-        expect(screen.tileFor('lemon').current.isNew, isFalse);
-        expect(screen.tileFor('toucan').current.isNew, isTrue);
-        expect(game.storage.seenItems, contains('bird:lemon'));
+        expect(screen.tileFor('sprout').current.isNew, isFalse);
+        expect(screen.tileFor('sunburst').current.isNew, isTrue);
+        expect(game.storage.seenItems, contains('hat:sprout'));
         expect(game.menu.items.hasNewBadge, isTrue);
         game.handleBack();
         stepGame(game, 0.6);
         await flushAndMount(game);
         screen = await openSkinShop(game);
-        expect(screen.tileFor('lemon').current.isNew, isFalse);
-        expect(screen.tileFor('toucan').current.isNew, isTrue);
+        game.selectSkinTab(SkinLayer.hat);
+        await flushAndMount(game);
+        expect(screen.tileFor('sprout').current.isNew, isFalse);
+        expect(screen.tileFor('sunburst').current.isNew, isTrue);
       },
     );
 
@@ -327,7 +333,7 @@ void main() {
           stepGame(game, 0.35);
           expect(pill.shownBalance, after);
           // Counters went up; the bar popped after 0.5 s.
-          expect(screen.bar.labelText, '4 / 88');
+          expect(screen.bar.labelText, '4 / 148');
           expect(counter.countText, isNot(countBefore));
           expect(sounds.contains(Sfx.skProgress), !legendary);
           stepGame(game, 0.8);
@@ -365,7 +371,7 @@ void main() {
         }
         expect(peak, closeTo(1.12, 0.01));
         expect(screen.bar.popScale, 1);
-        expect(screen.bar.fill, closeTo(4 / 88, 1e-9));
+        expect(screen.bar.fill, closeTo(4 / 148, 1e-9));
       },
     );
 

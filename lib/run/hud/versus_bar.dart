@@ -4,6 +4,7 @@ import 'package:flame/components.dart';
 
 import '../config/hud_config.dart';
 import '../config/versus_config.dart';
+import '../../components/versus_avatar.dart';
 import '../../services/avatars.dart';
 import 'name_chip.dart';
 import 'run_hud.dart';
@@ -81,7 +82,19 @@ class VersusBar extends PositionComponent {
     _box(canvas, youBox, HudConfig.youBox, a);
     final youAv = Rect.fromLTWH(HudConfig.youLeft, top, h, h);
     _box(canvas, youAv, HudConfig.youAvatar, a);
-    _avatar(canvas, youAv, HudConfig.soft, a, g.myAvatarKey);
+    // PRD-2.3 §21.3 your picture, else your own bird.
+    final mine = hud.game.avatars.lookup(g.myAvatarKey);
+    if (mine != null) {
+      AvatarImages.paint(canvas, mine, youAv, opacity: a);
+    } else {
+      VersusAvatar.paintBird(
+        canvas,
+        youAv,
+        hud.game.menu.items.look,
+        opacity: a,
+        backdrop: VersusAvatar.ownBackdrop,
+      );
+    }
     _score(
       canvas,
       '$myScore',
@@ -100,7 +113,21 @@ class VersusBar extends PositionComponent {
       Color.lerp(const Color(0xFF000000), fg, HudConfig.themAvatarMix)!,
       ta,
     );
-    _avatar(canvas, themAv, bg, ta, hud.run.setup.opponent?.avatarUrl ?? '');
+    // PRD-2.3 §21.3 their picture, else their own bird in their look
+    // (never the grey person icon).
+    final opp = hud.run.setup.opponent;
+    final theirs = hud.game.avatars.lookup(opp?.avatarUrl ?? '');
+    if (theirs != null) {
+      AvatarImages.paint(canvas, theirs, themAv, opacity: ta);
+    } else if (opp != null) {
+      VersusAvatar.paintBird(
+        canvas,
+        themAv,
+        opp.look,
+        mirror: true,
+        opacity: ta,
+      );
+    }
     _score(
       canvas,
       '$theirScore',
@@ -128,31 +155,6 @@ class VersusBar extends PositionComponent {
   void _box(Canvas canvas, Rect r, Color c, double a) {
     _p.color = c.withValues(alpha: c.a * a);
     canvas.drawRect(r, _p);
-  }
-
-  /// The avatar image ([image], an `AvatarImages` key, S6-64) filling
-  /// [r]; while it is missing, the mock's person glyph (head r 4.5 at
-  /// (12, 8), shoulders from y 22) at 25 pt in [r].
-  void _avatar(Canvas canvas, Rect r, Color c, double a, String image) {
-    final picture = hud.game.avatars.lookup(image);
-    if (picture != null) {
-      AvatarImages.paint(canvas, picture, r, opacity: a);
-      return;
-    }
-    final k = 25 / 24;
-    final o = r.center - Offset(12 * k, 12 * k);
-    _p.color = c.withValues(alpha: c.a * a);
-    canvas.drawCircle(o + Offset(12 * k, 8 * k), 4.5 * k, _p);
-    canvas.drawPath(
-      Path()
-        ..moveTo(o.dx + 3 * k, o.dy + 22 * k)
-        ..arcToPoint(
-          Offset(o.dx + 21 * k, o.dy + 22 * k),
-          radius: Radius.circular(9 * k),
-        )
-        ..close(),
-      _p,
-    );
   }
 
   final Map<String, HudText> _scores = {};

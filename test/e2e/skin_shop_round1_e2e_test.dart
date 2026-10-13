@@ -14,6 +14,7 @@ import 'package:flappy_spikes/services/ads_service.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/services/iap_service.dart';
 import 'package:flappy_spikes/services/monetization.dart';
+import 'package:flappy_spikes/skins/catalog.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -191,13 +192,13 @@ void main() {
       await _tap(game, tester, game.homeScreen!.skinsTile);
       await _fade(game);
       final screen = game.skinShop!;
-      expect(screen.bar.labelText, '3 / 88');
+      expect(screen.bar.labelText, '3 / 148');
       expect(screen.tabBar.tabs.map((tab) => tab.countText), [
         '1/30',
-        '0/14',
-        '0/14',
-        '1/15',
-        '1/15',
+        '0/29',
+        '0/29',
+        '1/30',
+        '1/30',
       ]);
 
       // Reach the last grid rows using actual drag input, then try Galaxy.
@@ -250,7 +251,7 @@ void main() {
       expect(game.menu.items.look.bird, 'galaxy');
       stepGame(game, .7);
       expect(game.coinPill.shownBalance, 1000);
-      expect(screen.bar.labelText, '4 / 88');
+      expect(screen.bar.labelText, '4 / 148');
       expect(screen.tabBar.tabs.first.countText, '2/30');
       expect(rig.events.params('item_purchase').single, {
         'layer': 'bird',
@@ -270,9 +271,9 @@ void main() {
       const dressed = Look(bird: 'galaxy', gear: 'shades', hat: 'cap');
       expect(game.menu.items.look, dressed);
       expect(game.menu.wallet.balance, 500);
-      expect(screen.bar.labelText, '6 / 88');
-      expect(screen.tabBar.tabFor(SkinLayer.gear).countText, '1/14');
-      expect(screen.tabBar.tabFor(SkinLayer.hat).countText, '1/14');
+      expect(screen.bar.labelText, '6 / 148');
+      expect(screen.tabBar.tabFor(SkinLayer.gear).countText, '1/29');
+      expect(screen.tabBar.tabFor(SkinLayer.hat).countText, '1/29');
       final reloaded = GameStorage();
       await reloaded.load();
       expect(
@@ -336,12 +337,12 @@ void main() {
       await _tap(game, tester, game.homeScreen!.skinsTile);
       await _fade(game);
       final screen = game.skinShop!;
-      expect(screen.bar.labelText, '6 / 88');
+      expect(screen.bar.labelText, '6 / 148');
       await _tab(game, tester, SkinLayer.gear);
       await _tap(game, tester, screen.tileFor(kNoneId));
       expect(game.menu.items.look.gear, kNoneId);
       expect(screen.actionButton.label, 'NOTHING ON');
-      expect(screen.tabBar.tabFor(SkinLayer.gear).countText, '1/14');
+      expect(screen.tabBar.tabFor(SkinLayer.gear).countText, '1/29');
       await _tab(game, tester, SkinLayer.hat);
       await _tap(game, tester, screen.tileFor('beanie'));
       expect(screen.previewLook.hat, 'beanie');
@@ -351,7 +352,7 @@ void main() {
       await _tab(game, tester, SkinLayer.hat);
       await _tap(game, tester, screen.tileFor(kNoneId));
       expect(screen.actionButton.label, 'NOTHING ON');
-      expect(screen.bar.labelText, '6 / 88');
+      expect(screen.bar.labelText, '6 / 148');
       await _tap(game, tester, screen.backButton);
       await _fade(game);
       expect(game.homeScreen!.bird.look, const Look(bird: 'robin'));
@@ -471,7 +472,10 @@ void main() {
         expect(screen.scroll.viewport.bottom, height - 44);
         for (final layer in SkinLayer.values) {
           await _tab(game, tester, layer);
-          expect(screen.tiles, hasLength(layer == SkinLayer.bird ? 30 : 15));
+          expect(
+            screen.tiles,
+            hasLength(30) /* PRD-2.3 §19: every layer has 30 */,
+          );
           expect(screen.tiles.first.toRect().top, 332);
           screen.scroll.offset = screen.scroll.maxOffset;
           final last = screen.tiles.last;
@@ -521,17 +525,19 @@ void main() {
 
   _journey(
     'long featured item name does not overlap its price',
-    prefs: const {
-      'ownedItems': ['bird:lemon', 'bird:toucan', 'bird:ghost'],
+    // PRD-2.3 §19.3: the featured item is the first not-owned 2.3 item; own
+    // everything before Birthday cake (the longest featured name in reach).
+    prefs: {
+      'ownedItems': kNewInUpdate.takeWhile((k) => k != 'hat:bdaycake').toList(),
     },
     (game, rig, tester) async {
       await _tap(game, tester, game.homeScreen!.shopTile);
       await _fade(game);
       final featured = game.shopScreen!.featured;
-      expect(featured.item!.id, 'carpet');
-      await _shot(game, tester, 'featured_carpet');
+      expect(featured.item!.id, 'bdaycake');
+      await _shot(game, tester, 'featured_bdaycake');
       final name = featured.children.query<MenuText>().singleWhere(
-        (text) => text.text == 'MAGIC CARPET',
+        (text) => text.text == 'BIRTHDAY CAKE',
       );
       expect(
         name.x + name.width,
@@ -541,42 +547,44 @@ void main() {
     },
   );
 
-  _journey(
-    'S1-12 settled locked static tiles need no per-frame saveLayer',
-    (game, rig, tester) async {
-      await _tap(game, tester, game.homeScreen!.skinsTile);
-      await _fade(game);
-      final tile = game.skinShop!.tileFor('sky');
-      expect(tile.animatesArt, isFalse);
-      final cache = game.skinShop!.art;
-      cache.pictureFor(tile.item); // warm the static picture before counting
-      final canvas = _LayerCounter();
-      tile.render(canvas);
-      expect(
-        canvas.layers,
-        0,
-        reason: 'static locked art at 42% should be cached already dimmed',
-      );
-    },
-  );
+  _journey('S1-12 settled locked static tiles need no per-frame saveLayer', (
+    game,
+    rig,
+    tester,
+  ) async {
+    await _tap(game, tester, game.homeScreen!.skinsTile);
+    await _fade(game);
+    final tile = game.skinShop!.tileFor('sky');
+    expect(tile.animatesArt, isFalse);
+    final cache = game.skinShop!.art;
+    cache.pictureFor(tile.item); // warm the static picture before counting
+    final canvas = _LayerCounter();
+    tile.render(canvas);
+    expect(
+      canvas.layers,
+      0,
+      reason: 'static locked art at 42% should be cached already dimmed',
+    );
+  });
 
-  _journey(
-    'S1-13 featured-item try-on clears its NEW tag and persists seen',
-    (game, rig, tester) async {
-      await _tap(game, tester, game.homeScreen!.shopTile);
-      await _fade(game);
-      await _tap(game, tester, game.shopScreen!.featured);
-      await _fade(game);
-      final screen = game.skinShop!;
-      expect(screen.tryOnId, 'lemon');
-      expect(
-        screen.tileFor('lemon').current.isNew,
-        isFalse,
-        reason: '§3.3 NEW clears when this item is tapped, including featured',
-      );
-      expect(game.storage.seenItems, contains('bird:lemon'));
-    },
-  );
+  _journey('S1-13 featured-item try-on clears its NEW tag and persists seen', (
+    game,
+    rig,
+    tester,
+  ) async {
+    await _tap(game, tester, game.homeScreen!.shopTile);
+    await _fade(game);
+    await _tap(game, tester, game.shopScreen!.featured);
+    await _fade(game);
+    final screen = game.skinShop!;
+    expect(screen.tryOnId, 'sunburst'); // PRD-2.3 §19.3 featured
+    expect(
+      screen.tileFor('sunburst').current.isNew,
+      isFalse,
+      reason: '§3.3 NEW clears when this item is tapped, including featured',
+    );
+    expect(game.storage.seenItems, contains('hat:sunburst'));
+  });
 
   _journey(
     'S1-14 debug reset immediately restores the default home look',
@@ -599,14 +607,15 @@ void main() {
 
   _journey(
     'S1-15 animated featured gear freezes under the debug panel',
+    // PRD-2.3 §19.3: Sunburst owned, so the featured item is the Disco ball.
     prefs: const {
-      'ownedItems': ['bird:lemon', 'bird:toucan', 'bird:ghost'],
+      'ownedItems': ['hat:sunburst'],
     },
     (game, rig, tester) async {
       await _tap(game, tester, game.homeScreen!.shopTile);
       await _fade(game);
       final featured = game.shopScreen!.featured;
-      expect(featured.item!.id, 'carpet');
+      expect(featured.item!.id, 'disco');
       game.openDebugPanel();
       await flushAndMount(game);
       // Capture the exact art draw commands before/after while overlays pause

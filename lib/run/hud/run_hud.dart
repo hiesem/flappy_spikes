@@ -10,6 +10,7 @@ import '../config/hud_config.dart';
 import '../run_controller.dart';
 import 'banner_layer.dart';
 import 'banners.dart';
+import 'fit_name.dart';
 import 'heart_indicator.dart';
 import 'pause_button.dart';
 import 'versus_bar.dart';
@@ -131,6 +132,30 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
 
 /// One-line text for the HUD and run screens (Opificio unless [font]).
 class HudText {
+  /// PRD-2.3 §21.2 a name tag: [name] fitted into [maxWidth] by [fitName]
+  /// (shrunk down to 70 %, then cut with "…").
+  factory HudText.name(
+    String name, {
+    required double maxWidth,
+    required double size,
+    required Color color,
+    double spacing = 0,
+    String? font,
+  }) {
+    final f = fitName(
+      name,
+      maxWidth,
+      size,
+      measureName(
+        fontFamily: font ?? Config.uiFont,
+        letterSpacingEm: spacing,
+        fontWeight: font == HudConfig.nameFont ? FontWeight.w600 : null,
+        trimTrailingSpacing: true,
+      ),
+    );
+    return HudText(f.text, size: f.size, color: color, spacing: spacing, font: font);
+  }
+
   HudText(
     this.text, {
     required this.size,

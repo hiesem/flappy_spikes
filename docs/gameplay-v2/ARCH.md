@@ -61,7 +61,7 @@ code. Paths are relative to `flappy_spikes/`.
 
 | File | Responsibility | API (Dart) | Deps | Replaces / reuses |
 |---|---|---|---|---|
-| `run/run_controller.dart` | Owns one run: state, clock, director, spawner, physics step, features, layers, mistake pipeline, end of run | `class RunController extends Component with HasGameReference<FlappySpikesGame>` — `RunController({required RunSetup setup})`; `RunState get state`; `RunContext get ctx`; `RunEvents get events`; `void open()` (PRD-2.3 §10.1/§10.2: the run opens waiting — features attach, hoop 0 placed at x 290, mid + 16; the game calls it right after adding the controller); `void beginWaiting()` (PRD-2.3 §10.3b: the bird is floating and tappable, the tap-reminder count `waitClock` starts; solo at START, versus after the VS intro — **PRD-2.3 §25.3 must call it when the VS/loading screen hands over**); `bool get waiting` / `waitingBegun` / `double get waitClock`; `void start()` (the first tap, PRD-2.3 §10.1: clock on, `RunStarted`; the game flaps first); `void onTap()`; `void pause()`; `void resume()`; `bool get isScrolling`; `void mistake(Mistake m)`; `void revive(ReviveKind k)`; `RunSummary summarize()`; `void disposeRun()` | run/*, services/*, menu/wallet | the spawner block in `FlappySpikesGame.update`, `onScoreSensor`, `onBirdHit` body |
+| `run/run_controller.dart` | Owns one run: state, clock, director, spawner, physics step, features, layers, mistake pipeline, end of run | `class RunController extends Component with HasGameReference<FlappySpikesGame>` — `RunController({required RunSetup setup})`; `RunState get state`; `RunContext get ctx`; `RunEvents get events`; `void open()` (PRD-2.3 §10.1/§10.2: the run opens waiting — features attach, hoop 0 placed at x 290, mid + 16; the game calls it right after adding the controller); `void beginWaiting()` (PRD-2.3 §10.3b: the bird is floating and tappable, the tap-reminder count `waitClock` starts; solo at START, versus after the VS intro, wired next to `onVersusIntroFinished`); `bool get waiting` / `waitingBegun` / `double get waitClock`; `void start()` (the first tap, PRD-2.3 §10.1: clock on, `RunStarted`; the game flaps first); `void onTap()`; `void pause()`; `void resume()`; `bool get isScrolling`; `void mistake(Mistake m)`; `void revive(ReviveKind k)`; `RunSummary summarize()`; `void disposeRun()` | run/*, services/*, menu/wallet | the spawner block in `FlappySpikesGame.update`, `onScoreSensor`, `onBirdHit` body |
 | `run/run_setup.dart` | Inputs to a run | `class RunSetup { int seed; Powerup starter; OpponentRun? opponent; int startHoopIndex = 0; List<ElementId> forced = const []; RideId? forcedRide; double viewHeight; }` | — | — |
 | `run/run_state.dart` | All mutable run data (pure data, no logic). Complete from WP-0b; feature WPs fill behaviour, not fields | see §2.1 | run/elements | — |
 | `run/run_clock.dart` | runClock + timeScale | `class RunClock { double t; bool running; double timeScale; void tick(double dt); }` | — | — |
@@ -733,6 +733,7 @@ default). Later WPs only read/write them.
 | `levelRewardsClaimed` | — | **reuses existing `claimedLevels`** (Set\<int\>; highest = max) | `saveClaimedLevels` (exists) | 2e (call: no second key) |
 | `versusNickname` | String? (generated once) | `versusNickname` | `saveVersusNickname(String)` | 5b |
 | `uploadQueue` | List\<String\> (JSON entries) empty | `uploadQueue` | `saveUploadQueue(List<String>)` | 5b |
+| `versusAvatar` | `({uid, hash, url})?` (JSON) null | `versusAvatar` | `saveVersusAvatar(...)` | PRD-2.3 §21.3: the last uploaded versus picture (the Firebase uid it belongs to, the SHA-256 of the Play Games icon it was made from, its download URL = the run's `avatar`); re-upload when uid or hash differ; cleared with the versus reset and the anonymous-account clean-up; **not** a PRD-2 key |
 | `uploadsToday` + `uploadsDay` | int 0 + String '' | `uploadsToday`, `uploadsDay` | `saveUploadsToday(String day, int count)` | 5b |
 | `notifOrder` | List\<int\> (shuffled at first schedule) | `notifOrder` | `saveNotifOrder(List<int>)` | 4b |
 | `notifPosition` | int 0 | `notifPosition` | `saveNotifPosition(int)` | 4b |
@@ -1516,3 +1517,98 @@ the chick's ×2, the perfect zone) are superseded by PRD-2.3 §14; `SPEC.md` has
 | Debug | `DebugPanel` **TUNING >** page (read-only: key = value [remote / default / default*], last fetch); RUN DEBUG **Runs: N (+5 / 0)**; `FlappySpikesGame.debugAvailable` includes `kTuning` | §15.4, §14.6 |
 | Autopilot | `_farFromPlane` hands a chase back earlier: + abs(bird y − hoop y) ÷ 300 pt/s, and a moving ring's sideways reach (`_reachX`) | gate, §14.4 |
 
+
+## PRD-2.3 WP-SKINS contract changes (§19, 2026-10-13)
+
+- **Catalogue:** every layer has 30 entries (`kCollectibleTotal` 148); the 60
+  new items are mixed into the grid by rarity; `kNewInUpdate` is the 2.3 list
+  (60 keys, the showpieces Sunburst, Disco ball, Aurora, Supernova first; the
+  Shop's `featuredItemFor` reads it). No new storage key.
+- **Art:** the new painters are 1:1 ports of `design/skins_v23/parts/*.js`
+  in `lib/skins/art/{hat,gear,hoop}_art_v23.dart` and `trail_v23.dart`,
+  dispatched from the existing masters (`paintHat`, `paintGearBack/Front`,
+  `HoopPainter.paintHalf`, `TrailEmitter`) so every surface (tiles, preview,
+  Home, run, results, share card, versus) still has one master per layer.
+  They draw through `Ctx2D` (`ctx2d.dart`), a Canvas2D-shaped facade with a
+  pooled path set, one reused `Paint` and a keyed gradient cache.
+  `Ctx2D.glowLayer` draws many same-blur canvas shadows as one blurred
+  layer (Aurora hoop: 22 segment glows per half → 1 blur; Pixel frame budget).
+- `TrailEmitter.paint` takes an optional `head` (the Supernova core glow;
+  defaults to the last emit point while emitting). `TrailEmitter.ids` /
+  `HoopPainter.ids` / `HatArt.ids` / `GearArt.ids` are the full grid order.
+- `LookPainter.extentOf` knows the new hats (`hatRise`), the gear that floats
+  above the head (`gearRise`, new) and below the body (`gearDrop`).
+- `BirdShape.hasBl` (JS `s.bl != null`) anchors stern gear on the duck.
+- Port check: `tool/skins_port/render_js.mjs` + `test/skins/p23_skins_port_test.dart`
+  → `docs/p23/SKINS_PORT.png` (page left, Flutter right, H1…T15).
+## PRD-2.3 WP-VS contract changes (§25 then §21, 2026-10-13)
+
+**§25 Versus: never a silent solo.**
+- `matcher.dart` (mirrored in `functions/src/matching.ts`, shared fixture
+  `test/fixtures/versus_matching.json`): "already met" is a preference. The
+  service keeps an ordered met list (`_met`, oldest first, cap
+  `VersusConfig.metCap` = 100; filled at `takeOpponent`). `matchCandidates`
+  prefers unmet runs (tiers `level`, `any`), else the run met longest ago
+  (tier `rematch`), else `solo` (only own runs). `hasUsableOpponent` counts
+  met runs; `hasFreshOpponent` is the unmet test. `searchPools` reads in
+  rounds of `VersusConfig.shards` documents in parallel, stops after the first
+  round holding an unmet run, else returns the document of the run met longest
+  ago; `onRead` reports every read as it is issued (a `timeout` has its real
+  count). Per-read time box `VersusConfig.readTimeout` (4 s).
+- `VersusService`: `onRunStart()` starts the search for the next opponent
+  (the Home prefetch stays as a backup). New members: `holdsOpponent`,
+  `loadingIntro` (false for `NoopVersusService` and, by default,
+  `FakeVersusService`: the 2.2 solo START without intro), and
+  `searchForStart()` (waits for the running search or starts one; completes
+  false at once when this Home visit's search already ended `no_rival`).
+- `FlappySpikesGame._startRun`: in VERSUS with nothing held and
+  `loadingIntro`, the VS intro is the loading screen: `VersusIntro(opponent:
+  null)` cycles fillers at the base interval while `searchForStart` runs, up
+  to `VersusConfig.introWait` (3 s) after START; `VersusIntro.resolve(o)`
+  lands smoothly on the found opponent, or (null / 3 s) on the NO RIVAL FOUND
+  plate (grey person icon, no emblem) followed by the banner master's FLY SOLO
+  (`VersusConfig.noRivalText` / `flySoloText`). A late result stays held for
+  the next START. Analytics: `versus_solo {reason, reads, level, waited_ms}`
+  and `versus_intro_wait {waited_ms, found}` whenever the reel waited.
+- **Hook for §10 (waiting start):** `FlappySpikesGame.onVersusIntroFinished`
+  (`void Function({required bool versus})?`) is called once the VS intro's
+  white fade covers the screen, right before the run starts; `versus` is
+  false when the intro landed on NO RIVAL FOUND (a solo run). WP-WAIT (P23-10)
+  hooks its waiting state here: right after that call the game runs
+  `_versusIntroFinishedForWaiting()`, which clears `_introPending` and calls
+  `RunController.beginWaiting()` on a run that already exists; while the
+  intro plays (`_introPending`) `_startGame` never starts the §10.3b
+  reminder count itself. Today the run is built just after the intro, so its
+  count starts in `_startGame`, after the VS screen either way.
+
+**§21 Versus: names, pictures and looks.**
+- One name rule: `lib/run/hud/fit_name.dart` `fitName(name, maxWidth, size,
+  measure)` (shrink to `HudConfig.nameMinScale` = 70 %, then cut with "…");
+  `HudText.name(...)` wraps it. Used by the intro plates (room ends before the
+  emblem: `VersusIntroPlate.nameRoom`), the HUD `NameChip`, the results
+  columns (`ResultsConfig.nameRoomVersus/Solo`) and the share card's name tag.
+- Avatar squares: `lib/components/versus_avatar.dart` `VersusAvatar.paintBird`
+  is the single fallback painter (the `LookPainter` art): the opponent's bird
+  in their look on their tint while the picture loads / fails / is missing;
+  your own bird on `VersusAvatar.ownBackdrop` when you have no Play Games
+  picture. The grey person icon only on the NO RIVAL FOUND plate.
+- Pictures: `VersusBackend.uploadAvatar(jpeg)` → Firebase Storage
+  `avatars/{uid}.jpg` (`storage.rules`: public read, owner-only write/delete,
+  `image/*` ≤ 30 KB); `encodeVersusAvatar` (`lib/services/avatar_upload.dart`,
+  package `image`) makes the 96 × 96 JPEG; the service uploads once per
+  (uid, picture hash) and puts the URL in `VersusProfile.avatarUrl` → the
+  run's `avatar`. `deleteMyData` also deletes `avatars/{uid}.jpg`
+  (`functions/src/avatars.ts`, bucket from `FIREBASE_CONFIG.storageBucket`,
+  else `<project>.firebasestorage.app`).
+- Self-match guard: runs carry `pg` (12th `RunEntry` key; SHA-256 hex of the
+  Play Games id + the app salt, '' without Play Games). The salt comes from
+  Remote Config parameter `versus_pg_salt` (`PgSaltSource`,
+  `RemoteConfigPgSalt`; tests use `FixedPgSalt`), never from the repo.
+  `isOtherPlayer` skips my uid and, when I have a pg, any run with my pg.
+  `firestore.rules` accept a 12th key `pg` ('' or 64 lowercase hex);
+  `timeline.ts` `validPg` re-checks it; `pools.ts` copies it.
+- Account switch: `VersusBackend.link(identity, beforeSwitch:)` runs
+  `beforeSwitch` on `credential-already-in-use` while still signed in as the
+  old anonymous uid; the service passes `deleteOnline()` (the `deleteMyData`
+  callable without sign-out) and clears `versusAvatar`. A failure is logged and
+  the switch goes on.

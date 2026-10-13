@@ -4,6 +4,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
 import '../run/config/versus_config.dart';
@@ -220,7 +221,10 @@ class FirebaseVersusBackend implements VersusBackend {
   }
 
   @override
-  Future<void> link(PlatformIdentity identity) async {
+  Future<void> link(
+    PlatformIdentity identity, {
+    Future<void> Function()? beforeSwitch,
+  }) async {
     final cred = await identity.firebaseCredential();
     if (cred == null) return;
     final user = _auth.currentUser;
@@ -236,19 +240,54 @@ class FirebaseVersusBackend implements VersusBackend {
       // The account that already owns the Play Games id wins (ARCH §6.4).
       // A server auth code is single-use: ask for a fresh one.
       final again = e.credential ?? await identity.firebaseCredential();
-      if (again != null) await _auth.signInWithCredential(again);
+      if (again == null) return;
+      // PRD-2.3 §21.4 the old anonymous uid's versus data goes first, while
+      // still signed in as it; a failure never blocks the switch.
+      if (beforeSwitch != null && (_auth.currentUser?.isAnonymous ?? false)) {
+        try {
+          await beforeSwitch();
+        } catch (err) {
+          debugPrint('versus: anonymous clean-up failed: ${err.runtimeType}');
+        }
+      }
+      await _auth.signInWithCredential(again);
     }
   }
 
   @override
   Future<bool> deleteMyData() async {
+    final ok = await deleteOnline();
+    await _auth.signOut();
+    return ok;
+  }
+
+  @override
+  Future<bool> deleteOnline() async {
     final result = await FirebaseFunctions.instanceFor(
       app: app,
       region: VersusConfig.functionsRegion,
     ).httpsCallable(VersusConfig.deleteFunction).call<Object?>();
     final data = result.data;
-    await _auth.signOut();
     return data is Map && data['ok'] == true;
+  }
+
+  /// PRD-2.3 §21.3 `avatars/{uid}.jpg` in the default Storage bucket.
+  @override
+  Future<String> uploadAvatar(Uint8List jpeg) async {
+    final uid = this.uid;
+    if (uid == null) return '';
+    final storage = app == null
+        ? FirebaseStorage.instance
+        : FirebaseStorage.instanceFor(app: app!);
+    final ref = storage.ref(VersusConfig.avatarPath(uid));
+    await ref.putData(
+      jpeg,
+      SettableMetadata(
+        contentType: 'image/jpeg',
+        cacheControl: 'public, max-age=86400',
+      ),
+    );
+    return ref.getDownloadURL();
   }
 
   @override

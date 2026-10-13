@@ -179,7 +179,7 @@ void main() {
   });
 
   group('ItemStore counters', () {
-    test('fresh install: 1/30, 0/14, 0/14, 1/15, 1/15 and 3/88', () async {
+    test('fresh install: 1/30, 0/29, 0/29, 1/30, 1/30 and 3/148 (PRD-2.3 §19)', () async {
       final (_, _, items) = await build();
       expect(items.ownedCountFor(SkinLayer.bird), 1);
       expect(items.ownedCountFor(SkinLayer.gear), 0);
@@ -187,10 +187,10 @@ void main() {
       expect(items.ownedCountFor(SkinLayer.hoop), 1);
       expect(items.ownedCountFor(SkinLayer.trail), 1);
       expect(items.totalFor(SkinLayer.bird), 30);
-      expect(items.totalFor(SkinLayer.gear), 14);
-      expect(items.totalFor(SkinLayer.hat), 14);
-      expect(items.totalFor(SkinLayer.hoop), 15);
-      expect(items.totalFor(SkinLayer.trail), 15);
+      expect(items.totalFor(SkinLayer.gear), 29);
+      expect(items.totalFor(SkinLayer.hat), 29);
+      expect(items.totalFor(SkinLayer.hoop), 30);
+      expect(items.totalFor(SkinLayer.trail), 30);
       expect(items.ownedCount, 3);
     });
 
@@ -203,7 +203,7 @@ void main() {
       expect(items.ownedCount, 4);
     });
 
-    test('grantAll owns all 88 collectibles', () async {
+    test('grantAll owns all 148 collectibles', () async {
       final (_, _, items) = await build();
       await items.grantAll();
       expect(items.ownedCount, kCollectibleTotal);
@@ -217,10 +217,15 @@ void main() {
   group('ItemStore NEW badge', () {
     test('kNewInUpdate items are new even without coins', () async {
       final (_, _, items) = await build();
-      expect(items.isNew(SkinLayer.bird, 'lemon'), isTrue);
-      expect(items.isNew(SkinLayer.gear, 'windup'), isTrue);
-      expect(items.isNew(SkinLayer.trail, 'echo'), isTrue);
+      // PRD-2.3 §19.3: the 2.3 list.
+      expect(items.isNew(SkinLayer.hat, 'sunburst'), isTrue);
+      expect(items.isNew(SkinLayer.gear, 'disco'), isTrue);
+      expect(items.isNew(SkinLayer.hoop, 'sunset'), isTrue);
+      expect(items.isNew(SkinLayer.trail, 'paint'), isTrue);
       expect(items.hasNewBadge, isTrue);
+      // The 2.0 entries follow the normal "affordable" rule now.
+      expect(items.isNew(SkinLayer.gear, 'windup'), isFalse);
+      expect(items.isNew(SkinLayer.trail, 'echo'), isFalse);
     });
 
     test('affordable items are new; too-expensive ones are not', () async {

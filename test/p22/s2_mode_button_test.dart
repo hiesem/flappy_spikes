@@ -367,6 +367,7 @@ void main() {
           'reason': 'app_check',
           'reads': 3,
           'level': g.menu.levels.level,
+          'waited_ms': 0, // PRD-2.3 §25.3
         });
         expect(events.where((e) => e.$1 == 'run_start').single.$2, {
           'mode': 'versus',

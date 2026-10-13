@@ -155,13 +155,13 @@ void main() {
     await _tap(game, tester, game.homeScreen!.skinsTile);
     await _fade(game);
     final screen = game.skinShop!;
-    expect(screen.bar.labelText, '3 / 88');
+    expect(screen.bar.labelText, '3 / 148');
     expect(screen.tabBar.tabs.map((tab) => tab.countText), [
       '1/30',
-      '0/14',
-      '0/14',
-      '1/15',
-      '1/15',
+      '0/29',
+      '0/29',
+      '1/30',
+      '1/30',
     ]);
     // Real drag input reaches the legendary row at the end of Birds.
     for (var i = 0; i < 6; i++) {
@@ -207,7 +207,7 @@ void main() {
     expect(screen.children.query<UnlockBanner>().single.nameText, 'GALAXY');
     stepGame(game, .7);
     expect(game.coinPill.shownBalance, 1000);
-    expect(screen.bar.labelText, '4 / 88');
+    expect(screen.bar.labelText, '4 / 148');
     expect(rig.events.params('item_purchase').single, {
       'layer': 'bird',
       'id': 'galaxy',
@@ -216,8 +216,9 @@ void main() {
       'source': 'button',
     });
     await _tab(game, tester, SkinLayer.gear);
-    // Wind-up key is in the fourth row: scroll before tapping it.
-    screen.scroll.offset = screen.scroll.maxOffset;
+    // Wind-up key is further down the 30-item grid (PRD-2.3 §19.3): scroll
+    // it into view before tapping it.
+    screen.scrollToItem('windup');
     await flushAndMount(game);
     await _tap(game, tester, screen.tileFor('windup'));
     await _tap(game, tester, screen.actionButton);
@@ -227,13 +228,13 @@ void main() {
     const outfit = Look(bird: 'galaxy', gear: 'windup', hat: 'cap');
     expect(game.menu.items.look, outfit);
     expect(game.menu.wallet.balance, 0);
-    expect(screen.bar.labelText, '6 / 88');
+    expect(screen.bar.labelText, '6 / 148');
     expect(screen.tabBar.tabs.map((tab) => tab.countText), [
       '2/30',
-      '1/14',
-      '1/14',
-      '1/15',
-      '1/15',
+      '1/29',
+      '1/29',
+      '1/30',
+      '1/30',
     ]);
     final saved = GameStorage();
     await saved.load();
@@ -301,13 +302,13 @@ void main() {
       await _tab(game, tester, SkinLayer.hat);
       await _tap(game, tester, screen.tileFor(kNoneId));
       expect(screen.actionButton.label, 'NOTHING ON');
-      expect(screen.bar.labelText, '6 / 88');
+      expect(screen.bar.labelText, '6 / 148');
       expect(screen.tabBar.tabs.map((tab) => tab.countText), [
         '2/30',
-        '1/14',
-        '1/14',
-        '1/15',
-        '1/15',
+        '1/29',
+        '1/29',
+        '1/30',
+        '1/30',
       ]);
       await _tap(game, tester, screen.backButton);
       await _fade(game);
@@ -359,13 +360,13 @@ void main() {
           await _shot(game, tester, '${height.toInt()}_${layer.key}_bottom');
         }
         expect(game.menu.wallet.balance, 250);
-        expect(screen.bar.labelText, '8 / 88');
+        expect(screen.bar.labelText, '8 / 148');
         expect(screen.tabBar.tabs.map((tab) => tab.countText), [
           '2/30',
-          '1/14',
-          '1/14',
-          '2/15',
-          '2/15',
+          '1/29',
+          '1/29',
+          '2/30',
+          '2/30',
         ]);
         expect(rig.events.params('item_purchase'), hasLength(5));
         expect(screen.stage.showsTrail, isTrue);
@@ -505,7 +506,7 @@ void main() {
       expect(game.menu.items.isOwned(SkinLayer.bird, 'ghost'), isFalse);
       await _tap(game, tester, game.homeScreen!.skinsTile);
       await _fade(game);
-      expect(game.skinShop!.bar.labelText, '6 / 88');
+      expect(game.skinShop!.bar.labelText, '6 / 148');
     },
   );
 
@@ -629,34 +630,27 @@ void main() {
 
   // S2-11 (PRD-2.2 §22): pools no longer wait for plugin metadata; a play
   // during warm-up is dropped, never dereferences anything missing.
-  test(
-    'S2-11 SFX during pool warm-up is dropped without errors',
-    () async {
-      final audio = FakeAudio();
-      final gate = audio.gates['flap.mp3'] = Completer<void>();
-      final sound = audio.service();
-      final uncaught = <Object>[];
-      await runZonedGuarded(() async {
-        sound.play(Sfx.flap); // starts warm-up, dropped
-        await _microtasks(); // the flap voice is still loading
-        sound.play(Sfx.flap);
-        await _microtasks();
-        gate.complete();
-        await _microtasks();
-      }, (error, stack) => uncaught.add(error));
-      expect(
-        audio.of('flap.mp3').fold<int>(0, (n, v) => n + v.starts),
-        0,
-        reason: 'plays during warm-up are dropped',
-      );
-      expect(
-        uncaught,
-        isEmpty,
-        reason: 'a play during warm-up must not throw',
-      );
-      await sound.dispose();
-    },
-  );
+  test('S2-11 SFX during pool warm-up is dropped without errors', () async {
+    final audio = FakeAudio();
+    final gate = audio.gates['flap.mp3'] = Completer<void>();
+    final sound = audio.service();
+    final uncaught = <Object>[];
+    await runZonedGuarded(() async {
+      sound.play(Sfx.flap); // starts warm-up, dropped
+      await _microtasks(); // the flap voice is still loading
+      sound.play(Sfx.flap);
+      await _microtasks();
+      gate.complete();
+      await _microtasks();
+    }, (error, stack) => uncaught.add(error));
+    expect(
+      audio.of('flap.mp3').fold<int>(0, (n, v) => n + v.starts),
+      0,
+      reason: 'plays during warm-up are dropped',
+    );
+    expect(uncaught, isEmpty, reason: 'a play during warm-up must not throw');
+    await sound.dispose();
+  });
 
   test('S2-12 low-latency pool playback failure is contained', () async {
     final audio = FakeAudio();

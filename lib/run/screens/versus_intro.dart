@@ -18,7 +18,9 @@ import '../config/versus_config.dart';
 import '../effects/easing.dart';
 import '../effects/fireworks.dart';
 import '../effects/particle_pool.dart';
+import '../hud/banners.dart' show ElementBanner;
 import '../hud/run_hud.dart' show HudText;
+import '../../components/versus_avatar.dart';
 import '../../services/avatars.dart';
 import '../../game/paints.dart';
 
@@ -70,27 +72,82 @@ double? _prog(double t, double? start, double length) {
 /// One clock ([time]) drives everything; the game awaits [done] and then
 /// starts the run under the white ([whiteOpacity] reaches 1).
 ///
+/// PRD-2.3 §25.3 the VS screen is the loading screen: built without an
+/// [opponent] it is [waiting] — the reel cycles filler names at its base
+/// interval (40 ms) while the search runs, up to [VersusConfig.introWait]
+/// (3 s) after START. [resolve] with the found opponent moves the reel
+/// into the usual landing (the last ≈ 20 names on the `reelBaseMs` /
+/// `reelSlowMs` / `reelPow` easing, starting from the name shown, at its
+/// speed: no jump); [resolve] with null, or the 3 s deadline, lands it the
+/// same way on the NO RIVAL FOUND plate (grey person icon, no emblem), then
+/// the banner master shows FLY SOLO ([noRival]) instead of MATCH FOUND! and
+/// the confetti, and the run starts solo.
+///
 /// Layout: the 320 × 711 mock; every y maps through [yFor] (the band
 /// between the 44 pt strips scales with the screen height, call), so
 /// 568 … 730 pt screens keep every part between the strips, unoverlapped.
 class VersusIntro extends PositionComponent
     with HasGameReference<FlappySpikesGame> {
   VersusIntro({
-    required this.opponent,
+    OpponentRun? opponent,
     required this.myName,
     required this.myLook,
     required this.myLevel,
     this.myAvatar = '',
     this.onCovered,
     math.Random? random,
-  }) : _rnd = random ?? math.Random(),
+  }) : _opponent = opponent,
+       _waiting = opponent == null,
+       waited = opponent == null,
+       _rnd = random ?? math.Random(),
        super(priority: priorityOnTop);
 
   /// Above the home screen (menus 20 live in the world too; the strips are
   /// lifted to 21 over it, as over the results page).
   static const int priorityOnTop = 20;
 
-  final OpponentRun opponent;
+  /// The opponent the reel lands on (null while [waiting], or after
+  /// landing on NO RIVAL FOUND).
+  OpponentRun? get opponent => _opponent;
+  OpponentRun? _opponent;
+
+  /// PRD-2.3 §25.3 the reel waits for the search (no opponent yet).
+  bool get waiting => _waiting;
+  bool _waiting;
+
+  /// PRD-2.3 §25.3 the intro started without a held opponent (analytics
+  /// `versus_intro_wait`).
+  final bool waited;
+
+  /// PRD-2.3 §25.3 the intro time the wait ended (null = still waiting /
+  /// never waited).
+  double? resolvedAt;
+
+  /// PRD-2.3 §25.3 `waited_ms`: how long the reel waited (0 when an
+  /// opponent was held at START).
+  int get waitedMs => !waited
+      ? 0
+      : ((resolvedAt ?? time) * 1000)
+            .round()
+            .clamp(0, (VersusConfig.introWait * 1000).round());
+
+  /// PRD-2.3 §25.3 the reel landed on NO RIVAL FOUND (the run is solo).
+  bool get noRival => _rival == false;
+
+  /// true = landing on an opponent, false = on NO RIVAL FOUND, null = not
+  /// decided yet.
+  bool? _rival;
+  bool _planned = false;
+  OpponentRun? _early;
+  bool _earlyResolved = false;
+  double _reelStart = 0;
+  double _nextFillerAt = double.infinity;
+  int _fillerCount = 0;
+  ElementBanner? _soloBanner;
+
+  /// PRD-2.3 §25.3 the FLY SOLO banner once it shows (tests).
+  ElementBanner? get soloBanner => _soloBanner;
+
   final String myName;
   final Look myLook;
   final int myLevel;
@@ -136,14 +193,15 @@ class VersusIntro extends PositionComponent
   ];
 
   // ---- schedule (s) --------------------------------------------------
-  late final List<double> _reelAt; // start of each name
-  late final List<String> _reelNames;
-  late final List<int> _reelLevels;
-  late final double lockAt;
-  late final double oppFlyAt;
-  late final double vsAt;
-  late final double fadeAt;
-  late final double endAt;
+  // Growable: the PRD-2.3 §25.3 filler cycling appends names while waiting.
+  final List<double> _reelAt = []; // start of each name
+  final List<String> _reelNames = [];
+  final List<int> _reelLevels = [];
+  double lockAt = double.infinity;
+  double oppFlyAt = double.infinity;
+  double vsAt = double.infinity;
+  double fadeAt = double.infinity;
+  double endAt = double.infinity;
 
   final List<(double, void Function())> _cues = [];
   int _nextCue = 0;
@@ -248,7 +306,7 @@ class VersusIntro extends PositionComponent
       glyph: _soft,
       level: myLevel,
       image: myAvatar,
-    );
+    )..bird = myLook; // PRD-2.3 §21.3 your bird when you have no picture
     _bottom.addAll([youBird, youPlate]);
 
     // Top panel (opponent): fg 26 % over bg, 45° stripes drifting left,
@@ -268,11 +326,11 @@ class VersusIntro extends PositionComponent
       ),
       avatar: fg,
       glyph: bg,
-      level: _reelLevels.first,
+      level: _reelLevels.isEmpty ? 1 + _rnd.nextInt(10) : _reelLevels.first,
       reel: true,
     )..opacity = 0;
     oppBird = VersusIntroBird(
-      look: opponent.look,
+      look: _opponent?.look ?? Look.defaults,
       home: Offset(VersusConfig.oppBird.dx, yFor(VersusConfig.oppBird.dy)),
       mirror: true,
       bobPeriod: VersusConfig.oppBobPeriod,
@@ -298,6 +356,12 @@ class VersusIntro extends PositionComponent
     _shake.addAll([_bottom, _top, vs, particles, fireworks]);
     youBird.opacity = 0;
     oppBird.opacity = 0;
+    _planned = true;
+    if (_opponent != null) {
+      _land(_opponent);
+    } else if (_earlyResolved) {
+      _land(_early);
+    }
   }
 
   void _at(double t, void Function() f) => _cues.add((t, f));
@@ -306,35 +370,13 @@ class VersusIntro extends PositionComponent
     if (!_frozen) game.sound.play(s);
   }
 
-  /// The §5.8 timeline (mock `play()`), absolute seconds from START.
+  /// The §5.8 timeline (mock `play()`), absolute seconds from START: the
+  /// fixed part up to the reel; [_land] plans the reel's landing and the
+  /// rest (at once with a held opponent, PRD-2.3 §25.3 later otherwise).
   void _plan() {
-    // Reel: 20 names, interval 40 + 330·p^2.4 ms, the last = the opponent.
-    const n = VersusConfig.reelNames;
-    final pool = [...fillers]..shuffle(_rnd);
-    _reelNames = [
-      for (var i = 0; i < n; i++)
-        i == n - 1 ? opponent.name : pool[i % pool.length],
-    ];
-    _reelLevels = [
-      for (var i = 0; i < n; i++)
-        i == n - 1 ? opponent.level : 1 + _rnd.nextInt(10),
-    ];
     const reelStart = VersusConfig.youFlyAt + VersusConfig.youFly;
-    _reelAt = [];
-    var t = reelStart;
-    for (var i = 0; i < n; i++) {
-      _reelAt.add(t);
-      final p = i / (n - 1);
-      t +=
-          (VersusConfig.reelBaseMs +
-              VersusConfig.reelSlowMs * math.pow(p, VersusConfig.reelPow)) /
-          1000;
-    }
-    lockAt = t;
-    oppFlyAt = lockAt + VersusConfig.oppFlyDelay;
-    vsAt = oppFlyAt + VersusConfig.oppFly + VersusConfig.vsDelay;
-    fadeAt = vsAt + VersusConfig.fadeAt;
-    endAt = fadeAt + VersusConfig.whiteFade;
+    _reelStart = reelStart;
+    _nextFillerAt = reelStart;
 
     // 0.12 s: panels + whoosh; 0.54 s they cover the home screen.
     _at(VersusConfig.panelsAt, () => _sfx(Sfx.vsWhoosh));
@@ -358,31 +400,143 @@ class VersusIntro extends PositionComponent
     _at(reelStart, () {
       youBird.land(time);
       youPlate.popAt = time;
-      oppPlate.emblemVisible = true;
+      if (_rival != false) oppPlate.emblemVisible = true;
       _sfx(Sfx.vsBoing);
     });
-    for (var i = 0; i < n; i++) {
-      final at = _reelAt[i];
+    _cues.sort((a, b) => a.$1.compareTo(b.$1));
+  }
+
+  /// PRD-2.3 §25.3 the search ended while the reel waits: [o] = the found
+  /// opponent (the game took it from the service), null = no rival. False
+  /// when the reel no longer waits (it already landed on NO RIVAL FOUND;
+  /// the game then leaves a late opponent held for the next START).
+  bool resolve(OpponentRun? o) {
+    if (!_waiting || _earlyResolved) return false;
+    resolvedAt = time;
+    if (!_planned) {
+      _early = o;
+      _earlyResolved = true;
+      return true;
+    }
+    _land(o);
+    return true;
+  }
+
+  /// One filler tick of the waiting reel (PRD-2.3 §25.3: the base interval,
+  /// random display names, never real players).
+  void _fillerTick(double at) {
+    final name = fillers[_rnd.nextInt(fillers.length)];
+    final level = 1 + _rnd.nextInt(10);
+    _reelAt.add(at);
+    _reelNames.add(name);
+    _reelLevels.add(level);
+    final i = _fillerCount++;
+    oppPlate.spin(name, time, VersusConfig.reelBaseMs / 1000 * .85, last: false);
+    oppPlate.avatar = avatarColors[i % avatarColors.length];
+    oppPlate.level = level;
+    _sfx(Sfx.vsTick);
+  }
+
+  /// Plans the reel's landing on [o] (null = NO RIVAL FOUND) and everything
+  /// after it. A held opponent: the 20-name §5.8 schedule from the reel
+  /// start (exactly the 2.2 intro). After a wait: the current name counts
+  /// as the schedule's first one, so the landing continues at the speed
+  /// shown (no jump) with the remaining 19 names.
+  void _land(OpponentRun? o) {
+    _waiting = false;
+    _rival = o != null;
+    if (o != null) {
+      _opponent = o;
+      oppBird.look = o.look;
+    }
+    const n = VersusConfig.reelNames;
+    final spinning = _reelAt.isNotEmpty;
+    final i0 = spinning ? 1 : 0;
+    final t0 = spinning ? _nextFillerAt : math.max(_reelStart, time);
+    _nextFillerAt = double.infinity;
+    final pool = [...fillers]..shuffle(_rnd);
+    final lastName = o?.name ?? VersusConfig.noRivalText;
+    final lastLevel = o?.level ?? 0;
+    var t = t0;
+    for (var i = i0; i < n; i++) {
       final last = i == n - 1;
-      final dur = last
-          ? (at - _reelAt[i - 1])
-          : (i + 1 < n ? _reelAt[i + 1] - at : .04);
-      _at(at, () {
+      final k = _reelAt.length;
+      _reelAt.add(t);
+      _reelNames.add(last ? lastName : pool[i % pool.length]);
+      _reelLevels.add(last ? lastLevel : 1 + _rnd.nextInt(10));
+      final p = i / (n - 1);
+      final step =
+          (VersusConfig.reelBaseMs +
+              VersusConfig.reelSlowMs * math.pow(p, VersusConfig.reelPow)) /
+          1000;
+      _at(t, () {
+        final dur = last
+            ? (_reelAt[k] - _reelAt[k - 1])
+            : (k + 1 < _reelAt.length ? _reelAt[k + 1] - _reelAt[k] : .04);
+        if (last && o == null) oppPlate.noRival = true;
         oppPlate.spin(
-          _reelNames[i],
+          _reelNames[k],
           time,
           last ? VersusConfig.reelLand : dur * .85,
           last: last,
         );
         oppPlate.avatar = last
             ? game.foregroundColor
-            : avatarColors[i % avatarColors.length];
-        // §5.8 the real avatar settles with the real name (S6-64).
-        if (last) oppPlate.image = opponent.avatarUrl;
-        oppPlate.level = _reelLevels[i];
+            : avatarColors[k % avatarColors.length];
+        // §5.8 the real avatar settles with the real name (S6-64); PRD-2.3
+        // §21.3 their bird while it loads / when they have none.
+        if (last && o != null) {
+          oppPlate
+            ..image = o.avatarUrl
+            ..bird = o.look;
+        }
+        oppPlate.level = _reelLevels[k];
         _sfx(Sfx.vsTick);
       });
+      t += step;
     }
+    lockAt = t;
+    if (o == null) {
+      _planNoRival();
+    } else {
+      _planMatch();
+    }
+    final tail = _cues.sublist(_nextCue)
+      ..sort((a, b) => a.$1.compareTo(b.$1));
+    _cues.replaceRange(_nextCue, _cues.length, tail);
+  }
+
+  /// PRD-2.3 §25.3 NO RIVAL FOUND: the plate flashes (no emblem, no MATCH
+  /// FOUND!, no confetti), then the banner master shows FLY SOLO and the
+  /// white fade starts the solo run.
+  void _planNoRival() {
+    fadeAt = lockAt + VersusConfig.soloBannerAt + VersusConfig.soloBanner;
+    endAt = fadeAt + VersusConfig.whiteFade;
+    _at(lockAt, () {
+      _sfx(Sfx.vsBoing);
+      oppPlate.flashAt = time;
+      _findingOut = time;
+      _qOut = time;
+    });
+    _at(lockAt + VersusConfig.soloBannerAt, () {
+      final banner = ElementBanner(
+        VersusConfig.flySoloText,
+        duration: VersusConfig.soloBanner,
+      );
+      banner.position = Vector2(0, seam - banner.bandHeight / 2);
+      _soloBanner = banner;
+      _shake.add(banner);
+      _sfx(Sfx.vsWhoosh);
+      youBird.hop(time, 22);
+    });
+  }
+
+  /// The §5.8 lock, the opponent's fly-in, the VS punch and the taunts.
+  void _planMatch() {
+    oppFlyAt = lockAt + VersusConfig.oppFlyDelay;
+    vsAt = oppFlyAt + VersusConfig.oppFly + VersusConfig.vsDelay;
+    fadeAt = vsAt + VersusConfig.fadeAt;
+    endAt = fadeAt + VersusConfig.whiteFade;
     // Lock.
     _at(lockAt, () {
       _sfx(Sfx.vsChime);
@@ -449,7 +603,6 @@ class VersusIntro extends PositionComponent
       youBird.hop(time, 16);
       _sfx(Sfx.flap);
     });
-    _cues.sort((a, b) => a.$1.compareTo(b.$1));
   }
 
   // Fly-in paths (x, y, rotation°) relative to the home spot.
@@ -524,6 +677,18 @@ class VersusIntro extends PositionComponent
     if (_frozen) return;
     super.update(dt);
     time += dt;
+    // PRD-2.3 §25.3 the waiting reel: filler names at the base interval,
+    // and NO RIVAL FOUND once the 3 s after START are up.
+    if (_waiting && _planned) {
+      while (_waiting && time >= _nextFillerAt) {
+        _fillerTick(_nextFillerAt);
+        _nextFillerAt += VersusConfig.reelBaseMs / 1000;
+      }
+      if (_waiting && time >= VersusConfig.introWait) {
+        resolvedAt = time;
+        _land(null);
+      }
+    }
     while (_nextCue < _cues.length && _cues[_nextCue].$1 <= time) {
       _cues[_nextCue++].$2();
     }
@@ -703,6 +868,15 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
   /// §5.8 the avatar image's `AvatarImages` key ('' = the neutral glyph;
   /// also the glyph while the image is not cached yet, S6-64).
   String image;
+
+  /// PRD-2.3 §21.3 the player's look: their bird fills the avatar square
+  /// while their picture loads, when it fails or when they have none (the
+  /// opponent's plate and, without a Play Games picture, your own).
+  Look? bird;
+
+  /// PRD-2.3 §25.3 the NO RIVAL FOUND plate: the grey person icon, no
+  /// emblem, and the name window runs to the plate's right edge.
+  bool noRival = false;
   late final EmblemView emblem;
 
   double? dropAt, popAt, flashAt, punchAt;
@@ -732,10 +906,33 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
     _landing = last;
   }
 
-  HudText _text(String s) => _texts.putIfAbsent(
-    s,
-    () => HudText(s, size: VersusConfig.plateNameSize, color: _plum),
-  );
+  /// PRD-2.3 §21.2 the name's room: from the name inset to the emblem's
+  /// overhang (minus a gap), so the emblem never covers text; without an
+  /// emblem (NO RIVAL FOUND) to the plate's right edge minus the inset.
+  double get nameRoom => noRival
+      ? size.x - VersusConfig.plateSlot - 2 * VersusConfig.plateNameLeft
+      : size.x -
+            VersusConfig.plateSlot / 2 -
+            VersusConfig.plateEmblemHalf -
+            VersusConfig.plateNameGap -
+            VersusConfig.plateSlot -
+            VersusConfig.plateNameLeft;
+
+  HudText _text(String s) {
+    final room = nameRoom;
+    return _texts.putIfAbsent(
+      '$room|$s',
+      () => HudText.name(
+        s,
+        maxWidth: room,
+        size: VersusConfig.plateNameSize,
+        color: _plum,
+      ),
+    );
+  }
+
+  /// The name as drawn now (tests: fitted text and size).
+  HudText? get shownText => _name.isEmpty ? null : _text(_name);
 
   /// The name shown now (tests).
   String get name => _name;
@@ -766,7 +963,7 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
     position = Vector2(rect.center.dx, rect.center.dy + dy);
     // Emblem: hidden until it pops (yours) / starts cycling (theirs).
     final pop = _prog(t, popAt, VersusConfig.emblemPop);
-    final shown = emblemVisible || pop != null;
+    final shown = !noRival && (emblemVisible || pop != null);
     if (!shown) {
       emblem.popScale = 0;
     } else if (pop != null && pop < 1) {
@@ -788,12 +985,22 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
     canvas.drawRect(Rect.fromLTWH(0, 0, w, hh), _p);
     _p.color = avatar;
     canvas.drawRect(const Rect.fromLTWH(0, 0, slot, slot), _p);
-    final picture = intro.game.avatars.lookup(image);
+    final picture = noRival ? null : intro.game.avatars.lookup(image);
+    final look = noRival ? null : bird;
     if (picture != null) {
       AvatarImages.paint(
         canvas,
         picture,
         const Rect.fromLTWH(0, 0, slot, slot),
+      );
+    } else if (look != null) {
+      VersusAvatar.paintBird(
+        canvas,
+        const Rect.fromLTWH(0, 0, slot, slot),
+        look,
+        mirror: reel, // the opponent faces left
+        t: intro.time,
+        backdrop: reel ? null : VersusAvatar.ownBackdrop,
       );
     } else {
       // Person glyph, 32 pt (24-unit box).
@@ -811,8 +1018,9 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
       );
       canvas.restore();
     }
-    // Name window (clipped; the reel rolls names through it).
-    final win = Rect.fromLTWH(slot, 0, w - 2 * slot, hh);
+    // Name window (clipped; the reel rolls names through it). PRD-2.3
+    // §25.3 the NO RIVAL FOUND plate has no emblem slot.
+    final win = Rect.fromLTWH(slot, 0, w - (noRival ? 1 : 2) * slot, hh);
     canvas.save();
     canvas.clipRect(win);
     final t = intro.time;
@@ -1023,15 +1231,23 @@ class VersusIntroVs extends PositionComponent {
 /// tilt, wing flaps, blinks, and the one-off reactions (hop, lunge, flip).
 class VersusIntroBird extends PositionComponent {
   VersusIntroBird({
-    required this.look,
+    required Look look,
     required this.home,
     required this.mirror,
     required this.bobPeriod,
     required this.bobDelay,
     required this.blinkDelay,
-  });
+  }) : _look = look; // ignore: prefer_initializing_formals
 
-  final Look look;
+  /// The look drawn (PRD-2.3 §25.3: the opponent's is set when the
+  /// search finds them).
+  Look get look => _look;
+  set look(Look v) {
+    _look = v;
+    if (isLoaded) bird.look = v;
+  }
+
+  Look _look;
   final Offset home;
   final bool mirror;
   final double bobPeriod, bobDelay, blinkDelay;
@@ -1081,7 +1297,7 @@ class VersusIntroBird extends PositionComponent {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    bird = LookComponent(look: look, artScale: VersusConfig.birdScale)
+    bird = LookComponent(look: _look, artScale: VersusConfig.birdScale)
       ..flapOverride = false;
     if (mirror) bird.scale = Vector2(-1, 1);
     add(bird);

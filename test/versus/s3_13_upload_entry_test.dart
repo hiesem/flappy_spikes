@@ -61,7 +61,8 @@ void main() {
       final e = entry(7, bestBefore: 3);
       expect(e.score, 7);
       expect(e.best, 7);
-      expect(e.toMap().keys, hasLength(11));
+      // PRD-2.3 §21.4 adds `pg` (12 keys).
+      expect(e.toMap().keys, hasLength(12));
       expect(e.toMap().keys, containsAll([
         'runId', 'score', 'best', 'ts', 'name', 'avatar', 'look', //
         'platform', 'tl', 'end', 'fl',

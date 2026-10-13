@@ -12,7 +12,8 @@ class _E implements Matchable {
     : uid = m['uid']! as String,
       runId = m['runId']! as String,
       score = (m['score']! as num).toInt(),
-      level = (m['level']! as num).toInt();
+      level = (m['level']! as num).toInt(),
+      pg = (m['pg'] as String?) ?? '';
   @override
   final String uid;
   @override
@@ -21,6 +22,8 @@ class _E implements Matchable {
   final int score;
   @override
   final int level;
+  @override
+  final String pg;
 }
 
 /// WP-5b PRD-2 §3.13 matching (shared fixture with `functions/src/
@@ -43,14 +46,17 @@ void main() {
           for (final e in (c['pool']! as List).cast<Map<String, Object?>>())
             _E(e),
         ];
-        final seen = {...(c['seen']! as List).cast<String>()};
+        // PRD-2.3 §25.2 the ordered met list (oldest first).
+        final seen = (c['seen']! as List).cast<String>();
+        final myPg = (me['pg'] as String?) ?? '';
         final expectMap = c['expect']! as Map<String, Object?>;
         final (tier, candidates) = matchCandidates(
           pool,
           myLevel: (me['level']! as num).toInt(),
           myBest: (me['best']! as num).toInt(),
           myUid: me['uid']! as String,
-          seen: seen,
+          met: seen,
+            myPg: myPg,
         );
         expect(tier.name, expectMap['tier']);
         expect(
@@ -64,7 +70,8 @@ void main() {
             myLevel: (me['level']! as num).toInt(),
             myBest: (me['best']! as num).toInt(),
             myUid: me['uid']! as String,
-            seen: seen,
+            met: seen,
+            myPg: myPg,
             r: Random(s),
           );
           if (tier == MatchTier.solo) {

@@ -145,7 +145,7 @@ void main() {
       expect(g.state, GameState.versusIntro);
       await flushAndMount(g);
       final intro = g.versusIntro!;
-      expect(intro.opponent.name, 'Pond');
+      expect(intro.opponent!.name, 'Pond');
       expect(
         analyticsLog(spy).where((e) => e.$1 == 'versus_matched'),
         hasLength(1),

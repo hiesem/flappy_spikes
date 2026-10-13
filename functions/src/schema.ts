@@ -94,6 +94,17 @@ export interface RunEntry {
    * to `score`.
    */
   fl: string;
+  /**
+   * PRD-2.3 §21.4 the hashed Play Games id: SHA-256 hex (64 chars) of the
+   * Play Games player id plus the app salt; '' without Play Games. Optional:
+   * runs stored without it match as before.
+   */
+  pg?: string;
+}
+
+/** PRD-2.3 §21.4 the shape of `pg`: '' or 64 lowercase hex characters. */
+export function validPg(v: unknown): boolean {
+  return v === undefined || (typeof v === 'string' && (v === '' || /^[0-9a-f]{64}$/.test(v)));
 }
 
 /** A pool entry: the run plus its owner and the server-computed level; `ts` = server accept time. */

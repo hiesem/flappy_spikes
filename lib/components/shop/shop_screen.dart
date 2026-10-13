@@ -41,7 +41,7 @@ const List<String> kShopImages = [
 ];
 
 /// The Shop's featured item (PRD-menu-v2 §4 / WP-C): the first item of the
-/// 2.0 update ([kNewInUpdate], in its order) not owned yet, else the
+/// 2.3 update ([kNewInUpdate], in its order; PRD-2.3 §19.3) not owned yet, else the
 /// cheapest item not owned (catalogue order breaks ties), or null when
 /// everything is owned.
 SkinItem? featuredItemFor(ItemStore items) {
@@ -485,8 +485,7 @@ class FreeCoinsRow extends MenuButton {
   /// The camera icon's nod (re-attached to every rebuilt icon).
   late final WiggleEffect cameraNod = WiggleEffect(this);
 
-  bool get _claimable =>
-      _chipText == getLabel || _chipText == null;
+  bool get _claimable => _chipText == getLabel || _chipText == null;
 
   /// [LiveClock] binding: pulse + nod while claimable and not dimmed.
   void animate(double t, bool still) {
@@ -979,6 +978,9 @@ class FeaturedSkinRow extends MenuButton {
     addAll([caption, name]);
     _content.add(pill);
     layoutRow(this, [pill], gap: 0, right: width - padX);
+    // PRD-2.3 §19.3: the 2.3 showpieces and long new names (Birthday cake,
+    // Crystal wings, …) beside a 5,000 pill shrink to keep §8.3's gap.
+    name.fitWidth(name.text, pill.x - 6 - name.x);
   }
 }
 

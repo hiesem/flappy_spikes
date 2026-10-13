@@ -1,28 +1,28 @@
-# PRD-2.3 device QA — incomplete resume
+# PRD-2.3 device QA — final Resume-2
 
-Initial device revision **f5bf640**; resume/build/local gates at **d273d04** (P2 fixes merged), branch `p23-qadev`, on the owner's **Pixel 6 / Android 17**, serial `24191FDF6008ZD`, 1080×2400, 90 Hz. Media, ring and notification streams stayed muted. The initial DND and stay-awake settings were retained. No real messages, notifications, purchases, sign-in, deployment or push. Share sheets were cancelled.
+2026-10-13, `p23-qadev`, tested revision **72188a1** (FIX3 and **2.3.0+10**), owner's **Pixel 6 / Android 17**, `24191FDF6008ZD`, 1080×2400, 90 Hz. Earlier retained visual/journey samples are from f5bf640; the interrupted P2 checkpoint was d273d04. This report replaces its secure-lock statuses with the resumed results and explicit owner tasks.
 
-**Device sign-off: INCOMPLETE / FAIL — S8-14 remains unreverified.** P2 S8-09…S8-13 are merged and their automated regressions pass. At the resume's lock/unlock scenario the phone required its fingerprint/PIN; adb cannot dismiss that secure lock. An unlock request is pending. Blocked device checks below are not passes. Finding S8-14 is renumbered from the interrupted draft's colliding S8-13. Store- and audible-audio-only checks remain explicitly limited below.
+**Functional resume: PASS within the stated muted/account limits. Formal device sign-off: FAIL — S8-15's sampled §19 frame criterion and the already reported §17.6 bonus-frequency shortfall.** S8-14 is resolved on the actual Android edge gesture. No production fix is delivered by this tester.
 
-Raw evidence root, referred to as **E/** below:
-`/home/killerhis/Projects/flappyspikes/.worktrees/briefs8/evidence/device/`.
-This resume commits only this report and selected game images. Native share sheets and system/account screens stay in external evidence.
+The phone stayed unlocked; no power/sleep input, lock/unlock or screen-off scenario was performed. Media/ring/notification volume stayed muted. Notification permission (granted at arrival), icon style and soak brightness were restored; DND and stay-awake 15 were retained. Only debug notification broadcasts were sent. Share sheets were cancelled; no real purchase, rating, message, interactive sign-in, account change, deployment or push.
+
+Raw evidence root (**E/**): `/home/killerhis/Projects/flappyspikes/.worktrees/briefs8/evidence/device/`. Native system/account sheets remain there. Only this report and three game images are committed.
 
 ## Gates
 
-| Gate | Result | Evidence |
+| Gate | Final result | Evidence |
 |---|---|---|
-| Device `release_e2e_test.dart`, `FS_E2E` + live versus, `--no-uninstall` | **PASS: 8 tests**, 85 PNGs; journey, all elements, six rides, pending reminder plan, modes, live match and isolated anonymous upload/read/delete | E/e2e-first.log; E/e2e_release/; E/e2e-sweep.mp4 |
-| Focused `test/p23` + `test/share`, concurrency 3 | **PASS on resume: 356 passed / 20 skipped** | E/resume-focused.log; initial E/focused.log |
-| Functions build and emulator tests | **PASS: 144 passed / zero pending** | E/resume-functions-build.log; E/resume-functions-test.log (144 passing) |
-| Final `flutter analyze` | **PASS: clean**, d273d04 | E/resume-analyze.log |
-| Full `flutter test --concurrency=3` | **PASS: 2,865 passed / 23 skipped**, d273d04 | E/resume-full-suite.log |
-| Profile skin performance | **BLOCKED: secure lock**; updated profile APK builds | E/skins-profile.apk; E/resume-build-skins-profile.log |
-| Short soak | **BLOCKED: secure lock**; no new numbers claimed or comparison fabricated | 2.2 baseline: docs/p22/PERF.md §2e |
+| Current device e2e, live versus, `--no-uninstall` | **PASS 8 / 85 PNGs; live upload/read/delete** | E/resume2-e2e.log; E/resume2-e2e-release.tar |
+| `flutter analyze`, restored source | **PASS clean** | E/resume2-final-analyze.log |
+| Full `flutter test --concurrency=3` | **PASS 2,868 / 23 skipped** | E/resume2-full-suite.log |
+| Focused P23/share, concurrency 3 | **PASS 359 / 20 skipped** | E/resume2-focused.log |
+| Functions build + emulator tests | **PASS 144** | E/resume2-functions-build.log; E/resume2-functions-test.log |
+| §19 profile | **FAIL sampled per-item criterion; heavy PASS** | E/resume2-skinperf-log.txt; table below |
+| Short soak, 5 games | **PASS completion / memory / players / thermal; high Home CPU recorded** | E/resume2-soak/soak.json, soak.csv, logcat.txt, raw/; not a 20-game release-gate pass |
 
-The e2e harness needed the §10 first playfield tap in `_start()` and the separate live-match path. The test-only patch is retained at **E/e2e-harness.patch**; application expectations and goldens were unchanged. The interrupted checkpoint 9a303b0 already contains the e2e harness patch and device host bridge. This resume restores its temporary adapter edits and delivers no further source changes.
+No tests or goldens were added/changed in this resume. FIX3's merged three regressions account for the full-suite increase from 2,865 to 2,868. The original e2e first-tap adapter already belongs to checkpoint 9a303b0. Temporary native QA instrumentation/receipt fixtures were restored out of the checkout; helper sources/APKs stay in E/.
 
-## Device checks
+## Final device checks
 
 | PRD / item | Result | Evidence / qualification |
 |---|---|---|
@@ -30,26 +30,26 @@ The e2e harness needed the §10 first playfield tap in `_start()` and the separa
 | §6.3 twenty shares, variation and memory | **PASS, sampled** | Marker→chooser-start **120–166 ms** (includes input transport, excludes chooser animation). PSS KB at shares 1/2/5/10/20: **711090 / 704489 / 705834 / 710312 / 714885**; +1.48% from share 2, no accumulating image-sized rise. E/share-latency.json; E/share-memory.json. |
 | §6.3 fresh Invite: both newcomer cards | **PASS** | E/fresh-invite-sheet-1.png … -6.png show Dodge and Flock with varying approved banners/texts. |
 | §6.3 Invite after a positive run | **PASS** | E/after-run-invite-spotlight.png: last run 2, best 2; Spotlight and score text. |
-| §6.3 `/get` on Android / messenger delivery | **BLOCKED direct-link foreground check; SKIP sending** | Google Messages/Gmail/WhatsApp sending is excluded by the owner's instruction. WhatsApp in-app received-link verification is consequently not claimed. |
-| §6.3 / §9 circle launcher, themed icon, splash, Recents | **PASS circle-mask sample; BLOCKED themed/splash/Recents** | E/launcher-flappy-search.png shows the 17C bird whole in the default launcher circle. Themed toggle and cold-start/Recents visual checks require an unlocked screen; attempted captures after lock are not evidence of game visuals. |
+| §6.3 `/get` on Android / messenger delivery | **PASS direct route; OWNER TASK message delivery** | E/resume2-get-route.png: actual Google Play Flappy Spikes/Duo Leads page. No message or recipient selected; messenger delivery remains excluded. |
+| §6.3 / §9 circle launcher, themed icon, splash, Recents | **PASS** | Default circle retained; E/resume2-themed-flappy-shortcut.png; E/resume2-cold-start.mp4 (frame 009); E/resume2-final-recents.png. Whole bird in each. Android 17 Icons → Minimal was reverted to Standard; both temporary shortcuts were removed. |
 | §6.3 / §14 first-gate flow | **PASS, limited sample** | Fresh runs 1–3 only showed permitted normal hoops. In the later gate-3 run, Bullseye/Star Trail also appeared (both gate 0). All gate thresholds have focused automated coverage. |
 | §14.6 RUN DEBUG counter | **PASS** | Actual row cycles 4→9→14→19→24→0, then 0→5→10→15→20. E/run-debug-gates-*.png; E/run-debug-runs-*.png. |
 | §6.3 / §14.8 full-run analytics | **PASS live** | DebugView has `coins_per_hoop`, `perfect_rate`, `opening_end`, `speed_end`, `games_played`. The 30-point / 7-hoop run reports **3.57 coins/hoop**, including the versus win reward. E/debugview-coins-per-hoop.txt and PNG. |
 | §6.3 / §15 live tuning, two launches | **PASS** | `coin_jar=9 [remote]`, curve opening `[[1,96],[100,72]]`; native hoop 1 = **96**, hoop 0 still 118. E/tuning-valid-page-*.png; E/tuned-opening-state.json. Native completion fixture gives **+9** and “20 fireflies · +9 coins”: E/tuned-jar-reward.json; E/tuned-jar-full-9.png. |
-| §6.3 / §15 malformed JSON and restoration | **PASS fallback/source and cloud restoration; BLOCKED page visual** | E/resume-malformed-state.json: rejected opening is `[[1,88],[100,66]]`, source `default*`; log rejects `{broken`. E/remote-params-actions.txt: restore version 6. Hash comparison confirms every other key, salt included, unchanged. Restored defaults are opening `[[1,88],[100,66]]`, jar 8. |
-| §6.3 / §15 production/no flag | **PASS release build and automated flag-off checks; BLOCKED native title/request check** | E/production-noflag.apk; E/resume-build-release.log; focused s15 tests. APK built with `--release` and neither tuning nor App Check debug defines. It was not installed over the tester build while locked. |
+| §6.3 / §15 malformed JSON and restoration | **PASS** | E/resume2-malformed-state.json; E/resume2-malformed-tuning-page-2.png visibly shows `curve_opening … [default*]`. Cloud defaults restored at version 10; E/resume2-remote-restored.txt confirms unrelated keys/salt unchanged. Final client activation: E/resume2-final-client-defaults.json. |
+| §6.3 / §15 production/no flag | **PASS flag-off build/UI** | Current revision release APK, neither tuning nor App Check debug defines: E/resume2-production-noflag.apk; E/resume2-build-release.log; E/resume2-release-title-longpress.png. Long press opens no panel. Flag-off no-tuning-backend regressions pass; this is not a packet-level network capture. |
 | §10.4 first-run hint, fixed hoop and frozen wait | **PASS** | E/first-run-hint.png: full warnings, chevrons, path/labels and hand; ring x290/opening118. After 5 s the run clock is zero, bird waiting, opponent zero. HUD clears the P1-corrected upper warning. |
 | §10.4 first hoop flyability | **PASS** | First manual flying attempt: three timed taps, no bot/god, one perfect pass, score 2. Hoop 1 opening 88. E/first-hoop-manual-pass.png; E/first-hoop-manual-state.json. |
 | §10.4 later-run reminder and pause | **PASS** | Run 2 has the hand/banner only after the wait; pause keeps `waiting=true`, clock 0; RESUME returns to the wait. E/run2-tap-reminder.png; E/waiting-pause-before-flap.png. |
-| P2 S8-09…S8-13 device rechecks / first-START sync feel | **BLOCKED secure lock; automated regressions PASS** | Focused s17_qa_waiting, s18_qa_persistence, s26_qa_interplay and s24_launch_ownership run on d273d04. Native periodic/run-end saving, preloads, bright back art, actual launch ownership and ≤1.5 s wait feel remain unsigned. The attempted resume-playtime-waiting.json contains no waiting run (keyguard intercepted taps); it is excluded. |
-| §10.4 real edge-back while waiting | **FAIL S8-14** | Starts the run and causes a death without a flap tap. E/waiting-after-edge-swipe.png; plain-build/fixer recheck blocked. |
-| §13.5 music/lifecycle/ads/notifications | **INCOMPLETE: correct debug action observed; foreground repeats blocked** | E/resume-correct-notification-locked.log: correct `com.flappyspikes.DEBUG_NOTIFICATION` logs `notify` → `notify-end`, usage `[5:1]`, with the app held for background. The earlier resume_music batch used an incorrect action namespace, so its 30 rows are **invalid notification evidence**, despite music being on. Lock requires fingerprint/PIN. Original native interstitial hold/recovery: E/interstitial-music.json. Five-per-scene notification/short MEDIA, shade, lock return, ads, long background and scenario soak are not signed off. |
-| §16.6 seamless loop, muted | **SKIP audible/seam recording: mandated mute; additional mixer captures blocked** | Waveform/onset/click/listening validation cannot be claimed from silence. Existing builder's muted-phone measurements are in MUSIC.md. |
-| §17.6 repeated big bonuses / visible clearing / portal entry | **PASS limited retained sample; BLOCKED new entry-boundary capture** | Long native runs recorded repeated jar/piggy pickups: E/debugview-bonus-counts.txt. Reviewed three portal-native clips/contact sheets: no second big bonus ahead or visible disappearance observed in sampled frames. Those recordings start after portal creation, so they do **not** establish the first beam pixel entering at the right edge. Jar completion is the synthetic fixture described under Calls. |
+| P2 S8-09…S8-13 device rechecks / first-START sync feel | **PASS fixes; native fixtures and regressions** | See the separate recheck table below. E/resume2-native-p2.json; E/resume2-launch-sync.json. The delayed receipt is a fake store with the native app/banner stack; no purchase or real entitlement delivery. |
+| §10.4 real edge-back while waiting | **PASS FIX3 / S8-14 resolved** | Actual `input swipe 2 1200 400 1200 150` in FREE FLY and live VERSUS leaves `waiting=true`, clock 0. E/resume2-s14-edge.json; E/resume2-s14-versus.json; [key capture](device/resume2-waiting-back.png). A separate playfield tap starts flight. |
+| §13.5 music/lifecycle/ads/notifications | **PASS foreground muted dispatch; owner audio/lifecycle limits** | Five notification and five short MEDIA broadcasts on each of Home/run/results: 30/30 music on afterward, zero own-music latches. Continuous log has all 30 native ding starts and 15 notification end/resume pairs (max 1 ms). Five shade + five 10 s Home/background returns also recover. E/resume2-music-final-continuous.log; E/resume2-music-final-music-state.json; E/resume2-music-state.json. Billing/ad checks below; screen-off omitted by hard rule. |
+| §16.6 seamless loop, muted | **OWNER TASK audible/seam recording** | All streams stayed muted. A silent playback capture cannot certify waveform/onset/click/listening criteria; retained mixer-counter results are in MUSIC.md. Hourglass and revive-duck wraps, headphones and listening remain owner checks. |
+| §17.6 repeated big bonuses / visible clearing / portal entry | **PASS sampled native entries** | Three recordings begin before the force/spawn. E/resume2-portal-{1,2,3}.mp4; E/resume2-portal-states.json (maximum open-big count 1); E/resume2-portal-entry-contact.png; [entry frames](device/resume2-portal-edge.png). Reviewed edge entry of beam/particles, no visible pop-in, second open big bonus or clearing in this sample. Earlier repeated pig/jar samples retained. |
 | §17.6 bonus frequency | **Target NOT met, known** | Focused soak: 6.66 vs 7.87 big bonuses / 50 hoops, **−15.4%**, against ≤10%; the builder's larger soak reports ≈−18%. P2 S8-11 waiting-path fix is merged; the builder re-soak is still **−17.6%** (6.64 vs 8.06 / 50 hoops, 1,600 runs), per SPEC. The resume focused tiny sample is −20.8%; its sample guard does not certify the ≤10% target. Neither rate is labelled a pass. |
 | §19 all 60 new items / all four tabs | **PASS visual sample** | E/skin-list.json; E/skin-*.png; E/skin-contact-{hat,gear,hoop,trail}.png; warmed trail captures. Compared with approved JS/Flutter contact sheet `SKINS_PORT.png`; no additional shape defect. |
-| §19 heaviest look and each legendary, profile | **BLOCKED secure lock** | Updated profile harness builds: E/skins-profile.apk. No native frame-budget pass is claimed; runs behind keyguard would not be comparable. |
-| §20.5 Settings layout / all rows / footer | **PASS** | E/settings-device.png. Approved layout with the PRD's Redeem row replacing Rate. Footer reads installed metadata **v2.2.0 (9)**: the release version still needs the planned 2.3.0+10 bump. |
+| §19 heaviest look and each legendary, profile | **FAIL literal frame-rate criterion: S8-15** | Baseline, heavy combination and every new legendary each ran 120 s in profile mode. Heavy passes; six individual phases have rare >16.7 ms frames above the baseline rate. Full table below; E/resume2-skinperf-log.txt; E/resume2-skinperf-summary.json. |
+| §20.5 Settings layout / all rows / footer | **PASS** | Approved layout retained; native installed footer now **v2.3.0 (10)**. E/resume2-final-settings.png; original E/settings-device.png covers row/layout checks. |
 | §20.5 volume bar drag / audio tiles / rumble | **PASS dispatch** | In-app bar changes step through 0–8; music level restored to 25%, sound and rumble restored. Physical stream volume never changed. E/settings-volume-*.png; E/settings-level-restored-25.png; E/vibrator-settings-rumble.txt. Human haptic feel is not claimed. |
 | §20.5 Support and Privacy links | **PASS** | Actual phone browser addresses `/support` and `/privacy`, correct live pages: E/settings-support-browser.png; E/settings-privacy-browser.png. |
 | §20.5 Delete data text / back | **PASS, cancelled** | Confirmation names `flappyspikes.com/delete-data`; edge back cancels it without deleting. E/delete-data-confirm.png; E/delete-confirm-cancelled.png. |
@@ -64,38 +64,84 @@ The e2e harness needed the §10 first playfield tap in `_start()` and the separa
 | §24.5 hour gap / five a day | **PASS controlled timestamps** | 59 min blocked; 60 min eligible through shows 2–5; show 6 blocked at 60 min. E/noads-hour-cap.json; E/noads-show-*-age-*.png. First session was ended by a relaunch; fixture `lastScore=10` makes the score guard eligible. |
 | §24.5 No-Ads next run has no banner/interstitial | **PASS controlled ownership** | All 20 actual live runs had no banner/interstitial after setting the local test ownership flag. No purchase was made. |
 | §25.4 twenty immediate deaths/restarts / small pool | **PASS** | Every START has a VS loading screen; every run reaches a waiting scene and a duel result. E/versus20.json; E/versus-contact.png; E/vs20-*.png; E/versus-log.txt. |
-| §25.4 rematch rotation | **PASS name/player rotation sample; run-id/LRU audit incomplete** | E/resume-versus-name-contact.png and E/versus-log.txt: earlier 20-run sample revisits HiesemSurahi, FluffyJay, BoldHeron, RapidParrot and E2E bot without solo exhaustion. Several runs of one player may share a name; exact run-id met-history order cannot be inferred from the pictures. New native audit blocked by secure lock. |
-| §26.4 fresh Shop/Skins lock / blocked content / bright controls | **PASS initial input; P2 S8-12 fixed locally, native recheck blocked** | Both lock overlays show 25; back works and coin pill stays bright. Initial back artwork was dim (P2 S8-12); resume automated locked/open pixel regressions now pass. Attempts behind keyguard are not a native brightness recheck. E/locked-shop.png; E/locked-skins.png. |
+| §25.4 rematch rotation | **PASS exact run-id/LRU audit** | Public service calls prime 23 usable non-own run IDs; four actual STARTs each choose exactly `metBefore[0]`, remove it there and append it to the end. Every START has a VS scene and rival. E/resume2-rematch-audit.json; E/resume2-rematch-log.txt. Original 20 rapid STARTs remain the broader UI sample. |
+| §26.4 fresh Shop/Skins lock / blocked content / bright controls | **PASS native bright art and retained lock flow** | Native locked/open Shop and Skins back pixels both `(236,0,140,255)`. E/resume2-bright-back-pixels.json; E/resume2-{locked,open}-{shop,skins}.png; [key capture](device/resume2-locked-shop.png). Back gestures work. Earlier fresh lock/input and completed-best-30 silent unlock samples retained. |
 | §26.4 unlock from a completed best ≥25 | **PASS** | Native bot/god run ends at best **30**; both screens then open, no unlock popup; only the normal results level reward. E/unlock-results-30.png; E/unlocked-home.png; E/unlocked-shop.png; E/unlocked-skins.png. |
 
-## S8-14 — major — Android edge-back starts the waiting run
+| Additional resumed check | Result | Evidence / limit |
+|---|---|---|
+| Native Play Billing sheet, cancel only, music | **PASS 5 native sheets cancelled; music on afterward** | E/resume2-billing-cancel.json; E/resume2-billing-cancel-log.txt. No confirmation/payment control pressed. |
+| Current native test interstitial music | **PASS native test ad: music held during, on after close** | E/resume2-interstitial-music.json and .log; no creative content tap. |
+| Final installation/settings | **PASS normal debug 2.3.0+10 installed; restored settings/defaults** | E/resume2-final-device.txt; E/resume2-audio-after.txt; E/resume2-final-client-defaults.json. |
 
-- **PRD:** §10.1/§10.4: only the first playfield tap starts flight; back while waiting behaves as during a run. PRD-2.2 §8 keeps system back inert in run states.
-- **Repro:** open a later VERSUS run; wait for the floating bird/reminder and clock 0. Execute the specified gesture, `adb -s 24191FDF6008ZD shell input swipe 2 1200 400 1200 150`, without any flap tap. Reproduced twice in the initial real app driven by the QA host bridge. The plain-build recheck and parallel fixer verification remain blocked by the secure lock.
-- **Expected:** still waiting, clock 0, no `run_start`; first hint remains unseen if it was the first run.
-- **Actual:** the first touch of the system gesture starts/flaps the bird. The run clock reaches **1.0655 s**, then the bird is dying with zero hoops. The first attempt also set `firstRunHintSeen=true` and saved a zero-point run.
-- **Evidence:** E/run2-tap-reminder.png → E/waiting-after-edge-swipe.png; E/first-run-back-inert.png. Console snapshots before/after show `waiting:true, clock:0` → `waiting:false, state:dying, clock:1.0655153`.
-- **Code clue, not a production fix:** `TapCatcher.onTapDown()` immediately calls `onPlayfieldTap()` before the OS cancels the pointer for a recognized back gesture. A later `handleSystemBack()` cannot undo the start. Unit/system-back method calls do not exercise this pointer sequence.
+## S8-09…S8-14 rechecks
+
+| Finding | Result on resumed revision |
+|---|---|
+| S8-09 periodic/run-end playtime | **PASS native**: waiting counted/persisted **13/10**, **26/20**; flight **42/40**; results **43/43** before NEXT. Four finished runs throughout waiting/flight, five at results. All gaps ≤10 s; E/resume2-native-p2.json. |
+| S8-10 premature preload | **PASS native**: no request with four finished runs during the fifth flight. Instrumented native request at **11:22:13.925**, after the forced death at **11:22:13.218**; it becomes eligible at the fifth run end. E/resume2-native-p2-log.txt. |
+| S8-11 cooldown waiting | **PASS regression** over 60 seeds; native one-open-bonus and three portal-entry samples pass. Debug force is setup and does not prove an optional random cooldown draw by itself. The separate frequency target is still unmet. |
+| S8-12 back brightness | **PASS native** locked/open comparison for Shop and Skins, plus actual back gesture; exact RGBA above. |
+| S8-13 launch ownership / first-START wait | **PASS native app/banner + delayed-store fixture**: START remains on Home while the store is held; reply at about 0.47 s reaches a waiting run by **0.76 s**, No Ads true, no banner. Never-answering query reaches the waiting run by **1.77 s** with its banner, without a hang. Times include adb transport/polling (initial input ≈0.23 s); the configured game-time budget is 1.5 s. Real restored receipts remain a store/owner task. E/resume2-launch-sync.json and .log. |
+| S8-14 edge-back started flight | **RESOLVED FIX3**: both actual FREE FLY and live VERSUS edge swipes retain `waiting=true`, clock **0**, and opponent score **0**. The separate playfield tap starts it. The prior repro/finding is preserved in E/resume2-report-before.md. |
+
+## S8-15 — minor — sampled legendary phases exceed today's rare slow-frame rate
+
+**PRD §19.6:** each new legendary, like the heavy look, must keep the existing frame budget with no extra frames over 16.7 ms beyond today's rate.
+
+**Repro:** upload-signed profile `integration_test/skins_perf_main.dart` on this Pixel 6. Baseline, heavy Sunburst + Disco + Aurora + Supernova, and all eight new legendaries each run **120 s**, trail forced active, real rendering/autopilot, no ads/services, separate `skinperf.` preference prefix. The temporary harness changes only the baseline duration; `SKINPERF_SHORT=120` extends all individual phases. Source restored afterward.
+
+**Expected:** each phase's >16.7 ms rate ≤ the baseline. **Actual:** heavy, Crystal and Disco meet it; Planet, Sunburst, Atom, Aurora, Supernova and Paint exceed the baseline **11/10,664 = 0.103%**. These are rare misses, not a demonstrated art-code cause. Courses/activities vary between phases, and this single run does not establish a statistically isolated regression. The literal sampled criterion is failed rather than silently relaxed.
+
+| Phase (120 s each) | Frames | Build / raster p90 ms | >16.7 ms | Verdict versus baseline |
+|---|---:|---:|---:|---|
+| baseline | 10,664 | 5.56 / 7.56 | 11 (0.10%) | baseline |
+| heavy | 10,742 | 5.89 / 10.24 | 4 (0.04%) | PASS rate |
+| planet | 10,585 | 5.96 / 7.84 | 22 (0.21%) | FAIL rate |
+| sunburst | 10,599 | 5.90 / 8.30 | 25 (0.24%) | FAIL rate |
+| crystal | 10,763 | 3.56 / 10.90 | 5 (0.05%) | PASS rate |
+| atom | 10,697 | 5.96 / 8.90 | 12 (0.11%) | FAIL rate |
+| disco | 10,716 | 5.75 / 8.02 | 9 (0.08%) | PASS rate |
+| aurora | 10,584 | 5.87 / 7.89 | 19 (0.18%) | FAIL rate |
+| supernova | 10,682 | 5.89 / 9.73 | 13 (0.12%) | FAIL rate |
+| paint | 10,619 | 5.87 / 7.93 | 13 (0.12%) | FAIL rate |
+
+All phases' build/raster p99 values are below 16.7 ms; worst individual durations range 21.98–76.87 ms. Evidence: E/resume2-skinperf-log.txt, E/resume2-skinperf-summary.json. The established harness measures whether **either build or raster** exceeds 16.7 ms; the soak separately reports total frame span. No production patch or threshold/golden rewrite is made here.
+
+## Short soak and the 2.2 comparison
+
+Unchanged `SoakDriver`, profile `FS_SOAK`, **5 games / 70 s holds**, 10 hoops each, the bonus path in game 3 and level reward path in game 4. The external copy of `tool/soak.py` only targets this serial, the saved APK and E/ output. Command: `python3 -I E/resume2_soak.py --label p23-final --serial 24191FDF6008ZD --no-build --games 5 --hold 70`. A labelled Google test interstitial after game 5 was closed through its native **Sluiten** control (the post-run wall time includes waiting for that close). No ad content/Install tap.
+
+Start skin **30.49 °C**, battery **27.6 °C**, thermal 0. Brightness manual 128 for measurement, restored to **auto (1), saved value 44**. Stay-awake 15 unchanged. Output: E/resume2-soak/ (JSON/CSV/logcat/raw dumps).
+
+| After game | PSS MiB | Native players | Home CPU, one core % | Run p90 ms / >12.5 ms | Thermal |
+|---|---:|---:|---:|---:|---:|
+| 1 | 444.5 | 93 | 91.8 | 12.99 / 13.5% | 0 |
+| 2 | 446.9 | 93 | 89.0 | 14.50 / 26.0% | 0 |
+| 5 | 479.8 | 93 | 88.1 | 14.48 / 30.8% | 0 |
+
+PSS **446.9 →479.8 MiB, +7.36%** from game 2 to 5 (within 10%); native players **93 at every Home hold**, 33 pools /92 pooled voices; position polling **0/s**; thermal **0**. Long stops include `perfect_3` **2,400–2,403 ms** and `lv_claim` **1,501 ms**. No accumulating unowned players observed.
+
+[2.2 final-fix baseline](../p22/PERF.md#2e-final-fix-round-r1-b-s7-19-session-sound-set-re-soak-2026-10-12-g7-fin-soak), game 2→5: PSS **454.9→487.1 MB (+7.1%)**, players **93**, Home CPU **52.0→49.0%**, run p90 **14.48→15.00 ms**, slow **25.0→23.1%**. Current game 5: p90 **14.48 ms**, slow **30.8%**, Home CPU **88.1%**. **Home CPU is high** and is not called a pass/improvement. This is Pixel 6 /90 Hz versus Pixel 8 /60 Hz, with different course/ad grace/temperature; comparison is descriptive, not causal. Five games cannot certify the game-20 frame criterion or long-session memory behaviour.
 
 ## Calls, limits and integration
 
-- The main tester build uses `FS_TUNING=true` and the newly registered **“Pixel 6 e2e 2.3”** App Check token; its value is outside git (mode 600), and remains registered for the installed debug build.
-- A temporary entry point calls the real `app.main()` and adds host setup/read-only state through `code_cache`. All product taps/swipes use adb, including the required edge gesture. The resume-only adapter changes are retained in E/p23-device-bridge-resume.txt and restored out of the checkout; no source diff is delivered by this resume. Profile measurements use their separate existing harnesses, not this disk-polling bridge.
-- Test setup includes bot/god, met-element and run-count controls, synthetic No-Ads ownership, a direct gift-popup display, stored popup-age fixtures, and a **paused jar/swarm-completion fixture** for the remote +9 payout. Do not mistake these for a real purchase, code grant, natural twenty-firefly collection, or a many-hour popup session.
-- Native share latency is a transport-inclusive marker-to-chooser-launch measurement. It is not a frame-accurate measure of the fully animated chooser.
-- The device is **90 Hz**; the 2.2 PERF table is a different **Pixel 8 at 60 Hz**. The skin baseline is the 2.2 look in this same 2.3 build, isolating art cost. Cross-device soak comparisons are descriptive, not evidence of a regression's cause.
-- P2 fixes are present at d273d04. Their automated regressions pass; native playtime, bright back-art and delayed launch ownership/first-START feel rechecks are blocked. The documented §17 frequency target remains unmet. S8-14 has a parallel fixer and no production fix is delivered here.
-- No gameplay/storage/module contract was changed, so SPEC/ARCH/Config/storage-key tables are untouched. No iOS/design/store screenshot changes are delivered.
-- Remote Config defaults are restored (version 6), with all unrelated parameters/salt unchanged. Secure lock prevents the remaining device measurements; no failed/empty lock-screen captures or stale bridge states are treated as passes.
+- Resume-2's **foreground-scene music scope** replaces the blocked lock/screen-off attempts; the longer original background/scenario-soak cases are listed below for another session. The incorrect-action initial batch and stale/background adapter snapshots are not accepted as passes. The first RC visual attempt hit MUSIC LOG because its QA coordinates used the wrong strip height; the corrected page is the evidence cited here. Cloud restore is confirmed after both attempts. The SDK fetch interval is one minute; after the soak, two later launches activated the restored values. The old report described notification permission as denied, but the actual pre-resume captures show granted; final cleanup follows the captures.
+- The actual app is driven by adb taps/swipes. The temporary bridge provides state and fixtures through `code_cache`; publication is atomic. Receipt and blocked-store tests use a fake store with native game/banner services, not a purchased entitlement. Rematch priming uses `searchForStart()`/`takeOpponent()`; no pool documents are edited. Bot/god, best/run counters and force queues are explicit test setup.
+- Media is muted: the Android playback list hides the ding early (notification holds are ≈180 ms), and may hide short MEDIA entirely. Recovery logs establish dispatch/state, not audible duration/quality or Spotify suppression. The separate audible tests remain unclaimed.
+- Share memory/latency and earlier full visual coverage remain the initial sampled results; native latency includes transport and does not measure chooser-animation completion. No recipient was selected. New Settings/version and all previously secure-lock-blocked permitted checks are covered above.
+- The §17.6 frequency target remains **FAIL, known**: builder's fixed waiting-path re-soak **6.64 versus 8.06 bonuses /50 hoops, −17.6% (1,600 runs)**, against ≤10%. This resume's focused tiny sample is −20.8% and is not a large re-soak. Report-and-continue is explicit in §17.6; no extra code defect is inferred from frequency alone.
+- Integration must retain FIX3's tap-up start and the P2 persistence/preload/brightness/ownership fixes. S8-15 needs performance assessment with comparable courses/device conditions; do not turn these measured failures into passes by changing a tolerance. High Home CPU and the short soak's scope remain visible risks.
+- No production source, tests, SPEC/ARCH contract, storage key, Config knob, iOS/design/store screenshot or backend deployment is changed by this tester commit. Cloud defaults/salt are restored; the App Check token remains registered (see Firebase console), with value only outside git.
 
+## Owner tasks / checks not done
 
-## Resume closure / next device session
+1. **Lock/unlock and every screen-off lifecycle case**: omitted by the new hard rule, including notification/shade returns that require a locked screen. No request to lock this phone is made.
+2. **Audible music/seam/own-music/headphone/haptic checks**: media stays muted. Three loop wraps, Hourglass and revive-duck seams, an audible heads-up, Spotify suppression/recovery, and human rumble feel need a later owner session. Headphones were unavailable.
+3. **Long background and music scenario soak**: original 10 min /≥30 min returns and 30-minute scenario cycling were not repeated in the foreground-only resume. Short 10 s returns and the requested five-game soak are complete; a 20-game performance gate remains separate.
+4. **Message delivery / received WhatsApp link**: only native share sheets and direct `/get` route were checked; all sheets cancelled. No Messages/Gmail/WhatsApp sending.
+5. **Real promo codes/orders/reinstall entitlement**: codes were not available for this run. No code redeemed or purchase confirmed; fake launch grants certify the ordering fixture only.
+6. **Native in-app review/30-day return/submitted rating**: requires a Play internal-track installation, whereas this run leaves a sideloaded debug build; no rating submitted.
+7. **Real Play Games picture/account-link conflict/ghost cleanup**: no interactive sign-in/account switch or owner-account changes. Bird fallback/name fit are native passes; cleanup/identity cases remain automated coverage.
 
-- **Local gates complete:** analyze clean; full Dart **2,865 passed / 23 skipped**; focused P23/share **356 passed / 20 skipped**; Functions **144 passed**. No new or changed delivered tests, application code, contract or golden references in this resume. The first e2e result remains from f5bf640; it was not repeated after the P2 merge.
-- **Remaining device blocker:** Android's secure fingerprint/PIN lock. An unlock request was sent while builds/gates continued. Do not treat the lock-screen captures, the incorrect-action music batch or stale/background snapshots as product failures or passing scenarios. Rebuild artifacts/helper source are retained in E/ for the next unlocked session.
-- **Still required after unlock:** themed icon/splash/Recents; correct notification/MEDIA repeats on all three scenes plus lifecycle/ad/long-background checks; fresh portal entry-boundary recording; native P2 persistence/brightness/launch-ownership and first-START feel rechecks; profile baseline/heavy/all legendary phases; short soak and 2.2 comparison; full run-id rematch-history audit; plain-build S8-14/fixer verification.
-- **Owner/store limits:** message delivery is cancelled by instruction; actual promo grants/orders/reinstall entitlements need codes; native review needs a Play-track installation; audible notification/own-music/seam checks and listening require the owner's later unmuted session; real Play Games profile/account transitions were not performed. No headphones were supplied, and no real purchase/billing flow was initiated.
-- **Known risks:** S8-14 is still an initial-device finding awaiting the parallel fix/retest. §17.6's ≤10% bonus-frequency target remains unmet after the P2 waiting fix. Native profile/soak performance is unmeasured on this merged build. Automated green gates alone are not device sign-off.
-- **Cleanup:** Remote Config restored to defaults at version 6; all other keys and the pg salt unchanged by hash verification. Only the two altered values were restored in the local activated tester cache too. Fixture ownership restored to No Ads=false, in-app music 25%, original audio/rumble preferences retained. Physical media/ring/notification mute, DND and stay-awake values were never raised or changed. The d273d04 tester debug build (`FS_TUNING=true`, registered App Check token) is installed with the original QA entry point, which cancels reminder schedules and installs NoopReminders; the secure lock remains. Signing copies were deleted from this worktree. E/resume-final-*-settings.txt confirms zen=1, stay-awake=15, brightness auto/value=1 and speaker media volume=0 match the initial values.
-
-Selected native game screenshots: [first-run hint](device/first_run_hint.png), [S8-14 edge-back outcome](device/waiting_edge_back_s8_14.png), [Settings](device/settings.png). These are retained initial-revision evidence, not native rechecks of the merged P2 build.
+**Final state:** Normal **debug 2.3.0+10**, `FS_TUNING=true` with the registered Pixel 6 App Check token, no e2e/soak/QA bridge target, verified on Home with **FREE FLY** restored; then force-stopped to remove scheduled reminder alarms, leaving the phone unlocked on its launcher. Sound/rumble ON and in-app music 25% retained; physical media/ring/notification mute remains true at volume 0. Notification permission restored **granted/user-set**, matching the actual pre-resume permission capture, icon Standard/circle and original Home layout restored, brightness auto, DND 1 and stay-awake 15 unchanged. Cloud defaults restored at version 10 and activated in the client. E/resume2-alarms-after-final-stop.txt records the reminder cleanup. Copied signing files deleted; no push.

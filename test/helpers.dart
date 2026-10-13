@@ -5,6 +5,7 @@ import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/components/menu_screen_chrome.dart';
 import 'package:flappy_spikes/components/noads_popup.dart';
 import 'package:flappy_spikes/components/shop/shop_screen.dart';
+import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/rumble.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
@@ -101,6 +102,15 @@ Future<void> flushAndMount(FlappySpikesGame game) async {
     await Future<void>.value();
     game.update(0);
   }
+}
+
+/// PRD-2.3 §13.4: lets the launch / foreground "own music" confirmation
+/// (two "yes" answers 1 s apart) finish: steps past the gap, then flushes
+/// the async check.
+Future<void> settleMusicChecks(FlappySpikesGame game) async {
+  await flushAndMount(game);
+  stepGame(game, Config.musicOwnConfirmGap + .05);
+  await flushAndMount(game);
 }
 
 /// Fixed-steps the game (and its Forge2D world) for [seconds] of game time.

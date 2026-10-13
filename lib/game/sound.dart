@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/foundation.dart';
 
 import 'audio_counter.dart';
 import 'config.dart';
+import 'music_log.dart';
 import 'sfx_pool.dart';
 import 'sound_durations.g.dart';
 
@@ -446,7 +448,14 @@ class SoundService {
   /// fresh player mid-animation).
   static const Set<Sfx> _burstPool = {Sfx.bnCoin, Sfx.skTick, Sfx.piggyCoin};
 
-  static const String _musicFile = 'HappyBeat_8-Bit_Retro_Game_Loop.mp3';
+  /// PRD-2.3 §16.3: the seamless 56-bar OGG loop on Android and the Linux
+  /// desktop build; iOS (paused, no OGG Vorbis) keeps the MP3.
+  static String musicFileFor({required bool isIOS}) => isIOS
+      ? 'HappyBeat_8-Bit_Retro_Game_Loop.mp3'
+      : 'HappyBeat_loop_56bars.ogg';
+
+  static String get _musicFile =>
+      musicFileFor(isIOS: !kIsWeb && Platform.isIOS);
 
   bool muted;
 
@@ -1045,6 +1054,81 @@ class SoundService {
   /// when [enabled] is false.
   void Function(String event)? onMusic;
 
+  /// PRD-2.3 §13.4: another app's notification sound (or a short media
+  /// sound that started while the game is in the foreground) is playing:
+  /// the music pauses, the sound effects keep playing.
+  bool _otherSound = false;
+
+  /// PRD-2.3 §13.3: the music diagnostic log.
+  final MusicLog musicLog = MusicLog();
+
+  /// PRD-2.3 §13.3: the last `AudioWatch` answer for the log (set by the
+  /// game's music guard).
+  String Function()? musicWatchLine;
+
+  /// Test seam (PRD-2.3 §13.5): the music player's real state instead of
+  /// audioplayers' (`playing`, `paused`, `stopped`, `completed`,
+  /// `disposed`, `none`).
+  String Function()? musicStateProbe;
+
+  /// [startMusic] was called (the game wants its music).
+  bool get musicWanted => _musicWanted;
+
+  /// §13.4 a notification sound holds the music.
+  bool get otherSound => _otherSound;
+
+  /// The app is not in the foreground (the music is held).
+  bool get background => _background;
+
+  /// The music player's real state (PRD-2.3 §13.3 / §13.4 watchdog):
+  /// `none` until the music was started for real.
+  String get musicPlayerState {
+    final probe = musicStateProbe;
+    if (probe != null) return probe();
+    if (!enabled || !_bgmInitialized) return 'none';
+    try {
+      return FlameAudio.bgm.audioPlayer.state.name;
+    } catch (_) {
+      return 'none';
+    }
+  }
+
+  /// PRD-2.3 §13.2 `music_held` reason of the current hold (null = not
+  /// held). Background first, then an ad, an interruption or a
+  /// notification, then the player's own music.
+  String? get musicHoldReason {
+    if (_background) return 'background';
+    if (_suspends > 0) return 'suspend';
+    if (_interrupted || _otherSound) return 'interrupted';
+    if (_ownMusicSkipped) return 'own_music';
+    return null;
+  }
+
+  String get _flags =>
+      'susp=$_suspends int=${_interrupted ? 1 : 0} '
+      'own=${_ownMusicSkipped ? 1 : 0} bg=${_background ? 1 : 0} '
+      'notif=${_otherSound ? 1 : 0} want=${_musicWanted ? 1 : 0} '
+      'on=${_musicActive ? 1 : 0}';
+
+  /// PRD-2.3 §13.3: one diagnostic log entry.
+  void logMusic(String event) {
+    String watch;
+    try {
+      watch = musicWatchLine?.call() ?? '-';
+    } catch (_) {
+      watch = '-';
+    }
+    musicLog.add(
+      MusicLogEntry(
+        time: DateTime.now(),
+        event: event,
+        flags: _flags,
+        watch: watch,
+        player: musicPlayerState,
+      ),
+    );
+  }
+
   /// §28.2 a full-screen ad is up.
   bool get suspended => _suspends > 0;
 
@@ -1060,12 +1144,17 @@ class SoundService {
   bool get _sfxSilenced => _suspends > 0 || _interrupted;
 
   bool get _musicHeld =>
-      _suspends > 0 || _interrupted || _ownMusicSkipped || _background;
+      _suspends > 0 ||
+      _interrupted ||
+      _ownMusicSkipped ||
+      _background ||
+      _otherSound;
 
   /// §28.2 a full-screen ad is shown: the music pauses (position kept),
   /// every loop stops and every [play] is dropped until [resume].
   void suspend() {
     _suspends++;
+    logMusic('suspend');
     if (_suspends == 1) {
       _pendingFirst.clear();
       _stopOneShots();
@@ -1113,6 +1202,7 @@ class SoundService {
   void resume() {
     if (_suspends == 0) return;
     _suspends--;
+    logMusic('resume-ad');
     if (_suspends == 0) unawaited(_syncMusic());
   }
 
@@ -1121,6 +1211,7 @@ class SoundService {
   void clearSuspend() {
     if (_suspends == 0) return;
     _suspends = 0;
+    logMusic('clear-suspend');
     unawaited(_syncMusic());
   }
 
@@ -1130,6 +1221,7 @@ class SoundService {
   void setInterrupted(bool on) {
     if (_interrupted == on) return;
     _interrupted = on;
+    logMusic(on ? 'interrupt' : 'interrupt-end');
     if (on) {
       _pendingFirst.clear();
       _stopOneShots();
@@ -1144,6 +1236,9 @@ class SoundService {
   /// and on foreground): the game skips its music. A quiet check only
   /// re-enables it when [sceneChange] is set (Home / run start, never
   /// mid-run).
+  ///
+  /// PRD-2.3 §13.4: the menu re-check (every 2 s while skipped on a menu)
+  /// counts as a scene change.
   void setOtherMusicActive(bool active, {bool sceneChange = false}) {
     if (active) {
       if (_ownMusicSkipped) return;
@@ -1152,7 +1247,32 @@ class SoundService {
       if (!_ownMusicSkipped || !sceneChange) return;
       _ownMusicSkipped = false;
     }
+    logMusic(active ? 'skip' : 'unskip');
     unawaited(_syncMusic());
+  }
+
+  /// PRD-2.3 §13.4: another app's notification sound plays ([on]): the
+  /// music pauses (position kept) and resumes when it ends. Sound effects
+  /// are not affected (a notification is not a call).
+  void setOtherSound(bool on) {
+    if (_otherSound == on) return;
+    _otherSound = on;
+    logMusic(on ? 'notify' : 'notify-end');
+    unawaited(_syncMusic());
+  }
+
+  /// PRD-2.3 §13.4 music watchdog: the game thinks the music plays but the
+  /// player is not playing (stopped, released, errored). The music restarts
+  /// from the start of the loop; logged as `player_dead`.
+  Future<void> restartMusic() {
+    logMusic('player_dead');
+    if (!_musicActive) return _syncMusic();
+    _musicActive = false;
+    _musicLoaded = false;
+    if (enabled) {
+      _musicOps = _musicOps.then((_) => _musicCall('stop'));
+    }
+    return _syncMusic();
   }
 
   /// The app left / came back to the foreground (the game owns the music
@@ -1161,6 +1281,7 @@ class SoundService {
   void setBackground(bool background) {
     if (_background == background) return;
     _background = background;
+    logMusic(background ? 'background' : 'foreground');
     unawaited(_syncMusic());
   }
 
@@ -1171,6 +1292,7 @@ class SoundService {
     final event = want ? (_musicLoaded ? 'resume' : 'start') : 'pause';
     if (want) _musicLoaded = true;
     onMusic?.call(event);
+    logMusic(event);
     if (!enabled) return _musicOps;
     if (kDebugMode) {
       debugPrint(
@@ -1202,6 +1324,9 @@ class SoundService {
           await bgm.pause();
         case 'resume':
           await bgm.resume();
+        case 'stop':
+          // PRD-2.3 §13.4 watchdog: the next 'start' plays from the top.
+          await bgm.stop();
       }
     } catch (_) {
       // Audio failure must never take the game down.

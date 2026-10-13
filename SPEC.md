@@ -1529,3 +1529,30 @@ production build has the flag off and uses these values only. Full key table:
   `test/p23/s25_vs_loading_screen_test.dart`, `test/p23/s21_names_test.dart`,
   `test/p23/s21_avatar_display_test.dart`,
   `test/p23/s21_versus_identity_test.dart`, `functions/test/p23_s21.test.ts`.
+
+## PRD-2.3 §17: one big bonus on screen (P23-17)
+
+- DEVIATION (PRD-2.3 §17.3, adds to PRD-2.2 §27.2): **at most one open big bonus.**
+  Big = Piggy Bank, Firefly Jar, comet star, Egg, the capsules, Star Trail, the reward
+  rings (pair, Lucky Spin, FEVER) and the portal; small items (heart, shield, feather,
+  puzzle piece) are not limited. A big bonus is open from its planning until it is
+  collected, flown through or passed by the bird. While one is open the director plans
+  no other (`DirectorContext.bigBonusOpen`, from `RunSpawner.bigBonusOpen`).
+- DEVIATION (PRD-2.3 §17.3 rule 4): **a blocked bonus waits.** A big bonus drawn while
+  rule 1 or the activity cool-down blocks it becomes the one waiting bonus and is placed
+  at the first allowed slot / gap before any new big draw; the blocked draw (and any big
+  draw while one waits) is drawn again from the non-big elements. A due portal and an
+  owed comet keep their "stays due" path and count as the waiting bonus; the comet roll
+  happens before the block check so the course stream stays the same. The director
+  model drops the big-bonus rate ≈ 14 %, the in-run soak ≈ 15 % (target ≤ 10 %;
+  reported, PRD-2.3 §17.6).
+- DEVIATION (PRD-2.3 §17.4, supersedes the fixed 60 pt for big bonuses): each slot's
+  hoop is created at `max(60, visual reach + 8)` pt past the right edge (portal 66 + 12
+  + 8; FEVER its decor-scaled beam; pair its gift tag; comet-star hoop the star's tail).
+  Normal hoops and hoop 0 are unchanged.
+- DEVIATION (PRD-2.3 §17.5, supersedes PRD-2.2 §27.3 for visible parts): when an
+  activity starts, only reward items / slots that are **not visible yet** are cleared
+  (owed as before; an off-screen portal hoop or comet star is owed again). Anything with
+  a part of its drawing on screen stays and can be collected or flown through; the
+  portal-on-screen fade and the reward-ring fade are gone for visible rings. The portal
+  ride's own clear (`clearAhead` / `clearAll`) is unchanged.

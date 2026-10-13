@@ -91,6 +91,9 @@ import 'palettes.dart';
 import 'playfield.dart';
 import 'playfield_viewport.dart';
 import 'purchases.dart';
+import '../share/share_card.dart' show ShareCardData; // PRD-2.3 §2
+import '../share/share_content.dart'; // PRD-2.3 §2
+import '../versus/nickname.dart' show generateNickname; // PRD-2.3 §2.2
 import 'rumble.dart';
 import 'sound.dart';
 import 'storage.dart';
@@ -296,12 +299,17 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   Purchases get purchases => _purchases!;
   Purchases? _purchases;
 
-  /// Called when the share button is pressed (wired up by the app shell).
-  void Function(int score)? onShareScore;
+  /// PRD-2.3 §2.0: called when the results-page share button is pressed,
+  /// with the Spotlight card data and the picked text (wired up by the app
+  /// shell to the card painter and the share sheet).
+  FutureOr<void> Function(ShareCardData data)? onShareScore;
 
-  /// Called by the home Invite tile (wired up by the app shell to the share
-  /// sheet with the store link).
-  void Function()? onInvite;
+  /// PRD-2.3 §2.2: called by the home Invite tile with its card (the
+  /// Spotlight card of the last run, or a new-player card).
+  FutureOr<void> Function(ShareCardData data)? onInvite;
+
+  /// PRD-2.3 §2 the random share picks (injectable for tests).
+  ShareContent shareContent = ShareContent();
 
   /// Awaited between the START press and the run (PRD-1 §9: part 2 inserts
   /// the versus intro here). Null = the run starts synchronously.
@@ -2999,8 +3007,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
   // endregion PRD-2.2 §7.4–§7.6
 
-  /// Invite tile: system share sheet with the store link (PRD-1 §3.4, no
-  /// reward).
+  /// Invite tile: the share sheet with a card and a text (PRD-2.3 §2.2; no
+  /// reward, PRD-1 §3.4).
   void invite() {
     if (!_homeInteractive) return;
     sound.play(Sfx.skTap);
@@ -3009,7 +3017,51 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (share == null) {
       showToast('Coming soon');
     } else {
-      share();
+      unawaited(_invite(share));
+    }
+  }
+
+  Future<void> _invite(FutureOr<void> Function(ShareCardData) share) async {
+    if (_sharing) return;
+    _sharing = true;
+    try {
+      final data = shareContent.invite(
+        best: storage.bestScore,
+        lastScore: storage.lastScore,
+        look: menu.items.look,
+        name: await shareName(),
+      );
+      services.track('invite', {'card': data.kind.analytics, ...data.analytics});
+      await share(data);
+    } catch (e) {
+      debugPrint('invite failed: $e');
+    } finally {
+      _sharing = false;
+    }
+  }
+
+  /// True while a share or invite is being prepared (a second tap waits).
+  bool _sharing = false;
+
+  /// PRD-2.3 §2.2 the username on the card: the Play Games name or the
+  /// versus nickname, created first when there is none ('' only when that
+  /// fails: the card then has no name tag).
+  Future<String> shareName() async {
+    try {
+      final n = versus.me.name.trim();
+      if (n.isNotEmpty) return n;
+    } catch (_) {}
+    try {
+      final nick = await storage.ensureVersusNickname(
+        () => generateNickname(Random()),
+      );
+      try {
+        final n = versus.me.name.trim();
+        if (n.isNotEmpty) return n;
+      } catch (_) {}
+      return nick.trim();
+    } catch (_) {
+      return '';
     }
   }
 
@@ -3668,10 +3720,30 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     );
   }
 
+  /// PRD-2.3 §2.0 the results-page share button: the Spotlight card of this
+  /// run (the sharer's own score and best, never an opponent's).
   void shareScore() {
     sound.play(Sfx.click);
-    services.logShareScore(score);
-    onShareScore?.call(score);
+    unawaited(_shareScore(score));
+  }
+
+  Future<void> _shareScore(int points) async {
+    if (_sharing) return;
+    _sharing = true;
+    try {
+      final data = shareContent.spotlight(
+        score: points,
+        best: storage.bestScore,
+        look: menu.items.look,
+        name: await shareName(),
+      );
+      services.logShareScore(points, data.analytics);
+      await onShareScore?.call(data);
+    } catch (e) {
+      debugPrint('share failed: $e');
+    } finally {
+      _sharing = false;
+    }
   }
 
   /// Leaderboard button (start + game-over scenes): opens the platform's

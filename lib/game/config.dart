@@ -139,14 +139,50 @@ class Config {
   static final Vector2 gameCenterGameoverButtonSize = Vector2(60, 60);
   static final Vector2 scoreCircleSize = Vector2(183, 183);
 
-  // Privacy policy, hosted on GitHub Pages (docs/index.html; see
-  // SUBMISSION.md). Linked from the start scene and both store listings.
-  static const String privacyPolicyUrl =
-      'https://hiesem.github.io/flappy_spikes/';
+  // PRD-2.3 §5.5: the privacy policy moved to flappyspikes.com (the GitHub
+  // Pages copy only points here now). Linked from Settings.
+  static const String privacyPolicyUrl = 'https://flappyspikes.com/privacy';
 
-  // Store listing shared by the home Invite tile (PRD-1 §3.4).
+  // PRD-2.3 §5.6: the website, and the one share link of every share and
+  // invite text (written without https://; /get redirects per device).
+  static const String siteUrl = 'https://flappyspikes.com';
+  static const String shareUrl = 'flappyspikes.com/get';
+
+  // The Play listing. PRD-2.3 §5.6: no longer shared anywhere; kept for a
+  // direct store link the app opens itself.
   static const String storeListingUrl =
       'https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes';
+
+  // region PRD-2.3 §3 approved share texts (2026-10-12). The analytics ids
+  // (§2.1 `text_id` / `banner_id`) are the 1-based positions in these lists.
+  /// §3.1 share texts; `{score}` = the run's points on the card's sticker.
+  static const List<String> shareTexts = [
+    'I scored {score} points in Flappy Spikes 🐦 Think you can beat me? $shareUrl',
+    '{score} points in Flappy Spikes. Beat that, I dare you 😏 $shareUrl',
+    'Just hit {score} points in Flappy Spikes 🐦 Your move. $shareUrl',
+    "{score} points in Flappy Spikes. Bet you can't top it 😎 $shareUrl",
+    'I got {score} points in Flappy Spikes 🔥 Can you do better? $shareUrl',
+  ];
+
+  /// §3.2 banner texts on the share cards.
+  static const List<String> shareBanners = [
+    'BEAT MY SCORE!',
+    'TRY TO BEAT ME!',
+    'I DARE YOU!',
+    'CAN YOU BEAT IT?',
+    'THINK YOU CAN WIN?',
+  ];
+
+  /// §3.3 new-player invite texts (Invite tile, best = 0; no score).
+  static const List<String> inviteTexts = [
+    'Can you beat me at Flappy Spikes? $shareUrl',
+    "Bet you can't beat me at Flappy Spikes! $shareUrl",
+    'Come play Flappy Spikes with me, I dare you! $shareUrl',
+  ];
+
+  /// §12 the tagline (home subtitle, share-card logo bar), in capitals.
+  static const String tagline = 'FLAP FAST, FLY FAR';
+  // endregion PRD-2.3 §3
 
   // UI positions. The helpers take the playfield center Y (viewHeight / 2)
   // and reproduce the original 320x568 layout exactly at centerY = 284

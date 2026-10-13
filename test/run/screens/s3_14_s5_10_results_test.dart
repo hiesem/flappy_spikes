@@ -5,6 +5,7 @@ import 'package:flappy_spikes/menu/wallet.dart';
 import 'package:flappy_spikes/run/config/results_config.dart';
 import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
+import 'package:flappy_spikes/share/share_card.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -351,12 +352,14 @@ void main() {
       '§5.10 the kept share and leaderboard buttons',
       () => createRunTestGame(prefs: {'bestScore': 900, 'claimedLevels': claimed1to6 + ['7', '8']}),
       (g) async {
-        var shared = -1;
+        ShareCardData? shared;
         g.onShareScore = (s) => shared = s;
         final page = await endWith(g, score: 21);
         stepGame(g, .4);
         page.shareButton.onPressed();
-        expect(shared, 21);
+        await flushAndMount(g); // PRD-2.3 §2.2 the nickname is made first
+        expect(shared?.score, 21);
+        expect(shared?.best, 900);
         page.leaderboardButton.onPressed(); // no-op services: must not throw
       },
     );

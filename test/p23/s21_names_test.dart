@@ -130,7 +130,7 @@ void main() {
           final bar = g.runHud!.versus!;
           for (final chip in [bar.you, bar.them]) {
             expect(chip.name, name);
-            expect(chip.size, greaterThanOrEqualTo(HudConfig.chipFont * .7 - 1e-6));
+            expect(chip.size, greaterThanOrEqualTo(HudConfig.chipNameSize * .7 - 1e-6));
             expect(chip.width,
                 lessThanOrEqualTo(HudConfig.boxWidth - 2 * HudConfig.chipPad + .5));
             if (n <= 10) expect(chip.shown, name);

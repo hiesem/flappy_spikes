@@ -178,7 +178,12 @@ abstract final class VersusConfig {
   static const Rect oppPlate = Rect.fromLTWH(44, 80, 232, 52);
   static const Rect youPlate = Rect.fromLTWH(44, 584, 232, 52);
   static const double plateSlot = 52;
-  static const double plateNameSize = 22;
+
+  /// §5.8 the plate name size; PRD-2.3 §21.2 (S8-08 call): 18 pt in the
+  /// name font (Fredoka SemiBold, like every other name tag) instead of
+  /// 22 pt Opificio, so every generated nickname (the longest: 14 letters
+  /// + 3 digits) fits the room before the emblem at 70 % with its digits.
+  static const double plateNameSize = 18;
   static const double plateNameLeft = 12;
 
   /// PRD-2.3 §21.2 the emblem's half width on the plate (the widest emblem,

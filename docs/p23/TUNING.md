@@ -184,6 +184,8 @@ The table is generated from `tuning_defaults.dart` by `dart run tool/tuning_sync
 | `curve_opening` | curve | `[[1,88],[100,66]]` | §14.4 | Opening (pt) by hoop index from hoop 1 (hoop 0 is always 118) |
 | `curve_moving` | curve | `[[19,0],[20,0.15],[35,0.4],[60,0.6],[80,0.75]]` | §14.4 | Moving-hoop chance by hoop index |
 | `curve_rim_soft_bump` | decimal | `20` | §14.4 | owner 2026-10-13: speed (pt/s) a rim hit from inside the opening ends with, away from that rim (top: down, bottom: up); hits from outside keep the hard bounce |
+| `curve_rim_hang_s` | decimal | `0.25` | §14.4 | owner 2026-10-13: after a soft rim bump (inside the opening, both rims) the bird hangs this long (s) in low gravity; a flap ends it |
+| `curve_rim_hang_gravity` | decimal | `0.25` | §14.4 | owner 2026-10-13: gravity scale during the rim hang (0 = none, 1 = full); then 0.1 s ease back to full |
 | `curve_tilt` | curve | `[[9,0],[10,0.3],[19,0.3],[20,0.5],[34,0.5],[35,0.6],[44,0.6],[45,0.78]]` | §14.4 | Tilted-hoop chance by hoop index |
 | `squeeze_first` | intList | `[25,40]` | §14.4 | First squeeze at a random hoop in [min, max] |
 | `squeeze_hold` | intList | `[5,10]` | §14.4 | Squeeze hold (hoops) in [min, max] |

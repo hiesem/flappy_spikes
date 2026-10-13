@@ -72,6 +72,22 @@ abstract final class RunConfig {
   static double get rimSoftBump =>
       TuningValues.current.d('curve_rim_soft_bump');
 
+  /// Owner 2026-10-13 (2.3.0 (15)): after a soft rim bump the bird hangs
+  /// for this long (s) with gravity scaled by [rimHangGravity], then
+  /// gravity eases back to full over [rimHangEase]; a flap ends it.
+  /// Remote (`curve_rim_hang_s`, default 0.25).
+  static double get rimHangSeconds =>
+      TuningValues.current.d('curve_rim_hang_s');
+
+  /// Owner 2026-10-13: the gravity scale of the rim hang (0 = none, 1 =
+  /// full). Remote (`curve_rim_hang_gravity`, default 0.25).
+  static double get rimHangGravity =>
+      TuningValues.current.d('curve_rim_hang_gravity');
+
+  /// Owner 2026-10-13: gravity eases from [rimHangGravity] back to full
+  /// over this time (s) after the hang.
+  static const double rimHangEase = 0.1;
+
   /// §3.0.1 Forward recovery toward cruise after a knock-back (pt/s²).
   static const double forwardRecovery = 2000;
 
@@ -300,13 +316,16 @@ abstract final class RunConfig {
 
   /// §3.16 Puzzle completion bonus range (coins) and step. PRD-2.3 §14.2:
   /// 50–150 in steps of 5 (`puzzle_reward` = [min, max, step]; was 50–250).
-  static int get puzzleBonusMin => TuningValues.current.ints('puzzle_reward')[0];
+  static int get puzzleBonusMin =>
+      TuningValues.current.ints('puzzle_reward')[0];
 
   /// §3.16 / PRD-2.3 §14.2 See [puzzleBonusMin].
-  static int get puzzleBonusMax => TuningValues.current.ints('puzzle_reward')[1];
+  static int get puzzleBonusMax =>
+      TuningValues.current.ints('puzzle_reward')[1];
 
   /// §3.16 / PRD-2.3 §14.2 See [puzzleBonusMin].
-  static int get puzzleBonusStep => TuningValues.current.ints('puzzle_reward')[2];
+  static int get puzzleBonusStep =>
+      TuningValues.current.ints('puzzle_reward')[2];
 
   /// §3.30 Hourglass duration range (s).
   static const double hourglassMin = 10;

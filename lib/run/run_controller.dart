@@ -73,7 +73,10 @@ class RunController extends Component {
         : GatesConfig.filter(
             all,
             games,
-            keep: [...setup.forced, if (setup.forcedRide != null) ElementId.portal],
+            keep: [
+              ...setup.forced,
+              if (setup.forcedRide != null) ElementId.portal,
+            ],
           );
     director = RunDirector(
       seed: setup.seed,
@@ -393,7 +396,11 @@ class RunController extends Component {
           if (mode == RimMode.deadly) {
             final c0 = res.contacts.first;
             h.resolveMiss();
-            final rc = RimTouch(point: c0.point, normal: c0.normal, ring: c0.ring);
+            final rc = RimTouch(
+              point: c0.point,
+              normal: c0.normal,
+              ring: c0.ring,
+            );
             kind.onRim(h, rc, ctx);
             mistake(
               Mistake(
@@ -478,6 +485,9 @@ class RunController extends Component {
     state.camX += res.position.x - pos.x;
     state.forwardSpeed = res.velocity.x;
     bird.setFlight(y: res.position.y, vy: res.velocity.y);
+    // Owner 2026-10-13 (2.3.0 (15)): a soft bump from inside the gap is
+    // followed by a short low-gravity hang (both rims).
+    if (res.contacts.any((c) => c.soft)) bird.startRimHang();
     for (final c in res.contacts) {
       // §3.0.4 2–3 every rim touch is a graze, also an overlap that was
       // already separating (pushed out, not reflected). Such a contact
@@ -582,8 +592,7 @@ class RunController extends Component {
     // bird (the world still eases to a stop), then the same tumble; the
     // Black Hole swallows it (no tumble, no body).
     final themed = _death?.themed;
-    if (themed != null &&
-        (_deathTime < themed.holdSeconds || themed.noBody)) {
+    if (themed != null && (_deathTime < themed.holdSeconds || themed.noBody)) {
       t.stepCamera(dt);
       state.camX = t.camX;
       state.forwardSpeed = t.camSpeed;

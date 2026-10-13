@@ -196,16 +196,19 @@ void main() {
       expect(res.velocity.x, closeTo(180, 1e-6), reason: 'forward kept');
     });
 
-    test('a falling bird on the bottom rim from inside ends with vy ≈ −bump', () {
-      final res = collideRims(
-        f,
-        BirdCircle(Vector2(398, 421 - 20), r),
-        Vector2(180, 400),
-      )!;
-      expect(res.bounced, isTrue);
-      expect(res.velocity.y, closeTo(-RunConfig.rimSoftBump, 1e-6));
-      expect(res.velocity.x, closeTo(180, 1e-6));
-    });
+    test(
+      'a falling bird on the bottom rim from inside ends with vy ≈ −bump',
+      () {
+        final res = collideRims(
+          f,
+          BirdCircle(Vector2(398, 421 - 20), r),
+          Vector2(180, 400),
+        )!;
+        expect(res.bounced, isTrue);
+        expect(res.velocity.y, closeTo(-RunConfig.rimSoftBump, 1e-6));
+        expect(res.velocity.x, closeTo(180, 1e-6));
+      },
+    );
 
     test('a tilted hoop: the push is along the ring, forward (local) kept', () {
       final tilted = HoopFrame(
@@ -244,6 +247,26 @@ void main() {
 
     test('the bump is remote (curve_rim_soft_bump, default 20)', () {
       expect(RunConfig.rimSoftBump, 20);
+    });
+
+    test('soft hits are flagged (the rim hang follows them)', () {
+      final soft = collideRims(
+        f,
+        BirdCircle(Vector2(402, 289 + 20), r),
+        Vector2(180, -350),
+      )!;
+      expect(soft.contacts.single.soft, isTrue);
+      final hard = collideRims(
+        f,
+        BirdCircle(Vector2(400, 289 - 20), r),
+        Vector2(180, 300),
+      )!;
+      expect(hard.contacts.single.soft, isFalse);
+    });
+
+    test('the rim hang is remote: 0.25 s at 25 % gravity by default', () {
+      expect(RunConfig.rimHangSeconds, .25);
+      expect(RunConfig.rimHangGravity, .25);
     });
 
     test('an outside hit (from above the top rim) is unchanged', () {

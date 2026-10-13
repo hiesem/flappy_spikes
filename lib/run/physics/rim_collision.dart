@@ -16,6 +16,7 @@ class RimContact {
     required this.overlap,
     required this.inside,
     required this.bounced,
+    this.soft = false,
   });
 
   /// Ring index and side (−1 top end, +1 bottom end).
@@ -38,6 +39,11 @@ class RimContact {
   /// The bird moved into the rim (relative to the rim's own velocity), so
   /// its velocity was reflected.
   final bool bounced;
+
+  /// Owner 2026-10-13: the hit from inside the gap ended with the soft
+  /// bump ([RunConfig.rimSoftBump]) instead of the reflection; the bird
+  /// then hangs in low gravity ([RunConfig.rimHangSeconds]).
+  final bool soft;
 
   /// The point on the rim surface (sparks).
   Vector2 get point => end + normal * RunConfig.rimRadius;
@@ -90,6 +96,7 @@ RimResult? collideRims(
       final rvx = v.x - rv.x, rvy = v.y - rv.y;
       final vn = rvx * n.x + rvy * n.y;
       final bounced = vn < 0;
+      var soft = false;
       if (bounced) {
         // Owner 2026-10-13 soft rim bump: a hit from inside the gap (the
         // top rim while rising, the bottom rim while falling) loses its
@@ -104,7 +111,7 @@ RimResult? collideRims(
         // back more than 45°, the bird in front of the rim end) and hits
         // from outside keep the hard reflection.
         final headOn = nlx < 0 && -nlx > nla;
-        final soft = inside && nla > 0 && !headOn && rly * side > 0;
+        soft = inside && nla > 0 && !headOn && rly * side > 0;
         if (soft) {
           final vlx = v.x * c + v.y * s;
           final rvl = -rv.x * s + rv.y * c;
@@ -127,6 +134,7 @@ RimResult? collideRims(
           overlap: overlap,
           inside: inside,
           bounced: bounced,
+          soft: soft,
         ),
       );
     }

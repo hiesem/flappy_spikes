@@ -290,6 +290,20 @@
           "description": "§14.4 owner 2026-10-13: speed (pt/s) a rim hit from inside the opening ends with, away from that rim (top: down, bottom: up); hits from outside keep the hard bounce",
           "valueType": "NUMBER"
         },
+        "curve_rim_hang_s": {
+          "defaultValue": {
+            "value": "0.25"
+          },
+          "description": "§14.4 owner 2026-10-13: after a soft rim bump (inside the opening, both rims) the bird hangs this long (s) in low gravity; a flap ends it",
+          "valueType": "NUMBER"
+        },
+        "curve_rim_hang_gravity": {
+          "defaultValue": {
+            "value": "0.25"
+          },
+          "description": "§14.4 owner 2026-10-13: gravity scale during the rim hang (0 = none, 1 = full); then 0.1 s ease back to full",
+          "valueType": "NUMBER"
+        },
         "curve_tilt": {
           "defaultValue": {
             "value": "[[9,0],[10,0.3],[19,0.3],[20,0.5],[34,0.5],[35,0.6],[44,0.6],[45,0.78]]"

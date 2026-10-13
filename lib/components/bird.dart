@@ -7,6 +7,7 @@ import '../game/config.dart';
 import '../game/flappy_game.dart';
 import '../game/playfield.dart';
 import '../game/sound.dart';
+import '../run/config/run_config.dart';
 import '../run/run_layers.dart';
 import '../skins/look.dart';
 import 'look_component.dart';
@@ -83,7 +84,8 @@ class Bird extends BodyComponent<FlappySpikesGame>
       ..type = BodyType.dynamic
       ..position = Vector2(Config.birdX, game.viewHeight / 2)
       ..fixedRotation = true
-      ..gravityScale = Vector2.zero() // frozen until the game starts
+      ..gravityScale =
+          Vector2.zero() // frozen until the game starts
       ..userData = this;
     final body = world.createBody(bodyDef);
     final shape = CircleShape()..radius = Config.birdRadius;
@@ -154,6 +156,7 @@ class Bird extends BodyComponent<FlappySpikesGame>
     }
     // WP-3b: input is ignored while a portal ride drives the bird (§3.12).
     if (_ride) return;
+    _endRimHang();
     body.linearVelocity.setZero();
     final impulse = Vector2(0, -Config.flapVelocity * body.mass);
     body.applyLinearImpulse(impulse);
@@ -186,6 +189,50 @@ class Bird extends BodyComponent<FlappySpikesGame>
     if (!isLoaded) return;
     body.setTransform(screen, angle);
   }
+
+  // region owner 2026-10-13 — rim hang (2.3.0 (15))
+  /// Time left in the low-gravity hang, then in the ease back (s); < 0 =
+  /// off.
+  double _hangT = -1;
+
+  /// Whether the rim hang (or its ease back) is running (tests).
+  bool get inRimHang => _hangT >= 0;
+
+  /// Starts (or restarts) the hang after a soft rim bump: gravity at
+  /// [RunConfig.rimHangGravity] for [RunConfig.rimHangSeconds], then back
+  /// to full over [RunConfig.rimHangEase].
+  void startRimHang() {
+    if (!isLoaded || _dead || _ride) return;
+    final hold = RunConfig.rimHangSeconds;
+    if (hold <= 0) return;
+    _hangT = hold + RunConfig.rimHangEase;
+    _setGravity(RunConfig.rimHangGravity);
+  }
+
+  void _endRimHang() {
+    if (_hangT < 0) return;
+    _hangT = -1;
+    if (isLoaded) _setGravity(1);
+  }
+
+  void _setGravity(double s) => body.gravityScale = Vector2(s, s);
+
+  void _stepRimHang(double dt) {
+    if (_hangT < 0) return;
+    if (_dead || _ride || game.state != GameState.playing) {
+      if (_dead || _ride) _hangT = -1;
+      return;
+    }
+    _hangT -= dt;
+    if (_hangT <= 0) {
+      _endRimHang();
+      return;
+    }
+    const ease = RunConfig.rimHangEase;
+    final g = RunConfig.rimHangGravity.clamp(0.0, 1.0);
+    _setGravity(_hangT >= ease ? g : 1 - (1 - g) * (_hangT / ease));
+  }
+  // endregion
 
   // region WP-1a — rim knock (PRD-2 §3.0.4 2–3)
   double _spinVelocity = 0;
@@ -343,5 +390,6 @@ class Bird extends BodyComponent<FlappySpikesGame>
     }
     _stepSpin(dt);
     _stepHover(dt);
+    _stepRimHang(dt);
   }
 }

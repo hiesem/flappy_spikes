@@ -18,7 +18,7 @@ enum AchievementId {
     "Cracked it! You're an EGG.",
     5,
     AchievementGroup.rank,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQBA',
   ),
   rankChick(
     'rank_chick',
@@ -27,7 +27,7 @@ enum AchievementId {
     "Peep peep! You're a CHICK.",
     5,
     AchievementGroup.rank,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQBQ',
   ),
   rankFledgling(
     'rank_fledgling',
@@ -36,7 +36,7 @@ enum AchievementId {
     'Your first feathers are in.',
     10,
     AchievementGroup.rank,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQBg',
   ),
   rankFlapper(
     'rank_flapper',
@@ -45,7 +45,7 @@ enum AchievementId {
     'Flap, flap, flap!',
     10,
     AchievementGroup.rank,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQBw',
   ),
   rankGlider(
     'rank_glider',
@@ -54,7 +54,7 @@ enum AchievementId {
     'Smooth sailing.',
     15,
     AchievementGroup.rank,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQCA',
   ),
   rankFalcon(
     'rank_falcon',
@@ -63,7 +63,7 @@ enum AchievementId {
     'Sharp eyes, fast wings.',
     20,
     AchievementGroup.rank,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQCQ',
   ),
   rankHawk(
     'rank_hawk',
@@ -72,7 +72,7 @@ enum AchievementId {
     'One fierce flyer.',
     25,
     AchievementGroup.rank,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQCg',
   ),
   rankSpikeAce(
     'rank_spike_ace',
@@ -81,7 +81,7 @@ enum AchievementId {
     'The spikes fear you.',
     30,
     AchievementGroup.rank,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQCw',
   ),
   rankPhoenix(
     'rank_phoenix',
@@ -90,7 +90,7 @@ enum AchievementId {
     'Rising from the ashes.',
     40,
     AchievementGroup.rank,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQDA',
   ),
   rankLegend(
     'rank_legend',
@@ -99,7 +99,7 @@ enum AchievementId {
     'Legendary. Truly.',
     60,
     AchievementGroup.rank,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQDQ',
   ),
 
   // --- Rides (7, 90 pts, all hidden) ------------------------------------------
@@ -111,7 +111,7 @@ enum AchievementId {
     10,
     AchievementGroup.ride,
     hidden: true,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQDg',
   ),
   rideSpace(
     'ride_space',
@@ -121,7 +121,7 @@ enum AchievementId {
     10,
     AchievementGroup.ride,
     hidden: true,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQDw',
   ),
   rideVolcano(
     'ride_volcano',
@@ -131,7 +131,7 @@ enum AchievementId {
     10,
     AchievementGroup.ride,
     hidden: true,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQEA',
   ),
   rideSea(
     'ride_sea',
@@ -141,7 +141,7 @@ enum AchievementId {
     10,
     AchievementGroup.ride,
     hidden: true,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQEQ',
   ),
   ridePinball(
     'ride_pinball',
@@ -151,7 +151,7 @@ enum AchievementId {
     10,
     AchievementGroup.ride,
     hidden: true,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQEg',
   ),
   rideStorm(
     'ride_storm',
@@ -161,7 +161,7 @@ enum AchievementId {
     10,
     AchievementGroup.ride,
     hidden: true,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQEw',
   ),
   rideAll(
     'ride_all',
@@ -171,7 +171,7 @@ enum AchievementId {
     30,
     AchievementGroup.ride,
     hidden: true,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQFA',
   ),
 
   // --- First catch of each item (12, 80 pts) ---------------------------------
@@ -182,7 +182,7 @@ enum AchievementId {
     'Love is in the air.',
     5,
     AchievementGroup.item,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQFQ',
   ),
   itemShield(
     'item_shield',
@@ -191,7 +191,7 @@ enum AchievementId {
     'Hard to crack.',
     5,
     AchievementGroup.item,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQFg',
   ),
   itemStarTrail(
     'item_star_trail',
@@ -200,7 +200,7 @@ enum AchievementId {
     'Star catcher!',
     5,
     AchievementGroup.item,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQFw',
   ),
   itemHourglass(
     'item_hourglass',
@@ -209,7 +209,7 @@ enum AchievementId {
     "Time flies when you're flapping.",
     5,
     AchievementGroup.item,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQGA',
   ),
   itemMiniBird(
     'item_mini_bird',
@@ -218,7 +218,7 @@ enum AchievementId {
     'Small but mighty.',
     5,
     AchievementGroup.item,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQGQ',
   ),
   itemCoinFrenzy(
     'item_coin_frenzy',
@@ -227,7 +227,7 @@ enum AchievementId {
     'Coins, coins, coins!',
     5,
     AchievementGroup.item,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQGg',
   ),
   itemEgg(
     'item_egg',
@@ -236,7 +236,7 @@ enum AchievementId {
     'Simply eggcellent!',
     5,
     AchievementGroup.item,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQGw',
   ),
   itemPiggy(
     'item_piggy',
@@ -245,7 +245,7 @@ enum AchievementId {
     'Saving for a rainy day.',
     5,
     AchievementGroup.item,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQHA',
   ),
   itemJar(
     'item_jar',
@@ -254,7 +254,7 @@ enum AchievementId {
     'Crunchy snacks ahead.',
     5,
     AchievementGroup.item,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQHQ',
   ),
   itemFeather(
     'item_feather',
@@ -263,7 +263,7 @@ enum AchievementId {
     'Floating on air.',
     5,
     AchievementGroup.item,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQHg',
   ),
   itemPuzzle(
     'item_puzzle',
@@ -272,7 +272,7 @@ enum AchievementId {
     'Hmm… where does this go?',
     5,
     AchievementGroup.item,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQHw',
   ),
   itemAll(
     'item_all',
@@ -281,7 +281,7 @@ enum AchievementId {
     'Every shiny thing is yours.',
     25,
     AchievementGroup.item,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQIA',
   ),
 
   // --- Mastery (5, 60 pts) ---------------------------------------------------
@@ -292,7 +292,7 @@ enum AchievementId {
     'Proud parent!',
     10,
     AchievementGroup.mastery,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQIQ',
   ),
   masterJar(
     'master_jar',
@@ -301,7 +301,7 @@ enum AchievementId {
     'What a glow!',
     10,
     AchievementGroup.mastery,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQIg',
   ),
   masterStars(
     'master_stars',
@@ -310,7 +310,7 @@ enum AchievementId {
     'Twinkle, twinkle!',
     10,
     AchievementGroup.mastery,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQIw',
   ),
   masterPicture(
     'master_picture',
@@ -319,7 +319,7 @@ enum AchievementId {
     'What a view!',
     15,
     AchievementGroup.mastery,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQJA',
   ),
   masterJackpot(
     'master_jackpot',
@@ -328,7 +328,7 @@ enum AchievementId {
     'Jackpot!',
     15,
     AchievementGroup.mastery,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQJQ',
   ),
 
   // --- Hoops in one run (4, 75 pts) ------------------------------------------
@@ -339,7 +339,7 @@ enum AchievementId {
     'Wheels up!',
     5,
     AchievementGroup.hoops,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQJg',
   ),
   hoops25(
     'hoops_25',
@@ -348,7 +348,7 @@ enum AchievementId {
     'Hoop, hoop, hooray!',
     10,
     AchievementGroup.hoops,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQJw',
   ),
   hoops50(
     'hoops_50',
@@ -357,7 +357,7 @@ enum AchievementId {
     'Ring after ring after ring.',
     20,
     AchievementGroup.hoops,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQKA',
   ),
   hoops100(
     'hoops_100',
@@ -366,7 +366,7 @@ enum AchievementId {
     'Passed with flying colors!',
     40,
     AchievementGroup.hoops,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQKQ',
   ),
 
   // --- Versus (3, 75 pts) ----------------------------------------------------
@@ -377,7 +377,7 @@ enum AchievementId {
     'Beak to beak, and you won!',
     10,
     AchievementGroup.versus,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQKg',
   ),
   vs10(
     'vs_10',
@@ -386,7 +386,7 @@ enum AchievementId {
     'Top of the pecking order.',
     25,
     AchievementGroup.versus,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQKw',
   ),
   vs50(
     'vs_50',
@@ -395,7 +395,7 @@ enum AchievementId {
     'The roost is yours.',
     40,
     AchievementGroup.versus,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQLA',
   ),
 
   // --- Firsts, skins and daily play (7, 155 pts) -----------------------------
@@ -406,7 +406,7 @@ enum AchievementId {
     'Still tweeting!',
     5,
     AchievementGroup.more,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQLQ',
   ),
   firstBigHoops(
     'first_big_hoops',
@@ -415,7 +415,7 @@ enum AchievementId {
     'Go big or go home.',
     5,
     AchievementGroup.more,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQLg',
   ),
   firstFever(
     'first_fever',
@@ -424,7 +424,7 @@ enum AchievementId {
     'Hot, hot, hot!',
     10,
     AchievementGroup.more,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQLw',
   ),
   skinFirst(
     'skin_first',
@@ -433,7 +433,7 @@ enum AchievementId {
     'Looking sharp!',
     10,
     AchievementGroup.more,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQMA',
   ),
   skinAll(
     'skin_all',
@@ -442,7 +442,7 @@ enum AchievementId {
     'The proudest bird in the sky.',
     50,
     AchievementGroup.more,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQMQ',
   ),
   daily7(
     'daily_7',
@@ -451,7 +451,7 @@ enum AchievementId {
     'Rise and shine!',
     25,
     AchievementGroup.more,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQMg',
   ),
   daily30(
     'daily_30',
@@ -460,7 +460,7 @@ enum AchievementId {
     'Always finds its way home.',
     50,
     AchievementGroup.more,
-    androidId: '',
+    androidId: 'CgkIsZz8pvUOEAIQMw',
   );
 
   const AchievementId(
@@ -494,8 +494,8 @@ enum AchievementId {
   /// Shown as "Hidden" until unlocked (the 7 rides).
   final bool hidden;
 
-  /// Play Console's generated id (§12.6). Empty = not created: `unlock`
-  /// skips the key on Android (logged once).
+  /// Play Console's generated id (§12.6, created 2026-10-14). Empty = not
+  /// created: `unlock` skips the key on Android (logged once).
   final String androidId;
 
   /// Game Center id (App Store Connect, §12.6 iOS kit).

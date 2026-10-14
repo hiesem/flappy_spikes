@@ -1642,3 +1642,8 @@ production build has the flag off and uses these values only. Full key table:
   free-coins ad pays **75** coins (`shop_ad_coins` default 75, was 40), and the row reads
   "FREE +75". The daily cap (5) and the cooldown (300 s) are unchanged, so Shop ads pay
   at most 375 coins a day (was 200).
+- DEVIATION (PRD-2.3.1 §6, supersedes the owner 2026-10-13 Bullseye value of 2): a
+  Bullseye hit pays **3** coins and **3** points (`coin_bullseye` default 3, was 2), on
+  top of the pass; the banner reads "+3 coins". The hit band is still the remote
+  `point_bullseye_band`; the guide lines stay drawn at ±12 pt. A rim touch does not
+  change it.

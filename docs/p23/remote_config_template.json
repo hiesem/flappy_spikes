@@ -47,7 +47,7 @@
         },
         "coin_bullseye": {
           "defaultValue": {
-            "value": "2"
+            "value": "3"
           },
           "description": "§14.2 Bullseye hit",
           "valueType": "NUMBER"

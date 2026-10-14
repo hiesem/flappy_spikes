@@ -25,7 +25,7 @@ const List<TuningDef> kTuningDefaults = [
   TuningDef('coin_jar', TuningType.integer, 8, '14.2', 'Firefly jar full (20 caught)'),
   TuningDef('coin_spin_slices', TuningType.intList, [1, 2, 3, 5, 1, 2], '14.2', 'Lucky spin slices (equal chance)'),
   TuningDef('coin_star_trail', TuningType.integer, 2, '14.2', 'Star trail 8/8'),
-  TuningDef('coin_bullseye', TuningType.integer, 2, '14.2', 'Bullseye hit'),
+  TuningDef('coin_bullseye', TuningType.integer, 3, '14.2', 'Bullseye hit'),
   TuningDef('coin_train', TuningType.integer, 1, '14.2', 'Ring train 3/3'),
   TuningDef('coin_switch', TuningType.integer, 0, '14.2', 'Switch touched'),
   TuningDef('coin_pair_gift', TuningType.integer, 3, '14.2', 'Pair "+N coins" gift'),

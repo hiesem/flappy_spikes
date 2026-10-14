@@ -107,7 +107,7 @@ void main() {
       expect(t.i('coin_jar'), 8);
       expect(t.ints('coin_spin_slices'), [1, 2, 3, 5, 1, 2]);
       expect(t.i('coin_star_trail'), 2);
-      expect(t.i('coin_bullseye'), 2); // owner 2026-10-13 (was 1)
+      expect(t.i('coin_bullseye'), 3); // PRD-2.3.1 §6 (was 2)
       expect(t.i('coin_train'), 1);
       expect(t.i('coin_switch'), 0);
       expect(t.i('coin_pair_gift'), 3);

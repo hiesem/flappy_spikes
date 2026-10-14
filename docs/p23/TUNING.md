@@ -154,7 +154,7 @@ The table is generated from `tuning_defaults.dart` by `dart run tool/tuning_sync
 | `coin_jar` | integer | `8` | §14.2 | Firefly jar full (20 caught) |
 | `coin_spin_slices` | intList | `[1,2,3,5,1,2]` | §14.2 | Lucky spin slices (equal chance) |
 | `coin_star_trail` | integer | `2` | §14.2 | Star trail 8/8 |
-| `coin_bullseye` | integer | `2` | §14.2 | Bullseye hit |
+| `coin_bullseye` | integer | `3` | §14.2 | Bullseye hit |
 | `coin_train` | integer | `1` | §14.2 | Ring train 3/3 |
 | `coin_switch` | integer | `0` | §14.2 | Switch touched |
 | `coin_pair_gift` | integer | `3` | §14.2 | Pair "+N coins" gift |

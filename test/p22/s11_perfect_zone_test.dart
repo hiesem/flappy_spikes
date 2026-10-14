@@ -150,7 +150,7 @@ void main() {
 
   tester.testGameWidget(
     '§14.3 Bullseye: a centred pass is perfect and pays +2 and the '
-    'bullseye +2 (owner 2026-10-13; PRD-2.3 §14.2 had +1)',
+    'bullseye +3 (PRD-2.3.1 §6; 2.3.0 had +2)',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(
@@ -171,7 +171,7 @@ void main() {
           .map((e) => (e.source, e.amount))
           .toList();
       expect(sources, contains((CoinSource.perfect, 2)));
-      expect(sources, contains((CoinSource.bullseye, 2)));
+      expect(sources, contains((CoinSource.bullseye, 3)));
       expect(
         events.whereType<HoopPassed>().where((e) => e.hoop == h).single.perfect,
         isTrue,

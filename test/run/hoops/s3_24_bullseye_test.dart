@@ -20,7 +20,7 @@ void main() {
   test('§3.24 the bullseye band is ±12 pt around the ring centre, fixed as '
       'openings shrink (Q63)', () {
     expect(BullseyeConfig.band, 12);
-    expect(BullseyeConfig.coins, 2, reason: 'owner 2026-10-13 (was 1; 2.2: 3)');
+    expect(BullseyeConfig.coins, 3, reason: 'PRD-2.3.1 §6 (2.3.0: 2)');
     for (final opening in [118.0, 100.0, 92.0]) {
       final f = HoopFrame(centre: Vector2(400, 300), opening: opening);
       for (final (dy, hit) in [
@@ -69,7 +69,7 @@ void main() {
   for (final (dy, hit) in [(0.0, true), (20.0, false)]) {
     tester.testGameWidget(
       hit
-          ? '§3.24 a pass with the bird centre in the band is a BULLSEYE: +2 '
+          ? '§3.24 a pass with the bird centre in the band is a BULLSEYE: +3 '
                 'coins (bullseye), banner, flash, thunk + chord, bullseye_hit'
           : '§3.24 a pass outside the band is a normal pass (no bonus)',
       setUp: (g, _) => prepare(g),
@@ -96,9 +96,9 @@ void main() {
         expect(await passHoopAt(game, h, dy: dy), isTrue);
         expect(h.takenRing, 0, reason: 'passed, not missed');
         // PRD-2.2 §13.1: a bullseye is a perfect pass (2 points at streak
-        // 1) plus the bonus in points (owner 2026-10-13: +2); outside the band
+        // 1) plus the bonus in points (PRD-2.3.1 §6: +3); outside the band
         // at 20 pt it is still perfect (PRD-2.3 §14.3: no rim touch).
-        expect(run.state.score, scoreBefore + (hit ? 2 + 2 : 2));
+        expect(run.state.score, scoreBefore + (hit ? 2 + 3 : 2));
         final bonus = events
             .whereType<CoinsEarned>()
             .where((e) => e.source == CoinSource.bullseye)
@@ -106,10 +106,10 @@ void main() {
         final banner = RunHud.of(run)?.banners.current;
         final names = spy.events.map((e) => e.$1).toList();
         if (hit) {
-          expect(bonus.single.amount, 2);
+          expect(bonus.single.amount, 3);
           expect(banner, isA<ElementBanner>());
           expect((banner! as ElementBanner).text, 'BULLSEYE!');
-          expect(banner.subtitle, '+2 coins');
+          expect(banner.subtitle, '+3 coins');
           expect(sfx, containsAll(['bullThunk', 'bullChord']));
           expect(names, contains('bullseye_hit'));
           expect(BullseyeHoopKind.flashOf(h), greaterThan(0));

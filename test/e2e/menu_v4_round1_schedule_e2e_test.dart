@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flappy_spikes/menu/free_coins_policy.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/purchases.dart';
@@ -343,7 +344,7 @@ void main() {
         rig.clock.now = rig.clock.now.add(const Duration(minutes: 6));
       }
       expect(game.storage.noAdsPopupVideos, 2);
-      expect(game.menu.wallet.balance, 80);
+      expect(game.menu.wallet.balance, 2 * FreeCoinsPolicy.reward); // PRD-2.3.1 §5: 75 each
       game.closeShop();
       await run(game, .5);
       await game.tapPowerupSlot();

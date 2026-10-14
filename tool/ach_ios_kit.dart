@@ -33,10 +33,11 @@ String _csvCell(Object v) {
 String kitCsv() {
   final rows = kitRows();
   final head = rows.first.keys.toList();
-  return [
+  final lines = [
     head.map(_csvCell).join(','),
     for (final r in rows) head.map((k) => _csvCell(r[k]!)).join(','),
-  ].join('\n') + '\n';
+  ];
+  return '${lines.join('\n')}\n';
 }
 
 String kitJson() =>

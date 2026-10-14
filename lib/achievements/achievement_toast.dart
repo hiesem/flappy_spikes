@@ -116,8 +116,13 @@ class AchievementToast extends PositionComponent
   }
 
   /// A tap dismisses the pill early (it slides out from where it is).
+  /// A tap dismisses the pill and still reaches what lies under it (the
+  /// shop's back button, the results page), so the pill never blocks a tap.
   @override
-  void onTapDown(TapDownEvent event) => dismiss();
+  void onTapDown(TapDownEvent event) {
+    dismiss();
+    event.continuePropagation = true;
+  }
 
   /// Slides the pill out from where it is (a tap; tests).
   void dismiss() {

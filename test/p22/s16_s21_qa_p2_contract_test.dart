@@ -74,8 +74,11 @@ void main() {
   group('S7-12', () {
     for (final modifier in [ElementId.angledRing, ElementId.movingRing]) {
       game().testGameWidget(
-        '§16 comet preserves $modifier in the planned-ahead hoop when it '
-        'later spawns',
+        // PRD-2.3.1 §16.1 A (supersedes S7-12 "keeps its geometry"): the
+        // planned-ahead slot moves into the comet layout as a plain ride
+        // hoop (upright, still) at a station and the zigzag height.
+        '§16 / PRD-2.3.1 §16.1 A comet re-places the planned-ahead $modifier '
+        'hoop: upright, still, at a comet station',
         setUp: boot,
         verify: (g, _) async {
           final run = await startRun(g, startHoopIndex: 20);
@@ -103,12 +106,19 @@ void main() {
           final spawned = run.spawner.hoops.singleWhere(
             (h) => h.plan.index == planned.index,
           );
-          if (modifier == ElementId.movingRing) {
-            expect(spawned.plan.motion, planned.motion);
-          } else {
-            expect(spawned.plan.tiltDeg, planned.tiltDeg);
-          }
-          expect(spawned.plan.centreY, planned.centreY);
+          expect(spawned.plan.motion, isNull);
+          expect(spawned.plan.tiltDeg, 0);
+          expect(spawned.plan.duringRide, isTrue);
+          expect(
+            run.director.cometStations.any(
+              (x) => (x - spawned.plan.trackX).abs() < 1e-6,
+            ),
+            isTrue,
+          );
+          expect(
+            (spawned.plan.centreY - run.state.viewHeight / 2).abs(),
+            closeTo(70, 1e-6),
+          );
         },
       );
     }

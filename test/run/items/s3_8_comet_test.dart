@@ -304,7 +304,9 @@ void main() {
           expect(p.opening, closeTo(RunConfig.opening0, 1e-9));
           expect(p.cometHang, isFalse);
         }
-        expect(passes.length, greaterThanOrEqualTo(5));
+        // PRD-2.3.1 §16: comet hoops ≈ `ride_comet_hoop_gap` (560) apart
+        // from the star's hoop (5–6 per 10 s comet; ≥ 4 in these 8.1 s).
+        expect(passes.length, greaterThanOrEqualTo(4));
         for (final p in passes) {
           expect(p.perfect, isTrue);
           expect(p.duringRide, isTrue);

@@ -1711,3 +1711,30 @@ production build has the flag off and uses these values only. Full key table:
   every placed portal counts (debug-forced and first-meet too; one turned plain and owed
   again does not), a revive does not reset the count, and at the cap the portal schedule
   stops. Comets are unaffected.
+
+### PRD-2.3.1 §0: the live Remote Config tuning is the in-app default (P231-T, 2026-10-14)
+
+- DEVIATION (PRD-2.3.1 §0, supersedes the PRD-2.3 §14 default values; the mechanics are
+  unchanged): every `kTuningDefaults` key takes the owner's live Remote Config value
+  (RC version 21), except `coin_bullseye` 3 (§6), `shop_ad_coins` 75 (§5) and the keys
+  new in 2.3.1 (`ride_comet_tail` 100, `ride_comet_after_gap` 310, `ride_portal_max` 2).
+  The changed defaults (2.3 value in brackets):
+  - coins: `coin_piggy_per` 3 (2: 20 caught pay 6, was 10), `coin_jar` 5 (8),
+    `coin_spin_slices` [1,2,3,1,2,1] ([1,2,3,5,1,2]);
+  - perfect band `point_perfect_band` [[1,18],[25,15],[50,13],[75,10],[100,8]] ([[0,0]]:
+    no band, any rim-free pass was perfect); Bullseye band `point_bullseye_band`
+    [[1,12],[50,10],[100,8]] ([[0,12]]);
+  - bonus / puzzle: `bonus_prizes` [25,25,25,40,40,40,50,50,100] (jackpot 100, was 150),
+    `bonus_feather_gaps` and `puzzle_gaps` [5,30] ([10,40]), `puzzle_reward` [40,100,5]
+    ([50,150,5]);
+  - rides: comet 4 % (2 %) from hoop 8 (10), ≥ 18 (25) apart; portal first at hoop 12–25
+    (40–60), then every 80–90 (60–80);
+  - spawn: `spawn_special_chance` [[0,0],[3,0],[4,0.4],[15,0.5],[30,0.6],[50,0.7]],
+    `spawn_item_chance` [[0,0],[2,0],[3,0.5],[20,0.55]], and every special / item row
+    earlier and closer (e.g. Bullseye from 4, ≥ 2 apart; train from 5, ≥ 4; saw from 20,
+    ≥ 3; Star Trail from gap 3, ≥ 3; piggy from 8, ≥ 12; jar from 10, ≥ 12);
+  - lifetime gates (`gate_*`, gamesPlayed): switch / train 0 (3); comet, portal, capsule,
+    shield 2 (5); spring, pair, egg 4 (8); feather, puzzle, piggy, jar 6 (10); FEVER,
+    Lucky Spin 8 (15); saw 12 (20).
+  The full table is `docs/p23/TUNING.md`. Tests that measure a mechanism at its 2.3
+  calibration pin the 2.3 values (`test/p231/tuning_23.dart`).

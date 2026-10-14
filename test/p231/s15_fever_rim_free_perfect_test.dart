@@ -81,14 +81,20 @@ void main() {
 
   tester.testGameWidget(
     '§15.3 a rim-free FEVER pass 20 pt off centre with band [[0,8]]: '
-    'perfect, the fire lights, streak ≥ 5, 2 coins; the same offset through '
+    'perfect, the fire lights, streak ≥ 5, 2 coins, +2 points (§15.1); the same offset through '
     'a normal hoop is not perfect',
     setUp: boot,
     verify: (g, _) async {
       final (run, h, events) = await toFever(g);
+      run.debugPass(perfect: false); // a fresh FEVER: streak 0
+      expect(run.state.streak, 0);
       final before = run.state.streak;
       final perfects = run.state.perfectPasses;
+      final score = run.state.score;
       final e = await passAt(g, h, 20);
+      // P1-04: points max(2, streak) before the FEVER boost: +2, not +5.
+      expect(run.state.score - score, 2);
+      expect(run.state.pointStreak, isNull);
       expect(h.touched, isFalse);
       expect(h.passOffset!.abs(), greaterThan(8));
       expect(e.perfect, isTrue);
@@ -145,7 +151,10 @@ void main() {
       }
       expect(run.state.streak, 6);
       expect(run.state.onFire, isTrue);
+      final score = run.state.score;
       final e = await passAt(g, h, 20);
+      // P1-04: scored like an ordinary perfect pass at streak 6 (→ 7).
+      expect(run.state.score - score, 7);
       expect(h.touched, isFalse);
       expect(h.passOffset!.abs(), greaterThan(8));
       expect(e.perfect, isTrue);

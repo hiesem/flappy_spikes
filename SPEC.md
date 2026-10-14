@@ -1493,7 +1493,9 @@ production build has the flag off and uses these values only. Full key table:
 - DEVIATION (PRD-2.3.1 §15, owner 2026-10-14): **the FEVER ring ignores the perfect
   band.** Any pass through the FEVER ring without a rim touch is a full perfect pass
   (perfect coins, points, feedback, counters, `fever_ring_passed {perfect: 1}`), then
-  FEVER as before (fire ≥ ×5, streak `max(5, streak + 1)`). A rim touch on it is
+  FEVER as before (fire ≥ ×5, streak `max(5, streak + 1)`). Its points are `max(2,
+  streak + 1)` with the streak *before* the FEVER boost, exactly like an ordinary perfect
+  pass (a fresh FEVER pays +2, at streak 6 it pays +7; `RunState.pointStreak`). A rim touch on it is
   unchanged (no FEVER, fire out, streak reset). Every other hoop keeps the band.
   Tests: `test/p231/s15_fever_rim_free_perfect_test.dart`.
 - DEVIATION (PRD-2.3 §14.3, supersedes PRD-2 §3.27 / PRD-2.2 §13.1 chick ×2): **the

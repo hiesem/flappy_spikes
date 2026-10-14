@@ -79,8 +79,11 @@ class ScoringFeature extends RunFeature {
     final perfect = e.perfect;
     // PRD-2.3 §14.3 the chick adds +1 point per hoop passed (one score
     // change with the pass, so the versus timeline keeps one entry).
+    // PRD-2.3.1 §15.1 a FEVER pass scores with the streak before its boost.
+    final streak = c.s.pointStreak ?? c.s.streak;
+    c.s.pointStreak = null;
     c.addScore(
-      pointsFor(perfect: perfect, streak: c.s.streak) + chickBonus(c.s),
+      pointsFor(perfect: perfect, streak: streak) + chickBonus(c.s),
       flags: (e.duringRide ? PointFlags.ride : PointFlags.none) |
           (train ? PointFlags.train : PointFlags.none),
     );

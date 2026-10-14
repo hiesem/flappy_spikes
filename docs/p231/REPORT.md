@@ -178,3 +178,42 @@ Full table: [`QA_DEVICE.md`](QA_DEVICE.md) (Sol, 2026-10-14). Evidence: `.worktr
 - The No Ads test order (GPA.3376-8876-7034-51055) was refunded with "Remove entitlement" at the start of the run.
 - **Known flaky test:** `test/p22/s7_s31_qa_p3_postrun_test.dart` (a colour-fade timing check) fails now and then under load and passes alone.
 - **Release-page AD_ID error:** still caused by the old production 1.0.1 build (versionCode 2); "Release without permission" was used again.
+
+## §19 Achievement pacing: 2.3.1 (21), 2026-10-14
+- **Why:** the owner unlocked 16 of 48 achievements in a few games on (20). The owner chose B (item counts across runs), C (at most 1 unlock per run) and D (more hidden), at about 1 unlock per 2–3 early runs. Shipped as **2.3.1 (21)** on internal testing ~22:07 CEST, built from `825cb38`.
+- **B, item goals.** Catch rates per 20-hoop run, from the new-player simulation (8 × 40 runs), and the chosen N:
+
+  | Item | Rate | N | Item | Rate | N |
+  |---|---|---|---|---|---|
+  | Heart | 0.27 | 10 | Egg | 0.15 | 5 |
+  | Shield | 0.37 | 10 | Piggy | 0.11 | 3 |
+  | Star Trail (trails) | 1.80 | 50 | Jar | 0.11 | 3 |
+  | Hourglass | 0.07 | 3 | Feather | 0.08 | 3 |
+  | Mini Bird | 0.08 | 3 | Puzzle | 0.05 | 3 |
+  | Coin Frenzy | 0.09 | 3 | | | |
+
+  - A Star Trail counts once per trail.
+  - MAGPIE unlocks when all 11 item achievements are unlocked.
+  - The goals are reached after about 27–44 runs; the puzzle takes about 57.
+- **C, at most 1 unlock per run.** Extra achievements earned in a run wait in a FIFO queue. Ties at run end go in catalog order. The shop, the bonus jackpot and the debug unlock are immediate.
+  - All achievement state is saved in one key, `achState`, with one write per change. A kill at any moment loses or duplicates nothing (QA P19-01..05).
+- **Bot pacing** (new player, about 20 hoops per run):
+  - runs 1–5: 1 each;
+  - first 20 runs: about 0.67 per run, 13.4 total; 18.9 by run 30; 22.8 by run 40.
+  - That is faster than the 0.33–0.5 target; ranks, rides and masteries make up the rest. Real new players with shorter runs will be slower.
+- **D, hidden.** Play Console **can't hide a published achievement** (the "Initial state" setting is locked after publishing). On Play only the 7 rides stay hidden. The catalog marks 17 as hidden for the future Game Center kit.
+- **Play Console:** the 11 item descriptions and MAGPIE ("Reach every item goal.") were edited and the Play Games configuration published at **20:44:06 and 20:46:38 CEST** (the second publish set the feather goal from 5 to 3). IDs, points and names are unchanged.
+- **QA:**
+  - Sol P19 found 3 blockers and 2 majors; all are fixed.
+  - Sol P19b confirmed the fixes and found **P19b-01..03**, accepted for later because none happens in normal play:
+    - a failed storage write still shows the unlock toast;
+    - one malformed `achState` field drops otherwise valid state;
+    - a debug reset during an unlock leaves a stale toast.
+  - The full suite passes: 3123.
+- **Owner reset:** the owner's Play Games achievements were reset **16 → 0** through the Management API, using the game's own web client.
+  - A temporary localhost redirect was added to that client for the reset, then removed again (verified).
+  - The token was revoked.
+- **Owner's Pixel 8:**
+  - Updated to (21) from Play, with the data cleared.
+  - A second **Test: No Ads** order made during play (GPA.3338-8041-8595-40051, revenue €0) was refunded with "Remove entitlement".
+  - The launch then logs `[IAP] purchases 0` and `versus: link switched none`. The phone starts as a new user, and the notification and consent prompts are left for the owner to answer.

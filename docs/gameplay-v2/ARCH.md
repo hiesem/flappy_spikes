@@ -397,7 +397,8 @@ Rules the director must implement (all from §3.0.3; tested in WP-0b):
   max(1, round(stretch / ride_comet_hoop_gap)) equal steps up to predicted end − `ride_comet_tail`) and
   `cometAfterMin` (end + `ride_comet_after_gap`, follows `updateCometEnd`); the spawner then re-places every hoop
   group not yet visible and the planned-ahead slot through `RunDirector.cometReplan` (plain ride hoop at the next
-  station, zigzag height) and drops the not-yet-visible gap items. `nextSlot` takes the remaining stations, then the
+  station, zigzag height) and drops every pickup planned in the moved hoops' gaps (everything past the last hoop
+  that stays, visible ones included — they fade — plus the waiting line items); pickups in unaffected gaps stay. `nextSlot` takes the remaining stations, then the
   safe first hoop after the comet (normal height).
 - Gap order: running piggy (4 per gap, 4 + 4×4 = 20) or jar (swarm of 7); fixed schedules heart (3, +17–27, skipped
   while extra life, schedule still moves) / feather (once, 3–12, only while `feathers < 3`) / piece (once, 14–25, only

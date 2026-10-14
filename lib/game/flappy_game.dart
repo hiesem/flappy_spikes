@@ -1266,7 +1266,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   RunStats? runStats;
 
   /// PRD-2.3 §10.1 the first playfield tap of a waiting run: everything
-  /// START used to do at once — the banner (PRD-2.2 §7.4), logGameStart,
+  /// START used to do at once — the banner (PRD-2.2 §7.4; since PRD-2.3.1 §11
+  /// it is up already on the waiting screen), logGameStart,
   /// `run_start`, versus.onRunStart, gravity and the first flap, then
   /// `RunController.start()` (the clock runs, `RunStarted`). The hint
   /// fades out. PRD-2.3.1 §10: the tap no longer saves `firstRunHintSeen`;
@@ -1362,6 +1363,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (debugAvailable && d.overlay) run.layers.fx.add(RunDebugOverlay(run));
     // region WP-2d — run HUD (viewport, real time) + pause freeze
     _addFirstRunHint(run, RunHud.ensureFor(run));
+    // PRD-2.3.1 §11: the banner shows on the waiting screen (the hovering
+    // bird), before the first tap. A VS intro keeps the strip reserved
+    // (`_reserveRunBanner`) until this point.
+    if (_runBanner) _bannerState.value = BannerState.showing;
     (world as RunScaledWorld).frozenSource = () => state == GameState.paused;
     // endregion WP-2d
   }
@@ -3332,8 +3337,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     monetization.banner.preload();
   }
 
-  /// §7.4: the first frame of `playing`: the banner fades in and the
-  /// interstitial starts loading.
+  /// §7.4: the first frame of `playing` starts the interstitial loading. The
+  /// banner is already up since the waiting screen (PRD-2.3.1 §11).
   void _onFirstFlight() {
     _rewardedWatchedThisRun = false;
     _ratingRequestedThisRun = false;
@@ -3343,7 +3348,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // loads at run end ([_preloadInterstitialAfterGrace]).
     _interstitialPreloadedThisRun = false;
     _preloadInterstitialAfterGrace();
-    if (_runBanner) _bannerState.value = BannerState.showing;
   }
 
   /// PRD-2.3 §18.5 (S8-10): whether this run already asked for the

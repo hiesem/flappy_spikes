@@ -1669,3 +1669,10 @@ production build has the flag off and uses these values only. Full key table:
   fails is not counted as seen by the `gamesPlayed > 0` fallback; the fallback covers only
   installs from before 2.3. Existing players (`firstRunHintSeen` true) keep the reminder
   only. VERSUS and FREE FLY follow the same rule.
+- DEVIATION (PRD-2.3.1 §11, supersedes the PRD-2.2 §7.4 "the banner fades in on the first
+  flight"): the **gameplay banner shows on the waiting screen**, the moment the run opens
+  (the hovering bird, before the first tap). The strip is still reserved and empty during
+  the VS intro, which is the only time before that; the ad fades in when it loads, as
+  before. The interstitial preload, the new-player ad grace, `run_start` and `logGameStart`
+  still happen on the first tap. NO ADS owners and every case without a wanted banner get
+  none.

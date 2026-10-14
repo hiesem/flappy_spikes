@@ -1647,3 +1647,8 @@ production build has the flag off and uses these values only. Full key table:
   top of the pass; the banner reads "+3 coins". The hit band is still the remote
   `point_bullseye_band`; the guide lines stay drawn at ±12 pt. A rim touch does not
   change it.
+- DEVIATION (PRD-2.3.1 §8, supersedes the PRD-2 §3.4 / §5.3 graze notice): a graze
+  (or a clean off-centre pass) that breaks a running streak adds **no text**. The
+  "GRAZE · streak lost" notice and its settings are removed. Everything else is
+  unchanged: the streak, tier look, gold bird, trail and multiplier reset at once, the
+  rim touch keeps its sparks, "tonk" and spin, and `streak_broken {length, cause}` stays.

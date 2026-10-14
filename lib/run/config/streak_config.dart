@@ -68,8 +68,7 @@ abstract final class StreakConfig {
 
   /// §3.19 A perfect FEVER pass sets the streak to max(this, streak + 1)
   /// (PRD-2.3 §14.3 unchanged; tunable `point_fever_streak`).
-  static int get feverMinStreak =>
-      TuningValues.current.i('point_fever_streak');
+  static int get feverMinStreak => TuningValues.current.i('point_fever_streak');
 
   /// §3.4 Tier sounds: streak 1, 2 and 3+ (index = min(streak, 3) − 1).
   static const List<Sfx> tierSounds = [
@@ -77,23 +76,6 @@ abstract final class StreakConfig {
     Sfx.perfect2,
     Sfx.perfect3,
   ];
-
-  /// §5.3 Graze notice text ("GRAZE · streak lost").
-  static const String grazeText = 'GRAZE · streak lost';
-
-  /// §5.3 Graze notice: font size (pt), letter-spacing (em).
-  static const double grazeFontSize = 22;
-  static const double grazeLetterSpacing = .1;
-
-  /// §5.3 Graze notice: centre x and top y (pt; mock left 60, top 250 —
-  /// top-anchored like the HUD, §3.0.1 screen heights).
-  static const double grazeCentreX = 160;
-  static const double grazeTop = 250;
-
-  /// §5.3 Graze notice: rises this far (pt) while fading out over
-  /// [grazeDuration] (s).
-  static const double grazeRise = 26;
-  static const double grazeDuration = 1.1;
 
   /// §5.4 Effects sit above the hoops and below the HUD: the perfect burst
   /// (screen space, at the bird, like the §5.3 mock's `pop`).
@@ -109,12 +91,6 @@ abstract final class StreakConfig {
   /// layer (PRD-2.2 §12.2: the layer itself is in the world at
   /// `RunLayer.banners`, behind the gameplay; the stickers sit under it).
   static const int bannerPriority = 18;
-
-  /// §5.3 The graze notice: same band as the banners.
-  static const int grazePriority = 18;
-
-  /// §5.3 Graze notice colour fallback (the stage foreground is used).
-  static const Color grazeFallback = Color(0xFF828282);
 }
 
 // PRD-2.3 §14.3 the PRD-2.2 §11 perfect zone (`PerfectConfig`: ±0.2 × the

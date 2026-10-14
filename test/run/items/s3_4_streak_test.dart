@@ -21,8 +21,8 @@ import '../../helpers.dart';
 
 /// WP-2b: the perfect-pass streak (PRD-2 §3.4), the ring field's tier
 /// reactions (§3.5), the banner sequence (§3.0.9 #7 / §5.4), the burst
-/// counts (#9), the gold bird (#5), the trail (#10), the graze notice
-/// (§5.3) and "no screen flash" (#13).
+/// counts (#9), the gold bird (#5), the trail (#10), a graze (§5.3; no text
+/// since PRD-2.3.1 §8) and "no screen flash" (#13).
 void main() {
   late AnalyticsSpy spy;
 
@@ -105,10 +105,18 @@ void main() {
       // §2.4 StreakChanged per pass, TierChanged up to the cap only.
       final log = run.events.log;
       expect(log.whereType<StreakChanged>(), hasLength(12));
-      expect(
-        log.whereType<TierChanged>().map((e) => e.newTier),
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-      );
+      expect(log.whereType<TierChanged>().map((e) => e.newTier), [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+      ]);
     },
   );
 
@@ -143,8 +151,8 @@ void main() {
   );
 
   tester.testGameWidget(
-    '§3.4 / §5.3 a graze resets the streak: point + pulse stay, '
-    '"GRAZE · streak lost", streak_broken (length)',
+    '§3.4 / PRD-2.3.1 §8 a graze resets the streak: point + pulse stay, no '
+    'text, streak_broken (length)',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await boot(game);
@@ -165,33 +173,17 @@ void main() {
       final broken = spy.events.where((e) => e.$1 == 'streak_broken').single;
       expect(broken.$2, {'length': 4, 'cause': 'graze'});
       await flushAndMount(game);
-      // WP-2d: the notice is HUD text (viewport, real time).
-      final notice = game.runHud!.children.where(
-        (c) => c.runtimeType.toString() == '_GrazeNotice',
-      );
-      expect(notice, hasLength(1));
-      // It rises and fades in 1.1 s.
-      for (var i = 0; i < 70; i++) {
-        game.runBird!.setFlight(y: game.viewHeight / 2, vy: 0);
-        game.update(1 / 60);
-      }
-      await flushAndMount(game);
+      // PRD-2.3.1 §8: a graze adds no text to the HUD (the notice is gone).
       expect(
-        game.runHud!.children.where(
-          (c) => c.runtimeType.toString() == '_GrazeNotice',
+        game.runHud!.descendants().whereType<TextComponent>().map(
+          (t) => t.text,
         ),
-        isEmpty,
+        isNot(contains('GRAZE · streak lost')),
       );
-      // A graze with no streak running: no notice, no streak_broken.
+      // A graze with no streak running: no streak_broken.
       pass(game, perfect: false);
       await flushAndMount(game);
       expect(spy.events.where((e) => e.$1 == 'streak_broken'), hasLength(1));
-      expect(
-        game.runHud!.children.where(
-          (c) => c.runtimeType.toString() == '_GrazeNotice',
-        ),
-        isEmpty,
-      );
     },
   );
 
@@ -313,10 +305,10 @@ void main() {
         run.events.log.whereType<StreakChanged>().last.cause,
         StreakCause.save,
       );
-      expect(
-        spy.events.where((e) => e.$1 == 'streak_broken').single.$2,
-        {'length': 2, 'cause': 'save'},
-      );
+      expect(spy.events.where((e) => e.$1 == 'streak_broken').single.$2, {
+        'length': 2,
+        'cause': 'save',
+      });
       pass(game);
       pass(game);
       expect(game.runBird!.lookComponent.goldTier, isTrue);

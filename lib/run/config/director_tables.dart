@@ -155,6 +155,7 @@ class DirectorTables {
     required this.specials,
     required this.gapItems,
     required this.portal,
+    this.portalMax = 2,
     required this.comet,
     required this.heart,
     required this.featherWindow,
@@ -189,6 +190,10 @@ class DirectorTables {
   /// §3.0.3 Portal schedule. PRD-2.3 §14.5: first at 40–60, then +60–80
   /// (`ride_portal_first` / `ride_portal_then`; was 25–50, then +40–60).
   final Schedule portal;
+
+  /// PRD-2.3.1 §17 at most this many portals per run (`ride_portal_max`;
+  /// 0 = no limit). Once reached, the director plans no more portals.
+  final int portalMax;
 
   /// §3.0.3 Comet hoop. PRD-2.3 §14.5: 2 % per eligible normal hoop from
   /// hoop 10, ≥ 25 hoops apart (was the schedule 10–30, then +45–60).
@@ -343,6 +348,7 @@ class DirectorTables {
         ElementId.shield: gap('spawn_shield'),
       },
       portal: schedule('ride_portal_first', 'ride_portal_then'),
+      portalMax: t.i('ride_portal_max'),
       comet: CometRule(
         chance: t.d('ride_comet_chance'),
         from: t.i('ride_comet_from'),

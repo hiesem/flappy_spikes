@@ -495,6 +495,124 @@ class RunSpawner {
     });
   }
 
+  // region WP-A — comet hoop layout (PRD-2.3.1 §16)
+  /// PRD-2.3.1 §16.1 a comet ride starts: locks the director's comet
+  /// layout ([RunDirector.onCometStart]) from the last hoop that stays (the
+  /// star's hoop or the last visible hoop) and moves everything not yet
+  /// visible into it:
+  /// - A: every hoop spawned beyond the right edge (no part of its drawing
+  ///   on screen; a Ring Train only if none of its rings is) is replaced by
+  ///   a plain ride hoop at the next comet station and zigzag height — the
+  ///   player sees nothing jump;
+  /// - B: the planned-ahead slot gets the next station the same way;
+  /// - the pickups planned in the gaps of the moved hoops (not visible yet,
+  ///   or waiting for their line) are dropped, like a ride's clear.
+  /// Hoops already on screen stay where they are.
+  void startCometLayout({
+    required double fromY,
+    required double endTrackX,
+    required double viewHeight,
+    required double amplitude,
+  }) {
+    final birdX =
+        run.birdTrackPosition()?.x ?? run.state.camX + RunConfig.birdX;
+    final groups = <int, List<Hoop>>{};
+    for (final h in _hoops) {
+      groups.putIfAbsent(h.plan.index, () => []).add(h);
+    }
+    final moving = <int, List<Hoop>>{};
+    var anchor = birdX;
+    for (final e in groups.entries) {
+      final move = e.value.every(
+        (h) => !h.resolved && h.planeX > birdX && !hoopVisible(h),
+      );
+      if (move) {
+        moving[e.key] = e.value;
+      } else {
+        for (final h in e.value) {
+          anchor = math.max(anchor, h.planeX);
+        }
+      }
+    }
+    run.director.onCometStart(
+      fromY: fromY,
+      endTrackX: endTrackX,
+      viewHeight: viewHeight,
+      amplitude: amplitude,
+      anchorX: anchor,
+    );
+    // The pickups in the moved hoops' gaps (and attached to them) go.
+    _dropCometGapItems(anchor);
+    final ctx = run.directorContext();
+    final order = moving.keys.toList()..sort();
+    for (final index in order) {
+      final group = moving[index]!;
+      group.sort((a, b) => a.planeX.compareTo(b.planeX));
+      final plan = run.director.cometReplan(group.first.plan, ctx);
+      if (plan == null) break;
+      for (final h in group) {
+        h.removeFromRun();
+        _hoops.remove(h);
+      }
+      _replaceLogged(plan);
+      _mountHoop(plan);
+    }
+    final ahead = _ahead;
+    if (ahead != null) {
+      final plan = run.director.cometReplan(ahead, ctx);
+      if (plan != null) {
+        _dropAheadItems();
+        _ahead = plan;
+        _replaceLogged(plan);
+      }
+    }
+  }
+
+  /// PRD-2.3.1 §16.1 A the pickups planned in the gaps of the hoops a
+  /// comet moves: every one past [anchorX] not yet visible, and every line
+  /// item still waiting for its line. Never judged (a ride's clear).
+  void _dropCometGapItems(double anchorX) {
+    _pickups.removeWhere((p) {
+      if (p.collected || p.escaped) return false;
+      if (p.position.x <= anchorX || isVisible(p)) return false;
+      _owe(p.id);
+      if (p.id == ElementId.comet) run.director.oweComet();
+      run.events.emit(PickupCleared(p.id, p));
+      p.escaped = true; // never judged
+      _aheadItems.remove(p);
+      p.removeFromParent();
+      return true;
+    });
+    for (final (item, _) in _pending) {
+      _owe(item.kind);
+      if (item.kind == ElementId.piggyCoins && run.state.piggy != null) {
+        run.director.refundPiggyCoins(item.extra as int? ?? 0);
+      }
+    }
+    _pending.clear();
+  }
+
+  /// The [slotLog] entry of [plan]'s index becomes [plan] (re-placed).
+  void _replaceLogged(SlotPlan plan) {
+    final k = slotLog.lastIndexWhere((p) => p.index == plan.index);
+    if (k >= 0) slotLog[k] = plan;
+  }
+
+  /// Creates [plan]'s (plain) hoop now.
+  void _mountHoop(SlotPlan plan) {
+    final kind = hoopKindFor(plan.kind) ?? hoopKindFor(HoopKindId.normal)!;
+    final hoop = Hoop(plan: plan, kind: kind);
+    kind.onSpawn(hoop, run.ctx);
+    kind.buildVisual(hoop, run.ctx);
+    run.layers.back.add(hoop);
+    run.layers.front.add(hoop.front);
+    // The moved hoops lie past every hoop that stays: the list keeps its
+    // course order.
+    _hoops.add(hoop);
+    run.events.emit(HoopSpawned(hoop, plan));
+  }
+  // endregion WP-A
+
   // region WP-BONUS — one big bonus on screen (PRD-2.3 §17)
   /// PRD-2.3 §17.2 the visual reach of item [e] (pt its drawing extends to
   /// the left of its x; for the Star Trail, left of its first star). Big

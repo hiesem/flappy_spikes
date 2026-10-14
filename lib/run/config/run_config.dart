@@ -91,8 +91,23 @@ abstract final class RunConfig {
   /// Owner 2026-10-14 (2.3.0 (19)): hoop spacing during a comet ride (pt,
   /// plane to plane; at least [spacing]). Remote (`ride_comet_hoop_gap`,
   /// default 560: about 5–6 hoops per 10 s comet instead of 8–10).
+  ///
+  /// PRD-2.3.1 §16 (2.3.1): the **target** spacing. At comet start the
+  /// director spreads the comet hoops evenly from the last hoop that stays
+  /// to the predicted end − [cometTail], in `max(1, round(stretch / gap))`
+  /// equal steps (`RunDirector.onCometStart`).
   static double get cometHoopGap =>
       TuningValues.current.d('ride_comet_hoop_gap');
+
+  /// PRD-2.3.1 §16.2 the last comet hoop sits this far before the comet's
+  /// predicted end (pt). Remote (`ride_comet_tail`, default 100).
+  static double get cometTail => TuningValues.current.d('ride_comet_tail');
+
+  /// PRD-2.3.1 §16.2 the first normal hoop after a comet is at least this
+  /// far after its predicted end (pt). Remote (`ride_comet_after_gap`,
+  /// default 310).
+  static double get cometAfterGap =>
+      TuningValues.current.d('ride_comet_after_gap');
 
   /// §3.0.1 Forward recovery toward cruise after a knock-back (pt/s²).
   static const double forwardRecovery = 2000;

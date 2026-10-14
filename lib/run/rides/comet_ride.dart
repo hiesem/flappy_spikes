@@ -167,14 +167,15 @@ class CometRide implements Ride {
       type: TimedPowerup.comet,
       duration: CometConfig.duration,
     );
-    c.director
-      ..onRideStart(RideKind.comet)
-      ..onCometStart(
-        fromY: starY ?? y,
-        endTrackX: predictEndTrackX(),
-        viewHeight: c.viewHeight,
-        amplitude: CometConfig.zigzagAmp,
-      );
+    c.director.onRideStart(RideKind.comet);
+    // PRD-2.3.1 §16 the comet layout (locked now; the hoops not yet
+    // visible move into it).
+    c.run.spawner.startCometLayout(
+      fromY: starY ?? y,
+      endTrackX: predictEndTrackX(),
+      viewHeight: c.viewHeight,
+      amplitude: CometConfig.zigzagAmp,
+    );
     c.game.runBird?.beginRide();
     final world = c.game.world;
     _pool = ParticlePool(capacity: 40, priority: RunLayer.fx);

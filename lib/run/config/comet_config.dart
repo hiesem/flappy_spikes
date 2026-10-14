@@ -7,6 +7,11 @@ import 'parts_config.dart';
 /// member's doc starts with its PRD section (ARCH §4). The pickup hit radius
 /// (18) is `PickupRadii.comet`, the hang (20 pt past the plane) is
 /// `RunConfig.cometHang` and the schedule lives in `DirectorTables.prd2`.
+///
+/// 2.3.1 (PRD-2.3.1 §16): the comet hoop layout is locked at comet start —
+/// the hoops not yet visible move into it, the comet hoops are spread
+/// evenly up to the predicted end − `RunConfig.cometTail`, and the first
+/// normal hoop after the ride is ≥ the end + `RunConfig.cometAfterGap`.
 abstract final class CometConfig {
   // --- §3.8 the boost -------------------------------------------------------
 

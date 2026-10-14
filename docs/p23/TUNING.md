@@ -193,8 +193,11 @@ The table is generated from `tuning_defaults.dart` by `dart run tool/tuning_sync
 | `ride_comet_chance` | decimal | `0.02` | §14.5 | Comet chance per eligible normal hoop |
 | `ride_comet_from` | integer | `10` | §14.5 | Comet from this hoop index |
 | `ride_comet_hoop_gap` | decimal | `560` | §14.5 | owner 2026-10-14: hoop spacing (pt) while a comet flies (normal 310; 560 = about 5-6 hoops per comet instead of 8-10) |
+| `ride_comet_tail` | decimal | `100` | §14.5 | PRD-2.3.1 §16: the last comet hoop sits this far (pt) before the predicted end of the comet |
+| `ride_comet_after_gap` | decimal | `310` | §14.5 | PRD-2.3.1 §16: the first normal hoop after a comet is at least this far (pt) after its predicted end |
 | `ride_comet_spacing` | integer | `25` | §14.5 | Comet at least this many hoops after the previous comet |
 | `ride_portal_first` | intList | `[40,60]` | §14.5 | First portal at a random hoop in [min, max] |
+| `ride_portal_max` | integer | `2` | §14.5 | PRD-2.3.1 §17: at most this many portal rides per run (0 = no limit) |
 | `ride_portal_then` | intList | `[60,80]` | §14.5 | Next portal this many hoops after the previous, [min, max] |
 | `spawn_special_chance` | curve | `[[0,0],[7,0],[8,0.25],[19,0.25],[20,0.35],[34,0.35],[35,0.45],[49,0.45],[50,0.6]]` | §15.3 | owner 2026-10-14: chance a hoop slot is a special hoop, by hoop index (linear between keys; the default reproduces the 2.3 steps) |
 | `spawn_item_chance` | curve | `[[0,0],[4,0],[5,0.25],[19,0.25],[20,0.33]]` | §15.3 | owner 2026-10-14: chance a gap gets an optional item, by gap index (linear between keys; the default reproduces the 2.3 steps) |

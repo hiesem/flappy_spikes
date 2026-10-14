@@ -226,6 +226,24 @@ class RunDirector {
   double _bigMult(int i, DirectorContext ctx) => i == 0 ? 1 : ctx.bigHoopsMult;
   bool get _portalOn => _on(ElementId.portal);
 
+  // region WP-A — at most N portal rides per run (PRD-2.3.1 §17)
+  /// PRD-2.3.1 §17 portals placed this run (a portal turned plain or
+  /// cleared before it was flown is owed again and does not count). A
+  /// revive does not reset it.
+  int _portalCount = 0;
+
+  /// The schedule after the cap: never.
+  static const int _noPortal = 1 << 30;
+
+  /// PRD-2.3.1 §17 portals placed this run (tests).
+  int get portalCount => _portalCount;
+
+  /// PRD-2.3.1 §17 the run has its `ride_portal_max` portals (0 = no
+  /// limit): the director plans no more.
+  bool get portalCapped =>
+      tables.portalMax > 0 && _portalCount >= tables.portalMax;
+  // endregion WP-A
+
   /// §3.0.1 / PRD-2.3 §14.4 opening at [hoopIndex]: 118 at hoop 0, then
   /// `curve_opening` (88 → 66); ride 118.
   double openingFor(int hoopIndex, {required bool ride}) =>
@@ -288,6 +306,9 @@ class RunDirector {
     if (k == RideKind.comet) {
       _zigEndX = null;
       _zigSide = 0;
+      // PRD-2.3.1 §16.1 C stations not planned by the end are dropped; the
+      // next slot is the safe first hoop after the comet.
+      _cometStations = null;
     }
   }
 
@@ -306,30 +327,140 @@ class RunDirector {
   /// gift), so the first zigzag hoop goes to the other side of the middle;
   /// [endTrackX] the bird's predicted track x when the ride (and its
   /// ease-out) ends; [amplitude] = `CometConfig.zigzagAmp`.
+  ///
+  /// PRD-2.3.1 §16.1 (2.3.1) the comet layout is locked here: the stretch
+  /// from [anchorX] (the track x of the last hoop that stays: the star's
+  /// hoop or the last visible hoop; default: the last planned slot) to
+  /// `endTrackX − ride_comet_tail` is cut into `k = max(1, round(stretch /
+  /// ride_comet_hoop_gap))` equal steps — one comet hoop at the end of each
+  /// ([cometStations]). The slots planned next (and the not-yet-visible
+  /// hoops the spawner re-places through [cometReplan]) take them in
+  /// order; the slot after them is the first normal hoop, at ≥ the
+  /// predicted end + `ride_comet_after_gap` ([cometAfterMin]).
   void onCometStart({
     required double fromY,
     required double endTrackX,
     required double viewHeight,
     required double amplitude,
+    double? anchorX,
   }) {
     _zigEndX = endTrackX;
     _zigAmp = amplitude;
     _zigSide = fromY < viewHeight / 2 ? 1 : -1;
+    // region WP-A — comet hoop layout (PRD-2.3.1 §16)
+    final from = anchorX ?? _lastPlanX ?? _nextX - spacing;
+    final last = endTrackX - RunConfig.cometTail;
+    final stretch = last - from;
+    final gap = RunConfig.cometHoopGap;
+    final k = stretch <= 0 ? 0 : max(1, (stretch / gap).round());
+    final stations = [for (var j = 1; j <= k; j++) from + stretch * j / k];
+    _cometLayout = List.unmodifiable(stations);
+    _cometStations = stations;
+    _cometAfterMin = endTrackX + RunConfig.cometAfterGap;
+    _nextX = stations.isNotEmpty ? stations.first : max(_nextX, _cometAfterMin!);
+    // endregion WP-A
   }
 
   /// PRD-2.2 §16.2 the ride's end prediction, refreshed while it flies.
+  /// PRD-2.3.1 §16.1 B the comet stations stay locked; only the first hoop
+  /// after the ride follows the new end.
   void updateCometEnd(double endTrackX) {
     if (_zigEndX != null) _zigEndX = endTrackX;
+    if (_cometAfterMin != null) {
+      _cometAfterMin = endTrackX + RunConfig.cometAfterGap;
+    }
   }
+
+  // region WP-A — comet hoop layout (PRD-2.3.1 §16)
+  /// PRD-2.3.1 §16.1 B the comet stations not planned yet (null: none).
+  List<double>? _cometStations;
+
+  /// PRD-2.3.1 §16.1 B every comet station locked at the comet's start.
+  List<double> _cometLayout = const [];
+
+  /// PRD-2.3.1 §16.1 C the first normal hoop after the comet goes at ≥
+  /// this track x (predicted end + `ride_comet_after_gap`); null once it is
+  /// planned.
+  double? _cometAfterMin;
+
+  /// The track x of the last slot planned ([nextSlot] / [cometReplan]).
+  double? _lastPlanX;
+
+  /// PRD-2.3.1 §16.1 B the comet stations of the current / last comet
+  /// (tests, debug).
+  List<double> get cometStations => _cometLayout;
+
+  /// PRD-2.3.1 §16.1 C the minimum track x of the first hoop after the
+  /// comet (null when it is planned, or no comet ran).
+  double? get cometAfterMin => _cometAfterMin;
+
+  /// PRD-2.3.1 §16.1: takes the next comet position: a station (true) or
+  /// the safe first hoop after the comet (false); null outside the layout.
+  /// Sets [_nextX] to it (the caller adds the slot's advance).
+  (double, bool)? _takeCometX() {
+    final after = _cometAfterMin;
+    if (after == null) return null;
+    final st = _cometStations;
+    if (st != null && st.isNotEmpty) {
+      final x = st.removeAt(0);
+      _nextX = x;
+      return (x, true);
+    }
+    final x = max(_nextX, after);
+    _cometStations = null;
+    _cometAfterMin = null;
+    _nextX = x;
+    return (x, false);
+  }
+
+  /// PRD-2.3.1 §16.1 B / C the advance after the comet station at [x]: to
+  /// the next station, or to the safe first hoop after the comet.
+  double _stationAdvance(double x) {
+    final st = _cometStations;
+    if (st != null && st.isNotEmpty) return st.first - x;
+    return max(x + spacing, _cometAfterMin ?? x + spacing) - x;
+  }
+
+  /// PRD-2.3.1 §16.1 A a hoop (spawned off-screen) or the planned-ahead
+  /// slot [p], not yet visible when a comet starts, moves into the comet
+  /// layout: the next comet station at the zigzag height (or, past the
+  /// stations, the safe first hoop after the comet at a normal height), a
+  /// plain ride hoop (full size, upright, still, nothing attached). Null
+  /// outside a comet layout.
+  SlotPlan? cometReplan(SlotPlan p, DirectorContext ctx) {
+    if (_cometAfterMin == null) return null;
+    final plain = plainSlot(p, ctx, ride: true);
+    final (x, station) = _takeCometX()!;
+    _lastPlanX = x;
+    final y = station
+        ? _zigzagY(x, p.index, ctx, plain.opening, station: true)
+        : null;
+    final advance = station ? _stationAdvance(x) : spacing;
+    _nextX = x + advance;
+    return plain.copyWith(
+      trackX: x,
+      centreY: y ?? plain.centreY,
+      advance: advance,
+    );
+  }
+  // endregion WP-A
 
   /// The predicted end of the running comet ride (tests).
   double? get cometEndTrackX => _zigEndX;
 
   /// PRD-2.2 §16.1 the zigzag centre for a ride slot at [trackX], or null
   /// (no comet ride, or the hoop is reached after the ride ends).
-  double? _zigzagY(double trackX, int i, DirectorContext ctx, double opening) {
+  double? _zigzagY(
+    double trackX,
+    int i,
+    DirectorContext ctx,
+    double opening, {
+    bool station = false,
+  }) {
     final end = _zigEndX;
-    if (end == null || _zigSide == 0 || trackX > end) return null;
+    if (end == null || _zigSide == 0 || (!station && trackX > end)) {
+      return null;
+    }
     final (lo, hi) = _layout.limits(i, ctx, opening, useTable: false);
     final y = (ctx.viewHeight / 2 + _zigSide * _zigAmp)
         .clamp(lo, hi)
@@ -378,7 +509,12 @@ class RunDirector {
   /// §3.0.3 "order of decisions for a hoop slot".
   SlotPlan nextSlot(DirectorContext ctx) {
     final i = _i++;
+    // PRD-2.3.1 §16.1 a comet's locked stations, then the safe first hoop
+    // after it (both move [_nextX] on).
+    final comet = _takeCometX();
+    final cometStation = comet?.$2 ?? false;
     final trackX = _nextX;
+    _lastPlanX = trackX;
     final ride = ctx.rideActive || _ride != null;
     final band = ctx.band;
 
@@ -417,17 +553,20 @@ class RunDirector {
       // (the normal draw still happens, so the course after the ride keeps
       // its random stream).
       final normal = _layout.nextCentre(i, ctx, opening);
-      final y = (ride ? _zigzagY(trackX, i, ctx, opening) : null) ?? normal;
+      // PRD-2.3.1 §16.1 only the comet stations zigzag; the first hoop
+      // after the comet (and any later ride slot) has a normal height.
+      final y =
+          (cometStation
+              ? _zigzagY(trackX, i, ctx, opening, station: true)
+              : null) ??
+          normal;
       _prevKind = HoopKindId.normal;
       _count(ElementId.normalHoop.storageId);
-      // Owner 2026-10-14 (2.3.0 (19)): during a comet the next hoop sits
-      // `ride_comet_hoop_gap` ahead (fewer hoops per comet, same ride),
-      // unless it would be reached after the ride: then the normal spacing.
-      final zigEnd = _zigEndX;
-      final gap = RunConfig.cometHoopGap;
-      final advance = ride && zigEnd != null && trackX + gap <= zigEnd
-          ? max(spacing, gap)
-          : spacing;
+      // Owner 2026-10-14 (2.3.0 (19)) / PRD-2.3.1 §16.1 B: during a comet
+      // the next hoop is the next locked station (≈ `ride_comet_hoop_gap`
+      // ahead), then the safe first hoop after the comet (≥ end +
+      // `ride_comet_after_gap`); otherwise the normal spacing.
+      final advance = cometStation ? _stationAdvance(trackX) : spacing;
       _nextX += advance;
       return SlotPlan(
         index: i,
@@ -500,7 +639,8 @@ class RunDirector {
     // §27.2: during an activity and its cool-down it waits.
     // PRD-2.3 §17.3 rules 1 / 4: while a big bonus is open it waits too
     // (the "stays due" path of `_portalAt`).
-    if (kind == null && !forced && _portalOn) {
+    // PRD-2.3.1 §17 skipped once the run has its `ride_portal_max` portals.
+    if (kind == null && !forced && _portalOn && !portalCapped) {
       if (!_rewardsBlocked(i, ctx) && !_bigOpen(ctx)) {
         if (due == ElementId.portal) _portalAt = min(_portalAt, i);
         if (i >= _portalAt &&
@@ -755,6 +895,10 @@ class RunDirector {
             RunRandom.rangeInt(r, tables.portal.then.$1, tables.portal.then.$2);
         _lastPortal = i;
         _portalWaiting = false;
+        // PRD-2.3.1 §17 every placed portal counts (debug-forced and
+        // first-meet ones too); at the cap the schedule stops.
+        _portalCount++;
+        if (portalCapped) _portalAt = _noPortal;
       default:
         break;
     }
@@ -1126,6 +1270,7 @@ class RunDirector {
     bool keepGeometry = false,
   }) {
     if (p.kind == HoopKindId.portal) {
+      _portalCount = max(0, _portalCount - 1); // PRD-2.3.1 §17 owed again
       _portalAt = p.index;
       _lastPortal = -99;
       if (oneBigBonus) _portalWaiting = true;
@@ -1188,6 +1333,7 @@ class RunDirector {
   /// the same ride.
   void oweSlot(SlotPlan p) {
     if (p.kind != HoopKindId.portal) return;
+    _portalCount = max(0, _portalCount - 1); // PRD-2.3.1 §17 owed again
     _portalAt = min(_portalAt, _i);
     _lastPortal = -99;
     _forcedRide ??= p.extra is RideId ? p.extra! as RideId : null;

@@ -667,6 +667,13 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   hoop's centre, drift to x 70), then straight back in with 2 s
   invulnerability; the next slot is a normal hoop. A death with ≤ 5 hoops
   goes to results as before and uses no ladder step.
+- DEVIATION (PRD-2.3.1 §14, owner 2026-10-14; supersedes PRD-2.2 §7.7's free
+  revive): **a NO ADS owner gets no free revive.** Their ad step is skipped for the
+  game as in the "no ad available" path, but **without** the "NO AD AVAILABLE"
+  label: 250 → 500 → 1 000 → 2 000 → 4 000 → 8 000, then no more revives (at most
+  6 a run; everyone else keeps the ad + 6 coin steps). `ReviveOffer.free` /
+  `ReviveKind.free` and the `revive_free_used` event are gone; their 250 revive
+  logs as a normal coin revive.
 - DEVIATION (PRD-2 §3.14): every death ends a running Egg / Piggy / Jar (no
   pay-out), a timed powerup (time scale and bird scale back to 1) and the
   fire; a revive resets a running squeeze to open (0.5 s) and rolls the next

@@ -114,7 +114,7 @@ harness with `--dart-define=ADSPERF_INTERSTITIAL=true` was used:
 |---|---|---|
 | Gameplay banner | not shown (WP-7a, §7.5.6) | `FlappySpikesGame._reserveRunBanner` |
 | Video ad after run | not shown (guard `no_ads`, WP-7a) | `interstitialSkipReason` |
-| Revive | 1st revive of a game FREE (`ReviveOffer.free`, `ReviveKind.free`), then 250, 500 … | `revive_ladder.dart`, `revive_screen.dart` |
+| Revive | ~~1st revive of a game FREE (`ReviveOffer.free`, `ReviveKind.free`), then 250, 500 …~~ DEVIATION (2.3.1, PRD-2.3.1 §14): no free revive — the ad step is skipped without the "NO AD AVAILABLE" label: 250, 500 … 8 000 (at most 6) | `revive_ladder.dart`, `revive_screen.dart` |
 | Shop 40 free coins | watch the ad (▶ GET chip with its video icon, dimmed when no ad) | `claimFreeCoins`, `FreeCoinsRow` |
 | Home power-up slot | unchanged: free | `tapPowerupSlot` |
 | Balloon bonus feather ×3 | watch the ad, once (no free button) | `BonusRules.offerFor` |
@@ -123,7 +123,8 @@ The celebration no longer shrinks the Shop chip's video icon (the home slot's
 still shrinks). Copy check: "NO FORCED ADS — or banners, ever" (popup) and "No
 more forced ads." (celebration) stay true; no text promises free rewards without
 ads. Analytics: `revive_offered.offer` = `ad` / `coins` / `free`,
-`revive_free_used {revive_index}`.
+`revive_free_used {revive_index}`. DEVIATION (2.3.1, PRD-2.3.1 §14): `free` and
+`revive_free_used` are gone; a NO ADS owner's revive is `offer` = `coins`.
 
 ## §7.8 bonus offer
 `RewardedAds` already reloads right after every show and every failure

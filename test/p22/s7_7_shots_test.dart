@@ -3,6 +3,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/run/config/bonus_config.dart';
 import 'package:flappy_spikes/run/screens/bonus_screen.dart';
+import 'package:flappy_spikes/run/screens/revive_ladder.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
 import 'package:flappy_spikes/services/monetization.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,7 +36,7 @@ void main() async {
   }
 
   tester({'noAds': true}).testGameWidget(
-    'shot: §7.7 the free revive heart',
+    'shot: §7.7 the NO ADS revive heart (PRD-2.3.1 §14: 250 coins, no label)',
     setUp: boot,
     verify: (g, tester) async {
       final run = await startRun(g);
@@ -52,7 +53,7 @@ void main() async {
       for (var i = 0; i < 40; i++) {
         g.update(1 / 60);
       }
-      expect(screen.offer.isFree, isTrue);
+      expect(screen.offer, const ReviveOffer.coins(250));
       await tester.runAsync(() => captureShot(g, 2, 'p22_s7_7_free_revive'));
       // The empty heart waiting (§7.15).
       for (var i = 0; i < 8 * 60; i++) {

@@ -1,0 +1,49 @@
+Reference Name,Achievement ID,Points,Hidden,Achievable More Than Once,Localization,Title,Pre-earned Description,Earned Description,Image
+EGG,fs_ach_rank_egg,5,no,no,English (U.S.),EGG,Score 10 points in one run.,Cracked it! You're an EGG.,ach_rank_egg.png
+CHICK,fs_ach_rank_chick,5,no,no,English (U.S.),CHICK,Score 50 points in one run.,Peep peep! You're a CHICK.,ach_rank_chick.png
+FLEDGLING,fs_ach_rank_fledgling,10,no,no,English (U.S.),FLEDGLING,Score 100 points in one run.,Your first feathers are in.,ach_rank_fledgling.png
+FLAPPER,fs_ach_rank_flapper,10,no,no,English (U.S.),FLAPPER,Score 200 points in one run.,"Flap, flap, flap!",ach_rank_flapper.png
+GLIDER,fs_ach_rank_glider,15,no,no,English (U.S.),GLIDER,Score 400 points in one run.,Smooth sailing.,ach_rank_glider.png
+FALCON,fs_ach_rank_falcon,20,no,no,English (U.S.),FALCON,Score 600 points in one run.,"Sharp eyes, fast wings.",ach_rank_falcon.png
+HAWK,fs_ach_rank_hawk,25,no,no,English (U.S.),HAWK,Score 800 points in one run.,One fierce flyer.,ach_rank_hawk.png
+SPIKE ACE,fs_ach_rank_spike_ace,30,no,no,English (U.S.),SPIKE ACE,"Score 1,000 points in one run.",The spikes fear you.,ach_rank_spike_ace.png
+PHOENIX,fs_ach_rank_phoenix,40,no,no,English (U.S.),PHOENIX,"Score 2,000 points in one run.",Rising from the ashes.,ach_rank_phoenix.png
+LEGEND,fs_ach_rank_legend,60,no,no,English (U.S.),LEGEND,"Score 5,000 points in one run.",Legendary. Truly.,ach_rank_legend.png
+BEAK FIRST,fs_ach_ride_cannon,10,yes,no,English (U.S.),BEAK FIRST,Finish the Cannon ride.,Fired out beak first!,ach_ride_cannon.png
+SPACE TWEET,fs_ach_ride_space,10,yes,no,English (U.S.),SPACE TWEET,Finish the Space ride.,"Houston, we have a tweet.",ach_ride_space.png
+FLAME-INGO,fs_ach_ride_volcano,10,yes,no,English (U.S.),FLAME-INGO,Finish the Volcano ride.,Hot stuff!,ach_ride_volcano.png
+PENGUIN MODE,fs_ach_ride_sea,10,yes,no,English (U.S.),PENGUIN MODE,Finish the Sea ride.,"Waddle you know, you made it!",ach_ride_sea.png
+BUMPER BIRD,fs_ach_ride_pinball,10,yes,no,English (U.S.),BUMPER BIRD,Finish the Pinball ride.,"Boing, boing, boing!",ach_ride_pinball.png
+RUFFLED FEATHERS,fs_ach_ride_storm,10,yes,no,English (U.S.),RUFFLED FEATHERS,Finish the Storm ride.,You weathered the storm.,ach_ride_storm.png
+FREQUENT FLYER,fs_ach_ride_all,30,yes,no,English (U.S.),FREQUENT FLYER,Finish all six rides.,"Every ride, done!",ach_ride_all.png
+TWEETHEART,fs_ach_item_heart,5,no,no,English (U.S.),TWEETHEART,Catch a Heart.,Love is in the air.,ach_item_heart.png
+TOUGH EGG,fs_ach_item_shield,5,no,no,English (U.S.),TOUGH EGG,Catch a Shield.,Hard to crack.,ach_item_shield.png
+STARLING,fs_ach_item_star_trail,5,no,no,English (U.S.),STARLING,Catch a star of a Star Trail.,Star catcher!,ach_item_star_trail.png
+TIME FLIES,fs_ach_item_hourglass,5,no,no,English (U.S.),TIME FLIES,Catch an Hourglass.,Time flies when you're flapping.,ach_item_hourglass.png
+LITTLE BIRDIE,fs_ach_item_mini_bird,5,no,no,English (U.S.),LITTLE BIRDIE,Catch a Mini Bird.,Small but mighty.,ach_item_mini_bird.png
+GOLDFINCH,fs_ach_item_coin_frenzy,5,no,no,English (U.S.),GOLDFINCH,Catch a Coin Frenzy.,"Coins, coins, coins!",ach_item_coin_frenzy.png
+EGGCELLENT!,fs_ach_item_egg,5,no,no,English (U.S.),EGGCELLENT!,Catch an Egg.,Simply eggcellent!,ach_item_egg.png
+NEST EGG,fs_ach_item_piggy,5,no,no,English (U.S.),NEST EGG,Catch a Piggy Bank.,Saving for a rainy day.,ach_item_piggy.png
+BUG BUFFET,fs_ach_item_jar,5,no,no,English (U.S.),BUG BUFFET,Catch a Firefly Jar.,Crunchy snacks ahead.,ach_item_jar.png
+LIGHT AS A FEATHER,fs_ach_item_feather,5,no,no,English (U.S.),LIGHT AS A FEATHER,Catch a Feather.,Floating on air.,ach_item_feather.png
+PUZZLED PIGEON,fs_ach_item_puzzle,5,no,no,English (U.S.),PUZZLED PIGEON,Catch a Puzzle Piece.,Hmm… where does this go?,ach_item_puzzle.png
+MAGPIE,fs_ach_item_all,25,no,no,English (U.S.),MAGPIE,Catch every item above at least once.,Every shiny thing is yours.,ach_item_all.png
+MOTHER HEN,fs_ach_master_hatch,10,no,no,English (U.S.),MOTHER HEN,Hatch an egg into a chick.,Proud parent!,ach_master_hatch.png
+NIGHT OWL,fs_ach_master_jar,10,no,no,English (U.S.),NIGHT OWL,Fill a Firefly Jar.,What a glow!,ach_master_jar.png
+SEEING STARS,fs_ach_master_stars,10,no,no,English (U.S.),SEEING STARS,Catch all 8 stars of a Star Trail.,"Twinkle, twinkle!",ach_master_stars.png
+BIRD'S-EYE VIEW,fs_ach_master_picture,15,no,no,English (U.S.),BIRD'S-EYE VIEW,Complete a puzzle picture.,What a view!,ach_master_picture.png
+GOLDEN EGG,fs_ach_master_jackpot,15,no,no,English (U.S.),GOLDEN EGG,Pop the jackpot balloon on the bonus screen.,Jackpot!,ach_master_jackpot.png
+FIRST FLIGHT,fs_ach_hoops_10,5,no,no,English (U.S.),FIRST FLIGHT,Pass 10 hoops in one run.,Wheels up!,ach_hoops_10.png
+HOOPOE,fs_ach_hoops_25,10,no,no,English (U.S.),HOOPOE,Pass 25 hoops in one run.,"Hoop, hoop, hooray!",ach_hoops_25.png
+RING-NECKED,fs_ach_hoops_50,20,no,no,English (U.S.),RING-NECKED,Pass 50 hoops in one run.,Ring after ring after ring.,ach_hoops_50.png
+FLYING COLORS,fs_ach_hoops_100,40,no,no,English (U.S.),FLYING COLORS,Pass 100 hoops in one run.,Passed with flying colors!,ach_hoops_100.png
+BEAK TO BEAK,fs_ach_vs_1,10,no,no,English (U.S.),BEAK TO BEAK,Win a versus match.,"Beak to beak, and you won!",ach_vs_1.png
+PECKING ORDER,fs_ach_vs_10,25,no,no,English (U.S.),PECKING ORDER,Win 10 versus matches.,Top of the pecking order.,ach_vs_10.png
+RULES THE ROOST,fs_ach_vs_50,40,no,no,English (U.S.),RULES THE ROOST,Win 50 versus matches.,The roost is yours.,ach_vs_50.png
+STILL TWEETING,fs_ach_first_revive,5,no,no,English (U.S.),STILL TWEETING,Revive during a run.,Still tweeting!,ach_first_revive.png
+BIG BIRD,fs_ach_first_big_hoops,5,no,no,English (U.S.),BIG BIRD,Play a run with Big Hoops.,Go big or go home.,ach_first_big_hoops.png
+HOT WINGS,fs_ach_first_fever,10,no,no,English (U.S.),HOT WINGS,Trigger FEVER.,"Hot, hot, hot!",ach_first_fever.png
+FRESH FEATHERS,fs_ach_skin_first,10,no,no,English (U.S.),FRESH FEATHERS,Buy your first item in the shop.,Looking sharp!,ach_skin_first.png
+PROUD PEACOCK,fs_ach_skin_all,50,no,no,English (U.S.),PROUD PEACOCK,Own every item in the shop.,The proudest bird in the sky.,ach_skin_all.png
+EARLY BIRD,fs_ach_daily_7,25,no,no,English (U.S.),EARLY BIRD,Play on 7 days in a row.,Rise and shine!,ach_daily_7.png
+HOMING PIGEON,fs_ach_daily_30,50,no,no,English (U.S.),HOMING PIGEON,Play on 30 days in a row.,Always finds its way home.,ach_daily_30.png

@@ -182,6 +182,13 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   `~/.config/flappyspikes_pgs_web_client.json` (mode 600) and is **never in the
   repo**. The PGS "Game server" credential is published. On a link conflict the
   account that already owns the Play Games id wins.
+- **Play Games achievements (PRD-2.3.1 §12)**: the 48 were created in Play
+  Console and the PGS configuration was **published 2026-10-14 12:53 CEST**
+  (published achievements can't be deleted). Their ids are in
+  `lib/achievements/achievement_catalog.dart`; the store art is in
+  `store/achievements/` (`play/` 512, `ios/` 1024 RGB + the Game Center kit
+  CSV/JSON). Game Center achievements are not created yet (iOS paused): the kit
+  and the steps are in `PORT-IOS.md` / `SUBMISSION.md`.
 - **App Check debug token** "Pixel 8 e2e" is registered in the Firebase console
   (App Check → Apps → Manage debug tokens). Debug / e2e builds pass it with
   `--dart-define=FS_APPCHECK_DEBUG_TOKEN=…`; **release builds never use the debug

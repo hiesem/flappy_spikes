@@ -64,6 +64,25 @@ which of the items below are build blockers.
       `PlayGamesIdentity`).
 - [ ] **Leaderboard** id `flappy_spikes_leaderboard` (`lib/services/game_services.dart:66`) must
       exist in App Store Connect (it is the 2014 id).
+- [ ] **Game Center achievements** (PRD-2.3.1 §12). The shared Dart code already sends the
+      Game Center ids (`fs_ach_<key>`, `lib/achievements/achievement_catalog.dart`); the upload kit
+      is in `store/achievements/ios/`: `achievements_ios.csv` / `.json` (Reference Name,
+      Achievement ID, Points, Hidden, Achievable More Than Once = no, and the English (U.S.)
+      Title, Pre-earned Description, Earned Description, Image) and the 48 icons
+      `ach_<key>.png` (1024×1024, RGB, no alpha, 72 dpi). Regenerate with
+      `dart run tool/ach_ios_kit.dart` (fields) and `tool/export_achievement_icons.py` (icons);
+      `test/p231/s12_ios_kit_test.dart` keeps the kit equal to the catalog.
+  - [ ] App Store Connect → the app → **Game Center → Achievements**: create the 48 from the kit,
+        in the kit order (755 of 1000 points; the 7 rides Hidden = yes).
+  - [ ] Attach the 48 achievements (and the leaderboard) to the **first iOS version** before
+        submitting it (the version page → Game Center).
+  - [ ] Sandbox test: a sandbox Game Center account, unlock a few, check the progress of the
+        counting ones (`vs_10`, `vs_50`, `ride_all`, `item_all`, `daily_7`, `daily_30`,
+        `skin_all` report `percentComplete` on iOS only); reset with
+        `Achievements.resetAchievements()` (a debug-only call; never ship it).
+  - [ ] Sign-in: the same rules as `GameCenterIdentity` above — never `GameAuth.signIn()` at
+        launch, never `GameAuth.isSignedIn`; unlocks are stored locally and reported by
+        `AchievementTracker.syncAll()` once the player stream has a player.
 - [ ] **In-app purchase** `no_ads` (`lib/services/iap_service.dart:18`) and the coin packs must be
       created in App Store Connect with the same product ids.
 - [ ] **AdMob.** Create the iOS app + rewarded unit; replace the Google test unit

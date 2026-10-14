@@ -96,7 +96,12 @@ void main() {
           final before = g.storage.achUnlocked.length;
           final earnedBefore = g.achievements.earned.length;
           g.runSeed = seed * 1000 + r;
-          // Home: the LEVEL UP popup is claimed first.
+          // Home: the No-Ads popup is dismissed, the LEVEL UP claimed.
+          if (g.noAdsPopup != null) {
+            g.closeNoAdsPopup();
+            stepGame(g, 1);
+            await flushAndMount(g);
+          }
           for (var i = 0; i < 5 && g.levelUpPopup != null; i++) {
             await g.claimLevelUp();
             stepGame(g, 1);

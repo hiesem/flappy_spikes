@@ -260,7 +260,7 @@ enum AchievementId {
   itemFeather(
     'item_feather',
     'LIGHT AS A FEATHER',
-    'Catch 5 Feathers.',
+    'Catch 3 Feathers.',
     'Floating on air.',
     5,
     AchievementGroup.item,
@@ -502,7 +502,10 @@ enum AchievementId {
 
   final AchievementGroup group;
 
-  /// Shown as "Hidden" until unlocked (the 7 rides).
+  /// Shown as "Hidden" until unlocked: the 7 rides, plus the 10 of
+  /// PRD-2.3.1 §19.3 (Game Center kit). Play Console locks the initial
+  /// state of a published achievement, so on Play only the 7 rides are
+  /// hidden; the §19.3 ten stay Revealed there (2026-10-14).
   final bool hidden;
 
   /// Play Console's generated id (§12.6, created 2026-10-14). Empty = not
@@ -578,11 +581,13 @@ const List<AchievementId> kItemAchievements = [
 /// PRD-2.3.1 §19.1 the lifetime catches each item achievement needs, set by
 /// how often the bot catches the item in a 20-hoop run on the live defaults
 /// (the rarest items get the smallest N; never below 3), so the 11 goals
-/// land after about 25–45 such runs. Bot catches per 20-hoop run
-/// (2026-10-14, 60 seeds): heart 0.27, shield 0.33, star trails 1.8 (a
-/// trail counts once), hourglass 0.10, mini bird 0.07, coin frenzy 0.08,
-/// egg 0.17, piggy 0.12, jar 0.12, feather 0.18, puzzle 0.10. The
-/// descriptions above say the same count (a test checks it).
+/// land after about 25–40 such runs (puzzle, the rarest, later). Bot
+/// catches per 20-hoop run of a simulated new player (2026-10-14, 8 × 40
+/// runs, first-meet and lifetime gates, `test/tools/ach_pacing_test.dart`):
+/// heart 0.27, shield 0.37, star trails 1.80 (a trail counts once),
+/// hourglass 0.07, mini bird 0.08, coin frenzy 0.09, egg 0.15, piggy 0.11,
+/// jar 0.11, feather 0.08, puzzle 0.05. The descriptions above say the same
+/// count (a test checks it).
 const Map<AchievementId, int> kItemGoals = {
   AchievementId.itemHeart: 10,
   AchievementId.itemShield: 10,
@@ -593,7 +598,7 @@ const Map<AchievementId, int> kItemGoals = {
   AchievementId.itemEgg: 5,
   AchievementId.itemPiggy: 3,
   AchievementId.itemJar: 3,
-  AchievementId.itemFeather: 5,
+  AchievementId.itemFeather: 3,
   AchievementId.itemPuzzle: 3,
 };
 

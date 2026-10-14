@@ -25,7 +25,7 @@ GOLDFINCH,fs_ach_item_coin_frenzy,5,no,no,English (U.S.),GOLDFINCH,Catch 3 Coin 
 EGGCELLENT!,fs_ach_item_egg,5,no,no,English (U.S.),EGGCELLENT!,Catch 5 Eggs.,Simply eggcellent!,ach_item_egg.png
 NEST EGG,fs_ach_item_piggy,5,no,no,English (U.S.),NEST EGG,Catch 3 Piggy Banks.,Saving for a rainy day.,ach_item_piggy.png
 BUG BUFFET,fs_ach_item_jar,5,no,no,English (U.S.),BUG BUFFET,Catch 3 Firefly Jars.,Crunchy snacks ahead.,ach_item_jar.png
-LIGHT AS A FEATHER,fs_ach_item_feather,5,no,no,English (U.S.),LIGHT AS A FEATHER,Catch 5 Feathers.,Floating on air.,ach_item_feather.png
+LIGHT AS A FEATHER,fs_ach_item_feather,5,no,no,English (U.S.),LIGHT AS A FEATHER,Catch 3 Feathers.,Floating on air.,ach_item_feather.png
 PUZZLED PIGEON,fs_ach_item_puzzle,5,no,no,English (U.S.),PUZZLED PIGEON,Catch 3 Puzzle Pieces.,Hmm… where does this go?,ach_item_puzzle.png
 MAGPIE,fs_ach_item_all,25,yes,no,English (U.S.),MAGPIE,Reach every item goal.,Every shiny thing is yours.,ach_item_all.png
 MOTHER HEN,fs_ach_master_hatch,10,yes,no,English (U.S.),MOTHER HEN,Hatch an egg into a chick.,Proud parent!,ach_master_hatch.png

@@ -65,8 +65,8 @@ void main() {
 
   group('§3.28 / §5.27 Piggy Bank rules (pure)', () {
     test(
-      '§3.28 exactly 20 coins, 4 in the own gap, pays 1 per 2 caught (PRD-2.3 §14.2; was ×2) of what you '
-      'caught; gap 12 weight 10 ≥ 30 apart; hit radii 18 / 14 (PRD-2.2 §26)',
+      '§3.28 exactly 20 coins, 4 in the own gap, pays 1 per 3 caught (PRD-2.3.1 §0 live RC v21; 2.3: 2) of what you '
+      'caught; gap 8 weight 10 ≥ 12 apart (live RC v21); hit radii 18 / 14 (PRD-2.2 §26)',
       () {
         expect(PiggyConfig.total, 20);
         expect(PiggyConfig.ownGapCoins, 4);
@@ -77,17 +77,17 @@ void main() {
         expect(PiggyConfig.ownGapStart, 20);
         expect(PiggyConfig.ownGapEnd, 40);
         expect(PiggyConfig.coinBulge, 18);
-        // PRD-2.3 §14.2 every 2 caught pay 1 (was ×2).
-        expect(PiggyConfig.coinsPer, 2);
-        expect(PiggyConfig.payoutFor(20), 10);
-        expect(PiggyConfig.payoutFor(7), 3);
+        // PRD-2.3.1 §0 (live RC v21) every 3 caught pay 1 (2.3: 2).
+        expect(PiggyConfig.coinsPer, 3);
+        expect(PiggyConfig.payoutFor(20), 6);
+        expect(PiggyConfig.payoutFor(7), 2);
         expect(ElementId.piggy.firstPossible, 12);
         expect(ElementId.piggy.kind, ElementKind.gap);
         expect(ElementId.piggy.storageId, 'piggy');
         final rule = DirectorTables.prd2.gapItems[ElementId.piggy]!;
-        expect(rule.from, 12);
+        expect(rule.from, 8); // live RC v21 (2.3: 12)
         expect(rule.weight, 10);
-        expect(rule.minSince, 30);
+        expect(rule.minSince, 12); // live RC v21 (2.3: 30)
         expect(PickupRadii.piggy, 18);
         expect(PickupRadii.piggyCoin, 14); // PRD-2.2 §26 (PRD-2: 10)
         expect(PickupRadii.forElement(ElementId.piggy), 18);
@@ -100,9 +100,9 @@ void main() {
         expect(PiggyConfig.bannerText, 'PIGGY BANK');
         expect(
           PiggyConfig.bannerSub,
-          '20 coins appear · every 2 caught pay 1',
+          '20 coins appear · every 3 caught pay 1',
         );
-        expect(PiggyConfig.payoutSub, ' / 20 coins · 2 per coin');
+        expect(PiggyConfig.payoutSub, ' / 20 coins · 3 per coin');
       },
     );
 
@@ -227,7 +227,7 @@ void main() {
 
   tester(worldHeight: 568, seed: 3).testGameWidget(
     '§3.28 caught coins go into the bank (not the wallet) and all 20 resolve '
-    'the smash: +8 for 16 caught (PRD-2.3 §14.2), piggy_paid, piggySmash',
+    'the smash: +5 for 16 caught (PRD-2.3.1 §0: 1 per 3), piggy_paid, piggySmash',
     setUp: (g, _) => boot(g),
     verify: (game, _) async {
       final run = await startRun(game);
@@ -251,9 +251,9 @@ void main() {
         run.events.emit(PickupEscaped(ElementId.piggyCoins));
       }
       expect(run.state.piggy, isNull);
-      expect(run.state.coinsThisRun - coins0, 8); // 16 ÷ 2
-      expect(game.menu.wallet.balance - wallet0, 8);
-      expect(earned.single.amount, 8);
+      expect(run.state.coinsThisRun - coins0, 5); // 16 ÷ 3
+      expect(game.menu.wallet.balance - wallet0, 5);
+      expect(earned.single.amount, 5);
       expect(earned.single.source, CoinSource.piggy);
       expect(earned.single.eggX2, isFalse);
       expect(featureOf(run).paid, 1);
@@ -263,18 +263,18 @@ void main() {
       expect(RunHud.ensureFor(run).children.whereType<PiggyBadge>(), isEmpty);
       final banner = RunHud.ensureFor(run).banners.current;
       expect(banner, isNotNull);
-      expect(banner!.text, '+8');
+      expect(banner!.text, '+5');
       expect(banner.color, PiggyConfig.payoutColor);
       final paid = analyticsLog(
         spy,
       ).firstWhere((e) => e.$1 == 'piggy_paid');
-      expect(paid.$2, equals(<String, Object>{'caught': 16, 'payout': 8}));
+      expect(paid.$2, equals(<String, Object>{'caught': 16, 'payout': 5}));
     },
   );
 
   tester(worldHeight: 711, seed: 29).testGameWidget(
     'PRD-2.3 §14.3 the chick no longer doubles the pay-out: 10 caught / 10 '
-    'missed pays 5',
+    'missed pays 3 (PRD-2.3.1 §0: 1 per 3)',
     setUp: (g, _) => boot(g),
     verify: (game, _) async {
       final run = await startRun(game);
@@ -290,10 +290,10 @@ void main() {
         run.events.emit(PickupEscaped(ElementId.piggyCoins));
       }
       expect(run.state.piggy, isNull);
-      expect(run.state.coinsThisRun - coins0, 5);
-      expect(earned.single.amount, 5);
+      expect(run.state.coinsThisRun - coins0, 3);
+      expect(earned.single.amount, 3);
       expect(earned.single.eggX2, isFalse);
-      expect(RunHud.ensureFor(run).banners.current!.text, '+5');
+      expect(RunHud.ensureFor(run).banners.current!.text, '+3');
     },
   );
 
@@ -371,13 +371,13 @@ void main() {
       }
       expect(run.state.piggy, isNotNull);
       expect(featureOf(run).paid, 0);
-      // The re-placed 4 are caught: the bank pays 20 caught ÷ 2
+      // The re-placed 4 are caught: the bank pays 20 caught ÷ 3
       // (PRD-2.3 §14.2).
       for (var i = 0; i < 4; i++) {
         run.events.emit(PickupCollected(ElementId.piggyCoins, null));
       }
       expect(run.state.piggy, isNull);
-      expect(run.state.coinsThisRun - coins0, 10);
+      expect(run.state.coinsThisRun - coins0, 6);
       expect(featureOf(run).paid, 1);
     },
   );

@@ -32,12 +32,17 @@ void main() {
       expect(ScoringFeature.coinsFor(perfect: false), 1);
       expect(ScoringFeature.coinsFor(perfect: true), 2);
       expect(PiggyConfig.total, 20);
-      expect(PiggyConfig.payoutFor(20), 10, reason: 'max 10');
-      expect(PiggyConfig.payoutFor(19), 9);
+      // PRD-2.3.1 §0 live RC v21: coin_piggy_per 3 (was 2: max 10).
+      expect(PiggyConfig.payoutFor(20), 6, reason: 'max 6');
+      expect(PiggyConfig.payoutFor(19), 6);
+      expect(PiggyConfig.payoutFor(18), 6);
+      expect(PiggyConfig.payoutFor(17), 5);
       expect(PiggyConfig.payoutFor(1), 0);
-      expect(JarConfig.reward, 8);
-      expect(JarConfig.fullSub, '20 fireflies · +8 coins');
-      expect(RunConfig.luckySpinSlices, [1, 2, 3, 5, 1, 2]);
+      // PRD-2.3.1 §0 live RC v21: coin_jar 5 (was 8), spin slices
+      // [1,2,3,1,2,1] (was [1,2,3,5,1,2]).
+      expect(JarConfig.reward, 5);
+      expect(JarConfig.fullSub, '20 fireflies · +5 coins');
+      expect(RunConfig.luckySpinSlices, [1, 2, 3, 1, 2, 1]);
       expect(StarTrailConfig.reward, 2);
       expect(StarTrailConfig.bannerSub, '8 / 8 stars · +2 coins');
       expect(BullseyeConfig.coins, 3); // PRD-2.3.1 §6 (was 2)
@@ -72,26 +77,28 @@ void main() {
         expect(prize.coins, RunConfig.luckySpinSlices[prize.slice]);
         seen.add(prize.coins);
       }
-      expect(seen, {1, 2, 3, 5});
+      expect(seen, {1, 2, 3}); // PRD-2.3.1 §0 live RC v21 (was {1,2,3,5})
     });
 
-    test('balloon prizes are the new set (525, jackpot 150)', () {
-      expect(BonusConfig.prizes, [25, 25, 25, 50, 50, 50, 75, 75, 150]);
-      expect(BonusConfig.prizes.fold<int>(0, (a, b) => a + b), 525);
-      expect(BonusConfig.jackpot, 150);
+    // PRD-2.3.1 §0 live RC v21 (was 525, jackpot 150).
+    test('balloon prizes are the live set (395, jackpot 100)', () {
+      expect(BonusConfig.prizes, [25, 25, 25, 40, 40, 40, 50, 50, 100]);
+      expect(BonusConfig.prizes.fold<int>(0, (a, b) => a + b), 395);
+      expect(BonusConfig.jackpot, 100);
     });
 
-    test('the puzzle reward is 50–150 in steps of 5', () {
+    // PRD-2.3.1 §0 live RC v21 (was 50–150).
+    test('the puzzle reward is 40–100 in steps of 5', () {
       final all = ElementId.values.toSet();
       final d = RunDirector(seed: 3, enabled: all, met: all);
       final seen = <int>{};
       for (var k = 0; k < 2000; k++) {
         final b = d.rollPuzzleBonus();
-        expect(b, inInclusiveRange(50, 150));
+        expect(b, inInclusiveRange(40, 100));
         expect(b % 5, 0);
         seen.add(b);
       }
-      expect(seen.length, 21);
+      expect(seen.length, 13);
     });
 
     test('the revive ladder is 250…8000, and no revive is offered after 6 '

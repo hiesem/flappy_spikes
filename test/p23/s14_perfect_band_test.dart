@@ -29,16 +29,20 @@ void main() {
   tearDown(() => useTuning(const {}));
 
   group('config', () {
-    test('defaults: perfect band [[0,0]] (off), bullseye band 12', () {
+    // PRD-2.3.1 §0: the live RC v21 bands are the defaults (were [[0,0]]
+    // and [[0,12]]).
+    test('defaults: perfect band 18 → 8, bullseye band 12 → 8', () {
       final defs = {for (final d in kTuningDefaults) d.key: d};
       expect(defs['point_perfect_band']!.value, [
-        [0, 0],
+        [1, 18], [25, 15], [50, 13], [75, 10], [100, 8], //
       ]);
       expect(defs['point_bullseye_band']!.value, [
-        [0, 12],
+        [1, 12], [50, 10], [100, 8], //
       ]);
-      expect(PerfectBandConfig.bandAt(0), 0);
-      expect(PerfectBandConfig.bandAt(80), 0);
+      expect(PerfectBandConfig.bandAt(1), 18);
+      expect(PerfectBandConfig.bandAt(25), 15);
+      expect(PerfectBandConfig.bandAt(80), closeTo(9.6, 1e-9));
+      expect(PerfectBandConfig.bandAt(200), 8);
       expect(BullseyeConfig.band, 12);
       expect(BullseyeConfig.drawBand, 12);
     });
@@ -46,6 +50,7 @@ void main() {
     test(
       'band ≤ 0: any rim-free pass is perfect (§14.3); a rim touch never',
       () {
+        useTuning({'point_perfect_band': '[[0,0]]'});
         for (final off in [0.0, 20.0, -40.0, null]) {
           expect(
             PerfectBandConfig.isPerfect(
@@ -173,8 +178,12 @@ void main() {
   );
 
   tester.testGameWidget(
-    'default: a rim-free pass 20 pt off-centre is perfect (today\'s rule)',
-    setUp: boot,
+    'band off ([[0,0]], the 2.3 default): a rim-free pass 20 pt off-centre '
+    'is perfect',
+    setUp: (g, t) async {
+      useTuning({'point_perfect_band': '[[0,0]]'});
+      await boot(g, t);
+    },
     verify: (g, _) async {
       await startRun(g, startHoopIndex: 3);
       final h = await nextNormal(g);
@@ -218,7 +227,10 @@ void main() {
 
   tester.testGameWidget(
     'a band set mid-run does not change the current run (beginRun lock)',
-    setUp: boot,
+    setUp: (g, t) async {
+      useTuning({'point_perfect_band': '[[0,0]]'});
+      await boot(g, t);
+    },
     verify: (g, _) async {
       await startRun(g, startHoopIndex: 3);
       // The console value arrives after the run began.

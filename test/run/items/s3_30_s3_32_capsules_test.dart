@@ -71,13 +71,13 @@ Future<RunController> _run(FlappySpikesGame game) async {
 void main() {
   group('§3.30–§3.32 capsule rules (pure)', () {
     test(
-      '§3.0.3 / §3.30 spawn: gap item from gap 10, weight 20, ≥ 20 gaps '
+      '§3.0.3 / §3.30 spawn: gap item from gap 6, weight 20, ≥ 8 gaps '
       'apart; Hourglass 35 / Mini Bird 35 / Coin Frenzy 30; hit radius 18',
       () {
         final rule = DirectorTables.prd2.gapItems[ElementId.capsule]!;
-        expect(rule.from, 10);
+        expect(rule.from, 6); // PRD-2.3.1 §0 live RC v21 (2.3: 10)
         expect(rule.weight, 20);
-        expect(rule.minSince, 20);
+        expect(rule.minSince, 8); // live RC v21 (2.3: 20)
         expect(DirectorTables.prd2.capsuleWeights, {
           CapsuleType.hourglass: 35,
           CapsuleType.miniBird: 35,

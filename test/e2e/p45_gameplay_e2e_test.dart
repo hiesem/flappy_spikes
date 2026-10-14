@@ -167,8 +167,8 @@ void main() {
             expect(g.storage.puzzleRound, 7);
           } else {
             expect(paid, hasLength(1));
-            // PRD-2.3 §14.2: 50–150 (was 50–250).
-            expect(paid.single, inInclusiveRange(50, 150));
+            // PRD-2.3.1 §0 live RC v21: 40–100 (2.3: 50–150, 2.2: 50–250).
+            expect(paid.single, inInclusiveRange(40, 100));
             expect(paid.single % 5, 0);
             expect(r.state.coinsThisRun, greaterThanOrEqualTo(paid.single));
             expect(g.storage.puzzlePieces, 0);
@@ -260,7 +260,8 @@ void main() {
       expect(r.state.runClock - before, lessThan(.4));
       g.runDebug.god = false;
       r.state.invulnerable = 0;
-      killRun(g);
+      // PRD-2.3.1 §0: the live set brings a shield from hoop 8; it saves once.
+      killRunThroughSaves(g);
       await flushAndMount(g);
       await declineRevive(g);
       expect(g.resultsScreen!.summary.duel, DuelResult.win);
@@ -339,9 +340,9 @@ void main() {
       await flushAndMount(g);
       final b = g.bonusScreen!;
       final before = g.menu.wallet.balance;
-      // PRD-2.3 §14.2 the jackpot is 150 (was 250).
+      // PRD-2.3.1 §0 live RC v21: the jackpot is 100 (2.3: 150, 2.2: 250).
       final jackpot = b.prizes.indexOf(BonusConfig.jackpot);
-      expect(BonusConfig.jackpot, 150);
+      expect(BonusConfig.jackpot, 100);
       expect(b.tapTile(jackpot), isTrue);
       expect(
         g.menu.wallet.balance,

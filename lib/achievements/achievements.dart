@@ -38,16 +38,64 @@ class AchievementTracker {
 
   bool isUnlocked(AchievementId id) => storage.achUnlocked.contains(id.key);
 
+  /// PRD-2.3.1 §19.2 earned, waiting in `achPending` for a run's slot.
+  bool isPending(AchievementId id) => storage.achPending.contains(id.key);
+
+  /// PRD-2.3.1 §19.2 every earned key: unlocked or pending.
+  Set<String> get earned => {...storage.achUnlocked, ...storage.achPending};
+
   /// Idempotent unlock: stores the key, logs `achievement_unlocked`, queues
   /// the toast and reports it to the platform. Returns whether it was new.
+  /// Immediate: the shop, the jackpot and the debug "unlock one" call it
+  /// directly (PRD-2.3.1 §19.2 exceptions); the run rules [_earn] instead.
   bool unlock(AchievementId id) {
     if (isUnlocked(id)) return false;
     unawaited(storage.saveAchUnlocked({...storage.achUnlocked, id.key}));
+    if (isPending(id)) {
+      unawaited(
+        storage.saveAchPending([
+          for (final k in storage.achPending)
+            if (k != id.key) k,
+        ]),
+      );
+    }
     services.track('achievement_unlocked', {'id': id.key, 'pts': id.points});
     toastQueue.add(id);
     onUnlocked?.call(id);
     unawaited(syncAll());
+    if (kItemAchievements.contains(id)) _checkMagpie();
     return true;
+  }
+
+  /// PRD-2.3.1 §19.2 a run rule earned [id]: it joins the end of the FIFO
+  /// `achPending` queue (unless already unlocked or pending) and unlocks
+  /// when a counting run end releases it ([releaseOne]). Never reported
+  /// and never toasted before that.
+  void _earn(AchievementId id) {
+    if (isUnlocked(id) || isPending(id)) return;
+    unawaited(storage.saveAchPending([...storage.achPending, id.key]));
+  }
+
+  /// PRD-2.3.1 §19.2 a counting run's one unlock slot: the oldest pending
+  /// achievement unlocks. Returns it (null = nothing pending).
+  AchievementId? releaseOne() {
+    final pending = [...storage.achPending];
+    AchievementId? next;
+    while (pending.isNotEmpty && next == null) {
+      final id = AchievementId.fromKey(pending.removeAt(0));
+      if (id != null && !isUnlocked(id)) next = id;
+    }
+    unawaited(storage.saveAchPending(pending));
+    if (next != null) unlock(next);
+    return next;
+  }
+
+  /// PRD-2.3.1 §19.1 MAGPIE is earned once all 11 item achievements are
+  /// unlocked (not merely pending).
+  void _checkMagpie() {
+    final n = kItemAchievements.where(isUnlocked).length;
+    _progress(AchievementId.itemAll, n, kItemAchievements.length);
+    if (n == kItemAchievements.length) _earn(AchievementId.itemAll);
   }
 
   // --- run rules (§12.2) ------------------------------------------------------
@@ -103,7 +151,7 @@ class AchievementTracker {
       );
       if (!crossed) return; // written at the next pause / event
       _journaledHoops = hoops;
-    } else if (staged.contains(op)) {
+    } else if (staged.contains(op) && !AchOp.repeats(op)) {
       return;
     } else {
       staged.add(op);
@@ -139,8 +187,10 @@ class AchievementTracker {
 
   /// The run ended (`FlappySpikesGame.endRun`): its staged rules commit, in
   /// order, only when it still [counts]; otherwise they are dropped. The
-  /// journal is cleared either way.
-  void finishRun({required bool counts}) {
+  /// journal is cleared either way. A counting run then earns its ranks
+  /// ([score]) and the daily streak ([day]), and (PRD-2.3.1 §19.2) unlocks
+  /// at most one achievement: the oldest pending one ([releaseOne]).
+  void finishRun({required bool counts, int? score, int? day}) {
     final staged = _staged ?? const <String>[];
     _staged = null;
     _excluded = false;
@@ -150,11 +200,14 @@ class AchievementTracker {
     for (final op in staged) {
       _apply(op);
     }
+    if (score != null) onRunScore(score);
+    if (day != null) onRunDay(day);
+    releaseOne();
   }
 
   /// Launch (QA P2-03): a journal left by a run the app died in commits
-  /// when it was clean (unlocks + counters; the platform report goes through
-  /// the normal [syncAll]) and is discarded when excluded. No toasts.
+  /// when it was clean and is discarded when excluded. PRD-2.3.1 §19.2:
+  /// what it earned joins `achPending` (no unlock, no toast, no report).
   Future<void> recoverJournal() async {
     final ops = storage.achJournal;
     final excluded = storage.achJournalExcluded;
@@ -172,7 +225,7 @@ class AchievementTracker {
     switch (kind) {
       case AchOp._unlock:
         final id = AchOp.idOf(arg);
-        if (id != null) unlock(id);
+        if (id != null) _earn(id);
       case AchOp._ride:
         final ride = RideId.values.where((r) => r.storageId == arg);
         if (ride.isNotEmpty) onRideFinished(ride.first);
@@ -191,7 +244,7 @@ class AchievementTracker {
   /// score, never the stored best: start fresh).
   void onRunScore(int score) {
     for (var l = 0; l < kRankAchievements.length && l < kLevels.length; l++) {
-      if (kLevels[l].threshold <= score) unlock(kRankAchievements[l]);
+      if (kLevels[l].threshold <= score) _earn(kRankAchievements[l]);
     }
   }
 
@@ -205,7 +258,7 @@ class AchievementTracker {
       RideId.pinball => AchievementId.ridePinball,
       RideId.storm => AchievementId.rideStorm,
     };
-    unlock(id);
+    _earn(id);
     if (!storage.achRides.contains(ride.storageId)) {
       unawaited(storage.saveAchRides({...storage.achRides, ride.storageId}));
       _progress(
@@ -215,31 +268,29 @@ class AchievementTracker {
       );
     }
     if (RideId.values.every((r) => storage.achRides.contains(r.storageId))) {
-      unlock(AchievementId.rideAll);
+      _earn(AchievementId.rideAll);
     }
   }
 
-  /// A first-catch item (one of [kItemAchievements]).
+  /// PRD-2.3.1 §19.1 one catch of an item (one of [kItemAchievements]):
+  /// the lifetime count (`achItemCounts`) grows; the item achievement is
+  /// earned at its goal ([kItemGoals]). Progress is local only.
   void onItemCaught(AchievementId item) {
-    unlock(item);
-    if (!storage.achItems.contains(item.key)) {
-      unawaited(storage.saveAchItems({...storage.achItems, item.key}));
-      _progress(
-        AchievementId.itemAll,
-        storage.achItems.length,
-        kItemAchievements.length,
-      );
-    }
-    if (kItemAchievements.every((a) => storage.achItems.contains(a.key))) {
-      unlock(AchievementId.itemAll);
-    }
+    final n = (storage.achItemCounts[item.key] ?? 0) + 1;
+    unawaited(
+      storage.saveAchItemCounts({...storage.achItemCounts, item.key: n}),
+    );
+    if (n >= itemGoal(item)) _earn(item);
   }
+
+  /// The lifetime catches of [item] so far.
+  int itemCount(AchievementId item) => storage.achItemCounts[item.key] ?? 0;
 
   /// Hoops passed in this run (1-based `hoopsPassed`); a jump past several
   /// thresholds unlocks each.
   void onHoops(int hoopsPassed) {
     for (final (n, id) in kHoopAchievements) {
-      if (hoopsPassed >= n) unlock(id);
+      if (hoopsPassed >= n) _earn(id);
     }
   }
 
@@ -249,7 +300,7 @@ class AchievementTracker {
     unawaited(storage.saveAchVersusWins(wins));
     for (final (n, id) in kVersusAchievements) {
       if (n > 1) _progress(id, wins, n);
-      if (wins >= n) unlock(id);
+      if (wins >= n) _earn(id);
     }
   }
 
@@ -261,7 +312,7 @@ class AchievementTracker {
     unawaited(storage.saveAchDays(streak, day));
     for (final (n, id) in kDailyAchievements) {
       _progress(id, streak, n);
-      if (streak >= n) unlock(id);
+      if (streak >= n) _earn(id);
     }
   }
 
@@ -351,6 +402,9 @@ abstract final class AchOp {
     final i = op.indexOf(':');
     return i < 0 ? (op, '') : (op.substring(0, i), op.substring(i + 1));
   }
+
+  /// PRD-2.3.1 §19.1 item catches count each time (never folded).
+  static bool repeats(String op) => split(op).$1 == _item;
 
   static int? hoopsOf(String op) {
     final (kind, arg) = split(op);

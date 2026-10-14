@@ -3855,13 +3855,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // stored best) and the daily streak, for a counting run only
     final achRun = _run;
     final counts = achRun != null && achRun.countsForAchievements;
-    // P1E-03: the run's staged unlocks commit only if it still counts.
-    achievements.finishRun(counts: counts);
-    if (counts) {
-      achievements
-        ..onRunScore(score)
-        ..onRunDay(storage.today);
-    }
+    // P1E-03: the run's staged unlocks commit only if it still counts;
+    // PRD-2.3.1 §19.2 a counting run then unlocks at most one (the oldest
+    // pending), after its ranks and daily streak are earned.
+    achievements.finishRun(counts: counts, score: score, day: storage.today);
     // endregion P231-E
     // PRD-2.3 §18.3 (S8-09): the run's playtime is saved at run end; §18.5
     // (S8-10): a grace that ended with this finished run loads now.

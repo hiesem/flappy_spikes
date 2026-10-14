@@ -23,7 +23,7 @@ void main() {
   });
 
   test('§12.9 points per group and 755 in total; multiples of 5, ≤ 100; '
-      'exactly the 7 rides hidden', () {
+      'the 7 rides plus the PRD-2.3.1 §19.3 ten hidden', () {
     int sum(AchievementGroup g) =>
         all.where((a) => a.group == g).fold(0, (s, a) => s + a.points);
     expect(sum(AchievementGroup.rank), 220);
@@ -38,9 +38,25 @@ void main() {
       expect(a.points % 5, 0, reason: a.key);
       expect(a.points, inInclusiveRange(5, 100), reason: a.key);
     }
+    // PRD-2.3.1 §19.3 (changed from §12.1's rides only): the rides, the 5
+    // masteries, MAGPIE, vs_10, vs_50, skin_all and daily_30.
     final hidden = all.where((a) => a.hidden).toList();
-    expect(hidden, hasLength(7));
-    expect(hidden.every((a) => a.group == AchievementGroup.ride), isTrue);
+    expect(hidden, hasLength(17));
+    expect(
+      hidden.where((a) => a.group != AchievementGroup.ride).map((a) => a.key),
+      unorderedEquals([
+        'master_hatch',
+        'master_jar',
+        'master_stars',
+        'master_picture',
+        'master_jackpot',
+        'item_all',
+        'vs_10',
+        'vs_50',
+        'skin_all',
+        'daily_30',
+      ]),
+    );
     expect(all.where((a) => a.group == AchievementGroup.ride), hasLength(7));
   });
 

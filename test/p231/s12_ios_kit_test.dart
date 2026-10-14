@@ -18,7 +18,7 @@ void main() {
     final rows = (jsonDecode(kit.kitJson()) as List).cast<Map>();
     expect(rows.map((r) => r['Achievement ID']),
         AchievementId.values.map((a) => 'fs_ach_${a.key}'));
-    expect(rows.where((r) => r['Hidden'] == 'yes'), hasLength(7));
+    expect(rows.where((r) => r['Hidden'] == 'yes'), hasLength(17)); // §19.3
     expect(rows.fold<int>(0, (s, r) => s + (r['Points'] as int)), 755);
   });
 

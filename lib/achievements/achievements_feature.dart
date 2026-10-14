@@ -2,6 +2,7 @@ import '../menu/powerup_slot.dart';
 import '../run/director/plans.dart';
 import '../run/elements.dart';
 import '../run/pickups/capsule.dart';
+import '../run/pickups/star_trail.dart';
 import '../run/run_context.dart';
 import '../run/run_events.dart';
 import '../run/run_feature.dart';
@@ -56,8 +57,17 @@ class AchievementsFeature extends RunFeature {
   }
 
   void _onPickup(PickupCollected e) {
-    final item = itemFor(e);
+    final item = catchFor(e);
     if (item != null) _rule(AchOp.item(item));
+  }
+
+  /// PRD-2.3.1 §19.1 the item catch a [PickupCollected] adds to the
+  /// lifetime counts ([itemFor]), except that a Star Trail counts once, on
+  /// its first star (its other stars add nothing).
+  static AchievementId? catchFor(PickupCollected e) {
+    final p = e.pickup;
+    if (p is StarTrail && p.caughtCount > 1) return null;
+    return itemFor(e);
   }
 
   /// §12.2 the item achievement of a catch (null = none: piggy coins,

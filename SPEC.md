@@ -1731,8 +1731,8 @@ production build has the flag off and uses these values only. Full key table:
     (40–60), then every 80–90 (60–80);
   - spawn: `spawn_special_chance` [[0,0],[3,0],[4,0.4],[15,0.5],[30,0.6],[50,0.7]],
     `spawn_item_chance` [[0,0],[2,0],[3,0.5],[20,0.55]], and every special / item row
-    earlier and closer (e.g. Bullseye from 4, ≥ 2 apart; train from 5, ≥ 4; saw from 20,
-    ≥ 3; Star Trail from gap 3, ≥ 3; piggy from 8, ≥ 12; jar from 10, ≥ 12);
+    but the saw earlier and closer (e.g. Bullseye from 4, ≥ 2 apart; train from 5, ≥ 4;
+    Star Trail from gap 3, ≥ 3; piggy from 8, ≥ 12; jar from 10, ≥ 12);
   - lifetime gates (`gate_*`, gamesPlayed): switch / train 0 (3); comet, portal, capsule,
     shield 2 (5); spring, pair, egg 4 (8); feather, puzzle, piggy, jar 6 (10); FEVER,
     Lucky Spin 8 (15); saw 12 (20).

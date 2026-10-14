@@ -21,12 +21,13 @@ import '../../helpers.dart';
 void main() {
   group('§3.15 bonus rules (pure)', () {
     // PRD-2.3 §14.2: the 2.2 set [25,25,50,50,75,75,100,150,250] became
-    // [25,25,25,50,50,50,75,75,150], jackpot 150.
+    // [25,25,25,50,50,50,75,75,150], jackpot 150; PRD-2.3.1 §0 (live RC
+    // v21): [25,25,25,40,40,40,50,50,100], jackpot 100.
     test(
-      '§3.15 / 2.3 §14.2 prizes 25, 25, 25, 50, 50, 50, 75, 75, 150 shuffled',
+      '§3.15 / 2.3.1 §0 prizes 25, 25, 25, 40, 40, 40, 50, 50, 100 shuffled',
       () {
-        expect(BonusConfig.prizes, [25, 25, 25, 50, 50, 50, 75, 75, 150]);
-        expect(BonusConfig.jackpot, 150);
+        expect(BonusConfig.prizes, [25, 25, 25, 40, 40, 40, 50, 50, 100]);
+        expect(BonusConfig.jackpot, 100);
         final a = BonusRules.shuffledPrizes(math.Random(1));
         final b = BonusRules.shuffledPrizes(math.Random(2));
         expect(List.of(a)..sort(), BonusConfig.prizes);

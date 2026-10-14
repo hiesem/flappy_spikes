@@ -98,14 +98,16 @@ void main() {
       }
     });
 
+    // PRD-2.3.1 §0: the section 14 values, updated to the live RC v21 set
+    // (except coin_bullseye 3 and shop_ad_coins 75).
     test('tuning_defaults.dart equals the section 14 values', () {
       final t = TuningValues.defaults();
       // §14.2 coins
       expect(t.i('coin_hoop'), 1);
       expect(t.i('coin_perfect'), 2);
-      expect(t.i('coin_piggy_per'), 2);
-      expect(t.i('coin_jar'), 8);
-      expect(t.ints('coin_spin_slices'), [1, 2, 3, 5, 1, 2]);
+      expect(t.i('coin_piggy_per'), 3);
+      expect(t.i('coin_jar'), 5);
+      expect(t.ints('coin_spin_slices'), [1, 2, 3, 1, 2, 1]);
       expect(t.i('coin_star_trail'), 2);
       expect(t.i('coin_bullseye'), 3); // PRD-2.3.1 §6 (was 2)
       expect(t.i('coin_train'), 1);
@@ -114,12 +116,12 @@ void main() {
       expect(t.i('coin_frenzy_ring'), 1);
       expect(t.i('coin_versus_win'), 10);
       expect(t.i('coin_versus_draw'), 5);
-      expect(t.ints('bonus_prizes'), [25, 25, 25, 50, 50, 50, 75, 75, 150]);
+      expect(t.ints('bonus_prizes'), [25, 25, 25, 40, 40, 40, 50, 50, 100]);
       expect(t.d('bonus_feather_chance'), .6);
-      expect(t.range('bonus_feather_gaps'), (10, 40));
+      expect(t.range('bonus_feather_gaps'), (5, 30));
       expect(t.d('puzzle_chance'), .6);
-      expect(t.range('puzzle_gaps'), (10, 40));
-      expect(t.ints('puzzle_reward'), [50, 150, 5]);
+      expect(t.range('puzzle_gaps'), (5, 30));
+      expect(t.ints('puzzle_reward'), [40, 100, 5]);
       expect(t.ints('revive_ladder'), [250, 500, 1000, 2000, 4000, 8000]);
       expect(t.i('revive_min_hoops'), 6);
       expect(
@@ -155,11 +157,15 @@ void main() {
       expect(t.range('squeeze_hold'), (5, 10));
       expect(t.range('squeeze_gap'), (25, 45));
       // §14.5 rides
-      expect(t.d('ride_comet_chance'), .02);
-      expect(t.i('ride_comet_from'), 10);
-      expect(t.i('ride_comet_spacing'), 25);
-      expect(t.range('ride_portal_first'), (40, 60));
-      expect(t.range('ride_portal_then'), (60, 80));
+      expect(t.d('ride_comet_chance'), .04);
+      expect(t.i('ride_comet_from'), 8);
+      expect(t.i('ride_comet_spacing'), 18);
+      expect(t.range('ride_portal_first'), (12, 25));
+      expect(t.range('ride_portal_then'), (80, 90));
+      expect(t.d('ride_comet_hoop_gap'), 560);
+      expect(t.d('ride_comet_tail'), 100); // PRD-2.3.1 §16
+      expect(t.d('ride_comet_after_gap'), 310); // PRD-2.3.1 §16
+      expect(t.i('ride_portal_max'), 2); // PRD-2.3.1 §17
       // §14.6 gates
       expect({
         for (final k in [
@@ -170,12 +176,12 @@ void main() {
           k: t.i('gate_$k'),
       }, {
         'heart': 0, 'star_trail': 0, 'bullseye': 0, //
-        'switch': 3, 'train': 3, //
-        'comet': 5, 'portal': 5, 'capsule': 5, 'shield': 5, //
-        'spring': 8, 'pair': 8, 'egg': 8, //
-        'feather': 10, 'puzzle': 10, 'piggy': 10, 'jar': 10, //
-        'fever': 15, 'lucky_spin': 15, //
-        'saw': 20,
+        'switch': 0, 'train': 0, //
+        'comet': 2, 'portal': 2, 'capsule': 2, 'shield': 2, //
+        'spring': 4, 'pair': 4, 'egg': 4, //
+        'feather': 6, 'puzzle': 6, 'piggy': 6, 'jar': 6, //
+        'fever': 8, 'lucky_spin': 8, //
+        'saw': 12,
       });
     });
 
@@ -278,7 +284,7 @@ void main() {
       final t = Tuning(backend: ThrowingBackend());
       await t.initialize();
       await t.pendingFetch;
-      expect(t.active.i('coin_jar'), 8);
+      expect(t.active.i('coin_jar'), 5); // the default (live RC v21)
       expect(t.lastFetchTime, isNull);
       expect(t.lastFetchStatus, 'unknown');
     });

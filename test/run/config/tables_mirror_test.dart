@@ -6,11 +6,18 @@ import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../p231/tuning_23.dart';
 
 /// `DirectorTables.prd2` / `RunConfig` mirror
 /// `design/reference/data/spawn_tables.json` (copied to test/fixtures; ARCH
 /// §4), with the PRD overrides asserted explicitly.
 void main() {
+  // PRD-2.3.1 §0: the in-app tables mirrored spawn_tables.json until the live
+  // RC v21 set became the default (test/p231/tuning_23.dart); the live set
+  // has its own checks.
+  useTuning(tuning23Spawn()); // before `t` below is built
+  setUp(() => useTuning(tuning23Spawn()));
+  tearDownAll(resetTuning);
   final json =
       jsonDecode(File('test/fixtures/spawn_tables.json').readAsStringSync())
           as Map<String, dynamic>;

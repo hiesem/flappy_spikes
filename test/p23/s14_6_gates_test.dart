@@ -19,18 +19,18 @@ const gated = {
   'fever', 'lucky_spin', 'saw',
 };
 
-/// PRD-2.3 §14.6 the table: what is open from each `gamesPlayed`.
+/// PRD-2.3 §14.6 the table: what is open from each `gamesPlayed`
+/// (PRD-2.3.1 §0 live RC v21 gates 0/2/4/6/8/12; were 0/3/5/8/10/15/20).
 Set<String> openAt(int games) => {
-  'heart', 'star_trail', 'bullseye',
-  if (games >= 3) ...['switch_ring', 'train'],
-  if (games >= 5) ...[
+  'heart', 'star_trail', 'bullseye', 'switch_ring', 'train',
+  if (games >= 2) ...[
     'comet', 'portal', 'capsule', 'hourglass', 'mini_bird', 'coin_frenzy', //
     'shield',
   ],
-  if (games >= 8) ...['spring', 'pair', 'egg'],
-  if (games >= 10) ...['feather', 'puzzle_piece', 'piggy', 'jar'],
-  if (games >= 15) ...['fever', 'lucky_spin'],
-  if (games >= 20) 'saw',
+  if (games >= 4) ...['spring', 'pair', 'egg'],
+  if (games >= 6) ...['feather', 'puzzle_piece', 'piggy', 'jar'],
+  if (games >= 8) ...['fever', 'lucky_spin'],
+  if (games >= 12) 'saw',
 };
 
 /// What spawned in [seeds] long runs with the elements open at [games]
@@ -60,15 +60,15 @@ Set<String> spawnedAt(int games, {int seeds = 40, int slots = 220}) {
 
 void main() {
   group('§14.6 lifetime unlock gates (director)', () {
-    for (final games in [0, 3, 5, 8, 10, 15, 20]) {
+    for (final games in [0, 2, 4, 6, 8, 12, 20]) {
       test('gamesPlayed $games: exactly the listed elements can spawn', () {
         expect(spawnedAt(games), openAt(games));
       });
     }
 
-    test('in between, the lower gate holds (gamesPlayed 4, 9, 14, 19)', () {
-      expect(spawnedAt(4, seeds: 20), openAt(3));
-      expect(spawnedAt(19, seeds: 20), openAt(15));
+    test('in between, the lower gate holds (gamesPlayed 3, 11)', () {
+      expect(spawnedAt(3, seeds: 20), openAt(2));
+      expect(spawnedAt(11, seeds: 20), openAt(8));
     });
 
     test('a debug force ignores the gate; normal, angled and moving hoops '
@@ -114,7 +114,8 @@ void main() {
         expect(none.pieceThisRun, isFalse);
         final d = RunDirector(seed: seed, enabled: all, met: all);
         expect(d.featherThisRun && d.pieceThisRun, isFalse, reason: '$seed');
-        expect(d.featherAt, inInclusiveRange(10, 42));
+        // PRD-2.3.1 §0 live RC v21 bonus_feather_gaps [5,30] (was 10–40).
+        expect(d.featherAt, inInclusiveRange(5, 32));
         if (d.featherThisRun) feathers++;
         if (d.pieceThisRun) pieces++;
         // The piece alone (the feather not allowed this run) still comes.
@@ -153,13 +154,14 @@ void main() {
           ElementId.heart,
           ElementId.starTrail,
           ElementId.bullseye,
+          ElementId.switchRing, // gate 0 (PRD-2.3.1 §0 live RC v21)
+          ElementId.train,
           ElementId.saw, // forced
         ]));
         for (final e in [
           ElementId.fever,
           ElementId.comet,
           ElementId.portal,
-          ElementId.switchRing,
           ElementId.feather,
           ElementId.capsule,
         ]) {

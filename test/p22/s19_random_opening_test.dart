@@ -3,6 +3,7 @@ import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../p231/tuning_23.dart';
 
 /// PRD-2.2 §19: a different opening every run — random first heart, the
 /// early random pool, the feather / piece in ≈ 60 % of runs, single pickups
@@ -38,6 +39,11 @@ const singles = {
 };
 
 void main() {
+  // PRD-2.3.1 §0: the early pool and the feather / piece windows are measured
+  // on the 2.3 spawn set (test/p231/tuning_23.dart); the live set has its own
+  // checks.
+  setUp(() => useTuning(tuning23Spawn()));
+  tearDown(resetTuning);
   const seeds = 500;
 
   test('§19.5 tables: heart (5–27, then 17–27), early pool 4–9 with four '

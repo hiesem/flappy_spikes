@@ -150,9 +150,9 @@ The table is generated from `tuning_defaults.dart` by `dart run tool/tuning_sync
 |---|---|---|---|---|
 | `coin_hoop` | integer | `1` | §14.2 | Coins for a hoop pass that is not perfect |
 | `coin_perfect` | integer | `2` | §14.2 | Coins for a perfect pass (and every ride hoop) |
-| `coin_piggy_per` | integer | `2` | §14.2 | Piggy Bank: every this many caught coins pay 1 (rounded down; 20 on screen = max 10) |
-| `coin_jar` | integer | `8` | §14.2 | Firefly jar full (20 caught) |
-| `coin_spin_slices` | intList | `[1,2,3,5,1,2]` | §14.2 | Lucky spin slices (equal chance) |
+| `coin_piggy_per` | integer | `3` | §14.2 | Piggy Bank: every this many caught coins pay 1 (rounded down; 20 on screen = max 10) |
+| `coin_jar` | integer | `5` | §14.2 | Firefly jar full (20 caught) |
+| `coin_spin_slices` | intList | `[1,2,3,1,2,1]` | §14.2 | Lucky spin slices (equal chance) |
 | `coin_star_trail` | integer | `2` | §14.2 | Star trail 8/8 |
 | `coin_bullseye` | integer | `3` | §14.2 | Bullseye hit |
 | `coin_train` | integer | `1` | §14.2 | Ring train 3/3 |
@@ -166,14 +166,14 @@ The table is generated from `tuning_defaults.dart` by `dart run tool/tuning_sync
 | `point_chick` | integer | `1` | §14.3 | Chick: extra points per hoop passed |
 | `point_fever_streak` | integer | `5` | §14.3 | A perfect FEVER pass sets the streak to max(this, streak + 1) |
 | `point_pair_gift` | integer | `5` | §14.3 | Pair "+N score" gift |
-| `point_perfect_band` | curve | `[[0,0]]` | §14.3 | owner 2026-10-13: perfect band ±pt around the gap centre by hoop index; <= 0 = no band (any rim-free pass is perfect) |
-| `point_bullseye_band` | curve | `[[0,12]]` | §14.3 | owner 2026-10-13: Bullseye hit band ±pt by hoop index (hit check only; the drawing stays 12) |
-| `bonus_prizes` | intList | `[25,25,25,50,50,50,75,75,150]` | §14.2 | Balloon prizes (shuffled; the largest is the jackpot) |
+| `point_perfect_band` | curve | `[[1,18],[25,15],[50,13],[75,10],[100,8]]` | §14.3 | owner 2026-10-13: perfect band ±pt around the gap centre by hoop index; <= 0 = no band (any rim-free pass is perfect) |
+| `point_bullseye_band` | curve | `[[1,12],[50,10],[100,8]]` | §14.3 | owner 2026-10-13: Bullseye hit band ±pt by hoop index (hit check only; the drawing stays 12) |
+| `bonus_prizes` | intList | `[25,25,25,40,40,40,50,50,100]` | §14.2 | Balloon prizes (shuffled; the largest is the jackpot) |
 | `bonus_feather_chance` | decimal | `0.6` | §14.2 | Chance per run that the golden feather appears |
-| `bonus_feather_gaps` | intList | `[10,40]` | §14.2 | The feather spawns at a random gap in [min, max] |
+| `bonus_feather_gaps` | intList | `[5,30]` | §14.2 | The feather spawns at a random gap in [min, max] |
 | `puzzle_chance` | decimal | `0.6` | §14.2 | Chance per run that a puzzle piece appears |
-| `puzzle_gaps` | intList | `[10,40]` | §14.2 | The piece spawns at a random gap in [min, max] |
-| `puzzle_reward` | intList | `[50,150,5]` | §14.2 | Puzzle completion reward [min, max, step] |
+| `puzzle_gaps` | intList | `[5,30]` | §14.2 | The piece spawns at a random gap in [min, max] |
+| `puzzle_reward` | intList | `[40,100,5]` | §14.2 | Puzzle completion reward [min, max, step] |
 | `revive_ladder` | intList | `[250,500,1000,2000,4000,8000]` | §14.2 | Coin revive prices after the ad revive; no revive after the last |
 | `revive_min_hoops` | integer | `6` | §14.2 | A revive is offered from this many hoops passed |
 | `level_rewards` | intList | `[50,100,150,250,400,600,800,1000,2000,5000]` | §14.2 | One-time coin reward of levels 1-10 |
@@ -190,31 +190,31 @@ The table is generated from `tuning_defaults.dart` by `dart run tool/tuning_sync
 | `squeeze_first` | intList | `[25,40]` | §14.4 | First squeeze at a random hoop in [min, max] |
 | `squeeze_hold` | intList | `[5,10]` | §14.4 | Squeeze hold (hoops) in [min, max] |
 | `squeeze_gap` | intList | `[25,45]` | §14.4 | Next squeeze this many hoops after the previous ended, [min, max] |
-| `ride_comet_chance` | decimal | `0.02` | §14.5 | Comet chance per eligible normal hoop |
-| `ride_comet_from` | integer | `10` | §14.5 | Comet from this hoop index |
+| `ride_comet_chance` | decimal | `0.04` | §14.5 | Comet chance per eligible normal hoop |
+| `ride_comet_from` | integer | `8` | §14.5 | Comet from this hoop index |
 | `ride_comet_hoop_gap` | decimal | `560` | §14.5 | owner 2026-10-14: hoop spacing (pt) while a comet flies (normal 310; 560 = about 5-6 hoops per comet instead of 8-10) |
 | `ride_comet_tail` | decimal | `100` | §14.5 | PRD-2.3.1 §16: the last comet hoop sits this far (pt) before the predicted end of the comet |
 | `ride_comet_after_gap` | decimal | `310` | §14.5 | PRD-2.3.1 §16: the first normal hoop after a comet is at least this far (pt) after its predicted end |
-| `ride_comet_spacing` | integer | `25` | §14.5 | Comet at least this many hoops after the previous comet |
-| `ride_portal_first` | intList | `[40,60]` | §14.5 | First portal at a random hoop in [min, max] |
+| `ride_comet_spacing` | integer | `18` | §14.5 | Comet at least this many hoops after the previous comet |
+| `ride_portal_first` | intList | `[12,25]` | §14.5 | First portal at a random hoop in [min, max] |
 | `ride_portal_max` | integer | `2` | §14.5 | PRD-2.3.1 §17: at most this many portal rides per run (0 = no limit) |
-| `ride_portal_then` | intList | `[60,80]` | §14.5 | Next portal this many hoops after the previous, [min, max] |
-| `spawn_special_chance` | curve | `[[0,0],[7,0],[8,0.25],[19,0.25],[20,0.35],[34,0.35],[35,0.45],[49,0.45],[50,0.6]]` | §15.3 | owner 2026-10-14: chance a hoop slot is a special hoop, by hoop index (linear between keys; the default reproduces the 2.3 steps) |
-| `spawn_item_chance` | curve | `[[0,0],[4,0],[5,0.25],[19,0.25],[20,0.33]]` | §15.3 | owner 2026-10-14: chance a gap gets an optional item, by gap index (linear between keys; the default reproduces the 2.3 steps) |
-| `spawn_bullseye` | object | `{"from":6,"weight":20,"min_since":6,"cooldown":1}` | §15.3 | Special hoop row: from hoop, weight, min hoops since the same, cooldown |
-| `spawn_train` | object | `{"from":8,"weight":14,"min_since":10,"cooldown":2}` | §15.3 | Special hoop row |
-| `spawn_spring` | object | `{"from":10,"weight":12,"min_since":10,"cooldown":2}` | §15.3 | Special hoop row |
-| `spawn_switch` | object | `{"from":12,"weight":14,"min_since":8,"cooldown":1}` | §15.3 | Special hoop row |
-| `spawn_pair` | object | `{"from":12,"weight":10,"min_since":15,"cooldown":2}` | §15.3 | Special hoop row |
-| `spawn_fever` | object | `{"from":15,"weight":6,"min_since":20,"cooldown":1}` | §15.3 | Special hoop row |
-| `spawn_lucky_spin` | object | `{"from":15,"weight":8,"min_since":18,"cooldown":1}` | §15.3 | Special hoop row |
+| `ride_portal_then` | intList | `[80,90]` | §14.5 | Next portal this many hoops after the previous, [min, max] |
+| `spawn_special_chance` | curve | `[[0,0],[3,0],[4,0.4],[15,0.5],[30,0.6],[50,0.7]]` | §15.3 | owner 2026-10-14: chance a hoop slot is a special hoop, by hoop index (linear between keys; PRD-2.3.1 §0: default = live RC v21) |
+| `spawn_item_chance` | curve | `[[0,0],[2,0],[3,0.5],[20,0.55]]` | §15.3 | owner 2026-10-14: chance a gap gets an optional item, by gap index (linear between keys; PRD-2.3.1 §0: default = live RC v21) |
+| `spawn_bullseye` | object | `{"from":4,"weight":20,"min_since":2,"cooldown":1}` | §15.3 | Special hoop row: from hoop, weight, min hoops since the same, cooldown |
+| `spawn_train` | object | `{"from":5,"weight":14,"min_since":4,"cooldown":2}` | §15.3 | Special hoop row |
+| `spawn_spring` | object | `{"from":6,"weight":12,"min_since":4,"cooldown":2}` | §15.3 | Special hoop row |
+| `spawn_switch` | object | `{"from":7,"weight":14,"min_since":3,"cooldown":1}` | §15.3 | Special hoop row |
+| `spawn_pair` | object | `{"from":8,"weight":10,"min_since":6,"cooldown":2}` | §15.3 | Special hoop row |
+| `spawn_fever` | object | `{"from":10,"weight":6,"min_since":8,"cooldown":1}` | §15.3 | Special hoop row |
+| `spawn_lucky_spin` | object | `{"from":10,"weight":8,"min_since":7,"cooldown":1}` | §15.3 | Special hoop row |
 | `spawn_saw` | object | `{"from":20,"weight":18,"weight_from_45":26,"min_since":3,"cooldown":1}` | §15.3 | Special hoop row (weight from hoop 45) |
-| `spawn_star_trail` | object | `{"from":5,"weight":30,"min_since":8}` | §15.3 | Gap item row: from gap, weight, min gaps since the same |
-| `spawn_capsule` | object | `{"from":10,"weight":20,"min_since":20}` | §15.3 | Gap item row |
-| `spawn_egg` | object | `{"from":10,"weight":12,"min_since":15}` | §15.3 | Gap item row |
-| `spawn_piggy` | object | `{"from":12,"weight":10,"min_since":30}` | §15.3 | Gap item row |
-| `spawn_jar` | object | `{"from":15,"weight":10,"min_since":30}` | §15.3 | Gap item row |
-| `spawn_shield` | object | `{"from":12,"weight":6,"min_since":0,"max_per_run":1}` | §15.3 | Gap item row (max per run) |
+| `spawn_star_trail` | object | `{"from":3,"weight":30,"min_since":3}` | §15.3 | Gap item row: from gap, weight, min gaps since the same |
+| `spawn_capsule` | object | `{"from":6,"weight":20,"min_since":8}` | §15.3 | Gap item row |
+| `spawn_egg` | object | `{"from":6,"weight":12,"min_since":6}` | §15.3 | Gap item row |
+| `spawn_piggy` | object | `{"from":8,"weight":10,"min_since":12}` | §15.3 | Gap item row |
+| `spawn_jar` | object | `{"from":10,"weight":10,"min_since":12}` | §15.3 | Gap item row |
+| `spawn_shield` | object | `{"from":8,"weight":6,"min_since":0,"max_per_run":1}` | §15.3 | Gap item row (max per run) |
 | `spawn_heart_first` | intList | `[5,27]` | §15.3 | First heart at a random gap in [min, max] |
 | `spawn_heart_then` | intList | `[17,27]` | §15.3 | Next heart this many gaps later, [min, max] |
 | `spawn_pair_gifts` | object | `{"shield":25,"comet":20,"coins":25,"score":15,"fever":15}` | §15.3 | Pair gift weights |
@@ -222,22 +222,22 @@ The table is generated from `tuning_defaults.dart` by `dart run tool/tuning_sync
 | `gate_heart` | integer | `0` | §14.6 | Heart from gamesPlayed >= N |
 | `gate_star_trail` | integer | `0` | §14.6 | Star trail from gamesPlayed >= N |
 | `gate_bullseye` | integer | `0` | §14.6 | Bullseye from gamesPlayed >= N |
-| `gate_switch` | integer | `3` | §14.6 | Switch ring from gamesPlayed >= N |
-| `gate_train` | integer | `3` | §14.6 | Ring train from gamesPlayed >= N |
-| `gate_comet` | integer | `5` | §14.6 | Comet from gamesPlayed >= N |
-| `gate_portal` | integer | `5` | §14.6 | Portal from gamesPlayed >= N |
-| `gate_capsule` | integer | `5` | §14.6 | Capsules (hourglass, mini bird, coin frenzy) from gamesPlayed >= N |
-| `gate_shield` | integer | `5` | §14.6 | Shield pickup from gamesPlayed >= N |
-| `gate_spring` | integer | `8` | §14.6 | Spring from gamesPlayed >= N |
-| `gate_pair` | integer | `8` | §14.6 | Pair from gamesPlayed >= N |
-| `gate_egg` | integer | `8` | §14.6 | Egg from gamesPlayed >= N |
-| `gate_feather` | integer | `10` | §14.6 | Golden feather and balloon bonus from gamesPlayed >= N |
-| `gate_puzzle` | integer | `10` | §14.6 | Puzzle piece from gamesPlayed >= N |
-| `gate_piggy` | integer | `10` | §14.6 | Piggy bank from gamesPlayed >= N |
-| `gate_jar` | integer | `10` | §14.6 | Firefly jar from gamesPlayed >= N |
-| `gate_fever` | integer | `15` | §14.6 | FEVER from gamesPlayed >= N |
-| `gate_lucky_spin` | integer | `15` | §14.6 | Lucky spin from gamesPlayed >= N |
-| `gate_saw` | integer | `20` | §14.6 | Saw from gamesPlayed >= N |
+| `gate_switch` | integer | `0` | §14.6 | Switch ring from gamesPlayed >= N |
+| `gate_train` | integer | `0` | §14.6 | Ring train from gamesPlayed >= N |
+| `gate_comet` | integer | `2` | §14.6 | Comet from gamesPlayed >= N |
+| `gate_portal` | integer | `2` | §14.6 | Portal from gamesPlayed >= N |
+| `gate_capsule` | integer | `2` | §14.6 | Capsules (hourglass, mini bird, coin frenzy) from gamesPlayed >= N |
+| `gate_shield` | integer | `2` | §14.6 | Shield pickup from gamesPlayed >= N |
+| `gate_spring` | integer | `4` | §14.6 | Spring from gamesPlayed >= N |
+| `gate_pair` | integer | `4` | §14.6 | Pair from gamesPlayed >= N |
+| `gate_egg` | integer | `4` | §14.6 | Egg from gamesPlayed >= N |
+| `gate_feather` | integer | `6` | §14.6 | Golden feather and balloon bonus from gamesPlayed >= N |
+| `gate_puzzle` | integer | `6` | §14.6 | Puzzle piece from gamesPlayed >= N |
+| `gate_piggy` | integer | `6` | §14.6 | Piggy bank from gamesPlayed >= N |
+| `gate_jar` | integer | `6` | §14.6 | Firefly jar from gamesPlayed >= N |
+| `gate_fever` | integer | `8` | §14.6 | FEVER from gamesPlayed >= N |
+| `gate_lucky_spin` | integer | `8` | §14.6 | Lucky spin from gamesPlayed >= N |
+| `gate_saw` | integer | `12` | §14.6 | Saw from gamesPlayed >= N |
 | `ui_tap_reminder_s` | decimal | `4` | §10.3b | Tap reminder after this many seconds without a tap |
 | `ads_grace_runs` | integer | `5` | §18.4 | New-player grace: no interstitial until this many finished runs (or ads_grace_seconds of playtime) |
 | `ads_grace_seconds` | integer | `300` | §18.4 | New-player grace: foreground playtime since install (s) that ends it |

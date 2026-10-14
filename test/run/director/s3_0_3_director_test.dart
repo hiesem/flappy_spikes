@@ -4,6 +4,7 @@ import 'package:flappy_spikes/run/director/layout_sampler.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../p231/tuning_23.dart';
 
 /// Every element switched on and already met (no first-meet forcing).
 final Set<ElementId> all = ElementId.values.toSet();
@@ -43,6 +44,11 @@ List<(SlotPlan, GapPlan)> fly(
 }
 
 void main() {
+  // PRD-2.3.1 §0: the slot / gap order and the measured shares are calibrated
+  // on the 2.3 spawn set (test/p231/tuning_23.dart); the live set has its own
+  // checks.
+  setUp(() => useTuning(tuning23Spawn()));
+  tearDown(resetTuning);
   group('§3.0.3 determinism (§7: same seed → same sequence)', () {
     test('§3.0.3 same seed gives the same slot / gap sequence', () {
       final a = fly(director(seed: 1234), 150);
@@ -495,8 +501,8 @@ void main() {
           spins.add(p.coins);
         }
       }
-      // PRD-2.3 §14.2 the slices are [1, 2, 3, 5, 1, 2].
-      expect(spins, {1, 2, 3, 5});
+      // PRD-2.3.1 §0 (live RC v21): [1, 2, 3, 1, 2, 1] (2.3: with a +5).
+      expect(spins, {1, 2, 3});
     });
   });
 
@@ -834,8 +840,8 @@ void main() {
         );
         expect(d.rollBigHoopsDuration(), inInclusiveRange(30, 40));
         final bonus = d.rollPuzzleBonus();
-        // PRD-2.3 §14.2 the puzzle reward is 50–150 (was 50–250).
-        expect(bonus, inInclusiveRange(50, 150));
+        // PRD-2.3.1 §0 (live RC v21) the puzzle reward is 40–100 (2.3: 50–150).
+        expect(bonus, inInclusiveRange(40, 100));
         expect(bonus % 5, 0);
         expect(d.rollHourglassDuration(), inInclusiveRange(10, 20));
       }

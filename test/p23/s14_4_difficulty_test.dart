@@ -159,8 +159,10 @@ void main() {
   });
 
   group('§14.5 rides', () {
-    test('over 200 seeded runs the comet comes with ≈ 2 % per eligible '
-        'normal hoop from hoop 10, never within 25 hoops of the previous '
+    // PRD-2.3.1 §0 live RC v21: 4 % from hoop 8, spacing 18 (was 2 %, 10,
+    // 25).
+    test('over 200 seeded runs the comet comes with ≈ 4 % per eligible '
+        'normal hoop from hoop 8, never within 18 hoops of the previous '
         'comet', () {
       var comets = 0, eligible = 0;
       for (var seed = 1; seed <= 200; seed++) {
@@ -175,11 +177,11 @@ void main() {
         for (final (s, _) in plans) {
           if (s.kind == HoopKindId.portal) lastPortal = s.index;
           if (s.cometHang) {
-            expect(s.index, greaterThanOrEqualTo(10));
-            expect(s.index - last, greaterThanOrEqualTo(25),
+            expect(s.index, greaterThanOrEqualTo(8));
+            expect(s.index - last, greaterThanOrEqualTo(18),
                 reason: 'seed $seed');
           }
-          // Eligible: a normal slot from 10, ≥ 25 after the last comet, not
+          // Eligible: a normal slot from 8, ≥ 18 after the last comet, not
           // within 10 hoops of a portal.
           final nextPortal = portals.firstWhere(
             (p) => p > s.index,
@@ -188,8 +190,8 @@ void main() {
           final ok =
               s.kind == HoopKindId.normal &&
               !s.duringRide &&
-              s.index >= 10 &&
-              s.index - last >= 25 &&
+              s.index >= 8 &&
+              s.index - last >= 18 &&
               s.index - lastPortal >= RunConfig.cometPortalDistance &&
               nextPortal - s.index >= RunConfig.cometPortalDistance;
           if (ok) eligible++;
@@ -200,14 +202,16 @@ void main() {
         }
       }
       final rate = comets / eligible;
-      expect(rate, closeTo(.02, .006), reason: '$comets / $eligible');
+      expect(rate, closeTo(.04, .01), reason: '$comets / $eligible');
     });
 
-    test('the portal: first at hoop 40–60, then every 60–80', () {
+    // PRD-2.3.1 §0 live RC v21: first 12–25, then 80–90 (was 40–60, 60–80);
+    // §17 at most 2 per run.
+    test('the portal: first at hoop 12–25, then every 80–90, at most 2', () {
       final firsts = <int>[];
       for (var seed = 1; seed <= 200; seed++) {
         final d = director(seed: seed);
-        expect(d.portalAt, inInclusiveRange(40, 60));
+        expect(d.portalAt, inInclusiveRange(12, 25));
         final portals = [
           for (final (s, _) in fly(d, 260))
             if (s.kind == HoopKindId.portal) s.index,
@@ -215,14 +219,15 @@ void main() {
         expect(portals, isNotEmpty);
         // A portal may wait (comet distance, the squeeze, an activity), so
         // it is never earlier than its schedule.
-        expect(portals.first, greaterThanOrEqualTo(40));
+        expect(portals.first, greaterThanOrEqualTo(12));
+        expect(portals.length, lessThanOrEqualTo(2));
         firsts.add(portals.first);
         for (var k = 1; k < portals.length; k++) {
-          expect(portals[k] - portals[k - 1], greaterThanOrEqualTo(60));
+          expect(portals[k] - portals[k - 1], greaterThanOrEqualTo(80));
         }
       }
-      expect(firsts.where((f) => f <= 60).length, greaterThan(150));
-      expect(firsts.toSet().length, greaterThan(15));
+      expect(firsts.where((f) => f <= 25).length, greaterThan(150));
+      expect(firsts.toSet().length, greaterThan(10));
     });
 
     test('tuning: a remote comet chance and portal schedule reach the '
@@ -239,7 +244,7 @@ void main() {
         for (final (s, _) in fly(d, 80))
           if (s.cometHang) s.index,
       ];
-      expect(comets.first, inInclusiveRange(10, 15));
+      expect(comets.first, inInclusiveRange(8, 13)); // ride_comet_from 8
       expect(comets[1] - comets[0], greaterThanOrEqualTo(30));
     });
   });

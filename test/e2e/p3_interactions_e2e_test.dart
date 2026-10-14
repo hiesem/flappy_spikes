@@ -785,6 +785,10 @@ void main() {
             final flight = await flyRun(g, untilHoops: 6, maxSeconds: 30);
             expect(flight.hoops, greaterThanOrEqualTo(6));
           }
+          // PRD-2.3.1 §0: the live portal comes at hoop 12–25, so the
+          // flight to six hoops may enter one.
+          if (run.state.ride != null) await flyOutOfRide(g, maxSeconds: 45);
+          expect(run.state.ride, isNull);
           run.state
             ..egg ??= EggState()
             ..piggy ??= PiggyState()

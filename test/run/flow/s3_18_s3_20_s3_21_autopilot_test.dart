@@ -40,10 +40,14 @@ void main() {
             );
             final seen = <int>{};
             var specials = 0;
+            // PRD-2.3.1 §0: the live portal (hoop 12–25) lands in the saw's
+            // window from hoop 20 and keeps saws away from it; the saw
+            // flight is longer.
+            final saw = kind == HoopKindId.saw;
             final flight = await flyRun(
               game,
-              maxSeconds: 80,
-              untilHoops: 14,
+              maxSeconds: saw ? 120 : 80,
+              untilHoops: saw ? 24 : 14,
               onFrame: (r) {
                 if (!r.director.forcedQueue.contains(element)) {
                   r.debugForce(element);

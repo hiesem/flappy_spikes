@@ -4,6 +4,8 @@ import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../p231/tuning_23.dart';
+
 /// The elements a slot / gap plan shows (incl. modifiers and capsule types).
 Set<ElementId> shown(SlotPlan s, GapPlan g) => {
   s.element,
@@ -50,6 +52,11 @@ void main() {
   final firstMeet = ElementId.values.where((e) => e.firstMeet).toList();
 
   group('§3.0.8 first-meet guarantee', () {
+    // PRD-2.3.1 §0: the live set (RC v21) opens most rows before their
+    // static first-meet index, so the elements come naturally before the
+    // guarantee is due. The guarantee is measured on the 2.3 spawn set.
+    setUp(() => useTuning(tuning23Spawn()));
+    tearDown(resetTuning);
     for (final e in firstMeet) {
       test('§3.0.8 never-met ${e.storageId} is forced within 5 slots / gaps of '
           'hoop ${e.firstPossible}', () {

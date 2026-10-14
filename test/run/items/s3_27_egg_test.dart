@@ -79,16 +79,16 @@ void main() {
   }
 
   group('§3.27 / §5.26 Egg rules (pure)', () {
-    test('§3.27 5 rings, gap 10, weight 12, ≥ 15 apart, one egg / chick, '
+    test('§3.27 5 rings, gap 6, weight 12, ≥ 6 apart (live RC v21), one egg / chick, '
         'hit radius 16', () {
       expect(EggConfig.rings, 5);
       expect(ElementId.egg.firstPossible, 10);
       expect(ElementId.egg.kind, ElementKind.gap);
       expect(ElementId.egg.storageId, 'egg');
       final rule = DirectorTables.prd2.gapItems[ElementId.egg]!;
-      expect(rule.from, 10);
+      expect(rule.from, 6); // PRD-2.3.1 §0 live RC v21 (2.3: 10)
       expect(rule.weight, 12);
-      expect(rule.minSince, 15);
+      expect(rule.minSince, 6); // live RC v21 (2.3: 15)
       expect(PickupRadii.egg, 16);
       expect(PickupRadii.forElement(ElementId.egg), 16);
       expect(pickupKindFor(ElementId.egg), isA<EggPickupKind>());

@@ -19,21 +19,21 @@
         },
         "coin_piggy_per": {
           "defaultValue": {
-            "value": "2"
+            "value": "3"
           },
           "description": "§14.2 Piggy Bank: every this many caught coins pay 1 (rounded down; 20 on screen = max 10)",
           "valueType": "NUMBER"
         },
         "coin_jar": {
           "defaultValue": {
-            "value": "8"
+            "value": "5"
           },
           "description": "§14.2 Firefly jar full (20 caught)",
           "valueType": "NUMBER"
         },
         "coin_spin_slices": {
           "defaultValue": {
-            "value": "[1,2,3,5,1,2]"
+            "value": "[1,2,3,1,2,1]"
           },
           "description": "§14.2 Lucky spin slices (equal chance)",
           "valueType": "JSON"
@@ -136,14 +136,14 @@
         },
         "point_perfect_band": {
           "defaultValue": {
-            "value": "[[0,0]]"
+            "value": "[[1,18],[25,15],[50,13],[75,10],[100,8]]"
           },
           "description": "§14.3 owner 2026-10-13: perfect band ±pt around the gap centre by hoop index; <= 0 = no band (any rim-free pass is perfect)",
           "valueType": "JSON"
         },
         "point_bullseye_band": {
           "defaultValue": {
-            "value": "[[0,12]]"
+            "value": "[[1,12],[50,10],[100,8]]"
           },
           "description": "§14.3 owner 2026-10-13: Bullseye hit band ±pt by hoop index (hit check only; the drawing stays 12)",
           "valueType": "JSON"
@@ -155,7 +155,7 @@
       "parameters": {
         "bonus_prizes": {
           "defaultValue": {
-            "value": "[25,25,25,50,50,50,75,75,150]"
+            "value": "[25,25,25,40,40,40,50,50,100]"
           },
           "description": "§14.2 Balloon prizes (shuffled; the largest is the jackpot)",
           "valueType": "JSON"
@@ -169,7 +169,7 @@
         },
         "bonus_feather_gaps": {
           "defaultValue": {
-            "value": "[10,40]"
+            "value": "[5,30]"
           },
           "description": "§14.2 The feather spawns at a random gap in [min, max]",
           "valueType": "JSON"
@@ -188,14 +188,14 @@
         },
         "puzzle_gaps": {
           "defaultValue": {
-            "value": "[10,40]"
+            "value": "[5,30]"
           },
           "description": "§14.2 The piece spawns at a random gap in [min, max]",
           "valueType": "JSON"
         },
         "puzzle_reward": {
           "defaultValue": {
-            "value": "[50,150,5]"
+            "value": "[40,100,5]"
           },
           "description": "§14.2 Puzzle completion reward [min, max, step]",
           "valueType": "JSON"
@@ -344,14 +344,14 @@
       "parameters": {
         "ride_comet_chance": {
           "defaultValue": {
-            "value": "0.02"
+            "value": "0.04"
           },
           "description": "§14.5 Comet chance per eligible normal hoop",
           "valueType": "NUMBER"
         },
         "ride_comet_from": {
           "defaultValue": {
-            "value": "10"
+            "value": "8"
           },
           "description": "§14.5 Comet from this hoop index",
           "valueType": "NUMBER"
@@ -379,14 +379,14 @@
         },
         "ride_comet_spacing": {
           "defaultValue": {
-            "value": "25"
+            "value": "18"
           },
           "description": "§14.5 Comet at least this many hoops after the previous comet",
           "valueType": "NUMBER"
         },
         "ride_portal_first": {
           "defaultValue": {
-            "value": "[40,60]"
+            "value": "[12,25]"
           },
           "description": "§14.5 First portal at a random hoop in [min, max]",
           "valueType": "JSON"
@@ -400,7 +400,7 @@
         },
         "ride_portal_then": {
           "defaultValue": {
-            "value": "[60,80]"
+            "value": "[80,90]"
           },
           "description": "§14.5 Next portal this many hoops after the previous, [min, max]",
           "valueType": "JSON"
@@ -412,63 +412,63 @@
       "parameters": {
         "spawn_special_chance": {
           "defaultValue": {
-            "value": "[[0,0],[7,0],[8,0.25],[19,0.25],[20,0.35],[34,0.35],[35,0.45],[49,0.45],[50,0.6]]"
+            "value": "[[0,0],[3,0],[4,0.4],[15,0.5],[30,0.6],[50,0.7]]"
           },
-          "description": "§15.3 owner 2026-10-14: chance a hoop slot is a special hoop, by hoop index (linear between keys; the default reproduces the 2.3 steps)",
+          "description": "§15.3 owner 2026-10-14: chance a hoop slot is a special hoop, by hoop index (linear between keys; PRD-2.3.1 §0: default = live RC v21)",
           "valueType": "JSON"
         },
         "spawn_item_chance": {
           "defaultValue": {
-            "value": "[[0,0],[4,0],[5,0.25],[19,0.25],[20,0.33]]"
+            "value": "[[0,0],[2,0],[3,0.5],[20,0.55]]"
           },
-          "description": "§15.3 owner 2026-10-14: chance a gap gets an optional item, by gap index (linear between keys; the default reproduces the 2.3 steps)",
+          "description": "§15.3 owner 2026-10-14: chance a gap gets an optional item, by gap index (linear between keys; PRD-2.3.1 §0: default = live RC v21)",
           "valueType": "JSON"
         },
         "spawn_bullseye": {
           "defaultValue": {
-            "value": "{\"from\":6,\"weight\":20,\"min_since\":6,\"cooldown\":1}"
+            "value": "{\"from\":4,\"weight\":20,\"min_since\":2,\"cooldown\":1}"
           },
           "description": "§15.3 Special hoop row: from hoop, weight, min hoops since the same, cooldown",
           "valueType": "JSON"
         },
         "spawn_train": {
           "defaultValue": {
-            "value": "{\"from\":8,\"weight\":14,\"min_since\":10,\"cooldown\":2}"
+            "value": "{\"from\":5,\"weight\":14,\"min_since\":4,\"cooldown\":2}"
           },
           "description": "§15.3 Special hoop row",
           "valueType": "JSON"
         },
         "spawn_spring": {
           "defaultValue": {
-            "value": "{\"from\":10,\"weight\":12,\"min_since\":10,\"cooldown\":2}"
+            "value": "{\"from\":6,\"weight\":12,\"min_since\":4,\"cooldown\":2}"
           },
           "description": "§15.3 Special hoop row",
           "valueType": "JSON"
         },
         "spawn_switch": {
           "defaultValue": {
-            "value": "{\"from\":12,\"weight\":14,\"min_since\":8,\"cooldown\":1}"
+            "value": "{\"from\":7,\"weight\":14,\"min_since\":3,\"cooldown\":1}"
           },
           "description": "§15.3 Special hoop row",
           "valueType": "JSON"
         },
         "spawn_pair": {
           "defaultValue": {
-            "value": "{\"from\":12,\"weight\":10,\"min_since\":15,\"cooldown\":2}"
+            "value": "{\"from\":8,\"weight\":10,\"min_since\":6,\"cooldown\":2}"
           },
           "description": "§15.3 Special hoop row",
           "valueType": "JSON"
         },
         "spawn_fever": {
           "defaultValue": {
-            "value": "{\"from\":15,\"weight\":6,\"min_since\":20,\"cooldown\":1}"
+            "value": "{\"from\":10,\"weight\":6,\"min_since\":8,\"cooldown\":1}"
           },
           "description": "§15.3 Special hoop row",
           "valueType": "JSON"
         },
         "spawn_lucky_spin": {
           "defaultValue": {
-            "value": "{\"from\":15,\"weight\":8,\"min_since\":18,\"cooldown\":1}"
+            "value": "{\"from\":10,\"weight\":8,\"min_since\":7,\"cooldown\":1}"
           },
           "description": "§15.3 Special hoop row",
           "valueType": "JSON"
@@ -482,42 +482,42 @@
         },
         "spawn_star_trail": {
           "defaultValue": {
-            "value": "{\"from\":5,\"weight\":30,\"min_since\":8}"
+            "value": "{\"from\":3,\"weight\":30,\"min_since\":3}"
           },
           "description": "§15.3 Gap item row: from gap, weight, min gaps since the same",
           "valueType": "JSON"
         },
         "spawn_capsule": {
           "defaultValue": {
-            "value": "{\"from\":10,\"weight\":20,\"min_since\":20}"
+            "value": "{\"from\":6,\"weight\":20,\"min_since\":8}"
           },
           "description": "§15.3 Gap item row",
           "valueType": "JSON"
         },
         "spawn_egg": {
           "defaultValue": {
-            "value": "{\"from\":10,\"weight\":12,\"min_since\":15}"
+            "value": "{\"from\":6,\"weight\":12,\"min_since\":6}"
           },
           "description": "§15.3 Gap item row",
           "valueType": "JSON"
         },
         "spawn_piggy": {
           "defaultValue": {
-            "value": "{\"from\":12,\"weight\":10,\"min_since\":30}"
+            "value": "{\"from\":8,\"weight\":10,\"min_since\":12}"
           },
           "description": "§15.3 Gap item row",
           "valueType": "JSON"
         },
         "spawn_jar": {
           "defaultValue": {
-            "value": "{\"from\":15,\"weight\":10,\"min_since\":30}"
+            "value": "{\"from\":10,\"weight\":10,\"min_since\":12}"
           },
           "description": "§15.3 Gap item row",
           "valueType": "JSON"
         },
         "spawn_shield": {
           "defaultValue": {
-            "value": "{\"from\":12,\"weight\":6,\"min_since\":0,\"max_per_run\":1}"
+            "value": "{\"from\":8,\"weight\":6,\"min_since\":0,\"max_per_run\":1}"
           },
           "description": "§15.3 Gap item row (max per run)",
           "valueType": "JSON"
@@ -578,112 +578,112 @@
         },
         "gate_switch": {
           "defaultValue": {
-            "value": "3"
+            "value": "0"
           },
           "description": "§14.6 Switch ring from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_train": {
           "defaultValue": {
-            "value": "3"
+            "value": "0"
           },
           "description": "§14.6 Ring train from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_comet": {
           "defaultValue": {
-            "value": "5"
+            "value": "2"
           },
           "description": "§14.6 Comet from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_portal": {
           "defaultValue": {
-            "value": "5"
+            "value": "2"
           },
           "description": "§14.6 Portal from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_capsule": {
           "defaultValue": {
-            "value": "5"
+            "value": "2"
           },
           "description": "§14.6 Capsules (hourglass, mini bird, coin frenzy) from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_shield": {
           "defaultValue": {
-            "value": "5"
+            "value": "2"
           },
           "description": "§14.6 Shield pickup from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_spring": {
           "defaultValue": {
-            "value": "8"
+            "value": "4"
           },
           "description": "§14.6 Spring from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_pair": {
           "defaultValue": {
-            "value": "8"
+            "value": "4"
           },
           "description": "§14.6 Pair from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_egg": {
           "defaultValue": {
-            "value": "8"
+            "value": "4"
           },
           "description": "§14.6 Egg from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_feather": {
           "defaultValue": {
-            "value": "10"
+            "value": "6"
           },
           "description": "§14.6 Golden feather and balloon bonus from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_puzzle": {
           "defaultValue": {
-            "value": "10"
+            "value": "6"
           },
           "description": "§14.6 Puzzle piece from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_piggy": {
           "defaultValue": {
-            "value": "10"
+            "value": "6"
           },
           "description": "§14.6 Piggy bank from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_jar": {
           "defaultValue": {
-            "value": "10"
+            "value": "6"
           },
           "description": "§14.6 Firefly jar from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_fever": {
           "defaultValue": {
-            "value": "15"
+            "value": "8"
           },
           "description": "§14.6 FEVER from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_lucky_spin": {
           "defaultValue": {
-            "value": "15"
+            "value": "8"
           },
           "description": "§14.6 Lucky spin from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_saw": {
           "defaultValue": {
-            "value": "20"
+            "value": "12"
           },
           "description": "§14.6 Saw from gamesPlayed >= N",
           "valueType": "NUMBER"

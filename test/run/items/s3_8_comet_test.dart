@@ -25,6 +25,7 @@ import 'package:flappy_spikes/run/run_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers.dart';
+import '../../p231/tuning_23.dart';
 
 CometFeature _comet(RunController r) =>
     r.features.whereType<CometFeature>().single;
@@ -487,6 +488,11 @@ void main() {
           for (final e in ElementId.values)
             if (e != ElementId.comet) e.storageId,
         });
+        // PRD-2.3.1 §0: the live portal (hoop 12–25) would sit right here
+        // and keep the comet its distance away; the 2.3 schedule (40–60)
+        // leaves the first-meet window free.
+        useTuning(tuning23(['ride_portal_first', 'ride_portal_then']));
+        addTearDown(resetTuning);
         final run = await startRun(game, startHoopIndex: 10);
         await _flyUntil(
           game,

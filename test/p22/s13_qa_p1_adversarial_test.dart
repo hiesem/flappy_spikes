@@ -18,6 +18,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
+import '../p231/tuning_23.dart';
 
 /// PRD-2.2 QA P1: integration boundaries missed by the builder suites.
 Future<List<dynamic>> serverChecks(List<Map<String, Object?>> cases) async {
@@ -112,7 +113,13 @@ void main() {
   for (final (dy, vy, hit) in [(10.0, 500.0, true), (26.0, -500.0, false)]) {
     gameCase(
       '§11.2 Bullseye uses crossing offset: start $dy, velocity $vy',
-      setUp: (g, _) => prepare(g),
+      setUp: (g, _) {
+        // The 2.3 rule this pins (any rim-free pass is perfect): no perfect
+        // band (PRD-2.3.1 §0: the live default is ±18).
+        useTuning(tuning23(['point_perfect_band']));
+        addTearDown(resetTuning);
+        return prepare(g);
+      },
       verify: (g, _) async {
         final run = await startRun(
           g,

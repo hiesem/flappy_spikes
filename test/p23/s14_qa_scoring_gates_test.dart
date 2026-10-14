@@ -6,6 +6,7 @@ import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/items/egg.dart';
 import 'package:flappy_spikes/run/run_state.dart';
+import 'package:flappy_spikes/services/tuning.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -56,11 +57,35 @@ void main() {
       gameSize: Vector2(320, 711),
     ).testGameWidget(
       '§14.3 ${kind.name} offset $dy with chick: +1 point, coins never doubled',
-      setUp: boot,
+      setUp: (g, t) async {
+        // The 2.3 rule this test pins: no perfect band (any rim-free pass is
+        // perfect); the live default band (PRD-2.3.1 §0) is ±18 at hoop 15.
+        Tuning.instance = Tuning(
+          active: TuningValues.resolve({
+            'ui_unlock_best': '0',
+            'point_perfect_band': '[[0,0]]',
+          }),
+        );
+        TuningValues.current = Tuning.instance.active;
+        addTearDown(() {
+          Tuning.instance = Tuning(
+            active: TuningValues.resolve({'ui_unlock_best': '0'}),
+          );
+          TuningValues.current = Tuning.instance.active;
+        });
+        await boot(g, t);
+      },
       verify: (g, _) async {
         final run = await startRun(g, startHoopIndex: 15, force: [element]);
-        final hoop = await flyToHoop(g, kind, element);
+        // PRD-2.3.1 §0: with the denser live spawn set the forced reward
+        // ring waits longer for a free slot (§17.3 one big bonus).
+        final hoop = await flyToHoop(g, kind, element, maxSeconds: 120);
         expect(hoop, isNotNull);
+        // Pass every hoop before it first, so only [hoop] scores below.
+        await flyUntil(
+          g,
+          (_) => hoopsOf(g).every((h) => h.resolved || h.planeX >= hoop!.planeX),
+        );
         run.state.streak = 0;
         run.state.egg = EggState()..stage = EggStage.chick;
         final score = run.state.score;

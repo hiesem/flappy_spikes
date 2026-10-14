@@ -11,6 +11,7 @@ import 'package:flappy_spikes/run/run_spawner.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
+import '../p231/tuning_23.dart';
 
 /// PRD-2.3 §17.6 the invariant soak: seeded autopilot runs at 568 and
 /// 711 pt, every element unlocked (the harness ignores the gates), Big
@@ -37,6 +38,12 @@ final Map<String, Object> _allMet = {
 };
 
 void main() {
+  // PRD-2.3.1 §0: the soak and its bonus-count guard are calibrated on the
+  // 2.3 spawn set (test/p231/tuning_23.dart). On the live set (RC v21) the
+  // rule cuts more (3 runs / config: 27 % fewer big bonuses per 50 hoops,
+  // the director model 43 %): reported to the owner (PRD-2.3 §17.6).
+  setUp(() => useTuning(tuning23Spawn()));
+  tearDown(resetTuning);
   for (final rule in [true, false]) {
     for (final h in [568.0, 711.0]) {
       for (final big in [false, true]) {

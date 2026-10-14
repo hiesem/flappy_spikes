@@ -40,10 +40,14 @@ void main() {
             );
             final seen = <int>{};
             var specials = 0;
+            // PRD-2.3.1 §0: with the live spawn set a reward ring is on
+            // screen most of the time (§17.3 one big bonus), so a forced
+            // FEVER waits up to ≈ 25 hoops: its flight is longer.
+            final fever = kind == HoopKindId.fever;
             final flight = await flyRun(
               game,
-              maxSeconds: 80,
-              untilHoops: 14,
+              maxSeconds: fever ? 160 : 80,
+              untilHoops: fever ? 45 : 14,
               onFrame: (r) {
                 if (!r.director.forcedQueue.contains(element)) {
                   r.debugForce(element);

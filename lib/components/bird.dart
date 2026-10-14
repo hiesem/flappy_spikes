@@ -369,6 +369,17 @@ class Bird extends BodyComponent<FlappySpikesGame>
 
   double get spriteOpacity => _spriteOpacity;
 
+  /// PRD-2.3.1 §13: the opacity the bird art is drawn with right now — the
+  /// one source of truth for "is the bird visible" (a ride's hide via
+  /// [placeRide], the game-over / saw / phoenix fades and the
+  /// invulnerability flash all land here). Things worn on the bird (the
+  /// shield ring) draw with it. 0 before [onLoad].
+  double get drawnOpacity => isLoaded ? _look.opacity : 0;
+
+  /// PRD-2.3.1 §13: the bird art's current scale (a ride's squash / the
+  /// storm's depth via [placeRide]; 1 otherwise).
+  double get drawnScale => isLoaded ? _look.scale.x : 1;
+
   @override
   void update(double dt) {
     super.update(dt);

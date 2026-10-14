@@ -1710,9 +1710,11 @@ production build has the flag off and uses these values only. Full key table:
   zigzag ±70 pt; the first hoop after the comet is at ≥ the predicted end +
   `ride_comet_after_gap` (310 pt) at a normal height.
 - DEVIATION (PRD-2.3.1 §17): at most `ride_portal_max` (2; 0 = no limit) portals per run;
-  every placed portal counts (debug-forced and first-meet too; one turned plain and owed
-  again does not), a revive does not reset the count, and at the cap the portal schedule
-  stops. Comets are unaffected.
+  every placed portal counts (debug-forced and first-meet too, and one later turned plain
+  or cleared by a revive / ride / activity: the count never goes down), a revive does not
+  reset the count, and at the cap the portal schedule stops: nothing waits, nothing is
+  owed, and a debug-forced portal is discarded (with cap 0 forcing is unrestricted).
+  Comets are unaffected.
 
 ### PRD-2.3.1 §0: the live Remote Config tuning is the in-app default (P231-T, 2026-10-14)
 

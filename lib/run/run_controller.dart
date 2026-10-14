@@ -9,6 +9,8 @@ import '../components/bird.dart';
 import '../game/flappy_game.dart';
 import '../game/sound.dart';
 import '../menu/powerup_slot.dart';
+import '../services/e2e.dart' show E2EHooks, kE2E;
+import '../services/soak.dart' show kSoak;
 import 'config/gates_config.dart';
 import 'config/physics_config.dart';
 import 'config/revive_config.dart';
@@ -109,7 +111,36 @@ class RunController extends Component {
     spawner = RunSpawner(this);
     features = buildRunFeatures();
     _bestBefore = storage.bestScore;
+    // region P231-E — PRD-2.3.1 §12.2 a debug / test start never counts
+    final d = game.runDebug;
+    final debug = FlappySpikesGame.debugAvailable;
+    _cleanStart =
+        setup.forced.isEmpty &&
+        setup.forcedRide == null &&
+        setup.startHoopIndex == 0 &&
+        !setup.ignoreGates &&
+        !kE2E &&
+        !kSoak &&
+        !E2EHooks.autopilot &&
+        !(debug && (d.god || d.bot));
+    // endregion P231-E
   }
+
+  // region P231-E — PRD-2.3.1 §12.2
+  late final bool _cleanStart;
+  bool _debugTouched = false;
+
+  /// Whether this run counts for achievements: a normal run in any mode,
+  /// never one with a debug or test start (forced elements / ride, god
+  /// mode, `startHoopIndex`, `ignoreGates`, `debugPass`, the force menu,
+  /// the autopilot / soak build, FS_E2E). Tests can opt in with
+  /// `AchievementTracker.countDebugRuns`.
+  bool get countsForAchievements {
+    if (game.achievements.countDebugRuns) return true;
+    if (FlappySpikesGame.debugAvailable && game.runDebug.god) return false;
+    return _cleanStart && !_debugTouched;
+  }
+  // endregion P231-E
 
   final RunSetup setup;
   final FlappySpikesGame game;
@@ -663,6 +694,7 @@ class RunController extends Component {
   /// PRD-2.2 §11: [clean] makes a non-perfect pass a clean off-centre one
   /// (no rim touched) instead of a graze.
   void debugPass({bool perfect = false, bool clean = false}) {
+    _debugTouched = true; // PRD-2.3.1 §12.2
     final isClean = clean && !perfect;
     state.passes++;
     state.hoopsPassed++;
@@ -850,10 +882,14 @@ class RunController extends Component {
   /// §3.0.8 debug force: the next slot / gap; elements the director does not
   /// place (squeeze) go to their feature as [DebugForced].
   void debugForce(ElementId e) {
+    _debugTouched = true; // PRD-2.3.1 §12.2
     if (!director.debugForce(e)) events.emit(DebugForced(e));
   }
 
-  void debugForceRide(RideId id) => director.debugForceRide(id);
+  void debugForceRide(RideId id) {
+    _debugTouched = true; // PRD-2.3.1 §12.2
+    director.debugForceRide(id);
+  }
 
   /// Freezes the run at its current time (screenshot tests, ARCH §7.1).
   void debugFreeze([double? t]) => _frozen = true;

@@ -1,3 +1,4 @@
+import 'package:flappy_spikes/menu/free_coins_policy.dart';
 import 'package:flappy_spikes/components/bird.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
@@ -79,7 +80,7 @@ void main() {
         expect(
           g.menu.wallet.balance,
           outcome == 'complete' && placement == AdPlacement.shopFreeCoins
-              ? 75
+              ? FreeCoinsPolicy.reward // PRD-2.3.1 §5 (75)
               : 0,
         );
       });

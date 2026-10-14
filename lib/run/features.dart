@@ -1,3 +1,4 @@
+import '../achievements/achievements_feature.dart'; // P231-E
 import 'hoops/motion/moving_rings_feature.dart';
 import 'items/analytics_router.dart';
 import 'items/big_hoops.dart';
@@ -101,6 +102,9 @@ List<RunFeature> buildRunFeatures() => [
   // region WP-G3 — ride / power-up sound preload (PRD-2.2 §18.4)
   SoundPreloadFeature(),
   // endregion WP-G3
+  // region P231-E — achievements (PRD-2.3.1 §12.2)
+  AchievementsFeature(),
+  // endregion P231-E
   // region WP-2d — revive rules (PRD-2 §3.14); keep last
   ReviveRulesFeature(),
   // endregion WP-2d

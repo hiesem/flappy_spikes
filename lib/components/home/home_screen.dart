@@ -35,6 +35,7 @@ const List<String> kHomeImages = [
   'menu/noads.png',
   'menu/trophy.png',
   'menu/lock.png',
+  'menu/medal.png', // PRD-2.3.1 §12.5
 ];
 
 /// The 2.0 home screen, v3 layout (PRD-home-v3 §3, approved design
@@ -72,6 +73,11 @@ class HomeScreen extends PositionComponent
   /// Games leaderboard; its glyph wiggles every 10 s.
   late final MenuButton trophyButton;
   late final WiggleEffect trophyWiggle;
+
+  /// PRD-2.3.1 §12.5 the medal box right of the trophy: opens the native
+  /// achievements list; wiggles like the trophy, 5 s after it.
+  late final MenuButton achievementsButton;
+  late final WiggleEffect medalWiggle;
   late final MenuText title;
   late final MenuText subtitle;
 
@@ -150,6 +156,25 @@ class HomeScreen extends PositionComponent
       isActive: _isActive,
       children: [trophyIcon],
     );
+    // region P231-E — PRD-2.3.1 §12.5 the achievements (medal) button
+    final medalRect = Config.homeAchievementsRectFor(h);
+    final medalIcon = MenuIcon(
+      icon('medal'),
+      size: Vector2.all(Config.homeMedalIconSize),
+      position: medalRect.size.toVector2() / 2,
+      anchor: Anchor.center,
+    );
+    medalWiggle = WiggleEffect(medalIcon);
+    medalIcon.decorator.addLast(medalWiggle);
+    achievementsButton = MenuButton(
+      color: Config.menuPink,
+      position: medalRect.topLeft.toVector2(),
+      size: medalRect.size.toVector2(),
+      onPressed: () => game.showAchievements(sfx: Sfx.skTap),
+      isActive: _isActive,
+      children: [medalIcon],
+    );
+    // endregion P231-E
     // §8.2: one idle clock for the screen's live effects.
     clock = LiveClock(
       paused: () => game.liveMotionPaused,
@@ -288,6 +313,14 @@ class HomeScreen extends PositionComponent
           still ? (scale: 1, degrees: 0) : LiveCurves.trophyWiggle(t),
         ),
       )
+      // PRD-2.3.1 §12.5 the medal: the trophy's wiggle, 5 s later.
+      ..bind(
+        (t, still) => medalWiggle.setPose(
+          still
+              ? (scale: 1, degrees: 0)
+              : LiveCurves.trophyWiggle(t - Config.homeMedalWiggleDelay),
+        ),
+      )
       // §3.2: the emblem's sweep + per-level idle; reduce motion freezes
       // it (static picture, no sweep).
       ..bind((t, still) {
@@ -300,6 +333,7 @@ class HomeScreen extends PositionComponent
       clock,
       gearButton,
       trophyButton,
+      achievementsButton, // PRD-2.3.1 §12.5
       titleHotspot,
       title,
       subtitle,
@@ -934,7 +968,13 @@ class CoinPill extends MenuButton
       final eased = _countLinear ? u : 1 - math.pow(1 - u, 3);
       _shown = (from + (target - from) * eased).round();
     }
-    label.text = formatCoins(_shown);
+    // PRD-2.3.1 §12.5 the pill stays clear of the Home medal button: a
+    // number wider than its room shrinks (the pill keeps its max width).
+    label.fitWidth(
+      formatCoins(_shown),
+      Config.homeCoinPillMaxWidth -
+          (pillHeight + plusGap + coinGap + coinSize + padRight),
+    );
     const textX = pillHeight + plusGap;
     label.position = Vector2(textX, (pillHeight - label.height) / 2);
     final coinX = textX + label.width + coinGap;

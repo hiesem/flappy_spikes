@@ -222,6 +222,7 @@ the HUD" ease). Details and owners in §3 and §21.
 | `lib/versus/run_entry.dart` | 5b | Firestore entry (de)serialisation, mirrors `functions/src/schema.ts` | — |
 | `lib/services/versus_service.dart` | interface + `NoopVersusService` 0b; Firebase impl 5b | §6.3 | pattern of `GameServices` |
 | `lib/services/versus_auth.dart` | P231-B | PRD-2.3.1 §2: `VersusAuth` port (uid, isAnonymous, linkedToPlayGames, sign-in anonymous / with credential, link, sign-out, reload, refreshToken) + `FirebaseVersusAuth`; `FirebaseVersusBackend(auth:, appCheck:, analytics:)` runs the link / switch and the start-up self-healing over it. `PlatformIdentity.firebaseCredential({bool fresh})` (fresh = `forceRefreshToken`). Link outcomes log `versus: link <outcome> <code>` in release + event `versus_link {outcome, code}` | `FirebaseAuth` |
+| `lib/achievements/` | P231-E | PRD-2.3.1 §12: `achievement_catalog.dart` (`enum AchievementId`, 48: key, title, descriptions, points, hidden, `androidId` from Play Console, `iosId` = `fs_ach_<key>`; the single source of the store kits), `achievements.dart` (`AchievementTracker` = `game.achievements`: idempotent `unlock`, the counters (`achRides`, `achItems`, `achVersusWins`, daily streak), the toast queue, `syncAll()` over `GameServices.unlockAchievement`), `achievements_feature.dart` (the run rules, a `RunFeature`; only while `RunController.countsForAchievements`: never a forced / `startHoopIndex` / `ignoreGates` / god / bot / `debugPass` / force-menu / e2e / soak run), `achievement_toast.dart` (the results-page / shop pill, one at a time, "+N more"). Ranks and daily run in `FlappySpikesGame.endRun`, GOLDEN EGG in `BonusScreen.tapTile` (`achievements.lastRunCounted`), the shop in `buyTriedOnItem` | — |
 | `lib/services/identity.dart` | 5b | `PlatformIdentity` (§6.4) | uses `games_services` |
 | `lib/services/reminders.dart` | 4b | `Reminders` service + pure `ReminderScheduler` (§3.34) | — |
 | `lib/services/e2e.dart` | 0b | `const bool kE2E = bool.fromEnvironment('FS_E2E'); const int kE2ESeed = int.fromEnvironment('FS_E2E_SEED', defaultValue: 7); const String kAppCheckDebugToken = String.fromEnvironment('FS_APPCHECK_DEBUG_TOKEN');` + `E2EHooks` | — |
@@ -479,6 +480,8 @@ Catalogue (WP-0b defines all of these; a WP that needs a new event appends it in
 | `SqueezePhase` | phase, index | squeeze |
 | `RevivePhoenixStarted` / `Revived` | kind (ad/coins), price | revive |
 | `RunEnded` | summary | controller |
+| `EggHatched` / `JarFilled` / `StarTrailPerfect` / `PuzzleCompleted` | — | egg / jar / star trail / puzzle features, next to their `track(...)` (PRD-2.3.1 §12.2, P231-E) |
+| `FeverStarted` | — | `FeverFeature._light(fever: true)`: every real FEVER (the ring's perfect pass, the pair gift), also when already burning; never the streak fire (PRD-2.3.1 §12.2) |
 
 ### 2.5 `HoopKind`
 
@@ -756,6 +759,11 @@ default). Later WPs only read/write them.
 | `playtimeSeconds` | int 0 | `playtimeSeconds` | `savePlaytimeSeconds(int)` | **PRD-2.3 §18.3**: foreground seconds since install (resumed, outside full-screen ads) until the new-player grace ends; written every 10 s, on going to the background and at run end; kept by "Delete my data" |
 | `firstInterstitialShown` | bool false | `firstInterstitialShown` | `saveFirstInterstitialShown()` | **PRD-2.3 §18.4**: the one-time `first_interstitial` event went out |
 | `lastRatingRequestAt` | int 0 (seconds since the epoch) | `lastRatingRequestAt` | `saveLastRatingRequestAt(int)` | **PRD-2.3 §23.2**: the last request of the store's rating sheet (30-day cooldown); kept by "Delete my data" |
+| `achUnlocked` / `achReported` | Set\<String\> empty | `achUnlocked`, `achReported` | `saveAchUnlocked`, `saveAchReported` | **PRD-2.3.1 §12.3** (P231-E): unlocked achievement keys (local truth) / keys the platform confirmed for `achReportedPlayer`. Kept by "Delete my data"; cleared by `resetMenuState` and the debug "Achievements: reset local" (`resetAchievements()`) |
+| `achReportedPlayer` | String '' | `achReportedPlayer` | `saveAchReportedPlayer(String)` | **PRD-2.3.1 §12.4**: the platform player id `achReported` belongs to; a different player clears `achReported` (everything is reported again) |
+| `achRides` / `achItems` | Set\<String\> empty | `achRides`, `achItems` | `saveAchRides`, `saveAchItems` | **PRD-2.3.1 §12.2**: portal rides finished (`RideId.storageId`) / item achievement keys caught (FREQUENT FLYER, MAGPIE) |
+| `achVersusWins` | int 0 | `achVersusWins` | `saveAchVersusWins(int)` | **PRD-2.3.1 §12.2**: versus wins since 2.3.1 |
+| `achDayStreak` + `achLastPlayDay` | int 0 + int −1 | `achDayStreak`, `achLastPlayDay` | `saveAchDays(int streak, int day)` | **PRD-2.3.1 §12.2**: consecutive local days (`storage.today`) with a counted run |
 
 The Firebase uid lives in Firebase Auth. Saw/switch "never twice in a row" is per run (`RunState`), not stored.
 "Delete my data" (WP-4c) clears `versusNickname` (regenerated), `uploadQueue`, `uploadsToday/Day`; it does not touch

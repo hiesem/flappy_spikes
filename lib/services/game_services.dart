@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:math';
 
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:games_services/games_services.dart';
 
+import '../achievements/achievement_catalog.dart';
 import '../firebase_options.dart';
 import '../skins/look.dart';
 import 'redact.dart';
@@ -32,6 +34,10 @@ enum ShowLeaderboardResult {
   /// A previous call is still in flight (double-tap guard).
   busy,
 }
+
+/// PRD-2.3.1 §12.4 outcome of [GameServices.showAchievements] (the Home
+/// medal button), mirroring [ShowLeaderboardResult].
+enum ShowAchievementsResult { opened, signInFailed, failed, unavailable, busy }
 
 /// Firebase Analytics + platform leaderboards (Google Play Games on Android,
 /// Game Center on iOS), wrapped so the rest of the game never touches plugin
@@ -86,9 +92,7 @@ class GameServices {
   Future<void> initialize() async {
     await ensureFirebase();
     try {
-      _playerSub = GameAuth.player.listen((player) {
-        _signedIn = player != null;
-      });
+      _playerSub = GameAuth.player.listen(_onPlayer);
     } catch (_) {
       _signedIn = false;
     }
@@ -130,6 +134,156 @@ class GameServices {
     }
     return _firebaseUp;
   }
+
+  // region P231-E — achievements (PRD-2.3.1 §12.4)
+  String? _playerId;
+
+  /// The signed-in platform player id (null = signed out / unknown).
+  String? get playerId => _playerId;
+
+  /// Called whenever a player appears or the player id changes (the
+  /// tracker's `syncAll`, §12.4). Set by `AchievementTracker`.
+  void Function()? onAchievementPlayer;
+
+  /// Plugin calls for achievements may run: initialised and signed in.
+  bool get achievementsReady => _initialized && _signedIn;
+
+  void _onPlayer(PlayerData? player) {
+    final before = _playerId;
+    _signedIn = player != null;
+    _playerId = player?.playerID;
+    if (player != null && (!_announcedPlayer || before != _playerId)) {
+      _announcedPlayer = true;
+      _notifyAchievementPlayer();
+    }
+    if (player == null) _announcedPlayer = false;
+  }
+
+  bool _announcedPlayer = false;
+
+  void _notifyAchievementPlayer() {
+    try {
+      onAchievementPlayer?.call();
+    } catch (_) {}
+  }
+
+  /// Tests: what the plugin's player stream would push ([id] null = signed
+  /// out).
+  @visibleForTesting
+  void debugSetPlayer(String? id) => _onPlayer(
+    id == null ? null : PlayerData(playerID: id, displayName: 'test'),
+  );
+
+  /// Whether this is iOS (Game Center progress); a test seam.
+  @visibleForTesting
+  bool Function() isIOSPlatform = _isIOS;
+
+  static bool _isIOS() {
+    try {
+      return !kIsWeb && Platform.isIOS;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  final Set<String> _missingAndroidIdLogged = {};
+
+  @visibleForTesting
+  Future<void> unlockAchievementPlugin(AchievementId id) async {
+    await Achievements.unlock(
+      achievement: Achievement(
+        androidID: id.androidId,
+        iOSID: id.iosId,
+        percentComplete: 100,
+        showsCompletionBanner: true,
+      ),
+    );
+  }
+
+  @visibleForTesting
+  Future<void> setAchievementProgressPlugin(
+    AchievementId id,
+    double percent,
+  ) async {
+    await Achievements.unlock(
+      achievement: Achievement(
+        androidID: id.androidId,
+        iOSID: id.iosId,
+        percentComplete: percent,
+        showsCompletionBanner: false,
+      ),
+    );
+  }
+
+  @visibleForTesting
+  Future<void> showAchievementsPlugin() async {
+    await Achievements.showAchievements();
+  }
+
+  /// §12.4 reports one unlock. Only while signed in (never signs in);
+  /// returns whether the platform confirmed it. A key without an Android
+  /// id is skipped on Android (logged once).
+  Future<bool> unlockAchievement(AchievementId id) async {
+    if (!achievementsReady) return false;
+    if (!isIOSPlatform() && id.androidId.isEmpty) {
+      if (_missingAndroidIdLogged.add(id.key)) {
+        debugPrint('GameServices: no Android id for achievement ${id.key}');
+      }
+      return false;
+    }
+    try {
+      await unlockAchievementPlugin(id).timeout(pluginTimeout);
+      return true;
+    } catch (e) {
+      _reportPgsError('unlock_achievement', e);
+      return false;
+    }
+  }
+
+  /// §12.4 Game Center progress (iOS only; Android unlocks at once and has
+  /// plain achievements). Game Center keeps the highest value.
+  Future<void> reportAchievementProgress(
+    AchievementId id,
+    double percent,
+  ) async {
+    if (!achievementsReady || !isIOSPlatform()) return;
+    try {
+      await setAchievementProgressPlugin(id, percent).timeout(pluginTimeout);
+    } catch (e) {
+      _reportPgsError('achievement_progress', e);
+    }
+  }
+
+  /// §12.4 opens the native achievements list, exactly like
+  /// [showLeaderboards]: the same busy guard (one plugin UI call at a
+  /// time), interactive sign-in on tap if needed, the timeout.
+  Future<ShowAchievementsResult> showAchievements() async {
+    if (!_initialized) return ShowAchievementsResult.unavailable;
+    if (_leaderboardBusy) return ShowAchievementsResult.busy;
+    _leaderboardBusy = true;
+    try {
+      if (!_signedIn) {
+        try {
+          await signInPlugin().timeout(pluginTimeout);
+          _signedIn = true;
+          _notifyAchievementPlayer();
+        } catch (e) {
+          _reportPgsError('sign_in', e);
+          return ShowAchievementsResult.signInFailed;
+        }
+      }
+      try {
+        await showAchievementsPlugin().timeout(pluginTimeout);
+        return ShowAchievementsResult.opened;
+      } catch (e) {
+        _reportPgsError('show_achievements', e);
+        return ShowAchievementsResult.failed;
+      }
+    } finally {
+      _leaderboardBusy = false;
+    }
+  }
+  // endregion P231-E
 
   /// Test seam: simulates a main()-initialized service without touching
   /// plugins (the game-level spy overrides the public methods anyway).
@@ -377,6 +531,7 @@ class GameServices {
           // plugin only succeeds then (see its Auth.kt). Do NOT double-check
           // via GameAuth.isSignedIn (stale-cache race, see [initialize]).
           _signedIn = true;
+          _notifyAchievementPlayer(); // PRD-2.3.1 §12.4
         } catch (e) {
           _reportPgsError('sign_in', e);
           return ShowLeaderboardResult.signInFailed;

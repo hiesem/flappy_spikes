@@ -339,3 +339,32 @@ class StarTrailFinished extends RunEvent {
   final StarTrail trail;
 }
 // endregion WP-3e
+
+// region P231-E — achievements (PRD-2.3.1 §12.2)
+/// The egg hatched into a chick (`EggFeature._hatch`).
+class EggHatched extends RunEvent {
+  const EggHatched();
+}
+
+/// A Firefly Jar was filled (`JarFeature._finish(full: true)`).
+class JarFilled extends RunEvent {
+  const JarFilled();
+}
+
+/// All 8 stars of a Star Trail were caught (PERFECT LINE).
+class StarTrailPerfect extends RunEvent {
+  const StarTrailPerfect();
+}
+
+/// The puzzle picture was completed (`puzzle_completed`).
+class PuzzleCompleted extends RunEvent {
+  const PuzzleCompleted();
+}
+
+/// A real FEVER started (the FEVER ring's perfect pass or the pair gift's
+/// [FeverIgnite]), also when the bird already burned. Never for the
+/// streak's on-fire state alone.
+class FeverStarted extends RunEvent {
+  const FeverStarted();
+}
+// endregion P231-E

@@ -80,6 +80,18 @@ Already done in Play Console (app id `4974493442709551492`):
   encrypted in transit, deletion link), advertising ID (no), government (no),
   financial (none), health (none).
 
+### Play Games achievements (PRD-2.3.1 §12) — console state (2026-10-14)
+
+- The 48 achievements were created in Play Console (Grow users → Play Games
+  services → Setup and management → Achievements) in the §12.1 order: name and
+  description from the catalog, the 512 px icons from
+  `store/achievements/play/`, not incremental, the 7 rides Hidden, the rest
+  Revealed, points 5–60 (755 of 2,000). The generated ids are in
+  `lib/achievements/achievement_catalog.dart` (`androidId`).
+- The Play Games configuration was **published 2026-10-14 12:53 CEST** (10:53
+  UTC); published achievements can't be deleted. Live for all players within a
+  few hours; Play Games testers see the drafts before that.
+
 To build a new AAB after changes:
 
 ```bash
@@ -133,6 +145,14 @@ In App Store Connect (either path):
    `flappy_spikes_leaderboard` (must match `GameServices.iosLeaderboardId`),
    score format integer, sort high-to-low. The entitlement file
    (`ios/Runner/Runner.entitlements`) is already in the project.
+   **Game Center → Achievements** (PRD-2.3.1 §12): create the 48 achievements from
+   the kit in `store/achievements/ios/` (`achievements_ios.csv` / `.json`: Reference
+   Name, Achievement ID `fs_ach_<key>`, Points, Hidden, Achievable More Than Once =
+   no, English (U.S.) Title / Pre-earned / Earned Description, Image = the 1024 px
+   RGB `ach_<key>.png` next to it), in the kit order; attach them to the first iOS
+   version; test in the sandbox (reset with `Achievements.resetAchievements()`).
+   The ids must match `lib/achievements/achievement_catalog.dart` exactly
+   (`test/p231/s12_ios_kit_test.dart`).
 3. Upload screenshots (6.7" iPhone and 12.9" iPad required — capture from the iOS
    simulator on a Mac, or reuse the Android ones at correct sizes via TestFlight first).
 4. Fill in description/keywords, content rating (4+), privacy policy URL

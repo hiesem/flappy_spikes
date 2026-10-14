@@ -146,14 +146,16 @@ class RidePath {
   Vector2 get end => Vector2(points.last.x, points.last.y);
 
   /// [n] stations at equal arc length from [first] to `length − endMargin`
-  /// (`rides84.js`: 11 rings from 190 to L − 260).
+  /// (`rides84.js`: 11 rings from 190 to L − 260; PRD-2.3.1 §7: 5 rings over
+  /// the same span).
   List<double> equalStations(int n, {double first = 190, double endMargin = 260}) {
     final last = length - endMargin;
     final step = (last - first) / (n - 1);
     return [for (var k = 0; k < n; k++) first + k * step];
   }
 
-  /// [n] stations every [step] pt from [first] (the cannon ride: 190 + 380k).
+  /// [n] stations every [step] pt from [first] (the cannon ride: 190 + 950k since
+  /// PRD-2.3.1 §7, was 380).
   static List<double> everyStep(int n, {double first = 190, double step = 380}) =>
       [for (var k = 0; k < n; k++) first + k * step];
 

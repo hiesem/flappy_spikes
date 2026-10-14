@@ -148,18 +148,19 @@ void main() {
           expect(tr.ridePasses, PortalConfig.rideRings);
           expect(run.state.hoopsPassed - tr.hoopsBefore, greaterThanOrEqualTo(6));
           // The portal pass happened before the ride started (counted in
-          // hoopsBefore); 11 ride passes give +11 / +22, the portal +1 / +2.
+          // hoopsBefore); the 5 ride passes (PRD-2.3.1 §7) each score and pay
+          // +2 coins, the portal +1 / +2.
           final rideScore = tr.events
               .whereType<ScoreChanged>()
               .where((e) => e.flags == PointFlags.ride)
               .length;
-          expect(rideScore, 11);
-          // The portal + 11 ride rings: +12 score, +24 coins (+2 per perfect
-          // pass), no extra ride bonus.
+          expect(rideScore, PortalConfig.rideRings);
+          // The portal + 5 ride rings (PRD-2.3.1 §7, was 11): 6 passes,
+          // +12 coins (+2 per perfect pass), no extra ride bonus.
           // PRD-2.2 §11: the portal ring itself is judged by the perfect
-          // zone (+2 centred, +1 off-centre); the 11 ride rings are always
+          // zone (+2 centred, +1 off-centre); the 5 ride rings are always
           // perfect (+2 each).
-          expect(tr.coinsAfterRide - tr.coinsBefore, anyOf(23, 24));
+          expect(tr.coinsAfterRide - tr.coinsBefore, anyOf(11, 12));
           // PRD-2.2 §13.1 ride rings follow the streak: max(2, streak).
           final rideDeltas = [
             for (final e in tr.events.whereType<ScoreChanged>())
@@ -173,7 +174,7 @@ void main() {
               wanted.add(math.max(2, streakNow));
             }
           }
-          expect(rideDeltas, hasLength(11));
+          expect(rideDeltas, hasLength(PortalConfig.rideRings));
           expect(rideDeltas, wanted);
           for (var k = 1; k < rideDeltas.length; k++) {
             expect(rideDeltas[k], greaterThanOrEqualTo(rideDeltas[k - 1]));
@@ -225,7 +226,8 @@ void main() {
           }
           expect(
             rumbleLog(game).where((k) => k == RumbleKind.shake).length,
-            greaterThanOrEqualTo(11),
+            // One per ride ring (PRD-2.3.1 §7: 5, was 11).
+            greaterThanOrEqualTo(PortalConfig.rideRings),
           );
           // PRD-2.2 §18.3 (supersedes §3.12 "≈ 1 s after the landing"):
           // the first ring is passed ≈ 2 s after control returns.

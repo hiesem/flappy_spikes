@@ -291,9 +291,15 @@ abstract class VersusBackend {
   /// signed in as the old **anonymous** uid, [beforeSwitch] runs first (the
   /// service deletes that uid's versus data). It never blocks the switch:
   /// the backend catches whatever it throws.
+  ///
+  /// PRD-2.3.1 §2.2 (QA P1-02) [isCurrent] answers false once a newer
+  /// versus session owns the Firebase user (this link outlived its
+  /// caller): the link then stops before it deletes, switches or signs in
+  /// anything.
   Future<void> link(
     PlatformIdentity identity, {
     Future<void> Function()? beforeSwitch,
+    bool Function()? isCurrent,
   });
 
   /// The `deleteMyData` callable, then sign out. True when the server
@@ -524,15 +530,14 @@ class FirebaseVersusService implements VersusService {
     try {
       if (!_ready) {
         await _recover();
-      } else {
-        // PRD-2.3.1 §2.2 a switch that failed (the player is on a fresh
-        // guest) is tried again on resume.
-        if (_player != null &&
-            !(_safe(() => backend.linkedToPlatform) ?? true)) {
-          await onPlatformSignIn();
-        }
-        await flush();
+        if (!_ready) return;
       }
+      // PRD-2.3.1 §2.2 a switch that failed (the player is on a fresh
+      // guest, or the link was cut off and versus had to start again) is
+      // tried again on resume: also the first resume after a recovery
+      // (QA P1-01), through the same single-flight link.
+      await _retryLink();
+      await flush();
     } catch (e) {
       _log('resume', e);
     }
@@ -543,6 +548,9 @@ class FirebaseVersusService implements VersusService {
       final gate = startAfter;
       if (gate != null) await gate();
       await ensureNickname();
+      // QA P1-02 a link that outlived its caller settles first.
+      await _linkSettled();
+      _session++;
       await _call(backend.start());
       _ready = true;
       _startFailure = null;
@@ -555,6 +563,9 @@ class FirebaseVersusService implements VersusService {
       } catch (e) {
         _log('player stream', e);
       }
+      // QA P1-01 a known platform player whose link was interrupted (the
+      // start-up had to begin again) is linked again now.
+      unawaited(_retryLink());
       unawaited(flush());
       await prefetch();
     } catch (e) {
@@ -626,7 +637,7 @@ class FirebaseVersusService implements VersusService {
   /// failure leaves the last record (or none: `avatar` stays empty).
   Future<void> _syncAvatar() async {
     try {
-      final icon = _player?.iconImage ?? '';
+      final icon = _profilePlayer?.iconImage ?? '';
       final uid = _safe(() => backend.uid) ?? '';
       if (icon.isEmpty || uid.isEmpty) return;
       final hash = sha256.convert(utf8.encode(icon)).toString();
@@ -662,12 +673,24 @@ class FirebaseVersusService implements VersusService {
     return _safe(() => backend.photoUrl) ?? '';
   }
 
+  /// PRD-2.3.1 §2.2 (QA P1-03) the platform player whose name and picture
+  /// the profile shows: none while Firebase is the fallback guest of a
+  /// failed switch (versus runs "under a guest name"). The `pg` self-match
+  /// guard still uses [_player].
+  PlatformPlayer? get _profilePlayer {
+    if (_switchFailed && !(_safe(() => backend.linkedToPlatform) ?? false)) {
+      return null;
+    }
+    return _player;
+  }
+
   @override
   VersusProfile get me {
     final s = storage;
-    final pgs = _player?.displayName ?? '';
+    final player = _profilePlayer;
+    final pgs = player?.displayName ?? '';
     final url = _avatarUrl;
-    final icon = _player?.iconImage ?? '';
+    final icon = player?.iconImage ?? '';
     return VersusProfile(
       name: pgs.trim().isNotEmpty
           ? RunEntry.clampName(pgs)
@@ -956,6 +979,10 @@ class FirebaseVersusService implements VersusService {
   /// user by a new anonymous one). True when it worked.
   Future<bool> _reauthenticate() async {
     try {
+      // QA P1-02 never next to a link still at work; once it outlived the
+      // wait, the new user belongs to a newer session.
+      await _linkSettled();
+      _session++;
       await _call(backend.start());
       if (kDebugMode) debugPrint('versus: re-authenticated after auth');
       _identityChanged();
@@ -1013,6 +1040,8 @@ class FirebaseVersusService implements VersusService {
   @override
   Future<bool> deleteMyData() async {
     var ok = false;
+    // QA P1-02 never next to a link still at work.
+    await _linkSettled();
     try {
       ok = await _call(backend.deleteMyData());
     } catch (e) {
@@ -1051,28 +1080,74 @@ class FirebaseVersusService implements VersusService {
   }
 
   /// The link in flight (PRD-2.3.1: one at a time — a resume and the
-  /// player stream may ask together).
+  /// player stream may ask together). QA P1-02: it stays set until the
+  /// underlying auth work settles, also after a caller stopped waiting.
   Future<void>? _linking;
+
+  /// QA P1-02 bumped by every new start of the Firebase user (start-up,
+  /// re-authentication): a link begun in an older session changes nothing.
+  int _session = 0;
+
+  /// QA P1-03 a failed switch left the player on a fallback guest (or
+  /// signed out): until a link succeeds, [me] is the guest profile.
+  bool _switchFailed = false;
 
   @override
   Future<void> onPlatformSignIn() {
     if (!_ready) return Future.value();
-    return _linking ??= _link().whenComplete(() => _linking = null);
+    final link = _linking ??= _link().whenComplete(() => _linking = null);
+    // PRD-2.3.1 §2: two auth codes, the clean-up and the switch: more
+    // than one plugin call's time box. The caller stops waiting then; the
+    // link itself keeps the guard until it settles.
+    return link.timeout(
+      timeout * 3,
+      onTimeout: () => _log('link', TimeoutException('link', timeout * 3)),
+    );
+  }
+
+  /// PRD-2.3.1 §2.2 links the known platform player when the Firebase
+  /// user is not linked to it yet (single flight via [onPlatformSignIn]).
+  Future<void> _retryLink() async {
+    if (_player == null || !_ready) return;
+    if (_safe(() => backend.linkedToPlatform) ?? true) return;
+    await onPlatformSignIn();
+  }
+
+  /// Waits (time-boxed) for a link still at work.
+  Future<void> _linkSettled() async {
+    final link = _linking;
+    if (link == null) return;
+    try {
+      await link.timeout(timeout * 3);
+    } catch (_) {}
   }
 
   Future<void> _link() async {
+    final session = _session;
+    bool current() => session == _session;
+    final before = _safe(() => backend.uid) ?? '';
     try {
-      // PRD-2.3.1 §2: two auth codes, the clean-up and the switch: more
-      // than one plugin call's time box.
-      await backend
-          .link(identity, beforeSwitch: _cleanUpAnonymousAccount)
-          .timeout(timeout * 3);
+      await backend.link(
+        identity,
+        beforeSwitch: () => _cleanUpAnonymousAccount(current),
+        isCurrent: current,
+      );
     } catch (e) {
       _log('link', e);
     }
+    // QA P1-02 a newer session owns the user: nothing here is ours.
+    if (!current()) return;
+    final uid = _safe(() => backend.uid) ?? '';
+    if (_safe(() => backend.linkedToPlatform) ?? false) {
+      _switchFailed = false;
+    } else if (uid != before) {
+      // QA P1-03 the switch failed and the guest was replaced: versus
+      // runs under a guest name until a retry succeeds.
+      _switchFailed = true;
+    }
     // PRD-2.3.1 §2.2 the link ended without a live user (the fallback
     // guest could not sign in, e.g. offline): versus starts again.
-    if ((_safe(() => backend.uid) ?? '').isEmpty) {
+    if (uid.isEmpty) {
       _ready = false;
       _startFailure = VersusSoloReason.auth;
       _scheduleRetry();
@@ -1084,7 +1159,9 @@ class FirebaseVersusService implements VersusService {
   /// switch to the uid that owns the Play Games id, the old anonymous
   /// uid's versus data (runs, pool entries, picture) is deleted while still
   /// signed in as it. Never throws and never blocks the switch.
-  Future<void> _cleanUpAnonymousAccount() async {
+  Future<void> _cleanUpAnonymousAccount(bool Function() current) async {
+    // QA P1-02 a stale link never deletes a newer session's user.
+    if (!current()) return;
     try {
       final ok = await _call(backend.deleteOnline());
       if (kDebugMode) debugPrint('versus: old anonymous account deleted: $ok');

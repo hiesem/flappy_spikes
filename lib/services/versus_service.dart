@@ -1080,18 +1080,24 @@ class FirebaseVersusService implements VersusService {
   /// work settles, also after a caller stopped waiting (QA P1-02).
   Future<void>? _linking;
 
-  /// QA P2-01 the end of the Auth queue. Every change of the Firebase user
-  /// (start / re-authentication, link / switch, data reset) runs in it, one
-  /// at a time; the next one starts only when the previous one SETTLED. A
-  /// plugin call cannot be cancelled, so a time-boxed caller that stops
-  /// waiting never lets another change start next to it.
-  Future<void> _authTail = Future<void>.value();
+  /// QA P2-01 the end of the Auth queue (null = idle). Every change of the
+  /// Firebase user (start / re-authentication, link / switch, data reset)
+  /// runs in it, one at a time; the next one starts only when the previous
+  /// one SETTLED. A plugin call cannot be cancelled, so a time-boxed caller
+  /// that stops waiting never lets another change start next to it.
+  Future<void>? _authTail;
 
   /// Runs [op] after every earlier Auth change settled (never time-boxed:
-  /// a stuck plugin call keeps the queue, and versus, waiting).
+  /// a stuck plugin call keeps the queue, and versus, waiting). An idle
+  /// queue runs [op] at once (no future is kept across idle periods).
   Future<T> _serialized<T>(Future<T> Function() op) {
-    final run = _authTail.then((_) => op());
-    _authTail = run.then<void>((_) {}, onError: (Object _) {});
+    final before = _authTail;
+    final run = before == null ? Future.sync(op) : before.then((_) => op());
+    late final Future<void> tail;
+    tail = run.then<void>((_) {}, onError: (Object _) {}).whenComplete(() {
+      if (identical(_authTail, tail)) _authTail = null;
+    });
+    _authTail = tail;
     return run;
   }
 

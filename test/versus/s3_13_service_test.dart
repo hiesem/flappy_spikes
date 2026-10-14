@@ -121,7 +121,8 @@ class FakeIdentity implements PlatformIdentity {
   @override
   Stream<PlatformPlayer?> get player => controller.stream;
   @override
-  Future<AuthCredential?> firebaseCredential() async => null;
+  Future<AuthCredential?> firebaseCredential({bool fresh = false}) async =>
+      null;
 }
 
 RunTimeline line(int n) {

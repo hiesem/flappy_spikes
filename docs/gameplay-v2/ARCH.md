@@ -221,6 +221,7 @@ the HUD" ease). Details and owners in §3 and §21.
 | `lib/versus/upload_queue.dart` | 5b | queue + 3/day + score ≥ 3 + best always | — |
 | `lib/versus/run_entry.dart` | 5b | Firestore entry (de)serialisation, mirrors `functions/src/schema.ts` | — |
 | `lib/services/versus_service.dart` | interface + `NoopVersusService` 0b; Firebase impl 5b | §6.3 | pattern of `GameServices` |
+| `lib/services/versus_auth.dart` | P231-B | PRD-2.3.1 §2: `VersusAuth` port (uid, isAnonymous, linkedToPlayGames, sign-in anonymous / with credential, link, sign-out, reload, refreshToken) + `FirebaseVersusAuth`; `FirebaseVersusBackend(auth:, appCheck:, analytics:)` runs the link / switch and the start-up self-healing over it. `PlatformIdentity.firebaseCredential({bool fresh})` (fresh = `forceRefreshToken`). Link outcomes log `versus: link <outcome> <code>` in release + event `versus_link {outcome, code}` | `FirebaseAuth` |
 | `lib/services/identity.dart` | 5b | `PlatformIdentity` (§6.4) | uses `games_services` |
 | `lib/services/reminders.dart` | 4b | `Reminders` service + pure `ReminderScheduler` (§3.34) | — |
 | `lib/services/e2e.dart` | 0b | `const bool kE2E = bool.fromEnvironment('FS_E2E'); const int kE2ESeed = int.fromEnvironment('FS_E2E_SEED', defaultValue: 7); const String kAppCheckDebugToken = String.fromEnvironment('FS_APPCHECK_DEBUG_TOKEN');` + `E2EHooks` | — |
@@ -854,8 +855,8 @@ class GameCenterIdentity implements PlatformIdentity {}  // stub returning null 
 ```
 
 Matching (pure, `lib/versus/matcher.dart`): own level & score < my best → else any → else null; never own uid; no
-repeat within a session. Linking: anonymous user `linkWithCredential`; on `credential-already-in-use` sign in with that
-credential (the account that already owns the Play Games id wins; call).
+repeat within a session. Linking: anonymous user `linkWithCredential`; on `credential-already-in-use` sign in with a
+fresh credential (the account that already owns the Play Games id wins; call; PRD-2.3.1 §2, see "PRD-2.3 WP-VS contract changes").
 
 ### 6.5 App Check flow
 
@@ -1615,6 +1616,18 @@ the chick's ×2, the perfect zone) are superseded by PRD-2.3 §14; `SPEC.md` has
   old anonymous uid; the service passes `deleteOnline()` (the `deleteMyData`
   callable without sign-out) and clears `versusAvatar`. A failure is logged and
   the switch goes on.
+- PRD-2.3.1 §2 (P231-B): the switch uses a FRESH server auth code
+  (`firebaseCredential(fresh: true)` → `forceRefreshToken`), never the code the
+  link used up; `beforeSwitch` runs only once that fresh credential is in hand
+  (none → nothing deleted, the guest stays, `switch_failed no_fresh_code`). A
+  failed `signInWithCredential` signs in a new anonymous user at once
+  (`fallback_anon`): `link()` never ends on the deleted guest. A link that
+  meets `invalid-credential` (a cached, used code on an in-process retry) is
+  tried once more with a fresh code. `start()` reloads a persisted user and
+  replaces one the server no longer knows (`deadUserCodes`) by a new guest;
+  `classify(e, liveUser:)` maps a `permission-denied` without a live user to
+  `auth`, and `prefetch` then re-authenticates (`backend.start()`) and searches
+  once more. A failed switch is retried on the next launch and on resume.
 
 ## 27. PRD-2.3 WP-ADS contract notes (as built, 2026-10-13)
 

@@ -389,6 +389,15 @@ Rules the director must implement (all from §3.0.3; tested in WP-0b):
   waits for ride/squeeze/comet < 10 back); cooldown (1, or 2 after train/spring/pair, 3 after portal); special roll
   with the budget table and per-type min distance / not-allowed rules; comet hang schedule (10–30, then +45–60; waits);
   tilt / motion for normal hoops (not in squeeze window for motion).
+  PRD-2.3.1 §17: at most `ride_portal_max` (2; 0 = no limit) portals per run (`portalCount`, a portal turned plain /
+  owed again does not count; a revive does not reset it); at the cap the portal step is skipped and the schedule stops.
+- PRD-2.3.1 §16 comet layout: `RunSpawner.startCometLayout` (called by `CometRide.start`) finds the last hoop that
+  stays (visible / behind the bird), calls `RunDirector.onCometStart(anchorX:)`, which locks `cometStations` (k =
+  max(1, round(stretch / ride_comet_hoop_gap)) equal steps up to predicted end − `ride_comet_tail`) and
+  `cometAfterMin` (end + `ride_comet_after_gap`, follows `updateCometEnd`); the spawner then re-places every hoop
+  group not yet visible and the planned-ahead slot through `RunDirector.cometReplan` (plain ride hoop at the next
+  station, zigzag height) and drops the not-yet-visible gap items. `nextSlot` takes the remaining stations, then the
+  safe first hoop after the comet (normal height).
 - Gap order: running piggy (4 per gap, 4 + 4×4 = 20) or jar (swarm of 7); fixed schedules heart (3, +17–27, skipped
   while extra life, schedule still moves) / feather (once, 3–12, only while `feathers < 3`) / piece (once, 14–25, only
   while the round is open) moving to the next free gap; the switch of a switch ring in the next slot (gap taken → the

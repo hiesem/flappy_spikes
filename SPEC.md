@@ -1635,3 +1635,25 @@ production build has the flag off and uses these values only. Full key table:
 - PRD-2.3 §26.2 (owner 2026-10-13): the Shop / Skins lock overlay covers the whole
   playfield incl. both spike strips at #000000 90 % (was 72 % between the strips);
   the back button and the coin pill stay bright above it.
+
+### PRD-2.3.1 rides and comet (2026-10-14)
+
+- DEVIATION (PRD-2.3.1 §7, supersedes PRD-2 §3.12 "11 rings"): every portal ride has
+  **6 rings: the portal + 5 ride rings** (`PortalConfig.rideRings` 5), at equal arc
+  length from 190 pt to L − 260 pt (the same span); the cannon's rings are 950 pt apart
+  (`PortalConfig.cannonRingStep`, was 380). Route, length, speed, camera, art, exit and
+  timing are unchanged. A ride is 6 perfect passes (was 12): about half the coins and
+  points (each ride ring still pays like a perfect pass).
+- DEVIATION (PRD-2.3.1 §16, supersedes the 2.3.0 (19) "`ride_comet_hoop_gap` ahead while
+  `trackX + gap ≤ end`" rule and PRD-2.2 §16.1 "already spawned / planned hoops keep
+  their height"): at comet start the layout is locked. The hoops not yet visible (a hoop
+  spawned past the right edge, the planned-ahead slot) become plain ride hoops in the
+  comet layout; the pickups in their gaps are dropped unjudged; hoops on screen stay. The
+  comet hoops are evenly spaced from the last hoop that stays to the predicted end −
+  `ride_comet_tail` (100 pt) in `max(1, round(stretch / ride_comet_hoop_gap))` steps and
+  zigzag ±70 pt; the first hoop after the comet is at ≥ the predicted end +
+  `ride_comet_after_gap` (310 pt) at a normal height.
+- DEVIATION (PRD-2.3.1 §17): at most `ride_portal_max` (2; 0 = no limit) portals per run;
+  every placed portal counts (debug-forced and first-meet too; one turned plain and owed
+  again does not), a revive does not reset the count, and at the cap the portal schedule
+  stops. Comets are unaffected.

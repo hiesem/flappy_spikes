@@ -1,5 +1,4 @@
 import 'package:flappy_spikes/run/config/director_tables.dart';
-import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/services/tuning.dart';

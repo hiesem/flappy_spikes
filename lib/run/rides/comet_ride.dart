@@ -33,7 +33,11 @@ import 'speed_lines.dart';
 ///   from the last hoop's plane (or the pickup) to the next one's, level at
 ///   each hoop and through its centre, tilting along its flight direction
 ///   (max ±35°); the hoops the director plans meanwhile zigzag ±70 pt
-///   around the middle ([RunDirector.onCometStart]).
+///   around the middle ([RunDirector.onCometStart]). 2.3.1 (PRD-2.3.1
+///   §16): the layout is locked at the start — the hoops not yet visible
+///   move into it, the comet hoops are evenly spaced up to the predicted
+///   end − `ride_comet_tail`, the first hoop after is ≥ end +
+///   `ride_comet_after_gap` ([RunSpawner.startCometLayout]).
 /// - PRD-2.2 §17: at the end the bird gets one normal flap and the run
 ///   world runs in a quiet slow motion for ≈ 1.5 s ([LandingSlowMo]).
 /// - It is a ride (`RunState.ride` = comet): rims are ignored, closed

@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -519,6 +520,19 @@ class RunController extends Component {
     }
   }
 
+  /// PRD-2.3.1 §10.2: saves `firstRunHintSeen` once per run, and only while it
+  /// is still false (a dying first run does not reach this).
+  bool _firstRunHintMarked = false;
+
+  void _markFirstRunHintSeen() {
+    if (_firstRunHintMarked) return;
+    _firstRunHintMarked = true;
+    final storage = game.storage;
+    if (!storage.firstRunHintSeen) {
+      unawaited(storage.saveFirstRunHintSeen(true));
+    }
+  }
+
   /// §3.0.4 5 a pass. PRD-2.3 §14.3: perfect = a pass with no rim touch,
   /// anywhere in the gap (Flappy Dunk's swish; the PRD-2.2 §11 centre zone
   /// is retired); rides: always perfect. A graze is a pass after a rim
@@ -553,6 +567,9 @@ class RunController extends Component {
         duringRide: ride,
       ),
     );
+    // PRD-2.3.1 §10.2: the first pass of hoop 0 (a graze counts) marks the
+    // first-run instructions seen.
+    if (h.plan.index == 0) _markFirstRunHintSeen();
     h.kind.onPass(
       h,
       PassInfo(

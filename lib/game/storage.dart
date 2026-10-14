@@ -184,9 +184,11 @@ class GameStorage {
   /// PRD-2.3 §14.2 the same for the puzzle piece.
   int lastPieceRun = -1;
 
-  /// PRD-2.3 §10.3 the first-run instructions were shown. A save without
-  /// the key that has played before (a 1.x / 2.x upgrade) counts as seen:
-  /// those players are not on their very first run.
+  /// PRD-2.3 §10.3 the first-run instructions are seen. PRD-2.3.1 §10: the
+  /// full instructions write `false` when they show, and the first pass of
+  /// hoop 0 saves `true`. A save without the key that has played before (a
+  /// 1.x / 2.x upgrade) counts as seen: those players are not on their very
+  /// first run.
   bool firstRunHintSeen = false;
   /// PRD-2.3 §18.3 foreground seconds since install (counted while the app
   /// is resumed, outside full-screen ads, until the new-player grace ends).
@@ -716,7 +718,7 @@ class GameStorage {
     await prefs.setInt(_lastPieceRunKey, value);
   }
 
-  /// PRD-2.3 §10.3 [firstRunHintSeen].
+  /// PRD-2.3 §10.3 / PRD-2.3.1 §10 [firstRunHintSeen].
   Future<void> saveFirstRunHintSeen(bool value) async {
     firstRunHintSeen = value;
     final prefs = await SharedPreferences.getInstance();

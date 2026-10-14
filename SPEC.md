@@ -1660,3 +1660,12 @@ production build has the flag off and uses these values only. Full key table:
   on the whole heart; full or extra life ready is unchanged (red, pulsing). Size (28 pt),
   position and the flying-heart landing point are unchanged. `HudConfig.heartPanelMix` is
   removed.
+- DEVIATION (PRD-2.3.1 §10, supersedes the PRD-2.3 §10.3 "saved at its first tap"): the
+  **full first-run instructions** show on **every** run until the run's first pass of
+  hoop 0 (a graze counts; dying first, or quitting, does not). Only then is
+  `firstRunHintSeen` saved `true`, once per run; from then on only the tap reminder shows
+  (§10.3b). The first tap fades the instructions out but saves nothing. The full
+  instructions write the key as `false` when they show, so a new player whose first run
+  fails is not counted as seen by the `gamesPlayed > 0` fallback; the fallback covers only
+  installs from before 2.3. Existing players (`firstRunHintSeen` true) keep the reminder
+  only. VERSUS and FREE FLY follow the same rule.

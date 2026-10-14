@@ -1269,18 +1269,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// START used to do at once — the banner (PRD-2.2 §7.4), logGameStart,
   /// `run_start`, versus.onRunStart, gravity and the first flap, then
   /// `RunController.start()` (the clock runs, `RunStarted`). The hint
-  /// fades out; the very first run saves `firstRunHintSeen`.
+  /// fades out. PRD-2.3.1 §10: the tap no longer saves `firstRunHintSeen`;
+  /// the first pass of hoop 0 does (`RunController`).
   void _firstTap() {
     final run = _run;
     if (run == null || !run.waiting) return;
     final hint = _firstRunHint;
     _firstRunHint = null;
-    if (hint != null) {
-      if (hint.mode == FirstRunHintMode.firstRun) {
-        unawaited(storage.saveFirstRunHintSeen(true));
-      }
-      hint.dismiss();
-    }
+    hint?.dismiss();
     // PRD-2.2 §7.4: the bird starts flying — banner in, interstitial load.
     _onFirstFlight();
     services.logGameStart();
@@ -1302,13 +1298,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   /// PRD-2.3 §10.3 / §10.3b adds the waiting run's hint: the full
-  /// instructions on the very first run ever, else the tap reminder.
+  /// instructions until `firstRunHintSeen` is saved (PRD-2.3.1 §10: the first
+  /// pass of hoop 0, so every run before that), else the tap reminder.
   void _addFirstRunHint(RunController run, RunHud hud) {
+    final full = !storage.firstRunHintSeen;
+    // PRD-2.3.1 §10.2: the full instructions write the key as `false`, so a
+    // new player whose first run fails is not counted as seen by the
+    // `gamesPlayed > 0` fallback. The fallback only covers installs from
+    // before 2.3.
+    if (full) unawaited(storage.saveFirstRunHintSeen(false));
     final hint = FirstRunHint(
       run: run,
-      mode: storage.firstRunHintSeen
-          ? FirstRunHintMode.reminder
-          : FirstRunHintMode.firstRun,
+      mode: full ? FirstRunHintMode.firstRun : FirstRunHintMode.reminder,
     );
     _firstRunHint = hint;
     hud.add(hint);

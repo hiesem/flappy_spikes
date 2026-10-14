@@ -92,13 +92,20 @@ Future<_BoostTrace> _boost(FlappySpikesGame game, {bool pair = false}) async {
   }
   final ride = _comet(run).ride!;
   tr.endX = run.director.cometEndTrackX!;
-  // Already spawned / planned at the pickup keep their heights.
+  // PRD-2.3.1 §16.1 A: the hoops not yet visible at the pickup moved into
+  // the comet layout; from then on every spawned / planned hoop keeps its
+  // height.
   for (final h in run.spawner.hoops) {
     tr.heldCentres[h.plan.index] = h.plan.centreY;
   }
   final ahead = run.spawner.plannedAhead;
   if (ahead != null) tr.heldCentres[ahead.index] = ahead.centreY;
-  tr.firstZigIndex = run.director.hoopIndex;
+  tr.firstZigIndex = run.spawner.slotLog
+      .firstWhere(
+        (p) => p.duringRide,
+        orElse: () => run.spawner.slotLog.last,
+      )
+      .index;
   var prevY = ride.y;
   var prevBx = run.state.camX + RunConfig.birdX;
   for (var f = 0; f < 60 * 11 && !ride.done; f++) {
@@ -176,10 +183,10 @@ void main() {
     TuningValues.current = Tuning.instance.active;
   }
 
-  group('2.3.0 (19) comet hoop gap', () {
+  group('2.3.0 (19) comet hoop gap (PRD-2.3.1 §16: the target spacing)', () {
     tearDown(() => useTuning(const {}));
-    test('default 560: ride hoops 560 pt apart; the last one before the '
-        'ride end leads on at the normal spacing', () {
+    test('default 560: ride hoops evenly ≈ 560 pt apart up to end − tail; '
+        'the first hoop after the ride ≥ end + after gap', () {
       expect(RunConfig.cometHoopGap, 560);
       final d = RunDirector(
         seed: 7,
@@ -191,11 +198,12 @@ void main() {
       for (var i = 0; i < 3; i++) {
         d.nextGap(ctx, d.nextSlot(ctx));
       }
+      final end = d.nextTrackX + 2799;
       d
         ..onRideStart(RideKind.comet)
         ..onCometStart(
           fromY: 300,
-          endTrackX: d.nextTrackX + 2799,
+          endTrackX: end,
           viewHeight: 711,
           amplitude: CometConfig.zigzagAmp,
         );
@@ -204,13 +212,18 @@ void main() {
         rideActive: true,
         ride: RideKind.comet,
       );
-      final plans = [for (var i = 0; i < 6; i++) d.nextSlot(ride)];
-      for (var i = 0; i < 4; i++) {
-        expect(plans[i + 1].trackX - plans[i].trackX, closeTo(560, 1e-9));
+      final k = d.cometStations.length;
+      expect(k, 5);
+      final plans = [for (var i = 0; i <= k; i++) d.nextSlot(ride)];
+      final step = plans[1].trackX - plans[0].trackX;
+      expect(step, inInclusiveRange(560 * .75, 560 * 1.4));
+      for (var i = 0; i < k - 1; i++) {
+        expect(plans[i + 1].trackX - plans[i].trackX, closeTo(step, 1e-6));
       }
+      expect(plans[k - 1].trackX, closeTo(end - RunConfig.cometTail, 1e-6));
       expect(
-        plans[5].trackX - plans[4].trackX,
-        closeTo(RunConfig.spacing, 1e-9),
+        plans[k].trackX,
+        greaterThanOrEqualTo(end + RunConfig.cometAfterGap - 1e-6),
       );
     });
   });

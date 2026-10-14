@@ -28,16 +28,20 @@ abstract final class PortalConfig {
   /// than the bird, so it rarely enters on the centre line).
   static const double joinTime = .5;
 
-  /// §3.12 Ride rings per ride (+ the portal = 12 passes).
-  static const int rideRings = 11;
+  /// §3.12 Ride rings per ride (+ the portal = 6 passes). Owner 2026-10-13
+  /// (PRD-2.3.1): was 11 (12 passes); the same span, route and length,
+  /// the rings spread evenly over it.
+  static const int rideRings = 5;
 
   /// §3.12 Cannon ride: the first ring this far along the path (pt)…
   static const double firstRing = 190;
 
-  /// §3.12 …then one every [cannonRingStep] (pt) (cannon ride).
-  static const double cannonRingStep = 380;
+  /// §3.12 …then one every [cannonRingStep] (pt) (cannon ride). Owner
+  /// 2026-10-13 (PRD-2.3.1): 950, so the 5 rings span the same 190 → 3 990
+  /// pt as the former 11 every 380.
+  static const double cannonRingStep = 950;
 
-  /// §5.12b Themed rides: 11 rings at equal arc length from [firstRing] to
+  /// §5.12b Themed rides: [rideRings] rings at equal arc length from [firstRing] to
   /// this far before the path end (pt) (`rides84.js`: `L − 260`).
   static const double themedRingEndMargin = 260;
 

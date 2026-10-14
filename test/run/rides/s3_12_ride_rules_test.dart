@@ -54,16 +54,18 @@ Future<void> _setUp(FlappySpikesGame game, _) async {
 void main() {
   group('§3.12 ride paths (pure)', () {
     test('§3.12 the cannon path: curve up r 180, climb 1 600, loop r 220, '
-        'dive 2 000; rings every 380 pt from 190', () {
+        'dive 2 000; 5 rings every 950 pt from 190 (same 190 → 3 990 span as '
+        'the former 11 every 380)', () {
       final t = rideThemeFor(RideId.cannon);
       final p = t.buildPath();
       final expected = 180 * math.pi / 2 + 1600 + 220 * math.pi + 2000;
       expect(p.length, closeTo(expected, expected * .005));
       final st = t.ringStations(p);
-      expect(st, hasLength(11));
-      for (var k = 0; k < 11; k++) {
-        expect(st[k], closeTo(190 + 380 * k, 1e-9));
+      expect(st, hasLength(5));
+      for (var k = 0; k < 5; k++) {
+        expect(st[k], closeTo(190 + 950 * k, 1e-9));
       }
+      expect(st.last, closeTo(190 + 380 * 10, 1e-9));
       expect(st.last, lessThan(p.length));
       // Up at the top of the climb, down at the end (the dive).
       expect(p.headingAt(283 + 800), closeTo(-math.pi / 2, .01));
@@ -71,7 +73,7 @@ void main() {
     });
 
     for (final id in RideId.values) {
-      test('§3.12 / §7 ${id.name}: 11 rings at equal arc length along the '
+      test('§3.12 / §7 ${id.name}: 5 rings at equal arc length along the '
           'path, facing the path', () {
         final t = rideThemeFor(id);
         final p = t.buildPath();
@@ -85,8 +87,8 @@ void main() {
         expect(st.last, lessThan(p.length - 100));
         // Arc length really is arc length: integrate the polyline.
         var s = 0.0;
-        var prev = p.at(st[3]);
-        for (var x = st[3] + 1; x <= st[4]; x += 1) {
+        var prev = p.at(st[2]);
+        for (var x = st[2] + 1; x <= st[3]; x += 1) {
           final q = p.at(x);
           s += (q - prev).length;
           prev = q;
@@ -101,7 +103,7 @@ void main() {
           );
         }
         // The ride ring is rotated to the heading at its station.
-        expect(p.headingAt(st[5]).isFinite, isTrue);
+        expect(p.headingAt(st[4]).isFinite, isTrue);
       });
     }
 

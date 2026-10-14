@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart' show TextPainter, TextSpan, TextStyle;
 import 'package:flutter/painting.dart' as p show TextDirection, TextAlign;
 
 import '../../game/sound.dart';
+import '../config/portal_config.dart';
 import '../director/plans.dart';
 import '../effects/particle_pool.dart';
 import 'ride_path.dart';
@@ -163,8 +164,9 @@ abstract class RideTheme {
   /// The path in path coordinates (starts at the portal heading right).
   RidePath buildPath();
 
-  /// Arc lengths of the 11 rings (equal arc length).
-  List<double> ringStations(RidePath p) => p.equalStations(11);
+  /// Arc lengths of the [PortalConfig.rideRings] rings (equal arc length).
+  List<double> ringStations(RidePath p) =>
+      p.equalStations(PortalConfig.rideRings);
 
   /// §5.12b The way-back wash tint (top → bottom).
   (Color, Color) get washTint;

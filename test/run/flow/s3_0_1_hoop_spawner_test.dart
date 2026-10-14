@@ -42,6 +42,9 @@ void main() {
           if (e.plan.kind == HoopKindId.rideRing) return;
           // WP-3c: a Ring Train's rings 2 and 3 belong to the same slot.
           if (e.plan.extra is TrainRing) return;
+          // PRD-2.3.1 §16.1 A a comet re-places a hoop not yet visible
+          // (same index): the new one replaces it here.
+          spawns.removeWhere((s) => s.$2.index == e.plan.index);
           spawns.add((e.hoop, e.plan, run.state.camX));
         });
         final flight = await flyRun(game, maxSeconds: 80, untilHoops: 32);
@@ -66,16 +69,17 @@ void main() {
             reason: 'hoop $i spawned at ${plan.trackX - cam} on screen',
           );
           if (i > 0) {
-            // 2.3.0 (19): after a comet ride hoop the next one may sit at
-            // the comet gap (`ride_comet_hoop_gap`).
+            // PRD-2.3.1 §16: around a comet the hoops sit at the comet
+            // stations (≈ `ride_comet_hoop_gap`, ≤ 1.4 ×) and the first hoop
+            // after it ≥ end + `ride_comet_after_gap`.
             final prev = spawns[i - 1].$2;
             final gap = plan.trackX - prev.lastRingX;
-            if (prev.duringRide) {
+            if (prev.duringRide || plan.duringRide) {
               expect(
                 gap,
-                anyOf(
-                  closeTo(RunConfig.spacing, 1e-6),
-                  closeTo(RunConfig.cometHoopGap, 1e-6),
+                inInclusiveRange(
+                  RunConfig.spacing - 1e-6,
+                  RunConfig.cometHoopGap * 1.4 + 1e-6,
                 ),
               );
             } else {

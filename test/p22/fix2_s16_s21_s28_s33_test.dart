@@ -3,6 +3,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/sound.dart';
+import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/items/comet.dart';
@@ -38,11 +39,7 @@ void main() {
         for (final fever in [false, true]) {
           final d = RunDirector(seed: seed, enabled: all, met: all);
           for (var k = 0; k < 150; k++) {
-            final ctx = DirectorContext.open(
-              711,
-              onFire: true,
-              fever: fever,
-            );
+            final ctx = DirectorContext.open(711, onFire: true, fever: fever);
             final s = d.nextSlot(ctx);
             d.nextGap(ctx, s);
             if (s.kind != HoopKindId.pair) continue;
@@ -69,7 +66,9 @@ void main() {
       () => createRunTestGame(worldHeight: 711, seed: 5, prefs: prefs),
       gameSize: Vector2(320, 711),
     ).testGameWidget(
-      'the reward goes (plain kind), the height stays, full size',
+      // PRD-2.3.1 §16.1 A (supersedes "the height stays"): the slot moves
+      // into the comet layout — a comet station at the zigzag height.
+      'the reward goes (plain kind), it moves to a comet station, full size',
       setUp: (g, _) async {
         await g.ready();
         await preloadImages(g);
@@ -83,10 +82,7 @@ void main() {
           maxSeconds: 8,
         );
         final planned = run.spawner.plannedAhead!;
-        expect(
-          run.features.whereType<CometFeature>().single.start(),
-          isTrue,
-        );
+        expect(run.features.whereType<CometFeature>().single.start(), isTrue);
         await flyUntil(
           g,
           (r) => r.spawner.hoops.any((h) => h.plan.index == planned.index),
@@ -96,8 +92,15 @@ void main() {
           (h) => h.plan.index == planned.index,
         );
         expect(spawned.plan.kind, HoopKindId.normal);
-        expect(spawned.plan.centreY, planned.centreY);
         expect(spawned.plan.duringRide, isTrue);
+        expect(
+          run.director.cometStations.any(
+            (x) => (x - spawned.plan.trackX).abs() < 1e-6,
+          ),
+          isTrue,
+        );
+        expect((spawned.plan.centreY - 711 / 2).abs(), closeTo(70, 1e-6));
+        expect(spawned.plan.opening, RunConfig.opening0);
       },
     );
   });

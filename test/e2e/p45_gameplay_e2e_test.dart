@@ -9,6 +9,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/menu/wallet.dart';
+import 'package:flappy_spikes/run/config/portal_config.dart';
 import 'package:flappy_spikes/run/config/bonus_config.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/items/squeeze.dart';
@@ -226,7 +227,8 @@ void main() {
       );
       expect(
         r.state.timeline.flags.where((f) => f == 1).length,
-        greaterThanOrEqualTo(11),
+        // The ride rings carry the ride flag (PRD-2.3.1 §7: 5, was 11).
+        greaterThanOrEqualTo(PortalConfig.rideRings),
       );
       expect(g.runHud!.versus!.out, isTrue);
       r.debugForce(ElementId.comet);
@@ -380,10 +382,7 @@ void main() {
   }
 
   journey('P45 bonus: unavailable ad: the offer waits 5 s, then NEXT '
-      '(PRD-2.2 §7.8)', (
-    g,
-    _,
-  ) async {
+      '(PRD-2.2 §7.8)', (g, _) async {
     (g.monetization.ads as FakeRewardedAds).mode = FakeAdMode.unavailable;
     await startRun(g);
     killRun(g);
@@ -794,139 +793,126 @@ void main() {
     },
   );
 
-  group(
-    'S6-62: completing a picture survives interrupted coin persistence',
-    () {
-      journey(
-        'S6-62 real fourth-piece collection does not lose an unpaid picture on restart',
-        (g, tester) async {
-          final r = await startRun(
-            g,
-            startHoopIndex: 14,
-            force: [ElementId.puzzlePiece],
-          );
-          g.runDebug.god = true;
-          final original = SharedPreferencesStorePlatform.instance;
-          final prefs = await SharedPreferences.getInstance();
-          final disk = {
-            for (final k in prefs.getKeys()) 'flutter.$k': prefs.get(k)!,
-          };
-          final cut = _KillCoinWrite(disk);
-          SharedPreferencesStorePlatform.instance = cut;
-          try {
-            expect(
-              await collectPickup(g, ElementId.puzzlePiece, reforce: false),
-              isNotNull,
-            );
-            await flushAndMount(g);
-            final paid = r.features
-                .whereType<PuzzleFeature>()
-                .single
-                .paid
-                .single;
-            expect(cut.stopped, isTrue);
-            // Every coin write of this session is cut (the pickups' too),
-            // so the balance the app held is what a restart must reach.
-            final live = g.storage.coins;
-            expect(live, greaterThanOrEqualTo(100 + paid));
-            final saved = await cut.getAll();
-            SharedPreferencesStorePlatform.instance = original;
-            SharedPreferences.setMockInitialValues({
-              for (final e in saved.entries)
-                e.key.replaceFirst('flutter.', ''): e.value,
-            });
-            final restarted = GameStorage();
-            await restarted.load();
-            expect(
-              restarted.coins == live ||
-                  restarted.puzzlePieces == 7 ||
-                  restarted.puzzlePayout == live,
-              isTrue,
-              reason:
-                  'disk has no coin payout and no recoverable completed picture: $saved',
-            );
-            // The start-up recovery pays the interrupted credit exactly once.
-            final wallet = Wallet(restarted);
-            final owed = live - restarted.coins;
-            expect(owed, greaterThanOrEqualTo(paid));
-            expect(await PuzzleFeature.settlePayout(restarted, wallet), owed);
-            expect(restarted.coins, live);
-            expect(restarted.puzzlePieces, 0);
-            expect(restarted.puzzleRound, 3);
-            expect(await PuzzleFeature.settlePayout(restarted, wallet), 0);
-            expect(restarted.coins, live);
-            final again = GameStorage();
-            await again.load();
-            expect(again.coins, live);
-            expect(again.puzzlePayout, 0);
-            expect(await PuzzleFeature.settlePayout(again, Wallet(again)), 0);
-          } finally {
-            SharedPreferencesStorePlatform.instance = original;
-          }
-        },
-        prefs: {'puzzlePieces': 7, 'puzzleRound': 2, 'coins': 100},
-      );
-    },
-  );
-
-  group(
-    'S6-63: bonus NEXT retains its reference size and bottom distance',
-    () {
-      journey(
-        'S6-63 568pt balloon page keeps NEXT 292x50 and 99pt bottom gap',
-        (g, tester) async {
-          await startRun(g);
-          killRun(g);
-          await flushAndMount(g);
-          final b = g.bonusScreen!;
-          final ref = BonusConfig.nextButton;
-          final rect = b.nextRect;
-          expect(g.viewHeight - rect.bottom, closeTo(711 - ref.bottom, .01));
-          expect(rect.width, closeTo(292, .01));
-          expect(rect.height, closeTo(50, .01));
-          // The scaled column above ends at or above the band.
-          final (k, off) = BonusRules.layoutFor(g.viewHeight);
+  group('S6-62: completing a picture survives interrupted coin persistence', () {
+    journey(
+      'S6-62 real fourth-piece collection does not lose an unpaid picture on restart',
+      (g, tester) async {
+        final r = await startRun(
+          g,
+          startHoopIndex: 14,
+          force: [ElementId.puzzlePiece],
+        );
+        g.runDebug.god = true;
+        final original = SharedPreferencesStorePlatform.instance;
+        final prefs = await SharedPreferences.getInstance();
+        final disk = {
+          for (final k in prefs.getKeys()) 'flutter.$k': prefs.get(k)!,
+        };
+        final cut = _KillCoinWrite(disk);
+        SharedPreferencesStorePlatform.instance = cut;
+        try {
           expect(
-            off.dy + BonusConfig.panel.bottom * k,
-            lessThan(rect.top),
+            await collectPickup(g, ElementId.puzzlePiece, reforce: false),
+            isNotNull,
           );
-          // What is drawn and tapped: NEXT's pink fills that rect.
-          b.phase = BonusPhase.done;
-          await stepSeconds(g, 1.2);
-          expect(b.nextShown, isTrue);
-          await tester.runAsync(() async {
-            final rec = ui.PictureRecorder();
-            b.renderTree(ui.Canvas(rec));
-            final image = await rec.endRecording().toImage(320, 568);
-            final bytes = (await image.toByteData(
-              format: ui.ImageByteFormat.rawRgba,
-            ))!.buffer.asUint8List();
-            image.dispose();
-            List<int> at(double x, double y) {
-              final i = (y.floor() * 320 + x.floor()) * 4;
-              return bytes.sublist(i, i + 3);
-            }
-
-            final pink = BonusConfig.pink;
-            final want = [
-              (pink.r * 255).round(),
-              (pink.g * 255).round(),
-              (pink.b * 255).round(),
-            ];
-            expect(at(rect.left + 2, rect.top + 2), want);
-            expect(at(rect.right - 2, rect.bottom - 2), want);
-            expect(at(rect.left + 2, rect.bottom + 2), isNot(want));
-            expect(at(rect.right + 2, rect.top + 2), isNot(want));
-          });
-          b.tapAt(rect.bottomRight - const Offset(2, 2));
           await flushAndMount(g);
-          expect(g.state, GameState.results);
-        },
-        prefs: {'feathers': 3},
-        h: 568,
-      );
-    },
-  );
+          final paid = r.features.whereType<PuzzleFeature>().single.paid.single;
+          expect(cut.stopped, isTrue);
+          // Every coin write of this session is cut (the pickups' too),
+          // so the balance the app held is what a restart must reach.
+          final live = g.storage.coins;
+          expect(live, greaterThanOrEqualTo(100 + paid));
+          final saved = await cut.getAll();
+          SharedPreferencesStorePlatform.instance = original;
+          SharedPreferences.setMockInitialValues({
+            for (final e in saved.entries)
+              e.key.replaceFirst('flutter.', ''): e.value,
+          });
+          final restarted = GameStorage();
+          await restarted.load();
+          expect(
+            restarted.coins == live ||
+                restarted.puzzlePieces == 7 ||
+                restarted.puzzlePayout == live,
+            isTrue,
+            reason:
+                'disk has no coin payout and no recoverable completed picture: $saved',
+          );
+          // The start-up recovery pays the interrupted credit exactly once.
+          final wallet = Wallet(restarted);
+          final owed = live - restarted.coins;
+          expect(owed, greaterThanOrEqualTo(paid));
+          expect(await PuzzleFeature.settlePayout(restarted, wallet), owed);
+          expect(restarted.coins, live);
+          expect(restarted.puzzlePieces, 0);
+          expect(restarted.puzzleRound, 3);
+          expect(await PuzzleFeature.settlePayout(restarted, wallet), 0);
+          expect(restarted.coins, live);
+          final again = GameStorage();
+          await again.load();
+          expect(again.coins, live);
+          expect(again.puzzlePayout, 0);
+          expect(await PuzzleFeature.settlePayout(again, Wallet(again)), 0);
+        } finally {
+          SharedPreferencesStorePlatform.instance = original;
+        }
+      },
+      prefs: {'puzzlePieces': 7, 'puzzleRound': 2, 'coins': 100},
+    );
+  });
+
+  group('S6-63: bonus NEXT retains its reference size and bottom distance', () {
+    journey(
+      'S6-63 568pt balloon page keeps NEXT 292x50 and 99pt bottom gap',
+      (g, tester) async {
+        await startRun(g);
+        killRun(g);
+        await flushAndMount(g);
+        final b = g.bonusScreen!;
+        final ref = BonusConfig.nextButton;
+        final rect = b.nextRect;
+        expect(g.viewHeight - rect.bottom, closeTo(711 - ref.bottom, .01));
+        expect(rect.width, closeTo(292, .01));
+        expect(rect.height, closeTo(50, .01));
+        // The scaled column above ends at or above the band.
+        final (k, off) = BonusRules.layoutFor(g.viewHeight);
+        expect(off.dy + BonusConfig.panel.bottom * k, lessThan(rect.top));
+        // What is drawn and tapped: NEXT's pink fills that rect.
+        b.phase = BonusPhase.done;
+        await stepSeconds(g, 1.2);
+        expect(b.nextShown, isTrue);
+        await tester.runAsync(() async {
+          final rec = ui.PictureRecorder();
+          b.renderTree(ui.Canvas(rec));
+          final image = await rec.endRecording().toImage(320, 568);
+          final bytes = (await image.toByteData(
+            format: ui.ImageByteFormat.rawRgba,
+          ))!.buffer.asUint8List();
+          image.dispose();
+          List<int> at(double x, double y) {
+            final i = (y.floor() * 320 + x.floor()) * 4;
+            return bytes.sublist(i, i + 3);
+          }
+
+          final pink = BonusConfig.pink;
+          final want = [
+            (pink.r * 255).round(),
+            (pink.g * 255).round(),
+            (pink.b * 255).round(),
+          ];
+          expect(at(rect.left + 2, rect.top + 2), want);
+          expect(at(rect.right - 2, rect.bottom - 2), want);
+          expect(at(rect.left + 2, rect.bottom + 2), isNot(want));
+          expect(at(rect.right + 2, rect.top + 2), isNot(want));
+        });
+        b.tapAt(rect.bottomRight - const Offset(2, 2));
+        await flushAndMount(g);
+        expect(g.state, GameState.results);
+      },
+      prefs: {'feathers': 3},
+      h: 568,
+    );
+  });
 }
 
 class _KillCoinWrite extends InMemorySharedPreferencesStore {

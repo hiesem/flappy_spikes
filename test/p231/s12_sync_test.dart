@@ -93,7 +93,9 @@ void main() {
     tracker.onVersusWin();
     await settle();
     expect(services.calls, isEmpty);
-    expect(storage.achUnlocked, {'rank_egg', 'vs_1'});
+    // PRD-2.3.1 §19.2: a run rule (the versus win) waits in achPending.
+    expect(storage.achUnlocked, {'rank_egg'});
+    expect(storage.achPending, ['vs_1']);
     expect(storage.achReported, isEmpty);
     // Never signs in for an unlock.
     expect(services.calls.contains('signIn'), isFalse);

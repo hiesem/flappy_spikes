@@ -16,34 +16,34 @@ PENGUIN MODE,fs_ach_ride_sea,10,yes,no,English (U.S.),PENGUIN MODE,Finish the Se
 BUMPER BIRD,fs_ach_ride_pinball,10,yes,no,English (U.S.),BUMPER BIRD,Finish the Pinball ride.,"Boing, boing, boing!",ach_ride_pinball.png
 RUFFLED FEATHERS,fs_ach_ride_storm,10,yes,no,English (U.S.),RUFFLED FEATHERS,Finish the Storm ride.,You weathered the storm.,ach_ride_storm.png
 FREQUENT FLYER,fs_ach_ride_all,30,yes,no,English (U.S.),FREQUENT FLYER,Finish all six rides.,"Every ride, done!",ach_ride_all.png
-TWEETHEART,fs_ach_item_heart,5,no,no,English (U.S.),TWEETHEART,Catch a Heart.,Love is in the air.,ach_item_heart.png
-TOUGH EGG,fs_ach_item_shield,5,no,no,English (U.S.),TOUGH EGG,Catch a Shield.,Hard to crack.,ach_item_shield.png
-STARLING,fs_ach_item_star_trail,5,no,no,English (U.S.),STARLING,Catch a star of a Star Trail.,Star catcher!,ach_item_star_trail.png
-TIME FLIES,fs_ach_item_hourglass,5,no,no,English (U.S.),TIME FLIES,Catch an Hourglass.,Time flies when you're flapping.,ach_item_hourglass.png
-LITTLE BIRDIE,fs_ach_item_mini_bird,5,no,no,English (U.S.),LITTLE BIRDIE,Catch a Mini Bird.,Small but mighty.,ach_item_mini_bird.png
-GOLDFINCH,fs_ach_item_coin_frenzy,5,no,no,English (U.S.),GOLDFINCH,Catch a Coin Frenzy.,"Coins, coins, coins!",ach_item_coin_frenzy.png
-EGGCELLENT!,fs_ach_item_egg,5,no,no,English (U.S.),EGGCELLENT!,Catch an Egg.,Simply eggcellent!,ach_item_egg.png
-NEST EGG,fs_ach_item_piggy,5,no,no,English (U.S.),NEST EGG,Catch a Piggy Bank.,Saving for a rainy day.,ach_item_piggy.png
-BUG BUFFET,fs_ach_item_jar,5,no,no,English (U.S.),BUG BUFFET,Catch a Firefly Jar.,Crunchy snacks ahead.,ach_item_jar.png
-LIGHT AS A FEATHER,fs_ach_item_feather,5,no,no,English (U.S.),LIGHT AS A FEATHER,Catch a Feather.,Floating on air.,ach_item_feather.png
-PUZZLED PIGEON,fs_ach_item_puzzle,5,no,no,English (U.S.),PUZZLED PIGEON,Catch a Puzzle Piece.,Hmm… where does this go?,ach_item_puzzle.png
-MAGPIE,fs_ach_item_all,25,no,no,English (U.S.),MAGPIE,Catch every item above at least once.,Every shiny thing is yours.,ach_item_all.png
-MOTHER HEN,fs_ach_master_hatch,10,no,no,English (U.S.),MOTHER HEN,Hatch an egg into a chick.,Proud parent!,ach_master_hatch.png
-NIGHT OWL,fs_ach_master_jar,10,no,no,English (U.S.),NIGHT OWL,Fill a Firefly Jar.,What a glow!,ach_master_jar.png
-SEEING STARS,fs_ach_master_stars,10,no,no,English (U.S.),SEEING STARS,Catch all 8 stars of a Star Trail.,"Twinkle, twinkle!",ach_master_stars.png
-BIRD'S-EYE VIEW,fs_ach_master_picture,15,no,no,English (U.S.),BIRD'S-EYE VIEW,Complete a puzzle picture.,What a view!,ach_master_picture.png
-GOLDEN EGG,fs_ach_master_jackpot,15,no,no,English (U.S.),GOLDEN EGG,Pop the jackpot balloon on the bonus screen.,Jackpot!,ach_master_jackpot.png
+TWEETHEART,fs_ach_item_heart,5,no,no,English (U.S.),TWEETHEART,Catch 10 Hearts.,Love is in the air.,ach_item_heart.png
+TOUGH EGG,fs_ach_item_shield,5,no,no,English (U.S.),TOUGH EGG,Catch 10 Shields.,Hard to crack.,ach_item_shield.png
+STARLING,fs_ach_item_star_trail,5,no,no,English (U.S.),STARLING,Catch stars from 50 Star Trails.,Star catcher!,ach_item_star_trail.png
+TIME FLIES,fs_ach_item_hourglass,5,no,no,English (U.S.),TIME FLIES,Catch 3 Hourglasses.,Time flies when you're flapping.,ach_item_hourglass.png
+LITTLE BIRDIE,fs_ach_item_mini_bird,5,no,no,English (U.S.),LITTLE BIRDIE,Catch 3 Mini Birds.,Small but mighty.,ach_item_mini_bird.png
+GOLDFINCH,fs_ach_item_coin_frenzy,5,no,no,English (U.S.),GOLDFINCH,Catch 3 Coin Frenzies.,"Coins, coins, coins!",ach_item_coin_frenzy.png
+EGGCELLENT!,fs_ach_item_egg,5,no,no,English (U.S.),EGGCELLENT!,Catch 5 Eggs.,Simply eggcellent!,ach_item_egg.png
+NEST EGG,fs_ach_item_piggy,5,no,no,English (U.S.),NEST EGG,Catch 3 Piggy Banks.,Saving for a rainy day.,ach_item_piggy.png
+BUG BUFFET,fs_ach_item_jar,5,no,no,English (U.S.),BUG BUFFET,Catch 3 Firefly Jars.,Crunchy snacks ahead.,ach_item_jar.png
+LIGHT AS A FEATHER,fs_ach_item_feather,5,no,no,English (U.S.),LIGHT AS A FEATHER,Catch 3 Feathers.,Floating on air.,ach_item_feather.png
+PUZZLED PIGEON,fs_ach_item_puzzle,5,no,no,English (U.S.),PUZZLED PIGEON,Catch 3 Puzzle Pieces.,Hmm… where does this go?,ach_item_puzzle.png
+MAGPIE,fs_ach_item_all,25,yes,no,English (U.S.),MAGPIE,Reach every item goal.,Every shiny thing is yours.,ach_item_all.png
+MOTHER HEN,fs_ach_master_hatch,10,yes,no,English (U.S.),MOTHER HEN,Hatch an egg into a chick.,Proud parent!,ach_master_hatch.png
+NIGHT OWL,fs_ach_master_jar,10,yes,no,English (U.S.),NIGHT OWL,Fill a Firefly Jar.,What a glow!,ach_master_jar.png
+SEEING STARS,fs_ach_master_stars,10,yes,no,English (U.S.),SEEING STARS,Catch all 8 stars of a Star Trail.,"Twinkle, twinkle!",ach_master_stars.png
+BIRD'S-EYE VIEW,fs_ach_master_picture,15,yes,no,English (U.S.),BIRD'S-EYE VIEW,Complete a puzzle picture.,What a view!,ach_master_picture.png
+GOLDEN EGG,fs_ach_master_jackpot,15,yes,no,English (U.S.),GOLDEN EGG,Pop the jackpot balloon on the bonus screen.,Jackpot!,ach_master_jackpot.png
 FIRST FLIGHT,fs_ach_hoops_10,5,no,no,English (U.S.),FIRST FLIGHT,Pass 10 hoops in one run.,Wheels up!,ach_hoops_10.png
 HOOPOE,fs_ach_hoops_25,10,no,no,English (U.S.),HOOPOE,Pass 25 hoops in one run.,"Hoop, hoop, hooray!",ach_hoops_25.png
 RING-NECKED,fs_ach_hoops_50,20,no,no,English (U.S.),RING-NECKED,Pass 50 hoops in one run.,Ring after ring after ring.,ach_hoops_50.png
 FLYING COLORS,fs_ach_hoops_100,40,no,no,English (U.S.),FLYING COLORS,Pass 100 hoops in one run.,Passed with flying colors!,ach_hoops_100.png
 BEAK TO BEAK,fs_ach_vs_1,10,no,no,English (U.S.),BEAK TO BEAK,Win a versus match.,"Beak to beak, and you won!",ach_vs_1.png
-PECKING ORDER,fs_ach_vs_10,25,no,no,English (U.S.),PECKING ORDER,Win 10 versus matches.,Top of the pecking order.,ach_vs_10.png
-RULES THE ROOST,fs_ach_vs_50,40,no,no,English (U.S.),RULES THE ROOST,Win 50 versus matches.,The roost is yours.,ach_vs_50.png
+PECKING ORDER,fs_ach_vs_10,25,yes,no,English (U.S.),PECKING ORDER,Win 10 versus matches.,Top of the pecking order.,ach_vs_10.png
+RULES THE ROOST,fs_ach_vs_50,40,yes,no,English (U.S.),RULES THE ROOST,Win 50 versus matches.,The roost is yours.,ach_vs_50.png
 STILL TWEETING,fs_ach_first_revive,5,no,no,English (U.S.),STILL TWEETING,Revive during a run.,Still tweeting!,ach_first_revive.png
 BIG BIRD,fs_ach_first_big_hoops,5,no,no,English (U.S.),BIG BIRD,Play a run with Big Hoops.,Go big or go home.,ach_first_big_hoops.png
 HOT WINGS,fs_ach_first_fever,10,no,no,English (U.S.),HOT WINGS,Trigger FEVER.,"Hot, hot, hot!",ach_first_fever.png
 FRESH FEATHERS,fs_ach_skin_first,10,no,no,English (U.S.),FRESH FEATHERS,Buy your first item in the shop.,Looking sharp!,ach_skin_first.png
-PROUD PEACOCK,fs_ach_skin_all,50,no,no,English (U.S.),PROUD PEACOCK,Own every item in the shop.,The proudest bird in the sky.,ach_skin_all.png
+PROUD PEACOCK,fs_ach_skin_all,50,yes,no,English (U.S.),PROUD PEACOCK,Own every item in the shop.,The proudest bird in the sky.,ach_skin_all.png
 EARLY BIRD,fs_ach_daily_7,25,no,no,English (U.S.),EARLY BIRD,Play on 7 days in a row.,Rise and shine!,ach_daily_7.png
-HOMING PIGEON,fs_ach_daily_30,50,no,no,English (U.S.),HOMING PIGEON,Play on 30 days in a row.,Always finds its way home.,ach_daily_30.png
+HOMING PIGEON,fs_ach_daily_30,50,yes,no,English (U.S.),HOMING PIGEON,Play on 30 days in a row.,Always finds its way home.,ach_daily_30.png

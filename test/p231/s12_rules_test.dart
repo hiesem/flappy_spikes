@@ -41,7 +41,9 @@ void main() {
     g.achievements.countDebugRuns = true;
   }
 
-  Set<String> unlocked(FlappySpikesGame g) => g.storage.achUnlocked;
+  // PRD-2.3.1 §19.2: the run rules earn (unlocked or pending in the
+  // 1-per-run queue); these rule tests check what was earned.
+  Set<String> unlocked(FlappySpikesGame g) => g.achievements.earned;
 
   /// Ends the running run (death → revive offer declined → results).
   Future<void> finish(FlappySpikesGame g) async {
@@ -79,20 +81,20 @@ void main() {
         for (final (j, id) in kRankAchievements.indexed) {
           expect(unlocked(g).contains(id.key), j <= i, reason: id.key);
         }
+        // §19.2: one unlock for the run (the first earned), the rest wait.
         expect(
-          spy.events.where(
-            (e) =>
-                e.$1 == 'achievement_unlocked' &&
-                e.$2!['id'] == kRankAchievements[i].key,
-          ),
-          hasLength(1),
+          spy.events
+              .where((e) => e.$1 == 'achievement_unlocked')
+              .map((e) => e.$2!['id']),
+          [kRankAchievements.first.key],
         );
       },
     );
   }
 
   t.testGameWidget(
-    '§12.2 ranks: a 2,000-point run unlocks 9 ranks at once (all toasted)',
+    '§12.2 ranks: a 2,000-point run earns 9 ranks at once (§19.2: one '
+    'unlocks and is toasted, 8 wait in achPending)',
     setUp: boot,
     verify: (g, _) async {
       final run = await startRun(g);
@@ -100,12 +102,12 @@ void main() {
       await finish(g);
       expect(unlocked(g).where((k) => k.startsWith('rank_')), hasLength(9));
       expect(unlocked(g).contains('rank_legend'), isFalse);
+      expect(g.storage.achUnlocked, {'rank_egg'});
+      expect(g.storage.achPending, hasLength(8));
       expect(
-        g.achievements.toastQueue
-                .where((a) => a.group == AchievementGroup.rank)
-                .length +
+        g.achievements.toastQueue.length +
             (g.achievementToast == null ? 0 : 1),
-        greaterThanOrEqualTo(9),
+        1,
       );
     },
   );
@@ -205,8 +207,8 @@ void main() {
   });
 
   t.testGameWidget(
-    '§12.2 each of the 11 items on its first catch, then MAGPIE; piggy '
-    'coins and fireflies are ignored',
+    '§12.2 / §19.1 each of the 11 items at its lifetime goal, then MAGPIE '
+    'once all 11 are unlocked; piggy coins and fireflies are ignored',
     setUp: boot,
     verify: (g, _) async {
       final run = await startRun(g);
@@ -226,25 +228,44 @@ void main() {
         ElementId.puzzlePiece: AchievementId.itemPuzzle,
       };
       for (final MapEntry(:key, :value) in plain.entries) {
-        run.events.emit(PickupCollected(key, null));
+        for (var i = 0; i < itemGoal(value); i++) {
+          expect(unlocked(g).contains(value.key), isFalse, reason: value.key);
+          run.events.emit(PickupCollected(key, null));
+        }
         expect(unlocked(g).contains(value.key), isTrue, reason: value.key);
       }
       expect(unlocked(g).contains('item_all'), isFalse);
       for (final c in CapsuleType.values) {
-        run.events.emit(
+        final id = AchievementsFeature.itemFor(
           PickupCollected(
             ElementId.capsule,
             CapsulePickup(
               GapItemPlan(kind: ElementId.capsule, trackX: 0, y: 0, extra: c),
             ),
           ),
-        );
+        )!;
+        for (var i = 0; i < itemGoal(id); i++) {
+          run.events.emit(
+            PickupCollected(
+              ElementId.capsule,
+              CapsulePickup(
+                GapItemPlan(kind: ElementId.capsule, trackX: 0, y: 0, extra: c),
+              ),
+            ),
+          );
+        }
       }
       for (final a in kItemAchievements) {
         expect(unlocked(g).contains(a.key), isTrue, reason: a.key);
+        expect(g.storage.achItemCounts[a.key], itemGoal(a), reason: a.key);
       }
-      expect(g.storage.achItems, hasLength(11));
-      expect(unlocked(g).contains('item_all'), isTrue);
+      // §19.1 MAGPIE needs the 11 unlocked, not just earned (pending).
+      expect(unlocked(g).contains('item_all'), isFalse);
+      for (var i = 0; i < 11; i++) {
+        g.achievements.releaseOne();
+      }
+      expect(kItemAchievements.every(g.achievements.isUnlocked), isTrue);
+      expect(g.achievements.isPending(AchievementId.itemAll), isTrue);
     },
   );
 

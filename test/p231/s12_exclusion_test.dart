@@ -230,22 +230,16 @@ void main() {
       expect(g.storage.achUnlocked, isEmpty);
       await finish(g);
       expect(g.achievements.lastRunCounted, isTrue);
-      expect(
-        g.storage.achUnlocked,
-        containsAll(['item_heart', 'first_fever', 'rank_egg']),
-      );
-      expect(g.storage.achItems, {'item_heart'});
+      // PRD-2.3.1 §19: the catch counts (1 of the heart goal); the run
+      // unlocks only its first earned achievement (FEVER), EGG waits.
+      expect(g.storage.achItemCounts, {'item_heart': 1});
+      expect(g.storage.achUnlocked, {'first_fever'});
+      expect(g.storage.achPending, ['rank_egg']);
       expect(g.storage.achDayStreak, 1);
-      expect(
-        achEvents(),
-        containsAll(['item_heart', 'first_fever', 'rank_egg']),
-      );
-      expect(services.unlocks, contains('unlock:item_heart'));
-      expect(g.storage.achReported, contains('item_heart'));
-      expect(g.achievements.toastQueue.take(2), [
-        AchievementId.itemHeart,
-        AchievementId.firstFever,
-      ]);
+      expect(achEvents(), ['first_fever']);
+      expect(services.unlocks, ['unlock:first_fever']);
+      expect(g.storage.achReported, {'first_fever'});
+      expect(g.achievements.toastQueue, [AchievementId.firstFever]);
     },
   );
 
@@ -422,18 +416,19 @@ void main() {
       expect(g.storage.achUnlocked, isEmpty);
       expect(services.unlocks, isEmpty);
       // The process dies here; the next launch commits the journal.
+      // PRD-2.3.1 §19.2: what it earned goes into achPending (no unlock, no
+      // report); the catch adds to the lifetime count.
       final (storage, next) = await relaunchTracker();
-      expect(storage.achUnlocked, containsAll(['item_heart', 'ride_space']));
+      expect(storage.achUnlocked, isEmpty);
+      expect(storage.achPending, ['ride_space']);
       expect(storage.achRides, {'space'});
-      expect(storage.achItems, {'item_heart'});
-      expect(
-        next.unlocks,
-        containsAll(['unlock:item_heart', 'unlock:ride_space']),
-      );
+      expect(storage.achItemCounts, {'item_heart': 1});
+      expect(next.unlocks, isEmpty);
       expect(storage.achJournal, isEmpty);
       // Committed once: a second launch adds nothing.
       final (again, _) = await relaunchTracker();
-      expect(again.achUnlocked, storage.achUnlocked);
+      expect(again.achPending, storage.achPending);
+      expect(again.achItemCounts, storage.achItemCounts);
     },
   );
 
@@ -442,10 +437,13 @@ void main() {
     setUp: boot,
     verify: (g, _) async {
       final r = await startRun(g);
-      r.events.emit(const PickupCollected(ElementId.heart, null));
+      r.events
+        ..emit(const PickupCollected(ElementId.heart, null))
+        ..emit(const Revived(ReviveKind.coins, 100));
       await flushAndMount(g);
       final (storage, _) = await relaunchTracker();
-      expect(storage.achUnlocked, {'item_heart'});
+      expect(storage.achItemCounts, {'item_heart': 1});
+      expect(storage.achPending, ['first_revive']); // §19.2 queued
       // An unfinished ride (no RideEnded) never counts.
       expect(storage.achRides, isEmpty);
     },
@@ -463,7 +461,8 @@ void main() {
       await flushAndMount(g);
       final (storage, next) = await relaunchTracker();
       expect(storage.achUnlocked, isEmpty);
-      expect(storage.achItems, isEmpty);
+      expect(storage.achItemCounts, isEmpty);
+      expect(storage.achPending, isEmpty);
       expect(next.unlocks, isEmpty);
       expect(storage.achJournalExcluded, isFalse); // discarded
     },
@@ -484,6 +483,7 @@ void main() {
       await flushAndMount(g);
       final (storage, _) = await relaunchTracker();
       expect(storage.achUnlocked, isEmpty);
+      expect(storage.achItemCounts, isEmpty);
     },
   );
 
@@ -492,15 +492,19 @@ void main() {
     setUp: boot,
     verify: (g, _) async {
       final r = await startRun(g);
-      r.events.emit(const PickupCollected(ElementId.heart, null));
+      r.events
+        ..emit(const PickupCollected(ElementId.heart, null))
+        ..emit(const Revived(ReviveKind.coins, 100));
       g.lifecycleStateChange(AppLifecycleState.paused);
       g.lifecycleStateChange(AppLifecycleState.resumed);
       g.resume();
       await finish(g);
-      expect(g.storage.achUnlocked, contains('item_heart'));
+      expect(g.storage.achUnlocked, contains('first_revive'));
+      expect(g.storage.achItemCounts, {'item_heart': 1});
       expect(g.storage.achJournal, isEmpty);
       final (storage, next) = await relaunchTracker();
       expect(storage.achJournal, isEmpty);
+      expect(storage.achItemCounts, {'item_heart': 1}); // counted once
       expect(next.events.where((e) => e.$1 == 'achievement_unlocked'), isEmpty);
     },
   );
@@ -508,16 +512,16 @@ void main() {
   withPrefs({
     'achJournal': ['item:item_heart', 'ride:space', 'hoops:12'],
   }).testGameWidget(
-    'P2-03 the launch commits a clean journal and reports it via the sync',
+    'P2-03 the launch commits a clean journal (PRD-2.3.1 §19.2: into the '
+    'pending queue, reported only once a run end unlocks it)',
     setUp: boot,
     verify: (g, _) async {
       await flushAndMount(g);
-      expect(
-        g.storage.achUnlocked,
-        containsAll(['item_heart', 'ride_space', 'hoops_10']),
-      );
+      expect(g.storage.achUnlocked, isEmpty);
+      expect(g.storage.achPending, ['ride_space', 'hoops_10']);
+      expect(g.storage.achItemCounts, {'item_heart': 1});
       expect(g.storage.achJournal, isEmpty);
-      expect(services.unlocks, contains('unlock:item_heart'));
+      expect(services.unlocks, isEmpty);
       expect(g.achievements.toastQueue, isEmpty);
     },
   );

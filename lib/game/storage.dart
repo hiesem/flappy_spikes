@@ -82,6 +82,9 @@ class GameStorage {
   // QA P2-03 the open run's provisional achievement journal.
   static const String _achJournalKey = 'achJournal';
   static const String _achJournalExcludedKey = 'achJournalExcluded';
+  // PRD-2.3.1 §19 the pacing queue and the lifetime item catch counts.
+  static const String _achPendingKey = 'achPending';
+  static const String _achItemCountsKey = 'achItemCounts';
   // endregion P231-E
   static const String _notifLastSentKey = 'notifLastSent';
   static const String _notifPermissionAskedKey = 'notifPermissionAsked';
@@ -289,6 +292,13 @@ class GameStorage {
 
   /// [today] of the last counted run (-1 = none).
   int achLastPlayDay = -1;
+
+  /// PRD-2.3.1 §19.2 earned achievements waiting for a counting run's
+  /// unlock slot, oldest first (FIFO). Earned for good, never reported.
+  List<String> achPending = [];
+
+  /// PRD-2.3.1 §19.1 lifetime catches per item achievement key.
+  Map<String, int> achItemCounts = {};
   // endregion P231-E
 
   /// §3.13 Versus nickname (generated once by WP-5b); null = not yet.
@@ -438,6 +448,13 @@ class GameStorage {
     achLastPlayDay = prefs.getInt(_achLastPlayDayKey) ?? -1;
     achJournal = [...?prefs.getStringList(_achJournalKey)];
     achJournalExcluded = prefs.getBool(_achJournalExcludedKey) ?? false;
+    achPending = [...?prefs.getStringList(_achPendingKey)];
+    achItemCounts = {
+      for (final e in prefs.getStringList(_achItemCountsKey) ?? const <String>[])
+        if (e.contains('='))
+          e.substring(0, e.lastIndexOf('=')):
+              int.tryParse(e.substring(e.lastIndexOf('=') + 1)) ?? 0,
+    };
     // endregion P231-E
     versusNickname = prefs.getString(_versusNicknameKey);
     versusAvatar = _parseVersusAvatar(prefs.getString(_versusAvatarKey));
@@ -611,9 +628,28 @@ class GameStorage {
     await prefs.setStringList(_achJournalKey, achJournal);
   }
 
+  /// PRD-2.3.1 §19.2 the pacing queue (oldest first).
+  Future<void> saveAchPending(List<String> value) async {
+    achPending = [...value];
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_achPendingKey, achPending);
+  }
+
+  /// PRD-2.3.1 §19.1 the lifetime item catch counts (stored as `key=n`).
+  Future<void> saveAchItemCounts(Map<String, int> value) async {
+    achItemCounts = {...value};
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_achItemCountsKey, [
+      for (final k in achItemCounts.keys.toList()..sort())
+        '$k=${achItemCounts[k]}',
+    ]);
+  }
+
   /// Debug "Achievements: reset local" / [resetMenuState]: clears every
   /// achievement key (it cannot reset the platform).
   Future<void> resetAchievements() async {
+    await saveAchPending(const []);
+    await saveAchItemCounts(const {});
     await saveAchUnlocked({});
     await saveAchReported({});
     await saveAchReportedPlayer('');

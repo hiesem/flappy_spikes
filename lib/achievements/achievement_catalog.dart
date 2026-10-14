@@ -2,7 +2,8 @@
 /// approved order. The single source for the tracker, the store kits and the
 /// tests: the names, the descriptions (Play's description = Apple's
 /// pre-earned text), Apple's earned text, the points (Game Center points =
-/// Play XP), hidden (the rides only) and both platform ids.
+/// Play XP), hidden (the rides; PRD-2.3.1 §19.3 adds the masteries,
+/// MAGPIE, vs_10, vs_50, skin_all and daily_30) and both platform ids.
 library;
 
 /// §12.1 the groups (their point sums are tested: 220 / 90 / 80 / 60 / 75 /
@@ -174,11 +175,11 @@ enum AchievementId {
     androidId: 'CgkIsZz8pvUOEAIQFA',
   ),
 
-  // --- First catch of each item (12, 80 pts) ---------------------------------
+  // --- Item catch goals (12, 80 pts; PRD-2.3.1 §19.1 lifetime counts) ---------------------------------
   itemHeart(
     'item_heart',
     'TWEETHEART',
-    'Catch a Heart.',
+    'Catch 10 Hearts.',
     'Love is in the air.',
     5,
     AchievementGroup.item,
@@ -187,7 +188,7 @@ enum AchievementId {
   itemShield(
     'item_shield',
     'TOUGH EGG',
-    'Catch a Shield.',
+    'Catch 10 Shields.',
     'Hard to crack.',
     5,
     AchievementGroup.item,
@@ -196,7 +197,7 @@ enum AchievementId {
   itemStarTrail(
     'item_star_trail',
     'STARLING',
-    'Catch a star of a Star Trail.',
+    'Catch stars from 50 Star Trails.',
     'Star catcher!',
     5,
     AchievementGroup.item,
@@ -205,7 +206,7 @@ enum AchievementId {
   itemHourglass(
     'item_hourglass',
     'TIME FLIES',
-    'Catch an Hourglass.',
+    'Catch 3 Hourglasses.',
     "Time flies when you're flapping.",
     5,
     AchievementGroup.item,
@@ -214,7 +215,7 @@ enum AchievementId {
   itemMiniBird(
     'item_mini_bird',
     'LITTLE BIRDIE',
-    'Catch a Mini Bird.',
+    'Catch 3 Mini Birds.',
     'Small but mighty.',
     5,
     AchievementGroup.item,
@@ -223,7 +224,7 @@ enum AchievementId {
   itemCoinFrenzy(
     'item_coin_frenzy',
     'GOLDFINCH',
-    'Catch a Coin Frenzy.',
+    'Catch 3 Coin Frenzies.',
     'Coins, coins, coins!',
     5,
     AchievementGroup.item,
@@ -232,7 +233,7 @@ enum AchievementId {
   itemEgg(
     'item_egg',
     'EGGCELLENT!',
-    'Catch an Egg.',
+    'Catch 5 Eggs.',
     'Simply eggcellent!',
     5,
     AchievementGroup.item,
@@ -241,7 +242,7 @@ enum AchievementId {
   itemPiggy(
     'item_piggy',
     'NEST EGG',
-    'Catch a Piggy Bank.',
+    'Catch 3 Piggy Banks.',
     'Saving for a rainy day.',
     5,
     AchievementGroup.item,
@@ -250,7 +251,7 @@ enum AchievementId {
   itemJar(
     'item_jar',
     'BUG BUFFET',
-    'Catch a Firefly Jar.',
+    'Catch 3 Firefly Jars.',
     'Crunchy snacks ahead.',
     5,
     AchievementGroup.item,
@@ -259,7 +260,7 @@ enum AchievementId {
   itemFeather(
     'item_feather',
     'LIGHT AS A FEATHER',
-    'Catch a Feather.',
+    'Catch 3 Feathers.',
     'Floating on air.',
     5,
     AchievementGroup.item,
@@ -268,7 +269,7 @@ enum AchievementId {
   itemPuzzle(
     'item_puzzle',
     'PUZZLED PIGEON',
-    'Catch a Puzzle Piece.',
+    'Catch 3 Puzzle Pieces.',
     'Hmm… where does this go?',
     5,
     AchievementGroup.item,
@@ -277,10 +278,11 @@ enum AchievementId {
   itemAll(
     'item_all',
     'MAGPIE',
-    'Catch every item above at least once.',
+    'Reach every item goal.',
     'Every shiny thing is yours.',
     25,
     AchievementGroup.item,
+    hidden: true, // PRD-2.3.1 §19.3
     androidId: 'CgkIsZz8pvUOEAIQIA',
   ),
 
@@ -292,6 +294,7 @@ enum AchievementId {
     'Proud parent!',
     10,
     AchievementGroup.mastery,
+    hidden: true, // PRD-2.3.1 §19.3
     androidId: 'CgkIsZz8pvUOEAIQIQ',
   ),
   masterJar(
@@ -301,6 +304,7 @@ enum AchievementId {
     'What a glow!',
     10,
     AchievementGroup.mastery,
+    hidden: true, // PRD-2.3.1 §19.3
     androidId: 'CgkIsZz8pvUOEAIQIg',
   ),
   masterStars(
@@ -310,6 +314,7 @@ enum AchievementId {
     'Twinkle, twinkle!',
     10,
     AchievementGroup.mastery,
+    hidden: true, // PRD-2.3.1 §19.3
     androidId: 'CgkIsZz8pvUOEAIQIw',
   ),
   masterPicture(
@@ -319,6 +324,7 @@ enum AchievementId {
     'What a view!',
     15,
     AchievementGroup.mastery,
+    hidden: true, // PRD-2.3.1 §19.3
     androidId: 'CgkIsZz8pvUOEAIQJA',
   ),
   masterJackpot(
@@ -328,6 +334,7 @@ enum AchievementId {
     'Jackpot!',
     15,
     AchievementGroup.mastery,
+    hidden: true, // PRD-2.3.1 §19.3
     androidId: 'CgkIsZz8pvUOEAIQJQ',
   ),
 
@@ -386,6 +393,7 @@ enum AchievementId {
     'Top of the pecking order.',
     25,
     AchievementGroup.versus,
+    hidden: true, // PRD-2.3.1 §19.3
     androidId: 'CgkIsZz8pvUOEAIQKw',
   ),
   vs50(
@@ -395,6 +403,7 @@ enum AchievementId {
     'The roost is yours.',
     40,
     AchievementGroup.versus,
+    hidden: true, // PRD-2.3.1 §19.3
     androidId: 'CgkIsZz8pvUOEAIQLA',
   ),
 
@@ -442,6 +451,7 @@ enum AchievementId {
     'The proudest bird in the sky.',
     50,
     AchievementGroup.more,
+    hidden: true, // PRD-2.3.1 §19.3
     androidId: 'CgkIsZz8pvUOEAIQMQ',
   ),
   daily7(
@@ -460,6 +470,7 @@ enum AchievementId {
     'Always finds its way home.',
     50,
     AchievementGroup.more,
+    hidden: true, // PRD-2.3.1 §19.3
     androidId: 'CgkIsZz8pvUOEAIQMw',
   );
 
@@ -491,7 +502,10 @@ enum AchievementId {
 
   final AchievementGroup group;
 
-  /// Shown as "Hidden" until unlocked (the 7 rides).
+  /// Shown as "Hidden" until unlocked: the 7 rides, plus the 10 of
+  /// PRD-2.3.1 §19.3 (Game Center kit). Play Console locks the initial
+  /// state of a published achievement, so on Play only the 7 rides are
+  /// hidden; the §19.3 ten stay Revealed there (2026-10-14).
   final bool hidden;
 
   /// Play Console's generated id (§12.6, created 2026-10-14). Empty = not
@@ -548,7 +562,8 @@ const List<(int, AchievementId)> kDailyAchievements = [
   (30, AchievementId.daily30),
 ];
 
-/// §12.1 the 11 first-catch item achievements (MAGPIE needs all of them).
+/// §12.1 the 11 item achievements (PRD-2.3.1 §19.1: lifetime catch goals;
+/// MAGPIE needs all of them unlocked).
 const List<AchievementId> kItemAchievements = [
   AchievementId.itemHeart,
   AchievementId.itemShield,
@@ -562,3 +577,30 @@ const List<AchievementId> kItemAchievements = [
   AchievementId.itemFeather,
   AchievementId.itemPuzzle,
 ];
+
+/// PRD-2.3.1 §19.1 the lifetime catches each item achievement needs, set by
+/// how often the bot catches the item in a 20-hoop run on the live defaults
+/// (the rarest items get the smallest N; never below 3), so the 11 goals
+/// land after about 25–40 such runs (puzzle, the rarest, later). Bot
+/// catches per 20-hoop run of a simulated new player (2026-10-14, 8 × 40
+/// runs, first-meet and lifetime gates, `test/tools/ach_pacing_test.dart`):
+/// heart 0.27, shield 0.37, star trails 1.80 (a trail counts once),
+/// hourglass 0.07, mini bird 0.08, coin frenzy 0.09, egg 0.15, piggy 0.11,
+/// jar 0.11, feather 0.08, puzzle 0.05. The descriptions above say the same
+/// count (a test checks it).
+const Map<AchievementId, int> kItemGoals = {
+  AchievementId.itemHeart: 10,
+  AchievementId.itemShield: 10,
+  AchievementId.itemStarTrail: 50,
+  AchievementId.itemHourglass: 3,
+  AchievementId.itemMiniBird: 3,
+  AchievementId.itemCoinFrenzy: 3,
+  AchievementId.itemEgg: 5,
+  AchievementId.itemPiggy: 3,
+  AchievementId.itemJar: 3,
+  AchievementId.itemFeather: 3,
+  AchievementId.itemPuzzle: 3,
+};
+
+/// The goal of an item achievement (1 for any other id).
+int itemGoal(AchievementId id) => kItemGoals[id] ?? 1;

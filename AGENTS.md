@@ -189,6 +189,11 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   `store/achievements/` (`play/` 512, `ios/` 1024 RGB + the Game Center kit
   CSV/JSON). Game Center achievements are not created yet (iOS paused): the kit
   and the steps are in `PORT-IOS.md` / `SUBMISSION.md`.
+  **PRD-2.3.1 §19 (2026-10-14):** the 11 item descriptions and MAGPIE's were
+  edited to the lifetime goals ("Catch 10 Hearts." …, "Reach every item goal.")
+  and published 20:44 / 20:46 CEST. The §19.3 hidden states could not be set:
+  Play locks "Initial state" once published, so on Play only the 7 rides are
+  hidden (the catalog / iOS kit hide the §19.3 ten as well).
 - **App Check debug token** "Pixel 8 e2e" is registered in the Firebase console
   (App Check → Apps → Manage debug tokens). Debug / e2e builds pass it with
   `--dart-define=FS_APPCHECK_DEBUG_TOKEN=…`; **release builds never use the debug

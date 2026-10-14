@@ -101,11 +101,12 @@ void main() async {
     'one at a time',
     setUp: boot,
     verify: (g, w) async {
-      await play(g, 60); // EGG + CHICK, a level up
-      expect(g.achievements.toastQueue.map((a) => a.key), [
-        'rank_egg',
-        'rank_chick',
-      ]);
+      await play(g, 60); // EGG + CHICK earned, a level up
+      // PRD-2.3.1 §19.2: the run unlocks one (EGG); CHICK waits in
+      // achPending. A second pill (e.g. the jackpot's) queues behind it.
+      expect(g.achievements.toastQueue.map((a) => a.key), ['rank_egg']);
+      expect(g.storage.achPending, ['rank_chick']);
+      g.achievements.toastQueue.add(AchievementId.rankChick);
       expect(g.resultsScreen!.model.levelUp, isTrue);
       var claimSeen = false;
       for (var i = 0; i < 900; i++) {

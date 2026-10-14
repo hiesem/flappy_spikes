@@ -217,3 +217,15 @@ Full table: [`QA_DEVICE.md`](QA_DEVICE.md) (Sol, 2026-10-14). Evidence: `.worktr
   - Updated to (21) from Play, with the data cleared.
   - A second **Test: No Ads** order made during play (GPA.3338-8041-8595-40051, revenue €0) was refunded with "Remove entitlement".
   - The launch then logs `[IAP] purchases 0` and `versus: link switched none`. The phone starts as a new user, and the notification and consent prompts are left for the owner to answer.
+
+## 2.3.1 (22): the game's achievement popup only when not signed in (2026-10-15)
+- **Why:** on Android a signed-in player already gets the Play Games popup, so the game's own toast doubled it.
+- **Research** (two Haiku 5.5 reports): neither platform forces sign-in.
+  - **Android:** players with no Play Games profile, Family Link children and devices without Google Play services stay signed out.
+  - **iOS:** our game signs in to Game Center only when the medal or leaderboard is tapped.
+- **Change:** the game's toast is queued only while `achievementsReady` is false, the same rule on both platforms. Signed-in players see only the platform popup.
+- **Release:** 2.3.1 (22) on internal testing, released 2026-10-15 ~00:25 CEST.
+- **Owner reset #2:**
+  - Play Games achievements 4 → 0, and the leaderboard score (929) removed, through the Management API with the game's web client. The temporary redirect was removed again and the token revoked.
+  - No new No Ads order exists; `[IAP] purchases 0`.
+  - The Pixel 8 was updated to (22) with its data cleared, so score, coins and skins start from zero.

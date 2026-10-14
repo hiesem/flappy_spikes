@@ -659,6 +659,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     add(drags);
 
     await storage.load();
+    // QA P2-03 (PRD-2.3.1 §12.3): commit (clean) or drop (excluded) the
+    // journal of a run the app died in, before the sync below reports it.
+    await achievements.recoverJournal();
     // PRD-2.3.1 §12.4 report what an earlier session left unreported (a
     // no-op while signed out; the player stream triggers it again).
     unawaited(achievements.syncAll());
@@ -936,6 +939,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.inactive) {
       pause();
+      // QA P2-03: the open run's achievement journal reaches disk.
+      final run = _run;
+      if (run != null && !run.ended) {
+        achievements.saveJournal(counts: run.countsForAchievements);
+      }
     }
     // endregion WP-2d
     // region PRD-2.2 §28 — the game owns the music lifecycle

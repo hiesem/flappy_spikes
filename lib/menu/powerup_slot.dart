@@ -21,8 +21,9 @@ class PowerupSlot extends ChangeNotifier {
 
   // PRD-2.3.1 §12.2 the debug origin of the offered / armed / consumed
   // powerup: a "Slot: force …" roll is a debug start (no achievements).
+  // The armed origin lives in storage next to the armed powerup (QA P2-02:
+  // it survives an app restart between arming and START).
   bool _offeredDebug = false;
-  bool _armedDebug = false;
   bool _consumedDebug = false;
 
   /// Returns and clears whether the last [consume]d powerup was a debug-forced
@@ -58,17 +59,20 @@ class PowerupSlot extends ChangeNotifier {
 
   /// Arms the offered powerup; overwrites any previously armed one.
   Future<void> armOffered() async {
-    _armedDebug = _offeredDebug && _offered != Powerup.none;
-    await _storage.saveArmedPowerup(_offered.name);
+    await _storage.saveArmedPowerup(
+      _offered.name,
+      debug: _offeredDebug && _offered != Powerup.none,
+    );
     notifyListeners();
   }
 
   /// Returns and clears the armed powerup (consumed on START).
   Powerup consume() {
     final current = armed;
-    _consumedDebug = _armedDebug && current != Powerup.none;
-    _armedDebug = false;
-    _storage.armedPowerup = 'none';
+    _consumedDebug = _storage.armedPowerupDebug && current != Powerup.none;
+    _storage
+      ..armedPowerup = 'none'
+      ..armedPowerupDebug = false;
     unawaited(_storage.saveArmedPowerup('none'));
     notifyListeners();
     return current;
@@ -87,7 +91,7 @@ class PowerupSlot extends ChangeNotifier {
   }
 
   Powerup _parse(String value) => Powerup.values.firstWhere(
-        (powerup) => powerup.name == value,
-        orElse: () => Powerup.none,
-      );
+    (powerup) => powerup.name == value,
+    orElse: () => Powerup.none,
+  );
 }

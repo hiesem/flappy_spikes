@@ -35,29 +35,29 @@ class AchievementsFeature extends RunFeature {
       ..on<PuzzleCompleted>(_onPicture);
   }
 
-  /// Applies [rule] through the tracker (staged until the run ends,
-  /// P1E-03), only while this run counts.
-  void _rule(void Function(AchievementTracker t) rule) {
+  /// Applies the rule [op] through the tracker (staged and journaled until
+  /// the run ends, P1E-03 / P2-03), only while this run counts.
+  void _rule(String op) {
     final c = _c;
     if (c == null || !c.run.countsForAchievements) return;
-    c.game.achievements.runRule(rule);
+    c.game.achievements.runOp(op);
   }
 
   void _onStarted(RunStarted e) {
     if (e.setup.starter == Powerup.bigHoops) {
-      _rule((t) => t.unlock(AchievementId.firstBigHoops));
+      _rule(AchOp.unlock(AchievementId.firstBigHoops));
     }
   }
 
   void _onRideEnded(RideEnded e) {
     final id = e.rideId;
     if (e.kind != RideKind.portal || id == null) return;
-    _rule((t) => t.onRideFinished(id));
+    _rule(AchOp.ride(id));
   }
 
   void _onPickup(PickupCollected e) {
     final item = itemFor(e);
-    if (item != null) _rule((t) => t.onItemCaught(item));
+    if (item != null) _rule(AchOp.item(item));
   }
 
   /// §12.2 the item achievement of a catch (null = none: piggy coins,
@@ -87,30 +87,29 @@ class AchievementsFeature extends RunFeature {
     final c = _c;
     if (c == null) return;
     final n = c.s.hoopsPassed; // captured now (the rule may be staged)
-    _rule((t) => t.onHoops(n));
+    _rule(AchOp.hoops(n));
   }
 
   void _onEnded(RunEnded e) {
-    if (e.summary.duel == DuelResult.win) _rule((t) => t.onVersusWin());
+    if (e.summary.duel == DuelResult.win) _rule(AchOp.versusWin);
   }
 
-  void _onRevived(Revived e) =>
-      _rule((t) => t.unlock(AchievementId.firstRevive));
+  void _onRevived(Revived e) => _rule(AchOp.unlock(AchievementId.firstRevive));
 
   void _onFever(FeverStarted e) =>
-      _rule((t) => t.unlock(AchievementId.firstFever));
+      _rule(AchOp.unlock(AchievementId.firstFever));
 
   void _onHatched(EggHatched e) =>
-      _rule((t) => t.unlock(AchievementId.masterHatch));
+      _rule(AchOp.unlock(AchievementId.masterHatch));
 
   void _onJarFilled(JarFilled e) =>
-      _rule((t) => t.unlock(AchievementId.masterJar));
+      _rule(AchOp.unlock(AchievementId.masterJar));
 
   void _onStars(StarTrailPerfect e) =>
-      _rule((t) => t.unlock(AchievementId.masterStars));
+      _rule(AchOp.unlock(AchievementId.masterStars));
 
   void _onPicture(PuzzleCompleted e) =>
-      _rule((t) => t.unlock(AchievementId.masterPicture));
+      _rule(AchOp.unlock(AchievementId.masterPicture));
 
   @override
   void detach() {

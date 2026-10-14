@@ -355,6 +355,7 @@ class RunDirector {
     final k = stretch <= 0 ? 0 : max(1, (stretch / gap).round());
     final stations = [for (var j = 1; j <= k; j++) from + stretch * j / k];
     _cometLayout = List.unmodifiable(stations);
+    _cometLockedEnd = endTrackX;
     _cometStations = stations;
     _cometAfterMin = endTrackX + RunConfig.cometAfterGap;
     _nextX = stations.isNotEmpty ? stations.first : max(_nextX, _cometAfterMin!);
@@ -389,6 +390,11 @@ class RunDirector {
   /// PRD-2.3.1 §16.1 B the comet stations of the current / last comet
   /// (tests, debug).
   List<double> get cometStations => _cometLayout;
+
+  double? _cometLockedEnd;
+
+  /// PRD-2.3.1 §16.1 B the predicted end the layout was locked with (tests).
+  double? get cometLockedEnd => _cometLockedEnd;
 
   /// PRD-2.3.1 §16.1 C the minimum track x of the first hoop after the
   /// comet (null when it is planned, or no comet ran).

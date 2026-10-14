@@ -14,10 +14,6 @@ abstract final class HudConfig {
   /// §5.7 Heart indicator left (pt), 38 × 38.
   static const double heartLeft = 14;
 
-  /// §5.7 Heart indicator panel: stage foreground at 18 % over the stage
-  /// background.
-  static const double heartPanelMix = .18;
-
   /// §5.7 The heart icon inside the indicator (pt, the 24-unit box).
   static const double heartIcon = 28;
 

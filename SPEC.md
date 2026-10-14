@@ -1649,6 +1649,47 @@ production build has the flag off and uses these values only. Full key table:
   playfield incl. both spike strips at #000000 90 % (was 72 % between the strips);
   the back button and the coin pill stay bright above it.
 
+## PRD-2.3.1 (owner 2026-10-13/14, version 2.3.1 (20))
+
+- DEVIATION (PRD-2.3.1 §5, supersedes the PRD-2.3 §14.2 Shop value): the Shop
+  free-coins ad pays **75** coins (`shop_ad_coins` default 75, was 40), and the row reads
+  "FREE +75". The daily cap (5) and the cooldown (300 s) are unchanged, so Shop ads pay
+  at most 375 coins a day (was 200).
+- DEVIATION (PRD-2.3.1 §6, supersedes the owner 2026-10-13 Bullseye value of 2): a
+  Bullseye hit pays **3** coins and **3** points (`coin_bullseye` default 3, was 2), on
+  top of the pass; the banner reads "+3 coins". The hit band is still the remote
+  `point_bullseye_band`; the guide lines stay drawn at ±12 pt. A rim touch does not
+  change it.
+- DEVIATION (PRD-2.3.1 §8, supersedes the PRD-2 §3.4 / §5.3 graze notice): a graze
+  (or a clean off-centre pass) that breaks a running streak adds **no text**. The
+  "GRAZE · streak lost" notice and its settings are removed. Everything else is
+  unchanged: the streak, tier look, gold bird, trail and multiplier reset at once, the
+  rim touch keeps its sparks, "tonk" and spin, and `streak_broken {length, cause}` stays.
+- DEVIATION (PRD-2.3.1 §9, supersedes the PRD-2.2 §5.7 heart panel): the HUD heart at the
+  top left has **no grey panel** (the 38 × 38 block at stage foreground 18 % over the
+  background). It floats on the game: the empty heart is see-through with the same dotted
+  outline (stage foreground, same width and dash); a partly filled heart (1 or 2 of 3) has
+  its red fill rising from the bottom, the unfilled top see-through, and the dotted outline
+  on the whole heart; full or extra life ready is unchanged (red, pulsing). Size (28 pt),
+  position and the flying-heart landing point are unchanged. `HudConfig.heartPanelMix` is
+  removed.
+- DEVIATION (PRD-2.3.1 §10, supersedes the PRD-2.3 §10.3 "saved at its first tap"): the
+  **full first-run instructions** show on **every** run until the run's first pass of
+  hoop 0 (a graze counts; dying first, or quitting, does not). Only then is
+  `firstRunHintSeen` saved `true`, once per run; from then on only the tap reminder shows
+  (§10.3b). The first tap fades the instructions out but saves nothing. The full
+  instructions write the key as `false` when they show, so a new player whose first run
+  fails is not counted as seen by the `gamesPlayed > 0` fallback; the fallback covers only
+  installs from before 2.3. Existing players (`firstRunHintSeen` true) keep the reminder
+  only. VERSUS and FREE FLY follow the same rule.
+- DEVIATION (PRD-2.3.1 §11, supersedes the PRD-2.2 §7.4 "the banner fades in on the first
+  flight"): the **gameplay banner shows on the waiting screen**, the moment the run opens
+  (the hovering bird, before the first tap). The strip is still reserved and empty during
+  the VS intro, which is the only time before that; the ad fades in when it loads, as
+  before. The interstitial preload, the new-player ad grace, `run_start` and `logGameStart`
+  still happen on the first tap. NO ADS owners and every case without a wanted banner get
+  none.
+
 ### PRD-2.3.1 rides and comet (2026-10-14)
 
 - DEVIATION (PRD-2.3.1 §7, supersedes PRD-2 §3.12 "11 rings"): every portal ride has

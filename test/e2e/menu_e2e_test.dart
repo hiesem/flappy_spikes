@@ -402,7 +402,7 @@ void main() {
     await tap(g, t, const Offset(49, 608));
     for (var i = 1; i <= 5; i++) {
       await tap(g, t, const Offset(260, 228));
-      expect(g.menu.wallet.balance, i * 40);
+      expect(g.menu.wallet.balance, i * 75);
       expect(g.shopScreen!.freeCoins.chipText, i == 5 ? 'TOMORROW' : '05:00');
       await tap(g, t, const Offset(260, 228));
       expect(r.ads.shown, i);
@@ -415,7 +415,7 @@ void main() {
     r.ads.mode = FakeAdMode.fail;
     await settle(g, t);
     await tap(g, t, const Offset(260, 228));
-    expect(g.menu.wallet.balance, 200);
+    expect(g.menu.wallet.balance, 375);
     expect(g.menu.freeCoins.claimedToday, 0);
     expect(toast(g), 'No video available right now');
     r.ads.mode = FakeAdMode.unavailable;
@@ -425,10 +425,10 @@ void main() {
     r.ads.mode = FakeAdMode.succeed;
     await settle(g, t);
     await tap(g, t, const Offset(260, 228));
-    expect(g.menu.wallet.balance, 240);
+    expect(g.menu.wallet.balance, 450);
     expect(g.menu.freeCoins.claimedToday, 1);
     expect(r.spy.params('coins_earned').last, {
-      'amount': 40,
+      'amount': 75,
       'source': 'rewarded',
     });
     expect(r.spy.params('ad_rewarded_shown').last, {

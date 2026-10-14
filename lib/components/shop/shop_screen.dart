@@ -412,7 +412,8 @@ class ShopBanner extends MenuButton {
   }
 }
 
-/// Gold "FREE +40" row with the pink GET chip (PRD-1 §3.2; PRD-menu-v2
+/// Gold "FREE +75" row (PRD-2.3.1 §5; the number is the policy's reward)
+/// with the pink GET chip (PRD-1 §3.2; PRD-menu-v2
 /// §8.3: was WATCH — label only, the rewarded-ad flow is unchanged): a
 /// rewarded ad for [FreeCoinsPolicy.reward] coins. No-ads owners get the
 /// same reward without an ad, so their chip reads "CLAIM" with no video

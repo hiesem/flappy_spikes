@@ -2,11 +2,8 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
-import 'package:flutter/painting.dart' show TextPainter, TextSpan, TextStyle;
-import 'package:flutter/painting.dart' as p show TextDirection;
 
 import '../../components/skins/item_art.dart' show paintLookForTrail;
-import '../../game/config.dart';
 import '../config/run_config.dart';
 import '../config/streak_config.dart';
 import '../director/plans.dart';
@@ -54,8 +51,9 @@ import '../run_feature.dart';
 /// from tier 3 (#10 via [TierTrail]: the equipped trail, or the block trail
 /// for the blocks item) — also during a ride (comet / portal).
 ///
-/// **Graze** with a streak running: "GRAZE · streak lost" rises and fades
-/// (§5.3, 1.1 s); everything else resets at once.
+/// **Graze** with a streak running: the streak resets at once, with no text
+/// (PRD-2.3.1 §8 removed the "GRAZE · streak lost" notice). The rim touch
+/// keeps its sparks, tonk and spin.
 class StreakFeature extends RunFeature {
   RunContext? _c;
 
@@ -121,12 +119,12 @@ class StreakFeature extends RunFeature {
     if (c == null) return;
     final s = c.s;
     if (!e.perfect) {
-      // PRD-2.2 §11.1 a clean off-centre pass also resets the streak, but
-      // it is no graze: no "GRAZE · streak lost" notice.
+      // PRD-2.2 §11.1 a clean off-centre pass also resets the streak. A
+      // graze resets it with no text (PRD-2.3.1 §8).
       if (e.clean) {
         _break(StreakCause.clean);
       } else {
-        _break(StreakCause.graze, notice: true);
+        _break(StreakCause.graze);
       }
       return;
     }
@@ -165,17 +163,13 @@ class StreakFeature extends RunFeature {
 
   // ----------------------------------------------------------------- rules
 
-  void _break(StreakCause cause, {bool notice = false}) {
+  void _break(StreakCause cause) {
     final c = _c;
     if (c == null) return;
     final old = c.s.streak;
     if (old == 0) return;
     _set(0, cause);
     c.track('streak_broken', {'length': old, 'cause': cause.name});
-    if (notice) {
-      // WP-2d: HUD text (viewport, real time).
-      RunHud.ensureFor(c.run).add(_GrazeNotice(c.game.foregroundColor));
-    }
   }
 
   void _set(int value, StreakCause cause) {
@@ -397,54 +391,5 @@ class _TrailComponent extends Component {
     trail.clear();
     pool.clear();
     super.onRemove();
-  }
-}
-
-/// §5.3 "GRAZE · streak lost": stage-foreground text that rises
-/// [StreakConfig.grazeRise] pt and fades over [StreakConfig.grazeDuration].
-class _GrazeNotice extends Component {
-  _GrazeNotice(this.color) : super(priority: StreakConfig.grazePriority);
-
-  final Color color;
-  double _t = 0;
-
-  late final TextPainter _tp = TextPainter(
-    text: TextSpan(
-      text: StreakConfig.grazeText,
-      style: TextStyle(
-        fontFamily: Config.uiFont,
-        fontSize: StreakConfig.grazeFontSize,
-        letterSpacing:
-            StreakConfig.grazeFontSize * StreakConfig.grazeLetterSpacing,
-        color: color,
-      ),
-    ),
-    textDirection: p.TextDirection.ltr,
-  )..layout();
-
-  final Paint _layer = Paint();
-
-  @override
-  void update(double dt) {
-    super.update(dt);
-    _t += dt;
-    if (_t >= StreakConfig.grazeDuration) removeFromParent();
-  }
-
-  @override
-  void render(Canvas canvas) {
-    final k = (_t / StreakConfig.grazeDuration).clamp(0.0, 1.0);
-    final a = 1 - k;
-    if (a <= 0) return;
-    final spacing =
-        StreakConfig.grazeFontSize * StreakConfig.grazeLetterSpacing;
-    final x = StreakConfig.grazeCentreX - (_tp.width - spacing) / 2;
-    final y = StreakConfig.grazeTop - StreakConfig.grazeRise * k;
-    canvas.saveLayer(
-      Rect.fromLTWH(x - 2, y - 2, _tp.width + 4, _tp.height + 4),
-      _layer..color = Color.fromRGBO(0, 0, 0, a),
-    );
-    _tp.paint(canvas, Offset(x, y));
-    canvas.restore();
   }
 }

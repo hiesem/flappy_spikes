@@ -90,7 +90,7 @@ void main() {
       expect(bonus.countDuration, 1.4);
       expect(bonus.flyDuration, .75);
       final get = CoinRewardAnimation.freeCoins(from: _button);
-      expect(get.amount, 40);
+      expect(get.amount, 75);
       expect(get.coins, 6);
       expect(get.ticks, 0);
       expect(get.confetti, 0);
@@ -262,7 +262,8 @@ void main() {
     );
 
     homeTest(
-      'GET (Shop free coins) runs the freeCoins preset: still +40, no ticks',
+      'GET (Shop free coins) runs the freeCoins preset: +75 (PRD-2.3.1 §5), '
+      'no ticks',
       prefs: const {'coins': 1250},
       verify: (game, spy, ads, tester) async {
         await openShop(game);
@@ -271,12 +272,12 @@ void main() {
         await game.claimFreeCoins();
         await flushAndMount(game);
         final reward = game.coinReward!;
-        expect(reward.amount, 40);
+        expect(reward.amount, 75);
         expect(reward.ticks, 0);
         expect(game.coinFly!.count, 6);
         await run(game, 2);
-        expect(game.coinPill.shownBalance, 1290);
-        expect(game.menu.wallet.balance, 1290);
+        expect(game.coinPill.shownBalance, 1325);
+        expect(game.menu.wallet.balance, 1325);
         expect(sounds, [Sfx.bnAdBtn, Sfx.bnCoin, Sfx.skProgress]);
         expect(reward.confettiBurst, isNull);
         expect(game.coinReward, isNull);

@@ -17,14 +17,18 @@ import 'normal.dart';
 
 /// Bullseye Ring (PRD-2 §3.24, §5.23; lab mock `screen_lab3_hoops.html`
 /// `?only=bull`): a normal hoop (score, coins, streak, rim bounce, tier
-/// look) with a **target** at its centre and two dashed guide lines marking
-/// the **bullseye band ±12 pt** (fixed as openings shrink, Q63).
+/// look) with a **target** at its centre and two dashed guide lines. The
+/// guide lines are only the drawing, at ±12 pt ([BullseyeConfig.drawBand]);
+/// they stay fixed as openings shrink (Q63).
 ///
-/// Crossing the plane with the bird's centre inside the band is a
-/// **BULLSEYE**: +3 coins ([CoinSource.bullseye]), the target flashes
-/// bigger, a red / white burst, the banner "BULLSEYE!" "+3 coins", the dart
-/// thunk + chord and `bullseye_hit`. Anywhere else in the opening is a
-/// normal pass. The target and the band lines are drawn behind the bird.
+/// Crossing the plane with the bird's centre inside the **hit band**
+/// ([BullseyeConfig.bandAt], remote `point_bullseye_band`, default ±12 pt)
+/// is a **BULLSEYE**: +[BullseyeConfig.coins] coins ([CoinSource.bullseye];
+/// `coin_bullseye`, 3 by default, PRD-2.3.1 §6) and the same points. The
+/// target flashes bigger, a red / white burst, the banner "BULLSEYE!" with
+/// "+N coins", the dart thunk + chord and `bullseye_hit`. A rim touch does
+/// not change it. Anywhere else in the opening is a normal pass. The target
+/// and the band lines are drawn behind the bird.
 class BullseyeHoopKind extends HoopKind {
   @override
   HoopKindId get id => HoopKindId.bullseye;

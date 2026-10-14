@@ -107,7 +107,7 @@ void main() {
       expect(t.i('coin_jar'), 8);
       expect(t.ints('coin_spin_slices'), [1, 2, 3, 5, 1, 2]);
       expect(t.i('coin_star_trail'), 2);
-      expect(t.i('coin_bullseye'), 2); // owner 2026-10-13 (was 1)
+      expect(t.i('coin_bullseye'), 3); // PRD-2.3.1 §6 (was 2)
       expect(t.i('coin_train'), 1);
       expect(t.i('coin_switch'), 0);
       expect(t.i('coin_pair_gift'), 3);
@@ -126,7 +126,7 @@ void main() {
         t.ints('level_rewards'),
         [50, 100, 150, 250, 400, 600, 800, 1000, 2000, 5000],
       );
-      expect(t.i('shop_ad_coins'), 40);
+      expect(t.i('shop_ad_coins'), 75); // PRD-2.3.1 §5 (was 40)
       expect(t.i('shop_ad_per_day'), 5);
       expect(t.i('shop_ad_cooldown_s'), 300);
       // §14.3 points

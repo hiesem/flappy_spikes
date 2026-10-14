@@ -28,17 +28,17 @@ void main() {
   Tuning.instance = Tuning();
   TuningValues.current = TuningValues.defaults();
 
-  // --- 1. Bullseye pays +2 -------------------------------------------------
+  // --- 1. Bullseye pays +3 (PRD-2.3.1 §6) ----------------------------------
 
-  test('tweak 1: coin_bullseye defaults to 2', () {
-    expect(BullseyeConfig.coins, 2);
+  test('tweak 1: coin_bullseye defaults to 3', () {
+    expect(BullseyeConfig.coins, 3);
   });
 
   FlameTester<FlappySpikesGame>(
     () => createRunTestGame(worldHeight: 711, seed: 5),
     gameSize: Vector2(320, 711),
   ).testGameWidget(
-    'tweak 1: a bullseye hit pays 2 coins and 2 points, banner "+2 coins"',
+    'tweak 1: a bullseye hit pays 3 coins and 3 points, banner "+3 coins"',
     setUp: (g, _) async {
       await g.ready();
       await preloadImages(g);
@@ -61,15 +61,15 @@ void main() {
       final h = firstHoopOf(game, HoopKindId.bullseye)!;
       final before = run.state.score;
       expect(await passHoopAt(game, h, dy: 0), isTrue);
-      // A perfect pass at streak 1 (2) plus the bullseye's 2.
-      expect(run.state.score - before, 2 + 2);
+      // A perfect pass at streak 1 (2) plus the bullseye's 3.
+      expect(run.state.score - before, 2 + 3);
       final bonus = events
           .whereType<CoinsEarned>()
           .where((e) => e.source == CoinSource.bullseye)
           .toList();
-      expect(bonus.single.amount, 2);
+      expect(bonus.single.amount, 3);
       final banner = RunHud.of(run)?.banners.current;
-      expect((banner! as ElementBanner).subtitle, '+2 coins');
+      expect((banner! as ElementBanner).subtitle, '+3 coins');
     },
   );
 

@@ -22,7 +22,8 @@ import 'banners.dart';
 /// What the [FirstRunHint] draws (PRD-2.3 §10.3 / §10.3b).
 enum FirstRunHintMode {
   /// §10.3 the full first-run instructions (veil, bands, flap path, banner,
-  /// hand), up from the start of the very first run's wait.
+  /// hand), from the start of each run's wait until the first pass of hoop 0
+  /// (PRD-2.3.1 §10); after that only the reminder.
   firstRun,
 
   /// §10.3b only the hand and the TAP TO FLAP! banner, after

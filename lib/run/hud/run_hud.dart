@@ -21,10 +21,10 @@ import 'versus_bar.dart';
 ///
 /// Holds the top row — heart indicator (x 14), versus bar + name chips
 /// (only with an opponent, driven by `RunSetup.opponent`; WP-5b fills the
-/// live parts) and the pause button (right edge 306) — plus the graze
-/// notice. No coin total (§5.7). The row shows while the run is playing or
-/// paused and fades out on a death (the revive screen has its own balance
-/// pill). The banner band ([banners], master #7) is not in the HUD any more:
+/// live parts) and the pause button (right edge 306). No coin total (§5.7).
+/// The row shows while the run is playing or paused and fades out on a death
+/// (the revive screen has its own balance pill). The banner band ([banners],
+/// master #7) is not in the HUD any more:
 /// PRD-2.2 §12 moved it to the world's [bannerLayer], behind the gameplay.
 class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
   RunHud(this.run) : super(priority: 10);
@@ -109,8 +109,8 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
       removeFromParent();
       return;
     }
-    // A death clears the banner band and the graze notice (the revive
-    // offer / results come up over the frozen game).
+    // A death clears the banner band (the revive offer / results come up
+    // over the frozen game).
     if (run.dying && !_cleared) {
       _cleared = true;
       banners.clear();
@@ -153,7 +153,13 @@ class HudText {
         trimTrailingSpacing: true,
       ),
     );
-    return HudText(f.text, size: f.size, color: color, spacing: spacing, font: font);
+    return HudText(
+      f.text,
+      size: f.size,
+      color: color,
+      spacing: spacing,
+      font: font,
+    );
   }
 
   HudText(

@@ -411,7 +411,7 @@ void main() {
   group('free coins', () {
     final clock = TestClock();
     shopTest(
-      'claim -> +40, cooldown "mm:ss", 5 per day -> TOMORROW, next day resets',
+      'claim -> +75, cooldown "mm:ss", 5 per day -> TOMORROW, next day resets',
       clock: clock,
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
@@ -421,12 +421,12 @@ void main() {
         await game.claimFreeCoins();
         await settle(game);
         expect(ads.placements, [AdPlacement.shopFreeCoins]);
-        expect(game.menu.wallet.balance, 40);
+        expect(game.menu.wallet.balance, 75);
         expect(spy.last('ad_rewarded_shown'), {
           'placement': 'shop_free_coins',
         });
-        expect(spy.last('coins_earned'), {'amount': 40, 'source': 'rewarded'});
-        expect(toastText(game), '+40 coins');
+        expect(spy.last('coins_earned'), {'amount': 75, 'source': 'rewarded'});
+        expect(toastText(game), '+75 coins');
         expect(shop.freeCoins.chipText, '05:00');
         expect(shop.freeCoins.chipDimmed, isTrue);
         expect(shop.freeCoins.tappable, isFalse);
@@ -445,7 +445,7 @@ void main() {
           await settle(game);
         }
         expect(ads.shown, 5);
-        expect(game.menu.wallet.balance, 200);
+        expect(game.menu.wallet.balance, 375); // 5 × 75 (PRD-2.3.1 §5)
         clock.now = clock.now.add(const Duration(minutes: 5));
         game.update(0);
         expect(shop.freeCoins.chipText, 'TOMORROW');
@@ -492,7 +492,7 @@ void main() {
     );
 
     shopTest(
-      'fake ad overlay (Linux): +40 only after the countdown; '
+      'fake ad overlay (Linux): +75 only after the countdown; '
       'Esc closes the overlay, not the Shop',
       fakeAdOverlay: true,
       verify: (game, spy, ads, iap, tester) async {
@@ -509,8 +509,8 @@ void main() {
         await claim;
         await settle(game);
         expect(game.fakeAdOverlay, isNull);
-        expect(game.menu.wallet.balance, 40);
-        expect(toastText(game), '+40 coins');
+        expect(game.menu.wallet.balance, 75);
+        expect(toastText(game), '+75 coins');
 
         // Second claim after the cooldown, closed early with Esc.
         game.storage.freeCoinsLastMs = 0;
@@ -522,7 +522,7 @@ void main() {
         await settle(game);
         expect(game.fakeAdOverlay, isNull);
         expect(game.shopScreen, isNotNull, reason: 'Esc only closed the ad');
-        expect(game.menu.wallet.balance, 40);
+        expect(game.menu.wallet.balance, 75);
         expect(toastText(game), 'No video available right now');
       },
     );
@@ -541,7 +541,7 @@ void main() {
         await settle(game);
         expect(ads.shown, 1);
         expect(ads.placements, [AdPlacement.shopFreeCoins]);
-        expect(game.menu.wallet.balance, 40);
+        expect(game.menu.wallet.balance, 75);
         expect(spy.last('ad_rewarded_shown'), {
           'placement': 'shop_free_coins',
         });
@@ -552,7 +552,7 @@ void main() {
         expect(shop.freeCoins.chipDimmed, isTrue);
         await game.claimFreeCoins();
         await settle(game);
-        expect(game.menu.wallet.balance, 40);
+        expect(game.menu.wallet.balance, 75);
       },
     );
   });

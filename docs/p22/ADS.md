@@ -21,7 +21,8 @@
   adaptive banner is 64 dp at 411.4 dp width, which gives 49.8 pt and a
   visible height of 661 pt.
 - Banner state (`game.bannerState`): `off` on Home → `reservedEmpty` at START
-  (and during the VS intro) → `showing` on the first `playing` frame → `off` on
+  (and during the VS intro) → `showing` when the waiting run opens (PRD-2.3.1 §11:
+  the waiting screen, before the first tap; was the first `playing` frame) → `off` on
   the Home arrival (after the interstitial). The used banner is disposed 0.1 s
   later and the next one is preloaded on Home.
 

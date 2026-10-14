@@ -47,7 +47,7 @@
         },
         "coin_bullseye": {
           "defaultValue": {
-            "value": "2"
+            "value": "3"
           },
           "description": "§14.2 Bullseye hit",
           "valueType": "NUMBER"
@@ -238,7 +238,7 @@
       "parameters": {
         "shop_ad_coins": {
           "defaultValue": {
-            "value": "40"
+            "value": "75"
           },
           "description": "§14.2 Shop free-coins ad: coins per ad",
           "valueType": "NUMBER"

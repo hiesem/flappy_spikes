@@ -294,7 +294,8 @@ void main() {
 
     tester.testGameWidget(
       'shows only while firstRunHintSeen is false; the first tap fades it '
-      'out (0.35 s) and sets the flag; the second run gets the reminder',
+      'out (0.35 s) but saves nothing (PRD-2.3.1 §10: hoop 0 saves it); the '
+      'second run, with no hoop passed, shows the instructions again',
       setUp: (game, _) => _boot(game),
       verify: (game, _) async {
         expect(game.storage.firstRunHintSeen, isFalse);
@@ -307,7 +308,7 @@ void main() {
         // Not on the very first run: no reminder on top of it.
         expect(_count(spy, 'tap_reminder_shown'), 0);
         game.onPlayfieldTap();
-        expect(game.storage.firstRunHintSeen, isTrue);
+        expect(game.storage.firstRunHintSeen, isFalse);
         expect(hint.dismissed, isTrue);
         await _wait(game, 0.2);
         expect(hint.opacity, closeTo(1 - 0.2 / 0.35, 0.02));
@@ -315,14 +316,14 @@ void main() {
         await flushAndMount(game);
         expect(hint.isRemoved, isTrue);
         expect(game.world.children.whereType<FirstRunVeil>(), isEmpty);
-        // The second run: the reminder, not the instructions.
+        // The second run (no hoop 0 passed): the instructions again.
         killRun(game);
         await declineRevive(game);
         game.replay();
         await flushAndMount(game);
         await _wait(game, .5);
         await openRun(game);
-        expect(game.firstRunHint!.mode, FirstRunHintMode.reminder);
+        expect(game.firstRunHint!.mode, FirstRunHintMode.firstRun);
       },
     );
 

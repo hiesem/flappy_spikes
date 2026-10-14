@@ -8,13 +8,14 @@ import '../config/lives_config.dart';
 import '../effects/life_icons.dart';
 import 'run_hud.dart';
 
-/// §5.7 / §3.3 the single heart indicator (x 14, y 52, 38 × 38): a soft
-/// panel (stage foreground 18 % over the background) with a 28 pt heart
-/// centred at [LivesConfig.indicatorCentre] (33, 71) — where WP-2a's
-/// flying hearts land. Empty = dashed outline; 1 or 2 of 3 hearts = red
-/// `#FF3B5C` filled one / two thirds, clipped from the bottom; extra life
-/// ready = full and pulsing 1.0 ↔ 1.14 every 0.9 s. Reads `RunState.hearts`
-/// and `RunState.extraLife` every frame.
+/// §5.7 / §3.3 the single heart indicator (x 14, y 52, 38 × 38) with a 28 pt
+/// heart centred at [LivesConfig.indicatorCentre] (33, 71) — where WP-2a's
+/// flying hearts land. PRD-2.3.1 §9: no panel behind it, the heart floats on
+/// the game. Empty = see-through with the dashed outline (stage foreground);
+/// 1 or 2 of 3 hearts = red `#FF3B5C` fill rising from the bottom, the unfilled
+/// top see-through, the outline still traces the whole heart; extra life ready
+/// = full and pulsing 1.0 ↔ 1.14 every 0.9 s. Reads `RunState.hearts` and
+/// `RunState.extraLife` every frame.
 class HeartIndicator extends PositionComponent {
   HeartIndicator(this.hud)
     : super(
@@ -47,7 +48,6 @@ class HeartIndicator extends PositionComponent {
     _t += dt;
   }
 
-  final Paint _panel = Paint();
   final Paint _fill = Paint();
   final Paint _outline = Paint()
     ..style = PaintingStyle.stroke
@@ -57,8 +57,7 @@ class HeartIndicator extends PositionComponent {
   void render(Canvas canvas) {
     final a = hud.rowOpacity;
     if (a <= 0) return;
-    final g = hud.game;
-    final fg = g.foregroundColor, bg = g.stageBackground;
+    final fg = hud.game.foregroundColor;
     canvas.save();
     final c = size.toOffset() / 2;
     final sc = pulse;
@@ -66,12 +65,6 @@ class HeartIndicator extends PositionComponent {
       ..translate(c.dx, c.dy)
       ..scale(sc)
       ..translate(-c.dx, -c.dy);
-    _panel.color = Color.lerp(
-      bg,
-      fg,
-      HudConfig.heartPanelMix,
-    )!.withValues(alpha: a);
-    canvas.drawRect(size.toRect(), _panel);
     // The heart in its 24-unit box, 28 pt, centred.
     final k = HudConfig.heartIcon / 24;
     canvas

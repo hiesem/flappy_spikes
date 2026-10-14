@@ -327,8 +327,8 @@ void main() {
         ],
       ),
     ).testGameWidget(
-      '§7.4 VS intro: the strip is reserved and stays empty; the banner '
-      'shows only when the bird flies',
+      '§7.4 VS intro: the strip is reserved and stays empty; PRD-2.3.1 §11: '
+      'the banner shows on the waiting screen after the intro, before the tap',
       setUp: boot,
       verify: (g, _) async {
         await g.versus.prefetch();
@@ -346,8 +346,8 @@ void main() {
         }
         expect(states, {BannerState.reservedEmpty});
         expect(g.state, GameState.playing);
-        // PRD-2.3 §10.1 the bird flies with the first tap.
-        expect(g.bannerState.value, BannerState.reservedEmpty);
+        // PRD-2.3.1 §11: the waiting run (the hovering bird) already shows it.
+        expect(g.bannerState.value, BannerState.showing);
         g.onPlayfieldTap();
         expect(g.bannerState.value, BannerState.showing);
       },

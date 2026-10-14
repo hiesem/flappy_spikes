@@ -1652,3 +1652,11 @@ production build has the flag off and uses these values only. Full key table:
   "GRAZE · streak lost" notice and its settings are removed. Everything else is
   unchanged: the streak, tier look, gold bird, trail and multiplier reset at once, the
   rim touch keeps its sparks, "tonk" and spin, and `streak_broken {length, cause}` stays.
+- DEVIATION (PRD-2.3.1 §9, supersedes the PRD-2.2 §5.7 heart panel): the HUD heart at the
+  top left has **no grey panel** (the 38 × 38 block at stage foreground 18 % over the
+  background). It floats on the game: the empty heart is see-through with the same dotted
+  outline (stage foreground, same width and dash); a partly filled heart (1 or 2 of 3) has
+  its red fill rising from the bottom, the unfilled top see-through, and the dotted outline
+  on the whole heart; full or extra life ready is unchanged (red, pulsing). Size (28 pt),
+  position and the flying-heart landing point are unchanged. `HudConfig.heartPanelMix` is
+  removed.

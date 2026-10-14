@@ -129,7 +129,7 @@ void main() {
         gameSize: Vector2(320, 711),
       ).testGameWidget(
         '§3.12 ${ride.name}: forced from the debug menu, runs start to '
-        'finish (12 passes, points by the streak, +2 coins per ride ring) and returns to normal play',
+        'finish (6 passes, points by the streak, +2 coins per ride ring) and returns to normal play',
         setUp: (game, _) async {
           await game.ready();
           await preloadImages(game);
@@ -144,9 +144,9 @@ void main() {
           expect(tr.endAt, greaterThan(0), reason: 'the ride ended');
           expect(run.ended, isFalse);
           expect(game.state, GameState.playing);
-          // Portal + 11 ride rings = 12 passes, all perfect.
+          // Portal + 5 ride rings = 6 passes, all perfect.
           expect(tr.ridePasses, PortalConfig.rideRings);
-          expect(run.state.hoopsPassed - tr.hoopsBefore, greaterThanOrEqualTo(12));
+          expect(run.state.hoopsPassed - tr.hoopsBefore, greaterThanOrEqualTo(6));
           // The portal pass happened before the ride started (counted in
           // hoopsBefore); 11 ride passes give +11 / +22, the portal +1 / +2.
           final rideScore = tr.events

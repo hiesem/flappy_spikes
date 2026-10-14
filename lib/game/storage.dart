@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../achievements/ach_state.dart';
 import '../menu/home_mode.dart';
 import '../skins/look.dart';
 import 'config.dart';
@@ -85,6 +86,9 @@ class GameStorage {
   // PRD-2.3.1 §19 the pacing queue and the lifetime item catch counts.
   static const String _achPendingKey = 'achPending';
   static const String _achItemCountsKey = 'achItemCounts';
+  // QA P19-01..03 everything above lives in ONE JSON key since 2.3.1 (21);
+  // the separate keys are only read once, to migrate a 2.3.1 (20) install.
+  static const String _achStateKey = 'achState';
   // endregion P231-E
   static const String _notifLastSentKey = 'notifLastSent';
   static const String _notifPermissionAskedKey = 'notifPermissionAsked';
@@ -261,44 +265,46 @@ class GameStorage {
   Set<String> metElements = {};
 
   // region P231-E — achievements (PRD-2.3.1 §12.3)
+  /// QA P19-01..03 the tracker's whole state (`AchState`), persisted as one
+  /// JSON value by [saveAchState]. The getters below are read-only views.
+  AchState ach = AchState();
+
   /// Unlocked achievement keys (the local truth).
-  Set<String> achUnlocked = {};
+  Set<String> get achUnlocked => ach.unlocked;
 
   /// Keys the platform confirmed for [achReportedPlayer].
-  Set<String> achReported = {};
+  Set<String> get achReported => ach.reported;
 
   /// The platform player id [achReported] belongs to ('' = none yet).
-  String achReportedPlayer = '';
+  String get achReportedPlayer => ach.reportedPlayer;
 
   /// Portal ride ids finished (`RideId.storageId`).
-  Set<String> achRides = {};
+  Set<String> get achRides => ach.rides;
 
-  /// Item achievement keys caught.
-  Set<String> achItems = {};
+  /// 2.3.1 (20) first-catch item keys (kept, no longer written).
+  Set<String> get achItems => ach.items;
 
-  /// QA P2-03 (PRD-2.3.1 §12.2 / §12.3): the staged rule ops of the open
-  /// run (`AchievementTracker`), empty when no run is open. Committed on the
-  /// next launch when the app died before the run ended.
-  List<String> achJournal = [];
+  /// QA P2-03: the staged rule ops of the open run, empty when none.
+  List<String> get achJournal => ach.journal;
 
   /// The open run's journal is excluded (a debug assist): discard it.
-  bool achJournalExcluded = false;
+  bool get achJournalExcluded => ach.journalExcluded;
 
   /// Versus wins since 2.3.1.
-  int achVersusWins = 0;
+  int get achVersusWins => ach.versusWins;
 
   /// Current streak of consecutive local days with a counted run.
-  int achDayStreak = 0;
+  int get achDayStreak => ach.dayStreak;
 
   /// [today] of the last counted run (-1 = none).
-  int achLastPlayDay = -1;
+  int get achLastPlayDay => ach.lastPlayDay;
 
   /// PRD-2.3.1 §19.2 earned achievements waiting for a counting run's
   /// unlock slot, oldest first (FIFO). Earned for good, never reported.
-  List<String> achPending = [];
+  List<String> get achPending => ach.pending;
 
   /// PRD-2.3.1 §19.1 lifetime catches per item achievement key.
-  Map<String, int> achItemCounts = {};
+  Map<String, int> get achItemCounts => ach.itemCounts;
   // endregion P231-E
 
   /// §3.13 Versus nickname (generated once by WP-5b); null = not yet.
@@ -438,23 +444,7 @@ class GameStorage {
     puzzlePayout = prefs.getInt(_puzzlePayoutKey) ?? 0;
     metElements = (prefs.getStringList(_metElementsKey) ?? const []).toSet();
     // region P231-E
-    achUnlocked = (prefs.getStringList(_achUnlockedKey) ?? const []).toSet();
-    achReported = (prefs.getStringList(_achReportedKey) ?? const []).toSet();
-    achReportedPlayer = prefs.getString(_achReportedPlayerKey) ?? '';
-    achRides = (prefs.getStringList(_achRidesKey) ?? const []).toSet();
-    achItems = (prefs.getStringList(_achItemsKey) ?? const []).toSet();
-    achVersusWins = prefs.getInt(_achVersusWinsKey) ?? 0;
-    achDayStreak = prefs.getInt(_achDayStreakKey) ?? 0;
-    achLastPlayDay = prefs.getInt(_achLastPlayDayKey) ?? -1;
-    achJournal = [...?prefs.getStringList(_achJournalKey)];
-    achJournalExcluded = prefs.getBool(_achJournalExcludedKey) ?? false;
-    achPending = [...?prefs.getStringList(_achPendingKey)];
-    achItemCounts = {
-      for (final e in prefs.getStringList(_achItemCountsKey) ?? const <String>[])
-        if (e.contains('='))
-          e.substring(0, e.lastIndexOf('=')):
-              int.tryParse(e.substring(e.lastIndexOf('=') + 1)) ?? 0,
-    };
+    ach = AchState.decode(prefs.getString(_achStateKey)) ?? _migrateAch(prefs);
     // endregion P231-E
     versusNickname = prefs.getString(_versusNicknameKey);
     versusAvatar = _parseVersusAvatar(prefs.getString(_versusAvatarKey));
@@ -570,94 +560,108 @@ class GameStorage {
   }
 
   // region P231-E — achievements (PRD-2.3.1 §12.3)
-  Future<void> _saveSet(String key, Set<String> value) async {
+
+  /// QA P19-01..03 THE achievement write: the whole [state] as one JSON
+  /// value, one awaited setter. The cache is replaced synchronously.
+  Future<void> saveAchState(AchState state) async {
+    ach = state;
+    final raw = state.encode();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(key, value.toList()..sort());
+    await prefs.setString(_achStateKey, raw);
   }
 
-  Future<void> saveAchUnlocked(Set<String> value) {
-    achUnlocked = {...value};
-    return _saveSet(_achUnlockedKey, achUnlocked);
+  /// A 2.3.1 (20) install: the separate keys, read once (never written
+  /// again; the next [saveAchState] makes `achState` the truth).
+  static AchState _migrateAch(SharedPreferences prefs) => AchState()
+    ..unlocked = (prefs.getStringList(_achUnlockedKey) ?? const []).toSet()
+    ..reported = (prefs.getStringList(_achReportedKey) ?? const []).toSet()
+    ..reportedPlayer = prefs.getString(_achReportedPlayerKey) ?? ''
+    ..rides = (prefs.getStringList(_achRidesKey) ?? const []).toSet()
+    ..items = (prefs.getStringList(_achItemsKey) ?? const []).toSet()
+    ..versusWins = prefs.getInt(_achVersusWinsKey) ?? 0
+    ..dayStreak = prefs.getInt(_achDayStreakKey) ?? 0
+    ..lastPlayDay = prefs.getInt(_achLastPlayDayKey) ?? -1
+    ..journal = [...?prefs.getStringList(_achJournalKey)]
+    ..journalExcluded = prefs.getBool(_achJournalExcludedKey) ?? false
+    ..pending = [...?prefs.getStringList(_achPendingKey)]
+    ..itemCounts = {
+      for (final e
+          in prefs.getStringList(_achItemCountsKey) ?? const <String>[])
+        if (e.contains('='))
+          e.substring(0, e.lastIndexOf('=')):
+              int.tryParse(e.substring(e.lastIndexOf('=') + 1)) ?? 0,
+    };
+
+  // Single-field conveniences (debug, tests): each is one whole-state write.
+  Future<void> _saveAch(void Function(AchState s) change) {
+    final next = ach.copy();
+    change(next);
+    return saveAchState(next);
   }
 
-  Future<void> saveAchReported(Set<String> value) {
-    achReported = {...value};
-    return _saveSet(_achReportedKey, achReported);
-  }
+  Future<void> saveAchUnlocked(Set<String> value) =>
+      _saveAch((s) => s.unlocked = {...value});
 
-  Future<void> saveAchReportedPlayer(String value) async {
-    achReportedPlayer = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_achReportedPlayerKey, value);
-  }
+  Future<void> saveAchReported(Set<String> value) =>
+      _saveAch((s) => s.reported = {...value});
 
-  Future<void> saveAchRides(Set<String> value) {
-    achRides = {...value};
-    return _saveSet(_achRidesKey, achRides);
-  }
+  Future<void> saveAchReportedPlayer(String value) =>
+      _saveAch((s) => s.reportedPlayer = value);
 
-  Future<void> saveAchItems(Set<String> value) {
-    achItems = {...value};
-    return _saveSet(_achItemsKey, achItems);
-  }
+  Future<void> saveAchRides(Set<String> value) =>
+      _saveAch((s) => s.rides = {...value});
 
-  Future<void> saveAchVersusWins(int value) async {
-    achVersusWins = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_achVersusWinsKey, value);
-  }
+  Future<void> saveAchItems(Set<String> value) =>
+      _saveAch((s) => s.items = {...value});
+
+  Future<void> saveAchVersusWins(int value) =>
+      _saveAch((s) => s.versusWins = value);
 
   /// The daily streak and its day, written together.
-  Future<void> saveAchDays(int streak, int lastDay) async {
-    achDayStreak = streak;
-    achLastPlayDay = lastDay;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_achDayStreakKey, streak);
-    await prefs.setInt(_achLastPlayDayKey, lastDay);
-  }
+  Future<void> saveAchDays(int streak, int lastDay) => _saveAch(
+    (s) => s
+      ..dayStreak = streak
+      ..lastPlayDay = lastDay,
+  );
 
   /// QA P2-03 the open run's journal and its exclusion, written together.
-  Future<void> saveAchJournal(
-    List<String> ops, {
-    required bool excluded,
-  }) async {
-    achJournal = [...ops];
-    achJournalExcluded = excluded;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_achJournalExcludedKey, excluded);
-    await prefs.setStringList(_achJournalKey, achJournal);
-  }
+  Future<void> saveAchJournal(List<String> ops, {required bool excluded}) =>
+      _saveAch(
+        (s) => s
+          ..journal = [...ops]
+          ..journalExcluded = excluded,
+      );
 
   /// PRD-2.3.1 §19.2 the pacing queue (oldest first).
-  Future<void> saveAchPending(List<String> value) async {
-    achPending = [...value];
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_achPendingKey, achPending);
-  }
+  Future<void> saveAchPending(List<String> value) =>
+      _saveAch((s) => s.pending = [...value]);
 
-  /// PRD-2.3.1 §19.1 the lifetime item catch counts (stored as `key=n`).
-  Future<void> saveAchItemCounts(Map<String, int> value) async {
-    achItemCounts = {...value};
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_achItemCountsKey, [
-      for (final k in achItemCounts.keys.toList()..sort())
-        '$k=${achItemCounts[k]}',
-    ]);
-  }
+  /// PRD-2.3.1 §19.1 the lifetime item catch counts.
+  Future<void> saveAchItemCounts(Map<String, int> value) =>
+      _saveAch((s) => s.itemCounts = {...value});
 
   /// Debug "Achievements: reset local" / [resetMenuState]: clears every
   /// achievement key (it cannot reset the platform).
   Future<void> resetAchievements() async {
-    await saveAchPending(const []);
-    await saveAchItemCounts(const {});
-    await saveAchUnlocked({});
-    await saveAchReported({});
-    await saveAchReportedPlayer('');
-    await saveAchRides({});
-    await saveAchItems({});
-    await saveAchVersusWins(0);
-    await saveAchDays(0, -1);
-    await saveAchJournal(const [], excluded: false);
+    await saveAchState(AchState());
+    // The 2.3.1 (20) keys go too, so nothing could ever migrate back.
+    final prefs = await SharedPreferences.getInstance();
+    for (final k in const [
+      _achUnlockedKey,
+      _achReportedKey,
+      _achReportedPlayerKey,
+      _achRidesKey,
+      _achItemsKey,
+      _achVersusWinsKey,
+      _achDayStreakKey,
+      _achLastPlayDayKey,
+      _achJournalKey,
+      _achJournalExcludedKey,
+      _achPendingKey,
+      _achItemCountsKey,
+    ]) {
+      await prefs.remove(k);
+    }
   }
   // endregion P231-E
 

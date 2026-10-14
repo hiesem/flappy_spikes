@@ -230,6 +230,28 @@ void main() {
     },
   );
 
+  t.testGameWidget(
+    'QA P19-04 a strict run: hoop 10, a revive, hoop 11 → FIRST FLIGHT '
+    'unlocks first (the hoop goal is staged when crossed)',
+    setUp: boot,
+    verify: (g, _) async {
+      g.achievements.countDebugRuns = false;
+      g.runDebug.ignoreGates = false;
+      final r = await startRun(g);
+      expect(r.countsForAchievements, isTrue);
+      r.state.hoopsPassed = 10;
+      r.events.emit(const HoopPassed(null));
+      r.events.emit(const Revived(ReviveKind.coins, 100));
+      r.state.hoopsPassed = 11;
+      r.events.emit(const HoopPassed(null));
+      expect(g.storage.achJournal, ['u:hoops_10', 'u:first_revive']);
+      await finish(g);
+      await g.achievements.flush();
+      expect(unlocked(g), {'hoops_10'});
+      expect(pending(g), ['first_revive']);
+    },
+  );
+
   tester(
     prefs: {
       'achPending': ['master_hatch', 'master_jar'],

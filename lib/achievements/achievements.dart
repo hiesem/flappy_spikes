@@ -57,7 +57,21 @@ class AchievementTracker {
   /// run (`debugPass`, the force menu, god mode), so nothing it earned is
   /// stored, logged or reported before [finishRun] knows it still counts.
   /// Their toasts show on the results page anyway (§12.5).
-  List<void Function()>? _staged;
+  ///
+  /// QA P2-03: the staged rules are serializable ops ([AchOp]) mirrored in
+  /// a provisional journal on disk (`GameStorage.achJournal`), so a clean
+  /// run's completed events survive the app dying before [finishRun]: the
+  /// next launch commits them ([recoverJournal]). A debug assist marks the
+  /// journal excluded first ([excludeRun]); an excluded journal is
+  /// discarded. Nothing is reported to the platform before a commit.
+  List<String>? _staged;
+
+  /// The open run was excluded (debug assist): its journal is discarded.
+  bool _excluded = false;
+
+  /// The deepest hoop count already written to the journal (hoop passes are
+  /// folded into one op and only written when they cross a threshold).
+  int _journaledHoops = 0;
 
   /// A new run: the toasts and staged rules of an unfinished earlier run are
   /// dropped. With [countDebugRuns] (tests) a run can never become excluded,
@@ -66,28 +80,110 @@ class AchievementTracker {
     lastRunCounted = counts;
     toastQueue.clear();
     _staged = countDebugRuns ? null : [];
+    _excluded = !counts;
+    _journaledHoops = 0;
+    unawaited(storage.saveAchJournal(const [], excluded: _excluded));
   }
 
-  /// A run rule of the open run: staged until [finishRun] (applied at once
-  /// outside a run).
-  void runRule(void Function(AchievementTracker t) rule) {
+  /// A run rule of the open run: staged (and journaled) until [finishRun];
+  /// applied at once outside a run.
+  void runOp(String op) {
     final staged = _staged;
     if (staged == null) {
-      rule(this);
-    } else {
-      staged.add(() => rule(this));
+      _apply(op);
+      return;
     }
+    final hoops = AchOp.hoopsOf(op);
+    if (hoops != null) {
+      // One folded op: onHoops(n) is monotonic.
+      staged.removeWhere((o) => AchOp.hoopsOf(o) != null);
+      staged.add(op);
+      final crossed = kHoopAchievements.any(
+        (h) => h.$1 > _journaledHoops && h.$1 <= hoops,
+      );
+      if (!crossed) return; // written at the next pause / event
+      _journaledHoops = hoops;
+    } else if (staged.contains(op)) {
+      return;
+    } else {
+      staged.add(op);
+    }
+    _writeJournal();
+  }
+
+  /// The app leaves the foreground with an open run (QA P2-03): writes the
+  /// journal as it is, or marks it excluded when the run no longer
+  /// [counts].
+  void saveJournal({required bool counts}) {
+    if (_staged == null) return;
+    if (!counts) {
+      excludeRun();
+      return;
+    }
+    _writeJournal();
+  }
+
+  /// A debug assist in the open run (QA P2-03): the journal is marked
+  /// excluded (and emptied) before the assist applies.
+  void excludeRun() {
+    if (_staged == null || _excluded) return;
+    _excluded = true;
+    _staged!.clear();
+    unawaited(storage.saveAchJournal(const [], excluded: true));
+  }
+
+  void _writeJournal() {
+    if (_excluded) return;
+    unawaited(storage.saveAchJournal(_staged ?? const [], excluded: false));
   }
 
   /// The run ended (`FlappySpikesGame.endRun`): its staged rules commit, in
-  /// order, only when it still [counts]; otherwise they are dropped.
+  /// order, only when it still [counts]; otherwise they are dropped. The
+  /// journal is cleared either way.
   void finishRun({required bool counts}) {
-    final staged = _staged ?? const [];
+    final staged = _staged ?? const <String>[];
     _staged = null;
+    _excluded = false;
     lastRunCounted = counts;
+    unawaited(storage.saveAchJournal(const [], excluded: false));
     if (!counts) return;
-    for (final rule in staged) {
-      rule();
+    for (final op in staged) {
+      _apply(op);
+    }
+  }
+
+  /// Launch (QA P2-03): a journal left by a run the app died in commits
+  /// when it was clean (unlocks + counters; the platform report goes through
+  /// the normal [syncAll]) and is discarded when excluded. No toasts.
+  Future<void> recoverJournal() async {
+    final ops = storage.achJournal;
+    final excluded = storage.achJournalExcluded;
+    if (ops.isEmpty && !excluded) return;
+    await storage.saveAchJournal(const [], excluded: false);
+    if (excluded) return;
+    for (final op in ops) {
+      _apply(op);
+    }
+    toastQueue.clear();
+  }
+
+  void _apply(String op) {
+    final (kind, arg) = AchOp.split(op);
+    switch (kind) {
+      case AchOp._unlock:
+        final id = AchOp.idOf(arg);
+        if (id != null) unlock(id);
+      case AchOp._ride:
+        final ride = RideId.values.where((r) => r.storageId == arg);
+        if (ride.isNotEmpty) onRideFinished(ride.first);
+      case AchOp._item:
+        final id = AchOp.idOf(arg);
+        if (id != null) onItemCaught(id);
+      case AchOp._hoops:
+        final n = int.tryParse(arg);
+        if (n != null) onHoops(n);
+      case AchOp._versusWin:
+        onVersusWin();
     }
   }
 
@@ -233,5 +329,38 @@ class AchievementTracker {
   Future<void> resetLocal() async {
     toastQueue.clear();
     await storage.resetAchievements();
+  }
+}
+
+/// QA P2-03 the serializable run rules of [AchievementTracker.runOp]
+/// (`kind:arg` strings, the journal's format).
+abstract final class AchOp {
+  static const _unlock = 'u';
+  static const _ride = 'ride';
+  static const _item = 'item';
+  static const _hoops = 'hoops';
+  static const _versusWin = 'vwin';
+
+  static String unlock(AchievementId id) => '$_unlock:${id.key}';
+  static String ride(RideId ride) => '$_ride:${ride.storageId}';
+  static String item(AchievementId id) => '$_item:${id.key}';
+  static String hoops(int hoopsPassed) => '$_hoops:$hoopsPassed';
+  static const String versusWin = '$_versusWin:';
+
+  static (String, String) split(String op) {
+    final i = op.indexOf(':');
+    return i < 0 ? (op, '') : (op.substring(0, i), op.substring(i + 1));
+  }
+
+  static int? hoopsOf(String op) {
+    final (kind, arg) = split(op);
+    return kind == _hoops ? int.tryParse(arg) : null;
+  }
+
+  static AchievementId? idOf(String key) {
+    for (final id in AchievementId.values) {
+      if (id.key == key) return id;
+    }
+    return null;
   }
 }

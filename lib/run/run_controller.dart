@@ -146,13 +146,20 @@ class RunController extends Component {
   /// (switching it off again never restores eligibility).
   void _latchGod() {
     if (FlappySpikesGame.debugAvailable && game.runDebug.god) {
-      _debugTouched = true;
+      _touchDebug();
     }
   }
 
   /// A debug assist used during this run (the force menu's god mode, …):
   /// the run stops counting for achievements until it ends (§12.2).
-  void markDebugAssist() => _debugTouched = true;
+  void markDebugAssist() => _touchDebug();
+
+  /// QA P2-03: the exclusion is journaled (the tracker's provisional run
+  /// journal is marked excluded) before the assist applies.
+  void _touchDebug() {
+    if (!_debugTouched) game.achievements.excludeRun();
+    _debugTouched = true;
+  }
   // endregion P231-E
 
   final RunSetup setup;
@@ -708,7 +715,7 @@ class RunController extends Component {
   /// PRD-2.2 §11: [clean] makes a non-perfect pass a clean off-centre one
   /// (no rim touched) instead of a graze.
   void debugPass({bool perfect = false, bool clean = false}) {
-    _debugTouched = true; // PRD-2.3.1 §12.2
+    _touchDebug(); // PRD-2.3.1 §12.2
     final isClean = clean && !perfect;
     state.passes++;
     state.hoopsPassed++;
@@ -729,7 +736,7 @@ class RunController extends Component {
   MistakeOutcome mistake(Mistake m) {
     if (!_started || _dying || _ended) return MistakeOutcome.ignored;
     if (FlappySpikesGame.debugAvailable && game.runDebug.god) {
-      _debugTouched = true; // PRD-2.3.1 §12.2 (P1E-02)
+      _touchDebug(); // PRD-2.3.1 §12.2 (P1E-02)
       return MistakeOutcome.ignored;
     }
     final outcome = pipeline.resolve(m, ctx);
@@ -897,12 +904,12 @@ class RunController extends Component {
   /// §3.0.8 debug force: the next slot / gap; elements the director does not
   /// place (squeeze) go to their feature as [DebugForced].
   void debugForce(ElementId e) {
-    _debugTouched = true; // PRD-2.3.1 §12.2
+    _touchDebug(); // PRD-2.3.1 §12.2
     if (!director.debugForce(e)) events.emit(DebugForced(e));
   }
 
   void debugForceRide(RideId id) {
-    _debugTouched = true; // PRD-2.3.1 §12.2
+    _touchDebug(); // PRD-2.3.1 §12.2
     director.debugForceRide(id);
   }
 

@@ -60,10 +60,11 @@ abstract final class ForceMenu {
         d.bot = !d.bot;
       }),
       DebugAction(() => 'God mode: ${d.god ? 'ON' : 'off'}', () async {
-        d.god = !d.god;
-        // PRD-2.3.1 §12.2 (P1E-02) god mode in a run excludes that run.
+        // PRD-2.3.1 §12.2 (P1E-02) god mode in a run excludes that run
+        // (journaled before the assist applies, QA P2-03).
         final run = game.run;
         if (run != null && !run.ended) run.markDebugAssist();
+        d.god = !d.god;
       }),
       DebugAction(() => 'Overlay: ${d.overlay ? 'ON' : 'off'}', () async {
         d.overlay = !d.overlay;

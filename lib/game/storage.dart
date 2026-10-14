@@ -32,6 +32,8 @@ class GameStorage {
   static const String _seenItemsKey = 'seenItems';
   static const String _noAdsKey = 'noAds';
   static const String _armedPowerupKey = 'armedPowerup';
+  // PRD-2.3.1 §12.2 (QA P2-02) the armed powerup's debug origin.
+  static const String _armedPowerupDebugKey = 'armedPowerupDebug';
   static const String _slotHistoryKey = 'slotHistory';
   static const String _installDayKey = 'installDay';
   static const String _noAdsPopupLastDayKey = 'noAdsPopupLastDay';
@@ -77,6 +79,9 @@ class GameStorage {
   static const String _achVersusWinsKey = 'achVersusWins';
   static const String _achDayStreakKey = 'achDayStreak';
   static const String _achLastPlayDayKey = 'achLastPlayDay';
+  // QA P2-03 the open run's provisional achievement journal.
+  static const String _achJournalKey = 'achJournal';
+  static const String _achJournalExcludedKey = 'achJournalExcluded';
   // endregion P231-E
   static const String _notifLastSentKey = 'notifLastSent';
   static const String _notifPermissionAskedKey = 'notifPermissionAsked';
@@ -135,6 +140,10 @@ class GameStorage {
 
   bool noAds = false;
   String armedPowerup = 'none';
+
+  /// PRD-2.3.1 §12.2 (QA P2-02): [armedPowerup] came from a debug "Slot:
+  /// force …" roll; written together with it.
+  bool armedPowerupDebug = false;
   List<String> slotHistory = [];
   int? installDay;
 
@@ -200,6 +209,7 @@ class GameStorage {
   /// 1.x / 2.x upgrade) counts as seen: those players are not on their very
   /// first run.
   bool firstRunHintSeen = false;
+
   /// PRD-2.3 §18.3 foreground seconds since install (counted while the app
   /// is resumed, outside full-screen ads, until the new-player grace ends).
   /// Kept by "Delete my data".
@@ -262,6 +272,14 @@ class GameStorage {
 
   /// Item achievement keys caught.
   Set<String> achItems = {};
+
+  /// QA P2-03 (PRD-2.3.1 §12.2 / §12.3): the staged rule ops of the open
+  /// run (`AchievementTracker`), empty when no run is open. Committed on the
+  /// next launch when the app died before the run ended.
+  List<String> achJournal = [];
+
+  /// The open run's journal is excluded (a debug assist): discard it.
+  bool achJournalExcluded = false;
 
   /// Versus wins since 2.3.1.
   int achVersusWins = 0;
@@ -360,6 +378,7 @@ class GameStorage {
     seenItems = (prefs.getStringList(_seenItemsKey) ?? const []).toSet();
     noAds = prefs.getBool(_noAdsKey) ?? false;
     armedPowerup = prefs.getString(_armedPowerupKey) ?? 'none';
+    armedPowerupDebug = prefs.getBool(_armedPowerupDebugKey) ?? false;
     slotHistory = _capSlotHistory(
       prefs.getStringList(_slotHistoryKey) ?? const [],
     );
@@ -395,8 +414,7 @@ class GameStorage {
     );
     lastFeatherRun = prefs.getInt(_lastFeatherRunKey) ?? -1;
     lastPieceRun = prefs.getInt(_lastPieceRunKey) ?? -1;
-    firstRunHintSeen =
-        prefs.getBool(_firstRunHintSeenKey) ?? (gamesPlayed > 0);
+    firstRunHintSeen = prefs.getBool(_firstRunHintSeenKey) ?? (gamesPlayed > 0);
     playtimeSeconds = prefs.getInt(_playtimeSecondsKey) ?? 0;
     firstInterstitialShown = prefs.getBool(_firstInterstitialShownKey) ?? false;
     lastRatingRequestAt = prefs.getInt(_lastRatingRequestAtKey) ?? 0;
@@ -418,6 +436,8 @@ class GameStorage {
     achVersusWins = prefs.getInt(_achVersusWinsKey) ?? 0;
     achDayStreak = prefs.getInt(_achDayStreakKey) ?? 0;
     achLastPlayDay = prefs.getInt(_achLastPlayDayKey) ?? -1;
+    achJournal = [...?prefs.getStringList(_achJournalKey)];
+    achJournalExcluded = prefs.getBool(_achJournalExcludedKey) ?? false;
     // endregion P231-E
     versusNickname = prefs.getString(_versusNicknameKey);
     versusAvatar = _parseVersusAvatar(prefs.getString(_versusAvatarKey));
@@ -529,10 +549,7 @@ class GameStorage {
   Future<void> saveMetElements(Set<String> value) async {
     metElements = {...value};
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-      _metElementsKey,
-      metElements.toList()..sort(),
-    );
+    await prefs.setStringList(_metElementsKey, metElements.toList()..sort());
   }
 
   // region P231-E — achievements (PRD-2.3.1 §12.3)
@@ -582,6 +599,18 @@ class GameStorage {
     await prefs.setInt(_achLastPlayDayKey, lastDay);
   }
 
+  /// QA P2-03 the open run's journal and its exclusion, written together.
+  Future<void> saveAchJournal(
+    List<String> ops, {
+    required bool excluded,
+  }) async {
+    achJournal = [...ops];
+    achJournalExcluded = excluded;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_achJournalExcludedKey, excluded);
+    await prefs.setStringList(_achJournalKey, achJournal);
+  }
+
   /// Debug "Achievements: reset local" / [resetMenuState]: clears every
   /// achievement key (it cannot reset the platform).
   Future<void> resetAchievements() async {
@@ -592,6 +621,7 @@ class GameStorage {
     await saveAchItems({});
     await saveAchVersusWins(0);
     await saveAchDays(0, -1);
+    await saveAchJournal(const [], excluded: false);
   }
   // endregion P231-E
 
@@ -910,9 +940,13 @@ class GameStorage {
     await prefs.setBool(_noAdsKey, value);
   }
 
-  Future<void> saveArmedPowerup(String value) async {
+  /// The armed powerup and its debug origin (PRD-2.3.1 §12.2, QA P2-02),
+  /// always written together; 'none' clears the origin.
+  Future<void> saveArmedPowerup(String value, {bool debug = false}) async {
     armedPowerup = value;
+    armedPowerupDebug = debug && value != 'none';
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_armedPowerupDebugKey, armedPowerupDebug);
     await prefs.setString(_armedPowerupKey, value);
   }
 

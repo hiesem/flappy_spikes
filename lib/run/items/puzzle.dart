@@ -79,6 +79,7 @@ class PuzzleFeature extends RunFeature {
       reward = _complete(c, rolled);
       paid.add(rolled);
       c.track('puzzle_completed', {'round': round + 1, 'coins': reward});
+      c.emit(const PuzzleCompleted()); // PRD-2.3.1 §12.2
     } else {
       unawaited(storage.savePuzzlePieces(mask));
     }

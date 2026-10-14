@@ -1499,4 +1499,56 @@ class Config {
   /// §10.3b / §0 item 4 the tap reminder fades out (ease-in) on the tap (s).
   static const double tapReminderFadeOut = 0.2;
   // endregion PRD-2.3 §10
+
+  // region P231-E — achievements (PRD-2.3.1 §12.5)
+  /// PRD-2.3.1 §12.5 the Home medal box: right of the trophy with the same
+  /// size and spacing as gear → trophy (14 → 60, so 60 → 106), y 58, 38×38.
+  static const double homeMedalLeft =
+      homeTrophyLeft + (homeTrophyLeft - homeMargin);
+
+  /// PRD-2.3.1 §12.5 the medal glyph (the trophy's 24 pt).
+  static const double homeMedalIconSize = homeTrophyIconSize;
+
+  /// PRD-2.3.1 §12.5 the medal wiggles like the trophy, this many seconds
+  /// after it (same 10 s period).
+  static const double homeMedalWiggleDelay = 5;
+
+  static Rect homeAchievementsRectFor(double viewHeight) => Rect.fromLTWH(
+    homeMedalLeft,
+    homeTopRowY,
+    homeTopRowHeight,
+    homeTopRowHeight,
+  );
+
+  /// PRD-2.3.1 §12.5 the coin pill (right edge 306) never reaches the medal:
+  /// its widest is up to 8 pt (the top row's gap) right of the medal box;
+  /// a longer balance shrinks its number to fit.
+  static const double homeCoinPillMaxWidth =
+      homeRightEdge - (homeMedalLeft + homeTopRowHeight + 8);
+
+  /// PRD-2.3.1 §12.5 the unlock toast pill: width, height, top (below the
+  /// top spike strip), corner radius.
+  static const double achToastWidth = 280;
+  static const double achToastHeight = 68;
+  static const double achToastTop = spikeHeight + 10;
+  static const double achToastRadius = 34;
+
+  /// PRD-2.3.1 §12.5 the achievement icon in the pill (pt).
+  static const double achToastIcon = 52;
+
+  /// PRD-2.3.1 §12.5 "ACHIEVEMENT UNLOCKED" (Opificio 11 pt, uiAccent), the
+  /// name (18 pt plum) and the "+N" points.
+  static const double achToastLabelSize = 11;
+  static const double achToastNameSize = 18;
+  static const double achToastPointsSize = 16;
+  static const Color achToastPlum = Color(0xFF6A0040);
+
+  /// PRD-2.3.1 §12.5 one pill shows ≈ 2.4 s, with a 0.3 s slide in / out.
+  static const double achToastDuration = 2.4;
+  static const double achToastSlide = 0.3;
+
+  /// PRD-2.3.1 §12.5 at most this many pills per batch; the last one of a
+  /// longer queue reads "+N more".
+  static const int achToastMaxPills = 5;
+  // endregion P231-E
 }

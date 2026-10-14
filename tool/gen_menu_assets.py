@@ -109,6 +109,23 @@ ICONS = {
     "back": [(SHOP, 1, ".back svg", 0, PINK)],
     "gear": [(HOME, 0, ".gear svg", 0, PINK)],
 }
+# Icons with no mock usage, drawn here in the mock's icon style (24-unit
+# viewBox, --soft glyph, tile-pink parts cut out): name -> (svg, size pt).
+# PRD-2.3.1 §12.5 medal: the Home achievements button, the trophy's sibling
+# (44 pt like the trophy, a ribboned medal with the trophy's star cut out).
+INLINE_ICONS = {
+    "medal": (
+        '<svg width="44" height="44" viewBox="0 0 24 24" '
+        'style="color:var(--soft);fill:var(--soft);flex:none">'
+        '<path d="M5.5 1.5h5l3 7.5h-5z"/><path d="M18.5 1.5h-5l-3 7.5h5z"/>'
+        '<circle cx="12" cy="15.2" r="7.3"/>'
+        '<path transform="translate(0 7.4)" d="M12 5l1 2.200 2.300.3-1.700 '
+        '1.600.5 2.300-2.100-1.200-2.100 1.200.5-2.300-1.700-1.600 2.300-.3z" '
+        'fill="var(--pink)"/></svg>',
+        44,
+    ),
+}
+
 # Icons the app draws larger than any mock usage: rasterised at this size
 # (pt, square) instead of the mock's, so the biggest in-app use is still a
 # clean downscale. The manifest keeps the mock's logical size. check: the
@@ -116,7 +133,7 @@ ICONS = {
 RENDER_PT = {"check": 40}
 # Glyph parts the mock paints in tile-pink are real cut-outs (transparent),
 # so the icon also reads on a pressed/darker tile.
-CUTOUT_ICONS = {"shop", "skins", "trophy"}
+CUTOUT_ICONS = {"shop", "skins", "trophy", "medal"}
 
 SKIN_IDS = [
     "pink", "blue", "green", "purple", "grey", "sand",
@@ -242,6 +259,32 @@ def prepare_svg(info, w, h, name) -> str:
     return svg
 
 
+def gen_inline_icons(r: Renderer, out: Path, manifest: dict, only=None):
+    """[INLINE_ICONS]: rendered from their own SVG (no mock to probe)."""
+    for name, (svg, pt) in INLINE_ICONS.items():
+        if only and name not in only:
+            continue
+        inner = resolve_vars(svg)
+        if name in CUTOUT_ICONS:
+            inner = cutout(inner)
+        img, (lw, lh) = r.render(standalone_page(inner, ROOT_VARS["--soft"],
+                                                 ROOT_VARS["--soft"], None), "#w > svg")
+        target = (round(pt * SCALE), round(pt * SCALE))
+        if img.size != target:
+            img = img.resize(target, Image.LANCZOS)
+        img.save(out / f"{name}.png", optimize=True)
+        manifest[name] = [float(pt), float(pt)]
+        print(f"icon {name:14s} {pt}x{pt} pt -> {img.size} (inline)")
+
+
+def gen_only(r: Renderer, out: Path, only: set):
+    """--only: re-render just these inline icons, merged into the manifest."""
+    path = out / "manifest.json"
+    manifest = json.loads(path.read_text()) if path.exists() else {}
+    gen_inline_icons(r, out, manifest, only)
+    path.write_text(json.dumps(manifest, indent=2) + "\n")
+
+
 def gen_icons(r: Renderer, out: Path):
     out.mkdir(parents=True, exist_ok=True)
     manifest, checks = {}, []
@@ -276,6 +319,7 @@ def gen_icons(r: Renderer, out: Path):
         info = {"x": cx + (142 - c) / 2, "y": cy + 78 - lh, "w": c, "h": lh}
         checks.append((name, img, info, (SHOP, 1), CARD))
         print(f"icon {name:14s} {c}x{lh} pt -> {img.size}")
+    gen_inline_icons(r, out, manifest)
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     return checks
 
@@ -837,7 +881,18 @@ def main():
     ap.add_argument("--contact", type=Path, default=None, help="write a verification sheet")
     ap.add_argument("--pink-only", action="store_true",
                     help="only rebuild the pink skin layers (no browser needed)")
+    ap.add_argument("--only", action="append", default=None,
+                    help="only (re)render these inline icons, e.g. --only medal")
     a = ap.parse_args()
+    if a.only:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as pw:
+            r = Renderer(pw, Path("."))
+            try:
+                gen_only(r, a.app / "assets/images/menu", set(a.only))
+            finally:
+                r.close()
+        return
     if a.pink_only:
         gen_pink_only(a.app)
         return

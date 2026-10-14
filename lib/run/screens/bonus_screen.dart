@@ -1,3 +1,4 @@
+import '../../achievements/achievement_catalog.dart'; // P231-E
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -353,6 +354,11 @@ class BonusScreen extends PositionComponent
     credited += tl.prize;
     game.menu.wallet.add(tl.prize, CoinSource.bonus);
     game.services.track('bonus_pop', {'prize': tl.prize, 'pop': pops});
+    // PRD-2.3.1 §12.2 GOLDEN EGG: the jackpot (the largest `bonus_prizes`
+    // value as it resolves now), when the run that led here counted.
+    if (tl.prize == BonusConfig.jackpot && game.achievements.lastRunCounted) {
+      game.achievements.unlock(AchievementId.masterJackpot);
+    }
     return true;
   }
 

@@ -130,6 +130,7 @@ class EggFeature extends RunFeature {
     _view?.hatched();
     c.sfx(Sfx.eggHatch);
     c.track('egg_hatched');
+    c.emit(const EggHatched()); // PRD-2.3.1 §12.2
     RunHud.ensureFor(c.run).banners.show(
       ElementBanner(
         EggConfig.hatchText,

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 
+import '../achievements/achievement_catalog.dart'; // P231-E
 import '../game/config.dart';
 import '../game/flappy_game.dart';
 import '../menu/powerup_slot.dart';
@@ -52,8 +53,13 @@ class DebugPanel extends PositionComponent
   /// PRD-2.3 §13.3: the MUSIC LOG page is up.
   bool _musicPage = false;
 
-  /// The open page (main / RUN DEBUG page / TUNING page / MUSIC LOG).
-  (int?, int?, bool) get _page => (_forcePage, _tuningPage, _musicPage);
+  /// PRD-2.3.1 §12.3 null = not on the ACHIEVEMENTS page; else its page.
+  int? _achPage;
+
+  /// The open page (main / RUN DEBUG page / TUNING page / MUSIC LOG /
+  /// ACHIEVEMENTS).
+  (int?, int?, bool, int?) get _page =>
+      (_forcePage, _tuningPage, _musicPage, _achPage);
 
   @override
   Future<void> onLoad() async {
@@ -88,7 +94,9 @@ class DebugPanel extends PositionComponent
     }
     _rows.clear();
     _labels.clear();
-    actions = _tuningPage != null
+    actions = _achPage != null
+        ? _achievementActions()
+        : _tuningPage != null
         ? _tuningActions()
         : _musicPage
         ? _musicActions()
@@ -211,6 +219,43 @@ class DebugPanel extends PositionComponent
     ];
   }
 
+  /// PRD-2.3.1 §12.3 "Achievements: sync now", "Achievements: reset
+  /// local" and "Achievements: unlock…" (one row per achievement, paged).
+  List<DebugAction> _achievementActions() {
+    final ach = game.achievements;
+    final per = (_rowsPerPage - 4).clamp(3, 48);
+    final all = AchievementId.values;
+    final pages = (all.length / per).ceil();
+    final page = (_achPage ?? 0).clamp(0, pages - 1);
+    final shown = all.skip(page * per).take(per);
+    return [
+      DebugAction(() => 'Achievements: sync now', () async {
+        await ach.syncAll();
+        game.showToast('Achievements synced');
+      }),
+      DebugAction(
+        () => 'Achievements: reset local (${game.storage.achUnlocked.length})',
+        () async {
+          await ach.resetLocal();
+          game.showToast('Local achievements reset');
+        },
+      ),
+      for (final id in shown)
+        DebugAction(
+          () => '${ach.isUnlocked(id) ? '✓' : 'Unlock'} ${id.title}',
+          () async {
+            ach.unlock(id);
+            game.showAchievementToasts();
+          },
+        ),
+      DebugAction(
+        () => 'More… (${page + 1}/$pages)',
+        () async => _achPage = (page + 1) % pages,
+      ),
+      DebugAction(() => '< Back', () async => _achPage = null),
+    ];
+  }
+
   List<DebugAction> _buildActions() {
     final menu = game.menu;
     final ads = game.monetization.ads;
@@ -302,6 +347,8 @@ class DebugPanel extends PositionComponent
       DebugAction(() => 'TUNING >', () async => _tuningPage = 0),
       // PRD-2.3 §13.3: the music diagnostic log.
       DebugAction(() => 'MUSIC LOG >', () async => _musicPage = true),
+      // PRD-2.3.1 §12.3 the achievements debug rows.
+      DebugAction(() => 'ACHIEVEMENTS >', () async => _achPage = 0),
       // §3.0.8 debug force menu (PRD-2, WP-0b).
       DebugAction(() => 'RUN DEBUG >', () async => _forcePage = 0),
       DebugAction(() => 'Close', () async => onClose()),

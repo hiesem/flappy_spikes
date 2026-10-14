@@ -68,6 +68,16 @@ class GameStorage {
   static const String _uploadsSentDayKey = 'uploadsSentDay';
   static const String _notifOrderKey = 'notifOrder';
   static const String _notifPositionKey = 'notifPosition';
+  // region P231-E — achievements (PRD-2.3.1 §12.3)
+  static const String _achUnlockedKey = 'achUnlocked';
+  static const String _achReportedKey = 'achReported';
+  static const String _achReportedPlayerKey = 'achReportedPlayer';
+  static const String _achRidesKey = 'achRides';
+  static const String _achItemsKey = 'achItems';
+  static const String _achVersusWinsKey = 'achVersusWins';
+  static const String _achDayStreakKey = 'achDayStreak';
+  static const String _achLastPlayDayKey = 'achLastPlayDay';
+  // endregion P231-E
   static const String _notifLastSentKey = 'notifLastSent';
   static const String _notifPermissionAskedKey = 'notifPermissionAsked';
   // endregion PRD-2 keys
@@ -237,6 +247,32 @@ class GameStorage {
   /// §3.0.8 Element storage ids the player has met (spawned on screen).
   Set<String> metElements = {};
 
+  // region P231-E — achievements (PRD-2.3.1 §12.3)
+  /// Unlocked achievement keys (the local truth).
+  Set<String> achUnlocked = {};
+
+  /// Keys the platform confirmed for [achReportedPlayer].
+  Set<String> achReported = {};
+
+  /// The platform player id [achReported] belongs to ('' = none yet).
+  String achReportedPlayer = '';
+
+  /// Portal ride ids finished (`RideId.storageId`).
+  Set<String> achRides = {};
+
+  /// Item achievement keys caught.
+  Set<String> achItems = {};
+
+  /// Versus wins since 2.3.1.
+  int achVersusWins = 0;
+
+  /// Current streak of consecutive local days with a counted run.
+  int achDayStreak = 0;
+
+  /// [today] of the last counted run (-1 = none).
+  int achLastPlayDay = -1;
+  // endregion P231-E
+
   /// §3.13 Versus nickname (generated once by WP-5b); null = not yet.
   String? versusNickname;
 
@@ -373,6 +409,16 @@ class GameStorage {
     levelRewardPayout = prefs.getInt(_levelRewardPayoutKey) ?? 0;
     puzzlePayout = prefs.getInt(_puzzlePayoutKey) ?? 0;
     metElements = (prefs.getStringList(_metElementsKey) ?? const []).toSet();
+    // region P231-E
+    achUnlocked = (prefs.getStringList(_achUnlockedKey) ?? const []).toSet();
+    achReported = (prefs.getStringList(_achReportedKey) ?? const []).toSet();
+    achReportedPlayer = prefs.getString(_achReportedPlayerKey) ?? '';
+    achRides = (prefs.getStringList(_achRidesKey) ?? const []).toSet();
+    achItems = (prefs.getStringList(_achItemsKey) ?? const []).toSet();
+    achVersusWins = prefs.getInt(_achVersusWinsKey) ?? 0;
+    achDayStreak = prefs.getInt(_achDayStreakKey) ?? 0;
+    achLastPlayDay = prefs.getInt(_achLastPlayDayKey) ?? -1;
+    // endregion P231-E
     versusNickname = prefs.getString(_versusNicknameKey);
     versusAvatar = _parseVersusAvatar(prefs.getString(_versusAvatarKey));
     versusAvatarAt = _parseVersusAvatarAt(prefs.getString(_versusAvatarKey));
@@ -488,6 +534,66 @@ class GameStorage {
       metElements.toList()..sort(),
     );
   }
+
+  // region P231-E — achievements (PRD-2.3.1 §12.3)
+  Future<void> _saveSet(String key, Set<String> value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(key, value.toList()..sort());
+  }
+
+  Future<void> saveAchUnlocked(Set<String> value) {
+    achUnlocked = {...value};
+    return _saveSet(_achUnlockedKey, achUnlocked);
+  }
+
+  Future<void> saveAchReported(Set<String> value) {
+    achReported = {...value};
+    return _saveSet(_achReportedKey, achReported);
+  }
+
+  Future<void> saveAchReportedPlayer(String value) async {
+    achReportedPlayer = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_achReportedPlayerKey, value);
+  }
+
+  Future<void> saveAchRides(Set<String> value) {
+    achRides = {...value};
+    return _saveSet(_achRidesKey, achRides);
+  }
+
+  Future<void> saveAchItems(Set<String> value) {
+    achItems = {...value};
+    return _saveSet(_achItemsKey, achItems);
+  }
+
+  Future<void> saveAchVersusWins(int value) async {
+    achVersusWins = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_achVersusWinsKey, value);
+  }
+
+  /// The daily streak and its day, written together.
+  Future<void> saveAchDays(int streak, int lastDay) async {
+    achDayStreak = streak;
+    achLastPlayDay = lastDay;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_achDayStreakKey, streak);
+    await prefs.setInt(_achLastPlayDayKey, lastDay);
+  }
+
+  /// Debug "Achievements: reset local" / [resetMenuState]: clears every
+  /// achievement key (it cannot reset the platform).
+  Future<void> resetAchievements() async {
+    await saveAchUnlocked({});
+    await saveAchReported({});
+    await saveAchReportedPlayer('');
+    await saveAchRides({});
+    await saveAchItems({});
+    await saveAchVersusWins(0);
+    await saveAchDays(0, -1);
+  }
+  // endregion P231-E
 
   /// Adds one element id; no write when it was already met.
   Future<void> markElementMet(String id) async {
@@ -988,6 +1094,7 @@ class GameStorage {
     await saveFreeCoinsCount(0);
     await saveFreeCoinsLastMs(0);
     await saveClaimedLevels({});
+    await resetAchievements(); // PRD-2.3.1 §12.3
   }
 
   List<String> _capSlotHistory(List<String> value) =>

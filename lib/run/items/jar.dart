@@ -101,6 +101,7 @@ class JarFeature extends RunFeature {
     _dropBadge();
     if (full) {
       fullJars++;
+      c.emit(const JarFilled()); // PRD-2.3.1 §12.2
       _bursts?.burst(
         at: const Offset(JarConfig.hudJarX, JarConfig.hudJarY),
         colors: JarConfig.fullColors,

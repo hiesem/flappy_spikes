@@ -152,6 +152,9 @@ class FeverFeature extends RunFeature {
     if (c == null) return;
     final s = c.s;
     if (fever) {
+      // PRD-2.3.1 §12.2 a real FEVER (ring or pair gift), also when the
+      // bird already burns; never the streak's on-fire state.
+      c.emit(const FeverStarted());
       s.feverLit = true;
       RunHud.ensureFor(c.run).banners.showFever(FeverBanner());
     }

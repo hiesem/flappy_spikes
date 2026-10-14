@@ -13,6 +13,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleState, KeyEventResult;
 import 'package:url_launcher/url_launcher.dart';
 
+import '../achievements/achievement_toast.dart'; // P231-E
+import '../achievements/achievements.dart'; // P231-E
 import '../components/bird.dart';
 import '../components/debug_panel.dart';
 import '../components/delete_data_popup.dart';
@@ -177,7 +179,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // PRD-2.2 §33.4 item 5: the engine stops in the background and resumes
     // on return (Flame's default, kept explicit: see lifecycleStateChange).
     pauseWhenBackgrounded = true;
+    achievements = AchievementTracker(storage: storage, services: this.services);
   }
+
+  /// PRD-2.3.1 §12.3 the achievement tracker (local truth + platform sync).
+  late final AchievementTracker achievements;
 
   static double _clampViewHeight(double height) =>
       height.clamp(Config.minViewHeight, Config.maxViewHeight);
@@ -653,6 +659,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     add(drags);
 
     await storage.load();
+    // PRD-2.3.1 §12.4 report what an earlier session left unreported (a
+    // no-op while signed out; the player stream triggers it again).
+    unawaited(achievements.syncAll());
     menu = MenuState(
       storage,
       onEarned: (amount, source) {
@@ -1350,6 +1359,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     d.force.clear();
     d.forcedRide = null;
     final run = RunController(setup: setup, game: this);
+    // PRD-2.3.1 §12.2 / §12.5 (a fresh toast queue per run)
+    _dropAchievementToasts();
+    achievements.beginRun(counts: run.countsForAchievements);
     runStats = RunStats(run); // 2.3.0 (18) debug TUNING page
     _run = run;
     (world as RunScaledWorld).timeScaleSource = () => run.state.timeScale;
@@ -2424,6 +2436,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // The purchase auto-equips (ItemStore.purchase): mirror the explicit
     // equip's analytics so both paths log the same events.
     services.logItemEquip(item.layer, item.id);
+    // PRD-2.3.1 §12.2 / §12.5 the shop always counts; its toast shows at once.
+    achievements.onShopPurchase(owned: items.ownedCount, total: kCollectibleTotal);
+    showAchievementToasts();
     _coinPill
       ..balance = menu.wallet.balance
       ..countFrom(before);
@@ -3826,6 +3841,17 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     // endregion P23-14
     storage.incrementGamesPlayed();
+    // region P231-E — PRD-2.3.1 §12.2 ranks (this run's score, never the
+    // stored best) and the daily streak, for a counting run only
+    final achRun = _run;
+    final counts = achRun != null && achRun.countsForAchievements;
+    achievements.lastRunCounted = counts;
+    if (counts) {
+      achievements
+        ..onRunScore(score)
+        ..onRunDay(storage.today);
+    }
+    // endregion P231-E
     // PRD-2.3 §18.3 (S8-09): the run's playtime is saved at run end; §18.5
     // (S8-10): a grace that ended with this finished run loads now.
     unawaited(playtime.flush());
@@ -3923,6 +3949,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   void _removeResults() {
+    _dropAchievementToasts(); // PRD-2.3.1 §12.5 they belong to the page
     final page = _results;
     _results = null;
     page?.removeFromParent();
@@ -4332,6 +4359,67 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
   }
 
+  // region P231-E — achievements (PRD-2.3.1 §12.5)
+  /// The Home medal button: opens the native achievements list (Play Games
+  /// / Game Center), with the leaderboard's failure toasts.
+  Future<void> showAchievements({Sfx sfx = Sfx.click}) async {
+    if (state == GameState.start && !_homeInteractive) return;
+    sound.play(sfx);
+    final result = await services.showAchievements();
+    services.track('achievements_open', {'result': result.name});
+    switch (result) {
+      case ShowAchievementsResult.signInFailed:
+        _showServiceMessage('Play Games sign-in unavailable');
+      case ShowAchievementsResult.failed:
+        _showServiceMessage('Achievements unavailable — try again');
+      case ShowAchievementsResult.opened:
+      case ShowAchievementsResult.unavailable:
+      case ShowAchievementsResult.busy:
+        break;
+    }
+  }
+
+  AchievementToast? _achToast;
+
+  /// The unlock toast on screen (tests; null when none).
+  AchievementToast? get achievementToast {
+    final t = _achToast;
+    return t == null || t.isRemoved || t.isRemoving ? null : t;
+  }
+
+  /// Starts the queued unlock toasts (one pill at a time; the 5th of more
+  /// than 5 reads "+N more"). No-op while one is showing (it continues
+  /// with the queue) or when nothing is queued.
+  void showAchievementToasts() {
+    if (achievementToast != null) return;
+    final queue = achievements.toastQueue;
+    if (queue.isEmpty) return;
+    final toast = AchievementToast(queue: queue, onDone: () {
+      _achToast = null;
+    });
+    _achToast = toast;
+    world.add(toast);
+  }
+
+  /// §12.5 the run's unlocks toast on the results page once its sequence
+  /// has played out (after the LEVEL UP and its CLAIM, if any).
+  void _checkAchievementToasts() {
+    if (achievements.toastQueue.isEmpty || _achToast != null) return;
+    final page = _results;
+    if (page == null || state != GameState.results) return;
+    if (!page.settled || page.leaving) return;
+    showAchievementToasts();
+  }
+
+  /// Removes the toast and forgets the queue (a new run, home).
+  void _dropAchievementToasts() {
+    achievements.toastQueue.clear();
+    final t = _achToast;
+    _achToast = null;
+    t?.removeFromParent();
+  }
+  // endregion P231-E
+
   void _showServiceMessage(String text) {
     // One message at a time: a new one replaces any still on screen.
     final old = _message;
@@ -4588,6 +4676,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     if (state == GameState.start) _checkLevelUp(dt);
     _checkRatingPrompt(dt);
+    _checkAchievementToasts(); // PRD-2.3.1 §12.5
     if (_bannerState.value != BannerState.off) _syncBannerStripColor();
 
     // region P22-33 — FS_SOAK driver (§33.3)

@@ -53,6 +53,7 @@ class StarTrailFeature extends RunFeature {
     c.track('star_trail', {'stars': n});
     if (n >= StarTrailConfig.stars) {
       perfects++;
+      c.emit(const StarTrailPerfect()); // PRD-2.3.1 §12.2
       RunHud.ensureFor(c.run).banners.show(
         ElementBanner(
           StarTrailConfig.bannerText,

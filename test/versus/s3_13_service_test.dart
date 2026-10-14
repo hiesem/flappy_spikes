@@ -70,6 +70,7 @@ class FakeBackend implements VersusBackend {
   Future<void> link(
     PlatformIdentity identity, {
     Future<void> Function()? beforeSwitch,
+    bool Function()? isCurrent,
   }) async {
     links++;
     final to = switchTo;

@@ -313,12 +313,16 @@ class FirebaseVersusBackend implements VersusBackend {
   Future<void> link(
     PlatformIdentity identity, {
     Future<void> Function()? beforeSwitch,
+    bool Function()? isCurrent,
   }) async {
     if (linkedToPlatform) return;
+    // QA P1-02 a stale link never changes a newer session's user.
+    bool stale() => isCurrent != null && !isCurrent();
     final cred = await identity.firebaseCredential();
     if (cred == null) return;
+    if (stale()) return;
     if (auth.uid == null) {
-      await _switchTo(cred);
+      await _switchTo(cred, stale);
       return;
     }
     var linkCred = cred;
@@ -344,6 +348,7 @@ class FirebaseVersusBackend implements VersusBackend {
     }
     // §2.1 never the code the link used up: a new one.
     final fresh = await identity.firebaseCredential(fresh: true);
+    if (stale()) return;
     if (fresh == null) {
       // §2.2 the clean-up waits for a fresh credential: the guest stays.
       _report(LinkOutcome.switchFailed, 'no_fresh_code');
@@ -358,17 +363,20 @@ class FirebaseVersusBackend implements VersusBackend {
         debugPrint('versus: anonymous clean-up failed: ${err.runtimeType}');
       }
     }
-    await _switchTo(fresh);
+    if (stale()) return;
+    await _switchTo(fresh, stale);
   }
 
-  /// Signs in with [cred]; on failure §2.2 a new anonymous user at once.
-  Future<void> _switchTo(AuthCredential cred) async {
+  /// Signs in with [cred]; on failure §2.2 a new anonymous user at once
+  /// (unless [stale]: a newer session owns the user by now).
+  Future<void> _switchTo(AuthCredential cred, bool Function() stale) async {
     try {
       await auth.signInWithCredential(cred);
       if (auth.uid == null) throw FirebaseAuthException(code: 'no-user');
       _report(LinkOutcome.switched);
     } catch (e) {
       _report(LinkOutcome.switchFailed, e);
+      if (stale()) return;
       await _fallbackAnonymous();
     }
   }

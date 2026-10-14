@@ -92,7 +92,10 @@ class ShieldFeature extends RunFeature implements MistakeInterceptor {
 /// pink fill) with a rotating dashed white inner ring (90°/s) and an idle
 /// pulse ±5 %, no badge on top; it forms with a pop (0.35 s, slight
 /// overshoot) and shatters on a hit. Drawn over the bird (world = screen
-/// coordinates), under the hoops' front halves.
+/// coordinates), under the hoops' front halves. PRD-2.3.1 §13: it draws
+/// with the bird's opacity and scale ([Bird.drawnOpacity] /
+/// [Bird.drawnScale]), so it vanishes while a ride hides the bird and is
+/// back, still armed, when the bird reappears.
 class ShieldCircle extends PositionComponent {
   ShieldCircle(this.c) : super(priority: RunLayer.bird + 1);
 
@@ -160,14 +163,32 @@ class ShieldCircle extends PositionComponent {
   static final Paint _fill = Paint();
   static final Paint _ring = Paint()..style = PaintingStyle.stroke;
 
+  /// PRD-2.3.1 §13: the bird's drawn opacity — the ring follows the bird's
+  /// visibility exactly (hidden in the cannon barrel, the volcano, the
+  /// rocket; every fade). One source of truth: [Bird.drawnOpacity].
+  double get birdOpacity => c.game.runBird?.drawnOpacity ?? 0;
+
+  /// PRD-2.3.1 §13: the bird art's scale (squash, the storm's depth).
+  double get birdScale => c.game.runBird?.drawnScale ?? 1;
+
+  /// PRD-2.3.1 §13: true when [render] paints something this frame.
+  bool get paints =>
+      scaleNow > 0 && birdOpacity > 0 && birdScale > 0 && centre != null;
+
+  static final Paint _layer = Paint();
+
   @override
   void render(Canvas canvas) {
-    final k = scaleNow;
-    if (k <= 0) return;
-    final at = centre;
-    if (at == null) return;
+    if (!paints) return;
+    final k = scaleNow * birdScale;
+    final at = centre!;
+    final o = birdOpacity.clamp(0.0, 1.0);
+    canvas.save();
+    if (o < 1) {
+      _layer.color = Color.fromRGBO(255, 255, 255, o);
+      canvas.saveLayer(null, _layer);
+    }
     canvas
-      ..save()
       ..translate(at.dx, at.dy)
       ..scale(k);
     _fill.color = PartsConfig.softPink.withValues(
@@ -194,6 +215,7 @@ class ShieldCircle extends PositionComponent {
       width: LivesConfig.shieldInnerStroke,
       dashes: LivesConfig.shieldInnerDash,
     );
+    if (o < 1) canvas.restore(); // the layer
     canvas.restore();
   }
 }

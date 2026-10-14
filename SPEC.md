@@ -667,6 +667,13 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   hoop's centre, drift to x 70), then straight back in with 2 s
   invulnerability; the next slot is a normal hoop. A death with ≤ 5 hoops
   goes to results as before and uses no ladder step.
+- DEVIATION (PRD-2.3.1 §14, owner 2026-10-14; supersedes PRD-2.2 §7.7's free
+  revive): **a NO ADS owner gets no free revive.** Their ad step is skipped for the
+  game as in the "no ad available" path, but **without** the "NO AD AVAILABLE"
+  label: 250 → 500 → 1 000 → 2 000 → 4 000 → 8 000, then no more revives (at most
+  6 a run; everyone else keeps the ad + 6 coin steps). `ReviveOffer.free` /
+  `ReviveKind.free` and the `revive_free_used` event are gone; their 250 revive
+  logs as a normal coin revive.
 - DEVIATION (PRD-2 §3.14): every death ends a running Egg / Piggy / Jar (no
   pay-out), a timed powerup (time scale and bird scale back to 1) and the
   fire; a revive resets a running squeeze to open (0.5 s) and rolls the next
@@ -1483,6 +1490,12 @@ production build has the flag off and uses these values only. Full key table:
   **hit check only**; the guide lines / target stay drawn at ±12 pt
   (`BullseyeConfig.drawBand`). Both are read once per run (`Tuning.beginRun`).
   Tests: `test/p23/s14_perfect_band_test.dart`.
+- DEVIATION (PRD-2.3.1 §15, owner 2026-10-14): **the FEVER ring ignores the perfect
+  band.** Any pass through the FEVER ring without a rim touch is a full perfect pass
+  (perfect coins, points, feedback, counters, `fever_ring_passed {perfect: 1}`), then
+  FEVER as before (fire ≥ ×5, streak `max(5, streak + 1)`). A rim touch on it is
+  unchanged (no FEVER, fire out, streak reset). Every other hoop keeps the band.
+  Tests: `test/p231/s15_fever_rim_free_perfect_test.dart`.
 - DEVIATION (PRD-2.3 §14.3, supersedes PRD-2 §3.27 / PRD-2.2 §13.1 chick ×2): **the
   chick no longer doubles coins or points** (puzzle and piggy included). While it flies
   every hoop passed scores **+1 point** (`point_chick`, added with the pass, one

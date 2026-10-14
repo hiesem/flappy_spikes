@@ -59,7 +59,7 @@ String formatCoins(int n) {
 ///
 /// One option per death from the [ReviveLadder]: the pink ad heart, the
 /// gold coin heart (250, 500, 1 000 …), the grey locked heart with
-/// GET COINS › or (PRD-2.2 §7.7, NO ADS owners) the pink FREE heart. The
+/// GET COINS › (PRD-2.3.1 §14: no FREE heart for NO ADS owners any more). The
 /// whole heart is the button; it drains from the top over 5 s (urgency
 /// from 3 s: shake, faster beat, red edge glow). PRD-2.2 §7.15: it never
 /// times out — the empty heart keeps pulsing until the player presses it
@@ -188,7 +188,8 @@ class ReviveScreen extends PositionComponent
     } catch (_) {
       _coin = null; // a missing asset never blocks the offer
     }
-    // PRD-2.2 §7.7: NO ADS owners get the ad step free; the ladder decides.
+    // PRD-2.3.1 §14: NO ADS owners skip the ad step (no free revive, no
+    // "NO AD AVAILABLE" label); the ladder decides.
     offer = ReviveLadder.offer(
       run.state,
       adReady: game.monetization.ads.isAvailable,
@@ -270,19 +271,7 @@ class ReviveScreen extends PositionComponent
     }
     _popT = 0;
     _trackWaited();
-    if (offer.isFree) {
-      // PRD-2.2 §7.7: straight to the phoenix, no ad, no price.
-      phase = RevivePhase.paying;
-      _track('revive_free_used', {
-        'revive_index': run.state.revivesThisGame + 1,
-      });
-      ReviveLadder.record(run.state, offer);
-      _after(ReviveConfig.adHideDelay, () => _fadeUi(0));
-      _after(
-        ReviveConfig.adHideDelay + ReviveConfig.phoenixDelay,
-        () => _startPhoenix(ReviveKind.free, 0),
-      );
-    } else if (offer.isAd) {
+    if (offer.isAd) {
       phase = RevivePhase.ad;
       _track('revive_ad_started');
       _after(ReviveConfig.adHideDelay, () {
@@ -642,7 +631,7 @@ class ReviveScreen extends PositionComponent
   }
 
   (Color, Color) get _colors {
-    if (offer.isAd || offer.isFree) {
+    if (offer.isAd) {
       return (ReviveConfig.adFill, ReviveConfig.adBorder);
     }
     if (locked) return (ReviveConfig.lockFill, ReviveConfig.lockBorder);
@@ -708,11 +697,6 @@ class ReviveScreen extends PositionComponent
 
   void _renderLabels(Canvas canvas, Offset c, double a) {
     const white = Color(0xFFFFFFFF);
-    if (offer.isFree) {
-      // PRD-2.2 §7.7: the pink heart with REVIVE only (no video, no coin).
-      _adRevive.paintCentred(canvas, Offset(c.dx, c.dy - 6), opacity: a);
-      return;
-    }
     if (offer.isAd) {
       _videoIcon(
         canvas,

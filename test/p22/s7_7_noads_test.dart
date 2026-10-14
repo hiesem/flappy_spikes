@@ -18,44 +18,30 @@ import '../helpers.dart';
 
 /// PRD-2.2 §7.7 the NO ADS table row by row (banner, video ad after the
 /// run, revive, Shop free coins, home slot, balloon bonus) and the
-/// `ReviveOfferKind.free` ladder; §7.8 the bonus "▶ feather ×3" offer that
+/// NO ADS revive ladder (PRD-2.3.1 §14: no free revive any more); §7.8 the bonus "▶ feather ×3" offer that
 /// always appears and waits up to 5 s for its ad.
 void main() {
   // ------------------------------------------------------------ the ladder
   group('§7.7 revive ladder for NO ADS owners', () {
     RunState fresh() => RunState(seed: 1, viewHeight: 711);
 
-    test('1st offer of a game is free even with no ad loaded; then 250, 500; '
-        'a new game gives a free one again', () {
+    // PRD-2.3.1 §14 (DEVIATION): the free revive is gone; a NO ADS owner's
+    // ad step is skipped without the label. Full checks:
+    // test/p231/s14_noads_revive_test.dart.
+    test('PRD-2.3.1 §14: no free 1st offer, with or without an ad loaded; '
+        '250, 500, 1000, 2000 with no label', () {
       final s = fresh();
       final seen = <String>[];
       for (var i = 0; i < 4; i++) {
-        final o = ReviveLadder.offer(s, adReady: false, noAds: true);
+        final o = ReviveLadder.offer(s, adReady: true, noAds: true);
         seen.add(o.toString());
         ReviveLadder.record(s, o);
       }
-      expect(seen, ['free', '250', '500', '1000']);
-      // With an ad loaded: still free (regardless of ad availability).
+      expect(seen, ['250', '500', '1000', '2000']);
       expect(
-        ReviveLadder.offer(fresh(), adReady: true, noAds: true),
-        const ReviveOffer.free(),
+        ReviveLadder.offer(fresh(), adReady: false, noAds: true),
+        const ReviveOffer.coins(250),
       );
-      final free = ReviveLadder.offer(fresh(), adReady: true, noAds: true);
-      expect(free.kind, ReviveOfferKind.free);
-      expect(free.price, 0);
-      expect(free.noAdLabel, isFalse);
-      expect(free.isFree, isTrue);
-      expect(free.isAd, isFalse);
-      expect(free.isCoins, isFalse);
-    });
-
-    test('record(free) uses up the step like an ad; the coin price is not '
-        'raised', () {
-      final s = fresh();
-      ReviveLadder.record(s, const ReviveOffer.free());
-      expect(s.adStepAvailableThisGame, isFalse);
-      expect(s.coinRevives, 0);
-      expect(ReviveLadder.offer(s, adReady: true, noAds: true).price, 250);
     });
 
     test('normal players unchanged: ad, or NO AD AVAILABLE + 250', () {
@@ -64,7 +50,8 @@ void main() {
         ReviveLadder.offer(fresh(), adReady: false),
         const ReviveOffer.coins(250, noAdLabel: true),
       );
-      expect(ReviveKind.values, contains(ReviveKind.free));
+      expect(ReviveKind.values, [ReviveKind.ad, ReviveKind.coins]);
+      expect(ReviveOfferKind.values, [ReviveOfferKind.ad, ReviveOfferKind.coins]);
     });
   });
 
@@ -121,46 +108,35 @@ void main() {
   }
 
   tester(
-    prefs: {'noAds': true},
+    prefs: {'noAds': true, 'coins': 5000},
     monetization: Monetization(
-      ads: FakeRewardedAds()..mode = FakeAdMode.unavailable,
+      ads: FakeRewardedAds()..mode = FakeAdMode.succeed,
     ),
   ).testGameWidget(
-    '§7.7 revive row: a NO ADS owner\'s 1st revive of the game is FREE (no '
-    'ad, even with none loaded): pink heart, REVIVE, no label / price; '
-    'straight to the phoenix; then 250',
+    '§7.7 revive row, PRD-2.3.1 §14: a NO ADS owner\'s 1st revive of the '
+    'game is a 250 coin heart (no free one, no label, no ad); then 500',
     setUp: boot,
     verify: (g, _) async {
       final ads = g.monetization.ads as FakeRewardedAds;
       final (run, screen) = await toOffer(g);
-      final balance = g.menu.wallet.balance;
-      expect(screen.offer, const ReviveOffer.free());
-      expect(screen.locked, isFalse, reason: 'free never locks');
+      expect(screen.offer, const ReviveOffer.coins(250));
       expect(
         spy.events.where((e) => e.$1 == 'revive_offered').single.$2,
-        {'offer': 'free', 'price': 0, 'revive_index': 1},
+        {'offer': 'coins', 'price': 250, 'revive_index': 1},
       );
       final phoenix = <RevivePhoenixStarted>[];
       run.events.on<RevivePhoenixStarted>(phoenix.add);
       screen.tapHeart();
-      expect(screen.phase, RevivePhase.paying, reason: 'no ad phase');
       await throughPhoenix(g);
       expect(g.state, GameState.playing);
       expect(ads.shown, 0);
-      expect(g.menu.wallet.balance, balance, reason: 'price 0');
-      expect(phoenix.single.kind, ReviveKind.free);
-      expect(phoenix.single.price, 0);
-      expect(
-        spy.events.where((e) => e.$1 == 'revive_free_used').single.$2,
-        {'revive_index': 1},
-      );
+      expect(phoenix.single.kind, ReviveKind.coins);
+      expect(phoenix.single.price, 250);
+      expect(spy.events.map((e) => e.$1), isNot(contains('revive_free_used')));
       expect(spy.events.map((e) => e.$1), isNot(contains('revive_ad_started')));
-      // The 2nd death of the game: 250 coins.
       await stepSeconds(g, ReviveConfig.invulnerable + .1);
       final (_, second) = await toOffer(g);
-      expect(second.offer.isCoins, isTrue);
-      expect(second.offer.price, 250);
-      expect(second.offer.noAdLabel, isFalse);
+      expect(second.offer, const ReviveOffer.coins(500));
     },
   );
 

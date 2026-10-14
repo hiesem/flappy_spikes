@@ -228,8 +228,9 @@ class SqueezePhaseChanged extends RunEvent {
   final int index;
 }
 
-/// PRD-2.2 §7.7 adds [free] (a NO ADS owner's first revive of a game).
-enum ReviveKind { ad, coins, free }
+/// How a revive was paid. PRD-2.3.1 §14 removed PRD-2.2 §7.7's `free`
+/// (a NO ADS owner's first revive of a game).
+enum ReviveKind { ad, coins }
 
 class RevivePhoenixStarted extends RunEvent {
   const RevivePhoenixStarted(this.kind, this.price);

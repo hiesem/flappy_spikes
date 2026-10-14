@@ -149,7 +149,8 @@ void main() {
     FlameTester<FlappySpikesGame>(
       () => createRunTestGame(
         worldHeight: 568,
-        prefs: {'noAds': noAds},
+        // PRD-2.3.1 §14: a NO ADS owner's 1st revive is a 250 coin revive.
+        prefs: {'noAds': noAds, if (noAds) 'coins': 1000},
         versus: versus,
         monetization: Monetization(
           ads: rewarded,
@@ -158,9 +159,9 @@ void main() {
       ),
       gameSize: Vector2(320, 568),
     ).testGameWidget(
-      '§7.7 / §24 versus ${noAds ? 'free' : 'ad'} revive: thirty-second '
-      'wait preserves the opponent and score, then exactly one phoenix '
-      'without charging coins',
+      '§7.7 / §24 versus ${noAds ? '250 coin (PRD-2.3.1 §14)' : 'ad'} '
+      'revive: thirty-second wait preserves the opponent and score, then '
+      'exactly one phoenix${noAds ? '' : ' without charging coins'}',
       setUp: boot,
       verify: (g, _) async {
         await versus.prefetch();
@@ -175,7 +176,7 @@ void main() {
         final screen = g.reviveScreen!;
         expect(
           screen.offer.kind,
-          noAds ? ReviveOfferKind.free : ReviveOfferKind.ad,
+          noAds ? ReviveOfferKind.coins : ReviveOfferKind.ad,
         );
         final score = run.state.score;
         final time = run.state.runClock;
@@ -194,8 +195,8 @@ void main() {
         }
         expect(g.state, GameState.playing);
         expect(phoenix, hasLength(1));
-        expect(phoenix.single.kind, noAds ? ReviveKind.free : ReviveKind.ad);
-        expect(g.menu.wallet.balance, balance);
+        expect(phoenix.single.kind, noAds ? ReviveKind.coins : ReviveKind.ad);
+        expect(g.menu.wallet.balance, balance - (noAds ? 250 : 0));
         expect(rewarded.shown, noAds ? 0 : 1);
         expect(run.setup.opponent, same(opponent));
         expect(run.state.score, score);

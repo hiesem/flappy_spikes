@@ -28,7 +28,10 @@ import '../run_feature.dart';
 ///   streak (×3 / ×5 / ×7, [FireLevel]); the colours follow a flame-type
 ///   trail ([fireColorsFor]). Hidden inside the comet fireball, kept through
 ///   portal rides. Visual only.
-/// - **FEVER lights** on a *perfect* pass through the FEVER ring (and on a
+/// - **FEVER lights** on a *perfect* pass through the FEVER ring — PRD-2.3.1
+///   §15: on the FEVER ring that is any rim-free pass; the perfect band
+///   (`point_perfect_band`) does not apply there (`RunController._pass`) —
+///   (and on a
 ///   [FeverIgnite] — the pair FEVER gift, Q59): the fire (at least the ×5
 ///   size), the FEVER! banner above the tier banner, the crackle loop at
 ///   the FEVER volume (a ≈ 0.3 s ramp up from the quiet crackle when the

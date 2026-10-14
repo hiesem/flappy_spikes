@@ -96,8 +96,12 @@ class AchievementsFeature extends RunFeature {
   void _onPassed(HoopPassed e) {
     final c = _c;
     if (c == null) return;
-    final n = c.s.hoopsPassed; // captured now (the rule may be staged)
-    _rule(AchOp.hoops(n));
+    // QA P19-04: a hoop goal is staged the moment its threshold is crossed
+    // (its earned position in the run); later passes add nothing.
+    final n = c.s.hoopsPassed;
+    for (final (goal, id) in kHoopAchievements) {
+      if (n >= goal) _rule(AchOp.unlock(id));
+    }
   }
 
   void _onEnded(RunEnded e) {

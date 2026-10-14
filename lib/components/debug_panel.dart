@@ -245,6 +245,7 @@ class DebugPanel extends PositionComponent
           () => '${ach.isUnlocked(id) ? '✓' : 'Unlock'} ${id.title}',
           () async {
             ach.unlock(id);
+            await ach.flush();
             game.showAchievementToasts();
           },
         ),

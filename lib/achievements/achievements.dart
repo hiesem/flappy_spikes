@@ -52,10 +52,43 @@ class AchievementTracker {
 
   // --- run rules (§12.2) ------------------------------------------------------
 
-  /// A new run: the toasts of an unfinished earlier run are dropped.
+  /// P1E-03: the run rules of the current run, staged until it ends (null
+  /// = no run open: rules apply at once). A run can still turn into a debug
+  /// run (`debugPass`, the force menu, god mode), so nothing it earned is
+  /// stored, logged or reported before [finishRun] knows it still counts.
+  /// Their toasts show on the results page anyway (§12.5).
+  List<void Function()>? _staged;
+
+  /// A new run: the toasts and staged rules of an unfinished earlier run are
+  /// dropped. With [countDebugRuns] (tests) a run can never become excluded,
+  /// so its rules apply at once.
   void beginRun({required bool counts}) {
     lastRunCounted = counts;
     toastQueue.clear();
+    _staged = countDebugRuns ? null : [];
+  }
+
+  /// A run rule of the open run: staged until [finishRun] (applied at once
+  /// outside a run).
+  void runRule(void Function(AchievementTracker t) rule) {
+    final staged = _staged;
+    if (staged == null) {
+      rule(this);
+    } else {
+      staged.add(() => rule(this));
+    }
+  }
+
+  /// The run ended (`FlappySpikesGame.endRun`): its staged rules commit, in
+  /// order, only when it still [counts]; otherwise they are dropped.
+  void finishRun({required bool counts}) {
+    final staged = _staged ?? const [];
+    _staged = null;
+    lastRunCounted = counts;
+    if (!counts) return;
+    for (final rule in staged) {
+      rule();
+    }
   }
 
   /// Ranks: every level whose threshold the run's score reached (the run's

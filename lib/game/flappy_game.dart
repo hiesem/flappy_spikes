@@ -1355,6 +1355,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       ignoreGates: d.ignoreGates || kE2E || kSoak,
       // PRD-2.3 §17.6 only the test baseline turns the rule off.
       oneBigBonus: d.oneBigBonus,
+      // PRD-2.3.1 §12.2 a debug-forced slot starter is a debug start.
+      debugStarter: menu.slot.takeConsumedDebug() && starter != Powerup.none,
     );
     d.force.clear();
     d.forcedRide = null;
@@ -3845,7 +3847,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // stored best) and the daily streak, for a counting run only
     final achRun = _run;
     final counts = achRun != null && achRun.countsForAchievements;
-    achievements.lastRunCounted = counts;
+    // P1E-03: the run's staged unlocks commit only if it still counts.
+    achievements.finishRun(counts: counts);
     if (counts) {
       achievements
         ..onRunScore(score)

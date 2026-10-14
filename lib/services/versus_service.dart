@@ -292,14 +292,11 @@ abstract class VersusBackend {
   /// service deletes that uid's versus data). It never blocks the switch:
   /// the backend catches whatever it throws.
   ///
-  /// PRD-2.3.1 §2.2 (QA P1-02) [isCurrent] answers false once a newer
-  /// versus session owns the Firebase user (this link outlived its
-  /// caller): the link then stops before it deletes, switches or signs in
-  /// anything.
+  /// QA P2-01 the service runs it in its Auth queue: no other change of
+  /// the Firebase user starts until it settled.
   Future<void> link(
     PlatformIdentity identity, {
     Future<void> Function()? beforeSwitch,
-    bool Function()? isCurrent,
   });
 
   /// The `deleteMyData` callable, then sign out. True when the server
@@ -548,10 +545,8 @@ class FirebaseVersusService implements VersusService {
       final gate = startAfter;
       if (gate != null) await gate();
       await ensureNickname();
-      // QA P1-02 a link that outlived its caller settles first.
-      await _linkSettled();
-      _session++;
-      await _call(backend.start());
+      // QA P2-01 Auth changes one at a time (a link still at work first).
+      await _authCall(backend.start);
       _ready = true;
       _startFailure = null;
       _failures = 0;
@@ -979,11 +974,8 @@ class FirebaseVersusService implements VersusService {
   /// user by a new anonymous one). True when it worked.
   Future<bool> _reauthenticate() async {
     try {
-      // QA P1-02 never next to a link still at work; once it outlived the
-      // wait, the new user belongs to a newer session.
-      await _linkSettled();
-      _session++;
-      await _call(backend.start());
+      // QA P2-01 never next to a link still at work.
+      await _authCall(backend.start);
       if (kDebugMode) debugPrint('versus: re-authenticated after auth');
       _identityChanged();
       return true;
@@ -1040,10 +1032,14 @@ class FirebaseVersusService implements VersusService {
   @override
   Future<bool> deleteMyData() async {
     var ok = false;
-    // QA P1-02 never next to a link still at work.
-    await _linkSettled();
     try {
-      ok = await _call(backend.deleteMyData());
+      // QA P2-01 never next to a link still at work. Versus is off from
+      // the moment the user is gone: a link queued behind it skips.
+      ok = await _authCall(() async {
+        final deleted = await backend.deleteMyData();
+        if (deleted) _ready = false;
+        return deleted;
+      });
     } catch (e) {
       _log('deleteMyData', e);
     }
@@ -1080,13 +1076,50 @@ class FirebaseVersusService implements VersusService {
   }
 
   /// The link in flight (PRD-2.3.1: one at a time — a resume and the
-  /// player stream may ask together). QA P1-02: it stays set until the
-  /// underlying auth work settles, also after a caller stopped waiting.
+  /// player stream may ask together). It stays set until the link's auth
+  /// work settles, also after a caller stopped waiting (QA P1-02).
   Future<void>? _linking;
 
-  /// QA P1-02 bumped by every new start of the Firebase user (start-up,
-  /// re-authentication): a link begun in an older session changes nothing.
-  int _session = 0;
+  /// QA P2-01 the end of the Auth queue (null = idle). Every change of the
+  /// Firebase user (start / re-authentication, link / switch, data reset)
+  /// runs in it, one at a time; the next one starts only when the previous
+  /// one SETTLED. A plugin call cannot be cancelled, so a time-boxed caller
+  /// that stops waiting never lets another change start next to it.
+  Future<void>? _authTail;
+
+  /// Runs [op] after every earlier Auth change settled (never time-boxed:
+  /// a stuck plugin call keeps the queue, and versus, waiting). An idle
+  /// queue runs [op] at once (no future is kept across idle periods).
+  Future<T> _serialized<T>(Future<T> Function() op) {
+    final before = _authTail;
+    final run = before == null ? Future.sync(op) : before.then((_) => op());
+    late final Future<void> tail;
+    tail = run.then<void>((_) {}, onError: (Object _) {}).whenComplete(() {
+      if (identical(_authTail, tail)) _authTail = null;
+    });
+    _authTail = tail;
+    return run;
+  }
+
+  /// [op] through the Auth queue, for a caller that waits at most 3 ×
+  /// [timeout] for its turn and [timeout] for the call itself. When the
+  /// wait for the turn runs out, [op] is dropped (it never runs late).
+  Future<T> _authCall<T>(Future<T> Function() op) async {
+    var gaveUp = false;
+    final turn = Completer<void>();
+    final run = _serialized<T>(() {
+      if (gaveUp) throw TimeoutException('auth: the caller stopped waiting');
+      turn.complete();
+      return op();
+    });
+    try {
+      await turn.future.timeout(timeout * 3);
+    } on TimeoutException {
+      gaveUp = true;
+      rethrow;
+    }
+    return run.timeout(timeout);
+  }
 
   /// QA P1-03 a failed switch left the player on a fallback guest (or
   /// signed out): until a link succeeds, [me] is the guest profile.
@@ -1095,10 +1128,12 @@ class FirebaseVersusService implements VersusService {
   @override
   Future<void> onPlatformSignIn() {
     if (!_ready) return Future.value();
-    final link = _linking ??= _link().whenComplete(() => _linking = null);
+    final link = _linking ??= _serialized(
+      _link,
+    ).whenComplete(() => _linking = null);
     // PRD-2.3.1 §2: two auth codes, the clean-up and the switch: more
     // than one plugin call's time box. The caller stops waiting then; the
-    // link itself keeps the guard until it settles.
+    // link itself keeps its place in the Auth queue until it settles.
     return link.timeout(
       timeout * 3,
       onTimeout: () => _log('link', TimeoutException('link', timeout * 3)),
@@ -1113,30 +1148,17 @@ class FirebaseVersusService implements VersusService {
     await onPlatformSignIn();
   }
 
-  /// Waits (time-boxed) for a link still at work.
-  Future<void> _linkSettled() async {
-    final link = _linking;
-    if (link == null) return;
-    try {
-      await link.timeout(timeout * 3);
-    } catch (_) {}
-  }
-
+  /// Runs in the Auth queue (QA P2-01): no other change of the Firebase
+  /// user happens while it works.
   Future<void> _link() async {
-    final session = _session;
-    bool current() => session == _session;
+    // A data reset ran first: the next start-up links again.
+    if (!_ready) return;
     final before = _safe(() => backend.uid) ?? '';
     try {
-      await backend.link(
-        identity,
-        beforeSwitch: () => _cleanUpAnonymousAccount(current),
-        isCurrent: current,
-      );
+      await backend.link(identity, beforeSwitch: _cleanUpAnonymousAccount);
     } catch (e) {
       _log('link', e);
     }
-    // QA P1-02 a newer session owns the user: nothing here is ours.
-    if (!current()) return;
     final uid = _safe(() => backend.uid) ?? '';
     if (_safe(() => backend.linkedToPlatform) ?? false) {
       _switchFailed = false;
@@ -1159,9 +1181,7 @@ class FirebaseVersusService implements VersusService {
   /// switch to the uid that owns the Play Games id, the old anonymous
   /// uid's versus data (runs, pool entries, picture) is deleted while still
   /// signed in as it. Never throws and never blocks the switch.
-  Future<void> _cleanUpAnonymousAccount(bool Function() current) async {
-    // QA P1-02 a stale link never deletes a newer session's user.
-    if (!current()) return;
+  Future<void> _cleanUpAnonymousAccount() async {
     try {
       final ok = await _call(backend.deleteOnline());
       if (kDebugMode) debugPrint('versus: old anonymous account deleted: $ok');

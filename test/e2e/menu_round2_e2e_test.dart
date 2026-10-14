@@ -79,7 +79,7 @@ void main() {
         expect(
           g.menu.wallet.balance,
           outcome == 'complete' && placement == AdPlacement.shopFreeCoins
-              ? 40
+              ? 75
               : 0,
         );
       });

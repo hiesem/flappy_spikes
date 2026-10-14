@@ -343,7 +343,7 @@ void main() {
         rig.clock.now = rig.clock.now.add(const Duration(minutes: 6));
       }
       expect(game.storage.noAdsPopupVideos, 2);
-      expect(game.menu.wallet.balance, 80);
+      expect(game.menu.wallet.balance, 150);
       game.closeShop();
       await run(game, .5);
       await game.tapPowerupSlot();

@@ -525,6 +525,12 @@ class FirebaseVersusService implements VersusService {
       if (!_ready) {
         await _recover();
       } else {
+        // PRD-2.3.1 §2.2 a switch that failed (the player is on a fresh
+        // guest) is tried again on resume.
+        if (_player != null &&
+            !(_safe(() => backend.linkedToPlatform) ?? true)) {
+          await onPlatformSignIn();
+        }
         await flush();
       }
     } catch (e) {
@@ -585,7 +591,9 @@ class FirebaseVersusService implements VersusService {
     // S8-03: a held opponent picked under the old uid / pg may now be me.
     _dropHeldIfMine();
     unawaited(_ensurePg().then((_) => _dropHeldIfMine()));
-    if (_ready) _avatarSync ??= _syncAvatar().whenComplete(() => _avatarSync = null);
+    if (_ready) {
+      _avatarSync ??= _syncAvatar().whenComplete(() => _avatarSync = null);
+    }
   }
 
   /// PRD-2.3 §21.4 `pg` = SHA-256(Play Games id + salt), '' without Play
@@ -624,7 +632,9 @@ class FirebaseVersusService implements VersusService {
       final hash = sha256.convert(utf8.encode(icon)).toString();
       final have = storage.versusAvatar;
       final at = storage.versusAvatarAt;
-      if (have != null && have.uid == uid && have.hash == hash &&
+      if (have != null &&
+          have.uid == uid &&
+          have.hash == hash &&
           have.url.isNotEmpty &&
           at != null &&
           storage.now().difference(at) < VersusConfig.avatarRefresh) {
@@ -821,7 +831,7 @@ class FirebaseVersusService implements VersusService {
     final gen = _searchGen;
     final level = levelFor(storage.bestScore);
     _search = VersusSearchInfo(state: VersusSearchState.running, level: level);
-    final startedAt = _clock();
+    var startedAt = _clock();
     final watch = Stopwatch()..start();
     Duration elapsed() {
       final byClock = _clock().difference(startedAt);
@@ -830,65 +840,83 @@ class FirebaseVersusService implements VersusService {
 
     var reads = 0;
     try {
-      final uid = _safe(() => backend.uid) ?? '';
-      // The salt is normally known since start-up; a slow Remote Config
-      // never holds the search up for long (the VS intro waits ≤ 3 s).
-      final myPg = await _ensurePg().timeout(
-        VersusConfig.pgWait,
-        onTimeout: () => _pg,
-      );
-      final found = await searchPools<PoolCandidate>(
-        order: poolSearchOrder(level, _random),
-        myUid: uid,
-        myPg: myPg,
-        met: List.of(_met),
-        expired: () => elapsed() >= searchLimit,
-        // PRD-2.3 §25.2 item 4: every read counts as it happens.
-        onRead: (n) {
-          reads = n;
-          if (gen == _searchGen && _loading) {
-            _search = VersusSearchInfo(
-              state: VersusSearchState.running,
-              reads: n,
-              level: level,
-            );
+      // PRD-2.3.1 §2.3 an `auth` failure (no live user) re-authenticates
+      // once and searches again (with its own time limit).
+      for (var attempt = 0; ; attempt++) {
+        try {
+          final uid = _safe(() => backend.uid) ?? '';
+          // The salt is normally known since start-up; a slow Remote Config
+          // never holds the search up for long (the VS intro waits ≤ 3 s).
+          final myPg = await _ensurePg().timeout(
+            VersusConfig.pgWait,
+            onTimeout: () => _pg,
+          );
+          final found = await searchPools<PoolCandidate>(
+            order: poolSearchOrder(level, _random),
+            myUid: uid,
+            myPg: myPg,
+            met: List.of(_met),
+            expired: () => elapsed() >= searchLimit,
+            // PRD-2.3 §25.2 item 4: every read counts as it happens.
+            onRead: (n) {
+              reads = n;
+              if (gen == _searchGen && _loading) {
+                _search = VersusSearchInfo(
+                  state: VersusSearchState.running,
+                  reads: n,
+                  level: level,
+                );
+              }
+            },
+            read: (id) async {
+              final left = searchLimit - elapsed();
+              final box = left < readTimeout ? left : readTimeout;
+              final entries = await backend
+                  .readPool(id)
+                  .timeout(box.isNegative ? Duration.zero : box);
+              return entries.map(PoolCandidate.new).toList();
+            },
+          );
+          _pool = [for (final c in found.pool) c.entry];
+          _pickFromPool();
+          final held = _held;
+          _search = held != null
+              ? VersusSearchInfo(
+                  state: VersusSearchState.found,
+                  reads: found.reads,
+                  level: level,
+                  opponentUid: held.uid,
+                )
+              : VersusSearchInfo(
+                  state: VersusSearchState.solo,
+                  reason: found.timedOut
+                      ? VersusSoloReason.timeout
+                      : VersusSoloReason.noRival,
+                  reads: found.reads,
+                  level: level,
+                );
+          break;
+        } catch (e) {
+          _log('prefetch', e);
+          if (attempt == 0 &&
+              soloReasonOf(e) == VersusSoloReason.auth &&
+              await _reauthenticate()) {
+            startedAt = _clock();
+            watch
+              ..reset()
+              ..start();
+            reads = 0;
+            continue;
           }
-        },
-        read: (id) async {
-          final left = searchLimit - elapsed();
-          final box = left < readTimeout ? left : readTimeout;
-          final entries = await backend
-              .readPool(id)
-              .timeout(box.isNegative ? Duration.zero : box);
-          return entries.map(PoolCandidate.new).toList();
-        },
-      );
-      _pool = [for (final c in found.pool) c.entry];
-      _pickFromPool();
-      final held = _held;
-      _search = held != null
-          ? VersusSearchInfo(
-              state: VersusSearchState.found,
-              reads: found.reads,
-              level: level,
-              opponentUid: held.uid,
-            )
-          : VersusSearchInfo(
-              state: VersusSearchState.solo,
-              reason: found.timedOut
-                  ? VersusSoloReason.timeout
-                  : VersusSoloReason.noRival,
-              reads: found.reads,
-              level: level,
-            );
-    } catch (e) {
-      _log('prefetch', e);
-      _search = VersusSearchInfo(
-        state: VersusSearchState.solo,
-        reason: soloReasonOf(e),
-        reads: reads,
-        level: level,
-      );
+          _search = VersusSearchInfo(
+            state: VersusSearchState.solo,
+            reason: soloReasonOf(e),
+            reads: reads,
+            level: level,
+          );
+          break;
+        }
+      }
     } finally {
       _loading = false;
       // S7-06: a search overtaken by a run start leaves the next Home free
@@ -921,6 +949,20 @@ class FirebaseVersusService implements VersusService {
       unawaited(flush());
     } catch (e) {
       _log('submit', e);
+    }
+  }
+
+  /// PRD-2.3.1 §2.3 a fresh start (the backend replaces a missing or dead
+  /// user by a new anonymous one). True when it worked.
+  Future<bool> _reauthenticate() async {
+    try {
+      await _call(backend.start());
+      if (kDebugMode) debugPrint('versus: re-authenticated after auth');
+      _identityChanged();
+      return true;
+    } catch (e) {
+      _log('re-authenticate', e);
+      return false;
     }
   }
 
@@ -1008,15 +1050,32 @@ class FirebaseVersusService implements VersusService {
     return true;
   }
 
+  /// The link in flight (PRD-2.3.1: one at a time — a resume and the
+  /// player stream may ask together).
+  Future<void>? _linking;
+
   @override
-  Future<void> onPlatformSignIn() async {
-    if (!_ready) return;
+  Future<void> onPlatformSignIn() {
+    if (!_ready) return Future.value();
+    return _linking ??= _link().whenComplete(() => _linking = null);
+  }
+
+  Future<void> _link() async {
     try {
-      await _call(
-        backend.link(identity, beforeSwitch: _cleanUpAnonymousAccount),
-      );
+      // PRD-2.3.1 §2: two auth codes, the clean-up and the switch: more
+      // than one plugin call's time box.
+      await backend
+          .link(identity, beforeSwitch: _cleanUpAnonymousAccount)
+          .timeout(timeout * 3);
     } catch (e) {
       _log('link', e);
+    }
+    // PRD-2.3.1 §2.2 the link ended without a live user (the fallback
+    // guest could not sign in, e.g. offline): versus starts again.
+    if ((_safe(() => backend.uid) ?? '').isEmpty) {
+      _ready = false;
+      _startFailure = VersusSoloReason.auth;
+      _scheduleRetry();
     }
     _identityChanged();
   }

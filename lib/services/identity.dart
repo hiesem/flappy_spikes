@@ -37,7 +37,11 @@ abstract class PlatformIdentity {
 
   /// The Firebase credential of the signed-in player (null when signed out
   /// or unavailable). Never shows any UI.
-  Future<AuthCredential?> firebaseCredential();
+  ///
+  /// PRD-2.3.1 §2.1 [fresh]: a NEW server auth code (Play Games:
+  /// `forceRefreshToken: true`). A server auth code works only once, so the
+  /// account switch after `credential-already-in-use` always asks for one.
+  Future<AuthCredential?> firebaseCredential({bool fresh = false});
 }
 
 /// Play Games (Android): the player comes from `GameAuth.player`; the link
@@ -69,11 +73,12 @@ class PlayGamesIdentity implements PlatformIdentity {
   });
 
   @override
-  Future<AuthCredential?> firebaseCredential() async {
+  Future<AuthCredential?> firebaseCredential({bool fresh = false}) async {
     if (_last == null) return null;
     try {
       final code = await GameAuth.getAuthCode(
         VersusConfig.playGamesWebClientId,
+        forceRefreshToken: fresh,
       ).timeout(timeout);
       if (code == null || code.isEmpty) return null;
       return PlayGamesAuthProvider.credential(serverAuthCode: code);
@@ -96,5 +101,6 @@ class GameCenterIdentity implements PlatformIdentity {
   Stream<PlatformPlayer?> get player => const Stream.empty();
 
   @override
-  Future<AuthCredential?> firebaseCredential() async => null;
+  Future<AuthCredential?> firebaseCredential({bool fresh = false}) async =>
+      null;
 }

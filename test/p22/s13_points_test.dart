@@ -167,7 +167,8 @@ void main() {
   );
 
   tester().testGameWidget(
-    '§13.7 FEVER: a centred FEVER pass at streak 2 gives 5 points',
+    '§13.7 FEVER: a centred FEVER pass at streak 2 gives 3 points '
+    '(PRD-2.3.1 §15.1: max(2, streak) before the FEVER boost), streak 5',
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(
@@ -189,7 +190,7 @@ void main() {
       final p0 = run.state.score;
       expect(await passHoopAt(game, h), isTrue);
       expect(run.state.streak, 5);
-      expect(run.state.score - p0, 5);
+      expect(run.state.score - p0, 3); // PRD-2.3.1 §15.1 (was 5)
     },
   );
 

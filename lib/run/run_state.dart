@@ -85,6 +85,12 @@ class RunState {
   /// Perfect passes in a row.
   int streak = 0;
   int bestStreak = 0;
+
+  /// PRD-2.3.1 §15.1 the streak the current perfect pass scores with: the
+  /// ordinary increment (streak + 1), *before* the FEVER boost to
+  /// max(5, streak + 1). Set by `StreakFeature` and consumed (reset to null)
+  /// by `ScoringFeature` in the same `HoopPassed` dispatch.
+  int? pointStreak;
   int get tier => streak.clamp(0, 10);
 
   /// PRD-2.2 §21 The bird burns (lit by a ×3 perfect streak or by FEVER).

@@ -25,7 +25,8 @@ import '../run_feature.dart';
 /// **Rules.** A perfect pass (no rim touch and inside the PRD-2.2 §11
 /// perfect zone; every ride hoop) adds one to
 /// `RunState.streak`; a perfect FEVER pass sets it to
-/// max([StreakConfig.feverMinStreak], streak + 1). A non-perfect pass (a
+/// max([StreakConfig.feverMinStreak], streak + 1); its points still use the
+/// ordinary increment (`RunState.pointStreak`, PRD-2.3.1 §15.1). A non-perfect pass (a
 /// graze, or a clean off-centre pass, PRD-2.2 §11), a saved mistake
 /// ([MistakeSaved]) and a death ([RunDied]) reset it
 /// to 0. The tier is `RunState.tier` (streak capped at 10). Every change
@@ -129,6 +130,9 @@ class StreakFeature extends RunFeature {
       return;
     }
     final old = s.streak;
+    // PRD-2.3.1 §15.1 the pass scores max(2, streak) with the ordinary
+    // increment, before the FEVER boost below.
+    s.pointStreak = old + 1;
     final fever = e.hoop?.plan.kind == HoopKindId.fever;
     final next = fever
         ? math.max(StreakConfig.feverMinStreak, old + 1)

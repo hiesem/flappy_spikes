@@ -227,9 +227,9 @@ class RunDirector {
   bool get _portalOn => _on(ElementId.portal);
 
   // region WP-A — at most N portal rides per run (PRD-2.3.1 §17)
-  /// PRD-2.3.1 §17 portals placed this run (a portal turned plain or
-  /// cleared before it was flown is owed again and does not count). A
-  /// revive does not reset it.
+  /// PRD-2.3.1 §17 portals placed this run. Monotonic: every placed portal
+  /// counts, also one later turned plain or cleared before it was flown
+  /// (owed by a revive / ride / activity); a revive does not reset it.
   int _portalCount = 0;
 
   /// The schedule after the cap: never.
@@ -601,6 +601,11 @@ class RunDirector {
       if (special != null) {
         ok = _specialAllowed(special, i, ctx, ignoreUnlock: true);
         if (ok) kind = special;
+      } else if (e == ElementId.portal && portalCapped) {
+        // PRD-2.3.1 §17 at the cap a forced portal is discarded (never
+        // owed; the queue moves on to the next debug item).
+        _forced.removeAt(dbgIdx);
+        _forcedRide = null;
       } else if (e == ElementId.portal) {
         ok =
             _on(e) &&
@@ -1276,11 +1281,14 @@ class RunDirector {
     bool keepGeometry = false,
   }) {
     if (p.kind == HoopKindId.portal) {
-      _portalCount = max(0, _portalCount - 1); // PRD-2.3.1 §17 owed again
-      _portalAt = p.index;
+      // PRD-2.3.1 §17 the placed portal keeps counting; below the cap it
+      // is owed again, at the cap nothing is owed.
       _lastPortal = -99;
-      if (oneBigBonus) _portalWaiting = true;
-      _forcedRide ??= p.extra is RideId ? p.extra! as RideId : null;
+      if (!portalCapped) {
+        _portalAt = p.index;
+        if (oneBigBonus) _portalWaiting = true;
+        _forcedRide ??= p.extra is RideId ? p.extra! as RideId : null;
+      }
     }
     if (p.cometHang) {
       _cometOwed = true;
@@ -1339,9 +1347,11 @@ class RunDirector {
   /// the same ride.
   void oweSlot(SlotPlan p) {
     if (p.kind != HoopKindId.portal) return;
-    _portalCount = max(0, _portalCount - 1); // PRD-2.3.1 §17 owed again
-    _portalAt = min(_portalAt, _i);
     _lastPortal = -99;
+    // PRD-2.3.1 §17 the placed portal keeps counting; at the cap nothing is
+    // owed.
+    if (portalCapped) return;
+    _portalAt = min(_portalAt, _i);
     _forcedRide ??= p.extra is RideId ? p.extra! as RideId : null;
     if (oneBigBonus) _portalWaiting = true;
   }

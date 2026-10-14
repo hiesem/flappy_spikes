@@ -3,6 +3,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/rides/portal_ride.dart';
+import 'package:flappy_spikes/services/tuning.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers.dart';
@@ -12,8 +13,16 @@ import '../../helpers.dart';
 /// seeds — the bot flies through the portal, the ride runs by itself, and
 /// normal play continues between rides. ≥ 12 hoops after the unlock is the
 /// PRD gate; the run must also survive two rides and the normal hoops in
-/// between (26 hoops).
+/// between (26 hoops). PRD-2.3.1 §17: this stress gate runs without the
+/// per-run portal cap (`ride_portal_max` 0); every placed portal counts,
+/// also one a ride turns plain, so the default cap of 2 would stop it.
 void main() {
+  void useTuning(Map<String, String> extra) {
+    Tuning.instance = Tuning(active: TuningValues.resolve(extra));
+    TuningValues.current = Tuning.instance.active;
+  }
+
+  tearDown(() => useTuning(const {}));
   for (final height in [568.0, 711.0]) {
     for (final seed in [3, 11, 29]) {
       FlameTester<FlappySpikesGame>(
@@ -23,6 +32,7 @@ void main() {
         '§3.12 portal on every slot from hoop 25: the autopilot passes ≥ 12 '
         'hoops (${height.toInt()} pt, seed $seed)',
         setUp: (game, _) async {
+          useTuning({'ride_portal_max': '0'});
           await game.ready();
           game.sound.enabled = false;
           await preloadImages(game);

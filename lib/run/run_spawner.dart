@@ -508,8 +508,9 @@ class RunSpawner {
   ///   a plain ride hoop at the next comet station and zigzag height — the
   ///   player sees nothing jump;
   /// - B: the planned-ahead slot gets the next station the same way;
-  /// - the pickups planned in the gaps of the moved hoops (not visible yet,
-  ///   or waiting for their line) are dropped, like a ride's clear.
+  /// - the pickups planned in the gaps of the moved hoops (everything past
+  ///   the last hoop that stays, visible ones included, and the line items
+  ///   waiting for their line) are dropped, like a ride's clear.
   /// Hoops already on screen stay where they are.
   void startCometLayout({
     required double fromY,
@@ -537,6 +538,7 @@ class RunSpawner {
         }
       }
     }
+    _cometAnchorX = anchor;
     run.director.onCometStart(
       fromY: fromY,
       endTrackX: endTrackX,
@@ -571,19 +573,34 @@ class RunSpawner {
     }
   }
 
+  double? _cometAnchorX;
+
+  /// PRD-2.3.1 §16.1 A the track x of the last hoop that stayed at the last
+  /// comet start (or the bird, if none was ahead): every pickup past it lay
+  /// in a moved hoop's gap and was dropped (tests).
+  double? get cometAnchorX => _cometAnchorX;
+
   /// PRD-2.3.1 §16.1 A the pickups planned in the gaps of the hoops a
-  /// comet moves: every one past [anchorX] not yet visible, and every line
-  /// item still waiting for its line. Never judged (a ride's clear).
+  /// comet moves: every one past [anchorX] (the last hoop that stays; every
+  /// hoop past it moves, so every gap past it is a moved hoop's gap),
+  /// visible ones included, and every line item still waiting for its
+  /// line. Never judged (a ride's clear). A visible one fades out over
+  /// [RunConfig.rewardClearFade] s; one not yet visible goes at once.
+  /// Pickups in the gaps up to [anchorX] (unaffected) stay.
   void _dropCometGapItems(double anchorX) {
     _pickups.removeWhere((p) {
       if (p.collected || p.escaped) return false;
-      if (p.position.x <= anchorX || isVisible(p)) return false;
+      if (p.position.x <= anchorX) return false;
       _owe(p.id);
       if (p.id == ElementId.comet) run.director.oweComet();
       run.events.emit(PickupCleared(p.id, p));
       p.escaped = true; // never judged
       _aheadItems.remove(p);
-      p.removeFromParent();
+      if (isVisible(p)) {
+        _fading.add((p, RunConfig.rewardClearFade, RunConfig.rewardClearFade));
+      } else {
+        p.removeFromParent();
+      }
       return true;
     });
     for (final (item, _) in _pending) {

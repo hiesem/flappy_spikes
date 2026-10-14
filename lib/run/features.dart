@@ -58,7 +58,8 @@ List<RunFeature> buildRunFeatures() => [
   RumbleRouter(),
   // endregion WP-2b
   // region WP-1a — scoring (PRD-2 §3.0.1, §3.1, §3.2). PRD-2.2 §13.6: after
-  // the streak, so a perfect pass's points read the streak *after* it.
+  // the streak, so a perfect pass's points read the streak *after* it
+  // (PRD-2.3.1 §15.1: a FEVER pass reads it before the boost, `pointStreak`).
   ScoringFeature(),
   // endregion WP-1a
   // region WP-3b — portal roller-coaster rides (PRD-2 §3.12, §5.12b)

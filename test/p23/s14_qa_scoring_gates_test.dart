@@ -84,7 +84,8 @@ void main() {
         // Pass every hoop before it first, so only [hoop] scores below.
         await flyUntil(
           g,
-          (_) => hoopsOf(g).every((h) => h.resolved || h.planeX >= hoop!.planeX),
+          (_) =>
+              hoopsOf(g).every((h) => h.resolved || h.planeX >= hoop!.planeX),
         );
         run.state.streak = 0;
         run.state.egg = EggState()..stage = EggStage.chick;
@@ -95,7 +96,10 @@ void main() {
         expect(await passHoopAt(g, hoop!, dy: dy), isTrue);
         expect(hoop.touched, isFalse);
         expect(run.state.streak, streak);
-        expect(run.state.score - score, (streak < 2 ? 2 : streak) + 1 + bonus);
+        // PRD-2.3.1 §15.1 a FEVER pass scores with the streak before its
+        // boost (0 + 1), not the boosted 5.
+        final scored = kind == HoopKindId.fever ? 1 : streak;
+        expect(run.state.score - score, (scored < 2 ? 2 : scored) + 1 + bonus);
         expect(run.state.coinsThisRun - coins, 2 + bonus);
         expect(chick.pointsAdded - added, 1);
       },

@@ -1493,7 +1493,9 @@ production build has the flag off and uses these values only. Full key table:
 - DEVIATION (PRD-2.3.1 §15, owner 2026-10-14): **the FEVER ring ignores the perfect
   band.** Any pass through the FEVER ring without a rim touch is a full perfect pass
   (perfect coins, points, feedback, counters, `fever_ring_passed {perfect: 1}`), then
-  FEVER as before (fire ≥ ×5, streak `max(5, streak + 1)`). A rim touch on it is
+  FEVER as before (fire ≥ ×5, streak `max(5, streak + 1)`). Its points are `max(2,
+  streak + 1)` with the streak *before* the FEVER boost, exactly like an ordinary perfect
+  pass (a fresh FEVER pays +2, at streak 6 it pays +7; `RunState.pointStreak`). A rim touch on it is
   unchanged (no FEVER, fire out, streak reset). Every other hoop keeps the band.
   Tests: `test/p231/s15_fever_rim_free_perfect_test.dart`.
 - DEVIATION (PRD-2.3 §14.3, supersedes PRD-2 §3.27 / PRD-2.2 §13.1 chick ×2): **the
@@ -1708,9 +1710,11 @@ production build has the flag off and uses these values only. Full key table:
   zigzag ±70 pt; the first hoop after the comet is at ≥ the predicted end +
   `ride_comet_after_gap` (310 pt) at a normal height.
 - DEVIATION (PRD-2.3.1 §17): at most `ride_portal_max` (2; 0 = no limit) portals per run;
-  every placed portal counts (debug-forced and first-meet too; one turned plain and owed
-  again does not), a revive does not reset the count, and at the cap the portal schedule
-  stops. Comets are unaffected.
+  every placed portal counts (debug-forced and first-meet too, and one later turned plain
+  or cleared by a revive / ride / activity: the count never goes down), a revive does not
+  reset the count, and at the cap the portal schedule stops: nothing waits, nothing is
+  owed, and a debug-forced portal is discarded (with cap 0 forcing is unrestricted).
+  Comets are unaffected.
 
 ### PRD-2.3.1 §0: the live Remote Config tuning is the in-app default (P231-T, 2026-10-14)
 

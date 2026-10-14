@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
@@ -271,11 +273,39 @@ void main() {
                   x: (x.planeX, x.plan.centreY),
             };
             final aheadIndex = sp.plannedAhead!.index;
+            // P1-05: the last hoop that stays, and the moved hoops' gaps.
+            final birdX =
+                run.birdTrackPosition()?.x ?? run.state.camX + RunConfig.birdX;
+            final anchor = shown.keys
+                .where((x) => x.planeX > birdX)
+                .map((x) => x.planeX)
+                .fold(birdX, (a, b) => a > b ? a : b);
+            final firstHidden = sp.hoops
+                .where((x) => hidden.contains(x.plan.index))
+                .map((x) => x.planeX)
+                .reduce((a, b) => a < b ? a : b);
+            // A visible pickup in the gap of the first moved hoop.
+            final right = run.state.camX + RunConfig.worldWidth;
+            final vx = math.min((anchor + firstHidden) / 2, right - 30);
+            expect(vx, greaterThan(anchor));
+            final visibleInGap = sp.spawnItem(
+              GapItemPlan(kind: ElementId.heart, trackX: vx, y: 60),
+            )!;
+            // A pickup in an unaffected gap (the gap before the last hoop
+            // that stays) is kept.
+            final kept = sp.spawnItem(
+              GapItemPlan(kind: ElementId.heart, trackX: anchor - 20, y: 60),
+            )!;
+            await flushAndMount(game);
+            expect(sp.isVisible(visibleInGap), isTrue);
             final hiddenItems = [
               for (final p in sp.pickups)
-                if (!p.collected && !p.escaped && !sp.isVisible(p)) p,
+                if (!p.collected && !p.escaped && p.position.x > anchor) p,
             ];
+            expect(hiddenItems, contains(visibleInGap));
             run.events.emit(const PickupCollected(ElementId.comet, null));
+            expect(kept.escaped, isFalse);
+            expect(sp.pickups, contains(kept));
             final st = run.director.cometStations;
             expect(st, isNotEmpty);
             final mid = h / 2;

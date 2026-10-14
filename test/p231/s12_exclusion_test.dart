@@ -8,7 +8,6 @@
 // (`countDebugRuns = false`, `ignoreGates = false`), signed in on a fake.
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
-import 'package:flappy_spikes/achievements/achievement_catalog.dart';
 import 'package:flappy_spikes/achievements/achievements.dart';
 import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
@@ -239,7 +238,9 @@ void main() {
       expect(achEvents(), ['first_fever']);
       expect(services.unlocks, ['unlock:first_fever']);
       expect(g.storage.achReported, {'first_fever'});
-      expect(g.achievements.toastQueue, [AchievementId.firstFever]);
+      // Signed in: the platform shows its own popup, the game's toast stays
+      // off (owner 2026-10-14).
+      expect(g.achievements.toastQueue, isEmpty);
     },
   );
 

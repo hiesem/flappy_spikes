@@ -83,7 +83,7 @@ class AchievementTracker {
   Set<String> get earned => {..._s.unlocked, ..._s.pending};
 
   /// Idempotent unlock: stores the key; once durable it logs
-  /// `achievement_unlocked`, queues the toast and reports it to the
+  /// `achievement_unlocked`, queues the toast (signed out only) and reports it to the
   /// platform. Returns whether it was new. Immediate: the shop, the jackpot
   /// and the debug "unlock one" call it directly (PRD-2.3.1 §19.2
   /// exceptions); the run rules [_earn] instead.
@@ -95,7 +95,10 @@ class AchievementTracker {
     _s.pending.remove(id.key);
     _effects.add(() {
       services.track('achievement_unlocked', {'id': id.key, 'pts': id.points});
-      toastQueue.add(id);
+      // Owner 2026-10-14: a signed-in player gets the platform's own
+      // popup (Play Games / Game Center), so the game's toast shows only
+      // while the player isn't signed in.
+      if (!services.achievementsReady) toastQueue.add(id);
       onUnlocked?.call(id);
       unawaited(syncAll());
     });

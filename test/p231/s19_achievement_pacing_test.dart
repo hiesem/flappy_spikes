@@ -194,7 +194,7 @@ void main() {
 
   t.testGameWidget(
     '§19.2 a run that earns 3 unlocks 1; the next two counting runs unlock '
-    'the others in FIFO order; the toast shows only the one',
+    'the others in FIFO order; signed in, no game toast',
     setUp: boot,
     verify: (g, _) async {
       await runWith(g, const [
@@ -204,17 +204,10 @@ void main() {
       ]);
       expect(unlocked(g), {'first_revive'});
       expect(pending(g), ['master_hatch', 'master_jar']);
-      expect(
-        g.achievements.toastQueue.length + (g.achievementToast == null ? 0 : 1),
-        1,
-      );
-      final shown = g.achievementToast;
-      if (shown != null) {
-        // The pill holds only the one unlock.
-        expect(g.achievements.toastQueue, isEmpty);
-      } else {
-        expect(g.achievements.toastQueue, [AchievementId.firstRevive]);
-      }
+      // Signed in: the platform popup replaces the game's toast (owner
+      // 2026-10-14), so no toast at all.
+      expect(g.achievementToast, isNull);
+      expect(g.achievements.toastQueue, isEmpty);
       await home(g);
       await runWith(g);
       expect(unlocked(g), {'first_revive', 'master_hatch'});
@@ -415,11 +408,7 @@ void main() {
     // A 120-point run (hoops staged first, then the ranks) earns in order.
     a.onHoops(25);
     a.onRunScore(120);
-    expect(s.achPending, [
-      'hoops_25',
-      'rank_chick',
-      'rank_fledgling',
-    ]);
+    expect(s.achPending, ['hoops_25', 'rank_chick', 'rank_fledgling']);
   });
 
   // --- §19.3 hidden flags ---------------------------------------------------------

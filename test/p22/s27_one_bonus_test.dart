@@ -178,12 +178,25 @@ void main() {
     return (run, item!);
   }
 
+  /// PRD-2.3.1 §16.1 A (supersedes PRD-2.3 §17.5 for a comet): [p] lay in
+  /// the gap of a hoop the comet moved (past the last hoop that stays), so
+  /// it was dropped unjudged, visible or not. Returns whether it was.
+  bool droppedByCometLayout(RunController run, Pickup p) {
+    final anchor = run.spawner.cometAnchorX;
+    expect(anchor, isNotNull);
+    if (p.position.x <= anchor!) return false;
+    expect(p.escaped, isTrue);
+    expect(run.spawner.pickups, isNot(contains(p)));
+    return true;
+  }
+
   // PRD-2.3 §17.5 (changes PRD-2.2 §27.3): an item already visible when an
   // activity starts is never cleared; only what is not visible yet goes
   // (that part: test/p23/s17_one_big_bonus_test.dart).
   _tester().testGameWidget(
     '§27.5 / PRD-2.3 §17.5 a feather on screen when a comet starts stays '
-    '(it is not cleared, owed or faded)',
+    '(it is not cleared, owed or faded), unless it lies in a moved hoop\'s '
+    'gap (PRD-2.3.1 §16.1 A: dropped)',
     setUp: (g, _) => _boot(g),
     verify: (game, _) async {
       final (run, feather) = await cometWith(game, ElementId.feather);
@@ -193,6 +206,10 @@ void main() {
       await flyUntil(game, (_) => watch.started.isNotEmpty, maxSeconds: 20);
       expect(watch.started.single, RunActivity.comet);
       expect(run.spawner.isVisible(feather), isTrue);
+      if (droppedByCometLayout(run, feather)) {
+        expect(cleared, contains(feather));
+        return;
+      }
       expect(cleared, isNot(contains(feather)));
       expect(run.spawner.pickups, contains(feather));
       expect(run.state.featherSpawned, isTrue);
@@ -205,13 +222,14 @@ void main() {
 
   _tester().testGameWidget(
     '§27.5 / PRD-2.3 §17.5 a heart on screen when a comet starts stays; the '
-    'heart schedule is kept',
+    'heart schedule is kept (PRD-2.3.1 §16.1 A: dropped in a moved gap)',
     setUp: (g, _) => _boot(g),
     verify: (game, _) async {
       final (run, heart) = await cometWith(game, ElementId.heart);
       final watch = _Watch(run);
       final heartAt = run.director.heartAt;
       await flyUntil(game, (_) => watch.started.isNotEmpty, maxSeconds: 20);
+      if (droppedByCometLayout(run, heart)) return;
       expect(run.spawner.pickups, contains(heart));
       expect(heart.clearAlpha, 1);
       expect(run.director.heartAt, heartAt, reason: 'the schedule is kept');
@@ -219,12 +237,14 @@ void main() {
   );
 
   _tester().testGameWidget(
-    '§27.5 / PRD-2.3 §17.5 a shield on screen when a comet starts stays',
+    '§27.5 / PRD-2.3 §17.5 a shield on screen when a comet starts stays '
+    '(PRD-2.3.1 §16.1 A: dropped in a moved gap)',
     setUp: (g, _) => _boot(g),
     verify: (game, _) async {
       final (run, shield) = await cometWith(game, ElementId.shield);
       final watch = _Watch(run);
       await flyUntil(game, (_) => watch.started.isNotEmpty, maxSeconds: 20);
+      if (droppedByCometLayout(run, shield)) return;
       expect(run.spawner.pickups, contains(shield));
       expect(shield.clearAlpha, 1);
       expect(run.director.forcedQueue, isNot(contains(ElementId.shield)));

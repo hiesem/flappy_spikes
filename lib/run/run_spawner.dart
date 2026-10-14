@@ -538,6 +538,7 @@ class RunSpawner {
         }
       }
     }
+    _cometAnchorX = anchor;
     run.director.onCometStart(
       fromY: fromY,
       endTrackX: endTrackX,
@@ -571,6 +572,13 @@ class RunSpawner {
       }
     }
   }
+
+  double? _cometAnchorX;
+
+  /// PRD-2.3.1 §16.1 A the track x of the last hoop that stayed at the last
+  /// comet start (or the bird, if none was ahead): every pickup past it lay
+  /// in a moved hoop's gap and was dropped (tests).
+  double? get cometAnchorX => _cometAnchorX;
 
   /// PRD-2.3.1 §16.1 A the pickups planned in the gaps of the hoops a
   /// comet moves: every one past [anchorX] (the last hoop that stays; every

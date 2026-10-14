@@ -427,7 +427,8 @@ void main() {
 
   _tester().testGameWidget(
     '§17.6 comet with a Firefly Jar due: the jar is never open together '
-    'with the comet star; collecting the comet clears nothing visible',
+    'with the comet star; collecting the comet clears nothing visible '
+    'outside the moved hoops\' gaps (PRD-2.3.1 §16.1 A)',
     setUp: (g, _) => _boot(g),
     verify: (game, _) async {
       game.runDebug.god = true;
@@ -438,6 +439,11 @@ void main() {
       );
       final bad = <String>[];
       run.events.on<PickupCleared>((e) {
+        // PRD-2.3.1 §16.1 A a comet drops every pickup in the gaps of the
+        // hoops it moves (past the last hoop that stays), visible ones too.
+        final anchor = run.spawner.cometAnchorX;
+        final comet = run.state.ride?.kind == RideKind.comet;
+        if (comet && anchor != null && e.pickup.position.x > anchor) return;
         if (run.spawner.isVisible(e.pickup)) bad.add('cleared ${e.element}');
       });
       final ringsOnScreen = <Hoop>{};

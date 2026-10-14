@@ -1030,8 +1030,9 @@ class Config {
   // --- Live home & Shop (PRD-menu-v2 §8) --------------------------------
   // Effect timings live in components/ui/live_effects.dart (LiveCurves).
 
-  /// Free-coins reward: the pill counts +40 in 0.4 s once the coins have
-  /// landed, then `sk_progress` 0.18 s later.
+  /// Free-coins reward: the pill counts up by the reward (75 by default,
+  /// `shop_ad_coins`; PRD-2.3.1 §5) in 0.4 s once the coins have landed,
+  /// then `sk_progress` 0.18 s later.
   static const double coinRewardCountDuration = 0.4;
   static const double coinRewardProgressDelay = 0.18;
 

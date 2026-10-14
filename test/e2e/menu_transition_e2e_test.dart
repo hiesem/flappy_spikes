@@ -124,7 +124,7 @@ void main() {
           1,
         );
       } else {
-        expect(g.menu.wallet.balance, 40);
+        expect(g.menu.wallet.balance, 75);
         expect(g.menu.freeCoins.claimedToday, 1);
       }
       expect(r.spy.params('ad_rewarded_shown').single, {

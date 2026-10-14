@@ -177,7 +177,7 @@ The table is generated from `tuning_defaults.dart` by `dart run tool/tuning_sync
 | `revive_ladder` | intList | `[250,500,1000,2000,4000,8000]` | §14.2 | Coin revive prices after the ad revive; no revive after the last |
 | `revive_min_hoops` | integer | `6` | §14.2 | A revive is offered from this many hoops passed |
 | `level_rewards` | intList | `[50,100,150,250,400,600,800,1000,2000,5000]` | §14.2 | One-time coin reward of levels 1-10 |
-| `shop_ad_coins` | integer | `40` | §14.2 | Shop free-coins ad: coins per ad |
+| `shop_ad_coins` | integer | `75` | §14.2 | Shop free-coins ad: coins per ad |
 | `shop_ad_per_day` | integer | `5` | §14.2 | Shop free-coins ad: ads per day |
 | `shop_ad_cooldown_s` | integer | `300` | §14.2 | Shop free-coins ad: cooldown (s) |
 | `curve_speed` | curve | `[[0,150],[50,172.5],[150,187.5]]` | §14.4 | Cruise speed (pt/s) by hoop index |

@@ -187,7 +187,8 @@ class CoinRewardAnimation extends Component
 
   /// The Shop's GET reward exactly as before (PRD-menu-v2 §8.3): 6 coins,
   /// 0.65 s, 70 ms apart after 0.25 s; when the last lands `bn_coin`, the
-  /// pill coin pops 135 %, the number counts +40 linearly in 0.4 s and
+  /// pill coin pops 135 %, the number counts up by the reward (75 by
+  /// default, `shop_ad_coins`; PRD-2.3.1 §5) linearly in 0.4 s and
   /// `sk_progress` follows 0.18 s later. No ticks, glow or confetti.
   CoinRewardAnimation.freeCoins({
     required this.from,

@@ -238,7 +238,7 @@
       "parameters": {
         "shop_ad_coins": {
           "defaultValue": {
-            "value": "40"
+            "value": "75"
           },
           "description": "§14.2 Shop free-coins ad: coins per ad",
           "valueType": "NUMBER"

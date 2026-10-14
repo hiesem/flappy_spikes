@@ -1,9 +1,9 @@
 import '../game/storage.dart';
 import '../run/config/tuning_values.dart';
 
-/// Rewarded-ad free coins: +40 per ad, max 5/day, 5-minute cooldown
-/// (PRD-2.3 §14.2 unchanged; tunable `shop_ad_coins`, `shop_ad_per_day`,
-/// `shop_ad_cooldown_s`).
+/// Rewarded-ad free coins: +75 per ad (PRD-2.3.1 §5, was 40), max 5/day,
+/// 5-minute cooldown (PRD-2.3 §14.2; tunable `shop_ad_coins`,
+/// `shop_ad_per_day`, `shop_ad_cooldown_s`).
 class FreeCoinsPolicy {
   FreeCoinsPolicy(this._storage);
 

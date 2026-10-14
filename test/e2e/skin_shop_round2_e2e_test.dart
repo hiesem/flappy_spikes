@@ -431,7 +431,7 @@ void main() {
     },
   );
 
-  _journey('round 2: GET → six-coin flight → +40 once after navigation', (
+  _journey('round 2: GET → six-coin flight → +75 once after navigation', (
     game,
     rig,
     tester,
@@ -443,7 +443,7 @@ void main() {
     expect(shop.freeCoins.chip!.size, Vector2(112, 32));
     rig.sounds.clear();
     await _tap(game, tester, shop.freeCoins.chip!);
-    expect(game.menu.wallet.balance, 40);
+    expect(game.menu.wallet.balance, 75);
     expect(game.coinPill.shownBalance, 0);
     final fly = game.coinFly!;
     expect(fly.count, 6);
@@ -463,7 +463,7 @@ void main() {
     expect(fly.landed, 6);
     expect(game.coinFly, isNull);
     expect(game.coinPill.held, isFalse);
-    expect(game.coinPill.shownBalance, 40);
+    expect(game.coinPill.shownBalance, 75);
     expect(
       rig.sounds.where(
         (sfx) => [Sfx.bnAdBtn, Sfx.bnCoin, Sfx.skProgress].contains(sfx),
@@ -472,14 +472,14 @@ void main() {
     );
     expect(rig.ads.shown, 1);
     expect(rig.events.params('coins_earned').single, {
-      'amount': 40,
+      'amount': 75,
       'source': 'rewarded',
     });
     await _tap(game, tester, game.homeScreen!.shopTile);
     await _fade(game);
     expect(game.shopScreen!.freeCoins.chipText, '05:00');
     await _tap(game, tester, game.shopScreen!.freeCoins.chip!);
-    expect(game.menu.wallet.balance, 40);
+    expect(game.menu.wallet.balance, 75);
     expect(rig.ads.shown, 1);
   });
 

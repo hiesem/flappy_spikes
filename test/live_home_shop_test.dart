@@ -413,7 +413,7 @@ void main() {
     );
 
     shopTest(
-      'GET reward: 6 coins fly in, the pill counts +40 in 0.4 s, sounds in order',
+      'GET reward: 6 coins fly in, the pill counts +75 in 0.4 s, sounds in order',
       prefs: const {'coins': 1250},
       verify: (game, spy, ads, iap, tester) async {
         final shop = await openShop(game);
@@ -422,7 +422,7 @@ void main() {
         game.coinFlyRandom = math.Random(7);
         await game.claimFreeCoins();
         await flushAndMount(game);
-        expect(game.menu.wallet.balance, 1290);
+        expect(game.menu.wallet.balance, 1325);
         final fly = game.coinFly!;
         expect(fly.count, 6);
         // The pill waits for the coins.
@@ -436,11 +436,11 @@ void main() {
         // Coin pop and the 0.4 s count.
         stepGame(game, 0.15);
         expect(game.coinPill.coinScale, greaterThan(1.2));
-        expect(game.coinPill.shownBalance, inExclusiveRange(1250, 1290));
+        expect(game.coinPill.shownBalance, inExclusiveRange(1250, 1325));
         await flushAndMount(game);
         stepGame(game, 0.3);
         await flushAndMount(game);
-        expect(game.coinPill.shownBalance, 1290);
+        expect(game.coinPill.shownBalance, 1325);
         expect(game.coinPill.coinScale, 1);
         expect(sounds, [Sfx.bnAdBtn, Sfx.bnCoin, Sfx.skProgress]);
         expect(shop.freeCoins.chipText, '05:00');

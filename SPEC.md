@@ -1635,3 +1635,10 @@ production build has the flag off and uses these values only. Full key table:
 - PRD-2.3 §26.2 (owner 2026-10-13): the Shop / Skins lock overlay covers the whole
   playfield incl. both spike strips at #000000 90 % (was 72 % between the strips);
   the back button and the coin pill stay bright above it.
+
+## PRD-2.3.1 (owner 2026-10-13/14, version 2.3.1 (20))
+
+- DEVIATION (PRD-2.3.1 §5, supersedes the PRD-2.3 §14.2 Shop value): the Shop
+  free-coins ad pays **75** coins (`shop_ad_coins` default 75, was 40), and the row reads
+  "FREE +75". The daily cap (5) and the cooldown (300 s) are unchanged, so Shop ads pay
+  at most 375 coins a day (was 200).

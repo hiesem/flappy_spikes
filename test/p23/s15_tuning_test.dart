@@ -126,7 +126,7 @@ void main() {
         t.ints('level_rewards'),
         [50, 100, 150, 250, 400, 600, 800, 1000, 2000, 5000],
       );
-      expect(t.i('shop_ad_coins'), 40);
+      expect(t.i('shop_ad_coins'), 75); // PRD-2.3.1 §5 (was 40)
       expect(t.i('shop_ad_per_day'), 5);
       expect(t.i('shop_ad_cooldown_s'), 300);
       // §14.3 points

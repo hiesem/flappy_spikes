@@ -48,7 +48,7 @@ const List<TuningDef> kTuningDefaults = [
   TuningDef('revive_ladder', TuningType.intList, [250, 500, 1000, 2000, 4000, 8000], '14.2', 'Coin revive prices after the ad revive; no revive after the last'),
   TuningDef('revive_min_hoops', TuningType.integer, 6, '14.2', 'A revive is offered from this many hoops passed'),
   TuningDef('level_rewards', TuningType.intList, [50, 100, 150, 250, 400, 600, 800, 1000, 2000, 5000], '14.2', 'One-time coin reward of levels 1-10'),
-  TuningDef('shop_ad_coins', TuningType.integer, 40, '14.2', 'Shop free-coins ad: coins per ad'),
+  TuningDef('shop_ad_coins', TuningType.integer, 75, '14.2', 'Shop free-coins ad: coins per ad'),
   TuningDef('shop_ad_per_day', TuningType.integer, 5, '14.2', 'Shop free-coins ad: ads per day'),
   TuningDef('shop_ad_cooldown_s', TuningType.integer, 300, '14.2', 'Shop free-coins ad: cooldown (s)'),
   TuningDef('curve_speed', TuningType.curve, [[0, 150], [50, 172.5], [150, 187.5]], '14.4', 'Cruise speed (pt/s) by hoop index'),

@@ -8,7 +8,7 @@ void main() {
 
   group('FreeCoinsPolicy', () {
     test('reward and limits match the PRD', () {
-      expect(FreeCoinsPolicy.reward, 40);
+      expect(FreeCoinsPolicy.reward, 75); // PRD-2.3.1 §5 (was 40)
       expect(FreeCoinsPolicy.maxPerDay, 5);
       expect(FreeCoinsPolicy.cooldown, const Duration(minutes: 5));
     });

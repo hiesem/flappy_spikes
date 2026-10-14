@@ -50,7 +50,7 @@ void main() {
       expect(CapsuleConfig.frenzyCoins, 1);
       expect(VersusConfig.winBonus, 10);
       expect(VersusConfig.drawBonus, 5);
-      expect(FreeCoinsPolicy.reward, 40);
+      expect(FreeCoinsPolicy.reward, 75); // PRD-2.3.1 §5 (was 40)
       expect(FreeCoinsPolicy.maxPerDay, 5);
       expect(FreeCoinsPolicy.cooldown, const Duration(minutes: 5));
     });

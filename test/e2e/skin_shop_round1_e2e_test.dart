@@ -369,7 +369,7 @@ void main() {
     },
   );
 
-  _journey('GET → rewarded completion → six coins fly → +40 and cooldown', (
+  _journey('GET → rewarded completion → six coins fly → +75 and cooldown', (
     game,
     rig,
     tester,
@@ -381,7 +381,7 @@ void main() {
     expect(shop.freeCoins.chip!.size, Vector2(112, 32));
     rig.sounds.clear();
     await _tap(game, tester, shop.freeCoins.chip!);
-    expect(game.menu.wallet.balance, 40);
+    expect(game.menu.wallet.balance, 75);
     final fly = game.coinFly!;
     expect(fly.count, 6);
     expect(fly.duration, .65);
@@ -393,20 +393,20 @@ void main() {
     await flushAndMount(game);
     expect(fly.landed, 6);
     stepGame(game, .15);
-    expect(game.coinPill.shownBalance, inExclusiveRange(0, 40));
+    expect(game.coinPill.shownBalance, inExclusiveRange(0, 75));
     expect(game.coinPill.coinScale, greaterThan(1.2));
     stepGame(game, .4);
     await flushAndMount(game);
-    expect(game.coinPill.shownBalance, 40);
+    expect(game.coinPill.shownBalance, 75);
     expect(game.coinFly, isNull);
     expect(rig.sounds, [Sfx.bnAdBtn, Sfx.bnCoin, Sfx.skProgress]);
     expect(shop.freeCoins.chipText, '05:00');
     final rewarded = rig.events.params('coins_earned');
     expect(rewarded, [
-      {'amount': 40, 'source': 'rewarded'},
+      {'amount': 75, 'source': 'rewarded'},
     ]);
     await _tap(game, tester, shop.freeCoins.chip!);
-    expect(game.menu.wallet.balance, 40);
+    expect(game.menu.wallet.balance, 75);
     expect(game.coinFly, isNull);
   });
 

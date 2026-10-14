@@ -138,6 +138,16 @@
   - the network-cut retry.
 
   The switch logic has automated coverage only: §2/§3 tests, QA P1–P3 probes, one Auth queue.
+- **Pixel 8 with the owner's Play Games profile, 2026-10-14 19:31: PASS.** Play update to 2.3.1 (20), then clear data and launch.
+  - Firebase Auth before: `u3nBdG6N…` last sign-in `2026-10-13T11:52:44Z`.
+  - Log: `versus: link switched none` ("none" means no error). Firebase Auth after: `u3nBdG6N…` last sign-in **`2026-10-14T17:31:25Z`** (provider playgames.google.com).
+  - VERSUS START found a rival, and the intro shows the own Play Games name **HiesemSurak** with its avatar.
+  - Relaunch: no link, no `deleteMyData`, no guest; same uid, no new sign-in.
+  - The medal opens the native Play Games list: **0/48**, names and descriptions correct (§12.10).
+  - **Not run:** the network cut during the switch (§4.6) stays covered by the automated tests only.
+  - **Observation:** right after the Play update, the Play Store's billing service didn't answer (`[IAP] isAvailable failed: TimeoutException`, on 3 launches). A force-stop of the Play Store fixed it: `[IAP] query 5: found 5`, `purchases 0`, so No Ads is not restored. This looks device-side; build 20 connected to billing normally on the Pixel 6.
+  - **Observation:** the rival was the pool entry named "E2E bot", a test account that real players can meet in matchmaking.
+  - The data was cleared again afterwards, so the owner starts as a new user: 0 coins, no No Ads, first-run instructions, and the notification and consent prompts.
 
 ## Device round (Pixel 6)
 Full table: [`QA_DEVICE.md`](QA_DEVICE.md) (Sol, 2026-10-14). Evidence: `.worktrees/briefs9/evidence/device/`, outside git.
@@ -145,7 +155,7 @@ Full table: [`QA_DEVICE.md`](QA_DEVICE.md) (Sol, 2026-10-14). Evidence: `.worktr
 | Check | Result |
 |---|---|
 | No Ads off after the refund | PASS (already off; purchase sync 0) |
-| §4 guest versus / signed-in switch | PARTIAL / **BLOCKED (D-01)** |
+| §4 guest versus / signed-in switch | PASS / PASS on the Pixel 8 (see §4 above) |
 | §5 shop ad 75 (test ad) | PASS: wallet 0 → 75 |
 | §6 bullseye +3 | PASS |
 | §7 6-ring rides | PASS: cannon 6 passes; volcano and space done |
@@ -154,7 +164,7 @@ Full table: [`QA_DEVICE.md`](QA_DEVICE.md) (Sol, 2026-10-14). Evidence: `.worktr
 | §10 instructions until hoop 0 | PASS (Play build) |
 | §11 banner on the waiting screen | PASS (Play and debug) |
 | §12 local unlocks, toasts, debug exclusion | PASS |
-| §12 native Play Games list / sync | **BLOCKED (D-01)** |
+| §12 native Play Games list / sync | list PASS on the Pixel 8 (0/48); sync of an unlock not yet seen |
 | §13 shield hidden with the bird | PASS: cannon, volcano, space |
 | §14 No Ads revive 250 → 500 | PASS |
 | §15 rim-free FEVER 19.4 pt off centre | PASS: perfect, +2, streak 5 |

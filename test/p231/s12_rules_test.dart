@@ -536,9 +536,12 @@ void main() {
       g.runDebug.god = true;
       expect(r.countsForAchievements, isFalse);
       g.runDebug.god = false;
-      expect(r.countsForAchievements, isTrue);
-      r.debugForce(ElementId.heart);
+      // P1E-02: god mode used once excludes the run until it ends.
       expect(r.countsForAchievements, isFalse);
+      final r2 = await fresh();
+      expect(r2.countsForAchievements, isTrue);
+      r2.debugForce(ElementId.heart);
+      expect(r2.countsForAchievements, isFalse);
     },
   );
 

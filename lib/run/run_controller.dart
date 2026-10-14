@@ -117,6 +117,7 @@ class RunController extends Component {
     _cleanStart =
         setup.forced.isEmpty &&
         setup.forcedRide == null &&
+        !setup.debugStarter &&
         setup.startHoopIndex == 0 &&
         !setup.ignoreGates &&
         !kE2E &&
@@ -137,9 +138,21 @@ class RunController extends Component {
   /// `AchievementTracker.countDebugRuns`.
   bool get countsForAchievements {
     if (game.achievements.countDebugRuns) return true;
-    if (FlappySpikesGame.debugAvailable && game.runDebug.god) return false;
+    _latchGod();
     return _cleanStart && !_debugTouched;
   }
+
+  /// P1E-02: god mode used at any moment of this run excludes it for good
+  /// (switching it off again never restores eligibility).
+  void _latchGod() {
+    if (FlappySpikesGame.debugAvailable && game.runDebug.god) {
+      _debugTouched = true;
+    }
+  }
+
+  /// A debug assist used during this run (the force menu's god mode, …):
+  /// the run stops counting for achievements until it ends (§12.2).
+  void markDebugAssist() => _debugTouched = true;
   // endregion P231-E
 
   final RunSetup setup;
@@ -337,6 +350,7 @@ class RunController extends Component {
   @override
   void update(double dt) {
     super.update(dt);
+    _latchGod(); // PRD-2.3.1 §12.2 (P1E-02)
     if (!_started && _waitBegun && !_paused && !_ended) _waitClock += dt;
     if (!_started || _frozen) return;
     final gameDt = dt;
@@ -715,6 +729,7 @@ class RunController extends Component {
   MistakeOutcome mistake(Mistake m) {
     if (!_started || _dying || _ended) return MistakeOutcome.ignored;
     if (FlappySpikesGame.debugAvailable && game.runDebug.god) {
+      _debugTouched = true; // PRD-2.3.1 §12.2 (P1E-02)
       return MistakeOutcome.ignored;
     }
     final outcome = pipeline.resolve(m, ctx);

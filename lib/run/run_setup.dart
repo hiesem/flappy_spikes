@@ -17,6 +17,7 @@ class RunSetup {
     this.enabledOverride,
     this.ignoreGates = false,
     this.oneBigBonus = RunConfig.oneBigBonus,
+    this.debugStarter = false,
   });
 
   /// Per-run seed (§3.0.3; tests fix it, e2e uses `kE2ESeed`).
@@ -49,4 +50,8 @@ class RunSetup {
   /// PRD-2.3 §17.3 the one-big-bonus planner rule; tests turn it off only
   /// for the §17.6 bonus-count baseline.
   final bool oneBigBonus;
+
+  /// PRD-2.3.1 §12.2 the [starter] came from the Home debug panel's
+  /// "Slot: force …" (a debug start: the run never counts for achievements).
+  final bool debugStarter;
 }

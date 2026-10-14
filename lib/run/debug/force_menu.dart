@@ -61,6 +61,9 @@ abstract final class ForceMenu {
       }),
       DebugAction(() => 'God mode: ${d.god ? 'ON' : 'off'}', () async {
         d.god = !d.god;
+        // PRD-2.3.1 §12.2 (P1E-02) god mode in a run excludes that run.
+        final run = game.run;
+        if (run != null && !run.ended) run.markDebugAssist();
       }),
       DebugAction(() => 'Overlay: ${d.overlay ? 'ON' : 'off'}', () async {
         d.overlay = !d.overlay;

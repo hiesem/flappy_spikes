@@ -19,6 +19,20 @@ class PowerupSlot extends ChangeNotifier {
 
   Powerup _offered = Powerup.none;
 
+  // PRD-2.3.1 §12.2 the debug origin of the offered / armed / consumed
+  // powerup: a "Slot: force …" roll is a debug start (no achievements).
+  bool _offeredDebug = false;
+  bool _armedDebug = false;
+  bool _consumedDebug = false;
+
+  /// Returns and clears whether the last [consume]d powerup was a debug-forced
+  /// one (PRD-2.3.1 §12.2; read once by the run setup).
+  bool takeConsumedDebug() {
+    final d = _consumedDebug;
+    _consumedDebug = false;
+    return d;
+  }
+
   /// Forces rolls to this powerup (debug panel); still recorded.
   Powerup? debugForce;
 
@@ -37,12 +51,14 @@ class PowerupSlot extends ChangeNotifier {
     _storage.slotHistory = history;
     unawaited(_storage.saveSlotHistory(history));
     _offered = roll;
+    _offeredDebug = debugForce != null;
     notifyListeners();
     return roll;
   }
 
   /// Arms the offered powerup; overwrites any previously armed one.
   Future<void> armOffered() async {
+    _armedDebug = _offeredDebug && _offered != Powerup.none;
     await _storage.saveArmedPowerup(_offered.name);
     notifyListeners();
   }
@@ -50,6 +66,8 @@ class PowerupSlot extends ChangeNotifier {
   /// Returns and clears the armed powerup (consumed on START).
   Powerup consume() {
     final current = armed;
+    _consumedDebug = _armedDebug && current != Powerup.none;
+    _armedDebug = false;
     _storage.armedPowerup = 'none';
     unawaited(_storage.saveArmedPowerup('none'));
     notifyListeners();

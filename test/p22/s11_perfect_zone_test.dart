@@ -14,6 +14,7 @@ import 'package:flappy_spikes/run/run_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
+import '../p231/tuning_23.dart';
 
 /// PRD-2.3 §14.3 (rewrites the PRD-2.2 §11.5 perfect-zone tests): perfect
 /// = a pass with **no rim touch**, anywhere in the gap (Flappy Dunk's
@@ -27,6 +28,11 @@ void main() {
   }, gameSize: Vector2(320, 711));
 
   Future<void> prepare(FlappySpikesGame g) async {
+    // This file pins the 2.3 rule (no perfect band: any rim-free pass is
+    // perfect). PRD-2.3.1 §0 made the live band (±18 → ±8) the default;
+    // the band has its own tests (test/p23/s14_perfect_band_test.dart).
+    useTuning(tuning23(['point_perfect_band']));
+    addTearDown(resetTuning);
     await g.ready();
     g.sound.enabled = false;
     await preloadImages(g);
@@ -121,9 +127,19 @@ void main() {
         startHoopIndex: 15,
         force: [ElementId.fever],
       );
-      await flyUntil(game, (_) => firstHoopOf(game, HoopKindId.fever) != null);
+      await flyUntil(
+        game,
+        (_) => firstHoopOf(game, HoopKindId.fever) != null,
+        maxSeconds: 120, // PRD-2.3.1 §0: the forced ring waits longer
+      );
       final h = firstHoopOf(game, HoopKindId.fever)!;
-      expect(await passHoopAt(game, h, dy: 24), isTrue);
+      // The later the ring, the smaller its opening: 14 pt off stays
+      // rim-free at any index (24 at hoop 15).
+      run.state.streak = 0;
+      expect(
+        await passHoopAt(game, h, dy: h.plan.index <= 20 ? 24 : 14),
+        isTrue,
+      );
       expect(h.takenRing, 0);
       expect(h.touched, isFalse);
       expect(run.state.streak, 5);
@@ -140,8 +156,13 @@ void main() {
         startHoopIndex: 15,
         force: [ElementId.fever],
       );
-      await flyUntil(game, (_) => firstHoopOf(game, HoopKindId.fever) != null);
+      await flyUntil(
+        game,
+        (_) => firstHoopOf(game, HoopKindId.fever) != null,
+        maxSeconds: 120, // PRD-2.3.1 §0: the forced ring waits longer
+      );
       final h = firstHoopOf(game, HoopKindId.fever)!;
+      run.state.streak = 0;
       expect(await passHoopAt(game, h), isTrue);
       expect(run.state.streak, 5);
       expect(run.state.onFire, isTrue);

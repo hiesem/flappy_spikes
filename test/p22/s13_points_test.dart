@@ -175,7 +175,11 @@ void main() {
         startHoopIndex: 15,
         force: [ElementId.fever],
       );
-      await flyUntil(game, (_) => firstHoopOf(game, HoopKindId.fever) != null);
+      await flyUntil(
+        game,
+        (_) => firstHoopOf(game, HoopKindId.fever) != null,
+        maxSeconds: 120, // PRD-2.3.1 §0: the forced ring waits longer
+      );
       final h = firstHoopOf(game, HoopKindId.fever)!;
       await flyUntil(game, (r) {
         final b = r.birdTrackPosition();

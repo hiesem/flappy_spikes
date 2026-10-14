@@ -19,11 +19,16 @@ import 'package:flappy_spikes/run/run_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
+import '../p231/tuning_23.dart';
 
 /// PRD-2.2 §25 Special rings shrink like normal rings: saw rings have the
 /// normal opening, the saw / FEVER decoration scales with the ring
 /// (`ry / ryDesign`), the portal ring stays 118 pt.
 void main() {
+  // PRD-2.3.1 §0: the forced saw slots are measured on the 2.3 spawn set
+  // (test/p231/tuning_23.dart); the live set has its own checks.
+  setUp(() => useTuning(tuning23Spawn()));
+  tearDown(resetTuning);
   const hoops = [20, 45, 70];
 
   RunDirector director(int start, List<ElementId> forced, {RideId? ride}) =>

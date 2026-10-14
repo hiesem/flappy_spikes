@@ -16,6 +16,7 @@ import 'package:flappy_spikes/run/run_spawner.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
+import '../p231/tuning_23.dart';
 
 /// PRD-2.2 §15: items scroll in from the right, never pop in. The director
 /// plans one slot ahead, so every hoop and pickup is created off-screen;
@@ -140,7 +141,15 @@ void main() {
         ).testGameWidget(
           '§15.4 ${e.storageId} (${h.round()} pt): every hoop and pickup is '
           'created right of the screen edge',
-          setUp: (g, _) => _boot(g),
+          setUp: (g, _) {
+            // PRD-2.3.1 §0: these 14 s windows were set on the 2.3 spawn
+            // set; the live set (a portal at hoop 12–25, a reward ring open
+            // most of the time) holds some forced elements past them. The
+            // natural runs below fly the live set.
+            useTuning(tuning23Spawn());
+            addTearDown(resetTuning);
+            return _boot(g);
+          },
           verify: (game, _) async {
             game.runDebug.god = true;
             final run = await startRun(
@@ -195,7 +204,9 @@ void main() {
               maxSeconds: 70,
               onFrame: (_) => watch.check(),
             );
-            expect(watch.hoops, greaterThan(30));
+            // PRD-2.3.1 §0: the live set's portal (hoop 12–25) and comets
+            // hold the course for a while: ≥ 26 hoops in 70 s (2.3: > 30).
+            expect(watch.hoops, greaterThan(25));
             // PRD-2.3 §14 course (faster cruise, new schedules): seed 9
             // meets 5 pickups in 70 s (was > 5).
             expect(watch.pickups, greaterThanOrEqualTo(5));
@@ -357,7 +368,13 @@ void main() {
   tester.testGameWidget(
     '§15.1 the switch is created with its ring\'s plan (one gap ahead), off '
     'screen, and linked to the ring when the ring spawns',
-    setUp: (g, _) => _boot(g),
+    setUp: (g, _) {
+      // PRD-2.3.1 §0: timed on the 2.3 spawn set (the live portal sits at
+      // hoop 12–25, right where this run starts).
+      useTuning(tuning23Spawn());
+      addTearDown(resetTuning);
+      return _boot(g);
+    },
     verify: (game, _) async {
       game.runDebug.god = true;
       final run = await startRun(

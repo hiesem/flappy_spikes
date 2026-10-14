@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
 import '../menu_screenshot_test.dart' show captureShot;
+import '../p231/tuning_23.dart';
 
 /// WP-G2 visual checks (written to `build/menu_shots/p22/`, never
 /// committed): the §27.3 reward rings losing their reward parts, the §23
@@ -134,7 +135,13 @@ void main() {
   _tester().testGameWidget(
     '§15 shot: a Power Iris switch on screen before its ring spawns draws '
     'its cable toward the planned ring',
-    setUp: (g, _) => _boot(g),
+    setUp: (g, _) {
+      // PRD-2.3.1 §0: framed on the 2.3 spawn set (the live portal sits at
+      // hoop 12–25, right where this run starts).
+      useTuning(tuning23Spawn());
+      addTearDown(resetTuning);
+      return _boot(g);
+    },
     verify: (game, tester) async {
       game.runDebug.god = true;
       final run = await startRun(game, startHoopIndex: 14);

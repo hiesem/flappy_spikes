@@ -10,6 +10,7 @@ import 'package:flappy_spikes/run/hoops/kinds/train.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers.dart';
+import '../../p231/tuning_23.dart';
 
 /// The 1.0 `pipe_spawner_test` / `gap_variance_test` ported to hoops
 /// (WP-1a): spacing, scroll-in, despawn, the opening ramp by hoop index and
@@ -30,7 +31,15 @@ void main() {
     tester.testGameWidget(
       '§3.0.1 / §3.0.2 ($h) spawned hoops: one spacing apart, scrolled in '
       'from ≥ 60 pt past the edge, opening by hoop index, inside the band',
-      setUp: (g, _) => boot(g),
+      setUp: (g, _) {
+        // PRD-2.3.1 §0: the live portal (hoop 12–25) would fall inside this
+        // 32-hoop flight; the slot-by-slot checks below assume none, as in
+        // the 2.3 spawn set (portal 40–60) this seeded course was made on.
+        // Portals have their own spawner tests.
+        useTuning(tuning23Spawn());
+        addTearDown(resetTuning);
+        return boot(g);
+      },
       verify: (game, _) async {
         final run = await startRun(game);
         final spawns = <(Hoop, SlotPlan, double)>[];

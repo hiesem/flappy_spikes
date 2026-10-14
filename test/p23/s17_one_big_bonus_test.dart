@@ -15,6 +15,7 @@ import 'package:flappy_spikes/run/run_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
+import '../p231/tuning_23.dart';
 
 /// PRD-2.3 §17 one big bonus on screen: the planner rule (§17.3), the
 /// waiting bonus (rule 4), the per-slot creation edge (§17.4), the narrowed
@@ -248,6 +249,10 @@ void main() {
     // from `s17_soak_test.dart`.
     test('bonus count: big bonuses per 50 hoops with the rule vs the same '
         'seeds without it (director model, 400 runs × 120 slots)', () {
+      // PRD-2.3.1 §0: calibrated on the 2.3 spawn set; the live set (RC v21)
+      // drops 43 % in this model (reported, PRD-2.3 §17.6).
+      useTuning(tuning23Spawn());
+      addTearDown(resetTuning);
       var withRule = 0, without = 0, slots = 0;
       for (var seed = 1; seed <= 400; seed++) {
         final (a, n) = _modelRun(seed, rule: true);
@@ -566,7 +571,10 @@ void main() {
       s.jar = JarState();
       game.update(1 / 60);
       expect(s.activity, RunActivity.jar);
-      expect(cleared, [feather]);
+      // PRD-2.3.1 §0: the live puzzle window (gaps 5–30) may have put an
+      // off-screen piece out too; only what is not visible goes.
+      expect(cleared, contains(feather));
+      expect(cleared.every((p) => !run.spawner.isVisible(p)), isTrue);
       expect(feather.escaped, isTrue);
       expect(s.featherSpawned, isFalse, reason: 'owed');
       expect(run.spawner.pickups, contains(heart));

@@ -275,8 +275,7 @@ void main() {
             final aheadIndex = sp.plannedAhead!.index;
             // P1-05: the last hoop that stays, and the moved hoops' gaps.
             final birdX =
-                run.birdTrackPosition()?.x ??
-                run.state.camX + RunConfig.birdX;
+                run.birdTrackPosition()?.x ?? run.state.camX + RunConfig.birdX;
             final anchor = shown.keys
                 .where((x) => x.planeX > birdX)
                 .map((x) => x.planeX)

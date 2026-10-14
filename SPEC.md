@@ -1490,6 +1490,12 @@ production build has the flag off and uses these values only. Full key table:
   **hit check only**; the guide lines / target stay drawn at ±12 pt
   (`BullseyeConfig.drawBand`). Both are read once per run (`Tuning.beginRun`).
   Tests: `test/p23/s14_perfect_band_test.dart`.
+- DEVIATION (PRD-2.3.1 §15, owner 2026-10-14): **the FEVER ring ignores the perfect
+  band.** Any pass through the FEVER ring without a rim touch is a full perfect pass
+  (perfect coins, points, feedback, counters, `fever_ring_passed {perfect: 1}`), then
+  FEVER as before (fire ≥ ×5, streak `max(5, streak + 1)`). A rim touch on it is
+  unchanged (no FEVER, fire out, streak reset). Every other hoop keeps the band.
+  Tests: `test/p231/s15_fever_rim_free_perfect_test.dart`.
 - DEVIATION (PRD-2.3 §14.3, supersedes PRD-2 §3.27 / PRD-2.2 §13.1 chick ×2): **the
   chick no longer doubles coins or points** (puzzle and piggy included). While it flies
   every hoop passed scores **+1 point** (`point_chick`, added with the pass, one

@@ -526,16 +526,20 @@ class RunController extends Component {
   /// longer happens.) Owner 2026-10-13: with a remote `point_perfect_band`
   /// > 0 a rim-free pass must also cross within that band
   /// ([PerfectBandConfig]); a rim-free pass outside it is [HoopPassed.clean].
+  /// PRD-2.3.1 §15: the FEVER ring ignores the band — any rim-free pass
+  /// through it is perfect.
   void _pass(Hoop h, int ring) {
     h.resolvePass(ring);
     final ride = state.ride != null;
     final perfect =
         ride ||
-        PerfectBandConfig.isPerfect(
-          touched: h.touched,
-          hoopIndex: h.plan.index,
-          offset: h.passOffset,
-        );
+        (h.plan.kind == HoopKindId.fever
+            ? !h.touched
+            : PerfectBandConfig.isPerfect(
+                touched: h.touched,
+                hoopIndex: h.plan.index,
+                offset: h.passOffset,
+              ));
     final clean = !perfect && !h.touched && !ride;
     state.passes++;
     state.hoopsPassed++;

@@ -134,6 +134,8 @@ abstract final class PerfectBandConfig {
   /// never perfect. With a band v > 0 the bird centre's crossing [offset]
   /// (ring-local, `Hoop.passOffset`, measured like the Bullseye) must also
   /// be within ±v pt; a null [offset] (no crossing recorded) skips the band.
+  /// PRD-2.3.1 §15: not asked for the FEVER ring — `RunController._pass`
+  /// makes any rim-free FEVER pass perfect, whatever the band.
   static bool isPerfect({
     required bool touched,
     required int hoopIndex,

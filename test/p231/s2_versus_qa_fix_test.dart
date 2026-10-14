@@ -125,7 +125,10 @@ void main() {
     expect(versus.ready, isTrue);
     expect(auth.current, 'old', reason: '§2.2 the next resume switches');
     expect(auth.live, isTrue);
-    expect(backend.deletedOnline, ['anon1', 'anon2'], reason: 'each guest once');
+    expect(backend.deletedOnline, [
+      'anon1',
+      'anon2',
+    ], reason: 'each guest once');
     expect(identity.asks, [false, true, false, true]);
   });
 

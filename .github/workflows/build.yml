@@ -15,6 +15,11 @@ jobs:
         with:
           channel: stable
           cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # The p45 / TS-replay tests read the compiled Cloud Functions.
+      - run: npm --prefix functions ci && npm --prefix functions run build
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
@@ -139,7 +144,7 @@ jobs:
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0"><dict>
             <key>method</key><string>app-store-connect</string>
-            <key>destination</key><string>upload</string>
+            <key>destination</key><string>export</string>
             <key>teamID</key><string>TF9VESMTKV</string>
             <key>signingStyle</key><string>automatic</string>
             <key>uploadSymbols</key><true/>
@@ -149,6 +154,10 @@ jobs:
             -exportOptionsPlist $RUNNER_TEMP/store.plist -exportPath build/ios/store \
             -allowProvisioningUpdates -authenticationKeyPath $RUNNER_TEMP/asc.p8 \
             -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          mkdir -p ~/.appstoreconnect/private_keys
+          cp $RUNNER_TEMP/asc.p8 ~/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8
+          xcrun altool --upload-app -t ios -f build/ios/store/*.ipa \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
       - uses: actions/upload-artifact@v4
         if: env.HAS_APPLE != 'true'
         with:

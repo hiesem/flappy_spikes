@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show HapticFeedback;
+import 'package:flutter/services.dart' show HapticFeedback, MethodChannel;
 import 'package:vibration/vibration.dart';
+
+import 'diag.dart';
 
 /// The two rumbles of PRD-2 §3.33.
 enum RumbleKind { knock, shake }
@@ -12,9 +14,12 @@ enum RumbleKind { knock, shake }
 /// of the RUMBLE setting and the throttle; callers only say [knock] or
 /// [shake].
 ///
-/// - knock: one 15 ms pulse at amplitude 90; at most one per
-///   [knockThrottle] — a knock inside that window (after any rumble) is
-///   skipped.
+/// - knock: a physical-button click (iOS round 2 §4: the runner's
+///   `flappy_spikes/haptics` `click` — iOS `UIImpactFeedbackGenerator`
+///   `.rigid` at full intensity, Android the predefined `EFFECT_HEAVY_CLICK`,
+///   else a 20 ms full-amplitude pulse); without that channel, the old
+///   15 ms pulse at amplitude 90. At most one per [knockThrottle] — a knock
+///   inside that window (after any rumble) is skipped.
 /// - shake: one 80 ms full-amplitude pulse (PRD-2.2 §10.3, was 45 ms); never skipped, and it starts a
 ///   new window, so a knock right after it is dropped (shake wins).
 ///
@@ -29,6 +34,7 @@ class Rumble {
 
   static const int knockMs = 15;
   static const int knockAmplitude = 90;
+
   /// PRD-2.2 §10.3 (was 45 ms in PRD-2 §3.33).
   static const int shakeMs = 80;
   static const int shakeAmplitude = 255;
@@ -97,7 +103,37 @@ class Rumble {
       fired.add(kind);
     }
     if (!hardware) return;
-    unawaited(_vibrate(ms, amplitude));
+    if (kind == RumbleKind.knock) {
+      unawaited(_click(ms, amplitude));
+    } else {
+      unawaited(_vibrate(ms, amplitude));
+    }
+  }
+
+  static const MethodChannel _haptics = MethodChannel('flappy_spikes/haptics');
+
+  /// The native click is there (null until the first knock asked).
+  bool? _clickAvailable;
+
+  /// iOS round 2 §4: the soft rumble as a button click (see the class
+  /// comment); the vibration-plugin pulse when the runner has no click.
+  Future<void> _click(int ms, int amplitude) async {
+    if (_clickAvailable != false) {
+      try {
+        final ok = await _haptics.invokeMethod<bool>('click') ?? false;
+        if (_clickAvailable == null) {
+          diag('FS-Rumble knock = native click (ok=$ok)');
+        }
+        _clickAvailable = true;
+        if (ok) return;
+      } catch (e) {
+        if (_clickAvailable == null) {
+          diag('FS-Rumble no native click ($e): plugin pulse');
+        }
+        _clickAvailable = false;
+      }
+    }
+    await _vibrate(ms, amplitude);
   }
 
   Future<void> _vibrate(int ms, int amplitude) async {

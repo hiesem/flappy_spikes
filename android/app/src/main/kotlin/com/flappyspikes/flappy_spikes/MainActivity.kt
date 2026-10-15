@@ -16,6 +16,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.Settings
 import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
@@ -40,6 +43,49 @@ class MainActivity : FlutterActivity() {
         setFrameworkHandlesBack(true)
     }
 
+    private var clicks = 0
+
+    @Suppress("DEPRECATION")
+    private fun click(): Boolean {
+        return try {
+            val vibrator: Vibrator =
+                if (Build.VERSION.SDK_INT >= 31) {
+                    getSystemService(VibratorManager::class.java).defaultVibrator
+                } else {
+                    getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                }
+            if (!vibrator.hasVibrator()) return false
+            val attributes = AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .build()
+            val kind: String
+            when {
+                Build.VERSION.SDK_INT >= 29 -> {
+                    vibrator.vibrate(
+                        VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK),
+                        attributes,
+                    )
+                    kind = "heavy_click"
+                }
+                Build.VERSION.SDK_INT >= 26 -> {
+                    vibrator.vibrate(VibrationEffect.createOneShot(20, 255), attributes)
+                    kind = "oneshot20"
+                }
+                else -> {
+                    vibrator.vibrate(20)
+                    kind = "legacy20"
+                }
+            }
+            clicks++
+            if (clicks <= 3 || clicks % 50 == 0) Log.i("FS-Rumble", "click #$clicks ($kind)")
+            true
+        } catch (e: Exception) {
+            Log.w("FS-Rumble", "click failed: $e")
+            false
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         // Play pre-launch reports and Firebase Test Lab run on devices that
@@ -51,6 +97,20 @@ class MainActivity : FlutterActivity() {
                     "isTestLab" -> result.success(
                         Settings.System.getString(contentResolver, "firebase.test.lab") == "true"
                     )
+                    else -> result.notImplemented()
+                }
+            }
+
+        // iOS round 2 §4: the soft rumble (Rumble.knock) is a physical
+        // button click on both platforms: the predefined HEAVY_CLICK effect
+        // (API 29+, a short crisp tick tuned per device), else a 20 ms
+        // full-amplitude pulse. The hard rumble stays on the vibration
+        // plugin. Same attributes as the plugin (USAGE_ALARM), so the
+        // click follows the same system settings as the shake.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "flappy_spikes/haptics")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "click" -> result.success(click())
                     else -> result.notImplemented()
                 }
             }

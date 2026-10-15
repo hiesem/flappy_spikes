@@ -78,8 +78,17 @@ firebase-ios-sdk (12.19.0 since `firebase_analytics` ^12.6.0) or SPM resolution 
 
 - [x] **Game Center ↔ Firebase Auth.** `GameCenterIdentity` (`lib/services/identity.dart`) is
       implemented and `main.dart` builds `FirebaseVersusService(identity: GameCenterIdentity())`
-      on iOS. Note: Game Center signs in from the leaderboard / achievements buttons only (the
-      no-launch-sign-in rule), so an iOS player links to Game Center after that first tap.
+      on iOS. **iOS exception to the no-launch-sign-in rule (round 2, 2026-10-15):** GameKit only
+      authenticates once the app sets the local player's authenticate handler (games_services does
+      that in `GameAuth.signIn()`), so without a launch sign-in a player signed in to Game Center on
+      the device counted as signed out (generated name, no achievement reports, no banner) until
+      the first leaderboard / achievements tap. `GameServices.authenticateAtLaunch` (called from
+      `main.dart` on iOS only, after `initialize` and the UMP / ATT flow) calls `signIn` once:
+      silent for a signed-in player (Apple's "Welcome back" banner), Game Center's own sheet once
+      for a signed-out one. **Android keeps the rule** (CLAUDE.md: Play Games shows a profile
+      picker). `FirebaseVersusService` follows the player stream from the start of `initialize`,
+      so the in-game name (versus intro, results, leaderboard rows) switches to the Game Center
+      alias as soon as GameKit reports the player.
       Was: a stub (no player, no credential). Implement it with `GameAuth.player` (never `GameAuth.signIn()`
       at launch, never `GameAuth.isSignedIn` — CLAUDE.md) and `GameCenterAuthProvider.credential()`;
       enable the Game Center provider in Firebase Auth; pass `identity: GameCenterIdentity()` when
@@ -103,9 +112,15 @@ firebase-ios-sdk (12.19.0 since `firebase_analytics` ^12.6.0) or SPM resolution 
         counting ones (`vs_10`, `vs_50`, `ride_all`, `item_all`, `daily_7`, `daily_30`,
         `skin_all` report `percentComplete` on iOS only); reset with
         `Achievements.resetAchievements()` (a debug-only call; never ship it).
-  - [ ] Sign-in: the same rules as `GameCenterIdentity` above — never `GameAuth.signIn()` at
-        launch, never `GameAuth.isSignedIn`; unlocks are stored locally and reported by
-        `AchievementTracker.syncAll()` once the player stream has a player.
+  - [x] Sign-in: as `GameCenterIdentity` above (iOS authenticates at launch, never
+        `GameAuth.isSignedIn`); unlocks are stored locally and reported by
+        `AchievementTracker.syncAll()` once the player stream has a player, with Apple's native
+        completion banner (`showsCompletionBanner: true`; the game's own toast only while signed
+        out). The 48 `fs_ach_<key>` ids and points match App Store Connect (checked over the ASC
+        API 2026-10-15; none repeatable or archived). Game Center banners an achievement once,
+        when it first completes; the local `achReported` set keeps already-confirmed ones from
+        being re-sent. The first authenticated launch reports every earlier unlock at once (one
+        banner each). Logs: `flutter: FS-GC …` / `flutter: FS-Ach …` in the device console.
 - [x] **In-app purchase** (created in App Store Connect with the Android ids; the gift products
       are Play-only: never queried (`kShopProducts`) and Settings → Redeem code is hidden on iOS.
       Settings → Restore purchases exists on every platform (App Store requirement). Consumables
@@ -141,16 +156,31 @@ firebase-ios-sdk (12.19.0 since `firebase_analytics` ^12.6.0) or SPM resolution 
 | `lib/services/reminders.dart:688`, `:703–711`, `:740–751` | Android notification channel `reminders`, `RawResourceAndroidNotificationSound('notif_chime')` (`res/raw/notif_chime.ogg` + `res/raw/keep.xml`), small icon `ic_notif_bird` / large icon `ic_notif_large` (`res/drawable-*`) | iOS has no channels / small icons: nothing to port; add `notif_chime.caf` (§1). Darwin settings already exist (`:726`, `:813`) |
 | `lib/services/reminders.dart:726` | `DarwinInitializationSettings(request*Permission: false)` | Keep false: the game asks once through `requestPermissionIfNeeded()` (`:771`, `IOSFlutterLocalNotificationsPlugin.requestPermissions`) |
 | `lib/services/reminders.dart:817` | `AndroidScheduleMode.inexactAllowWhileIdle` | Android-only parameter, ignored on iOS. iOS caps pending local notifications at 64 — the plan keeps ≤ 14, fine |
-| `lib/game/rumble.dart:95` | `Vibration.vibrate(duration, amplitude)`; amplitude only when `hasAmplitudeControl` | On iOS the `vibration` plugin maps to Core Haptics where available; check knock (15 ms / 90) vs shake (45 ms / 255) feel on an iPhone. If they feel the same, put a `HapticFeedback.lightImpact()` / `heavyImpact()` path behind `Rumble` for iOS **Done 2026-10-15:** vibration 3.2.1 has amplitude via Core Haptics; iPhones without it get `HapticFeedback.lightImpact()` (knock) / `heavyImpact()` (shake). Feel still to check on an iPhone. |
+| `lib/game/rumble.dart:95` | `Vibration.vibrate(duration, amplitude)`; amplitude only when `hasAmplitudeControl` | On iOS the `vibration` plugin maps to Core Haptics where available; check knock (15 ms / 90) vs shake (45 ms / 255) feel on an iPhone. If they feel the same, put a `HapticFeedback.lightImpact()` / `heavyImpact()` path behind `Rumble` for iOS **Done 2026-10-15:** vibration 3.2.1 has amplitude via Core Haptics; iPhones without it get `HapticFeedback.lightImpact()` (knock) / `heavyImpact()` (shake). Feel still to check on an iPhone. **Round 2 (owner on the iPhone 12 Pro: soft barely felt):** the soft rumble (knock) is a button click on both platforms through the runner's `flappy_spikes/haptics` `click`: iOS `UIImpactFeedbackGenerator(.rigid)` at intensity 1.0, Android `EFFECT_HEAVY_CLICK` (API 29+, else a 20 ms full pulse). The hard rumble (shake) is unchanged. |
 | `lib/main.dart:81` | Reminders already run on iOS (`_isMobile`) | Works once the AppDelegate delegate (§1) is set; verify the permission prompt timing |
 | `lib/game/flappy_game.dart:208` | Debug panel on Linux / debug builds | Nothing (no Android branch) |
 | `assets/audio/` | 169 mp3 + 6 wav, no ogg in the game assets | Plays on iOS (AVPlayer). Loops are wav on purpose (`docs/gameplay-v2/SOUNDS.md`) |
 | `lib/game/sfx_pool.dart`, `lib/game/sound.dart` (PRD-2.2 §22 / §33.4) | SFX voices are fixed `PlayerVoice` sets (`PlayerMode.lowLatency` = Android SoundPool, which reports no duration); stop times come from `lib/game/sound_durations.g.dart`; one global audio context (`AudioPlayer.global`, mixWithOthers); `positionUpdater = null` on SFX, loops and music. Pure Dart, no Android-side code change | iOS uses the same duration table (no reliance on `getDuration`) and the same caps. On iOS `setPlayerMode` is a no-op, so each voice is a full AVPlayer: check the live player count (≈ 30 core voices + lazy pools ≤ `Config.sfxMaxLivePools`) and first-play latency on an iPhone; lower `Config.sfxVoices*` there if needed. The global mixWithOthers context maps to the AVAudioSession category (`.ambient`/mixWithOthers) |
 | `lib/game/idle_frames.dart` (PRD-2.2 §33.4 item 5) | Idle menus stop Flame's ticker between frames (30 fps) and restart it from a Dart timer; pure Dart, no Android-side code | Same on iOS. On ProMotion iPhones (120 Hz) check that the idle Home still looks smooth and that `Config.idleMenuWakeLead` lands on the right vsync |
 | `lib/services/audio_focus.dart`, `MainActivity.kt` `AudioWatch` (PRD-2.2 §28.3) | Android: other apps' calls / ringtones / alarms / assistant seen through `AudioManager.registerAudioPlaybackCallback` + the audio-mode listener (no focus request); "other music playing" = an active `USAGE_MEDIA` player that is not ours (ours are tagged `USAGE_GAME`). iOS uses `NoopAudioFocus` today | iOS: an `AVAudioSession.interruptionNotification` (began / ended) stream for `interruptions`, and `AVAudioSession.sharedInstance().secondaryAudioShouldBeSilencedHint` for `isOtherMusicActive` and `isOtherMediaListed` (the hint never counts our own audio; plus `silenceSecondaryAudioHintNotification`). Keep the `.ambient` / mixWithOthers category so the player's music keeps playing. A small `flappy_spikes/audio` channel in the iOS runner when iOS reopens. PRD-2.3 §13 added `changes` / `snapshot` (an `AudioWatchState`; iOS can map an interruption to `interrupted` and leave `notification` / `media` false) and `log` (os_log) **Done 2026-10-15:** `AudioWatch` in `AppDelegate.swift` (interruption → `interrupted`, the silence hint → `media` / `musicActive` and both music checks; `log` → os_log category `FS-Music`); Dart uses the same `PlatformAudioFocus`; the iOS session category is `.ambient` (`SoundService.gameAudioContext`, also set in `AppDelegate` at launch). |
-| `lib/game/music_backend.dart` (PRD-2.3 §16) | Android plays the 56-bar OGG through just_audio (`JustAudioMusic`) | iOS keeps `AudioplayersMusic` with the MP3 (`SoundService.musicFileFor(isIOS: true)`; iOS cannot play OGG Vorbis). When iOS reopens, check the MP3 seam on an iPhone; AVPlayer loops an MP3 with its encoder padding, so a 56-bar AAC/M4A cut from `tool/make_music_loop.py`'s float cut may be needed |
+| `lib/game/music_backend.dart` (PRD-2.3 §16) | Android plays the 56-bar OGG through just_audio (`JustAudioMusic`) | **Done (round 2):** iOS plays the identical loop, seamlessly: `tool/make_music_loop_ios.py` encodes the same float cut as AAC-LC 192k (`ios/Runner/HappyBeat_loop_56bars.m4a`, a Runner bundle resource so Android never ships it, 2.3 MB; seam check: downbeat −0.9 ms, no extra silence, no click). The runner's `LoopMusic` (`AppDelegate.swift`, `flappy_spikes/music`, Dart `NativeLoopMusic`) schedules the segment [priming, priming + L) back to back on an `AVAudioPlayerNode` (sample-exact; AVPlayer's loop re-seeks and gaps), Hourglass via `AVAudioUnitTimePitch`. The offset (0 or 1024) comes from `AVAudioFile.length`, so it is exact whether or not Core Audio applies the MP4 edit list. The SFX loops (`SfxLoop` wavs) also moved to a native `AVAudioPlayerNode` `.loops` player (`SfxLoops`, `flappy_spikes/loops`) for the same reason. |
 | `lib/main.dart` `SystemBackObserver`, `MainActivity.onCreate` (PRD-2.2 §8, S7-20) | Android system back (`WidgetsBindingObserver.didPopRoute`) goes to the game's back stack and is always reported as handled. Predictive back is on (`android:enableOnBackInvokedCallback="true"`; targetSdk 36 forces it): the engine's `OnBackInvokedCallback` is registered only while the framework claims back, so `MainActivity.onCreate` and `SystemBackObserver.install` (and every resume) call `setFrameworkHandlesBack(true)`; without it Android 14+ finished the activity. Sticky immersive mode spends the first edge swipe on revealing the bars, so the (see-through) navigation bar is shown while `game.systemBackWanted` (a menu / popup over Home) and hidden on Home and in runs | iOS has no system back: `didPopRoute` is never called and `setFrameworkHandlesBack` / the nav-bar toggle are Android-only no-ops, so nothing to port. No `ios/` edits |
 | `android/app/src/main/AndroidManifest.xml:10–22` | `AD_ID`, `VIBRATE`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`; Play Games app id meta-data; notification receivers | iOS equivalents: ATT string, notification permission at runtime, Game Center capability (already in `Runner.entitlements`) |
+
+## 3b. Audio after background / lock (round 2)
+
+Owner: background → lock → unlock → reopen: music gone for good, some SFX dead. Fixed defensively
+(no Mac, no device logs to pin the exact trigger): `AudioWatch` ignores "app was suspended"
+interruptions (iOS delivers them late and never ends them; one stuck `interrupted` silences the
+music and every SFX), re-activates the `.ambient` session on `didBecomeActive` and when an
+interruption ends, and probes a stale interruption while the app is active; the music runs on the
+native `LoopMusic`, whose state reports `stopped` when it should play but the engine is down (the
+§13.4 watchdog then restarts it; AVPlayer kept saying `playing`); every SFX player is created
+afresh after a media-services reset and after ≥ 20 s in the background
+(`SoundService.rebuildVoices`), and a voice that failed to load retries after 5 s instead of
+silencing that sound for the session. Device logs (Console / `idevicesyslog`): `FS-Music …`
+(os_log `.default`, category FS-Music: session, interruptions, the Dart music log, the loop
+player) and `flutter: FS-Audio …` (voice rebuilds, failed voices, dropped first plays).
 
 ## 4. Verification on iOS
 

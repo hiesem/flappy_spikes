@@ -106,8 +106,11 @@ step 2 is built:** `lib/game/music_backend.dart`, `JustAudioMusic`:
   volume / duck → `setVolume(musicVolume × duck)`; Hourglass → `setSpeed`;
 - no `positionStream`: only `playerStateStream` (the watchdog's state);
 - the FS_SOAK counter counts it as one music player;
-- Linux desktop (no just_audio backend) and iOS (paused, MP3) keep
-  `FlameAudio.bgm` (`AudioplayersMusic`).
+- Linux desktop (no just_audio backend) keeps `FlameAudio.bgm`
+  (`AudioplayersMusic`). iOS (round 2, 2026-10-15) plays the same loop as AAC
+  (`tool/make_music_loop_ios.py` → `ios/Runner/HappyBeat_loop_56bars.m4a`) on
+  the runner's `LoopMusic` (`AVAudioPlayerNode`, segments back to back;
+  `NativeLoopMusic`); see PORT-IOS.md §3.
 
 **Not measured on the phone** (needs a run on the device, the counter method
 works the same): a wrap during an Hourglass slow-down and a wrap while the

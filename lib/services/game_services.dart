@@ -219,12 +219,33 @@ class GameServices {
     _playerId = player?.playerID;
     if (player != null && (!_announcedPlayer || before != _playerId)) {
       _announcedPlayer = true;
+      unawaited(_resetGameCenterIfAsked());
       _notifyAchievementPlayer();
     }
     if (player == null) _announcedPlayer = false;
   }
 
   bool _announcedPlayer = false;
+
+  bool _resetChecked = false;
+
+  /// Test only: a launch with the `-FSResetGameCenter` argument (only
+  /// WebDriverAgent / Xcode can pass one; App Store launches can't) resets
+  /// the signed-in player's Game Center achievements once, so the test
+  /// iPhone can start as a new player. iOS only; never runs otherwise.
+  Future<void> _resetGameCenterIfAsked() async {
+    if (_resetChecked || !Platform.isIOS) return;
+    _resetChecked = true;
+    try {
+      final args = await const MethodChannel('flappy_spikes/device')
+          .invokeListMethod<String>('launchArgs');
+      if (args == null || !args.contains('-FSResetGameCenter')) return;
+      final r = await GamesServices.resetAchievements();
+      diag('FS-GC reset achievements: ${r ?? 'ok'}');
+    } catch (e) {
+      diag('FS-GC reset achievements FAILED: $e');
+    }
+  }
 
   void _notifyAchievementPlayer() {
     try {

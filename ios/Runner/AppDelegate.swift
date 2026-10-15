@@ -43,7 +43,25 @@ import os.log
     sfxLoops = loops
     audioWatch = AudioWatch(messenger: messenger, music: music, loops: loops)
     haptics = Haptics(messenger: messenger)
+    // The iOS side of `flappy_spikes/device` (Android: MainActivity.kt).
+    // `launchArgs`: the process arguments, so a test run launched with
+    // `-FSResetGameCenter` (WebDriverAgent / Xcode only; App Store users
+    // can't pass launch arguments) can reset the player's achievements.
+    let device = FlutterMethodChannel(name: "flappy_spikes/device", binaryMessenger: messenger)
+    device.setMethodCallHandler { call, result in
+      switch call.method {
+      case "isTestLab":
+        result(false)
+      case "launchArgs":
+        result(ProcessInfo.processInfo.arguments)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+    deviceChannel = device
   }
+
+  private var deviceChannel: FlutterMethodChannel?
 }
 
 /// Release-visible device log. iOS streams `.default` (and above) to the

@@ -1379,6 +1379,14 @@ class Config {
   /// played for this long is disposed (its players too) ...
   static const int sfxPoolIdleDisposeMs = 180000;
 
+  /// iOS round 2 §2: a sound whose first voice failed to load tries again
+  /// on a play this long after the failure (no retry storm).
+  static const int sfxRetryFailedMs = 5000;
+
+  /// iOS round 2 §2: back from at least this long in the background (iOS),
+  /// the sound-effect voices are rebuilt ([SoundService.rebuildVoices]).
+  static const Duration iosVoiceRebuildAfter = Duration(seconds: 20);
+
   /// ... and at most this many pools stay alive (least recently used idle
   /// pools go first). With ≤ 6 players each this bounds the native players.
   /// §33.6 (S7-19): 56 = the pinned session set (`SoundService.prewarmed` +

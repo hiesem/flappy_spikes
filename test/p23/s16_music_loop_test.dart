@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:audio_session/audio_session.dart';
 import 'package:flappy_spikes/game/music_backend.dart';
 import 'package:flappy_spikes/game/sound.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:just_audio/just_audio.dart' as ja;
 
@@ -172,22 +172,100 @@ void main() {
   });
 
   group('§16.3 the music file per platform', () {
-    test('Android and Linux get the OGG, iOS gets the MP3', () {
+    test('Android and Linux get the OGG asset, iOS the same loop as AAC in '
+        'the Runner bundle (iOS round 2 §1)', () {
       expect(
         SoundService.musicFileFor(isIOS: false),
         'HappyBeat_loop_56bars.ogg',
       );
       expect(
         SoundService.musicFileFor(isIOS: true),
-        'HappyBeat_8-Bit_Retro_Game_Loop.mp3',
+        'HappyBeat_loop_56bars.m4a',
       );
-      // Both files ship (the MP3 stays for iOS).
-      for (final f in [
-        SoundService.musicFileFor(isIOS: false),
-        SoundService.musicFileFor(isIOS: true),
-      ]) {
-        expect(File('assets/audio/$f').existsSync(), isTrue, reason: f);
-      }
+      expect(
+        File(
+          'assets/audio/${SoundService.musicFileFor(isIOS: false)}',
+        ).existsSync(),
+        isTrue,
+      );
+      // iOS: a Runner bundle resource (Android never ships it), listed in
+      // the Runner target's resources.
+      final m4a = File('ios/Runner/${SoundService.iosMusicFile}');
+      expect(m4a.existsSync(), isTrue);
+      expect(m4a.lengthSync(), lessThan(3 * 1024 * 1024));
+      final pbx = File(
+        'ios/Runner.xcodeproj/project.pbxproj',
+      ).readAsStringSync();
+      expect(pbx, contains('${SoundService.iosMusicFile} in Resources */,'));
+    });
+
+    test('the iOS loop: AAC in MP4, 44 100 Hz, edit list = 1024 priming '
+        'samples + 4 059 616 (the LoopMusic offset table)', () {
+      final b = File(
+        'ios/Runner/${SoundService.iosMusicFile}',
+      ).readAsBytesSync();
+      int u32be(int i) =>
+          b[i] << 24 | b[i + 1] << 16 | b[i + 2] << 8 | b[i + 3];
+      final elst = indexOf(b, 'elst'.codeUnits);
+      expect(elst, greaterThan(0));
+      final v = b[elst + 4];
+      expect(v, 0, reason: 'version 0 edit list (ffmpeg)');
+      expect(u32be(elst + 8), 1, reason: 'one entry');
+      final mvhd = indexOf(b, 'mvhd'.codeUnits);
+      final movieScale = u32be(mvhd + 4 + 12);
+      final duration = u32be(elst + 12);
+      final mediaTime = u32be(elst + 16);
+      expect(mediaTime, 1024);
+      expect((duration * 44100 / movieScale).round(), 4059616);
+      final mdhd = indexOf(b, 'mdhd'.codeUnits);
+      expect(u32be(mdhd + 4 + 12), 44100);
+      expect(indexOf(b, 'mp4a'.codeUnits), greaterThan(0));
+    });
+  });
+
+  group('iOS round 2 §1: the native loop backend (fake channel)', () {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    const channel = MethodChannel('flappy_spikes/music');
+    final calls = <String>[];
+    var answer = 'playing';
+    setUp(() {
+      calls.clear();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            calls.add(
+              call.arguments == null
+                  ? call.method
+                  : '${call.method} ${call.arguments}',
+            );
+            return answer;
+          });
+    });
+    tearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    test('start / pause / resume / stop / volume / rate reach the runner; '
+        'the state is the runner\'s last answer', () async {
+      final music = NativeLoopMusic();
+      expect(music.state, 'none');
+      await music.start(SoundService.iosMusicFile, volume: .35, rate: .72);
+      await music.setVolume(.5);
+      await music.setRate(1);
+      await music.pause();
+      await music.resume();
+      answer = 'stopped';
+      await music.stop();
+      expect(calls, [
+        'state',
+        'start {file: HappyBeat_loop_56bars.m4a, volume: 0.35, rate: 0.72}',
+        'setVolume {volume: 0.5}',
+        'setRate {rate: 1.0}',
+        'pause',
+        'resume',
+        'stop',
+      ]);
+      expect(music.state, 'stopped');
     });
   });
 

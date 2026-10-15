@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 import 'package:audio_session/audio_session.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:just_audio/just_audio.dart' as ja;
 
 import 'audio_counter.dart';
@@ -15,12 +16,19 @@ import 'audio_counter.dart';
 /// - Android: [JustAudioMusic] (ExoPlayer, `LoopMode.one`), step 2 of §16.4:
 ///   audioplayers' `MediaPlayer` loop left a 250–265 ms gap at every wrap of
 ///   the OGG on the Pixel 6 (docs/p23/MUSIC.md).
-/// - Linux desktop (just_audio has no Linux backend) and iOS (paused, MP3):
-///   [AudioplayersMusic], the 2.2 path (`FlameAudio.bgm`).
+/// - iOS (round 2): [NativeLoopMusic], the runner's `LoopMusic`
+///   (`AVAudioPlayerNode`, the AAC loop scheduled back to back: seamless);
+///   AVPlayer's loop (audioplayers) re-seeks at the end and leaves a gap.
+/// - Linux desktop (just_audio has no Linux backend): [AudioplayersMusic],
+///   the 2.2 path (`FlameAudio.bgm`).
 abstract class MusicBackend {
   /// Loads [file] (in assets/audio) and plays it looping from the start at
   /// [volume] and [rate].
-  Future<void> start(String file, {required double volume, required double rate});
+  Future<void> start(
+    String file, {
+    required double volume,
+    required double rate,
+  });
 
   /// Pauses, keeping the position.
   Future<void> pause();
@@ -45,12 +53,13 @@ abstract class MusicBackend {
     required Future<void> Function() audioContext,
   }) {
     if (!kIsWeb && Platform.isAndroid) return JustAudioMusic();
+    if (!kIsWeb && Platform.isIOS) return NativeLoopMusic();
     return AudioplayersMusic(audioContext);
   }
 }
 
 /// The 2.2 music player: `FlameAudio.bgm` (audioplayers, Android
-/// `MediaPlayer` with `isLooping`). Linux desktop and iOS.
+/// `MediaPlayer` with `isLooping`). Linux desktop.
 class AudioplayersMusic implements MusicBackend {
   AudioplayersMusic(this._context);
 
@@ -59,7 +68,11 @@ class AudioplayersMusic implements MusicBackend {
   bool _initialized = false;
 
   @override
-  Future<void> start(String file, {required double volume, required double rate}) async {
+  Future<void> start(
+    String file, {
+    required double volume,
+    required double rate,
+  }) async {
     final bgm = FlameAudio.bgm;
     if (!_initialized) {
       // §28.3 mixWithOthers (the player's own music keeps playing);
@@ -211,7 +224,11 @@ class JustAudioMusic implements MusicBackend {
   }
 
   @override
-  Future<void> start(String file, {required double volume, required double rate}) async {
+  Future<void> start(
+    String file, {
+    required double volume,
+    required double rate,
+  }) async {
     final p = _ensure();
     final asset = 'assets/audio/$file';
     if (_loaded != asset) {
@@ -259,5 +276,63 @@ class JustAudioMusic implements MusicBackend {
 
   Future<void> dispose() async {
     await _stateSub?.cancel();
+  }
+}
+
+/// iOS round 2 §1: the music on the runner's `LoopMusic`
+/// (`AppDelegate.swift`, channel `flappy_spikes/music`): the 56-bar AAC
+/// loop (`ios/Runner/HappyBeat_loop_56bars.m4a`, a bundle resource made by
+/// `tool/make_music_loop_ios.py` from the same float cut as Android's OGG)
+/// played seamlessly on an `AVAudioPlayerNode`.
+///
+/// Every call answers with the native state (`none`, `playing`, `paused`,
+/// `stopped`); [state] returns the last answer and asks again in the
+/// background, so the §13.4 watchdog sees a music that should play but
+/// whose engine stopped (`stopped`) and restarts it.
+class NativeLoopMusic implements MusicBackend {
+  NativeLoopMusic({MethodChannel? channel})
+    : _channel = channel ?? const MethodChannel('flappy_spikes/music');
+
+  final MethodChannel _channel;
+  String _state = 'none';
+  bool _refreshing = false;
+
+  Future<void> _call(String method, [Map<String, Object?>? args]) async {
+    final answer = await _channel.invokeMethod<String>(method, args);
+    if (answer != null) _state = answer;
+  }
+
+  @override
+  Future<void> start(
+    String file, {
+    required double volume,
+    required double rate,
+  }) => _call('start', {'file': file, 'volume': volume, 'rate': rate});
+
+  @override
+  Future<void> pause() => _call('pause');
+
+  @override
+  Future<void> resume() => _call('resume');
+
+  @override
+  Future<void> stop() => _call('stop');
+
+  @override
+  Future<void> setVolume(double volume) =>
+      _call('setVolume', {'volume': volume});
+
+  @override
+  Future<void> setRate(double rate) => _call('setRate', {'rate': rate});
+
+  @override
+  String get state {
+    if (!_refreshing) {
+      _refreshing = true;
+      _call(
+        'state',
+      ).catchError((Object _) {}).whenComplete(() => _refreshing = false);
+    }
+    return _state;
   }
 }

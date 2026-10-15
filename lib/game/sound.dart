@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import 'audio_counter.dart';
 import 'config.dart';
+import 'diag.dart';
 import 'music_backend.dart';
 import 'music_log.dart';
 import 'sfx_pool.dart';
@@ -450,10 +451,14 @@ class SoundService {
   static const Set<Sfx> _burstPool = {Sfx.bnCoin, Sfx.skTick, Sfx.piggyCoin};
 
   /// PRD-2.3 §16.3: the seamless 56-bar OGG loop on Android and the Linux
-  /// desktop build; iOS (paused, no OGG Vorbis) keeps the MP3.
-  static String musicFileFor({required bool isIOS}) => isIOS
-      ? 'HappyBeat_8-Bit_Retro_Game_Loop.mp3'
-      : 'HappyBeat_loop_56bars.ogg';
+  /// desktop build. iOS (no OGG Vorbis) plays the same loop as AAC, a
+  /// Runner bundle resource (not a Flutter asset) played by the runner's
+  /// `LoopMusic` ([NativeLoopMusic], iOS round 2 §1).
+  static String musicFileFor({required bool isIOS}) =>
+      isIOS ? iosMusicFile : 'HappyBeat_loop_56bars.ogg';
+
+  /// The iOS music loop in `ios/Runner/` (`tool/make_music_loop_ios.py`).
+  static const String iosMusicFile = 'HappyBeat_loop_56bars.m4a';
 
   static String get _musicFile =>
       musicFileFor(isIOS: !kIsWeb && Platform.isIOS);
@@ -493,6 +498,10 @@ class SoundService {
   /// One creation per sound (also when it failed: no retry storm). An
   /// evicted pool's entry is removed so it can be created again.
   final Map<Sfx, Future<void>> _creating = {};
+
+  /// iOS round 2: when a pool's first voice last failed to load; its sound
+  /// tries again after [Config.sfxRetryFailedMs].
+  final Map<Sfx, int> _failedAtMs = {};
 
   /// First plays of lazily created pools, waiting for their pool (when the
   /// request was made).
@@ -648,6 +657,8 @@ class SoundService {
     // the project bans (CLAUDE.md: preloaded low-latency pools only).
     if (pool == null) {
       unawaited(_initPools());
+      final failed = _failedAtMs[sfx];
+      if (failed != null && _nowMs - failed < Config.sfxRetryFailedMs) return;
       if (!prewarmed.contains(sfx) && !_creating.containsKey(sfx)) {
         // First request of a lazy pool: create it and play this request
         // once it is ready (if that is quick enough).
@@ -909,17 +920,36 @@ class SoundService {
         nowMs: _nowMs,
       )..onStopped = debugOnStop;
       final first = await _newVoice(file);
-      if (first == null) return; // never became ready: stay silent
+      if (first == null) {
+        // Never became ready: stay silent. iOS round 2: logged, and the
+        // creation is forgotten so a later play tries again (a voice that
+        // failed once, e.g. while the app was coming back from the
+        // background, no longer silences that sound for the session).
+        diag('FS-Audio voice FAILED $file (pool not created; retried later)');
+        if (gen == _generation) {
+          _creating.remove(sfx);
+          _failedAtMs[sfx] = _nowMs;
+        }
+        return;
+      }
       if (stale(first)) return;
       pool.add(first);
       _pools[sfx] = pool;
+      _failedAtMs.remove(sfx);
       final asked = _pendingFirst.remove(sfx);
-      if (asked != null &&
-          enabled &&
-          !muted &&
-          !_sfxSilenced &&
-          DateTime.now().difference(asked) <= firstPlayLateLimit) {
-        pool.play(_nowMs);
+      if (asked != null) {
+        final waited = DateTime.now().difference(asked);
+        if (enabled &&
+            !muted &&
+            !_sfxSilenced &&
+            waited <= firstPlayLateLimit) {
+          pool.play(_nowMs);
+        } else {
+          diag(
+            'FS-Audio first play of $file dropped '
+            '(${waited.inMilliseconds} ms to load, silenced=$_sfxSilenced)',
+          );
+        }
       }
       _trimPools();
       while (!pool.disposed && pool.voiceCount < pool.capacity) {
@@ -965,10 +995,11 @@ class SoundService {
     stale.forEach(_evict);
     if (_pools.length <= Config.sfxMaxLivePools) return;
     // The latest preload (the ride about to happen) is kept (S7-11).
-    final lru = _pools.entries
-        .where((e) => evictable(e) && !_reserved.contains(e.key))
-        .toList()
-      ..sort((a, b) => a.value.lastUsedMs.compareTo(b.value.lastUsedMs));
+    final lru =
+        _pools.entries
+            .where((e) => evictable(e) && !_reserved.contains(e.key))
+            .toList()
+          ..sort((a, b) => a.value.lastUsedMs.compareTo(b.value.lastUsedMs));
     for (final e in lru) {
       if (_pools.length <= Config.sfxMaxLivePools) break;
       _evict(e.key);
@@ -991,6 +1022,39 @@ class SoundService {
       // Audio failure must never take the game down.
     }
   }
+
+  /// iOS round 2 §2: disposes every sound-effect pool and creates the core
+  /// and session sets again (fresh native players), keeping the loops and
+  /// the music. iOS: after a media-services reset (every AVPlayer is
+  /// invalid) and on the return from a long background (a player whose item
+  /// failed while the app was suspended plays nothing and never says so).
+  /// The global audio context is applied again first.
+  Future<void> rebuildVoices(String reason) async {
+    rebuilds++;
+    if (!enabled) return;
+    diag('FS-Audio rebuild voices ($reason): ${debugStats()}');
+    _generation++;
+    _poolsStarted = false;
+    final pools = List.of(_pools.values);
+    _pools.clear();
+    _creating.clear();
+    _inflight.clear();
+    _pendingFirst.clear();
+    _runEnded.clear();
+    _failedAtMs.clear();
+    _globalContext = null;
+    await Future.wait(pools.map((p) => p.dispose()));
+    if (muted) return;
+    if (_sessionPinned) {
+      await warmSession();
+    } else {
+      await _initPools();
+    }
+    diag('FS-Audio rebuild voices done ($reason): ${debugStats()}');
+  }
+
+  /// [rebuildVoices] runs so far (tests / diagnostics).
+  int rebuilds = 0;
 
   /// Teardown: disposes every pool and loop (never needed in a normal
   /// session; tests and the soak use it).
@@ -1103,8 +1167,9 @@ class SoundService {
 
   MusicBackend? _musicBackend;
 
-  /// PRD-2.3 §16.4: the music player (Android: just_audio; Linux / iOS:
-  /// audioplayers' `FlameAudio.bgm`). Replaceable in tests.
+  /// PRD-2.3 §16.4: the music player (Android: just_audio; iOS: the
+  /// runner's `LoopMusic`; Linux: audioplayers' `FlameAudio.bgm`).
+  /// Replaceable in tests.
   MusicBackend get musicBackend => _musicBackend ??= MusicBackend.forPlatform(
     audioContext: () =>
         FlameAudio.bgm.audioPlayer.setAudioContext(gameAudioContext()),

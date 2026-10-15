@@ -111,6 +111,13 @@ class MusicGuard {
 
   /// A playback change from the platform (or a re-check's answer).
   void apply(AudioWatchState s) {
+    // iOS round 2 §2: the media services were reset since the last answer:
+    // every native sound-effect player is invalid (the runner rebuilds the
+    // music engine itself).
+    if (s.resets > _last.resets) {
+      sound.logMusic('media-services-reset');
+      unawaited(sound.rebuildVoices('media-services-reset'));
+    }
     _last = s;
     sound.setInterrupted(s.interrupted);
     // Only actively playing players count: where the platform cannot say,

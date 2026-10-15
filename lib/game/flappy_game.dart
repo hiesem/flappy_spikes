@@ -10,6 +10,7 @@ import 'package:flame_forge2d/flame_forge2d.dart';
 import 'package:flutter/foundation.dart'
     show
         TargetPlatform,
+        visibleForTesting,
         ValueListenable,
         ValueNotifier,
         debugPrint,
@@ -186,7 +187,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // PRD-2.2 §33.4 item 5: the engine stops in the background and resumes
     // on return (Flame's default, kept explicit: see lifecycleStateChange).
     pauseWhenBackgrounded = true;
-    achievements = AchievementTracker(storage: storage, services: this.services);
+    achievements = AchievementTracker(
+      storage: storage,
+      services: this.services,
+    );
   }
 
   /// PRD-2.3.1 §12.3 the achievement tracker (local truth + platform sync).
@@ -2454,7 +2458,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // equip's analytics so both paths log the same events.
     services.logItemEquip(item.layer, item.id);
     // PRD-2.3.1 §12.2 / §12.5 the shop always counts; its toast shows at once.
-    achievements.onShopPurchase(owned: items.ownedCount, total: kCollectibleTotal);
+    achievements.onShopPurchase(
+      owned: items.ownedCount,
+      total: kCollectibleTotal,
+    );
     // QA P19: the toast is queued once the unlock is durable.
     unawaited(achievements.flush().then((_) => showAchievementToasts()));
     _coinPill
@@ -3063,6 +3070,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// [sound] exists (lifecycle events can arrive before onLoad made it).
   bool _soundReady = false;
 
+  /// iOS round 2: the iOS-only audio steps (a test seam).
+  @visibleForTesting
+  bool Function() isIOS = () => !kIsWeb && Platform.isIOS;
+
   /// When the last full-screen ad ended (any outcome): the ad's own player
   /// may still be listed as "other music" right after it closes.
   DateTime? _lastAdEndedAt;
@@ -3113,6 +3124,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       return;
     }
     musicGuard.onForeground();
+    // iOS round 2 §2: after a long background (the app was suspended, the
+    // screen locked) the sound-effect players are created afresh: an
+    // AVPlayer whose item failed meanwhile plays nothing and never says so.
+    final since = _backgroundSince;
+    final away = since == null ? null : storage.now().difference(since);
+    sound.logMusic(
+      'foreground-check away=${away?.inSeconds ?? -1}s '
+      'hold=${sound.musicHoldReason ?? '-'}',
+    );
+    if (isIOS() && away != null && away >= Config.iosVoiceRebuildAfter) {
+      unawaited(sound.rebuildVoices('foreground after ${away.inSeconds}s'));
+    }
     if (_adsShowing == 0) sound.clearSuspend();
     if (!sound.background) return;
     if (_adsShowing > 0 || _adJustEnded) {
@@ -4410,9 +4433,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (achievementToast != null) return;
     final queue = achievements.toastQueue;
     if (queue.isEmpty) return;
-    final toast = AchievementToast(queue: queue, onDone: () {
-      _achToast = null;
-    });
+    final toast = AchievementToast(
+      queue: queue,
+      onDone: () {
+        _achToast = null;
+      },
+    );
     _achToast = toast;
     world.add(toast);
   }

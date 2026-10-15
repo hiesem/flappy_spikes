@@ -1,0 +1,123 @@
+import 'package:flame/components.dart';
+import 'package:flame_test/flame_test.dart';
+import 'package:flappy_spikes/game/config.dart';
+import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/game/sound.dart';
+import 'package:flappy_spikes/services/audio_focus.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleState;
+import 'package:flutter_test/flutter_test.dart';
+
+import '../helpers.dart';
+import '../p22/fake_audio.dart';
+
+/// iOS round 2 §2: audio after the background / a lock / a media-services
+/// reset.
+void main() {
+  final session = {...SoundService.prewarmed, ...SoundService.sessionWarm};
+
+  group('SoundService.rebuildVoices', () {
+    test('disposes every voice and creates the core + session set again; '
+        'loops are kept', () async {
+      final audio = FakeAudio();
+      final sound = audio.service();
+      await sound.warmSession();
+      await flushAudio();
+      final before = audio.live;
+      final loop = sound.loop(SfxLoop.values.first);
+      await flushAudio();
+      final firstVoices = List.of(audio.voices);
+      await sound.rebuildVoices('test');
+      await flushAudio();
+      expect(sound.rebuilds, 1);
+      expect(firstVoices.every((v) => v.disposed), isTrue);
+      expect(audio.live, before, reason: 'the same set, fresh players');
+      for (final s in session) {
+        expect(sound.poolOf(s), isNotNull, reason: '$s');
+      }
+      expect(loop.stopped, isFalse);
+      await sound.dispose();
+    });
+
+    test('a sound whose first voice failed tries again after '
+        'Config.sfxRetryFailedMs (never on every play)', () async {
+      var now = 0;
+      final audio = FakeAudio()..failing.add('sk_close.mp3');
+      final sound = audio.service()..clockMs = () => now;
+      sound.play(Sfx.skClose);
+      await flushAudio();
+      expect(sound.poolOf(Sfx.skClose), isNull);
+      audio.failing.clear();
+      now = Config.sfxRetryFailedMs - 1;
+      sound.play(Sfx.skClose);
+      await flushAudio();
+      expect(sound.poolOf(Sfx.skClose), isNull, reason: 'cool-down');
+      now = Config.sfxRetryFailedMs + 1;
+      sound.play(Sfx.skClose);
+      await flushAudio();
+      expect(sound.poolOf(Sfx.skClose), isNotNull);
+      await sound.dispose();
+    });
+  });
+
+  group('the game', () {
+    var now = DateTime(2026, 10, 15, 12);
+    final focus = FakeAudioFocus();
+    final tester = FlameTester<FlappySpikesGame>(
+      () =>
+          createRunTestGame(worldHeight: 711, clock: () => now)
+            ..audioFocus = focus,
+      gameSize: Vector2(320, 711),
+    );
+
+    Future<void> boot(FlappySpikesGame g, WidgetTester _) async {
+      await g.ready();
+      await preloadImages(g);
+      await flushAndMount(g);
+    }
+
+    tester.testGameWidget(
+      'a media-services reset (iOS AudioWatch `resets`) rebuilds the voices',
+      setUp: boot,
+      verify: (g, _) async {
+        expect(g.sound.rebuilds, 0);
+        focus.push(const AudioWatchState(resets: 1));
+        await flushAndMount(g);
+        expect(g.sound.rebuilds, 1);
+        focus.push(const AudioWatchState(resets: 1));
+        await flushAndMount(g);
+        expect(g.sound.rebuilds, 1, reason: 'once per reset');
+      },
+    );
+
+    tester.testGameWidget(
+      'iOS: back from >= 20 s in the background rebuilds the voices; a '
+      'short trip or Android does not',
+      setUp: boot,
+      verify: (g, _) async {
+        void away(Duration d) {
+          g.lifecycleStateChange(AppLifecycleState.inactive);
+          g.lifecycleStateChange(AppLifecycleState.hidden);
+          g.lifecycleStateChange(AppLifecycleState.paused);
+          now = now.add(d);
+          g.lifecycleStateChange(AppLifecycleState.hidden);
+          g.lifecycleStateChange(AppLifecycleState.inactive);
+          g.lifecycleStateChange(AppLifecycleState.resumed);
+        }
+
+        away(const Duration(minutes: 5));
+        expect(g.sound.rebuilds, 0, reason: 'not iOS');
+        g.isIOS = () => true;
+        away(const Duration(seconds: 5));
+        expect(g.sound.rebuilds, 0, reason: 'short trip');
+        away(Config.iosVoiceRebuildAfter);
+        expect(g.sound.rebuilds, 1);
+        expect(
+          g.sound.musicLog.events.where(
+            (e) => e.startsWith('foreground-check'),
+          ),
+          isNotEmpty,
+        );
+      },
+    );
+  });
+}

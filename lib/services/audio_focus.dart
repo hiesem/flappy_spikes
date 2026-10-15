@@ -58,6 +58,7 @@ class AudioWatchState {
     this.musicActive = false,
     this.stateKnown = true,
     this.players = const [],
+    this.resets = 0,
   });
 
   /// A call / ringtone / alarm / assistant plays (or the audio mode is a
@@ -82,6 +83,12 @@ class AudioWatchState {
   /// playing, ? unknown).
   final List<String> players;
 
+  /// iOS round 2 §2: media-services resets so far (iOS
+  /// `mediaServicesWereResetNotification`; every native player is invalid
+  /// after one, so the game rebuilds its sound-effect voices). Always 0 on
+  /// Android.
+  final int resets;
+
   static AudioWatchState fromPlatform(Object? e) {
     if (e is Map) {
       return AudioWatchState(
@@ -91,6 +98,7 @@ class AudioWatchState {
         musicActive: e['musicActive'] == true,
         stateKnown: e['stateKnown'] != false,
         players: [for (final p in (e['players'] as List?) ?? const []) '$p'],
+        resets: e['resets'] is int ? e['resets'] as int : 0,
       );
     }
     // A bare bool (2.2 payload): the interruption flag.
@@ -100,7 +108,8 @@ class AudioWatchState {
   /// The diagnostic-log form: `[5:1,1:0] music=1 known=1`.
   String get logLine =>
       '[${players.join(',')}] music=${musicActive ? 1 : 0}'
-      '${stateKnown ? '' : ' known=0'}';
+      '${stateKnown ? '' : ' known=0'}'
+      '${interrupted ? ' int=1' : ''}${resets > 0 ? ' resets=$resets' : ''}';
 }
 
 /// Tests, Linux: nothing is ever interrupted.

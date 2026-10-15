@@ -49,9 +49,13 @@ Future<void> _shot(FlappySpikesGame game, String name) async {
     format: ui.ImageByteFormat.png,
   ))!.buffer.asUint8List();
   image.dispose();
-  final file = File('$_evidence/$name.png');
-  await file.parent.create(recursive: true);
-  await file.writeAsBytes(bytes);
+  // Evidence only: CI has no such folder, so a write failure never fails
+  // the test.
+  try {
+    final file = File('$_evidence/$name.png');
+    await file.parent.create(recursive: true);
+    await file.writeAsBytes(bytes);
+  } on FileSystemException catch (_) {}
 }
 
 /// Opens the list instead of the plugin.

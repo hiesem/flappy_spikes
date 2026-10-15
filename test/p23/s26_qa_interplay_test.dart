@@ -88,8 +88,11 @@ void main() async {
     await t.runAsync(() async {
       await captureShot(g, 1, name);
       final file = File('build/menu_shots/$name.png');
-      await Directory(_evidence).create(recursive: true);
-      await file.copy('$_evidence/$name.png');
+      // Evidence only (no such folder on CI).
+      try {
+        await Directory(_evidence).create(recursive: true);
+        await file.copy('$_evidence/$name.png');
+      } on FileSystemException catch (_) {}
       final codec = await ui.instantiateImageCodec(await file.readAsBytes());
       final frame = await codec.getNextFrame();
       final bytes = (await frame.image.toByteData())!;

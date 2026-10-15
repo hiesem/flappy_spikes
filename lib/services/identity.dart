@@ -24,8 +24,7 @@ class PlatformPlayer {
 }
 
 /// Platform identity behind a small interface (ARCH §8: platform code stays
-/// in `lib/services/`). Android = Play Games; iOS = Game Center (a stub
-/// until iOS work reopens).
+/// in `lib/services/`). Android = Play Games; iOS = Game Center.
 abstract class PlatformIdentity {
   /// 'android' | 'ios'.
   String get platform;
@@ -88,14 +87,53 @@ class PlayGamesIdentity implements PlatformIdentity {
   }
 }
 
-/// Game Center (iOS) — a stub until iOS work is reopened (ARCH §6.4): no
-/// player, no credential; iOS players duel with their nickname. Later:
-/// `GameCenterAuthProvider.credential()` and the Game Center name/avatar.
+/// Game Center (iOS, PORT-IOS §2): the player comes from `GameAuth.player`
+/// (games_services reports the authenticated `GKLocalPlayer`; the same
+/// rules as Android: never `GameAuth.signIn()` at launch, never
+/// `GameAuth.isSignedIn`). The link credential is
+/// `GameCenterAuthProvider.credential()`: Firebase Auth fetches the Game
+/// Center identity-verification signature natively when it is used, so
+/// every credential is fresh and [firebaseCredential]'s `fresh` changes
+/// nothing. The Game Center provider is enabled in Firebase Auth.
 class GameCenterIdentity implements PlatformIdentity {
-  const GameCenterIdentity();
+  GameCenterIdentity();
+
+  PlatformPlayer? _last;
 
   @override
   String get platform => 'ios';
+
+  @override
+  Stream<PlatformPlayer?> get player => GameAuth.player.map((p) {
+    _last = p == null
+        ? null
+        : PlatformPlayer(
+            // Null when Game Center's scoped ids are not persistent.
+            id: p.playerID ?? '',
+            displayName: p.displayName,
+            iconImage: p.iconImage ?? '',
+          );
+    return _last;
+  });
+
+  @override
+  Future<AuthCredential?> firebaseCredential({bool fresh = false}) async {
+    if (_last == null) return null;
+    try {
+      return GameCenterAuthProvider.credential();
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+/// No platform games account (tests, desktop): no player, no credential;
+/// the player duels with their nickname.
+class NoPlatformIdentity implements PlatformIdentity {
+  const NoPlatformIdentity({this.platform = 'ios'});
+
+  @override
+  final String platform;
 
   @override
   Stream<PlatformPlayer?> get player => const Stream.empty();

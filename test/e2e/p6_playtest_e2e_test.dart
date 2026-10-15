@@ -58,7 +58,7 @@ void main() {
     final service = FirebaseVersusService(
       storageOf: () => game.storage,
       backend: backend,
-      identity: const GameCenterIdentity(), // empty stream; no native identity
+      identity: const NoPlatformIdentity(), // empty stream; no native identity
     );
 
     FlameTester<FlappySpikesGame>(
@@ -101,7 +101,7 @@ void main() {
     final service = FirebaseVersusService(
       storageOf: () => game.storage,
       backend: _UnavailableBackend(),
-      identity: const GameCenterIdentity(),
+      identity: const NoPlatformIdentity(),
     );
     FlameTester<FlappySpikesGame>(
       () => game = createRunTestGame(

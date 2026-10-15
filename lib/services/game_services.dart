@@ -68,9 +68,9 @@ class GameServices {
   @visibleForTesting
   Duration pluginTimeout = const Duration(seconds: 10);
 
-  /// Game Center leaderboard ID (App Store Connect). Same ID the 2014
-  /// original used.
-  static const String iosLeaderboardId = 'flappy_spikes_leaderboard';
+  /// Game Center leaderboard ID (App Store Connect, "Top Scores"; the new
+  /// app record, not the 2014 original's `flappy_spikes_leaderboard`).
+  static const String iosLeaderboardId = 'fs_top_scores';
 
   /// Google Play Games leaderboard ID (Play Console, "Top Scores").
   static const String androidLeaderboardId = 'CgkIsZz8pvUOEAIQAA';

@@ -23,6 +23,7 @@ import 'services/tuning.dart';
 import 'services/tuning_firebase.dart';
 import 'run/config/versus_config.dart';
 import 'services/avatars.dart';
+import 'services/identity.dart';
 import 'services/versus_service.dart';
 import 'share/share_flow.dart';
 
@@ -127,12 +128,14 @@ Future<void> main() async {
   // endregion WP-0b
 
   // region WP-5b — versus (PRD-2 §3.13): the Firebase service on Android
-  // only (iOS later, Linux desktop never); everything else keeps the no-op.
-  // It reads the game's storage lazily (the game is built right below).
+  // (Play Games) and iOS (Game Center; PORT-IOS §2), never on the Linux
+  // desktop; everything else keeps the no-op. It reads the game's storage
+  // lazily (the game is built right below).
   late final FlappySpikesGame game;
-  final VersusService versus = _isAndroid && !kSoak
+  final VersusService versus = _isMobile && !kSoak
       ? FirebaseVersusService(
           storageOf: () => game.storage,
+          identity: _isIOS ? GameCenterIdentity() : null,
           // S6-66: a failed start-up auth retries in the background.
           retryBase: VersusConfig.authRetryBase,
           // S6-F01 / S6-F02: every start (main below, Home prefetch, an
@@ -173,8 +176,9 @@ Future<void> main() async {
   }
   game.onShareScore = _shareFlow.share;
   game.onInvite = _shareFlow.share;
-  // PRD-2.2 §28.3: other apps' calls / alarms / music (Android; iOS later).
-  if (_isAndroid) game.audioFocus = PlatformAudioFocus();
+  // PRD-2.2 §28.3: other apps' calls / alarms / music (Android:
+  // MainActivity.kt; iOS: AppDelegate.swift `AudioWatch`, same channel).
+  if (_isMobile) game.audioFocus = PlatformAudioFocus();
   // PRD-2.3 §20.2: the Settings footer's version (package_info_plus).
   game.appInfo = PluginAppInfo();
 
@@ -294,8 +298,11 @@ class SystemBackObserver extends WidgetsBindingObserver {
 /// plugins).
 bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
-/// The versus backend runs on Android only for now (WP-5b; iOS paused).
+/// Android host (the system back / navigation bar handling).
 bool get _isAndroid => !kIsWeb && Platform.isAndroid;
+
+/// iOS host (Game Center identity for versus).
+bool get _isIOS => !kIsWeb && Platform.isIOS;
 
 /// The screen width in logical pixels (dp); 360 when unknown.
 double _screenWidthDp() {

@@ -408,7 +408,13 @@ class PluginIapStore implements IapStore {
       // once, after the grant ([StoreIapService]); the plugin's auto-consume
       // raced a resume sync that had already consumed the purchase and
       // turned a paid, credited pack into "Purchase failed".
-      _iap.buyConsumable(purchaseParam: param, autoConsume: false);
+      // StoreKit has no separate consume step (the storekit plugin asserts
+      // autoConsume: true; finishing the transaction is the consume), so
+      // iOS keeps the default.
+      _iap.buyConsumable(
+        purchaseParam: param,
+        autoConsume: defaultTargetPlatform == TargetPlatform.iOS,
+      );
 
   @override
   Future<bool> buyNonConsumable(PurchaseParam param) =>

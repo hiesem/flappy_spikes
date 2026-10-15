@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:vibration/vibration.dart';
 
 /// The two rumbles of PRD-2 §3.33.
@@ -62,6 +63,8 @@ class Rumble {
   /// Device capabilities, probed once on the first pulse.
   Future<({bool vibrator, bool amplitude})>? _caps;
 
+  static bool get _isIOS => !kIsWeb && Platform.isIOS;
+
   static bool get _platformSupported =>
       !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
@@ -100,6 +103,16 @@ class Rumble {
   Future<void> _vibrate(int ms, int amplitude) async {
     try {
       final caps = await (_caps ??= _probe());
+      // iOS without Core Haptics amplitude (older iPhones): the system
+      // impact feedback, light for a knock and heavy for a shake (PORT-IOS
+      // §3). With Core Haptics the plugin plays the intensity as on
+      // Android.
+      if (_isIOS && !caps.amplitude) {
+        await (amplitude >= shakeAmplitude
+            ? HapticFeedback.heavyImpact()
+            : HapticFeedback.lightImpact());
+        return;
+      }
       if (!caps.vibrator) return;
       // Devices without amplitude control get a plain pulse of the same
       // length (§3.33 fallback).

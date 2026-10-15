@@ -8,7 +8,14 @@ import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
 import 'package:flutter/foundation.dart'
-    show ValueListenable, ValueNotifier, debugPrint, kDebugMode, kIsWeb;
+    show
+        TargetPlatform,
+        ValueListenable,
+        ValueNotifier,
+        debugPrint,
+        defaultTargetPlatform,
+        kDebugMode,
+        kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleState, KeyEventResult;
 import 'package:url_launcher/url_launcher.dart';
@@ -1747,7 +1754,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onDeleteMyData: openDeleteDataConfirm,
       onPrivacyOptions: privacyOptionsShown ? openPrivacyOptions : null,
       onSupport: openSupport,
-      onRedeemCode: openRedeemCode,
+      onRedeemCode: redeemCodeAvailable ? openRedeemCode : null,
     );
     _settingsPanel = settings;
     _runSettingsOpen = true;
@@ -4074,7 +4081,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onDeleteMyData: openDeleteDataConfirm,
       onPrivacyOptions: privacyOptionsShown ? openPrivacyOptions : null,
       onSupport: openSupport,
-      onRedeemCode: openRedeemCode,
+      onRedeemCode: redeemCodeAvailable ? openRedeemCode : null,
     );
     _settingsPanel = settings;
     // PRD-home-v3 §8: the settings back button is the shared corner box
@@ -4493,6 +4500,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// Settings → Support: `Config.supportUrl` (§20.3).
   Future<void> openSupport() => _openLink(Config.supportUrl);
+
+  /// Settings → Redeem code exists on Android only: the gift codes are
+  /// Google Play promo codes and the gift products are Play-only (PORT-IOS
+  /// §2; iOS never queries or shows them).
+  bool get redeemCodeAvailable => defaultTargetPlatform != TargetPlatform.iOS;
 
   /// Settings → Redeem code (PRD-2.3 §22.2): the Play Store's redeem
   /// screen; the gift arrives through the purchase sync on return.

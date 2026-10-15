@@ -815,7 +815,8 @@ class SoundService {
   /// (tests) and idempotent afterwards; while it runs (or after a failure)
   /// [play] simply drops those sounds instead of opening a one-shot player.
   Future<void> _initPools() async {
-    if (!enabled || _poolsStarted) {
+    // iOS round 2b: never create players while the app is not active.
+    if (!enabled || _poolsStarted || !_appActive) {
       return;
     }
     _poolsStarted = true;
@@ -837,7 +838,7 @@ class SoundService {
     final gen = _generation;
     await _initPools();
     for (final sfx in sessionWarm) {
-      if (gen != _generation || muted) return;
+      if (gen != _generation || muted || !_appActive) return;
       if (_pools.containsKey(sfx)) continue;
       await _ensurePool(sfx);
     }
@@ -879,8 +880,15 @@ class SoundService {
   @visibleForTesting
   int get runEndedPending => _runEnded.length;
 
-  Future<void> _ensurePool(Sfx sfx) =>
-      _creating.putIfAbsent(sfx, () => _createPool(sfx));
+  /// iOS round 2b: no player is created while the app is not active
+  /// (background, inactive, locked): creating AVPlayers then fails and kept
+  /// the media server resetting (device log 2026-10-15). The request is not
+  /// remembered; the next play / preload / warm-up in the foreground creates
+  /// the pool.
+  Future<void> _ensurePool(Sfx sfx) {
+    if (!_appActive) return Future<void>.value();
+    return _creating.putIfAbsent(sfx, () => _createPool(sfx));
+  }
 
   Future<SfxVoice?> _newVoice(String file) async {
     try {
@@ -953,7 +961,7 @@ class SoundService {
         }
       }
       _trimPools();
-      while (!pool.disposed && pool.voiceCount < pool.capacity) {
+      while (!pool.disposed && pool.voiceCount < pool.capacity && _appActive) {
         final voice = await _newVoice(file);
         if (voice == null) break;
         if (stale(voice)) break;
@@ -1024,16 +1032,86 @@ class SoundService {
     }
   }
 
+  /// iOS round 2b: whether the app is active (foreground, not inactive /
+  /// locked). The game sets it from the lifecycle. While false, no audio
+  /// player is created ([_ensurePool], [_initPools]) and a rebuild only
+  /// drops the dead players and is deferred ([rebuildPending]).
+  bool get appActive => _appActive;
+  bool _appActive = true;
+
+  void setAppActive(bool active) {
+    if (_appActive == active) return;
+    _appActive = active;
+  }
+
+  /// A rebuild was asked for while the app was not active (iOS: a
+  /// media-services reset in the background): it runs once, on the return
+  /// to the foreground, however many resets came meanwhile.
+  bool get rebuildPending => _rebuildPending;
+  bool _rebuildPending = false;
+  String? _pendingReason;
+
+  /// A rebuild is running now (later requests fold into it).
+  bool get rebuilding => _rebuildRun != null;
+  Future<void>? _rebuildRun;
+
   /// iOS round 2 §2: disposes every sound-effect pool and creates the core
   /// and session sets again (fresh native players), keeping the loops and
   /// the music. iOS: after a media-services reset (every AVPlayer is
   /// invalid) and on the return from a long background (a player whose item
   /// failed while the app was suspended plays nothing and never says so).
   /// The global audio context is applied again first.
+  ///
+  /// Round 2b (device log: a reset every ~7 s while rebuilding ~90 players
+  /// in the background): while the app is not active only the dead
+  /// players are disposed and the rebuild is deferred to the foreground
+  /// (`FS-Audio rebuild deferred (background)`); a request while a rebuild
+  /// runs folds into it.
   Future<void> rebuildVoices(String reason) async {
+    if (!_appActive) {
+      deferredRebuilds++;
+      if (!_rebuildPending) {
+        diag('FS-Audio rebuild deferred (background): $reason');
+      }
+      _rebuildPending = true;
+      _pendingReason ??= reason;
+      if (enabled) await _dropPools();
+      return;
+    }
+    final running = _rebuildRun;
+    if (running != null) {
+      diag('FS-Audio rebuild folded into the running one ($reason)');
+      return running;
+    }
+    final pending = _pendingReason;
+    final why = pending == null ? reason : '$reason; deferred: $pending';
+    _rebuildPending = false;
+    _pendingReason = null;
+    final run = _rebuild(why);
+    _rebuildRun = run;
+    try {
+      await run;
+    } finally {
+      _rebuildRun = null;
+    }
+  }
+
+  Future<void> _rebuild(String reason) async {
     rebuilds++;
     if (!enabled) return;
     diag('FS-Audio rebuild voices ($reason): ${debugStats()}');
+    await _dropPools();
+    if (muted || !_appActive) return;
+    if (_sessionPinned) {
+      await warmSession();
+    } else {
+      await _initPools();
+    }
+    diag('FS-Audio rebuild voices done ($reason): ${debugStats()}');
+  }
+
+  /// Disposes every pool (no new player is created).
+  Future<void> _dropPools() async {
     _generation++;
     _poolsStarted = false;
     final pools = List.of(_pools.values);
@@ -1045,17 +1123,13 @@ class SoundService {
     _failedAtMs.clear();
     _globalContext = null;
     await Future.wait(pools.map((p) => p.dispose()));
-    if (muted) return;
-    if (_sessionPinned) {
-      await warmSession();
-    } else {
-      await _initPools();
-    }
-    diag('FS-Audio rebuild voices done ($reason): ${debugStats()}');
   }
 
-  /// [rebuildVoices] runs so far (tests / diagnostics).
+  /// Full rebuilds run so far (tests / diagnostics).
   int rebuilds = 0;
+
+  /// Rebuild requests deferred while the app was not active.
+  int deferredRebuilds = 0;
 
   /// Teardown: disposes every pool and loop (never needed in a normal
   /// session; tests and the soak use it).

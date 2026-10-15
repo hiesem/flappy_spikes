@@ -61,6 +61,69 @@ void main() {
     });
   });
 
+  group('round 2b: nothing is created while the app is not active', () {
+    test('a rebuild in the background only disposes; one rebuild on the '
+        'return however many resets came', () async {
+      final audio = FakeAudio();
+      final sound = audio.service();
+      await sound.warmSession();
+      await flushAudio();
+      final live = audio.live;
+      final created = audio.created;
+      sound.setAppActive(false);
+      for (var i = 0; i < 5; i++) {
+        await sound.rebuildVoices('media-services-reset');
+        await flushAudio();
+      }
+      expect(audio.live, 0, reason: 'dead players dropped');
+      expect(audio.created, created, reason: 'none created in background');
+      expect(sound.rebuilds, 0);
+      expect(sound.deferredRebuilds, 5);
+      expect(sound.rebuildPending, isTrue);
+      // A play / preload in the background creates nothing either.
+      sound.play(Sfx.skClose);
+      sound.preload([Sfx.lvUp]);
+      await flushAudio();
+      expect(audio.created, created);
+      sound.setAppActive(true);
+      await sound.rebuildVoices('foreground');
+      await flushAudio();
+      expect(sound.rebuilds, 1);
+      expect(sound.rebuildPending, isFalse);
+      expect(audio.live, live);
+      await sound.dispose();
+    });
+
+    test('a request while a rebuild runs folds into it', () async {
+      final audio = FakeAudio();
+      final sound = audio.service();
+      final a = sound.rebuildVoices('a');
+      final b = sound.rebuildVoices('b');
+      await Future.wait([a, b]);
+      expect(sound.rebuilds, 1);
+      await sound.dispose();
+    });
+
+    test('the failed-voice retry does not fire while not active', () async {
+      var now = 0;
+      final audio = FakeAudio()..failing.add('sk_close.mp3');
+      final sound = audio.service()..clockMs = () => now;
+      sound.play(Sfx.skClose);
+      await flushAudio();
+      audio.failing.clear();
+      sound.setAppActive(false);
+      now = Config.sfxRetryFailedMs + 1;
+      sound.play(Sfx.skClose);
+      await flushAudio();
+      expect(sound.poolOf(Sfx.skClose), isNull);
+      sound.setAppActive(true);
+      sound.play(Sfx.skClose);
+      await flushAudio();
+      expect(sound.poolOf(Sfx.skClose), isNotNull);
+      await sound.dispose();
+    });
+  });
+
   group('§3 seamless loops on the native player (iOS)', () {
     TestWidgetsFlutterBinding.ensureInitialized();
     const channel = MethodChannel('flappy_spikes/loops');
@@ -133,6 +196,30 @@ void main() {
         focus.push(const AudioWatchState(resets: 1));
         await flushAndMount(g);
         expect(g.sound.rebuilds, 1, reason: 'once per reset');
+      },
+    );
+
+    tester.testGameWidget(
+      'resets in the background: deferred, then ONE rebuild on resumed '
+      '(also on Android-style short trips)',
+      setUp: boot,
+      verify: (g, _) async {
+        g.lifecycleStateChange(AppLifecycleState.inactive);
+        g.lifecycleStateChange(AppLifecycleState.hidden);
+        g.lifecycleStateChange(AppLifecycleState.paused);
+        for (var i = 1; i <= 4; i++) {
+          focus.push(AudioWatchState(resets: i));
+          await flushAndMount(g);
+        }
+        expect(g.sound.rebuilds, 0);
+        expect(g.sound.rebuildPending, isTrue);
+        g.lifecycleStateChange(AppLifecycleState.hidden);
+        g.lifecycleStateChange(AppLifecycleState.inactive);
+        expect(g.sound.rebuilds, 0, reason: 'inactive is not active');
+        g.lifecycleStateChange(AppLifecycleState.resumed);
+        await flushAndMount(g);
+        expect(g.sound.rebuilds, 1);
+        expect(g.sound.rebuildPending, isFalse);
       },
     );
 

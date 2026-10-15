@@ -3119,6 +3119,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _audioLifecycle(AppLifecycleState state) {
     if (kDebugMode) debugPrint('Sound: lifecycle ${state.name}');
     if (!_soundReady) return;
+    // iOS round 2b: no audio player is created while not active.
+    sound.setAppActive(state == AppLifecycleState.resumed);
     if (state == AppLifecycleState.inactive) return;
     if (state != AppLifecycleState.resumed) {
       musicGuard.onBackground();
@@ -3135,8 +3137,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       'foreground-check away=${away?.inSeconds ?? -1}s '
       'hold=${sound.musicHoldReason ?? '-'}',
     );
-    if (isIOS() && away != null && away >= Config.iosVoiceRebuildAfter) {
-      unawaited(sound.rebuildVoices('foreground after ${away.inSeconds}s'));
+    // Round 2b: ONE rebuild on the return, also for any number of
+    // media-services resets that were deferred while in the background.
+    final long = isIOS() && away != null && away >= Config.iosVoiceRebuildAfter;
+    if (sound.rebuildPending || long) {
+      unawaited(
+        sound.rebuildVoices(
+          'foreground after ${away?.inSeconds ?? -1}s'
+          '${sound.rebuildPending ? ' (deferred reset)' : ''}',
+        ),
+      );
     }
     if (_adsShowing == 0) sound.clearSuspend();
     if (!sound.background) return;

@@ -277,16 +277,34 @@ final class AudioWatch: NSObject, FlutterStreamHandler {
     push()
   }
 
+  /// A media-services reset happened while the app was not active: the
+  /// session / engines are set up again on the next `didBecomeActive`.
+  private var resetPending = false
+
   /// The media server restarted: every AVPlayer / engine is invalid.
+  ///
+  /// Round 2b (device log 2026-10-15: a reset every ~7 s in the background,
+  /// each one answered with a session activation that failed with '!pla'
+  /// and ~90 new players): while the app is not active nothing is activated
+  /// or created here. The dead engines are only dropped; the session, the
+  /// music engine and the loop engine come back on `didBecomeActive`, once.
+  /// Dart gets the count (`resets`) and defers its own player rebuild the
+  /// same way.
   @objc private func onMediaServicesReset(_ note: Notification) {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
       self.resets += 1
-      FSLog.audio("media services were reset (#\(self.resets))")
-      try? AVAudioSession.sharedInstance().setCategory(.ambient)
-      GameAudioSession.activate("media-services-reset")
-      self.music.mediaServicesReset()
+      let active = UIApplication.shared.applicationState == .active
+      FSLog.audio("media services were reset (#\(self.resets)) active=\(active ? 1 : 0)")
+      self.music.mediaServicesReset(rebuild: active)
       self.loops.mediaServicesReset()
+      if active {
+        try? AVAudioSession.sharedInstance().setCategory(.ambient)
+        GameAudioSession.activate("media-services-reset")
+      } else {
+        self.resetPending = true
+        FSLog.audio("media reset: session + engines deferred to didBecomeActive")
+      }
       self.push()
     }
   }
@@ -296,9 +314,14 @@ final class AudioWatch: NSObject, FlutterStreamHandler {
   /// background or the screen was locked), and the session is activated
   /// again explicitly.
   @objc private func onDidBecomeActive(_ note: Notification) {
-    FSLog.audio("app didBecomeActive interrupted=\(interrupted ? 1 : 0)")
+    FSLog.audio(
+      "app didBecomeActive interrupted=\(interrupted ? 1 : 0) resetPending=\(resetPending ? 1 : 0)")
     if interrupted {
       setInterrupted(false, "didBecomeActive")
+    }
+    if resetPending {
+      resetPending = false
+      try? AVAudioSession.sharedInstance().setCategory(.ambient)
     }
     GameAudioSession.activate("didBecomeActive")
     music.recover("didBecomeActive")
@@ -461,6 +484,12 @@ final class LoopMusic: NSObject {
     wanted = true
     stopped = false
     if engine == nil {
+      // Round 2b: nothing is built while the app is not active; recover()
+      // on didBecomeActive builds and plays it.
+      if UIApplication.shared.applicationState != .active {
+        FSLog.audio("music resume deferred: app not active (engine dropped)")
+        return
+      }
       guard fileName != nil, build() else { return }
     }
     play(from: savedPosition, reason: "resume")
@@ -479,7 +508,7 @@ final class LoopMusic: NSObject {
   /// The app is active again / an interruption ended: a music that should
   /// play but whose engine stopped is started again where it was.
   func recover(_ reason: String) {
-    guard wanted, !stopped else { return }
+    guard wanted, !stopped, UIApplication.shared.applicationState == .active else { return }
     if playingNow { return }
     let at = position()
     FSLog.audio(
@@ -491,12 +520,16 @@ final class LoopMusic: NSObject {
     play(from: at, reason: "recover-\(reason)")
   }
 
-  /// Every engine is invalid after a media-services reset: rebuilt now (and
-  /// playing again if it was).
-  func mediaServicesReset() {
+  /// Every engine is invalid after a media-services reset: dropped now.
+  /// With [rebuild] (the app is active) it is built again and plays on if it
+  /// was playing; otherwise (round 2b) the next `resume` / `recover` in the
+  /// foreground builds it (the engine is nil), never in the background.
+  func mediaServicesReset(rebuild: Bool) {
     let at = position()
+    if wanted { savedPosition = at }
     teardown()
-    guard fileName != nil else { return }
+    FSLog.audio("music engine dropped (media reset) rebuild=\(rebuild ? 1 : 0)")
+    guard rebuild, fileName != nil else { return }
     if wanted && !stopped {
       if build() { play(from: at, reason: "media-reset") }
     }
@@ -611,6 +644,13 @@ final class LoopMusic: NSObject {
 
   private func play(from pos: AVAudioFramePosition, reason: String) {
     guard let e = engine, let n = node else { return }
+    // Round 2b: never activate the session / start the engine while the
+    // app is not active ('!pla'); `recover` on didBecomeActive plays it.
+    if UIApplication.shared.applicationState != .active {
+      if wanted { savedPosition = pos }
+      FSLog.audio("music play (\(reason)) deferred: app not active")
+      return
+    }
     GameAudioSession.activate("music-\(reason)")
     if !e.isRunning {
       do {
@@ -729,6 +769,8 @@ final class SfxLoops: NSObject {
   }
 
   private func ensureEngine(_ reason: String) -> AVAudioEngine? {
+    // Round 2b: nothing is started while the app is not active.
+    if UIApplication.shared.applicationState != .active { return nil }
     let e: AVAudioEngine
     if let existing = engine {
       e = existing

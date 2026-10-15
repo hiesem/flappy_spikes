@@ -178,7 +178,13 @@ native `LoopMusic`, whose state reports `stopped` when it should play but the en
 §13.4 watchdog then restarts it; AVPlayer kept saying `playing`); every SFX player is created
 afresh after a media-services reset and after ≥ 20 s in the background
 (`SoundService.rebuildVoices`), and a voice that failed to load retries after 5 s instead of
-silencing that sound for the session. Device logs (Console / `idevicesyslog`): `FS-Music …`
+silencing that sound for the session. **Round 2b (device log 2026-10-15):** the real trigger
+was media-services resets in the background (every ~7 s), each answered by a failed session
+activation (`'!pla'`) and ~90 new AVPlayers — a loop. Now nothing is activated, built or created
+while the app is not active: a reset only drops the dead players / engines (`FS-Audio rebuild
+deferred (background)`), and `didBecomeActive` / `resumed` does ONE session activation, music
+engine rebuild and voice rebuild however many resets came; the 5 s retry waits for the
+foreground too. Device logs (Console / `idevicesyslog`): `FS-Music …`
 (os_log `.default`, category FS-Music: session, interruptions, the Dart music log, the loop
 player) and `flutter: FS-Audio …` (voice rebuilds, failed voices, dropped first plays).
 

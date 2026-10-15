@@ -52,19 +52,24 @@ enum AdResult {
 // Unit IDs (PRD-2.2 §7.3)
 // ---------------------------------------------------------------------------
 
-/// Release builds use the real Android unit; debug / profile builds and iOS
-/// (paused, unused) always use Google's official TEST units, so development
-/// taps never hit real ads (PRD-2.2 §7.3 item 5).
+/// Release builds use the real unit of the platform (Android, or iOS: app
+/// `ca-app-pub-2660521344509391~7451723332`); debug / profile builds use
+/// Google's official TEST units, so development taps never hit real ads
+/// (PRD-2.2 §7.3 item 5).
 @visibleForTesting
 String pickAdUnit({
   required String release,
   required String test,
+  required String iosRelease,
   required String iosTest,
   bool? releaseMode,
   TargetPlatform? platform,
 }) {
-  if ((platform ?? defaultTargetPlatform) == TargetPlatform.iOS) return iosTest;
-  return (releaseMode ?? kReleaseMode) ? release : test;
+  final real = releaseMode ?? kReleaseMode;
+  if ((platform ?? defaultTargetPlatform) == TargetPlatform.iOS) {
+    return real ? iosRelease : iosTest;
+  }
+  return real ? release : test;
 }
 
 /// Exponential backoff (10 s, 20 s, 40 s … capped at [max]) so a no-fill
@@ -336,11 +341,11 @@ class AdMobRewardedAds extends _AdMobFullScreenLoader<RewardedAd>
     : super(consent ?? AdMobAdsConsent());
 
   /// Production rewarded unit "Rewarded - all placements" (app
-  /// `ca-app-pub-2660521344509391~8153764631`). iOS has no production unit
-  /// yet (iOS paused) and only ever runs [NoopRewardedAds].
+  /// `ca-app-pub-2660521344509391~8153764631`) and its iOS twin.
   static const String androidUnitId = 'ca-app-pub-2660521344509391/3758032081';
   static const String androidTestUnitId =
       'ca-app-pub-3940256099942544/5224354917';
+  static const String iosUnitId = 'ca-app-pub-2660521344509391/9886314985';
   static const String iosTestUnitId = 'ca-app-pub-3940256099942544/1712485313';
 
   /// Longest wait between load retries after a failed load.
@@ -350,6 +355,7 @@ class AdMobRewardedAds extends _AdMobFullScreenLoader<RewardedAd>
   String get unitId => pickAdUnit(
     release: androidUnitId,
     test: androidTestUnitId,
+    iosRelease: iosUnitId,
     iosTest: iosTestUnitId,
   );
 
@@ -512,12 +518,14 @@ class AdMobInterstitialAds extends _AdMobFullScreenLoader<InterstitialAd>
   static const String androidUnitId = 'ca-app-pub-2660521344509391/1357627279';
   static const String androidTestUnitId =
       'ca-app-pub-3940256099942544/1033173712';
+  static const String iosUnitId = 'ca-app-pub-2660521344509391/4737185220';
   static const String iosTestUnitId = 'ca-app-pub-3940256099942544/4411468910';
 
   @override
   String get unitId => pickAdUnit(
     release: androidUnitId,
     test: androidTestUnitId,
+    iosRelease: iosUnitId,
     iosTest: iosTestUnitId,
   );
 
@@ -762,6 +770,7 @@ class AdMobBannerAds implements BannerAds {
   static const String androidUnitId = 'ca-app-pub-2660521344509391/8797133596';
   static const String androidTestUnitId =
       'ca-app-pub-3940256099942544/9214589741';
+  static const String iosUnitId = 'ca-app-pub-2660521344509391/2928270376';
   static const String iosTestUnitId = 'ca-app-pub-3940256099942544/2435281174';
 
   static const Duration maxRetryDelay = Duration(minutes: 5);
@@ -781,6 +790,7 @@ class AdMobBannerAds implements BannerAds {
   String get _unitId => pickAdUnit(
     release: androidUnitId,
     test: androidTestUnitId,
+    iosRelease: iosUnitId,
     iosTest: iosTestUnitId,
   );
 

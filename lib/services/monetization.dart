@@ -41,19 +41,9 @@ class Monetization {
             defaultTargetPlatform == TargetPlatform.iOS) &&
         (Platform.isAndroid || Platform.isIOS);
     if (mobile) {
-      // iOS is paused and Info.plist has no GADApplicationIdentifier yet (the
-      // iOS ads SDK aborts at launch without it): no ads there until reopened.
-      // TODO(ios): add GADApplicationIdentifier, then use AdMob on iOS too.
-      if (!Platform.isAndroid) {
-        return Monetization(
-          ads: NoopRewardedAds(),
-          interstitial: NoopInterstitialAds(),
-          banner: NoopBannerAds(),
-          consent: FakeAdsConsent(canRequestAds: false),
-          iap: StoreIapService(),
-        );
-      }
       // §7.10: consent + MobileAds.initialize ONCE, shared by all three.
+      // iOS too (PORT-IOS §3): Info.plist has GADApplicationIdentifier and
+      // SKAdNetworkItems; the ATT prompt runs inside the consent flow.
       final consent = AdMobAdsConsent();
       return Monetization(
         ads: AdMobRewardedAds(consent: consent),

@@ -52,16 +52,32 @@ void main() {
       String pick(bool release, TargetPlatform p) => pickAdUnit(
         release: 'real',
         test: 'test',
+        iosRelease: 'ios-real',
         iosTest: 'ios',
         releaseMode: release,
         platform: p,
       );
       expect(pick(true, TargetPlatform.android), 'real');
       expect(pick(false, TargetPlatform.android), 'test');
-      expect(pick(true, TargetPlatform.iOS), 'ios');
+      expect(pick(true, TargetPlatform.iOS), 'ios-real');
+      expect(pick(false, TargetPlatform.iOS), 'ios');
+      expect(
+        AdMobRewardedAds.iosUnitId,
+        'ca-app-pub-2660521344509391/9886314985',
+      );
+      expect(
+        AdMobInterstitialAds.iosUnitId,
+        'ca-app-pub-2660521344509391/4737185220',
+      );
+      expect(AdMobBannerAds.iosUnitId, 'ca-app-pub-2660521344509391/2928270376');
       // The test host runs in debug mode: the test unit.
       expect(
-        pickAdUnit(release: 'real', test: 'test', iosTest: 'ios'),
+        pickAdUnit(
+          release: 'real',
+          test: 'test',
+          iosRelease: 'ios-real',
+          iosTest: 'ios',
+        ),
         'test',
       );
     });

@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'redact.dart';
@@ -111,8 +113,50 @@ class AdMobAdsConsent implements AdsConsent {
       return;
     }
     await _gatherConsent();
+    // iOS: App Tracking Transparency after the UMP flow and before the
+    // Mobile Ads SDK starts (Google's order for UMP + ATT).
+    await _requestTrackingAuthorization();
     await _readPrivacyStatus();
     await _refreshCanRequest();
+  }
+
+  /// iOS only: the ATT prompt (`NSUserTrackingUsageDescription`), once.
+  /// When UMP's IDFA explainer message already led to the prompt, the
+  /// status is no longer `notDetermined` and nothing is shown. Never before
+  /// the first frame, and only while the app is active (iOS drops a request
+  /// made while it is not). Any failure means "not asked": ads then run
+  /// without the IDFA. Never throws.
+  Future<void> _requestTrackingAuthorization() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return;
+    try {
+      final binding = WidgetsBinding.instance;
+      await binding.waitUntilFirstFrameRasterized;
+      if (binding.lifecycleState != AppLifecycleState.resumed) {
+        final resumed = Completer<void>();
+        final listener = AppLifecycleListener(
+          onResume: () {
+            if (!resumed.isCompleted) resumed.complete();
+          },
+        );
+        try {
+          await resumed.future.timeout(const Duration(seconds: 30));
+        } on TimeoutException {
+          return;
+        } finally {
+          listener.dispose();
+        }
+      }
+      if (await AppTrackingTransparency.trackingAuthorizationStatus !=
+          TrackingStatus.notDetermined) {
+        return;
+      }
+      // A UMP form that just closed is still animating out: the ATT alert
+      // only shows once it is gone (plugin README).
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      await AppTrackingTransparency.requestTrackingAuthorization();
+    } catch (e) {
+      debugPrint('AdsConsent ATT request failed: $e');
+    }
   }
 
   /// Re-reads `canRequestAds` and starts the SDK the first time it is true.

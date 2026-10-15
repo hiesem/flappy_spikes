@@ -73,6 +73,7 @@ dependencies:
   firebase_storage: ^13.6.0
   image: ^4.9.1
   crypto: ^3.0.7
+  app_tracking_transparency: ^2.0.7
   # endregion PRD-2.3 §21
 
 dev_dependencies:
@@ -143,6 +144,9 @@ flutter_launcher_icons:
 
 # PRD-2.3 §9.4 splash: the 17C icon on its middle cyan. Android 12+ gets its
 # own 960 px render (background + foreground, §0 item 8) on the same colour.
+# iOS: `create` rewrites ios/Runner/Info.plist UIStatusBarHidden to false
+# (no `fullscreen` here, which would also change the Android styles). Set it
+# back to true after a re-run (PORT-IOS §1).
 flutter_native_splash:
   color: "#2BC8F5"
   image: assets/icon/splash_icon.png

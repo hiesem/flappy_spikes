@@ -13,6 +13,9 @@ import os.log
   /// iOS round 2: the seamless music loop (`flappy_spikes/music`).
   private var loopMusic: LoopMusic?
 
+  /// iOS round 2: the seamless sound-effect loops (`flappy_spikes/loops`).
+  private var sfxLoops: SfxLoops?
+
   /// iOS round 2: the crisp "button click" rumble (`flappy_spikes/haptics`).
   private var haptics: Haptics?
 
@@ -36,7 +39,9 @@ import os.log
     let messenger = engineBridge.applicationRegistrar.messenger()
     let music = LoopMusic(messenger: messenger)
     loopMusic = music
-    audioWatch = AudioWatch(messenger: messenger, music: music)
+    let loops = SfxLoops(messenger: messenger)
+    sfxLoops = loops
+    audioWatch = AudioWatch(messenger: messenger, music: music, loops: loops)
     haptics = Haptics(messenger: messenger)
   }
 }
@@ -109,13 +114,15 @@ final class AudioWatch: NSObject, FlutterStreamHandler {
   private let methods: FlutterMethodChannel
   private let events: FlutterEventChannel
   private let music: LoopMusic
+  private let loops: SfxLoops
   private var sink: FlutterEventSink?
   private var interrupted = false
   private var interruptedAt: Date?
   private var resets = 0
 
-  init(messenger: FlutterBinaryMessenger, music: LoopMusic) {
+  init(messenger: FlutterBinaryMessenger, music: LoopMusic, loops: SfxLoops) {
     self.music = music
+    self.loops = loops
     methods = FlutterMethodChannel(name: "flappy_spikes/audio", binaryMessenger: messenger)
     events = FlutterEventChannel(
       name: "flappy_spikes/audio_interruptions", binaryMessenger: messenger)
@@ -239,6 +246,7 @@ final class AudioWatch: NSObject, FlutterStreamHandler {
         if UIApplication.shared.applicationState == .active {
           GameAudioSession.activate("interruption-ended")
           self.music.recover("interruption-ended")
+          self.loops.recover("interruption-ended")
         }
       @unknown default:
         return
@@ -256,6 +264,7 @@ final class AudioWatch: NSObject, FlutterStreamHandler {
     if GameAudioSession.activate("stale-interruption-probe") {
       setInterrupted(false, "session re-activated while active")
       music.recover("stale-interruption")
+      loops.recover("stale-interruption")
     } else {
       // Try again in 3 s (not on every 0.5 s poll).
       interruptedAt = Date()
@@ -277,6 +286,7 @@ final class AudioWatch: NSObject, FlutterStreamHandler {
       try? AVAudioSession.sharedInstance().setCategory(.ambient)
       GameAudioSession.activate("media-services-reset")
       self.music.mediaServicesReset()
+      self.loops.mediaServicesReset()
       self.push()
     }
   }
@@ -292,6 +302,7 @@ final class AudioWatch: NSObject, FlutterStreamHandler {
     }
     GameAudioSession.activate("didBecomeActive")
     music.recover("didBecomeActive")
+    loops.recover("didBecomeActive")
     push()
   }
 
@@ -644,6 +655,162 @@ final class LoopMusic: NSObject {
         }
         self.schedule(gen, from: 0)
       }
+    }
+  }
+}
+
+/// iOS round 2 §3: the sound-effect loops (Dart: `NativeSfxLoops` on
+/// `flappy_spikes/loops`). Android loops them on SoundPool (seamless); here
+/// each loop asset (`assets/audio/*.wav`, read from the Flutter assets in
+/// the app bundle) is decoded once into a PCM buffer and played on its own
+/// `AVAudioPlayerNode` with `.loops` (sample-exact), all on one engine.
+/// AVPlayer (audioplayers) re-seeks at the end of the item: a gap every
+/// 4-7 s.
+final class SfxLoops: NSObject {
+  private let channel: FlutterMethodChannel
+  private var engine: AVAudioEngine?
+  private var nodes: [Int: AVAudioPlayerNode] = [:]
+  private var buffersOf: [Int: AVAudioPCMBuffer] = [:]
+  private var cache: [String: AVAudioPCMBuffer] = [:]
+  private var started = 0
+
+  init(messenger: FlutterBinaryMessenger) {
+    channel = FlutterMethodChannel(name: "flappy_spikes/loops", binaryMessenger: messenger)
+    super.init()
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard let self = self else {
+        result(nil)
+        return
+      }
+      let args = call.arguments as? [String: Any] ?? [:]
+      let id = (args["id"] as? NSNumber)?.intValue ?? 0
+      switch call.method {
+      case "start":
+        let asset = args["asset"] as? String ?? ""
+        let volume = (args["volume"] as? NSNumber)?.floatValue ?? 1
+        self.start(id: id, asset: asset, volume: volume)
+      case "setVolume":
+        self.nodes[id]?.volume = (args["volume"] as? NSNumber)?.floatValue ?? 1
+      case "stop":
+        self.stop(id: id)
+      default:
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      result(nil)
+    }
+  }
+
+  deinit {
+    NotificationCenter.default.removeObserver(self)
+  }
+
+  private func buffer(for asset: String) -> AVAudioPCMBuffer? {
+    if let b = cache[asset] { return b }
+    let key = FlutterDartProject.lookupKey(forAsset: asset)
+    guard let path = Bundle.main.path(forResource: key, ofType: nil) else {
+      FSLog.audio("loop asset MISSING: \(asset)")
+      return nil
+    }
+    do {
+      let f = try AVAudioFile(forReading: URL(fileURLWithPath: path))
+      guard
+        let b = AVAudioPCMBuffer(
+          pcmFormat: f.processingFormat, frameCapacity: AVAudioFrameCount(f.length))
+      else { return nil }
+      try f.read(into: b)
+      cache[asset] = b
+      FSLog.audio("loop load \(asset) frames=\(b.frameLength) sr=\(Int(f.processingFormat.sampleRate))")
+      return b
+    } catch {
+      FSLog.audio("loop load FAILED \(asset): \(error.localizedDescription)")
+      return nil
+    }
+  }
+
+  private func ensureEngine(_ reason: String) -> AVAudioEngine? {
+    let e: AVAudioEngine
+    if let existing = engine {
+      e = existing
+    } else {
+      e = AVAudioEngine()
+      _ = e.mainMixerNode
+      engine = e
+      NotificationCenter.default.addObserver(
+        self, selector: #selector(onConfigurationChange(_:)),
+        name: .AVAudioEngineConfigurationChange, object: e)
+    }
+    if !e.isRunning {
+      GameAudioSession.activate("loops-\(reason)")
+      do {
+        try e.start()
+      } catch {
+        FSLog.audio("loops engine start FAILED (\(reason)): \(error.localizedDescription)")
+        return nil
+      }
+    }
+    return e
+  }
+
+  private func start(id: Int, asset: String, volume: Float) {
+    guard let b = buffer(for: asset), let e = ensureEngine("start") else { return }
+    let n = AVAudioPlayerNode()
+    e.attach(n)
+    e.connect(n, to: e.mainMixerNode, format: b.format)
+    n.volume = volume
+    n.scheduleBuffer(b, at: nil, options: .loops, completionHandler: nil)
+    n.play()
+    nodes[id] = n
+    buffersOf[id] = b
+    started += 1
+    if started <= 3 || started % 20 == 0 {
+      FSLog.audio("loop start #\(started) \(asset) live=\(nodes.count)")
+    }
+  }
+
+  private func stop(id: Int) {
+    guard let n = nodes.removeValue(forKey: id) else { return }
+    buffersOf.removeValue(forKey: id)
+    n.stop()
+    engine?.detach(n)
+    // No loop left: the engine stops (no idle I/O).
+    if nodes.isEmpty, let e = engine, e.isRunning {
+      e.pause()
+    }
+  }
+
+  /// The engine stopped under live loops (interruption, route change): the
+  /// loops start again from their top.
+  func recover(_ reason: String) {
+    guard !nodes.isEmpty else { return }
+    guard let e = engine, !e.isRunning || nodes.values.contains(where: { !$0.isPlaying }) else {
+      return
+    }
+    FSLog.audio("loops recover (\(reason)) live=\(nodes.count)")
+    guard ensureEngine("recover") != nil else { return }
+    for (id, n) in nodes {
+      guard let b = buffersOf[id] else { continue }
+      n.stop()
+      n.scheduleBuffer(b, at: nil, options: .loops, completionHandler: nil)
+      n.play()
+    }
+  }
+
+  /// Every engine is invalid after a media-services reset: dropped; the
+  /// game's features start their loops again when they need them.
+  func mediaServicesReset() {
+    if let e = engine {
+      NotificationCenter.default.removeObserver(
+        self, name: .AVAudioEngineConfigurationChange, object: e)
+    }
+    nodes.removeAll()
+    buffersOf.removeAll()
+    engine = nil
+  }
+
+  @objc private func onConfigurationChange(_ note: Notification) {
+    DispatchQueue.main.async { [weak self] in
+      self?.recover("configuration-change")
     }
   }
 }

@@ -2,8 +2,10 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/game/native_loops.dart';
 import 'package:flappy_spikes/game/sound.dart';
 import 'package:flappy_spikes/services/audio_focus.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 
@@ -56,6 +58,51 @@ void main() {
       await flushAudio();
       expect(sound.poolOf(Sfx.skClose), isNotNull);
       await sound.dispose();
+    });
+  });
+
+  group('§3 seamless loops on the native player (iOS)', () {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    const channel = MethodChannel('flappy_spikes/loops');
+    final calls = <String>[];
+    setUp(() {
+      calls.clear();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            calls.add('${call.method} ${call.arguments}');
+            return null;
+          });
+    });
+    tearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    test('start / volume / interruption quiet / stop go to the runner; no '
+        'AVPlayer loop', () async {
+      final sound = SoundService()..nativeLoops = NativeSfxLoops();
+      final h = sound.loop(SfxLoop.feverLoop, volume: .6);
+      await h.setVolume(.3);
+      sound.setInterrupted(true);
+      sound.setInterrupted(false);
+      await h.stop();
+      await h.stop(); // idempotent
+      await pumpEventQueue();
+      expect(calls, [
+        'start {id: 1, asset: assets/audio/fever_loop.wav, volume: 0.6}',
+        'setVolume {id: 1, volume: 0.3}',
+        'setVolume {id: 1, volume: 0.0}',
+        'setVolume {id: 1, volume: 0.3}',
+        'stop {id: 1}',
+      ]);
+    });
+
+    test('muted: a silent recorder, nothing reaches the runner', () async {
+      final sound = SoundService(muted: true)..nativeLoops = NativeSfxLoops();
+      final h = sound.loop(SfxLoop.cometLoop);
+      await h.stop();
+      await pumpEventQueue();
+      expect(calls, isEmpty);
     });
   });
 

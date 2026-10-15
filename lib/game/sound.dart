@@ -9,6 +9,7 @@ import 'config.dart';
 import 'diag.dart';
 import 'music_backend.dart';
 import 'music_log.dart';
+import 'native_loops.dart';
 import 'sfx_pool.dart';
 import 'sound_durations.g.dart';
 
@@ -1435,6 +1436,24 @@ class SoundService {
 
   final List<_LoopPlayer> _loops = [];
 
+  NativeSfxLoops? _nativeLoops;
+
+  /// iOS round 2 §3: the seamless native loop player on iOS (null
+  /// elsewhere, and with fake voices in tests). Replaceable in tests.
+  NativeSfxLoops? get nativeLoops {
+    if (_nativeLoopsSet) return _nativeLoops;
+    if (voiceFactory != null || kIsWeb || !Platform.isIOS) return null;
+    return _nativeLoops ??= NativeSfxLoops();
+  }
+
+  bool _nativeLoopsSet = false;
+
+  @visibleForTesting
+  set nativeLoops(NativeSfxLoops? loops) {
+    _nativeLoopsSet = true;
+    _nativeLoops = loops;
+  }
+
   /// Loops currently playing (or recorded, when disabled).
   List<LoopHandle> get activeLoops =>
       _loops.where((l) => !l.stopped).toList(growable: false);
@@ -1451,6 +1470,7 @@ class SoundService {
       volume,
       live,
       live ? _ensureGlobalContext : null,
+      live ? nativeLoops : null,
     ).._quiet = _interrupted;
     if (_suspends > 0) {
       // Born stopped: the feature sees `stopped` and asks again after the
@@ -1508,11 +1528,15 @@ class SoundService {
 }
 
 class _LoopPlayer implements LoopHandle {
-  _LoopPlayer(this.loop, this._volume, this.live, this._context);
+  _LoopPlayer(this.loop, this._volume, this.live, this._context, this._native);
 
   /// Awaits the service's global audio context (PRD-2.2 §33: no
   /// per-player context).
   final Future<void> Function()? _context;
+
+  /// iOS round 2 §3: the runner's seamless loop player (iOS), else null.
+  final NativeSfxLoops? _native;
+  int? _nativeId;
 
   @override
   final SfxLoop loop;
@@ -1528,6 +1552,11 @@ class _LoopPlayer implements LoopHandle {
 
   Future<void> applyQuiet(bool quiet) async {
     _quiet = quiet;
+    final id = _nativeId;
+    if (id != null) {
+      _native?.setVolume(id, quiet ? 0 : _volume);
+      return;
+    }
     try {
       await _player?.setVolume(quiet ? 0 : _volume);
     } catch (_) {}
@@ -1543,6 +1572,12 @@ class _LoopPlayer implements LoopHandle {
   bool get audible => live;
 
   Future<void> start() async {
+    final native = _native;
+    if (native != null) {
+      if (_stopped) return;
+      _nativeId = native.start(loop.file, _quiet ? 0 : _volume);
+      return;
+    }
     try {
       await _context?.call();
       if (_stopped) return;
@@ -1566,6 +1601,11 @@ class _LoopPlayer implements LoopHandle {
   @override
   Future<void> setVolume(double volume) async {
     _volume = volume;
+    final id = _nativeId;
+    if (id != null) {
+      _native?.setVolume(id, _quiet ? 0 : volume);
+      return;
+    }
     try {
       await _player?.setVolume(_quiet ? 0 : volume);
     } catch (_) {}
@@ -1575,6 +1615,12 @@ class _LoopPlayer implements LoopHandle {
   Future<void> stop() async {
     if (_stopped) return;
     _stopped = true;
+    final id = _nativeId;
+    _nativeId = null;
+    if (id != null) {
+      await _native?.stop(id);
+      return;
+    }
     final p = _player;
     _player = null;
     if (p == null) return;

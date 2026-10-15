@@ -61,10 +61,15 @@ class FirebaseVersusAuth implements VersusAuth {
   @override
   bool get isAnonymous => _auth.currentUser?.isAnonymous ?? false;
 
+  /// Linked to the platform's game account: Play Games on Android, Game
+  /// Center on iOS (`gc.apple.com`). Checking only Play Games made every
+  /// iOS launch re-link an already linked account (`provider-already-linked`).
   @override
   bool get linkedToPlayGames =>
       _auth.currentUser?.providerData.any(
-        (p) => p.providerId == PlayGamesAuthProvider.PROVIDER_ID,
+        (p) =>
+            p.providerId == PlayGamesAuthProvider.PROVIDER_ID ||
+            p.providerId == GameCenterAuthProvider.PROVIDER_ID,
       ) ??
       false;
 

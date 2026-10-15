@@ -329,6 +329,12 @@ class FirebaseVersusBackend implements VersusBackend {
         return;
       } on FirebaseAuthException catch (e) {
         if (e.code == 'credential-already-in-use') break;
+        // This account already has the platform provider (e.g. a stale
+        // provider list): it is linked, nothing to do.
+        if (e.code == 'provider-already-linked') {
+          _report(LinkOutcome.linked);
+          return;
+        }
         // A retry in the same process may get the code an earlier try
         // used up back from the cache: one more try with a fresh one.
         if (attempt == 0 && e.code == 'invalid-credential') {

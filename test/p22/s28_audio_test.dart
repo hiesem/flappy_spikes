@@ -157,6 +157,9 @@ void main() {
       final c = SoundService.gameAudioContext();
       expect(c.android.audioFocus.name, 'none');
       expect(c.android.usageType.name, 'game');
+      // iOS: the ambient category (mixes with other apps by definition).
+      expect(c.iOS.category.name, 'ambient');
+      expect(c.iOS.options, isEmpty);
     });
   });
 

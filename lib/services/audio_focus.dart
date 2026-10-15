@@ -20,10 +20,12 @@ import 'package:flutter/services.dart';
 ///
 /// Android: `flappy_spikes/audio` in `MainActivity.kt` (an
 /// `AudioPlaybackCallback` + audio-mode listener for the interruptions,
-/// `AudioManager.isMusicActive()` for the music check). iOS (paused) maps
-/// to `AVAudioSession` interruptions and `secondaryAudioShouldBeSilencedHint`
-/// (PORT-IOS.md). Every call is guarded: audio checks never take the game
-/// down.
+/// `AudioManager.isMusicActive()` for the music check). iOS: the same
+/// channels in `AppDelegate.swift` (`AudioWatch`): `AVAudioSession`
+/// interruptions for `interrupted`, `secondaryAudioShouldBeSilencedHint`
+/// (another app's non-mixable audio, never the game's own) for the music
+/// checks and `media`; `notification` is always false there. Every call is
+/// guarded: audio checks never take the game down.
 abstract class AudioFocus {
   Stream<bool> get interruptions;
 
@@ -101,7 +103,7 @@ class AudioWatchState {
       '${stateKnown ? '' : ' known=0'}';
 }
 
-/// Tests, Linux, iOS (paused): nothing is ever interrupted.
+/// Tests, Linux: nothing is ever interrupted.
 class NoopAudioFocus implements AudioFocus {
   const NoopAudioFocus();
 
@@ -192,7 +194,8 @@ class FakeAudioFocus implements AudioFocus {
   Future<bool> isOtherMediaListed() async => otherMusic;
 }
 
-/// The Android implementation (MethodChannel + EventChannel).
+/// The Android and iOS implementation (MethodChannel + EventChannel; one
+/// channel protocol, MainActivity.kt / AppDelegate.swift).
 class PlatformAudioFocus implements AudioFocus {
   static const MethodChannel _methods = MethodChannel('flappy_spikes/audio');
   static const EventChannel _events = EventChannel(

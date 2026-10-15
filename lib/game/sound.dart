@@ -769,12 +769,20 @@ class SoundService {
   /// player's own music keeps playing, PRD-2.2 §28.3) with the Android
   /// usage `USAGE_GAME`, so `MainActivity.kt` can tell the game's players
   /// from another app's music in the active playback configurations.
+  /// iOS: the `.ambient` session category (it always mixes with other
+  /// apps' audio and follows the silent switch, like a game should;
+  /// PORT-IOS §3). AVFoundation forbids the explicit `mixWithOthers` option
+  /// on `.ambient`, so the option set stays empty.
   static AudioContext gameAudioContext() {
     final base = AudioContextConfig(
       focus: AudioContextConfigFocus.mixWithOthers,
     ).build();
     return base.copy(
       android: base.android.copy(usageType: AndroidUsageType.game),
+      iOS: AudioContextIOS(
+        category: AVAudioSessionCategory.ambient,
+        options: const {},
+      ),
     );
   }
 

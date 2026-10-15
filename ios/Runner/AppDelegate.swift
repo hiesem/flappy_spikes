@@ -230,11 +230,11 @@ final class AudioWatch: NSObject, FlutterStreamHandler {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
       let appState = UIApplication.shared.applicationState.rawValue
+      let reasonText = reason.map { String($0) } ?? "-"
       switch type {
       case .began:
         FSLog.audio(
-          "interruption began reason=\(reason.map { String($0) } ?? "-") "
-            + "suspended=\(suspended ? 1 : 0) app=\(appState)")
+          "interruption began reason=\(reasonText) suspended=\(suspended ? 1 : 0) app=\(appState)")
         if suspended {
           FSLog.audio("interruption ignored (app was suspended; iOS never ends it)")
           return

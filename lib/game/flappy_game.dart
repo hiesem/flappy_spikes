@@ -4388,7 +4388,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     sound.play(sfx);
     switch (await services.showLeaderboards()) {
       case ShowLeaderboardResult.signInFailed:
-        _showServiceMessage('Play Games sign-in unavailable');
+        _showServiceMessage(_signInUnavailable);
       case ShowLeaderboardResult.leaderboardFailed:
         _showServiceMessage('Leaderboard unavailable — try again');
       case ShowLeaderboardResult.opened:
@@ -4408,7 +4408,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     services.track('achievements_open', {'result': result.name});
     switch (result) {
       case ShowAchievementsResult.signInFailed:
-        _showServiceMessage('Play Games sign-in unavailable');
+        _showServiceMessage(_signInUnavailable);
       case ShowAchievementsResult.failed:
         _showServiceMessage('Achievements unavailable — try again');
       case ShowAchievementsResult.opened:
@@ -4417,6 +4417,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         break;
     }
   }
+
+  /// The sign-in failure message names the platform's service (iOS round
+  /// 2: Game Center on iOS).
+  String get _signInUnavailable => isIOS()
+      ? 'Game Center sign-in unavailable'
+      : 'Play Games sign-in unavailable';
 
   AchievementToast? _achToast;
 

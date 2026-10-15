@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 
 import 'package:flutter/foundation.dart';
 
+import '../game/diag.dart';
 import '../game/storage.dart';
 import '../levels/levels.dart';
 import '../run/config/versus_config.dart';
@@ -541,6 +542,16 @@ class FirebaseVersusService implements VersusService {
   }
 
   Future<void> _initialize() async {
+    // iOS round 2 §5: the platform player is followed from the start (not
+    // only once Firebase / App Check / auth are up, which can take seconds
+    // or fail offline), so the profile name ([me]: versus intro, results,
+    // leaderboard rows) is the Game Center / Play Games name as soon as
+    // the platform reports the player. Linking waits for [_ready].
+    try {
+      _playerSub ??= identity.player.listen(_onPlayer, onError: (_) {});
+    } catch (e) {
+      _log('player stream', e);
+    }
     try {
       final gate = startAfter;
       if (gate != null) await gate();
@@ -553,11 +564,6 @@ class FirebaseVersusService implements VersusService {
       _retry?.cancel();
       _retry = null;
       _identityChanged(); // PRD-2.3 §21.3 / §21.4
-      try {
-        _playerSub ??= identity.player.listen(_onPlayer, onError: (_) {});
-      } catch (e) {
-        _log('player stream', e);
-      }
       // QA P1-01 a known platform player whose link was interrupted (the
       // start-up had to begin again) is linked again now.
       unawaited(_retryLink());
@@ -584,7 +590,14 @@ class FirebaseVersusService implements VersusService {
 
   void _onPlayer(PlatformPlayer? p) {
     _player = p;
-    if (p != null && _ready && !backend.linkedToPlatform) {
+    diag(
+      'FS-GC versus player ${p == null ? 'none' : '"${p.displayName}"'} '
+      '(${identity.platform}) ready=$_ready',
+    );
+    // Before the start-up finished, [_initialize] refreshes the identity
+    // and links (`_retryLink`) once it is ready.
+    if (!_ready) return;
+    if (p != null && !backend.linkedToPlatform) {
       unawaited(onPlatformSignIn());
     } else {
       _identityChanged();

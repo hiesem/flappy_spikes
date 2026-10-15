@@ -10,6 +10,7 @@ import 'package:games_services/games_services.dart';
 
 import '../achievements/achievement_catalog.dart';
 import '../firebase_options.dart';
+import '../game/diag.dart';
 import '../skins/look.dart';
 import 'redact.dart';
 
@@ -99,7 +100,65 @@ class GameServices {
     // Set even when the plugin setup above failed: initialize() having RUN is
     // what distinguishes the real app from tests/unconfigured builds.
     _initialized = true;
+    if (!_initDone.isCompleted) _initDone.complete();
   }
+
+  final Completer<void> _initDone = Completer<void>();
+
+  /// iOS round 2 §5 / §6: Game Center authentication at launch (iOS only).
+  ///
+  /// The Android rule "never `GameAuth.signIn()` at launch" (CLAUDE.md:
+  /// Play Games shows a profile picker) stays Android-only. On iOS GameKit
+  /// authenticates only once the app sets the local player's authenticate
+  /// handler (games_services sets it in `signIn`); until then the player
+  /// counts as signed out even when signed in to Game Center on the
+  /// device: the in-game name stayed the generated one and no achievement
+  /// was reported (no native banner) until the player tapped the
+  /// leaderboard / achievements button. Setting the handler at launch is
+  /// Apple's standard flow: an already signed-in player is authenticated
+  /// silently (Apple's "Welcome back" banner), the player stream gets the
+  /// player and everything follows at once. A signed-out player gets
+  /// Game Center's own sign-in sheet once (GameKit stops asking after a
+  /// cancel; Settings → Game Center signs in later, and the plugin's
+  /// handler then reports the player at once).
+  ///
+  /// Runs after [initialize] and after [after] (the ads consent / ATT
+  /// flow at launch, capped at [launchAuthWait]) so the Game Center sheet
+  /// never collides with the UMP form or the ATT alert.
+  Future<void> authenticateAtLaunch({Future<void>? after}) async {
+    if (!isIOSPlatform()) return;
+    try {
+      await _initDone.future.timeout(launchAuthWait);
+      if (after != null) {
+        await after.timeout(launchAuthWait, onTimeout: () {});
+      }
+    } catch (_) {}
+    if (!_initialized || _signedIn) {
+      diag(
+        'FS-GC launch auth skipped (initialized=$_initialized '
+        'signedIn=$_signedIn)',
+      );
+      return;
+    }
+    diag('FS-GC launch auth: GameAuth.signIn (sets the authenticate handler)');
+    final watch = Stopwatch()..start();
+    try {
+      // Long: a signed-out player may take a while on Apple's sheet.
+      await signInPlugin().timeout(const Duration(minutes: 3));
+      diag('FS-GC launch auth ok in ${watch.elapsedMilliseconds} ms');
+    } catch (e) {
+      final code = e is PlatformException ? e.code : e.runtimeType.toString();
+      diag(
+        'FS-GC launch auth failed in ${watch.elapsedMilliseconds} ms: '
+        '$code',
+      );
+      _reportPgsError('sign_in_launch', e);
+    }
+  }
+
+  /// How long [authenticateAtLaunch] waits for [initialize] and for the
+  /// launch consent flow.
+  static const Duration launchAuthWait = Duration(seconds: 12);
 
   /// The shared `Firebase.initializeApp` (S6-F01): every caller —
   /// [initialize] and the versus start-up (`main.dart`) — waits for the
@@ -150,6 +209,12 @@ class GameServices {
 
   void _onPlayer(PlayerData? player) {
     final before = _playerId;
+    if ((player != null) != _signedIn || player?.playerID != before) {
+      diag(
+        'FS-GC player ${player == null ? 'signed out' : 'signed in "${player.displayName}"'}'
+        ' (persistent id: ${player?.playerID != null})',
+      );
+    }
     _signedIn = player != null;
     _playerId = player?.playerID;
     if (player != null && (!_announcedPlayer || before != _playerId)) {
@@ -233,8 +298,16 @@ class GameServices {
     }
     try {
       await unlockAchievementPlugin(id).timeout(pluginTimeout);
+      diag(
+        'FS-Ach report ${isIOSPlatform() ? id.iosId : id.androidId} '
+        '100% banner=on: ok',
+      );
       return true;
     } catch (e) {
+      diag(
+        'FS-Ach report ${isIOSPlatform() ? id.iosId : id.androidId} '
+        'FAILED: ${e is PlatformException ? '${e.code} ${e.message}' : e}',
+      );
       _reportPgsError('unlock_achievement', e);
       return false;
     }
@@ -249,7 +322,12 @@ class GameServices {
     if (!achievementsReady || !isIOSPlatform()) return;
     try {
       await setAchievementProgressPlugin(id, percent).timeout(pluginTimeout);
+      diag('FS-Ach progress ${id.iosId} ${percent.toStringAsFixed(1)}%: ok');
     } catch (e) {
+      diag(
+        'FS-Ach progress ${id.iosId} FAILED: '
+        '${e is PlatformException ? e.code : e}',
+      );
       _reportPgsError('achievement_progress', e);
     }
   }
@@ -290,6 +368,7 @@ class GameServices {
   @visibleForTesting
   void markInitialized() {
     _initialized = true;
+    if (!_initDone.isCompleted) _initDone.complete();
   }
 
   void logGameStart() => logEvent('game_start');
@@ -379,14 +458,13 @@ class GameServices {
     Rarity? rarity,
     int? price,
     int? shortfall,
-  }) =>
-      {
-        'layer': layer.key,
-        'id': id,
-        'rarity': ?rarity?.label,
-        'price': ?price,
-        'shortfall': ?shortfall,
-      };
+  }) => {
+    'layer': layer.key,
+    'id': id,
+    'rarity': ?rarity?.label,
+    'price': ?price,
+    'shortfall': ?shortfall,
+  };
 
   /// Menu / economy analytics (PRD-1 §6: coins_earned, shop_open,
   /// home_slot_shown, ...). Goes through [logEvent], so test spies that

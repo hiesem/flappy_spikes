@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import '../game/diag.dart';
 import '../game/storage.dart';
 import 'ach_state.dart';
 import '../levels/levels.dart';
@@ -98,7 +99,12 @@ class AchievementTracker {
       // Owner 2026-10-14: a signed-in player gets the platform's own
       // popup (Play Games / Game Center), so the game's toast shows only
       // while the player isn't signed in.
-      if (!services.achievementsReady) toastQueue.add(id);
+      final signedIn = services.achievementsReady;
+      if (!signedIn) toastQueue.add(id);
+      diag(
+        'FS-Ach unlocked ${id.key} (${id.iosId}) signedIn=$signedIn '
+        '${signedIn ? 'platform banner' : 'game toast'}',
+      );
       onUnlocked?.call(id);
       unawaited(syncAll());
     });
@@ -397,7 +403,10 @@ class AchievementTracker {
   }
 
   Future<void> _syncOnce() async {
-    if (!services.achievementsReady) return;
+    if (!services.achievementsReady) {
+      diag('FS-Ach sync: not signed in, nothing reported');
+      return;
+    }
     // Only what is durably unlocked is reported.
     await flush();
     final player = services.playerId;

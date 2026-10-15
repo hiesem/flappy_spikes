@@ -95,9 +95,7 @@ Future<void> main() async {
     // timeout) so it lands before the first run can start. A slower
     // activation still never changes a begun run (Tuning.beginRun pins).
     try {
-      await Tuning.instance.initialize().timeout(
-        const Duration(seconds: 3),
-      );
+      await Tuning.instance.initialize().timeout(const Duration(seconds: 3));
     } on TimeoutException {
       debugPrint('Tuning: activation still pending after 3 s');
     }
@@ -229,7 +227,15 @@ Future<void> main() async {
   }
   // Same fire-and-forget rule: the UMP consent form may be shown here, and
   // initialize() never throws; until it lands ads are simply unavailable.
-  unawaited(monetization.initialize());
+  final adsStarted = monetization.initialize();
+  unawaited(adsStarted);
+  // iOS round 2 §5 / §6: Game Center authenticates at launch on iOS only
+  // (an already signed-in player silently; GameServices.authenticateAtLaunch
+  // and PORT-IOS §2). Never on Android (Play Games' profile picker,
+  // CLAUDE.md). After the consent / ATT flow so the sheets never collide.
+  if (_isIOS && !isLinux && !kSoak && !kE2E) {
+    unawaited(services.authenticateAtLaunch(after: adsStarted));
+  }
 }
 
 /// PRD-2.2 §8.2: the Android system back (the gesture, or the 3-button back)
@@ -338,4 +344,3 @@ Future<double> _worldHeight(bool isLinux) async {
   }
   return height ?? _fallbackWorldHeight;
 }
-

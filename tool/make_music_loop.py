@@ -96,13 +96,10 @@ def rms_db(a, b) -> float:
     return seam.db(math.sqrt(s / max(1, len(a))))
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--report", help="also write the report to this file")
-    ap.add_argument("--page", help="design/music_v23 folder: rebuild loop_test.html "
-                    "from loop_test_src.html with both files embedded (card 4)")
-    args = ap.parse_args()
-
+def make_cut():
+    """Steps 1-6 (shared with tool/make_music_loop_ios.py): decode the MP3 and
+    return (start, end, (left, right)) — the float cut of exactly L samples
+    with the 5 ms seam crossfade."""
     print("1. decode", MP3.relative_to(ROOT))
     xl, xr = seam.decode(MP3)
     check(len(xl) == EXPECT_DECODED, f"decoded length {len(xl)} == {EXPECT_DECODED}")
@@ -135,6 +132,18 @@ def main() -> int:
         outs.append(o)
     ol, orr = outs
     check(len(ol) == L, f"cut length {len(ol)} == L")
+
+    return start, end, (ol, orr)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--report", help="also write the report to this file")
+    ap.add_argument("--page", help="design/music_v23 folder: rebuild loop_test.html "
+                    "from loop_test_src.html with both files embedded (card 4)")
+    args = ap.parse_args()
+
+    start, end, (ol, orr) = make_cut()
 
     print("7. encode OGG Vorbis q6")
     inter = array.array("f", bytes(8 * L))

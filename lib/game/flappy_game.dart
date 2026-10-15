@@ -101,6 +101,7 @@ import '../skins/catalog.dart';
 import '../skins/item_store.dart';
 import '../skins/look.dart';
 import 'config.dart';
+import 'diag.dart';
 import 'fade.dart';
 import 'palettes.dart';
 import 'playfield.dart';
@@ -1380,8 +1381,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     d.force.clear();
     d.forcedRide = null;
     final run = RunController(setup: setup, game: this);
-    // PRD-2.3.1 §12.2 / §12.5 (a fresh toast queue per run)
-    _dropAchievementToasts();
+    // PRD-2.3.1 §12.2 / §12.5: no pill over the run. iOS round 2 §6: the
+    // unshown toasts stay queued for the next results page / Home.
+    _hideAchievementToast();
     achievements.beginRun(counts: run.countsForAchievements);
     runStats = RunStats(run); // 2.3.0 (18) debug TUNING page
     _run = run;
@@ -3988,7 +3990,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   void _removeResults() {
-    _dropAchievementToasts(); // PRD-2.3.1 §12.5 they belong to the page
+    // iOS round 2 §6 (both platforms): a player who taps through the page
+    // before it settled no longer loses the unshown toasts: the pill on
+    // screen keeps going and the rest follow on Home
+    // ([_checkAchievementToasts]).
     final page = _results;
     _results = null;
     page?.removeFromParent();
@@ -4453,15 +4458,27 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// has played out (after the LEVEL UP and its CLAIM, if any).
   void _checkAchievementToasts() {
     if (achievements.toastQueue.isEmpty || _achToast != null) return;
+    // iOS round 2 §6: toasts carried over from a results page that was
+    // left early show on Home once nothing is over it.
+    if (state == GameState.start) {
+      if (_homeInteractive) {
+        diag(
+          'FS-Ach ${achievements.toastQueue.length} carried-over toast(s) '
+          'shown on Home',
+        );
+        showAchievementToasts();
+      }
+      return;
+    }
     final page = _results;
     if (page == null || state != GameState.results) return;
     if (!page.settled || page.leaving) return;
     showAchievementToasts();
   }
 
-  /// Removes the toast and forgets the queue (a new run, home).
-  void _dropAchievementToasts() {
-    achievements.toastQueue.clear();
+  /// Takes the pill off the screen (a new run); the unshown rest of the
+  /// queue is kept (iOS round 2 §6).
+  void _hideAchievementToast() {
     final t = _achToast;
     _achToast = null;
     t?.removeFromParent();

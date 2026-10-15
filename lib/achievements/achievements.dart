@@ -167,11 +167,12 @@ class AchievementTracker {
   /// The open run was excluded (debug assist): nothing more is staged.
   bool _excluded = false;
 
-  /// A new run: the toasts of an earlier run are dropped and an empty
-  /// journal is written.
+  /// A new run: an empty journal is written. iOS round 2 §6 (both
+  /// platforms): toasts of an earlier run that were not shown yet stay
+  /// queued (they show on the next results page / Home) instead of being
+  /// dropped.
   void beginRun({required bool counts}) => _tx(() {
     lastRunCounted = counts;
-    toastQueue.clear();
     _open = !countDebugRuns;
     _excluded = !counts;
     _s

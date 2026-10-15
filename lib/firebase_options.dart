@@ -26,10 +26,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -58,5 +55,14 @@ class DefaultFirebaseOptions {
     messagingSenderId: '512525012529',
     projectId: 'flappy-spikes-a2b55',
     storageBucket: 'flappy-spikes-a2b55.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyA5P_ps9Jcx2Q6p2vW4aM3NDDslu8zS5JE',
+    appId: '1:512525012529:ios:48d965d044af60e487cf10',
+    messagingSenderId: '512525012529',
+    projectId: 'flappy-spikes-a2b55',
+    storageBucket: 'flappy-spikes-a2b55.firebasestorage.app',
+    iosBundleId: 'com.flappyspikes.flappyspikes',
   );
 }

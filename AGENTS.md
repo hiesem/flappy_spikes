@@ -33,8 +33,13 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   `~/Android/Sdk`; `ninja` installed via uv (Linux desktop builds).
 - Linux desktop (`flutter run -d linux`, `flutter build linux --release`) is a
   **local test target only** — Android and iOS are the products.
-- iOS work is paused; make no new iOS changes until the user reopens it. The
-  later port checklist (do not edit `ios/`) is `PORT-IOS.md`.
+- iOS work REOPENED 2026-10-15 (branch `feat/ios`); the port checklist is
+  `PORT-IOS.md`. App Store app **"Flappy Spikes: Flap Fast"**, ASC app id
+  **6823208616**, bundle id **`com.flappyspikes.flappyspikes`** (the App Store
+  forbids `_`; Android stays `com.flappyspikes.flappy_spikes`). Game Center
+  leaderboard id **`fs_top_scores`** (not the 2014 `flappy_spikes_leaderboard`);
+  achievements `fs_ach_<key>`. iOS builds only on the GitHub macos runner
+  (Swift Package Manager for the plugins, CocoaPods fallback via `ios/Podfile`).
 
 - **Sound lengths (PRD-2.2 §22).** After adding or changing any file in
   `assets/audio/`, regenerate the stop-time table:
@@ -187,8 +192,8 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   (published achievements can't be deleted). Their ids are in
   `lib/achievements/achievement_catalog.dart`; the store art is in
   `store/achievements/` (`play/` 512, `ios/` 1024 RGB + the Game Center kit
-  CSV/JSON). Game Center achievements are not created yet (iOS paused): the kit
-  and the steps are in `PORT-IOS.md` / `SUBMISSION.md`.
+  CSV/JSON). Game Center achievement ids are `fs_ach_<key>` (App Store Connect);
+  the kit and the steps are in `PORT-IOS.md` / `SUBMISSION.md`.
   **PRD-2.3.1 §19 (2026-10-14):** the 11 item descriptions and MAGPIE's were
   edited to the lifetime goals ("Catch 10 Hearts." …, "Reach every item goal.")
   and published 20:44 / 20:46 CEST. The §19.3 hidden states could not be set:
@@ -247,7 +252,10 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   In a run with a banner `viewHeight` = visible height + `Config.bannerStripDrop` (20): run layouts
   keep their 44 pt bottom strip, its lowest 20 pt sit under the view's edge (`bottomStripInset` 24).
   Persistent components that cache heights implement `PlayfieldResizable`. Map in `docs/p22/ADS.md`.
-- iOS: ads route to Noop (no `GADApplicationIdentifier`; iOS paused), IAP is real.
+- iOS: AdMob on iOS too (UMP → ATT prompt → MobileAds.initialize); iOS app
+  `ca-app-pub-2660521344509391~7451723332`, real units in release builds and Google's test
+  units in debug / profile (as Android); IAP is real (StoreKit), the gift
+  products and Settings → Redeem code are Android-only.
 - Menus (home/shop/skins/dialogs/popups) always render at colour stage 0; only
   runs advance the colour stage.
 - The balloon bonus and results pages always use the approved grey (`kPostRunPalette`,

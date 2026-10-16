@@ -53,6 +53,7 @@ import '../menu/home_mode.dart';
 import '../menu/menu_state.dart';
 import '../menu/powerup_slot.dart';
 import '../menu/wallet.dart';
+import '../run/backdrop/run_backdrop.dart';
 import '../run/debug/autopilot.dart';
 import '../run/debug/debug_overlay.dart';
 import '../run/debug/force_menu.dart';
@@ -1389,6 +1390,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _run = run;
     (world as RunScaledWorld).timeScaleSource = () => run.state.timeScale;
     world.add(run);
+    // PRD-2.4 §3 the lively run background (leaves with its run).
+    world.add(RunBackdrop(run));
     // PRD-2.3 §10.1 / §10.2 the run opens waiting for the first tap, hoop 0
     // already at its spot.
     run.open();

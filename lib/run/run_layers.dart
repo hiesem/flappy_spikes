@@ -5,6 +5,10 @@ import 'package:flame/components.dart';
 /// the bird (10) and the spike strips (−5).
 abstract final class RunLayer {
   static const int backdrop = -1000;
+
+  /// PRD-2.4 §3: the lively run background (`RunBackdrop`), over the flat
+  /// backdrop rectangle and under everything else.
+  static const int runBackdrop = -999;
   static const int scoreCircle = -100;
   /// PRD-2.2 §12.2: every run banner and the collect stickers, screen-anchored
   /// (`RunBannerLayer`): above the score circle, below the guides and the bird.

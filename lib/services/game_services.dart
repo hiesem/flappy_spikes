@@ -272,6 +272,14 @@ class GameServices {
 
   static const MethodChannel _pgsChannel = MethodChannel('flappy_spikes/pgs');
 
+  /// Android: `PlayGamesSdk.initialize` (it starts the automatic sign-in
+  /// and its banner), called when [PlayerStreamGate] opens. Never throws.
+  static Future<void> initializePlayGames() async {
+    try {
+      await _pgsChannel.invokeMethod<bool>('initialize');
+    } catch (_) {}
+  }
+
   /// The silent Play Games check (Android); a test seam.
   @visibleForTesting
   Future<bool> isAuthenticatedPlugin() async =>

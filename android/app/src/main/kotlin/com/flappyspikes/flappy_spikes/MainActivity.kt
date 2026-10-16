@@ -34,11 +34,6 @@ class MainActivity : FlutterActivity() {
     private var debugPlayer: android.media.MediaPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Play Games v2 setup (Google: before any games API call). It starts
-        // the automatic sign-in of a returning player at app start, so the
-        // games_services player stream's one isAuthenticated check (when
-        // Dart first listens) sees the signed-in player (2.4.0 (24)).
-        PlayGamesSdk.initialize(applicationContext)
         super.onCreate(savedInstanceState)
         // PRD-2.2 §8 / S7-20: the game is the only back consumer. With
         // predictive back (targetSdk 36) the system finishes the activity
@@ -106,6 +101,19 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "flappy_spikes/pgs")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    // Play Games v2 setup (Google: before any games API
+                    // call). It starts the automatic sign-in of a returning
+                    // player, with Play Games' "Welcome back" banner, so Dart
+                    // calls it once the launch dialogs are done
+                    // (PlayerStreamGate, 2.4.0 (28)), not in onCreate.
+                    "initialize" -> {
+                        try {
+                            PlayGamesSdk.initialize(applicationContext)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.success(false)
+                        }
+                    }
                     "isAuthenticated" -> try {
                         PlayGames.getGamesSignInClient(this).isAuthenticated
                             .addOnCompleteListener { task ->

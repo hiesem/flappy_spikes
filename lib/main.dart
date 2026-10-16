@@ -202,7 +202,8 @@ Future<void> main() async {
   if (!_isIOS && !isLinux && !kSoak && !kE2E) {
     PlayerStreamGate.ready = game.launchDialogsDone
         .timeout(GameServices.launchGateWait, onTimeout: () {})
-        .then((_) => Future<void>.delayed(GameServices.launchGateSettle));
+        .then((_) => Future<void>.delayed(GameServices.launchGateSettle))
+        .then((_) => GameServices.initializePlayGames());
   }
 
   // PRD-2.2 §7.5.2: the game over the banner slot. PRD-2.3 §2.0: shares are

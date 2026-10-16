@@ -236,6 +236,11 @@ Future<void> main() async {
   if (_isIOS && !isLinux && !kSoak && !kE2E) {
     unawaited(services.authenticateAtLaunch(after: adsStarted));
   }
+  // 2.4.0 (24): Android re-asks Play Games silently while the player counts
+  // as signed out (GameServices.recheckSignIn; also on resume / run start).
+  if (!_isIOS && !isLinux && !kSoak && !kE2E) {
+    services.scheduleLaunchRechecks();
+  }
 }
 
 /// PRD-2.2 §8.2: the Android system back (the gesture, or the 3-button back)

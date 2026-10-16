@@ -21,6 +21,8 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.Settings
 import android.util.Log
+import com.google.android.gms.games.PlayGames
+import com.google.android.gms.games.PlayGamesSdk
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -32,6 +34,11 @@ class MainActivity : FlutterActivity() {
     private var debugPlayer: android.media.MediaPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Play Games v2 setup (Google: before any games API call). It starts
+        // the automatic sign-in of a returning player at app start, so the
+        // games_services player stream's one isAuthenticated check (when
+        // Dart first listens) sees the signed-in player (2.4.0 (24)).
+        PlayGamesSdk.initialize(applicationContext)
         super.onCreate(savedInstanceState)
         // PRD-2.2 §8 / S7-20: the game is the only back consumer. With
         // predictive back (targetSdk 36) the system finishes the activity
@@ -91,6 +98,28 @@ class MainActivity : FlutterActivity() {
         // Play pre-launch reports and Firebase Test Lab run on devices that
         // set this system setting; AdMobRewardedAds never loads ads there
         // (robot taps on real ads count as invalid traffic).
+        // 2.4.0 (24): the silent Play Games check behind
+        // GameServices.recheckSignIn. games_services asks isAuthenticated
+        // only once (when Dart first listens to its player stream); a
+        // player whose automatic sign-in landed later stayed "signed out"
+        // until a leaderboard tap. Never shows any UI.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "flappy_spikes/pgs")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isAuthenticated" -> try {
+                        PlayGames.getGamesSignInClient(this).isAuthenticated
+                            .addOnCompleteListener { task ->
+                                result.success(
+                                    task.isSuccessful && task.result.isAuthenticated
+                                )
+                            }
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "flappy_spikes/device")
             .setMethodCallHandler { call, result ->
                 when (call.method) {

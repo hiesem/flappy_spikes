@@ -22,6 +22,19 @@ class FakeGameServices extends GameServices {
   int showCalls = 0;
   int submitCalls = 0;
 
+  /// 2.4.0 (24): what the silent Play Games check answers, and how often
+  /// it was asked.
+  bool authenticated = false;
+  bool authThrows = false;
+  int authChecks = 0;
+
+  @override
+  Future<bool> isAuthenticatedPlugin() async {
+    authChecks++;
+    if (authThrows) throw StateError('pgs');
+    return authenticated;
+  }
+
   @override
   void logEvent(String name, [Map<String, Object>? parameters]) {
     events.add({'name': name, ...?parameters});

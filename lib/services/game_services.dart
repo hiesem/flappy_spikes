@@ -160,6 +160,88 @@ class GameServices {
   /// launch consent flow.
   static const Duration launchAuthWait = Duration(seconds: 12);
 
+  /// 2.4.0 (24), Android: the silent "signed in after all?" check.
+  ///
+  /// games_services 5.1.0 asks Play Games `isAuthenticated` only once, when
+  /// Dart first listens to its player stream at launch. When the automatic
+  /// sign-in of a returning player lands after that (a slow start, the
+  /// consent form at launch), the game kept the player "signed out" for
+  /// the session: the generated in-game name, the in-game achievement
+  /// toast instead of Play Games' popup, until a leaderboard tap signed in.
+  ///
+  /// While the game counts the player as signed out, this asks Play Games
+  /// again (`flappy_spikes/pgs` isAuthenticated, never any UI). Only when
+  /// Play Games says the player IS signed in, the plugin's sign-in fetches
+  /// the player: for an authenticated player that is silent (no profile
+  /// picker, so the CLAUDE.md "never signIn at launch" rule holds) and it
+  /// pushes the player into the stream, so name, achievements and the
+  /// popup follow at once. Concurrent requests fold into one; no-op on iOS
+  /// (Game Center: [authenticateAtLaunch]), in tests and when signed in.
+  Future<void> recheckSignIn(String reason) async {
+    if (!isAndroidPlatform() || _signedIn) return;
+    final running = _recheck;
+    if (running != null) return running;
+    final run = _recheckSignIn(reason);
+    _recheck = run;
+    try {
+      await run;
+    } finally {
+      _recheck = null;
+    }
+  }
+
+  Future<void>? _recheck;
+
+  Future<void> _recheckSignIn(String reason) async {
+    try {
+      await _initDone.future.timeout(launchAuthWait);
+    } catch (_) {
+      return;
+    }
+    if (!_initialized || _signedIn) return;
+    bool authenticated;
+    try {
+      authenticated = await isAuthenticatedPlugin().timeout(pluginTimeout);
+    } catch (e) {
+      diag('FS-GC recheck ($reason) failed: ${e.runtimeType}');
+      return;
+    }
+    if (!authenticated) {
+      diag('FS-GC recheck ($reason): not signed in to Play Games');
+      return;
+    }
+    if (_signedIn) return;
+    diag('FS-GC recheck ($reason): signed in to Play Games, fetching player');
+    try {
+      await signInPlugin().timeout(pluginTimeout);
+    } catch (e) {
+      diag('FS-GC recheck ($reason) sign-in failed: ${e.runtimeType}');
+      _reportPgsError('sign_in_recheck', e);
+    }
+  }
+
+  /// Android launch: [recheckSignIn] a few times over the first seconds
+  /// (the automatic sign-in can take a while, and the consent form may be
+  /// up); each one is a no-op once the player is signed in.
+  void scheduleLaunchRechecks() {
+    if (!isAndroidPlatform()) return;
+    for (final s in launchRecheckSeconds) {
+      Future<void>.delayed(
+        Duration(seconds: s),
+        () => recheckSignIn('launch +${s}s'),
+      );
+    }
+  }
+
+  static const List<int> launchRecheckSeconds = [2, 6, 15];
+
+  static const MethodChannel _pgsChannel = MethodChannel('flappy_spikes/pgs');
+
+  /// The silent Play Games check (Android); a test seam.
+  @visibleForTesting
+  Future<bool> isAuthenticatedPlugin() async =>
+      await _pgsChannel.invokeMethod<bool>('isAuthenticated') ?? false;
+
   /// The shared `Firebase.initializeApp` (S6-F01): every caller —
   /// [initialize] and the versus start-up (`main.dart`) — waits for the
   /// SAME attempt, so nothing that needs Firebase runs before it landed.
@@ -237,8 +319,9 @@ class GameServices {
     if (_resetChecked || !Platform.isIOS) return;
     _resetChecked = true;
     try {
-      final args = await const MethodChannel('flappy_spikes/device')
-          .invokeListMethod<String>('launchArgs');
+      final args = await const MethodChannel(
+        'flappy_spikes/device',
+      ).invokeListMethod<String>('launchArgs');
       if (args == null || !args.contains('-FSResetGameCenter')) return;
       final r = await GamesServices.resetAchievements();
       diag('FS-GC reset achievements: ${r ?? 'ok'}');
@@ -263,6 +346,18 @@ class GameServices {
   /// Whether this is iOS (Game Center progress); a test seam.
   @visibleForTesting
   bool Function() isIOSPlatform = _isIOS;
+
+  /// Whether this is Android (the Play Games re-check); a test seam.
+  @visibleForTesting
+  bool Function() isAndroidPlatform = _isAndroid;
+
+  static bool _isAndroid() {
+    try {
+      return !kIsWeb && Platform.isAndroid;
+    } catch (_) {
+      return false;
+    }
+  }
 
   static bool _isIOS() {
     try {

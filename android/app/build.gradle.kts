@@ -79,6 +79,9 @@ kotlin {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // MainActivity: PlayGamesSdk.initialize + the silent isAuthenticated
+    // check (the same version games_services 5.1.0 uses).
+    implementation("com.google.android.gms:play-services-games-v2:21.0.0")
 }
 
 flutter {

@@ -959,6 +959,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       }
     }
     // endregion WP-2d
+    // 2.4.0 (24): a player signed in to Play Games meanwhile (or whose
+    // automatic sign-in landed late) is picked up on the return.
+    if (state == AppLifecycleState.resumed) {
+      unawaited(services.recheckSignIn('resume'));
+    }
     // region PRD-2.2 §28 — the game owns the music lifecycle
     _audioLifecycle(state);
     // endregion PRD-2.2 §28
@@ -1352,6 +1357,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// force queue) and starts the [RunController] with the first tap.
   void _startRun(Powerup starter) {
     _run?.disposeRun();
+    // 2.4.0 (24): before the run's achievements, a late Play Games sign-in
+    // is picked up (Android; no-op when signed in, on iOS and in tests).
+    unawaited(services.recheckSignIn('run start'));
     _audioSceneChange(); // PRD-2.2 §28
     if (_soundReady) musicGuard.onRunStart(); // PRD-2.3 §13.3
     final d = runDebug;

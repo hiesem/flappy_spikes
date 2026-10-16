@@ -1755,3 +1755,18 @@ production build has the flag off and uses these values only. Full key table:
   and leaves with its run. It moves only with the run camera and the run clock (frozen on
   pause and death). Seam k is centred on hoop 40·k; hoops 0–39 are pure Nest Canopy; one
   loop is 400 hoops. Nothing else (bird, hoops, spikes, HUD, rides, physics) changes.
+
+### PRD-2.4 §3.5: the portal ride hands back to the background (P24-R, 2026-10-16)
+
+- DEVIATION (PRD 2.4 §3.5; replaces the 2.2 way-back wash of the five themed rides): around a
+  portal ride the background follows the run camera (layer shares of its height sky .07 /
+  far .17 / mid .32 / ground .5, capped 720 up / 100 down), holds on the exit, rushes with
+  the launch camera and catches up in the glide at +410·e^(−1.35·t) pt/s, bumps
+  6·share·e^(−4w)·sin(13w) on `pu_land` (tapered to 0 by the settle end). The cannon keeps
+  its tint and its wash; on space, sea, volcano, pinball and storm the scene leaves over
+  1.7 s (`smooth`) behind an edge in its own look and the world arrives per layer (lags
+  0 / .1 / .25 / .4 s, 1.9 s `smoother`). The fly's wash now only tints the leaving scene;
+  no wash in the glide. While a themed scene covers the screen the world is not drawn and
+  is re-synced to its hoop schedule at the launch; after a cannon ride the world re-syncs
+  at ≥ 0.6× (a seam right after it can land a few hoops early). Ride tracks, scenes,
+  exits, poses, sounds and timings are unchanged.

@@ -94,12 +94,26 @@ void main() {
         final b = RunBackdrop.of(g)!;
         expect(BackdropWorld.sceneAt(b.worldDistance), 0);
         var prev = b.worldDistance;
+        var prevCam = run.state.camX;
         var maxStep = 0.0;
         double? atPlane;
         await flyUntil(g, (r) {
           final w = b.worldDistance;
           final step = w - prev;
-          if (step.abs() > maxStep) maxStep = step.abs();
+          // PRD-2.4 §3.5 (WP-R): a themed portal ride re-syncs the world at
+          // its launch while its scene covers the whole screen (not drawn);
+          // on a ride the world moves with the ride camera (the launch
+          // rushes at the flight camera's speed, the glide catches up).
+          final unseen = b.rideHook?.hidden ?? false;
+          final dcam = (r.state.camX - prevCam).abs();
+          prevCam = r.state.camX;
+          final bound = r.state.ride == null ? 10.0 : dcam * 1.2 + 12;
+          if (!unseen && step.abs() > bound) {
+            fail('step $step > $bound (ride ${r.state.ride?.phase})');
+          }
+          if (!unseen && r.state.ride == null && step.abs() > maxStep) {
+            maxStep = step.abs();
+          }
           prev = w;
           for (final hp in r.spawner.hoops) {
             if (hp.plan.index == 40 && hp.plan.kind != HoopKindId.rideRing) {

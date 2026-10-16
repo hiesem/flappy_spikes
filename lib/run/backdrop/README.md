@@ -55,10 +55,15 @@ The prototype's `cam` is 300 pt per hoop; seam k sits at `cam = 12 000·k`. The 
 
 ## Ride hook (WP-R, PRD §3.5)
 
-`RunBackdrop.of(game)?.rideHook = myHook` during the ride, `null` after. `BackdropRideHook` has three no-op
-defaults: `bandOffset(band)` (dx, dy per band, also applied to slabs and pieces), `scroll(dc)` (override the
-world advance), `cover(path, viewHeight)` (the screen area the ride scene still covers; the background is not
-drawn there). The ride phase is `RunBackdrop.ridePhase` (`RunState.ride?.phase`).
+`RunBackdrop.of(game)?.rideHook = myHook` during the ride, `null` after (`PortalRide` does this with
+`lib/run/rides/portal_handover.dart`). `BackdropRideHook` has no-op defaults: `bandOffset(band)` (dx, dy per band,
+also applied to slabs and pieces; dy < −1 also stretches the band's row at design y 608 down to the screen
+bottom, so a lifted ground never ends), `sideReach(band)` (constant sideways travel: the band is drawn that much
+wider), `scroll(dc)` (override the world advance; after an override `WorldDistance` re-syncs to the hoop schedule
+at ≥ 0.6× with the unplanned-hoop cap off, until it is back on schedule), `cover(path, viewHeight)` (the screen area
+the ride scene still covers; the background is not drawn there) and `hidden` (the ride scene covers everything: the
+background is not drawn). `WorldDistance.resync(w)` sets the world while it is not seen (never across the next seam
+hoop or back into the last seam). The ride phase is `RunBackdrop.ridePhase` (`RunState.ride?.phase`).
 
 ## Colour and frame
 

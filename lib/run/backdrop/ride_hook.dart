@@ -27,4 +27,15 @@ abstract class BackdropRideHook {
   /// [covered] (screen coordinates, 320 × viewHeight) and return true; the
   /// background is then not drawn there. False = draw everywhere.
   bool cover(Path covered, double viewHeight) => false;
+
+  /// WP-R: true while the ride's own scene covers the whole screen (a
+  /// themed ride's scene once faded in, its exit): the background is not
+  /// drawn at all.
+  bool get hidden => false;
+
+  /// WP-R (PRD-2.4 §3.5 "No gaps"): the largest sideways shift (pt, + =
+  /// right) [band] gets during this handover, constant while it lasts:
+  /// the band is drawn that much wider on the side it leaves open (plus a
+  /// margin), so a layer that slides in has no open edge.
+  double sideReach(Band band) => 0;
 }

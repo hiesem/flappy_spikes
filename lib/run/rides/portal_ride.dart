@@ -25,6 +25,9 @@ import 'speed_lines.dart';
 import 'themes/storm.dart';
 import 'themes/themes.dart';
 import '../../game/paints.dart';
+import '../backdrop/run_backdrop.dart';
+import 'portal_handover.dart';
+import 'ride_reveal.dart';
 
 /// A ride's chain before it starts: theme, path, ring stations and the
 /// preview of the first curve ring (§3.12 "the next chain ring is already
@@ -256,6 +259,62 @@ class PortalRide implements Ride {
   /// The teeth's extra scroll (pt).
   double get teethShift => _spOff;
 
+  // region WP-R — PRD-2.4 §3.5 the handover to the run background
+  /// The background hook while the ride runs (null before / after).
+  PortalHandover? get handover => _handover;
+  PortalHandover? _handover;
+
+  /// The run camera's height in the last flight frame (track pt).
+  double get flyEndCamY => _camEndTrack.dy + _offEnd.dy;
+
+  /// The themed ride's reveal (null: the cannon).
+  late final RideReveal? _reveal = RideReveal.of(theme.id);
+  final Path _sceneClip = Path();
+
+  /// Whether the way-back wash was drawn in the glide (tests: the cannon
+  /// keeps it, the five themed rides have the reveal instead).
+  bool washInGlide = false;
+
+  void _installHandover() {
+    final h = PortalHandover(this);
+    _handover = h;
+    RunBackdrop.of(c.game)?.rideHook = h;
+    h.step();
+  }
+
+  void _removeHandover() {
+    final h = _handover;
+    if (h == null) return;
+    final b = RunBackdrop.of(c.game);
+    if (b != null && identical(b.rideHook, h)) b.rideHook = null;
+    _handover = null;
+  }
+
+  /// PRD-2.4 §3.5 / §3.6 `inScene`: paints [fn] clipped to the part of the
+  /// screen a themed ride's leaving scene still covers (unclipped before
+  /// the launch; nothing once it has gone).
+  void _inScene(Canvas canvas, void Function() fn) {
+    final rv = _reveal;
+    final p = _handover?.progress ?? 0;
+    if (rv == null || p <= 0) return fn();
+    if (p >= 1) return;
+    _sceneClip.reset();
+    RideReveal.sceneClip(_sceneClip, theme.id, p, view.t, view.w, view.h);
+    canvas
+      ..save()
+      ..clipPath(_sceneClip);
+    fn();
+    canvas.restore();
+  }
+
+  /// PRD-2.4 §3.5 the leaving edge in the ride's own look.
+  void _paintEdge(Canvas canvas) {
+    if (_reveal == null) return;
+    final p = _handover?.progress ?? 0;
+    RideReveal.paintEdge(canvas, theme.id, p, view.t, view.w, view.h);
+  }
+  // endregion WP-R
+
   late final Vector2 _origin;
   late Offset _join;
   late Offset _entry;
@@ -366,6 +425,7 @@ class PortalRide implements Ride {
     if (firstRing != null) _added.add(0);
 
     s.ride = RideState(kind: RideKind.portal, rideId: theme.id, phase: 'ride');
+    _installHandover();
     c.run.rideHold = true;
     c.run.spawner
       ..hold = true
@@ -407,6 +467,7 @@ class PortalRide implements Ride {
     game.storage.saveLastPortalRide(theme.id.storageId);
     _stepRide(0);
     _applySceneLook();
+    _handover?.step();
   }
 
   /// PRD-2.2 §18.1 the circle's look and layer, the banners' opacity and
@@ -506,6 +567,7 @@ class PortalRide implements Ride {
     if (dt > 0 && view.phase != RidePhase.glide) c.s.forwardSpeed = dx / dt;
     _placeBird();
     _applySceneLook();
+    _handover?.step();
   }
 
   void _placeBird() {
@@ -604,6 +666,7 @@ class PortalRide implements Ride {
       ..off = Offset.zero;
     _flyLaunch = theme.launchPoint(v);
     theme.onLaunch(v);
+    _handover?.onLaunch();
     c.game.runBird?.priority = PortalConfig.birdAfterShot;
     _stepFly(0);
   }
@@ -744,6 +807,7 @@ class PortalRide implements Ride {
     }
     _removeLayers();
     _restoreScene();
+    _removeHandover();
     c.emit(RideEnded(RideKind.portal, theme.id));
   }
 
@@ -763,6 +827,7 @@ class PortalRide implements Ride {
     c.s.ride = null;
     _removeLayers();
     _restoreScene();
+    _removeHandover();
   }
 
   void _removeLayers() {
@@ -794,14 +859,16 @@ class PortalRide implements Ride {
       case RidePhase.exit:
       case RidePhase.fly:
         final off = v.phase == RidePhase.fly ? v.off : Offset.zero;
-        if (!theme.exitFill) {
-          theme.paintBackdrop(
-            canvas,
-            v,
-            v.camEnd + Vector2(off.dx * .5, off.dy * .5),
-          );
-        }
-        theme.paintExitBackdrop(canvas, v, _exitTime, off);
+        _inScene(canvas, () {
+          if (!theme.exitFill) {
+            theme.paintBackdrop(
+              canvas,
+              v,
+              v.camEnd + Vector2(off.dx * .5, off.dy * .5),
+            );
+          }
+          theme.paintExitBackdrop(canvas, v, _exitTime, off);
+        });
       case RidePhase.glide:
       case RidePhase.done:
         break;
@@ -823,28 +890,38 @@ class PortalRide implements Ride {
       case RidePhase.exit:
       case RidePhase.fly:
         final off = v.phase == RidePhase.fly ? v.off : Offset.zero;
-        if (!theme.exitFill) {
-          theme.paintWorld(
-            canvas,
-            v,
-            v.camEnd + Vector2(off.dx * .5, off.dy * .5),
-          );
-        }
-        theme.paintExit(canvas, v, _exitTime, off);
-        if (v.phase == RidePhase.fly && !_cannon) {
-          final (top, bottom) = theme.washTint;
-          vGradient(
-            canvas,
-            _screen,
-            top,
-            bottom,
-            sm(v.ft / (PortalConfig.flyTime - PortalConfig.flyEndEarly)),
-          );
-        }
+        _inScene(canvas, () {
+          if (!theme.exitFill) {
+            theme.paintWorld(
+              canvas,
+              v,
+              v.camEnd + Vector2(off.dx * .5, off.dy * .5),
+            );
+          }
+          theme.paintExit(canvas, v, _exitTime, off);
+          if (v.phase == RidePhase.fly && !_cannon) {
+            final (top, bottom) = theme.washTint;
+            vGradient(
+              canvas,
+              _screen,
+              top,
+              bottom,
+              sm(v.ft / (PortalConfig.flyTime - PortalConfig.flyEndEarly)),
+            );
+          }
+        });
+        if (v.phase == RidePhase.fly) _paintEdge(canvas);
       case RidePhase.glide:
+        // PRD-2.4 §3.5: the five themed rides have the reveal instead of
+        // the way-back wash; the cannon keeps its tint.
+        if (_reveal != null) {
+          _paintEdge(canvas);
+          break;
+        }
         if (v.envA <= 0) break;
         final (top, bottom) = theme.washTint;
         vGradient(canvas, _screen, top, bottom, v.envA);
+        washInGlide = true;
       case RidePhase.done:
         break;
     }
@@ -865,7 +942,7 @@ class PortalRide implements Ride {
       case RidePhase.exit:
         theme.paintExitFront(canvas, v, _exitTime, Offset.zero);
       case RidePhase.fly:
-        theme.paintExitFront(canvas, v, _exitTime, v.off);
+        _inScene(canvas, () => theme.paintExitFront(canvas, v, _exitTime, v.off));
         if (theme.projectileActive(v, v.ft)) {
           theme.paintProjectile(canvas, v, v.ft, _pose.pos, _flyAngle);
         }

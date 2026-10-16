@@ -5,7 +5,6 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/run/elements.dart';
-import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
 import 'backdrop_harness.dart';

@@ -1,3 +1,4 @@
+import '../config/handover_config.dart';
 import 'backdrop_math.dart';
 
 /// Where the run's hoops are (PRD-2.4 §3.3 pacing): the director's next
@@ -62,6 +63,17 @@ class WorldDistance {
   double _c = 0;
   bool started = false;
 
+  /// WP-R (PRD-2.4 §3.5): a portal ride's hook drove the world (an
+  /// override), so it may be ahead of its hoop schedule. Until it is back
+  /// on it (the mapped rate is normal again) the unplanned-hoop cap is off and the rate never drops
+  /// below [HandoverConfig.afterRideMinRate]: the world re-syncs smoothly
+  /// instead of holding still or creeping (the seam may then come a few
+  /// hoops early after a ride that ends close to it).
+  bool _afterRide = false;
+
+  /// Whether the world is re-syncing after a portal ride (tests).
+  bool get afterRide => _afterRide;
+
   /// The camera centre the distance was last advanced to.
   double get c => _c;
 
@@ -96,15 +108,21 @@ class WorldDistance {
     final double dw;
     if (override != null) {
       dw = override;
+      _afterRide = true;
     } else {
       var lead = targetX(a, _c) - _c;
-      final lo = rem / rMax, hi = rem / rMin;
+      // back on (or behind) the hoop schedule: the re-sync is over
+      if (_afterRide && rem >= lead * kPerHoop / a.spacing) {
+        _afterRide = false;
+      }
+      final lo = rem / rMax,
+          hi = rem / (_afterRide ? HandoverConfig.afterRideMinRate : rMin);
       lead = lead < lo ? lo : (lead > hi ? hi : lead);
       dw = lead <= 0 ? dc : rem / lead * dc;
     }
     _c = c;
     var step = dw;
-    if (override == null && step > 0 && target >= a.nextIndex) {
+    if (override == null && !_afterRide && step > 0 && target >= a.nextIndex) {
       // The seam hoop is not planned yet (a ride holds the spawner, or the
       // spacing grew): the world may not come closer to it than the slots
       // still to plan, so the seam never plays ahead of its hoop. It holds
@@ -117,5 +135,19 @@ class WorldDistance {
       w = wt;
       target += kHoopsPerScene;
     }
+  }
+
+  /// WP-R (PRD-2.4 §3.5): sets the world distance to [to] while the world
+  /// is not seen (a themed ride's scene covers the screen at its launch),
+  /// so it is on its hoop schedule when control returns. It never crosses
+  /// the next seam hoop, and never moves back into the last seam's window
+  /// or its lingering pieces.
+  void resync(double to) {
+    final wt = target * kPerHoop;
+    final back = (target - kHoopsPerScene) * kPerHoop + kVWIN / 2 + kLinger;
+    final lo = w < back ? w : back;
+    final hi = wt - 1;
+    w = to < lo ? lo : (to > hi ? hi : to);
+    _afterRide = true;
   }
 }

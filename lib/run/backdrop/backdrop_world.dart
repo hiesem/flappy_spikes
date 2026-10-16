@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../config/handover_config.dart';
 import 'backdrop_ctx.dart';
 import 'backdrop_math.dart';
 import 'backdrop_palette.dart';
@@ -72,9 +73,19 @@ class BackdropWorld implements SceneDrawer {
   @override
   void group(Ctx c, int env, List<Band> bands, [BandOffset? dy]) {
     final scene = scenes[modI(env, kNST)];
+    final h = hook;
     for (final b in bands) {
       final y = dy == null ? 0.0 : dy(b);
-      final o = hook?.bandOffset(b) ?? Offset.zero;
+      final o = h?.bandOffset(b) ?? Offset.zero;
+      // WP-R (PRD-2.4 §3.5 "No gaps"): a band sliding in sideways is drawn
+      // wider on the side it leaves open.
+      final reach = h?.sideReach(b) ?? 0.0;
+      final xl = c.xl, xr = c.xr;
+      if (reach != 0) {
+        c
+          ..xl = xl + (reach > 0 ? -reach : 0) - HandoverConfig.sideMargin
+          ..xr = xr + (reach < 0 ? -reach : 0) + HandoverConfig.sideMargin;
+      }
       c.save();
       if (y != 0 || o != Offset.zero) c.translate(o.dx, y + o.dy);
       c.env = env;
@@ -82,7 +93,34 @@ class BackdropWorld implements SceneDrawer {
       scene.draw(c, b);
       c.restore();
       c.restore();
+      if (o.dy < -1) _extendDown(c, env, scene, b, o.dx, y + o.dy);
+      c
+        ..xl = xl
+        ..xr = xr;
     }
+  }
+
+  /// WP-R (PRD-2.4 §3.5 "No gaps"): a band lifted by a ride hook (it comes
+  /// down from above, or follows the camera down) gets its ground drawn
+  /// longer: its row [HandoverConfig.groundRow] below the design bottom is
+  /// stretched down to the screen bottom (the prototype's bottom-row
+  /// stretch), so the ground never ends above the screen bottom.
+  void _extendDown(Ctx c, int env, BackdropScene scene, Band b, double dx, double dy) {
+    final row = kVH + HandoverConfig.groundRow;
+    final ry = row + dy;
+    if (ry >= kVH) return;
+    final top = ry < c.yTop ? c.yTop : ry;
+    final span = kVH - top + 1;
+    c.save();
+    c.clipRect(c.xl - kVW, top, c.xr - c.xl + 2 * kVW, span);
+    c.translate(dx, top);
+    c.scale(1, span);
+    c.translate(0, -row);
+    c.env = env;
+    c.save();
+    scene.draw(c, b);
+    c.restore();
+    c.restore();
   }
 
   /// `vmove(…)`: a floor move.
@@ -177,6 +215,8 @@ class BackdropPainter {
     double opacity = 1,
   }) {
     if (opacity <= 0) return;
+    // WP-R: the ride's own scene covers the whole screen.
+    if (world.hook?.hidden ?? false) return;
     final screen = Rect.fromLTWH(0, 0, kVW, viewHeight);
     final identity = isIdentityPalette(bg, fg);
     if (!identity && (bg != _bg || fg != _fg)) {

@@ -279,6 +279,8 @@ const List<String> kAdTestDeviceIds = <String>[
   // ANDROID_ID, which Android keys per signing key, so the Play-installed app
   // (app-signing key) gets a different hash than local builds (upload key).
   kPixel8PlayAdTestDeviceId,
+  // The owner's iPhone (iOS keys the hash on the IDFA).
+  kOwnerIphoneAdTestDeviceId,
 ];
 
 /// The owner's Pixel 8 (see [kAdTestDeviceIds]).
@@ -287,3 +289,9 @@ const String kPixel8AdTestDeviceId = '375F7680953C1B0F47A1FC3E475A9AA1';
 /// The owner's Pixel 8 running the Play-signed build (2.2.0 (9) from internal
 /// testing, logcat 2026-10-12).
 const String kPixel8PlayAdTestDeviceId = 'C8EDCAE2408A20189883DF41E7E998DA';
+
+/// The owner's iPhone 12 Pro running the TestFlight build 2.3.1 (1017), read
+/// from the device syslog (`<Google> To get test ads on this device`)
+/// 2026-10-16. The hash follows the IDFA: resetting the advertising identifier
+/// or denying tracking changes it.
+const String kOwnerIphoneAdTestDeviceId = 'f44c3e6936d39bed4356dcdf57b83a39';

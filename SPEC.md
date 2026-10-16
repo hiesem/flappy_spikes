@@ -1530,8 +1530,8 @@ production build has the flag off and uses these values only. Full key table:
   `openingFor(index)` × the Big Hoops multiplier. The five ride rings of a portal ride take
   `openingFor(portal index)` × the multiplier (capped to the band); the rings of one ride
   share one size, fixed when the portal spawns (`PortalRide.rideRingOpening`). Exceptions:
-  **hoop 0** (118, also with Big Hoops, PRD-2.3 §10.2); **the portal** (118 with and without
-  Big Hoops; 2.3.1 multiplied it by Big Hoops, 2.4 keeps it at 118 as the PRD's exception);
+  **hoop 0** (118, also with Big Hoops, PRD-2.3 §10.2); **the portal** (118 at every
+  hoop, × Big Hoops as in 2.3.1, unchanged);
   the **saw**: `sawExtraOpening` stays 0 (PRD-2.2 §25: the saw is the normal opening; the
   PRD-2.4 text "keeps its +28 pt" describes the 2.0 value, so the saw is unchanged). Ride
   rings are still perfect passes and their rims are still ignored: ride difficulty and

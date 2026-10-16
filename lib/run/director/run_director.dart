@@ -757,15 +757,14 @@ class RunDirector {
     if (kind == HoopKindId.saw) opening += RunConfig.sawExtraOpening;
     // PRD-2.2 §25.1 the portal ring stays a big, easy 118 pt entrance at
     // every hoop (it took the shrinking normal opening before). PRD-2.4
-    // §2.3: it does not take the Big Hoops multiplier either; the director
-    // stays free of Flame imports.
+    // §2.3 keeps it unchanged: 118 × the Big Hoops multiplier, as in 2.3.1
+    // (the director stays free of Flame imports).
     if (kind == HoopKindId.portal) opening = RunConfig.portalOpening;
     final pairO =
         RunConfig.pairOffsetAt711 * ctx.viewHeight / RunConfig.designHeight;
     if (kind == HoopKindId.pair) extraMargin = pairO / 2;
     // PRD-2.3 §0 item 3 / §10.2: hoop 0 stays 118, also with Big Hoops.
-    final mult = kind == HoopKindId.portal ? 1.0 : _bigMult(i, ctx);
-    opening = cap(opening * mult, extraMargin);
+    opening = cap(opening * _bigMult(i, ctx), extraMargin);
     var y = _layout.nextCentre(i, ctx, opening, extra: extraMargin);
     final maxJump = tables.bandFor(i).dy.$3 * band;
 

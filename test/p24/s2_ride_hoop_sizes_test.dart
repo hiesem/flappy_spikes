@@ -21,8 +21,8 @@ import '../helpers.dart';
 /// (comet, portal ride, Big Hoops) plus the director's ride-time slots.
 ///
 /// Expected sizes: a hoop takes `openingFor(index)` × the Big Hoops
-/// multiplier (hoop 0 stays 118); the portal stays 118 with or without Big
-/// Hoops; the five ride rings take `openingFor(portal index)` × the
+/// multiplier (hoop 0 stays 118); the portal stays 118 × the multiplier
+/// (unchanged from 2.3.1); the five ride rings take `openingFor(portal index)` × the
 /// multiplier.
 
 const _mult = RunConfig.bigHoopsMult;
@@ -154,7 +154,10 @@ void _portalChecks({required bool bigHoops}) {
       final portal = run.spawner.slotLog.firstWhere(
         (p) => p.kind == HoopKindId.portal,
       );
-      expect(portal.opening, closeTo(RunConfig.portalOpening, 1e-9));
+      expect(
+        portal.opening,
+        closeTo(RunConfig.portalOpening * (bigHoops ? _mult : 1), 1e-9),
+      );
       await _flyUntil(game, run, () => run.state.ride?.kind == RideKind.portal);
       expect(run.state.ride?.kind, RideKind.portal, reason: 'the ride started');
       final ride = run.features.whereType<PortalRideFeature>().single.ride!;
@@ -254,8 +257,8 @@ void main() {
       expect(plain.opening, closeTo(RunConfig.openingFor(40) * _mult, 1e-9));
     });
 
-    test('§2.3 the portal stays 118 with Big Hoops (the rings take the '
-        'multiplier)', () {
+    test('§2.3 the portal keeps 118 × Big Hoops, unchanged from 2.3.1 (the '
+        'rings take the multiplier too)', () {
       final d = RunDirector(
         seed: 7,
         enabled: {ElementId.normalHoop, ElementId.portal},
@@ -266,7 +269,7 @@ void main() {
       );
       final portal = d.nextSlot(DirectorContext.open(711, bigHoopsMult: _mult));
       expect(portal.kind, HoopKindId.portal);
-      expect(portal.opening, closeTo(RunConfig.portalOpening, 1e-9));
+      expect(portal.opening, closeTo(RunConfig.portalOpening * _mult, 1e-9));
     });
   });
 

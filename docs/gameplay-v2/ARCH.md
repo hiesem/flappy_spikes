@@ -1484,7 +1484,7 @@ regression in `test/e2e/p2_gameplay_e2e_test.dart` (S6-20 … S6-24).
 | Activity | `RunState.activity` (`RunActivity.of(state)`: portal / comet ride, piggy, jar, capsule), `activityStart`, `activityEndedAtSlot`; `DirectorContext.activity` / `activityEndedAtSlot`; the director skips every reward ring / item (`RunDirector.rewardKinds`, `isRewardItem`, `isRewardSlot`) during an activity and its 2-hoop cool-down (slots from n + 1, gaps from n, n = the next slot to plan when it ended); `oweFeather` / `owePiece`; `activityItemsFor` refills the planned gap with a new piggy / jar run's own items | §27 |
 | Reward rings | `Hoop.plan` is mutable; `Hoop.stripReward()` (pair / Lucky Spin / FEVER on screen when an activity starts) makes its plan kind normal, fades the reward parts (`rewardAlpha`, `NormalHoopKind.paintStripped`) and the kinds skip their reward on pass | §27.3 |
 | Egg | A rim touch while still an egg breaks it (`EggFeature._break`, `egg_broken {cause, cracks}`); ride rings don't crack it; `CollectBursts.burst(gravity:)` | §23 |
-| Portal ring | Fixed 118 pt (`RunConfig.portalOpening`), also with Big Hoops | §25.1, PRD-2.4 §2.3 |
+| Portal ring | Fixed 118 pt (`RunConfig.portalOpening`) × the Big Hoops multiplier (unchanged from 2.3.1) | §25.1, PRD-2.4 §2.3 |
 ## 32. WP-33c contract notes (PRD-2.2 §33.4 items 4–6, as built 2026-10-12)
 
 | Area | As built | PRD |

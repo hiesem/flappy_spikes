@@ -188,8 +188,8 @@ abstract final class RunConfig {
   static const double heartOnLineChance = 0.5;
 
   /// PRD-2.2 §25.1 The portal ring is a fixed 118 pt at every hoop (it does
-  /// not shrink). PRD-2.4 §2.3: the portal stays 118 with Big Hoops too (the
-  /// ride rings are the ones that grow).
+  /// not shrink). PRD-2.4 §2.3 keeps it unchanged: Big Hoops multiplies it,
+  /// as in 2.3.1.
   static const double portalOpening = 118;
 
   /// PRD-2.2 §19.4 Single pickups (heart, shield, capsule, egg, jar,

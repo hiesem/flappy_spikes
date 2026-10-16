@@ -78,21 +78,27 @@ void main() {
         final d = director(i, const [], ride: RideId.space);
         final s = d.nextSlot(DirectorContext.open(711));
         expect(s.kind, HoopKindId.portal, reason: 'hoop $i');
-        expect(s.opening, closeTo(RunConfig.portalOpening, .5),
-            reason: 'hoop $i');
+        expect(
+          s.opening,
+          closeTo(RunConfig.portalOpening, .5),
+          reason: 'hoop $i',
+        );
       }
     });
 
-    test('PRD-2.4 §2.3 the portal stays 118 pt with Big Hoops too (the ride '
-        'rings take the multiplier)', () {
+    test('PRD-2.4 §2.3 the portal keeps 118 pt × Big Hoops, unchanged from '
+        '2.3.1', () {
       for (final i in [30, 45, 70, 120]) {
         final d = director(i, const [], ride: RideId.space);
         final s = d.nextSlot(
           DirectorContext.open(711, bigHoopsMult: RunConfig.bigHoopsMult),
         );
         expect(s.kind, HoopKindId.portal, reason: 'hoop $i');
-        expect(s.opening, closeTo(RunConfig.portalOpening, .5),
-            reason: 'hoop $i');
+        expect(
+          s.opening,
+          closeTo(RunConfig.portalOpening * RunConfig.bigHoopsMult, .5),
+          reason: 'hoop $i',
+        );
       }
     });
   });

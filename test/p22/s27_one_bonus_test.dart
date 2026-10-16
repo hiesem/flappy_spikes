@@ -56,6 +56,9 @@ class _Watch {
           _reward('${e.plan.kind.name} hoop', e.plan.trackX);
         }
         if (active && e.plan.kind != HoopKindId.normal) obstacles++;
+        if (!active && ended.isNotEmpty && e.plan.kind != HoopKindId.normal) {
+          obstaclesAfter++;
+        }
       });
   }
 
@@ -65,6 +68,11 @@ class _Watch {
   bool active = false;
   double? endX;
   int obstacles = 0;
+
+  /// Obstacle hoops after the activity ended (PRD-2.4 §1: a short jar run,
+  /// whose three escapes come early on the wider openings, can end before a
+  /// planned obstacle; obstacles still come after it).
+  int obstaclesAfter = 0;
 
   void _reward(String what, double x) {
     if (active) {
@@ -122,7 +130,13 @@ void main() {
         // After the end the forced rewards come — but only after 2 hoops.
         await flyRun(game, maxSeconds: 8);
         expect(watch.bad, isEmpty);
-        if (!ride) expect(watch.obstacles, greaterThan(0));
+        if (!ride) {
+          expect(
+            watch.obstacles + watch.obstaclesAfter,
+            greaterThan(0),
+            reason: 'obstacle rings come during or after the activity',
+          );
+        }
         // Never two at once.
         expect(watch.started.length - watch.ended.length, lessThanOrEqualTo(1));
       },

@@ -55,14 +55,14 @@ void main() {
   });
 
   group('PRD-2 hoop course (WP-1a: replaces the pipe math)', () {
-    test('§3.0.1 / PRD-2.3 §14.4 opening 118 at hoop 0, then 88 → 66 at '
-        'hoop 100, flat after', () {
+    test('§3.0.1 / PRD-2.3 §14.4 / PRD-2.4 §1 opening 118 at hoop 0, the '
+        'v23 curve from hoop 1 (118 → 66 at hoop 100), flat after; rides '
+        'follow it (PRD-2.4 §2)', () {
       expect(RunConfig.openingFor(0), 118);
-      expect(RunConfig.openingFor(1), 88);
-      expect(RunConfig.openingFor(50), closeTo(77, .2));
+      expect(RunConfig.openingFor(1), 118);
+      expect(RunConfig.openingFor(50), closeTo(81, .2));
       expect(RunConfig.openingFor(100), 66);
       expect(RunConfig.openingFor(200), 66);
-      expect(RunConfig.openingFor(200, ride: true), 118);
     });
 
     test('§3.0.1 spacing 310 pt, first hoop 60 pt past the right edge', () {

@@ -5,7 +5,6 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/run/config/fever_config.dart';
-import 'package:flappy_spikes/run/config/portal_config.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/config/saw_config.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
@@ -74,12 +73,25 @@ void main() {
     }
 
     test('§25 the portal ring stays 118 pt at every hoop', () {
-      expect(PortalConfig.ringOpening, 118);
+      expect(RunConfig.portalOpening, 118);
       for (final i in [30, 45, 70, 120]) {
         final d = director(i, const [], ride: RideId.space);
         final s = d.nextSlot(DirectorContext.open(711));
         expect(s.kind, HoopKindId.portal, reason: 'hoop $i');
-        expect(s.opening, closeTo(PortalConfig.ringOpening, .5),
+        expect(s.opening, closeTo(RunConfig.portalOpening, .5),
+            reason: 'hoop $i');
+      }
+    });
+
+    test('PRD-2.4 §2.3 the portal stays 118 pt with Big Hoops too (the ride '
+        'rings take the multiplier)', () {
+      for (final i in [30, 45, 70, 120]) {
+        final d = director(i, const [], ride: RideId.space);
+        final s = d.nextSlot(
+          DirectorContext.open(711, bigHoopsMult: RunConfig.bigHoopsMult),
+        );
+        expect(s.kind, HoopKindId.portal, reason: 'hoop $i');
+        expect(s.opening, closeTo(RunConfig.portalOpening, .5),
             reason: 'hoop $i');
       }
     });

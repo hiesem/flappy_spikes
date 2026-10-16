@@ -43,9 +43,9 @@ import 'speed_lines.dart';
 /// - It is a ride (`RunState.ride` = comet): rims are ignored, closed
 ///   switches never stop it, every hoop passed is a perfect pass (the
 ///   controller), the mistake pipeline ignores mistakes, hoops spawned now
-///   are full size, upright and still (the director). It also holds the
-///   timed-powerup slot (`RunState.timed` = comet): no capsule, comet hoop
-///   or COMET gift meanwhile.
+///   are upright and still at the curve size of their index (the director,
+///   PRD-2.4 §2). It also holds the timed-powerup slot (`RunState.timed` =
+///   comet): no capsule, comet hoop or COMET gift meanwhile.
 /// - Looks: the bird at 90 % inside the fireball (tail, gold shell with a
 ///   pink rim, inner glow), the countdown ring drawn with it (r 34, drains
 ///   over the boost), "Ns" 50 pt below, the comet's own speed streaks

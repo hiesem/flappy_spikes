@@ -143,7 +143,19 @@ void main() {
         [150, 187.5],
       ]);
       expect(t.raw('curve_opening'), [
-        [1, 88],
+        [1, 118],
+        [2, 118],
+        [6, 114],
+        [10, 110.5],
+        [16, 105.5],
+        [20, 102],
+        [25, 98],
+        [30, 94.5],
+        [35, 90.5],
+        [40, 87.5],
+        [50, 81],
+        [60, 76.5],
+        [75, 72],
         [100, 66],
       ]);
       expect(t.raw('curve_moving'), [
@@ -323,8 +335,8 @@ void main() {
     test('the §14.4 curves', () {
       final v = TuningValues.defaults();
       final opening = v.curve('curve_opening');
-      expect(opening.at(1), 88);
-      expect(opening.at(50), closeTo(77, .2));
+      expect(opening.at(1), 118);
+      expect(opening.at(50), closeTo(81, .2));
       expect(opening.at(100), 66);
       expect(opening.at(250), 66);
       final speed = v.curve('curve_speed');

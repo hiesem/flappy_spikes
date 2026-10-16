@@ -115,11 +115,14 @@ void main() {
         final run = await startRun(game, starter: Powerup.bigHoops);
         game.runDebug.god = true;
         final b = run.state.bigHoops!;
-        // (runClock, opening, index, gold, normal kind (WP-3c), spawned during a
-        // ride (WP-3a: the comet boost's hoops are full size, §3.0.1 / §3.8)).
-        // The last field: the streak tier paints this hoop gold at spawn
-        // (PRD-2 §3.5 tier 2 look; it applies to special kinds too).
-        final spawned = <(double, double, int, bool, bool, bool, bool)>[];
+        // (runClock, opening, index, gold, normal kind (WP-3c), spawned during
+        // a ride (unused since PRD-2.4 §2: the comet boost's hoops take their
+        // index's curve size), the streak tier paints this hoop gold at spawn
+        // (PRD-2 §3.5 tier 2 look; it applies to special kinds too), the kind).
+        // PRD-2.4 §2.3: a ride ring takes the multiplier when its ride starts,
+        // so it is checked in test/p24/s2_ride_hoop_sizes_test.dart.
+        final spawned =
+            <(double, double, int, bool, bool, bool, bool, HoopKindId)>[];
         bool tierGold() =>
             RingPainter.colorsForTier(run.state.tier) == RingColors.gold;
         // The first hoop was spawned at run start (runClock 0).
@@ -132,6 +135,7 @@ void main() {
           true,
           f.plan.duringRide,
           tierGold(),
+          f.plan.kind,
         ));
         final sizes = <Object, double>{};
         // PRD-2.2 §15 the runClock at which each slot was planned.
@@ -148,6 +152,7 @@ void main() {
             e.plan.kind == HoopKindId.normal,
             e.plan.duringRide,
             tierGold(),
+            e.plan.kind,
           ));
           sizes[e.hoop] = e.hoop.opening;
         });
@@ -173,11 +178,17 @@ void main() {
         final band = h - 2 * RunConfig.stripHeight;
         final cap = band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin);
         var sawEase = false, sawPlain = false;
-        for (final (t, opening, idx, gold, normal, ride, tier) in spawned) {
+        for (final (t, opening, idx, gold, normal, _, tier, kind)
+            in spawned) {
           final m = b.mult(t);
-          final base = run.director.openingFor(idx, ride: ride);
+          if (kind == HoopKindId.rideRing) continue;
+          // PRD-2.4 §2.3: the portal stays 118 with Big Hoops too.
+          final portal = kind == HoopKindId.portal;
+          final base = portal
+              ? RunConfig.portalOpening
+              : run.director.openingFor(idx);
           // PRD-2.3 §0 item 3: hoop 0 stays 118 with Big Hoops.
-          final mp = idx == 0 ? 1.0 : b.mult(planned[idx] ?? t);
+          final mp = idx == 0 || portal ? 1.0 : b.mult(planned[idx] ?? t);
           expect(opening, closeTo(min(base * mp, cap), 1e-6), reason: 't=$t');
           if (normal) expect(gold, m > 1 || tier, reason: 't=$t m=$m');
           // Big Hoops never paints a special kind; only the streak's own

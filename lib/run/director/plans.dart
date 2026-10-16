@@ -361,7 +361,8 @@ class SlotPlan {
   /// the gap BEFORE the ring), the comet star of a comet hoop.
   final List<GapItemPlan> attached;
 
-  /// Spawned while a ride was on (full size, upright, still).
+  /// Spawned while a ride was on (the curve size of its index, PRD-2.4 §2;
+  /// upright, still).
   final bool duringRide;
 
   /// A copy with the given fields replaced (PRD-2.2 §15 / §27: the

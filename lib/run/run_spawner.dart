@@ -164,9 +164,9 @@ class RunSpawner {
     final s = run.state;
     // §3.0.3 slot order 1–2 hold for the slot planned one gap earlier
     // (PRD-2.2 §15): a revive since then, or a ride that started since
-    // then, makes it a plain hoop (rides: full size). A comet ride keeps
-    // the planned slot's height, tilt and motion (PRD-2.2 §16.1,
-    // S7-12); only its reward / special part goes (§27). PRD-2.3.1 §16:
+    // then, makes it a plain hoop (rides: the curve size, PRD-2.4 §2). A
+    // comet ride keeps the planned slot's height, tilt and motion (PRD-2.2
+    // §16.1, S7-12); only its reward / special part goes (§27). PRD-2.3.1 §16:
     // a comet re-places the planned-ahead slot at its start
     // ([startCometLayout]), so this only covers a revive, a portal ride
     // and slots planned outside the comet layout.

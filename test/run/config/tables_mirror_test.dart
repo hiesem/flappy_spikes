@@ -199,10 +199,12 @@ void main() {
     final o = json['opening'] as Map<String, dynamic>;
     expect(RunConfig.opening0, o['at_hoop_0_pt']);
     expect(RunConfig.openingFor(0), o['at_hoop_0_pt']);
-    // PRD-2.3 §14.4 the opening curve from hoop 1.
+    // PRD-2.3 §14.4 / PRD-2.4 §1.2 the opening curve from hoop 1 (rides take
+    // it too, PRD-2.4 §2; the portal is the one 118 exception).
     for (final k in o['curve_from_hoop_1'] as List) {
       expect(RunConfig.openingFor(k[0] as int), k[1]);
     }
+    expect(RunConfig.portalOpening, 118);
     final m = json['moving'] as Map<String, dynamic>;
     for (final k in m['chance_curve'] as List) {
       expect(t.movingChance(k[0] as int), k[1]);

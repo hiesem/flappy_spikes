@@ -182,7 +182,7 @@ void main() {
         expect(
           h.opening,
           closeTo(
-            run.director.openingFor(h.plan.index, ride: false),
+            run.director.openingFor(h.plan.index),
             1e-9,
           ),
         );
@@ -228,12 +228,21 @@ void main() {
           run.events.onAny(events.add);
           final ry = h.opening / 2 + h.kind.rimRadius(h);
           final score = run.state.score;
+          // No save on the way: a shield / extra life picked up on the
+          // approach would absorb the touch (the autopilot's line through the
+          // PRD-2.4 §1 openings can meet one).
+          run.state
+            ..shield = false
+            ..extraLife = false;
           await glideInto(
             game,
             h,
             h.position.y + ry,
             seconds: .2,
-            until: (r) => r.dying,
+            until: (r) {
+              r.state.shield = false;
+              return r.dying;
+            },
           );
           expect(run.dying, isTrue);
           final died = events.whereType<RunDied>().single;

@@ -660,9 +660,12 @@ class SoundService {
       unawaited(_initPools());
       final failed = _failedAtMs[sfx];
       if (failed != null && _nowMs - failed < Config.sfxRetryFailedMs) return;
-      if (!prewarmed.contains(sfx) && !_creating.containsKey(sfx)) {
-        // First request of a lazy pool: create it and play this request
-        // once it is ready (if that is quick enough).
+      // A missing pool is created now and plays this request once it is
+      // ready (if that is quick enough): a lazy pool's first request, and
+      // also a core pool the warm-up skipped (2.4.0 (23) Pixel 8: the app
+      // was briefly inactive at launch and those sounds stayed silent for
+      // the whole session).
+      if (_appActive && !_creating.containsKey(sfx)) {
         _pendingFirst[sfx] = DateTime.now();
         unawaited(_ensurePool(sfx));
       }
@@ -824,6 +827,13 @@ class SoundService {
     for (final sfx in prewarmed) {
       // S7-10: a teardown stops the warm-up.
       if (gen != _generation) return;
+      if (!_appActive) {
+        // Not active (round 2b: no player is created): the warm-up runs
+        // again on the return ([setAppActive]), so no core sound is left
+        // without its pool.
+        _poolsStarted = false;
+        return;
+      }
       await _ensurePool(sfx);
     }
   }
@@ -961,15 +971,7 @@ class SoundService {
         }
       }
       _trimPools();
-      while (!pool.disposed && pool.voiceCount < pool.capacity && _appActive) {
-        final voice = await _newVoice(file);
-        if (voice == null) break;
-        if (stale(voice)) break;
-        if (!pool.add(voice)) {
-          await voice.dispose(); // evicted meanwhile
-          break;
-        }
-      }
+      await _fillVoices(pool, gen);
     } catch (_) {
       // Audio failure must never take the game down. One bad pool must not
       // stop the remaining sounds from warming up either.
@@ -1042,6 +1044,8 @@ class SoundService {
   void setAppActive(bool active) {
     if (_appActive == active) return;
     _appActive = active;
+    // A deferred rebuild (iOS) recreates everything itself.
+    if (active && !_rebuildPending) unawaited(_healPools());
   }
 
   /// A rebuild was asked for while the app was not active (iOS: a
@@ -1108,6 +1112,39 @@ class SoundService {
       await _initPools();
     }
     diag('FS-Audio rebuild voices done ($reason): ${debugStats()}');
+  }
+
+  /// Adds voices to [pool] up to its capacity while the app is active and
+  /// [gen] is current (stops at the first voice that fails).
+  Future<void> _fillVoices(SfxPool pool, int gen) async {
+    while (!pool.disposed && pool.voiceCount < pool.capacity && _appActive) {
+      final voice = await _newVoice(pool.file);
+      if (voice == null) return;
+      if (gen != _generation) {
+        unawaited(_discard(voice));
+        return;
+      }
+      if (!pool.add(voice)) {
+        await voice.dispose(); // evicted meanwhile
+        return;
+      }
+    }
+  }
+
+  /// Back to active: the parts of the warm-up the inactive app skipped
+  /// (core set, pinned session set, pools short of voices) are made up,
+  /// one by one. Nothing to do when nothing was skipped.
+  Future<void> _healPools() async {
+    if (!enabled || muted) return;
+    final gen = _generation;
+    await _initPools();
+    if (_sessionPinned) await warmSession();
+    for (final pool in List.of(_pools.values)) {
+      if (gen != _generation || !_appActive) return;
+      if (pool.voiceCount < pool.capacity && !pool.disposed) {
+        await _fillVoices(pool, gen);
+      }
+    }
   }
 
   /// Disposes every pool (no new player is created).

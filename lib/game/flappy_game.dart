@@ -3122,8 +3122,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _audioLifecycle(AppLifecycleState state) {
     if (kDebugMode) debugPrint('Sound: lifecycle ${state.name}');
     if (!_soundReady) return;
-    // iOS round 2b: no audio player is created while not active.
-    sound.setAppActive(state == AppLifecycleState.resumed);
+    // iOS round 2b: no audio player is created while not active. Android:
+    // `inactive` (a consent form, a Play Games banner, the notification
+    // shade) is still the foreground and its players work, so only the
+    // background gates it there (2.4.0 (23): core sounds stayed silent
+    // after an inactive launch).
+    sound.setAppActive(
+      state == AppLifecycleState.resumed ||
+          (state == AppLifecycleState.inactive && !isIOS()),
+    );
     if (state == AppLifecycleState.inactive) return;
     if (state != AppLifecycleState.resumed) {
       musicGuard.onBackground();

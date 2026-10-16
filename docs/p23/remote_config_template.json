@@ -136,9 +136,9 @@
         },
         "point_perfect_band": {
           "defaultValue": {
-            "value": "[[1,18],[25,15],[50,13],[75,10],[100,8]]"
+            "value": "[[1,18],[2,18],[6,17.4],[10,16.7],[16,15.8],[20,15.2],[25,14.5],[30,13.9],[35,13.2],[40,12.7],[50,11.6],[60,10.7],[75,10],[100,8]]"
           },
-          "description": "§14.3 owner 2026-10-13: perfect band ±pt around the gap centre by hoop index; <= 0 = no band (any rim-free pass is perfect)",
+          "description": "§14.3 owner 2026-10-13: perfect band ±pt around the gap centre by hoop index; <= 0 = no band (any rim-free pass is perfect).",
           "valueType": "JSON"
         },
         "point_bullseye_band": {
@@ -271,9 +271,9 @@
         },
         "curve_opening": {
           "defaultValue": {
-            "value": "[[1,88],[100,66]]"
+            "value": "[[1,118],[2,118],[6,114],[10,110.5],[16,105.5],[20,102],[25,98],[30,94.5],[35,90.5],[40,87.5],[50,81],[60,76.5],[75,72],[100,66]]"
           },
-          "description": "§14.4 Opening (pt) by hoop index from hoop 1 (hoop 0 is always 118)",
+          "description": "§14.4 Opening (pt) by hoop index from hoop 1 (hoop 0 is always 118; rides follow it, PRD-2.4 §2)",
           "valueType": "JSON"
         },
         "curve_moving": {

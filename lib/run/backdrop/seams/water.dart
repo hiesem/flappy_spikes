@@ -58,50 +58,61 @@ void waterline(Ctx c, double yw, double t) {
 
 /// `sea(c, ys, t, lead)`: water below the line [ys] (clips the canvas to
 /// it); it ends up as the sea stage's own gradient once the surface is
-/// above the screen.
+/// above the screen. On a taller view the gradient holds its middle colour
+/// for the view's extra height ([flat], `c.ext`) above y 0, so it meets the
+/// Underwater sky (whose gradient spans y 0–568 and holds its first colour
+/// above 0) exactly where the move ends or starts (PRD-2.4 §3.3 tall
+/// screens; at 568 pt this is the prototype's gradient).
 void sea(Ctx c, double ys, double t, [double lead = 190]) {
+  final flat = c.ext;
   c.beginPath();
   waterPath(c, ys, t);
   c.lineTo(c.xr + 8, kVH + 80);
   c.lineTo(c.xl, kVH + 80);
   c.closePath();
   c.clip();
+  final span = lead + flat + kVH;
   c.fillShader = c.linearGradient(
     0,
     ys,
     0,
-    ys + lead + kVH,
-    const [Color(0xFFE4E4E4), Color(0xFFF2F2F2), Color(0xFFE9E9E9)],
-    [0, lead / (lead + kVH), 1],
+    ys + span,
+    const [Color(0xFFE4E4E4), Color(0xFFF2F2F2), Color(0xFFF2F2F2), Color(0xFFE9E9E9)],
+    [0, lead / span, (lead + flat) / span, 1],
   );
-  c.fillRect(c.xl, ys - 10, c.xr - c.xl, kVH + 400);
+  c.fillRect(c.xl, ys - 10, c.xr - c.xl, kVH + 400 + flat);
 }
+
+/// One light ray's gradient (white at `.4·a` → clear over `VH·.8`), built
+/// once: each ray is drawn translated to its top with the alpha as
+/// `globalAlpha` (PRD-2.4 §3.4: no per-frame shader).
+final Shader _ray = Gradient.linear(
+  Offset.zero,
+  const Offset(0, kVH * .8),
+  const [Color(0xFFFFFFFF), Color.fromRGBO(255, 255, 255, 0)],
+);
 
 /// `rays(c, t, cam, par, top)`: light rays falling from the surface at
 /// y = [top].
 void rays(Ctx c, double t, double top) {
+  final ga = c.globalAlpha;
   each(c, c.cam * .05, 68, 3001, (xr, r, i) {
     final x0 = xr + math.sin(t * .25 + i * 1.3) * 14;
     final a = .5 + .5 * math.sin(t * .5 + i * 2.1);
-    c.fillShader = c.linearGradient(
-      0,
-      top,
-      0,
-      top + kVH * .8,
-      [
-        Color.fromRGBO(255, 255, 255, (.4 * a * 1000).round() / 1000),
-        const Color.fromRGBO(255, 255, 255, 0),
-      ],
-      const [0, 1],
-    );
+    c.globalAlpha = ga * (.4 * a * 1000).round() / 1000;
+    c.save();
+    c.translate(0, top);
+    c.fillShader = _ray;
     c.beginPath();
-    c.moveTo(x0, top);
-    c.lineTo(x0 + 20, top);
-    c.lineTo(x0 + 120, top + kVH * .8);
-    c.lineTo(x0 + 66, top + kVH * .8);
+    c.moveTo(x0, 0);
+    c.lineTo(x0 + 20, 0);
+    c.lineTo(x0 + 120, kVH * .8);
+    c.lineTo(x0 + 66, kVH * .8);
     c.closePath();
     c.fill();
+    c.restore();
   });
+  c.globalAlpha = ga;
 }
 
 /// `paperBoat(c, x, y, a)`.

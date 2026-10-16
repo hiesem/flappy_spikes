@@ -96,7 +96,7 @@ void main() {
         expect(h.rings, [closeTo(-o / 2, 1e-9), closeTo(o / 2, 1e-9)]);
         expect(
           h.opening,
-          closeTo(run.director.openingFor(h.plan.index, ride: false), 1e-9),
+          closeTo(run.director.openingFor(h.plan.index), 1e-9),
         );
         final ry = RingPainter.ryFor(h.opening);
         final top = h.position.y - o / 2 - ry;

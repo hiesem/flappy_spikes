@@ -244,10 +244,11 @@ class RunDirector {
       tables.portalMax > 0 && _portalCount >= tables.portalMax;
   // endregion WP-A
 
-  /// §3.0.1 / PRD-2.3 §14.4 opening at [hoopIndex]: 118 at hoop 0, then
-  /// `curve_opening` (88 → 66); ride 118.
-  double openingFor(int hoopIndex, {required bool ride}) =>
-      RunConfig.openingFor(hoopIndex, ride: ride);
+  /// §3.0.1 / PRD-2.3 §14.4 / PRD-2.4 §2 opening at [hoopIndex] before the
+  /// Big Hoops multiplier: 118 at hoop 0, then `curve_opening` (118 → 66).
+  /// Rides and comets use the same curve; the portal does not
+  /// ([RunConfig.portalOpening]).
+  double openingFor(int hoopIndex) => RunConfig.openingFor(hoopIndex);
 
   // --- timing-stream rolls (§3.0.3 "timing") --------------------------------
 
@@ -431,8 +432,8 @@ class RunDirector {
   /// slot [p], not yet visible when a comet starts, moves into the comet
   /// layout: the next comet station at the zigzag height (or, past the
   /// stations, the safe first hoop after the comet at a normal height), a
-  /// plain ride hoop (full size, upright, still, nothing attached). Null
-  /// outside a comet layout.
+  /// plain ride hoop (the curve size of its index, upright, still, nothing
+  /// attached; PRD-2.4 §2). Null outside a comet layout.
   SlotPlan? cometReplan(SlotPlan p, DirectorContext ctx) {
     if (_cometAfterMin == null) return null;
     final plain = plainSlot(p, ctx, ride: true);
@@ -550,11 +551,12 @@ class RunDirector {
       );
     }
 
-    // 1. Ride active: normal, full size, upright, still; no items.
+    // 1. Ride active: normal, upright, still; no items. PRD-2.4 §2: the
+    //    size is the curve's for this index (× Big Hoops), like any hoop.
     // 2. First slot after a revive: normal (call: plain — upright, still).
     if (ride || _revivePending) {
       _revivePending = false;
-      final opening = cap(openingFor(i, ride: ride) * _bigMult(i, ctx));
+      final opening = cap(openingFor(i) * _bigMult(i, ctx));
       // PRD-2.2 §16.1 comet ride hoops zigzag ±70 pt around the middle
       // (the normal draw still happens, so the course after the ride keeps
       // its random stream).
@@ -750,13 +752,13 @@ class RunDirector {
   }) {
     final r = rng.layout;
     final band = ctx.band;
-    var opening = openingFor(i, ride: false);
+    var opening = openingFor(i);
     var extraMargin = 0.0;
     if (kind == HoopKindId.saw) opening += RunConfig.sawExtraOpening;
     // PRD-2.2 §25.1 the portal ring stays a big, easy 118 pt entrance at
-    // every hoop (it took the shrinking normal opening before).
-    // (`RunConfig.portalOpening` == `PortalConfig.ringOpening`; the director
-    // stays free of Flame imports.)
+    // every hoop (it took the shrinking normal opening before). PRD-2.4
+    // §2.3 keeps it unchanged: 118 × the Big Hoops multiplier, as in 2.3.1
+    // (the director stays free of Flame imports).
     if (kind == HoopKindId.portal) opening = RunConfig.portalOpening;
     final pairO =
         RunConfig.pairOffsetAt711 * ctx.viewHeight / RunConfig.designHeight;
@@ -1264,16 +1266,17 @@ class RunDirector {
   /// PRD-2.2 §15 / §27: [p] (the planned-ahead slot, not spawned yet) as a
   /// plain normal hoop — upright, still, no gifts, one ring — at the same
   /// place: after a revive (§3.0.3 slot order 2), when a ride started
-  /// meanwhile ([ride]: full size, §3.0.1) or when an activity started
-  /// (its reward ring / comet star goes, §27.3). A portal or comet hoop
-  /// that never showed stays due: it comes at the first allowed slot.
+  /// meanwhile ([ride]: the curve size of its index, PRD-2.4 §2) or when an
+  /// activity started (its reward ring / comet star goes, §27.3). A portal
+  /// or comet hoop that never showed stays due: it comes at the first
+  /// allowed slot.
   ///
   /// [keepGeometry] (PRD-2.2 §16.1, S7-12): a comet ride started after the
   /// slot was planned. The slot is already planned, so it keeps its height,
   /// tilt and motion; only what §27 removes (the reward / special kind,
-  /// gifts, attached items, the comet star) goes. Like every ride hoop it
-  /// is full size (§3.0.1), the height clamped into the band only if the
-  /// larger opening needs it.
+  /// gifts, attached items, the comet star) goes. Its size is the curve
+  /// size of its index (PRD-2.4 §2), the height clamped into the band only
+  /// if the opening needs it.
   SlotPlan plainSlot(
     SlotPlan p,
     DirectorContext ctx, {
@@ -1295,8 +1298,9 @@ class RunDirector {
       _lastComet = -99;
     }
     final band = ctx.band;
+    // PRD-2.4 §2: the same curve size as any hoop of this index, ride or not.
     final opening = min(
-      openingFor(p.index, ride: ride) * _bigMult(p.index, ctx),
+      openingFor(p.index) * _bigMult(p.index, ctx),
       band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
     );
     final m = opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin;

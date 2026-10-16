@@ -11,9 +11,9 @@ Only the background: the bird, hoops, spikes, HUD and rides are untouched.
 | `backdrop_ctx.dart` | `Ctx`: a canvas-2D facade (`fillStyle`, `save/restore`, `beginPath`, `arc`, `ellipse`, `roundRect`, `fill/stroke/clip`, gradients, dashes) + the world state (`cam`, `t`, `env`, `xl/xr`, `yTop`, `vert`, `fold`, `cut`) + `strip()` picture cache |
 | `backdrop_helpers.dart` | the prototype's shared helpers: `each`, `wraps`, `ridgeY/ridgePath/ridge/ridgeAt`, `gfillSink/gfillCut`, `flatCloud`, `pill`, `vgrad`, `mark`, `early`, `presence` (≡ 1: no side-by-side seams) |
 | `backdrop_scene.dart` | `Band` (sky, far, mid, near, front) and `BackdropScene` |
-| `scenes/sNN_*.dart` | one painter per scene (1 Nest, 2 Sky, 3 City ported; 4–10 stubs) |
+| `scenes/sNN_*.dart` | one painter per scene (all 10 ported) |
 | `seams/seam.dart` | `FloorSeam` (seams 1–6: `dir`, `yF`, `thickness`, `hang`, `travel`, `slab`, `piece`, `fold`), `OlderSeam` (7–10: `move`), `SeamFrame` (`S`: `u`, `q`, `sT`, `sB`, `oA`, `oB`, `hx`) |
-| `seams/seamNN_*.dart` | one file per seam (1–2 ported, 3–6 stubs with the prototype's numbers, 7–10 ported moves) |
+| `seams/seamNN_*.dart` | one file per seam (all 10 ported) |
 | `seams/water.dart` | `ek`/`LAG`, `lift`, `wave`, `waterline`, `sea`, `rays`, `paperBoat` |
 | `backdrop_tables.dart` | `kScenes`, `kSeams` — already list every file; do not edit to fill a scene |
 | `backdrop_world.dart` | `BackdropWorld` (`world()`, `drawGroup()`, `vmove()`, first-loop rule) and `BackdropPainter` (base fill, tall anchoring, colour filter, ride clip) |
@@ -69,3 +69,12 @@ hoop or back into the last seam). The ride phase is `RunBackdrop.ridePhase` (`Ru
 
 One `saveLayer` per frame with `ColorFilter.matrix(palMatrix(stageBackground, foregroundColor))` (the game's own
 crossfaded stage colours) and the fade opacity; skipped at stage 0 when fully shown.
+
+## Scenes 8–10, seams 7–10 (WP-W3)
+
+- `scenes/s08_sea.dart` also holds the shared bubbles (`kBubbles`, `bubbles()`; Dreamland draws the sea's last ones).
+- `seams/water.dart` `sea()` holds its middle colour over the view's extra height above y 0, so on taller views the
+  dive ends and the emerge starts exactly on the Underwater sky's gradient; the Underwater rays start at y 0 (as at 568).
+- Seam 7 start fix (PRD §3.3 known issue): the sea, its rays, waterline and boats fade in over the first 5 % of the
+  move's ease (`DiveSeam.fadeIn`), instead of appearing at once over the paper river.
+- Static bands use strip keys 801–803, 901–902, 1001–1002.

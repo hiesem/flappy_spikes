@@ -37,14 +37,14 @@ List<(SlotPlan, GapPlan)> fly(
 /// PRD-2.3 §14.4 difficulty and §14.5 rides (all by hoop index).
 void main() {
   group('§14.4 curves', () {
-    test('opening 118 at hoop 0, 88 at hoop 1, 77 at hoop 50 and 66 from '
-        'hoop 100; rides 118', () {
+    test('opening 118 at hoop 0, 118 at hoop 1, 81 at hoop 50 and 66 from '
+        'hoop 100; the ride size is the same curve (PRD-2.4 §2)', () {
       expect(RunConfig.openingFor(0), 118);
-      expect(RunConfig.openingFor(1), 88);
-      expect(RunConfig.openingFor(50), closeTo(77, .2));
+      expect(RunConfig.openingFor(1), 118);
+      expect(RunConfig.openingFor(50), closeTo(81, .2));
+      expect(RunConfig.openingFor(70), closeTo(73.5, 1e-9));
       expect(RunConfig.openingFor(100), 66);
       expect(RunConfig.openingFor(300), 66);
-      expect(RunConfig.openingFor(70, ride: true), 118);
     });
 
     test('speed 150, 172.5 and 187.5 at hoops 0, 50 and 150, and 187.5 at '
@@ -74,11 +74,11 @@ void main() {
     });
 
     test('the director uses the curves: hoop 0 at 118, then the opening '
-        'curve; Big Hoops ×1.5 from hoop 1 (132 at hoop 1), hoop 0 stays '
+        'curve; Big Hoops ×1.5 from hoop 1 (177 at hoop 1), hoop 0 stays '
         '118 (§0 item 3)', () {
       final plain = fly(director(), 60);
       expect(plain[0].$1.opening, 118);
-      expect(plain[1].$1.opening, 88);
+      expect(plain[1].$1.opening, 118);
       for (final (s, _) in plain.skip(1)) {
         if (s.kind != HoopKindId.normal || s.duringRide) continue;
         expect(s.opening, closeTo(RunConfig.openingFor(s.index), 1e-9));
@@ -89,7 +89,7 @@ void main() {
         ctxFor: (_) => DirectorContext.open(711, bigHoopsMult: 1.5),
       );
       expect(big[0].$1.opening, 118);
-      expect(big[1].$1.opening, closeTo(132, 1e-9));
+      expect(big[1].$1.opening, closeTo(177, 1e-9));
     });
 
     test('over seeded runs the moving rate follows the curve (none before '

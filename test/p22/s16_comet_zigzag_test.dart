@@ -274,7 +274,8 @@ void main() {
           }
           for (final p in plans) {
             expect(p.duringRide, isTrue);
-            expect(p.opening, RunConfig.opening0);
+            // PRD-2.4 §2: the curve size of its index.
+            expect(p.opening, closeTo(RunConfig.openingFor(p.index), 1e-9));
             expect(p.tiltDeg, 0);
             expect(p.motion, isNull);
             // Far inside the band (items keep their edge margin).

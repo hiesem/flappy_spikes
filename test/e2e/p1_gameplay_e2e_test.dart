@@ -155,15 +155,20 @@ void main() {
             planned[e.plan.index] ?? run.state.runClock,
           );
           mults.add(mult);
-          expect(
-            e.hoop.opening,
-            // WP-3a: comet-boost hoops are full size (§3.0.1 "Rides").
-            closeTo(
-              RunConfig.openingFor(e.plan.index, ride: e.plan.duringRide) *
-                  mult,
-              .001,
-            ),
-          );
+          // PRD-2.4 §2: comet-boost hoops take their index's curve size × Big
+          // Hoops; the portal stays 118; a ride ring takes the multiplier when
+          // its ride starts (test/p24/s2_ride_hoop_sizes_test.dart).
+          if (e.plan.kind != HoopKindId.rideRing) {
+            expect(
+              e.hoop.opening,
+              closeTo(
+                e.plan.kind == HoopKindId.portal
+                    ? RunConfig.portalOpening
+                    : RunConfig.openingFor(e.plan.index) * mult,
+                .001,
+              ),
+            );
+          }
           originals[e.hoop] = e.hoop.opening;
         });
         // WP-3f: an Hourglass capsule on the way slows runClock (§3.30), so

@@ -56,7 +56,8 @@ class SkyScene extends BackdropScene {
           c.stroke();
         }
       case Band.far:
-        ridge(c, cam * .09, 446, 24, 70, 31, const Color(0xFFE8E8E8), .3);
+        c.strip(201, cam * .09,
+            (off) => ridge(c, off, 446, 24, 70, 31, const Color(0xFFE8E8E8), .3));
       case Band.mid:
         final off = cam * .2;
         ridge(c, off, 492, 20, 58, 27, const Color(0xFFDEDEDE), 1.7);
@@ -71,7 +72,8 @@ class SkyScene extends BackdropScene {
           c.circ(tx + sway, y - h - rr * .6, rr);
         });
       case Band.near:
-        ridge(c, cam * .32, 526, 8, 40, 19, const Color(0xFFD5D5D5), 2.9);
+        c.strip(202, cam * .32,
+            (off) => ridge(c, off, 526, 8, 40, 19, const Color(0xFFD5D5D5), 2.9));
       case Band.front:
         return;
     }

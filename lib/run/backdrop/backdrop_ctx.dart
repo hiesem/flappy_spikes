@@ -50,6 +50,53 @@ class Ctx {
   /// `G.fold` (seam 6): < 1 while the paper peaks pop up from the page.
   double fold = 1;
 
+  // ------------------------------------------------------------ strip cache
+  final Map<int, _Strip> _strips = {};
+  final _Style _held = _Style();
+
+  /// PRD-2.4 §3.4 a static band (no animation: a function of its scroll
+  /// offset only) drawn from a cached [Picture]: [paint] records the band
+  /// once for offset `off0` over three screen widths, and every frame the
+  /// picture is drawn shifted by `off0 − off`. Re-recorded when the band has
+  /// scrolled a screen width, or the view changed. [key] names the band.
+  void strip(int key, double off, void Function(double off) paint) {
+    var s = _strips[key];
+    if (s == null ||
+        (off - s.off0).abs() > kVW ||
+        s.yTop != yTop ||
+        s.xl != xl ||
+        s.xr != xr) {
+      s?.pic.dispose();
+      final rec = PictureRecorder();
+      final outer = canvas, oxl = xl, oxr = xr, depth = _depth;
+      _held.copyFrom(this);
+      canvas = Canvas(rec);
+      xl = oxl - kVW;
+      xr = oxr + kVW;
+      paint(off);
+      while (_depth > depth) {
+        restore();
+      }
+      canvas = outer;
+      xl = oxl;
+      xr = oxr;
+      _held.copyTo(this);
+      s = _strips[key] = _Strip(rec.endRecording(), off, yTop, xl, xr);
+    }
+    canvas.save();
+    canvas.translate(s.off0 - off, 0);
+    canvas.drawPicture(s.pic);
+    canvas.restore();
+  }
+
+  /// Drops every cached strip (tests; a new run starts with its own Ctx).
+  void clearStrips() {
+    for (final s in _strips.values) {
+      s.pic.dispose();
+    }
+    _strips.clear();
+  }
+
   // ------------------------------------------------------------ rng pool
   final List<Rng> _rngs = List.generate(8, (_) => Rng());
   int _rngDepth = 0;
@@ -406,6 +453,12 @@ class Ctx {
     }
     return out;
   }
+}
+
+class _Strip {
+  _Strip(this.pic, this.off0, this.yTop, this.xl, this.xr);
+  final Picture pic;
+  final double off0, yTop, xl, xr;
 }
 
 class _Style {

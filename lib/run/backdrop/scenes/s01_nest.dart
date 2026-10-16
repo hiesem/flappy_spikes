@@ -28,8 +28,10 @@ class NestScene extends BackdropScene {
     }
   }
 
-  static void _far(Ctx c) {
-    each(c, c.cam * .055, 120, 711, (x, r, k) {
+  static void _far(Ctx c) => c.strip(101, c.cam * .055, (off) => _farTrees(c, off));
+
+  static void _farTrees(Ctx c, double off) {
+    each(c, off, 120, 711, (x, r, k) {
       if (r() < .35) return;
       // tree tops above the screen, seen while descending
       final tx = x + r() * 40, w = 16 + r() * 12;
@@ -124,8 +126,10 @@ class NestScene extends BackdropScene {
     }
   }
 
-  static void _near(Ctx c) {
-    each(c, c.cam * .3, 28, 741, (x, r, k) {
+  static void _near(Ctx c) => c.strip(102, c.cam * .3, (off) => _nearBushes(c, off));
+
+  static void _nearBushes(Ctx c, double off) {
+    each(c, off, 28, 741, (x, r, k) {
       c.fillStyle = const Color(0xFFD8D8D8);
       final cx = x + r() * 8, cy = 522 - r() * 10;
       c.circ(cx, cy, 15 + r() * 8);

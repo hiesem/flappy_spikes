@@ -33,13 +33,22 @@ abstract class HoopAnchors {
 ///
 /// * `w` is continuous (it only ever moves by `r · dc`: no jump when the
 ///   spacing changes, on comets, rides, revive or a knock-back);
-/// * `w` is monotonic in the camera (`r` is clamped to [rMin, rMax] > 0);
+/// * `w` is monotonic in the camera (non-decreasing as it moves forward;
+///   `r` is clamped to [rMin, rMax] > 0);
 /// * between seams `r ≈ 300 / 310`: the layers move with the camera's
 ///   distance at the prototype's parallax factors (0.97×);
 /// * when hoop n*'s plane reaches the screen centre `w` is exactly W*: seam k
 ///   is centred on hoop 40·k. Then n* becomes the next multiple of 40.
+/// * while hoop n* is not planned yet the world never gets closer than
+///   300 per slot still to plan (+100) to W*: when the spawner holds (a
+///   portal ride) the world holds still near the seam instead of playing
+///   it under the ride, and lands it on its hoop after the ride.
+/// How far short of a seam hoop the world holds while that hoop is not
+/// planned yet (pt of world distance).
+const double kUnplannedMargin = 100;
+
 class WorldDistance {
-  WorldDistance({this.rMin = .4, this.rMax = 2.5});
+  WorldDistance({this.rMin = .1, this.rMax = 2.5});
 
   /// Bounds of the rate (world pt per camera pt).
   final double rMin, rMax;
@@ -94,7 +103,16 @@ class WorldDistance {
       dw = lead <= 0 ? dc : rem / lead * dc;
     }
     _c = c;
-    w += dw;
+    var step = dw;
+    if (override == null && step > 0 && target >= a.nextIndex) {
+      // The seam hoop is not planned yet (a ride holds the spawner, or the
+      // spacing grew): the world may not come closer to it than the slots
+      // still to plan, so the seam never plays ahead of its hoop. It holds
+      // still instead (never moves back).
+      final cap = wt - (target - a.nextIndex) * kPerHoop - kUnplannedMargin;
+      step = w >= cap ? 0 : (w + step > cap ? cap - w : step);
+    }
+    w += step;
     if (w >= wt) {
       w = wt;
       target += kHoopsPerScene;

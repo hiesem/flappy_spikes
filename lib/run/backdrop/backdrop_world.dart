@@ -41,6 +41,7 @@ class BackdropWorld implements SceneDrawer {
   /// or the scene the camera is in during one (`d < 0` → the leaving one).
   static int sceneAt(double cam) {
     final (:j, :d) = seamAt(cam);
+    if (j == 0) return 0; // the first loop has no Homecoming (see [paint])
     return modI(d < 0 ? j - 1 : j, kNST);
   }
 

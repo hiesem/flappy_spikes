@@ -54,29 +54,35 @@ int diffPixels(Uint8List a, Uint8List b, {int threshold = 40}) {
   return n;
 }
 
-/// PRD-2.4 §4 test 9: the frames at [cam] and [cam] + 1 pt (same clock)
-/// differ in at most [maxFraction] of the pixels (a 1-pt step moves the
-/// ground 0.34 pt; a pop or a jump changes whole shapes).
+/// Pixels changed between the frames at [cam] and [cam] + 1 pt (same
+/// clock), counting any channel change above 3 levels (the greys are close).
 Future<int> frameJump(double cam, {double viewHeight = 568, double t = 3}) async {
   final a = await renderBackdrop(cam: cam, viewHeight: viewHeight, t: t);
   final b = await renderBackdrop(cam: cam + 1, viewHeight: viewHeight, t: t);
-  final n = diffPixels(await rgbaOf(a), await rgbaOf(b));
+  final n = diffPixels(await rgbaOf(a), await rgbaOf(b), threshold: 3);
   a.dispose();
   b.dispose();
   return n;
 }
 
-/// Expects no jump between [cam] and [cam] + 1 (see [frameJump]).
+/// PRD-2.4 §4 test 9: the step [cam] → [cam] + 1 changes no more pixels than
+/// the ordinary motion around it (the 1-pt steps 3 pt before and after),
+/// times [factor], plus [slack] pixels. A pop or a jump changes whole
+/// shapes and fails it; ordinary motion (which is fast mid-seam) passes.
 Future<void> expectNoJump(
   double cam, {
   double viewHeight = 568,
-  double maxFraction = .01,
+  double factor = 2,
+  int slack = 300,
   String? label,
 }) async {
   final n = await frameJump(cam, viewHeight: viewHeight);
-  final limit = (kVW * viewHeight * maxFraction).round();
-  expect(n, lessThanOrEqualTo(limit),
-      reason: '${label ?? ''} jump at cam $cam (view $viewHeight): $n px changed');
+  final before = await frameJump(cam - 3, viewHeight: viewHeight);
+  final after = await frameJump(cam + 3, viewHeight: viewHeight);
+  final normal = before > after ? before : after;
+  expect(n, lessThanOrEqualTo(normal * factor + slack),
+      reason: '${label ?? ''} jump at cam $cam (view $viewHeight): $n px changed, '
+          'ordinary motion $normal');
 }
 
 /// Saves [img] as a PNG into the evidence folder [sub]/[name].png (only when

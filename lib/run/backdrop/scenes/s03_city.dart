@@ -52,11 +52,13 @@ class CityScene extends BackdropScene {
         c.fill();
         c.restore();
       case Band.far:
-        each(c, cam * .06, 30, 81, (x, r, k) {
-          final w = 22 + r() * 14, h = 80 + r() * 120;
-          c.fillStyle = const Color(0xFFE6E6E6);
-          c.fillRect(x, 545 - h, w, h + 80);
-          if (r() < .25) c.fillRect(x + w / 2 - 1, 545 - h - 14, 2, 14);
+        c.strip(301, cam * .06, (off) {
+          each(c, off, 30, 81, (x, r, k) {
+            final w = 22 + r() * 14, h = 80 + r() * 120;
+            c.fillStyle = const Color(0xFFE6E6E6);
+            c.fillRect(x, 545 - h, w, h + 80);
+            if (r() < .25) c.fillRect(x + w / 2 - 1, 545 - h - 14, 2, 14);
+          });
         });
       case Band.mid:
         each(c, cam * .16, 52, 91, (x, r, k) {

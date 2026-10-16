@@ -10,7 +10,7 @@ import 'backdrop_harness.dart';
 void main() {
   // seam k (1-based) is at world distance 12 000·k; loop 2 as well (from
   // hoop 400 the Homecoming plays, the hashes differ per loop).
-  const seams = [1, 2, 3, 4, 5, 6];
+  const seams = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   for (final h in [568.0, 730.0]) {
     for (final k in seams) {
       for (final loop in [0, 1]) {

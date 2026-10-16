@@ -6,7 +6,7 @@ import 'water.dart';
 
 /// PRD-2.4 §3.3 seam 9, Lift-off (Dreamland → Space; older move `ascend`):
 /// the ground drops away, then the islands, and space comes down. Ported
-/// 1:1 by WP-W1; WP-W3 owns it.
+/// 1:1 (WP-W1, WP-W3).
 class LiftOffSeam extends OlderSeam {
   const LiftOffSeam();
 

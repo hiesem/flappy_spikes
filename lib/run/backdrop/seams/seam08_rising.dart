@@ -9,7 +9,7 @@ import 'water.dart';
 
 /// PRD-2.4 §3.3 seam 8, Rising out (Underwater → Dreamland; older move
 /// `emerge`): the sea slides down and the dream's puffy cloud bank rests on
-/// the water. Ported 1:1 by WP-W1; WP-W3 owns it.
+/// the water. Ported 1:1 (WP-W1, WP-W3).
 class RisingSeam extends OlderSeam {
   const RisingSeam();
 
@@ -24,7 +24,9 @@ class RisingSeam extends OlderSeam {
     final ys = 590 + sh(Band.near), lead = lf - 590;
     w.group(c, gb, const [Band.sky, Band.far, Band.mid], sh);
     c.save();
-    sea(c, ys, t, lead);
+    // `lead` less the view's extra height: `sea` holds the middle colour
+    // over it, so at the start the gradient is the Underwater sky's
+    sea(c, ys, t, lead - c.ext);
     rays(c, t, ys + lead * (1 - ek(Band.near, q)));
     c.vert = true;
     w.group(c, ga, Band.layers, (b) => ek(b, q) * lf);

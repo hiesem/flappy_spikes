@@ -64,3 +64,12 @@ drawn there). The ride phase is `RunBackdrop.ridePhase` (`RunState.ride?.phase`)
 
 One `saveLayer` per frame with `ColorFilter.matrix(palMatrix(stageBackground, foregroundColor))` (the game's own
 crossfaded stage colours) and the fade opacity; skipped at stage 0 when fully shown.
+
+## Scenes 8–10, seams 7–10 (WP-W3)
+
+- `scenes/s08_sea.dart` also holds the shared bubbles (`kBubbles`, `bubbles()`; Dreamland draws the sea's last ones).
+- `seams/water.dart` `sea()` holds its middle colour over the view's extra height above y 0, so on taller views the
+  dive ends and the emerge starts exactly on the Underwater sky's gradient; the Underwater rays start at y 0 (as at 568).
+- Seam 7 start fix (PRD §3.3 known issue): the sea, its rays, waterline and boats fade in over the first 5 % of the
+  move's ease (`DiveSeam.fadeIn`), instead of appearing at once over the paper river.
+- Static bands use strip keys 801–803, 901–902, 1001–1002.

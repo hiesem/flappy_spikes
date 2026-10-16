@@ -13,8 +13,8 @@ import 'backdrop_harness.dart';
 /// is plain sky.
 void main() {
   // WP-W2 / WP-W3 extend these as they port.
-  const portedScenes = {0, 1, 2};
-  const portedSeams = {1, 2};
+  const portedScenes = {0, 1, 2, 7, 8, 9};
+  const portedSeams = {1, 2, 7, 8, 9, 10};
 
   final frames = <String, double>{
     for (var s = 0; s < 10; s++) 'scene ${s + 1}': kTotal + (s + .5) * kE,
@@ -23,9 +23,21 @@ void main() {
         'seam $k u$u': kTotal + k * kE + (u - .5) * kVWIN,
   };
 
+  // WP-W3: the older moves 9 (Lift-off) and 10 (Homecoming) bring Space's
+  // ground in from below (and take it out) after the other bands, as the
+  // prototype does: mid-move the rows behind the strip are Space's empty
+  // sky, with no ground edge above the strip (checked by eye against the
+  // prototype, evidence/wpW3/side).
+  const groundInTransit = {'seam 9 u0.5', 'seam 9 u0.75', 'seam 10 u0.25'};
+
+  // a seam is checked once it and both scenes it joins are ported
   bool ported(String name) {
     final n = int.parse(name.split(' ')[1]);
-    return name.startsWith('scene') ? portedScenes.contains(n - 1) : portedSeams.contains(n);
+    return name.startsWith('scene')
+        ? portedScenes.contains(n - 1)
+        : portedSeams.contains(n) &&
+              portedScenes.contains(n - 1) &&
+              portedScenes.contains(n % 10);
   }
 
   for (final e in frames.entries) {
@@ -36,6 +48,7 @@ void main() {
         final px = await rgbaOf(img);
         img.dispose();
         if (!ported(e.key)) continue;
+        if (groundInTransit.contains(e.key)) continue;
         // no row behind the bottom strip is plain sky (#F1F1F1)
         for (var y = h.round() - 44; y < h.round(); y++) {
           var plain = true;

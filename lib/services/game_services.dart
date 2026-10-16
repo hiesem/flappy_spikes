@@ -130,7 +130,9 @@ class GameServices {
     try {
       await _initDone.future.timeout(launchAuthWait);
       if (after != null) {
-        await after.timeout(launchAuthWait, onTimeout: () {});
+        // 2.4.0 (26): the launch dialogs (consent form, ATT, notification
+        // question) wait for the player, so the cap is generous.
+        await after.timeout(launchGateWait, onTimeout: () {});
       }
     } catch (_) {}
     if (!_initialized || _signedIn) {
@@ -198,6 +200,12 @@ class GameServices {
     } catch (_) {
       return;
     }
+    final gate = launchGate;
+    if (gate != null) {
+      await gate.timeout(launchGateWait, onTimeout: () {});
+      // Let the last dialog animate out, so the banner shows on the game.
+      await Future<void>.delayed(launchGateSettle);
+    }
     if (!_initialized || _signedIn) return;
     bool authenticated;
     try {
@@ -234,6 +242,13 @@ class GameServices {
   }
 
   static const List<int> launchRecheckSeconds = [2, 6, 15];
+
+  /// 2.4.0 (26): the launch dialogs (consent form, notification question);
+  /// set by main(). [recheckSignIn] signs in only after them, so Play
+  /// Games' "Welcome back" banner is not hidden behind them.
+  Future<void>? launchGate;
+  static const Duration launchGateWait = Duration(minutes: 3);
+  static const Duration launchGateSettle = Duration(milliseconds: 600);
 
   static const MethodChannel _pgsChannel = MethodChannel('flappy_spikes/pgs');
 

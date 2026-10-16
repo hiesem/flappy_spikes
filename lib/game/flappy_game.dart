@@ -844,13 +844,40 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // first game. §3.34 "Scheduling": the same plan is laid out at app start
     // (covers reboots and app updates); storage is loaded by now, so the
     // `{best}` / `{coins}` fill-in has the real values.
+    //
+    // 2.4.0 (26): the launch dialogs come one at a time. The notification
+    // question waits for the ads consent form ([awaitLaunchConsent]), and
+    // the platform sign-in (Play Games' "Welcome back" banner, Game
+    // Center's) waits for both ([launchDialogsDone]): on a first launch
+    // they all landed at once and the banner showed behind the dialogs.
     unawaited(() async {
-      await reminders.initialize();
-      await reminders.requestPermissionIfNeeded();
+      try {
+        await reminders.initialize();
+        final consent = awaitLaunchConsent;
+        if (consent != null) {
+          await consent().timeout(launchConsentWait, onTimeout: () {});
+        }
+        await reminders.requestPermissionIfNeeded();
+      } finally {
+        if (!_launchDialogs.isCompleted) _launchDialogs.complete();
+      }
       await reminders.reschedule();
     }());
     // endregion WP-4b
   }
+
+  /// 2.4.0 (26): main() sets this to the launch ads consent flow (UMP
+  /// form); null in tests (nothing to wait for).
+  Future<void> Function()? awaitLaunchConsent;
+
+  /// The longest the notification question waits for the consent form.
+  static const Duration launchConsentWait = Duration(minutes: 3);
+
+  final Completer<void> _launchDialogs = Completer<void>();
+
+  /// Completes once the launch dialogs (consent form, notification
+  /// question) are done; the platform sign-in waits for it.
+  Future<void> get launchDialogsDone => _launchDialogs.future;
 
   /// When the app went to the background (null while in the foreground).
   DateTime? _backgroundSince;

@@ -194,6 +194,12 @@ Future<void> main() async {
   }
   // endregion WP-4b
 
+  // 2.4.0 (26): the launch dialogs one at a time (consent form, then the
+  // notification question, then the platform sign-in); see
+  // FlappySpikesGame.awaitLaunchConsent / launchDialogsDone.
+  final launchConsent = Completer<void>();
+  game.awaitLaunchConsent = () => launchConsent.future;
+
   // PRD-2.2 §7.5.2: the game over the banner slot. PRD-2.3 §2.0: shares are
   // a drawn card, never a screen capture.
   runApp(
@@ -228,17 +234,18 @@ Future<void> main() async {
   // Same fire-and-forget rule: the UMP consent form may be shown here, and
   // initialize() never throws; until it lands ads are simply unavailable.
   final adsStarted = monetization.initialize();
-  unawaited(adsStarted);
+  unawaited(adsStarted.whenComplete(launchConsent.complete));
   // iOS round 2 §5 / §6: Game Center authenticates at launch on iOS only
   // (an already signed-in player silently; GameServices.authenticateAtLaunch
   // and PORT-IOS §2). Never on Android (Play Games' profile picker,
   // CLAUDE.md). After the consent / ATT flow so the sheets never collide.
   if (_isIOS && !isLinux && !kSoak && !kE2E) {
-    unawaited(services.authenticateAtLaunch(after: adsStarted));
+    unawaited(services.authenticateAtLaunch(after: game.launchDialogsDone));
   }
   // 2.4.0 (24): Android re-asks Play Games silently while the player counts
   // as signed out (GameServices.recheckSignIn; also on resume / run start).
   if (!_isIOS && !isLinux && !kSoak && !kE2E) {
+    services.launchGate = game.launchDialogsDone;
     services.scheduleLaunchRechecks();
   }
 }

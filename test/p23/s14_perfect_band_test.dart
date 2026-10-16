@@ -33,14 +33,17 @@ void main() {
     // and [[0,12]]).
     test('defaults: perfect band 18 → 8, bullseye band 12 → 8', () {
       final defs = {for (final d in kTuningDefaults) d.key: d};
+      // PRD-2.4 §1.2: the v23 curve (live RC version 23).
       expect(defs['point_perfect_band']!.value, [
-        [1, 18], [25, 15], [50, 13], [75, 10], [100, 8], //
+        [1, 18], [2, 18], [6, 17.4], [10, 16.7], [16, 15.8], [20, 15.2],
+        [25, 14.5], [30, 13.9], [35, 13.2], [40, 12.7], [50, 11.6],
+        [60, 10.7], [75, 10], [100, 8], //
       ]);
       expect(defs['point_bullseye_band']!.value, [
         [1, 12], [50, 10], [100, 8], //
       ]);
       expect(PerfectBandConfig.bandAt(1), 18);
-      expect(PerfectBandConfig.bandAt(25), 15);
+      expect(PerfectBandConfig.bandAt(25), 14.5);
       expect(PerfectBandConfig.bandAt(80), closeTo(9.6, 1e-9));
       expect(PerfectBandConfig.bandAt(200), 8);
       expect(BullseyeConfig.band, 12);

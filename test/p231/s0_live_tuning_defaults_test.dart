@@ -7,7 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// PRD-2.3.1 §0 "Remote Config: the owner's live tuning is the truth": the
 /// live Remote Config values (RC version 21, the tuning keys only) are the
 /// in-app defaults, except where the PRD wins: `coin_bullseye` 3 (§6),
-/// `shop_ad_coins` 75 (§5) and the keys new in 2.3.1 (§16, §17).
+/// `shop_ad_coins` 75 (§5) and the keys new in 2.3.1 (§16, §17). PRD-2.4 §1.2
+/// moved two of them to the v23 curves (`point_perfect_band`,
+/// `curve_opening`), which are pinned here as well.
 const Map<String, String> _liveV21 = {
   'coin_hoop': '1',
   'coin_perfect': '2',
@@ -26,7 +28,8 @@ const Map<String, String> _liveV21 = {
   'point_chick': '1',
   'point_fever_streak': '5',
   'point_pair_gift': '5',
-  'point_perfect_band': '[[1,18],[25,15],[50,13],[75,10],[100,8]]',
+  'point_perfect_band':
+      '[[1,18],[2,18],[6,17.4],[10,16.7],[16,15.8],[20,15.2],[25,14.5],[30,13.9],[35,13.2],[40,12.7],[50,11.6],[60,10.7],[75,10],[100,8]]',
   'point_bullseye_band': '[[1,12],[50,10],[100,8]]',
   'bonus_prizes': '[25,25,25,40,40,40,50,50,100]',
   'bonus_feather_chance': '0.6',
@@ -40,7 +43,8 @@ const Map<String, String> _liveV21 = {
   'shop_ad_per_day': '5',
   'shop_ad_cooldown_s': '300',
   'curve_speed': '[[0,150],[50,172.5],[150,187.5]]',
-  'curve_opening': '[[1,88],[100,66]]',
+  'curve_opening':
+      '[[1,118],[2,118],[6,114],[10,110.5],[16,105.5],[20,102],[25,98],[30,94.5],[35,90.5],[40,87.5],[50,81],[60,76.5],[75,72],[100,66]]',
   'curve_moving': '[[19,0],[20,0.15],[35,0.4],[60,0.6],[80,0.75]]',
   'curve_tilt':
       '[[9,0],[10,0.3],[19,0.3],[20,0.5],[34,0.5],[35,0.6],[44,0.6],[45,0.78]]',

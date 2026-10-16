@@ -206,10 +206,13 @@ void main() {
         game.runDebug.god = true;
         final run = await startRun(game, force: [ElementId.heart]);
         run.events.recordLog = true;
-        // The forced heart sits in gap 0, on the line to hoop 1.
-        await flyRun(game, maxSeconds: 3);
+        // The forced heart sits in gap 0. Fly only until it is spawned: the
+        // autopilot's line through the wider early openings (PRD-2.4 §1)
+        // passes it by, so a longer flight would leave it escaped.
+        await flyUntil(game, (_) => pickupsOf(game).isNotEmpty, maxSeconds: 3);
         final heart = pickupsOf(game).whereType<_TestPickup>().single;
         expect(heart.plan!.kind, ElementId.heart);
+        expect(heart.escaped, isFalse);
         final bird = run.birdTrackPosition()!;
         heart.position.setValues(bird.x + 16 + 14.75 - 0.5, bird.y);
         game.update(0);

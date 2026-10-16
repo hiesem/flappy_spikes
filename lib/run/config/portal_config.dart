@@ -65,9 +65,6 @@ abstract final class PortalConfig {
   static const double portalFadeFrom = .4;
   static const double portalFade = .8;
 
-  /// §3.12 Ride rings: the standard ring at full size (§3.0.1 ride = 118).
-  static const double ringOpening = 118;
-
   /// §5.12b Storm: rings and bird scale ±12 % with the funnel depth.
   static const double depthScale = .12;
 

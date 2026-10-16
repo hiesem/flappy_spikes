@@ -68,7 +68,7 @@ void main() {
     ).testGameWidget(
       // PRD-2.3.1 §16.1 A (supersedes "the height stays"): the slot moves
       // into the comet layout — a comet station at the zigzag height.
-      'the reward goes (plain kind), it moves to a comet station, full size',
+      'the reward goes (plain kind), it moves to a comet station, the curve size',
       setUp: (g, _) async {
         await g.ready();
         await preloadImages(g);
@@ -100,7 +100,11 @@ void main() {
           isTrue,
         );
         expect((spawned.plan.centreY - 711 / 2).abs(), closeTo(70, 1e-6));
-        expect(spawned.plan.opening, RunConfig.opening0);
+        // PRD-2.4 §2: a comet ride hoop takes the curve size of its index.
+        expect(
+          spawned.plan.opening,
+          closeTo(RunConfig.openingFor(spawned.plan.index), 1e-9),
+        );
       },
     );
   });

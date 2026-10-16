@@ -86,15 +86,16 @@ void main() {
   });
 
   group('§3.0.1 opening ramp', () {
-    test('§3.0.1 / PRD-2.3 §14.4 118 pt at hoop 0, then 88 → 66 at hoop '
-        '100; rides 118', () {
+    test('§3.0.1 / PRD-2.3 §14.4 / PRD-2.4 §1 118 pt at hoop 0, then the v23 '
+        'curve (118 at hoops 1–2, 110.5 at 10, 66 from hoop 100); the same '
+        'curve in a ride (PRD-2.4 §2)', () {
       final d = director();
-      expect(d.openingFor(0, ride: false), 118);
-      expect(d.openingFor(1, ride: false), 88);
-      expect(d.openingFor(10, ride: false), closeTo(88 - 22 * 9 / 99, 1e-9));
-      expect(d.openingFor(100, ride: false), 66);
-      expect(d.openingFor(200, ride: false), 66);
-      expect(d.openingFor(80, ride: true), 118);
+      expect(d.openingFor(0), 118);
+      expect(d.openingFor(1), 118);
+      expect(d.openingFor(10), 110.5);
+      expect(d.openingFor(100), 66);
+      expect(d.openingFor(200), 66);
+      expect(d.openingFor(80), closeTo(70.8, 1e-9));
     });
 
     test('§3.0.1 hoop index = slots spawned (a train is one slot)', () {
@@ -217,8 +218,8 @@ void main() {
   });
 
   group('§3.0.3 slot order', () {
-    test('§3.0.3 1. ride active: normal, full size, upright, still, no gap '
-        'item', () {
+    test('§3.0.3 1. ride active: normal, the curve size of its index '
+        '(PRD-2.4 §2), upright, still, no gap item', () {
       final d = director(startHoopIndex: 40);
       for (final (s, g) in fly(
         d,
@@ -226,7 +227,7 @@ void main() {
         ctxFor: (_) => DirectorContext.open(711, rideActive: true, ride: RideKind.comet),
       )) {
         expect(s.kind, HoopKindId.normal);
-        expect(s.opening, 118);
+        expect(s.opening, closeTo(RunConfig.openingFor(s.index), 1e-9));
         expect(s.tiltDeg, 0);
         expect(s.motion, isNull);
         expect(s.cometHang, isFalse);
@@ -485,6 +486,16 @@ void main() {
           springs++;
           final next = plans[s.index + 1];
           final dir = s.extra == SpringDir.up ? -1 : 1;
+          if (next.kind == HoopKindId.portal) {
+            // The portal keeps its 118 pt opening (PRD-2.2 §25.1), so its
+            // band is narrower than a spring's: the band rule clamps the
+            // jump inside it (PRD-2.4 §1 changes the spring's opening).
+            expect(
+              dir * (next.centreY - s.centreY),
+              inInclusiveRange(0, 240 + 1e-6),
+            );
+            continue;
+          }
           expect(next.centreY - s.centreY, closeTo(dir * 240, 1e-6));
         }
       }

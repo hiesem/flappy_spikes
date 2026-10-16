@@ -30,10 +30,14 @@ import '../../game/paints.dart';
 /// preview of the first curve ring (§3.12 "the next chain ring is already
 /// visible ahead").
 class _Chain {
-  _Chain(this.theme, this.path, this.stations);
+  _Chain(this.theme, this.path, this.stations, this.ringOpening);
   final RideTheme theme;
   final RidePath path;
   final List<double> stations;
+
+  /// PRD-2.4 §2.3 the size of every ring of this ride (set at the portal's
+  /// spawn, so the preview ring and the rest match).
+  final double ringOpening;
   Hoop? preview;
 }
 
@@ -74,9 +78,20 @@ class PortalRideFeature extends RunFeature {
     final id = e.plan.extra is RideId ? e.plan.extra! as RideId : RideId.cannon;
     final theme = rideThemeFor(id);
     final path = theme.buildPath();
-    final chain = _Chain(theme, path, theme.ringStations(path));
+    final chain = _Chain(
+      theme,
+      path,
+      theme.ringStations(path),
+      PortalRide.rideRingOpening(c, e.hoop),
+    );
     _chains[e.hoop] = chain;
-    chain.preview = PortalRide.buildRing(c, e.hoop, chain.path, chain.stations[0]);
+    chain.preview = PortalRide.buildRing(
+      c,
+      e.hoop,
+      chain.path,
+      chain.stations[0],
+      chain.ringOpening,
+    );
     PortalRide.addRing(c, chain.preview!);
   }
 
@@ -98,7 +113,7 @@ class PortalRideFeature extends RunFeature {
     final p = _pending;
     if (p != null && ride == null) {
       _pending = null;
-      final chain = _chains.remove(p) ?? _chainFor(p);
+      final chain = _chains.remove(p) ?? _chainFor(c, p);
       final r = PortalRide(
         c,
         p,
@@ -106,6 +121,7 @@ class PortalRideFeature extends RunFeature {
         path: chain.path,
         stations: chain.stations,
         firstRing: chain.preview,
+        ringOpening: chain.ringOpening,
       );
       ride = r;
       started.add(r.theme.id);
@@ -120,13 +136,18 @@ class PortalRideFeature extends RunFeature {
     _tidy(c);
   }
 
-  _Chain _chainFor(Hoop portal) {
+  _Chain _chainFor(RunContext c, Hoop portal) {
     final id = portal.plan.extra is RideId
         ? portal.plan.extra! as RideId
         : RideId.cannon;
     final theme = rideThemeFor(id);
     final path = theme.buildPath();
-    return _Chain(theme, path, theme.ringStations(path));
+    return _Chain(
+      theme,
+      path,
+      theme.ringStations(path),
+      PortalRide.rideRingOpening(c, portal),
+    );
   }
 
   /// §3.12 cyan sparkles drift off portals that wait ahead.
@@ -209,6 +230,7 @@ class PortalRide implements Ride {
     required this.theme,
     required this.path,
     required this.stations,
+    required this.ringOpening,
     this.firstRing,
   }) : view = RideView(
          path: path,
@@ -224,6 +246,9 @@ class PortalRide implements Ride {
   final List<double> stations;
   final RideView view;
   final Hoop? firstRing;
+
+  /// PRD-2.4 §2.3 the opening of every ride ring ([rideRingOpening]).
+  final double ringOpening;
 
   late final List<Hoop> rings;
   final Set<int> _added = {};
@@ -308,8 +333,26 @@ class PortalRide implements Ride {
 
   // ------------------------------------------------------------ the chain
 
-  /// A ride ring at arc length [s] of [path] from [portal]'s centre.
-  static Hoop buildRing(RunContext c, Hoop portal, RidePath path, double s) {
+  /// PRD-2.4 §2.3 the opening of a ride's rings: the curve size of the
+  /// portal's hoop index × the Big Hoops multiplier now, capped to the band
+  /// like every hoop (the portal itself stays 118). Taken once per ride.
+  static double rideRingOpening(RunContext c, Hoop portal) {
+    final ctx = c.run.directorContext();
+    return math.min(
+      RunConfig.openingFor(portal.plan.index) * ctx.bigHoopsMult,
+      ctx.band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
+    );
+  }
+
+  /// A ride ring at arc length [s] of [path] from [portal]'s centre, at
+  /// [opening] ([rideRingOpening]).
+  static Hoop buildRing(
+    RunContext c,
+    Hoop portal,
+    RidePath path,
+    double s,
+    double opening,
+  ) {
     final p = path.at(s);
     final h = path.headingAt(s);
     final plan = SlotPlan(
@@ -318,7 +361,7 @@ class PortalRide implements Ride {
       element: HoopKindId.rideRing.element,
       trackX: portal.planeX + p.x,
       centreY: portal.position.y + p.y,
-      opening: PortalConfig.ringOpening,
+      opening: opening,
       tiltDeg: h * 180 / math.pi,
       advance: 0,
       duringRide: true,
@@ -361,7 +404,9 @@ class PortalRide implements Ride {
     final first = firstRing;
     rings = [
       for (var i = 0; i < stations.length; i++)
-        i == 0 && first != null ? first : buildRing(c, portal, path, stations[i]),
+        i == 0 && first != null
+            ? first
+            : buildRing(c, portal, path, stations[i], ringOpening),
     ];
     if (firstRing != null) _added.add(0);
 

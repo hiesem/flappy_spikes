@@ -302,7 +302,12 @@ void main() {
           expect(p.kind, HoopKindId.normal);
           expect(p.tiltDeg, 0);
           expect(p.motion, isNull);
-          expect(p.opening, closeTo(RunConfig.opening0, 1e-9));
+          // PRD-2.4 §2: the curve size of its index (not 118).
+          expect(
+            p.opening,
+            closeTo(RunConfig.openingFor(p.index), 1e-9),
+            reason: 'comet hoop ${p.index}',
+          );
           expect(p.cometHang, isFalse);
         }
         // PRD-2.3.1 §16: comet hoops ≈ `ride_comet_hoop_gap` (560) apart

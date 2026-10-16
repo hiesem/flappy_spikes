@@ -765,8 +765,8 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   next hoop (taps ignored, ±25° tilt); white speed streaks cross the screen.
   The boost is a ride: rims are ignored, mistakes (spikes, closed switches)
   are ignored, every hoop passed is a **perfect pass** (banner, burst, +2
-  coins, tier sound, ring field), hoops spawned during it are 118 pt,
-  upright and still. Sounds `pu_comet_get`, `pu_comet_loop` (30 %, from
+  coins, tier sound, ring field), hoops spawned during it are upright and still at the
+  curve size of their index (PRD-2.4 §2; was 118 pt). Sounds `pu_comet_get`, `pu_comet_loop` (30 %, from
   1.2 s, 0.3 s fade), `pu_comet_end`. At the end the bird pops back (white
   flash, squares, gold ring) at its current height and control returns; no
   invulnerability afterwards. The streak carries on; the shield and the
@@ -1219,7 +1219,7 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   piggy, and when the piggy sits too late in its gap for them to end 40 pt
   before the next hoop they go in the gap after that hoop instead.
 - Call (§25.1, P22-G2): the portal ring is a fixed **118 pt** at every hoop
-  (it had taken the shrinking opening).
+  (it had taken the shrinking opening); PRD-2.4 §2.3: also with Big Hoops.
 - DEVIATION (PRD-2.2 §21, P22-V2; supersedes PRD-2 §3.19 Q51 "only the
   FEVER ring lights the fire" and the PRD-2 §3.5 / `TierTrail` trail scale):
   the **3rd perfect pass in a row sets the bird on fire**; it burns until the
@@ -1261,7 +1261,8 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   steering and the "hoops spawned during the boost" heights): **comet
   zigzag.** Hoops the director plans during a comet ride (incl. the pair's
   COMET gift) sit alternately **70 pt above / below `viewHeight / 2`**
-  (`CometConfig.zigzagAmp`, every run height), full size, upright, still;
+  (`CometConfig.zigzagAmp`, every run height), upright, still, at the curve size of their
+  index (PRD-2.4 §2; was full size = 118);
   the first goes to the other side of the star's hoop (the bird's height for
   the gift). A hoop whose plane the bird reaches after the predicted end of
   the ride (boost + ease-out, `CometRide.predictEndTrackX`) gets a normal
@@ -1277,7 +1278,7 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
     the normal layout draw for a ride slot, so the course after the ride
     keeps its random stream.
   - The planned-ahead slot (§15) when the comet starts keeps its height,
-    tilt and motion (full size like every ride hoop; the height is only
+    tilt and motion (the curve size of its index, PRD-2.4 §2; the height is only
     clamped if the larger opening needs it) (`RunDirector.plainSlot(keepGeometry: true)`,
     P22-FIX2, QA S7-12); only its reward / special kind, gifts, attached
     items and comet star go (§27). A revive still makes it fully plain.
@@ -1513,6 +1514,31 @@ production build has the flag off and uses these values only. Full key table:
   Moving-hoop chance `curve_moving` `[[19,0],[20,0.15],[35,0.40],[60,0.60],[80,0.75]]`
   (was .06 / .15 / .40 by row); tilt chance `curve_tilt` = the 2.2 rows as a step
   table. Spacing 310 unchanged (not tunable).
+- DEVIATION (PRD-2.4 §1, supersedes the PRD-2.3 §14.4 opening curve `[[1,88],[100,66]]`
+  and the PRD-2.3.1 §0 perfect band values): **the new hoop-size curve.** `curve_opening`
+  = `[[1,118],[2,118],[6,114],[10,110.5],[16,105.5],[20,102],[25,98],[30,94.5],[35,90.5],
+  [40,87.5],[50,81],[60,76.5],[75,72],[100,66]]`: hoops 0–2 are 118 pt, then an ease-out to
+  66 pt at hoop 100, flat after. `point_perfect_band` = `[[1,18],[2,18],[6,17.4],[10,16.7],
+  [16,15.8],[20,15.2],[25,14.5],[30,13.9],[35,13.2],[40,12.7],[50,11.6],[60,10.7],[75,10],
+  [100,8]]`: the band stays about 30 % of the gap up to hoop 75. Unchanged: the Bullseye band
+  `point_bullseye_band`, `curve_speed`, the Big Hoops ×1.5 and the saw. The in-app defaults
+  are these values (offline, before the first fetch). Tests: `test/p24/s1_hoop_curve_test.dart`.
+- DEVIATION (PRD-2.4 §2, supersedes the PRD-2.2 §16 "full size" rides, the PRD-2.2 §25.1
+  "ride hoops 118" note and the PRD-2.3 §14.4 "ride hoops 118"): **one hoop size through
+  rides.** Every hoop has the size of its index, also during and after a ride: comet hoops,
+  hoops planned during a portal ride, the first hoop after a ride and every re-plan take
+  `openingFor(index)` × the Big Hoops multiplier. The five ride rings of a portal ride take
+  `openingFor(portal index)` × the multiplier (capped to the band); the rings of one ride
+  share one size, fixed when the portal spawns (`PortalRide.rideRingOpening`). Exceptions:
+  **hoop 0** (118, also with Big Hoops, PRD-2.3 §10.2); **the portal** (118 at every
+  hoop, × Big Hoops as in 2.3.1, unchanged);
+  the **saw**: `sawExtraOpening` stays 0 (PRD-2.2 §25: the saw is the normal opening; the
+  PRD-2.4 text "keeps its +28 pt" describes the 2.0 value, so the saw is unchanged). Ride
+  rings are still perfect passes and their rims are still ignored: ride difficulty and
+  payouts are unchanged. `RunConfig.openingFor(hoopIndex)` has no `ride` parameter any more
+  and `PortalConfig.ringOpening` is removed (`RunConfig.portalOpening` is the portal's 118).
+  Tests: `test/p24/s2_ride_hoop_sizes_test.dart`, `test/p24/s2_no_jumps_test.dart`,
+  `test/p24/s2_ride_art_test.dart`.
 - DEVIATION (PRD-2.3 §14.4, squeeze, supersedes PRD-2 §3.17 timing): **counted in
   hoops**: the first at a random hoop **25–40**, each hold **5–10 hoops**, the next
   **25–45 hoops** after the previous one ended (no growing cooldown). A hoop count

@@ -1742,3 +1742,16 @@ production build has the flag off and uses these values only. Full key table:
     Lucky Spin 8 (15); saw 12 (20).
   The full table is `docs/p23/TUNING.md`. Tests that measure a mechanism at its 2.3
   calibration pin the 2.3 values (`test/p231/tuning_23.dart`).
+
+### PRD-2.4 §3: the lively run background (P24-W1, 2026-10-16)
+
+- DEVIATION (PRD 2.4 §3; the 2014 game had a flat background in the stage's background
+  colour): during a run (not on home, results or bonus pages) the background is a world of
+  10 scenes joined by 10 seams (`docs/p24/endless_vertical.html`, ported 1:1 in
+  `lib/run/backdrop/`), drawn in Sky & Hills greys and recoloured per colour stage by one
+  colour matrix (#F1F1F1 → stage background, #828282 → stage foreground). It sits at world
+  priority −999, just over the flat backdrop rectangle (−1000, which still shows on the
+  menus), fades in over 0.3 s when the run opens and out over 0.3 s under a post-run page,
+  and leaves with its run. It moves only with the run camera and the run clock (frozen on
+  pause and death). Seam k is centred on hoop 40·k; hoops 0–39 are pure Nest Canopy; one
+  loop is 400 hoops. Nothing else (bird, hoops, spikes, HUD, rides, physics) changes.

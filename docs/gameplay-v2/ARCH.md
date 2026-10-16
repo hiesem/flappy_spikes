@@ -1681,3 +1681,17 @@ the chick's ×2, the perfect zone) are superseded by PRD-2.3 §14; `SPEC.md` has
   (`interstitialMinGap`, `adsGraceRuns`, `adsGraceSeconds`, `ratingMinRuns`, `ratingCooldown`,
   `ratingDelaySeconds`, `noAdsPopupMinGap`, `noAdsPopupMaxPerDay`, `noAdsPopupFallback`, `menuUnlockBest`).
 
+
+## PRD-2.4 §3 WP-W1 contract notes — `lib/run/backdrop/` (as built, 2026-10-16)
+
+| File | Responsibility | API |
+|---|---|---|
+| `run/backdrop/run_backdrop.dart` | The run background component, one per run, world priority `RunLayer.runBackdrop` (−999, over the flat `RunLayer.backdrop` rect). Added by `FlappySpikesGame._startRun`; removes itself when `game.run` is another run; fades in 0.3 s at run open, out under `postRunPageUp` | `RunBackdrop(run)`; `static RunBackdrop? of(game)`; `double get worldDistance`; `double opacity`; `BackdropRideHook? rideHook`; `String? get ridePhase` |
+| `run/backdrop/backdrop_world.dart` | `world()` / `drawGroup()` / `vmove()` of the prototype; first-loop rule (no Homecoming below w 6 000); `BackdropPainter` (base fill, tall-screen anchoring: the 568 design on the screen bottom, one colour-filter `saveLayer`, ride cover clip) | `BackdropWorld.sceneAt(w)`, `seamAt(w)`, `paint(Ctx)`, `group(c, env, bands, dy)`; `BackdropPainter.paint(canvas, cam:, t:, viewHeight:, bg:, fg:, opacity:)` |
+| `run/backdrop/world_distance.dart` | camera → world distance (300 per hoop; seam k landed on hoop 40·k; continuous, monotonic; holds while the seam hoop is unplanned) | `WorldDistance.start/advance`, `HoopAnchors` |
+| `run/backdrop/backdrop_tables.dart` | `kScenes` (10), `kSeams` (10), one file each under `scenes/` and `seams/` | — |
+| `run/backdrop/ride_hook.dart` | WP-R's hook (§3.5) | `BackdropRideHook.bandOffset(band)`, `scroll(dc)`, `cover(path, viewHeight)` |
+| `run/backdrop/backdrop_ctx.dart`, `backdrop_helpers.dart`, `backdrop_math.dart`, `backdrop_palette.dart`, `seams/water.dart` | canvas-2D facade, the prototype's helpers, `palMatrix` | see `lib/run/backdrop/README.md` |
+
+Scenes 4–10 and seams 3–6 are stubs (W2: 4–7 + 3–6; W3: 8–10 + 7–10 + the loop); each builder edits only its own
+scene / seam files. Contract and the pacing math: `lib/run/backdrop/README.md`.

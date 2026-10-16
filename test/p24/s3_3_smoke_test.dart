@@ -13,8 +13,14 @@ import 'backdrop_harness.dart';
 /// is plain sky.
 void main() {
   // WP-W2 / WP-W3 extend these as they port.
-  const portedScenes = {0, 1, 2};
-  const portedSeams = {1, 2};
+  const portedScenes = {0, 1, 2, 3, 4, 5, 6};
+  const portedSeams = {1, 2, 3, 4, 5, 6};
+  // Frames where the bottom rows are the leaving scene's sky by design (the
+  // prototype draws the same; no ground edge shows, the ground has slid
+  // below the screen): seam 6 mid-climb up the book, Candy Land's ground is
+  // below the screen and its sky shows under the page edges
+  // (evidence wpW2/side/seam6_mid).
+  const skyBottomOk = {'seam 6 u0.5'};
 
   final frames = <String, double>{
     for (var s = 0; s < 10; s++) 'scene ${s + 1}': kTotal + (s + .5) * kE,
@@ -36,6 +42,7 @@ void main() {
         final px = await rgbaOf(img);
         img.dispose();
         if (!ported(e.key)) continue;
+        if (skyBottomOk.contains(e.key)) continue;
         // no row behind the bottom strip is plain sky (#F1F1F1)
         for (var y = h.round() - 44; y < h.round(); y++) {
           var plain = true;

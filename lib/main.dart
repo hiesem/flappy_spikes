@@ -199,6 +199,11 @@ Future<void> main() async {
   // FlappySpikesGame.awaitLaunchConsent / launchDialogsDone.
   final launchConsent = Completer<void>();
   game.awaitLaunchConsent = () => launchConsent.future;
+  if (!_isIOS && !isLinux && !kSoak && !kE2E) {
+    PlayerStreamGate.ready = game.launchDialogsDone
+        .timeout(GameServices.launchGateWait, onTimeout: () {})
+        .then((_) => Future<void>.delayed(GameServices.launchGateSettle));
+  }
 
   // PRD-2.2 §7.5.2: the game over the banner slot. PRD-2.3 §2.0: shares are
   // a drawn card, never a screen capture.

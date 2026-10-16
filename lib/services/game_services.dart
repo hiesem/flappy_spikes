@@ -50,6 +50,19 @@ enum ShowAchievementsResult { opened, signInFailed, failed, unavailable, busy }
 /// [_initialized] flag, so a never-initialized instance never even reaches
 /// the method channel. Every plugin call is also individually guarded and
 /// time-boxed: services must never take the game down.
+/// 2.4.0 (26), Android: the launch dialogs (consent form, notification
+/// question) come before anything listens to the games_services player
+/// stream. Its first listen asks Play Games for the player, which signs a
+/// returning player in and shows Play Games' "Welcome back" banner; at
+/// launch that banner showed behind the dialogs and the player saw no
+/// sign-in. main() sets [ready] to the dialogs (capped); it is complete
+/// everywhere else (iOS, tests, Linux).
+class PlayerStreamGate {
+  PlayerStreamGate._();
+
+  static Future<void> ready = Future<void>.value();
+}
+
 class GameServices {
   FirebaseAnalytics? _analytics;
   bool _signedIn = false;
@@ -92,11 +105,18 @@ class GameServices {
   /// the real native check lands, i.e. false on every cold call.
   Future<void> initialize() async {
     await ensureFirebase();
-    try {
-      _playerSub = GameAuth.player.listen(_onPlayer);
-    } catch (_) {
-      _signedIn = false;
-    }
+    // 2.4.0 (26): the first listen is what makes Play Games sign in (and
+    // show its "Welcome back" banner); it waits for the launch dialogs
+    // ([PlayerStreamGate]), so the banner is not hidden behind them.
+    unawaited(
+      PlayerStreamGate.ready.then((_) {
+        try {
+          _playerSub = GameAuth.player.listen(_onPlayer);
+        } catch (_) {
+          _signedIn = false;
+        }
+      }),
+    );
     // Set even when the plugin setup above failed: initialize() having RUN is
     // what distinguishes the real app from tests/unconfigured builds.
     _initialized = true;

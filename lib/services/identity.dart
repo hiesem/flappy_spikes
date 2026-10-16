@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:games_services/games_services.dart';
 
 import '../run/config/versus_config.dart';
+import 'game_services.dart' show PlayerStreamGate;
 
 /// The platform games account a player may be signed in to (PRD-2 §3.13
 /// "Who plays", ARCH §6.4): its display name, and once signed in the
@@ -59,7 +60,12 @@ class PlayGamesIdentity implements PlatformIdentity {
   String get platform => 'android';
 
   @override
-  Stream<PlatformPlayer?> get player => GameAuth.player.map((p) {
+  // 2.4.0 (26): after the launch dialogs (PlayerStreamGate).
+  Stream<PlatformPlayer?> get player => Stream.fromFuture(
+    PlayerStreamGate.ready,
+  ).asyncExpand((_) => GameAuth.player.map(_toPlayer));
+
+  PlatformPlayer? _toPlayer(PlayerData? p) {
     final id = p?.playerID;
     _last = p == null
         ? null
@@ -69,7 +75,7 @@ class PlayGamesIdentity implements PlatformIdentity {
             iconImage: p.iconImage ?? '',
           );
     return _last;
-  });
+  }
 
   @override
   Future<AuthCredential?> firebaseCredential({bool fresh = false}) async {

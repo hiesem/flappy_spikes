@@ -556,8 +556,24 @@ class StoreIapService implements IapService {
   /// failing with the generic "Not started".
   final Duration launchErrorGrace;
 
-  final StreamController<IapEvent> _events =
-      StreamController<IapEvent>.broadcast();
+  late final StreamController<IapEvent> _events =
+      StreamController<IapEvent>.broadcast(onListen: _replayHeld);
+
+  /// Audit A3-4 (iOS): App Store purchases delivered before anyone listened
+  /// (StoreKit re-delivers an unfinished transaction at launch, possibly
+  /// before the game subscribes). StoreKit's restore leaves consumables
+  /// out, so no sync would bring them back: they are replayed to the first
+  /// listener instead. Google Play purchases are not held: the launch sync
+  /// re-delivers them (S8-05).
+  final List<PurchaseDetails> _held = [];
+
+  void _replayHeld() {
+    if (_held.isEmpty) return;
+    final held = List.of(_held);
+    _held.clear();
+    iapLog('replaying ${held.length} held purchase(s)');
+    scheduleMicrotask(() => unawaited(_onPurchases(held)));
+  }
   final Map<IapProduct, ProductDetails> _details = {};
 
   /// Kept alive for the app's lifetime on purpose (see class doc).
@@ -786,6 +802,12 @@ class StoreIapService implements IapService {
             } catch (_) {
               iapLog('grant of ${product.storeId} not confirmed in time');
             }
+          } else if (purchase.verificationData.source == 'app_store') {
+            iapLog('grant of ${product.storeId}: no listener yet, held');
+            final id = purchase.purchaseID;
+            _held
+              ..removeWhere((h) => id != null && h.purchaseID == id)
+              ..add(purchase);
           } else {
             iapLog('grant of ${product.storeId}: no listener yet, kept');
           }

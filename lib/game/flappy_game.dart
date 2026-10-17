@@ -184,6 +184,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // beyond anything reachable (bird speeds stay in the low hundreds).
     maxTranslation = 10000;
     maxTranslationSquared = maxTranslation * maxTranslation;
+    (world as RunScaledWorld).coveredBelowSource = _worldCoveredBelow;
     // The knock throttle runs on game time (tests step it).
     rumble.clock = () => _clock;
     // PRD-2.2 §33.4 item 5: the engine stops in the background and resumes
@@ -4028,6 +4029,21 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// reach in the page grey and the banner strip takes it too.
   bool _postRunPage = false;
   bool get postRunPageUp => _postRunPage;
+
+  /// A2-5: the priority below which the run world is not drawn, while the
+  /// results page is opaque and covers the whole view (the page's background
+  /// is drawn over whatever is under it). Null when the world could show
+  /// through: the page fades in or out, is not mounted yet, is smaller than
+  /// the view, or a run shake has moved the view (and the page with it).
+  int? _worldCoveredBelow() {
+    final page = _results;
+    if (page == null || !page.isMounted || page.isRemoved) return null;
+    if (page.opacity < 1 || !page.position.isZero()) return null;
+    if (page.size.x < Config.worldWidth || page.size.y < viewHeight) return null;
+    final vf = camera.viewfinder;
+    if (!vf.position.isZero() || vf.zoom != 1) return null;
+    return page.priority;
+  }
 
   void _setPostRunPage(bool on) {
     _postRunPage = on;

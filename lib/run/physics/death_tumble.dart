@@ -33,6 +33,7 @@ class DeathTumble {
     this.radius = RunConfig.birdRadius,
     this.angle = 0,
     this.viewWidth = RunConfig.worldWidth,
+    this.viewLeft = 0,
   }) : position = position.clone(),
        velocity = velocity.clone(),
        camSpeed = math.max(0, camSpeed),
@@ -69,6 +70,9 @@ class DeathTumble {
 
   /// Screen width (the edge rule).
   final double viewWidth;
+
+  /// WP-TAB: the screen's left edge (screen x; −extra on a wide screen).
+  final double viewLeft;
 
   /// Radians (positive = clockwise).
   double angle;
@@ -139,8 +143,8 @@ class DeathTumble {
       position.x -= x - right;
       velocity.x = -velocity.x.abs() * PhysicsConfig.edgeRestitution;
     }
-    if (x < PhysicsConfig.edgeLeft) {
-      position.x += PhysicsConfig.edgeLeft - x;
+    if (x < viewLeft + PhysicsConfig.edgeLeft) {
+      position.x += viewLeft + PhysicsConfig.edgeLeft - x;
       velocity.x = velocity.x.abs() * PhysicsConfig.edgeRestitution;
     }
   }

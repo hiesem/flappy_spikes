@@ -21,6 +21,7 @@ import '../run_summary.dart';
 import 'phoenix_rise.dart';
 import 'post_run_screens.dart';
 import 'revive_ladder.dart';
+import '../run_scaled_world.dart';
 
 /// The WP-2d revive slot of the post-run flow (ARCH §1.11): shows the
 /// [ReviveScreen] in the viewport and completes with its outcome.
@@ -183,6 +184,8 @@ class ReviveScreen extends PositionComponent
   @override
   Future<void> onLoad() async {
     size = Vector2(320, game.viewHeight);
+    // WP-TAB: a 320 pt column centred on a wide screen.
+    position.x = game.extraWidth / 2;
     try {
       _coin = await game.images.load(CoinIcon.asset);
     } catch (_) {
@@ -197,9 +200,12 @@ class ReviveScreen extends PositionComponent
     );
     shownBalance = balance;
     dim = ReviveDim();
-    game.world.add(dim);
+    game.world.addRun(dim);
     dim.fadeTo(ReviveConfig.dim, ReviveConfig.fadeOut);
-    glow = ScreenEdgeGlow.reviveUrgency(size.clone())..intensity = 0;
+    // WP-TAB: the glow follows the true screen edges.
+    glow = ScreenEdgeGlow.reviveUrgency(Vector2(game.viewWidth, size.y))
+      ..position.x = -game.extraWidth / 2
+      ..intensity = 0;
     add(glow);
     _fadeUi(1);
     _track('revive_offered', {
@@ -397,7 +403,7 @@ class ReviveScreen extends PositionComponent
       },
     );
     phoenix = p;
-    game.world.add(p);
+    game.world.addRun(p);
   }
 
   void _finish(ReviveOutcome o) {

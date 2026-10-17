@@ -56,6 +56,7 @@ class ConfettiBurst extends Component {
   ConfettiBurst.rain({
     required this.count,
     double width = 320,
+    double left = 0, // WP-TAB: the screen's left edge in the column
     math.Random? random,
     super.priority,
   }) : rain = true,
@@ -64,7 +65,7 @@ class ConfettiBurst extends Component {
     for (var i = 0; i < count; i++) {
       _pieces.add(
         _Piece(
-          x: rnd.nextDouble() * width,
+          x: left + rnd.nextDouble() * width,
           y: -20 - rnd.nextDouble() * 240,
           vx: (rnd.nextDouble() - .5) * 40,
           vy: 60 + rnd.nextDouble() * 80,

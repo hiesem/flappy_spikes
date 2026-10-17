@@ -46,6 +46,7 @@ import 'run_setup.dart';
 import 'run_spawner.dart';
 import 'run_state.dart';
 import 'run_summary.dart';
+import 'run_scaled_world.dart';
 
 /// Owns one run (ARCH §1.1): state, clock, director, spawner, features,
 /// layers, the physics step, the mistake pipeline and the end of the run.
@@ -65,7 +66,7 @@ class RunController extends Component {
       metElements: {
         for (final id in storage.metElements) ?ElementId.fromStorageId(id),
       },
-    );
+    )..viewLeft = -game.extraWidth; // WP-TAB
     final all =
         setup.enabledOverride ??
         {...registeredElements(), ...registeredPickupElements()};
@@ -677,7 +678,8 @@ class RunController extends Component {
       fx: layers.fx,
       glowParent: game.world,
       glowPriority: RunLayer.items,
-      screen: Vector2(RunConfig.worldWidth, state.viewHeight),
+      screen: Vector2(game.viewWidth, state.viewHeight), // WP-TAB
+      screenLeft: -game.extraWidth,
     );
     ctx.sfx(Sfx.missShock);
     final cause = h.plan.kind == HoopKindId.pair
@@ -800,6 +802,7 @@ class RunController extends Component {
       floor: walls.floor,
       radius: _birdR,
       angle: bird?.body.angle ?? 0,
+      viewLeft: state.viewLeft, // WP-TAB
     );
     t.onLand = (at) => DustPuff.emit(
       particles,
@@ -953,7 +956,7 @@ class RunController extends Component {
     _worldFx
       ..removeWhere((x) => x.isRemoved)
       ..add(fx);
-    game.world.add(fx);
+    game.world.addRun(fx);
   }
 
   /// The run-owned world effects still alive (tests).

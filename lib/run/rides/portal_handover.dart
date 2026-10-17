@@ -216,6 +216,7 @@ class PortalHandover extends BackdropRideHook {
       ride.view.t,
       ride.view.w,
       viewHeight,
+      left: ride.view.left, // WP-TAB
     );
     return true;
   }

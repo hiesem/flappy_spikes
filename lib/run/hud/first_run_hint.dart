@@ -16,6 +16,7 @@ import '../config/run_config.dart';
 import '../effects/dashed_path.dart';
 import '../effects/easing.dart';
 import '../run_controller.dart';
+import '../run_scaled_world.dart';
 import '../run_layers.dart';
 import 'banners.dart';
 
@@ -129,7 +130,7 @@ class FirstRunHint extends PositionComponent
       );
       addAll([top, bottom]);
       final veil = _veil = FirstRunVeil(this);
-      game.world.add(veil);
+      game.world.add(RunScaledWorld.inRunColumn(veil)); // WP-TAB
     }
   }
 
@@ -458,9 +459,10 @@ class FirstRunVeil extends Component with HasGameReference<FlappySpikesGame> {
     if (a <= 0) return;
     // The world is drawn through the viewfinder (moved by run shakes):
     // cancel its offset so the veil stays on the screen.
-    final o = game.camera.viewfinder.position;
+    // WP-TAB: the shake only (not the column base); the whole screen.
+    final o = game.cameraShake;
     canvas.drawRect(
-      Rect.fromLTWH(o.x, o.y, Config.worldWidth, game.viewHeight),
+      game.bleedRect(game.viewHeight).shift(Offset(o.x, o.y)),
       fillPaint(FirstRunConfig.veilColor.withValues(alpha: a)),
     );
   }

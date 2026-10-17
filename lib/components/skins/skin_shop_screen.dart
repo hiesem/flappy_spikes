@@ -287,7 +287,9 @@ class SkinShopScreen extends MenuScreen {
     );
     if (legendary && !reduceMotion) {
       game.world.add(
-        ScreenFlash(size: Vector2(Config.worldWidth, game.viewHeight)),
+        ScreenFlash(
+          size: Vector2(game.viewWidth + game.extraWidth, game.viewHeight),
+        )..position.x = -game.extraWidth, // WP-TAB: full width
       );
       game.world.add(ScreenShake(game.camera.viewfinder));
     }

@@ -17,6 +17,7 @@ import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
 import '../run_layers.dart';
+import '../run_scaled_world.dart';
 
 /// The Shield powerup, run side (PRD-2 §3.7, §3.9, §5.5).
 ///
@@ -48,7 +49,7 @@ class ShieldFeature extends RunFeature implements MistakeInterceptor {
     c.events.on<PickupCollected>(_onPickup);
     final circle = ShieldCircle(c);
     _circle = circle;
-    c.game.world.add(circle);
+    c.game.world.addRun(circle);
     // Home slot: active from the start of the run.
     if (c.s.shield) circle.form();
   }

@@ -578,6 +578,6 @@ class _Flash extends Component {
       255,
       Config.coinRewardFlashOpacity * k,
     );
-    canvas.drawRect(Rect.fromLTWH(0, 0, Config.worldWidth, height), _paint);
+    canvas.drawRect(bleedRectFor(this, height), _paint); // WP-TAB
   }
 }

@@ -98,26 +98,27 @@ class PinballTheme extends RideTheme {
 
   @override
   void paintBackdrop(Canvas c, RideView v, Vector2 cam) {
-    c.drawRect(Rect.fromLTWH(0, 0, v.w, v.h), fillOf(const Color(0xFF141640)));
+    c.drawRect(v.full, fillOf(const Color(0xFF141640)));
     final grid = strokeOf(const Color(0x2E7C4DFF), 1);
     final ox = -((cam.x * .6) % 40), oy = -((cam.y * .6) % 40);
-    for (var x = ox; x < v.w; x += 40) {
+    // WP-TAB: the grid from the real left edge (same lines at 320).
+    for (var x = ox + ((v.left - ox) / 40).floor() * 40; x < v.w; x += 40) {
       c.drawLine(Offset(x, 0), Offset(x, v.h), grid);
     }
     for (var y = oy; y < v.h; y += 40) {
-      c.drawLine(Offset(0, y), Offset(v.w, y), grid);
+      c.drawLine(Offset(v.left, y), Offset(v.w, y), grid);
     }
   }
 
   @override
   void paintWorld(Canvas c, RideView v, Vector2 cam) {
     c.drawRect(
-      Rect.fromLTWH(10, 64, v.w - 20, v.h - 128),
+      Rect.fromLTWH(v.left + 10, 64, v.w - v.left - 20, v.h - 128),
       strokeOf(const Color(0xFFFF4FB7), 4),
     );
     for (final b in _bumps) {
       final x = b.x - cam.x, y = b.y - cam.y;
-      if (x < -50 || x > v.w + 50 || y < -50 || y > v.h + 50) continue;
+      if (x < v.left - 50 || x > v.w + 50 || y < -50 || y > v.h + 50) continue;
       final lit = (1 - (v.rt - b.lit) / .35).clamp(0.0, 1.0);
       final r = 24 + lit * 4;
       c
@@ -155,16 +156,16 @@ class PinballTheme extends RideTheme {
 
   @override
   void paintExitBackdrop(Canvas c, RideView v, double et, Offset off) {
-    c.drawRect(Rect.fromLTWH(0, 0, v.w, v.h), fillOf(const Color(0xFF0E1030)));
+    c.drawRect(v.full, fillOf(const Color(0xFF0E1030)));
     c
       ..save()
       ..translate(-off.dx, -off.dy)
       ..drawRect(
-        Rect.fromLTWH(10, 64, v.w - 20, v.h - 128),
+        Rect.fromLTWH(v.left + 10, 64, v.w - v.left - 20, v.h - 128),
         fillOf(const Color(0xFF141640)),
       )
       ..drawRect(
-        Rect.fromLTWH(10, 64, v.w - 20, v.h - 128),
+        Rect.fromLTWH(v.left + 10, 64, v.w - v.left - 20, v.h - 128),
         strokeOf(const Color(0xFFFF4FB7), 4),
       )
       ..restore();

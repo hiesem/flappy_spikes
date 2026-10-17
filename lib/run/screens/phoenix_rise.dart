@@ -61,7 +61,7 @@ class ReviveDim extends Component with HasGameReference<FlappySpikesGame> {
     if (alpha <= 0) return;
     _p.color = ReviveConfig.dimColor.withValues(alpha: alpha);
     canvas.drawRect(
-      Rect.fromLTWH(-40, -40, RunConfig.worldWidth + 80, game.viewHeight + 80),
+      game.bleedRect(game.viewHeight + 80, top: -40).inflate(40), // WP-TAB
       _p,
     );
   }
@@ -440,10 +440,7 @@ class PhoenixRise extends Component with HasGameReference<FlappySpikesGame> {
       _p.color = ReviveConfig.flashColor.withValues(
         alpha: ReviveConfig.flashAlpha * _flash / ReviveConfig.flashLength,
       );
-      canvas.drawRect(
-        Rect.fromLTWH(0, 0, RunConfig.worldWidth, game.viewHeight),
-        _p,
-      );
+      canvas.drawRect(game.runScreenRect(game.viewHeight), _p); // WP-TAB
     }
   }
 }

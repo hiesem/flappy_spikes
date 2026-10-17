@@ -19,6 +19,7 @@ import '../run_events.dart';
 import '../run_feature.dart';
 import '../run_layers.dart';
 import '../run_state.dart';
+import '../run_scaled_world.dart';
 
 /// §3.17 / §5.16 the spike squeeze: the scheduler and the phases.
 ///
@@ -95,7 +96,7 @@ class SqueezeFeature extends RunFeature {
     if (hud != null) {
       final o = ScoreCoverOverlay(hud, priority: RunLayer.strips + 1);
       _overlay = o;
-      world.add(o);
+      world.addRun(o);
     }
     if (c.run.setup.forced.contains(ElementId.squeeze)) force();
   }
@@ -299,7 +300,11 @@ class SqueezeFeature extends RunFeature {
           r.nextDouble() *
               (SqueezeConfig.bitSpeedMax - SqueezeConfig.bitSpeedMin);
       pool.spawn(
-        x: c.s.camX + r.nextDouble() * RunConfig.worldWidth,
+        // WP-TAB: across the whole screen (from the real left edge).
+        x:
+            c.s.camX +
+            c.s.viewLeft +
+            r.nextDouble() * (RunConfig.worldWidth - c.s.viewLeft),
         y: y + c.s.camY,
         vx: (r.nextDouble() * 2 - 1) * SqueezeConfig.bitDrift,
         vy: top ? v : -v,
@@ -330,7 +335,11 @@ class SqueezeFeature extends RunFeature {
           r.nextDouble() *
               (SqueezeConfig.dustSpeedMax - SqueezeConfig.dustSpeedMin);
       pool.spawn(
-        x: c.s.camX + r.nextDouble() * RunConfig.worldWidth,
+        // WP-TAB: across the whole screen (from the real left edge).
+        x:
+            c.s.camX +
+            c.s.viewLeft +
+            r.nextDouble() * (RunConfig.worldWidth - c.s.viewLeft),
         y: (top ? c.geo.topTooth : c.geo.floorTooth) + c.s.camY,
         vx: (r.nextDouble() * 2 - 1) * SqueezeConfig.dustDrift,
         vy: top ? v : -v,

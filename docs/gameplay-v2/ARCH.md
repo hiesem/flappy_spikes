@@ -1726,3 +1726,22 @@ scene / seam files. Contract and the pacing math: `lib/run/backdrop/README.md`.
   doc and pool entry (one identity per uid), `avatar: ''`, platform-name fields dropped, every object under
   `avatars/` deleted.
 
+
+## WP-TAB contract notes — tablets widen the world (as built, 2026-10-17)
+
+The playfield is `game.viewWidth` × `game.viewHeight`: 320 × (320 / aspect, clamped [568, 730]) on phones, 568 ×
+(568 × aspect, ≤ 426) on wider screens (`Config.viewWidthFor`, `Config.maxViewWidth`). `game.extraWidth` = width − 320
+(0 on phones: every path below is then the old one, bit for bit).
+
+| Piece | Contract |
+|---|---|
+| Camera | `PlayfieldViewport` resolution `(viewWidth, visible)`; the viewfinder rests at `game.cameraBase` = (−extra / 2, 0), so world x 0..320 (menus) is centred. Shakes move the viewfinder relative to it; code that cancels a shake uses `game.cameraShake` (viewfinder − base), never the raw position. |
+| Run column | `RunScaledWorld.columnShift` = extra / 2: world children marked as run content (`RunScaledWorld.inRunColumn(c)` / `world.addRun(c)`; every `RunTrack` automatically) are drawn that much further right. Run coordinates are unchanged (bird x 70, right edge 320): the look-ahead is the phone's; the screen's left edge in run x is `RunState.viewLeft` = −extra. **Any new run component added straight to the world must use `addRun`**, else it draws extra / 2 too far left on tablets. Hit testing is unaffected (run content takes no taps). |
+| Full-screen fills | `game.bleedRect(h)` / `bleedRectFor(component, h)` (x −extra .. 320 + extra: covers the screen from the centred column, the run column and the HUD); `game.runScreenRect(h)` (−extra .. 320) for run-column effects that need the true screen edges (edge glows, flashes). Spike strips paint `left: −extra` with the tooth phase kept. |
+| HUD / screens | `RunHud` at viewport x = extra (on the run column); `PauseScreen`, `ReviveScreen` at viewport x = extra / 2 (centred); world pages (results, bonus, VS intro, settings, popups) are centred by the camera. |
+| Culling | `RunSpawner._cull`, the saw / FEVER / Lucky Spin on-screen tests, the Black Hole lens and `DeathTumble.viewLeft` use the real left edge. Spawning and planning (right edge) are unchanged. |
+| Backdrop / rides | `BackdropPainter.paint(left: −extra)` draws `xl` from the left edge; `RideView.left` / `full` / `wrapX`, `RideReveal.sceneClip` / `paintEdge(left:)`, the theme culls and fills, `CometSpeedLines.extraLeft`. |
+| Banner strip | `bannerStripHeight` uses the screen's full width in game points (`dp × screenWidthPoints / widthDp`); `screenHeight` is at least 568. |
+
+Tests: `test/p24/tab_wide_world_test.dart` (sizes, geometry per shape, autopilot at 3:4, every ride + comet edge
+watch, backdrop gap check at every seam), `test/p24/tab_screens_evidence_test.dart` (PNG evidence).

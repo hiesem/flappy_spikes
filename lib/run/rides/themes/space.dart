@@ -85,7 +85,7 @@ class SpaceTheme extends RideTheme {
         [
           for (var i = 0; i < 70; i++)
             _Star(
-              r.nextDouble() * v.w,
+              v.left + r.nextDouble() * (v.w - v.left), // WP-TAB
               r.nextDouble() * v.h,
               .6 + r.nextDouble() * (1 + l),
               r.nextDouble() * 6,
@@ -104,7 +104,7 @@ class SpaceTheme extends RideTheme {
 
   @override
   void paintBackdrop(Canvas c, RideView v, Vector2 cam) {
-    final full = Rect.fromLTWH(0, 0, v.w, v.h);
+    final full = v.full;
     vGradient(c, full, const Color(0xFF08071F), const Color(0xFF1F1252));
     for (final (wx, wy, col) in const [
       (60.0, -200.0, Color(0x29EC008C)),
@@ -115,7 +115,7 @@ class SpaceTheme extends RideTheme {
     for (var l = 0; l < 3; l++) {
       final f = .15 + l * .3;
       for (final s in _stars[l]) {
-        final x = _wrap(s.x - cam.x * f, v.w), y = _wrap(s.y - cam.y * f, v.h);
+        final x = v.wrapX(s.x - cam.x * f), y = _wrap(s.y - cam.y * f, v.h);
         final tw = .5 + .5 * math.sin(v.t * 2 + s.tw);
         c.drawRect(
           Rect.fromLTWH(x, y, s.s, s.s),
@@ -130,7 +130,9 @@ class SpaceTheme extends RideTheme {
     final bx = 70.0, by = v.h * 360 / 711;
     for (final p in _planets) {
       final x = p.x - cam.x * .6 - bx * .4, y = p.y - cam.y * .6 - by * .4;
-      if (x < -160 || x > v.w + 160 || y < -160 || y > v.h + 160) continue;
+      if (x < v.left - 160 || x > v.w + 160 || y < -160 || y > v.h + 160) {
+        continue;
+      }
       switch (p.kind) {
         case 'ring':
           c.drawCircle(Offset(x, y), p.r, fillOf(const Color(0xFFF2B880)));
@@ -249,7 +251,7 @@ class SpaceTheme extends RideTheme {
     final p = _peel;
     if (p == null || p.t >= 1.2) return;
     c.saveLayer(
-      Rect.fromLTWH(0, 0, v.w, v.h),
+      v.full,
       layerPaint(1 - p.t / 1.2),
     );
     rocket(c, Offset(p.x, p.y), .6 + p.t * 2, fire: false, t: p.t);

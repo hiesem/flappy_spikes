@@ -39,6 +39,11 @@ class RunState {
   /// floor(hoopsPassed / 10) % 11.
   int get stage => RunConfig.stageForHoops(hoopsPassed);
 
+  /// WP-TAB: the screen's left edge in run screen x (0 on phones, −extra
+  /// on a wide screen: the extra width shows what is behind the bird). The
+  /// right edge stays at `RunConfig.worldWidth` (the phone's look-ahead).
+  double viewLeft = 0;
+
   // motion
   double camX = 0;
   double camY = 0;

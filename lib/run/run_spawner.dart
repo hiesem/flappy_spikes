@@ -330,7 +330,9 @@ class RunSpawner {
   }
 
   void _cull(double dt) {
-    final left = run.state.camX - RunConfig.firstHoopOffscreen;
+    // WP-TAB: from the real left edge (behind the bird on a wide screen).
+    final left =
+        run.state.camX + run.state.viewLeft - RunConfig.firstHoopOffscreen;
     _hoops.removeWhere((h) {
       final gone = h.isRemoved || h.planeX + h.opening < left;
       if (gone && !h.isRemoved) h.removeFromRun();

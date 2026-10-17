@@ -107,7 +107,11 @@ class StormTheme extends RideTheme {
     final r = math.Random(31);
     _rain = [
       for (var i = 0; i < 70; i++)
-        _Drop(r.nextDouble() * v.w, r.nextDouble() * v.h, 10 + r.nextDouble() * 14),
+        _Drop(
+          v.left + r.nextDouble() * (v.w - v.left), // WP-TAB
+          r.nextDouble() * v.h,
+          10 + r.nextDouble() * 14,
+        ),
     ];
     const kinds = ['leaf', 'leaf', 'plank', 'cow', 'leaf', 'plank', 'leaf'];
     _debris = [
@@ -124,7 +128,7 @@ class StormTheme extends RideTheme {
   void paintBackdrop(Canvas c, RideView v, Vector2 cam) {
     vGradient(
       c,
-      Rect.fromLTWH(0, 0, v.w, v.h),
+      v.full,
       const Color(0xFF252C3A),
       const Color(0xFF4A5468),
     );
@@ -185,13 +189,13 @@ class StormTheme extends RideTheme {
     }
     final rain = strokeOf(const Color(0x73C8D7EB), 1.4);
     for (final r in _rain) {
-      final x = _wrap(r.x - t * 120 - cam.x * .2, v.w);
+      final x = v.wrapX(r.x - t * 120 - cam.x * .2);
       final y = _wrap(r.y + t * 700, v.h);
       c.drawLine(Offset(x, y), Offset(x - 5, y + r.l), rain);
     }
     if (_flash > 0) {
       c.drawRect(
-        Rect.fromLTWH(0, 0, v.w, v.h),
+        v.full,
         fillOf(const Color(0xFFFFFFFF), _flash * .5),
       );
       final bolt = _bolt;

@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart' show TextPainter, TextSpan, TextStyle;
 import 'package:flutter/painting.dart' as p show TextDirection;
 
 import '../../game/config.dart';
+import '../../game/flappy_game.dart';
 import '../config/parts_config.dart';
 import '../config/streak_config.dart';
 import '../../game/paints.dart';
@@ -104,6 +105,13 @@ abstract class RunBanner extends PositionComponent {
     size = Vector2(bandWidth, bandHeight);
   }
 
+  /// WP-TAB: the extra playfield width left of the run column (0 on
+  /// phones and outside a game).
+  double get _extraLeft {
+    final g = findGame();
+    return g is FlappySpikesGame ? g.extraWidth : 0;
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
@@ -124,7 +132,13 @@ abstract class RunBanner extends PositionComponent {
     if (layer) {
       canvas.saveLayer(null, layerPaint(a));
     }
-    canvas.drawRect(Rect.fromLTWH(0, 0, bandWidth, h), fillPaint(color));
+    // WP-TAB: on a wide screen the band also spans the extra width left of
+    // the run column (the text stays centred on the column).
+    final left = _extraLeft;
+    canvas.drawRect(
+      Rect.fromLTWH(-left, 0, bandWidth + left, h),
+      fillPaint(color),
+    );
     final tp = _text;
     // Letter-spacing trails the last glyph; shift by half to stay centred.
     final spacing = fontSize * PartsConfig.bannerLetterSpacing;

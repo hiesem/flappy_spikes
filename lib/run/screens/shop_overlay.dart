@@ -4,7 +4,6 @@ import 'package:flame/components.dart';
 
 import 'package:flame/effects.dart';
 import '../../game/flappy_game.dart';
-import '../config/run_config.dart';
 
 /// World priority of the in-run menu overlay's backdrop: over the frozen
 /// run and the revive dim (17), under the menu chrome (corner box 19,
@@ -37,7 +36,7 @@ class RunMenuBackdrop extends PositionComponent
     if (_opacity <= 0) return;
     _p.color = game.stageBackground.withValues(alpha: _opacity);
     canvas.drawRect(
-      Rect.fromLTWH(-40, -40, RunConfig.worldWidth + 80, game.viewHeight + 80),
+      game.bleedRect(game.viewHeight + 80, top: -40).inflate(40), // WP-TAB
       _p,
     );
   }

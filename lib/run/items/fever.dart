@@ -18,6 +18,7 @@ import '../mistakes.dart';
 import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
+import '../run_scaled_world.dart';
 
 /// FEVER and the bird's fire (PRD-2 §3.19, §5.18; PRD-2.2 §21).
 ///
@@ -74,7 +75,7 @@ class FeverFeature extends RunFeature {
   void attach(RunContext c) {
     _c = c;
     _fire = FireMaster(c, colors: fireColorsFor(c.game.menu.items.look.trail));
-    c.game.world.add(_fire!);
+    c.game.world.addRun(_fire!);
     c.events
       ..on<HoopSpawned>(_onSpawned)
       ..on<HoopPassed>(_onPassed)

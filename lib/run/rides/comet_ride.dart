@@ -19,6 +19,7 @@ import '../run_layers.dart';
 import '../run_state.dart';
 import 'ride.dart';
 import 'speed_lines.dart';
+import '../run_scaled_world.dart';
 
 /// The comet boost engine (PRD-2 §3.8, §3.9, §5.6; `screen_comet2.html`).
 ///
@@ -153,7 +154,8 @@ class CometRide implements Ride {
   bool get loopSilenced => _loopSilenced;
   double _loopFadeT = -1;
 
-  final CometSpeedLines lines = CometSpeedLines();
+  late final CometSpeedLines lines = CometSpeedLines()
+    ..extraLeft = -c.s.viewLeft; // WP-TAB
   final List<Component> _parts = [];
   late final ParticlePool _pool;
   final _touch = PickupTouchFx.newPool();
@@ -190,7 +192,7 @@ class CometRide implements Ride {
       _pool,
     ]) {
       _parts.add(part);
-      world.add(part);
+      world.addRun(part);
     }
     c.sfx(Sfx.puCometGet);
     _pop();
@@ -372,12 +374,13 @@ class CometRide implements Ride {
     final at = Offset(RunConfig.birdX, y);
     _flash?.removeFromParent();
     final flash = _CometFlash(
-      Size(RunConfig.worldWidth, c.viewHeight),
+      Size(c.game.viewWidth, c.viewHeight), // WP-TAB: the whole screen
       priority: RunLayer.fx + 1,
+      left: c.s.viewLeft,
     );
     _flash = flash;
-    world.add(flash);
-    world.add(
+    world.addRun(flash);
+    world.addRun(
       _touch.obtain()
         ..priority = RunLayer.fx
         ..play(at, CometConfig.pop, pool: _pool, random: c.cosmetic),
@@ -587,8 +590,11 @@ class _CometLines extends Component {
 
 /// §3.8 the pop's white flash over the play area (0.7 → 0 in 0.38 s).
 class _CometFlash extends Component {
-  _CometFlash(this.size, {super.priority});
+  _CometFlash(this.size, {super.priority, this.left = 0});
   final Size size;
+
+  /// WP-TAB: the screen's left edge (run x).
+  final double left;
   double _t = 0;
   final Paint _paint = Paint();
 
@@ -604,6 +610,6 @@ class _CometFlash extends Component {
     final a = CometConfig.flashAlpha * (1 - _t / CometConfig.popLength);
     if (a <= 0) return;
     _paint.color = Color.fromRGBO(255, 255, 255, a.clamp(0.0, 1.0));
-    canvas.drawRect(Offset.zero & size, _paint);
+    canvas.drawRect(Offset(left, 0) & size, _paint);
   }
 }

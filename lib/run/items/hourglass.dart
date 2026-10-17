@@ -14,6 +14,7 @@ import '../effects/screen_edge_glow.dart';
 import '../run_context.dart';
 import '../run_state.dart';
 import 'timed_powerup.dart';
+import '../run_scaled_world.dart';
 
 /// Hourglass (PRD-2 §3.30, §5.29): slow motion for a random 10–20 s (real
 /// time). The whole world, bird included, runs at 45 % speed through
@@ -96,10 +97,11 @@ class HourglassFeature extends TimedPowerupEffect {
     final g = glow;
     if (g == null || g.isRemoved || g.isRemoving) {
       glow =
-          ScreenEdgeGlow.hourglass(Vector2(Config.worldWidth, ctx.viewHeight))
+          ScreenEdgeGlow.hourglass(Vector2(ctx.game.viewWidth, ctx.viewHeight))
+            ..position.x = -ctx.game.extraWidth // WP-TAB: the whole screen
             ..priority = CapsuleConfig.glowPriority
             ..intensity = 0;
-      ctx.game.world.add(glow!);
+      ctx.game.world.addRun(glow!);
     }
     final t = trail;
     if (t == null || t.isRemoved || t.isRemoving) {

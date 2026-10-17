@@ -75,30 +75,43 @@ class RideReveal {
 
   /// `sceneClip`: adds to [path] the part of the [w] × [h] screen ride
   /// [id]'s scene still covers at progress [p] and clock [t].
-  static void sceneClip(Path path, RideId id, double p, double t, double w, double h) {
+  ///
+  /// WP-TAB: [left] is the screen's left edge (< 0 on a wide screen: the
+  /// view runs from [left] to [w]); 0 gives the 320 pt design exactly.
+  static void sceneClip(
+    Path path,
+    RideId id,
+    double p,
+    double t,
+    double w,
+    double h, {
+    double left = 0,
+  }) {
+    final l = left - 10; // the clip's left end (−10 on a phone)
+    final cx = (left + w) / 2, hw = (w - left) / 2;
     switch (id) {
       case RideId.space:
         final yb = _lerp(h + 40, -110, p);
         path
-          ..moveTo(-10, -10)
+          ..moveTo(l, -10)
           ..lineTo(w + 10, -10);
-        for (var x = w + 10; x >= -10; x -= 10) {
-          path.lineTo(x, _spaceY(yb, x));
+        for (var x = w + 10; x >= l; x -= 10) {
+          path.lineTo(x, _spaceY(yb, x, cx, hw));
         }
         path.close();
       case RideId.sea:
-        final xb = _lerp(w + 40, -70, p);
-        path.moveTo(-10, -10);
+        final xb = _lerp(w + 40, left - 70, p);
+        path.moveTo(l, -10);
         for (var y = -10.0; y <= h + 10; y += 8) {
           path.lineTo(_seaX(xb, y, t), y);
         }
         path
-          ..lineTo(-10, h + 10)
+          ..lineTo(l, h + 10)
           ..close();
       case RideId.volcano:
         final yb = _lerp(-50, h + 110, p);
-        path.moveTo(-10, h + 10);
-        for (var x = -10.0; x <= w + 10; x += 10) {
+        path.moveTo(l, h + 10);
+        for (var x = l; x <= w + 10; x += 10) {
           path.lineTo(x, _volcanoY(yb, x, t));
         }
         path
@@ -107,23 +120,23 @@ class RideReveal {
       case RideId.pinball:
         final k = _lerp(-120, h + 260, p), tn = math.tan(.42);
         path
-          ..moveTo(-10, k + 170 * tn)
+          ..moveTo(l, k + (160 - l) * tn)
           ..lineTo(w + 10, k - 170 * tn)
           ..lineTo(w + 10, h + 300)
-          ..lineTo(-10, h + 300)
+          ..lineTo(l, h + 300)
           ..close();
       case RideId.storm:
-        final g = _lerp(0, 250, p);
+        final g = _lerp(0, 250 - left / 2, p);
         path
-          ..addRect(Rect.fromLTRB(math.min(-10, 160 - g), -10, math.max(-10, 160 - g), h + 10))
-          ..addRect(Rect.fromLTRB(math.min(160 + g, w + 10), -10, math.max(160 + g, w + 10), h + 10));
+          ..addRect(Rect.fromLTRB(math.min(l, cx - g), -10, math.max(l, cx - g), h + 10))
+          ..addRect(Rect.fromLTRB(math.min(cx + g, w + 10), -10, math.max(cx + g, w + 10), h + 10));
       case RideId.cannon:
         break;
     }
   }
 
-  static double _spaceY(double yb, double x) =>
-      yb + ((x - 160) / 160) * ((x - 160) / 160) * 30;
+  static double _spaceY(double yb, double x, [double cx = 160, double hw = 160]) =>
+      yb + ((x - cx) / hw) * ((x - cx) / hw) * 30;
   static double _seaX(double xb, double y, double t) =>
       xb + math.sin(y / 38 + t * 3) * 9 + math.sin(y / 13 - t * 5) * 3;
   static double _volcanoY(double yb, double x, double t) =>
@@ -144,8 +157,18 @@ class RideReveal {
 
   /// `sceneEdge`: the leaving edge of ride [id]'s scene in its own look,
   /// drawn while 0 < [p] < 1 ([t]: the ride clock; [w] × [h]: the view).
-  static void paintEdge(Canvas c, RideId id, double p, double t, double w, double h) {
+  static void paintEdge(
+    Canvas c,
+    RideId id,
+    double p,
+    double t,
+    double w,
+    double h, {
+    double left = 0, // WP-TAB: see [sceneClip]
+  }) {
     if (p <= 0 || p >= 1) return;
+    final l = left - 10;
+    final cx = (left + w) / 2, hw = (w - left) / 2;
     c.save();
     switch (id) {
       case RideId.space:
@@ -158,20 +181,20 @@ class RideReveal {
           const [0, .35, 1],
         );
         _path.reset();
-        for (var x = -10.0; x <= w + 10; x += 10) {
-          final y = _spaceY(yb, x) - 2;
-          x == -10 ? _path.moveTo(x, y) : _path.lineTo(x, y);
+        for (var x = l; x <= w + 10; x += 10) {
+          final y = _spaceY(yb, x, cx, hw) - 2;
+          x == l ? _path.moveTo(x, y) : _path.lineTo(x, y);
         }
         _path
           ..lineTo(w + 10, yb + 100)
-          ..lineTo(-10, yb + 100)
+          ..lineTo(l, yb + 100)
           ..close();
         c.drawPath(_path, _fill);
         _fill.shader = null;
         _path.reset();
-        for (var x = -10.0; x <= w + 10; x += 10) {
-          final y = _spaceY(yb, x);
-          x == -10 ? _path.moveTo(x, y) : _path.lineTo(x, y);
+        for (var x = l; x <= w + 10; x += 10) {
+          final y = _spaceY(yb, x, cx, hw);
+          x == l ? _path.moveTo(x, y) : _path.lineTo(x, y);
         }
         _stroke
           ..color = const Color(0xE6FFFFFF)
@@ -180,7 +203,7 @@ class RideReveal {
         c.drawPath(_path, _stroke);
       case RideId.sea:
         // foam and bubbles on the water's edge
-        final xb = _lerp(w + 40, -70, p);
+        final xb = _lerp(w + 40, left - 70, p);
         _path.reset();
         for (var y = -10.0; y <= h + 10; y += 8) {
           final x = _seaX(xb, y, t);
@@ -201,7 +224,8 @@ class RideReveal {
         final yb = _lerp(-50, h + 110, p);
         for (var i = 0; i < 9; i++) {
           final a = _mod(t * .45 + i / 9, 1);
-          final x = _mod(i * 47 + math.sin(t * .7 + i) * 10, w + 40) - 20;
+          final x =
+              _mod(i * 47 + math.sin(t * .7 + i) * 10, w - left + 40) - 20 + left;
           _circ(
             c,
             x,
@@ -217,7 +241,7 @@ class RideReveal {
         ];
         for (var j = 0; j < rows.length; j++) {
           final (dy, r0, col) = rows[j];
-          for (var i = -1; i < 12; i++) {
+          for (var i = (left / 30).floor() - 1; i < 12; i++) {
             final x = i * 30 + (j % 2) * 15 + math.sin(t * .8 + i + j) * 5;
             // JS `%` keeps the sign: (−1) % 3 = −1
             final r = r0 + (i + j).remainder(3) * 6 + math.sin(t * 1.3 + i * 2 + j) * 3;
@@ -228,21 +252,23 @@ class RideReveal {
         // a chrome rail with running lights
         final k = _lerp(-120, h + 260, p);
         c
-          ..translate(-10, k + 170 * math.tan(.42))
+          ..translate(l, k + (160 - l) * math.tan(.42))
           ..rotate(-.42);
+        // WP-TAB: a longer rail (and more lights) from a wider left edge.
+        final extra = -left / math.cos(.42);
         _fill
           ..shader = null
           ..color = const Color(0xFFB8B8C8);
-        c.drawRect(const Rect.fromLTWH(0, -7, 420, 14), _fill);
+        c.drawRect(Rect.fromLTWH(0, -7, 420 + extra, 14), _fill);
         _fill.color = const Color(0xFFE8E8F2);
-        c.drawRect(const Rect.fromLTWH(0, -6, 420, 3), _fill);
-        for (var i = 0; i < 14; i++) {
+        c.drawRect(Rect.fromLTWH(0, -6, 420 + extra, 3), _fill);
+        for (var i = 0; i < 14 + (extra / 30).ceil(); i++) {
           final lit = (t * 8 - i).floor().remainder(3) == 0;
           _circ(c, 15 + i * 30.0, 0, 3, lit ? const Color(0xFFFFD54A) : const Color(0xFF7C4DFF));
         }
       case RideId.storm:
         // puffy dark cloud edges, parting
-        final g = _lerp(0, 250, p);
+        final g = _lerp(0, 250 - left / 2, p);
         // 16 puffs at 568 (WP-R call: as many as fill a taller view)
         final n = ((h + 40) / 38).ceil();
         for (final s in const [-1, 1]) {
@@ -250,7 +276,7 @@ class RideReveal {
             final y = i * 38.0 - 10, r = 20.0 + (i % 3) * 7;
             _circ(
               c,
-              160 + s * (g - r * .35) + math.sin(t * 1.5 + i) * 3,
+              cx + s * (g - r * .35) + math.sin(t * 1.5 + i) * 3,
               y,
               r,
               i.isOdd ? const Color(0xFF4A5366) : const Color(0xFF59627A),

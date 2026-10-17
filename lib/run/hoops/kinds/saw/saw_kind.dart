@@ -245,7 +245,7 @@ class SawRingState extends Component {
   /// On screen (with a margin): ambient effects run only then.
   bool get onScreen {
     final x = hoop.planeX - c.s.camX;
-    return x > -60 && x < RunConfig.worldWidth + 60;
+    return x > c.s.viewLeft - 60 && x < RunConfig.worldWidth + 60; // WP-TAB
   }
 
   @override

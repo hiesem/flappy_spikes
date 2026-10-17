@@ -8,6 +8,7 @@ import '../../game/config.dart';
 import '../../game/flappy_game.dart';
 import '../config/hud_config.dart';
 import '../run_controller.dart';
+import '../run_scaled_world.dart';
 import 'banner_layer.dart';
 import 'banners.dart';
 import 'fit_name.dart';
@@ -42,8 +43,11 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
     }
     final hud = RunHud(run);
     _huds[run] = hud;
+    // WP-TAB: the HUD sits on the run column (right-aligned on a wide
+    // screen, like the run world).
+    hud.position.x = run.game.extraWidth;
     run.game.camera.viewport.add(hud);
-    run.game.world.add(hud.bannerLayer);
+    run.game.world.add(RunScaledWorld.inRunColumn(hud.bannerLayer));
     return hud;
   }
 

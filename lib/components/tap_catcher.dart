@@ -22,6 +22,9 @@ class TapCatcher extends PositionComponent
   Future<void> onLoad() async {
     await super.onLoad();
     size.y = game.viewHeight;
+    // WP-TAB: the whole screen on a wide (tablet) playfield.
+    position.x = -game.extraWidth;
+    size.x = Config.worldWidth + 2 * game.extraWidth;
     game.registerResizable(this);
   }
 

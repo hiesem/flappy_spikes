@@ -100,17 +100,23 @@ class MenuLockOverlay extends PositionComponent
     super.renderTree(canvas);
   }
 
+  /// WP-TAB: the whole screen width (the rect starts at the column's 0).
+  Rect get _bleed {
+    final r = bleedRectFor(this, size.y);
+    return size.x >= Config.worldWidth ? r : size.toRect();
+  }
+
   @override
   void render(Canvas canvas) {
     final hole = _hole;
     if (hole == null) {
-      canvas.drawRect(size.toRect(), _paint);
+      canvas.drawRect(_bleed, _paint);
       return;
     }
     canvas.drawPath(
       Path()
         ..fillType = PathFillType.evenOdd
-        ..addRect(size.toRect())
+        ..addRect(_bleed)
         ..addRect(hole),
       _paint,
     );

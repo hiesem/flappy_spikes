@@ -904,7 +904,7 @@ class ResultsScreen extends PositionComponent
   @override
   void render(Canvas canvas) {
     canvas.drawRect(
-      size.toRect(),
+      bleedRectFor(this, size.y), // WP-TAB: the whole screen
       Paint()..color = kPostRunPalette.background,
     );
     // Right above the background: the card, banners, rank, bar, CLAIM, the

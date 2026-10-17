@@ -17,6 +17,7 @@ import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
 import '../run_layers.dart';
+import '../run_scaled_world.dart';
 
 /// Hearts and the extra life (PRD-2 §3.3, §3.9, §5.2, §5.5).
 ///
@@ -50,7 +51,7 @@ class ExtraLifeFeature extends RunFeature implements MistakeInterceptor {
     c.events.on<PickupCollected>(_onPickup);
     final badge = HeartBadge(c);
     _badge = badge;
-    c.game.world.add(badge);
+    c.game.world.addRun(badge);
   }
 
   void _onPickup(PickupCollected e) {
@@ -83,7 +84,7 @@ class ExtraLifeFeature extends RunFeature implements MistakeInterceptor {
 
   /// §5.2 the touched heart flies straight into the HUD indicator.
   void _fetch(RunContext c, Offset from) {
-    c.game.world.add(
+    c.game.world.addRun(
       FetchFlight(
         from: from,
         to: LivesConfig.indicatorCentre,

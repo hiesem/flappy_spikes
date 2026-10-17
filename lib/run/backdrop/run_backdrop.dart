@@ -107,6 +107,7 @@ class RunBackdrop extends Component with HasGameReference<FlappySpikesGame> {
       bg: game.stageBackground,
       fg: game.foregroundColor,
       opacity: opacity,
+      left: -game.extraWidth, // WP-TAB
     );
   }
 

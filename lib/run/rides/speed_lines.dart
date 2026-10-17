@@ -78,7 +78,7 @@ class CannonSpeedLines {
         _acc--;
         final down = v.rnd.nextBool();
         _lines.add(
-          _Line(v.rand(10, 310), down ? -len : v.h + 49, down ? 1 : -1, life),
+          _Line(v.rand(v.left + 10, 310), down ? -len : v.h + 49, down ? 1 : -1, life),
         );
       }
     }
@@ -116,7 +116,7 @@ class RideSpeedLines {
         _acc--;
         _lines.add(
           _Line(
-            v.rand(0, v.w),
+            v.rand(v.left, v.w), // WP-TAB
             v.rand(80, v.h - 40),
             0,
             life,
@@ -163,9 +163,19 @@ class CometSpeedLines {
   /// Streaks on screen (tests).
   int get count => _lines.length;
 
+  /// WP-TAB: the extra screen width left of the run column (pt): streaks
+  /// keep sliding at the same speed until they have left the wider screen.
+  double extraLeft = 0;
+
+  double get _life => extraLeft == 0
+      ? CometConfig.lineLife
+      : CometConfig.lineLife *
+      (CometConfig.lineTravel + extraLeft) /
+      CometConfig.lineTravel;
+
   /// Spawns while [active]; existing streaks always finish their slide.
   void update(double dt, double viewHeight, math.Random rnd, {bool active = true}) {
-    _lines.removeWhere((l) => (l.t += dt) >= CometConfig.lineLife);
+    _lines.removeWhere((l) => (l.t += dt) >= _life);
     if (!active) {
       _acc = 0;
       return;

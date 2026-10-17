@@ -18,6 +18,7 @@ import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
 import '../run_state.dart';
+import '../run_scaled_world.dart';
 
 /// The Firefly Jar (PRD-2 §3.29, §5.28).
 ///
@@ -45,7 +46,7 @@ class JarFeature extends RunFeature {
       ..on<PickupCollected>(_onCollected)
       ..on<PickupEscaped>(_onEscaped);
     _bursts = CollectBursts();
-    c.game.world.add(_bursts!);
+    c.game.world.addRun(_bursts!);
   }
 
   void _onCollected(PickupCollected e) {
@@ -65,7 +66,7 @@ class JarFeature extends RunFeature {
     final from = at == null
         ? const Offset(JarConfig.hudJarX, JarConfig.hudJarY)
         : _screen(c, at);
-    c.game.world.add(
+    c.game.world.addRun(
       GlowFetch(from: from, to: const Offset(JarConfig.hudJarX, JarConfig.hudJarY)),
     );
     if (jar.caught >= JarConfig.total) _finish(c, jar, full: true);

@@ -73,6 +73,14 @@ class RunBackdrop extends Component with HasGameReference<FlappySpikesGame> {
     _sync();
   }
 
+  @override
+  void onRemove() {
+    // A2-32: the cached strip pictures are GPU-side memory; a backdrop that
+    // leaves the world (its run ended or was replaced) drops them with it.
+    painter.ctx.clearStrips();
+    super.onRemove();
+  }
+
   /// Integrates the world distance up to the camera's current position.
   void _sync() {
     final s = run.state;

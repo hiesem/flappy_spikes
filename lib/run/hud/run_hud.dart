@@ -225,6 +225,9 @@ class HudText {
   }) {
     final col = (colorOverride ?? color);
     final tp = _painter(col.withValues(alpha: col.a * opacity.clamp(0.0, 1.0)));
-    tp.paint(canvas, Offset(c.dx - width / 2, c.dy - tp.height / 2));
+    // The same width as [width], read from this layout: [width] would lay
+    // the text out again in the base colour on every faded frame (A2-11).
+    final w = tp.width - size * spacing;
+    tp.paint(canvas, Offset(c.dx - w / 2, c.dy - tp.height / 2));
   }
 }

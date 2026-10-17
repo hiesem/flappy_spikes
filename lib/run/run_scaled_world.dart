@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flame/components.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
 
@@ -24,6 +26,29 @@ class RunScaledWorld extends Forge2DWorld {
   /// World children that keep updating in real time while [frozen].
   final Set<Component> realTime = {};
   // endregion WP-2d
+
+  /// A2-5: while an opaque page covers the whole view (the results page),
+  /// the priority below which the children are not drawn; null otherwise.
+  /// Those children sit under the page's background, so only their drawing
+  /// is skipped: they still update.
+  int? Function()? coveredBelowSource;
+
+  @override
+  void renderFromCamera(Canvas canvas) {
+    final below = coveredBelowSource?.call();
+    if (below == null) {
+      super.renderFromCamera(canvas);
+      return;
+    }
+    // [Component.renderTree] without the children under the page.
+    render(canvas);
+    for (final child in children) {
+      if (child.priority < below) continue;
+      renderChild(canvas, child);
+    }
+    afterChildrenRendered(canvas);
+    if (debugMode) renderDebugMode(canvas);
+  }
 
   @override
   void updateTree(double dt) {

@@ -211,13 +211,15 @@ class EggFeature extends RunFeature {
     }
   }
 
-  void _onSaved(MistakeSaved e) => _lose(_c, 'crash');
+  void _onSaved(MistakeSaved e) => _lose(_c, 'crash', saved: true);
 
   void _onDied(RunDied e) => _lose(_c, 'crash');
 
   /// Drops the egg / chick. [cause] is the analytics `chick_lost` cause
-  /// (`rim` / `crash`); a rim touch also shows the "×2 LOST" banner.
-  void _lose(RunContext? c, String cause) {
+  /// (`rim` / `crash`); a rim touch also shows the "×2 LOST" banner. An
+  /// unhatched egg lost to a crash or a save ([saved]) tracks `egg_lost
+  /// {cause: crash | save}` (ARCH §25, audit A4-8).
+  void _lose(RunContext? c, String cause, {bool saved = false}) {
     if (c == null) return;
     final egg = c.s.egg;
     if (egg == null) return;
@@ -226,6 +228,7 @@ class EggFeature extends RunFeature {
     _dropBadge();
     if (!chick) {
       _view?.reset();
+      c.track('egg_lost', {'cause': saved ? 'save' : cause});
       return;
     }
     c.track('chick_lost', {'cause': cause, 'points_added': pointsAdded});

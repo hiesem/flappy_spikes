@@ -198,6 +198,10 @@ abstract class IapService {
   /// and on every resume, at most once per [Config.iapSyncInterval] (the
   /// throttle lives in `Purchases.sync`). Never throws.
   Future<void> syncPurchases();
+
+  /// Audit A3-5: a purchase flow is open right now, so [syncPurchases]
+  /// would be skipped (it never runs while a flow's own result is due).
+  bool get purchaseInProgress;
 }
 
 /// Purchases disabled: every [buy] fails immediately.
@@ -230,6 +234,9 @@ class NoopIapService implements IapService {
 
   @override
   Future<void> syncPurchases() async {}
+
+  @override
+  bool get purchaseInProgress => false;
 }
 
 /// A purchase the [FakeIapService] "store" holds (PRD-2.3 §22.6 tests): a
@@ -336,6 +343,9 @@ class FakeIapService implements IapService {
 
   /// Pushes [event] onto the purchase stream as the store would.
   void deliver(IapEvent event) => _events.add(event);
+
+  @override
+  bool get purchaseInProgress => false;
 
   @override
   Future<void> syncPurchases() async {
@@ -601,6 +611,9 @@ class StoreIapService implements IapService {
   bool get isAvailable => _available;
 
   @override
+  bool get purchaseInProgress => _buying != null;
+
+  @override
   Stream<IapEvent> get events => _events.stream;
 
   @override
@@ -737,6 +750,9 @@ class StoreIapService implements IapService {
         // Nothing to grant or acknowledge until it is paid.
         iapLog('pending ${purchase.productID}: skipped until paid');
         if (_productForStoreId(purchase.productID) case final p?) {
+          // A3-5: the flow is over (the store holds the purchase now); a
+          // left-over _buying skipped every later sync.
+          if (p == _buying) _buying = null;
           if (purchase.status != PurchaseStatus.restored) {
             _events.add(IapEvent(p, IapStatus.pending));
           }
@@ -758,9 +774,8 @@ class StoreIapService implements IapService {
               ? _buying
               : null);
       if (product != null) {
-        if (status != IapStatus.pending && product == _buying) {
-          _buying = null;
-        }
+        // A3-5: a pending result ends the flow too (App Store "Ask to Buy").
+        if (product == _buying) _buying = null;
         if (status == IapStatus.failed && error?.code == kConsumeFailedCode) {
           // 2.3.0 (17): a consume Play refused (already consumed by a sync)
           // is no purchase failure: the purchase was paid and granted.

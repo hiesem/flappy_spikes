@@ -47,7 +47,7 @@ const List<TuningDef> kTuningDefaults = [
   TuningDef('puzzle_reward', TuningType.intList, [40, 100, 5], '14.2', 'Puzzle completion reward [min, max, step]'),
   TuningDef('revive_ladder', TuningType.intList, [250, 500, 1000, 2000, 4000, 8000], '14.2', 'Coin revive prices after the ad revive; no revive after the last'),
   TuningDef('revive_min_hoops', TuningType.integer, 6, '14.2', 'A revive is offered from this many hoops passed'),
-  TuningDef('level_rewards', TuningType.intList, [50, 100, 150, 250, 400, 600, 800, 1000, 2000, 5000], '14.2', 'One-time coin reward of levels 1-10'),
+  TuningDef('level_rewards', TuningType.intList, [25, 50, 100, 200, 400, 600, 800, 1000, 2000, 5000], '14.2', 'One-time coin reward of levels 1-10'),
   TuningDef('shop_ad_coins', TuningType.integer, 75, '14.2', 'Shop free-coins ad: coins per ad'),
   TuningDef('shop_ad_per_day', TuningType.integer, 5, '14.2', 'Shop free-coins ad: ads per day'),
   TuningDef('shop_ad_cooldown_s', TuningType.integer, 300, '14.2', 'Shop free-coins ad: cooldown (s)'),

@@ -1,5 +1,5 @@
 Reference Name,Achievement ID,Points,Hidden,Achievable More Than Once,Localization,Title,Pre-earned Description,Earned Description,Image
-EGG,fs_ach_rank_egg,5,no,no,English (U.S.),EGG,Score 10 points in one run.,Cracked it! You're an EGG.,ach_rank_egg.png
+EGG,fs_ach_rank_egg,5,no,no,English (U.S.),EGG,Score 25 points in one run.,Cracked it! You're an EGG.,ach_rank_egg.png
 CHICK,fs_ach_rank_chick,5,no,no,English (U.S.),CHICK,Score 50 points in one run.,Peep peep! You're a CHICK.,ach_rank_chick.png
 FLEDGLING,fs_ach_rank_fledgling,10,no,no,English (U.S.),FLEDGLING,Score 100 points in one run.,Your first feathers are in.,ach_rank_fledgling.png
 FLAPPER,fs_ach_rank_flapper,10,no,no,English (U.S.),FLAPPER,Score 200 points in one run.,"Flap, flap, flap!",ach_rank_flapper.png

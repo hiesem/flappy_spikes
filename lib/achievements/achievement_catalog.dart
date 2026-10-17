@@ -15,7 +15,7 @@ enum AchievementId {
   rankEgg(
     'rank_egg',
     'EGG',
-    'Score 10 points in one run.',
+    'Score 25 points in one run.',
     "Cracked it! You're an EGG.",
     5,
     AchievementGroup.rank,

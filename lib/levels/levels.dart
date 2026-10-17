@@ -51,8 +51,8 @@ const List<LevelDef> kLevels = [
   LevelDef(
     level: 1,
     name: 'EGG',
-    threshold: 10,
-    reward: 50,
+    threshold: 25, // owner 2026-10-17 (was 10)
+    reward: 25, // owner 2026-10-17 (was 50)
     plate: Color(0xFFF6EBD2),
     rim: Color(0xFFD9C39A),
     accent: Color(0xFFB89A66),
@@ -61,7 +61,7 @@ const List<LevelDef> kLevels = [
     level: 2,
     name: 'CHICK',
     threshold: 50,
-    reward: 100,
+    reward: 50, // owner 2026-10-17 (was 100)
     plate: Color(0xFFFFE58A),
     rim: Color(0xFFFFB300),
     accent: Color(0xFFE07B00),
@@ -70,7 +70,7 @@ const List<LevelDef> kLevels = [
     level: 3,
     name: 'FLEDGLING',
     threshold: 100,
-    reward: 150,
+    reward: 100, // owner 2026-10-17 (was 150)
     plate: Color(0xFFB9F3E1),
     rim: Color(0xFF13B48D),
     accent: Color(0xFF00796B),
@@ -79,7 +79,7 @@ const List<LevelDef> kLevels = [
     level: 4,
     name: 'FLAPPER',
     threshold: 200,
-    reward: 250,
+    reward: 200, // owner 2026-10-17 (was 250)
     plate: Color(0xFFC8ECFD),
     rim: Color(0xFF1E9BE0),
     accent: Color(0xFF01579B),

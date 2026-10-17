@@ -46,18 +46,29 @@ class CometFeature extends RunFeature {
     final c = _c;
     if (c == null || e.element != ElementId.comet) return;
     final source = e.pickup == null ? 'pair' : 'hoop';
+    // Audit A4-2a: `comet_collected` only for a boost that really starts
+    // (tracked first, as before, so the analytics order is unchanged).
+    if (!canStart) return;
     c.track('comet_collected', {'source': source});
     start(source: source, starY: e.pickup?.position.y);
+  }
+
+  /// Whether [start] would start a boost now: not while a boost, a ride or
+  /// another timed powerup runs (§3.0.3 exclusivity).
+  bool get canStart {
+    final c = _c;
+    if (c == null) return false;
+    final current = ride;
+    if (current != null && !current.done) return false;
+    return c.s.ride == null && c.s.timed == null;
   }
 
   /// Starts the boost now (no-op while a ride or another timed powerup
   /// runs — the director never offers one then, §3.0.3 exclusivity).
   bool start({String source = 'hoop', double? starY}) {
     final c = _c;
-    if (c == null) return false;
+    if (c == null || !canStart) return false;
     final current = ride;
-    if (current != null && !current.done) return false;
-    if (c.s.ride != null || c.s.timed != null) return false;
     current?.abort();
     final r = CometRide(c, source: source, starY: starY);
     ride = r;
@@ -82,7 +93,12 @@ class CometFeature extends RunFeature {
   }
 
   @override
-  void onDeath(Mistake m) => landing?.stop();
+  void onDeath(Mistake m) {
+    landing?.stop();
+    // Audit A4-6: a death in the landing tail must not leave the speed
+    // streaks frozen on screen through the tumble and the revive offer.
+    ride?.lines.clear();
+  }
 
   @override
   void onRevive() => landing?.stop();

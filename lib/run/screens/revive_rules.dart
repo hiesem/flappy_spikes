@@ -59,6 +59,9 @@ class ReviveRulesFeature extends RunFeature {
   void onRevive() {
     final c = _c;
     if (c == null) return;
+    // Audit A4-3: a spring's flap lock running at death must not drop the
+    // first taps after the phoenix.
+    c.s.flapLock = 0;
     final sq = c.s.squeeze;
     if (sq.phase != SqueezePhase.idle || sq.inset > 0) {
       final was = sq.phase;

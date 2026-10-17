@@ -130,6 +130,15 @@ class ClosedSwitchReached extends RunEvent {
   final Hoop hoop;
 }
 
+/// SPEC WP-3d: a saw ring or a closed switch ring whose mistake a shield /
+/// extra life saved counts as passed with no score (`passes`,
+/// `hoopsPassed`, the colour stage and the hoop goals move; no points,
+/// coins or streak). Emitted after the counters moved.
+class SavedHoopPassed extends RunEvent {
+  const SavedHoopPassed(this.hoop);
+  final Hoop hoop;
+}
+
 class PickupCollected extends RunEvent {
   const PickupCollected(this.element, this.pickup);
   final ElementId element;

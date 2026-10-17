@@ -27,6 +27,7 @@ class AchievementsFeature extends RunFeature {
       ..on<RideEnded>(_onRideEnded)
       ..on<PickupCollected>(_onPickup)
       ..on<HoopPassed>(_onPassed)
+      ..on<SavedHoopPassed>(_onSavedPass)
       ..on<RunEnded>(_onEnded)
       ..on<Revived>(_onRevived)
       ..on<FeverStarted>(_onFever)
@@ -93,7 +94,12 @@ class AchievementsFeature extends RunFeature {
     _ => null,
   };
 
-  void _onPassed(HoopPassed e) {
+  void _onPassed(HoopPassed e) => _hoopGoals();
+
+  /// SPEC WP-3d: a saved saw / closed switch ring counts as passed.
+  void _onSavedPass(SavedHoopPassed e) => _hoopGoals();
+
+  void _hoopGoals() {
     final c = _c;
     if (c == null) return;
     // QA P19-04: a hoop goal is staged the moment its threshold is crossed
@@ -132,6 +138,7 @@ class AchievementsFeature extends RunFeature {
       ..off<RideEnded>(_onRideEnded)
       ..off<PickupCollected>(_onPickup)
       ..off<HoopPassed>(_onPassed)
+      ..off<SavedHoopPassed>(_onSavedPass)
       ..off<RunEnded>(_onEnded)
       ..off<Revived>(_onRevived)
       ..off<FeverStarted>(_onFever)

@@ -418,7 +418,8 @@ class PairState extends Component {
         wordY < PairConfig.bannerBandBottom) {
       wordY = birdY + 46;
     }
-    c.game.world.add(
+    // Audit A2-31: owned by the run (removed when it is disposed).
+    c.run.addWorldFx(
       RisingWord(
         st.word,
         at: Vector2(RunConfig.birdX + 110, wordY),

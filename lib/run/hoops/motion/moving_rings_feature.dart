@@ -63,6 +63,9 @@ class MovingRingsFeature extends RunFeature {
         continue;
       }
       motion.update(h, t);
+      // Audit A4-7 / A2-30: on the portal clear-ahead the guide fades with
+      // its ring (the spawner steps the ring's clear alpha first).
+      guide.opacity = h.clearAlpha;
     }
   }
 

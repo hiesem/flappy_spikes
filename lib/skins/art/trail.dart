@@ -124,6 +124,9 @@ class TrailEmitter {
   /// Live particle count (history points are tracked separately).
   int get particleCount => _v23?.particleCount ?? _alive;
 
+  /// Points in the path history (ribbon / Afterimage / 2.3 path trails).
+  int get pathLength => _v23?.historyLength ?? _histCount;
+
   /// Colour of the dot the shop thumbnail puts at the head of the trail
   /// (`drawThumb`: the second flame colour, or the per-kind fallback).
   Color get orbColor {

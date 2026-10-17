@@ -455,7 +455,7 @@ class RunController extends Component {
               ring: c0.ring,
             );
             kind.onRim(h, rc, ctx);
-            mistake(
+            final outcome = mistake(
               Mistake(
                 MistakeCause.saw,
                 normal: c0.normal,
@@ -464,6 +464,7 @@ class RunController extends Component {
               ),
             );
             if (_dying) return;
+            if (outcome == MistakeOutcome.saved) _countSavedPass(h);
             continue;
           }
           _applyRim(h, bird, pos, res);
@@ -482,7 +483,7 @@ class RunController extends Component {
             kind.onPlane(h, ev.ring, ctx) == PlaneVerdict.mistake) {
           h.resolveMiss();
           events.emit(ClosedSwitchReached(h));
-          mistake(
+          final outcome = mistake(
             Mistake(
               MistakeCause.closedSwitch,
               normal: Vector2(-1, 0),
@@ -491,6 +492,7 @@ class RunController extends Component {
             ),
           );
           if (_dying) return;
+          if (outcome == MistakeOutcome.saved) _countSavedPass(h);
           continue;
         }
         h.passOffset = ev.offset;
@@ -637,6 +639,31 @@ class RunController extends Component {
       ),
       ctx,
     );
+  }
+
+  /// SPEC WP-3d (PRD-2 §3.18 / §3.20): a saw ring or a closed switch ring
+  /// whose mistake was saved by the shield / extra life counts as passed
+  /// with no score: the pass counters, the taken tally, the colour stage and
+  /// the kind's pass hook move; no points, coins, streak or popup (no
+  /// [HoopPassed]). The hoop stays resolved as missed (its look unchanged).
+  void _countSavedPass(Hoop h) {
+    state.passes++;
+    state.hoopsPassed++;
+    final id = h.plan.element.storageId;
+    state.taken[id] = (state.taken[id] ?? 0) + 1;
+    events.emit(SavedHoopPassed(h));
+    h.kind.onPass(
+      h,
+      const PassInfo(
+        ring: 0,
+        perfect: false,
+        clean: false,
+        rimTouched: true,
+        duringRide: false,
+      ),
+      ctx,
+    );
+    game.applyRunStage(state.stage);
   }
 
   /// §3.0.4 5 / §5.13 a miss: the shock-ring miss flash, then the mistake

@@ -940,12 +940,11 @@ void main() {
         home.slotButton.y + home.slotButton.height,
         lessThan(home.shopTile.y),
       );
+      // Owner 2026-10-17 logo layout: the tagline stays above the BEST /
+      // LAST row (it may sit in the emblem's faint outer rays).
       expect(
         home.subtitle.y + home.subtitle.height,
-        lessThan(
-          Config.homePlateCentreFor(height).dy -
-              90 * Config.homeEmblemScaleFor(height),
-        ),
+        lessThan(home.bestStat.y),
       );
       expect(Config.homeEmblemBottomFor(height), lessThan(home.startButton.y));
       for (final c in [

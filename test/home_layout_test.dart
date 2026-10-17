@@ -39,9 +39,11 @@ void main() async {
     expect(Config.homeCoinPillPositionFor(h), Vector2(306, 58));
     expect(Config.homeGearRectFor(h), const Rect.fromLTWH(14, 58, 38, 38));
     expect(Config.homeTrophyRectFor(h), const Rect.fromLTWH(60, 58, 38, 38));
-    expect(Config.homeTitlePositionFor(h), Vector2(160, 104));
-    expect(Config.homeTitleFontSize, 34);
-    expect(Config.homeSubtitlePositionFor(h), Vector2(160, 142));
+    // Owner 2026-10-17: the logo (size S) replaces the title text; the
+    // tagline sits under it.
+    expect(Config.homeTitlePositionFor(h), Vector2(160, 100));
+    expect(Config.homeLogoWidthFor(h), 150);
+    expect(Config.homeSubtitlePositionFor(h), Vector2(160, 183));
     expect(Config.homeSubtitleFontSize, 13);
     expect(Config.homeStageRectFor(h), const Rect.fromLTWH(28, 148, 264, 204));
     final plate = Config.homePlateCentreFor(h);
@@ -80,7 +82,7 @@ void main() async {
   test('vertical rule: top pinned, tiles bottom-anchored, START centred', () {
     for (final h in [711.0, 730.0]) {
       expect(Config.homeTileRowTopFor(h), h - 149);
-      expect(Config.homeTitlePositionFor(h).y, 104);
+      expect(Config.homeTitlePositionFor(h).y, 100);
       expect(Config.homeStageScaleFor(h), 1);
     }
     // Short screens: the emblem shrinks to 0.78 / 1.1; PRD-2.2 §2.1 (the
@@ -166,13 +168,16 @@ void main() async {
         expect(home.coinPill.label.text, '1 250');
         expect(pill.width, closeTo(145, 1.5));
 
-        // Title + subtitle: centred, 34 pt / 13 pt one line, tops 104 / 142.
+        // Logo + subtitle (owner 2026-10-17, size S): centred; the logo is
+        // 150 pt wide from 100 where it fits, the tagline 47 pt above the
+        // BEST / LAST row (183 on 640 pt and taller).
         final title = rectOf(home.title);
-        expect(title.top, 104);
+        expect(title.top, 100);
         expect(title.center.dx, closeTo(160, 1e-9));
-        expect(title.height, closeTo(34, 1e-6), reason: 'line-height 1');
+        expect(title.width, closeTo(Config.homeLogoWidthFor(h), 1e-3));
         final subtitle = rectOf(home.subtitle);
-        expect(subtitle.top, 142);
+        expect(subtitle.top, closeTo(Config.homeSubtitleTopFor(h), 1e-3));
+        expect(subtitle.bottom, lessThan(best.top), reason: 'above BEST');
         expect(subtitle.center.dx, closeTo(160, 1e-9));
         expect(home.subtitle.text, 'FLAP FAST, FLY FAR'); // PRD-2.3 §12
 
@@ -255,6 +260,12 @@ void main() async {
           {'start', 'slot'},
           // PRD-2.2 §2.1: the VS tag sits half outside START's corner.
           {'vstag', 'start'},
+          // Owner 2026-10-17 logo layout: the tagline and the logo's soft
+          // shadow reach into the emblem's faint outer rays (its ink box
+          // spans 90 art units up); the plate itself stays clear.
+          {'subtitle', 'emblem'},
+          {'title', 'subtitle'},
+          {'title', 'emblem'},
         };
         final keys = named.keys.toList();
         for (var i = 0; i < keys.length; i++) {

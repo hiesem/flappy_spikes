@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flame/extensions.dart';
 
 import '../run/config/tuning_values.dart';
@@ -368,9 +370,14 @@ class Config {
   static const double homeTrophyLeft = 60;
   static const double homeTrophyIconSize = 24;
 
-  static const double homeTitleTop = 104;
+  /// Owner 2026-10-17 (design/logo_home, size S): the logo image replaces the
+  /// "Flappy Spikes" title text: 150 pt wide, top at 100; the tagline moves
+  /// under it to 183. (The title font size stays for the debug hotspot.)
+  static const double homeTitleTop = 100;
+  static const double homeLogoWidth = 150;
+  static const double homeLogoAspect = 600 / 352; // assets/images/menu/logo.png
   static const double homeTitleFontSize = 34;
-  static const double homeSubtitleTop = 142;
+  static const double homeSubtitleTop = 183;
   static const double homeSubtitleFontSize = 13;
   static const double homeSubtitleLetterSpacing = 0.14; // em
 
@@ -612,7 +619,26 @@ class Config {
   static Vector2 homeTitlePositionFor(double viewHeight) =>
       Vector2(worldWidth / 2, homeTitleTop);
   static Vector2 homeSubtitlePositionFor(double viewHeight) =>
-      Vector2(worldWidth / 2, homeSubtitleTop);
+      Vector2(worldWidth / 2, homeSubtitleTopFor(viewHeight));
+
+  /// Owner 2026-10-17 logo (size S): the tagline sits [homeSubtitleAboveFlank]
+  /// above the BEST / LAST row (183 on 640 pt and taller screens); on shorter
+  /// screens the row moves up, the tagline with it, and the logo shrinks to
+  /// fit between the top row and the tagline ([homeLogoWidthFor]).
+  static double homeSubtitleTopFor(double viewHeight) => math.min(
+    homeSubtitleTop,
+    homeFlankRectFor(viewHeight, right: false).top - homeSubtitleAboveFlank,
+  );
+  static const double homeSubtitleAboveFlank = 47;
+
+  /// The logo's width: [homeLogoWidth] (150) where it fits, else as wide as
+  /// the band from [homeTitleTop] to just under the tagline's top allows.
+  static double homeLogoWidthFor(double viewHeight) => math.min(
+    homeLogoWidth,
+    (homeSubtitleTopFor(viewHeight) + homeLogoTaglineOverlap - homeTitleTop) *
+        homeLogoAspect,
+  );
+  static const double homeLogoTaglineOverlap = 5; // the logo's soft shadow
 
   /// BEST (left, x 14) / LAST ([right], right edge 306) column, centred
   /// vertically on the plate.

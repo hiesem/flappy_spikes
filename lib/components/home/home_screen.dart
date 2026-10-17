@@ -36,6 +36,7 @@ const List<String> kHomeImages = [
   'menu/trophy.png',
   'menu/lock.png',
   'menu/medal.png', // PRD-2.3.1 §12.5
+  'menu/logo.png', // owner 2026-10-17: the logo replaces the title text
 ];
 
 /// The 2.0 home screen, v3 layout (PRD-home-v3 §3, approved design
@@ -78,7 +79,9 @@ class HomeScreen extends PositionComponent
   /// achievements list; wiggles like the trophy, 5 s after it.
   late final MenuButton achievementsButton;
   late final WiggleEffect medalWiggle;
-  late final MenuText title;
+  /// The Flappy Spikes logo (owner 2026-10-17, size S: 150 pt wide), in its
+  /// own colours (not stage-tinted); top-centre at [Config.homeTitlePositionFor].
+  late final SpriteComponent title;
   late final MenuText subtitle;
 
   /// The level emblem under the bird (§3.1 / §3.2).
@@ -182,11 +185,12 @@ class HomeScreen extends PositionComponent
     );
 
     // --- title ------------------------------------------------------------
-    title = MenuText(
-      'Flappy Spikes',
-      fontSize: Config.homeTitleFontSize,
-      color: _tint,
-      lineHeight: 1,
+    title = SpriteComponent(
+      sprite: icon('logo'),
+      size: Vector2(
+        Config.homeLogoWidthFor(h),
+        Config.homeLogoWidthFor(h) / Config.homeLogoAspect,
+      ),
       position: Config.homeTitlePositionFor(h),
       anchor: Anchor.topCenter,
     );
@@ -508,7 +512,6 @@ class HomeScreen extends PositionComponent
   void setTint(Color color) {
     _tint = color;
     if (_built) {
-      title.color = color;
       subtitle.color = color;
       bestStat.tint = color;
       lastStat.tint = color;

@@ -24,8 +24,8 @@ describe('§3.13 level recompute (levels.ts ↔ levels.dart)', () => {
   });
   it('§3.13 levelFor matches Dart levelFor at the boundaries', () => {
     assert.equal(levelFor(0), 0);
-    assert.equal(levelFor(9), 0);
-    assert.equal(levelFor(10), 1);
+    assert.equal(levelFor(24), 0);
+    assert.equal(levelFor(25), 1);
     assert.equal(levelFor(49), 1);
     assert.equal(levelFor(50), 2);
     assert.equal(levelFor(4999), 9);

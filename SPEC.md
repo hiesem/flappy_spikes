@@ -315,6 +315,9 @@ shop build:
   TRUE screen edges — no letterbox bars. (Any slivers on screens beyond the clamp,
   e.g. tablets, are painted with the foreground tint so they read as an extension
   of the strips; the world background itself is an in-world backdrop rect.)
+  DEVIATION (WP-TAB, 2026-10-17): screens wider than 320:568 (tablets) are no longer
+  letterboxed; see "Tablets: a wider world" at the end. Only screens wider than 3:4
+  keep side slivers in the foreground tint.
 
 ## Pipes
 
@@ -1817,3 +1820,27 @@ production build has the flag off and uses these values only. Full key table:
   the results bar fills with the run's score toward the next threshold ("N TO <next>" = the
   points the run was short). "Delete my data" and the debug "Reset menu state" reset the
   level to 0 (the delete keeps `claimedLevels`, so a level reached again never pays twice).
+
+### Tablets: a wider world (WP-TAB, 2026-10-17)
+
+- DEVIATION (owner 2026-10-17; supersedes "the playfield is always 320 pt wide"): phones
+  (screens taller than 568/320) are unchanged, bit for bit. A wider screen (iPad, Android
+  tablets, foldables) gets a playfield 568 pt high and `568 × aspect` wide, capped at
+  **426 pt (3:4)** (`Config.viewWidthFor`, `game.viewWidth`, `game.extraWidth` = width − 320);
+  anything wider than 3:4 keeps side bars in the foreground tint.
+- **Same look-ahead (fairness for versus and the leaderboard)**: the run keeps its phone
+  coordinates (screen x 0..320, bird at x 70, spawning / planning at the right edge 320
+  unchanged); it is drawn `extraWidth` further right, so the bird sits at screen x
+  70 + extra and the extra width shows what is BEHIND the bird (run x from −extra to 0).
+  Culling and every "on screen" test use the real left edge (`RunState.viewLeft` =
+  −extra); the death tumble bounces off it. The run HUD, the score circle and the banner
+  row stay on the phone's 320 pt column on the right (pause button at the screen's right
+  edge); the banner bands, spike strips, run background, ride scenes, flashes, edge glows,
+  dims and speed lines cover the whole width.
+- **Menus** (home, shop, skins, levels, settings, popups, the results page, the bonus page,
+  the pause card, the revive offer, the VS intro) stay a 320 pt column centred on the
+  screen; their background, the spike strips, stage colours and the tap area fill the
+  whole width.
+- The banner strip in a run keeps its dp height (points per dp from the screen's full width
+  in game points).
+

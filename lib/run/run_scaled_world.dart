@@ -1,7 +1,9 @@
 import 'dart:ui';
 
 import 'package:flame/components.dart';
-import 'package:flame_forge2d/flame_forge2d.dart';
+import 'package:flame_forge2d/flame_forge2d.dart' hide World;
+
+import 'run_layers.dart';
 
 /// The game world with a run time scale (ARCH §0): everything in it —
 /// Forge2D step, bird, hoops, pickups — updates with dt × [timeScale]
@@ -33,17 +35,49 @@ class RunScaledWorld extends Forge2DWorld {
   /// is skipped: they still update.
   int? Function()? coveredBelowSource;
 
+  // region WP-TAB — the run column on wide screens
+  /// WP-TAB: how far right the run column is drawn (pt): half the extra
+  /// width of a wide (tablet) playfield, 0 on phones. The camera centres
+  /// the 320 pt menu column; the run's content (bird, hoops, strips, run
+  /// effects, all in run screen coordinates 0..320) is drawn this much
+  /// further right, so the run keeps the phone's look-ahead and the extra
+  /// width shows what is behind the bird (run x from −extra to 320).
+  double columnShift = 0;
+
+  static final Expando<bool> _runColumn = Expando('runColumn');
+
+  /// WP-TAB: marks [c] (a direct world child) as run content, drawn in the
+  /// run column ([columnShift]). [RunTrack] layers are always run content.
+  static T inRunColumn<T extends Component>(T c) {
+    _runColumn[c] = true;
+    return c;
+  }
+
+  /// WP-TAB: whether [c] is drawn in the run column.
+  static bool isRunColumn(Component c) =>
+      c is RunTrack || (_runColumn[c] ?? false);
+  // endregion WP-TAB
+
   @override
   void renderFromCamera(Canvas canvas) {
     final below = coveredBelowSource?.call();
-    if (below == null) {
+    final shift = columnShift;
+    if (below == null && shift == 0) {
       super.renderFromCamera(canvas);
       return;
     }
     // [Component.renderTree] without the children under the page.
     render(canvas);
     for (final child in children) {
-      if (child.priority < below) continue;
+      if (below != null && child.priority < below) continue;
+      if (shift != 0 && isRunColumn(child)) {
+        canvas
+          ..save()
+          ..translate(shift, 0);
+        renderChild(canvas, child);
+        canvas.restore();
+        continue;
+      }
       renderChild(canvas, child);
     }
     afterChildrenRendered(canvas);
@@ -62,4 +96,10 @@ class RunScaledWorld extends Forge2DWorld {
       if (c.isMounted) c.updateTree(dt);
     }
   }
+}
+
+/// WP-TAB: adds run content to the world, drawn in the run column
+/// ([RunScaledWorld.columnShift]).
+extension RunColumnAdd on World {
+  void addRun(Component c) => add(RunScaledWorld.inRunColumn(c));
 }

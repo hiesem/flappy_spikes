@@ -28,6 +28,7 @@ import '../../game/paints.dart';
 import '../backdrop/run_backdrop.dart';
 import 'portal_handover.dart';
 import 'ride_reveal.dart';
+import '../run_scaled_world.dart';
 
 /// A ride's chain before it starts: theme, path, ring stations and the
 /// preview of the first curve ring (§3.12 "the next chain ring is already
@@ -240,6 +241,7 @@ class PortalRide implements Ride {
          h: c.viewHeight,
          rnd: c.cosmetic,
          cue: (_) {},
+         left: c.s.viewLeft, // WP-TAB
        );
 
   final RunContext c;
@@ -324,7 +326,15 @@ class PortalRide implements Ride {
     if (rv == null || p <= 0) return fn();
     if (p >= 1) return;
     _sceneClip.reset();
-    RideReveal.sceneClip(_sceneClip, theme.id, p, view.t, view.w, view.h);
+    RideReveal.sceneClip(
+      _sceneClip,
+      theme.id,
+      p,
+      view.t,
+      view.w,
+      view.h,
+      left: view.left, // WP-TAB
+    );
     canvas
       ..save()
       ..clipPath(_sceneClip);
@@ -336,7 +346,15 @@ class PortalRide implements Ride {
   void _paintEdge(Canvas canvas) {
     if (_reveal == null) return;
     final p = _handover?.progress ?? 0;
-    RideReveal.paintEdge(canvas, theme.id, p, view.t, view.w, view.h);
+    RideReveal.paintEdge(
+      canvas,
+      theme.id,
+      p,
+      view.t,
+      view.w,
+      view.h,
+      left: view.left, // WP-TAB
+    );
   }
   // endregion WP-R
 
@@ -505,7 +523,7 @@ class PortalRide implements Ride {
       _RideLayer(_paintFx, priority: PortalConfig.fxPriority),
     ]) {
       _layers.add(l);
-      world.add(l);
+      world.addRun(l);
     }
     c.emit(RideStarted(RideKind.portal, theme.id));
     c.track('portal_entered', {'ride': theme.id.storageId});
@@ -884,7 +902,7 @@ class PortalRide implements Ride {
 
   // -------------------------------------------------------------- paint
 
-  Rect get _screen => Rect.fromLTWH(0, 0, view.w, view.h);
+  Rect get _screen => view.full; // WP-TAB
 
   double get _exitTime =>
       view.phase == RidePhase.exit ? view.et : theme.exitDuration + view.ft;

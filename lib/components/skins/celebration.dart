@@ -155,9 +155,13 @@ class ScreenShake extends Component {
     this.keysY = _y,
     this.duration = Config.skinShopShakeDuration,
     this.delay = 0,
-  });
+  }) : _base = viewfinder.position.clone();
 
   final Viewfinder viewfinder;
+
+  /// WP-TAB: the camera's resting position (the centred menu column on a
+  /// wide screen, zero on phones) the shake moves around.
+  final Vector2 _base;
   final List<(double, double)> keysX;
   final List<(double, double)> keysY;
   final double duration;
@@ -186,13 +190,14 @@ class ScreenShake extends Component {
     if (_t < delay) return;
     final u = ((_t - delay) / duration).clamp(0.0, 1.0);
     // The world moves by the offset: the camera moves the other way.
-    viewfinder.position = Vector2(-keyframe(keysX, u), -keyframe(keysY, u));
+    viewfinder.position =
+        _base + Vector2(-keyframe(keysX, u), -keyframe(keysY, u));
     if (u >= 1) removeFromParent();
   }
 
   @override
   void onRemove() {
-    viewfinder.position = Vector2.zero();
+    viewfinder.position = _base.clone();
     super.onRemove();
   }
 }

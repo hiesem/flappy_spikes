@@ -87,6 +87,7 @@ class RideView {
     required this.h,
     required this.rnd,
     required this.cue,
+    this.left = 0,
   });
 
   final RidePath path;
@@ -94,6 +95,20 @@ class RideView {
   /// Screen size (pt).
   final double w = 320;
   final double h;
+
+  /// WP-TAB: the screen's left edge (pt; −extra on a wide screen: the
+  /// view runs from [left] to [w]).
+  final double left;
+
+  /// WP-TAB: the whole visible screen (`left, 0` – `w, h`).
+  Rect get full => Rect.fromLTRB(left, 0, w, h);
+
+  /// WP-TAB: [x] wrapped into the visible width ([left] .. [w]); the same
+  /// as a wrap into 0..[w] on a phone.
+  double wrapX(double x) {
+    final span = w - left;
+    return ((x - left) % span + span) % span + left;
+  }
   final math.Random rnd;
   void Function(RideCue cue) cue;
 

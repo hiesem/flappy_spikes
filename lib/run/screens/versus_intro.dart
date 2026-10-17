@@ -738,7 +738,8 @@ class _Backing extends Component {
   void render(Canvas canvas) {
     if (!intro.panelsIn) return;
     _p.color = intro.game.foregroundColor;
-    canvas.drawRect(Rect.fromLTWH(-10, 0, 340, intro.h), _p);
+    final e = intro.game.extraWidth; // WP-TAB: the whole screen
+    canvas.drawRect(Rect.fromLTWH(-10 - e, 0, 340 + 2 * e, intro.h), _p);
   }
 }
 
@@ -775,16 +776,22 @@ class VersusIntroPanel extends PositionComponent {
 
   Path _shape() {
     final s = intro.seam;
-    if (!top) return Path()..addRect(Rect.fromLTWH(0, s, 320, intro.h - s + 10));
+    // WP-TAB: the halves span the whole screen on a wide playfield (the
+    // teeth keep their phase from x 320).
+    final e = intro.game.extraWidth;
+    const half = VersusConfig.seamPeriod / 2;
+    final l = -e, r = 320.0 + (e / half).ceil() * half;
+    if (!top) {
+      return Path()..addRect(Rect.fromLTWH(l, s, r - l, intro.h - s + 10));
+    }
     final base = s - 3, tip = base + VersusConfig.seamTooth;
     final p = Path()
-      ..moveTo(0, -10)
-      ..lineTo(320, -10)
-      ..lineTo(320, base);
-    const half = VersusConfig.seamPeriod / 2;
-    var x = 320.0;
+      ..moveTo(l, -10)
+      ..lineTo(r, -10)
+      ..lineTo(r, base);
+    var x = r;
     var down = true;
-    while (x > 0) {
+    while (x > l) {
       x -= half;
       p.lineTo(x, down ? tip : base);
       down = !down;

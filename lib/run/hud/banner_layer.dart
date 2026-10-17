@@ -66,7 +66,7 @@ class RunBannerLayer extends PositionComponent {
     if (fade <= 0) return;
     // The world is drawn through the camera's viewfinder, which the run's
     // screen shake moves; cancel that offset to keep the bands on screen.
-    final offset = game.camera.viewfinder.position;
+    final offset = game.cameraShake; // WP-TAB: not the column base
     canvas.save();
     canvas.translate(offset.x, offset.y);
     if (fade < 1) canvas.saveLayer(null, layerPaint(fade));

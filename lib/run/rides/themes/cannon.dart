@@ -87,7 +87,7 @@ class CannonTheme extends RideTheme {
   void paintBackdrop(Canvas c, RideView v, Vector2 cam) {
     vGradient(
       c,
-      Rect.fromLTWH(0, 0, v.w, v.h),
+      v.full,
       PortalConfig.cannonTintTop,
       PortalConfig.cannonTintBottom,
     );
@@ -198,7 +198,7 @@ class CannonTheme extends RideTheme {
     final k = (v.t - at) / .35;
     if (k >= 1) return;
     c.drawRect(
-      Rect.fromLTWH(0, 0, v.w, v.h),
+      v.full,
       fillOf(const Color(0xFFFFFFFF), .7 * (1 - k)),
     );
   }

@@ -15,6 +15,25 @@ class Config {
   static const double minViewHeight = 568;
   static const double maxViewHeight = 730;
 
+  // region WP-TAB — tablets (3:4) widen the world
+  /// WP-TAB: the widest playfield (pt): 568 × 3 / 4, an iPad / Android
+  /// tablet in portrait. Wider screens are capped here (side bars in the
+  /// stage colour).
+  static const double maxViewWidth = 426;
+
+  /// WP-TAB: the playfield width for a screen whose height is
+  /// [screenHeight] at 320 pt wide (`320 × h / w`). Phones (taller than
+  /// 568/320) keep [worldWidth]; wider screens get height [minViewHeight]
+  /// and width `568 × aspect`, capped at [maxViewWidth].
+  static double viewWidthFor(double screenHeight) {
+    if (screenHeight >= minViewHeight) return worldWidth;
+    final w = minViewHeight * worldWidth / screenHeight;
+    // Round off float noise (3:4 gives 426.0000000001).
+    final r = (w * 1000).roundToDouble() / 1000;
+    return r > maxViewWidth ? maxViewWidth : r;
+  }
+  // endregion WP-TAB
+
   // region PRD-2.2 §7.5 — gameplay banner
   /// §7.5.5: the smallest VISIBLE run playfield with a banner (a 16:9 phone
   /// with a 50 dp banner leaves ≈ 524 pt). Menus keep [minViewHeight].

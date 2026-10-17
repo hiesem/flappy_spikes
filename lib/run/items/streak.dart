@@ -21,6 +21,7 @@ import 'big_hoops.dart';
 import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
+import '../run_scaled_world.dart';
 
 /// The perfect-pass streak (PRD-2 §3.4, §3.5, §3.19 FEVER hook, §5.3, §5.4).
 ///
@@ -89,7 +90,7 @@ class StreakFeature extends RunFeature {
     _c = c;
     final world = c.game.world;
     _burst = ParticlePool(priority: StreakConfig.burstPriority);
-    world.add(_burst!);
+    world.addRun(_burst!);
     final look = c.game.menu.items.look;
     _trail = _TrailComponent(
       c,
@@ -99,7 +100,7 @@ class StreakFeature extends RunFeature {
         lookPainter: paintLookForTrail,
       )..emitter.look = look,
     );
-    world.add(_trail!);
+    world.addRun(_trail!);
     // WP-2d: the banner band lives in the run HUD (viewport, real time).
     _banners = RunHud.ensureFor(c.run).banners;
     c.events

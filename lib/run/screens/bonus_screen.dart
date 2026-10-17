@@ -677,7 +677,8 @@ class BonusScreen extends PositionComponent
 
   @override
   void render(Canvas canvas) {
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.x, size.y), _fill..color = _bg);
+    // WP-TAB: the whole screen on a wide playfield.
+    canvas.drawRect(bleedRectFor(this, size.y), _fill..color = _bg);
   }
 
   void _text(

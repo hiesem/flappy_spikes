@@ -1,5 +1,7 @@
 #include "my_application.h"
 
+#include <cstdio>
+
 #include <flutter_linux/flutter_linux.h>
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
@@ -55,7 +57,18 @@ static void get_phone_window_size(GtkWidget* window, int* width, int* height) {
     if (workarea.height > 0) {
       const int phone_height = (int)(workarea.height * 0.85);
       *height = phone_height;
-      *width = (int)(phone_height * 9.0 / 19.5 + 0.5);
+      // WP-TAB (local testing): FS_WINDOW_ASPECT=W:H (e.g. 3:4) gives a
+      // tablet-shaped window instead of the 9:19.5 phone.
+      double aw = 9.0, ah = 19.5;
+      const gchar* aspect = g_getenv("FS_WINDOW_ASPECT");
+      if (aspect != nullptr) {
+        double w = 0, h = 0;
+        if (sscanf(aspect, "%lf:%lf", &w, &h) == 2 && w > 0 && h > 0) {
+          aw = w;
+          ah = h;
+        }
+      }
+      *width = (int)(phone_height * aw / ah + 0.5);
       return;
     }
   }

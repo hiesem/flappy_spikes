@@ -198,6 +198,10 @@ class BackdropPainter {
   final Ctx ctx = Ctx();
   final Paint _layer = Paint();
   final Paint _base = Paint()..color = const Color(0xFFF1F1F1);
+
+  /// WP-TAB tests: the base fill under the scenes (a sentinel colour shows
+  /// any gap the scenes leave).
+  Paint get basePaint => _base;
   final Path _cover = Path();
   Color? _bg, _fg;
   ColorFilter? _filter;
@@ -213,11 +217,14 @@ class BackdropPainter {
     required Color bg,
     required Color fg,
     double opacity = 1,
+    double left = 0,
   }) {
     if (opacity <= 0) return;
     // WP-R: the ride's own scene covers the whole screen.
     if (world.hook?.hidden ?? false) return;
-    final screen = Rect.fromLTWH(0, 0, kVW, viewHeight);
+    // WP-TAB: [left] < 0 on a wide screen: the view starts that far left
+    // of the 320 pt design (the scenes draw from `xl`).
+    final screen = Rect.fromLTRB(left, 0, kVW, viewHeight);
     final identity = isIdentityPalette(bg, fg);
     if (!identity && (bg != _bg || fg != _fg)) {
       _bg = bg;
@@ -252,7 +259,7 @@ class BackdropPainter {
       ..t = t
       ..viewHeight = viewHeight
       ..yTop = kVH - viewHeight
-      ..xl = 0
+      ..xl = left
       ..xr = kVW;
     world.paint(c);
     canvas.restore();

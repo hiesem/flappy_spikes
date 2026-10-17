@@ -159,7 +159,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
        rumble = Rumble(hardware: rumbleEnabled ?? soundEnabled),
        monetization = monetization ?? Monetization(),
        storage = GameStorage(clock: clock),
-       screenHeight = worldHeight ?? Config.worldHeight,
+       // WP-TAB: a wide screen (tablet) is 568 pt high in game points.
+       screenHeight = max(
+         worldHeight ?? Config.worldHeight,
+         Config.minViewHeight,
+       ),
+       viewWidth = Config.viewWidthFor(worldHeight ?? Config.worldHeight),
+       _screenWidthPoints =
+           (worldHeight ?? Config.worldHeight) >= Config.minViewHeight
+           ? Config.worldWidth
+           : Config.worldWidth *
+                 Config.minViewHeight /
+                 (worldHeight ?? Config.worldHeight),
        _viewHeight = _clampViewHeight(worldHeight ?? Config.worldHeight),
        super(
          world: RunScaledWorld(gravity: Vector2(0, Config.gravity)),
@@ -170,7 +181,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
          camera: CameraComponent(
            viewport: PlayfieldViewport(
              resolution: Vector2(
-               Config.worldWidth,
+               Config.viewWidthFor(worldHeight ?? Config.worldHeight),
                _clampViewHeight(worldHeight ?? Config.worldHeight),
              ),
            ),
@@ -221,7 +232,41 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   double _viewHeight;
 
   /// The full screen height (320 / aspect, unclamped) from the app shell.
+  /// WP-TAB: at least 568 (a wide screen is 568 pt high in game points).
   final double screenHeight;
+
+  // region WP-TAB — tablets widen the world
+  /// WP-TAB: the playfield width (pt): 320 on phones, `568 × aspect` on
+  /// wider screens, up to [Config.maxViewWidth] (3:4).
+  final double viewWidth;
+
+  /// WP-TAB: the screen's full width in game points (beyond 3:4 it is
+  /// wider than [viewWidth]: side bars).
+  final double _screenWidthPoints;
+
+  /// WP-TAB: the extra width over the phone's 320 pt (0 on phones).
+  double get extraWidth => viewWidth - Config.worldWidth;
+
+  /// WP-TAB: the camera's resting position: the 320 pt menu column is
+  /// centred on the screen (x −extra / 2). Shakes move the viewfinder
+  /// relative to it.
+  Vector2 get cameraBase => Vector2(-extraWidth / 2, 0);
+
+  /// WP-TAB: the camera's current shake offset (viewfinder − [cameraBase]).
+  Vector2 get cameraShake => camera.viewfinder.position - cameraBase;
+
+  /// WP-TAB: a rect [height] high that covers the whole screen from any
+  /// 320 pt column (centred menus, the run column, the viewport HUD):
+  /// x from −extra to 320 + extra. Full-screen fills (backgrounds, dims,
+  /// flashes) use it; the view clips the rest.
+  Rect bleedRect(double height, {double top = 0}) =>
+      Rect.fromLTWH(-extraWidth, top, Config.worldWidth + 2 * extraWidth, height);
+
+  /// WP-TAB: the visible screen in run coordinates (the run column: run
+  /// world content and the run HUD): x from −extra to 320.
+  Rect runScreenRect(double height) =>
+      Rect.fromLTWH(-extraWidth, 0, viewWidth, height);
+  // endregion WP-TAB
 
   /// PRD-2.2 §7.5.4: how far the bottom spike strip is lowered under the
   /// view's bottom edge ([Config.bannerStripDrop] in a run with a banner,
@@ -666,12 +711,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   Future<void> onLoad() async {
     await super.onLoad();
     camera.viewfinder.anchor = Anchor.topLeft;
+    // WP-TAB: the menu column is centred; the run column sits on the right.
+    camera.viewfinder.position = cameraBase;
+    (world as RunScaledWorld).columnShift = extraWidth / 2;
     // Before any DragCallbacks component mounts, so Flame uses this one: the
     // menu lists' drag slop is Config.menuScrollSlop world points (S1-50).
     final drags = MenuDragDispatcher(
       pointsToPixels: () => canvasSize.x <= 0 || canvasSize.y <= 0
           ? 1
-          : min(canvasSize.x / Config.worldWidth, canvasSize.y / viewHeight),
+          : min(canvasSize.x / viewWidth, canvasSize.y / viewHeight),
     );
     // Flame's own DragCallbacks registers its default dispatcher this way.
     // ignore: invalid_use_of_internal_member
@@ -781,8 +829,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // In-world background: a flat rect painted with the background color,
     // behind everything (backgroundColor() itself is now the bar color).
     _backdrop = RectangleComponent(
-      position: Vector2.zero(),
-      size: Vector2(Config.worldWidth, viewHeight),
+      position: Vector2(-extraWidth, 0), // WP-TAB: full width
+      size: Vector2(Config.worldWidth + 2 * extraWidth, viewHeight),
       priority: -1000,
       paint: Paint()..color = _bgColor,
     );
@@ -790,7 +838,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // PRD-2.2 §7.5.2: the backdrop and the score HUD follow the playfield.
     registerResizable(
       PlayfieldResizeCallback((h) {
-        _backdrop.size = Vector2(Config.worldWidth, h);
+        _backdrop.size = Vector2(Config.worldWidth + 2 * extraWidth, h);
         _hud.position = Config.scoreHudPositionFor(h / 2);
       }),
     );
@@ -798,11 +846,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _ground = SpikeStrip(isCeiling: false);
     _ceiling = SpikeStrip(isCeiling: true);
     _spikeInset = _SpikeInsetAdapter([_ground, _ceiling]);
-    world.add(_ground);
-    world.add(_ceiling);
+    // WP-TAB: the strips and the score circle are run content.
+    world.add(RunScaledWorld.inRunColumn(_ground));
+    world.add(RunScaledWorld.inRunColumn(_ceiling));
     _hud = ScoreHud(position: Config.scoreHudPositionFor(viewHeight / 2));
     _hud.opacity = 0;
-    world.add(_hud);
+    world.add(RunScaledWorld.inRunColumn(_hud));
     registerTintable(_hud);
     world.add(TapCatcher());
 
@@ -1047,7 +1096,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // The home screen draws its own bird in the start block; the physics
     // bird waits invisibly at its spawn point and fades in on START.
     _birdAdapter = _BirdOpacityAdapter(bird)..opacity = 0;
-    world.add(bird);
+    world.add(RunScaledWorld.inRunColumn(bird)); // WP-TAB
     // Menus show the short (44 pt) spike strips of the mocks.
     _fades.removeWhere((fade) => identical(fade.target, _spikeInset));
     _spikeInset.opacity = 1;
@@ -1436,7 +1485,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     (world as RunScaledWorld).timeScaleSource = () => run.state.timeScale;
     world.add(run);
     // PRD-2.4 §3 the lively run background (leaves with its run).
-    world.add(RunBackdrop(run));
+    world.add(RunScaledWorld.inRunColumn(RunBackdrop(run)));
     // PRD-2.3 §10.1 / §10.2 the run opens waiting for the first tap, hoop 0
     // already at its spot.
     run.open();
@@ -1636,8 +1685,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       _ceiling.priority = SpikeStrip.basePriority;
       _syncGroundPriority();
       final white = RectangleComponent(
-        position: Vector2.zero(),
-        size: Vector2(Config.worldWidth, viewHeight),
+        position: Vector2(-extraWidth, 0), // WP-TAB: full width
+        size: Vector2(Config.worldWidth + 2 * extraWidth, viewHeight),
         paint: Paint()..color = const Color(0xFFFFFFFF),
         priority: 1000,
       );
@@ -2989,7 +3038,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     fadeOpacity(popup, from: 0, to: 1, duration: 0.16);
     pushBack(_noAdsCelebrationBack);
     if (motion) {
-      world.add(ScreenFlash(size: Vector2(Config.worldWidth, viewHeight)));
+      world.add(
+        ScreenFlash(
+          size: Vector2(Config.worldWidth + 2 * extraWidth, viewHeight),
+        )..position.x = -extraWidth, // WP-TAB: full width
+      );
       world.add(
         ScreenShake(
           camera.viewfinder,
@@ -3017,6 +3070,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           ..add(
             ConfettiBurst.rain(
               count: Config.noAdsCelebrationConfetti,
+              width: viewWidth, // WP-TAB: the whole screen
+              left: -extraWidth / 2,
               random: coinFlyRandom,
               priority: 27,
             ),
@@ -3405,7 +3460,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _stripDrop = stripDrop;
     final viewport = camera.viewport;
     if (viewport is PlayfieldViewport) {
-      viewport.setResolution(Config.worldWidth, visible);
+      viewport.setResolution(viewWidth, visible);
     }
     if (!changed) return;
     for (final r in List.of(_resizables)) {
@@ -3439,7 +3494,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final b = monetization.banner;
     final dp = b.heightDp;
     if (dp == null || dp <= 0 || b.widthDp <= 0) return null;
-    return dp * Config.worldWidth / b.widthDp;
+    // WP-TAB: points per dp from the screen's full width in game points.
+    return dp * _screenWidthPoints / b.widthDp;
   }
 
   /// §7.5.6: the banner is off for NO ADS owners, without consent, on Test
@@ -4065,7 +4121,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (page.opacity < 1 || !page.position.isZero()) return null;
     if (page.size.x < Config.worldWidth || page.size.y < viewHeight) return null;
     final vf = camera.viewfinder;
-    if (!vf.position.isZero() || vf.zoom != 1) return null;
+    if (!cameraShake.isZero() || vf.zoom != 1) return null;
     return page.priority;
   }
 
@@ -4459,8 +4515,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
     // 0.3 s white fade.
     final overlay = RectangleComponent(
-      position: Vector2.zero(),
-      size: Vector2(Config.worldWidth, viewHeight),
+      position: Vector2(-extraWidth, 0), // WP-TAB: full width
+      size: Vector2(Config.worldWidth + 2 * extraWidth, viewHeight),
       paint: Paint()..color = const Color(0xFFFFFFFF),
       priority: 1000,
     );
@@ -4931,4 +4987,13 @@ class _PopupRequest {
 
   final bool Function() canOpen;
   final void Function() open;
+}
+
+/// WP-TAB: [FlappySpikesGame.bleedRect] seen from [c] (the plain 320 pt
+/// wide rect when [c] is not in a game, e.g. a standalone widget test).
+Rect bleedRectFor(Component c, double height, {double top = 0}) {
+  final g = c.findGame();
+  return g is FlappySpikesGame
+      ? g.bleedRect(height, top: top)
+      : Rect.fromLTWH(0, top, Config.worldWidth, height);
 }

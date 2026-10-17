@@ -358,7 +358,7 @@ class DebugPanel extends PositionComponent
 
   @override
   void render(Canvas canvas) {
-    canvas.drawRect(size.toRect(), Paint()..color = _dim);
+    canvas.drawRect(bleedRectFor(this, size.y), Paint()..color = _dim); // WP-TAB
   }
 
   /// Taps on the dim close the panel; the buttons consume their own taps.

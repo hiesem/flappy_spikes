@@ -19,6 +19,7 @@ import '../run_context.dart';
 import '../run_events.dart';
 import '../run_state.dart';
 import 'timed_powerup.dart';
+import '../run_scaled_world.dart';
 
 /// Coin Frenzy (PRD-2 §3.32, §5.31): for 6 s every ring not yet passed is a
 /// **coin ring**, and each ring passed pays **+5 coins on top of the normal
@@ -86,10 +87,11 @@ class CoinFrenzyFeature extends TimedPowerupEffect {
     final b = border;
     if (b != null && !b.isRemoved && !b.isRemoving) return;
     border =
-        ScreenEdgeGlow.coinFrenzy(Vector2(Config.worldWidth, ctx.viewHeight))
+        ScreenEdgeGlow.coinFrenzy(Vector2(ctx.game.viewWidth, ctx.viewHeight))
+          ..position.x = -ctx.game.extraWidth // WP-TAB: the whole screen
           ..priority = CapsuleConfig.glowPriority
           ..edgeWidth = CapsuleConfig.frenzyBorder;
-    ctx.game.world.add(border!);
+    ctx.game.world.addRun(border!);
   }
 
   void _hideBorder() {
@@ -263,7 +265,11 @@ class CoinFrenzyFeature extends TimedPowerupEffect {
       _sparkAcc -= 1;
       ctx.run.particles.spawn(
         shape: ParticleShape.twinkle,
-        x: ctx.s.camX + r.nextDouble() * Config.worldWidth,
+        // WP-TAB: across the whole screen (from the real left edge).
+        x:
+            ctx.s.camX +
+            ctx.s.viewLeft +
+            r.nextDouble() * (Config.worldWidth - ctx.s.viewLeft),
         y:
             h *
             (CapsuleConfig.sparkleTop +

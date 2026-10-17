@@ -266,7 +266,7 @@ class LuckyWheel extends Component {
 
   bool get _onScreen {
     final x = hoop.planeX - c.s.camX;
-    return x > -LuckySpinConfig.tickMargin &&
+    return x > c.s.viewLeft - LuckySpinConfig.tickMargin && // WP-TAB
         x < RunConfig.worldWidth + LuckySpinConfig.tickMargin;
   }
 

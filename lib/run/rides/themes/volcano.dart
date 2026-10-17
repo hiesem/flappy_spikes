@@ -115,7 +115,7 @@ class VolcanoTheme extends RideTheme {
 
   @override
   void paintBackdrop(Canvas c, RideView v, Vector2 cam) {
-    final full = Rect.fromLTWH(0, 0, v.w, v.h);
+    final full = v.full;
     vGradient(c, full, const Color(0xFF2A140D), const Color(0xFF120705));
     final gl = .25 + .1 * math.sin(v.t * 3);
     radialGlow(
@@ -133,7 +133,7 @@ class VolcanoTheme extends RideTheme {
     final crack = strokeOf(const Color(0x73FF6E28), 2);
     for (final k in _rocks) {
       final x = k.x - cam.x, y = k.y - cam.y;
-      if (x < -80 || x > v.w + 80 || y < -80 || y > v.h + 80) continue;
+      if (x < v.left - 80 || x > v.w + 80 || y < -80 || y > v.h + 80) continue;
       final s = k.s;
       c
         ..save()
@@ -154,7 +154,7 @@ class VolcanoTheme extends RideTheme {
     }
     for (final k in _crys) {
       final x = k.x - cam.x, y = k.y - cam.y;
-      if (x < -60 || x > v.w + 60 || y < -60 || y > v.h + 60) continue;
+      if (x < v.left - 60 || x > v.w + 60 || y < -60 || y > v.h + 60) continue;
       final blur = 7 + 3 * math.sin(v.t * 4 + x);
       final glow = Paint()
         ..color = k.col
@@ -178,17 +178,19 @@ class VolcanoTheme extends RideTheme {
     }
     final ly = _lavaY - cam.y;
     if (ly < v.h + 60 && ly > -200) {
-      final top = Path()..moveTo(0, v.h);
+      // WP-TAB: from the real left edge (x0 = 0 on a phone).
+      final x0 = v.left - (-v.left % 10);
+      final top = Path()..moveTo(x0, v.h);
       final crest = Path();
-      for (var x = 0.0; x <= v.w; x += 10) {
+      for (var x = x0; x <= v.w; x += 10) {
         final y = ly + math.sin(x / 30 + v.t * 3) * 6;
         top.lineTo(x, y);
-        x == 0 ? crest.moveTo(x, y) : crest.lineTo(x, y);
+        x == x0 ? crest.moveTo(x, y) : crest.lineTo(x, y);
       }
       top
         ..lineTo(v.w, v.h)
         ..close();
-      for (var x = v.w; x >= 0; x -= 10) {
+      for (var x = v.w; x >= x0; x -= 10) {
         crest.lineTo(x, ly + 6 + math.sin(x / 30 + v.t * 3) * 6);
       }
       crest.close();
@@ -206,7 +208,7 @@ class VolcanoTheme extends RideTheme {
       while (_emberAcc >= 1) {
         _emberAcc--;
         v.screen.spawn(
-          x: v.rand(0, v.w),
+          x: v.rand(v.left, v.w), // WP-TAB
           y: v.h + 10,
           vx: v.rand(-10, 10),
           vy: v.rand(-120, -60),
@@ -241,7 +243,7 @@ class VolcanoTheme extends RideTheme {
   void paintExitBackdrop(Canvas c, RideView v, double et, Offset off) {
     vGradient(
       c,
-      Rect.fromLTWH(0, 0, v.w, v.h),
+      v.full,
       const Color(0xFFFF8A50),
       const Color(0xFFFFD29A),
     );

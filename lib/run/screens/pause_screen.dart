@@ -84,6 +84,8 @@ class PauseScreen extends PositionComponent
   @override
   Future<void> onLoad() async {
     size = Vector2(320, game.viewHeight);
+    // WP-TAB: a 320 pt column centred on a wide screen.
+    position.x = game.extraWidth / 2;
   }
 
   @override
@@ -122,7 +124,7 @@ class PauseScreen extends PositionComponent
     if (hidden) return;
     final a = opacity;
     _p.color = HudConfig.pauseDim.withValues(alpha: HudConfig.pauseDim.a * a);
-    canvas.drawRect(size.toRect(), _p);
+    canvas.drawRect(game.bleedRect(size.y), _p); // WP-TAB: whole screen
     final c = card;
     _p.color = game.stageBackground.withValues(alpha: a);
     canvas.drawRect(c, _p);

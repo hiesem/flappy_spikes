@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import '../config/miss_flash_config.dart';
 import '../hoops/hoop.dart';
 import '../hoops/ring_painter.dart';
+import '../run_scaled_world.dart';
 import 'easing.dart';
 import 'screen_edge_glow.dart';
 import 'shock_ring.dart';
@@ -40,6 +41,7 @@ class MissFlash extends Component {
     Component? glowParent,
     int glowPriority = 0,
     required Vector2 screen,
+    double screenLeft = 0,
   }) {
     final flash = MissFlash(hoop);
     hoop.look.missed = true;
@@ -53,8 +55,14 @@ class MissFlash extends Component {
           ..missWave(Offset(c.x, c.y), opening: hoop.opening, tilt: f.tilt),
       );
     }
+    // WP-TAB: [screenLeft] is the screen's left edge in run coordinates
+    // (−extra on a wide screen); the glow is run content.
     glowParent?.add(
-      ScreenEdgeGlow.miss(screen.clone())..priority = glowPriority,
+      RunScaledWorld.inRunColumn(
+        ScreenEdgeGlow.miss(screen.clone())
+          ..priority = glowPriority
+          ..position.x = screenLeft,
+      ),
     );
     return flash;
   }

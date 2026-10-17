@@ -22,6 +22,7 @@ import '../../../run_layers.dart';
 import '../../hoop.dart';
 import '../ring_arcs.dart';
 import 'saw_kind.dart';
+import '../../../run_scaled_world.dart';
 
 /// The saw rings' run-side parts (PRD-2 §3.18, §5.17):
 ///
@@ -88,7 +89,7 @@ class SawFeature extends RunFeature {
     c.run.themedPose = pose;
     final death = SawDeath(c, d, e.mistake.hoop!, pose);
     _death = death;
-    c.game.world.add(death);
+    c.game.world.addRun(death);
   }
 
   @override
@@ -169,7 +170,7 @@ class SawFeature extends RunFeature {
         continue;
       }
       final sx = h.planeX - c.s.camX;
-      if (sx < -SawConfig.lensRange ||
+      if (sx < c.s.viewLeft - SawConfig.lensRange || // WP-TAB
           sx > RunConfig.worldWidth + SawConfig.lensRange) {
         continue;
       }
@@ -494,7 +495,7 @@ class SawDeath extends Component {
         ..sustain = 0
         ..blackHoleBoom();
       c.sfx(Sfx.sawHoleBoom);
-      c.game.world.add(
+      c.game.world.addRun(
         ShockRing(priority: RunLayer.fx).play(
           contact,
           rx: 8,

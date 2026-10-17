@@ -217,12 +217,16 @@ class SpikeStrip extends BodyComponent<FlappySpikesGame>
         ..translate(-Config.worldWidth / 2, Config.spikeHeight / 2)
         ..scale(1, -1);
     }
+    // WP-TAB: full-bleed on a wide screen (the extra width on both sides,
+    // whichever column the strip is seen from); the tooth phase is kept.
+    final extra = game.extraWidth;
     SpikeTeethPainter.paint(
       canvas,
-      width: Config.worldWidth,
+      left: -extra,
+      width: Config.worldWidth + 2 * extra,
       color: _paintTint,
       reach: squeezedReach, // WP-3g
-      offset: toothOffset,
+      offset: toothOffset + extra,
       opacity: teethOpacity,
       warp: _warp(), // WP-3d
       toothColor: _toothColor, // WP-3g

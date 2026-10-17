@@ -20,6 +20,7 @@ import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
 import '../run_state.dart';
+import '../run_scaled_world.dart';
 
 /// The Piggy Bank (PRD-2 §3.28, §5.27).
 ///
@@ -51,7 +52,7 @@ class PiggyFeature extends RunFeature {
       ..on<PickupEscaped>(_onEscaped)
       ..on<PickupCleared>(_onCleared);
     _bursts = CollectBursts();
-    c.game.world.add(_bursts!);
+    c.game.world.addRun(_bursts!);
   }
 
   void _onCollected(PickupCollected e) {
@@ -71,7 +72,7 @@ class PiggyFeature extends RunFeature {
     final from = at == null
         ? Offset(PiggyConfig.hudPigX, PiggyConfig.hudPigY)
         : _screen(c, at);
-    c.game.world.add(
+    c.game.world.addRun(
       CoinFetch(from: from, to: const Offset(PiggyConfig.hudPigX, PiggyConfig.hudPigY)),
     );
     _check(c, bank);
@@ -200,7 +201,7 @@ class PiggyFeature extends RunFeature {
       pieces: PiggyConfig.smashPieces,
       speed: PiggyConfig.smashSpeed,
     );
-    c.game.world.add(CollectShake(c));
+    c.game.world.addRun(CollectShake(c));
     c.sfx(Sfx.piggySmash);
     c.earn(payout, CoinSource.piggy);
     RunHud.ensureFor(c.run).banners.show(

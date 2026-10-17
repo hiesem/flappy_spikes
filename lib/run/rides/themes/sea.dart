@@ -137,7 +137,7 @@ class SeaTheme extends RideTheme {
     int l(double a, double b) => lerpD(a, b, depth).round();
     final top = Color.fromARGB(255, l(79, 8), l(201, 58), l(242, 104));
     final bot = Color.fromARGB(255, l(14, 4), l(74, 30), l(125, 60));
-    vGradient(c, Rect.fromLTWH(0, 0, v.w, v.h), top, bot);
+    vGradient(c, v.full, top, bot);
     final shaft = fillOf(const Color(0xFFFFFFFF), .08 * (1 - depth * .6));
     for (var i = 0; i < 4; i++) {
       final x = _wrap(i * 110 - cam.x * .2, 440) - 60;
@@ -150,16 +150,18 @@ class SeaTheme extends RideTheme {
     final t = v.t;
     final sy = 20 - cam.y;
     if (sy > -20) {
+      // WP-TAB: from the real left edge (x0 = 0 on a phone).
+      final x0 = v.left - (-v.left % 10);
       final sky = Path()
-        ..moveTo(0, 0)
+        ..moveTo(x0, 0)
         ..lineTo(v.w, 0);
       final line = Path();
-      for (var x = v.w; x >= 0; x -= 10) {
+      for (var x = v.w; x >= x0; x -= 10) {
         sky.lineTo(x, sy + math.sin(x / 25 + t * 4) * 4);
       }
-      for (var x = 0.0; x <= v.w; x += 10) {
+      for (var x = x0; x <= v.w; x += 10) {
         final y = sy + math.sin(x / 25 + t * 4) * 4;
-        x == 0 ? line.moveTo(x, y) : line.lineTo(x, y);
+        x == x0 ? line.moveTo(x, y) : line.lineTo(x, y);
       }
       c
         ..drawPath(sky..close(), fillOf(const Color(0xFFF1F1F1)))
@@ -167,7 +169,10 @@ class SeaTheme extends RideTheme {
     }
     final fy = _floorY - cam.y;
     if (fy < v.h + 40) {
-      c.drawRect(Rect.fromLTWH(0, fy, v.w, v.h), fillOf(const Color(0xFF0B2F4F)));
+      c.drawRect(
+        Rect.fromLTWH(v.left, fy, v.w - v.left, v.h), // WP-TAB
+        fillOf(const Color(0xFF0B2F4F)),
+      );
       final weed = strokeOf(const Color(0xFF2E7D32), 5);
       for (var i = 0; i < 12; i++) {
         final x = _wrap(i * 47 - cam.x, 560) - 120;
@@ -185,7 +190,7 @@ class SeaTheme extends RideTheme {
       }
     }
     final x = _ship.dx - cam.x, y = _ship.dy - cam.y;
-    if (x > -200 && x < v.w + 200 && y > -200 && y < v.h + 200) {
+    if (x > v.left - 200 && x < v.w + 200 && y > -200 && y < v.h + 200) {
       final hull = fillOf(const Color(0xBF141E28));
       c
         ..drawPath(poly([x - 90, y, x + 80, y - 14, x + 64, y + 30, x - 70, y + 40]), hull)
@@ -197,7 +202,9 @@ class SeaTheme extends RideTheme {
         final fx =
             f.x - cam.x + j * 22 + math.sin(t * 2 + f.ph + j) * 6 + (t * 40) % 600 - 300;
         final fyy = f.y - cam.y + (j % 2) * 14 + math.cos(t * 3 + j) * 4;
-        if (fx < -30 || fx > v.w + 30 || fyy < -30 || fyy > v.h + 30) continue;
+        if (fx < v.left - 30 || fx > v.w + 30 || fyy < -30 || fyy > v.h + 30) {
+          continue;
+        }
         c
           ..drawOval(
             Rect.fromCenter(center: Offset(fx, fyy), width: 18, height: 10),
@@ -210,7 +217,9 @@ class SeaTheme extends RideTheme {
     final tent = strokeOf(const Color(0x99FFB4E6), 2);
     for (final j in _jelly) {
       final jx = j.x - cam.x, jy = j.y - cam.y + math.sin(t * 1.5 + j.ph) * 14;
-      if (jx < -40 || jx > v.w + 40 || jy < -60 || jy > v.h + 60) continue;
+      if (jx < v.left - 40 || jx > v.w + 40 || jy < -60 || jy > v.h + 60) {
+        continue;
+      }
       c.drawArc(
         Rect.fromCircle(center: Offset(jx, jy), radius: 16),
         math.pi,
@@ -255,7 +264,7 @@ class SeaTheme extends RideTheme {
 
   @override
   void paintExitBackdrop(Canvas c, RideView v, double et, Offset off) {
-    c.drawRect(Rect.fromLTWH(0, 0, v.w, v.h), fillOf(const Color(0xFFF1F1F1)));
+    c.drawRect(v.full, fillOf(const Color(0xFFF1F1F1)));
     c
       ..save()
       ..translate(-off.dx, -off.dy);

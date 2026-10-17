@@ -238,7 +238,8 @@ class NoAdsPopup extends PositionComponent
   }
 
   @override
-  void render(Canvas canvas) => canvas.drawRect(size.toRect(), _dimPaint);
+  void render(Canvas canvas) =>
+      canvas.drawRect(bleedRectFor(this, size.y), _dimPaint); // WP-TAB
 
   @override
   bool containsLocalPoint(Vector2 point) =>

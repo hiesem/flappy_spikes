@@ -27,6 +27,7 @@ import '../run_events.dart';
 import '../run_feature.dart';
 import '../run_layers.dart';
 import '../run_state.dart';
+import '../run_scaled_world.dart';
 
 /// The egg and the ×2 chick (PRD-2 §3.27, §5.26).
 ///
@@ -61,9 +62,9 @@ class EggFeature extends RunFeature {
       ..on<MistakeSaved>(_onSaved)
       ..on<RunDied>(_onDied);
     _view = EggView(c);
-    c.game.world.add(_view!);
+    c.game.world.addRun(_view!);
     _bursts = CollectBursts();
-    c.game.world.add(_bursts!);
+    c.game.world.addRun(_bursts!);
   }
 
   void _onCollected(PickupCollected e) {

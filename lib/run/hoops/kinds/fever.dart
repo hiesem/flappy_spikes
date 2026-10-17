@@ -145,7 +145,11 @@ class FeverHoopKind extends HoopKind {
     }
     // Audit A2-31: owned by the run (removed when it is disposed).
     c.run
-      ..addWorldFx(FeverFlash(Vector2(RunConfig.worldWidth, c.viewHeight)))
+      ..addWorldFx(
+        // WP-TAB: the whole screen (from the real left edge).
+        FeverFlash(Vector2(c.game.viewWidth, c.viewHeight))
+          ..position.x = c.s.viewLeft,
+      )
       ..addWorldFx(FeverShake(c));
   }
 }
@@ -171,7 +175,7 @@ class FeverRingState extends Component {
     if (hoop.look.missed) return;
     if (hoop.rewardStripped) return; // PRD-2.2 §27.3 no more sparks
     final x = hoop.planeX - c.s.camX;
-    if (x < -60 || x > RunConfig.worldWidth + 60) return;
+    if (x < c.s.viewLeft - 60 || x > RunConfig.worldWidth + 60) return; // WP-TAB
     final ry = RingPainter.ryFor(hoop.opening);
     final d = FeverRingPainter.decorScaleFor(hoop.opening); // PRD-2.2 §25
     final at = hoop.frame().toWorld(Vector2(0, hoop.rings.first));

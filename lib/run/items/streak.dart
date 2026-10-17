@@ -345,6 +345,10 @@ class _TrailComponent extends Component with BirdAttachment {
 
   bool active = false;
 
+  /// Whether the trail was switched on last frame (streak tier / ride, run
+  /// live), regardless of the bird being hidden.
+  bool _wasOn = false;
+
   Vector2? _prevBird;
   double _prevCamX = 0, _prevCamY = 0;
 
@@ -374,15 +378,20 @@ class _TrailComponent extends Component with BirdAttachment {
     final s = c.s;
     final bird = c.game.runBirdPosition;
     final live = !c.run.dying && !c.run.ended;
-    active =
+    final on =
         live &&
         bird != null &&
-        (s.tier >= StreakConfig.trailTier || s.ride != null) &&
+        (s.tier >= StreakConfig.trailTier || s.ride != null);
+    active =
+        on &&
         // region WP-3b — no trail while a ride hides the bird (§3.12)
         !(s.ride?.birdHidden ?? false) &&
         // Audit HIDE: nor while anything else hides the bird.
         birdPresented;
     // endregion WP-3b
+    // Audit A2-1: switched off (streak break, death): no frozen stripe.
+    if (_wasOn && !on) trail.dropPath();
+    _wasOn = on;
     final vx = s.forwardSpeed;
     final heading = _heading(bird, dt);
     trail.update(

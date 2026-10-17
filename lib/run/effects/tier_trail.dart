@@ -103,6 +103,14 @@ class TierTrail {
     _emitter.step(dt);
   }
 
+  /// Audit A2-1: the trail switched off (streak break, death, end of a
+  /// ride): the path history (ribbon / Afterimage / 2.3 path trails) goes —
+  /// it is only moved while emitting and would stay as a frozen stripe —
+  /// while live particles fade out (the shop preview's switch-off,
+  /// [TrailEmitter.resetPath]). Not for a hidden bird (Audit HIDE: the shed
+  /// trail stays).
+  void dropPath() => _emitter.resetPath();
+
   /// Paints the equipped trail (the blocks are painted by the pool).
   void paint(Canvas canvas) {
     if (!usesBlocks) _emitter.paint(canvas, k: k);

@@ -405,9 +405,10 @@ void main() {
     expect(a.releaseOne(), AchievementId.hoops10);
     expect(s.achPending, isEmpty);
     expect(a.releaseOne(), isNull);
-    // A 120-point run (hoops staged first, then the ranks) earns in order.
+    // A run at level FLEDGLING (hoops staged first, then the ranks, WP-L:
+    // they follow the stored level) earns in order.
     a.onHoops(25);
-    a.onRunScore(120);
+    a.onLevel(3);
     expect(s.achPending, ['hoops_25', 'rank_chick', 'rank_fledgling']);
   });
 

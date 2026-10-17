@@ -215,11 +215,11 @@ class AchievementTracker {
 
   /// The run ended (`FlappySpikesGame.endRun`). One transition, one write:
   /// the journal is consumed; a counting run commits its staged rules in
-  /// earning order, then its run-end batch (the versus win, ranks for
-  /// [score], the daily streak for [day]) sorted by catalog index behind
+  /// earning order, then its run-end batch (the versus win, ranks up to the
+  /// stored [level] after the run (WP-L), the daily streak for [day]) sorted by catalog index behind
   /// the older pending, then (PRD-2.3.1 §19.2) unlocks at most one: the
   /// oldest pending.
-  void finishRun({required bool counts, int? score, int? day}) => _tx(() {
+  void finishRun({required bool counts, int? level, int? day}) => _tx(() {
     final staged = _open ? [..._s.journal] : const <String>[];
     _open = false;
     _excluded = false;
@@ -236,7 +236,7 @@ class AchievementTracker {
       for (final op in staged) {
         if (op == AchOp.versusWin) _apply(op);
       }
-      if (score != null) onRunScore(score);
+      if (level != null) onLevel(level);
       if (day != null) onRunDay(day);
     } finally {
       final batch = _batch!..sort((a, b) => a.index.compareTo(b.index));
@@ -287,11 +287,12 @@ class AchievementTracker {
     }
   }
 
-  /// Ranks: every level whose threshold the run's score reached (the run's
-  /// score, never the stored best: start fresh).
-  void onRunScore(int score) => _tx(() {
+  /// Ranks follow the stored level (owner 2026-10-17, WP-L): every rank up
+  /// to [level] (1..10; a rank missed by a non-counting run is caught up by
+  /// the next counting one).
+  void onLevel(int level) => _tx(() {
     for (var l = 0; l < kRankAchievements.length && l < kLevels.length; l++) {
-      if (kLevels[l].threshold <= score) _earn(kRankAchievements[l]);
+      if (kLevels[l].level <= level) _earn(kRankAchievements[l]);
     }
   });
 

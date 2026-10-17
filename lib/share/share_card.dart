@@ -50,7 +50,8 @@ class ShareCardData {
   /// The stored best after the run is counted (Spotlight only).
   final int best;
 
-  /// `levelFor(best)`: the emblem and the card colours (0 = unranked).
+  /// The stored player level (WP-L): the emblem and the card colours
+  /// (0 = unranked).
   final int level;
 
   /// The equipped look (bird, gear, hat are drawn).

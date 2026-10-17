@@ -18,7 +18,7 @@ void main() {
       'S8-03 §21.4 held opponent is revalidated after '
       '${switchUid ? 'account switch' : 'Play Games identity arrives'}',
       () async {
-        SharedPreferences.setMockInitialValues({'bestScore': 120});
+        SharedPreferences.setMockInitialValues({'bestScore': 120, 'playerLevel': 3});
         final storage = GameStorage();
         await storage.load();
         final backend = fixture.FakeBackend(myUid: 'anon');

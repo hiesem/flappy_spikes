@@ -317,14 +317,14 @@ void main() async {
       expect(levels.scroll.offset, greaterThan(0));
       expect(levels.currentRow!.def.name, 'FALCON');
       expect(levels.header.statsText.text, 'BEST 640 · GAMES 34');
-      expect(levels.header.barText.text, '160 TO HAWK');
+      expect(levels.header.barText.text, '800 TO HAWK'); // WP-L one run
       await _tap(game, tester, levels.backButton);
       await _advance(game, 1);
       expect(game.levelUpPopup, isNull);
       expect(rig.events.params('level_up'), hasLength(1));
     },
     prefs: {
-      'bestScore': 640,
+      'bestScore': 640, 'playerLevel': 6,
       'coins': 1250,
       'gamesPlayed': 34,
       'installDay': 1,
@@ -378,7 +378,7 @@ void main() async {
         }
       },
       prefs: {
-        'bestScore': 6000,
+        'bestScore': 6000, 'playerLevel': 10,
         'lastScore': 1234,
         'claimedLevels': _claimed(10),
       },
@@ -721,7 +721,7 @@ void main() async {
       expect(game.coinPill.shownBalance, 101000);
       expect(game.shopScreen!.banner.owned, isTrue);
     },
-    prefs: {'bestScore': 6000, 'claimedLevels': _claimed(10)},
+    prefs: {'bestScore': 6000, 'playerLevel': 10, 'claimedLevels': _claimed(10)},
   );
 
   _defect(
@@ -753,7 +753,7 @@ void main() async {
       expect(game.levelUpPopup, isNull, reason: 'EGG paid once');
       expect(game.coinPill.shownBalance, 1025);
     },
-    prefs: const {'bestScore': 25},
+    prefs: const {'bestScore': 25, 'playerLevel': 1},
   );
 
   _defect('S2-30', 'LEVEL UP emblem must freeze under OS reduce motion', (
@@ -775,7 +775,7 @@ void main() async {
       phase,
       reason: 'flags, stars, rays and ring must be static',
     );
-  }, prefs: {'bestScore': 5000, 'claimedLevels': _claimed(9)});
+  }, prefs: {'bestScore': 5000, 'playerLevel': 10, 'claimedLevels': _claimed(9)});
 
   _defect('S2-31', 'LEVEL UP home upgrade pop must follow the coin count-up', (
     game,
@@ -808,7 +808,7 @@ void main() async {
     expect(popAt, greaterThanOrEqualTo(countedAt));
     expect(game.homeScreen!.emblem.level, 1);
     expect(game.homeScreen!.popping, isFalse);
-  }, prefs: const {'bestScore': 25});
+  }, prefs: const {'bestScore': 25, 'playerLevel': 1});
 
   for (final mode in [FakeIapMode.cancel, FakeIapMode.fail]) {
     _defect(
@@ -895,7 +895,7 @@ void main() async {
       expect(game.purchaseResultPopup, isNull);
       expect(game.queuedPopups, 0);
     },
-    prefs: const {'bestScore': 25},
+    prefs: const {'bestScore': 25, 'playerLevel': 1},
   );
 
   group('S2-33', () {

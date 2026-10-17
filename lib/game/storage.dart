@@ -50,6 +50,7 @@ class GameStorage {
   static const String _freeCoinsLastMsKey = 'freeCoinsLastMs';
   static const String _debugDayOffsetKey = 'debugDayOffset';
   static const String _claimedLevelsKey = 'claimedLevels';
+  static const String _playerLevelKey = 'playerLevel';
   static const String _rumbleKey = 'rumble';
   static const String _lastScoreKey = 'lastScore';
   static const String _grantedPurchasesKey = 'grantedPurchases';
@@ -190,6 +191,11 @@ class GameStorage {
 
   /// PRD-home-v3 §11: levels whose one-time reward was paid.
   Set<int> claimedLevels = {};
+
+  /// Owner 2026-10-17 (WP-L): the stored player level (0 = unranked,
+  /// 1..10). It is no longer derived from the best score: a run whose score
+  /// reaches the next level's threshold raises it by exactly one.
+  int playerLevel = 0;
 
   /// PRD-2 §3.33: the RUMBLE switch (on by default).
   bool rumble = true;
@@ -423,6 +429,7 @@ class GameStorage {
         .map(int.tryParse)
         .whereType<int>()
         .toSet();
+    playerLevel = prefs.getInt(_playerLevelKey) ?? 0;
     rumble = prefs.getBool(_rumbleKey) ?? true;
     lastScore = prefs.getInt(_lastScoreKey);
     grantedPurchases = _capGranted(
@@ -1080,6 +1087,13 @@ class GameStorage {
     await prefs.setStringList(_claimedLevelsKey, _levelList(claimedLevels));
   }
 
+  /// WP-L the stored player level (see [playerLevel]).
+  Future<void> savePlayerLevel(int value) async {
+    playerLevel = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(_playerLevelKey, value);
+  }
+
   List<String> _levelList(Set<int> levels) =>
       (levels.toList()..sort()).map((l) => '$l').toList();
 
@@ -1147,8 +1161,9 @@ class GameStorage {
   }
 
   /// Debug-panel reset: clears the menu economy/skin/powerup/popup state but
-  /// keeps progression, sound / rumble settings and the install day. The
-  /// claimed level rewards are cleared (they pay again on the next home).
+  /// keeps the best score, sound / rumble settings and the install day. The
+  /// stored level goes back to 0 (unranked) and the claimed level rewards
+  /// are cleared (they pay again when the levels are reached again).
   Future<void> resetMenuState() async {
     await saveCoins(0);
     await saveOwnedItems({});
@@ -1168,6 +1183,7 @@ class GameStorage {
     await saveFreeCoinsCount(0);
     await saveFreeCoinsLastMs(0);
     await saveClaimedLevels({});
+    await savePlayerLevel(0); // WP-L
     await resetAchievements(); // PRD-2.3.1 §12.3
   }
 

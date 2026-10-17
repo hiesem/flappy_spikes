@@ -56,7 +56,7 @@ void main() {
   late FirebaseVersusService versus;
 
   Future<void> build({Map<String, Object> prefs = const {}}) async {
-    SharedPreferences.setMockInitialValues({'bestScore': 120, ...prefs});
+    SharedPreferences.setMockInitialValues({'bestScore': 120, 'playerLevel': 3, ...prefs});
     storage = GameStorage();
     await storage.load();
     backend = fixture.FakeBackend(myUid: 'anon');

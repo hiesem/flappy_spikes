@@ -387,7 +387,7 @@ void main() {
 
   v4Journey(
     'v4: LEVEL UP -> queued upsell -> purchase failure is serialized',
-    prefs: (rig) => {..._recent(rig), 'bestScore': 25, 'lastScore': 25},
+    prefs: (rig) => {..._recent(rig), 'bestScore': 25, 'playerLevel': 1, 'lastScore': 25},
     (game, rig, tester) async {
       await run(game, .5);
       expect(game.levelUpPopup, isNotNull);
@@ -594,7 +594,7 @@ void main() {
   group('S1-70', () {
     v4Journey(
       'queued session arrivals must coalesce and recheck the show window',
-      prefs: (rig) => {..._recent(rig), 'bestScore': 25, 'lastScore': 25},
+      prefs: (rig) => {..._recent(rig), 'bestScore': 25, 'playerLevel': 1, 'lastScore': 25},
       (game, rig, tester) async {
         await run(game, .5);
         expect(game.levelUpPopup, isNotNull);
@@ -627,7 +627,7 @@ void main() {
 
     v4Journey(
       'a queued offer rechecks its four-hour window after a clock correction',
-      prefs: (rig) => {..._recent(rig), 'bestScore': 25, 'lastScore': 25},
+      prefs: (rig) => {..._recent(rig), 'bestScore': 25, 'playerLevel': 1, 'lastScore': 25},
       (game, rig, tester) async {
         await run(game, .5);
         expect(game.levelUpPopup, isNotNull);

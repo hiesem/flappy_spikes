@@ -1012,7 +1012,7 @@ void main() {
     E2EHooks.autopilot = true;
     E2EHooks.skipVersusIntroWait = false;
     // Level 2 (best 50..99): any seeded run is found by the §3 search.
-    _freshPrefs({'bestScore': 60, 'homeMode': 'versus'});
+    _freshPrefs({'bestScore': 60, 'playerLevel': 2, 'homeMode': 'versus'});
     final g = await _launch(tester);
     expect(g.homeMode, HomeMode.versus);
     final found = await _waitFor(

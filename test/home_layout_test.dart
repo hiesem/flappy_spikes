@@ -114,7 +114,7 @@ void main() async {
       () => createTestGame(
         const {
           'coins': 1250,
-          'bestScore': 640,
+          'bestScore': 640, 'playerLevel': 6,
           'lastScore': 12,
           'gamesPlayed': 34,
           'claimedLevels': ['1', '2', '3', '4', '5', '6'],
@@ -326,7 +326,7 @@ void main() async {
   FlameTester<FlappySpikesGame>(
     () => createTestGame(
       {
-        'bestScore': 6000,
+        'bestScore': 6000, 'playerLevel': 10,
         'lastScore': 12345,
         'claimedLevels': [for (var l = 1; l <= 10; l++) '$l'],
       },

@@ -326,7 +326,12 @@ class PlayerFields {
     required this.look,
     required this.uploadsDay,
     required this.uploadsCount,
+    this.level,
   });
+
+  /// WP-L the stored player level for `players/{uid}.level` (null: the
+  /// pool level of the best, [levelFor]).
+  final int? level;
 
   final String name;
   final String avatar;
@@ -705,7 +710,7 @@ class FirebaseVersusService implements VersusService {
           : (s.versusNickname ?? ''),
       avatarUrl: url,
       avatarImage: icon.isNotEmpty ? AvatarImages.dataUri(icon) : url,
-      level: levelFor(s.bestScore),
+      level: s.playerLevel.clamp(0, kMaxLevel), // WP-L the stored level
     );
   }
 
@@ -825,6 +830,8 @@ class FirebaseVersusService implements VersusService {
     final uid = _safe(() => backend.uid) ?? '';
     final best = storage.bestScore;
     final pool = _pool.map(PoolCandidate.new);
+    // WP-L matching stays on the pool level of the best ([levelFor]): the
+    // server files every run by it, so like meets like.
     if (freshOnly &&
         !hasFreshOpponent(pool, myUid: uid, myPg: _pg, met: _met)) {
       return;
@@ -860,6 +867,8 @@ class FirebaseVersusService implements VersusService {
     _searching = done.future;
     _loading = true;
     final gen = _searchGen;
+    // WP-L the pool level of the best (the server's shards), not the
+    // stored player level.
     final level = levelFor(storage.bestScore);
     _search = VersusSearchInfo(state: VersusSearchState.running, level: level);
     var startedAt = _clock();
@@ -1023,6 +1032,7 @@ class FirebaseVersusService implements VersusService {
               look: q.entry.look,
               uploadsDay: queue.today,
               uploadsCount: queue.uploadsToday.clamp(0, 1000),
+              level: p.level,
             ),
           ),
         );
@@ -1069,7 +1079,8 @@ class FirebaseVersusService implements VersusService {
     }
     // Local reset (WP-4c storage helper, ARCH §5): the nickname is created
     // again, the queue and the counter are emptied; the session's pool and
-    // held opponent go too. Coins, skins and levels stay.
+    // held opponent go too. Coins and skins stay; the stored level is reset
+    // by the game (`confirmDeleteMyData`, WP-L).
     try {
       await storage.resetVersusData();
     } catch (e) {

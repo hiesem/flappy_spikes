@@ -281,6 +281,7 @@ void main() async {
       'installDay': _Clock().day - 1,
       'firstSessionDone': true,
       'bestScore': 15,
+      'playerLevel': 1, // WP-L EGG owed at launch
     },
     (game, events, clock, ads) async {
       // Launch: the upsell first, then LEVEL UP after it.

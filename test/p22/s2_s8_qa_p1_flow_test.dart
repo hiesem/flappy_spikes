@@ -86,7 +86,7 @@ void main() {
       versus: versus,
       prefs: {
         'homeMode': 'freeFly',
-        'bestScore': 900,
+        'bestScore': 900, 'playerLevel': 7,
         'claimedLevels': ['1', '2', '3', '4', '5', '6', '7', '8'],
       },
     );

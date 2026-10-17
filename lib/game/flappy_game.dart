@@ -3660,6 +3660,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       final data = shareContent.invite(
         best: storage.bestScore,
         lastScore: storage.lastScore,
+        level: menu.levels.level,
         look: menu.items.look,
         name: await shareName(),
       );
@@ -3939,14 +3940,24 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     // endregion P23-14
     storage.incrementGamesPlayed();
-    // region P231-E — PRD-2.3.1 §12.2 ranks (this run's score, never the
-    // stored best) and the daily streak, for a counting run only
+    // region WP-L — owner 2026-10-17: the stored level steps up by exactly
+    // one when this run's score reaches the next threshold (the cache is
+    // updated at once; the write follows).
+    unawaited(menu.levels.recordRun(score));
+    _resultsLevels = (previousLevel, menu.levels.level);
+    // endregion WP-L
+    // region P231-E — PRD-2.3.1 §12.2 ranks (WP-L: they follow the stored
+    // level) and the daily streak, for a counting run only
     final achRun = _run;
     final counts = achRun != null && achRun.countsForAchievements;
     // P1E-03: the run's staged unlocks commit only if it still counts;
     // PRD-2.3.1 §19.2 a counting run then unlocks at most one (the oldest
     // pending), after its ranks and daily streak are earned.
-    achievements.finishRun(counts: counts, score: score, day: storage.today);
+    achievements.finishRun(
+      counts: counts,
+      level: menu.levels.level,
+      day: storage.today,
+    );
     // endregion P231-E
     // PRD-2.3 §18.3 (S8-09): the run's playtime is saved at run end; §18.5
     // (S8-10): a grace that ended with this finished run loads now.
@@ -4025,6 +4036,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _syncBannerStripColor();
   }
 
+  /// WP-L the stored level before / after the last ended run (the results
+  /// page's level stage); null before the first run end.
+  (int, int)? _resultsLevels;
+
   /// The results page while it is up (tests, keyboard).
   ResultsScreen? get resultsScreen => _results;
 
@@ -4035,7 +4050,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (_results != null || state != GameState.results) return;
     final page = ResultsScreen(
       summary: s,
-      model: ResultsModel.of(s, pending: menu.levels.pendingLevelUp),
+      model: ResultsModel.of(
+        s,
+        pending: menu.levels.pendingLevelUp,
+        levelBefore: _resultsLevels?.$1,
+        levelAfter: _resultsLevels?.$2,
+      ),
     );
     _results = page;
     world.add(page);
@@ -4245,6 +4265,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       unawaited(sound.setMusicVolume(storage.musicVolume));
       // PRD-2.2 §2.2: the mode goes back to VERSUS.
       await storage.resetHomeMode();
+      // Owner 2026-10-17 (WP-L): the stored level goes back to unranked
+      // (the claimed rewards stay claimed: a level reached again never
+      // pays twice).
+      await menu.levels.reset();
       _home?.syncMode(animate: false);
       _settingsPanel?.setMusicVolume(sound.musicVolume);
     }
@@ -4424,6 +4448,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       final data = shareContent.spotlight(
         score: points,
         best: storage.bestScore,
+        level: menu.levels.level,
         look: menu.items.look,
         name: await shareName(),
       );

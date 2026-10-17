@@ -36,14 +36,13 @@ class PendingLevelUp {
   String toString() => 'PendingLevelUp($fromLevel -> $toLevel, +$reward)';
 }
 
-/// Levels derived from [GameStorage.bestScore] plus the one-time rewards
-/// (`claimedLevels`), shaped like [ItemStore]. The level itself is never
-/// stored (§11) and never lost.
+/// The stored player level (owner 2026-10-17, WP-L:
+/// [GameStorage.playerLevel], one step per run, see [recordRun]) plus the
+/// one-time rewards (`claimedLevels`), shaped like [ItemStore].
 ///
-/// [pendingLevelUp] covers both a fresh level-up (a run crossed one or
-/// more thresholds: one popup for the highest, rewards added) and the
-/// catch-up for players who update with a best already past some levels
-/// (claimed set empty: one popup paying everything reached).
+/// [pendingLevelUp] covers a fresh level-up (one step: one popup, its
+/// reward) and the catch-up of every reached-but-unclaimed level <= the
+/// stored one (an app kill before CLAIM, a debug reset of the claims).
 class LevelProgress extends ChangeNotifier {
   LevelProgress(this._storage, this._wallet);
 
@@ -52,14 +51,34 @@ class LevelProgress extends ChangeNotifier {
 
   int get best => _storage.bestScore;
 
-  /// Current level (0 = unranked).
-  int get level => levelFor(best);
+  /// Current level (0 = unranked), the stored one.
+  int get level => _storage.playerLevel.clamp(0, kMaxLevel);
 
   /// Current rank, null while unranked.
   LevelDef? get current => levelDef(level);
 
   /// The next rank to reach, null at LEGEND.
   LevelDef? get next => nextLevel(level);
+
+  /// A run of [score] ended: the level steps up by one when the score
+  /// reaches the next threshold ([levelAfterRun]); the new level is stored
+  /// (its cache at once, before the first await). Returns the level after
+  /// the run.
+  Future<int> recordRun(int score) async {
+    final before = level;
+    final after = levelAfterRun(before, score);
+    if (after == before) return before;
+    final saved = _storage.savePlayerLevel(after);
+    notifyListeners();
+    await saved;
+    return after;
+  }
+
+  /// "Delete my data" / debug resets: back to unranked.
+  Future<void> reset() async {
+    await _storage.savePlayerLevel(0);
+    notifyListeners();
+  }
 
   bool isClaimed(int level) => _storage.claimedLevels.contains(level);
 
@@ -148,13 +167,17 @@ class LevelProgress extends ChangeNotifier {
     return due > 0 ? due : 0;
   }
 
-  /// Debug panel "LEVEL UP": raises the best to the next threshold (a
-  /// pending level-up on the next home). At LEGEND it un-claims the top
-  /// level instead so the popup can be shown again.
+  /// Debug panel "LEVEL UP": raises the stored level by one (a pending
+  /// level-up on the next home; the best rises to its threshold when below
+  /// it). At LEGEND it un-claims the top level instead so the popup can be
+  /// shown again.
   Future<void> debugForceLevelUp() async {
     final up = next;
     if (up != null) {
-      await _storage.saveBestScore(up.threshold);
+      await _storage.savePlayerLevel(up.level);
+      if (_storage.bestScore < up.threshold) {
+        await _storage.saveBestScore(up.threshold);
+      }
     } else {
       await _storage.saveClaimedLevels(
         _storage.claimedLevels.difference({kMaxLevel}),

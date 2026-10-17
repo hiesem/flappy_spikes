@@ -192,11 +192,10 @@ class LevelsHeader extends PositionComponent {
     await super.onLoad();
     final def = levelDef(level);
     final next = nextLevel(level);
-    final lo = def?.threshold ?? 0;
-    final hi = next?.threshold ?? lo;
-    progress = next == null
-        ? 1
-        : ((best - lo) / (hi - lo)).clamp(0.0, 1.0).toDouble();
+    // Owner 2026-10-17 (WP-L): the level is stored and steps up one per
+    // run; the next one needs its threshold in a single run, so the bar is
+    // empty below LEGEND and the label names that score.
+    progress = next == null ? 1 : 0;
 
     const nameLine = Config.levelsHeaderNameFontSize * kNormalLineHeight;
     const statsLine = Config.levelsHeaderStatsFontSize * kNormalLineHeight;
@@ -220,7 +219,7 @@ class LevelsHeader extends PositionComponent {
     barText = MenuText(
       next == null
           ? 'MAX LEVEL'
-          : '${formatCoins(next.threshold - best)} TO ${next.name}',
+          : '${formatCoins(next.threshold)} TO ${next.name}',
       fontSize: Config.levelsBarFontSize,
       color: Config.menuPlum,
       letterSpacingEm: 0.1,

@@ -26,7 +26,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test('§3 START during an in-flight search still allows a fresh search '
       'on the next Home visit', () async {
-    SharedPreferences.setMockInitialValues({'bestScore': 120});
+    SharedPreferences.setMockInitialValues({'bestScore': 120, 'playerLevel': 3});
     final storage = GameStorage();
     await storage.load();
     final backend = _PendingBackend();

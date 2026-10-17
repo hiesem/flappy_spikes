@@ -99,7 +99,7 @@ void main() {
     FlameTester<FlappySpikesGame>(
       () => createRunTestGame(
         worldHeight: h,
-        prefs: const {'bestScore': 700},
+        prefs: const {'bestScore': 700, 'playerLevel': 6},
         versus: FakeVersusService(pool: [rival()]),
       ),
       gameSize: Vector2(320, h),

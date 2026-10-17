@@ -82,7 +82,7 @@ void main() async {
 
   levelsTest(
     'emblem tap: bird hops, LEVELS opens 0.17 s later, back / Esc home',
-    prefs: {'bestScore': 640, 'gamesPlayed': 34, 'claimedLevels': _claimed(6)},
+    prefs: {'bestScore': 640, 'playerLevel': 6, 'gamesPlayed': 34, 'claimedLevels': _claimed(6)},
     (game, events, t) async {
       final sounds = <Sfx>[];
       game.sound.onPlay = sounds.add;
@@ -137,7 +137,7 @@ void main() async {
 
   levelsTest(
     'LEVELS: header, row states, opens scrolled to the current row',
-    prefs: {'bestScore': 640, 'gamesPlayed': 34, 'claimedLevels': _claimed(6)},
+    prefs: {'bestScore': 640, 'playerLevel': 6, 'gamesPlayed': 34, 'claimedLevels': _claimed(6)},
     (game, events, t) async {
       game.openLevels();
       await flushAndMount(game);
@@ -146,8 +146,9 @@ void main() async {
       final header = screen.header;
       expect(header.nameText.text, 'FALCON');
       expect(header.statsText.text, 'BEST 640 · GAMES 34');
-      expect(header.barText.text, '160 TO HAWK');
-      expect(header.progress, closeTo(40 / 200, 1e-9));
+      // WP-L HAWK needs 800 in a single run: an empty bar.
+      expect(header.barText.text, '800 TO HAWK');
+      expect(header.progress, 0);
       expect(
         header.position,
         Config.levelsHeaderRect.topLeft.toVector2(),
@@ -202,7 +203,7 @@ void main() async {
       final screen = game.levelsScreen!;
       expect(screen.currentRow, isNull);
       expect(screen.header.nameText.text, 'UNRANKED');
-      expect(screen.header.barText.text, '21 TO EGG');
+      expect(screen.header.barText.text, '25 TO EGG');
       expect(screen.scroll.offset, 0);
       expect(
         screen.rows.every((r) => r.state == LevelRowState.locked),
@@ -213,7 +214,7 @@ void main() async {
 
   levelsTest(
     'LEVELS at LEGEND: MAX LEVEL, scrolled to the last row',
-    prefs: {'bestScore': 6000, 'claimedLevels': _claimed(10)},
+    prefs: {'bestScore': 6000, 'playerLevel': 10, 'claimedLevels': _claimed(10)},
     height: 568,
     (game, events, t) async {
       game.openLevels();
@@ -230,7 +231,7 @@ void main() async {
 
   levelsTest(
     'catch-up on the first home: one popup paying every reached level',
-    prefs: {'bestScore': 640, 'coins': 100},
+    prefs: {'bestScore': 640, 'playerLevel': 6, 'coins': 100},
     (game, events, t) async {
       final sounds = <Sfx>[];
       game.sound.onPlay = sounds.add;
@@ -296,7 +297,7 @@ void main() async {
 
   levelsTest(
     '✕ also claims (the reward is never lost); Esc too',
-    prefs: {'bestScore': 55, 'coins': 0},
+    prefs: {'bestScore': 55, 'playerLevel': 2, 'coins': 0},
     (game, events, t) async {
       stepGame(game, 0.5);
       await flushAndMount(game);
@@ -325,9 +326,10 @@ void main() async {
   );
 
   levelsTest(
-    'a run crossing several levels: one popup for the highest, summed',
+    'WP-L a run past several thresholds steps up ONE level (one popup, '
+    'that level\'s reward)',
     prefs: {
-      'bestScore': 30,
+      'bestScore': 30, 'playerLevel': 1,
       'coins': 0,
       'claimedLevels': _claimed(1),
     },
@@ -335,7 +337,7 @@ void main() async {
       stepGame(game, 1);
       expect(game.levelUpPopup, isNull, reason: 'EGG already claimed');
       await game.startRun();
-      game.score = 120; // CHICK + FLEDGLING in one run
+      game.score = 120; // past CHICK and FLEDGLING: CHICK only
       killRun(game);
       await _flush(game);
       expect(game.storage.lastScore, 120);
@@ -351,24 +353,25 @@ void main() async {
       await flushAndMount(game);
       final popup = game.levelUpPopup!;
       expect(popup.pending.fromLevel, 1);
-      expect(popup.pending.toLevel, 3);
-      expect(popup.pending.reward, 50 + 100);
-      expect(popup.nameText.text, 'FLEDGLING');
+      expect(popup.pending.toLevel, 2);
+      expect(popup.pending.reward, 50);
+      expect(popup.nameText.text, 'CHICK');
       popup.claimButton.onPressed();
       await _flush(game);
-      // +150 rewards (PRD-2 §3.2: run coins come per hoop passed, and this
+      // +50 reward (PRD-2 §3.2: run coins come per hoop passed, and this
       // run's score was set directly, so it passed none).
-      expect(game.menu.wallet.balance, 150);
+      expect(game.menu.wallet.balance, 50);
+      expect(game.storage.playerLevel, 2);
       expect(game.homeScreen!.emblem.level, 1, reason: 'until the pop');
       stepGame(game, 4);
       await flushAndMount(game);
-      expect(game.homeScreen!.emblem.level, 3);
+      expect(game.homeScreen!.emblem.level, 2);
     },
   );
 
   levelsTest(
     'no double popups: the no-ads launch popup goes first',
-    prefs: {'bestScore': 30, 'installDay': 1},
+    prefs: {'bestScore': 30, 'playerLevel': 1, 'installDay': 1},
     (game, events, t) async {
       expect(game.noAdsPopup, isNotNull);
       stepGame(game, 2);
@@ -398,7 +401,7 @@ void main() async {
 
   levelsTest(
     'no popup while LEVELS / Shop is up; it shows back on home',
-    prefs: {'bestScore': 30},
+    prefs: {'bestScore': 30, 'playerLevel': 1},
     (game, events, t) async {
       game.openShop();
       await flushAndMount(game);
@@ -414,7 +417,7 @@ void main() async {
 
   levelsTest(
     'popup at LEGEND: highest-level line, 140 confetti',
-    prefs: {'bestScore': 5000, 'claimedLevels': _claimed(9)},
+    prefs: {'bestScore': 5000, 'playerLevel': 10, 'claimedLevels': _claimed(9)},
     (game, events, t) async {
       final sounds = <Sfx>[];
       game.sound.onPlay = sounds.add;
@@ -433,7 +436,7 @@ void main() async {
 
   levelsTest(
     'reduce motion: emblem static (no sweep, t frozen), no popup confetti',
-    prefs: {'bestScore': 900, 'claimedLevels': _claimed(6)},
+    prefs: {'bestScore': 900, 'playerLevel': 7, 'claimedLevels': _claimed(6)},
     (game, events, t) async {
       game.reduceMotionOverride = true;
       final home = game.homeScreen!;
@@ -460,7 +463,7 @@ void main() async {
 
   levelsTest(
     'the emblem idle pauses under popups',
-    prefs: {'bestScore': 30, 'claimedLevels': _claimed(1), 'installDay': 1},
+    prefs: {'bestScore': 30, 'playerLevel': 1, 'claimedLevels': _claimed(1), 'installDay': 1},
     (game, events, t) async {
       expect(game.noAdsPopup, isNotNull);
       final home = game.homeScreen!;

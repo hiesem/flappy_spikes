@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import '../game/config.dart';
-import '../levels/levels.dart';
 import '../skins/look.dart';
 import 'share_card.dart';
 
@@ -20,6 +19,7 @@ class ShareContent {
   ShareCardData spotlight({
     required int score,
     required int best,
+    required int level,
     required Look look,
     required String name,
   }) {
@@ -29,7 +29,7 @@ class ShareContent {
       kind: ShareCardKind.spotlight,
       score: score,
       best: best,
-      level: levelFor(best),
+      level: level,
       look: look,
       name: name,
       banner: Config.shareBanners[bannerIndex],
@@ -65,9 +65,16 @@ class ShareContent {
   ShareCardData invite({
     required int best,
     required int? lastScore,
+    required int level,
     required Look look,
     required String name,
   }) => best > 0
-      ? spotlight(score: lastScore ?? best, best: best, look: look, name: name)
+      ? spotlight(
+          score: lastScore ?? best,
+          best: best,
+          level: level,
+          look: look,
+          name: name,
+        )
       : newcomer(look: look, name: name);
 }

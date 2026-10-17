@@ -60,7 +60,7 @@ void main() {
   var now = DateTime.utc(2026, 10, 12, 12);
 
   Future<void> build({
-    Map<String, Object> prefs = const {'bestScore': 120}, // level 3
+    Map<String, Object> prefs = const {'bestScore': 120, 'playerLevel': 3}, // level 3
     Duration searchLimit = VersusConfig.searchLimit,
   }) async {
     now = DateTime.utc(2026, 10, 12, 12);

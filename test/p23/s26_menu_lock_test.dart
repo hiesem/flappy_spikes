@@ -193,7 +193,7 @@ void main() async {
   );
 
   tester({
-    'bestScore': 25,
+    'bestScore': 25, 'playerLevel': 1,
     'claimedLevels': ['1'],
   }).testGameWidget(
     '§26.4 unlocked: a best of 25 opens both screens with no overlay and the '

@@ -37,22 +37,23 @@ const List<String> kResultsImages = [
   'menu/invite.png',
 ];
 
-/// The level bar of the results page at one best score (§5.10): the level,
-/// the fill from the level's threshold to the next one and the label under
-/// the bar ("185 TO SPIKE ACE", "MAX LEVEL").
+/// The level bar of the results page (§5.10; owner 2026-10-17, WP-L: the
+/// level is stored and steps up one per run): the level, the fill of a
+/// single run's [score] toward the next threshold and the label under the
+/// bar ("70 TO FLEDGLING", "MAX LEVEL").
 class LevelBar {
   const LevelBar(this.level, this.fraction, this.label);
 
-  /// The progress toward the next level at [best] (PRD-home-v3 §4.1).
-  factory LevelBar.at(int best) {
-    final level = levelFor(best);
+  /// The bar at [level] for a run of [score] (0 = no run counted yet: an
+  /// empty bar and the full threshold to reach).
+  factory LevelBar.at(int level, {int score = 0}) {
     final next = nextLevel(level);
     if (next == null) return LevelBar(level, 1, 'MAX LEVEL');
-    final lo = levelDef(level)?.threshold ?? 0;
+    final left = math.max(0, next.threshold - score);
     return LevelBar(
       level,
-      ((best - lo) / (next.threshold - lo)).clamp(0.0, 1.0),
-      '${formatCoins(next.threshold - best)} TO ${next.name}',
+      (score / next.threshold).clamp(0.0, 1.0),
+      '${formatCoins(left)} TO ${next.name}',
     );
   }
 
@@ -75,6 +76,8 @@ class ResultsModel {
     required this.bestAfter,
     required this.reward,
     this.levelReward = 0,
+    this.levelBefore = 0,
+    this.levelAfter = 0,
   });
 
   /// The page for [s]: YOUR REWARD is the run's coin total (`s.coins` =
@@ -82,14 +85,22 @@ class ResultsModel {
   /// the win / draw bonus; the balloon bonus is paid by the bonus screen
   /// straight into the wallet and is not part of it, Q36). [pending] is the
   /// owed level reward (rewards of every reached-but-unclaimed level).
-  factory ResultsModel.of(RunSummary s, {PendingLevelUp? pending}) =>
-      ResultsModel(
-        score: s.score,
-        bestBefore: s.bestBefore,
-        bestAfter: s.bestAfter,
-        reward: s.coins,
-        levelReward: pending?.reward ?? 0,
-      );
+  /// [levelBefore] / [levelAfter] are the stored level around the run
+  /// (WP-L; `FlappySpikesGame.endRun`).
+  factory ResultsModel.of(
+    RunSummary s, {
+    PendingLevelUp? pending,
+    int? levelBefore,
+    int? levelAfter,
+  }) => ResultsModel(
+    score: s.score,
+    bestBefore: s.bestBefore,
+    bestAfter: s.bestAfter,
+    reward: s.coins,
+    levelReward: pending?.reward ?? 0,
+    levelBefore: levelBefore ?? 0,
+    levelAfter: levelAfter ?? levelBefore ?? 0,
+  );
 
   final int score;
   final int bestBefore;
@@ -101,16 +112,15 @@ class ResultsModel {
   /// The level reward(s) claimed on this page (all reached levels added).
   final int levelReward;
 
-  /// The level shown at 0 s (PRD-home-v3 §4.1: read from the best before).
-  int get levelBefore => levelFor(bestBefore);
+  /// The stored level shown at 0 s (before this run, WP-L).
+  final int levelBefore;
 
-  /// The level after this run's score is counted.
-  int get levelAfter => levelFor(bestAfter);
+  /// The stored level after this run (at most one step up, WP-L).
+  final int levelAfter;
 
   bool get newBest => bestAfter > bestBefore;
 
-  /// This run reached one or more new levels (one celebration for the
-  /// highest).
+  /// This run reached the next level (one step, WP-L).
   bool get levelUp => levelAfter > levelBefore;
 
   /// The page shows CLAIM (a level up with a reward still owed).
@@ -352,7 +362,7 @@ class ResultsScreen extends PositionComponent
       ..position = transform.$1.clone()
       ..scale = transform.$2.clone();
 
-    final before = LevelBar.at(model.bestBefore);
+    final before = LevelBar.at(model.levelBefore);
 
     // --- card ------------------------------------------------------------
     final card = ResultsCard();
@@ -582,7 +592,13 @@ class ResultsScreen extends PositionComponent
         ResultsConfig.countDuration,
       );
     });
-    if (!model.newBest) return;
+    // WP-L the bar is this run's progress toward the next level: it fills
+    // after every run (a level up no longer needs a new best).
+    if (model.newBest) _planNewBest();
+    _planBar();
+  }
+
+  void _planNewBest() {
     _at(ResultsConfig.newBestAt, () {
       final sticker = GoldSticker.newBest(
         text: 'NEW BEST · ${model.score}',
@@ -596,7 +612,10 @@ class ResultsScreen extends PositionComponent
       sticker.position.y = ResultsConfig.newBestTop + sticker.box.height / 2;
       game.sound.play(Sfx.perfect1);
     });
-    final after = LevelBar.at(model.bestAfter);
+  }
+
+  void _planBar() {
+    final after = LevelBar.at(model.levelAfter, score: model.score);
     const b = ResultsConfig.barAt;
     if (!model.levelUp) {
       _at(b, () {
@@ -686,7 +705,8 @@ class ResultsScreen extends PositionComponent
   /// After the claim: the bar comes back empty and fills to the progress in
   /// the new level.
   void _barBack() {
-    final after = LevelBar.at(model.bestAfter);
+    // WP-L the run is spent on the step: the new level's bar starts empty.
+    final after = LevelBar.at(model.levelAfter);
     bar.fraction = 0;
     barLabel.text = after.label;
     _fadeBar(0, 1, ResultsConfig.barBackFade);

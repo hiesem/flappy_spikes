@@ -326,7 +326,7 @@ void main() {
       'S6-22 reproduce kill at the real claim persistence boundary',
       () async {
         SharedPreferences.setMockInitialValues({
-          'bestScore': 25,
+          'bestScore': 25, 'playerLevel': 1,
           'unclaimedLevelReward': 25,
           'coins': 100,
         });

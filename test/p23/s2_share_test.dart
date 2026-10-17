@@ -10,7 +10,6 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
-import 'package:flappy_spikes/levels/levels.dart';
 import 'package:flappy_spikes/services/share_sheet.dart';
 import 'package:flappy_spikes/services/versus_service.dart';
 import 'package:flappy_spikes/share/share_card.dart';
@@ -39,6 +38,7 @@ ShareCardData sampleData() =>
     ShareContent(Random(1)).spotlight(
       score: 12,
       best: 140,
+      level: 3,
       look: const Look(bird: 'sky'),
       name: 'Tester',
     );
@@ -62,6 +62,7 @@ void main() {
         final d = picks.spotlight(
           score: 37,
           best: 50,
+          level: 2,
           look: Look.defaults,
           name: 'n',
         );
@@ -82,7 +83,13 @@ void main() {
       final picks = ShareContent(Random(7));
       final seen = <int, Set<int>>{};
       for (var i = 0; i < 1000; i++) {
-        final d = picks.spotlight(score: 1, best: 1, look: Look.defaults, name: 'n');
+        final d = picks.spotlight(
+          score: 1,
+          best: 1,
+          level: 0,
+          look: Look.defaults,
+          name: 'n',
+        );
         seen.putIfAbsent(d.textId, () => {}).add(d.bannerId);
       }
       for (final t in [1, 2, 3, 4, 5]) {
@@ -120,6 +127,7 @@ void main() {
         final d = picks.invite(
           best: 0,
           lastScore: 0,
+          level: 0,
           look: Look.defaults,
           name: 'n',
         );
@@ -141,17 +149,19 @@ void main() {
       final a = ShareContent(Random(5)).invite(
         best: 140,
         lastScore: 33,
+        level: 2,
         look: Look.defaults,
         name: 'n',
       );
       expect(a.kind, ShareCardKind.spotlight);
       expect(a.score, 33);
       expect(a.best, 140);
-      expect(a.level, levelFor(140));
+      expect(a.level, 2, reason: 'WP-L the stored level, not the best');
       expect(a.text, contains('33'));
       final b = ShareContent(Random(5)).invite(
         best: 140,
         lastScore: null,
+        level: 2,
         look: Look.defaults,
         name: 'n',
       );
@@ -159,6 +169,7 @@ void main() {
       final c = ShareContent(Random(5)).invite(
         best: 140,
         lastScore: 0,
+        level: 2,
         look: Look.defaults,
         name: 'n',
       );
@@ -286,7 +297,7 @@ void main() {
 
     FlameTester<FlappySpikesGame>(
       () => createRunTestGame(
-        prefs: {'bestScore': 5, 'claimedLevels': ['1']},
+        prefs: {'bestScore': 5, 'claimedLevels': ['1'], 'playerLevel': 1},
         services: AnalyticsSpy(),
         versus: FakeVersusService(
           pool: [
@@ -330,7 +341,9 @@ void main() {
         expect(d.score, isNot(100));
         expect(d.best, g.storage.bestScore);
         expect(d.best, greaterThanOrEqualTo(21));
-        expect(d.level, levelFor(d.best));
+        // WP-L the stored level (EGG), not the level of the best (21: 0).
+        expect(d.level, 1);
+        expect(d.level, g.menu.levels.level);
         expect(d.look, g.menu.items.look);
         expect(d.name, isNot('Rival'));
         expect(d.name, isNotEmpty);

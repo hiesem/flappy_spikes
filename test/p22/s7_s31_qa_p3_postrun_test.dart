@@ -151,6 +151,7 @@ void main() {
           prefs: const {
             'feathers': 3,
             'bestScore': 12,
+            'playerLevel': 1, // WP-L EGG (claimed): the 60 run steps to CHICK
             'claimedLevels': ['1'],
           },
           versus: versus,

@@ -62,7 +62,8 @@ void main() {
       expect(levelDef(8)!.plateGradient, isNull);
     });
 
-    test('levelFor edges', () {
+    test('levelFor edges (the pool level of a best; not the player level)',
+        () {
       expect(levelFor(0), 0);
       expect(levelFor(24), 0);
       expect(levelFor(25), 1);
@@ -96,7 +97,8 @@ void main() {
     }
 
     test('unranked: nothing pending, claim pays nothing', () async {
-      final menu = await menuWith({'bestScore': 24});
+      // WP-L a best past EGG without a stored level is still unranked.
+      final menu = await menuWith({'bestScore': 640});
       expect(menu.levels.level, 0);
       expect(menu.levels.current, isNull);
       expect(menu.levels.next!.name, 'EGG');
@@ -108,6 +110,7 @@ void main() {
     test('fresh level-up: one level, its reward', () async {
       final menu = await menuWith({
         'bestScore': 50,
+        'playerLevel': 2,
         'claimedLevels': ['1'],
         'coins': 10,
       });
@@ -117,9 +120,11 @@ void main() {
       );
     });
 
-    test('a run crossing several levels: one popup, rewards added', () async {
+    test('several reached-but-unclaimed levels (a reset of the claims): one '
+        'popup, rewards added', () async {
       final menu = await menuWith({
         'bestScore': 640,
+        'playerLevel': 6,
         'claimedLevels': ['1', '2'],
       });
       expect(
@@ -132,8 +137,8 @@ void main() {
       );
     });
 
-    test('catch-up for an existing player: everything reached', () async {
-      final menu = await menuWith({'bestScore': 640});
+    test('catch-up: every stored level unclaimed', () async {
+      final menu = await menuWith({'bestScore': 640, 'playerLevel': 6});
       final pending = menu.levels.pendingLevelUp!;
       expect(pending.fromLevel, 0);
       expect(pending.toLevel, 6);
@@ -143,7 +148,11 @@ void main() {
 
     test('claim pays once via level_reward and persists', () async {
       final sources = <(int, CoinSource)>[];
-      SharedPreferences.setMockInitialValues({'bestScore': 120, 'coins': 5});
+      SharedPreferences.setMockInitialValues({
+        'bestScore': 120,
+        'playerLevel': 3,
+        'coins': 5,
+      });
       final storage = GameStorage();
       await storage.load();
       final menu = MenuState(storage, onEarned: (a, s) => sources.add((a, s)));
@@ -166,7 +175,7 @@ void main() {
     });
 
     test('concurrent claims pay once', () async {
-      final menu = await menuWith({'bestScore': 60});
+      final menu = await menuWith({'bestScore': 60, 'playerLevel': 2});
       final paid = await Future.wait([
         menu.levels.claim(),
         menu.levels.claim(),
@@ -175,14 +184,18 @@ void main() {
       expect(menu.wallet.balance, 75);
     });
 
-    test('debugForceLevelUp raises the best to the next threshold', () async {
+    test('debugForceLevelUp raises the stored level by one (the best to its '
+        'threshold)', () async {
       final menu = await menuWith({
         'bestScore': 640,
+        'playerLevel': 6,
         'claimedLevels': ['1', '2', '3', '4', '5', '6'],
       });
       expect(menu.levels.pendingLevelUp, isNull);
       await menu.levels.debugForceLevelUp();
       expect(menu.storage.bestScore, 800);
+      expect(menu.levels.level, 7);
+      expect(menu.storage.playerLevel, 7);
       expect(
         menu.levels.pendingLevelUp,
         const PendingLevelUp(fromLevel: 6, toLevel: 7, reward: 800),
@@ -192,6 +205,7 @@ void main() {
     test('debugForceLevelUp at LEGEND re-opens the top level', () async {
       final menu = await menuWith({
         'bestScore': 6000,
+        'playerLevel': 10,
         'claimedLevels': [for (var i = 1; i <= 10; i++) '$i'],
       });
       await menu.levels.debugForceLevelUp();
@@ -224,16 +238,18 @@ void main() {
       expect(reader.rumble, isFalse);
     });
 
-    test('resetMenuState clears claimed levels, keeps rumble', () async {
+    test('resetMenuState clears claimed levels and the level, keeps rumble', () async {
       SharedPreferences.setMockInitialValues({});
       final storage = GameStorage();
       await storage.load();
       await storage.saveClaimedLevels({1, 2});
+      await storage.savePlayerLevel(2);
       await storage.saveRumble(false);
       await storage.resetMenuState();
       final reader = GameStorage();
       await reader.load();
       expect(reader.claimedLevels, isEmpty);
+      expect(reader.playerLevel, 0, reason: 'WP-L the stored level resets');
       expect(reader.rumble, isFalse);
     });
   });

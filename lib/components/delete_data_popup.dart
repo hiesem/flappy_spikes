@@ -48,11 +48,12 @@ class DeleteDataPopup extends P1Popup {
       'Your online versus data is deleted: your uploaded runs, your player '
       'profile and your account.';
   static const String confirmSmall =
-      "This can't be undone. Coins, skins and levels stay on this phone.";
+      // WP-L (owner 2026-10-17): the stored level resets with the data.
+      "This can't be undone. Coins and skins stay; your level resets.";
   static const String doneTitle = 'DATA DELETED';
   static const String doneMessage =
-      'Your runs, your profile and your account are gone. Coins, skins and '
-      'levels on this phone are kept.';
+      'Your runs, your profile and your account are gone. Coins and skins '
+      'on this phone are kept.';
   static const String doneSmall = 'A fresh player profile starts from here.';
   /// PRD-2.3 §20.2: the confirm face names the website's request page.
   static final String confirmWeb =

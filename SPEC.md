@@ -1796,3 +1796,24 @@ production build has the flag off and uses these values only. Full key table:
   is re-synced to its hoop schedule at the launch; after a cannon ride the world re-syncs
   at ≥ 0.6× (a seam right after it can land a few hoops early). Ride tracks, scenes,
   exits, poses, sounds and timings are unchanged.
+
+### One level per run, stored level (WP-L, 2026-10-17)
+
+- DEVIATION (owner 2026-10-17: one level per run, stored level; supersedes PRD-home-v3 §4.1
+  / §11 "the level is derived from the best and never stored" and the PRD-2.3.1 §12.2 rank
+  rule "the run's score passes the threshold"): the player level is stored
+  (`playerLevel`, int 0 = unranked … 10, default 0; no migration — every install starts
+  at 0 whatever its best, and `claimedLevels` grant nothing). When a run ends, if its score
+  ≥ the threshold of level + 1 the level goes up by exactly one (never more, however high
+  the score; LEGEND stays): from 0 a run of 100 gives EGG, the next 100 gives CHICK, a 30 at
+  CHICK gives nothing. Each step owes that level's one-time reward through the unchanged
+  LEVEL UP / CLAIM flow (`unclaimedLevelReward`, `claimedLevels`, the kill-safe claim and
+  the catch-up of reached-but-unclaimed levels ≤ the stored one). Rank achievements unlock
+  when the stored level reaches the rank (earned in the counting run's end batch, §19
+  pacing unchanged). The stored level is what home, LEVELS, the results page (level before
+  / after the run), the share card and versus (own level, `players/{uid}.level`) show;
+  `levelFor(best)` remains only the server's pool level for matching and opponents. The
+  LEVELS header reads "<threshold> TO <next>" (the score one run needs) over an empty bar;
+  the results bar fills with the run's score toward the next threshold ("N TO <next>" = the
+  points the run was short). "Delete my data" and the debug "Reset menu state" reset the
+  level to 0 (the delete keeps `claimedLevels`, so a level reached again never pays twice).

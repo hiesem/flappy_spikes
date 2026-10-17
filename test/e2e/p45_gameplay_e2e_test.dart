@@ -143,7 +143,7 @@ void main() {
           hasLength(3),
         );
       },
-      prefs: {'feathers': 2, 'bestScore': 100},
+      prefs: {'feathers': 2, 'bestScore': 100, 'playerLevel': 3},
       h: h,
     );
 
@@ -198,7 +198,7 @@ void main() {
       },
       prefs: {
         'puzzleRound': 7,
-        'bestScore': 100,
+        'bestScore': 100, 'playerLevel': 3,
         'noAds': true,
         'claimedLevels': ['1', '2', '3'],
       },
@@ -274,7 +274,7 @@ void main() {
     },
     duel: true,
     prefs: {
-      'bestScore': 1000,
+      'bestScore': 1000, 'playerLevel': 8,
       'claimedLevels': ['1', '2', '3', '4', '5', '6', '7', '8'],
     },
   );

@@ -61,7 +61,7 @@ void main() {
       '§14.3 the first count ($points points, $coins coins) plays '
       'min(24, 8 + max) ticks, one stream',
       {
-        'bestScore': 900,
+        'bestScore': 900, 'playerLevel': 7,
         'claimedLevels': [...claimed1to6, '7', '8'],
       },
       (g) async {
@@ -80,7 +80,7 @@ void main() {
   rt(
     '§14.3 a 0 / 0 run plays no ticks; sound disabled (tests): play only '
     'reaches the recorder, no channel',
-    {'bestScore': 900},
+    {'bestScore': 900, 'playerLevel': 7},
     (g) async {
       expect(g.sound.enabled, isFalse);
       final sfx = sfxLog(g);
@@ -93,7 +93,7 @@ void main() {
   rt(
     '§14.3 the ticks follow the eased count: quick at first, slower later',
     {
-      'bestScore': 900,
+      'bestScore': 900, 'playerLevel': 7,
       'claimedLevels': [...claimed1to6, '7', '8'],
     },
     (g) async {
@@ -117,7 +117,7 @@ void main() {
   rt(
     '§14.3 NEXT mid-count stops further ticks',
     {
-      'bestScore': 900,
+      'bestScore': 900, 'playerLevel': 7,
       'claimedLevels': [...claimed1to6, '7', '8'],
     },
     (g) async {
@@ -136,7 +136,7 @@ void main() {
 
   rt(
     '§14.3 the CLAIM count plays min(24, 8 + claimed) ticks under lv_claim',
-    {'bestScore': 760, 'claimedLevels': claimed1to6},
+    {'bestScore': 760, 'playerLevel': 6, 'claimedLevels': claimed1to6},
     (g) async {
       final sfx = sfxLog(g);
       final page = await endWith(g, points: 815, coins: 65);

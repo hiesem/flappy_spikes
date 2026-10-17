@@ -100,12 +100,17 @@ void main() async {
     expect(g.state, GameState.results);
   }
 
-  tester().testGameWidget(
+  tester(
+    prefs: const {
+      'playerLevel': 1,
+      'claimedLevels': ['1'],
+    },
+  ).testGameWidget(
     '§12.5 the run\'s toasts wait for the LEVEL UP and its CLAIM, then show '
     'one at a time',
     setUp: boot,
     verify: (g, w) async {
-      await play(g, 60); // EGG + CHICK earned, a level up
+      await play(g, 60); // EGG -> CHICK (WP-L): EGG + CHICK earned
       // PRD-2.3.1 §19.2: the run unlocks one (EGG); CHICK waits in
       // achPending. A second pill (e.g. the jackpot's) queues behind it.
       expect(g.achievements.toastQueue.map((a) => a.key), ['rank_egg']);

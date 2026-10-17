@@ -97,7 +97,7 @@ void main() {
       );
       expect(
         popup.smallText.text,
-        contains('Coins, skins and levels stay on this phone'),
+        contains('Coins and skins stay; your level resets'),
       );
       expect(popup.cancelButton, isNotNull);
       expect(versus.deleteCalls, 0);
@@ -165,7 +165,7 @@ void main() {
       expect(result.messageText.text, contains('your account are gone'));
       expect(
         result.messageText.text,
-        contains('Coins, skins and levels on this phone are kept'),
+        contains('Coins and skins on this phone are kept'),
       );
       expect(result.cancelButton, isNull, reason: 'one OK on the result');
       result.confirmButton.onPressed();

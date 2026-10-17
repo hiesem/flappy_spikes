@@ -51,7 +51,7 @@ void main() {
 
   test('S8-06 an unchanged picture is uploaded again after the refresh '
       'period, not before; the upload time survives a restart', () async {
-    SharedPreferences.setMockInitialValues({'bestScore': 120});
+    SharedPreferences.setMockInitialValues({'bestScore': 120, 'playerLevel': 3});
     var now = DateTime(2026, 10, 13);
     final storage = GameStorage(clock: () => now);
     await storage.load();
@@ -79,7 +79,7 @@ void main() {
 
   test('S8-06 a record saved without an upload time is refreshed once', () async {
     SharedPreferences.setMockInitialValues({
-      'bestScore': 120,
+      'bestScore': 120, 'playerLevel': 3,
       'versusAvatar': jsonEncode({'uid': 'anon', 'hash': 'x', 'url': 'u'}),
     });
     final storage = GameStorage();

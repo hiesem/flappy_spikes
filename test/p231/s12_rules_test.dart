@@ -69,15 +69,24 @@ void main() {
 
   // --- ranks -----------------------------------------------------------------
 
+  // WP-L (owner 2026-10-17) ranks follow the stored level: a run that
+  // steps it up to a rank unlocks that rank and every lower one.
   for (final (i, lv) in kLevels.indexed) {
-    t.testGameWidget(
-      '§12.2 rank ${lv.name}: a run scoring exactly ${lv.threshold} unlocks '
-      'it and every lower rank, no higher one',
+    tester(
+      prefs: {
+        'playerLevel': i,
+        'claimedLevels': [for (var l = 1; l <= i; l++) '$l'],
+      },
+    ).testGameWidget(
+      '§12.2 rank ${lv.name}: at ${i == 0 ? 'UNRANKED' : kLevels[i - 1].name} '
+      'a run scoring exactly ${lv.threshold} steps up to it and unlocks it '
+      'and every lower rank, no higher one',
       setUp: boot,
       verify: (g, _) async {
         final run = await startRun(g);
         run.ctx.addScore(lv.threshold);
         await finish(g);
+        expect(g.menu.levels.level, lv.level);
         for (final (j, id) in kRankAchievements.indexed) {
           expect(unlocked(g).contains(id.key), j <= i, reason: id.key);
         }
@@ -93,7 +102,24 @@ void main() {
   }
 
   t.testGameWidget(
-    '§12.2 ranks: a 2,000-point run earns 9 ranks at once (§19.2: one '
+    'WP-L a 2,000-point first run steps up ONE level: EGG only',
+    setUp: boot,
+    verify: (g, _) async {
+      final run = await startRun(g);
+      run.ctx.addScore(2000);
+      await finish(g);
+      expect(g.menu.levels.level, 1);
+      expect(unlocked(g).where((k) => k.startsWith('rank_')), {'rank_egg'});
+    },
+  );
+
+  tester(
+    prefs: {
+      'playerLevel': 8,
+      'claimedLevels': [for (var l = 1; l <= 8; l++) '$l'],
+    },
+  ).testGameWidget(
+    '§12.2 ranks: a step up to PHOENIX earns 9 ranks at once (§19.2: one '
     'unlocks and is toasted, 8 wait in achPending)',
     setUp: boot,
     verify: (g, _) async {
@@ -113,8 +139,8 @@ void main() {
   );
 
   tester(prefs: {'bestScore': 5000}).testGameWidget(
-    '§12.2 ranks: a high stored best and a low run unlock nothing (start '
-    'fresh: the run score counts, never the best)',
+    '§12.2 ranks: a high stored best and a low run unlock nothing (WP-L: the '
+    'stored level counts, never the best)',
     setUp: boot,
     verify: (g, _) async {
       final run = await startRun(g);

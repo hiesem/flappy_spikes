@@ -288,7 +288,7 @@ void main() {
     _journey(
       'v2 $menu fling, stop, drag, rubber-band, scrollTo and return',
       prefs: const {
-        'bestScore': 640,
+        'bestScore': 640, 'playerLevel': 6,
         'claimedLevels': ['1', '2', '3', '4', '5', '6'],
       },
       (game, events, tester) async {

@@ -250,7 +250,7 @@ void main() async {
       final saved = await _saved();
       expect(saved.coins, 11425);
     },
-    prefs: const {'bestScore': 5000, 'coins': 1250},
+    prefs: const {'bestScore': 5000, 'playerLevel': 10, 'coins': 1250},
   );
 
   _journey('R2 pack count-up survives Shop → home → LEVELS → home', (
@@ -419,7 +419,7 @@ void main() async {
     await run(game, 2);
     expect(levels.currentRow!.liveEmblem!.t, 0);
     expect(levels.header.emblem.shine, isFalse);
-  }, prefs: {'bestScore': 5000, 'claimedLevels': _claimed(10)});
+  }, prefs: {'bestScore': 5000, 'playerLevel': 10, 'claimedLevels': _claimed(10)});
 
   _defect(
     'S1-31',
@@ -449,7 +449,7 @@ void main() async {
       expect(game.coinPill.shownBalance, 2275);
       expect(rig.events.count('noads_bonus_claimed'), 1);
     },
-    prefs: const {'coins': 1250, 'bestScore': 25},
+    prefs: const {'coins': 1250, 'bestScore': 25, 'playerLevel': 1},
   );
 
   _journey(

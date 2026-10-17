@@ -75,7 +75,7 @@ void main() {
       FlameTester<FlappySpikesGame>(
         () => createRunTestGame(
           worldHeight: h,
-          prefs: {'bestScore': 640},
+          prefs: {'bestScore': 640, 'playerLevel': 6},
           versus: FakeVersusService(
             pool: [
               shots.rival(

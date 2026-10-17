@@ -133,7 +133,7 @@ void main() {
     testGameWidgetWithSpy(
       'submits the stored best on game over even without a new best',
       prefs: {
-        'bestScore': 25,
+        'bestScore': 25, 'playerLevel': 1,
         'claimedLevels': ['1'], // no LEVEL UP popup
       },
       verify: (game, spy, tester) async {
@@ -147,7 +147,7 @@ void main() {
     testGameWidgetWithSpy(
       'submits the new best when the score beats it',
       prefs: {
-        'bestScore': 25,
+        'bestScore': 25, 'playerLevel': 1,
         'claimedLevels': ['1'], // no LEVEL UP popup
       },
       verify: (game, spy, tester) async {

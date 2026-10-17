@@ -60,7 +60,7 @@ void main() {
   late FirebaseVersusService versus;
 
   Future<void> build({
-    Map<String, Object> prefs = const {'bestScore': 120},
+    Map<String, Object> prefs = const {'bestScore': 120, 'playerLevel': 3},
     Duration searchLimit = VersusConfig.searchLimit,
     Duration readTimeout = VersusConfig.readTimeout,
   }) async {

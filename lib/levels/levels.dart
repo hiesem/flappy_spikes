@@ -2,7 +2,8 @@ import 'dart:ui';
 
 import '../run/config/tuning_values.dart';
 
-/// One bird rank of PRD-home-v3 §4.1, reached on the best score, with its
+/// One bird rank of PRD-home-v3 §4.1 (owner 2026-10-17: reached one step
+/// per run, see [levelAfterRun]), with its
 /// emblem colours from §4.2 / `design/menu_v2/emblem_art.js` (LEVELS).
 class LevelDef {
   const LevelDef({
@@ -22,7 +23,8 @@ class LevelDef {
   /// Rank name as shown ("SPIKE ACE").
   final String name;
 
-  /// Lowest best score that reaches this level.
+  /// The score a single run needs to step up to this level from the one
+  /// below it (owner 2026-10-17; it used to be the best score).
   final int threshold;
 
   /// The in-app default of [reward] (PRD-home-v3 §4.1).
@@ -149,14 +151,26 @@ const int kMaxLevel = 10;
 /// 10 175).
 const int kLevelRewardTotal = 10175;
 
-/// The level reached with [best]: the highest rank whose threshold <= best;
-/// 0 = unranked (best < 10).
+/// The highest rank whose threshold <= [best]; 0 = unranked.
+///
+/// Owner 2026-10-17 (WP-L): this is NOT the player's level any more (that
+/// is stored, `GameStorage.playerLevel`, and steps up one per run, see
+/// [levelAfterRun]). It only mirrors the server's pool level
+/// (`functions/src/levels.ts`) for versus matching and for opponents.
 int levelFor(int best) {
   var level = 0;
   for (final def in kLevels) {
     if (best >= def.threshold) level = def.level;
   }
   return level;
+}
+
+/// Owner 2026-10-17 (WP-L): the level after a run of [score] at [level]:
+/// one step up when the score reaches the next level's threshold (never
+/// more than one, however high the score), else unchanged. LEGEND stays.
+int levelAfterRun(int level, int score) {
+  final next = nextLevel(level);
+  return next != null && score >= next.threshold ? next.level : level;
 }
 
 /// The definition of [level] (1..10), null for unranked / out of range.

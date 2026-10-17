@@ -37,36 +37,43 @@ void main() {
   const claimed1to6 = ['1', '2', '3', '4', '5', '6'];
 
   group('§5.10 level bar and rank line (pure)', () {
-    test('§5.10 progress label "185 TO SPIKE ACE" at 815 (HAWK)', () {
-      final b = LevelBar.at(815);
+    test('§5.10 WP-L progress label: a run of 815 at HAWK is "185 TO SPIKE '
+        'ACE" (one run toward 1 000)', () {
+      final b = LevelBar.at(7, score: 815);
       expect(b.level, 7);
       expect(b.label, '185 TO SPIKE ACE');
-      expect(b.fraction, closeTo(15 / 200, 1e-9));
+      expect(b.fraction, closeTo(815 / 1000, 1e-9));
+      expect(LevelBar.at(7).label, '1 000 TO SPIKE ACE');
+      expect(LevelBar.at(7).fraction, 0);
       expect(rankText(7), 'HAWK · LV 7');
     });
 
     test('§5.10 unranked: "UNRANKED", bar toward EGG', () {
-      final b = LevelBar.at(7);
+      final b = LevelBar.at(0, score: 7);
       expect(b.level, 0);
-      expect(b.label, '3 TO EGG');
-      expect(b.fraction, closeTo(.7, 1e-9));
+      expect(b.label, '18 TO EGG');
+      expect(b.fraction, closeTo(7 / 25, 1e-9));
       expect(rankText(0), 'UNRANKED');
     });
 
     test('§5.10 "MAX LEVEL" at level 10, thousands with a space', () {
-      expect(LevelBar.at(5120).label, 'MAX LEVEL');
-      expect(LevelBar.at(5120).fraction, 1);
-      expect(LevelBar.at(1500).label, '500 TO PHOENIX');
-      expect(LevelBar.at(2000).label, '3 000 TO LEGEND');
+      expect(LevelBar.at(10, score: 5120).label, 'MAX LEVEL');
+      expect(LevelBar.at(10).fraction, 1);
+      expect(LevelBar.at(8, score: 1500).label, '500 TO PHOENIX');
+      expect(LevelBar.at(9, score: 2000).label, '3 000 TO LEGEND');
+      expect(LevelBar.at(9, score: 6000).label, '0 TO LEGEND');
     });
 
-    test('§3.14 the model reads the level from the best before / after', () {
+    test('§3.14 WP-L the model carries the stored level before / after',
+        () {
       const m = ResultsModel(
         score: 815,
         bestBefore: 760,
         bestAfter: 815,
         reward: 65,
         levelReward: 800,
+        levelBefore: 6,
+        levelAfter: 7,
       );
       expect(m.levelBefore, 6);
       expect(m.levelAfter, 7);
@@ -78,6 +85,8 @@ void main() {
         bestBefore: 640,
         bestAfter: 640,
         reward: 40,
+        levelBefore: 6,
+        levelAfter: 6,
       );
       expect(lose.newBest, isFalse);
       expect(lose.levelUp, isFalse);
@@ -108,7 +117,7 @@ void main() {
     rt(
       '§3.14 solo: the page replaces the game-over panel, no versus parts, '
       'no ad, NEXT goes home',
-      () => createRunTestGame(prefs: {'bestScore': 900, 'claimedLevels': claimed1to6 + ['7', '8']}),
+      () => createRunTestGame(prefs: {'bestScore': 900, 'playerLevel': 7, 'claimedLevels': claimed1to6 + ['7', '8']}),
       (g) async {
         final page = await endWith(g, score: 12, coins: 14);
         expect(page.model.reward, 14);
@@ -122,8 +131,14 @@ void main() {
         expect(page.shownReward, 14);
         expect(page.you.shownScore, 12);
         expect(page.newBestSticker, isNull, reason: 'no new best');
-        expect(page.bar.fraction, closeTo(LevelBar.at(900).fraction, 1e-9),
-            reason: 'no new best: the bar does not move');
+        // WP-L the bar is the run's progress toward the next level (it
+        // fills after every run).
+        stepGame(g, 2.5);
+        expect(
+          page.bar.fraction,
+          closeTo(LevelBar.at(7, score: 12).fraction, 1e-4),
+        );
+        expect(page.barLabel.text, '988 TO SPIKE ACE');
         // Strips over the page.
         expect(g.groundStripPriority, greaterThan(ResultsScreen.priorityOnTop));
         page.nextButton.onPressed();
@@ -138,7 +153,7 @@ void main() {
     rt(
       '§3.14 YOUR REWARD includes puzzle coins and the win / draw bonus, '
       'not the balloon bonus',
-      () => createRunTestGame(prefs: {'bestScore': 900, 'claimedLevels': claimed1to6 + ['7', '8']}),
+      () => createRunTestGame(prefs: {'bestScore': 900, 'playerLevel': 7, 'claimedLevels': claimed1to6 + ['7', '8']}),
       (g) async {
         final page = await endWith(
           g,
@@ -161,7 +176,7 @@ void main() {
     rt(
       '§5.10 new best without a level: NEW BEST at 1.2 s (perfect_1), the '
       'bar fills at 1.65 s (lv_bar), no CLAIM',
-      () => createRunTestGame(prefs: {'bestScore': 230, 'claimedLevels': ['1', '2', '3', '4']}),
+      () => createRunTestGame(prefs: {'bestScore': 230, 'playerLevel': 4, 'claimedLevels': ['1', '2', '3', '4']}),
       (g) async {
         final sfx = sfxLog(g);
         final page = await endWith(g, score: 262, coins: 30);
@@ -176,8 +191,12 @@ void main() {
         stepGame(g, .45);
         expect(sfx, contains('lvBar'));
         stepGame(g, 1.3);
-        expect(page.bar.fraction, closeTo(LevelBar.at(262).fraction, 1e-6));
-        expect(page.barLabel.text, LevelBar.at(262).label);
+        // WP-L 262 at FLAPPER: short of GLIDER's 400.
+        expect(
+          page.bar.fraction,
+          closeTo(LevelBar.at(4, score: 262).fraction, 1e-6),
+        );
+        expect(page.barLabel.text, '138 TO GLIDER');
         expect(page.claimShowing, isFalse);
         expect(sfx, isNot(contains('lvUp')));
         expect(g.storage.unclaimedLevelReward, 0);
@@ -188,7 +207,7 @@ void main() {
       '§3.14 level up (one level): celebration, CLAIM credits wallet.add '
       '(level_reward) at the claim, the reward counts up',
       () => createRunTestGame(
-        prefs: {'bestScore': 760, 'claimedLevels': claimed1to6},
+        prefs: {'bestScore': 760, 'playerLevel': 6, 'claimedLevels': claimed1to6},
         services: AnalyticsSpy(),
       ),
       (g) async {
@@ -242,8 +261,9 @@ void main() {
         expect(page.shownReward, 865);
         expect(page.stage.rays, 0);
         stepGame(g, 1);
-        expect(page.barLabel.text, '185 TO SPIKE ACE');
-        expect(page.bar.fraction, closeTo(15 / 200, 1e-6));
+        // WP-L the step used the run: SPIKE ACE needs 1 000 in one run.
+        expect(page.barLabel.text, '1 000 TO SPIKE ACE');
+        expect(page.bar.fraction, closeTo(0, 1e-6));
         // A second claim pays nothing.
         expect(await claimLevelRewards(g, 'tap'), 0);
         expect(g.menu.wallet.balance, before + 800);
@@ -251,18 +271,23 @@ void main() {
     );
 
     rt(
-      '§3.14 several levels in one run: one celebration for the highest, '
-      'rewards added together',
-      () => createRunTestGame(prefs: {'bestScore': 40}),
+      '§3.14 WP-L a run past several thresholds steps up ONE level: one '
+      'celebration, that level\'s reward; a run below the best still levels',
+      () => createRunTestGame(prefs: {'bestScore': 400, 'playerLevel': 1}),
       (g) async {
+        // 230 < best 400 (no new best), past CHICK, FLEDGLING and FLAPPER.
         final page = await endWith(g, score: 230);
-        // EGG 50 + CHICK 100 + FLEDGLING 150 + FLAPPER 250.
-        expect(page.model.levelReward, 550);
-        expect(g.storage.unclaimedLevelReward, 550);
+        // EGG (unclaimed, the catch-up) 25 + CHICK 50.
+        expect(page.model.levelBefore, 1);
+        expect(page.model.levelAfter, 2);
+        expect(page.model.levelReward, 75);
+        expect(g.storage.unclaimedLevelReward, 75);
+        expect(g.storage.playerLevel, 2);
         stepGame(g, 2.9);
         await flushAndMount(g);
-        expect(page.stage.level, 4);
-        expect(page.rank.text, 'FLAPPER · LV 4');
+        expect(page.newBestSticker, isNull);
+        expect(page.stage.level, 2);
+        expect(page.rank.text, 'CHICK · LV 2');
         expect(page.fx.bursts, hasLength(1), reason: 'one celebration');
         expect(page.fx.bursts.single.count, 60);
         stepGame(g, 1.4);
@@ -270,8 +295,8 @@ void main() {
         final before = g.menu.wallet.balance;
         page.claimButton.button.onPressed();
         await flushAndMount(g);
-        expect(g.menu.wallet.balance, before + 550);
-        expect(g.storage.claimedLevels, {1, 2, 3, 4});
+        expect(g.menu.wallet.balance, before + 75);
+        expect(g.storage.claimedLevels, {1, 2});
       },
     );
 
@@ -279,7 +304,7 @@ void main() {
       '§5.10 lv 9-10: lv_up_big and a second wave (2 confetti + 2 rockets)',
       () => createRunTestGame(
         prefs: {
-          'bestScore': 4600,
+          'bestScore': 4600, 'playerLevel': 9,
           'claimedLevels': claimed1to6 + ['7', '8', '9'],
         },
       ),
@@ -300,7 +325,7 @@ void main() {
     rt(
       '§3.14 NEXT while CLAIM shows claims first (same animation), then home',
       () => createRunTestGame(
-        prefs: {'bestScore': 760, 'claimedLevels': claimed1to6},
+        prefs: {'bestScore': 760, 'playerLevel': 6, 'claimedLevels': claimed1to6},
         services: AnalyticsSpy(),
       ),
       (g) async {
@@ -330,7 +355,7 @@ void main() {
 
     rt(
       '§3.14 NEXT before CLAIM came up still pays the reward (never lost)',
-      () => createRunTestGame(prefs: {'bestScore': 760, 'claimedLevels': claimed1to6}),
+      () => createRunTestGame(prefs: {'bestScore': 760, 'playerLevel': 6, 'claimedLevels': claimed1to6}),
       (g) async {
         final page = await endWith(g, score: 815);
         stepGame(g, .5);
@@ -350,7 +375,7 @@ void main() {
 
     rt(
       '§5.10 the kept share and leaderboard buttons',
-      () => createRunTestGame(prefs: {'bestScore': 900, 'claimedLevels': claimed1to6 + ['7', '8']}),
+      () => createRunTestGame(prefs: {'bestScore': 900, 'playerLevel': 7, 'claimedLevels': claimed1to6 + ['7', '8']}),
       (g) async {
         ShareCardData? shared;
         g.onShareScore = (s) => shared = s;
@@ -371,7 +396,7 @@ void main() {
       '(no animation, no popup)',
       () => createRunTestGame(
         prefs: {
-          'bestScore': 815,
+          'bestScore': 815, 'playerLevel': 7,
           'claimedLevels': claimed1to6,
           'unclaimedLevelReward': 800,
           'coins': 100,
@@ -399,7 +424,7 @@ void main() {
       '§7 a stale flag after a finished claim pays nothing twice',
       () => createRunTestGame(
         prefs: {
-          'bestScore': 815,
+          'bestScore': 815, 'playerLevel': 7,
           'claimedLevels': claimed1to6 + ['7'],
           'unclaimedLevelReward': 800,
           'coins': 100,

@@ -193,7 +193,7 @@ void main() {
 
   test('§3.13 initialize: a nickname once per install, anonymous auth, the '
       'first prefetch (PRD-2.2 §3: own level shards, then the other levels)', () async {
-    await build(prefs: {'bestScore': 120}); // level 3 (100 → 3)
+    await build(prefs: {'bestScore': 120, 'playerLevel': 3}); // level 3 (100 → 3)
     await versus.initialize();
     expect(versus.ready, isTrue);
     final nick = storage.versusNickname!;
@@ -215,7 +215,7 @@ void main() {
   test('§3.13 matching from the prefetched pool: a beatable run at my level '
       'first, never mine, never the same run twice in a session; START '
       'takes it synchronously and the next is held at once', () async {
-    await build(prefs: {'bestScore': 120});
+    await build(prefs: {'bestScore': 120, 'playerLevel': 3});
     final pool = [
       pooled('me', 'm1', 50, 3),
       pooled('a', 'a1', 80, 3, best: 300),
@@ -261,7 +261,7 @@ void main() {
 
   test('§3.13 submitRun: the upload rules, one run per write with the '
       'player fields (name, platform, look, UTC upload count)', () async {
-    await build(prefs: {'bestScore': 50});
+    await build(prefs: {'bestScore': 50, 'playerLevel': 2});
     await versus.initialize();
     await versus.submitRun(summary(2), const Look()); // < 3: never
     await versus.submitRun(summary(60, bestBefore: 50), const Look(bird: 'sky'));

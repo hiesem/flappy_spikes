@@ -262,7 +262,8 @@ class QueuedRun {
 ///   shift down unchanged);
 /// - a new best is the same object in `bestRun` and `recent[0]`; otherwise
 ///   `bestRun` stays what it was;
-/// - `best` never decreases (`max(old.best, run.best)`), `level` from it.
+/// - `best` never decreases (`max(old.best, run.best)`); `level` is the
+///   stored player [level] (WP-L), or from the best when null.
 Map<String, Object?> nextPlayerDoc({
   required Map<String, Object?>? old,
   required Map<String, Object?> run,
@@ -273,6 +274,7 @@ Map<String, Object?> nextPlayerDoc({
   required Look look,
   required String uploadsDay,
   required int uploadsCount,
+  int? level,
 }) {
   final oldBest = (old?['best'] as num?)?.toInt() ?? 0;
   final runBest = (run['best']! as num).toInt();
@@ -291,7 +293,7 @@ Map<String, Object?> nextPlayerDoc({
     'platform': platform,
     'look': lookToMap(look),
     'best': best,
-    'level': levelFor(best),
+    'level': level ?? levelFor(best),
     'bestRun': isBest ? run : oldBestRun,
     'recent': recent,
     'uploads': {'day': uploadsDay, 'count': uploadsCount},

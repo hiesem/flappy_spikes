@@ -57,7 +57,7 @@ void main() {
       'noAdsPopupLastMs': lastMs,
       'noAdsPopupLastDay': today,
       'noAdsPopupShowsToday': shows,
-      'bestScore': 100,
+      'bestScore': 100, 'playerLevel': 3,
       ...extra,
     };
   }

@@ -374,7 +374,7 @@ void main() {
           'opponent': 0,
         });
       },
-      prefs: const {'bestScore': 250},
+      prefs: const {'bestScore': 250, 'playerLevel': 4},
     );
   });
 

@@ -225,7 +225,7 @@ class SoakDriver {
       _dying = true;
       if (forcesLevelUp(current) && !_forcedLevelUp) {
         _forcedLevelUp = true;
-        final next = nextLevel(levelFor(game.storage.bestScore));
+        final next = nextLevel(game.menu.levels.level);
         if (next != null && next.threshold > run.state.score) {
           run.ctx.addScore(next.threshold - run.state.score);
         }

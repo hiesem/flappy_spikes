@@ -359,7 +359,7 @@ void main() async {
     height: 568,
     exactSurface: true,
     prefs: {
-      'bestScore': 640,
+      'bestScore': 640, 'playerLevel': 6,
       'gamesPlayed': 34,
       'claimedLevels': ['1', '2', '3', '4', '5', '6'],
     },

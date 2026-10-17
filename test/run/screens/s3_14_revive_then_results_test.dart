@@ -14,7 +14,7 @@ import '../../helpers.dart';
 void main() {
   for (final h in [568.0, 711.0]) {
     FlameTester<FlappySpikesGame>(
-      () => createRunTestGame(prefs: {'bestScore': 40}, worldHeight: h),
+      () => createRunTestGame(prefs: {'bestScore': 40, 'playerLevel': 1}, worldHeight: h),
       gameSize: Vector2(320, h),
     ).testGameWidget(
       '§3.14 ($h) ≥ 6 hoops: revive offer → No thanks → results with level '

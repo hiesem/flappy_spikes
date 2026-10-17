@@ -62,6 +62,8 @@ class _SwitchBanner implements BannerAds {
   void dispose() => inner.dispose();
   @override
   set onImpression(void Function()? callback) => inner.onImpression = callback;
+  @override
+  set preloadWanted(bool Function()? wanted) => inner.preloadWanted = wanted;
 }
 
 Future<void> main() async {

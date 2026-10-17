@@ -698,6 +698,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // mid-start, or a pre-WP10 arm-then-START build) and must not ride
     // along on a plain START.
     if (menu.slot.armed != Powerup.none) menu.slot.consume();
+    // Audit A3-6: the banner service's own preloads (consent, retry) skip
+    // NO ADS owners, like the game's ([bannerWanted]).
+    monetization.banner.preloadWanted = () => !menu.noAds;
     // §3.16 (S6-62) a 4/4 puzzle bonus a kill interrupted is paid first
     // (it happened before any level-reward claim of that session).
     try {
@@ -3201,13 +3204,24 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (!sound.background) return;
     if (_adsShowing > 0 || _adJustEnded) {
       sound.setBackground(false);
+      _startMusicIfDropped();
       return;
     }
     musicGuard.confirmOwnMusic(
       'foreground',
       delay: Config.musicForegroundCheckDelay,
-      then: () => sound.setBackground(false),
+      then: () {
+        sound.setBackground(false);
+        _startMusicIfDropped();
+      },
     );
+  }
+
+  /// Audit A3-3: a background during the launch check dropped that check
+  /// and the music start with it; the return starts the music instead
+  /// (a no-op once the music was started).
+  void _startMusicIfDropped() {
+    if (!sound.musicWanted) unawaited(sound.startMusic());
   }
 
   /// §28.2 / §28.3 at a scene change (Home arrival, run start): a stale

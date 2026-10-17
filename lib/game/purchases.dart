@@ -182,6 +182,12 @@ class Purchases {
     if (last != null && now.difference(last) < Config.iapSyncInterval) {
       return false;
     }
+    // Audit A3-5: the store layer skips a sync while a purchase flow is
+    // open; such a sync does not use up the throttle.
+    if (iap.purchaseInProgress) {
+      iapLog('sync skipped: purchase in progress');
+      return false;
+    }
     _lastSync = now;
     final query = iap.syncPurchases();
     _launchSync ??= _settle(query);

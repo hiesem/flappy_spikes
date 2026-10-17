@@ -239,13 +239,35 @@ class GameServices {
       return;
     }
     if (_signedIn) return;
+    // Audit A3-2: the plugin keeps ONE pending sign-in; a leaderboard /
+    // achievements tap signing in right now must not be overlapped (its
+    // result would never complete: a false "sign-in unavailable").
+    if (_leaderboardBusy) {
+      diag('FS-GC recheck ($reason): skipped, a tap is signing in');
+      return;
+    }
     diag('FS-GC recheck ($reason): signed in to Play Games, fetching player');
+    final signIn = Completer<void>();
+    _recheckSigningIn = signIn.future;
     try {
       await signInPlugin().timeout(pluginTimeout);
     } catch (e) {
       diag('FS-GC recheck ($reason) sign-in failed: ${e.runtimeType}');
       _reportPgsError('sign_in_recheck', e);
+    } finally {
+      _recheckSigningIn = null;
+      signIn.complete();
     }
+  }
+
+  /// Audit A3-2: the recheck's own plugin sign-in while it runs (never
+  /// fails); a tap waits for it before signing in itself.
+  Future<void>? _recheckSigningIn;
+
+  /// Waits for a recheck that is signing in right now (A3-2).
+  Future<void> _awaitRecheckSignIn() async {
+    final running = _recheckSigningIn;
+    if (running != null) await running;
   }
 
   /// Android launch: [recheckSignIn] a few times over the first seconds
@@ -499,6 +521,8 @@ class GameServices {
     if (_leaderboardBusy) return ShowAchievementsResult.busy;
     _leaderboardBusy = true;
     try {
+      // A3-2: never overlap a recheck's sign-in (one pending result).
+      if (!_signedIn) await _awaitRecheckSignIn();
       if (!_signedIn) {
         try {
           await signInPlugin().timeout(pluginTimeout);
@@ -761,6 +785,8 @@ class GameServices {
     }
     _leaderboardBusy = true;
     try {
+      // A3-2: never overlap a recheck's sign-in (one pending result).
+      if (!_signedIn) await _awaitRecheckSignIn();
       if (!_signedIn) {
         try {
           await signInPlugin().timeout(pluginTimeout);

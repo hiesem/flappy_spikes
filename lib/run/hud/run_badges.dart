@@ -25,6 +25,23 @@ import 'run_hud.dart';
 ///
 /// Every badge reads `RunState` on render and draws nothing while its
 /// collectable is not running.
+///
+/// A badge keeps its count text between frames ([_BadgeText]): a [HudText]
+/// lays its text out once, so a new one per frame would lay it out again
+/// every frame (A2-10).
+
+/// One badge text, re-created only when its string, size or colour changes.
+class _BadgeText {
+  HudText? _text;
+
+  HudText of(String text, {required double size, required Color color}) {
+    final t = _text;
+    if (t != null && t.text == text && t.size == size && t.color == color) {
+      return t;
+    }
+    return _text = HudText(text, size: size, color: color);
+  }
+}
 
 /// §5.26 the gold "×2" pill with the chick (mock `drawHud`: `rr(128,202,
 /// 64,24,12)` gold, the chick at (144,214) at 36 %, "×2" white 17 pt at
@@ -34,6 +51,7 @@ class EggBadge extends PositionComponent {
 
   final RunController run;
   double _t = 0;
+  final _BadgeText _plus = _BadgeText();
 
   @override
   void update(double dt) => _t += dt;
@@ -63,11 +81,13 @@ class EggBadge extends PositionComponent {
     );
     canvas.restore();
     // PRD-2.3 §14.3 (call) the pill shows the chick's "+1" (was "×2").
-    HudText(
-      '+${TuningValues.current.i('point_chick')}',
-      size: EggConfig.hudTextSize,
-      color: const Color(0xFFFFFFFF),
-    ).paintCentred(canvas, const Offset(EggConfig.hudTextX, EggConfig.hudTextY));
+    _plus
+        .of(
+          '+${TuningValues.current.i('point_chick')}',
+          size: EggConfig.hudTextSize,
+          color: const Color(0xFFFFFFFF),
+        )
+        .paintCentred(canvas, const Offset(EggConfig.hudTextX, EggConfig.hudTextY));
   }
 }
 
@@ -79,6 +99,8 @@ class PiggyBadge extends PositionComponent {
   PiggyBadge(this.run);
 
   final RunController run;
+  final _BadgeText _count = _BadgeText();
+  final _BadgeText _missed = _BadgeText();
 
   @override
   void render(Canvas canvas) {
@@ -89,7 +111,7 @@ class PiggyBadge extends PositionComponent {
       const Offset(PiggyConfig.hudPigX, PiggyConfig.hudPigY),
       PiggyConfig.hudScale,
     );
-    final count = HudText(
+    final count = _count.of(
       '${p.caught} / ${PiggyConfig.total}',
       size: PiggyConfig.hudTextSize,
       color: PiggyConfig.hudText,
@@ -131,7 +153,7 @@ class PiggyBadge extends PositionComponent {
       );
     }
     if (p.missed > 0) {
-      final missed = HudText(
+      final missed = _missed.of(
         '${p.missed} missed',
         size: PiggyConfig.hudMissedSize,
         color: PiggyConfig.hudMissed,
@@ -151,6 +173,7 @@ class JarBadge extends PositionComponent {
   JarBadge(this.run);
 
   final RunController run;
+  final _BadgeText _count = _BadgeText();
 
   @override
   void render(Canvas canvas) {
@@ -162,7 +185,7 @@ class JarBadge extends PositionComponent {
       JarConfig.hudJarScale,
       fill: j.caught / JarConfig.total,
     );
-    final count = HudText(
+    final count = _count.of(
       '${j.caught} / ${JarConfig.total}',
       size: JarConfig.hudTextSize,
       color: JarConfig.hudText,

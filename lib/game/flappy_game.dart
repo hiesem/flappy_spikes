@@ -3197,13 +3197,24 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (!sound.background) return;
     if (_adsShowing > 0 || _adJustEnded) {
       sound.setBackground(false);
+      _startMusicIfDropped();
       return;
     }
     musicGuard.confirmOwnMusic(
       'foreground',
       delay: Config.musicForegroundCheckDelay,
-      then: () => sound.setBackground(false),
+      then: () {
+        sound.setBackground(false);
+        _startMusicIfDropped();
+      },
     );
+  }
+
+  /// Audit A3-3: a background during the launch check dropped that check
+  /// and the music start with it; the return starts the music instead
+  /// (a no-op once the music was started).
+  void _startMusicIfDropped() {
+    if (!sound.musicWanted) unawaited(sound.startMusic());
   }
 
   /// §28.2 / §28.3 at a scene change (Home arrival, run start): a stale

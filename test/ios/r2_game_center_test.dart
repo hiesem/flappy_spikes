@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/services/identity.dart';
 import 'package:flappy_spikes/services/versus_service.dart';
+import 'package:flappy_spikes/versus/nickname.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -62,8 +63,8 @@ void main() {
     );
   });
 
-  test('§5 the profile name is the platform name as soon as the player '
-      'stream has it, before the versus start-up finished', () async {
+  test('§5 / WP-AV the profile name is the generated name, never the '
+      'Game Center name, before and after the versus start-up', () async {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({});
     final storage = GameStorage();
@@ -79,15 +80,14 @@ void main() {
     );
     final init = versus.initialize();
     await pumpEventQueue();
-    identity.controller.add(
-      const PlatformPlayer(id: 'G:1', displayName: 'hiesem'),
-    );
+    identity.controller.add(const PlatformPlayer(id: 'G:1'));
     await pumpEventQueue();
     expect(versus.ready, isFalse, reason: 'start-up still waiting');
-    expect(versus.me.name, 'hiesem');
+    expect(versus.me.name, isNot('hiesem'));
     gate.complete();
     await init;
     expect(versus.ready, isTrue);
-    expect(versus.me.name, 'hiesem');
+    expect(versus.me.name, storage.versusNickname);
+    expect(isGeneratedNickname(versus.me.name), isTrue);
   });
 }

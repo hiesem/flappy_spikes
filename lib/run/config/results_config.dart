@@ -54,7 +54,6 @@ abstract final class ResultsConfig {
   /// §5.10 Player column: avatar 40, name Fredoka 15, score 42 pt (36 from
   /// four digits); avatar top = card top + 16 + 4.
   static const double avatarSize = 40;
-  static const double avatarGlyph = 26;
   static const double avatarTop = 144;
   static const double nameTop = 188;
   static const double nameFontSize = 15;

@@ -22,7 +22,6 @@ class RunEntry {
     required this.best,
     required this.ts,
     required this.name,
-    this.avatar = '',
     this.look = Look.defaults,
     this.platform = 'android',
     required this.tl,
@@ -37,7 +36,6 @@ class RunEntry {
     RunSummary s, {
     required String runId,
     required String name,
-    String avatar = '',
     Look look = Look.defaults,
     String platform = 'android',
     required DateTime ts,
@@ -48,7 +46,6 @@ class RunEntry {
     best: s.bestAfter < s.score ? s.score : s.bestAfter,
     ts: ts,
     name: clampName(name),
-    avatar: avatar.length > VersusConfig.avatarMax ? '' : avatar,
     look: look,
     platform: platform,
     tl: s.timeline.encodeTl(),
@@ -62,7 +59,9 @@ class RunEntry {
   final int best;
   final DateTime ts;
   final String name;
-  final String avatar;
+
+  /// The equipped look; WP-AV the bird / gear / hat ids draw the player's
+  /// sticker avatar on every phone (unknown ids fall back per layer).
   final Look look;
 
   /// 'android' | 'ios' (analytics only, never used for matching).
@@ -106,7 +105,9 @@ class RunEntry {
     'best': best,
     'ts': ts ?? this.ts,
     'name': name,
-    'avatar': avatar,
+    // WP-AV the legacy picture field: always '' (no photos; the key stays
+    // because the rules and older apps expect exactly these 12 keys).
+    'avatar': '',
     'look': lookToMap(look),
     'platform': platform,
     'tl': tl,
@@ -137,7 +138,6 @@ class RunEntry {
             ? DateTime.fromMillisecondsSinceEpoch(ts.toInt(), isUtc: true)
             : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
         name: m['name']! as String,
-        avatar: (m['avatar'] as String?) ?? '',
         look: look is Map ? lookFromMap(look) : Look.defaults,
         platform: (m['platform'] as String?) ?? 'android',
         tl: tl,
@@ -214,7 +214,6 @@ class PoolEntry {
   OpponentRun toOpponent() => OpponentRun(
     uid: uid,
     name: run.name,
-    avatarUrl: run.avatar,
     look: run.look,
     score: run.score,
     best: run.best,
@@ -269,7 +268,6 @@ Map<String, Object?> nextPlayerDoc({
   required Map<String, Object?> run,
   required bool newBest,
   required String name,
-  required String avatar,
   required String platform,
   required Look look,
   required String uploadsDay,
@@ -289,7 +287,7 @@ Map<String, Object?> nextPlayerDoc({
   final oldBestRun = old?['bestRun'];
   return {
     'name': RunEntry.clampName(name),
-    'avatar': avatar.length > VersusConfig.avatarMax ? '' : avatar,
+    'avatar': '', // WP-AV legacy field, never filled
     'platform': platform,
     'look': lookToMap(look),
     'best': best,

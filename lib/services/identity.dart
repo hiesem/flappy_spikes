@@ -7,21 +7,13 @@ import '../run/config/versus_config.dart';
 import 'game_services.dart' show PlayerStreamGate;
 
 /// The platform games account a player may be signed in to (PRD-2 §3.13
-/// "Who plays", ARCH §6.4): its display name, and once signed in the
-/// credential that links it to the anonymous Firebase user.
+/// "Who plays", ARCH §6.4): its id (the self-match `pg` hash), and once
+/// signed in the credential that links it to the anonymous Firebase user.
+/// WP-AV: the platform's display name and picture are never read.
 class PlatformPlayer {
-  const PlatformPlayer({
-    required this.id,
-    required this.displayName,
-    this.iconImage = '',
-  });
+  const PlatformPlayer({required this.id});
 
   final String id;
-  final String displayName;
-
-  /// The icon-size profile image, base64 ('' when none; games_services
-  /// 5.1.0 `PlayerData.iconImage`, S6-64).
-  final String iconImage;
 }
 
 /// Platform identity behind a small interface (ARCH §8: platform code stays
@@ -67,13 +59,7 @@ class PlayGamesIdentity implements PlatformIdentity {
 
   PlatformPlayer? _toPlayer(PlayerData? p) {
     final id = p?.playerID;
-    _last = p == null
-        ? null
-        : PlatformPlayer(
-            id: id ?? '',
-            displayName: p.displayName,
-            iconImage: p.iconImage ?? '',
-          );
+    _last = p == null ? null : PlatformPlayer(id: id ?? '');
     return _last;
   }
 
@@ -113,12 +99,8 @@ class GameCenterIdentity implements PlatformIdentity {
   Stream<PlatformPlayer?> get player => GameAuth.player.map((p) {
     _last = p == null
         ? null
-        : PlatformPlayer(
-            // Null when Game Center's scoped ids are not persistent.
-            id: p.playerID ?? '',
-            displayName: p.displayName,
-            iconImage: p.iconImage ?? '',
-          );
+        // Null when Game Center's scoped ids are not persistent.
+        : PlatformPlayer(id: p.playerID ?? '');
     return _last;
   });
 

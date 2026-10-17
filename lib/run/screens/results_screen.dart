@@ -8,14 +8,12 @@ import 'package:flame/extensions.dart';
 import '../../components/home/menu_primitives.dart';
 import '../../components/levels/emblem_view.dart';
 import '../../components/look_component.dart';
-import '../../components/versus_avatar.dart'; // PRD-2.3 §21.3
 import '../../components/ui/coin_fly.dart';
 import '../../components/ui/confetti.dart';
 import '../../components/ui/live_effects.dart' show WiggleEffect;
 import '../../game/flappy_game.dart';
 import '../../game/palettes.dart';
 import '../../game/sound.dart';
-import '../../services/avatars.dart';
 import '../../levels/level_progress.dart';
 import '../../levels/levels.dart';
 import '../../skins/look.dart';
@@ -378,7 +376,7 @@ class ResultsScreen extends PositionComponent
         score: model.score,
         centreX: ResultsConfig.soloColumnX,
         mine: true,
-        avatar: game.myAvatarKey,
+        look: game.menu.items.look, // WP-AV your sticker avatar
       );
     } else {
       you = ResultsPlayerColumn(
@@ -386,8 +384,7 @@ class ResultsScreen extends PositionComponent
         score: model.score,
         centreX: ResultsConfig.youColumnX,
         mine: true,
-        avatar: game.myAvatarKey,
-        look: game.menu.items.look, // PRD-2.3 §21.3
+        look: game.menu.items.look, // WP-AV your sticker avatar
         lower: duel == DuelResult.lose,
         winner: duel == DuelResult.win,
       );
@@ -396,7 +393,6 @@ class ResultsScreen extends PositionComponent
         score: opp.score,
         centreX: ResultsConfig.opponentColumnX,
         mine: false,
-        avatar: opp.avatarUrl,
         look: opp.look,
         lower: duel == DuelResult.win,
         winner: duel == DuelResult.lose,
@@ -999,11 +995,11 @@ class ResultsCard extends PositionComponent {
   }
 }
 
-/// One player in the card (§5.10): 40 pt avatar square (yours pink with a
-/// soft-pink person glyph; the opponent's stage grey), the name in Fredoka
-/// SemiBold 15 plum and the score (42 pt, 36 from four digits; plum, or
-/// stage grey for the lower score in versus). WP-5b adds the opponent's
-/// column and the WINNER tag ([winner]).
+/// One player in the card (§5.10): 40 pt avatar square (yours pink, the
+/// opponent's stage grey) with the player's sticker avatar (WP-AV), the
+/// name in Fredoka SemiBold 15 plum and the score (42 pt, 36 from four
+/// digits; plum, or stage grey for the lower score in versus). WP-5b adds
+/// the opponent's column and the WINNER tag ([winner]).
 class ResultsPlayerColumn extends PositionComponent
     with HasGameReference<FlappySpikesGame> {
   ResultsPlayerColumn({
@@ -1013,20 +1009,15 @@ class ResultsPlayerColumn extends PositionComponent
     required this.mine,
     this.lower = false,
     this.winner = false,
-    this.avatar = '',
-    this.look,
+    this.look = Look.defaults,
   });
 
   final String name;
   final int score;
 
-  /// PRD-2.3 §21.3 the player's look: the avatar fallback.
-  final Look? look;
+  /// WP-AV the player's look: their sticker avatar (bird, gear, hat).
+  final Look look;
   final double centreX;
-
-  /// The avatar's `AvatarImages` key ('' / not cached yet = the neutral
-  /// glyph, S6-64).
-  final String avatar;
 
   /// Yours (pink avatar) or the opponent's (stage grey).
   final bool mine;
@@ -1099,18 +1090,6 @@ class ResultsPlayerColumn extends PositionComponent
 
   final Paint _paint = Paint();
 
-  static final Path _person = () {
-    // 24-unit viewBox: head r 4.5 at (12, 8), shoulders M3 22 a9 9 0 0 1 18 0z.
-    return Path()
-      ..addOval(Rect.fromCircle(center: const Offset(12, 8), radius: 4.5))
-      ..moveTo(3, 22)
-      ..arcToPoint(
-        const Offset(21, 22),
-        radius: const Radius.circular(9),
-      )
-      ..close();
-  }();
-
   @override
   void render(Canvas canvas) {
     const s = ResultsConfig.avatarSize;
@@ -1118,30 +1097,13 @@ class ResultsPlayerColumn extends PositionComponent
     final top = ResultsConfig.avatarTop;
     _paint.color = mine ? ResultsConfig.pink : kPostRunPalette.foreground;
     canvas.drawRect(Rect.fromLTWH(left, top, s, s), _paint);
-    final picture = game.avatars.lookup(avatar);
-    if (picture != null) {
-      AvatarImages.paint(canvas, picture, Rect.fromLTWH(left, top, s, s));
-      return;
-    }
-    // PRD-2.3 §21.3 a player without a picture shows their own bird.
-    final bird = look;
-    if (bird != null) {
-      VersusAvatar.paintBird(
-        canvas,
-        Rect.fromLTWH(left, top, s, s),
-        bird,
-        mirror: !mine,
-        backdrop: mine ? VersusAvatar.ownBackdrop : null,
-      );
-      return;
-    }
-    const g = ResultsConfig.avatarGlyph;
-    canvas.save();
-    canvas.translate(left + (s - g) / 2, top + (s - g) / 2);
-    canvas.scale(g / 24);
-    _paint.color = mine ? ResultsConfig.soft : kPostRunPalette.background;
-    canvas.drawPath(_person, _paint);
-    canvas.restore();
+    // WP-AV the sticker avatar; the opponent's faces left.
+    game.avatars.paint(
+      canvas,
+      Rect.fromLTWH(left, top, s, s),
+      look,
+      mirror: !mine,
+    );
   }
 }
 

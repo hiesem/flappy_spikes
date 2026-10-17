@@ -72,9 +72,6 @@ class FakeAuth implements VersusAuth {
       current != null && server.pgOwner.containsValue(current);
 
   @override
-  String get photoUrl => '';
-
-  @override
   Future<void> signInAnonymously() async {
     if (offline) throw _err('network-request-failed');
     final uid = 'anon${++server.anonCreated}';
@@ -237,9 +234,6 @@ class TestBackend extends FirebaseVersusBackend {
   }
 
   @override
-  Future<String> uploadAvatar(Uint8List jpeg) async => '';
-
-  @override
   Future<void> resetAnalytics() async {}
 }
 
@@ -288,9 +282,7 @@ void main() {
     );
     await versus.initialize();
     if (signedInToPlayGames) {
-      identity.controller.add(
-        const PlatformPlayer(id: 'g1', displayName: 'Owner'),
-      );
+      identity.controller.add(const PlatformPlayer(id: 'g1'));
       // The player stream starts the link; let it finish.
       for (var i = 0; i < 3; i++) {
         await Future<void>.delayed(Duration.zero);

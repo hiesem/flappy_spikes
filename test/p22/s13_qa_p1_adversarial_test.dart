@@ -38,7 +38,8 @@ Map<String, Object?> wireRun(RunTimeline t) => {
   'name': 'QA',
   'avatar': '',
   'platform': 'android',
-  'look': {'bird': 'default', 'gear': '', 'hat': '', 'hoop': '', 'trail': ''},
+  // WP-AV real catalogue ids: the server validates the id shape.
+  'look': {'bird': 'classic', 'gear': 'none', 'hat': 'none', 'hoop': 'pink', 'trail': 'flame'},
   'tl': t.encodeTl(),
   'fl': t.encodeFlags(),
   'end': t.endCs,

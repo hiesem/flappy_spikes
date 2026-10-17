@@ -135,7 +135,6 @@ void main() {
       run: e.toMap(),
       newBest: newBest,
       name: 'SwiftKiwi482',
-      avatar: '',
       platform: 'android',
       look: const Look(),
       uploadsDay: '2026-10-08',

@@ -435,13 +435,12 @@ void main() {
     );
   });
 
-  group('S6-64: a cached Play Games avatar is displayed', () {
-    const url = 'https://qa.invalid/avatar.png';
+  group('S6-64 / WP-AV: the opponent\'s sticker avatar is displayed', () {
     final source = opponentAt([1, 3, 6]);
     final opponent = OpponentRun(
       uid: source.uid,
       name: source.name,
-      avatarUrl: url,
+      look: const Look(bird: 'sky'),
       score: source.score,
       best: source.best,
       level: source.level,
@@ -455,21 +454,12 @@ void main() {
       ),
       gameSize: Vector2(320, 711),
     ).testGameWidget(
-      'S6-64 locked intro draws the available avatar instead of the neutral glyph',
+      'WP-AV locked intro draws their sticker avatar instead of the glyph',
       setUp: (g, _) async {
         await g.ready();
         await preloadImages(g);
       },
       verify: (g, tester) async {
-        await tester.runAsync(() async {
-          final rec = ui.PictureRecorder();
-          final canvas = ui.Canvas(rec);
-          canvas.drawRect(
-            const ui.Rect.fromLTWH(0, 0, 52, 52),
-            ui.Paint()..color = const ui.Color(0xFFFF0000),
-          );
-          g.images.add(url, await rec.endRecording().toImage(52, 52));
-        });
         g.onScreenTap();
         await flushAndMount(g);
         g.versusIntro!.debugFreeze(6);
@@ -482,12 +472,17 @@ void main() {
             format: ui.ImageByteFormat.rawRgba,
           ))!.buffer.asUint8List();
           image.dispose();
-          final index = (5 * 232 + 5) * 4;
+          var blue = 0;
+          for (var y = 0; y < 52; y++) {
+            for (var x = 0; x < 52; x++) {
+              final i = (y * 232 + x) * 4;
+              if (bytes[i + 2] > 180 && bytes[i + 2] - bytes[i] > 80) blue++;
+            }
+          }
           expect(
-            bytes.sublist(index, index + 3),
-            [255, 0, 0],
-            reason:
-                'cached avatar exists but the plate always paints a placeholder',
+            blue,
+            greaterThan(52 * 52 * .08),
+            reason: 'their sky bird sticker fills the avatar square',
           );
         });
       },
@@ -686,7 +681,6 @@ void main() {
             run: q.entry.toMap(ts: q.entry.ts.millisecondsSinceEpoch),
             newBest: q.newBest,
             name: q.entry.name,
-            avatar: '',
             platform: 'android',
             look: const Look(),
             uploadsDay: queue.today,

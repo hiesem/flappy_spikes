@@ -161,7 +161,6 @@ Future<int> writeRun(
     run: entry.toMap(ts: RestTs(entry.ts.toUtc().toIso8601String())),
     newBest: newBest,
     name: entry.name,
-    avatar: '',
     platform: 'android',
     look: entry.look,
     uploadsDay: '2026-10-08',

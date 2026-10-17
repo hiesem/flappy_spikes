@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flappy_spikes/game/storage.dart';
@@ -38,9 +37,6 @@ class FakeBackend implements VersusBackend {
 
   @override
   String? get uid => myUid;
-
-  @override
-  String get photoUrl => '';
 
   @override
   bool get linkedToPlatform => linked;
@@ -92,15 +88,6 @@ class FakeBackend implements VersusBackend {
       (_, v) => [for (final e in v) if (e.uid != myUid) e],
     );
     return true;
-  }
-
-  /// PRD-2.3 §21.3 uploads (uid, bytes).
-  final List<(String, Uint8List)> avatarUploads = [];
-
-  @override
-  Future<String> uploadAvatar(Uint8List jpeg) async {
-    avatarUploads.add((myUid, jpeg));
-    return 'https://storage.example/avatars/$myUid.jpg?v=${avatarUploads.length}';
   }
 
   @override
@@ -281,16 +268,14 @@ void main() {
     expect(backend.writes.map((w) => w.$1.entry.runId).toSet(), hasLength(4));
   });
 
-  test('§3.13 a Play Games player links the account and shows their name',
-      () async {
+  test('§3.13 a Play Games player links the account; WP-AV the name stays '
+      'the generated nickname', () async {
     await build();
     await versus.initialize();
-    identity.controller.add(
-      const PlatformPlayer(id: 'g1', displayName: 'Molly the Great'),
-    );
+    identity.controller.add(const PlatformPlayer(id: 'g1'));
     await Future<void>.delayed(Duration.zero);
     expect(backend.links, 1);
-    expect(versus.me.name, 'Molly the Great');
+    expect(versus.me.name, storage.versusNickname);
     identity.controller.add(null);
     await Future<void>.delayed(Duration.zero);
     expect(versus.me.name, storage.versusNickname);

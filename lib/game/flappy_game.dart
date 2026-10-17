@@ -89,7 +89,7 @@ import '../versus/diagnostics.dart'; // P22-2
 import '../run/screens/bonus_screen.dart'; // WP-4a
 import '../services/e2e.dart';
 import '../versus/timeline.dart';
-import '../services/avatars.dart';
+import '../components/sticker_avatar.dart'; // WP-AV
 import '../services/versus_service.dart';
 import '../services/ads_service.dart';
 import '../services/audio_focus.dart';
@@ -149,10 +149,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     this.soundEnabled = true,
     bool? rumbleEnabled,
     VersusService? versus,
-    AvatarSource? avatarSource,
     RatingPrompt? rating,
   }) : services = services ?? GameServices(),
-       _avatarSource = avatarSource ?? const NoAvatarSource(),
        versus = versus ?? NoopVersusService(),
        rating = rating ?? RatingPrompt(),
        reminders = reminders ?? const NoopReminders(),
@@ -272,17 +270,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Whether the app is resumed (PRD-2.3 §18.3: only resumed time counts).
   bool _resumed = true;
 
-  final AvatarSource _avatarSource;
-
-  /// §3.13 / §5.8 (S6-64) the avatar image cache shared by the VS intro,
-  /// the versus HUD bar and the results card (the neutral glyph while an
-  /// image is missing). The network source is wired by `main.dart` only.
-  ///
-  /// §33.4 item 4: decoded at the drawn size (the screen's pixels per
-  /// world point), at most [Config.avatarCacheMax] cached.
-  late final AvatarImages avatars = AvatarImages(
-    images,
-    source: _avatarSource,
+  /// WP-AV the sticker avatars (design C) shared by the VS intro, the
+  /// versus HUD bar and the results card: every player picture is the
+  /// player's own bird / gear / hat, rendered once per size at the
+  /// screen's pixels per world point and cached (no photo is ever read).
+  late final StickerAvatars avatars = StickerAvatars(
     pixelsPerPoint: _pixelsPerPoint,
   );
 
@@ -294,8 +286,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   /// §3.13 / §5.8 / §5.10 (S6-65) the own name on the plates, the HUD chip
-  /// and the results card: the Play Games display name when signed in,
-  /// else the generated nickname ([VersusService.me]); "You" only when the
+  /// and the results card: the generated nickname ([VersusService.me];
+  /// WP-AV: never a Play Games / Game Center name); "You" only when the
   /// service has no identity at all (no backend, before the nickname).
   String get myVersusName {
     try {
@@ -304,15 +296,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     } catch (_) {}
     final nick = storage.versusNickname?.trim() ?? '';
     return nick.isNotEmpty ? nick : 'You';
-  }
-
-  /// (S6-64) the own avatar's [avatars] key ('' = the neutral glyph).
-  String get myAvatarKey {
-    try {
-      return versus.me.avatarImage;
-    } catch (_) {
-      return '';
-    }
   }
 
   /// Reminder notifications (PRD-2 §3.34). No-op unless the app shell swaps
@@ -1579,14 +1562,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   Future<void> _playVersusIntro(OpponentRun? opponent) async {
     state = GameState.versusIntro;
     _introPending = true; // PRD-2.3 §10.3b
-    // S6-64: start both avatar loads now; they land in the cache before
-    // the reel locks (≈ 3.9 s), else the opponent's bird shows.
-    if (opponent != null) avatars.lookup(opponent.avatarUrl);
-    avatars.lookup(myAvatarKey);
     final intro = VersusIntro(
       opponent: opponent,
       myName: myVersusName,
-      myAvatar: myAvatarKey,
       myLook: menu.items.look,
       myLevel: menu.levels.level,
       onCovered: _dropHomeUnderIntro,
@@ -1609,7 +1587,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
               o = versus.takeOpponent();
             } catch (_) {}
           }
-          if (o != null) avatars.lookup(o.avatarUrl);
           intro.resolve(o);
         }),
       );
@@ -3704,8 +3681,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// True while a share or invite is being prepared (a second tap waits).
   bool _sharing = false;
 
-  /// PRD-2.3 §2.2 the username on the card: the Play Games name or the
-  /// versus nickname, created first when there is none ('' only when that
+  /// PRD-2.3 §2.2 the username on the card: the versus nickname (WP-AV:
+  /// never a platform name), created first when there is none ('' only when that
   /// fails: the card then has no name tag).
   Future<String> shareName() async {
     try {

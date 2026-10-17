@@ -130,13 +130,7 @@ void main() {
   );
 
   Future<void> signInToPlayGames() async {
-    identity.controller.add(
-      const PlatformPlayer(
-        id: 'g1',
-        displayName: 'Owner',
-        iconImage: 'aWNvbg==',
-      ),
-    );
+    identity.controller.add(const PlatformPlayer(id: 'g1'));
     for (var i = 0; i < 10; i++) {
       await Future<void>.delayed(Duration.zero);
     }
@@ -247,7 +241,8 @@ void main() {
         if (late == 'success') {
           expect(auth.current, 'old');
           expect(server.users.containsKey('old'), isTrue, reason: 'no reset');
-          expect(versus.me.name, 'Owner');
+          // WP-AV the generated name, never the platform name.
+          expect(versus.me.name, storage.versusNickname);
         } else {
           expect(auth.current, 'anon2', reason: '§2.2 the fallback guest');
         }
@@ -298,8 +293,9 @@ void main() {
     expect(auth.switchAttempts, 1);
   });
 
-  test('P1-03 a fallback guest plays under the guest name; a successful '
-      'retry brings the owner profile back; the pg guard stays', () async {
+  test('P1-03 a fallback guest plays under the nickname; a successful '
+      'retry keeps the nickname (WP-AV: never the platform name); the pg '
+      'guard stays', () async {
     final auth = f.FakeAuth(server)..switchBroken = true;
     final backend = f.TestBackend(auth, []);
     final versus = service(backend);
@@ -312,15 +308,13 @@ void main() {
     final nickname = storage.versusNickname;
     expect(nickname, isNotNull);
     expect(versus.me.name, nickname, reason: '§2.2 under a guest name');
-    expect(versus.me.avatarImage, isNot(contains('aWNvbg==')));
     await versus.settleIdentity();
     expect(versus.pg, isNotEmpty, reason: '§2.5 the pg guard is unchanged');
 
     auth.switchBroken = false;
     await versus.onResume();
     expect(auth.current, 'old');
-    expect(versus.me.name, 'Owner');
-    expect(versus.me.avatarImage, contains('aWNvbg=='));
+    expect(versus.me.name, nickname, reason: 'WP-AV the generated name');
     expect(versus.pg, isNotEmpty);
   });
 }

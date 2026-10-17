@@ -58,10 +58,10 @@ abstract final class VersusConfig {
   /// beyond it (a long offline stretch never grows the prefs unbounded).
   static const int queueCap = 12;
 
-  /// §3.13 ARCH §6.1 field limits: name 1–32, avatar ≤ 512, runId ≤ 64,
-  /// look ids ≤ 40, `tl` ≤ 16 384, `fl` ≤ 8 192 chars.
+  /// §3.13 ARCH §6.1 field limits: name 1–32, runId ≤ 64, look ids ≤ 40
+  /// (WP-AV: lowercase letters, digits and `_` only), `tl` ≤ 16 384,
+  /// `fl` ≤ 8 192 chars.
   static const int nameMax = 32;
-  static const int avatarMax = 512;
   static const int lookIdMax = 40;
   static const int tlMax = 16384;
   static const int flMax = 8192;
@@ -91,20 +91,6 @@ abstract final class VersusConfig {
   /// banner shows this long after the plate flash, then the white fade.
   static const double soloBannerAt = .3;
   static const double soloBanner = 1.3;
-
-  /// PRD-2.3 §21.3 the uploaded picture: 96 × 96 JPEG ≤ 30 KB (the
-  /// `storage.rules` cap), the qualities tried from best down.
-  static const int avatarSide = 96;
-  static const int avatarMaxBytes = 30 * 1024;
-  static const List<int> avatarQualities = [88, 80, 70, 60, 50, 40, 30];
-
-  /// PRD-2.3 §21.3 the Storage path of a player's picture.
-  static String avatarPath(String uid) => 'avatars/$uid.jpg';
-
-  /// PRD-2.3 §5.5 / §21.3 (S8-06): the server deletes the picture with the
-  /// player doc (≈ 60 days after the last run), so an unchanged picture is
-  /// uploaded again when its last upload is older than this.
-  static const Duration avatarRefresh = Duration(days: 30);
 
   /// PRD-2.3 §21.4 / §0 item 7 the Remote Config parameter holding the
   /// salt of the hashed Play Games id (generated at deploy, never in git).

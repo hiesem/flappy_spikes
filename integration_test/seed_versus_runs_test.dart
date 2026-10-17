@@ -122,7 +122,6 @@ void main() {
                 QueuedRun(entry, newBest: true),
                 PlayerFields(
                   name: name,
-                  avatar: '',
                   platform: 'android',
                   look: Look.defaults,
                   uploadsDay: day,

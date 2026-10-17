@@ -4,8 +4,6 @@ import 'package:flame/components.dart';
 
 import '../config/hud_config.dart';
 import '../config/versus_config.dart';
-import '../../components/versus_avatar.dart';
-import '../../services/avatars.dart';
 import 'name_chip.dart';
 import 'run_hud.dart';
 
@@ -26,7 +24,7 @@ class VersusBar extends PositionComponent {
 
   final RunHud hud;
 
-  /// §5.7 / §3.13 (S6-65) the own name: Play Games name or nickname.
+  /// §5.7 / §3.13 the own name: the generated nickname (WP-AV).
   late final NameChip you = NameChip(hud.game.myVersusName, HudConfig.youLeft);
   late final NameChip them = NameChip(
     hud.run.setup.opponent?.name ?? '',
@@ -82,19 +80,8 @@ class VersusBar extends PositionComponent {
     _box(canvas, youBox, HudConfig.youBox, a);
     final youAv = Rect.fromLTWH(HudConfig.youLeft, top, h, h);
     _box(canvas, youAv, HudConfig.youAvatar, a);
-    // PRD-2.3 §21.3 your picture, else your own bird.
-    final mine = hud.game.avatars.lookup(g.myAvatarKey);
-    if (mine != null) {
-      AvatarImages.paint(canvas, mine, youAv, opacity: a);
-    } else {
-      VersusAvatar.paintBird(
-        canvas,
-        youAv,
-        hud.game.menu.items.look,
-        opacity: a,
-        backdrop: VersusAvatar.ownBackdrop,
-      );
-    }
+    // WP-AV your sticker avatar (your bird, gear and hat).
+    g.avatars.paint(canvas, youAv, g.menu.items.look, opacity: a);
     _score(
       canvas,
       '$myScore',
@@ -113,20 +100,11 @@ class VersusBar extends PositionComponent {
       Color.lerp(const Color(0xFF000000), fg, HudConfig.themAvatarMix)!,
       ta,
     );
-    // PRD-2.3 §21.3 their picture, else their own bird in their look
-    // (never the grey person icon).
+    // WP-AV their sticker avatar from their look (never a photo, never
+    // the grey person icon), facing left.
     final opp = hud.run.setup.opponent;
-    final theirs = hud.game.avatars.lookup(opp?.avatarUrl ?? '');
-    if (theirs != null) {
-      AvatarImages.paint(canvas, theirs, themAv, opacity: ta);
-    } else if (opp != null) {
-      VersusAvatar.paintBird(
-        canvas,
-        themAv,
-        opp.look,
-        mirror: true,
-        opacity: ta,
-      );
+    if (opp != null) {
+      g.avatars.paint(canvas, themAv, opp.look, mirror: true, opacity: ta);
     }
     _score(
       canvas,

@@ -358,7 +358,7 @@ class GameServices {
     final before = _playerId;
     if ((player != null) != _signedIn || player?.playerID != before) {
       diag(
-        'FS-GC player ${player == null ? 'signed out' : 'signed in "${player.displayName}"'}'
+        'FS-GC player ${player == null ? 'signed out' : 'signed in'}'
         ' (persistent id: ${player?.playerID != null})',
       );
     }

@@ -18,9 +18,6 @@ abstract class VersusAuth {
   /// Whether the signed-in user is linked to Play Games.
   bool get linkedToPlayGames;
 
-  /// The signed-in user's photo URL, or ''.
-  String get photoUrl;
-
   Future<void> signInAnonymously();
   Future<void> signInWithCredential(AuthCredential credential);
 
@@ -72,9 +69,6 @@ class FirebaseVersusAuth implements VersusAuth {
             p.providerId == GameCenterAuthProvider.PROVIDER_ID,
       ) ??
       false;
-
-  @override
-  String get photoUrl => _auth.currentUser?.photoURL ?? '';
 
   @override
   Future<void> signInAnonymously() => _auth.signInAnonymously();

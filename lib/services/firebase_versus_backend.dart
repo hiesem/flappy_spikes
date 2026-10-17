@@ -6,7 +6,6 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
 import '../run/config/versus_config.dart';
@@ -231,12 +230,6 @@ class FirebaseVersusBackend implements VersusBackend {
   String? get uid => auth.uid;
 
   @override
-  String get photoUrl {
-    final url = auth.photoUrl;
-    return url.length > VersusConfig.avatarMax ? '' : url;
-  }
-
-  @override
   bool get linkedToPlatform => auth.uid != null && auth.linkedToPlayGames;
 
   @override
@@ -271,7 +264,6 @@ class FirebaseVersusBackend implements VersusBackend {
           run: run.entry.toMap(ts: Timestamp.fromDate(run.entry.ts)),
           newBest: run.newBest,
           name: f.name,
-          avatar: f.avatar,
           platform: f.platform,
           look: f.look,
           uploadsDay: f.uploadsDay,
@@ -419,25 +411,6 @@ class FirebaseVersusBackend implements VersusBackend {
     ).httpsCallable(VersusConfig.deleteFunction).call<Object?>();
     final data = result.data;
     return data is Map && data['ok'] == true;
-  }
-
-  /// PRD-2.3 §21.3 `avatars/{uid}.jpg` in the default Storage bucket.
-  @override
-  Future<String> uploadAvatar(Uint8List jpeg) async {
-    final uid = this.uid;
-    if (uid == null) return '';
-    final storage = app == null
-        ? FirebaseStorage.instance
-        : FirebaseStorage.instanceFor(app: app!);
-    final ref = storage.ref(VersusConfig.avatarPath(uid));
-    await ref.putData(
-      jpeg,
-      SettableMetadata(
-        contentType: 'image/jpeg',
-        cacheControl: 'public, max-age=86400',
-      ),
-    );
-    return ref.getDownloadURL();
   }
 
   @override

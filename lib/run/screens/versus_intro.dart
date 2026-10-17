@@ -21,8 +21,6 @@ import '../effects/fireworks.dart';
 import '../effects/particle_pool.dart';
 import '../hud/banners.dart' show ElementBanner;
 import '../hud/run_hud.dart' show HudText;
-import '../../components/versus_avatar.dart';
-import '../../services/avatars.dart';
 import '../../game/paints.dart';
 
 const Color _pink = Color(0xFFEC008C);
@@ -94,7 +92,6 @@ class VersusIntro extends PositionComponent
     required this.myName,
     required this.myLook,
     required this.myLevel,
-    this.myAvatar = '',
     this.onCovered,
     math.Random? random,
   }) : _opponent = opponent,
@@ -152,9 +149,6 @@ class VersusIntro extends PositionComponent
   final String myName;
   final Look myLook;
   final int myLevel;
-
-  /// The own avatar's `AvatarImages` key ('' = the neutral glyph, S6-64).
-  final String myAvatar;
   final math.Random _rnd;
 
   /// Called once the panels have landed and cover the home screen.
@@ -306,8 +300,7 @@ class VersusIntro extends PositionComponent
       avatar: _pink,
       glyph: _soft,
       level: myLevel,
-      image: myAvatar,
-    )..bird = myLook; // PRD-2.3 §21.3 your bird when you have no picture
+    )..bird = myLook; // WP-AV your sticker avatar
     _bottom.addAll([youBird, youPlate]);
 
     // Top panel (opponent): fg 26 % over bg, 45° stripes drifting left,
@@ -484,13 +477,9 @@ class VersusIntro extends PositionComponent
         oppPlate.avatar = last
             ? game.foregroundColor
             : avatarColors[k % avatarColors.length];
-        // §5.8 the real avatar settles with the real name (S6-64); PRD-2.3
-        // §21.3 their bird while it loads / when they have none.
-        if (last && o != null) {
-          oppPlate
-            ..image = o.avatarUrl
-            ..bird = o.look;
-        }
+        // §5.8 the real avatar settles with the real name: WP-AV their
+        // sticker avatar.
+        if (last && o != null) oppPlate.bird = o.look;
         oppPlate.level = _reelLevels[k];
         _sfx(Sfx.vsTick);
       });
@@ -841,7 +830,8 @@ class VersusIntroPanel extends PositionComponent {
   }
 }
 
-/// A name plate (232 × 52): avatar square with the person glyph, the name
+/// A name plate (232 × 52): avatar square (the sticker avatar, or the person
+/// glyph while the reel cycles filler names), the name
 /// (or the reel) and the level emblem overhanging the right slot.
 class VersusIntroPlate extends PositionComponent with GroupOpacity {
   VersusIntroPlate(
@@ -851,7 +841,6 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
     required this.glyph,
     required int level,
     this.reel = false,
-    this.image = '',
   }) : super(position: rect.topLeft.toVector2(), size: rect.size.toVector2()) {
     emblem = EmblemView(
       level: level,
@@ -866,13 +855,8 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
   final Color glyph;
   final bool reel;
 
-  /// §5.8 the avatar image's `AvatarImages` key ('' = the neutral glyph;
-  /// also the glyph while the image is not cached yet, S6-64).
-  String image;
-
-  /// PRD-2.3 §21.3 the player's look: their bird fills the avatar square
-  /// while their picture loads, when it fails or when they have none (the
-  /// opponent's plate and, without a Play Games picture, your own).
+  /// WP-AV the player's look: their sticker avatar fills the avatar
+  /// square (null while the reel cycles filler names: the person glyph).
   Look? bird;
 
   /// PRD-2.3 §25.3 the NO RIVAL FOUND plate: the grey person icon, no
@@ -987,22 +971,13 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
     canvas.drawRect(Rect.fromLTWH(0, 0, w, hh), _p);
     _p.color = avatar;
     canvas.drawRect(const Rect.fromLTWH(0, 0, slot, slot), _p);
-    final picture = noRival ? null : intro.game.avatars.lookup(image);
     final look = noRival ? null : bird;
-    if (picture != null) {
-      AvatarImages.paint(
-        canvas,
-        picture,
-        const Rect.fromLTWH(0, 0, slot, slot),
-      );
-    } else if (look != null) {
-      VersusAvatar.paintBird(
+    if (look != null) {
+      intro.game.avatars.paint(
         canvas,
         const Rect.fromLTWH(0, 0, slot, slot),
         look,
         mirror: reel, // the opponent faces left
-        t: intro.time,
-        backdrop: reel ? null : VersusAvatar.ownBackdrop,
       );
     } else {
       // Person glyph, 32 pt (24-unit box).

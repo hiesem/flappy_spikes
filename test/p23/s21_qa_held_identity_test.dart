@@ -43,9 +43,7 @@ void main() {
         await service.initialize();
         expect(service.held?.runId, 'ghost', reason: 'prefetched anonymously');
         if (switchUid) backend.switchTo = 'owner';
-        identity.controller.add(
-          const PlatformPlayer(id: 'g1', displayName: 'Me'),
-        );
+        identity.controller.add(const PlatformPlayer(id: 'g1'));
         await pumpEventQueue();
         await service.settleIdentity();
         final opponent = service.takeOpponent();

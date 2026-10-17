@@ -7,7 +7,6 @@ class OpponentRun implements OpponentFeed {
   const OpponentRun({
     required this.uid,
     required this.name,
-    this.avatarUrl = '',
     this.look = Look.defaults,
     required this.score,
     required this.best,
@@ -19,7 +18,6 @@ class OpponentRun implements OpponentFeed {
 
   final String uid;
   final String name;
-  final String avatarUrl;
   final Look look;
   final int score;
   final int best;

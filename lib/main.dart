@@ -22,7 +22,6 @@ import 'services/soak.dart';
 import 'services/tuning.dart';
 import 'services/tuning_firebase.dart';
 import 'run/config/versus_config.dart';
-import 'services/avatars.dart';
 import 'services/identity.dart';
 import 'services/versus_service.dart';
 import 'share/share_flow.dart';
@@ -161,8 +160,6 @@ Future<void> main() async {
     services: services,
     monetization: monetization,
     versus: versus,
-    // S6-64: Play Games avatars over https on the products only.
-    avatarSource: _isMobile && !kE2E && !kSoak ? HttpAvatarSource() : null,
     rating: rating,
   );
   // PRD-2.2 §33.4 item 5: idle menus draw at Config.idleMenuFps. Not in

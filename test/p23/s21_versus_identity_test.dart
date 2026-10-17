@@ -1,11 +1,9 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/levels/levels.dart';
 import 'package:flappy_spikes/run/config/versus_config.dart';
-import 'package:flappy_spikes/services/avatar_upload.dart';
 import 'package:flappy_spikes/services/identity.dart';
 import 'package:flappy_spikes/services/pg_salt.dart';
 import 'package:flappy_spikes/services/versus_service.dart';
@@ -13,27 +11,12 @@ import 'package:flappy_spikes/skins/look.dart';
 import 'package:flappy_spikes/versus/matcher.dart';
 import 'package:flappy_spikes/versus/run_entry.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:image/image.dart' as img;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../versus/s3_13_service_test.dart' as fixture;
 
 /// A fake salt (PRD-2.3 §0 item 7: the real one lives in Remote Config only).
 const _salt = 'test-salt-not-the-real-one';
-
-/// A Play Games picture as the plugin hands it over (base64 PNG), noisy so
-/// the JPEG is not trivially small.
-String _icon({int side = 256, int seed = 1}) {
-  final r = Random(seed);
-  final im = img.Image(width: side, height: side);
-  for (final p in im) {
-    p
-      ..r = r.nextInt(256)
-      ..g = r.nextInt(256)
-      ..b = r.nextInt(256);
-  }
-  return base64Encode(img.encodePng(im));
-}
 
 /// Grape, Shades, Cap, Neon, Bubbles (PRD-2.3 §21.5).
 const _fancy = Look(
@@ -44,8 +27,8 @@ const _fancy = Look(
   trail: 'bubbles',
 );
 
-/// PRD-2.3 §21.3 / §21.4 / §21.5 the versus identity: the uploaded picture,
-/// the hashed Play Games id and the self-match guard, the account-switch
+/// PRD-2.3 §21.4 / §21.5 the versus identity (WP-AV: no pictures, the
+/// generated name only): the hashed Play Games id and the self-match guard, the account-switch
 /// clean-up, and the look round trip.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -78,71 +61,20 @@ void main() {
     await versus.settleIdentity();
   }
 
-  group('§21.3 pictures', () {
-    test('§21.5 encodeVersusAvatar: 96 × 96 JPEG within 30 KB', () {
-      for (final side in [64, 96, 256, 512]) {
-        final jpg = encodeVersusAvatar(base64Decode(_icon(side: side)))!;
-        expect(jpg.length, lessThanOrEqualTo(VersusConfig.avatarMaxBytes));
-        final back = img.decodeJpg(jpg)!;
-        expect((back.width, back.height), (96, 96));
-      }
-      expect(encodeVersusAvatar(Uint8List.fromList([1, 2, 3])), isNull);
-    });
-
-    test('§21.5 an upload happens once per picture change; the run\'s '
-        'avatar holds the URL', () async {
+  group('WP-AV no pictures, the generated name', () {
+    test('WP-AV a signed-in Play Games player uploads no picture; the run '
+        'and the player doc carry avatar "" and the nickname', () async {
       await build();
       await versus.initialize();
-      final pic = _icon();
-      await signIn(PlatformPlayer(id: 'g1', displayName: 'Hiesem', iconImage: pic));
-      expect(backend.avatarUploads, hasLength(1));
-      final (uid, bytes) = backend.avatarUploads.single;
-      expect(uid, 'anon');
-      expect(bytes.length, lessThanOrEqualTo(30 * 1024));
-      expect(img.decodeJpg(bytes)!.width, 96);
-      final url = storage.versusAvatar!.url;
-      expect(url, startsWith('https://storage.example/avatars/anon.jpg'));
-      expect(versus.me.avatarUrl, url);
-
-      // The same picture again (a new player event, an app restart): no upload.
-      await signIn(PlatformPlayer(id: 'g1', displayName: 'Hiesem', iconImage: pic));
-      expect(backend.avatarUploads, hasLength(1));
-
-      // The run carries the URL in `avatar`.
+      final nick = storage.versusNickname!;
+      await signIn(const PlatformPlayer(id: 'g1'));
       await versus.submitRun(fixture.summary(30, bestBefore: 120), _fancy);
       await versus.flush();
       final (q, f) = backend.writes.single;
-      expect(q.entry.avatar, url);
-      expect(f.avatar, url);
-
-      // A new picture: one more upload.
-      await signIn(
-        PlatformPlayer(id: 'g1', displayName: 'Hiesem', iconImage: _icon(seed: 2)),
-      );
-      expect(backend.avatarUploads, hasLength(2));
-      expect(storage.versusAvatar!.url, endsWith('v=2'));
-    });
-
-    test('§21.3 players without a Play Games picture upload nothing; a failed '
-        'upload leaves avatar empty', () async {
-      await build();
-      await versus.initialize();
-      await signIn(const PlatformPlayer(id: 'g1', displayName: 'NoPic'));
-      expect(backend.avatarUploads, isEmpty);
-      expect(versus.me.avatarUrl, '');
-
-      await build();
-      backend = _FailingUpload(myUid: 'anon');
-      versus = FirebaseVersusService(
-        storageOf: () => storage,
-        backend: backend,
-        identity: identity,
-        pgSalt: const FixedPgSalt(_salt),
-      );
-      await versus.initialize();
-      await signIn(PlatformPlayer(id: 'g1', displayName: 'X', iconImage: _icon()));
-      expect(storage.versusAvatar, isNull);
-      expect(versus.me.avatarUrl, '');
+      expect(q.entry.name, nick);
+      expect(f.name, nick);
+      expect(q.entry.toMap()['avatar'], '');
+      expect(versus.me.name, nick);
     });
   });
 
@@ -159,9 +91,15 @@ void main() {
     test('§21.4 each new run stores pg; without Play Games it is ""', () async {
       await build();
       await versus.initialize();
-      await versus.submitRun(fixture.summary(30, bestBefore: 120), const Look());
-      await signIn(const PlatformPlayer(id: 'g1', displayName: 'Hiesem'));
-      await versus.submitRun(fixture.summary(31, bestBefore: 120), const Look());
+      await versus.submitRun(
+        fixture.summary(30, bestBefore: 120),
+        const Look(),
+      );
+      await signIn(const PlatformPlayer(id: 'g1'));
+      await versus.submitRun(
+        fixture.summary(31, bestBefore: 120),
+        const Look(),
+      );
       await versus.flush();
       expect(backend.writes.map((w) => w.$1.entry.pg), [
         '',
@@ -174,7 +112,7 @@ void main() {
         'runs without pg still match (client)', () async {
       await build();
       await versus.initialize();
-      await signIn(const PlatformPlayer(id: 'g1', displayName: 'Hiesem'));
+      await signIn(const PlatformPlayer(id: 'g1'));
       final mine = hashPlayGamesId('g1', _salt);
       PoolEntry withPg(String uid, String runId, String pg) {
         final e = fixture.pooled(uid, runId, 80, 3);
@@ -221,7 +159,7 @@ void main() {
       await versus.initialize();
       backend.pools['3_0'] = [fixture.pooled('anon', 'mine1', 50, 3)];
       backend.switchTo = 'owner';
-      await signIn(const PlatformPlayer(id: 'g1', displayName: 'Hiesem'));
+      await signIn(const PlatformPlayer(id: 'g1'));
       expect(backend.deletedOnlineUids, ['anon'], reason: 'deleted as anon');
       expect(backend.myUid, 'owner');
       expect(backend.pools['3_0'], isEmpty);
@@ -233,7 +171,7 @@ void main() {
       backend
         ..switchTo = 'owner'
         ..deleteOnlineFails = true;
-      await signIn(const PlatformPlayer(id: 'g1', displayName: 'Hiesem'));
+      await signIn(const PlatformPlayer(id: 'g1'));
       expect(backend.deletedOnlineUids, isEmpty);
       expect(backend.myUid, 'owner');
       expect(backend.linked, isTrue);
@@ -269,11 +207,4 @@ void main() {
       expect(opp.level, levelFor(uploaded.best));
     });
   });
-}
-
-class _FailingUpload extends fixture.FakeBackend {
-  _FailingUpload({super.myUid});
-  @override
-  Future<String> uploadAvatar(Uint8List jpeg) async =>
-      throw StateError('storage unavailable');
 }

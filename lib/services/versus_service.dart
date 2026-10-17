@@ -1,8 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
-
-import 'package:crypto/crypto.dart';
 
 import 'package:flutter/foundation.dart';
 
@@ -18,8 +15,6 @@ import '../versus/nickname.dart';
 import '../versus/opponent.dart';
 import '../versus/run_entry.dart';
 import '../versus/upload_queue.dart';
-import 'avatar_upload.dart';
-import 'avatars.dart';
 import 'firebase_versus_backend.dart';
 import 'identity.dart';
 import 'pg_salt.dart';
@@ -27,23 +22,12 @@ import 'redact.dart';
 
 /// The player's own versus identity (§3.13).
 class VersusProfile {
-  const VersusProfile({
-    this.name = '',
-    this.avatarUrl = '',
-    this.avatarImage = '',
-    this.level = 0,
-  });
+  const VersusProfile({this.name = '', this.level = 0});
 
-  /// §3.13 the Play Games display name when signed in, else the
-  /// generated nickname ('' before either exists).
+  /// §3.13 the generated nickname ('' before it exists). WP-AV: never the
+  /// Play Games / Game Center display name, and no picture (the avatar is
+  /// drawn from the look).
   final String name;
-
-  /// The avatar URL that is uploaded with a run ('' = default avatar).
-  final String avatarUrl;
-
-  /// The [AvatarImages] key of the own avatar on this phone: the Play
-  /// Games icon image (`data:` URI) or [avatarUrl] (S6-64); '' = glyph.
-  final String avatarImage;
   final int level;
 }
 
@@ -272,9 +256,6 @@ abstract class VersusBackend {
   /// The signed-in Firebase uid, or null.
   String? get uid;
 
-  /// The Firebase user's photo URL (Play Games link), or ''.
-  String get photoUrl;
-
   /// Whether the Firebase user is already linked to Play Games.
   bool get linkedToPlatform;
 
@@ -309,10 +290,6 @@ abstract class VersusBackend {
   /// credential right after). True when the server confirmed.
   Future<bool> deleteOnline();
 
-  /// PRD-2.3 §21.3 uploads [jpeg] (96 × 96, ≤ 30 KB) to
-  /// `avatars/{uid}.jpg` in Firebase Storage and returns its download URL.
-  Future<String> uploadAvatar(Uint8List jpeg);
-
   /// `FirebaseAnalytics.resetAnalyticsData()`.
   Future<void> resetAnalytics();
 }
@@ -321,7 +298,6 @@ abstract class VersusBackend {
 class PlayerFields {
   const PlayerFields({
     required this.name,
-    required this.avatar,
     required this.platform,
     required this.look,
     required this.uploadsDay,
@@ -334,7 +310,6 @@ class PlayerFields {
   final int? level;
 
   final String name;
-  final String avatar;
   final String platform;
   final Look look;
   final String uploadsDay;
@@ -433,9 +408,6 @@ class FirebaseVersusService implements VersusService {
   String _pg = '';
   String _pgFor = '';
 
-  /// PRD-2.3 §21.3 the picture upload in flight.
-  Future<void>? _avatarSync;
-
   /// PRD-2.2 §3 a search ended since the last run start: the result is
   /// cached for the Home visit (no new search until [onRunStart]).
   bool _searched = false;
@@ -467,10 +439,9 @@ class FirebaseVersusService implements VersusService {
   /// PRD-2.3 §21.4 my hashed Play Games id now (tests).
   String get pg => _pg;
 
-  /// PRD-2.3 §21.3 / §21.4 settles the pg and the picture upload (tests).
+  /// PRD-2.3 §21.4 settles the pg (tests).
   Future<void> settleIdentity() async {
     await _ensurePg();
-    await (_avatarSync ?? Future<void>.value());
   }
 
   /// What the upload queue decided for the last submitted run (tests and
@@ -549,9 +520,8 @@ class FirebaseVersusService implements VersusService {
   Future<void> _initialize() async {
     // iOS round 2 §5: the platform player is followed from the start (not
     // only once Firebase / App Check / auth are up, which can take seconds
-    // or fail offline), so the profile name ([me]: versus intro, results,
-    // leaderboard rows) is the Game Center / Play Games name as soon as
-    // the platform reports the player. Linking waits for [_ready].
+    // or fail offline), so its `pg` is known early. WP-AV: the profile
+    // name stays the nickname. Linking waits for [_ready].
     try {
       _playerSub ??= identity.player.listen(_onPlayer, onError: (_) {});
     } catch (e) {
@@ -596,7 +566,7 @@ class FirebaseVersusService implements VersusService {
   void _onPlayer(PlatformPlayer? p) {
     _player = p;
     diag(
-      'FS-GC versus player ${p == null ? 'none' : '"${p.displayName}"'} '
+      'FS-GC versus player ${p == null ? 'none' : 'signed in'} '
       '(${identity.platform}) ready=$_ready',
     );
     // Before the start-up finished, [_initialize] refreshes the identity
@@ -609,15 +579,11 @@ class FirebaseVersusService implements VersusService {
     }
   }
 
-  /// PRD-2.3 §21.3 / §21.4 the player or the uid changed: the pg hash and
-  /// the picture upload follow.
+  /// PRD-2.3 §21.4 the player or the uid changed: the pg hash follows.
   void _identityChanged() {
     // S8-03: a held opponent picked under the old uid / pg may now be me.
     _dropHeldIfMine();
     unawaited(_ensurePg().then((_) => _dropHeldIfMine()));
-    if (_ready) {
-      _avatarSync ??= _syncAvatar().whenComplete(() => _avatarSync = null);
-    }
   }
 
   /// PRD-2.3 §21.4 `pg` = SHA-256(Play Games id + salt), '' without Play
@@ -644,72 +610,11 @@ class FirebaseVersusService implements VersusService {
     }
   }
 
-  /// PRD-2.3 §21.3 uploads the Play Games picture (96 × 96 JPEG ≤ 30 KB)
-  /// once per picture change and uid; the download URL becomes the run's
-  /// `avatar`. Players without a Play Games picture upload nothing. A
-  /// failure leaves the last record (or none: `avatar` stays empty).
-  Future<void> _syncAvatar() async {
-    try {
-      final icon = _profilePlayer?.iconImage ?? '';
-      final uid = _safe(() => backend.uid) ?? '';
-      if (icon.isEmpty || uid.isEmpty) return;
-      final hash = sha256.convert(utf8.encode(icon)).toString();
-      final have = storage.versusAvatar;
-      final at = storage.versusAvatarAt;
-      if (have != null &&
-          have.uid == uid &&
-          have.hash == hash &&
-          have.url.isNotEmpty &&
-          at != null &&
-          storage.now().difference(at) < VersusConfig.avatarRefresh) {
-        return;
-      }
-      final jpeg = encodeVersusAvatar(base64Decode(icon));
-      if (jpeg == null) return;
-      final url = await _call(backend.uploadAvatar(jpeg));
-      if (url.isEmpty || url.length > VersusConfig.avatarMax) return;
-      if ((_safe(() => backend.uid) ?? '') != uid) return;
-      await storage.saveVersusAvatar((uid: uid, hash: hash, url: url));
-    } catch (e) {
-      _log('avatar upload', e);
-    }
-  }
-
-  /// PRD-2.3 §21.3 the uploaded picture's URL for the signed-in uid, else
-  /// the Firebase user's photo URL ('' = none).
-  String get _avatarUrl {
-    final uid = _safe(() => backend.uid) ?? '';
-    final a = storage.versusAvatar;
-    if (a != null && uid.isNotEmpty && a.uid == uid && a.url.isNotEmpty) {
-      return a.url;
-    }
-    return _safe(() => backend.photoUrl) ?? '';
-  }
-
-  /// PRD-2.3.1 §2.2 (QA P1-03) the platform player whose name and picture
-  /// the profile shows: none while Firebase is the fallback guest of a
-  /// failed switch (versus runs "under a guest name"). The `pg` self-match
-  /// guard still uses [_player].
-  PlatformPlayer? get _profilePlayer {
-    if (_switchFailed && !(_safe(() => backend.linkedToPlatform) ?? false)) {
-      return null;
-    }
-    return _player;
-  }
-
   @override
   VersusProfile get me {
     final s = storage;
-    final player = _profilePlayer;
-    final pgs = player?.displayName ?? '';
-    final url = _avatarUrl;
-    final icon = player?.iconImage ?? '';
     return VersusProfile(
-      name: pgs.trim().isNotEmpty
-          ? RunEntry.clampName(pgs)
-          : (s.versusNickname ?? ''),
-      avatarUrl: url,
-      avatarImage: icon.isNotEmpty ? AvatarImages.dataUri(icon) : url,
+      name: s.versusNickname ?? '', // WP-AV the generated name only
       level: s.playerLevel.clamp(0, kMaxLevel), // WP-L the stored level
     );
   }
@@ -980,7 +885,6 @@ class FirebaseVersusService implements VersusService {
         pg: pg,
         runId: _newRunId(),
         name: p.name.isEmpty ? await ensureNickname() : p.name,
-        avatar: p.avatarUrl,
         look: look,
         platform: identity.platform,
         ts: _clock().toUtc(),
@@ -1027,7 +931,6 @@ class FirebaseVersusService implements VersusService {
             q,
             PlayerFields(
               name: p.name.isEmpty ? q.entry.name : p.name,
-              avatar: p.avatarUrl,
               platform: identity.platform,
               look: q.entry.look,
               uploadsDay: queue.today,
@@ -1145,10 +1048,6 @@ class FirebaseVersusService implements VersusService {
     return run.timeout(timeout);
   }
 
-  /// QA P1-03 a failed switch left the player on a fallback guest (or
-  /// signed out): until a link succeeds, [me] is the guest profile.
-  bool _switchFailed = false;
-
   @override
   Future<void> onPlatformSignIn() {
     if (!_ready) return Future.value();
@@ -1177,20 +1076,12 @@ class FirebaseVersusService implements VersusService {
   Future<void> _link() async {
     // A data reset ran first: the next start-up links again.
     if (!_ready) return;
-    final before = _safe(() => backend.uid) ?? '';
     try {
       await backend.link(identity, beforeSwitch: _cleanUpAnonymousAccount);
     } catch (e) {
       _log('link', e);
     }
     final uid = _safe(() => backend.uid) ?? '';
-    if (_safe(() => backend.linkedToPlatform) ?? false) {
-      _switchFailed = false;
-    } else if (uid != before) {
-      // QA P1-03 the switch failed and the guest was replaced: versus
-      // runs under a guest name until a retry succeeds.
-      _switchFailed = true;
-    }
     // PRD-2.3.1 §2.2 the link ended without a live user (the fallback
     // guest could not sign in, e.g. offline): versus starts again.
     if (uid.isEmpty) {
@@ -1203,7 +1094,7 @@ class FirebaseVersusService implements VersusService {
 
   /// PRD-2.3 §21.4 the link met `credential-already-in-use`: before the
   /// switch to the uid that owns the Play Games id, the old anonymous
-  /// uid's versus data (runs, pool entries, picture) is deleted while still
+  /// uid's versus data (runs, pool entries) is deleted while still
   /// signed in as it. Never throws and never blocks the switch.
   Future<void> _cleanUpAnonymousAccount() async {
     try {
@@ -1212,9 +1103,6 @@ class FirebaseVersusService implements VersusService {
     } catch (e) {
       _log('anonymous clean-up', e);
     }
-    try {
-      await storage.saveVersusAvatar(null);
-    } catch (_) {}
   }
 }
 // endregion WP-5b

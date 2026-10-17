@@ -69,9 +69,7 @@ dependencies:
   in_app_purchase_android: ^0.5.3
   in_app_review: ^2.0.12
   # endregion P23-20/22
-  # region PRD-2.3 §21 — versus pictures (Firebase Storage), resize, pg hash
-  firebase_storage: ^13.6.0
-  image: ^4.9.1
+  # region PRD-2.3 §21 — pg hash (WP-AV: no versus pictures, no Storage)
   crypto: ^3.0.7
   app_tracking_transparency: ^2.0.7
   # endregion PRD-2.3 §21

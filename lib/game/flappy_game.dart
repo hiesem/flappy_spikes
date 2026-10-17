@@ -698,6 +698,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // mid-start, or a pre-WP10 arm-then-START build) and must not ride
     // along on a plain START.
     if (menu.slot.armed != Powerup.none) menu.slot.consume();
+    // Audit A3-6: the banner service's own preloads (consent, retry) skip
+    // NO ADS owners, like the game's ([bannerWanted]).
+    monetization.banner.preloadWanted = () => !menu.noAds;
     // §3.16 (S6-62) a 4/4 puzzle bonus a kill interrupted is paid first
     // (it happened before any level-reward claim of that session).
     try {

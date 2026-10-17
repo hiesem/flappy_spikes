@@ -641,6 +641,12 @@ abstract class BannerAds {
 
   /// §7.11: called at each `onAdImpression`.
   set onImpression(void Function()? callback);
+
+  /// Audit A3-6: whether a banner is wanted at all (the game: not for NO
+  /// ADS owners). While it answers false, [preload] does nothing, also the
+  /// service's own preloads (initialize, consent change, load retry).
+  /// Null = always wanted.
+  set preloadWanted(bool Function()? wanted);
 }
 
 /// No banner (iOS, Test Lab).
@@ -673,6 +679,9 @@ class NoopBannerAds implements BannerAds {
 
   @override
   set onImpression(void Function()? callback) {}
+
+  @override
+  set preloadWanted(bool Function()? wanted) {}
 }
 
 /// Scriptable in-memory banner for tests, Linux and E2E builds. Off by
@@ -713,9 +722,15 @@ class FakeBannerAds implements BannerAds {
   @override
   ValueListenable<bool> get loaded => _loaded;
 
+  bool Function()? _wanted;
+
+  @override
+  set preloadWanted(bool Function()? wanted) => _wanted = wanted;
+
   @override
   void preload() {
     if (!canShow || _loaded.value) return;
+    if (!(_wanted?.call() ?? true)) return;
     preloads++;
     if (fill) _loaded.value = true;
   }
@@ -807,6 +822,11 @@ class AdMobBannerAds implements BannerAds {
   @override
   set onImpression(void Function()? callback) => _onImpression = callback;
 
+  bool Function()? _wanted;
+
+  @override
+  set preloadWanted(bool Function()? wanted) => _wanted = wanted;
+
   @override
   Future<void> initialize() async {
     if (_initialized) return;
@@ -846,6 +866,11 @@ class AdMobBannerAds implements BannerAds {
   void preload() {
     final size = _size;
     if (!canShow || size == null || _ad != null) return;
+    // A3-6: no banner request (nor retry) for a player who has none.
+    if (!(_wanted?.call() ?? true)) {
+      _retryTimer?.cancel();
+      return;
+    }
     _retryTimer?.cancel();
     late final BannerAd ad;
     ad = BannerAd(

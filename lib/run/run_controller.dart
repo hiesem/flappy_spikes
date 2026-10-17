@@ -943,7 +943,28 @@ class RunController extends Component {
   /// Freezes the run at its current time (screenshot tests, ARCH §7.1).
   void debugFreeze([double? t]) => _frozen = true;
 
+  /// Audit A2-31: short-lived effects a feature puts straight into the game
+  /// world (outside the run layers): the FEVER pass flash and shake, the
+  /// pair gift's rising word. They go with the run ([disposeRun]).
+  final List<Component> _worldFx = [];
+
+  /// Adds [fx] to the game world, owned by this run (removed with it).
+  void addWorldFx(Component fx) {
+    _worldFx
+      ..removeWhere((x) => x.isRemoved)
+      ..add(fx);
+    game.world.add(fx);
+  }
+
+  /// The run-owned world effects still alive (tests).
+  @visibleForTesting
+  Iterable<Component> get worldFx => _worldFx.where((x) => !x.isRemoved);
+
   void disposeRun() {
+    for (final fx in _worldFx) {
+      if (!fx.isRemoved) fx.removeFromParent();
+    }
+    _worldFx.clear();
     for (final f in features) {
       f.detach();
     }

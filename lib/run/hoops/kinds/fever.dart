@@ -143,9 +143,10 @@ class FeverHoopKind extends HoopKind {
         fadePow: 2,
       );
     }
-    final world = c.game.world;
-    world.add(FeverFlash(Vector2(RunConfig.worldWidth, c.viewHeight)));
-    world.add(FeverShake(c));
+    // Audit A2-31: owned by the run (removed when it is disposed).
+    c.run
+      ..addWorldFx(FeverFlash(Vector2(RunConfig.worldWidth, c.viewHeight)))
+      ..addWorldFx(FeverShake(c));
   }
 }
 

@@ -20,13 +20,13 @@ const gated = {
 };
 
 /// PRD-2.3 §14.6 the table: what is open from each `gamesPlayed`
-/// (PRD-2.3.1 §0 live RC v21 gates 0/2/4/6/8/12; were 0/3/5/8/10/15/20).
+/// (PRD-2.3.1 §0 live RC v21 gates 0/2/4/6/8/12; were 0/3/5/8/10/15/20.
+/// Owner 2026-10-17, RC v24: comet, portal, capsules and shield from the
+/// first game, gate 0).
 Set<String> openAt(int games) => {
-  'heart', 'star_trail', 'bullseye', 'switch_ring', 'train',
-  if (games >= 2) ...[
-    'comet', 'portal', 'capsule', 'hourglass', 'mini_bird', 'coin_frenzy', //
-    'shield',
-  ],
+  'heart', 'star_trail', 'bullseye', 'switch_ring', 'train', //
+  'comet', 'portal', 'capsule', 'hourglass', 'mini_bird', 'coin_frenzy', //
+  'shield',
   if (games >= 4) ...['spring', 'pair', 'egg'],
   if (games >= 6) ...['feather', 'puzzle_piece', 'piggy', 'jar'],
   if (games >= 8) ...['fever', 'lucky_spin'],
@@ -74,64 +74,76 @@ void main() {
     test('a debug force ignores the gate; normal, angled and moving hoops '
         'are never gated', () {
       final all = ElementId.values.toSet();
-      final f = GatesConfig.filter(all, 0, keep: [ElementId.saw, ElementId.hourglass]);
-      expect(f, containsAll([ElementId.saw, ElementId.hourglass, ElementId.capsule]));
+      final f = GatesConfig.filter(
+        all,
+        0,
+        keep: [ElementId.saw, ElementId.hourglass],
+      );
+      expect(
+        f,
+        containsAll([ElementId.saw, ElementId.hourglass, ElementId.capsule]),
+      );
       expect(f, isNot(contains(ElementId.fever)));
-      expect(f, containsAll([
-        ElementId.normalHoop,
-        ElementId.angledRing,
-        ElementId.movingRing,
-        ElementId.squeeze,
-        ElementId.bigHoops,
-      ]));
+      expect(
+        f,
+        containsAll([
+          ElementId.normalHoop,
+          ElementId.angledRing,
+          ElementId.movingRing,
+          ElementId.squeeze,
+          ElementId.bigHoops,
+        ]),
+      );
     });
   });
 
-  group('§14.2 feather / piece: never in two runs in a row, never together',
-      () {
-    test('shownLastRun: blocked for the run right after (and the same '
-        'gamesPlayed), never before the first', () {
-      expect(GatesConfig.shownLastRun(-1, 0), isFalse);
-      expect(GatesConfig.shownLastRun(-1, 30), isFalse);
-      expect(GatesConfig.shownLastRun(12, 13), isTrue);
-      expect(GatesConfig.shownLastRun(12, 12), isTrue);
-      expect(GatesConfig.shownLastRun(12, 14), isFalse);
-    });
+  group(
+    '§14.2 feather / piece: never in two runs in a row, never together',
+    () {
+      test('shownLastRun: blocked for the run right after (and the same '
+          'gamesPlayed), never before the first', () {
+        expect(GatesConfig.shownLastRun(-1, 0), isFalse);
+        expect(GatesConfig.shownLastRun(-1, 30), isFalse);
+        expect(GatesConfig.shownLastRun(12, 13), isTrue);
+        expect(GatesConfig.shownLastRun(12, 12), isTrue);
+        expect(GatesConfig.shownLastRun(12, 14), isFalse);
+      });
 
-    test('featherAllowed / pieceAllowed false: never this run; both roll: '
-        'the feather wins', () {
-      var feathers = 0, pieces = 0;
-      for (var seed = 1; seed <= 300; seed++) {
-        final all = ElementId.values.toSet();
-        final none = RunDirector(
-          seed: seed,
-          enabled: all,
-          met: all,
-          featherAllowed: false,
-          pieceAllowed: false,
-        );
-        expect(none.featherThisRun, isFalse);
-        expect(none.pieceThisRun, isFalse);
-        final d = RunDirector(seed: seed, enabled: all, met: all);
-        expect(d.featherThisRun && d.pieceThisRun, isFalse, reason: '$seed');
-        // PRD-2.3.1 §0 live RC v21 bonus_feather_gaps [5,30] (was 10–40).
-        expect(d.featherAt, inInclusiveRange(5, 32));
-        if (d.featherThisRun) feathers++;
-        if (d.pieceThisRun) pieces++;
-        // The piece alone (the feather not allowed this run) still comes.
-        final p = RunDirector(
-          seed: seed,
-          enabled: all,
-          met: all,
-          featherAllowed: false,
-        );
-        expect(p.featherThisRun, isFalse);
-      }
-      expect(feathers / 300, closeTo(.6, .08));
-      // ≈ 0.6 × 0.4 = 24 % of runs.
-      expect(pieces / 300, closeTo(.24, .07));
-    });
-  });
+      test('featherAllowed / pieceAllowed false: never this run; both roll: '
+          'the feather wins', () {
+        var feathers = 0, pieces = 0;
+        for (var seed = 1; seed <= 300; seed++) {
+          final all = ElementId.values.toSet();
+          final none = RunDirector(
+            seed: seed,
+            enabled: all,
+            met: all,
+            featherAllowed: false,
+            pieceAllowed: false,
+          );
+          expect(none.featherThisRun, isFalse);
+          expect(none.pieceThisRun, isFalse);
+          final d = RunDirector(seed: seed, enabled: all, met: all);
+          expect(d.featherThisRun && d.pieceThisRun, isFalse, reason: '$seed');
+          // PRD-2.3.1 §0 live RC v21 bonus_feather_gaps [5,30] (was 10–40).
+          expect(d.featherAt, inInclusiveRange(5, 32));
+          if (d.featherThisRun) feathers++;
+          if (d.pieceThisRun) pieces++;
+          // The piece alone (the feather not allowed this run) still comes.
+          final p = RunDirector(
+            seed: seed,
+            enabled: all,
+            met: all,
+            featherAllowed: false,
+          );
+          expect(p.featherThisRun, isFalse);
+        }
+        expect(feathers / 300, closeTo(.6, .08));
+        // ≈ 0.6 × 0.4 = 24 % of runs.
+        expect(pieces / 300, closeTo(.24, .07));
+      });
+    },
+  );
 
   group('§14.6 in the game', () {
     final tester = FlameTester<FlappySpikesGame>(
@@ -150,20 +162,24 @@ void main() {
         game.runDebug.ignoreGates = false;
         final run = await startRun(game, force: [ElementId.saw]);
         expect(run.setup.ignoreGates, isFalse);
-        expect(run.enabled, containsAll([
-          ElementId.heart,
-          ElementId.starTrail,
-          ElementId.bullseye,
-          ElementId.switchRing, // gate 0 (PRD-2.3.1 §0 live RC v21)
-          ElementId.train,
-          ElementId.saw, // forced
-        ]));
+        expect(
+          run.enabled,
+          containsAll([
+            ElementId.heart,
+            ElementId.starTrail,
+            ElementId.bullseye,
+            ElementId.switchRing, // gate 0 (PRD-2.3.1 §0 live RC v21)
+            ElementId.train,
+            ElementId.comet, // gate 0 (owner 2026-10-17, RC v24)
+            ElementId.portal,
+            ElementId.capsule,
+            ElementId.saw, // forced
+          ]),
+        );
         for (final e in [
           ElementId.fever,
-          ElementId.comet,
-          ElementId.portal,
           ElementId.feather,
-          ElementId.capsule,
+          ElementId.spring,
         ]) {
           expect(run.enabled, isNot(contains(e)), reason: e.storageId);
         }

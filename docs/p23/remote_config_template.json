@@ -592,28 +592,28 @@
         },
         "gate_comet": {
           "defaultValue": {
-            "value": "2"
+            "value": "0"
           },
           "description": "§14.6 Comet from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_portal": {
           "defaultValue": {
-            "value": "2"
+            "value": "0"
           },
           "description": "§14.6 Portal from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_capsule": {
           "defaultValue": {
-            "value": "2"
+            "value": "0"
           },
           "description": "§14.6 Capsules (hourglass, mini bird, coin frenzy) from gamesPlayed >= N",
           "valueType": "NUMBER"
         },
         "gate_shield": {
           "defaultValue": {
-            "value": "2"
+            "value": "0"
           },
           "description": "§14.6 Shield pickup from gamesPlayed >= N",
           "valueType": "NUMBER"

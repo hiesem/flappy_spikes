@@ -87,10 +87,10 @@ const Map<String, String> _liveV21 = {
   'gate_bullseye': '0',
   'gate_switch': '0',
   'gate_train': '0',
-  'gate_comet': '2',
-  'gate_portal': '2',
-  'gate_capsule': '2',
-  'gate_shield': '2',
+  'gate_comet': '0', // owner 2026-10-17, RC v24
+  'gate_portal': '0', // owner 2026-10-17, RC v24
+  'gate_capsule': '0', // owner 2026-10-17, RC v24
+  'gate_shield': '0', // owner 2026-10-17, RC v24
   'gate_spring': '4',
   'gate_pair': '4',
   'gate_egg': '4',

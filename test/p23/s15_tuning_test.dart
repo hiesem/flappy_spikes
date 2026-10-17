@@ -189,7 +189,7 @@ void main() {
       }, {
         'heart': 0, 'star_trail': 0, 'bullseye': 0, //
         'switch': 0, 'train': 0, //
-        'comet': 2, 'portal': 2, 'capsule': 2, 'shield': 2, //
+        'comet': 0, 'portal': 0, 'capsule': 0, 'shield': 0, // RC v24
         'spring': 4, 'pair': 4, 'egg': 4, //
         'feather': 6, 'puzzle': 6, 'piggy': 6, 'jar': 6, //
         'fever': 8, 'lucky_spin': 8, //

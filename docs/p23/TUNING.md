@@ -224,10 +224,10 @@ The table is generated from `tuning_defaults.dart` by `dart run tool/tuning_sync
 | `gate_bullseye` | integer | `0` | §14.6 | Bullseye from gamesPlayed >= N |
 | `gate_switch` | integer | `0` | §14.6 | Switch ring from gamesPlayed >= N |
 | `gate_train` | integer | `0` | §14.6 | Ring train from gamesPlayed >= N |
-| `gate_comet` | integer | `2` | §14.6 | Comet from gamesPlayed >= N |
-| `gate_portal` | integer | `2` | §14.6 | Portal from gamesPlayed >= N |
-| `gate_capsule` | integer | `2` | §14.6 | Capsules (hourglass, mini bird, coin frenzy) from gamesPlayed >= N |
-| `gate_shield` | integer | `2` | §14.6 | Shield pickup from gamesPlayed >= N |
+| `gate_comet` | integer | `0` | §14.6 | Comet from gamesPlayed >= N |
+| `gate_portal` | integer | `0` | §14.6 | Portal from gamesPlayed >= N |
+| `gate_capsule` | integer | `0` | §14.6 | Capsules (hourglass, mini bird, coin frenzy) from gamesPlayed >= N |
+| `gate_shield` | integer | `0` | §14.6 | Shield pickup from gamesPlayed >= N |
 | `gate_spring` | integer | `4` | §14.6 | Spring from gamesPlayed >= N |
 | `gate_pair` | integer | `4` | §14.6 | Pair from gamesPlayed >= N |
 | `gate_egg` | integer | `4` | §14.6 | Egg from gamesPlayed >= N |

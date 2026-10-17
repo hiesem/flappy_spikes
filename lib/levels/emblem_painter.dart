@@ -95,6 +95,11 @@ abstract final class EmblemPainter {
       0, 0, 0, .38, 0,
     ]);
 
+  /// Bounds (art units) of every emblem at any [paint] time: measured
+  /// extremes are ±98 wide (rays of 9-10) and −98..+98 high; wings are
+  /// documented to ±113, so ±140 leaves margin.
+  static const Rect layerBounds = Rect.fromLTRB(-140, -140, 140, 140);
+
   static int _clamp(int level) =>
       level < 0 ? 0 : (level > maxLevel ? maxLevel : level);
 
@@ -116,7 +121,10 @@ abstract final class EmblemPainter {
       _draw(canvas, l, t, shine);
       return;
     }
-    canvas.saveLayer(null, _greyPaint);
+    // Audit A1-2: a bounded layer. With null bounds the layer covers the
+    // whole clip (the full LEVELS list viewport) for every locked row, every
+    // frame; the art never leaves [layerBounds], so the result is the same.
+    canvas.saveLayer(layerBounds, _greyPaint);
     _draw(canvas, l, t, shine);
     canvas.restore();
   }

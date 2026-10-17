@@ -145,8 +145,9 @@ const List<LevelDef> kLevels = [
 /// Highest level number.
 const int kMaxLevel = 10;
 
-/// All one-time rewards together (§4.1: 10 350).
-const int kLevelRewardTotal = 10350;
+/// All one-time rewards together (§4.1: 10 350; owner 2026-10-17 table:
+/// 10 175).
+const int kLevelRewardTotal = 10175;
 
 /// The level reached with [best]: the highest rank whose threshold <= best;
 /// 0 = unranked (best < 10).

@@ -229,17 +229,21 @@ class EggFeature extends RunFeature {
       return;
     }
     c.track('chick_lost', {'cause': cause, 'points_added': pointsAdded});
-    _view?.leave();
-    if (cause == 'rim') {
-      c.sfx(Sfx.eggBye);
-      RunHud.ensureFor(c.run).banners.show(
-        ElementBanner(
-          EggConfig.lostText,
-          color: EggConfig.lostGrey,
-          subtitle: EggConfig.lostSub,
-        ),
-      );
+    // Audit A4-5 (SPEC WP-3e): only a rim touch scares the chick away with
+    // "bye!"; a crash or a save loses it silently.
+    if (cause != 'rim') {
+      _view?.reset();
+      return;
     }
+    _view?.leave();
+    c.sfx(Sfx.eggBye);
+    RunHud.ensureFor(c.run).banners.show(
+      ElementBanner(
+        EggConfig.lostText,
+        color: EggConfig.lostGrey,
+        subtitle: EggConfig.lostSub,
+      ),
+    );
   }
 
   /// The track position [dx] right, [dy] up of the bird (for the pops).

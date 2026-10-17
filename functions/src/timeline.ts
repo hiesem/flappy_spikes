@@ -24,6 +24,7 @@ import {
   PUZZLE_BONUS_CAP,
   RunEntry,
   TIMELINE_VERSION,
+  validLook,
   validPg,
 } from './schema.js';
 
@@ -97,23 +98,20 @@ export type RejectReason =
   | 'rate'
   | 'duplicate';
 
-const LOOK_KEYS = ['bird', 'gear', 'hat', 'hoop', 'trail'];
-
 function isStr(v: unknown, min: number, max: number): v is string {
   return typeof v === 'string' && v.length >= min && v.length <= max;
 }
 
-/** The display fields a pool entry copies (the rules only bound them loosely). */
+/**
+ * The display fields a pool entry copies (the rules only bound them loosely).
+ * WP-AV: the look ids must have the catalogue-id shape ([validLook]).
+ */
 function validDisplay(run: RunEntry): boolean {
-  const look = run.look as unknown as Record<string, unknown> | null;
   return (
     isStr(run.name, 1, 32) &&
     isStr(run.avatar, 0, 512) &&
     (run.platform === 'android' || run.platform === 'ios') &&
-    look !== null &&
-    typeof look === 'object' &&
-    Object.keys(look).length === LOOK_KEYS.length &&
-    LOOK_KEYS.every((k) => isStr(look[k], 0, 40)) &&
+    validLook(run.look) &&
     // PRD-2.3 §21.4 the optional hashed Play Games id.
     validPg(run.pg)
   );

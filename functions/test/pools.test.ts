@@ -53,9 +53,9 @@ describe('§3.13 onPlayerRunWrite: accept', () => {
     assert.equal(await rate(uid), undefined);
   });
 
-  it('§3.13 a deleted player doc touches no pool (PRD-2.3 S8-06: only its picture goes)', async () => {
+  it('§3.13 a deleted player doc touches no pool (WP-AV: and no Storage)', async () => {
     const r = await processPlayerWrite(db, uniq('del'), makePlayer({ best: 5 }), undefined);
-    assert.deepEqual(r, { accepted: [], rejected: [], avatarDeleted: true });
+    assert.deepEqual(r, { accepted: [], rejected: [] });
   });
 });
 

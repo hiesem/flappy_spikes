@@ -25,13 +25,19 @@ service cloud.firestore {
       return p in ['android', 'ios'];
     }
 
+    // WP-AV a look id: lowercase letters, digits, '_', 1–40 characters (the bird / gear /
+    // hat ids draw the player's sticker avatar on every phone).
+    function isId(v) {
+      return v is string && v.matches('^[a-z0-9_]{1,40}$');
+    }
+
     // look: the five skin-shop ids (bird, gear, hat, hoop, trail).
     function validLook(l) {
       return l is map
         && l.keys().hasOnly(['bird', 'gear', 'hat', 'hoop', 'trail'])
         && l.keys().hasAll(['bird', 'gear', 'hat', 'hoop', 'trail'])
-        && isStr(l.bird, 0, 40) && isStr(l.gear, 0, 40) && isStr(l.hat, 0, 40)
-        && isStr(l.hoop, 0, 40) && isStr(l.trail, 0, 40);
+        && isId(l.bird) && isId(l.gear) && isId(l.hat)
+        && isId(l.hoop) && isId(l.trail);
     }
 
     // RunEntry (ARCH §6.1). Kept lean: rules may evaluate at most 1 000 expressions per
@@ -53,13 +59,12 @@ service cloud.firestore {
         && r.best is int && r.best >= r.score && best >= r.best
         && r.ts is timestamp
         && r.name is string && r.name.size() > 0 && r.name.size() <= 32
+        // WP-AV the legacy picture field: the app writes ''; older apps may still send a
+        // URL, which the function never copies into a pool.
         && r.avatar is string && r.avatar.size() <= 512
         && r.look is map && r.look.size() == 5
-        && r.look.bird is string && r.look.bird.size() <= 40
-        && r.look.gear is string && r.look.gear.size() <= 40
-        && r.look.hat is string && r.look.hat.size() <= 40
-        && r.look.hoop is string && r.look.hoop.size() <= 40
-        && r.look.trail is string && r.look.trail.size() <= 40
+        && isId(r.look.bird) && isId(r.look.gear) && isId(r.look.hat)
+        && isId(r.look.hoop) && isId(r.look.trail)
         && (r.platform == 'android' || r.platform == 'ios')
         && r.tl is string && r.tl.size() <= 16384
         && r.end is int && r.end >= 0 && r.end <= 65535

@@ -74,6 +74,27 @@ export interface Look {
   trail: string;
 }
 
+/**
+ * WP-AV (2.4) the shape of a look id: the bird / gear / hat ids draw the
+ * player's sticker avatar on every phone, so each id must look like a
+ * catalogue id (lowercase letters, digits, `_`; 1–40 characters, the
+ * rules' cap). An id the app does not know falls back on the phone.
+ */
+export const LOOK_ID_RE = /^[a-z0-9_]{1,40}$/;
+
+/** The five look keys, in order. */
+export const LOOK_KEYS = ['bird', 'gear', 'hat', 'hoop', 'trail'] as const;
+
+/** Whether [look] has exactly the five keys, each a well-formed id. */
+export function validLook(look: unknown): look is Look {
+  if (look === null || typeof look !== 'object' || Array.isArray(look)) return false;
+  const l = look as Record<string, unknown>;
+  return (
+    Object.keys(l).length === LOOK_KEYS.length &&
+    LOOK_KEYS.every((k) => typeof l[k] === 'string' && LOOK_ID_RE.test(l[k] as string))
+  );
+}
+
 /** One run as the client stores it in `players/{uid}` (ARCH §6.1 RunEntry). */
 export interface RunEntry {
   runId: string;
@@ -81,6 +102,10 @@ export interface RunEntry {
   best: number;
   ts: Timestamp;
   name: string;
+  /**
+   * WP-AV the legacy picture URL: the app writes '' (older apps may still
+   * send one); the pools always store ''.
+   */
   avatar: string;
   look: Look;
   platform: 'android' | 'ios';

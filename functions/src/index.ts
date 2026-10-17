@@ -5,14 +5,12 @@
 import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
-import { getStorage } from 'firebase-admin/storage';
 import { setGlobalOptions, logger } from 'firebase-functions/v2';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { deletePlayerData, processPlayerWrite, sweepAllPools, sweepStaleAvatars } from './pools.js';
+import { deletePlayerData, processPlayerWrite, sweepAllPools } from './pools.js';
 import type { PlayerDoc } from './schema.js';
-import { avatarBucketName, avatarPath } from './avatars.js';
 
 initializeApp();
 
@@ -33,7 +31,7 @@ export const onPlayerRunWrite = onDocumentWritten(
     const after = event.data?.after.data() as PlayerDoc | undefined;
     try {
       const r = await processPlayerWrite(getFirestore(), uid, before, after);
-      if (r.accepted.length || r.rejected.length || r.trimmedRecent || r.avatarDeleted) {
+      if (r.accepted.length || r.rejected.length || r.trimmedRecent) {
         logger.info('onPlayerRunWrite', { uid, ...r });
       }
     } catch (err) {
@@ -44,8 +42,9 @@ export const onPlayerRunWrite = onDocumentWritten(
 
 /**
  * "Delete my data" (§3.13 privacy): the caller's pool entries in all 44
- * shards, `players/{uid}`, the server rate doc, the versus picture
- * `avatars/{uid}.jpg` (PRD-2.3 §21.3) and the Auth user. Idempotent.
+ * shards, `players/{uid}`, the server rate doc and the Auth user.
+ * Idempotent. (WP-AV: there are no versus pictures any more; the one-off
+ * `scripts/backfill_avatars.ts` deleted every old one.)
  * App Check enforced (ARCH §6.3 / §6.5); tokens are not consumed (no replay
  * risk: the call only deletes the caller's own data).
  */
@@ -71,14 +70,6 @@ export const deleteMyData = onCall({ enforceAppCheck: true, consumeAppCheckToken
     logger.error('deleteMyData: data delete failed, nothing deleted', { uid, err: String(err) });
     throw new HttpsError('unavailable', 'Delete failed; nothing was deleted.');
   }
-  // PRD-2.3 §21.3 the versus picture `avatars/{uid}.jpg` (absent = fine).
-  // Before the Auth delete, so a failure is completed by the client's retry.
-  try {
-    await getStorage().bucket(avatarBucketName()).file(avatarPath(uid)).delete({ ignoreNotFound: true });
-  } catch (err) {
-    logger.error('deleteMyData: picture delete failed', { uid, err: String(err) });
-    throw new HttpsError('unavailable', 'Picture delete failed; please retry.');
-  }
   // The data part is idempotent, so a failure here is completed by the
   // client's retry with the same (still existing) account.
   try {
@@ -90,17 +81,8 @@ export const deleteMyData = onCall({ enforceAppCheck: true, consumeAppCheckToken
   return { ok: true, removed };
 });
 
-/**
- * Daily retention sweep of the pool shards (ARCH §6.2: entries > 60 d) and
- * of the versus pictures whose player doc is gone (PRD-2.3 §5.5, S8-06).
- */
+/** Daily retention sweep of the pool shards (ARCH §6.2: entries > 60 d). */
 export const sweepPools = onSchedule({ schedule: 'every 24 hours', timeZone: 'Etc/UTC' }, async () => {
   const removed = await sweepAllPools(getFirestore());
-  let avatars = 0;
-  try {
-    avatars = await sweepStaleAvatars(getFirestore());
-  } catch (err) {
-    logger.error('sweepPools: picture sweep failed', { err: String(err) });
-  }
-  logger.info('sweepPools', { removed, avatars });
+  logger.info('sweepPools', { removed });
 });

@@ -215,7 +215,7 @@ the HUD" ease). Details and owners in §3 and §21.
 | Path | Owner | Responsibility / API | Replaces / reuses |
 |---|---|---|---|
 | `lib/versus/timeline.dart` | 5b (codec in 0b for the recorder contract) | `class RunTimeline { List<int> cs; List<int> flags; int endCs; String encodeTl(); String encodeFlags(); static RunTimeline decode(...); int scoreAt(double runClock); }` — uint16 centisecond deltas, base64; flags byte per point: `ride=1, train=2, gift=4` | — |
-| `lib/versus/opponent.dart` | 0b | `class OpponentRun { String uid, name, avatarUrl; Look look; int score, best, level; RunTimeline timeline; String platform; }`, `abstract class OpponentFeed { int scoreAt(double runClock); bool outAt(double runClock); }` | — |
+| `lib/versus/opponent.dart` | 0b | `class OpponentRun { String uid, name; Look look; int score, best, level; RunTimeline timeline; String platform; }`, `abstract class OpponentFeed { int scoreAt(double runClock); bool outAt(double runClock); }` | — |
 | `lib/versus/matcher.dart` | 5b | `OpponentRun? pick(List<PoolEntry> pool, {required int myLevel, required int myBest, required String myUid, required Set<String> seen, required Random r})` | — |
 | `lib/versus/nickname.dart` | 5b | `String generateNickname(Random r)` (20 × 20 words, ≤ 14 chars + 3 digits) | — |
 | `lib/versus/upload_queue.dart` | 5b | queue + 3/day + score ≥ 3 + best always | — |
@@ -749,7 +749,7 @@ default). Later WPs only read/write them.
 | `playerLevel` | int 0 (0–10) | `playerLevel` | `savePlayerLevel(int)` | **WP-L (owner 2026-10-17)**: the stored player level (no longer derived from the best); steps up one per run (`LevelProgress.recordRun` / `levelAfterRun`); reset by "Delete my data" and `resetMenuState`; **not** a PRD-2 key |
 | `versusNickname` | String? (generated once) | `versusNickname` | `saveVersusNickname(String)` | 5b |
 | `uploadQueue` | List\<String\> (JSON entries) empty | `uploadQueue` | `saveUploadQueue(List<String>)` | 5b |
-| `versusAvatar` | `({uid, hash, url})?` (JSON) null + `versusAvatarAt` (JSON `at`, ms) | `versusAvatar` | `saveVersusAvatar(...)` | PRD-2.3 §21.3: the last uploaded versus picture (the Firebase uid it belongs to, the SHA-256 of the Play Games icon it was made from, its download URL = the run's `avatar`); re-upload when uid or hash differ, or (S8-06) when `at` is missing or older than `VersusConfig.avatarRefresh` (30 d: the server deletes the picture with the player doc); cleared with the versus reset and the anonymous-account clean-up; **not** a PRD-2 key |
+| `versusAvatar` | — (WP-AV: removed; the stale key is deleted at load and by the versus reset) | `versusAvatar` | — | was PRD-2.3 §21.3: the last uploaded versus picture (the Firebase uid it belongs to, the SHA-256 of the Play Games icon it was made from, its download URL = the run's `avatar`); re-upload when uid or hash differ, or (S8-06) when `at` is missing or older than `VersusConfig.avatarRefresh` (30 d: the server deletes the picture with the player doc); cleared with the versus reset and the anonymous-account clean-up; **not** a PRD-2 key |
 | `uploadsToday` + `uploadsDay` | int 0 + String '' | `uploadsToday`, `uploadsDay` | `saveUploadsToday(String day, int count)` | 5b |
 | `notifOrder` | List\<int\> (shuffled at first schedule) | `notifOrder` | `saveNotifOrder(List<int>)` | 4b |
 | `notifPosition` | int 0 | `notifPosition` | `saveNotifPosition(int)` | 4b |
@@ -785,7 +785,7 @@ coins, skins, levels, feathers, puzzle or met elements (Q22).
 
 ```
 players/{uid}
-  name: string (≤ 32)            avatar: string (URL or '')        platform: 'android' | 'ios'
+  name: string (≤ 32)            avatar: '' (WP-AV legacy key)     platform: 'android' | 'ios'
   look: { bird, gear, hat, hoop, trail }: string ids
   best: int  level: int (0–10, the stored player level client-side (WP-L); the pool level is recomputed from best server-side)
   bestRun: RunEntry | null       recent: RunEntry[] (≤ 5, newest first)
@@ -820,7 +820,7 @@ versusRate/{uid}                 server-only (rules deny all clients): { day 'YY
   delta — usually 0) flagged `gift` (4); flagged points (ride / train / gift) are exempt from the 0.9 s gap check.
 - `best` never decreases (rules); a run counts as a "new best" for the rate only if `bestRun.runId == runId`,
   `score == best` and `score >` the previous stored `best`.
-- `runId` ≤ 64 chars; `name` 1–32; `avatar` ≤ 512; `look` five string ids ≤ 40; `platform` `android | ios`.
+- `runId` ≤ 64 chars; `name` 1–32; `avatar` ≤ 512 (WP-AV: the app writes '', pools always store ''); `look` five ids `^[a-z0-9_]{1,40}$` (WP-AV, rules + function); `platform` `android | ios`.
 
 ### 6.2 Security-rule intent (`firestore.rules`, WP-5a) and App Check
 
@@ -840,9 +840,9 @@ versusRate/{uid}                 server-only (rules deny all clients): { day 'YY
 
 | Function | Trigger | Contract |
 |---|---|---|
-| `onPlayerRunWrite` | `onDocumentWritten('players/{uid}')` | Detect the new run (new `recent[0].runId` or new `bestRun.runId`). Validate (cheat filter, timeline v2 PRD-2.2 §13.5): `fl` is v2 (else `version`); sum of the entry values == `score`; plausibility per entry (a pass ≤ 2 × (pass entries so far + 5), a bonus ≤ 80, a puzzle completion bonus (flag 16) ≤ 500, a gift ≤ 10; else `count`); every entry without the ride/train/gift/bonus flag ≥ 0.9 s after the previous entry that is not a bonus (a bonus never restarts the interval, P22-FIX1 S7-02); the Dart mirror is `RunTimeline.check()`; `best >= score`; score ≥ 3; display fields re-checked; upload rate ≤ 3 non-best runs per UTC day per uid (+ best always). On accept: in a transaction on `pools/{level}_{random shard}` (+ `versusRate/{uid}`) remove this uid's entries, prepend the entry (+ uid, level, server ts), drop entries > 60 d, trim to 150 / 900 KB. On reject: log + `versusRate/{uid}.last`, no pool write. Also trims `recent` entries > 60 d in the player doc (the follow-up trigger finds nothing new and stops). On a delete of the player doc (the 60-day TTL or `deleteMyData`; PRD-2.3 S8-06) it re-reads the doc and, if it is still gone, deletes `avatars/{uid}.jpg`. Level is recomputed from `best` with `functions/src/levels.ts` (thresholds must equal `lib/levels/levels.dart`; `functions/test/levels.test.ts` parses the Dart file and compares). |
+| `onPlayerRunWrite` | `onDocumentWritten('players/{uid}')` | Detect the new run (new `recent[0].runId` or new `bestRun.runId`). Validate (cheat filter, timeline v2 PRD-2.2 §13.5): `fl` is v2 (else `version`); sum of the entry values == `score`; plausibility per entry (a pass ≤ 2 × (pass entries so far + 5), a bonus ≤ 80, a puzzle completion bonus (flag 16) ≤ 500, a gift ≤ 10; else `count`); every entry without the ride/train/gift/bonus flag ≥ 0.9 s after the previous entry that is not a bonus (a bonus never restarts the interval, P22-FIX1 S7-02); the Dart mirror is `RunTimeline.check()`; `best >= score`; score ≥ 3; display fields re-checked; upload rate ≤ 3 non-best runs per UTC day per uid (+ best always). On accept: in a transaction on `pools/{level}_{random shard}` (+ `versusRate/{uid}`) remove this uid's entries, prepend the entry (+ uid, level, server ts), drop entries > 60 d, trim to 150 / 900 KB. On reject: log + `versusRate/{uid}.last`, no pool write. Also trims `recent` entries > 60 d in the player doc (the follow-up trigger finds nothing new and stops). WP-AV: the pool entry gets `avatar: ''` and `versusName(name, uid)` (`functions/src/nickname.ts`: a generated name is kept, any other becomes a generated name derived from the uid); a delete of the player doc does nothing (no Storage). Level is recomputed from `best` with `functions/src/levels.ts` (thresholds must equal `lib/levels/levels.dart`; `functions/test/levels.test.ts` parses the Dart file and compares). |
 | `deleteMyData` | callable (`enforceAppCheck: true`, `consumeAppCheckToken: false`) | Deletes `players/{uid}` and `versusRate/{uid}`, removes the caller's entries from all 44 pool shards, deletes the Auth user (Admin SDK). Idempotent. Returns `{ ok: true, removed }`. Client: `FirebaseFunctions.instanceFor(region: 'europe-west1').httpsCallable('deleteMyData')`. |
-| `sweepPools` | `onSchedule('every 24 hours', UTC)` | Trims > 60 d entries in every shard; deletes every `avatars/{uid}.jpg` not updated for 60 d whose `players/{uid}` is gone (PRD-2.3 S8-06, retries a failed trigger delete). |
+| `sweepPools` | `onSchedule('every 24 hours', UTC)` | Trims > 60 d entries in every shard (WP-AV: no picture sweep any more). |
 
 Reference implementations for the 5b client live in `functions/src/` (`matching.ts`: candidates + pool read plan;
 `timeline.ts`: codec, `scoreAt`, cheat filter). The Dart matcher test must pass `test/fixtures/versus_matching.json`.
@@ -863,7 +863,7 @@ abstract class VersusService {                       // lib/services/versus_serv
   Future<void> submitRun(RunSummary s, Look look);   // queue + rules (best always, ≤ 3/day, score ≥ 3), retry online
   Future<bool> deleteMyData();                       // callable + local reset + FirebaseAnalytics.resetAnalyticsData();
                                                      // false = offline / refused, nothing deleted (WP-4c)
-  VersusProfile get me;                              // name, avatarUrl, level
+  VersusProfile get me;                              // name (the nickname), level
   Future<void> onPlatformSignIn();                   // links PlatformIdentity credential to the Firebase user
 }
 class NoopVersusService implements VersusService {}  // default; tests and unconfigured builds (like GameServices)
@@ -1468,8 +1468,8 @@ regression in `test/e2e/p2_gameplay_e2e_test.dart` (S6-20 … S6-24).
 | S6-61 | `deletePlayerData` is one Firestore transaction: reads the player, rate and 44 shards, then deletes / rewrites (≤ 46 writes) — a failure deletes nothing, a retry starts over; serializable with `processPlayerWrite`. `deleteMyData` first checks Auth (`getUser`, `unavailable` if it does not answer), then the transaction, then `deleteUser`; an Auth-delete failure after the data delete is completed by the client's retry (idempotent) | §3.13 / Q22 privacy |
 | S6-62 | `PuzzleFeature._complete`: `beginPuzzleCompletion(payout = balance + bonus)` (record, mask 0, round + 1 — issued before the coin write), `wallet.add`, then `endPuzzlePayout()`. `PuzzleFeature.settlePayout` pays `puzzlePayout − balance` at start (game `onLoad`, before `_creditUnclaimedLevelReward`) and clears the record — same pattern as S6-22 | §3.16, §7 |
 | S6-63 | `BonusRules.layoutFor` scales only the column above `BonusConfig.bandTop` (552) into `h − 159 − 44`; the band (feather row, ad button, NO THANKS, NEXT) is drawn unscaled with `bandShiftFor(h) = h − 711` (bottom-anchored). Taps hit-test grid in column space, buttons in band space; feather flights convert band points (`_bandToContent`) and keep the row's size at the band end | §3.0.1, §5.14 |
-| S6-64 | `lib/services/avatars.dart`: `AvatarImages` (game `avatars`) — `lookup(key)` returns the cached image (Flame `Images`, keyed by URL or a `data:` URI) or starts one load and returns null (glyph). `AvatarSource`: `NoAvatarSource` (default, tests/desktop), `HttpAvatarSource` (https, 8 s, 512 KB; wired in `main.dart` on mobile). `PlatformPlayer.iconImage` (games_services 5.1.0 `PlayerData.iconImage`, base64) → `VersusProfile.avatarImage`; the intro plates, `VersusBar` and `ResultsPlayerColumn` paint the image when cached | §3.13 Who plays, §5.8 |
-| S6-65 | `FlappySpikesGame.myVersusName`: `versus.me.name` (Play Games display name, else nickname), else the stored nickname, else "You"; used by the VS intro, the HUD chip and both results columns | §3.13, §5.8, §5.10 |
+| S6-64 | (superseded by WP-AV: `StickerAvatars`) `lib/services/avatars.dart`: `AvatarImages` (game `avatars`) — `lookup(key)` returns the cached image (Flame `Images`, keyed by URL or a `data:` URI) or starts one load and returns null (glyph). `AvatarSource`: `NoAvatarSource` (default, tests/desktop), `HttpAvatarSource` (https, 8 s, 512 KB; wired in `main.dart` on mobile). `PlatformPlayer.iconImage` (games_services 5.1.0 `PlayerData.iconImage`, base64) → `VersusProfile.avatarImage`; the intro plates, `VersusBar` and `ResultsPlayerColumn` paint the image when cached | §3.13 Who plays, §5.8 |
+| S6-65 | `FlappySpikesGame.myVersusName`: `versus.me.name` (WP-AV: always the nickname), else the stored nickname, else "You"; used by the VS intro, the HUD chip and both results columns | §3.13, §5.8, §5.10 |
 | S6-66 | `FirebaseVersusService`: a shared start future; a failed start schedules background retries (`retryBase` 5 s doubling to `retryMax` 2 min; `main.dart` passes `VersusConfig.authRetryBase`, tests leave it null) and is retried at once by `prefetch`, `flush` (so `submitRun` too) and the new `VersusService.onResume()` (game `lifecycleStateChange(resumed)`). `flush` passes are shared. No connectivity plugin (call): the backoff timer is the connectivity probe | §3.13 offline rules; R-3.13-2, -8 |
 
 
@@ -1493,7 +1493,7 @@ regression in `test/e2e/p2_gameplay_e2e_test.dart` (S6-20 … S6-24).
 |---|---|---|
 | Idle menus | `lib/game/idle_frames.dart` `IdleFrameLimiter` (game `idleFrames`, enabled by `main.dart` outside FS_E2E; off in tests unless a test turns it on). At the end of each `update` the game reports `_menuIdle` (state start, a menu scene on top with nothing over it, no fade / colour fade / popup queue / ad, Home built and fully shown, `CoinPill.busy` false, no `Effect`, `CoinFly`, `CoinRewardAnimation`, `ConfettiBurst`, `ServiceMessage`, `ScreenFlash`, `ScreenShake` or gliding `MenuScrollArea` in the tree) for `Config.idleMenuDelay` (2 s). Then Flame's loop is stopped after the frame and a timer restarts it `1/Config.idleMenuFps` later (30 fps); the restart frame's dt is the real vsync-to-vsync time (Flame's restart gives 0). A global pointer route, keys and the system back wake it at once. Home's idle motion (bob, pulse, streak, wiggles, glint) keeps its timing, only fewer frames | §33.4 item 5 |
 | Background | Flame's `pauseWhenBackgrounded` (kept explicit in the constructor) stops the engine on paused / hidden / detached and resumes on inactive / resumed; the limiter drops its timer on background | §33.4 item 5, §33.7 |
-| Avatars | `AvatarImages` decodes with `instantiateImageCodecWithSize`: short side ≤ `Config.avatarDecodePoints` (52 pt, the VS plate) × physical px per world pt, never upscaled; an LRU of `Config.avatarCacheMax` (6) keys, refreshed on every `lookup` hit, evicts with `Images.clear` (disposes); an evicted key loads again when drawn | §33.4 item 4 |
+| Avatars | (superseded by WP-AV) `AvatarImages` decodes with `instantiateImageCodecWithSize`: short side ≤ `Config.avatarDecodePoints` (52 pt, the VS plate) × physical px per world pt, never upscaled; an LRU of `Config.avatarCacheMax` (6) keys, refreshed on every `lookup` hit, evicts with `Images.clear` (disposes); an evicted key loads again when drawn | §33.4 item 4 |
 | Small ones | `lib/game/paints.dart` `layerPaint(alpha)` / `fillPaint(color)`: shared scratch paints for per-frame `saveLayer` fades and plain fills (banners, pair / switch kinds, bonus screen, stickers, feathers, puzzle, rides, menus); `PulseEffect` makes a new blur only when its sigma changes; `Rumble.fired` records only without hardware or in debug builds, capped at `Rumble.firedCap`; the share capture image is disposed after encoding; `CollectText.clearCache` disposes its `TextPainter`s | §33.4 item 6 |
 
 ## PRD-2.2 WP-G3 contract changes (2026-10-12)
@@ -1617,7 +1617,8 @@ the chick's ×2, the perfect zone) are superseded by PRD-2.3 §14; `SPEC.md` has
   `HudText.name(...)` wraps it. Used by the intro plates (room ends before the
   emblem: `VersusIntroPlate.nameRoom`), the HUD `NameChip`, the results
   columns (`ResultsConfig.nameRoomVersus/Solo`) and the share card's name tag.
-- Avatar squares: `lib/components/versus_avatar.dart` `VersusAvatar.paintBird`
+- (Superseded by WP-AV, see the end of this file: no pictures, sticker avatars.)
+  Avatar squares: `lib/components/versus_avatar.dart` `VersusAvatar.paintBird`
   is the single fallback painter (the `LookPainter` art): the opponent's bird
   in their look on their tint while the picture loads / fails / is missing;
   your own bird on `VersusAvatar.ownBackdrop` when you have no Play Games
@@ -1700,3 +1701,28 @@ the chick's ×2, the perfect zone) are superseded by PRD-2.3 §14; `SPEC.md` has
 
 Scenes 4–10 and seams 3–6 are stubs (W2: 4–7 + 3–6; W3: 8–10 + 7–10 + the loop); each builder edits only its own
 scene / seam files. Contract and the pacing math: `lib/run/backdrop/README.md`.
+
+## WP-AV sticker avatars (2026-10-17)
+
+- **One master:** `lib/components/sticker_avatar.dart` `StickerAvatars` (game `avatars`, built with the
+  physical px per world point) is the only painter of a player picture: `paint(canvas, rect, look, mirror:,
+  opacity:)` blits `image(look, side)`, rendered once per (bird, gear, hat, px) by `render` /
+  `paintSticker` (design C of `avatar_design/src.html`: star blob, 16° tilt, white edge from 20 stamps of
+  the look through a `srcIn` white layer, blurred black shadow) with `LookPainter.paint(t: .6)`; LRU of 16
+  images (`dispose` on eviction). `normalise` = the per-layer catalogue fallback; `tintOf` = `palette()`.
+  Callers: `VersusIntroPlate.render` (your plate and the opponent's once landed; the person glyph during
+  filler ticks and on NO RIVAL FOUND), `VersusBar.render`, `ResultsPlayerColumn.render` (also solo).
+  Removed: `VersusAvatar`, `AvatarImages` / `AvatarSource` / `HttpAvatarSource`, `avatar_upload.dart`,
+  `VersusBackend.uploadAvatar` / `photoUrl`, `VersusAuth.photoUrl`, `PlatformPlayer.displayName` /
+  `iconImage`, `VersusProfile.avatarUrl` / `avatarImage`, `OpponentRun.avatarUrl`, `RunEntry.avatar`,
+  `PlayerFields.avatar`, `Config.avatarDecodePoints` / `avatarCacheMax`, the `VersusConfig.avatar*`
+  knobs, the `firebase_storage` and `image` packages.
+- **Names:** `VersusProfile.name` is always `storage.versusNickname` (the platform player only drives the
+  link and `pg`).
+- **Backend:** `functions/src/avatars.ts`, `sweepStaleAvatars` and the Storage deletes are gone;
+  `storage.rules` deny all. `schema.ts` `validLook` / `LOOK_ID_RE` (used by `timeline.ts` `validDisplay`);
+  `firestore.rules` `isId`. One-off `functions/scripts/backfill_avatars.ts` (`--dry-run` / `--run`,
+  pure parts in `backfill_lib.ts`): random bird / gear / hat (40 % none) + generated name for every player
+  doc and pool entry (one identity per uid), `avatar: ''`, platform-name fields dropped, every object under
+  `avatars/` deleted.
+

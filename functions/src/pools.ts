@@ -4,9 +4,8 @@
  * Firestore instance so the emulator tests can drive it directly.
  */
 import { Firestore, Timestamp } from 'firebase-admin/firestore';
-import { getStorage } from 'firebase-admin/storage';
-import { avatarBucketName, avatarPath } from './avatars.js';
 import { levelFor } from './levels.js';
+import { versusName } from './nickname.js';
 import {
   DAILY_UPLOADS,
   PlayerDoc,
@@ -35,54 +34,6 @@ export interface WriteResult {
   trimmedRecent?: number;
   /** The live `players/{uid}` doc is gone (Delete my data): nothing written. */
   playerGone?: boolean;
-  /** S8-06: the deleted player's picture was removed (or was already gone). */
-  avatarDeleted?: boolean;
-}
-
-/** The slice of a Storage bucket the picture clean-up needs (tests inject one). */
-export interface AvatarBucket {
-  deleteAvatar(uid: string): Promise<void>;
-  /** Pictures as (uid, last update ms); paged internally. */
-  listAvatars(): Promise<{ uid: string; updatedMs: number }[]>;
-}
-
-/** The default Storage bucket of the project (`avatars/{uid}.jpg`). */
-export function defaultAvatarBucket(): AvatarBucket {
-  const bucket = () => getStorage().bucket(avatarBucketName());
-  return {
-    async deleteAvatar(uid) {
-      await bucket().file(avatarPath(uid)).delete({ ignoreNotFound: true });
-    },
-    async listAvatars() {
-      const [files] = await bucket().getFiles({ prefix: 'avatars/', autoPaginate: true });
-      const out: { uid: string; updatedMs: number }[] = [];
-      for (const f of files) {
-        const m = /^avatars\/(.+)\.jpg$/.exec(f.name);
-        if (!m) continue;
-        const t = Date.parse(String(f.metadata?.updated ?? f.metadata?.timeCreated ?? ''));
-        out.push({ uid: m[1], updatedMs: Number.isFinite(t) ? t : 0 });
-      }
-      return out;
-    },
-  };
-}
-
-/**
- * PRD-2.3 §5.5 / §21.3 (S8-06): the versus picture is versus data, so it
- * goes when `players/{uid}` goes (the Firestore TTL ≈ 60 days after the
- * last run, or Delete my data). The live doc is re-read first: a player
- * who wrote a new run since the delete keeps the picture. Idempotent; the
- * daily [sweepStaleAvatars] retries a failed delete.
- */
-async function deleteAvatarOfDeletedPlayer(
-  db: Firestore,
-  uid: string,
-  bucket: AvatarBucket,
-): Promise<boolean> {
-  const live = await db.collection('players').doc(uid).get();
-  if (live.exists) return false;
-  await bucket.deleteAvatar(uid);
-  return true;
 }
 
 function runsOf(p: PlayerDoc | undefined): RunEntry[] {
@@ -135,8 +86,6 @@ export interface ProcessOptions {
   nowMs?: number;
   /** Random in [0, 1); picks the shard. */
   rand?: () => number;
-  /** The picture bucket (default: the project's Storage bucket). */
-  avatars?: AvatarBucket;
 }
 
 /**
@@ -160,11 +109,7 @@ export async function processPlayerWrite(
 ): Promise<WriteResult> {
   const result: WriteResult = { accepted: [], rejected: [] };
   if (!after) {
-    // Deleted (TTL or deleteMyData): deleteMyData / the sweep clean the
-    // pools; the picture goes here (S8-06).
-    if (before) {
-      result.avatarDeleted = await deleteAvatarOfDeletedPlayer(db, uid, opts.avatars ?? defaultAvatarBucket());
-    }
+    // Deleted (TTL or deleteMyData): deleteMyData / the sweep clean the pools.
     return result;
   }
   const nowMs = opts.nowMs ?? Date.now();
@@ -233,9 +178,17 @@ export async function processPlayerWrite(
           score: chosen.score,
           best: chosen.best,
           ts: Timestamp.fromMillis(nowMs),
-          name: chosen.name,
-          avatar: chosen.avatar,
-          look: chosen.look,
+          // WP-AV only generated names and no pictures reach a pool: a
+          // platform name from an older app becomes a generated name.
+          name: versusName(chosen.name, uid),
+          avatar: '',
+          look: {
+            bird: chosen.look.bird,
+            gear: chosen.look.gear,
+            hat: chosen.look.hat,
+            hoop: chosen.look.hoop,
+            trail: chosen.look.trail,
+          },
           platform: chosen.platform,
           tl: chosen.tl,
           end: chosen.end,
@@ -286,31 +239,6 @@ async function rewritePool(
 export async function sweepAllPools(db: Firestore, nowMs = Date.now()): Promise<number> {
   const counts = await Promise.all(allPoolIds().map((pid) => rewritePool(db, pid, null, nowMs)));
   return counts.reduce((a, b) => a + b, 0);
-}
-
-/**
- * PRD-2.3 §5.5 / §21.3 (S8-06) daily retry of the picture clean-up: every
- * `avatars/{uid}.jpg` whose `players/{uid}` doc no longer exists and that
- * was not updated for [graceMs] (default: the 60-day retention, so a
- * picture uploaded before the player's first run is kept that long) is
- * deleted. Returns the number deleted.
- */
-export async function sweepStaleAvatars(
-  db: Firestore,
-  bucket: AvatarBucket = defaultAvatarBucket(),
-  nowMs = Date.now(),
-  graceMs = RETENTION_MS,
-): Promise<number> {
-  const files = await bucket.listAvatars();
-  let deleted = 0;
-  for (const f of files) {
-    if (nowMs - f.updatedMs < graceMs) continue;
-    const live = await db.collection('players').doc(f.uid).get();
-    if (live.exists) continue;
-    await bucket.deleteAvatar(f.uid);
-    deleted++;
-  }
-  return deleted;
 }
 
 /**

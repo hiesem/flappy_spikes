@@ -948,9 +948,9 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   restart (background retries with doubling waits 5 s → 2 min, and at once
   on app resume, Home prefetch, a run submit and before every flush).
   S6-65: the own name on the VS plate, the HUD chip and the results card is
-  the Play Games display name or the generated nickname ("You" only with no
-  identity at all). S6-64: avatars (the Play Games icon image / the uploaded
-  avatar URL) are drawn from one in-memory cache on the plates, the HUD and
+  the generated nickname (WP-AV; was: or the Play Games name) ("You" only with no
+  identity at all). S6-64 (superseded by WP-AV sticker avatars): avatars (the
+  Play Games icon image / the uploaded avatar URL) were drawn from one in-memory cache on the plates, the HUD and
   the results card; the neutral glyph shows while one is missing.
 - DEVIATION (PRD-2.2 §2, P22-2): a **mode button** above START chooses
   VERSUS (the default) or FREE FLY (remembered in `homeMode`; "Delete my
@@ -1621,9 +1621,10 @@ production build has the flag off and uses these values only. Full key table:
 - DEVIATION (PRD-2.3 §21.2/§21.3): every versus name tag follows one rule
   (shrink to 70 %, then "…"); avatar squares show the player's picture, else
   their own bird in their look (never the grey person icon for an opponent).
+  WP-AV (2.4) replaces the pictures with sticker avatars (see the WP-AV note).
 - Tests: `test/p23/s25_versus_matching_test.dart`,
   `test/p23/s25_vs_loading_screen_test.dart`, `test/p23/s21_names_test.dart`,
-  `test/p23/s21_avatar_display_test.dart`,
+  `test/p23/s21_avatar_display_test.dart` (removed by WP-AV),
   `test/p23/s21_versus_identity_test.dart`, `functions/test/p23_s21.test.ts`.
 
 ## PRD-2.3 §17: one big bonus on screen (P23-17)
@@ -1817,3 +1818,29 @@ production build has the flag off and uses these values only. Full key table:
   the results bar fills with the run's score toward the next threshold ("N TO <next>" = the
   points the run was short). "Delete my data" and the debug "Reset menu state" reset the
   level to 0 (the delete keeps `claimedLevels`, so a level reached again never pays twice).
+
+### Sticker avatars from the player's own bird (WP-AV, 2026-10-17)
+
+- DEVIATION (owner 2026-10-17, design C "Sticker"; supersedes PRD-2.3 §21.3 pictures and
+  the S6-64 / S6-65 platform picture and name): every player picture (the VS intro plates,
+  the versus HUD bar, the results card; yours and the opponent's, the solo results column
+  too) is a **sticker avatar** drawn on the phone from the player's equipped bird, gear and
+  hat: the game's own skin art, tilted 16° nose-up, animated items frozen at t = 0.6, a
+  white sticker edge (4.5 % of the size, ≥ 2 px) and a soft shadow (28 % black, blur 5 %,
+  3.5 % down), on a 9-point star blob turned 10° (radii 41 % / 33 %) in the bird's colour
+  mixed 72 % to white (rainbow #FF5252, snow / ghost #90A4AE). The opponent's faces left.
+  It is rendered once per (bird, gear, hat, pixel size) into an image and cached (LRU 16),
+  never drawn per frame. The avatar squares' colours and sizes are unchanged; the reel's
+  filler ticks and NO RIVAL FOUND keep the grey person glyph.
+- No photos and no platform names: the Play Games / Game Center picture and display name are
+  never read; nothing is uploaded to Firebase Storage (the `avatar` field of a run / player
+  doc is always '', kept only for the rules' key set and older apps); Storage rules deny
+  everything. Everyone's versus name is the generated nickname (also when signed in); the
+  platform identity stays for sign-in, the account link, `pg` and leaderboards only.
+- Opponents' stickers come from the `look` ids of their run; an id this build does not know
+  falls back per layer (classic bird, no gear, no hat). The server checks every look id's
+  shape (`^[a-z0-9_]{1,40}$`, function and rules) and pools a run with `avatar: ''` and a
+  generated name (a platform name from an older app becomes a generated name derived from
+  the uid).
+- Tests: `test/p24/av_sticker_avatar_test.dart`, `test/p24/av_versus_avatars_test.dart`,
+  `functions/test/p24_av.test.ts`.

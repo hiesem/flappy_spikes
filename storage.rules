@@ -1,24 +1,11 @@
 rules_version = '2';
 
-// Flappy Spikes versus pictures (PRD-2.3 §21.3).
-// - avatars/{uid}.jpg: the player's Play Games picture (96 × 96, ≤ 30 KB), shown to
-//   other players in Versus. Anyone may read; only that player may write or delete it;
-//   uploads must be images of at most 30 KB.
-// - everything else: denied.
+// Flappy Spikes Storage: closed (WP-AV, 2.4).
+// The versus pictures (avatars/{uid}.jpg, PRD-2.3 §21.3) are gone: the versus avatar is
+// drawn on each phone from the player's bird / gear / hat ids, no photo is read, uploaded or
+// stored. Nothing in the bucket can be read or written by a client.
 service firebase.storage {
   match /b/{bucket}/o {
-    function owner(file) {
-      return request.auth != null && file == request.auth.uid + '.jpg';
-    }
-
-    match /avatars/{file} {
-      allow read: if true;
-      allow create, update: if owner(file)
-        && request.resource.size <= 30 * 1024
-        && request.resource.contentType.matches('image/.*');
-      allow delete: if owner(file);
-    }
-
     match /{path=**} {
       allow read, write: if false;
     }

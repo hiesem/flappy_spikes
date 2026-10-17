@@ -605,6 +605,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// only at the idle frame rate.
   bool get _menuIdle {
     if (state != GameState.start || !_sceneOnTop(menuScene)) return false;
+    // Owner 2026-10-17: the Shop and Skins (the bird + trail preview moves
+    // fast and looked choppy at the idle rate) always draw at the display
+    // rate; Home and LEVELS keep the idle saving.
+    if (menuScene == MenuScene.shop || menuScene == MenuScene.skins) {
+      return false;
+    }
     if (_fades.isNotEmpty || _colorFadeT < 1) return false;
     if (_popupQueue.isNotEmpty || _levelsOpenIn != null) return false;
     if (_fakeAd != null || _adsShowing > 0 || liveMotionPaused) return false;

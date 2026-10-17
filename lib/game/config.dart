@@ -134,8 +134,9 @@ class Config {
   /// still covers 30 fps devices without slowing them down.
   static const double maxFrameStep = 1 / 30;
 
-  /// PRD-2.2 §33.4 item 5: frames per second of an idle menu (Home, Shop,
-  /// Skins, Levels on top with nothing over it, settled and untouched for
+  /// PRD-2.2 §33.4 item 5: frames per second of an idle menu (Home and
+  /// Levels on top with nothing over it; owner 2026-10-17: never the Shop or
+  /// Skins), settled and untouched for
   /// [idleMenuDelay]). Home's idle motion is slow (bob, pulse, streak), so
   /// half the display rate keeps its look and halves the CPU / GPU work.
   /// 0 = always the display rate.

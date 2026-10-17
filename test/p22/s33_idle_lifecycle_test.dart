@@ -59,6 +59,37 @@ void main() {
     );
 
     home().testGameWidget(
+      'owner 2026-10-17: the Shop and Skins always draw at the display rate '
+      '(the bird + trail preview), Home keeps the idle rate',
+      setUp: (g, _) => settle(g),
+      verify: (g, tester) async {
+        g.idleFrames
+          ..enabled = true
+          ..attach();
+        addTearDown(g.idleFrames.detach);
+        g.openSkins();
+        await pumpFor(tester, g, 1);
+        expect(g.menuScene, MenuScene.skins);
+        await pumpFor(tester, g, 3);
+        final skins = await pumpFor(tester, g, 1);
+        expect(skins, inInclusiveRange(58, 61), reason: 'Skins: 60 fps');
+        g.handleBack();
+        await pumpFor(tester, g, 1);
+        g.openShop();
+        await pumpFor(tester, g, 1);
+        expect(g.menuScene, MenuScene.shop);
+        await pumpFor(tester, g, 3);
+        final shop = await pumpFor(tester, g, 1);
+        expect(shop, inInclusiveRange(58, 61), reason: 'Shop: 60 fps');
+        g.handleBack();
+        await pumpFor(tester, g, 4);
+        expect(g.menuScene, MenuScene.home);
+        final home = await pumpFor(tester, g, 1);
+        expect(home, inInclusiveRange(27, 33), reason: 'Home idle: 30 fps');
+      },
+    );
+
+    home().testGameWidget(
       'settled Home draws ~30 frames/s, its idle clock keeps real time, '
       'a touch returns to 60 at once',
       setUp: (g, _) => settle(g),

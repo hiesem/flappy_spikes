@@ -4,9 +4,11 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 
 import '../../game/config.dart';
+import '../../game/flappy_game.dart';
 import '../../game/sound.dart';
 import '../../skins/art/look_painter.dart';
 import '../config/capsule_config.dart';
+import '../effects/bird_attachment.dart';
 import '../effects/easing.dart';
 import '../effects/screen_edge_glow.dart';
 import '../run_context.dart';
@@ -156,7 +158,7 @@ class HourglassFeature extends TimedPowerupEffect {
       final pos = ctx.run.birdTrackPosition();
       while (_ghostAcc >= 1) {
         _ghostAcc -= 1;
-        if (pos != null && ctx.s.ride == null) {
+        if (pos != null && ctx.s.ride == null && ctx.game.runBirdPresented) {
           ghosts.add(
             HourglassGhost(
               pos.x,
@@ -210,10 +212,24 @@ class HourglassGhost {
 /// birds (25 % → 0 over 0.5 s, left behind in the world) and, while the
 /// Hourglass runs, the thin blue clock ring (r 26, 2 pt) with a hand that
 /// turns once over the whole duration.
-class HourglassTrail extends Component {
+class HourglassTrail extends Component with BirdAttachment {
   HourglassTrail(this.owner);
 
   final HourglassFeature owner;
+
+  @override
+  FlappySpikesGame? get birdGame => owner.c?.game;
+
+  /// The ghosts are left behind in the world; only the clock is worn.
+  @override
+  bool get hidesWholly => false;
+
+  /// Audit HIDE: whether [render] draws the clock ring round the bird now.
+  bool get paintsClock =>
+      owner.on &&
+      owner.c?.s.ride == null &&
+      birdPresented &&
+      owner.c?.run.birdTrackPosition() != null;
 
   final Paint _layer = Paint();
   final Paint _ring = Paint()
@@ -248,7 +264,7 @@ class HourglassTrail extends Component {
       canvas.restore();
       canvas.restore();
     }
-    if (!owner.on || ctx.s.ride != null) return;
+    if (!owner.on || ctx.s.ride != null || !birdPresented) return;
     final pos = ctx.run.birdTrackPosition();
     if (pos == null) return;
     final centre = Offset(pos.x, pos.y);

@@ -1950,6 +1950,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// The run bird (null on the home screen before a run / after a reset).
   Bird? get runBird => _bird;
 
+  /// Audit HIDE: whether the run bird is drawn right now ([Bird.presented]).
+  /// Every attachment of the bird reads this one signal.
+  bool get runBirdPresented => _bird?.presented ?? false;
+
   /// The current colour stage's palette key (0, 5, …, 50).
   int get stageKey => _stage;
 

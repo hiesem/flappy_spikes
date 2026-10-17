@@ -4,9 +4,11 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 
 import '../../components/skins/item_art.dart' show paintLookForTrail;
+import '../../game/flappy_game.dart';
 import '../config/run_config.dart';
 import '../config/streak_config.dart';
 import '../director/plans.dart';
+import '../effects/bird_attachment.dart';
 import '../effects/particle_pool.dart';
 import '../effects/perfect_burst.dart';
 import '../effects/ring_tier_fx.dart';
@@ -323,11 +325,19 @@ class _HoopTier {
 
 /// The bird's tier-3+ trail (master #10 / equipped trail via [TierTrail]),
 /// in screen space right behind the bird. It also runs during a ride.
-class _TrailComponent extends Component {
+class _TrailComponent extends Component with BirdAttachment {
   _TrailComponent(this.c, this.trail)
     : super(priority: StreakConfig.trailPriority);
 
   final RunContext c;
+
+  @override
+  FlappySpikesGame get birdGame => c.game;
+
+  /// The trail already shed stays where it was left (it only stops
+  /// emitting while the bird is hidden).
+  @override
+  bool get hidesWholly => false;
   final TierTrail trail;
 
   /// Screen-space blocks of the block trail.
@@ -369,7 +379,9 @@ class _TrailComponent extends Component {
         bird != null &&
         (s.tier >= StreakConfig.trailTier || s.ride != null) &&
         // region WP-3b — no trail while a ride hides the bird (§3.12)
-        !(s.ride?.birdHidden ?? false);
+        !(s.ride?.birdHidden ?? false) &&
+        // Audit HIDE: nor while anything else hides the bird.
+        birdPresented;
     // endregion WP-3b
     final vx = s.forwardSpeed;
     final heading = _heading(bird, dt);

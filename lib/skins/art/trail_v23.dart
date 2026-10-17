@@ -802,6 +802,49 @@ final class TrailV23 {
         c.circ(p.x, p.y, p.s * (1 + u * 1.4) * .8, p.c0);
       }
     }
+    // Audit A1-1: the stars' violet glow (the page's per-star
+    // `shadowColor #E040FB, shadowBlur 6`) is drawn as ONE blurred layer of
+    // all star shapes instead of one mask-blur pass per star (~16 per frame,
+    // each its own offscreen pass on the GPU). Same colour, alpha and sigma;
+    // only where two glows overlap a star drawn earlier does the order
+    // differ (sub-pixel-level, measured in evidence/a1).
+    var any = false;
+    var l = 0.0, t = 0.0, r = 0.0, b = 0.0;
+    for (var pIx = 0; pIx < _alive; pIx++) {
+      final p = _pool[pIx];
+      if (p.kind != _kS) continue;
+      final u = p.life / p.max;
+      if (1 - u * u <= 0) continue;
+      final rad = p.s * (.6 + .6 * (.55 + .45 * math.sin(p.life * 14 + p.ph)));
+      if (!any) {
+        any = true;
+        l = p.x - rad;
+        t = p.y - rad;
+        r = p.x + rad;
+        b = p.y + rad;
+      } else {
+        l = math.min(l, p.x - rad);
+        t = math.min(t, p.y - rad);
+        r = math.max(r, p.x + rad);
+        b = math.max(b, p.y + rad);
+      }
+    }
+    if (any) {
+      c.glowLayer(6, Rect.fromLTRB(l, t, r, b), () {
+        for (var pIx = 0; pIx < _alive; pIx++) {
+          final p = _pool[pIx];
+          if (p.kind != _kS) continue;
+          final u = p.life / p.max;
+          final tw = .55 + .45 * math.sin(p.life * 14 + p.ph);
+          c.globalAlpha = 1 - u * u;
+          c.save();
+          c.translate(p.x, p.y);
+          c.rotate(p.rot);
+          _star4(c, p.s * (.6 + .6 * tw), const Color(0xFFE040FB));
+          c.restore();
+        }
+      });
+    }
     for (var pIx = 0; pIx < _alive; pIx++) {
       final p = _pool[pIx];
       final u = p.life / p.max;
@@ -811,8 +854,6 @@ final class TrailV23 {
         c.save();
         c.translate(p.x, p.y);
         c.rotate(p.rot);
-        c.shadowColor = const Color(0xFFE040FB);
-        c.shadowBlur = 6;
         _star4(c, p.s * (.6 + .6 * tw), p.c0);
         c.restore();
       } else if (p.kind == _kD) {

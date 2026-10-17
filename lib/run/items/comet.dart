@@ -93,7 +93,12 @@ class CometFeature extends RunFeature {
   }
 
   @override
-  void onDeath(Mistake m) => landing?.stop();
+  void onDeath(Mistake m) {
+    landing?.stop();
+    // Audit A4-6: a death in the landing tail must not leave the speed
+    // streaks frozen on screen through the tumble and the revive offer.
+    ride?.lines.clear();
+  }
 
   @override
   void onRevive() => landing?.stop();

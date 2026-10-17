@@ -89,13 +89,17 @@ class Ctx {
     canvas.restore();
   }
 
-  /// Drops every cached strip (tests; a new run starts with its own Ctx).
+  /// Drops every cached strip (the backdrop calls it when it leaves the
+  /// world; a new run starts with its own Ctx).
   void clearStrips() {
     for (final s in _strips.values) {
       s.pic.dispose();
     }
     _strips.clear();
   }
+
+  /// How many strip pictures are cached (tests).
+  int get stripCount => _strips.length;
 
   // ------------------------------------------------------------ rng pool
   final List<Rng> _rngs = List.generate(8, (_) => Rng());

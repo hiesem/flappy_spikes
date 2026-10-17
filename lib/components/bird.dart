@@ -380,6 +380,15 @@ class Bird extends BodyComponent<FlappySpikesGame>
   /// storm's depth via [placeRide]; 1 otherwise).
   double get drawnScale => isLoaded ? _look.scale.x : 1;
 
+  /// Audit HIDE (2026-10-17): the one "is the bird on screen" rule for
+  /// everything worn on or following it (egg, chick, shield ring, heart
+  /// badge, fire, trail, clock ring, ...): true exactly while the bird art
+  /// draws ([drawnOpacity] > 0, the same test [LookComponent.render] uses).
+  /// False in the cannon barrel, the volcano, the rocket, a Black Hole
+  /// swallow and the phoenix's no-body start. Read it through
+  /// `FlappySpikesGame.runBirdPresented` / `BirdAttachment`.
+  bool get presented => drawnOpacity > 0;
+
   @override
   void update(double dt) {
     super.update(dt);

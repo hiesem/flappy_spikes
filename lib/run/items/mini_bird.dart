@@ -149,7 +149,8 @@ class MiniBirdFeature extends TimedPowerupEffect {
       scale = _from + (_to - _from) * Ease.cubicInOut(_easeT);
     }
     _write();
-    if (on && ctx.s.ride == null && scale < 1) {
+    // Audit HIDE: no bubbles from a hidden bird.
+    if (on && ctx.s.ride == null && scale < 1 && ctx.game.runBirdPresented) {
       _bubbleAcc += realDt * CapsuleConfig.bubbleRate;
       final pos = ctx.run.birdTrackPosition();
       final r = ctx.cosmetic;

@@ -183,6 +183,9 @@ void main() {
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(game);
+      // Audit HIDE: the run-start fade-in done (a bird drawn at opacity 0
+      // wears no fire).
+      game.runBird!.setSpriteOpacity(1);
       final sfx = sfxLog(game);
       final fire = feverOf(run).fire!;
       Future<void> lightAgain() async {
@@ -240,6 +243,9 @@ void main() {
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(game);
+      // Audit HIDE: the run-start fade-in done (a bird drawn at opacity 0
+      // wears no fire).
+      game.runBird!.setSpriteOpacity(1);
       final fire = feverOf(run).fire!;
       for (final (n, rate, scale) in [
         (3, 55.0, .7),
@@ -281,6 +287,9 @@ void main() {
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(game);
+      // Audit HIDE: the run-start fade-in done (a bird drawn at opacity 0
+      // wears no fire).
+      game.runBird!.setSpriteOpacity(1);
       final fire = feverOf(run).fire!;
       for (var i = 0; i < 7; i++) {
         run.debugPass(perfect: true);
@@ -320,6 +329,9 @@ void main() {
       await game.menu.items.equip(SkinLayer.trail, 'blue');
       expect(game.menu.items.look.trail, 'blue');
       var run = await startRun(game);
+      // Audit HIDE: the run-start fade-in done (a bird drawn at opacity 0
+      // wears no fire).
+      game.runBird!.setSpriteOpacity(1);
       final blue = TrailEmitter.flameColors('blue')!;
       expect(feverOf(run).fire!.colors, blue);
       for (var i = 0; i < 3; i++) {
@@ -333,6 +345,9 @@ void main() {
       game.replay();
       await stepSeconds(game, .5);
       run = await startRun(game);
+      // Audit HIDE: the run-start fade-in done (a bird drawn at opacity 0
+      // wears no fire).
+      game.runBird!.setSpriteOpacity(1);
       expect(feverOf(run).fire!.colors, FeverConfig.firePalette);
     },
   );
@@ -343,6 +358,9 @@ void main() {
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(game);
+      // Audit HIDE: the run-start fade-in done (a bird drawn at opacity 0
+      // wears no fire).
+      game.runBird!.setSpriteOpacity(1);
       final fire = feverOf(run).fire!;
       final bird = game.world.children.whereType<Bird>().single;
       expect(fire.parent, same(bird.parent));
@@ -370,6 +388,9 @@ void main() {
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(game);
+      // Audit HIDE: the run-start fade-in done (a bird drawn at opacity 0
+      // wears no fire).
+      game.runBird!.setSpriteOpacity(1);
       final fire = feverOf(run).fire!;
       run.events.emit(const FeverIgnite('test'));
       expect(run.state.onFire, isTrue);
@@ -392,6 +413,9 @@ void main() {
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(game);
+      // Audit HIDE: the run-start fade-in done (a bird drawn at opacity 0
+      // wears no fire).
+      game.runBird!.setSpriteOpacity(1);
       final fire = feverOf(run).fire!;
       for (var i = 0; i < 3; i++) {
         run.debugPass(perfect: true);
@@ -433,6 +457,9 @@ void main() {
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(game);
+      // Audit HIDE: the run-start fade-in done (a bird drawn at opacity 0
+      // wears no fire).
+      game.runBird!.setSpriteOpacity(1);
       final loops = <(SfxLoop, double)>[];
       game.sound.onLoop = (l, v) => loops.add((l, v));
       final fever = feverOf(run);
@@ -512,6 +539,9 @@ void main() {
     setUp: (g, _) => prepare(g),
     verify: (game, _) async {
       final run = await startRun(game);
+      // Audit HIDE: the run-start fade-in done (a bird drawn at opacity 0
+      // wears no fire).
+      game.runBird!.setSpriteOpacity(1);
       final sfx = sfxLog(game);
       for (var i = 0; i < 4; i++) {
         run.debugPass(perfect: true);

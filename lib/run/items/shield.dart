@@ -3,9 +3,11 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 
+import '../../game/flappy_game.dart';
 import '../../game/sound.dart';
 import '../config/lives_config.dart';
 import '../config/parts_config.dart';
+import '../effects/bird_attachment.dart';
 import '../effects/dashed_path.dart';
 import '../effects/easing.dart';
 import '../effects/save_burst.dart';
@@ -96,10 +98,13 @@ class ShieldFeature extends RunFeature implements MistakeInterceptor {
 /// with the bird's opacity and scale ([Bird.drawnOpacity] /
 /// [Bird.drawnScale]), so it vanishes while a ride hides the bird and is
 /// back, still armed, when the bird reappears.
-class ShieldCircle extends PositionComponent {
+class ShieldCircle extends PositionComponent with BirdAttachment {
   ShieldCircle(this.c) : super(priority: RunLayer.bird + 1);
 
   final RunContext c;
+
+  @override
+  FlappySpikesGame get birdGame => c.game;
 
   double _t = 0;
   double? _formAt;

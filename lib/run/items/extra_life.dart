@@ -3,8 +3,10 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 
+import '../../game/flappy_game.dart';
 import '../../game/sound.dart';
 import '../config/lives_config.dart';
+import '../effects/bird_attachment.dart';
 import '../effects/easing.dart';
 import '../effects/fetch_flight.dart';
 import '../effects/life_icons.dart';
@@ -129,10 +131,13 @@ class ExtraLifeFeature extends RunFeature implements MistakeInterceptor {
 /// (≈ 0.6 Hz) and breathing ±8 %; it pops in (0.35 s, smoothstep) after
 /// the 3rd heart and, on a save, pops into 12 small hearts (+ a white
 /// flash, [SaveBurst]) in the run's particle pool. World coordinates = screen.
-class HeartBadge extends PositionComponent {
+class HeartBadge extends PositionComponent with BirdAttachment {
   HeartBadge(this.c) : super(priority: RunLayer.bird + 1);
 
   final RunContext c;
+
+  @override
+  FlappySpikesGame get birdGame => c.game;
 
   double _t = 0;
 

@@ -6,13 +6,14 @@ import 'package:flutter/painting.dart' show TextPainter, TextSpan, TextStyle;
 import 'package:flutter/painting.dart' as p show TextDirection;
 
 import '../../game/config.dart';
-import '../../game/flappy_game.dart' show GameState;
+import '../../game/flappy_game.dart' show FlappySpikesGame, GameState;
 import '../../game/sound.dart';
 import '../../skins/art/look_painter.dart';
 import '../../skins/look.dart';
 import '../config/egg_config.dart';
 import '../config/tuning_values.dart';
 import '../elements.dart';
+import '../effects/bird_attachment.dart';
 import '../effects/collect_fx.dart';
 import '../effects/particle_pool.dart';
 import '../effects/text_pop.dart';
@@ -42,7 +43,7 @@ import '../run_state.dart';
 /// `ReviveRulesFeature` clears `RunState.egg`).
 class EggFeature extends RunFeature {
   RunContext? _c;
-  _EggView? _view;
+  EggView? _view;
   CollectBursts? _bursts;
   EggBadge? _badge;
 
@@ -59,7 +60,7 @@ class EggFeature extends RunFeature {
       ..on<RimTouched>(_onRim)
       ..on<MistakeSaved>(_onSaved)
       ..on<RunDied>(_onDied);
-    _view = _EggView(c);
+    _view = EggView(c);
     c.game.world.add(_view!);
     _bursts = CollectBursts();
     c.game.world.add(_bursts!);
@@ -156,6 +157,9 @@ class EggFeature extends RunFeature {
 
   /// Eggs broken on a rim this run (tests / debug).
   int broken = 0;
+
+  /// The egg / chick view (tests).
+  EggView? get view => _view;
 
   /// The shell / burst particles (tests).
   CollectBursts? get bursts => _bursts;
@@ -283,11 +287,34 @@ class EggFeature extends RunFeature {
 /// The egg on the bird's back and the chick behind it (§5.26), in screen
 /// space just behind the bird (`RunLayer.bird − 1`). Reads `RunState.egg`,
 /// so it draws nothing while no egg / chick runs; the feature drives the
-/// wobble and the departure.
-class _EggView extends Component {
-  _EggView(this.c) : super(priority: RunLayer.bird - 1);
+/// wobble and the departure. Audit HIDE: the egg and the following chick
+/// are worn on the bird ([BirdAttachment]) — not drawn while the bird is
+/// hidden (cannon barrel, volcano, rocket, Black Hole, phoenix); a chick
+/// that already left keeps flying away.
+class EggView extends Component with BirdAttachment {
+  EggView(this.c) : super(priority: RunLayer.bird - 1);
 
   final RunContext c;
+
+  @override
+  FlappySpikesGame get birdGame => c.game;
+
+  /// The departing chick is no longer on the bird.
+  @override
+  bool get hidesWholly => false;
+
+  /// Audit HIDE: whether [render] draws the egg on the bird's back now.
+  bool get paintsEgg =>
+      c.s.egg?.stage == EggStage.egg &&
+      c.game.runBirdPosition != null &&
+      birdPresented;
+
+  /// Audit HIDE: whether [render] draws the following chick now.
+  bool get paintsChick =>
+      c.s.egg?.stage == EggStage.chick &&
+      !leaving &&
+      c.game.runBirdPosition != null &&
+      birdPresented;
 
   /// Wobble time left (s), set on each crack.
   double wob = 0;
@@ -379,7 +406,8 @@ class _EggView extends Component {
     final bird = c.game.runBirdPosition;
     if (bird == null) return;
     final egg = c.s.egg;
-    if (egg != null && egg.stage == EggStage.egg) {
+    final worn = birdPresented;
+    if (worn && egg != null && egg.stage == EggStage.egg) {
       canvas.save();
       canvas.translate(
         bird.x + EggConfig.onBirdDx,
@@ -389,7 +417,7 @@ class _EggView extends Component {
       EggArt.paint(canvas, Offset.zero, cracks: egg.cracks);
       canvas.restore();
     }
-    if (egg != null && egg.stage == EggStage.chick && !leaving) {
+    if (worn && egg != null && egg.stage == EggStage.chick && !leaving) {
       _paintChick(canvas, _chickX, _chickY, _t);
     }
     if (leaving) {

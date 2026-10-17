@@ -6,6 +6,7 @@ import 'package:flame/components.dart';
 import '../../game/flappy_game.dart';
 import '../../game/sound.dart';
 import '../config/fever_config.dart';
+import '../effects/bird_attachment.dart';
 import '../config/run_config.dart';
 import '../config/streak_config.dart';
 import '../director/plans.dart';
@@ -271,13 +272,20 @@ abstract final class FireLevel {
 /// warm halo and the smoke puffs when it goes out. Screen space, behind the
 /// bird ([FeverConfig.firePriority]). Allocation-free per frame: the halo
 /// paints are built once per colour set (PRD-2.2 §33.4 item 6).
-class FireMaster extends Component {
+class FireMaster extends Component with BirdAttachment {
   FireMaster(this.c, {List<Color> colors = FeverConfig.firePalette})
     : super(priority: FeverConfig.firePriority) {
     this.colors = colors;
   }
 
   final RunContext c;
+
+  @override
+  FlappySpikesGame get birdGame => c.game;
+
+  /// Flames already shed and the smoke drift free of the bird.
+  @override
+  bool get hidesWholly => false;
   final ParticlePool pool = ParticlePool(capacity: 120);
   final ParticlePool smokePool = ParticlePool(capacity: 24);
   double _acc = 0;
@@ -308,9 +316,12 @@ class FireMaster extends Component {
   bool get burning => c.s.onFire && !c.run.dying && !c.run.ended;
 
   /// PRD-2.2 §21.1 hidden inside the comet fireball and while a portal
-  /// ride hides the bird (cannon barrel, volcano, rocket).
+  /// ride hides the bird (cannon barrel, volcano, rocket). Audit HIDE: and
+  /// whenever else the bird is not drawn ([BirdAttachment.birdPresented]).
   bool get hidden =>
-      c.s.ride?.kind == RideKind.comet || (c.s.ride?.birdHidden ?? false);
+      c.s.ride?.kind == RideKind.comet ||
+      (c.s.ride?.birdHidden ?? false) ||
+      !birdPresented;
 
   /// Whether the fire shows (emits and draws its halo).
   bool get showing => burning && !hidden && _hasBird;

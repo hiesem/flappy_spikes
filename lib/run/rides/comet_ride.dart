@@ -340,13 +340,16 @@ class CometRide implements Ride {
     }
     final loop = _loop;
     if (loop == null || loop.stopped) return;
-    // A paused run silences the loop; it comes back on resume.
-    final silent = !c.run.isScrolling;
+    // A paused run silences the loop; it comes back on resume. Audit A2-3:
+    // SFX muted meanwhile (the pause screen's settings) keeps it silent.
+    final silent = _loopShouldBeSilent;
     if (silent != _loopSilenced) {
       _loopSilenced = silent;
       loop.setVolume(silent ? 0 : CometConfig.loopVolume);
     }
   }
+
+  bool get _loopShouldBeSilent => !c.run.isScrolling || c.game.sound.muted;
 
   void _stepLoopFade(double dt) {
     final loop = _loop;
@@ -355,9 +358,12 @@ class CometRide implements Ride {
     final k = 1 - (_loopFadeT / CometConfig.loopFade).clamp(0.0, 1.0);
     if (k <= 0) {
       loop.stop();
-    } else {
-      loop.setVolume(CometConfig.loopVolume * k);
+      return;
     }
+    // Audit A2-3: the fading hum is silent during a pause (and muted) too.
+    final silent = _loopShouldBeSilent;
+    _loopSilenced = silent;
+    loop.setVolume(silent ? 0 : CometConfig.loopVolume * k);
   }
 
   /// §5.6 the pop at the comet: white flash, squares and a gold ring.

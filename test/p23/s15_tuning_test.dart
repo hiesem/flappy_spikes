@@ -126,7 +126,7 @@ void main() {
       expect(t.i('revive_min_hoops'), 6);
       expect(
         t.ints('level_rewards'),
-        [50, 100, 150, 250, 400, 600, 800, 1000, 2000, 5000],
+        [25, 50, 100, 200, 400, 600, 800, 1000, 2000, 5000], // 2026-10-17
       );
       expect(t.i('shop_ad_coins'), 75); // PRD-2.3.1 §5 (was 40)
       expect(t.i('shop_ad_per_day'), 5);

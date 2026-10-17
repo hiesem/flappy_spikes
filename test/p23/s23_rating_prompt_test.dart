@@ -218,7 +218,7 @@ void main() {
     'closes',
     setUp: (g, _) => boot(g),
     verify: (g, _) async {
-      await play(g, 12); // run 5, reaches level 1: CLAIM shows
+      await play(g, 25); // run 5, reaches level 1: CLAIM shows
       for (var i = 0; i < 900 && !g.resultsScreen!.claimShowing; i++) {
         g.update(1 / 60);
       }

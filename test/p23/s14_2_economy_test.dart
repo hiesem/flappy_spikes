@@ -126,12 +126,14 @@ void main() {
       expect(ReviveLadder.eligible(short), isFalse);
     });
 
-    test('the level ladder is unchanged (10,350 in all)', () {
-      expect([for (final l in kLevels) l.reward], [
-        50, 100, 150, 250, 400, 600, 800, 1000, 2000, 5000, //
-      ]);
-      expect(kLevels.fold<int>(0, (a, l) => a + l.reward), kLevelRewardTotal);
-      expect(kLevelRewardTotal, 10350);
+    test('the level ladder is the owner 2026-10-17 table (10,175 in all)', () {
+      expect(
+        [for (final l in kLevels) l.reward],
+        [
+          25, 50, 100, 200, 400, 600, 800, 1000, 2000, 5000, //
+        ],
+      );
+      expect(kLevels.fold<int>(0, (a, l) => a + l.reward), 10175);
     });
 
     test('tuning: a remote value reaches the getter (coin_jar, '

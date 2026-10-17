@@ -88,6 +88,14 @@ void main() {
           greaterThanOrEqualTo(12),
           reason: flight.trace.join('\n'),
         );
+        // EGG needs 25 points (owner 2026-10-17): keep flying to it so the
+        // results page owes a level reward to CLAIM.
+        expect(
+          await flyUntil(g, (_) => g.score >= 25, maxSeconds: 60),
+          isTrue,
+          reason: 'score ${g.score}',
+        );
+        await flyOutOfRide(g);
         expect(r.spawner.slotLog.any((p) => p.tiltDeg != 0), isTrue);
         expect(r.spawner.slotLog.any((p) => p.motion != null), isTrue);
         final clock = r.state.runClock, cam = r.state.camX;
@@ -161,13 +169,12 @@ void main() {
         final page = g.resultsScreen!;
         expect(page.model.reward, earned);
         expect(g.storage.gamesPlayed, played + 1);
-        // PRD-2.3 §14.3: every rim-free pass is perfect, so 12 bot hoops
-        // can reach level 2 (EGG 50 + FLEDGLING 100): the owed reward is
-        // every level up to the run's score.
+        // The run reached at least EGG (25 points, 25 coins); it may go
+        // further: the owed reward is every level up to the run's score.
         final owed = kLevels
             .where((l) => l.level <= levelFor(g.storage.bestScore))
             .fold<int>(0, (a, l) => a + l.reward);
-        expect(owed, greaterThanOrEqualTo(50));
+        expect(owed, greaterThanOrEqualTo(25));
         expect(g.storage.unclaimedLevelReward, owed);
         stepGame(g, 4.2);
         await flushAndMount(g);
@@ -202,11 +209,11 @@ void main() {
     g,
     tester,
   ) async {
-    await endWith(g, 12);
-    expect(g.storage.unclaimedLevelReward, 50);
+    await endWith(g, 25);
+    expect(g.storage.unclaimedLevelReward, 25);
     final prefs = await SharedPreferences.getInstance();
     killedBeforeClaim = {for (final k in prefs.getKeys()) k: prefs.get(k)!};
-    expect(killedBeforeClaim!['unclaimedLevelReward'], 50);
+    expect(killedBeforeClaim!['unclaimedLevelReward'], 25);
     expect(g.storage.claimedLevels, isEmpty);
   });
   FlameTester<FlappySpikesGame>(
@@ -216,7 +223,7 @@ void main() {
     'P2 restart after kill before CLAIM: one credit, no popup',
     setUp: (g, _) => boot(g),
     verify: (g, _) async {
-      expect(g.storage.coins, (killedBeforeClaim!['coins'] as int? ?? 0) + 50);
+      expect(g.storage.coins, (killedBeforeClaim!['coins'] as int? ?? 0) + 25);
       expect(g.storage.claimedLevels, {1});
       expect(g.storage.unclaimedLevelReward, 0);
       expect(await claimLevelRewards(g, 'app_start'), 0);
@@ -319,8 +326,8 @@ void main() {
       'S6-22 reproduce kill at the real claim persistence boundary',
       () async {
         SharedPreferences.setMockInitialValues({
-          'bestScore': 12,
-          'unclaimedLevelReward': 50,
+          'bestScore': 25,
+          'unclaimedLevelReward': 25,
           'coins': 100,
         });
         final storage = GameStorage();
@@ -339,7 +346,7 @@ void main() {
         };
         expect(interruptedClaim!['claimedLevels'], ['1']);
         expect(interruptedClaim!['coins'], 100);
-        expect(interruptedClaim!['unclaimedLevelReward'], 50);
+        expect(interruptedClaim!['unclaimedLevelReward'], 25);
       },
     );
     FlameTester<FlappySpikesGame>(
@@ -350,8 +357,8 @@ void main() {
       verify: (g, _) async {
         expect(
           g.storage.coins,
-          150,
-          reason: 'the persisted 50-coin reward was never credited',
+          125,
+          reason: 'the persisted 25-coin reward was never credited',
         );
         expect(g.storage.unclaimedLevelReward, 0);
       },

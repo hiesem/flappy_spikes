@@ -174,16 +174,17 @@ List<String> _claimed(int upTo) => [for (var n = 1; n <= upTo; n++) '$n'];
 // Real physics/scoring, using the existing acceptance bot's look-ahead
 // controller. No score, best, wallet or claimed-level writes in this run.
 Future<void> _flyToEgg(FlappySpikesGame game) async {
-  // WP-1a: the hoop-aware acceptance bot (PRD-2 §7) flies the real course.
-  // PRD-2.3 §14.3: every rim-free pass is perfect, so the bot's points
-  // grow with the uncapped streak (12 hoops ≈ 79 points = level 2). 8 hoops
-  // (≥ 6 for the revive offer) keep this journey at EGG · LV 1 (10–49).
-  final flight = await flyRun(game, maxSeconds: 75, untilHoops: 8);
-  expect(
-    game.score,
-    inInclusiveRange(10, 49),
-    reason: 'actual hoop scoring\n${flight.trace.reversed.take(5).join('\n')}',
+  // WP-1a: the hoop-aware acceptance bot (PRD-2 §7) flies the real course
+  // until EGG · LV 1 (25–49, owner 2026-10-17) is reached; it also passes
+  // the ≥ 6 hoops of the revive offer on the way.
+  final reached = await flyUntil(
+    game,
+    (_) => game.score >= 25,
+    maxSeconds: 120,
   );
+  expect(reached, isTrue, reason: 'actual hoop scoring: ${game.score}');
+  expect(game.score, inInclusiveRange(25, 49));
+  expect(game.run!.state.hoopsPassed, greaterThanOrEqualTo(6));
   // WP-3a: a comet boost (first met at hoop 10) flies itself; finish it.
   await flyOutOfRide(game);
 }
@@ -193,8 +194,8 @@ void main() async {
   await loadFonts();
 
   test('QA home v3: rank thresholds and all 10 rewards match §4.1', () {
-    const thresholds = [10, 50, 100, 200, 400, 600, 800, 1000, 2000, 5000];
-    const rewards = [50, 100, 150, 250, 400, 600, 800, 1000, 2000, 5000];
+    const thresholds = [25, 50, 100, 200, 400, 600, 800, 1000, 2000, 5000];
+    const rewards = [25, 50, 100, 200, 400, 600, 800, 1000, 2000, 5000];
     const names = [
       'EGG',
       'CHICK',
@@ -210,7 +211,7 @@ void main() async {
     expect(kLevels.map((level) => level.threshold), thresholds);
     expect(kLevels.map((level) => level.reward), rewards);
     expect(kLevels.map((level) => level.name), names);
-    expect(rewards.reduce((a, b) => a + b), 10350);
+    expect(rewards.reduce((a, b) => a + b), 10175);
     for (var i = 0; i < thresholds.length; i++) {
       expect(levelFor(thresholds[i] - 1), i);
       expect(levelFor(thresholds[i]), i + 1);
@@ -219,7 +220,7 @@ void main() async {
   });
 
   for (final height in [568.0, 711.0]) {
-    _journey('QA fresh install → real run 12 → home → claim → EGG ($height)', (
+    _journey('QA fresh install → real run 25 → home → claim → EGG ($height)', (
       game,
       rig,
       tester,
@@ -240,7 +241,7 @@ void main() async {
       expect(game.levelUpPopup, isNull, reason: 'no popup at game over');
       final score = game.storage.lastScore!;
       final earned = game.menu.wallet.balance;
-      expect(score, greaterThanOrEqualTo(10));
+      expect(score, greaterThanOrEqualTo(25));
       // PRD-2 §3.2: 1 coin per hoop, 2 for a perfect pass, at the pass.
       // PRD-2.3 §14.3: points (streak) now outgrow the coins.
       expect(earned, game.run!.state.coinsThisRun);
@@ -252,9 +253,9 @@ void main() async {
       expect(panel.claimShowing, isTrue);
       expect(panel.rank.text, 'EGG · LV 1');
       await _tap(game, tester, panel.claimButton.button);
-      expect(game.menu.wallet.balance, earned + 50);
+      expect(game.menu.wallet.balance, earned + 25);
       await _advance(game, 3);
-      expect(panel.shownReward, earned + 50);
+      expect(panel.shownReward, earned + 25);
       await _tap(game, tester, panel.nextButton);
       await _advance(game, .9);
       expect(game.levelUpPopup, isNull, reason: 'claimed on the results page');
@@ -262,15 +263,15 @@ void main() async {
       expect(game.foregroundColor, paletteForStage(0).foreground);
       await _advance(game, 4);
       expect(game.levelUpPopup, isNull);
-      expect(game.coinPill.shownBalance, earned + 50);
+      expect(game.coinPill.shownBalance, earned + 25);
       expect(game.menu.levels.pendingLevelUp, isNull);
       expect(game.homeScreen!.emblem.level, 1);
       expect(rig.events.params('level_up'), [
-        {'from': 0, 'to': 1, 'reward': 50, 'claim': 'tap'},
+        {'from': 0, 'to': 1, 'reward': 25, 'claim': 'tap'},
       ]);
       final saved = await _reload();
       expect(saved.claimedLevels, {1});
-      expect(saved.coins, earned + 50);
+      expect(saved.coins, earned + 25);
       await _tap(game, tester, game.homeScreen!.bird);
       await _advance(game, .5);
       final levels = game.levelsScreen!;
@@ -298,18 +299,18 @@ void main() async {
       expect(game.noAdsPopup, isNull);
       final popup = game.levelUpPopup!;
       expect(popup.pending.toLevel, 6);
-      expect(popup.pending.reward, 1550);
+      expect(popup.pending.reward, 1375);
       await _tap(game, tester, popup.closeButton);
       await _advance(game, 5);
-      expect(game.menu.wallet.balance, 2800);
-      expect(game.coinPill.shownBalance, 2800);
+      expect(game.menu.wallet.balance, 2625);
+      expect(game.coinPill.shownBalance, 2625);
       expect(rig.events.params('level_reward_claimed'), [
-        {'level': 6, 'coins': 1550},
+        {'level': 6, 'coins': 1375},
       ]);
       expect(await game.menu.levels.claim(), 0);
       final saved = await _reload();
       expect(saved.claimedLevels, {1, 2, 3, 4, 5, 6});
-      expect(saved.coins, 2800);
+      expect(saved.coins, 2625);
       await _tap(game, tester, game.homeScreen!.bird);
       await _advance(game, .5);
       final levels = game.levelsScreen!;
@@ -750,9 +751,9 @@ void main() async {
       await _tap(game, tester, game.noAdsCelebration!.claimButton);
       await _advance(game, 5);
       expect(game.levelUpPopup, isNull, reason: 'EGG paid once');
-      expect(game.coinPill.shownBalance, 1050);
+      expect(game.coinPill.shownBalance, 1025);
     },
-    prefs: const {'bestScore': 10},
+    prefs: const {'bestScore': 25},
   );
 
   _defect('S2-30', 'LEVEL UP emblem must freeze under OS reduce motion', (
@@ -799,7 +800,7 @@ void main() async {
       4,
       sample: () {
         t += .05;
-        if (countedAt < 0 && game.coinPill.shownBalance == 50) countedAt = t;
+        if (countedAt < 0 && game.coinPill.shownBalance == 25) countedAt = t;
         if (popAt < 0 && game.homeScreen!.popping) popAt = t;
       },
     );
@@ -807,7 +808,7 @@ void main() async {
     expect(popAt, greaterThanOrEqualTo(countedAt));
     expect(game.homeScreen!.emblem.level, 1);
     expect(game.homeScreen!.popping, isFalse);
-  }, prefs: const {'bestScore': 10});
+  }, prefs: const {'bestScore': 25});
 
   for (final mode in [FakeIapMode.cancel, FakeIapMode.fail]) {
     _defect(
@@ -894,7 +895,7 @@ void main() async {
       expect(game.purchaseResultPopup, isNull);
       expect(game.queuedPopups, 0);
     },
-    prefs: const {'bestScore': 10},
+    prefs: const {'bestScore': 25},
   );
 
   group('S2-33', () {

@@ -275,17 +275,17 @@ void main() {
     });
     a.beginRun(counts: true);
     a.runOp(AchOp.versusWin);
-    a.finishRun(counts: true, score: 10, day: 100);
+    a.finishRun(counts: true, score: 25, day: 100);
     await a.flush();
     expect(s.achUnlocked, {'master_hatch'});
     expect(s.achPending, ['rank_egg', 'vs_1', 'daily_7']);
   });
 
-  test('P19-05 Sol: a first win and a 10-point run unlock EGG first', () async {
+  test('P19-05 Sol: a first win and a 25-point run unlock EGG first', () async {
     final (s, a) = await boot({});
     a.beginRun(counts: true);
     a.runOp(AchOp.versusWin);
-    a.finishRun(counts: true, score: 10, day: 100);
+    a.finishRun(counts: true, score: 25, day: 100);
     await a.flush();
     expect(s.achUnlocked, {'rank_egg'});
     expect(s.achPending, ['vs_1']);

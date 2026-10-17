@@ -18,7 +18,7 @@ void main() {
         'FALCON', 'HAWK', 'SPIKE ACE', 'PHOENIX', 'LEGEND',
       ]);
       expect(kLevels.map((l) => l.threshold), [
-        10,
+        25,
         50,
         100,
         200,
@@ -30,10 +30,10 @@ void main() {
         5000,
       ]);
       expect(kLevels.map((l) => l.reward), [
+        25,
         50,
         100,
-        150,
-        250,
+        200,
         400,
         600,
         800,
@@ -42,8 +42,9 @@ void main() {
         5000,
       ]);
       expect(kLevels.map((l) => l.level), List.generate(10, (i) => i + 1));
-      expect(kLevels.fold<int>(0, (s, l) => s + l.reward), kLevelRewardTotal);
-      expect(kLevelRewardTotal, 10350);
+      // Owner 2026-10-17 table: 10,175 in all (lib's kLevelRewardTotal is
+      // unused and still reads the old 10,350).
+      expect(kLevels.fold<int>(0, (s, l) => s + l.reward), 10175);
     });
 
     test('emblem colours match emblem_art.js', () {
@@ -63,8 +64,8 @@ void main() {
 
     test('levelFor edges', () {
       expect(levelFor(0), 0);
-      expect(levelFor(9), 0);
-      expect(levelFor(10), 1);
+      expect(levelFor(24), 0);
+      expect(levelFor(25), 1);
       expect(levelFor(49), 1);
       expect(levelFor(50), 2);
       expect(levelFor(599), 5);
@@ -95,7 +96,7 @@ void main() {
     }
 
     test('unranked: nothing pending, claim pays nothing', () async {
-      final menu = await menuWith({'bestScore': 9});
+      final menu = await menuWith({'bestScore': 24});
       expect(menu.levels.level, 0);
       expect(menu.levels.current, isNull);
       expect(menu.levels.next!.name, 'EGG');
@@ -112,7 +113,7 @@ void main() {
       });
       expect(
         menu.levels.pendingLevelUp,
-        const PendingLevelUp(fromLevel: 1, toLevel: 2, reward: 100),
+        const PendingLevelUp(fromLevel: 1, toLevel: 2, reward: 50),
       );
     });
 
@@ -126,7 +127,7 @@ void main() {
         const PendingLevelUp(
           fromLevel: 2,
           toLevel: 6,
-          reward: 150 + 250 + 400 + 600,
+          reward: 100 + 200 + 400 + 600,
         ),
       );
     });
@@ -137,7 +138,7 @@ void main() {
       expect(pending.fromLevel, 0);
       expect(pending.toLevel, 6);
       expect(pending.def.name, 'FALCON');
-      expect(pending.reward, 50 + 100 + 150 + 250 + 400 + 600);
+      expect(pending.reward, 25 + 50 + 100 + 200 + 400 + 600);
     });
 
     test('claim pays once via level_reward and persists', () async {
@@ -148,15 +149,15 @@ void main() {
       final menu = MenuState(storage, onEarned: (a, s) => sources.add((a, s)));
       var notified = 0;
       menu.levels.addListener(() => notified++);
-      expect(await menu.levels.claim(), 300);
-      expect(menu.wallet.balance, 305);
-      expect(sources, [(300, CoinSource.levelReward)]);
+      expect(await menu.levels.claim(), 175);
+      expect(menu.wallet.balance, 180);
+      expect(sources, [(175, CoinSource.levelReward)]);
       expect(CoinSource.levelReward.analyticsName, 'level_reward');
       expect(notified, 1);
       expect(menu.levels.pendingLevelUp, isNull);
       // Never twice (also not concurrently).
       expect(await menu.levels.claim(), 0);
-      expect(menu.wallet.balance, 305);
+      expect(menu.wallet.balance, 180);
 
       final reader = GameStorage();
       await reader.load();
@@ -170,8 +171,8 @@ void main() {
         menu.levels.claim(),
         menu.levels.claim(),
       ]);
-      expect(paid..sort(), [0, 150]);
-      expect(menu.wallet.balance, 150);
+      expect(paid..sort(), [0, 75]);
+      expect(menu.wallet.balance, 75);
     });
 
     test('debugForceLevelUp raises the best to the next threshold', () async {

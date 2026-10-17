@@ -144,16 +144,17 @@ List<String> _claimed(int n) => [for (var i = 1; i <= n; i++) '$i'];
 // Same physical flight controller as the acceptance bot / round 1. It
 // presses flap; it never writes score, best, wallet or claimed levels.
 Future<void> _flyToEgg(FlappySpikesGame game) async {
-  // WP-1a: the hoop-aware acceptance bot (PRD-2 §7) flies the real course.
-  // PRD-2.3 §14.3: every rim-free pass is perfect, so the bot's points
-  // grow with the uncapped streak (12 hoops ≈ 79 points = level 2). 8 hoops
-  // (≥ 6 for the revive offer) keep this journey at EGG · LV 1 (10–49).
-  final flight = await flyRun(game, maxSeconds: 75, untilHoops: 8);
-  expect(
-    game.score,
-    inInclusiveRange(10, 49),
-    reason: 'actual hoop scoring\n${flight.trace.reversed.take(5).join('\n')}',
+  // WP-1a: the hoop-aware acceptance bot (PRD-2 §7) flies the real course
+  // until EGG · LV 1 (25–49, owner 2026-10-17) is reached; it also passes
+  // the ≥ 6 hoops of the revive offer on the way.
+  final reached = await flyUntil(
+    game,
+    (_) => game.score >= 25,
+    maxSeconds: 120,
   );
+  expect(reached, isTrue, reason: 'actual hoop scoring: ${game.score}');
+  expect(game.score, inInclusiveRange(25, 49));
+  expect(game.run!.state.hoopsPassed, greaterThanOrEqualTo(6));
   // WP-3a: a comet boost (first met at hoop 10) flies itself; finish it.
   await flyOutOfRide(game);
 }
@@ -164,7 +165,7 @@ void main() async {
 
   for (final height in [640.0, 730.0]) {
     _journey(
-      'R2 fresh install → real 12+ run → LEVEL UP → CLAIM → EGG ($height)',
+      'R2 fresh install → real 25+ run → LEVEL UP → CLAIM → EGG ($height)',
       (game, rig, tester) async {
         final home = game.homeScreen!;
         expect(home.emblem.level, 0);
@@ -194,13 +195,13 @@ void main() async {
         final panel = game.world.children.query<ResultsScreen>().single;
         await run(game, .4);
         await _tap(game, tester, panel.nextButton);
-        expect(game.menu.wallet.balance, earned + 50);
+        expect(game.menu.wallet.balance, earned + 25);
         await run(game, 2.5);
         expect(game.state, GameState.start);
         expect(game.stageBackground, paletteForStage(0).background);
         await run(game, 4);
         expect(game.levelUpPopup, isNull);
-        expect(game.coinPill.shownBalance, earned + 50);
+        expect(game.coinPill.shownBalance, earned + 25);
         expect(game.storage.claimedLevels, {1});
         await _tap(game, tester, game.homeScreen!.bird);
         await run(game, .6);
@@ -213,7 +214,7 @@ void main() async {
         expect(rig.events.last('level_up'), {
           'from': 0,
           'to': 1,
-          'reward': 50,
+          'reward': 25,
           'claim': 'auto_next',
         });
       },
@@ -226,13 +227,13 @@ void main() async {
     (game, rig, tester) async {
       await run(game, .8);
       final popup = game.levelUpPopup!;
-      expect(popup.pending.reward, 10350);
+      expect(popup.pending.reward, 10175);
       await _tap(game, tester, popup.claimButton);
       // Re-enter the action before the fade removes the old component.
       popup.claimButton.onPressed();
       await _settle(game, tester);
       await run(game, 5);
-      expect(game.menu.wallet.balance, 11600);
+      expect(game.menu.wallet.balance, 11425);
       expect(game.storage.claimedLevels, {for (var i = 1; i <= 10; i++) i});
       expect(await game.menu.levels.claim(), 0);
       await _tap(game, tester, game.homeScreen!.bird);
@@ -247,7 +248,7 @@ void main() async {
       expect(rig.events.count('level_up'), 1);
       expect(rig.events.count('level_reward_claimed'), 1);
       final saved = await _saved();
-      expect(saved.coins, 11600);
+      expect(saved.coins, 11425);
     },
     prefs: const {'bestScore': 5000, 'coins': 1250},
   );
@@ -435,20 +436,20 @@ void main() async {
       await _tap(game, tester, game.levelUpPopup!.claimButton);
       expect(game.noAdsCelebration, isNotNull);
       await run(game, 4);
-      expect(game.menu.wallet.balance, 2300);
+      expect(game.menu.wallet.balance, 2275);
       expect(
         game.coinPill.shownBalance,
-        1300,
-        reason: 'only EGG +50 may count before the No ads CLAIM',
+        1275,
+        reason: 'only EGG +25 may count before the No ads CLAIM',
       );
       await _tap(game, tester, game.noAdsCelebration!.claimButton);
       await run(game, .9);
-      expect(game.coinPill.shownBalance, inExclusiveRange(1300, 2300));
+      expect(game.coinPill.shownBalance, inExclusiveRange(1275, 2275));
       await run(game, 5);
-      expect(game.coinPill.shownBalance, 2300);
+      expect(game.coinPill.shownBalance, 2275);
       expect(rig.events.count('noads_bonus_claimed'), 1);
     },
-    prefs: const {'coins': 1250, 'bestScore': 10},
+    prefs: const {'coins': 1250, 'bestScore': 25},
   );
 
   _journey(

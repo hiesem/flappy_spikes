@@ -224,7 +224,7 @@ void main() {
       r.events
         ..emit(const PickupCollected(ElementId.heart, null))
         ..emit(const FeverIgnite('pair'));
-      r.ctx.addScore(10);
+      r.ctx.addScore(25);
       await flushAndMount(g);
       expect(g.storage.achUnlocked, isEmpty);
       await finish(g);

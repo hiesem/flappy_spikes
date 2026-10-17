@@ -277,7 +277,7 @@ void main() {
     },
   );
 
-  for (final score in [5, 6, 10]) {
+  for (final score in [5, 6, 25]) {
     v4Journey(
       'v4: finished run $score -> persisted mood -> session arrival',
       prefs: _recent,
@@ -287,10 +287,10 @@ void main() {
         expect(game.storage.gamesPlayed, 1);
         expect(
           game.storage.lastRunMood,
-          score >= 10 ? RunMood.level : RunMood.best,
+          score >= 25 ? RunMood.level : RunMood.best,
         );
         expect(game.noAdsPopup, isNull);
-        if (score >= 10) {
+        if (score >= 25) {
           await run(game, .5);
           expect(game.levelUpPopup, isNotNull);
           await game.claimLevelUp();
@@ -311,7 +311,7 @@ void main() {
           expect(restarted.noAdsPopup, isNotNull);
           expect(
             rig.events.last('noads_popup_shown')!['reason'],
-            score >= 10 ? 'level' : 'best',
+            score >= 25 ? 'level' : 'best',
           );
           expect(restarted.storage.lastRunMood, RunMood.none);
         }
@@ -387,7 +387,7 @@ void main() {
 
   v4Journey(
     'v4: LEVEL UP -> queued upsell -> purchase failure is serialized',
-    prefs: (rig) => {..._recent(rig), 'bestScore': 10, 'lastScore': 10},
+    prefs: (rig) => {..._recent(rig), 'bestScore': 25, 'lastScore': 25},
     (game, rig, tester) async {
       await run(game, .5);
       expect(game.levelUpPopup, isNotNull);
@@ -594,7 +594,7 @@ void main() {
   group('S1-70', () {
     v4Journey(
       'queued session arrivals must coalesce and recheck the show window',
-      prefs: (rig) => {..._recent(rig), 'bestScore': 10, 'lastScore': 10},
+      prefs: (rig) => {..._recent(rig), 'bestScore': 25, 'lastScore': 25},
       (game, rig, tester) async {
         await run(game, .5);
         expect(game.levelUpPopup, isNotNull);
@@ -627,7 +627,7 @@ void main() {
 
     v4Journey(
       'a queued offer rechecks its four-hour window after a clock correction',
-      prefs: (rig) => {..._recent(rig), 'bestScore': 10, 'lastScore': 10},
+      prefs: (rig) => {..._recent(rig), 'bestScore': 25, 'lastScore': 25},
       (game, rig, tester) async {
         await run(game, .5);
         expect(game.levelUpPopup, isNotNull);

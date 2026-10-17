@@ -170,7 +170,7 @@ void main() async {
         expect(row.liveEmblem != null, l == 6);
         expect(row.bird != null, l == 6);
       }
-      expect(screen.rows[3].chipLabel, '+250');
+      expect(screen.rows[3].chipLabel, '+200');
       expect(screen.rows[9].chipLabel, '+5 000');
       expect(screen.currentRow, screen.rows[5]);
 
@@ -202,7 +202,7 @@ void main() async {
       final screen = game.levelsScreen!;
       expect(screen.currentRow, isNull);
       expect(screen.header.nameText.text, 'UNRANKED');
-      expect(screen.header.barText.text, '6 TO EGG');
+      expect(screen.header.barText.text, '21 TO EGG');
       expect(screen.scroll.offset, 0);
       expect(
         screen.rows.every((r) => r.state == LevelRowState.locked),
@@ -242,7 +242,7 @@ void main() async {
       await flushAndMount(game);
       final popup = game.levelUpPopup!;
       expect(popup.pending.toLevel, 6);
-      expect(popup.pending.reward, 50 + 100 + 150 + 250 + 400 + 600);
+      expect(popup.pending.reward, 25 + 50 + 100 + 200 + 400 + 600);
       expect(sounds, contains(Sfx.skBuyEpic));
       expect(events.params('level_up'), [
         {'level': 6, 'best': 640},
@@ -250,7 +250,7 @@ void main() async {
       expect(popup.nameText.text, 'FALCON');
       expect(popup.articleText.text, 'YOU ARE NOW A');
       expect(popup.nextText.text, 'Next: HAWK at 800');
-      expect(popup.claimText.text, '+1 550');
+      expect(popup.claimText.text, '+1 375');
       // Popups pause the idle motion.
       expect(game.liveMotionPaused, isTrue);
       // Confetti 0.18 s in: 90 pieces for lv 5-8.
@@ -263,14 +263,14 @@ void main() async {
       popup.claimButton.onPressed();
       await _flush(game);
       expect(game.levelUpPopup, isNull);
-      expect(game.menu.wallet.balance, 1650);
+      expect(game.menu.wallet.balance, 1475);
       expect(game.storage.claimedLevels, {1, 2, 3, 4, 5, 6});
       expect(game.menu.levels.pendingLevelUp, isNull);
       expect(events.params('level_reward_claimed'), [
-        {'level': 6, 'coins': 1550},
+        {'level': 6, 'coins': 1375},
       ]);
       final reward = game.coinReward!;
-      expect(reward.amount, 1550);
+      expect(reward.amount, 1375);
       expect(reward.level, 6);
       expect(game.coinPill.held, isTrue);
       // The emblem upgrades with its pop after the count-up (§4.3).
@@ -280,7 +280,7 @@ void main() async {
         stepGame(game, 0.05);
         await flushAndMount(game);
       }
-      expect(game.coinPill.shownBalance, 1650);
+      expect(game.coinPill.shownBalance, 1475);
       expect(home.emblem.level, 6);
       expect(home.popping, isTrue);
       expect(home.emblem.popScale, closeTo(0.6, 0.1));
@@ -301,14 +301,14 @@ void main() async {
       stepGame(game, 0.5);
       await flushAndMount(game);
       final popup = game.levelUpPopup!;
-      expect(popup.pending.reward, 150); // EGG + CHICK
+      expect(popup.pending.reward, 75); // EGG + CHICK
       final sounds = <Sfx>[];
       game.sound.onPlay = sounds.add;
       popup.closeButton.onPressed();
       await _flush(game);
       expect(sounds.first, Sfx.skClose);
       expect(game.levelUpPopup, isNull);
-      expect(game.menu.wallet.balance, 150);
+      expect(game.menu.wallet.balance, 75);
       expect(game.storage.claimedLevels, {1, 2});
 
       // Debug LEVEL UP: next threshold -> popup at once; Esc claims.
@@ -320,14 +320,14 @@ void main() async {
       game.onKeyEvent(_esc(), {});
       await _flush(game);
       expect(game.levelUpPopup, isNull);
-      expect(game.menu.wallet.balance, 300);
+      expect(game.menu.wallet.balance, 175);
     },
   );
 
   levelsTest(
     'a run crossing several levels: one popup for the highest, summed',
     prefs: {
-      'bestScore': 20,
+      'bestScore': 30,
       'coins': 0,
       'claimedLevels': _claimed(1),
     },
@@ -352,13 +352,13 @@ void main() async {
       final popup = game.levelUpPopup!;
       expect(popup.pending.fromLevel, 1);
       expect(popup.pending.toLevel, 3);
-      expect(popup.pending.reward, 100 + 150);
+      expect(popup.pending.reward, 50 + 100);
       expect(popup.nameText.text, 'FLEDGLING');
       popup.claimButton.onPressed();
       await _flush(game);
-      // +250 rewards (PRD-2 §3.2: run coins come per hoop passed, and this
+      // +150 rewards (PRD-2 §3.2: run coins come per hoop passed, and this
       // run's score was set directly, so it passed none).
-      expect(game.menu.wallet.balance, 250);
+      expect(game.menu.wallet.balance, 150);
       expect(game.homeScreen!.emblem.level, 1, reason: 'until the pop');
       stepGame(game, 4);
       await flushAndMount(game);
@@ -368,7 +368,7 @@ void main() async {
 
   levelsTest(
     'no double popups: the no-ads launch popup goes first',
-    prefs: {'bestScore': 15, 'installDay': 1},
+    prefs: {'bestScore': 30, 'installDay': 1},
     (game, events, t) async {
       expect(game.noAdsPopup, isNotNull);
       stepGame(game, 2);
@@ -398,7 +398,7 @@ void main() async {
 
   levelsTest(
     'no popup while LEVELS / Shop is up; it shows back on home',
-    prefs: {'bestScore': 15},
+    prefs: {'bestScore': 30},
     (game, events, t) async {
       game.openShop();
       await flushAndMount(game);

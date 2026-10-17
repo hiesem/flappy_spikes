@@ -42,6 +42,9 @@ class RunBannerLayer extends PositionComponent {
 
   @override
   Future<void> onLoad() async {
+    // WP-TAB: the banners are centred on the screen (the layer sits on the
+    // right-aligned run column; 0 on phones). Their bands span the screen.
+    banners.position.x = -game.extraWidth / 2;
     add(banners);
   }
 

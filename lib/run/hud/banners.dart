@@ -105,8 +105,7 @@ abstract class RunBanner extends PositionComponent {
     size = Vector2(bandWidth, bandHeight);
   }
 
-  /// WP-TAB: the extra playfield width left of the run column (0 on
-  /// phones and outside a game).
+  /// WP-TAB: the extra playfield width (0 on phones and outside a game).
   double get _extraLeft {
     final g = findGame();
     return g is FlappySpikesGame ? g.extraWidth : 0;
@@ -132,11 +131,13 @@ abstract class RunBanner extends PositionComponent {
     if (layer) {
       canvas.saveLayer(null, layerPaint(a));
     }
-    // WP-TAB: on a wide screen the band also spans the extra width left of
-    // the run column (the text stays centred on the column).
-    final left = _extraLeft;
+    // WP-TAB: on a wide screen the band spans the extra width on both
+    // sides (the run column, right-aligned, only needs the left part; a
+    // centred column — the VS intro — needs both); the text stays centred
+    // on the column and the view clips the rest.
+    final extra = _extraLeft;
     canvas.drawRect(
-      Rect.fromLTWH(-left, 0, bandWidth + left, h),
+      Rect.fromLTWH(-extra, 0, bandWidth + 2 * extra, h),
       fillPaint(color),
     );
     final tp = _text;

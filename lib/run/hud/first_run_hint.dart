@@ -115,14 +115,14 @@ class FirstRunHint extends PositionComponent
           ? HudConfig.chipTop + HudConfig.chipHeight
           : HudConfig.rowTop + HudConfig.rowHeight;
       top.position.setValues(
-        0,
+        centreShift,
         math.max(
           strip + FirstRunConfig.warningGap,
           hudBottom + FirstRunConfig.warningHudGap,
         ),
       );
       bottom.position.setValues(
-        0,
+        centreShift,
         run.state.viewHeight -
             strip -
             FirstRunConfig.warningGap -
@@ -250,10 +250,26 @@ class FirstRunHint extends PositionComponent
     canvas.restore();
   }
 
+  /// WP-TAB: how far left of the run column the message (the TAP TO FLAP!
+  /// banner, the hand, its ripples and the warning bands) is drawn, so it is
+  /// centred on the screen: half the extra width of a wide screen, 0 on
+  /// phones. The flap path stays on the run column (from the bird to hoop 0).
+  double get centreShift => -game.extraWidth / 2;
+
+  /// WP-TAB: the TAP TO FLAP! banner's centre in HUD coordinates (tests).
+  Offset get tapBannerCentre =>
+      FirstRunConfig.ctaCentre.translate(centreShift, _mid);
+
   @override
   void render(Canvas canvas) {
     final mid = _mid;
     if (mode == FirstRunHintMode.firstRun) _paintPath(canvas, mid);
+    final shift = centreShift;
+    if (shift != 0) {
+      canvas
+        ..save()
+        ..translate(shift, 0);
+    }
     // Design order: ripples, the banner, the hand (the bands are children,
     // drawn after).
     final tip = tipAt(mid);
@@ -266,6 +282,7 @@ class FirstRunHint extends PositionComponent
     }
     paintTapBanner(canvas, mid, _t);
     paintHand(canvas, mid, press: _press, burst: _tapK);
+    if (shift != 0) canvas.restore();
   }
 
   void _paintPath(Canvas canvas, double mid) {

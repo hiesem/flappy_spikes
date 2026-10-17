@@ -1862,7 +1862,8 @@ production build has the flag off and uses these values only. Full key table:
   Culling and every "on screen" test use the real left edge (`RunState.viewLeft` =
   −extra); the death tumble bounces off it. The run HUD, the score circle and the banner
   row stay on the phone's 320 pt column on the right (pause button at the screen's right
-  edge); the banner bands, spike strips, run background, ride scenes, flashes, edge glows,
+  edge); the banners and the first-run hint / tap reminder are centred on the screen (the
+  hint's flap path stays between the bird and hoop 0); the banner bands, spike strips, run background, ride scenes, flashes, edge glows,
   dims and speed lines cover the whole width.
 - **Menus** (home, shop, skins, levels, settings, popups, the results page, the bonus page,
   the pause card, the revive offer, the VS intro) stay a 320 pt column centred on the

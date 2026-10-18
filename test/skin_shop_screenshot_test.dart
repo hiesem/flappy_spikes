@@ -83,7 +83,7 @@ void main() async {
     );
   }
 
-  // Birds tab at the start: a hoop pass with the trail burning.
+  // Birds tab at the start: a hoop pass, the trail drawn as always.
   shot('birds', act: (game) async => stepGame(game, 1.15));
 
   // A locked legendary hat tried on, grid scrolled to the bottom.

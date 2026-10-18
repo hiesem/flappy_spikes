@@ -417,7 +417,7 @@ void main() {
       ),
       gameSize: Vector2(320, 711),
     ).testGameWidget(
-      'S6-65 own name plate uses the generated nickname or Play Games name',
+      'S6-65 / WP-NAME own name plate shows "You" (or the custom name)',
       setUp: (g, _) async {
         await g.ready();
         await preloadImages(g);
@@ -426,11 +426,9 @@ void main() {
         g.onScreenTap();
         await flushAndMount(g);
         g.versusIntro!.debugFreeze(2);
-        expect(
-          g.versusIntro!.youPlate.name,
-          g.versus.me.name,
-          reason: 'own name is hardcoded to You despite a ready profile',
-        );
+        // WP-NAME the own plate shows "You" (or the custom name).
+        expect(g.versusIntro!.youPlate.name, 'You');
+        expect(g.versusIntro!.youPlate.name, g.myVersusName);
       },
     );
   });

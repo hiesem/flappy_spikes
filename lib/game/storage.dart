@@ -66,6 +66,9 @@ class GameStorage {
   static const String _puzzlePayoutKey = 'puzzlePayout';
   static const String _metElementsKey = 'metElements';
   static const String _versusNicknameKey = 'versusNickname';
+  static const String _versusCustomNameKey = 'versusCustomName';
+  static const String _versusCustomNameSyncKey = 'versusCustomNameSync';
+  static const String _versusCustomNameErrorKey = 'versusCustomNameError';
   static const String _uploadQueueKey = 'uploadQueue';
   static const String _uploadsTodayKey = 'uploadsToday';
   static const String _uploadsDayKey = 'uploadsDay';
@@ -318,6 +321,18 @@ class GameStorage {
   /// §3.13 Versus nickname (generated once by WP-5b); null = not yet.
   String? versusNickname;
 
+  /// WP-NAME the custom versus name chosen in Settings ('' = none: the
+  /// player sees "You", opponents the nickname).
+  String versusCustomName = '';
+
+  /// WP-NAME what the server last confirmed, as `uid\nname` ('' = never):
+  /// [versusCustomName] still has to be sent when it differs.
+  String versusCustomNameSync = '';
+
+  /// WP-NAME why the server refused a name saved offline (a
+  /// `CustomNameReason` key; '' = none). The Settings card shows it once.
+  String versusCustomNameError = '';
+
   /// §3.13 Pending versus uploads (JSON run entries).
   List<String> uploadQueue = [];
 
@@ -450,6 +465,9 @@ class GameStorage {
     ach = AchState.decode(prefs.getString(_achStateKey)) ?? _migrateAch(prefs);
     // endregion P231-E
     versusNickname = prefs.getString(_versusNicknameKey);
+    versusCustomName = prefs.getString(_versusCustomNameKey) ?? '';
+    versusCustomNameSync = prefs.getString(_versusCustomNameSyncKey) ?? '';
+    versusCustomNameError = prefs.getString(_versusCustomNameErrorKey) ?? '';
     if (prefs.containsKey(_versusAvatarKey)) {
       unawaited(prefs.remove(_versusAvatarKey)); // WP-AV
     }
@@ -708,6 +726,36 @@ class GameStorage {
     await prefs.setString(_versusNicknameKey, value);
   }
 
+  /// WP-NAME saves the custom name ('' clears it); [syncedUid] = the
+  /// server confirmed it for that uid, null = not sent yet (offline).
+  Future<void> saveVersusCustomName(String name, {String? syncedUid}) async {
+    versusCustomName = name;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_versusCustomNameKey, name);
+    if (syncedUid != null) await saveVersusCustomNameSync(syncedUid, name);
+  }
+
+  /// WP-NAME the server confirmed [name] for [uid].
+  Future<void> saveVersusCustomNameSync(String uid, String name) async {
+    versusCustomNameSync = '$uid\n$name';
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_versusCustomNameSyncKey, versusCustomNameSync);
+  }
+
+  /// WP-NAME the name the server last confirmed for [uid] (null = none).
+  String? versusCustomNameSyncedFor(String uid) {
+    final s = versusCustomNameSync;
+    final i = s.indexOf('\n');
+    if (i < 0 || s.substring(0, i) != uid) return null;
+    return s.substring(i + 1);
+  }
+
+  Future<void> saveVersusCustomNameError(String reason) async {
+    versusCustomNameError = reason;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_versusCustomNameErrorKey, reason);
+  }
+
   Future<void> saveUploadQueue(List<String> value) async {
     uploadQueue = List.of(value);
     final prefs = await SharedPreferences.getInstance();
@@ -771,8 +819,15 @@ class GameStorage {
   /// default (PRD-2.2 §9.1).
   Future<void> resetVersusData() async {
     versusNickname = null;
+    // WP-NAME the custom name goes too (the server deletes its copy).
+    versusCustomName = '';
+    versusCustomNameSync = '';
+    versusCustomNameError = '';
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_versusNicknameKey);
+    await prefs.remove(_versusCustomNameKey);
+    await prefs.remove(_versusCustomNameSyncKey);
+    await prefs.remove(_versusCustomNameErrorKey);
     await prefs.remove(_versusAvatarKey); // WP-AV the old picture record
     await saveUploadQueue(const []);
     await saveUploadsToday('', 0);

@@ -5,6 +5,7 @@ import '../run/config/versus_config.dart';
 import '../run/run_summary.dart';
 import '../skins/catalog.dart';
 import '../skins/look.dart';
+import 'custom_name.dart';
 import 'opponent.dart';
 import 'timeline.dart';
 
@@ -192,11 +193,20 @@ String _clip(String s, int max) => s.length > max ? s.substring(0, max) : s;
 /// A pool entry (ARCH §6.1): a run plus its owner's uid and the
 /// server-computed level.
 class PoolEntry {
-  const PoolEntry({required this.run, required this.uid, required this.level});
+  const PoolEntry({
+    required this.run,
+    required this.uid,
+    required this.level,
+    this.customName = '',
+  });
 
   final RunEntry run;
   final String uid;
   final int level;
+
+  /// WP-NAME the owner's custom versus name ('' = none: the generated
+  /// [RunEntry.name] shows). Only names that pass the format rule.
+  final String customName;
 
   String get runId => run.runId;
   int get score => run.score;
@@ -206,14 +216,20 @@ class PoolEntry {
     final uid = m['uid'];
     final level = m['level'];
     if (run == null || uid is! String || level is! num) return null;
-    return PoolEntry(run: run, uid: uid, level: level.toInt());
+    return PoolEntry(
+      run: run,
+      uid: uid,
+      level: level.toInt(),
+      customName: validCustomName(m['customName']),
+    );
   }
 
   /// The opponent replayed in a run. The emblem level comes from their best
   /// score (§5.8 "never from the recorded run's own score").
   OpponentRun toOpponent() => OpponentRun(
     uid: uid,
-    name: run.name,
+    // WP-NAME opponents see the custom name when the owner chose one.
+    name: customName.isNotEmpty ? customName : run.name,
     look: run.look,
     score: run.score,
     best: run.best,

@@ -63,6 +63,8 @@ void main() {
         expect(row.labelText.text, 'DELETE MY DATA');
         expect(row.labelText.color, Config.settingsRed);
         expect(panel.privacyCard.rows.last, row);
+        // WP-NAME the body scrolls (PLAYER card on top): at its end.
+        panel.scroll.offset = panel.scroll.maxOffset;
         expect(
           row.toAbsoluteRect().bottom,
           lessThan(game.viewHeight - Config.menuSpikeHeight),

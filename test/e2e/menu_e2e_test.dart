@@ -517,7 +517,8 @@ void main() {
   e2e('QA empty restore times out with feedback', (g, r, t) async {
     g.openSettings();
     await settle(g, t, fade: true);
-    await tap(g, t, const Offset(160, 406)); // PRD-2.3 §20.2 Restore row
+    // PRD-2.3 §20.2 Restore row (WP-NAME: + 99 under the PLAYER card).
+    await tap(g, t, const Offset(160, 406 + 99));
     stepGame(g, 12);
     await flushAndMount(g);
     expect(toast(g), 'Nothing to restore');
@@ -630,9 +631,10 @@ void main() {
   ) async {
     await tap(g, t, const Offset(33, 77));
     // PRD-2.3 §20.2 at 711: the SOUND tile (14..106 x 135..235), then the
-    // 2nd volume bar (bars from x 26, 268 wide; y 276..306) = 2 / 8.
-    await tap(g, t, const Offset(60, 185));
-    await tap(g, t, const Offset(80, 300));
+    // 2nd volume bar (bars from x 26, 268 wide; y 276..306) = 2 / 8; WP-NAME
+    // all 99 pt lower under the PLAYER card.
+    await tap(g, t, const Offset(60, 185 + 99));
+    await tap(g, t, const Offset(80, 300 + 99));
     expect(g.storage.muteSound, isTrue);
     expect(g.storage.musicVolume, closeTo(0.25, 0.01));
     g.onKeyEvent(key(LogicalKeyboardKey.escape), {});

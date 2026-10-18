@@ -106,7 +106,9 @@ void main() {
             await Future<void>.value();
           }
           for (final plate in [intro.youPlate, intro.oppPlate]) {
-            expect(plate.name, name);
+            // WP-NAME the own plate is "You" (no custom name set).
+            final want = plate == intro.youPlate ? 'You' : name;
+            expect(plate.name, want);
             final t = plate.shownText!;
             expect(t.size, greaterThanOrEqualTo(VersusConfig.plateNameSize * HudConfig.nameMinScale - 1e-6));
             expect(t.width, lessThanOrEqualTo(plate.nameRoom + .5));
@@ -118,8 +120,8 @@ void main() {
                 VersusConfig.plateSlot / 2 -
                 VersusConfig.plateEmblemHalf;
             expect(nameRight, lessThanOrEqualTo(emblemLeft));
-            if (n <= 10) expect(t.text, name, reason: 'a short name is whole');
-            if (n >= 32) expect(t.text, endsWith('…'));
+            if (n <= 10) expect(t.text, want, reason: 'a short name is whole');
+            if (n >= 32 && want == name) expect(t.text, endsWith('…'));
           }
           final short = n <= 10 ? 's' : (n <= 17 ? 'm' : 'l');
           await tester.runAsync(() => shots.shot(g, 1.5, 's21_intro_${short}_$tag'));
@@ -129,11 +131,12 @@ void main() {
           // ---- the HUD name chips
           final bar = g.runHud!.versus!;
           for (final chip in [bar.you, bar.them]) {
-            expect(chip.name, name);
+            final want = chip == bar.you ? 'You' : name; // WP-NAME
+            expect(chip.name, want);
             expect(chip.size, greaterThanOrEqualTo(HudConfig.chipNameSize * HudConfig.nameMinScale - 1e-6));
             expect(chip.width,
                 lessThanOrEqualTo(HudConfig.boxWidth - 2 * HudConfig.chipPad + .5));
-            if (n <= 10) expect(chip.shown, name);
+            if (n <= 10) expect(chip.shown, want);
           }
           for (var i = 0; i < 60; i++) {
             g.update(1 / 60);

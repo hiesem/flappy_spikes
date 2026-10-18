@@ -95,17 +95,18 @@ void main() {
     ),
     gameSize: Vector2(320, 711),
   ).testGameWidget(
-    'S6-65 / WP-AV HUD chip and results card use the own name and the '
-    'sticker avatars (yours: your look; theirs: their look)',
+    'S6-65 / WP-AV / WP-NAME HUD chip and results card show "You" for the '
+    'own name (never the nickname) and the sticker avatars (yours: your '
+    'look; theirs: their look)',
     setUp: (g, _) async {
       await g.ready();
       await preloadImages(g);
     },
     verify: (g, tester) async {
-      expect(g.myVersusName, 'SwiftKiwi482');
+      expect(g.myVersusName, 'You');
       final run = await startRun(g);
       final bar = g.runHud!.versus!;
-      expect(bar.you.name, 'SwiftKiwi482');
+      expect(bar.you.name, 'You');
       expect(bar.them.name, opponent.name);
       for (var i = 0; i < 60; i++) {
         g.update(1 / 60);
@@ -134,7 +135,7 @@ void main() {
       await declineRevive(g);
       await flushAndMount(g);
       final page = g.resultsScreen!;
-      expect(page.you.name, 'SwiftKiwi482');
+      expect(page.you.name, 'You');
       expect(page.you.look.bird, 'lime');
       expect(page.them!.look, opponent.look);
       await tester.runAsync(() async {
@@ -179,14 +180,19 @@ void main() {
     () => createRunTestGame(worldHeight: 711),
     gameSize: Vector2(320, 711),
   ).testGameWidget(
-    'S6-65 without any identity (no backend, no nickname) the name is "You"',
+    'WP-NAME the own name is "You" (with or without a nickname) until a '
+    'custom name is set, then the custom name',
     setUp: (g, _) async {
       await g.ready();
     },
     verify: (g, _) async {
       expect(g.myVersusName, 'You');
       await g.storage.saveVersusNickname('BoldOwl007');
-      expect(g.myVersusName, 'BoldOwl007');
+      expect(g.myVersusName, 'You');
+      await g.storage.saveVersusCustomName('WiseOwl');
+      expect(g.myVersusName, 'WiseOwl');
+      await g.storage.saveVersusCustomName('');
+      expect(g.myVersusName, 'You');
     },
   );
 

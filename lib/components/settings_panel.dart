@@ -8,9 +8,13 @@ import 'package:flutter/painting.dart';
 
 import '../game/config.dart';
 import '../game/flappy_game.dart';
+import '../game/paints.dart' show layerPaint;
 import '../game/sound.dart' show Sfx;
 import '../game/tintable.dart';
 import 'home/menu_primitives.dart';
+import 'menu_screen_chrome.dart' show MenuScrollArea, MenuScrollTapGate;
+import '../versus/custom_name.dart' show CustomNameReason;
+import 'settings_player_card.dart';
 import 'skins/celebration.dart' show keyframe;
 
 /// Images the Settings screen draws (PRD-2.3 §20.1: game assets only).
@@ -26,6 +30,10 @@ const List<String> kSettingsImages = [
 /// the pause screen. Top to bottom:
 /// - the back button (the game's shared corner box; [backButton] is the
 ///   transparent tap target over it) and the `SETTINGS` title;
+/// - WP-NAME PLAYER: the player card (sticker + name, edit in place,
+///   [SettingsPlayerCard]); everything below moves down by its height,
+///   unchanged, and the body scrolls ([MenuScrollArea]) when it no longer
+///   fits above the bottom spikes;
 /// - SOUND: three pink tiles — SOUND, MUSIC, RUMBLE — each with its icon,
 ///   label and ON / OFF tag, grey when off;
 /// - the MUSIC VOLUME card: 8 bars, tap or drag across them (0–8);
@@ -115,6 +123,13 @@ class SettingsPanel extends PositionComponent
   late final VolumeBars volumeBars;
   late final SettingsCard gameCard;
   late final SettingsCard privacyCard;
+
+  /// WP-NAME the PLAYER card, the scrolling body and the rows under the
+  /// card (moved down by it, dimmed while the name is edited).
+  late final SettingsPlayerCard playerCard;
+  late final MenuScrollArea scroll;
+  late final SettingsBodyRest rest;
+  late final MenuText playerCaption;
 
   /// GAME rows (null when their callback is).
   SettingsRow? supportRow;
@@ -321,21 +336,102 @@ class SettingsPanel extends PositionComponent
       position: Vector2(Config.worldWidth / 2, lineTop + l.footerLine),
     );
 
+    // --- WP-NAME the PLAYER card on top; the rest moves down under it ---
+    playerCaption = _caption('PLAYER', Vector2(left, l.bodyTop));
+    playerCard = SettingsPlayerCard(
+      position: Vector2(
+        left,
+        l.bodyTop + Config.settingsCaptionHeight + l.captionGap,
+      ),
+      onLayout: _relayout,
+      initialError: CustomNameReason.fromKey(
+        game.storage.versusCustomNameError,
+      ),
+    );
+    rest = SettingsBodyRest(isBlocked: () => playerCard.editing)
+      ..addAll([
+        soundCaption,
+        soundTile,
+        musicTile,
+        rumbleTile,
+        volumeBars,
+        gameCard,
+        privacyCard,
+        creditLead,
+        creditText,
+        versionText,
+      ]);
+    scroll = MenuScrollArea(
+      viewport: Rect.fromLTRB(
+        0,
+        l.bodyTop - Config.settingsScrollTopGap,
+        Config.worldWidth,
+        h - Config.menuSpikeHeight,
+      ),
+      // The body shows between the bottom teeth (the game lifts the ground
+      // strip over the panel while it is mounted, as over the Shop).
+      bleedBottom: Config.menuSpikeToothDepth,
+    );
+    scroll.content.addAll([playerCaption, playerCard, rest]);
+    // At rest the footer stays at the bottom of the screen when there is
+    // room, else right under the cards (the end of the scrolled body).
+    _bodyBuilt = true;
+    final shift = _restShift();
+    final footerTopRest = math.max(
+      l.footerY - shift,
+      l.cardsBottom + l.footerGap,
+    );
+    for (final t in [creditLead, creditText, versionText]) {
+      t.y += footerTopRest - l.footerY;
+    }
+    _footerBottom = footerTopRest + 2 * l.footerLine;
+    _relayout();
+
     addAll([
       titleText,
-      soundCaption,
-      soundTile,
-      musicTile,
-      rumbleTile,
-      volumeBars,
-      gameCard,
-      privacyCard,
-      creditLead,
-      creditText,
-      versionText,
+      scroll,
       backButton,
+      MenuScrollTapGate(
+        scroll: scroll,
+        position: scroll.visibleRect.topLeft.toVector2(),
+        size: scroll.visibleRect.size.toVector2(),
+        priority: 1 << 20,
+      ),
     ]);
     _loadVersion();
+  }
+
+  /// The rows' offset under the card now (0 = where they were before the
+  /// card existed).
+  double _restShift() =>
+      playerCard.y +
+      playerCard.blockHeight +
+      Config.settingsCardGap -
+      layout.bodyTop;
+
+  /// The footer's bottom in [rest] coordinates.
+  double _footerBottom = 0;
+  bool _bodyBuilt = false;
+
+  void _relayout() {
+    if (!_bodyBuilt) return;
+    rest.y = _restShift();
+    scroll.contentBottom =
+        rest.y + _footerBottom + layout.bottomInset - Config.menuSpikeHeight;
+    // Editing: the card in view (it is at the top).
+    if (playerCard.editing) scroll.scrollTo(0, animate: false);
+  }
+
+  @override
+  void onMount() {
+    super.onMount();
+    game.holdGroundOverMenus(true); // WP-NAME
+  }
+
+  @override
+  void onRemove() {
+    game.holdGroundOverMenus(false);
+    super.onRemove();
   }
 
   Future<void> _loadVersion() async {
@@ -1277,5 +1373,44 @@ class _TapBlocker extends PositionComponent with TapCallbacks {
   @override
   void onTapDown(TapDownEvent event) {
     event.handled = true;
+  }
+}
+
+/// WP-NAME the Settings rows under the PLAYER card, as one group moved down
+/// by the card (positions inside are the pre-card layout). While the name
+/// is edited ([isBlocked]) they are dimmed to 35 % (the design's `.dim`)
+/// and take no taps.
+class SettingsBodyRest extends PositionComponent {
+  SettingsBodyRest({required this.isBlocked});
+
+  final bool Function() isBlocked;
+
+  static const double dimOpacity = .35;
+
+  @override
+  void renderTree(Canvas canvas) {
+    if (!isBlocked()) {
+      super.renderTree(canvas);
+      return;
+    }
+    canvas.saveLayer(null, layerPaint(dimOpacity));
+    super.renderTree(canvas);
+    canvas.restore();
+  }
+
+  @override
+  Iterable<Component> componentsAtLocation<T>(
+    T locationContext,
+    List<T>? nestedContexts,
+    T? Function(CoordinateTransform, T) transformContext,
+    bool Function(Component, T) checkContains,
+  ) {
+    if (isBlocked()) return const [];
+    return super.componentsAtLocation(
+      locationContext,
+      nestedContexts,
+      transformContext,
+      checkContains,
+    );
   }
 }

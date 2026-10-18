@@ -136,7 +136,7 @@ void main() {
           g.update(1 / 60);
           await Future<void>.value();
         }
-        expect(intro.youPlate.name, 'SwiftKiwi482');
+        expect(intro.youPlate.name, 'You'); // WP-NAME
         const s = VersusConfig.plateSlot;
         ui.Rect square(PositionComponent p) {
           final tl = p.absoluteTopLeftPosition;
@@ -196,7 +196,7 @@ void main() {
         final page = g.resultsScreen!;
         expect(page.you.look.bird, 'owl');
         expect(page.them!.look, rival.look);
-        expect(page.you.name, 'SwiftKiwi482');
+        expect(page.you.name, 'You'); // WP-NAME
         await tester.runAsync(
           () => _render(g, scale: 3, save: 'av_game_results_$tag'),
         );

@@ -112,6 +112,7 @@ import '../services/app_info.dart';
 import '../share/share_card.dart' show ShareCardData; // PRD-2.3 §2
 import '../share/share_content.dart'; // PRD-2.3 §2
 import '../versus/nickname.dart' show generateNickname; // PRD-2.3 §2.2
+import '../versus/custom_name.dart'; // WP-NAME
 import 'rumble.dart';
 import 'music_guard.dart';
 import 'sound.dart';
@@ -330,17 +331,52 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     return views.first.physicalSize.width / Config.worldWidth;
   }
 
-  /// §3.13 / §5.8 / §5.10 (S6-65) the own name on the plates, the HUD chip
-  /// and the results card: the generated nickname ([VersusService.me];
-  /// WP-AV: never a Play Games / Game Center name); "You" only when the
-  /// service has no identity at all (no backend, before the nickname).
+  /// §3.13 / §5.8 / §5.10 the own name on the plates, the HUD chip and the
+  /// results card. WP-NAME: the custom name chosen in Settings, else "You"
+  /// (opponents see the custom name, else the generated nickname; WP-AV:
+  /// never a Play Games / Game Center name).
   String get myVersusName {
+    final c = validCustomName(storage.versusCustomName);
+    return c.isNotEmpty ? c : kDefaultOwnName;
+  }
+
+  /// WP-NAME saves the custom versus name from the Settings card ('' =
+  /// none: "You"). The format rule first; then the server (word filter):
+  /// refused = nothing changes; offline = kept on the phone and sent later
+  /// (FirebaseVersusService.syncCustomName). Never throws.
+  Future<CustomNameSave> saveCustomName(String name) async {
+    final n = name.trim();
+    if (n.isNotEmpty) {
+      final f = checkCustomNameFormat(n);
+      if (f != null) return CustomNameRefused(f);
+    }
+    if (n == storage.versusCustomName) return const CustomNameAccepted('');
+    CustomNameSave r;
     try {
-      final n = versus.me.name.trim();
-      if (n.isNotEmpty) return n;
+      r = await versus
+          .sendCustomName(n)
+          .timeout(
+            VersusConfig.callTimeout + const Duration(seconds: 2),
+            onTimeout: () => const CustomNameOffline(),
+          );
+    } catch (_) {
+      r = const CustomNameOffline();
+    }
+    try {
+      switch (r) {
+        case CustomNameAccepted(:final uid):
+          await storage.saveVersusCustomName(
+            n,
+            syncedUid: uid.isEmpty ? null : uid,
+          );
+        case CustomNameOffline():
+          await storage.saveVersusCustomName(n);
+        case CustomNameRefused():
+          return r;
+      }
+      await storage.saveVersusCustomNameError('');
     } catch (_) {}
-    final nick = storage.versusNickname?.trim() ?? '';
-    return nick.isNotEmpty ? nick : 'You';
+    return r;
   }
 
   /// Reminder notifications (PRD-2 §3.34). No-op unless the app shell swaps
@@ -2075,8 +2111,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _syncGroundPriority();
   }
 
+  /// WP-NAME open Settings panels: their body scrolls under the ground
+  /// strip too (like a [MenuScreen]'s list).
+  int _groundHolds = 0;
+
+  /// A Settings panel mounted ([on]) or left.
+  void holdGroundOverMenus(bool on) {
+    _groundHolds = max(0, _groundHolds + (on ? 1 : -1));
+    _syncGroundPriority();
+  }
+
   void _syncGroundPriority() {
-    _ground.priority = _menuScreens.isEmpty
+    _ground.priority = _menuScreens.isEmpty && _groundHolds == 0
         ? SpikeStrip.basePriority
         : groundOverMenusPriority;
   }
@@ -3737,10 +3783,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// True while a share or invite is being prepared (a second tap waits).
   bool _sharing = false;
 
-  /// PRD-2.3 §2.2 the username on the card: the versus nickname (WP-AV:
+  /// PRD-2.3 §2.2 the username on the card: the custom name (WP-NAME),
+  /// else the versus nickname (WP-AV:
   /// never a platform name), created first when there is none ('' only when that
   /// fails: the card then has no name tag).
   Future<String> shareName() async {
+    // WP-NAME others see the custom name when the player chose one.
+    final custom = validCustomName(storage.versusCustomName);
+    if (custom.isNotEmpty) return custom;
     try {
       final n = versus.me.name.trim();
       if (n.isNotEmpty) return n;

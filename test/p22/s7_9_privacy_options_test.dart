@@ -80,6 +80,9 @@ void main() async {
           options.toAbsoluteRect().top,
           greaterThanOrEqualTo(panel.privacyRow.toAbsoluteRect().bottom),
         );
+        // WP-NAME the body scrolls (PLAYER card on top): at its end the
+        // card is inside the screen.
+        panel.scroll.offset = panel.scroll.maxOffset;
         expect(
           panel.privacyCard.toAbsoluteRect().bottom,
           lessThanOrEqualTo(h - Config.spikeHeight),

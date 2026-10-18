@@ -31,6 +31,9 @@ class BlockTrail {
   /// (radians, 0 = right, y down). Returns the number of blocks spawned.
   /// PRD-2.2 §21.1: [scale] multiplies the block size (the run trail draws
   /// it at 2×) and [back] is the spawn distance behind the bird.
+  /// WP-TRAIL: [drift] scales the 70 pt drift (0 for the run trail, whose
+  /// pool moves with the world instead: the blocks stay where the bird
+  /// was, like the mock's blocks that drift at about the scroll speed).
   int update(
     ParticlePool pool,
     double dt,
@@ -38,12 +41,13 @@ class BlockTrail {
     double heading, {
     double scale = 1,
     double back = PartsConfig.trailBack,
+    double drift = 1,
   }) {
     if (dt <= 0) return 0;
     _acc += dt * PartsConfig.trailRate;
     var n = 0;
     final hx = math.cos(heading), hy = math.sin(heading);
-    const v = PartsConfig.trailDrift / PartsConfig.trailLife;
+    final v = PartsConfig.trailDrift / PartsConfig.trailLife * drift;
     while (_acc >= 1) {
       _acc -= 1;
       final j = (_r.nextDouble() * 2 - 1) * PartsConfig.trailSide;

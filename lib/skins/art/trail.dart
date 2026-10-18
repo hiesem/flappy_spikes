@@ -39,8 +39,52 @@ class TrailEmitter {
 
   /// Where the last [emit] put the head, and how long ago (the Supernova
   /// core glow is drawn at the head while the trail is emitting).
-  Offset? _lastHead;
+  double _lastHeadX = 0, _lastHeadY = 0;
+  bool _hasLastHead = false;
   double _sinceEmit = double.infinity;
+
+  // region WP-TRAIL — the run trail lies along the bird's real path
+  /// WP-TRAIL (owner 2026-10-18): the run's mode. The caller moves the
+  /// whole trail with the world ([shift]) and passes the flight direction
+  /// to [emit] (`heading`); particles and path points then stay where the
+  /// bird really was, whatever the direction (vertical climbs, loops).
+  /// Emission jitter and the trails' backward drift are laid out along /
+  /// across the flight direction; gravity-like motion (flames rising, ink
+  /// falling) stays world-vertical. Path trails sample one point per
+  /// 1/60 s (frame-rate independent) with a live head point, and the
+  /// Rainbow ribbon's stripes are offset along the path normal.
+  ///
+  /// Off (the default: the shop preview and the shop tiles) the emitter is
+  /// exactly the mock's: horizontal drift `vx` and level offsets.
+  bool worldLocked = false;
+
+  /// The flight direction of the current emission (rad, 0 = right, y down)
+  /// and its cosine / sine (exactly 1 / 0 at heading 0).
+  double _hd = 0, _hdC = 1, _hdS = 0;
+
+  /// The spawn base point of the current emission (interpolated from the
+  /// previous emission's head to this one in [worldLocked] mode, so fast
+  /// flight leaves a continuous trail).
+  double _ex = 0, _ey = 0;
+  double _prevX = 0, _prevY = 0;
+  bool _hasPrev = false;
+
+  /// Per path point: the art scale it was emitted at, the bird's angle and
+  /// the flight direction ([worldLocked] mode).
+  final Float64List _histK = Float64List(_histSize);
+  final Float64List _histA = Float64List(_histSize);
+  final Float64List _histH = Float64List(_histSize);
+  double _histAcc = 0;
+
+  /// One path sample per this long in [worldLocked] mode (the mock's
+  /// one-per-frame at 60 fps).
+  static const double histStep = 1 / 60;
+
+  static final Path _ribbonPath = Path();
+  static final Paint _ribbonPaint = Paint();
+  static final Float64List _nx = Float64List(_histSize);
+  static final Float64List _ny = Float64List(_histSize);
+  // endregion WP-TRAIL
 
   void _syncV23() {
     _v23 = TrailV23.has(_trailId) ? TrailV23(_trailId, _random) : null;
@@ -127,6 +171,15 @@ class TrailEmitter {
   /// Points in the path history (ribbon / Afterimage / 2.3 path trails).
   int get pathLength => _v23?.historyLength ?? _histCount;
 
+  /// Path point [i] (0 = newest; tests).
+  Offset pathPoint(int i) =>
+      _v23?.historyPoint(i) ?? Offset(_histXAt(i), _histYAt(i));
+
+  /// Live particle positions (tests).
+  Iterable<Offset> get particlePositions =>
+      _v23?.particlePositions ??
+      _pool.take(_alive).map((p) => Offset(p.x, p.y));
+
   /// Colour of the dot the shop thumbnail puts at the head of the trail
   /// (`drawThumb`: the second flame colour, or the per-kind fallback).
   Color get orbColor {
@@ -153,13 +206,37 @@ class TrailEmitter {
   /// Emits the trail at the bird's tail [head] for [dt] seconds. [k] is pixels
   /// per art unit; [vx] is the world scroll in px/s (the mock's -140 in runs,
   /// -90 in the shop thumbnail) and moves the whole trail left with the world.
-  void emit(Offset head, double dt, {double k = 1, double vx = -140}) {
+  /// WP-TRAIL: [heading] is the flight direction and [angle] the bird's
+  /// drawn angle (Afterimage copies), both used in [worldLocked] mode only
+  /// (pass `vx: 0` there: the caller [shift]s the trail with the world).
+  void emit(
+    Offset head,
+    double dt, {
+    double k = 1,
+    double vx = -140,
+    double heading = 0,
+    double angle = 0,
+  }) {
     if (dt <= 0) return;
+    final world = worldLocked;
+    _hd = world ? heading : 0;
+    _hdC = _hd == 0 ? 1 : math.cos(_hd);
+    _hdS = _hd == 0 ? 0 : math.sin(_hd);
+    final hasPrev = world && _hasPrev;
     final v23 = _v23;
     if (v23 != null) {
+      v23.frame(
+        world: world,
+        heading: _hd,
+        prevX: hasPrev ? _prevX : null,
+        prevY: hasPrev ? _prevY : null,
+      );
       v23.emit(head.dx, head.dy, dt, k, vx);
-      _lastHead = head;
+      _lastHeadX = head.dx;
+      _lastHeadY = head.dy;
+      _hasLastHead = true;
       _sinceEmit = 0;
+      _setPrev(head);
       return;
     }
     final def = _def;
@@ -171,22 +248,30 @@ class TrailEmitter {
     switch (def.kind) {
       case _Kind.ribbon:
         _histCap = _histSize;
-        _histPush(x, y, false);
-        _histShift(_scrollVx * dt);
+        if (world) {
+          _histSample(x, y, false, k, angle, dt);
+        } else {
+          _histPush(x, y, false);
+          _histShift(_scrollVx * dt);
+        }
+        _setPrev(head);
         return;
       case _Kind.echo:
         _histCap = 84;
-        _histPush(x, y, (_acc * 6.6) % 1 < .4);
-        _histShift(_scrollVx * dt);
+        final flap = (_acc * 6.6) % 1 < .4;
+        if (world) {
+          _histSample(x, y, flap, k, angle, dt);
+        } else {
+          _histPush(x, y, flap);
+          _histShift(_scrollVx * dt);
+        }
         if (_random.nextDouble() < dt * 14) {
-          final p = _spawn(
-            x + _between(-30, 0) * k / 2,
-            y + _between(-12, 12) * k / 2,
-            _Kind.sq,
-            k,
-          );
+          _base(0, 1, x, y);
+          final ja = _between(-30, 0) * k / 2;
+          final jp = _between(-12, 12) * k / 2;
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp), _Kind.sq, k);
           if (p != null) {
-            p.vx = _between(-30, 0) * k / 2;
+            _along(p, _between(-30, 0) * k / 2);
             p.vy = 0;
             p.max = .35;
             p.s = _between(2, 4) * k / 2;
@@ -195,6 +280,7 @@ class TrailEmitter {
             p.color = _echoColors[_random.nextInt(_echoColors.length)];
           }
         }
+        _setPrev(head);
         return;
       default:
         break;
@@ -206,14 +292,17 @@ class TrailEmitter {
       _Kind.bolt => .05,
       _ => .04,
     };
-    while (_acc > rate) {
+    // The spawns this frame (the mock's `while (acc > rate) acc -= rate`).
+    var n = 0;
+    for (var a = _acc; a > rate; a -= rate) {
+      n++;
+    }
+    for (var j = 0; j < n; j++) {
       _acc -= rate;
-      final p = _spawn(
-        x + _between(-2, 2) * k,
-        y + _between(-4, 4) * k,
-        def.kind,
-        k,
-      );
+      _base(j, n, x, y);
+      final ja = _between(-2, 2) * k;
+      final jp = _between(-4, 4) * k;
+      final p = _spawn(_ox(ja, jp), _oy(ja, jp), def.kind, k);
       if (p == null) continue;
       switch (def.kind) {
         case _Kind.flame:
@@ -239,13 +328,20 @@ class TrailEmitter {
             p.kind = _Kind.lspark;
             p.max = .3;
             p.vy = _between(-40, 40) * k / 2;
-            p.vx = _between(-10, 30) * k / 2;
+            _along(p, _between(-10, 30) * k / 2);
             p.s = _between(1.5, 3) * k / 2;
           } else {
             p.max = .6;
-            p.y = y;
+            if (world) {
+              // On the flight line (the mock snaps y to the head).
+              p.x = _ex + _hdC * ja;
+              p.y = _ey + _hdS * ja;
+            } else {
+              p.y = y;
+            }
             p.vx = 0;
             p.vy = 0;
+            p.vyA = 0;
             p.ph = _time * 1000 / 90;
           }
         case _Kind.conf:
@@ -272,7 +368,117 @@ class TrailEmitter {
           break;
       }
     }
+    _setPrev(head);
   }
+
+  // region WP-TRAIL helpers
+  void _setPrev(Offset head) {
+    _prevX = head.dx;
+    _prevY = head.dy;
+    _hasPrev = worldLocked;
+  }
+
+  /// The base point of spawn [j] of [n] this frame: [x], [y] (the head) —
+  /// in [worldLocked] mode spread from the previous head to this one.
+  void _base(int j, int n, double x, double y) {
+    if (worldLocked && _hasPrev) {
+      final t = (j + 1) / n;
+      _ex = _prevX + (x - _prevX) * t;
+      _ey = _prevY + (y - _prevY) * t;
+    } else {
+      _ex = x;
+      _ey = y;
+    }
+  }
+
+  /// The spawn point [ja] along and [jp] across the flight direction from
+  /// the base (exactly `x + ja`, `y + jp` at heading 0).
+  double _ox(double ja, double jp) => _ex + (_hdC * ja - _hdS * jp);
+  double _oy(double ja, double jp) => _ey + (_hdS * ja + _hdC * jp);
+
+  /// A velocity [v] along the flight direction (the mock's `vx`).
+  void _along(_Particle p, double v) {
+    p.vx = v * _hdC;
+    p.vyA = v * _hdS;
+  }
+
+  /// WP-TRAIL: moves everything already drawn by ([dx], [dy]) — the world's
+  /// motion on screen this frame ([worldLocked] mode), so the trail stays
+  /// where the bird was.
+  void shift(double dx, double dy) {
+    if (dx == 0 && dy == 0) return;
+    _v23?.shift(dx, dy);
+    for (var i = 0; i < _alive; i++) {
+      final p = _pool[i];
+      p.x += dx;
+      p.y += dy;
+    }
+    for (var i = 0; i < _histCount; i++) {
+      final h = _histIndex(i);
+      _histX[h] += dx;
+      _histY[h] += dy;
+    }
+    _prevX += dx;
+    _prevY += dy;
+    _lastHeadX += dx;
+    _lastHeadY += dy;
+  }
+
+  /// WP-TRAIL: the next emission does not connect to the last one (the
+  /// trail paused, or the bird reappears somewhere else).
+  void breakStroke() => _hasPrev = false;
+
+  /// Whether trail [id] draws a path history (Rainbow, Afterimage, Prism,
+  /// Paint stroke) rather than free particles only.
+  static bool isPathTrail(String id) =>
+      id == 'rainbow' || id == 'echo' || id == 'prism' || id == 'paint';
+
+  /// One path sample per [histStep] with a live head: the newest point
+  /// always sits on the head; a new point is committed each [histStep].
+  void _histSample(
+    double x,
+    double y,
+    bool flap,
+    double k,
+    double angle,
+    double dt,
+  ) {
+    if (_histCount == 0) {
+      _histAcc = 0;
+      _histPushW(x, y, flap, k, angle);
+      return;
+    }
+    _histAcc += dt;
+    var pushes = 0;
+    if (_histAcc >= histStep) {
+      pushes = math.min(4, (_histAcc / histStep).floor());
+      _histAcc -= pushes * histStep;
+      if (_histAcc >= histStep) _histAcc = 0;
+    }
+    if (pushes == 0) {
+      final h = _histHead;
+      _histX[h] = x;
+      _histY[h] = y;
+      _histFlap[h] = flap ? 1 : 0;
+      _histK[h] = k;
+      _histA[h] = angle;
+      _histH[h] = _hd;
+      return;
+    }
+    final x0 = _histXAt(0), y0 = _histYAt(0);
+    for (var i = 1; i <= pushes; i++) {
+      final t = i / pushes;
+      _histPushW(x0 + (x - x0) * t, y0 + (y - y0) * t, flap, k, angle);
+    }
+  }
+
+  void _histPushW(double x, double y, bool flap, double k, double angle) {
+    _histPush(x, y, flap);
+    _histK[_histHead] = k;
+    _histA[_histHead] = angle;
+    _histH[_histHead] = _hd;
+  }
+  // endregion WP-TRAIL helpers
 
   /// Ages and moves every particle. [dt] also advances the trail's clock
   /// (used by the ribbon sparkle and the Afterimage tint cycle).
@@ -290,7 +496,7 @@ class TrailEmitter {
       final p = _pool[read];
       p.life += dt;
       p.x += (_scrollVx + p.vx) * dt;
-      p.y += p.vy * dt;
+      p.y += (p.vy + p.vyA) * dt;
       p.rot += p.vr * dt;
       if (p.life < p.max) {
         final swap = _pool[write];
@@ -308,15 +514,32 @@ class TrailEmitter {
   void paint(Canvas canvas, {double k = 1, Offset? head}) {
     final v23 = _v23;
     if (v23 != null) {
-      v23.paint(canvas, k, head ?? (_sinceEmit < .1 ? _lastHead : null));
+      v23.paint(
+        canvas,
+        k,
+        head ??
+            (_sinceEmit < .1 && _hasLastHead
+                ? Offset(_lastHeadX, _lastHeadY)
+                : null),
+      );
       return;
     }
     final def = _def;
     if (def.kind == _Kind.ribbon) {
-      _paintRibbon(canvas, k);
+      if (worldLocked) {
+        _paintRibbonPath(canvas);
+      } else {
+        _paintRibbon(canvas, k);
+      }
       return;
     }
-    if (def.kind == _Kind.echo) _paintEcho(canvas, k);
+    if (def.kind == _Kind.echo) {
+      if (worldLocked) {
+        _paintEchoPath(canvas);
+      } else {
+        _paintEcho(canvas, k);
+      }
+    }
     for (var i = 0; i < _alive; i++) {
       _paintParticle(canvas, _pool[i], k);
     }
@@ -329,6 +552,7 @@ class TrailEmitter {
     _acc = 0;
     _histCount = 0;
     _histHead = 0;
+    _hasPrev = false;
   }
 
   /// Drops only the path history (ribbon / Afterimage), letting live
@@ -338,6 +562,7 @@ class TrailEmitter {
     _v23?.resetPath();
     _histCount = 0;
     _histHead = 0;
+    _hasPrev = false;
   }
 
   /// Shop-grid thumbnail (the `fire` branch of `drawThumb` in skin_shop.js):
@@ -375,8 +600,9 @@ class TrailEmitter {
     p.kind = kind;
     p.x = x;
     p.y = y;
-    p.vx = _between(-20, 10) * k / 2;
+    _along(p, _between(-20, 10) * k / 2);
     p.vy = _between(-12, 12) * k / 2;
+    p.hd = _hd;
     p.life = 0;
     p.max = .5;
     p.s = _between(5, 9) * k / 2;
@@ -422,6 +648,91 @@ class TrailEmitter {
     );
   }
 
+  /// WP-TRAIL: the ribbon along the real path ([worldLocked] mode): the six
+  /// stripes are offset along the path normal (not straight down), so the
+  /// ribbon keeps its width when the bird climbs, dives or loops; each
+  /// point keeps the width of the bird scale it was emitted at. One filled
+  /// strip per stripe (reused path and paint: no per-frame allocation).
+  void _paintRibbonPath(Canvas canvas) {
+    final n = _histCount;
+    if (n < 2) return;
+    // Path normals from a smoothed tangent (older -> newer).
+    var lx = -math.sin(_histH[_histIndex(0)]);
+    var ly = math.cos(_histH[_histIndex(0)]);
+    for (var i = 0; i < n; i++) {
+      final a = math.max(0, i - 2), b = math.min(n - 1, i + 2);
+      final tx = _histXAt(a) - _histXAt(b);
+      final ty = _histYAt(a) - _histYAt(b);
+      final len = math.sqrt(tx * tx + ty * ty);
+      if (len > 1e-6) {
+        lx = -ty / len;
+        ly = tx / len;
+      }
+      _nx[i] = lx;
+      _ny[i] = ly;
+    }
+    final path = _ribbonPath;
+    final paint = _ribbonPaint..style = PaintingStyle.fill;
+    for (var c = 0; c < 6; c++) {
+      path.reset();
+      for (var i = 0; i < n; i++) {
+        final w = 2.6 * _histK[_histIndex(i)];
+        final o = (c - 2.5) * w - (w + .5) / 2;
+        final xx = _histXAt(i) + _nx[i] * o, yy = _histYAt(i) + _ny[i] * o;
+        if (i == 0) {
+          path.moveTo(xx, yy);
+        } else {
+          path.lineTo(xx, yy);
+        }
+      }
+      for (var i = n - 1; i >= 0; i--) {
+        final w = 2.6 * _histK[_histIndex(i)];
+        final o = (c - 2.5) * w + (w + .5) / 2;
+        path.lineTo(_histXAt(i) + _nx[i] * o, _histYAt(i) + _ny[i] * o);
+      }
+      path.close();
+      canvas.drawPath(
+        path,
+        paint..color = _rainbowRibbon[c].withValues(alpha: .95),
+      );
+    }
+    ArtPaint.star(
+      canvas,
+      _histXAt(0),
+      _histYAt(0),
+      3 * _histK[_histIndex(0)],
+      const Color(0xFFFFFFFF),
+      _time * 1000 / 300,
+    );
+  }
+
+  /// WP-TRAIL: the Afterimage copies along the real path ([worldLocked]
+  /// mode): each copy sits where the bird's centre was (17 art units ahead
+  /// of the path point along its flight direction), turned to the bird's
+  /// angle then and at the bird's scale then.
+  void _paintEchoPath(Canvas canvas) {
+    final paint = lookPainter;
+    if (paint == null || _histCount < 2) return;
+    for (var n = 4; n >= 1; n--) {
+      final index = n * 20;
+      if (index >= _histCount) continue;
+      final h = _histIndex(index);
+      final k = _histK[h], hd = _histH[h];
+      _echoDraw(
+        canvas,
+        paint,
+        _histX[h] + math.cos(hd) * 17 * k,
+        _histY[h] + math.sin(hd) * 17 * k,
+        k,
+        _echoColors[(n + (_time * 3).floor()) % _echoColors.length],
+        .78 - n * .13,
+        _random.nextDouble() < .07,
+        _histFlap[h] == 1,
+        angle: _histA[h],
+      );
+    }
+  }
+
   /// The four Afterimage copies, chased backwards along the path history
   /// (`H[n * 20]`, n = 4..1) and tinted in a cycling neon colour.
   void _paintEcho(Canvas canvas, double k) {
@@ -457,8 +768,9 @@ class TrailEmitter {
     Color color,
     double alpha,
     bool glitch,
-    bool flap,
-  ) {
+    bool flap, {
+    double angle = 0,
+  }) {
     final w = (90 * k).ceilToDouble();
     final top = y - w / 2;
     if (!glitch) {
@@ -474,6 +786,7 @@ class TrailEmitter {
         flap,
         top,
         w,
+        angle,
       );
       return;
     }
@@ -494,6 +807,7 @@ class TrailEmitter {
         flap,
         top,
         w,
+        angle,
       );
     }
   }
@@ -510,6 +824,7 @@ class TrailEmitter {
     bool flap,
     double top,
     double w,
+    double angle,
   ) {
     canvas.saveLayer(
       slice,
@@ -517,6 +832,7 @@ class TrailEmitter {
     );
     canvas.save();
     canvas.translate(centreX, centreY);
+    if (angle != 0) canvas.rotate(angle);
     canvas.scale(k);
     paint(canvas, look, _time, flap);
     canvas.restore();
@@ -542,6 +858,10 @@ class TrailEmitter {
     final u = p.life / p.max;
     canvas.save();
     canvas.translate(p.x, p.y);
+    // WP-TRAIL: the beam and the bolt lie along the flight direction.
+    if (p.hd != 0 && (p.kind == _Kind.laser || p.kind == _Kind.bolt)) {
+      canvas.rotate(p.hd);
+    }
     switch (p.kind) {
       case _Kind.flame:
         final ramp = p.ramp!;
@@ -842,6 +1162,11 @@ class _Particle {
   double rot = 0;
   double vr = 0;
   double ph = 0;
+
+  /// WP-TRAIL: the along-flight drift's vertical part (0 at heading 0) and
+  /// the flight direction at the spawn (beam / bolt orientation).
+  double vyA = 0;
+  double hd = 0;
   Color color = const Color(0xFFEC008C);
   List<Color>? ramp;
 

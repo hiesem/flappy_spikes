@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart' show AssetBundle, rootBundle;
 
@@ -515,7 +514,6 @@ abstract final class ShareCardPainter {
   /// the slot's right edge is 64 from the canvas edge and the two rows are
   /// centred vertically. A badge is drawn at its own proportions, centred in
   /// the slot: store badges are never stretched.
-  @visibleForTesting
   static ({Rect icon, Rect logo, Rect googlePlay, Rect appStore}) footerLayout(
     ShareCardAssets img,
   ) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/delete_data_popup.dart';
@@ -10,6 +12,7 @@ import 'package:flappy_spikes/services/monetization.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
 import '../helpers.dart';
 import '../menu_screenshot_test.dart' show captureShot, loadFonts;
@@ -23,13 +26,15 @@ void main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
   await loadFonts();
 
-  late List<Uri> opened;
+  // Every link the game asked to open, with its launch mode.
+  late List<(Uri, LaunchMode)> opened;
   late AnalyticsSpy spy;
 
   FlappySpikesGame make({
     double h = 711,
     Map<String, Object> prefs = const {},
     bool options = false,
+    AppInfo info = const FixedAppInfo(AppVersion('2.3.0', '10')),
   }) {
     opened = [];
     spy = AnalyticsSpy();
@@ -42,8 +47,8 @@ void main() async {
         consent: FakeAdsConsent(privacyOptionsRequired: options),
       ),
     );
-    g.urlOpener = (uri) async => opened.add(uri);
-    g.appInfo = const FixedAppInfo(AppVersion('2.3.0', '10'));
+    g.urlOpener = (uri, mode) async => opened.add((uri, mode));
+    g.appInfo = info;
     return g;
   }
 
@@ -56,6 +61,21 @@ void main() async {
   Future<SettingsPanel> open(FlappySpikesGame g) async {
     g.openSettings();
     await flushAndMount(g);
+    stepGame(g, .6);
+    await flushAndMount(g);
+    return g.world.children.query<SettingsPanel>().single;
+  }
+
+  /// Opens the screen the way the app does: the open's microtasks all run
+  /// (the panel loads and an already-resolved version lands) before the
+  /// next frame's game tick mounts the panel. [flushAndMount] would tick in
+  /// between and hide that order.
+  Future<SettingsPanel> openLikeTheApp(FlappySpikesGame g) async {
+    g.openSettings();
+    for (var i = 0; i < 30; i++) {
+      await Future<void>.value();
+    }
+    g.update(0); // the next frame mounts the panel
     stepGame(g, .6);
     await flushAndMount(g);
     return g.world.children.query<SettingsPanel>().single;
@@ -340,13 +360,76 @@ void main() async {
 
   // --- §20.5 rows and links ---------------------------------------------------
 
-  test('§20.3 the four URLs', () {
+  test('§20.3 the four URLs (and the music credit, WP-SET)', () {
     expect(Config.supportUrl, 'https://flappyspikes.com/support');
     expect(Config.privacyPolicyUrl, 'https://flappyspikes.com/privacy');
     expect(Config.deleteDataUrl, 'https://flappyspikes.com/delete-data');
     expect(Config.siteUrl, 'https://flappyspikes.com');
     expect(Config.redeemCodeUrl, 'https://play.google.com/redeem?code=');
+    expect(Config.musicCreditUrl, 'https://soundcloud.com/electrobaptist');
   });
+
+  // WP-SET (owner 2026-10-19): the name opens the artist's page in the
+  // in-app browser, with a tap box of at least 44 pt that never climbs over
+  // the cards above.
+  for (final h in [568.0, 711.0]) {
+    final tapHarness = FlameTester<FlappySpikesGame>(
+      () => make(h: h),
+      pumpWidget: (gameWidget, tester) async {
+        tester.view
+          ..physicalSize = Size(320, h)
+          ..devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(gameWidget);
+      },
+    );
+    tapHarness.testGameWidget(
+      'WP-SET ($h): a tap on the name opens SoundCloud in the in-app browser; '
+      'a tap on "Melody by" opens nothing; the tap box is 44 pt tall and '
+      'stays clear of the cards',
+      setUp: boot,
+      verify: (g, tester) async {
+        final panel = await open(g);
+        panel.scroll.offset = panel.scroll.maxOffset; // the footer's place
+        stepGame(g, .1);
+        await flushAndMount(g);
+
+        final link = panel.creditLink.toAbsoluteRect();
+        final name = panel.creditText.toAbsoluteRect();
+        final lead = panel.creditLead.toAbsoluteRect();
+        final privacy = panel.privacyCard.toAbsoluteRect();
+        expect(link.left, closeTo(name.left, 1e-6));
+        expect(link.width, closeTo(name.width, 1e-6));
+        expect(link.contains(name.center), isTrue);
+        expect(
+          link.height,
+          greaterThanOrEqualTo(Config.settingsCreditHitHeight),
+        );
+        expect(link.top, greaterThanOrEqualTo(privacy.bottom - 1e-6));
+        expect(
+          link.bottom,
+          lessThanOrEqualTo(
+            h - Config.menuSpikeHeight + Config.menuSpikeToothDepth,
+          ),
+        );
+
+        await tester.tapAt(lead.center);
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(opened, isEmpty, reason: '"Melody by" is not the link');
+
+        await tester.tapAt(link.center);
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(opened, [
+          (
+            Uri.parse('https://soundcloud.com/electrobaptist'),
+            LaunchMode.inAppBrowserView,
+          ),
+        ]);
+        expect(g.state, GameState.start, reason: 'no tap leak');
+      },
+    );
+  }
 
   FlameTester<FlappySpikesGame>(
     () => make(options: true),
@@ -376,10 +459,21 @@ void main() async {
       panel.privacyRow.onPressed();
       panel.redeemRow!.onPressed();
       await flushAndMount(g);
-      expect(opened.map((u) => u.toString()), [
-        'https://flappyspikes.com/support',
-        'https://flappyspikes.com/privacy',
-        'https://play.google.com/redeem?code=',
+      // Web pages open in the in-app browser (owner 2026-10-19); the redeem
+      // link stays in the Play Store app (PRD-2.3 §22.2).
+      expect(opened, [
+        (
+          Uri.parse('https://flappyspikes.com/support'),
+          LaunchMode.inAppBrowserView,
+        ),
+        (
+          Uri.parse('https://flappyspikes.com/privacy'),
+          LaunchMode.inAppBrowserView,
+        ),
+        (
+          Uri.parse('https://play.google.com/redeem?code='),
+          LaunchMode.externalApplication,
+        ),
       ]);
       expect(spy.events.map((e) => e.$1), contains('redeem_code_opened'));
 
@@ -442,12 +536,75 @@ void main() async {
     setUp: boot,
     verify: (g, tester) async {
       final panel = await open(g);
+      expect(panel.creditLead.text, 'Melody by ');
       expect(panel.creditText.text, 'ElectroBaptist');
       expect(panel.versionText.text, 'Flappy Spikes v2.3.0 (10)');
       expect(
         const AppVersion('2.3.0', '10').footer,
         'Flappy Spikes v2.3.0 (10)',
       );
+    },
+  );
+
+  // --- WP-SET the footer version ----------------------------------------------
+
+  // Bug (2.4.0 (36) report): the version was dropped on reopen. PluginAppInfo
+  // hands back one cached, already-resolved future; the panel's load ran
+  // before the frame that mounts it, and `isMounted` then skipped the text.
+  FlameTester<FlappySpikesGame>(
+    () => make(h: 568, info: _CachedAppInfo(const AppVersion('2.4.0', '36'))),
+    gameSize: Vector2(320, 568),
+  ).testGameWidget(
+    'WP-SET the footer shows the version on every open, also when the '
+    'version was already resolved before the panel opened',
+    setUp: boot,
+    verify: (g, tester) async {
+      final first = await openLikeTheApp(g);
+      expect(
+        first.versionText.text,
+        'Flappy Spikes v2.4.0 (36)',
+        reason: '1st',
+      );
+      g.closeSettings();
+      stepGame(g, .6);
+      await flushAndMount(g);
+      final second = await openLikeTheApp(g);
+      expect(
+        second.versionText.text,
+        'Flappy Spikes v2.4.0 (36)',
+        reason: '2nd',
+      );
+      // The footer sits under the cards: scroll to its end for the shot.
+      second.scroll.offset = second.scroll.maxOffset;
+      stepGame(g, .1);
+      await flushAndMount(g);
+      await tester.runAsync(
+        () => captureShot(g, 2, 'p23_s20_footer_568_reopen'),
+      );
+    },
+  );
+
+  FlameTester<FlappySpikesGame>(
+    () => make(h: 568),
+    gameSize: Vector2(320, 568),
+  ).testGameWidget(
+    'WP-SET the footer version also arrives when the read finishes after '
+    'the panel is mounted (first read of the session)',
+    setUp: boot,
+    verify: (g, tester) async {
+      final late = _LateAppInfo();
+      g.appInfo = late;
+      g.openSettings();
+      for (var i = 0; i < 30; i++) {
+        await Future<void>.value();
+      }
+      g.update(0); // mounted; the read is still in flight
+      late.finish(const AppVersion('2.4.0', '36'));
+      await flushAndMount(g);
+      stepGame(g, .6);
+      await flushAndMount(g);
+      final panel = g.world.children.query<SettingsPanel>().single;
+      expect(panel.versionText.text, 'Flappy Spikes v2.4.0 (36)');
     },
   );
 
@@ -477,4 +634,25 @@ void main() async {
       expect(g.state, GameState.paused);
     },
   );
+}
+
+/// PluginAppInfo after its first read: every call hands back the same,
+/// already completed future.
+class _CachedAppInfo extends AppInfo {
+  _CachedAppInfo(AppVersion version) : _future = Future.value(version);
+
+  final Future<AppVersion?> _future;
+
+  @override
+  Future<AppVersion?> load() => _future;
+}
+
+/// A read still in flight until [finish] (the first read of a session).
+class _LateAppInfo extends AppInfo {
+  final Completer<AppVersion?> _completer = Completer<AppVersion?>();
+
+  @override
+  Future<AppVersion?> load() => _completer.future;
+
+  void finish(AppVersion version) => _completer.complete(version);
 }

@@ -43,19 +43,33 @@ class FixedAppInfo extends AppInfo {
   Future<AppVersion?> load() async => version;
 }
 
-/// `package_info_plus` (PRD-2.3 §20.4): read once, cached; every call is
-/// try/caught — a failing plugin never takes the game down.
+/// `package_info_plus` (PRD-2.3 §20.4): read once and cached after a success.
+/// A failed read is not cached: the next call tries again (a null kept for
+/// the whole session would hide the footer's version until the next launch).
+/// Every call is try/caught — a failing plugin never takes the game down.
 class PluginAppInfo extends AppInfo {
-  PluginAppInfo();
+  PluginAppInfo({Future<PackageInfo> Function()? reader})
+    : _reader = reader ?? PackageInfo.fromPlatform;
 
-  Future<AppVersion?>? _cached;
+  final Future<PackageInfo> Function() _reader;
+
+  AppVersion? _version;
+  Future<AppVersion?>? _pending;
 
   @override
-  Future<AppVersion?> load() => _cached ??= _read();
+  Future<AppVersion?> load() {
+    final known = _version;
+    if (known != null) return Future.value(known);
+    return _pending ??= _read().then((version) {
+      _version = version;
+      _pending = null;
+      return version;
+    });
+  }
 
-  static Future<AppVersion?> _read() async {
+  Future<AppVersion?> _read() async {
     try {
-      final info = await PackageInfo.fromPlatform();
+      final info = await _reader();
       return AppVersion(info.version, info.buildNumber);
     } catch (_) {
       return null;

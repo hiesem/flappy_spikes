@@ -174,8 +174,10 @@ Future<void> main() async {
   // PRD-2.2 §28.3: other apps' calls / alarms / music (Android:
   // MainActivity.kt; iOS: AppDelegate.swift `AudioWatch`, same channel).
   if (_isMobile) game.audioFocus = PlatformAudioFocus();
-  // PRD-2.3 §20.2: the Settings footer's version (package_info_plus).
+  // PRD-2.3 §20.2: the Settings footer's version (package_info_plus). Read
+  // at launch, so the first open already has it (WP-SET).
   game.appInfo = PluginAppInfo();
+  unawaited(game.appInfo.load());
 
   // region PRD-2.2 §8 — the Android system back closes the menus only, and
   // never the app (SystemBackObserver below).

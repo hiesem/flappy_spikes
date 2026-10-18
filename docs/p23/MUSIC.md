@@ -1,5 +1,29 @@
 # PRD-2.3 §13 + §16: the music (investigation, fix, seamless loop)
 
+> **Update 2026-10-18: new music.** The HappyBeat loop below is replaced by the
+> Flappy Spikes remix, looped as the owner's option E of
+> `design/music_loop_remix/remix_loop.html` (crossfade select 80 ms). The
+> playback architecture of this document is unchanged (just_audio
+> `LoopMode.one` on Android, `LoopMusic` on iOS, `FlameAudio.bgm` on Linux);
+> only the files changed. `tool/make_music_loop.py`, `make_music_loop_ios.py`
+> and `loop_seam_check.py` (HappyBeat-specific: 146 BPM grid, silence-based
+> seam detection) are removed; the HappyBeat sections below are history.
+>
+> ```
+> python3 -I tool/make_music_loop_remix.py [--report out.json]
+> ```
+>
+> | | |
+> |---|---|
+> | source | `tool/music_src/Flappy_spikes_remix.mp3` (sha256 asserted; not shipped), 48 kHz stereo, no gapless header: ffmpeg decodes 8 815 104 samples (183.648 s), as the page's `decodeAudioData` |
+> | loop | START = 0.176 s = 8 448, END = 176.954 s = 8 493 792, **L = 8 485 344 samples = 176.778 s** (48 kHz, no resampling) |
+> | the jump (as the page plays it) | each segment is queued back to back and plays 80 ms *past* END, gain 1 → 0 linear over [END, END + 80 ms]; the next segment starts at START, gain 0 → 1 linear over the same 80 ms; summed. The loop file is one period of that: `y[i] = x[START+i]·i/X + x[END+i]·(1 − i/X)` for i < X = 3 840, then `x[START+i]` |
+> | OGG (Android / Linux) | `assets/audio/FlappySpikesRemix_loopE.ogg`, Vorbis q6, `ANDROID_LOOP=true`, last granule = L, decodes to L samples, 3.80 MB |
+> | M4A (iOS) | `ios/Runner/FlappySpikesRemix_loopE.m4a`, AAC-LC 192k, 4.33 MB. The encoder gets 2048 samples of the loop's own end as pre-roll (a cold AAC start was −46 dBFS off for the first 50 ms); edit list media_time 3072 (1024 priming + 2048 pre-roll), duration L; stts = 3072 + L; padding r = 544. `LoopMusic`: `loopFrames` 8 485 344, `primingFrames` 3072, `remainderFrames` 544 |
+> | wrap vs the page's own jump (±50 ms) | OGG −53.5 dBFS RMS difference, M4A −57.9; largest sample step at the wrap −42.9 / −38.6 dBFS, below the music's own steps in the 100 ms before (−36.6): no click |
+> | loudness | loop −14.3 LUFS = remix MP3 −14.3 LUFS (no gain: the page applies none). The old HappyBeat loop was −13.7 LUFS, so the new music is 0.6 dB quieter |
+> | first start | the file begins at the seam, so the very first play also has the 80 ms crossfade (the end of the breakdown fading out under the intro's first 41 ms of near-silence); every later wrap equals the page |
+
 Build run 2026-10-13, branch `p23-music`. Test phone: Pixel 6 `24191FDF6008ZD`
 (Android 17), media / ring / notification streams **muted on purpose** and
 Do Not Disturb on (zen mode 1) for the overnight run. Raw evidence (logs,

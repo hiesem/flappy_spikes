@@ -280,9 +280,9 @@ class JustAudioMusic implements MusicBackend {
 }
 
 /// iOS round 2 §1: the music on the runner's `LoopMusic`
-/// (`AppDelegate.swift`, channel `flappy_spikes/music`): the 56-bar AAC
-/// loop (`ios/Runner/HappyBeat_loop_56bars.m4a`, a bundle resource made by
-/// `tool/make_music_loop_ios.py` from the same float cut as Android's OGG)
+/// (`AppDelegate.swift`, channel `flappy_spikes/music`): the AAC music
+/// loop (`ios/Runner/FlappySpikesRemix_loopE.m4a`, a bundle resource made by
+/// `tool/make_music_loop_remix.py` from the same float loop as Android's OGG)
 /// played seamlessly on an `AVAudioPlayerNode`.
 ///
 /// Every call answers with the native state (`none`, `playing`, `paused`,

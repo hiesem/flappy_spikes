@@ -42,8 +42,8 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   (Swift Package Manager for the plugins, CocoaPods fallback via `ios/Podfile`).
   **iOS authenticates Game Center at launch** (`GameServices.authenticateAtLaunch`,
   silent for a signed-in player); the "never `GameAuth.signIn()` at launch"
-  rule is Android-only (PORT-IOS §2). iOS music = `ios/Runner/HappyBeat_loop_56bars.m4a`
-  (`tool/make_music_loop_ios.py`) on the native `LoopMusic`; device logs are
+  rule is Android-only (PORT-IOS §2). iOS music = `ios/Runner/FlappySpikesRemix_loopE.m4a`
+  (`tool/make_music_loop_remix.py`, also writes Android's OGG) on the native `LoopMusic`; device logs are
   `FS-Music` (os_log `.default`) and `flutter: FS-…` lines.
 
 - **Sound lengths (PRD-2.2 §22).** After adding or changing any file in

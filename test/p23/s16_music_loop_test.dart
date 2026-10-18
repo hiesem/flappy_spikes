@@ -99,9 +99,14 @@ class _FakeBackend implements MusicBackend {
   String get state => current;
 }
 
-/// PRD-2.3 §16.5: the seamless 56-bar music loop.
+/// PRD-2.3 §16.5: the seamless music loop. Since 2026-10-18 the Flappy
+/// Spikes remix looped as option E (design/music_loop_remix/remix_loop.html:
+/// 0.176 s → 176.954 s at 48 kHz, 80 ms crossfade at the jump;
+/// `tool/make_music_loop_remix.py`).
 void main() {
-  const oggPath = 'assets/audio/HappyBeat_loop_56bars.ogg';
+  const oggPath = 'assets/audio/FlappySpikesRemix_loopE.ogg';
+  // round(0.176 × 48 000) = 8 448, round(176.954 × 48 000) = 8 493 792.
+  const loopFrames = 8493792 - 8448; // 8 485 344 = 176.778 s
 
   int u32(Uint8List b, int i) =>
       b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24;
@@ -129,26 +134,26 @@ void main() {
   group('§16.5 the asset', () {
     final bytes = File(oggPath).readAsBytesSync();
 
-    test('the last Ogg page: granule position = 4 059 616 samples '
-        '(56 bars at 146 BPM, 44 100 Hz)', () {
+    test('the last Ogg page: granule position = 8 485 344 samples '
+        '(option E, 176.778 s at 48 kHz)', () {
       final i = indexOf(bytes, 'OggS'.codeUnits, last: true);
       expect(i, greaterThanOrEqualTo(0));
       var granule = 0;
       for (var k = 7; k >= 0; k--) {
         granule = granule * 256 + bytes[i + 6 + k];
       }
-      expect(granule, 4059616);
-      expect(granule, (56 * 240 / 146 * 44100).round());
+      expect(granule, loopFrames);
+      expect(granule, 8485344);
       // The last page carries the end-of-stream flag.
       expect(bytes[i + 5] & 0x04, 0x04);
     });
 
-    test('the Vorbis identification header says 44 100 Hz, 2 channels', () {
+    test('the Vorbis identification header says 48 000 Hz, 2 channels', () {
       final i = indexOf(bytes, [0x01, ...'vorbis'.codeUnits]);
       expect(i, greaterThanOrEqualTo(0));
       expect(u32(bytes, i + 7), 0, reason: 'vorbis_version');
       expect(bytes[i + 11], 2);
-      expect(u32(bytes, i + 12), 44100);
+      expect(u32(bytes, i + 12), 48000);
     });
 
     test('the ANDROID_LOOP=true comment is present', () {
@@ -176,11 +181,11 @@ void main() {
         'the Runner bundle (iOS round 2 §1)', () {
       expect(
         SoundService.musicFileFor(isIOS: false),
-        'HappyBeat_loop_56bars.ogg',
+        'FlappySpikesRemix_loopE.ogg',
       );
       expect(
         SoundService.musicFileFor(isIOS: true),
-        'HappyBeat_loop_56bars.m4a',
+        'FlappySpikesRemix_loopE.m4a',
       );
       expect(
         File(
@@ -192,15 +197,16 @@ void main() {
       // the Runner target's resources.
       final m4a = File('ios/Runner/${SoundService.iosMusicFile}');
       expect(m4a.existsSync(), isTrue);
-      expect(m4a.lengthSync(), lessThan(3 * 1024 * 1024));
+      expect(m4a.lengthSync(), lessThan(5 * 1024 * 1024));
       final pbx = File(
         'ios/Runner.xcodeproj/project.pbxproj',
       ).readAsStringSync();
       expect(pbx, contains('${SoundService.iosMusicFile} in Resources */,'));
     });
 
-    test('the iOS loop: AAC in MP4, 44 100 Hz, edit list = 1024 priming '
-        'samples + 4 059 616 (the LoopMusic offset table)', () {
+    test('the iOS loop: AAC in MP4, 48 kHz, edit list = 3072 frames '
+        '(1024 priming + 2048 pre-roll) + 8 485 344 (the LoopMusic offset '
+        'table)', () {
       final b = File(
         'ios/Runner/${SoundService.iosMusicFile}',
       ).readAsBytesSync();
@@ -215,10 +221,15 @@ void main() {
       final movieScale = u32be(mvhd + 4 + 12);
       final duration = u32be(elst + 12);
       final mediaTime = u32be(elst + 16);
-      expect(mediaTime, 1024);
-      expect((duration * 44100 / movieScale).round(), 4059616);
+      expect(mediaTime, 3072);
+      expect((duration * 48000 / movieScale).round(), loopFrames);
       final mdhd = indexOf(b, 'mdhd'.codeUnits);
-      expect(u32be(mdhd + 4 + 12), 44100);
+      expect(u32be(mdhd + 4 + 12), 48000);
+      // The runner's LoopMusic constants match the file.
+      final swift = File('ios/Runner/AppDelegate.swift').readAsStringSync();
+      expect(swift, contains('loopFrames: AVAudioFramePosition = 8_485_344'));
+      expect(swift, contains('primingFrames: AVAudioFramePosition = 3072'));
+      expect(swift, contains('remainderFrames: AVAudioFramePosition = 544'));
       expect(indexOf(b, 'mp4a'.codeUnits), greaterThan(0));
     });
   });
@@ -258,7 +269,7 @@ void main() {
       await music.stop();
       expect(calls, [
         'state',
-        'start {file: HappyBeat_loop_56bars.m4a, volume: 0.35, rate: 0.72}',
+        'start {file: FlappySpikesRemix_loopE.m4a, volume: 0.35, rate: 0.72}',
         'setVolume {volume: 0.5}',
         'setRate {rate: 1.0}',
         'pause',
@@ -274,10 +285,10 @@ void main() {
         'the volume and the speed, then plays', () async {
       final port = _FakePort();
       final music = JustAudioMusic(port: () => port);
-      await music.start('HappyBeat_loop_56bars.ogg', volume: .35, rate: .72);
+      await music.start('FlappySpikesRemix_loopE.ogg', volume: .35, rate: .72);
       expect(port.calls, [
         'attributes',
-        'asset assets/audio/HappyBeat_loop_56bars.ogg',
+        'asset assets/audio/FlappySpikesRemix_loopE.ogg',
         'loop one',
         'volume 0.35',
         'speed 0.72',
@@ -287,14 +298,14 @@ void main() {
       final port2 = _FakePort();
       await JustAudioMusic(
         port: () => port2,
-      ).start('HappyBeat_loop_56bars.ogg', volume: 1, rate: 1);
+      ).start('FlappySpikesRemix_loopE.ogg', volume: 1, rate: 1);
       expect(port2.calls.where((c) => c.startsWith('speed')), isEmpty);
     });
 
     test('pause and resume keep the position (no seek, no reload)', () async {
       final port = _FakePort();
       final music = JustAudioMusic(port: () => port);
-      await music.start('HappyBeat_loop_56bars.ogg', volume: 1, rate: 1);
+      await music.start('FlappySpikesRemix_loopE.ogg', volume: 1, rate: 1);
       port.calls.clear();
       await music.pause();
       await music.resume();
@@ -306,14 +317,14 @@ void main() {
       () async {
         final port = _FakePort();
         final music = JustAudioMusic(port: () => port);
-        await music.start('HappyBeat_loop_56bars.ogg', volume: 1, rate: 1);
+        await music.start('FlappySpikesRemix_loopE.ogg', volume: 1, rate: 1);
         port.calls.clear();
         await music.stop();
-        await music.start('HappyBeat_loop_56bars.ogg', volume: 1, rate: 1);
+        await music.start('FlappySpikesRemix_loopE.ogg', volume: 1, rate: 1);
         expect(port.calls, [
           'stop',
           'attributes',
-          'asset assets/audio/HappyBeat_loop_56bars.ogg',
+          'asset assets/audio/FlappySpikesRemix_loopE.ogg',
           'loop one',
           'volume 1.0',
           'play',
@@ -329,7 +340,7 @@ void main() {
       final port = _FakePort();
       await JustAudioMusic(
         port: () => port,
-      ).start('HappyBeat_loop_56bars.ogg', volume: 1, rate: 1);
+      ).start('FlappySpikesRemix_loopE.ogg', volume: 1, rate: 1);
       expect(port.attributes!.usage, AndroidAudioUsage.game);
       expect(port.attributes!.usage.value, 14);
       expect(port.attributes!.contentType, AndroidAudioContentType.music);
@@ -340,7 +351,7 @@ void main() {
       final port = _FakePort();
       final music = JustAudioMusic(port: () => port);
       expect(music.state, 'none');
-      await music.start('HappyBeat_loop_56bars.ogg', volume: 1, rate: 1);
+      await music.start('FlappySpikesRemix_loopE.ogg', volume: 1, rate: 1);
       await music.pause();
       await music.resume();
       expect(port.stateListens, 1);
@@ -367,7 +378,7 @@ void main() {
         await sound.setMusicRate(.72);
         await sound.startMusic();
         await flushAudio();
-        expect(backend.calls, ['start HappyBeat_loop_56bars.ogg 0.2 0.72']);
+        expect(backend.calls, ['start FlappySpikesRemix_loopE.ogg 0.2 0.72']);
         backend.calls.clear();
         await sound.duckMusic(1);
         await sound.setMusicRate(1);
@@ -381,7 +392,7 @@ void main() {
         await flushAudio();
         expect(backend.calls, [
           'stop',
-          'start HappyBeat_loop_56bars.ogg 0.5 1.0',
+          'start FlappySpikesRemix_loopE.ogg 0.5 1.0',
         ]);
         await sound.dispose();
       },

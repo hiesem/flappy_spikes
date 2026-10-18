@@ -21,9 +21,9 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 AUDIO = ROOT / "assets" / "audio"
 OUT = ROOT / "lib" / "game" / "sound_durations.g.dart"
-# The music files are skipped (PRD-2.3 §16.3: the OGG loop plays on Android
-# and Linux, the MP3 stays for iOS).
-MUSIC = {"HappyBeat_8-Bit_Retro_Game_Loop.mp3", "HappyBeat_loop_56bars.ogg"}
+# The music file is skipped (PRD-2.3 §16.3: the OGG loop plays on Android
+# and Linux; iOS plays its AAC twin from ios/Runner, not an asset).
+MUSIC = {"FlappySpikesRemix_loopE.ogg"}
 
 
 def duration_ms(path: pathlib.Path) -> int:

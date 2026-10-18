@@ -12,12 +12,9 @@ import 'fake_audio.dart';
 /// the generated table), long sounds get 3 players, and a fully busy pool
 /// steals its oldest copy instead of creating a player.
 void main() {
-  // PRD-2.3 §16.3: two music files (the OGG loop for Android / Linux, the
-  // MP3 for iOS), both outside the one-shot table.
-  const musicFiles = {
-    'HappyBeat_8-Bit_Retro_Game_Loop.mp3',
-    'HappyBeat_loop_56bars.ogg',
-  };
+  // PRD-2.3 §16.3: the music file (the OGG loop for Android / Linux; iOS
+  // plays its AAC twin from ios/Runner), outside the one-shot table.
+  const musicFiles = {'FlappySpikesRemix_loopE.ogg'};
 
   group('§22.4 the duration table is current', () {
     final files = Directory('assets/audio')
@@ -52,9 +49,9 @@ void main() {
       }
     });
 
-    test('PRD-2.3 §16.3 the shipped music loop is 92.055 s (56 bars at '
-        '146 BPM) and the music file is not in the table', () {
-      final ogg = File('assets/audio/HappyBeat_loop_56bars.ogg');
+    test('the shipped music loop is the remix option E, 176.778 s at '
+        '48 kHz, and the music file is not in the table', () {
+      final ogg = File('assets/audio/FlappySpikesRemix_loopE.ogg');
       expect(ogg.existsSync(), isTrue);
       final bytes = ogg.readAsBytesSync();
       // The last Ogg page's granule position = the sample count.
@@ -70,7 +67,8 @@ void main() {
       for (var k = 7; k >= 0; k--) {
         granule = granule * 256 + bytes[i + 6 + k];
       }
-      expect(granule / 44100, closeTo(92.055, 0.0005));
+      expect(granule, 8485344);
+      expect(granule / 48000, closeTo(176.778, 0.0005));
       expect(
         SoundService.musicFileFor(isIOS: false),
         ogg.uri.pathSegments.last,

@@ -18,7 +18,7 @@
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		A1FDE7161E0B14F8C353DCDC /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 7E953702702E4F09A86645F8 /* GoogleService-Info.plist */; };
 		1646DF954BC873E23577CC65 /* notif_chime.caf in Resources */ = {isa = PBXBuildFile; fileRef = 3584242CAFD7836D051E5003 /* notif_chime.caf */; };
-		7E1A2B3C4D5E6F7081920A1B /* HappyBeat_loop_56bars.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6071829304152 /* HappyBeat_loop_56bars.m4a */; };
+		7E1A2B3C4D5E6F7081920A1B /* FlappySpikesRemix_loopE.m4a in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6071829304152 /* FlappySpikesRemix_loopE.m4a */; };
 		9C5B7AA9BD727477C4167093 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7ED53DBBA5DAD68392796485 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -65,7 +65,7 @@
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7E953702702E4F09A86645F8 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		3584242CAFD7836D051E5003 /* notif_chime.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = notif_chime.caf; sourceTree = "<group>"; };
-		A1B2C3D4E5F6071829304152 /* HappyBeat_loop_56bars.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = HappyBeat_loop_56bars.m4a; sourceTree = "<group>"; };
+		A1B2C3D4E5F6071829304152 /* FlappySpikesRemix_loopE.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = FlappySpikesRemix_loopE.m4a; sourceTree = "<group>"; };
 		7ED53DBBA5DAD68392796485 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -134,7 +134,7 @@
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				7E953702702E4F09A86645F8 /* GoogleService-Info.plist */,
 				3584242CAFD7836D051E5003 /* notif_chime.caf */,
-				A1B2C3D4E5F6071829304152 /* HappyBeat_loop_56bars.m4a */,
+				A1B2C3D4E5F6071829304152 /* FlappySpikesRemix_loopE.m4a */,
 				7ED53DBBA5DAD68392796485 /* PrivacyInfo.xcprivacy */,
 			);
 			path = Runner;
@@ -243,7 +243,7 @@
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 				A1FDE7161E0B14F8C353DCDC /* GoogleService-Info.plist in Resources */,
 				1646DF954BC873E23577CC65 /* notif_chime.caf in Resources */,
-				7E1A2B3C4D5E6F7081920A1B /* HappyBeat_loop_56bars.m4a in Resources */,
+				7E1A2B3C4D5E6F7081920A1B /* FlappySpikesRemix_loopE.m4a in Resources */,
 				9C5B7AA9BD727477C4167093 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

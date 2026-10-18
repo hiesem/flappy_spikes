@@ -451,15 +451,17 @@ class SoundService {
   /// fresh player mid-animation).
   static const Set<Sfx> _burstPool = {Sfx.bnCoin, Sfx.skTick, Sfx.piggyCoin};
 
-  /// PRD-2.3 §16.3: the seamless 56-bar OGG loop on Android and the Linux
-  /// desktop build. iOS (no OGG Vorbis) plays the same loop as AAC, a
-  /// Runner bundle resource (not a Flutter asset) played by the runner's
-  /// `LoopMusic` ([NativeLoopMusic], iOS round 2 §1).
+  /// PRD-2.3 §16.3: the seamless OGG music loop on Android and the Linux
+  /// desktop build: the Flappy Spikes remix looped as the owner's option E
+  /// (0.176 s → 176.954 s, 80 ms crossfade at the jump; 2026-10-18,
+  /// `tool/make_music_loop_remix.py`). iOS (no OGG Vorbis) plays the same
+  /// loop as AAC, a Runner bundle resource (not a Flutter asset) played by
+  /// the runner's `LoopMusic` ([NativeLoopMusic], iOS round 2 §1).
   static String musicFileFor({required bool isIOS}) =>
-      isIOS ? iosMusicFile : 'HappyBeat_loop_56bars.ogg';
+      isIOS ? iosMusicFile : 'FlappySpikesRemix_loopE.ogg';
 
-  /// The iOS music loop in `ios/Runner/` (`tool/make_music_loop_ios.py`).
-  static const String iosMusicFile = 'HappyBeat_loop_56bars.m4a';
+  /// The iOS music loop in `ios/Runner/` (`tool/make_music_loop_remix.py`).
+  static const String iosMusicFile = 'FlappySpikesRemix_loopE.m4a';
 
   static String get _musicFile =>
       musicFileFor(isIOS: !kIsWeb && Platform.isIOS);

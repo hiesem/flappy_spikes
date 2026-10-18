@@ -442,6 +442,15 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   (ExoPlayer, `LoopMode.one`, `USAGE_GAME`, no audio focus): audioplayers'
   `MediaPlayer` loop left a 250–265 ms gap at every wrap (docs/p23/MUSIC.md).
   iOS (paused) keeps the MP3 on `FlameAudio.bgm`.
+- DEVIATION (2026-10-18): the music is the Flappy Spikes remix
+  (`tool/music_src/Flappy_spikes_remix.mp3`, 48 kHz) looped as the owner's
+  option E of `design/music_loop_remix/remix_loop.html`: 0.176 s → jump at
+  176.954 s back to 0.176 s, 80 ms linear crossfade at the jump (the
+  outgoing audio plays on 80 ms past the jump fading out while the loop start
+  fades in), 8 485 344 samples = 176.778 s, no gain change. Files:
+  `assets/audio/FlappySpikesRemix_loopE.ogg` (Android just_audio, Linux) and
+  `ios/Runner/FlappySpikesRemix_loopE.m4a` (iOS `LoopMusic`), both made by
+  `tool/make_music_loop_remix.py`. The HappyBeat files are gone from the app.
 - Share button: capture screenshot of the game + share text
   `OMG! I got N points in Flappy Spikes!` via share_plus.
 

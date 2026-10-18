@@ -374,11 +374,14 @@ final class AudioWatch: NSObject, FlutterStreamHandler {
   }
 }
 
-/// iOS round 2 §1: the 56-bar music loop, seamless (Dart: `NativeLoopMusic`
+/// iOS round 2 §1: the music loop, seamless (Dart: `NativeLoopMusic`
 /// on `flappy_spikes/music`).
 ///
-/// `HappyBeat_loop_56bars.m4a` (Runner bundle; `tool/make_music_loop_ios.py`)
-/// is AAC with 1024 priming samples. The loop is the file segment
+/// `FlappySpikesRemix_loopE.m4a` (Runner bundle;
+/// `tool/make_music_loop_remix.py`; the remix looped as option E, 48 kHz,
+/// L = 8 485 344 frames = 176.778 s) is AAC with 3072 frames before the loop
+/// (1024 encoder priming + 2048 pre-roll of the loop's own end, skipped by
+/// the MP4 edit list) and 544 padding frames. The loop is the file segment
 /// [offset, offset + loopFrames), scheduled back to back on an
 /// `AVAudioPlayerNode` (always one whole loop queued ahead), which plays
 /// scheduled segments sample-exactly one after the other: no gap and no
@@ -392,8 +395,8 @@ final class AudioWatch: NSObject, FlutterStreamHandler {
 /// `stopped` when the music should play but the engine / node is not
 /// running, so the Dart watchdog (PRD-2.3 §13.4) restarts it.
 final class LoopMusic: NSObject {
-  static let loopFrames: AVAudioFramePosition = 4_059_616
-  static let primingFrames: AVAudioFramePosition = 1024
+  static let loopFrames: AVAudioFramePosition = 8_485_344
+  static let primingFrames: AVAudioFramePosition = 3072
   static let remainderFrames: AVAudioFramePosition = 544
 
   private let channel: FlutterMethodChannel

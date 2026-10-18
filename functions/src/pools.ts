@@ -6,7 +6,10 @@
 import { Firestore, Timestamp } from 'firebase-admin/firestore';
 import { levelFor } from './levels.js';
 import { versusName } from './nickname.js';
+import { checkCustomName, CustomNameReason, poolCustomName } from './customname.js';
 import {
+  NAMES_COLLECTION,
+  NameDoc,
   DAILY_UPLOADS,
   PlayerDoc,
   POOL_CAP,
@@ -125,6 +128,7 @@ export async function processPlayerWrite(
     const poolRef = db.collection('pools').doc(pid);
     const rateRef = db.collection(RATE_COLLECTION).doc(uid);
     const playerRef = db.collection('players').doc(uid);
+    const nameRef = db.collection(NAMES_COLLECTION).doc(uid);
     const today = utcDay(nowMs);
 
     await db.runTransaction(async (tx) => {
@@ -132,10 +136,11 @@ export async function processPlayerWrite(
       result.rejected = [];
       delete result.pool;
       delete result.playerGone;
-      const [playerSnap, rateSnap, poolSnap] = await Promise.all([
+      const [playerSnap, rateSnap, poolSnap, nameSnap] = await Promise.all([
         tx.get(playerRef),
         tx.get(rateRef),
         tx.get(poolRef),
+        tx.get(nameRef),
       ]);
       if (!playerSnap.exists) {
         result.playerGone = true;
@@ -196,6 +201,9 @@ export async function processPlayerWrite(
           // PRD-2.3 §21.4 the self-match guard's hashed Play Games id.
           pg: typeof chosen.pg === 'string' ? chosen.pg : '',
         };
+        // WP-NAME the custom name the server accepted (setCustomName).
+        const custom = poolCustomName((nameSnap.data() as NameDoc | undefined)?.customName);
+        if (custom) entry.customName = custom;
         const pool = poolSnap.data() as PoolDoc | undefined;
         const { entries } = mergePool(poolRef.path, pool, entry, uid, nowMs);
         tx.set(poolRef, { level, shard, updatedAt: Timestamp.fromMillis(nowMs), entries });
@@ -254,11 +262,13 @@ export async function sweepAllPools(db: Firestore, nowMs = Date.now()): Promise<
 export async function deletePlayerData(db: Firestore, uid: string, nowMs = Date.now()): Promise<number> {
   const playerRef = db.collection('players').doc(uid);
   const rateRef = db.collection(RATE_COLLECTION).doc(uid);
+  const nameRef = db.collection(NAMES_COLLECTION).doc(uid);
   const poolRefs = allPoolIds().map((pid) => db.collection('pools').doc(pid));
   return db.runTransaction(async (tx) => {
-    const [player, rate, ...pools] = await Promise.all([
+    const [player, rate, name, ...pools] = await Promise.all([
       tx.get(playerRef),
       tx.get(rateRef),
+      tx.get(nameRef),
       ...poolRefs.map((ref) => tx.get(ref)),
     ]);
     let removed = 0;
@@ -272,6 +282,57 @@ export async function deletePlayerData(db: Firestore, uid: string, nowMs = Date.
     });
     if (player.exists) tx.delete(playerRef);
     if (rate.exists) tx.delete(rateRef);
+    if (name.exists) tx.delete(nameRef);
     return removed;
   });
+}
+
+export type SetNameResult = { ok: true; name: string; updated: number } | { ok: false; reason: CustomNameReason };
+
+/**
+ * WP-NAME sets (or with '' clears) [uid]'s custom versus name: the format
+ * rule and the word filter ([checkCustomName]); an accepted name is stored
+ * in `versusNames/{uid}` and written into this uid's entries in all 44 pool
+ * shards at once (one transaction), so opponents see it right away; a
+ * cleared one removes it there (the generated name shows again).
+ */
+export async function setCustomName(
+  db: Firestore,
+  uid: string,
+  raw: unknown,
+  nowMs = Date.now(),
+): Promise<SetNameResult> {
+  const name = raw === '' || raw === null || raw === undefined ? '' : raw;
+  if (name !== '') {
+    const reason = checkCustomName(name);
+    if (reason) return { ok: false, reason };
+  }
+  const custom = name as string;
+  const nameRef = db.collection(NAMES_COLLECTION).doc(uid);
+  const poolRefs = allPoolIds().map((pid) => db.collection('pools').doc(pid));
+  const updated = await db.runTransaction(async (tx) => {
+    const pools = await Promise.all(poolRefs.map((ref) => tx.get(ref)));
+    let n = 0;
+    pools.forEach((snap, i) => {
+      if (!snap.exists) return;
+      const pool = snap.data() as PoolDoc;
+      if (!Array.isArray(pool.entries) || !pool.entries.some((e) => e.uid === uid)) return;
+      const entries = pool.entries.map((e) => {
+        if (e.uid !== uid) return e;
+        n++;
+        const next: PoolEntry = { ...e };
+        if (custom) next.customName = custom;
+        else delete next.customName;
+        return next;
+      });
+      tx.update(poolRefs[i], { entries });
+    });
+    if (custom) {
+      tx.set(nameRef, { customName: custom, updatedAt: Timestamp.fromMillis(nowMs) } satisfies NameDoc);
+    } else {
+      tx.delete(nameRef);
+    }
+    return n;
+  });
+  return { ok: true, name: custom, updated };
 }

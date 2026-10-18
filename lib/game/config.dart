@@ -1464,6 +1464,10 @@ class Config {
   static const double settingsBodyLeft = 14;
   static const double settingsBodyWidth = 292;
   static const double settingsBodyTop = 114;
+
+  /// WP-NAME the scrolling body is clipped this far above the first
+  /// caption (under the title).
+  static const double settingsScrollTopGap = 6;
   static const double settingsBottomInset = 50;
 
   /// §20.2 captions: 10.5 pt, .22 em, a 15 pt line, 6 pt under it.

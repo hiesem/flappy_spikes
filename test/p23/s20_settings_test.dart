@@ -77,7 +77,7 @@ void main() async {
         gameSize: Vector2(320, h),
       ).testGameWidget(
         '§20.5 layout ($h, Privacy options ${options ? 'shown' : 'hidden'}) '
-        'fits between the strips without scrolling',
+        'fits between the strips (WP-NAME: scrolled to its end)',
         setUp: boot,
         verify: (g, tester) async {
           final panel = await open(g);
@@ -97,10 +97,16 @@ void main() async {
           expect(privacy.top, greaterThanOrEqualTo(game.bottom));
           final footerTop = panel.creditText.toAbsoluteRect().top;
           expect(footerTop, greaterThanOrEqualTo(privacy.bottom));
+          // WP-NAME the PLAYER card pushes the rows down: the body scrolls,
+          // and scrolled to its end the footer clears the bottom spikes.
+          final scroll = panel.scroll;
+          expect(scroll.scrollable, isTrue);
+          scroll.offset = scroll.maxOffset;
           expect(
             panel.versionText.toAbsoluteRect().bottom,
-            lessThanOrEqualTo(h - Config.menuSpikeHeight),
+            lessThanOrEqualTo(h - Config.menuSpikeHeight + 1e-3),
           );
+          scroll.offset = 0;
           // Three tiles in a row, equal width, 8 pt gaps, 292 pt body.
           final m = panel.musicTile.toAbsoluteRect();
           final r = panel.rumbleTile.toAbsoluteRect();
@@ -115,8 +121,9 @@ void main() async {
             expect(l.tileHeight, Config.settingsTileHeight);
             expect(l.rowHeight, Config.settingsRowHeight);
             expect(l.cardGap, Config.settingsCardGap);
-            expect(tiles.top, closeTo(135, 1e-6));
-            expect(game.top, closeTo(325, 1e-6));
+            // WP-NAME + 99: the PLAYER caption (15 + 6), card (68), gap 10.
+            expect(tiles.top, closeTo(135 + 99, 1e-3));
+            expect(game.top, closeTo(325 + 99, 1e-3));
           } else {
             // §20.2 order: card gaps first, then rows, then tiles.
             expect(l.cardGap, lessThan(Config.settingsCardGap));

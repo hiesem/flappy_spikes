@@ -56,7 +56,7 @@ void main() {
     test('§21.2 at 70 % and still too wide: cut and ended with "…"', () {
       const name = 'Wolfgang Amadeus Mozart Junior 3';
       final f = fitName(name, 116, 22, mono);
-      expect(f.size, closeTo(22 * .7, 1e-9));
+      expect(f.size, closeTo(22 * HudConfig.nameMinScale, 1e-9));
       expect(f.cut, isTrue);
       expect(f.text, endsWith('…'));
       expect(name.startsWith(f.text.substring(0, f.text.length - 1).trimRight()),
@@ -106,9 +106,11 @@ void main() {
             await Future<void>.value();
           }
           for (final plate in [intro.youPlate, intro.oppPlate]) {
-            expect(plate.name, name);
+            // WP-NAME the own plate is "You" (no custom name set).
+            final want = plate == intro.youPlate ? 'You' : name;
+            expect(plate.name, want);
             final t = plate.shownText!;
-            expect(t.size, greaterThanOrEqualTo(VersusConfig.plateNameSize * .7 - 1e-6));
+            expect(t.size, greaterThanOrEqualTo(VersusConfig.plateNameSize * HudConfig.nameMinScale - 1e-6));
             expect(t.width, lessThanOrEqualTo(plate.nameRoom + .5));
             // The name ends before the emblem's overhang (never covered).
             final nameRight = VersusConfig.plateSlot +
@@ -118,8 +120,8 @@ void main() {
                 VersusConfig.plateSlot / 2 -
                 VersusConfig.plateEmblemHalf;
             expect(nameRight, lessThanOrEqualTo(emblemLeft));
-            if (n <= 10) expect(t.text, name, reason: 'a short name is whole');
-            if (n >= 32) expect(t.text, endsWith('…'));
+            if (n <= 10) expect(t.text, want, reason: 'a short name is whole');
+            if (n >= 32 && want == name) expect(t.text, endsWith('…'));
           }
           final short = n <= 10 ? 's' : (n <= 17 ? 'm' : 'l');
           await tester.runAsync(() => shots.shot(g, 1.5, 's21_intro_${short}_$tag'));
@@ -129,11 +131,12 @@ void main() {
           // ---- the HUD name chips
           final bar = g.runHud!.versus!;
           for (final chip in [bar.you, bar.them]) {
-            expect(chip.name, name);
-            expect(chip.size, greaterThanOrEqualTo(HudConfig.chipNameSize * .7 - 1e-6));
+            final want = chip == bar.you ? 'You' : name; // WP-NAME
+            expect(chip.name, want);
+            expect(chip.size, greaterThanOrEqualTo(HudConfig.chipNameSize * HudConfig.nameMinScale - 1e-6));
             expect(chip.width,
                 lessThanOrEqualTo(HudConfig.boxWidth - 2 * HudConfig.chipPad + .5));
-            if (n <= 10) expect(chip.shown, name);
+            if (n <= 10) expect(chip.shown, want);
           }
           for (var i = 0; i < 60; i++) {
             g.update(1 / 60);
@@ -166,7 +169,7 @@ void main() {
           final page = g.resultsScreen!;
           for (final col in [page.you, page.them!]) {
             final t = col.nameText;
-            expect(t.fontSize, greaterThanOrEqualTo(ResultsConfig.nameFontSize * .7 - 1e-6));
+            expect(t.fontSize, greaterThanOrEqualTo(ResultsConfig.nameFontSize * HudConfig.nameMinScale - 1e-6));
             expect(t.size.x, lessThanOrEqualTo(ResultsConfig.nameRoomVersus + .5));
           }
           await tester.runAsync(() => shots.shot(g, 1.5, 's21_results_${short}_$tag'));

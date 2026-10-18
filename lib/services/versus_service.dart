@@ -9,6 +9,7 @@ import '../levels/levels.dart';
 import '../run/config/versus_config.dart';
 import '../run/run_summary.dart';
 import '../skins/look.dart';
+import '../versus/custom_name.dart';
 import '../versus/diagnostics.dart';
 import '../versus/matcher.dart';
 import '../versus/nickname.dart';
@@ -87,6 +88,12 @@ abstract class VersusService {
 
   VersusProfile get me;
 
+  /// WP-NAME sends the custom versus name ('' clears it) to the server now:
+  /// accepted (for a uid), refused (with the reason) or offline (the caller
+  /// keeps it on the phone; [FirebaseVersusService] sends it later). Never
+  /// throws.
+  Future<CustomNameSave> sendCustomName(String name);
+
   /// Links the platform identity's credential to the Firebase user.
   Future<void> onPlatformSignIn();
 
@@ -136,6 +143,11 @@ class NoopVersusService implements VersusService {
 
   @override
   VersusProfile get me => const VersusProfile();
+
+  /// No backend: the name stays on the phone.
+  @override
+  Future<CustomNameSave> sendCustomName(String name) async =>
+      const CustomNameOffline();
 
   @override
   Future<void> onPlatformSignIn() async {}
@@ -232,6 +244,22 @@ class FakeVersusService implements VersusService {
   @override
   VersusProfile get me => profile;
 
+  /// WP-NAME names sent ([sendCustomName]) and the scripted answer (null =
+  /// accepted for uid 'fake').
+  final List<String> sentNames = [];
+  CustomNameSave? nameAnswer;
+
+  /// WP-NAME completes the answer later when set (tests of the SAVING state).
+  Future<void>? nameDelay;
+
+  @override
+  Future<CustomNameSave> sendCustomName(String name) async {
+    sentNames.add(name);
+    final d = nameDelay;
+    if (d != null) await d;
+    return nameAnswer ?? const CustomNameAccepted('fake');
+  }
+
   @override
   Future<void> onPlatformSignIn() async => signInCalls++;
 
@@ -292,6 +320,9 @@ abstract class VersusBackend {
 
   /// `FirebaseAnalytics.resetAnalyticsData()`.
   Future<void> resetAnalytics();
+
+  /// WP-NAME the `setVersusName` callable ('' clears). May throw (offline).
+  Future<CustomNameSave> setCustomName(String name);
 }
 
 /// The player-level fields written with every run (ARCH §6.1).
@@ -584,6 +615,8 @@ class FirebaseVersusService implements VersusService {
     // S8-03: a held opponent picked under the old uid / pg may now be me.
     _dropHeldIfMine();
     unawaited(_ensurePg().then((_) => _dropHeldIfMine()));
+    // WP-NAME a new uid gets the custom name too.
+    if (_ready) unawaited(syncCustomName());
   }
 
   /// PRD-2.3 §21.4 `pg` = SHA-256(Play Games id + salt), '' without Play
@@ -617,6 +650,59 @@ class FirebaseVersusService implements VersusService {
       name: s.versusNickname ?? '', // WP-AV the generated name only
       level: s.playerLevel.clamp(0, kMaxLevel), // WP-L the stored level
     );
+  }
+
+  @override
+  Future<CustomNameSave> sendCustomName(String name) async {
+    if (!_ready) {
+      // Offline start-up: kept on the phone, sent once versus is up.
+      unawaited(_recover());
+      return const CustomNameOffline();
+    }
+    try {
+      return await _call(backend.setCustomName(name));
+    } catch (e) {
+      _log('custom name', e);
+      return const CustomNameOffline();
+    }
+  }
+
+  /// The custom-name sync in flight (one at a time).
+  Future<void>? _namesSyncing;
+
+  /// WP-NAME sends a custom name the server has not confirmed for the
+  /// current uid (saved offline, or the uid changed). A refusal puts back
+  /// the name the server last confirmed for this uid ('' = "You") and keeps
+  /// the reason for the Settings card. Never throws.
+  Future<void> syncCustomName() => _namesSyncing ??= _syncCustomName()
+      .whenComplete(() => _namesSyncing = null);
+
+  Future<void> _syncCustomName() async {
+    try {
+      if (!_ready) return;
+      final uid = _safe(() => backend.uid) ?? '';
+      if (uid.isEmpty) return;
+      final s = storage;
+      final name = s.versusCustomName;
+      final synced = s.versusCustomNameSyncedFor(uid);
+      // Nothing chosen and nothing sent for this uid: nothing to clear.
+      if (synced == name || (synced == null && name.isEmpty)) return;
+      final r = await _call(backend.setCustomName(name));
+      // The player changed it again meanwhile: the next pass sends that.
+      if (s.versusCustomName != name) return;
+      switch (r) {
+        case CustomNameAccepted(uid: final at):
+          await s.saveVersusCustomNameSync(at, name);
+        case CustomNameRefused(:final reason):
+          final back = synced ?? '';
+          await s.saveVersusCustomName(back);
+          await s.saveVersusCustomNameError(reason.key);
+        case CustomNameOffline():
+          break;
+      }
+    } catch (e) {
+      _log('custom name sync', e);
+    }
   }
 
   T? _safe<T>(T Function() f) {
@@ -919,6 +1005,7 @@ class FirebaseVersusService implements VersusService {
       await _recover();
       if (!_ready) return 0;
     }
+    unawaited(syncCustomName()); // WP-NAME
     return _flushing ??= _flush().whenComplete(() => _flushing = null);
   }
 

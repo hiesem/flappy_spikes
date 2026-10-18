@@ -7,7 +7,7 @@ import 'run_hud.dart';
 /// Fredoka SemiBold (the own name / the opponent's display name), 14 pt
 /// since S8-08 ([HudConfig.chipNameSize]).
 /// PRD-2.3 §21.2: the name follows the one name rule ([HudText.name]:
-/// shrunk to fit the chip minus its padding down to 70 %, then "…").
+/// shrunk to fit the chip minus its padding down to 66 %, then "…").
 /// Drawn by the [VersusBar].
 class NameChip {
   NameChip(this.name, this.left)

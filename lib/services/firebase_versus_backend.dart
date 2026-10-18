@@ -9,6 +9,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
 import '../run/config/versus_config.dart';
+import '../versus/custom_name.dart';
 import '../versus/diagnostics.dart';
 import '../versus/run_entry.dart';
 import '../versus/upload_queue.dart';
@@ -411,6 +412,23 @@ class FirebaseVersusBackend implements VersusBackend {
     ).httpsCallable(VersusConfig.deleteFunction).call<Object?>();
     final data = result.data;
     return data is Map && data['ok'] == true;
+  }
+
+  @override
+  Future<CustomNameSave> setCustomName(String name) async {
+    final uid = this.uid;
+    if (uid == null) return const CustomNameOffline();
+    final result = await FirebaseFunctions.instanceFor(
+      app: app,
+      region: VersusConfig.functionsRegion,
+    ).httpsCallable(VersusConfig.setNameFunction).call<Object?>({'name': name});
+    final data = result.data;
+    if (data is Map && data['ok'] == true) return CustomNameAccepted(uid);
+    if (data is Map) {
+      final reason = CustomNameReason.fromKey(data['reason']);
+      if (reason != null) return CustomNameRefused(reason);
+    }
+    return const CustomNameOffline();
   }
 
   @override

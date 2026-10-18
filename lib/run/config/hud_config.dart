@@ -51,9 +51,12 @@ abstract final class HudConfig {
   static const double chipHeight = 22;
   static const double chipFont = 15;
 
-  /// PRD-2.3 §21.2 a name tag shrinks to fit its room down to 70 % of its
-  /// normal size, then it is cut with "…" (`fitName`).
-  static const double nameMinScale = .7;
+  /// PRD-2.3 §21.2 a name tag shrinks to fit its room down to 66 % of its
+  /// normal size, then it is cut with "…" (`fitName`). WP-NAME: was 70 %;
+  /// the 40 + 40 word lists (design/nicknames/nickname_words.md) bring
+  /// 14-letter pairs such as SparklySparrow888, which need 66.9 % on the VS
+  /// plate and 69.7 % in the HUD chip to keep their digits (S8-08).
+  static const double nameMinScale = .66;
 
   /// PRD-2.3 §21.2 the padding on each side of a name chip's text (pt).
   /// S8-08: 2 (was 4), so with [chipNameSize] every generated nickname

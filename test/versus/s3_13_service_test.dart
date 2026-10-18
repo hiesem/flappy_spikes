@@ -8,6 +8,7 @@ import 'package:flappy_spikes/run/run_summary.dart';
 import 'package:flappy_spikes/services/identity.dart';
 import 'package:flappy_spikes/services/versus_service.dart';
 import 'package:flappy_spikes/skins/look.dart';
+import 'package:flappy_spikes/versus/custom_name.dart';
 import 'package:flappy_spikes/versus/nickname.dart';
 import 'package:flappy_spikes/versus/run_entry.dart';
 import 'package:flappy_spikes/versus/timeline.dart';
@@ -99,6 +100,24 @@ class FakeBackend implements VersusBackend {
 
   @override
   Future<void> resetAnalytics() async => resets++;
+
+  /// WP-NAME the names the callable got, the server's state per uid and a
+  /// scripted answer (refused 'blocked' when the name holds "bad").
+  /// [nameOffline] throws like an unreachable server.
+  final List<String> namesSent = [];
+  final Map<String, String> serverNames = {};
+  bool nameOffline = false;
+
+  @override
+  Future<CustomNameSave> setCustomName(String name) async {
+    namesSent.add(name);
+    if (nameOffline) throw StateError('offline');
+    if (name.toLowerCase().contains('bad')) {
+      return const CustomNameRefused(CustomNameReason.blocked);
+    }
+    serverNames[myUid] = name;
+    return CustomNameAccepted(myUid);
+  }
 }
 
 class FakeIdentity implements PlatformIdentity {

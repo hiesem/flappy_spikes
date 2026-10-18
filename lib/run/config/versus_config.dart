@@ -117,6 +117,10 @@ abstract final class VersusConfig {
   /// §3.13 The callable that deletes everything online (ARCH §6.3).
   static const String deleteFunction = 'deleteMyData';
 
+  /// WP-NAME the callable that checks and stores the custom versus name
+  /// (`functions/src/index.ts`).
+  static const String setNameFunction = 'setVersusName';
+
   /// §3.13 Play Games → Firebase link: the OAuth **web** client id the Play
   /// Games server auth code is requested for (public config, not a secret).
   static const String playGamesWebClientId =

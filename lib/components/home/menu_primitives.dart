@@ -92,6 +92,9 @@ class MenuText extends TextComponent<TextPaint> {
   /// Current font size (below [baseFontSize] after a shrinking [fitWidth]).
   double get fontSize => _fontSize;
 
+  /// Sets the font size directly (WP-NAME: the fitted player name).
+  set fontSize(double value) => _setFontSize(value);
+
   /// Sets [text] and shrinks the font so the text is at most [maxWidth]
   /// wide (S2-71: localized store prices like "Rp 1.599.000,00"). Starts
   /// from [baseFontSize] every call, so a shorter text grows back. Fitting

@@ -91,12 +91,77 @@ void main() {
   });
 
   group('§3.13 nicknames', () {
-    test('§3.13 the word lists: 20 adjectives, 20 bird words (PRD)', () {
-      expect(kNicknameAdjectives, hasLength(20));
-      expect(kNicknameBirds, hasLength(20));
+    test('§3.13 the word lists: 40 adjectives, 40 bird words, the old 20 '
+        'first in their old positions (nickname_words.md)', () {
+      expect(kNicknameAdjectives, hasLength(40));
+      expect(kNicknameBirds, hasLength(40));
+      expect(kNicknameAdjectives.toSet(), hasLength(40), reason: 'no dupes');
+      expect(kNicknameBirds.toSet(), hasLength(40), reason: 'no dupes');
       expect(kNicknameAdjectives.first, 'Swift');
-      expect(kNicknameAdjectives.last, 'Rapid');
-      expect(kNicknameBirds.last, 'Flappy');
+      expect(kNicknameAdjectives[19], 'Rapid');
+      expect(kNicknameAdjectives[20], 'Turbo');
+      expect(kNicknameAdjectives.last, 'Zappy');
+      expect(kNicknameBirds[19], 'Flappy');
+      expect(kNicknameBirds[20], 'Duck');
+      expect(kNicknameBirds.last, 'Pelican');
+    });
+
+    test('§3.13 both word orders are generated (about 50/50) and accepted; '
+        'old names still match', () {
+      final r = Random(3);
+      var adjFirst = 0, birdFirst = 0;
+      for (var i = 0; i < 2000; i++) {
+        final n = generateNickname(r);
+        expect(isGeneratedNickname(n), isTrue, reason: n);
+        final m = RegExp(r'^([A-Z][a-z]+)([A-Z][a-z]+)\d{3}$').firstMatch(n)!;
+        // 'Swift' is in both lists: SwiftSwift counts as adjective first.
+        if (kNicknameAdjectives.contains(m[1]) &&
+            kNicknameBirds.contains(m[2])) {
+          adjFirst++;
+        } else {
+          expect(kNicknameBirds, contains(m[1]));
+          expect(kNicknameAdjectives, contains(m[2]));
+          birdFirst++;
+        }
+      }
+      expect(adjFirst, inInclusiveRange(850, 1150));
+      expect(birdFirst, inInclusiveRange(850, 1150));
+      expect(isGeneratedNickname('TurboDuck111'), isTrue);
+      expect(isGeneratedNickname('DuckTurbo111'), isTrue);
+      expect(isGeneratedNickname('BraveParrot907'), isTrue, reason: 'old');
+      expect(isGeneratedNickname('ParrotBrave907'), isTrue);
+      expect(isGeneratedNickname('DuckGoose111'), isFalse, reason: '2 birds');
+      expect(isGeneratedNickname('TurboMega111'), isFalse, reason: '2 adj');
+      expect(isGeneratedNickname('DuckTurbo11'), isFalse);
+    });
+
+    test('§3.13 every pair (either order) is at most 14 letters', () {
+      for (final a in kNicknameAdjectives) {
+        for (final b in kNicknameBirds) {
+          expect(a.length + b.length, lessThanOrEqualTo(kNicknameWordsMax));
+          expect(isGeneratedNickname('$a${b}007'), isTrue);
+          expect(isGeneratedNickname('$b${a}007'), isTrue);
+        }
+      }
+    });
+
+    test('§3.13 the server port functions/src/nickname.ts has the same lists '
+        '(mirror, like levels.test.ts)', () {
+      final ts = File('functions/src/nickname.ts').readAsStringSync();
+      List<String> tsList(String name) {
+        final start = ts.indexOf('export const $name');
+        expect(start, greaterThanOrEqualTo(0), reason: name);
+        final body = ts.substring(
+          ts.indexOf('[', start),
+          ts.indexOf('];', start),
+        );
+        return [
+          for (final m in RegExp(r"'([^']+)'").allMatches(body)) m[1]!,
+        ];
+      }
+
+      expect(tsList('NICKNAME_ADJECTIVES'), kNicknameAdjectives);
+      expect(tsList('NICKNAME_BIRDS'), kNicknameBirds);
     });
 
     test('§3.13 Adjective + Bird + 3 digits (000–999), words ≤ 14 chars; '
@@ -120,7 +185,7 @@ void main() {
           for (final b in kNicknameBirds)
             if (a.length + b.length > 14) '$a$b',
       ];
-      expect(tooLong, isEmpty, reason: 'longest pair is 7 + 6 = 13');
+      expect(tooLong, isEmpty, reason: 'longest pair is 7 + 7 = 14');
       expect(isGeneratedNickname('SwiftKiwi482'), isTrue);
       expect(isGeneratedNickname('SwiftKiwi48'), isFalse);
       expect(isGeneratedNickname('Nobody123'), isFalse);

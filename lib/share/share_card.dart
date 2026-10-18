@@ -172,8 +172,11 @@ abstract final class ShareCardPainter {
   static const double footHeight = 200;
   static const double footY = size - footHeight;
 
-  /// The store badges' height on the logo bar (px).
-  static const double badgeHeight = 86;
+  /// The store badges on the logo bar (px): one common width, each at its
+  /// own artwork proportions (so the two heights differ), and the gap
+  /// between them.
+  static const double badgeWidth = 256;
+  static const double badgeGap = 16;
 
   /// The logo's lettering on the card (px): the opaque part of
   /// `logo.png` ([logoInk] of [logoSource]) is this tall.
@@ -509,16 +512,16 @@ abstract final class ShareCardPainter {
   ///
   /// The icon is 128 at x 64, centred vertically. The logo's lettering
   /// ([logoInk]) starts at the old title's x (220) and is centred on the
-  /// icon, at its own aspect ratio. Both store badges share one slot the
-  /// size of the Google Play badge at [badgeHeight] (288 x 86, as before);
-  /// the slot's right edge is 64 from the canvas edge and the two rows are
-  /// centred vertically. A badge is drawn at its own proportions, centred in
-  /// the slot: store badges are never stretched.
+  /// icon, at its own aspect ratio. The two store badges share one width
+  /// ([badgeWidth]) and so one vertical axis; their column's right edge is
+  /// 64 from the card edge, [badgeGap] lies between them, and the column is
+  /// centred vertically in the bar (equal top and bottom margins). Each
+  /// badge's height follows its own artwork, so nothing is stretched.
   static ({Rect icon, Rect logo, Rect googlePlay, Rect appStore}) footerLayout(
     ShareCardAssets img,
   ) {
     const y0 = footY, h = footHeight;
-    const iconSize = 128.0, margin = 64.0, titleGap = 28.0, badgeGap = 14.0;
+    const iconSize = 128.0, margin = 64.0, titleGap = 28.0;
     final iconRect = Rect.fromLTWH(
       margin,
       y0 + (h - iconSize) / 2,
@@ -533,28 +536,21 @@ abstract final class ShareCardPainter {
       logoSource.width * k,
       logoSource.height * k,
     );
-    // The badges: one slot, the Google Play badge's size at [badgeHeight].
-    final slotWidth =
-        img.googlePlay.width * badgeHeight / img.googlePlay.height;
-    final slotRight = size - margin;
-    final top = y0 + (h - (badgeHeight * 2 + badgeGap)) / 2;
-    Rect badge(ui.Image image, double y) {
-      final s = math.min(slotWidth / image.width, badgeHeight / image.height);
-      final w = image.width * s;
-      final bh = image.height * s;
-      return Rect.fromLTWH(
-        slotRight - slotWidth + (slotWidth - w) / 2,
-        y + (badgeHeight - bh) / 2,
-        w,
-        bh,
-      );
-    }
-
+    // The badges: one width; each height follows its own artwork.
+    final gpHeight = badgeWidth * img.googlePlay.height / img.googlePlay.width;
+    final asHeight = badgeWidth * img.appStore.height / img.appStore.width;
+    final left = size - margin - badgeWidth;
+    final top = y0 + (h - (gpHeight + badgeGap + asHeight)) / 2;
     return (
       icon: iconRect,
       logo: logoRect,
-      googlePlay: badge(img.googlePlay, top),
-      appStore: badge(img.appStore, top + badgeHeight + badgeGap),
+      googlePlay: Rect.fromLTWH(left, top, badgeWidth, gpHeight),
+      appStore: Rect.fromLTWH(
+        left,
+        top + gpHeight + badgeGap,
+        badgeWidth,
+        asHeight,
+      ),
     );
   }
 

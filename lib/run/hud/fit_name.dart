@@ -55,7 +55,7 @@ NameMeasure measureName({
 /// PRD-2.3 §21.2 the one name rule for every name tag (VS intro plates, the
 /// HUD name chips, the results columns, the share card's name tag):
 /// 1. the name at its normal [size] when it fits [maxWidth];
-/// 2. else shrunk until it fits, down to [minScale] (70 %) of [size];
+/// 2. else shrunk until it fits, down to [minScale] (66 %) of [size];
 /// 3. else cut at [minScale] × [size] and ended with "…".
 /// Names are never otherwise changed (generated nicknames keep their
 /// digits). [maxWidth] is the room: the window minus its padding and minus

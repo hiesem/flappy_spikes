@@ -7,18 +7,24 @@
  */
 import { createHash } from 'node:crypto';
 
-/** §3.13 nickname adjectives (20), as `kNicknameAdjectives`. */
+/** §3.13 nickname adjectives (40), as `kNicknameAdjectives` (same order). */
 export const NICKNAME_ADJECTIVES = [
   'Swift', 'Happy', 'Brave', 'Lucky', 'Sunny', 'Fluffy', 'Zippy', 'Mighty',
   'Jolly', 'Bouncy', 'Clever', 'Speedy', 'Cosmic', 'Golden', 'Tiny', 'Wild',
   'Crazy', 'Sparkly', 'Bold', 'Rapid',
+  'Turbo', 'Fizzy', 'Peppy', 'Plucky', 'Dizzy', 'Chirpy', 'Breezy', 'Nifty',
+  'Snappy', 'Spiky', 'Jumpy', 'Perky', 'Frosty', 'Super', 'Cheery', 'Daring',
+  'Quick', 'Merry', 'Mega', 'Zappy',
 ];
 
-/** §3.13 nickname bird words (20), as `kNicknameBirds`. */
+/** §3.13 nickname bird words (40), as `kNicknameBirds` (same order). */
 export const NICKNAME_BIRDS = [
   'Kiwi', 'Robin', 'Finch', 'Puffin', 'Wren', 'Owl', 'Hawk', 'Falcon',
   'Swift', 'Parrot', 'Toucan', 'Pigeon', 'Eagle', 'Lark', 'Jay', 'Gull',
   'Dove', 'Crow', 'Heron', 'Flappy',
+  'Duck', 'Goose', 'Swan', 'Stork', 'Crane', 'Ibis', 'Raven', 'Quail',
+  'Egret', 'Kite', 'Tern', 'Emu', 'Macaw', 'Chick', 'Magpie', 'Sparrow',
+  'Condor', 'Osprey', 'Penguin', 'Pelican',
 ];
 
 /** Adjective + Bird is at most this long (longer pairs re-roll). */
@@ -29,25 +35,31 @@ function pick(rand: () => number, n: number): number {
   return Math.min(n - 1, Math.floor(rand() * n));
 }
 
-/** A generated name, e.g. "SwiftKiwi482" (same logic as the app). */
+/**
+ * A generated name, e.g. "SwiftKiwi482" or "KiwiSwift482": either word
+ * order, 50/50 (same logic as the app).
+ */
 export function generateNickname(rand: () => number): string {
   for (;;) {
     const a = NICKNAME_ADJECTIVES[pick(rand, NICKNAME_ADJECTIVES.length)];
     const b = NICKNAME_BIRDS[pick(rand, NICKNAME_BIRDS.length)];
     if (a.length + b.length > NICKNAME_WORDS_MAX) continue;
-    return `${a}${b}${String(pick(rand, 1000)).padStart(3, '0')}`;
+    const birdFirst = rand() < 0.5;
+    const digits = String(pick(rand, 1000)).padStart(3, '0');
+    return birdFirst ? `${b}${a}${digits}` : `${a}${b}${digits}`;
   }
 }
 
-/** Whether [name] has the generated shape (as `isGeneratedNickname`). */
+/** Whether [name] has the generated shape, either order (as `isGeneratedNickname`). */
 export function isGeneratedNickname(name: unknown): boolean {
   if (typeof name !== 'string') return false;
   const m = /^([A-Z][a-z]+)([A-Z][a-z]+)(\d{3})$/.exec(name);
   if (!m) return false;
+  const [, first, second] = m;
+  if (first.length + second.length > NICKNAME_WORDS_MAX) return false;
   return (
-    NICKNAME_ADJECTIVES.includes(m[1]) &&
-    NICKNAME_BIRDS.includes(m[2]) &&
-    m[1].length + m[2].length <= NICKNAME_WORDS_MAX
+    (NICKNAME_ADJECTIVES.includes(first) && NICKNAME_BIRDS.includes(second)) ||
+    (NICKNAME_BIRDS.includes(first) && NICKNAME_ADJECTIVES.includes(second))
   );
 }
 

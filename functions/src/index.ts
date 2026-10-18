@@ -9,7 +9,7 @@ import { setGlobalOptions, logger } from 'firebase-functions/v2';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { deletePlayerData, processPlayerWrite, sweepAllPools } from './pools.js';
+import { deletePlayerData, processPlayerWrite, setCustomName, sweepAllPools } from './pools.js';
 import type { PlayerDoc } from './schema.js';
 
 initializeApp();
@@ -79,6 +79,27 @@ export const deleteMyData = onCall({ enforceAppCheck: true, consumeAppCheckToken
   }
   logger.info('deleteMyData', { uid, removed });
   return { ok: true, removed };
+});
+
+/**
+ * WP-NAME "Player name" in Settings: sets (`{name: 'Wise0wl'}`) or clears
+ * (`{name: ''}`) the caller's custom versus name. Refused names answer
+ * `{ok: false, reason: 'length' | 'chars' | 'blocked'}` (the app shows the
+ * reason in the card); accepted ones `{ok: true, name}` and are written into
+ * the caller's pool entries at once. App Check enforced, like deleteMyData.
+ */
+export const setVersusName = onCall({ enforceAppCheck: true, consumeAppCheckToken: false }, async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign-in required.');
+  const data = req.data as { name?: unknown } | undefined;
+  try {
+    const r = await setCustomName(getFirestore(), uid, data?.name);
+    if (r.ok) logger.info('setVersusName', { uid, set: r.name !== '', updated: r.updated });
+    return r;
+  } catch (err) {
+    logger.error('setVersusName failed', { uid, err: String(err) });
+    throw new HttpsError('unavailable', 'Name not saved.');
+  }
 });
 
 /** Daily retention sweep of the pool shards (ARCH §6.2: entries > 60 d). */

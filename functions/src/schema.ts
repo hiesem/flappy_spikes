@@ -136,6 +136,20 @@ export function validPg(v: unknown): boolean {
 export interface PoolEntry extends RunEntry {
   uid: string;
   level: number;
+  /**
+   * WP-NAME the owner's custom versus name (customname.ts rules), set only
+   * when they chose one; opponents show it instead of [name] (the generated
+   * name, which older apps keep showing).
+   */
+  customName?: string;
+}
+
+/** WP-NAME server-only custom names (`versusNames/{uid}`; clients have no access). */
+export const NAMES_COLLECTION = 'versusNames';
+
+export interface NameDoc {
+  customName: string;
+  updatedAt: Timestamp;
 }
 
 export interface PlayerDoc {

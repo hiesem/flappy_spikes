@@ -22,12 +22,12 @@ double pa(double x) => 1;
 
 /// `mark(dx)`: a landmark in the middle of its stage (moves at 0.04×).
 double mark(Ctx c, double dx) =>
-    kANCH + ((c.env + .5) * kE - c.cam) * .04 + dx;
+    kANCH + ((c.env + .5) * c.stage - c.cam) * .04 + dx;
 
 /// `early(x, f, span)`: 1 at the start of the current stage, easing to 0
 /// over [span] of it; for leftovers from the stage before.
 double early(Ctx c, double x, double f, double span) {
-  final seg = kE * f, p = x + c.cam * f, p0 = c.env * kE * f + kANCH;
+  final seg = c.stage * f, p = x + c.cam * f, p0 = c.env * c.stage * f + kANCH;
   return 1 - smooth((p - p0 - seg * .06) / (seg * span));
 }
 

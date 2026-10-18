@@ -107,7 +107,7 @@ class CuckooSeam extends FloorSeam {
   void piece(Ctx c, SeamFrame s, Band band) {
     if (band != Band.front || s.u < .29) return;
     final d = s.travel, t = s.t;
-    double doorX(double u) => kANCH - 92 - (u - .5) * kVWIN * .3;
+    double doorX(double u) => kANCH - 92 - (u - .5) * s.win * .3;
     double doorY(double u) => 540 - d * smooth(u) + 58;
     double ruler(double u) => 505 + d * (1 - smooth(math.min(1, u)));
     const ul = .86;
@@ -119,7 +119,7 @@ class CuckooSeam extends FloorSeam {
       cuckoo(c, x, y + (ruler(s.u) - y) * k + bob - 8, .5 + .5 * math.sin(t * 15), 1.1);
     } else {
       final hop = math.pow(math.max(0.0, math.sin(t * 2.6)), 10).toDouble() * 5;
-      cuckoo(c, 250 - (s.u - ul) * kVWIN * .3, ruler(s.u) - 8 - hop, hop > .5 ? .6 : 0, 1.1);
+      cuckoo(c, 250 - (s.u - ul) * s.win * .3, ruler(s.u) - 8 - hop, hop > .5 ? .6 : 0, 1.1);
     }
   }
 

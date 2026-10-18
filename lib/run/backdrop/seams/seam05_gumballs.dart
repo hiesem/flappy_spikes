@@ -91,7 +91,7 @@ class GumballsSeam extends FloorSeam {
   void piece(Ctx c, SeamFrame s, Band band) {
     if (band != Band.front) return;
     final d = s.travel, jy = 512 - s.y;
-    double jx(double u) => kANCH - 40 - (u - .5) * kVWIN * .3;
+    double jx(double u) => kANCH - 40 - (u - .5) * s.win * .3;
     final x = jx(s.u);
     // (`jy > -100`: above the top of the screen, which is c.yTop)
     if (x > c.xl - 120 && x < c.xr + 120 && jy > c.yTop - 100) {
@@ -135,9 +135,9 @@ class GumballsSeam extends FloorSeam {
         final p = (s.u - b.u0) / (b.ul - b.u0), yA = y0A + (gA - y0A) * p * p;
         gumball(c, x0 + (b.x1 - x0) * smooth(p), yA - s.y, b.r, b.col);
       } else {
-        final st = (s.u - b.ul) * kVWIN / _scroll;
+        final st = (s.u - b.ul) * s.win / _scroll;
         final bounce = 22 * math.exp(-2.4 * st) * math.sin(st * 5).abs();
-        gumball(c, b.x1 - (s.u - b.ul) * kVWIN * .3, gA - s.y - bounce, b.r, b.col);
+        gumball(c, b.x1 - (s.u - b.ul) * s.win * .3, gA - s.y - bounce, b.r, b.col);
       }
     }
   }

@@ -36,6 +36,15 @@ class Config {
   }
   // endregion WP-TAB
 
+  // region 2026-10-19 WP-BG — run background speed
+  /// The run background (PRD-2.4 §3, `RunBackdrop`) animates this many
+  /// times faster than the 2.4 prototype: the layers' parallax scroll and
+  /// every ambient animation (clouds, rain, fish, bubbles, lights, leaves).
+  /// The scene pacing (a seam on every 40th hoop), the gameplay scroll and
+  /// the ride scenes are not affected. 1 = the 2.4.0 speed.
+  static const double backgroundSpeedFactor = 2.0;
+  // endregion WP-BG
+
   // region PRD-2.2 §7.5 — gameplay banner
   /// §7.5.5: the smallest VISIBLE run playfield with a banner (a 16:9 phone
   /// with a 50 dp banner leaves ≈ 524 pt). Menus keep [minViewHeight].

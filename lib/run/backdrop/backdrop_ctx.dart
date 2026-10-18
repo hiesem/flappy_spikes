@@ -20,10 +20,25 @@ class Ctx {
   late Canvas canvas;
 
   // ------------------------------------------------------------ world state
-  /// `W_.cam`: the world distance (prototype `cam`, pt).
+  /// `W_.cam` as the painters read it: the layers' scroll distance (pt),
+  /// i.e. the world distance [world] × [speed]. Every parallax offset is
+  /// `cam × factor`, so [speed] scales every layer's scroll.
   double cam = 0;
 
-  /// `S.t`: the run clock (s).
+  /// The world distance itself (prototype `cam`, pt): which scene or seam
+  /// is on screen (`BackdropWorld.seamAt`). Not scaled by [speed], so the
+  /// pacing (seam k on hoop 40·k) stays.
+  double world = 0;
+
+  /// WP-BG (`Config.backgroundSpeedFactor`): how much faster the
+  /// background animates than the prototype (scroll and clock).
+  double speed = 1;
+
+  /// The length of a stage in [cam] units (`kE` × [speed]): what the
+  /// stage-relative helpers (`mark`, `early`, seam pieces) measure with.
+  double get stage => kE * speed;
+
+  /// `S.t`: the background clock (s): the run clock × [speed].
   double t = 0;
 
   /// `W_.env`: the absolute stage index being drawn (may exceed 9 or be

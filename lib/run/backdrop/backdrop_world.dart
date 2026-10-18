@@ -49,7 +49,7 @@ class BackdropWorld implements SceneDrawer {
   /// `world(V, cam, t, par)`: paints the world (no base fill, no colour
   /// filter; see `BackdropPainter`).
   void paint(Ctx c) {
-    final (:j, :d) = seamAt(c.cam);
+    final (:j, :d) = seamAt(c.world);
     // PRD-2.4 §3.3 / WP-W1 brief 5: in a run's first loop there is no
     // Homecoming: hoops 0–39 are pure Nest Canopy (the move treated as
     // finished, no leftovers from Space). From hoop 400 on it plays.
@@ -58,7 +58,7 @@ class BackdropWorld implements SceneDrawer {
     switch (seam) {
       case FloorSeam():
         if (d.abs() < kVWIN / 2 + kLinger) {
-          return _vmove(c, j - 1, j, d, seam, j * kE);
+          return _vmove(c, j - 1, j, d, seam, j * c.stage);
         }
         return group(c, d < 0 ? j - 1 : j, Band.layers);
       case OlderSeam():
@@ -135,6 +135,7 @@ class BackdropWorld implements SceneDrawer {
       ..dir = dir
       ..y = travel * q
       ..sc = sc
+      ..speed = c.speed
       ..cam = c.cam
       ..t = c.t
       ..a = ga
@@ -209,6 +210,9 @@ class BackdropPainter {
   /// Paints the background into the rectangle 0, 0, 320, [viewHeight]:
   /// world distance [cam] (pt), run clock [t] (s), colour stage [bg] / [fg]
   /// (the game's current, crossfaded stage colours), faded to [opacity].
+  /// WP-BG: [speed] (`Config.backgroundSpeedFactor` in a run) scales the
+  /// layers' scroll and the clock; which scene or seam shows still follows
+  /// [cam] itself.
   void paint(
     Canvas canvas, {
     required double cam,
@@ -218,6 +222,7 @@ class BackdropPainter {
     required Color fg,
     double opacity = 1,
     double left = 0,
+    double speed = 1,
   }) {
     if (opacity <= 0) return;
     // WP-R: the ride's own scene covers the whole screen.
@@ -255,8 +260,10 @@ class BackdropPainter {
     final c = ctx
       ..canvas = canvas
       ..resetStyle()
-      ..cam = cam
-      ..t = t
+      ..world = cam
+      ..speed = speed
+      ..cam = cam * speed
+      ..t = t * speed
       ..viewHeight = viewHeight
       ..yTop = kVH - viewHeight
       ..xl = left

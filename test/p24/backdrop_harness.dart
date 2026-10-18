@@ -24,12 +24,13 @@ Future<ui.Image> renderBackdrop({
   ui.Color bg = const ui.Color(0xFFF1F1F1),
   ui.Color fg = const ui.Color(0xFF828282),
   BackdropPainter? painter,
+  double speed = 1,
 }) async {
   final p = painter ?? BackdropPainter();
   final recorder = ui.PictureRecorder();
   final canvas = ui.Canvas(recorder);
   canvas.scale(scale);
-  p.paint(canvas, cam: cam, t: t, viewHeight: viewHeight, bg: bg, fg: fg);
+  p.paint(canvas, cam: cam, t: t, viewHeight: viewHeight, bg: bg, fg: fg, speed: speed);
   final pic = recorder.endRecording();
   final img = await pic.toImage((kVW * scale).round(), (viewHeight * scale).round());
   pic.dispose();
@@ -56,9 +57,9 @@ int diffPixels(Uint8List a, Uint8List b, {int threshold = 40}) {
 
 /// Pixels changed between the frames at [cam] and [cam] + 1 pt (same
 /// clock), counting any channel change above 3 levels (the greys are close).
-Future<int> frameJump(double cam, {double viewHeight = 568, double t = 3}) async {
-  final a = await renderBackdrop(cam: cam, viewHeight: viewHeight, t: t);
-  final b = await renderBackdrop(cam: cam + 1, viewHeight: viewHeight, t: t);
+Future<int> frameJump(double cam, {double viewHeight = 568, double t = 3, double speed = 1}) async {
+  final a = await renderBackdrop(cam: cam, viewHeight: viewHeight, t: t, speed: speed);
+  final b = await renderBackdrop(cam: cam + 1, viewHeight: viewHeight, t: t, speed: speed);
   final n = diffPixels(await rgbaOf(a), await rgbaOf(b), threshold: 3);
   a.dispose();
   b.dispose();
@@ -75,10 +76,11 @@ Future<void> expectNoJump(
   double factor = 2,
   int slack = 300,
   String? label,
+  double speed = 1,
 }) async {
-  final n = await frameJump(cam, viewHeight: viewHeight);
-  final before = await frameJump(cam - 3, viewHeight: viewHeight);
-  final after = await frameJump(cam + 3, viewHeight: viewHeight);
+  final n = await frameJump(cam, viewHeight: viewHeight, speed: speed);
+  final before = await frameJump(cam - 3, viewHeight: viewHeight, speed: speed);
+  final after = await frameJump(cam + 3, viewHeight: viewHeight, speed: speed);
   final normal = before > after ? before : after;
   expect(n, lessThanOrEqualTo(normal * factor + slack),
       reason: '${label ?? ''} jump at cam $cam (view $viewHeight): $n px changed, '

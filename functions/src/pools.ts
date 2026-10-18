@@ -3,10 +3,11 @@
  * `onPlayerRunWrite`, `deleteMyData` and `sweepPools`, written against a
  * Firestore instance so the emulator tests can drive it directly.
  */
-import { Firestore, Timestamp } from 'firebase-admin/firestore';
+import { DocumentReference, DocumentSnapshot, FieldValue, Firestore, Timestamp, Transaction } from 'firebase-admin/firestore';
 import { levelFor } from './levels.js';
 import { versusName } from './nickname.js';
 import { checkCustomName, CustomNameReason, poolCustomName } from './customname.js';
+import { CLAIMS_COLLECTION, ClaimDoc, GUEST_NAME_TTL_MS, nameKey, SEEN_REFRESH_MS } from './nameclaims.js';
 import {
   NAMES_COLLECTION,
   NameDoc,
@@ -271,6 +272,8 @@ export async function deletePlayerData(db: Firestore, uid: string, nowMs = Date.
       tx.get(nameRef),
       ...poolRefs.map((ref) => tx.get(ref)),
     ]);
+    // WP-N2 the name's claim goes too, but only while this uid holds it.
+    const release = await ownClaim(tx, db, uid, (name.data() as NameDoc | undefined)?.customName);
     let removed = 0;
     pools.forEach((snap, i) => {
       if (!snap.exists) return;
@@ -283,11 +286,46 @@ export async function deletePlayerData(db: Firestore, uid: string, nowMs = Date.
     if (player.exists) tx.delete(playerRef);
     if (rate.exists) tx.delete(rateRef);
     if (name.exists) tx.delete(nameRef);
+    if (release) tx.delete(release);
     return removed;
   });
 }
 
-export type SetNameResult = { ok: true; name: string; updated: number } | { ok: false; reason: CustomNameReason };
+/**
+ * WP-N2 the claim of [name] when [uid] holds it (read in [tx]; null when
+ * there is no name, no claim, or another uid holds it).
+ */
+async function ownClaim(
+  tx: Transaction,
+  db: Firestore,
+  uid: string,
+  name: unknown,
+): Promise<DocumentReference | null> {
+  if (typeof name !== 'string' || name === '') return null;
+  const ref = db.collection(CLAIMS_COLLECTION).doc(nameKey(name));
+  const snap = await tx.get(ref);
+  return snap.exists && (snap.data() as ClaimDoc).uid === uid ? ref : null;
+}
+
+/**
+ * WP-N2 the activity fields of a name doc for a linked / guest owner: for
+ * an update ([forSet] false) a linked owner's `guestSeen` is deleted; for a
+ * full set it is simply left out.
+ */
+function seenFields(nowMs: number, linked: boolean, forSet = false): Partial<Record<keyof NameDoc, unknown>> {
+  const at = Timestamp.fromMillis(nowMs);
+  if (!linked) return { lastSeen: at, linked, guestSeen: at };
+  return forSet ? { lastSeen: at, linked } : { lastSeen: at, linked, guestSeen: FieldValue.delete() };
+}
+
+export type SetNameResult =
+  | { ok: true; name: string; updated: number }
+  | { ok: false; reason: CustomNameReason; name?: string };
+
+export interface NameOptions {
+  /** The caller is linked to Play Games / Game Center (default: a guest). */
+  linked?: boolean;
+}
 
 /**
  * WP-NAME sets (or with '' clears) [uid]'s custom versus name: the format
@@ -295,12 +333,18 @@ export type SetNameResult = { ok: true; name: string; updated: number } | { ok: 
  * in `versusNames/{uid}` and written into this uid's entries in all 44 pool
  * shards at once (one transaction), so opponents see it right away; a
  * cleared one removes it there (the generated name shows again).
+ *
+ * WP-N2 one owner per name: in the same transaction the name's claim
+ * (`versusNameClaims/{nameKey}`) is taken — refused as `taken` when
+ * another uid holds it, answering the caller's current name too — and the
+ * caller's previous claim is released. The activity stamp is refreshed.
  */
 export async function setCustomName(
   db: Firestore,
   uid: string,
   raw: unknown,
   nowMs = Date.now(),
+  opts: NameOptions = {},
 ): Promise<SetNameResult> {
   const name = raw === '' || raw === null || raw === undefined ? '' : raw;
   if (name !== '') {
@@ -308,31 +352,164 @@ export async function setCustomName(
     if (reason) return { ok: false, reason };
   }
   const custom = name as string;
+  const linked = opts.linked === true;
   const nameRef = db.collection(NAMES_COLLECTION).doc(uid);
+  const claimRef = custom ? db.collection(CLAIMS_COLLECTION).doc(nameKey(custom)) : null;
   const poolRefs = allPoolIds().map((pid) => db.collection('pools').doc(pid));
-  const updated = await db.runTransaction(async (tx) => {
+  return db.runTransaction(async (tx): Promise<SetNameResult> => {
+    const nameSnap = await tx.get(nameRef);
+    const current = (nameSnap.data() as NameDoc | undefined)?.customName ?? '';
+    if (claimRef) {
+      const claim = await tx.get(claimRef);
+      if (claim.exists && (claim.data() as ClaimDoc).uid !== uid) {
+        return { ok: false, reason: 'taken', name: poolCustomName(current) };
+      }
+    }
+    const old = await ownClaim(tx, db, uid, current);
     const pools = await Promise.all(poolRefs.map((ref) => tx.get(ref)));
-    let n = 0;
-    pools.forEach((snap, i) => {
-      if (!snap.exists) return;
-      const pool = snap.data() as PoolDoc;
-      if (!Array.isArray(pool.entries) || !pool.entries.some((e) => e.uid === uid)) return;
-      const entries = pool.entries.map((e) => {
-        if (e.uid !== uid) return e;
-        n++;
-        const next: PoolEntry = { ...e };
-        if (custom) next.customName = custom;
-        else delete next.customName;
-        return next;
+    const n = writePoolNames(tx, uid, custom, pools, poolRefs);
+    if (old && (!claimRef || old.path !== claimRef.path)) tx.delete(old);
+    if (claimRef) {
+      tx.set(claimRef, { uid, name: custom, updatedAt: Timestamp.fromMillis(nowMs) } satisfies ClaimDoc);
+      tx.set(nameRef, {
+        customName: custom,
+        updatedAt: Timestamp.fromMillis(nowMs),
+        ...seenFields(nowMs, linked, true),
       });
-      tx.update(poolRefs[i], { entries });
-    });
-    if (custom) {
-      tx.set(nameRef, { customName: custom, updatedAt: Timestamp.fromMillis(nowMs) } satisfies NameDoc);
     } else {
       tx.delete(nameRef);
     }
-    return n;
+    return { ok: true, name: custom, updated: n };
   });
-  return { ok: true, name: custom, updated };
+}
+
+/** Writes (or with '' removes) [custom] in [uid]'s pool entries. Returns the count. */
+function writePoolNames(
+  tx: Transaction,
+  uid: string,
+  custom: string,
+  pools: DocumentSnapshot[],
+  refs: DocumentReference[],
+): number {
+  let n = 0;
+  pools.forEach((snap, i) => {
+    if (!snap.exists) return;
+    const pool = snap.data() as PoolDoc;
+    if (!Array.isArray(pool.entries) || !pool.entries.some((e) => e.uid === uid)) return;
+    const entries = pool.entries.map((e) => {
+      if (e.uid !== uid) return e;
+      n++;
+      const next: PoolEntry = { ...e };
+      if (custom) next.customName = custom;
+      else delete next.customName;
+      return next;
+    });
+    tx.update(refs[i], { entries });
+  });
+  return n;
+}
+
+export type GetNameResult = { ok: true; name: string };
+
+/**
+ * WP-N2 the caller's stored custom name ('' = none), read by the app after
+ * a start, a sign-in or an account switch (the server is the source of
+ * truth once a name was confirmed) and at most about once a day otherwise.
+ * It doubles as the guest-activity signal: `lastSeen` / `guestSeen` /
+ * `linked` are refreshed (at most every 12 h unless the link state
+ * changed). A 2.4.0 name without a claim takes its claim now; when another
+ * uid already holds that name, this one loses it (cleared).
+ */
+export async function getCustomName(
+  db: Firestore,
+  uid: string,
+  nowMs = Date.now(),
+  opts: NameOptions = {},
+): Promise<GetNameResult> {
+  const linked = opts.linked === true;
+  const nameRef = db.collection(NAMES_COLLECTION).doc(uid);
+  const r = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(nameRef);
+    if (!snap.exists) return { name: '', lost: false };
+    const doc = snap.data() as NameDoc;
+    const name = poolCustomName(doc.customName);
+    if (!name) return { name: '', lost: true };
+    const claimRef = db.collection(CLAIMS_COLLECTION).doc(nameKey(name));
+    const claim = await tx.get(claimRef);
+    if (claim.exists && (claim.data() as ClaimDoc).uid !== uid) return { name: '', lost: true };
+    if (!claim.exists) {
+      tx.set(claimRef, { uid, name, updatedAt: Timestamp.fromMillis(nowMs) } satisfies ClaimDoc);
+    }
+    const seen = doc.lastSeen?.toMillis() ?? 0;
+    if (!claim.exists || doc.linked !== linked || nowMs - seen >= SEEN_REFRESH_MS) {
+      tx.update(nameRef, seenFields(nowMs, linked));
+    }
+    return { name, lost: false };
+  });
+  // A stored name that no longer passes the rules or lost its claim: gone
+  // everywhere (pools too).
+  if (r.lost) await setCustomName(db, uid, '', nowMs, opts);
+  return { ok: true, name: r.name };
+}
+
+/**
+ * WP-N2 the daily job: guest names (`guestSeen` older than 30 days) are
+ * released — claim, `versusNames/{uid}` and the pool entries' customName.
+ * [isLinked] asks Auth first (true = linked meanwhile: the doc is marked
+ * linked and kept; null = Auth could not answer: kept for the next run).
+ * Each release re-checks the stamp in its own transaction, so an app that
+ * became active meanwhile keeps its name. Returns the uids released.
+ */
+export async function releaseStaleGuestNames(
+  db: Firestore,
+  isLinked: (uid: string) => Promise<boolean | null>,
+  nowMs = Date.now(),
+  pageSize = 200,
+): Promise<string[]> {
+  const cutoff = Timestamp.fromMillis(nowMs - GUEST_NAME_TTL_MS);
+  const released: string[] = [];
+  const skipped = new Set<string>();
+  for (;;) {
+    const limit = pageSize + skipped.size;
+    const page = await db
+      .collection(NAMES_COLLECTION)
+      .where('guestSeen', '<', cutoff)
+      .orderBy('guestSeen')
+      .limit(limit)
+      .get();
+    const todo = page.docs.filter((d) => !skipped.has(d.id));
+    for (const d of todo) {
+      const uid = d.id;
+      const linked = await isLinked(uid);
+      if (linked === null) {
+        skipped.add(uid);
+      } else if (linked) {
+        await d.ref.update({ linked: true, guestSeen: FieldValue.delete() });
+      } else if (await releaseGuestName(db, uid, cutoff)) {
+        released.push(uid);
+      } else {
+        skipped.add(uid);
+      }
+    }
+    if (todo.length === 0 || page.docs.length < limit) break;
+  }
+  return released;
+}
+
+/** Clears [uid]'s name when its `guestSeen` is still before [cutoff]. */
+async function releaseGuestName(db: Firestore, uid: string, cutoff: Timestamp): Promise<boolean> {
+  const nameRef = db.collection(NAMES_COLLECTION).doc(uid);
+  const poolRefs = allPoolIds().map((pid) => db.collection('pools').doc(pid));
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(nameRef);
+    const doc = snap.data() as NameDoc | undefined;
+    const seen = doc?.guestSeen;
+    if (!doc || !seen || seen.toMillis() >= cutoff.toMillis()) return false;
+    const claim = await ownClaim(tx, db, uid, doc.customName);
+    const pools = await Promise.all(poolRefs.map((ref) => tx.get(ref)));
+    writePoolNames(tx, uid, '', pools, poolRefs);
+    if (claim) tx.delete(claim);
+    tx.delete(nameRef);
+    return true;
+  });
 }

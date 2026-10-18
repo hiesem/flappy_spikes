@@ -163,7 +163,7 @@ describe('WP-NAME setCustomName (emulated Firestore)', () => {
 
   it('Delete my data removes the custom name too', async () => {
     const uid = uniq('cn-del');
-    await setCustomName(db, uid, 'GoodName');
+    assert.equal((await setCustomName(db, uid, 'DelName')).ok, true);
     await deletePlayerData(db, uid);
     assert.equal((await db.collection(NAMES_COLLECTION).doc(uid).get()).exists, false);
   });
@@ -210,9 +210,9 @@ describe('WP-NAME setVersusName (emulated callable, App Check enforced)', () => 
     const uid = uniq('cn-call');
     await auth.createUser({ uid });
     const headers = { Authorization: `Bearer ${idToken(uid)}`, 'X-Firebase-AppCheck': appCheck };
-    const ok = await call(headers, 'WiseOwl');
+    const ok = await call(headers, 'CallOwl');
     assert.equal(ok.status, 200, await ok.clone().text());
-    assert.deepEqual(((await ok.json()) as { result: unknown }).result, { ok: true, name: 'WiseOwl', updated: 0 });
+    assert.deepEqual(((await ok.json()) as { result: unknown }).result, { ok: true, name: 'CallOwl', updated: 0 });
     const bad = await call(headers, 'FUCKxx');
     assert.deepEqual(((await bad.json()) as { result: unknown }).result, { ok: false, reason: 'blocked' });
     const clear = await call(headers, '');

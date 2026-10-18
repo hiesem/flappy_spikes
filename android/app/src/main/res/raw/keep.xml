@@ -4,4 +4,4 @@
      shrinking (shrinkResources), or reminders play the system sound / show a
      blank icon. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@raw/notif_chime,@drawable/ic_notif_bird,@drawable/ic_notif_large" />
+    tools:keep="@raw/notif_chime,@drawable/ic_notif_bird" />

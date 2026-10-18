@@ -692,19 +692,15 @@ class LocalNotificationsPlatform implements ReminderPlatform {
   /// `RawResourceAndroidNotificationSound('notif_chime')` (§3.34).
   static const String sound = 'notif_chime';
 
-  /// `res/drawable-*/ic_notif_bird.png`, the white bird silhouette.
+  /// `res/drawable-*/ic_notif_bird.png`, the white bird silhouette. It is the
+  /// only icon on the reminder: there is no large icon beside the text.
   static const String icon = 'ic_notif_bird';
-
-  /// `res/drawable-*/ic_notif_large.png`, a copy of the app icon (the plugin
-  /// resolves `largeIcon` as a drawable, not as a mipmap).
-  static const String largeIcon = 'ic_notif_large';
 
   static const AndroidNotificationDetails _details =
       AndroidNotificationDetails(
         channelId,
         channelName,
         icon: icon,
-        largeIcon: DrawableResourceAndroidBitmap(largeIcon),
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
         sound: RawResourceAndroidNotificationSound(sound),

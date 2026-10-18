@@ -51,8 +51,11 @@ class _Confetti {
 /// hovering at 42 % of the stage width with a ±3 pt bob and flapping; hoops
 /// of the selected hoop skin scroll in from the right every 2.3 s at
 /// 120 pt/s and the bird flies through them (back half behind it, front
-/// half in front, a white pulse ring on each pass). The trail burns for
-/// 1.7 s after each pass and always while the TRAILS tab is open.
+/// half in front, a white pulse ring on each pass). The trail is ALWAYS drawn
+/// (owner bug, 2026-10-18): the equipped trail, or the one tried on, on every
+/// tab, between passes, on open, on re-entry and after an equip. The mock
+/// burned it for 1.7 s after each pass, which read as the trail going missing.
+/// A new trail is seeded with a full history ([_seedTrail]).
 ///
 /// The tried-on layer is drawn as one flat layer at `0.42 + 0.14 sin(4t)`
 /// ([tryOnAlpha]). [hop] kicks the bird up (−150 pt/s, 900 pt/s² back);
@@ -99,7 +102,7 @@ class PreviewStage extends PositionComponent {
   double _vy = 0;
   double _dy = 0;
   double _next = Config.skinShopHoopFirst;
-  double _fireT = 0;
+  bool _seeded = false;
   double _rays = 0;
   String? _lastHoop;
   String? _lastFire;
@@ -149,9 +152,6 @@ class PreviewStage extends PositionComponent {
 
   /// Vertical hop velocity (negative = rising).
   double get hopVelocity => _vy;
-
-  /// Whether the trail shows right now.
-  bool get showsTrail => _fireT > 0 || tab() == SkinLayer.trail;
 
   /// Live confetti pieces.
   int get confettiCount => _confetti.length;
@@ -273,7 +273,6 @@ class PreviewStage extends PositionComponent {
       if (!hoop.passed && hoop.x < birdX) {
         hoop.passed = true;
         hoop.pulse = 0;
-        _fireT = Config.skinShopFireAfterPass;
         if (_lastHoop != current.hoop) play(Sfx.skHoop);
         _lastHoop = current.hoop;
       } else if (hoop.pulse != null) {
@@ -282,26 +281,17 @@ class PreviewStage extends PositionComponent {
     }
     hoops.removeWhere((hoop) => hoop.x <= -50);
 
-    _fireT -= dt;
     final onTrails = tab() == SkinLayer.trail;
-    if (showsTrail && onTrails && _lastFire != current.trail) {
-      play(Sfx.skFire);
-    }
+    if (onTrails && _lastFire != current.trail) play(Sfx.skFire);
     if (onTrails) _lastFire = current.trail;
 
-    _trail
-      ..trailId = current.trail
-      ..look = current;
-    if (showsTrail) {
-      _trail.emit(
-        Offset(birdX - 17 * k, birdY + _bob),
-        dt,
-        k: k,
-        vx: Config.skinShopTrailScroll,
-      );
-    } else {
-      _trail.resetPath();
-    }
+    _syncTrail(current);
+    _trail.emit(
+      Offset(birdX - 17 * k, birdY + _bob),
+      dt,
+      k: k,
+      vx: Config.skinShopTrailScroll,
+    );
     _trail.step(dt);
 
     for (final p in _confetti) {
@@ -314,6 +304,39 @@ class PreviewStage extends PositionComponent {
     }
     _confetti.removeWhere((p) => p.life >= p.max);
     _rays = math.max(0, _rays - dt);
+  }
+
+  /// Points the emitter at the trail to show. The emitter drops the particles
+  /// and path points of the old trail when the id changes, so a new trail
+  /// (on open, after an equip or a try-on) is seeded at once.
+  void _syncTrail(Look current) {
+    _trail.look = current; // the Afterimage copies stamp this look
+    if (_seeded && _trail.trailId == current.trail) return;
+    _seeded = true;
+    _trail.trailId = current.trail;
+    _seedTrail();
+  }
+
+  /// Runs the trail for [Config.skinShopTrailSeedFrames] frames of 1/60 s that
+  /// end now, with the bird's bob at each frame, so the history is what a
+  /// running preview would already show. The path-history trails (rainbow,
+  /// afterimage copies, prism, paint) are then full on the first frame
+  /// instead of growing for up to 2 s.
+  void _seedTrail() {
+    const dt = 1 / 60;
+    final base = birdY;
+    for (var i = Config.skinShopTrailSeedFrames; i > 0; i--) {
+      final at = t - (i - 1) * dt;
+      final bob =
+          math.sin(at * Config.skinShopBobSpeed) * Config.skinShopBobAmplitude;
+      _trail.emit(
+        Offset(birdX - 17 * k, base + bob),
+        dt,
+        k: k,
+        vx: Config.skinShopTrailScroll,
+      );
+      _trail.step(dt);
+    }
   }
 
   double get _bob =>

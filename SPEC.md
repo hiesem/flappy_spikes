@@ -222,6 +222,13 @@ Product-owner decisions 2026-10-06/07 and implementation notes:
   (the PRD-1 200-coin featured skin is gone); hidden when all are owned.
 - `sk_hoop` / `sk_fire` play only after the hoop/trail skin changes (primed with
   the equipped skins on open).
+- **Preview trail always drawn** (owner bug, 2026-10-18). DEVIATION from PRD-menu-v2
+  §4.2, which burned the preview trail for 1.7 s after each hoop pass and kept it
+  only while the TRAILS tab was open: the equipped trail (or the one tried on) is
+  drawn on every tab, between passes, on open and on re-entry, and after an equip.
+  A new trail starts seeded with `Config.skinShopTrailSeedFrames` (120 frames), so
+  the history trails (rainbow, afterimage, prism, paint) are full at once. The
+  hoop loop (2.3 s, 120 pt/s, pulse ring) is unchanged.
 - **GET** (was WATCH) pulses only while claimable; the "+40" toast stays next to
   the coin-fly. START plays its own flap only when the run start is delayed (the
   run's first flap already plays it).

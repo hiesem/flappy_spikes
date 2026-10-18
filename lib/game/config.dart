@@ -968,8 +968,11 @@ class Config {
   static const double skinShopHoopFirst = 0.8;
   static const double skinShopHoopSpeed = 120; // pt/s
   static const double skinShopHoopRy = 26; // art units (x bird scale)
-  static const double skinShopFireAfterPass = 1.7;
   static const double skinShopTrailScroll = -150; // emitter vx
+  /// Frames of 1/60 s the preview's trail runs before it is first drawn (on
+  /// open, after an equip or a try-on): the rainbow ribbon's 120-point
+  /// history is full at once.
+  static const int skinShopTrailSeedFrames = 120;
 
   /// Name row (inside the stage, 8 / 7 from its top-left) and the action
   /// button (8 / 8 from its bottom-right).

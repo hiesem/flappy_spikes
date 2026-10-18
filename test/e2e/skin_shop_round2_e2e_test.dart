@@ -369,7 +369,6 @@ void main() {
           '2/30',
         ]);
         expect(rig.events.params('item_purchase'), hasLength(5));
-        expect(screen.stage.showsTrail, isTrue);
         expect(screen.stage.trail.particleCount, greaterThan(0));
         // Hoop/trail equipment is retained when returning to Home/run,
         // with rendering confined to the bird/gear/hat stack in this phase.

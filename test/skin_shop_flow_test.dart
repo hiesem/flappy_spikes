@@ -486,8 +486,8 @@ void main() {
 
   group('Skin shop live preview (§4.2)', () {
     shopTest(
-      'hoops every 2.3 s at 120 pt/s; pass = pulse + 1.7 s trail; sk_hoop '
-      'only after the hoop skin changed',
+      'hoops every 2.3 s at 120 pt/s; pass = pulse; the trail is drawn all '
+      'the time; sk_hoop only after the hoop skin changed',
       prefs: prefsWith(owned: ['hoop:sky', 'trail:blue'], seen: allSeen),
       verify: (game, spy, ads, iap, tester) async {
         final sounds = <Sfx>[];
@@ -501,15 +501,16 @@ void main() {
         final x0 = hoop.x;
         stepGame(game, 0.5);
         expect(hoop.x, closeTo(x0 - 60, 0.5));
-        expect(stage.showsTrail, isFalse);
         // Pass: x crosses the bird (42 % of 292).
         while (!hoop.passed) {
           stepGame(game, 1 / 60);
         }
-        expect(stage.showsTrail, isTrue);
         expect(sounds, isNot(contains(Sfx.skHoop))); // unchanged skin
+        // The trail is drawn on the Birds tab right after the pass and 1.75 s
+        // later, where the old 1.7 s burn had already ended (owner bug).
+        expect(stage.trail.particleCount, greaterThan(0));
         stepGame(game, 1.75);
-        expect(stage.showsTrail, isFalse);
+        expect(stage.trail.particleCount, greaterThan(0));
         // A new hoop skin: sk_hoop on its first pass only.
         game.selectSkinTab(SkinLayer.hoop);
         game.tapItem(SkinLayer.hoop, 'sky');
@@ -517,10 +518,9 @@ void main() {
         sounds.clear();
         stepGame(game, 4.6);
         expect(sounds.where((s) => s == Sfx.skHoop), hasLength(1));
-        // TRAILS tab: the trail burns permanently; sk_fire on a new trail.
+        // TRAILS tab: sk_fire on a new trail.
         game.selectSkinTab(SkinLayer.trail);
         stepGame(game, 2.5);
-        expect(stage.showsTrail, isTrue);
         expect(stage.trail.particleCount, greaterThan(0));
         sounds.clear();
         game.tapItem(SkinLayer.trail, 'blue');

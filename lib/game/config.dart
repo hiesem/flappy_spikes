@@ -271,7 +271,7 @@ class Config {
     'Come play Flappy Spikes with me, I dare you! $shareUrl',
   ];
 
-  /// §12 the tagline (home subtitle, share-card logo bar), in capitals.
+  /// §12 the tagline (the home subtitle), in capitals.
   static const String tagline = 'FLAP FAST, FLY FAR';
   // endregion PRD-2.3 §3
 

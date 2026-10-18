@@ -7,7 +7,11 @@ import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/services/reminders.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, debugDefaultTargetPlatformOverride;
+import 'package:flutter/services.dart' show MethodCall, MethodChannel;
 import 'package:flutter/widgets.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
@@ -646,5 +650,73 @@ void main() {
         expect(reminders.rescheduleCalls, 4);
       },
     );
+  });
+
+  group('§3.34 notification look: the small icon only', () {
+    const channel = MethodChannel('dexterous.com/flutter/local_notifications');
+    late List<MethodCall> calls;
+
+    setUp(() {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      calls = [];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            calls.add(call);
+            return null;
+          });
+    });
+
+    tearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    /// Schedules one reminder on [platform] through the real plugin and
+    /// returns the `platformSpecifics` it sends down the channel.
+    Future<Map<Object?, Object?>> scheduledDetails(
+      TargetPlatform platform,
+      FlutterLocalNotificationsPlatform impl,
+    ) async {
+      debugDefaultTargetPlatformOverride = platform;
+      FlutterLocalNotificationsPlatform.instance = impl;
+      await LocalNotificationsPlatform().schedule(
+        id: 1,
+        title: 'Flappy Spikes',
+        body: 'Your bird is waiting',
+        time: tz.TZDateTime.from(
+          DateTime.now().add(const Duration(hours: 2)),
+          amsterdam,
+        ),
+        payload: '{}',
+      );
+      final zoned = calls.singleWhere((c) => c.method == 'zonedSchedule');
+      final args = zoned.arguments! as Map<Object?, Object?>;
+      return args['platformSpecifics']! as Map<Object?, Object?>;
+    }
+
+    test('Android: the white bird is the only icon; no large icon beside the '
+        'text', () async {
+      final details = await scheduledDetails(
+        TargetPlatform.android,
+        AndroidFlutterLocalNotificationsPlugin(),
+      );
+      expect(details['icon'], 'ic_notif_bird');
+      expect(details.containsKey('largeIcon'), isFalse);
+      expect(details.containsKey('largeIconBitmapSource'), isFalse);
+      // The channel and its chime are unchanged.
+      expect(details['channelId'], 'reminders');
+      expect(details['sound'], 'notif_chime');
+    });
+
+    test('iOS is unchanged: the chime file and no Android icon keys', () async {
+      final details = await scheduledDetails(
+        TargetPlatform.iOS,
+        IOSFlutterLocalNotificationsPlugin(),
+      );
+      expect(details['sound'], 'notif_chime.caf');
+      expect(details.containsKey('icon'), isFalse);
+      expect(details.containsKey('largeIcon'), isFalse);
+    });
   });
 }

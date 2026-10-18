@@ -15,7 +15,7 @@ Everything below maps a deliverable to an exact store action.
 | Play feature graphic 1024×500 | `store/feature_graphic_1024x500.png` | |
 | Screenshots | `store/screenshots/` | Phone screenshots from the Android build |
 | iOS IPA | Built by GitHub Actions (`.github/workflows/build.yml`), artifact `runner-ipa-unsigned` | See §4 for signing |
-| Privacy policy | `docs/index.html` → https://hiesem.github.io/flappy_spikes/ | **Contains a placeholder contact email — replace `YOUR-CONTACT-EMAIL@example.com` (3 spots) before submitting** |
+| Privacy policy | `hosting/src/privacy_src.html` → https://flappyspikes.com/privacy | Live with the site build (updated 2026-10-19: custom names, PGS §3 disclosure); the contact email is hello@duoleads.com |
 | Source repo | https://github.com/hiesem/flappy_spikes | CI runs here |
 
 App identity: name **Flappy Spikes**, bundle/package **com.flappyspikes.flappy_spikes**,
@@ -28,8 +28,8 @@ min Android 24+, iOS 15+ (Firebase minimum).
 2. **Create app** → name `Flappy Spikes`, default language, free game.
 3. **Set up app** checklist: category *Games → Arcade*, content rating questionnaire
    (no violence/gambling — casual game), target audience 13+, privacy policy URL
-   https://hiesem.github.io/flappy_spikes/ (required — the game uses Firebase
-   Analytics; replace the placeholder email in `docs/index.html` first).
+   https://flappyspikes.com/privacy (required — the game uses Firebase Analytics;
+   the policy lists hello@duoleads.com).
 4. **Store listing**: upload `store/icon_512.png`, `store/feature_graphic_1024x500.png`,
    and 2–8 phone screenshots from `store/screenshots/`.
    Suggested short description: *Tap to flap. Don't touch the spikes — they're everywhere.*
@@ -40,19 +40,23 @@ min Android 24+, iOS 15+ (Firebase minimum).
    **closed test with 12 opted-in testers for 14 consecutive days** before
    production access unlocks. Start recruiting early.
 6. **Data Safety form** (the game now collects data):
-   - *App activity* (app interactions): collected, not linked to identity,
-     ephemeral → Firebase Analytics.
+   - *App activity* (app interactions and the versus runs): collected, linked to the
+     user (the versus runs are keyed to the account), App functionality. See the
+     2.4.0 (37) note at the end of this guide for how this category is answered.
    - *Device or other IDs* (Firebase installation ID): collected, not linked to
      identity → Firebase Analytics.
-   - *Personal info → nickname*: only via the Google Play Games profile for the
-     leaderboard, user-provided by Google, not collected by us. Declare per the
-     form's leaderboard/gameplay wording.
+   - *Personal info → name* and *User IDs*: the generated nickname, or the custom
+     name the player types (3–14 letters and digits, word-filtered), is stored by us
+     with the account id (anonymous, or linked to Play Games). Collected, not shared,
+     linked to the user, App functionality. We do not collect the Play Games profile
+     name or photo; Google shows the Play Games name on the leaderboard. See the
+     2.4.0 (37) note at the end of this guide.
    - *Rewarded ads (opt-in)*: an ad is only served when the player taps to watch
      one. Declare the app **contains ads**; declare the advertising ID as *not
      collected* while the `AD_ID` permission is removed (the real AdMob IDs and
      the final declaration are a pre-release TODO — see §5).
    - No data shared with third parties, data encrypted in transit (yes),
-     users can request deletion (yes, via Settings → Delete my data, or the
+     users can request deletion (yes, via Settings → DELETE MY ACCOUNT & DATA, or the
      policy email).
 7. Submit for review.
 
@@ -156,10 +160,13 @@ In App Store Connect (either path):
 3. Upload screenshots (6.7" iPhone and 12.9" iPad required — capture from the iOS
    simulator on a Mac, or reuse the Android ones at correct sizes via TestFlight first).
 4. Fill in description/keywords, content rating (4+), privacy policy URL
-   https://hiesem.github.io/flappy_spikes/ and the **App Privacy** labels:
-   collect *App Interaction* (analytics) + *Device ID*, both not linked to the
-   user's identity and not used for tracking; leaderboard data is the Game
-   Center nickname/score (declare as *User Content* → gameplay content if asked).
+   https://flappyspikes.com/privacy and the **App Privacy** labels: collect
+   *App Interaction* (analytics) + *Device ID*, both not linked to the user's
+   identity and not used for tracking; plus *User ID* (account id and the custom
+   name) and *Gameplay Content* (scores, runs), both linked to the user, App
+   Functionality, not used for tracking (see the 2.4.0 (37) note). Leaderboard data
+   is the Game Center nickname/score (declare as *User Content* → gameplay content
+   if asked).
 5. Submit for review.
 
 ## 5. What this build deliberately does NOT include
@@ -182,28 +189,32 @@ are local-only — no FCM, no server).
 Versus (async duels against real players' recorded runs) is the only feature that
 sends anything to a server of ours. Firebase project **`flappy-spikes-a2b55`**
 (Firestore in `eur3`, Cloud Functions in `europe-west1`). Use this list to fill in
-Play Console → **Data safety** (and, when iOS reopens, the App Privacy labels).
+Play Console → **Data safety** (and the App Privacy labels for iOS; see the 2.4.0 (37) note).
 
 ### What is collected and stored
 
 | Firestore path | Written by | Fields | Why |
 |---|---|---|---|
-| `players/{uid}` | the player's own client (rules: same `auth.uid` only) | `name` (nickname or Play Games display name), `avatar` (URL or `''`), `platform` (`android`/`ios`, analytics only), `look` (`bird`/`gear`/`hat`/`hoop`/`trail` item ids), `best`, `level`, `bestRun`, `recent` (≤ 5 recent run entries), `uploads {day, count}`, `updatedAt`, `expireAt` | the duel: who you played and their run timeline |
-| `pools/{level}_{shard}` | the server only (Cloud Function `onPlayerRunWrite`) | run entries: `uid`, `level`, `ts`, the run's score/best, display fields (`name`, `avatar`, `look`, `platform`) and the compressed timeline | other players' clients read a pool to find an opponent |
+| `players/{uid}` | the player's own client (rules: same `auth.uid` only) | `name` (the generated nickname; the custom name is never sent here), `avatar` (always `''`), `platform` (`android`/`ios`, analytics only), `look` (`bird`/`gear`/`hat`/`hoop`/`trail` item ids), `best`, `level` (the stored player level), `bestRun`, `recent` (≤ 5 recent run entries), `uploads {day, count}`, `updatedAt`, `expireAt` | the duel: who you played and their run timeline |
+| `versusNames/{uid}` | the server only (`setVersusName` callable; clients have no access) | `customName` (3–14 letters and digits, word-filtered), `updatedAt` | the player's custom name: opponents see it in place of the nickname, and it is copied into the owner's pool entries as `customName` |
+| name claims (one per name) | the server only, with the custom name | the normalised name (case-insensitive, look-alike characters folded) and the owner's uid | one owner per name; the claim is released when the owner changes or clears the name, on deletion, and after 30 days of inactivity for a guest (a player not signed in to Play Games or Game Center) |
+| `pools/{level}_{shard}` | the server only (Cloud Function `onPlayerRunWrite`) | run entries: `uid`, `level`, `ts`, the run's score/best, display fields (`name`, `avatar`, `look`, `platform`, and `customName` when the owner has one) and the compressed timeline | other players' clients read a pool to find an opponent |
 | `versusRate/{uid}` | the server only | `last`, upload counts | rate limit (≤ 3 non-best uploads per UTC day) |
 
 A stored run entry holds: score, best, timestamp, `name`, `avatar`, `look` (5 ids),
 the timeline (`tl`: uint16 delta stream on `runClock`) and its end, the ride/train
-flags and `platform`. No free text exists anywhere (nicknames are generated from a
-fixed 20 + 20 word list + 3 digits; the only user-supplied string is a Play Games
-display name, ≤ 32 chars).
+flags and `platform`. The only free text is the custom name (3–14 letters and digits,
+checked by the word filter in `functions/src/customname.ts`). Generated nicknames come
+from a fixed word list (40 adjectives and 40 birds in `lib/versus/nickname.dart`, plus
+3 digits). The stored `name` is at most 32 characters.
 
 ### Identity
 
 - **Anonymous Firebase Auth uid** by default — no email, no phone, no password.
 - **Optional** Play Games link: the Firebase account keeps the same uid, and
-  `name` / `avatar` become the Play Games display name / photo URL, plus the Play
-  Games player id in Firebase Auth's provider data. Sign-in is never required to play.
+  the Play Games player id is in Firebase Auth's provider data. The game does not use
+  the Play Games display name or photo: `name` stays the generated nickname and
+  `avatar` stays empty. Sign-in is never required to play.
 - **App Check**: Play Integrity (Android) / App Attest + DeviceCheck fallback (iOS,
   later) attest that the app is genuine. No personal data.
 - Firebase **Analytics**: an installation id and event names only (no free text);
@@ -215,25 +226,56 @@ display name, ≤ 32 chars).
   write) deletes an inactive player's **whole document** ~24 h after it expires;
   pool entries and `recent` runs older than **60 days** are trimmed on write and by
   the daily `sweepPools` function. Best runs stay while the player is active.
+- Custom names: kept in `versusNames/{uid}` and in the owner's pool entries until the
+  name is cleared, released or deleted. A guest's name (not signed in to Play Games or
+  Game Center) is released after 30 days of inactivity.
 - Nothing else is stored: the server keeps no logs with player content, and no
   third party receives this data.
 
-### "Delete my data" (Settings, PRD-2 §3.13 / Q22)
+### "DELETE MY ACCOUNT & DATA" (Settings, PRD-2 §3.13 / Q22)
 
 The Settings row opens a confirm dialog; DELETE calls the `deleteMyData` Cloud
 Function (App Check enforced), which
 
-- deletes `players/{uid}` and `versusRate/{uid}`,
+- deletes `players/{uid}`, `versusRate/{uid}` and `versusNames/{uid}` (the custom name),
+- releases the account's name claims,
 - removes the caller's entries from all pool shards,
 - deletes the Firebase Auth account (anonymous or linked), and
 
 then the client resets the Firebase Analytics ID (`resetAnalyticsData`) and the
-local versus state (`versusNickname`, upload queue, daily upload counter). A fresh
-anonymous account starts on the next launch. **Coins, skins, levels, feathers,
-puzzle pieces and met elements stay on the phone** — they were never uploaded.
+local versus state (`versusNickname`, the custom name, upload queue, daily upload
+counter). A fresh anonymous account starts on the next launch. The player level goes
+back to unranked on the phone (claimed level rewards stay claimed), and the music volume
+and the home mode go back to their defaults. **Coins, skins, feathers, puzzle pieces and
+met elements stay on the phone** — they were never uploaded.
 
 Offline or a refused call deletes nothing and says so; the player can retry.
 
 Note for the form: the **Play Games "Top Scores" leaderboard** is stored by Google
 Play Games Services, not by us; that score is removed through the player's own Play
 Games data controls, not by this button.
+
+### Data safety / App privacy changes for 2.4.0 (37)
+
+Custom names and name claims change what the two forms must say. Declare these
+before the 2.4.0 (37) upload:
+
+- **Play Data safety**
+  - *User IDs* (the account id, anonymous or linked to Play Games): collected, not
+    shared, linked to the user, App functionality.
+  - *Name* (the generated nickname, or the custom name the player types): collected,
+    not shared, linked to the user, App functionality.
+  - *App activity*: the versus runs (scores, runs, replays) are keyed to the account,
+    so declare the category as collected, linked to the user, App functionality. The
+    form has one answer for the category; check it against the Firebase Analytics
+    events before you submit.
+  - Account creation: yes, treated as in scope (anonymous account, optionally linked to
+    Play Games). Account deletion: yes, in the app (Settings → DELETE MY ACCOUNT & DATA)
+    and on the web page https://flappyspikes.com/delete-data, which goes in the Play
+    Console deletion URL field.
+  - Privacy policy URL: https://flappyspikes.com/privacy (updated 2026-10-19).
+- **Apple App Privacy labels**
+  - *User ID* (the account id and the custom name / screen name): linked to the user,
+    App Functionality, not used for tracking.
+  - *Gameplay Content* (scores, runs, replays): linked to the user, App Functionality,
+    not used for tracking.

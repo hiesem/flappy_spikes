@@ -197,7 +197,7 @@ class SettingsPanel extends PositionComponent
         ),
       if (onDeleteMyData case final cb?)
         deleteRow = SettingsRow(
-          'Delete my data',
+          'Delete my account & data',
           chevron: chevron,
           danger: true,
           onPressed: cb,

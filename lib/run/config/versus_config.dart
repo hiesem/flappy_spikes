@@ -121,6 +121,11 @@ abstract final class VersusConfig {
   /// (`functions/src/index.ts`).
   static const String setNameFunction = 'setVersusName';
 
+  /// WP-N2 the callable that reads the stored custom name back (restore
+  /// after a reinstall / sign-in / account switch; also the once-a-day
+  /// activity ping that keeps a guest's name).
+  static const String getNameFunction = 'getVersusName';
+
   /// §3.13 Play Games → Firebase link: the OAuth **web** client id the Play
   /// Games server auth code is requested for (public config, not a secret).
   static const String playGamesWebClientId =

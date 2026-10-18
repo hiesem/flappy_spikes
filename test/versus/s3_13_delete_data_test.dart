@@ -60,7 +60,7 @@ void main() {
       verify: (game, _) async {
         final panel = game.world.children.query<SettingsPanel>().single;
         final row = panel.deleteRow!;
-        expect(row.labelText.text, 'DELETE MY DATA');
+        expect(row.labelText.text, 'DELETE MY ACCOUNT & DATA');
         expect(row.labelText.color, Config.settingsRed);
         expect(panel.privacyCard.rows.last, row);
         // WP-NAME the body scrolls (PLAYER card on top): at its end.
@@ -87,7 +87,7 @@ void main() {
       var popup = game.deleteDataPopup;
       expect(popup, isNotNull);
       expect(popup!.step, DeleteDataStep.confirm);
-      expect(popup.titleText.text, 'DELETE MY DATA');
+      expect(popup.titleText.text, 'DELETE MY ACCOUNT & DATA');
       expect(
         popup.messageText.text,
         contains('uploaded runs'),

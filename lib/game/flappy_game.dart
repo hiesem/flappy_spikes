@@ -347,7 +347,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   Future<CustomNameSave> saveCustomName(String name) async {
     final n = name.trim();
     if (n.isNotEmpty) {
-      final f = checkCustomNameFormat(n);
+      final f = checkCustomNameLocal(n);
       if (f != null) return CustomNameRefused(f);
     }
     if (n == storage.versusCustomName) return const CustomNameAccepted('');

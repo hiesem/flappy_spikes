@@ -327,7 +327,7 @@ class SettingsPlayerCard extends PositionComponent
     if (!_editing || _saving) return;
     final name = _draft.trim();
     if (name.isNotEmpty) {
-      final f = checkCustomNameFormat(name);
+      final f = checkCustomNameLocal(name);
       if (f != null) {
         _error = f;
         _sync();

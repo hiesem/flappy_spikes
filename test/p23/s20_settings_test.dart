@@ -365,7 +365,7 @@ void main() async {
       expect(panel.privacyCard.rows.map((r) => r.labelText.text), [
         'PRIVACY POLICY',
         'PRIVACY OPTIONS',
-        'DELETE MY DATA',
+        'DELETE MY ACCOUNT & DATA',
       ]);
       expect(
         panel.rows.where((r) => r.labelText.text.contains('RATE')),
@@ -428,7 +428,7 @@ void main() async {
       expect(panel.privacyOptionsRow, isNull);
       expect(panel.privacyCard.rows.map((r) => r.labelText.text), [
         'PRIVACY POLICY',
-        'DELETE MY DATA',
+        'DELETE MY ACCOUNT & DATA',
       ]);
     },
   );

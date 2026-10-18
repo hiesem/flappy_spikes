@@ -424,6 +424,11 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   position. A full-screen invisible blocker consumes stray taps so they cannot
   start the game behind the open panel; the start-scene bird fades with the
   panels.
+- DEVIATION (WP-SET, owner 2026-10-19): the footer credit reads "Melody by
+  ElectroBaptist"; tapping the name opens https://soundcloud.com/electrobaptist
+  in the in-app browser (Chrome Custom Tab / SFSafariViewController), as do
+  Support and Privacy policy. Redeem code stays in the Play Store app. The
+  footer's `Flappy Spikes v<version> (<build>)` shows on every open.
 
 ## Audio & persistence
 

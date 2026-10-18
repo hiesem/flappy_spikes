@@ -42,7 +42,9 @@ const List<String> kSettingsImages = [
 /// - the PRIVACY & DATA card: Privacy policy, Privacy options (only when
 ///   [onPrivacyOptions] is set: the consent SDK requires it), Delete my
 ///   data;
-/// - the footer: the music credit and `Flappy Spikes v<version> (<build>)`.
+/// - the footer: the music credit (`Melody by ElectroBaptist`; the name opens
+///   the artist's page in the in-app browser, [creditLink]) and
+///   `Flappy Spikes v<version> (<build>)`.
 ///
 /// The spike strips are the game's own (they follow the stage tint); the
 /// tiles and cards keep their fixed colours. A full-screen blocker behind
@@ -141,8 +143,11 @@ class SettingsPanel extends PositionComponent
   SettingsRow? privacyOptionsRow;
   SettingsRow? deleteRow;
 
-  /// Footer lines.
+  /// Footer lines: "Melody by " and the name (the link, [creditLink]), and
+  /// the version line.
+  late final MenuText creditLead;
   late final MenuText creditText;
+  late final MenuButton creditLink;
   late final MenuText versionText;
 
   /// The RUMBLE tile's icon (tests).
@@ -311,8 +316,8 @@ class SettingsPanel extends PositionComponent
 
     // --- footer ---
     final footerTop = l.footerY;
-    final creditLead = MenuText(
-      'Music by ',
+    creditLead = MenuText(
+      'Melody by ',
       fontSize: Config.settingsFooterFontSize,
       color: Config.settingsFooter,
       letterSpacingEm: 0.08,
@@ -322,6 +327,14 @@ class SettingsPanel extends PositionComponent
       fontSize: Config.settingsFooterFontSize,
       color: Config.settingsInk,
       letterSpacingEm: 0.08,
+    );
+    // The name is the link: a transparent tap box (no press effect, the look
+    // is the design's), placed by [_placeCreditLink] once the footer is final.
+    creditLink = MenuButton(
+      onPressed: () => game.openMusicCredit(),
+      pressedTo: 1,
+      pressShade: false,
+      priority: 1,
     );
     final creditW = creditLead.width + creditText.width;
     final lineTop = footerTop + (l.footerLine - creditLead.height) / 2;
@@ -359,6 +372,7 @@ class SettingsPanel extends PositionComponent
         privacyCard,
         creditLead,
         creditText,
+        creditLink,
         versionText,
       ]);
     scroll = MenuScrollArea(
@@ -385,6 +399,7 @@ class SettingsPanel extends PositionComponent
       t.y += footerTopRest - l.footerY;
     }
     _footerBottom = footerTopRest + 2 * l.footerLine;
+    _placeCreditLink(l);
     _relayout();
 
     addAll([
@@ -434,9 +449,28 @@ class SettingsPanel extends PositionComponent
     super.onRemove();
   }
 
+  /// The music credit's tap box: the name's width and
+  /// [Config.settingsCreditHitHeight] tall (the touch minimum), centred on
+  /// the name's line as far as the PRIVACY & DATA card above allows; its top
+  /// never reaches up over that card, whose rows take the taps there.
+  void _placeCreditLink(SettingsLayout l) {
+    final mid = creditText.y + creditText.height / 2;
+    final top = math.max(
+      l.cardsBottom,
+      mid - Config.settingsCreditHitHeight / 2,
+    );
+    creditLink
+      ..position = Vector2(creditText.x, top)
+      ..size = Vector2(creditText.width, Config.settingsCreditHitHeight);
+  }
+
+  /// Sets the footer's version when the read is done. No mounted check: a
+  /// read that is already done lands before the next frame mounts this
+  /// panel (every reopen after the first read), and the text of a panel that
+  /// has closed meanwhile is harmless.
   Future<void> _loadVersion() async {
     final version = await game.appInfo.load();
-    if (version != null && isMounted) versionText.text = version.footer;
+    if (version != null) versionText.text = version.footer;
   }
 
   MenuText _caption(String text, Vector2 position) => MenuText(

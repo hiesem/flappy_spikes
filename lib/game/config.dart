@@ -224,6 +224,10 @@ class Config {
   static const String supportUrl = 'https://flappyspikes.com/support';
   static const String deleteDataUrl = 'https://flappyspikes.com/delete-data';
 
+  // WP-SET (owner 2026-10-19): the footer's music credit. Tapping the name
+  // opens the artist's SoundCloud page in the in-app browser.
+  static const String musicCreditUrl = 'https://soundcloud.com/electrobaptist';
+
   // PRD-2.3 §22.2: Settings → Redeem code opens the Play Store's redeem
   // screen. Owner 2026-10-13: the bare `/redeem` link makes the Play app
   // hand it on to the browser (wrong account possible); with an empty
@@ -1522,6 +1526,10 @@ class Config {
   static const double settingsFooterFontSize = 10.5;
   static const double settingsFooterLine = 16.8;
   static const double settingsFooterGap = 8;
+
+  /// WP-SET: the music credit's tap box is this tall (the 44 pt touch
+  /// minimum); its width is the name's.
+  static const double settingsCreditHitHeight = 44;
 
   // region PRD-2.3 §10 — the waiting start and the tap reminder
   /// §10.1 the waiting bird's hover: ±6 pt (the approved design's idle).

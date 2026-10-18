@@ -4715,20 +4715,24 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     world.add(message);
   }
 
-  /// Settings → Privacy policy: opens `Config.privacyPolicyUrl` (§20.3).
+  /// Settings → Privacy policy: opens `Config.privacyPolicyUrl` in the
+  /// in-app browser (§20.3; owner 2026-10-19).
   Future<void> openPrivacyPolicy() => _openLink(Config.privacyPolicyUrl);
 
   // region PRD-2.3 §20 / §22 — Settings links
 
-  /// Opens [uri] outside the game (browser / Play Store). Tests replace it
-  /// to record the links; the default never throws.
-  Future<void> Function(Uri uri) urlOpener = _launchExternal;
+  /// Opens [uri] outside the game in [mode]: the web pages in the in-app
+  /// browser (Chrome Custom Tab / SFSafariViewController), the redeem link
+  /// in the Play Store app. Tests replace it to record the links; the
+  /// default never throws.
+  Future<void> Function(Uri uri, LaunchMode mode) urlOpener = _launchLink;
 
-  static Future<void> _launchExternal(Uri uri) async {
+  static Future<void> _launchLink(Uri uri, LaunchMode mode) async {
     try {
       // Play links (Redeem code) go to the Play Store app itself, never a
       // browser; the browser is only the fallback (no Play Store).
-      if (uri.host == 'play.google.com' &&
+      if (mode == LaunchMode.externalApplication &&
+          uri.host == 'play.google.com' &&
           await launchUrl(
             uri,
             mode: LaunchMode.externalNonBrowserApplication,
@@ -4737,21 +4741,35 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       }
     } catch (_) {}
     try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      // No usable browser (or plugin unavailable in tests): ignore.
+      if (await launchUrl(uri, mode: mode)) return;
+    } catch (_) {}
+    if (mode == LaunchMode.inAppBrowserView) {
+      // No in-app browser here (the Linux desktop target) or it would not
+      // open: the link still opens in the external browser.
+      try {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        // No usable browser (or plugin unavailable in tests): ignore.
+      }
     }
   }
 
-  Future<void> _openLink(String url) async {
+  Future<void> _openLink(
+    String url, {
+    LaunchMode mode = LaunchMode.inAppBrowserView,
+  }) async {
     sound.play(Sfx.click);
     try {
-      await urlOpener(Uri.parse(url));
+      await urlOpener(Uri.parse(url), mode);
     } catch (_) {}
   }
 
-  /// Settings → Support: `Config.supportUrl` (§20.3).
+  /// Settings → Support: `Config.supportUrl` in the in-app browser (§20.3).
   Future<void> openSupport() => _openLink(Config.supportUrl);
+
+  /// Settings → the footer's music credit (the name): `Config.musicCreditUrl`
+  /// in the in-app browser (WP-SET, owner 2026-10-19).
+  Future<void> openMusicCredit() => _openLink(Config.musicCreditUrl);
 
   /// Settings → Redeem code exists on Android only: the gift codes are
   /// Google Play promo codes and the gift products are Play-only (PORT-IOS
@@ -4759,10 +4777,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   bool get redeemCodeAvailable => defaultTargetPlatform != TargetPlatform.iOS;
 
   /// Settings → Redeem code (PRD-2.3 §22.2): the Play Store's redeem
-  /// screen; the gift arrives through the purchase sync on return.
+  /// screen; the gift arrives through the purchase sync on return. Not the
+  /// in-app browser: the redeem must run in the Play app for the purchasing
+  /// account (owner decision 2026-10-13, see [Config.redeemCodeUrl]).
   Future<void> openRedeemCode() {
     services.track('redeem_code_opened');
-    return _openLink(Config.redeemCodeUrl);
+    return _openLink(
+      Config.redeemCodeUrl,
+      mode: LaunchMode.externalApplication,
+    );
   }
 
   /// The Settings footer's version source (PRD-2.3 §20.2; `main.dart`

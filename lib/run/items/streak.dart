@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flame/components.dart';
@@ -7,6 +8,7 @@ import '../../components/skins/item_art.dart' show paintLookForTrail;
 import '../../game/flappy_game.dart';
 import '../config/run_config.dart';
 import '../config/streak_config.dart';
+import '../config/trail_config.dart';
 import '../director/plans.dart';
 import '../effects/bird_attachment.dart';
 import '../effects/particle_pool.dart';
@@ -326,6 +328,19 @@ class _HoopTier {
 
 /// The bird's tier-3+ trail (master #10 / equipped trail via [TierTrail]),
 /// in screen space right behind the bird. It also runs during a ride.
+///
+/// WP-TRAIL (owner 2026-10-18): the trail lies along the bird's real path.
+/// Each frame everything already drawn moves with the world on screen (the
+/// camera's motion, ride camera included: climbs, loops, the launch
+/// flight), and the trail is emitted at the point [TrailConfig.runBack]
+/// back along the bird's own recent path (its centre path, sampled every
+/// [TrailConfig.pathStep] pt), in the path's direction. So the trail
+/// follows the bird like a snake follows its head.
+///
+/// Hide rule (Audit HIDE + WP-TRAIL): while the bird is drawn the trail is
+/// connected to it, with its drawn scale and opacity; when the bird is
+/// hidden the trail detaches (shed parts stay and fade in place); when it
+/// is back a fresh trail starts from it.
 class _TrailComponent extends Component with BirdAttachment {
   _TrailComponent(this.c, this.trail)
     : super(priority: StreakConfig.trailPriority);
@@ -350,27 +365,82 @@ class _TrailComponent extends Component with BirdAttachment {
   /// live), regardless of the bird being hidden.
   bool _wasOn = false;
 
-  Vector2? _prevBird;
+  /// Whether the bird was drawn last frame.
+  bool _wasShown = false;
+
+  bool _hasCam = false;
   double _prevCamX = 0, _prevCamY = 0;
 
-  /// The flight direction for master #10 (radians, 0 = right). Normal
-  /// flight: 0 — the camera follows the bird forward, so the trail lies
-  /// level behind it and drifts with the world, exactly the §5.3 mock (call:
-  /// the vertical flap motion does not tilt it). Rides (comet / portal):
-  /// the bird's motion relative to the world (screen motion + camera
-  /// motion), so the trail bends with diagonal and curved flight.
-  double _heading(Vector2? bird, double dt) {
+  /// The bird's recent centre path (screen, moved with the world), newest
+  /// at [_pHead]; a ring of [_pathCap] points [TrailConfig.pathStep] apart.
+  static const int _pathCap = 48;
+  final Float64List _px = Float64List(_pathCap);
+  final Float64List _py = Float64List(_pathCap);
+  int _pHead = 0, _pCount = 0;
+
+  /// The flight direction last frame (rad), kept while the bird stands.
+  double _heading = 0;
+
+  /// The emission point and heading this frame (tests).
+  Offset tail = Offset.zero;
+  double get heading => _heading;
+
+  /// The world's motion on screen this frame: minus the camera's move;
+  /// a cut (a jump no motion could make) moves nothing.
+  (double, double) _worldShift(double dt) {
     final s = c.s;
-    final prev = _prevBird;
-    final dxCam = s.camX - _prevCamX, dyCam = s.camY - _prevCamY;
-    _prevBird = bird?.clone();
+    final dx = s.camX - _prevCamX, dy = s.camY - _prevCamY;
+    final had = _hasCam;
+    _hasCam = true;
     _prevCamX = s.camX;
     _prevCamY = s.camY;
-    if (s.ride == null || bird == null || prev == null || dt <= 0) return 0;
-    final vx = bird.x - prev.x + dxCam;
-    final vy = bird.y - prev.y + dyCam;
-    if (vx * vx + vy * vy < 1e-6) return 0;
-    return math.atan2(vy, vx);
+    if (!had) return (0, 0);
+    final limit = TrailConfig.cutSlack + TrailConfig.maxWorldSpeed * dt;
+    if (dx * dx + dy * dy > limit * limit) return (0, 0);
+    return (-dx, -dy);
+  }
+
+  int _pi(int i) => (_pHead - i + _pathCap) % _pathCap;
+
+  void _record(double x, double y) {
+    if (_pCount > 0) {
+      final h = _pHead;
+      final ddx = x - _px[h], ddy = y - _py[h];
+      if (ddx * ddx + ddy * ddy <
+          TrailConfig.pathStep * TrailConfig.pathStep) {
+        return;
+      }
+    }
+    _pHead = (_pHead + 1) % _pathCap;
+    _px[_pHead] = x;
+    _py[_pHead] = y;
+    if (_pCount < _pathCap) _pCount++;
+  }
+
+  /// The point [back] pt back along the centre path from ([bx], [by]) and
+  /// the path direction there; with too little path, the oldest point (a
+  /// fresh trail starts at the bird).
+  Offset _tailOf(double bx, double by, double back) {
+    var x0 = bx, y0 = by;
+    var left = back;
+    for (var i = 0; i < _pCount; i++) {
+      final h = _pi(i);
+      final x1 = _px[h], y1 = _py[h];
+      final dx = x0 - x1, dy = y0 - y1;
+      final d = math.sqrt(dx * dx + dy * dy);
+      if (d >= left && d > 1e-9) {
+        final t = left / d;
+        final tx = x0 - dx * t, ty = y0 - dy * t;
+        _heading = math.atan2(by - ty, bx - tx);
+        return Offset(tx, ty);
+      }
+      left -= d;
+      x0 = x1;
+      y0 = y1;
+    }
+    final dx = bx - x0, dy = by - y0;
+    if (dx * dx + dy * dy > 1) _heading = math.atan2(dy, dx);
+    return Offset(x0, y0);
   }
 
   @override
@@ -383,25 +453,44 @@ class _TrailComponent extends Component with BirdAttachment {
         live &&
         bird != null &&
         (s.tier >= StreakConfig.trailTier || s.ride != null);
-    active =
-        on &&
-        // region WP-3b — no trail while a ride hides the bird (§3.12)
-        !(s.ride?.birdHidden ?? false) &&
-        // Audit HIDE: nor while anything else hides the bird.
-        birdPresented;
-    // endregion WP-3b
+    // Audit HIDE: the bird hidden by a ride or anything else.
+    final shown = birdPresented && !(s.ride?.birdHidden ?? false);
+    active = on && shown;
+    // The world's motion: everything shed stays where the bird was.
+    final (wx, wy) = _worldShift(dt);
+    trail.shift(pool, wx, wy);
+    for (var i = 0; i < _pCount; i++) {
+      final h = _pi(i);
+      _px[h] += wx;
+      _py[h] += wy;
+    }
+    // The bird's centre path (fresh when it reappears).
+    if (shown && !_wasShown) _pCount = 0;
+    final b = c.game.runBird;
+    final scale = b?.drawnScale ?? 1;
+    if (shown && bird != null) _record(bird.x, bird.y);
+    if (bird != null) {
+      tail = _tailOf(bird.x, bird.y, TrailConfig.runBack * scale);
+    }
     // Audit A2-1: switched off (streak break, death): no frozen stripe.
     if (_wasOn && !on) trail.dropPath();
+    // WP-TRAIL: the bird hidden while the trail is on: shed and fade.
+    if (on && !shown && _wasShown) trail.detach();
     _wasOn = on;
-    final vx = s.forwardSpeed;
-    final heading = _heading(bird, dt);
+    _wasShown = shown;
+    // The bird's opacity, except the invulnerability blink (the trail
+    // does not blink).
+    final opacity = s.invulnerable > 0 ? 1.0 : (b?.drawnOpacity ?? 1);
     trail.update(
       pool,
       dt,
       bird == null ? Offset.zero : Offset(bird.x, bird.y),
-      heading,
+      _heading,
       active: active,
-      scrollVx: -vx,
+      tail: bird == null ? null : tail,
+      scale: scale,
+      opacity: opacity,
+      angle: b != null && b.isLoaded ? b.body.angle : 0,
     );
     pool.step(dt);
   }

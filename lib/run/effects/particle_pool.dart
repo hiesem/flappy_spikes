@@ -158,6 +158,17 @@ class ParticlePool extends Component {
 
   void clear() => _alive = 0;
 
+  /// WP-TRAIL: moves every live particle by ([dx], [dy]) — a screen-space
+  /// pool whose particles stay put in the world while the camera moves.
+  void shift(double dx, double dy) {
+    if (dx == 0 && dy == 0) return;
+    for (var i = 0; i < _alive; i++) {
+      final p = _items[i];
+      p.x += dx;
+      p.y += dy;
+    }
+  }
+
   // region WP-3c — flame helpers (PRD-2 §5.18)
   /// The colour at [k] (0..1) along [ramp] (the mock's `ramp()`).
   static Color rampColor(List<Color> ramp, double k) {

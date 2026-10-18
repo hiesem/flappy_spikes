@@ -79,10 +79,130 @@ final class TrailV23 {
   final Float64List _hc = Float64List(_histSize);
   int _hHead = 0, _hCount = 0;
 
+  // region WP-TRAIL — the run trail along the bird's real path
+  /// WP-TRAIL: [TrailEmitter.worldLocked] mode (see there): no scroll drift
+  /// (the owner shifts the trail with the world), jitter and backward drift
+  /// laid out along / across the flight direction, time-sampled paths.
+  bool _world = false;
+
+  /// Flight direction (rad) and its cosine / sine (1 / 0 at heading 0).
+  double _hd = 0, _cH = 1, _sH = 0;
+  double _ex = 0, _ey = 0;
+  double _prevX = 0, _prevY = 0;
+  bool _hasPrev = false;
+  double _hAcc = 0;
+
+  /// Sets up the next [emit] (called by `TrailEmitter.emit`).
+  void frame({
+    required bool world,
+    required double heading,
+    double? prevX,
+    double? prevY,
+  }) {
+    _world = world;
+    _hd = heading;
+    _cH = heading == 0 ? 1 : math.cos(heading);
+    _sH = heading == 0 ? 0 : math.sin(heading);
+    _hasPrev = prevX != null && prevY != null;
+    if (_hasPrev) {
+      _prevX = prevX!;
+      _prevY = prevY!;
+    }
+  }
+
+  /// Base point of spawn [j] of [n] this frame (see `TrailEmitter`).
+  void _base(int j, int n, double x, double y) {
+    if (_world && _hasPrev) {
+      final t = (j + 1) / n;
+      _ex = _prevX + (x - _prevX) * t;
+      _ey = _prevY + (y - _prevY) * t;
+    } else {
+      _ex = x;
+      _ey = y;
+    }
+  }
+
+  double _ox(double ja, double jp) => _ex + (_cH * ja - _sH * jp);
+  double _oy(double ja, double jp) => _ey + (_sH * ja + _cH * jp);
+
+  /// Velocity [a] along the flight direction (the page's `vx`).
+  void _al(_P? p, double a) {
+    if (p == null) return;
+    p.vx = a * _cH;
+    p.ay = a * _sH;
+  }
+
+  /// A local velocity ([lx] along, [ly] across) turned to the flight
+  /// direction (exactly ([lx], [ly]) at heading 0).
+  void _turn(_P? p, double lx, double ly) {
+    if (p == null) return;
+    p.vx = lx * _cH - ly * _sH;
+    p.vy = lx * _sH + ly * _cH;
+  }
+
+  /// Moves everything drawn by ([dx], [dy]) (the world's motion).
+  void shift(double dx, double dy) {
+    for (var i = 0; i < _alive; i++) {
+      final p = _pool[i];
+      p.x += dx;
+      p.y += dy;
+    }
+    for (var i = 0; i < _hCount; i++) {
+      final h = _hi(i);
+      _hx[h] += dx;
+      _hy[h] += dy;
+    }
+  }
+
+  /// Time-sampled `head` (one committed point per 1/60 s, live newest).
+  void _headWorld(double dt, double x, double y, int n) {
+    if (_hCount == 0) {
+      _hAcc = 0;
+      _pushHead(x, y, n);
+      return;
+    }
+    _hAcc += dt;
+    var pushes = 0;
+    if (_hAcc >= 1 / 60) {
+      pushes = math.min(4, (_hAcc * 60).floor());
+      _hAcc -= pushes / 60;
+      if (_hAcc >= 1 / 60) _hAcc = 0;
+    }
+    if (pushes == 0) {
+      _hx[_hHead] = x;
+      _hy[_hHead] = y;
+      _hc[_hHead] = _clock;
+      return;
+    }
+    final x0 = _hx[_hHead], y0 = _hy[_hHead];
+    for (var i = 1; i <= pushes; i++) {
+      final t = i / pushes;
+      _pushHead(x0 + (x - x0) * t, y0 + (y - y0) * t, n);
+    }
+  }
+
+  void _pushHead(double x, double y, int n) {
+    _hHead = (_hHead + 1) % _histSize;
+    _hx[_hHead] = x;
+    _hy[_hHead] = y;
+    _hr[_hHead] = _random.nextDouble();
+    _hc[_hHead] = _clock;
+    if (_hCount < n) _hCount++;
+    if (_hCount > n) _hCount = n;
+  }
+  // endregion WP-TRAIL
+
   int get particleCount => _alive;
 
   /// Path-history points (Prism, Paint stroke).
   int get historyLength => _hCount;
+
+  /// Path point [i] (0 = newest; tests).
+  Offset historyPoint(int i) => Offset(_hx[_hi(i)], _hy[_hi(i)]);
+
+  /// Live particle positions (tests).
+  Iterable<Offset> get particlePositions =>
+      _pool.take(_alive).map((p) => Offset(p.x, p.y));
 
   void clear() {
     _alive = 0;
@@ -118,6 +238,7 @@ final class TrailV23 {
         final f = math.max(0.0, 1 - p.dr * dt);
         p.vx *= f;
         p.vy *= f;
+        p.ay *= f;
       }
     }
   }
@@ -130,6 +251,10 @@ final class TrailV23 {
 
   /// `head(st, dt, x, y, n)`: newest point first, all shifted with the scroll.
   void _head(double dt, double x, double y, int n) {
+    if (_world) {
+      _headWorld(dt, x, y, n);
+      return;
+    }
     _hHead = (_hHead + 1) % _histSize;
     _hx[_hHead] = x;
     _hy[_hHead] = y;
@@ -150,80 +275,103 @@ final class TrailV23 {
     final u = k / 2;
     switch (id) {
       case 'sunset':
-        for (var n = _every(0, .012, dt); n > 0; n--) {
-          final px = x + _r(-2, 2) * k, py = y + _r(-4, 4) * k;
-          final p = _spawn(px, py);
+        final n0 = _every(0, .012, dt);
+        for (var j = 0; j < n0; j++) {
+          _base(j, n0, x, y);
+          final ja = _r(-2, 2) * k, jp = _r(-4, 4) * k;
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
           final a = _r(-20, 10) * u, b = _r(-12, 12) * u - 14 * u;
           final m = _r(.38, .58), s = _r(5, 9) * u;
           p?.set(vx: a, vy: b, max: m, s: s);
+          _al(p, a);
         }
       case 'leaves':
         for (var i = 0; i < _alive; i++) {
           final p = _pool[i];
           p.vy = p.v0 + math.sin(p.life * 5 + p.ph) * 16 * u;
         }
-        for (var n = _every(0, .085, dt); n > 0; n--) {
+        final n0 = _every(0, .085, dt);
+        for (var j = 0; j < n0; j++) {
+          _base(j, n0, x, y);
           final v0 = _r(4, 18) * u;
-          final px = x + _r(-3, 1) * k, py = y + _r(-5, 5) * k;
+          final ja = _r(-3, 1) * k, jp = _r(-5, 5) * k;
           final a = _r(-14, 8) * u, m = _r(.9, 1.2), s = _r(6.5, 8.5) * u;
           final rot = _r(0, tau), vr = _r(-4, 4), ph = _r(0, tau);
           final c = _pick(_leaf);
-          _spawn(px, py)?.set(vx: a, vy: v0, max: m, s: s, rot: rot, vr: vr)
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, vy: v0, max: m, s: s, rot: rot, vr: vr)
             ?..v0 = v0
             ..ph = ph
             ..c0 = c.$1
             ..c1 = c.$2;
+          _al(p, a);
         }
       case 'snow':
-        for (var n = _every(0, .09, dt); n > 0; n--) {
-          final px = x + _r(-3, 1) * k, py = y + _r(-5, 5) * k;
+        final n0 = _every(0, .09, dt);
+        for (var j = 0; j < n0; j++) {
+          _base(j, n0, x, y);
+          final ja = _r(-3, 1) * k, jp = _r(-5, 5) * k;
           final a = _r(-14, 6) * u, b = _r(6, 20) * u, m = _r(.9, 1.2);
           final s = _r(5.5, 7.5) * u, rot = _r(0, tau), vr = _r(-2.5, 2.5);
           final c = _pick(_snowC);
-          _spawn(px, py)?.set(vx: a, vy: b, max: m, s: s, rot: rot, vr: vr).c0 =
-              c;
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, vy: b, max: m, s: s, rot: rot, vr: vr).c0 = c;
+          _al(p, a);
         }
       case 'petals':
         for (var i = 0; i < _alive; i++) {
           final p = _pool[i];
           p.vy = p.v0 + math.cos(p.life * 4 + p.ph) * 12 * u;
         }
-        for (var n = _every(0, .07, dt); n > 0; n--) {
+        final n0 = _every(0, .07, dt);
+        for (var j = 0; j < n0; j++) {
+          _base(j, n0, x, y);
           final v0 = _r(-4, 14) * u;
-          final px = x + _r(-3, 1) * k, py = y + _r(-5, 5) * k;
+          final ja = _r(-3, 1) * k, jp = _r(-5, 5) * k;
           final a = _r(-12, 8) * u, m = _r(.9, 1.2), s = _r(6, 8) * u;
           final rot = _r(0, tau), vr = _r(-3, 3), ph = _r(0, tau);
           final c = _pick(_pet);
-          _spawn(px, py)?.set(vx: a, vy: v0, max: m, s: s, rot: rot, vr: vr)
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, vy: v0, max: m, s: s, rot: rot, vr: vr)
             ?..v0 = v0
             ..ph = ph
             ..c0 = c.$1
             ..c1 = c.$2;
+          _al(p, a);
         }
       case 'ink':
         _phys(dt);
-        for (var n = _every(0, .06, dt); n > 0; n--) {
-          final px = x + _r(-3, 1) * k, py = y + _r(-4, 4) * k;
+        final n0 = _every(0, .06, dt);
+        for (var j = 0; j < n0; j++) {
+          _base(j, n0, x, y);
+          final ja = _r(-3, 1) * k, jp = _r(-4, 4) * k;
           final a = _r(-12, 6) * u, b = _r(-16, 6) * u, m = _r(.6, .85);
           final s = _r(4, 6.5) * u, c = _pick(_ink);
-          _spawn(px, py)?.set(vx: a, vy: b, max: m, s: s)
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, vy: b, max: m, s: s)
             ?..g = 200 * u
             ..c0 = c;
+          _al(p, a);
         }
       case 'planes':
         for (var i = 0; i < _alive; i++) {
           final p = _pool[i];
           p.vy = math.sin(p.life * 3.2 + p.ph) * 20 * u;
-          p.rot = math.cos(p.life * 3.2 + p.ph) * .32;
+          p.rot = math.cos(p.life * 3.2 + p.ph) * .32 + p.hd;
         }
-        for (var n = _every(0, .26, dt); n > 0; n--) {
-          final px = x + _r(-4, 0) * k, py = y + _r(-8, 8) * k;
+        final n0 = _every(0, .26, dt);
+        for (var j = 0; j < n0; j++) {
+          _base(j, n0, x, y);
+          final ja = _r(-4, 0) * k, jp = _r(-8, 8) * k;
           final a = _r(20, 46) * u, m = _r(1.3, 1.6), s = _r(10, 12.5) * u;
           final ph = _r(0, tau), c = _pick(_pln);
-          _spawn(px, py)?.set(vx: a, max: m, s: s)
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, max: m, s: s)
             ?..ph = ph
+            ..hd = _hd
             ..c0 = c.$1
             ..c1 = c.$2;
+          _al(p, a);
         }
       case 'popcorn':
         _phys(dt);
@@ -237,41 +385,55 @@ final class TrailV23 {
             p.g = 170 * u;
           }
         }
-        for (var n = _every(0, .075, dt); n > 0; n--) {
-          final px = x + _r(-3, 1) * k, py = y + _r(-3, 3) * k;
+        final n0 = _every(0, .075, dt);
+        for (var j = 0; j < n0; j++) {
+          _base(j, n0, x, y);
+          final ja = _r(-3, 1) * k, jp = _r(-3, 3) * k;
           final a = _r(-8, 0) * u, b = _r(-4, 4) * u, m = _r(.9, 1.1);
           final s = _r(6, 7.5) * u, rot = _r(0, tau), pt = _r(.08, .2);
           _random.nextDouble(); // b: Math.random() (unused by the art)
-          _spawn(px, py)?.set(vx: a, vy: b, max: m, s: s, rot: rot).pt = pt;
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, vy: b, max: m, s: s, rot: rot).pt = pt;
+          _al(p, a);
         }
       case 'fireworks':
         _phys(dt);
-        for (var n = _every(0, .2, dt); n > 0; n--) {
-          final px = x - _r(4, 10) * k, py = y + _r(-9, 9) * k;
+        final n0 = _every(0, .2, dt);
+        for (var j = 0; j < n0; j++) {
+          _base(j, n0, x, y);
+          final ja = -_r(4, 10) * k, jp = _r(-9, 9) * k;
           final a = _r(-6, 6) * u, s = _r(16, 22) * u, rot = _r(0, tau);
           final c = _pick(_fw);
-          _spawn(px, py)?.set(vx: a, max: .66, s: s, rot: rot)
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, max: .66, s: s, rot: rot)
             ?..kind = _kB
             ..c0 = c;
+          _al(p, a);
         }
-        for (var n = _every(1, .035, dt); n > 0; n--) {
-          final px = x + _r(-2, 1) * k, py = y + _r(-2, 2) * k;
+        final n1 = _every(1, .035, dt);
+        for (var j = 0; j < n1; j++) {
+          _base(j, n1, x, y);
+          final ja = _r(-2, 1) * k, jp = _r(-2, 2) * k;
           final a = _r(-20, 0) * u, b = _r(-10, 10) * u, s = _r(1.4, 2.2) * u;
           final c = _random.nextDouble() < .6
               ? artGold
               : const Color(0xFFFF9100);
-          _spawn(px, py)?.set(vx: a, vy: b, max: .35, s: s)
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, vy: b, max: .35, s: s)
             ?..kind = _kS
             ..g = 60 * u
             ..c0 = c;
+          _al(p, a);
         }
       case 'steps':
-        for (var n = _every(0, .14, dt); n > 0; n--) {
+        final n0 = _every(0, .14, dt);
+        for (var j = 0; j < n0; j++) {
+          _base(j, n0, x, y);
           _f = !_f;
-          _spawn(
-            x - 2 * k,
-            y + (_f ? -4 : 4) * k,
-          )?.set(max: 1.15, s: 7 * u, rot: _f ? -.22 : .22).c0 = _f
+          final ja = -2 * k, jp = (_f ? -4 : 4) * k;
+          _spawn(_ox(ja, jp), _oy(ja, jp))
+              ?.set(max: 1.15, s: 7 * u, rot: (_f ? -.22 : .22) + _hd)
+              .c0 = _f
               ? artPlum
               : artPink;
         }
@@ -280,47 +442,67 @@ final class TrailV23 {
           final p = _pool[i];
           if (p.kind == _kF) p.vy = math.cos(p.life * 7 + p.ph) * 16 * u;
         }
-        for (var n = _every(0, .24, dt); n > 0; n--) {
-          final px = x + _r(-3, 0) * k, py = y + _r(-8, 8) * k;
+        final n0 = _every(0, .24, dt);
+        for (var j = 0; j < n0; j++) {
+          _base(j, n0, x, y);
+          final ja = _r(-3, 0) * k, jp = _r(-8, 8) * k;
           final a = -_r(6, 26) * u, m = _r(1.1, 1.4), s = _r(7.5, 9.5) * u;
           final ph = _r(0, tau), c = _pick(_fish);
-          _spawn(px, py)?.set(vx: a, max: m, s: s)
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, max: m, s: s)
             ?..kind = _kF
             ..ph = ph
+            ..hd = _hd
             ..c0 = c.$1
             ..c1 = c.$2;
+          _al(p, a);
         }
-        for (var n = _every(1, .16, dt); n > 0; n--) {
-          final px = x + _r(-4, 0) * k, py = y + _r(-6, 6) * k;
+        final n1 = _every(1, .16, dt);
+        for (var j = 0; j < n1; j++) {
+          _base(j, n1, x, y);
+          final ja = _r(-4, 0) * k, jp = _r(-6, 6) * k;
           final b = -_r(14, 26) * u, s = _r(1.6, 2.6) * u;
-          _spawn(px, py)?.set(vy: b, max: .8, s: s).kind = _kB;
+          _spawn(_ox(ja, jp), _oy(ja, jp))?.set(vy: b, max: .8, s: s).kind =
+              _kB;
         }
       case 'galaxy':
-        for (var n = _every(0, .028, dt); n > 0; n--) {
-          final px = x + _r(-3, 1) * k, py = y + _r(-4, 4) * k;
+        final n0 = _every(0, .028, dt);
+        for (var j = 0; j < n0; j++) {
+          _base(j, n0, x, y);
+          final ja = _r(-3, 1) * k, jp = _r(-4, 4) * k;
           final a = _r(-12, 6) * u, b = _r(-8, 8) * u, m = _r(.7, 1);
           final s = _r(5, 8) * u, c = _pick(_neb);
-          _spawn(px, py)?.set(vx: a, vy: b, max: m, s: s)
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, vy: b, max: m, s: s)
             ?..kind = _kN
             ..c0 = c;
+          _al(p, a);
         }
-        for (var n = _every(1, .06, dt); n > 0; n--) {
-          final px = x + _r(-4, 1) * k, py = y + _r(-8, 8) * k;
+        final n1 = _every(1, .06, dt);
+        for (var j = 0; j < n1; j++) {
+          _base(j, n1, x, y);
+          final ja = _r(-4, 1) * k, jp = _r(-8, 8) * k;
           final a = _r(-10, 10) * u, b = _r(-10, 10) * u, m = _r(.8, 1.1);
           final s = _r(2.5, 4.2) * u, ph = _r(0, tau), vr = _r(-2, 2);
           final c = _random.nextDouble() < .65
               ? const Color(0xFFFFFFFF)
               : const Color(0xFFFFE57F);
-          _spawn(px, py)?.set(vx: a, vy: b, max: m, s: s, vr: vr)
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, vy: b, max: m, s: s, vr: vr)
             ?..kind = _kS
             ..ph = ph
             ..c0 = c;
+          _al(p, a);
         }
-        for (var n = _every(2, .03, dt); n > 0; n--) {
-          final px = x + _r(-6, 2) * k, py = y + _r(-7, 7) * k;
+        final n2 = _every(2, .03, dt);
+        for (var j = 0; j < n2; j++) {
+          _base(j, n2, x, y);
+          final ja = _r(-6, 2) * k, jp = _r(-7, 7) * k;
           final a = _r(-10, 10) * u, b = _r(-6, 6) * u, m = _r(.5, .9);
           final s = _r(.8, 1.3) * u;
-          _spawn(px, py)?.set(vx: a, vy: b, max: m, s: s).kind = _kD;
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, vy: b, max: m, s: s).kind = _kD;
+          _al(p, a);
         }
       case 'prism':
         _clock += dt;
@@ -332,7 +514,8 @@ final class TrailV23 {
             final a = math.pi + (ci - 2.5) * .13 + _r(-.05, .05);
             final v = _r(60, 110) * u;
             final m = _r(.35, .55), s = _r(1.8, 2.8) * u, ph = _r(0, tau);
-            _spawn(qx, qy)?.set(
+            final p = _spawn(qx, qy);
+            p?.set(
                 vx: math.cos(a) * v + 60 * u,
                 vy: math.sin(a) * v,
                 max: m,
@@ -340,44 +523,65 @@ final class TrailV23 {
               )
               ?..c0 = _spec[ci]
               ..ph = ph;
+            // WP-TRAIL: the spray leaves backwards along the flight.
+            if (_world) _turn(p, math.cos(a) * v + 60 * u, math.sin(a) * v);
           }
         }
       case 'lavadrip':
         _phys(dt);
-        for (var n = _every(0, .05, dt); n > 0; n--) {
-          final px = x + _r(-3, 1) * k, py = y + _r(-2, 5) * k;
+        final n0 = _every(0, .05, dt);
+        for (var j = 0; j < n0; j++) {
+          _base(j, n0, x, y);
+          final ja = _r(-3, 1) * k, jp = _r(-2, 5) * k;
           final a = _r(-10, 8) * u, b = _r(-10, 10) * u, m = _r(.7, .95);
           final s = _r(4.5, 6.5) * u;
-          _spawn(px, py)?.set(vx: a, vy: b, max: m, s: s)
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, vy: b, max: m, s: s)
             ?..kind = _kD
             ..g = 190 * u;
+          _al(p, a);
         }
-        for (var n = _every(1, .06, dt); n > 0; n--) {
-          final px = x + _r(-3, 1) * k, py = y + _r(-4, 4) * k;
+        final n1 = _every(1, .06, dt);
+        for (var j = 0; j < n1; j++) {
+          _base(j, n1, x, y);
+          final ja = _r(-3, 1) * k, jp = _r(-4, 4) * k;
           final a = _r(-16, 4) * u, b = -_r(14, 34) * u, m = _r(.4, .6);
           final s = _r(1.3, 2.2) * u, vr = _r(-6, 6);
-          _spawn(px, py)?.set(vx: a, vy: b, max: m, s: s, vr: vr).kind = _kE;
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, vy: b, max: m, s: s, vr: vr).kind = _kE;
+          _al(p, a);
         }
       case 'supernova':
         _clock += dt;
         _phys(dt);
-        for (var n = _every(0, .012, dt); n > 0; n--) {
-          final px = x + _r(-2, 1) * k, py = y + _r(-3, 3) * k;
+        final n0 = _every(0, .012, dt);
+        for (var j = 0; j < n0; j++) {
+          _base(j, n0, x, y);
+          final ja = _r(-2, 1) * k, jp = _r(-3, 3) * k;
           final a = _r(-30, 0) * u, b = _r(-12, 12) * u, m = _r(.35, .55);
           final s = _r(5, 9) * u;
-          _spawn(px, py)?.set(vx: a, vy: b, max: m, s: s).kind = _kC;
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, vy: b, max: m, s: s).kind = _kC;
+          _al(p, a);
         }
-        for (var n = _every(1, .36, dt); n > 0; n--) {
-          final bx = x - 3 * k, by = y;
-          _spawn(bx, by)?.set(vx: -6 * u, max: .8, s: 34 * u).kind = _kR;
-          _spawn(bx, by)?.set(vx: -6 * u, max: .6, s: 20 * u)
+        final n1 = _every(1, .36, dt);
+        for (var j = 0; j < n1; j++) {
+          _base(j, n1, x, y);
+          final bx = _ox(-3 * k, 0), by = _oy(-3 * k, 0);
+          final r0 = _spawn(bx, by);
+          r0?.set(vx: -6 * u, max: .8, s: 34 * u).kind = _kR;
+          _al(r0, -6 * u);
+          final r1 = _spawn(bx, by);
+          r1?.set(vx: -6 * u, max: .6, s: 20 * u)
             ?..kind = _kR
             ..w = .6;
+          _al(r1, -6 * u);
           for (var i = 0; i < 8; i++) {
             final a = i * tau / 8 + _r(-.2, .2), v = _r(90, 130) * u;
             final m = _r(.6, .8), s = _r(4.2, 5.8) * u, vr = _r(-6, 6);
             final c = _pick(_novaStars);
-            _spawn(bx, by)?.set(
+            final p = _spawn(bx, by);
+            p?.set(
                 vx: math.cos(a) * v - 10 * u,
                 vy: math.sin(a) * v,
                 max: m,
@@ -387,25 +591,34 @@ final class TrailV23 {
               ?..kind = _kS
               ..dr = 3
               ..c0 = c;
+            if (_world && p != null) {
+              p.vx = math.cos(a) * v - 10 * u * _cH;
+              p.ay = -10 * u * _sH;
+            }
           }
         }
       case 'paint':
         _clock += dt * 2.6;
         _head(dt, x, y, 90);
         _phys(dt);
-        for (var n = _every(0, .07, dt); n > 0; n--) {
+        final n0 = _every(0, .07, dt);
+        for (var j = 0; j < n0; j++) {
+          _base(j, n0, x, y);
           final c = _paintC(_clock);
           _r(-2.6, -.5); // a: unused by the art
           _random.nextDouble();
           final v = _r(30, 70) * u, sg = _random.nextDouble() < .5 ? -1 : 1;
-          final px = x - _r(0, 6) * k, py = y + sg * _r(1, 3) * k;
+          final ja = -_r(0, 6) * k, jp = sg * _r(1, 3) * k;
           final a = -_r(0, 30) * u, m = _r(.6, .9), s = _r(1.6, 3) * u;
           final sat = _random.nextDouble() < .6;
-          _spawn(px, py)?.set(vx: a, vy: sg * v, max: m, s: s)
+          final p = _spawn(_ox(ja, jp), _oy(ja, jp));
+          p?.set(vx: a, vy: sg * v, max: m, s: s)
             ?..g = 150 * u
             ..dr = 1.5
             ..c0 = c
             ..flag = sat;
+          // WP-TRAIL: the spatter flies off across the stroke.
+          if (_world) _turn(p, a, sg * v);
         }
     }
   }
@@ -417,7 +630,7 @@ final class TrailV23 {
       final p = _pool[read];
       p.life += dt;
       p.x += (_vx + p.vx) * dt;
-      p.y += p.vy * dt;
+      p.y += (p.vy + p.ay) * dt;
       p.rot += p.vr * dt;
       if (p.life < p.max) {
         final swap = _pool[write];
@@ -757,7 +970,7 @@ final class TrailV23 {
         c.restore();
         continue;
       }
-      c.rotate(math.sin(p.life * 7 + p.ph) * .25);
+      c.rotate(math.sin(p.life * 7 + p.ph) * .25 + p.hd);
       final w = math.sin(p.life * 14 + p.ph) * .35;
       c.fillStyle = p.c0;
       c.beginPath();
@@ -871,9 +1084,17 @@ final class TrailV23 {
     final px = _hx[_hi(q)], py = _hy[_hi(q)];
     final bx = _hx[_hi(q + 2)], by = _hy[_hi(q + 2)];
     // spectrum fan: six wedges opening backwards from the prism
-    final base =
+    var base =
         math.pi -
         math.max(-.35, math.min(.35, math.atan2(by - py, px - bx) * .45));
+    if (_world) {
+      // WP-TRAIL: the fan opens backwards along the beam whatever the
+      // direction; near level flight it keeps the page's damped tilt.
+      final th = math.atan2(py - by, px - bx);
+      final w = math.pow(math.max(0.0, math.cos(th)), 2).toDouble();
+      final damped = math.pi + math.max(-.35, math.min(.35, th * .45));
+      base = (th + math.pi) * (1 - w) + damped * w;
+    }
     final da = .13 * (1 + .12 * math.sin(T * 7)), L = 38 * k;
     for (final (f, a) in const [(1.0, .28), (.68, .35), (.36, .55)]) {
       c.globalAlpha = a;
@@ -1082,11 +1303,22 @@ final class TrailV23 {
       c.globalAlpha = al;
       c.strokeStyle = col;
       c.beginPath();
+      var nx = 0.0, ny = 1.0;
       for (var i = 0; i < N * .7; i++) {
         final h = _hi(i), w = W * (1 - i / N * .45);
-        i == 0
-            ? c.moveTo(_hx[h], _hy[h] + off * w)
-            : c.lineTo(_hx[h], _hy[h] + off * w);
+        if (_world) {
+          // WP-TRAIL: the bristles sit across the stroke (path normal).
+          final a = _hi(math.max(0, i - 1)), b = _hi(math.min(N - 1, i + 1));
+          final tx = _hx[a] - _hx[b], ty = _hy[a] - _hy[b];
+          final len = math.sqrt(tx * tx + ty * ty);
+          if (len > 1e-6) {
+            nx = -ty / len;
+            ny = tx / len;
+          }
+        }
+        final xx = _hx[h] + nx * off * w * (_world ? 1 : 0);
+        final yy = _hy[h] + (_world ? ny : 1) * off * w;
+        i == 0 ? c.moveTo(xx, yy) : c.lineTo(xx, yy);
       }
       c.stroke();
     }
@@ -1110,6 +1342,10 @@ final class _P {
   int kind = _kNone;
   double x = 0, y = 0, vx = 0, vy = 0, life = 0, max = 1, s = 4;
   double rot = 0, vr = 0, ph = 0, v0 = 0, g = 0, dr = 0, pt = 0, w = 0;
+
+  /// WP-TRAIL: the along-flight drift's vertical part and the flight
+  /// direction at the spawn (0 in the shop).
+  double ay = 0, hd = 0;
   Color c0 = const Color(0xFFFFFFFF), c1 = const Color(0xFFFFFFFF);
 
   /// popcorn `pop` / paint `sat`.
@@ -1119,7 +1355,7 @@ final class _P {
     kind = _kNone;
     x = px;
     y = py;
-    vx = vy = life = rot = vr = ph = v0 = g = dr = pt = w = 0;
+    vx = vy = life = rot = vr = ph = v0 = g = dr = pt = w = ay = hd = 0;
     max = 1;
     s = 4;
     flag = false;

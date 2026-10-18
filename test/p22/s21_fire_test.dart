@@ -102,7 +102,13 @@ void main() {
       expect(TrailConfig.runBack, 18);
       for (final id in TrailEmitter.ids) {
         final t = TierTrail(trailId: id);
-        expect(t.k, closeTo(2 * Config.lookScale, 1e-12), reason: id);
+        // WP-TRAIL (owner 2026-10-18): the Rainbow ribbon and the
+        // Afterimage copies keep the shop preview's size relative to the
+        // bird (the bird's own scale).
+        final want = TrailConfig.birdScaleIds.contains(id)
+            ? Config.lookScale
+            : 2 * Config.lookScale;
+        expect(t.k, closeTo(want, 1e-12), reason: id);
       }
       // The block trail (Pixel blocks): 2× its 8–13 pt master size.
       final pool = ParticlePool(capacity: 64);

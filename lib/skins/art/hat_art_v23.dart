@@ -191,31 +191,60 @@ void _paperboat(Ctx2D c, BirdShape s, double t) {
   c.fillRect(x + 1.6, y - 10.8, 4.6, 1.1);
 }
 
-// H5 headphones
+// H5 headphones, seen from the side: one big rounded cup over the ear, a
+// thick canopy band arching over the crown and down to the forehead. The
+// cup sits behind the eye (as far forward as the eye allows; the owl's eye
+// is a 10-unit box). Colours as before: slate band, plum shell, pink
+// cushion; a thin white outline round the band and the cup.
 void _phones(Ctx2D c, BirdShape s, double t) {
-  final x = s.hx, y = s.top, l = s.l + 1.5, r = s.r - 1.5, cy = y + 9;
-  c.strokeStyle = const Color(0xFF37474F);
-  c.lineWidth = 3;
+  final y = s.top;
+  const o = .75, bandW = 4.2, cupH = 18.0;
+  // The eye's box (the owl's is 10 units wide): the cup stays behind it and
+  // the band's far end clears it.
+  final owl = s.kind == 'owl';
+  final eyeL = s.eye.dx - (owl ? 5 : 2), eyeR = s.eye.dx + (owl ? 5 : 2);
+  final eyeT = s.eye.dy - (owl ? 5 : 2);
+  final right = eyeL - 1.2;
+  final cupW = math.min(15.0, right - (s.l - 1));
+  final cx = right - cupW / 2;
+  // The band: a half-ellipse from the cup's top-back, over the crown, down
+  // to the forehead at [xe]. Its centre line is 7 units under the head top
+  // unless the far end would sit over the eye.
+  final xs = cx - .5, xe = s.r - 2;
+  var by = y + 7;
+  if (xe - bandW / 2 - o < eyeR) {
+    by = math.min(by, eyeT - bandW / 2 - o - .5);
+  }
+  final top = by - 1.5; // the cup's top edge: the band enters it
+  final rx = (xe - xs) / 2, bx = xs + rx;
+  // A round arch, flattened when the band sits low (the owl): its apex stays
+  // within about 4 units of the head top.
+  final ry = math.min(10.0, math.min(rx * 1.15, by - y + 4));
   c.lineCap = StrokeCap.round;
   c.beginPath();
-  c.moveTo(l, cy - 3);
-  c.bezierCurveTo(l, y - 9, r, y - 9, r, cy - 3);
+  c.ellipse(bx, by, rx, ry, 0, math.pi, _tau);
+  c.strokeStyle = const Color(0xFFFFFFFF);
+  c.lineWidth = bandW + 2 * o;
   c.stroke();
-  c.strokeStyle = const Color(0xFF90A4AE);
-  c.lineWidth = 1.1;
+  c.strokeStyle = const Color(0xFF37474F);
+  c.lineWidth = bandW;
+  c.stroke();
   c.beginPath();
-  c.moveTo(x - 6, y - 3.4);
-  c.quadraticCurveTo(x, y - 5.6, x + 6, y - 3.4);
+  c.ellipse(bx, by, rx - .9, ry - .9, 0, math.pi * 1.25, math.pi * 1.85);
+  c.strokeStyle = const Color(0xFF90A4AE);
+  c.lineWidth = 1;
   c.stroke();
-  for (final (cx, d) in [(l, -1.0), (r, 1.0)]) {
-    c.fillStyle = artPlum;
-    c.rr(cx - 2.5 - (d > 0 ? 0 : 1), cy - 6, 5, 12, 2);
-    c.fill();
-    c.fillStyle = artPink;
-    c.rr(cx + d * 1.2 - 2.6, cy - 5.5, 5.2, 11, 2.4);
-    c.fill();
-    _hi(c, cx + d * 1.2 - 1.2, cy - 4, 1.3, 2.6);
-  }
+  // Cup: outline, plum shell, pink cushion inset in it, one highlight.
+  c.fillStyle = const Color(0xFFFFFFFF);
+  c.rr(cx - cupW / 2 - o, top - o, cupW + 2 * o, cupH + 2 * o, 5.2 + o);
+  c.fill();
+  c.fillStyle = artPlum;
+  c.rr(cx - cupW / 2, top, cupW, cupH, 5.2);
+  c.fill();
+  c.fillStyle = artPink;
+  c.rr(cx - cupW / 2 + 2.2, top + 2.2, cupW - 4.4, cupH - 4.4, 3.6);
+  c.fill();
+  _hi(c, cx - cupW / 2 + 3.4, top + 4.5, 1.3, 3.2);
 }
 
 // H6 fishbowl: goldfish swims laps, bubbles rise

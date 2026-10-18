@@ -52,7 +52,7 @@ min Android 24+, iOS 15+ (Firebase minimum).
      collected* while the `AD_ID` permission is removed (the real AdMob IDs and
      the final declaration are a pre-release TODO — see §5).
    - No data shared with third parties, data encrypted in transit (yes),
-     users can request deletion (yes, via Settings → Delete my data, or the
+     users can request deletion (yes, via Settings → DELETE MY ACCOUNT & DATA, or the
      policy email).
 7. Submit for review.
 
@@ -218,7 +218,7 @@ display name, ≤ 32 chars).
 - Nothing else is stored: the server keeps no logs with player content, and no
   third party receives this data.
 
-### "Delete my data" (Settings, PRD-2 §3.13 / Q22)
+### "DELETE MY ACCOUNT & DATA" (Settings, PRD-2 §3.13 / Q22)
 
 The Settings row opens a confirm dialog; DELETE calls the `deleteMyData` Cloud
 Function (App Check enforced), which

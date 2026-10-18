@@ -323,6 +323,10 @@ abstract class VersusBackend {
 
   /// WP-NAME the `setVersusName` callable ('' clears). May throw (offline).
   Future<CustomNameSave> setCustomName(String name);
+
+  /// WP-N2 the `getVersusName` callable: the name the server holds for the
+  /// signed-in uid ('' = none), null when it did not answer. May throw.
+  Future<String?> getCustomName();
 }
 
 /// The player-level fields written with every run (ARCH §6.1).
@@ -670,10 +674,24 @@ class FirebaseVersusService implements VersusService {
   /// The custom-name sync in flight (one at a time).
   Future<void>? _namesSyncing;
 
-  /// WP-NAME sends a custom name the server has not confirmed for the
-  /// current uid (saved offline, or the uid changed). A refusal puts back
-  /// the name the server last confirmed for this uid ('' = "You") and keeps
-  /// the reason for the Settings card. Never throws.
+  /// WP-N2 the next sync reads the server's name even when it was read
+  /// today (a link to Play Games / Game Center just happened).
+  bool _readNameNow = false;
+
+  /// WP-NAME / WP-N2 keeps the custom name in step with the server for the
+  /// current uid. Never throws.
+  ///
+  /// - A local edit the server has not confirmed (typed offline) wins
+  ///   until the server answers: it is sent. A refusal puts back the name
+  ///   the server holds for this uid (or the last confirmed one) and keeps
+  ///   the reason for the Settings card.
+  /// - Otherwise the server is the source of truth: its name is read back
+  ///   (`getVersusName`) for a new uid at once (reinstall, sign-in, account
+  ///   switch), else at most once a UTC day (the activity ping that keeps
+  ///   a guest's name). Its answer replaces the local name — '' too (a
+  ///   guest name released after 30 days) — except right after a switch
+  ///   to an account without a name: the name this phone confirmed for the
+  ///   previous uid moves to the account (sent; `taken` → "You").
   Future<void> syncCustomName() => _namesSyncing ??= _syncCustomName()
       .whenComplete(() => _namesSyncing = null);
 
@@ -684,25 +702,76 @@ class FirebaseVersusService implements VersusService {
       if (uid.isEmpty) return;
       final s = storage;
       final name = s.versusCustomName;
-      final synced = s.versusCustomNameSyncedFor(uid);
-      // Nothing chosen and nothing sent for this uid: nothing to clear.
-      if (synced == name || (synced == null && name.isEmpty)) return;
-      final r = await _call(backend.setCustomName(name));
-      // The player changed it again meanwhile: the next pass sends that.
-      if (s.versusCustomName != name) return;
-      switch (r) {
-        case CustomNameAccepted(uid: final at):
-          await s.saveVersusCustomNameSync(at, name);
-        case CustomNameRefused(:final reason):
-          final back = synced ?? '';
-          await s.saveVersusCustomName(back);
-          await s.saveVersusCustomNameError(reason.key);
-        case CustomNameOffline():
-          break;
+      final confirmed = _confirmedName(s);
+      // A local edit not confirmed by any server answer yet.
+      if (name != (confirmed?.$2 ?? '')) {
+        await _sendCustomName(uid, name, s.versusCustomNameSyncedFor(uid));
+        return;
+      }
+      final today = _utcDay(_clock());
+      if (!_readNameNow && s.versusCustomNameRead == '$uid\n$today') return;
+      _readNameNow = false;
+      final server = await _call(backend.getCustomName());
+      if (server == null) return;
+      // The player changed it meanwhile, or the user changed: the next
+      // pass handles that.
+      if (s.versusCustomName != name ||
+          (_safe(() => backend.uid) ?? '') != uid) {
+        return;
+      }
+      await s.saveVersusCustomNameRead(uid, today);
+      final carried = confirmed != null && confirmed.$1 != uid;
+      if (server.isEmpty && name.isNotEmpty && carried) {
+        await _sendCustomName(uid, name, '');
+        return;
+      }
+      if (server != name || s.versusCustomNameSyncedFor(uid) != server) {
+        await s.saveVersusCustomName(server, syncedUid: uid);
       }
     } catch (e) {
       _log('custom name sync', e);
     }
+  }
+
+  /// Sends [name] for [uid]; a refusal falls back to the server's current
+  /// name, else [fallback] (the last confirmed one; null = "You").
+  Future<void> _sendCustomName(
+    String uid,
+    String name,
+    String? fallback,
+  ) async {
+    final s = storage;
+    final r = await _call(backend.setCustomName(name));
+    // The player changed it again meanwhile: the next pass sends that.
+    if (s.versusCustomName != name) return;
+    switch (r) {
+      case CustomNameAccepted(uid: final at):
+        await s.saveVersusCustomNameSync(at, name);
+        await s.saveVersusCustomNameRead(at, _utcDay(_clock()));
+      case CustomNameRefused(:final reason, :final current):
+        final back = current ?? fallback ?? '';
+        await s.saveVersusCustomName(
+          back,
+          syncedUid: current != null ? uid : null,
+        );
+        await s.saveVersusCustomNameError(reason.key);
+      case CustomNameOffline():
+        break;
+    }
+  }
+
+  /// The (uid, name) the server last confirmed on this phone, or null.
+  (String, String)? _confirmedName(GameStorage s) {
+    final v = s.versusCustomNameSync;
+    final i = v.indexOf('\n');
+    if (i <= 0) return null;
+    return (v.substring(0, i), v.substring(i + 1));
+  }
+
+  static String _utcDay(DateTime t) {
+    final u = t.toUtc();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${u.year}-${two(u.month)}-${two(u.day)}';
   }
 
   T? _safe<T>(T Function() f) {
@@ -1168,6 +1237,9 @@ class FirebaseVersusService implements VersusService {
     } catch (e) {
       _log('link', e);
     }
+    // WP-N2 linked (same uid) or switched (the account's uid): the server's
+    // name is read back now, not tomorrow.
+    _readNameNow = true;
     final uid = _safe(() => backend.uid) ?? '';
     // PRD-2.3.1 §2.2 the link ended without a live user (the fallback
     // guest could not sign in, e.g. offline): versus starts again.

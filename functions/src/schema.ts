@@ -150,6 +150,19 @@ export const NAMES_COLLECTION = 'versusNames';
 export interface NameDoc {
   customName: string;
   updatedAt: Timestamp;
+  /**
+   * WP-N2 the owner's last activity the server saw (a name set, or the
+   * app's once-a-day name read on start / resume). Absent on 2.4.0 docs.
+   */
+  lastSeen?: Timestamp;
+  /** WP-N2 the owner is linked to Play Games / Game Center (never expires). */
+  linked?: boolean;
+  /**
+   * WP-N2 = [lastSeen] while the owner is a guest, absent once linked: the
+   * daily `releaseGuestNames` job queries `guestSeen < now − 30 d`
+   * (single-field index, no composite index needed).
+   */
+  guestSeen?: Timestamp;
 }
 
 export interface PlayerDoc {

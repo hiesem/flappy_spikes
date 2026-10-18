@@ -426,9 +426,27 @@ class FirebaseVersusBackend implements VersusBackend {
     if (data is Map && data['ok'] == true) return CustomNameAccepted(uid);
     if (data is Map) {
       final reason = CustomNameReason.fromKey(data['reason']);
-      if (reason != null) return CustomNameRefused(reason);
+      final current = data['name'];
+      if (reason != null) {
+        return CustomNameRefused(
+          reason,
+          current: current is String ? validCustomName(current) : null,
+        );
+      }
     }
     return const CustomNameOffline();
+  }
+
+  @override
+  Future<String?> getCustomName() async {
+    if (uid == null) return null;
+    final result = await FirebaseFunctions.instanceFor(
+      app: app,
+      region: VersusConfig.functionsRegion,
+    ).httpsCallable(VersusConfig.getNameFunction).call<Object?>();
+    final data = result.data;
+    if (data is Map && data['ok'] == true) return validCustomName(data['name']);
+    return null;
   }
 
   @override

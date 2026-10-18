@@ -148,7 +148,7 @@ void main() async {
         expect(game.state, GameState.start);
         final panel = game.world.children.query<SettingsPanel>().single;
         // PRD-2.3 §20: the Delete my data row of the PRIVACY & DATA card.
-        expect(panel.deleteRow?.labelText.text, 'DELETE MY DATA');
+        expect(panel.deleteRow?.labelText.text, 'DELETE MY ACCOUNT & DATA');
         await tester.runAsync(() => capture(game, 2, name));
         game.openDeleteDataConfirm();
         stepGame(game, 0.4);

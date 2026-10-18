@@ -9,7 +9,14 @@ import { setGlobalOptions, logger } from 'firebase-functions/v2';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { deletePlayerData, processPlayerWrite, setCustomName, sweepAllPools } from './pools.js';
+import {
+  deletePlayerData,
+  getCustomName,
+  processPlayerWrite,
+  releaseStaleGuestNames,
+  setCustomName,
+  sweepAllPools,
+} from './pools.js';
 import type { PlayerDoc } from './schema.js';
 
 initializeApp();
@@ -41,8 +48,26 @@ export const onPlayerRunWrite = onDocumentWritten(
 );
 
 /**
- * "Delete my data" (§3.13 privacy): the caller's pool entries in all 44
- * shards, `players/{uid}`, the server rate doc and the Auth user.
+ * WP-N2 whether [uid] is linked to Play Games / Game Center (an anonymous
+ * Firebase user has no provider). False when the user is gone; null when
+ * Auth could not answer.
+ */
+async function isLinked(uid: string): Promise<boolean | null> {
+  try {
+    const user = await getAuth().getUser(uid);
+    return user.providerData.length > 0;
+  } catch (err) {
+    if ((err as { code?: string }).code === 'auth/user-not-found') return false;
+    return null;
+  }
+}
+
+/**
+ * "Delete my account & data" (§3.13 privacy): the caller's pool entries in all 44
+ * shards, `players/{uid}`, the server rate doc, the custom name and its
+ * claim (WP-N2: released only while this uid holds it) and the Auth user.
+ * Also the guest clean-up before an account switch (the app calls it as
+ * the old anonymous uid), so a guest's name is free again for anyone.
  * Idempotent. (WP-AV: there are no versus pictures any more; the one-off
  * `scripts/backfill_avatars.ts` deleted every old one.)
  * App Check enforced (ARCH §6.3 / §6.5); tokens are not consumed (no replay
@@ -84,22 +109,53 @@ export const deleteMyData = onCall({ enforceAppCheck: true, consumeAppCheckToken
 /**
  * WP-NAME "Player name" in Settings: sets (`{name: 'Wise0wl'}`) or clears
  * (`{name: ''}`) the caller's custom versus name. Refused names answer
- * `{ok: false, reason: 'length' | 'chars' | 'blocked'}` (the app shows the
- * reason in the card); accepted ones `{ok: true, name}` and are written into
- * the caller's pool entries at once. App Check enforced, like deleteMyData.
+ * `{ok: false, reason: 'length' | 'chars' | 'blocked' | 'taken', name?}`
+ * (the app shows the reason in the card; WP-N2 `taken` = another player
+ * holds it, `name` = the caller's current name); accepted ones `{ok: true,
+ * name}` and are written into the caller's pool entries at once. App Check
+ * enforced, like deleteMyData.
  */
 export const setVersusName = onCall({ enforceAppCheck: true, consumeAppCheckToken: false }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign-in required.');
   const data = req.data as { name?: unknown } | undefined;
   try {
-    const r = await setCustomName(getFirestore(), uid, data?.name);
+    const linked = (await isLinked(uid)) === true;
+    const r = await setCustomName(getFirestore(), uid, data?.name, Date.now(), { linked });
     if (r.ok) logger.info('setVersusName', { uid, set: r.name !== '', updated: r.updated });
     return r;
   } catch (err) {
     logger.error('setVersusName failed', { uid, err: String(err) });
     throw new HttpsError('unavailable', 'Name not saved.');
   }
+});
+
+/**
+ * WP-N2 the caller's stored custom name (`{ok: true, name}`, '' = none):
+ * the app restores it after a reinstall, a sign-in or an account switch.
+ * Also the once-a-day activity ping that keeps a guest's name (see
+ * `releaseGuestNames`). App Check enforced.
+ */
+export const getVersusName = onCall({ enforceAppCheck: true, consumeAppCheckToken: false }, async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign-in required.');
+  try {
+    const linked = (await isLinked(uid)) === true;
+    return await getCustomName(getFirestore(), uid, Date.now(), { linked });
+  } catch (err) {
+    logger.error('getVersusName failed', { uid, err: String(err) });
+    throw new HttpsError('unavailable', 'Name not read.');
+  }
+});
+
+/**
+ * WP-N2 daily: guest names (anonymous, not linked) unused for 30 days are
+ * released (claim, name doc, pool entries); linked players' names never
+ * expire.
+ */
+export const releaseGuestNames = onSchedule({ schedule: 'every 24 hours', timeZone: 'Etc/UTC' }, async () => {
+  const released = await releaseStaleGuestNames(getFirestore(), isLinked);
+  logger.info('releaseGuestNames', { released: released.length });
 });
 
 /** Daily retention sweep of the pool shards (ARCH §6.2: entries > 60 d). */

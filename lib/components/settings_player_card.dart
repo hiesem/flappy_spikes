@@ -83,6 +83,10 @@ class SettingsPlayerCard extends PositionComponent
   late final MenuText _hint1;
   late final MenuText _hint2;
   late final MenuButton tapTarget;
+
+  /// WP-N2 while editing: a tap on the card's text area asks for the
+  /// keyboard again (the system can hide it, e.g. Android's hide arrow).
+  late final MenuButton fieldTarget;
   late final MenuButton pencil;
   late final MenuButton confirm;
   late final MenuButton cancel;
@@ -116,6 +120,12 @@ class SettingsPlayerCard extends PositionComponent
       pressedTo: 1,
       pressShade: false,
       onPressed: startEditing,
+    );
+    fieldTarget = MenuButton(
+      size: Vector2(_textRight, editHeight),
+      pressedTo: 1,
+      pressShade: false,
+      onPressed: showKeyboard,
     );
     pencil = MenuButton(
       color: Config.menuPink,
@@ -192,6 +202,7 @@ class SettingsPlayerCard extends PositionComponent
     }
 
     show(tapTarget, !_editing);
+    show(fieldTarget, _editing);
     show(pencil, !_editing);
     show(confirm, _editing);
     show(cancel, _editing);
@@ -316,7 +327,7 @@ class SettingsPlayerCard extends PositionComponent
     if (!_editing || _saving) return;
     final name = _draft.trim();
     if (name.isNotEmpty) {
-      final f = checkCustomNameFormat(name);
+      final f = checkCustomNameLocal(name);
       if (f != null) {
         _error = f;
         _sync();
@@ -342,10 +353,22 @@ class SettingsPlayerCard extends PositionComponent
     if (game.soundReady) game.sound.play(Sfx.click);
   }
 
+  /// The hidden field's state while it is mounted.
+  final GlobalKey<PlayerNameInputState> _input = GlobalKey(
+    debugLabel: 'playerNameInput',
+  );
+
+  /// WP-N2 asks for focus and the system keyboard again (editing only).
+  void showKeyboard() {
+    if (!_editing) return;
+    _input.currentState?.requestKeyboard();
+  }
+
   void _openKeyboard() {
     game.overlays.addEntry(
       kPlayerNameOverlay,
       (context, _) => PlayerNameInput(
+        key: _input,
         initial: _draft,
         onChanged: setDraft,
         onSubmitted: () => unawaited(commit()),
@@ -436,6 +459,32 @@ class PlayerNameInputState extends State<PlayerNameInput> {
     text: widget.initial,
   );
   final FocusNode focus = FocusNode(debugLabel: 'playerName');
+  final GlobalKey<EditableTextState> _field = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    // WP-N2 (no keyboard on the Pixel 8): `autofocus` alone never worked
+    // here. GameWidget puts the overlays inside its own FocusScope whose
+    // focused child is the game's Focus node, and autofocus only applies
+    // in a scope WITHOUT a focused child — so the field never got focus,
+    // never attached to the text input and never showed the keyboard.
+    // It asks for both explicitly once it is laid out.
+    WidgetsBinding.instance.addPostFrameCallback((_) => requestKeyboard());
+  }
+
+  /// Takes the focus (which attaches the field to the platform text input
+  /// and shows the keyboard) or, when it already has it, shows the
+  /// keyboard again.
+  void requestKeyboard() {
+    if (!mounted) return;
+    final field = _field.currentState;
+    if (field != null) {
+      field.requestKeyboard();
+    } else {
+      focus.requestFocus();
+    }
+  }
 
   @override
   void dispose() {
@@ -458,6 +507,7 @@ class PlayerNameInputState extends State<PlayerNameInput> {
           // backspace, arrows on desktop) come from here.
           child: DefaultTextEditingShortcuts(
             child: EditableText(
+              key: _field,
               controller: controller,
               focusNode: focus,
               autofocus: true,

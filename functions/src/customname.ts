@@ -5,13 +5,18 @@
  * filter (English, case-insensitive): blocked words are also caught inside
  * longer names ("xxSLURxx") and in simple leetspeak (0→o, 1→i, 3→e, 4→a,
  * 5→s), with repeated letters collapsed ("fuuuck").
+ *
+ * WP-N2: a name in the generated-nickname shape is refused as 'blocked'
+ * (2.4.0 apps already show that reason); a name another player holds is
+ * refused as 'taken' (`nameclaims.ts`, checked by `setCustomName`).
  */
+import { isGeneratedShape } from './nameclaims.js';
 
 export const CUSTOM_NAME_MIN = 3;
 export const CUSTOM_NAME_MAX = 14;
 
 /** Why a name was refused (the app maps each to its card message). */
-export type CustomNameReason = 'length' | 'chars' | 'blocked';
+export type CustomNameReason = 'length' | 'chars' | 'blocked' | 'taken';
 
 /**
  * Words refused anywhere inside a name. Only words that (almost) never
@@ -77,7 +82,7 @@ export function customNameFormat(name: unknown): CustomNameReason | null {
 export function checkCustomName(name: unknown): CustomNameReason | null {
   const format = customNameFormat(name);
   if (format) return format;
-  return isBlockedName(name as string) ? 'blocked' : null;
+  return isBlockedName(name as string) || isGeneratedShape(name as string) ? 'blocked' : null;
 }
 
 /** A stored custom name as a pool shows it: '' unless it passes the rules now. */

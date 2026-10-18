@@ -115,8 +115,29 @@ class FakeBackend implements VersusBackend {
     if (name.toLowerCase().contains('bad')) {
       return const CustomNameRefused(CustomNameReason.blocked);
     }
+    // WP-N2 one owner per name: [takenNames] (lower case) belong to
+    // another player.
+    if (takenNames.contains(name.toLowerCase())) {
+      return CustomNameRefused(
+        CustomNameReason.taken,
+        current: serverNames[myUid] ?? '',
+      );
+    }
     serverNames[myUid] = name;
     return CustomNameAccepted(myUid);
+  }
+
+  /// WP-N2 names (lower case) another player holds.
+  final Set<String> takenNames = {};
+
+  /// WP-N2 the uids the server's name was read for (`getVersusName`).
+  final List<String> nameReads = [];
+
+  @override
+  Future<String?> getCustomName() async {
+    nameReads.add(myUid);
+    if (nameOffline) throw StateError('offline');
+    return serverNames[myUid] ?? '';
   }
 }
 

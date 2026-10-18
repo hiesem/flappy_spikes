@@ -69,6 +69,7 @@ class GameStorage {
   static const String _versusCustomNameKey = 'versusCustomName';
   static const String _versusCustomNameSyncKey = 'versusCustomNameSync';
   static const String _versusCustomNameErrorKey = 'versusCustomNameError';
+  static const String _versusCustomNameReadKey = 'versusCustomNameRead';
   static const String _uploadQueueKey = 'uploadQueue';
   static const String _uploadsTodayKey = 'uploadsToday';
   static const String _uploadsDayKey = 'uploadsDay';
@@ -333,6 +334,11 @@ class GameStorage {
   /// `CustomNameReason` key; '' = none). The Settings card shows it once.
   String versusCustomNameError = '';
 
+  /// WP-N2 when the server's name was last read back, as `uid\nYYYY-MM-DD`
+  /// (UTC; '' = never): at most once a day per uid (also the activity
+  /// ping that keeps a guest's name), at once for a new uid.
+  String versusCustomNameRead = '';
+
   /// §3.13 Pending versus uploads (JSON run entries).
   List<String> uploadQueue = [];
 
@@ -468,6 +474,7 @@ class GameStorage {
     versusCustomName = prefs.getString(_versusCustomNameKey) ?? '';
     versusCustomNameSync = prefs.getString(_versusCustomNameSyncKey) ?? '';
     versusCustomNameError = prefs.getString(_versusCustomNameErrorKey) ?? '';
+    versusCustomNameRead = prefs.getString(_versusCustomNameReadKey) ?? '';
     if (prefs.containsKey(_versusAvatarKey)) {
       unawaited(prefs.remove(_versusAvatarKey)); // WP-AV
     }
@@ -750,6 +757,13 @@ class GameStorage {
     return s.substring(i + 1);
   }
 
+  /// WP-N2 the server's name was read for [uid] on [day] ('' clears).
+  Future<void> saveVersusCustomNameRead(String uid, String day) async {
+    versusCustomNameRead = uid.isEmpty ? '' : '$uid\n$day';
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_versusCustomNameReadKey, versusCustomNameRead);
+  }
+
   Future<void> saveVersusCustomNameError(String reason) async {
     versusCustomNameError = reason;
     final prefs = await SharedPreferences.getInstance();
@@ -823,8 +837,10 @@ class GameStorage {
     versusCustomName = '';
     versusCustomNameSync = '';
     versusCustomNameError = '';
+    versusCustomNameRead = '';
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_versusNicknameKey);
+    await prefs.remove(_versusCustomNameReadKey);
     await prefs.remove(_versusCustomNameKey);
     await prefs.remove(_versusCustomNameSyncKey);
     await prefs.remove(_versusCustomNameErrorKey);

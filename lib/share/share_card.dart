@@ -2,10 +2,10 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart' show AssetBundle, rootBundle;
 
-import '../game/config.dart';
 import '../levels/emblem_painter.dart';
 import '../levels/levels.dart';
 import '../run/hud/fit_name.dart';
@@ -87,6 +87,7 @@ class ShareCardAssets {
   ShareCardAssets({
     required this.spikes,
     required this.icon,
+    required this.logo,
     required this.googlePlay,
     required this.appStore,
     required this.coin,
@@ -94,12 +95,14 @@ class ShareCardAssets {
 
   final ui.Image spikes;
   final ui.Image icon;
+  final ui.Image logo;
   final ui.Image googlePlay;
   final ui.Image appStore;
   final ui.Image coin;
 
   static const String spikesAsset = 'assets/images/ground_spikes.png';
   static const String iconAsset = 'assets/images/app_icon.png';
+  static const String logoAsset = 'assets/images/menu/logo.png';
   static const String googlePlayAsset =
       'assets/images/share/badge_google_play.png';
   static const String appStoreAsset = 'assets/images/share/badge_app_store.png';
@@ -108,7 +111,7 @@ class ShareCardAssets {
   static Future<ShareCardAssets>? _cached;
 
   /// Decodes the images once per app run (they are small; the 1024 icon is
-  /// decoded at 256, twice its size on the card).
+  /// decoded at 256 and the logo at 544, twice their sizes on the card).
   static Future<ShareCardAssets> load([AssetBundle? bundle]) {
     final b = bundle ?? rootBundle;
     return _cached ??= _load(b).catchError((Object e) {
@@ -132,6 +135,7 @@ class ShareCardAssets {
     final images = await Future.wait([
       decode(spikesAsset),
       decode(iconAsset, width: 256),
+      decode(logoAsset, width: 544),
       decode(googlePlayAsset),
       decode(appStoreAsset),
       decode(coinAsset),
@@ -139,9 +143,10 @@ class ShareCardAssets {
     return ShareCardAssets(
       spikes: images[0],
       icon: images[1],
-      googlePlay: images[2],
-      appStore: images[3],
-      coin: images[4],
+      logo: images[2],
+      googlePlay: images[3],
+      appStore: images[4],
+      coin: images[5],
     );
   }
 }
@@ -162,12 +167,20 @@ abstract final class ShareCardPainter {
   static const Color white = Color(0xFFFFFFFF);
   static const Color grey = Color(0xFF828282);
   static const Color greyBg = Color(0xFFF1F1F1);
-  static const Color accent = Color(0xFFFF4FB7);
   static const Color legendBest = Color(0xFFFFE082);
 
   static const double spikeHeight = 74;
   static const double footHeight = 200;
   static const double footY = size - footHeight;
+
+  /// The store badges' height on the logo bar (px).
+  static const double badgeHeight = 86;
+
+  /// The logo's lettering on the card (px): the opaque part of
+  /// `logo.png` ([logoInk] of [logoSource]) is this tall.
+  static const double logoInkHeight = 128;
+  static const Rect logoInk = Rect.fromLTWH(30, 10, 537, 295);
+  static const Size logoSource = Size(600, 352);
 
   /// Centre of the emblem / centre art and of the rays.
   static const Offset centre = Offset(430, 470);
@@ -478,50 +491,73 @@ abstract final class ShareCardPainter {
     c.restore();
   }
 
-  /// The white logo bar flush with the bottom edge: 17C icon, name,
-  /// tagline (§12) and both store badges.
+  /// The white logo bar flush with the bottom edge: 17C icon, the logo in
+  /// the title's place, and both store badges (geometry: [footerLayout]).
   static void _footer(Canvas c, ShareCardAssets img) {
     const y0 = footY, h = footHeight;
+    final l = footerLayout(img);
     c.drawRect(const Rect.fromLTWH(0, y0, size, h), Paint()..color = white);
-    const icon = 128.0, ix = 64.0, iy = y0 + (h - icon) / 2;
-    final iconRect = const Rect.fromLTWH(ix, iy, icon, icon);
     c.save();
-    c.clipRRect(
-      RRect.fromRectAndRadius(iconRect, const Radius.circular(30)),
-    );
-    _image(c, img.icon, iconRect);
+    c.clipRRect(RRect.fromRectAndRadius(l.icon, const Radius.circular(30)));
+    _image(c, img.icon, l.icon);
     c.restore();
-    _text(
-      c,
-      'Flappy Spikes',
-      ix + icon + 28,
-      y0 + h / 2 - 22,
-      size: 62,
-      color: grey,
-      align: TextAlign.left,
+    _image(c, img.logo, l.logo);
+    _image(c, img.googlePlay, l.googlePlay);
+    _image(c, img.appStore, l.appStore);
+  }
+
+  /// The logo bar's rects in canvas px (shared by the painter and the tests).
+  ///
+  /// The icon is 128 at x 64, centred vertically. The logo's lettering
+  /// ([logoInk]) starts at the old title's x (220) and is centred on the
+  /// icon, at its own aspect ratio. Both store badges share one slot the
+  /// size of the Google Play badge at [badgeHeight] (288 x 86, as before);
+  /// the slot's right edge is 64 from the canvas edge and the two rows are
+  /// centred vertically. A badge is drawn at its own proportions, centred in
+  /// the slot: store badges are never stretched.
+  @visibleForTesting
+  static ({Rect icon, Rect logo, Rect googlePlay, Rect appStore}) footerLayout(
+    ShareCardAssets img,
+  ) {
+    const y0 = footY, h = footHeight;
+    const iconSize = 128.0, margin = 64.0, titleGap = 28.0, badgeGap = 14.0;
+    final iconRect = Rect.fromLTWH(
+      margin,
+      y0 + (h - iconSize) / 2,
+      iconSize,
+      iconSize,
     );
-    _text(
-      c,
-      Config.tagline,
-      ix + icon + 30,
-      y0 + h / 2 + 32,
-      size: 25,
-      color: accent,
-      align: TextAlign.left,
-      spacing: 3,
+    // The logo: [logoInkHeight] of lettering, scaled from logo.png's pixels.
+    final k = logoInkHeight / logoInk.height;
+    final logoRect = Rect.fromLTWH(
+      margin + iconSize + titleGap - logoInk.left * k,
+      y0 + h / 2 - (logoInk.top + logoInk.height / 2) * k,
+      logoSource.width * k,
+      logoSource.height * k,
     );
-    // Badges: the store guidelines want badges shown together at the same
-    // height, so both use the design's 86 px height (290 wide for Google
-    // Play) and share the right edge 64 from the canvas edge.
-    const bh = 86.0, gap = 14.0, right = size - 64;
-    const by = y0 + (h - (bh * 2 + gap)) / 2;
-    for (final (image, y) in [
-      (img.googlePlay, by),
-      (img.appStore, by + bh + gap),
-    ]) {
-      final w = image.width * bh / image.height;
-      _image(c, image, Rect.fromLTWH(right - w, y, w, bh));
+    // The badges: one slot, the Google Play badge's size at [badgeHeight].
+    final slotWidth =
+        img.googlePlay.width * badgeHeight / img.googlePlay.height;
+    final slotRight = size - margin;
+    final top = y0 + (h - (badgeHeight * 2 + badgeGap)) / 2;
+    Rect badge(ui.Image image, double y) {
+      final s = math.min(slotWidth / image.width, badgeHeight / image.height);
+      final w = image.width * s;
+      final bh = image.height * s;
+      return Rect.fromLTWH(
+        slotRight - slotWidth + (slotWidth - w) / 2,
+        y + (badgeHeight - bh) / 2,
+        w,
+        bh,
+      );
     }
+
+    return (
+      icon: iconRect,
+      logo: logoRect,
+      googlePlay: badge(img.googlePlay, top),
+      appStore: badge(img.appStore, top + badgeHeight + badgeGap),
+    );
   }
 
   static void _coin(Canvas c, ShareCardAssets img, double x, double y, double s) =>

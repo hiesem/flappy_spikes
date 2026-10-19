@@ -29,17 +29,23 @@ class ClockScene extends BackdropScene {
           final gx = x + r() * 40, gy = 200 + r() * 260;
           gear(c, gx, gy, rr, t * 7 * (k.isOdd ? 1 : -1) / rr, const Color(0xFFE8E8E8));
         });
-        // one swing per second
+        // one swing per second. The bob moves as on a 250 pt rod hung at
+        // y 20 (the prototype), but the rod hangs from far above the screen
+        // top so it always comes down from the ceiling (owner: on tall
+        // screens and with the ride camera it started in mid-air).
         const l = 250.0;
         final a = math.sin(t * math.pi) * .26;
+        final px = mark(c, 90), py = c.yTop - 400;
+        final bx = px - math.sin(a) * l, by = 20 + math.cos(a) * l;
+        final rod = math.sqrt((bx - px) * (bx - px) + (by - py) * (by - py));
         c.save();
-        c.translate(mark(c, 90), 20);
-        c.rotate(a);
+        c.translate(px, py);
+        c.rotate(-math.atan2(bx - px, by - py));
         c.fillStyle = const Color(0xFFE2E2E2);
-        c.fillRect(-1.5, 0, 3, l);
-        c.circ(0, l, 18);
+        c.fillRect(-1.5, 0, 3, rod);
+        c.circ(0, rod, 18);
         c.fillStyle = const Color(0xFFE9E9E9);
-        c.circ(0, l, 10);
+        c.circ(0, rod, 10);
         c.restore();
       case Band.mid:
         // pairs of meshing gears on posts

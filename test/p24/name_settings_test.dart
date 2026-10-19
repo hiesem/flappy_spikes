@@ -284,6 +284,109 @@ void main() async {
   );
 
   FlameTester<FlappySpikesGame>(
+    () => make(h: 568),
+    gameSize: Vector2(320, 568),
+  ).testGameWidget(
+    '2.4.0 (38) while the server answers: frames keep coming, the ✓ / ✕ '
+    'make way for the spinner, the field is read-only and taps / back do '
+    'nothing; a refusal restores the buttons and the field with the reason; '
+    'an accepted name closes the card',
+    setUp: boot,
+    verify: (g, tester) async {
+      final panel = await open(g);
+      final card = panel.playerCard;
+      final evidence =
+          Platform.environment['FS_NAME_EVIDENCE'] ?? '$outDir/saving';
+      Future<void> grab(String name) => tester.runAsync(() async {
+        await shot(g, name);
+        final f = File('$outDir/$name.png');
+        await Directory(evidence).create(recursive: true);
+        await f.copy('$evidence/$name.png');
+      });
+      bool readOnly() =>
+          tester.widget<EditableText>(find.byType(EditableText)).readOnly;
+
+      card.startEditing();
+      await flushAndMount(g);
+      await tester.pump();
+      card.setDraft('Flyer99');
+      stepGame(g, .1);
+      expect(card.confirm.isMounted, isTrue);
+      expect(card.cancel.isMounted, isTrue);
+      expect(readOnly(), isFalse);
+      await grab('name_save_1_editing');
+
+      // A slow server: the ✓ waits.
+      var gate = Completer<void>();
+      versus
+        ..nameAnswer = const CustomNameRefused(CustomNameReason.blocked)
+        ..nameDelay = gate.future;
+      card.confirm.onPressed();
+      await Future<void>.value();
+      await flushAndMount(g);
+      expect(card.saving, isTrue);
+      expect(card.confirm.isMounted, isFalse, reason: '✓ hidden');
+      expect(card.cancel.isMounted, isFalse, reason: '✕ hidden');
+      await tester.pump();
+      expect(readOnly(), isTrue, reason: 'no typing while saving');
+
+      // The game loop keeps running: real frames (the GameWidget's ticker)
+      // advance the spinner while the save is pending.
+      final spin0 = card.spin;
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(card.saving, isTrue);
+      expect(card.spin, greaterThan(spin0 + .2));
+
+      // Taps, typing and back change nothing while saving.
+      card.fieldTarget.onPressed();
+      card.cancelEditing();
+      expect(g.handleSystemBack(), isTrue);
+      card.setDraft('Other');
+      expect(card.editing, isTrue);
+      expect(card.saving, isTrue);
+      expect(card.draft, 'Flyer99');
+      stepGame(g, .25);
+      await grab('name_save_2_saving');
+
+      // Refused: the buttons, the field and the keyboard come back with the
+      // reason; nothing is saved.
+      gate.complete();
+      await settle(g);
+      await tester.pump();
+      expect(card.saving, isFalse);
+      expect(card.editing, isTrue);
+      expect(card.error, CustomNameReason.blocked);
+      expect(card.confirm.isMounted, isTrue);
+      expect(card.cancel.isMounted, isTrue);
+      expect(readOnly(), isFalse);
+      expect(g.storage.versusCustomName, '');
+      await grab('name_save_3_refused');
+
+      // Accepted after a wait: the card closes with the name, as before.
+      gate = Completer<void>();
+      versus
+        ..nameAnswer = null
+        ..nameDelay = gate.future;
+      card.setDraft('Flyer99');
+      final saving = card.commit();
+      await Future<void>.value();
+      expect(card.saving, isTrue);
+      gate.complete();
+      await saving;
+      await settle(g);
+      expect(card.editing, isFalse);
+      expect(card.saving, isFalse);
+      expect(card.pencil.isMounted, isTrue);
+      expect(g.overlays.isActive(kPlayerNameOverlay), isFalse);
+      expect(g.storage.versusCustomName, 'Flyer99');
+      expect(card.shownName, 'Flyer99');
+      await grab('name_save_4_saved');
+    },
+  );
+
+  FlameTester<FlappySpikesGame>(
     () => make(h: 568, prefs: {'versusCustomNameError': 'blocked'}),
     gameSize: Vector2(320, 568),
   ).testGameWidget(

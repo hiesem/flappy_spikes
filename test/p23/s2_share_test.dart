@@ -323,21 +323,30 @@ void main() {
     });
 
     test(
-      'the Android adaptive layers are 108 dp canvases with the picture '
-      'shrunk inside the view: the foreground border is transparent',
+      'the Android adaptive icon is the whole picture filling the 72 dp '
+      'view (one crisp layer), the foreground is empty',
       () async {
-        final bytes = File('assets/icon/ic_foreground.png').readAsBytesSync();
-        expect(pngSize(bytes), (432, 432));
-        final codec = await ui.instantiateImageCodec(bytes);
-        final image = (await codec.getNextFrame()).image;
-        final px = (await image.toByteData())!;
-        int alpha(int x, int y) => px.getUint8((y * 432 + x) * 4 + 3);
-        // 72 dp view = 288 px centred; the 65 dp picture starts at ~86 px.
-        expect(alpha(80, 216), 0, reason: 'left of the picture');
-        expect(alpha(216, 80), 0, reason: 'above the picture');
-        expect(alpha(216, 216), 255, reason: 'the bird');
-        image.dispose();
-        codec.dispose();
+        Future<ByteData> rgba(String path) async {
+          final bytes = File(path).readAsBytesSync();
+          expect(pngSize(bytes), (432, 432), reason: path);
+          final codec = await ui.instantiateImageCodec(bytes);
+          final image = (await codec.getNextFrame()).image;
+          final px = (await image.toByteData())!;
+          image.dispose();
+          codec.dispose();
+          return px;
+        }
+
+        final fg = await rgba('assets/icon/ic_foreground.png');
+        for (final (x, y) in [(0, 0), (216, 216), (431, 431)]) {
+          expect(fg.getUint8((y * 432 + x) * 4 + 3), 0, reason: 'fg $x,$y');
+        }
+        final bg = await rgba('assets/icon/ic_background.png');
+        int ch(int x, int y, int c) => bg.getUint8((y * 432 + x) * 4 + c);
+        // The bird's pink body (left cheek); a blue corner, no fade.
+        expect(ch(110, 280, 0), greaterThan(180), reason: 'pink red');
+        expect(ch(110, 280, 2), lessThan(170), reason: 'pink blue');
+        expect(ch(4, 428, 2), greaterThan(180), reason: 'blue corner');
       },
     );
   });

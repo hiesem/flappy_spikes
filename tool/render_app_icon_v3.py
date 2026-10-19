@@ -5,15 +5,21 @@ Source of truth: ``assets/icon/app_icon_src.png`` (a copy of the workspace's
 ``icon_concepts/v3/icon7.png``, 1254 x 1254, full-bleed). Pass another
 picture as the first argument to replace the source first.
 
-  assets/icon/ic_background.png    432 x 432  adaptive background (108 dp)
-  assets/icon/ic_foreground.png    432 x 432  picture shrunk into the safe zone
+  assets/icon/ic_background.png    432 x 432  adaptive layer: the full picture (108 dp)
+  assets/icon/ic_foreground.png    432 x 432  empty (transparent)
   assets/icon/ic_monochrome.png    432 x 432  themed-icon silhouette
   assets/icon/splash_icon.png      288 x 288  full picture, 22 % corners
   assets/icon/splash_android12.png 960 x 960  background + foreground
   assets/images/app_icon.png      1024 x 1024 full picture, no alpha (iOS)
   docs/p23/play_icon_512.png       512 x 512  Play listing icon, no alpha
 
-Android adaptive icon ("shrink to fit"): the picture is scaled to
+Android adaptive icon (owner, 2026-10-19 after testing 38, option "M"): the
+whole picture exactly fills the 72 dp view of the 108 dp canvas (one layer,
+no fade), so a rounded-square launcher shows the original uncropped and a
+circle only trims its corners (outer spike and wing tips). The monochrome
+icon uses the same scale.
+
+Android 12+ splash (unchanged from 38, "shrink to fit"): the picture is scaled to
 ``PICTURE_DP`` of the 108 dp canvas so the bird (wing tips, feet) and the
 three spike tips lie inside the 66 dp safe-zone circle. Its outer
 ``FEATHER_DP`` fade into the background layer, which extends the picture's
@@ -42,7 +48,8 @@ SRC = os.path.join(ROOT, "assets", "icon", "app_icon_src.png")
 
 PX_PER_DP = 16  # working resolution: 108 dp -> 1728 px
 CANVAS_DP = 108
-PICTURE_DP = 65.0  # picture edge length on the 108 dp canvas
+PICTURE_DP = 65.0  # picture edge on the 108 dp canvas (Android 12 splash)
+VIEW_DP = 72  # the part of the 108 dp canvas launchers show
 FEATHER_DP = 3.5  # fade band at the picture border
 # Splash / outer colour: the deep blue of the picture's corners.
 SPLASH = (0x00, 0x3A, 0xDC)
@@ -112,10 +119,10 @@ def background_mask(src):
     return bg
 
 
-def adaptive_layers(src):
+def adaptive_layers(src, picture_dp=None):
     """Returns (background RGB, foreground RGBA) at working resolution."""
     n = CANVAS_DP * PX_PER_DP
-    p = int(round(PICTURE_DP * PX_PER_DP))
+    p = int(round((picture_dp or PICTURE_DP) * PX_PER_DP))
     o = (n - p) // 2
     pic = src.resize((p, p), Image.LANCZOS)
     bgm = Image.fromarray((background_mask(src) * 255).astype(np.uint8)).resize(
@@ -134,7 +141,7 @@ def adaptive_layers(src):
     dy = np.maximum(np.maximum(o - yy, yy - (o + p)), 0)
     out = np.hypot(dx, dy) / PX_PER_DP
     # Ease into the splash colour from the picture edge to the canvas edge.
-    t = smoothstep(out / ((CANVAS_DP - PICTURE_DP) / 2 * 1.2))[..., None]
+    t = smoothstep(out / ((CANVAS_DP - (picture_dp or PICTURE_DP)) / 2 * 1.2))[..., None]
     back = fill * (1 - t) + np.array(SPLASH, dtype=float) * t
 
     # Foreground: the picture, its border feathered.
@@ -219,16 +226,23 @@ def main():
     n = back.shape[0]
     back_im = Image.fromarray(np.clip(back, 0, 255).round().astype(np.uint8))
     fore_im = Image.fromarray(np.clip(fore, 0, 255).round().astype(np.uint8), "RGBA")
-    back_im.resize((432, 432), Image.LANCZOS).save(
+    # The launcher icon: the whole picture exactly fills the 72 dp the
+    # launcher shows (crisp, no fade); outside it (seen only in launcher
+    # animations) the background extends its blue.
+    n = CANVAS_DP * PX_PER_DP
+    p72 = VIEW_DP * PX_PER_DP
+    ext, _ = adaptive_layers(src, picture_dp=VIEW_DP)
+    layer = Image.fromarray(np.clip(ext, 0, 255).round().astype(np.uint8))
+    layer.paste(src.resize((p72, p72), Image.LANCZOS), ((n - p72) // 2,) * 2)
+    layer.resize((432, 432), Image.LANCZOS).save(
         os.path.join(icon, "ic_background.png"), optimize=True
     )
-    fore_im.resize((432, 432), Image.LANCZOS).save(
+    Image.new("RGBA", (432, 432), (0, 0, 0, 0)).save(
         os.path.join(icon, "ic_foreground.png"), optimize=True
     )
 
-    p = int(round(PICTURE_DP * PX_PER_DP))
     mono = Image.fromarray((monochrome(src) * 255).round().astype(np.uint8))
-    mono = place(mono, n, p, "L")
+    mono = place(mono, n, VIEW_DP * PX_PER_DP, "L")
     white = Image.new("RGBA", (n, n), (255, 255, 255, 0))
     white.putalpha(mono)
     white.resize((432, 432), Image.LANCZOS).save(

@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.4.0+38
+version: 2.4.0+39
 
 environment:
   sdk: ^3.12.2
@@ -129,7 +129,8 @@ flutter:
 # App icon v3 = icon_concepts/v3/icon7.png (2026-10-19), source copy in
 # assets/icon/app_icon_src.png; every file is rendered by
 # tool/render_app_icon_v3.py (replaces the 17C render_app_icon.py). iOS uses
-# the full picture; Android's adaptive layers shrink it to fit (below).
+# the full picture; on Android it fills exactly the 72 dp the launcher shows
+# (background layer; the foreground is empty).
 flutter_launcher_icons:
   android: true
   ios: true

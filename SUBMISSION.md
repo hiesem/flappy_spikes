@@ -56,7 +56,7 @@ min Android 24+, iOS 15+ (Firebase minimum).
      collected* while the `AD_ID` permission is removed (the real AdMob IDs and
      the final declaration are a pre-release TODO — see §5).
    - No data shared with third parties, data encrypted in transit (yes),
-     users can request deletion (yes, via Settings → DELETE MY ACCOUNT & DATA, or the
+     users can request deletion (yes, via Settings → DELETE MY DATA, or the
      policy email).
 7. Submit for review.
 
@@ -232,7 +232,7 @@ from a fixed word list (40 adjectives and 40 birds in `lib/versus/nickname.dart`
 - Nothing else is stored: the server keeps no logs with player content, and no
   third party receives this data.
 
-### "DELETE MY ACCOUNT & DATA" (Settings, PRD-2 §3.13 / Q22)
+### "DELETE MY DATA" (Settings, PRD-2 §3.13 / Q22)
 
 The Settings row opens a confirm dialog; DELETE calls the `deleteMyData` Cloud
 Function (App Check enforced), which
@@ -270,7 +270,7 @@ before the 2.4.0 (37) upload:
     form has one answer for the category; check it against the Firebase Analytics
     events before you submit.
   - Account creation: yes, treated as in scope (anonymous account, optionally linked to
-    Play Games). Account deletion: yes, in the app (Settings → DELETE MY ACCOUNT & DATA)
+    Play Games). Account deletion: yes, in the app (Settings → DELETE MY DATA)
     and on the web page https://flappyspikes.com/delete-data, which goes in the Play
     Console deletion URL field.
   - Privacy policy URL: https://flappyspikes.com/privacy (updated 2026-10-19).

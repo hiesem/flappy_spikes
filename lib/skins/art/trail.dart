@@ -257,7 +257,8 @@ class TrailEmitter {
         _setPrev(head);
         return;
       case _Kind.echo:
-        _histCap = 84;
+        // A run spaces the copies by path distance: keep the whole buffer.
+        _histCap = world ? _histSize : 84;
         final flap = (_acc * 6.6) % 1 < .4;
         if (world) {
           _histSample(x, y, flap, k, angle, dt);
@@ -706,32 +707,81 @@ class TrailEmitter {
     );
   }
 
+  /// Afterimage copies in a run ([worldLocked] mode).
+  /// More copies than the shop's four keep the trail about as long as the
+  /// old time-spaced one.
+  static const int echoRunCopies = 6;
+
+  /// Path distance between two Afterimage copies in a run, in art units.
+  /// The shop's copies sit 20 frames apart at the preview drift of
+  /// `skinShopTrailScroll * k / 2` px/s: 150 / 2 / 3 = 25 art units. Run copies
+  /// are spaced by distance along the real path rather than by time, so they
+  /// overlap like the shop preview at full scroll speed and in climbs.
+  static const double echoSpacing = 25;
+
   /// WP-TRAIL: the Afterimage copies along the real path ([worldLocked]
-  /// mode): each copy sits where the bird's centre was (17 art units ahead
-  /// of the path point along its flight direction), turned to the bird's
-  /// angle then and at the bird's scale then.
+  /// mode): copy n sits [echoSpacing] * n art units back along the path
+  /// (each step measured at the bird scale it was emitted at), where the
+  /// bird's centre was (17 art units ahead of the path point along its
+  /// flight direction), turned to the bird's angle then and at its scale then.
   void _paintEchoPath(Canvas canvas) {
     final paint = lookPainter;
     if (paint == null || _histCount < 2) return;
-    for (var n = 4; n >= 1; n--) {
-      final index = n * 20;
-      if (index >= _histCount) continue;
-      final h = _histIndex(index);
+    final found = _placeEchoes();
+    for (var n = found; n >= 1; n--) {
+      final h = _echoH[n - 1];
       final k = _histK[h], hd = _histH[h];
       _echoDraw(
         canvas,
         paint,
-        _histX[h] + math.cos(hd) * 17 * k,
-        _histY[h] + math.sin(hd) * 17 * k,
+        _echoX[n - 1] + math.cos(hd) * 17 * k,
+        _echoY[n - 1] + math.sin(hd) * 17 * k,
         k,
         _echoColors[(n + (_time * 3).floor()) % _echoColors.length],
-        .78 - n * .13,
+        .78 - n * (.13 * 4 / echoRunCopies),
         _random.nextDouble() < .07,
         _histFlap[h] == 1,
         angle: _histA[h],
       );
     }
   }
+
+  /// Walks the path history back from the head and fills [_echoX] /
+  /// [_echoY] / [_echoH] with one point every [echoSpacing] art units;
+  /// returns how many copies fit on the path so far.
+  int _placeEchoes() {
+    final count = _histCount;
+    var found = 0;
+    var travelled = 0.0;
+    for (var i = 1; i < count && found < echoRunCopies; i++) {
+      final a = _histIndex(i - 1), b = _histIndex(i);
+      final dx = _histX[b] - _histX[a], dy = _histY[b] - _histY[a];
+      final kb = _histK[b] > 0 ? _histK[b] : 1.0;
+      final step = math.sqrt(dx * dx + dy * dy) / kb;
+      while (found < echoRunCopies &&
+          travelled + step >= echoSpacing * (found + 1)) {
+        final t = step <= 0
+            ? 1.0
+            : (echoSpacing * (found + 1) - travelled) / step;
+        _echoX[found] = _histX[a] + dx * t;
+        _echoY[found] = _histY[a] + dy * t;
+        _echoH[found] = t < .5 ? a : b;
+        found++;
+      }
+      travelled += step;
+    }
+    return found;
+  }
+
+  /// The run Afterimage copies' path points, nearest first (tests).
+  List<Offset> get echoPathPoints {
+    final n = _histCount < 2 ? 0 : _placeEchoes();
+    return [for (var i = 0; i < n; i++) Offset(_echoX[i], _echoY[i])];
+  }
+
+  final Float64List _echoX = Float64List(echoRunCopies);
+  final Float64List _echoY = Float64List(echoRunCopies);
+  final Int32List _echoH = Int32List(echoRunCopies);
 
   /// The four Afterimage copies, chased backwards along the path history
   /// (`H[n * 20]`, n = 4..1) and tinted in a cycling neon colour.

@@ -863,9 +863,6 @@ class ResultsScreen extends PositionComponent
 
   double _barLabelOpacity = 1;
 
-  /// The bar label's opacity (it fades with the bar).
-  double get barLabelOpacity => _barLabelOpacity;
-
   /// Centres "1 234 ●" in the white pill.
   void _layoutReward() {
     if (!_built) return;
@@ -1138,7 +1135,6 @@ class ResultsLevelStage extends PositionComponent {
   double? shakeStart;
   double? popStart;
   final math.Random _rnd = math.Random();
-
 
   /// The mock's pop curve at [k] = t / 0.5.
   static double popScale(double k) {

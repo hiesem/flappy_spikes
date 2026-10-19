@@ -31,7 +31,6 @@ abstract final class JarConfig {
   static const double rayOmega = .6;
   static const double rayLength = 36;
   static const double rayPulse = 8;
-  static const double rayPulseOmega = 3;
   static const double raySpread = .1;
   static const Color rayColor = Color(0xFFC8F03C);
   static const Color rayColorEnd = Color(0xFFE6FF78);

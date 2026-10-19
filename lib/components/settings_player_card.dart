@@ -455,9 +455,6 @@ class SettingsPlayerCard extends PositionComponent
   Offset get spinnerCenter => Offset(width - padX - button / 2, height / 2);
 
   double _textWidth(MenuText t) => t.text.isEmpty ? 0 : t.width;
-
-  /// The caret is showing now (tests).
-  bool get caretOn => _editing && _blink < .5 && !_saving;
 }
 
 /// The overlay name of the hidden keyboard field ([PlayerNameInput]).

@@ -184,10 +184,6 @@ class Ctx {
   // ------------------------------------------------------------ path
   final Path path = Path();
   bool _has = false;
-  double _cx = 0, _cy = 0, _sx = 0, _sy = 0;
-
-  /// The path's current point (canvas `currentPoint` semantics).
-  Offset get currentPoint => Offset(_cx, _cy);
 
   void beginPath() {
     path.reset();
@@ -197,36 +193,26 @@ class Ctx {
   void moveTo(double x, double y) {
     path.moveTo(x, y);
     _has = true;
-    _cx = _sx = x;
-    _cy = _sy = y;
   }
 
   void lineTo(double x, double y) {
     if (!_has) return moveTo(x, y);
     path.lineTo(x, y);
-    _cx = x;
-    _cy = y;
   }
 
   void quadraticCurveTo(double cpx, double cpy, double x, double y) {
     if (!_has) moveTo(cpx, cpy);
     path.quadraticBezierTo(cpx, cpy, x, y);
-    _cx = x;
-    _cy = y;
   }
 
   void closePath() {
     if (!_has) return;
     path.close();
-    _cx = _sx;
-    _cy = _sy;
   }
 
   void rect(double x, double y, double w, double h) {
     path.addRect(Rect.fromLTWH(x, y, w, h));
     _has = true;
-    _cx = _sx = x;
-    _cy = _sy = y;
   }
 
   /// `roundRect(x, y, w, h, r)` with one radius.
@@ -234,8 +220,6 @@ class Ctx {
     final rr = r.abs();
     path.addRRect(RRect.fromLTRBR(x, y, x + w, y + h, Radius.circular(rr)));
     _has = true;
-    _cx = _sx = x;
-    _cy = _sy = y;
   }
 
   /// `roundRect(x, y, w, h, [tl, tr, br, bl])`.
@@ -262,8 +246,6 @@ class Ctx {
       ),
     );
     _has = true;
-    _cx = _sx = x;
-    _cy = _sy = y;
   }
 
   static double _sweep(double a0, double a1, bool ccw) {
@@ -299,13 +281,9 @@ class Ctx {
     bool ccw = false,
   ]) {
     final sweep = _sweep(a0, a1, ccw);
-    final sx = x + math.cos(rot) * rx * math.cos(a0) - math.sin(rot) * ry * math.sin(a0);
-    final sy = y + math.sin(rot) * rx * math.cos(a0) + math.cos(rot) * ry * math.sin(a0);
     if (rot == 0 && sweep.abs() >= kTau && !_has) {
       path.addOval(Rect.fromLTRB(x - rx, y - ry, x + rx, y + ry));
       _has = true;
-      _cx = _sx = sx;
-      _cy = _sy = sy;
       return;
     }
     if (rot == 0) {
@@ -316,10 +294,6 @@ class Ctx {
         path.arcTo(r, a0 + sweep / 2, sweep / 2, false);
       } else {
         path.arcTo(r, a0, sweep, !_has);
-      }
-      if (!_has) {
-        _sx = sx;
-        _sy = sy;
       }
       _has = true;
     } else {
@@ -337,9 +311,6 @@ class Ctx {
         }
       }
     }
-    final ea = a0 + sweep;
-    _cx = x + math.cos(rot) * rx * math.cos(ea) - math.sin(rot) * ry * math.sin(ea);
-    _cy = y + math.sin(rot) * rx * math.cos(ea) + math.cos(rot) * ry * math.sin(ea);
   }
 
   // ------------------------------------------------------------ painting

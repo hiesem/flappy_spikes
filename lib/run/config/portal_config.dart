@@ -122,9 +122,6 @@ abstract final class PortalConfig {
   static const double teethScroll = 1300;
   static const double teethDecay = 1.35;
 
-  /// §5.12b Speed lines thin out over this (s) of the glide.
-  static const double linesThinOut = 1.4;
-
   /// PRD-2.2 §18.3 Normal hoops resume: the first ring's plane reaches the
   /// bird this long after control returns (end of the glide + settle), at
   /// cruise (s; supersedes PRD-2 §3.12 "≈ 1 s after the landing").

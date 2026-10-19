@@ -10,9 +10,6 @@ import 'home/menu_primitives.dart';
 import 'skins/celebration.dart' show keyframe;
 import 'ui/p1_popup.dart';
 
-/// Images the popup draws.
-const List<String> kPurchaseResultPopupImages = ['menu/close.png'];
-
 /// "PURCHASE CANCELLED" / "PURCHASE FAILED" (PRD-home-v3 §6, mock
 /// build73 `showFail`) in the P1 popup style: pink 120 pt header with the
 /// soft card icon and a gold ✕ badge that spins in, the ✕ close box, the

@@ -57,9 +57,6 @@ abstract final class StreakConfig {
   /// PRD-2.2 §29.2 The banner colour for perfect streak [n] (≥ 1).
   static Color colourFor(int n) => colours[((n < 1 ? 1 : n) - 1) % 10];
 
-  /// §3.4 / §5.3 Tiers above this reuse its effects (tier 3+ look).
-  static const int topEffectTier = 3;
-
   /// §3.5 / §5.3 The bird turns gold from this tier.
   static const int goldBirdTier = 2;
 

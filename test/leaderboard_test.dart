@@ -4,7 +4,6 @@ import 'package:flappy_spikes/run/config/results_config.dart';
 import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/components/ui/service_message.dart';
-import 'package:flappy_spikes/components/ui/text_button.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/services/game_services.dart';
@@ -90,10 +89,6 @@ void main() {
       expect(row.size.x, expected.width);
       expect(row.size.y, expected.height);
       expect(expected, const Rect.fromLTWH(60, 58, 38, 38));
-
-      // The privacy-policy link lives on the settings screen (2026-07-22):
-      // no text buttons on the home screen.
-      expect(home.children.whereType<TextButton>(), isEmpty);
 
       // Pressing it is a guarded no-op without configured services: no
       // crash, and the tap must not leak through and start the game.

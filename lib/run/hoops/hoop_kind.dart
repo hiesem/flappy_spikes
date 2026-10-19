@@ -67,9 +67,6 @@ abstract class HoopKind {
   /// pair, spring, portal: no (call, ARCH §2.5).
   bool get usesTierLook;
 
-  /// Saw: +28 (the director already includes it in `SlotPlan.opening`).
-  double extraOpening(SlotPlan p) => 0;
-
   /// Rides → ignored; saw → deadly; else bounce.
   RimMode rimMode(Hoop h, RunState s) =>
       s.ride != null ? RimMode.ignored : RimMode.bounce;

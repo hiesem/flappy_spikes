@@ -31,10 +31,6 @@ class Fireworks extends Component {
     ..style = PaintingStyle.stroke;
   final Paint _fill = Paint();
 
-  /// Rockets still rising and sparks alive (tests).
-  int get rocketsAlive => _rockets.length;
-  int get sparksAlive => _sparks.length;
-
   /// Bursts so far (tests).
   int bursts = 0;
 

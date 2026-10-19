@@ -141,7 +141,6 @@ abstract final class ReviveConfig {
   /// §5.9 Coin heart "REVIVE" size, spacing, top offset from the centre.
   static const double coinReviveSize = 24;
   static const double coinReviveSpacing = .1;
-  static const double coinReviveTop = -52;
 
   /// §5.9 Coin heart price size (pt), coin icon size (pt), row top offset.
   static const double priceSize = 40;
@@ -153,9 +152,7 @@ abstract final class ReviveConfig {
   static const double lockReviveSize = 22;
   static const double lockPriceSize = 36;
   static const double lockCoinSize = 30;
-  static const double lockPriceTop = -20;
   static const double needSize = 13;
-  static const double needTop = 24;
 
   /// §5.9 "NO AD AVAILABLE": 13 pt, 0.1 em, white 80 %, 34 pt above the
   /// heart.

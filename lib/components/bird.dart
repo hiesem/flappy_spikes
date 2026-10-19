@@ -195,9 +195,6 @@ class Bird extends BodyComponent<FlappySpikesGame>
   /// off.
   double _hangT = -1;
 
-  /// Whether the rim hang (or its ease back) is running (tests).
-  bool get inRimHang => _hangT >= 0;
-
   /// Starts (or restarts) the hang after a soft rim bump: gravity at
   /// [RunConfig.rimHangGravity] for [RunConfig.rimHangSeconds], then back
   /// to full over [RunConfig.rimHangEase].

@@ -757,10 +757,6 @@ class SoundService {
   /// from play to stop). Set before the first play.
   void Function(String file, int playedMs)? debugOnStop;
 
-  /// Live native audio players (created − disposed) when the FS_SOAK
-  /// counter ([CountingAudioPlatform]) is installed; null otherwise.
-  int? get livePlayers => CountingAudioPlatform.installed?.live;
-
   /// One-line counter summary for the soak log (logcat).
   String debugStats() {
     final c = CountingAudioPlatform.installed;
@@ -1036,11 +1032,6 @@ class SoundService {
     }
   }
 
-  /// iOS round 2b: whether the app is active (foreground, not inactive /
-  /// locked). The game sets it from the lifecycle. While false, no audio
-  /// player is created ([_ensurePool], [_initPools]) and a rebuild only
-  /// drops the dead players and is deferred ([rebuildPending]).
-  bool get appActive => _appActive;
   bool _appActive = true;
 
   void setAppActive(bool active) {
@@ -1057,8 +1048,6 @@ class SoundService {
   bool _rebuildPending = false;
   String? _pendingReason;
 
-  /// A rebuild is running now (later requests fold into it).
-  bool get rebuilding => _rebuildRun != null;
   Future<void>? _rebuildRun;
 
   /// iOS round 2 §2: disposes every sound-effect pool and creates the core

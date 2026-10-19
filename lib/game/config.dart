@@ -200,14 +200,7 @@ class Config {
   static const double spikeHeight = 44;
   static const double spikeTileWidth = 384;
 
-
   // UI sizes.
-  static final Vector2 titleSize = Vector2(274.5, 147.5);
-  static final Vector2 pointsfieldSize = Vector2(241.5, 82);
-  static final Vector2 buttonSize = Vector2(241.5, 38.5);
-  static final Vector2 settingsButtonSize = Vector2(30, 30);
-  static final Vector2 gameCenterButtonSize = Vector2(30, 30);
-  static final Vector2 gameCenterGameoverButtonSize = Vector2(60, 60);
   static final Vector2 scoreCircleSize = Vector2(183, 183);
 
   // PRD-2.3 §5.5: the privacy policy moved to flappyspikes.com (the GitHub
@@ -243,11 +236,6 @@ class Config {
   // seconds) for the launch purchase sync still running, then starts anyway.
   static const double launchOwnershipStartWait = 1.5;
 
-  // The Play listing. PRD-2.3 §5.6: no longer shared anywhere; kept for a
-  // direct store link the app opens itself.
-  static const String storeListingUrl =
-      'https://play.google.com/store/apps/details?id=com.flappyspikes.flappy_spikes';
-
   // region PRD-2.3 §3 approved share texts (2026-10-12). The analytics ids
   // (§2.1 `text_id` / `banner_id`) are the 1-based positions in these lists.
   /// §3.1 share texts; `{score}` = the run's points on the card's sticker.
@@ -282,62 +270,16 @@ class Config {
   // UI positions. The helpers take the playfield center Y (viewHeight / 2)
   // and reproduce the original 320x568 layout exactly at centerY = 284
   // (SpriteKit y-up coordinates from SPEC converted to Flame's y-down).
-  static Vector2 titlePositionFor(double centerY) =>
-      Vector2(160, centerY - 147.5 / 2 - 35); // 175.25 at 284
-  static Vector2 bestLabelPositionFor(double centerY) =>
-      Vector2(160, centerY + 120); // 404 at 284
-  static Vector2 gamesLabelPositionFor(double centerY) =>
-      Vector2(160, centerY + 150); // 434 at 284
-  static Vector2 settingsButtonPositionFor(double centerY) =>
-      Vector2(160, centerY); // screen center
   static Vector2 scoreHudPositionFor(double centerY) =>
       Vector2(160, centerY + 35); // 319 at 284
-  static Vector2 pointsfieldPositionFor(double centerY) =>
-      Vector2(160, centerY - 41); // 243 at 284
-  static Vector2 replayButtonPositionFor(double centerY) =>
-      Vector2(160, centerY + 19.25 + 6); // 309.25 at 284
-  static Vector2 shareButtonPositionFor(double centerY) =>
-      Vector2(160, centerY + 3 * 19.25 + 12); // 353.75 at 284
-  // Leaderboard buttons (positions from the 2014 original,
-  // FlappySpikes/Flappy Spikes/GameScene.m): on the start scene at 3/4 width,
-  // screen middle; on the game-over scene at the right side of the points
-  // field, vertically centered on it.
-  static Vector2 gameCenterButtonPositionFor(double centerY) =>
-      Vector2(240, centerY); // (240, 284) at 284
-  static Vector2 gameCenterGameoverButtonPositionFor(double centerY) =>
-      Vector2(240.5, centerY - 41); // (240.5, 243) at 284
-  // Privacy-policy link at the bottom of the start scene, just above the
-  // ground spikes.
-  static Vector2 privacyLinkPositionFor(double centerY) =>
-      Vector2(160, 2 * centerY - 92); // 476 at 284 (above the 1.0 strip)
   // Transient service-failure message (ServiceMessage): bottom-center, the
   // same free band the privacy link used before it moved into settings —
   // visible on both the start and game-over scenes.
   static Vector2 serviceMessagePositionFor(double centerY) =>
       Vector2(160, 2 * centerY - 92); // 476 at 284 (above the 1.0 strip)
 
-  // Game-over coin line ("+N" + coin, PRD-1 §4.2): below the games label,
-  // in the free band above the ground spikes (466 at 284).
-  static Vector2 coinsEarnedPositionFor(double centerY) =>
-      Vector2(160, centerY + 182);
-  static const double coinsEarnedFontSize = 22;
-  static const double coinsEarnedIconSize = 18;
-
   // Fixed positions at the design height (kept for tests and defaults).
-  static final Vector2 titlePosition = titlePositionFor(284);
-  static final Vector2 bestLabelPosition = bestLabelPositionFor(284);
-  static final Vector2 gamesLabelPosition = gamesLabelPositionFor(284);
-  static final Vector2 settingsButtonPosition = settingsButtonPositionFor(284);
   static final Vector2 scoreHudPosition = scoreHudPositionFor(284);
-  static final Vector2 pointsfieldPosition = pointsfieldPositionFor(284);
-  static final Vector2 replayButtonPosition = replayButtonPositionFor(284);
-  static final Vector2 shareButtonPosition = shareButtonPositionFor(284);
-  static final Vector2 gameCenterButtonPosition = gameCenterButtonPositionFor(
-    284,
-  );
-  static final Vector2 gameCenterGameoverButtonPosition =
-      gameCenterGameoverButtonPositionFor(284);
-  static final Vector2 privacyLinkPosition = privacyLinkPositionFor(284);
   static final Vector2 serviceMessagePosition = serviceMessagePositionFor(284);
 
   // --- Home screen v3 (PRD-home-v3 §3.1, design/menu_v2/
@@ -380,7 +322,6 @@ class Config {
   static const double homeTitleTop = 100;
   static const double homeLogoWidth = 150;
   static const double homeLogoAspect = 600 / 352; // assets/images/menu/logo.png
-  static const double homeTitleFontSize = 34;
   static const double homeSubtitleTop = 183;
   static const double homeSubtitleFontSize = 13;
   static const double homeSubtitleLetterSpacing = 0.14; // em
@@ -499,7 +440,6 @@ class Config {
   static const double homeStartGroupHeight =
       homeModeHeight + homeModeGap + homeStartBlockHeight; // 128
 
-  static const int homeTileCount = 4;
   static const double homeTileWidth = 70;
   static const double homeTileHeight = 92;
   static const double homeTileGap = 4;
@@ -797,12 +737,10 @@ class Config {
   // --- Shared menu-screen chrome (Shop, Skins; PRD-1 §5) --------------------
   //
   // Back button top-left in the gear's place, coin pill top-right (as on
-  // home; [menuScreenPillPositionFor] is its top-right corner), title
+  // home), title
   // centred at the top; the content scrolls in the band between the title
   // and the bottom spike tips. Everything is pinned to the top.
 
-  static Vector2 menuScreenPillPositionFor(double viewHeight) =>
-      homeCoinPillPositionFor(viewHeight);
   static Rect menuScreenBackRectFor(double viewHeight) =>
       homeGearRectFor(viewHeight);
   static const double menuScreenTitleTop = 104;
@@ -1265,10 +1203,6 @@ class Config {
   // stage foreground made them unreadable behind frozen pipes).
   static const Color uiAccent = Color(0xFFFF4FB7);
 
-  // Vertical offset of the score number inside the points field from the
-  // field's center (the "POINTS" caption lives in the field's lower half).
-  static const double scoreLabelNudgeY = -18;
-
   // Fonts.
   static const String scoreFont = 'LVDC Common2';
   static const String uiFont = 'Opificio Neue';
@@ -1291,13 +1225,10 @@ class Config {
   // The run's bird fading in at its spawn point after START (the home
   // screen's bird fades out with the home screen).
   static const double runBirdFadeDuration = 0.25;
-  // Stagger step for staggered menu elements.
-  static const double staggerDuration = 0.07;
   // Gameplay fades keep the 1.0 timing: the score HUD in / out, the spike
   // strips sliding out on START, the bird fading on death, and the
   // game-over panel's staggered fade-in chain.
   static const double gameplayFadeDuration = 0.5;
-  static const double gameOverStaggerDuration = 0.2;
   // How long a ServiceMessage stays fully visible between its fade-in and
   // fade-out (total lifetime: uiFadeDuration + this + uiFadeDuration).
   static const double serviceMessageHoldDuration = 2.0;
@@ -1358,8 +1289,6 @@ class Config {
   static const Offset noAdsCelebrationStampTopLeft = Offset(154, 88);
   static const double noAdsCelebrationClaimHeight = 52;
 
-  /// §7 timings (s).
-  static const double noAdsCelebrationFlash = 0.6;
   static const double noAdsCelebrationShakeDelay = 0.2;
   static const double noAdsCelebrationShake = 0.38;
   static const double noAdsCelebrationSwing = 0.36;

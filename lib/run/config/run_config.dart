@@ -169,24 +169,6 @@ abstract final class RunConfig {
   /// §3.0.3 Items stay this far inside the tooth lines (pt).
   static const double itemEdgeMargin = 40;
 
-  /// §3.0.3 Feather / piece: fraction of the spacing after the hoop.
-  static const double detourAfter = 0.65;
-
-  /// §3.0.3 Feather / piece: height above the hoop centre (pt).
-  static const double detourAboveMin = 64;
-
-  /// §3.0.3 Feather / piece: height above the hoop centre (pt).
-  static const double detourAboveMax = 200;
-
-  /// §3.0.3 Heart / shield off the line by this fraction of the band.
-  static const double offLineMin = 0.1;
-
-  /// §3.0.3 Heart / shield off the line by this fraction of the band.
-  static const double offLineMax = 0.4;
-
-  /// §3.0.3 Heart: later hearts sit on the line with this chance.
-  static const double heartOnLineChance = 0.5;
-
   /// PRD-2.2 §25.1 The portal ring is a fixed 118 pt at every hoop (it does
   /// not shrink). PRD-2.4 §2.3 keeps it unchanged: Big Hoops multiplies it,
   /// as in 2.3.1.
@@ -268,14 +250,8 @@ abstract final class RunConfig {
   /// §3.0.3 Portal / comet keep this many hoops apart (both directions).
   static const int cometPortalDistance = 10;
 
-  /// §3.0.3 Saw / FEVER / switch not within this many hoops of the portal.
-  static const int nearPortal = 3;
-
   /// §3.0.3 Cooldown after a portal (normal slots).
   static const int portalCooldown = 3;
-
-  /// §3.0.8 First-meet: force within this many slots / gaps.
-  static const int firstMeetWithin = 5;
 
   /// §3.25 Lucky Spin slices (coins), equal chance. PRD-2.3 §14.2:
   /// [1, 2, 3, 5, 1, 2] (`coin_spin_slices`; was [2, 5, 10, 3, 20, 5]).

@@ -259,9 +259,6 @@ class PortalRide implements Ride {
   final Set<int> _added = {};
   final Set<int> _passed = {};
 
-  /// Passes made by the ride (the [PortalConfig.rideRings] ride rings).
-  int get ringsPassed => _passed.length;
-
   @override
   RideKind get kind => RideKind.portal;
 

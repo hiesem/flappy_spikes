@@ -93,9 +93,6 @@ class MusicGuard {
   String? _holdSource;
   String? _pendingSource;
 
-  /// The last `AudioWatch` answer.
-  AudioWatchState get lastWatch => _last;
-
   /// A "two yes" confirmation is pending (tests).
   bool get confirming => _confirm != null;
 

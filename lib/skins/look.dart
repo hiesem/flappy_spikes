@@ -16,9 +16,6 @@ enum SkinLayer {
   final String key;
   final String tabLabel;
 
-  /// Gear and Hat have a free "none" entry; the other layers do not.
-  bool get hasNone => this == gear || this == hat;
-
   static SkinLayer? fromKey(String key) {
     for (final layer in values) {
       if (layer.key == key) return layer;

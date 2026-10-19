@@ -91,9 +91,6 @@ class DeathTumble {
   /// §3.0.5 resting line: tooth tips − r + 2.
   double get restY => floor - radius + PhysicsConfig.restInset;
 
-  /// Screen x of the bird.
-  double get screenPosition => position.x - camX;
-
   void step(double dt) {
     if (dt <= 0) return;
     time += dt;

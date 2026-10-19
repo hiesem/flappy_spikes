@@ -48,8 +48,6 @@ abstract final class ResultsConfig {
   /// §5.10 Versus card: soft panel (`fg` 14 % over bg), padding 16 / 8 / 8.
   static const Rect card = Rect.fromLTWH(14, 124, 292, 124);
   static const double cardTint = .14;
-  static const double cardPadTop = 16;
-  static const double cardPadSide = 8;
 
   /// §5.10 Player column: avatar 40, name Fredoka 15, score 42 pt (36 from
   /// four digits); avatar top = card top + 16 + 4.

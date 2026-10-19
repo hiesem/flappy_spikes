@@ -17,14 +17,6 @@ import '../versus/custom_name.dart' show CustomNameReason;
 import 'settings_player_card.dart';
 import 'skins/celebration.dart' show keyframe;
 
-/// Images the Settings screen draws (PRD-2.3 §20.1: game assets only).
-const List<String> kSettingsImages = [
-  'soundbutton.png',
-  'mutebutton.png',
-  'music_note.png',
-  'menu/back.png',
-];
-
 /// The Settings screen (PRD-2.3 §20, approved design
 /// `design/settings_v23/settings_final.html`), opened from the home gear or
 /// the pause screen. Top to bottom:

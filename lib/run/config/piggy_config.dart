@@ -134,7 +134,6 @@ abstract final class PiggyConfig {
   /// white, 200 pt/s, with a 4 pt camera shake ([RunShake.piggySmash]).
   static const int smashPieces = 22;
   static const double smashSpeed = 200;
-  static const Color smashGold = Color(0xFFFFB529);
 
   /// §5.27 The pay-out banner is gold `#FFB529`; the PIGGY BANK banner pink
   /// `#FF6FB0`.

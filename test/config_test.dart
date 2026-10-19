@@ -95,18 +95,11 @@ void main() {
     });
 
     test('center-Y position helpers reproduce the 568 layout at 284', () {
-      expect(Config.titlePositionFor(284).y, closeTo(175.25, 1e-9));
-      expect(Config.bestLabelPositionFor(284).y, 404);
-      expect(Config.gamesLabelPositionFor(284).y, 434);
       expect(Config.scoreHudPositionFor(284).y, 319);
-      expect(Config.pointsfieldPositionFor(284).y, 243);
-      expect(Config.replayButtonPositionFor(284).y, 309.25);
-      expect(Config.shareButtonPositionFor(284).y, 353.75);
     });
 
-    test('UI accent is the artwork pink; score nudge is upward', () {
+    test('UI accent is the artwork pink', () {
       expect(Config.uiAccent.toARGB32(), 0xFFFF4FB7);
-      expect(Config.scoreLabelNudgeY, lessThan(0));
     });
   });
 }

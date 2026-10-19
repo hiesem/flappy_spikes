@@ -159,11 +159,6 @@ void main() {
       );
       expect(tier, MatchTier.rematch);
       expect(c.single.runId, 'b1');
-      expect(
-        hasUsableOpponent(pool, myUid: 'me'),
-        isTrue,
-        reason: 'met runs still count as usable',
-      );
     });
   });
 

@@ -326,9 +326,6 @@ class BirdSpec {
     return p;
   }
 
-  /// Dark body: the dead-pose X eye is drawn white.
-  late final bool isDark = c.computeLuminance() < 0.15;
-
   /// Light body (white, yellow): the PRD-2 white dead X would vanish, so it
   /// is drawn dark there.
   late final bool isLight = c.computeLuminance() > 0.6;

@@ -321,20 +321,6 @@ Path poly(List<double> xy) {
   return p..close();
 }
 
-/// The mock's 4-point star (24 × 24 polygon scaled to [size]).
-void paintStar(Canvas c, Offset at, double size, Color col, double rot) {
-  c
-    ..save()
-    ..translate(at.dx, at.dy)
-    ..rotate(rot)
-    ..scale(size / 24);
-  c.drawPath(
-    poly([0, -12, 3, -3, 12, 0, 3, 3, 0, 12, -3, 3, -12, 0, -3, -3]),
-    fillOf(col),
-  );
-  c.restore();
-}
-
 final Map<String, TextPainter> _texts = {};
 
 /// Centred text (cached layouts).

@@ -141,15 +141,6 @@ List<String> poolSearchOrder(int level, Random r) {
   return order;
 }
 
-/// Whether [pool] holds a usable opponent: a run that is not mine
-/// ([isOtherPlayer]); exactly when [matchCandidates] is not solo. PRD-2.3
-/// §25.2: met runs count too (a rematch beats a solo run).
-bool hasUsableOpponent(
-  Iterable<Matchable> pool, {
-  required String myUid,
-  String myPg = '',
-}) => pool.any((e) => isOtherPlayer(e, myUid: myUid, myPg: myPg));
-
 /// PRD-2.3 §25.2 whether [pool] holds a usable run not met yet (the search
 /// stops at the first round with one).
 bool hasFreshOpponent(

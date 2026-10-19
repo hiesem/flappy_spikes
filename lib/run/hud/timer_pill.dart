@@ -53,8 +53,10 @@ class TimerPill extends PositionComponent {
     super.update(dt);
     _t += dt;
     final timed = run.state.timed;
+    // A direct null check (no promotion through a bool local; see
+    // PortalHandover.step).
     final want = timed != null && timed.type.isCapsule;
-    if (want) {
+    if (timed != null && want) {
       shown = timed.type;
       fraction = timed.duration <= 0
           ? 0

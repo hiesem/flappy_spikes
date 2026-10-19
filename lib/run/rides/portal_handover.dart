@@ -107,8 +107,8 @@ class PortalHandover extends BackdropRideHook {
     if (ride.phase != RidePhase.glide) return 0;
     final w = ride.view.gt - PortalConfig.glideTime;
     if (w < 0 || w >= PortalConfig.settleTime) return 0;
-    final taper = 1 -
-        math.pow(w / PortalConfig.settleTime, HandoverConfig.bumpTaperPow);
+    final taper =
+        1 - math.pow(w / PortalConfig.settleTime, HandoverConfig.bumpTaperPow);
     return math.exp(-HandoverConfig.bumpDecay * w) *
         math.sin(HandoverConfig.bumpFreq * w) *
         taper;
@@ -121,21 +121,27 @@ class PortalHandover extends BackdropRideHook {
     final t = tau;
     _p = rv == null ? 0 : RideReveal.progress(t);
     // the scene covers everything: faded in, the exit, the launch frame
-    _hidden = rv != null &&
+    _hidden =
+        rv != null &&
         ((ph == RidePhase.ride && ride.view.envA >= 1) ||
             ph == RidePhase.exit ||
             (ph == RidePhase.fly && _p <= 0));
     final cy = softY(_cy), bump = _bump;
-    final revealing = rv != null && t >= 0 && t < RideReveal.arrived;
+    // The reveal (null: the cannon, or outside the reveal window). Tested
+    // with a direct null check per band: a promotion through a bool local
+    // (`revealing = rv != null && …; if (revealing) rv.distance`) let the
+    // AOT compiler hoist `rv.distance` out of the guard, and the cannon
+    // (rv == null) crashed the app on its first frame (2.4.0 37, SIGSEGV).
+    final RideReveal? active = t >= 0 && t < RideReveal.arrived ? rv : null;
     for (var b = 0; b < 4; b++) {
       final share = HandoverConfig.share[b];
       var dx = 0.0, dy = -cy * share + HandoverConfig.bumpAmp * share * bump;
       var reach = 0.0;
-      if (revealing) {
-        final d = rv.distance[b] * RideReveal.remaining(b, t);
-        dx += rv.dirX * d;
-        dy += rv.dirY * d;
-        reach = rv.dirX * rv.distance[b];
+      if (active != null) {
+        final d = active.distance[b] * RideReveal.remaining(b, t);
+        dx += active.dirX * d;
+        dy += active.dirY * d;
+        reach = active.dirX * active.distance[b];
       }
       _offsets[b] = dx == 0 && dy == 0 ? Offset.zero : Offset(dx, dy);
       _reach[b] = reach;
@@ -155,14 +161,17 @@ class PortalHandover extends BackdropRideHook {
     const glide = PortalConfig.glideTime + PortalConfig.settleTime;
     // The flight camera's run (`_stepFly`: x = launch + 560·T − 140 at T).
     const fly = PortalConfig.flyTime - PortalConfig.flyEndEarly;
-    final dFly = ride.launch.dx + PortalConfig.launchVx * fly - PortalConfig.flyX1;
+    final dFly =
+        ride.launch.dx + PortalConfig.launchVx * fly - PortalConfig.flyX1;
     // The first hoop after the ride (`_beginGlide` → `resumeAt`) is
     // 2 s of cruise ahead of the screen centre's plane minus birdX when
     // the settle ends; the world must then be 300 · n1 short of it by r.
     final n1 = ride.c.director.hoopIndex;
-    final ahead = RunConfig.birdX - kANCH + cr * PortalConfig.firstRingAfterControl;
+    final ahead =
+        RunConfig.birdX - kANCH + cr * PortalConfig.firstRingAfterControl;
     final atEnd = kPerHoop * n1 - rate * ahead;
-    final catchUp = HandoverConfig.catchUp /
+    final catchUp =
+        HandoverConfig.catchUp /
         HandoverConfig.catchUpDecay *
         (1 - math.exp(-HandoverConfig.catchUpDecay * glide));
     final added = rate * (dFly + cr * glide + catchUp);
@@ -193,7 +202,8 @@ class PortalHandover extends BackdropRideHook {
         final g0 = _catchGt, g1 = ride.view.gt;
         _catchGt = g1;
         const k = HandoverConfig.catchUpDecay;
-        final extra = HandoverConfig.catchUp /
+        final extra =
+            HandoverConfig.catchUp /
             k *
             (math.exp(-k * g0) - math.exp(-k * g1));
         return rate * (dc + extra);
@@ -205,7 +215,8 @@ class PortalHandover extends BackdropRideHook {
   @override
   bool cover(Path covered, double viewHeight) {
     final rv = reveal;
-    if (rv == null || ride.phase != RidePhase.fly && ride.phase != RidePhase.glide) {
+    if (rv == null ||
+        ride.phase != RidePhase.fly && ride.phase != RidePhase.glide) {
       return false;
     }
     if (_p >= 1) return false;

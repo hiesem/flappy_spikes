@@ -3774,7 +3774,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       });
       await share(data);
     } catch (e) {
-      debugPrint('invite failed: $e');
+      debugPrint('invite failed: ${redactSecrets(e)}');
     } finally {
       _sharing = false;
     }
@@ -4578,7 +4578,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       services.logShareScore(points, data.analytics);
       await onShareScore?.call(data);
     } catch (e) {
-      debugPrint('share failed: $e');
+      debugPrint('share failed: ${redactSecrets(e)}');
     } finally {
       _sharing = false;
     }

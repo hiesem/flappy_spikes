@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show debugPrint;
 
+import '../services/redact.dart';
 import '../services/share_sheet.dart';
 import 'share_card.dart';
 
@@ -39,14 +40,14 @@ class ShareFlow {
       await f.writeAsBytes(png, flush: true);
       file = XFile(f.path, mimeType: 'image/png', name: fileName);
     } catch (e) {
-      debugPrint('ShareFlow: card failed, sharing the text only: $e');
+      debugPrint('ShareFlow: card failed, sharing the text only: ${redactSecrets(e)}');
       file = null;
     }
     try {
       await sheet.share(text: data.text, files: [?file]);
       return file != null;
     } catch (e) {
-      debugPrint('ShareFlow: share sheet failed: $e');
+      debugPrint('ShareFlow: share sheet failed: ${redactSecrets(e)}');
       if (file == null) return false;
       // The sheet refused the file: one more try with the text alone.
       try {

@@ -155,7 +155,7 @@ class AdMobAdsConsent implements AdsConsent {
       await Future<void>.delayed(const Duration(milliseconds: 500));
       await AppTrackingTransparency.requestTrackingAuthorization();
     } catch (e) {
-      debugPrint('AdsConsent ATT request failed: $e');
+      debugPrint('AdsConsent ATT request failed: ${redactSecrets(e)}');
     }
   }
 
@@ -165,7 +165,7 @@ class AdMobAdsConsent implements AdsConsent {
     try {
       can = await ConsentInformation.instance.canRequestAds();
     } catch (e) {
-      debugPrint('AdsConsent canRequestAds failed: $e');
+      debugPrint('AdsConsent canRequestAds failed: ${redactSecrets(e)}');
     }
     if (can && !_sdkStarted) {
       try {
@@ -178,7 +178,7 @@ class AdMobAdsConsent implements AdsConsent {
         await MobileAds.instance.initialize();
         _sdkStarted = true;
       } catch (e) {
-        debugPrint('AdsConsent MobileAds.initialize failed: $e');
+        debugPrint('AdsConsent MobileAds.initialize failed: ${redactSecrets(e)}');
         can = false;
       }
     }
@@ -191,7 +191,7 @@ class AdMobAdsConsent implements AdsConsent {
           .getPrivacyOptionsRequirementStatus();
       _privacyRequired = status == PrivacyOptionsRequirementStatus.required;
     } catch (e) {
-      debugPrint('AdsConsent privacy status failed: $e');
+      debugPrint('AdsConsent privacy status failed: ${redactSecrets(e)}');
       _privacyRequired = false;
     }
   }
@@ -209,7 +209,7 @@ class AdMobAdsConsent implements AdsConsent {
         if (!done.isCompleted) done.complete();
       });
     } catch (e) {
-      debugPrint('AdsConsent privacy form failed: $e');
+      debugPrint('AdsConsent privacy form failed: ${redactSecrets(e)}');
       if (!done.isCompleted) done.complete();
     }
     await done.future;
@@ -225,7 +225,7 @@ class AdMobAdsConsent implements AdsConsent {
     try {
       return await _device.invokeMethod<bool>('isTestLab') ?? false;
     } catch (e) {
-      debugPrint('AdsConsent isTestLab check failed: $e');
+      debugPrint('AdsConsent isTestLab check failed: ${redactSecrets(e)}');
       return false;
     }
   }
@@ -248,7 +248,7 @@ class AdMobAdsConsent implements AdsConsent {
               }
             });
           } catch (e) {
-            debugPrint('AdsConsent consent form failed: $e');
+            debugPrint('AdsConsent consent form failed: ${redactSecrets(e)}');
           }
           if (!done.isCompleted) done.complete();
         },
@@ -260,7 +260,7 @@ class AdMobAdsConsent implements AdsConsent {
         },
       );
     } catch (e) {
-      debugPrint('AdsConsent consent update failed: $e');
+      debugPrint('AdsConsent consent update failed: ${redactSecrets(e)}');
       if (!done.isCompleted) done.complete();
     }
     return done.future;

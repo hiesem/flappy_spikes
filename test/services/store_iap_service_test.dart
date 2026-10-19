@@ -288,7 +288,7 @@ void main() {
         await iap.buy(IapProduct.noAds);
         await pump();
         expect(events.single.message, 'Store error');
-        expect(events.single.code, 'TypeError');
+        expect(events.single.code, 'type'); // errorKind: obfuscation-proof
       },
     );
 

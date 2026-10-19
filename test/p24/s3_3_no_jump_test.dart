@@ -1,4 +1,3 @@
-import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/run/backdrop/backdrop_math.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -9,9 +8,6 @@ import 'backdrop_harness.dart';
 /// around them, differ by no more than a few pixels. WP-W2 / WP-W3 add
 /// their seams to [seams] (or call [seamEdges] in their own tests).
 void main() {
-  // WP-BG: checked at the shipping background speed (the layers scroll
-  // 2× the world distance; the seam windows stay where they are).
-  const speed = Config.backgroundSpeedFactor;
   // seam k (1-based) is at world distance 12 000·k; loop 2 as well (from
   // hoop 400 the Homecoming plays, the hashes differ per loop).
   const seams = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -21,7 +17,7 @@ void main() {
         final sc = k * kE + loop * kTotal;
         for (final e in seamEdges()) {
           test('seam $k loop $loop edge ${e.round()} @${h.round()}', () async {
-            await expectNoJump(sc + e, viewHeight: h, label: 'seam $k', speed: speed);
+            await expectNoJump(sc + e, viewHeight: h, label: 'seam $k');
           });
         }
       }
@@ -36,7 +32,7 @@ void main() {
     });
     test('first loop: Nest throughout hoops 0–39 @${h.round()}', () async {
       for (final w in <double>[-130, -1, 0, 5999, 6000, 6999, 7000]) {
-        await expectNoJump(w, viewHeight: h, label: 'first loop', speed: speed);
+        await expectNoJump(w, viewHeight: h, label: 'first loop');
       }
     });
   }

@@ -65,17 +65,6 @@ the ride scene still covers; the background is not drawn there) and `hidden` (th
 background is not drawn). `WorldDistance.resync(w)` sets the world while it is not seen (never across the next seam
 hoop or back into the last seam). The ride phase is `RunBackdrop.ridePhase` (`RunState.ride?.phase`).
 
-## Speed (WP-BG, 2026-10-19)
-
-`Config.backgroundSpeedFactor` (2.0) makes the run background animate 2× the prototype: `BackdropPainter.paint(speed:)`
-gives the painters `c.cam = w · speed` (every layer's parallax offset) and `c.t = runClock · speed` (every ambient
-animation), while `c.world = w` picks the scene / seam, so the pacing (seam k on hoop 40·k) is unchanged.
-Stage-relative helpers measure in scroll units: `c.stage` (`kE · speed`; `mark`, `early`, a seam's `sc`) and
-`SeamFrame.win` (`kVWIN · speed`; pieces that move with the window's progress `u`). Use them, not `kE` / `kVWIN`,
-for anything that must stay put on a scrolling band. Rides keep their own speeds (the hook's offsets and reveal are
-ride time); the world distance itself is still integrated from the camera, so the background stays continuous
-through every ride, pause and revive (`test/p24/bg_speed_test.dart`).
-
 ## Colour and frame
 
 One `saveLayer` per frame with `ColorFilter.matrix(palMatrix(stageBackground, foregroundColor))` (the game's own

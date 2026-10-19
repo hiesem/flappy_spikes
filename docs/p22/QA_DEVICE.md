@@ -3,7 +3,7 @@
 > Note: the raw device captures under `docs/p22/device/` (recordings, screenshots, UI/state dumps, logcat and console logs, interactions.jsonl) were removed 2026-10-20 (run 17), see git history. File names below refer to that history.
 
 2026-10-12. Tester branch: g7-qadev. Production code under test: a92835f.
-Pixel 8 38300DLJH004SD, Android 17, USB hub, gesture navigation (mode 2).
+Pixel 8 <PIXEL8_SERIAL>, Android 17, USB hub, gesture navigation (mode 2).
 No production, iOS, store, backend deployment or push changes.
 
 **Release gates: e2e PASS; analyze / unit / backend PASS; §33 soak FAIL;

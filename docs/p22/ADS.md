@@ -201,7 +201,7 @@ is built on the same focus request). So the game **observes** instead:
 
 ## Device pass (Pixel 8, debug build, Google TEST ads, 2026-10-12)
 Harness `integration_test/p22_audio_ads_device_main.dart` (`flutter run -d
-38300DLJH004SD -t …`, own prefs prefix `p7b.`; `--dart-define=P7B_AUDIO_ONLY=true`
+<PIXEL8_SERIAL> -t …`, own prefs prefix `p7b.`; `--dart-define=P7B_AUDIO_ONLY=true`
 skips the ad part), logs `P7B` in logcat. The phone's media volume was 0 (not
 changed), so the checks are by logs and `dumpsys audio` / `media.audio_flinger`.
 - **§28.1 / §28.2 revive ad with the chick:** the chick peeped while flying

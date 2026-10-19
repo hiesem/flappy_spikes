@@ -1,6 +1,7 @@
 import pathlib,subprocess,time,xml.etree.ElementTree as ET
 root=pathlib.Path(__file__).resolve().parent
-adb=['adb','-s','38300DLJH004SD']
+import os,sys
+adb=['adb','-s',os.environ.get('FS_DEVICE') or sys.exit('No device: set FS_DEVICE=<adb serial>')]
 for i in range(50):
     s=subprocess.run(adb+['shell','dumpsys','window'],capture_output=True,text=True).stdout
     focus=[x for x in s.splitlines() if 'mCurrentFocus=' in x]

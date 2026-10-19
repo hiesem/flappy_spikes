@@ -1,7 +1,7 @@
 # P6 — real Pixel 8 playtest, final PRD-2 merge
 
 Independent device test on **2026-10-08**, branch `g6-qa5`, product baseline
-`0f96074`. Device **Pixel 8**, Android **17**, serial `38300DLJH004SD`,
+`0f96074`. Device **Pixel 8**, Android **17**, serial `<PIXEL8_SERIAL>`,
 1080 × 2400 px (320 pt game width). This is the requested Flappy Spikes 2.1 /
 PRD-2 feature build; its embedded package version remains **2.0.0+7**.
 

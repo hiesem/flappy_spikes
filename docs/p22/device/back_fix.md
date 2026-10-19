@@ -2,7 +2,7 @@
 
 > Note: the raw device captures under `docs/p22/device/` (recordings, screenshots, UI/state dumps, logcat and console logs, interactions.jsonl) were removed 2026-10-20 (run 17), see git history. File names below refer to that history.
 
-Branch `g7-fin-back`, 2026-10-12. Pixel 8 `38300DLJH004SD`, Android 17, gesture
+Branch `g7-fin-back`, 2026-10-12. Pixel 8 `<PIXEL8_SERIAL>`, Android 17, gesture
 navigation (mode 2), targetSdk 36. Debug builds signed with the upload key,
 `adb install -r` only (never uninstalled; saved wallet / best kept).
 

@@ -2,9 +2,9 @@
 // profile build flown by the hoop-aware autopilot with the trail forced on
 // (streak held at 5, so the equipped trail emits all the time).
 //
-//   flutter run --profile --no-uninstall -d 24191FDF6008ZD \
+//   flutter run --profile --no-uninstall -d <PIXEL6_SERIAL> \
 //     -t integration_test/skins_perf_main.dart
-//   adb -s 24191FDF6008ZD logcat -s flutter | grep SKINPERF
+//   adb -s <PIXEL6_SERIAL> logcat -s flutter | grep SKINPERF
 //
 // Phases: the 2.2 look (Classic flame, Classic hoop, no gear / hat) as the
 // baseline, the heaviest 2.3 combination (Sunburst + Disco ball + Aurora +

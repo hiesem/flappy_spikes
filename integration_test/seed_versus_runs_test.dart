@@ -7,7 +7,7 @@
 // timeline is a recorded run.
 //
 //   flutter test integration_test/seed_versus_runs_test.dart \
-//     -d 38300DLJH004SD --dart-define=FS_SEED_VERSUS=true \
+//     -d <PIXEL8_SERIAL> --dart-define=FS_SEED_VERSUS=true \
 //     --dart-define=FS_APPCHECK_DEBUG_TOKEN=<registered token>
 //
 // Without FS_SEED_VERSUS (or off Android) every test is skipped.

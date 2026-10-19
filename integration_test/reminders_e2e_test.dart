@@ -1,6 +1,6 @@
 // Pixel 8 reminder smoke (ARCH §7.3, PRD-2 §3.34):
 //   flutter test integration_test/reminders_e2e_test.dart \
-//     -d 38300DLJH004SD --dart-define=FS_E2E=true
+//     -d <PIXEL8_SERIAL> --dart-define=FS_E2E=true
 //
 // Drives the *real* `flutter_local_notifications` channel on the device:
 // permission, the 14 scheduled requests of the 7-day window, and the payload

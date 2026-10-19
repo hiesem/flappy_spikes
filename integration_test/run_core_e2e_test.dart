@@ -1,6 +1,6 @@
 // Pixel 8 smoke run of the PRD-2 run core (ARCH §7.3):
 //   flutter test integration_test/run_core_e2e_test.dart \
-//     -d 38300DLJH004SD --dart-define=FS_E2E=true
+//     -d <PIXEL8_SERIAL> --dart-define=FS_E2E=true
 import 'package:flame/game.dart';
 import 'package:flame_audio/flame_audio.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';

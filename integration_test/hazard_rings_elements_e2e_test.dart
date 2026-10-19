@@ -3,7 +3,7 @@
 // 12; the autopilot takes the switch first) and a pair of powerup rings
 // (from 12; the nearer ring).
 //   flutter test integration_test/hazard_rings_elements_e2e_test.dart \
-//     -d 38300DLJH004SD --dart-define=FS_E2E=true
+//     -d <PIXEL8_SERIAL> --dart-define=FS_E2E=true
 import 'package:flame/game.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/main.dart' as app;

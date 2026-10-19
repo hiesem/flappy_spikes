@@ -961,7 +961,7 @@ fixtures shared with the Dart matcher test (`test/fixtures/versus_matching.json`
 
 ### 7.3 `integration_test/` on the Pixel 8 (`FS_E2E`)
 
-- `flutter test integration_test/<file>.dart -d 38300DLJH004SD --dart-define=FS_E2E=true [--dart-define=FS_E2E_SEED=7] [--dart-define=FS_APPCHECK_DEBUG_TOKEN=…]`
+- `flutter test integration_test/<file>.dart -d <PIXEL8_SERIAL> --dart-define=FS_E2E=true [--dart-define=FS_E2E_SEED=7] [--dart-define=FS_APPCHECK_DEBUG_TOKEN=…]`
 - `kE2E` switches: fixed seed (`kE2ESeed`), `FakeRewardedAds` with the overlay (succeed), App Check debug provider,
   `E2EHooks` (force element, start hoop index, force ride, fake clock offset for reminders, skip VS intro wait),
   the autopilot as the player.

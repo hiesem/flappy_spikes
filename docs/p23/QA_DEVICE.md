@@ -1,6 +1,6 @@
 # PRD-2.3 device QA — final Resume-2
 
-2026-10-13, `p23-qadev`, tested revision **72188a1** (FIX3 and **2.3.0+10**), owner's **Pixel 6 / Android 17**, `24191FDF6008ZD`, 1080×2400, 90 Hz. Earlier retained visual/journey samples are from f5bf640; the interrupted P2 checkpoint was d273d04. This report replaces its secure-lock statuses with the resumed results and explicit owner tasks.
+2026-10-13, `p23-qadev`, tested revision **72188a1** (FIX3 and **2.3.0+10**), owner's **Pixel 6 / Android 17**, `<PIXEL6_SERIAL>`, 1080×2400, 90 Hz. Earlier retained visual/journey samples are from f5bf640; the interrupted P2 checkpoint was d273d04. This report replaces its secure-lock statuses with the resumed results and explicit owner tasks.
 
 **Functional resume: PASS within the stated muted/account limits. Formal device sign-off: FAIL — S8-15's sampled §19 frame criterion and the already reported §17.6 bonus-frequency shortfall.** S8-14 is resolved on the actual Android edge gesture. No production fix is delivered by this tester.
 
@@ -110,7 +110,7 @@ All phases' build/raster p99 values are below 16.7 ms; worst individual duration
 
 ## Short soak and the 2.2 comparison
 
-Unchanged `SoakDriver`, profile `FS_SOAK`, **5 games / 70 s holds**, 10 hoops each, the bonus path in game 3 and level reward path in game 4. The external copy of `tool/soak.py` only targets this serial, the saved APK and E/ output. Command: `python3 -I E/resume2_soak.py --label p23-final --serial 24191FDF6008ZD --no-build --games 5 --hold 70`. A labelled Google test interstitial after game 5 was closed through its native **Sluiten** control (the post-run wall time includes waiting for that close). No ad content/Install tap.
+Unchanged `SoakDriver`, profile `FS_SOAK`, **5 games / 70 s holds**, 10 hoops each, the bonus path in game 3 and level reward path in game 4. The external copy of `tool/soak.py` only targets this serial, the saved APK and E/ output. Command: `python3 -I E/resume2_soak.py --label p23-final --serial <PIXEL6_SERIAL> --no-build --games 5 --hold 70`. A labelled Google test interstitial after game 5 was closed through its native **Sluiten** control (the post-run wall time includes waiting for that close). No ad content/Install tap.
 
 Start skin **30.49 °C**, battery **27.6 °C**, thermal 0. Brightness manual 128 for measurement, restored to **auto (1), saved value 44**. Stay-awake 15 unchanged. Output: E/resume2-soak/ (JSON/CSV/logcat/raw dumps).
 

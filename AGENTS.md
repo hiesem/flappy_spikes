@@ -72,12 +72,12 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
 
 ### 2.1 gameplay build (PRD-2)
 
-- **Device e2e (Pixel 8 `38300DLJH004SD`).** `--dart-define=FS_E2E=true` turns on
+- **Device e2e (Pixel 8 `<PIXEL8_SERIAL>`).** `--dart-define=FS_E2E=true` turns on
   the fixed seed, the fake rewarded ads (visible overlay), the App Check debug
   provider and the `E2EHooks` / debug force menu:
 
   ```bash
-  flutter test integration_test/release_e2e_test.dart -d 38300DLJH004SD \
+  flutter test integration_test/release_e2e_test.dart -d <PIXEL8_SERIAL> \
     --dart-define=FS_E2E=true --dart-define=FS_E2E_SEED=7 \
     --dart-define=FS_APPCHECK_DEBUG_TOKEN=<registered token>
   ```

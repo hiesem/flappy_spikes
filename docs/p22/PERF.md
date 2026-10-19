@@ -8,7 +8,7 @@ WP-33a, 2026-10-12. Branch `g7-wp33a` (feat/2.2 @ 120ec25 = the 2.1 gameplay + t
 
 | Item | Value |
 |---|---|
-| Device | Pixel 8 `38300DLJH004SD`, Android 17, USB through the hub (charging) |
+| Device | Pixel 8 `<PIXEL8_SERIAL>`, Android 17, USB through the hub (charging) |
 | Build | `flutter build apk --profile --dart-define=FS_SOAK=true`, signed with the upload key, installed with `adb install -r` over the sideloaded 2.1.0 (8). The player's data is kept. |
 | Display | 60 Hz during the run: Home and play both rendered 60 frames/s, display mode 1 = 60 Hz (smooth display not active). Brightness fixed manual 128/255; the old values (auto, 3) were restored afterwards. |
 | Stay awake | `stay_on_while_plugged_in` = 7 (already set; left unchanged) |

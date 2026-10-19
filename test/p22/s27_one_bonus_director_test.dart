@@ -191,7 +191,7 @@ void main() {
           enabled: all..remove(ElementId.portal),
           met: all,
         );
-        TuningValues.current = TuningValues.defaults();
+        TuningValues.current = TuningValues.resolve({'ui_unlock_best': '0'});
         all.add(ElementId.portal);
         final cd = c.cometAt;
         for (; c.hoopIndex <= cd + 2;) {

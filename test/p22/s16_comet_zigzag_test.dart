@@ -12,7 +12,7 @@ import 'package:flappy_spikes/run/items/comet.dart';
 import 'package:flappy_spikes/run/rides/comet_ride.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
 import 'package:flappy_spikes/run/run_events.dart';
-import 'package:flappy_spikes/services/tuning.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -101,10 +101,7 @@ Future<_BoostTrace> _boost(FlappySpikesGame game, {bool pair = false}) async {
   final ahead = run.spawner.plannedAhead;
   if (ahead != null) tr.heldCentres[ahead.index] = ahead.centreY;
   tr.firstZigIndex = run.spawner.slotLog
-      .firstWhere(
-        (p) => p.duringRide,
-        orElse: () => run.spawner.slotLog.last,
-      )
+      .firstWhere((p) => p.duringRide, orElse: () => run.spawner.slotLog.last)
       .index;
   var prevY = ride.y;
   var prevBx = run.state.camX + RunConfig.birdX;
@@ -177,10 +174,10 @@ void _expectZigzag(_BoostTrace tr) {
 
 void main() {
   void useTuning(Map<String, String> extra) {
-    Tuning.instance = Tuning(
-      active: TuningValues.resolve({'ui_unlock_best': '0', ...extra}),
-    );
-    TuningValues.current = Tuning.instance.active;
+    TuningValues.current = TuningValues.resolve({
+      'ui_unlock_best': '0',
+      ...extra,
+    });
   }
 
   group('2.3.0 (19) comet hoop gap (PRD-2.3.1 §16: the target spacing)', () {

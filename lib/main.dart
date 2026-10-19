@@ -19,8 +19,6 @@ import 'services/monetization.dart';
 import 'services/rating_prompt.dart';
 import 'services/reminders.dart';
 import 'services/soak.dart';
-import 'services/tuning.dart';
-import 'services/tuning_firebase.dart';
 import 'run/config/versus_config.dart';
 import 'services/identity.dart';
 import 'services/versus_service.dart';
@@ -80,26 +78,6 @@ Future<void> main() async {
   // Analytics + leaderboards (Firebase / Play Games / Game Center). No-op
   // when the native config isn't present.
   final services = GameServices();
-
-  // region P23-15 — remote tuning (PRD-2.3 §15.2): FS_TUNING tester builds
-  // only. activate() applies the values fetched last time (before the first
-  // run can start: a run reads them at its start), then a background
-  // fetch() stores new ones for the next start. The production build (no
-  // flag) never creates the backend and makes no Remote Config request.
-  if (kTuning && _isMobile && !kSoak) {
-    Tuning.instance = Tuning(
-      backend: FirebaseTuningBackend(ensureFirebase: services.ensureFirebase),
-    );
-    // S8-02: wait for activation (bounded: Firebase.initializeApp has no
-    // timeout) so it lands before the first run can start. A slower
-    // activation still never changes a begun run (Tuning.beginRun pins).
-    try {
-      await Tuning.instance.initialize().timeout(const Duration(seconds: 3));
-    } on TimeoutException {
-      debugPrint('Tuning: activation still pending after 3 s');
-    }
-  }
-  // endregion P23-15
 
   // Rewarded ads + in-app purchases: AdMob / Play Billing / StoreKit on
   // mobile, in-memory fakes elsewhere (Linux).

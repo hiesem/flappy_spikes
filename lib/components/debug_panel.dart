@@ -11,7 +11,6 @@ import '../menu/wallet.dart';
 import '../run/debug/force_menu.dart';
 import '../services/ads_service.dart';
 import '../services/iap_service.dart';
-import '../services/tuning.dart';
 import '../skins/catalog.dart';
 import 'home/menu_primitives.dart';
 
@@ -47,19 +46,14 @@ class DebugPanel extends PositionComponent
   /// null = the main page; else the force-menu page index.
   int? _forcePage;
 
-  /// PRD-2.3 §15.4 null = not on the TUNING page; else its page index.
-  int? _tuningPage;
-
   /// PRD-2.3 §13.3: the MUSIC LOG page is up.
   bool _musicPage = false;
 
   /// PRD-2.3.1 §12.3 null = not on the ACHIEVEMENTS page; else its page.
   int? _achPage;
 
-  /// The open page (main / RUN DEBUG page / TUNING page / MUSIC LOG /
-  /// ACHIEVEMENTS).
-  (int?, int?, bool, int?) get _page =>
-      (_forcePage, _tuningPage, _musicPage, _achPage);
+  /// The open page (main / RUN DEBUG page / MUSIC LOG / ACHIEVEMENTS).
+  (int?, bool, int?) get _page => (_forcePage, _musicPage, _achPage);
 
   @override
   Future<void> onLoad() async {
@@ -96,8 +90,6 @@ class DebugPanel extends PositionComponent
     _labels.clear();
     actions = _achPage != null
         ? _achievementActions()
-        : _tuningPage != null
-        ? _tuningActions()
         : _musicPage
         ? _musicActions()
         : _forcePage == null
@@ -163,46 +155,6 @@ class DebugPanel extends PositionComponent
       DebugAction(() => '< Back', () async => _forcePage = null),
     ];
   }
-
-  /// PRD-2.3 §15.4 the read-only TUNING page: the last fetch (time and
-  /// result), then every key with its active value and its source
-  /// (`remote`, `default`, `default*` = a remote value was rejected).
-  List<DebugAction> _tuningActions() {
-    final t = Tuning.instance;
-    final v = t.active;
-    String when(DateTime? d) => d == null
-        ? '-'
-        : '${d.year}-${_two(d.month)}-${_two(d.day)} '
-              '${_two(d.hour)}:${_two(d.minute)}';
-    final all = [
-      DebugAction(
-        () => 'Fetch: ${t.lastFetchStatus} · ${when(t.lastFetchTime)}',
-        () async {},
-      ),
-      // 2.3.0 (18) gameplay tuning: the current / last run.
-      DebugAction(() => game.runStats?.economyLine ?? 'Run: -', () async {}),
-      DebugAction(() => game.runStats?.funLine ?? 'Specials -', () async {}),
-      for (final d in v.defs)
-        DebugAction(
-          () =>
-              '${d.key} = ${d.type.encode(v.raw(d.key))} '
-              '[${v.sourceOf(d.key).label}]',
-          () async {},
-        ),
-    ];
-    final per = (_rowsPerPage - 2).clamp(4, 40);
-    final pages = (all.length / per).ceil();
-    final page = (_tuningPage ?? 0).clamp(0, pages - 1);
-    return [
-      ...all.skip(page * per).take(per),
-      DebugAction(() => 'Page ${page + 1}/$pages  >', () async {
-        _tuningPage = (page + 1) % pages;
-      }),
-      DebugAction(() => '< Back', () async => _tuningPage = null),
-    ];
-  }
-
-  static String _two(int n) => n.toString().padLeft(2, '0');
 
   /// PRD-2.3 §13.3: the newest music diagnostic log entries (the whole
   /// log is in logcat, tag FS-Music); any row re-reads it.
@@ -344,8 +296,10 @@ class DebugPanel extends PositionComponent
       // opponent <uid-prefix>" (debug builds only, like the whole panel);
       // a tap re-reads it.
       DebugAction(() => game.versus.lastSearch.debugLine, () async {}),
-      // PRD-2.3 §15.4 the read-only TUNING page.
-      DebugAction(() => 'TUNING >', () async => _tuningPage = 0),
+      // 2.3.0 (18) gameplay tuning: the current / last run (was on the
+      // TUNING page, removed with the remote tuning in audit 17).
+      DebugAction(() => game.runStats?.economyLine ?? 'Run: -', () async {}),
+      DebugAction(() => game.runStats?.funLine ?? 'Specials -', () async {}),
       // PRD-2.3 §13.3: the music diagnostic log.
       DebugAction(() => 'MUSIC LOG >', () async => _musicPage = true),
       // PRD-2.3.1 §12.3 the achievements debug rows.
@@ -358,7 +312,10 @@ class DebugPanel extends PositionComponent
 
   @override
   void render(Canvas canvas) {
-    canvas.drawRect(bleedRectFor(this, size.y), Paint()..color = _dim); // WP-TAB
+    canvas.drawRect(
+      bleedRectFor(this, size.y),
+      Paint()..color = _dim,
+    ); // WP-TAB
   }
 
   /// Taps on the dim close the panel; the buttons consume their own taps.

@@ -25,7 +25,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// PRD-2.3 §14.2 coins and §14.3 scoring (pure parts; the in-run paths are
 /// covered by the rewritten 2.2 tests: s11_perfect_zone, s3_27_egg, …).
 void main() {
-  tearDown(() => TuningValues.current = TuningValues.defaults());
+  tearDown(
+    () => TuningValues.current = TuningValues.resolve({'ui_unlock_best': '0'}),
+  );
 
   group('§14.2 each item pays its new coin value', () {
     test('the table', () {

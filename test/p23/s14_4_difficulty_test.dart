@@ -251,7 +251,11 @@ void main() {
         'ride_comet_spacing': '30',
         'ride_portal_first': '[100,100]',
       });
-      addTearDown(() => TuningValues.current = TuningValues.defaults());
+      addTearDown(
+        () => TuningValues.current = TuningValues.resolve({
+          'ui_unlock_best': '0',
+        }),
+      );
       final d = director();
       expect(d.portalAt, 100);
       final comets = [

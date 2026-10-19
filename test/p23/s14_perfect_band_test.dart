@@ -9,7 +9,7 @@ import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/hoops/hoop.dart';
 import 'package:flappy_spikes/run/hoops/kinds/bullseye.dart';
 import 'package:flappy_spikes/run/run_events.dart';
-import 'package:flappy_spikes/services/tuning.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -20,10 +20,10 @@ import '../helpers.dart';
 void main() {
   // The test-wide set (flutter_test_config.dart) plus [extra].
   void useTuning(Map<String, String> extra) {
-    Tuning.instance = Tuning(
-      active: TuningValues.resolve({'ui_unlock_best': '0', ...extra}),
-    );
-    TuningValues.current = Tuning.instance.active;
+    TuningValues.current = TuningValues.resolve({
+      'ui_unlock_best': '0',
+      ...extra,
+    });
   }
 
   tearDown(() => useTuning(const {}));
@@ -225,30 +225,6 @@ void main() {
       expect(h2.passOffset!.abs(), lessThanOrEqualTo(16));
       expect(e2!.perfect, isTrue);
       expect(run.state.perfectPasses, perfects + 1);
-    },
-  );
-
-  tester.testGameWidget(
-    'a band set mid-run does not change the current run (beginRun lock)',
-    setUp: (g, t) async {
-      useTuning({'point_perfect_band': '[[0,0]]'});
-      await boot(g, t);
-    },
-    verify: (g, _) async {
-      await startRun(g, startHoopIndex: 3);
-      // The console value arrives after the run began.
-      Tuning.instance = Tuning(
-        active: TuningValues.resolve({
-          'ui_unlock_best': '0',
-          'point_perfect_band': '[[0,16]]',
-        }),
-      );
-      final h = await nextNormal(g);
-      expect(h, isNotNull);
-      final e = await passAt(g, h!, 20);
-      expect(h.passOffset!.abs(), greaterThan(16));
-      expect(e!.perfect, isTrue, reason: 'the run pinned the old set');
-      expect(PerfectBandConfig.bandAt(h.plan.index), 0);
     },
   );
 

@@ -10,7 +10,7 @@ import 'package:flappy_spikes/run/hud/banners.dart';
 import 'package:flappy_spikes/run/hud/run_hud.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
 import 'package:flappy_spikes/run/run_events.dart';
-import 'package:flappy_spikes/services/tuning.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -18,14 +18,12 @@ import '../helpers.dart';
 /// PRD-2.3.1 §6: every bullseye hit pays `coin_bullseye` (3) coins and the
 /// same number of points on top of the pass. A rim touch does not change it.
 void main() {
-  /// The test-wide set (flutter_test_config.dart) plus [extra]; a run start
-  /// hands `Tuning.instance.active` to the config getters, so a remote value
-  /// has to live in the service.
+  /// The test-wide set (flutter_test_config.dart) plus [extra].
   void useTuning(Map<String, String> extra) {
-    Tuning.instance = Tuning(
-      active: TuningValues.resolve({'ui_unlock_best': '0', ...extra}),
-    );
-    TuningValues.current = Tuning.instance.active;
+    TuningValues.current = TuningValues.resolve({
+      'ui_unlock_best': '0',
+      ...extra,
+    });
   }
 
   tearDown(() => useTuning(const {}));

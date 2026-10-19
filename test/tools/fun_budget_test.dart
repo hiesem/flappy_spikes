@@ -12,7 +12,7 @@ import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/wallet.dart';
 import 'package:flappy_spikes/run/debug/run_stats.dart';
 import 'package:flappy_spikes/run/elements.dart';
-import 'package:flappy_spikes/services/tuning.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -47,8 +47,7 @@ void main() {
       'fun seed $seed',
       skip: !on,
       setUp: (g, _) async {
-        Tuning.instance = Tuning(active: TuningValues.resolve(overrides));
-        TuningValues.current = Tuning.instance.active;
+        TuningValues.current = TuningValues.resolve(overrides);
         await g.ready();
         g.sound.enabled = false;
         await preloadImages(g);

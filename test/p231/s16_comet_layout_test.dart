@@ -12,7 +12,7 @@ import 'package:flappy_spikes/run/items/comet.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
 import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/run/run_spawner.dart';
-import 'package:flappy_spikes/services/tuning.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -25,10 +25,10 @@ import '../helpers.dart';
 final Set<ElementId> _all = ElementId.values.toSet();
 
 void _useTuning(Map<String, String> extra) {
-  Tuning.instance = Tuning(
-    active: TuningValues.resolve({'ui_unlock_best': '0', ...extra}),
-  );
-  TuningValues.current = Tuning.instance.active;
+  TuningValues.current = TuningValues.resolve({
+    'ui_unlock_best': '0',
+    ...extra,
+  });
 }
 
 CometFeature _comet(RunController r) =>

@@ -8,7 +8,7 @@ import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/run/config/tuning_defaults.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
 import 'package:flappy_spikes/services/monetization.dart';
-import 'package:flappy_spikes/services/tuning.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -18,7 +18,6 @@ import '../menu_screenshot_test.dart' show captureShot, loadFonts;
 void main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
   // The owner's default (the lock is on); see test/flutter_test_config.dart.
-  Tuning.instance = Tuning();
   TuningValues.current = TuningValues.defaults();
   await loadFonts();
 
@@ -193,7 +192,8 @@ void main() async {
   );
 
   tester({
-    'bestScore': 25, 'playerLevel': 1,
+    'bestScore': 25,
+    'playerLevel': 1,
     'claimedLevels': ['1'],
   }).testGameWidget(
     '§26.4 unlocked: a best of 25 opens both screens with no overlay and the '
@@ -273,11 +273,7 @@ void main() async {
   }
 
   FlameTester<FlappySpikesGame>(() {
-    // A run start hands the tuned set to the config getters (as in a tester build).
-    Tuning.instance = Tuning(
-      active: TuningValues.resolve({'ui_unlock_best': '10'}),
-    );
-    Tuning.instance.beginRun();
+    TuningValues.current = TuningValues.resolve({'ui_unlock_best': '10'});
     return createRunTestGame(
       prefs: const {'bestScore': 9},
       worldHeight: 568,
@@ -299,25 +295,20 @@ void main() async {
           'TO UNLOCK THE SHOP',
         ]);
       } finally {
-        Tuning.instance = Tuning();
-        TuningValues.current = TuningValues.defaults();
+        TuningValues.current = TuningValues.resolve({'ui_unlock_best': '0'});
       }
     },
   );
 
   group('§26.1 tuning', () {
     setUp(() {
-      Tuning.instance = Tuning(
-        active: TuningValues.resolve({'ui_unlock_best': '10'}),
-      );
+      TuningValues.current = TuningValues.resolve({'ui_unlock_best': '10'});
     });
     tearDown(() {
-      Tuning.instance = Tuning();
-      TuningValues.current = TuningValues.defaults();
+      TuningValues.current = TuningValues.resolve({'ui_unlock_best': '0'});
     });
 
     test('ui_unlock_best = 10 moves the threshold and the text', () {
-      Tuning.instance.beginRun(); // a run start reads the tuned set
       expect(Config.menuUnlockBest, 10);
       expect(
         kTuningDefaults.where((d) => d.key == 'ui_unlock_best').single.value,

@@ -15,7 +15,7 @@ import 'package:flappy_spikes/run/hud/run_hud.dart';
 import 'package:flappy_spikes/run/physics/hoop_frame.dart';
 import 'package:flappy_spikes/run/physics/rim_collision.dart';
 import 'package:flappy_spikes/run/run_events.dart';
-import 'package:flappy_spikes/services/tuning.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -25,7 +25,6 @@ import '../helpers.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   // The owner's default (the lock is on); see test/flutter_test_config.dart.
-  Tuning.instance = Tuning();
   TuningValues.current = TuningValues.defaults();
 
   // --- 1. Bullseye pays +3 (PRD-2.3.1 §6) ----------------------------------

@@ -97,7 +97,7 @@ import '../services/game_services.dart';
 import '../services/iap_service.dart';
 import '../services/monetization.dart';
 import '../services/reminders.dart';
-import '../services/tuning.dart';
+import '../services/tester.dart';
 import '../skins/catalog.dart';
 import '../skins/item_store.dart';
 import '../skins/look.dart';
@@ -423,10 +423,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// Debug panel availability: debug builds and the Linux desktop target.
   /// P22-33 (§33.3): also in an FS_SOAK profile build (never release).
-  /// PRD-2.3 §15.4: also in FS_TUNING tester builds (the TUNING page and the
-  /// RUN DEBUG "Runs" row); never in the production build.
+  /// Audit 17: also in FS_TESTER tester builds (god mode, autopilot bot,
+  /// RUN DEBUG); never in the production build (the flag defaults to false).
   static bool get debugAvailable =>
-      kDebugMode || kSoak || kTuning || (!kIsWeb && Platform.isLinux);
+      kDebugMode || kSoak || kTester || (!kIsWeb && Platform.isLinux);
 
   /// P22-33 (§33.3) the FS_SOAK driver (null in every normal build).
   SoakDriver? soak;
@@ -1468,8 +1468,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _audioSceneChange(); // PRD-2.2 §28
     if (_soundReady) musicGuard.onRunStart(); // PRD-2.3 §13.3
     final d = runDebug;
-    // PRD-2.3 §15.2 the tuning values are read once per run, at run start.
-    Tuning.instance.beginRun();
     final e2e =
         kE2E || E2EHooks.force.isNotEmpty || E2EHooks.startHoopIndex > 0;
     final setup = RunSetup(
@@ -1499,7 +1497,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // unshown toasts stay queued for the next results page / Home.
     _hideAchievementToast();
     achievements.beginRun(counts: run.countsForAchievements);
-    runStats = RunStats(run); // 2.3.0 (18) debug TUNING page
+    runStats = RunStats(run); // 2.3.0 (18) debug panel run rows
     _run = run;
     (world as RunScaledWorld).timeScaleSource = () => run.state.timeScale;
     world.add(run);

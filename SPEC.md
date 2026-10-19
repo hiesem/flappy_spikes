@@ -1473,10 +1473,10 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
 ## PRD-2.3 §14 / §15: economy, scoring and difficulty rebalance; remote tuning
 
 Every value below is a tuning value of PRD-2.3 §15 (`lib/run/config/tuning_defaults.dart`,
-key in backticks); the numbers are the in-app defaults. Tester builds
-(`--dart-define=FS_TUNING=true`) can change them from Firebase Remote Config; the
-production build has the flag off and uses these values only. Full key table:
-`docs/p23/TUNING.md`.
+key in backticks); the numbers are the baked values. DEVIATION (audit 17, 2026-10-19):
+the remote tuning is removed. The values are plain constants (they equalled the live
+Remote Config values, so none changed); no build reads them from Firebase any more.
+Remote Config only serves `versus_pg_salt`. Key list: `docs/p23/TUNING.md`.
 
 - DEVIATION (PRD-2.3 §14.2, supersedes PRD-2 §3.15–§3.32 / PRD-2.2 coin values):
   **fewer coins.** Hoop 1 / perfect 2 (unchanged, `coin_hoop` / `coin_perfect`);
@@ -1585,9 +1585,10 @@ production build has the flag off and uses these values only. Full key table:
 - DEVIATION (PRD-2.3 §14.8, analytics): `run_end` gets `coins_per_hoop`,
   `perfect_rate` (2 decimals), `opening_end`, `speed_end` and `games_played`; new event
   `coins_spent {amount, reason}` from `Wallet.spend` (`skin` for a shop item, `revive`, …).
-- PRD-2.3 §15 remote tuning: the debug panel (now also in FS_TUNING tester builds) has
-  a read-only **TUNING >** page: every key, its active value and its source (`remote`,
-  `default`, `default*` = a rejected remote value), and the last fetch.
+- PRD-2.3 §15 remote tuning: REMOVED (audit 17). The **TUNING >** debug page is gone (its
+  two run-stats rows moved to the debug panel main page). Tester builds use
+  `--dart-define=FS_TESTER=true` (debug panel: god mode, autopilot bot, RUN DEBUG) and
+  change no gameplay value.
 - Tests: `test/p23/s14_2_economy_test.dart`, `s14_4_difficulty_test.dart`,
   `s14_6_gates_test.dart`, `s15_tuning_test.dart`; rewritten
   `test/p22/s11_perfect_zone_test.dart`; updated 2.2 pins in

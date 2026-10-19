@@ -3,7 +3,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/rides/portal_ride.dart';
-import 'package:flappy_spikes/services/tuning.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers.dart';
@@ -18,8 +18,7 @@ import '../../helpers.dart';
 /// also one a ride turns plain, so the default cap of 2 would stop it.
 void main() {
   void useTuning(Map<String, String> extra) {
-    Tuning.instance = Tuning(active: TuningValues.resolve(extra));
-    TuningValues.current = Tuning.instance.active;
+    TuningValues.current = TuningValues.resolve(extra);
   }
 
   tearDown(() => useTuning(const {}));

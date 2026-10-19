@@ -5,7 +5,7 @@ import '../run_events.dart';
 
 /// Owner 2026-10-14 (2.3.0 (18)) gameplay tuning: what one run produced —
 /// passes, coins (by source), points, special hoops, gap items and rides.
-/// Shown live on the debug TUNING page; the bot report
+/// Shown live on the debug panel main page; the bot report
 /// (`test/tools/fun_budget_test.dart`) uses the same counts.
 class RunStats {
   RunStats(RunController run) {

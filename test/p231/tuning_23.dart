@@ -1,11 +1,11 @@
-import 'package:flappy_spikes/services/tuning.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 
 /// PRD-2.3.1 §0: the live Remote Config set (RC v21) became the in-app
 /// defaults. These are the 2.3 defaults it replaced, for the tests that pin
 /// a 2.3 value on purpose (a mechanism measured at its old calibration).
 /// Pick the keys a test needs with [tuning23] and apply them with
-/// [useTuning] (in setUp, before the run starts: the run start pins the
-/// active set).
+/// [useTuning] (it sets `TuningValues.current`, which the config getters
+/// read).
 const Map<String, String> kTuning23 = {
   'coin_piggy_per': '2',
   'coin_jar': '8',
@@ -71,12 +71,12 @@ Map<String, String> tuning23Spawn() => {
 };
 
 /// The test-wide set (flutter_test_config.dart: `ui_unlock_best` 0) plus
-/// [extra], in the service and in `TuningValues.current`.
+/// [extra], in `TuningValues.current`.
 void useTuning(Map<String, String> extra) {
-  Tuning.instance = Tuning(
-    active: TuningValues.resolve({'ui_unlock_best': '0', ...extra}),
-  );
-  TuningValues.current = Tuning.instance.active;
+  TuningValues.current = TuningValues.resolve({
+    'ui_unlock_best': '0',
+    ...extra,
+  });
 }
 
 /// Back to the test-wide set.

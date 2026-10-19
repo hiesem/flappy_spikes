@@ -10,7 +10,7 @@ import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
 import 'package:flappy_spikes/services/iap_service.dart';
 import 'package:flappy_spikes/services/monetization.dart';
-import 'package:flappy_spikes/services/tuning.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -35,7 +35,6 @@ void main() async {
   await loadFonts();
   setUp(() {
     // Override the global flutter_test_config.dart unlock bypass.
-    Tuning.instance = Tuning();
     TuningValues.current = TuningValues.defaults();
   });
 

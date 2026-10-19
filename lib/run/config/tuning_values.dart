@@ -1,82 +1,57 @@
-/// PRD-2.3 §15.2 the resolved tuning values the game reads (pure Dart).
+/// The resolved gameplay values the config getters read (pure Dart).
 ///
-/// [TuningValues.current] is the set the config getters read. The `Tuning`
-/// service (`lib/services/tuning.dart`) sets it once at startup (after
-/// Remote Config's `activate()`) and again at every run start
-/// (`Tuning.beginRun`), so a value never changes during a run. Without
-/// `FS_TUNING` it stays [TuningValues.defaults] (the in-app defaults of
-/// `tuning_defaults.dart`).
+/// Audit 17 (2026-10-19): the remote tuning of PRD-2.3 §15 is gone. The
+/// values are the baked constants of `tuning_defaults.dart` (= the live
+/// Remote Config values of 2026-10-19); nothing at runtime changes them.
+/// [TuningValues.current] stays assignable for tests only, which pin a
+/// value with [TuningValues.resolve] (e.g. a 2.3 calibration).
 library;
 
 import 'tuning_defaults.dart';
 import 'tuning_types.dart';
 
-/// PRD-2.3 §15.4 where an active value came from.
-enum TuningSource {
-  /// From the console (Remote Config).
-  remote('remote'),
-
-  /// No remote value: the in-app default.
-  defaultValue('default'),
-
-  /// A remote value was rejected (wrong type, broken JSON): the default.
-  rejected('default*');
-
-  const TuningSource(this.label);
-
-  /// The TUNING page label.
-  final String label;
-}
-
 /// One immutable set of tuning values (key → value + source).
 class TuningValues {
-  TuningValues._(this._values, this._sources, this.defs);
+  TuningValues._(this._values, this.defs);
 
-  /// The in-app defaults ([kTuningDefaults]).
+  /// The baked values ([kTuningDefaults]).
   factory TuningValues.defaults([List<TuningDef> defs = kTuningDefaults]) =>
-      TuningValues._(
-        {for (final d in defs) d.key: d.value},
-        {for (final d in defs) d.key: TuningSource.defaultValue},
-        defs,
-      );
+      TuningValues._({for (final d in defs) d.key: d.value}, defs);
 
-  /// PRD-2.3 §15.2 "fallback only": [remote] (key → the console's string)
-  /// over the defaults. A missing key keeps its default; a wrong type or
-  /// broken JSON keeps the default too, marked [TuningSource.rejected] and
-  /// reported once through [onReject]. Remote keys the app doesn't know are
-  /// ignored. No min/max clamps.
+  /// Tests only: [overrides] (key → value as a string, parsed like the
+  /// former Remote Config strings) over the baked values. An unknown key or
+  /// a value that does not parse throws, so a typo never passes silently.
   factory TuningValues.resolve(
-    Map<String, String> remote, {
+    Map<String, String> overrides, {
     List<TuningDef> defs = kTuningDefaults,
-    void Function(String key, String raw)? onReject,
   }) {
+    final known = {for (final d in defs) d.key};
+    for (final k in overrides.keys) {
+      if (!known.contains(k)) {
+        throw ArgumentError.value(k, 'overrides', 'unknown tuning key');
+      }
+    }
     final values = <String, Object>{};
-    final sources = <String, TuningSource>{};
     for (final d in defs) {
-      final raw = remote[d.key];
+      final raw = overrides[d.key];
       if (raw == null) {
         values[d.key] = d.value;
-        sources[d.key] = TuningSource.defaultValue;
         continue;
       }
       final v = d.type.parse(raw, d.value);
       if (v == null) {
-        values[d.key] = d.value;
-        sources[d.key] = TuningSource.rejected;
-        onReject?.call(d.key, raw);
-      } else {
-        values[d.key] = v;
-        sources[d.key] = TuningSource.remote;
+        throw ArgumentError.value(raw, d.key, 'does not parse as ${d.type}');
       }
+      values[d.key] = v;
     }
-    return TuningValues._(values, sources, defs);
+    return TuningValues._(values, defs);
   }
 
-  /// The set the game reads (see the library doc).
+  /// The set the game reads: always [TuningValues.defaults] in the app;
+  /// tests assign an override set (see the library doc).
   static TuningValues current = TuningValues.defaults();
 
   final Map<String, Object> _values;
-  final Map<String, TuningSource> _sources;
 
   /// Every key, in [kTuningDefaults] order.
   final List<TuningDef> defs;
@@ -89,11 +64,7 @@ class TuningValues {
     return v;
   }
 
-  /// The source of [key] (TUNING page).
-  TuningSource sourceOf(String key) =>
-      _sources[key] ?? TuningSource.defaultValue;
-
-  /// The raw active value of [key] (TUNING page, analytics).
+  /// The raw value of [key] (tests).
   Object raw(String key) => _get(key);
 
   /// An int value.

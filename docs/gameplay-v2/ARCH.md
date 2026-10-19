@@ -94,7 +94,7 @@ code. Paths are relative to `flappy_spikes/`.
 | `run_config.dart` | 0b | §3.0.1 core tuning (`RunConfig`) |
 | `director_tables.dart` | 0b | §3.0.2 / §3.0.3 tables (`DirectorTables.prd2`) mirroring `spawn_tables.json` |
 | `<feature>_config.dart` | feature WP | one file per feature (e.g. `squeeze_config.dart`, `comet_config.dart`, `revive_config.dart`) |
-| `tuning_types.dart`, `tuning_values.dart`, `tuning_defaults.dart` (generated), `tuning_codegen.dart` | P23-15 | **2.3:** the remote tuning layer (PRD-2.3 §15). Every §14 value is a `TuningDef` key in `tuning_defaults.dart`; config getters read `TuningValues.current` (set at startup and at every run start). See §33 below and `docs/p23/TUNING.md` |
+| `tuning_types.dart`, `tuning_values.dart`, `tuning_defaults.dart` | P23-15, audit 17 | The gameplay value table (PRD-2.3 §14). Every §14 value is a `TuningDef` key in `tuning_defaults.dart` (a const table); config getters read `TuningValues.current`, which is always `TuningValues.defaults()` in the app (tests assign overrides). The Remote Config read, `tuning_codegen.dart` and `tool/tuning_sync.dart` were removed in audit 17 (DEVIATION from PRD-2.3 §15) |
 | `gates_config.dart` | P23-14 | **2.3:** lifetime unlock gates (PRD-2.3 §14.6, `gate_*` keys) |
 
 ### 1.4 `lib/run/physics/` (WP-1a; squeeze walls API used by WP-3g)
@@ -1535,8 +1535,8 @@ the chick's ×2, the perfect zone) are superseded by PRD-2.3 §14; `SPEC.md` has
 
 | Contract | As built | PRD-2.3 |
 |---|---|---|
-| Tuning layer | `TuningValues.current` (pure Dart, `run/config/tuning_values.dart`) is what every tunable getter reads: `tuning.i/d/b/ints/range/curve/obj('<key>')`. `Tuning.instance` (`services/tuning.dart`): no-op by default; with `--dart-define=FS_TUNING=true` (`kTuning`) `main.dart` installs `FirebaseTuningBackend`, `initialize()` = setUp → `activate()` → resolve (fallback only, `default*`) → `TuningValues.current` → background `fetch()` for the next start. `FlappySpikesGame._startRun` calls `Tuning.instance.beginRun()` before the `RunController` (values fixed per run) | §15.2 |
-| Adding a key | One `TuningDef(key, type, default, section, doc)` line in `tuning_defaults.dart` + a config getter; `dart run tool/tuning_sync.dart format` + `export`. Groups `kTuningGroups` include `ads_`, `rate_`, `noads_`, `ui_` (§0 item 5) | §15.3 |
+| Tuning layer | `TuningValues.current` (pure Dart, `run/config/tuning_values.dart`) is what every tunable getter reads: `tuning.i/d/b/ints/range/curve/obj('<key>')`. DEVIATION (audit 17, 2026-10-19): the Remote Config read (`services/tuning.dart`, `FirebaseTuningBackend`, `kTuning` / `FS_TUNING`, `beginRun`) is removed; the baked values equal the live RC values of 2026-10-19. `TuningValues.resolve` is a test-only override | §15.2 |
+| Adding a key | One `TuningDef(key, type, value, section, doc)` line in `tuning_defaults.dart` + a config getter | §15.3 |
 | Keyframes | `Keyframes([[hoop, value], …]).at(x)`: linear between keys, flat outside | §15.3 |
 | `DirectorTables.prd2` | Now a getter: `DirectorTables.fromTuning(TuningValues.current)` (spawn rows `spawn_*`, heart, feather / piece windows and chances, `CometRule comet` {chance, from, spacing} replacing the comet `Schedule`, portal `Schedule` 40–60 / 60–80, pair / capsule weights, `tiltCurve` / `movingCurve` → `tiltChance(i)` / `movingChance(i)`). `RunDirector({DirectorTables? tables})` defaults to it. Budget rows and the early pool stay const | §14.4, §14.5, §15.3 |
 | Speed / opening | `RunConfig.cruise(int hoopIndex)` (`curve_speed`; callers pass `RunState.hoopIndex`, so a revive keeps the speed); `RunConfig.openingFor(i)` = 118 at hoop 0 (also with Big Hoops: `RunDirector._bigMult`), then `curve_opening` (PRD-2.4 §1: 118 at hoops 1–2, 66 from hoop 100; rides and comets use it too, §2); `RunConfig.secondsForHoops(from, n)` turns hoop counts into runClock | §14.4, §0 item 3 |
@@ -1548,7 +1548,7 @@ the chick's ×2, the perfect zone) are superseded by PRD-2.3 §14; `SPEC.md` has
 | Revive | `ReviveConfig.coinLadder` (`revive_ladder`); `ReviveLadder.eligible` is false once `coinRevives ≥ ladder.length` | §14.2 |
 | Analytics | `run_end` + `coins_per_hoop`, `perfect_rate`, `opening_end`, `speed_end`, `games_played`; `Wallet(onSpent:)` → `coins_spent {amount, reason}` (`Wallet.spendReason`: `item:*` → `skin`) | §14.8 |
 | Portal rides | `RunDirector.portalDropped(ride)`: a portal planned / spawned ahead and cleared by a ride (`RunSpawner.clearAhead` / `clearAll`) does not count as the last ride | §3.12 (kept) |
-| Debug | `DebugPanel` **TUNING >** page (read-only: key = value [remote / default / default*], last fetch); RUN DEBUG **Runs: N (+5 / 0)**; `FlappySpikesGame.debugAvailable` includes `kTuning` | §15.4, §14.6 |
+| Debug | The **TUNING >** page is removed (audit 17); its two run-stats rows are on the debug panel main page. RUN DEBUG **Runs: N (+5 / 0)**; `FlappySpikesGame.debugAvailable` includes `kTester` (`--dart-define=FS_TESTER=true`, `services/tester.dart`) | §15.4, §14.6 |
 | Autopilot | `_farFromPlane` hands a chase back earlier: + abs(bird y − hoop y) ÷ 300 pt/s, and a moving ring's sideways reach (`_reachX`) | gate, §14.4 |
 
 

@@ -1,4 +1,5 @@
-import 'package:flappy_spikes/run/config/tuning_codegen.dart';
+import 'dart:convert';
+
 import 'package:flappy_spikes/run/config/tuning_defaults.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
@@ -124,11 +125,7 @@ void main() {
       expect(d, isNotNull, reason: '${e.key} is a tuning key');
       final live = d!.type.parse(e.value, d.value);
       expect(live, isNotNull, reason: '${e.key} parses');
-      expect(
-        renderValue(d.type, d.value),
-        renderValue(d.type, live!),
-        reason: e.key,
-      );
+      expect(jsonEncode(d.value), jsonEncode(live!), reason: e.key);
     }
   });
 

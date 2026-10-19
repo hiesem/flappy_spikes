@@ -6,7 +6,7 @@ import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/items/egg.dart';
 import 'package:flappy_spikes/run/run_state.dart';
-import 'package:flappy_spikes/services/tuning.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -60,18 +60,12 @@ void main() {
       setUp: (g, t) async {
         // The 2.3 rule this test pins: no perfect band (any rim-free pass is
         // perfect); the live default band (PRD-2.3.1 §0) is ±18 at hoop 15.
-        Tuning.instance = Tuning(
-          active: TuningValues.resolve({
-            'ui_unlock_best': '0',
-            'point_perfect_band': '[[0,0]]',
-          }),
-        );
-        TuningValues.current = Tuning.instance.active;
+        TuningValues.current = TuningValues.resolve({
+          'ui_unlock_best': '0',
+          'point_perfect_band': '[[0,0]]',
+        });
         addTearDown(() {
-          Tuning.instance = Tuning(
-            active: TuningValues.resolve({'ui_unlock_best': '0'}),
-          );
-          TuningValues.current = Tuning.instance.active;
+          TuningValues.current = TuningValues.resolve({'ui_unlock_best': '0'});
         });
         await boot(g, t);
       },

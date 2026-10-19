@@ -1,7 +1,7 @@
 import 'package:flappy_spikes/run/config/director_tables.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
-import 'package:flappy_spikes/services/tuning.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// PRD-2.3.1 §17 at most `ride_portal_max` portal rides per run (default 2,
@@ -12,10 +12,10 @@ import 'package:flutter_test/flutter_test.dart';
 final Set<ElementId> _all = ElementId.values.toSet();
 
 void _useTuning(Map<String, String> extra) {
-  Tuning.instance = Tuning(
-    active: TuningValues.resolve({'ui_unlock_best': '0', ...extra}),
-  );
-  TuningValues.current = Tuning.instance.active;
+  TuningValues.current = TuningValues.resolve({
+    'ui_unlock_best': '0',
+    ...extra,
+  });
 }
 
 /// Plans [hoops] slots; [reviveAt] hoop indexes get a revive first.

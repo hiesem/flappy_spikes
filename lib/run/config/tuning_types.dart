@@ -1,11 +1,9 @@
-/// PRD-2.3 §15.2 / §15.3 the types of the remote tuning layer, pure Dart
-/// (no Flutter imports): `tool/tuning_sync.dart` uses them too.
+/// PRD-2.3 §15.3 the types of the gameplay value table, pure Dart.
 ///
-/// A tuning value has a key (`<group>_<name>`, snake_case), a [TuningType]
-/// and an in-app default ([TuningDef], listed in `tuning_defaults.dart`).
-/// [TuningType.parse] turns a remote string into a value, or null when it
-/// is the wrong type or broken JSON (the caller then falls back to the
-/// default, §15.2 "fallback only": no min/max clamps).
+/// A value has a key (`<group>_<name>`, snake_case), a [TuningType] and its
+/// baked value ([TuningDef], listed in `tuning_defaults.dart`). Audit 17
+/// removed the Remote Config read: [TuningType.parse] is only used by tests
+/// that pin an override (`TuningValues.resolve`).
 library;
 
 import 'dart:convert';
@@ -32,14 +30,7 @@ enum TuningType {
   /// (one spawn-table row, a weight table).
   object;
 
-  /// The Remote Config `valueType` of the template (§15.5).
-  String get remoteType => switch (this) {
-    TuningType.integer || TuningType.decimal => 'NUMBER',
-    TuningType.boolean => 'BOOLEAN',
-    _ => 'JSON',
-  };
-
-  /// Parses a remote string against [fallback] (the default, for the
+  /// Parses an override string against [fallback] (the default, for the
   /// object's key set). Null = rejected (wrong type, broken JSON).
   Object? parse(String raw, Object fallback) {
     final s = raw.trim();
@@ -112,21 +103,10 @@ enum TuningType {
         return out;
     }
   }
-
-  /// The value as the string Remote Config stores (§15.5 template).
-  String encode(Object value) => switch (this) {
-    TuningType.integer || TuningType.decimal => _num(value as num),
-    TuningType.boolean => '$value',
-    _ => jsonEncode(value),
-  };
-
-  static String _num(num v) => v is double && v == v.roundToDouble()
-      ? v.toInt().toString()
-      : '$v';
 }
 
-/// PRD-2.3 §15.2 one tuning value: its key, type, in-app default, the PRD
-/// section it implements and a short description (TUNING.md, the console).
+/// PRD-2.3 §15.2 one gameplay value: its key, type, baked value, the PRD
+/// section it implements and a short description.
 class TuningDef {
   const TuningDef(this.key, this.type, this.value, this.section, this.doc);
 
@@ -141,19 +121,9 @@ class TuningDef {
   /// The PRD section (e.g. `14.2`).
   final String section;
 
-  /// One line for the console and TUNING.md.
+  /// One line: what the value is.
   final String doc;
-
-  /// The group (`coin`, `curve`, …): the key up to the first `_`.
-  String get group => key.substring(0, key.indexOf('_'));
 }
-
-/// PRD-2.3 §15.3 the key groups (§0 item 5 adds `ads_`, `rate_`, `noads_`
-/// and `ui_`). A key must start with one of them.
-const List<String> kTuningGroups = [
-  'coin', 'point', 'bonus', 'puzzle', 'revive', 'level', 'shop', 'curve', //
-  'squeeze', 'ride', 'spawn', 'gate', 'ads', 'rate', 'noads', 'ui', //
-];
 
 /// PRD-2.3 §14.4 / §15.3 a keyframe table `[[hoop, value], …]`: linear
 /// between keys, the first value before the first key and the last value

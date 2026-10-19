@@ -13,7 +13,7 @@ import '../helpers.dart';
 /// PRD-2.3.1 §5: the Shop free-coins ad pays 75 coins (`shop_ad_coins`,
 /// default 75; a remote value replaces it). The row label follows the reward.
 void main() {
-  tearDown(() => TuningValues.current = TuningValues.defaults());
+  tearDown(() => TuningValues.current = TuningValues.resolve({'ui_unlock_best': '0'}));
 
   final spy = AnalyticsSpy();
 

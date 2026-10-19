@@ -1,3 +1,13 @@
+> **REMOVED (audit 17, 2026-10-19).** The remote tuning described below no longer exists:
+> `lib/services/tuning.dart`, `FirebaseTuningBackend`, the TUNING debug page,
+> `lib/run/config/tuning_codegen.dart`, `tool/tuning_sync.dart` and
+> `docs/p23/remote_config_template.json` were deleted. The live Remote Config values were compared
+> with the in-app defaults (101 keys, app parser): all equal, so no value changed. The values are
+> the const table `lib/run/config/tuning_defaults.dart`; the key table below is still a valid
+> list of them (no longer regenerated). Remote Config only serves `versus_pg_salt`. Tester builds
+> use `--dart-define=FS_TESTER=true` (debug panel only, no gameplay values). This page is kept
+> as history.
+
 # Remote tuning (PRD-2.3 §15)
 
 Remote tuning lets testers change the gameplay and economy values of PRD-2.3 §14 from the

@@ -14,12 +14,6 @@ import 'backdrop_math.dart';
 /// prototype's thinning in `each`, the sinking in `ridgeY` / `gfill` and the
 /// fading in `pa()` never apply; the ports below leave them out.
 
-/// `presence(p, f)`: identically 1 (see above).
-double presence(double p, double f) => 1;
-
-/// `pa(x)`: identically 1 (see above).
-double pa(double x) => 1;
-
 /// `mark(dx)`: a landmark in the middle of its stage (moves at 0.04× of
 /// the prototype's 12 000 stage, i.e. it sweeps 480 pt per stage; with
 /// 20-hoop stages it moves at 0.08× so it still sweeps 480 pt and is off
@@ -69,12 +63,6 @@ double ridgeY(double off, double x, double base, double amp, double f1,
   final w = x + off;
   return base - amp * (0.62 * math.sin(w / f1 + ph) + 0.38 * math.sin(w / f2 + ph * 2.1));
 }
-
-/// `ridgeAt(env, f, off, x, …)`: a ground height as the given stage draws
-/// it (no sinking, see [presence]).
-double ridgeAt(double off, double x, double base, double amp, double f1,
-        double f2, double ph) =>
-    ridgeY(off, x, base, amp, f1, f2, ph);
 
 /// `ridgePath(c, off, base, amp, f1, f2, ph)` (into the current path).
 void ridgePath(Ctx c, double off, double base, double amp, double f1,

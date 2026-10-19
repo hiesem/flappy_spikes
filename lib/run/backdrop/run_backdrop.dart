@@ -41,9 +41,6 @@ class RunBackdrop extends Component with HasGameReference<FlappySpikesGame> {
   BackdropRideHook? get rideHook => painter.world.hook;
   set rideHook(BackdropRideHook? h) => painter.world.hook = h;
 
-  /// PRD-2.4 §3.5 the ride phase a hook reads (null = no ride).
-  String? get ridePhase => run.state.ride?.phase;
-
   /// The world distance this frame (prototype `cam`).
   double get worldDistance {
     _sync();

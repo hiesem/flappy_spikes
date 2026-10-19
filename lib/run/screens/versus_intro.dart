@@ -231,10 +231,6 @@ class VersusIntro extends PositionComponent
     return i < 0 ? '' : _reelNames[i];
   }
 
-  /// The white fade over everything (0..1; the run starts at 1).
-  double get whiteOpacity =>
-      ((time - fadeAt) / VersusConfig.whiteFade).clamp(0.0, 1.0);
-
   /// The intro has locked on the opponent.
   bool get locked => time >= lockAt;
 

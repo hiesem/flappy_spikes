@@ -164,9 +164,6 @@ class MenuParagraph extends PositionComponent {
   final TextPainter _painter;
   final double _shift;
 
-  /// Laid-out line count (tests).
-  int get lineCount => _painter.computeLineMetrics().length;
-
   @override
   void render(Canvas canvas) => _painter.paint(canvas, Offset(-_shift, 0));
 }

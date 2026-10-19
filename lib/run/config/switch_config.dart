@@ -47,7 +47,6 @@ abstract final class SwitchConfig {
   static const Color red = Color(0xFFFF3B5C);
   static const Color plum = Color(0xFF7A0044);
   static const Color pink = Color(0xFFEC008C);
-  static const Color pinkBack = Color(0xFFB0006B);
 
   /// §5.19 The crash word of each design (red banner).
   static String crashWord(SwitchDesign d) => switch (d) {
@@ -143,7 +142,4 @@ abstract final class SwitchConfig {
 
   /// §5.19 Gift Wrap confetti squares at the cut.
   static const int giftConfetti = 34;
-
-  /// §5.19 Lockdown: chain links that burst off at the unlock.
-  static const int lockLinks = 26;
 }

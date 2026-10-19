@@ -27,25 +27,6 @@ class RunGeometry {
   /// Screen y at fraction [f] of the normal band.
   double fraction(double f) => stripHeight + f * band;
 
-  /// §3.0.2 band rule: [y] clamped so the hoop stays ≥ opening/2 + 7 + 18
-  /// (+ [extra]) from each current tooth line.
-  double clampCentre(double y, double opening, {double extra = 0}) {
-    final m = opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin + extra;
-    final lo = topTooth + m;
-    final hi = floorTooth - m;
-    if (lo > hi) return (lo + hi) / 2;
-    return y.clamp(lo, hi).toDouble();
-  }
-
-  /// §3.0.1 the normal bird position's y (viewHeight / 2), kept inside the
-  /// current tooth lines (squeeze).
-  double safeLine() => (viewHeight / 2)
-      .clamp(
-        topTooth + RunConfig.birdRadius * 2,
-        floorTooth - RunConfig.birdRadius * 2,
-      )
-      .toDouble();
-
   /// §3.0.1 the normal bird position (70, viewHeight / 2) on screen.
   Vector2 normalBirdPosition() => Vector2(RunConfig.birdX, viewHeight / 2);
 

@@ -7,9 +7,9 @@ Only the background: the bird, hoops, spikes, HUD and rides are untouched.
 
 | File | What |
 |---|---|
-| `backdrop_math.dart` | constants (`kHoopsPerScene` 20, `kE` 6 000, `kNST` 10, `kVWIN` 1 500, `kLinger` 1 750, `kANCH` 160, 320 × 568 design), `hash`, `Rng` (`rng`), `smooth`, `smoother`, `modD`, `jsRound` |
+| `backdrop_math.dart` | constants (`kHoopsPerScene` 20, `kE` 6 000, `kNST` 10, `kVWIN` 1 500, `kLinger` 1 750, `kANCH` 160, 320 × 568 design), `hash`, `Rng` (`rng`), `smooth`, `modD`, `jsRound` |
 | `backdrop_ctx.dart` | `Ctx`: a canvas-2D facade (`fillStyle`, `save/restore`, `beginPath`, `arc`, `ellipse`, `roundRect`, `fill/stroke/clip`, gradients, dashes) + the world state (`cam`, `t`, `env`, `xl/xr`, `yTop`, `vert`, `fold`, `cut`) + `strip()` picture cache |
-| `backdrop_helpers.dart` | the prototype's shared helpers: `each`, `wraps`, `ridgeY/ridgePath/ridge/ridgeAt`, `gfillSink/gfillCut`, `flatCloud`, `pill`, `vgrad`, `mark`, `early`, `presence` (≡ 1: no side-by-side seams) |
+| `backdrop_helpers.dart` | the prototype's shared helpers: `each`, `wraps`, `ridgeY/ridgePath/ridge`, `gfillSink/gfillCut`, `flatCloud`, `pill`, `vgrad`, `mark`, `early` |
 | `backdrop_scene.dart` | `Band` (sky, far, mid, near, front) and `BackdropScene` |
 | `scenes/sNN_*.dart` | one painter per scene (all 10 ported) |
 | `seams/seam.dart` | `FloorSeam` (seams 1–6: `dir`, `yF`, `thickness`, `hang`, `travel`, `slab`, `piece`, `fold`), `OlderSeam` (7–10: `move`), `SeamFrame` (`S`: `u`, `q`, `sT`, `sB`, `oA`, `oB`, `hx`) |

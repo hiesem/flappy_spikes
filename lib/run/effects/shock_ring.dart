@@ -114,29 +114,6 @@ class ShockRing extends PooledEffect {
         tilt: tilt,
       );
 
-  /// Circular gold ring (pickups, shield form, phoenix): radius [r] grows
-  /// by [scaleTo].
-  ShockRing goldRing(
-    Offset centre, {
-    double r = 20,
-    double scaleFrom = .4,
-    double scaleTo = 2.4,
-    double stroke = 4,
-    double length = .5,
-    Color color = PartsConfig.gold,
-    double delay = 0,
-  }) => play(
-    centre,
-    rx: r,
-    color: color,
-    length: length,
-    scaleFrom: scaleFrom,
-    scaleTo: scaleTo,
-    strokeFrom: stroke,
-    strokeTo: stroke * .5,
-    delay: delay,
-  );
-
   /// Current (scale, stroke, alpha) — for tests.
   (double, double, double) valuesAt(double k) => (
     scaleFrom + (scaleTo - scaleFrom) * k,

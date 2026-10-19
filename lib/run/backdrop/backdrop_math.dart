@@ -52,12 +52,6 @@ double smooth(double x) {
   return x * x * (3 - 2 * x);
 }
 
-/// `smoother` (smootherstep, clamped) — `ride_landings.html`.
-double smoother(double x) {
-  x = clampD(x, 0, 1);
-  return x * x * x * (x * (x * 6 - 15) + 10);
-}
-
 /// JS `Math.round` (halves round towards +∞).
 int jsRound(double x) => (x + 0.5).floor();
 

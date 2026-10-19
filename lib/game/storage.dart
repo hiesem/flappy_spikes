@@ -653,14 +653,6 @@ class GameStorage {
       ..lastPlayDay = lastDay,
   );
 
-  /// QA P2-03 the open run's journal and its exclusion, written together.
-  Future<void> saveAchJournal(List<String> ops, {required bool excluded}) =>
-      _saveAch(
-        (s) => s
-          ..journal = [...ops]
-          ..journalExcluded = excluded,
-      );
-
   /// PRD-2.3.1 §19.2 the pacing queue (oldest first).
   Future<void> saveAchPending(List<String> value) =>
       _saveAch((s) => s.pending = [...value]);

@@ -137,9 +137,6 @@ abstract final class VersusConfig {
   static const double outOpacity = .4;
 
   // ------------------------------------------------------------ VS intro (§5.8)
-  /// §5.8 START squash (s).
-  static const double startSquash = .14;
-
   /// §5.8 Panels slide in at 0.12 s for 0.42 s with a 6 pt overshoot.
   static const double panelsAt = .12;
   static const double panelsSlide = .42;

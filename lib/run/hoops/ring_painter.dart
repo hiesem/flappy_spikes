@@ -69,9 +69,6 @@ abstract final class RingPainter {
   /// Half height of the stroke centre line for an [opening] (pt).
   static double ryFor(double opening) => opening / 2 + PartsConfig.rimRadius;
 
-  /// Outer height of the drawn ring (opening + 2 × 7 + stroke).
-  static double outerHeight(double opening) => 2 * ryFor(opening) + stroke;
-
   /// The tier override of §3.5 (null = draw the equipped skin).
   static RingColors? colorsForTier(int tier) => tier >= 3
       ? RingColors.brightGold

@@ -73,9 +73,6 @@ class FirebaseVersusBackend implements VersusBackend {
   /// The activation in flight: concurrent callers share one attempt.
   static Future<void>? _appCheckActivation;
 
-  /// Whether App Check was activated successfully in this process.
-  static bool get appCheckActive => _appCheckActive;
-
   /// ARCH §6.5: Play Integrity in release; the debug provider in debug and
   /// `FS_E2E` builds (its debug secret is printed to logcat by the native
   /// SDK — "Enter this debug secret into the allow list …" — for the

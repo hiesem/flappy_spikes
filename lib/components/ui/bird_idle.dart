@@ -77,15 +77,10 @@ class BirdIdle {
   /// The last random action that fired (tests).
   BirdIdleAction? lastAction;
 
-  /// Seconds until the next random action.
-  double get nextAction => _next;
-
   final List<IdleParticle> particles = [];
 
   double get time => _t;
 
-  /// Height above the resting line (negative = up).
-  double get hopY => _y;
   double get velocity => _vy;
   bool get airborne => _vy != 0;
 

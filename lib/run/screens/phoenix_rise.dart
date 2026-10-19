@@ -126,9 +126,6 @@ class PhoenixRise extends Component with HasGameReference<FlappySpikesGame> {
   /// The safe line this phoenix rises to.
   double get safeY => _safeY;
 
-  /// The bird's screen centre now.
-  Offset get birdAt => _bird;
-
   bool get burst => _burst;
   bool get done => _done;
 

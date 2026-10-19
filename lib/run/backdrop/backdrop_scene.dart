@@ -28,16 +28,3 @@ abstract class BackdropScene {
   /// Paints [band] (one of [Band.layers]).
   void draw(Ctx c, Band band);
 }
-
-/// A scene not ported yet: draws nothing over the plain sky (the
-/// backdrop's base fill), so the world still runs while WP-W2 / WP-W3 fill
-/// it in.
-class StubScene extends BackdropScene {
-  const StubScene(this.name);
-
-  @override
-  final String name;
-
-  @override
-  void draw(Ctx c, Band band) {}
-}

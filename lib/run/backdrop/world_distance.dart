@@ -71,9 +71,6 @@ class WorldDistance {
   /// hoops early after a ride that ends close to it).
   bool _afterRide = false;
 
-  /// Whether the world is re-syncing after a portal ride (tests).
-  bool get afterRide => _afterRide;
-
   /// The camera centre the distance was last advanced to.
   double get c => _c;
 

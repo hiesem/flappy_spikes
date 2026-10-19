@@ -68,9 +68,6 @@ class PortalHandover extends BackdropRideHook {
   /// How far the themed scene has left (0 before the launch, 1 gone).
   double get progress => _p;
 
-  /// The offset of [band] this frame (tests, debug).
-  Offset offsetOf(Band band) => _offsets[_index(band)];
-
   static int _index(Band b) => b == Band.front ? Band.near.index : b.index;
 
   /// `softY`: the follow, capped so the scene never runs out.

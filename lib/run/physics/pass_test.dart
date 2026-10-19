@@ -9,10 +9,6 @@ enum PlaneEventKind {
 
   /// Fully past the ring without a pass: a miss.
   missPast,
-
-  /// A pass crossing on a closed switch ring (the kind decides; the
-  /// controller reports it with this kind).
-  closedReached,
 }
 
 class PlaneEvent {

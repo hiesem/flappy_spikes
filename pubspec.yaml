@@ -31,9 +31,6 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
   flame: ^1.37.0
   flame_forge2d: ^0.19.2+6
   flame_audio: ^2.12.1
@@ -98,10 +95,9 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
 
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
-  uses-material-design: true
+  # No Material icons are drawn (no Icon / Icons anywhere in lib), so the
+  # 1.6 MB MaterialIcons font is not bundled (audit 17).
+  uses-material-design: false
 
   assets:
     - assets/images/

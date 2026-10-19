@@ -60,9 +60,6 @@ class FlipDriver extends Component {
   bool _swapped = false;
   bool _done = false;
 
-  /// Whether the new face is up (tests).
-  bool get swapped => _swapped;
-
   void _swap() {
     if (_swapped) return;
     _swapped = true;

@@ -15,9 +15,6 @@ abstract final class PartsConfig {
   /// §3.4 Gold `#FFB529` (coin, gold ring, gold bird, banner tiers 3/6).
   static const Color gold = Color(0xFFFFB529);
 
-  /// §3.4 Deep pink `#C2185B` (banner tiers 4/9).
-  static const Color deepPink = Color(0xFFC2185B);
-
   /// §3.4 Plum `#7A0044` (banner tiers 5/10, sticker text).
   static const Color plum = Color(0xFF7A0044);
 
@@ -56,13 +53,6 @@ abstract final class PartsConfig {
 
   /// §3.0.9 #7 Letter spacing (em).
   static const double bannerLetterSpacing = .1;
-
-  /// §3.0.9 #7 Fixed font size per tier 1..10 (pt). PRD-2.2 §29: no
-  /// longer used by the streak banner (its font is auto-sized for the 50
-  /// names); kept for reference.
-  static const List<double> bannerFontSizes = [
-    28, 32, 34, 30, 32, 34, 34, 32, 34, 30, //
-  ];
 
   /// §3.0.9 #7 Scale-in share of the banner duration (0.12 ≈ 0.1 s).
   static const double bannerInShare = .12;

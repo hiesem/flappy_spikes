@@ -293,9 +293,6 @@ class RunDirector {
     RunConfig.hourglassMax,
   );
 
-  /// Generic timing roll in [a, b) for feature WPs (balloon prizes, …).
-  double rollTiming(double a, double b) => RunRandom.range(rng.timing, a, b);
-
   // --- lifecycle --------------------------------------------------------------
 
   /// §3.0.3 slot order 2: the next slot is a plain normal hoop.

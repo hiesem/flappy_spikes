@@ -959,10 +959,6 @@ class RunController extends Component {
     game.world.addRun(fx);
   }
 
-  /// The run-owned world effects still alive (tests).
-  @visibleForTesting
-  Iterable<Component> get worldFx => _worldFx.where((x) => !x.isRemoved);
-
   void disposeRun() {
     for (final fx in _worldFx) {
       if (!fx.isRemoved) fx.removeFromParent();

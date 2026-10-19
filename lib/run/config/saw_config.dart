@@ -118,7 +118,6 @@ abstract final class SawConfig {
   static const Color wireCoreBack = Color(0xFF121A38);
   static const Color wireCyan = Color(0xFF5CF2FF);
   static const Color wireCyanBack = Color(0xFF0E93AD);
-  static const Color wireBolt = Color(0xFF7DF9FF);
   static const Color wireGlow = Color(0xFF22E6FF);
 
   /// §5.17 Frost Ring colours: rim, inner rim, shards.
@@ -130,9 +129,6 @@ abstract final class SawConfig {
 
   /// §5.17 Frost Ring: shard cluster points round the ring.
   static const int frostPoints = 46;
-
-  /// §5.17 Frost Ring: longest shard (pt, top / bottom curves; sides ≈ 50 %).
-  static const double frostShardMax = 35;
 
   /// §5.17 Black Hole: torus width (pt), photon ring, plasma colours.
   static const double holeTorus = 16;

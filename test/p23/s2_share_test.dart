@@ -285,8 +285,8 @@ void main() {
       expect(xml, contains('@drawable/ic_launcher_monochrome'));
     });
 
-    test('assets/images/app_icon.png is the v3 (icon8) picture: 1024, no '
-        'alpha, deep blue corners, the pink bird in the middle', () async {
+    test('assets/images/app_icon.png is the v3 (icon10) picture: 1024, no '
+        'alpha, sky blue corners (the splash colour), the pink bird in the middle', () async {
       final bytes = File('assets/images/app_icon.png').readAsBytesSync();
       expect(pngSize(bytes), (1024, 1024));
       expect(bytes[25], 2, reason: 'colour type 2 = RGB, no alpha');
@@ -296,8 +296,9 @@ void main() {
       int at(int x, int y) => px.getUint32((y * 1024 + x) * 4);
       for (final (x, y) in [(8, 8), (1015, 8), (8, 1015), (1015, 1015)]) {
         final c = at(x, y);
-        expect(c >> 24, lessThan(30), reason: 'corner ($x, $y) red');
-        expect((c >> 8) & 0xFF, greaterThan(190), reason: 'corner blue');
+        // icon10: #2CA4F4 corners.
+        expect(c >> 24, lessThan(70), reason: 'corner ($x, $y) red');
+        expect((c >> 8) & 0xFF, greaterThan(220), reason: 'corner blue');
       }
       final pink = at(300, 820); // the bird's body, left of the beak
       expect(pink >> 24, greaterThan(200), reason: 'pink red channel');
@@ -306,10 +307,10 @@ void main() {
       codec.dispose();
     });
 
-    test('the splash colour is the icon\'s deep blue #003ADC everywhere', () {
+    test('the splash colour is the icon\'s corner blue #2CA4F4 everywhere', () {
       expect(
         RegExp(
-          'color: "#003ADC"',
+          'color: "#2CA4F4"',
         ).allMatches(File('pubspec.yaml').readAsStringSync()),
         hasLength(3),
       );
@@ -318,7 +319,7 @@ void main() {
           'android/app/src/main/res/$v/styles.xml',
         ).readAsStringSync();
         expect(xml, isNot(contains('#2BC8F5')), reason: v);
-        expect(RegExp('#003ADC').allMatches(xml), hasLength(2), reason: v);
+        expect(RegExp('#2CA4F4').allMatches(xml), hasLength(2), reason: v);
       }
     });
 

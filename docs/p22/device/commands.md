@@ -12,7 +12,7 @@ Set `settings put global stay_on_while_plugged_in 7` during QA.
 ```bash
 flutter test integration_test/release_e2e_test.dart -d 38300DLJH004SD \
   --dart-define=FS_E2E=true --dart-define=FS_LIVE_VERSUS=true \
-  --dart-define=FS_APPCHECK_DEBUG_TOKEN=b129ba61-86cc-487d-a022-66f0fa2f7574 \
+  --dart-define=FS_APPCHECK_DEBUG_TOKEN=<registered debug token> \
   --reporter expanded > docs/p22/device/e2e.txt 2>&1
 npm --prefix functions ci
 npm --prefix functions run build
@@ -46,7 +46,7 @@ both tests, replayed 13 v2 pool runs, and deleted only its anonymous QA account.
 ```bash
 flutter test integration_test/release_e2e_test.dart -d 38300DLJH004SD \
   --no-uninstall --dart-define=FS_E2E=true --dart-define=FS_LIVE_VERSUS=true \
-  --dart-define=FS_APPCHECK_DEBUG_TOKEN=b129ba61-86cc-487d-a022-66f0fa2f7574 \
+  --dart-define=FS_APPCHECK_DEBUG_TOKEN=<registered debug token> \
   --plain-name live --reporter expanded
 ```
 The final full rerun uses the same flags without `--plain-name`.
@@ -72,7 +72,7 @@ were recorded (end cards can need another close). See `soak_ad_watch.txt`,
 
 ```bash
 flutter build apk --debug -t integration_test/p22_final_device_main.dart \
-  --dart-define=FS_APPCHECK_DEBUG_TOKEN=b129ba61-86cc-487d-a022-66f0fa2f7574
+  --dart-define=FS_APPCHECK_DEBUG_TOKEN=<registered debug token>
 ```
 This harness uses the actual game, back observer, native sound/rumble/focus and
 Google test ad loaders; mock game prefs, FakeIapService, no cloud or reminders.
@@ -91,7 +91,7 @@ flutter analyze --no-pub
 flutter test --no-pub --concurrency=4 --reporter expanded
 npm --prefix functions test
 flutter build apk --debug \
-  --dart-define=FS_APPCHECK_DEBUG_TOKEN=b129ba61-86cc-487d-a022-66f0fa2f7574
+  --dart-define=FS_APPCHECK_DEBUG_TOKEN=<registered debug token>
 adb -s 38300DLJH004SD install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 

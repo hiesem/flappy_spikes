@@ -125,7 +125,7 @@ Run frame times get worse after the first game: p90 12.8 → 14.7 ms, slow frame
    - The next build carries the fix.
 2. **Send the 2 pending changes for review** (Ads declaration and Data safety) in Play Console → Publishing overview, when you are ready for a public release.
 3. **The `AD_ID` error on the older active build** clears once a build with the permission reaches production.
-4. **Repo size before a push:** the QA evidence committed under `docs/p22/` (screenshots, screen recordings, raw performance dumps) is about **160 MB**. Consider moving `docs/p22/device/` and `docs/p22/perf/*/` out of the repo, or into Git LFS, before pushing `feat/2.2`. The branch is unpushed, so its history can still be rewritten.
+4. **Repo size before a push:** the QA evidence committed under `docs/p22/` (screenshots, screen recordings, raw performance dumps) is about **160 MB**. Consider moving `docs/p22/device/` and `docs/p22/perf/*/` out of the repo, or into Git LFS, before pushing `feat/2.2`. The branch is unpushed, so its history can still be rewritten. *(Run 17, 2026-10-20: the raw captures in `docs/p22/device/` were removed, see git history; `docs/p22/perf/` stays.)*
 5. **Still owner-only (§7.2):**
    - the US state regulations message in AdMob;
    - the Unity payout profile;

@@ -1,5 +1,7 @@
 # PRD-2.2 final Pixel 8 QA
 
+> Note: the raw device captures under `docs/p22/device/` (recordings, screenshots, UI/state dumps, logcat and console logs, interactions.jsonl) were removed 2026-10-20 (run 17), see git history. File names below refer to that history.
+
 2026-10-12. Tester branch: g7-qadev. Production code under test: a92835f.
 Pixel 8 38300DLJH004SD, Android 17, USB hub, gesture navigation (mode 2).
 No production, iOS, store, backend deployment or push changes.
@@ -12,15 +14,15 @@ checkout: its head is the P3 merge, not a later P3 fix merge.
 
 | Gate | Result | Evidence |
 | --- | --- | --- |
-| Device e2e (mode, FREE FLY, live VERSUS, journey, elements, six rides, reminders, upload/delete) | PASS, **8/8**, final full run | [e2e.txt](device/e2e.txt), [85-shot manifest](device/e2e_manifest.json), [PNG folder](device/e2e_release/) |
-| flutter analyze | PASS, no issues | [analyze.txt](device/analyze.txt) |
-| Full flutter test --concurrency=4 | PASS, **2465 passed /6 skipped** | [full_test.txt](device/full_test.txt) |
-| Focused music /rumble /revive /moving physics | PASS, 19 | [focused.txt](device/focused.txt) |
-| Focused captureShot visual suites (mode /portal /fire /post-run) | PASS, 45 | [focused_visual.txt](device/focused_visual.txt) |
-| npm --prefix functions test | PASS, **121**; build completed first | [functions_test.txt](device/functions_test.txt), [setup](device/functions_setup.txt) |
-| §33 final soak | **FAIL**, 20 games, 3/5 criteria fail | [PERF.md §2d](PERF.md), [CSV](device/soak/soak.csv), [console](device/soak_console.txt) |
-| Native Android back | **FAIL**, S7-20 | [gesture results](device/gesture_results.json), [finish log](device/gesture_finish.txt), [before/after PNGs](device/shots/) |
-| Final debug install /settings restoration | PASS: normal lib/main.dart debug APK, data retained, brightness 1 /3, stay-awake 7; copied keys deleted | [build](device/final_debug_build.txt), [install](device/final_debug_install.txt), [restoration](device/restoration.txt), [final Home](device/shots/final_debug_home_restored.png) |
+| Device e2e (mode, FREE FLY, live VERSUS, journey, elements, six rides, reminders, upload/delete) | PASS, **8/8**, final full run | e2e.txt (removed 2026-10-20 (run 17), see git history), 85-shot manifest (removed 2026-10-20 (run 17), see git history), PNG folder (removed 2026-10-20 (run 17), see git history) |
+| flutter analyze | PASS, no issues | analyze.txt (removed 2026-10-20 (run 17), see git history) |
+| Full flutter test --concurrency=4 | PASS, **2465 passed /6 skipped** | full_test.txt (removed 2026-10-20 (run 17), see git history) |
+| Focused music /rumble /revive /moving physics | PASS, 19 | focused.txt (removed 2026-10-20 (run 17), see git history) |
+| Focused captureShot visual suites (mode /portal /fire /post-run) | PASS, 45 | focused_visual.txt (removed 2026-10-20 (run 17), see git history) |
+| npm --prefix functions test | PASS, **121**; build completed first | functions_test.txt (removed 2026-10-20 (run 17), see git history), setup (removed 2026-10-20 (run 17), see git history) |
+| §33 final soak | **FAIL**, 20 games, 3/5 criteria fail | [PERF.md §2d](PERF.md), [CSV](device/soak/soak.csv), console (removed 2026-10-20 (run 17), see git history) |
+| Native Android back | **FAIL**, S7-20 | gesture results (removed 2026-10-20 (run 17), see git history), finish log (removed 2026-10-20 (run 17), see git history), before/after PNGs (removed 2026-10-20 (run 17), see git history) |
+| Final debug install /settings restoration | PASS: normal lib/main.dart debug APK, data retained, brightness 1 /3, stay-awake 7; copied keys deleted | build (removed 2026-10-20 (run 17), see git history), install (removed 2026-10-20 (run 17), see git history), restoration (removed 2026-10-20 (run 17), see git history), final Home (removed 2026-10-20 (run 17), see git history) |
 
 The six skips include the three P3 finding regressions in
 `test/p22/s12_s18_s20_s21_qa_p3_test.dart`. Green automated gates
@@ -31,7 +33,7 @@ was changed or fixed.
 ## Device pass/fail matrix
 
 Paths below are inside device/. Every setup operation, adb tap/swipe, snapshot
-and close-button tap is logged in [interactions.jsonl](device/interactions.jsonl).
+and close-button tap is logged in interactions.jsonl (removed 2026-10-20 (run 17), see git history).
 [commands.md](device/commands.md) records build/test commands and correction history.
 Native render/audio/rumble/focus/Google test ads use
 [integration_test/p22_final_device_main.dart](../../integration_test/p22_final_device_main.dart).

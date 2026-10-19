@@ -1,1 +1,0 @@
-Reminder e2e permission accepted: adb -s 38300DLJH004SD shell input tap 540 1371

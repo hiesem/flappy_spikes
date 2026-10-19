@@ -1,3 +1,0 @@
---------- beginning of main
-10-12 06:18:05.914 D/FirebaseAuth( 1837): Notifying id token listeners about user ( z7WSQY0EtPc5SqRUYWE4yJmkDTU2 ).
-10-12 06:18:05.914 D/FirebaseAuth( 1837): Notifying auth state listeners about user ( z7WSQY0EtPc5SqRUYWE4yJmkDTU2 ).

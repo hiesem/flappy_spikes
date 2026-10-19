@@ -1,5 +1,7 @@
 # S7-20 fix: Android system back on the Pixel 8 (PRD-2.2 §8)
 
+> Note: the raw device captures under `docs/p22/device/` (recordings, screenshots, UI/state dumps, logcat and console logs, interactions.jsonl) were removed 2026-10-20 (run 17), see git history. File names below refer to that history.
+
 Branch `g7-fin-back`, 2026-10-12. Pixel 8 `38300DLJH004SD`, Android 17, gesture
 navigation (mode 2), targetSdk 36. Debug builds signed with the upload key,
 `adb install -r` only (never uninstalled; saved wallet / best kept).
@@ -44,7 +46,7 @@ Driver `backfix.py` (uses `docs/p22/device/drive.py`; every adb call in
 `back_fix/interactions.jsonl`). Each case starts from a fresh launch, does ONE
 `input swipe 2 1200 400 1200 150` or ONE `input keyevent KEYCODE_BACK`, then
 checks the game state and `dumpsys activity activities` (topResumedActivity =
-MainActivity). Raw data: [results.json](back_fix/results.json); states in
+MainActivity). Raw data: results.json (removed 2026-10-20 (run 17), see git history); states in
 `back_fix/states/`, before/after screenshots in `back_fix/shots/`
 (`<swipe|key>_<case>_{before,after}.png`).
 
@@ -70,7 +72,7 @@ revive offer; the driver now accepts either and the rerun passed.)
 
 ## Results: normal `lib/main.dart` debug build (left installed)
 
-[normal_main.txt](back_fix/normal_main.txt):
+normal_main.txt (removed 2026-10-20 (run 17), see git history):
 
 - swipe 0.3 s after `am start -W` (cold launch): app stays resumed;
 - Home: two edge swipes + KEYCODE_BACK: nothing happens, app resumed

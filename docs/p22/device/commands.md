@@ -1,5 +1,7 @@
 # Final device QA commands
 
+> Note: the raw device captures under `docs/p22/device/` (recordings, screenshots, UI/state dumps, logcat and console logs, interactions.jsonl) were removed 2026-10-20 (run 17), see git history. File names below refer to that history.
+
 All shell sessions use PATH / ANDROID_HOME / JAVA_HOME from AGENTS.md.
 Device commands always target Pixel 8 `38300DLJH004SD`.
 

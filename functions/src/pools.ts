@@ -11,6 +11,7 @@ import { CLAIMS_COLLECTION, ClaimDoc, GUEST_NAME_TTL_MS, nameKey, SEEN_REFRESH_M
 import {
   NAMES_COLLECTION,
   NameDoc,
+  DAILY_BEST_UPLOADS,
   DAILY_UPLOADS,
   PlayerDoc,
   POOL_CAP,
@@ -151,6 +152,7 @@ export async function processPlayerWrite(
       if (rate.day !== today) {
         rate.day = today;
         rate.count = 0;
+        rate.bestCount = 0;
       }
       const seen = new Set(rate.seen ?? []);
       let chosen: RunEntry | null = null;
@@ -162,6 +164,11 @@ export async function processPlayerWrite(
         if (reason === null && !isBest) {
           if (rate.count >= DAILY_UPLOADS) reason = 'rate';
           else rate.count++;
+        } else if (reason === null) {
+          // Audit 17: new bests have their own (generous) daily cap.
+          const bests = rate.bestCount ?? 0;
+          if (bests >= DAILY_BEST_UPLOADS) reason = 'rate';
+          else rate.bestCount = bests + 1;
         }
         if (reason !== 'duplicate') seen.add(run.runId);
         if (reason === null) {

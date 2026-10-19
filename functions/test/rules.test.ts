@@ -8,7 +8,20 @@ import {
   initializeTestEnvironment,
   RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, serverTimestamp, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  collectionGroup,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 import { encodeDeltas, encodeEntries } from '../src/timeline.js';
 import { DAY, LOOK, PROJECT, uniq } from './helpers.js';
 
@@ -181,5 +194,44 @@ describe('§3.13 rules: pools and everything else', () => {
     await assertFails(setDoc(doc(db, 'versusRate', uid), { count: 0 }));
     await assertFails(setDoc(doc(db, 'anything', 'x'), { a: 1 }));
     assert.ok(true);
+  });
+});
+
+describe('audit 17 rules: a modified client with the public Firebase config', () => {
+  it('cannot read, create or change a custom name or a name claim (no profanity-filter bypass)', async () => {
+    const uid = uniq('nm');
+    const db = env.authenticatedContext(uid).firestore();
+    await assertFails(setDoc(doc(db, 'versusNames', uid), { customName: 'Anything', updatedAt: serverTimestamp() }));
+    await assertFails(getDoc(doc(db, 'versusNames', uid)));
+    await assertFails(setDoc(doc(db, 'versusNameClaims', 'anything'), { uid, name: 'Anything' }));
+    await assertFails(getDoc(doc(db, 'versusNameClaims', 'anything')));
+    await assertFails(deleteDoc(doc(db, 'versusNameClaims', 'anything')));
+    // A pool entry with a chosen customName cannot be written either.
+    await assertFails(setDoc(doc(db, 'pools', '10_0'), { entries: [{ uid, customName: 'Anything' }] }));
+  });
+
+  it('cannot enumerate players (collection list or collection-group query)', async () => {
+    const owner = uniq('enum');
+    await assertSucceeds(setDoc(doc(env.authenticatedContext(owner).firestore(), 'players', owner), player()));
+    const db = env.authenticatedContext(uniq('spy')).firestore();
+    await assertFails(getDocs(collection(db, 'players')));
+    await assertFails(getDocs(query(collection(db, 'players'), where('best', '>', 0))));
+    await assertFails(getDocs(collectionGroup(db, 'players')));
+    await assertFails(getDocs(collection(db, 'versusRate')));
+    await assertFails(getDocs(collection(db, 'versusNames')));
+  });
+
+  it('cannot read anything unauthenticated', async () => {
+    const db = env.unauthenticatedContext().firestore();
+    await assertFails(getDocs(collection(db, 'pools')));
+    await assertFails(getDocs(collection(db, 'players')));
+  });
+
+  it('cannot write a best above 100 000 or a run without a timeline type', async () => {
+    const uid = uniq('big');
+    const ref = doc(env.authenticatedContext(uid).firestore(), 'players', uid);
+    await assertFails(setDoc(ref, player({ best: 100001 })));
+    await assertFails(setDoc(ref, player({ recent: [run({ tl: 123 })] })));
+    await assertFails(setDoc(ref, player({ recent: [run({ score: -1 })] })));
   });
 });

@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { DocumentReference, Firestore, Timestamp, Transaction } from 'firebase-admin/firestore';
 import { deletePlayerData, processPlayerWrite, sweepAllPools } from '../src/pools.js';
-import { POOL_CAP, POOL_MAX_BYTES, poolId, RATE_COLLECTION } from '../src/schema.js';
+import { DAILY_BEST_UPLOADS, POOL_CAP, POOL_MAX_BYTES, poolId, RATE_COLLECTION } from '../src/schema.js';
 import { docSize } from '../src/size.js';
 import { DAY, db, makePlayer, makeRun, poolEntries, processLive, uniq, waitFor } from './helpers.js';
 
@@ -117,6 +117,29 @@ describe('§3.13 onPlayerRunWrite: upload rate (3 a day, best always)', () => {
     next = makePlayer({ best: 310, bestRun: fake, recent: recent.slice(0, 5) });
     r = await processLive(uid, prev, next, { rand: shard0, nowMs: day0 + DAY });
     assert.deepEqual(r.accepted, [run.runId]);
+  });
+
+  it('audit 17: a forged client raising best by 1 per write pools at most 20 new bests a UTC day', async () => {
+    const uid = uniq('bestcap');
+    const day0 = Date.UTC(2026, 9, 9, 12);
+    let prev = makePlayer({ best: 10 });
+    const results: string[] = [];
+    for (let i = 0; i < DAILY_BEST_UPLOADS + 2; i++) {
+      const run = makeRun({ score: 11 + i });
+      const next = makePlayer({ best: 11 + i, bestRun: run, recent: [run] });
+      const r = await processLive(uid, prev, next, { rand: shard0, nowMs: day0 + i });
+      results.push(r.accepted.length ? 'ok' : r.rejected[0].reason);
+      prev = next;
+    }
+    assert.deepEqual(results, [...Array(DAILY_BEST_UPLOADS).fill('ok'), 'rate', 'rate']);
+    // The non-best allowance is separate and untouched.
+    assert.equal((await rate(uid))?.count, 0);
+    // The next UTC day resets the cap.
+    const run = makeRun({ score: 100 });
+    const next = makePlayer({ best: 100, bestRun: run, recent: [run] });
+    const r = await processLive(uid, prev, next, { rand: shard0, nowMs: day0 + DAY });
+    assert.deepEqual(r.accepted, [run.runId]);
+    assert.equal((await rate(uid))?.bestCount, 1);
   });
 
   it('§3.13 a retried event (same runId) is not counted twice', async () => {

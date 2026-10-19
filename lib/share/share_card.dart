@@ -493,7 +493,7 @@ abstract final class ShareCardPainter {
     c.restore();
   }
 
-  /// The white logo bar flush with the bottom edge: 17C icon, the logo in
+  /// The white logo bar flush with the bottom edge: app icon, the logo in
   /// the title's place, and both store badges (geometry: [footerLayout]).
   static void _footer(Canvas c, ShareCardAssets img) {
     const y0 = footY, h = footHeight;

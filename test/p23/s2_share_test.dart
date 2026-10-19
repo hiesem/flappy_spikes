@@ -28,20 +28,22 @@ class SheetSpy implements ShareSheet {
   bool failWithFiles = false;
 
   @override
-  Future<void> share({required String text, List<XFile> files = const []}) async {
+  Future<void> share({
+    required String text,
+    List<XFile> files = const [],
+  }) async {
     if (failWithFiles && files.isNotEmpty) throw StateError('no files');
     calls.add((text, files));
   }
 }
 
-ShareCardData sampleData() =>
-    ShareContent(Random(1)).spotlight(
-      score: 12,
-      best: 140,
-      level: 3,
-      look: const Look(bird: 'sky'),
-      name: 'Tester',
-    );
+ShareCardData sampleData() => ShareContent(Random(1)).spotlight(
+  score: 12,
+  best: 140,
+  level: 3,
+  look: const Look(bird: 'sky'),
+  name: 'Tester',
+);
 
 /// Width and height from a PNG header.
 (int, int) pngSize(Uint8List b) {
@@ -70,7 +72,10 @@ void main() {
         banners.add(d.bannerId);
         expect(d.text, contains('37'));
         expect(d.text, endsWith('flappyspikes.com/get'));
-        expect(d.text, Config.shareTexts[d.textId - 1].replaceAll('{score}', '37'));
+        expect(
+          d.text,
+          Config.shareTexts[d.textId - 1].replaceAll('{score}', '37'),
+        );
         expect(Config.shareBanners, contains(d.banner));
         expect(d.banner, Config.shareBanners[d.bannerId - 1]);
       }
@@ -78,8 +83,7 @@ void main() {
       expect(banners, {1, 2, 3, 4, 5});
     });
 
-    test('the picks are independent: the text does not predict the banner',
-        () {
+    test('the picks are independent: the text does not predict the banner', () {
       final picks = ShareContent(Random(7));
       final seen = <int, Set<int>>{};
       for (var i = 0; i < 1000; i++) {
@@ -181,20 +185,23 @@ void main() {
   });
 
   group('§2.0 / §6.1 the share call', () {
-    test('passes the text and exactly one 1080 x 1080 image/png file', () async {
-      final sheet = SheetSpy();
-      final dir = await Directory.systemTemp.createTemp('share_test');
-      final flow = ShareFlow(sheet: sheet, directory: () async => dir);
-      final data = sampleData();
-      expect(await flow.share(data), isTrue);
-      expect(sheet.calls, hasLength(1));
-      final (text, files) = sheet.calls.single;
-      expect(text, data.text);
-      expect(files, hasLength(1));
-      expect(files.single.mimeType, 'image/png');
-      expect(pngSize(await files.single.readAsBytes()), (1080, 1080));
-      await dir.delete(recursive: true);
-    });
+    test(
+      'passes the text and exactly one 1080 x 1080 image/png file',
+      () async {
+        final sheet = SheetSpy();
+        final dir = await Directory.systemTemp.createTemp('share_test');
+        final flow = ShareFlow(sheet: sheet, directory: () async => dir);
+        final data = sampleData();
+        expect(await flow.share(data), isTrue);
+        expect(sheet.calls, hasLength(1));
+        final (text, files) = sheet.calls.single;
+        expect(text, data.text);
+        expect(files, hasLength(1));
+        expect(files.single.mimeType, 'image/png');
+        expect(pngSize(await files.single.readAsBytes()), (1080, 1080));
+        await dir.delete(recursive: true);
+      },
+    );
 
     test('when the painter throws, the text goes alone', () async {
       final sheet = SheetSpy();
@@ -216,18 +223,20 @@ void main() {
       await dir.delete(recursive: true);
     });
 
-    test('the card image is freed after encoding (renders twice in a row)',
-        () async {
-      final assets = await ShareCardAssets.load();
-      for (var i = 0; i < 2; i++) {
-        final png = await renderShareCardPng(sampleData(), assets);
-        final codec = await ui.instantiateImageCodec(png);
-        final f = await codec.getNextFrame();
-        expect(f.image.width, 1080);
-        f.image.dispose();
-        codec.dispose();
-      }
-    });
+    test(
+      'the card image is freed after encoding (renders twice in a row)',
+      () async {
+        final assets = await ShareCardAssets.load();
+        for (var i = 0; i < 2; i++) {
+          final png = await renderShareCardPng(sampleData(), assets);
+          final codec = await ui.instantiateImageCodec(png);
+          final f = await codec.getNextFrame();
+          expect(f.image.width, 1080);
+          f.image.dispose();
+          codec.dispose();
+        }
+      },
+    );
   });
 
   group('§5.6 / §12 config', () {
@@ -255,7 +264,11 @@ void main() {
         'adaptive icon has the three layers', () {
       const res = 'android/app/src/main/res';
       for (final d in ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
-        expect(File('$res/mipmap-$d/ic_launcher.png').existsSync(), isTrue, reason: d);
+        expect(
+          File('$res/mipmap-$d/ic_launcher.png').existsSync(),
+          isTrue,
+          reason: d,
+        );
         for (final layer in ['foreground', 'background', 'monochrome']) {
           expect(
             File('$res/drawable-$d/ic_launcher_$layer.png').existsSync(),
@@ -264,14 +277,16 @@ void main() {
           );
         }
       }
-      final xml = File('$res/mipmap-anydpi-v26/ic_launcher.xml').readAsStringSync();
+      final xml = File(
+        '$res/mipmap-anydpi-v26/ic_launcher.xml',
+      ).readAsStringSync();
       expect(xml, contains('@drawable/ic_launcher_foreground'));
       expect(xml, contains('@drawable/ic_launcher_background'));
       expect(xml, contains('@drawable/ic_launcher_monochrome'));
     });
 
-    test('assets/images/app_icon.png is the 17C render: 1024, no alpha, '
-        'navy strip on top and cyan in between', () async {
+    test('assets/images/app_icon.png is the v3 (icon7) picture: 1024, no '
+        'alpha, deep blue corners, the pink bird in the middle', () async {
       final bytes = File('assets/images/app_icon.png').readAsBytesSync();
       expect(pngSize(bytes), (1024, 1024));
       expect(bytes[25], 2, reason: 'colour type 2 = RGB, no alpha');
@@ -279,13 +294,52 @@ void main() {
       final image = (await codec.getNextFrame()).image;
       final px = (await image.toByteData())!;
       int at(int x, int y) => px.getUint32((y * 1024 + x) * 4);
-      expect(at(512, 10), 0x14204AFF, reason: 'navy #14204A top strip');
-      final cyan = at(40, 512);
-      expect((cyan >> 8) & 0xFF, greaterThan(150), reason: 'blue channel');
-      expect(cyan >> 24, lessThan(120), reason: 'red channel (cyan)');
+      for (final (x, y) in [(8, 8), (1015, 8), (8, 1015), (1015, 1015)]) {
+        final c = at(x, y);
+        expect(c >> 24, lessThan(30), reason: 'corner ($x, $y) red');
+        expect((c >> 8) & 0xFF, greaterThan(190), reason: 'corner blue');
+      }
+      final pink = at(300, 820); // the bird's body, left of the beak
+      expect(pink >> 24, greaterThan(200), reason: 'pink red channel');
+      expect((pink >> 16) & 0xFF, lessThan(80), reason: 'pink green channel');
       image.dispose();
       codec.dispose();
     });
+
+    test('the splash colour is the icon\'s deep blue #003ADC everywhere', () {
+      expect(
+        RegExp(
+          'color: "#003ADC"',
+        ).allMatches(File('pubspec.yaml').readAsStringSync()),
+        hasLength(3),
+      );
+      for (final v in ['values-v31', 'values-night-v31']) {
+        final xml = File(
+          'android/app/src/main/res/$v/styles.xml',
+        ).readAsStringSync();
+        expect(xml, isNot(contains('#2BC8F5')), reason: v);
+        expect(RegExp('#003ADC').allMatches(xml), hasLength(2), reason: v);
+      }
+    });
+
+    test(
+      'the Android adaptive layers are 108 dp canvases with the picture '
+      'shrunk inside the view: the foreground border is transparent',
+      () async {
+        final bytes = File('assets/icon/ic_foreground.png').readAsBytesSync();
+        expect(pngSize(bytes), (432, 432));
+        final codec = await ui.instantiateImageCodec(bytes);
+        final image = (await codec.getNextFrame()).image;
+        final px = (await image.toByteData())!;
+        int alpha(int x, int y) => px.getUint8((y * 432 + x) * 4 + 3);
+        // 72 dp view = 288 px centred; the 65 dp picture starts at ~86 px.
+        expect(alpha(80, 216), 0, reason: 'left of the picture');
+        expect(alpha(216, 80), 0, reason: 'above the picture');
+        expect(alpha(216, 216), 255, reason: 'the bird');
+        image.dispose();
+        codec.dispose();
+      },
+    );
   });
 
   group('§2 / §6.1 in the game', () {
@@ -297,7 +351,11 @@ void main() {
 
     FlameTester<FlappySpikesGame>(
       () => createRunTestGame(
-        prefs: {'bestScore': 5, 'claimedLevels': ['1'], 'playerLevel': 1},
+        prefs: {
+          'bestScore': 5,
+          'claimedLevels': ['1'],
+          'playerLevel': 1,
+        },
         services: AnalyticsSpy(),
         versus: FakeVersusService(
           pool: [

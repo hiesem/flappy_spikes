@@ -126,8 +126,10 @@ flutter:
           weight: 600
     # endregion WP-0b
 
-# PRD-2.3 §9.3 app icon 17C (rendered by tool/render_app_icon.py). iOS is
-# generated too: owner exception to the iOS pause (2026-10-12).
+# App icon v3 = icon_concepts/v3/icon7.png (2026-10-19), source copy in
+# assets/icon/app_icon_src.png; every file is rendered by
+# tool/render_app_icon_v3.py (replaces the 17C render_app_icon.py). iOS uses
+# the full picture; Android's adaptive layers shrink it to fit (below).
 flutter_launcher_icons:
   android: true
   ios: true
@@ -136,22 +138,24 @@ flutter_launcher_icons:
   adaptive_icon_background: assets/icon/ic_background.png
   adaptive_icon_foreground: assets/icon/ic_foreground.png
   adaptive_icon_monochrome: assets/icon/ic_monochrome.png
-  # The layers are already full 108 dp canvases (bird inside the 66 dp safe
-  # zone), so no extra inset.
+  # The layers are already full 108 dp canvases (the picture shrunk to 65 dp,
+  # bird + spike tips inside the 66 dp safe circle, its border feathered
+  # into the extended blue background), so no extra inset.
   adaptive_icon_foreground_inset: 0
 
-# PRD-2.3 §9.4 splash: the 17C icon on its middle cyan. Android 12+ gets its
-# own 960 px render (background + foreground, §0 item 8) on the same colour.
+# Splash: the v3 (icon7) icon on the deep blue of its corners, #003ADC.
+# Android 12+ gets its own 960 px render (background + foreground, its rim
+# eased into the same colour so the 72 dp circle does not show).
 # iOS: `create` rewrites ios/Runner/Info.plist UIStatusBarHidden to false
 # (no `fullscreen` here, which would also change the Android styles). Set it
 # back to true after a re-run (PORT-IOS §1).
 flutter_native_splash:
-  color: "#2BC8F5"
+  color: "#003ADC"
   image: assets/icon/splash_icon.png
   android_12:
-    color: "#2BC8F5"
+    color: "#003ADC"
     image: assets/icon/splash_android12.png
-    icon_background_color: "#2BC8F5"
+    icon_background_color: "#003ADC"
   android: true
   ios: true
 

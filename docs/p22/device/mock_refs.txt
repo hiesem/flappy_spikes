@@ -1,7 +1,0 @@
-screen_mode_toggle3 0
-screen_fire_choice2 2
-screen_comet_weave 1
-screen_portal_rides3 1
-screen_piggy_coins2x 2
-screen_streak_names 1
-screen_levelup_rays_new 0

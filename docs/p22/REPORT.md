@@ -78,7 +78,7 @@ Nothing went to closed or open testing or production, and the store listing was 
   - The 2.2.0 (9) AAB went into the internal-testing draft, replacing bundle 8. Release notes are en-US, and the release is rolled out to internal testing.
   - Play reported an `AD_ID` error for an older active build, most likely the pre-ads production 2.0.0. Bundle 9 itself contains the permission. The agent chose "Release without permission" for this release only.
   - **Nothing was sent for review.** Publishing overview still lists 2 changes waiting for the owner: the Ads declaration and Data safety.
-  - The tester list "Flappy Spikes internal" holds killerhis@gmail.com.
+  - The tester list "Flappy Spikes internal" holds the owner.
 - **Pixel 8 install:**
   - The local build was uninstalled, because Play signs with the app-signing key and local builds use the upload key.
   - 2.2.0 (9) was installed from the Play Store.
@@ -118,14 +118,14 @@ Run frame times get worse after the first game: p90 12.8 → 14.7 ms, slow frame
 ## 7. Open items for the owner
 
 1. **Real ads on your Pixel 8 with the Play build. Don't tap them.**
-   - AdMob's test-device hash is derived from ANDROID_ID, which Android keys per signing key. So the Play-signed build (hash `C8EDCAE2408A20189883DF41E7E998DA`) is not covered by the upload-key hash in the code.
+   - AdMob's test-device hash is derived from ANDROID_ID, which Android keys per signing key. So the Play-signed build is not covered by the upload-key hash. (Run 17: the hashes are no longer in the code; the owner's phones are registered as test devices in the AdMob console.)
    - **The code fix** (commit `ad5f31c`) is on `feat/2.2` but **not in build 9**.
    - The AdMob console test device "Owner Pixel 8", registered by advertising ID, had not taken effect 5 minutes later. It may need more time.
    - Mediated Unity ads are never test ads.
    - The next build carries the fix.
 2. **Send the 2 pending changes for review** (Ads declaration and Data safety) in Play Console → Publishing overview, when you are ready for a public release.
 3. **The `AD_ID` error on the older active build** clears once a build with the permission reaches production.
-4. **Repo size before a push:** the QA evidence committed under `docs/p22/` (screenshots, screen recordings, raw performance dumps) is about **160 MB**. Consider moving `docs/p22/device/` and `docs/p22/perf/*/` out of the repo, or into Git LFS, before pushing `feat/2.2`. The branch is unpushed, so its history can still be rewritten.
+4. **Repo size before a push:** the QA evidence committed under `docs/p22/` (screenshots, screen recordings, raw performance dumps) is about **160 MB**. Consider moving `docs/p22/device/` and `docs/p22/perf/*/` out of the repo, or into Git LFS, before pushing `feat/2.2`. The branch is unpushed, so its history can still be rewritten. *(Run 17, 2026-10-20: the raw captures in `docs/p22/device/` were removed, see git history; `docs/p22/perf/` stays.)*
 5. **Still owner-only (§7.2):**
    - the US state regulations message in AdMob;
    - the Unity payout profile;

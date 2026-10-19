@@ -4,7 +4,7 @@ profile APK, installs it over the existing app (same upload key, data kept),
 plays 20 games unattended and records the §33.3 numbers after games
 1, 2, 5, 10, 20 plus one Perfetto trace around game 10.
 
-    python3 tool/soak.py --label baseline-2.1 [--no-build] [--serial S]
+    python3 tool/soak.py --label baseline-2.1 [--no-build] [--serial S]   (default serial: $FS_DEVICE)
 
 Output: docs/p22/perf/<label>/ (soak.csv, soak.json, logcat.txt, raw dumps,
 trace_g10.perfetto-trace). The in-app driver lives in lib/services/soak.dart;
@@ -126,7 +126,8 @@ def parse_app(line):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--label', required=True)
-    ap.add_argument('--serial', default='38300DLJH004SD')
+    ap.add_argument('--serial', default=os.environ.get('FS_DEVICE', ''),
+                    help='adb serial (default: $FS_DEVICE)')
     ap.add_argument('--no-build', action='store_true')
     ap.add_argument('--games', type=int, default=20)
     ap.add_argument('--hold', type=int, default=100)
@@ -137,6 +138,8 @@ def main():
     ap.add_argument('--no-banner', action='store_true',
                     help='S7-19 diagnosis: build without the gameplay banner')
     a = ap.parse_args()
+    if not a.serial:
+        sys.exit('No device: set FS_DEVICE=<adb serial> or pass --serial')
 
     out = os.path.join(ROOT, 'docs', 'p22', 'perf', a.label)
     os.makedirs(os.path.join(out, 'raw'), exist_ok=True)

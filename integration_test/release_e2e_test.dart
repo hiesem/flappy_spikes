@@ -1,7 +1,7 @@
 // P6 release e2e suite (PRD-2 §7, ARCH §7.3). The final device sign-off:
 //
 //   flutter test integration_test/release_e2e_test.dart \
-//     -d 38300DLJH004SD --dart-define=FS_E2E=true
+//     -d <PIXEL8_SERIAL> --dart-define=FS_E2E=true
 //
 // Local check on the Linux desktop target (notifications and versus live are
 // skipped there — only a phone can do them):
@@ -271,7 +271,7 @@ void _printShotsHint() {
   debugPrint('E2E SHOTS: ${_shots.length} PNGs in ${_outDir.path}');
   if (_isAndroid) {
     debugPrint(
-      'E2E SHOTS pull: adb -s 38300DLJH004SD exec-out run-as '
+      'E2E SHOTS pull: adb -s <serial> exec-out run-as '
       'com.flappyspikes.flappy_spikes tar c -C cache e2e_release '
       '> e2e_release.tar',
     );

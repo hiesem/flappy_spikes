@@ -91,9 +91,6 @@ Future<void> main() async {
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
   // Google TEST units only. Scripted consent avoids changing the owner's UMP
   // choice; this harness does not certify the consent form or live mediation.
-  await MobileAds.instance.updateRequestConfiguration(
-    RequestConfiguration(testDeviceIds: kAdTestDeviceIds),
-  );
   await MobileAds.instance.initialize();
   final view = WidgetsBinding.instance.platformDispatcher.views.first;
   final consent = FakeAdsConsent();

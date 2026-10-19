@@ -126,7 +126,7 @@ regenerates the nickname and clears the upload queue. Data-safety answers: SUBMI
    `cd functions && GCLOUD_PROJECT=flappy-spikes-a2b55 npx tsx scripts/convert_pools_v2.ts --dry-run`, then without `--dry-run`
    (needs `gcloud auth application-default login` with an owner account).
 3. Live round trip from the Pixel 8 (debug build, App Check debug token):
-   `flutter test integration_test/release_e2e_test.dart -d 38300DLJH004SD --dart-define=FS_E2E=true --dart-define=FS_LIVE_VERSUS=true --dart-define=FS_APPCHECK_DEBUG_TOKEN=<token>`
+   `flutter test integration_test/release_e2e_test.dart -d <PIXEL8_SERIAL> --dart-define=FS_E2E=true --dart-define=FS_LIVE_VERSUS=true --dart-define=FS_APPCHECK_DEBUG_TOKEN=<token>`
    (uploads a v2 run and replays every run in the level 0–2 pools, converted ones included).
 4. Seed ~5 real 2.2 runs from the test account:
-   `flutter test integration_test/seed_versus_runs_test.dart -d 38300DLJH004SD --dart-define=FS_SEED_VERSUS=true --dart-define=FS_APPCHECK_DEBUG_TOKEN=<token>`.
+   `flutter test integration_test/seed_versus_runs_test.dart -d <PIXEL8_SERIAL> --dart-define=FS_SEED_VERSUS=true --dart-define=FS_APPCHECK_DEBUG_TOKEN=<token>`.

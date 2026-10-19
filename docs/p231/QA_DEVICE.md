@@ -1,7 +1,7 @@
 # PRD-2.3.1 device QA — Pixel 6
 
 2026-10-14, GPT-6.1 Sol. Branch `p231-qadev`, baseline `39ef4d1`.
-Pixel 6 `24191FDF6008ZD`, Android 17, 1080 × 2400.
+Pixel 6 `<PIXEL6_SERIAL>`, Android 17, 1080 × 2400.
 
 **Result: gameplay checks passed; signed-in acceptance is blocked by D-01.**
 No confirmed production-code defect was found. This is not a complete sign-off
@@ -25,7 +25,7 @@ recordings and logs remain outside git. Every copied PNG was visually inspected.
 |---|---|---|
 | Initial No Ads state | PASS | First launch already showed `No Ads: off`; the launch purchase sync returned zero purchases. No initial entitlement toggle needed. `E/02-noads-state.png`, `E/03-cleardata-launch.log`. Ads were wanted: a Play banner subsequently displayed. |
 | §4.1 Play installation | PASS | 2.3.1, versionCode 20, Play installer verified before testing. `E/00-initial.png`. |
-| §4.2–3 clear data, signed-in switch, fresh Firebase sign-in | BLOCKED | Data cleared and launch completed, but Play Games was not authenticated. Medal sign-in opened profile creation; cancelled under the account/settings restriction. No `link switched` occurred. Read-only Auth lookup: `u3nBdG6ND4Zd5xnaaE3r5fRFvVn2`, last sign-in `2026-10-13T11:52:44.875Z`, unchanged. `E/03-auth-after.json`, `E/04-medal-wait.png`, `E/05-versus.log`. D-01. |
+| §4.2–3 clear data, signed-in switch, fresh Firebase sign-in | BLOCKED | Data cleared and launch completed, but Play Games was not authenticated. Medal sign-in opened profile creation; cancelled under the account/settings restriction. No `link switched` occurred. Read-only Auth lookup: `<FIREBASE_TEST_UID>`, last sign-in `2026-10-13T11:52:44.875Z`, unchanged. `E/03-auth-after.json`, `E/04-medal-wait.png`, `E/05-versus.log`. D-01. |
 | §4.4 rival and own name | PARTIAL | Play guest VERSUS START found `E2E bot`; own name was guest `SwiftParrot278`. No `rules` solo. The Play Games-name requirement remains blocked. `E/05-versus.mp4`, [waiting](device/play-waiting.png). |
 | §4.5 relaunch without deletion/new guest | BLOCKED | Guest relaunch again found the rival and retained the guest display name, but the required post-switch server/account assertions cannot be certified without the switch. `E/07-relaunch.log`, `E/07-hint-repeat.mp4`. |
 | §4.6 network cut during switch / guest fallback / next-launch switch | SKIPPED | No authenticated Play Games switch could be initiated. Network settings were left unchanged. D-01. |

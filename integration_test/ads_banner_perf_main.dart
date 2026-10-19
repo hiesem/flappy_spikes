@@ -2,9 +2,9 @@
 // the REAL AdMob banner platform view (Google TEST unit: profile builds never
 // use real IDs) under the playfield, flown by the hoop-aware autopilot.
 //
-//   flutter run --profile -d 38300DLJH004SD \
+//   flutter run --profile -d <PIXEL8_SERIAL> \
 //     -t integration_test/ads_banner_perf_main.dart
-//   adb -s 38300DLJH004SD logcat -s flutter | grep ADSPERF
+//   adb -s <PIXEL8_SERIAL> logcat -s flutter | grep ADSPERF
 //
 // Phase 1 flies 120 s WITHOUT the banner (the 2.1 baseline: no strip, no
 // platform view), phase 2 flies 120 s WITH it. Each phase prints build /

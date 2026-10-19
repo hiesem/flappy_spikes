@@ -72,12 +72,12 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
 
 ### 2.1 gameplay build (PRD-2)
 
-- **Device e2e (Pixel 8 `38300DLJH004SD`).** `--dart-define=FS_E2E=true` turns on
+- **Device e2e (Pixel 8 `<PIXEL8_SERIAL>`).** `--dart-define=FS_E2E=true` turns on
   the fixed seed, the fake rewarded ads (visible overlay), the App Check debug
   provider and the `E2EHooks` / debug force menu:
 
   ```bash
-  flutter test integration_test/release_e2e_test.dart -d 38300DLJH004SD \
+  flutter test integration_test/release_e2e_test.dart -d <PIXEL8_SERIAL> \
     --dart-define=FS_E2E=true --dart-define=FS_E2E_SEED=7 \
     --dart-define=FS_APPCHECK_DEBUG_TOKEN=<registered token>
   ```
@@ -311,7 +311,7 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   local price; US $1.29 / $9.99 / $15.99 / $84.99 / no_ads $3.49), verified 174/174 per product
   (`tools/pricing/PLAY_VERIFY_2026-10-07.md`). Runbook: PRD-menu-v4 §7. Price editor tax column: a rate = included in
   the buyer price; "No VAT" = nothing included (incl. US/CA/ID/VN where tax is added at checkout).
-- Licence testing + internal-testing tester list "Flappy Spikes internal" (killerhis@gmail.com).
+- Licence testing + internal-testing tester list "Flappy Spikes internal" (the owner).
   Internal testing track: 2.0.0 (6) live (versions 3-5 superseded).
 - Products need a PUBLISHED bundle with BILLING permission before they can be created (draft is not enough).
 - After creating products the device returned notFound for all 5 until the Play Store app's cache was

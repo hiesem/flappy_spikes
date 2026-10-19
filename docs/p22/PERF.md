@@ -8,7 +8,7 @@ WP-33a, 2026-10-12. Branch `g7-wp33a` (feat/2.2 @ 120ec25 = the 2.1 gameplay + t
 
 | Item | Value |
 |---|---|
-| Device | Pixel 8 `38300DLJH004SD`, Android 17, USB through the hub (charging) |
+| Device | Pixel 8 `<PIXEL8_SERIAL>`, Android 17, USB through the hub (charging) |
 | Build | `flutter build apk --profile --dart-define=FS_SOAK=true`, signed with the upload key, installed with `adb install -r` over the sideloaded 2.1.0 (8). The player's data is kept. |
 | Display | 60 Hz during the run: Home and play both rendered 60 frames/s, display mode 1 = 60 Hz (smooth display not active). Brightness fixed manual 128/255; the old values (auto, 3) were restored afterwards. |
 | Stay awake | `stay_on_while_plugged_in` = 7 (already set; left unchanged) |
@@ -297,7 +297,7 @@ The Home idle CPU (§33.4 item 5) is the larger, separate win: most of the 80 % 
 
 Production revision `a92835f`. Same Pixel 8 / Android 17 / hub / charging / 60 Hz setup, profile `FS_SOAK`, brightness 128. Start skin **26.86 °C**, battery **25.3 °C**, thermal **0** (baseline live skin 25.8 / battery 24.0). Native game prefs remain in memory. Every game reached 10 hoops; bonus games 3/8/13/18 and CLAIM paths are in the log. Driver duration **1,215.4 s**. Brightness restored to auto (1), value 3.
 
-The merged build includes the native test banner and test interstitials. The legacy driver required the host to close interstitial × buttons: seven close taps, including end-card closes, recorded in `device/interactions.jsonl` and `device/soak_ad_watch.txt`. No ad-content, consent, billing or sign-in taps. This is an intentional test of the complete merged flow; the 2.1 baseline had no interstitial flow.
+The merged build includes the native test banner and test interstitials. The legacy driver required the host to close interstitial × buttons: seven close taps, including end-card closes, recorded in `device/interactions.jsonl` and `device/soak_ad_watch.txt` (removed 2026-10-20 (run 17), see git history). No ad-content, consent, billing or sign-in taps. This is an intentional test of the complete merged flow; the 2.1 baseline had no interstitial flow.
 
 Raw evidence: [CSV](perf/final-qa/soak.csv), [JSON](perf/final-qa/soak.json), [logcat](perf/final-qa/logcat.txt), [raw dumps](perf/final-qa/raw/), [commands](device/commands.md). The 40 s game-10 Perfetto trace is retained locally at `perf/final-qa/trace_g10.perfetto-trace` (gitignored). `device/soak` links to this dataset.
 

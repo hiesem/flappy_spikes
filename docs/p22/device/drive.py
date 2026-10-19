@@ -3,6 +3,7 @@
 Import from a scenario script, or run: drive.py status / shot NAME / cmd JSON.
 """
 import json
+import os
 import pathlib
 import shlex
 import subprocess
@@ -10,7 +11,8 @@ import sys
 import time
 
 OUT = pathlib.Path(__file__).resolve().parent
-SERIAL = '38300DLJH004SD'
+SERIAL = os.environ.get('FS_DEVICE') or sys.exit(
+    'No device: set FS_DEVICE=<adb serial> (see `adb devices`)')
 PKG = 'com.flappyspikes.flappy_spikes'
 
 def adb(*args, data=None, binary=False, timeout=60):

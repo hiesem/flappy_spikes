@@ -1,2 +1,0 @@
-Edge foreground True
-KEYCODE_BACK foreground False

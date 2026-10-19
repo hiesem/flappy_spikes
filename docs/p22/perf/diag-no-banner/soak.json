@@ -1,6 +1,6 @@
 {
  "label": "diag-no-banner",
- "serial": "38300DLJH004SD",
+ "serial": "<PIXEL8_SERIAL>",
  "games": 10,
  "no_banner": true,
  "hold_s": 100,

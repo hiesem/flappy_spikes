@@ -128,19 +128,19 @@
   - The phone's account has **no Play Games profile**. The sign-in sheet asks to create one ("Een Play Games-profiel maken").
   - Log: `GameServices pgs_error: op=sign_in code=timeout`.
   - No `versus: link switched` line appeared, because there was no platform player.
-- **Firebase Auth, read-only, before and after the round:** `u3nBdG6N…` last sign-in `2026-10-13T11:52:44Z`, unchanged.
+- **Firebase Auth, read-only, before and after the round:** `<FIREBASE_TEST_UID>` last sign-in `2026-10-13T11:52:44Z`, unchanged.
 - **Guest versus works:** VERSUS START found a rival (no `rules` solo) under the guest name `SwiftParrot278`, and a relaunch found a rival again under the same guest.
 - **Open, for the owner (D-01):** run PRD §4 steps 2–6 on the Pixel 8 with the owner's Play Games profile:
   - the `versus: link switched` log;
-  - a fresh sign-in on `u3nBdG6N…`;
+  - a fresh sign-in on `<FIREBASE_TEST_UID>`;
   - the own name on the intro;
   - a relaunch without a new guest;
   - the network-cut retry.
 
   The switch logic has automated coverage only: §2/§3 tests, QA P1–P3 probes, one Auth queue.
 - **Pixel 8 with the owner's Play Games profile, 2026-10-14 19:31: PASS.** Play update to 2.3.1 (20), then clear data and launch.
-  - Firebase Auth before: `u3nBdG6N…` last sign-in `2026-10-13T11:52:44Z`.
-  - Log: `versus: link switched none` ("none" means no error). Firebase Auth after: `u3nBdG6N…` last sign-in **`2026-10-14T17:31:25Z`** (provider playgames.google.com).
+  - Firebase Auth before: `<FIREBASE_TEST_UID>` last sign-in `2026-10-13T11:52:44Z`.
+  - Log: `versus: link switched none` ("none" means no error). Firebase Auth after: `<FIREBASE_TEST_UID>` last sign-in **`2026-10-14T17:31:25Z`** (provider playgames.google.com).
   - VERSUS START found a rival, and the intro shows the own Play Games name **HiesemSurak** with its avatar.
   - Relaunch: no link, no `deleteMyData`, no guest; same uid, no new sign-in.
   - The medal opens the native Play Games list: **0/48**, names and descriptions correct (§12.10).
@@ -174,8 +174,8 @@ Full table: [`QA_DEVICE.md`](QA_DEVICE.md) (Sol, 2026-10-14). Evidence: `.worktr
 **D-01 (setup blocker, not a code defect):** the Pixel 6's Google account has no Play Games profile, so the signed-in checks (§4.2–4.6, §12.10 native list and sync) couldn't run without changing the owner's accounts. The phone was left on Play 2.3.1 (20), with No Ads off, volume 0 and notifications denied.
 
 ## Owner notes
-- The phone test ran on the **Pixel 6** (`24191FDF6008ZD`), as the owner chose; the Pixel 8 was not connected.
-- The No Ads test order (GPA.3376-8876-7034-51055) was refunded with "Remove entitlement" at the start of the run.
+- The phone test ran on the **Pixel 6** (`<PIXEL6_SERIAL>`), as the owner chose; the Pixel 8 was not connected.
+- The No Ads test order (<PLAY_TEST_ORDER_ID_1>) was refunded with "Remove entitlement" at the start of the run.
 - **Known flaky test:** `test/p22/s7_s31_qa_p3_postrun_test.dart` (a colour-fade timing check) fails now and then under load and passes alone.
 - **Release-page AD_ID error:** still caused by the old production 1.0.1 build (versionCode 2); "Release without permission" was used again.
 
@@ -215,7 +215,7 @@ Full table: [`QA_DEVICE.md`](QA_DEVICE.md) (Sol, 2026-10-14). Evidence: `.worktr
   - The token was revoked.
 - **Owner's Pixel 8:**
   - Updated to (21) from Play, with the data cleared.
-  - A second **Test: No Ads** order made during play (GPA.3338-8041-8595-40051, revenue €0) was refunded with "Remove entitlement".
+  - A second **Test: No Ads** order made during play (<PLAY_TEST_ORDER_ID_2>, revenue €0) was refunded with "Remove entitlement".
   - The launch then logs `[IAP] purchases 0` and `versus: link switched none`. The phone starts as a new user, and the notification and consent prompts are left for the owner to answer.
 
 ## 2.3.1 (22): the game's achievement popup only when not signed in (2026-10-15)

@@ -1,5 +1,5 @@
 {
-  "source": "adb -s 38300DLJH004SD exec-out screencap -p",
+  "source": "adb -s <PIXEL8_SERIAL> exec-out screencap -p",
   "resolution": "1080x2400",
   "captures": [
     {

@@ -24,7 +24,7 @@
 > | loudness | loop −14.3 LUFS = remix MP3 −14.3 LUFS (no gain: the page applies none). The old HappyBeat loop was −13.7 LUFS, so the new music is 0.6 dB quieter |
 > | first start | the file begins at the seam, so the very first play also has the 80 ms crossfade (the end of the breakdown fading out under the intro's first 41 ms of near-silence); every later wrap equals the page |
 
-Build run 2026-10-13, branch `p23-music`. Test phone: Pixel 6 `24191FDF6008ZD`
+Build run 2026-10-13, branch `p23-music`. Test phone: Pixel 6 `<PIXEL6_SERIAL>`
 (Android 17), media / ring / notification streams **muted on purpose** and
 Do Not Disturb on (zen mode 1) for the overnight run. Raw evidence (logs,
 `dumpsys` captures, sampler output) is in
@@ -153,7 +153,7 @@ the game's own music and another app's muted media player are not listed (the
 was used (no real notifications, PRD §0):
 
 ```
-adb -s 24191FDF6008ZD shell am broadcast -a com.flappyspikes.DEBUG_NOTIFICATION \
+adb -s <PIXEL6_SERIAL> shell am broadcast -a com.flappyspikes.DEBUG_NOTIFICATION \
     [--es player notification|media] [--ei ms 1500] [--ei linger 8000]
 ```
 
@@ -276,7 +276,7 @@ suspend timeout and the watchdog, and logged if they ever happen.
    wrap comes 92 s after the music starts); include a wrap during an Hourglass
    and one with the revive shop open. It must sound like card 3 / 4 of
    `design/music_v23/loop_test.html`. Optional objective recording:
-   `~/opt/scrcpy-linux-x86_64-v5.0.1/scrcpy -s 24191FDF6008ZD --no-video
+   `~/opt/scrcpy-linux-x86_64-v5.0.1/scrcpy -s <PIXEL6_SERIAL> --no-video
    --audio-source=playback --audio-codec=raw --record=music.wav
    --time-limit=300`, then `python3 -I tool/loop_seam_check.py music.wav`.
 2. **The notification case with sound (§13.5 device list):** with sound on

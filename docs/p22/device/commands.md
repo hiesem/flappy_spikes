@@ -1,7 +1,9 @@
 # Final device QA commands
 
+> Note: the raw device captures under `docs/p22/device/` (recordings, screenshots, UI/state dumps, logcat and console logs, interactions.jsonl) were removed 2026-10-20 (run 17), see git history. File names below refer to that history.
+
 All shell sessions use PATH / ANDROID_HOME / JAVA_HOME from AGENTS.md.
-Device commands always target Pixel 8 `38300DLJH004SD`.
+Device commands always target Pixel 8 `<PIXEL8_SERIAL>`.
 
 Initial revision: `a92835f` (branch `g7-qadev`). `flutter pub get` passed.
 Initial `pm list packages flappy` was empty; dumpsys reported app absent.
@@ -10,7 +12,7 @@ Original stay-awake = 7; original brightness/mode are in `original_*.txt`.
 Set `settings put global stay_on_while_plugged_in 7` during QA.
 
 ```bash
-flutter test integration_test/release_e2e_test.dart -d 38300DLJH004SD \
+flutter test integration_test/release_e2e_test.dart -d <PIXEL8_SERIAL> \
   --dart-define=FS_E2E=true --dart-define=FS_LIVE_VERSUS=true \
   --dart-define=FS_APPCHECK_DEBUG_TOKEN=<registered debug token> \
   --reporter expanded > docs/p22/device/e2e.txt 2>&1
@@ -44,7 +46,7 @@ Check token handshake is now explicitly awaited. The focused live retry passed
 both tests, replayed 13 v2 pool runs, and deleted only its anonymous QA account.
 
 ```bash
-flutter test integration_test/release_e2e_test.dart -d 38300DLJH004SD \
+flutter test integration_test/release_e2e_test.dart -d <PIXEL8_SERIAL> \
   --no-uninstall --dart-define=FS_E2E=true --dart-define=FS_LIVE_VERSUS=true \
   --dart-define=FS_APPCHECK_DEBUG_TOKEN=<registered debug token> \
   --plain-name live --reporter expanded
@@ -59,7 +61,7 @@ Final full e2e: **8 passed**. Its 85 screenshot calls and hashes are recorded in
 python3 -I tool/soak.py --label final-qa > docs/p22/device/soak_console.txt 2>&1
 ```
 The script itself builds the upload-key-signed profile APK with `FS_SOAK=true`,
-installs with `adb -s 38300DLJH004SD install -r`, fixes brightness at 128, and
+installs with `adb -s <PIXEL8_SERIAL> install -r`, fixes brightness at 128, and
 restores the saved brightness/mode. `device/soak` links to `../perf/final-qa`.
 Trace data remains local under the existing gitignore rule.
 
@@ -92,7 +94,7 @@ flutter test --no-pub --concurrency=4 --reporter expanded
 npm --prefix functions test
 flutter build apk --debug \
   --dart-define=FS_APPCHECK_DEBUG_TOKEN=<registered debug token>
-adb -s 38300DLJH004SD install -r build/app/outputs/flutter-apk/app-debug.apk
+adb -s <PIXEL8_SERIAL> install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
 The final build uses the default `lib/main.dart`, without FS_E2E /FS_SOAK or

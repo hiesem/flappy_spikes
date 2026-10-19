@@ -2,8 +2,8 @@
 // the game with the REAL AdMob rewarded ad (Google TEST unit in debug), the
 // real audio (SoundService enabled) and the Android AudioFocus watcher.
 //
-//   flutter run -d 38300DLJH004SD -t integration_test/p22_audio_ads_device_main.dart
-//   adb -s 38300DLJH004SD logcat -s flutter | grep P7B
+//   flutter run -d <PIXEL8_SERIAL> -t integration_test/p22_audio_ads_device_main.dart
+//   adb -s <PIXEL8_SERIAL> logcat -s flutter | grep P7B
 //
 // Scenario (logs every step with `P7B`):
 // 1. a run with the chick flying (hatched through the run's events), 6

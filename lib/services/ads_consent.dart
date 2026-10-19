@@ -79,13 +79,7 @@ class FakeAdsConsent implements AdsConsent {
 /// UMP + `MobileAds.initialize` via `google_mobile_ads`. Every plugin call is
 /// try/caught: ads must never take the game down.
 class AdMobAdsConsent implements AdsConsent {
-  AdMobAdsConsent({List<String> testDeviceIds = kAdTestDeviceIds})
-    : _testDeviceIds = [
-        for (final id in testDeviceIds)
-          if (id.isNotEmpty && !id.startsWith('TODO')) id,
-      ];
-
-  final List<String> _testDeviceIds;
+  AdMobAdsConsent();
 
   static const MethodChannel _device = MethodChannel('flappy_spikes/device');
 
@@ -169,12 +163,8 @@ class AdMobAdsConsent implements AdsConsent {
     }
     if (can && !_sdkStarted) {
       try {
-        // §7.5.3: own devices get test ads even with the real units.
-        if (_testDeviceIds.isNotEmpty) {
-          await MobileAds.instance.updateRequestConfiguration(
-            RequestConfiguration(testDeviceIds: _testDeviceIds),
-          );
-        }
+        // §7.5.3: the owner's own phones get test ads through the AdMob
+        // console's test-device list (run 17: no device ids in the code).
         await MobileAds.instance.initialize();
         _sdkStarted = true;
       } catch (e) {
@@ -266,32 +256,3 @@ class AdMobAdsConsent implements AdsConsent {
     return done.future;
   }
 }
-
-/// §7.5.3: hashed AdMob device IDs that always get TEST ads, in every build
-/// mode (the owner's Pixel 8 must never show or count a real ad, also not
-/// with the release build from internal testing). The hash is printed by the
-/// SDK in logcat ("Use RequestConfiguration.Builder().setTestDeviceIds(...)")
-/// on the first ad request. Emulators are test devices automatically.
-const List<String> kAdTestDeviceIds = <String>[
-  // Pixel 8 (38300DLJH004SD), read from logcat 2026-10-12 (docs/p22/ADS.md).
-  kPixel8AdTestDeviceId,
-  // The same Pixel 8 with the Play-signed build: the hash is derived from
-  // ANDROID_ID, which Android keys per signing key, so the Play-installed app
-  // (app-signing key) gets a different hash than local builds (upload key).
-  kPixel8PlayAdTestDeviceId,
-  // The owner's iPhone (iOS keys the hash on the IDFA).
-  kOwnerIphoneAdTestDeviceId,
-];
-
-/// The owner's Pixel 8 (see [kAdTestDeviceIds]).
-const String kPixel8AdTestDeviceId = '375F7680953C1B0F47A1FC3E475A9AA1';
-
-/// The owner's Pixel 8 running the Play-signed build (2.2.0 (9) from internal
-/// testing, logcat 2026-10-12).
-const String kPixel8PlayAdTestDeviceId = 'C8EDCAE2408A20189883DF41E7E998DA';
-
-/// The owner's iPhone 12 Pro running the TestFlight build 2.3.1 (1017), read
-/// from the device syslog (`<Google> To get test ads on this device`)
-/// 2026-10-16. The hash follows the IDFA: resetting the advertising identifier
-/// or denying tracking changes it.
-const String kOwnerIphoneAdTestDeviceId = 'f44c3e6936d39bed4356dcdf57b83a39';

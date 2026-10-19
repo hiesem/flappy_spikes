@@ -122,7 +122,7 @@ footer noscript img { vertical-align: middle; }
 <main><article>
 
 <h1>Privacy policy</h1>
-<p class="updated">Last updated: October 19, 2026</p>
+<p class="updated">Last updated: October 20, 2026</p>
 
 <p>Thanks for playing Flappy Spikes. This page explains, in plain language, what
 information the game collects, why it collects it, who helps us process it, and
@@ -170,11 +170,23 @@ reset or delete your advertising ID, or opt out of personalised ads, in your
 phone's settings. Buying <strong>NO ADS</strong> removes the banner and the ads after
 runs; rewarded ads stay available if you want them.</p>
 
-<p><strong>Purchases.</strong> Coin packs and NO ADS are sold through Google Play.
-Google Play handles the payment; the game never sees your card or payment details.
-It only receives the purchase confirmation so it can give you what you bought,
-and it can restore NO ADS on a new phone (Settings → Restore purchases). Gift
-codes are redeemed in the Play Store in the same way.</p>
+<p><strong>Tracking permission on iPhone and iPad.</strong> On iOS the game shows
+Apple's App Tracking Transparency prompt once, before ads start. It asks whether
+Flappy Spikes may use your device's advertising identifier to track you across
+apps and websites owned by other companies, which is what personalised ads need.
+Ads are only personalised if you choose <strong>Allow</strong>; if you choose
+<strong>Ask App Not to Track</strong>, the advertising identifier is not shared and
+you still get ads, just not personalised ones. You can change your choice at any
+time in your iPhone or iPad's <strong>Settings → Privacy &amp; Security →
+Tracking</strong>.</p>
+
+<p><strong>Purchases.</strong> Coin packs and NO ADS are sold through Google Play
+on Android and through Apple's App Store on iPhone and iPad. Google or Apple
+handles the payment; the game never sees your card or payment details. It only
+receives the purchase confirmation so it can give you what you bought, and it can
+restore NO ADS on a new phone or after reinstalling (Settings → Restore purchases),
+using the Google Play or App Store account you bought it with. Gift codes are
+redeemed in the Play Store in the same way.</p>
 
 <p><strong>Leaderboards.</strong> If you sign in to Google Play Games (on Android)
 or Game Center (on iPhone and iPad), the game submits your
@@ -209,6 +221,12 @@ in to Google Play Games or Game Center and you have been inactive for 30 days, t
 name is released so that another player can use it. The name is deleted with your
 account.</p>
 
+<p><strong>Configuration.</strong> The game downloads a small configuration value
+from Google Firebase Remote Config. Versus mode uses it to make the one-way hashed
+form of your Play Games player id described above, so the id itself is never
+stored. To deliver it, Firebase uses a random app installation identifier and
+basic app and device information. Nothing you do in the game is sent with it.</p>
+
 <p><strong>Security.</strong> Firebase App Check (with Google Play Integrity) checks
 that requests come from the real app, so the versus server is not abused. It
 does not collect personal information.</p>
@@ -229,11 +247,12 @@ a fixed word list. No data sold. No notifications sent from a server.</p>
 <p>The game relies on these services, each with its own privacy policy:</p>
 
 <ul>
-<li><a href="https://firebase.google.com/support/privacy">Google Firebase</a>: Analytics, Authentication, Cloud Firestore, Cloud Functions and App Check (statistics and the versus server)</li>
+<li><a href="https://firebase.google.com/support/privacy">Google Firebase</a>: Analytics, Authentication, Cloud Firestore, Cloud Functions, Remote Config and App Check (statistics and the versus server)</li>
 <li><a href="https://policies.google.com/technologies/ads">Google AdMob</a>: ads, and Google's consent message</li>
 <li><a href="https://unity.com/legal/game-player-and-app-user-privacy-policy">Unity Ads</a>: ads, through AdMob mediation</li>
 <li><a href="https://policies.google.com/privacy">Google Play Games</a>: sign-in and leaderboards on Android</li>
-<li><a href="https://policies.google.com/privacy">Google Play billing</a>: purchases</li>
+<li><a href="https://policies.google.com/privacy">Google Play billing</a>: purchases on Android</li>
+<li><a href="https://www.apple.com/legal/privacy/">Apple App Store</a>: purchases on iPhone and iPad</li>
 <li><a href="https://www.apple.com/legal/privacy/">Apple Game Center</a>: leaderboards on iPhone and iPad</li>
 </ul>
 
@@ -268,7 +287,7 @@ covered by their standard contractual clauses and the EU–US Data Privacy Frame
 <li><strong>Analytics data</strong> is kept as long as Google Analytics retains it.</li>
 <li><strong>Ad data</strong> is kept by Google and Unity under their own policies.</li>
 <li><strong>Leaderboard scores</strong> stay on Google Play Games or Game Center until you remove them there.</li>
-<li><strong>Purchase records</strong> are kept by Google Play, as the law requires.</li>
+<li><strong>Purchase records</strong> are kept by Google Play or Apple, as the law requires.</li>
 </ul>
 
 <p>You can delete your versus data and account right away from

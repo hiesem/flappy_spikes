@@ -1,6 +1,6 @@
 {
  "label": "after-idle",
- "serial": "38300DLJH004SD",
+ "serial": "<PIXEL8_SERIAL>",
  "games": 20,
  "hold_s": 100,
  "brightness": 128,

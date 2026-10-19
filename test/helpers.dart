@@ -39,22 +39,10 @@ final kAllImages = [
   ...kResultsImages,
   // endregion WP-2e
 
-  'bird.png',
-  'bird_flap.png',
-  'bird_dead.png',
   'ground_spikes.png',
   'background_score.png',
-  'title.png',
-  'gameover_title.png',
-  'pointsfield.png',
-  'replaybutton.png',
-  'sharebutton.png',
   'soundbutton.png',
   'mutebutton.png',
-  'gamcenter.png',
-  'gamecenter_gameover.png',
-  'settings_gear.png',
-  'back_arrow.png',
   'music_note.png',
 ];
 

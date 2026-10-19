@@ -63,7 +63,7 @@ async function isLinked(uid: string): Promise<boolean | null> {
 }
 
 /**
- * "Delete my account & data" (§3.13 privacy): the caller's pool entries in all 44
+ * "Delete my data" (§3.13 privacy): the caller's pool entries in all 44
  * shards, `players/{uid}`, the server rate doc, the custom name and its
  * claim (WP-N2: released only while this uid holds it) and the Auth user.
  * Also the guest clean-up before an account switch (the app calls it as

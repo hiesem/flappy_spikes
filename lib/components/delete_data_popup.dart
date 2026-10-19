@@ -13,7 +13,7 @@ const List<String> kDeleteDataPopupImages = ['menu/close.png'];
 
 /// Which face of the "Delete my data" dialog is up (PRD-2 §3.13 / Q22).
 enum DeleteDataStep {
-  /// "DELETE MY ACCOUNT & DATA" — CANCEL / DELETE.
+  /// "DELETE MY DATA" — CANCEL / DELETE.
   confirm,
 
   /// The callable confirmed: "DATA DELETED", nothing left online.
@@ -43,7 +43,7 @@ class DeleteDataPopup extends P1Popup {
   /// The confirm face's DELETE tap.
   final void Function() onConfirm;
 
-  static const String confirmTitle = 'DELETE MY ACCOUNT & DATA';
+  static const String confirmTitle = 'DELETE MY DATA';
   static const String confirmMessage =
       'Your online versus data is deleted: your uploaded runs, your player '
       'profile and your account.';
@@ -119,8 +119,8 @@ class DeleteDataPopup extends P1Popup {
       anchor: Anchor.center,
       position: Vector2(w / 2, titleH / 2),
     );
-    // WP-N2 "DELETE MY ACCOUNT & DATA" is wider than the card at 20 pt:
-    // the same title, scaled down to fit between the card's paddings.
+    // Fit guard: a title wider than the card's paddings is scaled down to fit
+    // between them (the WP-N2 title needed it; "DELETE MY DATA" fits at 20 pt).
     const room = w - 2 * pad;
     if (titleText.width > room) {
       titleText.fontSize = (titleText.fontSize * room / titleText.width)

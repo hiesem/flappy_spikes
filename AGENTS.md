@@ -33,6 +33,24 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   `~/Android/Sdk`; `ninja` installed via uv (Linux desktop builds).
 - Linux desktop (`flutter run -d linux`, `flutter build linux --release`) is a
   **local test target only** — Android and iOS are the products.
+- **Release builds are obfuscated (audit 17).** Local Play upload build:
+
+  ```bash
+  DI=<dir outside the repo>/symbols_<build>   # keep per build, never commit
+  flutter build appbundle --release --obfuscate --split-debug-info=$DI \
+    --extra-gen-snapshot-options=--save-obfuscation-map=$DI/obfuscation.map.json
+  ```
+
+  `$DI` gets `app.android-{arm64,arm,x64}.symbols` (one per ABI; this replaces the
+  old `--extra-gen-snapshot-options=--save-debugging-info=<dir>/app.so`, which kept
+  only the last ABI) plus the obfuscation map. Symbolize a Dart stack trace with
+  `flutter symbolize -i trace.txt -d $DI/app.android-arm64.symbols`; for a native
+  tombstone in `libapp.so`, use the matching `.symbols` file (same BuildId) with
+  `llvm-symbolizer` / `ndk-stack`; read obfuscated names back with the map. CI
+  (`build.yml`) does the same for Android and iOS (`flutter build ios
+  --config-only --obfuscate …` writes it into `Generated.xcconfig`) and uploads
+  the `*-debug-info` artifacts. Never use `runtimeType.toString()` for codes or keys
+  (names are obfuscated) — use `errorKind()` in `lib/services/redact.dart`.
 - iOS work REOPENED 2026-10-15 (branch `feat/ios`); the port checklist is
   `PORT-IOS.md`. App Store app **"Flappy Spikes: Flap Fast"**, ASC app id
   **6823208616**, bundle id **`com.flappyspikes.flappyspikes`** (the App Store

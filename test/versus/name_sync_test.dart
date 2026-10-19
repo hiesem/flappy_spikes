@@ -256,6 +256,53 @@ void main() {
     expect(CustomNameReason.taken.message, 'This name is taken.');
   });
 
+  test(
+    'audit 17 the daily change cap (resource-exhausted) is a refusal: '
+    'the old name stays, the reason is kept, nothing is sent again',
+    () async {
+      await build(server: {'me': 'OldOwl'});
+      await versus.initialize();
+      await storage.saveVersusCustomName('OldOwl', syncedUid: 'me');
+      backend.nameLimited = true;
+      // From the Settings card.
+      final r = await versus.sendCustomName('NewOwl');
+      expect((r as CustomNameRefused).reason, CustomNameReason.limit);
+      expect(r.current, isNull);
+      // Re-sending the current name is not a change.
+      expect(await versus.sendCustomName('OldOwl'), isA<CustomNameAccepted>());
+      // An offline edit sent later: put back, the reason kept for the card.
+      await storage.saveVersusCustomName('NewOwl');
+      backend.namesSent.clear();
+      await versus.syncCustomName();
+      expect(backend.namesSent, ['NewOwl']);
+      expect(storage.versusCustomName, 'OldOwl');
+      expect(storage.versusCustomNameError, 'limit');
+      await versus.syncCustomName();
+      expect(backend.namesSent, ['NewOwl'], reason: 'no resend');
+      expect(backend.serverNames['me'], 'OldOwl');
+      // Other callable errors stay "offline" (kept, sent later).
+      backend
+        ..nameLimited = false
+        ..nameOffline = true;
+      expect(await versus.sendCustomName('NewOwl'), isA<CustomNameOffline>());
+    },
+  );
+
+  test('audit 17 only resource-exhausted maps to the daily cap', () {
+    for (final c in ['resource-exhausted', 'RESOURCE_EXHAUSTED']) {
+      final r = customNameSaveForErrorCode(c);
+      expect((r as CustomNameRefused).reason, CustomNameReason.limit);
+    }
+    for (final c in ['unavailable', 'internal', 'unauthenticated', '', null]) {
+      expect(customNameSaveForErrorCode(c), isNull, reason: c);
+    }
+    expect(CustomNameReason.fromKey('limit'), CustomNameReason.limit);
+    expect(
+      CustomNameReason.limit.message,
+      'Too many changes today. Try tomorrow.',
+    );
+  });
+
   test('a refused offline name puts back the last confirmed one and keeps '
       'the reason for the Settings card', () async {
     await build();

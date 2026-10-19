@@ -28,7 +28,12 @@ enum CustomNameReason {
   blocked('blocked'),
 
   /// WP-N2 another player holds this name (or a look-alike of it).
-  taken('taken');
+  taken('taken'),
+
+  /// Audit 17: the daily cap of name changes is reached (the callable
+  /// answers `resource-exhausted`; app-only key, the server never sends
+  /// it as a reason). The old name stays; nothing is sent again.
+  limit('limit');
 
   const CustomNameReason(this.key);
   final String key;
@@ -46,6 +51,7 @@ enum CustomNameReason {
     CustomNameReason.chars => 'Only letters A–Z and numbers 0–9.',
     CustomNameReason.blocked => 'That name is not allowed. Try another.',
     CustomNameReason.taken => 'This name is taken.',
+    CustomNameReason.limit => 'Too many changes today. Try tomorrow.',
   };
 }
 
@@ -116,6 +122,16 @@ class CustomNameRefused extends CustomNameSave {
   /// WP-N2 the name the server holds for this player now ('' = none; null
   /// = it did not say, e.g. a refusal by the format rule or the filter).
   final String? current;
+}
+
+/// Audit 17: the `setVersusName` error [code] as a save result: the
+/// daily change cap (`resource-exhausted`) is a refusal
+/// ([CustomNameReason.limit]); anything else is null (offline).
+CustomNameSave? customNameSaveForErrorCode(String? code) {
+  final c = code?.toLowerCase().replaceAll('_', '-');
+  return c == 'resource-exhausted'
+      ? const CustomNameRefused(CustomNameReason.limit)
+      : null;
 }
 
 /// The server could not be reached: kept on the phone, sent later.

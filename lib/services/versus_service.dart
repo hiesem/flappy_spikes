@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:cloud_functions/cloud_functions.dart'
+    show FirebaseFunctionsException;
 import 'package:flutter/foundation.dart';
 
 import '../game/diag.dart';
@@ -664,10 +666,23 @@ class FirebaseVersusService implements VersusService {
       return const CustomNameOffline();
     }
     try {
-      return await _call(backend.setCustomName(name));
+      return await _setCustomName(name);
     } catch (e) {
       _log('custom name', e);
       return const CustomNameOffline();
+    }
+  }
+
+  /// The `setVersusName` callable; audit 17: the daily change cap
+  /// (`resource-exhausted`) comes back as [CustomNameReason.limit], other
+  /// errors are rethrown (offline: kept and sent later).
+  Future<CustomNameSave> _setCustomName(String name) async {
+    try {
+      return await _call(backend.setCustomName(name));
+    } on FirebaseFunctionsException catch (e) {
+      final r = customNameSaveForErrorCode(e.code);
+      if (r == null) rethrow;
+      return r;
     }
   }
 
@@ -741,7 +756,7 @@ class FirebaseVersusService implements VersusService {
     String? fallback,
   ) async {
     final s = storage;
-    final r = await _call(backend.setCustomName(name));
+    final r = await _setCustomName(name);
     // The player changed it again meanwhile: the next pass sends that.
     if (s.versusCustomName != name) return;
     switch (r) {

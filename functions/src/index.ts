@@ -15,6 +15,7 @@ import {
   processPlayerWrite,
   releaseStaleGuestNames,
   setCustomName,
+  SetNameResult,
   sweepAllPools,
 } from './pools.js';
 import type { PlayerDoc } from './schema.js';
@@ -112,21 +113,27 @@ export const deleteMyData = onCall({ enforceAppCheck: true, consumeAppCheckToken
  * (the app shows the reason in the card; WP-N2 `taken` = another player
  * holds it, `name` = the caller's current name); accepted ones `{ok: true,
  * name}` and are written into the caller's pool entries at once. App Check
- * enforced, like deleteMyData.
+ * enforced, like deleteMyData. Audit 17: at most DAILY_NAME_CHANGES
+ * accepted changes a UTC day (then `resource-exhausted`).
  */
 export const setVersusName = onCall({ enforceAppCheck: true, consumeAppCheckToken: false }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign-in required.');
   const data = req.data as { name?: unknown } | undefined;
+  let r: SetNameResult;
   try {
     const linked = (await isLinked(uid)) === true;
-    const r = await setCustomName(getFirestore(), uid, data?.name, Date.now(), { linked });
-    if (r.ok) logger.info('setVersusName', { uid, set: r.name !== '', updated: r.updated });
-    return r;
+    r = await setCustomName(getFirestore(), uid, data?.name, Date.now(), { linked, rateLimit: true });
   } catch (err) {
     logger.error('setVersusName failed', { uid, err: String(err) });
     throw new HttpsError('unavailable', 'Name not saved.');
   }
+  // Audit 17: the daily change cap answers an error. The app (2.4.0+44 on)
+  // shows it and keeps the old name; older versions treat it as offline
+  // (kept on the phone, sent again later).
+  if (!r.ok && r.reason === 'rate') throw new HttpsError('resource-exhausted', 'Name not saved.');
+  if (r.ok) logger.info('setVersusName', { uid, set: r.name !== '', updated: r.updated });
+  return r;
 });
 
 /**

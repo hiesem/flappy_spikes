@@ -387,6 +387,67 @@ void main() async {
   );
 
   FlameTester<FlappySpikesGame>(
+    () => make(h: 568, prefs: {'versusCustomName': 'OldOwl'}),
+    gameSize: Vector2(320, 568),
+  ).testGameWidget(
+    'audit 17 the 6th name change in a UTC day (resource-exhausted): the '
+    'spinner ends, the card says "Too many changes today. Try tomorrow." '
+    'and the old name stays (nothing kept to send later)',
+    setUp: boot,
+    verify: (g, tester) async {
+      final panel = await open(g);
+      final card = panel.playerCard;
+      expect(card.shownName, 'OldOwl');
+      card.startEditing();
+      await flushAndMount(g);
+      card.setDraft('NewOwl');
+      final gate = Completer<void>();
+      versus
+        ..nameAnswer = const CustomNameRefused(CustomNameReason.limit)
+        ..nameDelay = gate.future;
+      final saving = card.commit();
+      await Future<void>.value();
+      await flushAndMount(g);
+      expect(card.saving, isTrue);
+      expect(card.confirm.isMounted, isFalse);
+      gate.complete();
+      await saving;
+      await settle(g);
+      await tester.pump();
+      expect(versus.sentNames, ['NewOwl']);
+      expect(card.saving, isFalse, reason: 'the spinner ends');
+      expect(card.confirm.isMounted, isTrue);
+      expect(card.cancel.isMounted, isTrue);
+      expect(card.editing, isTrue);
+      expect(card.error, CustomNameReason.limit);
+      expect(card.error!.message, 'Too many changes today. Try tomorrow.');
+      expect(g.storage.versusCustomName, 'OldOwl');
+      expect(g.myVersusName, 'OldOwl');
+      await tester.runAsync(() => shot(g, 'name_settings_568_limit'));
+
+      // ✕ closes the card on the old name.
+      card.cancelEditing();
+      await settle(g);
+      expect(card.editing, isFalse);
+      expect(card.shownName, 'OldOwl');
+      expect(versus.sentNames, ['NewOwl'], reason: 'no resend');
+    },
+  );
+
+  FlameTester<FlappySpikesGame>(
+    () => make(h: 568, prefs: {'versusCustomNameError': 'limit'}),
+    gameSize: Vector2(320, 568),
+  ).testGameWidget(
+    'audit 17 a name change refused by the daily cap after an offline save '
+    'is reported in the card',
+    setUp: boot,
+    verify: (g, tester) async {
+      final panel = await open(g);
+      expect(panel.playerCard.error, CustomNameReason.limit);
+    },
+  );
+
+  FlameTester<FlappySpikesGame>(
     () => make(h: 568, prefs: {'versusCustomNameError': 'blocked'}),
     gameSize: Vector2(320, 568),
   ).testGameWidget(

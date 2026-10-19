@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/run/mistakes.dart';
@@ -108,10 +109,20 @@ class FakeBackend implements VersusBackend {
   final Map<String, String> serverNames = {};
   bool nameOffline = false;
 
+  /// Audit 17: the daily change cap is reached (the callable answers
+  /// `resource-exhausted`, as the real backend throws it).
+  bool nameLimited = false;
+
   @override
   Future<CustomNameSave> setCustomName(String name) async {
     namesSent.add(name);
     if (nameOffline) throw StateError('offline');
+    if (nameLimited && serverNames[myUid] != name) {
+      throw FirebaseFunctionsException(
+        message: 'Name not saved.',
+        code: 'resource-exhausted',
+      );
+    }
     if (name.toLowerCase().contains('bad')) {
       return const CustomNameRefused(CustomNameReason.blocked);
     }

@@ -12,6 +12,7 @@ import {
   NAMES_COLLECTION,
   NameDoc,
   DAILY_BEST_UPLOADS,
+  DAILY_NAME_CHANGES,
   DAILY_UPLOADS,
   PlayerDoc,
   POOL_CAP,
@@ -327,11 +328,18 @@ function seenFields(nowMs: number, linked: boolean, forSet = false): Partial<Rec
 
 export type SetNameResult =
   | { ok: true; name: string; updated: number }
-  | { ok: false; reason: CustomNameReason; name?: string };
+  | { ok: false; reason: CustomNameReason; name?: string }
+  /** Audit 17: [DAILY_NAME_CHANGES] reached (only with [NameOptions.rateLimit]). */
+  | { ok: false; reason: 'rate' };
 
 export interface NameOptions {
   /** The caller is linked to Play Games / Game Center (default: a guest). */
   linked?: boolean;
+  /**
+   * Audit 17: count this change against [DAILY_NAME_CHANGES] (the client
+   * callable; server-side clean-ups never count).
+   */
+  rateLimit?: boolean;
 }
 
 /**
@@ -363,9 +371,19 @@ export async function setCustomName(
   const nameRef = db.collection(NAMES_COLLECTION).doc(uid);
   const claimRef = custom ? db.collection(CLAIMS_COLLECTION).doc(nameKey(custom)) : null;
   const poolRefs = allPoolIds().map((pid) => db.collection('pools').doc(pid));
+  const rateRef = db.collection(RATE_COLLECTION).doc(uid);
   return db.runTransaction(async (tx): Promise<SetNameResult> => {
-    const nameSnap = await tx.get(nameRef);
+    const [nameSnap, rateSnap] = await Promise.all([tx.get(nameRef), tx.get(rateRef)]);
     const current = (nameSnap.data() as NameDoc | undefined)?.customName ?? '';
+    // Audit 17: a change (not a re-send of the same name) counts.
+    let names: { day: string; count: number } | null = null;
+    if (opts.rateLimit && custom !== current) {
+      const today = utcDay(nowMs);
+      const prev = (rateSnap.data() as RateDoc | undefined)?.names;
+      const count = prev?.day === today ? prev.count : 0;
+      if (count >= DAILY_NAME_CHANGES) return { ok: false, reason: 'rate' };
+      names = { day: today, count: count + 1 };
+    }
     if (claimRef) {
       const claim = await tx.get(claimRef);
       if (claim.exists && (claim.data() as ClaimDoc).uid !== uid) {
@@ -386,6 +404,7 @@ export async function setCustomName(
     } else {
       tx.delete(nameRef);
     }
+    if (names) tx.set(rateRef, { names }, { merge: true });
     return { ok: true, name: custom, updated: n };
   });
 }

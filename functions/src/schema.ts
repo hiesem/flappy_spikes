@@ -25,6 +25,14 @@ export const DAILY_UPLOADS = 3;
  * pooled (the player never sees the pool upload result).
  */
 export const DAILY_BEST_UPLOADS = 20;
+/**
+ * Audit 17 (owner decision, 2026-10-20): accepted custom-name changes per
+ * player per (UTC) day through `setVersusName`. Each change rewrites the
+ * caller's entries in all 44 pool shards, so it bounds the cost of a
+ * looping client. The 6th change answers `resource-exhausted`: the app
+ * shows "Too many changes today. Try tomorrow." and keeps the old name.
+ */
+export const DAILY_NAME_CHANGES = 5;
 /** Runs under this score are never uploaded (§3.13). */
 export const MIN_SCORE = 3;
 /** Minimum time between two plain points, centiseconds (§3.13 cheat filter, 0.9 s). */
@@ -199,6 +207,8 @@ export interface RateDoc {
   count: number;
   /** Audit 17: new-best uploads this [day] ([DAILY_BEST_UPLOADS]; absent = 0). */
   bestCount?: number;
+  /** Audit 17: accepted custom-name changes on [names.day] ([DAILY_NAME_CHANGES]). */
+  names?: { day: string; count: number };
   seen: string[];
   last?: { runId: string; status: 'accepted' | 'rejected'; reason?: string; pool?: string };
 }

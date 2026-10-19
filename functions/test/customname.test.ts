@@ -30,8 +30,8 @@ import {
   seededRandom,
 } from '../src/nickname.js';
 import { deletePlayerData, setCustomName } from '../src/pools.js';
-import { NAMES_COLLECTION, poolId } from '../src/schema.js';
-import { auth, db, fakeJwt, makePlayer, makeRun, poolEntries, processLive, PROJECT, uniq } from './helpers.js';
+import { DAILY_NAME_CHANGES, NAMES_COLLECTION, poolId, RATE_COLLECTION } from '../src/schema.js';
+import { auth, DAY, db, fakeJwt, makePlayer, makeRun, poolEntries, processLive, PROJECT, uniq } from './helpers.js';
 
 const ROOT = join(__dirname, '..', '..');
 
@@ -161,6 +161,31 @@ describe('WP-NAME setCustomName (emulated Firestore)', () => {
     assert.equal((await db.collection(NAMES_COLLECTION).doc(uid).get()).data()?.customName, 'GoodName');
   });
 
+  it('audit 17: the callable path allows 5 name changes a UTC day; re-sends and clean-ups do not count', async () => {
+    assert.equal(DAILY_NAME_CHANGES, 5);
+    const uid = uniq('cn-rate');
+    const day0 = Date.UTC(2026, 9, 9, 12);
+    const lim = { rateLimit: true };
+    const nameN = (i: number) => `RateLimit${String.fromCharCode(97 + i)}`;
+    for (let i = 0; i < DAILY_NAME_CHANGES; i++) {
+      assert.equal((await setCustomName(db, uid, nameN(i), day0 + i, lim)).ok, true, `change ${i + 1}`);
+    }
+    // Re-sending the current name is free; a new one is refused.
+    assert.equal((await setCustomName(db, uid, nameN(DAILY_NAME_CHANGES - 1), day0 + 20, lim)).ok, true);
+    assert.deepEqual(await setCustomName(db, uid, nameN(20), day0 + 21, lim), { ok: false, reason: 'rate' });
+    assert.equal((await db.collection(NAMES_COLLECTION).doc(uid).get()).data()?.customName, nameN(DAILY_NAME_CHANGES - 1));
+    // Server-side calls (no rateLimit) are never counted.
+    assert.equal((await setCustomName(db, uid, '', day0 + 22)).ok, true);
+    // The next UTC day resets the count.
+    assert.equal((await setCustomName(db, uid, nameN(21), day0 + DAY, lim)).ok, true);
+    // The run-upload rate in the same doc keeps the name count (and vice versa).
+    const run = makeRun({ score: 30 });
+    await processLive(uid, undefined, makePlayer({ best: 30, bestRun: run, recent: [run] }), { rand: () => 0, nowMs: day0 + DAY });
+    const rate = (await db.collection(RATE_COLLECTION).doc(uid).get()).data();
+    assert.deepEqual(rate?.names, { day: '2026-10-10', count: 1 });
+    assert.equal(rate?.bestCount, 1);
+  });
+
   it('Delete my data removes the custom name too', async () => {
     const uid = uniq('cn-del');
     assert.equal((await setCustomName(db, uid, 'DelName')).ok, true);
@@ -218,5 +243,22 @@ describe('WP-NAME setVersusName (emulated callable, App Check enforced)', () => 
     const clear = await call(headers, '');
     assert.equal(((await clear.json()) as { result: { ok: boolean } }).result.ok, true);
     assert.equal((await db.collection(NAMES_COLLECTION).doc(uid).get()).exists, false);
+  });
+
+  it('audit 17: the 6th change in a UTC day answers resource-exhausted and keeps the old name', async () => {
+    const uid = uniq('cn-cap');
+    await auth.createUser({ uid });
+    const headers = { Authorization: `Bearer ${idToken(uid)}`, 'X-Firebase-AppCheck': appCheck };
+    for (const name of ['CapOne', 'CapTwo', 'CapThree', 'CapFour', 'CapFive']) {
+      const res = await call(headers, name);
+      assert.equal(((await res.json()) as { result: { ok: boolean } }).result.ok, true, name);
+    }
+    // Re-sending the current name does not count.
+    const again = await call(headers, 'CapFive');
+    assert.equal(((await again.json()) as { result: { ok: boolean } }).result.ok, true);
+    const sixth = await call(headers, 'CapSix');
+    assert.equal(sixth.status, 429);
+    assert.equal(((await sixth.json()) as { error: { status: string } }).error.status, 'RESOURCE_EXHAUSTED');
+    assert.equal((await db.collection(NAMES_COLLECTION).doc(uid).get()).data()?.customName, 'CapFive');
   });
 });

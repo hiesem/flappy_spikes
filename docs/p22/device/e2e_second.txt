@@ -369,7 +369,7 @@ The test description was:
 Sound: lifecycle paused
 Sound: music pause (suspends 0, interrupted false, own music false, background true)
 =====================================================================
- APP CHECK DEBUG TOKEN: b129ba61-86cc-487d-a022-66f0fa2f7574
+ APP CHECK DEBUG TOKEN: <redacted>
  (from FS_APPCHECK_DEBUG_TOKEN)
 =====================================================================
 VERSUS uid z7WSQY0EtPc5SqRUYWE4yJmkDTU2

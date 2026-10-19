@@ -348,7 +348,7 @@ Sound: lifecycle paused
 Sound: music pause (suspends 0, interrupted false, own music false, background true)
 10:09 +7: P6 §3.13 versus live round trip (FS_LIVE_VERSUS): anonymous sign-in, upload, pool read, deleteMyData
 =====================================================================
- APP CHECK DEBUG TOKEN: b129ba61-86cc-487d-a022-66f0fa2f7574
+ APP CHECK DEBUG TOKEN: <redacted>
  (from FS_APPCHECK_DEBUG_TOKEN)
 =====================================================================
 VERSUS uid IXqLRRdy3CgD8jj2Y5MwNhGdFSn1

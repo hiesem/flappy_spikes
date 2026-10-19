@@ -109,9 +109,12 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
 
   ```bash
   RT=$(python3 -c "import json;print(json.load(open('$HOME/.config/configstore/firebase-tools.json'))['tokens']['refresh_token'])")
+  # The firebase-tools installed-app client secret ships inside the CLI (lib/api.js);
+  # read it from there instead of keeping a copy in this public repo.
+  CS=$(grep -oE "j9iV[A-Za-z0-9_-]+" "$(dirname "$(readlink -f "$(which firebase)")")/../api.js" | head -1)
   ACCESS_TOKEN=$(curl -s -X POST https://oauth2.googleapis.com/token \
     -d client_id=563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com \
-    -d client_secret=j9iVZfS8kkCEFUPaAeJV0sAi -d refresh_token="$RT" \
+    -d client_secret="$CS" -d refresh_token="$RT" \
     -d grant_type=refresh_token | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
   ```
 

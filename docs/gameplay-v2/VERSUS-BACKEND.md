@@ -122,7 +122,7 @@ regenerates the nickname and clears the upload queue. Data-safety answers: SUBMI
 ## PRD-2.2 §13.5 timeline v2 rollout (orchestrator, after the merge and the tests)
 
 1. Deploy the functions: `cd functions && npm run build && firebase deploy --only functions --project flappy-spikes-a2b55`.
-2. Convert the 2.1 pool runs (idempotent, logs the counts):
+2. Convert the 2.1 pool runs (idempotent, logs the counts; DONE — the script was removed in audit 17, see git history):
    `cd functions && GCLOUD_PROJECT=flappy-spikes-a2b55 npx tsx scripts/convert_pools_v2.ts --dry-run`, then without `--dry-run`
    (needs `gcloud auth application-default login` with an owner account).
 3. Live round trip from the Pixel 8 (debug build, App Check debug token):

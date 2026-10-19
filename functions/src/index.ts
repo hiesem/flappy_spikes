@@ -68,8 +68,7 @@ async function isLinked(uid: string): Promise<boolean | null> {
  * claim (WP-N2: released only while this uid holds it) and the Auth user.
  * Also the guest clean-up before an account switch (the app calls it as
  * the old anonymous uid), so a guest's name is free again for anyone.
- * Idempotent. (WP-AV: there are no versus pictures any more; the one-off
- * `scripts/backfill_avatars.ts` deleted every old one.)
+ * Idempotent. (WP-AV: there are no versus pictures any more.)
  * App Check enforced (ARCH §6.3 / §6.5); tokens are not consumed (no replay
  * risk: the call only deletes the caller's own data).
  */

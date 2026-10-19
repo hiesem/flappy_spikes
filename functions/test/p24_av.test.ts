@@ -4,8 +4,7 @@
  * - a pool entry never holds a picture URL or a platform name;
  * - look ids are validated (catalogue-id shape, length cap) by the
  *   function and the Firestore rules;
- * - Storage is closed (no read / write anywhere, `avatars/` included);
- * - the backfill's pure parts (random looks, names, rewrites).
+ * - Storage is closed (no read / write anywhere, `avatars/` included).
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -27,17 +26,6 @@ import {
 } from '../src/nickname.js';
 import { LOOK_ID_RE, poolId, validLook } from '../src/schema.js';
 import { checkRun, encodeDeltas, encodeEntries } from '../src/timeline.js';
-import {
-  BIRD_IDS,
-  GEAR_IDS,
-  HAT_IDS,
-  identityFor,
-  isAvatarObject,
-  randomLook,
-  rewritePlayer,
-  rewritePoolEntries,
-  rewriteRun,
-} from '../scripts/backfill_lib.js';
 import { DAY, LOOK, LOOK_FANCY, makePlayer, makeRun, poolEntries, processLive, PROJECT, uniq } from './helpers.js';
 
 const ROOT = join(__dirname, '..', '..');
@@ -51,14 +39,6 @@ function dartList(file: string, name: string): string[] {
   return [...body.matchAll(/'([^']+)'/g)].map((m) => m[1]);
 }
 
-/** The ids of a Dart catalogue list `const List<SkinItem> <name>`. */
-function dartIds(name: string): string[] {
-  const src = readFileSync(join(ROOT, 'lib/skins/catalog.dart'), 'utf8');
-  const start = src.indexOf(`const List<SkinItem> ${name}`);
-  assert.ok(start >= 0, name);
-  const body = src.slice(start, src.indexOf('];', start));
-  return [...body.matchAll(/id: '([^']+)'/g)].map((m) => m[1]);
-}
 
 describe('WP-AV generated names (port of lib/versus/nickname.dart)', () => {
   it('the word lists are the app\'s, word for word', () => {
@@ -212,103 +192,5 @@ describe('WP-AV rules: look ids, closed Storage', () => {
     await assertFails(mine.ref(`avatars/${uid}.jpg`).delete());
     await assertFails(env.unauthenticatedContext().storage(bucket).ref(`avatars/${uid}.jpg`).getMetadata());
     await assertFails(mine.ref(`other/${uid}.jpg`).put(jpeg, meta).then());
-  });
-});
-
-describe('WP-AV backfill (pure parts)', () => {
-  it('the catalogue ids are the app\'s (lib/skins/catalog.dart)', () => {
-    assert.deepEqual(BIRD_IDS, dartIds('kBirds'));
-    assert.deepEqual(['none', ...GEAR_IDS], dartIds('kGear'));
-    assert.deepEqual(['none', ...HAT_IDS], dartIds('kHats'));
-    for (const id of [...BIRD_IDS, ...GEAR_IDS, ...HAT_IDS]) assert.ok(LOOK_ID_RE.test(id), id);
-  });
-
-  it('randomLook: catalogue ids, gear and hat "none" about 40 % of the time, every bird used', () => {
-    const r = seededRandom('dist');
-    const n = 4000;
-    let noGear = 0;
-    let noHat = 0;
-    const birds = new Set<string>();
-    for (let i = 0; i < n; i++) {
-      const l = randomLook(r);
-      assert.ok(BIRD_IDS.includes(l.bird));
-      assert.ok(l.gear === 'none' || GEAR_IDS.includes(l.gear));
-      assert.ok(l.hat === 'none' || HAT_IDS.includes(l.hat));
-      if (l.gear === 'none') noGear++;
-      if (l.hat === 'none') noHat++;
-      birds.add(l.bird);
-    }
-    assert.ok(Math.abs(noGear / n - 0.4) < 0.04, `gear none ${noGear / n}`);
-    assert.ok(Math.abs(noHat / n - 0.4) < 0.04, `hat none ${noHat / n}`);
-    assert.equal(birds.size, BIRD_IDS.length);
-  });
-
-  it('identityFor: deterministic per (seed, uid); keeps a generated name, replaces a platform name', () => {
-    const a = identityFor('u1', 'Hiesem', 's1');
-    assert.deepEqual(identityFor('u1', 'Hiesem', 's1'), a);
-    assert.ok(isGeneratedNickname(a.name));
-    assert.equal(identityFor('u1', 'BoldOwl007', 's1').name, 'BoldOwl007');
-    const looks = new Set(Array.from({ length: 30 }, (_, i) => JSON.stringify(identityFor(`u${i}`, '', 's1').look)));
-    assert.ok(looks.size > 20, 'players get different looks');
-  });
-
-  it('rewriteRun / rewritePlayer: new name, avatar "", bird / gear / hat replaced, hoop / trail kept, platform fields dropped', () => {
-    const id = { look: { bird: 'owl', gear: 'monocle', hat: 'tophat' }, name: 'WiseOwl088' };
-    const old = {
-      ...makeRun({ look: LOOK_FANCY }),
-      name: 'Hiesem',
-      avatar: 'https://x/y.jpg',
-      displayName: 'Hiesem',
-    };
-    const r = rewriteRun(old, id) as Record<string, unknown>;
-    assert.equal(r.name, 'WiseOwl088');
-    assert.equal(r.avatar, '');
-    assert.deepEqual(r.look, { bird: 'owl', gear: 'monocle', hat: 'tophat', hoop: 'neon', trail: 'bubbles' });
-    assert.equal('displayName' in r, false);
-    assert.equal(r.tl, old.tl, 'the run itself is untouched');
-    assert.equal(old.name, 'Hiesem', 'input not mutated');
-
-    const p = { ...makePlayer({ best: 12, bestRun: old as never, recent: [old as never, makeRun()] }), photoUrl: 'https://p' };
-    const { set, remove } = rewritePlayer(p, id);
-    assert.equal(set.name, 'WiseOwl088');
-    assert.equal(set.avatar, '');
-    assert.deepEqual(set.look, { bird: 'owl', gear: 'monocle', hat: 'tophat', hoop: 'pink', trail: 'flame' });
-    assert.equal((set.bestRun as Record<string, unknown>).name, 'WiseOwl088');
-    assert.equal((set.recent as unknown[]).length, 2);
-    for (const x of set.recent as Record<string, unknown>[]) {
-      assert.equal(x.avatar, '');
-      assert.deepEqual((x.look as Record<string, unknown>).bird, 'owl');
-    }
-    assert.deepEqual(remove, ['photoUrl']);
-    // A doc without bestRun / a null bestRun.
-    assert.equal(rewritePlayer({ name: 'x', recent: [] }, id).set.bestRun, undefined);
-    assert.equal(rewritePlayer({ name: 'x', bestRun: null }, id).set.bestRun, null);
-  });
-
-  it('rewritePoolEntries: each owner gets their identity; malformed entries are left alone', () => {
-    const seen: string[] = [];
-    const idOf = (uid: string) => {
-      seen.push(uid);
-      return { look: { bird: 'sky', gear: 'none', hat: 'cap' }, name: `SwiftKiwi${uid === 'a' ? '001' : '002'}` };
-    };
-    const out = rewritePoolEntries(
-      [{ ...makeRun(), uid: 'a', level: 3 }, { ...makeRun(), uid: 'b', level: 3, avatar: 'https://z' }, null, { runId: 'x' }],
-      idOf,
-    ) as Record<string, unknown>[];
-    assert.deepEqual(seen, ['a', 'b']);
-    assert.equal(out[0].name, 'SwiftKiwi001');
-    assert.equal(out[1].name, 'SwiftKiwi002');
-    assert.equal(out[1].avatar, '');
-    assert.equal(out[0].uid, 'a');
-    assert.equal(out[0].level, 3);
-    assert.equal(out[2], null);
-    assert.deepEqual(out[3], { runId: 'x' });
-  });
-
-  it('isAvatarObject: everything under avatars/ only', () => {
-    assert.ok(isAvatarObject('avatars/u1.jpg'));
-    assert.ok(isAvatarObject('avatars/sub/x.png'));
-    assert.equal(isAvatarObject('other/avatars/u1.jpg'), false);
-    assert.equal(isAvatarObject('avatarsX/u1.jpg'), false);
   });
 });

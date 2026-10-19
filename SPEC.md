@@ -1119,7 +1119,7 @@ behind the frozen pipes they were unreadable. They use the fixed UI accent pink
   80 = 2 × the 40-coin piggy, a puzzle completion entry — flag puzzle 16
   with bonus 8 — ≤ 500 = 2 × 250, gift ≤ 10: P22-FIX1, S7-05), and rejects v1 uploads
   (`version`); the client skips v1 pool entries. The 2.1 pool runs are
-  converted once (value 1 per entry) by `functions/scripts/convert_pools_v2.ts`.
+  converted once (value 1 per entry) by `functions/scripts/convert_pools_v2.ts` (one-off, removed in audit 17; in git history).
 - DEVIATION (PRD-2.2 §14, supersedes the "—" sound at 0.45 s of the PRD-2
   §5.10 timeline): the results count-ups play **one `sk_tick` stream** —
   min(24, 8 + the largest running count: your points, the opponent's points,

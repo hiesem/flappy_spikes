@@ -20,9 +20,12 @@ double presence(double p, double f) => 1;
 /// `pa(x)`: identically 1 (see above).
 double pa(double x) => 1;
 
-/// `mark(dx)`: a landmark in the middle of its stage (moves at 0.04×).
+/// `mark(dx)`: a landmark in the middle of its stage (moves at 0.04× of
+/// the prototype's 12 000 stage, i.e. it sweeps 480 pt per stage; with
+/// 20-hoop stages it moves at 0.08× so it still sweeps 480 pt and is off
+/// screen at the seams, as in the prototype).
 double mark(Ctx c, double dx) =>
-    kANCH + ((c.env + .5) * kE - c.cam) * .04 + dx;
+    kANCH + ((c.env + .5) * kE - c.cam) * (.04 * kProtoStage / kE) + dx;
 
 /// `early(x, f, span)`: 1 at the start of the current stage, easing to 0
 /// over [span] of it; for leftovers from the stage before.

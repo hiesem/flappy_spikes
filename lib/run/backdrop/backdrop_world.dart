@@ -51,8 +51,8 @@ class BackdropWorld implements SceneDrawer {
   void paint(Ctx c) {
     final (:j, :d) = seamAt(c.cam);
     // PRD-2.4 §3.3 / WP-W1 brief 5: in a run's first loop there is no
-    // Homecoming: hoops 0–39 are pure Nest Canopy (the move treated as
-    // finished, no leftovers from Space). From hoop 400 on it plays.
+    // Homecoming: hoops 0–19 are pure Nest Canopy (the move treated as
+    // finished, no leftovers from Space). From hoop 200 on it plays.
     if (j == 0) return group(c, 0, Band.layers);
     final seam = seams[modI(j - 1, kNST)];
     switch (seam) {

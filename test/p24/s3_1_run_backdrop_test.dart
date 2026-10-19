@@ -13,7 +13,7 @@ import '../helpers.dart';
 
 /// PRD-2.4 §3.1 / §3.3: the run background shows only in the run (not on
 /// home, results or bonus pages), sits at the bottom of the world, freezes
-/// with pause, and its seams land on hoop 40·k in a real run.
+/// with pause, and its seams land on hoop 20·k in a real run.
 void main() {
   const prefs = {'firstRunHintSeen': true};
 
@@ -27,7 +27,7 @@ void main() {
           prefs: {
             ...prefs,
             // every element met: no first-meet force (a forced portal at
-            // hoop 38 would make hoop 40 a ride ring)
+            // hoop 38 / 58 would make hoop 40 / 60 a ride ring)
             if (met) 'metElements': [for (final e in ElementId.values) e.storageId],
           },
           worldHeight: h,
@@ -86,17 +86,17 @@ void main() {
 
   for (final h in [568.0, 730.0]) {
     tester(h: h, met: true).testGameWidget(
-      'seam 1 is centred on hoop 40 in a real run @${h.round()}',
+      'seams 2 and 3 are centred on hoops 40 and 60 in a real run @${h.round()}',
       setUp: (g, _) async => boot(g),
       verify: (g, _) async {
         g.runDebug.god = true;
         final run = await startRun(g, startHoopIndex: 34);
         final b = RunBackdrop.of(g)!;
-        expect(BackdropWorld.sceneAt(b.worldDistance), 0);
+        expect(BackdropWorld.sceneAt(b.worldDistance), 1);
         var prev = b.worldDistance;
         var prevCam = run.state.camX;
         var maxStep = 0.0;
-        double? atPlane;
+        final atPlane = <int, double>{};
         await flyUntil(g, (r) {
           final w = b.worldDistance;
           final step = w - prev;
@@ -116,15 +116,20 @@ void main() {
           }
           prev = w;
           for (final hp in r.spawner.hoops) {
-            if (hp.plan.index == 40 && hp.plan.kind != HoopKindId.rideRing) {
-              if (atPlane == null && r.state.camX + kANCH >= hp.plan.trackX) atPlane = w;
+            final i = hp.plan.index;
+            if ((i == 40 || i == 60) && hp.plan.kind != HoopKindId.rideRing) {
+              if (!atPlane.containsKey(i) && r.state.camX + kANCH >= hp.plan.trackX) atPlane[i] = w;
             }
           }
-          return atPlane != null;
-        }, maxSeconds: 40);
-        expect(atPlane, isNotNull);
-        // the frame that reaches hoop 40's plane is within one frame's move
-        expect((atPlane! - 40 * kPerHoop).abs(), lessThan(6), reason: 'w $atPlane');
+          return atPlane.length == 2;
+        }, maxSeconds: 80);
+        expect(atPlane.keys, unorderedEquals([40, 60]));
+        // the frame that reaches hoop 20·k's plane is within one frame's
+        // move of seam k (kHoopsPerScene = 20: one scene is 20 hoops)
+        for (final MapEntry(key: i, value: w) in atPlane.entries) {
+          expect((w - i * kPerHoop).abs(), lessThan(6), reason: 'hoop $i: w $w');
+          expect(BackdropWorld.seamAt(w).j, i ~/ kHoopsPerScene);
+        }
         expect(maxStep, lessThan(10), reason: 'continuous');
         expect(run.state.hoopsPassed, greaterThan(0));
       },

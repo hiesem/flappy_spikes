@@ -4,6 +4,7 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/palettes.dart';
+import 'package:flappy_spikes/run/backdrop/backdrop_math.dart';
 import 'package:flappy_spikes/run/backdrop/run_backdrop.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -42,7 +43,7 @@ void main() {
       for (var s = 0; s < 4; s++) {
         painter.paint(
           canvas,
-          cam: s * 12000 + 6000.0,
+          cam: (s + .5) * kE, // mid-scene
           t: 2,
           viewHeight: 568,
           bg: pal.background,

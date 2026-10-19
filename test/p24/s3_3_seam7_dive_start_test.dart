@@ -46,7 +46,7 @@ void main() {
       final (n, normal) = await jumpAndNormal(painter(const _PrototypeDive()), sc - kVWIN / 2, h);
       expect(n, greaterThan(normal * 2 + 300), reason: 'prototype dive: $n px, normal $normal');
     });
-    for (final e in [-kVWIN / 2 - 1, -kVWIN / 2 - .5, -kVWIN / 2, -1300.0, -1100.0, -900.0, 0.0,
+    for (final e in [-kVWIN / 2 - 1, -kVWIN / 2 - .5, -kVWIN / 2, -kVWIN * 13 / 30, -kVWIN * 11 / 30, -kVWIN * 9 / 30, 0.0,
       kVWIN / 2 - 1, kVWIN / 2]) {
       test('the dive has no jump at ${e.round()} @${h.round()}', () async {
         final p = painter(kSeams[6]);
@@ -57,7 +57,7 @@ void main() {
     }
     test('evidence: the dive start with the paper river @${h.round()}', () async {
       final p = painter(kSeams[6]);
-      for (final e in [-1501.0, -1500, -1300, -1100, -750]) {
+      for (final e in [-kVWIN / 2 - 1, -kVWIN / 2, -kVWIN * 13 / 30, -kVWIN * 11 / 30, -kVWIN / 4]) {
         final img = await renderBackdrop(cam: sc + e, viewHeight: h, scale: 2, painter: p);
         await saveEvidence(img, 'wpW3/dart', 'seam7_fixture_${e.round()}_${h.round()}');
         img.dispose();

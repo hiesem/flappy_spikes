@@ -265,7 +265,7 @@ void main() {
   for (final id in [RideId.sea, RideId.cannon, RideId.space]) {
     tester(met: true).testGameWidget(
       '§3.5 $id near seam 1: no hold under the launch, no creep after; '
-      '${id == RideId.cannon ? 'seam within a few hoops of 40' : 'seam on hoop 40'}',
+      '${id == RideId.cannon ? 'seam within a few hoops of 20' : 'seam on hoop 20'}',
       setUp: (g, _) async {
         await g.ready();
         await preloadImages(g);
@@ -273,9 +273,9 @@ void main() {
       verify: (g, _) async {
         g.runDebug.god = true;
         double? atPlane;
-        final (frames, _, _) = await _fly(g, id, start: 34, after: 12, onFrame: (r, w) {
+        final (frames, _, _) = await _fly(g, id, start: 14, after: 12, onFrame: (r, w) {
           for (final hp in r.spawner.hoops) {
-            if (hp.plan.index == 40 && hp.plan.kind != HoopKindId.rideRing) {
+            if (hp.plan.index == kHoopsPerScene && hp.plan.kind != HoopKindId.rideRing) {
               if (atPlane == null && r.state.camX + kANCH >= hp.plan.trackX) atPlane = w;
             }
           }
@@ -293,10 +293,10 @@ void main() {
             expect((back[i].w - back[i - 1].w) / dc, greaterThan(HandoverConfig.afterRideMinRate - .01));
           }
         }
-        // where is the world when hoop 40's plane reaches the screen centre?
+        // where is the world when hoop 20's plane reaches the screen centre?
         expect(atPlane, isNotNull);
         if (id != RideId.cannon) {
-          // the themed ride re-synced under its scene: seam 1 lands on 40
+          // the themed ride re-synced under its scene: seam 1 lands on 20
           expect((atPlane! - kE).abs(), lessThan(6), reason: 'w $atPlane');
         } else {
           // the cannon's world is seen all along: it re-syncs at ≥ 0.6×

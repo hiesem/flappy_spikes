@@ -56,3 +56,24 @@ docs/p22/perf/**/*.perfetto-trace
 
 # Firebase CLI hosting deploy cache
 .firebase/
+
+# Credentials and signing material (the repo is PUBLIC) — never commit
+*.jks
+*.keystore
+*.p8
+*.p12
+*.pem
+*.mobileprovision
+*.provisionprofile
+.env
+.env.*
+*service-account*.json
+*-adminsdk-*.json
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+# Built store artifacts
+*.aab
+*.apk
+*.ipa
+*.xcarchive/

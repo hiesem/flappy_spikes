@@ -854,67 +854,6 @@ class SoundService {
       if (_pools.containsKey(sfx)) continue;
       await _ensurePool(sfx);
     }
-    await _warmLoops();
-  }
-
-  /// Android: one idle SoundPool player per [SfxLoop] that only holds its
-  /// sample, so every loop's sample stays decoded for the session. Without
-  /// it a loop's sample was unloaded with its last player (the fire going
-  /// out) and decoded again on the next start; SoundPool decodes one sample
-  /// at a time, so at a portal ride (whose cues are preloaded as a batch)
-  /// the burning crackle only started hoops later (owner, 2.4.0 (40)).
-  /// A new loop player now reuses the loaded sample and starts at once.
-  /// iOS plays its loops natively ([nativeLoops]); tests use
-  /// [loopKeeperFactory].
-  final Map<SfxLoop, Future<void> Function()> _loopKeepers = {};
-
-  /// Test seam: creates a keeper for a loop and returns its disposer
-  /// (null: none).
-  @visibleForTesting
-  Future<Future<void> Function()?> Function(SfxLoop loop)? loopKeeperFactory;
-
-  /// The loops whose sample is held now (tests).
-  @visibleForTesting
-  Set<SfxLoop> get keptLoops => _loopKeepers.keys.toSet();
-
-  Future<void> _warmLoops() async {
-    if (!enabled || muted || !_appActive) return;
-    final make = loopKeeperFactory ??
-        (kIsWeb || !Platform.isAndroid || voiceFactory != null
-            ? null
-            : _createLoopKeeper);
-    if (make == null) return;
-    final gen = _generation;
-    for (final l in SfxLoop.values) {
-      if (_loopKeepers.containsKey(l)) continue;
-      if (gen != _generation || muted || !_appActive) return;
-      final dispose = await make(l);
-      if (dispose == null) continue;
-      if (gen != _generation) {
-        await dispose();
-        return;
-      }
-      _loopKeepers[l] = dispose;
-    }
-  }
-
-  Future<Future<void> Function()?> _createLoopKeeper(SfxLoop l) async {
-    try {
-      await _ensureGlobalContext();
-      final p = AudioPlayer()..audioCache = FlameAudio.audioCache;
-      p.positionUpdater = null;
-      await p.setPlayerMode(PlayerMode.lowLatency);
-      await p.setSource(AssetSource(l.file));
-      return () async {
-        try {
-          await p.dispose();
-        } catch (_) {}
-      };
-    } catch (_) {
-      // Audio failure must never take the game down: the loop then loads
-      // on its first start, as before.
-      return null;
-    }
   }
 
   /// PRD-2.2 §33.4 item 3 / §33.6 (S7-19): the run is over (Home arrival).
@@ -1248,11 +1187,8 @@ class SoundService {
     _reserved = const {};
     _runEnded.clear();
     _sessionPinned = false;
-    final keepers = List.of(_loopKeepers.values);
-    _loopKeepers.clear();
     await stopAllLoops();
     await Future.wait(pools.map((p) => p.dispose()));
-    await Future.wait(keepers.map((d) => d()));
   }
 
   /// Starts the looping background music. Idempotent: only the first

@@ -78,7 +78,7 @@ Nothing went to closed or open testing or production, and the store listing was 
   - The 2.2.0 (9) AAB went into the internal-testing draft, replacing bundle 8. Release notes are en-US, and the release is rolled out to internal testing.
   - Play reported an `AD_ID` error for an older active build, most likely the pre-ads production 2.0.0. Bundle 9 itself contains the permission. The agent chose "Release without permission" for this release only.
   - **Nothing was sent for review.** Publishing overview still lists 2 changes waiting for the owner: the Ads declaration and Data safety.
-  - The tester list "Flappy Spikes internal" holds killerhis@gmail.com.
+  - The tester list "Flappy Spikes internal" holds the owner.
 - **Pixel 8 install:**
   - The local build was uninstalled, because Play signs with the app-signing key and local builds use the upload key.
   - 2.2.0 (9) was installed from the Play Store.

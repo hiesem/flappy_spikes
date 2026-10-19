@@ -311,7 +311,7 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   local price; US $1.29 / $9.99 / $15.99 / $84.99 / no_ads $3.49), verified 174/174 per product
   (`tools/pricing/PLAY_VERIFY_2026-10-07.md`). Runbook: PRD-menu-v4 §7. Price editor tax column: a rate = included in
   the buyer price; "No VAT" = nothing included (incl. US/CA/ID/VN where tax is added at checkout).
-- Licence testing + internal-testing tester list "Flappy Spikes internal" (killerhis@gmail.com).
+- Licence testing + internal-testing tester list "Flappy Spikes internal" (the owner).
   Internal testing track: 2.0.0 (6) live (versions 3-5 superseded).
 - Products need a PUBLISHED bundle with BILLING permission before they can be created (draft is not enough).
 - After creating products the device returned notFound for all 5 until the Play Store app's cache was

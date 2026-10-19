@@ -17,8 +17,8 @@ import '../share/share_card_golden_test.dart' show loadCardFonts;
 import 'support/tablet.dart' show renderGame;
 
 /// WP-N2 evidence and fit checks: the PLAYER card while editing (with the
-/// keyboard state written next to the PNG), the "taken" error, the renamed
-/// "DELETE MY ACCOUNT & DATA" row and confirm popup — both labels fit.
+/// keyboard state written next to the PNG), the "taken" error, the
+/// "DELETE MY DATA" row and confirm popup fit.
 /// PNGs land in $FS_EVIDENCE_DIR (default build/menu_shots/n2).
 void main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -118,12 +118,12 @@ void main() async {
     make,
     gameSize: Vector2(320, 568),
   ).testGameWidget(
-    'WP-N2 "DELETE MY ACCOUNT & DATA": the row and the popup title fit',
+    'WP-N2 "DELETE MY DATA": the row and the popup title fit',
     setUp: boot,
     verify: (g, tester) async {
       final panel = await open(g);
       final row = panel.deleteRow!;
-      expect(row.labelText.text, 'DELETE MY ACCOUNT & DATA');
+      expect(row.labelText.text, 'DELETE MY DATA');
       final labelRight = row.labelText.x + row.labelText.width;
       final chevronLeft = row.chevron.x - Config.settingsChevronSize / 2;
       expect(labelRight, lessThan(chevronLeft - 4));
@@ -137,7 +137,13 @@ void main() async {
       stepGame(g, .5);
       await flushAndMount(g);
       final popup = g.deleteDataPopup!;
-      expect(popup.titleText.text, 'DELETE MY ACCOUNT & DATA');
+      expect(popup.titleText.text, 'DELETE MY DATA');
+      // The shorter title needs no shrinking any more (the fit guard stays).
+      expect(
+        popup.titleText.fontSize,
+        Config.purchasePopupTitleFontSize,
+        reason: 'the title is drawn at its full size',
+      );
       expect(
         popup.titleText.width,
         lessThanOrEqualTo(Config.p1PopupWidth - 2 * Config.p1PopupPad),

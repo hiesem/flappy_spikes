@@ -51,6 +51,8 @@
 				</array>
 			</dict>
 		</dict>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>Save your score card to your photos.</string>
 		<key>NSUserTrackingUsageDescription</key>
 		<string>Your choice here only changes which ads you see. Allowing it lets us show ads that are more relevant to you.</string>
 		<key>SKAdNetworkItems</key>

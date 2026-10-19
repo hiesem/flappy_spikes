@@ -4,7 +4,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   checkRun,
-  convertV1ToV2,
   decodeDeltas,
   decodeEntries,
   encodeDeltas,
@@ -106,23 +105,5 @@ describe('§3.13 / PRD-2.2 §13.5 cheat filter (checkRun)', () => {
   it('§3.13 best < score is rejected (entry best and player best)', () => {
     assert.equal(checkRun(makeRun({ score: 10, best: 9 }), 20), 'best_below_score');
     assert.equal(checkRun(makeRun({ score: 10, best: 10 }), 9), 'best_below_score');
-  });
-});
-
-describe('PRD-2.2 §13.5 v1 → v2 pool conversion', () => {
-  it('§13.7 the fixture v1 run becomes the v2 run: value 1 per entry, same score, flags kept, same replay', () => {
-    const fl = convertV1ToV2(FX.v1);
-    assert.equal(fl, FX.v1Converted.fl);
-    const converted = { ...makeRun({ score: FX.v1.score }), tl: FX.v1.tl, fl: fl!, end: FX.v1.end };
-    assert.equal(checkRun(converted, 99), null);
-    for (const [cs, score] of FX.v1Replay as [number, number][]) {
-      assert.equal(scoreAt(FX.v1.tl, fl!, cs), score, `at ${cs} cs`);
-    }
-    assert.deepEqual(decodeEntries(fl!)!.flags, Array.from(Buffer.from(FX.v1.fl, 'base64')));
-  });
-  it('§13.5 idempotent: a v2 run is left alone; a malformed run is skipped', () => {
-    assert.equal(convertV1ToV2(FX.v1Converted), null);
-    assert.equal(convertV1ToV2(FX.run), null);
-    assert.equal(convertV1ToV2({ tl: FX.v1.tl, fl: encodeEntries([0], [1]).slice(0, 4) }), null);
   });
 });

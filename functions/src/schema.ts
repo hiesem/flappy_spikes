@@ -17,6 +17,14 @@ export const RETENTION_DAYS = 60;
 export const RETENTION_MS = RETENTION_DAYS * 24 * 3600 * 1000;
 /** Non-best uploads per player per (UTC) day (§3.13 "at most 3 a day"). */
 export const DAILY_UPLOADS = 3;
+/**
+ * Audit 17: new-best uploads per player per (UTC) day. A new best skips
+ * [DAILY_UPLOADS], but `best` is client-written, so a forged client could
+ * raise it by 1 on every write and pool without limit. 20 is far above what
+ * an honest player sets in a day; an honest best past the cap is simply not
+ * pooled (the player never sees the pool upload result).
+ */
+export const DAILY_BEST_UPLOADS = 20;
 /** Runs under this score are never uploaded (§3.13). */
 export const MIN_SCORE = 3;
 /** Minimum time between two plain points, centiseconds (§3.13 cheat filter, 0.9 s). */
@@ -189,6 +197,8 @@ export interface PoolDoc {
 export interface RateDoc {
   day: string;
   count: number;
+  /** Audit 17: new-best uploads this [day] ([DAILY_BEST_UPLOADS]; absent = 0). */
+  bestCount?: number;
   seen: string[];
   last?: { runId: string; status: 'accepted' | 'rejected'; reason?: string; pool?: string };
 }

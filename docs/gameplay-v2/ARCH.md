@@ -804,7 +804,7 @@ RunEntry
   fl: string (timeline format v2, PRD-2.2 §13.5: base64 of the version byte 2, then per entry the flag byte
               ride 1 | train 2 | gift 4 | bonus 8 | puzzle 16 (with bonus 8, the puzzle completion) and the entry's value as uint16 LE; ≤ 8 192 chars ≈ 2 047 entries.
               The values sum to `score`. v1 — one flag byte per point — is rejected by the server and skipped by
-              the client; the 2.1 pool runs were converted once by `functions/scripts/convert_pools_v2.ts`)
+              the client; the 2.1 pool runs were converted once by `functions/scripts/convert_pools_v2.ts`, removed in audit 17)
 
 pools/{level}_{shard}            level 0–10, shard 0–3   (server-written only)
   level: int  shard: int  updatedAt: timestamp
@@ -1726,7 +1726,7 @@ scene / seam files. Contract and the pacing math: `lib/run/backdrop/README.md`.
 - **Backend:** `functions/src/avatars.ts`, `sweepStaleAvatars` and the Storage deletes are gone;
   `storage.rules` deny all. `schema.ts` `validLook` / `LOOK_ID_RE` (used by `timeline.ts` `validDisplay`);
   `firestore.rules` `isId`. One-off `functions/scripts/backfill_avatars.ts` (`--dry-run` / `--run`,
-  pure parts in `backfill_lib.ts`): random bird / gear / hat (40 % none) + generated name for every player
+  pure parts in `backfill_lib.ts`; both removed in audit 17 after the run, see git history): random bird / gear / hat (40 % none) + generated name for every player
   doc and pool entry (one identity per uid), `avatar: ''`, platform-name fields dropped, every object under
   `avatars/` deleted.
 

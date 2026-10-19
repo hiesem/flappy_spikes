@@ -8,7 +8,7 @@
  * (ride 1 | train 2 | gift 4 | bonus 8 | puzzle 16) and the entry's value (uint16 LE):
  * the points it added (a pass 1 / 2 / the streak, a pair gift, a coin bonus).
  * The values sum to the score. v1 (one flag byte per point, no values) is
- * rejected (`version`); old pool runs are converted by `convertV1ToV2`.
+ * rejected (`version`).
  */
 import {
   BONUS_CAP,
@@ -79,12 +79,6 @@ export function encodeEntries(flags: number[], values: number[]): string {
     buf.writeUInt16LE(values[i], 2 + i * 3);
   });
   return buf.toString('base64');
-}
-
-/** True when `fl` is a well-formed v2 entry list for `entries` entries. */
-export function isV2(fl: string, entries: number): boolean {
-  const m = decodeEntries(fl);
-  return m !== null && m.flags.length === entries;
 }
 
 export type RejectReason =
@@ -208,20 +202,4 @@ export function scoreAt(tl: string, fl: string, cs: number): number {
     n += meta.values[i];
   }
   return n;
-}
-
-/**
- * PRD-2.2 §13.5 the one-off conversion of a 2.1 (v1) pool run: one entry =
- * one point becomes a v2 entry of value 1 with its flags kept; `tl`, `end`
- * and the score stay. Returns the converted `fl`, or null when the run is
- * already v2 (idempotent) or is not a well-formed v1 run.
- */
-export function convertV1ToV2(run: Pick<RunEntry, 'tl' | 'fl'>): string | null {
-  const deltas = decodeDeltas(run.tl);
-  if (deltas === null) return null;
-  if (isV2(run.fl, deltas.length)) return null;
-  const buf = strictB64(run.fl);
-  if (buf === null || buf.length !== deltas.length) return null;
-  const flags = Array.from(buf);
-  return encodeEntries(flags, flags.map(() => 1));
 }

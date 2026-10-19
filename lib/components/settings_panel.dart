@@ -1250,22 +1250,31 @@ class SettingsRow extends MenuButton {
       canvas.drawRect(Rect.fromLTWH(0, height - 1, width, 1), _line);
     }
     if (_busy) {
-      // The page's 14 pt spinner: a soft ring with a pink top, 0.7 s/turn.
       final c = Offset(width - 8, height / 2);
-      const r = 6.0;
-      _ring.color = Config.menuSoft;
-      canvas.drawCircle(c, r, _ring);
-      _ring.color = Config.menuPink;
-      final a = _spin / 0.7 * 2 * math.pi;
-      canvas.drawArc(
-        Rect.fromCircle(center: c, radius: r),
-        -math.pi * 3 / 4 + a,
-        math.pi / 2,
-        false,
-        _ring,
-      );
+      paintSettingsSpinner(canvas, c, _spin, _ring);
     }
   }
+}
+
+/// The Settings page's 14 pt spinner (one master: Restore's row and the
+/// PLAYER card's save): a soft ring with a pink top, 0.7 s/turn. [spin] is
+/// the seconds it has been turning; [ring] a stroke paint the caller keeps.
+void paintSettingsSpinner(Canvas canvas, Offset c, double spin, Paint ring) {
+  const r = 6.0;
+  ring
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2
+    ..color = Config.menuSoft;
+  canvas.drawCircle(c, r, ring);
+  ring.color = Config.menuPink;
+  final a = spin / 0.7 * 2 * math.pi;
+  canvas.drawArc(
+    Rect.fromCircle(center: c, radius: r),
+    -math.pi * 3 / 4 + a,
+    math.pi / 2,
+    false,
+    ring,
+  );
 }
 
 /// The RUMBLE icon (PRD-home-v3 §8, mock build73 `PHONE`; reused unchanged

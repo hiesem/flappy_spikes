@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flame/components.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -12,6 +13,7 @@ import '../run/config/hud_config.dart';
 import '../run/hud/fit_name.dart';
 import '../versus/custom_name.dart';
 import 'home/menu_primitives.dart';
+import 'settings_panel.dart' show paintSettingsSpinner;
 
 /// WP-NAME the PLAYER card at the top of Settings (design A "Player card
 /// at the top, edit in place", `design/username_settings/username.html`):
@@ -26,6 +28,11 @@ import 'home/menu_primitives.dart';
 /// in a GameWidget overlay ([kPlayerNameOverlay]); this card draws what is
 /// typed. ✓ / Enter saves, ✕ / back cancels. Under the card a hint (or the
 /// inline error in red) says the rule: 3–14 letters A–Z or digits.
+///
+/// 2.4.0 (38) while a ✓ waits for the server ([saving]) the ✓ / ✕ make
+/// way for the Settings spinner ([paintSettingsSpinner]), the field is
+/// read-only (the keyboard goes down) and taps / back do nothing; a
+/// refusal brings the buttons and the keyboard back with the reason.
 class SettingsPlayerCard extends PositionComponent
     with HasGameReference<FlappySpikesGame> {
   SettingsPlayerCard({
@@ -73,6 +80,18 @@ class SettingsPlayerCard extends PositionComponent
   /// A ✓ is waiting for the server.
   bool _saving = false;
   bool get saving => _saving;
+  set _savingNow(bool value) {
+    _saving = value;
+    _readOnly.value = value;
+    if (value) _spin = 0;
+  }
+
+  /// The hidden field is read-only while [saving].
+  final ValueNotifier<bool> _readOnly = ValueNotifier(false);
+
+  /// Seconds the save spinner has been turning (tests).
+  double _spin = 0;
+  double get spin => _spin;
 
   double _blink = 0;
 
@@ -204,8 +223,8 @@ class SettingsPlayerCard extends PositionComponent
     show(tapTarget, !_editing);
     show(fieldTarget, _editing);
     show(pencil, !_editing);
-    show(confirm, _editing);
-    show(cancel, _editing);
+    show(confirm, _editing && !_saving);
+    show(cancel, _editing && !_saving);
     show(_name, !_editing);
     show(_field, _editing);
     show(_counter, _editing);
@@ -279,7 +298,7 @@ class SettingsPlayerCard extends PositionComponent
     if (_editing) return;
     _click();
     _editing = true;
-    _saving = false;
+    _savingNow = false;
     _error = null;
     _draft = validCustomName(game.storage.versusCustomName);
     _blink = 0;
@@ -290,14 +309,14 @@ class SettingsPlayerCard extends PositionComponent
 
   /// ✕ / back: leaves the name as it was.
   void cancelEditing() {
-    if (!_editing) return;
+    if (!_editing || _saving) return;
     _click();
     _close();
   }
 
   void _close() {
     _editing = false;
-    _saving = false;
+    _savingNow = false;
     _error = null;
     game.popBack(_back);
     _closeKeyboard();
@@ -335,12 +354,12 @@ class SettingsPlayerCard extends PositionComponent
       }
     }
     _click();
-    _saving = true;
+    _savingNow = true;
     _error = null;
     _sync();
     final r = await game.saveCustomName(name);
     if (!isMounted || !_editing) return;
-    _saving = false;
+    _savingNow = false;
     if (r is CustomNameRefused) {
       _error = r.reason;
       _sync();
@@ -360,7 +379,7 @@ class SettingsPlayerCard extends PositionComponent
 
   /// WP-N2 asks for focus and the system keyboard again (editing only).
   void showKeyboard() {
-    if (!_editing) return;
+    if (!_editing || _saving) return;
     _input.currentState?.requestKeyboard();
   }
 
@@ -370,6 +389,7 @@ class SettingsPlayerCard extends PositionComponent
       (context, _) => PlayerNameInput(
         key: _input,
         initial: _draft,
+        readOnly: _readOnly,
         onChanged: setDraft,
         onSubmitted: () => unawaited(commit()),
       ),
@@ -395,10 +415,12 @@ class SettingsPlayerCard extends PositionComponent
   void update(double dt) {
     super.update(dt);
     if (_editing) _blink = (_blink + dt) % 1;
+    if (_saving) _spin += dt;
   }
 
   final Paint _white = Paint()..color = const Color(0xFFFFFFFF);
   final Paint _pink = Paint()..color = Config.menuPink;
+  final Paint _ring = Paint();
 
   @override
   void render(Canvas canvas) {
@@ -423,7 +445,14 @@ class SettingsPlayerCard extends PositionComponent
         canvas.drawRect(Rect.fromLTWH(x, cy - caretH / 2, 2, caretH), _pink);
       }
     }
+    // Saving: the spinner where the ✓ / ✕ column was.
+    if (_saving) {
+      paintSettingsSpinner(canvas, spinnerCenter, _spin, _ring);
+    }
   }
+
+  /// The save spinner's centre: the middle of the ✓ / ✕ column.
+  Offset get spinnerCenter => Offset(width - padX - button / 2, height / 2);
 
   double _textWidth(MenuText t) => t.text.isEmpty ? 0 : t.width;
 
@@ -444,9 +473,14 @@ class PlayerNameInput extends StatefulWidget {
     required this.initial,
     required this.onChanged,
     required this.onSubmitted,
+    this.readOnly,
   });
 
   final String initial;
+
+  /// True while the card saves: no typing, the keyboard goes down (and
+  /// comes back when it turns false with the focus still here).
+  final ValueListenable<bool>? readOnly;
   final void Function(String text) onChanged;
   final void Function() onSubmitted;
 
@@ -455,6 +489,8 @@ class PlayerNameInput extends StatefulWidget {
 }
 
 class PlayerNameInputState extends State<PlayerNameInput> {
+  static final ValueListenable<bool> _never = ValueNotifier(false);
+
   late final TextEditingController controller = TextEditingController(
     text: widget.initial,
   );
@@ -506,29 +542,33 @@ class PlayerNameInputState extends State<PlayerNameInput> {
           // The app has no WidgetsApp: the editing shortcuts (hardware
           // backspace, arrows on desktop) come from here.
           child: DefaultTextEditingShortcuts(
-            child: EditableText(
-              key: _field,
-              controller: controller,
-              focusNode: focus,
-              autofocus: true,
-              autocorrect: false,
-              enableSuggestions: false,
-              keyboardType: TextInputType.visiblePassword,
-              textInputAction: TextInputAction.done,
-              textCapitalization: TextCapitalization.none,
-              inputFormatters: [
-                LengthLimitingTextInputFormatter(kCustomNameMax),
-              ],
-              style: const TextStyle(fontSize: 20, color: Color(0xFF000000)),
-              cursorColor: const Color(0xFF000000),
-              backgroundCursorColor: const Color(0xFF000000),
-              onChanged: (t) {
-                // The card draws the caret at the end: keep it there.
-                final end = TextSelection.collapsed(offset: t.length);
-                if (controller.selection != end) controller.selection = end;
-                widget.onChanged(t);
-              },
-              onSubmitted: (_) => widget.onSubmitted(),
+            child: ValueListenableBuilder<bool>(
+              valueListenable: widget.readOnly ?? _never,
+              builder: (context, readOnly, _) => EditableText(
+                key: _field,
+                readOnly: readOnly,
+                controller: controller,
+                focusNode: focus,
+                autofocus: true,
+                autocorrect: false,
+                enableSuggestions: false,
+                keyboardType: TextInputType.visiblePassword,
+                textInputAction: TextInputAction.done,
+                textCapitalization: TextCapitalization.none,
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(kCustomNameMax),
+                ],
+                style: const TextStyle(fontSize: 20, color: Color(0xFF000000)),
+                cursorColor: const Color(0xFF000000),
+                backgroundCursorColor: const Color(0xFF000000),
+                onChanged: (t) {
+                  // The card draws the caret at the end: keep it there.
+                  final end = TextSelection.collapsed(offset: t.length);
+                  if (controller.selection != end) controller.selection = end;
+                  widget.onChanged(t);
+                },
+                onSubmitted: (_) => widget.onSubmitted(),
+              ),
             ),
           ),
         ),

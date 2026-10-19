@@ -169,7 +169,7 @@ class GameServices {
       await signInPlugin().timeout(const Duration(minutes: 3));
       diag('FS-GC launch auth ok in ${watch.elapsedMilliseconds} ms');
     } catch (e) {
-      final code = e is PlatformException ? e.code : e.runtimeType.toString();
+      final code = e is PlatformException ? e.code : errorKind(e);
       diag(
         'FS-GC launch auth failed in ${watch.elapsedMilliseconds} ms: '
         '$code',
@@ -231,7 +231,7 @@ class GameServices {
     try {
       authenticated = await isAuthenticatedPlugin().timeout(pluginTimeout);
     } catch (e) {
-      diag('FS-GC recheck ($reason) failed: ${e.runtimeType}');
+      diag('FS-GC recheck ($reason) failed: ${errorKind(e)}');
       return;
     }
     if (!authenticated) {
@@ -252,7 +252,7 @@ class GameServices {
     try {
       await signInPlugin().timeout(pluginTimeout);
     } catch (e) {
-      diag('FS-GC recheck ($reason) sign-in failed: ${e.runtimeType}');
+      diag('FS-GC recheck ($reason) sign-in failed: ${errorKind(e)}');
       _reportPgsError('sign_in_recheck', e);
     } finally {
       _recheckSigningIn = null;
@@ -391,7 +391,7 @@ class GameServices {
       final r = await GamesServices.resetAchievements();
       diag('FS-GC reset achievements: ${r ?? 'ok'}');
     } catch (e) {
-      diag('FS-GC reset achievements FAILED: $e');
+      diag('FS-GC reset achievements FAILED: ${redactSecrets(e)}');
     }
   }
 

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'ads_service.dart';
 import 'iap_service.dart';
+import 'redact.dart';
 
 /// Ads (rewarded, interstitial, banner — PRD-2.2 §7.10) + in-app purchases,
 /// bundled so the game takes one object.
@@ -95,7 +96,7 @@ class Monetization {
     try {
       await init();
     } catch (e) {
-      debugPrint('Monetization initialize failed: $e');
+      debugPrint('Monetization initialize failed: ${redactSecrets(e)}');
     }
   }
 }

@@ -15,6 +15,7 @@ import '../versus/run_entry.dart';
 import '../versus/upload_queue.dart';
 import 'e2e.dart';
 import 'identity.dart';
+import 'redact.dart';
 import 'versus_auth.dart';
 import 'versus_service.dart';
 
@@ -352,7 +353,7 @@ class FirebaseVersusBackend implements VersusBackend {
       try {
         await beforeSwitch();
       } catch (err) {
-        debugPrint('versus: anonymous clean-up failed: ${err.runtimeType}');
+        debugPrint('versus: anonymous clean-up failed: ${errorKind(err)}');
       }
     }
     await _switchTo(fresh);

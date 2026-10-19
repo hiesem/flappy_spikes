@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import 'redact.dart';
+
 /// PRD-2.2 §28.3: other apps' audio, observed WITHOUT taking audio focus
 /// (the game keeps mixing with the player's own music).
 ///
@@ -218,7 +220,7 @@ class PlatformAudioFocus implements AudioFocus {
       .receiveBroadcastStream()
       .map(AudioWatchState.fromPlatform)
       .handleError((Object e) {
-        debugPrint('AudioFocus changes failed: $e');
+        debugPrint('AudioFocus changes failed: ${redactSecrets(e)}');
       })
       .asBroadcastStream();
 
@@ -233,7 +235,7 @@ class PlatformAudioFocus implements AudioFocus {
         await _methods.invokeMethod<Object?>('snapshot'),
       );
     } catch (e) {
-      debugPrint('AudioFocus snapshot failed: $e');
+      debugPrint('AudioFocus snapshot failed: ${redactSecrets(e)}');
       return const AudioWatchState();
     }
   }
@@ -250,7 +252,7 @@ class PlatformAudioFocus implements AudioFocus {
     try {
       return await _methods.invokeMethod<bool>('isOtherMusicActive') ?? false;
     } catch (e) {
-      debugPrint('AudioFocus isOtherMusicActive failed: $e');
+      debugPrint('AudioFocus isOtherMusicActive failed: ${redactSecrets(e)}');
       return false;
     }
   }
@@ -260,7 +262,7 @@ class PlatformAudioFocus implements AudioFocus {
     try {
       return await _methods.invokeMethod<bool>('isOtherMediaListed') ?? false;
     } catch (e) {
-      debugPrint('AudioFocus isOtherMediaListed failed: $e');
+      debugPrint('AudioFocus isOtherMediaListed failed: ${redactSecrets(e)}');
       return false;
     }
   }

@@ -87,7 +87,7 @@ void _notifyShown(void Function()? onShown) {
   try {
     onShown();
   } catch (e) {
-    debugPrint('Ads onShown listener threw: $e');
+    debugPrint('Ads onShown listener threw: ${redactSecrets(e)}');
   }
 }
 
@@ -416,7 +416,7 @@ class AdMobRewardedAds extends _AdMobFullScreenLoader<RewardedAd>
         },
       );
     } catch (e) {
-      debugPrint('AdMobRewardedAds show threw: $e');
+      debugPrint('AdMobRewardedAds show threw: ${redactSecrets(e)}');
       _dispose(ad);
       finish(AdResult.failed);
     }
@@ -592,7 +592,7 @@ class AdMobInterstitialAds extends _AdMobFullScreenLoader<InterstitialAd>
       );
       await ad.show();
     } catch (e) {
-      debugPrint('AdMobInterstitialAds show threw: $e');
+      debugPrint('AdMobInterstitialAds show threw: ${redactSecrets(e)}');
       _dispose(ad);
       finish(AdResult.failed);
     }
@@ -850,7 +850,7 @@ class AdMobBannerAds implements BannerAds {
         widthDp.truncate(),
       );
     } catch (e) {
-      debugPrint('AdMobBannerAds size failed: $e');
+      debugPrint('AdMobBannerAds size failed: ${redactSecrets(e)}');
     }
   }
 
@@ -909,10 +909,10 @@ class AdMobBannerAds implements BannerAds {
     _ad = ad;
     try {
       ad.load().catchError((Object e) {
-        debugPrint('AdMobBannerAds load threw: $e');
+        debugPrint('AdMobBannerAds load threw: ${redactSecrets(e)}');
       });
     } catch (e) {
-      debugPrint('AdMobBannerAds load threw: $e');
+      debugPrint('AdMobBannerAds load threw: ${redactSecrets(e)}');
     }
   }
 

@@ -9,6 +9,8 @@
 /// code, host, path, provider-free text) for diagnosis.
 library;
 
+import 'dart:async' show TimeoutException;
+
 const String redacted = '<redacted>';
 
 /// Query strings / fragments of any URL (`scheme://host/path?…` / `#…`).
@@ -60,3 +62,16 @@ Map<String, Object>? redactParams(Map<String, Object>? parameters) =>
         for (final e in parameters.entries)
           e.key: e.value is String ? redactSecrets(e.value) : e.value,
       };
+
+/// A stable name for the kind of [error], for log lines and analytics
+/// codes. Never `runtimeType.toString()`: release builds are obfuscated
+/// (`--obfuscate`), so class names there are meaningless short ids.
+String errorKind(Object? error) => switch (error) {
+  TimeoutException() => 'timeout',
+  FormatException() => 'format',
+  StateError() => 'state',
+  ArgumentError() => 'argument',
+  UnsupportedError() => 'unsupported',
+  TypeError() => 'type',
+  _ => 'error',
+};

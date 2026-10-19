@@ -1,18 +1,22 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
+
 import '../run/director/plans.dart';
 import '../run/elements.dart';
 
 /// `--dart-define=FS_E2E=true`: the Pixel 8 `integration_test` build
 /// (ARCH §7.3): a fixed run seed, fake rewarded ads with the visible
 /// overlay (succeed), the App Check debug provider (WP-5b) and [E2EHooks].
-const bool kE2E = bool.fromEnvironment('FS_E2E');
+/// Audit 17: always false in a release build, whatever the defines.
+const bool kE2E = bool.fromEnvironment('FS_E2E') && !kReleaseMode;
 
 /// `--dart-define=FS_E2E_SEED=n`: the fixed run seed of e2e builds.
 const int kE2ESeed = int.fromEnvironment('FS_E2E_SEED', defaultValue: 7);
 
-/// `--dart-define=FS_APPCHECK_DEBUG_TOKEN=…` (WP-5b).
-const String kAppCheckDebugToken = String.fromEnvironment(
-  'FS_APPCHECK_DEBUG_TOKEN',
-);
+/// `--dart-define=FS_APPCHECK_DEBUG_TOKEN=…` (WP-5b). Audit 17: empty in a
+/// release build, so a registered debug token can never ship in the binary.
+const String kAppCheckDebugToken = kReleaseMode
+    ? ''
+    : String.fromEnvironment('FS_APPCHECK_DEBUG_TOKEN');
 
 /// Hooks an `integration_test` sets before starting a run. Read by
 /// `FlappySpikesGame` only when [kE2E] (or a test) enables them.

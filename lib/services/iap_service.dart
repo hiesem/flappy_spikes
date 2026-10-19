@@ -520,7 +520,7 @@ const Map<String, String> _billingReasons = {
   if (e is TimeoutException) {
     return (reason: 'Store timeout', code: 'timeout');
   }
-  return (reason: 'Store error', code: e.runtimeType.toString());
+  return (reason: 'Store error', code: errorKind(e));
 }
 
 /// Keeps `Purchase failed: <reason>` inside the 320 pt playfield.
@@ -707,7 +707,7 @@ class StoreIapService implements IapService {
       );
     } catch (e) {
       // Includes a details conversion failure inside the plugin.
-      iapLog('queryProductDetails failed: ${e.runtimeType}: $e');
+      iapLog('queryProductDetails failed: ${errorKind(e)}: $e');
       _notFound.removeAll(ids); // unknown now: report the error instead
       _queryFailure = _failureFromException(e);
     }
@@ -899,7 +899,7 @@ class StoreIapService implements IapService {
       final failure = _failureFromException(e);
       // The plugin lost its native details cache: re-query next time.
       if (failure.code == 'NOT_FOUND') _details.remove(p);
-      iapLog('buy ${p.storeId} threw ${e.runtimeType}');
+      iapLog('buy ${p.storeId} threw ${errorKind(e)}');
       _fail(p, failure);
     }
   }

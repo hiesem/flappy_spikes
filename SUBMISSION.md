@@ -101,7 +101,9 @@ To build a new AAB after changes:
 ```bash
 export PATH="/c/Program Files/Microsoft/jdk-17.0.19.10-hotspot/bin:/c/Users/kille/flutter/bin:$PATH"
 cd flappy_spikes
-flutter build appbundle --release   # bump version in pubspec.yaml first
+# bump version in pubspec.yaml first; keep $DI (symbols + obfuscation map) per build
+flutter build appbundle --release --obfuscate --split-debug-info=$DI \
+  --extra-gen-snapshot-options=--save-obfuscation-map=$DI/obfuscation.map.json
 ```
 
 ## 3. CI (GitHub Actions)

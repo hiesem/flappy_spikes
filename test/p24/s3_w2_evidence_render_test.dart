@@ -18,13 +18,13 @@ void main() {
   final shots = <String, double>{
     for (var s = 4; s <= 7; s++) 'scene${s}_mid': kTotal + (s - 1) * kE + kE / 2,
     for (var k = 3; k <= 6; k++) ...{
-      'seam${k}_linger_in': kTotal + k * kE - 4000,
-      'seam${k}_start': kTotal + k * kE - 1500,
-      'seam${k}_q25': kTotal + k * kE - 750,
+      'seam${k}_linger_in': kTotal + k * kE - kVWIN / 2 - kLinger * 5 / 7,
+      'seam${k}_start': kTotal + k * kE - kVWIN / 2,
+      'seam${k}_q25': kTotal + k * kE - kVWIN / 4,
       'seam${k}_mid': kTotal + k * kE,
-      'seam${k}_q75': kTotal + k * kE + 750,
-      'seam${k}_end': kTotal + k * kE + 1500,
-      'seam${k}_linger_out': kTotal + k * kE + 3000,
+      'seam${k}_q75': kTotal + k * kE + kVWIN / 4,
+      'seam${k}_end': kTotal + k * kE + kVWIN / 2,
+      'seam${k}_linger_out': kTotal + k * kE + kVWIN / 2 + kLinger * 3 / 7,
     },
   };
   for (final h in [568.0, 730.0]) {

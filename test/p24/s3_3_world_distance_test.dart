@@ -3,7 +3,7 @@ import 'package:flappy_spikes/run/backdrop/world_distance.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// PRD-2.4 §3.3 pacing (WP-W1 brief 4): the camera → world distance
-/// mapping is monotonic and continuous and lands seam k on hoop 40·k, also
+/// mapping is monotonic and continuous and lands seam k on hoop 20·k ([kHoopsPerScene]), also
 /// when the hoop spacing changes (trains, comets) or the camera runs on
 /// without hoops (a ride).
 class _Course implements HoopAnchors {
@@ -48,17 +48,17 @@ void main() {
       expect(dw, greaterThanOrEqualTo(0), reason: 'monotonic at $c');
       expect(dw, lessThanOrEqualTo(step * w.rMax + 1e-9), reason: 'continuous at $c');
       prev = w.w;
-      for (var k = 1; 40 * k < planes.length; k++) {
-        final x = planes[40 * k];
+      for (var k = 1; kHoopsPerScene * k < planes.length; k++) {
+        final x = planes[kHoopsPerScene * k];
         if (c - step < x && c >= x) {
-          // the step that crosses hoop 40k's plane ends within one step of W*
+          // the step that crosses hoop 20k's plane ends within one step of W*
           expect((w.w - k * kE).abs(), lessThanOrEqualTo(step * 1.2 + 1e-6),
-              reason: 'seam $k at hoop ${40 * k}');
+              reason: 'seam $k at hoop ${kHoopsPerScene * k}');
           landed++;
         }
       }
     }
-    expect(landed, greaterThanOrEqualTo(2));
+    expect(landed, greaterThanOrEqualTo(5));
   }
 
   List<double> course(double Function(int i) gap, int n) {
@@ -69,7 +69,7 @@ void main() {
     return p;
   }
 
-  test('regular 310 spacing: rate 300/310, seams on hoops 40, 80, 120', () {
+  test('regular 310 spacing: rate 300/310, seams on hoops 20, 40, 60, …', () {
     fly(course((_) => 310, 130));
   });
 
@@ -78,22 +78,23 @@ void main() {
   });
 
   test('a long ride (no hoops for 4 000 pt) right before a seam', () {
-    fly(course((i) => i == 38 ? 4000 : 310, 130));
+    fly(course((i) => i == kHoopsPerScene - 2 || i == 3 * kHoopsPerScene - 2 ? 4000 : 310, 130));
   });
 
-  test('exactly W* when hoop 40 reaches the centre (landing step)', () {
+  test('exactly W* when hoop 20 reaches the centre (landing step)', () {
     final planes = course((_) => 310, 60);
     final course0 = _Course(planes)..c = 160;
     final w = WorldDistance()..start(160, 0, planes[0], 310);
     var c = 160.0;
-    while (c < planes[40]) {
+    while (c < planes[kHoopsPerScene]) {
       course0.c = c;
-      final next = c + 3 > planes[40] ? planes[40] : c + 3;
+      final next = c + 3 > planes[kHoopsPerScene] ? planes[kHoopsPerScene] : c + 3;
       w.advance(next, course0);
       c = next;
     }
-    expect(w.w, closeTo(40 * kPerHoop, 1e-6));
-    expect(w.target, 80);
+    expect(w.w, closeTo(20 * kPerHoop, 1e-6));
+    expect(w.w, kE);
+    expect(w.target, 40);
   });
 
   test('a knock-back moves the world back a little, no jump', () {

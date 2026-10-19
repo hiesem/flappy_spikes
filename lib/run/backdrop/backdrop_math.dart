@@ -11,24 +11,34 @@ const double kVH = 568;
 /// `TAU`.
 const double kTau = math.pi * 2;
 
-/// The world: a stage (scene) is [kE] long (40 hoops at 300 pt), [kNST]
-/// stages make the loop, a seam's camera move spans [kVWIN] (10 hoops),
-/// centred on the seam, which sits at the screen centre [kANCH].
-const double kE = 12000;
-const int kNST = 10;
-const double kTotal = kE * kNST;
-const double kVWIN = 3000;
-const double kANCH = kVW / 2;
-
-/// Floor-move pieces stay in place this far beyond the window, until they
-/// have scrolled away (`LINGER`).
-const double kLinger = 3500;
+/// Hoops per scene (seam k is centred on hoop 20·k). Owner 2026-10-19
+/// (2.4.0+38): 20 (was the prototype's 40).
+const int kHoopsPerScene = 20;
 
 /// World distance per hoop in the prototype (300 pt between hoop planes).
 const double kPerHoop = 300;
 
-/// Hoops per scene (seam k is centred on hoop 40·k).
-const int kHoopsPerScene = 40;
+/// The world: a stage (scene) is [kE] long ([kHoopsPerScene] hoops at
+/// [kPerHoop] = 6 000), [kNST] stages make the loop, a seam's camera move
+/// spans [kVWIN] (5 hoops, a quarter of the stage as in the prototype's
+/// 3 000 of 12 000), centred on the seam, which sits at the screen centre
+/// [kANCH].
+const double kE = kHoopsPerScene * kPerHoop;
+const int kNST = 10;
+const double kTotal = kE * kNST;
+const double kVWIN = kE / 4;
+const double kANCH = kVW / 2;
+
+/// Floor-move pieces stay in place this far beyond the window, until they
+/// have scrolled away (`LINGER`; the prototype's 3 500 of a 12 000 stage,
+/// scaled with it). A seam's window plus linger (±2 500) ends 1 000 before
+/// the next seam's begins.
+const double kLinger = kE * 3500 / 12000;
+
+/// The prototype's stage length (12 000): what a landmark's sweep
+/// (`mark`) was designed for. A landmark sweeps the same screen distance
+/// over its (shorter) stage, so it still enters and leaves inside it.
+const double kProtoStage = 12000;
 
 /// `mod`: always in [0, n).
 double modD(double a, double n) => ((a % n) + n) % n;

@@ -78,14 +78,6 @@ class SeamFrame {
   /// The seam's world distance (`sc`), the camera (`cam`) and clock (`t`).
   double sc = 0, cam = 0, t = 0;
 
-  /// WP-BG: the background speed (`Ctx.speed`); [sc] and [cam] are in
-  /// scroll units (world distance × [speed]). A piece that moves with the
-  /// window's progress `u` moves `u · kVWIN · speed` (see [win]).
-  double speed = 1;
-
-  /// The window's length in scroll units (`kVWIN` × [speed]).
-  double get win => kVWIN * speed;
-
   /// The leaving (`A`) and arriving (`B`) stages (absolute indices).
   int a = 0, b = 0;
 

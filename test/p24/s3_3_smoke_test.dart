@@ -70,7 +70,10 @@ void main() {
         } else if (e.key.startsWith('scene')) {
           // anchored to the bottom: the last 568 rows are the 568 frame
           final off = (730 - 568) * 320 * 4;
-          expect(diffPixels(small!, Uint8List.sublistView(px, off), threshold: 2), 0,
+          // (≤ 4 px: single anti-aliased edge pixels may round differently
+          // with the 162 pt shift; a frame that is not bottom-anchored
+          // differs in thousands)
+          expect(diffPixels(small!, Uint8List.sublistView(px, off), threshold: 2), lessThanOrEqualTo(4),
               reason: '${e.key} not bottom-anchored');
         }
       }

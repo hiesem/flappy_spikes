@@ -7,7 +7,7 @@ Only the background: the bird, hoops, spikes, HUD and rides are untouched.
 
 | File | What |
 |---|---|
-| `backdrop_math.dart` | constants (`kE` 12 000, `kNST` 10, `kVWIN` 3 000, `kLinger` 3 500, `kANCH` 160, 320 × 568 design), `hash`, `Rng` (`rng`), `smooth`, `smoother`, `modD`, `jsRound` |
+| `backdrop_math.dart` | constants (`kHoopsPerScene` 20, `kE` 6 000, `kNST` 10, `kVWIN` 1 500, `kLinger` 1 750, `kANCH` 160, 320 × 568 design), `hash`, `Rng` (`rng`), `smooth`, `smoother`, `modD`, `jsRound` |
 | `backdrop_ctx.dart` | `Ctx`: a canvas-2D facade (`fillStyle`, `save/restore`, `beginPath`, `arc`, `ellipse`, `roundRect`, `fill/stroke/clip`, gradients, dashes) + the world state (`cam`, `t`, `env`, `xl/xr`, `yTop`, `vert`, `fold`, `cut`) + `strip()` picture cache |
 | `backdrop_helpers.dart` | the prototype's shared helpers: `each`, `wraps`, `ridgeY/ridgePath/ridge/ridgeAt`, `gfillSink/gfillCut`, `flatCloud`, `pill`, `vgrad`, `mark`, `early`, `presence` (≡ 1: no side-by-side seams) |
 | `backdrop_scene.dart` | `Band` (sky, far, mid, near, front) and `BackdropScene` |
@@ -40,18 +40,30 @@ Only the background: the bird, hoops, spikes, HUD and rides are untouched.
 
 ## World distance (pacing, PRD §3.3)
 
-The prototype's `cam` is 300 pt per hoop; seam k sits at `cam = 12 000·k`. The game's hoop spacing is not fixed
+The prototype's `cam` is 300 pt per hoop; seam k sits at `cam = 6 000·k` (see "Scene length" below). The game's hoop spacing is not fixed
 (310, trains 422, comets, rides), so `WorldDistance` integrates the camera instead of scaling it:
 
 - each frame the screen centre `c = camX + 160` moves by `dc` and the world by `r·dc`,
-  `r = (W* − w) / (X* − c)`: W* = 300·n* for the next seam hoop n* (a multiple of 40), X* its plane (real once
+  `r = (W* − w) / (X* − c)`: W* = 300·n* for the next seam hoop n* (a multiple of 20), X* its plane (real once
   planned, else the director's next slot + 310 per slot, never nearer than the right screen edge);
 - `r` is clamped to [0.1, 2.5]: continuous and monotonic; between seams r ≈ 300/310 (the prototype parallax);
-- when hoop n*'s plane reaches the screen centre, `w = W*` exactly (seam k centred on hoop 40·k);
+- when hoop n*'s plane reaches the screen centre, `w = W*` exactly (seam k centred on hoop 20·k);
 - while n* is not planned (a portal ride holds the spawner), the world never comes nearer than
   `300·(slots to plan) + 100` to W*: it holds still under the ride and plays the seam on its hoop afterwards;
 - the run starts with `w = 300·i₀ − (x₀ − c)·300/310` (first hoop i₀ at x₀); a knock-back moves it back a little.
-- First loop: `w < 6 000` draws pure Nest Canopy (no Homecoming, no leftovers); from hoop 400 the loop plays.
+- First loop: `w < 3 000` draws pure Nest Canopy (no Homecoming, no leftovers); from hoop 200 the loop plays.
+
+## Scene length (owner 2026-10-19, 2.4.0+38)
+
+A scene lasts `kHoopsPerScene` = 20 hoops (the prototype: 40), at the 1× scroll and clock of 2.4.0 (36). Everything
+measured in the stage is scaled with it, so a scene is the prototype's composition in half the hoops:
+`kE = 20 · kPerHoop` = 6 000, the seam window `kVWIN = kE / 4` = 1 500 (5 hoops), `kLinger = kE · 3 500 / 12 000`
+= 1 750. A seam (window + linger, ±2 500) ends 1 000 (≈ 3 hoops) before the next one starts; seam k is centred on
+hoop 20·k; the loop of 10 scenes is 200 hoops. Set pieces run on the window's progress `u` (cuckoo, gumballs,
+book, crane), so they play complete in the shorter window. A landmark (`mark`) sweeps 480 pt per stage as in the
+prototype (0.08× instead of 0.04×), so it still enters and leaves inside its scene. The layers' own parallax and
+the ambient clock are unchanged. Colour stages stay at 10 hoops (`stageForHoops`, not tied to the scene).
+Tests: `test/p24/scene_length_test.dart`.
 
 ## Ride hook (WP-R, PRD §3.5)
 
@@ -64,17 +76,6 @@ at ≥ 0.6× with the unplanned-hoop cap off, until it is back on schedule), `co
 the ride scene still covers; the background is not drawn there) and `hidden` (the ride scene covers everything: the
 background is not drawn). `WorldDistance.resync(w)` sets the world while it is not seen (never across the next seam
 hoop or back into the last seam). The ride phase is `RunBackdrop.ridePhase` (`RunState.ride?.phase`).
-
-## Speed (WP-BG, 2026-10-19)
-
-`Config.backgroundSpeedFactor` (2.0) makes the run background animate 2× the prototype: `BackdropPainter.paint(speed:)`
-gives the painters `c.cam = w · speed` (every layer's parallax offset) and `c.t = runClock · speed` (every ambient
-animation), while `c.world = w` picks the scene / seam, so the pacing (seam k on hoop 40·k) is unchanged.
-Stage-relative helpers measure in scroll units: `c.stage` (`kE · speed`; `mark`, `early`, a seam's `sc`) and
-`SeamFrame.win` (`kVWIN · speed`; pieces that move with the window's progress `u`). Use them, not `kE` / `kVWIN`,
-for anything that must stay put on a scrolling band. Rides keep their own speeds (the hook's offsets and reveal are
-ride time); the world distance itself is still integrated from the camera, so the background stays continuous
-through every ride, pause and revive (`test/p24/bg_speed_test.dart`).
 
 ## Colour and frame
 

@@ -18,7 +18,7 @@ abstract class HoopAnchors {
 }
 
 /// PRD-2.4 §3.3 "Pacing": maps the run camera to the prototype's world
-/// distance `cam` (300 pt per hoop, a scene = 12 000, seam k at 12 000·k).
+/// distance `cam` (300 pt per hoop, a scene = 6 000 (20 hoops), seam k at 6 000·k).
 ///
 /// The world distance `w` is integrated from the camera: every frame the
 /// screen-centre track x `c = camX + 160` moves by `dc`, and `w` moves by
@@ -27,7 +27,7 @@ abstract class HoopAnchors {
 ///     r = (W* − w) / (X* − c)
 ///
 /// with W* = 300 · n* the world distance of the next seam hoop n* (the next
-/// multiple of 40 ahead) and X* the track x of that hoop's plane: its real
+/// multiple of 20 ahead) and X* the track x of that hoop's plane: its real
 /// plane once the director has planned it, otherwise a prediction (the
 /// director's next slot plus 310 pt per slot still to come, never closer
 /// than the right screen edge). So
@@ -39,7 +39,7 @@ abstract class HoopAnchors {
 /// * between seams `r ≈ 300 / 310`: the layers move with the camera's
 ///   distance at the prototype's parallax factors (0.97×);
 /// * when hoop n*'s plane reaches the screen centre `w` is exactly W*: seam k
-///   is centred on hoop 40·k. Then n* becomes the next multiple of 40.
+///   is centred on hoop 20·k. Then n* becomes the next multiple of 20.
 /// * while hoop n* is not planned yet the world never gets closer than
 ///   300 per slot still to plan (+100) to W*: when the spawner holds (a
 ///   portal ride) the world holds still near the seam instead of playing
@@ -57,7 +57,7 @@ class WorldDistance {
   /// The world distance (prototype `cam`).
   double w = 0;
 
-  /// The next seam hoop (a multiple of 40).
+  /// The next seam hoop (a multiple of 20).
   int target = 0;
 
   double _c = 0;

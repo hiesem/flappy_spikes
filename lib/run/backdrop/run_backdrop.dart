@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 
-import '../../game/config.dart';
 import '../../game/flappy_game.dart';
 import '../config/run_config.dart';
 import '../hoops/hoop_kind.dart';
@@ -109,7 +108,6 @@ class RunBackdrop extends Component with HasGameReference<FlappySpikesGame> {
       fg: game.foregroundColor,
       opacity: opacity,
       left: -game.extraWidth, // WP-TAB
-      speed: Config.backgroundSpeedFactor, // WP-BG
     );
   }
 

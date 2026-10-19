@@ -7,7 +7,7 @@ import 'water.dart';
 /// PRD-2.4 §3.3 seam 10, Homecoming (Space → Nest Canopy; older move
 /// `descend`): space lifts away and the treetops rise from below. Ported
 /// 1:1 (WP-W1, WP-W3). It is not played in a run's first loop
-/// (hoops 0–39 are pure Nest Canopy, see `BackdropWorld`).
+/// (hoops 0–19 are pure Nest Canopy, see `BackdropWorld`).
 class HomecomingSeam extends OlderSeam {
   const HomecomingSeam();
 

@@ -128,8 +128,8 @@ firebase-ios-sdk (12.19.0 since `firebase_analytics` ^12.6.0) or SPM resolution 
       created in App Store Connect with the same product ids.
 - [x] **AdMob.** iOS app + rewarded / interstitial / banner units exist; `ads_service.dart` has
       `iosUnitId` (release builds) and `iosTestUnitId` (debug / profile), like Android. Still to do:
-      the owner's iPhone in `kAdTestDeviceIds` (hash from the Xcode console on the first ad
-      request), the Unity iOS placements in the AdMob mediation groups, and the UMP IDFA explainer
+      the owner's iPhone as a test device in the AdMob console (run 17: no test-device ids in
+      the code), the Unity iOS placements in the AdMob mediation groups, and the UMP IDFA explainer
       message (AdMob → Privacy & messaging). Ads run on iOS: UMP →
       ATT prompt (`app_tracking_transparency`, after the first frame and only while active, skipped
       when UMP's IDFA message already asked) → `MobileAds.initialize`.

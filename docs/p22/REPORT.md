@@ -118,7 +118,7 @@ Run frame times get worse after the first game: p90 12.8 → 14.7 ms, slow frame
 ## 7. Open items for the owner
 
 1. **Real ads on your Pixel 8 with the Play build. Don't tap them.**
-   - AdMob's test-device hash is derived from ANDROID_ID, which Android keys per signing key. So the Play-signed build (hash `C8EDCAE2408A20189883DF41E7E998DA`) is not covered by the upload-key hash in the code.
+   - AdMob's test-device hash is derived from ANDROID_ID, which Android keys per signing key. So the Play-signed build is not covered by the upload-key hash. (Run 17: the hashes are no longer in the code; the owner's phones are registered as test devices in the AdMob console.)
    - **The code fix** (commit `ad5f31c`) is on `feat/2.2` but **not in build 9**.
    - The AdMob console test device "Owner Pixel 8", registered by advertising ID, had not taken effect 5 minutes later. It may need more time.
    - Mediated Unity ads are never test ads.

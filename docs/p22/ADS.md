@@ -68,9 +68,10 @@ pause card and the squeeze walls. Tests: `test/p22/s7_banner_layout_test.dart`.
 - Banner `ca-app-pub-2660521344509391/8797133596`, interstitial
   `ca-app-pub-2660521344509391/1357627279`, rewarded `/3758032081`. These are
   used in release builds only. Debug and profile builds use Google's test units.
-- Test devices (§7.5.3): the Pixel 8's hashed ID `375F7680953C1B0F47A1FC3E475A9AA1`
-  is in `kAdTestDeviceIds` (`lib/services/ads_consent.dart`). It is applied in
-  every build mode, so the owner's phone gets test ads with the real units too.
+- Test devices (§7.5.3): the owner's phones are registered as test devices in
+  the AdMob console (run 17, 2026-10-20: the hashed IDs were removed from the
+  code, where `kAdTestDeviceIds` used to hold them), so they get test ads with
+  the real units too.
   Emulators are test devices automatically.
 
 ## §7.5.7 performance gate (Pixel 8, profile build, Google test banner)
@@ -102,7 +103,7 @@ harness with `--dart-define=ADSPERF_INTERSTITIAL=true` was used:
   stays up. Closing it with its × goes Home at full height (711 pt), the
   banner is off, and `lastFullScreenAdClosedAt` is set.
 - Logcat confirms the hashed test-device ID above
-  ("Use RequestConfiguration…setTestDeviceIds(…375F7680953C1B0F47A1FC3E475A9AA1…)").
+  ("Use RequestConfiguration…setTestDeviceIds(…<hashed id>…)").
 - Not done on the device: the 60 s / first-3-runs guards (covered by
   `test/p22/s7_ads_test.dart` with the fakes) and the consent-form logo check
   (it needs a consent reset with the UMP debug geography EEA, which would

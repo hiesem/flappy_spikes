@@ -221,9 +221,10 @@ class RunDirector {
 
   bool _on(ElementId e) => enabled.contains(e);
 
-  /// §3.6 the Big Hoops multiplier for slot [i]. PRD-2.3 §0 item 3: hoop 0
-  /// always stays at 118 (§10.2 wins over §14.4), also with Big Hoops.
-  double _bigMult(int i, DirectorContext ctx) => i == 0 ? 1 : ctx.bigHoopsMult;
+  /// §3.6 the Big Hoops multiplier for slot [i]. DEVIATION from PRD-2.3 §0
+  /// item 3 (owner, 2026-10-19): with Big Hoops armed hoop 0 grows too (big
+  /// and gold already on the waiting screen); without it hoop 0 stays 118.
+  double _bigMult(int i, DirectorContext ctx) => ctx.bigHoopsMult;
   bool get _portalOn => _on(ElementId.portal);
 
   // region WP-A — at most N portal rides per run (PRD-2.3.1 §17)
@@ -531,8 +532,8 @@ class RunDirector {
     );
 
     // PRD-2.3 §10.2 hoop 0 of a run: plain (no special kind, no motion, no
-    // tilt, nothing attached), opening 118 (also with Big Hoops, §0 item 3),
-    // centre 16 pt below the middle. Debug-forced slot elements wait for
+    // tilt, nothing attached), opening 118, centre 16 pt below the middle.
+    // DEVIATION from §0 item 3 (owner, 2026-10-19): Big Hoops grows it too. Debug-forced slot elements wait for
     // hoop 1.
     if (fixedFirstHoop && i == 0 && _startIndex == 0) {
       final y = ctx.viewHeight / 2 + RunConfig.hoop0DropY;
@@ -546,7 +547,7 @@ class RunDirector {
         element: ElementId.normalHoop,
         trackX: trackX,
         centreY: y,
-        opening: RunConfig.opening0,
+        opening: cap(RunConfig.opening0 * _bigMult(i, ctx)),
         advance: spacing,
       );
     }

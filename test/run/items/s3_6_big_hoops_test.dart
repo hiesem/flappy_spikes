@@ -59,10 +59,10 @@ void main() {
         final b = run.state.bigHoops!;
         expect(b.start, 0);
         expect(b.duration, inInclusiveRange(30, 40));
-        // PRD-2.3 §0 item 3: the first hoop stays 118 (the fixed easy
-        // hoop 0) but is gold; from hoop 1 the opening is 1.5× (132).
+        // Owner 2026-10-19 (deviation from PRD-2.3 §0 item 3): the first
+        // hoop grows too (118 × 1.5 = 177) and is gold; so is hoop 1.
         final first = run.spawner.hoops.first;
-        expect(first.opening, RunConfig.opening0);
+        expect(first.opening, closeTo(RunConfig.opening0 * 1.5, 1e-9));
         expect(first.look.colors, RingColors.gold);
         expect(BigHoopsFeature.isGold(first), isTrue);
         final second = run.spawner.slotLog.firstWhere((p) => p.index == 1);
@@ -178,8 +178,7 @@ void main() {
         final band = h - 2 * RunConfig.stripHeight;
         final cap = band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin);
         var sawEase = false, sawPlain = false;
-        for (final (t, opening, idx, gold, normal, _, tier, kind)
-            in spawned) {
+        for (final (t, opening, idx, gold, normal, _, tier, kind) in spawned) {
           final m = b.mult(t);
           if (kind == HoopKindId.rideRing) continue;
           // PRD-2.4 §2.3: the portal stays 118 with Big Hoops too.
@@ -187,8 +186,8 @@ void main() {
           final base = portal
               ? RunConfig.portalOpening
               : run.director.openingFor(idx);
-          // PRD-2.3 §0 item 3: hoop 0 stays 118 with Big Hoops.
-          final mp = idx == 0 || portal ? 1.0 : b.mult(planned[idx] ?? t);
+          // Owner 2026-10-19: hoop 0 grows with Big Hoops too.
+          final mp = portal ? 1.0 : b.mult(planned[idx] ?? t);
           expect(opening, closeTo(min(base * mp, cap), 1e-6), reason: 't=$t');
           if (normal) expect(gold, m > 1 || tier, reason: 't=$t m=$m');
           // Big Hoops never paints a special kind; only the streak's own

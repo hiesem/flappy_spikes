@@ -151,9 +151,7 @@ void main() {
           for (final p in run.spawner.slotLog) p.index: run.state.runClock,
         };
         run.events.on<HoopSpawned>((e) {
-          final mult = boost.mult(
-            planned[e.plan.index] ?? run.state.runClock,
-          );
+          final mult = boost.mult(planned[e.plan.index] ?? run.state.runClock);
           mults.add(mult);
           // PRD-2.4 §2: comet-boost hoops take their index's curve size × Big
           // Hoops; the portal stays 118; a ride ring takes the multiplier when
@@ -283,9 +281,9 @@ void main() {
       verify: (g, _) async {
         final run = await startRun(g, starter: Powerup.bigHoops);
         expect(g.storage.armedPowerup, 'none');
-        // PRD-2.3 §0 item 3: hoop 0 stays 118 also with Big Hoops (was
-        // 118 × 1.5 = 177); from hoop 1 the ×1.5 applies (§14.4).
-        expect(run.spawner.hoops.first.opening, 118);
+        // Owner 2026-10-19 (deviation from PRD-2.3 §0 item 3): hoop 0 is
+        // 118 × 1.5 = 177 with Big Hoops, like every hoop after it.
+        expect(run.spawner.hoops.first.opening, closeTo(177, 1e-9));
         expect(run.spawner.hoops.first.look.colors, RingColors.gold);
       },
     );

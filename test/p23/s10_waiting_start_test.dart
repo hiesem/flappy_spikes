@@ -21,6 +21,7 @@ import 'package:flappy_spikes/versus/opponent.dart';
 import 'package:flappy_spikes/versus/timeline.dart';
 import 'package:flutter/painting.dart' show Canvas, Paint, Rect;
 import 'package:flutter/services.dart';
+import 'package:flappy_spikes/run/items/big_hoops.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -259,12 +260,18 @@ void main() {
       gameSize: Vector2(Config.worldWidth, Config.worldHeight),
     );
     big.testGameWidget(
-      'PRD-2.3 §0 item 3: hoop 0 stays 118 with Big Hoops',
+      'Big Hoops: hoop 0 is big (177) and gold already on the waiting '
+      'screen (owner 2026-10-19, deviation from PRD-2.3 §0 item 3)',
       setUp: (game, _) => _boot(game),
       verify: (game, _) async {
-        final run = await startRun(game, starter: Powerup.bigHoops);
+        game.storage.armedPowerup = Powerup.bigHoops.name;
+        final run = await openRun(game);
         expect(run.setup.starter, Powerup.bigHoops);
-        expect(hoopsOf(game).first.opening, 118);
+        expect(run.waiting, isTrue, reason: 'still the waiting screen');
+        final h0 = hoopsOf(game).first;
+        expect(h0.opening, closeTo(177, 1e-9));
+        expect(BigHoopsFeature.isGold(h0), isTrue);
+        expect(h0.position.y, game.viewHeight / 2 + 16, reason: 'same spot');
       },
     );
 
@@ -382,10 +389,9 @@ void main() {
         expect(game.world.children.whereType<FirstRunVeil>(), isEmpty);
         await _wait(game, 10);
         expect(_count(spy, 'tap_reminder_shown'), 1);
-        expect(
-          spy.events.firstWhere((e) => e.$1 == 'tap_reminder_shown').$2,
-          {'mode': 'versus'},
-        );
+        expect(spy.events.firstWhere((e) => e.$1 == 'tap_reminder_shown').$2, {
+          'mode': 'versus',
+        });
         game.onPlayfieldTap();
         expect(game.run!.started, isTrue);
         expect(game.runBirdVelocityY!, lessThan(0));

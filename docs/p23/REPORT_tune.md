@@ -36,7 +36,7 @@ A real player who touches the rim on about half the passes earns roughly **1.6 c
   - also `s3_16_puzzle_test`, `s3_15_bonus_screen_test`, `p3_interactions_e2e_test`, `p45_gameplay_e2e_test`.
 - **Revive ladder (§14.2):** `s3_14_revive_test`, `s3_3_s3_7_lives_test`.
 - **Squeeze in hoops (§14.4):** `s3_17_squeeze_test`.
-- **Hoop 0 stays 118 with Big Hoops (§0 item 3):** `s3_6_big_hoops_test`, `p1_gameplay_e2e_test`.
+- **Hoop 0 stays 118 with Big Hoops (§0 item 3):** `s3_6_big_hoops_test`, `p1_gameplay_e2e_test`. DEVIATION 2026-10-19 (owner, 2.4.0 42): with Big Hoops hoop 0 grows too (177, gold, already on the waiting screen); `s10_waiting_start_test`.
 - **Feather and piece (§14.2):** `s19_random_opening_test`, `s27_one_bonus_director_test`, `p45_gameplay_e2e_test`.
 - **Level-up journeys:** `home_v3_round1_e2e_test`, `home_v3_round2_e2e_test`, `p2_gameplay_e2e_test`.
 - **Spawn timing:** `s15_scroll_in_test`. A debug-forced moving ring on the very first slot can swing about 7 pt into view at 711 pt; real runs start at hoop 0, which never moves.

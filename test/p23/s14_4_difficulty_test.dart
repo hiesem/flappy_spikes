@@ -67,15 +67,26 @@ void main() {
       expect(t.movingChance(80), .75);
       expect(t.movingChance(200), .75);
       expect(t.movingChance(47), closeTo(.40 + .20 * 12 / 25, 1e-9));
-      for (final (i, v) in [(0, 0.0), (9, 0.0), (10, .30), (19, .30), (20, .50), (34, .50), (35, .60), (44, .60), (45, .78), (99, .78)]) {
+      for (final (i, v) in [
+        (0, 0.0),
+        (9, 0.0),
+        (10, .30),
+        (19, .30),
+        (20, .50),
+        (34, .50),
+        (35, .60),
+        (44, .60),
+        (45, .78),
+        (99, .78),
+      ]) {
         expect(t.tiltChance(i), v, reason: 'hoop $i');
         expect(t.tiltChance(i), t.bandFor(i).tilt, reason: 'hoop $i');
       }
     });
 
     test('the director uses the curves: hoop 0 at 118, then the opening '
-        'curve; Big Hoops ×1.5 from hoop 1 (177 at hoop 1), hoop 0 stays '
-        '118 (§0 item 3)', () {
+        'curve; Big Hoops ×1.5 from hoop 0 (177 at hoops 0 and 1; owner '
+        '2026-10-19, deviation from §0 item 3)', () {
       final plain = fly(director(), 60);
       expect(plain[0].$1.opening, 118);
       expect(plain[1].$1.opening, 118);
@@ -88,7 +99,7 @@ void main() {
         2,
         ctxFor: (_) => DirectorContext.open(711, bigHoopsMult: 1.5),
       );
-      expect(big[0].$1.opening, 118);
+      expect(big[0].$1.opening, closeTo(177, 1e-9));
       expect(big[1].$1.opening, closeTo(177, 1e-9));
     });
 
@@ -178,8 +189,11 @@ void main() {
           if (s.kind == HoopKindId.portal) lastPortal = s.index;
           if (s.cometHang) {
             expect(s.index, greaterThanOrEqualTo(8));
-            expect(s.index - last, greaterThanOrEqualTo(18),
-                reason: 'seed $seed');
+            expect(
+              s.index - last,
+              greaterThanOrEqualTo(18),
+              reason: 'seed $seed',
+            );
           }
           // Eligible: a normal slot from 8, ≥ 18 after the last comet, not
           // within 10 hoops of a portal.

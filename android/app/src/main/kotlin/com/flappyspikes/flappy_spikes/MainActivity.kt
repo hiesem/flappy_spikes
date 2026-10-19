@@ -232,19 +232,13 @@ class MainActivity : FlutterActivity() {
                             )
                             return
                         }
+                        // DEBUG_RINGTONE: 6 s with ringtone usage.
                         val tone = RingtoneManager.getRingtone(context, uri)
                         tone.audioAttributes = AudioAttributes.Builder()
-                            .setUsage(
-                                if (media) AudioAttributes.USAGE_MEDIA
-                                else AudioAttributes.USAGE_NOTIFICATION_RINGTONE
-                            )
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
                             .build()
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) tone.isLooping = media
                         tone.play()
-                        Handler(Looper.getMainLooper()).postDelayed(
-                            { tone.stop() },
-                            if (media) 20000L else 6000L,
-                        )
+                        Handler(Looper.getMainLooper()).postDelayed({ tone.stop() }, 6000L)
                     } catch (_: Exception) {
                     }
                 }

@@ -285,7 +285,7 @@ void main() {
       expect(xml, contains('@drawable/ic_launcher_monochrome'));
     });
 
-    test('assets/images/app_icon.png is the v3 (icon7) picture: 1024, no '
+    test('assets/images/app_icon.png is the v3 (icon8) picture: 1024, no '
         'alpha, deep blue corners, the pink bird in the middle', () async {
       final bytes = File('assets/images/app_icon.png').readAsBytesSync();
       expect(pngSize(bytes), (1024, 1024));

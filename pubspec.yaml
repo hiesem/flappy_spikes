@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.4.0+39
+version: 2.4.0+40
 
 environment:
   sdk: ^3.12.2
@@ -126,7 +126,7 @@ flutter:
           weight: 600
     # endregion WP-0b
 
-# App icon v3 = icon_concepts/v3/icon7.png (2026-10-19), source copy in
+# App icon v3 = icon_concepts/v3/icon8.png (2026-10-19, was icon7), source copy in
 # assets/icon/app_icon_src.png; every file is rendered by
 # tool/render_app_icon_v3.py (replaces the 17C render_app_icon.py). iOS uses
 # the full picture; on Android it fills exactly the 72 dp the launcher shows
@@ -144,7 +144,7 @@ flutter_launcher_icons:
   # into the extended blue background), so no extra inset.
   adaptive_icon_foreground_inset: 0
 
-# Splash: the v3 (icon7) icon on the deep blue of its corners, #003ADC.
+# Splash: the v3 (icon8) icon on the deep blue of its corners, #003ADC.
 # Android 12+ gets its own 960 px render (background + foreground, its rim
 # eased into the same colour so the 72 dp circle does not show).
 # iOS: `create` rewrites ios/Runner/Info.plist UIStatusBarHidden to false

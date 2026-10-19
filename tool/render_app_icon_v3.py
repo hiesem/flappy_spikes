@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""App icon v3 ("icon7"): renders every app-icon file from one picture.
+"""App icon v3 ("icon8"; was icon7): renders every app-icon file from one picture.
 
 Source of truth: ``assets/icon/app_icon_src.png`` (a copy of the workspace's
-``icon_concepts/v3/icon7.png``, 1254 x 1254, full-bleed). Pass another
+``icon_concepts/v3/icon8.png``, 1254 x 1254, full-bleed). Pass another
 picture as the first argument to replace the source first.
 
   assets/icon/ic_background.png    432 x 432  adaptive layer: the full picture (108 dp)
@@ -29,7 +29,7 @@ and eases into ``SPLASH`` towards the canvas edge, so no square edge shows.
 Needs Pillow + numpy + scipy (system Python has no PIL; use a venv):
 
   python3 -m venv /tmp/v && /tmp/v/bin/pip install pillow numpy scipy
-  /tmp/v/bin/python tool/render_app_icon_v3.py [path/to/icon7.png]
+  /tmp/v/bin/python tool/render_app_icon_v3.py [path/to/icon8.png]
 
 Then: ``dart run flutter_launcher_icons`` and
 ``dart run flutter_native_splash:create`` (and set UIStatusBarHidden back to

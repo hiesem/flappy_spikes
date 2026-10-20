@@ -15,6 +15,7 @@ import '../versus/run_entry.dart';
 import '../versus/upload_queue.dart';
 import 'e2e.dart';
 import 'identity.dart';
+import 'integrity_guard.dart';
 import 'redact.dart';
 import 'versus_auth.dart';
 import 'versus_service.dart';
@@ -37,6 +38,7 @@ class FirebaseVersusBackend implements VersusBackend {
     VersusAuth? auth,
     Future<void> Function()? appCheck,
     void Function(String name, Map<String, Object> params)? analytics,
+    this.integrity,
   }) : auth = auth ?? FirebaseVersusAuth(app: app),
        _appCheck = appCheck ?? activateAppCheck,
        _analytics = analytics ?? _firebaseAnalytics;
@@ -47,6 +49,9 @@ class FirebaseVersusBackend implements VersusBackend {
   final VersusAuth auth;
   final Future<void> Function() _appCheck;
   final void Function(String, Map<String, Object>) _analytics;
+
+  /// PRD-2.5 §3.3 the guard of [writeRun] (null = [IntegrityGuard.instance]).
+  final IntegrityGuard? integrity;
 
   /// PRD-2.3.1 §2.3 the time box of the start-up liveness check of a
   /// persisted user (offline: the user is kept and the start goes on).
@@ -78,7 +83,8 @@ class FirebaseVersusBackend implements VersusBackend {
   /// `FS_E2E` builds (its debug secret is printed to logcat by the native
   /// SDK — "Enter this debug secret into the allow list …" — for the
   /// orchestrator to register; a `FS_APPCHECK_DEBUG_TOKEN` dart-define
-  /// passes a registered one). iOS: App Attest with DeviceCheck fallback.
+  /// passes a registered one). iOS: App Attest only (PRD-2.5 §3.2: every
+  /// iOS 15 device supports it; no DeviceCheck fallback).
   /// [debugToken] overrides the dart-define (the P6 live versus e2e prints
   /// and passes its own, WP-6a).
   ///
@@ -103,7 +109,7 @@ class FirebaseVersusBackend implements VersusBackend {
           : const AndroidPlayIntegrityProvider(),
       providerApple: debug
           ? const AppleDebugProvider()
-          : const AppleAppAttestWithDeviceCheckFallbackProvider(),
+          : const AppleAppAttestProvider(),
     );
     _appCheckActive = true;
     debugPrint(
@@ -250,10 +256,17 @@ class FirebaseVersusBackend implements VersusBackend {
     ];
   }
 
+  /// PRD-2.5 §3.3 (D1, silent): an untrusted install reports the run as
+  /// written ([UploadWrite.done]) without the transaction, so the queue,
+  /// the daily counters, the UI and analytics are exactly those of a real
+  /// write. The guard's verdict is awaited for at most 2 s.
   @override
   Future<UploadWrite> writeRun(QueuedRun run, PlayerFields f) async {
     final uid = this.uid;
     if (uid == null) return UploadWrite.retry;
+    final guard = integrity ?? IntegrityGuard.instance;
+    await guard.waitReady();
+    if (!guard.trusted) return UploadWrite.done;
     final ref = _db.collection('players').doc(uid);
     try {
       await _db.runTransaction((tx) async {

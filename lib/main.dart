@@ -10,6 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'game/audio_counter.dart';
 import 'components/banner_slot.dart';
 import 'game/flappy_game.dart';
+import 'game/save_seal.dart';
+import 'game/storage.dart';
 import 'services/app_info.dart';
 import 'services/game_services.dart';
 import 'services/e2e.dart';
@@ -21,6 +23,7 @@ import 'services/reminders.dart';
 import 'services/soak.dart';
 import 'run/config/versus_config.dart';
 import 'services/identity.dart';
+import 'services/integrity_guard.dart';
 import 'services/versus_service.dart';
 import 'share/share_flow.dart';
 
@@ -133,6 +136,20 @@ Future<void> main() async {
     backend: _isMobile && !kE2E && !kSoak ? const InAppReviewBackend() : null,
   );
 
+  // region PRD-2.5 WP-GUARD / WP-SAVE: the integrity verdict (silent, D1)
+  // and the tamper-evident save on the mobile products; never in FS_E2E /
+  // soak builds (in-memory prefs). One `integrity_untrusted` event per
+  // process, once Firebase is up.
+  IntegrityGuard.instance.onUntrusted = (reason) => unawaited(
+    services.ensureFirebase().then((ok) {
+      if (ok) services.logIntegrityUntrusted(reason);
+    }),
+  );
+  if (_isMobile && !kE2E && !kSoak) {
+    GameStorage.defaultSealer = PlatformSaveSealer();
+  }
+  // endregion PRD-2.5
+
   game = FlappySpikesGame(
     worldHeight: worldHeight,
     services: services,
@@ -208,6 +225,9 @@ Future<void> main() async {
     // game's storage load (S6-F01: its startAfter gate, shared with every
     // other start path); initialize() never throws (failure = solo).
     unawaited(services.initialize());
+    // PRD-2.5 §3.3: the platform integrity check, never awaited by gameplay
+    // (only versus writes and leaderboard submits wait, at most 2 s).
+    unawaited(IntegrityGuard.instance.start());
     // versus.initialize() waits for Firebase + storage itself (startAfter).
     unawaited(versus.initialize());
     // endregion WP-5b

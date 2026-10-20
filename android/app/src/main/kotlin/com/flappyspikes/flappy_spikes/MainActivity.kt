@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import android.content.pm.Signature
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.AudioPlaybackConfiguration
@@ -20,6 +22,8 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.Settings
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Log
 import com.google.android.gms.games.PlayGames
 import com.google.android.gms.games.PlayGamesSdk
@@ -27,6 +31,12 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
+import java.security.KeyStore
+import java.security.MessageDigest
+import java.util.concurrent.Executors
+import javax.crypto.KeyGenerator
+import javax.crypto.Mac
+import javax.crypto.SecretKey
 
 class MainActivity : FlutterActivity() {
     private var audioWatch: AudioWatch? = null
@@ -134,6 +144,16 @@ class MainActivity : FlutterActivity() {
                     "isTestLab" -> result.success(
                         Settings.System.getString(contentResolver, "firebase.test.lab") == "true"
                     )
+                    // PRD-2.5 §3.3 / §3.4: off the main thread (Keystore
+                    // calls can take a while); the answer goes back on it.
+                    // Every failure answers null: the Dart side fails open.
+                    "integrity" -> background(result) { integrityInfo() }
+                    "sealKey" -> background(result) { SaveSeal.ensureKey() }
+                    "seal" -> {
+                        val data = (call.arguments as? List<*>)?.filterIsInstance<ByteArray>()
+                        background(result) { if (data == null) null else SaveSeal.mac(data) }
+                    }
+                    "sealDrop" -> background(result) { SaveSeal.drop(); null }
                     else -> result.notImplemented()
                 }
             }
@@ -254,6 +274,58 @@ class MainActivity : FlutterActivity() {
             }
             debugReceiver = r
         }
+    }
+
+    private val worker = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    /** Runs [work] on [worker]; its value (or null on any error) goes back on main. */
+    private fun background(result: MethodChannel.Result, work: () -> Any?) {
+        worker.execute {
+            val value = try { work() } catch (_: Throwable) { null }
+            mainHandler.post { result.success(value) }
+        }
+    }
+
+    /**
+     * PRD-2.5 §3.3 WP-GUARD: the SHA-256 of every signing certificate (the
+     * whole rotation lineage on API 28+) and the installer, compared in Dart.
+     */
+    @Suppress("DEPRECATION")
+    private fun integrityInfo(): Map<String, Any?> {
+        val pm = packageManager
+        val signatures: Array<Signature> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.getPackageInfo(
+                    packageName,
+                    PackageManager.PackageInfoFlags.of(PackageManager.GET_SIGNING_CERTIFICATES.toLong()),
+                )
+            } else {
+                pm.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+            }
+            val si = info.signingInfo
+            when {
+                si == null -> emptyArray()
+                si.hasMultipleSigners() -> si.apkContentsSigners ?: emptyArray()
+                else -> si.signingCertificateHistory ?: emptyArray()
+            }
+        } else {
+            pm.getPackageInfo(packageName, PackageManager.GET_SIGNATURES).signatures ?: emptyArray()
+        }
+        val certs = signatures.map { sig ->
+            MessageDigest.getInstance("SHA-256").digest(sig.toByteArray())
+                .joinToString("") { "%02x".format(it) }
+        }
+        val installer = try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                pm.getInstallSourceInfo(packageName).installingPackageName
+            } else {
+                pm.getInstallerPackageName(packageName)
+            }
+        } catch (_: Exception) {
+            null
+        }
+        return mapOf("certs" to certs, "installer" to installer)
     }
 
     /** PRD-2.3 §13.3: a local heads-up notification with sound (debug only). */
@@ -526,5 +598,62 @@ class AudioWatch(private val am: AudioManager) : EventChannel.StreamHandler {
             }
         }
         modeListener = null
+    }
+}
+
+/**
+ * PRD-2.5 §3.4 WP-SAVE: the device key of the tamper-evident save, a
+ * non-exportable AndroidKeyStore HMAC-SHA256 key. The MACs are computed
+ * here; the key never leaves the Keystore. Not in the auto-backup, so a
+ * restore lands on the "key absent" (trusted) path.
+ */
+object SaveSeal {
+    private const val ALIAS = "fs_save_seal_v1"
+
+    private fun store(): KeyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+
+    private fun create() {
+        val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_HMAC_SHA256, "AndroidKeyStore")
+        gen.init(KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_SIGN).build())
+        gen.generateKey()
+    }
+
+    /** {existed: Boolean}: creates the key when it is missing. */
+    @Synchronized
+    fun ensureKey(): Map<String, Any> {
+        val existed = store().containsAlias(ALIAS)
+        if (!existed) create()
+        return mapOf("existed" to existed)
+    }
+
+    private fun macs(data: List<ByteArray>): List<ByteArray> {
+        val key = store().getKey(ALIAS, null) as SecretKey
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(key)
+        return data.map { mac.doFinal(it) }
+    }
+
+    /** {macs, rekeyed}: an unusable key is replaced once (rekeyed = true). */
+    @Synchronized
+    fun mac(data: List<ByteArray>): Map<String, Any>? {
+        return try {
+            mapOf("macs" to macs(data), "rekeyed" to false)
+        } catch (_: Exception) {
+            try {
+                drop()
+                create()
+                mapOf("macs" to macs(data), "rekeyed" to true)
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
+
+    @Synchronized
+    fun drop() {
+        try {
+            store().deleteEntry(ALIAS)
+        } catch (_: Exception) {
+        }
     }
 }

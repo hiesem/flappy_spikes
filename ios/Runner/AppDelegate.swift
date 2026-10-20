@@ -2,6 +2,7 @@ import AVFoundation
 import Flutter
 import UIKit
 import UserNotifications
+import Security
 import os.log
 
 @main
@@ -54,6 +55,14 @@ import os.log
         result(false)
       case "launchArgs":
         result(ProcessInfo.processInfo.arguments)
+      // PRD-2.5 §3.3 WP-GUARD / §3.4 WP-SAVE (fail-open: nil on errors).
+      case "integrity":
+        result(Integrity.info())
+      case "sealKey":
+        result(SaveSealKey.ensure())
+      case "sealDrop":
+        SaveSealKey.drop()
+        result(nil)
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -915,5 +924,86 @@ final class Haptics: NSObject {
     if clicks <= 3 || clicks % 50 == 0 {
       FSLog.info("haptics click #\(clicks) (rigid, intensity 1.0)")
     }
+  }
+}
+
+/// PRD-2.5 §3.3 WP-GUARD: the embedded provisioning profile's team. App
+/// Store and TestFlight builds carry none (Apple re-signs them); our own
+/// dev / ad-hoc builds carry our team; a re-signed sideload another team.
+/// Compared in Dart.
+enum Integrity {
+  static func info() -> [String: Any] {
+    var out: [String: Any] = [
+      "sandboxReceipt":
+        Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+    ]
+    if let team = provisionTeam() {
+      out["provisionTeam"] = team
+    }
+    return out
+  }
+
+  private static func provisionTeam() -> String? {
+    guard
+      let path = Bundle.main.path(forResource: "embedded", ofType: "mobileprovision"),
+      let data = FileManager.default.contents(atPath: path),
+      let text = String(data: data, encoding: .isoLatin1),
+      let start = text.range(of: "<?xml"),
+      let end = text.range(of: "</plist>", range: start.lowerBound..<text.endIndex)
+    else { return nil }
+    let xml = String(text[start.lowerBound..<end.upperBound])
+    guard
+      let plistData = xml.data(using: .isoLatin1),
+      let plist = try? PropertyListSerialization.propertyList(
+        from: plistData, options: [], format: nil) as? [String: Any],
+      let teams = plist["TeamIdentifier"] as? [String],
+      let team = teams.first
+    else { return nil }
+    return team
+  }
+}
+
+/// PRD-2.5 §3.4 WP-SAVE: the device key of the tamper-evident save, a
+/// 32-byte random Keychain generic password (AfterFirstUnlock, not
+/// ThisDeviceOnly: it moves with encrypted backups together with the
+/// preferences). The MACs are computed in Dart.
+enum SaveSealKey {
+  private static let service = "com.flappyspikes.saveseal"
+  private static let account = "v1"
+
+  private static var baseQuery: [String: Any] {
+    [
+      kSecClass as String: kSecClassGenericPassword,
+      kSecAttrService as String: service,
+      kSecAttrAccount as String: account,
+    ]
+  }
+
+  /// ["existed": Bool, "key": bytes], or nil when the Keychain fails.
+  static func ensure() -> [String: Any]? {
+    var query = baseQuery
+    query[kSecReturnData as String] = true
+    query[kSecMatchLimit as String] = kSecMatchLimitOne
+    var item: CFTypeRef?
+    let status = SecItemCopyMatching(query as CFDictionary, &item)
+    if status == errSecSuccess, let key = item as? Data, key.count >= 16 {
+      return ["existed": true, "key": FlutterStandardTypedData(bytes: key)]
+    }
+    if status != errSecItemNotFound && status != errSecSuccess { return nil }
+    if status == errSecSuccess { SecItemDelete(baseQuery as CFDictionary) }
+    var bytes = [UInt8](repeating: 0, count: 32)
+    guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else {
+      return nil
+    }
+    let key = Data(bytes)
+    var add = baseQuery
+    add[kSecValueData as String] = key
+    add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+    guard SecItemAdd(add as CFDictionary, nil) == errSecSuccess else { return nil }
+    return ["existed": false, "key": FlutterStandardTypedData(bytes: key)]
+  }
+
+  static func drop() {
+    SecItemDelete(baseQuery as CFDictionary)
   }
 }

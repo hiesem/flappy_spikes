@@ -2,18 +2,28 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../achievements/ach_state.dart';
 import '../menu/home_mode.dart';
+import '../services/integrity_guard.dart';
 import '../skins/look.dart';
 import 'config.dart';
+import 'save_seal.dart';
 
 /// Persistence layer for bestScore / gamesPlayed / muteSound / musicVolume /
 /// rumble / homeMode and the 2.0 menu state (coins, skins, powerup slot, no-ads popup,
 /// free coins, claimed level rewards).
 class GameStorage {
-  GameStorage({DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
+  GameStorage({DateTime Function()? clock, SaveSealer? sealer})
+    : _clock = clock ?? DateTime.now,
+      _sealer = sealer ?? defaultSealer;
+
+  /// PRD-2.5 §3.4 WP-SAVE: the sealer every new storage uses unless one is
+  /// passed. main.dart sets the platform sealer on the mobile products;
+  /// null (tests, Linux, FS_E2E / soak) = no sealing at all.
+  static SaveSealer? defaultSealer;
 
   /// The preferences handle [load] resolved. The legacy API keeps every
   /// value in a memory cache that its setters update synchronously, so a
@@ -118,6 +128,8 @@ class GameStorage {
   // PRD-2.3 §21.3 the last uploaded versus picture (WP-AV: no pictures any
   // more; the stale record is removed at load and by "Delete my data").
   static const String _versusAvatarKey = 'versusAvatar';
+  // PRD-2.5 §3.4 WP-SAVE the sealed snapshots ({cur, prev}).
+  static const String _sealKey = 'saveSeal';
 
   /// One preference key per equipped layer (the five-key equipped map).
   static String _equippedItemKey(SkinLayer layer) =>
@@ -392,12 +404,10 @@ class GameStorage {
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     _prefs = prefs;
-    bestScore = prefs.getInt(_bestScoreKey) ?? 0;
     gamesPlayed = prefs.getInt(_gamesPlayedKey) ?? 0;
     muteSound = prefs.getBool(_muteSoundKey) ?? false;
     musicVolume = prefs.getDouble(_musicVolumeKey) ?? Config.defaultMusicVolume;
 
-    coins = prefs.getInt(_coinsKey) ?? 0;
     // PRD-menu-v2 (product decision): the PRD-1 single-skin keys are reset on
     // sight — old skins are dropped, with no refund.
     if (prefs.containsKey(_ownedSkinsKey) ||
@@ -407,7 +417,6 @@ class GameStorage {
       await prefs.remove(_equippedSkinKey);
       await prefs.remove(_seenSkinsKey);
     }
-    ownedItems = (prefs.getStringList(_ownedItemsKey) ?? const []).toSet();
     equippedItems = {
       for (final layer in SkinLayer.values)
         layer:
@@ -415,7 +424,6 @@ class GameStorage {
             Look.defaults.idFor(layer),
     };
     seenItems = (prefs.getStringList(_seenItemsKey) ?? const []).toSet();
-    noAds = prefs.getBool(_noAdsKey) ?? false;
     armedPowerup = prefs.getString(_armedPowerupKey) ?? 'none';
     armedPowerupDebug = prefs.getBool(_armedPowerupDebugKey) ?? false;
     slotHistory = _capSlotHistory(
@@ -446,12 +454,8 @@ class GameStorage {
         .map(int.tryParse)
         .whereType<int>()
         .toSet();
-    playerLevel = prefs.getInt(_playerLevelKey) ?? 0;
     rumble = prefs.getBool(_rumbleKey) ?? true;
     lastScore = prefs.getInt(_lastScoreKey);
-    grantedPurchases = _capGranted(
-      prefs.getStringList(_grantedPurchasesKey) ?? const [],
-    );
     lastFeatherRun = prefs.getInt(_lastFeatherRunKey) ?? -1;
     lastPieceRun = prefs.getInt(_lastPieceRunKey) ?? -1;
     firstRunHintSeen = prefs.getBool(_firstRunHintSeenKey) ?? (gamesPlayed > 0);
@@ -478,7 +482,6 @@ class GameStorage {
     if (prefs.containsKey(_versusAvatarKey)) {
       unawaited(prefs.remove(_versusAvatarKey)); // WP-AV
     }
-    uploadQueue = List.of(prefs.getStringList(_uploadQueueKey) ?? const []);
     uploadsToday = prefs.getInt(_uploadsTodayKey) ?? 0;
     uploadsDay = prefs.getString(_uploadsDayKey) ?? '';
     uploadsSent = prefs.getInt(_uploadsSentKey) ?? 0;
@@ -492,7 +495,242 @@ class GameStorage {
     notifPermissionAsked = prefs.getBool(_notifPermissionAskedKey) ?? false;
     // endregion PRD-2 keys
     homeMode = HomeMode.parse(prefs.getString(_homeModeKey));
+    // PRD-2.5 §3.4: the sealed fields last, in one synchronous block after
+    // every sealed write in flight has reached the preferences (a covered
+    // setter writes its value only after its seal).
+    while (_sealIssuing > 0) {
+      await _sealIdle.future;
+    }
+    _readSealedFields(prefs);
+    if (_sealer != null && _sealBase == null && !_sealOff) {
+      final base = _verifySeal(prefs, _sealHashes());
+      _sealBase = base;
+      IntegrityGuard.instance.track(base);
+    }
   }
+
+  void _readSealedFields(SharedPreferences prefs) {
+    bestScore = prefs.getInt(_bestScoreKey) ?? 0;
+    coins = prefs.getInt(_coinsKey) ?? 0;
+    ownedItems = (prefs.getStringList(_ownedItemsKey) ?? const []).toSet();
+    noAds = prefs.getBool(_noAdsKey) ?? false;
+    playerLevel = prefs.getInt(_playerLevelKey) ?? 0;
+    grantedPurchases = _capGranted(
+      prefs.getStringList(_grantedPurchasesKey) ?? const [],
+    );
+    uploadQueue = List.of(prefs.getStringList(_uploadQueueKey) ?? const []);
+  }
+
+  // region PRD-2.5 §3.4 WP-SAVE — tamper-evident save
+  final SaveSealer? _sealer;
+
+  /// The sticky flag of the seal: this save was found edited. Only "Delete
+  /// my data" (or a start without the device key) clears it.
+  bool get sealUntrusted => _sealUntrusted;
+  bool _sealUntrusted = false;
+
+  /// The first load's verification (null = not started: no sealing yet).
+  Future<void>? _sealBase;
+
+  /// Sealing is unavailable for this process (no key / channel error).
+  bool _sealOff = false;
+
+  /// A covered value was written before the first verification started;
+  /// it cannot be judged, so the verification trusts and reseals.
+  bool _unsealedWrite = false;
+
+  /// The last stored `cur` snapshot (the next seal's `prev`).
+  SealSnapshot? _sealCur;
+  int _sealWanted = 0;
+  int _sealDone = 0;
+  Future<void>? _sealRunning;
+
+  /// Covered setters between their seal and their value write.
+  int _sealIssuing = 0;
+  Completer<void> _sealIdle = Completer<void>()..complete();
+
+  /// Tests: seal records written.
+  @visibleForTesting
+  int sealWrites = 0;
+
+  /// Tests: the verification of the first [load] (null = none).
+  @visibleForTesting
+  Future<void>? get sealVerified => _sealBase;
+
+  /// The covered fields (PRD §3.4), one canonical hash each.
+  Map<String, String> _sealHashes() => {
+    'bestScore': sealFieldHash(bestScore),
+    'coins': sealFieldHash(coins),
+    'grantedPurchases': sealFieldHash(List.of(grantedPurchases)..sort()),
+    'noAds': sealFieldHash(noAds),
+    'ownedItems': sealFieldHash(ownedItems.toList()..sort()),
+    'playerLevel': sealFieldHash(playerLevel),
+    'uploadQueue': sealFieldHash(uploadQueue),
+  };
+
+  bool get _sealedFieldsAtDefault =>
+      bestScore == 0 &&
+      coins == 0 &&
+      grantedPurchases.isEmpty &&
+      !noAds &&
+      ownedItems.isEmpty &&
+      playerLevel == 0 &&
+      uploadQueue.isEmpty;
+
+  /// Step 1 of a covered setter, right after its cache update: the seal of
+  /// the new values. Null when sealing is off (the setter writes at once).
+  /// A non-null gate must be followed by [_sealWritten] once the value
+  /// write is issued.
+  Future<void>? _sealGate() {
+    final sealer = _sealer;
+    if (sealer == null || _sealOff) return null;
+    if (_sealBase == null) {
+      _unsealedWrite = true;
+      return null;
+    }
+    if (_sealIssuing++ == 0) _sealIdle = Completer<void>();
+    return _sealUpTo(++_sealWanted);
+  }
+
+  void _sealWritten() {
+    if (--_sealIssuing == 0 && !_sealIdle.isCompleted) _sealIdle.complete();
+  }
+
+  /// A covered value write: the seal first, then [write] (its value is
+  /// captured by the caller at call time). Without sealing it is exactly
+  /// the old `await getInstance(); await set…` ([cached]: the `_prefs`
+  /// handle first, as [savePlayerLevel] always did).
+  Future<void> _sealedWrite(
+    Future<bool> Function(SharedPreferences prefs) write, {
+    bool cached = false,
+  }) async {
+    final gate = _sealGate();
+    if (gate == null) {
+      final prefs = cached
+          ? _prefs ?? await SharedPreferences.getInstance()
+          : await SharedPreferences.getInstance();
+      await write(prefs);
+      return;
+    }
+    Future<bool>? issued;
+    try {
+      await gate;
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      issued = write(prefs);
+    } finally {
+      _sealWritten();
+    }
+    await issued;
+  }
+
+  /// Serialised: one seal in flight, the latest values win.
+  Future<void> _sealUpTo(int want) async {
+    await _sealBase;
+    while (_sealDone < want && !_sealOff) {
+      final running = _sealRunning;
+      if (running != null) {
+        await running;
+        continue;
+      }
+      final target = _sealWanted;
+      final f = _sealOnce();
+      _sealRunning = f;
+      try {
+        await f;
+      } finally {
+        _sealRunning = null;
+        if (target > _sealDone) _sealDone = target;
+      }
+    }
+  }
+
+  /// Writes one seal record of the current values (never throws).
+  Future<void> _sealOnce() async {
+    final sealer = _sealer;
+    if (sealer == null || _sealOff) return;
+    try {
+      final next = SealSnapshot(_sealHashes(), untrusted: _sealUntrusted);
+      final prev = _sealCur;
+      final r = await sealer.mac([next.payload(), ?prev?.payload()]);
+      if (r == null) {
+        // The key stopped working: drop it, so the next start takes the
+        // "key absent" path (trusted) instead of a stale seal.
+        _sealOff = true;
+        await sealer.drop();
+        return;
+      }
+      final cur = next.withMac(r.macs[0]);
+      _sealCur = cur;
+      final record = SealRecord(cur, prev?.withMac(r.macs[1]));
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      sealWrites++;
+      await prefs.setString(_sealKey, record.encode());
+    } catch (_) {
+      _sealOff = true;
+    }
+  }
+
+  /// The once-per-process verdict (PRD §3.4 "Verdict at start"). It never
+  /// resets or changes a value; an edited save only sets the sticky flag
+  /// and tells the [IntegrityGuard].
+  Future<void> _verifySeal(
+    SharedPreferences prefs,
+    Map<String, String> loaded,
+  ) async {
+    final sealer = _sealer!;
+    try {
+      final existed = await sealer.ensureKey();
+      if (existed == null) {
+        _sealOff = true;
+        return;
+      }
+      var tampered = false;
+      final raw = prefs.getString(_sealKey);
+      if (!existed || _unsealedWrite) {
+        // Fresh install / restore / transfer / lost key: trust and seal.
+      } else if (raw == null) {
+        tampered = !_sealedFieldsAtDefault;
+      } else {
+        final rec = SealRecord.decode(raw);
+        if (rec == null) {
+          tampered = true;
+        } else {
+          final prev = rec.prev;
+          final r = await sealer.mac([rec.cur.payload(), ?prev?.payload()]);
+          if (r == null || r.rekeyed) {
+            // Cannot verify (the key broke): fail open.
+          } else if (r.macs[0] != rec.cur.mac ||
+              (prev != null && r.macs[1] != prev.mac)) {
+            tampered = true;
+          } else {
+            _sealCur = rec.cur;
+            if (rec.cur.untrusted) {
+              tampered = true;
+            } else {
+              for (final e in loaded.entries) {
+                final a = rec.cur.hashes[e.key];
+                final b = prev?.hashes[e.key];
+                // A field neither snapshot knows is not judged.
+                if (a == null && b == null) continue;
+                if (e.value != a && e.value != b) {
+                  tampered = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+      if (tampered) {
+        _sealUntrusted = true;
+        IntegrityGuard.instance.markUntrusted('save');
+      }
+      await _sealOnce();
+    } catch (_) {
+      _sealOff = true;
+    }
+  }
+  // endregion WP-SAVE
 
   // region PRD-2 keys (WP-0b) — setters
   static Map<int, String> _decodeIntMap(String? json) {
@@ -764,8 +1002,8 @@ class GameStorage {
 
   Future<void> saveUploadQueue(List<String> value) async {
     uploadQueue = List.of(value);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_uploadQueueKey, uploadQueue);
+    final list = uploadQueue;
+    await _sealedWrite((p) => p.setStringList(_uploadQueueKey, list));
   }
 
   Future<void> saveUploadsToday(String day, int count) async {
@@ -825,6 +1063,9 @@ class GameStorage {
   /// default (PRD-2.2 §9.1).
   Future<void> resetVersusData() async {
     versusNickname = null;
+    // PRD-2.5 §3.4: "Delete my data" clears the sticky seal flag (the
+    // upload-queue reset below writes the new seal).
+    _sealUntrusted = false;
     // WP-NAME the custom name goes too (the server deletes its copy).
     versusCustomName = '';
     versusCustomNameSync = '';
@@ -857,8 +1098,8 @@ class GameStorage {
         if (id.isNotEmpty && !grantedPurchases.contains(id)) id,
     ];
     grantedPurchases = _capGranted(next);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_grantedPurchasesKey, grantedPurchases);
+    final list = grantedPurchases;
+    await _sealedWrite((p) => p.setStringList(_grantedPurchasesKey, list));
   }
 
   List<String> _capGranted(List<String> value) =>
@@ -868,8 +1109,7 @@ class GameStorage {
 
   Future<void> saveBestScore(int value) async {
     bestScore = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_bestScoreKey, value);
+    await _sealedWrite((p) => p.setInt(_bestScoreKey, value));
   }
 
   Future<void> saveLastScore(int value) async {
@@ -949,15 +1189,14 @@ class GameStorage {
 
   Future<void> saveCoins(int value) async {
     coins = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_coinsKey, value);
+    await _sealedWrite((p) => p.setInt(_coinsKey, value));
   }
 
   /// Owned item keys (`"layer:id"`); the free defaults are implicit.
   Future<void> saveOwnedItems(Set<String> value) async {
     ownedItems = {...value};
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_ownedItemsKey, ownedItems.toList());
+    final list = ownedItems.toList();
+    await _sealedWrite((p) => p.setStringList(_ownedItemsKey, list));
   }
 
   /// Replaces the whole equipped map (five keys).
@@ -987,8 +1226,7 @@ class GameStorage {
 
   Future<void> saveNoAds(bool value) async {
     noAds = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_noAdsKey, value);
+    await _sealedWrite((p) => p.setBool(_noAdsKey, value));
   }
 
   /// The armed powerup and its debug origin (PRD-2.3.1 §12.2, QA P2-02),
@@ -1094,8 +1332,7 @@ class GameStorage {
   /// WP-L the stored player level (see [playerLevel]).
   Future<void> savePlayerLevel(int value) async {
     playerLevel = value;
-    final prefs = _prefs ?? await SharedPreferences.getInstance();
-    await prefs.setInt(_playerLevelKey, value);
+    await _sealedWrite((p) => p.setInt(_playerLevelKey, value), cached: true);
   }
 
   List<String> _levelList(Set<int> levels) =>

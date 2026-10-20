@@ -69,11 +69,21 @@ abstract final class SqueezeConfig {
   /// §3.17 Closing shake (pt).
   static const double closeShake = 2.2;
 
-  /// §3.17 Lock punch (pt) …
-  static const double lockShake = 6;
+  /// §3.17 (DEVIATION 2.5.1) Lock thump: a vertical-only damped bounce of
+  /// at most this many pt, the world moving down first (was a random 6 pt
+  /// both-axes punch, which read as the spikes shifting sideways) …
+  static const double lockThump = 3;
 
-  /// §3.17 … decaying over this many seconds.
-  static const double lockShakeTime = .35;
+  /// §3.17 … ending (exactly 0) after this many seconds …
+  static const double lockThumpTime = .3;
+
+  /// §3.17 … bouncing at this frequency (Hz).
+  static const double lockThumpFreq = 7;
+
+  /// PRD 2.5.1 WP-SND: the squeeze cues are preloaded this many seconds of
+  /// runClock before the warning can start (and the late hold cues this
+  /// long before the first tick).
+  static const double preloadLead = 3;
 
   /// §3.17 Opening shake (pt) at the start …
   static const double openShake = 1.4;

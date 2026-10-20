@@ -32,12 +32,16 @@ void main() {
     test('§3.17 each wall moves 134 / 152 / 170 / 187 pt at 711 and '
         '98 / 112 / 125 / 125 at 568 (44 pt strips, band 623 / 480); '
         '4th and later = the limit', () {
-      final at711 = [for (var i = 0; i < 6; i++) SqueezeConfig.insetFor(i, 711)];
+      final at711 = [
+        for (var i = 0; i < 6; i++) SqueezeConfig.insetFor(i, 711),
+      ];
       // the PRD's "≈" values (40 % of 711 = 284.4 → 169.3)
       for (final (i, v) in [134, 152, 170, 187, 187, 187].indexed) {
         expect(at711[i], closeTo(v, 1));
       }
-      final at568 = [for (var i = 0; i < 6; i++) SqueezeConfig.insetFor(i, 568)];
+      final at568 = [
+        for (var i = 0; i < 6; i++) SqueezeConfig.insetFor(i, 568),
+      ];
       expect(at568.map((v) => v.round()), [98, 112, 125, 125, 125, 125]);
       // both walls move the same distance: the band stays centred
       for (final h in [568.0, 711.0]) {
@@ -88,12 +92,23 @@ void main() {
       expect(SqueezeConfig.ease(.75), closeTo(.875, 1e-9));
     });
 
-    test('§3.17 shake: warning 0 → 2.6 pt, closing 2.2, lock 6 pt over '
-        '0.35 s, opening 1.4 pt over 0.8 s (the RunShake helpers)', () {
+    test('§3.17 shake: warning 0 → 2.6 pt, closing 2.2, lock thump 3 pt '
+        'vertical over 0.3 s at 7 Hz (DEVIATION 2.5.1), opening 1.4 pt over '
+        '0.8 s (the RunShake helpers)', () {
       expect(SqueezeConfig.warnShake, RunShake.squeezeWarning(1.5));
       expect(SqueezeConfig.closeShake, RunShake.squeezeClosing);
-      expect(SqueezeConfig.lockShake, RunShake.squeezeLock(0));
-      expect(RunShake.squeezeLock(SqueezeConfig.lockShakeTime), 0);
+      expect(SqueezeConfig.lockThump, 3);
+      expect(SqueezeConfig.lockThumpTime, .3);
+      expect(SqueezeConfig.lockThumpFreq, 7);
+      expect(
+        RunShake.thumpAt(
+          SqueezeConfig.lockThumpTime,
+          amplitude: SqueezeConfig.lockThump,
+          time: SqueezeConfig.lockThumpTime,
+          freq: SqueezeConfig.lockThumpFreq,
+        ),
+        0,
+      );
       expect(SqueezeConfig.openShake, RunShake.squeezeOpening(0));
       expect(RunShake.squeezeOpening(SqueezeConfig.openShakeTime), 0);
       expect(SqueezeConfig.tickTremble, closeTo(1.44, 1e-9));
@@ -105,11 +120,24 @@ void main() {
       expect(SqueezeConfig.flashPeriod, .5);
       expect(SqueezeConfig.flashIntoClosing, .4);
       expect(SqueezeConfig.flashAt(0), closeTo(0, 1e-9));
-      expect(SqueezeConfig.flashAt(.25), closeTo(SqueezeConfig.flashPeak, 1e-9));
+      expect(
+        SqueezeConfig.flashAt(.25),
+        closeTo(SqueezeConfig.flashPeak, 1e-9),
+      );
       expect(SqueezeConfig.flashAt(.5), closeTo(0, 1e-9));
-      expect(SqueezeConfig.flashAt(1.25), closeTo(SqueezeConfig.flashPeak, 1e-9));
-      expect(SqueezeConfig.flashAt(1.75), closeTo(SqueezeConfig.flashPeak, 1e-9));
-      expect(SqueezeConfig.flashAt(1.7), greaterThan(.5), reason: 'into closing');
+      expect(
+        SqueezeConfig.flashAt(1.25),
+        closeTo(SqueezeConfig.flashPeak, 1e-9),
+      );
+      expect(
+        SqueezeConfig.flashAt(1.75),
+        closeTo(SqueezeConfig.flashPeak, 1e-9),
+      );
+      expect(
+        SqueezeConfig.flashAt(1.7),
+        greaterThan(.5),
+        reason: 'into closing',
+      );
       expect(SqueezeConfig.flashAt(1.9), 0);
       expect(SqueezeConfig.flashAt(-1), 0);
     });
@@ -244,7 +272,10 @@ void main() {
         expect(sq.inset, depth);
         expect(sfx, contains(Sfx.sqLock.name));
         expect(f.pool!.alive, greaterThanOrEqualTo(SqueezeConfig.dustCount));
-        expect(f.shake.amplitude, greaterThan(5));
+        // DEVIATION 2.5.1: a vertical-only thump, no random punch.
+        expect(f.shake.thumping, isTrue);
+        expect(f.shake.offset.dx, 0);
+        expect(f.shake.offset.dy, isNot(0));
         expect(
           sq.holdS,
           inInclusiveRange(
@@ -299,10 +330,9 @@ void main() {
           (SqueezeConfig.openFor(0, h) / h * 100).round(),
         );
         expect(startedEv.$2!['hold_s'], sq.holdS.round());
-        expect(
-          events.where((e) => e.$1 == 'squeeze_survived').single.$2,
-          {'index': 1},
-        );
+        expect(events.where((e) => e.$1 == 'squeeze_survived').single.$2, {
+          'index': 1,
+        });
         // The second squeeze leaves less room.
         sq.nextAt = s.runClock + .1;
         await flyUntil(game, (_) => sq.phase == SqueezePhase.hold);
@@ -360,10 +390,7 @@ void main() {
         expect(cross, lessThanOrEqualTo(s.squeeze.nextAt - 3));
       }
       // Window on (3 s before the warning): the coming squeeze's band.
-      await flyUntil(
-        game,
-        (_) => s.runClock >= s.squeeze.nextAt - 3 + .1,
-      );
+      await flyUntil(game, (_) => s.runClock >= s.squeeze.nextAt - 3 + .1);
       final ctx = run.directorContext();
       final d = SqueezeConfig.insetFor(0, 711);
       expect(ctx.squeezeWindow, isTrue);
@@ -451,7 +478,10 @@ void main() {
       game.update(1 / 60);
       expect(saves, hasLength(1));
       expect(run.dying, isFalse);
-      expect(game.runBirdPosition!.y, greaterThan(top + RunConfig.birdRadius - .1));
+      expect(
+        game.runBirdPosition!.y,
+        greaterThan(top + RunConfig.birdRadius - .1),
+      );
     },
   );
 
@@ -516,10 +546,7 @@ void main() {
     },
   );
 
-  for (final (h, index, covered) in [
-    (568.0, 3, true),
-    (711.0, 0, false),
-  ]) {
+  for (final (h, index, covered) in [(568.0, 3, true), (711.0, 0, false)]) {
     FlameTester<FlappySpikesGame>(
       () => createRunTestGame(worldHeight: h),
       gameSize: Vector2(320, h),
@@ -530,9 +557,14 @@ void main() {
       verify: (game, _) async {
         final run = await squeezeNow(game, index: index);
         final hud = game.world.children.whereType<ScoreHud>().single;
-        final overlay = game.world.children.whereType<ScoreCoverOverlay>().single;
+        final overlay = game.world.children
+            .whereType<ScoreCoverOverlay>()
+            .single;
         expect(overlay.priority, greaterThan(SpikeStrip.basePriority));
-        await flyUntil(game, (_) => run.state.squeeze.phase == SqueezePhase.hold);
+        await flyUntil(
+          game,
+          (_) => run.state.squeeze.phase == SqueezePhase.hold,
+        );
         final expected = ScoreHud.coverFor(
           centreY: hud.position.y,
           radius: Config.scoreCircleSize.x / 2,
@@ -542,7 +574,10 @@ void main() {
         expect(hud.squeezeCover, closeTo(expected, 1e-9));
         expect(hud.squeezeCover > 0, covered);
         expect(overlay.floor, run.walls.floor);
-        await flyUntil(game, (_) => run.state.squeeze.phase == SqueezePhase.idle);
+        await flyUntil(
+          game,
+          (_) => run.state.squeeze.phase == SqueezePhase.idle,
+        );
         await flyUntil(game, (_) => false, maxSeconds: .1);
         expect(hud.squeezeCover, 0);
       },
@@ -612,6 +647,8 @@ void main() {
       await flyUntil(game, (_) => s.squeeze.phase == SqueezePhase.closing);
       game.world.add(FeverShake(run.ctx));
       await flyUntil(game, (_) => s.squeeze.phase == SqueezePhase.hold);
+      // PRD 2.5.1: a FEVER pass right at the lock composes with the thump.
+      game.world.add(FeverShake(run.ctx));
       // lens + squeeze + flash render together
       final strip = game.world.children.whereType<SpikeStrip>().first;
       strip.lens = (p) => Offset(p.dx, p.dy + 10);

@@ -39,6 +39,13 @@ import '../run_scaled_world.dart';
 ///   dust (own [ParticlePool] in the fx track), the score circle cover
 ///   ([ScoreHud.setSqueezeCover] + [ScoreCoverOverlay]), `sq_*` sounds and
 ///   the `sq_hold` loop.
+/// - **Preload (PRD 2.5.1 WP-SND):** the five `sq_*` one-shots ([cues]) are
+///   run-scoped pools that `SoundService` creates on the first play and
+///   drops that play when the pool takes over 250 ms. So the cues are
+///   preloaded [SqueezeConfig.preloadLead] s before the warning can start
+///   (again when a ride / revive moves that moment), touched again at the
+///   warning, and the late hold cues (ticks, open) once more 3 s before the
+///   first tick (the LRU cap may have evicted them meanwhile).
 /// - **Revive:** `ReviveRulesFeature` (WP-2d) resets a running squeeze to
 ///   open over 0.5 s and re-rolls the moment; this feature counts the
 ///   interrupted squeeze (the next one is tighter), drops its shake / loop
@@ -54,6 +61,29 @@ class SqueezeFeature extends RunFeature {
 
   /// Squeezes started this run (warning reached).
   int started = 0;
+
+  /// PRD 2.5.1 WP-SND: the one-shot cues of a squeeze (the `sq_hold` loop
+  /// is a separate player).
+  static const Set<Sfx> cues = {
+    Sfx.sqWarn,
+    Sfx.sqClose,
+    Sfx.sqLock,
+    Sfx.sqTick,
+    Sfx.sqOpen,
+  };
+
+  /// PRD 2.5.1 WP-SND: the late hold cues, touched again before the ticks.
+  static const Set<Sfx> lateCues = {Sfx.sqTick, Sfx.sqOpen};
+
+  /// Squeeze sound preload requests issued this run (tests).
+  int preloads = 0;
+
+  /// The warning moment ([SqueezeState.nextAt] / ride wait) the cues were
+  /// last preloaded for; −1 = none yet.
+  double _preloadedDue = -1;
+
+  /// True once this squeeze's late cues were touched in the hold.
+  bool _latePreloaded = false;
 
   /// runClock before which no squeeze may start (ride / revive + 2 s).
   double _waitUntil = 0;
@@ -145,6 +175,28 @@ class SqueezeFeature extends RunFeature {
         !c.run.rideHold;
   }
 
+  // ------------------------------------------------------------ preload
+
+  /// PRD 2.5.1 WP-SND: preloads [cues] once per warning moment, within
+  /// [SqueezeConfig.preloadLead] s of it, never during a ride (that would
+  /// take the reservation from the ride's own cues).
+  void _maybePreload() {
+    final c = _c!;
+    if (c.s.ride != null || c.run.rideHold) return;
+    final due = math.max(_sq.nextAt, _waitUntil);
+    if (due == _preloadedDue) return;
+    if (c.s.runClock < due - SqueezeConfig.preloadLead) return;
+    _preloadedDue = due;
+    _preload(cues);
+  }
+
+  void _preload(Set<Sfx> batch) {
+    final c = _c;
+    if (c == null) return;
+    preloads++;
+    c.game.sound.preload(batch);
+  }
+
   // ------------------------------------------------------------ phases
 
   void _enter(SqueezePhase p) {
@@ -160,16 +212,19 @@ class SqueezeFeature extends RunFeature {
     depth = SqueezeConfig.insetFor(sq.index, c.viewHeight);
     sq.holdS = c.director.rollSqueezeHold(hoop: c.s.hoopIndex);
     _ticks = 0;
+    _latePreloaded = false;
     started++;
+    // PRD 2.5.1 WP-SND: refresh the pools (use time + reservation) for
+    // the 17–27 s squeeze; the idle-window preload created them.
+    _preload(cues);
     _enter(SqueezePhase.warning);
     c.sfx(Sfx.sqWarn);
     c.emit(const ElementSpawned(ElementId.squeeze));
     c.track('squeeze_started', {
       'index': sq.index + 1,
-      'open_pct': (SqueezeConfig.openFor(sq.index, c.viewHeight) /
-              c.viewHeight *
-              100)
-          .round(),
+      'open_pct':
+          (SqueezeConfig.openFor(sq.index, c.viewHeight) / c.viewHeight * 100)
+              .round(),
       'hold_s': sq.holdS.round(),
     });
   }
@@ -183,6 +238,7 @@ class SqueezeFeature extends RunFeature {
     if (dt > 0) {
       switch (sq.phase) {
         case SqueezePhase.idle:
+          _maybePreload();
           if (c.s.runClock >= sq.nextAt && _mayStart) _start();
         case SqueezePhase.warning:
           phaseT += dt;
@@ -201,6 +257,14 @@ class SqueezeFeature extends RunFeature {
         case SqueezePhase.hold:
           phaseT += dt;
           sq.inset = depth;
+          if (!_latePreloaded &&
+              phaseT >=
+                  sq.holdS -
+                      SqueezeConfig.lastTicks -
+                      SqueezeConfig.preloadLead) {
+            _latePreloaded = true;
+            _preload(lateCues);
+          }
           while (_ticks < SqueezeConfig.lastTicks &&
               phaseT >= sq.holdS - (SqueezeConfig.lastTicks - _ticks)) {
             _ticks++;
@@ -229,11 +293,14 @@ class SqueezeFeature extends RunFeature {
   void _lock() {
     final c = _c!;
     _sq.inset = depth;
+    // PRD 2.5.1 WP-THUMP: a vertical-only damped bounce (world down first),
+    // no sideways jump.
     shake
       ..sustain = 0
-      ..kick(
-        SqueezeConfig.lockShake,
-        decay: SqueezeConfig.lockShake / SqueezeConfig.lockShakeTime,
+      ..thump(
+        SqueezeConfig.lockThump,
+        time: SqueezeConfig.lockThumpTime,
+        freq: SqueezeConfig.lockThumpFreq,
       );
     _enter(SqueezePhase.hold);
     c.sfx(Sfx.sqLock);
@@ -262,6 +329,7 @@ class SqueezeFeature extends RunFeature {
     c.track('squeeze_survived', {'index': sq.index + 1});
     sq.index++;
     sq.nextAt = c.director.rollSqueezeAt(c.s.runClock, hoop: c.s.hoopIndex);
+    _preloadedDue = -1;
     _enter(SqueezePhase.idle);
   }
 
@@ -448,6 +516,8 @@ class SqueezeFeature extends RunFeature {
     if (_sq.phase != SqueezePhase.idle) _sq.index++;
     phaseT = 0;
     _ticks = 0;
+    _preloadedDue = -1;
+    _latePreloaded = false;
     _lastInset = _sq.inset;
     _stopLoop();
     shake.stop();

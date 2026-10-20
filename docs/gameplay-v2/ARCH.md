@@ -674,7 +674,7 @@ Additional shared parts (not in the PRD table, introduced here so elements do no
 - `ShockRing.passPulse / missWave / goldRing / play`; `PickupTouchFx` + `PickupTouchSpec.{feather, puzzlePiece,
   switchTouch, heart, shield, capsule}`; `FetchFlight` + `FetchSpec.{feather, puzzlePiece, heart}`; `Twinkle`
   (`waist`: ring 0.354 / pickups 0.28); `GoldSticker.newBest / collect`; `InvulnFlash`; `DashedPathPainter`;
-  `ScreenEdgeGlow.miss / reviveUrgency / hourglass / coinFrenzy`; `RunShake` (kick + sustain, squeeze helpers);
+  `ScreenEdgeGlow.miss / reviveUrgency / hourglass / coinFrenzy`; `RunShake` (kick + sustain + the vertical thump (2.5.1 squeeze lock), squeeze helpers);
   `CollectSlot.request(CollectSlotItem)`; shared easings in `lib/run/effects/easing.dart` (`Ease`).
 
 **Skin interplay (call, from PRD-menu-v2 §3.8/§6 and Q-S2…Q-S4 proposals):** normal hoops draw the **equipped hoop

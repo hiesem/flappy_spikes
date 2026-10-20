@@ -9,6 +9,7 @@ import { setGlobalOptions, logger } from 'firebase-functions/v2';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { defineSecret } from 'firebase-functions/params';
 import {
   deletePlayerData,
   getCustomName,
@@ -19,6 +20,15 @@ import {
   sweepAllPools,
 } from './pools.js';
 import type { PlayerDoc } from './schema.js';
+import {
+  clearPurchaseUid,
+  handleVerifyPurchase,
+  makeAppleApi,
+  makePlayGet,
+  parseVerifyInput,
+  type PurchaseDeps,
+  sweepVoided,
+} from './purchases.js';
 
 initializeApp();
 
@@ -85,6 +95,14 @@ export const deleteMyData = onCall({ enforceAppCheck: true, consumeAppCheckToken
     if ((err as { code?: string }).code !== 'auth/user-not-found') {
       throw new HttpsError('unavailable', 'Auth unavailable; nothing was deleted.');
     }
+  }
+  // PRD-2.5 §3.8: the uid leaves its purchase records first (idempotent;
+  // the token records stay for refunds / fraud and are not personal then).
+  try {
+    await clearPurchaseUid(getFirestore(), uid);
+  } catch (err) {
+    logger.error('deleteMyData: purchase uid clean-up failed, nothing deleted', { uid, err: String(err) });
+    throw new HttpsError('unavailable', 'Delete failed; nothing was deleted.');
   }
   // All-or-nothing: the player, rate and every pool membership in one
   // transaction (a failure deletes nothing).
@@ -169,3 +187,74 @@ export const sweepPools = onSchedule({ schedule: 'every 24 hours', timeZone: 'Et
   const removed = await sweepAllPools(getFirestore());
   logger.info('sweepPools', { removed });
 });
+
+// region PRD-2.5 §3.8 WP-IAP — server purchase verification
+
+/**
+ * The dedicated service account of the purchase functions: Play Console
+ * grants it "View financial data, orders, and cancellation survey
+ * responses" (productsv2 get + voidedpurchases list); IAM gives it
+ * datastore.user + logging.logWriter. No key file (ADC).
+ */
+const IAP_SA = 'iap-verify@flappy-spikes-a2b55.iam.gserviceaccount.com';
+
+/**
+ * App Store Connect In-App Purchase key (.p8 contents). Until the real key
+ * exists the secret holds a placeholder and every iOS check answers
+ * `unknown`.
+ */
+const ASC_IAP_KEY = defineSecret('ASC_IAP_KEY');
+/*
+ * Its key id and the ASC issuer id are not secret: plain environment
+ * variables ASC_IAP_KEY_ID / ASC_ISSUER_ID (functions/.env.<project> at
+ * deploy time, once the key exists). Not params, so a deploy never prompts;
+ * missing = iOS checks answer `unknown`.
+ */
+
+let playGet: PurchaseDeps['playGet'] | undefined;
+
+async function purchaseDeps(): Promise<PurchaseDeps> {
+  playGet ??= makePlayGet();
+  let apple: PurchaseDeps['apple'] = null;
+  try {
+    apple = await makeAppleApi({
+      key: ASC_IAP_KEY.value(),
+      keyId: process.env.ASC_IAP_KEY_ID,
+      issuerId: process.env.ASC_ISSUER_ID,
+    });
+  } catch (err) {
+    logger.warn('verifyPurchase: Apple client unavailable', { err: String(err) });
+  }
+  return { playGet, apple };
+}
+
+/**
+ * `{platform: 'android'|'ios', productId, token}` → `{status: 'valid' |
+ * 'revoked' | 'invalid' | 'unknown'}` (see purchases.ts). App Check
+ * enforced, tokens not consumed (idempotent and read-only towards the
+ * stores, like the other callables). Sign-in optional: the uid is stored
+ * when present.
+ */
+export const verifyPurchase = onCall(
+  { enforceAppCheck: true, consumeAppCheckToken: false, serviceAccount: IAP_SA, secrets: [ASC_IAP_KEY] },
+  async (req) => {
+    const input = parseVerifyInput(req.data);
+    if (!input) throw new HttpsError('invalid-argument', 'Bad purchase.');
+    return handleVerifyPurchase(getFirestore(), await purchaseDeps(), input, req.auth?.uid, Date.now());
+  },
+);
+
+/** Daily: refunded / voided Play purchases → `revoked` (replaces RTDN). */
+export const sweepVoidedPurchases = onSchedule(
+  { schedule: 'every 24 hours', timeZone: 'Etc/UTC', serviceAccount: IAP_SA },
+  async () => {
+    try {
+      const marked = await sweepVoided(getFirestore(), { playGet: (playGet ??= makePlayGet()), apple: null }, Date.now());
+      logger.info('sweepVoidedPurchases', { marked });
+    } catch (err) {
+      logger.error('sweepVoidedPurchases failed', { err: String(err) });
+    }
+  },
+);
+
+// endregion

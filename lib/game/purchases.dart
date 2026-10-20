@@ -4,6 +4,7 @@ import '../menu/menu_state.dart';
 import '../menu/wallet.dart';
 import '../services/game_services.dart';
 import '../services/iap_service.dart';
+import '../services/purchase_verifier.dart';
 import 'config.dart';
 
 /// Grants what the store sells (PRD-1 §3.2, §3.5): listens to
@@ -59,7 +60,13 @@ class Purchases {
     this.onResolved,
     this.onGift,
     DateTime Function()? clock,
-  }) : _clock = clock ?? DateTime.now;
+    PurchaseVerifier? verifier,
+  }) : _clock = clock ?? DateTime.now,
+       verifier = verifier ?? PurchaseVerifier.instance;
+
+  /// PRD-2.5 §3.8 WP-IAP: server verification after each grant (the
+  /// app-wide [PurchaseVerifier.instance] unless a test passes one).
+  final PurchaseVerifier verifier;
 
   final DateTime Function() _clock;
 
@@ -111,6 +118,16 @@ class Purchases {
   /// Subscribes to the store's purchase updates (idempotent).
   void start() {
     _sub ??= iap.events.listen(_track);
+    // PRD-2.5 §3.8: a refunded No Ads (no other No-Ads purchase known)
+    // turns No Ads off; coins are never taken back.
+    verifier.onNoAdsRevoked = _onNoAdsRevoked;
+    unawaited(verifier.load());
+  }
+
+  Future<void> _onNoAdsRevoked() async {
+    if (!menu.noAds) return;
+    iapLog('No Ads refunded: turned off');
+    await menu.setNoAds(false);
   }
 
   /// PRD-2.3 §24.3 (S8-13): the events being handled right now (grants
@@ -150,6 +167,9 @@ class Purchases {
   void dispose() {
     _sub?.cancel();
     _sub = null;
+    if (verifier.onNoAdsRevoked == _onNoAdsRevoked) {
+      verifier.onNoAdsRevoked = null;
+    }
   }
 
   /// Whether a purchase of [product] was started and has not finished
@@ -177,6 +197,9 @@ class Purchases {
   /// PRD-2.3 §22.2: [IapService.syncPurchases], at most once per
   /// [Config.iapSyncInterval]. Returns whether it ran.
   bool sync() {
+    // PRD-2.5 §3.8: launch + every resume also check queued purchases with
+    // the server (background, own backoff per item).
+    unawaited(verifier.drain());
     final now = _clock();
     final last = _lastSync;
     if (last != null && now.difference(last) < Config.iapSyncInterval) {
@@ -221,6 +244,7 @@ class Purchases {
   Future<void> _onEvent(IapEvent event) async {
     final product = event.product;
     if (event.status != IapStatus.pending) onResolved?.call(product);
+    if (_mayBeRevoked(event) && await _skipRevoked(event)) return;
     switch (event.status) {
       case IapStatus.pending:
         _inFlight.add(product);
@@ -240,6 +264,7 @@ class Purchases {
           _confirm(event, error: e);
           rethrow;
         }
+        _verify(event);
         _confirm(event);
       case IapStatus.purchased:
         _inFlight.remove(product);
@@ -249,6 +274,7 @@ class Purchases {
           _confirm(event, error: e);
           rethrow;
         }
+        _verify(event);
         _confirm(event);
       case IapStatus.restored:
         _inFlight.remove(product);
@@ -264,6 +290,7 @@ class Purchases {
           _confirm(event, error: e);
           rethrow;
         }
+        _verify(event);
         _confirm(event);
       case IapStatus.failed:
         _inFlight.remove(product);
@@ -285,6 +312,37 @@ class Purchases {
         _inFlight.remove(product);
         onPurchaseProblem?.call(product, PurchaseProblem.cancelled, null);
     }
+  }
+
+  /// PRD-2.5 §3.8: a No-Ads purchase whose id was refunded (the server said
+  /// `revoked`) is not granted again when the store re-delivers it (the
+  /// launch sync / a restore); it is only completed with the store.
+  /// Synchronous (no extra async step) for every other event.
+  bool _mayBeRevoked(IapEvent event) =>
+      verifier.enabled &&
+      (event.status == IapStatus.purchased ||
+          event.status == IapStatus.restored) &&
+      event.product.grantsNoAds &&
+      event.transactionIds.isNotEmpty;
+
+  Future<bool> _skipRevoked(IapEvent event) async {
+    if (!verifier.loaded) await verifier.load();
+    if (!verifier.isRevoked(event.transactionIds)) return false;
+    iapLog('${event.product.storeId}: refunded purchase re-delivered, skipped');
+    _inFlight.remove(event.product);
+    _confirm(event);
+    return true;
+  }
+
+  /// PRD-2.5 §3.8: the grant persisted, queue the server check (background;
+  /// never awaited, never throws).
+  void _verify(IapEvent event) {
+    if (event.transactionIds.isEmpty) return;
+    unawaited(
+      verifier
+          .enqueue(event.product, event.transactionIds)
+          .catchError((Object _) {}),
+    );
   }
 
   /// Tells the store layer the event was handled (it completes the

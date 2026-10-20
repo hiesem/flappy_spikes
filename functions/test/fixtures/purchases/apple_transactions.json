@@ -1,0 +1,8 @@
+{
+  "_note": "App Store Server API getTransactionInfo results after SignedDataVerifier.verifyAndDecodeTransaction (JWSTransactionDecodedPayload fields used); null = APIException 4040010 TransactionIdNotFound",
+  "2000000000000001": { "Production": { "bundleId": "com.flappyspikes.flappyspikes", "productId": "no_ads", "environment": "Production" } },
+  "2000000000000002": { "Production": null, "Sandbox": { "bundleId": "com.flappyspikes.flappyspikes", "productId": "coins_1000", "environment": "Sandbox" } },
+  "2000000000000003": { "Production": { "bundleId": "com.flappyspikes.flappyspikes", "productId": "no_ads", "revocationDate": 1760900000000, "environment": "Production" } },
+  "2000000000000004": { "Production": null, "Sandbox": null },
+  "2000000000000005": { "Production": { "bundleId": "com.example.other", "productId": "no_ads", "environment": "Production" } }
+}

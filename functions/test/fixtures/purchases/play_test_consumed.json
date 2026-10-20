@@ -1,0 +1,16 @@
+{
+  "_note": "productsv2 200, a license-tester coin pack already consumed and not yet acknowledged when verified",
+  "status": 200,
+  "body": {
+    "kind": "androidpublisher#productPurchaseV2",
+    "productLineItem": [
+      { "productId": "coins_1000", "productOfferDetails": { "quantity": 1, "refundableQuantity": 0, "consumptionState": "CONSUMPTION_STATE_CONSUMED" } }
+    ],
+    "purchaseStateContext": { "purchaseState": "PURCHASED" },
+    "testPurchaseContext": { "fopType": "TEST" },
+    "acknowledgementState": "ACKNOWLEDGEMENT_STATE_PENDING",
+    "orderId": "GPA.3301-0000-0000-00000",
+    "purchaseCompletionTime": "2026-10-20T10:05:00Z",
+    "regionCode": "NL"
+  }
+}

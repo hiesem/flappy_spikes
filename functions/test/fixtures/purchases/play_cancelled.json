@@ -1,0 +1,9 @@
+{
+  "_note": "productsv2 200, purchase cancelled (refunded / never paid): not proof of a fake",
+  "status": 200,
+  "body": {
+    "kind": "androidpublisher#productPurchaseV2",
+    "productLineItem": [ { "productId": "no_ads" } ],
+    "purchaseStateContext": { "purchaseState": "CANCELLED" }
+  }
+}

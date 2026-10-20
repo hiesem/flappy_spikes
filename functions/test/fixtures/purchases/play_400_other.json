@@ -1,0 +1,5 @@
+{
+  "_note": "productsv2 400 that is not about the token (our request): unknown",
+  "status": 400,
+  "body": { "error": { "code": 400, "message": "Bad request", "errors": [ { "message": "Bad request", "domain": "global", "reason": "badRequest" } ], "status": "INVALID_ARGUMENT" } }
+}

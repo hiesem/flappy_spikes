@@ -460,9 +460,11 @@ void iapLog(String message) {
 }
 
 /// The store identity of [purchase] (S1-71): its purchaseID (Play order id /
-/// StoreKit transaction id) and, on Google Play, the purchase token. iOS
-/// tokens are the whole app receipt (shared by every transaction), so they
-/// are never used as an id.
+/// StoreKit transaction id) and, on Google Play, the purchase token. On iOS
+/// (StoreKit 2, the storekit plugin's default) `serverVerificationData` is
+/// the transaction's JWS, not a stable id, so only the transaction id is
+/// used. PRD-2.5 §3.8: `PurchaseVerifier` sends the `token:` entry (Play)
+/// or the `id:` entry (StoreKit transaction id) to `verifyPurchase`.
 @visibleForTesting
 List<String> transactionIdsOf(PurchaseDetails purchase) {
   final ids = <String>[];

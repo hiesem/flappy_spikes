@@ -5,7 +5,8 @@ rules_version = '2';
 // - pools/{doc}: read-only for signed-in clients; written by the Cloud Function (Admin SDK) only.
 // - everything else (incl. the server's versusRate/{uid} and versusNames/{uid}, the custom
 //   names the setVersusName callable checks and stores, and versusNameClaims/{key}, which
-//   uid holds a name — WP-N2): denied.
+//   uid holds a name — WP-N2; PRD-2.5 §3.6 versusFlags/{uid}_{runId}, the server's anti-cheat
+//   flags): denied.
 // - purchases/{sha256(platform:token)} and iapMeta/voidedSweep (PRD-2.5 §3.8 WP-IAP: the
 //   verifyPurchase callable's store verdicts and the daily voided-purchases sweep) are
 //   written by the Cloud Functions (Admin SDK) only and are deliberately NOT listed below,

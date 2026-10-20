@@ -96,11 +96,10 @@ void main() {
         expect(await passHoopAt(game, h, dy: dy), isTrue);
         expect(h.takenRing, 0, reason: 'passed, not missed');
         // PRD-2.2 §13.1: a bullseye is a perfect pass (2 points at streak
-        // 1) plus the bonus in points (PRD-2.3.1 §6: +3); outside the band
-        // at 20 pt it is a clean pass: 1 point (PRD-2.3.1 §0: the live
-        // perfect band, ±18 → ±15 over hoops 1–25, is the default; with
-        // 2.3's band off it was perfect).
-        expect(run.state.score, scoreBefore + (hit ? 2 + 3 : 1));
+        // 1) plus the bonus in points (PRD-2.3.1 §6: +3); outside the
+        // bullseye band at 20 pt it is a plain perfect pass, no bonus (owner
+        // 2026-10-20: the perfect band is ±36 → ±30 around hoops 6–10).
+        expect(run.state.score, scoreBefore + (hit ? 2 + 3 : 2));
         final bonus = events
             .whereType<CoinsEarned>()
             .where((e) => e.source == CoinSource.bullseye)

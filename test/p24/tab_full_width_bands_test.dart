@@ -43,8 +43,18 @@ void main() {
             (px[i + 2] - (c.b * 255).round()).abs() <= 3;
       }
 
-      for (final x in [1, img.width ~/ 4, img.width ~/ 2, img.width * 3 ~/ 4, img.width - 2]) {
-        expect(isBand(x), isTrue, reason: '$name: band colour at x $x of ${img.width}');
+      for (final x in [
+        1,
+        img.width ~/ 4,
+        img.width ~/ 2,
+        img.width * 3 ~/ 4,
+        img.width - 2,
+      ]) {
+        expect(
+          isBand(x),
+          isTrue,
+          reason: '$name: band colour at x $x of ${img.width}',
+        );
       }
       img.dispose();
     });
@@ -106,12 +116,20 @@ void main() {
         ElementBanner('BULLSEYE!', color: PartsConfig.pink, duration: 5),
       );
       await flushAndMount(g);
-      await flyUntil(g, (r) => r.state.runClock > 2);
+      // 2.5.0 (46): with the wider perfect band a streak banner can replace
+      // this one within a second of flying; let it settle in place for 1 s
+      // without flapping (no hoop pass).
+      for (var i = 0; i < 10; i++) {
+        stepGame(g, 0.1);
+      }
+      await flushAndMount(g);
       expect(banner.isMounted, isTrue);
       // the band is screen-centred too
       expect(
-        banner.absolutePosition.x - g.camera.viewfinder.position.x +
-            g.extraWidth / 2 + 160,
+        banner.absolutePosition.x -
+            g.camera.viewfinder.position.x +
+            g.extraWidth / 2 +
+            160,
         closeTo(g.viewWidth / 2, 1e-3),
       );
       await expectFullWidth(g, tester, banner, 'run_banner_3x4');
@@ -143,7 +161,8 @@ void main() {
           final hint = g.firstRunHint!;
           expect(hint.shown, isTrue);
           final hud = RunHud.of(g.run!)!;
-          final screenX = hud.position.x + hint.position.x + hint.tapBannerCentre.dx;
+          final screenX =
+              hud.position.x + hint.position.x + hint.tapBannerCentre.dx;
           expect(screenX, closeTo(g.viewWidth / 2, 1e-3));
           if (name == 'phone') {
             expect(hint.centreShift, 0);
@@ -151,7 +170,11 @@ void main() {
           }
           await tester.runAsync(() async {
             final img = await renderGame(g, sz);
-            await saveTabEvidence(img, 'bands', 'hint_${first ? 'first' : 'reminder'}_$name');
+            await saveTabEvidence(
+              img,
+              'bands',
+              'hint_${first ? 'first' : 'reminder'}_$name',
+            );
             img.dispose();
           });
         },

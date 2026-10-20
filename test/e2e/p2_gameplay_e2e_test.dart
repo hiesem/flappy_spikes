@@ -170,9 +170,10 @@ void main() {
         expect(page.model.reward, earned);
         expect(g.storage.gamesPlayed, played + 1);
         // The run reached at least EGG (25 points, 25 coins); it may go
-        // further: the owed reward is every level up to the run's score.
+        // further, but the stored level moves one step per run, so the owed
+        // reward is every level up to that stored level.
         final owed = kLevels
-            .where((l) => l.level <= levelFor(g.storage.bestScore))
+            .where((l) => l.level <= g.menu.levels.level)
             .fold<int>(0, (a, l) => a + l.reward);
         expect(owed, greaterThanOrEqualTo(25));
         expect(g.storage.unclaimedLevelReward, owed);
@@ -326,7 +327,8 @@ void main() {
       'S6-22 reproduce kill at the real claim persistence boundary',
       () async {
         SharedPreferences.setMockInitialValues({
-          'bestScore': 25, 'playerLevel': 1,
+          'bestScore': 25,
+          'playerLevel': 1,
           'unclaimedLevelReward': 25,
           'coins': 100,
         });
@@ -384,8 +386,14 @@ void main() {
       );
       // §3.0.1: the bottom button keeps its §5.10 size while the column
       // above it scales.
-      expect(page.nextButton.height * k, closeTo(ResultsConfig.next.height, .001));
-      expect(page.nextButton.width * k, closeTo(ResultsConfig.next.width, .001));
+      expect(
+        page.nextButton.height * k,
+        closeTo(ResultsConfig.next.height, .001),
+      );
+      expect(
+        page.nextButton.width * k,
+        closeTo(ResultsConfig.next.width, .001),
+      );
       expect(left, closeTo(ResultsConfig.next.left, .001));
     }, height: 568);
   });

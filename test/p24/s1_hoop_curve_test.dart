@@ -12,7 +12,7 @@ const _openingV23 = [
   [75, 72], [100, 66],
 ];
 const _bandV23 = [
-  [1, 18], [2, 18], [6, 17.4], [10, 16.7], [16, 15.8], [20, 15.2], //
+  [1, 40], [2, 40], [6, 36], [10, 30], [16, 24], [20, 18], // owner 2026-10-20
   [25, 14.5], [30, 13.9], [35, 13.2], [40, 12.7], [50, 11.6], [60, 10.7],
   [75, 10], [100, 8],
 ];
@@ -62,18 +62,19 @@ void main() {
       }
     });
 
-    test('§1.2 perfect band: ±18 at hoops 1–2, ±16.7 at 10, ±10 at 75, ±8 '
+    // Owner 2026-10-20 (2.5.0 46): hoops 0–20 wider (±40 → ±18).
+    test('§1.2 perfect band: ±40 at hoops 1–2, ±30 at 10, ±10 at 75, ±8 '
         'from 100', () {
-      expect(PerfectBandConfig.bandAt(1), closeTo(18, 1e-9));
-      expect(PerfectBandConfig.bandAt(2), closeTo(18, 1e-9));
-      expect(PerfectBandConfig.bandAt(10), closeTo(16.7, 1e-9));
+      expect(PerfectBandConfig.bandAt(1), closeTo(40, 1e-9));
+      expect(PerfectBandConfig.bandAt(2), closeTo(40, 1e-9));
+      expect(PerfectBandConfig.bandAt(10), closeTo(30, 1e-9));
       expect(PerfectBandConfig.bandAt(75), closeTo(10, 1e-9));
       expect(PerfectBandConfig.bandAt(100), closeTo(8, 1e-9));
       expect(PerfectBandConfig.bandAt(200), closeTo(8, 1e-9));
     });
 
-    test('§1.2 the band stays about 30 % of the gap up to hoop 75', () {
-      for (final i in [10, 25, 40, 50, 60, 75]) {
+    test('§1.2 the band stays about 30 % of the gap from hoop 25 to 75', () {
+      for (final i in [25, 40, 50, 60, 75]) {
         final ratio = PerfectBandConfig.bandAt(i) * 2 / RunConfig.openingFor(i);
         expect(ratio, inInclusiveRange(0.27, 0.31), reason: "hoop $i");
       }

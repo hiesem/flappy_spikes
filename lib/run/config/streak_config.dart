@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../game/sound.dart';
 import '../run_layers.dart';
+import 'run_config.dart';
 import 'tuning_values.dart';
 
 /// Perfect-pass streak, ring tier reactions and the graze notice (PRD-2
@@ -109,14 +110,29 @@ abstract final class PerfectBandConfig {
   /// be within ±v pt; a null [offset] (no crossing recorded) skips the band.
   /// PRD-2.3.1 §15: not asked for the FEVER ring — `RunController._pass`
   /// makes any rim-free FEVER pass perfect, whatever the band.
+  ///
+  /// Owner 2026-10-20 (2.5.0 46): the band grows with the hoop. [opening] is
+  /// the hoop's planned gap; when it is larger than the curve's gap for
+  /// [hoopIndex] (Big Hoops, up to ×1.5), the band is multiplied by the same
+  /// factor. A gap capped smaller by a short screen keeps the plain band.
   static bool isPerfect({
     required bool touched,
     required int hoopIndex,
     double? offset,
+    double? opening,
   }) {
     if (touched) return false;
-    final v = bandAt(hoopIndex);
+    final v = bandAt(hoopIndex) * growthFor(hoopIndex, opening);
     if (v <= 0 || offset == null) return true;
     return offset.abs() <= v;
+  }
+
+  /// The band's growth for a hoop of [opening] at [hoopIndex]: the hoop's
+  /// size over the curve's, never below 1 nor above Big Hoops' multiplier.
+  static double growthFor(int hoopIndex, double? opening) {
+    if (opening == null) return 1;
+    final base = RunConfig.openingFor(hoopIndex);
+    if (base <= 0) return 1;
+    return (opening / base).clamp(1.0, RunConfig.bigHoopsMult).toDouble();
   }
 }

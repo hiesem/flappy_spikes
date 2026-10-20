@@ -55,8 +55,8 @@ const List<TuningDef> kTuningDefaults = [
   TuningDef('point_fever_streak', TuningType.integer, 5),
   // §14.3 Pair "+N score" gift
   TuningDef('point_pair_gift', TuningType.integer, 5),
-  // §14.3 owner 2026-10-13: perfect band ±pt around the gap centre by hoop index; <= 0 = no band (any rim-free pass is perfect).
-  TuningDef('point_perfect_band', TuningType.curve, [[1, 18], [2, 18], [6, 17.4], [10, 16.7], [16, 15.8], [20, 15.2], [25, 14.5], [30, 13.9], [35, 13.2], [40, 12.7], [50, 11.6], [60, 10.7], [75, 10], [100, 8]]),
+  // §14.3 owner 2026-10-13: perfect band ±pt around the gap centre by hoop index; <= 0 = no band (any rim-free pass is perfect). Owner 2026-10-20 (2.5.0 46): wider for hoops 0–20; × the hoop's Big Hoops growth.
+  TuningDef('point_perfect_band', TuningType.curve, [[1, 40], [2, 40], [6, 36], [10, 30], [16, 24], [20, 18], [25, 14.5], [30, 13.9], [35, 13.2], [40, 12.7], [50, 11.6], [60, 10.7], [75, 10], [100, 8]]),
   // §14.3 owner 2026-10-13: Bullseye hit band ±pt by hoop index (hit check only; the drawing stays 12)
   TuningDef('point_bullseye_band', TuningType.curve, [[1, 12], [50, 10], [100, 8]]),
   // §14.2 Balloon prizes (shuffled; the largest is the jackpot)

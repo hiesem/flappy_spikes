@@ -608,6 +608,7 @@ class RunController extends Component {
                 touched: h.touched,
                 hoopIndex: h.plan.index,
                 offset: h.passOffset,
+                opening: h.plan.opening,
               ));
     final clean = !perfect && !h.touched && !ride;
     state.passes++;

@@ -372,8 +372,12 @@ export async function handleVerifyPurchase(
   return { status };
 }
 
-/** How far back the sweep looks at most (Play keeps 30 days). */
-export const SWEEP_MAX_BACK_MS = 30 * 24 * 3600 * 1000;
+/**
+ * How far back the sweep looks at most. Play keeps 30 days and answers 400
+ * to a startTime that is older by the time the request arrives, so stay an
+ * hour inside the window.
+ */
+export const SWEEP_MAX_BACK_MS = (30 * 24 - 1) * 3600 * 1000;
 const DAY_MS = 24 * 3600 * 1000;
 
 /**

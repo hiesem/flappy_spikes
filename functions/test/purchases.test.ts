@@ -24,6 +24,7 @@ import {
   type PurchaseDeps,
   purchaseDocId,
   PURCHASES_COLLECTION,
+  SWEEP_MAX_BACK_MS,
   sweepVoided,
   verifyAndroid,
   verifyIos,
@@ -304,20 +305,20 @@ describe('WP-IAP voided-purchases sweep', () => {
     assert.equal((await db.doc(IAP_META_DOC).get()).data()?.lastRunMs, now);
   });
 
-  it('start = last run − 1 day, never more than 30 days back', async () => {
+  it('start = last run − 1 day, never more than SWEEP_MAX_BACK_MS back', async () => {
     const DAY = 24 * 3600 * 1000;
     const now = Date.UTC(2026, 9, 20);
     const empty = () => play({ status: 200, body: {} });
     let p = empty();
     await sweepVoided(db, p.deps, now);
-    assert.equal(new URL(p.urls[0]!).searchParams.get('startTime'), String(now - 30 * DAY));
+    assert.equal(new URL(p.urls[0]!).searchParams.get('startTime'), String(now - SWEEP_MAX_BACK_MS));
     p = empty();
     await sweepVoided(db, p.deps, now + DAY);
     assert.equal(new URL(p.urls[0]!).searchParams.get('startTime'), String(now - DAY));
     await db.doc(IAP_META_DOC).set({ lastRunMs: now - 90 * DAY });
     p = empty();
     await sweepVoided(db, p.deps, now);
-    assert.equal(new URL(p.urls[0]!).searchParams.get('startTime'), String(now - 30 * DAY));
+    assert.equal(new URL(p.urls[0]!).searchParams.get('startTime'), String(now - SWEEP_MAX_BACK_MS));
   });
 
   it('a failed page keeps the old start time', async () => {

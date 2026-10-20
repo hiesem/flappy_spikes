@@ -12,6 +12,8 @@ import '../achievements/achievement_catalog.dart';
 import '../firebase_options.dart';
 import '../game/diag.dart';
 import '../skins/look.dart';
+import 'integrity_guard.dart';
+import 'leaderboard_limits.dart';
 import 'redact.dart';
 
 /// Outcome of a [GameServices.showLeaderboards] call, so the game can tell
@@ -81,6 +83,11 @@ class GameServices {
   /// Injectable in tests so they don't wait out the real 10 s.
   @visibleForTesting
   Duration pluginTimeout = const Duration(seconds: 10);
+
+  /// PRD-2.5 §3.3 the integrity guard of [submitBestScore] (null =
+  /// [IntegrityGuard.instance]). Tests inject their own.
+  @visibleForTesting
+  IntegrityGuard? integrity;
 
   /// Game Center leaderboard ID (App Store Connect, "Top Scores"; the new
   /// app record, not the 2014 original's `flappy_spikes_leaderboard`).
@@ -556,6 +563,11 @@ class GameServices {
 
   void logGameStart() => logEvent('game_start');
 
+  /// PRD-2.5 §3.3 the once-per-process `integrity_untrusted` event (reason
+  /// sig / ios_team / save / iap_fake).
+  void logIntegrityUntrusted(String reason) =>
+      logEvent('integrity_untrusted', {'reason': reason});
+
   void logGameOver({required int score, required int bestScore}) =>
       logEvent('game_over', {'score': score, 'best_score': bestScore});
 
@@ -757,10 +769,18 @@ class GameServices {
   /// `getPlayerScore()` read-back: brand-new Play Games players return null
   /// there while the backend provisions them, which would silently drop
   /// scores (games_services #202).
+  ///
+  /// PRD-2.5 (D1, silent): values outside 0..[kLeaderboardMaxScore] (§3.7)
+  /// and every submit of an untrusted install (§3.3 WP-GUARD) are skipped.
+  /// The guard's verdict is awaited for at most 2 s.
   Future<void> submitBestScore(int value) async {
     if (!_initialized) {
       return;
     }
+    if (value < 0 || value > kLeaderboardMaxScore) return;
+    final guard = integrity ?? IntegrityGuard.instance;
+    await guard.waitReady();
+    if (!guard.trusted) return;
     try {
       await submitScorePlugin(value).timeout(pluginTimeout);
     } catch (e) {

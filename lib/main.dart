@@ -16,6 +16,7 @@ import 'services/e2e.dart';
 import 'services/ads_service.dart';
 import 'services/audio_focus.dart';
 import 'services/monetization.dart';
+import 'services/purchase_verifier.dart';
 import 'services/rating_prompt.dart';
 import 'services/reminders.dart';
 import 'services/soak.dart';
@@ -78,6 +79,12 @@ Future<void> main() async {
   // Analytics + leaderboards (Firebase / Play Games / Game Center). No-op
   // when the native config isn't present.
   final services = GameServices();
+  // PRD-2.5 §3.8 WP-IAP: server purchase verification (mobile products).
+  if (_isMobile && !kE2E && !kSoak) {
+    PurchaseVerifier.instance = PurchaseVerifier.firebase(
+      ensureFirebase: services.ensureFirebase,
+    );
+  }
 
   // Rewarded ads + in-app purchases: AdMob / Play Billing / StoreKit on
   // mobile, in-memory fakes elsewhere (Linux).

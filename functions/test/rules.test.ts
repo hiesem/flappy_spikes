@@ -195,6 +195,19 @@ describe('§3.13 rules: pools and everything else', () => {
     await assertFails(setDoc(doc(db, 'anything', 'x'), { a: 1 }));
     assert.ok(true);
   });
+
+  it('PRD-2.5 §3.6 clients can never get, list or write versusFlags', async () => {
+    const uid = uniq('flags');
+    const db = env.authenticatedContext(uid).firestore();
+    await assertFails(getDoc(doc(db, 'versusFlags', 'x')));
+    await assertFails(getDoc(doc(db, 'versusFlags', `${uid}_r1`)));
+    await assertFails(getDocs(collection(db, 'versusFlags')));
+    await assertFails(getDocs(query(collection(db, 'versusFlags'), where('uid', '==', uid))));
+    await assertFails(setDoc(doc(db, 'versusFlags', 'x'), { uid }));
+    await assertFails(setDoc(doc(db, 'versusFlags', `${uid}_r1`), { uid, runId: 'r1' }));
+    await assertFails(deleteDoc(doc(db, 'versusFlags', `${uid}_r1`)));
+    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'versusFlags', 'x')));
+  });
 });
 
 describe('audit 17 rules: a modified client with the public Firebase config', () => {

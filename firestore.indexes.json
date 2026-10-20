@@ -21,6 +21,17 @@
       "collectionGroup": "pools",
       "fieldPath": "entries",
       "indexes": []
+    },
+    {
+      "collectionGroup": "versusFlags",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "versusFlags",
+      "fieldPath": "signals",
+      "indexes": []
     }
   ]
 }

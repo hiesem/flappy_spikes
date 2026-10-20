@@ -4,8 +4,8 @@
  */
 import assert from 'node:assert/strict';
 import { DocumentReference, Firestore, Timestamp, Transaction } from 'firebase-admin/firestore';
-import { deletePlayerData, processPlayerWrite, sweepAllPools } from '../src/pools.js';
-import { DAILY_BEST_UPLOADS, POOL_CAP, POOL_MAX_BYTES, poolId, RATE_COLLECTION } from '../src/schema.js';
+import { deletePlayerData, flagId, processPlayerWrite, sweepAllPools } from '../src/pools.js';
+import { DAILY_BEST_UPLOADS, FLAGS_COLLECTION, POOL_CAP, POOL_MAX_BYTES, poolId, RATE_COLLECTION } from '../src/schema.js';
 import { docSize } from '../src/size.js';
 import { DAY, db, makePlayer, makeRun, poolEntries, processLive, uniq, waitFor } from './helpers.js';
 
@@ -308,5 +308,138 @@ describe('§3.13 deleteMyData (data part)', () => {
     assert.equal((await db.collection('players').doc(uid).get()).exists, false);
     assert.equal(await rate(uid), undefined);
     for (const s of [0, 1]) assert.ok((await poolEntries(poolId(3, s))).every((e) => e.uid !== uid));
+  });
+});
+
+describe('PRD-2.5 §3.6 anomaly flags (D3: flag only)', () => {
+  const flagDoc = async (uid: string, runId: string) =>
+    (await db.collection(FLAGS_COLLECTION).doc(flagId(uid, runId)).get()).data();
+  const flagsOf = async (uid: string) => (await db.collection(FLAGS_COLLECTION).where('uid', '==', uid).get()).docs;
+  /** An honest-paced run (plain passes 1.7 s apart, streak values). */
+  const honest = (o: { score?: number; best?: number } = {}) => {
+    const n = 20;
+    const values = Array.from({ length: n }, (_, i) => Math.max(2, i + 1)); // Σ = 211
+    return makeRun({ ...o, score: 211, best: o.best ?? 211, deltas: values.map(() => 170), values });
+  };
+  /** A streak_jump cheat that the old filter accepts: 2, 3, 9. */
+  const cheat = (o: { best?: number } = {}) =>
+    makeRun({ score: 14, best: o.best ?? 14, deltas: [200, 180, 180], flags: [0, 0, 0], values: [2, 3, 9] });
+
+  it('a flagged run is pooled exactly like before and gets one versusFlags doc', async () => {
+    const uid = uniq('flag');
+    const run = cheat();
+    const now = Date.now();
+    const r = await processLive(uid, undefined, makePlayer({ best: 14, bestRun: run, recent: [run] }), {
+      rand: shard0,
+      nowMs: now,
+    });
+    assert.deepEqual(r.accepted, [run.runId]);
+    assert.equal(r.pool, poolId(0, 0));
+    assert.deepEqual(r.flagged, [run.runId]);
+    const entry = (await poolEntries(poolId(0, 0))).find((e) => e.runId === run.runId);
+    assert.ok(entry, 'pooled');
+    assert.equal(entry!.uid, uid);
+    assert.equal(entry!.score, 14);
+    assert.equal(entry!.tl, run.tl);
+    assert.equal(entry!.fl, run.fl);
+    assert.equal((await rate(uid))?.last?.status, 'accepted');
+    const f = await flagDoc(uid, run.runId);
+    assert.ok(f, 'flag written');
+    assert.equal(f!.uid, uid);
+    assert.equal(f!.runId, run.runId);
+    assert.equal(f!.score, 14);
+    assert.deepEqual(f!.signals, { streak_jump: 9 });
+    assert.equal(f!.soft, false);
+    assert.equal(f!.pool, poolId(0, 0));
+    assert.equal(f!.level, 0);
+    assert.equal(f!.passes, 3);
+    assert.equal(f!.durationCs, 200 + 180 + 180 + 80);
+    assert.equal(f!.platform, 'android');
+    assert.equal((f!.ts as Timestamp).toMillis(), now);
+    assert.equal((f!.expireAt as Timestamp).toMillis(), now + 60 * DAY);
+    // Idempotent: a retried event writes no second doc.
+    await processLive(uid, undefined, makePlayer({ best: 14, bestRun: run, recent: [run] }), { rand: shard0, nowMs: now });
+    assert.equal((await flagsOf(uid)).length, 1);
+  });
+
+  it('an honest run writes no flag', async () => {
+    const uid = uniq('noflag');
+    const run = honest();
+    const r = await processLive(uid, undefined, makePlayer({ best: 211, bestRun: run, recent: [run] }), { rand: shard0 });
+    assert.deepEqual(r.accepted, [run.runId]);
+    assert.equal(r.flagged, undefined);
+    assert.equal((await flagsOf(uid)).length, 0);
+  });
+
+  it('a rate-limited run is still judged (flag with pool null); a rejected run is not', async () => {
+    const uid = uniq('flagrate');
+    const day0 = Date.UTC(2026, 9, 21, 12);
+    let prev = makePlayer({ best: 300 });
+    const recent: ReturnType<typeof makeRun>[] = [];
+    for (let i = 0; i < 3; i++) {
+      const run = honest({ best: 300 });
+      recent.unshift(run);
+      const next = makePlayer({ best: 300, recent: recent.slice(0, 5) });
+      await processLive(uid, prev, next, { rand: shard0, nowMs: day0 + i });
+      prev = next;
+    }
+    const run = cheat({ best: 300 });
+    recent.unshift(run);
+    const next = makePlayer({ best: 300, recent: recent.slice(0, 5) });
+    const r = await processLive(uid, prev, next, { rand: shard0, nowMs: day0 + 3 });
+    assert.deepEqual(r.rejected, [{ runId: run.runId, reason: 'rate' }]);
+    assert.deepEqual(r.flagged, [run.runId]);
+    assert.equal((await flagDoc(uid, run.runId))!.pool, null);
+    // A run the cheat filter rejects (sum ≠ score) is not judged.
+    const bad = { ...cheat({ best: 300 }), score: 15 };
+    recent.unshift(bad);
+    const next2 = makePlayer({ best: 300, recent: recent.slice(0, 5) });
+    const r2 = await processLive(uid, next, next2, { rand: shard0, nowMs: day0 + 4 });
+    assert.deepEqual(r2.rejected, [{ runId: bad.runId, reason: 'count' }]);
+    assert.equal(r2.flagged, undefined);
+  });
+
+  it('RateDoc.scores keeps the last 10 scores of runs that passed checkRun', async () => {
+    const uid = uniq('hist');
+    const day0 = Date.UTC(2026, 9, 22, 12);
+    let prev = makePlayer({ best: 0 });
+    for (let i = 0; i < 12; i++) {
+      const run = makeRun({ score: 10 + i, deltas: Array.from({ length: 10 + i }, () => 170) });
+      const next = makePlayer({ best: 10 + i, bestRun: run, recent: [run] });
+      await processLive(uid, prev, next, { rand: shard0, nowMs: day0 + i });
+      prev = next;
+    }
+    assert.deepEqual((await rate(uid))?.scores, [12, 13, 14, 15, 16, 17, 18, 19, 20, 21]);
+  });
+
+  it('a score jump alone is a soft flag', async () => {
+    const uid = uniq('jump');
+    const day0 = Date.UTC(2026, 9, 23, 12);
+    await db.collection(RATE_COLLECTION).doc(uid).set({ day: '', count: 0, seen: [], scores: [20, 30, 25, 40, 35] });
+    const values = Array.from({ length: 40 }, (_, i) => Math.max(2, i + 1)); // Σ = 821
+    const run = makeRun({ score: 821, deltas: values.map(() => 170), values });
+    const r = await processLive(uid, undefined, makePlayer({ best: 821, bestRun: run, recent: [run] }), {
+      rand: shard0,
+      nowMs: day0,
+    });
+    assert.deepEqual(r.accepted, [run.runId]);
+    const f = await flagDoc(uid, run.runId);
+    assert.deepEqual(f!.signals, { jump: 30 });
+    assert.equal(f!.soft, true);
+  });
+
+  it('deletePlayerData removes the uid flags (and only theirs)', async () => {
+    const uid = uniq('flagdel');
+    const other = uniq('flagkeep');
+    for (const u of [uid, other]) {
+      const run = cheat();
+      await processLive(u, undefined, makePlayer({ best: 14, bestRun: run, recent: [run] }), { rand: shard0 });
+    }
+    assert.equal((await flagsOf(uid)).length, 1);
+    await db.collection('players').doc(uid).set({ marker: true });
+    await deletePlayerData(db, uid);
+    assert.equal((await flagsOf(uid)).length, 0);
+    assert.equal((await flagsOf(other)).length, 1);
+    await deletePlayerData(db, uid); // idempotent
   });
 });

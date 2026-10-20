@@ -5,7 +5,8 @@ rules_version = '2';
 // - pools/{doc}: read-only for signed-in clients; written by the Cloud Function (Admin SDK) only.
 // - everything else (incl. the server's versusRate/{uid} and versusNames/{uid}, the custom
 //   names the setVersusName callable checks and stores, and versusNameClaims/{key}, which
-//   uid holds a name — WP-N2): denied.
+//   uid holds a name — WP-N2; PRD-2.5 §3.6 versusFlags/{uid}_{runId}, the server's anti-cheat
+//   flags): denied.
 // App Check is enforced on Firestore by the platform (console setting), not here.
 // Rules cannot rate-limit: onPlayerRunWrite enforces the 3-a-day upload rate.
 service cloud.firestore {

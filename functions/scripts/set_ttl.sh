@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Firestore TTL policy for the versus data (PRD-2 §3.13 retention, ARCH §6.2):
-# players/{uid}.expireAt — inactive players vanish 60 days after their last write.
+# players/{uid}.expireAt — inactive players vanish 60 days after their last write;
+# PRD-2.5 §3.6 versusFlags/{uid}_{runId}.expireAt — anti-cheat flags vanish after 60 days.
 # (Pool / recent entries live inside documents, so the function and the daily
 # sweepPools trim those; TTL can only delete whole documents.)
 #
@@ -9,16 +10,22 @@
 # checks it directly through the Firestore Admin REST API, e.g. when the CLI
 # path is not used or to verify the state.
 #
-# Usage:  functions/scripts/set_ttl.sh [enable|disable|status]   (default: status)
+# Usage:  functions/scripts/set_ttl.sh [enable|disable|status] [GROUP]   (default: status players)
+#         e.g. functions/scripts/set_ttl.sh enable versusFlags
 # Auth:   ACCESS_TOKEN=<oauth token>  or a logged-in `gcloud` (gcloud auth print-access-token).
-# Env:    PROJECT (default flappy-spikes-a2b55), DATABASE (default "(default)").
+# Env:    PROJECT (default flappy-spikes-a2b55), DATABASE (default "(default)"),
+#         GROUP (default players; the second argument wins).
 set -euo pipefail
 
 PROJECT="${PROJECT:-flappy-spikes-a2b55}"
 DATABASE="${DATABASE:-(default)}"
-GROUP="players"
-FIELD="expireAt"
 action="${1:-status}"
+GROUP="${2:-${GROUP:-players}}"
+FIELD="expireAt"
+case "$GROUP" in
+  players|versusFlags) ;;
+  *) echo "unknown GROUP '$GROUP' (players | versusFlags)" >&2; exit 2 ;;
+esac
 
 token="${ACCESS_TOKEN:-}"
 if [[ -z "$token" ]]; then
@@ -42,7 +49,7 @@ case "$action" in
       "${url}?updateMask=ttlConfig,indexConfig" \
       -d '{"ttlConfig": {}, "indexConfig": {"indexes": []}}'
     echo
-    echo "Requested. The policy takes a few minutes to become ACTIVE: $0 status"
+    echo "Requested. The policy takes a few minutes to become ACTIVE: $0 status $GROUP"
     ;;
   disable)
     curl -sS -X PATCH -H "Authorization: Bearer ${token}" -H "Content-Type: application/json" \
@@ -54,7 +61,7 @@ case "$action" in
     echo
     ;;
   *)
-    echo "usage: $0 [enable|disable|status]" >&2
+    echo "usage: $0 [enable|disable|status] [players|versusFlags]" >&2
     exit 2
     ;;
 esac

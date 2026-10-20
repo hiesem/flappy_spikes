@@ -211,6 +211,13 @@ export interface RateDoc {
   names?: { day: string; count: number };
   seen: string[];
   last?: { runId: string; status: 'accepted' | 'rejected'; reason?: string; pool?: string };
+  /**
+   * PRD-2.5 §3.6 the scores of this player's last [SCORE_HISTORY] runs that
+   * passed `checkRun` (oldest first), kept by the server in the upload
+   * transaction; the `jump` anomaly signal compares a new run with them.
+   * Absent on older rate docs (= no history).
+   */
+  scores?: number[];
 }
 
 export function poolId(level: number, shard: number): string {
@@ -228,3 +235,68 @@ export function allPoolIds(): string[] {
 export function utcDay(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
+
+// region PRD-2.5 §3.6 WP-VERSUS — anomaly flags (D3: flag only, pools unchanged)
+
+/** Server-only collection of anomaly flags, `versusFlags/{uid}_{runId}` (clients have no access). */
+export const FLAGS_COLLECTION = 'versusFlags';
+/** How long a flag is kept (Firestore TTL on `expireAt`; privacy policy: "up to 60 days"). */
+export const FLAG_TTL_DAYS = 60;
+/** Scores kept in [RateDoc.scores] (the history of the `jump` signal). */
+export const SCORE_HISTORY = 10;
+/**
+ * `streak_jump`: a pass entry may exceed the previous pass entry's value by
+ * at most this much (+1 streak, +1 chick hatching on that pass; PRD: +2) …
+ * Run 19: +3 — the autopilot fixtures (honest_runs.json) hit the PRD's
+ * exact limit many times, so one point of headroom for honest players.
+ */
+export const STREAK_STEP_MAX = 3;
+/**
+ * … or reach this value at most (the FEVER hoop / pair FEVER gift lift the
+ * streak to 5, so the next perfect pass scores 6, +1 with the chick = 7;
+ * PRD: 7, run 19: 8 for the same one point of headroom).
+ */
+export const STREAK_FLOOR_MAX = 8;
+/**
+ * `pace`: flag when the median gap between consecutive plain passes (flag
+ * byte 0) is under this many centiseconds. Plain hoops come every 310 pt at
+ * ≤ 187.5 pt/s → ≥ ~165 cs; 135 cs leaves room for tilted crossings.
+ */
+export const PACE_MIN_MEDIAN_CS = 135;
+/** `pace` only judges a run with at least this many plain-pass gaps. */
+export const PACE_MIN_GAPS = 10;
+/** `passes`: the top scroll speed (`curve_speed` max, tuning_defaults.dart). */
+export const PASS_MAX_SPEED = 187.5;
+/** `passes`: the hoop spacing in pt (`RunConfig.spacing`; the comet's 560 only lowers the count). */
+export const PASS_SPACING = 310;
+/** `passes`: rings per slot assumed (every slot a 3-ring train — deliberately generous). */
+export const PASS_RINGS_PER_SLOT = 3;
+/** `passes`: slack on top of the bound. */
+export const PASS_EXTRA = 5;
+/** `jump` (soft): only scores at least this high are judged. */
+export const JUMP_MIN_SCORE = 500;
+/** `jump` (soft): a score above this × the median of the history … */
+export const JUMP_FACTOR = 5;
+/** … with at least this many history entries. */
+export const JUMP_MIN_HISTORY = 5;
+
+/** One anomaly flag (`versusFlags/{uid}_{runId}`). */
+export interface FlagDoc {
+  uid: string;
+  runId: string;
+  score: number;
+  best: number;
+  /** Signal name → its measured value (see anomaly.ts). */
+  signals: Record<string, number>;
+  /** Only the soft `jump` signal fired (listed separately; never acted on alone). */
+  soft: boolean;
+  durationCs: number;
+  passes: number;
+  level: number;
+  /** The pool the run went into, null when it was not pooled (rate-limited or an older run). */
+  pool: string | null;
+  platform: string;
+  ts: Timestamp;
+  expireAt: Timestamp;
+}
+// endregion PRD-2.5 §3.6

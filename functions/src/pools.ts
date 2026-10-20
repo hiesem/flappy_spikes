@@ -4,6 +4,8 @@
  * Firestore instance so the emulator tests can drive it directly.
  */
 import { DocumentReference, DocumentSnapshot, FieldValue, Firestore, Timestamp, Transaction } from 'firebase-admin/firestore';
+import { logger } from 'firebase-functions/v2';
+import { Anomaly, scoreRun } from './anomaly.js';
 import { levelFor } from './levels.js';
 import { versusName } from './nickname.js';
 import { checkCustomName, CustomNameReason, poolCustomName } from './customname.js';
@@ -29,6 +31,10 @@ import {
   allPoolIds,
   utcDay,
   MAX_LEVEL,
+  FLAG_TTL_DAYS,
+  FLAGS_COLLECTION,
+  FlagDoc,
+  SCORE_HISTORY,
 } from './schema.js';
 import { docSize } from './size.js';
 import { checkRun, RejectReason } from './timeline.js';
@@ -40,6 +46,8 @@ export interface WriteResult {
   trimmedRecent?: number;
   /** The live `players/{uid}` doc is gone (Delete my data): nothing written. */
   playerGone?: boolean;
+  /** PRD-2.5 §3.6 runIds that got a `versusFlags` doc (soft ones included). */
+  flagged?: string[];
 }
 
 function runsOf(p: PlayerDoc | undefined): RunEntry[] {
@@ -134,9 +142,13 @@ export async function processPlayerWrite(
     const nameRef = db.collection(NAMES_COLLECTION).doc(uid);
     const today = utcDay(nowMs);
 
+    // PRD-2.5 §3.6 anomalies of the runs that passed checkRun (reset on a
+    // transaction retry; written after the commit).
+    let anomalies: { run: RunEntry; a: Anomaly }[] = [];
     await db.runTransaction(async (tx) => {
       result.accepted = [];
       result.rejected = [];
+      anomalies = [];
       delete result.pool;
       delete result.playerGone;
       const [playerSnap, rateSnap, poolSnap, nameSnap] = await Promise.all([
@@ -156,10 +168,22 @@ export async function processPlayerWrite(
         rate.bestCount = 0;
       }
       const seen = new Set(rate.seen ?? []);
+      // PRD-2.5 §3.6 the last scores of runs that passed checkRun (oldest first).
+      const scores = Array.isArray(rate.scores) ? rate.scores.filter((x) => typeof x === 'number') : [];
       let chosen: RunEntry | null = null;
       let last: RateDoc['last'];
       for (const run of fresh) {
         let reason: RejectReason | null = seen.has(run.runId) ? 'duplicate' : checkRun(run, playerBest);
+        if (reason === null) {
+          // PRD-2.5 §3.6 (D3) judged whether pooled or rate-limited; never changes the outcome.
+          try {
+            const a = scoreRun(run, scores);
+            if (a) anomalies.push({ run, a });
+          } catch (err) {
+            logger.error('versusFlag: scoring failed', { uid, runId: run.runId, err: String(err) });
+          }
+          scores.push(run.score);
+        }
         const isBest =
           after.bestRun?.runId === run.runId && run.score > prevBest && run.score === playerBest;
         if (reason === null && !isBest) {
@@ -182,6 +206,7 @@ export async function processPlayerWrite(
         }
       }
       rate.seen = [...seen].slice(-SEEN_KEEP);
+      rate.scores = scores.slice(-SCORE_HISTORY);
       if (last) rate.last = last;
       tx.set(rateRef, rate);
       if (chosen) {
@@ -219,6 +244,9 @@ export async function processPlayerWrite(
         result.pool = pid;
       }
     });
+    if (!result.playerGone && anomalies.length > 0) {
+      result.flagged = await writeFlags(db, uid, anomalies, chosenId(result), result.pool ?? null, level, nowMs);
+    }
   }
 
   // Retention for `recent` (ARCH §6.2): drop entries older than 60 days. The
@@ -232,6 +260,79 @@ export async function processPlayerWrite(
     }
   }
   return result;
+}
+
+/** The runId that went into the pool (the first accepted one), if any. */
+function chosenId(r: WriteResult): string | null {
+  return r.pool && r.accepted.length > 0 ? r.accepted[0] : null;
+}
+
+/** `versusFlags` doc id: flat (`{uid}_{runId}`), idempotent per run. */
+export function flagId(uid: string, runId: string): string {
+  return `${uid}_${runId}`.replace(/\//g, '_');
+}
+
+/**
+ * PRD-2.5 §3.6 writes one flag per anomaly after the upload transaction
+ * committed. Idempotent (`set` by id); a failure is logged and never
+ * touches the pool / rate result (D3). Returns the runIds written.
+ */
+async function writeFlags(
+  db: Firestore,
+  uid: string,
+  anomalies: { run: RunEntry; a: Anomaly }[],
+  pooledRunId: string | null,
+  pool: string | null,
+  level: number,
+  nowMs: number,
+): Promise<string[]> {
+  const written: string[] = [];
+  for (const { run, a } of anomalies) {
+    const doc: FlagDoc = {
+      uid,
+      runId: run.runId,
+      score: run.score,
+      best: run.best,
+      signals: a.signals as Record<string, number>,
+      soft: a.soft,
+      durationCs: a.durationCs,
+      passes: a.passes,
+      level,
+      pool: run.runId === pooledRunId ? pool : null,
+      platform: run.platform,
+      ts: Timestamp.fromMillis(nowMs),
+      expireAt: Timestamp.fromMillis(nowMs + FLAG_TTL_DAYS * 24 * 3600 * 1000),
+    };
+    try {
+      await db.collection(FLAGS_COLLECTION).doc(flagId(uid, run.runId)).set(doc);
+      written.push(run.runId);
+      logger.warn('versusFlag', {
+        uid,
+        runId: run.runId,
+        score: run.score,
+        signals: a.signals,
+        soft: a.soft,
+        pool: doc.pool,
+      });
+    } catch (err) {
+      logger.error('versusFlag: write failed', { uid, runId: run.runId, err: String(err) });
+    }
+  }
+  return written;
+}
+
+/** PRD-2.5 §3.6 deletes every `versusFlags` doc of [uid] (Delete my data). Returns the count. */
+export async function deleteFlags(db: Firestore, uid: string): Promise<number> {
+  let n = 0;
+  for (;;) {
+    const page = await db.collection(FLAGS_COLLECTION).where('uid', '==', uid).limit(400).get();
+    if (page.empty) return n;
+    const batch = db.batch();
+    page.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    n += page.size;
+    if (page.size < 400) return n;
+  }
 }
 
 async function rewritePool(
@@ -267,8 +368,17 @@ export async function sweepAllPools(db: Firestore, nowMs = Date.now()): Promise<
  * (which re-reads the player doc in its transaction): a run write either
  * commits first (its pool entry is then removed here) or sees the player
  * gone and writes nothing. Idempotent: a second call removes 0.
+ * PRD-2.5 §3.6: after that transaction the uid's `versusFlags` docs are
+ * deleted too (a query + batch delete; idempotent, a retry finishes it).
  */
 export async function deletePlayerData(db: Firestore, uid: string, nowMs = Date.now()): Promise<number> {
+  const removed = await deletePlayerDocs(db, uid, nowMs);
+  // PRD-2.5 §3.6 the anti-cheat flags go too (after the transaction; idempotent).
+  await deleteFlags(db, uid);
+  return removed;
+}
+
+async function deletePlayerDocs(db: Firestore, uid: string, nowMs: number): Promise<number> {
   const playerRef = db.collection('players').doc(uid);
   const rateRef = db.collection(RATE_COLLECTION).doc(uid);
   const nameRef = db.collection(NAMES_COLLECTION).doc(uid);

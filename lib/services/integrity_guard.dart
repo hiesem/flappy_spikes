@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../game/diag.dart';
 import 'tester.dart';
+import 'obf_strings.g.dart';
 
 /// PRD-2.5 §3.3 WP-GUARD: the install's integrity verdict.
 ///
@@ -37,14 +38,13 @@ class IntegrityGuard {
   static IntegrityGuard instance = IntegrityGuard();
 
   /// The Play app-signing certificate (SHA-256 of the DER cert).
-  static const String playCertSha256 =
-      '324311eff3c0134cf41d7b82162d836f3c5e2824e65b410e6392e287667e328f';
+  static final String playCertSha256 = Obf.playCertSha256;
 
   /// The Apple Developer team that signs our own builds.
-  static const String appleTeamId = 'TF9VESMTKV';
+  static final String appleTeamId = Obf.appleTeamId;
 
   /// WP-IAP's sticky marker (written by the purchase verifier).
-  static const String iapFakeKey = 'iapFake';
+  static final String iapFakeKey = Obf.prefIapFake;
 
   /// The bound of [waitReady] (PRD §3.3 "Race").
   static const Duration readyTimeout = Duration(seconds: 2);
@@ -132,7 +132,7 @@ class IntegrityGuard {
     if (os != 'android' && os != 'ios') return;
     Map<Object?, Object?>? info;
     try {
-      info = await _channel.invokeMapMethod<Object?, Object?>('integrity');
+      info = await _channel.invokeMapMethod<Object?, Object?>(Obf.chIntegrity);
     } catch (e) {
       // MissingPluginException / PlatformException: fail-open.
       diag('FS-Guard check unavailable');

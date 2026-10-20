@@ -126,7 +126,6 @@ void main() {
         );
         expect(keys.add(d.key), isTrue, reason: 'duplicate ${d.key}');
         expect(d.type.validate(d.value, d.value), isNotNull, reason: d.key);
-        expect(d.section, isNotEmpty);
       }
     });
   });

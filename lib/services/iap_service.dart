@@ -9,6 +9,7 @@ import 'package:in_app_purchase_android/in_app_purchase_android.dart'
     show GooglePlayPurchaseDetails, InAppPurchaseAndroidPlatformAddition;
 
 import 'redact.dart';
+import 'obf_strings.g.dart';
 
 /// Store products (Play Console / App Store Connect product IDs in
 /// [IapProductInfo.storeId]).
@@ -29,13 +30,13 @@ enum IapProduct {
 extension IapProductInfo on IapProduct {
   /// Store product ID.
   String get storeId => switch (this) {
-    IapProduct.coins1000 => 'coins_1000',
-    IapProduct.coins10000 => 'coins_10000',
-    IapProduct.coins17000 => 'coins_17000',
-    IapProduct.coins100000 => 'coins_100000',
-    IapProduct.noAds => 'no_ads',
-    IapProduct.giftCoins10000 => 'gift_coins_10000',
-    IapProduct.giftNoAdsCoins10000 => 'gift_noads_coins_10000',
+    IapProduct.coins1000 => Obf.productCoins1000,
+    IapProduct.coins10000 => Obf.productCoins10000,
+    IapProduct.coins17000 => Obf.productCoins17000,
+    IapProduct.coins100000 => Obf.productCoins100000,
+    IapProduct.noAds => Obf.productNoAds,
+    IapProduct.giftCoins10000 => Obf.productGiftCoins10000,
+    IapProduct.giftNoAdsCoins10000 => Obf.productGiftNoAdsCoins10000,
   };
 
   /// Coins granted by a coin pack or gift (0 for No ads — its bonus is
@@ -586,6 +587,7 @@ class StoreIapService implements IapService {
     iapLog('replaying ${held.length} held purchase(s)');
     scheduleMicrotask(() => unawaited(_onPurchases(held)));
   }
+
   final Map<IapProduct, ProductDetails> _details = {};
 
   /// Kept alive for the app's lifetime on purpose (see class doc).

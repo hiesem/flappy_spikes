@@ -105,10 +105,11 @@ enum TuningType {
   }
 }
 
-/// PRD-2.3 §15.2 one gameplay value: its key, type, baked value, the PRD
-/// section it implements and a short description.
+/// PRD-2.3 §15.2 one gameplay value: its key, type and baked value. The PRD
+/// section and the description are `//` comments above each line in
+/// tuning_defaults.dart (PRD-2.5 §3.5: no description text in the binary).
 class TuningDef {
-  const TuningDef(this.key, this.type, this.value, this.section, this.doc);
+  const TuningDef(this.key, this.type, this.value);
 
   /// `<group>_<name>` (§15.3).
   final String key;
@@ -117,12 +118,6 @@ class TuningDef {
   /// The in-app default (int, double, bool, `List<int>`,
   /// `List<List<num>>` or `Map<String, num>`).
   final Object value;
-
-  /// The PRD section (e.g. `14.2`).
-  final String section;
-
-  /// One line: what the value is.
-  final String doc;
 }
 
 /// PRD-2.3 §14.4 / §15.3 a keyframe table `[[hoop, value], …]`: linear

@@ -27,6 +27,7 @@ import 'services/identity.dart';
 import 'services/integrity_guard.dart';
 import 'services/versus_service.dart';
 import 'share/share_flow.dart';
+import 'services/obf_strings.g.dart';
 
 /// PRD-2.3 §2: the share card painter and the share sheet (results share
 /// button and the Invite tile).
@@ -46,9 +47,9 @@ Future<void> main() async {
     // The in-memory store on purpose (the release e2e does the same).
     // ignore: invalid_use_of_visible_for_testing_member
     SharedPreferences.setMockInitialValues({
-      'bestScore': 0,
-      'coins': 0,
-      'firstSessionDone': true,
+      Obf.prefBestScore: 0,
+      Obf.prefCoins: 0,
+      Obf.prefFirstSessionDone: true,
     });
     CountingAudioPlatform.install();
   }

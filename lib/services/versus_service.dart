@@ -1138,7 +1138,7 @@ class FirebaseVersusService implements VersusService {
         return deleted;
       });
     } catch (e) {
-      _log('deleteMyData', e);
+      _log(VersusConfig.deleteFunction, e);
     }
     if (!ok) {
       // Offline / refused: nothing online was deleted, so keep the local

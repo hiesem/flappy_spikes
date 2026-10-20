@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import '../services/obf_strings.g.dart';
 
 /// PRD-2.5 §3.4 WP-SAVE: the device key behind the tamper-evident save.
 ///
@@ -50,7 +51,7 @@ class PlatformSaveSealer implements SaveSealer {
   @override
   Future<bool?> ensureKey() async {
     try {
-      final r = await _channel.invokeMapMethod<Object?, Object?>('sealKey');
+      final r = await _channel.invokeMapMethod<Object?, Object?>(Obf.chSealKey);
       if (r == null) return null;
       final key = r['key'];
       if (key is Uint8List && key.length >= 16) _key = key;
@@ -70,7 +71,7 @@ class PlatformSaveSealer implements SaveSealer {
     }
     try {
       final r = await _channel.invokeMapMethod<Object?, Object?>(
-        'seal',
+        Obf.chSeal,
         payloads,
       );
       final macs = r?['macs'];
@@ -90,7 +91,7 @@ class PlatformSaveSealer implements SaveSealer {
   Future<void> drop() async {
     _key = null;
     try {
-      await _channel.invokeMethod<void>('sealDrop');
+      await _channel.invokeMethod<void>(Obf.chSealDrop);
     } catch (_) {}
   }
 }

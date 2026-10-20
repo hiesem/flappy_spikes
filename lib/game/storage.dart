@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../achievements/ach_state.dart';
 import '../menu/home_mode.dart';
 import '../services/integrity_guard.dart';
+import '../services/obf_strings.g.dart';
 import '../skins/look.dart';
 import 'config.dart';
 import 'save_seal.dart';
@@ -32,108 +33,109 @@ class GameStorage {
   /// `getInstance()`.
   SharedPreferences? _prefs;
 
-  static const String _bestScoreKey = 'bestScore';
-  static const String _gamesPlayedKey = 'gamesPlayed';
-  static const String _muteSoundKey = 'muteSound';
-  static const String _musicVolumeKey = 'musicVolume';
-  static const String _coinsKey = 'coins';
-  static const String _ownedSkinsKey = 'ownedSkins';
-  static const String _equippedSkinKey = 'equippedSkin';
-  static const String _seenSkinsKey = 'seenSkins';
-  static const String _ownedItemsKey = 'ownedItems';
-  static const String _seenItemsKey = 'seenItems';
-  static const String _noAdsKey = 'noAds';
-  static const String _armedPowerupKey = 'armedPowerup';
+  static final String _bestScoreKey = Obf.prefBestScore;
+  static final String _gamesPlayedKey = Obf.prefGamesPlayed;
+  static final String _muteSoundKey = Obf.prefMuteSound;
+  static final String _musicVolumeKey = Obf.prefMusicVolume;
+  static final String _coinsKey = Obf.prefCoins;
+  static final String _ownedSkinsKey = Obf.prefOwnedSkins;
+  static final String _equippedSkinKey = Obf.prefEquippedSkin;
+  static final String _seenSkinsKey = Obf.prefSeenSkins;
+  static final String _ownedItemsKey = Obf.prefOwnedItems;
+  static final String _seenItemsKey = Obf.prefSeenItems;
+  static final String _noAdsKey = Obf.prefNoAds;
+  static final String _armedPowerupKey = Obf.prefArmedPowerup;
   // PRD-2.3.1 §12.2 (QA P2-02) the armed powerup's debug origin.
-  static const String _armedPowerupDebugKey = 'armedPowerupDebug';
-  static const String _slotHistoryKey = 'slotHistory';
-  static const String _installDayKey = 'installDay';
-  static const String _noAdsPopupLastDayKey = 'noAdsPopupLastDay';
-  static const String _noAdsPopupDismissalsKey = 'noAdsPopupDismissals';
-  static const String _noAdsPopupLastMsKey = 'noAdsPopupLastMs';
-  static const String _noAdsPopupClosedMsKey = 'noAdsPopupClosedMs';
-  static const String _noAdsPopupShowsTodayKey = 'noAdsPopupShowsToday';
-  static const String _noAdsPopupVideosKey = 'noAdsPopupVideos';
-  static const String _lastRunMoodKey = 'lastRunMood';
-  static const String _firstSessionDoneKey = 'firstSessionDone';
-  static const String _freeCoinsDayKey = 'freeCoinsDay';
-  static const String _freeCoinsCountKey = 'freeCoinsCount';
-  static const String _freeCoinsLastMsKey = 'freeCoinsLastMs';
-  static const String _debugDayOffsetKey = 'debugDayOffset';
-  static const String _claimedLevelsKey = 'claimedLevels';
-  static const String _playerLevelKey = 'playerLevel';
-  static const String _rumbleKey = 'rumble';
-  static const String _lastScoreKey = 'lastScore';
-  static const String _grantedPurchasesKey = 'grantedPurchases';
+  static final String _armedPowerupDebugKey = Obf.prefArmedPowerupDebug;
+  static final String _slotHistoryKey = Obf.prefSlotHistory;
+  static final String _installDayKey = Obf.prefInstallDay;
+  static final String _noAdsPopupLastDayKey = Obf.prefNoAdsPopupLastDay;
+  static final String _noAdsPopupDismissalsKey = Obf.prefNoAdsPopupDismissals;
+  static final String _noAdsPopupLastMsKey = Obf.prefNoAdsPopupLastMs;
+  static final String _noAdsPopupClosedMsKey = Obf.prefNoAdsPopupClosedMs;
+  static final String _noAdsPopupShowsTodayKey = Obf.prefNoAdsPopupShowsToday;
+  static final String _noAdsPopupVideosKey = Obf.prefNoAdsPopupVideos;
+  static final String _lastRunMoodKey = Obf.prefLastRunMood;
+  static final String _firstSessionDoneKey = Obf.prefFirstSessionDone;
+  static final String _freeCoinsDayKey = Obf.prefFreeCoinsDay;
+  static final String _freeCoinsCountKey = Obf.prefFreeCoinsCount;
+  static final String _freeCoinsLastMsKey = Obf.prefFreeCoinsLastMs;
+  static final String _debugDayOffsetKey = Obf.prefDebugDayOffset;
+  static final String _claimedLevelsKey = Obf.prefClaimedLevels;
+  static final String _playerLevelKey = Obf.prefPlayerLevel;
+  static final String _rumbleKey = Obf.prefRumble;
+  static final String _lastScoreKey = Obf.prefLastScore;
+  static final String _grantedPurchasesKey = Obf.prefGrantedPurchases;
 
   // region PRD-2 keys (WP-0b; PRD-2 §7 persistence table, ARCH §5)
-  static const String _feathersKey = 'feathers';
-  static const String _puzzlePiecesKey = 'puzzlePieces';
-  static const String _puzzleRoundKey = 'puzzleRound';
-  static const String _lastPortalRideKey = 'lastPortalRide';
-  static const String _unclaimedLevelRewardKey = 'unclaimedLevelReward';
-  static const String _levelRewardPayoutKey = 'levelRewardPayout';
-  static const String _puzzlePayoutKey = 'puzzlePayout';
-  static const String _metElementsKey = 'metElements';
-  static const String _versusNicknameKey = 'versusNickname';
-  static const String _versusCustomNameKey = 'versusCustomName';
-  static const String _versusCustomNameSyncKey = 'versusCustomNameSync';
-  static const String _versusCustomNameErrorKey = 'versusCustomNameError';
-  static const String _versusCustomNameReadKey = 'versusCustomNameRead';
-  static const String _uploadQueueKey = 'uploadQueue';
-  static const String _uploadsTodayKey = 'uploadsToday';
-  static const String _uploadsDayKey = 'uploadsDay';
-  static const String _uploadsSentKey = 'uploadsSent';
-  static const String _uploadsSentDayKey = 'uploadsSentDay';
-  static const String _notifOrderKey = 'notifOrder';
-  static const String _notifPositionKey = 'notifPosition';
+  static final String _feathersKey = Obf.prefFeathers;
+  static final String _puzzlePiecesKey = Obf.prefPuzzlePieces;
+  static final String _puzzleRoundKey = Obf.prefPuzzleRound;
+  static final String _lastPortalRideKey = Obf.prefLastPortalRide;
+  static final String _unclaimedLevelRewardKey = Obf.prefUnclaimedLevelReward;
+  static final String _levelRewardPayoutKey = Obf.prefLevelRewardPayout;
+  static final String _puzzlePayoutKey = Obf.prefPuzzlePayout;
+  static final String _metElementsKey = Obf.prefMetElements;
+  static final String _versusNicknameKey = Obf.prefVersusNickname;
+  static final String _versusCustomNameKey = Obf.prefVersusCustomName;
+  static final String _versusCustomNameSyncKey = Obf.prefVersusCustomNameSync;
+  static final String _versusCustomNameErrorKey = Obf.prefVersusCustomNameError;
+  static final String _versusCustomNameReadKey = Obf.prefVersusCustomNameRead;
+  static final String _uploadQueueKey = Obf.prefUploadQueue;
+  static final String _uploadsTodayKey = Obf.prefUploadsToday;
+  static final String _uploadsDayKey = Obf.prefUploadsDay;
+  static final String _uploadsSentKey = Obf.prefUploadsSent;
+  static final String _uploadsSentDayKey = Obf.prefUploadsSentDay;
+  static final String _notifOrderKey = Obf.prefNotifOrder;
+  static final String _notifPositionKey = Obf.prefNotifPosition;
   // region P231-E — achievements (PRD-2.3.1 §12.3)
-  static const String _achUnlockedKey = 'achUnlocked';
-  static const String _achReportedKey = 'achReported';
-  static const String _achReportedPlayerKey = 'achReportedPlayer';
-  static const String _achRidesKey = 'achRides';
-  static const String _achItemsKey = 'achItems';
-  static const String _achVersusWinsKey = 'achVersusWins';
-  static const String _achDayStreakKey = 'achDayStreak';
-  static const String _achLastPlayDayKey = 'achLastPlayDay';
+  static final String _achUnlockedKey = Obf.prefAchUnlocked;
+  static final String _achReportedKey = Obf.prefAchReported;
+  static final String _achReportedPlayerKey = Obf.prefAchReportedPlayer;
+  static final String _achRidesKey = Obf.prefAchRides;
+  static final String _achItemsKey = Obf.prefAchItems;
+  static final String _achVersusWinsKey = Obf.prefAchVersusWins;
+  static final String _achDayStreakKey = Obf.prefAchDayStreak;
+  static final String _achLastPlayDayKey = Obf.prefAchLastPlayDay;
   // QA P2-03 the open run's provisional achievement journal.
-  static const String _achJournalKey = 'achJournal';
-  static const String _achJournalExcludedKey = 'achJournalExcluded';
+  static final String _achJournalKey = Obf.prefAchJournal;
+  static final String _achJournalExcludedKey = Obf.prefAchJournalExcluded;
   // PRD-2.3.1 §19 the pacing queue and the lifetime item catch counts.
-  static const String _achPendingKey = 'achPending';
-  static const String _achItemCountsKey = 'achItemCounts';
+  static final String _achPendingKey = Obf.prefAchPending;
+  static final String _achItemCountsKey = Obf.prefAchItemCounts;
   // QA P19-01..03 everything above lives in ONE JSON key since 2.3.1 (21);
   // the separate keys are only read once, to migrate a 2.3.1 (20) install.
-  static const String _achStateKey = 'achState';
+  static final String _achStateKey = Obf.prefAchState;
   // endregion P231-E
-  static const String _notifLastSentKey = 'notifLastSent';
-  static const String _notifPermissionAskedKey = 'notifPermissionAsked';
+  static final String _notifLastSentKey = Obf.prefNotifLastSent;
+  static final String _notifPermissionAskedKey = Obf.prefNotifPermissionAsked;
   // endregion PRD-2 keys
   // PRD-2.3 §14.2 the gamesPlayed of the run that last showed a golden
   // feather / puzzle piece (−1 = never; never in two runs in a row).
-  static const String _lastFeatherRunKey = 'lastFeatherRun';
-  static const String _lastPieceRunKey = 'lastPieceRun';
+  static final String _lastFeatherRunKey = Obf.prefLastFeatherRun;
+  static final String _lastPieceRunKey = Obf.prefLastPieceRun;
   // PRD-2.3 §10.3 the first-run instructions were shown (saved at that
   // run's first tap). Local progress: "Delete my data" keeps it.
-  static const String _firstRunHintSeenKey = 'firstRunHintSeen';
+  static final String _firstRunHintSeenKey = Obf.prefFirstRunHintSeen;
   // PRD-2.3 §18.3 foreground seconds since install (kept by "Delete my data").
-  static const String _playtimeSecondsKey = 'playtimeSeconds';
+  static final String _playtimeSecondsKey = Obf.prefPlaytimeSeconds;
   // PRD-2.3 §18.4 the one-time `first_interstitial` event has been sent.
-  static const String _firstInterstitialShownKey = 'firstInterstitialShown';
+  static final String _firstInterstitialShownKey =
+      Obf.prefFirstInterstitialShown;
   // PRD-2.3 §23.2 the last rating-sheet request, in seconds since the epoch
   // (0 = never; kept by "Delete my data").
-  static const String _lastRatingRequestAtKey = 'lastRatingRequestAt';
+  static final String _lastRatingRequestAtKey = Obf.prefLastRatingRequestAt;
   // PRD-2.2 §2.2 the Home mode button: 'versus' (default) / 'freeFly'.
-  static const String _homeModeKey = 'homeMode';
+  static final String _homeModeKey = Obf.prefHomeMode;
   // PRD-2.3 §21.3 the last uploaded versus picture (WP-AV: no pictures any
   // more; the stale record is removed at load and by "Delete my data").
-  static const String _versusAvatarKey = 'versusAvatar';
+  static final String _versusAvatarKey = Obf.prefVersusAvatar;
   // PRD-2.5 §3.4 WP-SAVE the sealed snapshots ({cur, prev}).
-  static const String _sealKey = 'saveSeal';
+  static final String _sealKey = Obf.prefSaveSeal;
 
   /// One preference key per equipped layer (the five-key equipped map).
   static String _equippedItemKey(SkinLayer layer) =>
-      'equippedItem.${layer.key}';
+      '${Obf.prefEquippedItemPrefix}${layer.key}';
 
   /// [slotHistory] keeps at most this many entries (most recent last).
   static const int _maxSlotHistory = 3;
@@ -559,13 +561,13 @@ class GameStorage {
 
   /// The covered fields (PRD §3.4), one canonical hash each.
   Map<String, String> _sealHashes() => {
-    'bestScore': sealFieldHash(bestScore),
-    'coins': sealFieldHash(coins),
-    'grantedPurchases': sealFieldHash(List.of(grantedPurchases)..sort()),
-    'noAds': sealFieldHash(noAds),
-    'ownedItems': sealFieldHash(ownedItems.toList()..sort()),
-    'playerLevel': sealFieldHash(playerLevel),
-    'uploadQueue': sealFieldHash(uploadQueue),
+    Obf.prefBestScore: sealFieldHash(bestScore),
+    Obf.prefCoins: sealFieldHash(coins),
+    Obf.prefGrantedPurchases: sealFieldHash(List.of(grantedPurchases)..sort()),
+    Obf.prefNoAds: sealFieldHash(noAds),
+    Obf.prefOwnedItems: sealFieldHash(ownedItems.toList()..sort()),
+    Obf.prefPlayerLevel: sealFieldHash(playerLevel),
+    Obf.prefUploadQueue: sealFieldHash(uploadQueue),
   };
 
   bool get _sealedFieldsAtDefault =>
@@ -905,7 +907,7 @@ class GameStorage {
     await saveAchState(AchState());
     // The 2.3.1 (20) keys go too, so nothing could ever migrate back.
     final prefs = await SharedPreferences.getInstance();
-    for (final k in const [
+    for (final k in [
       _achUnlockedKey,
       _achReportedKey,
       _achReportedPlayerKey,

@@ -27,6 +27,10 @@ import 'run_hud.dart';
 /// drawn in the run's banner layer instead (PRD-2.2 §12.1 / §12.2), behind
 /// the gameplay: the stickers ("BONUS UNLOCKED!", "PICTURE COMPLETE") and the
 /// puzzle's collect text ("n/4", "+N") through [labels] in [bannerLayer].
+/// Owner 2026-10-20 (2.5.0 47): the rest is drawn there too ([view]): the
+/// slot (feather tray / puzzle pill), the trails, sparkles, confetti and
+/// rings sit behind the hoops, bird and pickups, over the score circle. The
+/// layer itself stays in the HUD for its clock and life cycle.
 class CollectLayer extends PositionComponent
     with HasGameReference<FlappySpikesGame> {
   CollectLayer(this.run, this.bannerLayer)
@@ -40,6 +44,10 @@ class CollectLayer extends PositionComponent
 
   /// The banner-layer part of this layer's collect text (see [CollectLabels]).
   late final CollectLabels labels = CollectLabels(this);
+
+  /// Draws this layer's slot and effects in the banner layer, under
+  /// [labels] (see [CollectView]).
+  late final CollectView view = CollectView(this);
 
   static final Expando<CollectLayer> _layers = Expando('CollectLayer');
 
@@ -89,6 +97,7 @@ class CollectLayer extends PositionComponent
   Future<void> onLoad() async {
     add(slot);
     add(pool);
+    bannerLayer.add(view);
     bannerLayer.add(labels);
     try {
       coin = await CoinIcon.load(game.images);
@@ -101,9 +110,17 @@ class CollectLayer extends PositionComponent
   /// slot's items drop their stickers in the slot's own removal.
   @override
   void onRemove() {
+    view.removeFromParent();
     labels.removeFromParent();
     super.onRemove();
   }
+
+  /// Nothing in the HUD: [view] draws this layer in the banner layer.
+  @override
+  void renderTree(Canvas canvas) {}
+
+  /// This layer's own drawing (slot, pool, rings), for [view].
+  void paintTree(Canvas canvas) => super.renderTree(canvas);
 
   /// A gold ring growing [from] → [to] pt (stroke [stroke], [length] s).
   void ring(
@@ -188,6 +205,18 @@ class CollectLayer extends PositionComponent
     final item = slot.current;
     if (item is CollectTimeline) item.advance(this, slot.time);
   }
+}
+
+/// Owner 2026-10-20 (2.5.0 47): the [CollectLayer]'s slot and effects, drawn
+/// in the run's banner layer (behind the gameplay, over the score circle),
+/// under the [CollectLabels]. The layer keeps its HUD clock; this only draws.
+class CollectView extends PositionComponent {
+  CollectView(this.layer) : super(priority: 1);
+
+  final CollectLayer layer;
+
+  @override
+  void render(Canvas canvas) => layer.paintTree(canvas);
 }
 
 /// The part of a [CollectLayer] that lives in the run's banner layer (PRD-2.2

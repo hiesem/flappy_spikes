@@ -11,7 +11,7 @@ import 'normal.dart';
 
 /// The portal ring (PRD-2 §3.12, §5.12b): a normal-sized ring in purple
 /// `#7C4DFF` / deep violet `#4B2BB8` with a cyan `#22E6FF` inner rim and a
-/// 13 % cyan fill; a short beam of light (66 pt, as tall as the opening,
+/// cyan fill as strong as the beam's start (owner 2026-10-20; was 13 %); a short beam of light (66 pt, as tall as the opening,
 /// cyan → violet → transparent, pulsing 75–100 %) streams out of its front
 /// toward the bird. It is ring #0 of the ride chain: the bird flies through
 /// it like any ring (rims bounce, the pass counts as usual) and the pass
@@ -37,11 +37,19 @@ class PortalHoopKind extends HoopKind {
       .75 + .25 * math.sin(t * PortalConfig.beamPulse);
 
   /// Back half (behind the bird): beam, cyan fill, deep violet back stroke.
+  /// Owner 2026-10-20 (2.5.0 47): the whole inside is the beam's cyan (the
+  /// beam stops at the ellipse, so its left half no longer shows a seam
+  /// against a faint right half), pulsing with the beam.
   static void paintBack(Canvas c, double opening, double t, double opacity) {
     if (opacity <= 0) return;
     final r = ry(opening);
     final beam = beamAlpha(t) * opacity;
     const len = PortalConfig.portalBeam;
+    final oval = Rect.fromCenter(
+      center: Offset.zero,
+      width: 2 * PortalConfig.portalRx,
+      height: 2 * r,
+    );
     final p = Paint()
       ..shader = Gradient.linear(
         const Offset(2, 0),
@@ -54,21 +62,20 @@ class PortalHoopKind extends HoopKind {
         const [0, .6, 1],
       );
     c.drawPath(
-      Path()
-        ..moveTo(2, -r - 1)
-        ..lineTo(2, r + 1)
-        ..lineTo(2 - len, .8 * (r + 1))
-        ..lineTo(2 - len, -.8 * (r + 1))
-        ..close(),
+      Path.combine(
+        PathOperation.difference,
+        Path()
+          ..moveTo(2, -r - 1)
+          ..lineTo(2, r + 1)
+          ..lineTo(2 - len, .8 * (r + 1))
+          ..lineTo(2 - len, -.8 * (r + 1))
+          ..close(),
+        Path()..addOval(oval),
+      ),
       p,
     );
-    final oval = Rect.fromCenter(
-      center: Offset.zero,
-      width: 2 * PortalConfig.portalRx,
-      height: 2 * r,
-    );
     c
-      ..drawOval(oval, Paint()..color = Color.fromRGBO(34, 230, 255, .13 * opacity))
+      ..drawOval(oval, Paint()..color = Color.fromRGBO(34, 230, 255, .73 * beam))
       ..drawArc(
         oval,
         -math.pi / 2,

@@ -1,0 +1,10 @@
+{
+  "_note": "productsv2 200, a slow payment method still pending",
+  "status": 200,
+  "body": {
+    "kind": "androidpublisher#productPurchaseV2",
+    "productLineItem": [ { "productId": "coins_10000", "productOfferDetails": { "quantity": 1 } } ],
+    "purchaseStateContext": { "purchaseState": "PENDING" },
+    "acknowledgementState": "ACKNOWLEDGEMENT_STATE_PENDING"
+  }
+}

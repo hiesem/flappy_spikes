@@ -1,0 +1,15 @@
+{
+  "_note": "purchases.productsv2.getproductpurchasev2 200, a real paid No Ads (shape per the androidpublisher v3 ProductPurchaseV2 reference; ids anonymised)",
+  "status": 200,
+  "body": {
+    "kind": "androidpublisher#productPurchaseV2",
+    "productLineItem": [
+      { "productId": "no_ads", "productOfferDetails": { "offerToken": "AbCdEf", "quantity": 1, "refundableQuantity": 1, "consumptionState": "CONSUMPTION_STATE_NO_NEED_TO_CONSUME" } }
+    ],
+    "purchaseStateContext": { "purchaseState": "PURCHASED" },
+    "acknowledgementState": "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED",
+    "orderId": "GPA.3300-0000-0000-00000",
+    "purchaseCompletionTime": "2026-10-20T10:00:00Z",
+    "regionCode": "NL"
+  }
+}

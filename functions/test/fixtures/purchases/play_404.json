@@ -1,0 +1,5 @@
+{
+  "_note": "productsv2 404 for a token Play never issued",
+  "status": 404,
+  "body": { "error": { "code": 404, "message": "The purchase token was not found.", "errors": [ { "message": "The purchase token was not found.", "domain": "androidpublisher", "reason": "purchaseTokenNotFound" } ], "status": "NOT_FOUND" } }
+}

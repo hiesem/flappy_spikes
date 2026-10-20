@@ -6,6 +6,10 @@ rules_version = '2';
 // - everything else (incl. the server's versusRate/{uid} and versusNames/{uid}, the custom
 //   names the setVersusName callable checks and stores, and versusNameClaims/{key}, which
 //   uid holds a name — WP-N2): denied.
+// - purchases/{sha256(platform:token)} and iapMeta/voidedSweep (PRD-2.5 §3.8 WP-IAP: the
+//   verifyPurchase callable's store verdicts and the daily voided-purchases sweep) are
+//   written by the Cloud Functions (Admin SDK) only and are deliberately NOT listed below,
+//   so every client read and write is denied. Do not add a rule for them.
 // App Check is enforced on Firestore by the platform (console setting), not here.
 // Rules cannot rate-limit: onPlayerRunWrite enforces the 3-a-day upload rate.
 service cloud.firestore {

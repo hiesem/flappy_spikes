@@ -1,0 +1,12 @@
+{
+  "_note": "purchases.voidedpurchases.list page 1 of 2 (type=0)",
+  "status": 200,
+  "body": {
+    "pageInfo": { "totalResults": 2, "resultPerPage": 2, "startIndex": 0 },
+    "tokenPagination": { "nextPageToken": "page-2-token" },
+    "voidedPurchases": [
+      { "kind": "androidpublisher#voidedPurchase", "purchaseToken": "voided-token-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "purchaseTimeMillis": "1760000000000", "voidedTimeMillis": "1760900000000", "orderId": "GPA.3302-0000-0000-00001", "voidedSource": 0, "voidedReason": 1 },
+      { "kind": "androidpublisher#voidedPurchase", "purchaseToken": "voided-token-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "purchaseTimeMillis": "1760000500000", "voidedTimeMillis": "1760905000000", "orderId": "GPA.3302-0000-0000-00002", "voidedSource": 2, "voidedReason": 7 }
+    ]
+  }
+}

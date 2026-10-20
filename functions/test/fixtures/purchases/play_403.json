@@ -1,0 +1,5 @@
+{
+  "_note": "productsv2 403 before the Play Console permission of the service account is live",
+  "status": 403,
+  "body": { "error": { "code": 403, "message": "The current user has insufficient permissions to perform the requested operation.", "errors": [ { "message": "The current user has insufficient permissions to perform the requested operation.", "domain": "androidpublisher", "reason": "permissionDenied" } ], "status": "PERMISSION_DENIED" } }
+}

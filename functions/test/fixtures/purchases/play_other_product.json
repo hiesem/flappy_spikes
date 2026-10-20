@@ -1,0 +1,10 @@
+{
+  "_note": "productsv2 200, a real 0.99 pack token sent as the 79.99 pack",
+  "status": 200,
+  "body": {
+    "kind": "androidpublisher#productPurchaseV2",
+    "productLineItem": [ { "productId": "coins_1000", "productOfferDetails": { "quantity": 1 } } ],
+    "purchaseStateContext": { "purchaseState": "PURCHASED" },
+    "acknowledgementState": "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED"
+  }
+}

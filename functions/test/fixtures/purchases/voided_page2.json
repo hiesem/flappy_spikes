@@ -1,0 +1,9 @@
+{
+  "_note": "purchases.voidedpurchases.list page 2 of 2 (no nextPageToken)",
+  "status": 200,
+  "body": {
+    "voidedPurchases": [
+      { "kind": "androidpublisher#voidedPurchase", "purchaseToken": "voided-token-cccccccccccccccccccccccccccccc", "purchaseTimeMillis": "1760001000000", "voidedTimeMillis": "1760910000000", "orderId": "GPA.3302-0000-0000-00003", "voidedSource": 1, "voidedReason": 0 }
+    ]
+  }
+}

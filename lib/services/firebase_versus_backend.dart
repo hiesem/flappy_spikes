@@ -19,6 +19,7 @@ import 'integrity_guard.dart';
 import 'redact.dart';
 import 'versus_auth.dart';
 import 'versus_service.dart';
+import 'obf_strings.g.dart';
 
 /// The FlutterFire calls of the versus service (PRD-2 §3.13, ARCH §6):
 /// App Check, anonymous Auth + the Play Games link, the `players/{uid}`
@@ -241,7 +242,7 @@ class FirebaseVersusBackend implements VersusBackend {
   Future<List<PoolEntry>> readPool(String id) async {
     final DocumentSnapshot<Map<String, dynamic>> snap;
     try {
-      snap = await _db.collection('pools').doc(id).get();
+      snap = await _db.collection(Obf.colPools).doc(id).get();
     } on FirebaseException catch (e) {
       throw VersusFailure(
         await classify(e, liveUser: () => _userIsLive(refresh: true)),
@@ -267,7 +268,7 @@ class FirebaseVersusBackend implements VersusBackend {
     final guard = integrity ?? IntegrityGuard.instance;
     await guard.waitReady();
     if (!guard.trusted) return UploadWrite.done;
-    final ref = _db.collection('players').doc(uid);
+    final ref = _db.collection(Obf.colPlayers).doc(uid);
     try {
       await _db.runTransaction((tx) async {
         final snap = await tx.get(ref);

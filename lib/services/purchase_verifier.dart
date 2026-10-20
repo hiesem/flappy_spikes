@@ -10,6 +10,7 @@ import 'firebase_versus_backend.dart';
 import 'iap_service.dart';
 import 'integrity_guard.dart';
 import 'tester.dart';
+import 'obf_strings.g.dart';
 
 /// PRD-2.5 §3.8 WP-IAP: the server's answer for one purchase.
 enum PurchaseVerdict { valid, revoked, invalid, unknown }
@@ -30,24 +31,24 @@ class PurchaseVerifyRefused implements Exception {
   const PurchaseVerifyRefused();
 }
 
-/// The callable's name (WP-STRINGS hides the literal later).
-const String kVerifyPurchaseFunction = 'verifyPurchase';
+/// The callable's name (masked: PRD-2.5 §3.5 WP-STRINGS).
+final String kVerifyPurchaseFunction = Obf.fnVerifyPurchase;
 
 // New shared_preferences keys (PRD-2.5 §3.8; no existing key is renamed).
 /// Purchases waiting for their server check (JSON list, survives restarts).
-const String kIapVerifyQueueKey = 'iapVerifyQueue';
+final String kIapVerifyQueueKey = Obf.prefIapVerifyQueue;
 
 /// Refunded purchase ids, in the `IapEvent.transactionIds` form
 /// (`token:<Play token>` / `id:<StoreKit transaction id>`).
-const String kRevokedPurchasesKey = 'revokedPurchases';
+final String kRevokedPurchasesKey = Obf.prefRevokedPurchases;
 
 /// Verified No-Ads purchases, re-checked every [PurchaseVerifier.noAdsRecheck]
 /// so a later refund is seen (JSON list).
-const String kIapNoAdsTokensKey = 'iapNoAdsTokens';
+final String kIapNoAdsTokensKey = Obf.prefIapNoAdsTokens;
 
 /// Sticky: the server called one of this install's purchases fake. WP-GUARD
 /// reads it at start as the untrusted reason `iap_fake`.
-const String kIapFakeKey = 'iapFake';
+final String kIapFakeKey = Obf.prefIapFake;
 
 /// The WP-GUARD reason for a fake purchase.
 const String kIapFakeReason = 'iap_fake';

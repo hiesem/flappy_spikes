@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'tuning_values.dart';
+import '../../services/obf_strings.g.dart';
 
 /// Versus tuning (PRD-2 §3.13 rules + backend, §5.7 HUD out state, §5.8 VS
 /// intro, §5.10 results). WP-5b. Every member's doc starts with its PRD
@@ -94,7 +95,7 @@ abstract final class VersusConfig {
 
   /// PRD-2.3 §21.4 / §0 item 7 the Remote Config parameter holding the
   /// salt of the hashed Play Games id (generated at deploy, never in git).
-  static const String pgSaltKey = 'versus_pg_salt';
+  static final String pgSaltKey = Obf.rcPgSalt;
 
   /// PRD-2.3 §21.4 / §25.3 (call) a search waits at most this long for the
   /// pg salt before it goes on with the pg known so far.
@@ -115,16 +116,16 @@ abstract final class VersusConfig {
   static const String functionsRegion = 'europe-west1';
 
   /// §3.13 The callable that deletes everything online (ARCH §6.3).
-  static const String deleteFunction = 'deleteMyData';
+  static final String deleteFunction = Obf.fnDeleteMyData;
 
   /// WP-NAME the callable that checks and stores the custom versus name
   /// (`functions/src/index.ts`).
-  static const String setNameFunction = 'setVersusName';
+  static final String setNameFunction = Obf.fnSetVersusName;
 
   /// WP-N2 the callable that reads the stored custom name back (restore
   /// after a reinstall / sign-in / account switch; also the once-a-day
   /// activity ping that keeps a guest's name).
-  static const String getNameFunction = 'getVersusName';
+  static final String getNameFunction = Obf.fnGetVersusName;
 
   /// §3.13 Play Games → Firebase link: the OAuth **web** client id the Play
   /// Games server auth code is requested for (public config, not a secret).

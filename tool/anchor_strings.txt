@@ -1,0 +1,31 @@
+ownedSkins
+ownedItems
+grantedPurchases
+equippedSkin
+uploadQueue
+freeCoinsCount
+saveSeal
+iapFake
+iapVerifyQueue
+revokedPurchases
+iapNoAdsTokens
+coins_1000
+coins_10000
+coins_17000
+coins_100000
+no_ads
+gift_coins_10000
+gift_noads_coins_10000
+setVersusName
+getVersusName
+deleteMyData
+verifyPurchase
+versus_pg_salt
+pools
+sealKey
+sealDrop
+324311eff3c0134cf41d7b82162d836f3c5e2824e65b410e6392e287667e328f
+TF9VESMTKV
+Coins for a hoop pass that is not perfect
+Coin revive prices after the ad revive; no revive after the last
+One-time coin reward of levels 1-10

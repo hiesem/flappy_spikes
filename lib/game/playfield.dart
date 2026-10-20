@@ -1,3 +1,5 @@
+import '../services/obf_strings.g.dart';
+
 /// PRD-2.2 §7.5.2: a persistent component that survives scene changes and
 /// caches positions derived from `game.viewHeight`. It registers with
 /// `game.registerResizable(this)` (like `Tintable`) and re-lays itself out
@@ -38,15 +40,23 @@ enum BannerState {
 /// replaces `first_runs` (the new-player grace), `rating` is a run that
 /// asked for the store's rating sheet.
 enum InterstitialSkip {
-  noAds('no_ads'),
-  newPlayer('new_player'),
-  rating('rating'),
-  rewardedThisRun('rewarded_this_run'),
-  cooldown('cooldown'),
-  notLoaded('not_loaded'),
-  background('background');
+  noAds,
+  newPlayer,
+  rating,
+  rewardedThisRun,
+  cooldown,
+  notLoaded,
+  background;
 
-  const InterstitialSkip(this.analyticsName);
-
-  final String analyticsName;
+  /// A getter, not a const field: `no_ads` is also the No-Ads product id,
+  /// whose literal must not be in the binary (PRD-2.5 §3.5).
+  String get analyticsName => switch (this) {
+    InterstitialSkip.noAds => Obf.productNoAds,
+    InterstitialSkip.newPlayer => 'new_player',
+    InterstitialSkip.rating => 'rating',
+    InterstitialSkip.rewardedThisRun => 'rewarded_this_run',
+    InterstitialSkip.cooldown => 'cooldown',
+    InterstitialSkip.notLoaded => 'not_loaded',
+    InterstitialSkip.background => 'background',
+  };
 }

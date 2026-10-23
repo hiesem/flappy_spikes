@@ -6,7 +6,7 @@
 import { DocumentReference, DocumentSnapshot, FieldValue, Firestore, Timestamp, Transaction } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
 import { Anomaly, scoreRun } from './anomaly.js';
-import { levelFor } from './levels.js';
+import { bracketFor } from './brackets.js';
 import { versusName } from './nickname.js';
 import { checkCustomName, CustomNameReason, poolCustomName } from './customname.js';
 import { CLAIMS_COLLECTION, ClaimDoc, GUEST_NAME_TTL_MS, nameKey, SEEN_REFRESH_MS } from './nameclaims.js';
@@ -30,7 +30,7 @@ import {
   SHARDS,
   allPoolIds,
   utcDay,
-  MAX_LEVEL,
+  MAX_BRACKET,
   FLAG_TTL_DAYS,
   FLAGS_COLLECTION,
   FlagDoc,
@@ -38,6 +38,7 @@ import {
 } from './schema.js';
 import { docSize } from './size.js';
 import { checkRun, RejectReason } from './timeline.js';
+import { lbSyncName } from './board_delete.js';
 
 export interface WriteResult {
   accepted: string[];
@@ -102,10 +103,15 @@ export interface ProcessOptions {
   rand?: () => number;
 }
 
+/** PRD-2.6 R4/O17d: the stored player level range copied into pool entries as `plv`. */
+const MAX_PLAYER_LEVEL = 9999;
+
 /**
  * Handles one `players/{uid}` write: validates the new run(s), applies the
  * upload rate, writes the newest accepted run to a random shard of the
- * player's (server-recomputed) level and trims stale `recent` entries.
+ * player's (server-recomputed) best-score bracket and trims stale `recent`
+ * entries. Each new entry also carries the player's stored level (`plv`) and
+ * the SPACE FLYER flag (`space`, only when true).
  *
  * The event snapshot may arrive after `deletePlayerData` (S6-08): the
  * transaction re-reads the live player doc and writes nothing (no rate doc,
@@ -133,9 +139,15 @@ export async function processPlayerWrite(
   if (fresh.length > 0) {
     const playerBest = typeof after.best === 'number' ? after.best : 0;
     const prevBest = typeof before?.best === 'number' ? before.best : 0;
-    const level = Math.min(MAX_LEVEL, levelFor(playerBest));
+    const bracket = Math.min(MAX_BRACKET, bracketFor(playerBest));
     const shard = Math.min(SHARDS - 1, Math.floor(rand() * SHARDS));
-    const pid = poolId(level, shard);
+    const pid = poolId(bracket, shard);
+    const player = after as PlayerDoc & { space?: unknown };
+    const playerLevel =
+      typeof player.level === 'number' && Number.isFinite(player.level)
+        ? Math.max(0, Math.min(MAX_PLAYER_LEVEL, Math.trunc(player.level)))
+        : 0;
+    const playerSpace = player.space === true;
     const poolRef = db.collection('pools').doc(pid);
     const rateRef = db.collection(RATE_COLLECTION).doc(uid);
     const playerRef = db.collection('players').doc(uid);
@@ -213,7 +225,9 @@ export async function processPlayerWrite(
         const entry: PoolEntry = {
           runId: chosen.runId,
           uid,
-          level,
+          level: bracket,
+          plv: playerLevel,
+          ...(playerSpace ? { space: true } : {}),
           score: chosen.score,
           best: chosen.best,
           ts: Timestamp.fromMillis(nowMs),
@@ -240,12 +254,12 @@ export async function processPlayerWrite(
         if (custom) entry.customName = custom;
         const pool = poolSnap.data() as PoolDoc | undefined;
         const { entries } = mergePool(poolRef.path, pool, entry, uid, nowMs);
-        tx.set(poolRef, { level, shard, updatedAt: Timestamp.fromMillis(nowMs), entries });
+        tx.set(poolRef, { level: bracket, shard, updatedAt: Timestamp.fromMillis(nowMs), entries });
         result.pool = pid;
       }
     });
     if (!result.playerGone && anomalies.length > 0) {
-      result.flagged = await writeFlags(db, uid, anomalies, chosenId(result), result.pool ?? null, level, nowMs);
+      result.flagged = await writeFlags(db, uid, anomalies, chosenId(result), result.pool ?? null, bracket, nowMs);
     }
   }
 
@@ -482,7 +496,7 @@ export async function setCustomName(
   const claimRef = custom ? db.collection(CLAIMS_COLLECTION).doc(nameKey(custom)) : null;
   const poolRefs = allPoolIds().map((pid) => db.collection('pools').doc(pid));
   const rateRef = db.collection(RATE_COLLECTION).doc(uid);
-  return db.runTransaction(async (tx): Promise<SetNameResult> => {
+  const result = await db.runTransaction(async (tx): Promise<SetNameResult> => {
     const [nameSnap, rateSnap] = await Promise.all([tx.get(nameRef), tx.get(rateRef)]);
     const current = (nameSnap.data() as NameDoc | undefined)?.customName ?? '';
     // Audit 17: a change (not a re-send of the same name) counts.
@@ -517,6 +531,10 @@ export async function setCustomName(
     if (names) tx.set(rateRef, { names }, { merge: true });
     return { ok: true, name: custom, updated: n };
   });
+  // PRD-2.6 LB3: keep the server-derived board name in step with the name
+  // callable. Wave-0 hook; its real implementation is in board_delete.ts.
+  if (result.ok) await lbSyncName(db, uid, result.name, nowMs);
+  return result;
 }
 
 /** Writes (or with '' removes) [custom] in [uid]'s pool entries. Returns the count. */
@@ -622,6 +640,8 @@ export async function releaseStaleGuestNames(
       } else if (linked) {
         await d.ref.update({ linked: true, guestSeen: FieldValue.delete() });
       } else if (await releaseGuestName(db, uid, cutoff)) {
+        // PRD-2.6 LB3: a released guest name becomes the generated one on the board.
+        await lbSyncName(db, uid, '', nowMs);
         released.push(uid);
       } else {
         skipped.add(uid);

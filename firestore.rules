@@ -6,7 +6,8 @@ rules_version = '2';
 // - everything else (incl. the server's versusRate/{uid} and versusNames/{uid}, the custom
 //   names the setVersusName callable checks and stores, and versusNameClaims/{key}, which
 //   uid holds a name — WP-N2; PRD-2.5 §3.6 versusFlags/{uid}_{runId}, the server's anti-cheat
-//   flags): denied.
+//   flags; PRD-2.6 LB3 the server-only lb* collections: lbPlayers, lbGroups, lbOpen,
+//   lbGhostPool, lbBest, lbGifts, lbTomb, lbFlags and lbMeta): denied.
 // - purchases/{sha256(platform:token)} and iapMeta/voidedSweep (PRD-2.5 §3.8 WP-IAP: the
 //   verifyPurchase callable's store verdicts and the daily voided-purchases sweep) are
 //   written by the Cloud Functions (Admin SDK) only and are deliberately NOT listed below,
@@ -38,13 +39,23 @@ service cloud.firestore {
       return v is string && v.matches('^[a-z0-9_]{1,40}$');
     }
 
-    // look: the five skin-shop ids (bird, gear, hat, hoop, trail).
+    // PRD-2.6 F9 one `<frame>|<name>|<sticker>` string, at most 48 chars.
+    // Each non-empty slot is an approved versus-card id or a skill-only item
+    // (O80). `[|]` keeps the separators literal without backslash escapes.
+    function validCard(c) {
+      return c is string && c.size() <= 48
+        && c.matches('^(f_bubblegum|f_tape|f_checker|f_eggshell|f_stitch|f_hazard|f_spikes|f_feathers|f_hoops|f_pinball|f_deepsea|f_neon|f_laurel|f_magma|f_storm|f_wings|f_orbit|pecking|roost|prey)?[|](n_tangerine|n_ocean|n_grass|n_cherry|n_grape|n_midnight|n_bubble|n_candy|n_comic|n_sunset|n_spiky|n_rainbow|n_gold|n_flappy|n_glitch|n_fire|n_stardust|n_sky|n_thunder|n_marquee)?[|](s_gg|s_thumbs|s_heart|s_wow|s_kaching|s_spiked|s_pow|s_nailed|s_bye|s_hatch|s_zoom|s_hot|s_medal|s_piggy|s_disco|s_champ|s_fireworks|s_unstop|s_flawless|s_topflock)?$');
+    }
+
+    // look: the five skin-shop ids (bird, gear, hat, hoop, trail), plus the
+    // optional PRD-2.6 F9 versus card. A 2.5 five-key look stays valid.
     function validLook(l) {
       return l is map
-        && l.keys().hasOnly(['bird', 'gear', 'hat', 'hoop', 'trail'])
+        && l.keys().hasOnly(['bird', 'gear', 'hat', 'hoop', 'trail', 'card'])
         && l.keys().hasAll(['bird', 'gear', 'hat', 'hoop', 'trail'])
         && isId(l.bird) && isId(l.gear) && isId(l.hat)
-        && isId(l.hoop) && isId(l.trail);
+        && isId(l.hoop) && isId(l.trail)
+        && (!('card' in l) || validCard(l.card));
     }
 
     // RunEntry (ARCH §6.1). Kept lean: rules may evaluate at most 1 000 expressions per
@@ -69,9 +80,7 @@ service cloud.firestore {
         // WP-AV the legacy picture field: the app writes ''; older apps may still send a
         // URL, which the function never copies into a pool.
         && r.avatar is string && r.avatar.size() <= 512
-        && r.look is map && r.look.size() == 5
-        && isId(r.look.bird) && isId(r.look.gear) && isId(r.look.hat)
-        && isId(r.look.hoop) && isId(r.look.trail)
+        && validLook(r.look)
         && (r.platform == 'android' || r.platform == 'ios')
         && r.tl is string && r.tl.size() <= 16384
         && r.end is int && r.end >= 0 && r.end <= 65535
@@ -114,7 +123,7 @@ service cloud.firestore {
         && validPlatform(d.platform)
         && validLook(d.look)
         && isInt(d.best, 0, 100000)
-        && isInt(d.level, 0, 10)
+        && isInt(d.level, 0, 9999)
         && validRecent(d.recent, d.best, old)
         // A new best run is also recent[0] (validated there); otherwise it is unchanged.
         && (!('bestRun' in d) || d.bestRun == null || d.bestRun in old

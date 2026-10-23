@@ -250,7 +250,8 @@ void main() {
       const MysteryBoxLid.shake(.5, revealTime: .675),
       MysteryBoxLid.off(1),
     ];
-    const cellW = 240, cellH = 260, cols = 3, rows = 10;
+    // Leave room above and beside the box for the complete rotated lid.
+    const cellW = 280, cellH = 320, cols = 3, rows = 10;
     await tester.runAsync(() async {
       final rec = ui.PictureRecorder();
       final c = ui.Canvas(rec);
@@ -271,7 +272,7 @@ void main() {
             : MysteryBoxLook.colours(base.main, base.dark, label: null);
         for (var col = 0; col < lids.length; col++) {
           c.save();
-          c.translate(cellW * col + cellW / 2, cellH * row + 175);
+          c.translate(cellW * col + cellW / 2, cellH * row + 230);
           MysteryBox.paint(c, look, size: 92, lid: lids[col]);
           c.restore();
         }
@@ -281,6 +282,27 @@ void main() {
         cellH * rows,
       );
       final png = await image.toByteData(format: ui.ImageByteFormat.png);
+      final raw = await image.toByteData(
+        format: ui.ImageByteFormat.rawStraightRgba,
+      );
+      // Every pose must have a white margin inside its own cell, including
+      // the top row: a clipped lid (or one entering a neighbour) fails.
+      final pixels = raw!.buffer.asUint8List();
+      for (var y = 0; y < cellH * rows; y++) {
+        for (var x = 0; x < cellW * cols; x++) {
+          final cx = x % cellW, cy = y % cellH;
+          if (cx >= 4 && cx < cellW - 4 && cy >= 4 && cy < cellH - 4) {
+            continue;
+          }
+          final i = (y * cellW * cols + x) * 4;
+          if (pixels[i] != 255 ||
+              pixels[i + 1] != 255 ||
+              pixels[i + 2] != 255 ||
+              pixels[i + 3] != 255) {
+            fail('Box art crosses the cell margin at ($x, $y)');
+          }
+        }
+      }
       image.dispose();
       final file = File('build/p26/mystery_box_style_a.png');
       await file.parent.create(recursive: true);
@@ -289,8 +311,8 @@ void main() {
       final bytes = await file.readAsBytes();
       expect(bytes.length, greaterThan(8000));
       expect(bytes.sublist(0, 8), [137, 80, 78, 71, 13, 10, 26, 10]);
-      expect(cellW * cols, 720);
-      expect(cellH * rows, 2600);
+      expect(cellW * cols, 840);
+      expect(cellH * rows, 3200);
     });
   });
 }

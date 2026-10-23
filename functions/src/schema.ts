@@ -91,7 +91,7 @@ export interface Look {
   hat: string;
   hoop: string;
   trail: string;
-  /** PRD-2.6 F9 one `"<frame>|<name>|<sticker>"` versus-card string (wave-0 stub). */
+  /** PRD-2.6 F9 one `"<frame>|<name>|<sticker>"` versus-card string. */
   card?: string;
 }
 
@@ -108,8 +108,8 @@ export const LOOK_KEYS = ['bird', 'gear', 'hat', 'hoop', 'trail'] as const;
 
 /**
  * Whether [look] has the five required keys, each a well-formed id, and an
- * optional [Look.card] accepted by [validCard]. The card validator is a
- * wave-0 stub: non-undefined cards are rejected until F9 fills the allow-list.
+ * optional [Look.card] accepted by [validCard]. A 2.5 look without the key
+ * stays valid.
  */
 export function validLook(look: unknown): look is Look {
   if (look === null || typeof look !== 'object' || Array.isArray(look)) return false;

@@ -13,22 +13,47 @@ const shard0 = () => 0;
 const rate = async (uid: string) => (await db.collection(RATE_COLLECTION).doc(uid).get()).data();
 
 describe('§3.13 onPlayerRunWrite: accept', () => {
-  it('§3.13 a new best run goes to a shard of the server-recomputed level, newest first', async () => {
+  it('§3.13 a new best run goes to a shard of the server-computed bracket, newest first', async () => {
     const uid = uniq('acc');
     const run = makeRun({ score: 150 });
     const after = { ...makePlayer({ best: 150, bestRun: run, recent: [run] }), level: 9 }; // client level is wrong
     const now = Date.now();
     const r = await processLive(uid, undefined, after, { rand: shard0, nowMs: now });
     assert.deepEqual(r.accepted, [run.runId]);
-    assert.equal(r.pool, poolId(3, 0)); // best 150 → FLEDGLING (3)
+    assert.equal(r.pool, poolId(3, 0)); // best 150 → bracket 3
     const entries = await poolEntries(poolId(3, 0));
     const e = entries[0];
     assert.equal(e.uid, uid);
     assert.equal(e.runId, run.runId);
-    assert.equal(e.level, 3);
+    assert.equal(e.level, 3); // the stored pool `level` field is the bracket
+    assert.equal(e.plv, 9); // PRD-2.6 R4 the player's level is copied, not used for filing
     assert.equal(e.tl, run.tl);
     assert.equal((e.ts as Timestamp).toMillis(), now); // upload time is the server's
     assert.equal((await rate(uid))?.last?.status, 'accepted');
+  });
+
+  it('§3.13 pool filing uses the best-score bracket and copies plv/space from the player', async () => {
+    const cases: Array<{ level: number; plv: number; space?: boolean }> = [
+      { level: 25, plv: 25 },
+      { level: 12000, plv: 9999 },
+      { level: undefined as unknown as number, plv: 0 },
+      { level: 0, plv: 0, space: true },
+    ];
+    for (const c of cases) {
+      const uid = uniq('bracket');
+      const run = makeRun({ score: 80 });
+      const player = makePlayer({ best: 80, bestRun: run, recent: [run] });
+      if (c.level === undefined) delete (player as Partial<typeof player>).level;
+      else player.level = c.level;
+      if (c.space) (player as typeof player & { space?: boolean }).space = true;
+      const r = await processLive(uid, undefined, player, { rand: shard0 });
+      assert.deepEqual(r.accepted, [run.runId]);
+      assert.equal(r.pool, poolId(2, 0)); // best 80 → bracket 2
+      const e = (await poolEntries(poolId(2, 0))).find((x) => x.runId === run.runId)!;
+      assert.equal(e.level, 2);
+      assert.equal(e.plv, c.plv, `level ${c.level}`);
+      assert.equal(e.space, c.space === true ? true : undefined, `space for level ${c.level}`);
+    }
   });
 
   it('§3.13 the player older entries are removed from the shard (dedupe per uid)', async () => {

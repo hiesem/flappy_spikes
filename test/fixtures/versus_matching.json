@@ -1,271 +1,281 @@
 {
-  "_doc": "PRD-2 §3.13 Matching, ARCH §6.4. Shared by functions/test/matching.test.ts (reference) and the Dart matcher test (WP-5b, lib/versus/matcher.dart). 'expect.runIds' is the candidate set the client picks from at random (order-free); tier 'solo' means no opponent. PRD-2.3 §25.2: 'seen' is the ordered met list (oldest first); unmet runs are always preferred, and when every run that is not mine was met the one met longest ago is the single candidate (tier 'rematch'). PRD-2.3 §21.4: 'pg' is the hashed Play Games id; a run with my non-empty pg is never a candidate, runs without pg match as before.",
+  "_doc": "PRD-2 §3.13 Matching, ARCH §6.4. Shared by functions/test/matching.test.ts (reference) and the Dart matcher test (WP-5b, lib/versus/matcher.dart). PRD-2.6 E4: matching keys on the best-score 'bracket' (0–10), never the player level; pool ids stay '{bracket}_{shard}'. 'expect.runIds' is the candidate set the client picks from at random (order-free); tier 'solo' means no opponent. PRD-2.3 §25.2: 'seen' is the ordered met list (oldest first); unmet runs are always preferred, and when every run that is not mine was met the one met longest ago is the single candidate (tier 'rematch'). PRD-2.3 §21.4: 'pg' is the hashed Play Games id; a run with my non-empty pg is never a candidate, runs without pg match as before.",
   "cases": [
     {
-      "name": "same level and below my best wins over any other run",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "name": "same bracket and below my best wins over any other run",
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": [],
       "pool": [
-        { "uid": "a", "runId": "a1", "score": 80, "level": 3 },
-        { "uid": "b", "runId": "b1", "score": 119, "level": 3 },
-        { "uid": "c", "runId": "c1", "score": 150, "level": 3 },
-        { "uid": "d", "runId": "d1", "score": 40, "level": 2 }
+        { "uid": "a", "runId": "a1", "score": 80, "bracket": 3 },
+        { "uid": "b", "runId": "b1", "score": 119, "bracket": 3 },
+        { "uid": "c", "runId": "c1", "score": 150, "bracket": 3 },
+        { "uid": "d", "runId": "d1", "score": 40, "bracket": 2 }
       ],
-      "expect": { "tier": "level", "runIds": ["a1", "b1"] }
+      "expect": { "tier": "bracket", "runIds": ["a1", "b1"] }
     },
     {
-      "name": "a score equal to my best is not beatable, so it is not a level match",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "name": "a score equal to my best is not beatable, so it is not a bracket match",
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": [],
       "pool": [
-        { "uid": "a", "runId": "a1", "score": 120, "level": 3 },
-        { "uid": "d", "runId": "d1", "score": 40, "level": 2 }
+        { "uid": "a", "runId": "a1", "score": 120, "bracket": 3 },
+        { "uid": "d", "runId": "d1", "score": 40, "bracket": 2 }
       ],
       "expect": { "tier": "any", "runIds": ["a1", "d1"] }
     },
     {
-      "name": "no run at my level: any stored run (other levels, higher scores)",
-      "me": { "uid": "me", "best": 30, "level": 1 },
+      "name": "no run at my bracket: any stored run (other brackets, higher scores)",
+      "me": { "uid": "me", "best": 30, "bracket": 1 },
       "seen": [],
       "pool": [
-        { "uid": "a", "runId": "a1", "score": 300, "level": 5 },
-        { "uid": "b", "runId": "b1", "score": 450, "level": 5 }
+        { "uid": "a", "runId": "a1", "score": 300, "bracket": 5 },
+        { "uid": "b", "runId": "b1", "score": 450, "bracket": 5 }
       ],
       "expect": { "tier": "any", "runIds": ["a1", "b1"] }
     },
     {
       "name": "never my own runs",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": [],
       "pool": [
-        { "uid": "me", "runId": "m1", "score": 100, "level": 3 },
-        { "uid": "me", "runId": "m2", "score": 110, "level": 3 },
-        { "uid": "a", "runId": "a1", "score": 200, "level": 4 }
+        { "uid": "me", "runId": "m1", "score": 100, "bracket": 3 },
+        { "uid": "me", "runId": "m2", "score": 110, "bracket": 3 },
+        { "uid": "a", "runId": "a1", "score": 200, "bracket": 4 }
       ],
       "expect": { "tier": "any", "runIds": ["a1"] }
     },
     {
       "name": "only my own runs: solo",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": [],
-      "pool": [{ "uid": "me", "runId": "m1", "score": 100, "level": 3 }],
+      "pool": [{ "uid": "me", "runId": "m1", "score": 100, "bracket": 3 }],
       "expect": { "tier": "solo", "runIds": [] }
     },
     {
       "name": "an unmet run is preferred over a met one",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": ["a1"],
       "pool": [
-        { "uid": "a", "runId": "a1", "score": 80, "level": 3 },
-        { "uid": "b", "runId": "b1", "score": 90, "level": 3 }
+        { "uid": "a", "runId": "a1", "score": 80, "bracket": 3 },
+        { "uid": "b", "runId": "b1", "score": 90, "bracket": 3 }
       ],
-      "expect": { "tier": "level", "runIds": ["b1"] }
+      "expect": { "tier": "bracket", "runIds": ["b1"] }
     },
     {
       "name": "every candidate already met: the one met longest ago (rematch, never solo)",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": ["a1", "b1"],
       "pool": [
-        { "uid": "a", "runId": "a1", "score": 80, "level": 3 },
-        { "uid": "b", "runId": "b1", "score": 90, "level": 3 }
+        { "uid": "a", "runId": "a1", "score": 80, "bracket": 3 },
+        { "uid": "b", "runId": "b1", "score": 90, "bracket": 3 }
       ],
       "expect": { "tier": "rematch", "runIds": ["a1"] }
     },
     {
       "name": "rematch order follows the met list (b1 met longest ago)",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": ["b1", "a1"],
       "pool": [
-        { "uid": "a", "runId": "a1", "score": 80, "level": 3 },
-        { "uid": "b", "runId": "b1", "score": 90, "level": 3 }
+        { "uid": "a", "runId": "a1", "score": 80, "bracket": 3 },
+        { "uid": "b", "runId": "b1", "score": 90, "bracket": 3 }
       ],
       "expect": { "tier": "rematch", "runIds": ["b1"] }
     },
     {
-      "name": "an unmet run of another level beats a met run at my level",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "name": "level 25 player with best 80 → bracket 2",
+      "me": { "uid": "me", "best": 80, "bracket": 2, "plv": 25 },
+      "seen": [],
+      "pool": [
+        { "uid": "a", "runId": "a1", "score": 60, "bracket": 2 },
+        { "uid": "b", "runId": "b1", "score": 90, "bracket": 3 }
+      ],
+      "expect": { "tier": "bracket", "runIds": ["a1"] }
+    },
+    {
+      "name": "an unmet run of another bracket beats a met run at my bracket",
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": ["a1"],
       "pool": [
-        { "uid": "a", "runId": "a1", "score": 80, "level": 3 },
-        { "uid": "d", "runId": "d1", "score": 40, "level": 2 }
+        { "uid": "a", "runId": "a1", "score": 80, "bracket": 3 },
+        { "uid": "d", "runId": "d1", "score": 40, "bracket": 2 }
       ],
       "expect": { "tier": "any", "runIds": ["d1"] }
     },
     {
       "name": "met runs of mine stay excluded: only my own runs is solo even when met",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": ["m1"],
-      "pool": [{ "uid": "me", "runId": "m1", "score": 100, "level": 3 }],
+      "pool": [{ "uid": "me", "runId": "m1", "score": 100, "bracket": 3 }],
       "expect": { "tier": "solo", "runIds": [] }
     },
     {
       "name": "a candidate with my pg under another uid (my old account) is never chosen",
-      "me": { "uid": "me", "best": 120, "level": 3, "pg": "1111111111111111111111111111111111111111111111111111111111111111" },
+      "me": { "uid": "me", "best": 120, "bracket": 3, "pg": "1111111111111111111111111111111111111111111111111111111111111111" },
       "seen": [],
       "pool": [
-        { "uid": "oldme", "runId": "o1", "score": 80, "level": 3, "pg": "1111111111111111111111111111111111111111111111111111111111111111" },
-        { "uid": "b", "runId": "b1", "score": 300, "level": 4, "pg": "2222222222222222222222222222222222222222222222222222222222222222" }
+        { "uid": "oldme", "runId": "o1", "score": 80, "bracket": 3, "pg": "1111111111111111111111111111111111111111111111111111111111111111" },
+        { "uid": "b", "runId": "b1", "score": 300, "bracket": 4, "pg": "2222222222222222222222222222222222222222222222222222222222222222" }
       ],
       "expect": { "tier": "any", "runIds": ["b1"] }
     },
     {
       "name": "only runs under my pg: solo",
-      "me": { "uid": "me", "best": 120, "level": 3, "pg": "1111111111111111111111111111111111111111111111111111111111111111" },
+      "me": { "uid": "me", "best": 120, "bracket": 3, "pg": "1111111111111111111111111111111111111111111111111111111111111111" },
       "seen": ["o1"],
       "pool": [
-        { "uid": "oldme", "runId": "o1", "score": 80, "level": 3, "pg": "1111111111111111111111111111111111111111111111111111111111111111" }
+        { "uid": "oldme", "runId": "o1", "score": 80, "bracket": 3, "pg": "1111111111111111111111111111111111111111111111111111111111111111" }
       ],
       "expect": { "tier": "solo", "runIds": [] }
     },
     {
       "name": "runs without pg still match (older runs), also when I have one",
-      "me": { "uid": "me", "best": 120, "level": 3, "pg": "1111111111111111111111111111111111111111111111111111111111111111" },
+      "me": { "uid": "me", "best": 120, "bracket": 3, "pg": "1111111111111111111111111111111111111111111111111111111111111111" },
       "seen": [],
       "pool": [
-        { "uid": "a", "runId": "a1", "score": 80, "level": 3 },
-        { "uid": "b", "runId": "b1", "score": 90, "level": 3, "pg": "" }
+        { "uid": "a", "runId": "a1", "score": 80, "bracket": 3 },
+        { "uid": "b", "runId": "b1", "score": 90, "bracket": 3, "pg": "" }
       ],
-      "expect": { "tier": "level", "runIds": ["a1", "b1"] }
+      "expect": { "tier": "bracket", "runIds": ["a1", "b1"] }
     },
     {
       "name": "without a pg of my own, empty pgs never exclude anyone",
-      "me": { "uid": "me", "best": 120, "level": 3, "pg": "" },
+      "me": { "uid": "me", "best": 120, "bracket": 3, "pg": "" },
       "seen": [],
-      "pool": [{ "uid": "a", "runId": "a1", "score": 80, "level": 3, "pg": "" }],
-      "expect": { "tier": "level", "runIds": ["a1"] }
+      "pool": [{ "uid": "a", "runId": "a1", "score": 80, "bracket": 3, "pg": "" }],
+      "expect": { "tier": "bracket", "runIds": ["a1"] }
     },
     {
       "name": "empty pool (offline / not loaded): solo",
-      "me": { "uid": "me", "best": 0, "level": 0 },
+      "me": { "uid": "me", "best": 0, "bracket": 0 },
       "seen": [],
       "pool": [],
       "expect": { "tier": "solo", "runIds": [] }
     },
     {
-      "name": "new player with best 0: no level match is beatable, any run is used",
-      "me": { "uid": "me", "best": 0, "level": 0 },
+      "name": "new player with best 0: no bracket match is beatable, any run is used",
+      "me": { "uid": "me", "best": 0, "bracket": 0 },
       "seen": [],
       "pool": [
-        { "uid": "a", "runId": "a1", "score": 5, "level": 0 },
-        { "uid": "b", "runId": "b1", "score": 8, "level": 0 }
+        { "uid": "a", "runId": "a1", "score": 5, "bracket": 0 },
+        { "uid": "b", "runId": "b1", "score": 8, "bracket": 0 }
       ],
       "expect": { "tier": "any", "runIds": ["a1", "b1"] }
     },
     {
       "name": "platform is never used for matching (an iOS run matches an Android player)",
-      "me": { "uid": "me", "best": 60, "level": 2 },
+      "me": { "uid": "me", "best": 60, "bracket": 2 },
       "seen": [],
-      "pool": [{ "uid": "i", "runId": "i1", "score": 55, "level": 2, "platform": "ios" }],
-      "expect": { "tier": "level", "runIds": ["i1"] }
+      "pool": [{ "uid": "i", "runId": "i1", "score": 55, "bracket": 2, "platform": "ios" }],
+      "expect": { "tier": "bracket", "runIds": ["i1"] }
     }
   ],
-  "_searchDoc": "PRD-2.2 §3 search: 'pools' maps a pool id (level_shard) to its entries (absent = empty doc). The search reads every shard of my level in random order, then the other levels nearest first (lower before higher at each distance). PRD-2.3 §25.2: the 4 shards of a level are read together (one round), the search stops after the first round with a usable run not met yet (the first such shard in the order), and if only met runs exist anywhere, the shard holding the one met longest ago wins after reading everything. 'expect.pool' is that shard (null = solo); 'expect.runIds' the matchCandidates set inside it; reads lie in [minReads, maxReads] whatever the shard shuffle.",
+  "_searchDoc": "PRD-2.2 §3 search: 'pools' maps a pool id (bracket_shard) to its entries (absent = empty doc). The search reads every shard of my bracket in random order, then the other brackets nearest first (lower before higher at each distance). PRD-2.3 §25.2: the 4 shards of a bracket are read together (one round), the search stops after the first round with a usable run not met yet (the first such shard in the order), and if only met runs exist anywhere, the shard holding the one met longest ago wins after reading everything. 'expect.pool' is that shard (null = solo); 'expect.runIds' the matchCandidates set inside it; reads lie in [minReads, maxReads] whatever the shard shuffle.",
   "search": [
     {
-      "name": "sparse pool: one run in one shard of my level is found within my level's 4 reads",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "name": "sparse pool: one run in one shard of my bracket is found within my bracket's 4 reads",
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": [],
       "pools": {
-        "3_2": [{ "uid": "a", "runId": "a1", "score": 80, "level": 3 }]
+        "3_2": [{ "uid": "a", "runId": "a1", "score": 80, "bracket": 3 }]
       },
-      "expect": { "pool": "3_2", "tier": "level", "runIds": ["a1"], "minReads": 4, "maxReads": 4 }
+      "expect": { "pool": "3_2", "tier": "bracket", "runIds": ["a1"], "minReads": 4, "maxReads": 4 }
     },
     {
       "name": "own uid only everywhere: solo after reading all 44 shards",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": [],
       "pools": {
-        "3_0": [{ "uid": "me", "runId": "m1", "score": 100, "level": 3 }],
-        "3_3": [{ "uid": "me", "runId": "m2", "score": 110, "level": 3 }],
-        "4_1": [{ "uid": "me", "runId": "m3", "score": 150, "level": 4 }],
-        "0_0": [{ "uid": "me", "runId": "m4", "score": 5, "level": 0 }]
+        "3_0": [{ "uid": "me", "runId": "m1", "score": 100, "bracket": 3 }],
+        "3_3": [{ "uid": "me", "runId": "m2", "score": 110, "bracket": 3 }],
+        "4_1": [{ "uid": "me", "runId": "m3", "score": 150, "bracket": 4 }],
+        "0_0": [{ "uid": "me", "runId": "m4", "score": 5, "bracket": 0 }]
       },
       "expect": { "pool": null, "tier": "solo", "runIds": [], "minReads": 44, "maxReads": 44 }
     },
     {
-      "name": "other-level hit: my level empty, the nearest level with a run wins (level 4 at distance 1 before level 1 at distance 2)",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "name": "other-bracket hit: my bracket empty, the nearest bracket with a run wins (bracket 4 at distance 1 before bracket 1 at distance 2)",
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": [],
       "pools": {
-        "4_3": [{ "uid": "b", "runId": "b1", "score": 210, "level": 4 }],
-        "1_0": [{ "uid": "c", "runId": "c1", "score": 30, "level": 1 }]
+        "4_3": [{ "uid": "b", "runId": "b1", "score": 210, "bracket": 4 }],
+        "1_0": [{ "uid": "c", "runId": "c1", "score": 30, "bracket": 1 }]
       },
       "expect": { "pool": "4_3", "tier": "any", "runIds": ["b1"], "minReads": 12, "maxReads": 12 }
     },
     {
-      "name": "at the same distance the lower level is read first",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "name": "at the same distance the lower bracket is read first",
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": [],
       "pools": {
-        "2_1": [{ "uid": "d", "runId": "d1", "score": 60, "level": 2 }],
-        "4_0": [{ "uid": "e", "runId": "e1", "score": 160, "level": 4 }]
+        "2_1": [{ "uid": "d", "runId": "d1", "score": 60, "bracket": 2 }],
+        "4_0": [{ "uid": "e", "runId": "e1", "score": 160, "bracket": 4 }]
       },
       "expect": { "pool": "2_1", "tier": "any", "runIds": ["d1"], "minReads": 8, "maxReads": 8 }
     },
     {
-      "name": "a shard with only my own run is skipped; the next usable shard of my level is the hit",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "name": "a shard with only my own run is skipped; the next usable shard of my bracket is the hit",
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": [],
       "pools": {
-        "3_0": [{ "uid": "me", "runId": "m1", "score": 100, "level": 3 }],
-        "3_1": [{ "uid": "me", "runId": "m2", "score": 90, "level": 3 }],
-        "3_2": [{ "uid": "me", "runId": "m3", "score": 95, "level": 3 }],
-        "3_3": [{ "uid": "me", "runId": "m4", "score": 70, "level": 3 }, { "uid": "f", "runId": "f1", "score": 60, "level": 3 }]
+        "3_0": [{ "uid": "me", "runId": "m1", "score": 100, "bracket": 3 }],
+        "3_1": [{ "uid": "me", "runId": "m2", "score": 90, "bracket": 3 }],
+        "3_2": [{ "uid": "me", "runId": "m3", "score": 95, "bracket": 3 }],
+        "3_3": [{ "uid": "me", "runId": "m4", "score": 70, "bracket": 3 }, { "uid": "f", "runId": "f1", "score": 60, "bracket": 3 }]
       },
-      "expect": { "pool": "3_3", "tier": "level", "runIds": ["f1"], "minReads": 4, "maxReads": 4 }
+      "expect": { "pool": "3_3", "tier": "bracket", "runIds": ["f1"], "minReads": 4, "maxReads": 4 }
     },
     {
       "name": "a shard with only met runs is no hit while unmet runs exist elsewhere",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": ["a1"],
       "pools": {
-        "3_1": [{ "uid": "a", "runId": "a1", "score": 80, "level": 3 }],
-        "5_2": [{ "uid": "g", "runId": "g1", "score": 400, "level": 5 }]
+        "3_1": [{ "uid": "a", "runId": "a1", "score": 80, "bracket": 3 }],
+        "5_2": [{ "uid": "g", "runId": "g1", "score": 400, "bracket": 5 }]
       },
       "expect": { "pool": "5_2", "tier": "any", "runIds": ["g1"], "minReads": 20, "maxReads": 20 }
     },
     {
-      "name": "level 0 player: own level, then 1, 2, … upward",
-      "me": { "uid": "me", "best": 0, "level": 0 },
+      "name": "bracket 0 player: own bracket, then 1, 2, … upward",
+      "me": { "uid": "me", "best": 0, "bracket": 0 },
       "seen": [],
       "pools": {
-        "2_0": [{ "uid": "h", "runId": "h1", "score": 60, "level": 2 }],
-        "9_0": [{ "uid": "i", "runId": "i1", "score": 900, "level": 9 }]
+        "2_0": [{ "uid": "h", "runId": "h1", "score": 60, "bracket": 2 }],
+        "9_0": [{ "uid": "i", "runId": "i1", "score": 900, "bracket": 9 }]
       },
       "expect": { "pool": "2_0", "tier": "any", "runIds": ["h1"], "minReads": 12, "maxReads": 12 }
     },
     {
-      "name": "top level player: own level 10, then 9, 8, … downward",
-      "me": { "uid": "me", "best": 5000, "level": 10 },
+      "name": "top bracket player: own bracket 10, then 9, 8, … downward",
+      "me": { "uid": "me", "best": 5000, "bracket": 10 },
       "seen": [],
       "pools": {
-        "8_3": [{ "uid": "j", "runId": "j1", "score": 700, "level": 8 }]
+        "8_3": [{ "uid": "j", "runId": "j1", "score": 700, "bracket": 8 }]
       },
       "expect": { "pool": "8_3", "tier": "any", "runIds": ["j1"], "minReads": 12, "maxReads": 12 }
     },
     {
       "name": "only met runs anywhere: the shard with the run met longest ago, after all 44 reads",
-      "me": { "uid": "me", "best": 120, "level": 3 },
+      "me": { "uid": "me", "best": 120, "bracket": 3 },
       "seen": ["b1", "a1"],
       "pools": {
-        "3_1": [{ "uid": "a", "runId": "a1", "score": 80, "level": 3 }],
-        "4_0": [{ "uid": "b", "runId": "b1", "score": 160, "level": 4 }]
+        "3_1": [{ "uid": "a", "runId": "a1", "score": 80, "bracket": 3 }],
+        "4_0": [{ "uid": "b", "runId": "b1", "score": 160, "bracket": 4 }]
       },
       "expect": { "pool": "4_0", "tier": "rematch", "runIds": ["b1"], "minReads": 44, "maxReads": 44 }
     },
     {
       "name": "a shard with only runs under my pg is skipped",
-      "me": { "uid": "me", "best": 120, "level": 3, "pg": "1111111111111111111111111111111111111111111111111111111111111111" },
+      "me": { "uid": "me", "best": 120, "bracket": 3, "pg": "1111111111111111111111111111111111111111111111111111111111111111" },
       "seen": [],
       "pools": {
-        "3_0": [{ "uid": "oldme", "runId": "o1", "score": 80, "level": 3, "pg": "1111111111111111111111111111111111111111111111111111111111111111" }],
-        "2_2": [{ "uid": "k", "runId": "k1", "score": 60, "level": 2 }]
+        "3_0": [{ "uid": "oldme", "runId": "o1", "score": 80, "bracket": 3, "pg": "1111111111111111111111111111111111111111111111111111111111111111" }],
+        "2_2": [{ "uid": "k", "runId": "k1", "score": 60, "bracket": 2 }]
       },
       "expect": { "pool": "2_2", "tier": "any", "runIds": ["k1"], "minReads": 8, "maxReads": 8 }
     },
     {
       "name": "all pools empty: solo after 44 reads",
-      "me": { "uid": "me", "best": 0, "level": 0 },
+      "me": { "uid": "me", "best": 0, "bracket": 0 },
       "seen": [],
       "pools": {},
       "expect": { "pool": null, "tier": "solo", "runIds": [], "minReads": 44, "maxReads": 44 }

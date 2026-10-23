@@ -1,7 +1,7 @@
 /**
  * §3.13 matching: the reference matcher against the fixture shared with the
  * Dart matcher (test/fixtures/versus_matching.json), plus matching on pools the
- * real function built (level, shards, no self-match).
+ * real function built (bracket, shards, no self-match).
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -14,7 +14,7 @@ import {
   MAX_SEARCH_READS,
   MatchEntry,
 } from '../src/matching.js';
-import { MAX_LEVEL, poolId, SHARDS } from '../src/schema.js';
+import { MAX_BRACKET, poolId, SHARDS } from '../src/schema.js';
 import { makePlayer, makeRun, poolEntries, processLive, uniq } from './helpers.js';
 
 const fixture = JSON.parse(
@@ -44,23 +44,23 @@ describe('§3.13 matching fixture (shared with the Dart matcher)', () => {
 });
 
 describe('PRD-2.2 §3 search order', () => {
-  const levelOf = (id: string) => Number(id.split('_')[0]);
-  it('§3 every shard of my level first, then the other levels nearest first (lower before higher); 44 ids, each once', () => {
-    for (let level = 0; level <= MAX_LEVEL; level++) {
+  const bracketOf = (id: string) => Number(id.split('_')[0]);
+  it('§3 every shard of my bracket first, then the other brackets nearest first (lower before higher); 44 ids, each once', () => {
+    for (let bracket = 0; bracket <= MAX_BRACKET; bracket++) {
       for (const seed of [0, 0.3, 0.6, 0.999]) {
         let x = seed;
         const rand = () => (x = (x * 9301 + 0.49297) % 1);
-        const order = poolSearchOrder(level, rand);
+        const order = poolSearchOrder(bracket, rand);
         assert.equal(order.length, MAX_SEARCH_READS);
         assert.equal(MAX_SEARCH_READS, 44);
         assert.equal(new Set(order).size, 44);
-        assert.deepEqual(order.slice(0, SHARDS).map(levelOf), [level, level, level, level]);
-        const levels = order.map(levelOf).filter((_, i) => i % SHARDS === 0);
-        for (let i = 0; i < order.length; i++) assert.equal(levelOf(order[i]), levels[Math.floor(i / SHARDS)]);
-        for (let i = 1; i < levels.length; i++) {
-          const a = Math.abs(levels[i - 1] - level);
-          const b = Math.abs(levels[i] - level);
-          assert.ok(a < b || (a === b && levels[i - 1] < levels[i]), `nearest first at ${i}: ${levels}`);
+        assert.deepEqual(order.slice(0, SHARDS).map(bracketOf), [bracket, bracket, bracket, bracket]);
+        const brackets = order.map(bracketOf).filter((_, i) => i % SHARDS === 0);
+        for (let i = 0; i < order.length; i++) assert.equal(bracketOf(order[i]), brackets[Math.floor(i / SHARDS)]);
+        for (let i = 1; i < brackets.length; i++) {
+          const a = Math.abs(brackets[i - 1] - bracket);
+          const b = Math.abs(brackets[i] - bracket);
+          assert.ok(a < b || (a === b && brackets[i - 1] < brackets[i]), `nearest first at ${i}: ${brackets}`);
         }
       }
     }
@@ -73,7 +73,7 @@ describe('PRD-2.2 §3 search fixture (shared with the Dart matcher)', () => {
       for (const seed of [0.01, 0.37, 0.73, 0.99]) {
         let x = seed;
         const rand = () => (x = (x * 9301 + 0.49297) % 1);
-        const order = poolSearchOrder(c.me.level, rand);
+        const order = poolSearchOrder(c.me.bracket, rand);
         const r = searchPools(order, c.pools, c.me, c.seen);
         assert.equal(r.poolId, c.expect.pool);
         assert.ok(r.reads >= c.expect.minReads && r.reads <= c.expect.maxReads, `reads ${r.reads}`);
@@ -87,15 +87,15 @@ describe('PRD-2.2 §3 search fixture (shared with the Dart matcher)', () => {
 
   it('§3 the read cap stops a search early', () => {
     const order = poolSearchOrder(3, () => 0.5);
-    const r = searchPools(order, {}, { uid: 'me', best: 0, level: 3 }, [], 5);
+    const r = searchPools(order, {}, { uid: 'me', best: 0, bracket: 3 }, [], 5);
     assert.equal(r.reads, 5);
     assert.equal(r.poolId, null);
   });
 });
 
 describe('§3.13 matching on server-built pools', () => {
-  const level = 2; // best 50..99
-  it('§3.13 runs land in a shard of the uploader level; all 4 shards are used; no self-match', async () => {
+  const bracket = 2; // best 50..99
+  it('§3.13 runs land in a shard of the uploader bracket; all 4 shards are used; no self-match', async () => {
     const me = uniq('me');
     const others: string[] = [];
     // One run per shard from others, plus one of mine in shard 0.
@@ -112,14 +112,16 @@ describe('§3.13 matching on server-built pools', () => {
       rand: () => 0,
     });
     for (let s = 0; s < SHARDS; s++) {
-      const entries = await poolEntries(poolId(level, s));
+      const entries = await poolEntries(poolId(bracket, s));
       assert.ok(entries.some((e) => e.uid === others[s]), `shard ${s} holds opp${s}`);
-      assert.ok(entries.every((e) => e.level === level));
+      assert.ok(entries.every((e) => e.level === bracket));
     }
-    const shard0 = (await poolEntries(poolId(level, 0))) as MatchEntry[];
+    const shard0 = (await poolEntries(poolId(bracket, 0))).map(
+      (e) => ({ ...e, bracket: e.level }) as unknown as MatchEntry,
+    );
     assert.ok(shard0.some((e) => e.uid === me));
-    const r = matchCandidates(shard0, { uid: me, best: 70, level }, []);
-    assert.equal(r.tier, 'level');
+    const r = matchCandidates(shard0, { uid: me, best: 70, bracket }, []);
+    assert.equal(r.tier, 'bracket');
     assert.ok(r.candidates.every((e) => e.uid !== me));
     assert.ok(r.candidates.some((e) => e.uid === others[0]));
   });

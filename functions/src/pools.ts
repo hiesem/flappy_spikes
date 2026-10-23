@@ -6,7 +6,7 @@
 import { DocumentReference, DocumentSnapshot, FieldValue, Firestore, Timestamp, Transaction } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
 import { Anomaly, scoreRun } from './anomaly.js';
-import { levelFor } from './levels.js';
+import { bracketFor } from './brackets.js';
 import { versusName } from './nickname.js';
 import { checkCustomName, CustomNameReason, poolCustomName } from './customname.js';
 import { CLAIMS_COLLECTION, ClaimDoc, GUEST_NAME_TTL_MS, nameKey, SEEN_REFRESH_MS } from './nameclaims.js';
@@ -103,10 +103,15 @@ export interface ProcessOptions {
   rand?: () => number;
 }
 
+/** PRD-2.6 R4/O17d: the stored player level range copied into pool entries as `plv`. */
+const MAX_PLAYER_LEVEL = 9999;
+
 /**
  * Handles one `players/{uid}` write: validates the new run(s), applies the
  * upload rate, writes the newest accepted run to a random shard of the
- * player's (server-recomputed) level and trims stale `recent` entries.
+ * player's (server-recomputed) best-score bracket and trims stale `recent`
+ * entries. Each new entry also carries the player's stored level (`plv`) and
+ * the SPACE FLYER flag (`space`, only when true).
  *
  * The event snapshot may arrive after `deletePlayerData` (S6-08): the
  * transaction re-reads the live player doc and writes nothing (no rate doc,
@@ -134,9 +139,15 @@ export async function processPlayerWrite(
   if (fresh.length > 0) {
     const playerBest = typeof after.best === 'number' ? after.best : 0;
     const prevBest = typeof before?.best === 'number' ? before.best : 0;
-    const level = Math.min(MAX_BRACKET, levelFor(playerBest));
+    const bracket = Math.min(MAX_BRACKET, bracketFor(playerBest));
     const shard = Math.min(SHARDS - 1, Math.floor(rand() * SHARDS));
-    const pid = poolId(level, shard);
+    const pid = poolId(bracket, shard);
+    const player = after as PlayerDoc & { space?: unknown };
+    const playerLevel =
+      typeof player.level === 'number' && Number.isFinite(player.level)
+        ? Math.max(0, Math.min(MAX_PLAYER_LEVEL, Math.trunc(player.level)))
+        : 0;
+    const playerSpace = player.space === true;
     const poolRef = db.collection('pools').doc(pid);
     const rateRef = db.collection(RATE_COLLECTION).doc(uid);
     const playerRef = db.collection('players').doc(uid);
@@ -214,7 +225,9 @@ export async function processPlayerWrite(
         const entry: PoolEntry = {
           runId: chosen.runId,
           uid,
-          level,
+          level: bracket,
+          plv: playerLevel,
+          ...(playerSpace ? { space: true } : {}),
           score: chosen.score,
           best: chosen.best,
           ts: Timestamp.fromMillis(nowMs),
@@ -241,12 +254,12 @@ export async function processPlayerWrite(
         if (custom) entry.customName = custom;
         const pool = poolSnap.data() as PoolDoc | undefined;
         const { entries } = mergePool(poolRef.path, pool, entry, uid, nowMs);
-        tx.set(poolRef, { level, shard, updatedAt: Timestamp.fromMillis(nowMs), entries });
+        tx.set(poolRef, { level: bracket, shard, updatedAt: Timestamp.fromMillis(nowMs), entries });
         result.pool = pid;
       }
     });
     if (!result.playerGone && anomalies.length > 0) {
-      result.flagged = await writeFlags(db, uid, anomalies, chosenId(result), result.pool ?? null, level, nowMs);
+      result.flagged = await writeFlags(db, uid, anomalies, chosenId(result), result.pool ?? null, bracket, nowMs);
     }
   }
 

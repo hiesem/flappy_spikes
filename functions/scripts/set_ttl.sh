@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Firestore TTL policy for the versus data (PRD-2 §3.13 retention, ARCH §6.2):
+# Firestore TTL policy for the versus and leaderboard data:
 # players/{uid}.expireAt — inactive players vanish 60 days after their last write;
-# PRD-2.5 §3.6 versusFlags/{uid}_{runId}.expireAt — anti-cheat flags vanish after 60 days.
+# PRD-2.5 §3.6 versusFlags/{uid}_{runId}.expireAt — anti-cheat flags vanish after 60 days;
+# PRD-2.6 LB3 — lbPlayers, lbGroups, lbGifts, lbTomb and lbFlags have their own
+# `expireAt` retention (400 d / end + 3 d / 400 d / 7 d / 60 d).
 # (Pool / recent entries live inside documents, so the function and the daily
 # sweepPools trim those; TTL can only delete whole documents.)
 #
@@ -23,8 +25,8 @@ action="${1:-status}"
 GROUP="${2:-${GROUP:-players}}"
 FIELD="expireAt"
 case "$GROUP" in
-  players|versusFlags) ;;
-  *) echo "unknown GROUP '$GROUP' (players | versusFlags)" >&2; exit 2 ;;
+  players|versusFlags|lbPlayers|lbGroups|lbGifts|lbTomb|lbFlags) ;;
+  *) echo "unknown GROUP '$GROUP' (players | versusFlags | lbPlayers | lbGroups | lbGifts | lbTomb | lbFlags)" >&2; exit 2 ;;
 esac
 
 token="${ACCESS_TOKEN:-}"
@@ -61,7 +63,7 @@ case "$action" in
     echo
     ;;
   *)
-    echo "usage: $0 [enable|disable|status] [players|versusFlags]" >&2
+    echo "usage: $0 [enable|disable|status] [players|versusFlags|lbPlayers|lbGroups|lbGifts|lbTomb|lbFlags]" >&2
     exit 2
     ;;
 esac

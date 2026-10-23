@@ -2,7 +2,7 @@
  * Flappy Spikes versus backend (PRD-2 §3.13, ARCH §6.3). 2nd gen, europe-west1
  * (inside the eur3 multi-region of the Firestore database).
  */
-import { initializeApp } from 'firebase-admin/app';
+import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { setGlobalOptions, logger } from 'firebase-functions/v2';
@@ -29,12 +29,33 @@ import {
   type PurchaseDeps,
   sweepVoided,
 } from './purchases.js';
+import {
+  lbClaimGift as claimGift,
+  lbGetBoard as getBoard,
+  lbSettleGroups as settleGroups,
+  lbSubmitRun as submitRun,
+} from './board_store.js';
+import { deleteBoardData } from './board_delete.js';
 
-initializeApp();
+if (getApps().length === 0) initializeApp();
 
 /** Region next to the eur3 database; small caps keep the Blaze bill near zero (§3.13 costs). */
 const REGION = 'europe-west1';
 setGlobalOptions({ region: REGION, maxInstances: 10, memory: '256MiB' });
+
+/** Shared LB3 callable options: region, cap and App Check are pinned per export. */
+const LB_CALLABLE_OPTIONS = {
+  enforceAppCheck: true,
+  consumeAppCheckToken: false,
+  region: REGION,
+  maxInstances: 10,
+} as const;
+
+/** The caller's Firebase Auth uid; LB3 callables require anonymous or linked auth. */
+function requireUid(auth: { uid?: string } | undefined): string {
+  if (!auth?.uid) throw new HttpsError('unauthenticated', 'Sign-in required.');
+  return auth.uid;
+}
 
 /**
  * Validates the new run of a `players/{uid}` write and maintains the pools.
@@ -102,6 +123,15 @@ export const deleteMyData = onCall({ enforceAppCheck: true, consumeAppCheckToken
     await clearPurchaseUid(getFirestore(), uid);
   } catch (err) {
     logger.error('deleteMyData: purchase uid clean-up failed, nothing deleted', { uid, err: String(err) });
+    throw new HttpsError('unavailable', 'Delete failed; nothing was deleted.');
+  }
+  // PRD-2.6 LB3: the same privacy boundary covers our leaderboard. This
+  // tombstone and the lb cleanup run after purchases and before the
+  // all-or-nothing players transaction.
+  try {
+    await deleteBoardData(getFirestore(), uid);
+  } catch (err) {
+    logger.error('deleteMyData: board clean-up failed, nothing deleted', { uid, err: String(err) });
     throw new HttpsError('unavailable', 'Delete failed; nothing was deleted.');
   }
   // All-or-nothing: the player, rate and every pool membership in one
@@ -187,6 +217,37 @@ export const sweepPools = onSchedule({ schedule: 'every 24 hours', timeZone: 'Et
   const removed = await sweepAllPools(getFirestore());
   logger.info('sweepPools', { removed });
 });
+
+// region PRD-2.6 §3 LB3 — daily leaderboard callables and settlement
+
+/** Submit up to ten finished runs; the stub returns an empty accepted set in wave 0. */
+export const lbSubmitRun = onCall(LB_CALLABLE_OPTIONS, async (req) => {
+  const uid = requireUid(req.auth);
+  return submitRun(getFirestore(), uid, req.data, Date.now());
+});
+
+/** Read TODAY / BEST RUN; the stub returns empty boards in wave 0. */
+export const lbGetBoard = onCall(LB_CALLABLE_OPTIONS, async (req) => {
+  const uid = requireUid(req.auth);
+  return getBoard(getFirestore(), uid, req.data, Date.now());
+});
+
+/** Claim a podium gift idempotently; the stub answers `ok: false` in wave 0. */
+export const lbClaimGift = onCall(LB_CALLABLE_OPTIONS, async (req) => {
+  const uid = requireUid(req.auth);
+  return claimGift(getFirestore(), uid, req.data, Date.now());
+});
+
+/** Every 10 minutes: settle ended groups and write ghost days (idempotent). */
+export const lbSettleGroups = onSchedule(
+  { schedule: 'every 10 minutes', timeZone: 'Etc/UTC', region: REGION, maxInstances: 10 },
+  async () => {
+    const r = await settleGroups(getFirestore(), Date.now());
+    logger.info('lbSettle', r);
+  },
+);
+
+// endregion PRD-2.6 §3 LB3
 
 // region PRD-2.5 §3.8 WP-IAP — server purchase verification
 

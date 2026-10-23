@@ -30,7 +30,7 @@ import {
   SHARDS,
   allPoolIds,
   utcDay,
-  MAX_LEVEL,
+  MAX_BRACKET,
   FLAG_TTL_DAYS,
   FLAGS_COLLECTION,
   FlagDoc,
@@ -38,6 +38,7 @@ import {
 } from './schema.js';
 import { docSize } from './size.js';
 import { checkRun, RejectReason } from './timeline.js';
+import { lbSyncName } from './board_delete.js';
 
 export interface WriteResult {
   accepted: string[];
@@ -133,7 +134,7 @@ export async function processPlayerWrite(
   if (fresh.length > 0) {
     const playerBest = typeof after.best === 'number' ? after.best : 0;
     const prevBest = typeof before?.best === 'number' ? before.best : 0;
-    const level = Math.min(MAX_LEVEL, levelFor(playerBest));
+    const level = Math.min(MAX_BRACKET, levelFor(playerBest));
     const shard = Math.min(SHARDS - 1, Math.floor(rand() * SHARDS));
     const pid = poolId(level, shard);
     const poolRef = db.collection('pools').doc(pid);
@@ -482,7 +483,7 @@ export async function setCustomName(
   const claimRef = custom ? db.collection(CLAIMS_COLLECTION).doc(nameKey(custom)) : null;
   const poolRefs = allPoolIds().map((pid) => db.collection('pools').doc(pid));
   const rateRef = db.collection(RATE_COLLECTION).doc(uid);
-  return db.runTransaction(async (tx): Promise<SetNameResult> => {
+  const result = await db.runTransaction(async (tx): Promise<SetNameResult> => {
     const [nameSnap, rateSnap] = await Promise.all([tx.get(nameRef), tx.get(rateRef)]);
     const current = (nameSnap.data() as NameDoc | undefined)?.customName ?? '';
     // Audit 17: a change (not a re-send of the same name) counts.
@@ -517,6 +518,10 @@ export async function setCustomName(
     if (names) tx.set(rateRef, { names }, { merge: true });
     return { ok: true, name: custom, updated: n };
   });
+  // PRD-2.6 LB3: keep the server-derived board name in step with the name
+  // callable. Wave-0 hook; its real implementation is in board_delete.ts.
+  if (result.ok) await lbSyncName(db, uid, result.name, nowMs);
+  return result;
 }
 
 /** Writes (or with '' removes) [custom] in [uid]'s pool entries. Returns the count. */
@@ -622,6 +627,8 @@ export async function releaseStaleGuestNames(
       } else if (linked) {
         await d.ref.update({ linked: true, guestSeen: FieldValue.delete() });
       } else if (await releaseGuestName(db, uid, cutoff)) {
+        // PRD-2.6 LB3: a released guest name becomes the generated one on the board.
+        await lbSyncName(db, uid, '', nowMs);
         released.push(uid);
       } else {
         skipped.add(uid);

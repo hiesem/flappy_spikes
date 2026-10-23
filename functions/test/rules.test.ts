@@ -103,7 +103,7 @@ describe('§3.13 rules: players/{uid}', () => {
     ['an unknown field', { cheat: true }],
     ['an empty name', { name: '' }],
     ['a name over 32 chars', { name: 'x'.repeat(33) }],
-    ['level 11', { level: 11 }],
+    ['level 10000', { level: 10000 }],
     ['an unknown platform', { platform: 'web' }],
     ['a look with a missing id', { look: { bird: 'a', gear: 'b', hat: 'c', hoop: 'd' } }],
     ['a client-chosen updatedAt', { updatedAt: Timestamp.now() }],
@@ -128,6 +128,15 @@ describe('§3.13 rules: players/{uid}', () => {
       await assertFails(setDoc(doc(env.authenticatedContext(uid).firestore(), 'players', uid), data));
     });
   }
+
+  it('PRD-2.6 R4 accepts the new level ceiling and keeps 2.5 levels 0–10 valid', async () => {
+    const high = uniq('lvl-high');
+    await assertSucceeds(setDoc(doc(env.authenticatedContext(high).firestore(), 'players', high), player({ level: 9999 })));
+    for (const level of Array.from({ length: 11 }, (_, i) => i)) {
+      const uid = uniq(`lvl${level}`);
+      await assertSucceeds(setDoc(doc(env.authenticatedContext(uid).firestore(), 'players', uid), player({ level })));
+    }
+  });
 
   it('§3.13 accepts a create holding one run (bestRun == recent[0]) with a long timeline', async () => {
     const uid = uniq('full');
@@ -207,6 +216,30 @@ describe('§3.13 rules: pools and everything else', () => {
     await assertFails(setDoc(doc(db, 'versusFlags', `${uid}_r1`), { uid, runId: 'r1' }));
     await assertFails(deleteDoc(doc(db, 'versusFlags', `${uid}_r1`)));
     await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'versusFlags', 'x')));
+  });
+});
+
+describe('PRD-2.6 LB3 rules: every lb* collection is server-only', () => {
+  const LB_COLLECTIONS = ['lbPlayers', 'lbGroups', 'lbOpen', 'lbGhostPool', 'lbBest', 'lbGifts', 'lbTomb', 'lbFlags', 'lbMeta'];
+
+  for (const name of LB_COLLECTIONS) {
+    it(`denies signed-in client reads and writes on ${name}`, async () => {
+      const db = env.authenticatedContext(uniq('lb')).firestore();
+      const ref = doc(db, name, 'x');
+      await assertFails(getDoc(ref));
+      await assertFails(getDocs(collection(db, name)));
+      await assertFails(setDoc(ref, { a: 1 }));
+      await assertFails(setDoc(ref, { uid: 'x', a: 1 }, { merge: true }));
+      await assertFails(deleteDoc(ref));
+    });
+  }
+
+  it('denies every lb* collection unauthenticated too', async () => {
+    const db = env.unauthenticatedContext().firestore();
+    for (const name of LB_COLLECTIONS) {
+      await assertFails(getDoc(doc(db, name, 'x')));
+      await assertFails(setDoc(doc(db, name, 'x'), { a: 1 }));
+    }
   });
 });
 

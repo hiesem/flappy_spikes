@@ -1,5 +1,23 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "lbGroups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "settled", "order": "ASCENDING" },
+        { "fieldPath": "end", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "lbPlayers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "hidden", "order": "ASCENDING" },
+        { "fieldPath": "bestShadow", "order": "ASCENDING" },
+        { "fieldPath": "best", "order": "DESCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": [
     {
       "collectionGroup": "players",
@@ -31,6 +49,56 @@
     {
       "collectionGroup": "versusFlags",
       "fieldPath": "signals",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "lbPlayers",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "lbGroups",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "lbGifts",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "lbTomb",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "lbFlags",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "lbGroups",
+      "fieldPath": "members",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "lbGroups",
+      "fieldPath": "ghosts",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "lbGhostPool",
+      "fieldPath": "entries",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "lbBest",
+      "fieldPath": "rows",
       "indexes": []
     }
   ]

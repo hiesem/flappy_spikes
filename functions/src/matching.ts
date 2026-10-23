@@ -3,7 +3,7 @@
  * the Dart client (`lib/versus/matcher.dart`, WP-5b) must give the same
  * answers on the shared fixture `test/fixtures/versus_matching.json`.
  */
-import { MAX_LEVEL, poolId, SHARDS } from './schema.js';
+import { MAX_BRACKET, poolId, SHARDS } from './schema.js';
 
 export interface MatchEntry {
   uid: string;
@@ -73,7 +73,7 @@ export function pickOpponent(
 }
 
 /** PRD-2.2 §3: at most every shard of every level per search (44). */
-export const MAX_SEARCH_READS = (MAX_LEVEL + 1) * SHARDS;
+export const MAX_SEARCH_READS = (MAX_BRACKET + 1) * SHARDS;
 
 function shardsOf(level: number, rand: () => number): string[] {
   const s = Array.from({ length: SHARDS }, (_, i) => i);
@@ -87,16 +87,16 @@ function shardsOf(level: number, rand: () => number): string[] {
 /**
  * PRD-2.2 §3 the opponent search order (replaces the 2.1 `poolReadPlan`):
  * all shards of my own level in random order, then the other levels nearest
- * first (distance 1, 2, … up to MAX_LEVEL; at each distance the lower level
+ * first (distance 1, 2, … up to MAX_BRACKET; at each distance the lower bracket
  * before the higher one), every shard of each level in random order. Every
  * pool document exactly once (≤ MAX_SEARCH_READS).
  */
 export function poolSearchOrder(level: number, rand: () => number = Math.random): string[] {
-  const own = Math.max(0, Math.min(MAX_LEVEL, level));
+  const own = Math.max(0, Math.min(MAX_BRACKET, level));
   const order = shardsOf(own, rand);
-  for (let d = 1; d <= MAX_LEVEL; d++) {
+  for (let d = 1; d <= MAX_BRACKET; d++) {
     for (const l of [own - d, own + d]) {
-      if (l >= 0 && l <= MAX_LEVEL) order.push(...shardsOf(l, rand));
+      if (l >= 0 && l <= MAX_BRACKET) order.push(...shardsOf(l, rand));
     }
   }
   return order;

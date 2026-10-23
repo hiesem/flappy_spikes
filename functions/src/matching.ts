@@ -121,6 +121,92 @@ export interface PoolSearch {
   reads: number;
 }
 
+/** PRD-2.6 E5 `duelStep` starts here and may move within [−4, +8]. */
+export const DUEL_STEP_START = -2;
+export const DUEL_STEP_MIN = -4;
+export const DUEL_STEP_MAX = 8;
+
+/** The three duel outcomes; only the result moves the staircase (WP-E E5). */
+export type DuelOutcome = 'win' | 'loss' | 'draw';
+
+/** Which rule of E5 picked the opponent inside the found pool document. */
+export type DuelPickTier = 'band' | 'closest' | 'rematch' | 'solo';
+
+export interface DuelPick {
+  tier: DuelPickTier;
+  /** The chosen run, or null for solo. */
+  entry: MatchEntry | null;
+  /** The target score T = clamp(0.8 + 0.1·duelStep, 0.4, 1.6) × median(recentScores). */
+  target: number;
+}
+
+function clamp(x: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, x));
+}
+
+/** Arithmetic median of the last 10 scores; 0 for an empty history. */
+export function duelMedian(recentScores: readonly number[]): number {
+  const s = recentScores.slice(-10).sort((a, b) => a - b);
+  if (!s.length) return 0;
+  const mid = s.length >> 1;
+  return s.length % 2 === 1 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+/** PRD-2.6 E5: the step after a duel result (draw leaves it unchanged). */
+export function duelStepAfter(step: number, result: DuelOutcome): number {
+  const delta = result === 'win' ? 1 : result === 'loss' ? -2 : 0;
+  return clamp(step + delta, DUEL_STEP_MIN, DUEL_STEP_MAX);
+}
+
+/** PRD-2.6 E5: T = clamp(0.8 + 0.1·duelStep, 0.4, 1.6) × median(recentScores). */
+export function duelTarget(step: number, recentScores: readonly number[]): number {
+  return clamp(0.8 + 0.1 * step, 0.4, 1.6) * duelMedian(recentScores);
+}
+
+/**
+ * PRD-2.6 E5 the pick inside the found pool document: a fresh run in the
+ * target band [0.75T, 1.25T], else the closest fresh run, else a rematch
+ * (the run met longest ago), else solo. `met` is ordered oldest first.
+ * This is reference logic only: the live client performs the pick; the
+ * deployed server matcher (`matchCandidates` / `pickOpponent`) is unchanged.
+ */
+export function pickDuelOpponent(
+  pool: MatchEntry[],
+  me: { uid: string; pg?: string },
+  step: number,
+  recentScores: readonly number[],
+  met: Iterable<string>,
+  rand: () => number = Math.random,
+): DuelPick {
+  const target = duelTarget(step, recentScores);
+  const lo = 0.75 * target;
+  const hi = 1.25 * target;
+  const metList = [...met];
+  const metSet = new Set(metList);
+  const open = pool.filter((e) => isOtherPlayer(e, me));
+  const fresh = open.filter((e) => !metSet.has(e.runId));
+  const inBand = fresh.filter((e) => e.score >= lo && e.score <= hi);
+  if (inBand.length) {
+    return {
+      tier: 'band',
+      entry: inBand[Math.min(inBand.length - 1, Math.floor(rand() * inBand.length))],
+      target,
+    };
+  }
+  if (fresh.length) {
+    let closest = fresh[0];
+    for (const e of fresh.slice(1)) {
+      if (Math.abs(e.score - target) < Math.abs(closest.score - target)) closest = e;
+    }
+    return { tier: 'closest', entry: closest, target };
+  }
+  const oldest = metLongestAgo(open, metList);
+  if (oldest !== null) {
+    return { tier: 'rematch', entry: open.find((e) => e.runId === oldest)!, target };
+  }
+  return { tier: 'solo', entry: null, target };
+}
+
 /**
  * PRD-2.2 §3 / PRD-2.3 §25.2 reads the pools in `order` in rounds of
  * `parallel` documents (the 4 shards of a bracket read together) and stops

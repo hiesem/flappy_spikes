@@ -13,7 +13,7 @@ class _E implements Matchable {
     : uid = m['uid']! as String,
       runId = m['runId']! as String,
       score = (m['score']! as num).toInt(),
-      level = (m['level']! as num).toInt(),
+      level = (m['bracket']! as num).toInt(),
       pg = (m['pg'] as String?) ?? '';
   @override
   final String uid;
@@ -86,19 +86,19 @@ void main() {
             as Map<String, Object?>;
     final cases = (fixture['search']! as List).cast<Map<String, Object?>>();
 
-    test('§3 the fixture has the sparse / own-uid-only / other-level cases',
+    test('§3 the fixture has the sparse / own-uid-only / other-bracket cases',
         () {
       final names = cases.map((c) => c['name']! as String).join('\n');
       expect(names, contains('sparse pool'));
       expect(names, contains('own uid only'));
-      expect(names, contains('other-level hit'));
+      expect(names, contains('other-bracket hit'));
     });
 
     for (final c in cases) {
       test('§3 ${c['name']}', () async {
         final me = c['me']! as Map<String, Object?>;
         final myUid = me['uid']! as String;
-        final level = (me['level']! as num).toInt();
+        final bracket = (me['bracket']! as num).toInt();
         // PRD-2.3 §25.2 the ordered met list (oldest first).
         final seen = (c['seen']! as List).cast<String>();
         final myPg = (me['pg'] as String?) ?? '';
@@ -107,7 +107,7 @@ void main() {
         for (var seed = 0; seed < 12; seed++) {
           final reads = <String>[];
           final r = await searchPools<_E>(
-            order: poolSearchOrder(level, Random(seed)),
+            order: poolSearchOrder(bracket, Random(seed)),
             read: (id) async {
               reads.add(id);
               return byId[id] ?? const [];
@@ -129,13 +129,13 @@ void main() {
           }
           final (tier, cands) = matchCandidates(
             r.pool,
-            myLevel: level,
+            myLevel: bracket,
             myBest: (me['best']! as num).toInt(),
             myUid: myUid,
             met: seen,
             myPg: myPg,
           );
-          expect(tier.name, ex['tier']);
+          expect(tier.name == 'level' ? 'bracket' : tier.name, ex['tier']);
           expect(cands.map((e) => e.runId).toSet(), {
             ...(ex['runIds']! as List).cast<String>(),
           });

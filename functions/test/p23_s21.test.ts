@@ -49,8 +49,10 @@ describe('PRD-2.3 §21.5 looks and pg: upload → pool → matching', () => {
     assert.deepEqual(e.look, LOOK_FANCY);
     assert.equal(e.pg, PG_B);
     // Matching from the real pool doc hands out exactly this run (and its look).
-    const me = { uid: uniq('me'), best: 200, level: 3 };
-    const pool = entries.filter((x) => x.runId === run.runId) as unknown as MatchEntry[];
+    const me = { uid: uniq('me'), best: 200, bracket: 3 };
+    const pool = entries
+      .filter((x) => x.runId === run.runId)
+      .map((x) => ({ ...x, bracket: x.level })) as unknown as MatchEntry[];
     const pick = pickOpponent(pool, me, [], () => 0) as unknown as Record<string, unknown>;
     assert.deepEqual(pick.look, LOOK_FANCY);
   });
@@ -61,17 +63,21 @@ describe('PRD-2.3 §21.5 looks and pg: upload → pool → matching', () => {
     await processLive(uid, undefined, makePlayer({ best: 160, bestRun: run, recent: [run] }), { rand: () => 0 });
     const e = (await poolEntries(poolId(3, 0))).find((x) => x.runId === run.runId)!;
     assert.equal(e.pg, '');
-    const { tier } = matchCandidates([e as unknown as MatchEntry], { uid: 'me', best: 200, level: 3, pg: PG_A }, []);
-    assert.equal(tier, 'level');
+    const { tier } = matchCandidates(
+      [{ ...e, bracket: e.level } as unknown as MatchEntry],
+      { uid: 'me', best: 200, bracket: 3, pg: PG_A },
+      [],
+    );
+    assert.equal(tier, 'bracket');
   });
 
   it('§21.4 a candidate with my pg under another uid is never chosen', () => {
     const pool: MatchEntry[] = [
-      { uid: 'old-anon', runId: 'o1', score: 80, level: 3, pg: PG_A },
-      { uid: 'b', runId: 'b1', score: 90, level: 3, pg: PG_B },
+      { uid: 'old-anon', runId: 'o1', score: 80, bracket: 3, pg: PG_A },
+      { uid: 'b', runId: 'b1', score: 90, bracket: 3, pg: PG_B },
     ];
     for (let i = 0; i < 20; i++) {
-      assert.equal(pickOpponent(pool, { uid: 'me', best: 200, level: 3, pg: PG_A }, [], () => i / 20)!.runId, 'b1');
+      assert.equal(pickOpponent(pool, { uid: 'me', best: 200, bracket: 3, pg: PG_A }, [], () => i / 20)!.runId, 'b1');
     }
   });
 

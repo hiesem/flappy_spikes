@@ -12,7 +12,7 @@ class _E implements Matchable {
     : uid = m['uid']! as String,
       runId = m['runId']! as String,
       score = (m['score']! as num).toInt(),
-      level = (m['level']! as num).toInt(),
+      level = (m['bracket']! as num).toInt(),
       pg = (m['pg'] as String?) ?? '';
   @override
   final String uid;
@@ -52,13 +52,13 @@ void main() {
         final expectMap = c['expect']! as Map<String, Object?>;
         final (tier, candidates) = matchCandidates(
           pool,
-          myLevel: (me['level']! as num).toInt(),
+          myLevel: (me['bracket']! as num).toInt(),
           myBest: (me['best']! as num).toInt(),
           myUid: me['uid']! as String,
           met: seen,
             myPg: myPg,
         );
-        expect(tier.name, expectMap['tier']);
+        expect(_fixtureTier(tier.name), expectMap['tier']);
         expect(
           candidates.map((e) => e.runId).toSet(),
           {...(expectMap['runIds']! as List).cast<String>()},
@@ -67,7 +67,7 @@ void main() {
         for (var s = 0; s < 20; s++) {
           final pick = pickOpponent(
             pool,
-            myLevel: (me['level']! as num).toInt(),
+            myLevel: (me['bracket']! as num).toInt(),
             myBest: (me['best']! as num).toInt(),
             myUid: me['uid']! as String,
             met: seen,
@@ -85,7 +85,7 @@ void main() {
 
     // PRD-2.2 §3: the 2.1 read plan became a search order
     // (test/p22/s3_matcher_search_test.dart).
-    test('§3.13 pool ids are level_shard', () {
+    test('§3.13 pool ids are bracket_shard', () {
       expect(poolId(3, 2), '3_2');
     });
   });
@@ -146,7 +146,7 @@ void main() {
     });
 
     test('§3.13 the server port functions/src/nickname.ts has the same lists '
-        '(mirror, like levels.test.ts)', () {
+        '(mirror, like brackets.test.ts)', () {
       final ts = File('functions/src/nickname.ts').readAsStringSync();
       List<String> tsList(String name) {
         final start = ts.indexOf('export const $name');
@@ -197,3 +197,7 @@ void main() {
     });
   });
 }
+
+/// PRD-2.6 E4: the fixture names the tier `bracket`; the Dart matcher's enum
+/// rename (`MatchTier.level` → `MatchTier.bracket`) is wave 2.
+String _fixtureTier(String dartTier) => dartTier == 'level' ? 'bracket' : dartTier;

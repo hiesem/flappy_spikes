@@ -43,12 +43,16 @@ phase are parameters. No other file owns box geometry or a second box path.
 
 The approved reference is **`levels_v26/item_reveal.html`, LEVEL ITEM REVEAL,
 style A**. The master keeps its art-unit geometry (body `(-40,-10)…(40,42)`,
-lid `(-46,-24)…(46,-8)`, 80-unit reference width) and its lid timing:
+lid `(-46,-24)…(46,-8)`, 80-unit reference width) and style A's timing:
 
-- closed → shake: `sin(u × 42) × (2 + 12u²)` degrees of wobble and
-  `abs(sin(u × 21)) × (-3 - 6u)` art units of hop;
-- shake → lid-off: the lid translates `(60u, -150u + 40u²)` and rotates `80u`
-  degrees over the 0.5 s opening clip.
+- reveal time 0.00–0.30 s: the closed/rest box (the page's separate entrance
+  scale is owned by the reveal screen, not the box master);
+- 0.30–1.05 s (`shake` progress `sh`, elapsed reveal time `u`):
+  `sin(u × 42) × (2 + 12sh²)` degrees of wobble and
+  `abs(sin(u × 21)) × (-3 - 6sh)` art units of hop — frequency uses elapsed
+  time while amplitude uses normalized shake progress;
+- 1.05–1.55 s: the lid translates `(60u, -150u + 40u²)` and rotates `80u`
+  degrees over the 0.5 s opening clip (`u` is now opening progress).
 
 ### O100 — enforcement
 
@@ -80,7 +84,7 @@ the only permitted differences; layout geometry stays in the owning screen.
 
 | Master file / class | Allowed parameters | 2.6 design elements that map here |
 |---|---|---|
-| `lib/components/ui/mystery_box.dart` — `MysteryBox`, `MysteryBoxComponent`, `MysteryBoxLook`, `MysteryBoxTier`, `MysteryBoxAnimation`, `MysteryBoxLid`, `MysteryBoxPhase` | `main` / `dark` / `ribbon` / `labelColor`, `label` (`'?'` or null), `size` (80-unit reference scaled), `MysteryBoxLid` phase and progress, `drawBody` / `drawLid` for the split reveal, component position / priority | **Reference:** `levels_v26/item_reveal.html` — LEVEL ITEM REVEAL, style A mystery box, shake and lid-off. Also: `levels_v26/levels_screen.html` — locked LEVELS row grey box (`GREY` #BDBDBD/#9C9C9C, `?`); `approvals_v26/missions.html` — §4 ALL DONE: THE BONUS CHEST ON HOME (gold); `approvals_v26/leaderboard_gifts.html` — §1 GO TO COLLECT and §2 OPENING THE BOX (gold / silver / bronze); `approvals_v26/star_road.html` — MYSTERY tiers / tier-claim box; `lib/run/hoops/kinds/pair/gift_box.dart` — in-run paired-hoops gift (visual only) |
+| `lib/components/ui/mystery_box.dart` — `MysteryBox`, `MysteryBoxComponent`, `MysteryBoxLook`, `MysteryBoxTier`, `MysteryBoxAnimation`, `MysteryBoxLid`, `MysteryBoxPhase` | `main` / `dark` / `ribbon` / `labelColor`, `label` (`'?'` or null), `size` (80-unit reference scaled), `shake` progress plus its separate `revealTime`, lid-off progress, `drawBody` / `drawLid` for the split reveal, component position / priority | **Reference:** `levels_v26/item_reveal.html` — LEVEL ITEM REVEAL, style A mystery box, shake and lid-off. Also: `levels_v26/levels_screen.html` — locked LEVELS row grey box (`GREY` #BDBDBD/#9C9C9C, `?`); `approvals_v26/missions.html` — §4 ALL DONE: THE BONUS CHEST ON HOME (gold); `approvals_v26/leaderboard_gifts.html` — §1 GO TO COLLECT and §2 OPENING THE BOX (gold / silver / bronze); `approvals_v26/star_road.html` — MYSTERY tiers / tier-claim box; `lib/run/hoops/kinds/pair/gift_box.dart` — in-run paired-hoops gift (visual only) |
 
 `MysteryBox.paintPair` is the pair's parameterised shortcut: a label-less,
 reward-coloured box at the pair's existing 43.5 pt size. It contains no
@@ -176,6 +180,20 @@ geometry of its own and exists so the run cannot grow a second path.
 | `lib/skins/art/look_painter.dart` — `LookPainter`; `lib/components/look_component.dart` — `LookComponent` | `Look` (bird / gear / hat / trail), art scale, pose (idle / flap / dead), blink, gold tier, blend tint, opacity, paused, flap override, position / priority; the art box and all skin drawings stay | `levels_v26/item_reveal.html` — reveal bird; `levels_v26/levels_screen.html` — level bird; `approvals_v26/leaderboard.html` — board avatars; `approvals_v26/versus_cards.html` — VS intro / card looks; `approvals_v26/flight_guide.html` — bird pictures |
 | `lib/components/ui/flip.dart` — `FlipEffect`, `FlipDriver`, `ShrinkAway`, `ShrinkDriver` | decoration target, flip axis / squash, durations, swap / done callbacks, shrink start / end; the CSS flip and shrink curves stay | `approvals_v26/versus_cards.html` — card flip / selection; `approvals_v26/leaderboard.html` — tab change / card swap; `approvals_v26/levels_tabs.html` — tab content transition |
 
+### Live UI motion
+
+These are shared motion masters, not per-screen CSS rewrites. `LiveClock`
+supplies one elapsed clock and the decorators consume it; reduce motion calls
+`rest()` / `still`, never a second animation.
+
+| Master file / class | Allowed parameters | 2.6 design elements that map here |
+|---|---|---|
+| `lib/components/ui/live_effects.dart` — `LiveCurves` | input loop time and, where a curve already defines it, cascade delay; every keyframe, period and curve stay fixed | Idle motion on buttons, tags, packs and trophies in every 2.6 home / panel page: `approvals_v26/missions.html` §1–§2 and §4; `approvals_v26/day_streak.html` §1–§4; `approvals_v26/leaderboard.html` §2–§6; `approvals_v26/leaderboard_gifts.html` §1–§2; `approvals_v26/star_road.html` / `star_road_popup.html`; `approvals_v26/puzzle_album.html`; `approvals_v26/worlds_map.html`; `approvals_v26/versus_cards.html`; `approvals_v26/weekly_course.html` §1 and §3 |
+| `lib/components/ui/live_effects.dart` — `WiggleEffect` | target component, pivot, a `LivePose` supplied by `LiveCurves`, rest / reduce-motion state; no ad-hoc sine wiggle | NEW / MOST POPULAR / BEST DEAL tags, trophy and emblem idle poses in the pages above |
+| `lib/components/ui/live_effects.dart` — `PulseEffect` | target, peak amount, glow colour, blur, spread, inflate, pulse value, pivot, rest state; the pulse curve stays | `approvals_v26/missions.html` §1 home entry / mission strip and §4 chest; `approvals_v26/day_streak.html` §1 flame chip and §2 reward; `approvals_v26/star_road_popup.html` claim button; `approvals_v26/leaderboard.html` §5 home entry; `approvals_v26/levels_tabs.html` primary buttons |
+| `lib/components/ui/live_effects.dart` — `LightStreak` | target, existing cascade delay, clock-driven progress, rest state; band width, skew, gradient and period stay | Primary / buy / claim buttons and selectable cards in `approvals_v26/missions.html`, `approvals_v26/day_streak.html`, `approvals_v26/leaderboard.html`, `approvals_v26/leaderboard_gifts.html`, `approvals_v26/star_road.html`, `approvals_v26/star_road_popup.html`, `approvals_v26/versus_cards.html` and `approvals_v26/weekly_course.html` |
+| `lib/components/ui/live_effects.dart` — `LiveClock` | paused / still predicates and decorator bindings; period and scale factors never change here | The single idle clock for every animated 2.6 menu surface named above |
+
 ### Other run masters reused by 2.6 art
 
 | Master file / class | Allowed parameters | 2.6 design elements that map here |
@@ -185,6 +203,16 @@ geometry of its own and exists so the run cannot grow a second path.
 | `lib/run/effects/shock_ring.dart` — `ShockRing` | position, radii, tilt, scale, stroke, opacity, length, delay, grow, glow; named presets stay the entry points | Reward / pass moments in `approvals_v26/missions.html` §4; `approvals_v26/leaderboard_gifts.html` §2; `approvals_v26/star_road.html`; run pictures in `approvals_v26/flight_guide.html` |
 | `lib/skins/art/trail.dart` — `TrailEmitter` | trail id, seeded random, look painter, capacity seed history, scale, head, scroll / emit delta; the trail catalogue art stays | `levels_v26/item_reveal.html` — trail reveal art; `approvals_v26/versus_cards.html` — trail card items; `approvals_v26/leaderboard.html` — board avatars / run pictures |
 | `lib/run/effects/spike_teeth.dart` — `SpikeTeethPainter` | edge, width, phase, colour / tint, strip height; the 44 pt strip shape and tooth rhythm stay | Any 2.6 drawing of the run: `approvals_v26/leaderboard.html` §4 picture guide (real full-bleed strips per O90); `approvals_v26/flight_guide.html`; `approvals_v26/weekly_course.html` §2; `levels_v26/item_reveal.html` review-stage strips |
+| `lib/components/score_hud.dart` — `ScoreHud` (+ `ScoreCoverOverlay`) | score, position, tint / score colour, opacity, ride scene circle+digits / mix / alpha, squeeze cover amount and text colour; the 183 pt circle and LVDC digit art stay | `approvals_v26/weekly_course.html` §2 weekly run and §3 weekly results; `approvals_v26/leaderboard.html` §4 run picture; `approvals_v26/flight_guide.html` run depictions |
+| `lib/run/effects/particle_pool.dart` — `ParticlePool` | capacity, seeded spawn position / velocity / size / life / spin / fade / shape / colour; pool ownership and the flat-particle style stay | Run sparkles, confetti, shards and bursts behind `approvals_v26/missions.html` §4, `approvals_v26/leaderboard_gifts.html` §2, `approvals_v26/star_road.html`, `approvals_v26/puzzle_album.html`, `approvals_v26/weekly_course.html` §2–§3 |
+| `lib/run/effects/fireworks.dart` — `Fireworks` | launch y, launch x / burst y / colour / delay, seeded random, priority; rise, 34-streak burst, drag and fade stay | Level-up / reward moments in `levels_v26/item_reveal.html`; `approvals_v26/missions.html` §4; `approvals_v26/day_streak.html` §2; `approvals_v26/leaderboard.html` §1; `approvals_v26/first_win_of_day.html`; `approvals_v26/weekly_course.html` §3 |
+| `lib/run/effects/pickup_touch_fx.dart` — `PickupTouchFx` / `PickupTouchSpec` | named pickup preset or body-colour preset, position, pool, delay / priority; flash, ring and square timings stay | Item / collect touch moments in `approvals_v26/missions.html` §4; `approvals_v26/leaderboard_gifts.html` §2; `approvals_v26/star_road.html`; `approvals_v26/flight_guide.html`; `levels_v26/item_reveal.html` reward interactions |
+| `lib/run/effects/fetch_flight.dart` — `FetchFlight` / `FetchSpec` | source / target, item painter, named or value `FetchSpec`, particle pool, seeded random, land callback, priority; curve, swell and trail envelopes stay | Collect / claim flights in `approvals_v26/missions.html` §3–§4; `approvals_v26/day_streak.html` §2; `approvals_v26/leaderboard_gifts.html` §2; `approvals_v26/star_road.html`; `approvals_v26/puzzle_album.html` |
+| `lib/run/effects/hud_fetch.dart` — `HudFetch`, `CoinFetch`, `GlowFetch` | source / target, custom item painter, life, priority; coin and glow subclasses keep their fixed art / timings | Coin / firefly HUD flights behind `approvals_v26/missions.html` §3, `approvals_v26/leaderboard_gifts.html` §2 and `approvals_v26/weekly_course.html` §3 |
+| `lib/run/effects/collect_art.dart` — `CollectArt` | centre, radius / size, colour, alpha, triangle points, rounded-rect bounds; halo, four-point star and basic shapes stay | Shared sparkle / halo primitives in `levels_v26/item_reveal.html`; `approvals_v26/missions.html` §4; `approvals_v26/leaderboard_gifts.html` §2; `approvals_v26/star_road.html`; `approvals_v26/puzzle_album.html` |
+| `lib/run/effects/collect_fx.dart` — `CollectBursts` / `CollectShake` | burst origin, colours, piece count / speed / shape / size / life / gravity; shake target, amplitude, decay; the pooled style stays | Hatch / smash / celebration moments used by `levels_v26/item_reveal.html`; `approvals_v26/missions.html` §4; `approvals_v26/leaderboard_gifts.html` §2; `approvals_v26/star_road.html`; `approvals_v26/puzzle_album.html` |
+| `lib/run/effects/text_pop.dart` — `TextPop` | text, position, colour, font size; rise, fade and 1 s life stay | Small collect / reward count pops in `approvals_v26/missions.html` §3–§4; `approvals_v26/leaderboard_gifts.html` §2; `approvals_v26/weekly_course.html` §2–§3 |
+| `lib/run/hud/collect_slot.dart` — `CollectSlot` / `CollectSlotItem` | queued item painter / timings already exposed by the item contract, banner host or null, position / layer ownership; one-at-a-time queue and fade / slide stay | Feather / puzzle-style collection and reward queues in `approvals_v26/missions.html` §3–§4; `approvals_v26/leaderboard_gifts.html` §2; `approvals_v26/puzzle_album.html`; `approvals_v26/star_road.html` |
 
 ## Approved design index
 

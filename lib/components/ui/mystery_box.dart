@@ -95,20 +95,28 @@ class MysteryBoxLook {
 enum MysteryBoxPhase { closed, shake, lidOff }
 
 /// The box's lid state at one moment. [shake] is 0..1 across the warning
-/// phase; [lift] / [angle] / [drop] are the style A lid transform at
-/// [lidOff] progress [u].
+/// phase, while [revealTime] is the separate elapsed style-A clock that drives
+/// the sine frequencies; [lift] / [angle] / [drop] are the style A lid
+/// transform at [lidOff] progress [u].
 class MysteryBoxLid {
   const MysteryBoxLid.closed()
     : phase = MysteryBoxPhase.closed,
       shake = 0,
+      revealTime = 0,
       u = 0;
 
-  const MysteryBoxLid.shake(this.shake) : phase = MysteryBoxPhase.shake, u = 0;
+  const MysteryBoxLid.shake(this.shake, {required this.revealTime})
+    : phase = MysteryBoxPhase.shake,
+      u = 0;
 
-  const MysteryBoxLid.off(this.u) : phase = MysteryBoxPhase.lidOff, shake = 0;
+  const MysteryBoxLid.off(this.u)
+    : phase = MysteryBoxPhase.lidOff,
+      shake = 0,
+      revealTime = 0;
 
   final MysteryBoxPhase phase;
   final double shake;
+  final double revealTime;
   final double u;
 
   bool get isOff => phase == MysteryBoxPhase.lidOff;
@@ -119,16 +127,17 @@ class MysteryBoxLid {
   double get drop => -150 * u + 40 * u * u;
   double get angle => u * 80 * math.pi / 180;
 
-  /// Warning wobble: 2..14 box-unit rotation, alternating, in style A's
-  /// 0.3–0.75 s shake window. Deterministic for a given [shake].
+  /// Warning wobble: `sin(revealTime × 42) × (2 + 12 × shake²)` degrees,
+  /// exactly as style A drives frequency from elapsed reveal time and
+  /// amplitude from normalized shake progress.
   double get wobble => phase == MysteryBoxPhase.shake
-      ? math.sin(shake * 42) * (2 + shake * shake * 12) * math.pi / 180
+      ? math.sin(revealTime * 42) * (2 + shake * shake * 12) * math.pi / 180
       : 0;
 
   /// Style A's small upward hop during the shake:
-  /// `abs(sin(u × 21)) × (-3 - 6u)` box units.
+  /// `abs(sin(revealTime × 21)) × (-3 - 6 × shake)` box units.
   double get hop => phase == MysteryBoxPhase.shake
-      ? -math.sin(shake * 21).abs() * (3 + shake * 6)
+      ? -math.sin(revealTime * 21).abs() * (3 + shake * 6)
       : 0;
 }
 
@@ -139,18 +148,19 @@ class MysteryBoxLid {
 /// show the whole sequence pass elapsed seconds.
 class MysteryBoxAnimation {
   const MysteryBoxAnimation({
-    this.shakeFrom = 0,
-    this.shakeLength = .45,
-    this.lidOffFrom = .45,
+    this.shakeFrom = .3,
+    this.shakeLength = .75,
+    this.lidOffFrom = 1.05,
     this.lidOffLength = .5,
   });
 
   final double shakeFrom, shakeLength, lidOffFrom, lidOffLength;
 
   MysteryBoxLid at(double elapsed) {
-    if (elapsed < shakeFrom + shakeLength) {
+    if (elapsed < shakeFrom) return const MysteryBoxLid.closed();
+    if (elapsed < lidOffFrom) {
       final u = ((elapsed - shakeFrom) / shakeLength).clamp(0.0, 1.0);
-      return u <= 0 ? const MysteryBoxLid.closed() : MysteryBoxLid.shake(u);
+      return MysteryBoxLid.shake(u, revealTime: elapsed);
     }
     final u = ((elapsed - lidOffFrom) / lidOffLength).clamp(0.0, 1.0);
     return MysteryBoxLid.off(u);

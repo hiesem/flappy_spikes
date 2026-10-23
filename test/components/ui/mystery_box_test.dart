@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flappy_spikes/components/ui/mystery_box.dart';
@@ -105,51 +106,93 @@ void main() {
     },
   );
 
-  test('O99 the "?" label is optional and stays inside the body', () async {
-    final labelled = await _render(MysteryBoxLook.tier(MysteryBoxTier.gold));
-    final unlabelled = await _render(
-      MysteryBoxLook.tier(MysteryBoxTier.gold, label: null),
-    );
-    expect(_changed(labelled, unlabelled), greaterThan(80));
-    expect(_changed(labelled, unlabelled), lessThan(900));
+  test(
+    'O99 every approved palette renders with and without the "?" label',
+    () async {
+      final looks = [
+        MysteryBoxLook.tier(MysteryBoxTier.gold),
+        MysteryBoxLook.tier(MysteryBoxTier.silver),
+        MysteryBoxLook.tier(MysteryBoxTier.bronze),
+        MysteryBoxLook.tier(MysteryBoxTier.pink),
+        MysteryBoxLook.levelBox,
+      ];
+      final labelless = [
+        for (final look in looks)
+          MysteryBoxLook.colours(look.main, look.dark, label: null),
+      ];
+      for (var i = 0; i < looks.length; i++) {
+        final labelled = await _render(looks[i]);
+        final unlabelled = await _render(labelless[i]);
+        final changed = _changed(labelled, unlabelled);
+        expect(
+          changed,
+          greaterThan(80),
+          reason: 'palette $i removes its label',
+        );
+        expect(changed, lessThan(900));
+      }
 
-    final noBody = await _render(
-      MysteryBoxLook.tier(MysteryBoxTier.gold),
-      drawBody: false,
-    );
-    final body = await _render(MysteryBoxLook.tier(MysteryBoxTier.gold));
-    expect(_changed(body, noBody), greaterThan(500));
-  });
+      final noBody = await _render(
+        MysteryBoxLook.tier(MysteryBoxTier.gold),
+        drawBody: false,
+      );
+      final body = await _render(MysteryBoxLook.tier(MysteryBoxTier.gold));
+      expect(_changed(body, noBody), greaterThan(500));
+    },
+  );
 
   test('O99 closed → shake → lid-off steps deterministically', () async {
     final anim = const MysteryBoxAnimation();
+    expect(anim.shakeFrom, closeTo(.3, 1e-9));
+    expect(anim.shakeLength, closeTo(.75, 1e-9));
+    expect(anim.lidOffFrom, closeTo(1.05, 1e-9));
+    expect(anim.lidOffLength, closeTo(.5, 1e-9));
     expect(anim.at(0).phase, MysteryBoxPhase.closed);
-    expect(anim.at(.2).phase, MysteryBoxPhase.shake);
-    expect(anim.at(.7).phase, MysteryBoxPhase.lidOff);
-    expect(anim.at(.7).u, closeTo(.5, 1e-9));
+    expect(anim.at(.299).phase, MysteryBoxPhase.closed);
+    expect(anim.at(.3).phase, MysteryBoxPhase.shake);
+    expect(anim.at(.3).shake, 0);
 
-    final a = anim.at(.2), b = anim.at(.2);
+    final shaking = anim.at(.7);
+    expect(shaking.phase, MysteryBoxPhase.shake);
+    expect(shaking.revealTime, closeTo(.7, 1e-9));
+    expect(shaking.shake, closeTo(8 / 15, 1e-9));
+    expect(
+      shaking.wobble,
+      closeTo(math.sin(.7 * 42) * 406 / 75 * math.pi / 180, 1e-12),
+    );
+    expect(
+      shaking.hop,
+      closeTo(-math.sin(.7 * 21).abs() * (3 + 48 / 15), 1e-12),
+    );
+    expect(anim.at(1.049999).phase, MysteryBoxPhase.shake);
+    expect(anim.at(1.05).phase, MysteryBoxPhase.lidOff);
+    expect(anim.at(1.05).u, 0);
+
+    final a = anim.at(.7), b = anim.at(.7);
     expect(a.shake, b.shake);
     expect(a.wobble, b.wobble);
     expect(a.hop, b.hop);
 
     final off = anim.at(1.2);
     expect(off.isOff, isTrue);
-    expect(off.u, 1);
-    expect(off.lift, 60);
-    expect(off.drop, -110);
-    expect(off.angle, closeTo(80 * 3.141592653589793 / 180, 1e-9));
+    expect(off.u, closeTo(.3, 1e-9));
+    expect(off.lift, closeTo(18, 1e-9));
+    expect(off.drop, closeTo(-41.4, 1e-9));
+    expect(off.angle, closeTo(24 * math.pi / 180, 1e-9));
+    expect(anim.at(1.55).u, closeTo(1, 1e-9));
 
     final comp = MysteryBoxComponent(
       look: MysteryBoxLook.tier(MysteryBoxTier.gold),
       boxSize: 160,
       animation: const MysteryBoxAnimation(),
     );
-    comp.update(.2);
+    comp.update(.3);
     expect(comp.lid.phase, MysteryBoxPhase.shake);
-    comp.update(.5);
+    comp.update(.7);
+    expect(comp.lid.phase, MysteryBoxPhase.shake);
+    comp.update(.05);
     expect(comp.lid.phase, MysteryBoxPhase.lidOff);
-    comp.update(1);
+    comp.update(.5);
     expect(comp.lid.u, 1);
   });
 
@@ -158,12 +201,18 @@ void main() {
     () async {
       final look = MysteryBoxLook.tier(MysteryBoxTier.gold);
       final closed = await _render(look);
-      final shake = await _render(look, lid: const MysteryBoxLid.shake(.5));
+      final shake = await _render(
+        look,
+        lid: const MysteryBoxLid.shake(.5, revealTime: .675),
+      );
       final off = await _render(look, lid: const MysteryBoxLid.off(1));
       expect(_changed(closed, shake), greaterThan(200));
       expect(_changed(shake, off), greaterThan(200));
       expect(_changed(closed, off), greaterThan(200));
-      final again = await _render(look, lid: const MysteryBoxLid.shake(.5));
+      final again = await _render(
+        look,
+        lid: const MysteryBoxLid.shake(.5, revealTime: .675),
+      );
       expect(_changed(shake, again), 0);
     },
   );
@@ -196,12 +245,12 @@ void main() {
       MysteryBoxLook.tier(MysteryBoxTier.pink),
       MysteryBoxLook.levelBox,
     ];
-    const lids = [
+    final lids = [
       MysteryBoxLid.closed(),
-      MysteryBoxLid.shake(.5),
+      const MysteryBoxLid.shake(.5, revealTime: .675),
       MysteryBoxLid.off(1),
     ];
-    const cellW = 240, cellH = 260, cols = 3, rows = 5;
+    const cellW = 240, cellH = 260, cols = 3, rows = 10;
     await tester.runAsync(() async {
       final rec = ui.PictureRecorder();
       final c = ui.Canvas(rec);
@@ -214,11 +263,16 @@ void main() {
         ),
         ui.Paint()..color = const ui.Color(0xFFFFFFFF),
       );
-      for (var row = 0; row < looks.length; row++) {
+      for (var row = 0; row < rows; row++) {
+        final labelled = row < looks.length;
+        final base = looks[row % looks.length];
+        final look = labelled
+            ? base
+            : MysteryBoxLook.colours(base.main, base.dark, label: null);
         for (var col = 0; col < lids.length; col++) {
           c.save();
           c.translate(cellW * col + cellW / 2, cellH * row + 175);
-          MysteryBox.paint(c, looks[row], size: 92, lid: lids[col]);
+          MysteryBox.paint(c, look, size: 92, lid: lids[col]);
           c.restore();
         }
       }
@@ -236,7 +290,7 @@ void main() {
       expect(bytes.length, greaterThan(8000));
       expect(bytes.sublist(0, 8), [137, 80, 78, 71, 13, 10, 26, 10]);
       expect(cellW * cols, 720);
-      expect(cellH * rows, 1300);
+      expect(cellH * rows, 2600);
     });
   });
 }

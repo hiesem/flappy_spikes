@@ -1,0 +1,164 @@
+# df4.toml — DuoFoundry v4 project config (written by `df4 init`; full reference: templates/df4.toml in
+# the df4 checkout). Values marked `from ...` were detected in this repo; the rest are df4 defaults.
+# No secrets in this file: keys stay in their env files and are never read by df4's agents.
+
+[project]
+name = "flappy_spikes"
+repo = "hiesem/flappy_spikes"    # from git remote origin
+remote = ""
+base_branch = "feat/2.6"    # owner 2026-10-24: 2.6 builds on feat/2.6 (off feat/2.5 = 2.5.0+48); main untouched
+lanes = 3    # owner choice
+milestones = ["M0", "M1", "M2", "M3", "M4", "M5"]    # = PRD 2.6 §4 build waves 0-5
+language = "English"
+env_prefix = "DF4"
+state_dir = ""
+require_plan_approval = true
+report_dir = "docs/reports"
+plan_docs = ["docs/p26/PRD-2.6-fun-progression.md", "docs/p26/README.md", "SPEC.md", "docs/gameplay-v2/ARCH.md"]
+planner_rules = [
+  "Milestone Mk is PRD 2.6 section 4 build wave k (M0 = wave 0 ... M5 = wave 5). Plan exactly that wave's contents; the work-package sections of the PRD are binding, including the tests they name.",
+  "The approved designs in docs/p26/design/ are the visual reference (path map in docs/p26/README.md): name the page (and section) in every UI task's context; player-facing strings come from docs/p26/design/approvals_v26/texts.html.",
+  "Deploys, the leaderboard import/cleanup runs, console or store work, Play uploads, device (Pixel) tests and release clicks are never tasks: list them as userAction lines.",
+  "Shared hot spots (lib/game/flappy_game.dart, lib/game/storage.dart, lib/game/config.dart, tool/gen_obf_strings.dart and its generated file, pubspec.yaml) belong to the skeleton task or to one task per milestone, so parallel tasks keep disjoint paths.",
+]
+agent_rules = [
+  "Follow docs/p26/BUILD_NOTES.md (toolchain, never-do list, invariants) and the PRD docs/p26/PRD-2.6-fun-progression.md.",
+  "Never run adb, emulators, firebase deploy, gcloud or anything that touches the real Firebase project or the stores.",
+]
+never_commit = ["android/upload-keystore.jks", "android/app/key.properties", "*.jks", "*.keystore", "functions/lib/**", "firestore-debug.log", "*-debug.log"]
+protected_paths = ["pubspec.lock", "functions/package-lock.json", "df4.toml", "scripts/verify.sh", "docs/p26/**", "android/app/build.gradle*", ".github/**"]
+heavy_slots = 1
+builder_notes = "docs/p26/BUILD_NOTES.md"
+tester_notes = "docs/p26/BUILD_NOTES.md"
+
+[roles.orchestrator]
+kind = "claude"
+model = "claude-opus-5-5"
+effort = "medium"
+timeout_s = 1800
+
+[roles.builder1]
+kind = "codex"
+model = "deepseek/deepseek-v4.1-flash-1017@preset/df4-deepseek-wafer"    # OpenRouter preset: Wafer only, mxfp4, no fallbacks (owner 2026-10-24)
+effort = "max"
+network = true
+timeout_s = 3600
+idle_timeout_s = 900
+home = "~/.local/state/df4/flappy-spikes/codex-openrouter"
+env_file = "~/.config/duofoundry/openrouter.env"
+
+[roles.builder2]
+kind = "codex"
+model = "glm-5.3"    # Z.ai coding plan (owner 2026-10-24)
+effort = "max"
+network = true
+timeout_s = 3600
+idle_timeout_s = 900
+home = "~/.local/state/df4/flappy-spikes/codex-zai"
+env_file = "~/.config/duofoundry/glm.env"
+
+[roles.builder3]
+kind = "codex"
+model = "gpt-6.1-sol"
+effort = "medium"
+network = true
+timeout_s = 2400
+
+[roles.tester]
+kind = "codex"
+model = "gpt-6.1-sol"
+effort = "high"
+timeout_s = 1800
+
+[roles.tester3]
+kind = "codex"
+model = "gpt-6.1-sol"
+effort = "high"
+timeout_s = 1800
+
+[roles.fallback]
+kind = "claude"
+model = "claude-haiku-5-5"
+effort = "max"
+timeout_s = 2400    # unused: routing.fallback = "" (owner table has no fallback)
+
+[routing]
+build = ["builder1", "builder2", "builder3"]
+check = ["tester", "tester", "tester3"]
+allow_same_model = [3]    # owner 2026-10-24: Sol builds round 3 and Sol tests every round
+fallback = ""    # owner table: no fallback model; codex outages wait and resume
+resume_round2 = true
+round3_needs_progress = true
+
+[council]
+member_a = { kind = "claude", model = "claude-opus-5-5", effort = "medium", timeout_s = 1800 }
+member_b = { kind = "codex", model = "gpt-6.1-sol", effort = "high", timeout_s = 1800 }
+max_inline_kb = 40
+
+[council.context]
+default = []
+
+[verify]
+script = "scripts/verify.sh"
+timeout_s = 1800
+compose = "off"
+stack_paths = []
+port_base = 20000
+port_stride = 10
+port_slots = 10
+compose_up_timeout_s = 900
+health_timeout_s = 300
+gate_repairs = 2
+full_label = "verify:full"
+
+[deploy]
+when = "off"
+script = "deploy/deploy.sh"
+requires = []
+check_cmd = []
+env = {  }
+pass_ssh_agent = false
+after = []
+timeout_s = 1800
+busy_exit = 0
+busy_wait_s = 600
+busy_retries = 6
+health_url = ""
+
+[retry]
+transient_waits_s = [30, 120, 300, 900, 1800, 3600]
+
+[prepare]
+install = "flutter pub get && npm --prefix functions ci --no-audit --no-fund"
+lockfiles = ["pubspec.lock", "functions/package-lock.json"]
+copy_from_main = []
+env = { PUB_CACHE = "/home/killerhis/.local/state/df4/flappy-spikes/cache/pub-cache" }
+timeout_s = 1800
+
+[jail]
+mode = "required"
+hide_roots = ["~", "/run/media", "/media", "/mnt", "/run/user/{uid}"]
+hide = ["/run/docker.sock", "/var/run/docker.sock", "/run/podman", "/run/dbus/system_bus_socket"]
+home_ro = ["~/.local/share/mise/installs", "~/.local/share/mise/shims", "~/.config/mise", "~/.local/share/uv/python", "~/.cache/ms-playwright", "~/.cache/firebase/emulators"]
+claude_home = "~/.claude"
+claude_json = "~/.claude.json"
+caches = { UV_CACHE_DIR = "uv-cache", npm_config_cache = "npm-cache", PUB_CACHE = "pub-cache", DF4_FLUTTER_SDK = "flutter" }   # flutter SDK copy: the tool writes bin/cache
+env = { XDG_RUNTIME_DIR = "/tmp", PATH = "/home/killerhis/.local/state/df4/flappy-spikes/cache/flutter/bin:/home/killerhis/.local/share/mise/installs/node/26.7.0/bin:/usr/local/bin:/usr/bin:/bin" }
+docker = false
+probes = {  }
+
+[secrets]
+never_read = [".env", ".env.*", "*.env", "secrets/", "*.ppk", "*.pem", "*.key", "*.p12", "*.pfx", "*.jks", "id_*", "~/.ssh/", "~/.codex/auth.json", "~/.claude/.credentials.json", "~/.config/df4/df4-notes-keys.json", "~/.config/duofoundry/"]
+known_value_files = []
+
+[issues]
+comments = true
+
+[tools]
+git = "git"
+gh = "gh"
+claude = "claude"
+codex = "codex"
+bwrap = "bwrap"
+podman = "podman"
+podman_compose = "podman-compose"

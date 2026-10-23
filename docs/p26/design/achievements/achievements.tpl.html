@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rank Achievement Icons</title>
+<style>
+@font-face{font-family:'Opificio';src:url(data:font/ttf;base64,/*FONT*/) format('truetype')}
+:root{--bg:#EEF3F7;--card:#fff;--ink:#2B3238;--sub:#6B7780;--line:#D5DEE5;--accent:#FF4FB7;--steel:#627480}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15191C;--card:#1F2428;--ink:#E8EDF0;--sub:#9AA6AE;--line:#2E353A}}
+:root[data-theme="dark"]{--bg:#15191C;--card:#1F2428;--ink:#E8EDF0;--sub:#9AA6AE;--line:#2E353A}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif}
+main{max-width:1240px;margin:0 auto;padding:28px 16px 60px}
+h1{font:400 34px 'Opificio',sans-serif;letter-spacing:2px;margin:0 0 4px;color:var(--accent)}
+.lede{color:var(--sub);margin:0 0 20px;max-width:760px}
+.bar{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:22px}
+.bar b{font-weight:600;margin-right:6px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--ink);padding:7px 12px;font:inherit;cursor:pointer}
+.seg button.on{background:var(--accent);color:#fff}
+.ref{display:flex;gap:10px;align-items:center;margin-left:auto;color:var(--sub);font-size:13px}
+.ref img{width:48px;height:48px;border-radius:11px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.card canvas{width:100%;max-width:256px;aspect-ratio:1;height:auto;display:block;transition:border-radius .2s}
+.round .card canvas{border-radius:50%}
+.name{font:400 21px 'Opificio',sans-serif;letter-spacing:1.5px;margin:10px 0 0}
+.meta{color:var(--sub);font-size:13px}
+.pts{display:inline-block;margin-top:6px;background:var(--accent);color:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600}
+.dl{margin-top:10px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:5px 10px;cursor:pointer;font:inherit;font-size:13px}
+h2{font:400 22px 'Opificio',sans-serif;letter-spacing:1.5px;margin:34px 0 10px}
+.strip{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.strip canvas{width:64px;height:64px}
+.round .strip canvas{border-radius:50%}
+.strip.small canvas{width:40px;height:40px}
+.total{font-weight:600;margin:0 0 4px}
+h2 .secpts{font:500 13px system-ui,sans-serif;letter-spacing:0;color:var(--sub);margin-left:8px}
+.secsub{color:var(--sub);margin:-4px 0 12px}
+.notes{color:var(--sub);max-width:820px}
+.notes li{margin:4px 0}
+</style>
+</head>
+<body>
+<main>
+<h1>ACHIEVEMENTS</h1>
+<p class="lede">All 48 achievement icons, 512×512, in the 17C app-icon style: navy spike ring, glowing disc with white rays, offset drop shadow. Ranks carry the in-game badge; every other icon is a scene with a bird from the skin shop (body shapes, colours, patterns) wearing gear and hats from the shop, redrawn in the new big-eyed style.</p>
+
+<div class="bar">
+  <span><b>Disc</b><span class="seg" id="bgSeg">
+    <button data-v="cyan" class="on">Icon cyan</button><button data-v="rank">Rank colour (ranks only)</button></span></span>
+  <span><b>Crop</b><span class="seg" id="cropSeg">
+    <button data-v="sq" class="on">Square (Play)</button><button data-v="round">Circle (Game Center)</button></span></span>
+  <span><b>Theme</b><span class="seg" id="themeSeg">
+    <button data-v="" class="on">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span></span>
+  <span class="ref">Game icon for reference <img src="data:image/png;base64,/*ICON*/" alt="Flappy Spikes app icon"></span>
+</div>
+
+<div id="root">
+  <p class="total" id="total"></p>
+  <div id="sections"></div>
+  <h2>THE WHOLE COLLECTION <span class="secpts">list size</span></h2>
+  <div class="strip" id="strip64"></div>
+</div>
+
+<h2>NOTES</h2>
+<ul class="notes">
+  <li><b>Collection:</b> every icon shares the spike ring, the rays and the drop shadow. Most discs are the app icon's cyan; rides and a few others (Night Owl, Golden Egg, Rules the Roost, Hot Wings, Early Bird) get a themed disc for variety.</li>
+  <li><b>Birds:</b> skin-shop birds redrawn in the 17C style: Classic, Sky, Tangerine, Grape, Lemonade, Coral dots, Camo, Snow, Mint, Robin, Chick, Penguin, Owl, Flamingo, Puffer, Buzz, Zombie, 8-Bit, Frost, Magma, Golden, Rainbow, Galaxy-style, plus a pigeon, magpie, hoopoe and peacock for the bird-name achievements.</li>
+  <li><b>Gear and hats:</b> shades, heart shades, monocle, bow tie, chain, bandana, magic carpet, sweatband, cap, beanie, party hat, bucket hat, top hat, cowboy, propeller, chef, viking, wizard, crown — and a few extras (astro helmet, snorkel, beret, mail cap, night cap).</li>
+  <li>Each achievement needs one icon: Play greys it out while locked, Game Center shows its own placeholder.</li>
+</ul>
+</main>
+
+<script>/*SKIN_ART*/</script>
+<script>/*EMBLEM_ART*/</script>
+<script>/*ACH_ART*/</script>
+<script>
+// ---- 17C app icon language (icon_concepts/17c_clean_flap_big_eyes_cyan.svg) ----
+const NAVY='#14204A',SHADE='#0546A8';
+const PTS=[5,5,10,10,15,20,25,30,40,60];
+let bgMode='cyan';
+const hex=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const mix=(a,b,u)=>{const A=hex(a),B=hex(b);return'#'+A.map((v,i)=>Math.round(v+(B[i]-v)*u).toString(16).padStart(2,'0')).join('')};
+// disc glow per rank: light centre -> rim colour -> deep edge (the icon's B4F7FF/2BC8F5/0A6FE2 ramp)
+function ramp(lv){
+  if(bgMode==='cyan')return['#B4F7FF','#2BC8F5','#0A6FE2'];
+  return[mix(lv.plate,'#ffffff',.55),lv.rim,mix(lv.acc,'#000000',.15)];
+}
+
+// ---- the 17C bird with a look per rank (same style, different bird) ----
+// Bird space: body 0..225 square, eye white 104..220 x 22..136, beak from x 225.
+const P=(c,pts,col)=>{c.fillStyle=col;c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fill()};
+const R_=(c,x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h)};
+const INK='#1A1030',WING='#C4234F',BODY='#EC008C';
+const LOOKS=[
+ {rot:-6, eye:'big',   brow:'raised', beak:'closed', wing:'tri',    props:['shell']},          // EGG
+ {rot:-10,eye:'happy', brow:'none',   beak:'open',   wing:'tri',    props:['tuft']},           // CHICK
+ {rot:-18,eye:'wide',  brow:'high',   beak:'open',   wing:'up',     props:['sweat']},          // FLEDGLING
+ {rot:-14,eye:'big',   brow:'raised', beak:'open',   wing:'flap',   props:['speed']},          // FLAPPER
+ {rot:-4, eye:'half',  brow:'none',   beak:'closed', wing:'spread', props:['swoosh']},         // GLIDER
+ {rot:24, eye:'fierce',brow:'angry',  beak:'closed', wing:'tuck',   props:['dive']},           // FALCON
+ {rot:-10,eye:'fierce',brow:'angry',  beak:'open',   wing:'up',     props:['mohawk']},         // HAWK
+ {rot:-14,eye:'big',   brow:'none',   beak:'grin',   wing:'tri',    props:['scarf','cap']},    // SPIKE ACE
+ {rot:-20,eye:'fire',  brow:'angry',  beak:'open',   wing:'flame',  props:['flame','embers']}, // PHOENIX
+ {rot:-10,eye:'shades',brow:'none',   beak:'grin',   wing:'tri',    props:['sparkle']},        // LEGEND
+];
+function birdLook(c,o){
+  c.save();c.translate(-118,-112);
+  const has=k=>o.props.includes(k);
+  // behind the body
+  if(has('speed')){c.strokeStyle='#fff';c.lineCap='round';c.lineWidth=12;c.globalAlpha=.85;for(const[y,x0,x1]of[[150,-150,-80],[195,-125,-45],[105,-120,-75]]){c.beginPath();c.moveTo(x0,y);c.lineTo(x1,y);c.stroke()}c.globalAlpha=1}
+  if(has('dive')){c.strokeStyle='#fff';c.lineCap='round';c.lineWidth=12;c.globalAlpha=.85;for(const[x,y0,y1]of[[40,-60,-130],[110,-40,-140],[180,-60,-120]]){c.beginPath();c.moveTo(x-60,y0);c.lineTo(x-90,y1);c.stroke()}c.globalAlpha=1}
+  if(has('swoosh')){c.strokeStyle='rgba(255,255,255,.85)';c.lineWidth=11;c.lineCap='round';c.beginPath();c.moveTo(-170,200);c.quadraticCurveTo(-60,250,40,232);c.stroke();c.beginPath();c.moveTo(-150,150);c.quadraticCurveTo(-90,170,-40,165);c.stroke()}
+  if(has('scarf')){const w=[[30,150],[-40,130],[-120,165],[-190,140],[-170,185],[-100,205],[-30,185],[30,190]];P(c,w,'#fff');P(c,[[-190,140],[-235,160],[-170,185]],'#E8EEF5')}
+  if(has('embers'))for(const[x,y,r]of[[-70,30,10],[-110,110,7],[-60,190,9],[-140,60,6],[280,-40,7]]){P(c,[[x,y-r*1.6],[x+r,y],[x,y+r*1.6],[x-r,y]],'#FFC400')}
+  // wing behind (up / spread / flame)
+  if(o.wing==='up')P(c,[[40,60],[-30,-110],[60,-60],[130,40]],'#A0124A');
+  if(o.wing==='flap'){P(c,[[40,60],[-20,-95],[70,-50],[130,40]],'#A0124A');c.strokeStyle='rgba(255,255,255,.8)';c.lineWidth=8;c.lineCap='round';c.beginPath();c.arc(30,30,150,-2.1,-1.55);c.stroke()}
+  if(o.wing==='spread')P(c,[[30,70],[-200,40],[-170,110],[90,140]],'#A0124A');
+  if(o.wing==='flame'){P(c,[[40,70],[-60,-130],[10,-70],[40,-150],[90,-50],[140,40]],'#FF7A1A');P(c,[[60,50],[0,-80],[45,-45],[60,-100],[95,-30],[120,40]],'#FFC400')}
+  // tail + body
+  P(c,o.wing==='flame'?[[-80,60],[0,60],[0,130],[-70,150],[-40,105]]:[[-60,68],[0,68],[0,125]],o.wing==='flame'?'#FF7A1A':BODY);
+  R_(c,0,0,225,225,BODY);
+  if(o.wing==='tri'||o.wing==='up'||o.wing==='flap'||o.wing==='flame')P(c,[[26,8],[26,124],[110,124]],WING);
+  if(o.wing==='spread')P(c,[[20,96],[130,96],[100,140],[20,140]],WING);
+  if(o.wing==='tuck')P(c,[[10,40],[120,130],[10,150]],WING);
+  // eye
+  const E=o.eye;
+  if(E==='happy'){R_(c,104,22,116,114,BODY);c.strokeStyle=INK;c.lineWidth=20;c.lineJoin='miter';c.beginPath();c.moveTo(118,100);c.lineTo(162,52);c.lineTo(206,100);c.stroke()}
+  else if(E==='shades'){ // pixel "deal with it" shades
+    R_(c,104,22,116,114,'#fff');R_(c,152,40,56,58,INK);
+    R_(c,70,34,196,18,INK);
+    for(const x0 of[96,176]){R_(c,x0,52,72,22,INK);R_(c,x0+12,74,60,12,INK);R_(c,x0+24,86,36,10,INK);R_(c,x0+12,56,14,10,'#fff');R_(c,x0+28,66,10,8,'#fff')}
+  }
+  else{
+    R_(c,104,22,116,114,'#fff');
+    const pu={big:[152,28,56,58],wide:[160,50,40,40],half:[150,70,56,52],fierce:[156,52,52,56],fire:[156,52,52,56]}[E];
+    R_(c,...pu,INK);
+    if(E==='fire')R_(c,pu[0]+6,pu[1]+8,18,18,'#FF7A1A');
+    R_(c,pu[0]+(E==='wide'?22:32),pu[1]+6,E==='wide'?12:16,E==='wide'?12:16,'#fff');
+    if(E==='half')R_(c,104,22,116,52,BODY),R_(c,104,66,116,10,INK);
+  }
+  // brow
+  if(o.brow==='raised')P(c,[[98,4],[222,-14],[224,6],[102,24]],INK);
+  if(o.brow==='high')P(c,[[104,-18],[160,-40],[218,-22],[214,-6],[160,-24],[108,-2]],INK);
+  if(o.brow==='angry')P(c,[[98,6],[224,40],[224,62],[102,28]],INK);
+  // beak
+  if(o.beak==='open'){P(c,[[225,100],[300,136],[225,176]],'#7A0040');c.fillStyle='#FF6E9C';c.beginPath();c.ellipse(244,160,16,9,0,0,TAU);c.fill();P(c,[[225,44],[306,40],[225,112]],'#FFC400');P(c,[[225,150],[300,212],[225,206]],'#E9A600')}
+  if(o.beak==='closed'){P(c,[[225,70],[310,118],[225,124]],'#FFC400');P(c,[[225,124],[310,118],[225,170]],'#E9A600')}
+  if(o.beak==='grin'){P(c,[[225,60],[312,96],[225,124]],'#FFC400');P(c,[[225,124],[300,112],[225,160]],'#E9A600');R_(c,225,118,60,6,'#7A0040')}
+  // cheek blush on the cute ones
+  if(E==='happy'||has('shell')){c.fillStyle='#FF6E9C';c.beginPath();c.ellipse(150,165,22,12,0,0,TAU);c.fill()}
+  // props on top
+  if(has('shell')){
+    const pts=[];for(let i=0;i<=7;i++)pts.push([-24+i*38,150+(i%2?-24:0)]);
+    P(c,[...pts,[256,150],[246,226],[206,256],[20,256],[-16,226],[-24,150]],'#FFF4DE');
+    c.fillStyle='#E9D6AE';for(const[x,y]of[[20,200],[150,222],[96,186],[210,180]])c.fillRect(x,y,14,14);
+    P(c,[[40,-6],[64,-48],[124,-62],[176,-42],[192,-6],[166,-22],[140,2],[112,-20],[84,4],[60,-18]],'#FFF4DE');
+  }
+  if(has('tuft')){P(c,[[70,0],[60,-80],[100,0]],'#FFC400');P(c,[[95,0],[118,-100],[130,0]],BODY);P(c,[[125,0],[170,-64],[155,0]],'#FFC400')}
+  if(has('sweat')){P(c,[[250,-40],[272,0],[262,22],[240,22],[232,0]],'#7FE3FF');c.strokeStyle='#fff';c.lineWidth=5;c.stroke()}
+  if(has('mohawk'))P(c,[[20,0],[30,-70],[60,-20],[80,-100],[110,-20],[140,-90],[160,-16],[200,-60],[205,0]],'#1A1030');
+  if(has('cap')){P(c,[[-8,40],[-8,-10],[30,-44],[200,-44],[232,-10],[232,30],[200,10],[20,10]],'#8D5A2B');R_(c,-8,24,24,90,'#8D5A2B');
+    R_(c,96,-26,128,46,INK);R_(c,108,-20,48,34,'#7FE3FF');R_(c,166,-20,48,34,'#7FE3FF');R_(c,114,-16,14,10,'#fff');R_(c,172,-16,14,10,'#fff')}
+  if(has('flame')){P(c,[[30,4],[40,-110],[80,-40],[110,-150],[140,-40],[180,-100],[200,4]],'#FF7A1A');P(c,[[60,4],[80,-60],[110,-90],[135,-50],[170,4]],'#FFC400')}
+  if(has('sparkle'))for(const[x,y,r]of[[-50,-40,26],[290,-40,20],[-70,210,16]]){P(c,[[x,y-r],[x+r*.28,y-r*.28],[x+r,y],[x+r*.28,y+r*.28],[x,y+r],[x-r*.28,y+r*.28],[x-r,y],[x-r*.28,y-r*.28]],'#fff')}
+  c.restore();
+}
+// badge + bird at scale 1 (emblem units); the bird sits big on the plate, tilted like the icon
+function art(c,L){
+  drawEmblem(c,L,1.15,{shine:false});
+  const o=LOOKS[L-1];
+  c.save();c.translate(2,L===1?4:2);c.rotate(o.rot*Math.PI/180);c.scale(.3,.3);birdLook(c,o);c.restore();
+}
+const BOUNDS={};
+function bounds(L){
+  if(BOUNDS[L])return BOUNDS[L];
+  const S=600,cv=document.createElement('canvas');cv.width=cv.height=S;const c=cv.getContext('2d');
+  c.translate(S/2,S/2);art(c,L);
+  const d=c.getImageData(0,0,S,S).data;let x0=S,y0=S,x1=0,y1=0;
+  for(let y=0;y<S;y++)for(let x=0;x<S;x++)if(d[(y*S+x)*4+3]>8){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+  return BOUNDS[L]={cx:(x0+x1)/2-S/2,cy:(y0+y1)/2-S/2,w:x1-x0,h:y1-y0};
+}
+
+function frame(c,rp){
+  c.fillStyle=NAVY;c.fillRect(0,0,512,512);
+  c.save();c.translate(256,256);
+  const R=248,[c0,c1,c2]=rp;
+  const g=c.createRadialGradient(-12,-6,0,0,0,R*1.05);g.addColorStop(0,c0);g.addColorStop(.45,c1);g.addColorStop(1,c2);
+  c.fillStyle=g;c.beginPath();c.arc(0,0,R,0,TAU);c.fill();
+  c.save();c.beginPath();c.arc(0,0,R,0,TAU);c.clip();
+  c.globalAlpha=.13;c.fillStyle='#fff';for(let i=0;i<18;i++){const a=i/18*TAU;c.beginPath();c.moveTo(0,0);c.arc(0,0,400,a,a+TAU/18*.5);c.fill()}
+  c.globalAlpha=1;
+  // inward spike teeth (the icon's strips bent into a ring), with the icon's blue shadow
+  const n=16,len=46;
+  const tooth=(dy,col,al)=>{c.globalAlpha=al;c.fillStyle=col;for(let i=0;i<n;i++){const a=i/n*TAU-Math.PI/2,w=TAU/n/2;
+    c.beginPath();c.moveTo(Math.cos(a-w)*(R+4),Math.sin(a-w)*(R+4)+dy);c.lineTo(Math.cos(a)*(R-len),Math.sin(a)*(R-len)+dy);c.lineTo(Math.cos(a+w)*(R+4),Math.sin(a+w)*(R+4)+dy);c.closePath();c.fill()}};
+  tooth(8,SHADE,.25);tooth(0,NAVY,1);
+  c.restore();c.restore();
+}
+
+const OFF=document.createElement('canvas');OFF.width=OFF.height=512;const OC=OFF.getContext('2d');
+const SH_=document.createElement('canvas');SH_.width=SH_.height=512;const SC=SH_.getContext('2d');
+// every achievement: rank icons use L (badge + rank bird), the rest a scene from ach_art.js
+const ACH=[
+ {sec:'RANKS',sub:'Reach each rank (best score).',items:LEVELS.map((lv,i)=>({id:'rank_'+lv.n.toLowerCase().replace(/ /g,'_'),n:lv.n,d:`Reach rank ${lv.n} (best score ${lv.s.toLocaleString('en')})`,p:PTS[i],L:i+1}))},
+ {sec:'RIDES',sub:'Finish each of the six rides. Discs take the ride theme colours.',items:[
+  {id:'ride_cannon',n:'BEAK FIRST',d:'Finish the Cannon ride',p:10,s:'cannon',r:'cannon'},
+  {id:'ride_space',n:'SPACE TWEET',d:'Finish the Space ride',p:10,s:'space',r:'space'},
+  {id:'ride_volcano',n:'FLAME-INGO',d:'Finish the Volcano ride',p:10,s:'volcano',r:'volcano'},
+  {id:'ride_sea',n:'PENGUIN MODE',d:'Finish the Sea ride',p:10,s:'sea',r:'sea'},
+  {id:'ride_pinball',n:'BUMPER BIRD',d:'Finish the Pinball ride',p:10,s:'pinball',r:'pinball'},
+  {id:'ride_storm',n:'RUFFLED FEATHERS',d:'Finish the Storm ride',p:10,s:'storm',r:'storm'},
+  {id:'ride_all',n:'FREQUENT FLYER',d:'Finish all six rides',p:30,s:'frequent'}]},
+ {sec:'ITEMS',sub:'Catch each item for the first time.',items:[
+  {id:'item_heart',n:'TWEETHEART',d:'Catch a Heart',p:5,s:'heart'},
+  {id:'item_shield',n:'TOUGH EGG',d:'Catch a Shield',p:5,s:'shield'},
+  {id:'item_star_trail',n:'STARLING',d:'Catch a Star Trail',p:5,s:'star'},
+  {id:'item_hourglass',n:'TIME FLIES',d:'Catch an Hourglass',p:5,s:'hourglass'},
+  {id:'item_mini_bird',n:'LITTLE BIRDIE',d:'Catch a Mini Bird',p:5,s:'mini'},
+  {id:'item_coin_frenzy',n:'GOLDFINCH',d:'Catch a Coin Frenzy',p:5,s:'frenzy'},
+  {id:'item_egg',n:'EGGCELLENT!',d:'Catch an Egg',p:5,s:'egg'},
+  {id:'item_piggy',n:'NEST EGG',d:'Catch a Piggy Bank',p:5,s:'piggy'},
+  {id:'item_jar',n:'BUG BUFFET',d:'Catch a Firefly Jar',p:5,s:'jar'},
+  {id:'item_feather',n:'LIGHT AS A FEATHER',d:'Catch a Feather',p:5,s:'feather'},
+  {id:'item_puzzle',n:'PUZZLED PIGEON',d:'Catch a Puzzle Piece',p:5,s:'puzzle'},
+  {id:'item_all',n:'MAGPIE',d:'Catch every item',p:25,s:'magpie'}]},
+ {sec:'MASTERY',sub:'Get the most out of an item.',items:[
+  {id:'master_hatch',n:'MOTHER HEN',d:'Hatch the egg into a chick',p:10,s:'hen'},
+  {id:'master_jar',n:'NIGHT OWL',d:'Fill a Firefly Jar',p:10,s:'nightOwl',r:'night'},
+  {id:'master_stars',n:'SEEING STARS',d:'Collect 8 of 8 stars on a Star Trail',p:10,s:'seeingStars'},
+  {id:'master_picture',n:"BIRD'S-EYE VIEW",d:'Finish a puzzle picture',p:15,s:'birdsEye'},
+  {id:'master_jackpot',n:'GOLDEN EGG',d:'Pop the jackpot balloon',p:15,s:'goldenEgg',r:'gold'}]},
+ {sec:'HOOPS',sub:'Hoops in one run.',items:[
+  {id:'hoops_10',n:'FIRST FLIGHT',d:'10 hoops in one run',p:5,s:'firstFlight'},
+  {id:'hoops_25',n:'HOOPOE',d:'25 hoops in one run',p:10,s:'hoopoe'},
+  {id:'hoops_50',n:'RING-NECKED',d:'50 hoops in one run',p:20,s:'ringNecked'},
+  {id:'hoops_100',n:'FLYING COLORS',d:'100 hoops in one run',p:40,s:'flyingColors'}]},
+ {sec:'VERSUS',sub:'Win versus matches.',items:[
+  {id:'vs_1',n:'BEAK TO BEAK',d:'Win your first versus match',p:10,s:'beakToBeak'},
+  {id:'vs_10',n:'PECKING ORDER',d:'Win 10 versus matches',p:25,s:'peckingOrder'},
+  {id:'vs_50',n:'RULES THE ROOST',d:'Win 50 versus matches',p:40,s:'roost',r:'gold'}]},
+ {sec:'MORE',sub:'Firsts, skins and daily play.',items:[
+  {id:'first_revive',n:'STILL TWEETING',d:'Revive for the first time',p:5,s:'stillTweeting'},
+  {id:'first_big_hoops',n:'BIG BIRD',d:'Play a run with Big Hoops',p:5,s:'bigBird'},
+  {id:'first_fever',n:'HOT WINGS',d:'Trigger Fever',p:10,s:'hotWings',r:'fire'},
+  {id:'skin_first',n:'FRESH FEATHERS',d:'Buy your first skin',p:10,s:'freshFeathers'},
+  {id:'skin_all',n:'PROUD PEACOCK',d:'Own every skin',p:50,s:'peacock'},
+  {id:'daily_7',n:'EARLY BIRD',d:'Play 7 days in a row',p:25,s:'earlyBird',r:'sunrise'},
+  {id:'daily_30',n:'HOMING PIGEON',d:'Play 30 days in a row',p:50,s:'homingPigeon'}]},
+];
+
+// PRD-2.3.1 §12.6: [k] scales the whole icon (512 * k px; the art is unchanged,
+// drawn in the same 512-unit space). k = 1 is exactly the approved drawing.
+function drawIcon(cv,it,k=1){
+  const S=Math.round(512*k);
+  if(OFF.width!==S){OFF.width=OFF.height=S;SH_.width=SH_.height=S}
+  const c=cv.getContext('2d');c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,S,S);c.setTransform(k,0,0,k,0,0);
+  frame(c,it.L?ramp(LEVELS[it.L-1]):(it.r&&bgMode==='cyan'?RAMP[it.r]:it.r?RAMP[it.r]:CYAN));
+  OC.setTransform(1,0,0,1,0,0);OC.clearRect(0,0,S,S);OC.setTransform(k,0,0,k,0,0);OC.save();
+  if(it.L){const L=it.L,b=bounds(L),kk=Math.min((452+L*5)/b.w,(440+L*4)/b.h,3.6);OC.translate(256,258);OC.scale(kk,kk);OC.translate(-b.cx,-b.cy);art(OC,L)}
+  else{OC.translate(256,256);OC.beginPath();OC.arc(0,0,250,0,TAU);OC.clip();SC_SAFE(OC,it.s)}
+  OC.restore();OC.setTransform(1,0,0,1,0,0);
+  // the icon's offset drop shadow
+  SC.setTransform(1,0,0,1,0,0);
+  SC.globalCompositeOperation='source-over';SC.clearRect(0,0,S,S);SC.drawImage(OFF,0,0);
+  SC.globalCompositeOperation='source-in';SC.fillStyle='#06235E';SC.fillRect(0,0,S,S);
+  c.setTransform(1,0,0,1,0,0);
+  c.save();c.globalAlpha=.38;c.drawImage(SH_,12*k,14*k);c.restore();
+  c.drawImage(OFF,0,0);
+}
+const SCENE_ERRORS=[];
+function SC_SAFE(c,k){try{SCENES[k](c)}catch(e){SCENE_ERRORS.push(k+': '+e);console.error(k,e)}}
+
+const cards=[],minis=[];
+function build(){
+  const root=document.getElementById('sections'),s64=document.getElementById('strip64');
+  let total=0,count=0;
+  for(const sec of ACH){
+    const pts=sec.items.reduce((a,x)=>a+x.p,0);
+    root.insertAdjacentHTML('beforeend',`<h2>${sec.sec} <span class="secpts">${sec.items.length} · ${pts} pts</span></h2><p class="secsub">${sec.sub}</p>`);
+    const g=document.createElement('div');g.className='grid';root.appendChild(g);
+    for(const it of sec.items){
+      total+=it.p;count++;
+      const card=document.createElement('div');card.className='card';
+      const cv=document.createElement('canvas');cv.width=cv.height=512;card.appendChild(cv);
+      card.insertAdjacentHTML('beforeend',`<div class="name">${it.n}</div><div class="meta">${it.d}</div><span class="pts">${it.p} pts</span>`);
+      const b=document.createElement('button');b.className='dl';b.textContent='Download PNG';
+      b.onclick=()=>{const a=document.createElement('a');a.download=`ach_${it.id}.png`;a.href=cv.toDataURL('image/png');a.click()};
+      card.appendChild(b);g.appendChild(card);cards.push([cv,it]);
+      const m=document.createElement('canvas');m.width=m.height=512;m.title=it.n;s64.appendChild(m);minis.push([m,it]);
+    }
+  }
+  document.getElementById('total').textContent=`${count} achievements · ${total} of 1000 points`;
+}
+function redraw(){for(const[cv,it]of cards)drawIcon(cv,it);for(const[cv,it]of minis)drawIcon(cv,it)}
+function seg(id,fn){const el=document.getElementById(id);el.onclick=e=>{const b=e.target.closest('button');if(!b)return;el.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));fn(b.dataset.v)}}
+seg('bgSeg',v=>{bgMode=v;redraw()});
+seg('cropSeg',v=>document.getElementById('root').classList.toggle('round',v==='round'));
+seg('themeSeg',v=>{if(v)document.documentElement.dataset.theme=v;else delete document.documentElement.dataset.theme});
+build();
+// #B / #round in the URL preselect the frame / crop (for screenshots)
+for(const v of location.hash.slice(1).split(',')){const b=document.querySelector(`.seg button[data-v="${v}"]`);if(b)b.click()}
+document.fonts.load("13px Opificio").then(()=>{redraw();if(location.hash.includes('sheet'))sheet();if(location.hash.includes('export='))exportAll()},redraw);
+// PRD-2.3.1 §12.6 #export=<size>: renders every icon at size x size with the same art
+// (drawIcon's scale) and leaves [{id, png}] (data URLs) in window.EXPORT for the
+// headless exporter; window.EXPORT_ERRORS lists any scene that threw.
+function exportAll(){const m=location.hash.match(/export=(\d+)/),N=+m[1],k=N/512,out=[];
+  const cv=document.createElement('canvas');cv.width=cv.height=N;
+  for(const it of ACH.flatMap(s=>s.items)){SCENE_ERRORS.length=0;drawIcon(cv,it,k);
+    out.push({id:it.id,png:cv.toDataURL('image/png'),errors:[...SCENE_ERRORS]})}
+  OFF.width=OFF.height=SH_.width=SH_.height=512;
+  window.EXPORT_ERRORS=out.flatMap(o=>o.errors.map(e=>o.id+' '+e));window.EXPORT=out}
+// #sheet: one big contact sheet of every non-rank icon (for review screenshots)
+function sheet(){const all=ACH.flatMap(s=>s.items),from=location.hash.includes('ranks')?0:10,list=all.slice(from),N=6,Z=300;
+  const cv=document.createElement('canvas');cv.width=N*Z;cv.height=Math.ceil(list.length/N)*(Z+30);const c=cv.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,cv.width,cv.height);
+  const one=document.createElement('canvas');one.width=one.height=512;
+  list.forEach((it,i)=>{drawIcon(one,it);const x=(i%N)*Z,y=Math.floor(i/N)*(Z+30);c.drawImage(one,x+6,y+6,Z-12,Z-12);c.fillStyle='#000';c.font='16px sans-serif';c.textAlign='center';c.fillText(it.n,x+Z/2,y+Z+14)});
+  document.body.innerHTML='';document.body.style.margin=0;document.body.appendChild(cv)}
+</script>
+</body>
+</html>

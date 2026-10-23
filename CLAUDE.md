@@ -1,0 +1,365 @@
+# flappy_spikes (Flutter + Flame rebuild)
+
+Read `../AGENTS.md` (workspace root) FIRST — it has the full project context,
+cloud/store state, browser-automation notes and pending tasks. This file adds the
+local environment, current status and the settled 2.1-gameplay decisions.
+
+Quick facts:
+- Gameplay contract: `SPEC.md` — follow it exactly for any behaviour change. The
+  per-WP **DEVIATION** notes are the current start / run / replay and hoops flow
+  (the PRD-2 sections at the end of the file).
+- Module map / contracts: `docs/gameplay-v2/ARCH.md`; requirement traceability:
+  `docs/gameplay-v2/REQ-MATRIX.md`; the sound pack: `docs/gameplay-v2/SOUNDS.md`;
+  the versus runbook: `docs/gameplay-v2/VERSUS-BACKEND.md`.
+- Gate: `flutter analyze` clean + `flutter test` all green (1871 tests, 3 skipped).
+- Store guide: `SUBMISSION.md`. Task log: `TODO.md`. iOS port checklist: `PORT-IOS.md`.
+- Never commit `android/upload-keystore.jks`, `android/app/key.properties`, or the
+  Play Games web-client secret (only at `~/.config/flappyspikes_pgs_web_client.json`).
+
+## Environment (Linux/Omarchy machine)
+
+The workspace is `/home/killerhis/Projects/flappyspikes` (moved off Windows
+2026-10). `flutter`, `dart` and `adb` are **not on PATH** in a fresh shell;
+prefix every command (bash):
+
+```bash
+export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
+  ANDROID_HOME="$HOME/Android/Sdk" JAVA_HOME="$(ls -d $HOME/opt/jdk-17* | head -1)"
+```
+
+- Flutter stable **3.47.6** in `~/flutter`; 3.47 is now the **minimum**
+  (`google_mobile_ads` pulls `webview_flutter_wkwebview`).
+- JDK 17 in `~/opt/jdk-17*` (system Java is too new for Gradle); Android SDK in
+  `~/Android/Sdk`; `ninja` installed via uv (Linux desktop builds).
+- Linux desktop (`flutter run -d linux`, `flutter build linux --release`) is a
+  **local test target only** — Android and iOS are the products.
+- **Release builds are obfuscated (audit 17).** Local Play upload build:
+
+  ```bash
+  DI=<dir outside the repo>/symbols_<build>   # keep per build, never commit
+  flutter build appbundle --release --obfuscate --split-debug-info=$DI \
+    --extra-gen-snapshot-options=--save-obfuscation-map=$DI/obfuscation.map.json
+  ```
+
+  `$DI` gets `app.android-{arm64,arm,x64}.symbols` (one per ABI; this replaces the
+  old `--extra-gen-snapshot-options=--save-debugging-info=<dir>/app.so`, which kept
+  only the last ABI) plus the obfuscation map. Symbolize a Dart stack trace with
+  `flutter symbolize -i trace.txt -d $DI/app.android-arm64.symbols`; for a native
+  tombstone in `libapp.so`, use the matching `.symbols` file (same BuildId) with
+  `llvm-symbolizer` / `ndk-stack`; read obfuscated names back with the map. CI
+  (`build.yml`) does the same for Android and iOS (`flutter build ios
+  --config-only --obfuscate …` writes it into `Generated.xcconfig`) and uploads
+  the `*-debug-info` artifacts. Never use `runtimeType.toString()` for codes or keys
+  (names are obfuscated) — use `errorKind()` in `lib/services/redact.dart`.
+- iOS work REOPENED 2026-10-15 (branch `feat/ios`); the port checklist is
+  `PORT-IOS.md`. App Store app **"Flappy Spikes: Flap Fast"**, ASC app id
+  **6823208616**, bundle id **`com.flappyspikes.flappyspikes`** (the App Store
+  forbids `_`; Android stays `com.flappyspikes.flappy_spikes`). Game Center
+  leaderboard id **`fs_top_scores`** (not the 2014 `flappy_spikes_leaderboard`);
+  achievements `fs_ach_<key>`. iOS builds only on the GitHub macos runner
+  (Swift Package Manager for the plugins, CocoaPods fallback via `ios/Podfile`).
+  **iOS authenticates Game Center at launch** (`GameServices.authenticateAtLaunch`,
+  silent for a signed-in player); the "never `GameAuth.signIn()` at launch"
+  rule is Android-only (PORT-IOS §2). iOS music = `ios/Runner/FlappySpikesRemix_loopE.m4a`
+  (`tool/make_music_loop_remix.py`, also writes Android's OGG) on the native `LoopMusic`; device logs are
+  `FS-Music` (os_log `.default`) and `flutter: FS-…` lines.
+
+- **Sound lengths (PRD-2.2 §22).** After adding or changing any file in
+  `assets/audio/`, regenerate the stop-time table:
+  `python3 -I tool/gen_sound_durations.py` (needs `ffprobe`) →
+  `lib/game/sound_durations.g.dart`. `test/p22/s22_full_length_sounds_test.dart`
+  fails on a stale table. Audio pool rules: `docs/gameplay-v2/ARCH.md` §2.7.
+
+### 2.1 gameplay build (PRD-2)
+
+- **Device e2e (Pixel 8 `<PIXEL8_SERIAL>`).** `--dart-define=FS_E2E=true` turns on
+  the fixed seed, the fake rewarded ads (visible overlay), the App Check debug
+  provider and the `E2EHooks` / debug force menu:
+
+  ```bash
+  flutter test integration_test/release_e2e_test.dart -d <PIXEL8_SERIAL> \
+    --dart-define=FS_E2E=true --dart-define=FS_E2E_SEED=7 \
+    --dart-define=FS_APPCHECK_DEBUG_TOKEN=<registered token>
+  ```
+
+  Linux also runs it (`-d linux --dart-define=FS_E2E=true`); reminders and versus
+  live skip there (phone-only). `FS_E2E_SEED` defaults to 7. Add
+  `--dart-define=FS_LIVE_VERSUS=true` for the live Firebase round trip
+  (anonymous auth → upload → pool read → `deleteMyData`); it prints the App Check
+  debug token it used, so a freshly generated one can be registered in the
+  Firebase console. Never set `FS_E2E` / `FS_APPCHECK_DEBUG_TOKEN` in a release
+  build (release uses Play Integrity).
+- **Emulator fallback.** The AVD `flappy_e2e` (API 35, Google APIs **Play**) lives
+  at `~/.config/.android/avd`:
+
+  ```bash
+  ANDROID_AVD_HOME="$HOME/.config/.android/avd" \
+    "$HOME/Android/Sdk/emulator/emulator" -avd flappy_e2e -gpu swiftshader_indirect &
+  ```
+
+- **Functions.** `npm --prefix functions ci` once, then `npm --prefix functions
+  test` (tsc build + type-check + mocha in the Firebase Emulator Suite; Java ≥ 11,
+  the Android JDK 17 works). The Dart p45 tests in `test/e2e/` load the compiled
+  `functions/lib`, so run **`npm --prefix functions run build` before** the Dart
+  suite — a stale/missing build gives two false failures (S6-60, S6-61).
+- **Firebase CLI without gcloud.** No `gcloud` is installed; mint an access token
+  from the firebase CLI login (the refresh token in
+  `~/.config/configstore/firebase-tools.json`). The firebase-tools OAuth client is
+  `563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com`:
+
+  ```bash
+  RT=$(python3 -c "import json;print(json.load(open('$HOME/.config/configstore/firebase-tools.json'))['tokens']['refresh_token'])")
+  # The firebase-tools installed-app client secret ships inside the CLI (lib/api.js);
+  # read it from there instead of keeping a copy in this public repo.
+  CS=$(grep -oE "j9iV[A-Za-z0-9_-]+" "$(dirname "$(readlink -f "$(which firebase)")")/../api.js" | head -1)
+  ACCESS_TOKEN=$(curl -s -X POST https://oauth2.googleapis.com/token \
+    -d client_id=563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com \
+    -d client_secret="$CS" -d refresh_token="$RT" \
+    -d grant_type=refresh_token | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+  ```
+
+  `firebase` / `firebase deploy` need no token; only raw REST calls (the TTL
+  script, `serviceusage`) do.
+
+## Status (2026-10-08) — 2.1 gameplay (PRD-2)
+
+- `feat/gameplay-v2` (off `feat/menu-v4` 0380b4e) implements all of
+  `PRD-2-gameplay.md`: hoops replace pipes, the run director, hearts / shield /
+  extra life / Big Hoops, the perfect-pass streak + ring tiers, the comet boost,
+  the portal roller-coaster + cannon, the special hoops (Bullseye, Ring Train,
+  Spring, Lucky Spin, FEVER, saw, switch, pairs), the gap items (Star Trail, Egg,
+  Piggy Bank, Firefly Jar, the four capsules), the spike squeeze, golden feathers
+  + balloon bonus, puzzle pieces, the HUD / pause / revive v2 / results page,
+  versus (client + Firebase backend), rumble and reminder notifications.
+- **Local only.** Every WP and fix round is merged into `feat/gameplay-v2`
+  (head `0f96074`); nothing is pushed — `origin` has only `main` (`c901ece`).
+- Gate: `flutter analyze` clean, `flutter test` **1871 passed / 3 skipped**
+  (was 247 before PRD-2). Function tests: `npm --prefix functions test`.
+- QA rounds (Sol) all fixed and merged: P1 9 findings (S6-01…09, 5 major),
+  P2 5 (S6-20…24, 1 major), P3 8 (S6-40…47, 2 major), P4/P5 7 (S6-60…66, 4
+  major); fix rounds `Fix P1 R1`, `Fix P2 R1`, `Fix P3 R1`, `Fix P45 R1`.
+- **Gate 2 passed on the Pixel 8** (`FS_E2E` + `FS_LIVE_VERSUS`): the journey and
+  the §3.0.8 element sweep (76 screenshots), the portal rides, reminders and the
+  live versus round trip. Frame log in the space ride: avg 12 ms / p90 15.6 ms.
+  The App Check debug token "Pixel 8 e2e" is registered and App Check Play
+  Integrity is **enforced on Firestore**.
+- Gate 3 (Sol device playtest on the Pixel 8, `g6-qa5`) is **open** — it was
+  running when the unattended batch stopped.
+- **Pending user-only tasks: none.** The Play Games game-server credential was
+  published by the owner on 2026-10-08; the remaining release steps (the 2.1.0+8
+  AAB upload and the Play release click) are the owner's, but nothing is waiting
+  on them now.
+- TODO phase 22 is the WP-by-WP log and the remaining work.
+
+## Status (2026-10-07) — 2.0 menu, skin shop, home v3
+
+- `feat/home-v3` (off `feat/skin-shop`) implements `PRD-home-v3.md`: emblem home, 10 levels on best score, LEVELS
+  screen + LEVEL UP popup, coin-pack / No-ads celebrations, purchase cancelled/failed popup, Settings v3 with RUMBLE.
+  **Not pushed.** See TODO phase 19.
+
+- `feat/skin-shop` (off `feat/menu-v2`) implements `PRD-menu-v2.md`: 5-layer
+  skin shop (88 items), live home & Shop. **Not pushed.** See SPEC "2.0 skin shop
+  (PRD-menu-v2) deviations" and TODO phase 18.
+
+## Status (2026-10-03) — 2.0 menu (PRD-1)
+
+- `feat/menu-v2` implements PRD-1 (2.0 menu): home screen, wallet, Shop, Skins
+  (12), no-ads IAP + popup, rewarded ads, IAP, powerup slot, debug panel,
+  keyboard controls and the Linux runner. **Branch not pushed**; `main` untouched.
+- `feat/menu-v4` (PRD-menu-v4) adds the coin packs (`coins_1000` … `coins_100000`),
+  the per-country store prices and the no-ads popup schedule; `feat/gameplay-v2`
+  branches off it. See TODO phase 21.
+
+## Settled decisions (future work must respect these)
+
+### 2.3 website (PRD-2.3 §5, §11, §12)
+
+- **flappyspikes.com** is built from `hosting/src/` into `hosting/public/` (the Firebase Hosting root, committed) by
+  `python3 hosting/build.py` (stdlib only; it ends with the §11.7 static checks and fails on any violation).
+  Fonts / icons / badges / the 2014 sprites are pre-generated into `hosting/src/gen/` by `hosting/tools/make_assets.py`
+  (`uv run --with fonttools --with brotli --with pillow python hosting/tools/make_assets.py`).
+- Shared files are published once under `/a/<name>.<hash>.<ext>` (immutable, 1 year); pages are cached 1 h.
+  `firebase.json` has the hosting block (`cleanUrls`, `trailingSlash: false`). Local test:
+  `firebase emulators:start --only hosting` (port 5050). Preview: `firebase hosting:channel:deploy p23 --expires 30d`.
+- The homepage is the approved `design/landing_v23/` design; `hosting/src/js/game.js` is its game.js with asset URLs
+  instead of data URIs, lazy sounds, and the rays moved to a compositor-only rotation (`rays.js`, `base.css`).
+  Other pages use `paint.js` (game.js's helper block, generated by build.py) + `pages.js`.
+- Emails only as HTML text / `mailto:` (Cloudflare obfuscates them); `app-ads.txt` must stay byte-identical to the
+  ad networks' list (any new network adds its lines here). `docs/index.html` (GitHub Pages, main branch) is the
+  "moved to flappyspikes.com/privacy" note: publish it only after the domain is live.
+
+### 2.1 gameplay (PRD-2)
+
+- **Hoops replace pipes** (WP-1a). `pipe_pair.dart` is gone; the obstacle is one
+  `Hoop` with a `kind`. `SPEC.md` carries the DEVIATION notes for the rim bounce,
+  scoring (+1 per hoop, +1 coin), the miss rule, the death tumble, the 2.0 physics
+  and the 44 pt spike strips.
+- **The run director** (§3.0.3) is owned by the game and decides each hoop slot,
+  gap and gap item at spawn time; its tables are data in `lib/run/config/`. Two
+  seeded streams (`layout` / `cosmetic`) plus a third `timing` stream so
+  clock-driven rolls never shift the slot sequence; the seed is per run (each
+  player has their own course in versus). Same seed → same sequence (unit test).
+- **Versus on Firebase** — project `flappy-spikes-a2b55` (Blaze): Firestore
+  `(default)` in **eur3**, Cloud Functions 2nd gen in **europe-west1** (Node 22),
+  Auth anonymous + optional Play Games link. Rules + indexes + TTL + functions are
+  deployed. **60-day TTL** on `players.expireAt`; the daily `sweepPools` trims
+  pools and old `recent` runs. **App Check is ENFORCED on Firestore**; the
+  `deleteMyData` callable enforces App Check in code and is one atomic
+  transaction; the ≤ 3 non-best uploads per UTC day is enforced on the server.
+  Billing is Blaze with a **€5/month alert** (alerts only). Full runbook:
+  `docs/gameplay-v2/VERSUS-BACKEND.md`.
+- **Play Games game-server OAuth client** `512525012529-ts8djs53…` (web client
+  "Flappy Spikes game server (PGS + Firebase Auth)"). Its secret lives at
+  `~/.config/flappyspikes_pgs_web_client.json` (mode 600) and is **never in the
+  repo**. The PGS "Game server" credential is published. On a link conflict the
+  account that already owns the Play Games id wins.
+- **Play Games achievements (PRD-2.3.1 §12)**: the 48 were created in Play
+  Console and the PGS configuration was **published 2026-10-14 12:53 CEST**
+  (published achievements can't be deleted). Their ids are in
+  `lib/achievements/achievement_catalog.dart`; the store art is in
+  `store/achievements/` (`play/` 512, `ios/` 1024 RGB + the Game Center kit
+  CSV/JSON). Game Center achievement ids are `fs_ach_<key>` (App Store Connect);
+  the kit and the steps are in `PORT-IOS.md` / `SUBMISSION.md`.
+  **PRD-2.3.1 §19 (2026-10-14):** the 11 item descriptions and MAGPIE's were
+  edited to the lifetime goals ("Catch 10 Hearts." …, "Reach every item goal.")
+  and published 20:44 / 20:46 CEST. The §19.3 hidden states could not be set:
+  Play locks "Initial state" once published, so on Play only the 7 rides are
+  hidden (the catalog / iOS kit hide the §19.3 ten as well).
+- **App Check debug token** "Pixel 8 e2e" is registered in the Firebase console
+  (App Check → Apps → Manage debug tokens). Debug / e2e builds pass it with
+  `--dart-define=FS_APPCHECK_DEBUG_TOKEN=…`; **release builds never use the debug
+  provider** (Play Integrity).
+- **Sideloaded release builds play solo (PRD-2.2 §4).** A release APK/AAB that
+  is not installed from Google Play fails Play Integrity, so with App Check
+  enforced its versus reads and writes are refused: it always plays solo and
+  nothing uploads. This is expected and is logged as `versus_solo {reason:
+  app_check}` (logcat: `versus: solo (app_check, <n> reads)`). Test versus
+  with builds installed from the **internal-testing track**, or with debug /
+  e2e builds carrying the registered App Check debug token. Debug builds show
+  the last search in the debug panel ("Versus: last search …").
+- **Sounds** go through the preloaded low-latency `AudioPool` only (`Sfx` /
+  `SfxLoop` in `lib/game/sound.dart`); never bare `FlameAudio.play`. The PRD-2
+  pack (88 one-shots + 4 loops) is in `docs/gameplay-v2/SOUNDS.md`, made with
+  `design/menu_v2/gen_sfx15.py`.
+- **Look layers in runs:** equipped hoop skin + trail now show in runs;
+  gameplay gold (streak tier / Big Hoops) wins while it is active. The dead pose
+  and gold-tier rules are the ones in SPEC's skin-shop deviations.
+- **Rumble (PRD-2 §3.33):** runs vibrate (knocks + death shake), 90 ms throttle;
+  the `rumble` setting (Settings v3) applies. Menu knocks are unchanged.
+  PRD-2.2 §10 (2026-10-12): the rim touch knocks at contact, the perfect shake
+  is 80 ms. §10.2 check on the Pixel 8 (`dumpsys vibrator_manager`):
+  `hasAmplitudeControl=true`; knocks reach the motor as `Step=15ms(amplitude=0,35)`
+  and the 2.1 shakes as `Step=45ms(amplitude=1,00)` — the amplitude path works,
+  but the HAL reports ≈ 90–135 ms effect duration for both (ramp-down), which is
+  why 15 ms vs 45 ms felt alike; the 80 ms shake still needs Sol's feel check.
+- **Reminders (PRD-2 §3.34):** local only (`flutter_local_notifications` +
+  `timezone`), 2 slots a day, never 22:00–09:00, next-7-days plan rescheduled on
+  pause / close / start; no server and no FCM.
+
+### 2.0 (still in force)
+
+- The pre-2.0 uncommitted v1.0.1 tree is preserved as the baseline commit on
+  `feat/menu-v2`; `main` is untouched. The lockfile was restored after `pub
+  upgrade`: only the 6 SDK-pinned test deps moved (flame 1.37 / games_services
+  5.1.0 kept).
+- `onScreenTap()` stays the primary-action API (tests and the keyboard mean
+  START); real taps no longer start runs (`TapCatcher` → `onPlayfieldTap`).
+- `PowerupSlot` rolls in its constructor (= launch arrival); only `goHome()`
+  re-rolls. An armed powerup is consumed on START.
+- `AD_ID` permission: the `tools:node="remove"` block is gone (PRD-2.2 §7.13, after the
+  Play declarations were saved 2026-10-12); ads may be personalised where consent allows.
+- Run banners (PRD-2.2 §12): every run banner and the collect stickers are drawn by the
+  run's `RunBannerLayer` in the world at `RunLayer.banners` (−60): behind the bird, the
+  hoops and the pickups, above the score circle. The HUD keeps the top row, the tray /
+  pill and their fetch flights. The band keeps real time (not slowed by the Hourglass),
+  freezes on pause and stays on screen during a camera shake. `RunHud.banners` is the host.
+- Gameplay banner (PRD-2.2 §7.5, WP-7a): `main.dart` is `Column(Expanded(game), BannerSlot)`;
+  `game.setPlayfieldHeight` is the only resize entry point (START with a banner / Home arrival).
+  In a run with a banner `viewHeight` = visible height + `Config.bannerStripDrop` (20): run layouts
+  keep their 44 pt bottom strip, its lowest 20 pt sit under the view's edge (`bottomStripInset` 24).
+  Persistent components that cache heights implement `PlayfieldResizable`. Map in `docs/p22/ADS.md`.
+- iOS: AdMob on iOS too (UMP → ATT prompt → MobileAds.initialize); iOS app
+  `ca-app-pub-2660521344509391~7451723332`, real units in release builds and Google's test
+  units in debug / profile (as Android); IAP is real (StoreKit), the gift
+  products and Settings → Redeem code are Android-only.
+- Menus (home/shop/skins/dialogs/popups) always render at colour stage 0; only
+  runs advance the colour stage.
+- The balloon bonus and results pages always use the approved grey (`kPostRunPalette`,
+  stage 0: #F1F1F1 / #828282), whatever stage the run ended on; the run's strips draw
+  their normal reach in that grey while such a page is up (PRD-2.2 §31).
+- Looks (2.0 skin shop, PRD-2.2 §20): the whole look (bird + gear + hat) keeps its
+  true colours at every colour stage, in menus and in runs; the old 0.35 stage
+  blend is gone (a pure stage modulate had made all skins grey). Only a themed
+  death tints the look (`Bird.deathTint`).
+- Modal popups (no-ads launch, LEVEL UP, purchase result, No-ads celebration) go through one queue: never two at
+  once. Menu button presses knock when RUMBLE is on (PRD-home-v3 §10).
+- Item art is drawn in code (`lib/skins/art/`, port of
+  `design/menu_v2/skin_art.js`) — no skin sprite assets any more.
+- Menu spike strips are drawn 44 pt (slide to 72 pt on START); visual only.
+- WP7 folded into WP4–WP6: invite wiring + analytics events live where the
+  actions are; audit in the Sol E2E pass.
+- Linux visual checks: live capture (grim) hangs while the display is off — use
+  headless screenshot tests instead; window geometry via `hyprctl`.
+
+## In-app purchases — test setup (2026-10-05, packs revised 2026-10-07)
+- Payments profile **Duo Leads (0852-6699-4116)** linked (merchant category Computer Software, support
+  hello@duoleads.com, statement DUO LEADS). Bank account + 15% service-fee enrolment still open (user).
+- One-time products (new model), updated 2026-10-07 (PRD-menu-v4): **Active** coins_1000 / coins_10000 /
+  coins_17000 / coins_100000 / no_ads (purchase options coins-1000 … no-ads, Buy, backwards compatible); **Inactive**
+  coins_500 / coins_1800 / coins_5000 / coins_12000. Prices: every one of the 174 Play countries set by hand from
+  `tools/pricing/play_prices.csv` (rule: before-tax ≥ USD target, + the price editor's Tax column, rounded up to a nice
+  local price; US $1.29 / $9.99 / $15.99 / $84.99 / no_ads $3.49), verified 174/174 per product
+  (`tools/pricing/PLAY_VERIFY_2026-10-07.md`). Runbook: PRD-menu-v4 §7. Price editor tax column: a rate = included in
+  the buyer price; "No VAT" = nothing included (incl. US/CA/ID/VN where tax is added at checkout).
+- Licence testing + internal-testing tester list "Flappy Spikes internal" (the owner).
+  Internal testing track: 2.0.0 (6) live (versions 3-5 superseded).
+- Products need a PUBLISHED bundle with BILLING permission before they can be created (draft is not enough).
+- After creating products the device returned notFound for all 5 until the Play Store app's cache was
+  cleared on the phone; then `[IAP] query 5: found 5`. Read IAP diagnostics with
+  `adb logcat -s flutter | grep '\[IAP\]'` (release builds log them).
+- Release builds need android/app/proguard-rules.pro (keeps WorkManager's Room DB; google_mobile_ads pulls
+  in androidx.work) — without it the release app crashes at launch. Debug builds hide this.
+- **Store prices (PRD-2.2 §32, saved in Play Console 2026-10-12):** coins_1000 0.99, coins_10000 8.99,
+  coins_17000 14.99, coins_100000 79.99, no_ads 2.99 — the same number in $/£/€ in every country of those
+  currencies (VAT included where Play includes it, never added on top). Every other currency = USD price x the
+  day's rate (open.er-api.com), rounded to the NEAREST natural App Store price step
+  (tools/pricing/pricing.py + test_pricing.py; 2026-10-12 rates). 5 products x 174 countries verified 174/174
+  (tools/pricing/PLAY_VERIFY_2026-10-12.md). Offline placeholders (IapProduct.placeholderPrice): $0.99, $8.99,
+  $14.99, $79.99, NO ADS $2.99. The UI always shows the store's price (PRD-menu-v4 §4).
+- **Ad IDs (Android, release builds):** App ca-app-pub-2660521344509391~8153764631; rewarded
+  /3758032081 (group 9050711652); banner "Banner - gameplay" ca-app-pub-2660521344509391/8797133596
+  (group 7736442819, Unity Banner_Android); interstitial "Interstitial - after run"
+  ca-app-pub-2660521344509391/1357627279 (group 5294815708, Unity Interstitial_Android). All groups:
+  AdMob Network + Unity Ads bidding, Unity Game ID 6202807. Debug/profile builds use Google test IDs only
+  (banner /9214589741, interstitial /1033173712, rewarded test unit).
+- **Play declarations (saved 2026-10-12):** contains ads = yes; Advertising ID used (analytics, advertising);
+  Data safety adds Device or other IDs + Approximate location (collected and shared for advertising).
+  Ads + Data safety changes await "Send for review" in Publishing overview (owner/release step).
+- AAB upload via Playwright over CDP: `setInputFiles` refuses files > 50 MB — use CDP `DOM.setFileInputFiles` on the
+  upload input instead (2.0.0+7 is 56 MB). Internal testing: 2.0.0 (7) saved as DRAFT 2026-10-07 (user releases).
+- Linux: no Google Chrome — tools/browser_linux.js drives /usr/bin/chromium with profile
+  tools/.pw-linux-profile (optional URL arg).
+
+<!-- df4:begin (managed by `df4 init`; keep identical in CLAUDE.md and AGENTS.md) -->
+## Built by DuoFoundry v4 (df4)
+
+This repo is built by df4: an Opus orchestrator plans milestones into GitHub issues; per issue a builder works in its
+own worktree, `bash scripts/verify.sh` is the gate, a tester of a different model checks, and the framework merges.
+
+Rules for every builder and tester (binding):
+- **Never read, open, print, copy or grep** `.env`, `.env.*` (except `.env.template`/`.env.example`), `secrets/`,
+  private keys (`*.pem`, `*.key`, `*.ppk`, `id_*`), `~/.ssh/`, `~/.codex/auth.json`, `~/.claude/.credentials.json` —
+  not even to check that they exist. Never repeat key material.
+- Do not commit: the framework commits after your turn (secret paths are never staged).
+- Touch only the paths under `## Paths` of your issue. Report failures outside them; do not fix them.
+- `bash scripts/verify.sh` must be green before you stop (the framework runs exactly that as the gate). Testers do not edit
+  product code: everything a tester changes is reverted.
+- The app stack (if any) is started by the framework outside the jail; never start docker/podman yourself.
+  Environment for verify: `DF4_VERIFY_BASE`, `DF4_E2E_BASE_URL`, `DF4_E2E_SERVICE` (see the
+  contract at the top of `scripts/verify.sh`).
+
+**CLAUDE.md and AGENTS.md carry the same content — change them together.** Claude roles (orchestrator, Opus builder
+and tester, Haiku fallback, council member) read `CLAUDE.md`; codex roles (Sol builder and tester, council member)
+read `AGENTS.md`. If an `AGENTS.override.md` exists, codex reads it **instead of** `AGENTS.md` (it replaces, it does
+not merge): keep these rules there too, or delete it.
+<!-- df4:end -->

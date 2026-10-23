@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Achievement Icons 2.6</title>
+<style>
+@font-face{font-family:'Opificio';src:url(data:font/ttf;base64,/*FONT*/) format('truetype')}
+/*WEBFONTS*/
+:root{--pink:#EC008C;--soft:#FCD9EE;--plum:#7A0044;--gold:#FFB529;--gold-d:#C98A00;--accent:#FF4FB7;
+ --ui-bg:#FFF4FA;--ui-ink:#4A1030;--ui-line:#F3C6DF;--ui-mute:#8C5A75;--ui-card:#FFFFFF}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ui-bg:#1C1018;--ui-ink:#F6DCEA;--ui-line:#4A2A3C;--ui-mute:#B88AA3;--ui-card:#26161F}}
+:root[data-theme="dark"]{--ui-bg:#1C1018;--ui-ink:#F6DCEA;--ui-line:#4A2A3C;--ui-mute:#B88AA3;--ui-card:#26161F}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--ui-bg);color:var(--ui-ink);font-family:Fred,system-ui,sans-serif;font-weight:600}
+main{max-width:1240px;margin:0 auto;padding:22px 16px 48px}
+h1{font-family:Opi;font-weight:400;font-size:30px;letter-spacing:.06em;color:var(--pink);margin:18px 0 4px}
+h2{font-family:Opi;font-weight:400;font-size:20px;letter-spacing:.12em;color:var(--pink);margin:34px 0 4px}
+.sub{font-size:13.5px;color:var(--ui-mute);line-height:1.5;margin:0 0 14px;max-width:880px}
+div.box{border:2px solid var(--ui-line);background:var(--ui-card);padding:14px 18px 12px;margin:0 0 6px}
+.box>b{display:block;font-family:Opi;font-weight:400;font-size:13px;letter-spacing:.2em;color:var(--pink);margin:0 0 8px}
+.box p,.box li{font-size:13.5px;line-height:1.55;margin:0 0 6px;color:var(--ui-ink)}
+.box ul{margin:0 0 4px;padding-left:20px}
+.box.q{border-color:var(--gold);margin-top:10px}
+.box.q>b{color:var(--gold-d)}
+.upd{display:inline-block;font-family:Fred;font-weight:600;font-size:9.5px;letter-spacing:.08em;line-height:1;padding:3px 5px 2px;margin:0 6px 0 0;background:var(--soft);color:var(--plum);vertical-align:2px}
+.bar{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;margin:16px 0 0}
+.bar>span{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.14em;color:var(--ui-mute);font-family:Opi;font-weight:400}
+.seg{display:inline-flex;border:2px solid var(--ui-line)}
+.seg button{border:0;background:transparent;color:var(--ui-ink);padding:6px 11px;font:600 13px Fred,system-ui,sans-serif;cursor:pointer}
+.seg button.on{background:var(--pink);color:#fff}
+
+/* the 10 big cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(216px,1fr));gap:14px}
+.grid.ab2{grid-template-columns:repeat(auto-fill,minmax(380px,1fr))}
+.card{background:var(--ui-card);border:2px solid var(--ui-line);padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card .icons{display:flex;gap:12px;justify-content:center}
+.card .icons figure{margin:0;flex:1 1 0;max-width:300px;min-width:0;position:relative}
+.card canvas.big{width:100%;aspect-ratio:1;height:auto;display:block}
+.card figcaption{font-family:Opi;font-size:12px;letter-spacing:.16em;color:var(--ui-mute);text-align:center;margin-top:6px}
+.card figcaption em{font-style:normal;color:#fff;background:#2fbf71;padding:2px 6px 1px;margin-left:6px;font-family:Fred;letter-spacing:.06em;font-size:10px}
+.nm{font-family:Opi;font-weight:400;font-size:22px;letter-spacing:.06em;color:var(--ui-ink);line-height:1.1}
+.rule{font-size:14px;line-height:1.4}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:11px;letter-spacing:.06em;padding:3px 7px 2px;background:var(--soft);color:var(--plum)}
+.chip.pt{background:var(--pink);color:#fff}
+.chip.hid{background:#3A2A48;color:#fff}
+.chip.vis{background:#2fbf71;color:#fff}
+.idea{font-size:12.5px;color:var(--ui-mute);line-height:1.5;font-weight:600}
+.idea b{color:var(--ui-ink)}
+
+/* real sizes */
+.sizes{background:var(--ui-card);border:2px solid var(--ui-line);overflow:hidden}
+.srow{display:grid;grid-template-columns:150px 1fr 1fr;border-top:2px solid var(--ui-line)}
+.srow:first-child{border-top:0}
+.srow>div{padding:10px 12px;display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;min-width:0}
+.srow .lab{font-family:Opi;font-size:14px;letter-spacing:.06em;align-items:center}
+.srow.hd>div{font-family:Opi;font-size:11px;letter-spacing:.16em;color:var(--ui-mute);align-items:center;padding:8px 12px}
+.srow .dk{background:#202124}.srow .lt{background:#F2F2F7}
+.sz{display:flex;flex-direction:column;align-items:center;gap:3px;font:600 9.5px Fred,system-ui,sans-serif;color:#9AA0A6}
+.lt .sz{color:#8E8E93}
+.sz canvas{display:block}
+.sz canvas.gc{border-radius:50%}
+.sz canvas.lk{filter:grayscale(1) brightness(.85);opacity:.55}
+
+/* console list mocks */
+.consoles{display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:14px}
+.con{border-radius:14px;overflow:hidden;font-family:Roboto,system-ui,sans-serif;font-weight:400}
+.con .ttl{padding:12px 14px 8px;font-size:12px;letter-spacing:.08em;font-weight:600;opacity:.75}
+.con .it{display:flex;align-items:center;gap:12px;padding:8px 14px}
+.con .it canvas{width:48px;height:48px;flex:0 0 auto;border-radius:6px}
+.con.gc .it canvas{border-radius:50%;width:52px;height:52px}
+.con .it canvas.lk{filter:grayscale(1);opacity:.45}
+.con .tx{min-width:0;flex:1}
+.con .t1{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.con .t2{font-size:12.5px;opacity:.72;line-height:1.3}
+.con .xp{font-size:12px;opacity:.7;white-space:nowrap}
+.con.pd{background:#202124;color:#E8EAED}.con.pl{background:#FFFFFF;color:#202124;border:1px solid #DADCE0}
+.con.gd{background:#1C1C1E;color:#F2F2F7}.con.gl{background:#F2F2F7;color:#1C1C1E;border:1px solid #D1D1D6}
+.con .ph{width:48px;height:48px;border-radius:6px;background:#5F6368;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;flex:0 0 auto}
+.con.gc .ph{border-radius:50%;width:52px;height:52px;background:#8E8E93}
+
+/* next to the 48 */
+.mix{display:flex;flex-wrap:wrap;gap:16px;padding:16px;background:var(--ui-card);border:2px solid var(--ui-line);justify-content:center}
+.mix figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:5px;width:120px}
+.mix canvas{width:120px;height:120px;display:block}
+.mix figcaption{font:600 10.5px Fred,system-ui,sans-serif;letter-spacing:.04em;text-align:center;line-height:1.25}
+.mix figcaption i{display:block;font-style:normal;font-size:9.5px;letter-spacing:.12em;color:var(--ui-mute)}
+.mix figure.nw figcaption i{color:var(--pink)}
+.strip{display:flex;flex-wrap:wrap;gap:8px;padding:14px;background:var(--ui-card);border:2px solid var(--ui-line)}
+.strip canvas{width:56px;height:56px;display:block}
+.strip canvas.nw{outline:3px solid var(--pink);outline-offset:2px}
+.round canvas.big,.round .mix canvas,.round .strip canvas{border-radius:50%}
+@media (max-width:700px){
+ .grid,.grid.ab2{grid-template-columns:1fr}
+ h1{font-size:25px}
+ .srow{grid-template-columns:1fr}
+ .srow.hd{display:none}
+ .srow .lab{padding-bottom:0}
+ .srow>div.dk::before{content:"Play Games · dark";width:100%;font:600 10px Fred;color:#9AA0A6;letter-spacing:.1em}
+ .srow>div.lt::before{content:"Game Center · light";width:100%;font:600 10px Fred;color:#8E8E93;letter-spacing:.1em}
+ .mix figure{width:92px}.mix canvas{width:92px;height:92px}
+ .strip canvas{width:44px;height:44px}
+}
+</style>
+</head>
+<body>
+<main>
+<div class="box"><b>WHAT IS THIS FOR</b>
+ <p><b>Icons for the 10 new achievements of 2.6 (PRD-2.6 §7.1 D15, decision O94).</b> Every achievement needs one picture in Play Games and Game Center. Players see it in the native achievements screen (now opened from the ACHIEVEMENTS tab of our leaderboard) and on the small toast on the results page when they earn it. The names, rules, points and visible / hidden flags are already approved (J9, O39, O77, O80, O82, O83; texts ACH-49 … ACH-58); <b>only the pictures are new here</b>.</p>
+ <p><b>Style:</b> drawn exactly like the 48 approved icons (the "17C spike-ring style"): the same navy spike ring, the glowing disc with white rays, the offset blue drop shadow, and the same big-eyed bird. The new art only adds scenes; the 48 icons do not change. In the versus icons <b>you</b> are always the pink bird with the gold sweatband and the <b>rival</b> the blue bird with the red band, as in the approved BEAK TO BEAK.</p>
+ <p><b>On this page:</b> (1) each new icon large, with its rule and points, and for three of them a second idea <b>B</b> with a recommendation; (2) the icons at the real sizes and on the dark and light backgrounds the consoles use; (3) the new icons mixed in with approved ones, and the whole set of 58. <b>What you approve:</b> the 10 pictures (choose A or B where there is a B). After your OK, Sol exports the PNGs in the build (512 for Play, 1024 for App Store Connect, 160 for the in-game toast), just like the 48.</p>
+</div>
+
+<h1>ACHIEVEMENT ICONS · 2.6</h1>
+<p class="sub">58 achievements in all, 965 of the 1,000 points both stores allow. 512 × 512 squares; Game Center crops them to a circle (try the switch).</p>
+<div class="bar">
+ <span>CROP <span class="seg" id="cropSeg"><button data-v="sq" class="on">Square (Play)</button><button data-v="round">Circle (Game Center)</button></span></span>
+ <span>PAGE <span class="seg" id="themeSeg"><button data-v="" class="on">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span></span>
+</div>
+
+<h2>THE 10 NEW ICONS</h2>
+<p class="sub">Drawn at 512 × 512, shown here at about 220. Points are Play XP and Game Center points (the same number).</p>
+<div class="grid" id="cards"></div>
+
+<h2>THREE WITH A SECOND IDEA</h2>
+<p class="sub">For these three a second picture also works. Pick A or B (a red-box note with "A" or "B" is enough); the recommended one is the one shown above.</p>
+<div class="grid ab2" id="abcards"></div>
+
+<h2>AT REAL SIZES</h2>
+<p class="sub">Left: Play Games (square) on its dark background, from the 512 upload down to the list size, plus the greyed look Play uses while an achievement is still locked. Right: Game Center (circle) on its light background. The last column is the 32 px toast-like size, the hardest test.</p>
+<div class="sizes" id="sizes"><div class="srow hd"><div>ICON</div><div>PLAY GAMES · DARK · 128 / 96 / 64 / 48 / 32 · LOCKED 64</div><div>GAME CENTER · LIGHT · 128 / 96 / 64 / 48 / 32</div></div></div>
+
+<h2>IN THE CONSOLE LISTS</h2>
+<p class="sub">How a few of them sit in the native screens (mock-ups of the list rows, not exact copies). BIRD OF PREY is hidden: until it is earned both stores show their own placeholder and "Hidden achievement", never this icon.</p>
+<div class="consoles" id="consoles"></div>
+
+<h2>NEXT TO THE APPROVED ICONS</h2>
+<p class="sub">The new icons (pink label) mixed with six approved ones at 120 px, to judge whether they belong to one family.</p>
+<div class="mix" id="mix"></div>
+
+<h2>THE WHOLE SET · 58</h2>
+<p class="sub">All 48 approved icons followed by the 10 new ones (pink outline), list size.</p>
+<div class="strip" id="strip"></div>
+
+<div class="box q" style="margin-top:28px"><b>OPEN QUESTIONS FOR THE OWNER</b>
+ <ul id="questions"></ul>
+</div>
+<div class="box" style="margin-top:10px"><b>FOR THE BUILD (SOL)</b>
+ <p>The art lives in <code>design/achievements/ach_art_v26.js</code> (new scenes added to the shared <code>SCENES</code>, new disc colours to <code>RAMP</code>; it draws with the same ring, shadow and bird code as the 48 and changes none of them). This page is built by <code>design/achievements/build_v26.py</code>. Export works like the 48: open this page with <code>#export=&lt;size&gt;</code>; <code>window.EXPORT</code> then holds <code>[{id, png}]</code> for the 10 icons (the chosen variant of each; A unless set otherwise in <code>ACH_V26</code>), <code>window.EXPORT_ERRORS</code> lists any scene that failed. File keys (<code>ach_bullseye</code> …) are proposals; use the final achievement ids.</p>
+</div>
+</main>
+
+<script>/*SKIN_ART*/</script>
+<script>/*EMBLEM_ART*/</script>
+<script>/*ACH_ART*/</script>
+<script>/*ACH_ART_V26*/</script>
+<script>
+/*CORE*/
+</script>
+<script>
+// ---------- the approval page (uses drawIcon from the 48's page core above) ----------
+const DPR=Math.min(2,window.devicePixelRatio||1);
+const pick=it=>it; // A by default
+const NEW=ACH_V26.map(a=>({id:a.id,n:a.n,s:a.s,r:a.r,p:a.p}));
+const OLD=ACH.flatMap(s=>s.items);
+const oldById=id=>OLD.find(x=>x.id===id);
+const jobs=[];
+function cv(it,css,cls='',inline=true){const c=document.createElement('canvas');const px=Math.round(css*DPR);c.width=c.height=px;if(inline)c.style.width=c.style.height=css+'px';if(cls)c.className=cls;jobs.push([c,it,px/512]);return c}
+function bigCv(it){const c=document.createElement('canvas');c.width=c.height=512;c.className='big';jobs.push([c,it,1]);return c}
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+// 1 · cards: the 10 (their recommended picture), then the A/B choices
+const cardsEl=document.getElementById('cards'),abEl=document.getElementById('abcards');
+const chips=a=>`<div class="chips"><span class="chip pt">${a.p} POINTS</span><span class="chip ${a.vis==='Hidden'?'hid':'vis'}">${a.vis.toUpperCase()}</span><span class="chip">${a.ach}</span>${a.unlock!=='—'?`<span class="chip">UNLOCKS ${esc(a.unlock).toUpperCase()}</span>`:''}</div>`;
+for(const a of ACH_V26){
+ const card=document.createElement('div');card.className='card';
+ const icons=document.createElement('div');icons.className='icons';
+ const fA=document.createElement('figure');fA.appendChild(bigCv({s:a.s,r:a.r}));icons.appendChild(fA);
+ card.appendChild(icons);
+ card.insertAdjacentHTML('beforeend',`<div class="nm">${a.n}</div><div class="rule">${esc(a.d)}</div>${chips(a)}
+  <div class="idea"><b>Idea: </b>${esc(a.idea)}${a.alt?' <b>Second idea B below.</b>':''}</div>`);
+ cardsEl.appendChild(card);
+ if(!a.alt)continue;
+ const ab=document.createElement('div');ab.className='card ab';
+ const ic=document.createElement('div');ic.className='icons';
+ for(const[k,s,r,idea]of[['A',a.s,a.r,a.idea],['B',a.alt.s,a.alt.r||a.r,a.alt.idea]]){const f=document.createElement('figure');f.appendChild(bigCv({s,r}));
+  f.insertAdjacentHTML('beforeend',`<figcaption>${k}${(a.rec||'A')===k?'<em>RECOMMENDED</em>':''}</figcaption><div class="idea" style="margin-top:4px">${esc(idea)}</div>`);ic.appendChild(f)}
+ ab.appendChild(ic);ab.insertAdjacentHTML('beforeend',`<div class="nm">${a.n}</div><div class="rule">${esc(a.d)}</div><div class="idea"><b>${esc(a.q)}</b></div>`);
+ abEl.appendChild(ab);
+}
+
+// 2 · real sizes
+const sizesEl=document.getElementById('sizes');
+for(const a of ACH_V26){
+ const it={s:a.s,r:a.r};const row=document.createElement('div');row.className='srow';
+ row.insertAdjacentHTML('beforeend',`<div class="lab">${a.n}</div>`);
+ const dk=document.createElement('div');dk.className='dk';const lt=document.createElement('div');lt.className='lt';
+ for(const z of[128,96,64,48,32]){const w=document.createElement('div');w.className='sz';w.appendChild(cv(it,z));w.insertAdjacentHTML('beforeend',z);dk.appendChild(w);
+  const w2=document.createElement('div');w2.className='sz';w2.appendChild(cv(it,z,'gc'));w2.insertAdjacentHTML('beforeend',z);lt.appendChild(w2)}
+ const w=document.createElement('div');w.className='sz';w.appendChild(cv(it,64,'lk'));w.insertAdjacentHTML('beforeend','locked');dk.appendChild(w);
+ row.append(dk,lt);sizesEl.appendChild(row);
+}
+
+// 3 · console list mocks
+const conEl=document.getElementById('consoles');
+const V=id=>ACH_V26.find(a=>a.id===id);
+const conRows=[['pd','PLAY GAMES · DARK',['top_bird','sky_high','second_wind','bird_of_prey'],[0,1,0,0]],
+ ['pl','PLAY GAMES · LIGHT',['bullseye','albatross','iron_beak','birdwatcher'],[0,0,1,0]],
+ ['gd gc','GAME CENTER · DARK',['three_little_birds','flawless','bird_of_prey','top_bird'],[0,0,0,0]],
+ ['gl gc','GAME CENTER · LIGHT',['birdwatcher','sky_high','iron_beak','second_wind'],[0,0,0,1]]];
+for(const[cls,ttl,ids,locked]of conRows){
+ const box=document.createElement('div');box.className='con '+cls;box.insertAdjacentHTML('beforeend',`<div class="ttl">${ttl}</div>`);
+ ids.forEach((id,i)=>{const a=V(id),row=document.createElement('div');row.className='it';const lk=locked[i],gc=cls.includes('gc');
+  if(a.vis==='Hidden'&&i===3&&!gc){row.insertAdjacentHTML('beforeend',`<div class="ph">?</div><div class="tx"><div class="t1">Hidden achievement</div><div class="t2">Keep playing to learn more</div></div><div class="xp">${a.p} XP</div>`)}
+  else if(a.vis==='Hidden'&&gc&&i===2){row.insertAdjacentHTML('beforeend',`<div class="ph">?</div><div class="tx"><div class="t1">Hidden</div><div class="t2">Keep playing to unlock</div></div><div class="xp">${a.p} pts</div>`)}
+  else{row.appendChild(cv({s:a.s,r:a.r},gc?52:48,lk?'lk':''));row.insertAdjacentHTML('beforeend',`<div class="tx"><div class="t1">${a.n.charAt(0)+a.n.slice(1).toLowerCase().replace(/ (\w)/g,(m,x)=>' '+x.toUpperCase())}</div><div class="t2">${esc(a.d)}</div></div><div class="xp">${a.p} ${gc?'pts':'XP'}</div>`)}
+  box.appendChild(row)});
+ conEl.appendChild(box);
+}
+
+// 4 · mixed row + whole set
+const mixEl=document.getElementById('mix');
+const mixOrder=[['new','bullseye'],['old','vs_1'],['new','second_wind'],['new','albatross'],['old','vs_10'],['new','bird_of_prey'],['old','hoops_100'],['new','sky_high'],
+ ['new','birdwatcher'],['old','master_jackpot'],['new','three_little_birds'],['old','vs_50'],['new','iron_beak'],['new','flawless'],['old','first_big_hoops'],['new','top_bird']];
+for(const[k,id]of mixOrder){const f=document.createElement('figure');f.className=k==='new'?'nw':'';
+ if(k==='new'){const a=V(id);f.appendChild(cv({s:a.s,r:a.r},120,'',false));f.insertAdjacentHTML('beforeend',`<figcaption>${a.n}<i>NEW</i></figcaption>`)}
+ else{const it=oldById(id);f.appendChild(cv(it,120,'',false));f.insertAdjacentHTML('beforeend',`<figcaption>${it.n}<i>APPROVED</i></figcaption>`)}
+ mixEl.appendChild(f)}
+const stripEl=document.getElementById('strip');
+for(const it of OLD){const c=cv(it,56,'',false);c.title=it.n;stripEl.appendChild(c)}
+for(const a of ACH_V26){const c=cv({s:a.s,r:a.r},56,'nw',false);c.title=a.n;stripEl.appendChild(c)}
+
+// open questions (A/B)
+document.getElementById('questions').innerHTML=ACH_V26.filter(a=>a.alt).map(a=>`<li><b>${a.n}: A or B?</b> ${esc(a.q)}</li>`).join('');
+
+function redraw(){for(const[c,it,k]of jobs){if(c.width!==Math.round(512*k)){}drawIcon(c,it,k)}OFF.width=OFF.height=SH_.width=SH_.height=512}
+function seg(id,fn){const el=document.getElementById(id);el.onclick=e=>{const b=e.target.closest('button');if(!b)return;el.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));fn(b.dataset.v)}}
+seg('cropSeg',v=>document.body.classList.toggle('round',v==='round'));
+seg('themeSeg',v=>{if(v)document.documentElement.dataset.theme=v;else delete document.documentElement.dataset.theme});
+// #export=<size>: every NEW icon (its chosen variant) at size x size for the headless exporter, like the 48's page
+function exportNew(){const m=location.hash.match(/export=(\d+)/),N=+m[1],k=N/512,out=[];
+ const c=document.createElement('canvas');c.width=c.height=N;
+ for(const a of ACH_V26){const s=a.rec==='B'&&a.alt?a.alt.s:a.s;SCENE_ERRORS.length=0;drawIcon(c,{s,r:a.r},k);out.push({id:a.id,png:c.toDataURL('image/png'),errors:[...SCENE_ERRORS]})}
+ OFF.width=OFF.height=SH_.width=SH_.height=512;
+ window.EXPORT_ERRORS=out.flatMap(o=>o.errors.map(e=>o.id+' '+e));window.EXPORT=out}
+document.fonts.load('40px Opificio').then(()=>{redraw();if(location.hash.includes('export='))exportNew()},()=>redraw());
+</script>
+</body>
+</html>

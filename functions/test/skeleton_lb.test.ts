@@ -61,11 +61,12 @@ describe('PRD-2.6 wave 0 schema constants', () => {
     assert.equal(bracketFor(5000), 10);
   });
 
-  it('accepts the 2.5 look, rejects a defined card until F9 fills the stub', () => {
+  it('accepts the 2.5 look and a defined card now that F9 fills the stub', () => {
     assert.equal(validLook({ ...LOOK }), true);
-    assert.equal(validLook({ ...LOOK, card: 'f_orbit|n_fire|s_fireworks' }), false);
+    assert.equal(validLook({ ...LOOK, card: 'f_orbit|n_fire|s_fireworks' }), true);
     assert.equal(validCard(undefined), true);
-    assert.equal(validCard('f_orbit|n_fire|s_fireworks'), false);
+    assert.equal(validCard('f_orbit|n_fire|s_fireworks'), true);
+    assert.equal(validCard('f_orbit|n_fire'), false);
     assert.equal(validLook({ ...LOOK, extra: 'x' }), false);
   });
 });

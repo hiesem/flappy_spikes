@@ -8,11 +8,20 @@ and, when `functions/` changed, `npm --prefix functions test` in the Firebase em
 
 **Never:** `adb`, devices or emulators, `firebase deploy`, gcloud, Play Console / App Store Connect, real Firebase
 project calls, publishing anything. Never touch `android/upload-keystore.jks`, `android/app/key.properties` or any
-secret file. Don't edit `docs/p26/` (PRD + approved designs) — report a conflict instead.
+secret file. Don't edit `docs/p26/` (PRD + approved designs; the one exception is `docs/p26/SHARED_ELEMENTS.md`, kept
+current by the issues that add or change a master) — report a conflict instead.
 
 **Spec:** `docs/p26/PRD-2.6-fun-progression.md` (binding) with the approved designs in `docs/p26/design/` (see
 `docs/p26/README.md` for the path map). Gameplay changes follow `SPEC.md` or add a DEVIATION note there.
 Module map: `docs/gameplay-v2/ARCH.md`.
+
+**Reuse, don't remake (owner, PRD O97–O100 — binding):** when a 2.6 design shows an element the game already has
+(rays, boxes, confetti, coin fly / counter, popup frame, buttons, tags, banners, stickers, sparkles, emblems, avatars,
+card painters …), use the existing in-game element and its code; the design page only gives layout, size, colour and
+timing. A new look is only a parameter of the same master, never a second drawing. Rays: reuse one of the 4 existing
+ray versions as it is (O98). Boxes: everything draws from the one box master (O99). The list of masters is
+`docs/p26/SHARED_ELEMENTS.md` (written by the first M0 issue): check it before drawing anything. **Testers: fail any
+second drawing of a listed element** (blocker), and any new shared-looking element that is not added to the list.
 
 **Invariants that break things silently (from the workspace CLAUDE.md):**
 - `maxTranslation = 10000` in the `FlappySpikesGame` constructor — never remove it.

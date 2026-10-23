@@ -9,7 +9,7 @@
  */
 import { createHash } from 'node:crypto';
 import { Timestamp } from 'firebase-admin/firestore';
-import { runFacts, scoreRun, type Anomaly, type RunFacts } from './anomaly.js';
+import { passBound, runFacts, scoreRun, type Anomaly, type RunFacts } from './anomaly.js';
 import { bracketFor } from './brackets.js';
 import {
   LB_BEST_SIZE,
@@ -38,7 +38,7 @@ import {
   type Look,
   type RunEntry,
 } from './schema.js';
-import { checkRun, decodeDeltas } from './timeline.js';
+import { decodeDeltas, decodeEntries, gapOk, plausibleValues } from './timeline.js';
 
 export { LB_GIFTS };
 
@@ -355,7 +355,8 @@ function freshGroup(input: LbJoinGroupInput): LbGroupDoc {
 /**
  * Join an existing group until it has 50 real members. A group with under
  * three hours left, a full group, a settled group, or a group of another
- * bracket opens a fresh 24 h race. Every real join drops the last ghost row.
+ * bracket opens a fresh 24 h race. Every real join drops its lowest-ranked
+ * shown ghost row.
  */
 export function joinGroup(input: LbJoinGroupInput): LbJoinGroupResult {
   if (input.hidden === true) {
@@ -389,9 +390,17 @@ export function joinGroup(input: LbJoinGroupInput): LbJoinGroupResult {
     if (sameBracket && hasRoom && enoughTime) {
       const ghosts = [...group.ghosts];
       const ownGhost = ghosts.findIndex((ghost) => ghost.uid === uid);
-      // A new joiner replaces the last shown ghost; if the same person was a
-      // ghost earlier, remove that row instead so no uid appears twice.
-      const removedGhost = ownGhost >= 0 ? ghosts.splice(ownGhost, 1)[0] : ghosts.length > 0 ? ghosts.pop()! : null;
+      const rankedGhosts = rankToday(group, input.nowMs, { includeHidden: true })
+        .filter((entry) => entry.ghost)
+        .map((entry) => entry.uid);
+      const lowestShownGhost = rankedGhosts.length === 0 ? null : rankedGhosts[rankedGhosts.length - 1];
+      const removeIndex =
+        ownGhost >= 0
+          ? ownGhost
+          : lowestShownGhost === null
+            ? ghosts.length - 1
+            : ghosts.findIndex((ghost) => ghost.uid === lowestShownGhost);
+      const removedGhost = removeIndex >= 0 ? ghosts.splice(removeIndex, 1)[0] : null;
       const memberUids = [...group.memberUids, uid];
       const members = { ...group.members, [uid]: makeMember(input.member) };
       const next: LbGroupDoc = {
@@ -938,10 +947,9 @@ function validRunShape(input: unknown): input is LbSubmittedRun {
   );
 }
 
-function mapTimelineReject(reason: string | null): LbDropReason {
-  if (reason === 'timeline' || reason === 'version') return 'timeline';
-  if (reason === 'low_score') return 'low_score';
-  return 'bounds';
+function scoreOnlyBoundsOk(run: LbSubmittedRun): boolean {
+  if (run.hoops < 1 || run.hoops > passBound(run.cs)) return false;
+  return run.score <= run.hoops * (run.hoops + 11);
 }
 
 function verifyTimeline(run: LbSubmittedRun, ctx: LbRunCheckContext): TimelineVerified {
@@ -966,8 +974,15 @@ function verifyTimeline(run: LbSubmittedRun, ctx: LbRunCheckContext): TimelineVe
     end: endCs,
     fl: run.fl,
   };
-  const reject = checkRun(entry, best);
-  if (reject !== null) return { ok: false, reason: mapTimelineReject(reject) };
+  const entries = decodeEntries(run.fl);
+  if (entries === null) return { ok: false, reason: 'timeline' };
+  if (entries.flags.length !== deltas.length) return { ok: false, reason: 'timeline' };
+  if (entries.values.reduce((sum, value) => sum + value, 0) !== run.score) {
+    return { ok: false, reason: 'bounds' };
+  }
+  if (!plausibleValues(entries.flags, entries.values) || !gapOk(deltas, entries.flags)) {
+    return { ok: false, reason: 'bounds' };
+  }
   const anomaly = scoreRun(entry, [...(ctx.hist ?? [])]);
   const facts = runFacts(entry) ?? undefined;
   return { ok: true, anomaly, facts };
@@ -1041,11 +1056,26 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
       return intervalStart(a.input) - intervalStart(b.input) || a.index - b.index;
     });
 
-  const numeric = shaped.filter((x) => validRunShape(x.input)).map((x) => x.input as LbSubmittedRun);
-  const earliestStart = numeric.length === 0 ? ctx.nowMs : Math.min(...numeric.map(intervalStart));
-  const elapsed = Math.max(0, ctx.nowMs - earliestStart);
-  const sumCs = numeric.reduce((sum, run) => sum + run.cs, 0) * 10;
-  const aggregateTimeBad = sumCs > elapsed + LB_RUN_CLOCK_SLACK_MS;
+  const aggregateSeen = new Set(seen);
+  const aggregateStarts: number[] = [];
+  let aggregateCs = 0;
+  for (const item of shaped) {
+    if (!validRunShape(item.input)) continue;
+    const run = item.input;
+    if (run.score > LB_MAX_SCORE || run.score < MIN_SCORE || aggregateSeen.has(run.id)) continue;
+    aggregateSeen.add(run.id);
+    const start = intervalStart(run);
+    if (start < 0 || run.endTs > ctx.nowMs + LB_RUN_CLOCK_SLACK_MS) continue;
+    const old = ctx.groupStartMs !== undefined && ctx.groupStartMs !== null && run.endTs < ctx.groupStartMs;
+    const timeline = verifyTimeline(run, ctx);
+    if (run.tl !== undefined || run.fl !== undefined ? !timeline.ok : !scoreOnlyBoundsOk(run)) continue;
+    if (!old && (dailyCounts[utcDay(run.endTs)] ?? 0) >= LB_MAX_RUNS_DAY) continue;
+    aggregateStarts.push(start);
+    aggregateCs += run.cs * 10;
+  }
+  const aggregateEarliestStart = aggregateStarts.length === 0 ? ctx.nowMs : Math.min(...aggregateStarts);
+  const aggregateElapsed = Math.max(0, ctx.nowMs - aggregateEarliestStart);
+  const aggregateTimeBad = aggregateCs > aggregateElapsed + LB_RUN_CLOCK_SLACK_MS;
 
   for (const item of shaped) {
     if (!validRunShape(item.input)) {
@@ -1085,12 +1115,16 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
     const clampTo = Math.max(500, ctx.best * 2);
     const old = ctx.groupStartMs !== undefined && ctx.groupStartMs !== null && end < ctx.groupStartMs;
     const timeline = verifyTimeline(run, ctx);
-
+    const overlaps = overlapsAny(intervals, start, end);
+    const day = utcDay(end);
+    const dailyCapped = (dailyCounts[day] ?? 0) >= LB_MAX_RUNS_DAY;
     if (old) {
       let bestUpdate: LbBestUpdate | null = null;
       if (
         !hidden &&
         timeline.ok &&
+        !overlaps &&
+        !aggregateTimeBad &&
         run.score > ctx.best &&
         ctx.nowMs - end <= (ctx.bestWindowMs ?? LB_BEST_RAISE_MS)
       ) {
@@ -1112,26 +1146,31 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
       continue;
     }
 
-    if (aggregateTimeBad) {
-      pushDrop('time');
-      continue;
-    }
-    if (overlapsAny(intervals, start, end)) {
-      pushDrop('overlap');
-      continue;
-    }
-
-    const day = utcDay(end);
-    if ((dailyCounts[day] ?? 0) >= LB_MAX_RUNS_DAY) {
-      pushDrop('daily_cap');
-      continue;
-    }
-
     if (run.tl !== undefined || run.fl !== undefined) {
       if (!timeline.ok) {
         pushDrop(timeline.reason ?? 'timeline');
         continue;
       }
+    } else if (!scoreOnlyBoundsOk(run)) {
+      pushDrop('bounds');
+      continue;
+    }
+
+    if (aggregateTimeBad) {
+      pushDrop('time');
+      continue;
+    }
+    if (overlaps) {
+      pushDrop('overlap');
+      continue;
+    }
+
+    if (dailyCapped) {
+      pushDrop('daily_cap');
+      continue;
+    }
+
+    if (run.tl !== undefined || run.fl !== undefined) {
       const hard = timeline.anomaly !== null && timeline.anomaly !== undefined && !timeline.anomaly.soft;
       const bestUpdate =
         !hidden && run.score > ctx.best && ctx.nowMs - end <= (ctx.bestWindowMs ?? LB_BEST_RAISE_MS)

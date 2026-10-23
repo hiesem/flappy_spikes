@@ -185,7 +185,7 @@ describe('PRD-2.6 LB1 brackets and ghost supply', () => {
     assert.notEqual(tooLate.ref!.id, '');
   });
 
-  it('a joining player removes the last ghost and does not duplicate an existing real member', () => {
+  it('a joining player removes the lowest-ranked shown ghost and does not duplicate a real member', () => {
     const existing = group({
       memberUids: ['a', 'b'],
       members: { a: member(100, 40, T0 + 1000), b: member(90, 50, T0 + 1000) },
@@ -194,8 +194,8 @@ describe('PRD-2.6 LB1 brackets and ghost supply', () => {
     const r = joinGroup(joinInput('c', { group: existing, nowMs: T0 + 3600 * 1000 }));
     assert.equal(r.created, false);
     assert.deepEqual(r.group!.memberUids, ['a', 'b', 'c']);
-    assert.deepEqual(r.group!.ghosts.map((g) => g.uid), ['g1']);
-    assert.equal(r.removedGhost!.uid, 'g2');
+    assert.deepEqual(r.group!.ghosts.map((g) => g.uid), ['g2']);
+    assert.equal(r.removedGhost!.uid, 'g1');
     const again = joinGroup(joinInput('b', { group: existing, nowMs: T0 + 3600 * 1000 }));
     assert.equal(again.created, false);
     assert.deepEqual(again.group!.memberUids, ['a', 'b']);
@@ -212,6 +212,22 @@ describe('PRD-2.6 LB1 brackets and ghost supply', () => {
     assert.deepEqual(r.group!.memberUids, ['a', 'me']);
     assert.deepEqual(r.group!.ghosts.map((g) => g.uid), ['other']);
     assert.equal(r.removedGhost!.uid, 'me');
+  });
+
+  it('ghost eviction follows the shown order, not the stored order', () => {
+    const existing = group({
+      memberUids: ['real'],
+      members: { real: member(50, 50, T0 + 1000) },
+      ghosts: [ghost('low', [[3600, 10]]), ghost('high', [[3600, 100]])],
+    });
+    const r = joinGroup(joinInput('joiner', { group: existing, nowMs: T0 + 2 * 3600 * 1000 }));
+    assert.deepEqual(rankToday(existing, T0 + 2 * 3600 * 1000, {}).map((entry) => entry.uid), [
+      'high',
+      'real',
+      'low',
+    ]);
+    assert.equal(r.removedGhost!.uid, 'low');
+    assert.deepEqual(r.group!.ghosts.map((ghostRow) => ghostRow.uid), ['high']);
   });
 
   it('an existing member stays in a full group and in its final three hours', () => {
@@ -549,6 +565,23 @@ describe('PRD-2.6 LB3 run checks', () => {
     assert.equal(rb.bestUpdate, null);
   });
 
+  it('score-only runs still pass duration, hoop-count and score bounds', () => {
+    const impossibleHoops = run({ id: 'too-many-hoops', score: 100, hoops: 100, cs: 100 });
+    delete impossibleHoops.tl;
+    delete impossibleHoops.fl;
+    assert.equal(checkLbRun(impossibleHoops, ctx({ best: 100 })).reason, 'bounds');
+
+    const impossibleScore = run({ id: 'too-much-score', score: 100, hoops: 1, cs: 1200 });
+    delete impossibleScore.tl;
+    delete impossibleScore.fl;
+    assert.equal(checkLbRun(impossibleScore, ctx({ best: 100 })).reason, 'bounds');
+
+    const valid = run({ id: 'score-only', score: 30, hoops: 30, cs: 30 * 170 + 80 });
+    delete valid.tl;
+    delete valid.fl;
+    assert.equal(checkLbRun(valid, ctx({ best: 100 })).accepted, true);
+  });
+
   it('new PB, > 2 × best and the top-50 floor make a timeline required', () => {
     const atFloor = run({ score: 200 });
     delete atFloor.tl;
@@ -580,6 +613,39 @@ describe('PRD-2.6 LB3 run checks', () => {
     const within = checkLbRun(run({ score: 150, endTs: T0 + 1000 }), ctx({ nowMs: T0 + 6 * DAY, groupStartMs: T0 + 6 * DAY, best: 100 }));
     assert.equal(within.reason, 'old');
     assert.deepEqual(within.bestUpdate, { score: 150, atMs: T0 + 1000, shadow: false });
+  });
+
+  it('leaderboard timelines use LB_MAX_SCORE, not the versus one-million limit', () => {
+    const entries = 1500;
+    const score = 1_125_750;
+    const values: number[] = [];
+    let remaining = score;
+    let previous = 0;
+    for (let i = 0; i < entries; i++) {
+      const value = Math.min(2 * (i + 1) + 10, previous + 3, remaining - (entries - i - 1));
+      values.push(value);
+      remaining -= value;
+      previous = value;
+    }
+    assert.equal(remaining, 0);
+    const deltas = Array.from({ length: entries }, () => 170);
+    const cs = entries * 170 + 80;
+    const high = run({
+      id: 'high',
+      score,
+      hoops: entries,
+      cs,
+      endTs: T12 - cs * 10,
+      tl: encodeDeltas(deltas),
+      fl: encodeEntries(deltas.map(() => 0), values),
+    });
+    const result = checkLbRun(high, ctx({ best: 1_000_001, nowMs: T12 + 1000 }));
+    assert.equal(result.accepted, true);
+    assert.equal(result.reason, undefined);
+    assert.deepEqual(result.bestUpdate, { score, atMs: high.endTs, shadow: false });
+
+    const small = run({ score: 30 });
+    assert.equal(checkLbRun(small, ctx({ best: 1_000_001 })).accepted, true);
   });
 
   it('a hard anomaly flags and sets a shadow best; a soft jump does not shadow', () => {
@@ -631,6 +697,18 @@ describe('PRD-2.6 LB3 run checks', () => {
     assert.equal(r.bestUpdate, null);
   });
 
+  it('an old BEST candidate still respects overlap', () => {
+    const overlapping = run({ score: 150, endTs: T0 + 1000, cs: 20 * 170 + 80 });
+    const result = checkLbRun(overlapping, {
+      nowMs: T0 + 6 * DAY,
+      best: 100,
+      groupStartMs: T0 + 6 * DAY,
+      intervals: [{ startMs: T0, endMs: T0 + 1000 }],
+    });
+    assert.equal(result.reason, 'old');
+    assert.equal(result.bestUpdate, null);
+  });
+
   it('drops the 401st run of a UTC day and marks t:1 hidden', () => {
     const acceptedDay = 400 - 0;
     const capped = checkLbRun(run({ score: 30 }), ctx({ dailyCount: acceptedDay }));
@@ -650,11 +728,21 @@ describe('PRD-2.6 LB3 run checks', () => {
     const overlap = run({ id: 'overlap', score: 30, endTs: T12 - 55_000 });
     assert.equal(checkLbRuns([first, overlap], ctx({ nowMs: T12 + 1000 })).results[1].reason, 'overlap');
 
-    const longA = run({ id: 'long-a', score: 30, endTs: T12, cs: 600_000 });
-    const longB = run({ id: 'long-b', score: 30, endTs: T12 - 120_000, cs: 600_000 });
+    const longDeltas = Array.from({ length: 30 }, () => 20_000);
+    const longA = run({ id: 'long-a', score: 30, endTs: T12, deltas: longDeltas });
+    const longB = run({ id: 'long-b', score: 30, endTs: T12 - 120_000, deltas: longDeltas });
     const time = checkLbRuns([longA, longB], ctx({ nowMs: T12 + 1000 }));
     assert.equal(time.results[0].reason, 'time');
     assert.equal(time.results[1].reason, 'time');
+  });
+
+  it('duplicate retries do not consume the batch duration allowance', () => {
+    const retry = run({ id: 'retry', endTs: T12 - 100_000, cs: 10_000 });
+    const fresh = run({ id: 'fresh', endTs: T12, cs: 10_000 });
+    const result = checkLbRuns([retry, fresh], ctx({ nowMs: T12 + 1000, seenIds: ['retry'] }));
+    assert.deepEqual(result.accepted, ['fresh']);
+    assert.equal(result.results[0].reason, 'duplicate');
+    assert.equal(result.results[1].accepted, true);
   });
 
   it('clamps or rejects impossible passes using the shared passBound', () => {

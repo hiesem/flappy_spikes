@@ -5,7 +5,7 @@
  */
 import { DocumentReference, DocumentSnapshot, FieldValue, Firestore, Timestamp, Transaction } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
-import { Anomaly, scoreRun } from './anomaly.js';
+import { Anomaly, runFacts, scoreRun } from './anomaly.js';
 import { bracketFor } from './brackets.js';
 import { versusName } from './nickname.js';
 import { checkCustomName, CustomNameReason, poolCustomName } from './customname.js';
@@ -182,6 +182,10 @@ export async function processPlayerWrite(
       const seen = new Set(rate.seen ?? []);
       // PRD-2.5 §3.6 the last scores of runs that passed checkRun (oldest first).
       const scores = Array.isArray(rate.scores) ? rate.scores.filter((x) => typeof x === 'number') : [];
+      // PRD-2.6 E6 the last pass counts of runs that passed checkRun (oldest first).
+      const passHist = Array.isArray(rate.passHist)
+        ? rate.passHist.filter((x) => Number.isInteger(x) && x >= 0)
+        : [];
       let chosen: RunEntry | null = null;
       let last: RateDoc['last'];
       for (const run of fresh) {
@@ -189,7 +193,7 @@ export async function processPlayerWrite(
         if (reason === null) {
           // PRD-2.5 §3.6 (D3) judged whether pooled or rate-limited; never changes the outcome.
           try {
-            const a = scoreRun(run, scores);
+            const a = scoreRun(run, passHist);
             if (a) anomalies.push({ run, a });
           } catch (err) {
             logger.error('versusFlag: scoring failed', { uid, runId: run.runId, err: String(err) });
@@ -212,6 +216,8 @@ export async function processPlayerWrite(
           result.accepted.push(run.runId);
           if (!chosen) chosen = run;
           last = { runId: run.runId, status: 'accepted', pool: pid };
+          const facts = runFacts(run);
+          if (facts) passHist.push(facts.passes);
         } else {
           result.rejected.push({ runId: run.runId, reason });
           if (reason !== 'duplicate') last = { runId: run.runId, status: 'rejected', reason };
@@ -219,6 +225,7 @@ export async function processPlayerWrite(
       }
       rate.seen = [...seen].slice(-SEEN_KEEP);
       rate.scores = scores.slice(-SCORE_HISTORY);
+      rate.passHist = passHist.slice(-10);
       if (last) rate.last = last;
       tx.set(rateRef, rate);
       if (chosen) {

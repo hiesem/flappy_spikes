@@ -87,9 +87,21 @@ describe('PRD-2.5 §3.6 anomaly: honest shapes raise nothing', () => {
     assertHonest(makeRun({ score: 5 }), []);
   });
 
-  it('a big honest improvement with a short history is not judged; ≥ 500 needs > 5 × the median', () => {
-    assertHonest(perfectRun(40), [10, 12]); // score 819, 2 history entries
-    assertHonest(perfectRun(40), [200, 180, 220, 190, 210]); // 819 < 5 × 200
+  it('honest 20 → 60 → 140 hoops, and 140 after a full earlier history, raise no jump', () => {
+    const passHist: number[] = [];
+    for (const passes of [20, 60, 140]) {
+      const run = perfectRun(passes);
+      assert.equal(scoreRun(run, passHist), null, `${passes} hoops`);
+      passHist.push(passes);
+    }
+    // 140 > 4 × 20, but below the 150-pass minimum.
+    assertHonest(perfectRun(140), [20, 20, 20, 20, 20]);
+  });
+
+  it('a big point jump from the uncapped streak with modest passes is not judged', () => {
+    const run = perfectRun(40); // 821 points, but only 40 passes
+    assert.ok(run.score > 500);
+    assertHonest(run, [1, 1, 1, 1, 1]);
   });
 });
 
@@ -112,7 +124,7 @@ describe('PRD-2.5 §3.6 anomaly: honest game timelines (fixtures/honest_runs.jso
   });
 
   it('every honest run passes checkRun and raises zero flags (also judged with its predecessors as history)', () => {
-    const hist: number[] = [];
+    const passHist: number[] = [];
     let minMedian = Infinity;
     let maxPassRatio = 0;
     for (const f of runs) {
@@ -131,10 +143,10 @@ describe('PRD-2.5 §3.6 anomaly: honest game timelines (fixtures/honest_runs.jso
       };
       assert.equal(checkRun(run, run.best), null, f.name);
       assert.equal(scoreRun(run, []), null, `${f.name}: ${JSON.stringify(scoreRun(run, []))}`);
-      const withHist = scoreRun(run, hist.slice(-10));
-      assert.ok(withHist === null || withHist.soft, `${f.name} (history): ${JSON.stringify(withHist)}`);
-      hist.push(run.score);
+      const withHist = scoreRun(run, passHist.slice(-10));
+      assert.equal(withHist, null, `${f.name} (history): ${JSON.stringify(withHist)}`);
       const facts = runFacts(run)!;
+      passHist.push(facts.passes);
       if (facts.paceGaps >= PACE_MIN_GAPS) minMedian = Math.min(minMedian, facts.paceMedianCs!);
       maxPassRatio = Math.max(maxPassRatio, facts.passes / facts.passBound);
     }
@@ -176,15 +188,23 @@ describe('PRD-2.5 §3.6 anomaly: crafted cheat shapes', () => {
     assert.equal(scoreRun(r, [])?.signals.passes, 200);
   });
 
-  it('jump (soft): ≥ 500 and > 5 × the median of ≥ 5 earlier scores', () => {
-    const r = perfectRun(40); // 819
+  it('jump (soft): ≥ 150 passes and > 4 × the median of ≥ 5 earlier pass counts', () => {
+    const r = perfectRun(150);
     const a = scoreRun(r, [20, 30, 25, 40, 35]);
     assert.equal(a?.signals.jump, 30);
     assert.equal(a?.soft, true);
+    // The threshold is strict: 150 is not more than 4 × a median of 37.5.
+    assert.equal(scoreRun(r, [20, 20, 20, 55, 55, 55]), null);
+    assert.equal(scoreRun(perfectRun(151), [20, 20, 20, 55, 55, 55])?.signals.jump, 37.5);
+    // Fewer than five earlier pass counts are never judged.
+    assert.equal(scoreRun(perfectRun(200), [1, 1, 1, 1]), null);
+    // 149 passes stay below the minimum even with a tiny median.
+    assert.equal(scoreRun(perfectRun(149), [1, 1, 1, 1, 1]), null);
     // Combined with a hard signal the flag is hard.
-    const both = scoreRun(shaped([[200, P, 500], [180, P, 501]]), [20, 30, 25, 40, 35]);
-    assert.ok(both?.signals.jump !== undefined && both.signals.streak_jump === 500);
-    assert.equal(both?.soft, false);
+    const hard = shaped([...Array.from({ length: 150 }, () => [170, P, 1] as [number, number, number]), [170, P, 9]]);
+    const bothHard = scoreRun(hard, [1, 1, 1, 1, 1]);
+    assert.ok(bothHard?.signals.jump !== undefined && bothHard.signals.streak_jump === 9);
+    assert.equal(bothHard?.soft, false);
   });
 
   it('a malformed timeline is not judged here (checkRun rejects it)', () => {

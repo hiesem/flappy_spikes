@@ -2,7 +2,7 @@
  * Flappy Spikes versus backend (PRD-2 §3.13, ARCH §6.3). 2nd gen, europe-west1
  * (inside the eur3 multi-region of the Firestore database).
  */
-import { initializeApp } from 'firebase-admin/app';
+import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { setGlobalOptions, logger } from 'firebase-functions/v2';
@@ -37,7 +37,7 @@ import {
 } from './board_store.js';
 import { deleteBoardData } from './board_delete.js';
 
-initializeApp();
+if (getApps().length === 0) initializeApp();
 
 /** Region next to the eur3 database; small caps keep the Blaze bill near zero (§3.13 costs). */
 const REGION = 'europe-west1';

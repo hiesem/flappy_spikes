@@ -137,24 +137,38 @@ describe('PRD-2.6 wave 0 LB3 callable exports', () => {
     assert.ok(settle, 'lbSettleGroups is exported');
     assert.deepEqual(settle!.region, ['europe-west1']);
     assert.equal(settle!.maxInstances, 10);
-    assert.deepEqual(settle!.scheduleTrigger, {
-      schedule: 'every 10 minutes',
-      retryConfig: {},
-      timeZone: 'Etc/UTC',
-    });
+    const schedule = settle!.scheduleTrigger as { schedule?: string; timeZone?: string } | undefined;
+    assert.deepEqual(
+      {
+        schedule: schedule?.schedule,
+        timeZone: schedule?.timeZone,
+      },
+      {
+        schedule: 'every 10 minutes',
+        timeZone: 'Etc/UTC',
+      },
+    );
   });
 
-  it('refuses an unauthenticated call through the functions emulator', async () => {
+  it('refuses a call without auth or App Check through the functions emulator', async () => {
     const base = `http://127.0.0.1:5001/${PROJECT}/europe-west1`;
     const appCheck = fakeJwt({ sub: '1:512525012529:android:8bb85c213b543c6487cf10', aud: [`projects/${PROJECT}`] });
+    const idToken = (uid: string) =>
+      fakeJwt({ sub: uid, user_id: uid, aud: PROJECT, iss: `https://securetoken.google.com/${PROJECT}`, iat: 1, exp: 4e9 });
     for (const fn of ['lbSubmitRun', 'lbGetBoard', 'lbClaimGift']) {
-      const res = await fetch(`${base}/${fn}`, {
+      const unauthenticated = await fetch(`${base}/${fn}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Firebase-AppCheck': appCheck },
         body: JSON.stringify({ data: {} }),
       });
-      assert.equal(res.status, 401, `${fn}: ${await res.clone().text()}`);
-      const body = (await res.json()) as { error?: { status?: string } };
+      assert.equal(unauthenticated.status, 401, `${fn} auth: ${await unauthenticated.clone().text()}`);
+      const withoutAppCheck = await fetch(`${base}/${fn}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken('lb-skeleton')}` },
+        body: JSON.stringify({ data: {} }),
+      });
+      assert.equal(withoutAppCheck.status, 401, `${fn} App Check: ${await withoutAppCheck.clone().text()}`);
+      const body = (await unauthenticated.json()) as { error?: { status?: string } };
       assert.equal(body.error?.status, 'UNAUTHENTICATED');
     }
   });

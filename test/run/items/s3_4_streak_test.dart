@@ -96,12 +96,9 @@ void main() {
         for (var i = 0; i < 10; i++) 'perfect3',
       ]);
       expect(sfx, isNot(contains('point')));
-      // §6 perfect_pass (tier).
-      final tiers = [
-        for (final e in spy.events.where((e) => e.$1 == 'perfect_pass'))
-          e.$2!['tier'],
-      ];
-      expect(tiers, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10]);
+      // PRD-2.6 WP-A1: no per-pass perfect_pass event any more; its tier
+      // counts are sent once in run_extra at run end.
+      expect(spy.events.where((e) => e.$1 == 'perfect_pass'), isEmpty);
       // §2.4 StreakChanged per pass, TierChanged up to the cap only.
       final log = run.events.log;
       expect(log.whereType<StreakChanged>(), hasLength(12));

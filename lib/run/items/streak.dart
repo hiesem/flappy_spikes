@@ -40,10 +40,11 @@ import '../run_scaled_world.dart';
 /// **Per perfect pass** (the §3.0.9 masters, never redrawn here): the
 /// streak banner #7 ([BannerHost.showStreak], one host shared with the
 /// FEVER / element banners), the tier sound `perfect_1/2/3`, the small
-/// burst #9 at the bird ([PerfectBurst], screen space like the §5.3 mock)
-/// and `perfect_pass` (tier). The "+2 coin" popup #8 and the coins belong to
-/// `ScoringFeature`; a graze keeps `point` + the ring pulse there. **No
-/// screen flash** (#13).
+/// burst #9 at the bird ([PerfectBurst], screen space like the §5.3 mock).
+/// PRD-2.6 WP-A: there is no per-pass `perfect_pass` event; the analytics
+/// router counts the tiers per run for `run_extra`. The "+2 coin" popup #8
+/// and the coins belong to `ScoringFeature`; a graze keeps `point` + the
+/// ring pulse there. **No screen flash** (#13).
 ///
 /// **The ring field** (§3.5): every hoop whose kind `usesTierLook` gets one
 /// [RingTierFx] per ring (#11: sparkles / flame flicks in front, the glow
@@ -154,7 +155,6 @@ class StreakFeature extends RunFeature {
           : Offset(RunConfig.birdX, c.viewHeight / 2);
       PerfectBurst.emit(burst, at, tier, c.cosmetic);
     }
-    c.track('perfect_pass', {'tier': tier});
   }
 
   // region WP-3d — §3.21 the pair FEVER gift: streak at least ×5
@@ -406,8 +406,7 @@ class _TrailComponent extends Component with BirdAttachment {
     if (_pCount > 0) {
       final h = _pHead;
       final ddx = x - _px[h], ddy = y - _py[h];
-      if (ddx * ddx + ddy * ddy <
-          TrailConfig.pathStep * TrailConfig.pathStep) {
+      if (ddx * ddx + ddy * ddy < TrailConfig.pathStep * TrailConfig.pathStep) {
         return;
       }
     }

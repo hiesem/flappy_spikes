@@ -5,6 +5,9 @@ already filled; `node` / `npm` / `firebase` are on PATH. Dependencies are instal
 `flutter pub get --offline` only if you must, never add a package without the issue saying so. Run
 `bash scripts/verify.sh` before you stop (it runs `flutter analyze`, the functions build, the scoped `flutter test`
 and, when `functions/` changed, `npm --prefix functions test` in the Firebase emulators under a demo project).
+Run the functions tests ONLY as `npm --prefix functions test [-- test/<file>.test.ts]`: never start
+`firebase emulators:exec` / `emulators:start` yourself (other lanes share the fixed emulator ports; the npm script
+waits for its turn, a hand-started suite breaks their runs).
 
 **Never:** `adb`, devices or emulators, `firebase deploy`, gcloud, Play Console / App Store Connect, real Firebase
 project calls, publishing anything. Never touch `android/upload-keystore.jks`, `android/app/key.properties` or any

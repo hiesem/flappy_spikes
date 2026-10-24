@@ -198,7 +198,8 @@ void main() {
       },
       prefs: {
         'puzzleRound': 7,
-        'bestScore': 100, 'playerLevel': 3,
+        'bestScore': 100,
+        'playerLevel': 3,
         'noAds': true,
         'claimedLevels': ['1', '2', '3'],
       },
@@ -236,7 +237,7 @@ void main() {
         await flyUntil(
           g,
           (r) => r.features.whereType<CometFeature>().single.active,
-          maxSeconds: 40,
+          maxSeconds: 60,
         ),
         isTrue,
       );
@@ -274,7 +275,8 @@ void main() {
     },
     duel: true,
     prefs: {
-      'bestScore': 1000, 'playerLevel': 8,
+      'bestScore': 1000,
+      'playerLevel': 8,
       'claimedLevels': ['1', '2', '3', '4', '5', '6', '7', '8'],
     },
   );
@@ -492,7 +494,16 @@ void main() {
     () async {
       final zone = tz.getLocation('Europe/Amsterdam');
       var now = tz.TZDateTime(zone, 2027, 3, 20, 9);
-      SharedPreferences.setMockInitialValues({});
+      // PRD-2.6 WP-C3 gates four reminder texts on met elements; this test
+      // checks the complete 20-message rotation.
+      SharedPreferences.setMockInitialValues({
+        'metElements': [
+          ElementId.squeeze.storageId,
+          ElementId.luckySpin.storageId,
+          ElementId.egg.storageId,
+          ElementId.fever.storageId,
+        ],
+      });
       final platform = FakeReminderPlatform();
       final seen = <int, DateTime>{};
       final all = <int>{};

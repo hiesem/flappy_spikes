@@ -21,7 +21,12 @@ void main() {
   for (final height in [568.0, 711.0]) {
     for (final seed in [3, 11, 29]) {
       FlameTester<FlappySpikesGame>(
-        () => createRunTestGame(worldHeight: height, seed: seed),
+        () => createRunTestGame(
+          // PRD-2.6 C1 opens squeezes from the sixth game.
+          prefs: {'gamesPlayed': 5},
+          worldHeight: height,
+          seed: seed,
+        ),
         gameSize: Vector2(320, height),
       ).testGameWidget(
         '§3.17 squeeze forced back to back: the autopilot passes ≥ 12 hoops '

@@ -203,29 +203,64 @@ function raceAfterPlayersSourceSnapshot(original: Firestore, concurrent: () => P
   });
 }
 
-/** Run [concurrent] before the import's lbBest rebuild transaction. */
-function raceBeforeImportCacheRebuild(original: Firestore, concurrent: () => Promise<void>): Firestore {
-  let commits = 0;
+/**
+ * Start a real concurrent writer after the cache transaction has read its
+ * snapshot and queued its publication, but before that transaction commits.
+ * Do not await the writer inside the transaction: Firestore's pessimistic
+ * locks may serialize it after the cache commit. Await it before asserting.
+ * Identify the cache by its write path, never by a transaction invocation count.
+ */
+function raceAfterCacheSnapshot(original: Firestore, concurrent: () => Promise<void>) {
+  let pending: Promise<void> | undefined;
   let fired = false;
-  return new Proxy(original, {
+  const racingDb = new Proxy(original, {
     get(target, property) {
       const value = Reflect.get(target, property, target);
       if (property !== 'runTransaction') {
         return typeof value === 'function' ? value.bind(target) : value;
       }
-      return async (...args: unknown[]) => {
-        const transactionIndex = ++commits;
-        // The first transaction commits the imported row; the second is the
-        // cache rebuild. Delete before that rebuild's lbPlayers snapshot.
-        if (transactionIndex === 2 && !fired) {
-          fired = true;
-          await concurrent();
-        }
-        const result = await (value as (...a: unknown[]) => Promise<unknown>).apply(target, args);
-        return result;
-      };
+      return (callback: (tx: any) => Promise<unknown>, ...options: unknown[]) =>
+        value.call(target, async (tx: any) => {
+          let publishesCache = false;
+          let readPlayerSnapshot = false;
+          const wrapped = new Proxy(tx, {
+            get(txTarget, txProperty) {
+              const txValue = Reflect.get(txTarget, txProperty, txTarget);
+              if (txProperty === 'get') {
+                return async (ref: { path?: string }, ...args: unknown[]) => {
+                  const snapshot = await txValue.call(txTarget, ref, ...args);
+                  if (ref.path?.startsWith('lbPlayers/')) readPlayerSnapshot = true;
+                  return snapshot;
+                };
+              }
+              if (txProperty === 'set') {
+                return (ref: { path: string }, ...args: unknown[]) => {
+                  if (ref.path === 'lbBest/global') publishesCache = true;
+                  return txValue.call(txTarget, ref, ...args);
+                };
+              }
+              return typeof txValue === 'function' ? txValue.bind(txTarget) : txValue;
+            },
+          });
+          const result = await callback(wrapped);
+          if (publishesCache && !fired) {
+            assert.ok(readPlayerSnapshot, 'cache publication must read players in its transaction');
+            fired = true;
+            pending = concurrent();
+            // Attach a handler immediately; surface any failure in finish().
+            void pending.catch(() => {});
+          }
+          return result;
+        }, ...options);
     },
   });
+  return {
+    db: racingDb,
+    async finish() {
+      assert.ok(fired, 'the race must start after the cache transaction snapshot');
+      await pending;
+    },
+  };
 }
 
 function liveRun(score: number, endTs = NOW - 1000) {
@@ -546,6 +581,28 @@ describe('PRD-2.6 C8 verified best-run import', () => {
     assert.deepEqual(meta?.keepUids, ['owner-a', 'owner-b']);
   });
 
+  it('keeps cleanedAt on a no-op rerun after a kept imported player has played', async () => {
+    const uid = uniq('import-played-cleanup');
+    const options = { keepUids: [uid], apply: true, nowMs: NOW, log: () => {} };
+    await seedPlayers(db, [
+      [uid, player({ best: 40, bestRun: makeRun({ score: 40, tsMs: T0, best: 40 }), recent: [] })],
+    ]);
+    await importLeaderboard(db, options);
+    await lbSubmitRun(db, uid, {
+      runs: [liveRun(95)], name: 'BraveOwl123', look: LOOK, platform: 'android',
+    }, NOW);
+    await cleanupLeaderboard(db, options);
+    const before = (await db.collection('lbPlayers').doc(uid).get()).data();
+    assert.equal(before?.src, 'import');
+    for (let day = 1; day <= 2; day++) {
+      const result = await importLeaderboard(db, { ...options, nowMs: NOW + day * DAY });
+      assert.equal(result.imported, 0);
+      assert.equal(result.preservedPlay, 1);
+      assert.deepEqual((await db.collection('lbPlayers').doc(uid).get()).data(), before);
+      assert.equal((await db.collection('lbMeta').doc('import').get()).data()?.cleanedAt?.toMillis(), NOW);
+    }
+  });
+
   it('preserves a live submission that commits during the import and rebuilds lbBest from committed data', async () => {
     const uid = uniq('import-live-race');
     await seedPlayers(db, [
@@ -668,14 +725,14 @@ describe('PRD-2.6 C8 verified best-run import', () => {
     );
   });
 
-  it('retries the BEST rebuild from fresh data when a live submission commits after its snapshot', async () => {
+  it('serializes the BEST rebuild with a live submission started after its snapshot', async () => {
     const uid = uniq('import-live-cache-race');
     await seedPlayers(db, [
       [uid, player({ best: 40, bestRun: makeRun({ score: 40, tsMs: T0, best: 40 }), recent: [] })],
     ]);
     await db.collection('lbPlayers').doc(uid).set(imported(uid, 40));
     let live: Awaited<ReturnType<typeof lbSubmitRun>> | undefined;
-    const racingDb = raceBeforeImportCacheRebuild(db, async () => {
+    const racingDb = raceAfterCacheSnapshot(db, async () => {
       live = await lbSubmitRun(
         db,
         uid,
@@ -684,7 +741,8 @@ describe('PRD-2.6 C8 verified best-run import', () => {
       );
     });
 
-    await importLeaderboard(racingDb, { keepUids: ['owner-a'], apply: true, nowMs: NOW, log: () => {} });
+    await importLeaderboard(racingDb.db, { keepUids: ['owner-a'], apply: true, nowMs: NOW, log: () => {} });
+    await racingDb.finish();
     assert.ok(live);
     const stored = (await db.collection('lbPlayers').doc(uid).get()).data() as LbPlayerDoc;
     assert.equal(stored.best, 90);
@@ -737,11 +795,12 @@ describe('PRD-2.6 C8 verified best-run import', () => {
       [uid, player({ best: 71, bestRun: makeRun({ score: 71, tsMs: T0 }), recent: [] })],
       [other, player({ best: 72, bestRun: makeRun({ score: 72, tsMs: T0 }), recent: [] })],
     ]);
-    const racingDb = raceBeforeImportCacheRebuild(db, async () => {
+    const racingDb = raceAfterCacheSnapshot(db, async () => {
       await deleteBoardData(db, uid, NOW);
     });
 
-    await importLeaderboard(racingDb, { keepUids: [], apply: true, nowMs: NOW, log: () => {} });
+    await importLeaderboard(racingDb.db, { keepUids: [], apply: true, nowMs: NOW, log: () => {} });
+    await racingDb.finish();
     assert.equal((await db.collection(LB_TOMB_COLLECTION).doc(uid).get()).exists, true);
     assert.equal((await db.collection('lbPlayers').doc(uid).get()).exists, false);
     const best = (await db.collection('lbBest').doc('global').get()).data() as {

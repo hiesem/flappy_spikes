@@ -304,6 +304,11 @@ async function commitImportedPlayer(
     // not enough to check that field. Any state change since the planning read
     // means the live writer owns this row; never replace it with stale data.
     if (!isDeepStrictEqual(current, expected)) return 'preservedPlay';
+    // Invalidate the release gate atomically with an actual player write.
+    // Planning alone may overestimate writes when a live player is preserved.
+    tx.set(db.collection(LB_META_COLLECTION).doc('import'), {
+      cleanedAt: FieldValue.delete(),
+    }, { merge: true });
     tx.set(playerRef, desired);
     return 'written';
   });
@@ -516,7 +521,6 @@ export async function importLeaderboard(db: Firestore, opts: ImportOptions): Pro
   const existing = await readLbPlayers(db);
   const existingByUid = new Map(existing.map((row) => [row.uid, row.data]));
   const planned = new Map<string, LbPlayerDoc>();
-  const changed = new Map<string, LbPlayerDoc>();
   const sourceCount = { bestRun: 0, recent: 0 };
   let skipped = 0;
   let tombstoned = 0;
@@ -547,7 +551,6 @@ export async function importLeaderboard(db: Firestore, opts: ImportOptions): Pro
     const next = importedPlayerDoc(uid, choice, nowMs);
     planned.set(uid, next);
     if (sameImportedPlayer(existingByUid.get(uid), next, nowMs)) planUnchanged++;
-    else changed.set(uid, next);
     sourceCount[choice.source]++;
   }
 
@@ -571,12 +574,15 @@ export async function importLeaderboard(db: Firestore, opts: ImportOptions): Pro
   let resultBest = best;
   if (apply) {
     const metaRef = db.collection(LB_META_COLLECTION).doc('import');
-    const metaBeforeSnap = await metaRef.get();
-    const metaBefore = (metaBeforeSnap.exists ? metaBeforeSnap.data() : {}) as Partial<LbMetaDoc>;
-    const keepListChanged = metaBeforeSnap.exists && !sameUidList(metaBefore.keepUids ?? [], opts.keepUids);
-    if (changed.size > 0 || keepListChanged) {
-      await metaRef.set({ cleanedAt: FieldValue.delete() }, { merge: true });
-    }
+    // A changed keep-list invalidates cleanup even if no players are written.
+    // Publish the list and invalidate its gate in the same transaction.
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(metaRef);
+      const meta = snap.data() as Partial<LbMetaDoc> | undefined;
+      if (snap.exists && !sameUidList(meta?.keepUids ?? [], opts.keepUids)) {
+        tx.set(metaRef, { keepUids: opts.keepUids, cleanedAt: FieldValue.delete() }, { merge: true });
+      }
+    });
 
     let written = 0;
     let unchanged = 0;
@@ -601,24 +607,28 @@ export async function importLeaderboard(db: Firestore, opts: ImportOptions): Pro
     if (bestNeedsWrite) resultBest = await rebuildBestFromCommitted(db, nowMs);
     else resultBest = existingBest ?? committedBest;
 
-    const metaSnap = await metaRef.get();
-    const meta = (metaSnap.exists ? metaSnap.data() : {}) as Partial<LbMetaDoc>;
-    const metaNeedsWrite =
-      written > 0 ||
-      !metaSnap.exists ||
-      meta.ranAt === undefined ||
-      meta.count !== planned.size ||
-      !sameUidList(meta.keepUids ?? [], opts.keepUids);
-    if (metaNeedsWrite) {
-      const nextMeta: Record<string, unknown> = {
-        ranAt: written > 0 || meta.ranAt === undefined ? Timestamp.fromMillis(nowMs) : meta.ranAt,
-        count: planned.size,
-        keepUids: opts.keepUids,
-      };
-      // Only new / changed imported data invalidates an earlier cleanup gate.
-      if (written > 0 || keepListChanged) nextMeta.cleanedAt = FieldValue.delete();
-      await metaRef.set(nextMeta, { merge: true });
-    }
+    await db.runTransaction(async (tx) => {
+      const metaSnap = await tx.get(metaRef);
+      const meta = (metaSnap.data() ?? {}) as Partial<LbMetaDoc>;
+      const keepListChanged = !sameUidList(meta.keepUids ?? [], opts.keepUids);
+      const metaNeedsWrite =
+        written > 0 ||
+        !metaSnap.exists ||
+        meta.ranAt === undefined ||
+        meta.count !== planned.size ||
+        keepListChanged;
+      if (metaNeedsWrite) {
+        const nextMeta: Record<string, unknown> = {
+          ranAt: written > 0 || meta.ranAt === undefined ? Timestamp.fromMillis(nowMs) : meta.ranAt,
+          count: planned.size,
+          keepUids: opts.keepUids,
+        };
+        // Player writes already cleared this atomically. Do not clear a cleanup
+        // completed since those writes merely because final metadata is due.
+        if (keepListChanged) nextMeta.cleanedAt = FieldValue.delete();
+        tx.set(metaRef, nextMeta, { merge: true });
+      }
+    });
     logLine(
       opts,
       written === 0

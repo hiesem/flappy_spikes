@@ -37,14 +37,15 @@ List<(SlotPlan, GapPlan)> fly(
 /// PRD-2.3 §14.4 difficulty and §14.5 rides (all by hoop index).
 void main() {
   group('§14.4 curves', () {
-    test('opening 118 at hoop 0, 118 at hoop 1, 81 at hoop 50 and 66 from '
-        'hoop 100; the ride size is the same curve (PRD-2.4 §2)', () {
+    test('opening 118 at hoop 0, 118 at hoop 1, 83 at hoop 50 and 70 from '
+        'hoop 150; the ride size is the same curve (PRD-2.4 §2)', () {
       expect(RunConfig.openingFor(0), 118);
       expect(RunConfig.openingFor(1), 118);
-      expect(RunConfig.openingFor(50), closeTo(81, .2));
-      expect(RunConfig.openingFor(70), closeTo(73.5, 1e-9));
-      expect(RunConfig.openingFor(100), 66);
-      expect(RunConfig.openingFor(300), 66);
+      expect(RunConfig.openingFor(50), 83);
+      expect(RunConfig.openingFor(70), closeTo(76.7, .04));
+      expect(RunConfig.openingFor(100), 72.5);
+      expect(RunConfig.openingFor(150), 70);
+      expect(RunConfig.openingFor(300), 70);
     });
 
     test('speed 150, 172.5 and 187.5 at hoops 0, 50 and 150, and 187.5 at '
@@ -56,31 +57,32 @@ void main() {
       expect(RunConfig.cruise(100), closeTo(180, 1e-9));
     });
 
-    test('the moving-hoop chance at every key (a jump at hoop 20, then a '
-        'ramp); tilt keeps the 2.2 rows', () {
+    test('the moving-hoop chance at every key (a jump at hoop 25, then a '
+        'ramp); tilt follows the D2 curve', () {
       final t = DirectorTables.prd2;
       expect(t.movingChance(0), 0);
-      expect(t.movingChance(19), 0);
-      expect(t.movingChance(20), .15);
-      expect(t.movingChance(35), .40);
-      expect(t.movingChance(60), .60);
-      expect(t.movingChance(80), .75);
-      expect(t.movingChance(200), .75);
-      expect(t.movingChance(47), closeTo(.40 + .20 * 12 / 25, 1e-9));
+      expect(t.movingChance(24), 0);
+      expect(t.movingChance(25), .15);
+      expect(t.movingChance(34), .15);
+      expect(t.movingChance(35), .25);
+      expect(t.movingChance(60), closeTo(.42, 1e-9));
+      expect(t.movingChance(100), .52);
+      expect(t.movingChance(150), .58);
+      expect(t.movingChance(200), .58);
+      expect(t.movingChance(47), closeTo(.25 + .17 * 12 / 25, 1e-9));
       for (final (i, v) in [
         (0, 0.0),
         (9, 0.0),
         (10, .30),
-        (19, .30),
-        (20, .50),
-        (34, .50),
-        (35, .60),
-        (44, .60),
-        (45, .78),
-        (99, .78),
+        (49, .35),
+        (50, .50),
+        (99, .598),
+        (100, .60),
+        (149, .649),
+        (150, .65),
+        (250, .65),
       ]) {
         expect(t.tiltChance(i), v, reason: 'hoop $i');
-        expect(t.tiltChance(i), t.bandFor(i).tilt, reason: 'hoop $i');
       }
     });
 
@@ -104,21 +106,21 @@ void main() {
     });
 
     test('over seeded runs the moving rate follows the curve (none before '
-        'hoop 20)', () {
+        'hoop 25)', () {
       var early = 0, mid = 0, midN = 0;
       for (var seed = 1; seed <= 120; seed++) {
         for (final (s, _) in fly(director(seed: seed), 34)) {
           if (s.kind != HoopKindId.normal || s.cometHang) continue;
-          if (s.index < 20 && s.motion != null) early++;
-          if (s.index >= 20 && s.index < 35) {
+          if (s.index < 25 && s.motion != null) early++;
+          if (s.index >= 25 && s.index < 35) {
             midN++;
             if (s.motion != null) mid++;
           }
         }
       }
       expect(early, 0);
-      // 0.15 → 0.40 over hoops 20–34 (≈ 0.26 on average).
-      expect(mid / midN, inInclusiveRange(.18, .34));
+      // The chance is a 0.15 plateau over hoops 25–34.
+      expect(mid / midN, inInclusiveRange(.08, .23));
     });
   });
 

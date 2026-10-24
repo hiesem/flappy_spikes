@@ -357,7 +357,9 @@ class RunDirector {
     _cometLockedEnd = endTrackX;
     _cometStations = stations;
     _cometAfterMin = endTrackX + RunConfig.cometAfterGap;
-    _nextX = stations.isNotEmpty ? stations.first : max(_nextX, _cometAfterMin!);
+    _nextX = stations.isNotEmpty
+        ? stations.first
+        : max(_nextX, _cometAfterMin!);
     // endregion WP-A
   }
 
@@ -749,7 +751,6 @@ class RunDirector {
     required double Function(double, [double]) cap,
   }) {
     final r = rng.layout;
-    final band = ctx.band;
     var opening = openingFor(i);
     var extraMargin = 0.0;
     if (kind == HoopKindId.saw) opening += RunConfig.sawExtraOpening;
@@ -763,8 +764,16 @@ class RunDirector {
     if (kind == HoopKindId.pair) extraMargin = pairO / 2;
     // PRD-2.3 §0 item 3 / §10.2: hoop 0 stays 118, also with Big Hoops.
     opening = cap(opening * _bigMult(i, ctx), extraMargin);
-    var y = _layout.nextCentre(i, ctx, opening, extra: extraMargin);
-    final maxJump = tables.bandFor(i).dy.$3 * band;
+    final hardFollowUp = _layout.takeHardFollowUp();
+    var y = _layout.nextCentre(
+      i,
+      ctx,
+      opening,
+      extra: extraMargin,
+      hardFollowUp: hardFollowUp,
+    );
+    final maxJump = _layout.maxDy(i, ctx, hardFollowUp: hardFollowUp);
+    final approachDy = y - (prevY ?? y);
 
     Object? extra;
     var advance = spacing;
@@ -945,7 +954,20 @@ class RunDirector {
             opening,
             force: forceMod == ElementId.movingRing,
           );
-          if (motion?.type == MotionType.swing) tilt = 0;
+        }
+        var tiltLimit = RunConfig.maxTiltDeg;
+        if (motion != null) {
+          tiltLimit = i >= 150 ? 30 : 15;
+        } else if (ctx.squeezeWindow && i < 150) {
+          tiltLimit = 15;
+        }
+        tilt = _layout.alignedTilt(tilt, approachDy, tiltLimit);
+        _layout.noteModifiers(motion: motion, tiltDeg: tilt);
+        if (tilt.abs() == 45) {
+          opening = cap(
+            opening + TuningValues.current.i('tilt45_extra_opening'),
+            extraMargin,
+          );
         }
         if (tilt != 0) {
           _count('tilted');

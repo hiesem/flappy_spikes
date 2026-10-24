@@ -12,10 +12,9 @@ import 'director_tables.dart';
 abstract final class LayoutConfig {
   // --- §3.0.2 the ramp -------------------------------------------------------
 
-  /// §3.0.2 Hoop layout ramp, one row per hoop-index band (ascending `from`):
-  /// centre range and |Δy| (median, p90, max) as fractions of the band
-  /// between the tooth lines, tilt chance + tilt-step weights (degrees,
-  /// positive = top leans right), moving chance.
+  /// §3.0.2 / PRD-2.6 D2 hoop layout ramp, one row per hoop-index band
+  /// (ascending `from`): centre range as a fraction of the band and |Δy|
+  /// (median, p90, max) as a fraction of `dyRefBand`.
   static const List<LayoutBand> bands = [
     LayoutBand(
       from: 0,
@@ -36,36 +35,58 @@ abstract final class LayoutConfig {
     LayoutBand(
       from: 10,
       centre: (0.30, 0.69),
-      dy: (0.09, 0.30, 0.38),
+      dy: (0.11, 0.27, 0.35),
       tilt: 0.30,
-      tiltWeights: {-10: 6, 15: 4},
+      tiltWeights: {10: 6, 15: 4},
       moving: 0,
     ),
     LayoutBand(
       from: 20,
-      centre: (0.27, 0.69),
+      centre: (0.27, 0.70),
       dy: (0.12, 0.31, 0.38),
       tilt: 0.50,
-      tiltWeights: {-10: 35, 15: 30, 30: 25, -20: 10},
-      moving: 0.06,
-    ),
-    LayoutBand(
-      from: 35,
-      centre: (0.24, 0.72),
-      dy: (0.14, 0.33, 0.42),
-      tilt: 0.60,
-      tiltWeights: {-10: 25, 15: 20, 30: 30, -20: 10, 45: 15},
+      tiltWeights: {10: 30, 15: 30, 20: 20, 30: 20},
       moving: 0.15,
     ),
     LayoutBand(
-      from: 45,
-      centre: (0.16, 0.76),
-      dy: (0.15, 0.38, 0.52),
-      tilt: 0.78,
-      tiltWeights: {-20: 20, -10: 10, 15: 10, 30: 30, 45: 30},
-      moving: 0.40,
+      from: 40,
+      centre: (0.24, 0.73),
+      dy: (0.14, 0.33, 0.42),
+      tilt: 0.50,
+      tiltWeights: {10: 30, 15: 30, 20: 20, 30: 20},
+      moving: 0.25,
+    ),
+    LayoutBand(
+      from: 65,
+      centre: (0.20, 0.76),
+      dy: (0.15, 0.35, 0.46),
+      tilt: 0.60,
+      tiltWeights: {10: 20, 15: 20, 20: 15, 30: 30, 45: 15},
+      moving: 0.42,
+    ),
+    LayoutBand(
+      from: 100,
+      centre: (0.16, 0.78),
+      dy: (0.15, 0.37, 0.50),
+      tilt: 0.65,
+      tiltWeights: {10: 15, 15: 15, 20: 15, 30: 30, 45: 25},
+      moving: 0.52,
     ),
   ];
+
+  /// PRD-2.6 D2 tilt-magnitude rows, independent of the Δy row boundaries.
+  static const Map<int, Map<int, int>> tiltRows = {
+    10: {10: 6, 15: 4},
+    50: {10: 30, 15: 30, 20: 20, 30: 20},
+    60: {10: 20, 15: 20, 20: 15, 30: 30, 45: 15},
+    100: {10: 15, 15: 15, 20: 15, 30: 30, 45: 25},
+  };
+
+  /// PRD-2.6 D2 Δy is measured in points, capped at this band height.
+  static const double dyRefBand = 540;
+
+  /// PRD-2.6 D2 the Δy ceiling after a moving or strongly tilted hoop.
+  static const double hardHoopDyFactor = 0.85;
 
   /// §3.0.2 The ramp row for [hoopIndex].
   static LayoutBand bandFor(int hoopIndex) {
@@ -87,28 +108,83 @@ abstract final class LayoutConfig {
 
   // --- §3.0.2 / §3.11 moving types --------------------------------------------
 
-  /// §3.0.2 Moving types for hoops 20–44: rail slide 80 %, swing 20 %.
-  static const Map<MotionType, int> movingTypes20 = {
-    MotionType.rail: 80,
-    MotionType.swing: 20,
-  };
+  /// PRD-2.6 D2 one motion-type / speed row.
+  static const List<
+    ({
+      int from,
+      Map<MotionType, int> types,
+      (double, double) halfTravel,
+      (double, double) speed,
+    })
+  >
+  motionRows = [
+    (
+      from: 25,
+      types: {MotionType.rail: 100},
+      halfTravel: (30, 45),
+      speed: (22, 28),
+    ),
+    (
+      from: 35,
+      types: {MotionType.rail: 75, MotionType.swing: 25},
+      halfTravel: (40, 60),
+      speed: (26, 34),
+    ),
+    (
+      from: 70,
+      types: {
+        MotionType.rail: 55,
+        MotionType.swing: 15,
+        MotionType.horizontal: 15,
+        MotionType.diagonal: 15,
+      },
+      halfTravel: (40, 60),
+      speed: (30, 39),
+    ),
+    (
+      from: 90,
+      types: {
+        MotionType.rail: 45,
+        MotionType.swing: 15,
+        MotionType.horizontal: 10,
+        MotionType.diagonal: 10,
+        MotionType.orbit: 10,
+        MotionType.rock: 10,
+      },
+      halfTravel: (40, 60),
+      speed: (30, 39),
+    ),
+    (
+      from: 120,
+      types: {
+        MotionType.rail: 45,
+        MotionType.swing: 15,
+        MotionType.horizontal: 10,
+        MotionType.diagonal: 10,
+        MotionType.orbit: 10,
+        MotionType.rock: 10,
+      },
+      halfTravel: (40, 60),
+      speed: (34, 42),
+    ),
+  ];
 
-  /// §3.0.2 Moving types from hoop 45: rail 50, swing 15, horizontal 10,
-  /// diagonal 10, orbit 8, rock 7.
+  /// PRD-2.6 D2 compatibility aliases consumed through `DirectorTables`.
+  static const Map<MotionType, int> movingTypes20 = {MotionType.rail: 100};
   static const Map<MotionType, int> movingTypes45 = {
-    MotionType.rail: 50,
+    MotionType.rail: 45,
     MotionType.swing: 15,
     MotionType.horizontal: 10,
     MotionType.diagonal: 10,
-    MotionType.orbit: 8,
-    MotionType.rock: 7,
+    MotionType.orbit: 10,
+    MotionType.rock: 10,
   };
 
-  /// §3.11 Every slide type joins from this hoop index (before: rail + swing).
-  static const int allMotionTypesFrom = 45;
+  /// PRD-2.6 D2 the full motion table starts at hoop 35.
+  static const int allMotionTypesFrom = 35;
 
-  /// §3.11 Rail slide: axis up to ±25° off vertical, ±40–60 pt, constant
-  /// 30–39 pt/s (horizontal / diagonal slides use the same travel + speed).
+  /// §3.11 Rail slide geometry; PRD-2.6 D2 supplies the row-specific travel
+  /// and speed ranges (horizontal / diagonal slides share them).
   static const RailTable rail = RailTable(
     axisDeg: (-25, 25),
     halfTravel: (40, 60),

@@ -3,6 +3,7 @@ import 'dart:math';
 import '../config/director_tables.dart';
 import '../config/layout_config.dart';
 import '../config/run_config.dart';
+import '../config/tuning_values.dart';
 import 'director_context.dart';
 import 'plans.dart';
 import 'rng.dart';
@@ -23,6 +24,9 @@ class LayoutSampler {
   /// A forced next centre (spring launch target, §3.23).
   double? forceY;
 
+  /// PRD-2.6 D2 whether the next Δy follows a moving or ≥30° tilted hoop.
+  bool _hardFollowUp = false;
+
   /// §3.0.2 band rule: the centre range for a hoop with [opening] at
   /// [hoopIndex] — the table's fractions of the band, at least
   /// opening/2 + 7 + 18 (+ [extra]) from each tooth line; the squeezed band
@@ -36,9 +40,15 @@ class LayoutSampler {
   }) {
     final b = tables.bandFor(hoopIndex);
     final band = ctx.band;
+    final centreBand = min(band, RunConfig.dyRefBand);
+    final centreMid = (ctx.topTooth + ctx.floorTooth) / 2;
     final m = opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin + extra;
-    var lo = useTable ? ctx.topTooth + b.centre.$1 * band : ctx.topTooth;
-    var hi = useTable ? ctx.topTooth + b.centre.$2 * band : ctx.floorTooth;
+    var lo = useTable
+        ? centreMid + (b.centre.$1 - 0.5) * centreBand
+        : ctx.topTooth;
+    var hi = useTable
+        ? centreMid + (b.centre.$2 - 0.5) * centreBand
+        : ctx.floorTooth;
     if (ctx.squeezeWindow) {
       lo = ctx.squeezeTopTooth + m;
       hi = ctx.squeezeFloorTooth - m;
@@ -71,6 +81,7 @@ class LayoutSampler {
     DirectorContext ctx,
     double opening, {
     double extra = 0,
+    bool hardFollowUp = false,
   }) {
     final (lo, hi) = limits(hoopIndex, ctx, opening, extra: extra);
     final prev = lastY;
@@ -99,7 +110,13 @@ class LayoutSampler {
       return y;
     }
     final b = tables.bandFor(hoopIndex);
-    final mag = sampleDy(b.dy, random.nextDouble()) * ctx.band;
+    final hard = hardFollowUp || _hardFollowUp;
+    _hardFollowUp = false;
+    final dyRef = min(ctx.band, RunConfig.dyRefBand);
+    final mag =
+        sampleDy(b.dy, random.nextDouble()) *
+        dyRef *
+        (hard ? RunConfig.hardHoopDyFactor : 1);
     var sign = random.nextDouble() < LayoutConfig.flipChance
         ? -lastSign
         : lastSign;
@@ -115,19 +132,67 @@ class LayoutSampler {
     return y;
   }
 
+  /// PRD-2.6 D2 take (and clear) the hard-hoop marker before planning the
+  /// next centre; the same value also bounds that slot's special checks.
+  bool takeHardFollowUp() {
+    final value = _hardFollowUp;
+    _hardFollowUp = false;
+    return value;
+  }
+
+  /// PRD-2.6 D2 record the final modifiers of the slot just planned.
+  void noteModifiers({MotionSpec? motion, double tiltDeg = 0}) {
+    _hardFollowUp = motion != null || tiltDeg.abs() >= 30;
+  }
+
+  /// PRD-2.6 D2 the current row's point-space Δy ceiling.
+  double maxDy(
+    int hoopIndex,
+    DirectorContext ctx, {
+    bool hardFollowUp = false,
+  }) =>
+      tables.bandFor(hoopIndex).dy.$3 *
+      min(ctx.band, RunConfig.dyRefBand) *
+      (hardFollowUp ? RunConfig.hardHoopDyFactor : 1);
+
   /// §3.0.2 / §3.10 Tilt roll for a normal hoop (degrees, 0 = upright).
   /// [force] = first-meet / debug: always tilted (from the band's weights,
   /// or the hoop-10 row when the band has none).
-  double tilt(int hoopIndex, {bool force = false}) {
-    final b = tables.bandFor(hoopIndex);
+  double tilt(
+    int hoopIndex, {
+    bool force = false,
+    double maxTiltDeg = RunConfig.maxTiltDeg,
+  }) {
     final roll = random.nextDouble();
     // PRD-2.3 §14.4 the tilt chance by hoop index (`curve_tilt`).
     if (!force && roll >= tables.tiltChance(hoopIndex)) return 0;
-    final weights = b.tiltWeights.isNotEmpty
-        ? b.tiltWeights
-        : tables.bandFor(10).tiltWeights;
+    final rawRows = tuning.obj('tilt_rows');
+    var rowFrom = 10;
+    for (final key in rawRows.keys) {
+      final from = int.parse(key.split('_').first);
+      if (hoopIndex >= from && from >= rowFrom) rowFrom = from;
+    }
+    final weights = <int, int>{
+      for (final entry in rawRows.entries)
+        if (entry.key.split('_').first == '$rowFrom')
+          int.parse(entry.key.split('_')[1]): entry.value.toInt(),
+    };
     final ang = RunRandom.pickWeighted<int>(random, weights) ?? 0;
-    return ang.toDouble().clamp(-RunConfig.maxTiltDeg, RunConfig.maxTiltDeg);
+    final sign = random.nextBool() ? -1 : 1;
+    return (sign * ang).clamp(-maxTiltDeg, maxTiltDeg).toDouble();
+  }
+
+  /// PRD-2.6 D2 applies the approach sign to strong tilts and motion/squeeze
+  /// magnitude limits.
+  double alignedTilt(double tiltDeg, double dy, double maxTiltDeg) {
+    final alignMin = tuning.i('tilt_align_min_deg').toDouble();
+    final minDy = tuning.d('tilt_align_min_dy');
+    var magnitude = tiltDeg.abs();
+    final wasStrong = magnitude >= alignMin;
+    if (wasStrong && dy.abs() < minDy) magnitude = 15;
+    magnitude = min(magnitude, maxTiltDeg);
+    if (wasStrong && dy != 0) return dy.sign * magnitude;
+    return tiltDeg.sign * magnitude;
   }
 
   /// §3.0.2 / §3.11 Motion roll for a normal hoop at [centre]. Never during
@@ -148,10 +213,12 @@ class LayoutSampler {
     // The band rule (not the row's centre range) bounds a slide's travel.
     final (blo, bhi) = limits(hoopIndex, ctx, opening, useTable: false);
     final bandRoom = max(0.0, min(centre - blo, bhi - centre));
-    final types = hoopIndex >= LayoutConfig.allMotionTypesFrom
-        ? tables.movingTypes45
-        : tables.movingTypes20;
-    final t = RunRandom.pickWeighted<MotionType>(random, types)!;
+    _hardFollowUp = true;
+    var row = LayoutConfig.motionRows.first;
+    for (final candidate in LayoutConfig.motionRows) {
+      if (hoopIndex >= candidate.from) row = candidate;
+    }
+    final t = RunRandom.pickWeighted<MotionType>(random, row.types)!;
     final rail = tables.rail;
     switch (t) {
       case MotionType.rail:
@@ -164,14 +231,13 @@ class LayoutSampler {
             rail.axisDeg.$2,
           ),
           MotionType.horizontal => RunConfig.horizontalAxisDeg,
-          _ =>
-            (random.nextDouble() < 0.5 ? -1 : 1) * RunConfig.diagonalAxisDeg,
+          _ => (random.nextDouble() < 0.5 ? -1 : 1) * RunConfig.diagonalAxisDeg,
         };
         final cosA = cos(axis * pi / 180).abs();
         final want = RunRandom.range(
           random,
-          rail.halfTravel.$1,
-          rail.halfTravel.$2,
+          row.halfTravel.$1,
+          row.halfTravel.$2,
         );
         // §3.11 fairness (WP-1b): the travel is capped so the ring keeps the
         // band rule along its whole path; a slide with less than the minimum
@@ -190,7 +256,7 @@ class LayoutSampler {
           type: t,
           axisDeg: axis,
           halfTravel: half.toDouble(),
-          speed: RunRandom.range(random, rail.speed.$1, rail.speed.$2),
+          speed: RunRandom.range(random, row.speed.$1, row.speed.$2),
           phase: random.nextDouble(),
         );
       case MotionType.swing:
@@ -205,11 +271,14 @@ class LayoutSampler {
           phase: RunRandom.range(random, 0, 2 * pi),
         );
       case MotionType.orbit:
+        final ry = min(RunConfig.orbitRy, room);
         return MotionSpec(
           type: t,
           rx: RunConfig.orbitRx,
-          ry: min(RunConfig.orbitRy, room),
-          omega: RunConfig.orbitOmega,
+          ry: ry,
+          omega:
+              RunRandom.range(random, row.speed.$1, row.speed.$2) /
+              max(RunConfig.orbitRx, ry),
           phase: RunRandom.range(random, 0, 2 * pi),
         );
       case MotionType.rock:

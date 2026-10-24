@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flappy_spikes/run/config/director_tables.dart';
+import 'package:flappy_spikes/run/config/layout_config.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/director/layout_sampler.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
@@ -81,21 +84,24 @@ void main() {
         '^0x9e3779b9', () {
       final r = RunRandom(42);
       expect(r.layout.nextDouble(), RunRandom(42).layout.nextDouble());
-      expect(r.timing.nextInt(1 << 30), isNot(RunRandom(42).layout.nextInt(1 << 30)));
+      expect(
+        r.timing.nextInt(1 << 30),
+        isNot(RunRandom(42).layout.nextInt(1 << 30)),
+      );
     });
   });
 
   group('§3.0.1 opening ramp', () {
-    test('§3.0.1 / PRD-2.3 §14.4 / PRD-2.4 §1 118 pt at hoop 0, then the v23 '
-        'curve (118 at hoops 1–2, 110.5 at 10, 66 from hoop 100); the same '
+    test('§3.0.1 / PRD-2.6 D2 118 pt at hoop 0, then the 2.6 '
+        'curve (118 at hoops 1–2, 110 at 10, 70 from hoop 150); the same '
         'curve in a ride (PRD-2.4 §2)', () {
       final d = director();
       expect(d.openingFor(0), 118);
       expect(d.openingFor(1), 118);
-      expect(d.openingFor(10), 110.5);
-      expect(d.openingFor(100), 66);
-      expect(d.openingFor(200), 66);
-      expect(d.openingFor(80), closeTo(70.8, 1e-9));
+      expect(d.openingFor(10), 110);
+      expect(d.openingFor(100), 72.5);
+      expect(d.openingFor(200), 70);
+      expect(d.openingFor(80), closeTo(74.9, 1e-9));
     });
 
     test('§3.0.1 hoop index = slots spawned (a train is one slot)', () {
@@ -110,10 +116,12 @@ void main() {
       expect(plans[2].$1.trackX - plans[1].$1.trackX, RunConfig.spacing);
     });
 
-    test('§3.0.1 the first hoop is 60 pt past the right edge (track x 380)',
-        () {
-      expect(fly(director(), 1).single.$1.trackX, 380);
-    });
+    test(
+      '§3.0.1 the first hoop is 60 pt past the right edge (track x 380)',
+      () {
+        expect(fly(director(), 1).single.$1.trackX, 380);
+      },
+    );
   });
 
   group('§3.0.2 layout ramp', () {
@@ -137,23 +145,31 @@ void main() {
         'the row max', () {
       for (var seed = 1; seed <= 40; seed++) {
         for (final vh in [568.0, 711.0]) {
-          final d = director(
-            seed: seed,
-            enabled: {ElementId.normalHoop},
-          );
+          final d = director(seed: seed, enabled: {ElementId.normalHoop});
           final band = vh - 2 * RunConfig.stripHeight;
+          final centreBand = math.min(band, LayoutConfig.dyRefBand);
+          final centreMid = vh / 2;
           double? prev;
           for (final (s, _) in fly(d, 90, viewHeight: vh)) {
             final row = DirectorTables.prd2.bandFor(s.index);
             final m = s.opening / 2 + 7 + 18;
-            final lo = RunConfig.stripHeight + row.centre.$1 * band;
-            final hi = RunConfig.stripHeight + row.centre.$2 * band;
+            final lo = centreMid + (row.centre.$1 - 0.5) * centreBand;
+            final hi = centreMid + (row.centre.$2 - 0.5) * centreBand;
             expect(s.centreY, greaterThanOrEqualTo(lo - 1e-6));
             expect(s.centreY, lessThanOrEqualTo(hi + 1e-6));
-            expect(s.centreY - RunConfig.stripHeight, greaterThanOrEqualTo(m - 1e-6));
-            expect(vh - RunConfig.stripHeight - s.centreY, greaterThanOrEqualTo(m - 1e-6));
+            expect(
+              s.centreY - RunConfig.stripHeight,
+              greaterThanOrEqualTo(m - 1e-6),
+            );
+            expect(
+              vh - RunConfig.stripHeight - s.centreY,
+              greaterThanOrEqualTo(m - 1e-6),
+            );
             if (prev != null) {
-              expect((s.centreY - prev).abs(), lessThanOrEqualTo(row.dy.$3 * band + 1e-6));
+              expect(
+                (s.centreY - prev).abs(),
+                lessThanOrEqualTo(row.dy.$3 * centreBand + 1e-6),
+              );
             }
             prev = s.centreY;
           }
@@ -161,9 +177,20 @@ void main() {
       }
     });
 
-    test('§3.0.2 no tilt before hoop 10, no motion before 20; steps capped '
+    test('§D2 no tilt before hoop 10, no motion before 25; steps capped '
         'at 45°; tilt / motion on normal hoops only', () {
-      final allowedSteps = {-20.0, -10.0, 15.0, 30.0, 45.0};
+      final allowedSteps = {
+        -45.0,
+        -30.0,
+        -20.0,
+        -15.0,
+        -10.0,
+        10.0,
+        15.0,
+        20.0,
+        30.0,
+        45.0,
+      };
       var tilted = 0, moving = 0;
       for (var seed = 1; seed <= 40; seed++) {
         final d = director(seed: seed);
@@ -173,7 +200,7 @@ void main() {
             expect(s.tiltDeg, 0);
           }
           if (s.index < 4) expect(s.tiltDeg, 0);
-          if (s.index < 20) expect(s.motion, isNull);
+          if (s.index < 25) expect(s.motion, isNull);
           if (s.kind != HoopKindId.normal || s.cometHang) {
             expect(s.tiltDeg, 0);
             expect(s.motion, isNull);
@@ -182,16 +209,17 @@ void main() {
             tilted++;
             expect(allowedSteps, contains(s.tiltDeg));
           }
-          if (s.index < 35) expect(s.tiltDeg, isNot(45));
+          if (s.index < 60) expect(s.tiltDeg, isNot(45));
           if (s.motion != null) {
             moving++;
-            if (s.index < 45) {
+            if (s.index < 70) {
               // A rail without room for its minimum travel rocks in place
               // (§3.11 fairness, WP-1b); PRD-2.2 §19 courses hit that too.
-              expect(
-                [MotionType.rail, MotionType.swing, MotionType.rock],
-                contains(s.motion!.type),
-              );
+              expect([
+                MotionType.rail,
+                MotionType.swing,
+                MotionType.rock,
+              ], contains(s.motion!.type));
             }
           }
         }
@@ -207,7 +235,8 @@ void main() {
         for (final (s, _) in fly(
           d,
           60,
-          ctxFor: (_) => DirectorContext.open(711, squeezeWindow: true, squeezeInset: 60),
+          ctxFor: (_) =>
+              DirectorContext.open(711, squeezeWindow: true, squeezeInset: 60),
         )) {
           expect(s.motion, isNull);
           if (s.tiltDeg != 0) tilted++;
@@ -224,7 +253,8 @@ void main() {
       for (final (s, g) in fly(
         d,
         30,
-        ctxFor: (_) => DirectorContext.open(711, rideActive: true, ride: RideKind.comet),
+        ctxFor: (_) =>
+            DirectorContext.open(711, rideActive: true, ride: RideKind.comet),
       )) {
         expect(s.kind, HoopKindId.normal);
         expect(s.opening, closeTo(RunConfig.openingFor(s.index), 1e-9));
@@ -255,7 +285,9 @@ void main() {
       for (var seed = 1; seed <= 60; seed++) {
         final d = director(seed: seed, lastPortalRide: RideId.space);
         final plans = fly(d, 260).map((e) => e.$1).toList();
-        final portals = plans.where((s) => s.kind == HoopKindId.portal).toList();
+        final portals = plans
+            .where((s) => s.kind == HoopKindId.portal)
+            .toList();
         expect(portals, isNotEmpty);
         // It may wait (comet hoop < 10 back), never come early.
         expect(d.portalAt, greaterThan(portals.first.index));
@@ -267,7 +299,10 @@ void main() {
           lastRide = ride;
           if (k > 0) {
             // It may wait (comet hoop < 10 back), never come early.
-            expect(portals[k].index - portals[k - 1].index, greaterThanOrEqualTo(60));
+            expect(
+              portals[k].index - portals[k - 1].index,
+              greaterThanOrEqualTo(60),
+            );
           }
           for (var c = 1; c <= 3 && portals[k].index + c < plans.length; c++) {
             expect(plans[portals[k].index + c].kind, HoopKindId.normal);
@@ -281,12 +316,17 @@ void main() {
       for (var seed = 1; seed <= 60; seed++) {
         final plans = fly(director(seed: seed), 150).map((e) => e.$1).toList();
         for (final s in plans) {
-          if (s.kind == HoopKindId.normal || s.kind == HoopKindId.portal) continue;
+          if (s.kind == HoopKindId.normal || s.kind == HoopKindId.portal) {
+            continue;
+          }
           final cd = DirectorTables.prd2.specials[s.kind]!.cooldown;
           for (var c = 1; c <= cd && s.index + c < plans.length; c++) {
             final next = plans[s.index + c];
-            expect(next.kind == HoopKindId.normal || next.kind == HoopKindId.portal,
-                isTrue, reason: 'seed $seed: ${s.kind} at ${s.index} then ${next.kind}');
+            expect(
+              next.kind == HoopKindId.normal || next.kind == HoopKindId.portal,
+              isTrue,
+              reason: 'seed $seed: ${s.kind} at ${s.index} then ${next.kind}',
+            );
           }
         }
       }
@@ -306,7 +346,9 @@ void main() {
               d.earlyPicks[s.index] == EarlyPick.bullseye;
           expect(s.index, greaterThanOrEqualTo(pooled ? 4 : rule.from));
           final prev = last[s.kind];
-          if (prev != null) expect(s.index - prev, greaterThanOrEqualTo(rule.minSince));
+          if (prev != null) {
+            expect(s.index - prev, greaterThanOrEqualTo(rule.minSince));
+          }
           last[s.kind] = s.index;
         }
       }
@@ -317,16 +359,19 @@ void main() {
         'while a timed powerup runs', () {
       var runsWithComet = 0;
       for (var seed = 1; seed <= 60; seed++) {
-        final comets = fly(director(seed: seed), 150)
-            .map((e) => e.$1)
-            .where((s) => s.cometHang)
-            .toList();
+        final comets = fly(
+          director(seed: seed),
+          150,
+        ).map((e) => e.$1).where((s) => s.cometHang).toList();
         if (comets.isNotEmpty) runsWithComet++;
         if (comets.isNotEmpty) {
           expect(comets.first.index, greaterThanOrEqualTo(10));
         }
         for (var k = 1; k < comets.length; k++) {
-          expect(comets[k].index - comets[k - 1].index, greaterThanOrEqualTo(25));
+          expect(
+            comets[k].index - comets[k - 1].index,
+            greaterThanOrEqualTo(25),
+          );
         }
         for (final c in comets) {
           final star = c.attached.single;
@@ -348,10 +393,16 @@ void main() {
     test('§3.0.3 the comet hoop and the portal keep ≥ 10 hoops apart', () {
       for (var seed = 1; seed <= 60; seed++) {
         final plans = fly(director(seed: seed), 200).map((e) => e.$1).toList();
-        final portals = plans.where((s) => s.kind == HoopKindId.portal).map((s) => s.index);
+        final portals = plans
+            .where((s) => s.kind == HoopKindId.portal)
+            .map((s) => s.index);
         for (final c in plans.where((s) => s.cometHang)) {
           for (final p in portals) {
-            expect((c.index - p).abs(), greaterThanOrEqualTo(10), reason: 'seed $seed');
+            expect(
+              (c.index - p).abs(),
+              greaterThanOrEqualTo(10),
+              reason: 'seed $seed',
+            );
           }
         }
       }
@@ -364,16 +415,22 @@ void main() {
         for (final (s, g) in fly(
           d,
           80,
-          ctxFor: (_) => DirectorContext.open(711, squeezeWindow: true, squeezeInset: 50),
+          ctxFor: (_) =>
+              DirectorContext.open(711, squeezeWindow: true, squeezeInset: 50),
         )) {
-          expect(
-            [HoopKindId.normal, HoopKindId.bullseye, HoopKindId.fever, HoopKindId.saw],
-            contains(s.kind),
-          );
+          expect([
+            HoopKindId.normal,
+            HoopKindId.bullseye,
+            HoopKindId.fever,
+            HoopKindId.saw,
+          ], contains(s.kind));
           expect(s.cometHang, isFalse);
           for (final it in g.items) {
-            expect([ElementId.heart, ElementId.starTrail], contains(it.kind),
-                reason: 'only scheduled hearts + star trails in a squeeze');
+            expect(
+              [ElementId.heart, ElementId.starTrail],
+              contains(it.kind),
+              reason: 'only scheduled hearts + star trails in a squeeze',
+            );
           }
         }
       }
@@ -391,7 +448,9 @@ void main() {
             expect(s.opening, closeTo(RunConfig.openingFor(s.index), 1e-9));
             expect(s.extra, isNot(lastSaw));
             lastSaw = s.extra! as SawDesign;
-            if (s.index > 0) expect(plans[s.index - 1].kind, isNot(HoopKindId.fever));
+            if (s.index > 0) {
+              expect(plans[s.index - 1].kind, isNot(HoopKindId.fever));
+            }
           }
           if (s.kind == HoopKindId.switchRing) {
             expect(s.extra, isNot(lastSwitch));
@@ -404,47 +463,64 @@ void main() {
     test('§3.0.3 saw / FEVER / switch never within 3 hoops of the portal', () {
       for (var seed = 1; seed <= 60; seed++) {
         final plans = fly(director(seed: seed), 200).map((e) => e.$1).toList();
-        final portals = plans.where((s) => s.kind == HoopKindId.portal).map((s) => s.index).toList();
+        final portals = plans
+            .where((s) => s.kind == HoopKindId.portal)
+            .map((s) => s.index)
+            .toList();
         for (final s in plans) {
-          if (![HoopKindId.saw, HoopKindId.fever, HoopKindId.switchRing].contains(s.kind)) {
+          if (![
+            HoopKindId.saw,
+            HoopKindId.fever,
+            HoopKindId.switchRing,
+          ].contains(s.kind)) {
             continue;
           }
           for (final p in portals) {
-            expect((s.index - p).abs(), greaterThan(3), reason: 'seed $seed ${s.kind}');
+            expect(
+              (s.index - p).abs(),
+              greaterThan(3),
+              reason: 'seed $seed ${s.kind}',
+            );
           }
         }
       }
     });
 
-    test('§3.20 switch ring: its switch takes the gap before (1.0 s × scroll '
-        '≥ 150 pt, 70–100 pt above / below, ≤ 110 pt from the previous centre)',
-        () {
-      var seen = 0;
-      for (var seed = 1; seed <= 60; seed++) {
-        final plans = fly(
-          director(seed: seed),
-          150,
-          ctxFor: (_) => DirectorContext.open(711, scrollSpeed: 180),
-        );
-        for (var k = 0; k < plans.length; k++) {
-          final s = plans[k].$1;
-          if (s.kind != HoopKindId.switchRing) continue;
-          seen++;
-          final sw = s.attached.single;
-          expect(sw.kind, ElementId.switchRing);
-          expect(s.trackX - sw.trackX, 180);
-          final dy = (sw.y! - s.centreY).abs();
-          expect(dy, greaterThanOrEqualTo(60));
-          final prev = plans[k - 1].$1;
-          final prevEnd = prev.kind == HoopKindId.train
-              ? prev.centreY + 2 * 16 * (prev.extra! as TrainSpec).dir
-              : prev.centreY;
-          expect((sw.y! - prevEnd).abs(), lessThanOrEqualTo(110 + 1e-6));
-          expect(plans[k - 1].$2.items, isEmpty, reason: 'the gap before is free');
+    test(
+      '§3.20 switch ring: its switch takes the gap before (1.0 s × scroll '
+      '≥ 150 pt, 70–100 pt above / below, ≤ 110 pt from the previous centre)',
+      () {
+        var seen = 0;
+        for (var seed = 1; seed <= 60; seed++) {
+          final plans = fly(
+            director(seed: seed),
+            150,
+            ctxFor: (_) => DirectorContext.open(711, scrollSpeed: 180),
+          );
+          for (var k = 0; k < plans.length; k++) {
+            final s = plans[k].$1;
+            if (s.kind != HoopKindId.switchRing) continue;
+            seen++;
+            final sw = s.attached.single;
+            expect(sw.kind, ElementId.switchRing);
+            expect(s.trackX - sw.trackX, 180);
+            final dy = (sw.y! - s.centreY).abs();
+            expect(dy, greaterThanOrEqualTo(60));
+            final prev = plans[k - 1].$1;
+            final prevEnd = prev.kind == HoopKindId.train
+                ? prev.centreY + 2 * 16 * (prev.extra! as TrainSpec).dir
+                : prev.centreY;
+            expect((sw.y! - prevEnd).abs(), lessThanOrEqualTo(110 + 1e-6));
+            expect(
+              plans[k - 1].$2.items,
+              isEmpty,
+              reason: 'the gap before is free',
+            );
+          }
         }
-      }
-      expect(seen, greaterThan(20));
-    });
+        expect(seen, greaterThan(20));
+      },
+    );
 
     test('§3.21 pair: offset 230 × viewHeight / 711, two different gifts, no '
         'shield when armed, no FEVER during FEVER', () {
@@ -456,7 +532,12 @@ void main() {
             director(seed: seed),
             150,
             viewHeight: vh,
-            ctxFor: (_) => DirectorContext.open(vh, shieldArmed: true, onFire: true, fever: true),
+            ctxFor: (_) => DirectorContext.open(
+              vh,
+              shieldArmed: true,
+              onFire: true,
+              fever: true,
+            ),
           )) {
             if (s.kind != HoopKindId.pair) continue;
             pairs++;
@@ -467,9 +548,14 @@ void main() {
               expect(g, isNot(PairReward.shield));
               expect(g, isNot(PairReward.fever));
             }
-            expect(s.centreY - o / 2 - s.opening / 2 - 7, greaterThanOrEqualTo(114 - 1e-6));
-            expect(s.centreY + o / 2 + s.opening / 2 + 7 + 18,
-                lessThanOrEqualTo(vh - RunConfig.stripHeight + 1e-6));
+            expect(
+              s.centreY - o / 2 - s.opening / 2 - 7,
+              greaterThanOrEqualTo(114 - 1e-6),
+            );
+            expect(
+              s.centreY + o / 2 + s.opening / 2 + 7 + 18,
+              lessThanOrEqualTo(vh - RunConfig.stripHeight + 1e-6),
+            );
           }
         }
         expect(pairs, greaterThan(5));
@@ -548,7 +634,10 @@ void main() {
         60,
         ctxFor: (_) => DirectorContext.open(711, extraLifeActive: true),
       );
-      expect(plans.expand((e) => e.$2.items).where((i) => i.kind == ElementId.heart), isEmpty);
+      expect(
+        plans.expand((e) => e.$2.items).where((i) => i.kind == ElementId.heart),
+        isEmpty,
+      );
       expect(d.heartAt, greaterThan(5 + 17));
     });
 
@@ -600,12 +689,17 @@ void main() {
       final none = fly(
         director(),
         40,
-        ctxFor: (_) => DirectorContext.open(711, featherWanted: false, puzzleMask: 0xF),
+        ctxFor: (_) =>
+            DirectorContext.open(711, featherWanted: false, puzzleMask: 0xF),
       );
       expect(
-        none.expand((e) => e.$2.items).where(
-          (i) => i.kind == ElementId.feather || i.kind == ElementId.puzzlePiece,
-        ),
+        none
+            .expand((e) => e.$2.items)
+            .where(
+              (i) =>
+                  i.kind == ElementId.feather ||
+                  i.kind == ElementId.puzzlePiece,
+            ),
         isEmpty,
       );
     });
@@ -635,7 +729,10 @@ void main() {
         ctxFor: (_) => DirectorContext.open(711, jarRunning: true),
       );
       for (final (_, g) in plans) {
-        expect(g.items.where((i) => i.kind == ElementId.fireflySwarm).single.extra, 7);
+        expect(
+          g.items.where((i) => i.kind == ElementId.fireflySwarm).single.extra,
+          7,
+        );
       }
     });
 
@@ -659,7 +756,9 @@ void main() {
             }
             last[it.kind] = s.index;
             if (it.kind == ElementId.shield) shields++;
-            if (it.kind == ElementId.capsule) expect(it.extra, isA<CapsuleType>());
+            if (it.kind == ElementId.capsule) {
+              expect(it.extra, isA<CapsuleType>());
+            }
           }
           expect(g.items.length, lessThanOrEqualTo(1));
         }
@@ -682,10 +781,11 @@ void main() {
           ),
         );
         for (final it in plans.expand((e) => e.$2.items)) {
-          expect(
-            [ElementId.capsule, ElementId.egg, ElementId.shield],
-            isNot(contains(it.kind)),
-          );
+          expect([
+            ElementId.capsule,
+            ElementId.egg,
+            ElementId.shield,
+          ], isNot(contains(it.kind)));
         }
       }
     });
@@ -705,10 +805,11 @@ void main() {
             if (it.kind == ElementId.starTrail) {
               expect(pick, EarlyPick.starTrail);
             } else {
-              expect(
-                [ElementId.heart, ElementId.feather, ElementId.puzzlePiece],
-                contains(it.kind),
-              );
+              expect([
+                ElementId.heart,
+                ElementId.feather,
+                ElementId.puzzlePiece,
+              ], contains(it.kind));
             }
           }
         }
@@ -743,8 +844,11 @@ void main() {
           n[key]![1]++;
           if (s.kind != HoopKindId.normal) n[key]![0]++;
           gaps++;
-          final nextHasSwitch = k + 1 < plans.length &&
-              plans[k + 1].$1.attached.any((a) => a.kind == ElementId.switchRing);
+          final nextHasSwitch =
+              k + 1 < plans.length &&
+              plans[k + 1].$1.attached.any(
+                (a) => a.kind == ElementId.switchRing,
+              );
           if (g.items.isNotEmpty || nextHasSwitch) used++;
         }
       }
@@ -806,13 +910,18 @@ void main() {
       expect(g.items.single.extra, CapsuleType.hourglass);
     });
 
-    test('§3.0.8 force portal ride: the next slot is a portal with that ride',
-        () {
-      final d = director(forcedRide: RideId.pinball, lastPortalRide: RideId.pinball);
-      final s = fly(d, 1).single.$1;
-      expect(s.kind, HoopKindId.portal);
-      expect(s.extra, RideId.pinball);
-    });
+    test(
+      '§3.0.8 force portal ride: the next slot is a portal with that ride',
+      () {
+        final d = director(
+          forcedRide: RideId.pinball,
+          lastPortalRide: RideId.pinball,
+        );
+        final s = fly(d, 1).single.$1;
+        expect(s.kind, HoopKindId.portal);
+        expect(s.extra, RideId.pinball);
+      },
+    );
 
     test('§7 startHoopIndex sets the hoop index and the opening ramp', () {
       final d = director(startHoopIndex: 20, enabled: {ElementId.normalHoop});

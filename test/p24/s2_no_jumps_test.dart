@@ -2,6 +2,7 @@ import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/run/debug/autopilot.dart';
 import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/elements.dart';
@@ -73,7 +74,10 @@ void _noJumps({required bool bigHoops}) {
       expect(normal.length, greaterThan(100));
       double normalised(SlotPlan p) {
         final m = bigHoops ? big.mult(planned[p.index] ?? 0) : 1.0;
-        return p.opening / m;
+        final tilt45Extra = p.tiltDeg.abs() == 45
+            ? TuningValues.current.i('tilt45_extra_opening')
+            : 0;
+        return (p.opening - tilt45Extra) / m;
       }
 
       final slack = bigHoops ? 0.01 : 0.0;

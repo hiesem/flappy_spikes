@@ -31,14 +31,14 @@ void main() {
   group('config', () {
     // PRD-2.3.1 §0: the live RC v21 bands are the defaults (were [[0,0]]
     // and [[0,12]]).
-    test('defaults: perfect band 40 → 8, bullseye band 12 → 8', () {
+    test('defaults: perfect band 40 → 10, bullseye band 12 → 8', () {
       final defs = {for (final d in kTuningDefaults) d.key: d};
       // PRD-2.4 §1.2: the v23 curve (live RC version 23).
       expect(defs['point_perfect_band']!.value, [
         // Owner 2026-10-20 (2.5.0 46): wider for hoops 0–20.
         [1, 40], [2, 40], [6, 36], [10, 30], [16, 24], [20, 18],
-        [25, 14.5], [30, 13.9], [35, 13.2], [40, 12.7], [50, 11.6],
-        [60, 10.7], [75, 10], [100, 8], //
+        [25, 14.5], [30, 13.9], [35, 13.2], [40, 12.7], [50, 11.8],
+        [60, 11.2], [75, 10.6], [100, 10.2], [150, 10], //
       ]);
       expect(defs['point_bullseye_band']!.value, [
         [1, 12], [50, 10], [100, 8], //
@@ -47,8 +47,8 @@ void main() {
       expect(PerfectBandConfig.bandAt(4), 38);
       expect(PerfectBandConfig.bandAt(20), 18);
       expect(PerfectBandConfig.bandAt(25), 14.5);
-      expect(PerfectBandConfig.bandAt(80), closeTo(9.6, 1e-9));
-      expect(PerfectBandConfig.bandAt(200), 8);
+      expect(PerfectBandConfig.bandAt(80), closeTo(10.52, 1e-9));
+      expect(PerfectBandConfig.bandAt(200), 10);
       expect(BullseyeConfig.band, 12);
       expect(BullseyeConfig.drawBand, 12);
     });

@@ -61,24 +61,27 @@ void main() {
         [1, 118],
         [2, 118],
         [6, 114],
-        [10, 110.5],
+        [10, 110],
         [16, 105.5],
         [20, 102],
         [25, 98],
-        [30, 94.5],
-        [35, 90.5],
-        [40, 87.5],
-        [50, 81],
-        [60, 76.5],
-        [75, 72],
-        [100, 66],
+        [30, 95],
+        [40, 88.5],
+        [50, 83],
+        [60, 79],
+        [75, 75.5],
+        [100, 72.5],
+        [125, 71],
+        [150, 70],
       ]);
       expect(t.raw('curve_moving'), [
-        [19, 0],
-        [20, 0.15],
-        [35, 0.40],
-        [60, 0.60],
-        [80, 0.75],
+        [24, 0],
+        [25, 0.15],
+        [34, 0.15],
+        [35, 0.25],
+        [60, 0.42],
+        [100, 0.52],
+        [150, 0.58],
       ]);
       expect(t.range('squeeze_first'), (25, 40));
       expect(t.range('squeeze_hold'), (5, 10));
@@ -120,7 +123,7 @@ void main() {
       final keys = <String>{};
       for (final d in kTuningDefaults) {
         expect(
-          RegExp(r'^[a-z]+(_[a-z0-9]+)+$').hasMatch(d.key),
+          RegExp(r'^[a-z][a-z0-9]*(_[a-z0-9]+)+$').hasMatch(d.key),
           isTrue,
           reason: d.key,
         );
@@ -202,9 +205,9 @@ void main() {
       final v = TuningValues.defaults();
       final opening = v.curve('curve_opening');
       expect(opening.at(1), 118);
-      expect(opening.at(50), closeTo(81, .2));
-      expect(opening.at(100), 66);
-      expect(opening.at(250), 66);
+      expect(opening.at(50), 83);
+      expect(opening.at(100), 72.5);
+      expect(opening.at(250), 70);
       final speed = v.curve('curve_speed');
       expect(speed.at(0), 150);
       expect(speed.at(50), 172.5);

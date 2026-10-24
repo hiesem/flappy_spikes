@@ -5,7 +5,6 @@ import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/home_moments.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
 import 'package:flappy_spikes/run/items/big_hoops.dart';
-import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/services/rating_prompt.dart';
 import 'package:flappy_spikes/run/showcase/showcase_plan.dart';
@@ -125,7 +124,13 @@ void main() {
 
       game.endRun(null);
       expect(showcaseProgress.runEnds.single.gamesPlayed, 4);
-      expect(ftueTracker.steps, [FtueStep.run4Start, FtueStep.firstTap]);
+      // PRD-2.6 WP-A: Home defaults to VERSUS, so its first end also emits
+      // `versus_first_end`; PersistedFtueTracker deduplicates it per install.
+      expect(ftueTracker.steps, [
+        FtueStep.run4Start,
+        FtueStep.firstTap,
+        FtueStep.versusFirstEnd,
+      ]);
       await flushAndMount(game);
     },
   );
@@ -161,8 +166,9 @@ void main() {
         expect(run.state.shield, isTrue);
         expect(run.state.bigHoops, isNotNull);
         expect(run.state.bigHoops!.mult(0), 1.5);
-        final baseline = RunDirector(seed: 7, enabled: {}, met: {});
-        expect(run.state.bigHoops!.duration, baseline.rollBigHoopsDuration());
+        // PRD-2.6 B2 / B3 step 1: Big Hoops lasts 60 s in the portal
+        // showcase (the normal 30–40 s roll is for steps 2–3 only).
+        expect(run.state.bigHoops!.duration, 60);
         expect(run.spawner.hoops, isNotEmpty);
         expect(run.spawner.hoops.every(BigHoopsFeature.isGold), isTrue);
       },
@@ -199,16 +205,19 @@ void main() {
         final run = await startRun(game);
         run.state.hoopsPassed = 2;
         game.endRun(null);
+        // PRD-2.6 WP-A: the first VERSUS run ends with `versus_first_end`
+        // as well (the Home mode defaults to VERSUS).
         expect(tracker.calls, [
           (id: FtueStep.firstTap, gamesPlayed: milestone.key - 1),
           (id: milestone.value, gamesPlayed: milestone.key),
+          (id: FtueStep.versusFirstEnd, gamesPlayed: milestone.key),
         ]);
         expect(progress.runEnds, [
           (gamesPlayed: milestone.key, hoopsPassed: 2),
         ]);
         // A second end signal must not count or report the same run again.
         game.endRun(null);
-        expect(tracker.calls, hasLength(2));
+        expect(tracker.calls, hasLength(3));
         expect(progress.runEnds, hasLength(1));
         await flushAndMount(game);
       },

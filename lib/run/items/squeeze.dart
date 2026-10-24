@@ -156,7 +156,9 @@ class SqueezeFeature extends RunFeature {
   }
 
   void _onForced(DebugForced e) {
-    if (e.element == ElementId.squeeze) force();
+    if (e.element == ElementId.squeeze) {
+      force();
+    }
   }
 
   void _onRideEnded(RideEnded e) => _wait();

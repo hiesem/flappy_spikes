@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
-import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/components/score_hud.dart';
 import 'package:flappy_spikes/components/spike_strip.dart';
 import 'package:flappy_spikes/game/config.dart';
@@ -10,6 +9,7 @@ import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/sound.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/config/squeeze_config.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/effects/run_shake.dart';
 import 'package:flappy_spikes/run/elements.dart';
@@ -345,15 +345,38 @@ void main() {
   }
 
   FlameTester<FlappySpikesGame>(
-    () => createRunTestGame(worldHeight: 711),
+    () => createRunTestGame(
+      prefs: {
+        'gamesPlayed': 5,
+        'metElements': [for (final e in ElementId.values) e.storageId],
+      },
+      worldHeight: 711,
+    ),
     gameSize: Vector2(320, 711),
   ).testGameWidget(
     '§3.17 a squeeze never starts during a ride: it waits until the ride '
     'ends + 2 s; the same after a revive',
     setUp: (g, _) => boot(g),
     verify: (game, _) async {
+      final tuning = TuningValues.current;
+      addTearDown(() => TuningValues.current = tuning);
+      TuningValues.current = TuningValues.resolve({
+        'ui_unlock_best': '0',
+        'ride_comet_chance': '0',
+        'ride_portal_first': '[999,1000]',
+        'ride_portal_max': '0',
+        'spawn_special_chance': '[[0,0],[150,0]]',
+        'spawn_item_chance': '[[0,0],[150,0]]',
+      });
       final run = await squeezeNow(game);
       final s = run.state;
+      await flyUntil(
+        game,
+        (r) =>
+            r.state.hoopsPassed >= 12 &&
+            r.director.allowsSqueezeWarning(r.state.hoopIndex),
+      );
+      s.squeeze.nextAt = s.runClock + .02;
       s.ride = RideState(kind: RideKind.comet);
       for (var i = 0; i < 60; i++) {
         game.update(1 / 60);
@@ -365,11 +388,12 @@ void main() {
       await flyUntil(game, (_) => s.squeeze.phase != SqueezePhase.idle);
       expect(s.runClock - endedAt, closeTo(2, 1 / 30));
       expect(s.squeeze.phase, SqueezePhase.warning);
+      TuningValues.current = tuning;
     },
   );
 
   FlameTester<FlappySpikesGame>(
-    () => createRunTestGame(worldHeight: 711),
+    () => createRunTestGame(prefs: {'gamesPlayed': 5}, worldHeight: 711),
     gameSize: Vector2(320, 711),
   ).testGameWidget(
     '§3.17 the window: from 3 s before the warning until open the director '
@@ -457,7 +481,13 @@ void main() {
   }
 
   FlameTester<FlappySpikesGame>(
-    () => createRunTestGame(worldHeight: 711),
+    () => createRunTestGame(
+      prefs: {
+        'gamesPlayed': 5,
+        'metElements': [for (final e in ElementId.values) e.storageId],
+      },
+      worldHeight: 711,
+    ),
     gameSize: Vector2(320, 711),
   ).testGameWidget(
     '§3.17 a save on a squeezed wall bounces off the squeezed tooth line '
@@ -486,7 +516,13 @@ void main() {
   );
 
   FlameTester<FlappySpikesGame>(
-    () => createRunTestGame(worldHeight: 711),
+    () => createRunTestGame(
+      prefs: {
+        'gamesPlayed': 5,
+        'metElements': [for (final e in ElementId.values) e.storageId],
+      },
+      worldHeight: 711,
+    ),
     gameSize: Vector2(320, 711),
   ).testGameWidget(
     '§3.17 / §3.14 a revived death during a squeeze: the walls slide out '
@@ -495,6 +531,16 @@ void main() {
     'after the revive',
     setUp: (g, _) => boot(g),
     verify: (game, _) async {
+      final tuning = TuningValues.current;
+      addTearDown(() => TuningValues.current = tuning);
+      TuningValues.current = TuningValues.resolve({
+        'ui_unlock_best': '0',
+        'ride_comet_chance': '0',
+        'ride_portal_first': '[999,1000]',
+        'ride_portal_max': '0',
+        'spawn_special_chance': '[[0,0],[150,0]]',
+        'spawn_item_chance': '[[0,0],[150,0]]',
+      });
       final run = await squeezeNow(game);
       final s = run.state;
       final f = feature(run);
@@ -540,7 +586,9 @@ void main() {
       final revivedAt = s.runClock;
       s.squeeze.nextAt = s.runClock;
       await flyUntil(game, (_) => s.squeeze.phase != SqueezePhase.idle);
-      expect(s.runClock - revivedAt, closeTo(2, .05));
+      // PRD-2.6 D6 can hold the warning longer for the headline window; it
+      // still never starts before the revive wait.
+      expect(s.runClock - revivedAt, greaterThanOrEqualTo(2));
       await flyUntil(game, (_) => s.squeeze.phase == SqueezePhase.hold);
       expect(s.squeeze.inset, SqueezeConfig.insetFor(1, 711));
     },

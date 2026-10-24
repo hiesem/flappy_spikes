@@ -50,8 +50,14 @@ void main() {
         ReviveLadder.offer(fresh(), adReady: false),
         const ReviveOffer.coins(250, noAdLabel: true),
       );
+      // PRD-2.6 WP-B2 adds `free`; it is only offered when `showcase` is
+      // true, so these no-showcase offers stay unchanged.
       expect(ReviveKind.values, [ReviveKind.ad, ReviveKind.coins]);
-      expect(ReviveOfferKind.values, [ReviveOfferKind.ad, ReviveOfferKind.coins]);
+      expect(ReviveOfferKind.values, [
+        ReviveOfferKind.ad,
+        ReviveOfferKind.coins,
+        ReviveOfferKind.free,
+      ]);
     });
   });
 
@@ -62,18 +68,15 @@ void main() {
     Map<String, Object> prefs = const {},
     Monetization? monetization,
     double h = 711,
-  }) => FlameTester<FlappySpikesGame>(
-    () {
-      spy.events.clear();
-      return createRunTestGame(
-        prefs: prefs,
-        services: spy,
-        worldHeight: h,
-        monetization: monetization,
-      );
-    },
-    gameSize: Vector2(320, h),
-  );
+  }) => FlameTester<FlappySpikesGame>(() {
+    spy.events.clear();
+    return createRunTestGame(
+      prefs: prefs,
+      services: spy,
+      worldHeight: h,
+      monetization: monetization,
+    );
+  }, gameSize: Vector2(320, h));
 
   Future<void> boot(FlappySpikesGame g, WidgetTester _) async {
     await g.ready();
@@ -120,10 +123,11 @@ void main() {
       final ads = g.monetization.ads as FakeRewardedAds;
       final (run, screen) = await toOffer(g);
       expect(screen.offer, const ReviveOffer.coins(250));
-      expect(
-        spy.events.where((e) => e.$1 == 'revive_offered').single.$2,
-        {'offer': 'coins', 'price': 250, 'revive_index': 1},
-      );
+      expect(spy.events.where((e) => e.$1 == 'revive_offered').single.$2, {
+        'offer': 'coins',
+        'price': 250,
+        'revive_index': 1,
+      });
       final phoenix = <RevivePhoenixStarted>[];
       run.events.on<RevivePhoenixStarted>(phoenix.add);
       screen.tapHeart();
@@ -166,10 +170,9 @@ void main() {
       await g.claimFreeCoins();
       await flushAndMount(g);
       expect(ads.placements, [AdPlacement.shopFreeCoins]);
-      expect(
-        spy.events.where((e) => e.$1 == 'ad_rewarded_shown').single.$2,
-        {'placement': 'shop_free_coins'},
-      );
+      expect(spy.events.where((e) => e.$1 == 'ad_rewarded_shown').single.$2, {
+        'placement': 'shop_free_coins',
+      });
       expect(g.shopScreen!.freeCoins.chipText, isNot('CLAIM'));
     },
   );

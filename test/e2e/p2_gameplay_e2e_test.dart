@@ -236,7 +236,16 @@ void main() {
   test('P2 reminders: spring DST and persisted daily plans', () async {
     final zone = tz.getLocation('Europe/Amsterdam');
     final platform = FakeReminderPlatform();
-    SharedPreferences.setMockInitialValues({});
+    // PRD-2.6 §539 gates four reminder texts on met elements; this test
+    // exercises the complete rotation across DST.
+    SharedPreferences.setMockInitialValues({
+      'metElements': [
+        ElementId.squeeze.storageId,
+        ElementId.luckySpin.storageId,
+        ElementId.egg.storageId,
+        ElementId.fever.storageId,
+      ],
+    });
     var now = tz.TZDateTime(zone, 2027, 3, 24, 9);
     final delivered = <int, DateTime>{};
     final offsets = <int>{};

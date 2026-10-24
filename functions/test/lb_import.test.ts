@@ -155,6 +155,54 @@ function raceAfterLbPlayersSnapshot(original: Firestore, concurrent: () => Promi
   });
 }
 
+/**
+ * Run [concurrent] after the source players snapshot, but before the initial
+ * lbPlayers snapshot. The importer must not adopt that live result as its
+ * precondition and then overwrite it with the older source run.
+ */
+function raceAfterPlayersSourceSnapshot(original: Firestore, concurrent: () => Promise<void>): Firestore {
+  let fired = false;
+  return new Proxy(original, {
+    get(target, property) {
+      const value = Reflect.get(target, property, target);
+      if (property !== 'collection') {
+        return typeof value === 'function' ? value.bind(target) : value;
+      }
+      return (path: string) => {
+        const collection = value.call(target, path);
+        if (path !== 'players') return collection;
+        return new Proxy(collection, {
+          get(collectionTarget, collectionProperty) {
+            const collectionValue = Reflect.get(collectionTarget, collectionProperty, collectionTarget);
+            if (collectionProperty !== 'limit' || typeof collectionValue !== 'function') {
+              return typeof collectionValue === 'function' ? collectionValue.bind(collectionTarget) : collectionValue;
+            }
+            return (...args: unknown[]) => {
+              const query = collectionValue.apply(collectionTarget, args);
+              return new Proxy(query, {
+                get(queryTarget, queryProperty) {
+                  const queryValue = Reflect.get(queryTarget, queryProperty, queryTarget);
+                  if (queryProperty !== 'get' || typeof queryValue !== 'function') {
+                    return typeof queryValue === 'function' ? queryValue.bind(queryTarget) : queryValue;
+                  }
+                  return async (...getArgs: unknown[]) => {
+                    const snap = await queryValue.apply(queryTarget, getArgs);
+                    if (!fired) {
+                      fired = true;
+                      await concurrent();
+                    }
+                    return snap;
+                  };
+                },
+              });
+            };
+          },
+        });
+      };
+    },
+  });
+}
+
 /** Run [concurrent] before the import's lbBest rebuild transaction. */
 function raceBeforeImportCacheRebuild(original: Firestore, concurrent: () => Promise<void>): Firestore {
   let commits = 0;
@@ -580,6 +628,76 @@ describe('PRD-2.6 C8 verified best-run import', () => {
     assert.equal(stored.best, 95);
     assert.equal(stored.groupId, live!.group!.id);
     assert.ok((stored.hist ?? []).includes(95));
+  });
+
+  it('does not roll back a live submission committed before the lbPlayers planning snapshot', async () => {
+    const uid = uniq('import-live-before-snapshot');
+    await seedPlayers(db, [
+      [uid, player({ best: 40, bestRun: makeRun({ score: 40, tsMs: T0, best: 40 }), recent: [] })],
+    ]);
+    await db.collection('lbPlayers').doc(uid).set(imported(uid, 40));
+    let live: Awaited<ReturnType<typeof lbSubmitRun>> | undefined;
+    const racingDb = raceAfterPlayersSourceSnapshot(db, async () => {
+      live = await lbSubmitRun(
+        db,
+        uid,
+        { runs: [liveRun(95)], name: 'BraveOwl123', look: LOOK, platform: 'android' },
+        NOW,
+      );
+    });
+
+    const result = await importLeaderboard(racingDb, {
+      keepUids: ['owner-a'],
+      apply: true,
+      nowMs: NOW,
+      log: () => {},
+    });
+    assert.equal(result.preservedPlay, 1);
+    const stored = (await db.collection('lbPlayers').doc(uid).get()).data() as LbPlayerDoc;
+    assert.equal(stored.best, 95);
+    assert.equal(stored.bestShadow, 95);
+    assert.equal(stored.groupId, live!.group!.id);
+    assert.ok((stored.hist ?? []).includes(95));
+
+    const best = (await db.collection('lbBest').doc('global').get()).data() as {
+      rows: Array<{ uid: string; best: number }>;
+    };
+    assert.deepEqual(
+      best.rows.filter((row) => row.uid === uid).map((row) => row.best),
+      [95],
+    );
+  });
+
+  it('retries the BEST rebuild from fresh data when a live submission commits after its snapshot', async () => {
+    const uid = uniq('import-live-cache-race');
+    await seedPlayers(db, [
+      [uid, player({ best: 40, bestRun: makeRun({ score: 40, tsMs: T0, best: 40 }), recent: [] })],
+    ]);
+    await db.collection('lbPlayers').doc(uid).set(imported(uid, 40));
+    let live: Awaited<ReturnType<typeof lbSubmitRun>> | undefined;
+    const racingDb = raceBeforeImportCacheRebuild(db, async () => {
+      live = await lbSubmitRun(
+        db,
+        uid,
+        { runs: [liveRun(90)], name: 'BraveOwl123', look: LOOK, platform: 'android' },
+        NOW,
+      );
+    });
+
+    await importLeaderboard(racingDb, { keepUids: ['owner-a'], apply: true, nowMs: NOW, log: () => {} });
+    assert.ok(live);
+    const stored = (await db.collection('lbPlayers').doc(uid).get()).data() as LbPlayerDoc;
+    assert.equal(stored.best, 90);
+    assert.equal(stored.bestShadow, 90);
+
+    const best = (await db.collection('lbBest').doc('global').get()).data() as {
+      rows: Array<{ uid: string; best: number }>;
+    };
+    assert.deepEqual(
+      best.rows.filter((row) => row.uid === uid).map((row) => row.best),
+      [90],
+      'the cache must commit from data that includes the concurrent live submission',
+    );
   });
 
   it('skips an existing tombstone and a deletion during import, leaving no leaderboard data', async () => {

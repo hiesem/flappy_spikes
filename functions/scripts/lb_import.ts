@@ -21,8 +21,10 @@ import {
   getFirestore,
   type CollectionReference,
   type DocumentData,
+  type DocumentSnapshot,
   type Firestore,
   type QueryDocumentSnapshot,
+  type Transaction,
   type WriteBatch,
 } from 'firebase-admin/firestore';
 import { bracketForVerifiedBest, rankBestRuns } from '../src/board.js';
@@ -264,6 +266,18 @@ export function sameImportedPlayer(
 
 type ImportCommitOutcome = 'written' | 'unchanged' | 'preservedPlay' | 'tombstoned';
 
+function receivedLiveSubmission(existing: LbPlayerDoc | Record<string, unknown> | undefined): boolean {
+  const player = existing as Partial<LbPlayerDoc> | undefined;
+  return (
+    player !== undefined &&
+    (player.hist !== undefined ||
+      player.rate !== undefined ||
+      player.groupId !== undefined ||
+      player.groupStart !== undefined ||
+      player.groupEnd !== undefined)
+  );
+}
+
 /**
  * Commit one imported row only if it is still safe to do so. The transaction
  * either sees a live play row (and leaves it untouched) or the Delete My Data
@@ -284,6 +298,7 @@ async function commitImportedPlayer(
     if (tombSnap.exists) return 'tombstoned';
     const current = playerSnap.exists ? (playerSnap.data() as LbPlayerDoc) : undefined;
     if (current?.src === 'play') return 'preservedPlay';
+    if (receivedLiveSubmission(current)) return 'preservedPlay';
     if (playerSnap.exists && sameImportedPlayer(current, desired, nowMs)) return 'unchanged';
     // A live submit on an already-imported row keeps `src: 'import'`, so it is
     // not enough to check that field. Any state change since the planning read
@@ -295,24 +310,26 @@ async function commitImportedPlayer(
 }
 
 /**
- * Rebuild `lbBest/global` from the committed lbPlayers collection. A Delete My
- * Data that lands after a player import but before this read would otherwise be
- * resurrected in the cached BEST RUN rows. The transaction rechecks every
- * tombstone from the snapshot, so it either commits after the deletion or
- * retries and reads the cleaned collection.
+ * Rebuild `lbBest/global` from data read inside the same transaction that
+ * writes the cache. Reads of every player and the cache create contention with
+ * concurrent submissions and deletions, so Firestore retries this function from
+ * fresh committed data instead of publishing a stale snapshot. Tombstones are
+ * rechecked as an additional Delete My Data guard.
  */
 export async function rebuildBestFromCommitted(db: Firestore, nowMs: number): Promise<LbBestDoc> {
   const bestRef = db.collection(LB_BEST_COLLECTION).doc('global');
   for (let attempt = 0; attempt < 5; attempt++) {
-    const best = bestDocFromPlayers(await readLbPlayers(db), nowMs);
-    const clean = await db.runTransaction(async (tx) => {
-      const uids = best.rows.map((row) => row.uid);
+    const { best, clean } = await db.runTransaction(async (tx) => {
+      await tx.get(bestRef);
+      const rows = await readLbPlayersInTransaction(db, tx);
+      const nextBest = bestDocFromPlayers(rows, nowMs);
+      const uids = nextBest.rows.map((row) => row.uid);
       const tombstones = await Promise.all(
         uids.map((uid) => tx.get(db.collection(LB_TOMB_COLLECTION).doc(uid))),
       );
-      if (uids.some((_, i) => tombstones[i].exists)) return false;
-      tx.set(bestRef, best);
-      return true;
+      const stillClean = !uids.some((_, i) => tombstones[i].exists);
+      if (stillClean) tx.set(bestRef, nextBest);
+      return { best: nextBest, clean: stillClean };
     });
     if (clean) return best;
   }
@@ -406,6 +423,27 @@ async function readPages(collection: CollectionReference<DocumentData>): Promise
     docs.push(...snap.docs);
     if (snap.size < PAGE) return docs;
     last = snap.docs[snap.docs.length - 1];
+  }
+}
+
+async function readLbPlayersInTransaction(
+  db: Firestore,
+  tx: Transaction,
+): Promise<Array<{ uid: string; data: LbPlayerDoc | Record<string, unknown> }>> {
+  const docs: DocumentSnapshot<DocumentData>[] = [];
+  let last: DocumentSnapshot<DocumentData> | null = null;
+  for (;;) {
+    let query = db.collection(LB_PLAYERS_COLLECTION).limit(PAGE);
+    if (last !== null) query = query.startAfter(last);
+    const snap = await tx.get(query);
+    const lockedDocs = await Promise.all(snap.docs.map((doc) => tx.get(doc.ref)));
+    docs.push(...lockedDocs);
+    if (lockedDocs.length < PAGE) {
+      return docs
+        .filter((doc) => doc.exists)
+        .map((doc) => ({ uid: doc.id, data: doc.data() as LbPlayerDoc | Record<string, unknown> }));
+    }
+    last = lockedDocs[lockedDocs.length - 1];
   }
 }
 
@@ -560,8 +598,8 @@ export async function importLeaderboard(db: Firestore, opts: ImportOptions): Pro
     const bestSnap = await bestRef.get();
     const existingBest = bestSnap.exists ? (bestSnap.data() as LbBestDoc) : undefined;
     const bestNeedsWrite = written > 0 || !sameBestDoc(existingBest, committedBest);
-    if (bestNeedsWrite) await rebuildBestFromCommitted(db, nowMs);
-    resultBest = bestNeedsWrite ? committedBest : (existingBest ?? committedBest);
+    if (bestNeedsWrite) resultBest = await rebuildBestFromCommitted(db, nowMs);
+    else resultBest = existingBest ?? committedBest;
 
     const metaSnap = await metaRef.get();
     const meta = (metaSnap.exists ? metaSnap.data() : {}) as Partial<LbMetaDoc>;

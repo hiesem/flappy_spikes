@@ -47,9 +47,9 @@ const Map<String, String> _liveV21 = {
   'curve_speed': '[[0,150],[50,172.5],[150,187.5]]',
   'curve_opening':
       '[[1,118],[2,118],[6,114],[10,110],[16,105.5],[20,102],[25,98],[30,95],[40,88.5],[50,83],[60,79],[75,75.5],[100,72.5],[125,71],[150,70]]',
-  'curve_moving': '[[24,0],[25,0.15],[34,0.15],[35,0.25],[60,0.42],[100,0.52],[150,0.58]]',
-  'curve_tilt':
-      '[[9,0],[10,0.30],[49,0.35],[50,0.50],[100,0.60],[150,0.65]]',
+  'curve_moving':
+      '[[24,0],[25,0.15],[34,0.15],[35,0.25],[60,0.42],[100,0.52],[150,0.58]]',
+  'curve_tilt': '[[9,0],[10,0.30],[49,0.35],[50,0.50],[100,0.60],[150,0.65]]',
   'curve_rim_soft_bump': '20',
   'curve_rim_hang_s': '0.25',
   'curve_rim_hang_gravity': '0.25',
@@ -65,12 +65,9 @@ const Map<String, String> _liveV21 = {
   'spawn_bullseye': '{"from":4,"weight":20,"min_since":2,"cooldown":1}',
   'spawn_train': '{"from":5,"weight":14,"min_since":4,"cooldown":2}',
   'spawn_spring': '{"from":6,"weight":12,"min_since":4,"cooldown":2}',
-  'spawn_switch': '{"from":7,"weight":14,"min_since":3,"cooldown":1}',
   'spawn_pair': '{"from":8,"weight":10,"min_since":6,"cooldown":2}',
   'spawn_fever': '{"from":10,"weight":6,"min_since":8,"cooldown":1}',
   'spawn_lucky_spin': '{"from":10,"weight":8,"min_since":7,"cooldown":1}',
-  'spawn_saw':
-      '{"from":20,"weight":18,"weight_from_45":26,"min_since":3,"cooldown":1}',
   'spawn_star_trail': '{"from":3,"weight":30,"min_since":3}',
   'spawn_capsule': '{"from":6,"weight":20,"min_since":8}',
   'spawn_egg': '{"from":6,"weight":12,"min_since":6}',
@@ -130,13 +127,25 @@ void main() {
   });
 
   test('the PRD wins over live: coin_bullseye 3, shop_ad_coins 75; the '
-      '2.3.1 keys keep their PRD defaults', () {
+      '2.3.1 / D2 keys keep their PRD defaults', () {
     expect(defs['coin_bullseye']!.value, 3); // §6 (live: 2)
     expect(defs['shop_ad_coins']!.value, 75); // §5 (live: 40)
     expect(defs['ride_comet_hoop_gap']!.value, 560); // live
     expect(defs['ride_comet_tail']!.value, 100); // §16
     expect(defs['ride_comet_after_gap']!.value, 310); // §16
     expect(defs['ride_portal_max']!.value, 2); // §17
+    expect(defs['spawn_switch']!.value, {
+      'from': 15,
+      'weight': 14,
+      'min_since': 3,
+      'cooldown': 1,
+    });
+    expect(defs['spawn_saw']!.value, {
+      'from': 30,
+      'weight': 14,
+      'min_since': 3,
+      'cooldown': 1,
+    });
   });
 
   test('the PRD-2.6 wave-1 tuning additions use their final values', () {

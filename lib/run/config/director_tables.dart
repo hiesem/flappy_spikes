@@ -60,10 +60,10 @@ class SpecialRule {
   const SpecialRule({
     required this.from,
     required this.weight,
-    this.weightFrom45,
+    this.weightCurve,
     required this.minSince,
     required this.cooldown,
-    this.allowedInSqueeze = false,
+    this.allowedInSqueezeFrom,
     this.blockedNearPortal = 0,
   });
 
@@ -73,8 +73,8 @@ class SpecialRule {
   /// §3.0.3 Weight.
   final int weight;
 
-  /// §3.0.3 Weight from hoop 45 (saw: 26).
-  final int? weightFrom45;
+  /// PRD-2.6 §D2 weight by hoop index (saw).
+  final Keyframes? weightCurve;
 
   /// §3.0.3 Min hoops since the same type.
   final int minSince;
@@ -82,14 +82,17 @@ class SpecialRule {
   /// §3.0.3 Normal slots after it.
   final int cooldown;
 
-  /// §3.0.3 Allowed in the squeeze window (bullseye, FEVER, saw).
-  final bool allowedInSqueeze;
+  /// PRD-2.6 §D2 first hoop where the kind is allowed in a squeeze; null =
+  /// never allowed (bullseye / FEVER from 0, saw from 100).
+  final int? allowedInSqueezeFrom;
 
   /// §3.0.3 Not within this many hoops of the portal (saw, FEVER, switch).
   final int blockedNearPortal;
 
-  int weightAt(int hoopIndex) =>
-      hoopIndex >= 45 && weightFrom45 != null ? weightFrom45! : weight;
+  int weightAt(int hoopIndex) => weightCurve?.at(hoopIndex).round() ?? weight;
+
+  bool allowedInSqueezeAt(int hoopIndex) =>
+      allowedInSqueezeFrom != null && hoopIndex >= allowedInSqueezeFrom!;
 }
 
 /// §3.0.3 Optional gap item row.
@@ -302,10 +305,10 @@ class DirectorTables {
       return SpecialRule(
         from: o['from']!.toInt(),
         weight: o['weight']!.toInt(),
-        weightFrom45: o['weight_from_45']?.toInt(),
+        weightCurve: key == 'spawn_saw' ? t.curve('spawn_saw_weight') : null,
         minSince: o['min_since']!.toInt(),
         cooldown: o['cooldown']!.toInt(),
-        allowedInSqueeze: _specialInSqueeze.contains(key),
+        allowedInSqueezeFrom: _specialInSqueezeFrom[key],
         blockedNearPortal: _specialNearPortal.contains(key) ? 3 : 0,
       );
     }
@@ -385,12 +388,12 @@ class DirectorTables {
     );
   }
 
-  /// §3.0.3 Special hoops allowed in the squeeze window (bullseye, FEVER,
-  /// saw) — a rule, not a tuning value.
-  static const Set<String> _specialInSqueeze = {
-    'spawn_bullseye',
-    'spawn_fever',
-    'spawn_saw',
+  /// §3.0.3 / PRD-2.6 §D2 special hoops allowed in the squeeze window and
+  /// their first eligible hoop — a rule, not a tuning value.
+  static const Map<String, int> _specialInSqueezeFrom = {
+    'spawn_bullseye': 0,
+    'spawn_fever': 0,
+    'spawn_saw': 100,
   };
 
   /// §3.0.3 Special hoops not within 3 hoops of the portal (switch, FEVER,
@@ -412,14 +415,14 @@ class DirectorTables {
     BudgetRow(50, 0.60, 0.33),
   ];
 
-  /// PRD-2.2 §19.2 the early random pool (not tunable).
+  /// PRD-2.2 §19.2 / PRD-2.6 §D2 the early random pool (not tunable; no
+  /// angled ring before the normal tilt curve starts at hoop 10).
   static const EarlyPool _earlyPool = EarlyPool(
     from: 4,
     to: 9,
     weights: {
       EarlyPick.starTrail: 1,
       EarlyPick.bullseye: 1,
-      EarlyPick.angled: 1,
       EarlyPick.nothing: 1,
     },
   );
@@ -433,18 +436,15 @@ enum EarlyPick {
   /// The slot is a Bullseye Ring.
   bullseye,
 
-  /// The slot is an angled (tilted) normal ring.
-  angled,
-
   /// Nothing extra (a quiet index).
   nothing,
 }
 
 /// PRD-2.2 §19.2 For slot / gap indices [from]–[to] the director makes one
 /// equal-chance draw per index from [weights] instead of the special-hoop
-/// and optional-gap-item rolls. Bullseye and the angled ring may come from
-/// index [from] here (their normal unlocks stay for the regular tables);
-/// the usual exclusivity and cooldowns still apply.
+/// and optional-gap-item rolls. Bullseye may come from index [from] here
+/// (its normal unlock stays for the regular tables); the usual exclusivity
+/// and cooldowns still apply.
 class EarlyPool {
   const EarlyPool({
     required this.from,

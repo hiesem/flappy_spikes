@@ -74,12 +74,18 @@ void main() {
         final run = await startRun(game, startHoopIndex: 20, force: [force]);
         final h = await _onScreen(game, run, kind, force);
         await flushAndMount(game);
-        await tester.runAsync(() => captureShot(game, 1.5, 'p22/s27_${kind.name}_0_before'));
+        await tester.runAsync(
+          () => captureShot(game, 1.5, 'p22/s27_${kind.name}_0_before'),
+        );
         h.stripReward();
         _step(game, .1);
-        await tester.runAsync(() => captureShot(game, 1.5, 'p22/s27_${kind.name}_1_fading'));
+        await tester.runAsync(
+          () => captureShot(game, 1.5, 'p22/s27_${kind.name}_1_fading'),
+        );
         _step(game, .2);
-        await tester.runAsync(() => captureShot(game, 1.5, 'p22/s27_${kind.name}_2_plain'));
+        await tester.runAsync(
+          () => captureShot(game, 1.5, 'p22/s27_${kind.name}_2_plain'),
+        );
         expect(h.rewardAlpha, 0);
       },
     );
@@ -94,13 +100,19 @@ void main() {
       run.events.emit(const PickupCollected(ElementId.egg, null));
       _step(game, .3);
       await flushAndMount(game);
-      await tester.runAsync(() => captureShot(game, 1.5, 'p22/s23_egg_0_carried'));
+      await tester.runAsync(
+        () => captureShot(game, 1.5, 'p22/s23_egg_0_carried'),
+      );
       final h = run.spawner.hoops.first;
       run.events.emit(RimTouched(h, Vector2(h.planeX, 300), Vector2(0, 1)));
       _step(game, .12);
-      await tester.runAsync(() => captureShot(game, 1.5, 'p22/s23_egg_1_break'));
+      await tester.runAsync(
+        () => captureShot(game, 1.5, 'p22/s23_egg_1_break'),
+      );
       _step(game, .2);
-      await tester.runAsync(() => captureShot(game, 1.5, 'p22/s23_egg_2_falling'));
+      await tester.runAsync(
+        () => captureShot(game, 1.5, 'p22/s23_egg_2_falling'),
+      );
       expect(run.state.egg, isNull);
     },
   );
@@ -124,11 +136,17 @@ void main() {
       );
       await flushAndMount(game);
       _step(game, .08);
-      await tester.runAsync(() => captureShot(game, 1.5, 'p22/s15_popin_0_growing'));
+      await tester.runAsync(
+        () => captureShot(game, 1.5, 'p22/s15_popin_0_growing'),
+      );
       _step(game, .08);
-      await tester.runAsync(() => captureShot(game, 1.5, 'p22/s15_popin_1_overshoot'));
+      await tester.runAsync(
+        () => captureShot(game, 1.5, 'p22/s15_popin_1_overshoot'),
+      );
       _step(game, .2);
-      await tester.runAsync(() => captureShot(game, 1.5, 'p22/s15_popin_2_done'));
+      await tester.runAsync(
+        () => captureShot(game, 1.5, 'p22/s15_popin_2_done'),
+      );
     },
   );
 
@@ -144,22 +162,24 @@ void main() {
     },
     verify: (game, tester) async {
       game.runDebug.god = true;
-      final run = await startRun(game, startHoopIndex: 14);
+      final run = await startRun(game, startHoopIndex: 15);
       run.director.debugForceSwitchDesign(SwitchDesign.powerIris);
       run.debugForce(ElementId.switchRing);
       SwitchPickup? sw;
       await flyUntil(game, (r) {
         sw = r.spawner.pickups.whereType<SwitchPickup>().firstOrNull;
         final p = sw;
-        return p != null &&
-            p.ring == null &&
-            p.position.x - r.state.camX < 290;
+        return p != null && p.ring == null && p.position.x - r.state.camX < 290;
       }, maxSeconds: 20);
       expect(sw?.ringPlan, isNotNull);
-      await tester.runAsync(() => captureShot(game, 1.5, 'p22/s15_iris_cable_planned'));
+      await tester.runAsync(
+        () => captureShot(game, 1.5, 'p22/s15_iris_cable_planned'),
+      );
       await flyUntil(game, (_) => sw!.ring != null, maxSeconds: 3);
       _step(game, .1);
-      await tester.runAsync(() => captureShot(game, 1.5, 'p22/s15_iris_cable_linked'));
+      await tester.runAsync(
+        () => captureShot(game, 1.5, 'p22/s15_iris_cable_linked'),
+      );
       expect(RunConfig.worldWidth, 320);
     },
   );

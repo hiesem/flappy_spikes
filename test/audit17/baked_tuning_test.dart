@@ -48,9 +48,9 @@ const Map<String, String> _liveRc20261019 = {
   'curve_speed': '[[0,150],[50,172.5],[150,187.5]]',
   'curve_opening':
       '[[1,118],[2,118],[6,114],[10,110],[16,105.5],[20,102],[25,98],[30,95],[40,88.5],[50,83],[60,79],[75,75.5],[100,72.5],[125,71],[150,70]]',
-  'curve_moving': '[[24,0],[25,0.15],[34,0.15],[35,0.25],[60,0.42],[100,0.52],[150,0.58]]',
-  'curve_tilt':
-      '[[9,0],[10,0.30],[49,0.35],[50,0.50],[100,0.60],[150,0.65]]',
+  'curve_moving':
+      '[[24,0],[25,0.15],[34,0.15],[35,0.25],[60,0.42],[100,0.52],[150,0.58]]',
+  'curve_tilt': '[[9,0],[10,0.30],[49,0.35],[50,0.50],[100,0.60],[150,0.65]]',
   'curve_rim_soft_bump': '20',
   'curve_rim_hang_s': '0.25',
   'curve_rim_hang_gravity': '0.25',
@@ -73,8 +73,6 @@ const Map<String, String> _liveRc20261019 = {
   'spawn_pair': '{"from":8,"weight":10,"min_since":6,"cooldown":2}',
   'spawn_fever': '{"from":10,"weight":6,"min_since":8,"cooldown":1}',
   'spawn_lucky_spin': '{"from":10,"weight":8,"min_since":7,"cooldown":1}',
-  'spawn_saw':
-      '{"from":20,"weight":18,"weight_from_45":26,"min_since":3,"cooldown":1}',
   'spawn_star_trail': '{"from":3,"weight":30,"min_since":3}',
   'spawn_capsule': '{"from":6,"weight":20,"min_since":8}',
   'spawn_egg': '{"from":6,"weight":12,"min_since":6}',
@@ -141,17 +139,41 @@ const Map<String, String> _liveRc20261019 = {
 };
 
 void main() {
+  const prd26Wins = {'spawn_switch', 'spawn_saw'};
+
   test('every baked value equals the live RC value of 2026-10-19 (parsed '
-      'with the app parser), and every key is covered', () {
+      'with the app parser), and every key is covered; PRD-2.6 §D2 wins for '
+      'the spawn unlocks', () {
     final defs = {for (final d in kTuningDefaults) d.key: d};
-    expect(defs.keys.toSet(), _liveRc20261019.keys.toSet());
+    expect(defs.keys.toSet(), {
+      ..._liveRc20261019.keys,
+      'spawn_switch',
+      'spawn_saw',
+    });
     final baked = TuningValues.defaults();
     for (final e in _liveRc20261019.entries) {
       final d = defs[e.key]!;
+      if (prd26Wins.contains(e.key)) continue;
       final live = d.type.parse(e.value, d.value);
       expect(live, isNotNull, reason: '${e.key} parses');
       expect(jsonEncode(baked.raw(e.key)), jsonEncode(live), reason: e.key);
     }
+  });
+
+  test('PRD-2.6 D2 wins over the 2026-10-19 live spawn rows', () {
+    final defs = {for (final d in kTuningDefaults) d.key: d};
+    expect(defs['spawn_switch']!.value, {
+      'from': 15,
+      'weight': 14,
+      'min_since': 3,
+      'cooldown': 1,
+    });
+    expect(defs['spawn_saw']!.value, {
+      'from': 30,
+      'weight': 14,
+      'min_since': 3,
+      'cooldown': 1,
+    });
   });
 
   test('the tester flag is off by default (release builds have no define)', () {

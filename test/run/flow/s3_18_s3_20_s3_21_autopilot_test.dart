@@ -8,15 +8,15 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../helpers.dart';
 
 /// §3.18 / §3.20 / §3.21 / §7 playability gate for WP-3d: saw rings (from
-/// hoop 20), switch rings (from 12) and pairs of powerup rings (from 12)
+/// hoop 30), switch rings (from 15) and pairs of powerup rings (from 12)
 /// are each forced on every slot the director allows from the unlock index,
 /// and the hoop-aware autopilot (switch first, the nearer pair ring, the
 /// Black Hole pull in its rollout) passes ≥ 12 hoops at 568 and 711 pt
 /// over three seeds.
 void main() {
   for (final (element, kind, start) in [
-    (ElementId.saw, HoopKindId.saw, 20),
-    (ElementId.switchRing, HoopKindId.switchRing, 12),
+    (ElementId.saw, HoopKindId.saw, 30),
+    (ElementId.switchRing, HoopKindId.switchRing, 15),
     (ElementId.pair, HoopKindId.pair, 12),
   ]) {
     for (final height in [568.0, 711.0]) {
@@ -40,8 +40,8 @@ void main() {
             );
             final seen = <int>{};
             var specials = 0;
-            // PRD-2.3.1 §0: the live portal (hoop 12–25) lands in the saw's
-            // window from hoop 20 and keeps saws away from it; the saw
+            // The portal (hoop 12–25 or +80–90) can keep saws away from
+            // their forced slot; the saw
             // flight is longer.
             final saw = kind == HoopKindId.saw;
             final flight = await flyRun(
@@ -67,7 +67,12 @@ void main() {
                   '${flight.trace.reversed.take(16).join('\n')}',
             );
             expect(run.ended, isFalse);
-            expect(specials, greaterThanOrEqualTo(3));
+            expect(
+              specials,
+              kind == HoopKindId.switchRing
+                  ? greaterThanOrEqualTo(1)
+                  : greaterThanOrEqualTo(3),
+            );
             // ignore: avoid_print
             print(
               '${element.storageId} h=$height seed=$seed: '

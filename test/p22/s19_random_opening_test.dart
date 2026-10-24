@@ -46,7 +46,7 @@ void main() {
   tearDown(resetTuning);
   const seeds = 500;
 
-  test('§19.5 tables: heart (5–27, then 17–27), early pool 4–9 with four '
+  test('§19.5 tables: heart (5–27, then 17–27), early pool 4–9 with three '
       'equal options, feather / piece 60 % (PRD-2.3 §14.2: in 10–40)', () {
     final t = DirectorTables.prd2;
     expect(t.heart.first, (5, 27));
@@ -84,7 +84,7 @@ void main() {
   });
 
   test('§19.2 indices 4–9: one equal-chance draw per index; the first '
-      'optional item (index 4) is each pool option ≈ 25 % (± 5)', () {
+      'optional item (index 4) is each pool option ≈ 33 % (± 5)', () {
     final draws = <EarlyPick, int>{};
     final first = <EarlyPick, int>{};
     for (var seed = 1; seed <= seeds; seed++) {
@@ -99,8 +99,6 @@ void main() {
       final (s, g) = plans[4];
       final shown = s.kind == HoopKindId.bullseye
           ? EarlyPick.bullseye
-          : s.tiltDeg != 0
-          ? EarlyPick.angled
           : g.items.any((i) => i.kind == ElementId.starTrail)
           ? EarlyPick.starTrail
           : EarlyPick.nothing;
@@ -115,14 +113,13 @@ void main() {
       }
     }
     for (final o in EarlyPick.values) {
-      expect(draws[o]! / (6 * seeds), closeTo(.25, .05), reason: '$o draws');
-      expect(first[o]! / seeds, closeTo(.25, .05), reason: '$o first');
+      expect(draws[o]! / (6 * seeds), closeTo(1 / 3, .05), reason: '$o draws');
+      expect(first[o]! / seeds, closeTo(1 / 3, .05), reason: '$o first');
     }
   });
 
   test('§19.2 the pool keeps exclusivity and cooldowns: Star Trails ≥ 8 '
-      'apart, Bullseyes ≥ 6 apart; from index 10 the normal tables apply',
-      () {
+      'apart, Bullseyes ≥ 6 apart; from index 10 the normal tables apply', () {
     for (var seed = 1; seed <= seeds; seed++) {
       final d = director(seed);
       int? lastTrail, lastBull;
@@ -146,9 +143,7 @@ void main() {
         if (s.index < 6 && s.kind == HoopKindId.bullseye) {
           expect(d.earlyPicks[s.index], EarlyPick.bullseye);
         }
-        if (s.index < 10 && s.tiltDeg != 0) {
-          expect(d.earlyPicks[s.index], EarlyPick.angled);
-        }
+        if (s.index < 10) expect(s.tiltDeg, 0);
       }
     }
   });

@@ -93,20 +93,38 @@ void main() {
       final r = t.specials[names[e.key]]!;
       expect(r.from, j['from'], reason: e.key);
       expect(r.weight, j['w'], reason: e.key);
-      expect(r.weightFrom45, j['w_from_45'], reason: e.key);
       expect(r.minSince, j['min_gap'], reason: e.key);
       expect(r.cooldown, j['cooldown'], reason: e.key);
       // Same unlocks as the catalogue (§3.0.7).
       expect(names[e.key]!.element.firstPossible, j['from']);
     }
-    // §3.0.3 "not allowed when": squeeze-window kinds and portal distance.
+    // PRD-2.6 §D2: the saw weight curve replaces the old hoop-45 step.
+    final saw = t.specials[HoopKindId.saw]!;
+    final sawJson =
+        (specials['saw'] as Map<String, dynamic>)['w_curve'] as List;
+    for (final point in sawJson) {
+      expect(
+        saw.weightAt(point[0] as int),
+        point[1],
+        reason: 'hoop ${point[0]}',
+      );
+    }
+    expect(saw.weightAt(45), 17);
+    expect(saw.weightAt(80), 23);
+
+    // §3.0.3 / §D2 "not allowed when": squeeze-window kinds and portal
+    // distance. Saw only re-enters a squeeze from hoop 100.
     expect(
       {
         for (final e in t.specials.entries)
-          if (e.value.allowedInSqueeze) e.key,
+          if (e.value.allowedInSqueezeFrom != null) e.key,
       },
       {HoopKindId.bullseye, HoopKindId.fever, HoopKindId.saw},
     );
+    expect(t.specials[HoopKindId.bullseye]!.allowedInSqueezeAt(0), isTrue);
+    expect(t.specials[HoopKindId.fever]!.allowedInSqueezeAt(0), isTrue);
+    expect(t.specials[HoopKindId.saw]!.allowedInSqueezeAt(99), isFalse);
+    expect(t.specials[HoopKindId.saw]!.allowedInSqueezeAt(100), isTrue);
     expect(
       {
         for (final e in t.specials.entries)
@@ -147,8 +165,17 @@ void main() {
   test('§3.0.3 schedules mirror spawn_tables.json', () {
     final s = json['schedules'] as Map<String, dynamic>;
     List<int> pair((int, int) r) => [r.$1, r.$2];
-    expect(pair(t.portal.first), s['portal']['first']);
-    expect(pair(t.portal.then), s['portal']['then']);
+    expect(s['portal']['first'], [12, 25]);
+    expect(s['portal']['then'], [80, 90]);
+    expect(ElementId.portal.firstPossible, 12);
+    expect(
+      kTuningDefaults.firstWhere((d) => d.key == 'ride_portal_first').value,
+      [12, 25],
+    );
+    expect(
+      kTuningDefaults.firstWhere((d) => d.key == 'ride_portal_then').value,
+      [80, 90],
+    );
     // PRD-2.3 §14.5 the comet: 2 % per eligible hoop from 10, ≥ 25 apart.
     expect(t.comet.chance, s['comet_hoop']['chance']);
     expect(t.comet.from, s['comet_hoop']['from']);
@@ -167,7 +194,6 @@ void main() {
     expect(t.earlyPool!.weights, {
       EarlyPick.starTrail: 1,
       EarlyPick.bullseye: 1,
-      EarlyPick.angled: 1,
       EarlyPick.nothing: 1,
     });
   });

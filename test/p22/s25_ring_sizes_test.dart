@@ -28,7 +28,7 @@ void main() {
   // (test/p231/tuning_23.dart); the live set has its own checks.
   setUp(() => useTuning(tuning23Spawn()));
   tearDown(resetTuning);
-  const hoops = [20, 45, 70];
+  const hoops = [30, 45, 70];
 
   RunDirector director(int start, List<ElementId> forced, {RideId? ride}) =>
       RunDirector(
@@ -51,7 +51,7 @@ void main() {
     });
 
     for (final mult in [1.0, RunConfig.bigHoopsMult]) {
-      test('§25 at hoops 20 / 45 / 70 a saw ring\'s opening equals a normal '
+      test('§25 at hoops 30 / 45 / 70 a saw ring\'s opening equals a normal '
           'ring\'s (± 0.5 pt), Big Hoops ×$mult', () {
         for (final i in hoops) {
           final ctx = DirectorContext.open(711, bigHoopsMult: mult);

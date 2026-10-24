@@ -168,6 +168,24 @@ function dbWithSubmitAfterInitialGroupSweep(submit: () => Promise<unknown>): Fir
   }) as Firestore;
 }
 
+function dbWithDeleteAfterSubmit(deleteData: () => Promise<unknown>): Firestore {
+  let deleted = false;
+  return new Proxy(db, {
+    get(target, property) {
+      if (property !== 'runTransaction') return boundMember(target, property);
+      const runTransaction = Reflect.get(target, property, target) as AnyFunction;
+      return async (...args: unknown[]) => {
+        const result = await runTransaction.apply(target, args);
+        if (!deleted) {
+          deleted = true;
+          await deleteData();
+        }
+        return result;
+      };
+    },
+  }) as Firestore;
+}
+
 function runRequest(score = 70, endTs = T0) {
   const deltas = Array.from({ length: score }, () => 140);
   return {
@@ -483,6 +501,22 @@ describe('PRD-2.6 LB3 Delete My Data', () => {
     assert.deepEqual(copiedGroup.ghosts, []);
     assert.deepEqual(await boardDocsReferencingUid(uid), []);
   });
+
+  it('does not let an in-flight submit recreate lbFlags after deletion', async () => {
+    const uid = uniq('bd-flight-flag');
+    await seedBoardPlayer(uid, null, 'WiseOwl');
+    const anomaly = runRequest(200, T0);
+    anomaly.runs[0].tl = encodeDeltas(Array(200).fill(100));
+
+    await lbSubmitRun(
+      dbWithDeleteAfterSubmit(() => deleteBoardData(db, uid, T0 + 1000)),
+      uid,
+      anomaly,
+      T0 + 1000,
+    );
+    assert.equal((await db.collection(LB_PLAYERS_COLLECTION).doc(uid).get()).exists, false);
+    assert.equal((await db.collection(LB_FLAGS_COLLECTION).where('uid', '==', uid).get()).size, 0);
+  });
 });
 
 describe('PRD-2.6 LB3 name hooks', () => {
@@ -566,5 +600,31 @@ describe('PRD-2.6 LB3 name hooks', () => {
     const uid = uniq('bd-name-none');
     await lbSyncName(db, uid, 'NobodyOwl', T0);
     assert.equal((await db.collection(LB_PLAYERS_COLLECTION).doc(uid).get()).exists, false);
+  });
+
+  it('a delayed old lbSyncName leaves the newer name on every board surface', async () => {
+    const uid = uniq('bd-name-race');
+    const gid = uniq('bd-name-race-group');
+    await seedBoardPlayer(uid, gid, 'OldOwl');
+    await db.collection(LB_GROUPS_COLLECTION).doc(gid).set(group(gid, uid, uniq('bd-name-race-other'), 'OldOwl'));
+    await db.collection(LB_BEST_COLLECTION).doc('global').set({
+      rows: [{ uid, best: 900, bestAt: at(T0), name: 'OldOwl', look: LOOK, platform: 'android', bracket: 5 }],
+      floor: 900,
+      updatedAt: at(T0),
+    } satisfies LbBestDoc);
+
+    await setCustomName(db, uid, 'NewerOwl', T0);
+    await lbSyncName(db, uid, 'OldOwl', T0 + 1000);
+
+    assert.equal(((await db.collection(LB_PLAYERS_COLLECTION).doc(uid).get()).data() as LbPlayerDoc).name, 'NewerOwl');
+    assert.equal(
+      ((await db.collection(LB_GROUPS_COLLECTION).doc(gid).get()).data() as LbGroupDoc).members[uid].name,
+      'NewerOwl',
+    );
+    assert.equal(
+      ((await db.collection(LB_BEST_COLLECTION).doc('global').get()).data() as LbBestDoc).rows[0].name,
+      'NewerOwl',
+    );
+    assert.equal(((await db.collection(NAMES_COLLECTION).doc(uid).get()).data() as any).customName, 'NewerOwl');
   });
 });

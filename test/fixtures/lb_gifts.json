@@ -1,0 +1,24 @@
+{
+  "bronze": {
+    "coinsMin": 25,
+    "coinsMax": 100,
+    "coinStep": 5
+  },
+  "silver": {
+    "coinsMin": 50,
+    "coinsMax": 200,
+    "coinStep": 5
+  },
+  "gold": {
+    "coinsMin": 100,
+    "coinsMax": 300,
+    "coinStep": 5,
+    "featherPct": 20,
+    "piecePct": 20,
+    "itemPct": 10,
+    "coinsPct": 50,
+    "itemMaxPrice": 750,
+    "commonPct": 70,
+    "rarePct": 30
+  }
+}

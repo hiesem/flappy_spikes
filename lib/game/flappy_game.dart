@@ -68,6 +68,7 @@ import '../run/mistakes.dart';
 import '../run/run_controller.dart';
 import '../run/run_scaled_world.dart';
 import '../run/run_setup.dart';
+import '../run/run_state.dart' show BigHoopsState;
 import '../run/run_summary.dart';
 import '../run/showcase/showcase_plan.dart';
 import '../run/screens/post_run_flow.dart';
@@ -1543,6 +1544,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     world.add(RunScaledWorld.inRunColumn(RunBackdrop(run)));
     // PRD-2.3 §10.1 / §10.2 the run opens waiting for the first tap, hoop 0
     // already at its spot.
+    // PRD-2.6 WP-B: arm showcase extras before features attach and hoop 0
+    // is planned. A Home-slot Big Hoops still owns its single duration roll.
+    if (setup.extraStarters.contains(Powerup.shield)) run.state.shield = true;
+    if (setup.starter != Powerup.bigHoops &&
+        setup.extraStarters.contains(Powerup.bigHoops)) {
+      run.state.bigHoops = BigHoopsState(
+        duration: run.director.rollBigHoopsDuration(),
+        start: run.state.runClock,
+      );
+    }
     run.open();
     _debugBot = debugAvailable && (d.bot || E2EHooks.autopilot)
         ? Autopilot(run)

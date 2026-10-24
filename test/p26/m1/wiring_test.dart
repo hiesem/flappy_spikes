@@ -3,7 +3,11 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/home_moments.dart';
+import 'package:flappy_spikes/menu/powerup_slot.dart';
+import 'package:flappy_spikes/run/items/big_hoops.dart';
+import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/run_events.dart';
+import 'package:flappy_spikes/services/rating_prompt.dart';
 import 'package:flappy_spikes/run/showcase/showcase_plan.dart';
 import 'package:flappy_spikes/services/ftue_tracker.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,6 +25,9 @@ final class _PlanCall {
 }
 
 final class _ShowcasePlan extends ShowcasePlan {
+  _ShowcasePlan([this.result]);
+
+  final ShowcaseRunPlan? result;
   final calls = <_PlanCall>[];
 
   @override
@@ -31,7 +38,7 @@ final class _ShowcasePlan extends ShowcasePlan {
     required bool forced,
   }) {
     calls.add(_PlanCall(gamesPlayed, seen, attempt, forced));
-    return null;
+    return result;
   }
 }
 
@@ -52,9 +59,13 @@ final class _ShowcaseProgress extends ShowcaseProgress {
 
 final class _FtueTracker extends FtueTracker {
   final steps = <String>[];
+  final calls = <({String id, int gamesPlayed})>[];
 
   @override
-  void step(String id, {required int gamesPlayed}) => steps.add(id);
+  void step(String id, {required int gamesPlayed}) {
+    steps.add(id);
+    calls.add((id: id, gamesPlayed: gamesPlayed));
+  }
 }
 
 final class _HomeMoments extends HomeMoments {
@@ -119,6 +130,138 @@ void main() {
     },
   );
 
+  for (final starter in [Powerup.none, Powerup.shield, Powerup.bigHoops]) {
+    const plan = ShowcaseRunPlan(
+      highlightId: 'portal',
+      step: 0,
+      attempt: 1,
+      extraStarters: [Powerup.bigHoops, Powerup.shield],
+    );
+    final planner = _ShowcasePlan(plan);
+    final withExtras = FlameTester<FlappySpikesGame>(() {
+      SharedPreferences.setMockInitialValues({});
+      return FlappySpikesGame(
+        worldHeight: Config.worldHeight,
+        soundEnabled: false,
+        showcasePlan: planner,
+      )..runSeed = 7;
+    }, gameSize: Vector2(Config.worldWidth, Config.worldHeight));
+
+    withExtras.testGameWidget(
+      'showcase arms both extras before hoop 0 with Home starter $starter',
+      setUp: (game, _) async {
+        await game.ready();
+        await preloadImages(game);
+      },
+      verify: (game, _) async {
+        final run = await startRun(game, starter: starter);
+        expect(run.setup.showcase, same(plan));
+        expect(run.setup.starter, starter);
+        expect(run.setup.extraStarters, plan.extraStarters);
+        expect(run.state.shield, isTrue);
+        expect(run.state.bigHoops, isNotNull);
+        expect(run.state.bigHoops!.mult(0), 1.5);
+        final baseline = RunDirector(seed: 7, enabled: {}, met: {});
+        expect(run.state.bigHoops!.duration, baseline.rollBigHoopsDuration());
+        expect(run.spawner.hoops, isNotEmpty);
+        expect(run.spawner.hoops.every(BigHoopsFeature.isGold), isTrue);
+      },
+    );
+  }
+
+  for (final milestone in {
+    1: FtueStep.run1End,
+    2: FtueStep.run2End,
+    3: FtueStep.run3End,
+    20: FtueStep.run20End,
+  }.entries) {
+    final tracker = _FtueTracker();
+    final progress = _ShowcaseProgress();
+    final withMilestone = FlameTester<FlappySpikesGame>(() {
+      SharedPreferences.setMockInitialValues({
+        'gamesPlayed': milestone.key - 1,
+      });
+      return FlappySpikesGame(
+        worldHeight: Config.worldHeight,
+        soundEnabled: false,
+        ftueTracker: tracker,
+        showcaseProgress: progress,
+      )..runSeed = 7;
+    }, gameSize: Vector2(Config.worldWidth, Config.worldHeight));
+
+    withMilestone.testGameWidget(
+      'run ${milestone.key} end forwards FTUE and progress arguments',
+      setUp: (game, _) async {
+        await game.ready();
+        await preloadImages(game);
+      },
+      verify: (game, _) async {
+        final run = await startRun(game);
+        run.state.hoopsPassed = 2;
+        game.endRun(null);
+        expect(tracker.calls, [
+          (id: FtueStep.firstTap, gamesPlayed: milestone.key - 1),
+          (id: milestone.value, gamesPlayed: milestone.key),
+        ]);
+        expect(progress.runEnds, [
+          (gamesPlayed: milestone.key, hoopsPassed: 2),
+        ]);
+        // A second end signal must not count or report the same run again.
+        game.endRun(null);
+        expect(tracker.calls, hasLength(2));
+        expect(progress.runEnds, hasLength(1));
+        await flushAndMount(game);
+      },
+    );
+  }
+
+  for (final finishedRuns in [5, 6]) {
+    final moments = _HomeMoments();
+    final backend = _RatingBackend();
+    final prompt = RatingPrompt(backend: backend);
+    final withRating = FlameTester<FlappySpikesGame>(() {
+      SharedPreferences.setMockInitialValues({
+        'gamesPlayed': finishedRuns - 1,
+        'showcaseDoneAt': 4,
+      });
+      return FlappySpikesGame(
+        worldHeight: Config.worldHeight,
+        soundEnabled: false,
+        homeMoments: moments,
+        rating: prompt,
+      )..runSeed = 7;
+    }, gameSize: Vector2(Config.worldWidth, Config.worldHeight));
+
+    withRating.testGameWidget(
+      'rating routes through HomeMoments at showcase-adjusted run $finishedRuns',
+      setUp: (game, _) async {
+        await prompt.prepare();
+        await game.ready();
+        await preloadImages(game);
+      },
+      verify: (game, _) async {
+        await startRun(game);
+        game.endRun(null);
+        await flushAndMount(game);
+        for (
+          var frame = 0;
+          frame < 900 && !game.resultsScreen!.settled;
+          frame++
+        ) {
+          game.update(1 / 60);
+        }
+        expect(game.resultsScreen!.settled, isTrue);
+        stepGame(game, Config.ratingDelaySeconds + .1);
+        await flushAndMount(game);
+        expect(
+          moments.moments,
+          finishedRuns == 6 ? [HomeMoment.rating] : isEmpty,
+        );
+        expect(backend.requests, finishedRuns == 6 ? 1 : 0);
+      },
+    );
+  }
+
   final homeMoments = _HomeMoments();
   final withHome = FlameTester<FlappySpikesGame>(() {
     SharedPreferences.setMockInitialValues({
@@ -148,4 +291,16 @@ void main() {
       expect(homeMoments.moments, [HomeMoment.noAds, HomeMoment.levelUp]);
     },
   );
+}
+
+final class _RatingBackend implements RatingBackend {
+  int requests = 0;
+
+  @override
+  Future<bool> isAvailable() async => true;
+
+  @override
+  Future<void> requestReview() async {
+    requests++;
+  }
 }

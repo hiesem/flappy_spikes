@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 
+import '../../menu/home_mode.dart';
 import '../../menu/wallet.dart';
 import '../../services/analytics_buckets.dart';
+import '../../services/ftue_tracker.dart';
 import '../config/run_config.dart';
 import '../director/formations.dart';
 import '../director/plans.dart';
@@ -12,6 +14,7 @@ import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
 import '../run_state.dart';
+import '../run_summary.dart';
 
 /// The plan/state snapshot of one mistake (PRD-2.6 WP-A2 `run_fail`).
 ///
@@ -106,6 +109,8 @@ class AnalyticsRouter extends RunFeature {
   /// that set at failure time would always answer "not new".
   Set<ElementId> _metAtStart = const {};
 
+  final Map<ElementId, _PendingFirstMeet> _pendingFirstMeets = {};
+
   /// Perfect passes per streak tier (1 … 10). The streak owner emits
   /// `StreakChanged` from inside the `HoopPassed` dispatch; the router
   /// attaches first, so it observes that nested event and records the tier
@@ -145,6 +150,7 @@ class AnalyticsRouter extends RunFeature {
     c.run.pipeline.onResolved = _onResolved;
     c.events
       ..on<CoinsEarned>(_onCoins)
+      ..on<ElementSpawned>(_onElementSpawned)
       ..on<HoopSpawned>(_onHoopSpawned)
       ..on<HoopPassed>(_onHoopPassed)
       ..on<StreakChanged>(_onStreakChanged)
@@ -172,6 +178,39 @@ class AnalyticsRouter extends RunFeature {
     if (plan.calm) _calmCount++;
     final hazard = (plan.hazardCost * 10).round();
     if (hazard > _maxHazardX10) _maxHazardX10 = hazard;
+  }
+
+  void _onElementSpawned(ElementSpawned e) {
+    final c = _c;
+    if (c == null || !e.onScreen || _metAtStart.contains(e.element)) return;
+    SlotPlan? plan;
+    for (final candidate in _plans.values) {
+      if (candidate.element == e.element &&
+          (plan == null || candidate.index > plan.index)) {
+        plan = candidate;
+      }
+    }
+    final forced =
+        c.run.setup.forced.contains(e.element) || (plan?.forced ?? false);
+    _pendingFirstMeets.putIfAbsent(
+      e.element,
+      () => _PendingFirstMeet(
+        element: e.element,
+        hoop: plan?.index ?? c.s.hoopIndex,
+        forced: forced,
+      ),
+    );
+    if (e.element == ElementId.saw) {
+      c.game.ftueTracker.step(
+        FtueStep.firstSaw,
+        gamesPlayed: _gamesAtStart + 1,
+      );
+    } else if (e.element == ElementId.squeeze) {
+      c.game.ftueTracker.step(
+        FtueStep.firstSqueeze,
+        gamesPlayed: _gamesAtStart + 1,
+      );
+    }
   }
 
   void _onHoopPassed(HoopPassed e) {
@@ -231,7 +270,23 @@ class AnalyticsRouter extends RunFeature {
     if (c != null) _rideEndedAt = c.s.runClock;
   }
 
-  void _onHighlight(HighlightStarted e) => _highlights++;
+  void _onHighlight(HighlightStarted e) {
+    _highlights++;
+    final c = _c;
+    if (c == null) return;
+    c.game.ftueTracker.highlight(
+      e.id,
+      scripted: e.scripted,
+      runNo: _gamesAtStart + 1,
+      hoop: e.hoop,
+    );
+    if (_gamesAtStart == 0) {
+      c.game.ftueTracker.step(
+        FtueStep.run1Highlight,
+        gamesPlayed: _gamesAtStart + 1,
+      );
+    }
+  }
 
   // ------------------------------------------------------------ mistakes
 
@@ -383,6 +438,22 @@ class AnalyticsRouter extends RunFeature {
     if (pending != null) c.track('run_fail', pending.params);
 
     final s = e.summary;
+    for (final meet in _pendingFirstMeets.values) {
+      c.game.ftueTracker.firstMeet(
+        meet.element,
+        hoop: meet.hoop,
+        games: _gamesAtStart + 1,
+        forced: meet.forced,
+        survived: _survived(c, s, meet.element),
+      );
+    }
+    _pendingFirstMeets.clear();
+    if (c.game.homeMode == HomeMode.versus) {
+      c.game.ftueTracker.step(
+        FtueStep.versusFirstEnd,
+        gamesPlayed: _gamesAtStart + 1,
+      );
+    }
     c.track('run_end', {
       'cause': s.cause.analyticsName,
       'hoop_index': s.hoopIndex,
@@ -447,6 +518,32 @@ class AnalyticsRouter extends RunFeature {
       });
     }
     _coins.clear();
+    _setUserProperties(c, s);
+  }
+
+  bool _survived(RunContext c, RunSummary s, ElementId element) {
+    if (element == ElementId.squeeze) {
+      return c.s.squeeze.phase == SqueezePhase.idle;
+    }
+    return s.hoopKind?.element != element;
+  }
+
+  void _setUserProperties(RunContext c, RunSummary s) {
+    final services = c.game.services;
+    services.setUserProperty('fs_level', '${c.game.storage.playerLevel}');
+    services.setUserProperty(
+      'fs_gb',
+      AnalyticsBuckets.gamesBucket(_gamesAtStart + 1),
+    );
+    services.setUserProperty(
+      'fs_best_hb',
+      AnalyticsBuckets.hoopBucket(s.hoopsPassed),
+    );
+    services.setUserProperty(
+      'fs_showcase',
+      c.game.storage.showcaseDoneAt == null ? '0' : '1',
+    );
+    services.setUserProperty('fs_arm', '0');
   }
 
   /// Counts formation *starts* (a formation's slots share one id), not its
@@ -478,6 +575,7 @@ class AnalyticsRouter extends RunFeature {
       }
       c.events
         ..off<CoinsEarned>(_onCoins)
+        ..off<ElementSpawned>(_onElementSpawned)
         ..off<HoopSpawned>(_onHoopSpawned)
         ..off<HoopPassed>(_onHoopPassed)
         ..off<StreakChanged>(_onStreakChanged)
@@ -489,4 +587,16 @@ class AnalyticsRouter extends RunFeature {
     }
     _c = null;
   }
+}
+
+final class _PendingFirstMeet {
+  const _PendingFirstMeet({
+    required this.element,
+    required this.hoop,
+    required this.forced,
+  });
+
+  final ElementId element;
+  final int hoop;
+  final bool forced;
 }

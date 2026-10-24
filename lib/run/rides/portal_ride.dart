@@ -110,6 +110,18 @@ class PortalRideFeature extends RunFeature {
     _pending = h;
   }
 
+  /// WP-B4: a showcase run grabs a portal at any forward crossing of its
+  /// plane, even when the bird is outside the ring and no pass event exists.
+  bool grab(Hoop portal) {
+    final c = _c;
+    if (c == null || portal.plan.kind != HoopKindId.portal) return false;
+    if (c.run.setup.showcase == null || ride != null || _pending != null) {
+      return false;
+    }
+    _pending = portal;
+    return true;
+  }
+
   @override
   void update(double gameDt, double realDt) {
     final c = _c;
@@ -130,6 +142,13 @@ class PortalRideFeature extends RunFeature {
       ride = r;
       started.add(r.theme.id);
       r.start(c);
+      c.emit(
+        HighlightStarted(
+          'portal',
+          scripted: c.run.setup.showcase != null,
+          hoop: p.plan.index,
+        ),
+      );
     }
     final r = ride;
     if (r != null) {

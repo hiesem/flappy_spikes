@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 
 import '../../game/flappy_game.dart';
 import '../../game/sound.dart';
+import '../../menu/powerup_slot.dart';
 import '../config/lives_config.dart';
 import '../config/parts_config.dart';
 import '../effects/bird_attachment.dart';
@@ -45,6 +46,7 @@ class ShieldFeature extends RunFeature implements MistakeInterceptor {
   @override
   void attach(RunContext c) {
     _c = c;
+    if (c.run.setup.extraStarters.contains(Powerup.shield)) c.s.shield = true;
     c.run.pipeline.add(this);
     c.events.on<PickupCollected>(_onPickup);
     final circle = ShieldCircle(c);

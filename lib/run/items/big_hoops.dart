@@ -1,4 +1,5 @@
 import '../../menu/powerup_slot.dart';
+import '../config/showcase_config.dart';
 import '../director/plans.dart';
 import '../hoops/hoop.dart';
 import '../hoops/ring_painter.dart';
@@ -32,9 +33,13 @@ class BigHoopsFeature extends RunFeature {
   @override
   void attach(RunContext c) {
     _c = c;
-    if (c.run.setup.starter == Powerup.bigHoops) {
+    final wanted =
+        c.run.setup.starter == Powerup.bigHoops ||
+        c.run.setup.extraStarters.contains(Powerup.bigHoops);
+    if (wanted) {
+      final rolled = c.s.bigHoops?.duration;
       c.s.bigHoops = BigHoopsState(
-        duration: c.director.rollBigHoopsDuration(),
+        duration: _duration(c, alreadyRolled: rolled),
         start: c.s.runClock,
       );
     }
@@ -73,5 +78,12 @@ class BigHoopsFeature extends RunFeature {
   void detach() {
     _c?.events.off<HoopSpawned>(_onSpawn);
     _c = null;
+  }
+
+  double _duration(RunContext c, {double? alreadyRolled}) {
+    final duration = alreadyRolled ?? c.director.rollBigHoopsDuration();
+    return c.run.setup.showcase?.step == 0
+        ? ShowcaseConfig.portalBigHoopsSeconds
+        : duration;
   }
 }

@@ -16,6 +16,9 @@ import '../run_feature.dart';
 /// hoops' banners, bursts, +2 and tier sounds from the streak / scoring
 /// features (every ride pass is perfect).
 class CometFeature extends RunFeature {
+  static const double showcasePickupRadius = 60;
+  static const double showcaseDriftSpeed = 90;
+
   RunContext? _c;
 
   /// The running boost (null in normal play), and the one whose landing
@@ -74,6 +77,13 @@ class CometFeature extends RunFeature {
     ride = r;
     started++;
     r.start(c);
+    c.emit(
+      HighlightStarted(
+        'comet',
+        scripted: c.run.setup.showcase != null,
+        hoop: c.s.hoopIndex - 1,
+      ),
+    );
     return true;
   }
 

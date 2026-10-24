@@ -138,6 +138,12 @@ const Map<String, String> kObfStrings = {
   'playCertSha256':
       '324311eff3c0134cf41d7b82162d836f3c5e2824e65b410e6392e287667e328f',
   'appleTeamId': 'TF9VESMTKV',
+  // PRD-2.6 §Appendix WP-B / FTUE storage keys.
+  'prefFtueSteps': 'ftueSteps',
+  'prefShowcaseSeen': 'showcaseSeen',
+  'prefShowcaseAttempt': 'showcaseAttempt',
+  'prefShowcaseRuns': 'showcaseRuns',
+  'prefShowcaseDoneAt': 'showcaseDoneAt',
 };
 
 /// The output path, relative to the package root.

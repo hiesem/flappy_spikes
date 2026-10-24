@@ -69,12 +69,14 @@ import '../run/run_controller.dart';
 import '../run/run_scaled_world.dart';
 import '../run/run_setup.dart';
 import '../run/run_summary.dart';
+import '../run/showcase/showcase_plan.dart';
 import '../run/screens/post_run_flow.dart';
 import '../run/config/revive_config.dart';
 import '../run/debug/run_stats.dart';
 import '../run/hud/first_run_hint.dart';
 import '../run/hud/run_hud.dart';
-import '../run/run_events.dart' show ReviveKind;
+import '../levels/level_progress.dart' show PendingLevelUp;
+import '../run/run_events.dart' show HighlightStarted, ReviveKind;
 import '../run/screens/pause_screen.dart';
 import '../run/screens/phoenix_rise.dart' show ReviveDim;
 import '../run/screens/post_run_screens.dart';
@@ -88,6 +90,7 @@ import '../versus/opponent.dart'; // WP-5b
 import '../versus/diagnostics.dart'; // P22-2
 import '../run/screens/bonus_screen.dart'; // WP-4a
 import '../services/e2e.dart';
+import '../services/ftue_tracker.dart';
 import '../versus/timeline.dart';
 import '../components/sticker_avatar.dart'; // WP-AV
 import '../services/versus_service.dart';
@@ -104,6 +107,7 @@ import '../skins/look.dart';
 import 'config.dart';
 import 'diag.dart';
 import 'fade.dart';
+import 'home_moments.dart';
 import 'palettes.dart';
 import 'playfield.dart';
 import 'playfield_viewport.dart';
@@ -151,12 +155,20 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     bool? rumbleEnabled,
     VersusService? versus,
     RatingPrompt? rating,
+    ShowcasePlan? showcasePlan,
+    ShowcaseProgress? showcaseProgress,
+    FtueTracker? ftueTracker,
+    HomeMoments? homeMoments,
   }) : services = services ?? GameServices(),
        versus = versus ?? NoopVersusService(),
        rating = rating ?? RatingPrompt(),
        reminders = reminders ?? const NoopReminders(),
        rumble = Rumble(hardware: rumbleEnabled ?? soundEnabled),
        monetization = monetization ?? Monetization(),
+       showcasePlan = showcasePlan ?? const InertShowcasePlan(),
+       showcaseProgress = showcaseProgress ?? const InertShowcaseProgress(),
+       ftueTracker = ftueTracker ?? const InertFtueTracker(),
+       homeMoments = homeMoments ?? const PassthroughHomeMoments(),
        storage = GameStorage(clock: clock),
        // WP-TAB: a wide screen (tablet) is 568 pt high in game points.
        screenHeight = max(
@@ -208,6 +220,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// PRD-2.3.1 §12.3 the achievement tracker (local truth + platform sync).
   late final AchievementTracker achievements;
+
+  /// PRD-2.6 M1 seams; their default implementations are inert.
+  final ShowcasePlan showcasePlan;
+  final ShowcaseProgress showcaseProgress;
+  final FtueTracker ftueTracker;
+  final HomeMoments homeMoments;
 
   static double _clampViewHeight(double height) =>
       height.clamp(Config.minViewHeight, Config.maxViewHeight);
@@ -1431,6 +1449,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     try {
       versus.onRunStart();
     } catch (_) {}
+    ftueTracker.step(FtueStep.firstTap, gamesPlayed: storage.gamesPlayed);
     _bird!
       ..stopHover()
       ..enableGravity()
@@ -1470,6 +1489,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final d = runDebug;
     final e2e =
         kE2E || E2EHooks.force.isNotEmpty || E2EHooks.startHoopIndex > 0;
+    final forced = [...d.force, if (e2e) ...E2EHooks.force];
+    final showcase = showcasePlan.atStart(
+      gamesPlayed: storage.gamesPlayed,
+      seen: storage.showcaseSeen,
+      attempt: storage.showcaseAttempt,
+      forced: forced.isNotEmpty,
+    );
     final setup = RunSetup(
       seed: runSeed ?? (kE2E ? kE2ESeed : _random.nextInt(1 << 31)),
       starter: starter,
@@ -1479,7 +1505,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       startHoopIndex: e2e && E2EHooks.startHoopIndex > 0
           ? E2EHooks.startHoopIndex
           : d.startHoopIndex,
-      forced: [...d.force, if (e2e) ...E2EHooks.force],
+      forced: forced,
       forcedRide: d.forcedRide ?? (e2e ? E2EHooks.forcedRide : null),
       viewHeight: viewHeight,
       // PRD-2.3 §14.6 the gates hold in every real run; the test harness,
@@ -1489,6 +1515,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       oneBigBonus: d.oneBigBonus,
       // PRD-2.3.1 §12.2 a debug-forced slot starter is a debug start.
       debugStarter: menu.slot.takeConsumedDebug() && starter != Powerup.none,
+      showcase: showcase,
+      extraStarters: showcase?.extraStarters ?? const [],
     );
     d.force.clear();
     d.forcedRide = null;
@@ -1499,6 +1527,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     achievements.beginRun(counts: run.countsForAchievements);
     runStats = RunStats(run); // 2.3.0 (18) debug panel run rows
     _run = run;
+    run.events.on<HighlightStarted>(
+      (event) => showcaseProgress.onHighlight(
+        event.id,
+        scripted: event.scripted,
+        hoop: event.hoop,
+      ),
+    );
+    if (storage.gamesPlayed == 3) {
+      ftueTracker.step(FtueStep.run4Start, gamesPlayed: storage.gamesPlayed);
+    }
     (world as RunScaledWorld).timeScaleSource = () => run.state.timeScale;
     world.add(run);
     // PRD-2.4 §3 the lively run background (leaves with its run).
@@ -2678,6 +2716,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void openLevelUpPopup() {
     final pending = menu.levels.pendingLevelUp;
     if (pending == null || _levelUpPopup != null || !_homeInteractive) return;
+    homeMoments.show(HomeMoment.levelUp, () {
+      _showLevelUpPopup(pending);
+    });
+  }
+
+  void _showLevelUpPopup(PendingLevelUp pending) {
     final level = pending.toLevel;
     sound.play(
       level >= 9
@@ -2792,6 +2836,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// happens (no request, no cooldown) when the sheet is not available here
   /// (§23.4) or when a request went out in the last [Config.ratingCooldown].
   void _requestRating(String trigger) {
+    homeMoments.show(HomeMoment.rating, () {
+      _requestRatingNow(trigger);
+    });
+  }
+
+  void _requestRatingNow(String trigger) {
     if (!rating.available) return;
     final now = storage.now();
     if (!RatingRules.cooldownOver(
@@ -2863,23 +2913,25 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       showToast('Already ad-free');
       return;
     }
-    services.track('noads_popup_shown', {
-      'trigger': _launchTrigger,
-      'reason': ?reason,
-      // PRD-2.3 §24.4: session (app launch / return) or after_run.
-      'check': check,
+    homeMoments.show(HomeMoment.noAds, () {
+      services.track('noads_popup_shown', {
+        'trigger': _launchTrigger,
+        'reason': ?reason,
+        // PRD-2.3 §24.4: session (app launch / return) or after_run.
+        'check': check,
+      });
+      final popup = NoAdsPopup(
+        onDismiss: () => closeNoAdsPopup(),
+        onBuy: () {
+          _noAdsSource = 'popup';
+          buyProduct(IapProduct.noAds);
+        },
+      );
+      _noAdsPopup = popup;
+      world.add(popup);
+      fadeOpacity(popup, from: 0, to: 1, duration: Config.popupFadeDuration);
+      pushBack(_noAdsPopupBack);
     });
-    final popup = NoAdsPopup(
-      onDismiss: () => closeNoAdsPopup(),
-      onBuy: () {
-        _noAdsSource = 'popup';
-        buyProduct(IapProduct.noAds);
-      },
-    );
-    _noAdsPopup = popup;
-    world.add(popup);
-    fadeOpacity(popup, from: 0, to: 1, duration: Config.popupFadeDuration);
-    pushBack(_noAdsPopupBack);
   }
 
   /// Closes the popup. [dismissed] (×, dim, Esc) logs
@@ -4046,6 +4098,20 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     // endregion P23-14
     storage.incrementGamesPlayed();
+    showcaseProgress.onRunEnd(
+      gamesPlayed: storage.gamesPlayed,
+      hoopsPassed: _run?.state.hoopsPassed ?? summary?.hoopsPassed ?? 0,
+    );
+    switch (storage.gamesPlayed) {
+      case 1:
+        ftueTracker.step(FtueStep.run1End, gamesPlayed: storage.gamesPlayed);
+      case 2:
+        ftueTracker.step(FtueStep.run2End, gamesPlayed: storage.gamesPlayed);
+      case 3:
+        ftueTracker.step(FtueStep.run3End, gamesPlayed: storage.gamesPlayed);
+      case 20:
+        ftueTracker.step(FtueStep.run20End, gamesPlayed: storage.gamesPlayed);
+    }
     // region WP-L — owner 2026-10-17: the stored level steps up by exactly
     // one when this run's score reaches the next threshold (the cache is
     // updated at once; the write follows).
@@ -4078,7 +4144,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _ratingTrigger = RatingRules.trigger(
       runs: storage.gamesPlayed,
       newBest: score > previousBest,
-      minRuns: Config.ratingMinRuns,
+      minRuns: Config.ratingMinRunsFor(storage.showcaseDoneAt),
     );
     _ratingSettle = 0;
     // endregion PRD-2.3 §23.2
@@ -4144,7 +4210,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final page = _results;
     if (page == null || !page.isMounted || page.isRemoved) return null;
     if (page.opacity < 1 || !page.position.isZero()) return null;
-    if (page.size.x < Config.worldWidth || page.size.y < viewHeight) return null;
+    if (page.size.x < Config.worldWidth || page.size.y < viewHeight) {
+      return null;
+    }
     final vf = camera.viewfinder;
     if (!cameraShake.isZero() || vf.zoom != 1) return null;
     return page.priority;

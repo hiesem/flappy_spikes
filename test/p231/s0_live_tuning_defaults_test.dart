@@ -139,6 +139,42 @@ void main() {
     expect(defs['ride_portal_max']!.value, 2); // §17
   });
 
+  test('the PRD-2.6 wave-1 tuning additions use their final values', () {
+    expect(defs['tilt_align_min_deg']!.value, 20);
+    expect(defs['tilt_align_min_dy']!.value, 40);
+    expect(defs['tilt45_extra_opening']!.value, 6);
+    expect(defs['dy_ref_band']!.value, 540);
+    expect(defs['dy_hard_factor']!.value, 0.85);
+    expect(defs['spawn_saw_weight']!.value, [
+      [30, 14],
+      [60, 20],
+      [100, 26],
+    ]);
+    expect(defs['hazard_budget']!.value, [
+      [0, 0],
+      [3, 0.5],
+      [10, 2],
+      [25, 3],
+      [50, 4],
+      [100, 5],
+      [150, 5.5],
+    ]);
+    expect(defs['calm_every']!.value, {
+      'first_min': 30,
+      'first_max': 34,
+      'mult': 1.2,
+      'cap': 55,
+      'len': 3,
+      'min_gap': 12,
+    });
+    expect(defs['calm_after']!.value, {'revive': 3, 'squeeze': 2, 'ride': 2});
+    expect(defs['headline_window']!.value, 8);
+    expect(defs['headline_wait']!.value, 5);
+    expect(defs['formation_every']!.value, [12, 20]);
+    expect(defs['showcase_max_games']!.value, 6);
+    expect(defs['showcase_fast_hoops']!.value, 40);
+  });
+
   test('on the live defaults every element is still met in a full run '
       '(§3.0.8 first meet, 30 seeds × 200 slots)', () {
     final firstMeet = ElementId.values.where((e) => e.firstMeet).toList();

@@ -1,0 +1,120 @@
+import 'package:flappy_spikes/game/config.dart';
+import 'package:flappy_spikes/game/home_moments.dart';
+import 'package:flappy_spikes/game/storage.dart';
+import 'package:flappy_spikes/run/director/calm_schedule.dart';
+import 'package:flappy_spikes/run/director/formations.dart';
+import 'package:flappy_spikes/run/director/hazard_budget.dart';
+import 'package:flappy_spikes/run/director/headline_window.dart';
+import 'package:flappy_spikes/run/director/plans.dart';
+import 'package:flappy_spikes/run/elements.dart';
+import 'package:flappy_spikes/run/run_setup.dart';
+import 'package:flappy_spikes/services/obf_strings.g.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../tool/gen_obf_strings.dart';
+
+void main() {
+  test('the five PRD-2.6 storage keys are appended in order', () {
+    expect(kObfStrings.values.skip(kObfStrings.length - 5).toList(), [
+      'ftueSteps',
+      'showcaseSeen',
+      'showcaseAttempt',
+      'showcaseRuns',
+      'showcaseDoneAt',
+    ]);
+    expect([
+      Obf.prefFtueSteps,
+      Obf.prefShowcaseSeen,
+      Obf.prefShowcaseAttempt,
+      Obf.prefShowcaseRuns,
+      Obf.prefShowcaseDoneAt,
+    ], kObfStrings.values.skip(kObfStrings.length - 5).toList());
+  });
+
+  test('the new state round-trips and Delete my data clears it', () async {
+    SharedPreferences.setMockInitialValues({
+      'ftueSteps': 3,
+      'showcaseSeen': 5,
+      'showcaseAttempt': 2,
+      'showcaseRuns': 4,
+      'showcaseDoneAt': 6,
+    });
+    final storage = GameStorage();
+    await storage.load();
+    expect(storage.ftueSteps, 3);
+    expect(storage.showcaseSeen, 5);
+    expect(storage.showcaseAttempt, 2);
+    expect(storage.showcaseRuns, 4);
+    expect(storage.showcaseDoneAt, 6);
+
+    await storage.resetVersusData();
+    final prefs = await SharedPreferences.getInstance();
+    expect(storage.ftueSteps, 0);
+    expect(storage.showcaseSeen, 0);
+    expect(storage.showcaseAttempt, 0);
+    expect(storage.showcaseRuns, 0);
+    expect(storage.showcaseDoneAt, isNull);
+    for (final key in kObfStrings.values.skip(kObfStrings.length - 5)) {
+      expect(prefs.containsKey(key), isFalse, reason: key);
+    }
+  });
+
+  test('the rating minimum is five or two runs after showcase completion', () {
+    expect(Config.ratingMinRunsFor(null), 5);
+    expect(Config.ratingMinRunsFor(0), 5);
+    expect(Config.ratingMinRunsFor(3), 5);
+    expect(Config.ratingMinRunsFor(4), 6);
+    expect(Config.ratingMinRunsFor(10), 12);
+  });
+
+  test('Home moments use the C2 priority order and pass through', () {
+    expect(HomeMoment.values, [
+      HomeMoment.streakLost,
+      HomeMoment.levelUp,
+      HomeMoment.streakReward,
+      HomeMoment.leaderboardCollect,
+      HomeMoment.missionsChest,
+      HomeMoment.starRoad,
+      HomeMoment.noAds,
+      HomeMoment.rating,
+    ]);
+    var opened = false;
+    const PassthroughHomeMoments().show(HomeMoment.rating, () {
+      opened = true;
+    });
+    expect(opened, isTrue);
+  });
+
+  test('the wave-1 model defaults and stub modules are inert', () {
+    const setup = RunSetup(seed: 1, viewHeight: 711);
+    expect(setup.showcase, isNull);
+    expect(setup.extraStarters, isEmpty);
+    final plan = const SlotPlan(
+      index: 0,
+      kind: HoopKindId.normal,
+      element: ElementId.normalHoop,
+      trackX: 0,
+      centreY: 0,
+      opening: 100,
+      advance: 310,
+    );
+    expect(plan.calm, isFalse);
+    expect(plan.hazardCost, 0);
+    expect(plan.formation, isNull);
+
+    final copy = plan.copyWith(
+      calm: true,
+      hazardCost: 2,
+      formation: () => FormationId.stairs,
+    );
+    expect(copy.calm, isTrue);
+    expect(copy.hazardCost, 2);
+    expect(copy.formation, FormationId.stairs);
+
+    expect(HazardBudget().allows(copy), isTrue);
+    expect(CalmSchedule().dueAt(31), isFalse);
+    expect(HeadlineWindow().allows('portal', 7), isTrue);
+    expect(Formations().nextAt(150), isNull);
+  });
+}

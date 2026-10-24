@@ -377,3 +377,15 @@ class FeverStarted extends RunEvent {
   const FeverStarted();
 }
 // endregion P231-E
+
+// region PRD-2.6 WP-B — invisible showcase
+/// A scripted showcase highlight started. Wave 1 defines the event only; no
+/// gameplay component emits it yet.
+class HighlightStarted extends RunEvent {
+  const HighlightStarted(this.id, {required this.scripted, required this.hoop});
+
+  final String id;
+  final bool scripted;
+  final int hoop;
+}
+// endregion

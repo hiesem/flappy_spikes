@@ -221,4 +221,36 @@ const List<TuningDef> kTuningDefaults = [
   TuningDef('noads_fallback_h', TuningType.decimal, 3.0),
   // §26.1 Shop and Skins unlock at this best score
   TuningDef('ui_unlock_best', TuningType.integer, 25),
+  // §D2 Signed tilt weights: `<from>_<magnitude>` entries by hoop band
+  TuningDef('tilt_rows', TuningType.object, {'10_10': 6, '10_15': 4, '50_10': 30, '50_15': 30, '50_20': 20, '50_30': 20, '60_10': 20, '60_15': 20, '60_20': 15, '60_30': 30, '60_45': 15, '100_10': 15, '100_15': 15, '100_20': 15, '100_30': 30, '100_45': 25}),
+  // §D2 A tilt at or above this angle follows the approach sign
+  TuningDef('tilt_align_min_deg', TuningType.integer, 20),
+  // §D2 Below this absolute Δy a large tilt is clamped to 15°
+  TuningDef('tilt_align_min_dy', TuningType.integer, 40),
+  // §D2 Extra opening on 45° rings
+  TuningDef('tilt45_extra_opening', TuningType.integer, 6),
+  // §D2 The Δy reference band cap
+  TuningDef('dy_ref_band', TuningType.decimal, 540.0),
+  // §D2 Δy reduction after a moving or strongly tilted hoop
+  TuningDef('dy_hard_factor', TuningType.decimal, 0.85),
+  // §D2 Saw special-hoop weight by hoop index
+  TuningDef('spawn_saw_weight', TuningType.curve, [[30, 14], [60, 20], [100, 26]]),
+  // §D3 The rolling four-slot hazard budget by hoop index
+  TuningDef('hazard_budget', TuningType.curve, [[0, 0], [3, 0.5], [10, 2], [25, 3], [50, 4], [100, 5], [150, 5.5]]),
+  // §D3 Slot costs used by the future hazard ledger
+  TuningDef('hazard_costs', TuningType.object, {'saw': 2, 'switch': 1.5, 'spring': 0.5, 'pair': 0.5, 'train': 0.5, 'tilt_20': 0.25, 'tilt_30': 1, 'tilt_45': 1.5, 'rail': 1, 'swing': 1, 'other_motion': 1.25, 'dy_p90': 1, 'squeeze': 1}),
+  // §D4 Periodic calm-stretch scheduling
+  TuningDef('calm_every', TuningType.object, {'first_min': 30, 'first_max': 34, 'mult': 1.2, 'cap': 55, 'len': 3, 'min_gap': 12}),
+  // §D4 Calm lengths after run events
+  TuningDef('calm_after', TuningType.object, {'revive': 3, 'squeeze': 2, 'ride': 2}),
+  // §D6 No two headlines within this hoop window
+  TuningDef('headline_window', TuningType.integer, 8),
+  // §D6 A due headline may wait this many hoops
+  TuningDef('headline_wait', TuningType.integer, 5),
+  // §D7 Formation spacing from hoop 150
+  TuningDef('formation_every', TuningType.intList, [12, 20]),
+  // §B1 The showcase safety net stops after this many finished games
+  TuningDef('showcase_max_games', TuningType.integer, 6),
+  // §B1 A showcase run passing this hoop finishes the safety net
+  TuningDef('showcase_fast_hoops', TuningType.integer, 40),
 ];

@@ -29,3 +29,8 @@ TF9VESMTKV
 Coins for a hoop pass that is not perfect
 Coin revive prices after the ad revive; no revive after the last
 One-time coin reward of levels 1-10
+ftueSteps
+showcaseSeen
+showcaseAttempt
+showcaseRuns
+showcaseDoneAt

@@ -1,5 +1,7 @@
 /** PRD-2.6 WP-LB pure board logic: groups, ghosts, ranking, prizes and run checks. */
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Timestamp } from 'firebase-admin/firestore';
 import {
   LB_BEST_RAISE_MS,
@@ -49,6 +51,10 @@ const LOOK = { bird: 'classic', gear: 'none', hat: 'none', hoop: 'pink', trail: 
 const DAY = 24 * 3600 * 1000;
 const T0 = Date.UTC(2026, 9, 20, 0, 0, 0);
 const T12 = T0 + 12 * 3600 * 1000;
+const ROOT = join(__dirname, '..', '..');
+const GIFTS_FIXTURE = JSON.parse(
+  readFileSync(join(ROOT, 'test', 'fixtures', 'lb_gifts.json'), 'utf8'),
+) as typeof LB_GIFTS;
 const at = (ms: number) => Timestamp.fromMillis(ms);
 const noShuffle = () => 0;
 
@@ -565,8 +571,8 @@ describe('PRD-2.6 LB1 BEST RUN ranking', () => {
     const board = bestBoard(many, 'u52');
     assert.equal(board.rows.length, LB_BEST_SIZE);
     assert.equal(board.rows[0].rank, 1);
-    assert.equal(board.me!.rank, LB_BEST_SIZE + 1);
-    assert.equal(board.me!.points, 1000 - (LB_BEST_SIZE + 1));
+    assert.equal(board.me!.rank, 53);
+    assert.equal(board.me!.points, 948);
   });
 
   it('PRD O52: hidden users are absent from BEST and no row exposes a uid', () => {
@@ -590,16 +596,18 @@ describe('PRD-2.6 LB2 gift rolls', () => {
     { id: 'epic-2000', price: 2000, rarity: 'rare' },
   ];
 
-  it('bronze is 25–100 and silver 50–200, all in step 5', () => {
+  it('PRD LB2: rolls follow test/fixtures/lb_gifts.json; bronze and silver are uniform coin steps', () => {
+    assert.deepEqual(GIFTS_FIXTURE, LB_GIFTS);
     for (let seed = 1; seed <= 1000; seed++) {
-      for (const [tier, min, max] of [
-        ['bronze', 25, 100],
-        ['silver', 50, 200],
-      ] as const) {
+      for (const tier of ['bronze', 'silver'] as const) {
+        const table = GIFTS_FIXTURE[tier];
         const roll = rollGift(tier, { random: seededRandom(seed) });
         assert.equal(roll.kind, 'coins');
-        assert.ok(roll.coins >= min && roll.coins <= max, `${tier} ${roll.coins}`);
-        assert.equal(roll.coins % 5, 0);
+        assert.ok(
+          roll.coins >= table.coinsMin && roll.coins <= table.coinsMax,
+          `${tier} ${roll.coins}`,
+        );
+        assert.equal(roll.coins % table.coinStep, 0);
       }
     }
   });
@@ -740,6 +748,12 @@ describe('PRD-2.6 LB3 run checks', () => {
     assert.equal(rb.bestUpdate, null);
   });
 
+  it('PRD LB3: MIN_SCORE is inclusive and one below it is dropped', () => {
+    assert.equal(MIN_SCORE, 3);
+    assert.equal(checkLbRun(run({ score: MIN_SCORE }), ctx({ best: 100 })).accepted, true);
+    assert.equal(checkLbRun(run({ score: MIN_SCORE - 1 }), ctx({ best: 100 })).reason, 'low_score');
+  });
+
   it('score-only runs still pass duration, hoop-count and score bounds', () => {
     const impossibleHoops = run({ id: 'too-many-hoops', score: 100, hoops: 100, cs: 100 });
     delete impossibleHoops.tl;
@@ -774,7 +788,8 @@ describe('PRD-2.6 LB3 run checks', () => {
     const fresh = checkLbRun(run({ score: 150 }), ctx({ best: 100, nowMs: T12 + 1000 }));
     assert.equal(fresh.accepted, true);
     assert.equal(fresh.timelineVerified, true);
-    assert.deepEqual(fresh.bestUpdate, { score: 150, atMs: T12, shadow: false });
+    const expected: LbBestUpdate = { score: 150, atMs: T12, shadow: false };
+    assert.deepEqual(fresh.bestUpdate, expected);
 
     const old = checkLbRun(run({ score: 150, endTs: T0 + 1000 }), ctx({ nowMs: T12, groupStartMs: T12, best: 100 }));
     assert.equal(old.reason, 'old');
@@ -788,6 +803,18 @@ describe('PRD-2.6 LB3 run checks', () => {
     const within = checkLbRun(run({ score: 150, endTs: T0 + 1000 }), ctx({ nowMs: T0 + 6 * DAY, groupStartMs: T0 + 6 * DAY, best: 100 }));
     assert.equal(within.reason, 'old');
     assert.deepEqual(within.bestUpdate, { score: 150, atMs: T0 + 1000, shadow: false });
+    assert.equal(LB_BEST_RAISE_MS, 7 * DAY);
+    const end = T0 + 1000;
+    const atLimit = checkLbRun(
+      run({ score: 150, endTs: end }),
+      ctx({ nowMs: end + LB_BEST_RAISE_MS, groupStartMs: end + LB_BEST_RAISE_MS, best: 100 }),
+    );
+    assert.deepEqual(atLimit.bestUpdate, { score: 150, atMs: end, shadow: false });
+    const pastLimit = checkLbRun(
+      run({ score: 150, endTs: end }),
+      ctx({ nowMs: end + LB_BEST_RAISE_MS + 1, groupStartMs: end + LB_BEST_RAISE_MS + 1, best: 100 }),
+    );
+    assert.equal(pastLimit.bestUpdate, null);
   });
 
   it('leaderboard timelines use LB_MAX_SCORE, not the versus one-million limit', () => {
@@ -918,6 +945,19 @@ describe('PRD-2.6 LB3 run checks', () => {
     assert.deepEqual(result.accepted, ['fresh']);
     assert.equal(result.results[0].reason, 'duplicate');
     assert.equal(result.results[1].accepted, true);
+  });
+
+  it('PRD LB3: a repeated id in one batch stays dropped even when its first occurrence fails', () => {
+    const first = run({ id: 'same-id', score: 100, endTs: T12 - 20 * 60_000, cs: 100 });
+    delete first.tl;
+    delete first.fl;
+    const second = run({ id: 'same-id', score: 30, endTs: T12 - 1000 });
+    const result = checkLbRuns([first, second], ctx({ best: 100, nowMs: T12 + 1000 }));
+    assert.deepEqual(result.accepted, []);
+    assert.deepEqual(result.dropped, [
+      { id: 'same-id', reason: 'bounds' },
+      { id: 'same-id', reason: 'duplicate' },
+    ]);
   });
 
   it('clamps or rejects impossible passes using the shared passBound', () => {

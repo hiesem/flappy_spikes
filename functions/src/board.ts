@@ -1061,14 +1061,19 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
       return intervalStart(a.input) - intervalStart(b.input) || a.index - b.index;
     });
 
-  const aggregateSeen = new Set(seen);
+  const duplicateIndexes = new Set<number>();
+  const batchIds = new Set(seen);
   const aggregateStarts: number[] = [];
   let aggregateCs = 0;
   for (const item of shaped) {
     if (!validRunShape(item.input)) continue;
     const run = item.input;
-    if (run.score > LB_MAX_SCORE || run.score < MIN_SCORE || aggregateSeen.has(run.id)) continue;
-    aggregateSeen.add(run.id);
+    if (batchIds.has(run.id)) {
+      duplicateIndexes.add(item.index);
+      continue;
+    }
+    batchIds.add(run.id);
+    if (run.score > LB_MAX_SCORE || run.score < MIN_SCORE) continue;
     const start = intervalStart(run);
     if (start < 0 || run.endTs > ctx.nowMs + LB_RUN_CLOCK_SLACK_MS) continue;
     const old = ctx.groupStartMs !== undefined && ctx.groupStartMs !== null && run.endTs < ctx.groupStartMs;
@@ -1103,6 +1108,10 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
       continue;
     }
     if (seen.has(run.id)) {
+      pushDrop('duplicate');
+      continue;
+    }
+    if (duplicateIndexes.has(item.index)) {
       pushDrop('duplicate');
       continue;
     }

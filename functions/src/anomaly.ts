@@ -4,7 +4,7 @@
  * `versusFlags` doc for a human to review).
  *
  * Pure (no Firestore): [scoreRun] judges one run that already passed
- * `checkRun`, against the player's recent score history. What a run carries
+ * `checkRun`, against the player's recent pass history. What a run carries
  * (schema.ts `RunEntry`): per timeline entry a cs delta, a flag byte and a
  * value; "passes" are the entries without the gift / bonus flag, the
  * duration is Σ deltas + `end`.
@@ -12,18 +12,19 @@
  * Signals (thresholds in schema.ts):
  * - `streak_jump` (hard): a pass worth more than max(previous pass + 3, 8)
  *   (PRD: + 2, 7; one point of headroom, see schema.ts);
- * - `pace` (hard): median gap between consecutive plain passes < 1.35 s
+ * - `pace` (hard): median gap between consecutive plain passes < 1.32 s
  *   over ≥ 10 gaps;
  * - `passes` (hard): more passes than the scroll can bring even if every
  *   slot were a 3-ring train;
- * - `jump` (soft): score ≥ 500 and > 5 × the median of ≥ 5 earlier scores.
+ * - `jump` (soft): passes ≥ 150 and > 4 × the median of ≥ 5 earlier pass
+ *   counts (PRD-2.6 E6; points jump on honest progress as the streak grows).
  */
 import {
   FLAG_BONUS,
   FLAG_GIFT,
-  JUMP_FACTOR,
   JUMP_MIN_HISTORY,
-  JUMP_MIN_SCORE,
+  JUMP_MIN_PASSES,
+  JUMP_PASS_FACTOR,
   PACE_MIN_GAPS,
   PACE_MIN_MEDIAN_CS,
   PASS_EXTRA,
@@ -113,9 +114,11 @@ export function runFacts(run: RunEntry): RunFacts | null {
 
 /**
  * The anomaly of [run] (already accepted by `checkRun`), or null for an
- * unremarkable run. [hist] = the player's earlier scores (newest last).
+ * unremarkable run. [passHist] = the player's earlier pass counts (oldest
+ * first). Score history is deliberately not used: the uncapped streak makes
+ * honest points jump as a player improves.
  */
-export function scoreRun(run: RunEntry, hist: number[]): Anomaly | null {
+export function scoreRun(run: RunEntry, passHist: number[]): Anomaly | null {
   const facts = runFacts(run);
   if (facts === null) return null;
   const signals: Partial<Record<Signal, number>> = {};
@@ -124,10 +127,10 @@ export function scoreRun(run: RunEntry, hist: number[]): Anomaly | null {
     signals.pace = facts.paceMedianCs;
   }
   if (facts.passes > facts.passBound) signals.passes = facts.passes;
-  const h = Array.isArray(hist) ? hist.filter((x) => typeof x === 'number' && Number.isFinite(x)) : [];
-  if (run.score >= JUMP_MIN_SCORE && h.length >= JUMP_MIN_HISTORY) {
+  const h = passHist.filter((x) => Number.isInteger(x) && x >= 0);
+  if (facts.passes >= JUMP_MIN_PASSES && h.length >= JUMP_MIN_HISTORY) {
     const m = median(h);
-    if (run.score > JUMP_FACTOR * m) signals.jump = m;
+    if (facts.passes > JUMP_PASS_FACTOR * m) signals.jump = m;
   }
   const names = Object.keys(signals);
   if (names.length === 0) return null;

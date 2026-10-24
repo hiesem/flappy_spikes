@@ -55,6 +55,12 @@ const Map<String, String> kTuning23 = {
   'gate_saw': '20',
 };
 
+/// PRD-2.6 wave-1 values needed by tests that pin the whole spawn set. These
+/// are new keys only; they have no historical 2.3 value.
+const Map<String, String> kTuning26Wave1 = {
+  'spawn_saw_weight': '[[30,14],[60,20],[100,26]]',
+};
+
 /// The 2.3 values of [keys] (every changed key when [keys] is null).
 Map<String, String> tuning23([Iterable<String>? keys]) =>
     keys == null ? {...kTuning23} : {for (final k in keys) k: kTuning23[k]!};
@@ -68,6 +74,7 @@ Map<String, String> tuning23Spawn() => {
         e.key.startsWith('ride_') ||
         e.key.endsWith('_gaps'))
       e.key: e.value,
+  ...kTuning26Wave1,
 };
 
 /// The test-wide set (flutter_test_config.dart: `ui_unlock_best` 0) plus

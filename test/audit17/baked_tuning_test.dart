@@ -118,6 +118,26 @@ const Map<String, String> _liveRc20261019 = {
   'noads_gap_min': '60',
   'noads_max_per_day': '5',
   'noads_fallback_h': '3',
+  // PRD-2.6 wave-1 additions (not in the 2026-10-19 live template).
+  'tilt_rows':
+      '{"10_10":6,"10_15":4,"50_10":30,"50_15":30,"50_20":20,"50_30":20,"60_10":20,"60_15":20,"60_20":15,"60_30":30,"60_45":15,"100_10":15,"100_15":15,"100_20":15,"100_30":30,"100_45":25}',
+  'tilt_align_min_deg': '20',
+  'tilt_align_min_dy': '40',
+  'tilt45_extra_opening': '6',
+  'dy_ref_band': '540',
+  'dy_hard_factor': '0.85',
+  'spawn_saw_weight': '[[30,14],[60,20],[100,26]]',
+  'hazard_budget': '[[0,0],[3,0.5],[10,2],[25,3],[50,4],[100,5],[150,5.5]]',
+  'hazard_costs':
+      '{"saw":2,"switch":1.5,"spring":0.5,"pair":0.5,"train":0.5,"tilt_20":0.25,"tilt_30":1,"tilt_45":1.5,"rail":1,"swing":1,"other_motion":1.25,"dy_p90":1,"squeeze":1}',
+  'calm_every':
+      '{"first_min":30,"first_max":34,"mult":1.2,"cap":55,"len":3,"min_gap":12}',
+  'calm_after': '{"revive":3,"squeeze":2,"ride":2}',
+  'headline_window': '8',
+  'headline_wait': '5',
+  'formation_every': '[12,20]',
+  'showcase_max_games': '6',
+  'showcase_fast_hoops': '40',
 };
 
 void main() {

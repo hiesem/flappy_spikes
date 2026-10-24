@@ -3,6 +3,7 @@ import '../versus/opponent.dart';
 import 'config/run_config.dart';
 import 'director/plans.dart';
 import 'elements.dart';
+import 'showcase/showcase_plan.dart';
 
 /// Inputs to one run (ARCH §1.1).
 class RunSetup {
@@ -18,6 +19,8 @@ class RunSetup {
     this.ignoreGates = false,
     this.oneBigBonus = RunConfig.oneBigBonus,
     this.debugStarter = false,
+    this.showcase,
+    this.extraStarters = const [],
   });
 
   /// Per-run seed (§3.0.3; tests fix it, e2e uses `kE2ESeed`).
@@ -54,4 +57,10 @@ class RunSetup {
   /// PRD-2.3.1 §12.2 the [starter] came from the Home debug panel's
   /// "Slot: force …" (a debug start: the run never counts for achievements).
   final bool debugStarter;
+
+  /// PRD-2.6 WP-B the frozen showcase plan, null in a normal run.
+  final ShowcaseRunPlan? showcase;
+
+  /// PRD-2.6 WP-B additional starters (Big Hoops / shield) to arm at START.
+  final List<Powerup> extraStarters;
 }

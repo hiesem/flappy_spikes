@@ -245,7 +245,10 @@ export function selectGhosts(opts: LbGhostSelectionOptions): LbGhost[] {
       const at = dayMillis(row.day);
       if (!uid || excluded.has(uid) || row.hidden === true || at === null) continue;
       // Ghost days are earlier days only; at most 14 days before the race.
-      if (at >= startDay || startDay - at > LB_GHOST_MAX_AGE || nowDay - at > LB_GHOST_MAX_AGE) continue;
+      // `row.day` is the UTC midnight of the day; the race starts later that
+      // same day, so compare whole days rather than the timestamp (`<= 14`).
+      const ageDays = Math.floor((startDay - at) / DAY_MS);
+      if (at >= startDay || ageDays > 14 || nowDay - at > LB_GHOST_MAX_AGE) continue;
       if (!Array.isArray(row.runs) || row.runs.length === 0) continue;
       const old = byUid.get(uid);
       // Keep the newest eligible day of a player before the random shuffle.
@@ -550,7 +553,9 @@ export function rankToday(group: LbGroupDoc, atMs: number, opts: LbRankTodayOpti
     if (!uid || hidden.has(uid) || memberUids.has(uid) || seenGhosts.has(uid)) continue;
     seenGhosts.add(uid);
     const progress = ghostProgress(ghost.runs, groupStart, groupEnd, atMs);
-    if (progress.reachedAtMs === null) continue;
+    // A ghost with no run yet still holds one of the group's 50 places; it
+    // simply has 0 points until its first replayed run. Dropping the row
+    // would shrink the board and let a real joiner pass the ghost's place.
     entries.push({
       uid,
       ghost: true,
@@ -563,7 +568,7 @@ export function rankToday(group: LbGroupDoc, atMs: number, opts: LbRankTodayOpti
       points: progress.points,
       best: progress.best,
       reachedAtMs: progress.reachedAtMs,
-      lastAtMs: progress.lastAtMs,
+      lastAtMs: progress.lastAtMs ?? groupStart,
       playingNow: false,
     });
   }

@@ -1,7 +1,12 @@
 /** PRD-2.6 WP-LB board_store: Firestore transactions and emulated callables. */
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import { mock } from 'node:test';
+import { readFileSync } from 'node:fs';
+import { logger } from 'firebase-functions/v2';
 import { Timestamp } from 'firebase-admin/firestore';
 import {
+  GIFT_SHOP_ITEMS,
   lbClaimGift,
   lbGetBoard,
   lbSettleGroups,
@@ -374,5 +379,130 @@ describe('PRD-2.6 LB3 claim, tombstone and response shapes', () => {
     assert.equal('bestAllTime' in board.result, true);
     const claim = await call('lbClaimGift', { id: 'not-a-gift' });
     assert.equal(claim.result.ok, false);
+  });
+});
+
+
+describe('PRD-2.6 LB3 regression fixes', () => {
+  it('starts fresh totals and history in the next group and preserves TOP BIRD', async () => {
+    for (const lazy of [false, true]) {
+      const uid = uniq('lb-next-day');
+      const start = T0 + (lazy ? 72 * HOUR : 0);
+      const first = await lbSubmitRun(db, uid, request([submitRun({ score: 40, endTs: start })]), start + 1000);
+      await db.collection(LB_GROUPS_COLLECTION).doc(first.group!.id).update({ ghosts: [], ghostUids: [] });
+      const old = (await group(first.group!.id))!;
+      const end = old.end.toMillis();
+      if (!lazy) await lbSettleGroups(db, end + 1000, first.group!.id);
+      const next = await lbSubmitRun(db, uid, request([submitRun({ score: 15, endTs: end + HOUR })]), end + HOUR + 1000);
+      assert.notEqual(next.group!.id, first.group!.id);
+      const member = (await group(next.group!.id))!.members[uid] as any;
+      assert.equal(member.t, 15);
+      assert.equal(member.b, 15);
+      assert.equal(member.n, 1);
+      assert.equal(member.runs.length, 1);
+      assert.equal(member.runs[0].s, 15);
+      const p = await player(uid) as any;
+      assert.equal(p.topBird, true);
+      assert.equal(p.topBirdAt.toMillis(), end);
+      assert.equal(p.bestShadow, 40);
+    }
+  });
+
+  it('removes a newly hidden player from cached BEST and the histogram and refills place 50', async () => {
+    const uid = uniq('lb-was-visible');
+    await lbSubmitRun(db, uid, request([submitRun({ score: 130 })]), T0 + 1000);
+    const template = (await player(uid))!;
+    // 50 lower public scores: hiding the leader must promote the old #51.
+    const batch = db.batch();
+    for (let i = 1; i <= 50; i++) {
+      batch.set(db.collection(LB_PLAYERS_COLLECTION).doc(`rank-${i}`), {
+        ...template, name: `Rank${i}`, best: 130 - i, bestShadow: 130 - i,
+      });
+    }
+    await batch.commit();
+    const viewer = uniq('lb-viewer');
+    assert.equal((await lbGetBoard(db, viewer, { tab: 'best' }, T0 + HOUR + 500)).best.rows[0].points, 130);
+    await lbSubmitRun(db, uid, request([submitRun({ score: 15, endTs: T0 + HOUR })], { t: 1 }), T0 + HOUR + 1000);
+    const board = (await lbGetBoard(db, viewer, { tab: 'best' }, T0 + HOUR + 2000)).best;
+    assert.equal(board.rows.length, 50);
+    assert.equal(board.rows[0].points, 129);
+    assert.equal(board.rows[49].points, 80);
+    const hist = (await db.collection(LB_BEST_COLLECTION).doc('hist').get()).data()!;
+    assert.equal(hist.bins['100'], undefined);
+    assert.equal((await group(template.groupId!))!.memberUids.includes(uid), false);
+  });
+
+  it('keeps tie timestamps public and accepts a verified improvement below a private anomaly', async () => {
+    const a = uniq('lb-tie-first');
+    const b = uniq('lb-tie-second');
+    await lbSubmitRun(db, a, request([submitRun({ score: 100 })]), T0 + 1000);
+    await lbSubmitRun(db, b, request([submitRun({ score: 100, endTs: T0 + HOUR })]), T0 + HOUR + 1000);
+    const anomaly = submitRun({ score: 200, endTs: T0 + 2 * HOUR });
+    // Valid bounds/gaps, but a median pace below 1.35 s is a hard anomaly.
+    anomaly.tl = encodeDeltas(Array(200).fill(100));
+    await lbSubmitRun(db, a, request([anomaly]), T0 + 2 * HOUR + 1000);
+    assert.equal((await player(a))!.best, 200);
+    assert.equal((await player(a))!.bestShadow, 100);
+    assert.equal((await player(a))!.bestAt.toMillis(), T0);
+    const board = await lbGetBoard(db, a, { tab: 'best' }, T0 + 2 * HOUR + 2000);
+    assert.equal(board.best.me!.rank, 1);
+    assert.equal(board.best.rows[0].rid, board.best.me!.rid);
+    await lbSubmitRun(db, a, request([submitRun({ score: 150, endTs: T0 + 3 * HOUR })]), T0 + 3 * HOUR + 1000);
+    const p = (await player(a))!;
+    assert.equal(p.best, 200);
+    assert.equal(p.bestShadow, 150);
+    assert.equal(p.bestAt.toMillis(), T0 + 3 * HOUR);
+    assert.equal((await lbGetBoard(db, b, { tab: 'best' }, T0 + 3 * HOUR + 2000)).best.rows[0].points, 150);
+  });
+
+  it('mirrors the eligible paid common/rare shop catalog', () => {
+    const catalog = readFileSync('../lib/skins/catalog.dart', 'utf8');
+    const expected = [...catalog.matchAll(/SkinItem\(layer: SkinLayer\.(\w+), id: '([^']+)'.*?rarity: Rarity\.(common|rare), price: (\d+)/g)]
+      .filter((m) => Number(m[4]) > 0 && Number(m[4]) <= 750)
+      .map((m) => ({ id: `${m[1]}:${m[2]}`, rarity: m[3], price: Number(m[4]) }));
+    assert.deepEqual([...GIFT_SHOP_ITEMS].sort((a, b) => a.id.localeCompare(b.id)), expected.sort((a, b) => a.id.localeCompare(b.id)));
+  });
+
+  it('persists an item-class gold claim with fallback coins and repeats it unchanged', async () => {
+    const uid = uniq('lb-item-claim');
+    const id = uniq('lb-item-gift');
+    await db.collection(LB_GIFTS_COLLECTION).doc(id).set({ uid, gid: id, tier: 'gold', boardRank: 1, expireAt: Timestamp.fromMillis(T0 + 400 * 24 * HOUR) });
+    const rng = mock.method(crypto, 'randomInt', () => 1530780169);
+    try {
+      const claim = await lbClaimGift(db, uid, { id }, T0);
+      assert.equal(claim.prize!.kind, 'item');
+      assert.ok(GIFT_SHOP_ITEMS.some((item) => item.id === claim.prize!.item));
+      assert.equal(claim.prize!.coins, 290);
+      assert.equal(claim.prize!.seed, '1530780169');
+      const repeat = await lbClaimGift(db, uid, { id }, T0 + 1000);
+      assert.deepEqual(repeat, claim);
+      assert.equal(rng.mock.callCount(), 1);
+      assert.equal((await lbClaimGift(db, uniq('lb-other-claim'), { id }, T0)).ok, false);
+    } finally { rng.mock.restore(); }
+  });
+
+  it('logs each committed settlement once for lazy reads, lazy submits and the scheduler', async () => {
+    const info = mock.method(logger, 'info', () => {});
+    try {
+      for (const [index, route] of ['read', 'submit', 'scheduled'].entries()) {
+        const uid = uniq(`lb-log-${route}`);
+        const start = T0 + index * 72 * HOUR;
+        const first = await lbSubmitRun(db, uid, request([submitRun({ score: 40, endTs: start })]), start + 1000);
+        const gid = first.group!.id;
+        await db.collection(LB_GROUPS_COLLECTION).doc(gid).update({ ghosts: [], ghostUids: [] });
+        const end = (await group(gid))!.end.toMillis();
+        if (route === 'read') await lbGetBoard(db, uid, { tab: 'today' }, end + 1000);
+        else if (route === 'submit') await lbSubmitRun(db, uid, request([submitRun({ score: 15, endTs: end + HOUR })]), end + HOUR + 1000);
+        else await lbSettleGroups(db, end + 1000, gid);
+        await lbSettleGroups(db, end + 2000, gid);
+        const logs = info.mock.calls.filter((call) => call.arguments[0] === 'lbSettle' && (call.arguments[1] as any).gid === gid);
+        assert.equal(logs.length, 1);
+        const metrics = logs[0].arguments[1] as any;
+        assert.equal(metrics.groups, 1);
+        assert.equal(metrics.gifts, 1);
+        assert.equal(metrics.ghostDays, 1);
+        assert.equal(metrics.gifts_lost_to_ghosts, 0);
+      }
+    } finally { info.mock.restore(); }
   });
 });

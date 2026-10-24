@@ -32,6 +32,7 @@ import {
   type LbClaimGiftResult,
   type LbGetBoardResult,
   type LbJoinGroupResult,
+  type LbGiftShopItem,
   type LbRunCheck,
   type LbRunInterval,
   type LbSettleResult,
@@ -89,6 +90,21 @@ const MAX_GHOST_ENTRIES = 200;
 const HIST_BUCKET = 100;
 const GIFT_ID_RE = /^[A-Za-z0-9_-]{1,180}$/;
 const DEFAULT_LOOK: Look = { bird: 'classic', gear: 'none', hat: 'none', hoop: 'pink', trail: 'flame' };
+
+// Paid common/rare items from lib/skins/catalog.dart; mirrored by a test.
+// Ownership and capacity fallbacks are resolved locally using the stored coins.
+export const GIFT_SHOP_ITEMS: readonly LbGiftShopItem[] = [
+  ...'sky lime grape tangerine mint lemon slate coral snow'.split(' ').map((id) => ({ id: `bird:${id}`, price: 150, rarity: 'common' as const })),
+  ...'robin toucan chick penguin owl duck flamingo puffer zebra buzz'.split(' ').map((id) => ({ id: `bird:${id}`, price: 750, rarity: 'rare' as const })),
+  ...'shades bowtie stache scarf bandana snorkel necktie bandaid gum lei'.split(' ').map((id) => ({ id: `gear:${id}`, price: 250, rarity: 'common' as const })),
+  ...'hearts monocle sneakers windup carpet balloon backpack skates swimring cape'.split(' ').map((id) => ({ id: `gear:${id}`, price: 750, rarity: 'rare' as const })),
+  ...'cap beanie party band bucket sprout cone egg paperboat phones'.split(' ').map((id) => ({ id: `hat:${id}`, price: 250, rarity: 'common' as const })),
+  ...'tophat cowboy prop chef viking fishbowl cupcake raincloud antennae sharkfin'.split(' ').map((id) => ({ id: `hat:${id}`, price: 750, rarity: 'rare' as const })),
+  ...'sky lime violet night sunset lemon bamboo rope cloud'.split(' ').map((id) => ({ id: `hoop:${id}`, price: 250, rarity: 'common' as const })),
+  ...'candy polka checker donut tire melon zipper tape pearls vine'.split(' ').map((id) => ({ id: `hoop:${id}`, price: 750, rarity: 'rare' as const })),
+  ...'blue toxic hot shadow sunset leaves snow petals ink'.split(' ').map((id) => ({ id: `trail:${id}`, price: 250, rarity: 'common' as const })),
+  ...'sparkle bubbles hearts laser confetti planes popcorn fireworks steps fish'.split(' ').map((id) => ({ id: `trail:${id}`, price: 750, rarity: 'rare' as const })),
+];
 
 interface StoredRate {
   day: string;
@@ -650,7 +666,7 @@ interface SettleOutcome {
 
 async function settleGroup(db: Firestore, gid: string, nowMs: number): Promise<SettleOutcome> {
   const groupRef = db.collection(LB_GROUPS_COLLECTION).doc(gid);
-  return db.runTransaction(async (tx) => {
+  const outcome = await db.runTransaction(async (tx) => {
     const groupSnap = await tx.get(groupRef);
     if (!groupSnap.exists) return { settled: false, gifts: 0, ghostDays: 0, giftsLost: 0 };
     const group = loadGroup(groupSnap.data());
@@ -752,6 +768,11 @@ async function settleGroup(db: Firestore, gid: string, nowMs: number): Promise<S
       .filter((entry) => entry.ghost || entry.hidden).length;
     return { settled: true, gifts, ghostDays, giftsLost: lost };
   });
+  if (outcome.settled) {
+    logger.info('lbSettle', { gid, groups: 1, gifts: outcome.gifts,
+      gifts_lost_to_ghosts: outcome.giftsLost, ghostDays: outcome.ghostDays });
+  }
+  return outcome;
 }
 
 async function submit(
@@ -778,7 +799,7 @@ async function submit(
     const floor = typeof bestData?.floor === 'number' && bestData.floor > 0 ? bestData.floor : null;
     const base = {
       nowMs,
-      best: state.best,
+      best: state.shadow,
       hist: state.hist,
       floor,
       seenIds: state.seen,
@@ -792,7 +813,7 @@ async function submit(
       ...base,
       groupStartMs: isRunning ? millis(current.group!.start) : provisionalStart(input.runs, nowMs),
     });
-    const potentialBest = Math.max(state.best, ...checks.results.map((entry) => entry.bestUpdate?.score ?? 0));
+    const potentialBest = Math.max(state.shadow, ...checks.results.map((entry) => entry.bestUpdate?.shadow ? 0 : (entry.bestUpdate?.score ?? 0)));
     const bracket = isRunning ? current.group!.bracket : bracketForVerifiedBest(potentialBest);
     const candidate: Candidate = state.hidden
       ? { group: null, gid: null, ref: null, pointerRef: null, pointerUsable: false }
@@ -813,7 +834,7 @@ async function submit(
     const lastEnd = runs.length > 0 ? Math.max(...runs.map((run) => run.endMs)) : nowMs;
     const points = runs.reduce((sum, run) => sum + run.counted, 0);
     const bestToday = runs.reduce((max, run) => Math.max(max, run.counted), 0);
-    const oldMember = (candidate.group?.members?.[uid] ?? current.group?.members?.[uid]) as StoredMember | undefined;
+    const oldMember = (willJoin ? candidate.group?.members?.[uid] : undefined) as StoredMember | undefined;
     const oldRuns = memberRuns(oldMember);
     const newRuns = runs.map((run) => [timeOfDaySec(run.endMs), run.counted] as LbGhostPoint);
     const history = [...oldRuns, ...newRuns].slice(-LB_GHOST_RUNS);
@@ -879,7 +900,6 @@ async function submit(
     }
 
     let localBest = state.best;
-    let localBestAt = state.bestAt;
     let localShadow = state.shadow;
     let localShadowAt = state.bestAt;
     const flags: LbFlagDoc[] = [];
@@ -892,23 +912,45 @@ async function submit(
       if (update === null) continue;
       if (update.score > localBest) {
         localBest = update.score;
-        localBestAt = update.atMs;
       }
       if (!update.shadow && update.score > localShadow) {
         localShadow = update.score;
         localShadowAt = update.atMs;
       }
     }
-    const publicBestChanged = localShadow > state.shadow;
+    const becameHidden = state.hidden && player?.hidden === false;
+    const publicBestChanged = !state.hidden && localShadow > state.shadow;
+    // Refill the top 50, including boundary ties, when a public row disappears.
+    // This single-field paged query also works without an additional index.
+    let replacementRows: LbBestRow[] = [];
+    if (becameHidden) {
+      let cursor: DocumentSnapshot | undefined;
+      while (true) {
+        const query = db.collection(LB_PLAYERS_COLLECTION).orderBy('bestShadow', 'desc').limit(100);
+        const page = await tx.get(cursor ? query.startAfter(cursor) : query);
+        for (const doc of page.docs) {
+          if (doc.id === uid) continue;
+          const row = rowFromPlayer(doc.id, doc.data() as LbPlayerDoc);
+          if (row !== null) replacementRows.push(row);
+        }
+        replacementRows = mergeBestRows(replacementRows, null);
+        const last = page.docs.at(-1);
+        if (page.size < 100 || (replacementRows.length >= LB_BEST_SIZE &&
+          count(last?.data()?.bestShadow) < replacementRows[LB_BEST_SIZE - 1].best)) break;
+        cursor = last;
+      }
+    }
     const nextPlayer: LbPlayerDoc = {
+      ...player,
       best: localBest,
-      bestAt: at(localBestAt),
+      // best may contain a private anomaly; bestAt belongs to bestShadow.
+      bestAt: at(localShadowAt),
       bestShadow: localShadow,
       name,
       look: input.look,
       ...(input.card === undefined ? {} : { card: input.card }),
       platform: input.platform,
-      bracket: bracketForVerifiedBest(localBest),
+      bracket: bracketForVerifiedBest(localShadow),
       groupId: state.hidden ? null : shouldJoin ? finalGid : (player?.groupId ?? null),
       groupStart: state.hidden ? null : shouldJoin ? (finalGroup?.start ?? null) : (player?.groupStart ?? null),
       groupEnd: state.hidden ? null : shouldJoin ? (finalGroup?.end ?? null) : (player?.groupEnd ?? null),
@@ -940,7 +982,7 @@ async function submit(
       }
     }
 
-    if (publicBestChanged) {
+    if (publicBestChanged || becameHidden) {
       const own: LbBestRow = {
         uid,
         best: localShadow,
@@ -951,14 +993,14 @@ async function submit(
         platform: input.platform,
         bracket: bracketForVerifiedBest(localShadow),
       };
-      const merged = mergeBestRows(bestData?.rows ?? [], own);
+      const merged = becameHidden ? replacementRows : mergeBestRows(bestData?.rows ?? [], own);
       const rows = merged.slice(0, LB_BEST_SIZE);
       tx.set(bestRef, {
         rows,
         floor: merged.length >= LB_BEST_SIZE ? merged[LB_BEST_SIZE - 1].best : 0,
         updatedAt: at(nowMs),
       } satisfies LbBestDoc);
-      tx.set(histRef, addHistogram(histSnap.exists ? (histSnap.data() as HistogramDoc) : undefined, state.shadow, localShadow, nowMs));
+      tx.set(histRef, addHistogram(histSnap.exists ? (histSnap.data() as HistogramDoc) : undefined, state.shadow, becameHidden ? 0 : localShadow, nowMs));
     }
 
     const board: LbBoardPayload =
@@ -981,7 +1023,7 @@ async function submit(
         gifts: gifts.length > 0 ? gifts : null,
       } satisfies LbSubmitRunResult,
       flags,
-      publicBestChanged,
+      publicBestChanged: publicBestChanged || becameHidden,
     };
   });
   await writeFlags(db, result.flags);
@@ -1195,7 +1237,7 @@ export async function lbClaimGift(
     const gift = snap.data() as LbGiftDoc;
     if (gift.rolled !== undefined) return { ok: true, id: ref.id, tier: gift.tier, prize: gift.rolled };
     const seed = String(randomInt(1, 0x7fffffff));
-    const prize = rollGift(gift.tier, { random: seededRandom(Number(seed)), seed });
+    const prize = rollGift(gift.tier, { random: seededRandom(Number(seed)), seed, shopItems: GIFT_SHOP_ITEMS });
     tx.update(ref, { rolled: prize, claimedAt: at(nowMs) });
     return { ok: true, id: ref.id, tier: gift.tier, prize };
   });
@@ -1222,17 +1264,12 @@ export async function lbSettleGroups(
   let groups = 0;
   let gifts = 0;
   let ghostDays = 0;
-  let giftsLost = 0;
   for (const gid of ids) {
     const result = await settleGroup(db, gid, nowMs);
     if (!result.settled) continue;
     groups++;
     gifts += result.gifts;
     ghostDays += result.ghostDays;
-    giftsLost += result.giftsLost;
-  }
-  if (groups > 0 || onlyGid !== undefined) {
-    logger.info('lbSettle', { groups, gifts, gifts_lost_to_ghosts: giftsLost, ghostDays });
   }
   return { groups, gifts, ghostDays };
 }

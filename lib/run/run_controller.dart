@@ -47,6 +47,7 @@ import 'run_spawner.dart';
 import 'run_state.dart';
 import 'run_summary.dart';
 import 'run_scaled_world.dart';
+import 'rides/portal_ride.dart' show PortalRideFeature;
 
 /// Owns one run (ARCH §1.1): state, clock, director, spawner, features,
 /// layers, the physics step, the mistake pipeline and the end of the run.
@@ -500,6 +501,14 @@ class RunController extends Component {
         _pass(h, ev.ring);
         continue;
       }
+      if (setup.showcase != null &&
+          state.ride == null &&
+          kind.id == HoopKindId.portal &&
+          portalPlaneCrossed(f, prev, pos)) {
+        h.resolveMiss();
+        features.whereType<PortalRideFeature>().single.grab(h);
+        continue;
+      }
       if (isFullyPast(f, BirdCircle(pos, r))) {
         if (state.ride != null) {
           _pass(h, 0);
@@ -525,6 +534,13 @@ class RunController extends Component {
     _prevFrames
       ..clear()
       ..addAll(poses);
+  }
+
+  @visibleForTesting
+  static bool portalPlaneCrossed(HoopFrame f, Vector2 prev, Vector2 pos) {
+    final before = f.toLocal(prev);
+    final after = f.toLocal(pos);
+    return before.x < 0 && after.x >= 0;
   }
 
   /// §3.0.4 3 the rim "tonk". WP-3h registers `Sfx.rimTonk` (parallel
@@ -603,7 +619,7 @@ class RunController extends Component {
     final perfect =
         ride ||
         (h.plan.kind == HoopKindId.fever
-            ? !h.touched
+            ? !h.touched || setup.showcase != null
             : PerfectBandConfig.isPerfect(
                 touched: h.touched,
                 hoopIndex: h.plan.index,
@@ -977,6 +993,9 @@ class RunController extends Component {
     }
     removeFromParent();
   }
+
+  @visibleForTesting
+  void debugPassHoop(Hoop h) => _pass(h, 0);
 }
 
 // region WP-3d — themed death pose (PRD-2 §3.0.5)

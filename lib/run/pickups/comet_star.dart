@@ -7,6 +7,7 @@ import '../config/comet_config.dart';
 import '../config/parts_config.dart';
 import '../director/plans.dart';
 import '../elements.dart';
+import '../items/comet.dart';
 import '../run_context.dart';
 import 'pickup.dart';
 
@@ -20,7 +21,7 @@ class CometStarKind extends PickupKind {
   ElementId get element => ElementId.comet;
 
   @override
-  Pickup build(GapItemPlan p, RunContext c) => CometStar(p);
+  Pickup build(GapItemPlan p, RunContext c) => CometStar(p, c);
 }
 
 /// §5.6 the comet pickup: a 46 pt gold 4-point star with a white 2 pt
@@ -29,21 +30,36 @@ class CometStarKind extends PickupKind {
 /// Hit radius 18 pt (§3.0.3). It hangs in the opening of an upright, still
 /// hoop, so flying through the hoop collects it.
 class CometStar extends Pickup {
-  CometStar(GapItemPlan p)
-    : super(
+  CometStar(GapItemPlan p, RunContext c)
+    : _context = c,
+      _magnet = c.run.setup.showcase != null,
+      super(
         id: ElementId.comet,
-        hitRadius: PickupRadii.comet,
+        hitRadius: c.run.setup.showcase == null
+            ? PickupRadii.comet
+            : CometFeature.showcasePickupRadius,
         plan: p,
         position: Vector2(p.trackX, p.y ?? 0),
         size: Vector2.all(CometConfig.starSize),
       );
 
+  final RunContext _context;
+  final bool _magnet;
   double _t = 0;
 
   @override
   void update(double dt) {
     super.update(dt);
     _t += dt;
+    if (!_magnet) return;
+    if (!_context.run.canCollect) return;
+    final bird = _context.run.birdTrackPosition();
+    if (bird == null) return;
+    final delta = bird - position;
+    final distance = delta.length;
+    if (distance == 0) return;
+    final step = math.min(CometFeature.showcaseDriftSpeed * dt, distance);
+    position.add(delta / distance * step);
   }
 
   /// The collection pop is the comet's (`CometRide`): it plays at the bird.

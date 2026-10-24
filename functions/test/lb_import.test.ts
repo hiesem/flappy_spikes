@@ -19,7 +19,17 @@ import {
   pruneGroup,
   runCleanupCli,
 } from '../scripts/lb_cleanup_test.js';
-import type { LbGhostDay, LbGhostPoolDoc, LbGroupDoc, LbPlayerDoc, PlayerDoc } from '../src/schema.js';
+import { deleteBoardData } from '../src/board_delete.js';
+import { lbSubmitRun } from '../src/board_store.js';
+import {
+  LB_TOMB_COLLECTION,
+  type LbGhostDay,
+  type LbGhostPoolDoc,
+  type LbGroupDoc,
+  type LbPlayerDoc,
+  type PlayerDoc,
+} from '../src/schema.js';
+import { encodeDeltas, encodeEntries } from '../src/timeline.js';
 import { DAY, LOOK, makePlayer, makeRun, uniq } from './helpers.js';
 
 const T0 = Date.UTC(2026, 9, 20, 12, 0, 0);
@@ -41,7 +51,7 @@ async function clearCollection(name: string): Promise<void> {
 }
 
 beforeEach(async () => {
-  for (const name of ['players', 'lbPlayers', 'lbBest', 'lbMeta', 'lbGifts', 'lbGhostPool', 'lbGroups']) {
+  for (const name of ['players', 'lbPlayers', 'lbBest', 'lbMeta', 'lbGifts', 'lbGhostPool', 'lbGroups', LB_TOMB_COLLECTION]) {
     await clearCollection(name);
   }
 });
@@ -101,6 +111,87 @@ function interruptImportAfterPlayerWrites(original: Firestore): Firestore {
       };
     },
   });
+}
+
+/**
+ * Run [concurrent] once, after the first `lbPlayers` snapshot has been taken
+ * but before the import receives it. That is the stale-snapshot window the
+ * import must close with a transaction.
+ */
+function raceAfterLbPlayersSnapshot(original: Firestore, concurrent: () => Promise<void>): Firestore {
+  let fired = false;
+  const wrapQuery = (query: any): any =>
+    new Proxy(query, {
+      get(target, property) {
+        const value = Reflect.get(target, property, target);
+        if (typeof value !== 'function') return value;
+        return (...args: unknown[]) => {
+          if (property === 'get') {
+            return (async () => {
+              const snap = await value.apply(target, args);
+              if (!fired) {
+                fired = true;
+                await concurrent();
+              }
+              return snap;
+            })();
+          }
+          return wrapQuery(value.apply(target, args));
+        };
+      },
+    });
+
+  return new Proxy(original, {
+    get(target, property) {
+      const value = Reflect.get(target, property, target);
+      if (property !== 'collection') {
+        return typeof value === 'function' ? value.bind(target) : value;
+      }
+      return (path: string) => {
+        const collection = value.call(target, path);
+        return path === 'lbPlayers' ? wrapQuery(collection) : collection;
+      };
+    },
+  });
+}
+
+/** Run [concurrent] before the import's lbBest rebuild transaction. */
+function raceBeforeImportCacheRebuild(original: Firestore, concurrent: () => Promise<void>): Firestore {
+  let commits = 0;
+  let fired = false;
+  return new Proxy(original, {
+    get(target, property) {
+      const value = Reflect.get(target, property, target);
+      if (property !== 'runTransaction') {
+        return typeof value === 'function' ? value.bind(target) : value;
+      }
+      return async (...args: unknown[]) => {
+        const transactionIndex = ++commits;
+        // The first transaction commits the imported row; the second is the
+        // cache rebuild. Delete before that rebuild's lbPlayers snapshot.
+        if (transactionIndex === 2 && !fired) {
+          fired = true;
+          await concurrent();
+        }
+        const result = await (value as (...a: unknown[]) => Promise<unknown>).apply(target, args);
+        return result;
+      };
+    },
+  });
+}
+
+function liveRun(score: number, endTs = NOW - 1000) {
+  const deltas = Array.from({ length: score }, () => 140);
+  return {
+    id: uniq('live-run'),
+    score,
+    hoops: score,
+    cs: Math.max(1400, score * 140 + 80),
+    endTs,
+    mode: 'free',
+    tl: encodeDeltas(deltas),
+    fl: encodeEntries(deltas.map(() => 0), deltas.map(() => 1)),
+  };
 }
 
 function interruptCleanupAfterFirstCommittedBatch(original: Firestore): Firestore {
@@ -369,6 +460,177 @@ describe('PRD-2.6 C8 verified best-run import', () => {
 
     await cleanupLeaderboard(db, { keepUids: [], apply: true, nowMs: NOW, log: () => {} });
     assert.equal((await db.collection('lbMeta').doc('import').get()).data()?.cleanedAt.toMillis(), NOW);
+  });
+
+  it('clears cleanedAt when the keep-list changes but keeps it for an unchanged rerun', async () => {
+    const uid = uniq('import-keep-list');
+    await seedPlayers(db, [
+      [uid, player({ best: 34, bestRun: makeRun({ score: 34, tsMs: T0, best: 34 }), recent: [] })],
+    ]);
+    const first = await importLeaderboard(db, {
+      keepUids: ['owner-a'],
+      apply: true,
+      nowMs: NOW,
+      log: () => {},
+    });
+    assert.equal(first.imported, 1);
+
+    const cleanedAt = at(NOW + DAY);
+    await db.collection('lbMeta').doc('import').set({ cleanedAt }, { merge: true });
+    const same = await importLeaderboard(db, {
+      keepUids: ['owner-a'],
+      apply: true,
+      nowMs: NOW + DAY,
+      log: () => {},
+    });
+    assert.equal(same.unchanged, 1);
+    assert.equal((await db.collection('lbMeta').doc('import').get()).data()?.cleanedAt.toMillis(), cleanedAt.toMillis());
+
+    const changed = await importLeaderboard(db, {
+      keepUids: ['owner-a', 'owner-b'],
+      apply: true,
+      nowMs: NOW + 2 * DAY,
+      log: () => {},
+    });
+    assert.equal(changed.unchanged, 1);
+    const meta = (await db.collection('lbMeta').doc('import').get()).data();
+    assert.equal(meta?.cleanedAt, undefined, 'a changed keep-list invalidates the cleanup gate');
+    assert.deepEqual(meta?.keepUids, ['owner-a', 'owner-b']);
+  });
+
+  it('preserves a live submission that commits during the import and rebuilds lbBest from committed data', async () => {
+    const uid = uniq('import-live-race');
+    await seedPlayers(db, [
+      [
+        uid,
+        player({
+          best: 40,
+          bestRun: makeRun({ score: 40, tsMs: T0, best: 40 }),
+          recent: [],
+          expireAt: at(NOW + 30 * DAY),
+        }),
+      ],
+    ]);
+    let live: Awaited<ReturnType<typeof lbSubmitRun>> | undefined;
+    const racingDb = raceAfterLbPlayersSnapshot(db, async () => {
+      live = await lbSubmitRun(
+        db,
+        uid,
+        {
+          runs: [liveRun(90)],
+          name: 'BraveOwl123',
+          look: LOOK,
+          platform: 'android',
+        },
+        NOW,
+      );
+    });
+
+    const result = await importLeaderboard(racingDb, {
+      keepUids: ['owner-a'],
+      apply: true,
+      nowMs: NOW,
+      log: () => {},
+    });
+    assert.ok(live?.group);
+    assert.equal(result.preservedPlay, 1);
+
+    const stored = (await db.collection('lbPlayers').doc(uid).get()).data() as LbPlayerDoc;
+    assert.equal(stored.src, 'play');
+    assert.equal(stored.best, 90, 'the import must not restore the older imported score');
+    assert.equal(stored.bestShadow, 90);
+    assert.equal(stored.groupId, live!.group!.id);
+    assert.ok((stored.hist ?? []).includes(90), 'the live history must survive the import');
+
+    const best = (await db.collection('lbBest').doc('global').get()).data() as {
+      rows: Array<{ uid: string; best: number }>;
+    };
+    assert.deepEqual(
+      best.rows.filter((row) => row.uid === uid).map((row) => row.best),
+      [90],
+      'the cache must be rebuilt from the committed live row',
+    );
+  });
+
+  it('does not roll an already-imported row back when a live submission races the import', async () => {
+    const uid = uniq('import-live-existing');
+    await seedPlayers(db, [
+      [uid, player({ best: 40, bestRun: makeRun({ score: 40, tsMs: T0, best: 40 }), recent: [] })],
+    ]);
+    await db.collection('lbPlayers').doc(uid).set(imported(uid, 40));
+    let live: Awaited<ReturnType<typeof lbSubmitRun>> | undefined;
+    const racingDb = raceAfterLbPlayersSnapshot(db, async () => {
+      live = await lbSubmitRun(
+        db,
+        uid,
+        { runs: [liveRun(95)], name: 'BraveOwl123', look: LOOK, platform: 'android' },
+        NOW,
+      );
+    });
+
+    const result = await importLeaderboard(racingDb, {
+      keepUids: ['owner-a'],
+      apply: true,
+      nowMs: NOW,
+      log: () => {},
+    });
+    assert.equal(result.preservedPlay, 1);
+    const stored = (await db.collection('lbPlayers').doc(uid).get()).data() as LbPlayerDoc;
+    assert.equal(stored.src, 'import', 'a live submit keeps the row provenance after an import');
+    assert.equal(stored.best, 95);
+    assert.equal(stored.groupId, live!.group!.id);
+    assert.ok((stored.hist ?? []).includes(95));
+  });
+
+  it('skips an existing tombstone and a deletion during import, leaving no leaderboard data', async () => {
+    const alreadyDeleted = uniq('import-already-deleted');
+    const deletedDuring = uniq('import-deleted-during');
+    await seedPlayers(db, [
+      [alreadyDeleted, player({ best: 51, bestRun: makeRun({ score: 51, tsMs: T0 }), recent: [] })],
+      [deletedDuring, player({ best: 62, bestRun: makeRun({ score: 62, tsMs: T0 }), recent: [] })],
+    ]);
+    await deleteBoardData(db, alreadyDeleted, NOW - DAY);
+
+    const racingDb = raceAfterLbPlayersSnapshot(db, async () => {
+      await deleteBoardData(db, deletedDuring, NOW);
+    });
+    const result = await importLeaderboard(racingDb, {
+      keepUids: [],
+      apply: true,
+      nowMs: NOW,
+      log: () => {},
+    });
+    assert.equal(result.imported, 0);
+
+    for (const uid of [alreadyDeleted, deletedDuring]) {
+      assert.equal((await db.collection(LB_TOMB_COLLECTION).doc(uid).get()).exists, true);
+      assert.equal((await db.collection('lbPlayers').doc(uid).get()).exists, false);
+      assert.equal(
+        (await db.collection('lbBest').doc('global').get()).data()?.rows.some((row: { uid: string }) => row.uid === uid),
+        false,
+      );
+    }
+  });
+
+  it('does not let the post-import BEST rebuild resurrect a deletion during the cache rebuild', async () => {
+    const uid = uniq('import-delete-rebuild');
+    const other = uniq('import-delete-rebuild-other');
+    await seedPlayers(db, [
+      [uid, player({ best: 71, bestRun: makeRun({ score: 71, tsMs: T0 }), recent: [] })],
+      [other, player({ best: 72, bestRun: makeRun({ score: 72, tsMs: T0 }), recent: [] })],
+    ]);
+    const racingDb = raceBeforeImportCacheRebuild(db, async () => {
+      await deleteBoardData(db, uid, NOW);
+    });
+
+    await importLeaderboard(racingDb, { keepUids: [], apply: true, nowMs: NOW, log: () => {} });
+    assert.equal((await db.collection(LB_TOMB_COLLECTION).doc(uid).get()).exists, true);
+    assert.equal((await db.collection('lbPlayers').doc(uid).get()).exists, false);
+    const best = (await db.collection('lbBest').doc('global').get()).data() as {
+      rows: Array<{ uid: string; best: number }>;
+    };
+    assert.equal(best.rows.some((row) => row.uid === uid), false);
+    assert.equal(best.rows.some((row) => row.uid === other), true);
   });
 
   it('imports a player close to the 60-day source expiry but skips an already-expired source doc', async () => {

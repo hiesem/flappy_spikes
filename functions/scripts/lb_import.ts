@@ -13,6 +13,7 @@
  * the day (C8); the release-blocking test-player cleanup is separate. The
  * command previews by default and writes only with --apply.
  */
+import { isDeepStrictEqual } from 'node:util';
 import { getApps, initializeApp } from 'firebase-admin/app';
 import {
   FieldValue,
@@ -32,6 +33,7 @@ import {
   LB_META_COLLECTION,
   LB_PLAYER_TTL,
   LB_PLAYERS_COLLECTION,
+  LB_TOMB_COLLECTION,
   validLook,
   type LbBestDoc,
   type LbBestRow,
@@ -71,6 +73,7 @@ export interface ImportResult {
   scanned: number;
   imported: number;
   skipped: number;
+  tombstoned: number;
   expired: number;
   preservedPlay: number;
   unchanged: number;
@@ -259,6 +262,63 @@ export function sameImportedPlayer(
   );
 }
 
+type ImportCommitOutcome = 'written' | 'unchanged' | 'preservedPlay' | 'tombstoned';
+
+/**
+ * Commit one imported row only if it is still safe to do so. The transaction
+ * either sees a live play row (and leaves it untouched) or the Delete My Data
+ * tombstone (and imports nothing). A live submission that commits between the
+ * planning read and this transaction therefore always wins.
+ */
+async function commitImportedPlayer(
+  db: Firestore,
+  uid: string,
+  desired: LbPlayerDoc,
+  expected: LbPlayerDoc | Record<string, unknown> | undefined,
+  nowMs: number,
+): Promise<ImportCommitOutcome> {
+  const playerRef = db.collection(LB_PLAYERS_COLLECTION).doc(uid);
+  const tombRef = db.collection(LB_TOMB_COLLECTION).doc(uid);
+  return db.runTransaction(async (tx) => {
+    const [tombSnap, playerSnap] = await Promise.all([tx.get(tombRef), tx.get(playerRef)]);
+    if (tombSnap.exists) return 'tombstoned';
+    const current = playerSnap.exists ? (playerSnap.data() as LbPlayerDoc) : undefined;
+    if (current?.src === 'play') return 'preservedPlay';
+    if (playerSnap.exists && sameImportedPlayer(current, desired, nowMs)) return 'unchanged';
+    // A live submit on an already-imported row keeps `src: 'import'`, so it is
+    // not enough to check that field. Any state change since the planning read
+    // means the live writer owns this row; never replace it with stale data.
+    if (!isDeepStrictEqual(current, expected)) return 'preservedPlay';
+    tx.set(playerRef, desired);
+    return 'written';
+  });
+}
+
+/**
+ * Rebuild `lbBest/global` from the committed lbPlayers collection. A Delete My
+ * Data that lands after a player import but before this read would otherwise be
+ * resurrected in the cached BEST RUN rows. The transaction rechecks every
+ * tombstone from the snapshot, so it either commits after the deletion or
+ * retries and reads the cleaned collection.
+ */
+export async function rebuildBestFromCommitted(db: Firestore, nowMs: number): Promise<LbBestDoc> {
+  const bestRef = db.collection(LB_BEST_COLLECTION).doc('global');
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const best = bestDocFromPlayers(await readLbPlayers(db), nowMs);
+    const clean = await db.runTransaction(async (tx) => {
+      const uids = best.rows.map((row) => row.uid);
+      const tombstones = await Promise.all(
+        uids.map((uid) => tx.get(db.collection(LB_TOMB_COLLECTION).doc(uid))),
+      );
+      if (uids.some((_, i) => tombstones[i].exists)) return false;
+      tx.set(bestRef, best);
+      return true;
+    });
+    if (clean) return best;
+  }
+  throw new Error('lbBest rebuild raced Delete My Data; rerun the import');
+}
+
 function bestRow(uid: string, data: LbPlayerDoc | Record<string, unknown>): LbBestRow | null {
   const p = data as Partial<LbPlayerDoc>;
   const score = typeof p.bestShadow === 'number' ? p.bestShadow : p.best;
@@ -408,6 +468,8 @@ export class BatchedWriter {
  * Import one verified run per players/{uid}. Safe to rerun: a row already
  * owned by live play (`src: 'play'`) is preserved; an unchanged imported row
  * is not rewritten, so a repeated command leaves the same data and timestamps.
+ * Each write is a transaction that rechecks the live row and the Delete My Data
+ * tombstone. `lbBest/global` is rebuilt from the committed lbPlayers data.
  */
 export async function importLeaderboard(db: Firestore, opts: ImportOptions): Promise<ImportResult> {
   const nowMs = opts.nowMs ?? Date.now();
@@ -419,9 +481,11 @@ export async function importLeaderboard(db: Firestore, opts: ImportOptions): Pro
   const changed = new Map<string, LbPlayerDoc>();
   const sourceCount = { bestRun: 0, recent: 0 };
   let skipped = 0;
+  let tombstoned = 0;
   let expired = 0;
   let preservedPlay = 0;
-  let unchanged = 0;
+  let planUnchanged = 0;
+  let unchangedCount = 0;
 
   for (const doc of players) {
     const uid = doc.id;
@@ -444,7 +508,7 @@ export async function importLeaderboard(db: Firestore, opts: ImportOptions): Pro
     }
     const next = importedPlayerDoc(uid, choice, nowMs);
     planned.set(uid, next);
-    if (sameImportedPlayer(existingByUid.get(uid), next, nowMs)) unchanged++;
+    if (sameImportedPlayer(existingByUid.get(uid), next, nowMs)) planUnchanged++;
     else changed.set(uid, next);
     sourceCount[choice.source]++;
   }
@@ -458,7 +522,7 @@ export async function importLeaderboard(db: Firestore, opts: ImportOptions): Pro
     `${apply ? 'Import plan' : 'DRY RUN — nothing written'}: scanned ${players.length} player(s), ` +
       `${apply ? 'would write' : 'would import'} ${planned.size} ` +
       `(bestRun ${sourceCount.bestRun}, recent ${sourceCount.recent}), ` +
-      `unchanged ${unchanged}, expired ${expired}, skip ${skipped}, preserve play-sourced ${preservedPlay}`,
+      `unchanged ${planUnchanged}, expired ${expired}, skip ${skipped}, preserve play-sourced ${preservedPlay}`,
   );
   logLine(
     opts,
@@ -468,58 +532,74 @@ export async function importLeaderboard(db: Firestore, opts: ImportOptions): Pro
 
   let resultBest = best;
   if (apply) {
-    if (changed.size > 0) {
-      const metaRef = db.collection(LB_META_COLLECTION).doc('import');
+    const metaRef = db.collection(LB_META_COLLECTION).doc('import');
+    const metaBeforeSnap = await metaRef.get();
+    const metaBefore = (metaBeforeSnap.exists ? metaBeforeSnap.data() : {}) as Partial<LbMetaDoc>;
+    const keepListChanged = metaBeforeSnap.exists && !sameUidList(metaBefore.keepUids ?? [], opts.keepUids);
+    if (changed.size > 0 || keepListChanged) {
       await metaRef.set({ cleanedAt: FieldValue.delete() }, { merge: true });
     }
 
-    const writer = new BatchedWriter(db);
-    for (const [uid, data] of changed) {
-      await writer.set(db.collection(LB_PLAYERS_COLLECTION).doc(uid), data);
+    let written = 0;
+    let unchanged = 0;
+    for (const [uid, data] of [...planned]) {
+      const outcome = await commitImportedPlayer(db, uid, data, existingByUid.get(uid), nowMs);
+      if (outcome === 'written') written++;
+      else if (outcome === 'unchanged') unchanged++;
+      else if (outcome === 'preservedPlay') {
+        preservedPlay++;
+        planned.delete(uid);
+      } else {
+        tombstoned++;
+        planned.delete(uid);
+      }
     }
-    await writer.flush();
 
     const bestRef = db.collection(LB_BEST_COLLECTION).doc('global');
+    const committedBest = bestDocFromPlayers(await readLbPlayers(db), nowMs);
     const bestSnap = await bestRef.get();
     const existingBest = bestSnap.exists ? (bestSnap.data() as LbBestDoc) : undefined;
-    const bestNeedsWrite = changed.size > 0 || !sameBestDoc(existingBest, best);
-    if (bestNeedsWrite) await bestRef.set(best);
-    else if (existingBest !== undefined) resultBest = existingBest;
+    const bestNeedsWrite = written > 0 || !sameBestDoc(existingBest, committedBest);
+    if (bestNeedsWrite) await rebuildBestFromCommitted(db, nowMs);
+    resultBest = bestNeedsWrite ? committedBest : (existingBest ?? committedBest);
 
-    const metaRef = db.collection(LB_META_COLLECTION).doc('import');
     const metaSnap = await metaRef.get();
     const meta = (metaSnap.exists ? metaSnap.data() : {}) as Partial<LbMetaDoc>;
     const metaNeedsWrite =
-      changed.size > 0 ||
+      written > 0 ||
       !metaSnap.exists ||
       meta.ranAt === undefined ||
       meta.count !== planned.size ||
       !sameUidList(meta.keepUids ?? [], opts.keepUids);
     if (metaNeedsWrite) {
       const nextMeta: Record<string, unknown> = {
-        ranAt: changed.size > 0 || meta.ranAt === undefined ? Timestamp.fromMillis(nowMs) : meta.ranAt,
+        ranAt: written > 0 || meta.ranAt === undefined ? Timestamp.fromMillis(nowMs) : meta.ranAt,
         count: planned.size,
         keepUids: opts.keepUids,
       };
       // Only new / changed imported data invalidates an earlier cleanup gate.
-      if (changed.size > 0) nextMeta.cleanedAt = FieldValue.delete();
+      if (written > 0 || keepListChanged) nextMeta.cleanedAt = FieldValue.delete();
       await metaRef.set(nextMeta, { merge: true });
     }
     logLine(
       opts,
-      changed.size === 0
+      written === 0
         ? 'Import complete: no data changed; nothing written.'
-        : `Import complete: wrote ${changed.size} lbPlayers, lbBest/global and lbMeta/import.`,
+        : `Import complete: wrote ${written} lbPlayers, lbBest/global and lbMeta/import.`,
     );
+    unchangedCount = unchanged;
+  } else {
+    unchangedCount = planUnchanged;
   }
 
   return {
     scanned: players.length,
     imported: planned.size,
     skipped,
+    tombstoned,
     expired,
     preservedPlay,
-    unchanged,
+    unchanged: unchangedCount,
     fromBestRun: sourceCount.bestRun,
     fromRecent: sourceCount.recent,
     best: resultBest,

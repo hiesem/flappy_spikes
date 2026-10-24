@@ -4,8 +4,11 @@ import '../config/director_tables.dart';
 import '../config/run_config.dart';
 import '../config/tuning_values.dart';
 import '../elements.dart';
+import 'calm_schedule.dart';
 import 'director_context.dart';
 import 'first_meet.dart';
+import 'hazard_budget.dart';
+import 'headline_window.dart';
 import 'layout_sampler.dart';
 import 'plans.dart';
 import 'rng.dart';
@@ -106,6 +109,13 @@ class RunDirector {
         _pieceAt += 2;
       }
     }
+    _calm = CalmSchedule(rng.timing);
+    if (startHoopIndex > 34) _calm.onRideStart(startHoopIndex);
+    _introductions = {
+      for (final element in const [ElementId.saw, ElementId.squeeze])
+        if (!this.enabled.contains(element) || !firstMeet.met.contains(element))
+          element,
+    };
   }
 
   final DirectorTables tables;
@@ -182,6 +192,15 @@ class RunDirector {
   int _collectablePlannedAt = -99;
   RideKind? _ride;
   final Map<String, int> _spawned = {};
+  late final CalmSchedule _calm;
+  final HazardBudget _hazard = HazardBudget();
+  final HeadlineWindow _headline = HeadlineWindow();
+  String? _headlineReservationId;
+  int _headlineReservationDue = -1;
+  int? _forcedHeadlineAt;
+  late final Set<ElementId> _introductions;
+  int _downgrades = 0;
+  double? _lastFinalY;
 
   /// Next slot index (= hoop index of the slot [nextSlot] plans next).
   int get hoopIndex => _i;
@@ -218,6 +237,10 @@ class RunDirector {
   /// Spawned counts per kind / modifier / item storage id (analytics
   /// `run_director_hoops` / `run_director_items`).
   Map<String, int> get spawnedCounts => Map.unmodifiable(_spawned);
+
+  /// PRD-2.6 D3 slots downgraded by the rolling hazard ledger (tests and
+  /// `run_extra`).
+  int get downgrades => _downgrades;
 
   bool _on(ElementId e) => enabled.contains(e);
 
@@ -258,7 +281,12 @@ class RunDirector {
   /// 25–45 hoops after the previous one ended (`squeeze_gap`). The hoop
   /// count turns into runClock at the cruise of the hoops ahead
   /// ([RunConfig.secondsForHoops] from [hoop], the bird's hoop now).
-  double rollSqueezeAt(double now, {required int hoop, bool first = false}) {
+  double rollSqueezeAt(
+    double now, {
+    required int hoop,
+    int index = 0,
+    bool first = false,
+  }) {
     final (a, b) = TuningValues.current.range(
       first ? 'squeeze_first' : 'squeeze_gap',
     );
@@ -268,7 +296,7 @@ class RunDirector {
 
   /// §3.17 / PRD-2.3 §14.4 the hold: 5–10 hoops (`squeeze_hold`) from
   /// [hoop], in runClock seconds.
-  double rollSqueezeHold({required int hoop}) {
+  double rollSqueezeHold({required int hoop, int index = 0}) {
     final (a, b) = TuningValues.current.range('squeeze_hold');
     final n = RunRandom.rangeInt(rng.timing, a, b);
     return RunConfig.secondsForHoops(hoop, n);
@@ -296,12 +324,19 @@ class RunDirector {
   // --- lifecycle --------------------------------------------------------------
 
   /// §3.0.3 slot order 2: the next slot is a plain normal hoop.
-  void onRevive() => _revivePending = true;
+  void onRevive() {
+    _revivePending = true;
+    _calm.onRevive(_i);
+  }
 
-  void onRideStart(RideKind k) => _ride = k;
+  void onRideStart(RideKind k) {
+    _ride = k;
+    _calm.onRideStart(_i);
+  }
 
   void onRideEnd(RideKind k) {
     if (_ride == k) _ride = null;
+    _calm.onRideEnded(_i);
     if (k == RideKind.comet) {
       _zigEndX = null;
       _zigSide = 0;
@@ -310,6 +345,19 @@ class RunDirector {
       _cometStations = null;
     }
   }
+
+  /// PRD-2.6 D4/D5 a squeeze warning may start at [hoop].
+  bool allowsSqueezeWarning(int hoop) {
+    if (!_calm.allowsSqueezeWarning(hoop)) return false;
+    if (_headlineDue('squeeze', hoop)) return true;
+    return false;
+  }
+
+  /// PRD-2.6 D6 the squeeze warning claimed the headline at [hoop].
+  void onSqueezeWarning(int hoop) => _claimHeadline('squeeze', hoop);
+
+  /// PRD-2.6 D4 two calm slots follow a finished squeeze.
+  void onSqueezeEnded(int hoop) => _calm.startAt(max(hoop + 1, _i), 2);
 
   // region WP-G3 — comet zigzag (PRD-2.2 §16)
   /// PRD-2.2 §16.1 the comet ride's predicted end: hoops whose plane lies
@@ -540,22 +588,24 @@ class RunDirector {
       _prevKind = HoopKindId.normal;
       _count(ElementId.normalHoop.storageId);
       _nextX += spacing;
-      return SlotPlan(
-        index: i,
-        kind: HoopKindId.normal,
-        element: ElementId.normalHoop,
-        trackX: trackX,
-        centreY: y,
-        opening: cap(RunConfig.opening0 * _bigMult(i, ctx)),
-        advance: spacing,
+      return _recordSlot(
+        SlotPlan(
+          index: i,
+          kind: HoopKindId.normal,
+          element: ElementId.normalHoop,
+          trackX: trackX,
+          centreY: y,
+          opening: cap(RunConfig.opening0 * _bigMult(i, ctx)),
+          advance: spacing,
+        ),
+        ctx,
+        previousY: null,
       );
     }
 
     // 1. Ride active: normal, upright, still; no items. PRD-2.4 §2: the
     //    size is the curve's for this index (× Big Hoops), like any hoop.
-    // 2. First slot after a revive: normal (call: plain — upright, still).
-    if (ride || _revivePending) {
-      _revivePending = false;
+    if (ride) {
       final opening = cap(openingFor(i) * _bigMult(i, ctx));
       // PRD-2.2 §16.1 comet ride hoops zigzag ±70 pt around the middle
       // (the normal draw still happens, so the course after the ride keeps
@@ -576,19 +626,25 @@ class RunDirector {
       // `ride_comet_after_gap`); otherwise the normal spacing.
       final advance = cometStation ? _stationAdvance(trackX) : spacing;
       _nextX += advance;
-      return SlotPlan(
-        index: i,
-        kind: HoopKindId.normal,
-        element: ElementId.normalHoop,
-        trackX: trackX,
-        centreY: y,
-        opening: opening,
-        advance: advance,
-        duringRide: ride,
+      return _recordSlot(
+        SlotPlan(
+          index: i,
+          kind: HoopKindId.normal,
+          element: ElementId.normalHoop,
+          trackX: trackX,
+          centreY: y,
+          opening: opening,
+          advance: advance,
+          duringRide: ride,
+        ),
+        ctx,
+        previousY: null,
       );
     }
 
-    final prevY = ctx.prevCentreY ?? _layout.lastY;
+    final prevY = ctx.prevCentreY ?? _lastFinalY ?? _layout.lastY;
+    final calm = _calm.isCalm(i);
+    if (calm) _calm.startAt(i, 3);
     HoopKindId? kind;
     var forced = false;
     ElementId? forceMod; // angledRing / movingRing on a normal slot
@@ -630,7 +686,11 @@ class RunDirector {
       }
     }
 
-    final due = forced ? null : firstMeet.dueSlot(i);
+    var due = forced ? null : firstMeet.dueSlot(i);
+    if (due != null && !_headlineDue('first-meet', i)) {
+      final wait = firstMeet.dueSince;
+      if (wait == null || i - wait < 5) due = null;
+    }
 
     // PRD-2.2 §19.2 the early random pool: one equal-chance draw per index
     // 4–9 (replaces the special roll and the optional gap roll there).
@@ -658,6 +718,8 @@ class RunDirector {
         if (due == ElementId.portal) _portalAt = min(_portalAt, i);
         if (i >= _portalAt &&
             !ctx.squeezeWindow &&
+            !calm &&
+            _headlineDue('ride', i) &&
             i - _lastComet >= RunConfig.cometPortalDistance) {
           kind = HoopKindId.portal;
           forced = due == ElementId.portal;
@@ -672,10 +734,18 @@ class RunDirector {
     if (kind == null && !forced && !cooling) {
       final dueSpecial = due == null ? null : HoopKindId.specialFor(due);
       final waiting = _waitRing;
+      final headlineWaiting = _headlineWaitRing;
       if (waiting != null && _specialAllowed(waiting, i, ctx)) {
         // PRD-2.3 §17.3 rule 4 the waiting reward ring comes first.
         kind = waiting;
         _waitRing = null;
+      } else if (headlineWaiting != null &&
+          i >= _headlineWaitRingDue &&
+          _headlineDue(_headlineWaitRingId, i) &&
+          _specialAllowed(headlineWaiting, i, ctx)) {
+        kind = headlineWaiting;
+        forced = false;
+        _clearHeadlineWaitRing();
       } else if (dueSpecial != null && _specialAllowed(dueSpecial, i, ctx)) {
         kind = dueSpecial;
         forced = true;
@@ -712,6 +782,14 @@ class RunDirector {
               kind = RunRandom.pickWeighted<HoopKindId>(rng.layout, w);
             }
           }
+          if (kind != null &&
+              rewardKinds.contains(kind) &&
+              !_headlineDue('big-bonus', i)) {
+            _headlineWaitRing = kind;
+            _headlineWaitRingId = 'big-bonus';
+            _headlineWaitRingDue = _delayHeadline('big-bonus', i);
+            kind = null;
+          }
         }
       }
     }
@@ -721,7 +799,7 @@ class RunDirector {
       forceMod = due;
     }
     kind ??= HoopKindId.normal;
-    return _buildSlot(
+    final planned = _buildSlot(
       i,
       trackX,
       ctx,
@@ -731,6 +809,181 @@ class RunDirector {
       cometMode: cometMode,
       prevY: prevY,
       cap: cap,
+    );
+    return _recordSlot(
+      planned,
+      ctx,
+      previousY: prevY,
+      calm: calm,
+      firstMeetElement: due,
+    );
+  }
+
+  SlotPlan _recordSlot(
+    SlotPlan planned,
+    DirectorContext ctx, {
+    required double? previousY,
+    bool calm = false,
+    ElementId? firstMeetElement,
+  }) {
+    final hoop = planned.index;
+    final dyRef = min(ctx.band, RunConfig.dyRefBand);
+    final row = tables.bandFor(hoop).dy;
+    final hazardPrevious = previousY ?? _lastFinalY;
+    final shouldCalm = calm && !planned.forced;
+    var finalPlan = shouldCalm
+        ? _calmSlot(planned, ctx, previousY: previousY)
+        : planned;
+    final willDowngrade =
+        !shouldCalm &&
+        !planned.forced &&
+        !_hazard.allows(
+          planned,
+          previousY: hazardPrevious,
+          rowP90: row.$2 * dyRef,
+          squeeze: ctx.squeezeWindow,
+        );
+    if (willDowngrade) {
+      finalPlan = _hazard.downgrade(
+        planned,
+        previousY: hazardPrevious,
+        rowP90: row.$2 * dyRef,
+        squeeze: ctx.squeezeWindow,
+      );
+      if (!_hazard.allows(
+        finalPlan,
+        previousY: hazardPrevious,
+        rowP90: row.$2 * dyRef,
+        squeeze: ctx.squeezeWindow,
+      )) {
+        final centre = hazardPrevious == null
+            ? finalPlan.centreY
+            : hazardPrevious +
+                  (finalPlan.centreY - hazardPrevious).sign *
+                      (row.$2 * dyRef - 0.000001);
+        finalPlan = finalPlan.copyWith(
+          centreY: centre,
+          tiltDeg: 0,
+          motion: () => null,
+        );
+      }
+      _downgrades++;
+    }
+    finalPlan = finalPlan.copyWith(
+      hazardCost: _hazard.costOf(
+        finalPlan,
+        previousY: hazardPrevious,
+        rowP90: row.$2 * dyRef,
+        squeeze: ctx.squeezeWindow,
+      ),
+    );
+    _hazard.add(
+      finalPlan,
+      previousY: hazardPrevious,
+      rowP90: row.$2 * dyRef,
+      squeeze: ctx.squeezeWindow,
+    );
+
+    _markFinal(finalPlan);
+    if (planned.kind == HoopKindId.portal || planned.cometHang) {
+      _claimHeadline('ride', hoop);
+    } else if (firstMeetElement != null &&
+        (finalPlan.element == firstMeetElement ||
+            (firstMeetElement == ElementId.angledRing &&
+                finalPlan.tiltDeg != 0) ||
+            (firstMeetElement == ElementId.movingRing &&
+                finalPlan.motion != null))) {
+      _claimHeadline('first-meet', hoop);
+    } else if (rewardKinds.contains(finalPlan.kind)) {
+      _claimHeadline('big-bonus', hoop);
+    }
+    if (_introductions.contains(ElementId.saw) &&
+        finalPlan.kind == HoopKindId.saw) {
+      _claimHeadline('introduction', hoop);
+    }
+
+    _layout.lastY = finalPlan.centreY;
+    _lastFinalY = finalPlan.centreY;
+    _layout.noteModifiers(motion: finalPlan.motion, tiltDeg: finalPlan.tiltDeg);
+    if (planned.kind != finalPlan.kind) {
+      _prevKind = HoopKindId.normal;
+      _layout.forceY = null;
+    }
+    _replaceSpawnedCount(planned, finalPlan);
+    _nextX = finalPlan.trackX + finalPlan.advance;
+    return finalPlan.copyWith(
+      hazardCost: _hazard.costOf(
+        finalPlan,
+        previousY: hazardPrevious,
+        rowP90: row.$2 * dyRef,
+        squeeze: ctx.squeezeWindow,
+      ),
+    );
+  }
+
+  void _markFinal(SlotPlan plan) {
+    if (plan.cometHang) firstMeet.markMet(ElementId.comet);
+    if (plan.kind == HoopKindId.normal) {
+      if (plan.tiltDeg != 0) firstMeet.markMet(ElementId.angledRing);
+      if (plan.motion != null) firstMeet.markMet(ElementId.movingRing);
+    }
+    firstMeet.markMet(plan.element);
+  }
+
+  void _replaceSpawnedCount(SlotPlan planned, SlotPlan finalPlan) {
+    void remove(String key) {
+      final value = (_spawned[key] ?? 1) - 1;
+      if (value <= 0) {
+        _spawned.remove(key);
+      } else {
+        _spawned[key] = value;
+      }
+    }
+
+    final kindChanged = planned.kind != finalPlan.kind;
+    if (kindChanged) remove(planned.element.storageId);
+    if (planned.tiltDeg != 0 && finalPlan.tiltDeg == 0) remove('tilted');
+    if (planned.motion != null && finalPlan.motion == null) remove('moving');
+    if (planned.cometHang && !finalPlan.cometHang) {
+      remove(ElementId.comet.storageId);
+    }
+    if (kindChanged) _count(ElementId.normalHoop.storageId);
+  }
+
+  SlotPlan _calmSlot(
+    SlotPlan planned,
+    DirectorContext ctx, {
+    required double? previousY,
+  }) {
+    final hoop = planned.index;
+    final opening = min(
+      openingFor(hoop) * _bigMult(hoop, ctx),
+      ctx.band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
+    );
+    final median =
+        tables.bandFor(hoop).dy.$1 * min(ctx.band, RunConfig.dyRefBand);
+    final previous = previousY ?? (ctx.topTooth + ctx.floorTooth) / 2;
+    final delta = planned.centreY - previous;
+    final (lo, hi) = _layout.limits(hoop, ctx, opening);
+    final target = previous + delta.sign * min(delta.abs(), median);
+    final calmLo = max(lo, previous - median);
+    final calmHi = min(hi, previous + median);
+    final centre = calmLo <= calmHi
+        ? target.clamp(calmLo, calmHi)
+        : previous.clamp(lo, hi);
+    return planned.copyWith(
+      kind: HoopKindId.normal,
+      element: ElementId.normalHoop,
+      centreY: centre.clamp(lo, hi).toDouble(),
+      opening: opening,
+      tiltDeg: 0,
+      motion: () => null,
+      cometHang: false,
+      ringOffsets: const [0],
+      advance: spacing,
+      extra: () => null,
+      attached: const [],
+      calm: true,
     );
   }
 
@@ -935,7 +1188,6 @@ class RunDirector {
           ),
         );
         _count(ElementId.comet.storageId);
-        firstMeet.markMet(ElementId.comet);
       } else {
         // 7. Modifiers (§3.0.2): tilt, then movement.
         if (_on(ElementId.angledRing)) {
@@ -966,11 +1218,9 @@ class RunDirector {
         }
         if (tilt != 0) {
           _count('tilted');
-          firstMeet.markMet(ElementId.angledRing);
         }
         if (motion != null) {
           _count('moving');
-          firstMeet.markMet(ElementId.movingRing);
         }
       }
     }
@@ -983,7 +1233,6 @@ class RunDirector {
       _lastOf[kind] = i;
     }
     final element = kind.element;
-    firstMeet.markMet(element);
     _count(element.storageId);
     _prevKind = kind;
     _nextX += advance;
@@ -1008,6 +1257,12 @@ class RunDirector {
   bool _nearPortal(int i, int within) {
     if (!_portalOn) return false;
     return (i - _portalAt).abs() <= within || (i - _lastPortal) <= within;
+  }
+
+  bool _portalWaitingForHeadline(int hoop, DirectorContext ctx) {
+    if (!_portalOn || portalCapped || hoop < _portalAt) return false;
+    if (_rewardsBlocked(hoop, ctx) || _bigOpen(ctx)) return false;
+    return !_headlineDue('ride', hoop);
   }
 
   /// §3.0.3 special-hoop eligibility (unlocked, far enough, allowed now).
@@ -1039,6 +1294,11 @@ class RunDirector {
     }
     if (k == HoopKindId.saw && _prevKind == HoopKindId.fever) return false;
     if (rule.blockedNearPortal > 0 && _nearPortal(i, rule.blockedNearPortal)) {
+      return false;
+    }
+    if (rule.blockedNearPortal > 0 &&
+        _portalWaitingForHeadline(i, ctx) &&
+        _nearPortal(i, rule.blockedNearPortal + 5)) {
       return false;
     }
     if (k == HoopKindId.switchRing && _gapUsed.contains(i - 1)) return false;
@@ -1075,6 +1335,11 @@ class RunDirector {
     if (mode == 0 && !_cometOwed && rng.layout.nextDouble() >= rule.chance) {
       return false;
     }
+    if (!_cometOwed) {
+      _cometOwed = true;
+      _lastComet = -99;
+    }
+    if (!_headlineDue('ride', i)) return false;
     // PRD-2.3 §17.3 (after the roll, so the course stream stays the same):
     // rule 1 — a comet drawn while a big bonus is open waits (owed, rule 4)
     // unless another bonus waits already; rule 4 — while another waits no
@@ -1240,6 +1505,50 @@ class RunDirector {
   /// PRD-2.3 §17.2 a slot that is (or carries) a big bonus.
   static bool isBigSlot(SlotPlan p) =>
       isRewardSlot(p) || p.attached.any((a) => isBigItem(a.kind));
+
+  HoopKindId? _headlineWaitRing;
+  String _headlineWaitRingId = '';
+  int _headlineWaitRingDue = -1;
+  ElementId? _headlineWaitItem;
+  String _headlineWaitItemId = '';
+  int _headlineWaitItemDue = -1;
+
+  void _clearHeadlineWaitRing() {
+    _headlineWaitRing = null;
+    _headlineWaitRingId = '';
+    _headlineWaitRingDue = -1;
+  }
+
+  void _clearHeadlineWaitItem() {
+    _headlineWaitItem = null;
+    _headlineWaitItemId = '';
+    _headlineWaitItemDue = -1;
+  }
+
+  bool _headlineDue(String id, int hoop) {
+    final forcedUntil = _forcedHeadlineAt == null ? -1 : _forcedHeadlineAt! + 8;
+    if (hoop < forcedUntil) {
+      return _headlineReservationId == id && hoop >= _headlineReservationDue;
+    }
+    if (_headline.allows(id, hoop)) return true;
+    _headlineReservationId ??= id;
+    if (_headlineReservationId == id && _headlineReservationDue < 0) {
+      _headlineReservationDue = hoop + 5;
+    }
+    return false;
+  }
+
+  int _delayHeadline(String id, int hoop) {
+    if (_headlineDue(id, hoop)) return hoop;
+    return _headlineReservationId == id ? _headlineReservationDue : hoop + 5;
+  }
+
+  void _claimHeadline(String id, int hoop) {
+    if (!_headline.allows(id, hoop)) _forcedHeadlineAt = hoop;
+    _headline.add(id, hoop);
+    _headlineReservationId = null;
+    _headlineReservationDue = -1;
+  }
 
   /// PRD-2.3 §17.3 rule 4 the one waiting big bonus drawn while blocked: a
   /// reward ring ([_waitRing]) or a big gap item ([_waitItem]). A due
@@ -1619,15 +1928,28 @@ class RunDirector {
       _drawWhileBlocked(g, ctx);
     }
     if (!used && !blocked) {
-      final due = firstMeet.dueGap(g);
+      var due = firstMeet.dueGap(g);
+      if (due != null && !_headlineDue('first-meet', g)) {
+        final wait = firstMeet.dueSince;
+        if (wait == null || g - wait < 5) due = null;
+      }
       final pool = tables.earlyPool;
       ElementId? pick;
       CapsuleType? capsule;
       final waiting = _waitItem;
-      if (waiting != null && _gapAllowed(waiting, g, ctx)) {
+      final headlineWaiting = _headlineWaitItem;
+      if (waiting != null &&
+          _gapAllowed(waiting, g, ctx) &&
+          (!isBigItem(waiting) || _headlineDue('big-bonus', g))) {
         // PRD-2.3 §17.3 rule 4 the waiting big item comes first.
         pick = waiting;
         _waitItem = null;
+      } else if (headlineWaiting != null &&
+          g >= _headlineWaitItemDue &&
+          _headlineDue(_headlineWaitItemId, g) &&
+          _gapAllowed(headlineWaiting, g, ctx)) {
+        pick = headlineWaiting;
+        _clearHeadlineWaitItem();
       } else if (due != null && _gapAllowed(due, g, ctx)) {
         pick = due.isCapsuleType ? ElementId.capsule : due;
         if (due.isCapsuleType) {
@@ -1638,7 +1960,13 @@ class RunDirector {
         // it may come from index 4 (its min distance still holds).
         if (_earlyPicks[g] == EarlyPick.starTrail) {
           if (_gapAllowed(ElementId.starTrail, g, ctx, ignoreFrom: true)) {
-            pick = ElementId.starTrail;
+            if (_headlineDue('big-bonus', g)) {
+              pick = ElementId.starTrail;
+            } else {
+              _headlineWaitItem = ElementId.starTrail;
+              _headlineWaitItemId = 'big-bonus';
+              _headlineWaitItemDue = _delayHeadline('big-bonus', g);
+            }
           } else if (oneBigBonus &&
               !_bonusWaits &&
               _gapAllowed(
@@ -1656,11 +1984,12 @@ class RunDirector {
         for (final e in tables.gapItems.entries) {
           // PRD-2.3 §17.3 rule 4: a big item that only rule 1 blocks stays
           // in the draw (and waits if drawn).
+          final preferred = slot.calm && !isBigItem(e.key) ? 3 : 1;
           if (_gapAllowed(e.key, g, ctx) ||
               (oneBigBonus &&
                   isBigItem(e.key) &&
                   _gapAllowed(e.key, g, ctx, ignoreOpen: true))) {
-            w[e.key] = e.value.weight;
+            w[e.key] = e.value.weight * preferred;
           }
         }
         pick = RunRandom.pickWeighted<ElementId>(r, w);
@@ -1674,8 +2003,19 @@ class RunDirector {
             pick = RunRandom.pickWeighted<ElementId>(r, w);
           }
         }
+        if (pick != null && isBigItem(pick) && !_headlineDue('big-bonus', g)) {
+          _headlineWaitItem = pick;
+          _headlineWaitItemId = 'big-bonus';
+          _headlineWaitItemDue = _delayHeadline('big-bonus', g);
+          pick = null;
+        }
       }
       if (pick != null) {
+        if (due != null && pick.storageId == due.storageId) {
+          _claimHeadline('first-meet', g);
+        } else if (isBigItem(pick)) {
+          _claimHeadline('big-bonus', g);
+        }
         if (pick == ElementId.capsule && capsule == null) {
           final cw = <CapsuleType, int>{
             for (final e in tables.capsuleWeights.entries)

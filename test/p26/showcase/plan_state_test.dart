@@ -31,6 +31,8 @@ Future<(GameStorage, ShowcaseShow, _Events)> _show([
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  setUp(ShowcaseShow.resetProcessMemoryForTests);
+
   test('A increments at START and is saved', () async {
     final (storage, show, events) = await _show();
 
@@ -101,7 +103,7 @@ void main() {
     await next.writesSettled;
   });
 
-  test('only a scripted highlight with the planned id sets a bit', () async {
+  test('a recognized organic highlight sets its own bit', () async {
     final (storage, show, events) = await _show();
     show.atStart(
       gamesPlayed: 0,
@@ -109,10 +111,55 @@ void main() {
       attempt: storage.showcaseAttempt,
       forced: false,
     );
-    show.onHighlight('comet', scripted: true, hoop: 9);
-    show.onHighlight('portal', scripted: false, hoop: 7);
-    expect(storage.showcaseSeen, 0);
+    show.onHighlight('portal', scripted: false, hoop: 20);
+    expect(storage.showcaseSeen, 1);
+    expect(storage.showcaseAttempt, 0);
+    expect(events.named('highlight_seen').single.params, {
+      'id': 'portal',
+      'scripted': 0,
+      'run_no': 1,
+      'hoop': 20,
+    });
+    await show.writesSettled;
+
+    final restarted = GameStorage();
+    await restarted.load();
+    expect(restarted.showcaseSeen, 1);
+  });
+
+  test('an organic other-step highlight is recorded without completing the '
+      'planned highlight', () async {
+    final (storage, show, events) = await _show();
+    show.atStart(
+      gamesPlayed: 0,
+      seen: storage.showcaseSeen,
+      attempt: storage.showcaseAttempt,
+      forced: false,
+    );
+    show.onHighlight('comet', scripted: false, hoop: 12);
+    expect(storage.showcaseSeen, 1 << 1);
+    expect(storage.showcaseAttempt, 1);
     expect(events.named('highlight_seen'), isEmpty);
+
+    show.onRunEnd(
+      gamesPlayed: 1,
+      hoopsPassed: 12,
+      score: 13,
+      cause: 'spikes',
+      shieldUsed: true,
+      reviveUsed: true,
+    );
+    expect(events.named('showcase_end').single.params, {
+      'step': 1,
+      'attempt': 1,
+      'hoops': 12,
+      'highlight': 0,
+      'score': 13,
+      'cause': 'spikes',
+      'shield_used': 1,
+      'revive_used': 1,
+    });
+    await show.writesSettled;
   });
 
   test('done via all: all bits set -> done at run end', () async {
@@ -244,7 +291,7 @@ void main() {
 
   test('Delete my data (cleared keys) returns to step 1 and A = 1', () async {
     SharedPreferences.setMockInitialValues({
-      'gamesPlayed': 5,
+      'gamesPlayed': 6,
       'showcaseSeen': 0x7 | (1 << ShowcaseConfig.doneBit),
       'showcaseDoneAt': 5,
     });
@@ -272,6 +319,66 @@ void main() {
     expect(plan.portalHoops, [7]);
     await show.writesSettled;
   });
+
+  test(
+    'Delete my data replays from a new Storage at gamesPlayed 5 and 6',
+    () async {
+      for (final gamesPlayed in [5, 6]) {
+        ShowcaseShow.resetProcessMemoryForTests();
+        SharedPreferences.setMockInitialValues({
+          'gamesPlayed': gamesPlayed,
+          'showcaseSeen': 0x7 | (1 << ShowcaseConfig.doneBit),
+          'showcaseAttempt': 1,
+          'showcaseRuns': 3,
+          'showcaseDoneAt': gamesPlayed,
+        });
+        final storage = GameStorage();
+        await storage.load();
+        final before = ShowcaseShow(storage: storage);
+        expect(before.done, isTrue);
+
+        await storage.resetVersusData();
+        final fresh = GameStorage();
+        await fresh.load();
+        final restarted = ShowcaseShow(storage: fresh);
+        final plan = restarted.atStart(
+          gamesPlayed: fresh.gamesPlayed,
+          seen: fresh.showcaseSeen,
+          attempt: fresh.showcaseAttempt,
+          forced: false,
+        );
+        expect(plan!.step, 0);
+        expect(plan.attempt, 1);
+        expect(plan.portalHoops, [7]);
+        await restarted.writesSettled;
+      }
+    },
+  );
+
+  test(
+    'queued showcase writes cannot restore keys cleared by Delete my data',
+    () async {
+      final (storage, show, _) = await _show();
+      show.atStart(
+        gamesPlayed: 0,
+        seen: storage.showcaseSeen,
+        attempt: storage.showcaseAttempt,
+        forced: false,
+      );
+      show.onHighlight('portal', scripted: true, hoop: 7);
+      show.onRunEnd(gamesPlayed: 1, hoopsPassed: 40);
+
+      await storage.resetVersusData();
+      await show.writesSettled;
+
+      final fresh = GameStorage();
+      await fresh.load();
+      expect(fresh.showcaseSeen, 0);
+      expect(fresh.showcaseAttempt, 0);
+      expect(fresh.showcaseRuns, 0);
+      expect(fresh.showcaseDoneAt, isNull);
+    },
+  );
 
   test(
     'a second storage instance after reset starts at step 1, A = 1',

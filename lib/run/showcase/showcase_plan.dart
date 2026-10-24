@@ -1,5 +1,9 @@
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../game/storage.dart';
 import '../../menu/powerup_slot.dart';
+import '../../services/obf_strings.g.dart';
 import '../config/showcase_config.dart';
 import '../director/plans.dart' show RideId;
 
@@ -255,11 +259,13 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
     this.secondsSinceInstall,
     this.maxGames,
     this.fastHoops,
-  }) : _sawShowcaseState =
-           storage.showcaseSeen != 0 ||
-           storage.showcaseAttempt != 0 ||
-           storage.showcaseRuns != 0 ||
-           storage.showcaseDoneAt != null;
+  }) {
+    _hadShowcaseState = _hasShowcaseState;
+    if (_hadShowcaseState) {
+      _processHasShowcaseState = true;
+    }
+    _detectReset();
+  }
 
   final GameStorage storage;
 
@@ -277,7 +283,9 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
   /// Whether this model has ever seen (or created) showcase state. A legacy
   /// install has none; once the state disappears after being seen, the cause
   /// is "Delete my data", not a legacy install.
-  bool _sawShowcaseState;
+  bool _sawShowcaseState = false;
+  bool _hadShowcaseState = false;
+  bool _resetReplay = false;
 
   ShowcaseRunPlan? _active;
   bool _started = false;
@@ -286,6 +294,38 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
   /// Serialises the fire-and-forget preference writes, so a later reset can
   /// never be overtaken by an earlier increment.
   Future<void> _writes = Future<void>.value();
+
+  int _writeEpoch = 0;
+
+  static bool _processHasShowcaseState = false;
+
+  @visibleForTesting
+  static void resetProcessMemoryForTests() {
+    _processHasShowcaseState = false;
+  }
+
+  bool get _hasShowcaseState =>
+      storage.showcaseSeen != 0 ||
+      storage.showcaseAttempt != 0 ||
+      storage.showcaseRuns != 0 ||
+      storage.showcaseDoneAt != null;
+
+  void _detectReset() {
+    final hasState = _hasShowcaseState;
+    if (_processHasShowcaseState && !hasState) {
+      _resetReplay = true;
+      _sawShowcaseState = true;
+      _writeEpoch++;
+    } else if (_hadShowcaseState && !hasState) {
+      _resetReplay = true;
+      _sawShowcaseState = true;
+      _writeEpoch++;
+    } else if (hasState) {
+      _sawShowcaseState = true;
+      _processHasShowcaseState = true;
+    }
+    _hadShowcaseState = hasState;
+  }
 
   /// Completes when every mirrored storage write has settled (tests).
   Future<void> get writesSettled => _writes;
@@ -358,12 +398,7 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
     required int attempt,
     required bool forced,
   }) {
-    if (seen != 0 ||
-        attempt != 0 ||
-        storage.showcaseRuns != 0 ||
-        storage.showcaseDoneAt != null) {
-      _sawShowcaseState = true;
-    }
+    _detectReset();
     // A debug / e2e / tester start never builds or spends a showcase run.
     final shown =
         storage.showcaseDoneAt != null ||
@@ -372,7 +407,9 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
       _active = null;
       return null;
     }
-    if (!_sawShowcaseState && _isTesterFor(gamesPlayed, seen, attempt)) {
+    if (!_resetReplay &&
+        !_sawShowcaseState &&
+        _isTesterFor(gamesPlayed, seen, attempt)) {
       // Testers / existing installs are done without ever building a plan.
       // This check comes before the done-bit check on purpose: after "Delete
       // my data" on such an install the safety net must not replay either.
@@ -388,7 +425,7 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
     }
     // B1: the hard cap is checked at START (gamesPlayed is the finished
     // count; this run would be the next game).
-    if (gamesPlayed >= _maxGames) {
+    if (!_resetReplay && gamesPlayed >= _maxGames) {
       _markDone(gamesPlayed, ShowcaseDoneVia.cap);
       _active = null;
       return null;
@@ -404,8 +441,9 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
     _started = false;
     _pendingVia = null;
     _sawShowcaseState = true;
+    _processHasShowcaseState = true;
     storage.showcaseAttempt = a;
-    _write(() => storage.saveShowcaseAttempt(a));
+    _saveAttempt(a);
     _track('showcase_start', {'step': s + 1, 'attempt': a});
     return _active;
   }
@@ -413,30 +451,31 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
   @override
   void onHighlight(String id, {required bool scripted, required int hoop}) {
     final plan = _active;
-    if (plan == null || plan.highlightId != id) return;
-    // Only the scripted highlight advances the step. A random portal / comet
-    // / FEVER is just a highlight_seen in the other analytics issue.
-    if (!scripted) return;
+    if (plan == null) return;
+    final bitIndex = ShowcaseConfig.highlightIds.indexOf(id);
+    if (bitIndex < 0) return;
+    final bit = 1 << bitIndex;
     if (!_started) {
-      _started = true;
-      final bit = 1 << plan.step;
-      if (storage.showcaseSeen & bit == 0) {
-        final next = storage.showcaseSeen | bit;
-        storage.showcaseSeen = next;
-        _write(() => storage.saveShowcaseSeen(next));
-      }
+      _started = id == plan.highlightId;
+    }
+    if (storage.showcaseSeen & bit == 0) {
+      final next = storage.showcaseSeen | bit;
+      storage.showcaseSeen = next;
+      _saveSeen(next);
+    }
+    if (_started) {
       // The next step starts at A = 1 (a kill after the highlight must not
       // leave the next step at A = 2).
       if (storage.showcaseAttempt != 0) {
         storage.showcaseAttempt = 0;
-        _write(() => storage.saveShowcaseAttempt(0));
+        _saveAttempt(0);
       }
       if (_stepFor(storage.showcaseSeen) == null) {
         _pendingVia = ShowcaseDoneVia.all;
       }
       _track('highlight_seen', {
         'id': id,
-        'scripted': 1,
+        'scripted': scripted ? 1 : 0,
         'run_no': storage.gamesPlayed + 1,
         'hoop': hoop,
       });
@@ -444,18 +483,29 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
   }
 
   @override
-  void onRunEnd({required int gamesPlayed, required int hoopsPassed}) {
+  void onRunEnd({
+    required int gamesPlayed,
+    required int hoopsPassed,
+    int score = 0,
+    String cause = 'missed_hoop',
+    bool shieldUsed = false,
+    bool reviveUsed = false,
+  }) {
     final plan = _active;
     if (plan == null) return;
     _active = null;
     final runs = storage.showcaseRuns + 1;
     storage.showcaseRuns = runs;
-    _write(() => storage.saveShowcaseRuns(runs));
+    _saveRuns(runs);
     _track('showcase_end', {
       'step': plan.step + 1,
       'attempt': plan.attempt,
       'hoops': hoopsPassed,
       'highlight': _started ? 1 : 0,
+      'score': score,
+      'cause': cause,
+      'shield_used': shieldUsed ? 1 : 0,
+      'revive_used': reviveUsed ? 1 : 0,
     });
     if (done) return;
     final via = _pendingVia ?? _doneReason(gamesPlayed, hoopsPassed);
@@ -474,12 +524,12 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
     if (done) return;
     final reason = via ?? _doneReason(gamesPlayed, 0) ?? ShowcaseDoneVia.all;
     storage.showcaseDoneAt = gamesPlayed;
-    _write(() => storage.saveShowcaseDoneAt(gamesPlayed));
+    _saveDoneAt(gamesPlayed);
     final bit = 1 << ShowcaseConfig.doneBit;
     if (storage.showcaseSeen & bit == 0) {
       final next = storage.showcaseSeen | bit;
       storage.showcaseSeen = next;
-      _write(() => storage.saveShowcaseSeen(next));
+      _saveSeen(next);
     }
     _sendDone(reason);
   }
@@ -502,8 +552,43 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
     }
   }
 
-  void _write(Future<void> Function() write) {
-    _writes = _writes.then((_) => write()).catchError((Object _) {});
+  void _saveSeen(int value) => _write((prefs) async {
+    if (storage.showcaseSeen != value) {
+      return;
+    }
+    await prefs.setInt(Obf.prefShowcaseSeen, value);
+  });
+
+  void _saveAttempt(int value) => _write((prefs) async {
+    if (storage.showcaseAttempt != value) {
+      return;
+    }
+    await prefs.setInt(Obf.prefShowcaseAttempt, value);
+  });
+
+  void _saveRuns(int value) => _write((prefs) async {
+    if (storage.showcaseRuns != value) {
+      return;
+    }
+    await prefs.setInt(Obf.prefShowcaseRuns, value);
+  });
+
+  void _saveDoneAt(int value) => _write((prefs) async {
+    if (storage.showcaseDoneAt != value) {
+      return;
+    }
+    await prefs.setInt(Obf.prefShowcaseDoneAt, value);
+  });
+
+  void _write(Future<void> Function(SharedPreferences prefs) write) {
+    final epoch = _writeEpoch;
+    _writes = _writes
+        .then((_) async {
+          final prefs = await SharedPreferences.getInstance();
+          if (epoch != _writeEpoch) return;
+          await write(prefs);
+        })
+        .catchError((Object _) {});
   }
 }
 

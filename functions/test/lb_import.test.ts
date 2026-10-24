@@ -1,8 +1,10 @@
 /** PRD-2.6 C8/C9: the verified best-run import and the release-blocking LB-only cleanup. */
 import assert from 'node:assert/strict';
+import { getApps } from 'firebase-admin/app';
 import { getFirestore, Timestamp, type Firestore } from 'firebase-admin/firestore';
 import {
   bestDocFromPlayers,
+  databaseForProject,
   importLeaderboard,
   runImportCli,
   validCleanupArgs,
@@ -127,6 +129,7 @@ describe('PRD-2.6 C8 verified best-run import', () => {
 
     const result = await importLeaderboard(db, {
       keepUids: ['owner-a', 'owner-b'],
+      apply: true,
       nowMs: NOW,
       log: () => {},
     });
@@ -177,11 +180,109 @@ describe('PRD-2.6 C8 verified best-run import', () => {
   it('a dry run writes neither lbPlayers, lbBest nor lbMeta', async () => {
     const uid = uniq('import-dry');
     await seedPlayers(db, [[uid, player({ best: 12, bestRun: makeRun({ score: 12, tsMs: T0 }), recent: [] })]]);
-    const result = await importLeaderboard(db, { keepUids: [], dryRun: true, nowMs: NOW, log: () => {} });
+    // Dry run is the default; --apply is the only mode that writes.
+    const result = await importLeaderboard(db, { keepUids: [], nowMs: NOW, log: () => {} });
     assert.ok(result.imported >= 1);
     assert.equal((await db.collection('lbPlayers').doc(uid).get()).exists, false);
     assert.equal((await db.collection('lbMeta').doc('import').get()).exists, false);
     assert.equal((await db.collection('lbBest').doc('global').get()).exists, false);
+  });
+
+  it('is idempotent: a second --apply leaves lbPlayers, lbBest and lbMeta byte-for-byte stable', async () => {
+    const uid = uniq('import-idempotent');
+    await seedPlayers(db, [
+      [
+        uid,
+        player({
+          best: 42,
+          bestRun: makeRun({ score: 42, tsMs: T0, best: 42 }),
+          recent: [],
+          expireAt: at(NOW + 30 * DAY),
+        }),
+      ],
+    ]);
+
+    const first = await importLeaderboard(db, {
+      keepUids: ['owner-a'],
+      apply: true,
+      nowMs: NOW,
+      log: () => {},
+    });
+    assert.equal(first.imported, 1);
+    assert.equal(first.unchanged, 0);
+    const player1 = (await db.collection('lbPlayers').doc(uid).get()).data() as LbPlayerDoc;
+    const best1 = (await db.collection('lbBest').doc('global').get()).data() as Record<string, any>;
+    const meta1 = (await db.collection('lbMeta').doc('import').get()).data() as Record<string, any>;
+
+    const second = await importLeaderboard(db, {
+      keepUids: ['owner-a'],
+      apply: true,
+      nowMs: NOW + DAY,
+      log: () => {},
+    });
+    assert.equal(second.imported, 1);
+    assert.equal(second.unchanged, 1);
+
+    const player2 = (await db.collection('lbPlayers').doc(uid).get()).data() as LbPlayerDoc;
+    const best2 = (await db.collection('lbBest').doc('global').get()).data() as Record<string, any>;
+    const meta2 = (await db.collection('lbMeta').doc('import').get()).data() as Record<string, any>;
+    assert.equal(player2.best, player1.best);
+    assert.equal(player2.bestAt.toMillis(), player1.bestAt.toMillis());
+    assert.equal(player2.expireAt.toMillis(), player1.expireAt.toMillis(), 'a rerun must not renew the TTL');
+    assert.equal(best2.updatedAt.toMillis(), best1.updatedAt.toMillis());
+    assert.deepEqual(best2.rows, best1.rows);
+    assert.equal(meta2.ranAt.toMillis(), meta1.ranAt.toMillis());
+    assert.equal(meta2.count, meta1.count);
+
+    // A completed cleanup gate stays valid when a rerun changes nothing.
+    const cleanedAt = at(NOW + DAY);
+    await db.collection('lbMeta').doc('import').set({ cleanedAt }, { merge: true });
+    const third = await importLeaderboard(db, {
+      keepUids: ['owner-a'],
+      apply: true,
+      nowMs: NOW + 2 * DAY,
+      log: () => {},
+    });
+    assert.equal(third.unchanged, 1);
+    const meta3 = (await db.collection('lbMeta').doc('import').get()).data();
+    assert.equal(meta3?.cleanedAt.toMillis(), cleanedAt.toMillis());
+  });
+
+  it('imports a player close to the 60-day source expiry but skips an already-expired source doc', async () => {
+    const near = uniq('import-near-expiry');
+    const stale = uniq('import-expired');
+    await seedPlayers(db, [
+      [
+        near,
+        player({
+          best: 21,
+          bestRun: makeRun({ score: 21, tsMs: T0 }),
+          recent: [],
+          expireAt: at(NOW + 3600_000),
+        }),
+      ],
+      [
+        stale,
+        player({
+          best: 88,
+          bestRun: makeRun({ score: 88, tsMs: T0 }),
+          recent: [],
+          expireAt: at(NOW),
+        }),
+      ],
+    ]);
+
+    const result = await importLeaderboard(db, {
+      keepUids: ['owner-a'],
+      apply: true,
+      nowMs: NOW,
+      log: () => {},
+    });
+    assert.equal(result.imported, 1);
+    assert.equal(result.expired, 1);
+    assert.deepEqual(result.importedUids, [near]);
+    assert.equal((await db.collection('lbPlayers').doc(near).get()).exists, true);
+    assert.equal((await db.collection('lbPlayers').doc(stale).get()).exists, false);
   });
 
   it('rebuilds lbBest from bestShadow, excluding hidden players and keeping only the top 50', () => {
@@ -279,11 +380,19 @@ describe('PRD-2.6 C9 release-blocking LB cleanup', () => {
   it('a dry run writes nothing, including no cleanedAt', async () => {
     const test = uniq('test-dry');
     await seedLb(db, [[test, imported(test, 100)]], [test], [], []);
+    const previous = at(T0);
+    await db.collection('lbMeta').doc('import').set({
+      ranAt: at(T0 - DAY),
+      count: 1,
+      keepUids: [],
+      cleanedAt: previous,
+    });
     const result = await cleanupLeaderboard(db, { keepUids: [], apply: false, nowMs: NOW, log: () => {} });
     assert.deepEqual(result.removedPlayers, [test]);
     assert.equal((await db.collection('lbPlayers').doc(test).get()).exists, true);
     assert.equal((await db.collection('lbGifts').doc(`${test}_g1`).get()).exists, true);
-    assert.equal((await db.collection('lbMeta').doc('import').get()).exists, false);
+    const meta = (await db.collection('lbMeta').doc('import').get()).data();
+    assert.equal(meta?.cleanedAt.toMillis(), previous.toMillis());
   });
 
   it('prints the dry-run deletions and the remaining best board', async () => {
@@ -325,10 +434,13 @@ describe('PRD-2.6 C9 release-blocking LB cleanup', () => {
 describe('C8/C9 CLI contract', () => {
   it('validates flags and refuses a missing --project before touching Firestore', async () => {
     assert.equal(validImportArgs(['--dry-run']), true);
+    assert.equal(validImportArgs(['--apply']), true);
+    assert.equal(validImportArgs(['--execute']), false);
     assert.equal(validImportArgs(['--project']), false);
     assert.equal(validCleanupArgs(['--keep', 'a', '--apply']), true);
     assert.equal(validCleanupArgs(['--keep', 'a', '--execute']), false);
 
+    const appsBefore = getApps().length;
     const errors: string[] = [];
     const original = console.error;
     console.error = (line: unknown) => errors.push(String(line));
@@ -339,5 +451,15 @@ describe('C8/C9 CLI contract', () => {
       console.error = original;
     }
     assert.equal(errors.filter((line) => line.includes('--project is required')).length, 2);
+    assert.equal(getApps().length, appsBefore, 'a rejected CLI must not initialize another Firebase app');
+  });
+
+  it('binds the admin database to the explicit demo project, not an existing default app', () => {
+    const project = 'demo-flappy-spikes';
+    const explicitDb = databaseForProject(project);
+    const adminApp = getApps().find((app) => app.name === `lb-tools-${project}`);
+    assert.ok(adminApp, 'the tools use a project-named app');
+    assert.equal(adminApp?.options.projectId, project);
+    assert.notEqual(explicitDb, db, 'the tools never reuse the default Admin app');
   });
 });

@@ -13,8 +13,7 @@
  *
  * Auth: Application Default Credentials.
  */
-import { getApps, initializeApp } from 'firebase-admin/app';
-import { FieldValue, Timestamp, getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore';
 import {
   LB_BEST_COLLECTION,
   LB_GIFTS_COLLECTION,
@@ -31,6 +30,7 @@ import {
 import {
   BatchedWriter,
   bestDocFromPlayers,
+  databaseForProject,
   hasFlag,
   logLine,
   parseOption,
@@ -329,8 +329,7 @@ export async function runCleanupCli(argv: readonly string[]): Promise<number> {
     return 2;
   }
   const apply = hasFlag(argv, 'apply');
-  if (getApps().length === 0) initializeApp({ projectId: project });
-  const db = getFirestore();
+  const db = databaseForProject(project);
   const plan = await planCleanup(db, { keepUids, apply });
   printCleanupPlan(project, apply, plan);
   if (apply) plan.best = await applyCleanup(db, plan);

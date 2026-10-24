@@ -7,10 +7,11 @@
  * skipped. The import writes `lbPlayers` (`src: 'import'`, 400-day TTL),
  * rebuilds `lbBest/global` and records `lbMeta/import`.
  *
- *   cd functions && npx tsx scripts/lb_import.ts --project <id> [--keep uid,uid] [--dry-run]
+ *   cd functions && npx tsx scripts/lb_import.ts --project <id> [--keep uid,uid] [--apply]
  *
  * Auth: Application Default Credentials. Never run before the owner's OK on
- * the day (C8); the release-blocking test-player cleanup is separate.
+ * the day (C8); the release-blocking test-player cleanup is separate. The
+ * command previews by default and writes only with --apply.
  */
 import { getApps, initializeApp } from 'firebase-admin/app';
 import {
@@ -43,7 +44,7 @@ import {
 import { checkRun } from '../src/timeline.js';
 
 export const IMPORT_USAGE =
-  'usage: npx tsx scripts/lb_import.ts --project <firebase-project> [--keep uid1,uid2] [--dry-run] [--help]';
+  'usage: npx tsx scripts/lb_import.ts --project <firebase-project> [--keep uid1,uid2] [--apply] [--help]';
 const PAGE = 500;
 const BATCH_LIMIT = 400;
 
@@ -56,7 +57,9 @@ export interface VerifiedRunChoice {
 export interface ImportOptions {
   /** Owner / tester uids to remember for the release-blocking cleanup. */
   keepUids: string[];
-  /** Preview only: read and print, but write nothing. Default false. */
+  /** Write the import. Default false: preview only. */
+  apply?: boolean;
+  /** Backwards-compatible explicit preview flag; it always wins over [apply]. */
   dryRun?: boolean;
   /** Injected clock for deterministic tests. */
   nowMs?: number;
@@ -68,7 +71,9 @@ export interface ImportResult {
   scanned: number;
   imported: number;
   skipped: number;
+  expired: number;
   preservedPlay: number;
+  unchanged: number;
   fromBestRun: number;
   fromRecent: number;
   best: LbBestDoc;
@@ -98,6 +103,23 @@ export function requiredProject(argv: readonly string[]): string | null {
   return project !== undefined && project.trim() !== '' ? project.trim() : null;
 }
 
+/**
+ * Open Firestore for exactly [project]. A pre-existing default Admin app is
+ * never reused for a different project: that would make `--project` advisory
+ * and could write an operational command into the wrong deployment.
+ */
+export function databaseForProject(project: string): Firestore {
+  const appName = `lb-tools-${project}`;
+  // A generated name keeps this app distinct from the default Admin app. The
+  // options check below is still the final guard if an app exists under it.
+  const existing = getApps().find((app) => app.name === appName);
+  const app = existing ?? initializeApp({ projectId: project }, appName);
+  if (app.options.projectId !== project) {
+    throw new Error(`Admin app ${app.name} is bound to ${app.options.projectId ?? '(unknown)'}, not ${project}.`);
+  }
+  return getFirestore(app);
+}
+
 function validArgs(
   argv: readonly string[],
   valueFlags: readonly string[],
@@ -116,7 +138,7 @@ function validArgs(
 }
 
 export function validImportArgs(argv: readonly string[]): boolean {
-  return validArgs(argv, ['--project', '--keep'], ['--dry-run', '--help', '-h']);
+  return validArgs(argv, ['--project', '--keep'], ['--apply', '--dry-run', '--help', '-h']);
 }
 
 export function validCleanupArgs(argv: readonly string[]): boolean {
@@ -195,6 +217,48 @@ export function importedPlayerDoc(uid: string, choice: VerifiedRunChoice, nowMs:
   };
 }
 
+function sameLook(a: unknown, b: Look): boolean {
+  const look = a as Partial<Look> | undefined;
+  return (
+    look !== undefined &&
+    look.bird === b.bird &&
+    look.gear === b.gear &&
+    look.hat === b.hat &&
+    look.hoop === b.hoop &&
+    look.trail === b.trail
+  );
+}
+
+/**
+ * Whether an imported row already represents exactly this source run. The
+ * existing expiry is deliberately retained: an idempotent rerun must not extend
+ * a 400-day TTL or move timestamps just because the command was repeated.
+ */
+export function sameImportedPlayer(
+  existing: LbPlayerDoc | Record<string, unknown> | undefined,
+  desired: LbPlayerDoc,
+  nowMs: number,
+): boolean {
+  if (existing === undefined) return false;
+  const p = existing as Partial<LbPlayerDoc>;
+  const expireAt = timestampMs(p.expireAt);
+  return (
+    p.src === 'import' &&
+    p.hidden === false &&
+    p.best === desired.best &&
+    p.bestShadow === desired.bestShadow &&
+    timestampMs(p.bestAt) === desired.bestAt.toMillis() &&
+    p.name === desired.name &&
+    sameLook(p.look, desired.look) &&
+    p.card === desired.card &&
+    p.platform === desired.platform &&
+    p.bracket === desired.bracket &&
+    timestampMs(p.lastRunAt) === timestampMs(desired.lastRunAt) &&
+    expireAt !== null &&
+    expireAt > nowMs
+  );
+}
+
 function bestRow(uid: string, data: LbPlayerDoc | Record<string, unknown>): LbBestRow | null {
   const p = data as Partial<LbPlayerDoc>;
   const score = typeof p.bestShadow === 'number' ? p.bestShadow : p.best;
@@ -247,6 +311,29 @@ export function bestDocFromPlayers(
     floor: ranked.length > 0 ? ranked[Math.min(ranked.length, LB_BEST_SIZE) - 1].best : 0,
     updatedAt: Timestamp.fromMillis(nowMs),
   };
+}
+
+function sameBestRow(a: LbBestRow, b: LbBestRow): boolean {
+  return (
+    a.uid === b.uid &&
+    a.best === b.best &&
+    timestampMs(a.bestAt) === timestampMs(b.bestAt) &&
+    a.name === b.name &&
+    sameLook(a.look, b.look) &&
+    a.card === b.card &&
+    a.platform === b.platform &&
+    a.bracket === b.bracket
+  );
+}
+
+function sameBestDoc(existing: LbBestDoc | undefined, desired: LbBestDoc): boolean {
+  if (existing === undefined || existing.floor !== desired.floor) return false;
+  if (!Array.isArray(existing.rows) || existing.rows.length !== desired.rows.length) return false;
+  return existing.rows.every((row, i) => sameBestRow(row, desired.rows[i]));
+}
+
+function sameUidList(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((uid, i) => uid === b[i]);
 }
 
 async function readPages(collection: CollectionReference<DocumentData>): Promise<QueryDocumentSnapshot<DocumentData>[]> {
@@ -319,22 +406,34 @@ export class BatchedWriter {
 
 /**
  * Import one verified run per players/{uid}. Safe to rerun: a row already
- * owned by live play (`src: 'play'`) is preserved; imported rows are updated.
+ * owned by live play (`src: 'play'`) is preserved; an unchanged imported row
+ * is not rewritten, so a repeated command leaves the same data and timestamps.
  */
 export async function importLeaderboard(db: Firestore, opts: ImportOptions): Promise<ImportResult> {
   const nowMs = opts.nowMs ?? Date.now();
-  const dryRun = opts.dryRun === true;
+  const apply = opts.apply === true && opts.dryRun !== true;
   const players = await readPages(db.collection('players'));
   const existing = await readLbPlayers(db);
   const existingByUid = new Map(existing.map((row) => [row.uid, row.data]));
-  const importedNow = new Map<string, LbPlayerDoc>();
+  const planned = new Map<string, LbPlayerDoc>();
+  const changed = new Map<string, LbPlayerDoc>();
   const sourceCount = { bestRun: 0, recent: 0 };
   let skipped = 0;
+  let expired = 0;
   let preservedPlay = 0;
+  let unchanged = 0;
 
   for (const doc of players) {
     const uid = doc.id;
-    const choice = verifiedRunFor(doc.data() as PlayerDoc);
+    const playerDoc = doc.data() as PlayerDoc;
+    const sourceExpireAt = timestampMs(playerDoc.expireAt);
+    // Firestore TTL deletion may lag by a day. A document already past its
+    // expiry is inactive source data and must not be revived by the import.
+    if (sourceExpireAt !== null && sourceExpireAt <= nowMs) {
+      expired++;
+      continue;
+    }
+    const choice = verifiedRunFor(playerDoc);
     if (choice === null) {
       skipped++;
       continue;
@@ -343,20 +442,23 @@ export async function importLeaderboard(db: Firestore, opts: ImportOptions): Pro
       preservedPlay++;
       continue;
     }
-    importedNow.set(uid, importedPlayerDoc(uid, choice, nowMs));
+    const next = importedPlayerDoc(uid, choice, nowMs);
+    planned.set(uid, next);
+    if (sameImportedPlayer(existingByUid.get(uid), next, nowMs)) unchanged++;
+    else changed.set(uid, next);
     sourceCount[choice.source]++;
   }
 
   const projected = new Map(existing.map((row) => [row.uid, row.data]));
-  for (const [uid, data] of importedNow) projected.set(uid, data);
+  for (const [uid, data] of planned) projected.set(uid, data);
   const best = bestDocFromPlayers([...projected].map(([uid, data]) => ({ uid, data })), nowMs);
 
   logLine(
     opts,
-    `${dryRun ? 'DRY RUN — nothing written' : 'Import plan'}: scanned ${players.length} player(s), ` +
-      `${dryRun ? 'would import' : 'will write'} ${importedNow.size} ` +
+    `${apply ? 'Import plan' : 'DRY RUN — nothing written'}: scanned ${players.length} player(s), ` +
+      `${apply ? 'would write' : 'would import'} ${planned.size} ` +
       `(bestRun ${sourceCount.bestRun}, recent ${sourceCount.recent}), ` +
-      `skip ${skipped}, preserve play-sourced ${preservedPlay}`,
+      `unchanged ${unchanged}, expired ${expired}, skip ${skipped}, preserve play-sourced ${preservedPlay}`,
   );
   logLine(
     opts,
@@ -364,35 +466,59 @@ export async function importLeaderboard(db: Firestore, opts: ImportOptions): Pro
   );
   printTop50(best, (line) => logLine(opts, line));
 
-  if (!dryRun) {
+  let resultBest = best;
+  if (apply) {
     const writer = new BatchedWriter(db);
-    for (const [uid, data] of importedNow) {
+    for (const [uid, data] of changed) {
       await writer.set(db.collection(LB_PLAYERS_COLLECTION).doc(uid), data);
     }
     await writer.flush();
-    await db.collection(LB_BEST_COLLECTION).doc('global').set(best);
-    const meta: Pick<LbMetaDoc, 'ranAt' | 'count' | 'keepUids'> = {
-      ranAt: Timestamp.fromMillis(nowMs),
-      count: importedNow.size,
-      keepUids: opts.keepUids,
-    };
-    // A rerun invalidates an earlier cleanup gate.
-    await db
-      .collection(LB_META_COLLECTION)
-      .doc('import')
-      .set({ ...meta, cleanedAt: FieldValue.delete() }, { merge: true });
-    logLine(opts, `Import complete: wrote ${importedNow.size} lbPlayers, lbBest/global and lbMeta/import.`);
+
+    const bestRef = db.collection(LB_BEST_COLLECTION).doc('global');
+    const bestSnap = await bestRef.get();
+    const existingBest = bestSnap.exists ? (bestSnap.data() as LbBestDoc) : undefined;
+    const bestNeedsWrite = changed.size > 0 || !sameBestDoc(existingBest, best);
+    if (bestNeedsWrite) await bestRef.set(best);
+    else if (existingBest !== undefined) resultBest = existingBest;
+
+    const metaRef = db.collection(LB_META_COLLECTION).doc('import');
+    const metaSnap = await metaRef.get();
+    const meta = (metaSnap.exists ? metaSnap.data() : {}) as Partial<LbMetaDoc>;
+    const metaNeedsWrite =
+      changed.size > 0 ||
+      !metaSnap.exists ||
+      meta.ranAt === undefined ||
+      meta.count !== planned.size ||
+      !sameUidList(meta.keepUids ?? [], opts.keepUids);
+    if (metaNeedsWrite) {
+      const nextMeta: Record<string, unknown> = {
+        ranAt: changed.size > 0 || meta.ranAt === undefined ? Timestamp.fromMillis(nowMs) : meta.ranAt,
+        count: planned.size,
+        keepUids: opts.keepUids,
+      };
+      // Only new / changed imported data invalidates an earlier cleanup gate.
+      if (changed.size > 0) nextMeta.cleanedAt = FieldValue.delete();
+      await metaRef.set(nextMeta, { merge: true });
+    }
+    logLine(
+      opts,
+      changed.size === 0
+        ? 'Import complete: no data changed; nothing written.'
+        : `Import complete: wrote ${changed.size} lbPlayers, lbBest/global and lbMeta/import.`,
+    );
   }
 
   return {
     scanned: players.length,
-    imported: importedNow.size,
+    imported: planned.size,
     skipped,
+    expired,
     preservedPlay,
+    unchanged,
     fromBestRun: sourceCount.bestRun,
     fromRecent: sourceCount.recent,
-    best,
-    importedUids: [...importedNow.keys()].sort(),
+    best: resultBest,
+    importedUids: [...planned.keys()].sort(),
   };
 }
 
@@ -414,10 +540,10 @@ export async function runImportCli(argv: readonly string[]): Promise<number> {
     return 2;
   }
   const keepUids = parseUidList(parseOption(argv, 'keep'));
-  const dryRun = hasFlag(argv, 'dry-run');
-  if (getApps().length === 0) initializeApp({ projectId: project });
-  console.log(`${project}: ${dryRun ? 'LB import dry run' : 'LB import'} — keep ${keepUids.length} uid(s)`);
-  await importLeaderboard(getFirestore(), { keepUids, dryRun });
+  const apply = hasFlag(argv, 'apply') && !hasFlag(argv, 'dry-run');
+  const db = databaseForProject(project);
+  console.log(`${project}: LB import${apply ? '' : ' dry run'} — keep ${keepUids.length} uid(s)`);
+  await importLeaderboard(db, { keepUids, apply });
   return 0;
 }
 

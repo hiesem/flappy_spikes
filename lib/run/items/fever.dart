@@ -112,7 +112,7 @@ class FeverFeature extends RunFeature {
         'streak_after': after,
       });
       if (e.perfect) {
-        _light(fever: true);
+        _light(fever: true, hoop: e.hoop?.plan.index);
         return;
       }
     }
@@ -149,7 +149,7 @@ class FeverFeature extends RunFeature {
 
   /// Sets the bird on fire: by the streak (×3) or by FEVER ([fever]: the
   /// FEVER! banner and the FEVER phase, also when the bird already burns).
-  void _light({bool fever = false}) {
+  void _light({bool fever = false, int? hoop}) {
     final c = _c;
     if (c == null) return;
     final s = c.s;
@@ -158,6 +158,13 @@ class FeverFeature extends RunFeature {
       // bird already burns; never the streak's on-fire state.
       c.emit(const FeverStarted());
       s.feverLit = true;
+      c.emit(
+        HighlightStarted(
+          'fever',
+          scripted: c.run.setup.showcase != null,
+          hoop: hoop ?? c.s.hoopIndex - 1,
+        ),
+      );
       RunHud.ensureFor(c.run).banners.showFever(FeverBanner());
     }
     if (s.onFire) {
@@ -195,8 +202,9 @@ class FeverFeature extends RunFeature {
   }
 
   /// PRD-2.2 §21.1 the loop's target volume right now.
-  double get _target =>
-      (_c?.s.fever ?? false) ? FeverConfig.loopVolume : FeverConfig.crackleVolume;
+  double get _target => (_c?.s.fever ?? false)
+      ? FeverConfig.loopVolume
+      : FeverConfig.crackleVolume;
 
   @override
   void update(double gameDt, double realDt) {

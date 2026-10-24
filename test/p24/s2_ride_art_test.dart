@@ -19,8 +19,8 @@ import 'package:flutter_test/flutter_test.dart';
 import '../helpers.dart';
 
 /// PRD-2.4 §4 test 6 (§2.4 ride-ring art): every ride theme drawn with the
-/// smallest ring the curve gives (66 pt, at hoop 100 and later) and with
-/// Big Hoops on (66 × 1.5 = 99 pt). Nothing may throw, and the rings have
+/// curve size at hoop 120 (71.3 pt) and with Big Hoops on (71.3 × 1.5 =
+/// 106.95 pt). Nothing may throw, and the rings have
 /// that size. PNGs of the ride (3.5 s in) and of the exit go to
 /// `build/shots/p24/` (never committed) for the visual check.
 const String outDir = 'build/shots/p24';
@@ -65,13 +65,13 @@ void main() {
   setUpAll(_fonts);
   for (final mult in [1.0, RunConfig.bigHoopsMult]) {
     for (final id in RideId.values) {
-      final tag = mult == 1 ? '66' : '99';
+      final tag = mult == 1 ? '71.3' : '106.95';
       FlameTester<FlappySpikesGame>(
         () => createRunTestGame(worldHeight: 711, seed: 5),
         gameSize: Vector2(320, 711),
       ).testGameWidget(
         '§2.4 ride art: ${id.name} with ring size $tag'
-        '${mult == 1 ? '' : ' (66 × Big Hoops)'} draws through the ride and '
+        '${mult == 1 ? '' : ' (71.3 × Big Hoops)'} draws through the ride and '
         'its exit without throwing',
         setUp: (game, _) async {
           await game.ready();
@@ -99,7 +99,7 @@ void main() {
           expect(ride!.theme.id, id);
           expect(ride.rings, isNotEmpty);
           for (final r in ride.rings) {
-            expect(r.opening, closeTo(66 * mult, 1e-9), reason: 'ring size');
+            expect(r.opening, closeTo(71.3 * mult, 1e-9), reason: 'ring size');
           }
           // The ride itself: frames while rings are ahead of the bird (1.2 s
           // and 2.4 s in), then the exit (the bird's way back).

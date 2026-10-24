@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flappy_spikes/run/config/director_tables.dart';
+import 'package:flappy_spikes/run/config/layout_config.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
+import 'package:flappy_spikes/run/config/tuning_defaults.dart';
 import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,22 +26,33 @@ void main() {
   // PRD-2.3 §15: the tables are built from the tuning defaults.
   final t = DirectorTables.prd2;
 
-  test('§3.0.2 layout bands mirror spawn_tables.json', () {
-    final bands = json['bands'] as List;
-    expect(t.bands, hasLength(bands.length));
-    for (var i = 0; i < bands.length; i++) {
-      final j = bands[i] as Map<String, dynamic>;
-      final b = t.bands[i];
-      expect(b.from, j['from']);
-      expect([b.centre.$1, b.centre.$2], j['centre_y']);
-      expect([b.dy.$1, b.dy.$2, b.dy.$3], j['abs_dy_median_p90_max']);
-      expect(b.tilt, j['tilt_chance']);
-      expect(b.moving, j['moving_chance']);
-      expect(
-        {for (final e in b.tiltWeights.entries) '${e.key}': e.value},
-        (j['tilt_weights'] as Map).cast<String, int>(),
-      );
-    }
+  test('§D2 layout bands replace the spawn-table ramp', () {
+    expect(t.bands, same(LayoutConfig.bands));
+    expect(t.bands.map((b) => b.from), [0, 3, 10, 20, 40, 65, 100]);
+    expect(t.bands.map((b) => [b.centre.$1, b.centre.$2]), [
+      [0.45, 0.55],
+      [0.33, 0.67],
+      [0.30, 0.69],
+      [0.27, 0.70],
+      [0.24, 0.73],
+      [0.20, 0.76],
+      [0.16, 0.78],
+    ]);
+    expect(t.bands.map((b) => [b.dy.$1, b.dy.$2, b.dy.$3]), [
+      [0.03, 0.06, 0.07],
+      [0.11, 0.27, 0.35],
+      [0.11, 0.27, 0.35],
+      [0.12, 0.31, 0.38],
+      [0.14, 0.33, 0.42],
+      [0.15, 0.35, 0.46],
+      [0.15, 0.37, 0.50],
+    ]);
+    expect(LayoutConfig.tiltRows, {
+      10: {10: 6, 15: 4},
+      50: {10: 30, 15: 30, 20: 20, 30: 20},
+      60: {10: 20, 15: 20, 20: 15, 30: 30, 45: 15},
+      100: {10: 15, 15: 15, 20: 15, 30: 30, 45: 25},
+    });
   });
 
   test('§3.0.2 tilt steps capped at 45° (60° folded in)', () {
@@ -161,19 +174,36 @@ void main() {
 
   test('§3.21 / §3.0.2 pair weights and moving types mirror the json', () {
     final pw = json['pair_weights'] as Map<String, dynamic>;
-    expect({for (final e in t.pairWeights.entries) e.key.name: e.value}, pw);
     final m = json['moving'] as Map<String, dynamic>;
-    String name(MotionType x) => x == MotionType.horizontal ? 'horizontal' : x.name;
-    expect(
-      {for (final e in t.movingTypes45.entries) name(e.key): e.value},
-      m['types_from_hoop_45'],
-    );
+    expect({for (final e in t.pairWeights.entries) e.key.name: e.value}, pw);
+    String name(MotionType x) =>
+        x == MotionType.horizontal ? 'horizontal' : x.name;
     expect(
       {for (final e in t.movingTypes20.entries) name(e.key): e.value},
-      m['types_hoop_20_44'],
+      {
+        for (final e in LayoutConfig.movingTypes20.entries)
+          name(e.key): e.value,
+      },
     );
+    expect(
+      {for (final e in t.movingTypes45.entries) name(e.key): e.value},
+      {
+        for (final e in LayoutConfig.movingTypes45.entries)
+          name(e.key): e.value,
+      },
+    );
+    expect(LayoutConfig.motionRows.map((row) => row.from), [
+      25,
+      35,
+      70,
+      90,
+      120,
+    ]);
     expect([t.rail.axisDeg.$1, t.rail.axisDeg.$2], m['rail']['axis_deg']);
-    expect([t.rail.halfTravel.$1, t.rail.halfTravel.$2], m['rail']['half_travel_pt']);
+    expect([
+      t.rail.halfTravel.$1,
+      t.rail.halfTravel.$2,
+    ], m['rail']['half_travel_pt']);
     expect([t.rail.speed.$1, t.rail.speed.$2], m['rail']['speed_pt_s']);
     expect(t.swing.amplitudeDeg, m['swing']['amplitude_deg']);
     expect(t.swing.period, m['swing']['period_s']);
@@ -196,22 +226,46 @@ void main() {
     expect(RunConfig.rimRestitution, c['rim_restitution']);
     expect(RunConfig.forwardRecovery, c['forward_recovery_pt_s2']);
     expect(RunConfig.stageEveryHoops, c['colour_stage_every_hoops']);
+    final defaults = {for (final def in kTuningDefaults) def.key: def};
     final o = json['opening'] as Map<String, dynamic>;
-    expect(RunConfig.opening0, o['at_hoop_0_pt']);
-    expect(RunConfig.openingFor(0), o['at_hoop_0_pt']);
+    expect(RunConfig.opening0, 118);
     // PRD-2.3 §14.4 / PRD-2.4 §1.2 the opening curve from hoop 1 (rides take
     // it too, PRD-2.4 §2; the portal is the one 118 exception).
-    for (final k in o['curve_from_hoop_1'] as List) {
-      expect(RunConfig.openingFor(k[0] as int), k[1]);
-    }
+    expect(defaults['curve_opening']!.value, [
+      [1, 118],
+      [2, 118],
+      [6, 114],
+      [10, 110],
+      [16, 105.5],
+      [20, 102],
+      [25, 98],
+      [30, 95],
+      [40, 88.5],
+      [50, 83],
+      [60, 79],
+      [75, 75.5],
+      [100, 72.5],
+      [125, 71],
+      [150, 70],
+    ]);
     expect(RunConfig.portalOpening, 118);
-    final m = json['moving'] as Map<String, dynamic>;
-    for (final k in m['chance_curve'] as List) {
-      expect(t.movingChance(k[0] as int), k[1]);
-    }
-    for (final k in m['tilt_curve'] as List) {
-      expect(t.tiltChance(k[0] as int), k[1]);
-    }
+    expect(defaults['curve_moving']!.value, [
+      [24, 0],
+      [25, 0.15],
+      [34, 0.15],
+      [35, 0.25],
+      [60, 0.42],
+      [100, 0.52],
+      [150, 0.58],
+    ]);
+    expect(defaults['curve_tilt']!.value, [
+      [9, 0],
+      [10, 0.30],
+      [49, 0.35],
+      [50, 0.50],
+      [100, 0.60],
+      [150, 0.65],
+    ]);
     // PRD-2.2 §25 overrides the json's saw_extra_pt (see the group below).
     expect(o['saw_extra_pt'], 28);
     final comet = json['comet'] as Map<String, dynamic>;

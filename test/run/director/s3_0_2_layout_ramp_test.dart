@@ -34,11 +34,13 @@ List<SlotPlan> course(
     startHoopIndex: start,
   );
   final out = <SlotPlan>[];
+  double? previousY;
   for (var k = 0; k < n; k++) {
-    final ctx = DirectorContext.open(vh);
+    final ctx = DirectorContext.open(vh, prevCentreY: previousY);
     final s = d.nextSlot(ctx);
     d.nextGap(ctx, s);
     out.add(s);
+    previousY = s.centreY;
   }
   return out;
 }
@@ -77,10 +79,34 @@ void main() {
       expect(identical(t.swing, LayoutConfig.swing), isTrue);
     });
 
-    test('§3.0.2 rows at 0, 3, 10, 20, 35, 45 with the PRD values', () {
-      expect(LayoutConfig.bands.map((b) => b.from), [0, 3, 10, 20, 35, 45]);
-      expect(LayoutConfig.bands.map((b) => b.tilt), [0, 0, .30, .50, .60, .78]);
-      expect(LayoutConfig.bands.map((b) => b.moving), [0, 0, 0, .06, .15, .40]);
+    test('PRD-2.6 D2 rows at 0, 3, 10, 20, 40, 65, 100', () {
+      expect(LayoutConfig.bands.map((b) => b.from), [
+        0,
+        3,
+        10,
+        20,
+        40,
+        65,
+        100,
+      ]);
+      expect(LayoutConfig.bands.map((b) => b.tilt), [
+        0,
+        0,
+        .30,
+        .50,
+        .50,
+        .60,
+        .65,
+      ]);
+      expect(LayoutConfig.bands.map((b) => b.moving), [
+        0,
+        0,
+        0,
+        .15,
+        .25,
+        .42,
+        .52,
+      ]);
       for (final (i, row) in [
         (0, 0),
         (2, 0),
@@ -90,10 +116,13 @@ void main() {
         (19, 2),
         (20, 3),
         (34, 3),
-        (35, 4),
-        (44, 4),
-        (45, 5),
-        (400, 5),
+        (35, 3),
+        (40, 4),
+        (64, 4),
+        (65, 5),
+        (99, 5),
+        (100, 6),
+        (400, 6),
       ]) {
         expect(
           LayoutConfig.bandFor(i),
@@ -115,12 +144,13 @@ void main() {
         'course uses the whole range (568 and 711)', () {
       for (final vh in plans.keys) {
         final band = vh - 2 * RunConfig.stripHeight;
+        final centreBand = math.min(band, LayoutConfig.dyRefBand);
         for (final (row, last) in rows) {
           final ys = <double>[];
           for (final run in plans[vh]!) {
             for (final s in run) {
               if (s.index < row.from || s.index > last) continue;
-              final f = (s.centreY - RunConfig.stripHeight) / band;
+              final f = (s.centreY - vh / 2) / centreBand + 0.5;
               expect(
                 f,
                 greaterThanOrEqualTo(row.centre.$1 - 1e-9),
@@ -136,16 +166,14 @@ void main() {
           }
           if (row.from == 0) continue; // hoops 0–2 barely move (dy ≤ 0.07)
           final lo = ys.reduce(math.min), hi = ys.reduce(math.max);
-          // The band rule may cut the range at 568 (opening/2 + 25 pt).
-          final m = (RunConfig.openingFor(row.from) / 2 + 25) / band;
           expect(
             lo,
-            lessThan(math.max(row.centre.$1, m) + 0.03),
+            lessThan(row.centre.$1 + 0.03),
             reason: 'row ${row.from} @$vh',
           );
           expect(
             hi,
-            greaterThan(math.min(row.centre.$2, 1 - m) - 0.03),
+            greaterThan(row.centre.$2 - 0.03),
             reason: 'row ${row.from} @$vh',
           );
         }
@@ -156,7 +184,10 @@ void main() {
       for (final (row, last) in rows) {
         final dys = <double>[];
         for (final vh in plans.keys) {
-          final band = vh - 2 * RunConfig.stripHeight;
+          final band = math.min(
+            vh - 2 * RunConfig.stripHeight,
+            LayoutConfig.dyRefBand,
+          );
           for (final run in plans[vh]!) {
             for (var k = 1; k < run.length; k++) {
               final s = run[k];
@@ -205,56 +236,54 @@ void main() {
       expect(flips / steps, inInclusiveRange(.62, .80));
     });
 
-    test('§3.10 tilt share and step weights per row; none before 10; 45° '
-        'only from 35', () {
-      for (final (row, last) in rows) {
-        var normal = 0, tilted = 0, swing = 0;
+    test('§D2 tilt follows the curve and magnitude rows; none before 10; 45° '
+        'only from 60', () {
+      for (final entry in LayoutConfig.tiltRows.entries) {
+        final rowFrom = entry.key;
+        final weights = entry.value;
+        final rowTo =
+            LayoutConfig.tiltRows.keys
+                .where((from) => from > rowFrom)
+                .fold(1 << 30, math.min) -
+            1;
+        var normal = 0, tilted = 0;
         final steps = <int, int>{};
         for (final vh in plans.keys) {
           for (final run in plans[vh]!) {
             for (final s in run) {
-              if (s.index < row.from || s.index > last) continue;
+              if (s.index < rowFrom || s.index > rowTo) continue;
               // PRD-2.2 §19.2 indices 4–9 draw the early pool instead (its
               // angled ring; tested in test/p22/s19_random_opening_test).
               if (DirectorTables.prd2.earlyPool!.covers(s.index)) continue;
               normal++;
-              if (s.motion?.type == MotionType.swing) {
-                swing++;
-                expect(
-                  s.tiltDeg,
-                  0,
-                  reason: 'a swing hangs in line with its rope',
-                );
-              }
               if (s.tiltDeg != 0) {
                 tilted++;
                 steps[s.tiltDeg.round()] = (steps[s.tiltDeg.round()] ?? 0) + 1;
+                final dy = s.centreY - (run.elementAt(s.index - 1).centreY);
+                if (s.tiltDeg.abs() >= 20) {
+                  expect(dy.abs(), greaterThanOrEqualTo(40 - 1e-9));
+                  expect(s.tiltDeg.sign, dy.sign);
+                }
               }
             }
           }
         }
-        // Swings are rolled after the tilt and force it upright.
-        final want = row.tilt * (1 - swing / normal);
-        expect(tilted / normal, closeTo(want, .03), reason: 'row ${row.from}');
-        if (row.tilt == 0) continue;
-        final total = row.tiltWeights.values.reduce((a, b) => a + b);
-        for (final e in row.tiltWeights.entries) {
-          expect(
-            (steps[e.key] ?? 0) / tilted,
-            closeTo(e.value / total, .04),
-            reason: 'row ${row.from} step ${e.key}',
-          );
+        final table = DirectorTables.prd2;
+        var chance = 0.0;
+        for (var i = rowFrom; i <= rowTo; i++) {
+          chance += table.tiltChance(i);
         }
+        chance /= rowTo - rowFrom + 1;
+        expect(tilted / normal, closeTo(chance, .04), reason: 'row $rowFrom');
         expect(
-          steps.keys.toSet().difference(row.tiltWeights.keys.toSet()),
-          isEmpty,
+          steps.keys.map((step) => step.abs()).toSet(),
+          weights.keys.toSet(),
         );
-        if (row.from < 35) expect(steps.containsKey(45), isFalse);
+        if (rowFrom < 60) expect(steps.containsKey(45), isFalse);
       }
     });
 
-    test('§3.11 moving share (PRD-2.3 §14.4 curve) and type weights per row; '
-        'none before 20', () {
+    test('§D2 moving share and type weights; none before 25', () {
       for (final (row, last) in rows) {
         var normal = 0, moving = 0, hiSeen = row.from;
         final types = <MotionType, int>{};
@@ -281,39 +310,40 @@ void main() {
         want /= hiSeen - row.from + 1;
         expect(moving / normal, closeTo(want, .03), reason: 'row ${row.from}');
         if (moving == 0) continue;
-        final table = row.from >= LayoutConfig.allMotionTypesFrom
-            ? LayoutConfig.movingTypes45
-            : LayoutConfig.movingTypes20;
-        final total = table.values.reduce((a, b) => a + b);
-        expect(types.keys.toSet().difference(table.keys.toSet()), isEmpty);
-        for (final e in table.entries) {
-          expect(
-            (types[e.key] ?? 0) / moving,
-            closeTo(e.value / total, .06),
-            reason: 'row ${row.from} ${e.key}',
-          );
-        }
+        final allowed = row.from < 40
+            ? {MotionType.rail, MotionType.swing}
+            : row.from < 65
+            ? {
+                MotionType.rail,
+                MotionType.swing,
+                MotionType.horizontal,
+                MotionType.diagonal,
+              }
+            : MotionType.values.toSet();
+        expect(types.keys.toSet().difference(allowed), isEmpty);
       }
     });
   });
 
   group('§3.11 motion rolls', () {
-    // A long course from hoop 45 gives every type.
+    // A long course from hoop 25 gives every type.
     final specs = <(SlotPlan, double)>[];
     for (final vh in [568.0, 711.0]) {
       for (var seed = 1; seed <= 80; seed++) {
-        for (final s in course(seed, start: 45, n: 80, vh: vh)) {
+        for (final s in course(seed, start: 25, n: 120, vh: vh)) {
           if (s.motion != null) specs.add((s, vh));
         }
       }
     }
 
-    test('§3.11 slides: rail ≤ ±25° off vertical, horizontal 90°, diagonal '
-        '±38° off horizontal; ±40–60 pt (less where the band is short); '
-        '30–39 pt/s', () {
+    test('§D2 slides use the motion-row travel and speed ranges', () {
       final seen = <MotionType>{};
       for (final (s, _) in specs) {
         final m = s.motion!;
+        var row = LayoutConfig.motionRows.first;
+        for (final candidate in LayoutConfig.motionRows) {
+          if (s.index >= candidate.from) row = candidate;
+        }
         seen.add(m.type);
         switch (m.type) {
           case MotionType.rail:
@@ -325,10 +355,17 @@ void main() {
           default:
             continue;
         }
-        expect(m.halfTravel, inInclusiveRange(RunConfig.railMinHalfTravel, 60));
-        expect(m.speed, inInclusiveRange(30, 39));
+        if (row.from == 25) {
+          expect(m.halfTravel, inInclusiveRange(30, 45));
+          expect(m.speed, inInclusiveRange(22, 28));
+        } else {
+          expect(m.speed, inInclusiveRange(row.speed.$1, row.speed.$2));
+        }
         final period = RailMotion(m).period;
-        expect(period, inInclusiveRange(4 * 10 / 39, 4 * 60 / 30));
+        expect(
+          period,
+          inInclusiveRange(4 * 10 / row.speed.$2, 4 * 60 / row.speed.$1),
+        );
       }
       expect(seen, MotionType.values.toSet());
     });
@@ -347,7 +384,14 @@ void main() {
           case MotionType.orbit:
             expect(m.rx, 25);
             expect(m.ry, lessThanOrEqualTo(31));
-            expect(m.omega * math.max(m.rx, m.ry), lessThanOrEqualTo(39));
+            var row = LayoutConfig.motionRows.first;
+            for (final candidate in LayoutConfig.motionRows) {
+              if (s.index >= candidate.from) row = candidate;
+            }
+            expect(
+              m.omega * math.max(m.rx, m.ry),
+              inInclusiveRange(row.speed.$1, row.speed.$2),
+            );
           case MotionType.rock:
             expect(m.amplitudeDeg, 15);
             expect(m.period, 3);

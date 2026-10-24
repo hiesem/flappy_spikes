@@ -354,7 +354,7 @@ abstract final class RunConfig {
   /// §3.0.1 / PRD-2.3 §14.4 / PRD-2.4 §2 Opening at [hoopIndex] (before the
   /// Big Hoops multiplier): hoop 0 is 118 (the fixed easy first hoop,
   /// §10.2); from hoop 1 the `curve_opening` keyframe table, 118 at hoops
-  /// 1–2, 110.5 at 10, 98 at 25, 87.5 at 40, 72 at 75, 66 from hoop 100
+  /// 1–2, 110 at 10, 98 at 25, 88.5 at 40, 75.5 at 75, 70 from hoop 150
   /// (PRD-2.4 §1.2). Rides, comets and re-plans during a ride follow the
   /// same curve (PRD-2.4 §2); only the portal stays 118 ([portalOpening]).
   /// Replaces the 2.2 118 − 0.32 %/hoop → 92.
@@ -362,6 +362,12 @@ abstract final class RunConfig {
     if (hoopIndex <= 0) return opening0;
     return TuningValues.current.curve('curve_opening').at(hoopIndex);
   }
+
+  /// PRD-2.6 D2 Δy reference cap (points).
+  static double get dyRefBand => tuning.d('dy_ref_band');
+
+  /// PRD-2.6 D2 Δy factor on the slot after a moving or ≥30° tilted hoop.
+  static double get hardHoopDyFactor => tuning.d('dy_hard_factor');
 
   /// §3.0.1 Colour stage for [hoopsPassed].
   static int stageForHoops(int hoopsPassed) =>

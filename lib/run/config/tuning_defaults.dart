@@ -56,11 +56,41 @@ const List<TuningDef> kTuningDefaults = [
   // §14.3 Pair "+N score" gift
   TuningDef('point_pair_gift', TuningType.integer, 5),
   // §14.3 owner 2026-10-13: perfect band ±pt around the gap centre by hoop index; <= 0 = no band (any rim-free pass is perfect). Owner 2026-10-20 (2.5.0 46): wider for hoops 0–20; × the hoop's Big Hoops growth.
-  TuningDef('point_perfect_band', TuningType.curve, [[1, 40], [2, 40], [6, 36], [10, 30], [16, 24], [20, 18], [25, 14.5], [30, 13.9], [35, 13.2], [40, 12.7], [50, 11.6], [60, 10.7], [75, 10], [100, 8]]),
+  TuningDef('point_perfect_band', TuningType.curve, [
+    [1, 40],
+    [2, 40],
+    [6, 36],
+    [10, 30],
+    [16, 24],
+    [20, 18],
+    [25, 14.5],
+    [30, 13.9],
+    [35, 13.2],
+    [40, 12.7],
+    [50, 11.8],
+    [60, 11.2],
+    [75, 10.6],
+    [100, 10.2],
+    [150, 10],
+  ]),
   // §14.3 owner 2026-10-13: Bullseye hit band ±pt by hoop index (hit check only; the drawing stays 12)
-  TuningDef('point_bullseye_band', TuningType.curve, [[1, 12], [50, 10], [100, 8]]),
+  TuningDef('point_bullseye_band', TuningType.curve, [
+    [1, 12],
+    [50, 10],
+    [100, 8],
+  ]),
   // §14.2 Balloon prizes (shuffled; the largest is the jackpot)
-  TuningDef('bonus_prizes', TuningType.intList, [25, 25, 25, 40, 40, 40, 50, 50, 100]),
+  TuningDef('bonus_prizes', TuningType.intList, [
+    25,
+    25,
+    25,
+    40,
+    40,
+    40,
+    50,
+    50,
+    100,
+  ]),
   // §14.2 Chance per run that the golden feather appears
   TuningDef('bonus_feather_chance', TuningType.decimal, 0.6),
   // §14.2 The feather spawns at a random gap in [min, max]
@@ -72,11 +102,29 @@ const List<TuningDef> kTuningDefaults = [
   // §14.2 Puzzle completion reward [min, max, step]
   TuningDef('puzzle_reward', TuningType.intList, [40, 100, 5]),
   // §14.2 Coin revive prices after the ad revive; no revive after the last
-  TuningDef('revive_ladder', TuningType.intList, [250, 500, 1000, 2000, 4000, 8000]),
+  TuningDef('revive_ladder', TuningType.intList, [
+    250,
+    500,
+    1000,
+    2000,
+    4000,
+    8000,
+  ]),
   // §14.2 A revive is offered from this many hoops passed
   TuningDef('revive_min_hoops', TuningType.integer, 6),
   // §14.2 One-time coin reward of levels 1-10
-  TuningDef('level_rewards', TuningType.intList, [25, 50, 100, 200, 400, 600, 800, 1000, 2000, 5000]),
+  TuningDef('level_rewards', TuningType.intList, [
+    25,
+    50,
+    100,
+    200,
+    400,
+    600,
+    800,
+    1000,
+    2000,
+    5000,
+  ]),
   // §14.2 Shop free-coins ad: coins per ad
   TuningDef('shop_ad_coins', TuningType.integer, 75),
   // §14.2 Shop free-coins ad: ads per day
@@ -84,11 +132,39 @@ const List<TuningDef> kTuningDefaults = [
   // §14.2 Shop free-coins ad: cooldown (s)
   TuningDef('shop_ad_cooldown_s', TuningType.integer, 300),
   // §14.4 Cruise speed (pt/s) by hoop index
-  TuningDef('curve_speed', TuningType.curve, [[0, 150], [50, 172.5], [150, 187.5]]),
+  TuningDef('curve_speed', TuningType.curve, [
+    [0, 150],
+    [50, 172.5],
+    [150, 187.5],
+  ]),
   // §14.4 Opening (pt) by hoop index from hoop 1 (hoop 0 is always 118; rides follow it, PRD-2.4 §2)
-  TuningDef('curve_opening', TuningType.curve, [[1, 118], [2, 118], [6, 114], [10, 110.5], [16, 105.5], [20, 102], [25, 98], [30, 94.5], [35, 90.5], [40, 87.5], [50, 81], [60, 76.5], [75, 72], [100, 66]]),
+  TuningDef('curve_opening', TuningType.curve, [
+    [1, 118],
+    [2, 118],
+    [6, 114],
+    [10, 110],
+    [16, 105.5],
+    [20, 102],
+    [25, 98],
+    [30, 95],
+    [40, 88.5],
+    [50, 83],
+    [60, 79],
+    [75, 75.5],
+    [100, 72.5],
+    [125, 71],
+    [150, 70],
+  ]),
   // §14.4 Moving-hoop chance by hoop index
-  TuningDef('curve_moving', TuningType.curve, [[19, 0], [20, 0.15], [35, 0.4], [60, 0.6], [80, 0.75]]),
+  TuningDef('curve_moving', TuningType.curve, [
+    [24, 0],
+    [25, 0.15],
+    [34, 0.15],
+    [35, 0.25],
+    [60, 0.42],
+    [100, 0.52],
+    [150, 0.58],
+  ]),
   // §14.4 owner 2026-10-13: speed (pt/s) a rim hit from inside the opening ends with, away from that rim (top: down, bottom: up); hits from outside keep the hard bounce
   TuningDef('curve_rim_soft_bump', TuningType.decimal, 20.0),
   // §14.4 owner 2026-10-13: after a soft rim bump (inside the opening, both rims) the bird hangs this long (s) in low gravity; a flap ends it
@@ -96,7 +172,14 @@ const List<TuningDef> kTuningDefaults = [
   // §14.4 owner 2026-10-13: gravity scale during the rim hang (0 = none, 1 = full); then 0.1 s ease back to full
   TuningDef('curve_rim_hang_gravity', TuningType.decimal, 0.25),
   // §14.4 Tilted-hoop chance by hoop index
-  TuningDef('curve_tilt', TuningType.curve, [[9, 0], [10, 0.3], [19, 0.3], [20, 0.5], [34, 0.5], [35, 0.6], [44, 0.6], [45, 0.78]]),
+  TuningDef('curve_tilt', TuningType.curve, [
+    [9, 0],
+    [10, 0.30],
+    [49, 0.35],
+    [50, 0.50],
+    [100, 0.60],
+    [150, 0.65],
+  ]),
   // §14.4 First squeeze at a random hoop in [min, max]
   TuningDef('squeeze_first', TuningType.intList, [25, 40]),
   // §14.4 Squeeze hold (hoops) in [min, max]
@@ -122,45 +205,133 @@ const List<TuningDef> kTuningDefaults = [
   // §14.5 Next portal this many hoops after the previous, [min, max]
   TuningDef('ride_portal_then', TuningType.intList, [80, 90]),
   // §15.3 owner 2026-10-14: chance a hoop slot is a special hoop, by hoop index (linear between keys; PRD-2.3.1 §0: default = live RC v21)
-  TuningDef('spawn_special_chance', TuningType.curve, [[0, 0], [3, 0], [4, 0.4], [15, 0.5], [30, 0.6], [50, 0.7]]),
+  TuningDef('spawn_special_chance', TuningType.curve, [
+    [0, 0],
+    [3, 0],
+    [4, 0.4],
+    [15, 0.5],
+    [30, 0.6],
+    [50, 0.7],
+  ]),
   // §15.3 owner 2026-10-14: chance a gap gets an optional item, by gap index (linear between keys; PRD-2.3.1 §0: default = live RC v21)
-  TuningDef('spawn_item_chance', TuningType.curve, [[0, 0], [2, 0], [3, 0.5], [20, 0.55]]),
+  TuningDef('spawn_item_chance', TuningType.curve, [
+    [0, 0],
+    [2, 0],
+    [3, 0.5],
+    [20, 0.55],
+  ]),
   // §15.3 Special hoop row: from hoop, weight, min hoops since the same, cooldown
-  TuningDef('spawn_bullseye', TuningType.object, {'from': 4, 'weight': 20, 'min_since': 2, 'cooldown': 1}),
+  TuningDef('spawn_bullseye', TuningType.object, {
+    'from': 4,
+    'weight': 20,
+    'min_since': 2,
+    'cooldown': 1,
+  }),
   // §15.3 Special hoop row
-  TuningDef('spawn_train', TuningType.object, {'from': 5, 'weight': 14, 'min_since': 4, 'cooldown': 2}),
+  TuningDef('spawn_train', TuningType.object, {
+    'from': 5,
+    'weight': 14,
+    'min_since': 4,
+    'cooldown': 2,
+  }),
   // §15.3 Special hoop row
-  TuningDef('spawn_spring', TuningType.object, {'from': 6, 'weight': 12, 'min_since': 4, 'cooldown': 2}),
+  TuningDef('spawn_spring', TuningType.object, {
+    'from': 6,
+    'weight': 12,
+    'min_since': 4,
+    'cooldown': 2,
+  }),
   // §15.3 Special hoop row
-  TuningDef('spawn_switch', TuningType.object, {'from': 7, 'weight': 14, 'min_since': 3, 'cooldown': 1}),
+  TuningDef('spawn_switch', TuningType.object, {
+    'from': 7,
+    'weight': 14,
+    'min_since': 3,
+    'cooldown': 1,
+  }),
   // §15.3 Special hoop row
-  TuningDef('spawn_pair', TuningType.object, {'from': 8, 'weight': 10, 'min_since': 6, 'cooldown': 2}),
+  TuningDef('spawn_pair', TuningType.object, {
+    'from': 8,
+    'weight': 10,
+    'min_since': 6,
+    'cooldown': 2,
+  }),
   // §15.3 Special hoop row
-  TuningDef('spawn_fever', TuningType.object, {'from': 10, 'weight': 6, 'min_since': 8, 'cooldown': 1}),
+  TuningDef('spawn_fever', TuningType.object, {
+    'from': 10,
+    'weight': 6,
+    'min_since': 8,
+    'cooldown': 1,
+  }),
   // §15.3 Special hoop row
-  TuningDef('spawn_lucky_spin', TuningType.object, {'from': 10, 'weight': 8, 'min_since': 7, 'cooldown': 1}),
+  TuningDef('spawn_lucky_spin', TuningType.object, {
+    'from': 10,
+    'weight': 8,
+    'min_since': 7,
+    'cooldown': 1,
+  }),
   // §15.3 Special hoop row (weight from hoop 45)
-  TuningDef('spawn_saw', TuningType.object, {'from': 20, 'weight': 18, 'weight_from_45': 26, 'min_since': 3, 'cooldown': 1}),
+  TuningDef('spawn_saw', TuningType.object, {
+    'from': 20,
+    'weight': 18,
+    'weight_from_45': 26,
+    'min_since': 3,
+    'cooldown': 1,
+  }),
   // §15.3 Gap item row: from gap, weight, min gaps since the same
-  TuningDef('spawn_star_trail', TuningType.object, {'from': 3, 'weight': 30, 'min_since': 3}),
+  TuningDef('spawn_star_trail', TuningType.object, {
+    'from': 3,
+    'weight': 30,
+    'min_since': 3,
+  }),
   // §15.3 Gap item row
-  TuningDef('spawn_capsule', TuningType.object, {'from': 6, 'weight': 20, 'min_since': 8}),
+  TuningDef('spawn_capsule', TuningType.object, {
+    'from': 6,
+    'weight': 20,
+    'min_since': 8,
+  }),
   // §15.3 Gap item row
-  TuningDef('spawn_egg', TuningType.object, {'from': 6, 'weight': 12, 'min_since': 6}),
+  TuningDef('spawn_egg', TuningType.object, {
+    'from': 6,
+    'weight': 12,
+    'min_since': 6,
+  }),
   // §15.3 Gap item row
-  TuningDef('spawn_piggy', TuningType.object, {'from': 8, 'weight': 10, 'min_since': 12}),
+  TuningDef('spawn_piggy', TuningType.object, {
+    'from': 8,
+    'weight': 10,
+    'min_since': 12,
+  }),
   // §15.3 Gap item row
-  TuningDef('spawn_jar', TuningType.object, {'from': 10, 'weight': 10, 'min_since': 12}),
+  TuningDef('spawn_jar', TuningType.object, {
+    'from': 10,
+    'weight': 10,
+    'min_since': 12,
+  }),
   // §15.3 Gap item row (max per run)
-  TuningDef('spawn_shield', TuningType.object, {'from': 8, 'weight': 6, 'min_since': 0, 'max_per_run': 1}),
+  TuningDef('spawn_shield', TuningType.object, {
+    'from': 8,
+    'weight': 6,
+    'min_since': 0,
+    'max_per_run': 1,
+  }),
   // §15.3 First heart at a random gap in [min, max]
   TuningDef('spawn_heart_first', TuningType.intList, [5, 27]),
   // §15.3 Next heart this many gaps later, [min, max]
   TuningDef('spawn_heart_then', TuningType.intList, [17, 27]),
   // §15.3 Pair gift weights
-  TuningDef('spawn_pair_gifts', TuningType.object, {'shield': 25, 'comet': 20, 'coins': 25, 'score': 15, 'fever': 15}),
+  TuningDef('spawn_pair_gifts', TuningType.object, {
+    'shield': 25,
+    'comet': 20,
+    'coins': 25,
+    'score': 15,
+    'fever': 15,
+  }),
   // §15.3 Capsule type weights
-  TuningDef('spawn_capsules', TuningType.object, {'hourglass': 35, 'mini_bird': 35, 'coin_frenzy': 30}),
+  TuningDef('spawn_capsules', TuningType.object, {
+    'hourglass': 35,
+    'mini_bird': 35,
+    'coin_frenzy': 30,
+  }),
   // §14.6 Heart from gamesPlayed >= N
   TuningDef('gate_heart', TuningType.integer, 0),
   // §14.6 Star trail from gamesPlayed >= N
@@ -221,8 +392,25 @@ const List<TuningDef> kTuningDefaults = [
   TuningDef('noads_fallback_h', TuningType.decimal, 3.0),
   // §26.1 Shop and Skins unlock at this best score
   TuningDef('ui_unlock_best', TuningType.integer, 25),
-  // §D2 Signed tilt weights: `<from>_<magnitude>` entries by hoop band
-  TuningDef('tilt_rows', TuningType.object, {'10_10': 6, '10_15': 4, '50_10': 30, '50_15': 30, '50_20': 20, '50_30': 20, '60_10': 20, '60_15': 20, '60_20': 15, '60_30': 30, '60_45': 15, '100_10': 15, '100_15': 15, '100_20': 15, '100_30': 30, '100_45': 25}),
+  // §D2 Tilt-magnitude weights: `<from>_<magnitude>` entries by hoop band
+  TuningDef('tilt_rows', TuningType.object, {
+    '10_10': 6,
+    '10_15': 4,
+    '50_10': 30,
+    '50_15': 30,
+    '50_20': 20,
+    '50_30': 20,
+    '60_10': 20,
+    '60_15': 20,
+    '60_20': 15,
+    '60_30': 30,
+    '60_45': 15,
+    '100_10': 15,
+    '100_15': 15,
+    '100_20': 15,
+    '100_30': 30,
+    '100_45': 25,
+  }),
   // §D2 A tilt at or above this angle follows the approach sign
   TuningDef('tilt_align_min_deg', TuningType.integer, 20),
   // §D2 Below this absolute Δy a large tilt is clamped to 15°
@@ -234,15 +422,52 @@ const List<TuningDef> kTuningDefaults = [
   // §D2 Δy reduction after a moving or strongly tilted hoop
   TuningDef('dy_hard_factor', TuningType.decimal, 0.85),
   // §D2 Saw special-hoop weight by hoop index
-  TuningDef('spawn_saw_weight', TuningType.curve, [[30, 14], [60, 20], [100, 26]]),
+  TuningDef('spawn_saw_weight', TuningType.curve, [
+    [30, 14],
+    [60, 20],
+    [100, 26],
+  ]),
   // §D3 The rolling four-slot hazard budget by hoop index
-  TuningDef('hazard_budget', TuningType.curve, [[0, 0], [3, 0.5], [10, 2], [25, 3], [50, 4], [100, 5], [150, 5.5]]),
+  TuningDef('hazard_budget', TuningType.curve, [
+    [0, 0],
+    [3, 0.5],
+    [10, 2],
+    [25, 3],
+    [50, 4],
+    [100, 5],
+    [150, 5.5],
+  ]),
   // §D3 Slot costs used by the future hazard ledger
-  TuningDef('hazard_costs', TuningType.object, {'saw': 2, 'switch': 1.5, 'spring': 0.5, 'pair': 0.5, 'train': 0.5, 'tilt_20': 0.25, 'tilt_30': 1, 'tilt_45': 1.5, 'rail': 1, 'swing': 1, 'other_motion': 1.25, 'dy_p90': 1, 'squeeze': 1}),
+  TuningDef('hazard_costs', TuningType.object, {
+    'saw': 2,
+    'switch': 1.5,
+    'spring': 0.5,
+    'pair': 0.5,
+    'train': 0.5,
+    'tilt_20': 0.25,
+    'tilt_30': 1,
+    'tilt_45': 1.5,
+    'rail': 1,
+    'swing': 1,
+    'other_motion': 1.25,
+    'dy_p90': 1,
+    'squeeze': 1,
+  }),
   // §D4 Periodic calm-stretch scheduling
-  TuningDef('calm_every', TuningType.object, {'first_min': 30, 'first_max': 34, 'mult': 1.2, 'cap': 55, 'len': 3, 'min_gap': 12}),
+  TuningDef('calm_every', TuningType.object, {
+    'first_min': 30,
+    'first_max': 34,
+    'mult': 1.2,
+    'cap': 55,
+    'len': 3,
+    'min_gap': 12,
+  }),
   // §D4 Calm lengths after run events
-  TuningDef('calm_after', TuningType.object, {'revive': 3, 'squeeze': 2, 'ride': 2}),
+  TuningDef('calm_after', TuningType.object, {
+    'revive': 3,
+    'squeeze': 2,
+    'ride': 2,
+  }),
   // §D6 No two headlines within this hoop window
   TuningDef('headline_window', TuningType.integer, 8),
   // §D6 A due headline may wait this many hoops

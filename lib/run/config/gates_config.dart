@@ -6,7 +6,7 @@ import 'tuning_values.dart';
 /// gate (`gate_*` tuning keys). The in-run rules (from-hoop, weights,
 /// first-meet) apply on top; first-meet fires the first time a gate is
 /// open (the director only knows the open elements). Not gated: normal,
-/// angled and moving hoops (difficulty, §14.4), the squeeze and the home
+/// angled and moving hoops (difficulty, §14.4) and the home
 /// slot (Big Hoops / shield). Pure Dart.
 abstract final class GatesConfig {
   /// PRD-2.3 §14.6 the gate key of every gated element.
@@ -35,6 +35,7 @@ abstract final class GatesConfig {
     ElementId.fever: 'gate_fever',
     ElementId.luckySpin: 'gate_lucky_spin',
     ElementId.saw: 'gate_saw',
+    ElementId.squeeze: 'gate_squeeze',
   };
 
   /// PRD-2.3 §14.6 the `gamesPlayed` [e] needs (0 = not gated).
@@ -44,8 +45,7 @@ abstract final class GatesConfig {
   }
 
   /// PRD-2.3 §14.6 whether [e] is open at [gamesPlayed] finished runs.
-  static bool isOpen(ElementId e, int gamesPlayed) =>
-      gamesPlayed >= gateFor(e);
+  static bool isOpen(ElementId e, int gamesPlayed) => gamesPlayed >= gateFor(e);
 
   /// PRD-2.3 §14.6 [elements] without the ones still gated at
   /// [gamesPlayed]. [keep] (the debug force queue) stays: a debug force
@@ -56,7 +56,10 @@ abstract final class GatesConfig {
     int gamesPlayed, {
     Iterable<ElementId> keep = const [],
   }) {
-    final kept = {...keep, if (keep.any((e) => e.isCapsuleType)) ElementId.capsule};
+    final kept = {
+      ...keep,
+      if (keep.any((e) => e.isCapsuleType)) ElementId.capsule,
+    };
     return {
       for (final e in elements)
         if (kept.contains(e) || isOpen(e, gamesPlayed)) e,

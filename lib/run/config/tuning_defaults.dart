@@ -351,25 +351,27 @@ const List<TuningDef> kTuningDefaults = [
   // §14.6 Shield pickup from gamesPlayed >= N
   TuningDef('gate_shield', TuningType.integer, 0),
   // §14.6 Spring from gamesPlayed >= N
-  TuningDef('gate_spring', TuningType.integer, 4),
+  TuningDef('gate_spring', TuningType.integer, 0),
   // §14.6 Pair from gamesPlayed >= N
-  TuningDef('gate_pair', TuningType.integer, 4),
+  TuningDef('gate_pair', TuningType.integer, 0),
   // §14.6 Egg from gamesPlayed >= N
-  TuningDef('gate_egg', TuningType.integer, 4),
+  TuningDef('gate_egg', TuningType.integer, 0),
   // §14.6 Golden feather and balloon bonus from gamesPlayed >= N
-  TuningDef('gate_feather', TuningType.integer, 6),
+  TuningDef('gate_feather', TuningType.integer, 0),
   // §14.6 Puzzle piece from gamesPlayed >= N
-  TuningDef('gate_puzzle', TuningType.integer, 6),
+  TuningDef('gate_puzzle', TuningType.integer, 0),
   // §14.6 Piggy bank from gamesPlayed >= N
-  TuningDef('gate_piggy', TuningType.integer, 6),
+  TuningDef('gate_piggy', TuningType.integer, 0),
   // §14.6 Firefly jar from gamesPlayed >= N
-  TuningDef('gate_jar', TuningType.integer, 6),
+  TuningDef('gate_jar', TuningType.integer, 0),
   // §14.6 FEVER from gamesPlayed >= N
-  TuningDef('gate_fever', TuningType.integer, 8),
+  TuningDef('gate_fever', TuningType.integer, 0),
   // §14.6 Lucky spin from gamesPlayed >= N
-  TuningDef('gate_lucky_spin', TuningType.integer, 8),
+  TuningDef('gate_lucky_spin', TuningType.integer, 0),
   // §14.6 Saw from gamesPlayed >= N
-  TuningDef('gate_saw', TuningType.integer, 12),
+  TuningDef('gate_saw', TuningType.integer, 3),
+  // §14.6 Spike squeeze from gamesPlayed >= N
+  TuningDef('gate_squeeze', TuningType.integer, 5),
   // §10.3b Tap reminder after this many seconds without a tap
   TuningDef('ui_tap_reminder_s', TuningType.decimal, 4.0),
   // §18.4 New-player grace: no interstitial until this many finished runs (or ads_grace_seconds of playtime)

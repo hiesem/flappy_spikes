@@ -20,17 +20,15 @@ const gated = {
 };
 
 /// PRD-2.3 §14.6 the table: what is open from each `gamesPlayed`
-/// (PRD-2.3.1 §0 live RC v21 gates 0/2/4/6/8/12; were 0/3/5/8/10/15/20.
-/// Owner 2026-10-17, RC v24: comet, portal, capsules and shield from the
-/// first game, gate 0).
+/// (PRD-2.6 WP-C1: only saw and squeeze stay lifetime-gated; every
+/// director-spawned element below saw is open from the first game).
 Set<String> openAt(int games) => {
   'heart', 'star_trail', 'bullseye', 'switch_ring', 'train', //
   'comet', 'portal', 'capsule', 'hourglass', 'mini_bird', 'coin_frenzy', //
   'shield',
-  if (games >= 4) ...['spring', 'pair', 'egg'],
-  if (games >= 6) ...['feather', 'puzzle_piece', 'piggy', 'jar'],
-  if (games >= 8) ...['fever', 'lucky_spin'],
-  if (games >= 12) 'saw',
+  'spring', 'pair', 'egg', 'feather', 'puzzle_piece', 'piggy', 'jar', //
+  'fever', 'lucky_spin',
+  if (games >= 3) 'saw',
 };
 
 /// What spawned in [seeds] long runs with the elements open at [games]
@@ -60,15 +58,15 @@ Set<String> spawnedAt(int games, {int seeds = 40, int slots = 220}) {
 
 void main() {
   group('§14.6 lifetime unlock gates (director)', () {
-    for (final games in [0, 2, 4, 6, 8, 12, 20]) {
+    for (final games in [0, 2, 3, 4, 5, 20]) {
       test('gamesPlayed $games: exactly the listed elements can spawn', () {
         expect(spawnedAt(games), openAt(games));
       });
     }
 
-    test('in between, the lower gate holds (gamesPlayed 3, 11)', () {
-      expect(spawnedAt(3, seeds: 20), openAt(2));
-      expect(spawnedAt(11, seeds: 20), openAt(8));
+    test('in between, the lower gate holds (gamesPlayed 1, 4)', () {
+      expect(spawnedAt(1, seeds: 20), openAt(0));
+      expect(spawnedAt(4, seeds: 20), openAt(3));
     });
 
     test('a debug force ignores the gate; normal, angled and moving hoops '
@@ -83,14 +81,13 @@ void main() {
         f,
         containsAll([ElementId.saw, ElementId.hourglass, ElementId.capsule]),
       );
-      expect(f, isNot(contains(ElementId.fever)));
+      expect(f, isNot(contains(ElementId.squeeze)));
       expect(
         f,
         containsAll([
           ElementId.normalHoop,
           ElementId.angledRing,
           ElementId.movingRing,
-          ElementId.squeeze,
           ElementId.bigHoops,
         ]),
       );
@@ -173,16 +170,12 @@ void main() {
             ElementId.comet, // gate 0 (owner 2026-10-17, RC v24)
             ElementId.portal,
             ElementId.capsule,
+            ElementId.spring,
+            ElementId.fever,
+            ElementId.feather,
             ElementId.saw, // forced
           ]),
         );
-        for (final e in [
-          ElementId.fever,
-          ElementId.feather,
-          ElementId.spring,
-        ]) {
-          expect(run.enabled, isNot(contains(e)), reason: e.storageId);
-        }
       },
     );
 

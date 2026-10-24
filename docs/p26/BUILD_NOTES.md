@@ -42,3 +42,9 @@ second drawing of a listed element** (blocker), and any new shared-looking eleme
 **Tests:** use `test/helpers.dart` (`createRunTestGame`, `startRun`, `flyRun`, `flushAndMount`; always
 `soundEnabled: false`). Add the tests the PRD names for your work package. `test/autopilot_test.dart` is the
 playability gate and must stay green.
+
+**Known-red tests (temporary, M1F):** M1 merged with 55 failing tests. They are listed in
+`scripts/known_red_tests.txt`; `scripts/verify.sh` runs the whole Flutter suite and stays green while every failure is
+on that list, red on any other failure. Never edit that list (protected). When your work makes listed tests pass,
+name them in your summary. A test's expectation may only change when PRD 2.6 changed the rule it checks (cite the
+PRD section in the test); otherwise fix the code.

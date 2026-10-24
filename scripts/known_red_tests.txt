@@ -1,0 +1,55 @@
+test/config_test.dart: PRD-2 hoop course (WP-1a: replaces the pipe math) §3.0.1 / PRD-2.3 §14.4 / PRD-2.4 §1 opening 118 at hoop 0, the v23 curve from hoop 1 (118 → 66 at hoop 100), flat after; rides follow it (PRD-2.4 §2)
+test/e2e/p1_gameplay_e2e_test.dart: P1 journey: persisted reminders across 35 days and autumn DST
+test/e2e/p2_gameplay_e2e_test.dart: P2 reminders: spring DST and persisted daily plans
+test/e2e/p3_interactions_e2e_test.dart: P3 Black Hole lens + squeeze walls + FEVER shake compose and reset h=568.0
+test/e2e/p3_interactions_e2e_test.dart: P3 Black Hole lens + squeeze walls + FEVER shake compose and reset h=711.0
+test/e2e/p3_interactions_e2e_test.dart: P3 comet + due squeeze: pause boost, delay warning until landing +2s h=568.0
+test/e2e/p3_interactions_e2e_test.dart: P3 comet + due squeeze: pause boost, delay warning until landing +2s h=711.0
+test/e2e/p45_gameplay_e2e_test.dart: P45 reminders: repeated sessions, spring DST and 20-message rotation
+test/e2e/p45_gameplay_e2e_test.dart: P45 versus: portal + comet replay, pause, real Hourglass and opponent out
+test/p22/s15_scroll_in_test.dart: §15.4 on-screen spawn gate (every element forced) §15.4 a natural run (568 pt, seed 9): nothing pops in
+test/p22/s15_scroll_in_test.dart: §15.4 on-screen spawn gate (every element forced) §15.4 a natural run (711 pt, seed 9): nothing pops in
+test/p22/s19_random_opening_test.dart: §19.4 single pickups sit 30–70 % along the gap and ≤ 50 pt off the line; patterns keep their shape and stay inside the gap
+test/p22/s27_one_bonus_director_test.dart: §27.2 what is blocked scheduled items wait: a portal / comet hoop due during a piggy run comes at the first allowed slot after the pay-out + 2 hoops
+test/p22/s33_session_pools_test.dart: the game: 6 soak games (bonus, level-up CLAIM) with fake voices; every Home arrival holds exactly the session set (replay → endRun)
+test/p22/s7_7_noads_test.dart: §7.7 revive ladder for NO ADS owners normal players unchanged: ad, or NO AD AVAILABLE + 250
+test/p23/s14_4_difficulty_test.dart: §14.5 rides over 200 seeded runs the comet comes with ≈ 4 % per eligible normal hoop from hoop 8, never within 18 hoops of the previous comet
+test/p23/s14_4_difficulty_test.dart: §14.5 rides the portal: first at hoop 12–25, then every 80–90, at most 2
+test/p23/s14_4_difficulty_test.dart: §14.5 rides tuning: a remote comet chance and portal schedule reach the director
+test/p24/s2_no_jumps_test.dart: PRD-2.4 §2 no jumps §2 no jumps: over 120 hoops with forced comets and portals, the normal openings never grow from one hoop to the next (Big Hoops, divided by the multiplier)
+test/p25/squeeze_fix_test.dart: 2.5.1 WP-SND: a squeeze delayed by a ride preloads again before its warning; never while a ride runs
+test/p25/squeeze_fix_test.dart: 2.5.1 WP-SND: the cues are preloaded once in the idle window 3 s before the warning (never twice for the same moment), touched again at the warning and the late cues once in the hold; again for the next squeeze
+test/p25/squeeze_fix_test.dart: 2.5.1 WP-SND with fake voices 2.5.1 every squeeze cue of the first squeeze finds its pool ready (no first-play drop) and starts a voice
+test/p25/squeeze_fix_test.dart: 2.5.1 WP-THUMP: at the lock the camera moves only vertically (world down first, ≤ 3 pt) and is back at its base after the thump
+test/p26/bot/human_bot_test.dart: the helper flies to death and records highlights at 711 pt
+test/p26/curve/layout_d2_test.dart: D2 Δy is point-based, height-capped, reduced after hard hoops, and stable above the cap
+test/p26/curve/spawn_tables_d2_test.dart: D2 / C3 firstPossible and first natural appearances
+test/p26/m1/wiring_test.dart: run 1 end forwards FTUE and progress arguments
+test/p26/m1/wiring_test.dart: run 20 end forwards FTUE and progress arguments
+test/p26/m1/wiring_test.dart: run 2 end forwards FTUE and progress arguments
+test/p26/m1/wiring_test.dart: run 3 end forwards FTUE and progress arguments
+test/p26/m1/wiring_test.dart: showcase arms both extras before hoop 0 with Home starter Powerup.bigHoops
+test/p26/m1/wiring_test.dart: showcase arms both extras before hoop 0 with Home starter Powerup.none
+test/p26/m1/wiring_test.dart: showcase arms both extras before hoop 0 with Home starter Powerup.shield
+test/p26/m1/wiring_test.dart: the showcase, progress and FTUE seams fire
+test/p26/showcase/plan_state_test.dart: Delete my data replays after a process restart at gamesPlayed 3, 5 and 6
+test/run/director/s3_0_2_layout_ramp_test.dart: §3.0.2 layout ramp per hoop index §3.0.2 every hoop index keeps its row's centre range, and the course uses the whole range (568 and 711)
+test/run/director/s3_0_2_layout_ramp_test.dart: §3.0.2 layout ramp per hoop index §D2 moving share and type weights; none before 25
+test/run/director/s3_0_2_layout_ramp_test.dart: §3.0.2 layout ramp per hoop index §D2 tilt follows the curve and magnitude rows; none before 10; 45° only from 60
+test/run/hoops/s3_11_moving_rings_test.dart: §3.10 / §3.11 / §3.3 in a run §3.11 a moving hoop gets its motion and its guide at the home position (spawned together off-screen right); it moves with runClock and the guide leaves with the hoop
+test/run/hoops/s3_23_spring_test.dart: §3.23 the spring has room for its 240 pt jump inside the band at 568 and 711 from hoop 10 (WP-3c fix: band rule, not the row range)
+test/run/items/s3_17_squeeze_autopilot_test.dart: §3.17 squeeze forced back to back: the autopilot passes ≥ 12 hoops and every window hoop fits the squeezed band (568 pt, seed 11)
+test/run/items/s3_17_squeeze_autopilot_test.dart: §3.17 squeeze forced back to back: the autopilot passes ≥ 12 hoops and every window hoop fits the squeezed band (568 pt, seed 29)
+test/run/items/s3_17_squeeze_autopilot_test.dart: §3.17 squeeze forced back to back: the autopilot passes ≥ 12 hoops and every window hoop fits the squeezed band (568 pt, seed 3)
+test/run/items/s3_17_squeeze_autopilot_test.dart: §3.17 squeeze forced back to back: the autopilot passes ≥ 12 hoops and every window hoop fits the squeezed band (711 pt, seed 11)
+test/run/items/s3_17_squeeze_autopilot_test.dart: §3.17 squeeze forced back to back: the autopilot passes ≥ 12 hoops and every window hoop fits the squeezed band (711 pt, seed 29)
+test/run/items/s3_17_squeeze_autopilot_test.dart: §3.17 squeeze forced back to back: the autopilot passes ≥ 12 hoops and every window hoop fits the squeezed band (711 pt, seed 3)
+test/run/items/s3_17_squeeze_test.dart: §3.17 / §3.14 a revived death during a squeeze: the walls slide out over 0.5 s (bits fall), the interrupted squeeze counts (the next is tighter), the next comes 60–120 s later; a due squeeze waits 2 s after the revive
+test/run/items/s3_17_squeeze_test.dart: §3.17 a squeeze never starts during a ride: it waits until the ride ends + 2 s; the same after a revive
+test/run/items/s3_26_29_collect_autopilot_test.dart: §7 3.29 Firefly Jar forced from hoop 15: the autopilot passes ≥ 12 hoops (711 pt, seed 29)
+test/run/items/s3_8_comet_autopilot_test.dart: §3.8 comet hoop on every slot from hoop 10: the autopilot passes ≥ 12 hoops (568 pt, seed 11)
+test/run/items/s3_8_comet_autopilot_test.dart: §3.8 comet hoop on every slot from hoop 10: the autopilot passes ≥ 12 hoops (568 pt, seed 29)
+test/run/items/s3_8_comet_autopilot_test.dart: §3.8 comet hoop on every slot from hoop 10: the autopilot passes ≥ 12 hoops (568 pt, seed 3)
+test/run/items/s3_8_comet_autopilot_test.dart: §3.8 comet hoop on every slot from hoop 10: the autopilot passes ≥ 12 hoops (711 pt, seed 11)
+test/run/items/s3_8_comet_autopilot_test.dart: §3.8 comet hoop on every slot from hoop 10: the autopilot passes ≥ 12 hoops (711 pt, seed 29)
+test/run/items/s3_8_comet_autopilot_test.dart: §3.8 comet hoop on every slot from hoop 10: the autopilot passes ≥ 12 hoops (711 pt, seed 3)

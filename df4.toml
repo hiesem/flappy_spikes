@@ -28,7 +28,7 @@ agent_rules = [
   "Never run adb, emulators, firebase deploy, gcloud or anything that touches the real Firebase project or the stores.",
 ]
 never_commit = ["android/upload-keystore.jks", "android/app/key.properties", "*.jks", "*.keystore", "functions/lib/**", "firestore-debug.log", "*-debug.log"]
-protected_paths = ["pubspec.lock", "functions/package-lock.json", "df4.toml", "scripts/verify.sh", "docs/p26/PRD-2.6-fun-progression.md", "docs/p26/README.md", "docs/p26/BUILD_NOTES.md", "docs/p26/design/**", "android/app/build.gradle*", ".github/**"]
+protected_paths = ["pubspec.lock", "functions/package-lock.json", "df4.toml", "scripts/verify.sh", "scripts/known_red_tests.txt", "docs/p26/PRD-2.6-fun-progression.md", "docs/p26/README.md", "docs/p26/BUILD_NOTES.md", "docs/p26/design/**", "android/app/build.gradle*", ".github/**"]
 heavy_slots = 1
 builder_notes = "docs/p26/BUILD_NOTES.md"
 tester_notes = "docs/p26/BUILD_NOTES.md"

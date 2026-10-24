@@ -66,6 +66,11 @@ class GameStorage {
   static final String _rumbleKey = Obf.prefRumble;
   static final String _lastScoreKey = Obf.prefLastScore;
   static final String _grantedPurchasesKey = Obf.prefGrantedPurchases;
+  static final String _ftueStepsKey = Obf.prefFtueSteps;
+  static final String _showcaseSeenKey = Obf.prefShowcaseSeen;
+  static final String _showcaseAttemptKey = Obf.prefShowcaseAttempt;
+  static final String _showcaseRunsKey = Obf.prefShowcaseRuns;
+  static final String _showcaseDoneAtKey = Obf.prefShowcaseDoneAt;
 
   // region PRD-2 keys (WP-0b; PRD-2 §7 persistence table, ARCH §5)
   static final String _feathersKey = Obf.prefFeathers;
@@ -255,6 +260,18 @@ class GameStorage {
   /// PRD-2.3 §23.2 wall-clock seconds of the last rating-sheet request
   /// (0 = never). Kept by "Delete my data".
   int lastRatingRequestAt = 0;
+
+  /// PRD-2.6 §Appendix the reached FTUE milestones. Wave-1 only persists and
+  /// resets the state; later waves define the bit meaning.
+  int ftueSteps = 0;
+
+  /// PRD-2.6 WP-B the showcase highlight bits and counters.
+  int showcaseSeen = 0;
+  int showcaseAttempt = 0;
+  int showcaseRuns = 0;
+
+  /// `gamesPlayed` when showcase finished (null = not finished).
+  int? showcaseDoneAt;
 
   // region PRD-2 keys (WP-0b)
   /// §3.15 Golden feathers held (0–3).
@@ -464,6 +481,11 @@ class GameStorage {
     playtimeSeconds = prefs.getInt(_playtimeSecondsKey) ?? 0;
     firstInterstitialShown = prefs.getBool(_firstInterstitialShownKey) ?? false;
     lastRatingRequestAt = prefs.getInt(_lastRatingRequestAtKey) ?? 0;
+    ftueSteps = prefs.getInt(_ftueStepsKey) ?? 0;
+    showcaseSeen = prefs.getInt(_showcaseSeenKey) ?? 0;
+    showcaseAttempt = prefs.getInt(_showcaseAttemptKey) ?? 0;
+    showcaseRuns = prefs.getInt(_showcaseRunsKey) ?? 0;
+    showcaseDoneAt = prefs.getInt(_showcaseDoneAtKey);
     // region PRD-2 keys (WP-0b)
     feathers = (prefs.getInt(_feathersKey) ?? 0).clamp(0, 3);
     puzzlePieces = (prefs.getInt(_puzzlePiecesKey) ?? 0) & 0xF;
@@ -1065,6 +1087,11 @@ class GameStorage {
   /// default (PRD-2.2 §9.1).
   Future<void> resetVersusData() async {
     versusNickname = null;
+    ftueSteps = 0;
+    showcaseSeen = 0;
+    showcaseAttempt = 0;
+    showcaseRuns = 0;
+    showcaseDoneAt = null;
     // PRD-2.5 §3.4: "Delete my data" clears the sticky seal flag (the
     // upload-queue reset below writes the new seal).
     _sealUntrusted = false;
@@ -1074,6 +1101,11 @@ class GameStorage {
     versusCustomNameError = '';
     versusCustomNameRead = '';
     final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_ftueStepsKey);
+    await prefs.remove(_showcaseSeenKey);
+    await prefs.remove(_showcaseAttemptKey);
+    await prefs.remove(_showcaseRunsKey);
+    await prefs.remove(_showcaseDoneAtKey);
     await prefs.remove(_versusNicknameKey);
     await prefs.remove(_versusCustomNameReadKey);
     await prefs.remove(_versusCustomNameKey);
@@ -1112,6 +1144,40 @@ class GameStorage {
   Future<void> saveBestScore(int value) async {
     bestScore = value;
     await _sealedWrite((p) => p.setInt(_bestScoreKey, value));
+  }
+
+  Future<void> saveFtueSteps(int value) async {
+    ftueSteps = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_ftueStepsKey, value);
+  }
+
+  Future<void> saveShowcaseSeen(int value) async {
+    showcaseSeen = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_showcaseSeenKey, value);
+  }
+
+  Future<void> saveShowcaseAttempt(int value) async {
+    showcaseAttempt = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_showcaseAttemptKey, value);
+  }
+
+  Future<void> saveShowcaseRuns(int value) async {
+    showcaseRuns = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_showcaseRunsKey, value);
+  }
+
+  Future<void> saveShowcaseDoneAt(int? value) async {
+    showcaseDoneAt = value;
+    final prefs = await SharedPreferences.getInstance();
+    if (value == null) {
+      await prefs.remove(_showcaseDoneAtKey);
+    } else {
+      await prefs.setInt(_showcaseDoneAtKey, value);
+    }
   }
 
   Future<void> saveLastScore(int value) async {

@@ -1120,6 +1120,11 @@ class Config {
   /// runs requests the store's rating sheet (any later run only on a new best).
   static int get ratingMinRuns => TuningValues.current.i('rate_min_runs');
 
+  /// PRD-2.6 C3: a later showcase finish delays the rating sheet to at least
+  /// two runs after `showcaseDoneAt`, never below the 2.5 minimum.
+  static int ratingMinRunsFor(int? showcaseDoneAt) =>
+      math.max(5, (showcaseDoneAt ?? -3) + 2);
+
   /// PRD-2.3 §23.2 (`rate_cooldown_days`): at most one request in this long.
   static Duration get ratingCooldown =>
       Duration(days: TuningValues.current.i('rate_cooldown_days'));

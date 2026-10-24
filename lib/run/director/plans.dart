@@ -5,6 +5,7 @@
 library;
 
 import '../elements.dart';
+import 'formations.dart';
 
 /// The hoop kinds of PRD-2 §7 ("one `Hoop` component with a `kind`").
 ///
@@ -322,6 +323,9 @@ class SlotPlan {
     this.forced = false,
     this.attached = const [],
     this.duringRide = false,
+    this.calm = false,
+    this.hazardCost = 0,
+    this.formation,
   });
 
   final int index;
@@ -365,6 +369,15 @@ class SlotPlan {
   /// upright, still).
   final bool duringRide;
 
+  /// PRD-2.6 D4 this slot belongs to a calm stretch.
+  final bool calm;
+
+  /// PRD-2.6 D3 this slot's contribution to the rolling four-slot budget.
+  final double hazardCost;
+
+  /// PRD-2.6 D7 the formation this slot belongs to, if any.
+  final FormationId? formation;
+
   /// A copy with the given fields replaced (PRD-2.2 §15 / §27: the
   /// spawner turns a planned-ahead slot into a plain one).
   SlotPlan copyWith({
@@ -380,6 +393,9 @@ class SlotPlan {
     bool? forced,
     List<GapItemPlan>? attached,
     bool? duringRide,
+    bool? calm,
+    double? hazardCost,
+    FormationId? Function()? formation,
     double? trackX,
     double? advance,
   }) => SlotPlan(
@@ -398,6 +414,9 @@ class SlotPlan {
     forced: forced ?? this.forced,
     attached: attached ?? this.attached,
     duringRide: duringRide ?? this.duringRide,
+    calm: calm ?? this.calm,
+    hazardCost: hazardCost ?? this.hazardCost,
+    formation: formation == null ? this.formation : formation(),
   );
 
   /// Track x of the last ring of the slot (train: + 2 × 56).
@@ -422,7 +441,10 @@ class SlotPlan {
       other.extra == extra &&
       other.forced == forced &&
       _listEq(other.attached, attached) &&
-      other.duringRide == duringRide;
+      other.duringRide == duringRide &&
+      other.calm == calm &&
+      other.hazardCost == hazardCost &&
+      other.formation == formation;
 
   @override
   int get hashCode => Object.hash(
@@ -439,6 +461,9 @@ class SlotPlan {
     extra,
     forced,
     Object.hashAll(attached),
+    calm,
+    hazardCost,
+    formation,
   );
 
   @override

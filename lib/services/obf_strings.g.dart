@@ -105,6 +105,11 @@ abstract final class Obf {
   static final String chSealDrop = _d(const [209, 221, 100, 13, 246, 178, 132, 147], 98);
   static final String playCertSha256 = _d(const [108, 164, 14, 143, 10, 53, 212, 209, 239, 23, 96, 181, 17, 99, 197, 67, 114, 65, 69, 224, 4, 48, 187, 235, 104, 71, 30, 40, 121, 5, 66, 37, 204, 103, 221, 190, 138, 161, 115, 31, 84, 165, 130, 67, 168, 79, 215, 124, 241, 92, 51, 16, 46, 68, 135, 87, 146, 101, 160, 106, 189, 127, 164, 223], 99);
   static final String appleTeamId = _d(const [33, 92, 168, 27, 87, 131, 110, 207, 187, 55], 100);
+  static final String prefFtueSteps = _d(const [25, 78, 9, 236, 169, 124, 190, 151, 72], 101);
+  static final String prefShowcaseSeen = _d(const [211, 146, 36, 246, 244, 109, 208, 171, 179, 35, 88, 214], 102);
+  static final String prefShowcaseAttempt = _d(const [61, 179, 43, 219, 51, 86, 64, 235, 115, 220, 60, 176, 25, 99, 230], 103);
+  static final String prefShowcaseRuns = _d(const [79, 107, 196, 222, 252, 238, 86, 149, 58, 98, 219, 92], 104);
+  static final String prefShowcaseDoneAt = _d(const [109, 135, 231, 58, 184, 71, 3, 38, 148, 126, 53, 127, 192, 200], 105);
 
   /// test/obf_strings_test.dart: every value in table order (never read by the app).
   static List<String> get debugValues => [
@@ -209,6 +214,11 @@ abstract final class Obf {
     chSealDrop,
     playCertSha256,
     appleTeamId,
+    prefFtueSteps,
+    prefShowcaseSeen,
+    prefShowcaseAttempt,
+    prefShowcaseRuns,
+    prefShowcaseDoneAt,
   ];
 
   static String _d(List<int> data, int index) {

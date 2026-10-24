@@ -54,6 +54,40 @@ firebase deploy --only firestore:rules,firestore:indexes,functions --project fla
   this); nothing else was changed.
 - Logs: `firebase functions:log --project flappy-spikes-a2b55` (every accept / reject is logged with its reason).
 
+## 3a. PRD-2.6 WP-LB wave-0 deploy, import and cleanup
+
+The own-leaderboard release adds nine server-only `lb*` collections and three callables. It ships **before any 2.6 app build reaches a device** (PRD-2.6 §4 wave 0, C8). 2.5 clients never call the new surface, so the deploy is backward compatible.
+
+**Wave-0 order (owner / orchestrator only; builders never deploy):**
+
+1. Deploy `firestore.indexes.json` and wait until the new composite indexes (`lbGroups`, `lbPlayers`) are **built**.
+2. Deploy the rules (the LB3 note is comment-only; every `lb*` collection stays denied).
+3. Deploy the functions together with the E4 / F9 / G4 / E6 changes (`lbSubmitRun`, `lbGetBoard`, `lbClaimGift`, `lbSettleGroups`).
+4. Enable the TTL policies (`functions/scripts/set_ttl.sh enable`, or `firebase deploy --only firestore:indexes`).
+5. With the owner's explicit OK on the day (C8), run the one-time import. Do it promptly: old `players` documents expire 60 days after their last write, while `lbPlayers` rows get a fresh 400-day TTL.
+
+```bash
+# Auth once with an owner account: gcloud auth application-default login
+npx --prefix functions tsx functions/scripts/lb_import.ts   --project flappy-spikes-a2b55 --keep <hiesem-uid>,<hiesemie-uid>,<tester-uid>
+
+# Preview first if desired; this variant writes nothing:
+npx --prefix functions tsx functions/scripts/lb_import.ts   --project flappy-spikes-a2b55 --keep <uids> --dry-run
+```
+
+`lb_import.ts` never trusts the client-written `players/{uid}.best`. It imports the verified `bestRun` when `checkRun` accepts it; otherwise it takes the highest verified `recent[]` run; otherwise it skips the player. It writes `lbPlayers/{uid}` (`src: 'import'`, `expireAt` now + 400 days), rebuilds `lbBest/global` and writes `lbMeta/import` (`ranAt`, `count`, `keepUids`). A rerun updates imported rows but preserves any row already owned by live play (`src: 'play'`), and clears an earlier `cleanedAt` because that gate must be run again.
+
+**Release-blocking cleanup (C9, before production — not needed for internal / closed testing):**
+
+```bash
+# 1. DRY RUN (default): review every deletion and the remaining top 50.
+npx --prefix functions tsx functions/scripts/lb_cleanup_test.ts   --project flappy-spikes-a2b55 --keep <hiesem-uid>,<hiesemie-uid>,<tester-uids>
+
+# 2. Apply exactly that plan, then confirm lbMeta/import.cleanedAt in the console.
+npx --prefix functions tsx functions/scripts/lb_cleanup_test.ts   --project flappy-spikes-a2b55 --keep <hiesem-uid>,<hiesemie-uid>,<tester-uids> --apply
+```
+
+The cleanup deletes every **imported** `lbPlayers` row not on the keep-list, plus its `lbGifts`, ghost-pool entries and member/ghost rows in `lbGroups`; it rebuilds `lbBest/global`, sets `lbMeta/import.cleanedAt`, and prints the remaining top 50. It touches only the new `lb*` collections and never the versus `pools` (O7), `players` or other versus data. Rows created by live play are never deleted. Both scripts **require an explicit `--project`** and never fall back to a default project; the import runs unless `--dry-run` is passed, while the cleanup writes nothing unless `--apply` is passed.
+
 ## 4. TTL policy (60 days)
 
 Firestore TTL deletes whole documents only, so the policy is on **`players.expireAt`** (the client writes now + 60 d on

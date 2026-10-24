@@ -106,6 +106,15 @@ flutter build appbundle --release --obfuscate --split-debug-info=$DI \
   --extra-gen-snapshot-options=--save-obfuscation-map=$DI/obfuscation.map.json
 ```
 
+### 2.6 own-leaderboard release gate (PRD-2.6 C8 / C9)
+
+The own leaderboard (`lbPlayers` / `lbBest` / `lbMeta`) is seeded from verified versus runs after the wave-0 server deploy. The one-time import and the release-blocking test-player cleanup are documented in `docs/gameplay-v2/VERSUS-BACKEND.md` §3a.
+
+- [ ] Wave-0 server deploy is complete (indexes built → rules → functions → TTL).
+- [ ] `lb_import.ts` ran once on `flappy-spikes-a2b55` with the owner's OK, and `lbMeta/import` has `ranAt`, `count` and `keepUids`.
+- [ ] **Release gate for production: `lbMeta/import.cleanedAt set`** after `lb_cleanup_test.ts --apply --keep <owner/testers>`. Never publish a production release while it is absent.
+- [ ] The cleanup is **not** required for Play internal / closed testing; it is mandatory before production.
+
 ## 3. CI (GitHub Actions)
 
 `.github/workflows/build.yml` runs on every push: analyze + test (Ubuntu),

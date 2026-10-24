@@ -66,8 +66,12 @@ void main() {
       );
     });
 
-    test('§14.1 the free kinds are gone', () {
-      expect(ReviveOfferKind.values, [ReviveOfferKind.ad, ReviveOfferKind.coins]);
+    test('§14.1 the showcase free offer exists, but not for NO ADS owners', () {
+      expect(ReviveOfferKind.values, [
+        ReviveOfferKind.ad,
+        ReviveOfferKind.coins,
+        ReviveOfferKind.free,
+      ]);
       expect(ReviveKind.values, [ReviveKind.ad, ReviveKind.coins]);
     });
 

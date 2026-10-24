@@ -13,8 +13,7 @@
  *
  * Auth: Application Default Credentials.
  */
-import { getApps, initializeApp } from 'firebase-admin/app';
-import { FieldValue, Timestamp, getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore';
 import {
   LB_BEST_COLLECTION,
   LB_GIFTS_COLLECTION,
@@ -31,6 +30,7 @@ import {
 import {
   BatchedWriter,
   bestDocFromPlayers,
+  databaseForProject,
   hasFlag,
   logLine,
   parseOption,
@@ -244,9 +244,6 @@ export function printCleanupPlan(project: string, apply: boolean, plan: CleanupP
 
 async function applyCleanup(db: Firestore, plan: CleanupPlan): Promise<ReturnType<typeof bestDocFromPlayers>> {
   const writer = new BatchedWriter(db);
-  for (const uid of plan.result.removedPlayers) {
-    await writer.delete(db.collection(LB_PLAYERS_COLLECTION).doc(uid));
-  }
   for (const item of plan.orphans) {
     await writer.delete(db.collection(item.collection).doc(item.id));
   }
@@ -279,6 +276,10 @@ async function applyCleanup(db: Firestore, plan: CleanupPlan): Promise<ReturnTyp
     });
   }
 
+  await writer.flush();
+  for (const uid of plan.result.removedPlayers) {
+    await writer.delete(db.collection(LB_PLAYERS_COLLECTION).doc(uid));
+  }
   await writer.flush();
   // Re-read after the deletes: the printed board is exactly what the live collection now holds.
   const after = bestDocFromPlayers(await readLbPlayers(db), plan.nowMs);
@@ -329,8 +330,7 @@ export async function runCleanupCli(argv: readonly string[]): Promise<number> {
     return 2;
   }
   const apply = hasFlag(argv, 'apply');
-  if (getApps().length === 0) initializeApp({ projectId: project });
-  const db = getFirestore();
+  const db = databaseForProject(project);
   const plan = await planCleanup(db, { keepUids, apply });
   printCleanupPlan(project, apply, plan);
   if (apply) plan.best = await applyCleanup(db, plan);

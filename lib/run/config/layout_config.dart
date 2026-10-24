@@ -33,14 +33,6 @@ abstract final class LayoutConfig {
       moving: 0,
     ),
     LayoutBand(
-      from: 10,
-      centre: (0.30, 0.69),
-      dy: (0.11, 0.27, 0.35),
-      tilt: 0.30,
-      tiltWeights: {10: 6, 15: 4},
-      moving: 0,
-    ),
-    LayoutBand(
       from: 20,
       centre: (0.27, 0.70),
       dy: (0.12, 0.31, 0.38),

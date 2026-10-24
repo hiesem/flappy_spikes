@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { mock } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { logger } from 'firebase-functions/v2';
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp, type Firestore } from 'firebase-admin/firestore';
 import {
   GIFT_SHOP_ITEMS,
   lbClaimGift,
@@ -96,6 +96,28 @@ async function group(gid: string): Promise<LbGroupDoc | undefined> {
 
 async function gifts(uid: string): Promise<LbGiftDoc[]> {
   return (await db.collection(LB_GIFTS_COLLECTION).where('uid', '==', uid).get()).docs.map((d) => d.data() as LbGiftDoc);
+}
+
+/** Run [after] once, after the next completed transaction (used for races). */
+function dbWithAfterTransaction(after: () => Promise<void>): Firestore {
+  let ran = false;
+  return new Proxy(db, {
+    get(target, property) {
+      if (property !== 'runTransaction') {
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      }
+      const runTransaction = Reflect.get(target, property, target) as (...args: any[]) => any;
+      return async (...args: any[]) => {
+        const result = await runTransaction.apply(target, args);
+        if (!ran) {
+          ran = true;
+          await after();
+        }
+        return result;
+      };
+    },
+  }) as Firestore;
 }
 
 describe('PRD-2.6 LB3 submit, join and group placement', () => {
@@ -484,6 +506,98 @@ describe('PRD-2.6 LB3 regression fixes', () => {
     assert.deepEqual((await gifts(picked)).filter((gift) => gift.gid === nextGid).map((gift) => gift.tier), ['silver']);
   });
 
+  it('excludes a hidden ghost raced into settlement before the cleanup sweep', async () => {
+    const vanished = uniq('lb-race-hidden');
+    const peer = uniq('lb-race-peer');
+    const picked = uniq('lb-race-picked');
+    for (const [uid, name] of [[vanished, 'GhostOwl'], [peer, 'PeerOwl'], [picked, 'PickedOwl']]) {
+      await db.collection(NAMES_COLLECTION).doc(uid).set({ customName: name, updatedAt: Timestamp.fromMillis(T0) });
+    }
+    const source = await lbSubmitRun(db, vanished, request([submitRun({ score: 900, endTs: T0 })]), T0 + 1000);
+    const sourceGid = source.group!.id;
+    await lbSubmitRun(db, peer, request([submitRun({ score: 800, endTs: T0 + 1000 })]), T0 + 2000);
+    const sourceEnd = (await group(sourceGid))!.end.toMillis();
+    await lbSettleGroups(db, sourceEnd + 1000, sourceGid);
+
+    // A later group embeds the earlier day as a ghost. The owner then hides:
+    // its player doc commits hidden before the cleanup can strip this group.
+    const nextStart = sourceEnd + HOUR;
+    const next = await lbSubmitRun(db, picked, request([submitRun({ score: 700, endTs: nextStart })]), nextStart + 1000);
+    const nextGid = next.group!.id;
+    const nextGroup = (await group(nextGid))!;
+    assert.equal(nextGroup.ghosts.some((ghost) => ghost.uid === vanished), true);
+
+    let settledRace = false;
+    let raceBoard: Awaited<ReturnType<typeof lbGetBoard>>['today'] | null = null;
+    const racingDb = dbWithAfterTransaction(async () => {
+      if (settledRace) return;
+      const live = (await group(nextGid))!;
+      if (!live.ghosts.some((ghost) => ghost.uid === vanished)) return;
+      settledRace = true;
+      const end = live.end.toMillis();
+      await lbSettleGroups(db, end + 1000, nextGid);
+      raceBoard = (await lbGetBoard(db, picked, { tab: 'today' }, end + 2000)).today;
+    });
+    await lbSubmitRun(
+      racingDb,
+      vanished,
+      request([submitRun({ score: 10, endTs: nextStart + 2000 })], { t: 1 }),
+      nextStart + 2000,
+    );
+    assert.equal(settledRace, true, 'settlement ran between the hidden commit and the cleanup sweep');
+    const settledBoard = raceBoard as Awaited<ReturnType<typeof lbGetBoard>>['today'] | null;
+    assert.ok(settledBoard);
+    assert.equal(settledBoard!.rows.some((row) => row.name === 'GhostOwl'), false);
+
+    const settledGroup = (await group(nextGid))!;
+    assert.equal(settledGroup.settled, true);
+    assert.equal((await gifts(vanished)).some((gift) => gift.gid === nextGid), false);
+    assert.deepEqual((await gifts(picked)).filter((gift) => gift.gid === nextGid).map((gift) => gift.tier), ['silver']);
+  });
+
+  it('leaves a hidden ghost out of a submit response raced in before the cleanup sweep', async () => {
+    const vanished = uniq('lb-race-submit-hidden');
+    const peer = uniq('lb-race-submit-peer');
+    const picked = uniq('lb-race-submit-picked');
+    const viewer = uniq('lb-race-submit-viewer');
+    for (const [uid, name] of [[vanished, 'GhostOwl'], [peer, 'PeerOwl'], [picked, 'PickedOwl'], [viewer, 'ViewerOwl']]) {
+      await db.collection(NAMES_COLLECTION).doc(uid).set({ customName: name, updatedAt: Timestamp.fromMillis(T0) });
+    }
+    const source = await lbSubmitRun(db, vanished, request([submitRun({ score: 900, endTs: T0 })]), T0 + 1000);
+    const sourceGid = source.group!.id;
+    await lbSubmitRun(db, peer, request([submitRun({ score: 800, endTs: T0 + 1000 })]), T0 + 2000);
+    const sourceEnd = (await group(sourceGid))!.end.toMillis();
+    await lbSettleGroups(db, sourceEnd + 1000, sourceGid);
+
+    const nextStart = sourceEnd + HOUR;
+    const next = await lbSubmitRun(db, picked, request([submitRun({ score: 700, endTs: nextStart })]), nextStart + 1000);
+    const nextGid = next.group!.id;
+    assert.equal((await group(nextGid))!.ghosts.some((ghost) => ghost.uid === vanished), true);
+
+    let flaggedDuringSweep = false;
+    let during: Awaited<ReturnType<typeof lbSubmitRun>> | null = null;
+    const racingDb = dbWithAfterTransaction(async () => {
+      if (!(await group(nextGid))!.ghosts.some((ghost) => ghost.uid === vanished)) return;
+      flaggedDuringSweep = (await db.collection(LB_PLAYERS_COLLECTION).doc(vanished).get()).data()?.cleanupPending === true;
+      during = await lbSubmitRun(db, viewer, request([submitRun({ score: 700, endTs: nextStart + 3000 })]), nextStart + 3000);
+    });
+    await lbSubmitRun(
+      racingDb,
+      vanished,
+      request([submitRun({ score: 10, endTs: nextStart + 2000 })], { t: 1 }),
+      nextStart + 2000,
+    );
+
+    assert.equal(flaggedDuringSweep, true, 'the hide committed the cleanup marker while the ghost was still embedded');
+    const response = during as Awaited<ReturnType<typeof lbSubmitRun>> | null;
+    assert.ok(response);
+    assert.equal(response!.group?.id, nextGid);
+    assert.equal(response!.board!.rows.some((row) => row.name === 'GhostOwl'), false);
+    assert.equal(response!.rank!.after, response!.board!.me!.rank);
+    assert.equal((await db.collection(LB_PLAYERS_COLLECTION).doc(vanished).get()).data()?.cleanupPending, false);
+    assert.equal((await group(nextGid))!.ghosts.some((ghost) => ghost.uid === vanished), false);
+  });
+
   it('keeps tie timestamps public and accepts a verified improvement below a private anomaly', async () => {
     const a = uniq('lb-tie-first');
     const b = uniq('lb-tie-second');
@@ -527,6 +641,33 @@ describe('PRD-2.6 LB3 regression fixes', () => {
     assert.equal(publicView.rows[0].name, versusName('BraveOwl123', owner));
     assert.equal(publicView.me!.points, 90);
     assert.equal(publicView.me!.rank, 2);
+  });
+
+  it('pins a first-ever hard anomaly for its owner without publishing a row', async () => {
+    const owner = uniq('lb-private-only-owner');
+    const other = uniq('lb-private-only-other');
+    const anomaly = submitRun({ score: 200, endTs: T0 });
+    anomaly.tl = encodeDeltas(Array(200).fill(100));
+    await lbSubmitRun(db, owner, request([anomaly]), T0 + 1000);
+
+    const stored = (await player(owner))!;
+    assert.equal(stored.best, 200);
+    assert.equal(stored.bestShadow, 0);
+
+    const own = (await lbGetBoard(db, owner, { tab: 'best' }, T0 + 2000)).best;
+    assert.equal(own.rows.some((row) => row.points === 200), false);
+    assert.ok(own.me);
+    assert.equal(own.me!.points, 200);
+    assert.equal(own.me!.best, 200);
+    assert.equal(own.me!.rank, 0);
+    assert.equal(own.me!.lastAt, T0);
+    assert.equal(own.floor ?? 0, 0);
+
+    await lbSubmitRun(db, other, request([submitRun({ score: 10, endTs: T0 + 3000 })]), T0 + 4000);
+    const publicView = (await lbGetBoard(db, other, { tab: 'best' }, T0 + 5000)).best;
+    assert.equal(publicView.rows.some((row) => row.points === 200), false);
+    assert.equal(publicView.me!.points, 10);
+    assert.equal((await lbGetBoard(db, owner, { tab: 'best' }, T0 + 5000)).best.me!.points, 200);
   });
 
   it('persists timestamps and history from the accepted duplicate run, not a malformed namesake', async () => {

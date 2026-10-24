@@ -120,6 +120,9 @@ interface StoredMember extends LbGroupMember {
   runs?: LbGhostPoint[];
 }
 
+/** `lbPlayers/{uid}`; `cleanupPending` is set by a hidden submit until its cleanup sweep has run. */
+type StoredPlayer = LbPlayerDoc & { cleanupPending?: boolean };
+
 interface HistogramDoc {
   bins: Record<string, number>;
   updatedAt: Timestamp;
@@ -227,6 +230,41 @@ function loadGroup(value: unknown): LbGroupDoc | null {
       }))
     : [];
   return { ...(value as unknown as LbGroupDoc), members, ghosts };
+}
+
+/**
+ * Ghost owners whose player document settlement must check before it ranks
+ * the ghost. A member is already covered by the member lookup.
+ */
+function groupGhostOwnerUids(group: LbGroupDoc): string[] {
+  const members = new Set(group.memberUids);
+  const owners = new Set<string>();
+  for (const ghost of group.ghosts) {
+    const uid = ghost.uid;
+    if (typeof uid !== 'string' || uid === '' || members.has(uid)) continue;
+    owners.add(uid);
+  }
+  return [...owners];
+}
+
+/**
+ * Hidden players whose embedded ghosts may still sit in other groups. A hidden
+ * submit sets `cleanupPending` in the commit that hides the player and clears
+ * it only after the cleanup sweep, so board reads and submit responses leave
+ * these uids out until then. One equality filter on one field: no composite
+ * index is needed.
+ */
+async function pendingCleanupUids(db: Firestore): Promise<string[]> {
+  const snap = await db.collection(LB_PLAYERS_COLLECTION).where('cleanupPending', '==', true).get();
+  return snap.docs.map((doc) => doc.id);
+}
+
+/** Ends the suppression once the sweep has removed every embedded copy. */
+async function clearCleanupPending(db: Firestore, uid: string): Promise<void> {
+  const ref = db.collection(LB_PLAYERS_COLLECTION).doc(uid);
+  await db.runTransaction(async (tx) => {
+    if ((await tx.get(ref)).exists) tx.update(ref, { cleanupPending: false });
+  });
 }
 
 function storeGhostDay(entry: LbGhostDay): LbGhostDay {
@@ -487,9 +525,15 @@ function makeMember(
   };
 }
 
-function rankOf(group: LbGroupDoc, uid: string, nowMs: number, hidden: boolean): number | null {
+function rankOf(
+  group: LbGroupDoc,
+  uid: string,
+  nowMs: number,
+  hidden: boolean,
+  hiddenUids: readonly string[],
+): number | null {
   if (hidden) return null;
-  return rankToday(group, nowMs, {}).find((entry) => entry.uid === uid && !entry.ghost)?.rank ?? null;
+  return rankToday(group, nowMs, { hiddenUids }).find((entry) => entry.uid === uid && !entry.ghost)?.rank ?? null;
 }
 
 async function tombstoneIn(tx: Transaction, db: Firestore, uid: string): Promise<boolean> {
@@ -727,18 +771,40 @@ async function settleGroup(db: Firestore, gid: string, nowMs: number): Promise<S
       return { settled: false, gifts: 0, ghostDays: 0, giftsLost: 0 };
     }
 
-    const playerRefs = group.memberUids.map((uid) => db.collection(LB_PLAYERS_COLLECTION).doc(uid));
+    // Embedded ghosts can outlive their owner's Delete My Data or a hidden
+    // submit until the cleanup sweep reaches them. Settlement must therefore
+    // decide eligibility from the owners' player documents in this same
+    // transaction, not from the group's stale ghost arrays.
+    const ghostOwners = groupGhostOwnerUids(group);
+    const ownerUids = [...new Set([...group.memberUids, ...ghostOwners])];
+    const playerRefs = ownerUids.map((uid) => db.collection(LB_PLAYERS_COLLECTION).doc(uid));
     const playerSnaps = await Promise.all(playerRefs.map((ref) => tx.get(ref)));
     const players = new Map<string, LbPlayerDoc | undefined>();
-    playerSnaps.forEach((snap, index) => players.set(group.memberUids[index], snap.exists ? (snap.data() as LbPlayerDoc) : undefined));
+    playerSnaps.forEach((snap, index) => players.set(ownerUids[index], snap.exists ? (snap.data() as LbPlayerDoc) : undefined));
+    // Hidden real members keep their O65 place reserved. A ghost whose owner
+    // is hidden or gone is removed entirely: it is not a member and must not
+    // occupy a prize place.
     const hidden = new Set<string>();
+    const suppressedGhosts = new Set<string>();
     for (const uid of group.memberUids) {
       const player = players.get(uid);
       if (player === undefined || player.hidden === true) hidden.add(uid);
     }
+    for (const uid of ghostOwners) {
+      const player = players.get(uid);
+      if (player === undefined || player.hidden === true) suppressedGhosts.add(uid);
+    }
+    // Ranking and prizes read only `ghosts`; the filtered copy is never written back.
+    const eligible = suppressedGhosts.size === 0 ? group : {
+      ...group,
+      ghosts: group.ghosts.filter((ghost) => ghost.uid === undefined || !suppressedGhosts.has(ghost.uid)),
+    };
 
-    const ranked = rankToday(group, millis(group.end), { hiddenUids: hidden, includeHidden: true });
-    const awards = settlePrizeAwards(group, gid, millis(group.end), hidden);
+    const ranked = rankToday(eligible, millis(group.end), {
+      hiddenUids: hidden,
+      includeHidden: true,
+    });
+    const awards = settlePrizeAwards(eligible, gid, millis(group.end), hidden);
     const giftRefs = awards.map((award) => db.collection(LB_GIFTS_COLLECTION).doc(giftId(award.uid, gid)));
     const giftSnaps = await Promise.all(giftRefs.map((ref) => tx.get(ref)));
 
@@ -836,13 +902,15 @@ async function submit(
   const playerRef = db.collection(LB_PLAYERS_COLLECTION).doc(uid);
   const bestRef = db.collection(LB_BEST_COLLECTION).doc('global');
   const histRef = db.collection(LB_BEST_COLLECTION).doc('hist');
+  // Hidden players still being swept are kept out of this response's board and ranks.
+  const pending = await pendingCleanupUids(db);
   const result = await db.runTransaction(async (tx) => {
     if (await tombstoneIn(tx, db, uid)) deleted();
     const playerSnap = await tx.get(playerRef);
     const bestSnap = await tx.get(bestRef);
     const histSnap = await tx.get(histRef);
     const nameSnap = await tx.get(db.collection(NAMES_COLLECTION).doc(uid));
-    const player = playerSnap.exists ? (playerSnap.data() as LbPlayerDoc) : undefined;
+    const player = playerSnap.exists ? (playerSnap.data() as StoredPlayer) : undefined;
     const bestData = bestSnap.exists ? (bestSnap.data() as LbBestDoc) : undefined;
     const state = loadPlayer(player, input);
     const name = displayName(uid, input, nameSnap.exists ? (nameSnap.data() as NameDoc) : undefined);
@@ -882,7 +950,7 @@ async function submit(
     const shouldJoin = !state.hidden && runs.length > 0;
     const pools = shouldJoin && !willJoin ? await readPools(tx, db, bracket) : {};
 
-    const beforeRank = candidate.group === null ? null : rankOf(candidate.group, uid, nowMs, state.hidden);
+    const beforeRank = candidate.group === null ? null : rankOf(candidate.group, uid, nowMs, state.hidden, pending);
     const lastEnd = runs.length > 0 ? Math.max(...runs.map((run) => run.endMs)) : nowMs;
     const points = runs.reduce((sum, run) => sum + run.counted, 0);
     const bestToday = runs.reduce((max, run) => Math.max(max, run.counted), 0);
@@ -997,7 +1065,7 @@ async function submit(
         cursor = last;
       }
     }
-    const nextPlayer: LbPlayerDoc = {
+    const nextPlayer: StoredPlayer = {
       ...player,
       best: localBest,
       // best may contain a private anomaly; bestAt belongs to bestShadow.
@@ -1015,6 +1083,8 @@ async function submit(
       hist: [...state.hist, ...runs.map((run) => run.score)].slice(-10),
       lastRunAt: runs.length > 0 ? at(lastEnd) : (player?.lastRunAt ?? null),
       hidden: state.hidden,
+      // Same commit as the hide: any read after it sees the marker until the sweep clears it.
+      ...(state.hidden ? { cleanupPending: true } : {}),
       src: player?.src ?? 'play',
       expireAt: at(nowMs + LB_PLAYER_TTL),
     };
@@ -1065,7 +1135,7 @@ async function submit(
     const board: LbBoardPayload =
       finalGroup === null || finalGid === null
         ? { tab: LB_TAB_TODAY, rows: [], me: null, floor: null, group: null, gifts: [] }
-        : todayBoard(finalGroup, uid, nowMs, { gid: finalGid, hiddenUids: state.hidden ? [uid] : [] });
+        : todayBoard(finalGroup, uid, nowMs, { gid: finalGid, hiddenUids: [...(state.hidden ? [uid] : []), ...pending] });
     const gifts = giftSnap?.exists ? [giftSnap.data() as LbGiftDoc] : [];
     board.gifts = gifts.map((g) => ({ gid: g.gid, tier: g.tier, boardRank: g.boardRank, claimedAt: g.claimedAt ?? null }));
     if (state.hidden) board.me = null;
@@ -1077,7 +1147,7 @@ async function submit(
           finalGroup === null || finalGid === null
             ? null
             : { id: finalGid, end: millis(finalGroup.end), bracket: finalGroup.bracket },
-        rank: { before: beforeRank, after: finalGroup === null ? null : rankOf(finalGroup, uid, nowMs, state.hidden) },
+        rank: { before: beforeRank, after: finalGroup === null ? null : rankOf(finalGroup, uid, nowMs, state.hidden, pending) },
         board,
         gifts: gifts.length > 0 ? gifts : null,
       } satisfies LbSubmitRunResult,
@@ -1090,10 +1160,12 @@ async function submit(
   if (result.hidden) {
     // Hidden players must disappear from every board immediately: embedded
     // ghosts in other groups and their copied day entries in all pool shards
-    // are cleaned with the same idempotent routines Delete My Data uses.
+    // are cleaned with the same idempotent routines Delete My Data uses. The
+    // marker stays until this completes, so a failed sweep keeps them hidden.
     await stripGroups(db, uid, result.cleanupGid);
     await pruneGhostPools(db, uid, nowMs);
     await stripGroups(db, uid, null);
+    await clearCleanupPending(db, uid);
   }
   await writeFlags(db, result.flags);
   if (result.publicBestChanged) bestCache.delete(db);
@@ -1196,36 +1268,48 @@ async function exactRank(db: Firestore, uid: string, best: number, bestAt: numbe
   return { rank: greater.data().count + 1 + ties, approximate: false };
 }
 
-async function boardBest(db: Firestore, uid: string, player: LbPlayerDoc | undefined, nowMs: number): Promise<LbBoardPayload> {
+/**
+ * BEST RUN for [uid]. Public rows and ranks use the verified shadow score. The
+ * owner's pinned row shows the private best and is built from the player
+ * document, so it exists before any verified best does (rank 0: not ranked yet).
+ */
+async function boardBest(
+  db: Firestore,
+  uid: string,
+  player: StoredPlayer | undefined,
+  nowMs: number,
+  pending: readonly string[],
+): Promise<LbBoardPayload> {
   const doc = await readBest(db, nowMs);
-  const own = player === undefined ? null : rowFromPlayer(uid, player);
-  const rows = mergeBestRows(doc?.rows ?? [], own);
+  const publicRow = player === undefined ? null : rowFromPlayer(uid, player);
+  const rows = mergeBestRows(doc?.rows ?? [], publicRow);
   const hidden = player?.hidden === true ? [uid] : [];
   const payload = bestBoard(rows, uid, {
     floor: doc?.floor ?? null,
-    hiddenUids: hidden,
+    hiddenUids: [...hidden, ...pending],
     gid: 'global',
   });
-  if (own !== null) {
-    // The pinned row is the owner's own view. A hard anomaly raises the
-    // private `best` but deliberately leaves `bestShadow` (and therefore all
-    // public rows and the rank) on the verified score.
-    const privateBest = Math.max(count(player?.best), count(player?.bestShadow));
-    const exact = await exactRank(db, uid, count(player?.bestShadow), millis(player?.bestAt));
-    if (exact.rank !== null) {
+  if (player !== undefined && player.hidden !== true) {
+    const privateBest = Math.max(count(player.best), count(player.bestShadow));
+    if (privateBest > 0) {
+      const publicBest = count(player.bestShadow);
+      const exact = await exactRank(db, uid, publicBest, millis(player.bestAt));
+      // `bestAt` belongs to the verified best; before one exists, the last accepted run is the closest time.
+      const bestAt = millis(player.bestAt);
+      const lastAt = bestAt > 0 ? bestAt : millis(player.lastRunAt);
       payload.me = {
         rid: createHash('sha256').update(`global\u0000${uid}`).digest('hex').slice(0, 16),
-        rank: exact.rank,
-        name: own.name,
-        look: own.look,
-        ...(own.card === undefined ? {} : { card: own.card }),
+        rank: exact.rank ?? 0,
+        name: player.name,
+        look: player.look ?? DEFAULT_LOOK,
+        ...(player.card === undefined ? {} : { card: player.card }),
         points: privateBest,
         best: privateBest,
-        lastAt: millis(own.bestAt),
+        ...(lastAt > 0 ? { lastAt } : {}),
       };
-      payload.floor = payload.floor ?? count(player?.bestShadow);
+      payload.floor = payload.floor ?? publicBest;
+      payload.approximate = exact.approximate || payload.approximate;
     }
-    payload.approximate = exact.approximate || payload.approximate;
   }
   return payload;
 }
@@ -1261,11 +1345,14 @@ export async function lbGetBoard(
   }
   const giftsSnap = await db.collection(LB_GIFTS_COLLECTION).where('uid', '==', uid).limit(50).get();
   const gifts = giftsSnap.docs.map((doc) => doc.data() as LbGiftDoc);
+  // A hidden player's embedded ghosts can outlive the hide until the sweep
+  // reaches them; the pending set keeps those players off TODAY meanwhile.
+  const pending = await pendingCleanupUids(db);
   const hidden = player?.hidden === true ? [uid] : [];
   const today =
     group === null || gid === null
       ? emptyBoard(LB_TAB_TODAY)
-      : todayBoard(group, uid, nowMs, { gid, hiddenUids: hidden });
+      : todayBoard(group, uid, nowMs, { gid, hiddenUids: [...hidden, ...pending] });
   today.gifts = gifts.map((gift) => ({
     gid: gift.gid,
     tier: gift.tier,
@@ -1273,7 +1360,7 @@ export async function lbGetBoard(
     claimedAt: gift.claimedAt ?? null,
   }));
   if (player?.hidden === true) today.me = null;
-  const best = await boardBest(db, uid, player, nowMs);
+  const best = await boardBest(db, uid, player, nowMs, pending);
   return {
     today,
     best,

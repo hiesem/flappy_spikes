@@ -39,7 +39,11 @@ void main() {
               ? [5, 11, 29]
               : [3, 11, 29]) {
         FlameTester<FlappySpikesGame>(
-          () => createRunTestGame(worldHeight: height, seed: seed),
+          () => createRunTestGame(
+            prefs: {'gamesPlayed': 5},
+            worldHeight: height,
+            seed: seed,
+          ),
           gameSize: Vector2(320, height),
         ).testGameWidget(
           '§7 $label forced from hoop $from: the autopilot passes ≥ 12 hoops '

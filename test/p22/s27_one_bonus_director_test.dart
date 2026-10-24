@@ -94,7 +94,10 @@ void main() {
           startHoopIndex: 20,
         );
         for (var k = 0; k < 80; k++) {
-          final ctx = DirectorContext.open(711, piggyRunning: k < 6).copyActivity();
+          final ctx = DirectorContext.open(
+            711,
+            piggyRunning: k < 6,
+          ).copyActivity();
           final s = d.nextSlot(ctx);
           final g = d.nextGap(ctx, s);
           expect(rewardSlot(s), isFalse, reason: 'seed $seed $s');
@@ -107,24 +110,26 @@ void main() {
       expect(coins, greaterThan(300), reason: 'the piggy keeps its coins');
     });
 
-    test('a debug force of a reward waits for the activity too (exclusivity)',
-        () {
-      final d = RunDirector(
-        seed: 3,
-        enabled: all,
-        met: all,
-        startHoopIndex: 20,
-        forced: [ElementId.heart, ElementId.pair],
-      );
-      for (var k = 0; k < 5; k++) {
-        final ctx = DirectorContext.open(711).copyActivity();
-        final s = d.nextSlot(ctx);
-        final g = d.nextGap(ctx, s);
-        expect(s.kind, isNot(HoopKindId.pair));
-        expect(rewardItems(g), isEmpty);
-      }
-      expect(d.forcedQueue, containsAll([ElementId.heart, ElementId.pair]));
-    });
+    test(
+      'a debug force of a reward waits for the activity too (exclusivity)',
+      () {
+        final d = RunDirector(
+          seed: 3,
+          enabled: all,
+          met: all,
+          startHoopIndex: 20,
+          forced: [ElementId.heart, ElementId.pair],
+        );
+        for (var k = 0; k < 5; k++) {
+          final ctx = DirectorContext.open(711).copyActivity();
+          final s = d.nextSlot(ctx);
+          final g = d.nextGap(ctx, s);
+          expect(s.kind, isNot(HoopKindId.pair));
+          expect(rewardItems(g), isEmpty);
+        }
+        expect(d.forcedQueue, containsAll([ElementId.heart, ElementId.pair]));
+      },
+    );
 
     test('cool-down: after the end (next slot n) reward rings come from slot '
         'n + 1, gap rewards from gap n', () {
@@ -154,9 +159,26 @@ void main() {
 
     test('scheduled items wait: a portal / comet hoop due during a piggy run '
         'comes at the first allowed slot after the pay-out + 2 hoops', () {
+      final tuning = TuningValues.current;
+      addTearDown(() => TuningValues.current = tuning);
+      final isolated = {
+        'ui_unlock_best': '0',
+        'ride_portal_first': '[12,12]',
+        'ride_comet_chance': '0',
+        'spawn_special_chance': '[[0,0],[150,0]]',
+        'spawn_item_chance': '[[0,0],[150,0]]',
+      };
+      TuningValues.current = TuningValues.resolve(isolated);
       var portals = 0, comets = 0;
       for (var seed = 1; seed <= 100; seed++) {
-        final d = RunDirector(seed: seed, enabled: all, met: all);
+        // Start after the early random pool so unrelated bonus headlines
+        // cannot mask the activity cooldown being checked here.
+        final d = RunDirector(
+          seed: seed,
+          enabled: all,
+          met: all,
+          startHoopIndex: 10,
+        );
         final due = d.portalAt;
         // The piggy run covers the portal's slot.
         var k = 0;
@@ -185,13 +207,17 @@ void main() {
         // allowed slot (≥ n + 1; it also keeps 10 hoops from the portal).
         // PRD-2.3 §14.5 the comet is a per-hoop chance now: at chance 1 it
         // is due at every allowed hoop, as the 2.2 schedule was here.
-        TuningValues.current = TuningValues.resolve({'ride_comet_chance': '1'});
+        TuningValues.current = TuningValues.resolve({
+          ...isolated,
+          'ride_comet_chance': '1',
+        });
         final c = RunDirector(
           seed: seed,
           enabled: all..remove(ElementId.portal),
           met: all,
+          startHoopIndex: 10,
         );
-        TuningValues.current = TuningValues.resolve({'ui_unlock_best': '0'});
+        TuningValues.current = TuningValues.resolve(isolated);
         all.add(ElementId.portal);
         final cd = c.cometAt;
         for (; c.hoopIndex <= cd + 2;) {
@@ -289,7 +315,9 @@ void main() {
         final g = d.nextGap(ctx, s);
         final blockedSlot = on != null || s.index < endedAt + 1;
         final blockedGap = on != null || g.index < endedAt;
-        if (blockedSlot) expect(rewardSlot(s), isFalse, reason: 'seed $seed $s');
+        if (blockedSlot) {
+          expect(rewardSlot(s), isFalse, reason: 'seed $seed $s');
+        }
         if (blockedGap) {
           expect(rewardItems(g), isEmpty, reason: 'seed $seed $g');
         }

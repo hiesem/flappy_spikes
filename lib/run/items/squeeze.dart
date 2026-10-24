@@ -111,6 +111,7 @@ class SqueezeFeature extends RunFeature {
     sq.nextAt = c.director.rollSqueezeAt(
       c.s.runClock,
       hoop: c.s.hoopIndex,
+      index: sq.index,
       first: true,
     );
     c.events
@@ -172,7 +173,8 @@ class SqueezeFeature extends RunFeature {
     return c.s.ride == null &&
         c.s.runClock >= _waitUntil &&
         c.run.isScrolling &&
-        !c.run.rideHold;
+        !c.run.rideHold &&
+        c.director.allowsSqueezeWarning(c.s.hoopIndex);
   }
 
   // ------------------------------------------------------------ preload
@@ -210,7 +212,7 @@ class SqueezeFeature extends RunFeature {
     final c = _c!;
     final sq = _sq;
     depth = SqueezeConfig.insetFor(sq.index, c.viewHeight);
-    sq.holdS = c.director.rollSqueezeHold(hoop: c.s.hoopIndex);
+    sq.holdS = c.director.rollSqueezeHold(hoop: c.s.hoopIndex, index: sq.index);
     _ticks = 0;
     _latePreloaded = false;
     started++;
@@ -220,6 +222,7 @@ class SqueezeFeature extends RunFeature {
     _enter(SqueezePhase.warning);
     c.sfx(Sfx.sqWarn);
     c.emit(const ElementSpawned(ElementId.squeeze));
+    c.director.onSqueezeWarning(c.s.hoopIndex);
     c.track('squeeze_started', {
       'index': sq.index + 1,
       'open_pct':
@@ -328,7 +331,12 @@ class SqueezeFeature extends RunFeature {
     shake.sustain = 0;
     c.track('squeeze_survived', {'index': sq.index + 1});
     sq.index++;
-    sq.nextAt = c.director.rollSqueezeAt(c.s.runClock, hoop: c.s.hoopIndex);
+    sq.nextAt = c.director.rollSqueezeAt(
+      c.s.runClock,
+      hoop: c.s.hoopIndex,
+      index: sq.index,
+    );
+    c.director.onSqueezeEnded(c.s.hoopIndex);
     _preloadedDue = -1;
     _enter(SqueezePhase.idle);
   }

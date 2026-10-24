@@ -8,6 +8,7 @@ import '../../components/spike_strip.dart';
 import '../../game/config.dart';
 import '../../game/flappy_game.dart';
 import '../../game/sound.dart';
+import '../config/gates_config.dart';
 import '../config/run_config.dart';
 import '../config/squeeze_config.dart';
 import '../effects/particle_pool.dart';
@@ -170,7 +171,12 @@ class SqueezeFeature extends RunFeature {
 
   bool get _mayStart {
     final c = _c!;
-    return c.s.ride == null &&
+    final gateOpen =
+        c.run.setup.ignoreGates ||
+        c.run.setup.forced.contains(ElementId.squeeze) ||
+        GatesConfig.isOpen(ElementId.squeeze, c.game.storage.gamesPlayed);
+    return gateOpen &&
+        c.s.ride == null &&
         c.s.runClock >= _waitUntil &&
         c.run.isScrolling &&
         !c.run.rideHold &&

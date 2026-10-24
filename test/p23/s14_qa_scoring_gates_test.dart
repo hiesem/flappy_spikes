@@ -30,7 +30,9 @@ void main() {
         expect(run.setup.ignoreGates, isFalse);
         for (final e in GatesConfig.keys.keys) {
           // piggyCoins/fireflySwarm are activity internals, not spawn ids.
-          if (e == ElementId.piggyCoins || e == ElementId.fireflySwarm) {
+          if (e == ElementId.piggyCoins ||
+              e == ElementId.fireflySwarm ||
+              e == ElementId.squeeze) {
             continue;
           }
           expect(

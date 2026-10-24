@@ -46,7 +46,7 @@ enum ElementId {
   pair('pair', ElementKind.slot, 12, true),
   fever('fever', ElementKind.slot, 15, true),
   luckySpin('lucky_spin', ElementKind.slot, 15, true),
-  saw('saw', ElementKind.slot, 30, true),
+  saw('saw', ElementKind.slot, 30, false),
   // PRD-2.6 §C3 the portal comes first at hoop 12–25.
   portal('portal', ElementKind.schedule, 12, true),
   comet('comet', ElementKind.schedule, 10, true),

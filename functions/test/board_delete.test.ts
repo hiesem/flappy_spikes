@@ -168,17 +168,17 @@ function dbWithSubmitAfterInitialGroupSweep(submit: () => Promise<unknown>): Fir
   }) as Firestore;
 }
 
-function dbWithSubmitAfterTombstone(submit: () => Promise<unknown>): Firestore {
-  let submitted = false;
+function dbWithDeleteAfterSubmit(deleteData: () => Promise<unknown>): Firestore {
+  let deleted = false;
   return new Proxy(db, {
     get(target, property) {
       if (property !== 'runTransaction') return boundMember(target, property);
       const runTransaction = Reflect.get(target, property, target) as AnyFunction;
       return async (...args: unknown[]) => {
         const result = await runTransaction.apply(target, args);
-        if (!submitted) {
-          submitted = true;
-          await submit();
+        if (!deleted) {
+          deleted = true;
+          await deleteData();
         }
         return result;
       };
@@ -507,12 +507,14 @@ describe('PRD-2.6 LB3 Delete My Data', () => {
     await seedBoardPlayer(uid, null, 'WiseOwl');
     const anomaly = runRequest(200, T0);
     anomaly.runs[0].tl = encodeDeltas(Array(200).fill(100));
-    const submit = () => lbSubmitRun(db, uid, anomaly, T0 + 1000);
 
-    await assert.rejects(
-      deleteBoardData(dbWithSubmitAfterTombstone(submit), uid, T0),
-      (err: any) => err.code === 'permission-denied',
+    await lbSubmitRun(
+      dbWithDeleteAfterSubmit(() => deleteBoardData(db, uid, T0 + 1000)),
+      uid,
+      anomaly,
+      T0 + 1000,
     );
+    assert.equal((await db.collection(LB_PLAYERS_COLLECTION).doc(uid).get()).exists, false);
     assert.equal((await db.collection(LB_FLAGS_COLLECTION).where('uid', '==', uid).get()).size, 0);
   });
 });

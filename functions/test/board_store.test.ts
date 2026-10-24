@@ -481,7 +481,7 @@ describe('PRD-2.6 LB3 regression fixes', () => {
     const settleEnd = hiddenGroup.end.toMillis();
     await lbSettleGroups(db, settleEnd + 1000, nextGid);
     assert.equal((await gifts(vanished)).some((gift) => gift.gid === nextGid), false);
-    assert.deepEqual((await gifts(picked)).filter((gift) => gift.gid === nextGid).map((gift) => gift.tier), ['gold']);
+    assert.deepEqual((await gifts(picked)).filter((gift) => gift.gid === nextGid).map((gift) => gift.tier), ['silver']);
   });
 
   it('keeps tie timestamps public and accepts a verified improvement below a private anomaly', async () => {

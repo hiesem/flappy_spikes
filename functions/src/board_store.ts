@@ -1093,6 +1093,7 @@ async function submit(
     // are cleaned with the same idempotent routines Delete My Data uses.
     await stripGroups(db, uid, result.cleanupGid);
     await pruneGhostPools(db, uid, nowMs);
+    await stripGroups(db, uid, null);
   }
   await writeFlags(db, result.flags);
   if (result.publicBestChanged) bestCache.delete(db);

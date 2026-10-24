@@ -350,9 +350,9 @@
    "cooldown": 2
   },
   "switch": {
-   "from": 12,
+   "from": 15,
    "w": 14,
-   "min_gap": 8,
+   "min_gap": 3,
    "cooldown": 1
   },
   "pair": {
@@ -374,9 +374,22 @@
    "cooldown": 1
   },
   "saw": {
-   "from": 20,
-   "w": 18,
-   "w_from_45": 26,
+   "from": 30,
+   "w": 14,
+   "w_curve": [
+    [
+     30,
+     14
+    ],
+    [
+     60,
+     20
+    ],
+    [
+     100,
+     26
+    ]
+   ],
    "min_gap": 3,
    "cooldown": 1
   }
@@ -384,12 +397,12 @@
  "schedules": {
   "portal": {
    "first": [
-    40,
-    60
+    12,
+    25
    ],
    "then": [
-    60,
-    80
+    80,
+    90
    ]
   },
   "comet_hoop": {

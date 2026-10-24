@@ -243,7 +243,7 @@ const List<TuningDef> kTuningDefaults = [
   }),
   // §15.3 Special hoop row
   TuningDef('spawn_switch', TuningType.object, {
-    'from': 7,
+    'from': 15,
     'weight': 14,
     'min_since': 3,
     'cooldown': 1,
@@ -269,11 +269,11 @@ const List<TuningDef> kTuningDefaults = [
     'min_since': 7,
     'cooldown': 1,
   }),
-  // §15.3 Special hoop row (weight from hoop 45)
+  // §15.3 / PRD-2.6 §D2 special hoop row; the saw weight comes from the
+  // `spawn_saw_weight` curve below.
   TuningDef('spawn_saw', TuningType.object, {
-    'from': 20,
-    'weight': 18,
-    'weight_from_45': 26,
+    'from': 30,
+    'weight': 14,
     'min_since': 3,
     'cooldown': 1,
   }),

@@ -720,11 +720,6 @@ class RunDirector {
         (due == ElementId.angledRing || due == ElementId.movingRing)) {
       forceMod = due;
     }
-    // PRD-2.2 §19.2 the angled ring may come from index 4 here.
-    if (early == EarlyPick.angled && kind == null && forceMod == null) {
-      forceMod = ElementId.angledRing;
-    }
-
     kind ??= HoopKindId.normal;
     return _buildSlot(
       i,
@@ -1038,7 +1033,7 @@ class RunDirector {
         (_rewardsBlocked(i, ctx) || _bigOpen(ctx))) {
       return false;
     }
-    if (ctx.squeezeWindow && !rule.allowedInSqueeze) return false;
+    if (ctx.squeezeWindow && !rule.allowedInSqueezeAt(i)) return false;
     if (k == HoopKindId.fever && (ctx.fever || _prevKind == HoopKindId.saw)) {
       return false;
     }

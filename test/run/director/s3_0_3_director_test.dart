@@ -195,10 +195,7 @@ void main() {
       for (var seed = 1; seed <= 40; seed++) {
         final d = director(seed: seed);
         for (final (s, _) in fly(d, 100)) {
-          // PRD-2.2 §19.2: the early pool's angled ring may come from 4.
-          if (s.index < 10 && d.earlyPicks[s.index] != EarlyPick.angled) {
-            expect(s.tiltDeg, 0);
-          }
+          if (s.index < 10) expect(s.tiltDeg, 0);
           if (s.index < 4) expect(s.tiltDeg, 0);
           if (s.index < 25) expect(s.motion, isNull);
           if (s.kind != HoopKindId.normal || s.cometHang) {
@@ -279,9 +276,10 @@ void main() {
       }
     });
 
-    test('§3.0.3 3. portal first at 40–60 (PRD-2.3 §14.5), then +60–80; '
+    test('§3.0.3 3. portal first at 12–25 (PRD-2.6 §C3), then +80–90; '
         'never the same ride twice in a row (also across runs); cooldown 3 '
         'after it', () {
+      resetTuning();
       for (var seed = 1; seed <= 60; seed++) {
         final d = director(seed: seed, lastPortalRide: RideId.space);
         final plans = fly(d, 260).map((e) => e.$1).toList();
@@ -291,7 +289,7 @@ void main() {
         expect(portals, isNotEmpty);
         // It may wait (comet hoop < 10 back), never come early.
         expect(d.portalAt, greaterThan(portals.first.index));
-        expect(portals.first.index, inInclusiveRange(40, 70));
+        expect(portals.first.index, inInclusiveRange(12, 35));
         var lastRide = RideId.space;
         for (var k = 0; k < portals.length; k++) {
           final ride = portals[k].extra! as RideId;
@@ -301,7 +299,7 @@ void main() {
             // It may wait (comet hoop < 10 back), never come early.
             expect(
               portals[k].index - portals[k - 1].index,
-              greaterThanOrEqualTo(60),
+              greaterThanOrEqualTo(80),
             );
           }
           for (var c = 1; c <= 3 && portals[k].index + c < plans.length; c++) {

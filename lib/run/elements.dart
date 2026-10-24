@@ -38,17 +38,17 @@ enum ElementKind {
 enum ElementId {
   normalHoop('normal_hoop', ElementKind.slot, 0, false),
   angledRing('angled_ring', ElementKind.modifier, 10, true),
-  movingRing('moving_ring', ElementKind.modifier, 20, true),
+  movingRing('moving_ring', ElementKind.modifier, 25, true),
   bullseye('bullseye', ElementKind.slot, 6, true),
   train('train', ElementKind.slot, 8, true),
   spring('spring', ElementKind.slot, 10, true),
-  switchRing('switch_ring', ElementKind.slot, 12, true),
+  switchRing('switch_ring', ElementKind.slot, 15, true),
   pair('pair', ElementKind.slot, 12, true),
   fever('fever', ElementKind.slot, 15, true),
   luckySpin('lucky_spin', ElementKind.slot, 15, true),
-  saw('saw', ElementKind.slot, 20, true),
-  // PRD-2.3 §14.5 the portal comes first at hoop 40–60 (was 25–50).
-  portal('portal', ElementKind.schedule, 40, true),
+  saw('saw', ElementKind.slot, 30, true),
+  // PRD-2.6 §C3 the portal comes first at hoop 12–25.
+  portal('portal', ElementKind.schedule, 12, true),
   comet('comet', ElementKind.schedule, 10, true),
   heart('heart', ElementKind.gap, 3, false),
   shield('shield', ElementKind.gap, 12, true),
@@ -74,12 +74,17 @@ enum ElementId {
   // Follow-up items of a running Piggy Bank / Firefly Jar (§3.0.3 gap order
   // 1). Not catalogue rows of their own.
   piggyCoins('piggy_coins', ElementKind.gap, null, false),
-  fireflySwarm('firefly_swarm', ElementKind.gap, null, false),
+  fireflySwarm('firefly_swarm', ElementKind.gap, null, false)
   // region anchors — append below (one value per WP, with a `// WP-x` note)
   // endregion anchors
   ;
 
-  const ElementId(this.storageId, this.kind, this.firstPossible, this.firstMeet);
+  const ElementId(
+    this.storageId,
+    this.kind,
+    this.firstPossible,
+    this.firstMeet,
+  );
 
   /// Stable snake_case id (storage `metElements`, analytics).
   final String storageId;

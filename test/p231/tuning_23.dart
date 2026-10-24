@@ -55,9 +55,11 @@ const Map<String, String> kTuning23 = {
   'gate_saw': '20',
 };
 
-/// PRD-2.6 wave-1 values needed by tests that pin the whole spawn set. These
-/// are new keys only; they have no historical 2.3 value.
+/// PRD-2.6 values needed by tests that pin the whole spawn set. Some are new
+/// keys; the rest are D2/C3 changes that supersede the historical 2.3 values.
 const Map<String, String> kTuning26Wave1 = {
+  'spawn_switch': '{"from":15,"weight":14,"min_since":3,"cooldown":1}',
+  'spawn_saw': '{"from":30,"weight":14,"min_since":3,"cooldown":1}',
   'spawn_saw_weight': '[[30,14],[60,20],[100,26]]',
 };
 

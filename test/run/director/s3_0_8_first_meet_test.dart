@@ -29,12 +29,11 @@ int? firstShown(RunDirector d, ElementId e, {int n = 120}) {
   return null;
 }
 
-/// PRD-2.2 §19.2 the early pool may show Bullseye, the angled ring and the
+/// PRD-2.2 §19.2 / PRD-2.6 §D2 the early pool may show Bullseye and the
 /// Star Trail from index 4 (before their normal unlock); the first meet
 /// itself is unchanged.
 int earliest(ElementId e) => switch (e) {
   ElementId.bullseye ||
-  ElementId.angledRing ||
   ElementId.starTrail => DirectorTables.prd2.earlyPool!.from,
   _ => e.firstPossible!,
 };
@@ -43,7 +42,6 @@ int earliest(ElementId e) => switch (e) {
 bool fromPool(RunDirector d, ElementId e, int index) =>
     switch (d.earlyPicks[index]) {
       EarlyPick.bullseye => e == ElementId.bullseye,
-      EarlyPick.angled => e == ElementId.angledRing,
       EarlyPick.starTrail => e == ElementId.starTrail,
       _ => false,
     };
@@ -100,7 +98,11 @@ void main() {
           }
         }
         for (final e in firstMeet) {
-          expect(first[e], isNotNull, reason: 'seed $seed never met ${e.storageId}');
+          expect(
+            first[e],
+            isNotNull,
+            reason: 'seed $seed never met ${e.storageId}',
+          );
           expect(first[e]!, greaterThanOrEqualTo(earliest(e)));
         }
         expect(d.firstMeet.met, containsAll(firstMeet));
@@ -128,10 +130,11 @@ void main() {
     });
 
     test('§3.0.8 one forced element at a time, oldest unlock first', () {
-      final fm = FirstMeet(
-        {},
-        {ElementId.bullseye, ElementId.train, ElementId.starTrail},
-      );
+      final fm = FirstMeet({}, {
+        ElementId.bullseye,
+        ElementId.train,
+        ElementId.starTrail,
+      });
       expect(fm.due(4), isNull);
       expect(fm.due(5), ElementId.starTrail);
       expect(fm.due(9), ElementId.starTrail, reason: 'still the head');
@@ -151,7 +154,11 @@ void main() {
     });
 
     test('§3.0.8 the squeeze, the feather and the piece are never forced', () {
-      for (final e in [ElementId.squeeze, ElementId.feather, ElementId.puzzlePiece]) {
+      for (final e in [
+        ElementId.squeeze,
+        ElementId.feather,
+        ElementId.puzzlePiece,
+      ]) {
         expect(e.firstMeet, isFalse);
       }
     });

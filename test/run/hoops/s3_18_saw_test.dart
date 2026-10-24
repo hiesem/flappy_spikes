@@ -108,7 +108,7 @@ void main() {
           seed: seed,
           enabled: ElementId.values.toSet(),
           met: ElementId.values.toSet(),
-          startHoopIndex: 20,
+          startHoopIndex: 30,
         );
         SawDesign? last;
         for (var i = 0; i < 300; i++) {
@@ -158,7 +158,7 @@ void main() {
     }) async {
       final run = await startRun(
         game,
-        startHoopIndex: 20,
+        startHoopIndex: 30,
         force: [ElementId.saw],
         starter: starter,
       );
@@ -179,13 +179,7 @@ void main() {
       setUp: (g, _) => prepare(g),
       verify: (game, _) async {
         final (run, h) = await sawRun(game);
-        expect(
-          h.opening,
-          closeTo(
-            run.director.openingFor(h.plan.index),
-            1e-9,
-          ),
-        );
+        expect(h.opening, closeTo(run.director.openingFor(h.plan.index), 1e-9));
         final events = <RunEvent>[];
         run.events.onAny(events.add);
         final score = run.state.score, streak = run.state.streak;

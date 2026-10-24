@@ -5,6 +5,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/storage.dart';
+import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/services/reminders.dart';
 import 'package:flutter/foundation.dart'
@@ -63,6 +64,7 @@ class MorningSim {
       state: state,
       best: 12,
       coins: 250,
+      metElements: ElementId.values.toSet(),
       lastPlayedAt: now,
       pending: pending,
     );
@@ -103,12 +105,14 @@ void main() {
     List<PendingReminder> pending = const [],
     int best = 12,
     int coins = 250,
+    Set<ElementId>? metElements,
     DateTime? lastPlayed,
   }) => (withScheduler ?? scheduler()).plan(
     now: now,
     state: state,
     best: best,
     coins: coins,
+    metElements: metElements ?? ElementId.values.toSet(),
     lastPlayedAt: lastPlayed ?? now,
     pending: pending,
   );
@@ -172,6 +176,25 @@ void main() {
       expect(ten.title, '1234 coins to spend 💰');
     });
 
+    test('the corrected bodies use the approved 2.6 texts', () {
+      final corrected = {
+        2: 'Your best is 42 points. How close can you get today?',
+        13: 'Fly through a Lucky Spin ring and see where the wheel stops!',
+        16: 'Carry an egg through 5 hoops to hatch a chick for bonus points!',
+        17: 'Grab the piggy bank and catch the coins that follow!',
+      };
+
+      for (final entry in corrected.entries) {
+        final text = ReminderMessages.textFor(
+          entry.key,
+          best: 42,
+          coins: 250,
+        );
+        expect(text.body, entry.value);
+        expect(text.title, ReminderMessages.byNumber(entry.key).title);
+      }
+    });
+
     test('new-player fallback for #1 and #2 (best 0)', () {
       final one = ReminderMessages.textFor(1, best: 0, coins: 0);
       expect(one.title, ReminderMessages.newPlayerTitle1);
@@ -189,6 +212,59 @@ void main() {
   });
 
   group('§3.34 when', () {
+    test('element reminders are unavailable until their element is met', () {
+      const gatedNumbers = [11, 13, 16, 19];
+      const gatedElements = [
+        ElementId.squeeze,
+        ElementId.luckySpin,
+        ElementId.egg,
+        ElementId.fever,
+      ];
+
+      for (final seed in [1, 2, 3, 5, 7, 11, 13, 17, 19, 23]) {
+        final plan = ReminderScheduler(
+          random: Random(seed),
+          location: amsterdam,
+        ).plan(
+          now: tz.TZDateTime(amsterdam, 2026, 10, 8, 9),
+          state: ReminderState.empty,
+          best: 42,
+          coins: 250,
+          metElements: const {},
+        );
+        final plannedGated = plan.reminders
+            .where((r) => gatedNumbers.contains(r.messageNumber))
+            .map((r) => r.messageNumber);
+        expect(plannedGated, isEmpty,
+            reason: 'seed $seed planned an unmet element reminder');
+      }
+
+      for (var i = 0; i < gatedNumbers.length; i++) {
+        final otherNumbers = [
+          for (var number = 1; number <= 20; number++)
+            if (number != gatedNumbers[i]) number,
+        ];
+        final plan = ReminderScheduler(
+          random: Random(7),
+          location: amsterdam,
+        ).plan(
+          now: tz.TZDateTime(amsterdam, 2026, 10, 8, 9),
+          state: ReminderState(
+            order: [gatedNumbers[i], ...otherNumbers],
+            position: 0,
+            lastSent: const {},
+          ),
+          best: 42,
+          coins: 250,
+          metElements: {gatedElements[i]},
+        );
+        expect(
+          plan.reminders.map((r) => r.messageNumber),
+          contains(gatedNumbers[i]),
+        );
+      }
+    });
+
     test('two slots a day inside their windows', () {
       final plan = planAt(tz.TZDateTime(amsterdam, 2026, 10, 8, 9));
       expect(plan.reminders.length, ReminderScheduler.windowSlots);
@@ -348,6 +424,7 @@ void main() {
         state: first.state,
         best: 12,
         coins: 250,
+        metElements: ElementId.values.toSet(),
         lastPlayedAt: now,
         pending: pendingOf(first),
       );
@@ -375,6 +452,7 @@ void main() {
         state: first.state,
         best: 12,
         coins: 250,
+        metElements: ElementId.values.toSet(),
         lastPlayedAt: tz.TZDateTime(amsterdam, 2026, 10, 9, 9),
         pending: pending,
       );
@@ -397,7 +475,13 @@ void main() {
     late ReminderScheduler scheduler;
 
     setUp(() async {
-      SharedPreferences.setMockInitialValues({'bestScore': 12, 'coins': 250});
+      SharedPreferences.setMockInitialValues({
+        'bestScore': 12,
+        'coins': 250,
+        'metElements': [
+          for (final element in ElementId.values) element.storageId,
+        ],
+      });
       platform = FakeReminderPlatform();
       analytics = RecordingGameServices();
       now = tz.TZDateTime(amsterdam, 2026, 10, 8, 22);

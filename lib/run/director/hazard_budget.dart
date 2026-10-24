@@ -1,15 +1,214 @@
+import '../config/tuning_values.dart';
+import '../elements.dart';
 import 'plans.dart';
 
 /// PRD-2.6 D3 rolling four-slot hazard accounting.
-///
-/// The M1 ledger is deliberately permissive: it records nothing and accepts
-/// every plan. The curve task replaces these methods while retaining the API.
 class HazardBudget {
-  double budgetAt(int hoop) => double.infinity;
+  HazardBudget([TuningValues? values]) : _values = values ?? tuning;
 
-  double costOf(SlotPlan plan) => plan.hazardCost;
+  final TuningValues _values;
+  final List<double> _ledger = [];
 
-  bool allows(SlotPlan plan) => true;
+  static const int windowSize = 4;
 
-  void add(SlotPlan plan) {}
+  double budgetAt(int hoop) => _values.curve('hazard_budget').at(hoop);
+
+  double costOf(
+    SlotPlan plan, {
+    double? previousY,
+    double? rowP90,
+    bool squeeze = false,
+  }) {
+    final costs = _values.obj('hazard_costs');
+    if (plan.cometHang || plan.duringRide) return 0;
+
+    var cost = 0.0;
+    cost += switch (plan.kind) {
+      HoopKindId.saw => costs['saw']!,
+      HoopKindId.switchRing => costs['switch']!,
+      HoopKindId.spring => costs['spring']!,
+      HoopKindId.pair => costs['pair']!,
+      HoopKindId.train => costs['train']!,
+      HoopKindId.normal => 0,
+      HoopKindId.bullseye ||
+      HoopKindId.fever ||
+      HoopKindId.luckySpin ||
+      HoopKindId.portal ||
+      HoopKindId.rideRing => 0,
+    };
+
+    final tilt = plan.tiltDeg.abs();
+    if (tilt > 0) {
+      cost += tilt <= 20
+          ? costs['tilt_20']!
+          : tilt <= 30
+          ? costs['tilt_30']!
+          : costs['tilt_45']!;
+    }
+    if (plan.motion case final motion?) {
+      cost += switch (motion.type) {
+        MotionType.rail => costs['rail']!,
+        MotionType.swing => costs['swing']!,
+        MotionType.horizontal ||
+        MotionType.diagonal ||
+        MotionType.orbit ||
+        MotionType.rock => costs['other_motion']!,
+      };
+    }
+    if (previousY != null && rowP90 != null) {
+      final dy = (plan.centreY - previousY).abs();
+      if (dy > rowP90) {
+        cost += costs['dy_p90']!;
+      }
+    }
+    if (squeeze) {
+      cost += costs['squeeze']!;
+    }
+    return cost;
+  }
+
+  bool allows(
+    SlotPlan plan, {
+    double? previousY,
+    double? rowP90,
+    bool squeeze = false,
+  }) {
+    if (plan.forced) return true;
+    final cost = costOf(
+      plan,
+      previousY: previousY,
+      rowP90: rowP90,
+      squeeze: squeeze,
+    );
+    return _ledgerSum + cost <= budgetAt(plan.index) + _epsilon;
+  }
+
+  void add(
+    SlotPlan plan, {
+    double? previousY,
+    double? rowP90,
+    bool squeeze = false,
+  }) {
+    _ledger.add(
+      costOf(plan, previousY: previousY, rowP90: rowP90, squeeze: squeeze),
+    );
+    if (_ledger.length > windowSize) {
+      _ledger.removeRange(0, _ledger.length - windowSize);
+    }
+  }
+
+  SlotPlan downgrade(
+    SlotPlan plan, {
+    double? previousY,
+    double? rowP90,
+    bool squeeze = false,
+  }) {
+    if (plan.forced) return plan;
+
+    SlotPlan current = _withCost(
+      plan,
+      previousY: previousY,
+      rowP90: rowP90,
+      squeeze: squeeze,
+    );
+    if (_fits(
+      current,
+      previousY: previousY,
+      rowP90: rowP90,
+      squeeze: squeeze,
+    )) {
+      return current;
+    }
+
+    current = _withCost(
+      current.copyWith(motion: () => null),
+      previousY: previousY,
+      rowP90: rowP90,
+      squeeze: squeeze,
+    );
+    if (_fits(
+      current,
+      previousY: previousY,
+      rowP90: rowP90,
+      squeeze: squeeze,
+    )) {
+      return current;
+    }
+
+    final tilt = current.tiltDeg;
+    if (tilt.abs() > 15) {
+      current = _withCost(
+        current.copyWith(tiltDeg: tilt.sign * 15),
+        previousY: previousY,
+        rowP90: rowP90,
+        squeeze: squeeze,
+      );
+    }
+    if (_fits(
+      current,
+      previousY: previousY,
+      rowP90: rowP90,
+      squeeze: squeeze,
+    )) {
+      return current;
+    }
+
+    if (previousY != null && rowP90 != null) {
+      final delta = current.centreY - previousY;
+      if (delta.abs() > rowP90) {
+        current = _withCost(
+          current.copyWith(centreY: previousY + delta.sign * rowP90),
+          previousY: previousY,
+          rowP90: rowP90,
+          squeeze: squeeze,
+        );
+      }
+    }
+    if (_fits(
+      current,
+      previousY: previousY,
+      rowP90: rowP90,
+      squeeze: squeeze,
+    )) {
+      return current;
+    }
+
+    return _withCost(
+      current.copyWith(
+        kind: HoopKindId.normal,
+        element: ElementId.normalHoop,
+        ringOffsets: const [0],
+        extra: () => null,
+        attached: const [],
+      ),
+      previousY: previousY,
+      rowP90: rowP90,
+      squeeze: squeeze,
+    );
+  }
+
+  SlotPlan _withCost(
+    SlotPlan plan, {
+    double? previousY,
+    double? rowP90,
+    bool squeeze = false,
+  }) => plan.copyWith(
+    hazardCost: costOf(
+      plan,
+      previousY: previousY,
+      rowP90: rowP90,
+      squeeze: squeeze,
+    ),
+  );
+
+  bool _fits(
+    SlotPlan plan, {
+    double? previousY,
+    double? rowP90,
+    bool squeeze = false,
+  }) => _ledgerSum + plan.hazardCost <= budgetAt(plan.index) + _epsilon;
+
+  double get _ledgerSum => _ledger.fold(0, (sum, cost) => sum + cost);
+
+  static const double _epsilon = 0.000001;
 }

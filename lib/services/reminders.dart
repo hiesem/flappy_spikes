@@ -8,6 +8,7 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../game/storage.dart';
+import '../run/elements.dart';
 import 'game_services.dart';
 
 /// Reminder notifications (PRD-2 §3.34).
@@ -108,7 +109,7 @@ class ReminderMessages {
     ReminderMessage(
       2,
       'Chase your record 🏅',
-      '{best} hoops is your best. How close can you get today?',
+      'Your best is {best} points. How close can you get today?',
     ),
     ReminderMessage(
       3,
@@ -163,7 +164,7 @@ class ReminderMessages {
     ReminderMessage(
       13,
       'Spin to win 🎡',
-      'Lucky Spin rings pay out up to 20 coins. Go find one!',
+      'Fly through a Lucky Spin ring and see where the wheel stops!',
     ),
     ReminderMessage(
       14,
@@ -178,12 +179,12 @@ class ReminderMessages {
     ReminderMessage(
       16,
       'Hatch a lucky chick 🥚',
-      'Carry an egg through 5 hoops and double every coin!',
+      'Carry an egg through 5 hoops to hatch a chick for bonus points!',
     ),
     ReminderMessage(
       17,
       'Fill the piggy bank 🐷',
-      'Grab the piggy and catch all 20 coins for a double payout!',
+      'Grab the piggy bank and catch the coins that follow!',
     ),
     ReminderMessage(
       18,
@@ -428,6 +429,13 @@ class ReminderScheduler {
   static const int awakeHourFrom = 9;
   static const int awakeHourTo = 22;
 
+  static const Map<int, ElementId> _elementByMessage = {
+    11: ElementId.squeeze,
+    13: ElementId.luckySpin,
+    16: ElementId.egg,
+    19: ElementId.fever,
+  };
+
   /// Builds the next 7 days of reminders (§3.34 "Scheduling").
   ///
   /// [now] is the moment the app is left (+ the app-start pass): it is both
@@ -441,6 +449,7 @@ class ReminderScheduler {
     required ReminderState state,
     required int best,
     required int coins,
+    Set<ElementId>? metElements,
     DateTime? lastPlayedAt,
     List<PendingReminder> pending = const [],
   }) {
@@ -475,6 +484,7 @@ class ReminderScheduler {
       random: _random,
       order: unscheduled.order,
       position: position,
+      unavailableMessages: _unavailableMessages(metElements),
     );
 
     final reminders = <ScheduledReminder>[];
@@ -512,6 +522,14 @@ class ReminderScheduler {
     final order = List<int>.generate(ReminderMessages.count, (i) => i + 1);
     order.shuffle(_random);
     return order;
+  }
+
+  static Set<int> _unavailableMessages(Set<ElementId>? metElements) {
+    if (metElements == null) return const {};
+    return {
+      for (final entry in _elementByMessage.entries)
+        if (!metElements.contains(entry.value)) entry.key,
+    };
   }
 
   /// The window's slot times: today's remaining slots plus the next days up
@@ -567,13 +585,19 @@ class ReminderScheduler {
 /// at least [ReminderScheduler.noRepeatDays] days away from its last use,
 /// reshuffling (least recently used first) when the order runs out.
 class _Rotation {
-  _Rotation({required this.random, required List<int> order, required int position})
+  _Rotation({
+    required this.random,
+    required List<int> order,
+    required int position,
+    required this.unavailableMessages,
+  })
     : order = List<int>.of(order),
       position = position.clamp(0, order.length);
 
   final Random random;
   List<int> order;
   int position;
+  final Set<int> unavailableMessages;
   final Set<int> _used = {};
 
   int take(DateTime slotDay, Map<int, String> lastSent) {
@@ -587,6 +611,7 @@ class _Rotation {
       }
       final number = order[position++];
       if (_used.contains(number)) continue;
+      if (unavailableMessages.contains(number)) continue;
       if (_blocked(number, slotDay, lastSent)) continue;
       _used.add(number);
       return number;
@@ -617,7 +642,9 @@ class _Rotation {
   }
 
   int _oldest(Map<int, String> lastSent) {
-    final candidates = order.where((m) => !_used.contains(m)).toList();
+    final candidates = order
+        .where((m) => !_used.contains(m) && !unavailableMessages.contains(m))
+        .toList();
     if (candidates.isEmpty) {
       return order.firstWhere((m) => !_used.contains(m), orElse: () => order.first);
     }
@@ -991,6 +1018,11 @@ class LocalReminders implements Reminders {
         // that already fired (the order only ever moves forward).
         pending = const [];
       }
+      final metElements = <ElementId>{};
+      for (final storageId in _store.metElements) {
+        final element = ElementId.fromStorageId(storageId);
+        if (element != null) metElements.add(element);
+      }
       final plan = _scheduler.plan(
         now: now,
         state: ReminderState(
@@ -1000,6 +1032,7 @@ class LocalReminders implements Reminders {
         ),
         best: _store.bestScore,
         coins: _store.coins,
+        metElements: metElements,
         // §3.34: a reminder within 2 h of now is skipped — the player just
         // played (this runs when the app is left and at app start).
         lastPlayedAt: now,

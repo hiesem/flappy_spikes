@@ -26,19 +26,6 @@ void main() {
       if (e.$1 == name) e.$2!,
   ];
 
-  /// Steps until [until] (at most [seconds]) without flying further hoops.
-  Future<void> stepUntil(
-    FlappySpikesGame game,
-    bool Function() until, {
-    double seconds = 4,
-  }) async {
-    for (var t = 0.0; t < seconds && !until(); t += 1 / 60) {
-      game.update(1 / 60);
-      if (((t * 60).round() % 10) == 0) await flushAndMount(game);
-    }
-    await flushAndMount(game);
-  }
-
   /// Steps through the death tumble to the revive offer / results.
   Future<void> settleDeath(FlappySpikesGame game) async {
     for (var t = 0.0; t < 3 && game.state == GameState.dying; t += 1 / 60) {
@@ -263,7 +250,9 @@ void main() {
         run.events.emit(const RideEnded(RideKind.comet));
         run.ctx.earn(3, CoinSource.bonus);
         run.ctx.earn(5, CoinSource.hoop);
-        run.events.emit(const HighlightStarted('ride', scripted: false, hoop: 4));
+        run.events.emit(
+          const HighlightStarted('ride', scripted: false, hoop: 4),
+        );
         run.state.squeeze
           ..phase = SqueezePhase.warning
           ..index = 2;
@@ -280,6 +269,7 @@ void main() {
         expect(events(spy, 'run_fail'), hasLength(1));
 
         final extra = events(spy, 'run_extra').single;
+        expect(extra, hasLength(lessThanOrEqualTo(25)));
         for (var tier = 1; tier <= 10; tier++) {
           expect(extra['perfect_$tier'], 1, reason: 'tier $tier');
         }
@@ -318,7 +308,9 @@ void main() {
       verify: (game, _) async {
         spy.events.clear();
         final run = await startRun(game);
-        run.events.emit(const HoopPassed(null, perfect: true, duringRide: true));
+        run.events.emit(
+          const HoopPassed(null, perfect: true, duringRide: true),
+        );
         game.endRun(run.endRun());
         expect(events(spy, 'run_extra').single['ride_hoops'], 1);
       },

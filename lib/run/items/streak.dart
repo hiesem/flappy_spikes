@@ -406,8 +406,7 @@ class _TrailComponent extends Component with BirdAttachment {
     if (_pCount > 0) {
       final h = _pHead;
       final ddx = x - _px[h], ddy = y - _py[h];
-      if (ddx * ddx + ddy * ddy <
-          TrailConfig.pathStep * TrailConfig.pathStep) {
+      if (ddx * ddx + ddy * ddy < TrailConfig.pathStep * TrailConfig.pathStep) {
         return;
       }
     }

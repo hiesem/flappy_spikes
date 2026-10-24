@@ -419,7 +419,8 @@ class AnalyticsRouter extends RunFeature {
     });
     final perfects = _perfectCounts(s.perfectPasses);
     c.track('run_extra', {
-      for (var tier = 1; tier <= 10; tier++) 'perfect_$tier': perfects[tier - 1],
+      for (var tier = 1; tier <= 10; tier++)
+        'perfect_$tier': perfects[tier - 1],
       'ride_hoops': _rideHoops,
       'squeezes': _squeezes,
       'max_speed': _maxSpeed,

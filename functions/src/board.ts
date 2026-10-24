@@ -12,6 +12,8 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { passBound, runFacts, scoreRun, type Anomaly, type RunFacts } from './anomaly.js';
 import { bracketFor } from './brackets.js';
 import {
+  BONUS_CAP,
+  GIFT_CAP,
   LB_BEST_SIZE,
   LB_GIFTS,
   LB_GHOST_MAX_AGE,
@@ -25,6 +27,9 @@ import {
   LB_PLAYING_NOW_MS,
   LB_PRIZE_PLACES,
   MIN_SCORE,
+  PASS_CAP_EXTRA,
+  PASS_CAP_MULT,
+  PUZZLE_BONUS_CAP,
   utcDay,
   type LbBestRow,
   type LbGiftDoc,
@@ -953,8 +958,17 @@ function validRunShape(input: unknown): input is LbSubmittedRun {
 }
 
 function scoreOnlyBoundsOk(run: LbSubmittedRun): boolean {
-  if (run.hoops < 1 || run.hoops > passBound(run.cs)) return false;
-  return run.score <= run.hoops * (run.hoops + 11);
+  const opportunities = passBound(run.cs);
+  if (run.hoops > opportunities) return false;
+  // Sum the per-pass caps from plausibleValues. Non-notable uploads omit
+  // their timelines (O55), so their score also needs room for coin bonuses,
+  // pair gifts and puzzle payouts. Use the duration's opportunity bound,
+  // rather than successful passes: pickups can be caught beside missed hoops.
+  // Allow every kind at each opportunity conservatively; a notable score
+  // still needs a timeline to update BEST and otherwise gets the TODAY clamp.
+  const passScore = PASS_CAP_MULT * run.hoops * ((run.hoops + 1) / 2 + PASS_CAP_EXTRA);
+  const extraScore = opportunities * (BONUS_CAP + GIFT_CAP + PUZZLE_BONUS_CAP);
+  return run.score <= passScore + extraScore;
 }
 
 function verifyTimeline(run: LbSubmittedRun, ctx: LbRunCheckContext): TimelineVerified {
@@ -1054,12 +1068,16 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
   const accepted: string[] = [];
   const dropped: LbDroppedRun[] = [];
 
+  // Malformed entries sort after valid runs. Giving every input a fixed
+  // chronological key keeps the comparator consistent even across bad data.
   const shaped = runs
-    .map((input, index) => ({ input, index, id: validRunShape(input) ? input.id : '' }))
-    .sort((a, b) => {
-      if (!validRunShape(a.input) || !validRunShape(b.input)) return a.index - b.index;
-      return intervalStart(a.input) - intervalStart(b.input) || a.index - b.index;
-    });
+    .map((input, index) => ({
+      input,
+      index,
+      id: validRunShape(input) ? input.id : '',
+      start: validRunShape(input) ? intervalStart(input) : Infinity,
+    }))
+    .sort((a, b) => a.start - b.start || a.index - b.index);
 
   const duplicateIndexes = new Set<number>();
   const batchIds = new Set(seen);

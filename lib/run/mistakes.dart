@@ -16,6 +16,28 @@ enum MistakeCause {
   final String analyticsName;
 }
 
+/// What the mistake pipeline did with one mistake (PRD-2.6 WP-A2
+/// `run_fail.outcome`).
+enum MistakeResolution {
+  /// The run continues with a shield.
+  shield,
+
+  /// The run continues with the extra life.
+  life,
+
+  /// The run continues after a rewarded-ad revive.
+  reviveAd,
+
+  /// The run continues after a coin revive.
+  reviveCoins,
+
+  /// The run continues after a showcase's free revive.
+  reviveFree,
+
+  /// The mistake ended the run.
+  end,
+}
+
 /// A themed death's signature moment (§3.0.5: Live Wire, Frost Ring, Black
 /// Hole, switch crashes); played before the tumble.
 class ThemedDeath {
@@ -57,6 +79,12 @@ abstract class MistakeInterceptor {
 class MistakePipeline {
   final List<MistakeInterceptor> _interceptors = [];
 
+  /// Called once for every mistake that is not ignored. A save is reported
+  /// at once; a death is reported as [MistakeResolution.end] by the
+  /// controller's idempotent [RunEnded], so a revive can replace it with
+  /// the revive outcome first. The analytics router owns the listener.
+  void Function(Mistake mistake, MistakeResolution outcome)? onResolved;
+
   void add(MistakeInterceptor i) {
     _interceptors
       ..add(i)
@@ -72,10 +100,15 @@ class MistakePipeline {
     for (final i in _interceptors) {
       if (i.tryAbsorb(m, ctx)) {
         s.saves++;
+        onResolved?.call(
+          m,
+          i.id == 'shield' ? MistakeResolution.shield : MistakeResolution.life,
+        );
         ctx.emit(MistakeSaved(m, i.id));
         return MistakeOutcome.saved;
       }
     }
+    onResolved?.call(m, MistakeResolution.end);
     ctx.emit(RunDied(m));
     return MistakeOutcome.died;
   }

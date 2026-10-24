@@ -1,13 +1,35 @@
+import 'dart:math' as math;
+
 import '../../menu/wallet.dart';
+import '../../services/analytics_buckets.dart';
 import '../config/run_config.dart';
+import '../director/formations.dart';
+import '../director/plans.dart';
+import '../elements.dart';
+import '../hoops/hoop.dart';
+import '../mistakes.dart';
 import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
+import '../run_state.dart';
 
-/// Run-level analytics (PRD-2 §6, ARCH §2.7): `run_end`,
-/// `run_director_hoops`, `run_director_items` (≤ 25 int params each) at the
-/// end of a run, plus the in-run `coins_earned` aggregated per (source,
-/// egg_x2) into one event each (call: avoids ~100 events per run).
+/// The plan/state snapshot of one mistake (PRD-2.6 WP-A2 `run_fail`).
+///
+/// It is taken when the mistake happens, not when the run later ends or the
+/// player revives: by then the squeeze / ride / course state has moved on.
+class _FailSnapshot {
+  const _FailSnapshot(this.params);
+
+  final Map<String, Object> params;
+}
+
+/// Run-level analytics (PRD-2 §6, PRD-2.6 WP-A; ARCH §2.7).
+///
+/// Sends `run_fail` once for every mistake that would have ended the run,
+/// `run_end`, `run_director_hoops` and `run_director_items` (each ≤ 25
+/// parameters) at the end, `run_extra` with the per-run detail whose
+/// per-pass counterpart would be too expensive, plus `coins_earned`
+/// aggregated per (source, egg_x2) into one event each.
 class AnalyticsRouter extends RunFeature {
   RunContext? _c;
   final Map<(CoinSource, bool), int> _coins = {};
@@ -49,9 +71,67 @@ class AnalyticsRouter extends RunFeature {
     // endregion anchors
   ];
 
+  /// The 22 `run_fail` parameters, in the PRD's order.
+  static const List<String> failKeys = [
+    'hoop',
+    'hb',
+    'cause',
+    'elem',
+    'tilt_deg',
+    'motion',
+    'opening',
+    'dy_pt',
+    'squeeze_idx',
+    'calm',
+    'hazard_x10',
+    'since_calm',
+    'formation',
+    'ride_exit',
+    'new_elem',
+    'outcome',
+    'run_no',
+    'gb',
+    'level',
+    'mode',
+    'showcase',
+    'speed',
+  ];
+
   /// `gamesPlayed` when the run started (PRD-2.3 §14.8 `games_played`
-  /// counts this run too).
+  /// counts this run too; WP-A's `run_no` is the 1-based game number).
   int _gamesAtStart = 0;
+
+  /// The elements the player had already met when this run started. The run
+  /// itself adds every spawned element to `RunState.metElements`, so asking
+  /// that set at failure time would always answer "not new".
+  Set<ElementId> _metAtStart = const {};
+
+  /// Perfect passes per streak tier (1 … 10). The streak owner emits
+  /// `StreakChanged` from inside the `HoopPassed` dispatch; the router
+  /// attaches first, so it observes that nested event and records the tier
+  /// without a per-pass analytics event.
+  final List<int> _perfectByTier = List.filled(10, 0);
+  bool _perfectPending = false;
+  final List<int> _perfectUncounted = [];
+
+  /// Spawned slot plans by slot index (train rings share one plan index).
+  final Map<int, SlotPlan> _plans = {};
+  int _calmCount = 0;
+  int _maxHazardX10 = 0;
+
+  int _highlights = 0;
+  int _rideHoops = 0;
+  int _squeezes = 0;
+  int _coinsBonus = 0;
+  int _maxSpeed = 0;
+  int _revivesAd = 0;
+  int _revivesCoin = 0;
+
+  /// The most recent completed ride, for `run_fail.ride_exit`.
+  double? _rideEndedAt;
+
+  /// A death that has not been resolved by a revive or the run end yet.
+  _FailSnapshot? _pendingFail;
 
   /// PRD-2.3 §14.8 a ratio with 2 decimals.
   static double ratio2(num a, num b) =>
@@ -61,19 +141,247 @@ class AnalyticsRouter extends RunFeature {
   void attach(RunContext c) {
     _c = c;
     _gamesAtStart = c.game.storage.gamesPlayed;
-    c.events.on<CoinsEarned>(_onCoins);
-    c.events.on<RunEnded>(_onEnded);
+    _metAtStart = Set.of(c.s.metElements);
+    c.run.pipeline.onResolved = _onResolved;
+    c.events
+      ..on<CoinsEarned>(_onCoins)
+      ..on<HoopSpawned>(_onHoopSpawned)
+      ..on<HoopPassed>(_onHoopPassed)
+      ..on<StreakChanged>(_onStreakChanged)
+      ..on<SqueezePhaseChanged>(_onSqueezeChanged)
+      ..on<RideEnded>(_onRideEnded)
+      ..on<HighlightStarted>(_onHighlight)
+      ..on<Revived>(_onRevived)
+      ..on<RunEnded>(_onEnded);
   }
 
+  // ------------------------------------------------------------ in-run
+
   void _onCoins(CoinsEarned e) {
-    if (!e.source.aggregatedInRun) return;
-    final key = (e.source, e.eggX2);
-    _coins[key] = (_coins[key] ?? 0) + e.amount;
+    if (e.source.aggregatedInRun) {
+      final key = (e.source, e.eggX2);
+      _coins[key] = (_coins[key] ?? 0) + e.amount;
+    }
+    if (RunContext.paysPoints(e.source)) _coinsBonus += e.amount;
   }
+
+  void _onHoopSpawned(HoopSpawned e) {
+    final plan = e.plan;
+    if (_plans.containsKey(plan.index)) return;
+    _plans[plan.index] = plan;
+    if (plan.calm) _calmCount++;
+    final hazard = (plan.hazardCost * 10).round();
+    if (hazard > _maxHazardX10) _maxHazardX10 = hazard;
+  }
+
+  void _onHoopPassed(HoopPassed e) {
+    _perfectPending = e.perfect;
+    if (!e.perfect) {
+      _perfectUncounted.clear();
+      return;
+    }
+    _perfectUncounted.add(_scoredTier(e));
+    if (e.duringRide) _rideHoops++;
+  }
+
+  void _onStreakChanged(StreakChanged e) {
+    if (e.cause != StreakCause.pass && e.cause != StreakCause.fever) return;
+    if (_perfectPending) {
+      _perfectPending = false;
+      final tier = e.newStreak.clamp(1, 10);
+      _perfectByTier[tier - 1]++;
+      if (_perfectUncounted.isNotEmpty) _perfectUncounted.removeLast();
+    }
+  }
+
+  /// A FEVER pass can keep the streak on max(5, streak + 1), so it emits no
+  /// `StreakChanged` and the handshake above has nothing to count. The
+  /// summary's perfect total is authoritative; put any such pass in the
+  /// tier it was scored at (its row's 5…10) so `run_extra` always sums to
+  /// `run_end`'s perfect count.
+  List<int> _perfectCounts(int perfectPasses) {
+    final out = List.of(_perfectByTier);
+    final counted = out.fold<int>(0, (sum, n) => sum + n);
+    final missing = perfectPasses - counted;
+    for (var i = 0; i < missing; i++) {
+      final tier = i < _perfectUncounted.length
+          ? _perfectUncounted[i]
+          : (_c?.s.streak ?? 1).clamp(1, 10);
+      out[tier - 1]++;
+    }
+    return out;
+  }
+
+  /// The tier a perfect pass scores at: the ordinary streak increment before
+  /// `StreakFeature` boosts a FEVER ring to at least ×5.
+  int _scoredTier(HoopPassed e) {
+    final streak = _c?.s.streak ?? 0;
+    return (e.hoop?.plan.kind == HoopKindId.fever
+            ? math.max(streak + 1, 5)
+            : streak + 1)
+        .clamp(1, 10);
+  }
+
+  void _onSqueezeChanged(SqueezePhaseChanged e) {
+    if (e.phase == SqueezePhase.warning) _squeezes++;
+  }
+
+  void _onRideEnded(RideEnded e) {
+    final c = _c;
+    if (c != null) _rideEndedAt = c.s.runClock;
+  }
+
+  void _onHighlight(HighlightStarted e) => _highlights++;
+
+  // ------------------------------------------------------------ mistakes
+
+  void _onResolved(Mistake m, MistakeResolution outcome) {
+    final c = _c;
+    if (c == null) return;
+    final snapshot = _snapshotFail(m, outcome);
+    if (outcome == MistakeResolution.end) {
+      // A death is not final yet: [Revived] replaces this with the paid
+      // outcome, while the idempotent [RunEnded] confirms `end`.
+      _pendingFail = snapshot;
+      return;
+    }
+    c.track('run_fail', snapshot.params);
+  }
+
+  _FailSnapshot _snapshotFail(Mistake m, MistakeResolution outcome) {
+    final c = _c!;
+    final s = c.s;
+    final plan = m.hoop?.plan ?? _nextHoopPlan();
+    final index = plan?.index ?? s.hoopIndex;
+    final previous = _previousPlan(plan);
+    final motion = plan?.motion;
+    return _FailSnapshot({
+      'hoop': index,
+      'hb': AnalyticsBuckets.hoopBucket(index),
+      'cause': m.cause.analyticsName,
+      'elem': plan?.element.storageId ?? 'none',
+      'tilt_deg': (plan?.tiltDeg ?? 0).round(),
+      'motion': motion == null ? 'none' : _snake(motion.type.name),
+      'opening': (plan?.opening ?? RunConfig.openingFor(index)).round(),
+      'dy_pt': previous == null
+          ? 0
+          : ((plan?.centreY ?? previous.centreY) - previous.centreY)
+                .abs()
+                .round(),
+      'squeeze_idx': s.squeeze.phase == SqueezePhase.idle
+          ? -1
+          : s.squeeze.index,
+      'calm': plan?.calm == true ? 1 : 0,
+      'hazard_x10': ((plan?.hazardCost ?? 0) * 10).round(),
+      'since_calm': _sinceCalm(index),
+      'formation': _formationName(plan?.formation),
+      'ride_exit': _rideExit(s.runClock),
+      'new_elem': _newElement(plan?.element),
+      'outcome': _outcomeName(outcome),
+      'run_no': _gamesAtStart + 1,
+      'gb': AnalyticsBuckets.gamesBucket(_gamesAtStart + 1),
+      'level': 0,
+      'mode': c.game.homeMode.analytics,
+      'showcase': _showcase(c),
+      'speed': s.forwardSpeed.round(),
+    });
+  }
+
+  SlotPlan? _nextHoopPlan() {
+    final c = _c;
+    if (c == null) return null;
+    final Hoop? hoop = c.run.spawner.nextHoopAhead();
+    return hoop?.plan;
+  }
+
+  /// The nearest earlier spawned slot, excluding other rings of the same
+  /// train / pair group.
+  SlotPlan? _previousPlan(SlotPlan? plan) {
+    if (plan == null) return null;
+    SlotPlan? previous;
+    for (final p in _plans.values) {
+      if (p.index >= plan.index) continue;
+      if (previous == null || p.index > previous.index) previous = p;
+    }
+    return previous;
+  }
+
+  int _sinceCalm(int index) {
+    var calm = -1;
+    for (final plan in _plans.values) {
+      if (plan.index > index) continue;
+      if (plan.calm && plan.index > calm) calm = plan.index;
+    }
+    return calm < 0 ? -1 : index - calm;
+  }
+
+  int _rideExit(double now) {
+    final at = _rideEndedAt;
+    if (at == null) return -1;
+    return math.max(0, (now - at).round());
+  }
+
+  String _newElement(ElementId? element) {
+    if (element == null || _metAtStart.contains(element)) return 'none';
+    return element.storageId;
+  }
+
+  static String _formationName(FormationId? id) =>
+      id == null ? 'none' : _snake(id.name);
+
+  static String _outcomeName(MistakeResolution outcome) => switch (outcome) {
+    MistakeResolution.shield => 'shield',
+    MistakeResolution.life => 'life',
+    MistakeResolution.reviveAd => 'revive_ad',
+    MistakeResolution.reviveCoins => 'revive_coins',
+    MistakeResolution.reviveFree => 'revive_free',
+    MistakeResolution.end => 'end',
+  };
+
+  static int _showcase(RunContext c) {
+    final plan = c.run.setup.showcase;
+    return plan == null ? 0 : plan.step + 1;
+  }
+
+  static String _snake(String value) {
+    final out = StringBuffer();
+    for (var i = 0; i < value.length; i++) {
+      final ch = value[i];
+      final upper = ch.toUpperCase() == ch && ch.toLowerCase() != ch;
+      if (upper && i > 0) out.write('_');
+      out.write(ch.toLowerCase());
+    }
+    return out.toString();
+  }
+
+  void _onRevived(Revived e) {
+    final c = _c;
+    final pending = _pendingFail;
+    if (c == null || pending == null) return;
+    _pendingFail = null;
+    final outcome = e.kind == ReviveKind.ad
+        ? 'revive_ad'
+        : e.price == 0
+        ? 'revive_free'
+        : 'revive_coins';
+    if (e.kind == ReviveKind.ad) {
+      _revivesAd++;
+    } else if (e.price > 0) {
+      _revivesCoin++;
+    }
+    pending.params['outcome'] = outcome;
+    c.track('run_fail', pending.params);
+  }
+
+  // ------------------------------------------------------------ run end
 
   void _onEnded(RunEnded e) {
     final c = _c;
     if (c == null) return;
+    final pending = _pendingFail;
+    _pendingFail = null;
+    if (pending != null) c.track('run_fail', pending.params);
+
     final s = e.summary;
     c.track('run_end', {
       'cause': s.cause.analyticsName,
@@ -84,7 +392,8 @@ class AnalyticsRouter extends RunFeature {
       'score': s.score,
       'hoops': s.hoopsPassed,
       'max_streak': s.maxStreak,
-      // PRD-2.2 §11.4
+      // PRD-2.2 §11.4 (PRD-2.6 WP-A keeps this; opening_end / speed_end /
+      // games_played make room for the new fields instead).
       'clean_passes': s.cleanPasses,
       'coins': s.coins,
       'saves': s.saves,
@@ -94,9 +403,29 @@ class AnalyticsRouter extends RunFeature {
       // PRD-2.3 §14.8 the budget and difficulty checks.
       'coins_per_hoop': ratio2(s.coins, s.hoopsPassed < 1 ? 1 : s.hoopsPassed),
       'perfect_rate': ratio2(s.perfectPasses, s.passes),
-      'opening_end': RunConfig.openingFor(s.hoopIndex).round(),
-      'speed_end': RunConfig.cruise(c.s.hoopIndex).round(),
-      'games_played': _gamesAtStart + 1,
+      // PRD-2.6 WP-A2.
+      'mode': c.game.homeMode.analytics,
+      'showcase': _showcase(c),
+      'hb': AnalyticsBuckets.hoopBucket(s.hoopsPassed),
+      'highlights': _highlights,
+      'calm_count': _calmCount,
+      'max_hazard_x10': _maxHazardX10,
+      'revives_ad': _revivesAd,
+      'revives_coin': _revivesCoin,
+      // WP-J / WP-K fields are inert until M2.
+      'level': 0,
+      'lvl_pts_before': 0,
+      'beat_best_hoop': -1,
+    });
+    final perfects = _perfectCounts(s.perfectPasses);
+    c.track('run_extra', {
+      for (var tier = 1; tier <= 10; tier++) 'perfect_$tier': perfects[tier - 1],
+      'ride_hoops': _rideHoops,
+      'squeezes': _squeezes,
+      'max_speed': _maxSpeed,
+      'coins_bonus': _coinsBonus,
+      'formations': _formationCount(),
+      'downgraded': 0,
     });
     c.track('run_director_hoops', {
       for (final k in hoopKeys) k: s.spawned[k] ?? 0,
@@ -119,10 +448,44 @@ class AnalyticsRouter extends RunFeature {
     _coins.clear();
   }
 
+  /// Counts formation *starts* (a formation's slots share one id), not its
+  /// individual hoops.
+  int _formationCount() {
+    final indices = _plans.keys.toList()..sort();
+    FormationId? previous;
+    var count = 0;
+    for (final index in indices) {
+      final id = _plans[index]!.formation;
+      if (id != null && id != previous) count++;
+      previous = id;
+    }
+    return count;
+  }
+
+  @override
+  void update(double gameDt, double realDt) {
+    final speed = _c?.s.forwardSpeed.round() ?? 0;
+    if (speed > _maxSpeed) _maxSpeed = speed;
+  }
+
   @override
   void detach() {
-    _c?.events.off<CoinsEarned>(_onCoins);
-    _c?.events.off<RunEnded>(_onEnded);
+    final c = _c;
+    if (c != null) {
+      if (c.run.pipeline.onResolved == _onResolved) {
+        c.run.pipeline.onResolved = null;
+      }
+      c.events
+        ..off<CoinsEarned>(_onCoins)
+        ..off<HoopSpawned>(_onHoopSpawned)
+        ..off<HoopPassed>(_onHoopPassed)
+        ..off<StreakChanged>(_onStreakChanged)
+        ..off<SqueezePhaseChanged>(_onSqueezeChanged)
+        ..off<RideEnded>(_onRideEnded)
+        ..off<HighlightStarted>(_onHighlight)
+        ..off<Revived>(_onRevived)
+        ..off<RunEnded>(_onEnded);
+    }
     _c = null;
   }
 }

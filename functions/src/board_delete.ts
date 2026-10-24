@@ -32,6 +32,7 @@ import {
   LB_PLAYERS_COLLECTION,
   LB_TOMB_COLLECTION,
   MAX_BRACKET,
+  NAMES_COLLECTION,
   type LbBestDoc,
   type LbBestRow,
   type LbGhostDay,
@@ -39,6 +40,7 @@ import {
   type LbGroupDoc,
   type LbPlayerDoc,
   type Look,
+  type NameDoc,
 } from './schema.js';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -150,7 +152,7 @@ async function forEachLimited<T>(items: readonly T[], fn: (item: T) => Promise<v
  * (and its ghost entry is pruned afterwards) or retries against a group that
  * no longer contains the uid.
  */
-async function stripGroups(db: Firestore, uid: string, currentGid: string | null): Promise<void> {
+export async function stripGroups(db: Firestore, uid: string, currentGid: string | null): Promise<void> {
   let directGid = currentGid;
   for (;;) {
     const [byMember, byGhost] = await Promise.all([
@@ -301,7 +303,7 @@ async function removeFromBest(
 }
 
 /** Remove this uid's rows from all 44 ghost-pool documents. */
-async function pruneGhostPools(db: Firestore, uid: string, nowMs: number): Promise<void> {
+export async function pruneGhostPools(db: Firestore, uid: string, nowMs: number): Promise<void> {
   await forEachLimited(ghostPoolRefs(db), async (ref) => {
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
@@ -357,13 +359,17 @@ export async function lbSyncName(
   name: string,
   _nowMs = Date.now(),
 ): Promise<void> {
-  const custom = poolCustomName(name);
-  const boardName = custom || versusName(name, uid);
   const playerRef = db.collection(LB_PLAYERS_COLLECTION).doc(uid);
+  const nameRef = db.collection(NAMES_COLLECTION).doc(uid);
   const bestRef = db.collection(LB_BEST_COLLECTION).doc('global');
   await db.runTransaction(async (tx) => {
-    const playerSnap = await tx.get(playerRef);
+    const [playerSnap, nameSnap] = await Promise.all([tx.get(playerRef), tx.get(nameRef)]);
     const player = playerSnap.exists ? (playerSnap.data() as LbPlayerDoc) : undefined;
+    // The hook can arrive after a newer name was accepted. `versusNames` is
+    // the authoritative source, so read it in this transaction instead of
+    // trusting the name captured by the earlier call.
+    const storedName = nameSnap.exists ? (nameSnap.data() as NameDoc).customName : '';
+    const boardName = poolCustomName(storedName) || versusName('', uid);
     const gid = typeof player?.groupId === 'string' && player.groupId ? player.groupId : null;
     const groupRef = gid === null ? null : db.collection(LB_GROUPS_COLLECTION).doc(gid);
     const [groupSnap, bestSnap] = await Promise.all([

@@ -21,6 +21,7 @@ import {
   joinGroup,
   LB_BEST_RAISE_MS,
   LB_GROUP_TTL_MS,
+  LB_MAX_RUN_CS,
   LB_TAB_BEST,
   LB_TAB_TODAY,
   rankToday,
@@ -38,6 +39,7 @@ import {
   type LbSettleResult,
   type LbSubmitRunResult,
 } from './board.js';
+import { pruneGhostPools, stripGroups } from './board_delete.js';
 import { poolCustomName } from './customname.js';
 import { versusName } from './nickname.js';
 import {
@@ -384,12 +386,52 @@ function provisionalStart(runs: unknown[], nowMs: number): number {
   return Math.min(nowMs, Math.max(nowMs - LB_OFFLINE_BACKDATE, earliest));
 }
 
-function acceptedRuns(runs: unknown[], checks: LbRunCheck[]): AcceptedRun[] {
+function isSafeInteger(value: unknown, min: number, max: number): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= min && value <= max;
+}
+
+/** Mirrors `validRunShape` in board.ts for choosing among duplicate raw ids. */
+function validRunInput(input: unknown): input is Record<string, unknown> {
+  if (!isObject(input)) return false;
+  return (
+    typeof input.id === 'string' &&
+    input.id.length >= 1 &&
+    input.id.length <= 128 &&
+    isSafeInteger(input.score, 0, Number.MAX_SAFE_INTEGER) &&
+    isSafeInteger(input.hoops, 0, Number.MAX_SAFE_INTEGER) &&
+    isSafeInteger(input.cs, 1, LB_MAX_RUN_CS) &&
+    isSafeInteger(input.endTs, 0, Number.MAX_SAFE_INTEGER) &&
+    (input.mode === 'free' || input.mode === 'versus' || input.mode === 'weekly') &&
+    (input.tl === undefined || (typeof input.tl === 'string' && input.tl.length <= 16384)) &&
+    (input.fl === undefined || (typeof input.fl === 'string' && input.fl.length <= 8192))
+  );
+}
+
+/**
+ * The exact raw run the validator chose for [id]. Validation orders valid
+ * runs by start time (then raw position) and drops a duplicate id before it
+ * can be accepted, so the earliest valid occurrence is the authoritative one.
+ */
+function validatedRun(runs: readonly unknown[], id: string): Record<string, unknown> | undefined {
+  let selected: Record<string, unknown> | undefined;
+  let selectedStart = Infinity;
+  for (const candidate of runs) {
+    if (!validRunInput(candidate) || candidate.id !== id) continue;
+    const start = entryEnd(candidate) - entryCs(candidate) * 10;
+    if (selected === undefined || start < selectedStart) {
+      selected = candidate;
+      selectedStart = start;
+    }
+  }
+  return selected;
+}
+
+function acceptedRuns(runs: readonly unknown[], checks: LbRunCheck[]): AcceptedRun[] {
   const out: AcceptedRun[] = [];
   for (const check of checks) {
     if (!check.accepted) continue;
-    const run = runs.find((candidate) => isObject(candidate) && candidate.id === check.id);
-    if (!isObject(run)) continue;
+    const run = validatedRun(runs, check.id);
+    if (run === undefined) continue;
     const endMs = entryEnd(run);
     out.push({
       id: check.id,
@@ -603,7 +645,17 @@ async function writeFlags(db: Firestore, flags: LbFlagDoc[]): Promise<void> {
   for (const flag of flags) {
     try {
       const id = `${flag.uid}_${flag.runId}`.replace(/\//g, '_');
-      await db.collection(LB_FLAGS_COLLECTION).doc(id).set(flag, { merge: true });
+      const flagRef = db.collection(LB_FLAGS_COLLECTION).doc(id);
+      const tombRef = db.collection(LB_TOMB_COLLECTION).doc(flag.uid);
+      const written = await db.runTransaction(async (tx) => {
+        // A submission that was already in flight when Delete My Data began
+        // must not recreate a flag after the tombstone exists.
+        if ((await tx.get(tombRef)).exists) return false;
+        const snap = await tx.get(flagRef);
+        if (!snap.exists) tx.set(flagRef, flag);
+        return true;
+      });
+      if (!written) continue;
       logger.info('lbFlag', {
         uid: flag.uid,
         runId: flag.runId,
@@ -905,7 +957,7 @@ async function submit(
     const flags: LbFlagDoc[] = [];
     for (const check of checks.results) {
       if (check.anomaly !== undefined && check.anomaly !== null) {
-        const flag = flagDoc(uid, check, nowMs, entryScore(input.runs.find((r) => isObject(r) && r.id === check.id)), localShadow);
+        const flag = flagDoc(uid, check, nowMs, entryScore(validatedRun(input.runs, check.id)), localShadow);
         if (flag !== null) flags.push(flag);
       }
       const update = check.bestUpdate;
@@ -918,12 +970,17 @@ async function submit(
         localShadowAt = update.atMs;
       }
     }
-    const becameHidden = state.hidden && player?.hidden === false;
+    // Repeated hidden submissions also retry a cleanup that failed after the
+    // player document was already marked hidden.
+    const removePublicBest = state.hidden && (
+      player?.hidden !== true ||
+      (Array.isArray(bestData?.rows) && bestData.rows.some((row) => row.uid === uid))
+    );
     const publicBestChanged = !state.hidden && localShadow > state.shadow;
     // Refill the top 50, including boundary ties, when a public row disappears.
     // This single-field paged query also works without an additional index.
     let replacementRows: LbBestRow[] = [];
-    if (becameHidden) {
+    if (removePublicBest) {
       let cursor: DocumentSnapshot | undefined;
       while (true) {
         const query = db.collection(LB_PLAYERS_COLLECTION).orderBy('bestShadow', 'desc').limit(100);
@@ -968,7 +1025,9 @@ async function submit(
         const memberUids = current.group.memberUids.filter((id) => id !== uid);
         const members = { ...current.group.members };
         delete members[uid];
-        tx.set(current.ref, storeGroup({ ...current.group, memberUids, members }));
+        const ghosts = current.group.ghosts.filter((ghost) => ghost.uid !== uid);
+        const ghostUids = current.group.ghostUids.filter((id) => id !== uid);
+        tx.set(current.ref, storeGroup({ ...current.group, memberUids, members, ghosts, ghostUids }));
       }
     } else if (shouldJoin && finalGroup !== null && finalGid !== null) {
       const groupRef = db.collection(LB_GROUPS_COLLECTION).doc(finalGid);
@@ -982,7 +1041,7 @@ async function submit(
       }
     }
 
-    if (publicBestChanged || becameHidden) {
+    if (publicBestChanged || removePublicBest) {
       const own: LbBestRow = {
         uid,
         best: localShadow,
@@ -993,14 +1052,14 @@ async function submit(
         platform: input.platform,
         bracket: bracketForVerifiedBest(localShadow),
       };
-      const merged = becameHidden ? replacementRows : mergeBestRows(bestData?.rows ?? [], own);
+      const merged = removePublicBest ? replacementRows : mergeBestRows(bestData?.rows ?? [], own);
       const rows = merged.slice(0, LB_BEST_SIZE);
       tx.set(bestRef, {
         rows,
         floor: merged.length >= LB_BEST_SIZE ? merged[LB_BEST_SIZE - 1].best : 0,
         updatedAt: at(nowMs),
       } satisfies LbBestDoc);
-      tx.set(histRef, addHistogram(histSnap.exists ? (histSnap.data() as HistogramDoc) : undefined, state.shadow, becameHidden ? 0 : localShadow, nowMs));
+      tx.set(histRef, addHistogram(histSnap.exists ? (histSnap.data() as HistogramDoc) : undefined, state.shadow, removePublicBest ? 0 : localShadow, nowMs));
     }
 
     const board: LbBoardPayload =
@@ -1023,9 +1082,19 @@ async function submit(
         gifts: gifts.length > 0 ? gifts : null,
       } satisfies LbSubmitRunResult,
       flags,
-      publicBestChanged: publicBestChanged || becameHidden,
+      publicBestChanged: publicBestChanged || removePublicBest,
+      hidden: state.hidden,
+      cleanupGid: typeof player?.groupId === 'string' && player.groupId ? player.groupId : null,
     };
   });
+  if (result.hidden) {
+    // Hidden players must disappear from every board immediately: embedded
+    // ghosts in other groups and their copied day entries in all pool shards
+    // are cleaned with the same idempotent routines Delete My Data uses.
+    await stripGroups(db, uid, result.cleanupGid);
+    await pruneGhostPools(db, uid, nowMs);
+    await stripGroups(db, uid, null);
+  }
   await writeFlags(db, result.flags);
   if (result.publicBestChanged) bestCache.delete(db);
   return result.value;
@@ -1138,6 +1207,10 @@ async function boardBest(db: Firestore, uid: string, player: LbPlayerDoc | undef
     gid: 'global',
   });
   if (own !== null) {
+    // The pinned row is the owner's own view. A hard anomaly raises the
+    // private `best` but deliberately leaves `bestShadow` (and therefore all
+    // public rows and the rank) on the verified score.
+    const privateBest = Math.max(count(player?.best), count(player?.bestShadow));
     const exact = await exactRank(db, uid, count(player?.bestShadow), millis(player?.bestAt));
     if (exact.rank !== null) {
       payload.me = {
@@ -1146,11 +1219,11 @@ async function boardBest(db: Firestore, uid: string, player: LbPlayerDoc | undef
         name: own.name,
         look: own.look,
         ...(own.card === undefined ? {} : { card: own.card }),
-        points: own.best,
-        best: own.best,
+        points: privateBest,
+        best: privateBest,
         lastAt: millis(own.bestAt),
       };
-      payload.floor = payload.floor ?? own.best;
+      payload.floor = payload.floor ?? count(player?.bestShadow);
     }
     payload.approximate = exact.approximate || payload.approximate;
   }

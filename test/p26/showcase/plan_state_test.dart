@@ -321,9 +321,9 @@ void main() {
   });
 
   test(
-    'Delete my data replays from a new Storage at gamesPlayed 5 and 6',
+    'Delete my data replays after a process restart at gamesPlayed 3, 5 and 6',
     () async {
-      for (final gamesPlayed in [5, 6]) {
+      for (final gamesPlayed in [3, 5, 6]) {
         ShowcaseShow.resetProcessMemoryForTests();
         SharedPreferences.setMockInitialValues({
           'gamesPlayed': gamesPlayed,
@@ -338,6 +338,7 @@ void main() {
         expect(before.done, isTrue);
 
         await storage.resetVersusData();
+        ShowcaseShow.resetProcessMemoryForTests();
         final fresh = GameStorage();
         await fresh.load();
         final restarted = ShowcaseShow(storage: fresh);
@@ -346,6 +347,11 @@ void main() {
           seen: fresh.showcaseSeen,
           attempt: fresh.showcaseAttempt,
           forced: false,
+        );
+        expect(
+          plan,
+          isNotNull,
+          reason: 'Deletion must survive a process restart',
         );
         expect(plan!.step, 0);
         expect(plan.attempt, 1);

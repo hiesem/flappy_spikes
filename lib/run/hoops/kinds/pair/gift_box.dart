@@ -1,61 +1,50 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../../../../components/ui/mystery_box.dart';
 import '../../../config/pair_config.dart';
 import '../../../director/plans.dart' show PairReward;
 import '../ring_arcs.dart';
 
-/// The §5.20 gift box and the reward icons (mock `TH.gift.back` and
-/// `icon()` of `build65.py`): flat, hard edges like the square bird.
+/// The §5.20 gift box and its reward icons. The box itself is drawn only by
+/// the 2.6 O99 master ([MysteryBox.paintPair]); this class keeps the run's
+/// reward-coloured parameters and the icon art.
 abstract final class GiftBox {
   static final Paint _p = Paint();
 
-  /// The box centred at the origin (≈ 44 pt): body in the main colour with
-  /// the right half dark, a slightly wider lid in the light shade (right
-  /// half main), a white ribbon cross and a white bow; [lid] false = the
-  /// lid has flown off.
-  static void paint(Canvas c, PairReward r, {bool lid = true}) {
+  /// The approved box look for [r]: the pair keeps the shield / comet /
+  /// coins / score / FEVER reward colours, with no label (the gift tag
+  /// carries the word), and the master's 44 pt size and white ribbon.
+  static MysteryBoxLook look(PairReward r) {
     final st = PairConfig.style(r);
-    const s = PairConfig.boxHalf;
-    c.save();
-    c.scale(PairConfig.boxScale);
-    c.drawRect(
-      const Rect.fromLTWH(-s, -s + 4, s * 2, s * 2 - 4),
-      _p..color = st.main,
-    );
-    c.drawRect(
-      const Rect.fromLTWH(0, -s + 4, s, s * 2 - 4),
-      _p..color = st.dark,
-    );
-    _p.color = const Color(0xFFFFFFFF);
-    c.drawRect(const Rect.fromLTWH(-3, -s + 4, 6, s * 2 - 4), _p);
-    c.drawRect(const Rect.fromLTWH(-s, 2, s * 2, 5), _p);
-    if (lid) paintLid(c, r);
-    c.restore();
+    return MysteryBoxLook.colours(st.main, st.dark, label: null);
   }
 
-  /// The lid with the ribbon and the bow (box-local, before the ×1.45).
-  static void paintLid(Canvas c, PairReward r) {
-    final st = PairConfig.style(r);
-    const s = PairConfig.boxHalf;
-    c.drawRect(
-      const Rect.fromLTWH(-s - 2, -s - 2, s * 2 + 4, 7),
-      _p..color = st.light,
+  /// The box centred at the origin (≈ 44 pt). [lid] false = the lid has
+  /// flown off. Drawing is delegated to [MysteryBox.paintPair]; the caller
+  /// owns the bob / tilt transform and the tag's skip fade.
+  static void paint(Canvas c, PairReward r, {bool lid = true}) {
+    MysteryBox.paintPair(
+      c,
+      main: PairConfig.style(r).main,
+      dark: PairConfig.style(r).dark,
+      size: PairConfig.boxHalf * 2 * PairConfig.boxScale,
+      lid: lid,
     );
-    c.drawRect(const Rect.fromLTWH(0, -s - 2, s + 2, 7), _p..color = st.main);
-    _p.color = const Color(0xFFFFFFFF);
-    c.drawRect(const Rect.fromLTWH(-3, -s - 2, 6, 7), _p);
-    RingArcs.poly(c, const [
-      Offset(0, -s - 2),
-      Offset(-11, -s - 11),
-      Offset(-9, -s - 1),
-    ], const Color(0xFFFFFFFF));
-    RingArcs.poly(c, const [
-      Offset(0, -s - 2),
-      Offset(11, -s - 11),
-      Offset(9, -s - 1),
-    ], const Color(0xFFFFFFFF));
-    c.drawRect(const Rect.fromLTWH(-3, -s - 5, 6, 5), _p);
+  }
+
+  /// The lid with the ribbon and the bow. Used by the fly-away bit in
+  /// `PairState.pick`; it is the same master lid, not a second drawing. The
+  /// caller has already applied [PairConfig.boxScale], so the master draws
+  /// at the same size as [paint].
+  static void paintLid(Canvas c, PairReward r) {
+    MysteryBox.paint(
+      c,
+      look(r),
+      size: PairConfig.boxHalf * 2,
+      drawBody: false,
+      lid: const MysteryBoxLid.closed(),
+    );
   }
 
   /// §5.20 the reward icon at [at], [size] pt (12 = the mock's unit).

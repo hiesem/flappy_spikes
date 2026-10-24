@@ -24,6 +24,7 @@ test/p25/squeeze_fix_test.dart: 2.5.1 WP-THUMP: at the lock the camera moves onl
 test/p26/bot/human_bot_test.dart: the helper flies to death and records highlights at 711 pt
 test/p26/curve/layout_d2_test.dart: D2 Δy is point-based, height-capped, reduced after hard hoops, and stable above the cap
 test/p26/curve/spawn_tables_d2_test.dart: D2 / C3 firstPossible and first natural appearances
+test/p26/m1/skeleton_test.dart: the wave-1 model defaults and stub modules are inert
 test/p26/m1/wiring_test.dart: run 1 end forwards FTUE and progress arguments
 test/p26/m1/wiring_test.dart: run 20 end forwards FTUE and progress arguments
 test/p26/m1/wiring_test.dart: run 2 end forwards FTUE and progress arguments

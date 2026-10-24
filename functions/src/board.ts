@@ -12,6 +12,8 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { passBound, runFacts, scoreRun, type Anomaly, type RunFacts } from './anomaly.js';
 import { bracketFor } from './brackets.js';
 import {
+  BONUS_CAP,
+  GIFT_CAP,
   LB_BEST_SIZE,
   LB_GIFTS,
   LB_GHOST_MAX_AGE,
@@ -25,6 +27,9 @@ import {
   LB_PLAYING_NOW_MS,
   LB_PRIZE_PLACES,
   MIN_SCORE,
+  PASS_CAP_EXTRA,
+  PASS_CAP_MULT,
+  PUZZLE_BONUS_CAP,
   utcDay,
   type LbBestRow,
   type LbGiftDoc,
@@ -245,7 +250,10 @@ export function selectGhosts(opts: LbGhostSelectionOptions): LbGhost[] {
       const at = dayMillis(row.day);
       if (!uid || excluded.has(uid) || row.hidden === true || at === null) continue;
       // Ghost days are earlier days only; at most 14 days before the race.
-      if (at >= startDay || startDay - at > LB_GHOST_MAX_AGE || nowDay - at > LB_GHOST_MAX_AGE) continue;
+      // `row.day` is the UTC midnight of the day; the race starts later that
+      // same day, so compare whole days rather than the timestamp (`<= 14`).
+      const ageDays = Math.floor((startDay - at) / DAY_MS);
+      if (at >= startDay || ageDays > 14 || nowDay - at > LB_GHOST_MAX_AGE) continue;
       if (!Array.isArray(row.runs) || row.runs.length === 0) continue;
       const old = byUid.get(uid);
       // Keep the newest eligible day of a player before the random shuffle.
@@ -550,7 +558,9 @@ export function rankToday(group: LbGroupDoc, atMs: number, opts: LbRankTodayOpti
     if (!uid || hidden.has(uid) || memberUids.has(uid) || seenGhosts.has(uid)) continue;
     seenGhosts.add(uid);
     const progress = ghostProgress(ghost.runs, groupStart, groupEnd, atMs);
-    if (progress.reachedAtMs === null) continue;
+    // A ghost with no run yet still holds one of the group's 50 places; it
+    // simply has 0 points until its first replayed run. Dropping the row
+    // would shrink the board and let a real joiner pass the ghost's place.
     entries.push({
       uid,
       ghost: true,
@@ -563,7 +573,7 @@ export function rankToday(group: LbGroupDoc, atMs: number, opts: LbRankTodayOpti
       points: progress.points,
       best: progress.best,
       reachedAtMs: progress.reachedAtMs,
-      lastAtMs: progress.lastAtMs,
+      lastAtMs: progress.lastAtMs ?? groupStart,
       playingNow: false,
     });
   }
@@ -948,8 +958,17 @@ function validRunShape(input: unknown): input is LbSubmittedRun {
 }
 
 function scoreOnlyBoundsOk(run: LbSubmittedRun): boolean {
-  if (run.hoops < 1 || run.hoops > passBound(run.cs)) return false;
-  return run.score <= run.hoops * (run.hoops + 11);
+  const opportunities = passBound(run.cs);
+  if (run.hoops > opportunities) return false;
+  // Sum the per-pass caps from plausibleValues. Non-notable uploads omit
+  // their timelines (O55), so their score also needs room for coin bonuses,
+  // pair gifts and puzzle payouts. Use the duration's opportunity bound,
+  // rather than successful passes: pickups can be caught beside missed hoops.
+  // Allow every kind at each opportunity conservatively; a notable score
+  // still needs a timeline to update BEST and otherwise gets the TODAY clamp.
+  const passScore = PASS_CAP_MULT * run.hoops * ((run.hoops + 1) / 2 + PASS_CAP_EXTRA);
+  const extraScore = opportunities * (BONUS_CAP + GIFT_CAP + PUZZLE_BONUS_CAP);
+  return run.score <= passScore + extraScore;
 }
 
 function verifyTimeline(run: LbSubmittedRun, ctx: LbRunCheckContext): TimelineVerified {
@@ -1049,21 +1068,30 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
   const accepted: string[] = [];
   const dropped: LbDroppedRun[] = [];
 
+  // Malformed entries sort after valid runs. Giving every input a fixed
+  // chronological key keeps the comparator consistent even across bad data.
   const shaped = runs
-    .map((input, index) => ({ input, index, id: validRunShape(input) ? input.id : '' }))
-    .sort((a, b) => {
-      if (!validRunShape(a.input) || !validRunShape(b.input)) return a.index - b.index;
-      return intervalStart(a.input) - intervalStart(b.input) || a.index - b.index;
-    });
+    .map((input, index) => ({
+      input,
+      index,
+      id: validRunShape(input) ? input.id : '',
+      start: validRunShape(input) ? intervalStart(input) : Infinity,
+    }))
+    .sort((a, b) => a.start - b.start || a.index - b.index);
 
-  const aggregateSeen = new Set(seen);
+  const duplicateIndexes = new Set<number>();
+  const batchIds = new Set(seen);
   const aggregateStarts: number[] = [];
   let aggregateCs = 0;
   for (const item of shaped) {
     if (!validRunShape(item.input)) continue;
     const run = item.input;
-    if (run.score > LB_MAX_SCORE || run.score < MIN_SCORE || aggregateSeen.has(run.id)) continue;
-    aggregateSeen.add(run.id);
+    if (batchIds.has(run.id)) {
+      duplicateIndexes.add(item.index);
+      continue;
+    }
+    batchIds.add(run.id);
+    if (run.score > LB_MAX_SCORE || run.score < MIN_SCORE) continue;
     const start = intervalStart(run);
     if (start < 0 || run.endTs > ctx.nowMs + LB_RUN_CLOCK_SLACK_MS) continue;
     const old = ctx.groupStartMs !== undefined && ctx.groupStartMs !== null && run.endTs < ctx.groupStartMs;
@@ -1098,6 +1126,10 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
       continue;
     }
     if (seen.has(run.id)) {
+      pushDrop('duplicate');
+      continue;
+    }
+    if (duplicateIndexes.has(item.index)) {
       pushDrop('duplicate');
       continue;
     }

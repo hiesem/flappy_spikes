@@ -1,7 +1,11 @@
 /** PRD-2.6 WP-LB pure board logic: groups, ghosts, ranking, prizes and run checks. */
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Timestamp } from 'firebase-admin/firestore';
 import {
+  LB_BEST_RAISE_MS,
+  LB_GROUP_TTL_MS,
   bestBoard,
   bracketForVerifiedBest,
   checkLbRun,
@@ -16,15 +20,21 @@ import {
   seededRandom,
   selectGhosts,
   settlePrizeAwards,
+  todayBoard,
+  type LbBestUpdate,
   type LbGiftShopItem,
   type LbJoinGroupInput,
   type LbSubmittedRun,
 } from '../src/board.js';
 import {
+  LB_BEST_SIZE,
+  LB_GIFTS,
+  LB_GHOST_MAX_AGE,
   LB_GROUP_MS,
   LB_GROUP_SIZE,
   LB_MAX_SCORE,
   LB_MIN_LEFT_MS,
+  MIN_SCORE,
   LB_PLAYING_NOW_MS,
   LB_PRIZE_PLACES,
   type LbBestRow,
@@ -41,6 +51,10 @@ const LOOK = { bird: 'classic', gear: 'none', hat: 'none', hoop: 'pink', trail: 
 const DAY = 24 * 3600 * 1000;
 const T0 = Date.UTC(2026, 9, 20, 0, 0, 0);
 const T12 = T0 + 12 * 3600 * 1000;
+const ROOT = join(__dirname, '..', '..');
+const GIFTS_FIXTURE = JSON.parse(
+  readFileSync(join(ROOT, 'test', 'fixtures', 'lb_gifts.json'), 'utf8'),
+) as typeof LB_GIFTS;
 const at = (ms: number) => Timestamp.fromMillis(ms);
 const noShuffle = () => 0;
 
@@ -132,6 +146,42 @@ describe('PRD-2.6 LB1 brackets and ghost supply', () => {
     });
     assert.deepEqual(got.map((g) => g.uid), ['same']);
     assert.equal(new Set(got.map((g) => g.uid)).size, got.length);
+  });
+
+  it('PRD O51: the 14-day ghost window is inclusive, and the new group day never becomes a ghost', () => {
+    const pools = {
+      3: [
+        ghostDay('day-14', '2026-10-06', [[3600, 10]]),
+        ghostDay('day-15', '2026-10-05', [[3600, 10]]),
+        ghostDay('race-day', '2026-10-20', [[3600, 10]]),
+      ],
+    };
+    const got = selectGhosts({ bracket: 3, slots: 10, pools, excludeUids: [], nowMs: T0, groupStartMs: T0, random: noShuffle });
+    assert.deepEqual(got.map((g) => g.uid), ['day-14']);
+    assert.ok(LB_GHOST_MAX_AGE === 14 * DAY);
+  });
+
+  it('PRD O51: a user appears only once even when the same uid is in several pools', () => {
+    const pools = {
+      3: [ghostDay('shared', '2026-10-18', [[3600, 10]], false), ghostDay('shared', '2026-10-17', [[3600, 20]], false)],
+      2: [ghostDay('shared', '2026-10-19', [[3600, 30]], false)],
+      4: [ghostDay('shared', '2026-10-19', [[3600, 40]], false)],
+    };
+    const got = selectGhosts({ bracket: 3, slots: 10, pools, excludeUids: [], nowMs: T0, groupStartMs: T0, random: noShuffle });
+    assert.deepEqual(got.map((g) => g.uid), ['shared']);
+    assert.deepEqual(got[0].runs, [[3600, 10]], 'the newest eligible day in the own bracket wins');
+  });
+
+  it('PRD O51 / O66: a full group opens a fresh race and a new joiner never enters with < 3 h left', () => {
+    const full = group({
+      memberUids: Array.from({ length: LB_GROUP_SIZE }, (_, i) => `f${i}`),
+      members: { f0: member(10, 10, T0 + 1000) },
+    });
+    const fresh = joinGroup(joinInput('new', { group: full, nowMs: T0 + 3600 * 1000 }));
+    assert.equal(fresh.created, true);
+    assert.equal(fresh.group!.memberUids.length, 1);
+    const late = joinGroup(joinInput('new', { group: full, nowMs: full.end.toMillis() - LB_MIN_LEFT_MS + 1 }));
+    assert.equal(late.created, true);
   });
 
   it('creates a group with 49 ghosts, a 24 h timer and expiry three days after the end', () => {
@@ -258,6 +308,33 @@ describe('PRD-2.6 LB1 brackets and ghost supply', () => {
     assert.equal(r.group!.start.toMillis(), T0 + 14 * 3600 * 1000);
   });
 
+  it('PRD LB1: a fresh group starts at the first run and is capped at now - 6 h', () => {
+    const now = T0 + 20 * 3600 * 1000;
+    const inWindow = joinGroup(joinInput('me', { nowMs: now, runStartMs: now - 2 * 3600 * 1000 }));
+    assert.equal(inWindow.group!.start.toMillis(), now - 2 * 3600 * 1000);
+    assert.equal(inWindow.group!.end.toMillis() - inWindow.group!.start.toMillis(), LB_GROUP_MS);
+    const clamped = joinGroup(joinInput('me2', { nowMs: now, runStartMs: now - 10 * 3600 * 1000 }));
+    assert.equal(clamped.group!.start.toMillis(), now - 6 * 3600 * 1000);
+  });
+
+  it('PRD LB3: a group expires three days after its 24 h race', () => {
+    const r = joinGroup(joinInput('me', { nowMs: T0 + 3600 * 1000, runStartMs: T0 + 3300 * 1000 }));
+    assert.equal(r.group!.expireAt.toMillis() - r.group!.end.toMillis(), LB_GROUP_TTL_MS);
+    assert.equal(LB_GROUP_TTL_MS, 3 * DAY);
+  });
+
+  it('PRD O51: hidden, tester and viewer uids are never used as ghosts', () => {
+    const pools = {
+      3: [
+        ghostDay('hidden', '2026-10-18', [[3600, 10]], true),
+        ghostDay('viewer', '2026-10-18', [[3600, 20]], false),
+        ghostDay('real', '2026-10-18', [[3600, 30]], false),
+      ],
+    };
+    const got = selectGhosts({ bracket: 3, slots: 10, pools, excludeUids: ['viewer'], nowMs: T0, groupStartMs: T0, random: noShuffle });
+    assert.deepEqual(got.map((g) => g.uid), ['real']);
+  });
+
   it('a hidden player joins no public group and receives no prize', () => {
     const r = joinGroup(joinInput('me', { hidden: true }));
     assert.equal(r.hidden, true);
@@ -319,6 +396,63 @@ describe('PRD-2.6 LB1 live ghost replay and ranking', () => {
     assert.deepEqual(ranked.map((e) => e.rank), [1, 2, 3, 4]);
     const board = bestBoard([], 'a');
     assert.equal(board.tab, 'best');
+  });
+
+  it('PRD LB1: TODAY ranks by total points, then best run today, then first to reach', () => {
+    const g = group({
+      memberUids: ['total', 'tie-a', 'tie-b', 'best', 'early'],
+      members: {
+        total: member(300, 10, T0 + 9000),
+        'tie-a': member(200, 50, T0 + 5000),
+        'tie-b': member(200, 50, T0 + 4000),
+        best: member(200, 70, T0 + 9000),
+        early: member(100, 90, T0 + 1000),
+      },
+    });
+    const ranked = rankToday(g, T0 + 10_000, {});
+    assert.deepEqual(ranked.map((e) => e.uid), ['total', 'best', 'tie-b', 'tie-a', 'early']);
+    assert.deepEqual(ranked.map((e) => e.rank), [1, 2, 3, 4, 5]);
+  });
+
+  it('PRD O62: TODAY exposes only total points and no BEST field', () => {
+    const g = group({
+      memberUids: ['a'],
+      members: { a: member(123, 45, T0 + 1000) },
+    });
+    const board = todayBoard(g, 'a', T0 + 2000, { gid: 'g' });
+    assert.equal(board.tab, 'today');
+    assert.equal(board.rows.length, 1);
+    assert.equal(board.rows[0].points, 123);
+    assert.equal('best' in board.rows[0], false);
+    assert.equal(board.me!.points, 123);
+  });
+
+  it('PRD O51: a ghost with no run yet still occupies its row at 0 points', () => {
+    const g = group({
+      memberUids: ['real'],
+      members: { real: member(40, 40, T0 + 1000) },
+      ghosts: [ghost('later', [[20 * 3600, 100]])],
+    });
+    const ranked = rankToday(g, T0 + 3600 * 1000, {});
+    assert.deepEqual(ranked.map((e) => e.uid), ['real', 'later']);
+    assert.equal(ranked[1].points, 0);
+    assert.equal(ranked[1].reachedAtMs, null);
+    assert.equal(ranked[1].lastAtMs, T0);
+    const board = todayBoard(g, 'real', T0 + 3600 * 1000, { gid: 'g' });
+    assert.equal(board.rows.length, 2, 'no ghost slot disappears before its first run');
+    assert.equal(board.rows[1].rank, 2);
+  });
+
+  it('PRD O51: PLAYING NOW is only a real member with a run under 5 minutes old', () => {
+    const g = group({
+      memberUids: ['fresh', 'old'],
+      members: { fresh: member(1, 1, T0 + 10_000), old: member(2, 2, T0) },
+      ghosts: [ghost('g', [[0, 99]])],
+    });
+    const ranked = rankToday(g, T0 + 10_000 + LB_PLAYING_NOW_MS - 1, {});
+    assert.equal(ranked.find((e) => e.uid === 'fresh')!.playingNow, true);
+    assert.equal(ranked.find((e) => e.uid === 'old')!.playingNow, false);
+    assert.equal(ranked.find((e) => e.uid === 'g')!.playingNow, false);
   });
 
   it('omits hidden members from TODAY but keeps their place for prize settlement', () => {
@@ -407,6 +541,53 @@ describe('PRD-2.6 LB2 O65 prize rule', () => {
   });
 });
 
+describe('PRD-2.6 LB1 BEST RUN ranking', () => {
+  const rows: LbBestRow[] = [
+    { uid: 'a', best: 300, bestAt: at(3000), name: 'A', look: LOOK, platform: 'android', bracket: 3 },
+    { uid: 'b', best: 200, bestAt: at(2000), name: 'B', look: LOOK, platform: 'android', bracket: 3 },
+    { uid: 'c', best: 200, bestAt: at(1000), name: 'C', look: LOOK, platform: 'android', bracket: 3 },
+    { uid: 'd', best: 100, bestAt: at(4000), name: 'D', look: LOOK, platform: 'android', bracket: 3 },
+  ];
+
+  it('PRD O52: equal best scores rank by the earlier bestAt, then uid', () => {
+    assert.deepEqual(rankBestRuns(rows).map((r) => [r.uid, r.rank]), [['a', 1], ['c', 2], ['b', 3], ['d', 4]]);
+    const same = [
+      { ...rows[1], bestAt: at(1000) },
+      { ...rows[2], bestAt: at(1000) },
+    ];
+    assert.deepEqual(rankBestRuns(same).map((r) => r.uid), ['b', 'c'].sort());
+  });
+
+  it('PRD O52: BEST RUN returns the global top 50 plus the pinned exact row', () => {
+    const many = Array.from({ length: LB_BEST_SIZE + 5 }, (_, i) => ({
+      uid: `u${i}`,
+      best: 1000 - i,
+      bestAt: at(1000 + i),
+      name: `U${i}`,
+      look: LOOK,
+      platform: 'android' as const,
+      bracket: 3,
+    }));
+    const board = bestBoard(many, 'u52');
+    assert.equal(board.rows.length, LB_BEST_SIZE);
+    assert.equal(board.rows[0].rank, 1);
+    assert.equal(board.me!.rank, 53);
+    assert.equal(board.me!.points, 948);
+  });
+
+  it('PRD O52: hidden users are absent from BEST and no row exposes a uid', () => {
+    const board = bestBoard(rows, 'd', { hiddenUids: ['a'], gid: 'global' });
+    assert.deepEqual(board.rows.map((r) => r.rank), [1, 2, 3]);
+    assert.equal(board.rows.some((r) => r.name === 'A'), false);
+    assert.equal(board.rows.some((r) => Object.prototype.hasOwnProperty.call(r, 'uid')), false);
+  });
+
+  it('PRD O52: above ~20 000 players BEST switches to approximate', () => {
+    assert.equal(bestBoard(rows, 'a', { totalPlayers: 19_999 }).approximate, false);
+    assert.equal(bestBoard(rows, 'a', { totalPlayers: 20_000 }).approximate, true);
+  });
+});
+
 describe('PRD-2.6 LB2 gift rolls', () => {
   const shop: LbGiftShopItem[] = [
     { id: 'cheap-common', price: 250, rarity: 'common' },
@@ -415,21 +596,43 @@ describe('PRD-2.6 LB2 gift rolls', () => {
     { id: 'epic-2000', price: 2000, rarity: 'rare' },
   ];
 
-  it('bronze is 25–100 and silver 50–200, all in step 5', () => {
-    for (let seed = 1; seed <= 1000; seed++) {
-      for (const [tier, min, max] of [
-        ['bronze', 25, 100],
-        ['silver', 50, 200],
-      ] as const) {
-        const roll = rollGift(tier, { random: seededRandom(seed) });
+  it('PRD LB2: fixture coin ranges are uniform in steps of 5 for every tier', () => {
+    assert.deepEqual(GIFTS_FIXTURE, LB_GIFTS);
+    for (const tier of ['bronze', 'silver', 'gold'] as const) {
+      const table = GIFTS_FIXTURE[tier];
+      const buckets = (table.coinsMax - table.coinsMin) / table.coinStep + 1;
+      const counts = new Map<number, number>();
+      // Stratify [0,1) over every coin bucket, including values near either
+      // edge. Constant, rounded or otherwise biased selection must fail.
+      const n = buckets * 100;
+      for (let i = 0; i < n; i++) {
+        const coinRandom = (i + 0.5) / n;
+        const draws = tier === 'gold' ? [0, coinRandom] : [coinRandom];
+        const roll = rollGift(tier, { random: () => draws.shift()! });
         assert.equal(roll.kind, 'coins');
-        assert.ok(roll.coins >= min && roll.coins <= max, `${tier} ${roll.coins}`);
-        assert.equal(roll.coins % 5, 0);
+        counts.set(roll.coins, (counts.get(roll.coins) ?? 0) + 1);
+      }
+      assert.equal(counts.size, buckets, tier);
+      for (let coins = table.coinsMin; coins <= table.coinsMax; coins += table.coinStep) {
+        assert.equal(counts.get(coins), 100, `${tier}: ${coins}`);
       }
     }
   });
 
-  it('gold over 20 000 seeded rolls stays within ±1.5 pp of 50/20/20/10', () => {
+  it('PRD LB2: with both item pools eligible, fixture rarity odds are common 70 / rare 30', () => {
+    const counts = { common: 0, rare: 0 };
+    for (let i = 0; i < 1000; i++) {
+      const draws = [0.95, 0.5, (i + 0.5) / 1000, 0.5];
+      const roll = rollGift('gold', { random: () => draws.shift()!, shopItems: shop });
+      assert.equal(roll.kind, 'item');
+      assert.ok(roll.rarity === 'common' || roll.rarity === 'rare');
+      counts[roll.rarity]++;
+    }
+    assert.equal(counts.common, 10 * GIFTS_FIXTURE.gold.commonPct);
+    assert.equal(counts.rare, 10 * GIFTS_FIXTURE.gold.rarePct);
+  });
+
+  it('PRD LB2: gold over 20 000 seeded rolls matches fixture odds within ±1.5 pp', () => {
     const counts = { coins: 0, feather: 0, piece: 0, item: 0 };
     const n = 20_000;
     for (let seed = 1; seed <= n; seed++) {
@@ -438,13 +641,16 @@ describe('PRD-2.6 LB2 gift rolls', () => {
       if (roll.kind === 'coins') assert.ok(roll.coins >= 100 && roll.coins <= 300 && roll.coins % 5 === 0);
       assert.ok(roll.coins >= 100 && roll.coins <= 300, 'every gold roll has pre-rolled fallback coins');
     }
-    for (const [kind, expected] of Object.entries({ coins: 50, feather: 20, piece: 20, item: 10 })) {
+    for (const [kind, expected] of Object.entries({
+      coins: GIFTS_FIXTURE.gold.coinsPct, feather: GIFTS_FIXTURE.gold.featherPct,
+      piece: GIFTS_FIXTURE.gold.piecePct, item: GIFTS_FIXTURE.gold.itemPct,
+    })) {
       const pct = (counts[kind as keyof typeof counts] / n) * 100;
       assert.ok(Math.abs(pct - expected) <= 1.5, `${kind}: ${pct.toFixed(2)}% vs ${expected}%`);
     }
   });
 
-  it('gold item rolls choose an unowned shop item ≤ 750 and split common 70 / rare 30', () => {
+  it('PRD LB2: item rolls use eligible shop items and fall back to the only available rarity', () => {
     const onlyCommon = shop.filter((i) => i.rarity === 'common');
     const onlyRare = shop.filter((i) => i.rarity === 'rare');
     for (let seed = 1; seed <= 500; seed++) {
@@ -565,13 +771,19 @@ describe('PRD-2.6 LB3 run checks', () => {
     assert.equal(rb.bestUpdate, null);
   });
 
+  it('PRD LB3: MIN_SCORE is inclusive and one below it is dropped', () => {
+    assert.equal(MIN_SCORE, 3);
+    assert.equal(checkLbRun(run({ score: MIN_SCORE }), ctx({ best: 100 })).accepted, true);
+    assert.equal(checkLbRun(run({ score: MIN_SCORE - 1 }), ctx({ best: 100 })).reason, 'low_score');
+  });
+
   it('score-only runs still pass duration, hoop-count and score bounds', () => {
     const impossibleHoops = run({ id: 'too-many-hoops', score: 100, hoops: 100, cs: 100 });
     delete impossibleHoops.tl;
     delete impossibleHoops.fl;
     assert.equal(checkLbRun(impossibleHoops, ctx({ best: 100 })).reason, 'bounds');
 
-    const impossibleScore = run({ id: 'too-much-score', score: 100, hoops: 1, cs: 1200 });
+    const impossibleScore = run({ id: 'too-much-score', score: LB_MAX_SCORE, hoops: 1, cs: 1200, deltas: [170] });
     delete impossibleScore.tl;
     delete impossibleScore.fl;
     assert.equal(checkLbRun(impossibleScore, ctx({ best: 100 })).reason, 'bounds');
@@ -580,6 +792,39 @@ describe('PRD-2.6 LB3 run checks', () => {
     delete valid.tl;
     delete valid.fl;
     assert.equal(checkLbRun(valid, ctx({ best: 100 })).accepted, true);
+  });
+
+  it('PRD O52 / O55 / LB3: score-only TODAY includes bonus, gift and puzzle points', () => {
+    for (const [flag, value] of [[8, 40], [4, 5], [8 | 16, 250], [8, 80], [4, 10], [8 | 16, 500]]) {
+      const withTimeline = run({
+        score: 1 + value, hoops: 1, cs: 280,
+        tl: encodeDeltas([170, 30]), fl: encodeEntries([0, flag], [1, value]),
+      });
+      const scoreOnly = { ...withTimeline };
+      delete scoreOnly.tl;
+      delete scoreOnly.fl;
+      const expected = checkLbRun(withTimeline, ctx({ best: 1000 }));
+      assert.equal(expected.accepted, true);
+      const result = checkLbRun(scoreOnly, ctx({ best: 1000 }));
+      assert.equal(result.accepted, true, `flag ${flag}, value ${value}`);
+      assert.equal(result.counted, expected.counted);
+      assert.equal(result.notable, false);
+      assert.equal(result.bestUpdate, null);
+    }
+    const combined = run({ score: 591, hoops: 1, cs: 280 });
+    delete combined.tl;
+    delete combined.fl;
+    assert.equal(checkLbRun(combined, ctx({ best: 1000 })).counted, 591);
+    // A player can miss the hoops and still catch a pickup. All three
+    // counting modes upload these ordinary runs without a timeline (O52).
+    for (const mode of ['free', 'versus', 'weekly']) {
+      const pickupOnly = run({ score: 40, hoops: 0, cs: 280, mode });
+      delete pickupOnly.tl;
+      delete pickupOnly.fl;
+      const result = checkLbRun(pickupOnly, ctx({ best: 1000 }));
+      assert.equal(result.accepted, true, mode);
+      assert.equal(result.counted, 40, mode);
+    }
   });
 
   it('new PB, > 2 × best and the top-50 floor make a timeline required', () => {
@@ -599,7 +844,8 @@ describe('PRD-2.6 LB3 run checks', () => {
     const fresh = checkLbRun(run({ score: 150 }), ctx({ best: 100, nowMs: T12 + 1000 }));
     assert.equal(fresh.accepted, true);
     assert.equal(fresh.timelineVerified, true);
-    assert.deepEqual(fresh.bestUpdate, { score: 150, atMs: T12, shadow: false });
+    const expected: LbBestUpdate = { score: 150, atMs: T12, shadow: false };
+    assert.deepEqual(fresh.bestUpdate, expected);
 
     const old = checkLbRun(run({ score: 150, endTs: T0 + 1000 }), ctx({ nowMs: T12, groupStartMs: T12, best: 100 }));
     assert.equal(old.reason, 'old');
@@ -613,6 +859,18 @@ describe('PRD-2.6 LB3 run checks', () => {
     const within = checkLbRun(run({ score: 150, endTs: T0 + 1000 }), ctx({ nowMs: T0 + 6 * DAY, groupStartMs: T0 + 6 * DAY, best: 100 }));
     assert.equal(within.reason, 'old');
     assert.deepEqual(within.bestUpdate, { score: 150, atMs: T0 + 1000, shadow: false });
+    assert.equal(LB_BEST_RAISE_MS, 7 * DAY);
+    const end = T0 + 1000;
+    const atLimit = checkLbRun(
+      run({ score: 150, endTs: end }),
+      ctx({ nowMs: end + LB_BEST_RAISE_MS, groupStartMs: end + LB_BEST_RAISE_MS, best: 100 }),
+    );
+    assert.deepEqual(atLimit.bestUpdate, { score: 150, atMs: end, shadow: false });
+    const pastLimit = checkLbRun(
+      run({ score: 150, endTs: end }),
+      ctx({ nowMs: end + LB_BEST_RAISE_MS + 1, groupStartMs: end + LB_BEST_RAISE_MS + 1, best: 100 }),
+    );
+    assert.equal(pastLimit.bestUpdate, null);
   });
 
   it('leaderboard timelines use LB_MAX_SCORE, not the versus one-million limit', () => {
@@ -736,6 +994,24 @@ describe('PRD-2.6 LB3 run checks', () => {
     assert.equal(time.results[1].reason, 'time');
   });
 
+  it('PRD LB3: malformed entries cannot change chronological overlap selection', () => {
+    const earlier = run({ id: 'earlier', endTs: T12 - 1000 });
+    const later = run({ id: 'later', endTs: T12 });
+    const expected = checkLbRuns([later, earlier], ctx());
+    assert.deepEqual(expected.accepted, ['earlier']);
+    assert.deepEqual(expected.dropped, [{ id: 'later', reason: 'overlap' }]);
+    for (const inputs of [
+      [later, { id: 'malformed' }, earlier],
+      [{ id: 'malformed' }, later, earlier],
+      [later, earlier, { id: 'malformed' }],
+    ]) {
+      const result = checkLbRuns(inputs, ctx());
+      assert.deepEqual(result.accepted, expected.accepted);
+      assert.deepEqual(result.results.filter((r) => r.reason !== 'shape'), expected.results);
+      assert.equal(result.results.filter((r) => r.reason === 'shape').length, 1);
+    }
+  });
+
   it('duplicate retries do not consume the batch duration allowance', () => {
     const retry = run({ id: 'retry', endTs: T12 - 100_000, cs: 10_000 });
     const fresh = run({ id: 'fresh', endTs: T12, cs: 10_000 });
@@ -743,6 +1019,19 @@ describe('PRD-2.6 LB3 run checks', () => {
     assert.deepEqual(result.accepted, ['fresh']);
     assert.equal(result.results[0].reason, 'duplicate');
     assert.equal(result.results[1].accepted, true);
+  });
+
+  it('PRD LB3: a repeated id in one batch stays dropped even when its first occurrence fails', () => {
+    const first = run({ id: 'same-id', score: 100, endTs: T12 - 20 * 60_000, cs: 100 });
+    delete first.tl;
+    delete first.fl;
+    const second = run({ id: 'same-id', score: 30, endTs: T12 - 1000 });
+    const result = checkLbRuns([first, second], ctx({ best: 100, nowMs: T12 + 1000 }));
+    assert.deepEqual(result.accepted, []);
+    assert.deepEqual(result.dropped, [
+      { id: 'same-id', reason: 'bounds' },
+      { id: 'same-id', reason: 'duplicate' },
+    ]);
   });
 
   it('clamps or rejects impossible passes using the shared passBound', () => {

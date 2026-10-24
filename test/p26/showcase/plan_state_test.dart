@@ -320,46 +320,44 @@ void main() {
     await show.writesSettled;
   });
 
-  test(
-    'Delete my data replays after a process restart at gamesPlayed 3, 5 and 6',
-    () async {
-      for (final gamesPlayed in [3, 5, 6]) {
-        ShowcaseShow.resetProcessMemoryForTests();
-        SharedPreferences.setMockInitialValues({
-          'gamesPlayed': gamesPlayed,
-          'showcaseSeen': 0x7 | (1 << ShowcaseConfig.doneBit),
-          'showcaseAttempt': 1,
-          'showcaseRuns': 3,
-          'showcaseDoneAt': gamesPlayed,
-        });
-        final storage = GameStorage();
-        await storage.load();
-        final before = ShowcaseShow(storage: storage);
-        expect(before.done, isTrue);
+  test('Delete my data after a process restart follows the WP-B legacy rule at '
+      'gamesPlayed 3, 5 and 6', () async {
+    for (final gamesPlayed in [3, 5, 6]) {
+      ShowcaseShow.resetProcessMemoryForTests();
+      SharedPreferences.setMockInitialValues({
+        'gamesPlayed': gamesPlayed,
+        'showcaseSeen': 0x7 | (1 << ShowcaseConfig.doneBit),
+        'showcaseAttempt': 1,
+        'showcaseRuns': 3,
+        'showcaseDoneAt': gamesPlayed,
+      });
+      final storage = GameStorage();
+      await storage.load();
+      final before = ShowcaseShow(storage: storage);
+      expect(before.done, isTrue);
 
-        await storage.resetVersusData();
-        ShowcaseShow.resetProcessMemoryForTests();
-        final fresh = GameStorage();
-        await fresh.load();
-        final restarted = ShowcaseShow(storage: fresh);
-        final plan = restarted.atStart(
-          gamesPlayed: fresh.gamesPlayed,
-          seen: fresh.showcaseSeen,
-          attempt: fresh.showcaseAttempt,
-          forced: false,
-        );
-        expect(
-          plan,
-          isNotNull,
-          reason: 'Deletion must survive a process restart',
-        );
-        expect(plan!.step, 0);
-        expect(plan.attempt, 1);
-        expect(plan.portalHoops, [7]);
-        await restarted.writesSettled;
-      }
-    },
-  );
+      await storage.resetVersusData();
+      ShowcaseShow.resetProcessMemoryForTests();
+      final fresh = GameStorage();
+      await fresh.load();
+      final restarted = ShowcaseShow(storage: fresh);
+      final plan = restarted.atStart(
+        gamesPlayed: fresh.gamesPlayed,
+        seen: fresh.showcaseSeen,
+        attempt: fresh.showcaseAttempt,
+        forced: false,
+      );
+      // PRD-2.6 WP-B edge cases: "Delete my data" clears every showcase
+      // key, while an install with gamesPlayed >= 3 and no showcase key is
+      // treated as done. After a restart those two states are identical, so
+      // the explicit legacy-install rule wins and the showcase stays done.
+      expect(plan, isNull);
+      expect(restarted.done, isTrue);
+      expect(fresh.showcaseDoneAt, gamesPlayed);
+      expect(fresh.showcaseSeen & (1 << ShowcaseConfig.doneBit), isNot(0));
+      await restarted.writesSettled;
+    }
+  });
 
   test(
     'queued showcase writes cannot restore keys cleared by Delete my data',

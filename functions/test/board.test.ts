@@ -956,15 +956,90 @@ describe('PRD-2.6 LB3 run checks', () => {
   });
 
   it('an old BEST candidate still respects overlap', () => {
-    const overlapping = run({ score: 150, endTs: T0 + 1000, cs: 20 * 170 + 80 });
+    const overlapping = run({ score: 30, endTs: T0 + 60_000, deltas: Array(30).fill(170) });
     const result = checkLbRun(overlapping, {
       nowMs: T0 + 6 * DAY,
-      best: 100,
+      best: 20,
       groupStartMs: T0 + 6 * DAY,
-      intervals: [{ startMs: T0, endMs: T0 + 1000 }],
+      intervals: [{ startMs: T0 + 50_000, endMs: T0 + 70_000 }],
     });
     assert.equal(result.reason, 'old');
+    assert.equal(result.timelineVerified, true);
+    assert.equal(result.notable, true);
     assert.equal(result.bestUpdate, null);
+  });
+
+  it('PRD O52 / O55: an offline batch gives the same TODAY points as sequential uploads', () => {
+    const earlier = run({ id: 'earlier', score: 600, endTs: T12 - 4 * 3600_000, deltas: Array(600).fill(170) });
+    const later = run({ id: 'later', score: 550, endTs: T12, deltas: Array(550).fill(170) });
+    delete later.tl;
+    delete later.fl;
+    const batch = checkLbRuns([earlier, later], ctx({ nowMs: T12 + 1000 }));
+
+    const first = checkLbRuns([earlier], ctx({ nowMs: T12 + 1000 }));
+    const second = checkLbRuns(
+      [later],
+      ctx({
+        best: earlier.score,
+        nowMs: T12 + 1000,
+        seenIds: [earlier.id],
+        intervals: [{ startMs: earlier.endTs - earlier.cs * 10, endMs: earlier.endTs }],
+        dailyCounts: first.dailyCounts,
+      }),
+    );
+    const sequential = [...first.results, ...second.results];
+
+    assert.deepEqual(batch.accepted, ['earlier', 'later']);
+    assert.deepEqual(batch.results.map((r) => r.counted), [600, 550]);
+    assert.deepEqual(batch.results.map((r) => r.counted), sequential.map((r) => r.counted));
+    assert.deepEqual(batch.results.map((r) => r.clamped), sequential.map((r) => r.clamped));
+    assert.deepEqual(batch.results.map((r) => r.bestUpdate), sequential.map((r) => r.bestUpdate));
+  });
+
+  it('PRD LB3: overlapping old BEST candidates reserve only the earlier interval', () => {
+    const first = run({ id: 'old-first', score: 150, endTs: T0 + 20_000, deltas: Array(150).fill(170) });
+    const second = run({ id: 'old-second', score: 200, endTs: T0 + 150_000, deltas: Array(200).fill(170) });
+    const result = checkLbRuns([second, first], ctx({ best: 100, nowMs: T0 + 6 * DAY, groupStartMs: T0 + 6 * DAY }));
+    assert.deepEqual(result.results.map((r) => r.bestUpdate?.score ?? null), [150, null]);
+    assert.deepEqual(result.results.map((r) => r.timelineVerified), [true, true]);
+    assert.deepEqual(result.dropped, [
+      { id: 'old-first', reason: 'old' },
+      { id: 'old-second', reason: 'old' },
+    ]);
+  });
+
+  it('PRD LB3: an old BEST candidate reserves its interval against a current run', () => {
+    const old = run({ id: 'old', score: 150, endTs: T0 + 5_000, deltas: Array(150).fill(170) });
+    const current = run({ id: 'current', score: 30, endTs: T0 + 20_000, deltas: Array(30).fill(170) });
+    const result = checkLbRuns([current, old], ctx({ best: 100, nowMs: T0 + DAY, groupStartMs: T0 + 20_000 }));
+    assert.deepEqual(result.results.map((r) => r.bestUpdate?.score ?? null), [150, null]);
+    assert.equal(result.results[0].timelineVerified, true);
+    assert.deepEqual(result.dropped, [
+      { id: 'old', reason: 'old' },
+      { id: 'current', reason: 'overlap' },
+    ]);
+  });
+
+  it('PRD LB3: a shadow old run does not raise the verified best used by a later run', () => {
+    const deltas = Array(150).fill(100);
+    const shadow = run({
+      id: 'shadow',
+      score: 150,
+      endTs: T0 + 5_000,
+      tl: encodeDeltas(deltas),
+      fl: encodeEntries(deltas.map(() => 0), deltas.map(() => 1)),
+      cs: 150 * 170 + 80,
+    });
+    const later = run({ id: 'later', score: 120, endTs: T0 + 400_000, deltas: Array(120).fill(170) });
+    const result = checkLbRuns(
+      [shadow, later],
+      ctx({ best: 100, nowMs: T0 + DAY, groupStartMs: T0 + 500_000 }),
+    );
+    assert.deepEqual(result.results.map((r) => r.bestUpdate), [
+      { score: 150, atMs: T0 + 5_000, shadow: true },
+      { score: 120, atMs: T0 + 400_000, shadow: false },
+    ]);
+    assert.deepEqual(result.accepted, []);
   });
 
   it('drops the 401st run of a UTC day and marks t:1 hidden', () => {

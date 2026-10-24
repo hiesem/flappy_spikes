@@ -29,6 +29,7 @@ import {
   type LbPlayerDoc,
 } from '../src/schema.js';
 import { encodeDeltas, encodeEntries } from '../src/timeline.js';
+import { versusName } from '../src/nickname.js';
 import { db, fakeJwt, LOOK, PROJECT, uniq } from './helpers.js';
 
 const HOUR = 3600 * 1000;
@@ -432,6 +433,57 @@ describe('PRD-2.6 LB3 regression fixes', () => {
     assert.equal((await group(template.groupId!))!.memberUids.includes(uid), false);
   });
 
+  it('removes a player turned hidden from every embedded ghost and pool after settlement', async () => {
+    const vanished = uniq('lb-hidden-after-settle');
+    const peer = uniq('lb-hidden-peer');
+    const picked = uniq('lb-hidden-picked');
+    for (const [uid, name] of [[vanished, 'HiddenOwl'], [peer, 'PeerOwl'], [picked, 'PickedOwl']]) {
+      await db.collection(NAMES_COLLECTION).doc(uid).set({ customName: name, updatedAt: Timestamp.fromMillis(T0) });
+    }
+    const first = await lbSubmitRun(db, vanished, request([submitRun({ score: 900, endTs: T0 })]), T0 + 1000);
+    const firstGid = first.group!.id;
+    await lbSubmitRun(db, peer, request([submitRun({ score: 800, endTs: T0 + 1000 })]), T0 + 2000);
+    const end = (await group(firstGid))!.end.toMillis();
+    await lbSettleGroups(db, end + 1000, firstGid);
+
+    const pools = await db.collection(LB_GHOST_POOL_COLLECTION).get();
+    assert.equal(
+      pools.docs.some((doc) => (doc.data().entries as any[]).some((entry) => entry.uid === vanished)),
+      true,
+    );
+
+    // A later group selects the vanished player's earlier day as a ghost.
+    const nextStart = end + HOUR;
+    const next = await lbSubmitRun(db, picked, request([submitRun({ score: 700, endTs: nextStart })]), nextStart + 1000);
+    const nextGid = next.group!.id;
+    const nextGroup = (await group(nextGid))!;
+    assert.equal(nextGroup.ghosts.some((ghost) => ghost.uid === vanished), true);
+    const beforeHide = (await lbGetBoard(db, picked, { tab: 'today' }, nextStart + 1500)).today;
+    assert.equal(beforeHide.rows.some((row) => row.name === 'HiddenOwl'), true);
+
+    await lbSubmitRun(db, vanished, request([submitRun({ score: 10, endTs: nextStart + 1000 })], { t: 1 }), nextStart + 2000);
+
+    const hiddenGroup = (await group(nextGid))!;
+    assert.equal(hiddenGroup.memberUids.includes(vanished), false);
+    assert.equal(hiddenGroup.ghostUids.includes(vanished), false);
+    assert.equal(hiddenGroup.ghosts.some((ghost) => ghost.uid === vanished), false);
+    const afterPools = await db.collection(LB_GHOST_POOL_COLLECTION).get();
+    assert.equal(
+      afterPools.docs.some((doc) => (doc.data().entries as any[]).some((entry) => entry.uid === vanished)),
+      false,
+    );
+
+    const today = (await lbGetBoard(db, picked, { tab: 'today' }, nextStart + 3000)).today;
+    assert.equal(today.rows.some((row) => row.name === 'HiddenOwl'), false);
+    assert.equal(today.rows.length, beforeHide.rows.length - 1);
+    assert.equal(today.me!.points, 700);
+
+    const settleEnd = hiddenGroup.end.toMillis();
+    await lbSettleGroups(db, settleEnd + 1000, nextGid);
+    assert.equal((await gifts(vanished)).some((gift) => gift.gid === nextGid), false);
+    assert.deepEqual((await gifts(picked)).filter((gift) => gift.gid === nextGid).map((gift) => gift.tier), ['gold']);
+  });
+
   it('keeps tie timestamps public and accepts a verified improvement below a private anomaly', async () => {
     const a = uniq('lb-tie-first');
     const b = uniq('lb-tie-second');
@@ -453,6 +505,60 @@ describe('PRD-2.6 LB3 regression fixes', () => {
     assert.equal(p.bestShadow, 150);
     assert.equal(p.bestAt.toMillis(), T0 + 3 * HOUR);
     assert.equal((await lbGetBoard(db, b, { tab: 'best' }, T0 + 3 * HOUR + 2000)).best.rows[0].points, 150);
+  });
+
+  it('shows the owner their private anomaly best but keeps public rows and rank verified', async () => {
+    const owner = uniq('lb-private-owner');
+    const other = uniq('lb-private-other');
+    await lbSubmitRun(db, owner, request([submitRun({ score: 100, endTs: T0 })]), T0 + 1000);
+    await lbSubmitRun(db, other, request([submitRun({ score: 90, endTs: T0 + 1000 })]), T0 + 2000);
+    const anomaly = submitRun({ score: 200, endTs: T0 + HOUR });
+    anomaly.tl = encodeDeltas(Array(200).fill(100));
+    await lbSubmitRun(db, owner, request([anomaly]), T0 + HOUR + 1000);
+
+    const own = (await lbGetBoard(db, owner, { tab: 'best' }, T0 + HOUR + 2000)).best;
+    assert.equal(own.me!.points, 200);
+    assert.equal(own.me!.best, 200);
+    assert.equal(own.me!.rank, 1);
+    assert.equal(own.rows.find((row) => row.rid === own.me!.rid)!.points, 100);
+
+    const publicView = (await lbGetBoard(db, other, { tab: 'best' }, T0 + HOUR + 2000)).best;
+    assert.equal(publicView.rows[0].points, 100);
+    assert.equal(publicView.rows[0].name, versusName('BraveOwl123', owner));
+    assert.equal(publicView.me!.points, 90);
+    assert.equal(publicView.me!.rank, 2);
+  });
+
+  it('persists timestamps and history from the accepted duplicate run, not a malformed namesake', async () => {
+    const uid = uniq('lb-duplicate-order');
+    const id = uniq('lb-duplicate-order-run');
+    const accepted = submitRun({ id, score: 60, endTs: T0 });
+    const malformed = { ...submitRun({ id, score: 300, endTs: T0 + 2 * HOUR }), cs: 'broken' };
+    const result = await lbSubmitRun(db, uid, request([accepted, malformed, submitRun({ score: 5, endTs: T0 - HOUR })]), T0 + 1000);
+    assert.deepEqual(result.dropped, [{ id: '', reason: 'shape' }]);
+
+    const p = (await player(uid))!;
+    assert.deepEqual(p.hist, [5, 60]);
+    const member = (await group(result.group!.id))!.members[uid] as any;
+    assert.equal(member.last.toMillis(), T0);
+    assert.deepEqual(member.runs.map((point: any) => point.s), [5, 60]);
+    assert.equal(member.n, 2);
+  });
+
+  it('keeps the earlier validated run from an out-of-order duplicate batch', async () => {
+    const uid = uniq('lb-duplicate-out-of-order');
+    const id = uniq('lb-duplicate-out-of-order-run');
+    const earlier = submitRun({ id, score: 60, endTs: T0 });
+    const later = submitRun({ id, score: 80, endTs: T0 + 2 * HOUR });
+    const result = await lbSubmitRun(db, uid, request([later, earlier]), T0 + 2 * HOUR + 1000);
+    assert.deepEqual(result.accepted, [id]);
+    assert.deepEqual(result.dropped, [{ id, reason: 'duplicate' }]);
+
+    const p = (await player(uid))!;
+    assert.deepEqual(p.hist, [60]);
+    const member = (await group(result.group!.id))!.members[uid] as any;
+    assert.equal(member.last.toMillis(), T0);
+    assert.deepEqual(member.runs.map((point: any) => point.s), [60]);
   });
 
   it('mirrors the eligible paid common/rare shop catalog', () => {

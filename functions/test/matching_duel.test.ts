@@ -92,6 +92,12 @@ describe('PRD-2.6 E5 duel staircase fixture (shared with the Dart matcher)', () 
         assert.equal(picked.entry?.runId, c.expect.pick);
       }
       if (c.expect.runIds) {
+        // Check every expected band member is selectable, including endpoints
+        // when another valid candidate is present (membership alone misses this).
+        c.expect.runIds.forEach((runId, i, ids) => {
+          const p = pickDuelOpponent(...args, () => (i + 0.5) / ids.length);
+          assert.equal(p.entry?.runId, runId);
+        });
         for (const rand of [0, 0.1, 0.5, 0.999]) {
           const p = pickDuelOpponent(...args, () => rand);
           assert.ok(p.entry && c.expect.runIds.includes(p.entry.runId), `rand ${rand}`);

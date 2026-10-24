@@ -160,7 +160,14 @@ export function duelStepAfter(step: number, result: DuelOutcome): number {
 
 /** PRD-2.6 E5: T = clamp(0.8 + 0.1·duelStep, 0.4, 1.6) × median(recentScores). */
 export function duelTarget(step: number, recentScores: readonly number[]): number {
-  return clamp(0.8 + 0.1 * step, 0.4, 1.6) * duelMedian(recentScores);
+  return duelTargetTenths(step, recentScores) / 10;
+}
+
+function duelTargetTenths(step: number, recentScores: readonly number[]): number {
+  // Scores are integers, so their median is an integer or half-integer.
+  // Keep the factor in tenths until the final division to avoid rounding
+  // 0.8 + 0.1 * -2 above 0.6 (and excluding an inclusive band endpoint).
+  return clamp(8 + step, 4, 16) * duelMedian(recentScores);
 }
 
 /**
@@ -178,9 +185,10 @@ export function pickDuelOpponent(
   met: Iterable<string>,
   rand: () => number = Math.random,
 ): DuelPick {
-  const target = duelTarget(step, recentScores);
-  const lo = 0.75 * target;
-  const hi = 1.25 * target;
+  const targetTenths = duelTargetTenths(step, recentScores);
+  const target = targetTenths / 10;
+  const lo = (3 * targetTenths) / 40;
+  const hi = (5 * targetTenths) / 40;
   const metList = [...met];
   const metSet = new Set(metList);
   const open = pool.filter((e) => isOtherPlayer(e, me));

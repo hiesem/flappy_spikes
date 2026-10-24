@@ -107,6 +107,81 @@
   ],
   "pickCases": [
     {
+      "name": "lower endpoint at step -2 is in the band",
+      "step": -2,
+      "recentScores": [100],
+      "me": {"uid": "me"},
+      "seen": [],
+      "pool": [
+        {"uid": "a", "runId": "lower", "score": 45, "bracket": 2}
+      ],
+      "expect": {"tier": "band", "pick": "lower", "target": 60}
+    },
+    {
+      "name": "lower endpoint at step -2 stays eligible alongside the upper endpoint; outside scores are excluded",
+      "step": -2,
+      "recentScores": [100],
+      "me": {"uid": "me"},
+      "seen": [],
+      "pool": [
+        {"uid": "a", "runId": "lower", "score": 45, "bracket": 2},
+        {"uid": "b", "runId": "upper", "score": 75, "bracket": 2},
+        {"uid": "c", "runId": "below", "score": 44, "bracket": 2},
+        {"uid": "d", "runId": "above", "score": 76, "bracket": 2}
+      ],
+      "expect": {"tier": "band", "pick": "lower", "target": 60, "runIds": ["lower", "upper"]}
+    },
+    {
+      "name": "lower endpoint at step -1 is in the band",
+      "step": -1,
+      "recentScores": [40],
+      "me": {"uid": "me"},
+      "seen": [],
+      "pool": [
+        {"uid": "a", "runId": "lower", "score": 21, "bracket": 2}
+      ],
+      "expect": {"tier": "band", "pick": "lower", "target": 28}
+    },
+    {
+      "name": "lower endpoint at step -1 stays eligible alongside the upper endpoint; outside scores are excluded",
+      "step": -1,
+      "recentScores": [40],
+      "me": {"uid": "me"},
+      "seen": [],
+      "pool": [
+        {"uid": "a", "runId": "lower", "score": 21, "bracket": 2},
+        {"uid": "b", "runId": "upper", "score": 35, "bracket": 2},
+        {"uid": "c", "runId": "below", "score": 20, "bracket": 2},
+        {"uid": "d", "runId": "above", "score": 36, "bracket": 2}
+      ],
+      "expect": {"tier": "band", "pick": "lower", "target": 28, "runIds": ["lower", "upper"]}
+    },
+    {
+      "name": "lower endpoint at step +4 is in the band",
+      "step": 4,
+      "recentScores": [100],
+      "me": {"uid": "me"},
+      "seen": [],
+      "pool": [
+        {"uid": "a", "runId": "lower", "score": 90, "bracket": 2}
+      ],
+      "expect": {"tier": "band", "pick": "lower", "target": 120}
+    },
+    {
+      "name": "lower endpoint at step +4 stays eligible alongside the upper endpoint; outside scores are excluded",
+      "step": 4,
+      "recentScores": [100],
+      "me": {"uid": "me"},
+      "seen": [],
+      "pool": [
+        {"uid": "a", "runId": "lower", "score": 90, "bracket": 2},
+        {"uid": "b", "runId": "upper", "score": 150, "bracket": 2},
+        {"uid": "c", "runId": "below", "score": 89, "bracket": 2},
+        {"uid": "d", "runId": "above", "score": 151, "bracket": 2}
+      ],
+      "expect": {"tier": "band", "pick": "lower", "target": 120, "runIds": ["lower", "upper"]}
+    },
+    {
       "name": "an empty recentScores has T 0 and no fresh run can be in its band, so the closest fresh run is picked",
       "step": 0,
       "recentScores": [],
@@ -163,7 +238,7 @@
         { "uid": "b", "runId": "b1", "score": 20, "bracket": 1 },
         { "uid": "c", "runId": "c1", "score": 100, "bracket": 3 }
       ],
-      "expect": { "tier": "closest", "pick": "c1", "target": 60 }
+      "expect": { "tier": "closest", "pick": "b1", "target": 60 }
     },
     {
       "name": "no fresh run in the band: the closest fresh run wins",

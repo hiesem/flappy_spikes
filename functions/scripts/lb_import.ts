@@ -468,6 +468,11 @@ export async function importLeaderboard(db: Firestore, opts: ImportOptions): Pro
 
   let resultBest = best;
   if (apply) {
+    if (changed.size > 0) {
+      const metaRef = db.collection(LB_META_COLLECTION).doc('import');
+      await metaRef.set({ cleanedAt: FieldValue.delete() }, { merge: true });
+    }
+
     const writer = new BatchedWriter(db);
     for (const [uid, data] of changed) {
       await writer.set(db.collection(LB_PLAYERS_COLLECTION).doc(uid), data);

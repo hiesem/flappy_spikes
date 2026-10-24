@@ -244,9 +244,6 @@ export function printCleanupPlan(project: string, apply: boolean, plan: CleanupP
 
 async function applyCleanup(db: Firestore, plan: CleanupPlan): Promise<ReturnType<typeof bestDocFromPlayers>> {
   const writer = new BatchedWriter(db);
-  for (const uid of plan.result.removedPlayers) {
-    await writer.delete(db.collection(LB_PLAYERS_COLLECTION).doc(uid));
-  }
   for (const item of plan.orphans) {
     await writer.delete(db.collection(item.collection).doc(item.id));
   }
@@ -279,6 +276,10 @@ async function applyCleanup(db: Firestore, plan: CleanupPlan): Promise<ReturnTyp
     });
   }
 
+  await writer.flush();
+  for (const uid of plan.result.removedPlayers) {
+    await writer.delete(db.collection(LB_PLAYERS_COLLECTION).doc(uid));
+  }
   await writer.flush();
   // Re-read after the deletes: the printed board is exactly what the live collection now holds.
   const after = bestDocFromPlayers(await readLbPlayers(db), plan.nowMs);

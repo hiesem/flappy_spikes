@@ -66,6 +66,71 @@ function imported(uid: string, best: number, src: 'import' | 'play' = 'import'):
   };
 }
 
+function interruptImportAfterPlayerWrites(original: Firestore): Firestore {
+  return new Proxy(original, {
+    get(target, property) {
+      const value = Reflect.get(target, property, target);
+      if (property !== 'collection') {
+        return typeof value === 'function' ? value.bind(target) : value;
+      }
+      return (path: string) => {
+        const collection = value.call(target, path);
+        if (path !== 'lbBest') return collection;
+        return new Proxy(collection, {
+          get(collectionTarget, collectionProperty) {
+            const collectionValue = Reflect.get(collectionTarget, collectionProperty, collectionTarget);
+            if (collectionProperty !== 'doc' || typeof collectionValue !== 'function') {
+              return typeof collectionValue === 'function' ? collectionValue.bind(collectionTarget) : collectionValue;
+            }
+            return (...args: Parameters<typeof collection.doc>) => {
+              const ref = collectionValue.apply(collectionTarget, args);
+              return new Proxy(ref, {
+                get(refTarget, refProperty) {
+                  const refValue = Reflect.get(refTarget, refProperty, refTarget);
+                  if (refProperty === 'get') {
+                    return async () => {
+                      throw new Error('interrupted after imported players committed');
+                    };
+                  }
+                  return typeof refValue === 'function' ? refValue.bind(refTarget) : refValue;
+                },
+              });
+            };
+          },
+        });
+      };
+    },
+  });
+}
+
+function interruptCleanupAfterFirstCommittedBatch(original: Firestore): Firestore {
+  let batchCalls = 0;
+  return new Proxy(original, {
+    get(target, property) {
+      const value = Reflect.get(target, property, target);
+      if (property !== 'batch') {
+        return typeof value === 'function' ? value.bind(target) : value;
+      }
+      return () => {
+        batchCalls++;
+        const batch = target.batch();
+        if (batchCalls === 1) return batch;
+        return new Proxy(batch, {
+          get(batchTarget, batchProperty) {
+            if (batchProperty === 'delete') {
+              return () => {
+                throw new Error('interrupted after first cleanup batch committed');
+              };
+            }
+            const batchValue = Reflect.get(batchTarget, batchProperty, batchTarget);
+            return typeof batchValue === 'function' ? batchValue.bind(batchTarget) : batchValue;
+          },
+        });
+      };
+    },
+  });
+}
+
 function group(_gid: string, members: string[], ghosts: string[]): LbGroupDoc {
   return {
     bracket: 0,
@@ -103,6 +168,26 @@ async function seedLb(db: Firestore, docs: Array<[string, LbPlayerDoc]>, gifts: 
   for (const [gid, doc] of groups) batch.set(db.collection('lbGroups').doc(gid), doc);
   for (const [id, doc] of pools) batch.set(db.collection('lbGhostPool').doc(id), doc);
   await batch.commit();
+}
+
+async function seedCleanupRetryData(keep: string, count: number): Promise<string[]> {
+  const uids = Array.from({ length: count }, (_, index) => `cleanup-retry-${String(index).padStart(3, '0')}`);
+  for (let offset = 0; offset < uids.length; offset += 200) {
+    const batch = db.batch();
+    for (const uid of uids.slice(offset, offset + 200)) {
+      batch.set(db.collection('lbPlayers').doc(uid), imported(uid, 100));
+      batch.set(db.collection('lbGifts').doc(`${uid}_g1`), {
+        uid,
+        gid: 'retry-g1',
+        tier: 'gold',
+        boardRank: 1,
+        expireAt: at(NOW + 400 * DAY),
+      });
+    }
+    await batch.commit();
+  }
+  await db.collection('lbPlayers').doc(keep).set(imported(keep, 500));
+  return uids;
 }
 
 describe('PRD-2.6 C8 verified best-run import', () => {
@@ -248,6 +333,44 @@ describe('PRD-2.6 C8 verified best-run import', () => {
     assert.equal(meta3?.cleanedAt.toMillis(), cleanedAt.toMillis());
   });
 
+  it('invalidates cleanedAt before imported players commit, so an interrupted apply remains cleanup-gated', async () => {
+    const uid = uniq('import-interrupted');
+    await seedPlayers(db, [
+      [uid, player({ best: 33, bestRun: makeRun({ score: 33, tsMs: T0, best: 33 }), recent: [] })],
+    ]);
+    await db.collection('lbMeta').doc('import').set({
+      ranAt: at(T0),
+      count: 0,
+      keepUids: [],
+      cleanedAt: at(T0),
+    });
+
+    await assert.rejects(
+      importLeaderboard(interruptImportAfterPlayerWrites(db), {
+        keepUids: [],
+        apply: true,
+        nowMs: NOW,
+        log: () => {},
+      }),
+      /interrupted after imported players committed/,
+    );
+    assert.equal((await db.collection('lbPlayers').doc(uid).get()).exists, true);
+    assert.equal((await db.collection('lbBest').doc('global').get()).exists, false);
+    assert.equal((await db.collection('lbMeta').doc('import').get()).data()?.cleanedAt, undefined);
+
+    const retry = await importLeaderboard(db, {
+      keepUids: [],
+      apply: true,
+      nowMs: NOW,
+      log: () => {},
+    });
+    assert.equal(retry.unchanged, 1);
+    assert.equal((await db.collection('lbMeta').doc('import').get()).data()?.cleanedAt, undefined);
+
+    await cleanupLeaderboard(db, { keepUids: [], apply: true, nowMs: NOW, log: () => {} });
+    assert.equal((await db.collection('lbMeta').doc('import').get()).data()?.cleanedAt.toMillis(), NOW);
+  });
+
   it('imports a player close to the 60-day source expiry but skips an already-expired source doc', async () => {
     const near = uniq('import-near-expiry');
     const stale = uniq('import-expired');
@@ -375,6 +498,46 @@ describe('PRD-2.6 C9 release-blocking LB cleanup', () => {
     const meta = (await db.collection('lbMeta').doc('import').get()).data();
     assert.equal(meta?.cleanedAt.toMillis(), NOW);
     assert.deepEqual(meta?.keepUids, [keepA, keepB]);
+  });
+
+  it('resumes safely after a committed 400-deletion batch without losing its cleanup targets', async () => {
+    const keep = uniq('cleanup-retry-keep');
+    const removed = await seedCleanupRetryData(keep, 400);
+
+    await assert.rejects(
+      cleanupLeaderboard(interruptCleanupAfterFirstCommittedBatch(db), {
+        keepUids: [keep],
+        apply: true,
+        nowMs: NOW,
+        log: () => {},
+      }),
+      /interrupted after first cleanup batch committed/,
+    );
+
+    assert.equal((await db.collection('lbGifts').limit(1).get()).size, 0, 'the first committed batch removes gifts');
+    const surviving = await db.collection('lbPlayers').get();
+    const survivingUids = new Set(surviving.docs.map((doc) => doc.id));
+    assert.equal(survivingUids.has(keep), true);
+    assert.deepEqual(
+      removed.filter((uid) => !survivingUids.has(uid)),
+      [],
+      'target players stay durable until their dependent artifacts are gone',
+    );
+
+    const retry = await cleanupLeaderboard(db, {
+      keepUids: [keep],
+      apply: true,
+      nowMs: NOW,
+      log: () => {},
+    });
+    assert.deepEqual(retry.removedPlayers, removed.sort());
+    assert.equal(retry.keptImported, 1);
+    assert.equal((await db.collection('lbPlayers').doc(keep).get()).exists, true);
+    for (const uid of removed) {
+      assert.equal((await db.collection('lbPlayers').doc(uid).get()).exists, false);
+    }
+    assert.equal((await db.collection('lbGifts').limit(1).get()).size, 0);
+    assert.equal((await db.collection('lbMeta').doc('import').get()).data()?.cleanedAt.toMillis(), NOW);
   });
 
   it('a dry run writes nothing, including no cleanedAt', async () => {

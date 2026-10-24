@@ -68,13 +68,14 @@ The own-leaderboard release adds nine server-only `lb*` collections and three ca
 
 ```bash
 # Auth once with an owner account: gcloud auth application-default login
+# 1. Preview (default): nothing is written.
 npx --prefix functions tsx functions/scripts/lb_import.ts   --project flappy-spikes-a2b55 --keep <hiesem-uid>,<hiesemie-uid>,<tester-uid>
 
-# Preview first if desired; this variant writes nothing:
-npx --prefix functions tsx functions/scripts/lb_import.ts   --project flappy-spikes-a2b55 --keep <uids> --dry-run
+# 2. Import the reviewed plan.
+npx --prefix functions tsx functions/scripts/lb_import.ts   --project flappy-spikes-a2b55 --keep <hiesem-uid>,<hiesemie-uid>,<tester-uid> --apply
 ```
 
-`lb_import.ts` never trusts the client-written `players/{uid}.best`. It imports the verified `bestRun` when `checkRun` accepts it; otherwise it takes the highest verified `recent[]` run; otherwise it skips the player. It writes `lbPlayers/{uid}` (`src: 'import'`, `expireAt` now + 400 days), rebuilds `lbBest/global` and writes `lbMeta/import` (`ranAt`, `count`, `keepUids`). A rerun updates imported rows but preserves any row already owned by live play (`src: 'play'`), and clears an earlier `cleanedAt` because that gate must be run again.
+`lb_import.ts` never trusts the client-written `players/{uid}.best`. It imports the verified `bestRun` when `checkRun` accepts it; otherwise it takes the highest verified `recent[]` run; otherwise it skips the player. `--apply` writes `lbPlayers/{uid}` (`src: 'import'`, `expireAt` now + 400 days), rebuilds `lbBest/global` and writes `lbMeta/import` (`ranAt`, `count`, `keepUids`). A rerun is idempotent and preserves any row already owned by live play (`src: 'play'`). A changed import clears an earlier `cleanedAt` before writing players, so even an interrupted import remains gated until cleanup succeeds; an unchanged rerun leaves a valid `cleanedAt` untouched.
 
 **Release-blocking cleanup (C9, before production — not needed for internal / closed testing):**
 
@@ -86,7 +87,7 @@ npx --prefix functions tsx functions/scripts/lb_cleanup_test.ts   --project flap
 npx --prefix functions tsx functions/scripts/lb_cleanup_test.ts   --project flappy-spikes-a2b55 --keep <hiesem-uid>,<hiesemie-uid>,<tester-uids> --apply
 ```
 
-The cleanup deletes every **imported** `lbPlayers` row not on the keep-list, plus its `lbGifts`, ghost-pool entries and member/ghost rows in `lbGroups`; it rebuilds `lbBest/global`, sets `lbMeta/import.cleanedAt`, and prints the remaining top 50. It touches only the new `lb*` collections and never the versus `pools` (O7), `players` or other versus data. Rows created by live play are never deleted. Both scripts **require an explicit `--project`** and never fall back to a default project; the import runs unless `--dry-run` is passed, while the cleanup writes nothing unless `--apply` is passed.
+The cleanup deletes every **imported** `lbPlayers` row not on the keep-list, plus its `lbGifts`, ghost-pool entries and member/ghost rows in `lbGroups`; it rebuilds `lbBest/global`, sets `lbMeta/import.cleanedAt`, and prints the remaining top 50. It touches only the new `lb*` collections and never the versus `pools` (O7), `players` or other versus data. Rows created by live play are never deleted. Both scripts **require an explicit `--project`** and never fall back to a default project; both preview by default and write only when `--apply` is passed. Cleanup removes dependent artifacts before target players, so an interrupted large run can be resumed with the same keep-list.
 
 ## 4. TTL policy (60 days)
 

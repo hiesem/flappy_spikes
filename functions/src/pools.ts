@@ -184,20 +184,15 @@ export async function processPlayerWrite(
       const scores = Array.isArray(rate.scores) ? rate.scores.filter((x) => typeof x === 'number') : [];
       // PRD-2.6 E6 the last pass counts of runs that passed checkRun (oldest first).
       const passHist = Array.isArray(rate.passHist)
-        ? rate.passHist.filter((x) => Number.isInteger(x) && x >= 0)
+        ? rate.passHist.filter((x) => Number.isInteger(x) && x >= 0).slice(-10)
         : [];
+      const judged: RunEntry[] = [];
       let chosen: RunEntry | null = null;
       let last: RateDoc['last'];
       for (const run of fresh) {
         let reason: RejectReason | null = seen.has(run.runId) ? 'duplicate' : checkRun(run, playerBest);
         if (reason === null) {
-          // PRD-2.5 §3.6 (D3) judged whether pooled or rate-limited; never changes the outcome.
-          try {
-            const a = scoreRun(run, passHist);
-            if (a) anomalies.push({ run, a });
-          } catch (err) {
-            logger.error('versusFlag: scoring failed', { uid, runId: run.runId, err: String(err) });
-          }
+          judged.push(run);
           scores.push(run.score);
         }
         const isBest =
@@ -216,13 +211,29 @@ export async function processPlayerWrite(
           result.accepted.push(run.runId);
           if (!chosen) chosen = run;
           last = { runId: run.runId, status: 'accepted', pool: pid };
-          const facts = runFacts(run);
-          if (facts) passHist.push(facts.passes);
         } else {
           result.rejected.push({ runId: run.runId, reason });
           if (reason !== 'duplicate') last = { runId: run.runId, status: 'rejected', reason };
         }
       }
+      // Keep newest-first upload limits / pool selection above, but judge
+      // oldest first: a later run must never become an earlier pass count.
+      // D3 still judges rate-limited runs; only accepted runs enter history.
+      const accepted = new Set(result.accepted);
+      for (const run of judged.reverse()) {
+        try {
+          const a = scoreRun(run, passHist);
+          if (a) anomalies.push({ run, a });
+        } catch (err) {
+          logger.error('versusFlag: scoring failed', { uid, runId: run.runId, err: String(err) });
+        }
+        if (accepted.has(run.runId)) {
+          const facts = runFacts(run);
+          if (facts) passHist.push(facts.passes);
+          if (passHist.length > 10) passHist.shift();
+        }
+      }
+      anomalies.reverse();
       rate.seen = [...seen].slice(-SEEN_KEEP);
       rate.scores = scores.slice(-SCORE_HISTORY);
       rate.passHist = passHist.slice(-10);

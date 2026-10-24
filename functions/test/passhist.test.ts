@@ -10,8 +10,10 @@ import {
   initializeTestEnvironment,
   RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc } from 'firebase/firestore';
-import { RATE_COLLECTION, RunEntry } from '../src/schema.js';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { Timestamp } from 'firebase-admin/firestore';
+import { flagId } from '../src/pools.js';
+import { FLAGS_COLLECTION, RATE_COLLECTION, RunEntry } from '../src/schema.js';
 import { DAY, PROJECT, db, makePlayer, makeRun, processLive, uniq } from './helpers.js';
 
 const shard0 = () => 0;
@@ -27,6 +29,65 @@ const passRun = (passes: number, best: number, values?: number[]): RunEntry => {
 const rate = async (uid: string) => (await db.collection(RATE_COLLECTION).doc(uid).get()).data();
 
 describe('PRD-2.6 E6 versusRate.passHist', () => {
+  for (const counts of [[150, 10], [10, 150]]) {
+    it(`judges batched passes ${counts.join(' → ')} against only earlier accepted runs`, async () => {
+      const uid = uniq('passbatch');
+      const nowMs = Date.UTC(2026, 9, 24, 12);
+      await db.collection(RATE_COLLECTION).doc(uid).set({
+        day: '', count: 0, seen: [], passHist: [10, 10, 10, 10],
+      });
+      const runs = counts.map((count, i) => ({
+        ...passRun(count, 300), ts: Timestamp.fromMillis(nowMs - 2000 + i * 1000),
+      }));
+      const r = await processLive(uid, undefined, makePlayer({ best: 300, recent: [...runs].reverse() }), {
+        rand: shard0, nowMs,
+      });
+      assert.deepEqual(r.accepted, [...runs].reverse().map((run) => run.runId));
+      assert.deepEqual(r.flagged ?? [], counts[1] === 150 ? [runs[1].runId] : []);
+      if (counts[1] === 150) {
+        const flag = await db.collection(FLAGS_COLLECTION).doc(flagId(uid, runs[1].runId)).get();
+        assert.deepEqual(flag.data()?.signals, { jump: 10 });
+        assert.equal(flag.data()?.soft, true);
+      }
+      assert.deepEqual((await rate(uid))?.passHist, [10, 10, 10, 10, ...counts]);
+      const entries = (await db.collection('pools').doc(r.pool!).get()).data()?.entries;
+      assert.equal(entries[0].runId, runs[1].runId);
+    });
+  }
+
+  it('caps history between runs within a batch before computing the next median', async () => {
+    const uid = uniq('passbatchcap');
+    const nowMs = Date.UTC(2026, 9, 24, 12);
+    const history = [10, 10, 10, 10, 10, 100, 100, 100, 100, 100];
+    await db.collection(RATE_COLLECTION).doc(uid).set({ day: '', count: 0, seen: [], passHist: history });
+    const runs = [10, 150].map((count, i) => ({
+      ...passRun(count, 300), ts: Timestamp.fromMillis(nowMs - 2000 + i * 1000),
+    }));
+    const r = await processLive(uid, undefined, makePlayer({ best: 300, recent: [...runs].reverse() }), {
+      rand: shard0, nowMs,
+    });
+    // Last 10 earlier counts have median 55; an uncapped 11-count history
+    // would have median 10 and would incorrectly flag the 150-pass run.
+    assert.deepEqual(r.flagged ?? [], []);
+    assert.deepEqual((await rate(uid))?.passHist, [...history, 10, 150].slice(-10));
+  });
+
+  it('preserves newest-first upload limits and pool selection for a batch', async () => {
+    const uid = uniq('passbatchrate');
+    const nowMs = Date.UTC(2026, 9, 24, 12);
+    const runs = [10, 20, 30, 40].map((count, i) => ({
+      ...passRun(count, 300), ts: Timestamp.fromMillis(nowMs - 4000 + i * 1000),
+    }));
+    const r = await processLive(uid, undefined, makePlayer({ best: 300, recent: [...runs].reverse() }), {
+      rand: shard0, nowMs,
+    });
+    assert.deepEqual(r.accepted, [runs[3].runId, runs[2].runId, runs[1].runId]);
+    assert.deepEqual(r.rejected, [{ runId: runs[0].runId, reason: 'rate' }]);
+    assert.deepEqual((await rate(uid))?.passHist, [20, 30, 40]);
+    const entries = (await db.collection('pools').doc(r.pool!).get()).data()?.entries;
+    assert.equal(entries[0].runId, runs[3].runId);
+  });
+
   it('appends the pass count of every accepted run and keeps the last 10', async () => {
     const uid = uniq('passhist');
     const day0 = Date.UTC(2026, 9, 24, 12);
@@ -136,6 +197,7 @@ describe('PRD-2.6 E6 rules: versusRate is server-only', () => {
       const client = authed ? env.authenticatedContext(uid).firestore() : env.unauthenticatedContext().firestore();
       const ref = doc(client, RATE_COLLECTION, uid);
       await assertFails(getDoc(ref));
+      await assertFails(setDoc(ref, { passHist: [1, 2, 3] }, { merge: true }));
       await env.withSecurityRulesDisabled(async (ctx) => {
         assert.equal((await ctx.firestore().collection(RATE_COLLECTION).doc(uid).get()).exists, true);
       });
@@ -146,14 +208,16 @@ describe('PRD-2.6 E6 rules: versusRate is server-only', () => {
     const uid = uniq('poolread');
     const day0 = Date.UTC(2026, 9, 24, 16);
     const run = passRun(21, 21);
-    await processLive(uid, undefined, makePlayer({ best: 130, bestRun: run, recent: [run] }), {
+    const r = await processLive(uid, undefined, makePlayer({ best: 130, bestRun: run, recent: [run] }), {
       rand: shard0,
       nowMs: day0,
     });
     const hist = (await rate(uid))?.passHist;
     assert.deepEqual(hist, [21]);
     // The only client-readable versus data is pools/{id}; its entries carry no history.
-    const entries = (await db.collection('pools').doc('1_0').get()).data()?.entries ?? [];
-    for (const entry of entries) assert.equal(entry.passHist, undefined);
+    const entries = (await db.collection('pools').doc(r.pool!).get()).data()?.entries ?? [];
+    const entry = entries.find((entry: { uid: string }) => entry.uid === uid);
+    assert.ok(entry, 'accepted run is present in the selected pool');
+    assert.equal(entry.passHist, undefined);
   });
 });

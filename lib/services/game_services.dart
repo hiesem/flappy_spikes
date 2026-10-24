@@ -696,6 +696,16 @@ class GameServices {
     }
   }
 
+  /// Sets a GA4 user property. The default (uninitialized) instance is a
+  /// no-op; a plugin failure never affects gameplay.
+  void setUserProperty(String name, String? value) {
+    try {
+      _analytics
+          ?.setUserProperty(name: name, value: value)
+          .catchError((Object _) {});
+    } catch (_) {}
+  }
+
   // --- plugin seams (overridable in tests) --------------------------------
 
   @visibleForTesting

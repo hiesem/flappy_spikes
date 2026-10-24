@@ -263,7 +263,7 @@ export function utcDay(ms: number): string {
 export const FLAGS_COLLECTION = 'versusFlags';
 /** How long a flag is kept (Firestore TTL on `expireAt`; privacy policy: "up to 60 days"). */
 export const FLAG_TTL_DAYS = 60;
-/** Scores kept in [RateDoc.scores] (the history of the `jump` signal). */
+/** Scores kept in [RateDoc.scores] (retained for existing rate docs; `jump` now uses the pass history). */
 export const SCORE_HISTORY = 10;
 /**
  * `streak_jump`: a pass entry may exceed the previous pass entry's value by
@@ -281,9 +281,10 @@ export const STREAK_FLOOR_MAX = 8;
 /**
  * `pace`: flag when the median gap between consecutive plain passes (flag
  * byte 0) is under this many centiseconds. Plain hoops come every 310 pt at
- * ≤ 187.5 pt/s → ≥ ~165 cs; 135 cs leaves room for tilted crossings.
+ * ≤ 187.5 pt/s → ≥ ~165 cs; 132 cs leaves room for tilted crossings and
+ * stays within the PRD-2.6 E6 bound (≤ 0.8 × 310 / 187.5 × 100 = 132.27).
  */
-export const PACE_MIN_MEDIAN_CS = 135;
+export const PACE_MIN_MEDIAN_CS = 132;
 /** `pace` only judges a run with at least this many plain-pass gaps. */
 export const PACE_MIN_GAPS = 10;
 /** `passes`: the top scroll speed (`curve_speed` max, tuning_defaults.dart). */
@@ -294,10 +295,6 @@ export const PASS_SPACING = 310;
 export const PASS_RINGS_PER_SLOT = 3;
 /** `passes`: slack on top of the bound. */
 export const PASS_EXTRA = 5;
-/** `jump` (soft): only scores at least this high are judged. */
-export const JUMP_MIN_SCORE = 500;
-/** `jump` (soft): a score above this × the median of the history … */
-export const JUMP_FACTOR = 5;
 /** … with at least this many history entries. */
 export const JUMP_MIN_HISTORY = 5;
 

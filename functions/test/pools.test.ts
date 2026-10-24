@@ -437,22 +437,6 @@ describe('PRD-2.5 §3.6 anomaly flags (D3: flag only)', () => {
     assert.deepEqual((await rate(uid))?.scores, [12, 13, 14, 15, 16, 17, 18, 19, 20, 21]);
   });
 
-  it('a score jump alone is a soft flag', async () => {
-    const uid = uniq('jump');
-    const day0 = Date.UTC(2026, 9, 23, 12);
-    await db.collection(RATE_COLLECTION).doc(uid).set({ day: '', count: 0, seen: [], scores: [20, 30, 25, 40, 35] });
-    const values = Array.from({ length: 40 }, (_, i) => Math.max(2, i + 1)); // Σ = 821
-    const run = makeRun({ score: 821, deltas: values.map(() => 170), values });
-    const r = await processLive(uid, undefined, makePlayer({ best: 821, bestRun: run, recent: [run] }), {
-      rand: shard0,
-      nowMs: day0,
-    });
-    assert.deepEqual(r.accepted, [run.runId]);
-    const f = await flagDoc(uid, run.runId);
-    assert.deepEqual(f!.signals, { jump: 30 });
-    assert.equal(f!.soft, true);
-  });
-
   it('deletePlayerData removes the uid flags (and only theirs)', async () => {
     const uid = uniq('flagdel');
     const other = uniq('flagkeep');

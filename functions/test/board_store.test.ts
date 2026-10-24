@@ -12,7 +12,11 @@ import {
   LB_GHOST_POOL_COLLECTION,
   LB_GROUPS_COLLECTION,
   LB_GROUP_SIZE,
+  LB_BEST_COLLECTION,
+  LB_FLAGS_COLLECTION,
+  LB_OPEN_COLLECTION,
   LB_MIN_LEFT_MS,
+  NAMES_COLLECTION,
   LB_PLAYERS_COLLECTION,
   LB_TOMB_COLLECTION,
   type LbGiftDoc,
@@ -24,6 +28,22 @@ import { db, fakeJwt, LOOK, PROJECT, uniq } from './helpers.js';
 
 const HOUR = 3600 * 1000;
 const T0 = Date.UTC(2026, 9, 20, 12, 0, 0);
+const LB_COLLECTIONS_TO_CLEAR = [
+  LB_GIFTS_COLLECTION,
+  LB_GHOST_POOL_COLLECTION,
+  LB_GROUPS_COLLECTION,
+  LB_PLAYERS_COLLECTION,
+  LB_TOMB_COLLECTION,
+  LB_BEST_COLLECTION,
+  LB_FLAGS_COLLECTION,
+  LB_OPEN_COLLECTION,
+  NAMES_COLLECTION,
+];
+
+beforeEach(async function clearBoardStoreCollections() {
+  if (!this.currentTest?.fullTitle().startsWith('PRD-2.6 LB3')) return;
+  for (const name of LB_COLLECTIONS_TO_CLEAR) await db.recursiveDelete(db.collection(name));
+});
 
 function submitRun(o: {
   id?: string;
@@ -36,8 +56,8 @@ function submitRun(o: {
   const score = o.score ?? 120;
   const hoops = o.hoops ?? score;
   const endTs = o.endTs ?? T0;
-  const cs = o.cs ?? Math.max(1200, score * 120 + 80);
-  const deltas = Array.from({ length: score }, () => 120);
+  const cs = o.cs ?? Math.max(1400, score * 140 + 80);
+  const deltas = Array.from({ length: score }, () => 140);
   return {
     id: o.id ?? uniq('lb-run'),
     score,
@@ -120,7 +140,7 @@ describe('PRD-2.6 LB3 submit, join and group placement', () => {
 
   it('keeps the group at most LB_GROUP_SIZE real members', async () => {
     const first = uniq('lb-full-first');
-    const r0 = await lbSubmitRun(db, first, request([submitRun({ score: 2100, endTs: T0 })]), T0 + 1000);
+    const r0 = await lbSubmitRun(db, first, request([submitRun({ score: 2000, endTs: T0 })]), T0 + 1000);
     const gid = r0.group!.id;
     const g0 = await group(gid);
     const members = [...g0!.memberUids];
@@ -196,7 +216,7 @@ describe('PRD-2.6 LB3 settlement and gifts', () => {
     const lazy = uniq('lb-lazy');
     const sched = uniq('lb-sched');
     const lazyRun = await lbSubmitRun(db, lazy, request([submitRun({ score: 700, endTs: T0 })]), T0 + 1000);
-    const scheduledRun = await lbSubmitRun(db, sched, request([submitRun({ score: 600, endTs: T0 + 5 * HOUR })]), T0 + 5 * HOUR + 1000);
+    const scheduledRun = await lbSubmitRun(db, sched, request([submitRun({ score: 900, endTs: T0 + 5 * HOUR })]), T0 + 5 * HOUR + 1000);
     const lazyGid = lazyRun.group!.id;
     const schedGid = scheduledRun.group!.id;
     assert.notEqual(lazyGid, schedGid);
@@ -234,7 +254,7 @@ describe('PRD-2.6 LB3 settlement and gifts', () => {
     const hidden = uniq('lb-hidden-podium');
     const rr = await lbSubmitRun(db, real, request([submitRun({ score: 900, endTs: T0 })]), T0 + 1000);
     const gid = rr.group!.id;
-    await lbSubmitRun(db, hidden, request([submitRun({ score: 300, endTs: T0 + 1000 })], { t: 1 }), T0 + 2000);
+    await lbSubmitRun(db, hidden, request([submitRun({ score: 1900, endTs: T0 + 1000 })], { t: 1 }), T0 + 2000);
     // Force the hidden tester into the group so the O65 place-keeping rule is
     // exercised; a real hidden submission never joins by itself.
     const g = (await group(gid))!;
@@ -242,13 +262,18 @@ describe('PRD-2.6 LB3 settlement and gifts', () => {
       memberUids: [...g.memberUids, hidden],
       members: {
         ...g.members,
-        [hidden]: { t: 300, b: 300, n: 1, last: Timestamp.fromMillis(T0), name: 'Hidden', look: LOOK, platform: 'android' },
+        [hidden]: { t: 1900, b: 1900, n: 1, last: Timestamp.fromMillis(T0), name: 'Hidden', look: LOOK, platform: 'android' },
       },
     });
     const end = g.end.toMillis();
-    await lbSettleGroups(db, end + 1000, gid);
+    const settled = await lbSettleGroups(db, end + 1000, gid);
+    assert.equal(settled.groups, 1);
+    assert.equal((await group(gid))?.settled, true);
     assert.equal((await gifts(hidden)).length, 0);
-    assert.equal((await gifts(real)).length, 0);
+    const realGifts = await gifts(real);
+    assert.equal(realGifts.length, 1);
+    assert.equal(realGifts[0]?.tier, 'silver');
+    assert.equal(realGifts[0]?.boardRank, 2);
   });
 });
 
@@ -317,12 +342,12 @@ describe('PRD-2.6 LB3 claim, tombstone and response shapes', () => {
   it('uses custom versusNames, never a platform name', async () => {
     const uid = uniq('lb-name');
     await db.collection('versusNames').doc(uid).set({
-      customName: 'Brave Lark',
+      customName: 'BraveLark',
       updatedAt: Timestamp.fromMillis(T0),
     });
     const r = await lbSubmitRun(db, uid, request([submitRun({ score: 75, endTs: T0 })], { name: 'Dev Platform Name' }), T0 + 1000);
-    assert.equal(r.board?.rows.some((row) => row.name === 'Brave Lark'), true);
-    assert.equal((await player(uid))?.name, 'Brave Lark');
+    assert.equal(r.board?.rows.some((row) => row.name === 'BraveLark'), true);
+    assert.equal((await player(uid))?.name, 'BraveLark');
   });
 
   it('emulated callables accept an anonymous App Check user and expose the PRD shapes', async () => {

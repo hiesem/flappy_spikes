@@ -270,6 +270,11 @@ function openId(bracket: number, shard: number): string {
   return `${bracket}_${shard}`;
 }
 
+function freshGroupId(bracket: number, startMs: number, uid: string, nowMs: number): string {
+  const clampedStart = Math.min(startMs, nowMs);
+  return `${bracket}_${clampedStart.toString(36)}_${hash32(`group:${uid}`).toString(36)}`;
+}
+
 function giftId(uid: string, gid: string): string {
   return `${uid}_${gid}`;
 }
@@ -834,7 +839,14 @@ async function submit(
           group: willJoin ? candidate.group : null,
           pools,
           random: Math.random,
-          gid: willJoin ? (candidate.gid ?? undefined) : undefined,
+          gid: willJoin
+            ? (candidate.gid ?? undefined)
+            : freshGroupId(
+                bracket,
+                Math.max(nowMs - LB_OFFLINE_BACKDATE, runs.length > 0 ? Math.min(...runs.map((run) => run.startMs)) : nowMs),
+                uid,
+                nowMs,
+              ),
         })
       : null;
     const joinedGroup = joined?.group ?? (isRunning ? current.group : null);

@@ -2,9 +2,8 @@ import '../config/revive_config.dart';
 import '../run_state.dart';
 
 /// What one revive offer asks for (§3.14 "one option per death").
-/// PRD-2.3.1 §14 removed PRD-2.2 §7.7's `free` kind: a NO ADS owner gets no
-/// free revive any more.
-enum ReviveOfferKind { ad, coins }
+/// PRD-2.6 WP-B2 restores `free` for one revive in a showcase run.
+enum ReviveOfferKind { ad, coins, free }
 
 /// One offer of the price ladder.
 class ReviveOffer {
@@ -14,6 +13,10 @@ class ReviveOffer {
       noAdLabel = false;
   const ReviveOffer.coins(this.price, {this.noAdLabel = false})
     : kind = ReviveOfferKind.coins;
+  const ReviveOffer.free()
+    : kind = ReviveOfferKind.free,
+      price = 0,
+      noAdLabel = false;
 
   final ReviveOfferKind kind;
 
@@ -27,6 +30,8 @@ class ReviveOffer {
 
   bool get isCoins => kind == ReviveOfferKind.coins;
 
+  bool get isFree => kind == ReviveOfferKind.free;
+
   @override
   bool operator ==(Object other) =>
       other is ReviveOffer &&
@@ -38,8 +43,11 @@ class ReviveOffer {
   int get hashCode => Object.hash(kind, price, noAdLabel);
 
   @override
-  String toString() =>
-      isAd ? 'ad' : '$price${noAdLabel ? ' (no ad)' : ''}';
+  String toString() => isAd
+      ? 'ad'
+      : isFree
+      ? 'free'
+      : '$price${noAdLabel ? ' (no ad)' : ''}';
 }
 
 /// The §3.14 price ladder (pure; the state lives in [RunState], so it
@@ -79,13 +87,19 @@ abstract final class ReviveLadder {
   /// The offer for this death. [adReady] = a rewarded ad can be shown now.
   /// [noAds] = the player owns NO ADS (PRD-2.3.1 §14: the ad step is
   /// skipped, no label, no free revive).
+  /// [showcase] = this run has the WP-B2 safety net (the first revive is
+  /// free; it consumes neither the ad step nor a coin step).
   /// Skipping the ad step is written to [s] (it never comes back in this
   /// game).
   static ReviveOffer offer(
     RunState s, {
     required bool adReady,
     bool noAds = false,
+    bool showcase = false,
   }) {
+    if (showcase && s.revivesThisGame == 0) {
+      return const ReviveOffer.free();
+    }
     if (s.adStepAvailableThisGame) {
       if (!noAds && adReady) return const ReviveOffer.ad();
       s.adStepAvailableThisGame = false;
@@ -98,13 +112,17 @@ abstract final class ReviveLadder {
   static void record(RunState s, ReviveOffer offer) {
     if (offer.isAd) {
       s.adStepAvailableThisGame = false;
+    } else if (offer.isFree) {
+      return;
     } else {
       s.coinRevives++;
     }
   }
 
   /// §3.14 the offer is only made from [ReviveConfig.minHoops] hoops
-  /// passed, and (PRD-2.3 §14.2) never after the last paid step.
-  static bool eligible(RunState s) =>
-      s.hoopsPassed >= ReviveConfig.minHoops && !exhausted(s);
+  /// passed, and (PRD-2.3 §14.2) never after the last paid step. A showcase
+  /// run may offer its free revive after hoop 0.
+  static bool eligible(RunState s, {bool showcase = false}) =>
+      (showcase ? s.hoopsPassed > 0 : s.hoopsPassed >= ReviveConfig.minHoops) &&
+      !exhausted(s);
 }

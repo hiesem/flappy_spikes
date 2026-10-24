@@ -32,6 +32,10 @@ class ReviveFlow implements ReviveScreenFactory {
   Future<ReviveOutcome> show(FlappySpikesGame game, RunSummary s) async {
     final run = game.run;
     if (run == null) return ReviveOutcome.declined;
+    final showcase = run.setup.showcase?.freeRevive ?? false;
+    if (!showcase && run.state.hoopsPassed < ReviveConfig.minHoops) {
+      return ReviveOutcome.declined;
+    }
     final screen = ReviveScreen(run);
     game.camera.viewport.add(screen);
     return screen.outcome;
@@ -167,6 +171,12 @@ class ReviveScreen extends PositionComponent
     color: ReviveConfig.plum,
     spacing: ReviveConfig.coinReviveSpacing,
   );
+  late final HudText _freeRevive = HudText(
+    'FREE',
+    size: ReviveConfig.adReviveSize,
+    color: const Color(0xFFFFFFFF),
+    spacing: ReviveConfig.adReviveSpacing,
+  );
   late final HudText _lockRevive = HudText(
     'REVIVE',
     size: ReviveConfig.lockReviveSize,
@@ -197,6 +207,7 @@ class ReviveScreen extends PositionComponent
       run.state,
       adReady: game.monetization.ads.isAvailable,
       noAds: game.menu.noAds,
+      showcase: run.setup.showcase?.freeRevive ?? false,
     );
     shownBalance = balance;
     dim = ReviveDim();
@@ -277,7 +288,18 @@ class ReviveScreen extends PositionComponent
     }
     _popT = 0;
     _trackWaited();
-    if (offer.isAd) {
+    if (offer.isFree) {
+      phase = RevivePhase.paying;
+      _track('revive_free_used', {
+        'revive_index': run.state.revivesThisGame + 1,
+      });
+      ReviveLadder.record(run.state, offer);
+      _after(ReviveConfig.adHideDelay, () => _fadeUi(0));
+      _after(
+        ReviveConfig.adHideDelay + ReviveConfig.phoenixDelay,
+        () => _startPhoenix(ReviveKind.coins, 0),
+      );
+    } else if (offer.isAd) {
       phase = RevivePhase.ad;
       _track('revive_ad_started');
       _after(ReviveConfig.adHideDelay, () {
@@ -637,7 +659,7 @@ class ReviveScreen extends PositionComponent
   }
 
   (Color, Color) get _colors {
-    if (offer.isAd) {
+    if (offer.isAd || offer.isFree) {
       return (ReviveConfig.adFill, ReviveConfig.adBorder);
     }
     if (locked) return (ReviveConfig.lockFill, ReviveConfig.lockBorder);
@@ -656,22 +678,20 @@ class ReviveScreen extends PositionComponent
       ..translate(c.dx + shake + lockShake, c.dy)
       ..scale(beat * pop)
       ..translate(-c.dx, -c.dy);
-    // The heart path in the mock's viewBox "1 1.5 22 20.5".
-    final sx = hr.width / 22, sy = hr.height / 20.5;
     canvas
       ..save()
-      ..translate(hr.left, hr.top)
-      ..scale(sx, sy)
-      ..translate(-1, -1.5);
-    final path = LifeIcons.heart24;
-    _p.color = ReviveConfig.emptyFill.withValues(
-      alpha: ReviveConfig.emptyFill.a * a,
+      ..translate(c.dx, c.dy)
+      ..scale(1, hr.height / hr.width)
+      ..translate(-c.dx, -c.dy);
+    LifeIcons.paintHeart(
+      canvas,
+      c,
+      hr.width,
+      fill: ReviveConfig.emptyFill,
+      outline: ReviveConfig.heartStroke,
+      outlineColor: ReviveConfig.emptyBorder,
+      opacity: a,
     );
-    canvas.drawPath(path, _p);
-    _stroke
-      ..strokeWidth = ReviveConfig.heartStroke
-      ..color = ReviveConfig.emptyBorder.withValues(alpha: a);
-    canvas.drawPath(path, _stroke);
     final d = drain;
     if (d < 1) {
       var (fill, border) = _colors;
@@ -682,13 +702,24 @@ class ReviveScreen extends PositionComponent
       }
       canvas
         ..save()
-        ..clipRect(Rect.fromLTRB(-2, 1.5 + d * 20.5, 26, 26));
-      _p.color = fill.withValues(alpha: a);
-      canvas.drawPath(path, _p);
-      _stroke.color = border.withValues(alpha: a);
-      canvas
-        ..drawPath(path, _stroke)
-        ..restore();
+        ..clipRect(
+          Rect.fromLTRB(
+            hr.left - 4,
+            hr.top + d * hr.height - 2,
+            hr.right + 4,
+            hr.bottom + 4,
+          ),
+        );
+      LifeIcons.paintHeart(
+        canvas,
+        c,
+        hr.width,
+        fill: fill,
+        outline: ReviveConfig.heartStroke,
+        outlineColor: border,
+        opacity: a,
+      );
+      canvas.restore();
     }
     canvas.restore();
     _renderLabels(canvas, c, a);
@@ -710,6 +741,10 @@ class ReviveScreen extends PositionComponent
         a,
       );
       _adRevive.paintCentred(canvas, Offset(c.dx, c.dy + 2), opacity: a);
+      return;
+    }
+    if (offer.isFree) {
+      _freeRevive.paintCentred(canvas, Offset(c.dx, c.dy - 6), opacity: a);
       return;
     }
     final price = formatCoins(offer.price);

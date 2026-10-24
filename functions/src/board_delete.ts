@@ -342,10 +342,11 @@ export async function deleteBoardData(db: Firestore, uid: string, nowMs = Date.n
   const player = playerSnap.exists ? (playerSnap.data() as LbPlayerDoc) : undefined;
   const currentGid = typeof player?.groupId === 'string' && player.groupId ? player.groupId : null;
 
+  await stripGroups(db, uid, currentGid);
   await deleteOwnedDocs(db, LB_GIFTS_COLLECTION, uid);
   await deleteOwnedDocs(db, LB_FLAGS_COLLECTION, uid);
-  await stripGroups(db, uid, currentGid);
   await pruneGhostPools(db, uid, nowMs);
+  await stripGroups(db, uid, null);
   await deleteBoardCore(db, uid, nowMs);
 }
 

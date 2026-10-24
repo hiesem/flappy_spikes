@@ -1,8 +1,8 @@
 /** PRD-2.6 LB3 Delete My Data and the server-derived name hooks. */
 import assert from 'node:assert/strict';
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp, type Firestore } from 'firebase-admin/firestore';
 import { deleteBoardData, lbSyncName } from '../src/board_delete.js';
-import { lbSubmitRun } from '../src/board_store.js';
+import { lbSettleGroups, lbSubmitRun } from '../src/board_store.js';
 import { nameKey } from '../src/nameclaims.js';
 import { versusName } from '../src/nickname.js';
 import { getCustomName, releaseStaleGuestNames, setCustomName } from '../src/pools.js';
@@ -41,6 +41,8 @@ const CLEARED = [
   NAMES_COLLECTION,
   CLAIMS_COLLECTION,
 ];
+
+type AnyFunction = (...args: any[]) => any;
 
 function at(ms: number): Timestamp {
   return Timestamp.fromMillis(ms);
@@ -98,7 +100,75 @@ async function seedBoardPlayer(uid: string, gid: string | null, name: string, be
   await db.collection(LB_PLAYERS_COLLECTION).doc(uid).set(player(uid, gid, name, best));
 }
 
-function runRequest(score = 70) {
+function boundMember(target: object, key: string | symbol): unknown {
+  const value = Reflect.get(target, key, target);
+  return typeof value === 'function' ? (value as AnyFunction).bind(target) : value;
+}
+
+function dbWithSettlementDuringGiftSweep(gid: string, now: number): Firestore {
+  let settled = false;
+  const settle = async () => {
+    if (settled) return;
+    settled = true;
+    await lbSettleGroups(db, now, gid);
+  };
+  return new Proxy(db, {
+    get(target, property) {
+      if (property !== 'collection') return boundMember(target, property);
+      return (name: string) => {
+        const collection = target.collection(name);
+        if (name !== LB_GIFTS_COLLECTION) return collection;
+        return new Proxy(collection, {
+          get(collectionTarget, collectionProperty) {
+            if (collectionProperty !== 'where') return boundMember(collectionTarget, collectionProperty);
+            const where = Reflect.get(collectionTarget, collectionProperty, collectionTarget) as AnyFunction;
+            return (...whereArgs: unknown[]) => {
+              return trackedQuery(where.apply(collectionTarget, whereArgs), settle);
+            };
+          },
+        });
+      };
+    },
+  }) as Firestore;
+}
+
+function trackedQuery(query: object, settle: () => Promise<void>): object {
+  return new Proxy(query, {
+    get(target, property) {
+      const value = Reflect.get(target, property, target);
+      if (typeof value !== 'function') return value;
+      if (property !== 'get') {
+        return (...args: unknown[]) => {
+          const result = (value as AnyFunction).apply(target, args);
+          return result !== null && typeof result === 'object' ? trackedQuery(result, settle) : result;
+        };
+      }
+      return async (...args: unknown[]) => {
+        const snapshot = await (value as AnyFunction).apply(target, args);
+        await settle();
+        return snapshot;
+      };
+    },
+  });
+}
+
+function dbWithSubmitAfterInitialGroupSweep(submit: () => Promise<unknown>): Firestore {
+  let transactions = 0;
+  return new Proxy(db, {
+    get(target, property) {
+      if (property !== 'runTransaction') return boundMember(target, property);
+      const runTransaction = Reflect.get(target, property, target) as AnyFunction;
+      return async (...args: unknown[]) => {
+        const transactionIndex = ++transactions;
+        const result = await runTransaction.apply(target, args);
+        if (transactionIndex === 2) await submit();
+        return result;
+      };
+    },
+  }) as Firestore;
+}
+
+function runRequest(score = 70, endTs = T0) {
   const deltas = Array.from({ length: score }, () => 140);
   return {
     runs: [{
@@ -106,7 +176,7 @@ function runRequest(score = 70) {
       score,
       hoops: score,
       cs: Math.max(1400, score * 140 + 80),
-      endTs: T0,
+      endTs,
       mode: 'free',
       tl: encodeDeltas(deltas),
       fl: encodeEntries(deltas.map(() => 0), deltas.map(() => 1)),
@@ -352,6 +422,66 @@ describe('PRD-2.6 LB3 Delete My Data', () => {
     assert.deepEqual(kept.ghosts.map((ghost) => ghost.uid), [other]);
     assert.deepEqual(kept.ghostUids, [other]);
     assert.deepEqual(kept.memberUids, [other]);
+  });
+
+  it('removes a gift awarded by a settlement racing the gift sweep', async () => {
+    const uid = uniq('bd-race-gift');
+    const other = uniq('bd-race-gift-other');
+    const gid = uniq('bd-race-gift-group');
+    const oldGid = uniq('bd-race-gift-old');
+    await seedBoardPlayer(uid, gid, 'WiseOwl');
+    await seedBoardPlayer(other, gid, 'OtherOwl', 800);
+    await db.collection(LB_GROUPS_COLLECTION).doc(gid).set(group(gid, uid, other, 'WiseOwl'));
+    await db.collection(LB_GIFTS_COLLECTION).doc(`${uid}_${oldGid}`).set({
+      uid,
+      gid: oldGid,
+      tier: 'gold',
+      boardRank: 1,
+      expireAt: at(T0 + 400 * DAY),
+    });
+
+    await deleteBoardData(dbWithSettlementDuringGiftSweep(gid, T0 + 2 * DAY), uid, T0 + 2 * DAY);
+    assert.equal(((await db.collection(LB_GROUPS_COLLECTION).doc(gid).get()).data() as LbGroupDoc).settled, true);
+    assert.deepEqual(await boardDocsReferencingUid(uid), []);
+  });
+
+  it('removes a ghost copied into a group between the group and pool sweeps', async () => {
+    const uid = uniq('bd-race-ghost');
+    const other = uniq('bd-race-ghost-other');
+    const gid = uniq('bd-race-ghost-group');
+    await seedBoardPlayer(uid, gid, 'WiseOwl');
+    await db.collection(LB_GROUPS_COLLECTION).doc(gid).set(group(gid, uid, other, 'WiseOwl'));
+    const poolBatch = db.batch();
+    for (let bracket = 0; bracket <= MAX_BRACKET; bracket++) {
+      for (let shard = 0; shard < 4; shard++) {
+        poolBatch.set(db.collection(LB_GHOST_POOL_COLLECTION).doc(`${bracket}_${shard}`), {
+          bracket,
+          shard,
+          updatedAt: at(T0),
+          entries: [
+            { uid, day: '2026-10-19', runs: [{ t: 100, s: 42 }], name: 'WiseOwl', look: LOOK, platform: 'android' },
+          ],
+        });
+      }
+    }
+    await poolBatch.commit();
+
+    let copiedGid: string | undefined;
+    await deleteBoardData(
+      dbWithSubmitAfterInitialGroupSweep(async () => {
+        const result = await lbSubmitRun(db, other, runRequest(70, T0 + 2 * DAY + 1000), T0 + 2 * DAY + 1000);
+        copiedGid = result.group?.id;
+      }),
+      uid,
+      T0 + 2 * DAY,
+    );
+
+    assert.ok(copiedGid);
+    const copiedGroup = (await db.collection(LB_GROUPS_COLLECTION).doc(copiedGid).get()).data() as LbGroupDoc;
+    assert.deepEqual(copiedGroup.memberUids, [other]);
+    assert.deepEqual(copiedGroup.ghostUids, []);
+    assert.deepEqual(copiedGroup.ghosts, []);
+    assert.deepEqual(await boardDocsReferencingUid(uid), []);
   });
 });
 

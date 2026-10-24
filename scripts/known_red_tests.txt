@@ -25,15 +25,6 @@ test/p26/bot/human_bot_test.dart: the helper flies to death and records highligh
 test/p26/curve/layout_d2_test.dart: D2 Δy is point-based, height-capped, reduced after hard hoops, and stable above the cap
 test/p26/curve/spawn_tables_d2_test.dart: D2 / C3 firstPossible and first natural appearances
 test/p26/m1/skeleton_test.dart: the wave-1 model defaults and stub modules are inert
-test/p26/m1/wiring_test.dart: run 1 end forwards FTUE and progress arguments
-test/p26/m1/wiring_test.dart: run 20 end forwards FTUE and progress arguments
-test/p26/m1/wiring_test.dart: run 2 end forwards FTUE and progress arguments
-test/p26/m1/wiring_test.dart: run 3 end forwards FTUE and progress arguments
-test/p26/m1/wiring_test.dart: showcase arms both extras before hoop 0 with Home starter Powerup.bigHoops
-test/p26/m1/wiring_test.dart: showcase arms both extras before hoop 0 with Home starter Powerup.none
-test/p26/m1/wiring_test.dart: showcase arms both extras before hoop 0 with Home starter Powerup.shield
-test/p26/m1/wiring_test.dart: the showcase, progress and FTUE seams fire
-test/p26/showcase/plan_state_test.dart: Delete my data replays after a process restart at gamesPlayed 3, 5 and 6
 test/run/director/s3_0_2_layout_ramp_test.dart: §3.0.2 layout ramp per hoop index §3.0.2 every hoop index keeps its row's centre range, and the course uses the whole range (568 and 711)
 test/run/director/s3_0_2_layout_ramp_test.dart: §3.0.2 layout ramp per hoop index §D2 moving share and type weights; none before 25
 test/run/director/s3_0_2_layout_ramp_test.dart: §3.0.2 layout ramp per hoop index §D2 tilt follows the curve and magnitude rows; none before 10; 45° only from 60

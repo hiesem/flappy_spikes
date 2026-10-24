@@ -2026,7 +2026,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final revive = PostRunScreens.revive;
     if (state == GameState.dying &&
         revive != null &&
-        ReviveLadder.eligible(run.state)) {
+        ReviveLadder.eligible(
+          run.state,
+          showcase: run.setup.showcase?.freeRevive ?? false,
+        )) {
       state = GameState.reviving;
       unawaited(_offerRevive(run, revive));
       return;

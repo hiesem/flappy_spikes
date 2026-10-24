@@ -110,6 +110,9 @@ abstract final class Obf {
   static final String prefShowcaseAttempt = _d(const [61, 179, 43, 219, 51, 86, 64, 235, 115, 220, 60, 176, 25, 99, 230], 103);
   static final String prefShowcaseRuns = _d(const [79, 107, 196, 222, 252, 238, 86, 149, 58, 98, 219, 92], 104);
   static final String prefShowcaseDoneAt = _d(const [109, 135, 231, 58, 184, 71, 3, 38, 148, 126, 53, 127, 192, 200], 105);
+  static final String prefInstallAtMs = _d(const [246, 83, 20, 128, 211, 208, 52, 236, 1, 218, 128], 106);
+  static final String prefBestHoops = _d(const [235, 28, 167, 210, 62, 233, 54, 23, 218], 107);
+  static final String prefPendingFirstMeets = _d(const [91, 11, 204, 253, 117, 180, 27, 29, 39, 123, 112, 82, 228, 239, 80, 40, 255], 108);
 
   /// test/obf_strings_test.dart: every value in table order (never read by the app).
   static List<String> get debugValues => [
@@ -219,6 +222,9 @@ abstract final class Obf {
     prefShowcaseAttempt,
     prefShowcaseRuns,
     prefShowcaseDoneAt,
+    prefInstallAtMs,
+    prefBestHoops,
+    prefPendingFirstMeets,
   ];
 
   static String _d(List<int> data, int index) {

@@ -71,6 +71,11 @@ class GameStorage {
   static final String _showcaseAttemptKey = Obf.prefShowcaseAttempt;
   static final String _showcaseRunsKey = Obf.prefShowcaseRuns;
   static final String _showcaseDoneAtKey = Obf.prefShowcaseDoneAt;
+  // PRD-2.6 WP-A: the real install time (ms since epoch), the lifetime best
+  // hoop count and the first_meet records not sent yet.
+  static final String _installAtMsKey = Obf.prefInstallAtMs;
+  static final String _bestHoopsKey = Obf.prefBestHoops;
+  static final String _pendingFirstMeetsKey = Obf.prefPendingFirstMeets;
 
   // region PRD-2 keys (WP-0b; PRD-2 §7 persistence table, ARCH §5)
   static final String _feathersKey = Obf.prefFeathers;
@@ -179,6 +184,20 @@ class GameStorage {
   bool armedPowerupDebug = false;
   List<String> slotHistory = [];
   int? installDay;
+
+  /// Wall-clock milliseconds at the first ever launch of this install (the
+  /// FTUE's real `s_since_install`). Before this key existed it is migrated
+  /// from the oldest first-launch data available: midnight of [installDay]
+  /// (the day-only install key), or else the start of the current day.
+  int installAtMs = 0;
+
+  /// PRD-2.6 WP-G1/G5: the most hoops passed in any non-debug run.
+  int bestHoops = 0;
+
+  /// PRD-2.6 WP-A: `first_meet` records persisted at announcement and not
+  /// sent yet. A process that dies before `RunEnded` still sends them at the
+  /// next launch (as not survived). Encoded as a small JSON list.
+  List<Map<String, Object?>> pendingFirstMeets = [];
 
   /// PRD-menu-v4 §8: the local day of the latest show (with
   /// [noAdsPopupShowsToday], the per-day cap).
@@ -457,6 +476,23 @@ class GameStorage {
     } else {
       installDay = storedInstallDay;
     }
+    final storedInstallAt = prefs.getInt(_installAtMsKey);
+    if (storedInstallAt != null && storedInstallAt > 0) {
+      installAtMs = storedInstallAt;
+    } else {
+      // Migration for installs from before the timestamp existed. The only
+      // first-launch datum kept is `installDay`, a local calendar day: use
+      // its local midnight (the latest possible first-launch moment, so the
+      // elapsed time is never over-reported). A save without even that day
+      // starts at midnight of the current day.
+      final day = installDay ?? today;
+      installAtMs = _localDayStartMs(day);
+      await prefs.setInt(_installAtMsKey, installAtMs);
+    }
+    bestHoops = math.max(0, prefs.getInt(_bestHoopsKey) ?? 0);
+    pendingFirstMeets = _decodeFirstMeets(
+      prefs.getStringList(_pendingFirstMeetsKey) ?? const [],
+    );
     noAdsPopupLastDay = prefs.getInt(_noAdsPopupLastDayKey) ?? -1;
     noAdsPopupDismissals = prefs.getInt(_noAdsPopupDismissalsKey) ?? 0;
     noAdsPopupLastMs = prefs.getInt(_noAdsPopupLastMsKey) ?? 0;
@@ -1150,6 +1186,53 @@ class GameStorage {
     ftueSteps = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_ftueStepsKey, value);
+  }
+
+  /// PRD-2.6 WP-A the lifetime best hoop count, only ever raised (a worse
+  /// later run leaves it alone). A debug run passes the same value, so it
+  /// cannot lower it either.
+  Future<void> saveBestHoops(int value) async {
+    final next = math.max(0, value);
+    if (next <= bestHoops) return;
+    bestHoops = next;
+    await _sealedWrite((p) => p.setInt(_bestHoopsKey, next));
+  }
+
+  /// PRD-2.6 WP-A replaces the durable queue of first-meet records. The
+  /// list is written one item per string (SharedPreferences has no object
+  /// lists), preserving order.
+  Future<void> savePendingFirstMeets(List<Map<String, Object?>> value) async {
+    pendingFirstMeets = [
+      for (final record in value) Map<String, Object?>.of(record),
+    ];
+    final encoded = [
+      for (final record in pendingFirstMeets) jsonEncode(record),
+    ];
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_pendingFirstMeetsKey, encoded);
+  }
+
+  static int _localDayStartMs(int day) => DateTime.fromMillisecondsSinceEpoch(
+    day * Duration.millisecondsPerDay,
+    isUtc: true,
+  ).millisecondsSinceEpoch;
+
+  static List<Map<String, Object?>> _decodeFirstMeets(List<String> raw) {
+    final out = <Map<String, Object?>>[];
+    for (final line in raw) {
+      try {
+        final value = jsonDecode(line);
+        if (value is Map) {
+          out.add({
+            for (final entry in value.entries)
+              '${entry.key}': entry.value,
+          });
+        }
+      } catch (_) {
+        // A corrupt record must not prevent the game from starting.
+      }
+    }
+    return out;
   }
 
   Future<void> saveShowcaseSeen(int value) async {

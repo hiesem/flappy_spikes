@@ -171,7 +171,14 @@ void main() {
       TuningValues.current = TuningValues.resolve(isolated);
       var portals = 0, comets = 0;
       for (var seed = 1; seed <= 100; seed++) {
-        final d = RunDirector(seed: seed, enabled: all, met: all);
+        // Start after the early random pool so unrelated bonus headlines
+        // cannot mask the activity cooldown being checked here.
+        final d = RunDirector(
+          seed: seed,
+          enabled: all,
+          met: all,
+          startHoopIndex: 10,
+        );
         final due = d.portalAt;
         // The piggy run covers the portal's slot.
         var k = 0;
@@ -194,10 +201,7 @@ void main() {
           d.nextGap(ctx, s);
           if (s.kind == HoopKindId.portal) portalAt = s.index;
         }
-        // PRD-2.6 D6 may hold the ride headline for its eight-hoop window
-        // after the activity; it still comes then, never a whole schedule
-        // later.
-        expect(portalAt, inInclusiveRange(n + 1, n + 8), reason: 'seed $seed');
+        expect(portalAt, n + 1, reason: 'seed $seed');
         portals++;
         // The comet hoop: due during the run, after it at the first
         // allowed slot (≥ n + 1; it also keeps 10 hoops from the portal).
@@ -211,6 +215,7 @@ void main() {
           seed: seed,
           enabled: all..remove(ElementId.portal),
           met: all,
+          startHoopIndex: 10,
         );
         TuningValues.current = TuningValues.resolve(isolated);
         all.add(ElementId.portal);

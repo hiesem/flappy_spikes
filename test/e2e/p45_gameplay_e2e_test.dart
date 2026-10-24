@@ -494,7 +494,7 @@ void main() {
     () async {
       final zone = tz.getLocation('Europe/Amsterdam');
       var now = tz.TZDateTime(zone, 2027, 3, 20, 9);
-      // PRD-2.6 §539 gates four reminder texts on met elements; this test
+      // PRD-2.6 WP-C3 gates four reminder texts on met elements; this test
       // checks the complete 20-message rotation.
       SharedPreferences.setMockInitialValues({
         'metElements': [

@@ -526,9 +526,9 @@ void main() {
     gameSize: Vector2(320, 711),
   ).testGameWidget(
     '§3.17 / §3.14 a revived death during a squeeze: the walls slide out '
-    'over 0.5 s (bits fall), the interrupted squeeze counts (the next is '
-    'tighter), the next comes 60–120 s later; a due squeeze waits 2 s '
-    'after the revive',
+    'over 0.5 s (bits fall), the interrupted squeeze keeps its index '
+    '(PRD-2.6 D5), the next comes 60–120 s later; a due squeeze waits '
+    '2 s after the revive',
     setUp: (g, _) => boot(g),
     verify: (game, _) async {
       final tuning = TuningValues.current;
@@ -565,7 +565,9 @@ void main() {
         await flushAndMount(game);
       }
       expect(s.squeeze.phase, SqueezePhase.idle);
-      expect(s.squeeze.index, 1);
+      // PRD-2.6 D5 supersedes §3.17's interrupted-squeeze tightening:
+      // reviving preserves the index and the next squeeze's depth.
+      expect(s.squeeze.index, 0);
       expect(s.squeeze.nextAt - s.runClock, inInclusiveRange(60, 120));
       for (var i = 0; i < 15; i++) {
         game.update(1 / 60);
@@ -590,7 +592,7 @@ void main() {
       // still never starts before the revive wait.
       expect(s.runClock - revivedAt, greaterThanOrEqualTo(2));
       await flyUntil(game, (_) => s.squeeze.phase == SqueezePhase.hold);
-      expect(s.squeeze.inset, SqueezeConfig.insetFor(1, 711));
+      expect(s.squeeze.inset, SqueezeConfig.insetFor(0, 711));
     },
   );
 

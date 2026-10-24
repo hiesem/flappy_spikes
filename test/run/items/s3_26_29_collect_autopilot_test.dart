@@ -1,7 +1,6 @@
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
-import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
 import 'package:flappy_spikes/run/run_events.dart';
@@ -40,7 +39,11 @@ void main() {
               ? [5, 11, 29]
               : [3, 11, 29]) {
         FlameTester<FlappySpikesGame>(
-          () => createRunTestGame(worldHeight: height, seed: seed),
+          () => createRunTestGame(
+            prefs: {'gamesPlayed': 5},
+            worldHeight: height,
+            seed: seed,
+          ),
           gameSize: Vector2(320, height),
         ).testGameWidget(
           '§7 $label forced from hoop $from: the autopilot passes ≥ 12 hoops '
@@ -51,17 +54,6 @@ void main() {
             await preloadImages(game);
           },
           verify: (game, _) async {
-            if (element == ElementId.jar && height == 711 && seed == 29) {
-              final tuning = TuningValues.current;
-              addTearDown(() => TuningValues.current = tuning);
-              TuningValues.current = TuningValues.resolve({
-                'ui_unlock_best': '0',
-                'hazard_costs':
-                    '{"saw":0,"switch":0,"spring":0,"pair":0,"train":0,'
-                    '"tilt_20":0,"tilt_30":0,"tilt_45":0,"rail":0,"swing":0,'
-                    '"other_motion":0,"dy_p90":0,"squeeze":0}',
-              });
-            }
             final run = await startRun(
               game,
               startHoopIndex: from,

@@ -213,7 +213,7 @@ void main() {
   test(
     'P1 journey: persisted reminders across 35 days and autumn DST',
     () async {
-      // PRD-2.6 §539 gates four reminder texts on met elements. This suite
+      // PRD-2.6 WP-C3 gates four reminder texts on met elements. This suite
       // exercises the complete 20-message rotation, so seed those elements.
       SharedPreferences.setMockInitialValues({
         'metElements': [

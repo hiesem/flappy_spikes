@@ -12,9 +12,8 @@
 #
 # Flappy Spikes checks:
 #   always      flutter analyze (whole project; must be clean)
-#   scoped      the changed/added test files + every test under a test/ folder whose name matches a changed lib/
-#               file or folder + the playability core (autopilot, layout, flap physics); the functions tests only
-#               when functions/ or firestore.rules changed
+#   scoped      flutter test (all) as well (DF4_VERIFY_SCOPED=1: only the changed/matching tests + the playability
+#               core); the functions tests only when functions/ or firestore.rules changed
 #   unscoped    flutter test (all) + npm --prefix functions test (Firebase emulators, demo project; never the real one)
 # No device, emulator or store work runs here: Pixel e2e and uploads stay with the orchestrator / owner.
 set -euo pipefail
@@ -36,7 +35,9 @@ flutter_checks() {
   flutter analyze --no-pub
   echo "--- functions build (the Dart p45 tests load functions/lib)"
   npm --prefix functions run --silent build
-  if [ -z "$BASE" ]; then
+  # Always the whole Flutter suite (~5 min): scoping by file name hid cross-suite breakage in M1 (55 red tests
+  # merged unseen). Set DF4_VERIFY_SCOPED=1 to get the old scoped run for a quick local check.
+  if [ -z "$BASE" ] || [ "${DF4_VERIFY_SCOPED:-}" != 1 ]; then
     echo "--- flutter test (all)"
     flutter test --no-pub
     return

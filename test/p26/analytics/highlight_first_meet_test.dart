@@ -1,7 +1,10 @@
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/elements.dart';
+import 'package:flappy_spikes/run/hoops/hoop.dart';
+import 'package:flappy_spikes/run/hoops/kinds/registry.dart';
 import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/services/ftue_tracker.dart';
 import 'package:flappy_spikes/services/game_services.dart';
@@ -20,11 +23,11 @@ FlappySpikesGame makeGame(AnalyticsSpy spy, FtueTracker tracker) {
     'metElements': ['normal_hoop'],
   });
   return FlappySpikesGame(
-    worldHeight: 711,
-    services: spy,
-    soundEnabled: false,
-    ftueTracker: tracker,
-  )
+      worldHeight: 711,
+      services: spy,
+      soundEnabled: false,
+      ftueTracker: tracker,
+    )
     ..runSeed = 7
     ..runDebug.ignoreGates = true;
 }
@@ -74,10 +77,14 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   final highlightSpy = AnalyticsSpy();
-  FlameTester<FlappySpikesGame>(
-    () => makeGame(highlightSpy, RouterTracker(highlightSpy)),
-    gameSize: Vector2(320, 711),
-  ).testGameWidget(
+  FlameTester<FlappySpikesGame>(() {
+    SharedPreferences.setMockInitialValues({});
+    return FlappySpikesGame(
+      worldHeight: 711,
+      services: highlightSpy,
+      soundEnabled: false,
+    )..runSeed = 7;
+  }, gameSize: Vector2(320, 711)).testGameWidget(
     'highlight_seen carries the four PRD parameters',
     setUp: (game, _) async {
       await game.ready();
@@ -91,12 +98,43 @@ void main() {
       run.events.emit(const HighlightStarted('ride', scripted: true, hoop: 7));
 
       expect(events(highlightSpy, 'highlight_seen'), [
-          {'id': 'ride', 'scripted': true, 'run_no': 1, 'hoop': 7},
+        {'id': 'ride', 'scripted': true, 'run_no': 1, 'hoop': 7},
       ]);
       expect(
         events(highlightSpy, 'ftue_step').single['name'],
         'run1_highlight',
       );
+    },
+  );
+
+  final productionSpy = AnalyticsSpy();
+  FlameTester<FlappySpikesGame>(() {
+    SharedPreferences.setMockInitialValues({'ftueSteps': 0, 'gamesPlayed': 0});
+    return FlappySpikesGame(
+      worldHeight: 711,
+      services: productionSpy,
+      soundEnabled: false,
+    )..runSeed = 7;
+  }, gameSize: Vector2(320, 711)).testGameWidget(
+    'normal construction wires the persisted FTUE tracker',
+    setUp: (game, _) async {
+      await game.ready();
+      game.sound.enabled = false;
+      await preloadImages(game);
+    },
+    verify: (game, _) async {
+      final run = await startRun(game);
+      productionSpy.events.clear();
+
+      run.events.emit(const HighlightStarted('ride', scripted: false, hoop: 3));
+
+      expect(
+        events(productionSpy, 'ftue_step').map((event) => event['name']),
+        contains('run1_highlight'),
+      );
+      expect(events(productionSpy, 'highlight_seen'), [
+        {'id': 'ride', 'scripted': false, 'run_no': 1, 'hoop': 3},
+      ]);
     },
   );
 
@@ -115,9 +153,25 @@ void main() {
       game.runDebug.force.add(ElementId.saw);
       final run = await startRun(game, force: [ElementId.saw]);
       meetSpy.events.clear();
+      final plan = SlotPlan(
+        index: run.state.hoopIndex,
+        kind: HoopKindId.saw,
+        element: ElementId.saw,
+        trackX: 1000,
+        centreY: 300,
+        opening: 100,
+        advance: 310,
+      );
+      final hoop = Hoop(
+        plan: plan,
+        kind: hoopKindFor(HoopKindId.saw) ?? hoopKindFor(HoopKindId.normal)!,
+      );
 
-      run.events.emit(const ElementSpawned(ElementId.saw));
-      run.events.emit(const ElementSpawned(ElementId.saw));
+      run.events
+        ..emit(HoopSpawned(hoop, plan))
+        ..emit(const ElementSpawned(ElementId.saw))
+        ..emit(const ElementSpawned(ElementId.saw))
+        ..emit(HoopPassed(hoop));
       run.endRun();
 
       expect(events(meetSpy, 'first_meet'), [
@@ -125,14 +179,15 @@ void main() {
           'element': 'saw',
           'hoop': run.state.hoopIndex,
           'games': 1,
-            'forced': true,
-            'survived': true,
+          'forced': true,
+          'survived': true,
         },
       ]);
       expect(
-        events(meetSpy, 'ftue_step')
-            .where((event) => event['name'] == 'first_saw')
-            .single['name'],
+        events(
+          meetSpy,
+          'ftue_step',
+        ).where((event) => event['name'] == 'first_saw').single['name'],
         'first_saw',
       );
     },

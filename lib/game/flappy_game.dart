@@ -168,7 +168,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
        monetization = monetization ?? Monetization(),
        showcasePlan = showcasePlan ?? const InertShowcasePlan(),
        showcaseProgress = showcaseProgress ?? const InertShowcaseProgress(),
-       ftueTracker = ftueTracker ?? const InertFtueTracker(),
        homeMoments = homeMoments ?? const PassthroughHomeMoments(),
        storage = GameStorage(clock: clock),
        // WP-TAB: a wide screen (tablet) is 568 pt high in game points.
@@ -200,6 +199,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
          ),
          zoom: 1,
        ) {
+    _ftueTracker =
+        ftueTracker ??
+        PersistedFtueTracker(services: this.services, storage: storage);
     // The game uses 1 Forge2D world unit = 1 logical point (SPEC.md). The
     // engine's default per-step translation clamp (2.0 units, tuned for
     // meter-scale worlds) would otherwise cap every body at ~120 pt/s at
@@ -225,7 +227,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// PRD-2.6 M1 seams; their default implementations are inert.
   final ShowcasePlan showcasePlan;
   final ShowcaseProgress showcaseProgress;
-  final FtueTracker ftueTracker;
+  late final FtueTracker _ftueTracker;
+
+  /// PRD-2.6 WP-A: production always uses the persisted tracker. Tests can
+  /// inject an inert or recording implementation.
+  FtueTracker get ftueTracker => _ftueTracker;
   final HomeMoments homeMoments;
 
   static double _clampViewHeight(double height) =>
@@ -277,8 +283,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// 320 pt column (centred menus, the run column, the viewport HUD):
   /// x from −extra to 320 + extra. Full-screen fills (backgrounds, dims,
   /// flashes) use it; the view clips the rest.
-  Rect bleedRect(double height, {double top = 0}) =>
-      Rect.fromLTWH(-extraWidth, top, Config.worldWidth + 2 * extraWidth, height);
+  Rect bleedRect(double height, {double top = 0}) => Rect.fromLTWH(
+    -extraWidth,
+    top,
+    Config.worldWidth + 2 * extraWidth,
+    height,
+  );
 
   /// WP-TAB: the visible screen in run coordinates (the run column: run
   /// world content and the run HUD): x from −extra to 320.
@@ -410,6 +420,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// PRD-2.3 §13.4: the music never stays silent without a reason (built
   /// in [onLoad] with [sound]).
   late final MusicGuard musicGuard;
+  bool _musicReady = false;
 
   /// Rewarded ads + in-app purchases. In-memory fakes unless main() passes
   /// `Monetization.forPlatform()`.
@@ -765,6 +776,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     add(drags);
 
     await storage.load();
+    await ftueTracker.flushPendingFirstMeets();
     // QA P2-03 (PRD-2.3.1 §12.3): commit (clean) or drop (excluded) the
     // journal of a run the app died in, before the sync below reports it.
     await achievements.recoverJournal();
@@ -853,6 +865,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       otherMusicNow: _otherMusicNow,
       track: services.track,
     )..attach();
+    _musicReady = true;
     unawaited(_startMusicChecked());
     // PRD-2.2 §33.6 (S7-19): the session sound set is created once on
     // Home and kept, so the live players stay flat game after game.
@@ -1036,7 +1049,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   @override
   void onRemove() {
-    unawaited(musicGuard.dispose());
+    if (_musicReady) unawaited(musicGuard.dispose());
     monetization.consent.canRequestAds.removeListener(_preloadBanner);
     idleFrames.detach();
     _purchases?.dispose();

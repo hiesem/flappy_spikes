@@ -98,6 +98,11 @@ void main() {
 
   MorningSim morningSim(ReminderScheduler s) => MorningSim(s);
 
+  const rescheduleElementCases = <String, Set<ElementId>>{
+    'empty metElements': <ElementId>{},
+    'partly filled metElements': {ElementId.squeeze, ElementId.egg},
+  };
+
   ReminderPlan planAt(
     DateTime now, {
     ReminderScheduler? withScheduler,
@@ -415,56 +420,141 @@ void main() {
       );
     });
 
-    test('re-scheduling without delivery keeps the same messages', () {
-      final s = scheduler();
-      final now = tz.TZDateTime(amsterdam, 2026, 10, 8, 9);
-      final first = planAt(now, withScheduler: s);
-      final second = s.plan(
-        now: now.add(const Duration(minutes: 5)),
-        state: first.state,
-        best: 12,
-        coins: 250,
-        metElements: ElementId.values.toSet(),
-        lastPlayedAt: now,
-        pending: pendingOf(first),
-      );
-      expect(
-        second.reminders.map((r) => r.messageNumber),
-        first.reminders.map((r) => r.messageNumber),
-      );
-      expect(second.state.position, first.state.position);
-    });
+    for (final entry in rescheduleElementCases.entries) {
+      test('re-scheduling without delivery keeps the same messages '
+          '(${entry.key})', () {
+        final s = scheduler();
+        final now = tz.TZDateTime(amsterdam, 2026, 10, 8, 9);
+        final first = planAt(
+          now,
+          withScheduler: s,
+          metElements: entry.value,
+        );
+        final second = s.plan(
+          now: now.add(const Duration(minutes: 5)),
+          state: first.state,
+          best: 12,
+          coins: 250,
+          metElements: entry.value,
+          lastPlayedAt: now,
+          pending: pendingOf(first),
+        );
+        expect(
+          second.reminders.map((r) => r.messageNumber),
+          first.reminders.map((r) => r.messageNumber),
+        );
+        expect(second.state.position, first.state.position);
+      });
 
-    test('delivered slots advance the rotation', () {
-      final s = scheduler();
-      final first = planAt(tz.TZDateTime(amsterdam, 2026, 10, 8, 9),
-          withScheduler: s);
-      // The two reminders of day 1 fired; the rest is still pending.
-      final firedAt = tz.TZDateTime(amsterdam, 2026, 10, 8, 21);
-      final pending = first.reminders
-          .where((r) => r.time.isAfter(firedAt))
-          .map((r) => PendingReminder(messageNumber: r.messageNumber, time: r.time))
-          .toList();
-      expect(pending.length, 12);
+      test('repeated reschedules before delivery never burn the pending '
+          'order (${entry.key})', () {
+        final s = scheduler(seed: 11);
+        final now = tz.TZDateTime(amsterdam, 2026, 10, 8, 9);
+        var plan = planAt(
+          now,
+          withScheduler: s,
+          metElements: entry.value,
+        );
+        final firstMessages = plan.reminders
+            .map((r) => r.messageNumber)
+            .toList();
+        final firstPosition = plan.state.position;
+        for (var replan = 1; replan <= 5; replan++) {
+          plan = s.plan(
+            now: now.add(Duration(minutes: replan * 5)),
+            state: plan.state,
+            best: 12,
+            coins: 250,
+            metElements: entry.value,
+            lastPlayedAt: now,
+            pending: pendingOf(plan),
+          );
+          expect(
+            plan.reminders.map((r) => r.messageNumber),
+            firstMessages,
+            reason: 'replan $replan changed the pending order',
+          );
+          expect(
+            plan.state.position,
+            firstPosition,
+            reason: 'replan $replan advanced the cursor before delivery',
+          );
+        }
+      });
 
-      final second = s.plan(
-        now: tz.TZDateTime(amsterdam, 2026, 10, 9, 9),
-        state: first.state,
-        best: 12,
-        coins: 250,
-        metElements: ElementId.values.toSet(),
-        lastPlayedAt: tz.TZDateTime(amsterdam, 2026, 10, 9, 9),
-        pending: pending,
-      );
-      // Day 2 carries on where day 1 stopped: the third message of the plan.
-      expect(second.reminders.first.messageNumber, first.reminders[2].messageNumber);
-      expect(second.reminders.first.time.day, 9);
-      // The two delivered messages are blocked for day 2 (1 day ago < 10).
-      expect(
-        second.reminders.map((r) => r.messageNumber).toSet(),
-        isNot(contains(first.reminders[0].messageNumber)),
-      );
-    });
+      test('delivered slots advance the rotation (${entry.key})', () {
+        final s = scheduler();
+        final first = planAt(
+          tz.TZDateTime(amsterdam, 2026, 10, 8, 9),
+          withScheduler: s,
+          metElements: entry.value,
+        );
+        // The two reminders of day 1 fired; the rest is still pending.
+        final firedAt = tz.TZDateTime(amsterdam, 2026, 10, 8, 21);
+        final pending = pendingOf(first)
+            .where((p) => p.time.isAfter(firedAt))
+            .toList();
+        expect(pending.length, 12);
+
+        final second = s.plan(
+          now: tz.TZDateTime(amsterdam, 2026, 10, 9, 9),
+          state: first.state,
+          best: 12,
+          coins: 250,
+          metElements: entry.value,
+          lastPlayedAt: tz.TZDateTime(amsterdam, 2026, 10, 9, 9),
+          pending: pending,
+        );
+        // Day 2 carries on exactly where day 1 stopped: all 12 still-pending
+        // messages keep their order, then the two fired slots take two new
+        // ones from the advanced cursor.
+        final carried = first.reminders.skip(2).map((r) => r.messageNumber);
+        expect(
+          second.reminders.take(12).map((r) => r.messageNumber),
+          carried,
+        );
+        final fresh = second.reminders.skip(12).toList();
+        expect(fresh, hasLength(2));
+        expect(
+          fresh.map((r) => r.time.day),
+          everyElement(greaterThan(second.reminders[11].time.day)),
+        );
+        expect(
+          fresh.map((r) => r.messageNumber).toSet(),
+          isNot(containsAll(carried)),
+        );
+        expect(
+          second.state.position,
+          greaterThan(first.state.position),
+          reason: 'the two fresh messages advance the cursor',
+        );
+        // The two delivered messages are blocked for day 2 (1 day ago < 10).
+        expect(
+          second.reminders.map((r) => r.messageNumber).toSet(),
+          isNot(contains(first.reminders[0].messageNumber)),
+        );
+        expect(
+          second.reminders.map((r) => r.messageNumber).toSet(),
+          isNot(contains(first.reminders[1].messageNumber)),
+        );
+
+        // A replan before any of the new reminders fires keeps this whole
+        // order, including the two entries taken after the delivered pair.
+        final third = s.plan(
+          now: tz.TZDateTime(amsterdam, 2026, 10, 9, 10),
+          state: second.state,
+          best: 12,
+          coins: 250,
+          metElements: entry.value,
+          lastPlayedAt: tz.TZDateTime(amsterdam, 2026, 10, 9, 9),
+          pending: pendingOf(second),
+        );
+        expect(
+          third.reminders.map((r) => r.messageNumber),
+          second.reminders.map((r) => r.messageNumber),
+        );
+      });
+    }
   });
 
   group('§3.34 service', () {
@@ -564,6 +654,91 @@ void main() {
         first.map((p) => p.messageNumber),
       );
       expect(second.map((p) => p.slot), first.map((p) => p.slot));
+    });
+
+    test('gated messages survive replans and only delivered slots advance',
+        () async {
+      await store.saveMetElements(const {});
+      final reminders = service();
+      await reminders.initialize();
+      await reminders.reschedule();
+      final first = [
+        for (final raw in platform.pending) ReminderPayload.decode(raw)!,
+      ];
+      expect(
+        first.map((p) => p.messageNumber).toSet().intersection({
+          11,
+          13,
+          16,
+          19,
+        }),
+        isEmpty,
+      );
+
+      // Two app visits before any delivery must not burn a rotation entry.
+      now = now.add(const Duration(minutes: 5));
+      await reminders.reschedule();
+      now = now.add(const Duration(minutes: 5));
+      await reminders.reschedule();
+      expect(
+        platform.pending.map((raw) => ReminderPayload.decode(raw)!.messageNumber),
+        first.map((p) => p.messageNumber),
+      );
+
+      // Let just the first pending reminder fire, then reopen the app.
+      final firstPending = ReminderPayload.decode(platform.pending.first)!;
+      platform.deliverDue(
+        DateTime.fromMillisecondsSinceEpoch(
+          firstPending.epochMs,
+          isUtc: true,
+        ),
+      );
+      final remaining = [
+        for (final raw in platform.pending) ReminderPayload.decode(raw)!,
+      ];
+      expect(remaining, hasLength(ReminderScheduler.windowSlots - 1));
+      await reminders.reschedule();
+      final after = [
+        for (final raw in platform.pending) ReminderPayload.decode(raw)!,
+      ];
+      expect(after, hasLength(ReminderScheduler.windowSlots));
+      expect(
+        after.take(ReminderScheduler.windowSlots - 1).map((p) => p.messageNumber),
+        remaining.map((p) => p.messageNumber),
+        reason: 'only the delivered first slot advances the rotation',
+      );
+      expect(
+        after.map((p) => p.messageNumber),
+        isNot(contains(firstPending.messageNumber)),
+      );
+    });
+
+    test('a failed replan releases the canceled pending order for retry',
+        () async {
+      await store.saveMetElements(const {});
+      final reminders = service();
+      await reminders.initialize();
+      await reminders.reschedule();
+      final first = [
+        for (final raw in platform.pending) ReminderPayload.decode(raw)!,
+      ];
+
+      // The replacement cancels the old plan, then its first schedule call
+      // fails. The canceled messages were never delivered, so the persisted
+      // state must let the next pause/start schedule them again.
+      platform.throwOnSchedule = true;
+      now = now.add(const Duration(minutes: 5));
+      await reminders.reschedule();
+      expect(platform.pending, isEmpty);
+
+      platform.throwOnSchedule = false;
+      now = now.add(const Duration(minutes: 5));
+      await reminders.reschedule();
+      expect(
+        platform.pending.map((raw) => ReminderPayload.decode(raw)!.messageNumber),
+        first.map((p) => p.messageNumber),
+        reason: 'a failed plan must not burn its canceled pending messages',
+      );
     });
 
     test('permission is asked once and the result is logged', () async {

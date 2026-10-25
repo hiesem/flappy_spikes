@@ -441,9 +441,8 @@ class ReminderScheduler {
   /// [now] is the moment the app is left (+ the app-start pass): it is both
   /// the start of the window and the play time used by the skip-after-play
   /// rule ("the player just played"). [pending] is what the plugin still has
-  /// scheduled from the previous pass; its still-future messages are given
-  /// back to the rotation so that opening the app twice does not burn the
-  /// order.
+  /// scheduled from the previous pass; its still-future messages are carried
+  /// into this plan so that opening the app twice does not burn the order.
   ReminderPlan plan({
     required DateTime now,
     required ReminderState state,
@@ -455,13 +454,14 @@ class ReminderScheduler {
   }) {
     final tzNow = tz.TZDateTime.from(now, location);
     final lastSent = Map<int, String>.of(state.lastSent);
-    var position = state.position;
+    final carried = <PendingReminder>[];
+    final carriedNumbers = <int>{};
     for (final p in pending) {
       final at = tz.TZDateTime.from(p.time, location);
-      // Still to fire: un-consume the message and put its earlier use back
-      // (this plan's future date is not a use yet).
+      // Still to fire: put its earlier use back (this plan's future date is
+      // not a use yet) and carry the message itself into this plan below.
       if (at.isAfter(tzNow)) {
-        if (position > 0) position--;
+        if (carriedNumbers.add(p.messageNumber)) carried.add(p);
         final previous = p.previousLastSent;
         if (previous == null) {
           lastSent.remove(p.messageNumber);
@@ -470,27 +470,44 @@ class ReminderScheduler {
         }
       }
     }
+    carried.sort((a, b) => a.time.compareTo(b.time));
 
     final slots = _slots(
       tzNow,
       lastPlayedAt == null ? null : tz.TZDateTime.from(lastPlayedAt, location),
     );
+    final order = state.order.isEmpty ? _freshOrder() : state.order;
     final unscheduled = ReminderState(
-      order: state.order.isEmpty ? _freshOrder() : state.order,
-      position: position,
+      order: order,
+      // A failed replacement follows a successful cancelAll(), so none of the
+      // old plan is pending any more. Start again from the front when it had
+      // pending messages (lastSent still blocks the ones that did fire);
+      // otherwise the cursor already points at the next unsent message.
+      position: carried.isEmpty ? state.position : 0,
       lastSent: Map<int, String>.of(lastSent),
     );
     final rotation = _Rotation(
       random: _random,
-      order: unscheduled.order,
-      position: position,
+      order: order,
+      // The cursor already sits after the previous plan's pending tail. The
+      // carried messages do not need to be taken again; new slots continue
+      // from where that plan stopped.
+      position: state.position,
       unavailableMessages: _unavailableMessages(metElements),
     );
+    final toCarry = carried.take(slots.length).toList();
+    for (final p in toCarry) {
+      // Carried messages are still in this plan, so a reshuffle while taking
+      // a new message must not hand one of them out a second time.
+      rotation.reserve(p.messageNumber);
+    }
 
     final reminders = <ScheduledReminder>[];
     for (var i = 0; i < slots.length; i++) {
       final slot = slots[i];
-      final number = rotation.take(_dayOf(slot.time), lastSent);
+      final number = i < toCarry.length
+          ? toCarry[i].messageNumber
+          : rotation.take(_dayOf(slot.time), lastSent);
       final text = ReminderMessages.textFor(number, best: best, coins: coins);
       final previous = lastSent[number];
       reminders.add(
@@ -599,6 +616,9 @@ class _Rotation {
   int position;
   final Set<int> unavailableMessages;
   final Set<int> _used = {};
+
+  /// Keeps a message from an earlier plan out of the fresh part of this one.
+  void reserve(int number) => _used.add(number);
 
   int take(DateTime slotDay, Map<int, String> lastSent) {
     var passes = 0;

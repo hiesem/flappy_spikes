@@ -121,8 +121,11 @@ abstract final class ReviveLadder {
 
   /// §3.14 the offer is only made from [ReviveConfig.minHoops] hoops
   /// passed, and (PRD-2.3 §14.2) never after the last paid step. A showcase
-  /// run may offer its free revive after hoop 0.
+  /// run may offer its free revive after hoop 0; once that revive is used,
+  /// the normal six-hoop rule applies again.
   static bool eligible(RunState s, {bool showcase = false}) =>
-      (showcase ? s.hoopsPassed > 0 : s.hoopsPassed >= ReviveConfig.minHoops) &&
+      ((showcase && s.revivesThisGame == 0)
+          ? s.hoopsPassed > 0
+          : s.hoopsPassed >= ReviveConfig.minHoops) &&
       !exhausted(s);
 }

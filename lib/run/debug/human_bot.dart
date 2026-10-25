@@ -69,12 +69,7 @@ class HumanNoiseFlapScheduler {
     final at = now == null ? jitteredTime : math.max(jitteredTime, now);
     final id = _nextBaseId++;
     _scheduled.add(
-      _ScheduledFlap(
-        at,
-        extra: false,
-        plannedTime: plannedTime,
-        baseId: id,
-      ),
+      _ScheduledFlap(at, extra: false, plannedTime: plannedTime, baseId: id),
     );
     if (extra) {
       _scheduled.add(
@@ -84,32 +79,6 @@ class HumanNoiseFlapScheduler {
           baseId: id,
         ),
       );
-    }
-    _scheduled.sort((a, b) => a.time.compareTo(b.time));
-  }
-
-  /// Re-anchors the not-yet-emitted forecast on the autopilot's real request
-  /// time. The drawn jitter (the emitted offset from the request) and the
-  /// extra-flap roll stay with it, so a late forecast cannot delay a requested
-  /// flap and re-rolling it cannot bias the extras.
-  void movePendingBase(double plannedTime, {required double now}) {
-    _ScheduledFlap? base;
-    for (final flap in _scheduled) {
-      if (!flap.extra) {
-        base = flap;
-        break;
-      }
-    }
-    if (base == null || base.plannedTime == null) return;
-    final oldTime = base.time;
-    final newTime = math.max(plannedTime + (oldTime - base.plannedTime!), now);
-    final delta = newTime - oldTime;
-    base.plannedTime = plannedTime;
-    base.time = newTime;
-    for (final flap in _scheduled) {
-      if (flap.extra && flap.baseId == base.baseId) {
-        flap.time = math.max(flap.time + delta, now);
-      }
     }
     _scheduled.sort((a, b) => a.time.compareTo(b.time));
   }
@@ -184,8 +153,12 @@ class HumanNoiseBot {
 
     // A forecast already owns the next base flap; a request only fills in for
     // a crossing that could not be predicted (run start, ride hand-over).
-    if (rising) debugRequestTimes.add(now);
-    if (rising && scheduler.pendingBases > 0) debugRequestForecast.add(scheduler.pendingBasePlannedTime! - now);
+    if (rising) {
+      debugRequestTimes.add(now);
+    }
+    if (rising && scheduler.pendingBases > 0) {
+      debugRequestForecast.add(scheduler.pendingBasePlannedTime! - now);
+    }
     if (rising && scheduler.pendingBases == 0) {
       scheduler.planBase(now, now: now);
     }

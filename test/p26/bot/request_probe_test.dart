@@ -20,34 +20,42 @@ double _sd(List<double> x) {
 
 void main() {
   for (final height in [568.0, 711.0]) {
-    for (final seed in [23, 41, 43, 37]) {
-      FlameTester(
-        () => createRunTestGame(worldHeight: height, seed: 11),
-        gameSize: Vector2(Config.worldWidth, height),
-      ).testGameWidget('probe $seed', setUp: (game, _) async {
+    FlameTester(
+      () => createRunTestGame(worldHeight: height, seed: 11),
+      gameSize: Vector2(Config.worldWidth, height),
+    ).testGameWidget(
+      'emitted flaps bracket real autopilot requests at ${height.round()} pt',
+      setUp: (game, _) async {
         await game.ready();
         game.sound.enabled = false;
         await preloadImages(game);
-      }, verify: (game, _) async {
+      },
+      verify: (game, _) async {
         final run = await startRun(game);
-        final bot = HumanNoiseBot(run, seed: seed);
-        for (var f = 0; f < 60 * 240 && game.state.name == 'playing'; f++) {
+        final bot = HumanNoiseBot(run, seed: 37);
+        for (
+          var frame = 0;
+          frame < 60 * 240 && game.state.name == 'playing';
+          frame++
+        ) {
           if (bot.shouldFlap()) game.onScreenTap();
           game.update(1 / 60);
-          if (f % 10 == 9) await flushAndMount(game);
+          if (frame % 10 == 9) await flushAndMount(game);
         }
-        final hoops = run.state.hoopsPassed;
-        final o = bot.baseFlapOffsets.map((e) => e * 1000).toList();
-        final d = bot.debugRequestForecast.map((e) => e * 1000).toList();
-        final absd = d.map((e) => e.abs()).toList()..sort();
-        // ignore: avoid_print
-        print('RQ h=$height seed=$seed hoops=${hoops} n=${o.length} '
-            'sd=${_sd(o).toStringAsFixed(1)} reqs=${bot.debugRequestTimes.length} '
-            'anticipated=${d.length} '
-            'dmean=${_mean(d).toStringAsFixed(0)} '
-            'dmed=${absd.isEmpty ? 0 : absd[absd.length ~/ 2].toStringAsFixed(0)} '
-            'd90=${absd.isEmpty ? 0 : absd[(absd.length * .9).floor()].toStringAsFixed(0)}');
-      });
-    }
+
+        final offsets = bot.baseFlapOffsets
+            .map((offset) => offset * 1000)
+            .toList();
+        expect(offsets.length, greaterThan(20));
+        expect(offsets.any((offset) => offset < 0), isTrue);
+        expect(_sd(offsets), closeTo(90, 10));
+        expect(_mean(offsets), closeTo(0, 10));
+        expect(
+          bot.flapTimes.length,
+          bot.baseFlapOffsets.length + bot.extraFlaps,
+        );
+        expect(bot.debugRequestForecast.length, bot.debugRequestTimes.length);
+      },
+    );
   }
 }

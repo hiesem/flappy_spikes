@@ -7,6 +7,7 @@ import '../elements.dart';
 import 'calm_schedule.dart';
 import 'director_context.dart';
 import 'first_meet.dart';
+import 'formations.dart';
 import 'hazard_budget.dart';
 import 'headline_window.dart';
 import 'layout_sampler.dart';
@@ -201,6 +202,26 @@ class RunDirector {
   late final Set<ElementId> _introductions;
   int _downgrades = 0;
   double? _lastFinalY;
+
+  /// PRD-2.6 D7 the post-ceiling formation scheduler. The scheduler draws
+  /// from the layout stream so a formation changes the course deterministically
+  /// but never shifts the timing stream.
+  late final Formations _formations = Formations(
+    seed: rng.seed,
+    random: rng.layout,
+    formationEvery: const [1, 1],
+  );
+  int _formationAt = 150;
+  int? _lastFormationAt;
+
+  /// Templates owned by the current formation. Recovery and forced actions
+  /// can interrupt it; periodic calm stretches are avoided before starting.
+  ({int start, int length, List<SlotPlan> templates})? _formationReservation;
+
+  /// The D7 chapter stream: only used past hoop 150 to thin or thicken the
+  /// ordinary moving draw to its chapter share. It is separate from the
+  /// layout / timing streams, so the pre-ceiling course is untouched.
+  late final Random _chapterRandom = Random(rng.seed ^ 0xD7C4A11);
 
   /// Next slot index (= hoop index of the slot [nextSlot] plans next).
   int get hoopIndex => _i;
@@ -606,6 +627,7 @@ class RunDirector {
     // 1. Ride active: normal, upright, still; no items. PRD-2.4 §2: the
     //    size is the curve's for this index (× Big Hoops), like any hoop.
     if (ride) {
+      _formationReservation = null;
       final opening = cap(openingFor(i) * _bigMult(i, ctx));
       // PRD-2.2 §16.1 comet ride hoops zigzag ±70 pt around the middle
       // (the normal draw still happens, so the course after the ride keeps
@@ -692,6 +714,26 @@ class RunDirector {
       if (wait == null || i - wait < 5) due = null;
     }
 
+    // PRD-2.6 D7 formations own whole runs of otherwise-normal slots. A
+    // calm / squeeze / ride or a due forced element takes precedence.
+    final freeForStart =
+        !forced && !calm && !ctx.squeezeWindow && due == null && !ride;
+    final formation = _nextFormationSlot(
+      i,
+      trackX,
+      ctx,
+      cap: cap,
+      mayStart: freeForStart,
+    );
+    if (formation != null) {
+      return _recordSlot(
+        formation,
+        ctx,
+        previousY: prevY,
+        firstMeetElement: due,
+      );
+    }
+
     // PRD-2.2 §19.2 the early random pool: one equal-chance draw per index
     // 4–9 (replaces the special roll and the optional gap roll there).
     final pool = tables.earlyPool;
@@ -767,7 +809,11 @@ class RunDirector {
                 (oneBigBonus &&
                     rewardKinds.contains(e.key) &&
                     _specialAllowed(e.key, i, ctx, ignoreBig: true))) {
-              w[e.key] = e.value.weightAt(i);
+              final rotated =
+                  e.key == HoopKindId.saw || e.key == HoopKindId.switchRing;
+              w[e.key] = rotated
+                  ? _rotatedSpecialWeight(e.key, e.value, i).round()
+                  : e.value.weightAt(i);
             }
           }
           kind = RunRandom.pickWeighted<HoopKindId>(rng.layout, w);
@@ -948,6 +994,248 @@ class RunDirector {
       remove(ElementId.comet.storageId);
     }
     if (kindChanged) _count(ElementId.normalHoop.storageId);
+  }
+
+  /// PRD-2.6 D7: takes the next queued formation slot, or starts a new
+  /// formation when the scheduler is due at [i]. The generator owns the six
+  /// shapes and their 310 pt planes; this adapter places a shape in the live
+  /// band and leaves the final hazard decision to [_recordSlot].
+  SlotPlan? _nextFormationSlot(
+    int i,
+    double trackX,
+    DirectorContext ctx, {
+    required double Function(double, [double]) cap,
+    required bool mayStart,
+  }) {
+    // Recovery, debug actions and rides take precedence over a queued shape.
+    if (!mayStart) _formationReservation = null;
+    final reservation = _formationReservation;
+    if (reservation != null) {
+      final offset = i - reservation.start;
+      if (offset >= 0 && offset < reservation.length) {
+        final plan = reservation.templates[offset];
+        _countFormationSlot(plan);
+        if (offset == reservation.length - 1) _formationReservation = null;
+        return plan;
+      }
+      _formationReservation = null;
+    }
+    if (i < 150 || !mayStart) return null;
+    final interval = TuningValues.current.ints('formation_every');
+    final last = _lastFormationAt;
+    if (last != null && i - last < interval[0]) return null;
+    // Reserve room for the longest shape. If a periodic recovery is about
+    // to close that room, use the last safe start in the cadence window.
+    bool roomAt(int start) {
+      for (var offset = 0; offset < 5; offset++) {
+        if (_calm.dueAt(start + offset)) return false;
+      }
+      return true;
+    }
+
+    if (!roomAt(i)) return null;
+    if (i < _formationAt && roomAt(i + 1)) return null;
+    final id = _formations.nextAt(i);
+    if (id == null) return null;
+    _lastFormationAt = i;
+    _formationAt = i + RunRandom.rangeInt(rng.layout, interval[0], interval[1]);
+    if (!_formationEnabled(id)) return null;
+    final templates = _placeFormation(
+      _formations.build(id, i, startTrackX: 0, centreY: 0),
+      trackX,
+      ctx,
+      cap: cap,
+    );
+    final plan = templates.first;
+    _formationReservation = (
+      start: i,
+      length: templates.length,
+      templates: templates,
+    );
+    _countFormationSlot(plan);
+    if (templates.length == 1) _formationReservation = null;
+    _layout.forceY = null;
+    return plan;
+  }
+
+  /// Whether every element a D7 shape needs is registered.
+  bool _formationEnabled(FormationId id) {
+    final needed = switch (id) {
+      FormationId.stairs => [ElementId.angledRing],
+      FormationId.slalom => <ElementId>[],
+      FormationId.tiltWave => [ElementId.angledRing],
+      FormationId.syncRails => [ElementId.movingRing],
+      FormationId.sawGate => [ElementId.saw],
+      FormationId.switchChain => [ElementId.switchRing],
+    };
+    return needed.every(_on);
+  }
+
+  /// Slot bookkeeping `_buildSlot` normally does for a formation slot.
+  void _countFormationSlot(SlotPlan plan) {
+    _prevKind = plan.kind;
+    if (plan.tiltDeg != 0) _count('tilted');
+    if (plan.motion != null) _count('moving');
+    _count(plan.element.storageId);
+    if (plan.kind == HoopKindId.switchRing) {
+      _gapUsed.add(plan.index - 1);
+      if (plan.extra is SwitchDesign) _lastSwitch = plan.extra! as SwitchDesign;
+    } else if (plan.kind == HoopKindId.saw) {
+      if (plan.extra is SawDesign) _lastSaw = plan.extra! as SawDesign;
+    }
+    if (plan.kind != HoopKindId.normal) {
+      _lastSpecial = plan.index;
+      _cdLeft = tables.specials[plan.kind]!.cooldown;
+      _lastOf[plan.kind] = plan.index;
+    }
+  }
+
+  /// Places the normalized [templates] of one formation at [trackX] and in
+  /// the live band. The shape's relative centre offsets stay intact; only the
+  /// shared origin, opening and x coordinates are adapted.
+  List<SlotPlan> _placeFormation(
+    List<SlotPlan> templates,
+    double trackX,
+    DirectorContext ctx, {
+    required double Function(double, [double]) cap,
+  }) {
+    var lo = double.negativeInfinity;
+    var hi = double.infinity;
+    final openings = <double>[];
+    for (final plan in templates) {
+      final opening = cap(
+        (openingFor(plan.index) +
+                (plan.kind == HoopKindId.saw ? RunConfig.sawExtraOpening : 0)) *
+            _bigMult(plan.index, ctx),
+      );
+      openings.add(opening);
+      final travel = plan.motion?.halfTravel ?? 0;
+      final reach =
+          opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin + travel;
+      lo = max(lo, ctx.topTooth + reach - plan.centreY);
+      hi = min(hi, ctx.floorTooth - reach - plan.centreY);
+      for (final attached in plan.attached) {
+        final y = attached.y;
+        if (y == null) continue;
+        final offset = y - plan.centreY;
+        lo = max(lo, ctx.topTooth + RunConfig.itemEdgeMargin - offset);
+        hi = min(hi, ctx.floorTooth - RunConfig.itemEdgeMargin - offset);
+      }
+    }
+    // Very short screens are still expected to fit every D7 shape; if a
+    // degenerate band cannot, use its middle and let the hazard downgrade
+    // (and the spawner's normal band clamps) protect the slot.
+    final preferred = _lastFinalY ?? (ctx.topTooth + ctx.floorTooth) / 2;
+    final base = lo <= hi
+        ? preferred.clamp(lo, hi).toDouble()
+        : (ctx.topTooth + ctx.floorTooth) / 2;
+    return [
+      for (var k = 0; k < templates.length; k++)
+        _adaptFormationSlot(
+          templates[k],
+          index: templates[k].index,
+          trackX: trackX + k * spacing,
+          centreY: base + templates[k].centreY,
+          opening: openings[k],
+        ),
+    ];
+  }
+
+  SlotPlan _adaptFormationSlot(
+    SlotPlan template, {
+    required int index,
+    required double trackX,
+    required double centreY,
+    required double opening,
+  }) {
+    assert(template.index == index);
+    final attached = [
+      for (final item in template.attached)
+        GapItemPlan(
+          kind: item.kind,
+          trackX: trackX + item.trackX - template.trackX,
+          y: item.y == null ? null : centreY + (item.y! - template.centreY),
+          lineOffset: item.lineOffset,
+          extra: item.extra,
+          toTrackX: item.toTrackX == null
+              ? null
+              : trackX + item.toTrackX! - template.trackX,
+          toY: item.toY,
+        ),
+    ];
+    return template.copyWith(
+      trackX: trackX,
+      centreY: centreY,
+      opening: opening,
+      advance: spacing,
+      attached: attached,
+    );
+  }
+
+  /// PRD-2.6 D7 chapter weights, based on the live post-ceiling hard-family
+  /// masses. The sum is kept constant, so the rotation changes the mix, not
+  /// the hazard budget.
+  Map<MixWeightKey, double> _chapterWeights(int hoop) {
+    final saw = tables.specials[HoopKindId.saw]?.weightAt(hoop) ?? 0;
+    final switching =
+        tables.specials[HoopKindId.switchRing]?.weightAt(hoop) ?? 0;
+    final moving = (tables.movingChance(hoop) * 100).round();
+    return Formations.mixWeightsAt(hoop, {
+      MixWeightKey.saw: saw,
+      MixWeightKey.switchRing: switching,
+      MixWeightKey.moving: moving,
+    });
+  }
+
+  /// PRD-2.6 D7 the moving chance after the chapter rotation (before 150:
+  /// the unchanged D2 curve).
+  double _movingChance(int hoop) {
+    if (hoop < 150) return tables.movingChance(hoop);
+    return _chapterWeights(hoop)[MixWeightKey.moving]! / 100;
+  }
+
+  /// PRD-2.6 D7 the chapter-rotated hard-family special weights. The
+  /// chapter is normalized from the live base masses, then the scaling is
+  /// applied to [rule]; this keeps every other special's D2 weight intact.
+  double _rotatedSpecialWeight(HoopKindId kind, SpecialRule rule, int hoop) {
+    final base = rule.weightAt(hoop).toDouble();
+    if (hoop < 150) return base;
+    return _chapterWeights(hoop)[switch (kind) {
+      HoopKindId.saw => MixWeightKey.saw,
+      HoopKindId.switchRing => MixWeightKey.switchRing,
+      _ => throw ArgumentError.value(kind, 'kind', 'not a hard special'),
+    }]!;
+  }
+
+  /// The D2 motion roll, adjusted to the D7 chapter share past hoop 150.
+  /// The ordinary roll is still made, then deterministically thinned or
+  /// supplemented on [_chapterRandom]; a forced (debug / first-meet) moving
+  /// ring bypasses the adjustment.
+  MotionSpec? _chapterMotion(
+    int i,
+    DirectorContext ctx,
+    double y,
+    double opening, {
+    required bool force,
+  }) {
+    final base = tables.movingChance(i);
+    final target = _movingChance(i);
+    if (force ||
+        i < 150 ||
+        (target - base).abs() < 1e-12 ||
+        ctx.squeezeWindow) {
+      return _layout.motion(i, ctx, y, opening, force: force);
+    }
+    final drawn = _layout.motion(i, ctx, y, opening);
+    if (target > base) {
+      if (drawn != null) return drawn;
+      final chance = (target - base) / (1 - base);
+      if (chance <= 0 || _chapterRandom.nextDouble() >= chance) return null;
+      return _layout.motion(i, ctx, y, opening, force: true);
+    }
+    if (drawn == null || base <= 0) return null;
+    final keep = target / base;
+    return _chapterRandom.nextDouble() < keep ? drawn : null;
   }
 
   SlotPlan _calmSlot(
@@ -1194,7 +1482,7 @@ class RunDirector {
           tilt = _layout.tilt(i, force: forceMod == ElementId.angledRing);
         }
         if (_on(ElementId.movingRing)) {
-          motion = _layout.motion(
+          motion = _chapterMotion(
             i,
             ctx,
             y,
@@ -1652,6 +1940,7 @@ class RunDirector {
       forced: false,
       attached: const [],
       duringRide: ride,
+      formation: () => null,
     );
   }
 

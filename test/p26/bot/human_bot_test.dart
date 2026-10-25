@@ -86,7 +86,14 @@ void main() {
           },
         );
 
-        expect(result.cause, isA<MistakeCause>());
+        // PRD-2.6 D2's height-capped curve can keep the noisy helper alive
+        // for the whole 90 s window; the gate is flight + highlight capture,
+        // not an artificial death.
+        if (result.cause == null) {
+          expect(result.hoops, greaterThan(25));
+        } else {
+          expect(result.cause, isA<MistakeCause>());
+        }
         expect(result.seconds, greaterThan(0));
         expect(result.flaps, greaterThan(0));
         expect(result.highlightIds, contains('human-bot-test'));

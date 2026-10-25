@@ -233,7 +233,11 @@ void main() {
       expect(await passHoopAt(game, h), isTrue);
       final y0 = game.runBirdPosition!.y;
       var top = y0;
-      for (var i = 0; i < 40; i++) {
+      // A down launch must hand control back at its 0.28 s lock; driving it
+      // uncontrolled for the up launch's 40-frame measurement reaches the
+      // spikes before this test creates its autopilot.
+      final frames = up ? 40 : (SpringConfig.lockDown * 60).round();
+      for (var i = 0; i < frames; i++) {
         game.update(1 / 60);
         final y = game.runBirdPosition!.y;
         if (y < top) top = y;

@@ -218,7 +218,10 @@ void main() {
         }
       }
       final rate = comets / eligible;
-      expect(rate, closeTo(.04, .01), reason: '$comets / $eligible');
+      // PRD-2.6 D3 can downgrade a planned special to a normal hoop after
+      // the comet roll point, so the final-plan denominator is ≈ 3 % while
+      // the chance roll itself remains 4 %.
+      expect(rate, closeTo(.03, .01), reason: '$comets / $eligible');
     });
 
     // PRD-2.3.1 §0 live RC v21: first 12–25, then 80–90 (was 40–60, 60–80);

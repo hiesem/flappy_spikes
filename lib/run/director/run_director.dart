@@ -755,7 +755,11 @@ class RunDirector {
 
     // 4. Cooldown. 5. Special roll (first-meet replaces the roll).
     final cooling = i - _lastSpecial <= _cdLeft;
-    if (kind == null && !forced && !cooling) {
+    var owedCometReady = false;
+    if (_cometOwed) {
+      owedCometReady = _cometAllowed(i, ctx);
+    }
+    if (kind == null && !forced && !cooling && !owedCometReady) {
       final dueSpecial = due == null ? null : HoopKindId.specialFor(due);
       final waiting = _waitRing;
       final headlineWaiting = _headlineWaitRing;
@@ -956,6 +960,18 @@ class RunDirector {
       }
       _downgrades++;
       if (finalPlan.kind != HoopKindId.spring) _springLandingAt = null;
+    }
+    if (finalPlan.kind == HoopKindId.normal) {
+      var opening = openingFor(hoop) * _bigMult(hoop, ctx);
+      if (finalPlan.tiltDeg.abs() == 45) {
+        opening += TuningValues.current.i('tilt45_extra_opening');
+      }
+      finalPlan = finalPlan.copyWith(
+        opening: min(
+          opening,
+          ctx.band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
+        ),
+      );
     }
     finalPlan = finalPlan.copyWith(
       // A train's longer advance belongs to the train in the final plan. A
@@ -1376,6 +1392,16 @@ class RunDirector {
     return !_headlineDue('ride', hoop);
   }
 
+  /// PRD-2.6 D6: the scheduled first portal owns its headline window. A
+  /// random big bonus in the preceding seven hoops would otherwise postpone
+  /// the C3 introduction past its 12–25 first-appearance window.
+  bool _reservesFirstPortal(int hoop) =>
+      _portalOn &&
+      !portalCapped &&
+      _portalCount == 0 &&
+      hoop < _portalAt &&
+      hoop > _portalAt - 8;
+
   /// §3.0.3 special-hoop eligibility (unlocked, far enough, allowed now).
   bool _specialAllowed(
     HoopKindId k,
@@ -1387,6 +1413,11 @@ class RunDirector {
   }) {
     final rule = tables.specials[k];
     if (rule == null || !_on(k.element)) return false;
+    if (rewardKinds.contains(k) &&
+        k != HoopKindId.portal &&
+        _reservesFirstPortal(i)) {
+      return false;
+    }
     if (!ignoreUnlock) {
       if (!ignoreFrom && i < rule.from) return false;
       if (i - (_lastOf[k] ?? -99) < rule.minSince) return false;
@@ -1443,10 +1474,8 @@ class RunDirector {
             _portalAt - i < RunConfig.cometPortalDistance)) {
       return false;
     }
-    var drawn = false;
     if (mode == 0 && !_cometOwed) {
       if (rng.layout.nextDouble() >= rule.chance) return false;
-      drawn = true;
       // PRD-2.2 §14.5 / PRD-2.6 D6: a drawn comet stays due. It skips the
       // chance roll until its headline can run, so deferring it does not
       // lose the drawn ride; its 18-hoop spacing still counts from the
@@ -1645,6 +1674,11 @@ class RunDirector {
 
   bool _headlineDue(String id, int hoop) {
     final forcedUntil = _forcedHeadlineAt == null ? -1 : _forcedHeadlineAt! + 8;
+    if (_headlineReservationId == id &&
+        _headlineReservationDue >= 0 &&
+        hoop >= _headlineReservationDue) {
+      return true;
+    }
     if (hoop < forcedUntil) {
       return _headlineReservationId == id && hoop >= _headlineReservationDue;
     }
@@ -1664,8 +1698,10 @@ class RunDirector {
   void _claimHeadline(String id, int hoop) {
     if (!_headline.allows(id, hoop)) _forcedHeadlineAt = hoop;
     _headline.add(id, hoop);
-    _headlineReservationId = null;
-    _headlineReservationDue = -1;
+    if (_headlineReservationId == id) {
+      _headlineReservationId = null;
+      _headlineReservationDue = -1;
+    }
   }
 
   /// PRD-2.3 §17.3 rule 4 the one waiting big bonus drawn while blocked: a
@@ -2058,12 +2094,14 @@ class RunDirector {
       final waiting = _waitItem;
       final headlineWaiting = _headlineWaitItem;
       if (waiting != null &&
+          !(_reservesFirstPortal(g) && isBigItem(waiting)) &&
           _gapAllowed(waiting, g, ctx) &&
           (!isBigItem(waiting) || _headlineDue('big-bonus', g))) {
         // PRD-2.3 §17.3 rule 4 the waiting big item comes first.
         pick = waiting;
         _waitItem = null;
       } else if (headlineWaiting != null &&
+          !(_reservesFirstPortal(g) && isBigItem(headlineWaiting)) &&
           g >= _headlineWaitItemDue &&
           _headlineDue(_headlineWaitItemId, g) &&
           _gapAllowed(headlineWaiting, g, ctx)) {
@@ -2077,7 +2115,7 @@ class RunDirector {
       } else if (pool != null && pool.covers(g)) {
         // PRD-2.2 §19.2 the early pool's Star Trail (drawn with the slot);
         // it may come from index 4 (its min distance still holds).
-        if (_earlyPicks[g] == EarlyPick.starTrail) {
+        if (_earlyPicks[g] == EarlyPick.starTrail && !_reservesFirstPortal(g)) {
           if (_gapAllowed(ElementId.starTrail, g, ctx, ignoreFrom: true)) {
             if (_headlineDue('big-bonus', g)) {
               pick = ElementId.starTrail;
@@ -2104,10 +2142,11 @@ class RunDirector {
           // PRD-2.3 §17.3 rule 4: a big item that only rule 1 blocks stays
           // in the draw (and waits if drawn).
           final preferred = slot.calm && !isBigItem(e.key) ? 3 : 1;
-          if (_gapAllowed(e.key, g, ctx) ||
-              (oneBigBonus &&
-                  isBigItem(e.key) &&
-                  _gapAllowed(e.key, g, ctx, ignoreOpen: true))) {
+          if (!(isBigItem(e.key) && _reservesFirstPortal(g)) &&
+              (_gapAllowed(e.key, g, ctx) ||
+                  (oneBigBonus &&
+                      isBigItem(e.key) &&
+                      _gapAllowed(e.key, g, ctx, ignoreOpen: true)))) {
             w[e.key] = e.value.weight * preferred;
           }
         }
@@ -2177,7 +2216,12 @@ class RunDirector {
       };
       pick = RunRandom.pickWeighted<ElementId>(r, w);
     }
-    if (pick == null || _bonusWaits || !isBigItem(pick)) return;
+    if (pick == null ||
+        _bonusWaits ||
+        !isBigItem(pick) ||
+        _reservesFirstPortal(g)) {
+      return;
+    }
     if (!_gapAllowed(pick, g, ctx, ignoreOpen: true, ignoreFrom: true)) {
       return;
     }

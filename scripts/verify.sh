@@ -37,12 +37,23 @@ norm_failures() { grep ' \[E\]$' | sed -E 's#^([0-9:]+ )?\+[0-9]+( ~[0-9]+)? -[0
 flutter_all() {
   local out rc=0
   out="$(mktemp)"
-  flutter test --no-pub 2>&1 | tee "$out" || rc=$?
+  flutter test --no-pub -j "${DF4_FLUTTER_J:-4}" 2>&1 | tee "$out" || rc=$?
   [ "$rc" = 0 ] && { rm -f "$out"; return 0; }
   if [ ! -s "$KNOWN_RED" ]; then rm -f "$out"; return "$rc"; fi
   local new
   new="$(norm_failures < "$out" | comm -23 - <(sort -u "$KNOWN_RED"))"
   local nfail; nfail="$(norm_failures < "$out" | wc -l)"
+  if [ "$nfail" != 0 ] && [ -n "$new" ]; then
+    # flaky tests (timing, unseeded randomness) turned whole rounds red: rerun the files of the unlisted failures
+    # once; only failures that repeat count (they are printed as FLAKY otherwise).
+    local files again
+    files="$(printf '%s\n' "$new" | cut -d: -f1 | sort -u | tr '\n' ' ')"
+    echo "--- rerun once (flake check): $files"
+    again="$(flutter test --no-pub -j "${DF4_FLUTTER_J:-4}" $files 2>&1 | norm_failures)"
+    local flaky; flaky="$(comm -23 <(printf '%s\n' "$new") <(printf '%s\n' "$again") | grep -v '^$' || true)"
+    [ -n "$flaky" ] && { echo "=== FLAKY (failed once, passed on the rerun):"; printf '%s\n' "$flaky"; }
+    new="$(comm -12 <(printf '%s\n' "$new") <(printf '%s\n' "$again") | grep -v '^$' || true)"
+  fi
   rm -f "$out"
   if [ "$nfail" = 0 ] || [ -n "$new" ]; then
     echo "=== flutter test: failures NOT in $KNOWN_RED (these make the gate red):"

@@ -177,8 +177,12 @@ Future<HumanNoiseBotResult> flyHumanNoiseBotToDeath(
       seconds += dt;
       onFrame?.call(run);
       if (++frame % 10 == 0) {
-        await Future<void>.value();
-        game.update(0);
+        // Drain component onLoad chains before advancing the fixed clock.
+        // Ride/hoop children can take several microtasks to mount.
+        for (var pending = 0; pending < 10; pending++) {
+          await Future<void>.value();
+          game.update(0);
+        }
       }
     }
   } finally {

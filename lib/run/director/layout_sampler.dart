@@ -39,10 +39,17 @@ class LayoutSampler {
     bool useTable = true,
   }) {
     final b = tables.bandFor(hoopIndex);
-    final band = ctx.band;
-    final centreBand = min(band, RunConfig.dyRefBand);
     final centreMid = (ctx.topTooth + ctx.floorTooth) / 2;
     final m = opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin + extra;
+    // PRD-2.6 D2: the centre rows are fractions of the full band; only the
+    // Δy rows use `dyRef = min(band, 540 pt)` (see nextCentre). Above the
+    // 711 pt design height the D2 fairness rule (R2 / §3.D) keeps Δy in
+    // points identical at 711 and 730 pt. A wider row envelope would clip a
+    // step later on the taller screen and change the whole course, so the
+    // envelope stays the design band's (623 pt) and is centred in the
+    // taller band. At 568 and 711 pt this is the full band.
+    final designBand = RunConfig.designHeight - 2 * RunConfig.stripHeight;
+    final centreBand = min(ctx.band, designBand);
     var lo = useTable
         ? centreMid + (b.centre.$1 - 0.5) * centreBand
         : ctx.topTooth;
@@ -122,8 +129,13 @@ class LayoutSampler {
         : lastSign;
     var y = prev + sign * mag;
     if (y < lo || y > hi) {
-      sign = -sign;
-      y = prev + sign * mag;
+      // PRD-2.6 §11 R2 fairness: Δy in points is identical at 711 and 730
+      // when the band is ≥ dyRef. A step that leaves the row is shortened
+      // against the edge it crossed; flipping it here would make a taller
+      // screen (whose row ends further out) take the unflipped step and
+      // change the whole course. The next draw still uses `lastSign` from
+      // the actual edge step (the zig-zag direction is not forced).
+      y = y < lo ? lo : hi;
     }
     y = y.clamp(lo, hi).toDouble();
     final s = (y - prev).sign;
@@ -140,7 +152,10 @@ class LayoutSampler {
     return value;
   }
 
-  /// PRD-2.6 D2 record the final modifiers of the slot just planned.
+  /// PRD-2.6 D2 record the final modifiers of the slot just planned. The
+  /// director may call this more than once for a slot (it re-applies the
+  /// final tilt after the hazard ledger); the result must describe the final
+  /// plan, not just the latest provisional one.
   void noteModifiers({MotionSpec? motion, double tiltDeg = 0}) {
     _hardFollowUp = motion != null || tiltDeg.abs() >= 30;
   }

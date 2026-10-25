@@ -81,6 +81,8 @@ class BigHoopsFeature extends RunFeature {
   }
 
   double _duration(RunContext c, {double? alreadyRolled}) {
+    // PRD-2.6 B3 step 1: keep the normal draw even though the duration is
+    // replaced, so every later timing-stream roll stays on the same seed.
     final duration = alreadyRolled ?? c.director.rollBigHoopsDuration();
     return c.run.setup.showcase?.step == 0
         ? ShowcaseConfig.portalBigHoopsSeconds

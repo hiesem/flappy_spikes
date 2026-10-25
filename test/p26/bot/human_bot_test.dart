@@ -21,9 +21,11 @@ void main() {
       scheduler.flapDue(now);
       planned = scheduler.plannedFlapTimes.length;
     }
-    for (var frame = baseFlaps * 27;
-        scheduler.flapTimes.length < baseFlaps + scheduler.extraFlaps;
-        frame++) {
+    for (
+      var frame = baseFlaps * 27;
+      scheduler.flapTimes.length < baseFlaps + scheduler.extraFlaps;
+      frame++
+    ) {
       scheduler.flapDue(frame / 60);
     }
     return scheduler;
@@ -71,7 +73,9 @@ void main() {
         final result = await flyHumanNoiseBotToDeath(
           game,
           seed: 23,
-          maxSeconds: 90,
+          // PRD-2.6 D2 softens the course: retain the death assertion,
+          // with enough flight time to reach the harder rows.
+          maxSeconds: 180,
           onFrame: (run) {
             if (!emittedHighlight) {
               emittedHighlight = true;

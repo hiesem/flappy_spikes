@@ -4,6 +4,7 @@ import 'package:flappy_spikes/run/config/director_tables.dart';
 import 'package:flappy_spikes/run/config/layout_config.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
+import 'package:flappy_spikes/run/director/layout_sampler.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/hoops/motion/hoop_motion.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -79,11 +80,10 @@ void main() {
       expect(identical(t.swing, LayoutConfig.swing), isTrue);
     });
 
-    test('PRD-2.6 D2 rows at 0, 3, 10, 20, 40, 65, 100', () {
+    test('PRD-2.6 D2 rows at 0, 3, 20, 40, 65, 100', () {
       expect(LayoutConfig.bands.map((b) => b.from), [
         0,
         3,
-        10,
         20,
         40,
         65,
@@ -92,14 +92,12 @@ void main() {
       expect(LayoutConfig.bands.map((b) => b.tilt), [
         0,
         0,
-        .30,
         .50,
         .50,
         .60,
         .65,
       ]);
       expect(LayoutConfig.bands.map((b) => b.moving), [
-        0,
         0,
         0,
         .15,
@@ -112,17 +110,14 @@ void main() {
         (2, 0),
         (3, 1),
         (9, 1),
-        (10, 2),
-        (19, 2),
-        (20, 3),
-        (34, 3),
-        (35, 3),
-        (40, 4),
-        (64, 4),
-        (65, 5),
-        (99, 5),
-        (100, 6),
-        (400, 6),
+        (20, 2),
+        (39, 2),
+        (40, 3),
+        (64, 3),
+        (65, 4),
+        (99, 4),
+        (100, 5),
+        (400, 5),
       ]) {
         expect(
           LayoutConfig.bandFor(i),
@@ -144,13 +139,14 @@ void main() {
         'course uses the whole range (568 and 711)', () {
       for (final vh in plans.keys) {
         final band = vh - 2 * RunConfig.stripHeight;
-        final centreBand = math.min(band, LayoutConfig.dyRefBand);
         for (final (row, last) in rows) {
           final ys = <double>[];
           for (final run in plans[vh]!) {
             for (final s in run) {
               if (s.index < row.from || s.index > last) continue;
-              final f = (s.centreY - vh / 2) / centreBand + 0.5;
+              // PRD-2.6 D2: centre rows are fractions of the full band (only
+              // Δy rows use min(band, dyRef)).
+              final f = (s.centreY - vh / 2) / band + 0.5;
               expect(
                 f,
                 greaterThanOrEqualTo(row.centre.$1 - 1e-9),
@@ -241,29 +237,44 @@ void main() {
       for (final entry in LayoutConfig.tiltRows.entries) {
         final rowFrom = entry.key;
         final weights = entry.value;
-        final rowTo =
-            LayoutConfig.tiltRows.keys
-                .where((from) => from > rowFrom)
-                .fold(1 << 30, math.min) -
-            1;
+        final rowTo = math.min(
+          150,
+          LayoutConfig.tiltRows.keys
+                  .where((from) => from > rowFrom)
+                  .fold(1 << 30, math.min) -
+              1,
+        );
+        // PRD-2.6 D2 defines the tilt chance and weights as a roll on the
+        // row. D3 may remove a tilt afterwards and D4 forces calm slots
+        // untilted, so the final course is not a sample of the roll chance.
+        // Sample the sampler itself, then keep the final-plan safety checks
+        // below (early rows and the 45° gate).
         var normal = 0, tilted = 0;
         final steps = <int, int>{};
+        for (var hoop = rowFrom; hoop <= rowTo; hoop++) {
+          for (var seed = 1; seed <= 120; seed++) {
+            final sampler = LayoutSampler(
+              DirectorTables.prd2,
+              math.Random(seed * 1009 + hoop),
+            );
+            final tilt = sampler.tilt(hoop);
+            normal++;
+            if (tilt != 0) {
+              tilted++;
+              final step = tilt.round();
+              steps[step] = (steps[step] ?? 0) + 1;
+            }
+          }
+        }
         for (final vh in plans.keys) {
           for (final run in plans[vh]!) {
             for (final s in run) {
               if (s.index < rowFrom || s.index > rowTo) continue;
-              // PRD-2.2 §19.2 indices 4–9 draw the early pool instead (its
-              // angled ring; tested in test/p22/s19_random_opening_test).
               if (DirectorTables.prd2.earlyPool!.covers(s.index)) continue;
-              normal++;
-              if (s.tiltDeg != 0) {
-                tilted++;
-                steps[s.tiltDeg.round()] = (steps[s.tiltDeg.round()] ?? 0) + 1;
-                final dy = s.centreY - (run.elementAt(s.index - 1).centreY);
-                if (s.tiltDeg.abs() >= 20) {
-                  expect(dy.abs(), greaterThanOrEqualTo(40 - 1e-9));
-                  expect(s.tiltDeg.sign, dy.sign);
-                }
+              if (s.tiltDeg.abs() >= 20) {
+                final dy = s.centreY - run.elementAt(s.index - 1).centreY;
+                expect(dy.abs(), greaterThanOrEqualTo(40 - 1e-9));
+                expect(s.tiltDeg.sign, dy.sign);
               }
             }
           }
@@ -274,53 +285,88 @@ void main() {
           chance += table.tiltChance(i);
         }
         chance /= rowTo - rowFrom + 1;
-        expect(tilted / normal, closeTo(chance, .04), reason: 'row $rowFrom');
+        expect(tilted / normal, closeTo(chance, .03), reason: 'row $rowFrom');
         expect(
           steps.keys.map((step) => step.abs()).toSet(),
           weights.keys.toSet(),
         );
         if (rowFrom < 60) expect(steps.containsKey(45), isFalse);
       }
+      for (final run in plans[711.0]!) {
+        for (final s in run) {
+          if (s.index < 10) expect(s.tiltDeg, 0, reason: 'hoop ${s.index}');
+          if (s.index < 60) expect(s.tiltDeg.abs(), isNot(45));
+        }
+      }
     });
 
     test('§D2 moving share and type weights; none before 25', () {
       for (final (row, last) in rows) {
-        var normal = 0, moving = 0, hiSeen = row.from;
+        if (last < 25) continue;
+        final from = math.max(row.from, 25);
+        final to = math.min(last, 150);
+        // PRD-2.6 D3/D4 can clear a motion after the D2 roll, so the final
+        // course under-samples the row's moving chance. Sample the roll
+        // directly, and keep the final plans' type / early-gate checks.
+        var normal = 0, moving = 0;
         final types = <MotionType, int>{};
-        for (final vh in plans.keys) {
-          for (final run in plans[vh]!) {
-            for (final s in run) {
-              if (s.index < row.from || s.index > last) continue;
-              normal++;
-              if (s.index > hiSeen) hiSeen = s.index;
-              final m = s.motion;
-              if (m == null) continue;
-              moving++;
-              types[m.type] = (types[m.type] ?? 0) + 1;
-            }
+        final ctx = DirectorContext.open(711);
+        for (var hoop = from; hoop <= to; hoop++) {
+          final opening = RunConfig.openingFor(hoop);
+          final (lo, hi) = LayoutSampler(
+            DirectorTables.prd2,
+            math.Random(1),
+          ).limits(hoop, ctx, opening);
+          for (var seed = 1; seed <= 120; seed++) {
+            final sampler = LayoutSampler(
+              DirectorTables.prd2,
+              math.Random(seed * 1013 + hoop),
+            );
+            final motion = sampler.motion(
+              hoop,
+              ctx,
+              (lo + hi) / 2,
+              opening,
+            );
+            normal++;
+            if (motion == null) continue;
+            moving++;
           }
         }
         // PRD-2.3 §14.4 the moving chance is the `curve_moving` keyframe
         // table (the row's mean over its hoops).
         final t = DirectorTables.prd2;
         var want = 0.0;
-        for (var i = row.from; i <= hiSeen; i++) {
+        for (var i = from; i <= to; i++) {
           want += t.movingChance(i);
         }
-        want /= hiSeen - row.from + 1;
+        want /= to - from + 1;
         expect(moving / normal, closeTo(want, .03), reason: 'row ${row.from}');
-        if (moving == 0) continue;
-        final allowed = row.from < 40
-            ? {MotionType.rail, MotionType.swing}
-            : row.from < 65
-            ? {
-                MotionType.rail,
-                MotionType.swing,
-                MotionType.horizontal,
-                MotionType.diagonal,
+        for (final vh in plans.keys) {
+          for (final run in plans[vh]!) {
+            for (final s in run) {
+              if (s.index < row.from || s.index > last) continue;
+              if (s.motion case final motion?) {
+                types[motion.type] = (types[motion.type] ?? 0) + 1;
+                var motionRow = LayoutConfig.motionRows.first;
+                for (final candidate in LayoutConfig.motionRows) {
+                  if (s.index >= candidate.from) motionRow = candidate;
+                }
+                expect(
+                  motionRow.types.keys,
+                  contains(motion.type),
+                  reason: 'hoop ${s.index}',
+                );
               }
-            : MotionType.values.toSet();
-        expect(types.keys.toSet().difference(allowed), isEmpty);
+            }
+          }
+        }
+        expect(types, isNotEmpty);
+      }
+      for (final run in plans[711.0]!) {
+        for (final s in run) {
+          if (s.index < 25) expect(s.motion, isNull, reason: 'hoop ${s.index}');
+        }
       }
     });
   });

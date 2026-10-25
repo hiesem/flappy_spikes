@@ -28,6 +28,23 @@ changed() {   # files the branch touches (scoped) — empty when unscoped
 
 CORE_TESTS=(test/autopilot_test.dart test/layout_test.dart test/flap_physics_test.dart)
 
+# df4 heavy slots (project.heavy_slots, heavy_scope = "all"): the flutter suites run while holding one of
+# $DF4_HEAVY_LOCKS, so lanes and the agents' own verify runs never run more full suites at once than the slots allow.
+# Empty when df4 already holds a slot for this run: then `heavy` just runs the command.
+heavy() {
+  [ -n "${DF4_HEAVY_LOCKS:-}" ] && command -v flock >/dev/null || { "$@"; return; }
+  local f got="" rc=0
+  for f in $DF4_HEAVY_LOCKS; do
+    exec 9<"$f"
+    if flock -n 9; then got=1; break; fi
+    exec 9<&-
+  done
+  [ -n "$got" ] || { exec 9<"${DF4_HEAVY_LOCKS%% *}"; flock 9; }
+  "$@" || rc=$?
+  exec 9<&-
+  return $rc
+}
+
 # Known-red list (temporary, orchestrator-owned like this script): failures listed in scripts/known_red_tests.txt
 # ("<test file>: <full test name>", one per line) do not turn the gate red; any other failure, a load/compile error
 # or a listed test that now passes but is still listed is reported. Builders never edit the list (protected path):
@@ -74,7 +91,7 @@ flutter_checks() {
   # merged unseen). Set DF4_VERIFY_SCOPED=1 to get the old scoped run for a quick local check.
   if [ -z "$BASE" ] || [ "${DF4_VERIFY_SCOPED:-}" != 1 ]; then
     echo "--- flutter test (all)"
-    flutter_all
+    heavy flutter_all
     return
   fi
   local files=() f stem
@@ -90,7 +107,7 @@ flutter_checks() {
   files+=("${CORE_TESTS[@]}")
   mapfile -t files < <(printf '%s\n' "${files[@]}" | sort -u)
   echo "--- flutter test (scoped: ${#files[@]} files)"
-  flutter test --no-pub "${files[@]}"
+  heavy flutter test --no-pub "${files[@]}"
 }
 
 functions_checks() {

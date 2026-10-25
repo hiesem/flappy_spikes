@@ -29,7 +29,8 @@ agent_rules = [
 ]
 never_commit = ["android/upload-keystore.jks", "android/app/key.properties", "*.jks", "*.keystore", "functions/lib/**", "firestore-debug.log", "*-debug.log"]
 protected_paths = ["pubspec.lock", "functions/package-lock.json", "df4.toml", "scripts/verify.sh", "scripts/known_red_tests.txt", "docs/p26/PRD-2.6-fun-progression.md", "docs/p26/README.md", "docs/p26/BUILD_NOTES.md", "docs/p26/design/**", "android/app/build.gradle*", ".github/**"]
-heavy_slots = 1
+heavy_slots = 2    # 2026-10-25: was 1; with heavy_scope = "all" every verify (also the agents' own) queues on these
+heavy_scope = "all"    # 2026-10-25: 3 lanes x full flutter suites squeezed memory (page allocation failures at 04:22)
 builder_notes = "docs/p26/BUILD_NOTES.md"
 tester_notes = "docs/p26/BUILD_NOTES.md"
 
@@ -147,6 +148,23 @@ health_url = ""
 
 [retry]
 transient_waits_s = [30, 120, 300, 900, 1800, 3600]
+
+[run]
+role_crash_pause = 3
+outage_notice_s = 900
+min_free_mem_gb = 4                        # no new lane/verify/tester below this MemAvailable
+inhibit = "sleep:idle:handle-lid-switch"   # 2026-10-24 14:44 the laptop suspended mid-M1F: 12 h lost
+
+[autonomy]   # df4 4.3: plans are reviewed by member_b (Sol) and approved by df4; follow-up rounds before each gate
+mode = "on"
+until = ""   # = M5, the last wave of PRD 2.6
+mandate = "owner (standing mandate, 2026-10-25): continue without my supervision or input until everything from the PRD is built"
+reviewer = "member_b"
+followup_rounds = 2
+
+[notify]
+command = ["notify-send", "-u", "critical", "-a", "df4", "df4 {project}: {event}", "{line}"]
+url = ""
 
 [prepare]
 install = "flutter pub get && npm --prefix functions ci --no-audit --no-fund"

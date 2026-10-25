@@ -168,8 +168,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
        monetization = monetization ?? Monetization(),
        showcasePlan = showcasePlan ?? const InertShowcasePlan(),
        showcaseProgress = showcaseProgress ?? const InertShowcaseProgress(),
-       ftueTracker = ftueTracker ?? const InertFtueTracker(),
-       homeMoments = homeMoments ?? const PassthroughHomeMoments(),
+       homeMoments = homeMoments ?? HomeMomentBudget(),
        storage = GameStorage(clock: clock),
        // WP-TAB: a wide screen (tablet) is 568 pt high in game points.
        screenHeight = max(
@@ -200,6 +199,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
          ),
          zoom: 1,
        ) {
+    _ftueTracker =
+        ftueTracker ??
+        PersistedFtueTracker(services: this.services, storage: storage);
     // The game uses 1 Forge2D world unit = 1 logical point (SPEC.md). The
     // engine's default per-step translation clamp (2.0 units, tuned for
     // meter-scale worlds) would otherwise cap every body at ~120 pt/s at
@@ -225,7 +227,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// PRD-2.6 M1 seams; their default implementations are inert.
   final ShowcasePlan showcasePlan;
   final ShowcaseProgress showcaseProgress;
-  final FtueTracker ftueTracker;
+  late final FtueTracker _ftueTracker;
+
+  /// PRD-2.6 WP-A: production always uses the persisted tracker. Tests can
+  /// inject an inert or recording implementation.
+  FtueTracker get ftueTracker => _ftueTracker;
   final HomeMoments homeMoments;
 
   static double _clampViewHeight(double height) =>
@@ -277,8 +283,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// 320 pt column (centred menus, the run column, the viewport HUD):
   /// x from −extra to 320 + extra. Full-screen fills (backgrounds, dims,
   /// flashes) use it; the view clips the rest.
-  Rect bleedRect(double height, {double top = 0}) =>
-      Rect.fromLTWH(-extraWidth, top, Config.worldWidth + 2 * extraWidth, height);
+  Rect bleedRect(double height, {double top = 0}) => Rect.fromLTWH(
+    -extraWidth,
+    top,
+    Config.worldWidth + 2 * extraWidth,
+    height,
+  );
 
   /// WP-TAB: the visible screen in run coordinates (the run column: run
   /// world content and the run HUD): x from −extra to 320.
@@ -410,6 +420,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// PRD-2.3 §13.4: the music never stays silent without a reason (built
   /// in [onLoad] with [sound]).
   late final MusicGuard musicGuard;
+  bool _musicReady = false;
 
   /// Rewarded ads + in-app purchases. In-memory fakes unless main() passes
   /// `Monetization.forPlatform()`.
@@ -765,6 +776,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     add(drags);
 
     await storage.load();
+    await ftueTracker.flushPendingFirstMeets();
     // QA P2-03 (PRD-2.3.1 §12.3): commit (clean) or drop (excluded) the
     // journal of a run the app died in, before the sync below reports it.
     await achievements.recoverJournal();
@@ -853,6 +865,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       otherMusicNow: _otherMusicNow,
       track: services.track,
     )..attach();
+    _musicReady = true;
     unawaited(_startMusicChecked());
     // PRD-2.2 §33.6 (S7-19): the session sound set is created once on
     // Home and kept, so the live players stay flat game after game.
@@ -999,6 +1012,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     await menu.noAdsPopup.startSession();
     _runsThisSession = 0;
     if (state != GameState.start || menuScene != MenuScene.home) return;
+    // A resumed session is a new Home visit. The initial launch keeps the
+    // pre-2.6 launch order (session upsell before the catch-up LEVEL UP);
+    // once a run has arrived Home, later sessions start with a clean budget.
+    if (_homeVisitBudgeted) _beginHomeVisit();
     _queueNoAdsOffer(
       check: 'session',
       stale: () =>
@@ -1007,6 +1024,35 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           menu.noAds ||
           state != GameState.start ||
           menuScene != MenuScene.home,
+    );
+  }
+
+  /// C2: the Home arrival after a run starts a fresh popup budget. Live
+  /// candidates come from the same sources that can open a popup; a rejected
+  /// request stays pending with its source for a later visit. The launch /
+  /// resume upsell is the pre-2.6 session path, and returns from Shop / Skins
+  /// / Levels / Settings are not arrivals, so none of those reset the budget.
+  bool _homeVisitBudgeted = false;
+
+  void _beginHomeVisit() {
+    if (state != GameState.start || menuScene != MenuScene.home) return;
+    _homeVisitBudgeted = true;
+    final levels = _resultsLevels;
+    final newLevelThisRun = levels != null && levels.$2 > levels.$1;
+    homeMoments.beginVisit(
+      HomeVisit(
+        day: storage.now(),
+        gamesPlayed: storage.gamesPlayed,
+        requests: HomeVisitRequests(
+          levelUpCatchUp:
+              newLevelThisRun && menu.levels.pendingLevelUp != null,
+          noAds:
+              !giftThisHomeVisit &&
+              !_ratingRequestedThisRun &&
+              menu.noAdsPopup.evaluate() != null,
+          rating: _deferredRatingTrigger != null,
+        ),
+      ),
     );
   }
 
@@ -1036,7 +1082,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   @override
   void onRemove() {
-    unawaited(musicGuard.dispose());
+    if (_musicReady) unawaited(musicGuard.dispose());
     monetization.consent.canRequestAds.removeListener(_preloadBanner);
     idleFrames.detach();
     _purchases?.dispose();
@@ -2803,9 +2849,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   Future<void>? _homeReload;
 
   /// The rating trigger of the results page on screen (`run5` / `new_best`),
-  /// or null. Set by [endRun]; cleared once the request goes out, or when
-  /// Home comes back.
+  /// or null. Set by [endRun]; cleared once the request goes out.
   String? _ratingTrigger;
+
+  /// A rating request the C2 budget deferred to a later Home visit. The
+  /// results page's own [Config.ratingDelaySeconds] window has passed, so
+  /// the next arrival offers the sheet directly.
+  String? _deferredRatingTrigger;
 
   /// Seconds the results page has been settled with no overlay open (the
   /// §23.2 item 4 count).
@@ -2841,7 +2891,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     _ratingSettle += dt;
     if (_ratingSettle < Config.ratingDelaySeconds) return;
-    _ratingTrigger = null;
     _ratingSettle = 0;
     _requestRating(trigger);
   }
@@ -2850,9 +2899,42 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// happens (no request, no cooldown) when the sheet is not available here
   /// (§23.4) or when a request went out in the last [Config.ratingCooldown].
   void _requestRating(String trigger) {
-    homeMoments.show(HomeMoment.rating, () {
+    final opened = homeMoments.tryShow(HomeMoment.rating, () {
       _requestRatingNow(trigger);
     });
+    if (opened) {
+      _ratingTrigger = null;
+    } else {
+      // A higher-priority moment owns this Home visit. Keep the rating due;
+      // the next arrival includes it in the visit requests.
+      _ratingTrigger = null;
+      _deferredRatingTrigger = trigger;
+    }
+  }
+
+  /// Offers a rating request that the previous Home visit deferred because a
+  /// higher-priority popup took it. Only the settled Home can show it; if the
+  /// current visit's selected moment wins again, it stays deferred.
+  void _checkDeferredRating() {
+    final trigger = _deferredRatingTrigger;
+    final home = _home;
+    if (trigger == null ||
+        !_homeInteractive ||
+        home == null ||
+        !home.built ||
+        home.opacity < 1 ||
+        modalPopupOpen ||
+        _debugPanel != null ||
+        _fakeAd != null ||
+        _adsShowing > 0 ||
+        _interstitialBusy) {
+      return;
+    }
+    final opened = homeMoments.tryShow(HomeMoment.rating, () {
+      _deferredRatingTrigger = null;
+      _requestRatingNow(trigger);
+    });
+    if (opened) _deferredRatingTrigger = null;
   }
 
   void _requestRatingNow(String trigger) {
@@ -4552,13 +4634,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // PRD-2.3 §24.2: the No-Ads popup is checked on every Home arrival after
     // a run (after the interstitial, which is over by now). The check waits
     // for the arrival's storage reload, so a reload that lands late can never
-    // revert a show that was recorded in the meantime.
+    // revert a show that was recorded in the meantime. The budget starts
+    // after that reload, so its candidates see the run's saved mood.
     final reload = _homeReload;
     if (reload == null) {
+      _beginHomeVisit();
       _offerNoAdsAfterRun();
     } else {
       unawaited(
-        reload.catchError((Object _) {}).then((_) => _offerNoAdsAfterRun()),
+        reload.catchError((Object _) {}).then((_) {
+          _beginHomeVisit();
+          _offerNoAdsAfterRun();
+        }),
       );
     }
   }
@@ -5052,6 +5139,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     if (state == GameState.start) _checkLevelUp(dt);
     _checkRatingPrompt(dt);
+    _checkDeferredRating();
     _checkAchievementToasts(); // PRD-2.3.1 §12.5
     if (_bannerState.value != BannerState.off) _syncBannerStripColor();
 

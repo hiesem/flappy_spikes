@@ -8,7 +8,7 @@ repo = "hiesem/flappy_spikes"    # from git remote origin
 remote = ""
 base_branch = "feat/2.6"    # owner 2026-10-24: 2.6 builds on feat/2.6 (off feat/2.5 = 2.5.0+48); main untouched
 lanes = 3    # owner choice
-milestones = ["M0", "M1", "M2", "M3", "M4", "M5"]    # = PRD 2.6 §4 build waves 0-5
+milestones = ["M0", "M1", "M1F", "M2", "M3", "M4", "M5"]    # = PRD 2.6 §4 build waves 0-5; M1F = fix-ups for the findings M1 merged with (orchestrator plan)
 language = "English"
 env_prefix = "DF4"
 state_dir = ""
@@ -28,8 +28,9 @@ agent_rules = [
   "Never run adb, emulators, firebase deploy, gcloud or anything that touches the real Firebase project or the stores.",
 ]
 never_commit = ["android/upload-keystore.jks", "android/app/key.properties", "*.jks", "*.keystore", "functions/lib/**", "firestore-debug.log", "*-debug.log"]
-protected_paths = ["pubspec.lock", "functions/package-lock.json", "df4.toml", "scripts/verify.sh", "docs/p26/PRD-2.6-fun-progression.md", "docs/p26/README.md", "docs/p26/BUILD_NOTES.md", "docs/p26/design/**", "android/app/build.gradle*", ".github/**"]
-heavy_slots = 1
+protected_paths = ["pubspec.lock", "functions/package-lock.json", "df4.toml", "scripts/verify.sh", "scripts/known_red_tests.txt", "docs/p26/PRD-2.6-fun-progression.md", "docs/p26/README.md", "docs/p26/BUILD_NOTES.md", "docs/p26/design/**", "android/app/build.gradle*", ".github/**"]
+heavy_slots = 2    # 2026-10-25: was 1; with heavy_scope = "all" every verify (also the agents' own) queues on these
+heavy_scope = "all"    # 2026-10-25: 3 lanes x full flutter suites squeezed memory (page allocation failures at 04:22)
 builder_notes = "docs/p26/BUILD_NOTES.md"
 tester_notes = "docs/p26/BUILD_NOTES.md"
 
@@ -41,13 +42,11 @@ timeout_s = 1800
 
 [roles.builder1]
 kind = "codex"
-model = "deepseek/deepseek-v4.1-flash-1017@preset/df4-deepseek-wafer"    # OpenRouter preset: Wafer only, mxfp4, no fallbacks (owner 2026-10-24)
-effort = "max"
+model = "gpt-6.1-sol"    # owner 2026-10-25: Sol 6.1 medium builds round 1 (was DeepSeek)
+effort = "medium"
 network = true
-timeout_s = 3600
-idle_timeout_s = 900
-home = "~/.local/state/df4/flappy-spikes/codex-openrouter"
-env_file = "~/.config/duofoundry/openrouter.env"
+timeout_s = 2400
+fallback = "fallback_deepseek"    # owner 2026-10-25: DeepSeek V4.1 Flash max (Wafer only)
 
 [roles.builder2]
 kind = "codex"
@@ -58,6 +57,7 @@ timeout_s = 3600
 idle_timeout_s = 900
 home = "~/.local/state/df4/flappy-spikes/codex-zai"
 env_file = "~/.config/duofoundry/glm.env"
+fallback = "fallback_sol"    # owner 2026-10-24: Sol 6.1 medium; then Opus checks that round (Sol is the tester)
 
 [roles.builder3]
 kind = "codex"
@@ -65,30 +65,63 @@ model = "gpt-6.1-sol"
 effort = "medium"
 network = true
 timeout_s = 2400
+fallback = "fallback_opus"    # owner 2026-10-24: Opus 5.5 medium
 
 [roles.tester]
 kind = "codex"
 model = "gpt-6.1-sol"
 effort = "high"
 timeout_s = 1800
+fallback = "fallback_opus"    # owner 2026-10-24: Opus 5.5 medium
 
 [roles.tester3]
+kind = "claude"
+model = "claude-opus-5-5"    # owner 2026-10-25: Opus 5.5 medium tests round 3 (was Sol high)
+effort = "medium"
+timeout_s = 1800
+fallback = "fallback_sol_high"    # owner 2026-10-25: Sol 6.1 high
+
+[roles.tester1]    # owner 2026-10-25: Opus 5.5 medium tests round 1 (Sol builds it)
+kind = "claude"
+model = "claude-opus-5-5"
+effort = "medium"
+timeout_s = 1800
+fallback = "fallback_sol_high"    # owner 2026-10-25: Sol 6.1 high; when Sol built the round it checks only if Opus is down (SAME-MODEL-CHECK)
+
+[roles.fallback_deepseek]    # builder1's fallback (owner 2026-10-25)
+kind = "codex"
+model = "deepseek/deepseek-v4.1-flash-1017@preset/df4-deepseek-wafer"    # OpenRouter preset: Wafer only, mxfp4, no fallbacks (owner 2026-10-24)
+effort = "max"
+network = true
+timeout_s = 3600
+idle_timeout_s = 900
+home = "~/.local/state/df4/flappy-spikes/codex-openrouter"
+env_file = "~/.config/duofoundry/openrouter.env"
+
+[roles.fallback_sol_high]    # fallback of tester1 and tester3 (owner 2026-10-25)
 kind = "codex"
 model = "gpt-6.1-sol"
 effort = "high"
 timeout_s = 1800
 
-[roles.fallback]
+[roles.fallback_sol]    # builder2's fallback (owner 2026-10-24)
+kind = "codex"
+model = "gpt-6.1-sol"
+effort = "medium"
+network = true
+timeout_s = 2400
+
+[roles.fallback_opus]    # fallback of builder3 and tester (owner 2026-10-24)
 kind = "claude"
-model = "claude-haiku-5-5"
-effort = "max"
-timeout_s = 2400    # unused: routing.fallback = "" (owner table has no fallback)
+model = "claude-opus-5-5"
+effort = "medium"
+timeout_s = 2400
 
 [routing]
 build = ["builder1", "builder2", "builder3"]
-check = ["tester", "tester", "tester3"]
-allow_same_model = [3]    # owner 2026-10-24: Sol builds round 3 and Sol tests every round
-fallback = ""    # owner table: no fallback model; codex outages wait and resume
+check = ["tester1", "tester", "tester3"]    # owner 2026-10-25: Opus tests round 1
+same_model = "prefer-different"    # owner 2026-10-25 (df4 4.3.2): another model checks when one is available, else the builder's model checks; never wait
+fallback = ""    # no run-wide fallback: every role names its own
 resume_round2 = true
 round3_needs_progress = true
 
@@ -129,6 +162,23 @@ health_url = ""
 
 [retry]
 transient_waits_s = [30, 120, 300, 900, 1800, 3600]
+
+[run]
+role_crash_pause = 3
+outage_notice_s = 900
+min_free_mem_gb = 4                        # no new lane/verify/tester below this MemAvailable
+inhibit = "sleep:idle:handle-lid-switch"   # 2026-10-24 14:44 the laptop suspended mid-M1F: 12 h lost
+
+[autonomy]   # df4 4.3: plans are reviewed by member_b (Sol) and approved by df4; follow-up rounds before each gate
+mode = "on"
+until = ""   # = M5, the last wave of PRD 2.6
+mandate = "owner (standing mandate, 2026-10-25): continue without my supervision or input until everything from the PRD is built"
+reviewer = "member_b"
+followup_rounds = 2
+
+[notify]
+command = ["notify-send", "-u", "critical", "-a", "df4", "df4 {project}: {event}", "{line}"]
+url = ""
 
 [prepare]
 install = "flutter pub get && npm --prefix functions ci --no-audit --no-fund"

@@ -5,6 +5,10 @@ already filled; `node` / `npm` / `firebase` are on PATH. Dependencies are instal
 `flutter pub get --offline` only if you must, never add a package without the issue saying so. Run
 `bash scripts/verify.sh` before you stop (it runs `flutter analyze`, the functions build, the scoped `flutter test`
 and, when `functions/` changed, `npm --prefix functions test` in the Firebase emulators under a demo project).
+Run the functions tests ONLY as `npm --prefix functions test [-- test/<file>.test.ts]`: never start
+`firebase emulators:exec` / `emulators:start` yourself (other lanes share the fixed emulator ports; the npm script
+waits for its turn, a hand-started suite breaks their runs).
+Memory is shared by 3 lanes (22 GB): run `flutter test` with `-j 4` at most, and prefer single files while you work.
 
 **Never:** `adb`, devices or emulators, `firebase deploy`, gcloud, Play Console / App Store Connect, real Firebase
 project calls, publishing anything. Never touch `android/upload-keystore.jks`, `android/app/key.properties` or any
@@ -42,3 +46,9 @@ second drawing of a listed element** (blocker), and any new shared-looking eleme
 **Tests:** use `test/helpers.dart` (`createRunTestGame`, `startRun`, `flyRun`, `flushAndMount`; always
 `soundEnabled: false`). Add the tests the PRD names for your work package. `test/autopilot_test.dart` is the
 playability gate and must stay green.
+
+**Known-red tests (temporary, M1F):** M1 merged with 55 failing tests. They are listed in
+`scripts/known_red_tests.txt`; `scripts/verify.sh` runs the whole Flutter suite and stays green while every failure is
+on that list, red on any other failure. Never edit that list (protected). When your work makes listed tests pass,
+name them in your summary. A test's expectation may only change when PRD 2.6 changed the rule it checks (cite the
+PRD section in the test); otherwise fix the code.

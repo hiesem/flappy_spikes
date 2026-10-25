@@ -25,6 +25,6 @@ class HeadlineWindow {
   void add(String id, int hoop) {
     if (!allows(id, hoop)) return;
     _lastHeadlineAt = hoop;
-    _waitUntil.clear();
+    _waitUntil.remove(id);
   }
 }

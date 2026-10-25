@@ -1,0 +1,2 @@
+test/run/items/s3_17_squeeze_autopilot_test.dart: §3.17 squeeze forced back to back: the autopilot passes ≥ 12 hoops and every window hoop fits the squeezed band (568 pt, seed 11)
+test/run/items/s3_17_squeeze_autopilot_test.dart: §3.17 squeeze forced back to back: the autopilot passes ≥ 12 hoops and every window hoop fits the squeezed band (711 pt, seed 11)

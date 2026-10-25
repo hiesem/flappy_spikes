@@ -102,7 +102,8 @@ void main() {
           for (final k in [
             'heart', 'star_trail', 'bullseye', 'switch', 'train', 'comet', //
             'portal', 'capsule', 'shield', 'spring', 'pair', 'egg', //
-            'feather', 'puzzle', 'piggy', 'jar', 'fever', 'lucky_spin', 'saw',
+            'feather', 'puzzle', 'piggy', 'jar', 'fever', 'lucky_spin', //
+            'saw', 'squeeze',
           ])
             k: t.i('gate_$k'),
         },
@@ -110,10 +111,10 @@ void main() {
           'heart': 0, 'star_trail': 0, 'bullseye': 0, //
           'switch': 0, 'train': 0, //
           'comet': 0, 'portal': 0, 'capsule': 0, 'shield': 0, // RC v24
-          'spring': 4, 'pair': 4, 'egg': 4, //
-          'feather': 6, 'puzzle': 6, 'piggy': 6, 'jar': 6, //
-          'fever': 8, 'lucky_spin': 8, //
-          'saw': 12,
+          'spring': 0, 'pair': 0, 'egg': 0, //
+          'feather': 0, 'puzzle': 0, 'piggy': 0, 'jar': 0, //
+          'fever': 0, 'lucky_spin': 0, //
+          'saw': 3, 'squeeze': 5,
         },
       );
     });

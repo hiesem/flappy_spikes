@@ -1067,6 +1067,11 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
   const results: LbRunCheck[] = [];
   const accepted: string[] = [];
   const dropped: LbDroppedRun[] = [];
+  // The verified best moves chronologically as this batch is admitted. A
+  // later offline run must be judged against the best the earlier one set,
+  // not against the value the batch started with. Shadow updates are private
+  // and never become the public verified best.
+  let verifiedBest = ctx.best;
 
   // Malformed entries sort after valid runs. Giving every input a fixed
   // chronological key keeps the comparator consistent even across bad data.
@@ -1141,10 +1146,10 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
     }
 
     const notable =
-      run.score > ctx.best ||
-      run.score > Math.max(500, ctx.best * 2) ||
+      run.score > verifiedBest ||
+      run.score > Math.max(500, verifiedBest * 2) ||
       ((ctx.floor ?? 0) > 0 && run.score >= (ctx.floor as number));
-    const clampTo = Math.max(500, ctx.best * 2);
+    const clampTo = Math.max(500, verifiedBest * 2);
     const old = ctx.groupStartMs !== undefined && ctx.groupStartMs !== null && end < ctx.groupStartMs;
     const timeline = verifyTimeline(run, ctx);
     const overlaps = overlapsAny(intervals, start, end);
@@ -1157,11 +1162,13 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
         timeline.ok &&
         !overlaps &&
         !aggregateTimeBad &&
-        run.score > ctx.best &&
+        run.score > verifiedBest &&
         ctx.nowMs - end <= (ctx.bestWindowMs ?? LB_BEST_RAISE_MS)
       ) {
         const hard = timeline.anomaly !== null && timeline.anomaly !== undefined && !timeline.anomaly.soft;
         bestUpdate = { score: run.score, atMs: end, shadow: hard };
+        if (!hard) verifiedBest = run.score;
+        intervals.push({ id: run.id, startMs: start, endMs: end });
       }
       const result: LbRunCheck = {
         ...emptyCheck(run.id, bracket, 'old', hidden),
@@ -1205,9 +1212,10 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
     if (run.tl !== undefined || run.fl !== undefined) {
       const hard = timeline.anomaly !== null && timeline.anomaly !== undefined && !timeline.anomaly.soft;
       const bestUpdate =
-        !hidden && run.score > ctx.best && ctx.nowMs - end <= (ctx.bestWindowMs ?? LB_BEST_RAISE_MS)
+        !hidden && run.score > verifiedBest && ctx.nowMs - end <= (ctx.bestWindowMs ?? LB_BEST_RAISE_MS)
           ? { score: run.score, atMs: end, shadow: hard }
           : null;
+      if (bestUpdate !== null && !hard) verifiedBest = run.score;
       const counted = hard ? Math.min(run.score, clampTo) : run.score;
       const result: LbRunCheck = {
         id: run.id,

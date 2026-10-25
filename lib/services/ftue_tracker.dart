@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+import 'dart:async';
 
 import '../game/storage.dart';
 import '../run/elements.dart';
@@ -59,6 +59,17 @@ abstract class FtueTracker {
     required bool forced,
     required bool survived,
   }) {}
+
+  void firstMeetEncountered(
+    ElementId element, {
+    required int hoop,
+    required int games,
+    required bool forced,
+  }) {}
+
+  void firstMeetOutcome(ElementId element, {required bool survived}) {}
+
+  Future<void> flushPendingFirstMeets() async {}
 }
 
 class InertFtueTracker extends FtueTracker {
@@ -83,11 +94,9 @@ class PersistedFtueTracker extends FtueTracker {
       _injectedSecondsSinceInstall ?? () => _installSeconds(storage);
 
   static int _installSeconds(GameStorage storage) {
-    final installDay = storage.installDay;
-    final elapsedDays = installDay == null
-        ? 0
-        : math.max(0, storage.today - installDay);
-    return math.max(storage.playtimeSeconds, elapsedDays * 86400);
+    final elapsedMs =
+        storage.now().millisecondsSinceEpoch - storage.installAtMs;
+    return elapsedMs <= 0 ? 0 : elapsedMs ~/ Duration.millisecondsPerSecond;
   }
 
   @override
@@ -121,11 +130,98 @@ class PersistedFtueTracker extends FtueTracker {
     required int games,
     required bool forced,
     required bool survived,
-  }) => services.track('first_meet', {
+  }) {
+    _trackFirstMeet(element, hoop, games, forced, survived);
+    _removePending(element);
+  }
+
+  @override
+  void firstMeetEncountered(
+    ElementId element, {
+    required int hoop,
+    required int games,
+    required bool forced,
+  }) {
+    if (storage.pendingFirstMeets.any(
+      (record) => record['element'] == element.storageId,
+    )) {
+      return;
+    }
+    final record = <String, Object?>{
+      'element': element.storageId,
+      'hoop': hoop,
+      'games': games,
+      'forced': forced,
+      'survived': false,
+    };
+    storage.pendingFirstMeets = [...storage.pendingFirstMeets, record];
+    unawaited(storage.savePendingFirstMeets(storage.pendingFirstMeets));
+  }
+
+  @override
+  void firstMeetOutcome(ElementId element, {required bool survived}) {
+    var changed = false;
+    final records = [
+      for (final record in storage.pendingFirstMeets)
+        () {
+          if (record['element'] != element.storageId) return record;
+          changed = changed || record['survived'] != survived;
+          return {...record, 'survived': survived};
+        }(),
+    ];
+    if (!changed) return;
+    storage.pendingFirstMeets = records;
+    unawaited(storage.savePendingFirstMeets(records));
+  }
+
+  @override
+  Future<void> flushPendingFirstMeets() async {
+    final records = List<Map<String, Object?>>.of(storage.pendingFirstMeets);
+    if (records.isEmpty) return;
+    for (final record in records) {
+      final element = ElementId.values
+          .where((element) => element.storageId == record['element'])
+          .firstOrNull;
+      if (element == null) continue;
+      _trackFirstMeet(
+        element,
+        _readInt(record['hoop']),
+        _readInt(record['games']),
+        record['forced'] == true || record['forced'] == 1,
+        record['survived'] == true || record['survived'] == 1,
+      );
+      unawaited(storage.markElementMet(element.storageId));
+    }
+    storage.pendingFirstMeets = const [];
+    await storage.savePendingFirstMeets(const []);
+  }
+
+  void _trackFirstMeet(
+    ElementId element,
+    int hoop,
+    int games,
+    bool forced,
+    bool survived,
+  ) => services.track('first_meet', {
     'element': element.storageId,
     'hoop': hoop,
     'games': games,
     'forced': forced,
     'survived': survived,
   });
+
+  void _removePending(ElementId element) {
+    if (!storage.pendingFirstMeets.any(
+      (record) => record['element'] == element.storageId,
+    )) {
+      return;
+    }
+    storage.pendingFirstMeets = [
+      for (final record in storage.pendingFirstMeets)
+        if (record['element'] != element.storageId) record,
+    ];
+    unawaited(storage.savePendingFirstMeets(storage.pendingFirstMeets));
+  }
+
+  static int _readInt(Object? value) => value is int ? value : 0;
 }

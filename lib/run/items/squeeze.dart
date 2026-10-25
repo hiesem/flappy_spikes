@@ -8,6 +8,7 @@ import '../../components/spike_strip.dart';
 import '../../game/config.dart';
 import '../../game/flappy_game.dart';
 import '../../game/sound.dart';
+import '../config/gates_config.dart';
 import '../config/run_config.dart';
 import '../config/squeeze_config.dart';
 import '../effects/particle_pool.dart';
@@ -48,7 +49,7 @@ import '../run_scaled_world.dart';
 ///   first tick (the LRU cap may have evicted them meanwhile).
 /// - **Revive:** `ReviveRulesFeature` (WP-2d) resets a running squeeze to
 ///   open over 0.5 s and re-rolls the moment; this feature counts the
-///   interrupted squeeze (the next one is tighter), drops its shake / loop
+///   interrupted squeeze at the same index (PRD-2.6 D5), drops its shake / loop
 ///   and lets bits fall while the walls slide out.
 class SqueezeFeature extends RunFeature {
   RunContext? _c;
@@ -170,7 +171,12 @@ class SqueezeFeature extends RunFeature {
 
   bool get _mayStart {
     final c = _c!;
-    return c.s.ride == null &&
+    final gateOpen =
+        c.run.setup.ignoreGates ||
+        c.run.setup.forced.contains(ElementId.squeeze) ||
+        GatesConfig.isOpen(ElementId.squeeze, c.game.storage.gamesPlayed);
+    return gateOpen &&
+        c.s.ride == null &&
         c.s.runClock >= _waitUntil &&
         c.run.isScrolling &&
         !c.run.rideHold &&
@@ -517,11 +523,10 @@ class SqueezeFeature extends RunFeature {
 
   @override
   void onRevive() {
-    // Runs before WP-2d's ReviveRulesFeature resets the state: an
-    // interrupted squeeze still counts (the next one is tighter).
+    // PRD-2.6 D5: a revive keeps the current squeeze index. Only a
+    // completed squeeze advances the depth; WP-2d re-rolls its schedule.
     final c = _c;
     if (c == null) return;
-    if (_sq.phase != SqueezePhase.idle) _sq.index++;
     phaseT = 0;
     _ticks = 0;
     _preloadedDue = -1;

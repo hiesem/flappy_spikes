@@ -39,15 +39,15 @@ class LayoutSampler {
     bool useTable = true,
   }) {
     final b = tables.bandFor(hoopIndex);
-    final band = ctx.band;
-    final centreBand = min(band, RunConfig.dyRefBand);
     final centreMid = (ctx.topTooth + ctx.floorTooth) / 2;
     final m = opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin + extra;
+    // PRD-2.6 D2: the centre rows are fractions of the full band; only the
+    // Δy rows use `dyRef = min(band, 540 pt)` (see nextCentre).
     var lo = useTable
-        ? centreMid + (b.centre.$1 - 0.5) * centreBand
+        ? centreMid + (b.centre.$1 - 0.5) * ctx.band
         : ctx.topTooth;
     var hi = useTable
-        ? centreMid + (b.centre.$2 - 0.5) * centreBand
+        ? centreMid + (b.centre.$2 - 0.5) * ctx.band
         : ctx.floorTooth;
     if (ctx.squeezeWindow) {
       lo = ctx.squeezeTopTooth + m;
@@ -113,17 +113,23 @@ class LayoutSampler {
     final hard = hardFollowUp || _hardFollowUp;
     _hardFollowUp = false;
     final dyRef = min(ctx.band, RunConfig.dyRefBand);
-    final mag =
-        sampleDy(b.dy, random.nextDouble()) *
-        dyRef *
-        (hard ? RunConfig.hardHoopDyFactor : 1);
+    var mag = sampleDy(b.dy, random.nextDouble()) * dyRef;
+    // PRD-2.6 D2: `dy_hard_factor` is a clamp on the upper tail, not a
+    // scale of the whole distribution. Keep smaller draws exactly as they
+    // were and only shorten the ones above 0.85 × the row maximum.
+    if (hard) mag = min(mag, b.dy.$3 * dyRef * RunConfig.hardHoopDyFactor);
     var sign = random.nextDouble() < LayoutConfig.flipChance
         ? -lastSign
         : lastSign;
     var y = prev + sign * mag;
     if (y < lo || y > hi) {
-      sign = -sign;
-      y = prev + sign * mag;
+      // PRD-2.6 §11 R2 fairness: Δy in points is identical at 711 and 730
+      // when the band is ≥ dyRef. A step that leaves the row is shortened
+      // against the edge it crossed; flipping it here would make a taller
+      // screen (whose row ends further out) take the unflipped step and
+      // change the whole course. The next draw still uses `lastSign` from
+      // the actual edge step (the zig-zag direction is not forced).
+      y = y < lo ? lo : hi;
     }
     y = y.clamp(lo, hi).toDouble();
     final s = (y - prev).sign;
@@ -140,7 +146,10 @@ class LayoutSampler {
     return value;
   }
 
-  /// PRD-2.6 D2 record the final modifiers of the slot just planned.
+  /// PRD-2.6 D2 record the final modifiers of the slot just planned. The
+  /// director may call this more than once for a slot (it re-applies the
+  /// final tilt after the hazard ledger); the result must describe the final
+  /// plan, not just the latest provisional one.
   void noteModifiers({MotionSpec? motion, double tiltDeg = 0}) {
     _hardFollowUp = motion != null || tiltDeg.abs() >= 30;
   }
@@ -154,6 +163,45 @@ class LayoutSampler {
       tables.bandFor(hoopIndex).dy.$3 *
       min(ctx.band, RunConfig.dyRefBand) *
       (hardFollowUp ? RunConfig.hardHoopDyFactor : 1);
+
+  /// PRD-2.6 D2 the angular part a motion adds to the rendered ring.
+  double motionTiltDeg(MotionSpec? motion) => switch (motion?.type) {
+    null ||
+    MotionType.rail ||
+    MotionType.horizontal ||
+    MotionType.diagonal => 0,
+    MotionType.swing || MotionType.rock => motion!.amplitudeDeg.abs(),
+    MotionType.orbit =>
+      motion!.amplitudeDeg > 0
+          ? motion.amplitudeDeg
+          : LayoutConfig.orbitTiltDeg,
+  };
+
+  /// PRD-2.6 D2 the maximum rendered angle of a moving ring (and of a
+  /// squeezed ring before hoop 150). The base tilt must leave room for
+  /// [motionTiltDeg], so a motion counts towards the cap too.
+  double tiltCap(int hoopIndex, MotionSpec? motion, {bool squeeze = false}) {
+    if (motion != null) {
+      return hoopIndex >= LayoutConfig.movingTiltCapFromHoop
+          ? LayoutConfig.movingTiltCapFrom150Deg
+          : LayoutConfig.movingTiltCapBefore150Deg;
+    }
+    if (squeeze && hoopIndex < LayoutConfig.movingTiltCapFromHoop) {
+      return LayoutConfig.movingTiltCapBefore150Deg;
+    }
+    return RunConfig.maxTiltDeg;
+  }
+
+  /// PRD-2.6 D2 the largest base tilt that keeps the rendered ring within
+  /// [tiltCap].
+  double maxBaseTilt(
+    int hoopIndex,
+    MotionSpec? motion, {
+    bool squeeze = false,
+  }) => max(
+    0,
+    tiltCap(hoopIndex, motion, squeeze: squeeze) - motionTiltDeg(motion),
+  );
 
   /// §3.0.2 / §3.10 Tilt roll for a normal hoop (degrees, 0 = upright).
   /// [force] = first-meet / debug: always tilted (from the band's weights,
@@ -260,10 +308,17 @@ class LayoutSampler {
           phase: random.nextDouble(),
         );
       case MotionType.swing:
+        final speed = min(
+          RunRandom.range(random, row.speed.$1, row.speed.$2),
+          LayoutConfig.motionSpeedCap,
+        );
         return MotionSpec(
           type: t,
           amplitudeDeg: tables.swing.amplitudeDeg,
+          // Legacy fallback for standalone specs; director-issued swings use
+          // their row speed to derive the actual period from the rope.
           period: tables.swing.period,
+          speed: speed,
           rope: max(
             RunConfig.swingMinRope,
             centre - ctx.topTooth + RunConfig.swingPivotAbove,
@@ -272,6 +327,12 @@ class LayoutSampler {
         );
       case MotionType.orbit:
         final ry = min(RunConfig.orbitRy, room);
+        final angle = hoopIndex >= LayoutConfig.movingTiltCapFromHoop
+            ? LayoutConfig.orbitTiltDeg
+            : min(
+                LayoutConfig.orbitTiltDeg,
+                LayoutConfig.orbitTiltBefore150Deg,
+              );
         return MotionSpec(
           type: t,
           rx: RunConfig.orbitRx,
@@ -279,6 +340,7 @@ class LayoutSampler {
           omega:
               RunRandom.range(random, row.speed.$1, row.speed.$2) /
               max(RunConfig.orbitRx, ry),
+          amplitudeDeg: angle,
           phase: RunRandom.range(random, 0, 2 * pi),
         );
       case MotionType.rock:

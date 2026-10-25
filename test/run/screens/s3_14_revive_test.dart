@@ -61,6 +61,23 @@ void main() {
       expect(ReviveLadder.offer(s, adReady: true).price, 1000);
     });
 
+    test('PRD-2.6 B2 a FREE revive lifts the six-hoop gate only once', () {
+      final s = fresh()..hoopsPassed = 1;
+      expect(ReviveLadder.eligible(s, showcase: true), isTrue);
+      final free = ReviveLadder.offer(s, adReady: true, showcase: true);
+      expect(free, const ReviveOffer.free());
+      ReviveLadder.record(s, free);
+      s.revivesThisGame++;
+      expect(ReviveLadder.eligible(s, showcase: true), isFalse);
+
+      s.hoopsPassed = ReviveConfig.minHoops;
+      expect(ReviveLadder.eligible(s, showcase: true), isTrue);
+      expect(
+        ReviveLadder.offer(s, adReady: true, showcase: true).kind,
+        ReviveOfferKind.ad,
+      );
+    });
+
     test('§3.14 knobs (reviveMinHoops 6, 250 first coin step, 5 s + 1 s, '
         'phoenix 1.65 s, 2 s invulnerability)', () {
       expect(ReviveConfig.minHoops, 6);

@@ -213,7 +213,16 @@ void main() {
   test(
     'P1 journey: persisted reminders across 35 days and autumn DST',
     () async {
-      SharedPreferences.setMockInitialValues({});
+      // PRD-2.6 WP-C3 gates four reminder texts on met elements. This suite
+      // exercises the complete 20-message rotation, so seed those elements.
+      SharedPreferences.setMockInitialValues({
+        'metElements': [
+          ElementId.squeeze.storageId,
+          ElementId.luckySpin.storageId,
+          ElementId.egg.storageId,
+          ElementId.fever.storageId,
+        ],
+      });
       var now = tz.TZDateTime(
         tz.getLocation('Europe/Amsterdam'),
         2026,

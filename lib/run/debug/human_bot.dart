@@ -3,14 +3,16 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 
 import '../../game/flappy_game.dart';
+import '../config/run_config.dart';
 import '../mistakes.dart';
 import '../run_controller.dart';
 import '../run_events.dart';
 import 'autopilot.dart';
 
 /// Turns the perfect autopilot's base flap requests into a deterministic
-/// human-noise schedule: each request is delayed by Gaussian jitter and has a
-/// chance of producing one extra flap shortly after it.
+/// human-noise schedule: each request is planned from a predicted future tap
+/// time and moved by Gaussian jitter (early as well as late). Each base flap
+/// has a chance of producing one extra flap shortly after it.
 @visibleForTesting
 class HumanNoiseFlapScheduler {
   HumanNoiseFlapScheduler({
@@ -24,36 +26,75 @@ class HumanNoiseFlapScheduler {
   final double extraFlapChance;
   final math.Random _random;
 
+  /// The nominal (pre-jitter) base-flap times, in planning order.
   final List<double> plannedFlapTimes = [];
+
+  /// Every emitted flap, including extras (the execution trace).
   final List<double> flapTimes = [];
+
+  /// Emitted base-flap time minus its planned time. Extras are excluded; this
+  /// is the timing distribution the human-noise bot must have.
+  final List<double> baseFlapOffsets = [];
+
+  /// The raw Gaussian draws (debug / diagnostics only).
   final List<double> jitterSeconds = [];
+
   final List<_ScheduledFlap> _scheduled = [];
 
   int extraFlaps = 0;
   double? _lastDelay;
+  int _nextBaseId = 0;
 
-  /// Registers an autopilot flap requested at [plannedTime].
-  void planBase(double plannedTime) {
+  bool get hasPendingBase => _scheduled.any((flap) => !flap.extra);
+  int get pendingBases => _scheduled.where((flap) => !flap.extra).length;
+  int get pendingFlaps => _scheduled.length;
+  double? get pendingBasePlannedTime {
+    for (final flap in _scheduled) {
+      if (!flap.extra) return flap.plannedTime;
+    }
+    return null;
+  }
+
+  /// Registers an autopilot flap intended at [plannedTime].
+  ///
+  /// [now] is the frame the schedule was made. A negative jitter can make the
+  /// flap due before the autopilot's request, but not before [now] (the
+  /// scheduler cannot act in the past).
+  void planBase(double plannedTime, {double? now}) {
     final jitter = _gaussian() * jitterSigma;
     final jitteredTime = plannedTime + jitter;
     final extra = _random.nextDouble() < extraFlapChance;
     plannedFlapTimes.add(plannedTime);
     jitterSeconds.add(jitter);
-    _scheduled.add(_ScheduledFlap(jitteredTime, extra: false));
+    final at = now == null ? jitteredTime : math.max(jitteredTime, now);
+    final id = _nextBaseId++;
+    _scheduled.add(
+      _ScheduledFlap(at, extra: false, plannedTime: plannedTime, baseId: id),
+    );
     if (extra) {
       _scheduled.add(
-        _ScheduledFlap(jitteredTime + HumanNoiseBot.extraFlapGap, extra: true),
+        _ScheduledFlap(
+          at + HumanNoiseBot.extraFlapGap,
+          extra: true,
+          baseId: id,
+        ),
       );
     }
     _scheduled.sort((a, b) => a.time.compareTo(b.time));
   }
 
-  /// Returns a flap whose delayed time is due at or before [now], or null.
+  /// Emits one flap that is due at or before [now], or returns false.
   bool flapDue(double now) {
     if (_scheduled.isEmpty || _scheduled.first.time > now) return false;
     final flap = _scheduled.removeAt(0);
-    flapTimes.add(math.max(flap.time, now));
-    if (flap.extra) extraFlaps++;
+    final at = math.max(flap.time, now);
+    flapTimes.add(at);
+    final planned = flap.plannedTime;
+    if (planned == null) {
+      extraFlaps++;
+    } else {
+      baseFlapOffsets.add(at - planned);
+    }
     return true;
   }
 
@@ -94,20 +135,64 @@ class HumanNoiseBot {
   final HumanNoiseFlapScheduler scheduler;
 
   bool _autopilotWanted = false;
+  final List<double> debugRequestTimes = [];
+  final List<double> debugRequestForecast = [];
 
   List<double> get flapTimes => scheduler.flapTimes;
+  List<double> get baseFlapOffsets => scheduler.baseFlapOffsets;
   List<double> get plannedFlapTimes => scheduler.plannedFlapTimes;
   int get extraFlaps => scheduler.extraFlaps;
 
   /// Called once per fixed frame before updating [run]. The return value is
   /// whether the noisy bot taps at this frame.
   bool shouldFlap() {
+    final now = run.state.runClock;
     final wanted = autopilot.shouldFlap();
-    if (wanted && !_autopilotWanted) {
-      scheduler.planBase(run.state.runClock);
-    }
+    final rising = wanted && !_autopilotWanted;
     _autopilotWanted = wanted;
-    return scheduler.flapDue(run.state.runClock);
+
+    // A forecast already owns the next base flap; a request only fills in for
+    // a crossing that could not be predicted (run start, ride hand-over).
+    if (rising) {
+      debugRequestTimes.add(now);
+    }
+    if (rising && scheduler.pendingBases > 0) {
+      debugRequestForecast.add(scheduler.pendingBasePlannedTime! - now);
+    }
+    if (rising && scheduler.pendingBases == 0) {
+      scheduler.planBase(now, now: now);
+    }
+
+    if (scheduler.flapDue(now)) return true;
+
+    if (!wanted && scheduler.pendingBases == 0 && _canPredict) {
+      final at = _predictNextTap(now);
+      if (at > now + 1e-9) scheduler.planBase(at, now: now);
+    }
+    return false;
+  }
+
+  bool get _canPredict =>
+      run.isScrolling &&
+      run.state.flapLock <= 0 &&
+      run.state.ride == null &&
+      run.birdTrackPosition() != null &&
+      run.game.runBirdVelocityY != null;
+
+  /// Ballistic forecast of the next bang-bang threshold crossing.
+  double _predictNextTap(double now) {
+    final bird = run.birdTrackPosition()!;
+    var vy = run.game.runBirdVelocityY!;
+    final target = autopilot.targetY() + autopilot.margin;
+    var y = bird.y;
+    var t = 0.0;
+    while (t < 1.5) {
+      if (y > target && vy > Autopilot.risingVy) break;
+      vy = math.min(RunConfig.maxFallSpeed, vy + RunConfig.gravity / 60);
+      y += vy / 60;
+      t += 1 / 60;
+    }
+    return now + t;
   }
 }
 
@@ -121,6 +206,7 @@ class HumanNoiseBotResult {
     required this.seconds,
     required this.flaps,
     required this.extraFlaps,
+    required this.baseFlapOffsets,
   });
 
   final int hoops;
@@ -129,6 +215,7 @@ class HumanNoiseBotResult {
   final double seconds;
   final int flaps;
   final int extraFlaps;
+  final List<double> baseFlapOffsets;
 }
 
 /// Fixed-steps a started run with [HumanNoiseBot] until its first death (or
@@ -177,8 +264,12 @@ Future<HumanNoiseBotResult> flyHumanNoiseBotToDeath(
       seconds += dt;
       onFrame?.call(run);
       if (++frame % 10 == 0) {
-        await Future<void>.value();
-        game.update(0);
+        // Drain component onLoad chains before advancing the fixed clock.
+        // Ride/hoop children can take several microtasks to mount.
+        for (var pending = 0; pending < 10; pending++) {
+          await Future<void>.value();
+          game.update(0);
+        }
       }
     }
   } finally {
@@ -192,12 +283,20 @@ Future<HumanNoiseBotResult> flyHumanNoiseBotToDeath(
     seconds: seconds,
     flaps: bot.flapTimes.length,
     extraFlaps: bot.extraFlaps,
+    baseFlapOffsets: List.of(bot.baseFlapOffsets),
   );
 }
 
 final class _ScheduledFlap {
-  const _ScheduledFlap(this.time, {required this.extra});
+  _ScheduledFlap(
+    this.time, {
+    required this.extra,
+    this.plannedTime,
+    this.baseId,
+  });
 
-  final double time;
+  double time;
   final bool extra;
+  double? plannedTime;
+  final int? baseId;
 }

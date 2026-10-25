@@ -1,3 +1,5 @@
+import 'dart:math' show max;
+
 import '../config/tuning_values.dart';
 import '../elements.dart';
 import 'plans.dart';
@@ -20,7 +22,9 @@ class HazardBudget {
     bool squeeze = false,
   }) {
     final costs = _values.obj('hazard_costs');
-    if (plan.cometHang || plan.duringRide) return 0;
+    if (plan.cometHang || plan.duringRide || _isRewardOrRide(plan.kind)) {
+      return 0;
+    }
 
     var cost = 0.0;
     cost += switch (plan.kind) {
@@ -29,7 +33,7 @@ class HazardBudget {
       HoopKindId.spring => costs['spring']!,
       HoopKindId.pair => costs['pair']!,
       HoopKindId.train => costs['train']!,
-      HoopKindId.normal => 0,
+      HoopKindId.normal ||
       HoopKindId.bullseye ||
       HoopKindId.fever ||
       HoopKindId.luckySpin ||
@@ -57,7 +61,10 @@ class HazardBudget {
     }
     if (previousY != null && rowP90 != null) {
       final dy = (plan.centreY - previousY).abs();
-      if (dy > rowP90) {
+      // A Δy clamped exactly to p90 is not "above p90"; binary division can
+      // land a fraction of an ulp over it, so compare with the ledger's own
+      // tolerance.
+      if (dy > rowP90 + _epsilon) {
         cost += costs['dy_p90']!;
       }
     }
@@ -80,7 +87,7 @@ class HazardBudget {
       rowP90: rowP90,
       squeeze: squeeze,
     );
-    return _ledgerSum + cost <= budgetAt(plan.index) + _epsilon;
+    return _windowSum + cost <= budgetAt(plan.index) + _epsilon;
   }
 
   void add(
@@ -102,6 +109,7 @@ class HazardBudget {
     double? previousY,
     double? rowP90,
     bool squeeze = false,
+    bool preserveDy = false,
   }) {
     if (plan.forced) return plan;
 
@@ -153,9 +161,9 @@ class HazardBudget {
       return current;
     }
 
-    if (previousY != null && rowP90 != null) {
+    if (!preserveDy && previousY != null && rowP90 != null) {
       final delta = current.centreY - previousY;
-      if (delta.abs() > rowP90) {
+      if (delta.abs() > rowP90 + _epsilon) {
         current = _withCost(
           current.copyWith(centreY: previousY + delta.sign * rowP90),
           previousY: previousY,
@@ -187,6 +195,30 @@ class HazardBudget {
     );
   }
 
+  /// Whether [current] and the following slot's [nextCost] fit the four-slot
+  /// window. The next slot's row / squeeze costs are supplied by the caller;
+  /// this lets the director reserve the fixed 240 pt spring landing (§3.23)
+  /// before it commits the spring itself.
+  bool allowsFollowing(
+    SlotPlan current, {
+    required double nextCost,
+    required int nextIndex,
+    double? previousY,
+    double? rowP90,
+    bool squeeze = false,
+  }) {
+    if (current.forced) return true;
+    final costs = [..._ledger];
+    if (costs.length >= windowSize) {
+      costs.removeRange(0, costs.length - (windowSize - 2));
+    }
+    costs.add(
+      costOf(current, previousY: previousY, rowP90: rowP90, squeeze: squeeze),
+    );
+    final sum = costs.fold(0.0, (total, cost) => total + cost);
+    return sum + nextCost <= budgetAt(nextIndex) + _epsilon;
+  }
+
   SlotPlan _withCost(
     SlotPlan plan, {
     double? previousY,
@@ -206,9 +238,26 @@ class HazardBudget {
     double? previousY,
     double? rowP90,
     bool squeeze = false,
-  }) => _ledgerSum + plan.hazardCost <= budgetAt(plan.index) + _epsilon;
+  }) => _windowSum + plan.hazardCost <= budgetAt(plan.index) + _epsilon;
 
-  double get _ledgerSum => _ledger.fold(0, (sum, cost) => sum + cost);
+  /// The previous three costs only: the candidate fills the fourth slot.
+  double get _windowSum => _ledger
+      .skip(max(0, _ledger.length - (windowSize - 1)))
+      .fold(0.0, (sum, cost) => sum + cost);
+
+  static bool _isRewardOrRide(HoopKindId kind) => switch (kind) {
+    HoopKindId.bullseye ||
+    HoopKindId.fever ||
+    HoopKindId.luckySpin ||
+    HoopKindId.portal ||
+    HoopKindId.rideRing => true,
+    HoopKindId.normal ||
+    HoopKindId.saw ||
+    HoopKindId.switchRing ||
+    HoopKindId.spring ||
+    HoopKindId.pair ||
+    HoopKindId.train => false,
+  };
 
   static const double _epsilon = 0.000001;
 }

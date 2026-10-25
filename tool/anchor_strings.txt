@@ -34,3 +34,6 @@ showcaseSeen
 showcaseAttempt
 showcaseRuns
 showcaseDoneAt
+installAtMs
+bestHoops
+pendingFirstMeets

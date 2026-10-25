@@ -144,6 +144,11 @@ const Map<String, String> kObfStrings = {
   'prefShowcaseAttempt': 'showcaseAttempt',
   'prefShowcaseRuns': 'showcaseRuns',
   'prefShowcaseDoneAt': 'showcaseDoneAt',
+  // M1 fix-up / PRD-2.6 WP-A: real install time, lifetime best hoops and
+  // the durable first_meet queue.
+  'prefInstallAtMs': 'installAtMs',
+  'prefBestHoops': 'bestHoops',
+  'prefPendingFirstMeets': 'pendingFirstMeets',
 };
 
 /// The output path, relative to the package root.

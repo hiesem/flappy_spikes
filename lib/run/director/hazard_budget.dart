@@ -57,7 +57,10 @@ class HazardBudget {
     }
     if (previousY != null && rowP90 != null) {
       final dy = (plan.centreY - previousY).abs();
-      if (dy > rowP90) {
+      // A Δy clamped exactly to p90 is not "above p90"; binary division can
+      // land a fraction of an ulp over it, so compare with the ledger's own
+      // tolerance.
+      if (dy > rowP90 + _epsilon) {
         cost += costs['dy_p90']!;
       }
     }
@@ -102,6 +105,7 @@ class HazardBudget {
     double? previousY,
     double? rowP90,
     bool squeeze = false,
+    bool preserveDy = false,
   }) {
     if (plan.forced) return plan;
 
@@ -153,9 +157,9 @@ class HazardBudget {
       return current;
     }
 
-    if (previousY != null && rowP90 != null) {
+    if (!preserveDy && previousY != null && rowP90 != null) {
       final delta = current.centreY - previousY;
-      if (delta.abs() > rowP90) {
+      if (delta.abs() > rowP90 + _epsilon) {
         current = _withCost(
           current.copyWith(centreY: previousY + delta.sign * rowP90),
           previousY: previousY,
@@ -185,6 +189,35 @@ class HazardBudget {
       rowP90: rowP90,
       squeeze: squeeze,
     );
+  }
+
+  /// Whether [current] and the following slot's [nextCost] fit the four-slot
+  /// window. The next slot's row / squeeze costs are supplied by the caller;
+  /// this lets the director reserve the fixed 240 pt spring landing (§3.23)
+  /// before it commits the spring itself.
+  bool allowsFollowing(
+    SlotPlan current, {
+    required double nextCost,
+    required int nextIndex,
+    double? previousY,
+    double? rowP90,
+    bool squeeze = false,
+  }) {
+    if (current.forced) return true;
+    final costs = [..._ledger];
+    if (costs.length >= windowSize) {
+      costs.removeRange(0, costs.length - (windowSize - 1));
+    }
+    costs.add(
+      costOf(
+        current,
+        previousY: previousY,
+        rowP90: rowP90,
+        squeeze: squeeze,
+      ),
+    );
+    final sum = costs.fold(0.0, (total, cost) => total + cost);
+    return sum + nextCost <= budgetAt(nextIndex) + _epsilon;
   }
 
   SlotPlan _withCost(

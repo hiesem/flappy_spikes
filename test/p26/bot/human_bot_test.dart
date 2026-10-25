@@ -17,7 +17,12 @@ void main() {
     var planned = 0;
     for (var frame = 0; planned < baseFlaps; frame++) {
       final now = frame / 60;
-      if (frame % 27 == 0) scheduler.planBase(now);
+      if (frame % 27 == 0) {
+        // Plan the request one flap interval ahead, as the bot does: an early
+        // jitter then fires before the polled request instead of being
+        // collapsed into it.
+        scheduler.planBase(now + 0.3, now: now);
+      }
       scheduler.flapDue(now);
       planned = scheduler.plannedFlapTimes.length;
     }
@@ -41,18 +46,20 @@ void main() {
     expect(other.flapTimes, isNot(first.flapTimes));
   });
 
-  test('flap jitter is 90 ms sigma and extra flaps are 10 percent', () {
+  test('emitted base-flap offsets are 90 ms sigma and extra flaps are 10 percent', () {
     const flaps = 1000;
     final scheduler = schedule(seed: 7, baseFlaps: flaps);
-    final mean = scheduler.jitterSeconds.reduce((a, b) => a + b) / flaps;
+    final offsets = scheduler.baseFlapOffsets;
+    final mean = offsets.reduce((a, b) => a + b) / flaps;
     final variance =
-        scheduler.jitterSeconds
+        offsets
             .map((value) => (value - mean) * (value - mean))
             .reduce((a, b) => a + b) /
         (flaps - 1);
     final sigmaMilliseconds = math.sqrt(variance) * 1000;
 
     expect(sigmaMilliseconds, closeTo(90, 10));
+    expect(mean * 1000, closeTo(0, 10));
     expect(scheduler.extraFlaps / flaps, closeTo(.1, .02));
   });
 
@@ -94,13 +101,23 @@ void main() {
         expect(result.seconds, greaterThan(0));
         expect(result.flaps, greaterThan(0));
         expect(result.highlightIds, contains('human-bot-test'));
+        final offsets = result.baseFlapOffsets;
+        final mean = offsets.reduce((a, b) => a + b) / offsets.length;
+        final variance =
+            offsets
+                .map((value) => (value - mean) * (value - mean))
+                .reduce((a, b) => a + b) /
+            (offsets.length - 1);
+        final sigmaMilliseconds = math.sqrt(variance) * 1000;
+        expect(sigmaMilliseconds, closeTo(90, 10));
+        expect(mean * 1000, closeTo(0, 10));
         // Keep a concrete cross-height signal in failure output without making
         // this issue own the later ceiling gate.
         // ignore: avoid_print
         print(
           'HUMAN BOT h=$height: ${result.hoops} hoops, '
           '${result.flaps} flaps (${result.extraFlaps} extra), '
-          'cause ${result.cause}',
+          'cause ${result.cause}, offsets ${result.baseFlapOffsets.length}',
         );
       },
     );

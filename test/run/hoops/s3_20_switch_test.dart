@@ -255,6 +255,12 @@ void main() {
         // Steer away from the switch, toward the ring centre.
         game.runBird!.setFlight(y: h.position.y, vy: 0);
         p.position.y = h.position.y + 300; // out of reach
+        // The seeded course may have offered a shield on the way; this test
+        // owns the un-saved closed-ring mistake, so clear incidental saves.
+        run.state
+          ..shield = false
+          ..extraLife = false
+          ..invulnerable = 0;
         await flyUntil(
           game,
           (r) => r.dying || h.resolved,

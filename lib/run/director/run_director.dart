@@ -181,8 +181,10 @@ class RunDirector {
   int _lastPortal = -99;
   int _lastComet = -99;
   HoopKindId? _prevKind;
+  MotionSpec? _lastFinalMotion;
   SawDesign? _lastSaw;
   SwitchDesign? _lastSwitch;
+  SwitchDesign? _switchBeforePlanned;
   RideId? _lastRide;
 
   /// The last ride before [_lastRide] (a dropped portal restores it).
@@ -1079,7 +1081,20 @@ class RunDirector {
           rowP90: row.$2 * dyRef,
           squeeze: ctx.squeezeWindow,
         );
-    if (willDowngrade) {
+    final trainAfterMovingJump =
+        planned.kind == HoopKindId.train &&
+        _lastFinalMotion != null &&
+        _lastFinalY != null &&
+        (planned.centreY - _lastFinalY!).abs() > 120;
+    if (trainAfterMovingJump) {
+      finalPlan = finalPlan.copyWith(
+        kind: HoopKindId.normal,
+        element: ElementId.normalHoop,
+        ringOffsets: const [0],
+        extra: () => null,
+      );
+    }
+    if (willDowngrade || trainAfterMovingJump) {
       finalPlan = _hazard.downgrade(
         finalPlan,
         previousY: hazardPrevious,
@@ -1269,6 +1284,7 @@ class RunDirector {
 
     _layout.lastY = finalPlan.centreY;
     _lastFinalY = finalPlan.centreY;
+    _lastFinalMotion = finalPlan.motion;
     // The sampler noted the provisional tilt / motion in `_buildSlot`; a
     // calm stretch or hazard downgrade may have removed them. Record the
     // final pair, so the next Δy is only capped after a hard hoop that
@@ -1279,6 +1295,11 @@ class RunDirector {
       _layout.forceY = null;
     }
     _replaceSpawnedCount(planned, finalPlan);
+    if (planned.kind == HoopKindId.switchRing &&
+        finalPlan.kind != HoopKindId.switchRing) {
+      _lastSwitch = _switchBeforePlanned;
+    }
+    _switchBeforePlanned = null;
     _nextX = finalPlan.trackX + finalPlan.advance;
     return finalPlan.copyWith(
       hazardCost: _hazard.costOf(
@@ -1366,21 +1387,59 @@ class RunDirector {
     _lastFormationAt = i;
     _formationAt = i + RunRandom.rangeInt(rng.layout, interval[0], interval[1]);
     if (!_formationEnabled(id)) return null;
-    final templates = _placeFormation(
-      _formations.build(id, i, startTrackX: 0, centreY: 0),
-      trackX,
-      ctx,
-      cap: cap,
-    );
-    final plan = templates.first;
+    var templates = _formations.build(id, i, startTrackX: 0, centreY: 0);
+    if (id == FormationId.switchChain) {
+      templates = _withoutRepeatingSwitch(templates);
+    }
+    final placedTemplates = _placeFormation(templates, trackX, ctx, cap: cap);
+    final plan = placedTemplates.first;
     _formationReservation = (
       start: i,
-      length: templates.length,
-      templates: templates,
+      length: placedTemplates.length,
+      templates: placedTemplates,
     );
     _countFormationSlot(plan);
     if (templates.length == 1) _formationReservation = null;
     return plan;
+  }
+
+  List<SlotPlan> _withoutRepeatingSwitch(List<SlotPlan> templates) {
+    var previous = _lastSwitch;
+    final out = <SlotPlan>[];
+    for (final template in templates) {
+      final current = template.extra is SwitchDesign
+          ? template.extra! as SwitchDesign
+          : null;
+      final design = current == previous
+          ? _switchDesignAfter(previous)
+          : current;
+      previous = design;
+      out.add(
+        identical(design, current)
+            ? template
+            : _withSwitchDesign(template, design!),
+      );
+    }
+    return out;
+  }
+
+  SwitchDesign _switchDesignAfter(SwitchDesign? previous) =>
+      SwitchDesign.values.where((design) => design != previous).first;
+
+  SlotPlan _withSwitchDesign(SlotPlan template, SwitchDesign design) {
+    final attached = [
+      for (final item in template.attached)
+        GapItemPlan(
+          kind: item.kind,
+          trackX: item.trackX,
+          y: item.y,
+          lineOffset: item.lineOffset,
+          extra: design,
+          toTrackX: item.toTrackX,
+          toY: item.toY,
+        ),
+    ];
+    return template.copyWith(extra: () => design, attached: attached);
   }
 
   /// Whether every element a D7 shape needs is registered.
@@ -1404,7 +1463,10 @@ class RunDirector {
     _count(plan.element.storageId);
     if (plan.kind == HoopKindId.switchRing) {
       _gapUsed.add(plan.index - 1);
-      if (plan.extra is SwitchDesign) _lastSwitch = plan.extra! as SwitchDesign;
+      if (plan.extra is SwitchDesign) {
+        _switchBeforePlanned = _lastSwitch;
+        _lastSwitch = plan.extra! as SwitchDesign;
+      }
     } else if (plan.kind == HoopKindId.saw) {
       if (plan.extra is SawDesign) _lastSaw = plan.extra! as SawDesign;
     }
@@ -1749,6 +1811,7 @@ class RunDirector {
         _lastSaw = d;
         extra = d;
       case HoopKindId.switchRing:
+        _switchBeforePlanned = _lastSwitch;
         final options = SwitchDesign.values
             .where((d) => d != _lastSwitch)
             .toList();
@@ -1774,6 +1837,8 @@ class RunDirector {
           kind = HoopKindId.normal;
           forced = false;
           extra = null;
+          _lastSwitch = _switchBeforePlanned;
+          _switchBeforePlanned = null;
         } else {
           if (fit.$1 != y) {
             y = fit.$1;

@@ -15,13 +15,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../tool/gen_obf_strings.dart';
 
 void main() {
-  test('the five PRD-2.6 storage keys are appended in order', () {
-    expect(kObfStrings.values.skip(kObfStrings.length - 5).toList(), [
+  test('the PRD-2.6 storage keys are appended in order', () {
+    expect(kObfStrings.values.skip(kObfStrings.length - 8).toList(), [
       'ftueSteps',
       'showcaseSeen',
       'showcaseAttempt',
       'showcaseRuns',
       'showcaseDoneAt',
+      'installAtMs',
+      'bestHoops',
+      'pendingFirstMeets',
     ]);
     expect([
       Obf.prefFtueSteps,
@@ -29,36 +32,49 @@ void main() {
       Obf.prefShowcaseAttempt,
       Obf.prefShowcaseRuns,
       Obf.prefShowcaseDoneAt,
-    ], kObfStrings.values.skip(kObfStrings.length - 5).toList());
+      Obf.prefInstallAtMs,
+      Obf.prefBestHoops,
+      Obf.prefPendingFirstMeets,
+    ], kObfStrings.values.skip(kObfStrings.length - 8).toList());
   });
 
-  test('the new state round-trips and Delete my data clears it', () async {
-    SharedPreferences.setMockInitialValues({
-      'ftueSteps': 3,
-      'showcaseSeen': 5,
-      'showcaseAttempt': 2,
-      'showcaseRuns': 4,
-      'showcaseDoneAt': 6,
-    });
-    final storage = GameStorage();
-    await storage.load();
-    expect(storage.ftueSteps, 3);
-    expect(storage.showcaseSeen, 5);
-    expect(storage.showcaseAttempt, 2);
-    expect(storage.showcaseRuns, 4);
-    expect(storage.showcaseDoneAt, 6);
+  test(
+    'the new state round-trips and Delete my data clears run queue state',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'ftueSteps': 3,
+        'showcaseSeen': 5,
+        'showcaseAttempt': 2,
+        'showcaseRuns': 4,
+        'showcaseDoneAt': 6,
+        'installAtMs': 123,
+        'bestHoops': 17,
+        'pendingFirstMeets': [
+          '{"element":"saw","hoop":3,"games":1,"forced":true,"survived":false}',
+        ],
+      });
+      final storage = GameStorage();
+      await storage.load();
+      expect(storage.ftueSteps, 3);
+      expect(storage.showcaseSeen, 5);
+      expect(storage.showcaseAttempt, 2);
+      expect(storage.showcaseRuns, 4);
+      expect(storage.showcaseDoneAt, 6);
+      expect(storage.installAtMs, 123);
+      expect(storage.bestHoops, 17);
+      expect(storage.pendingFirstMeets, hasLength(1));
 
-    await storage.resetVersusData();
-    final prefs = await SharedPreferences.getInstance();
-    expect(storage.ftueSteps, 0);
-    expect(storage.showcaseSeen, 0);
-    expect(storage.showcaseAttempt, 0);
-    expect(storage.showcaseRuns, 0);
-    expect(storage.showcaseDoneAt, isNull);
-    for (final key in kObfStrings.values.skip(kObfStrings.length - 5)) {
-      expect(prefs.containsKey(key), isFalse, reason: key);
-    }
-  });
+      await storage.resetVersusData();
+      final prefs = await SharedPreferences.getInstance();
+      expect(storage.ftueSteps, 0);
+      expect(storage.showcaseSeen, 0);
+      expect(storage.showcaseAttempt, 0);
+      expect(storage.showcaseRuns, 0);
+      expect(storage.showcaseDoneAt, isNull);
+      expect(storage.pendingFirstMeets, isEmpty);
+      expect(prefs.containsKey(Obf.prefPendingFirstMeets), isFalse);
+    },
+  );
 
   test('the rating minimum is five or two runs after showcase completion', () {
     expect(Config.ratingMinRunsFor(null), 5);

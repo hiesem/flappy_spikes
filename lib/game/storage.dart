@@ -187,8 +187,8 @@ class GameStorage {
 
   /// Wall-clock milliseconds at the first ever launch of this install (the
   /// FTUE's real `s_since_install`). Before this key existed it is migrated
-  /// from the oldest first-launch data available: midnight of [installDay]
-  /// (the day-only install key), or else the start of the current day.
+  /// from the day-only [installDay] (its local midnight). A brand-new install
+  /// stores the current clock, not midnight.
   int installAtMs = 0;
 
   /// PRD-2.6 WP-G1/G5: the most hoops passed in any non-debug run.
@@ -483,10 +483,11 @@ class GameStorage {
       // Migration for installs from before the timestamp existed. The only
       // first-launch datum kept is `installDay`, a local calendar day: use
       // its local midnight (the latest possible first-launch moment, so the
-      // elapsed time is never over-reported). A save without even that day
-      // starts at midnight of the current day.
-      final day = installDay ?? today;
-      installAtMs = _localDayStartMs(day);
+      // elapsed time is never over-reported). A first launch writes the real
+      // clock immediately.
+      installAtMs = storedInstallDay == null
+          ? now().millisecondsSinceEpoch
+          : _localDayStartMs(installDay ?? today);
       await prefs.setInt(_installAtMsKey, installAtMs);
     }
     bestHoops = math.max(0, prefs.getInt(_bestHoopsKey) ?? 0);
@@ -1128,6 +1129,7 @@ class GameStorage {
     showcaseAttempt = 0;
     showcaseRuns = 0;
     showcaseDoneAt = null;
+    pendingFirstMeets = const [];
     // PRD-2.5 §3.4: "Delete my data" clears the sticky seal flag (the
     // upload-queue reset below writes the new seal).
     _sealUntrusted = false;
@@ -1142,6 +1144,7 @@ class GameStorage {
     await prefs.remove(_showcaseAttemptKey);
     await prefs.remove(_showcaseRunsKey);
     await prefs.remove(_showcaseDoneAtKey);
+    await prefs.remove(_pendingFirstMeetsKey);
     await prefs.remove(_versusNicknameKey);
     await prefs.remove(_versusCustomNameReadKey);
     await prefs.remove(_versusCustomNameKey);
@@ -1212,10 +1215,17 @@ class GameStorage {
     await prefs.setStringList(_pendingFirstMeetsKey, encoded);
   }
 
-  static int _localDayStartMs(int day) => DateTime.fromMillisecondsSinceEpoch(
-    day * Duration.millisecondsPerDay,
-    isUtc: true,
-  ).millisecondsSinceEpoch;
+  static int _localDayStartMs(int day) {
+    final utcDay = DateTime.fromMillisecondsSinceEpoch(
+      day * Duration.millisecondsPerDay,
+      isUtc: true,
+    );
+    return DateTime(
+      utcDay.year,
+      utcDay.month,
+      utcDay.day,
+    ).millisecondsSinceEpoch;
+  }
 
   static List<Map<String, Object?>> _decodeFirstMeets(List<String> raw) {
     final out = <Map<String, Object?>>[];
@@ -1224,8 +1234,7 @@ class GameStorage {
         final value = jsonDecode(line);
         if (value is Map) {
           out.add({
-            for (final entry in value.entries)
-              '${entry.key}': entry.value,
+            for (final entry in value.entries) '${entry.key}': entry.value,
           });
         }
       } catch (_) {

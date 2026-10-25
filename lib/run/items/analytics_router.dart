@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import '../../menu/home_mode.dart';
@@ -10,6 +11,7 @@ import '../director/plans.dart';
 import '../elements.dart';
 import '../hoops/hoop.dart';
 import '../mistakes.dart';
+import '../pickups/pickup.dart';
 import '../run_context.dart';
 import '../run_events.dart';
 import '../run_feature.dart';
@@ -121,6 +123,10 @@ class AnalyticsRouter extends RunFeature {
 
   /// Spawned slot plans by slot index (train rings share one plan index).
   final Map<int, SlotPlan> _plans = {};
+  final List<Hoop> _unannouncedHoops = [];
+  final List<Pickup> _unannouncedPickups = [];
+  Hoop? _announcingHoop;
+  Pickup? _announcingPickup;
   int _calmCount = 0;
   int _maxHazardX10 = 0;
 
@@ -152,7 +158,10 @@ class AnalyticsRouter extends RunFeature {
       ..on<CoinsEarned>(_onCoins)
       ..on<ElementSpawned>(_onElementSpawned)
       ..on<HoopSpawned>(_onHoopSpawned)
+      ..on<PickupSpawned>(_onPickupSpawned)
       ..on<HoopPassed>(_onHoopPassed)
+      ..on<SavedHoopPassed>(_onSavedHoopPassed)
+      ..on<PickupCollected>(_onPickupCollected)
       ..on<StreakChanged>(_onStreakChanged)
       ..on<SqueezePhaseChanged>(_onSqueezeChanged)
       ..on<RideEnded>(_onRideEnded)
@@ -173,6 +182,7 @@ class AnalyticsRouter extends RunFeature {
 
   void _onHoopSpawned(HoopSpawned e) {
     final plan = e.plan;
+    _unannouncedHoops.add(e.hoop);
     if (_plans.containsKey(plan.index)) return;
     _plans[plan.index] = plan;
     if (plan.calm) _calmCount++;
@@ -182,23 +192,33 @@ class AnalyticsRouter extends RunFeature {
 
   void _onElementSpawned(ElementSpawned e) {
     final c = _c;
-    if (c == null || !e.onScreen || _metAtStart.contains(e.element)) return;
-    SlotPlan? plan;
-    for (final candidate in _plans.values) {
-      if (candidate.element == e.element &&
-          (plan == null || candidate.index > plan.index)) {
-        plan = candidate;
-      }
-    }
+    if (c == null || !e.onScreen) return;
+    final hoop = _hoopFor(e.element);
+    final pickup = hoop == null ? _pickupFor(e.element) : null;
+    if (_metAtStart.contains(e.element)) return;
+    final plan = hoop?.plan;
     final forced =
         c.run.setup.forced.contains(e.element) || (plan?.forced ?? false);
+    final hoopIndex =
+        plan?.index ??
+        (pickup == null ? c.s.hoopIndex : _hoopForPickup(pickup)?.index) ??
+        c.s.hoopIndex;
     _pendingFirstMeets.putIfAbsent(
       e.element,
       () => _PendingFirstMeet(
         element: e.element,
-        hoop: plan?.index ?? c.s.hoopIndex,
+        hoopIndex: hoopIndex,
         forced: forced,
+        sourceHoop: hoop,
+        pickup: pickup,
+        squeezeIndex: e.element == ElementId.squeeze ? c.s.squeeze.index : null,
       ),
+    );
+    c.game.ftueTracker.firstMeetEncountered(
+      e.element,
+      hoop: hoopIndex,
+      games: _gamesAtStart + 1,
+      forced: forced,
     );
     if (e.element == ElementId.saw) {
       c.game.ftueTracker.step(
@@ -213,7 +233,70 @@ class AnalyticsRouter extends RunFeature {
     }
   }
 
+  Hoop? _hoopFor(ElementId element) {
+    if (element == ElementId.squeeze) return null;
+    if (element == ElementId.angledRing) {
+      return _announcingHoop?.plan.tiltDeg == 0 ? null : _announcingHoop;
+    }
+    if (element == ElementId.movingRing) {
+      return _announcingHoop?.plan.motion == null ? null : _announcingHoop;
+    }
+    Hoop? hoop;
+    for (final candidate in _unannouncedHoops) {
+      final matches = element == ElementId.angledRing
+          ? candidate.plan.tiltDeg != 0
+          : element == ElementId.movingRing
+          ? candidate.plan.motion != null
+          : candidate.plan.element == element;
+      if (matches) {
+        hoop = candidate;
+        break;
+      }
+    }
+    if (hoop != null) _unannouncedHoops.remove(hoop);
+    if (hoop != null) _announcingHoop = hoop;
+    return hoop;
+  }
+
+  Pickup? _pickupFor(ElementId element) {
+    final current = _announcingPickup;
+    if (current != null && _pickupMatches(current, element)) return current;
+    Pickup? pickup;
+    for (final candidate in _unannouncedPickups) {
+      if (_pickupMatches(candidate, element)) {
+        pickup = candidate;
+        break;
+      }
+    }
+    if (pickup != null) _announcingPickup = pickup;
+    return pickup;
+  }
+
+  static bool _pickupMatches(Pickup pickup, ElementId element) {
+    if (pickup.id == element) return true;
+    if (element == ElementId.capsule && pickup.id.isCapsuleType) return true;
+    final extra = pickup.plan?.extra;
+    return extra is CapsuleType && extra.element == element;
+  }
+
+  SlotPlan? _hoopForPickup(Pickup pickup) {
+    SlotPlan? host;
+    for (final plan in _plans.values) {
+      if (plan.trackX <= pickup.position.x &&
+          (host == null || plan.index > host.index)) {
+        host = plan;
+      }
+    }
+    if (host != null || _plans.isEmpty) return host;
+    return _plans.values.reduce((a, b) => a.index < b.index ? a : b);
+  }
+
+  void _onPickupSpawned(PickupSpawned e) {
+    _unannouncedPickups.add(e.pickup);
+  }
+
   void _onHoopPassed(HoopPassed e) {
+    if (e.hoop != null) _resolveHoop(e.hoop!, survived: true);
     _perfectPending = e.perfect;
     if (!e.perfect) {
       _perfectUncounted.clear();
@@ -221,6 +304,27 @@ class AnalyticsRouter extends RunFeature {
     }
     _perfectUncounted.add(_scoredTier(e));
     if (e.duringRide) _rideHoops++;
+  }
+
+  void _onSavedHoopPassed(SavedHoopPassed e) =>
+      _resolveHoop(e.hoop, survived: true);
+
+  void _onPickupCollected(PickupCollected e) {
+    if (e.pickup == null) return;
+    for (final meet in _pendingFirstMeets.values) {
+      if (meet.pickup == e.pickup) _setSurvived(meet, true);
+    }
+  }
+
+  void _resolveHoop(Hoop hoop, {required bool survived}) {
+    for (final meet in _pendingFirstMeets.values) {
+      if (meet.sourceHoop == hoop) _setSurvived(meet, survived);
+    }
+  }
+
+  void _setSurvived(_PendingFirstMeet meet, bool survived) {
+    meet.survived = survived;
+    _c?.game.ftueTracker.firstMeetOutcome(meet.element, survived: survived);
   }
 
   void _onStreakChanged(StreakChanged e) {
@@ -263,6 +367,19 @@ class AnalyticsRouter extends RunFeature {
 
   void _onSqueezeChanged(SqueezePhaseChanged e) {
     if (e.phase == SqueezePhase.warning) _squeezes++;
+    for (final meet in _pendingFirstMeets.values) {
+      if (meet.element != ElementId.squeeze || meet.squeezeIndex != e.index) {
+        continue;
+      }
+      if (e.phase == SqueezePhase.opening) {
+        meet.sawOpening = true;
+      } else if (e.phase == SqueezePhase.idle) {
+        _setSurvived(meet, meet.sawOpening);
+        meet.sawOpening = false;
+      } else {
+        _setSurvived(meet, false);
+      }
+    }
   }
 
   void _onRideEnded(RideEnded e) {
@@ -294,6 +411,14 @@ class AnalyticsRouter extends RunFeature {
     final c = _c;
     if (c == null) return;
     final snapshot = _snapshotFail(m, outcome);
+    if (m.hoop != null) {
+      _resolveHoop(m.hoop!, survived: outcome != MistakeResolution.end);
+    } else if (m.cause == MistakeCause.spikes &&
+        c.s.squeeze.phase != SqueezePhase.idle) {
+      for (final meet in _pendingFirstMeets.values) {
+        if (meet.element == ElementId.squeeze) _setSurvived(meet, false);
+      }
+    }
     if (outcome == MistakeResolution.end) {
       // A death is not final yet: [Revived] replaces this with the paid
       // outcome, while the idempotent [RunEnded] confirms `end`.
@@ -441,10 +566,10 @@ class AnalyticsRouter extends RunFeature {
     for (final meet in _pendingFirstMeets.values) {
       c.game.ftueTracker.firstMeet(
         meet.element,
-        hoop: meet.hoop,
+        hoop: meet.hoopIndex,
         games: _gamesAtStart + 1,
         forced: meet.forced,
-        survived: _survived(c, s, meet.element),
+        survived: meet.survived,
       );
     }
     _pendingFirstMeets.clear();
@@ -521,15 +646,12 @@ class AnalyticsRouter extends RunFeature {
     _setUserProperties(c, s);
   }
 
-  bool _survived(RunContext c, RunSummary s, ElementId element) {
-    if (element == ElementId.squeeze) {
-      return c.s.squeeze.phase == SqueezePhase.idle;
-    }
-    return s.hoopKind?.element != element;
-  }
-
   void _setUserProperties(RunContext c, RunSummary s) {
     final services = c.game.services;
+    final bestHoops = math.max(c.game.storage.bestHoops, s.hoopsPassed);
+    if (c.run.countsForAchievements) {
+      unawaited(c.game.storage.saveBestHoops(bestHoops));
+    }
     services.setUserProperty('fs_level', '${c.game.storage.playerLevel}');
     services.setUserProperty(
       'fs_gb',
@@ -537,7 +659,7 @@ class AnalyticsRouter extends RunFeature {
     );
     services.setUserProperty(
       'fs_best_hb',
-      AnalyticsBuckets.hoopBucket(s.hoopsPassed),
+      AnalyticsBuckets.hoopBucket(bestHoops),
     );
     services.setUserProperty(
       'fs_showcase',
@@ -577,7 +699,10 @@ class AnalyticsRouter extends RunFeature {
         ..off<CoinsEarned>(_onCoins)
         ..off<ElementSpawned>(_onElementSpawned)
         ..off<HoopSpawned>(_onHoopSpawned)
+        ..off<PickupSpawned>(_onPickupSpawned)
         ..off<HoopPassed>(_onHoopPassed)
+        ..off<SavedHoopPassed>(_onSavedHoopPassed)
+        ..off<PickupCollected>(_onPickupCollected)
         ..off<StreakChanged>(_onStreakChanged)
         ..off<SqueezePhaseChanged>(_onSqueezeChanged)
         ..off<RideEnded>(_onRideEnded)
@@ -590,13 +715,21 @@ class AnalyticsRouter extends RunFeature {
 }
 
 final class _PendingFirstMeet {
-  const _PendingFirstMeet({
+  _PendingFirstMeet({
     required this.element,
-    required this.hoop,
+    required this.hoopIndex,
     required this.forced,
+    required this.sourceHoop,
+    required this.pickup,
+    required this.squeezeIndex,
   });
 
   final ElementId element;
-  final int hoop;
+  final int hoopIndex;
   final bool forced;
+  final Hoop? sourceHoop;
+  final Pickup? pickup;
+  final int? squeezeIndex;
+  bool survived = false;
+  bool sawOpening = false;
 }

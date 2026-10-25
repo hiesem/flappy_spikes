@@ -48,8 +48,7 @@ class LayoutSampler {
     // step later on the taller screen and change the whole course, so the
     // envelope stays the design band's (623 pt) and is centred in the
     // taller band. At 568 and 711 pt this is the full band.
-    final designBand =
-        RunConfig.designHeight - 2 * RunConfig.stripHeight;
+    final designBand = RunConfig.designHeight - 2 * RunConfig.stripHeight;
     final centreBand = min(ctx.band, designBand);
     var lo = useTable
         ? centreMid + (b.centre.$1 - 0.5) * centreBand

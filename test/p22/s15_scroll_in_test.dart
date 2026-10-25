@@ -207,8 +207,8 @@ void main() {
             // PRD-2.3.1 §0: the live set's portal (hoop 12–25) and comets
             // hold the course for a while: ≥ 26 hoops in 70 s (2.3: > 30).
             expect(watch.hoops, greaterThan(25));
-            // PRD-2.6 D2/C3's early pool replaces one star-trail third with
-            // "nothing"; this seed now naturally meets three pickups.
+            // PRD-2.6 D2 changes the early pool and D3/D4/D6 change the
+            // later mix/headline timing; seed 9 now meets three pickups.
             expect(watch.pickups, greaterThanOrEqualTo(3));
             expect(watch.bad, isEmpty);
           },

@@ -34,7 +34,9 @@ void _noJumps({required bool bigHoops}) {
       game.runDebug.god = true;
       final run = await startRun(
         game,
-        force: [ElementId.comet, ElementId.portal],
+        // PRD-2.6 D3 can downgrade natural saws in this seeded course.
+        // Force one so the saw exclusion remains exercised in both runs.
+        force: [ElementId.comet, ElementId.portal, ElementId.saw],
         starter: bigHoops ? Powerup.bigHoops : Powerup.none,
       );
       // Big Hoops: 1.5 from the start, eased back over the last 8 s of 60.

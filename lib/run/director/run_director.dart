@@ -331,6 +331,10 @@ class RunDirector {
   /// §3.0.3 slot order 2: the next slot is a plain normal hoop.
   void onRevive() {
     _revivePending = true;
+    // The revive interrupts the launch; its recovery slots take priority
+    // over a landing reserved by a spring before the death.
+    _springLandingAt = null;
+    _layout.forceY = null;
     _calm.onRevive(_i);
   }
 
@@ -737,6 +741,11 @@ class RunDirector {
             !ctx.squeezeWindow &&
             !calm &&
             _headlineDue('ride', i) &&
+            [
+              HoopKindId.saw,
+              HoopKindId.fever,
+              HoopKindId.switchRing,
+            ].every((hard) => i - (_lastOf[hard] ?? -99) > 3) &&
             i - _lastComet >= RunConfig.cometPortalDistance) {
           kind = HoopKindId.portal;
           forced = due == ElementId.portal;
@@ -758,6 +767,8 @@ class RunDirector {
     var owedCometReady = false;
     if (_cometOwed) {
       owedCometReady = _cometAllowed(i, ctx);
+    } else if (due == ElementId.comet) {
+      owedCometReady = _cometAllowed(i, ctx, mode: 1);
     }
     if (kind == null && !forced && !cooling && !owedCometReady) {
       final dueSpecial = due == null ? null : HoopKindId.specialFor(due);
@@ -961,6 +972,49 @@ class RunDirector {
       _downgrades++;
       if (finalPlan.kind != HoopKindId.spring) _springLandingAt = null;
     }
+    if (finalPlan.kind == HoopKindId.switchRing &&
+        finalPlan.centreY != planned.centreY) {
+      // D3 can shorten the approach after the switch was positioned. Keep
+      // its 70–100 pt offset and the previous-hoop/item-band constraints.
+      final item = finalPlan.attached.single;
+      final originalY = item.y!;
+      double? switchY;
+      for (final side in [-1, 1]) {
+        final near =
+            finalPlan.centreY + side * (RunConfig.switchOffsetMin + 1e-6);
+        final far =
+            finalPlan.centreY + side * (RunConfig.switchOffsetMax - 1e-6);
+        var lo = max(
+          min(near, far),
+          ctx.squeezeTopTooth + RunConfig.itemEdgeMargin,
+        );
+        var hi = min(
+          max(near, far),
+          ctx.squeezeFloorTooth - RunConfig.itemEdgeMargin,
+        );
+        if (hazardPrevious != null) {
+          lo = max(lo, hazardPrevious - RunConfig.switchMaxFromPrev);
+          hi = min(hi, hazardPrevious + RunConfig.switchMaxFromPrev);
+        }
+        if (lo > hi) continue;
+        final candidate = originalY.clamp(lo, hi).toDouble();
+        if (switchY == null ||
+            (candidate - originalY).abs() < (switchY - originalY).abs()) {
+          switchY = candidate;
+        }
+      }
+      if (switchY != null) {
+        finalPlan = finalPlan.copyWith(attached: [item.resolved(y: switchY)]);
+      } else {
+        finalPlan = finalPlan.copyWith(
+          kind: HoopKindId.normal,
+          element: ElementId.normalHoop,
+          attached: const [],
+          extra: () => null,
+        );
+        _gapUsed.remove(hoop - 1);
+      }
+    }
     if (finalPlan.kind == HoopKindId.normal) {
       var opening = openingFor(hoop) * _bigMult(hoop, ctx);
       if (finalPlan.tiltDeg.abs() == 45) {
@@ -972,6 +1026,31 @@ class RunDirector {
           ctx.band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
         ),
       );
+    }
+    if (finalPlan.kind == HoopKindId.spring) {
+      // D3 may shorten the approach to the spring. Its landing must follow
+      // the centre that actually ships, rather than the provisional centre.
+      final dir = finalPlan.extra == SpringDir.up ? -1 : 1;
+      final target = finalPlan.centreY + dir * RunConfig.springJump;
+      final nextOpening = openingFor(hoop + 1) * _bigMult(hoop + 1, ctx);
+      final (lo, hi) = _layout.limits(
+        hoop + 1,
+        ctx,
+        nextOpening,
+        useTable: false,
+      );
+      if (target >= lo && target <= hi) {
+        _layout.forceY = target;
+      } else {
+        finalPlan = finalPlan.copyWith(
+          kind: HoopKindId.normal,
+          element: ElementId.normalHoop,
+          ringOffsets: const [0],
+          extra: () => null,
+        );
+        _layout.forceY = null;
+        _springLandingAt = null;
+      }
     }
     finalPlan = finalPlan.copyWith(
       // A train's longer advance belongs to the train in the final plan. A
@@ -1413,7 +1492,8 @@ class RunDirector {
   }) {
     final rule = tables.specials[k];
     if (rule == null || !_on(k.element)) return false;
-    if (rewardKinds.contains(k) &&
+    if (!ignoreUnlock &&
+        rewardKinds.contains(k) &&
         k != HoopKindId.portal &&
         _reservesFirstPortal(i)) {
       return false;
@@ -1474,6 +1554,7 @@ class RunDirector {
             _portalAt - i < RunConfig.cometPortalDistance)) {
       return false;
     }
+    if (mode == 0 && oneBigBonus && !_cometOwed && _bonusWaits) return false;
     if (mode == 0 && !_cometOwed) {
       if (rng.layout.nextDouble() >= rule.chance) return false;
       // PRD-2.2 §14.5 / PRD-2.6 D6: a drawn comet stays due. It skips the
@@ -1482,11 +1563,7 @@ class RunDirector {
       // previous comet.
       _cometOwed = true;
     }
-    // PRD-2.6 D6: a drawn comet keeps its schedule, but its headline slot
-    // may wait up to five hoops. Being deferred does not make it "owed" —
-    // an owed comet skips the chance roll and would otherwise inflate the
-    // ride rate.
-    if (!_headlineDue('ride', i)) return false;
+    if (mode < 2 && !_headlineDue('ride', i)) return false;
     // PRD-2.3 §17.3 (after the roll, so the course stream stays the same):
     // rule 1 — a comet drawn while a big bonus is open waits (owed, rule 4)
     // unless another bonus waits already; rule 4 — while another waits no
@@ -1674,11 +1751,6 @@ class RunDirector {
 
   bool _headlineDue(String id, int hoop) {
     final forcedUntil = _forcedHeadlineAt == null ? -1 : _forcedHeadlineAt! + 8;
-    if (_headlineReservationId == id &&
-        _headlineReservationDue >= 0 &&
-        hoop >= _headlineReservationDue) {
-      return true;
-    }
     if (hoop < forcedUntil) {
       return _headlineReservationId == id && hoop >= _headlineReservationDue;
     }
@@ -1698,10 +1770,8 @@ class RunDirector {
   void _claimHeadline(String id, int hoop) {
     if (!_headline.allows(id, hoop)) _forcedHeadlineAt = hoop;
     _headline.add(id, hoop);
-    if (_headlineReservationId == id) {
-      _headlineReservationId = null;
-      _headlineReservationDue = -1;
-    }
+    _headlineReservationId = null;
+    _headlineReservationDue = -1;
   }
 
   /// PRD-2.3 §17.3 rule 4 the one waiting big bonus drawn while blocked: a

@@ -177,51 +177,63 @@ void main() {
     test('over 200 seeded runs the comet comes with ≈ 4 % per eligible '
         'normal hoop from hoop 8, never within 18 hoops of the previous '
         'comet', () {
-      var comets = 0, eligible = 0;
-      for (var seed = 1; seed <= 200; seed++) {
-        final d = director(seed: seed);
-        var last = -99;
-        var lastPortal = -99;
-        final plans = fly(d, 200);
-        final portals = [
-          for (final (s, _) in plans)
-            if (s.kind == HoopKindId.portal) s.index,
-        ];
-        for (final (s, _) in plans) {
-          if (s.kind == HoopKindId.portal) lastPortal = s.index;
-          if (s.cometHang) {
-            expect(s.index, greaterThanOrEqualTo(8));
-            expect(
-              s.index - last,
-              greaterThanOrEqualTo(18),
-              reason: 'seed $seed',
+      for (final enabled in [
+        {ElementId.normalHoop, ElementId.comet},
+        all,
+      ]) {
+        var comets = 0, eligible = 0;
+        for (var seed = 1; seed <= 200; seed++) {
+          // PRD-2.6 D3/D6 can replace specials with normal hoops and defer
+          // headlines. Isolate the comet roll so the denominator contains
+          // only slots on which that 4 % roll can actually occur.
+          final d = director(seed: seed, enabled: enabled);
+          var last = -99;
+          var lastPortal = -99;
+          final plans = fly(d, 200);
+          final portals = [
+            for (final (s, _) in plans)
+              if (s.kind == HoopKindId.portal) s.index,
+          ];
+          for (final (s, _) in plans) {
+            if (s.kind == HoopKindId.portal) lastPortal = s.index;
+            if (s.cometHang) {
+              expect(s.index, greaterThanOrEqualTo(8));
+              expect(
+                s.index - last,
+                greaterThanOrEqualTo(18),
+                reason: 'seed $seed',
+              );
+            }
+            // Eligible: a normal slot from 8, ≥ 18 after the last comet, not
+            // within 10 hoops of a portal.
+            final nextPortal = portals.firstWhere(
+              (p) => p > s.index,
+              orElse: () => 1 << 30,
             );
-          }
-          // Eligible: a normal slot from 8, ≥ 18 after the last comet, not
-          // within 10 hoops of a portal.
-          final nextPortal = portals.firstWhere(
-            (p) => p > s.index,
-            orElse: () => 1 << 30,
-          );
-          final ok =
-              s.kind == HoopKindId.normal &&
-              !s.duringRide &&
-              s.index >= 8 &&
-              s.index - last >= 18 &&
-              s.index - lastPortal >= RunConfig.cometPortalDistance &&
-              nextPortal - s.index >= RunConfig.cometPortalDistance;
-          if (ok) eligible++;
-          if (s.cometHang) {
-            comets++;
-            last = s.index;
+            final ok =
+                s.kind == HoopKindId.normal &&
+                !s.duringRide &&
+                // PRD-2.6 D4 calm slots cannot carry a comet star.
+                !s.calm &&
+                s.index >= 8 &&
+                s.index - last >= 18 &&
+                s.index - lastPortal >= RunConfig.cometPortalDistance &&
+                nextPortal - s.index >= RunConfig.cometPortalDistance;
+            if (ok) eligible++;
+            if (s.cometHang) {
+              comets++;
+              last = s.index;
+            }
           }
         }
+        final rate = comets / eligible;
+        if (enabled.length == 2) {
+          expect(rate, closeTo(.04, .01), reason: '$comets / $eligible');
+        } else {
+          // Keep the full-mix spacing and portal-distance checks above too.
+          expect(comets, greaterThan(0));
+        }
       }
-      final rate = comets / eligible;
-      // PRD-2.6 D3 can downgrade a planned special to a normal hoop after
-      // the comet roll point, so the final-plan denominator is ≈ 3 % while
-      // the chance roll itself remains 4 %.
-      expect(rate, closeTo(.03, .01), reason: '$comets / $eligible');
     });
 
     // PRD-2.3.1 §0 live RC v21: first 12–25, then 80–90 (was 40–60, 60–80);
@@ -261,7 +273,9 @@ void main() {
           'ui_unlock_best': '0',
         }),
       );
-      final d = director();
+      // PRD-2.6 D3/D6 arbitrate the full mix separately; this checks
+      // remote ride tuning without competing special/bonus headlines.
+      final d = director(enabled: {ElementId.normalHoop, ElementId.comet});
       expect(d.portalAt, 100);
       final comets = [
         for (final (s, _) in fly(d, 80))

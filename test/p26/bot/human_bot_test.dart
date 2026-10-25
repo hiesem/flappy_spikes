@@ -21,9 +21,11 @@ void main() {
       scheduler.flapDue(now);
       planned = scheduler.plannedFlapTimes.length;
     }
-    for (var frame = baseFlaps * 27;
-        scheduler.flapTimes.length < baseFlaps + scheduler.extraFlaps;
-        frame++) {
+    for (
+      var frame = baseFlaps * 27;
+      scheduler.flapTimes.length < baseFlaps + scheduler.extraFlaps;
+      frame++
+    ) {
       scheduler.flapDue(frame / 60);
     }
     return scheduler;
@@ -71,7 +73,9 @@ void main() {
         final result = await flyHumanNoiseBotToDeath(
           game,
           seed: 23,
-          maxSeconds: 90,
+          // PRD-2.6 D2 softens the course: retain the death assertion,
+          // with enough flight time to reach the harder rows.
+          maxSeconds: 180,
           onFrame: (run) {
             if (!emittedHighlight) {
               emittedHighlight = true;
@@ -86,14 +90,7 @@ void main() {
           },
         );
 
-        // PRD-2.6 D2's height-capped curve can keep the noisy helper alive
-        // for the whole 90 s window; the gate is flight + highlight capture,
-        // not an artificial death.
-        if (result.cause == null) {
-          expect(result.hoops, greaterThan(25));
-        } else {
-          expect(result.cause, isA<MistakeCause>());
-        }
+        expect(result.cause, isA<MistakeCause>());
         expect(result.seconds, greaterThan(0));
         expect(result.flaps, greaterThan(0));
         expect(result.highlightIds, contains('human-bot-test'));

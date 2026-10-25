@@ -85,6 +85,7 @@ class RunController extends Component {
           );
     director = RunDirector(
       seed: setup.seed,
+      showcase: setup.showcase,
       enabled: enabled,
       met: state.metElements,
       startHoopIndex: setup.startHoopIndex,
@@ -209,7 +210,7 @@ class RunController extends Component {
   void onMount() {
     super.onMount();
     for (final l in layers.all) {
-      parent?.add(l);
+      game.world.addRun(l);
     }
     layers.fx.add(particles);
   }

@@ -32,23 +32,28 @@ abstract final class ForceMenu {
     final d = game.runDebug;
     String queued(ElementId e) => d.force.contains(e) ? ' *' : '';
     return [
-      DebugAction(
-        () => 'Start at hoop ${d.startHoopIndex}',
-        () async {
-          final i = startSteps.indexOf(d.startHoopIndex);
-          d.startHoopIndex = startSteps[(i + 1) % startSteps.length];
-        },
-      ),
+      DebugAction(() => 'Start at hoop ${d.startHoopIndex}', () async {
+        final i = startSteps.indexOf(d.startHoopIndex);
+        d.startHoopIndex = startSteps[(i + 1) % startSteps.length];
+      }),
       // PRD-2.3 §14.6 "Runs: N (+5 / 0)": sets `gamesPlayed` to test the
       // lifetime unlock gates (+5 per tap; from 20 — every gate open — the
       // next tap goes back to 0).
-      DebugAction(
-        () => 'Runs: ${game.storage.gamesPlayed} (+5 / 0)',
-        () async {
-          final g = game.storage.gamesPlayed;
-          await game.storage.saveGamesPlayed(g >= runsTop ? 0 : g + runsStep);
-        },
-      ),
+      DebugAction(() => 'Runs: ${game.storage.gamesPlayed} (+5 / 0)', () async {
+        final g = game.storage.gamesPlayed;
+        await game.storage.saveGamesPlayed(g >= runsTop ? 0 : g + runsStep);
+      }),
+      DebugAction(() {
+        final plan = game.run?.setup.showcase;
+        final seen = game.storage.showcaseSeen;
+        final done = game.storage.showcaseDoneAt != null || seen & 128 != 0;
+        final step =
+            plan?.step ??
+            [0, 1, 2].where((s) => seen & (1 << s) == 0).firstOrNull;
+        return 'Showcase: step ${step == null ? "—" : step + 1} / '
+            'attempt ${plan?.attempt ?? game.storage.showcaseAttempt} / '
+            'done ${done ? "yes" : "no"}';
+      }, () async {}),
       DebugAction(
         () => 'Reset met elements (${game.storage.metElements.length})',
         () async {
@@ -76,7 +81,8 @@ abstract final class ForceMenu {
         ),
       for (final r in RideId.values)
         DebugAction(
-          () => 'Force portal ride: ${r.name}'
+          () =>
+              'Force portal ride: ${r.name}'
               '${d.forcedRide == r ? ' *' : ''}',
           () async => game.debugForceRide(r),
         ),

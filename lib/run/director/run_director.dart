@@ -4,6 +4,7 @@ import '../config/director_tables.dart';
 import '../config/run_config.dart';
 import '../config/tuning_values.dart';
 import '../elements.dart';
+import '../showcase/showcase_plan.dart';
 import 'calm_schedule.dart';
 import 'director_context.dart';
 import 'first_meet.dart';
@@ -36,6 +37,7 @@ class RunDirector {
     List<ElementId> forced = const [],
     RideId? forcedRide,
     double firstTrackX = RunConfig.worldWidth + RunConfig.firstHoopOffscreen,
+    this.showcase,
     this.fixedFirstHoop = false,
     this.spacing = RunConfig.spacing,
     bool featherAllowed = true,
@@ -50,7 +52,7 @@ class RunDirector {
        _lastRide = lastPortalRide,
        _forcedRide = forcedRide,
        _forced = [...forced] {
-    firstMeet = FirstMeet(met, this.enabled);
+    firstMeet = FirstMeet(met, this.enabled, pullsEnabled: showcase == null);
     final tables = this.tables;
     _layout = LayoutSampler(tables, rng.layout);
     final r = rng.layout;
@@ -118,6 +120,11 @@ class RunDirector {
           element,
     };
   }
+
+  /// Frozen START input; never added to the debug-force queue.
+  final ShowcaseRunPlan? showcase;
+
+  late final Random _showcaseRandom = Random(rng.seed ^ 0x5C0A5E);
 
   final DirectorTables tables;
   final RunRandom rng;
@@ -206,6 +213,7 @@ class RunDirector {
   int? _forcedHeadlineAt;
   late final Set<ElementId> _introductions;
   int _downgrades = 0;
+  SlotPlan? _showcaseNormalSlot;
   double? _lastFinalY;
 
   /// PRD-2.6 D7 the post-ceiling formation scheduler. The scheduler draws
@@ -695,7 +703,7 @@ class RunDirector {
 
     // Debug force (head slot element of the queue).
     final dbgIdx = _forced.indexWhere((e) => e.isSlotElement);
-    if (dbgIdx >= 0) {
+    if (dbgIdx >= 0 && !_scriptedSlot(i)) {
       final e = _forced[dbgIdx];
       final special = HoopKindId.specialFor(e);
       var ok = false;
@@ -904,7 +912,7 @@ class RunDirector {
       kind,
       forced: forced,
       forceMod: forceMod,
-      cometMode: cometMode,
+      cometMode: showcase?.cometHoops.contains(i) == true ? 2 : cometMode,
       prevY: prevY,
       cap: cap,
     );
@@ -918,6 +926,83 @@ class RunDirector {
     );
   }
 
+  bool _scriptedGap(int gap) {
+    final plan = showcase;
+    return plan != null &&
+        (plan.hearts.contains(gap) ||
+            plan.gapItems.any((item) => item.gap == gap));
+  }
+
+  bool _scriptedSlot(int hoop) {
+    final plan = showcase;
+    return plan != null &&
+        (plan.portalHoops.contains(hoop) ||
+            plan.cometHoops.contains(hoop) ||
+            plan.feverHoops.contains(hoop) ||
+            plan.bullseyeHoops.contains(hoop));
+  }
+
+  SlotPlan? _showcaseSlot(SlotPlan normal, DirectorContext ctx) {
+    final plan = showcase;
+    final i = normal.index;
+    if (plan == null || !_scriptedSlot(i)) return null;
+    final portal = plan.portalHoops.contains(i);
+    final comet = plan.cometHoops.contains(i);
+    final kind = portal
+        ? HoopKindId.portal
+        : comet
+        ? HoopKindId.normal
+        : plan.feverHoops.contains(i)
+        ? HoopKindId.fever
+        : HoopKindId.bullseye;
+    RideId? theme;
+    if (portal) {
+      theme = plan.portals.firstWhere((p) => p.hoop == i).theme;
+      _rideBefore = _lastRide;
+      _lastRide = theme;
+      _lastPortal = i;
+      _portalCount++;
+      // B3: a separate stream leaves the normal course's draws untouched.
+      _portalAt = i + RunRandom.rangeInt(_showcaseRandom, 25, 40);
+      if (portalCapped) _portalAt = _noPortal;
+      _portalWaiting = false;
+    }
+    if (comet) {
+      _lastComet = i;
+      _cometOwed = false;
+    }
+    final opening = min(
+      (portal ? RunConfig.portalOpening : openingFor(i)) * ctx.bigHoopsMult,
+      ctx.band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
+    );
+    final (lo, hi) = _layout.limits(i, ctx, opening, useTable: false);
+    final y = normal.centreY.clamp(lo, hi).toDouble();
+    return normal.copyWith(
+      centreY: y,
+      kind: kind,
+      element: comet ? ElementId.normalHoop : kind.element,
+      opening: opening,
+      tiltDeg: 0,
+      motion: () => null,
+      cometHang: comet,
+      ringOffsets: const [0],
+      advance: spacing,
+      extra: () => theme,
+      forced: false,
+      duringRide: false,
+      calm: false,
+      attached: comet
+          ? [
+              GapItemPlan(
+                kind: ElementId.comet,
+                trackX: normal.trackX + RunConfig.cometHang,
+                y: y,
+              ),
+            ]
+          : const [],
+    );
+  }
+
   SlotPlan _recordSlot(
     SlotPlan planned,
     DirectorContext ctx, {
@@ -927,10 +1012,18 @@ class RunDirector {
     bool springLanding = false,
   }) {
     final hoop = planned.index;
+    // Step 0 owns the scripted index. The ordinary draw still happens, so
+    // adding a scripted reward never consumes a layout/timing random draw.
+    final scripted = _showcaseSlot(planned, ctx);
+    if (scripted != null) {
+      _showcaseNormalSlot = planned;
+      _replaceSpawnedCount(planned, scripted);
+      planned = scripted;
+    }
     final dyRef = min(ctx.band, RunConfig.dyRefBand);
     final row = tables.bandFor(hoop).dy;
     final hazardPrevious = previousY ?? _lastFinalY;
-    final shouldCalm = calm && !planned.forced;
+    final shouldCalm = calm && !planned.forced && scripted == null;
     var finalPlan = shouldCalm
         ? _calmSlot(planned, ctx, previousY: previousY)
         : planned;
@@ -979,6 +1072,7 @@ class RunDirector {
     final willDowngrade =
         !shouldCalm &&
         !finalPlan.forced &&
+        scripted == null &&
         !_hazard.allows(
           finalPlan,
           previousY: hazardPrevious,
@@ -1222,7 +1316,10 @@ class RunDirector {
     if (planned.cometHang && !finalPlan.cometHang) {
       remove(ElementId.comet.storageId);
     }
-    if (kindChanged) _count(ElementId.normalHoop.storageId);
+    if (kindChanged) _count(finalPlan.element.storageId);
+    if (!planned.cometHang && finalPlan.cometHang) {
+      _count(ElementId.comet.storageId);
+    }
   }
 
   /// PRD-2.6 D7: takes the next queued formation slot, or starts a new
@@ -2085,6 +2182,18 @@ class RunDirector {
   }
 
   bool _headlineDue(String id, int hoop) {
+    // B2/D6 reserve the headline window for the known scripted ride/ring.
+    // Ordinary rewards wait; scripted decisions bypass this arbitration.
+    final plan = showcase;
+    if (plan != null &&
+        [
+          ...plan.portalHoops,
+          ...plan.cometHoops,
+          ...plan.feverHoops,
+        ].any((at) => (hoop - at).abs() < 8)) {
+      return false;
+    }
+
     final forcedUntil = _forcedHeadlineAt == null ? -1 : _forcedHeadlineAt! + 8;
     if (hoop < forcedUntil) {
       return _headlineReservationId == id && hoop >= _headlineReservationDue;
@@ -2389,8 +2498,60 @@ class RunDirector {
   /// Bank coins still to be placed (tests).
   int get piggyCoinsOwed => _piggyOwed;
 
-  /// §3.0.3 "order of decisions for the gap" after [slot].
+  /// §3.0.3 gap step 0, before debug force and first-meet pulls.
   GapPlan nextGap(DirectorContext ctx, SlotPlan slot) {
+    final baseline = _showcaseNormalSlot;
+    _showcaseNormalSlot = null;
+    final normal = _normalGap(ctx, baseline ?? slot);
+    final plan = showcase;
+    if (plan == null) return normal;
+    final ids = [
+      for (final item in plan.gapItems)
+        if (item.gap == slot.index) ElementId.fromStorageId(item.id)!,
+      if (plan.hearts.contains(slot.index)) ElementId.heart,
+    ];
+    if (ids.isEmpty) return normal;
+    for (final item in normal.items) {
+      final key = item.kind.storageId;
+      final count = (_spawned[key] ?? 1) - 1;
+      if (count <= 0) {
+        _spawned.remove(key);
+      } else {
+        _spawned[key] = count;
+      }
+    }
+    final items = <GapItemPlan>[];
+    for (final id in ids) {
+      final capsule = CapsuleType.values.where((c) => c.element == id);
+      final kind = id.isCapsuleType ? ElementId.capsule : id;
+      final missing = [
+        for (var b = 0; b < 4; b++)
+          if (ctx.puzzleMask & (1 << b) == 0) b,
+      ];
+      items.add(
+        GapItemPlan(
+          kind: kind,
+          trackX: id == ElementId.starTrail
+              ? slot.lastRingX + RunConfig.starTrailInset
+              : slot.lastRingX + spacing / 2,
+          toTrackX: id == ElementId.starTrail
+              ? slot.trackX + slot.advance - RunConfig.starTrailInset
+              : null,
+          extra: id == ElementId.starTrail
+              ? RunConfig.starTrailStars
+              : id == ElementId.puzzlePiece
+              ? (missing.isEmpty ? 0 : missing.first)
+              : capsule.isEmpty
+              ? null
+              : capsule.first,
+        ),
+      );
+      _count(kind.storageId);
+    }
+    return GapPlan(index: slot.index, items: items);
+  }
+
+  GapPlan _normalGap(DirectorContext ctx, SlotPlan slot) {
     final g = slot.index;
     final r = rng.layout;
     if (ctx.rideActive ||
@@ -2425,7 +2586,7 @@ class RunDirector {
     // Debug force: the head gap element of the queue, ignoring unlock,
     // schedules and min distances (exclusivity still applies).
     final dbgIdx = _forced.indexWhere((e) => e.isGapElement);
-    if (!used && !blocked && dbgIdx >= 0) {
+    if (!used && !blocked && dbgIdx >= 0 && !_scriptedGap(g)) {
       final e = _forced[dbgIdx];
       final p = _forcedGapItem(e, g, ctx, slot, mid, nextX);
       if (p != null) {

@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { mock } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { logger } from 'firebase-functions/v2';
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp, type DocumentReference, type DocumentSnapshot, type Firestore, type Transaction } from 'firebase-admin/firestore';
 import {
   GIFT_SHOP_ITEMS,
   lbClaimGift,
@@ -96,6 +96,79 @@ async function group(gid: string): Promise<LbGroupDoc | undefined> {
 
 async function gifts(uid: string): Promise<LbGiftDoc[]> {
   return (await db.collection(LB_GIFTS_COLLECTION).where('uid', '==', uid).get()).docs.map((d) => d.data() as LbGiftDoc);
+}
+
+/** Run [after] once, after the next completed transaction (used for races). */
+function dbWithAfterTransaction(after: () => Promise<void>): Firestore {
+  let ran = false;
+  return new Proxy(db, {
+    get(target, property) {
+      if (property !== 'runTransaction') {
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      }
+      const runTransaction = Reflect.get(target, property, target) as (...args: any[]) => any;
+      return async (...args: any[]) => {
+        const result = await runTransaction.apply(target, args);
+        if (!ran) {
+          ran = true;
+          await after();
+        }
+        return result;
+      };
+    },
+  }) as Firestore;
+}
+
+/** Replays a group snapshot from before cleanup while every later read is fresh. */
+function dbWithStaleGroupSnapshot(
+  gid: string,
+  staleGroup: DocumentSnapshot,
+  afterGroupRead?: () => Promise<void>,
+): Firestore {
+  const groupPath = `${LB_GROUPS_COLLECTION}/${gid}`;
+  return new Proxy(db, {
+    get(target, property) {
+      if (property === 'runTransaction') {
+        return async (callback: (tx: Transaction) => Promise<unknown>) => callback({
+          async get(ref: DocumentReference) {
+            if (ref.path === groupPath) {
+              if (afterGroupRead) await afterGroupRead();
+              return staleGroup;
+            }
+            return target.collection(ref.parent.id).doc(ref.id).get();
+          },
+        } as unknown as Transaction);
+      }
+      const value = Reflect.get(target, property, target);
+      if (property !== 'collection' || typeof value !== 'function') {
+        return typeof value === 'function' ? value.bind(target) : value;
+      }
+      return (name: string) => {
+        const collection = value.call(target, name);
+        if (name !== LB_GROUPS_COLLECTION) return collection;
+        return new Proxy(collection, {
+          get(collectionTarget, collectionProperty) {
+            const collectionValue = Reflect.get(collectionTarget, collectionProperty, collectionTarget);
+            if (collectionProperty !== 'doc' || typeof collectionValue !== 'function') {
+              return typeof collectionValue === 'function' ? collectionValue.bind(collectionTarget) : collectionValue;
+            }
+            return (...args: unknown[]) => {
+              const ref = collectionValue.apply(collectionTarget, args as [string?]) as DocumentReference;
+              if (ref.path !== groupPath) return ref;
+              return new Proxy(ref, {
+                get(refTarget, refProperty) {
+                  const refValue = Reflect.get(refTarget, refProperty, refTarget);
+                  if (refProperty === 'get' && typeof refValue === 'function') return () => staleGroup;
+                  return typeof refValue === 'function' ? refValue.bind(refTarget) : refValue;
+                },
+              });
+            };
+          },
+        });
+      };
+    },
+  }) as Firestore;
 }
 
 describe('PRD-2.6 LB3 submit, join and group placement', () => {
@@ -484,6 +557,151 @@ describe('PRD-2.6 LB3 regression fixes', () => {
     assert.deepEqual((await gifts(picked)).filter((gift) => gift.gid === nextGid).map((gift) => gift.tier), ['silver']);
   });
 
+  it('excludes a hidden ghost raced into settlement before the cleanup sweep', async () => {
+    const vanished = uniq('lb-race-hidden');
+    const peer = uniq('lb-race-peer');
+    const picked = uniq('lb-race-picked');
+    for (const [uid, name] of [[vanished, 'GhostOwl'], [peer, 'PeerOwl'], [picked, 'PickedOwl']]) {
+      await db.collection(NAMES_COLLECTION).doc(uid).set({ customName: name, updatedAt: Timestamp.fromMillis(T0) });
+    }
+    const source = await lbSubmitRun(db, vanished, request([submitRun({ score: 900, endTs: T0 })]), T0 + 1000);
+    const sourceGid = source.group!.id;
+    await lbSubmitRun(db, peer, request([submitRun({ score: 800, endTs: T0 + 1000 })]), T0 + 2000);
+    const sourceEnd = (await group(sourceGid))!.end.toMillis();
+    await lbSettleGroups(db, sourceEnd + 1000, sourceGid);
+
+    // A later group embeds the earlier day as a ghost. The owner then hides:
+    // its player doc commits hidden before the cleanup can strip this group.
+    const nextStart = sourceEnd + HOUR;
+    const next = await lbSubmitRun(db, picked, request([submitRun({ score: 700, endTs: nextStart })]), nextStart + 1000);
+    const nextGid = next.group!.id;
+    const nextGroup = (await group(nextGid))!;
+    assert.equal(nextGroup.ghosts.some((ghost) => ghost.uid === vanished), true);
+
+    let settledRace = false;
+    let raceBoard: Awaited<ReturnType<typeof lbGetBoard>>['today'] | null = null;
+    const racingDb = dbWithAfterTransaction(async () => {
+      if (settledRace) return;
+      const live = (await group(nextGid))!;
+      if (!live.ghosts.some((ghost) => ghost.uid === vanished)) return;
+      settledRace = true;
+      const end = live.end.toMillis();
+      await lbSettleGroups(db, end + 1000, nextGid);
+      raceBoard = (await lbGetBoard(db, picked, { tab: 'today' }, end + 2000)).today;
+    });
+    await lbSubmitRun(
+      racingDb,
+      vanished,
+      request([submitRun({ score: 10, endTs: nextStart + 2000 })], { t: 1 }),
+      nextStart + 2000,
+    );
+    assert.equal(settledRace, true, 'settlement ran between the hidden commit and the cleanup sweep');
+    const settledBoard = raceBoard as Awaited<ReturnType<typeof lbGetBoard>>['today'] | null;
+    assert.ok(settledBoard);
+    assert.equal(settledBoard!.rows.some((row) => row.name === 'GhostOwl'), false);
+
+    const settledGroup = (await group(nextGid))!;
+    assert.equal(settledGroup.settled, true);
+    assert.equal((await gifts(vanished)).some((gift) => gift.gid === nextGid), false);
+    assert.deepEqual((await gifts(picked)).filter((gift) => gift.gid === nextGid).map((gift) => gift.tier), ['silver']);
+  });
+
+  it('leaves a hidden ghost out of a submit response raced in before the cleanup sweep', async () => {
+    const vanished = uniq('lb-race-submit-hidden');
+    const peer = uniq('lb-race-submit-peer');
+    const picked = uniq('lb-race-submit-picked');
+    const viewer = uniq('lb-race-submit-viewer');
+    for (const [uid, name] of [[vanished, 'GhostOwl'], [peer, 'PeerOwl'], [picked, 'PickedOwl'], [viewer, 'ViewerOwl']]) {
+      await db.collection(NAMES_COLLECTION).doc(uid).set({ customName: name, updatedAt: Timestamp.fromMillis(T0) });
+    }
+    const source = await lbSubmitRun(db, vanished, request([submitRun({ score: 900, endTs: T0 })]), T0 + 1000);
+    const sourceGid = source.group!.id;
+    await lbSubmitRun(db, peer, request([submitRun({ score: 800, endTs: T0 + 1000 })]), T0 + 2000);
+    const sourceEnd = (await group(sourceGid))!.end.toMillis();
+    await lbSettleGroups(db, sourceEnd + 1000, sourceGid);
+
+    const nextStart = sourceEnd + HOUR;
+    const next = await lbSubmitRun(db, picked, request([submitRun({ score: 700, endTs: nextStart })]), nextStart + 1000);
+    const nextGid = next.group!.id;
+    assert.equal((await group(nextGid))!.ghosts.some((ghost) => ghost.uid === vanished), true);
+
+    let flaggedDuringSweep = false;
+    let during: Awaited<ReturnType<typeof lbSubmitRun>> | null = null;
+    const racingDb = dbWithAfterTransaction(async () => {
+      if (!(await group(nextGid))!.ghosts.some((ghost) => ghost.uid === vanished)) return;
+      flaggedDuringSweep = (await db.collection(LB_PLAYERS_COLLECTION).doc(vanished).get()).data()?.cleanupPending === true;
+      during = await lbSubmitRun(db, viewer, request([submitRun({ score: 700, endTs: nextStart + 3000 })]), nextStart + 3000);
+    });
+    await lbSubmitRun(
+      racingDb,
+      vanished,
+      request([submitRun({ score: 10, endTs: nextStart + 2000 })], { t: 1 }),
+      nextStart + 2000,
+    );
+
+    assert.equal(flaggedDuringSweep, true, 'the hide committed the cleanup marker while the ghost was still embedded');
+    const response = during as Awaited<ReturnType<typeof lbSubmitRun>> | null;
+    assert.ok(response);
+    assert.equal(response!.group?.id, nextGid);
+    assert.equal(response!.board!.rows.some((row) => row.name === 'GhostOwl'), false);
+    assert.equal(response!.rank!.after, response!.board!.me!.rank);
+    assert.equal((await db.collection(LB_PLAYERS_COLLECTION).doc(vanished).get()).data()?.cleanupPending, false);
+    assert.equal((await group(nextGid))!.ghosts.some((ghost) => ghost.uid === vanished), false);
+  });
+
+  it('checks ghost owners again when a stale TODAY group outlives its cleanup marker', async () => {
+    const vanished = uniq('lb-stale-read-hidden');
+    const picked = uniq('lb-stale-read-picked');
+    for (const [uid, name] of [[vanished, 'GhostOwl'], [picked, 'PickedOwl']]) {
+      await db.collection(NAMES_COLLECTION).doc(uid).set({ customName: name, updatedAt: Timestamp.fromMillis(T0) });
+    }
+
+    const source = await lbSubmitRun(db, vanished, request([submitRun({ score: 900, endTs: T0 })]), T0 + 1000);
+    const sourceEnd = (await group(source.group!.id))!.end.toMillis();
+    await lbSettleGroups(db, sourceEnd + 1000, source.group!.id);
+    const nextStart = sourceEnd + HOUR;
+    const next = await lbSubmitRun(db, picked, request([submitRun({ score: 700, endTs: nextStart })]), nextStart + 1000);
+    const nextGid = next.group!.id;
+    assert.equal((await group(nextGid))!.ghosts.some((ghost) => ghost.uid === vanished), true);
+
+    let staleGroup: DocumentSnapshot | null = null;
+    let boardPromise: ReturnType<typeof lbGetBoard> | null = null;
+    let cleanupClearedBetweenReads = false;
+    const racingDb = dbWithAfterTransaction(async () => {
+      if (!(await group(nextGid))!.ghosts.some((ghost) => ghost.uid === vanished)) return;
+      staleGroup = await db.collection(LB_GROUPS_COLLECTION).doc(nextGid).get();
+      boardPromise = lbGetBoard(
+        dbWithStaleGroupSnapshot(nextGid, staleGroup, async () => {
+          for (let attempt = 0; attempt < 200; attempt++) {
+            if ((await db.collection(LB_PLAYERS_COLLECTION).doc(vanished).get()).data()?.cleanupPending !== true) {
+              cleanupClearedBetweenReads = true;
+              return;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 10));
+          }
+          throw new Error('cleanup did not finish between the group and eligibility reads');
+        }),
+        picked,
+        { tab: 'today' },
+        nextStart + 3000,
+      );
+    });
+    await lbSubmitRun(
+      racingDb,
+      vanished,
+      request([submitRun({ score: 10, endTs: nextStart + 2000 })], { t: 1 }),
+      nextStart + 2000,
+    );
+
+    assert.ok(staleGroup, 'captured the stale group after hidden committed but before cleanup');
+    assert.ok(boardPromise, 'started the board read before cleanup could run');
+    const board = (await boardPromise as Awaited<ReturnType<typeof lbGetBoard>>).today;
+    assert.equal(cleanupClearedBetweenReads, true, 'cleanup cleared the marker between the group and eligibility reads');
+    assert.equal(board.rows.some((row) => row.name === 'GhostOwl'), false);
+    assert.equal((await db.collection(LB_PLAYERS_COLLECTION).doc(vanished).get()).data()?.cleanupPending, false);
+    assert.equal((await group(nextGid))!.ghosts.some((ghost) => ghost.uid === vanished), false);
+  });
+
   it('keeps tie timestamps public and accepts a verified improvement below a private anomaly', async () => {
     const a = uniq('lb-tie-first');
     const b = uniq('lb-tie-second');
@@ -527,6 +745,33 @@ describe('PRD-2.6 LB3 regression fixes', () => {
     assert.equal(publicView.rows[0].name, versusName('BraveOwl123', owner));
     assert.equal(publicView.me!.points, 90);
     assert.equal(publicView.me!.rank, 2);
+  });
+
+  it('pins a first-ever hard anomaly for its owner without publishing a row', async () => {
+    const owner = uniq('lb-private-only-owner');
+    const other = uniq('lb-private-only-other');
+    const anomaly = submitRun({ score: 200, endTs: T0 });
+    anomaly.tl = encodeDeltas(Array(200).fill(100));
+    await lbSubmitRun(db, owner, request([anomaly]), T0 + 1000);
+
+    const stored = (await player(owner))!;
+    assert.equal(stored.best, 200);
+    assert.equal(stored.bestShadow, 0);
+
+    const own = (await lbGetBoard(db, owner, { tab: 'best' }, T0 + 2000)).best;
+    assert.equal(own.rows.some((row) => row.points === 200), false);
+    assert.ok(own.me);
+    assert.equal(own.me!.points, 200);
+    assert.equal(own.me!.best, 200);
+    assert.equal(own.me!.rank, 0);
+    assert.equal(own.me!.lastAt, T0);
+    assert.equal(own.floor ?? 0, 0);
+
+    await lbSubmitRun(db, other, request([submitRun({ score: 10, endTs: T0 + 3000 })]), T0 + 4000);
+    const publicView = (await lbGetBoard(db, other, { tab: 'best' }, T0 + 5000)).best;
+    assert.equal(publicView.rows.some((row) => row.points === 200), false);
+    assert.equal(publicView.me!.points, 10);
+    assert.equal((await lbGetBoard(db, owner, { tab: 'best' }, T0 + 5000)).best.me!.points, 200);
   });
 
   it('persists timestamps and history from the accepted duplicate run, not a malformed namesake', async () => {

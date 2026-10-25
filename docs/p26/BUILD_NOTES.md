@@ -8,6 +8,7 @@ and, when `functions/` changed, `npm --prefix functions test` in the Firebase em
 Run the functions tests ONLY as `npm --prefix functions test [-- test/<file>.test.ts]`: never start
 `firebase emulators:exec` / `emulators:start` yourself (other lanes share the fixed emulator ports; the npm script
 waits for its turn, a hand-started suite breaks their runs).
+Memory is shared by 3 lanes (22 GB): run `flutter test` with `-j 4` at most, and prefer single files while you work.
 
 **Never:** `adb`, devices or emulators, `firebase deploy`, gcloud, Play Console / App Store Connect, real Firebase
 project calls, publishing anything. Never touch `android/upload-keystore.jks`, `android/app/key.properties` or any

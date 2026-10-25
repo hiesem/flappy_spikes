@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { mock } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { logger } from 'firebase-functions/v2';
-import { Timestamp, type Firestore } from 'firebase-admin/firestore';
+import { Timestamp, type DocumentReference, type DocumentSnapshot, type Firestore, type Transaction } from 'firebase-admin/firestore';
 import {
   GIFT_SHOP_ITEMS,
   lbClaimGift,
@@ -115,6 +115,57 @@ function dbWithAfterTransaction(after: () => Promise<void>): Firestore {
           await after();
         }
         return result;
+      };
+    },
+  }) as Firestore;
+}
+
+/** Replays a group snapshot from before cleanup while every later read is fresh. */
+function dbWithStaleGroupSnapshot(
+  gid: string,
+  staleGroup: DocumentSnapshot,
+  afterGroupRead?: () => Promise<void>,
+): Firestore {
+  const groupPath = `${LB_GROUPS_COLLECTION}/${gid}`;
+  return new Proxy(db, {
+    get(target, property) {
+      if (property === 'runTransaction') {
+        return async (callback: (tx: Transaction) => Promise<unknown>) => callback({
+          async get(ref: DocumentReference) {
+            if (ref.path === groupPath) {
+              if (afterGroupRead) await afterGroupRead();
+              return staleGroup;
+            }
+            return target.collection(ref.parent.id).doc(ref.id).get();
+          },
+        } as unknown as Transaction);
+      }
+      const value = Reflect.get(target, property, target);
+      if (property !== 'collection' || typeof value !== 'function') {
+        return typeof value === 'function' ? value.bind(target) : value;
+      }
+      return (name: string) => {
+        const collection = value.call(target, name);
+        if (name !== LB_GROUPS_COLLECTION) return collection;
+        return new Proxy(collection, {
+          get(collectionTarget, collectionProperty) {
+            const collectionValue = Reflect.get(collectionTarget, collectionProperty, collectionTarget);
+            if (collectionProperty !== 'doc' || typeof collectionValue !== 'function') {
+              return typeof collectionValue === 'function' ? collectionValue.bind(collectionTarget) : collectionValue;
+            }
+            return (...args: unknown[]) => {
+              const ref = collectionValue.apply(collectionTarget, args as [string?]) as DocumentReference;
+              if (ref.path !== groupPath) return ref;
+              return new Proxy(ref, {
+                get(refTarget, refProperty) {
+                  const refValue = Reflect.get(refTarget, refProperty, refTarget);
+                  if (refProperty === 'get' && typeof refValue === 'function') return () => staleGroup;
+                  return typeof refValue === 'function' ? refValue.bind(refTarget) : refValue;
+                },
+              });
+            };
+          },
+        });
       };
     },
   }) as Firestore;
@@ -594,6 +645,59 @@ describe('PRD-2.6 LB3 regression fixes', () => {
     assert.equal(response!.group?.id, nextGid);
     assert.equal(response!.board!.rows.some((row) => row.name === 'GhostOwl'), false);
     assert.equal(response!.rank!.after, response!.board!.me!.rank);
+    assert.equal((await db.collection(LB_PLAYERS_COLLECTION).doc(vanished).get()).data()?.cleanupPending, false);
+    assert.equal((await group(nextGid))!.ghosts.some((ghost) => ghost.uid === vanished), false);
+  });
+
+  it('checks ghost owners again when a stale TODAY group outlives its cleanup marker', async () => {
+    const vanished = uniq('lb-stale-read-hidden');
+    const picked = uniq('lb-stale-read-picked');
+    for (const [uid, name] of [[vanished, 'GhostOwl'], [picked, 'PickedOwl']]) {
+      await db.collection(NAMES_COLLECTION).doc(uid).set({ customName: name, updatedAt: Timestamp.fromMillis(T0) });
+    }
+
+    const source = await lbSubmitRun(db, vanished, request([submitRun({ score: 900, endTs: T0 })]), T0 + 1000);
+    const sourceEnd = (await group(source.group!.id))!.end.toMillis();
+    await lbSettleGroups(db, sourceEnd + 1000, source.group!.id);
+    const nextStart = sourceEnd + HOUR;
+    const next = await lbSubmitRun(db, picked, request([submitRun({ score: 700, endTs: nextStart })]), nextStart + 1000);
+    const nextGid = next.group!.id;
+    assert.equal((await group(nextGid))!.ghosts.some((ghost) => ghost.uid === vanished), true);
+
+    let staleGroup: DocumentSnapshot | null = null;
+    let boardPromise: ReturnType<typeof lbGetBoard> | null = null;
+    let cleanupClearedBetweenReads = false;
+    const racingDb = dbWithAfterTransaction(async () => {
+      if (!(await group(nextGid))!.ghosts.some((ghost) => ghost.uid === vanished)) return;
+      staleGroup = await db.collection(LB_GROUPS_COLLECTION).doc(nextGid).get();
+      boardPromise = lbGetBoard(
+        dbWithStaleGroupSnapshot(nextGid, staleGroup, async () => {
+          for (let attempt = 0; attempt < 200; attempt++) {
+            if ((await db.collection(LB_PLAYERS_COLLECTION).doc(vanished).get()).data()?.cleanupPending !== true) {
+              cleanupClearedBetweenReads = true;
+              return;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 10));
+          }
+          throw new Error('cleanup did not finish between the group and eligibility reads');
+        }),
+        picked,
+        { tab: 'today' },
+        nextStart + 3000,
+      );
+    });
+    await lbSubmitRun(
+      racingDb,
+      vanished,
+      request([submitRun({ score: 10, endTs: nextStart + 2000 })], { t: 1 }),
+      nextStart + 2000,
+    );
+
+    assert.ok(staleGroup, 'captured the stale group after hidden committed but before cleanup');
+    assert.ok(boardPromise, 'started the board read before cleanup could run');
+    const board = (await boardPromise as Awaited<ReturnType<typeof lbGetBoard>>).today;
+    assert.equal(cleanupClearedBetweenReads, true, 'cleanup cleared the marker between the group and eligibility reads');
+    assert.equal(board.rows.some((row) => row.name === 'GhostOwl'), false);
     assert.equal((await db.collection(LB_PLAYERS_COLLECTION).doc(vanished).get()).data()?.cleanupPending, false);
     assert.equal((await group(nextGid))!.ghosts.some((ghost) => ghost.uid === vanished), false);
   });

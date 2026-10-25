@@ -267,6 +267,22 @@ async function clearCleanupPending(db: Firestore, uid: string): Promise<void> {
   });
 }
 
+/** Reads the persistent hidden state of every embedded ghost owner. */
+async function hiddenGhostOwnerUids(
+  tx: Transaction,
+  db: Firestore,
+  group: LbGroupDoc,
+): Promise<string[]> {
+  const owners = groupGhostOwnerUids(group);
+  const snaps = await Promise.all(
+    owners.map((uid) => tx.get(db.collection(LB_PLAYERS_COLLECTION).doc(uid))),
+  );
+  return owners.filter((uid, index) => {
+    const snap = snaps[index];
+    return !snap.exists || (snap.data() as LbPlayerDoc | undefined)?.hidden === true;
+  });
+}
+
 function storeGhostDay(entry: LbGhostDay): LbGhostDay {
   return { ...entry, runs: entry.runs.map(storePoint) } as unknown as LbGhostDay;
 }
@@ -950,7 +966,6 @@ async function submit(
     const shouldJoin = !state.hidden && runs.length > 0;
     const pools = shouldJoin && !willJoin ? await readPools(tx, db, bracket) : {};
 
-    const beforeRank = candidate.group === null ? null : rankOf(candidate.group, uid, nowMs, state.hidden, pending);
     const lastEnd = runs.length > 0 ? Math.max(...runs.map((run) => run.endMs)) : nowMs;
     const points = runs.reduce((sum, run) => sum + run.counted, 0);
     const bestToday = runs.reduce((max, run) => Math.max(max, run.counted), 0);
@@ -1018,6 +1033,9 @@ async function submit(
         expireAt: at(millis(joinedGroup.end) + LB_GROUP_TTL_MS),
       };
     }
+    const hiddenGhostOwners = finalGroup === null ? [] : await hiddenGhostOwnerUids(tx, db, finalGroup);
+    const suppressedUids = [...new Set([...pending, ...hiddenGhostOwners])];
+    const beforeRank = candidate.group === null ? null : rankOf(candidate.group, uid, nowMs, state.hidden, suppressedUids);
 
     let localBest = state.best;
     let localShadow = state.shadow;
@@ -1135,7 +1153,7 @@ async function submit(
     const board: LbBoardPayload =
       finalGroup === null || finalGid === null
         ? { tab: LB_TAB_TODAY, rows: [], me: null, floor: null, group: null, gifts: [] }
-        : todayBoard(finalGroup, uid, nowMs, { gid: finalGid, hiddenUids: [...(state.hidden ? [uid] : []), ...pending] });
+        : todayBoard(finalGroup, uid, nowMs, { gid: finalGid, hiddenUids: [...(state.hidden ? [uid] : []), ...suppressedUids] });
     const gifts = giftSnap?.exists ? [giftSnap.data() as LbGiftDoc] : [];
     board.gifts = gifts.map((g) => ({ gid: g.gid, tier: g.tier, boardRank: g.boardRank, claimedAt: g.claimedAt ?? null }));
     if (state.hidden) board.me = null;
@@ -1147,7 +1165,7 @@ async function submit(
           finalGroup === null || finalGid === null
             ? null
             : { id: finalGid, end: millis(finalGroup.end), bracket: finalGroup.bracket },
-        rank: { before: beforeRank, after: finalGroup === null ? null : rankOf(finalGroup, uid, nowMs, state.hidden, pending) },
+        rank: { before: beforeRank, after: finalGroup === null ? null : rankOf(finalGroup, uid, nowMs, state.hidden, suppressedUids) },
         board,
         gifts: gifts.length > 0 ? gifts : null,
       } satisfies LbSubmitRunResult,
@@ -1222,6 +1240,25 @@ async function readBest(db: Firestore, nowMs: number): Promise<LbBestDoc | null>
   const rows = Array.isArray(doc.rows) ? doc.rows : [];
   bestCache.set(db, { rows, floor: doc.floor ?? null, at: nowMs });
   return { ...doc, rows };
+}
+
+/**
+ * Reads TODAY's group and its ghost owners' persistent hidden state from one
+ * Firestore snapshot. A cleanup can clear the transient marker while a request
+ * holds an older group snapshot; the owner document remains hidden.
+ */
+async function readTodayGroup(
+  db: Firestore,
+  gid: string,
+): Promise<{ group: LbGroupDoc | null; hiddenGhostOwners: string[] }> {
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(db.collection(LB_GROUPS_COLLECTION).doc(gid));
+    const group = snap.exists ? loadGroup(snap.data()) : null;
+    return {
+      group,
+      hiddenGhostOwners: group === null ? [] : await hiddenGhostOwnerUids(tx, db, group),
+    };
+  });
 }
 
 async function visibleCount(db: Firestore): Promise<number> {
@@ -1330,17 +1367,17 @@ export async function lbGetBoard(
   const player = playerSnap.exists ? (playerSnap.data() as LbPlayerDoc) : undefined;
   let group: LbGroupDoc | null = null;
   let gid: string | null = null;
+  let hiddenGhostOwners: string[] = [];
   if (typeof player?.groupId === 'string' && player.groupId) {
     gid = player.groupId;
-    const ref = db.collection(LB_GROUPS_COLLECTION).doc(gid);
-    let snap = await ref.get();
-    if (snap.exists) {
-      group = loadGroup(snap.data());
-      if (group !== null && group.settled !== true && millis(group.end) <= nowMs) {
-        await settleGroup(db, gid, nowMs);
-        snap = await ref.get();
-        group = snap.exists ? loadGroup(snap.data()) : null;
-      }
+    let snapshot = await readTodayGroup(db, gid);
+    group = snapshot.group;
+    hiddenGhostOwners = snapshot.hiddenGhostOwners;
+    if (group !== null && group.settled !== true && millis(group.end) <= nowMs) {
+      await settleGroup(db, gid, nowMs);
+      snapshot = await readTodayGroup(db, gid);
+      group = snapshot.group;
+      hiddenGhostOwners = snapshot.hiddenGhostOwners;
     }
   }
   const giftsSnap = await db.collection(LB_GIFTS_COLLECTION).where('uid', '==', uid).limit(50).get();
@@ -1348,11 +1385,12 @@ export async function lbGetBoard(
   // A hidden player's embedded ghosts can outlive the hide until the sweep
   // reaches them; the pending set keeps those players off TODAY meanwhile.
   const pending = await pendingCleanupUids(db);
+  const suppressedUids = [...new Set([...pending, ...hiddenGhostOwners])];
   const hidden = player?.hidden === true ? [uid] : [];
   const today =
     group === null || gid === null
       ? emptyBoard(LB_TAB_TODAY)
-      : todayBoard(group, uid, nowMs, { gid, hiddenUids: [...hidden, ...pending] });
+      : todayBoard(group, uid, nowMs, { gid, hiddenUids: [...hidden, ...suppressedUids] });
   today.gifts = gifts.map((gift) => ({
     gid: gift.gid,
     tier: gift.tier,
@@ -1360,7 +1398,7 @@ export async function lbGetBoard(
     claimedAt: gift.claimedAt ?? null,
   }));
   if (player?.hidden === true) today.me = null;
-  const best = await boardBest(db, uid, player, nowMs, pending);
+  const best = await boardBest(db, uid, player, nowMs, suppressedUids);
   return {
     today,
     best,

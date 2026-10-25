@@ -2,8 +2,11 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
+import 'package:flappy_spikes/run/config/revive_config.dart';
 import 'package:flappy_spikes/run/run_state.dart';
+import 'package:flappy_spikes/run/screens/post_run_screens.dart';
 import 'package:flappy_spikes/run/screens/revive_ladder.dart';
+import 'package:flappy_spikes/run/screens/revive_screen.dart';
 import 'package:flappy_spikes/run/showcase/showcase_plan.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
 import 'package:flappy_spikes/services/monetization.dart';
@@ -56,6 +59,23 @@ void main() {
     expect(
       ReviveLadder.offer(state, adReady: false, noAds: true, showcase: true),
       const ReviveOffer.free(),
+    );
+  });
+
+  test('WP-B2 the six-hoop exemption ends when the FREE revive is used', () {
+    final state = RunState(seed: 7, viewHeight: 711)..hoopsPassed = 1;
+    expect(ReviveLadder.eligible(state, showcase: true), isTrue);
+    final free = ReviveLadder.offer(state, adReady: true, showcase: true);
+    expect(free, const ReviveOffer.free());
+    ReviveLadder.record(state, free);
+    state.revivesThisGame++;
+    expect(ReviveLadder.eligible(state, showcase: true), isFalse);
+
+    state.hoopsPassed = ReviveConfig.minHoops;
+    expect(ReviveLadder.eligible(state, showcase: true), isTrue);
+    expect(
+      ReviveLadder.offer(state, adReady: true, showcase: true),
+      const ReviveOffer.ad(),
     );
   });
 
@@ -170,6 +190,87 @@ void main() {
         spy.events.map((event) => event.$1),
         isNot(contains('revive_offered')),
       );
+    },
+  );
+
+  FlameTester<FlappySpikesGame>(() {
+    spy.events.clear();
+    SharedPreferences.setMockInitialValues(const {'coins': 50000});
+    return FlappySpikesGame(
+      worldHeight: 711,
+      services: spy,
+      monetization: Monetization(ads: FakeRewardedAds()),
+      soundEnabled: false,
+      showcasePlan: const _ShowcasePlan(_plan),
+    );
+  }, gameSize: Vector2(320, 711)).testGameWidget(
+    'WP-B2 after the FREE revive at hoop 1, a second death below six gets no '
+    'offer',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+    },
+    verify: (game, _) async {
+      final ads = game.monetization.ads as FakeRewardedAds;
+      final run = await startRun(game);
+      run.state.shield = false;
+      run.debugPass(perfect: true);
+      killRunThroughSaves(game);
+      await flushAndMount(game);
+      expect(game.state, GameState.reviving);
+      final free = game.reviveScreen!;
+      for (var i = 0; i < 30 && free.ui < 1; i++) {
+        game.update(1 / 60);
+      }
+      expect(free.offer, const ReviveOffer.free());
+      free.tapHeart();
+      for (var i = 0; i < 200 && game.state == GameState.reviving; i++) {
+        game.update(1 / 60);
+        if (i % 10 == 0) await flushAndMount(game);
+      }
+      expect(game.state, GameState.playing);
+      expect(run.state.revivesThisGame, 1);
+      expect(ads.shown, 0);
+
+      // Still below six hoops: the used FREE revive removes the exemption.
+      run.state.invulnerable = 0;
+      killRunThroughSaves(game);
+      await flushAndMount(game);
+      expect(game.state, GameState.results);
+      expect(game.reviveScreen, isNull);
+      expect(run.state.revivesThisGame, 1);
+      expect(ads.shown, 0);
+      expect(
+        spy.events
+            .where((event) => event.$1 == 'revive_offered')
+            .map((event) => event.$2!['offer'])
+            .toList(),
+        ['free'],
+      );
+    },
+  );
+
+  FlameTester<FlappySpikesGame>(() {
+    SharedPreferences.setMockInitialValues(const {});
+    return FlappySpikesGame(
+      worldHeight: 711,
+      soundEnabled: false,
+      showcasePlan: const _ShowcasePlan(_plan),
+    );
+  }, gameSize: Vector2(320, 711)).testGameWidget(
+    'WP-B2 ReviveFlow.show uses the shared eligibility after the FREE revive',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+    },
+    verify: (game, _) async {
+      final run = await startRun(game);
+      run.state.hoopsPassed = 1;
+      run.state.revivesThisGame = 1;
+      final pending = const ReviveFlow().show(game, run.summarize());
+      await flushAndMount(game);
+      expect(game.reviveScreen, isNull);
+      expect(await pending, ReviveOutcome.declined);
     },
   );
 }

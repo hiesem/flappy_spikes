@@ -34,6 +34,14 @@ FlappySpikesGame _game(ShowcaseRunPlan plan) {
   )..runSeed = 35;
 }
 
+List<Object> _nextTiming(RunDirector director) => [
+  director.rollSqueezeHold(hoop: 7, index: 1),
+  director.rollPuzzleBonus(),
+  director.rollHourglassDuration(),
+  director.rollBigHoopsDuration(),
+  director.rollSqueezeAt(42, hoop: 12, index: 1),
+];
+
 void main() {
   for (final starter in [Powerup.none, Powerup.shield, Powerup.bigHoops]) {
     FlameTester<FlappySpikesGame>(
@@ -64,6 +72,10 @@ void main() {
         expect(game.menu.slot.armed, Powerup.none);
         expect(run.spawner.hoops, isNotEmpty);
 
+        // The 60 s override still consumes the normal Big Hoops draw. Drive
+        // the same startup draws on a normal Big Hoops director and compare
+        // the next timing-stream values, so a missing draw cannot shift a
+        // later squeeze, bonus or powerup.
         final baseline = RunDirector(
           seed: 35,
           enabled: const {},
@@ -71,6 +83,22 @@ void main() {
         );
         final rolled = baseline.rollBigHoopsDuration();
         expect(rolled, inInclusiveRange(30, 40));
+        final firstSqueeze = baseline.rollSqueezeAt(
+          0,
+          hoop: 0,
+          index: 0,
+          first: true,
+        );
+        expect(
+          run.state.squeeze.nextAt,
+          firstSqueeze,
+          reason: 'the showcase startup consumed a different timing draw',
+        );
+        expect(
+          _nextTiming(run.director),
+          _nextTiming(baseline),
+          reason: 'the showcase timing stream drifted after Big Hoops',
+        );
       },
     );
   }

@@ -32,8 +32,10 @@ class ReviveFlow implements ReviveScreenFactory {
   Future<ReviveOutcome> show(FlappySpikesGame game, RunSummary s) async {
     final run = game.run;
     if (run == null) return ReviveOutcome.declined;
-    final showcase = run.setup.showcase?.freeRevive ?? false;
-    if (!showcase && run.state.hoopsPassed < ReviveConfig.minHoops) {
+    if (!ReviveLadder.eligible(
+      run.state,
+      showcase: run.setup.showcase?.freeRevive ?? false,
+    )) {
       return ReviveOutcome.declined;
     }
     final screen = ReviveScreen(run);

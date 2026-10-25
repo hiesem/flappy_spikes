@@ -482,6 +482,62 @@ void main() {
         }
       });
 
+      test('a shorter plan restores its unscheduled tail (${entry.key})', () {
+        final s = scheduler();
+        final first = planAt(
+          tz.TZDateTime(amsterdam, 2026, 10, 8, 9),
+          withScheduler: s,
+          metElements: entry.value,
+        );
+        final shorter = planAt(
+          tz.TZDateTime(amsterdam, 2026, 10, 8, 11, 30),
+          withScheduler: s,
+          state: first.state,
+          pending: pendingOf(first),
+          metElements: entry.value,
+        );
+        expect(first.reminders, hasLength(14));
+        expect(shorter.reminders, hasLength(13));
+        expect(
+          shorter.reminders.map((r) => r.messageNumber),
+          first.reminders.take(13).map((r) => r.messageNumber),
+        );
+        final afterDelivery = tz.TZDateTime(amsterdam, 2026, 10, 8, 22);
+        final pending = pendingOf(shorter)
+            .where((p) => p.time.isAfter(afterDelivery))
+            .toList();
+        expect(pending, hasLength(12));
+        final expanded = planAt(
+          afterDelivery,
+          withScheduler: s,
+          state: shorter.state,
+          pending: pending,
+          metElements: entry.value,
+        );
+        expect(expanded.reminders, hasLength(14));
+        expect(
+          expanded.reminders.take(13).map((r) => r.messageNumber),
+          first.reminders.skip(1).map((r) => r.messageNumber),
+          reason: 'the canceled tail must follow the still-pending messages',
+        );
+        expect(
+          expanded.reminders.map((r) => r.messageNumber),
+          isNot(contains(first.reminders.first.messageNumber)),
+          reason: 'the delivered message remains consumed',
+        );
+        final repeated = planAt(
+          afterDelivery.add(const Duration(minutes: 5)),
+          withScheduler: s,
+          state: expanded.state,
+          pending: pendingOf(expanded),
+          metElements: entry.value,
+        );
+        expect(
+          repeated.reminders.map((r) => r.messageNumber),
+          expanded.reminders.map((r) => r.messageNumber),
+        );
+      });
+
       test('delivered slots advance the rotation (${entry.key})', () {
         final s = scheduler();
         final first = planAt(
@@ -740,6 +796,45 @@ void main() {
         reason: 'a failed plan must not burn its canceled pending messages',
       );
     });
+
+    for (final entry in rescheduleElementCases.entries) {
+      test('failed replacement preserves order after reshuffling '
+          '(${entry.key})', () async {
+        await store.saveMetElements({for (final e in entry.value) e.storageId});
+        final reminders = service();
+        await reminders.initialize();
+        List<int>? initialOrder;
+        for (var day = 1; day <= 5; day++) {
+          now = tz.TZDateTime(amsterdam, 2026, 10, day, 9);
+          platform.deliverDue(now);
+          await reminders.reschedule();
+          initialOrder ??= List<int>.of(store.notifOrder);
+        }
+        expect(store.notifOrder, isNot(initialOrder),
+            reason: 'exercise recovery after crossing a shuffle boundary');
+        final before = [
+          for (final raw in platform.pending)
+            ReminderPayload.decode(raw)!.messageNumber,
+        ];
+        final history = Map<int, String>.of(store.notifLastSent);
+        platform.throwOnSchedule = true;
+        now = now.add(const Duration(minutes: 5));
+        await reminders.reschedule();
+        expect(platform.pending, isEmpty);
+        platform.throwOnSchedule = false;
+        now = now.add(const Duration(minutes: 5));
+        await reminders.reschedule();
+        expect(
+          platform.pending.map((raw) => ReminderPayload.decode(raw)!.messageNumber),
+          before,
+          reason: 'retry must preserve the canceled sequence across reshuffles',
+        );
+        for (final message in history.keys.where((m) => !before.contains(m))) {
+          expect(store.notifLastSent[message], history[message],
+              reason: 'delivered history must survive failure recovery');
+        }
+      });
+    }
 
     test('permission is asked once and the result is logged', () async {
       final reminders = service();

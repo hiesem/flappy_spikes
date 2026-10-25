@@ -476,23 +476,35 @@ class ReminderScheduler {
       tzNow,
       lastPlayedAt == null ? null : tz.TZDateTime.from(lastPlayedAt, location),
     );
-    final order = state.order.isEmpty ? _freshOrder() : state.order;
+    final priorOrder = state.order.isEmpty ? _freshOrder() : state.order;
+    final priorPosition = state.position.clamp(0, priorOrder.length);
+    // Recover the actual pending sequence from the payloads: after a shuffle
+    // it may no longer match the order before the cursor. Move it immediately
+    // before the remaining rotation, keeping a permutation of all messages.
+    // This also puts any tail that won't fit the new window back at the cursor
+    // rather than consuming it without scheduling it.
+    final consumed = priorOrder
+        .take(priorPosition)
+        .where((number) => !carriedNumbers.contains(number))
+        .toList();
+    final order = [
+      ...consumed,
+      for (final p in carried) p.messageNumber,
+      ...priorOrder.skip(priorPosition).where(
+        (number) => !carriedNumbers.contains(number),
+      ),
+    ];
     final unscheduled = ReminderState(
       order: order,
-      // A failed replacement follows a successful cancelAll(), so none of the
-      // old plan is pending any more. Start again from the front when it had
-      // pending messages (lastSent still blocks the ones that did fire);
-      // otherwise the cursor already points at the next unsent message.
-      position: carried.isEmpty ? state.position : 0,
+      // cancelAll() removes the previous plan too. Retry its recovered
+      // sequence, with the delivered history intact, if replacement fails.
+      position: consumed.length,
       lastSent: Map<int, String>.of(lastSent),
     );
     final rotation = _Rotation(
       random: _random,
       order: order,
-      // The cursor already sits after the previous plan's pending tail. The
-      // carried messages do not need to be taken again; new slots continue
-      // from where that plan stopped.
-      position: state.position,
+      position: consumed.length + min(carried.length, slots.length),
       unavailableMessages: _unavailableMessages(metElements),
     );
     final toCarry = carried.take(slots.length).toList();

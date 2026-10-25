@@ -79,10 +79,27 @@ void main() {
 
       final wave = formations.build(FormationId.tiltWave, 150);
       expect(wave.map((plan) => plan.tiltDeg), [-30, -15, 0, 15, 30]);
-      expect(
-        wave.map((plan) => plan.centreY),
-        everyElement(wave.first.centreY),
-      );
+      for (var index = 1; index < wave.length; index++) {
+        final plan = wave[index];
+        final approach = plan.centreY - wave[index - 1].centreY;
+        if (plan.tiltDeg != 0) {
+          expect(
+            plan.tiltDeg.sign,
+            approach.sign,
+            reason: 'D7 wave hoop $index follows its approach',
+          );
+        }
+        if (plan.tiltDeg.abs() >= 20) {
+          expect(
+            approach.abs(),
+            greaterThanOrEqualTo(40),
+            reason: 'D2 strong wave tilt $index has the minimum Δy',
+          );
+        }
+      }
+      expect(wave[2].centreY, lessThan(wave[1].centreY));
+      expect(wave[2].centreY, lessThan(wave[3].centreY));
+      expect(wave.first.centreY, wave.last.centreY);
 
       final rails = formations.build(FormationId.syncRails, 150);
       expect(rails.length, anyOf(3, 4));

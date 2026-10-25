@@ -285,32 +285,83 @@ void main() {
   });
 
   test('D2 a hard follow-up clamps only draws above 0.85 × the row max', () {
-    double centre({required double u, required bool hard}) {
-      final sampler =
-          LayoutSampler(
+    // PRD-2.6 D2: independent expected rows, rather than values copied from
+    // LayoutConfig. Start at the opposite edge to leave the most room.
+    const rows = <int, (double, double, double)>{
+      0: (.03, .06, .07),
+      3: (.11, .27, .35),
+      20: (.12, .31, .38),
+      40: (.14, .33, .42),
+      65: (.15, .35, .46),
+      100: (.15, .37, .50),
+    };
+    for (final height in [568.0, 711.0, 730.0]) {
+      final ctx = DirectorContext.open(height);
+      final dyRef = math.min(height - 88, 540.0);
+      for (final entry in rows.entries) {
+        final hoop = entry.key;
+        final row = entry.value;
+        for (final sign in [-1.0, 1.0]) {
+          double draw(double u, {required bool hard, bool explicit = false}) {
+            final sampler = LayoutSampler(
               DirectorTables.prd2,
               _DrawQueue([u, .9]), // Δy draw, then no direction flip.
-            )
-            ..lastY = 200
-            ..lastSign = 1;
-      if (hard) {
-        sampler.noteModifiers(motion: const MotionSpec(type: MotionType.rail));
+            );
+            final (lo, hi) = sampler.limits(
+              hoop,
+              ctx,
+              RunConfig.openingFor(hoop),
+            );
+            final previous = sign > 0 ? lo : hi;
+            sampler
+              ..lastY = previous
+              ..lastSign = sign;
+            if (hard && !explicit) {
+              sampler.noteModifiers(
+                motion: const MotionSpec(type: MotionType.rail),
+              );
+            }
+            return (sampler.nextCentre(
+                      hoop,
+                      ctx,
+                      RunConfig.openingFor(hoop),
+                      hardFollowUp: hard && explicit,
+                    ) -
+                    previous) *
+                sign;
+          }
+
+          // u=.25 gives half the median; u=.96 gives 60% of the p90→max
+          // segment. Include the maximum draw and both hard-marker APIs.
+          for (final u in [.25, .96, 1.0]) {
+            final normal =
+                (u == .25
+                    ? row.$1 * .5
+                    : row.$2 + (row.$3 - row.$2) * ((u - .9) / .1)) *
+                dyRef;
+            final clamped = math.min(normal, .85 * row.$3 * dyRef);
+            final bounds = LayoutSampler(
+              DirectorTables.prd2,
+              math.Random(1),
+            ).limits(hoop, ctx, RunConfig.openingFor(hoop));
+            // At 568 pt the row-3 centre span is slightly below its Δy max.
+            final span = bounds.$2 - bounds.$1;
+            expect(
+              draw(u, hard: false),
+              closeTo(math.min(normal, span), 1e-9),
+              reason: 'normal hoop $hoop, height $height, sign $sign, u $u',
+            );
+            for (final explicit in [false, true]) {
+              expect(
+                draw(u, hard: true, explicit: explicit),
+                closeTo(math.min(clamped, span), 1e-9),
+                reason: 'hard hoop $hoop, height $height, sign $sign, u $u',
+              );
+            }
+          }
+        }
       }
-      return sampler.nextCentre(
-        100,
-        DirectorContext.open(711),
-        RunConfig.openingFor(100),
-      );
     }
-
-    // The normal draw is unchanged: 0.075 × 540 = 40.5 pt.
-    expect(centre(u: .25, hard: false), closeTo(240.5, 1e-9));
-    expect(centre(u: .25, hard: true), closeTo(240.5, 1e-9));
-
-    // The normal draw is 241.92 pt; after a hard hoop its magnitude is
-    // clamped to 0.85 × (0.50 × 540) = 229.5 pt.
-    expect(centre(u: .96, hard: false), closeTo(441.92, 1e-9));
-    expect(centre(u: .96, hard: true), closeTo(429.5, 1e-9));
   });
 
   test('D2 motion rows own their type, travel, and speed ranges', () {

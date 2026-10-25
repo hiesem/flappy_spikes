@@ -7,6 +7,7 @@ import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/run/director/layout_sampler.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
+import 'package:flappy_spikes/run/hoops/motion/hoop_motion.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _plain = {
@@ -58,16 +59,39 @@ MotionRow _motionRowFor(int hoopIndex) {
   return row;
 }
 
+double _motionPeriod(MotionSpec spec) {
+  final amplitude = spec.amplitudeDeg * math.pi / 180;
+  return switch (spec.type) {
+    MotionType.rail || MotionType.horizontal || MotionType.diagonal =>
+      spec.speed <= 0 ? 1 : 4 * spec.halfTravel / spec.speed,
+    MotionType.swing =>
+      spec.speed > 0 && spec.rope > 0 && amplitude > 0
+          ? 2 * math.pi * spec.rope * amplitude / spec.speed
+          : (spec.period > 0 ? spec.period : 1),
+    MotionType.orbit => spec.omega <= 0 ? 1 : 2 * math.pi / spec.omega,
+    MotionType.rock => spec.period > 0 ? spec.period : 1,
+  };
+}
+
+final class _DrawQueue implements math.Random {
+  _DrawQueue(this.values);
+
+  final List<double> values;
+  var _next = 0;
+
+  @override
+  double nextDouble() => values[_next++];
+
+  @override
+  bool nextBool() => false;
+
+  @override
+  int nextInt(int max) => 0;
+}
+
 void main() {
   test('D2 data rows use point-based Δy and magnitude tilts', () {
-    expect(LayoutConfig.bands.map((row) => row.from), [
-      0,
-      3,
-      20,
-      40,
-      65,
-      100,
-    ]);
+    expect(LayoutConfig.bands.map((row) => row.from), [0, 3, 20, 40, 65, 100]);
     expect(LayoutConfig.dyRefBand, 540);
     expect(LayoutConfig.hardHoopDyFactor, 0.85);
     expect(LayoutConfig.tiltRows, {
@@ -94,6 +118,40 @@ void main() {
       '100_30': 30,
       '100_45': 25,
     });
+  });
+
+  test('D2 PRD rows keep their exact centre and Δy fractions', () {
+    const rows = <int, ((double, double), (double, double, double))>{
+      0: ((.45, .55), (.03, .06, .07)),
+      3: ((.33, .67), (.11, .27, .35)),
+      20: ((.27, .70), (.12, .31, .38)),
+      40: ((.24, .73), (.14, .33, .42)),
+      65: ((.20, .76), (.15, .35, .46)),
+      100: ((.16, .78), (.15, .37, .50)),
+    };
+    final bands = LayoutConfig.bands;
+    expect(bands.map((row) => row.from), rows.keys);
+    for (var i = 0; i < bands.length; i++) {
+      final band = bands[i];
+      final expected = rows[band.from]!;
+      expect(band.centre, expected.$1, reason: 'centre row ${band.from}');
+      expect(band.dy, expected.$2, reason: 'Δy row ${band.from}');
+    }
+    // PRD-2.6 D2 has no separate hoop-10 row: hoops 10–19 use the 3–19 row.
+    expect(LayoutConfig.bandFor(10), same(LayoutConfig.bandFor(3)));
+    expect(LayoutConfig.bandFor(10).centre, (.33, .67));
+  });
+
+  test('D2 centre limits use the full band above the design height', () {
+    const viewHeight = 730.0;
+    const band = viewHeight - 2 * RunConfig.stripHeight;
+    const mid = viewHeight / 2;
+    final ctx = DirectorContext.open(viewHeight);
+    final sampler = LayoutSampler(DirectorTables.prd2, math.Random(1));
+    final (lo, hi) = sampler.limits(100, ctx, RunConfig.openingFor(100));
+
+    expect(lo, closeTo(mid + (.16 - .5) * band, 1e-9));
+    expect(hi, closeTo(mid + (.78 - .5) * band, 1e-9));
   });
 
   test('D2 tilt magnitudes follow the row weights', () {
@@ -181,16 +239,12 @@ void main() {
     }
   });
 
-  test('D2 Δy is point-based, height-capped, reduced after hard hoops, and '
-      'stable above the cap', () {
+  test('D2 Δy is point-based and reduced after hard hoops', () {
     final shortPlans = [
       for (var seed = 1; seed <= 100; seed++) _course(seed, 568),
     ];
     final tallPlans = [
       for (var seed = 1; seed <= 100; seed++) _course(seed, 711),
-    ];
-    final widestPlans = [
-      for (var seed = 1; seed <= 100; seed++) _course(seed, 730),
     ];
 
     for (final plans in shortPlans) {
@@ -210,12 +264,15 @@ void main() {
         expect(dy, lessThanOrEqualTo(limit + 1e-9));
       }
     }
-    for (var run = 0; run < tallPlans.length; run++) {
-      for (var i = 1; i < tallPlans[run].length; i++) {
-        final tall = tallPlans[run][i].centreY - tallPlans[run][i - 1].centreY;
-        final wide =
-            widestPlans[run][i].centreY - widestPlans[run][i - 1].centreY;
-        expect(tall, closeTo(wide, 1e-9), reason: 'run ${run + 1}, hoop $i');
+    // A taller view keeps the point-space Δy cap even though the centre rows
+    // (issue #97 / D2) use the full band as their denominator.
+    for (var seed = 1; seed <= 100; seed++) {
+      final plans = _course(seed, 730);
+      for (var i = 1; i < plans.length; i++) {
+        final dy = (plans[i].centreY - plans[i - 1].centreY).abs();
+        final previous = plans[i - 1];
+        final hard = previous.motion != null || previous.tiltDeg.abs() >= 30;
+        expect(dy, lessThanOrEqualTo((hard ? 270 * 0.85 : 270) + 1e-9));
       }
     }
 
@@ -225,6 +282,35 @@ void main() {
       sampler.maxDy(100, ctx, hardFollowUp: true),
       closeTo(270 * 0.85, 1e-9),
     );
+  });
+
+  test('D2 a hard follow-up clamps only draws above 0.85 × the row max', () {
+    double centre({required double u, required bool hard}) {
+      final sampler =
+          LayoutSampler(
+              DirectorTables.prd2,
+              _DrawQueue([u, .9]), // Δy draw, then no direction flip.
+            )
+            ..lastY = 200
+            ..lastSign = 1;
+      if (hard) {
+        sampler.noteModifiers(motion: const MotionSpec(type: MotionType.rail));
+      }
+      return sampler.nextCentre(
+        100,
+        DirectorContext.open(711),
+        RunConfig.openingFor(100),
+      );
+    }
+
+    // The normal draw is unchanged: 0.075 × 540 = 40.5 pt.
+    expect(centre(u: .25, hard: false), closeTo(240.5, 1e-9));
+    expect(centre(u: .25, hard: true), closeTo(240.5, 1e-9));
+
+    // The normal draw is 241.92 pt; after a hard hoop its magnitude is
+    // clamped to 0.85 × (0.50 × 540) = 229.5 pt.
+    expect(centre(u: .96, hard: false), closeTo(441.92, 1e-9));
+    expect(centre(u: .96, hard: true), closeTo(429.5, 1e-9));
   });
 
   test('D2 motion rows own their type, travel, and speed ranges', () {
@@ -263,6 +349,58 @@ void main() {
     });
     expect(counts[90]!.keys, MotionType.values.toSet());
     expect(counts[120]!.keys, MotionType.values.toSet());
+  });
+
+  test('D2 a moving ring\'s rendered angle stays under 15° / 30°', () {
+    final seenBefore = <MotionType>{};
+    final seenAfter = <MotionType>{};
+    for (var seed = 1; seed <= 50; seed++) {
+      for (final plan in _course(seed, 711)) {
+        final spec = plan.motion;
+        if (spec == null) continue;
+        (plan.index >= 150 ? seenAfter : seenBefore).add(spec.type);
+        final cap = plan.index >= 150 ? 30.0 : 15.0;
+        final motion = HoopMotion.fromSpec(spec);
+        final period = _motionPeriod(spec);
+        for (var n = 0; n <= 1000; n++) {
+          motion.poseAt(period * n / 1000);
+          final rendered = plan.tiltDeg * math.pi / 180 + motion.angleOffset;
+          expect(
+            rendered.abs() * 180 / math.pi,
+            lessThanOrEqualTo(cap + 1e-6),
+            reason: '$spec at hoop ${plan.index}',
+          );
+        }
+      }
+    }
+    expect(seenBefore, containsAll([MotionType.swing, MotionType.orbit]));
+    expect(seenAfter, containsAll([MotionType.swing, MotionType.orbit]));
+  });
+
+  test('D2 swing speed comes from its motion row and the rope geometry', () {
+    var swings = 0;
+    for (var seed = 1; seed <= 80; seed++) {
+      for (final plan in _course(seed, 711)) {
+        final spec = plan.motion;
+        if (spec?.type != MotionType.swing) continue;
+        swings++;
+        final row = _motionRowFor(plan.index);
+        expect(spec!.speed, inInclusiveRange(row.speed.$1, row.speed.$2));
+        expect(spec.speed, lessThanOrEqualTo(42));
+
+        final motion = HoopMotion.fromSpec(spec);
+        final period = _motionPeriod(spec);
+        var peak = 0.0;
+        for (var n = 0; n <= 2000; n++) {
+          motion.poseAt(period * n / 2000);
+          peak = math.max(peak, motion.velocity.length);
+        }
+        expect(peak, closeTo(spec.speed, .01));
+        expect(peak, inInclusiveRange(row.speed.$1, row.speed.$2));
+        expect(peak, lessThanOrEqualTo(42));
+      }
+    }
+    expect(swings, greaterThan(0));
   });
 
   test('D2 same seed and context sequence produce the same plans', () {

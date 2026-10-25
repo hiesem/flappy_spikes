@@ -75,11 +75,11 @@ timeout_s = 1800
 fallback = "fallback_opus"    # owner 2026-10-24: Opus 5.5 medium
 
 [roles.tester3]
-kind = "codex"
-model = "gpt-6.1-sol"
-effort = "high"
+kind = "claude"
+model = "claude-opus-5-5"    # owner 2026-10-25: Opus 5.5 medium tests round 3 (was Sol high)
+effort = "medium"
 timeout_s = 1800
-fallback = "fallback_opus"    # owner 2026-10-24: Opus 5.5 medium; checks round 3 when Sol built it (preferred)
+fallback = "fallback_sol_high"    # owner 2026-10-25: Sol 6.1 high
 
 [roles.tester1]    # owner 2026-10-25: Opus 5.5 medium tests round 1 (Sol builds it)
 kind = "claude"
@@ -98,7 +98,7 @@ idle_timeout_s = 900
 home = "~/.local/state/df4/flappy-spikes/codex-openrouter"
 env_file = "~/.config/duofoundry/openrouter.env"
 
-[roles.fallback_sol_high]    # tester1's fallback (owner 2026-10-25)
+[roles.fallback_sol_high]    # fallback of tester1 and tester3 (owner 2026-10-25)
 kind = "codex"
 model = "gpt-6.1-sol"
 effort = "high"
@@ -111,7 +111,7 @@ effort = "medium"
 network = true
 timeout_s = 2400
 
-[roles.fallback_opus]    # fallback of builder3, tester and tester3 (owner 2026-10-24)
+[roles.fallback_opus]    # fallback of builder3 and tester (owner 2026-10-24)
 kind = "claude"
 model = "claude-opus-5-5"
 effort = "medium"

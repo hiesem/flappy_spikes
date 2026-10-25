@@ -26,11 +26,7 @@ void main() {
       scheduler.flapDue(now);
       planned = scheduler.plannedFlapTimes.length;
     }
-    for (
-      var frame = baseFlaps * 27;
-      scheduler.flapTimes.length < baseFlaps + scheduler.extraFlaps;
-      frame++
-    ) {
+    for (var frame = baseFlaps * 27; scheduler.pendingFlaps > 0; frame++) {
       scheduler.flapDue(frame / 60);
     }
     return scheduler;
@@ -52,6 +48,8 @@ void main() {
       const flaps = 1000;
       final scheduler = schedule(seed: 7, baseFlaps: flaps);
       final offsets = scheduler.baseFlapOffsets;
+      expect(offsets, hasLength(flaps));
+      expect(scheduler.flapTimes, hasLength(flaps + scheduler.extraFlaps));
       final mean = offsets.reduce((a, b) => a + b) / flaps;
       final variance =
           offsets
@@ -65,6 +63,52 @@ void main() {
       expect(scheduler.extraFlaps / flaps, closeTo(.1, .02));
     },
   );
+
+  test('caller-observed base flaps include early and late 90 ms offsets', () {
+    // PRD-2.6 §0.3 item 4: measure the returned actions on a frame clock,
+    // independently of the scheduler's diagnostic jitter/offset lists.
+    final scheduler = HumanNoiseFlapScheduler(seed: 7, extraFlapChance: 0);
+    final emitted = <double>[];
+    const count = 1000;
+    for (var frame = 0; frame < (count + 1) * 60; frame++) {
+      final now = frame / 60;
+      if (frame % 60 == 0 && frame < count * 60) {
+        scheduler.planBase(now + .4, now: now);
+      }
+      if (scheduler.flapDue(now)) emitted.add(now);
+    }
+    expect(emitted, hasLength(count));
+    final offsets = List.generate(count, (i) => emitted[i] - (i + .4));
+    final mean = offsets.reduce((a, b) => a + b) / count;
+    final variance =
+        offsets
+            .map((offset) => math.pow(offset - mean, 2))
+            .reduce((a, b) => a + b) /
+        (count - 1);
+    expect(offsets.where((offset) => offset < 0).length, greaterThan(400));
+    expect(offsets.where((offset) => offset > 0).length, greaterThan(400));
+    expect(mean * 1000, closeTo(0, 10));
+    expect(math.sqrt(variance) * 1000, closeTo(90, 10));
+    expect(scheduler.baseFlapOffsets, orderedEquals(offsets));
+    expect(scheduler.flapTimes, orderedEquals(emitted));
+  });
+
+  test('offsets record the polling frame even when a flap is overdue', () {
+    final scheduler = HumanNoiseFlapScheduler(
+      seed: 7,
+      jitterSigma: 0,
+      extraFlapChance: 1,
+    );
+    scheduler.planBase(1, now: 0);
+    expect(scheduler.flapDue(.9), isFalse);
+    expect(scheduler.flapDue(1.05), isTrue);
+    expect(scheduler.baseFlapOffsets.single, closeTo(.05, 1e-9));
+    expect(scheduler.flapDue(1.1), isTrue);
+    expect(scheduler.baseFlapOffsets, hasLength(1));
+    expect(scheduler.extraFlaps, 1);
+    expect(scheduler.flapTimes, [1.05, 1.1]);
+    expect(scheduler.pendingFlaps, 0);
+  });
 
   for (final height in [568.0, 711.0]) {
     FlameTester(

@@ -33,12 +33,16 @@ void main() {
       verify: (game, _) async {
         final run = await startRun(game);
         final bot = HumanNoiseBot(run, seed: 37);
+        final emitted = <double>[];
         for (
           var frame = 0;
           frame < 60 * 240 && game.state.name == 'playing';
           frame++
         ) {
-          if (bot.shouldFlap()) game.onScreenTap();
+          if (bot.shouldFlap()) {
+            emitted.add(run.state.runClock);
+            game.onScreenTap();
+          }
           game.update(1 / 60);
           if (frame % 10 == 9) await flushAndMount(game);
         }
@@ -47,6 +51,7 @@ void main() {
             .map((offset) => offset * 1000)
             .toList();
         expect(offsets.length, greaterThan(20));
+        expect(bot.flapTimes, orderedEquals(emitted));
         expect(offsets.any((offset) => offset < 0), isTrue);
         expect(_sd(offsets), closeTo(90, 10));
         expect(_mean(offsets), closeTo(0, 10));

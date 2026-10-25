@@ -18,7 +18,7 @@ import '../hoop.dart';
 ///   slide (axis 90°) and diagonal slides (±52° off vertical = ±38° off
 ///   horizontal) — a constant-speed ping-pong along the axis.
 /// - [SwingMotion]: hangs from a rope whose pivot is above the top spikes,
-///   ±15°, period 1.8 s; the ring stays in line with the rope.
+///   ±15° with its row speed; the ring stays in line with the rope.
 /// - [OrbitMotion]: an ellipse around the home position, the angle
 ///   changing ±22° along the path.
 /// - [RockMotion]: stays in place and rocks ±15°, period 3 s.
@@ -135,13 +135,20 @@ class RailMotion extends HoopMotion {
 
 /// §3.11 Swing: the ring hangs from a rope of length [MotionSpec.rope] whose
 /// pivot is straight above the home position (above the top spikes); the
-/// rope swings ±[MotionSpec.amplitudeDeg] with [MotionSpec.period]; the ring
-/// stays in line with the rope.
+/// rope swings ±[MotionSpec.amplitudeDeg]; its row speed gives the period
+/// from the geometry, with [MotionSpec.period] as the legacy fallback; the
+/// ring stays in line with the rope.
 class SwingMotion extends HoopMotion {
   SwingMotion(super.spec);
 
   double get _amp => spec.amplitudeDeg * math.pi / 180;
-  double get _omega => spec.period <= 0 ? 0 : 2 * math.pi / spec.period;
+  double get _omega {
+    if (spec.speed > 0 && spec.rope > 0 && _amp > 0) {
+      // Peak rope speed = rope × amplitude × omega (pt/s).
+      return spec.speed / (spec.rope * _amp);
+    }
+    return spec.period <= 0 ? 0 : 2 * math.pi / spec.period;
+  }
 
   /// The rope angle at [t] (radians; positive = ring swung right).
   double ropeAngle(double t) => _amp * math.sin(t * _omega + spec.phase);
@@ -168,11 +175,14 @@ class SwingMotion extends HoopMotion {
 
 /// §3.11 Orbit: an ellipse [MotionSpec.rx] × [MotionSpec.ry] around home at
 /// [MotionSpec.omega] rad/s (clockwise on screen), the ring's angle
-/// changing ±22° along the path.
+/// changing ±[MotionSpec.amplitudeDeg] along the path (22° when omitted).
 class OrbitMotion extends HoopMotion {
   OrbitMotion(super.spec);
 
-  static const double _tilt = LayoutConfig.orbitTiltDeg * math.pi / 180;
+  double get _tilt =>
+      (spec.amplitudeDeg > 0 ? spec.amplitudeDeg : LayoutConfig.orbitTiltDeg) *
+      math.pi /
+      180;
 
   @override
   void poseAt(double t) {

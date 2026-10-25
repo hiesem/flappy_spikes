@@ -75,7 +75,7 @@ void main() async {
     for (final entry in sizes.entries) {
       await capturePng(
         game,
-        '../flappy_spikes/store/screenshots_tablet/${entry.key}_$scene.png',
+        'build/store/screenshots_tablet/${entry.key}_$scene.png',
         entry.value,
       );
     }

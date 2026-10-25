@@ -147,7 +147,9 @@ void main() {
         for (final vh in [568.0, 711.0]) {
           final d = director(seed: seed, enabled: {ElementId.normalHoop});
           final band = vh - 2 * RunConfig.stripHeight;
-          final centreBand = math.min(band, LayoutConfig.dyRefBand);
+          // PRD-2.6 D2: centre rows use the full band; only Δy uses
+          // dyRef = min(band, 540).
+          final centreBand = band;
           final centreMid = vh / 2;
           double? prev;
           for (final (s, _) in fly(d, 90, viewHeight: vh)) {
@@ -168,7 +170,9 @@ void main() {
             if (prev != null) {
               expect(
                 (s.centreY - prev).abs(),
-                lessThanOrEqualTo(row.dy.$3 * centreBand + 1e-6),
+                lessThanOrEqualTo(
+                  row.dy.$3 * math.min(band, LayoutConfig.dyRefBand) + 1e-6,
+                ),
               );
             }
             prev = s.centreY;

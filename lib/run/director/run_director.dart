@@ -1408,12 +1408,13 @@ class RunDirector {
             force: forceMod == ElementId.movingRing,
           );
         }
-        var tiltLimit = RunConfig.maxTiltDeg;
-        if (motion != null) {
-          tiltLimit = i >= 150 ? 30 : 15;
-        } else if (ctx.squeezeWindow && i < 150) {
-          tiltLimit = 15;
-        }
+        // PRD-2.6 D2 caps the rendered ring, not just its base tilt: the
+        // motion's own angular swing must fit under the same 15° / 30° cap.
+        final tiltLimit = _layout.maxBaseTilt(
+          i,
+          motion,
+          squeeze: ctx.squeezeWindow,
+        );
         tilt = _layout.alignedTilt(tilt, approachDy, tiltLimit);
         _layout.noteModifiers(motion: motion, tiltDeg: tilt);
         if (tilt.abs() == 45) {

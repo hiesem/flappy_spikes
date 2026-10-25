@@ -80,6 +80,18 @@ abstract final class LayoutConfig {
   /// PRD-2.6 D2 the Δy ceiling after a moving or strongly tilted hoop.
   static const double hardHoopDyFactor = 0.85;
 
+  /// PRD-2.6 D2 the moving-ring rendered-angle cap before hoop 150.
+  static const double movingTiltCapBefore150Deg = 15;
+
+  /// PRD-2.6 D2 the moving-ring rendered-angle cap from hoop 150.
+  static const double movingTiltCapFrom150Deg = 30;
+
+  /// PRD-2.6 D2 the hoop index where moving rings get the wider tilt cap.
+  static const int movingTiltCapFromHoop = 150;
+
+  /// PRD-2.6 D2 the largest allowed motion speed (pt/s).
+  static const double motionSpeedCap = 42;
+
   /// §3.0.2 The ramp row for [hoopIndex].
   static LayoutBand bandFor(int hoopIndex) {
     var b = bands.first;
@@ -183,11 +195,15 @@ abstract final class LayoutConfig {
     speed: (30, 39),
   );
 
-  /// §3.11 Swing: ±15°, period 1.8 s.
+  /// §3.11 Swing: ±15°; the 1.8 s value is the legacy fallback for specs
+  /// without a director-issued row speed.
   static const SwingTable swing = SwingTable(amplitudeDeg: 15, period: 1.8);
 
   /// §3.11 Orbit: the ring's angle changes ±22° along the path.
   static const double orbitTiltDeg = 22;
+
+  /// PRD-2.6 D2 before hoop 150 an orbit's own angle is capped at 15°.
+  static const double orbitTiltBefore150Deg = 15;
 
   // --- §5.12 guides ------------------------------------------------------------
 

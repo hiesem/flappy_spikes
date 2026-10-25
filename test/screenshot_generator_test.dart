@@ -98,7 +98,9 @@ void main() async {
       // --- shot 1: start scene ---------------------------------------------
       stepGame(game, 0.4); // let the idle animation advance a little
       expect(game.state, GameState.start);
-      await tester.runAsync(() => capturePng(game, '../shots/store_start.png'));
+      await tester.runAsync(
+        () => capturePng(game, 'build/shots/store_start.png'),
+      );
 
       // --- enter playing state ----------------------------------------------
       // PRD-2 (WP-1a): the real hoop course, flown by the hoop-aware
@@ -120,7 +122,7 @@ void main() async {
           reason: 'the bird must have passed real hoops');
       expect(hoopsOf(game), isNotEmpty);
       await tester.runAsync(
-        () => capturePng(game, '../shots/store_gameplay.png'),
+        () => capturePng(game, 'build/shots/store_gameplay.png'),
       );
 
       // --- shot 3: results -----------------------------------------------------
@@ -139,7 +141,7 @@ void main() async {
       await flushAndMount(game);
       expect(game.world.children.query<ResultsScreen>(), hasLength(1));
       await tester.runAsync(
-        () => capturePng(game, '../shots/store_gameover.png'),
+        () => capturePng(game, 'build/shots/store_gameover.png'),
       );
     },
   );

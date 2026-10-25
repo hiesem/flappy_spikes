@@ -28,11 +28,11 @@ void main() {
 
   test('§D2 layout bands replace the spawn-table ramp', () {
     expect(t.bands, same(LayoutConfig.bands));
-    expect(t.bands.map((b) => b.from), [0, 3, 10, 20, 40, 65, 100]);
+    // PRD-2.6 D2 replaces the interim hoop-10 row; hoops 10–19 use row 3.
+    expect(t.bands.map((b) => b.from), [0, 3, 20, 40, 65, 100]);
     expect(t.bands.map((b) => [b.centre.$1, b.centre.$2]), [
       [0.45, 0.55],
       [0.33, 0.67],
-      [0.30, 0.69],
       [0.27, 0.70],
       [0.24, 0.73],
       [0.20, 0.76],
@@ -40,7 +40,6 @@ void main() {
     ]);
     expect(t.bands.map((b) => [b.dy.$1, b.dy.$2, b.dy.$3]), [
       [0.03, 0.06, 0.07],
-      [0.11, 0.27, 0.35],
       [0.11, 0.27, 0.35],
       [0.12, 0.31, 0.38],
       [0.14, 0.33, 0.42],

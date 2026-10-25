@@ -1,3 +1,5 @@
+import 'dart:math' show max;
+
 import '../config/tuning_values.dart';
 import '../elements.dart';
 import 'plans.dart';
@@ -20,7 +22,9 @@ class HazardBudget {
     bool squeeze = false,
   }) {
     final costs = _values.obj('hazard_costs');
-    if (plan.cometHang || plan.duringRide) return 0;
+    if (plan.cometHang || plan.duringRide || _isRewardOrRide(plan.kind)) {
+      return 0;
+    }
 
     var cost = 0.0;
     cost += switch (plan.kind) {
@@ -29,7 +33,7 @@ class HazardBudget {
       HoopKindId.spring => costs['spring']!,
       HoopKindId.pair => costs['pair']!,
       HoopKindId.train => costs['train']!,
-      HoopKindId.normal => 0,
+      HoopKindId.normal ||
       HoopKindId.bullseye ||
       HoopKindId.fever ||
       HoopKindId.luckySpin ||
@@ -83,7 +87,7 @@ class HazardBudget {
       rowP90: rowP90,
       squeeze: squeeze,
     );
-    return _ledgerSum + cost <= budgetAt(plan.index) + _epsilon;
+    return _windowSum + cost <= budgetAt(plan.index) + _epsilon;
   }
 
   void add(
@@ -206,15 +210,10 @@ class HazardBudget {
     if (current.forced) return true;
     final costs = [..._ledger];
     if (costs.length >= windowSize) {
-      costs.removeRange(0, costs.length - (windowSize - 1));
+      costs.removeRange(0, costs.length - (windowSize - 2));
     }
     costs.add(
-      costOf(
-        current,
-        previousY: previousY,
-        rowP90: rowP90,
-        squeeze: squeeze,
-      ),
+      costOf(current, previousY: previousY, rowP90: rowP90, squeeze: squeeze),
     );
     final sum = costs.fold(0.0, (total, cost) => total + cost);
     return sum + nextCost <= budgetAt(nextIndex) + _epsilon;
@@ -239,9 +238,26 @@ class HazardBudget {
     double? previousY,
     double? rowP90,
     bool squeeze = false,
-  }) => _ledgerSum + plan.hazardCost <= budgetAt(plan.index) + _epsilon;
+  }) => _windowSum + plan.hazardCost <= budgetAt(plan.index) + _epsilon;
 
-  double get _ledgerSum => _ledger.fold(0, (sum, cost) => sum + cost);
+  /// The previous three costs only: the candidate fills the fourth slot.
+  double get _windowSum => _ledger
+      .skip(max(0, _ledger.length - (windowSize - 1)))
+      .fold(0.0, (sum, cost) => sum + cost);
+
+  static bool _isRewardOrRide(HoopKindId kind) => switch (kind) {
+    HoopKindId.bullseye ||
+    HoopKindId.fever ||
+    HoopKindId.luckySpin ||
+    HoopKindId.portal ||
+    HoopKindId.rideRing => true,
+    HoopKindId.normal ||
+    HoopKindId.saw ||
+    HoopKindId.switchRing ||
+    HoopKindId.spring ||
+    HoopKindId.pair ||
+    HoopKindId.train => false,
+  };
 
   static const double _epsilon = 0.000001;
 }

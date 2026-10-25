@@ -126,4 +126,35 @@ void main() {
     expect(eventDraws, [5]);
     expect(plainDraws, [5]);
   });
+
+  test('the no-argument schedule is deterministic', () {
+    final first = CalmSchedule();
+    final starts = <int>[];
+    final calmHoops = <bool>[];
+    for (var hoop = 0; hoop <= 230; hoop++) {
+      if (first.remainingAt(hoop) == 3) {
+        starts.add(hoop);
+        first.startAt(hoop, 3);
+      }
+      calmHoops.add(first.isCalm(hoop));
+    }
+
+    for (var run = 0; run < 50; run++) {
+      final schedule = CalmSchedule();
+      final otherStarts = <int>[];
+      final otherCalmHoops = <bool>[];
+      for (var hoop = 0; hoop <= 230; hoop++) {
+        if (schedule.remainingAt(hoop) == 3) {
+          otherStarts.add(hoop);
+          schedule.startAt(hoop, 3);
+        }
+        otherCalmHoops.add(schedule.isCalm(hoop));
+      }
+      expect(otherStarts, starts, reason: 'run $run');
+      expect(otherCalmHoops, calmHoops, reason: 'run $run');
+    }
+
+    expect(starts, [32, 68, 111, 163, 218]);
+    expect(CalmSchedule().dueAt(31), isFalse);
+  });
 }

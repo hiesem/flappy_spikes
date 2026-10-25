@@ -2,6 +2,9 @@ import 'dart:math' show Random, min;
 
 /// PRD-2.6 D4 periodic and event-driven calm stretches.
 class CalmSchedule {
+  /// D4's reference schedule starts at hoop 32. A standalone schedule uses
+  /// this fixed seed; the director always injects its seeded timing stream.
+  static const int _defaultTimingSeed = 4;
   static const _firstMin = 30;
   static const _firstMax = 34;
   static const _intervalMultiplier = 1.2;
@@ -14,7 +17,8 @@ class CalmSchedule {
   /// [timing] supplies only the first periodic calm draw. That draw happens
   /// now, before any run-event outcome, so event suppression can never change
   /// the number or order of stream draws.
-  CalmSchedule([Random? timing]) : _timing = timing ?? Random() {
+  CalmSchedule([Random? timing])
+    : _timing = timing ?? Random(_defaultTimingSeed) {
     final first = _rollFirst(_timing);
     _nextPeriodicAt = first.toDouble();
     _nextInterval = _firstMin * _intervalMultiplier;

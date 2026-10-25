@@ -63,7 +63,6 @@ void main() {
     expect(LayoutConfig.bands.map((row) => row.from), [
       0,
       3,
-      10,
       20,
       40,
       65,

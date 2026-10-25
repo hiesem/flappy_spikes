@@ -312,8 +312,11 @@ void main() {
         final first = hoopsOf(game).first;
         expect(first.plan.motion, isNotNull);
         expect(first.motion, isA<HoopMotion>());
+        // PRD-2.6 D2 motion rows introduce swings from hoop 35; their arc
+        // may already reach left of the off-screen home. The spawn contract
+        // is on the home plane, shared with the guide below.
         expect(
-          first.planeX,
+          first.basePosition.x,
           greaterThan(run.state.camX + 320),
           reason: 'off-screen right',
         );

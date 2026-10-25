@@ -67,6 +67,13 @@ void main() {
       };
       const tiltCosts = [0.0, .25, .25, 1.0, 1.5];
       const motionCosts = [0.0, 1.0, 1.0, 1.25, 1.25, 1.25, 1.25];
+      const zeroCostElements = {
+        HoopKindId.bullseye,
+        HoopKindId.fever,
+        HoopKindId.luckySpin,
+        HoopKindId.portal,
+        HoopKindId.rideRing,
+      };
 
       for (final element in elements) {
         for (var tiltIndex = 0; tiltIndex < tilts.length; tiltIndex++) {
@@ -77,12 +84,13 @@ void main() {
           ) {
             for (final aboveP90 in [false, true]) {
               for (final squeeze in [false, true]) {
-                final expected =
-                    elementCosts[element]! +
-                    tiltCosts[tiltIndex] +
-                    motionCosts[motionIndex] +
-                    (aboveP90 ? 1 : 0) +
-                    (squeeze ? 1 : 0);
+                final expected = zeroCostElements.contains(element)
+                    ? 0.0
+                    : elementCosts[element]! +
+                          tiltCosts[tiltIndex] +
+                          motionCosts[motionIndex] +
+                          (aboveP90 ? 1 : 0) +
+                          (squeeze ? 1 : 0);
                 final actual = budget.costOf(
                   plan(
                     160,
@@ -135,11 +143,64 @@ void main() {
       budget.add(plan(104, HoopKindId.saw));
       expect(budget.allows(plan(105, HoopKindId.normal)), isFalse); // 8 > 5.2
       budget.add(plan(105, HoopKindId.normal));
-      expect(budget.allows(plan(106, HoopKindId.normal)), isFalse); // 6 > 5.24
+      expect(budget.allows(plan(106, HoopKindId.normal)), isTrue); // 4 ≤ 5.24
       budget.add(plan(106, HoopKindId.normal));
-      expect(budget.allows(plan(107, HoopKindId.normal)), isTrue); // 4 ≤ 5.28
+      expect(budget.allows(plan(107, HoopKindId.normal)), isTrue); // 2 ≤ 5.28
     },
   );
+
+  test('a following-slot reservation uses the preceding two slots', () {
+    final budget = HazardBudget();
+    for (final index in [100, 101, 102, 103]) {
+      budget.add(plan(index, HoopKindId.saw));
+    }
+
+    // Hoops 100–103 cost 8, but the current slot plus the reserved next slot
+    // are the other two entries of the four-slot window. Only hoops 102–103
+    // are still relevant, so 4 fits the budget at 105.
+    expect(
+      budget.allowsFollowing(
+        plan(104, HoopKindId.normal),
+        nextCost: 0,
+        nextIndex: 105,
+      ),
+      isTrue,
+    );
+  });
+
+  test('the oldest cost expires when the fifth slot is checked', () {
+    final budget = HazardBudget();
+    budget.add(plan(100, HoopKindId.saw));
+    budget.add(plan(101, HoopKindId.spring));
+    budget.add(plan(102, HoopKindId.spring));
+    budget.add(plan(103, HoopKindId.spring));
+
+    // Hoop 100's cost expires when hoop 104 is the fifth slot checked: the
+    // four slots 101–104 cost 1.5 + 2 = 3.5, not 5.5.
+    expect(budget.allows(plan(104, HoopKindId.saw)), isTrue);
+    budget.add(plan(104, HoopKindId.saw));
+    // Hoop 101 also expires here: the four slots 102–105 cost 3 + 2 = 5.
+    expect(budget.allows(plan(105, HoopKindId.saw)), isTrue);
+  });
+
+  test('downgrade checks the preceding three slots, not four', () {
+    final budget = HazardBudget();
+    budget.add(plan(100, HoopKindId.saw));
+    budget.add(plan(101, HoopKindId.spring));
+    budget.add(plan(102, HoopKindId.spring));
+    budget.add(plan(103, HoopKindId.spring));
+    final original = plan(
+      104,
+      HoopKindId.switchRing,
+      tiltDeg: 45,
+      motion: MotionType.horizontal,
+    );
+
+    final downgraded = budget.downgrade(original);
+    expect(downgraded.motion, isNull);
+    expect(downgraded.tiltDeg, 45);
+    expect(downgraded.hazardCost, 3);
+  });
 
   test('downgrade applies one step when dropping motion is enough', () {
     final budget = HazardBudget();
@@ -202,21 +263,38 @@ void main() {
 
   test('reward and ride slots always cost zero', () {
     final budget = HazardBudget();
-    final comet = plan(
-      100,
-      HoopKindId.normal,
-      tiltDeg: 45,
-      motion: MotionType.rock,
-      centreY: 150,
-    ).copyWith(cometHang: true);
-    final ride = plan(
-      101,
-      HoopKindId.normal,
-      centreY: 150,
-    ).copyWith(duringRide: true);
+    final zeroSlots = <SlotPlan>[
+      for (final kind in const [
+        HoopKindId.bullseye,
+        HoopKindId.fever,
+        HoopKindId.luckySpin,
+        HoopKindId.portal,
+        HoopKindId.rideRing,
+      ])
+        plan(100, kind, tiltDeg: 45, motion: MotionType.rock, centreY: 150),
+      plan(
+        100,
+        HoopKindId.normal,
+        tiltDeg: 45,
+        motion: MotionType.rock,
+        centreY: 150,
+      ).copyWith(cometHang: true),
+      plan(
+        100,
+        HoopKindId.normal,
+        tiltDeg: 45,
+        motion: MotionType.rock,
+        centreY: 150,
+      ).copyWith(duringRide: true),
+    ];
 
-    expect(budget.costOf(comet, previousY: 100, rowP90: 40, squeeze: true), 0);
-    expect(budget.costOf(ride, previousY: 100, rowP90: 40, squeeze: true), 0);
+    for (final slot in zeroSlots) {
+      expect(
+        budget.costOf(slot, previousY: 100, rowP90: 40, squeeze: true),
+        0,
+        reason: slot.kind.name,
+      );
+    }
   });
 
   test('downgrade can reduce delta-y to the row p90', () {

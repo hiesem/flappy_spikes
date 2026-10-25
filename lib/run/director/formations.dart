@@ -217,13 +217,19 @@ class Formations {
 
   List<SlotPlan> _tiltWave(int start, double x, double y) {
     const tilts = [-30.0, -15.0, 0.0, 15.0, 30.0];
+    // PRD-2.6 D2/D7: strong tilts follow their approach sign, so the wave
+    // rises through the negative tilts to the upright apex and descends
+    // through the positive ones. A step of the minimum aligned Δy keeps every
+    // approach valid without changing the angles or the 310 pt plane spacing.
+    final step = TuningValues.current.d('tilt_align_min_dy');
+    const path = [0.0, -1.0, -2.0, -1.0, 0.0];
     return [
       for (var offset = 0; offset < tilts.length; offset++)
         _slot(
           id: FormationId.tiltWave,
           index: start + offset,
           trackX: x + offset * RunConfig.spacing,
-          centreY: y,
+          centreY: y + path[offset] * step,
           tiltDeg: tilts[offset],
           hazardCost: switch (tilts[offset].abs()) {
             30 => 1,

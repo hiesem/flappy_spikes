@@ -125,6 +125,10 @@ class AnalyticsRouter extends RunFeature {
   final Map<int, SlotPlan> _plans = {};
   final List<Hoop> _unannouncedHoops = [];
   final List<Pickup> _unannouncedPickups = [];
+  // Remember which candidates came from the spawner so its live collection
+  // remains authoritative even while removed objects are still fading out.
+  final Set<Hoop> _spawnerHoops = {};
+  final Set<Pickup> _spawnerPickups = {};
   Hoop? _announcingHoop;
   Pickup? _announcingPickup;
   int _calmCount = 0;
@@ -183,6 +187,7 @@ class AnalyticsRouter extends RunFeature {
   void _onHoopSpawned(HoopSpawned e) {
     final plan = e.plan;
     _unannouncedHoops.add(e.hoop);
+    if (_c!.run.spawner.hoops.contains(e.hoop)) _spawnerHoops.add(e.hoop);
     if (_plans.containsKey(plan.index)) return;
     _plans[plan.index] = plan;
     if (plan.calm) _calmCount++;
@@ -235,6 +240,10 @@ class AnalyticsRouter extends RunFeature {
 
   Hoop? _hoopFor(ElementId element) {
     if (element == ElementId.squeeze) return null;
+    final live = _c!.run.spawner.hoops;
+    _unannouncedHoops.removeWhere(
+      (h) => _spawnerHoops.contains(h) && !live.contains(h),
+    );
     if (element == ElementId.angledRing) {
       return _announcingHoop?.plan.tiltDeg == 0 ? null : _announcingHoop;
     }
@@ -243,6 +252,7 @@ class AnalyticsRouter extends RunFeature {
     }
     Hoop? hoop;
     for (final candidate in _unannouncedHoops) {
+      if (_spawnerHoops.contains(candidate) && !candidate.announced) continue;
       final matches = element == ElementId.angledRing
           ? candidate.plan.tiltDeg != 0
           : element == ElementId.movingRing
@@ -259,16 +269,29 @@ class AnalyticsRouter extends RunFeature {
   }
 
   Pickup? _pickupFor(ElementId element) {
+    final live = _c!.run.spawner.pickups;
+    _unannouncedPickups.removeWhere(
+      (p) => _spawnerPickups.contains(p) && !live.contains(p),
+    );
     final current = _announcingPickup;
-    if (current != null && _pickupMatches(current, element)) return current;
+    if (current != null &&
+        current.id != element &&
+        (!_spawnerPickups.contains(current) || live.contains(current)) &&
+        _pickupMatches(current, element)) {
+      return current;
+    }
     Pickup? pickup;
     for (final candidate in _unannouncedPickups) {
+      if (_spawnerPickups.contains(candidate) && !candidate.announced) continue;
       if (_pickupMatches(candidate, element)) {
         pickup = candidate;
         break;
       }
     }
-    if (pickup != null) _announcingPickup = pickup;
+    if (pickup != null) {
+      _unannouncedPickups.remove(pickup);
+      _announcingPickup = pickup;
+    }
     return pickup;
   }
 
@@ -280,6 +303,25 @@ class AnalyticsRouter extends RunFeature {
   }
 
   SlotPlan? _hoopForPickup(Pickup pickup) {
+    final spawner = _c!.run.spawner;
+    final item = pickup.plan;
+    bool matches(GapItemPlan candidate) =>
+        item != null &&
+        candidate.trackX == item.trackX &&
+        candidate.kind == item.kind &&
+        candidate.extra == item.extra;
+    // Attached items can precede their hoop; a gap item belongs to the gap's
+    // index even when comet replanning has moved the neighbouring hoops.
+    for (final slot in spawner.slotLog.reversed) {
+      if (slot.attached.any(matches)) return slot;
+    }
+    for (final gap in spawner.gapLog.reversed) {
+      if (gap.items.any(matches)) {
+        for (final slot in spawner.slotLog.reversed) {
+          if (slot.index == gap.index) return slot;
+        }
+      }
+    }
     SlotPlan? host;
     for (final plan in _plans.values) {
       if (plan.trackX <= pickup.position.x &&
@@ -293,6 +335,9 @@ class AnalyticsRouter extends RunFeature {
 
   void _onPickupSpawned(PickupSpawned e) {
     _unannouncedPickups.add(e.pickup);
+    if (_c!.run.spawner.pickups.contains(e.pickup)) {
+      _spawnerPickups.add(e.pickup);
+    }
   }
 
   void _onHoopPassed(HoopPassed e) {
@@ -323,6 +368,8 @@ class AnalyticsRouter extends RunFeature {
   }
 
   void _setSurvived(_PendingFirstMeet meet, bool survived) {
+    if (meet.resolved) return;
+    meet.resolved = true;
     meet.survived = survived;
     _c?.game.ftueTracker.firstMeetOutcome(meet.element, survived: survived);
   }
@@ -368,16 +415,15 @@ class AnalyticsRouter extends RunFeature {
   void _onSqueezeChanged(SqueezePhaseChanged e) {
     if (e.phase == SqueezePhase.warning) _squeezes++;
     for (final meet in _pendingFirstMeets.values) {
-      if (meet.element != ElementId.squeeze || meet.squeezeIndex != e.index) {
-        continue;
-      }
-      if (e.phase == SqueezePhase.opening) {
+      if (meet.element != ElementId.squeeze || meet.resolved) continue;
+      // SqueezeFeature advances the index before emitting idle.
+      if (e.phase == SqueezePhase.idle &&
+          e.index == meet.squeezeIndex! + 1 &&
+          meet.sawOpening) {
+        _setSurvived(meet, true);
+      } else if (e.index == meet.squeezeIndex &&
+          e.phase == SqueezePhase.opening) {
         meet.sawOpening = true;
-      } else if (e.phase == SqueezePhase.idle) {
-        _setSurvived(meet, meet.sawOpening);
-        meet.sawOpening = false;
-      } else {
-        _setSurvived(meet, false);
       }
     }
   }
@@ -413,10 +459,14 @@ class AnalyticsRouter extends RunFeature {
     final snapshot = _snapshotFail(m, outcome);
     if (m.hoop != null) {
       _resolveHoop(m.hoop!, survived: outcome != MistakeResolution.end);
-    } else if (m.cause == MistakeCause.spikes &&
+    }
+    if (outcome == MistakeResolution.end &&
         c.s.squeeze.phase != SqueezePhase.idle) {
       for (final meet in _pendingFirstMeets.values) {
-        if (meet.element == ElementId.squeeze) _setSurvived(meet, false);
+        if (meet.element == ElementId.squeeze &&
+            meet.squeezeIndex == c.s.squeeze.index) {
+          _setSurvived(meet, false);
+        }
       }
     }
     if (outcome == MistakeResolution.end) {
@@ -730,6 +780,7 @@ final class _PendingFirstMeet {
   final Hoop? sourceHoop;
   final Pickup? pickup;
   final int? squeezeIndex;
+  bool resolved = false;
   bool survived = false;
   bool sawOpening = false;
 }

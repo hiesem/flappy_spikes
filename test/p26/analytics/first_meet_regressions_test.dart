@@ -7,6 +7,7 @@ import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/hoops/hoop.dart';
 import 'package:flappy_spikes/run/hoops/kinds/registry.dart';
 import 'package:flappy_spikes/run/mistakes.dart';
+import 'package:flappy_spikes/run/items/squeeze.dart';
 import 'package:flappy_spikes/run/pickups/heart_pickup.dart';
 import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/run/run_state.dart';
@@ -252,13 +253,23 @@ void main() {
     (game) async {
       final run = await startRun(game);
       squeezePositive.events.clear();
+      // Drive the production feature: _done advances index before idle.
+      final feature = run.features.whereType<SqueezeFeature>().single;
+      final sq = run.state.squeeze;
+      sq.phase = SqueezePhase.opening;
       run.events
         ..emit(const ElementSpawned(ElementId.squeeze))
-        ..emit(const SqueezePhaseChanged(SqueezePhase.warning, 0))
-        ..emit(const SqueezePhaseChanged(SqueezePhase.closing, 0))
-        ..emit(const SqueezePhaseChanged(SqueezePhase.hold, 0))
-        ..emit(const SqueezePhaseChanged(SqueezePhase.opening, 0))
-        ..emit(const SqueezePhaseChanged(SqueezePhase.idle, 0));
+        ..emit(const SqueezePhaseChanged(SqueezePhase.opening, 0));
+      feature.phaseT = 100;
+      feature.update(1 / 60, 1 / 60);
+      expect(sq.index, 1);
+      expect(sq.phase, SqueezePhase.idle);
+      // A later instance's spike death cannot change that completed meet.
+      sq.phase = SqueezePhase.hold;
+      run.pipeline.onResolved!(
+        Mistake(MistakeCause.spikes),
+        MistakeResolution.end,
+      );
       run.endRun();
 
       expect(meet(squeezePositive)['survived'], true);
@@ -325,6 +336,97 @@ void main() {
     expect(meet(forcedPickup)['hoop'], 17);
     expect(meet(forcedPickup)['forced'], true);
   });
+
+  for (final clear in [true, false]) {
+    final spy = MeetSpy();
+    tester(
+      spy,
+      {ElementId.angledRing},
+      'first encounter skips ${clear ? 'portal-cleared' : 'comet-replanned'} hoops',
+      (game) async {
+        final run = await startRun(game);
+        spy.events.clear();
+        // Use the same live collection used by RunSpawner._announce. A removed
+        // object can remain mounted while its portal-clear fade finishes.
+        final live = run.spawner.hoops as List<Hoop>;
+        final old = hoopFor(plan(15, tilt: 12, forced: true));
+        live.add(old);
+        run.events.emit(HoopSpawned(old, old.plan));
+        if (clear) {
+          run.spawner.clearAhead();
+        } else {
+          run.spawner.startCometLayout(
+            fromY: 300,
+            endTrackX: 6000,
+            viewHeight: 711,
+            amplitude: 80,
+          );
+          expect(live.contains(old), false);
+        }
+        final replacement = hoopFor(plan(16, tilt: 18));
+        live.add(replacement);
+        run.events.emit(HoopSpawned(replacement, replacement.plan));
+        replacement.announced = true;
+        run.events
+          ..emit(const ElementSpawned(ElementId.normalHoop))
+          ..emit(const ElementSpawned(ElementId.angledRing))
+          ..emit(HoopPassed(replacement));
+        run.endRun();
+        expect(meet(spy)['hoop'], 16);
+        expect(meet(spy)['forced'], false);
+        expect(meet(spy)['survived'], true);
+      },
+    );
+  }
+
+  final attachedPickup = MeetSpy();
+  tester(
+    attachedPickup,
+    {ElementId.heart},
+    'an attached pickup announced before its hoop uses that slot',
+    (game) async {
+      final run = await startRun(game);
+      attachedPickup.events.clear();
+      const itemPlan = GapItemPlan(kind: ElementId.heart, trackX: 900, y: 300);
+      final slot = plan(23, trackX: 1000).copyWith(attached: [itemPlan]);
+      run.spawner.slotLog.add(slot);
+      final item = run.spawner.spawnItem(itemPlan)!;
+      item.announced = true;
+      run.events
+        ..emit(const ElementSpawned(ElementId.heart))
+        ..emit(PickupCollected(ElementId.heart, item));
+      run.endRun();
+      expect(meet(attachedPickup)['hoop'], 23);
+      expect(meet(attachedPickup)['survived'], true);
+    },
+  );
+
+  final clearedPickup = MeetSpy();
+  tester(
+    clearedPickup,
+    {ElementId.heart},
+    'portal clear discards an unannounced gap pickup',
+    (game) async {
+      final run = await startRun(game);
+      clearedPickup.events.clear();
+      run.spawner.spawnItem(
+        const GapItemPlan(kind: ElementId.heart, trackX: 1150, y: 300),
+      );
+      run.spawner.clearAhead();
+      final host = hoopFor(plan(22, trackX: 2000));
+      run.events.emit(HoopSpawned(host, host.plan));
+      final item = run.spawner.spawnItem(
+        const GapItemPlan(kind: ElementId.heart, trackX: 2150, y: 300),
+      )!;
+      item.announced = true;
+      run.events
+        ..emit(const ElementSpawned(ElementId.heart))
+        ..emit(PickupCollected(ElementId.heart, item));
+      run.endRun();
+      expect(meet(clearedPickup)['hoop'], 22);
+      expect(meet(clearedPickup)['survived'], true);
+    },
+  );
 
   final restart = MeetSpy();
   tester(restart, {ElementId.saw}, 'a killed process still sends one meet', (

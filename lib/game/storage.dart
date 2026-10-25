@@ -482,8 +482,8 @@ class GameStorage {
     } else {
       // Migration for installs from before the timestamp existed. The only
       // first-launch datum kept is `installDay`, a local calendar day: use
-      // its local midnight (the latest possible first-launch moment, so the
-      // elapsed time is never over-reported). A first launch writes the real
+      // its local midnight (an approximation that can over-report elapsed
+      // time by up to one day). A first launch writes the real
       // clock immediately.
       installAtMs = storedInstallDay == null
           ? now().millisecondsSinceEpoch

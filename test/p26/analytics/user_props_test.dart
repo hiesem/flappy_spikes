@@ -1,8 +1,9 @@
-import 'package:flame/extensions.dart';
+import 'package:flame/game.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers.dart';
 
@@ -85,7 +86,7 @@ void main() {
   FlameTester<FlappySpikesGame>(
     () => createRunTestGame(
       services: restartSpy,
-      prefs: {'gamesPlayed': 3, 'bestHoops': 17},
+      prefs: {'gamesPlayed': 3, 'bestHoops': 12},
     ),
     gameSize: Vector2(320, 711),
   ).testGameWidget(
@@ -95,17 +96,39 @@ void main() {
       game.sound.enabled = false;
       await preloadImages(game);
     },
-    verify: (game, _) async {
+    verify: (game, tester) async {
+      game.achievements.countDebugRuns = true;
       final run = await startRun(game);
-      run.state.hoopsPassed = 12;
+      run.state.hoopsPassed = 17;
       run.endRun();
+      await flushAndMount(game);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('bestHoops'), 17);
 
+      // A fresh game and storage, with the same persisted preferences.
+      final freshSpy = PropertySpy();
+      final fresh = FlappySpikesGame(
+        worldHeight: 711,
+        services: freshSpy,
+        soundEnabled: false,
+      )..runSeed = 7;
+      fresh.onGameResize(Vector2(320, 711));
+      await tester.pumpWidget(GameWidget(game: fresh));
+      await tester.runAsync(() async {
+        await fresh.ready();
+        await preloadImages(fresh);
+      });
+      expect(fresh.storage.bestHoops, 17);
+      final worse = await startRun(fresh);
+      worse.state.hoopsPassed = 12;
+      worse.endRun();
       expect(
-        restartSpy.properties
+        freshSpy.properties
             .singleWhere((property) => property.$1 == 'fs_best_hb')
             .$2,
         '15-19',
       );
+      fresh.onRemove();
     },
   );
 

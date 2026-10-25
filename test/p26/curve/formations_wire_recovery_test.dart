@@ -1,5 +1,6 @@
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
+import 'package:flappy_spikes/run/director/formations.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -38,6 +39,98 @@ List<SlotPlan> _events(int seed) {
 
 void main() {
   test(
+    'D7 a spring immediately before a due formation keeps its 240 pt target',
+    () {
+      for (final height in [568.0, 711.0]) {
+        for (var seed = 0; seed < 20; seed++) {
+          final director = RunDirector(
+            seed: seed,
+            enabled: {
+              ElementId.normalHoop,
+              ElementId.spring,
+              ElementId.angledRing,
+            },
+            met: ElementId.values.toSet(),
+            startHoopIndex: 149,
+          );
+          final ctx = DirectorContext.open(height);
+          director.debugForce(ElementId.spring);
+          final spring = director.nextSlot(ctx);
+          director.nextGap(ctx, spring);
+          expect(spring.kind, HoopKindId.spring);
+          final landing = director.nextSlot(ctx);
+          director.nextGap(ctx, landing);
+          expect(landing.formation, isNull);
+          final direction = spring.extra == SpringDir.up ? -1 : 1;
+          expect(
+            landing.centreY - spring.centreY,
+            closeTo(direction * RunConfig.springJump, 1e-8),
+          );
+        }
+      }
+    },
+  );
+
+  test('D7 preserves spring landings and aligns final formation tilts', () {
+    var springLandings = 0;
+    var strongTilts = 0;
+    var waveEntries = 0;
+    for (final height in [568.0, 711.0]) {
+      for (final start in [0, 150, 250]) {
+        for (var seed = 0; seed < 200; seed++) {
+          final director = RunDirector(
+            seed: seed,
+            enabled: ElementId.values.toSet(),
+            met: ElementId.values.toSet(),
+            startHoopIndex: start,
+          );
+          final ctx = DirectorContext.open(height);
+          SlotPlan? previous;
+          for (var k = 0; k < 400; k++) {
+            final plan = director.nextSlot(ctx);
+            director.nextGap(ctx, plan);
+            final reason =
+                'height $height start $start seed $seed '
+                'hoop ${plan.index}';
+            if (previous?.kind == HoopKindId.spring && !plan.calm) {
+              springLandings++;
+              final direction = previous!.extra == SpringDir.up ? -1 : 1;
+              expect(plan.formation, isNull, reason: reason);
+              // The existing hazard ledger may shorten a landing; formations
+              // must never consume or replace the pending target.
+              expect(
+                (plan.centreY - previous.centreY).sign,
+                direction.toDouble(),
+                reason: reason,
+              );
+            }
+            if (plan.formation != null) {
+              final dy = plan.centreY - (previous?.centreY ?? height / 2);
+              if (plan.formation == FormationId.tiltWave &&
+                  previous?.formation != FormationId.tiltWave) {
+                waveEntries++;
+              }
+              if (plan.tiltDeg.abs() >= 20) {
+                strongTilts++;
+                expect(
+                  dy.abs(),
+                  greaterThanOrEqualTo(40 - 1e-9),
+                  reason: reason,
+                );
+                expect(plan.tiltDeg.sign, dy.sign, reason: reason);
+              }
+            }
+            previous = plan;
+          }
+        }
+      }
+    }
+    expect(springLandings, greaterThan(0));
+    expect(strongTilts, greaterThan(0));
+    expect(waveEntries, greaterThan(0));
+  });
+
+  test(
     'D7 recovery, rides and squeezes interrupt shapes deterministically',
     () {
       for (var seed = 0; seed < 200; seed++) {
@@ -64,6 +157,8 @@ void main() {
           expect(
             plan.centreY - reach,
             greaterThanOrEqualTo(ctx.topTooth - 1e-9),
+            reason:
+                'seed $seed height $height plan $plan shape ${plan.formation}',
           );
           expect(
             plan.centreY + reach,

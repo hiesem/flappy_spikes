@@ -845,6 +845,19 @@ class RunDirector {
       forceMod = due;
     }
     kind ??= HoopKindId.normal;
+    // Leave the next plane free at the last formation start before the
+    // cadence deadline or recovery. Earlier springs may finish their landing
+    // first; a spring here would make the formation miss its available window.
+    if (!forced && kind == HoopKindId.spring && i >= 150) {
+      final interval = TuningValues.current.ints('formation_every');
+      final last = _lastFormationAt;
+      final canStartNext = last == null || i + 1 - last >= interval[0];
+      final recoverySoon = List.generate(5, (k) => i + 2 + k).any(_calm.dueAt);
+      if (canStartNext &&
+          (last != null && i + 1 - last >= interval[1] || recoverySoon)) {
+        kind = HoopKindId.normal;
+      }
+    }
     final planned = _buildSlot(
       i,
       trackX,
@@ -880,18 +893,30 @@ class RunDirector {
     var finalPlan = shouldCalm
         ? _calmSlot(planned, ctx, previousY: previousY)
         : planned;
+    SlotPlan alignFormation(SlotPlan plan) {
+      if (plan.formation == null) return plan;
+      return plan.copyWith(
+        tiltDeg: _layout.alignedTilt(
+          plan.tiltDeg,
+          plan.centreY - (hazardPrevious ?? ctx.viewHeight / 2),
+          plan.motion == null ? RunConfig.maxTiltDeg : 30,
+        ),
+      );
+    }
+
+    finalPlan = alignFormation(finalPlan);
     final willDowngrade =
         !shouldCalm &&
         !planned.forced &&
         !_hazard.allows(
-          planned,
+          finalPlan,
           previousY: hazardPrevious,
           rowP90: row.$2 * dyRef,
           squeeze: ctx.squeezeWindow,
         );
     if (willDowngrade) {
       finalPlan = _hazard.downgrade(
-        planned,
+        finalPlan,
         previousY: hazardPrevious,
         rowP90: row.$2 * dyRef,
         squeeze: ctx.squeezeWindow,
@@ -906,7 +931,10 @@ class RunDirector {
             ? finalPlan.centreY
             : hazardPrevious +
                   (finalPlan.centreY - hazardPrevious).sign *
-                      (row.$2 * dyRef - 0.000001);
+                      min(
+                        (finalPlan.centreY - hazardPrevious).abs(),
+                        row.$2 * dyRef - 0.000001,
+                      );
         finalPlan = finalPlan.copyWith(
           centreY: centre,
           tiltDeg: 0,
@@ -915,6 +943,7 @@ class RunDirector {
       }
       _downgrades++;
     }
+    finalPlan = alignFormation(finalPlan);
     finalPlan = finalPlan.copyWith(
       hazardCost: _hazard.costOf(
         finalPlan,
@@ -1020,7 +1049,7 @@ class RunDirector {
       }
       _formationReservation = null;
     }
-    if (i < 150 || !mayStart) return null;
+    if (i < 150 || !mayStart || _layout.forceY != null) return null;
     final interval = TuningValues.current.ints('formation_every');
     final last = _lastFormationAt;
     if (last != null && i - last < interval[0]) return null;
@@ -1054,7 +1083,6 @@ class RunDirector {
     );
     _countFormationSlot(plan);
     if (templates.length == 1) _formationReservation = null;
-    _layout.forceY = null;
     return plan;
   }
 
@@ -1091,14 +1119,27 @@ class RunDirector {
   }
 
   /// Places the normalized [templates] of one formation at [trackX] and in
-  /// the live band. The shape's relative centre offsets stay intact; only the
-  /// shared origin, opening and x coordinates are adapted.
+  /// the live band. Relative offsets stay intact except a tilt wave's valley
+  /// can flatten at the band edge; final alignment then reduces strong tilts
+  /// whose approaches are too short.
   List<SlotPlan> _placeFormation(
     List<SlotPlan> templates,
     double trackX,
     DirectorContext ctx, {
     required double Function(double, [double]) cap,
   }) {
+    // The pure tilt template supplies angles; give the live wave a shallow
+    // valley so both 30° ends have at least a 40 pt approach (D2 / D7) where the
+    // band permits it. Keep its exit at the shared origin for a smooth handoff.
+    final tiltWave = templates.first.formation == FormationId.tiltWave;
+    if (tiltWave) {
+      final step = 1.5 * TuningValues.current.d('tilt_align_min_dy');
+      final offsets = [-step, -step, -step, -step, 0.0];
+      templates = [
+        for (var k = 0; k < templates.length; k++)
+          templates[k].copyWith(centreY: offsets[k]),
+      ];
+    }
     var lo = double.negativeInfinity;
     var hi = double.infinity;
     final openings = <double>[];
@@ -1112,8 +1153,9 @@ class RunDirector {
       final travel = plan.motion?.halfTravel ?? 0;
       final reach =
           opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin + travel;
-      lo = max(lo, ctx.topTooth + reach - plan.centreY);
-      hi = min(hi, ctx.floorTooth - reach - plan.centreY);
+      final offset = tiltWave ? 0.0 : plan.centreY;
+      lo = max(lo, ctx.topTooth + reach - offset);
+      hi = min(hi, ctx.floorTooth - reach - offset);
       for (final attached in plan.attached) {
         final y = attached.y;
         if (y == null) continue;
@@ -1135,7 +1177,9 @@ class RunDirector {
           templates[k],
           index: templates[k].index,
           trackX: trackX + k * spacing,
-          centreY: base + templates[k].centreY,
+          centreY: tiltWave
+              ? (base + templates[k].centreY).clamp(lo, hi).toDouble()
+              : base + templates[k].centreY,
           opening: openings[k],
         ),
     ];

@@ -34,7 +34,7 @@ void main() {
       r.features.whereType<SqueezeFeature>().single;
 
   FlameTester<FlappySpikesGame> tester() => FlameTester<FlappySpikesGame>(
-    () => createRunTestGame(worldHeight: 711),
+    () => createRunTestGame(prefs: {'gamesPlayed': 5}, worldHeight: 711),
     gameSize: Vector2(320, 711),
   );
 
@@ -50,7 +50,10 @@ void main() {
       final s = run.state;
       final sq = s.squeeze;
       final f = feature(run);
-      await flyUntil(game, (r) => r.state.hoopsPassed >= 1);
+      await flyUntil(
+        game,
+        (r) => r.director.allowsSqueezeWarning(r.state.hoopIndex),
+      );
       expect(f.preloads, 0, reason: 'the first squeeze is far away');
       sq.nextAt = s.runClock + 5;
       final preloadAt = <double>[];
@@ -152,7 +155,10 @@ void main() {
       final s = run.state;
       final sq = s.squeeze;
       final f = feature(run);
-      await flyUntil(game, (r) => r.state.hoopsPassed >= 1);
+      await flyUntil(
+        game,
+        (r) => r.director.allowsSqueezeWarning(r.state.hoopIndex),
+      );
       sq.nextAt = s.runClock + 2;
       game.update(1 / 60);
       expect(f.preloads, 1, reason: 'due is within the 3 s lead');
@@ -207,7 +213,7 @@ void main() {
             if (sound.poolOf(sfx) == null) missing.add(sfx);
           };
           game.runDebug.god = true;
-          final run = await startRun(game);
+          final run = await startRun(game, startHoopIndex: 45);
           final s = run.state;
           final sq = s.squeeze;
           final bot = Autopilot(run);
@@ -359,7 +365,7 @@ void main() {
     setUp: (g, _) => boot(g),
     verify: (game, _) async {
       game.runDebug.god = true;
-      final run = await startRun(game);
+      final run = await startRun(game, startHoopIndex: 45);
       final s = run.state;
       final sq = s.squeeze;
       final f = feature(run);

@@ -5,6 +5,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/sound.dart';
+import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/services/soak.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -202,7 +203,12 @@ void main() {
   );
 
   FlameTester<FlappySpikesGame>(
-    () => createRunTestGame(),
+    () => createRunTestGame(
+      prefs: {
+        'gamesPlayed': 5,
+        'metElements': [for (final e in ElementId.values) e.storageId],
+      },
+    ),
     gameSize: Vector2(320, 568),
   ).testGameWidget(
     'the game: 6 soak games (bonus, level-up CLAIM) with fake voices; every '
@@ -223,7 +229,7 @@ void main() {
         g,
         games: 6,
         holdSeconds: 2,
-        hoopsPerGame: 10,
+        hoopsPerGame: 35,
         measured: {1, 2, 3, 4, 5, 6},
         log: (line) {
           if (line.startsWith('$kSoakTag hold ')) {

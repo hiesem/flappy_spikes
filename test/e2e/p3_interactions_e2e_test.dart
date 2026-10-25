@@ -7,6 +7,7 @@ import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
 import 'package:flappy_spikes/run/config/director_tables.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/debug/force_menu.dart';
 import 'package:flappy_spikes/run/elements.dart';
@@ -40,12 +41,19 @@ void qa(
   double height = 711,
   int seed = 5,
   bool realAsync = false,
+  bool squeezeReady = false,
 }) {
   FlameTester<FlappySpikesGame>(
     () => createRunTestGame(
       worldHeight: height,
       seed: seed,
-      prefs: {'coins': 50000, 'noAds': true},
+      prefs: {
+        'coins': 50000,
+        'noAds': true,
+        if (squeezeReady) 'gamesPlayed': 5,
+        if (squeezeReady)
+          'metElements': [for (final e in ElementId.values) e.storageId],
+      },
     ),
     gameSize: Vector2(320, height),
   ).testGameWidget(
@@ -168,7 +176,9 @@ void main() {
         await flyUntil(g, (r) => r.state.squeeze.phase != SqueezePhase.idle),
         isTrue,
       );
-      expect(run.state.runClock - endedAt!, closeTo(2, .05));
+      // PRD-2.6 D6 may hold the warning for the 8-hoop headline window;
+      // it still cannot start before landing + 2 s.
+      expect(run.state.runClock - endedAt!, greaterThanOrEqualTo(2));
       for (final phase in [
         SqueezePhase.warning,
         SqueezePhase.closing,
@@ -191,64 +201,61 @@ void main() {
       ElementId.saw,
     ]) {
       final s644 = element == ElementId.switchRing;
-      group(
-        s644 ? 'S6-44 regression' : 'P3 Mini Bird',
-        () {
-          qa('P3 Mini Bird through $element h=$height', (g) async {
-            final run = await startRun(g, startHoopIndex: 20, force: [element]);
-            // PRD-2.2 §27: a pair (a reward ring) never comes during a
-            // power-up; one already on screen when it starts loses its gifts
-            // and stays a two-ring hoop. So for the pair the Mini Bird starts
-            // once a pair is on screen, and ends after its pass.
-            final pair = element == ElementId.pair;
-            if (!pair) {
-              expect(
-                feature<TimedPowerupSlot>(run).start(CapsuleType.miniBird),
-                isTrue,
-              );
-            }
-            var miniPasses = 0;
-            run.events.on<HoopPassed>((e) {
-              final hit = pair
-                  ? e.hoop?.kind.id == HoopKindId.pair
-                  : e.hoop?.plan.element == element;
-              if (hit && run.state.birdScale < .6) {
-                miniPasses++;
-                if (pair) run.state.timed?.remaining = 0;
-              }
-            });
-            final flight = await flyRun(
-              g,
-              maxSeconds: pair ? 120 : 60,
-              untilHoops: pair ? 60 : 20,
-              onFrame: (r) {
-                if (pair && miniPasses > 3) return;
-                if (!r.director.forcedQueue.contains(element)) {
-                  r.debugForce(element);
-                }
-                final pairAhead = r.spawner.hoops.any(
-                  (h) =>
-                      h.kind.id == HoopKindId.pair &&
-                      !h.resolved &&
-                      h.planeX - r.state.camX < RunConfig.worldWidth,
-                );
-                if (r.state.timed == null &&
-                    r.state.ride == null &&
-                    (!pair || pairAhead)) {
-                  feature<TimedPowerupSlot>(r).start(CapsuleType.miniBird);
-                }
-              },
-            );
+      group(s644 ? 'S6-44 regression' : 'P3 Mini Bird', () {
+        qa('P3 Mini Bird through $element h=$height', (g) async {
+          final run = await startRun(g, startHoopIndex: 20, force: [element]);
+          // PRD-2.2 §27: a pair (a reward ring) never comes during a
+          // power-up; one already on screen when it starts loses its gifts
+          // and stays a two-ring hoop. So for the pair the Mini Bird starts
+          // once a pair is on screen, and ends after its pass.
+          final pair = element == ElementId.pair;
+          if (!pair) {
             expect(
-              flight.hoops,
-              greaterThanOrEqualTo(20),
-              reason: flight.trace.join('\n'),
+              feature<TimedPowerupSlot>(run).start(CapsuleType.miniBird),
+              isTrue,
             );
-            expect(miniPasses, greaterThan(2));
-            expect(run.dying, isFalse);
-          }, height: height);
-        },
-      );
+          }
+          var miniPasses = 0;
+          run.events.on<HoopPassed>((e) {
+            final hit = pair
+                ? e.hoop?.kind.id == HoopKindId.pair
+                : e.hoop?.plan.element == element;
+            if (hit && run.state.birdScale < .6) {
+              miniPasses++;
+              if (pair) run.state.timed?.remaining = 0;
+            }
+          });
+          final flight = await flyRun(
+            g,
+            maxSeconds: pair ? 120 : 60,
+            untilHoops: pair ? 60 : 20,
+            onFrame: (r) {
+              if (pair && miniPasses > 3) return;
+              if (!r.director.forcedQueue.contains(element)) {
+                r.debugForce(element);
+              }
+              final pairAhead = r.spawner.hoops.any(
+                (h) =>
+                    h.kind.id == HoopKindId.pair &&
+                    !h.resolved &&
+                    h.planeX - r.state.camX < RunConfig.worldWidth,
+              );
+              if (r.state.timed == null &&
+                  r.state.ride == null &&
+                  (!pair || pairAhead)) {
+                feature<TimedPowerupSlot>(r).start(CapsuleType.miniBird);
+              }
+            },
+          );
+          expect(
+            flight.hoops,
+            greaterThanOrEqualTo(20),
+            reason: flight.trace.join('\n'),
+          );
+          expect(miniPasses, greaterThan(2));
+          expect(run.dying, isFalse);
+        }, height: height);
+      });
     }
     qa('P3 S6-44 control: full-size switch autopilot h=$height', (g) async {
       await startRun(g, startHoopIndex: 20, force: [ElementId.switchRing]);
@@ -316,49 +323,74 @@ void main() {
       expect(run.dying, isFalse);
     }, height: height);
 
-    qa('P3 Black Hole lens + squeeze walls + FEVER shake compose and reset '
-        'h=$height', (g) async {
-      final run = await startRun(g, startHoopIndex: 20, force: [ElementId.saw]);
-      final h = await flyToHoop(
-        g,
-        HoopKindId.saw,
-        ElementId.saw,
-        where: (h) => SawHoopKind.designOf(h) == SawDesign.blackHole,
-      );
-      expect(h, isNotNull);
-      expect(await flyUntil(g, (r) => h!.planeX - r.state.camX < 300), isTrue);
-      final camera = g.camera.viewfinder.position.clone();
-      // The scheduler seam makes the warning due while the hole is on screen.
-      run.state.squeeze.nextAt = run.state.runClock;
-      g.update(1 / 60);
-      expect(run.state.squeeze.phase, SqueezePhase.warning);
-      g.world.add(FeverShake(run.ctx));
-      await flushAndMount(g);
-      g.update(1 / 60);
-      final strips = g.world.children.whereType<SpikeStrip>().toList();
-      expect(strips.every((s) => s.lens != null), isTrue);
-      final p = const ui.Offset(160, 44);
-      expect(strips.first.lens!(p), isNot(p));
-      await pauseSnapshot(g);
-      // This test checks the visual composition and its reset, not survival:
-      // the bot vs a Black Hole inside a 568 pt squeeze depends on the
-      // seeded course, so it flies with god mode (debug, §3.0.8).
-      g.runDebug.god = true;
-      expect(
-        await flyUntil(
+    qa(
+      'P3 Black Hole lens + squeeze walls + FEVER shake compose and reset '
+      'h=$height',
+      (g) async {
+        final tuning = TuningValues.current;
+        addTearDown(() => TuningValues.current = tuning);
+        TuningValues.current = TuningValues.resolve({
+          'ui_unlock_best': '0',
+          'ride_comet_chance': '0',
+          'ride_portal_first': '[999,1000]',
+          'ride_portal_max': '0',
+          'spawn_special_chance': '[[0,0],[150,0]]',
+          'spawn_item_chance': '[[0,0],[150,0]]',
+        });
+        final run = await startRun(
           g,
-          (r) => r.state.squeeze.phase == SqueezePhase.idle,
-          maxSeconds: 30,
-        ),
-        isTrue,
-      );
-      await flyRun(g, maxSeconds: 1);
-      expect(g.camera.viewfinder.position.distanceTo(camera), lessThan(.001));
-      expect(
-        strips.every((s) => s.squeezeInset == 0 && s.toothFlash == 0),
-        isTrue,
-      );
-    }, height: height);
+          startHoopIndex: 15,
+          force: [ElementId.saw],
+        );
+        run.state.squeeze.nextAt = 1e99;
+        final h = await flyToHoop(
+          g,
+          HoopKindId.saw,
+          ElementId.saw,
+          where: (h) => SawHoopKind.designOf(h) == SawDesign.blackHole,
+        );
+        expect(h, isNotNull);
+        expect(
+          await flyUntil(g, (r) => h!.planeX - r.state.camX < 300),
+          isTrue,
+        );
+        final camera = g.camera.viewfinder.position.clone();
+        expect(g.storage.gamesPlayed, 5);
+        // The scheduler seam makes the warning due while the hole is on screen.
+        run.state.squeeze.nextAt = run.state.runClock;
+        g.update(1 / 60);
+        expect(run.state.squeeze.phase, SqueezePhase.warning);
+        g.world.add(FeverShake(run.ctx));
+        await flushAndMount(g);
+        g.update(1 / 60);
+        final strips = g.world.children.whereType<SpikeStrip>().toList();
+        expect(strips.every((s) => s.lens != null), isTrue);
+        final p = const ui.Offset(160, 44);
+        expect(strips.first.lens!(p), isNot(p));
+        await pauseSnapshot(g);
+        // This test checks the visual composition and its reset, not survival:
+        // the bot vs a Black Hole inside a 568 pt squeeze depends on the
+        // seeded course, so it flies with god mode (debug, §3.0.8).
+        g.runDebug.god = true;
+        expect(
+          await flyUntil(
+            g,
+            (r) => r.state.squeeze.phase == SqueezePhase.idle,
+            maxSeconds: 30,
+          ),
+          isTrue,
+        );
+        await flyRun(g, maxSeconds: 1);
+        expect(g.camera.viewfinder.position.distanceTo(camera), lessThan(.001));
+        expect(
+          strips.every((s) => s.squeezeInset == 0 && s.toothFlash == 0),
+          isTrue,
+        );
+      },
+      height: height,
+      seed: 2,
+      squeezeReady: true,
+    );
   }
 
   group('S6-40 regression', () {

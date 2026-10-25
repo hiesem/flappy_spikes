@@ -88,7 +88,22 @@ functions_checks() {
     return
   fi
   echo "--- npm --prefix functions test (emulators, demo project)"
-  npm --prefix functions test
+  # functions/scripts/test.sh serializes the emulator suite across lanes (flock); an agent that starts the emulators
+  # by hand bypasses it, so a "port taken" start is retried (up to 4 times, 90 s apart) instead of turning the gate red.
+  local out rc attempt
+  out="$(mktemp)"
+  for attempt in 1 2 3 4 5; do
+    rc=0
+    npm --prefix functions test 2>&1 | tee "$out" || rc=$?
+    if [ "$rc" != 0 ] && [ "$attempt" -lt 5 ] && grep -q -E "port taken|Port [0-9]+ is not open" "$out"; then
+      echo "--- emulator ports taken by another lane; retrying in 90 s (attempt $((attempt + 1)) of 5)"
+      sleep 90
+      continue
+    fi
+    break
+  done
+  rm -f "$out"
+  return "$rc"
 }
 
 run_checks() {

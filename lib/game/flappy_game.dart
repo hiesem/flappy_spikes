@@ -1015,7 +1015,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // A resumed session is a new Home visit. The initial launch keeps the
     // pre-2.6 launch order (session upsell before the catch-up LEVEL UP);
     // once a run has arrived Home, later sessions start with a clean budget.
-    if (_homeVisitBudgeted) _beginHomeVisit(includeCandidates: false);
+    if (_homeVisitBudgeted) _beginHomeVisit();
     _queueNoAdsOffer(
       check: 'session',
       stale: () =>
@@ -1034,7 +1034,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// / Levels / Settings are not arrivals, so none of those reset the budget.
   bool _homeVisitBudgeted = false;
 
-  void _beginHomeVisit({bool includeCandidates = true}) {
+  void _beginHomeVisit() {
     if (state != GameState.start || menuScene != MenuScene.home) return;
     _homeVisitBudgeted = true;
     final levels = _resultsLevels;
@@ -1043,17 +1043,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       HomeVisit(
         day: storage.now(),
         gamesPlayed: storage.gamesPlayed,
-        requests: includeCandidates
-            ? HomeVisitRequests(
-                levelUpCatchUp:
-                    newLevelThisRun && menu.levels.pendingLevelUp != null,
-                noAds:
-                    !giftThisHomeVisit &&
-                    !_ratingRequestedThisRun &&
-                    menu.noAdsPopup.evaluate() != null,
-                rating: _deferredRatingTrigger != null,
-              )
-            : const HomeVisitRequests(),
+        requests: HomeVisitRequests(
+          levelUpCatchUp:
+              newLevelThisRun && menu.levels.pendingLevelUp != null,
+          noAds:
+              !giftThisHomeVisit &&
+              !_ratingRequestedThisRun &&
+              menu.noAdsPopup.evaluate() != null,
+          rating: _deferredRatingTrigger != null,
+        ),
       ),
     );
   }

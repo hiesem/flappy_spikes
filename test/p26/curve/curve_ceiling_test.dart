@@ -8,7 +8,7 @@ import 'package:flappy_spikes/run/elements.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Independent PRD D3 oracle: do not trust a plan's own reported cost.
-double _hazardCost(SlotPlan p, double dy, double p90, bool squeezeEntry) {
+double _hazardCost(SlotPlan p, double dy, double p90, bool squeeze) {
   if (p.cometHang ||
       p.duringRide ||
       {
@@ -43,7 +43,7 @@ double _hazardCost(SlotPlan p, double dy, double p90, bool squeezeEntry) {
   if (dy.abs() > p90 + 1e-6) {
     cost++;
   }
-  if (squeezeEntry) {
+  if (squeeze) {
     cost++;
   }
   return cost;
@@ -97,7 +97,6 @@ void main() {
           double? previous;
           var lastCalm = -1;
           var wasCalm = false;
-          var wasSqueeze = false;
           var calmInterval = 36.0;
           for (var i = 0; i < 400; i++) {
             // Squeeze is an in-run state; hold it over realistic windows.
@@ -111,7 +110,23 @@ void main() {
             final p = first.nextSlot(ctx);
             final tag = 'seed=$seed slot=$i h=$height squeeze=$squeeze $p';
             expect(p, replay.nextSlot(ctx), reason: tag);
-            expect(first.nextGap(ctx, p), replay.nextGap(ctx, p), reason: tag);
+            final gap = first.nextGap(ctx, p);
+            expect(gap, replay.nextGap(ctx, p), reason: tag);
+            // D1 changes these introductions. Other specials and gap items
+            // retain the approved 2.5 tuning (SPEC PRD-2.3.1 §0).
+            final introducedAt = const {
+              ElementId.angledRing: 10,
+              ElementId.movingRing: 25,
+              ElementId.switchRing: 15,
+              ElementId.saw: 30,
+              ElementId.portal: 12,
+            }[p.element];
+            if (introducedAt != null) {
+              expect(i, greaterThanOrEqualTo(introducedAt), reason: tag);
+            }
+            if (p.formation != null) {
+              expect(i, greaterThanOrEqualTo(150), reason: tag);
+            }
             final dy = previous == null ? 0.0 : p.centreY - previous;
             expect(dy.abs(), lessThanOrEqualTo(270 + 1e-8), reason: tag);
             if (p.tiltDeg.abs() >= 20) {
@@ -176,13 +191,11 @@ void main() {
             if (p.kind == HoopKindId.switchRing) {
               expect(i, greaterThanOrEqualTo(15), reason: tag);
             }
-            final squeezeEntry = squeeze && !wasSqueeze;
-            if (squeezeEntry) costs.clear();
             final cost = _hazardCost(
               p,
               dy,
               first.tables.bandFor(i).dy.$2 * math.min(ctx.band, 540),
-              squeezeEntry,
+              squeeze,
             );
             expect(p.hazardCost, closeTo(cost, 1e-8), reason: tag);
             costs.add(cost);
@@ -198,16 +211,14 @@ void main() {
               expect(p.kind, HoopKindId.normal, reason: tag);
               expect(p.motion, isNull, reason: tag);
               expect(p.tiltDeg.abs(), lessThanOrEqualTo(10), reason: tag);
-              if (!squeeze) {
-                expect(
-                  dy.abs(),
-                  lessThanOrEqualTo(
-                    first.tables.bandFor(i).dy.$1 * math.min(ctx.band, 540) +
-                        1e-8,
-                  ),
-                  reason: tag,
-                );
-              }
+              expect(
+                dy.abs(),
+                lessThanOrEqualTo(
+                  first.tables.bandFor(i).dy.$1 * math.min(ctx.band, 540) +
+                      1e-8,
+                ),
+                reason: tag,
+              );
               if (!wasCalm) {
                 if (lastCalm < 0) {
                   expect(i, inInclusiveRange(30, 35), reason: tag);
@@ -229,7 +240,6 @@ void main() {
                 lastCalm = i;
               }
             }
-            wasSqueeze = squeeze;
             wasCalm = p.calm;
             previous = p.centreY;
           }

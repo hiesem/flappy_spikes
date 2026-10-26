@@ -5,50 +5,9 @@ import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
 import 'package:flappy_spikes/run/debug/autopilot.dart';
 import 'package:flappy_spikes/run/debug/human_bot.dart';
-import 'package:flappy_spikes/run/run_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
-
-class _NoisyAutopilot {
-  _NoisyAutopilot(
-    RunController run, {
-    required int seed,
-    required double margin,
-  }) : _autopilot = Autopilot(run, margin: margin),
-       scheduler = HumanNoiseFlapScheduler(seed: seed);
-
-  final Autopilot _autopilot;
-  final HumanNoiseFlapScheduler scheduler;
-  bool _wanted = false;
-
-  bool shouldFlap(double now) {
-    final wanted = _autopilot.shouldFlap();
-    final rising = wanted && !_wanted;
-    _wanted = wanted;
-    if (rising && scheduler.pendingBases == 0) {
-      scheduler.planBase(now, now: now);
-    }
-    return scheduler.flapDue(now);
-  }
-}
-
-Future<int> _flyNoisyAutopilotToDeath(
-  FlappySpikesGame game,
-  int seed, {
-  required double margin,
-}) async {
-  final run = game.run!;
-  final bot = _NoisyAutopilot(run, seed: seed, margin: margin);
-  var frames = 0;
-  while (frames < 120 * 60 && game.state == GameState.playing && !run.ended) {
-    if (bot.shouldFlap(run.state.runClock)) game.onScreenTap();
-    game.update(1 / 60);
-    frames++;
-    if (frames % 10 == 0) await flushAndMount(game);
-  }
-  return run.state.hoopsPassed;
-}
 
 /// The playability gate (PRD-2 §7, ARCH §7.1), rewritten for hoops by
 /// WP-1a: the hoop-aware bang-bang [Autopilot] (prototype `botStep`) flies
@@ -140,6 +99,7 @@ void main() {
       },
       verify: (game, _) async {
         final scores = <int>[];
+        final outcomes = <String>[];
         game.runDebug.ignoreGates = false;
         for (var seed = 0; seed < 21; seed++) {
           game.runSeed = seed;
@@ -147,12 +107,11 @@ void main() {
           final run = await startRun(game);
           expect(run.setup.showcase, isNull);
           expect(run.setup.ignoreGates, isFalse);
-          scores.add(
-            await _flyNoisyAutopilotToDeath(
-              game,
-              seed,
-              margin: height == 711 ? 17 : 10,
-            ),
+          final flight = await flyHumanNoiseBotToDeath(game, seed: seed);
+          scores.add(flight.hoops);
+          outcomes.add(
+            'seed=$seed hoops=${flight.hoops} cause=${flight.cause} '
+            'seconds=${flight.seconds.toStringAsFixed(1)}',
           );
           game.replay();
           await flushAndMount(game);
@@ -163,7 +122,7 @@ void main() {
         expect(
           scores[scores.length ~/ 2],
           greaterThanOrEqualTo(40),
-          reason: 'h=$height scores=$scores',
+          reason: 'h=$height scores=$scores\n${outcomes.join('\n')}',
         );
       },
     );

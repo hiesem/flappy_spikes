@@ -1928,9 +1928,12 @@ Remote Config only serves `versus_pg_salt`. Key list: `docs/p23/TUNING.md`.
   in the ledger but are exempt. Reward/ride slots cost zero. Calm slots also
   pass through hazard accounting. Spring reservations use the final kind,
   so a spring converted to calm cannot restore its discarded special.
-  A squeeze episode carries its +1 surcharge once and starts a fresh ledger;
-  continuing squeeze slots do not repeat that surcharge. This resolves the
-  PRD's otherwise-impossible 5–10-hold windows against budgets below 5.5.
+  **Unresolved PRD conflict:** the inherited director charges squeeze only
+  once per episode and resets the ledger. D3 instead requires +1 for every
+  squeezed slot without a reset; the independent integration oracle now
+  enforces D3. Four squeezed slots already cost 4 before added hazards,
+  exceeding the budget before hoop 50, while O18 requires an initial
+  5–10-slot squeeze at hoop 25–40. The episode workaround is not approved.
 - **DEVIATION (D4/D5):** periodic calm lasts three slots, first at 30–34,
   growing intervals ×1.2 capped at 55. Revive gives three slots; squeeze/ride
   recovery two. Starts are at least 12 apart except mandatory revive calm.
@@ -1952,8 +1955,11 @@ Remote Config only serves `versus_pg_salt`. Key list: `docs/p23/TUNING.md`.
   No new point source or timeline flag is added: `fl` remains 2 and the
   leaderboard maximum remains 32,500,000.
 
-WP-D automated validation is green: the 200-seed curve sweep (568 / 711 /
-730, with and without squeeze), the R2 setup/height matrix, the 150 / 250
-autopilot starts and the ordinary gamesPlayed-10 human-noise median use the
-shared 90 ms / 10%-extra flap schedule. The owner Pixel 8 ceiling playtest
+WP-D validation includes the 200-seed curve sweep (568 / 711 / 730,
+with and without squeeze), the R2 setup/height matrix, the 150 / 250
+autopilot starts and the ordinary gamesPlayed-10 human-noise median using
+the shared `HumanNoiseBot` (90 ms / 10% extra flaps). The strict squeeze
+accounting and shared-bot median currently fail; they must be resolved
+before wave 1 is accepted. The legacy cooldown audit also needs to account
+for D7's consecutive switch-chain rings. The owner Pixel 8 ceiling playtest
 remains required.

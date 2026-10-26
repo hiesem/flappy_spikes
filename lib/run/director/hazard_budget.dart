@@ -10,6 +10,7 @@ class HazardBudget {
 
   final TuningValues _values;
   final List<double> _ledger = [];
+  final List<double> _surcharges = [];
 
   static const int windowSize = 4;
 
@@ -87,7 +88,7 @@ class HazardBudget {
       rowP90: rowP90,
       squeeze: squeeze,
     );
-    return _windowSum + cost <= budgetAt(plan.index) + _epsilon;
+    return _fitsCost(cost, plan.index, squeeze: squeeze);
   }
 
   void add(
@@ -99,7 +100,13 @@ class HazardBudget {
     _ledger.add(
       costOf(plan, previousY: previousY, rowP90: rowP90, squeeze: squeeze),
     );
+    _surcharges.add(
+      squeeze && _ledger.last > 0
+          ? _values.obj('hazard_costs')['squeeze']!.toDouble()
+          : 0,
+    );
     if (_ledger.length > windowSize) {
+      _surcharges.removeRange(0, _surcharges.length - windowSize);
       _ledger.removeRange(0, _ledger.length - windowSize);
     }
   }
@@ -110,7 +117,9 @@ class HazardBudget {
     required double previousY,
     required double rowP90,
   }) {
-    final preview = HazardBudget(_values).._ledger.addAll(_ledger);
+    final preview = HazardBudget(_values)
+      .._ledger.addAll(_ledger)
+      .._surcharges.addAll(_surcharges);
     var previous = previousY;
     for (final plan in plans) {
       if (!preview.allows(plan, previousY: previous, rowP90: rowP90)) {
@@ -226,13 +235,13 @@ class HazardBudget {
     bool squeeze = false,
   }) {
     if (current.forced) return true;
-    final costs = [..._ledger];
+    final costs = [
+      for (var i = 0; i < _ledger.length; i++) _ledger[i] - _surcharges[i],
+    ];
     if (costs.length >= windowSize) {
       costs.removeRange(0, costs.length - (windowSize - 2));
     }
-    costs.add(
-      costOf(current, previousY: previousY, rowP90: rowP90, squeeze: squeeze),
-    );
+    costs.add(costOf(current, previousY: previousY, rowP90: rowP90));
     final sum = costs.fold(0.0, (total, cost) => total + cost);
     return sum + nextCost <= budgetAt(nextIndex) + _epsilon;
   }
@@ -256,7 +265,22 @@ class HazardBudget {
     double? previousY,
     double? rowP90,
     bool squeeze = false,
-  }) => _windowSum + plan.hazardCost <= budgetAt(plan.index) + _epsilon;
+  }) => _fitsCost(plan.hazardCost, plan.index, squeeze: squeeze);
+
+  // #127, D3 × O18: fixed squeeze slots are exempt, but every +1 stays
+  // in the ledger. Only that surcharge is excluded from the budget check.
+  // Before budget 4, a squeezed slot must have no other hazard cost.
+  bool _fitsCost(double cost, int index, {required bool squeeze}) {
+    final surcharge = squeeze && cost > 0
+        ? _values.obj('hazard_costs')['squeeze']!
+        : 0;
+    final ownCost = cost - surcharge;
+    if (squeeze && budgetAt(index) < 4 && ownCost > _epsilon) return false;
+    final windowSurcharge = _surcharges
+        .skip(max(0, _surcharges.length - (windowSize - 1)))
+        .fold(0.0, (sum, value) => sum + value);
+    return _windowSum - windowSurcharge + ownCost <= budgetAt(index) + _epsilon;
+  }
 
   /// The previous three costs only: the candidate fills the fourth slot.
   double get _windowSum => _ledger

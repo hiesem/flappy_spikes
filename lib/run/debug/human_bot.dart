@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 
 import '../../game/flappy_game.dart';
-import '../config/run_config.dart';
 import '../mistakes.dart';
 import '../run_controller.dart';
 import '../run_events.dart';
@@ -98,6 +97,14 @@ class HumanNoiseFlapScheduler {
     return true;
   }
 
+  /// An extra tap changes the actual trajectory before the pending base.
+  /// Discard that obsolete forecast; its replacement is drawn from the new
+  /// state next frame. Emitted offsets remain the actual execution trace.
+  void discardPendingBase() {
+    final ids = _scheduled.where((f) => !f.extra).map((f) => f.baseId).toSet();
+    _scheduled.removeWhere((f) => ids.contains(f.baseId));
+  }
+
   double _gaussian() {
     final reuse = _lastDelay;
     if (reuse != null) {
@@ -147,52 +154,32 @@ class HumanNoiseBot {
   /// whether the noisy bot taps at this frame.
   bool shouldFlap() {
     final now = run.state.runClock;
-    final wanted = autopilot.shouldFlap();
+    final delay = autopilot.nextFlapDelay();
+    final wanted = delay == 0;
     final rising = wanted && !_autopilotWanted;
     _autopilotWanted = wanted;
-
-    // A forecast already owns the next base flap; a request only fills in for
-    // a crossing that could not be predicted (run start, ride hand-over).
     if (rising) {
       debugRequestTimes.add(now);
+      debugRequestForecast.add((scheduler.pendingBasePlannedTime ?? now) - now);
     }
-    if (rising && scheduler.pendingBases > 0) {
-      debugRequestForecast.add(scheduler.pendingBasePlannedTime! - now);
+    if (scheduler.flapDue(now)) {
+      // Every execution (including an extra) ends the old plan. The next
+      // frame observes the actual post-tap position/velocity, not the ideal
+      // trajectory that was used to decide this flap.
+      scheduler.discardPendingBase();
+      autopilot.replanAfterFlap();
+      _autopilotWanted = false;
+      return true;
     }
-    if (rising && scheduler.pendingBases == 0) {
-      scheduler.planBase(now, now: now);
-    }
-
-    if (scheduler.flapDue(now)) return true;
-
-    if (!wanted && scheduler.pendingBases == 0 && _canPredict) {
-      final at = _predictNextTap(now);
-      if (at > now + 1e-9) scheduler.planBase(at, now: now);
+    if (!scheduler.hasPendingBase && delay != null) {
+      scheduler.planBase(now + delay, now: now);
+      if (scheduler.flapDue(now)) {
+        autopilot.replanAfterFlap();
+        _autopilotWanted = false;
+        return true;
+      }
     }
     return false;
-  }
-
-  bool get _canPredict =>
-      run.isScrolling &&
-      run.state.flapLock <= 0 &&
-      run.state.ride == null &&
-      run.birdTrackPosition() != null &&
-      run.game.runBirdVelocityY != null;
-
-  /// Ballistic forecast of the next bang-bang threshold crossing.
-  double _predictNextTap(double now) {
-    final bird = run.birdTrackPosition()!;
-    var vy = run.game.runBirdVelocityY!;
-    final target = autopilot.targetY() + autopilot.margin;
-    var y = bird.y;
-    var t = 0.0;
-    while (t < 1.5) {
-      if (y > target && vy > Autopilot.risingVy) break;
-      vy = math.min(RunConfig.maxFallSpeed, vy + RunConfig.gravity / 60);
-      y += vy / 60;
-      t += 1 / 60;
-    }
-    return now + t;
   }
 }
 

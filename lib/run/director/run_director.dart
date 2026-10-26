@@ -204,8 +204,7 @@ class RunDirector {
   RideKind? _ride;
   final Map<String, int> _spawned = {};
   late final CalmSchedule _calm;
-  HazardBudget _hazard = HazardBudget();
-  bool _inSqueezeWindow = false;
+  final HazardBudget _hazard = HazardBudget();
 
   /// PRD-2 §3.23 the next slot is the fixed landing of a spring shipped at
   /// this index − 1. Its 240 pt separation is part of the spring's geometry,
@@ -1032,9 +1031,7 @@ class RunDirector {
     ElementId? firstMeetElement,
     bool springLanding = false,
   }) {
-    final squeezeEntry = ctx.squeezeWindow && !_inSqueezeWindow;
-    if (squeezeEntry) _hazard = HazardBudget();
-    final ledgerSqueeze = squeezeEntry;
+    final ledgerSqueeze = ctx.squeezeWindow;
     final hoop = planned.index;
     final dyRef = min(ctx.band, RunConfig.dyRefBand);
     final row = tables.bandFor(hoop).dy;
@@ -1275,7 +1272,6 @@ class RunDirector {
       rowP90: row.$2 * dyRef,
       squeeze: ledgerSqueeze,
     );
-    _inSqueezeWindow = ctx.squeezeWindow;
 
     _markFinal(finalPlan);
     if (planned.kind == HoopKindId.portal || planned.cometHang) {

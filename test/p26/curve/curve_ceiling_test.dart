@@ -94,6 +94,7 @@ void main() {
           );
           final first = director(), replay = director();
           final costs = <double>[];
+          final surcharges = <double>[];
           double? previous;
           var lastCalm = -1;
           var wasCalm = false;
@@ -199,13 +200,23 @@ void main() {
             );
             expect(p.hazardCost, closeTo(cost, 1e-8), reason: tag);
             costs.add(cost);
-            if (costs.length > 4) costs.removeAt(0);
+            surcharges.add(squeeze && cost > 0 ? 1 : 0);
+            if (costs.length > 4) {
+              costs.removeAt(0);
+              surcharges.removeAt(0);
+            }
             if (!p.forced) {
               expect(
-                costs.reduce((a, b) => a + b),
+                // #127 D3 × O18: count every +1, exempt only the fixed
+                // squeeze surcharge; other hazards still fit the budget.
+                costs.reduce((a, b) => a + b) -
+                    surcharges.reduce((a, b) => a + b),
                 lessThanOrEqualTo(HazardBudget().budgetAt(i) + 1e-8),
                 reason: '$tag costs=$costs forced=${p.forced}',
               );
+            }
+            if (squeeze && HazardBudget().budgetAt(i) < 4 && !p.forced) {
+              expect(cost, lessThanOrEqualTo(1), reason: tag);
             }
             if (p.calm) {
               expect(p.kind, HoopKindId.normal, reason: tag);

@@ -100,6 +100,7 @@ void main() {
       verify: (game, _) async {
         final scores = <int>[];
         final outcomes = <String>[];
+        final deathsByHoop = <int, int>{};
         game.runDebug.ignoreGates = false;
         for (var seed = 0; seed < 21; seed++) {
           game.runSeed = seed;
@@ -109,6 +110,7 @@ void main() {
           expect(run.setup.ignoreGates, isFalse);
           final flight = await flyHumanNoiseBotToDeath(game, seed: seed);
           scores.add(flight.hoops);
+          deathsByHoop.update(flight.hoops, (n) => n + 1, ifAbsent: () => 1);
           outcomes.add(
             'seed=$seed hoops=${flight.hoops} cause=${flight.cause} '
             'seconds=${flight.seconds.toStringAsFixed(1)}',
@@ -122,7 +124,8 @@ void main() {
         expect(
           scores[scores.length ~/ 2],
           greaterThanOrEqualTo(40),
-          reason: 'h=$height scores=$scores\n${outcomes.join('\n')}',
+          reason:
+              'h=$height scores=$scores\ndeathsByHoop=$deathsByHoop\n${outcomes.join('\n')}',
         );
       },
     );

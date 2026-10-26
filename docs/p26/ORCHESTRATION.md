@@ -11,7 +11,7 @@ it is built.
 | Role | Who | Does | Never |
 |---|---|---|---|
 | Orchestrator | Claude Opus 5.5 (medium), the main Claude Code session | plans each wave, writes the builder brief per work package (WP), creates worktrees, starts builders and testers, runs the verify gate, merges, prunes the known-red list, decides open questions (records them in §8 / SPEC.md), deploys, device-tests, releases, reports | writes product code itself (except trivial merge-conflict resolution and infra in `scripts/`), merges a WP without a tester PASS |
-| Builder | GPT-6.1 Sol (medium) via codex, one per WP, up to **4 in parallel** | implements exactly one WP in its own git worktree, adds the tests the WP names, runs `bash scripts/verify.sh` before stopping, commits on its branch | touches paths outside its WP, edits `scripts/known_red_tests.txt`, weakens assertions, deploys, uses devices |
+| Builder | GPT-6.1 Sol (medium) via codex, one per WP, up to **6 in parallel** | implements exactly one WP in its own git worktree, adds the tests the WP names, runs the scoped verify before stopping, commits on its branch | touches paths outside its WP, edits `scripts/known_red_tests.txt`, weakens assertions, deploys, uses devices |
 | Tester | Claude Opus 5.5 (medium), a detached `claude -p` process, one per build round | reviews the diff against the WP acceptance criteria, the PRD lines and SHARED_ELEMENTS.md; runs the named tests; writes a verdict PASS / FAIL with findings (blocker / major / minor) | edits product code (read + run only) |
 
 Every builder and tester runs as a **detached process** started with `scripts/orch/spawn.sh` (it survives the Claude
@@ -20,16 +20,15 @@ cap 90 min):
 
 ```bash
 scripts/orch/spawn.sh <wp>-b<n> 90 /home/killerhis/Projects/flappyspikes/.worktrees/p26-<wp> -- \
-  codex exec -m gpt-6.1-sol -c model_reasoning_effort="medium" -s workspace-write \
-    -c sandbox_workspace_write.network_access=true \
-    --add-dir ~/flutter --add-dir ~/.pub-cache --add-dir ~/.npm --add-dir ~/.cache \
+  codex exec -m gpt-6.1-sol -c model_reasoning_effort="medium" -s danger-full-access \
     --json -o /home/killerhis/Projects/flappyspikes/.worktrees/briefs26/<wp>.b<n>.last.txt \
     "$(cat /home/killerhis/Projects/flappyspikes/.worktrees/briefs26/<wp>.md)"
 ```
 
 A fix round resumes the builder's codex session (`codex exec resume <session-id> "<findings>"`, same flags) so it keeps
-its context. ~/.codex/config.toml defaults to effort high and full access: the flags above override both. If the
-sandbox blocks the toolchain, fall back to `-s danger-full-access` for that builder and note it in the RUNLOG.
+its context. Full access is required: the smoke test of 2026-10-26 showed `workspace-write` blocks `git commit`
+(index.lock) and Flutter's cache even with `--add-dir`; the brief's rules (paths, no secrets, no devices, no deploys)
+bound the builder instead. ~/.codex/config.toml defaults to effort high: `-c model_reasoning_effort="medium"` overrides it.
 
 Tester (worker id `<wp>-t<round>`, cap 45 min), in the WP's worktree:
 
@@ -42,27 +41,32 @@ scripts/orch/spawn.sh <wp>-t<n> 45 /home/killerhis/Projects/flappyspikes/.worktr
 The tester prompt holds the WP brief, the diff range (`feat/2.6...p26/<wp>`), the builder summary, the verify tail,
 the read-only rule and the verdict format of §4; the verdict is the end of the worker's log.
 
-## 2. SDLC per work package
+## 2. SDLC per work package (pipelined: nobody waits on anybody)
 
 1. **Plan** — the orchestrator writes `.worktrees/briefs26/<wp>.md`: goal, PRD line ranges, approved design pages and
    text ids, shared masters to reuse, the decisions from PRD §8.3 that apply, **paths** (narrow), acceptance criteria
-   (testable), tests to add, hotspot regions it may touch, and the standing rules (BUILD_NOTES.md).
-2. **Build** — worktree `.worktrees/p26-<wp>` on branch `p26/<wp>` from the current `feat/2.6`; the Sol builder works and
-   commits. It must run `bash scripts/verify.sh` (whole Flutter suite + functions tests when `functions/` changed).
-3. **Verify** — the orchestrator re-runs `bash scripts/verify.sh` in the worktree (under the heavy lock, §5). Red →
-   back to the builder with the tail (counts as a fix round).
-4. **Test** — the Opus tester reviews and runs the WP's tests. PASS = no blocker/major open.
-5. **Fix rounds** — FAIL → the same builder session gets the findings (resume) → verify → test. **At most 3 fix
-   rounds.** Still failing → the orchestrator rewrites or splits the WP (or asks the council: one Opus + one Sol
-   answer on a written brief) and starts again. **Nothing merges with a FAIL verdict or a red verify.**
-6. **Merge** — rebase/merge onto the latest `feat/2.6`, re-run verify on the merge result, fast-forward `feat/2.6`,
-   push. Prune `scripts/known_red_tests.txt` if listed tests now pass. Log the WP in the RUNLOG.
-7. **Wave gate** — after the last WP of a wave: full `bash scripts/verify.sh` on `feat/2.6` (flutter analyze clean,
-   whole flutter test, functions tests), the GitHub Actions iOS build green, and a short wave report
-   (`docs/reports/p26-W<n>.md`). A red gate gets repair WPs before the next wave starts (PRD §4: later waves never start on
-   a red tree).
+   (testable), tests to add, hotspot regions it may touch, and the standing rules (BUILD_NOTES.md). Briefs for the next
+   WPs are written while builders run, so a free lane is filled at once.
+2. **Build** — worktree `.worktrees/p26-<wp>` on branch `p26/<wp>` from the latest green `feat/2.6`; the Sol builder
+   works and commits. While working it runs single test files; before it stops it runs the **scoped** verify
+   (`VERIFY_BASE=feat/2.6 VERIFY_SCOPED=1 bash scripts/verify.sh`: analyze + the changed/matching tests + the playability
+   core, ~1–3 min), not the whole suite.
+3. **Verify + test in parallel** — when the builder exits, the orchestrator starts, at the same moment, the **full**
+   verify (`<wp>-v<n>` worker, heavy lock) AND the Opus tester (`<wp>-t<n>`). A red verify stops the tester and goes
+   straight back to the builder with the tail (counts as a fix round). PASS needs both: verify green and no
+   blocker/major.
+4. **Fix rounds** — FAIL → the same codex session gets the findings + verify tail at once (resume) → step 3 again.
+   **At most 3 fix rounds.** Still failing → the orchestrator rewrites or splits the WP (or asks the council: one
+   Opus + one Sol answer on a written brief). **Nothing merges with a FAIL verdict or a red verify.**
+5. **Merge (fast, never blocks a lane)** — see §5.2: the WP joins the merge queue; a merge takes ~1–3 min (rebase,
+   analyze + the WP's tests + the core tests, fast-forward, push), not a full suite. The full suite runs in the background
+   on `feat/2.6` (rolling integration verify). The lane is free for the next WP the moment the WP enters the queue.
+6. **Wave gate (rolling)** — a wave is "done" when its last WP merged and the integration verify on that head is green,
+   plus the GitHub Actions iOS build and a short wave report (`docs/reports/p26-W<n>.md`). WPs of the next wave do NOT
+   wait for the gate: each starts as soon as its own dependencies are merged and the latest integration verify is
+   green (PRD §4: never start on a red tree).
 
-The known-red list must be **empty** at gate W1 and stay empty.
+The known-red list must be **empty** from the end of W1 and stay empty.
 
 ## 3. Waves and work packages
 
@@ -169,19 +173,38 @@ NOTES: <acceptance criteria checked, one line each>
 
 Blocker/major → FAIL. Minors are collected into a "polish" WP per wave, never dropped.
 
-## 5. Running in parallel safely (22 GB RAM)
+## 5. Maximum parallelism (22 GB RAM, 20 cores)
 
-- **Up to 4 Sol builders at once**, only on WPs whose paths and hotspot regions do not overlap.
-- **Hotspots (one WP at a time each):** `lib/run/director/run_director.dart`; the run-end block of
-  `lib/game/flappy_game.dart` (and `_beginHomeVisit`); `lib/game/storage.dart` + `tool/gen_obf_strings.dart` + anchors;
-  `lib/run/config/tuning_defaults.dart`; `lib/run/screens/results_screen.dart`; `lib/components/home/home_screen.dart`;
-  `functions/src/board_store.ts`. New code goes into new files where the WP allows; edits in hot files stay inside a
-  `// region P26-<WP>` block.
-- **Heavy lock:** at most 2 full Flutter suites at once — verify runs with
-  `VERIFY_HEAVY_LOCKS="<lockdir>/heavy-0 <lockdir>/heavy-1"`; builders are told to run single test files while working.
-  The functions emulator suite serializes itself (`functions/scripts/test.sh` flock).
-- New lanes wait while MemAvailable < 4 GB.
+### 5.1 Lanes
+- **Up to 6 Sol builders at once** (owner: as much parallel as possible), filled from a ready queue: every WP whose
+  dependencies are merged, across waves, highest priority first (W1 fixes and the deploy path, then the longest
+  dependency chains: WP-J → results/levels UI, F9 → cards/board rows, G1 → missions UI/Star Road).
+- **Testers are not limited by lanes:** one Opus tester per finished build round, running next to the builders.
+- Two WPs run together only when their paths and hotspot regions do not overlap. **Hotspots (one WP at a time each):**
+  `lib/run/director/run_director.dart`; the run-end block of `lib/game/flappy_game.dart` (and `_beginHomeVisit`);
+  `lib/game/storage.dart` + `tool/gen_obf_strings.dart` + anchors; `lib/run/config/tuning_defaults.dart`;
+  `lib/run/screens/results_screen.dart`; `lib/components/home/home_screen.dart`; `functions/src/board_store.ts`.
+  To keep lanes full, the first WP of a chain that needs a hotspot extracts a seam (e.g. J2's `RunEndBookkeeping`,
+  S0 adds all keys at once) so later WPs work in new files.
+- **Full-suite slots:** at most **3** full Flutter suites at once (`VERIFY_HEAVY_LOCKS`, lock files in
+  `.worktrees/briefs26/locks/`); builders' scoped checks and single test files do not take a slot. The functions
+  emulator suite serializes itself (`functions/scripts/test.sh` flock).
+- **Memory guard:** no new builder or full suite while MemAvailable < 4 GB; then lanes drop to what fits (never kill a
+  running verify to start a builder).
 - Never two builders in one worktree; never a second flow on a WP that is in progress.
+
+### 5.2 Merge queue (merging never slows the build)
+- One merge at a time (seconds of git work), in the order WPs pass, run as a background worker `merge-<wp>`:
+  1. rebase `p26/<wp>` on the latest `feat/2.6`; a conflict → back to the WP's builder (resume) as a fix round;
+  2. **fast check:** `flutter analyze` + the WP's own tests + the files the rebase touched + the core tests (scoped
+     verify against the WP's base), and the functions tests only when `functions/` changed — ~1–3 min;
+  3. fast-forward `feat/2.6`, push, log, start the next WP in that lane.
+- **Rolling integration verify:** a background worker always runs the full `scripts/verify.sh` on the newest
+  `feat/2.6` head (one at a time; if more merges land meanwhile, the next run takes the newest head). Green → that head
+  is the base for new worktrees. Red → the culprit is among the merges since the last green head: the orchestrator
+  reruns the failing tests on each of those merge commits, reverts the culprit on `feat/2.6`, and sends it back to its
+  builder as a fix round. New WPs branch from the last green head meanwhile, so nobody waits.
+- Prune `scripts/known_red_tests.txt` after a green integration run that shows listed tests passing.
 
 ## 6. Autonomy, stops and owner actions
 

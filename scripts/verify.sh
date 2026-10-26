@@ -49,10 +49,10 @@ heavy() {
 # when their work makes a listed test pass they say so in their summary and the orchestrator prunes the list.
 KNOWN_RED=scripts/known_red_tests.txt
 norm_failures() { grep ' \[E\]$' | sed -E 's#^([0-9:]+ )?\+[0-9]+( ~[0-9]+)? -[0-9]+: ##; s#^/[^ ]*/(test/)#\1#; s# \[E\]$##' | sort -u; }
-flutter_all() {
+flutter_all() {   # [test files...] (none = the whole suite); failures on the known-red list are tolerated
   local out rc=0
   out="$(mktemp)"
-  flutter test --no-pub -j "${FLUTTER_J:-4}" 2>&1 | tee "$out" || rc=$?
+  flutter test --no-pub -j "${FLUTTER_J:-4}" "$@" 2>&1 | tee "$out" || rc=$?
   [ "$rc" = 0 ] && { rm -f "$out"; return 0; }
   if [ ! -s "$KNOWN_RED" ]; then rm -f "$out"; return "$rc"; fi
   local new
@@ -75,7 +75,7 @@ flutter_all() {
     [ -n "$new" ] && printf '%s\n' "$new" || echo "(no [E] lines: a load or compile error, see above)"
     return 1
   fi
-  echo "=== flutter test: $nfail failure(s), all listed in $KNOWN_RED (known red, tolerated until the M1F fix-ups)"
+  echo "=== flutter test: $nfail failure(s), all listed in $KNOWN_RED (known red, tolerated until their work package fixes them)"
 }
 
 flutter_checks() {
@@ -104,8 +104,8 @@ flutter_checks() {
   done < <(changed)
   files+=("${CORE_TESTS[@]}")
   mapfile -t files < <(printf '%s\n' "${files[@]}" | sort -u)
-  echo "--- flutter test (scoped: ${#files[@]} files)"
-  heavy flutter test --no-pub "${files[@]}"
+  echo "--- flutter test (scoped: ${#files[@]} files; no heavy slot)"
+  flutter_all "${files[@]}"
 }
 
 functions_checks() {

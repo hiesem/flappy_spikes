@@ -1,13 +1,13 @@
 # Notes for every builder and tester (Flappy Spikes 2.6)
 
 **Toolchain:** see the workspace CLAUDE.md (`flutter` / `dart` / `node` / `npm` / `firebase` on PATH). Dependencies are installed: use
-`flutter pub get --offline` only if you must, never add a package without the issue saying so. Run
-`bash scripts/verify.sh` before you stop (it runs `flutter analyze`, the functions build, the whole `flutter test`
-and, when `functions/` changed, `npm --prefix functions test` in the Firebase emulators under a demo project).
+`flutter pub get --offline` only if you must, never add a package without the issue saying so. Before you stop run the scoped verify `VERIFY_BASE=feat/2.6 VERIFY_SCOPED=1 bash scripts/verify.sh` (`flutter analyze`,
+the functions build, your changed/matching tests + the playability core, and `npm --prefix functions test` in the
+Firebase emulators when `functions/` changed) and get it green; the orchestrator runs the whole suite.
 Run the functions tests ONLY as `npm --prefix functions test [-- test/<file>.test.ts]`: never start
 `firebase emulators:exec` / `emulators:start` yourself (parallel builders share the fixed emulator ports; the npm script
 waits for its turn, a hand-started suite breaks their runs).
-Memory is shared by parallel builders (22 GB): run `flutter test` with `-j 4` at most, and prefer single files while you work.
+Memory is shared by up to 6 parallel builders (22 GB): run single test files while you work, `-j 4` at most; never the whole suite.
 
 **Never:** `adb`, devices or emulators, `firebase deploy`, gcloud, Play Console / App Store Connect, real Firebase
 project calls, publishing anything. Never touch `android/upload-keystore.jks`, `android/app/key.properties` or any

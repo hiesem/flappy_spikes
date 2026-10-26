@@ -350,16 +350,17 @@ work-package details are in `docs/p26/status/`; the rules for every builder and 
 | Role | Model | Reads |
 |---|---|---|
 | Orchestrator | Claude Opus 5.5 (medium), the main Claude Code session (or a headless pass started by the heartbeat timer) | CLAUDE.md, ORCHESTRATION.md, `.worktrees/briefs26/STATE.md` + `RUNLOG.md` |
-| Builder | GPT-6.1 Sol (medium) via `codex exec`, one per work package, up to 4 at once, each in its own worktree `.worktrees/p26-<wp>` on branch `p26/<wp>` | AGENTS.md, its brief `.worktrees/briefs26/<wp>.md`, BUILD_NOTES.md |
+| Builder | GPT-6.1 Sol (medium) via `codex exec`, one per work package, up to 6 at once, each in its own worktree `.worktrees/p26-<wp>` on branch `p26/<wp>` | AGENTS.md, its brief `.worktrees/briefs26/<wp>.md`, BUILD_NOTES.md |
 | Tester | Claude Opus 5.5 (medium) via `claude -p`, one per build round | CLAUDE.md, its tester prompt, BUILD_NOTES.md |
 
-**SDLC per work package:** plan (brief) → build → verify (`bash scripts/verify.sh`) → test (PASS / FAIL with
-blocker / major / minor findings) → at most 3 fix rounds → merge into `feat/2.6` only with a green verify AND a tester
-PASS → wave gate (full suite + iOS CI). The known-red list `scripts/known_red_tests.txt` must stay empty from wave 1 on.
+**SDLC per work package (pipelined):** plan (brief) → build (builder's own scoped verify) → full verify AND Opus
+test started together (PASS / FAIL with blocker / major / minor findings) → at most 3 fix rounds → merge queue (rebase
++ fast check, ~1–3 min) into `feat/2.6` only with a green verify AND a tester PASS → rolling full-suite integration
+verify in the background → rolling wave gate (+ iOS CI). Next WPs start as soon as their own dependencies are merged. The known-red list `scripts/known_red_tests.txt` must stay empty from wave 1 on.
 
 **If you are a builder:** do only your brief's work package; touch only its paths (edits in shared hot files stay
-inside a `// region P26-<WP>` block); add the tests it names; run `bash scripts/verify.sh` and get it green before you
-stop; commit on your branch with a clear message. Never edit `scripts/known_red_tests.txt`, never weaken or delete an
+inside a `// region P26-<WP>` block); add the tests it names; before you stop run the scoped verify
+(`VERIFY_BASE=feat/2.6 VERIFY_SCOPED=1 bash scripts/verify.sh`) and get it green (the orchestrator runs the full suite); commit on your branch with a clear message. Never edit `scripts/known_red_tests.txt`, never weaken or delete an
 assertion to get green, never deploy, never use adb / devices / store consoles, never read secrets (`.env*`, key
 files, `android/upload-keystore.jks`, `android/app/key.properties`, `~/.config/**`, credentials). A conflict with the
 PRD or another area: report it in your final message, don't work around it.

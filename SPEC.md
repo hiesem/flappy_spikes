@@ -1912,10 +1912,11 @@ Remote Config only serves `versus_pg_salt`. Key list: `docs/p23/TUNING.md`.
 - **DEVIATION (WP-D, D1/D2):** the shared opening curve reaches 70 pt at
   hoop 150, perfect band 10 pt; speed and 310 pt plane spacing remain pinned.
   Δy uses min(band, 540 pt), at most 270 pt, with a 0.85 maximum after a hard
-  hoop. Screens above the 711 reference reuse its portable 623 pt
-  centre-course band below the top tooth line, so centre rows and edge
-  recovery produce the same point-space Δy at 711 and 730 (the rendered pair
-  offset still scales with view height). Tilts start at 10,
+  hoop. R2 holds for the drawn Δy; centres use the full band (PRD §8.3
+  decision 3, #97/#118). Identical seeded layout draws at 711 and 730 pt
+  produce identical point-space Δy magnitudes before edge placement; the
+  final band-edge clamp may differ. The rendered pair offset still scales
+  with view height. Tilts start at 10,
   switch 15, rails 25, saw 30, strong aligned tilts 50, 45° at 60, slides 70,
   orbit/rock 90, saw-in-squeeze 100, moving + 30° at 150. Strong tilts follow
   the approach and require |Δy| ≥40; otherwise they clamp to 15°. A 45° ring

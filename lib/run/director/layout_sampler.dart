@@ -24,8 +24,11 @@ class LayoutSampler {
   /// A forced next centre (spring launch target, §3.23).
   double? forceY;
 
-  /// Whether [nextCentre] has started a director-owned portable course.
-  bool _portableCourse = false;
+  // region P26-D-R2
+  /// Latest sampled |Δy| in points, after the hard-follow-up cap and before
+  /// direction / edge placement. Null for an initial or spring-forced centre.
+  double? lastDrawnDy;
+  // endregion
 
   /// PRD-2.6 D2 whether the next Δy follows a moving or ≥30° tilted hoop.
   bool _hardFollowUp = false;
@@ -40,47 +43,12 @@ class LayoutSampler {
     double opening, {
     double extra = 0,
     bool useTable = true,
-  }) => _limits(
-    hoopIndex,
-    ctx,
-    opening,
-    extra: extra,
-    useTable: useTable,
-    portable: false,
-  );
-
-  (double, double) portableLimits(
-    int hoopIndex,
-    DirectorContext ctx,
-    double opening, {
-    double extra = 0,
-    bool useTable = true,
-  }) => _limits(
-    hoopIndex,
-    ctx,
-    opening,
-    extra: extra,
-    useTable: useTable,
-    portable: true,
-  );
-
-  (double, double) _limits(
-    int hoopIndex,
-    DirectorContext ctx,
-    double opening, {
-    double extra = 0,
-    bool useTable = true,
-    required bool portable,
   }) {
     final b = tables.bandFor(hoopIndex);
-    final centreBand = portable
-        ? min(ctx.band, LayoutConfig.courseRefBand)
-        : ctx.band;
-    final coreCentre = portable
-        ? ctx.topTooth + centreBand / 2
-        : (ctx.topTooth + ctx.floorTooth) / 2;
-    final coreTop = coreCentre - centreBand / 2;
-    final coreFloor = coreCentre + centreBand / 2;
+    final centreBand = ctx.band;
+    final coreCentre = (ctx.topTooth + ctx.floorTooth) / 2;
+    final coreTop = ctx.topTooth;
+    final coreFloor = ctx.floorTooth;
     final m = opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin + extra;
     // PRD-2.6 D2: the centre rows are fractions of the band; only the Δy
     // rows use `dyRef = min(band, 540 pt)` (see nextCentre).
@@ -121,18 +89,12 @@ class LayoutSampler {
     double extra = 0,
     bool hardFollowUp = false,
   }) {
-    var (lo, hi) = portableLimits(hoopIndex, ctx, opening, extra: extra);
+    final (lo, hi) = limits(hoopIndex, ctx, opening, extra: extra);
     final prev = lastY;
-    if (prev == null) _portableCourse = true;
-    if (!_portableCourse && prev != null && (prev < lo || prev > hi)) {
-      final full = limits(hoopIndex, ctx, opening, extra: extra);
-      if (prev >= full.$1 && prev <= full.$2) lo = full.$1;
-      hi = full.$2;
-    }
+    lastDrawnDy = null;
     if (prev == null) {
       // Hoop 0 (and the first slot of a startHoopIndex run): exact centre.
-      final referenceCentre =
-          ctx.topTooth + min(ctx.band, LayoutConfig.courseRefBand) / 2;
+      final referenceCentre = (ctx.topTooth + ctx.floorTooth) / 2;
       final y = referenceCentre.clamp(lo, hi);
       lastY = y;
       return y;
@@ -142,13 +104,12 @@ class LayoutSampler {
       forceY = null;
       // region WP-3c — §3.23 the ring after a spring sits 240 pt away
       // inside the band (band rule), even outside the row's centre range.
-      final (flo, fhi) = _limits(
+      final (flo, fhi) = limits(
         hoopIndex,
         ctx,
         opening,
         extra: extra,
         useTable: false,
-        portable: true,
       );
       final y = forced.clamp(flo, fhi).toDouble();
       // endregion WP-3c
@@ -165,17 +126,14 @@ class LayoutSampler {
     // scale of the whole distribution. Keep smaller draws exactly as they
     // were and only shorten the ones above 0.85 × the row maximum.
     if (hard) mag = min(mag, b.dy.$3 * dyRef * RunConfig.hardHoopDyFactor);
-    var sign = random.nextDouble() < LayoutConfig.flipChance
+    lastDrawnDy = mag;
+    final sign = random.nextDouble() < LayoutConfig.flipChance
         ? -lastSign
         : lastSign;
     var y = prev + sign * mag;
     if (y < lo || y > hi) {
-      // PRD-2.6 §11 R2 fairness: Δy in points is identical at 711 and 730
-      // when the band is ≥ dyRef. A step that leaves the row is shortened
-      // against the edge it crossed; flipping it here would make a taller
-      // screen (whose row ends further out) take the unflipped step and
-      // change the whole course. The next draw still uses `lastSign` from
-      // the actual edge step (the zig-zag direction is not forced).
+      // PRD-2.6 §8.3 decision 3 (#97/#118): R2 applies to the drawn
+      // magnitude. Full-band rows may shorten the step at different edges.
       y = y < lo ? lo : hi;
     }
     y = y.clamp(lo, hi).toDouble();
@@ -308,10 +266,10 @@ class LayoutSampler {
     final roll = random.nextDouble();
     // PRD-2.3 §14.4 the moving chance by hoop index (`curve_moving`).
     if (!force && roll >= tables.movingChance(hoopIndex)) return null;
-    final (lo, hi) = portableLimits(hoopIndex, ctx, opening);
+    final (lo, hi) = limits(hoopIndex, ctx, opening);
     final room = max(0.0, min(centre - lo, hi - centre));
     // The band rule (not the row's centre range) bounds a slide's travel.
-    final (blo, bhi) = portableLimits(hoopIndex, ctx, opening, useTable: false);
+    final (blo, bhi) = limits(hoopIndex, ctx, opening, useTable: false);
     final bandRoom = max(0.0, min(centre - blo, bhi - centre));
     _hardFollowUp = true;
     var row = LayoutConfig.motionRows.first;

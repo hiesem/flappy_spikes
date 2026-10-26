@@ -5,6 +5,7 @@ import 'package:flappy_spikes/run/config/director_tables.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/run/director/layout_sampler.dart';
+import 'package:flappy_spikes/run/director/formations.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/hoops/motion/hoop_motion.dart';
@@ -152,6 +153,109 @@ void main() {
 
     expect(lo, closeTo(mid + (.16 - .5) * band, 1e-9));
     expect(hi, closeTo(mid + (.78 - .5) * band, 1e-9));
+  });
+
+  // PRD §8.3 decision 3: exercise production placement, not just limits().
+  test('D2 the first production centre uses the full live band', () {
+    final director = RunDirector(
+      seed: 7,
+      enabled: _plain,
+      met: ElementId.values.toSet(),
+    );
+    final slot = director.nextSlot(DirectorContext.open(730));
+    expect(slot.centreY, 365);
+  });
+
+  test('D2 edge clamp changes only a draw leaving the full-band row', () {
+    const rows = <int, (double, double)>{
+      0: (.45, .55),
+      3: (.33, .67),
+      20: (.27, .70),
+      40: (.24, .73),
+      65: (.20, .76),
+      100: (.16, .78),
+    };
+    for (final height in [568.0, 711.0, 730.0]) {
+      final ctx = DirectorContext.open(height);
+      final band = height - 88;
+      for (final entry in rows.entries) {
+        final hoop = entry.key;
+        // Independent full-band row bounds; these rows are tighter than
+        // the opening safety margin at the tested heights.
+        final lo = 44 + entry.value.$1 * band;
+        final hi = 44 + entry.value.$2 * band;
+        final q = LayoutConfig.bandFor(hoop).dy;
+        final mag = q.$1 * .5 * math.min(band, 540);
+        for (final sign in [-1.0, 1.0]) {
+          // Near either edge, just on it, and safely inside the row.
+          for (final previous in [
+            lo,
+            lo + mag / 2,
+            (lo + hi) / 2,
+            hi - mag / 2,
+            hi,
+          ]) {
+            final sampler =
+                LayoutSampler(DirectorTables.prd2, _DrawQueue([.25, .9]))
+                  ..lastY = previous
+                  ..lastSign = sign;
+            final y = sampler.nextCentre(hoop, ctx, RunConfig.openingFor(hoop));
+            final proposed = previous + sign * mag;
+            final expected = proposed.clamp(lo, hi);
+            expect(sampler.lastDrawnDy, closeTo(mag, 1e-9));
+            expect(
+              y,
+              closeTo(expected, 1e-9),
+              reason: 'height=$height hoop=$hoop prev=$previous sign=$sign',
+            );
+            if (proposed >= lo && proposed <= hi) {
+              expect(y - previous, closeTo(sign * mag, 1e-9));
+            } else {
+              expect(y, closeTo(proposed < lo ? lo : hi, 1e-9));
+            }
+          }
+        }
+      }
+    }
+  });
+
+  test('D2 drawn delta is cleared for a spring-forced centre', () {
+    final ctx = DirectorContext.open(730);
+    final sampler = LayoutSampler(DirectorTables.prd2, math.Random(7));
+    sampler.nextCentre(100, ctx, 70);
+    sampler.nextCentre(101, ctx, 70);
+    expect(sampler.lastDrawnDy, isNotNull);
+    sampler.forceY = 550;
+    expect(sampler.nextCentre(102, ctx, 70), 550);
+    expect(sampler.lastDrawnDy, isNull);
+  });
+
+  test('D2 all formation shapes fit the full band at 730', () {
+    final seen = <FormationId>{};
+    for (var seed = 0; seed < 40; seed++) {
+      final director = RunDirector(
+        seed: seed,
+        enabled: ElementId.values.toSet(),
+        met: ElementId.values.toSet(),
+        startHoopIndex: 150,
+      );
+      final ctx = DirectorContext.open(730);
+      for (var i = 0; i < 260; i++) {
+        final plan = director.nextSlot(ctx);
+        director.nextGap(ctx, plan);
+        if (plan.formation case final shape?) {
+          seen.add(shape);
+          final reach =
+              plan.opening / 2 +
+              RunConfig.rimRadius +
+              RunConfig.bandMargin +
+              (plan.motion?.halfTravel ?? 0);
+          expect(plan.centreY - reach, greaterThanOrEqualTo(44 - 1e-8));
+          expect(plan.centreY + reach, lessThanOrEqualTo(686 + 1e-8));
+        }
+      }
+    }
+    expect(seen, FormationId.values.toSet());
   });
 
   test('D2 tilt magnitudes follow the row weights', () {

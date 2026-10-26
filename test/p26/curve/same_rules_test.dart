@@ -1,8 +1,13 @@
+import 'dart:math' as math;
+
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/home_mode.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
+import 'package:flappy_spikes/run/director/layout_sampler.dart';
+import 'package:flappy_spikes/run/config/director_tables.dart';
+import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
 import 'package:flappy_spikes/run/run_setup.dart';
@@ -90,22 +95,53 @@ void main() {
     },
   );
 
-  test('R2 delta y in points is identical at 711 and 730', () {
-    for (var seed = 0; seed < 200; seed++) {
-      RunDirector director() => RunDirector(
-        seed: seed,
-        enabled: ElementId.values.toSet(),
-        met: ElementId.values.toSet(),
-      );
-      final a = _plans(director(), 711);
-      final b = _plans(director(), 730);
-      for (var i = 1; i < 400; i++) {
-        expect(
-          a[i].$1.centreY - a[i - 1].$1.centreY,
-          closeTo(b[i].$1.centreY - b[i - 1].$1.centreY, 1e-8),
-          reason: 'seed=$seed hoop=$i',
-        );
+  // PRD §8.3 decision 3 (#97/#118) replaces final-centre identity with
+  // drawn-Δy identity: the row edges scale with the full live band.
+  test('R2 drawn delta y in points is identical at 711 and 730', () {
+    var differentEdgeSteps = 0;
+    for (final squeezed in [false, true]) {
+      for (var seed = 0; seed < 200; seed++) {
+        final a = LayoutSampler(DirectorTables.prd2, math.Random(seed));
+        final b = LayoutSampler(DirectorTables.prd2, math.Random(seed));
+        final oracle = math.Random(seed);
+        for (var i = 0; i < 400; i++) {
+          final previousA = a.lastY;
+          final previousB = b.lastY;
+          // Identical modifier inputs isolate the layout rule from later
+          // geometry-dependent motion/special/hazard decisions.
+          final hard = i % 7 == 0;
+          double next(LayoutSampler sampler, double height) =>
+              sampler.nextCentre(
+                i,
+                DirectorContext.open(
+                  height,
+                  squeezeWindow: squeezed,
+                  squeezeInset: squeezed ? 54 : 0,
+                ),
+                RunConfig.openingFor(i),
+                hardFollowUp: hard,
+              );
+          final ya = next(a, 711);
+          final yb = next(b, 730);
+          if (i == 0) {
+            expect(a.lastDrawnDy, isNull);
+            expect(b.lastDrawnDy, isNull);
+            continue;
+          }
+          final u = oracle.nextDouble();
+          oracle.nextDouble(); // direction draw
+          final q = DirectorTables.prd2.bandFor(i).dy;
+          final raw = LayoutSampler.sampleDy(q, u) * 540;
+          final expected = hard ? math.min(raw, q.$3 * 540 * .85) : raw;
+          final tag = 'seed=$seed hoop=$i squeeze=$squeezed';
+          expect(a.lastDrawnDy, closeTo(expected, 1e-9), reason: tag);
+          expect(b.lastDrawnDy, a.lastDrawnDy, reason: tag);
+          if (((ya - previousA!) - (yb - previousB!)).abs() > 1e-8) {
+            differentEdgeSteps++;
+          }
+        }
       }
     }
+    expect(differentEdgeSteps, greaterThan(0));
   });
 }

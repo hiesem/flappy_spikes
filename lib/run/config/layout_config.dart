@@ -77,10 +77,6 @@ abstract final class LayoutConfig {
   /// PRD-2.6 D2 Δy is measured in points, capped at this band height.
   static const double dyRefBand = 540;
 
-  /// PRD-2.6 D2 the largest centre-row band. The 711-pt playfield keeps its
-  /// full 623-pt course; taller playfields use the same reference for R2.
-  static const double courseRefBand = 623;
-
   /// PRD-2.6 D2 the Δy ceiling after a moving or strongly tilted hoop.
   static const double hardHoopDyFactor = 0.85;
 

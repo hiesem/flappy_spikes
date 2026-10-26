@@ -24,6 +24,9 @@ class LayoutSampler {
   /// A forced next centre (spring launch target, §3.23).
   double? forceY;
 
+  /// Whether [nextCentre] has started a director-owned portable course.
+  bool _portableCourse = false;
+
   /// PRD-2.6 D2 whether the next Δy follows a moving or ≥30° tilted hoop.
   bool _hardFollowUp = false;
 
@@ -37,27 +40,62 @@ class LayoutSampler {
     double opening, {
     double extra = 0,
     bool useTable = true,
+  }) => _limits(
+    hoopIndex,
+    ctx,
+    opening,
+    extra: extra,
+    useTable: useTable,
+    portable: false,
+  );
+
+  (double, double) portableLimits(
+    int hoopIndex,
+    DirectorContext ctx,
+    double opening, {
+    double extra = 0,
+    bool useTable = true,
+  }) => _limits(
+    hoopIndex,
+    ctx,
+    opening,
+    extra: extra,
+    useTable: useTable,
+    portable: true,
+  );
+
+  (double, double) _limits(
+    int hoopIndex,
+    DirectorContext ctx,
+    double opening, {
+    double extra = 0,
+    bool useTable = true,
+    required bool portable,
   }) {
     final b = tables.bandFor(hoopIndex);
-    final centreMid = (ctx.topTooth + ctx.floorTooth) / 2;
+    final centreBand = portable
+        ? min(ctx.band, LayoutConfig.courseRefBand)
+        : ctx.band;
+    final coreCentre = portable
+        ? ctx.topTooth + centreBand / 2
+        : (ctx.topTooth + ctx.floorTooth) / 2;
+    final coreTop = coreCentre - centreBand / 2;
+    final coreFloor = coreCentre + centreBand / 2;
     final m = opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin + extra;
-    // PRD-2.6 D2: the centre rows are fractions of the full band; only the
-    // Δy rows use `dyRef = min(band, 540 pt)` (see nextCentre).
+    // PRD-2.6 D2: the centre rows are fractions of the band; only the Δy
+    // rows use `dyRef = min(band, 540 pt)` (see nextCentre).
     var lo = useTable
-        ? centreMid + (b.centre.$1 - 0.5) * ctx.band
+        ? coreCentre + (b.centre.$1 - 0.5) * centreBand
         : ctx.topTooth;
     var hi = useTable
-        ? centreMid + (b.centre.$2 - 0.5) * ctx.band
+        ? coreCentre + (b.centre.$2 - 0.5) * centreBand
         : ctx.floorTooth;
     if (ctx.squeezeWindow) {
       lo = ctx.squeezeTopTooth + m;
       hi = ctx.squeezeFloorTooth - m;
     }
-    lo = max(lo, (ctx.squeezeWindow ? ctx.squeezeTopTooth : ctx.topTooth) + m);
-    hi = min(
-      hi,
-      (ctx.squeezeWindow ? ctx.squeezeFloorTooth : ctx.floorTooth) - m,
-    );
+    lo = max(lo, (ctx.squeezeWindow ? ctx.squeezeTopTooth : coreTop) + m);
+    hi = min(hi, (ctx.squeezeWindow ? ctx.squeezeFloorTooth : coreFloor) - m);
     if (lo > hi) {
       final mid = (lo + hi) / 2;
       return (mid, mid);
@@ -83,11 +121,19 @@ class LayoutSampler {
     double extra = 0,
     bool hardFollowUp = false,
   }) {
-    final (lo, hi) = limits(hoopIndex, ctx, opening, extra: extra);
+    var (lo, hi) = portableLimits(hoopIndex, ctx, opening, extra: extra);
     final prev = lastY;
+    if (prev == null) _portableCourse = true;
+    if (!_portableCourse && prev != null && (prev < lo || prev > hi)) {
+      final full = limits(hoopIndex, ctx, opening, extra: extra);
+      if (prev >= full.$1 && prev <= full.$2) lo = full.$1;
+      hi = full.$2;
+    }
     if (prev == null) {
       // Hoop 0 (and the first slot of a startHoopIndex run): exact centre.
-      final y = ((ctx.topTooth + ctx.floorTooth) / 2).clamp(lo, hi);
+      final referenceCentre =
+          ctx.topTooth + min(ctx.band, LayoutConfig.courseRefBand) / 2;
+      final y = referenceCentre.clamp(lo, hi);
       lastY = y;
       return y;
     }
@@ -96,12 +142,13 @@ class LayoutSampler {
       forceY = null;
       // region WP-3c — §3.23 the ring after a spring sits 240 pt away
       // inside the band (band rule), even outside the row's centre range.
-      final (flo, fhi) = limits(
+      final (flo, fhi) = _limits(
         hoopIndex,
         ctx,
         opening,
         extra: extra,
         useTable: false,
+        portable: true,
       );
       final y = forced.clamp(flo, fhi).toDouble();
       // endregion WP-3c
@@ -132,6 +179,11 @@ class LayoutSampler {
       y = y < lo ? lo : hi;
     }
     y = y.clamp(lo, hi).toDouble();
+    // A spring/calm recovery can leave the preceding centre outside the
+    // row. Re-enter it gradually instead of turning the row clamp into an
+    // above-ceiling jump (including the hard-follow-up cap).
+    final maxStep = b.dy.$3 * dyRef * (hard ? RunConfig.hardHoopDyFactor : 1);
+    y = y.clamp(prev - maxStep, prev + maxStep).toDouble();
     final s = (y - prev).sign;
     lastSign = s == 0 ? sign : s;
     lastY = y;
@@ -256,10 +308,10 @@ class LayoutSampler {
     final roll = random.nextDouble();
     // PRD-2.3 §14.4 the moving chance by hoop index (`curve_moving`).
     if (!force && roll >= tables.movingChance(hoopIndex)) return null;
-    final (lo, hi) = limits(hoopIndex, ctx, opening);
+    final (lo, hi) = portableLimits(hoopIndex, ctx, opening);
     final room = max(0.0, min(centre - lo, hi - centre));
     // The band rule (not the row's centre range) bounds a slide's travel.
-    final (blo, bhi) = limits(hoopIndex, ctx, opening, useTable: false);
+    final (blo, bhi) = portableLimits(hoopIndex, ctx, opening, useTable: false);
     final bandRoom = max(0.0, min(centre - blo, bhi - centre));
     _hardFollowUp = true;
     var row = LayoutConfig.motionRows.first;
@@ -292,6 +344,8 @@ class LayoutSampler {
         // travel left rocks in place instead.
         final cap = cosA < 0.2 ? rail.halfTravel.$2 : bandRoom / cosA;
         if (cap < RunConfig.railMinHalfTravel) {
+          // D1: a cramped slide must not introduce rock before hoop 90.
+          if (hoopIndex < 90) return null;
           return MotionSpec(
             type: MotionType.rock,
             amplitudeDeg: RunConfig.rockAmplitudeDeg,

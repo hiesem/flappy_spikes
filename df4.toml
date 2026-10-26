@@ -174,7 +174,7 @@ mode = "on"
 until = ""   # = M5, the last wave of PRD 2.6
 mandate = "owner (standing mandate, 2026-10-25): continue without my supervision or input until everything from the PRD is built"
 reviewer = "member_b"
-followup_rounds = 2
+followup_rounds = 3   # owner mandate: one more round when the 2 used rounds left merges unchecked (2026-10-26)
 
 [notify]
 command = ["notify-send", "-u", "critical", "-a", "df4", "df4 {project}: {event}", "{line}"]

@@ -122,8 +122,11 @@ def review_from_text(text):
 
 def test(a):
     start = time.time()
-    p = subprocess.run(a.rest, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
-    sys.stdout.write(p.stdout)
+    p = subprocess.Popen(a.rest, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
+    buf = []
+    for line in p.stdout:          # stream (the worker log must move, or status.sh calls it stalled)
+        sys.stdout.write(line); sys.stdout.flush(); buf.append(line)
+    p.wait(); p.stdout = "".join(buf)
     append({"ev": "test", "ts_start": iso(start), "ts_end": iso(), "task_id": a.opt.get("task"), "wave": a.opt.get("wave"),
             "cmd": " ".join(a.rest)[:300], "scope": a.opt.get("scope", "targeted"),
             "where": a.opt.get("where", "task-worktree"), "exit": p.returncode,

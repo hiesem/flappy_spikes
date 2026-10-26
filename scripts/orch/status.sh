@@ -3,7 +3,7 @@
 . "$(dirname "$0")/env.sh"
 now=$(date +%s); n=0
 for d in "$W"/*/; do
-  [ -d "$d" ] || continue; id=$(basename "$d"); n=$((n+1))
+  [ -d "$d" ] || continue; id=$(basename "$d"); [ -f "$d/processed" ] && [ -z "${ALL:-}" ] && continue; n=$((n+1))
   pid=$(cat "$d/pid" 2>/dev/null || echo 0); st=$(cat "$d/started" 2>/dev/null || echo $now); cap=$(cat "$d/cap" 2>/dev/null || echo 90)
   run=$(( (now-st)/60 )); lm=$(stat -c %Y "$d/log" 2>/dev/null || echo $st); idle=$(( (now-lm)/60 ))
   if [ -f "$d/exit" ]; then s="DONE(exit $(cat "$d/exit"))"

@@ -177,23 +177,33 @@ void main() {
         everyElement(stairs.first.tiltDeg),
       );
 
-      final slalom = formations.build(FormationId.slalom, 150);
+      // region P26-D-SLALOM
+      // PRD-2.6 §8.3 decision 4: 110–130 pt is the consecutive Δy.
+      const slalomCentre = 355.0;
+      final slalom = formations.build(
+        FormationId.slalom,
+        150,
+        centreY: slalomCentre,
+      );
       expect(slalom, hasLength(4));
-      final slalomCentre = (slalom[0].centreY + slalom[1].centreY) / 2;
-      final slalomOffsets = [
-        for (var index = 0; index < 4; index++)
-          (slalom[index].centreY - slalomCentre).abs(),
-      ];
+      final slalomStep = slalom[1].centreY - slalom[0].centreY;
       expect(
-        slalomOffsets,
-        everyElement(allOf(greaterThanOrEqualTo(110), lessThanOrEqualTo(130))),
+        slalomStep,
+        allOf(greaterThanOrEqualTo(110), lessThanOrEqualTo(130)),
       );
       for (var index = 0; index < slalom.length; index++) {
         final sign = index.isEven ? -1 : 1;
-        final expected = sign * slalomOffsets[index];
+        final expected = sign * slalomStep / 2;
         expect(slalom[index].centreY, closeTo(slalomCentre + expected, 1e-9));
         expect(slalom[index].tiltDeg, 0);
+        if (index > 0) {
+          expect(
+            slalom[index].centreY - slalom[index - 1].centreY,
+            closeTo(sign * slalomStep, 1e-9),
+          );
+        }
       }
+      // endregion
 
       final wave = formations.build(FormationId.tiltWave, 150);
       expect(wave.map((plan) => plan.tiltDeg), [-30, -15, 0, 15, 30]);

@@ -202,7 +202,9 @@ class Formations {
     ];
   }
 
+  // region P26-D-SLALOM
   List<SlotPlan> _slalom(int start, double x, double y, math.Random random) {
+    // PRD-2.6 §8.3 decision 4 defines the step between consecutive hoops.
     final step = _range(random, 110, 130);
     return [
       for (var offset = 0; offset < 4; offset++)
@@ -210,11 +212,12 @@ class Formations {
           id: FormationId.slalom,
           index: start + offset,
           trackX: x + offset * RunConfig.spacing,
-          centreY: y + (offset.isEven ? -step : step),
+          centreY: y + (offset.isEven ? -step / 2 : step / 2),
           hazardCost: 1,
         ),
     ];
   }
+  // endregion
 
   List<SlotPlan> _tiltWave(int start, double x, double y) {
     const tilts = [-30.0, -15.0, 0.0, 15.0, 30.0];

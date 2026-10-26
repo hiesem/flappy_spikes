@@ -364,9 +364,6 @@ void main() async {
   ) async {
     game.closeNoAdsPopup();
     await _flush(game);
-    // PRD 2.6 C2: launch already used its popup slot. A new Home visit
-    // leaves a slot for the forced popup while the schedule gap stays shut.
-    await background(game, clock, Config.sessionGap);
     expect(game.menu.noAdsPopup.evaluate(), isNull, reason: 'gap');
     game.openDebugPanel();
     await _flush(game);

@@ -84,6 +84,30 @@ void main() {
     expect(policy.selectedGift, isNull);
   });
 
+  test('debug force bypasses C2 without consuming or resetting the visit', () {
+    final policy = HomeMomentBudget();
+    policy.beginVisit(
+      HomeVisit(
+        day: DateTime(2026, 10, 24),
+        gamesPlayed: 3,
+        requests: const HomeVisitRequests(levelUpCatchUp: true, noAds: true),
+      ),
+    );
+    final opened = <HomeMoment>[];
+    policy.showDebug(HomeMoment.noAds, () => opened.add(HomeMoment.noAds));
+    expect(policy.selectedMoment, HomeMoment.levelUp);
+    expect(
+      policy.tryShow(HomeMoment.levelUp, () => opened.add(HomeMoment.levelUp)),
+      isTrue,
+    );
+    policy.showDebug(HomeMoment.noAds, () => opened.add(HomeMoment.noAds));
+    expect(
+      policy.tryShow(HomeMoment.noAds, () => fail('visit already spent')),
+      isFalse,
+    );
+    expect(opened, [HomeMoment.noAds, HomeMoment.levelUp, HomeMoment.noAds]);
+  });
+
   test('gift boxes are oldest-first and only one is offered per visit', () {
     final policy = HomeMomentBudget();
     final gifts = [
@@ -257,7 +281,7 @@ void main() {
         ),
       );
 
-      game.openNoAdsPopup(reason: 'forced', check: 'forced');
+      game.openNoAdsPopup(reason: 'videos');
       await flushAndMount(game);
       expect(game.noAdsPopup, isNull);
 
@@ -279,7 +303,7 @@ void main() {
           requests: const HomeVisitRequests(noAds: true),
         ),
       );
-      game.openNoAdsPopup(reason: 'forced', check: 'forced');
+      game.openNoAdsPopup(reason: 'videos');
       await flushAndMount(game);
       expect(game.noAdsPopup, isNotNull);
     },

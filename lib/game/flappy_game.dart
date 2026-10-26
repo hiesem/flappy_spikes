@@ -3026,7 +3026,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       showToast('Already ad-free');
       return;
     }
-    homeMoments.show(HomeMoment.noAds, () {
+    // region P26-C2L
+    // The debug panel's explicit force bypasses automatic pacing. Keep
+    // normal offers routed through C2, and leave the visit budget intact.
+    final show = reason == 'forced' ? homeMoments.showDebug : homeMoments.show;
+    show(HomeMoment.noAds, () {
       services.track('noads_popup_shown', {
         'trigger': _launchTrigger,
         'reason': ?reason,
@@ -3045,6 +3049,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       fadeOpacity(popup, from: 0, to: 1, duration: Config.popupFadeDuration);
       pushBack(_noAdsPopupBack);
     });
+    // endregion
   }
 
   /// Closes the popup. [dismissed] (×, dim, Esc) logs

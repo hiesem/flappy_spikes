@@ -404,12 +404,19 @@ void main() {
       expect(v4ModalCount(game), 1);
       await game.claimLevelUp();
       await v4Settle(game, tester);
-      expect(game.noAdsPopup, isNotNull);
-      expect(game.purchaseResultPopup, isNull);
+      // PRD 2.6 C2: LEVEL UP has this visit's popup priority. The upsell
+      // stays pending; the explicit purchase feedback remains serialized.
+      expect(game.noAdsPopup, isNull);
+      expect(game.purchaseResultPopup!.problem, PurchaseProblem.failed);
       expect(v4ModalCount(game), 1);
       game.handleBack();
       await v4Settle(game, tester);
-      expect(game.purchaseResultPopup!.problem, PurchaseProblem.failed);
+      expect(game.purchaseResultPopup, isNull);
+      expect(game.noAdsPopup, isNull);
+      expect(v4ModalCount(game), 0);
+      await v4Background(game, rig, tester, v4SessionGap);
+      expect(game.noAdsPopup, isNotNull);
+      expect(game.purchaseResultPopup, isNull);
       expect(v4ModalCount(game), 1);
       game.handleBack();
       await run(game, .5);
@@ -594,15 +601,25 @@ void main() {
   group('S1-70', () {
     v4Journey(
       'queued session arrivals must coalesce and recheck the show window',
-      prefs: (rig) => {..._recent(rig), 'bestScore': 25, 'playerLevel': 1, 'lastScore': 25},
+      // PRD 2.6 C2: use an explicit purchase-feedback modal as the queue
+      // blocker; an owed LEVEL UP would reserve this visit's popup slot.
+      prefs: (rig) => {..._recent(rig), 'bestScore': 25, 'playerLevel': 1, 'claimedLevels': ['1'], 'lastScore': 25},
       (game, rig, tester) async {
-        await run(game, .5);
-        expect(game.levelUpPopup, isNotNull);
+        game.openPurchaseResultPopup(
+          IapProduct.coins1000,
+          PurchaseProblem.failed,
+          'network',
+        );
+        await v4Settle(game, tester);
+        expect(game.purchaseResultPopup, isNotNull);
+        expect(game.levelUpPopup, isNull);
         rig.clock.now = rig.clock.now.add(Config.noAdsPopupFallback);
         for (var i = 0; i < 3; i++) {
           await v4Background(game, rig, tester, v4SessionGap);
+          expect(game.queuedPopups, 1, reason: 'session offers coalesce');
+          expect(game.noAdsPopup, isNull);
         }
-        await game.claimLevelUp();
+        game.handleBack();
         await v4Settle(game, tester);
         expect(game.noAdsPopup, isNotNull);
         for (var i = 0; i < 3; i++) {
@@ -627,16 +644,26 @@ void main() {
 
     v4Journey(
       'a queued offer rechecks its four-hour window after a clock correction',
-      prefs: (rig) => {..._recent(rig), 'bestScore': 25, 'playerLevel': 1, 'lastScore': 25},
+      // PRD 2.6 C2: use an explicit purchase-feedback modal as the queue
+      // blocker; an owed LEVEL UP would reserve this visit's popup slot.
+      prefs: (rig) => {..._recent(rig), 'bestScore': 25, 'playerLevel': 1, 'claimedLevels': ['1'], 'lastScore': 25},
       (game, rig, tester) async {
-        await run(game, .5);
-        expect(game.levelUpPopup, isNotNull);
+        game.openPurchaseResultPopup(
+          IapProduct.coins1000,
+          PurchaseProblem.failed,
+          'network',
+        );
+        await v4Settle(game, tester);
+        expect(game.purchaseResultPopup, isNotNull);
+        expect(game.levelUpPopup, isNull);
         rig.clock.now = rig.clock.now.add(Config.noAdsPopupFallback);
         await v4Background(game, rig, tester, v4SessionGap);
         expect(game.queuedPopups, 1);
         rig.clock.now = rig.clock.now.subtract(Config.noAdsPopupFallback);
-        await game.claimLevelUp();
+        game.handleBack();
         await v4Settle(game, tester);
+        expect(game.purchaseResultPopup, isNull);
+        expect(game.queuedPopups, 0, reason: 'the queued offer was rechecked and dropped');
         expect(
           game.noAdsPopup,
           isNull,

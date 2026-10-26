@@ -66,6 +66,10 @@ abstract class HomeMoments {
 
   void show(HomeMoment moment, void Function() open);
 
+  /// An explicit debug-panel force. Custom routing seams still observe it;
+  /// production bypasses the automatic popup budget without changing it.
+  void showDebug(HomeMoment moment, void Function() open) => show(moment, open);
+
   /// [show], but tells the caller whether [open] ran. Custom policies that do
   /// not need the answer keep the old [show]-only contract (the default here
   /// treats an invocation as opened).
@@ -121,6 +125,9 @@ class HomeMomentBudget extends HomeMoments {
     _selectedGift = null;
     _selected = _select(visit);
   }
+
+  @override
+  void showDebug(HomeMoment moment, void Function() open) => open();
 
   @override
   void show(HomeMoment moment, void Function() open) {

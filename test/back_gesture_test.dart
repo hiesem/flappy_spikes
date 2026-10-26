@@ -1,6 +1,7 @@
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/game/home_moments.dart';
 import 'package:flappy_spikes/game/purchases.dart';
 import 'package:flappy_spikes/game/sound.dart';
 import 'package:flappy_spikes/main.dart' show SystemBackObserver;
@@ -93,6 +94,15 @@ void main() {
         await stepSeconds(game, Config.systemBackDebounce + 0.01);
 
         await game.menu.levels.debugForceLevelUp(); // a reward is owed
+        // PRD 2.6 C2: the No-Ads popup spent the first visit's slot. Test
+        // LEVEL UP's back handler on the next declared Home visit.
+        game.homeMoments.beginVisit(
+          HomeVisit(
+            day: game.storage.now(),
+            gamesPlayed: game.storage.gamesPlayed,
+            requests: const HomeVisitRequests(levelUpCatchUp: true),
+          ),
+        );
         game.openLevelUpPopup();
         await flushAndMount(game);
         expect(game.levelUpPopup, isNotNull);

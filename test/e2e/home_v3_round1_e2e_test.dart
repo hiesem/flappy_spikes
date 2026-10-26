@@ -289,19 +289,21 @@ void main() async {
   }
 
   _journey(
-    'QA existing FALCON: launch upsell → single catch-up → close claims → persisted',
+    'QA existing FALCON: C2 catch-up first → close claims → persisted',
     (game, rig, tester) async {
-      expect(game.noAdsPopup, isNotNull);
+      // PRD 2.6 C2: catch-up LEVEL UP precedes No-Ads and consumes the
+      // launch visit's single big popup slot; the upsell stays pending.
+      expect(game.noAdsPopup, isNull);
       await _advance(game, .8);
-      expect(game.levelUpPopup, isNull);
-      game.handleBack();
-      await _advance(game, .8);
+      expect(game.levelUpPopup, isNotNull);
       expect(game.noAdsPopup, isNull);
       final popup = game.levelUpPopup!;
       expect(popup.pending.toLevel, 6);
       expect(popup.pending.reward, 1375);
       await _tap(game, tester, popup.closeButton);
       await _advance(game, 5);
+      expect(game.noAdsPopup, isNull, reason: 'C2 keeps No-Ads for a later visit');
+      expect(rig.events.params('noads_popup_shown'), isEmpty);
       expect(game.menu.wallet.balance, 2625);
       expect(game.coinPill.shownBalance, 2625);
       expect(rig.events.params('level_reward_claimed'), [

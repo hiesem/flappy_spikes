@@ -58,6 +58,9 @@ void main() {
       'noAdsPopupLastDay': today,
       'noAdsPopupShowsToday': shows,
       'bestScore': 100, 'playerLevel': 3,
+      // PRD 2.6 C2: isolate No-Ads scheduling from the higher-priority
+      // catch-up LEVEL UP; these reached levels were already claimed.
+      'claimedLevels': ['1', '2', '3'],
       ...extra,
     };
   }

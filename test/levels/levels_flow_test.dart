@@ -6,6 +6,7 @@ import 'package:flappy_spikes/components/levels/level_up_popup.dart';
 import 'package:flappy_spikes/components/levels/levels_screen.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/game/home_moments.dart';
 import 'package:flappy_spikes/game/sound.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flutter/gestures.dart' show TapDownDetails;
@@ -312,8 +313,16 @@ void main() async {
       expect(game.menu.wallet.balance, 75);
       expect(game.storage.claimedLevels, {1, 2});
 
-      // Debug LEVEL UP: next threshold -> popup at once; Esc claims.
+      // PRD 2.6 C2: the close-button claim used this visit's slot. Declare
+      // the next Home visit before testing the separate Esc claim.
       await game.menu.levels.debugForceLevelUp();
+      game.homeMoments.beginVisit(
+        HomeVisit(
+          day: game.storage.now(),
+          gamesPlayed: game.storage.gamesPlayed,
+          requests: const HomeVisitRequests(levelUpCatchUp: true),
+        ),
+      );
       game.openLevelUpPopup();
       await flushAndMount(game);
       expect(game.levelUpPopup!.pending.toLevel, 3);
@@ -370,14 +379,11 @@ void main() async {
   );
 
   levelsTest(
-    'no double popups: the no-ads launch popup goes first',
+    'no double popups: C2 gives the launch LEVEL UP priority over No-Ads',
     prefs: {'bestScore': 30, 'playerLevel': 1, 'installDay': 1},
     (game, events, t) async {
-      expect(game.noAdsPopup, isNotNull);
-      stepGame(game, 2);
-      expect(game.levelUpPopup, isNull);
-      game.closeNoAdsPopup();
-      await flushAndMount(game);
+      // PRD 2.6 C2: an owed LEVEL UP takes the visit's single popup slot.
+      expect(game.noAdsPopup, isNull);
       stepGame(game, 0.2);
       expect(game.levelUpPopup, isNull, reason: 'home must settle first');
       stepGame(game, Config.levelUpSettleDelay);
@@ -396,6 +402,12 @@ void main() async {
         game.world.children.query<LevelUpPopup>(),
         hasLength(1),
       );
+      await game.claimLevelUp();
+      await _flush(game);
+      stepGame(game, 2);
+      expect(game.levelUpPopup, isNull);
+      expect(game.noAdsPopup, isNull, reason: 'C2 defers the upsell to a later visit');
+      expect(events.params('noads_popup_shown'), isEmpty);
     },
   );
 

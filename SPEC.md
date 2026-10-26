@@ -1952,6 +1952,14 @@ Remote Config only serves `versus_pg_salt`. Key list: `docs/p23/TUNING.md`.
   the live Δy ceiling; sampler recovery re-enters centre rows gradually.
   Formation placement uses the same portable course band, so tall-screen
   edge clamps do not change Δy.
+  Tilt waves retain the complete −30/−15/0/+15/+30° sequence and their
+  rising/falling 40 pt steps when translated into the band. A wave is chosen
+  only when its rising entrance and all five slots fit D2/D3; another shape
+  takes the slot otherwise. A committed spring landing is a plain, still
+  hoop at exactly ±240 pt; specials, first meets and formations wait until
+  after it (§3.23). The debug autopilot previews the remaining Ring Train
+  planes together, rather than accepting a head pass that strands the bird
+  before the next 56 pt plane; train geometry and gameplay are unchanged.
   No new point source or timeline flag is added: `fl` remains 2 and the
   leaderboard maximum remains 32,500,000.
 

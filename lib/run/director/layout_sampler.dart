@@ -289,7 +289,7 @@ class LayoutSampler {
     final minDy = tuning.d('tilt_align_min_dy');
     var magnitude = tiltDeg.abs();
     final wasStrong = magnitude >= alignMin;
-    if (wasStrong && dy.abs() < minDy) magnitude = 15;
+    if (wasStrong && dy.abs() + 1e-9 < minDy) magnitude = 15;
     magnitude = min(magnitude, maxTiltDeg);
     if (wasStrong && dy != 0) return dy.sign * magnitude;
     return tiltDeg.sign * magnitude;

@@ -25,6 +25,22 @@ void main() {
     forced: forced,
   );
 
+  test('D7 shape preview checks every window without consuming the ledger', () {
+    final budget = HazardBudget();
+    final saws = [for (var i = 150; i < 154; i++) plan(i, HoopKindId.saw)];
+    expect(budget.allowsSequence(saws, previousY: 100, rowP90: 200), isFalse);
+    // A rejected reservation must leave all 5.5 points available.
+    expect(
+      budget.allowsSequence(saws.take(2).toList(), previousY: 100, rowP90: 200),
+      isTrue,
+    );
+    budget.add(plan(149, HoopKindId.saw));
+    expect(
+      budget.allowsSequence(saws.take(2).toList(), previousY: 100, rowP90: 200),
+      isFalse,
+    );
+  });
+
   test(
     'the cost table covers every element, tilt, motion, delta and squeeze',
     () {

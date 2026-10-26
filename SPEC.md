@@ -1979,11 +1979,25 @@ Remote Config only serves `versus_pg_salt`. Key list: `docs/p23/TUNING.md`.
 WP-D validation includes the 200-seed curve sweep (568 / 711 / 730,
 with and without squeeze), the R2 setup/height matrix, the 150 / 250
 autopilot starts and the ordinary gamesPlayed-10 human-noise median using
-the shared `HumanNoiseBot` (90 ms / 10% extra flaps). Issue #127 makes the
-bot closed-loop: every forecast starts from the bird's actual state, an
-emitted extra keeps its already-committed base reaction but that base is
-re-forecast once from the changed trajectory, and every emitted tap clears
-the selected controller plan. Noise is neither capped nor reduced.
+the shared `HumanNoiseBot`. D-BOT makes its timing noise closed-loop: one
+Gaussian jitter draw is retained for each base decision while the bot asks
+`Autopilot.nextFlapDelay()` again on every frame from the real bird state.
+For nonnegative jitter it waits until the autopilot has continuously wanted
+to flap for that duration; the wait resets when the request goes away.
+For negative jitter it taps when the fresh forecast is within the early
+window. It never moves a pending deadline forward by re-adding jitter.
+An extra tap is scheduled 80 ms after an emitted base tap. Every emitted
+tap, including an extra, clears the retained jitter and wait and invalidates
+the selected controller plan, so the next frame replans from the changed
+trajectory. Constructor parameters default to sigma 90 ms and 10% extra
+flaps; noise is neither capped nor reduced. With both parameters zero,
+the bot reproduces `flyRun` when seed and course history match. Diagnostics
+record actual emitted base offsets against the current nominal decision,
+including frame quantization; extra taps are excluded. Distribution checks
+pool multiple seeded flights (at least 500 base taps) at each height,
+retaining the mean 0 +/-10 ms and standard deviation 90 +/-10 ms limits.
+The sigma-90 baseline comparison and calibrated 40-hoop median gates are
+separate validation work under PRD-2.6 decision 8.3-1.
 The curve, same-rules and D7 ceiling gates pass at their original thresholds.
 The legacy cooldown audit accounts for D7's consecutive switch-chain rings.
 The owner Pixel 8 ceiling playtest remains required.

@@ -241,6 +241,7 @@ class Formations {
     ];
   }
 
+  // region P26-D-SYNC
   List<SlotPlan> _syncRails(int start, double x, double y, math.Random random) {
     final count = random.nextBool() ? 3 : 4;
     final motion = MotionSpec(
@@ -249,6 +250,11 @@ class Formations {
       speed: _range(random, 34, 42),
       phase: random.nextDouble(),
     );
+    // D7.8: the clock is absolute, but each subsequent plane is reached
+    // one spacing/cruise later. Subtract that delay in cycles so every
+    // ring has the same offset when the bird reaches it on a cruise line.
+    final period = 4 * motion.halfTravel / motion.speed;
+    final phaseStep = RunConfig.spacing / RunConfig.cruise(start) / period;
     return [
       for (var offset = 0; offset < count; offset++)
         _slot(
@@ -256,11 +262,18 @@ class Formations {
           index: start + offset,
           trackX: x + offset * RunConfig.spacing,
           centreY: y,
-          motion: motion,
+          motion: MotionSpec(
+            type: motion.type,
+            halfTravel: motion.halfTravel,
+            speed: motion.speed,
+            phase: (motion.phase - offset * phaseStep) % 1,
+          ),
           hazardCost: 1,
         ),
     ];
   }
+
+  // endregion
 
   List<SlotPlan> _sawGate(int start, double x, double y, math.Random random) {
     final design = SawDesign.values[random.nextInt(SawDesign.values.length)];

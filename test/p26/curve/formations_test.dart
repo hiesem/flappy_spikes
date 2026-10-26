@@ -1,9 +1,127 @@
+import 'package:flame/extensions.dart';
+import 'package:flame_test/flame_test.dart';
+import 'package:flappy_spikes/game/config.dart';
+import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/director/formations.dart';
-import 'package:flappy_spikes/run/director/plans.dart';
+import 'package:flappy_spikes/run/director/run_director.dart';
+import 'package:flappy_spikes/run/elements.dart';
+import 'package:flappy_spikes/run/hoops/motion/hoop_motion.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../helpers.dart';
+
+// region P26-D-SYNC
+// Pin the real director to a seed whose opening formation is the requested
+// sync rail length; production has no separate debug force for formations.
+int _syncSeed(int start, int count) {
+  for (var seed = 0; seed < 1000; seed++) {
+    final director = RunDirector(
+      seed: seed,
+      enabled: ElementId.values.toSet(),
+      met: {},
+      startHoopIndex: start,
+      firstTrackX: RunConfig.worldWidth + RunConfig.firstHoopOffscreen,
+    );
+    final context = DirectorContext.open(711);
+    final first = director.nextSlot(context);
+    if (first.formation != FormationId.syncRails) continue;
+    var length = 1;
+    while (director.nextSlot(context).formation == FormationId.syncRails) {
+      length++;
+    }
+    if (length == count) return seed;
+  }
+  throw StateError('No $count-ring sync rails seed from hoop $start');
+}
+// endregion
+
 void main() {
+  // region P26-D-SYNC
+  test('D7.8 sync rail offsets agree at cruise arrivals across seeds', () {
+    for (final start in [150, 250]) {
+      for (var seed = 0; seed < 200; seed++) {
+        final rails = Formations(
+          seed: seed,
+        ).build(FormationId.syncRails, start);
+        final first = rails.first.motion!;
+        expect(first.halfTravel, inInclusiveRange(30, 45));
+        expect(first.speed, inInclusiveRange(34, 42));
+        for (final time in [0.0, .37, 2.1, 13.9]) {
+          final target = HoopMotion.fromSpec(first).offsetAt(time).y;
+          for (var k = 0; k < rails.length; k++) {
+            final motion = rails[k].motion!;
+            expect(motion.type, MotionType.rail);
+            expect(motion.halfTravel, first.halfTravel);
+            expect(motion.speed, first.speed);
+            expect(motion.phase, allOf(greaterThanOrEqualTo(0), lessThan(1)));
+            final arrival =
+                time + k * RunConfig.spacing / RunConfig.cruise(start);
+            expect(
+              HoopMotion.fromSpec(motion).offsetAt(arrival).y,
+              closeTo(target, 1e-9),
+              reason: 'start=$start seed=$seed ring=$k time=$time',
+            );
+          }
+        }
+      }
+    }
+  });
+
+  for (final start in [150, 250]) {
+    for (final count in [3, 4]) {
+      final seed = _syncSeed(start, count);
+      for (final height in [568.0, 711.0]) {
+        FlameTester<FlappySpikesGame>(
+          () => createRunTestGame(worldHeight: height, seed: seed),
+          gameSize: Vector2(Config.worldWidth, height),
+        ).testGameWidget(
+          'D7.8 $count sync rails align at real plane crossings '
+          'from $start height $height',
+          setUp: (game, _) async {
+            await game.ready();
+            await preloadImages(game);
+          },
+          verify: (game, _) async {
+            final run = await startRun(game, startHoopIndex: start);
+            expect(run.spawner.slotLog.first.formation, FormationId.syncRails);
+            final offsets = <int, double>{};
+            final flight = await flyRun(
+              game,
+              untilHoops: count,
+              onFrame: (r) {
+                final birdX = r.state.camX + RunConfig.birdX;
+                for (final hoop in r.spawner.hoops) {
+                  if (hoop.plan.index >= start + count ||
+                      offsets.containsKey(hoop.plan.index) ||
+                      birdX < hoop.planeX) {
+                    continue;
+                  }
+                  expect(hoop.plan.formation, FormationId.syncRails);
+                  expect(hoop.touched, isFalse);
+                  expect(
+                    r.state.forwardSpeed,
+                    closeTo(RunConfig.cruise(start), 1e-9),
+                  );
+                  offsets[hoop.plan.index] = hoop.motion!.offset.y;
+                }
+              },
+            );
+            expect(
+              flight.hoops,
+              count,
+              reason: '${flight.cause} ${flight.trace}',
+            );
+            expect(offsets, hasLength(count));
+            final values = offsets.values.toList()..sort();
+            expect(values.last - values.first, lessThanOrEqualTo(4));
+          },
+        );
+      }
+    }
+  }
+  // endregion
+
   test('schedules formations every 12–20 hoops from hoop 150', () {
     final starts = <int>[];
     final shapes = <FormationId>{};
@@ -103,10 +221,17 @@ void main() {
 
       final rails = formations.build(FormationId.syncRails, 150);
       expect(rails.length, anyOf(3, 4));
+      // region P26-D-SYNC
+      // D7.8 synchronizes arrival poses, so absolute phases differ.
       expect(
-        rails.map((plan) => plan.motion),
-        everyElement(rails.first.motion),
+        rails.map((plan) => plan.motion?.halfTravel),
+        everyElement(rails.first.motion?.halfTravel),
       );
+      expect(
+        rails.map((plan) => plan.motion?.speed),
+        everyElement(rails.first.motion?.speed),
+      );
+      // endregion
       expect(rails.first.motion?.type, MotionType.rail);
       expect(
         rails.map((plan) => plan.centreY),

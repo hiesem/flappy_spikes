@@ -23,7 +23,10 @@ import '../../helpers.dart';
 /// to build/shots/run/debug/ (ARCH §7.1).
 Future<void> _capture(FlappySpikesGame game, String name) async {
   const scale = 1.5;
-  final shotSize = Vector2(320 * scale, (game.viewHeight * scale).roundToDouble());
+  final shotSize = Vector2(
+    320 * scale,
+    (game.viewHeight * scale).roundToDouble(),
+  );
   game.onGameResize(shotSize); // resize right before rendering
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
@@ -36,9 +39,9 @@ Future<void> _capture(FlappySpikesGame game, String name) async {
     shotSize.x.toInt(),
     shotSize.y.toInt(),
   );
-  final bytes = (await image.toByteData(format: ui.ImageByteFormat.png))!
-      .buffer
-      .asUint8List();
+  final bytes = (await image.toByteData(
+    format: ui.ImageByteFormat.png,
+  ))!.buffer.asUint8List();
   image.dispose();
   final file = File('build/shots/run/debug/$name.png');
   await file.parent.create(recursive: true);
@@ -83,17 +86,34 @@ void main() async {
         game.openDebugPanel();
         await flushAndMount(game);
         final p2 = game.world.children.query<DebugPanel>().single;
-        final open = p2.actions.indexWhere((a) => a.label().startsWith('RUN DEBUG'));
+        final open = p2.actions.indexWhere(
+          (a) => a.label().startsWith('RUN DEBUG'),
+        );
         expect(open, greaterThanOrEqualTo(0));
         await p2.press(open);
         await flushAndMount(game);
         expect(p2.actions.first.label(), startsWith('Start at hoop'));
 
+        // WP-B uses the existing DebugAction row master, with live state.
+        final showcaseRow = ForceMenu.actions(
+          game,
+        ).singleWhere((a) => a.label().startsWith('Showcase:'));
+        game.storage.showcaseSeen = 1;
+        game.storage.showcaseAttempt = 2;
+        expect(showcaseRow.label(), 'Showcase: step 2 / attempt 2 / done no');
+        game.storage.showcaseDoneAt = 3;
+        expect(showcaseRow.label(), endsWith('done yes'));
+        game.storage.showcaseSeen = 0;
+        game.storage.showcaseAttempt = 0;
+        game.storage.showcaseDoneAt = null;
+
         // Walk every page, collecting the labels.
         final labels = <String>{};
         for (var page = 0; page < 10; page++) {
           labels.addAll(p2.actions.map((a) => a.label()));
-          final next = p2.actions.indexWhere((a) => a.label().startsWith('Page '));
+          final next = p2.actions.indexWhere(
+            (a) => a.label().startsWith('Page '),
+          );
           if (page == 0) {
             await widgetTester.runAsync(
               () => _capture(game, 'force_menu_${vh.toInt()}'),
@@ -104,8 +124,11 @@ void main() async {
           if (p2.actions.first.label().startsWith('Start at hoop')) break;
         }
         for (final e in ForceMenu.forceable) {
-          expect(labels.any((l) => l.startsWith('Force: ${e.storageId}')), isTrue,
-              reason: e.storageId);
+          expect(
+            labels.any((l) => l.startsWith('Force: ${e.storageId}')),
+            isTrue,
+            reason: e.storageId,
+          );
         }
         for (final r in RideId.values) {
           expect(labels, contains('Force portal ride: ${r.name}'));
@@ -114,12 +137,16 @@ void main() async {
         // Rows act on the next run's setup.
         Future<void> pressLabel(String prefix) async {
           for (var page = 0; page < 10; page++) {
-            final i = p2.actions.indexWhere((a) => a.label().startsWith(prefix));
+            final i = p2.actions.indexWhere(
+              (a) => a.label().startsWith(prefix),
+            );
             if (i >= 0) {
               await p2.press(i);
               return;
             }
-            await p2.press(p2.actions.indexWhere((a) => a.label().startsWith('Page ')));
+            await p2.press(
+              p2.actions.indexWhere((a) => a.label().startsWith('Page ')),
+            );
           }
           fail('no row $prefix');
         }

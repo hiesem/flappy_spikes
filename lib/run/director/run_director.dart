@@ -4,6 +4,7 @@ import '../config/director_tables.dart';
 import '../config/run_config.dart';
 import '../config/tuning_values.dart';
 import '../elements.dart';
+import '../showcase/showcase_plan.dart';
 import 'calm_schedule.dart';
 import 'director_context.dart';
 import 'first_meet.dart';
@@ -36,6 +37,7 @@ class RunDirector {
     List<ElementId> forced = const [],
     RideId? forcedRide,
     double firstTrackX = RunConfig.worldWidth + RunConfig.firstHoopOffscreen,
+    this.showcase,
     this.fixedFirstHoop = false,
     this.spacing = RunConfig.spacing,
     bool featherAllowed = true,
@@ -50,7 +52,7 @@ class RunDirector {
        _lastRide = lastPortalRide,
        _forcedRide = forcedRide,
        _forced = [...forced] {
-    firstMeet = FirstMeet(met, this.enabled);
+    firstMeet = FirstMeet(met, this.enabled, pullsEnabled: showcase == null);
     final tables = this.tables;
     _layout = LayoutSampler(tables, rng.layout);
     final r = rng.layout;
@@ -119,6 +121,11 @@ class RunDirector {
     };
   }
 
+  /// Frozen START input; never added to the debug-force queue.
+  final ShowcaseRunPlan? showcase;
+
+  late final Random _showcaseRandom = Random(rng.seed ^ 0x5C0A5E);
+
   final DirectorTables tables;
   final RunRandom rng;
   final double spacing;
@@ -174,8 +181,10 @@ class RunDirector {
   int _lastPortal = -99;
   int _lastComet = -99;
   HoopKindId? _prevKind;
+  MotionSpec? _lastFinalMotion;
   SawDesign? _lastSaw;
   SwitchDesign? _lastSwitch;
+  SwitchDesign? _switchBeforePlanned;
   RideId? _lastRide;
 
   /// The last ride before [_lastRide] (a dropped portal restores it).
@@ -206,6 +215,8 @@ class RunDirector {
   int? _forcedHeadlineAt;
   late final Set<ElementId> _introductions;
   int _downgrades = 0;
+  SlotPlan? _showcaseNormalSlot;
+  int? _showcasePortalAt;
   double? _lastFinalY;
 
   /// PRD-2.6 D7 the post-ceiling formation scheduler. The scheduler draws
@@ -241,7 +252,7 @@ class RunDirector {
   List<ElementId> get forcedQueue => List.unmodifiable(_forced);
 
   /// The schedules (tests, debug overlay).
-  int get portalAt => _portalAt;
+  int get portalAt => _showcasePortalAt ?? _portalAt;
 
   /// PRD-2.3 §14.5 the first hoop the next comet may hang in (chance-based
   /// from there; `ride_comet_from`, ≥ `ride_comet_spacing` after the last).
@@ -695,7 +706,7 @@ class RunDirector {
 
     // Debug force (head slot element of the queue).
     final dbgIdx = _forced.indexWhere((e) => e.isSlotElement);
-    if (dbgIdx >= 0) {
+    if (dbgIdx >= 0 && !_scriptedSlot(i)) {
       final e = _forced[dbgIdx];
       final special = HoopKindId.specialFor(e);
       var ok = false;
@@ -918,6 +929,75 @@ class RunDirector {
     );
   }
 
+  bool _scriptedGap(int gap) {
+    final plan = showcase;
+    return plan != null &&
+        (plan.hearts.contains(gap) ||
+            plan.gapItems.any((item) => item.gap == gap));
+  }
+
+  bool _scriptedSlot(int hoop) {
+    final plan = showcase;
+    return plan != null &&
+        (plan.portalHoops.contains(hoop) ||
+            plan.cometHoops.contains(hoop) ||
+            plan.feverHoops.contains(hoop) ||
+            plan.bullseyeHoops.contains(hoop));
+  }
+
+  SlotPlan? _showcaseSlot(SlotPlan normal, DirectorContext ctx) {
+    final plan = showcase;
+    final i = normal.index;
+    if (plan == null || !_scriptedSlot(i)) return null;
+    final portal = plan.portalHoops.contains(i);
+    final comet = plan.cometHoops.contains(i);
+    final kind = portal
+        ? HoopKindId.portal
+        : comet
+        ? HoopKindId.normal
+        : plan.feverHoops.contains(i)
+        ? HoopKindId.fever
+        : HoopKindId.bullseye;
+    RideId? theme;
+    if (portal) {
+      theme = plan.portals.firstWhere((p) => p.hoop == i).theme;
+      // The replacement schedule has its own stream. Never feed a script
+      // decision back into the ordinary layout, cooldowns or hazard ledger.
+      _showcasePortalAt = i + RunRandom.rangeInt(_showcaseRandom, 25, 40);
+    }
+    final opening = min(
+      (portal ? RunConfig.portalOpening : openingFor(i)) * ctx.bigHoopsMult,
+      ctx.band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
+    );
+    final (lo, hi) = _layout.limits(i, ctx, opening, useTable: false);
+    final y = normal.centreY.clamp(lo, hi).toDouble();
+    return normal.copyWith(
+      centreY: y,
+      kind: kind,
+      element: comet ? ElementId.normalHoop : kind.element,
+      opening: opening,
+      tiltDeg: 0,
+      motion: () => null,
+      cometHang: comet,
+      ringOffsets: const [0],
+      advance: spacing,
+      extra: () => theme,
+      forced: false,
+      duringRide: true,
+      hazardCost: 0,
+      calm: false,
+      attached: comet
+          ? [
+              GapItemPlan(
+                kind: ElementId.comet,
+                trackX: normal.trackX + RunConfig.cometHang,
+                y: y,
+              ),
+            ]
+          : const [],
+    );
+  }
+
   SlotPlan _recordSlot(
     SlotPlan planned,
     DirectorContext ctx, {
@@ -985,7 +1065,20 @@ class RunDirector {
           rowP90: row.$2 * dyRef,
           squeeze: ctx.squeezeWindow,
         );
-    if (willDowngrade) {
+    final trainAfterMovingJump =
+        planned.kind == HoopKindId.train &&
+        _lastFinalMotion != null &&
+        _lastFinalY != null &&
+        (planned.centreY - _lastFinalY!).abs() > 120;
+    if (trainAfterMovingJump) {
+      finalPlan = finalPlan.copyWith(
+        kind: HoopKindId.normal,
+        element: ElementId.normalHoop,
+        ringOffsets: const [0],
+        extra: () => null,
+      );
+    }
+    if (willDowngrade || trainAfterMovingJump) {
       finalPlan = _hazard.downgrade(
         finalPlan,
         previousY: hazardPrevious,
@@ -1175,6 +1268,7 @@ class RunDirector {
 
     _layout.lastY = finalPlan.centreY;
     _lastFinalY = finalPlan.centreY;
+    _lastFinalMotion = finalPlan.motion;
     // The sampler noted the provisional tilt / motion in `_buildSlot`; a
     // calm stretch or hazard downgrade may have removed them. Record the
     // final pair, so the next Δy is only capped after a hard hoop that
@@ -1185,8 +1279,13 @@ class RunDirector {
       _layout.forceY = null;
     }
     _replaceSpawnedCount(planned, finalPlan);
+    if (planned.kind == HoopKindId.switchRing &&
+        finalPlan.kind != HoopKindId.switchRing) {
+      _lastSwitch = _switchBeforePlanned;
+    }
+    _switchBeforePlanned = null;
     _nextX = finalPlan.trackX + finalPlan.advance;
-    return finalPlan.copyWith(
+    final normal = finalPlan.copyWith(
       hazardCost: _hazard.costOf(
         finalPlan,
         previousY: hazardPrevious,
@@ -1194,7 +1293,72 @@ class RunDirector {
         squeeze: ctx.squeezeWindow,
       ),
     );
+    if (showcase == null) return normal;
+    // Run the normal decision to completion first, then overlay step 0.
+    // Its sampler, reservations and random streams remain exactly the same
+    // as an ordinary course with first-meet pulls disabled.
+    _showcaseNormalSlot = normal;
+    var shipped = _showcaseSlot(normal, ctx) ?? normal;
+    if (!_scriptedSlot(hoop)) {
+      final portalDue = _showcasePortalAt;
+      if (portalDue != null &&
+          hoop >= portalDue &&
+          !ctx.rideActive &&
+          _ride == null &&
+          !ctx.activity) {
+        final theme =
+            RideId.values[_showcaseRandom.nextInt(RideId.values.length)];
+        shipped = _showcasePortal(normal, ctx, theme);
+        _showcasePortalAt = hoop + RunRandom.rangeInt(_showcaseRandom, 25, 40);
+      } else if (_showcaseHeadline(hoop) ||
+          portalDue != null && normal.kind == HoopKindId.portal) {
+        shipped = _showcasePlain(normal, ctx);
+      }
+    }
+    _replaceSpawnedCount(normal, shipped);
+    return shipped;
   }
+
+  bool _showcaseHeadline(int hoop) {
+    final plan = showcase;
+    return plan != null &&
+        [
+          ...plan.portalHoops,
+          ...plan.cometHoops,
+          ...plan.feverHoops,
+        ].any((at) => (hoop - at).abs() < 8);
+  }
+
+  SlotPlan _showcasePlain(SlotPlan normal, DirectorContext ctx) =>
+      normal.copyWith(
+        kind: HoopKindId.normal,
+        element: ElementId.normalHoop,
+        opening: min(
+          openingFor(normal.index) * _bigMult(normal.index, ctx),
+          ctx.band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
+        ),
+        tiltDeg: 0,
+        motion: () => null,
+        cometHang: false,
+        ringOffsets: const [0],
+        attached: const [],
+        extra: () => null,
+        hazardCost: 0,
+      );
+
+  SlotPlan _showcasePortal(
+    SlotPlan normal,
+    DirectorContext ctx,
+    RideId theme,
+  ) => _showcasePlain(normal, ctx).copyWith(
+    kind: HoopKindId.portal,
+    element: ElementId.portal,
+    extra: () => theme,
+    opening: min(
+      RunConfig.portalOpening * ctx.bigHoopsMult,
+      ctx.band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
+    ),
+  );
 
   void _markFinal(SlotPlan plan) {
     if (plan.cometHang) firstMeet.markMet(ElementId.comet);
@@ -1222,7 +1386,10 @@ class RunDirector {
     if (planned.cometHang && !finalPlan.cometHang) {
       remove(ElementId.comet.storageId);
     }
-    if (kindChanged) _count(ElementId.normalHoop.storageId);
+    if (kindChanged) _count(finalPlan.element.storageId);
+    if (!planned.cometHang && finalPlan.cometHang) {
+      _count(ElementId.comet.storageId);
+    }
   }
 
   /// PRD-2.6 D7: takes the next queued formation slot, or starts a new
@@ -1269,21 +1436,59 @@ class RunDirector {
     _lastFormationAt = i;
     _formationAt = i + RunRandom.rangeInt(rng.layout, interval[0], interval[1]);
     if (!_formationEnabled(id)) return null;
-    final templates = _placeFormation(
-      _formations.build(id, i, startTrackX: 0, centreY: 0),
-      trackX,
-      ctx,
-      cap: cap,
-    );
-    final plan = templates.first;
+    var templates = _formations.build(id, i, startTrackX: 0, centreY: 0);
+    if (id == FormationId.switchChain) {
+      templates = _withoutRepeatingSwitch(templates);
+    }
+    final placedTemplates = _placeFormation(templates, trackX, ctx, cap: cap);
+    final plan = placedTemplates.first;
     _formationReservation = (
       start: i,
-      length: templates.length,
-      templates: templates,
+      length: placedTemplates.length,
+      templates: placedTemplates,
     );
     _countFormationSlot(plan);
     if (templates.length == 1) _formationReservation = null;
     return plan;
+  }
+
+  List<SlotPlan> _withoutRepeatingSwitch(List<SlotPlan> templates) {
+    var previous = _lastSwitch;
+    final out = <SlotPlan>[];
+    for (final template in templates) {
+      final current = template.extra is SwitchDesign
+          ? template.extra! as SwitchDesign
+          : null;
+      final design = current == previous
+          ? _switchDesignAfter(previous)
+          : current;
+      previous = design;
+      out.add(
+        identical(design, current)
+            ? template
+            : _withSwitchDesign(template, design!),
+      );
+    }
+    return out;
+  }
+
+  SwitchDesign _switchDesignAfter(SwitchDesign? previous) =>
+      SwitchDesign.values.where((design) => design != previous).first;
+
+  SlotPlan _withSwitchDesign(SlotPlan template, SwitchDesign design) {
+    final attached = [
+      for (final item in template.attached)
+        GapItemPlan(
+          kind: item.kind,
+          trackX: item.trackX,
+          y: item.y,
+          lineOffset: item.lineOffset,
+          extra: design,
+          toTrackX: item.toTrackX,
+          toY: item.toY,
+        ),
+    ];
+    return template.copyWith(extra: () => design, attached: attached);
   }
 
   /// Whether every element a D7 shape needs is registered.
@@ -1307,7 +1512,10 @@ class RunDirector {
     _count(plan.element.storageId);
     if (plan.kind == HoopKindId.switchRing) {
       _gapUsed.add(plan.index - 1);
-      if (plan.extra is SwitchDesign) _lastSwitch = plan.extra! as SwitchDesign;
+      if (plan.extra is SwitchDesign) {
+        _switchBeforePlanned = _lastSwitch;
+        _lastSwitch = plan.extra! as SwitchDesign;
+      }
     } else if (plan.kind == HoopKindId.saw) {
       if (plan.extra is SawDesign) _lastSaw = plan.extra! as SawDesign;
     }
@@ -1652,6 +1860,7 @@ class RunDirector {
         _lastSaw = d;
         extra = d;
       case HoopKindId.switchRing:
+        _switchBeforePlanned = _lastSwitch;
         final options = SwitchDesign.values
             .where((d) => d != _lastSwitch)
             .toList();
@@ -1677,6 +1886,8 @@ class RunDirector {
           kind = HoopKindId.normal;
           forced = false;
           extra = null;
+          _lastSwitch = _switchBeforePlanned;
+          _switchBeforePlanned = null;
         } else {
           if (fit.$1 != y) {
             y = fit.$1;
@@ -2166,6 +2377,7 @@ class RunDirector {
     bool ride = false,
     bool keepGeometry = false,
   }) {
+    if (_scriptedSlot(p.index)) return p.copyWith(duringRide: ride);
     if (p.kind == HoopKindId.portal) {
       // PRD-2.3.1 §17 the placed portal keeps counting; below the cap it
       // is owed again, at the cap nothing is owed.
@@ -2389,8 +2601,68 @@ class RunDirector {
   /// Bank coins still to be placed (tests).
   int get piggyCoinsOwed => _piggyOwed;
 
-  /// §3.0.3 "order of decisions for the gap" after [slot].
+  /// §3.0.3 gap step 0, before debug force and first-meet pulls.
   GapPlan nextGap(DirectorContext ctx, SlotPlan slot) {
+    final baseline = _showcaseNormalSlot;
+    _showcaseNormalSlot = null;
+    final normal = _normalGap(ctx, baseline ?? slot);
+    final plan = showcase;
+    if (plan == null) return normal;
+    final ids = [
+      for (final item in plan.gapItems)
+        if (item.gap == slot.index) ElementId.fromStorageId(item.id)!,
+      if (plan.hearts.contains(slot.index)) ElementId.heart,
+    ];
+    if (ids.isEmpty && !_showcaseHeadline(slot.index)) return normal;
+    if (ids.isEmpty && normal.items.every((item) => !isBigItem(item.kind))) {
+      return normal;
+    }
+    for (final item in normal.items) {
+      final key = item.kind.storageId;
+      final count = (_spawned[key] ?? 1) - 1;
+      if (count <= 0) {
+        _spawned.remove(key);
+      } else {
+        _spawned[key] = count;
+      }
+    }
+    final items = <GapItemPlan>[
+      if (ids.isEmpty) ...normal.items.where((item) => !isBigItem(item.kind)),
+    ];
+    for (final item in items) {
+      _count(item.kind.storageId);
+    }
+    for (final id in ids) {
+      final capsule = CapsuleType.values.where((c) => c.element == id);
+      final kind = id.isCapsuleType ? ElementId.capsule : id;
+      final missing = [
+        for (var b = 0; b < 4; b++)
+          if (ctx.puzzleMask & (1 << b) == 0) b,
+      ];
+      items.add(
+        GapItemPlan(
+          kind: kind,
+          trackX: id == ElementId.starTrail
+              ? slot.lastRingX + RunConfig.starTrailInset
+              : slot.lastRingX + spacing / 2,
+          toTrackX: id == ElementId.starTrail
+              ? slot.trackX + slot.advance - RunConfig.starTrailInset
+              : null,
+          extra: id == ElementId.starTrail
+              ? RunConfig.starTrailStars
+              : id == ElementId.puzzlePiece
+              ? (missing.isEmpty ? 0 : missing.first)
+              : capsule.isEmpty
+              ? null
+              : capsule.first,
+        ),
+      );
+      _count(kind.storageId);
+    }
+    return GapPlan(index: slot.index, items: items);
+  }
+
+  GapPlan _normalGap(DirectorContext ctx, SlotPlan slot) {
     final g = slot.index;
     final r = rng.layout;
     if (ctx.rideActive ||
@@ -2425,7 +2697,7 @@ class RunDirector {
     // Debug force: the head gap element of the queue, ignoring unlock,
     // schedules and min distances (exclusivity still applies).
     final dbgIdx = _forced.indexWhere((e) => e.isGapElement);
-    if (!used && !blocked && dbgIdx >= 0) {
+    if (!used && !blocked && dbgIdx >= 0 && !_scriptedGap(g)) {
       final e = _forced[dbgIdx];
       final p = _forcedGapItem(e, g, ctx, slot, mid, nextX);
       if (p != null) {

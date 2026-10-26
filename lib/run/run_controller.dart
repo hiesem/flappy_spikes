@@ -85,6 +85,7 @@ class RunController extends Component {
           );
     director = RunDirector(
       seed: setup.seed,
+      showcase: setup.showcase,
       enabled: enabled,
       met: state.metElements,
       startHoopIndex: setup.startHoopIndex,
@@ -140,6 +141,12 @@ class RunController extends Component {
   /// `AchievementTracker.countDebugRuns`.
   bool get countsForAchievements {
     if (game.achievements.countDebugRuns) return true;
+    return countsForUpload;
+  }
+
+  /// Upload eligibility is permanent for the run and has no test override.
+  /// Free Fly, showcase starters and revives are ordinary play (B2).
+  bool get countsForUpload {
     _latchGod();
     return _cleanStart && !_debugTouched;
   }
@@ -147,7 +154,8 @@ class RunController extends Component {
   /// P1E-02: god mode used at any moment of this run excludes it for good
   /// (switching it off again never restores eligibility).
   void _latchGod() {
-    if (FlappySpikesGame.debugAvailable && game.runDebug.god) {
+    if (FlappySpikesGame.debugAvailable &&
+        (game.runDebug.god || game.runDebug.bot)) {
       _touchDebug();
     }
   }
@@ -209,7 +217,7 @@ class RunController extends Component {
   void onMount() {
     super.onMount();
     for (final l in layers.all) {
-      parent?.add(l);
+      game.world.addRun(l);
     }
     layers.fx.add(particles);
   }

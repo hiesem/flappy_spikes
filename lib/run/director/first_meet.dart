@@ -6,7 +6,10 @@ import '../elements.dart';
 /// Only elements in [enabled] (registered by a WP) and flagged
 /// [ElementId.firstMeet] are ever forced.
 class FirstMeet {
-  FirstMeet(Set<ElementId> met, this.enabled) : met = {...met};
+  FirstMeet(Set<ElementId> met, this.enabled, {this.pullsEnabled = true})
+    : met = {...met};
+
+  final bool pullsEnabled;
 
   final Set<ElementId> met;
   final Set<ElementId> enabled;
@@ -25,6 +28,7 @@ class FirstMeet {
   /// The never-met element with the oldest unlock that is due at [index]
   /// (its first-possible hoop / gap reached), or null.
   ElementId? due(int index) {
+    if (!pullsEnabled) return null;
     final head = _head;
     final since = dueSince;
     if (head != null &&

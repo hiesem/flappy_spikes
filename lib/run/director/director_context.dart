@@ -12,6 +12,9 @@ class DirectorContext {
     double? squeezeTopTooth,
     double? squeezeFloorTooth,
     this.squeezeWindow = false,
+    // region P26-D-SPRING
+    this.squeezeNextSlot = false,
+    // endregion
     this.rideActive = false,
     this.ride,
     this.timedPowerupRunning = false,
@@ -40,6 +43,9 @@ class DirectorContext {
   factory DirectorContext.open(
     double viewHeight, {
     bool squeezeWindow = false,
+    // region P26-D-SPRING
+    bool squeezeNextSlot = false,
+    // endregion
     double squeezeInset = 0,
     bool rideActive = false,
     RideKind? ride,
@@ -69,6 +75,9 @@ class DirectorContext {
       squeezeTopTooth: top + squeezeInset,
       squeezeFloorTooth: floor - squeezeInset,
       squeezeWindow: squeezeWindow,
+      // region P26-D-SPRING
+      squeezeNextSlot: squeezeNextSlot,
+      // endregion
       rideActive: rideActive,
       ride: ride,
       timedPowerupRunning: timedPowerupRunning,
@@ -102,6 +111,12 @@ class DirectorContext {
 
   /// §3.0.3 From 3 s before the squeeze warning until the walls are open.
   final bool squeezeWindow;
+
+  // region P26-D-SPRING
+  /// The next hoop plane reaches the squeeze window one slot after this one.
+  /// Reserves safe geometry for a spring's committed landing.
+  final bool squeezeNextSlot;
+  // endregion
 
   final bool rideActive;
   final RideKind? ride;

@@ -934,6 +934,7 @@ class RunDirector {
         kind = HoopKindId.normal;
       }
     }
+    // region P26-D-SPRING
     var planned = _buildSlot(
       i,
       trackX,
@@ -945,12 +946,15 @@ class RunDirector {
       prevY: prevY,
       cap: cap,
     );
+    // Only prepare for the deepest short-screen squeeze band when a squeeze
+    // can affect this slot or its calm successor.
     if (ctx.viewHeight < RunConfig.designHeight &&
-        !ctx.squeezeWindow &&
+        (ctx.squeezeWindow || ctx.squeezeNextSlot) &&
         !planned.forced &&
         _calm.dueAt(i + 1)) {
       planned = _prepareForNextCalm(planned, ctx, previousY: prevY);
     }
+    // endregion
     return _recordSlot(
       planned,
       ctx,
@@ -961,6 +965,7 @@ class RunDirector {
     );
   }
 
+  // region P26-D-SPRING
   SlotPlan _prepareForNextCalm(
     SlotPlan planned,
     DirectorContext ctx, {
@@ -1016,6 +1021,8 @@ class RunDirector {
     _layout.lastY = centre;
     return planned.copyWith(centreY: centre);
   }
+
+  // endregion
 
   bool _scriptedGap(int gap) {
     final plan = showcase;
@@ -1127,8 +1134,12 @@ class RunDirector {
       final landingCost = (landingY - planned.centreY).abs() > nextP90
           ? TuningValues.current.obj('hazard_costs')['dy_p90']!.toDouble()
           : 0.0;
+      // region P26-D-SPRING
       final unsafeLanding =
-          _calm.dueAt(hoop + 1) || _hazard.budgetAt(hoop + 1) < 4;
+          _calm.dueAt(hoop + 1) ||
+          ((ctx.squeezeNextSlot || ctx.squeezeWindow) &&
+              _hazard.budgetAt(hoop + 1) < 4);
+      // endregion
       if (unsafeLanding ||
           !_hazard.allowsFollowing(
             planned,

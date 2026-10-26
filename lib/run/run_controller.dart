@@ -320,6 +320,15 @@ class RunController extends Component {
     final window =
         sq.phase != SqueezePhase.idle ||
         s.runClock > sq.nextAt - RunConfig.squeezeWindowLead - lead;
+    // region P26-D-SPRING
+    final squeezeNextSlot =
+        sq.phase != SqueezePhase.idle ||
+        s.runClock >
+            sq.nextAt -
+                RunConfig.squeezeWindowLead -
+                lead -
+                RunConfig.spacing / cruise;
+    // endregion
     final storage = game.storage;
     return DirectorContext(
       viewHeight: s.viewHeight,
@@ -339,6 +348,9 @@ class RunController extends Component {
           : geo.floorTooth,
       // endregion WP-3g
       squeezeWindow: window,
+      // region P26-D-SPRING
+      squeezeNextSlot: squeezeNextSlot,
+      // endregion
       rideActive: s.ride != null,
       ride: s.ride?.kind,
       timedPowerupRunning: s.timed != null,

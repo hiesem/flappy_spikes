@@ -1935,14 +1935,18 @@ Remote Config only serves `versus_pg_salt`. Key list: `docs/p23/TUNING.md`.
   `window cost − squeeze surcharge ≤ hazard_budget`. Other costs are
   downgraded in D3 order; below budget 4 a squeezed slot must carry no cost
   beyond its surcharge. Reward/ride slots retain D3's zero cost.
-  A non-forced spring whose fixed landing would enter a due calm stretch, or
-  whose landing could carry geometry before budget 4, is downgraded before it
-  commits. Below the 711 pt design height, the slot before a due calm is
-  pre-positioned against that short screen's deepest squeeze band; a strong
-  ring keeps its signed 40–270 pt approach when that intersects the safe
-  reach, and otherwise loses its modifier. The 711 / 730 portable course is
-  unchanged so R2's drawn Δy stays identical. This preserves O18 timing,
-  D4's median step and D3's zero-other-cost rule.
+  A non-forced spring whose fixed landing would enter a due calm stretch is
+  downgraded before it commits. Below budget 4 it is also downgraded when
+  the current or next slot reaches the squeeze window; the controller supplies
+  that one-slot look-ahead using the next plane's travel time plus one slot
+  spacing at cruise speed. Outside those windows springs remain available
+  from hoop 10, subject to the rolling budget and the fixed 240 pt landing
+  reservation. Below the 711 pt design height, the slot before a due calm
+  is pre-positioned against the deepest squeeze band only when the current
+  or next slot reaches the squeeze window. A strong ring keeps its signed
+  approach of at least 40 pt when that intersects the safe reach; otherwise
+  it loses its modifier. Ordinary slots outside those windows are unaffected.
+  This preserves O18 timing, D4's median step and D3's zero-other-cost rule.
 - **DEVIATION (D4/D5):** periodic calm lasts three slots, first at 30–34,
   growing intervals ×1.2 capped at 55. Revive gives three slots; squeeze/ride
   recovery two. Starts are at least 12 apart except mandatory revive calm.

@@ -105,6 +105,10 @@ void main() {
             final ctx = DirectorContext.open(
               height,
               squeezeWindow: squeeze,
+              // region P26-D-SPRING
+              squeezeNextSlot:
+                  squeezed && (i == 34 || (i >= 35 && i % 40 == 29)),
+              // endregion
               squeezeInset: squeeze ? 100 : 0,
               prevCentreY: previous,
             );

@@ -9,9 +9,8 @@ import '../run_events.dart';
 import 'autopilot.dart';
 
 /// Turns the perfect autopilot's base flap requests into a deterministic
-/// human-noise schedule: each request is planned from a predicted future tap
-/// time and moved by Gaussian jitter (early as well as late). Each base flap
-/// has a chance of producing one extra flap shortly after it.
+/// human-noise schedule, with Gaussian jitter (early as well as late). Each
+/// base flap has a chance of producing one extra flap shortly after it.
 @visibleForTesting
 class HumanNoiseFlapScheduler {
   HumanNoiseFlapScheduler({
@@ -129,6 +128,28 @@ class HumanNoiseFlapScheduler {
     _scheduled.sort((a, b) => a.time.compareTo(b.time));
   }
 
+  // region P26-D-BOT
+  double _drawJitter() {
+    final jitter = _gaussian() * jitterSigma;
+    jitterSeconds.add(jitter);
+    return jitter;
+  }
+
+  /// Record a closed-loop base action against its fresh nominal decision.
+  /// Extras are scheduled from the emitted tap, never a stale forecast.
+  void _emitBase(double now, double plannedTime) {
+    plannedFlapTimes.add(plannedTime);
+    flapTimes.add(now);
+    baseFlapOffsets.add(now - plannedTime);
+    if (_random.nextDouble() < extraFlapChance) {
+      _scheduled.add(
+        _ScheduledFlap(now + HumanNoiseBot.extraFlapGap, extra: true),
+      );
+      _scheduled.sort((a, b) => a.time.compareTo(b.time));
+    }
+  }
+  // endregion
+
   double _gaussian() {
     final reuse = _lastDelay;
     if (reuse != null) {
@@ -153,9 +174,18 @@ class HumanNoiseFlapScheduler {
 /// debug-only showcase/ceiling tooling), never by release paths.
 @visibleForTesting
 class HumanNoiseBot {
-  HumanNoiseBot(this.run, {int seed = 7})
-    : autopilot = Autopilot(run),
-      scheduler = HumanNoiseFlapScheduler(seed: seed);
+  // region P26-D-BOT
+  HumanNoiseBot(
+    this.run, {
+    int seed = 7,
+    double jitterSigma = HumanNoiseBot.jitterSigma,
+    double extraFlapChance = HumanNoiseBot.extraFlapChance,
+  }) : autopilot = Autopilot(run),
+       scheduler = HumanNoiseFlapScheduler(
+         seed: seed,
+         jitterSigma: jitterSigma,
+         extraFlapChance: extraFlapChance,
+       );
 
   static const double jitterSigma = .09;
   static const double extraFlapChance = .1;
@@ -165,8 +195,9 @@ class HumanNoiseBot {
   final Autopilot autopilot;
   final HumanNoiseFlapScheduler scheduler;
 
+  double? _jitter;
+  double? _wantSince;
   bool _autopilotWanted = false;
-  bool _rebasePendingBase = false;
   final List<double> debugRequestTimes = [];
   final List<double> debugRequestForecast = [];
 
@@ -175,39 +206,47 @@ class HumanNoiseBot {
   List<double> get plannedFlapTimes => scheduler.plannedFlapTimes;
   int get extraFlaps => scheduler.extraFlaps;
 
-  /// Called once per fixed frame before updating [run]. The return value is
-  /// whether the noisy bot taps at this frame.
+  /// Re-read the real trajectory every frame, retaining one noise draw until
+  /// a tap executes. Positive noise waits from the controller's current request;
+  /// negative noise anticipates its fresh forecast. Re-adding positive jitter
+  /// to each forecast would keep pushing the deadline away forever.
   bool shouldFlap() {
     final now = run.state.runClock;
     final delay = autopilot.nextFlapDelay();
     final wanted = delay == 0;
-    final rising = wanted && !_autopilotWanted;
-    _autopilotWanted = wanted;
-    if (rising) {
+    if (wanted && !_autopilotWanted) {
       debugRequestTimes.add(now);
-      debugRequestForecast.add((scheduler.pendingBasePlannedTime ?? now) - now);
+      debugRequestForecast.add(delay!);
     }
-    final dueIsExtra = scheduler.nextDueIsExtra;
+    _autopilotWanted = wanted;
     if (scheduler.flapDue(now)) {
-      autopilot.replanAfterFlap();
-      _autopilotWanted = false;
-      _rebasePendingBase = dueIsExtra;
+      _afterFlap();
       return true;
     }
-    if (_rebasePendingBase && scheduler.hasPendingBase && delay != null) {
-      scheduler.rebasePendingBase(now + delay, now: now);
+    if (delay == null) {
+      _wantSince = null;
+      return false;
     }
-    _rebasePendingBase = false;
-    if (!scheduler.hasPendingBase && delay != null) {
-      scheduler.planBase(now + delay, now: now);
-      if (scheduler.flapDue(now)) {
-        autopilot.replanAfterFlap();
-        _autopilotWanted = false;
-        return true;
-      }
+    final jitter = _jitter ??= scheduler._drawJitter();
+    if (wanted) {
+      _wantSince ??= now;
+      if (now - _wantSince! < jitter) return false;
+    } else {
+      _wantSince = null;
+      if (jitter >= 0 || delay > -jitter) return false;
     }
-    return false;
+    scheduler._emitBase(now, _wantSince ?? now + delay);
+    _afterFlap();
+    return true;
   }
+
+  void _afterFlap() {
+    autopilot.replanAfterFlap();
+    _jitter = null;
+    _wantSince = null;
+    _autopilotWanted = false;
+  }
+  // endregion
 }
 
 /// The outcome of [flyHumanNoiseBotToDeath].
@@ -240,6 +279,10 @@ Future<HumanNoiseBotResult> flyHumanNoiseBotToDeath(
   int seed = 7,
   double dt = 1 / 60,
   double maxSeconds = 120,
+  // region P26-D-BOT
+  double jitterSigma = HumanNoiseBot.jitterSigma,
+  double extraFlapChance = HumanNoiseBot.extraFlapChance,
+  // endregion
   void Function(RunController run)? onFrame,
 }) async {
   final run = game.run;
@@ -247,7 +290,14 @@ Future<HumanNoiseBotResult> flyHumanNoiseBotToDeath(
     throw StateError('flyHumanNoiseBotToDeath expects a started run');
   }
 
-  final bot = HumanNoiseBot(run, seed: seed);
+  // region P26-D-BOT
+  final bot = HumanNoiseBot(
+    run,
+    seed: seed,
+    jitterSigma: jitterSigma,
+    extraFlapChance: extraFlapChance,
+  );
+  // endregion
   final highlights = <String>{};
   MistakeCause? cause;
   var died = false;

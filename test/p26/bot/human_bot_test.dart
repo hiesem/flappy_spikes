@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
+import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/menu/powerup_slot.dart';
 import 'package:flappy_spikes/run/debug/human_bot.dart';
 import 'package:flappy_spikes/run/mistakes.dart';
 import 'package:flappy_spikes/run/run_events.dart';
@@ -18,9 +20,8 @@ void main() {
     for (var frame = 0; planned < baseFlaps; frame++) {
       final now = frame / 60;
       if (frame % 27 == 0) {
-        // Plan the request one flap interval ahead, as the bot does: an early
-        // jitter then fires before the polled request instead of being
-        // collapsed into it.
+        // A known future request lets the scheduler exercise early jitter
+        // on a frame clock rather than collapsing it into the planning frame.
         scheduler.planBase(now + 0.3, now: now);
       }
       scheduler.flapDue(now);
@@ -109,6 +110,176 @@ void main() {
     expect(scheduler.flapTimes, [1.05, 1.1]);
     expect(scheduler.pendingFlaps, 0);
   });
+
+  // region P26-D-BOT
+  for (final height in [568.0, 711.0]) {
+    FlameTester(
+      () => createRunTestGame(worldHeight: height, prefs: {'gamesPlayed': 10}),
+      gameSize: Vector2(Config.worldWidth, height),
+    ).testGameWidget(
+      'σ 0 / extra 0 reproduces `flyRun` at $height',
+      setUp: (game, _) async {
+        await game.ready();
+        await preloadImages(game);
+      },
+      verify: (game, _) async {
+        Future<void> reset() async {
+          game.replay();
+          await flushAndMount(game);
+          stepGame(game, .4);
+          await flushAndMount(game);
+        }
+
+        game.runDebug.ignoreGates = false;
+        for (var seed = 0; seed <= 20; seed++) {
+          game.runSeed = seed;
+          game.storage
+            ..gamesPlayed = 10
+            ..metElements = {}
+            ..lastPortalRide = null
+            ..lastFeatherRun = -1
+            ..lastPieceRun = -1
+            ..feathers = 0
+            ..puzzlePieces = 0;
+          await startRun(game);
+          final ideal = await flyRun(game, maxSeconds: 60);
+          await reset();
+          // First meets, ride no-repeat and collectible history also affect
+          // the course. Restore every course input before the paired replay.
+          game.storage
+            ..gamesPlayed = 10
+            ..metElements = {}
+            ..lastPortalRide = null
+            ..lastFeatherRun = -1
+            ..lastPieceRun = -1
+            ..feathers = 0
+            ..puzzlePieces = 0;
+          await startRun(game);
+          final noisy = await flyHumanNoiseBotToDeath(
+            game,
+            seed: seed,
+            maxSeconds: 60,
+            jitterSigma: 0,
+            extraFlapChance: 0,
+          );
+          expect(
+            noisy.hoops,
+            ideal.hoops,
+            reason:
+                'seed=$seed h=$height ideal=${ideal.cause}/${ideal.seconds} noisy=${noisy.cause}/${noisy.seconds}',
+          );
+          expect(
+            noisy.cause,
+            ideal.cause,
+            reason:
+                'seed=$seed h=$height ideal=${ideal.cause}/${ideal.seconds} noisy=${noisy.cause}/${noisy.seconds}',
+          );
+          expect(noisy.extraFlaps, 0);
+          expect(noisy.baseFlapOffsets, everyElement(0));
+          await reset();
+        }
+      },
+      timeout: const Timeout(Duration(minutes: 10)),
+    );
+  }
+
+  FlameTester(
+    () => createRunTestGame(seed: 7),
+    gameSize: Vector2(Config.worldWidth, 568),
+  ).testGameWidget(
+    'closed-loop trace records actual taps and extras follow emitted bases by 80 ms',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+    },
+    verify: (game, _) async {
+      // Every base deliberately doubles here; protect one mistake so this
+      // timing fixture observes enough pairs even on the normal course.
+      final run = await startRun(game, starter: Powerup.shield);
+      final bot = HumanNoiseBot(run, jitterSigma: 0, extraFlapChance: 1);
+      final emitted = <double>[];
+      final dueExtras = <double>[];
+      for (var frame = 0; frame < 60 * 20; frame++) {
+        if (game.state != GameState.playing) break;
+        final now = run.state.runClock;
+        final extrasBefore = bot.extraFlaps;
+        if (bot.shouldFlap()) {
+          emitted.add(now);
+          if (bot.extraFlaps > extrasBefore) {
+            expect(dueExtras, isNotEmpty);
+            final elapsed = now - dueExtras.removeAt(0);
+            expect(elapsed, greaterThanOrEqualTo(HumanNoiseBot.extraFlapGap));
+            expect(
+              elapsed,
+              lessThan(HumanNoiseBot.extraFlapGap + 1 / 60 + 1e-9),
+            );
+          } else {
+            dueExtras.add(now);
+            expect(bot.baseFlapOffsets.last, now - bot.plannedFlapTimes.last);
+          }
+        }
+        game.update(1 / 60);
+        if (frame % 10 == 9) await flushAndMount(game);
+      }
+      expect(bot.baseFlapOffsets.length, greaterThan(10));
+      expect(bot.extraFlaps, greaterThan(0));
+      expect(bot.flapTimes, orderedEquals(emitted));
+      expect(emitted.length, bot.baseFlapOffsets.length + bot.extraFlaps);
+    },
+  );
+
+  FlameTester(
+    () => createRunTestGame(prefs: {'gamesPlayed': 10}),
+    gameSize: Vector2(Config.worldWidth, 568),
+  ).testGameWidget(
+    'closed-loop emitted offsets and extras retain the human-noise distribution',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+    },
+    verify: (game, _) async {
+      final offsets = <double>[];
+      var extras = 0;
+      game.runDebug.ignoreGates = false;
+      for (var seed = 0; seed < 50; seed++) {
+        game.runSeed = seed;
+        game.storage.gamesPlayed = 10;
+        await startRun(game);
+        final result = await flyHumanNoiseBotToDeath(
+          game,
+          seed: seed,
+          maxSeconds: 60,
+        );
+        offsets.addAll(result.baseFlapOffsets);
+        extras += result.extraFlaps;
+        expect(result.flaps, result.baseFlapOffsets.length + result.extraFlaps);
+        game.replay();
+        await flushAndMount(game);
+        stepGame(game, .4);
+        await flushAndMount(game);
+      }
+      expect(offsets.length, greaterThanOrEqualTo(500));
+      final mean = offsets.reduce((a, b) => a + b) / offsets.length;
+      final variance =
+          offsets
+              .map((offset) => math.pow(offset - mean, 2))
+              .reduce((a, b) => a + b) /
+          (offsets.length - 1);
+      final sd = math.sqrt(variance);
+      // Measure emitted actions, including frame quantization, rather than
+      // merely testing the Gaussian generator's raw draws.
+      expect(mean * 1000, closeTo(0, 10));
+      expect(sd * 1000, closeTo(90, 10));
+      expect(extras / offsets.length, closeTo(.1, .03));
+      // ignore: avoid_print
+      print(
+        'CLOSED LOOP: n=${offsets.length} mean=${mean * 1000}ms '
+        'sd=${sd * 1000}ms extra=${extras / offsets.length}',
+      );
+    },
+    timeout: const Timeout(Duration(minutes: 10)),
+  );
+  // endregion
 
   for (final height in [568.0, 711.0]) {
     FlameTester(

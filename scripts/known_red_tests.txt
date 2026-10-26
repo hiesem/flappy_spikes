@@ -1,2 +1,6 @@
+test/e2e/p3_interactions_e2e_test.dart: P3 director budget / cooldown / exclusivity audit across 30 seeds
+test/p26/curve/formations_wire_autopilot_test.dart: D7 ceiling autopilot start 250 height 711.0 seed 7
+test/p26/curve/layout_d2_test.dart: D2 Δy is point-based and reduced after hard hoops
+test/run/hoops/s3_20_switch_test.dart: §3.20 rules (pure) §3.20 five designs at random (all used, about equally), never the same twice in a row, mixed within a run
 test/run/items/s3_17_squeeze_autopilot_test.dart: §3.17 squeeze forced back to back: the autopilot passes ≥ 12 hoops and every window hoop fits the squeezed band (568 pt, seed 11)
 test/run/items/s3_17_squeeze_autopilot_test.dart: §3.17 squeeze forced back to back: the autopilot passes ≥ 12 hoops and every window hoop fits the squeezed band (711 pt, seed 11)

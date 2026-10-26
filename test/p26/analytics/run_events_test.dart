@@ -2,6 +2,7 @@ import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/menu/wallet.dart';
+import 'package:flappy_spikes/run/director/director_context.dart';
 import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/items/analytics_router.dart';
 import 'package:flappy_spikes/run/mistakes.dart';
@@ -303,7 +304,7 @@ void main() {
     );
 
     tester.testGameWidget(
-      'a ride hoop counts in run_extra.ride_hoops; formations count starts',
+      'ride_hoops counts perfect and non-perfect ride passes only',
       setUp: (g, _) => boot(g),
       verify: (game, _) async {
         spy.events.clear();
@@ -311,8 +312,37 @@ void main() {
         run.events.emit(
           const HoopPassed(null, perfect: true, duringRide: true),
         );
+        run.events.emit(
+          const HoopPassed(null, perfect: false, duringRide: true),
+        );
+        run.events.emit(
+          const HoopPassed(null, perfect: false, duringRide: false),
+        );
+        run.events.emit(
+          const HoopPassed(null, perfect: true, duringRide: false),
+        );
         game.endRun(run.endRun());
-        expect(events(spy, 'run_extra').single['ride_hoops'], 1);
+        expect(events(spy, 'run_extra').single['ride_hoops'], 2);
+      },
+    );
+
+    tester.testGameWidget(
+      'run_extra reports the director downgrade count for this run',
+      setUp: (g, _) => boot(g),
+      verify: (game, _) async {
+        spy.events.clear();
+        final run = await startRun(game);
+        // Exercise real planning and its hazard budget, without a debug
+        // setter or relying on the starting slots to need downgrades.
+        for (var i = 0; i < 400; i++) {
+          final ctx = DirectorContext.open(711);
+          final plan = run.director.nextSlot(ctx);
+          run.director.nextGap(ctx, plan);
+        }
+        final downgraded = run.director.downgrades;
+        expect(downgraded, greaterThan(0));
+        game.endRun(run.endRun());
+        expect(events(spy, 'run_extra').single['downgraded'], downgraded);
       },
     );
   });

@@ -340,16 +340,18 @@ class AnalyticsRouter extends RunFeature {
     }
   }
 
+  // region P26-A1
   void _onHoopPassed(HoopPassed e) {
     if (e.hoop != null) _resolveHoop(e.hoop!, survived: true);
+    if (e.duringRide) _rideHoops++;
     _perfectPending = e.perfect;
     if (!e.perfect) {
       _perfectUncounted.clear();
       return;
     }
     _perfectUncounted.add(_scoredTier(e));
-    if (e.duringRide) _rideHoops++;
   }
+  // endregion
 
   void _onSavedHoopPassed(SavedHoopPassed e) =>
       _resolveHoop(e.hoop, survived: true);
@@ -672,7 +674,9 @@ class AnalyticsRouter extends RunFeature {
       'max_speed': _maxSpeed,
       'coins_bonus': _coinsBonus,
       'formations': _formationCount(),
-      'downgraded': 0,
+      // region P26-A1
+      'downgraded': c.director.downgrades,
+      // endregion
     });
     c.track('run_director_hoops', {
       for (final k in hoopKeys) k: s.spawned[k] ?? 0,
@@ -698,7 +702,11 @@ class AnalyticsRouter extends RunFeature {
 
   void _setUserProperties(RunContext c, RunSummary s) {
     final services = c.game.services;
-    final bestHoops = math.max(c.game.storage.bestHoops, s.hoopsPassed);
+    // region P26-A1
+    final bestHoops = c.run.countsForAchievements
+        ? math.max(c.game.storage.bestHoops, s.hoopsPassed)
+        : c.game.storage.bestHoops;
+    // endregion
     if (c.run.countsForAchievements) {
       unawaited(c.game.storage.saveBestHoops(bestHoops));
     }

@@ -72,7 +72,16 @@ void main() {
       expect(storage.showcaseRuns, 0);
       expect(storage.showcaseDoneAt, isNull);
       expect(storage.pendingFirstMeets, isEmpty);
-      expect(prefs.containsKey(Obf.prefPendingFirstMeets), isFalse);
+      for (final key in [
+        Obf.prefFtueSteps,
+        Obf.prefShowcaseSeen,
+        Obf.prefShowcaseAttempt,
+        Obf.prefShowcaseRuns,
+        Obf.prefShowcaseDoneAt,
+        Obf.prefPendingFirstMeets,
+      ]) {
+        expect(prefs.containsKey(key), isFalse, reason: key);
+      }
     },
   );
 

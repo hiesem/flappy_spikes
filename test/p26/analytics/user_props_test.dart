@@ -161,4 +161,42 @@ void main() {
       expect(game.storage.bestHoops, 17);
     },
   );
+
+  for (final useGodMode in [false, true]) {
+    final debugSpy = PropertySpy();
+    FlameTester<FlappySpikesGame>(
+      () => createRunTestGame(services: debugSpy, prefs: {'bestHoops': 12}),
+      gameSize: Vector2(320, 711),
+    ).testGameWidget(
+      'fs_best_hb ignores a higher non-counting '
+      '${useGodMode ? 'god-mode' : 'debug-assisted'} run',
+      setUp: (game, _) async {
+        await game.ready();
+        game.sound.enabled = false;
+        await preloadImages(game);
+      },
+      verify: (game, _) async {
+        final run = await startRun(game);
+        if (useGodMode) {
+          game.runDebug.god = true;
+        } else {
+          run.debugPass();
+        }
+        run.state.hoopsPassed = 200;
+        expect(run.countsForAchievements, isFalse);
+        run.endRun();
+        await flushAndMount(game);
+
+        expect(
+          debugSpy.properties
+              .singleWhere((property) => property.$1 == 'fs_best_hb')
+              .$2,
+          '10-14',
+        );
+        expect(game.storage.bestHoops, 12);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getInt('bestHoops'), 12);
+      },
+    );
+  }
 }

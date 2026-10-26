@@ -89,11 +89,18 @@ void main() {
       final restarted = GameStorage(clock: () => now);
       await restarted.load();
       expect(restarted.installAtMs, firstInstallAt);
+      now = now.add(const Duration(hours: 1, seconds: 7));
+      final restartedSpy = AnalyticsSpy();
       final restartedTracker = PersistedFtueTracker(
-        services: AnalyticsSpy(),
+        services: restartedSpy,
         storage: restarted,
       );
       restartedTracker.step(FtueStep.run2End, gamesPlayed: 2);
+      expect(restartedSpy.events.single.$1, 'ftue_step');
+      expect(restartedSpy.events.single.$2, {
+        'name': FtueStep.run2End,
+        's_since_install': 3757,
+      });
       expect(storage.installAtMs, firstInstallAt);
       expect(restarted.installAtMs, firstInstallAt);
 

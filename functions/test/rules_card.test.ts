@@ -101,3 +101,19 @@ describe('PRD-2.6 F9 look.card in Firestore rules', () => {
     })));
   });
 });
+
+// region P26-S1
+describe('PRD-2.6 G4 optional player space flag in Firestore rules', () => {
+  it('accepts true, false and the absent 2.5 field', async () => {
+    await assertSucceeds(write(player({ space: true })));
+    await assertSucceeds(write(player({ space: false })));
+    await assertSucceeds(write(player()));
+  });
+
+  it('rejects non-boolean space values', async () => {
+    for (const space of ['x', 1, null, [], {}]) {
+      await assertFails(write(player({ space })));
+    }
+  });
+});
+// endregion

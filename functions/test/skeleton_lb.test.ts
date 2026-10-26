@@ -3,7 +3,7 @@
  * index / TTL declarations that later board work packages rely on.
  */
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { validCard } from '../src/card.js';
 import { bracketFor } from '../src/brackets.js';
@@ -28,6 +28,7 @@ import {
   MAX_LEVEL,
   validLook,
 } from '../src/schema.js';
+import * as schema from '../src/schema.js';
 import { LOOK, fakeJwt, PROJECT } from './helpers.js';
 
 const ROOT = join(__dirname, '..', '..');
@@ -73,7 +74,7 @@ describe('PRD-2.6 wave 0 schema constants', () => {
 
 describe('PRD-2.6 wave 0 deploy declarations', () => {
   const indexes = JSON.parse(readFileSync(join(ROOT, 'firestore.indexes.json'), 'utf8')) as {
-    indexes: Array<{ collectionGroup: string; fields: Array<{ fieldPath: string; order?: string }> }>;
+    indexes: Array<{ collectionGroup: string; queryScope: string; fields: Array<{ fieldPath: string; order?: string }> }>;
     fieldOverrides: Array<{ collectionGroup: string; fieldPath: string; ttl?: boolean; indexes: unknown[] }>;
   };
   const ttl = readFileSync(join(ROOT, 'functions', 'scripts', 'set_ttl.sh'), 'utf8');
@@ -82,12 +83,99 @@ describe('PRD-2.6 wave 0 deploy declarations', () => {
     const fields = (group: string) =>
       indexes.indexes.find((i) => i.collectionGroup === group)?.fields.map((f) => `${f.fieldPath}:${f.order}`) ?? [];
     assert.deepEqual(fields('lbGroups'), ['settled:ASCENDING', 'end:ASCENDING']);
+    // region P26-S1
+    // LB3: exactRank filters hidden and ranges over bestShadow; best is unused.
     assert.deepEqual(fields('lbPlayers'), [
       'hidden:ASCENDING',
       'bestShadow:ASCENDING',
-      'best:DESCENDING',
     ]);
+    assert.ok(indexes.indexes.some((i) => i.collectionGroup === 'lbPlayers' &&
+      i.fields.map((f) => `${f.fieldPath}:${f.order}`).join(',') ===
+        'hidden:ASCENDING,bestShadow:ASCENDING,bestAt:ASCENDING')); // S2 tie count
+    // endregion
   });
+
+  // region P26-S1
+  it('inventories every server where/orderBy query and checks composite index coverage', () => {
+    type Clause = { field: string; op: string };
+    type Query = { collection: string; clauses: Clause[] };
+    const queries = new Map<string, Query>();
+    const constants = schema as unknown as Record<string, unknown>;
+    for (const file of readdirSync(join(ROOT, 'functions/src')).filter((f) => f.endsWith('.ts'))) {
+      const source = readFileSync(join(ROOT, 'functions/src', file), 'utf8');
+      const localConstants = Object.fromEntries([...source.matchAll(/\bconst\s+(\w+)\s*=\s*'([^']+)'/g)]
+        .map((m) => [m[1], m[2]]));
+      const aliases = new Map<string, Query>();
+      let scanned = 0;
+      // Follow fluent query chains through their terminal get/count or assignment.
+      // The coverage count below fails closed for new syntax / unresolved aliases.
+      const chains = /(?:\b\w+\s*\.\s*collection(?:Group)?\(\s*(\w+|'[^']+')\s*\)|\b(\w+))(\s*\.(?:where|orderBy|limit)\s*\([^;]*?)(?=\s*\.(?:get|count)\s*\(|;)/g;
+      for (const match of source.matchAll(chains)) {
+        const [expression, collectionArg, alias, tail] = match;
+        assert.ok(!expression.includes('collectionGroup('), `${file}: collection-group index scope must be checked`);
+        const name = collectionArg?.startsWith("'") ? collectionArg.slice(1, -1) : (constants[collectionArg] ?? localConstants[collectionArg]);
+        const base = collectionArg ? { collection: typeof name === 'string' ? name : collectionArg, clauses: [] } :
+          aliases.get(alias);
+        assert.ok(base, `${file}: unresolved query alias ${alias}`);
+        const query: Query = { ...base, clauses: [...base.clauses] };
+        const clauses = /\.(where|orderBy)\(\s*'([^']+)'(?:\s*,\s*'([^']+)')?/g;
+        for (const clause of tail.matchAll(clauses)) {
+          const [, method, field, operator] = clause;
+          assert.ok(method === 'orderBy' || operator, `${file}: non-literal where operator`);
+          query.clauses.push({ field, op: operator ?? 'asc' });
+          scanned++;
+          const signature = `${file}: ${query.collection} ${query.clauses.map((c) => `${c.field} ${c.op}`).join(', ')}`;
+          queries.set(signature, { ...query, clauses: [...query.clauses] });
+        }
+        const assignment = source.slice(0, match.index).match(/\bconst\s+(\w+)\s*=\s*$/);
+        if (assignment) aliases.set(assignment[1], query);
+      }
+      assert.equal(scanned, [...source.matchAll(/\.(?:where|orderBy)\s*\(/g)].length,
+        `${file}: every where/orderBy must be inventoried`);
+    }
+    // Include intermediate chains: a shared base (exactRank's col) must not hide its range.
+    assert.deepEqual([...queries.keys()].sort(), [
+      'board_delete.ts: collection uid ==',
+      'board_delete.ts: lbGroups ghostUids array-contains',
+      'board_delete.ts: lbGroups memberUids array-contains',
+      'board_delete.ts: lbPlayers bestShadow desc',
+      'board_store.ts: lbGifts gid ==',
+      'board_store.ts: lbGifts uid ==',
+      'board_store.ts: lbGroups settled ==',
+      'board_store.ts: lbGroups settled ==, end <=',
+      'board_store.ts: lbGroups settled ==, end <=, end asc',
+      'board_store.ts: lbPlayers bestShadow desc',
+      'board_store.ts: lbPlayers cleanupPending ==',
+      'board_store.ts: lbPlayers hidden ==',
+      'board_store.ts: lbPlayers hidden ==, bestShadow ==',
+      'board_store.ts: lbPlayers hidden ==, bestShadow >',
+      'pools.ts: versusFlags uid ==',
+      'pools.ts: versusNames guestSeen <',
+      'pools.ts: versusNames guestSeen <, guestSeen asc',
+      'purchases.ts: purchases firstUid ==',
+    ].sort());
+    for (const [signature, query] of queries) {
+      const equalities = [...new Set(query.clauses.filter((c) => c.op === '==').map((c) => c.field))];
+      const ordered = new Map<string, string>();
+      for (const { field, op } of query.clauses) {
+        if (['<', '<=', '>', '>='].includes(op)) ordered.set(field, 'ASCENDING');
+        if (op === 'asc' || op === 'desc') ordered.set(field, op === 'asc' ? 'ASCENDING' : 'DESCENDING');
+      }
+      const fields = new Set(query.clauses.map((c) => c.field));
+      for (const field of fields) {
+        assert.ok(!indexes.fieldOverrides.some((f) => f.collectionGroup === query.collection &&
+          f.fieldPath === field && f.indexes.length === 0), `${signature}: ${field} is exempt from automatic indexing`);
+      }
+      // Single-field queries and equality-only queries use automatic indexes / index merging.
+      if (fields.size <= 1 || ordered.size === 0) continue;
+      const expected = [...equalities.map((field) => `${field}:ASCENDING`),
+        ...[...ordered].filter(([field]) => !equalities.includes(field)).map(([field, order]) => `${field}:${order}`)];
+      assert.ok(indexes.indexes.some((index) => index.collectionGroup === query.collection && index.queryScope === 'COLLECTION' &&
+        index.fields.map((f) => `${f.fieldPath}:${f.order}`).join(',') === expected.join(',')),
+      `${signature} needs (${expected.join(', ')})`);
+    }
+  });
+  // endregion
 
   it('exempts the embedded LB arrays from indexing', () => {
     const exempt = (group: string, field: string) =>

@@ -259,6 +259,10 @@ export async function processPlayerWrite(
             hat: chosen.look.hat,
             hoop: chosen.look.hoop,
             trail: chosen.look.trail,
+            // region P26-S1
+            // F9: checkRun already validated the optional versus-card string.
+            ...(chosen.look.card !== undefined ? { card: chosen.look.card } : {}),
+            // endregion
           },
           platform: chosen.platform,
           tl: chosen.tl,

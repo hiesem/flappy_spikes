@@ -7,7 +7,7 @@ import { DocumentReference, Firestore, Timestamp, Transaction } from 'firebase-a
 import { deletePlayerData, flagId, processPlayerWrite, sweepAllPools } from '../src/pools.js';
 import { DAILY_BEST_UPLOADS, FLAGS_COLLECTION, POOL_CAP, POOL_MAX_BYTES, poolId, RATE_COLLECTION } from '../src/schema.js';
 import { docSize } from '../src/size.js';
-import { DAY, db, makePlayer, makeRun, poolEntries, processLive, uniq, waitFor } from './helpers.js';
+import { DAY, LOOK, db, makePlayer, makeRun, poolEntries, processLive, uniq, waitFor } from './helpers.js';
 
 const shard0 = () => 0;
 const rate = async (uid: string) => (await db.collection(RATE_COLLECTION).doc(uid).get()).data();
@@ -55,6 +55,35 @@ describe('§3.13 onPlayerRunWrite: accept', () => {
       assert.equal(e.space, c.space === true ? true : undefined, `space for level ${c.level}`);
     }
   });
+
+  // region P26-S1
+  it('F9 preserves a valid run card and keeps a 2.5 run card-less', async () => {
+    for (const card of ['f_orbit|n_fire|s_fireworks', '|n_ocean|', '||', undefined]) {
+      const uid = uniq('card');
+      const run = makeRun({ score: 80 });
+      run.look = { ...run.look };
+      if (card !== undefined) run.look.card = card;
+      const player = makePlayer({ best: 80, bestRun: run, recent: [run] });
+      // Copy the run's look, even when the current player look differs.
+      player.look = { ...player.look, card: 'pecking||' };
+      const r = await processLive(uid, undefined, player, { rand: shard0 });
+      assert.deepEqual(r.accepted, [run.runId]);
+      const entry = (await poolEntries(poolId(2, 0))).find((e) => e.runId === run.runId)!;
+      assert.deepEqual(entry.look, run.look);
+      assert.equal(Object.hasOwn(entry.look, 'card'), card !== undefined);
+    }
+  });
+
+  it('F9 rejects an invalid run card before it reaches a pool', async () => {
+    const uid = uniq('badcard');
+    const run = makeRun({ score: 80 });
+    run.look = { ...run.look, card: 'f_unknown|n_fire|s_fireworks' };
+    const r = await processLive(uid, undefined, makePlayer({ best: 80, bestRun: run, recent: [run] }), { rand: shard0 });
+    assert.deepEqual(r.accepted, []);
+    assert.deepEqual(r.rejected, [{ runId: run.runId, reason: 'shape' }]);
+    assert.ok((await poolEntries(poolId(2, 0))).every((e) => e.uid !== uid));
+  });
+  // endregion
 
   it('§3.13 the player older entries are removed from the shard (dedupe per uid)', async () => {
     const uid = uniq('dedupe');
@@ -185,6 +214,9 @@ describe('§3.13 pool shard limits', () => {
     return {
       ...makeRun({ runId: `seed-${i}`, score: 12 }),
       tl: 'A'.repeat(tlChars),
+      // region P26-S1
+      look: { ...LOOK, card: 'f_orbit|n_fire|s_fireworks' },
+      // endregion
       uid: `seed-uid-${i}`,
       level,
       ts: Timestamp.fromMillis(tsMs),

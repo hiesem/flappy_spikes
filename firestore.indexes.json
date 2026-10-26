@@ -13,8 +13,16 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "hidden", "order": "ASCENDING" },
+        { "fieldPath": "bestShadow", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "lbPlayers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "hidden", "order": "ASCENDING" },
         { "fieldPath": "bestShadow", "order": "ASCENDING" },
-        { "fieldPath": "best", "order": "DESCENDING" }
+        { "fieldPath": "bestAt", "order": "ASCENDING" }
       ]
     }
   ],

@@ -114,9 +114,10 @@ service cloud.firestore {
         .concat('bestRun' in d && d.bestRun != null ? [d.bestRun] : []);
     }
 
+    // region P26-S1
     function validPlayer(d, old) {
       return d.keys().hasOnly(['name', 'avatar', 'platform', 'look', 'best', 'level', 'bestRun', 'recent',
-                               'uploads', 'updatedAt', 'expireAt'])
+                               'uploads', 'updatedAt', 'expireAt', 'space'])
         && d.keys().hasAll(['name', 'avatar', 'platform', 'look', 'best', 'level', 'recent', 'updatedAt', 'expireAt'])
         && isStr(d.name, 1, 32)
         && isStr(d.avatar, 0, 512)
@@ -124,6 +125,7 @@ service cloud.firestore {
         && validLook(d.look)
         && isInt(d.best, 0, 100000)
         && isInt(d.level, 0, 9999)
+        && (!('space' in d) || d.space is bool)
         && validRecent(d.recent, d.best, old)
         // A new best run is also recent[0] (validated there); otherwise it is unchanged.
         && (!('bestRun' in d) || d.bestRun == null || d.bestRun in old
@@ -135,6 +137,8 @@ service cloud.firestore {
         && d.expireAt > request.time + duration.value(59, 'd')
         && d.expireAt < request.time + duration.value(61, 'd');
     }
+
+    // endregion
 
     match /players/{uid} {
       allow read, delete: if signedIn() && request.auth.uid == uid;

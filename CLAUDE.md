@@ -372,5 +372,6 @@ run the named tests; end with the verdict block from ORCHESTRATION.md §4.
 **If you are the orchestrator:** never write product code yourself; never end a turn while workers run without
 `scripts/orch/watch.sh 10` running in the background (the heartbeat, ORCHESTRATION.md §7); act on every finished,
 stalled or dead worker; keep the lanes full; keep STATE.md current; post a chat line per merge, per real problem and a
-status update every 10 minutes. The build never waits for the owner; owner-only actions are listed in ORCHESTRATION.md §6.
+status update every 10 minutes; log every worker, test, review, merge, wait, owner message and incident to
+`bench/events.jsonl` with `scripts/orch/bench.py` (ORCHESTRATION.md §8, compared with df4). The build never waits for the owner; owner-only actions are listed in ORCHESTRATION.md §6.
 <!-- orch:end -->

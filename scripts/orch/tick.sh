@@ -10,5 +10,5 @@ exec 9>"$ORCH/headless.lock"; flock -n 9 || exit 0
 "$(dirname "$0")/lease.sh" take "headless-$$"
 log=$ORCH/headless/$(date +%Y%m%d-%H%M).log; mkdir -p "$ORCH/headless"
 cd "$REPO" && timeout 75m claude -p --model claude-opus-5-5 --effort medium --permission-mode bypassPermissions \
-  "$(cat "$REPO/scripts/orch/headless_prompt.md")" > "$log" 2>&1
+  --output-format json "$(cat "$REPO/scripts/orch/headless_prompt.md")" > "$log" 2>&1
 echo "headless pass exit $? ($(date '+%F %T'))" >> "$ORCH/RUNLOG.md"

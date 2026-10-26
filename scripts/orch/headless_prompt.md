@@ -11,3 +11,6 @@ the interactive orchestrator session has been silent for 45+ minutes. Run ONE or
 5. Stop after at most ~60 minutes or when nothing more can be done until a worker finishes. Never wait for a worker
    in this pass: the timer starts the next pass. Follow every rule in CLAUDE.md and ORCHESTRATION.md (no prod /
    review clicks, no spending, phone rules, kill Gradle daemons by PID, never pkill -f).
+6. Benchmark (ORCHESTRATION.md §8): log every finished worker with `scripts/orch/bench.py worker …`, every merge,
+   wait and incident; at the start of this pass note the time, and at the end run
+   `scripts/orch/bench.py orch-turn --from <that time> --who headless --transcript <this session's transcript, or skip>`.

@@ -34,12 +34,13 @@ Tester (worker id `<wp>-t<round>`, cap 45 min), in the WP's worktree:
 
 ```bash
 scripts/orch/spawn.sh <wp>-t<n> 45 /home/killerhis/Projects/flappyspikes/.worktrees/p26-<wp> -- \
-  claude -p --model claude-opus-5-5 --effort medium --permission-mode bypassPermissions \
+  claude -p --model claude-opus-5-5 --effort medium --permission-mode bypassPermissions --output-format json \
     "$(cat /home/killerhis/Projects/flappyspikes/.worktrees/briefs26/<wp>.t<n>.md)"
 ```
 
 The tester prompt holds the WP brief, the diff range (`feat/2.6...p26/<wp>`), the builder summary, the verify tail,
-the read-only rule and the verdict format of §4; the verdict is the end of the worker's log.
+the read-only rule and the verdict format of §4; the verdict is the `result` field of the worker's JSON log
+(`--output-format json` also gives the token usage for the benchmark, §8).
 
 ## 2. SDLC per work package (pipelined: nobody waits on anybody)
 
@@ -280,3 +281,32 @@ since when). Scripts: `scripts/orch/` — `spawn.sh`, `status.sh`, `stop.sh`, `w
 - Owner says stop: `touch .worktrees/briefs26/ORCH_STOP`, `stop.sh` every running worker, disable the timer, write
   STATE.md. Resume: remove `ORCH_STOP`, enable the timer, continue from STATE.md.
 - Done (after the final report): remove `ORCH_ACTIVE`, disable the timer.
+
+## 8. Benchmark logging (required; compared with df4 afterwards)
+
+Every orchestrator (session or headless) writes append-only JSON Lines to `bench/events.jsonl` in the `feat/2.6`
+checkout (one object per line, ISO timestamps with timezone, never rewrite a line) through `scripts/orch/bench.py`, and
+commits `bench/` with each merge. Event types and when they are written:
+
+| Event | Written when | How |
+|---|---|---|
+| `run_start` | W0, once: base SHA, branch, scope, machine, max parallel agents | `bench.py ev run_start base_sha=… scope:='["W1",…]' …` |
+| `plan` | each wave's briefs are written: ts_start/ts_end, tasks (task_id, title, req_ids, deps, planned_paths) | `bench.py ev plan …` |
+| `turn` | every finished builder / tester worker (model, effort, role build/fix/review, duration, outcome, error, tokens) | `bench.py worker <id> --task T --role R --wave W` (parses codex `turn.completed` usage / `claude -p` JSON usage) |
+| `turn` (orchestrate) | end of every orchestrator wake: tokens from the Claude transcript between wake and sleep; headless passes too | `bench.py orch-turn --from <wake ISO>` |
+| `test` | every verify / test run: cmd, scope targeted/full, where task-worktree/integration, exit, failures, seconds | verify workers run as `bench.py test … -- bash scripts/verify.sh`, or `bench.py worker <id>` |
+| `review` | every tester verdict: verdict, findings with severity / file / issue | written by `bench.py worker <id> --role review` |
+| `merge` | every merge: sha, conflict, resolved_by, files_changed, lines ±, ts_start/ts_end | `bench.py ev merge …` (numbers from `git diff --shortstat`) |
+| `wait` | a ready WP waited for a slot / dependency / merge / provider: ts_start (ready) → ts_end (started) | `bench.py ev wait …` (ready time kept in STATE.md) |
+| `milestone_done` | a wave gate: full_suite {exit, failures, seconds}, main_red_minutes, reverts | `bench.py ev milestone_done …` |
+| `human` | every owner message that changes the build (feedback, stop, decision) | `bench.py ev human what=…` |
+| `incident` | capacity / rate-limit / timeout / crash / other, with detail | `bench.py ev incident what=… detail=…` |
+| `final_check` / `run_end` | after W5 | see below |
+
+Task ids are the WP keys of §3; `wave` (W1…W5) stands in for df4's milestone. At the end:
+`bash scripts/verify.sh` UNSCOPED (VERIFY_BASE and VERIFY_SCOPED unset — the same unscoped path df4 ran with
+DF4_VERIFY_BASE unset) on the final commit, full log in `bench/final-verify.log`, failures listed against
+`scripts/known_red_tests.txt` (event `final_check`); `bench/acceptance.md` (PRD acceptance criteria per wave: met yes/no +
+the proving test, from the briefs and tester verdicts); then `bench.py summary` writes `bench/summary.md` (wall time per
+wave and total, tasks, turns and tokens per model, full-suite runs, fix-round distribution, final check, acceptance,
+human interventions and incidents). Never change `scripts/verify.sh` or tests to make the final check pass.

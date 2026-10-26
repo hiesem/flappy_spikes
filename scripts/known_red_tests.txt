@@ -1,2 +1,3 @@
 test/autopilot_test.dart: D human-noise median >=40 from hoop 0 gamesPlayed 10 h=568.0
 test/autopilot_test.dart: D human-noise median >=40 from hoop 0 gamesPlayed 10 h=711.0
+test/run/hoops/s3_23_spring_test.dart: §3.23 the spring has room for its 240 pt jump inside the band at 568 and 711 from hoop 10 (WP-3c fix: band rule, not the row range)

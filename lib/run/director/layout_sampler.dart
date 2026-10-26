@@ -132,6 +132,11 @@ class LayoutSampler {
       y = y < lo ? lo : hi;
     }
     y = y.clamp(lo, hi).toDouble();
+    // A spring/calm recovery can leave the preceding centre outside the
+    // row. Re-enter it gradually instead of turning the row clamp into an
+    // above-ceiling jump (including the hard-follow-up cap).
+    final maxStep = b.dy.$3 * dyRef * (hard ? RunConfig.hardHoopDyFactor : 1);
+    y = y.clamp(prev - maxStep, prev + maxStep).toDouble();
     final s = (y - prev).sign;
     lastSign = s == 0 ? sign : s;
     lastY = y;
@@ -292,6 +297,8 @@ class LayoutSampler {
         // travel left rocks in place instead.
         final cap = cosA < 0.2 ? rail.halfTravel.$2 : bandRoom / cosA;
         if (cap < RunConfig.railMinHalfTravel) {
+          // D1: a cramped slide must not introduce rock before hoop 90.
+          if (hoopIndex < 90) return null;
           return MotionSpec(
             type: MotionType.rock,
             amplitudeDeg: RunConfig.rockAmplitudeDeg,

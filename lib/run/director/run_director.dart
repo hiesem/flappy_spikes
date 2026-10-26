@@ -1031,7 +1031,7 @@ class RunDirector {
     // baseline Δy cost while shipping the spring; if the four-slot window
     // cannot afford it, replace the spring itself (D3's last resort) rather
     // than shortening the jump later.
-    if (planned.kind == HoopKindId.spring && !planned.forced) {
+    if (finalPlan.kind == HoopKindId.spring && !finalPlan.forced) {
       final dir = planned.extra == SpringDir.up ? -1 : 1;
       final landingY = planned.centreY + dir * RunConfig.springJump;
       final nextP90 = tables.bandFor(hoop + 1).dy.$2 * dyRef;
@@ -1057,7 +1057,6 @@ class RunDirector {
       }
     }
     final willDowngrade =
-        !shouldCalm &&
         !finalPlan.forced &&
         !_hazard.allows(
           finalPlan,
@@ -1536,6 +1535,54 @@ class RunDirector {
     DirectorContext ctx, {
     required double Function(double, [double]) cap,
   }) {
+    // Reverse an outward stair only when fitting its four steps would
+    // push the entrance beyond the live Δy limit. Preserve the seeded
+    // direction whenever its entrance is already reachable.
+    if (templates.first.formation == FormationId.stairs) {
+      final previous = _lastFinalY ?? (ctx.topTooth + ctx.floorTooth) / 2;
+      final reach =
+          openingFor(templates.first.index) *
+              _bigMult(templates.first.index, ctx) /
+              2 +
+          RunConfig.rimRadius +
+          RunConfig.bandMargin;
+      final offsets = templates.map((p) => p.centreY);
+      final low = ctx.topTooth + reach - offsets.reduce(min);
+      final high = ctx.floorTooth - reach - offsets.reduce(max);
+      final maxStep =
+          tables.bandFor(templates.first.index).dy.$3 *
+          min(ctx.band, RunConfig.dyRefBand) *
+          RunConfig.hardHoopDyFactor;
+      if (low <= high &&
+          (previous.clamp(low, high) + templates.first.centreY - previous)
+                  .abs() >
+              maxStep) {
+        templates = [
+          for (final plan in templates)
+            plan.copyWith(centreY: -plan.centreY, tiltDeg: -plan.tiltDeg),
+        ];
+      }
+    }
+    // D2's short-screen ceiling also applies inside a slalom. Keep the
+    // alternating shape but fit its point-space steps to the live Δy cap.
+    if (templates.first.formation == FormationId.slalom) {
+      final maxStep =
+          tables.bandFor(templates.first.index).dy.$3 *
+          min(ctx.band, RunConfig.dyRefBand);
+      var largest = 0.0;
+      for (var k = 1; k < templates.length; k++) {
+        largest = max(
+          largest,
+          (templates[k].centreY - templates[k - 1].centreY).abs(),
+        );
+      }
+      if (largest > maxStep) {
+        templates = [
+          for (final plan in templates)
+            plan.copyWith(centreY: plan.centreY * maxStep / largest),
+        ];
+      }
+    }
     // The pure tilt template supplies angles; give the live wave a shallow
     // valley so both 30° ends have at least a 40 pt approach (D2 / D7) where the
     // band permits it. Keep its exit at the shared origin for a smooth handoff.
@@ -1704,7 +1751,7 @@ class RunDirector {
         tables.bandFor(hoop).dy.$1 * min(ctx.band, RunConfig.dyRefBand);
     final previous = previousY ?? (ctx.topTooth + ctx.floorTooth) / 2;
     final delta = planned.centreY - previous;
-    final (lo, hi) = _layout.limits(hoop, ctx, opening);
+    final (lo, hi) = _layout.limits(hoop, ctx, opening, useTable: false);
     final target = previous + delta.sign * min(delta.abs(), median);
     final calmLo = max(lo, previous - median);
     final calmHi = min(hi, previous + median);

@@ -1894,3 +1894,59 @@ Remote Config only serves `versus_pg_salt`. Key list: `docs/p23/TUNING.md`.
 - The banner strip in a run keeps its dp height (points per dp from the screen's full width
   in game points).
 
+
+### 2.6 wave 1: showcase, gates and ceiling (WP-B/C/D)
+
+- **DEVIATION (PRD-2.6 §3 WP-B, R2/R6):** showcase planning is step 0,
+  before debug forces and first-meet pulls. START freezes the selected script;
+  the ordinary planner still consumes its draws before the script overlays its
+  highlights. Portal → comet → FEVER steps are pass-driven, with attempt-based
+  scripts, Big Hoops + shield safety starters and one free revive. These are
+  ordinary versus/upload-eligible runs. Debug assistance permanently excludes
+  the run; it never consumes normal showcase progress. Existing upgraded
+  installs skip the showcase. See `test/p26/showcase/`.
+- **DEVIATION (WP-C, C1–C3):** lifetime gates are silent filters: saw opens
+  at gamesPlayed 3 (game 4), squeeze at 5 (game 6). Other elements use the
+  in-run introductions and existing first-meet pulls; saw/squeeze have no
+  first-meet force. The initial portal window is hoop 12–25. Gate UI is gone.
+- **DEVIATION (WP-D, D1/D2):** the shared opening curve reaches 70 pt at
+  hoop 150, perfect band 10 pt; speed and 310 pt plane spacing remain pinned.
+  Δy uses min(band, 540 pt), at most 270 pt, with a 0.85 maximum after a hard
+  hoop. Centre-row fractions still use the full band. Tilts start at 10,
+  switch 15, rails 25, saw 30, strong aligned tilts 50, 45° at 60, slides 70,
+  orbit/rock 90, saw-in-squeeze 100, moving + 30° at 150. Strong tilts follow
+  the approach and require |Δy| ≥40; otherwise they clamp to 15°. A 45° ring
+  receives +6 pt opening. A cramped slide before hoop 90 drops its motion
+  instead of introducing rock early. Rendered moving angles include the
+  motion's own angular offset under the 15°/30° cap.
+- **DEVIATION (D3):** the last four slots carry hazard costs, with budget
+  0/0.5/2/3/4/5/5.5 at hoops 0/3/10/25/50/100/150. Downgrades remove motion,
+  reduce tilt, shorten Δy to p90, then remove the special. Forced slots count
+  in the ledger but are exempt. Reward/ride slots cost zero. Calm slots also
+  pass through hazard accounting. Spring reservations use the final kind,
+  so a spring converted to calm cannot restore its discarded special.
+- **DEVIATION (D4/D5):** periodic calm lasts three slots, first at 30–34,
+  growing intervals ×1.2 capped at 55. Revive gives three slots; squeeze/ride
+  recovery two. Starts are at least 12 apart except mandatory revive calm.
+  Calm is normal, motionless, ≤10° tilt and median Δy. Recovery from a spring
+  may lie outside the row's centre range while retaining the physical band
+  margin and median step. Squeeze timing remains 25–40 first / 25–45 gap;
+  warnings wait outside calm and revives preserve the squeeze index.
+- **DEVIATION (D6):** `headline_window` coordinates introductions, first
+  meets, rides, big bonuses and squeeze warnings: one headline per eight
+  hoops, with due events waiting at most five hoops.
+- **DEVIATION (D7):** from hoop 150, all six formations ship (stairs,
+  slalom, tilt wave, sync rails, saw gate, switch chain), every 12–20 hoops,
+  avoiding the previous two shapes and respecting budget and recovery.
+  Saw/switch/moving mix chapters rotate every 50 hoops at equal budget.
+  Stairs face into the available band and short-screen slalom steps cap at
+  the live Δy ceiling; sampler recovery re-enters centre rows gradually.
+  No new point source or timeline flag is added: `fl` remains 2 and the
+  leaderboard maximum remains 32,500,000.
+
+WP-D validation remains open: `curve_ceiling_test.dart` exposes over-budget
+squeeze windows (four unavoidable +1 costs exceed the budget before hoop 50),
+`same_rules_test.dart` exposes height-dependent edge clamps, and the ordinary
+human-noise median gate is below 40. These are unresolved requirements, not
+additional approved deviations or exceptions to R2. The owner Pixel 8 ceiling
+playtest remains required after the automated gates pass.

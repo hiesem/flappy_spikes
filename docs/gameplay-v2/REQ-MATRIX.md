@@ -944,3 +944,23 @@ the looping player).
 | R-S-22 | Deliverable: Hourglass (slowdown, tick-tock, speed-up), Mini Bird (start, end), Coin Frenzy (start run, cascade, end tone) | 5.29–5.31, 7 | 3h / 3f | test/run/sound_pack_test.dart::§7 every PRD-2 §7 deliverable is a registered Sfx | done (3h: `hourglass_*`, `mini_*`, `frenzy_*`, 8 files); 3f use pending |
 | R-S-23 | Deliverable: rim "tonk" | 3.0.4, 7 | 3h / 1a (placeholder: `sk_tap` until 3h lands) | test/run/sound_pack_test.dart::§7 every PRD-2 §7 deliverable is a registered Sfx | done (3h: `rim_tonk`); 1a wiring pending |
 | R-S-24 | Deliverable: squeeze tick-last-3-s tremble uses `sq_tick`; graze sound = `point.mp3` (no new file) | 3.17, 3.4 | 3g / 2b | test/run/items/s3_17_squeeze_test.dart::§3.17 a squeeze from start to open (3 × sq_tick + tremble) | done (3g part) |
+
+## 9. PRD-2.6 wave 1 (WP-A–D)
+
+Paths below are relative to `test/`; all rows refer to PRD-2.6 §3 and §1.4.
+
+| ID | Requirement | PRD § | WP | Test ID(s) | Status |
+|---|---|---|---|---|---|
+| R-26-A1 | Typed events, stable analytics names/buckets and user properties | A | A | p26/analytics/run_events_test.dart; analytics_names_test.dart; analytics_buckets_test.dart; user_props_test.dart | implemented |
+| R-26-A2 | Once-only FTUE and Home moment priority | A | A | p26/analytics/ftue_tracker_test.dart; p26/home/home_moments_test.dart | implemented |
+| R-26-B1 | Frozen showcase scripts, persistence, attempts and highlights | B1–B4 | B | p26/showcase/plan_tables_test.dart; plan_state_test.dart; director_script_test.dart; director_spawn_test.dart; bot_highlights_test.dart | implemented |
+| R-26-B2 | Safety starters, one free revive, normal versus uploads | B2, R2 | B | p26/showcase/starters_test.dart; free_revive_test.dart; upload_rules_test.dart | implemented |
+| R-26-C1 | Silent saw/squeeze gates and portal introduction | C1–C3 | C | p26/gates/unlocks_test.dart; p26/analytics/first_meet_regressions_test.dart | implemented |
+| R-26-D1 | Introduction schedule, Δy, aligned tilts, 45° allowance, motion caps, clean windows and deterministic downgrades | D1/D2 | D | p26/curve/curve_ceiling_test.dart; layout_d2_test.dart; spawn_tables_d2_test.dart | integration sweep added |
+| R-26-D3 | Rolling four-slot hazard budget, forced exceptions | D3 | D | p26/curve/hazard_budget_test.dart; curve_ceiling_test.dart | blocked: squeeze integration exceeds budget |
+| R-26-D4 | Periodic/event calm, median steps, spacing, squeeze timing | D4/D5 | D | p26/curve/calm_schedule_test.dart; curve_ceiling_test.dart | integration sweep added |
+| R-26-D6 | One headline per eight hoops, bounded waiting | D6 | D | p26/curve/headline_window_test.dart | implemented |
+| R-26-D7 | Six formations, cadence, recovery and mix chapters | D7 | D | p26/curve/formations_test.dart; formations_wire_schedule_test.dart; formations_wire_recovery_test.dart; formations_wire_autopilot_test.dart | implemented |
+| R-26-R2 | Same ordinary plans across games/best/level/mode/payment; point-space Δy equality across tall screens | 1.4 R2, D tests | D | p26/curve/same_rules_test.dart | setup matrix passes; height equality blocked; only arm 0 wired |
+| R-26-D-BOT | Baseline ≥12; ceiling starts 150/250 ≥40, heights 568/711, three seeds; human-noise median ≥40 at game 10 | D tests | D | autopilot_test.dart | perfect bot passes; human-noise gate blocked |
+| R-26-PIN | Leaderboard maximum and timeline fl=2 unchanged | 1.4 | A–D | protection/leaderboard_max_test.dart; p22/s13_versus_timeline_test.dart; p22/s13_fix1_timeline_check_test.dart | existing tests unedited |

@@ -77,6 +77,56 @@ class GameStorage {
   static final String _bestHoopsKey = Obf.prefBestHoops;
   static final String _pendingFirstMeetsKey = Obf.prefPendingFirstMeets;
 
+  // region P26-S0
+  // PRD-2.6 J5, G, LB and §8.3-12. Dates are local day indexes unless
+  // the owning feature uses a UTC week/season identifier. Empty = unassigned.
+  int lvlIndex = 0;
+  int lvlPoints = 0;
+  List<Map<String, Object?>> lvlPending = const [];
+  int lvlPayout = 0;
+  int bestRunHoops = 0;
+  List<int> recentScores = const [];
+  int duelStep = -2;
+  int lifetimeCoinsEarned = 0;
+  int lifetimeCoinsSpent = 0;
+  int lifetimeCoinsBought = 0;
+  int vsWinStreak = 0;
+  int vsWinStreakBest = 0;
+  Map<String, int> vsBigWinsDay = const {};
+  int missionDay = -1;
+  List<Map<String, Object?>> missions = const [];
+  int missionTier = 0;
+  int missionRerollDay = -1;
+  int streakDays = 0;
+  int streakLastDay = -1;
+  int streakPaidDay = -1;
+  int streakLostDays = 0;
+  int streakLostSeenDay = -1;
+  int worldsReached = 0;
+  int worldsSeen = 0;
+  Map<String, int> weeklyBest = const {};
+  Set<int> weeklyRewards = const {};
+  int weeklyHintDay = -1;
+  int firstWinDay = -1;
+  List<int> albumCounts = const [0, 0, 0, 0, 0, 0, 0, 0];
+  bool albumRewardClaimed = false;
+  String albumRewardItem = '';
+  int guideSeenCount = 0;
+  int starRoadSeason = 0;
+  int starRoadXp = 0;
+  Set<int> starRoadClaimed = const {};
+  int starRoadPopupDay = -1;
+  bool homeLevelsTag = false;
+  List<String> lbQueue = const [];
+  String lbGroupId = '';
+  int lbGroupEnd = 0;
+  int lbLastRank = 0;
+  Set<String> lbGiftsClaimed = const {};
+  Map<String, Object?> lbGiftPending = const {};
+  bool lbInfoSeen = false;
+  String abArmV1 = '';
+  // endregion
+
   // region PRD-2 keys (WP-0b; PRD-2 §7 persistence table, ARCH §5)
   static final String _feathersKey = Obf.prefFeathers;
   static final String _puzzlePiecesKey = Obf.prefPuzzlePieces;
@@ -555,6 +605,68 @@ class GameStorage {
     notifLastSent = _decodeIntMap(prefs.getString(_notifLastSentKey));
     notifPermissionAsked = prefs.getBool(_notifPermissionAskedKey) ?? false;
     // endregion PRD-2 keys
+    // region P26-S0
+    lvlPoints = prefs.getInt(Obf.prefLvlPoints) ?? 0;
+    lvlPayout = prefs.getInt(Obf.prefLvlPayout) ?? 0;
+    bestRunHoops = prefs.getInt(Obf.prefBestRunHoops) ?? 0;
+    recentScores =
+        prefs
+            .getStringList(Obf.prefRecentScores)
+            ?.map(int.tryParse)
+            .whereType<int>()
+            .toList() ??
+        const [];
+    duelStep = prefs.getInt(Obf.prefDuelStep) ?? -2;
+    lifetimeCoinsEarned = prefs.getInt(Obf.prefLifetimeCoinsEarned) ?? 0;
+    lifetimeCoinsSpent = prefs.getInt(Obf.prefLifetimeCoinsSpent) ?? 0;
+    lifetimeCoinsBought = prefs.getInt(Obf.prefLifetimeCoinsBought) ?? 0;
+    vsWinStreak = prefs.getInt(Obf.prefVsWinStreak) ?? 0;
+    vsWinStreakBest = prefs.getInt(Obf.prefVsWinStreakBest) ?? 0;
+    vsBigWinsDay = _p26IntMap(prefs.getString(Obf.prefVsBigWinsDay));
+    missionDay = prefs.getInt(Obf.prefMissionDay) ?? -1;
+    missions = _p26Records(prefs.getString(Obf.prefMissions));
+    missionTier = prefs.getInt(Obf.prefMissionTier) ?? 0;
+    missionRerollDay = prefs.getInt(Obf.prefMissionRerollDay) ?? -1;
+    streakDays = prefs.getInt(Obf.prefStreakDays) ?? 0;
+    streakLastDay = prefs.getInt(Obf.prefStreakLastDay) ?? -1;
+    streakPaidDay = prefs.getInt(Obf.prefStreakPaidDay) ?? -1;
+    streakLostDays = prefs.getInt(Obf.prefStreakLostDays) ?? 0;
+    streakLostSeenDay = prefs.getInt(Obf.prefStreakLostSeenDay) ?? -1;
+    worldsReached = prefs.getInt(Obf.prefWorldsReached) ?? 0;
+    worldsSeen = prefs.getInt(Obf.prefWorldsSeen) ?? 0;
+    weeklyBest = _p26IntMap(prefs.getString(Obf.prefWeeklyBest));
+    weeklyRewards = (prefs.getStringList(Obf.prefWeeklyRewards) ?? const [])
+        .map(int.tryParse)
+        .whereType<int>()
+        .toSet();
+    weeklyHintDay = prefs.getInt(Obf.prefWeeklyHintDay) ?? -1;
+    firstWinDay = prefs.getInt(Obf.prefFirstWinDay) ?? -1;
+    albumCounts =
+        prefs
+            .getStringList(Obf.prefAlbumCounts)
+            ?.map(int.tryParse)
+            .whereType<int>()
+            .toList() ??
+        const [0, 0, 0, 0, 0, 0, 0, 0];
+    albumRewardClaimed = prefs.getBool(Obf.prefAlbumRewardClaimed) ?? false;
+    albumRewardItem = prefs.getString(Obf.prefAlbumRewardItem) ?? '';
+    guideSeenCount = prefs.getInt(Obf.prefGuideSeenCount) ?? 0;
+    starRoadSeason = prefs.getInt(Obf.prefStarRoadSeason) ?? 0;
+    starRoadXp = prefs.getInt(Obf.prefStarRoadXp) ?? 0;
+    starRoadClaimed = (prefs.getStringList(Obf.prefStarRoadClaimed) ?? const [])
+        .map(int.tryParse)
+        .whereType<int>()
+        .toSet();
+    starRoadPopupDay = prefs.getInt(Obf.prefStarRoadPopupDay) ?? -1;
+    homeLevelsTag = prefs.getBool(Obf.prefHomeLevelsTag) ?? false;
+    lbQueue = prefs.getStringList(Obf.prefLbQueue) ?? const [];
+    lbGroupId = prefs.getString(Obf.prefLbGroupId) ?? '';
+    lbGroupEnd = prefs.getInt(Obf.prefLbGroupEnd) ?? 0;
+    lbLastRank = prefs.getInt(Obf.prefLbLastRank) ?? 0;
+    lbGiftPending = _p26JsonMap(prefs.getString(Obf.prefLbGiftPending));
+    lbInfoSeen = prefs.getBool(Obf.prefLbInfoSeen) ?? false;
+    abArmV1 = prefs.getString(Obf.prefAbArmV1) ?? '';
+    // endregion
     homeMode = HomeMode.parse(prefs.getString(_homeModeKey));
     // PRD-2.5 §3.4: the sealed fields last, in one synchronous block after
     // every sealed write in flight has reached the preferences (a covered
@@ -571,6 +683,12 @@ class GameStorage {
   }
 
   void _readSealedFields(SharedPreferences prefs) {
+    // region P26-S0
+    lvlIndex = prefs.getInt(Obf.prefLvlIndex) ?? 0;
+    lvlPending = _p26Records(prefs.getString(Obf.prefLvlPending));
+    lbGiftsClaimed = (prefs.getStringList(Obf.prefLbGiftsClaimed) ?? const [])
+        .toSet();
+    // endregion
     bestScore = prefs.getInt(_bestScoreKey) ?? 0;
     coins = prefs.getInt(_coinsKey) ?? 0;
     ownedItems = (prefs.getStringList(_ownedItemsKey) ?? const []).toSet();
@@ -620,6 +738,11 @@ class GameStorage {
 
   /// The covered fields (PRD §3.4), one canonical hash each.
   Map<String, String> _sealHashes() => {
+    // region P26-S0
+    Obf.prefLvlIndex: sealFieldHash(lvlIndex),
+    Obf.prefLvlPending: sealFieldHash(lvlPending),
+    Obf.prefLbGiftsClaimed: sealFieldHash(lbGiftsClaimed.toList()..sort()),
+    // endregion
     Obf.prefBestScore: sealFieldHash(bestScore),
     Obf.prefCoins: sealFieldHash(coins),
     Obf.prefGrantedPurchases: sealFieldHash(List.of(grantedPurchases)..sort()),
@@ -629,6 +752,7 @@ class GameStorage {
     Obf.prefUploadQueue: sealFieldHash(uploadQueue),
   };
 
+  // region P26-S0
   bool get _sealedFieldsAtDefault =>
       bestScore == 0 &&
       coins == 0 &&
@@ -636,7 +760,11 @@ class GameStorage {
       !noAds &&
       ownedItems.isEmpty &&
       playerLevel == 0 &&
-      uploadQueue.isEmpty;
+      uploadQueue.isEmpty &&
+      lvlIndex == 0 &&
+      lvlPending.isEmpty &&
+      lbGiftsClaimed.isEmpty;
+  // endregion
 
   /// Step 1 of a covered setter, right after its cache update: the seal of
   /// the new values. Null when sealing is off (the setter writes at once).
@@ -1116,12 +1244,13 @@ class GameStorage {
   // endregion PRD-2 keys
 
   // region WP-4c — "Delete my data" local reset (PRD-2 §3.13 Q22, ARCH §5)
-  /// Q22: "Delete my data" resets the versus install state — the generated
-  /// nickname (cleared; a new one is made at the next use), the upload queue
-  /// and the daily upload counter. Progress kept only on the phone (coins,
-  /// skins, levels, feathers, puzzle pieces, met elements) and the mute /
-  /// rumble settings are not touched. The music volume goes back to its
-  /// default (PRD-2.2 §9.1).
+  // region P26-S0
+  /// Clears versus, leaderboard and 2.6 meta/progression state, including
+  /// both generations of level keys (PRD-2.6 J5 / Appendix). The streak and
+  /// device A/B arm stay (§8.3-12). Coins, skins, feathers, puzzle pieces,
+  /// met elements and sound/rumble settings remain local progress. Music
+  /// volume returns to its default (PRD-2.2 §9.1).
+  // endregion
   Future<void> resetVersusData() async {
     versusNickname = null;
     ftueSteps = 0;
@@ -1151,6 +1280,9 @@ class GameStorage {
     await prefs.remove(_versusCustomNameSyncKey);
     await prefs.remove(_versusCustomNameErrorKey);
     await prefs.remove(_versusAvatarKey); // WP-AV the old picture record
+    // region P26-S0
+    await _resetP26Data();
+    // endregion
     await saveUploadQueue(const []);
     await saveUploadsToday('', 0);
     await saveUploadsSent('', 0);
@@ -1592,4 +1724,412 @@ class GameStorage {
       value.length > _maxSlotHistory
       ? value.sublist(value.length - _maxSlotHistory)
       : List.of(value);
+  // region P26-S0
+  static List<Map<String, Object?>> _p26Records(String? raw) {
+    try {
+      final value = jsonDecode(raw ?? '[]');
+      if (value is List) {
+        return [
+          for (final record in value)
+            if (record is Map<String, dynamic>) Map<String, Object?>.of(record),
+        ];
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  static Map<String, Object?> _p26JsonMap(String? raw) {
+    try {
+      final value = jsonDecode(raw ?? '{}');
+      if (value is Map<String, dynamic>) return Map<String, Object?>.of(value);
+    } catch (_) {}
+    return {};
+  }
+
+  static Map<String, int> _p26IntMap(String? raw) => {
+    for (final e in _p26JsonMap(raw).entries)
+      if (e.value is int) e.key: e.value as int,
+  };
+
+  Future<void> saveLvlIndex(int value) async {
+    lvlIndex = value;
+    final stored = lvlIndex;
+    await _sealedWrite((p) => p.setInt(Obf.prefLvlIndex, stored));
+  }
+
+  Future<void> saveLvlPoints(int value) async {
+    lvlPoints = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefLvlPoints, lvlPoints);
+  }
+
+  Future<void> saveLvlPending(List<Map<String, Object?>> value) async {
+    lvlPending = [for (final record in value) Map<String, Object?>.of(record)];
+    final stored = jsonEncode(lvlPending);
+    await _sealedWrite((p) => p.setString(Obf.prefLvlPending, stored));
+  }
+
+  Future<void> saveLvlPayout(int value) async {
+    lvlPayout = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefLvlPayout, lvlPayout);
+  }
+
+  Future<void> saveBestRunHoops(int value) async {
+    bestRunHoops = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefBestRunHoops, bestRunHoops);
+  }
+
+  Future<void> saveRecentScores(List<int> value) async {
+    recentScores = List<int>.of(value);
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      Obf.prefRecentScores,
+      recentScores.map((v) => '$v').toList(),
+    );
+  }
+
+  Future<void> saveDuelStep(int value) async {
+    duelStep = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefDuelStep, duelStep);
+  }
+
+  Future<void> saveLifetimeCoinsEarned(int value) async {
+    lifetimeCoinsEarned = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefLifetimeCoinsEarned, lifetimeCoinsEarned);
+  }
+
+  Future<void> saveLifetimeCoinsSpent(int value) async {
+    lifetimeCoinsSpent = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefLifetimeCoinsSpent, lifetimeCoinsSpent);
+  }
+
+  Future<void> saveLifetimeCoinsBought(int value) async {
+    lifetimeCoinsBought = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefLifetimeCoinsBought, lifetimeCoinsBought);
+  }
+
+  Future<void> saveVsWinStreak(int value) async {
+    vsWinStreak = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefVsWinStreak, vsWinStreak);
+  }
+
+  Future<void> saveVsWinStreakBest(int value) async {
+    vsWinStreakBest = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefVsWinStreakBest, vsWinStreakBest);
+  }
+
+  Future<void> saveVsBigWinsDay(Map<String, int> value) async {
+    vsBigWinsDay = {...value};
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setString(Obf.prefVsBigWinsDay, jsonEncode(vsBigWinsDay));
+  }
+
+  Future<void> saveMissionDay(int value) async {
+    missionDay = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefMissionDay, missionDay);
+  }
+
+  Future<void> saveMissions(List<Map<String, Object?>> value) async {
+    missions = [for (final record in value) Map<String, Object?>.of(record)];
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setString(Obf.prefMissions, jsonEncode(missions));
+  }
+
+  Future<void> saveMissionTier(int value) async {
+    missionTier = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefMissionTier, missionTier);
+  }
+
+  Future<void> saveMissionRerollDay(int value) async {
+    missionRerollDay = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefMissionRerollDay, missionRerollDay);
+  }
+
+  Future<void> saveStreakDays(int value) async {
+    streakDays = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefStreakDays, streakDays);
+  }
+
+  Future<void> saveStreakLastDay(int value) async {
+    streakLastDay = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefStreakLastDay, streakLastDay);
+  }
+
+  Future<void> saveStreakPaidDay(int value) async {
+    streakPaidDay = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefStreakPaidDay, streakPaidDay);
+  }
+
+  Future<void> saveStreakLostDays(int value) async {
+    streakLostDays = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefStreakLostDays, streakLostDays);
+  }
+
+  Future<void> saveStreakLostSeenDay(int value) async {
+    streakLostSeenDay = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefStreakLostSeenDay, streakLostSeenDay);
+  }
+
+  Future<void> saveWorldsReached(int value) async {
+    worldsReached = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefWorldsReached, worldsReached);
+  }
+
+  Future<void> saveWorldsSeen(int value) async {
+    worldsSeen = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefWorldsSeen, worldsSeen);
+  }
+
+  Future<void> saveWeeklyBest(Map<String, int> value) async {
+    weeklyBest = {...value};
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setString(Obf.prefWeeklyBest, jsonEncode(weeklyBest));
+  }
+
+  Future<void> saveWeeklyRewards(Set<int> value) async {
+    weeklyRewards = {...value};
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      Obf.prefWeeklyRewards,
+      weeklyRewards.map((v) => '$v').toList(),
+    );
+  }
+
+  Future<void> saveWeeklyHintDay(int value) async {
+    weeklyHintDay = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefWeeklyHintDay, weeklyHintDay);
+  }
+
+  Future<void> saveFirstWinDay(int value) async {
+    firstWinDay = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefFirstWinDay, firstWinDay);
+  }
+
+  Future<void> saveAlbumCounts(List<int> value) async {
+    albumCounts = List<int>.of(value);
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      Obf.prefAlbumCounts,
+      albumCounts.map((v) => '$v').toList(),
+    );
+  }
+
+  Future<void> saveAlbumRewardClaimed(bool value) async {
+    albumRewardClaimed = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setBool(Obf.prefAlbumRewardClaimed, albumRewardClaimed);
+  }
+
+  Future<void> saveAlbumRewardItem(String value) async {
+    albumRewardItem = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setString(Obf.prefAlbumRewardItem, albumRewardItem);
+  }
+
+  Future<void> saveGuideSeenCount(int value) async {
+    guideSeenCount = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefGuideSeenCount, guideSeenCount);
+  }
+
+  Future<void> saveStarRoadSeason(int value) async {
+    starRoadSeason = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefStarRoadSeason, starRoadSeason);
+  }
+
+  Future<void> saveStarRoadXp(int value) async {
+    starRoadXp = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefStarRoadXp, starRoadXp);
+  }
+
+  Future<void> saveStarRoadClaimed(Set<int> value) async {
+    starRoadClaimed = {...value};
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      Obf.prefStarRoadClaimed,
+      starRoadClaimed.map((v) => '$v').toList(),
+    );
+  }
+
+  Future<void> saveStarRoadPopupDay(int value) async {
+    starRoadPopupDay = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefStarRoadPopupDay, starRoadPopupDay);
+  }
+
+  Future<void> saveHomeLevelsTag(bool value) async {
+    homeLevelsTag = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setBool(Obf.prefHomeLevelsTag, homeLevelsTag);
+  }
+
+  Future<void> saveLbQueue(List<String> value) async {
+    lbQueue = List<String>.of(value);
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setStringList(Obf.prefLbQueue, lbQueue);
+  }
+
+  Future<void> saveLbGroupId(String value) async {
+    lbGroupId = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setString(Obf.prefLbGroupId, lbGroupId);
+  }
+
+  Future<void> saveLbGroupEnd(int value) async {
+    lbGroupEnd = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefLbGroupEnd, lbGroupEnd);
+  }
+
+  Future<void> saveLbLastRank(int value) async {
+    lbLastRank = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefLbLastRank, lbLastRank);
+  }
+
+  Future<void> saveLbGiftsClaimed(Set<String> value) async {
+    lbGiftsClaimed = {...value};
+    final stored = lbGiftsClaimed.toList();
+    await _sealedWrite((p) => p.setStringList(Obf.prefLbGiftsClaimed, stored));
+  }
+
+  Future<void> saveLbGiftPending(Map<String, Object?> value) async {
+    lbGiftPending = {...value};
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setString(Obf.prefLbGiftPending, jsonEncode(lbGiftPending));
+  }
+
+  Future<void> saveLbInfoSeen(bool value) async {
+    lbInfoSeen = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setBool(Obf.prefLbInfoSeen, lbInfoSeen);
+  }
+
+  Future<void> saveAbArmV1(String value) async {
+    abArmV1 = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setString(Obf.prefAbArmV1, abArmV1);
+  }
+
+  Future<void> _resetP26Data() async {
+    lvlIndex = 0;
+    lvlPoints = 0;
+    lvlPending = const [];
+    lvlPayout = 0;
+    bestRunHoops = 0;
+    recentScores = const [];
+    duelStep = -2;
+    lifetimeCoinsEarned = 0;
+    lifetimeCoinsSpent = 0;
+    lifetimeCoinsBought = 0;
+    vsWinStreak = 0;
+    vsWinStreakBest = 0;
+    vsBigWinsDay = const {};
+    missionDay = -1;
+    missions = const [];
+    missionTier = 0;
+    missionRerollDay = -1;
+    worldsReached = 0;
+    worldsSeen = 0;
+    weeklyBest = const {};
+    weeklyRewards = const {};
+    weeklyHintDay = -1;
+    firstWinDay = -1;
+    albumCounts = const [0, 0, 0, 0, 0, 0, 0, 0];
+    albumRewardClaimed = false;
+    albumRewardItem = '';
+    guideSeenCount = 0;
+    starRoadSeason = 0;
+    starRoadXp = 0;
+    starRoadClaimed = const {};
+    starRoadPopupDay = -1;
+    homeLevelsTag = false;
+    lbQueue = const [];
+    lbGroupId = '';
+    lbGroupEnd = 0;
+    lbLastRank = 0;
+    lbGiftsClaimed = const {};
+    lbGiftPending = const {};
+    lbInfoSeen = false;
+    playerLevel = 0;
+    claimedLevels = {};
+    unclaimedLevelReward = 0;
+    levelRewardPayout = 0;
+    // Seal the reset before removing its covered fields. Issue every
+    // removal together so a concurrent load sees one preferences snapshot.
+    await _sealedWrite((p) async {
+      final removed = await Future.wait([
+        for (final key in [
+          Obf.prefLvlIndex,
+          Obf.prefLvlPoints,
+          Obf.prefLvlPending,
+          Obf.prefLvlPayout,
+          Obf.prefBestRunHoops,
+          Obf.prefRecentScores,
+          Obf.prefDuelStep,
+          Obf.prefLifetimeCoinsEarned,
+          Obf.prefLifetimeCoinsSpent,
+          Obf.prefLifetimeCoinsBought,
+          Obf.prefVsWinStreak,
+          Obf.prefVsWinStreakBest,
+          Obf.prefVsBigWinsDay,
+          Obf.prefMissionDay,
+          Obf.prefMissions,
+          Obf.prefMissionTier,
+          Obf.prefMissionRerollDay,
+          Obf.prefWorldsReached,
+          Obf.prefWorldsSeen,
+          Obf.prefWeeklyBest,
+          Obf.prefWeeklyRewards,
+          Obf.prefWeeklyHintDay,
+          Obf.prefFirstWinDay,
+          Obf.prefAlbumCounts,
+          Obf.prefAlbumRewardClaimed,
+          Obf.prefAlbumRewardItem,
+          Obf.prefGuideSeenCount,
+          Obf.prefStarRoadSeason,
+          Obf.prefStarRoadXp,
+          Obf.prefStarRoadClaimed,
+          Obf.prefStarRoadPopupDay,
+          Obf.prefHomeLevelsTag,
+          Obf.prefLbQueue,
+          Obf.prefLbGroupId,
+          Obf.prefLbGroupEnd,
+          Obf.prefLbLastRank,
+          Obf.prefLbGiftsClaimed,
+          Obf.prefLbGiftPending,
+          Obf.prefLbInfoSeen,
+          _playerLevelKey,
+          _claimedLevelsKey,
+          _unclaimedLevelRewardKey,
+          _levelRewardPayoutKey,
+        ])
+          p.remove(key),
+      ]);
+      return removed.every((ok) => ok);
+    }, cached: true);
+  }
+  // endregion
 }

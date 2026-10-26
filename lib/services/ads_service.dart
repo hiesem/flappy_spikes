@@ -18,11 +18,20 @@ enum AdPlacement {
   revive,
   // PRD-2 §3.15 balloon bonus extra pops (WP-0b).
   bonusFeathers,
+  // region P26-S0
+  missionReroll,
+  streakRestore,
+  // endregion
 }
 
 extension AdPlacementName on AdPlacement {
   /// Analytics parameter value for this placement.
   String get analyticsName => switch (this) {
+    // region P26-S0
+    AdPlacement.missionReroll => 'mission_reroll',
+    AdPlacement.streakRestore => 'streak_restore',
+    // endregion
+
     AdPlacement.shopFreeCoins => 'shop_free_coins',
     AdPlacement.homeSlot => 'home_slot',
     AdPlacement.revive => 'revive',

@@ -29,10 +29,31 @@ enum CoinSource {
   // PRD-2.3 §22.2: a gift-code product (gift_coins_10000 /
   // gift_noads_coins_10000).
   gift,
+  // region P26-S0
+  mission,
+  missionChest,
+  streak,
+  streakRestore,
+  firstWinDay,
+  leaderboardGift,
+  starRoad,
+  album,
+  // endregion
 }
 
 extension CoinSourceName on CoinSource {
   String get analyticsName => switch (this) {
+        // region P26-S0
+        CoinSource.mission => 'mission',
+        CoinSource.missionChest => 'mission_chest',
+        CoinSource.streak => 'streak',
+        CoinSource.streakRestore => 'streak_restore',
+        CoinSource.firstWinDay => 'first_win_day',
+        CoinSource.leaderboardGift => 'leaderboard_gift',
+        CoinSource.starRoad => 'star_road',
+        CoinSource.album => 'album',
+        // endregion
+
         CoinSource.play => 'play',
         CoinSource.iap => 'iap',
         CoinSource.rewarded => 'rewarded',

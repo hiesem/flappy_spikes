@@ -137,6 +137,28 @@ const Map<String, String> _liveRc20261019 = {
   'formation_every': '[12,20]',
   'showcase_max_games': '6',
   'showcase_fast_hoops': '40',
+  // region P26-S0
+  // PRD-2.6 Appendix: new defaults, separate from the 2026-10-19 snapshot.
+  'level_points':
+      '[25,50,100,150,200,300,400,500,600,700,800,900,1000,1200,1400,1600,1800,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,6000,7000,8000,10000]',
+  'level_coins':
+      '[50,50,50,50,50,75,100,125,150,175,200,225,250,300,350,400,450,500,550,600,650,700,750,875,1000,1125,1250,1500,1750,2000,2500]',
+  'level_eternal_points': '10000',
+  'level_eternal_coins': '2500',
+  'ui_unlock_games': '3',
+  'mission_rewards': '[20,35,55]',
+  'mission_chest_coins': '40',
+  'weekly_rewards': '{"15":40,"30":80,"60":150,"120":300}',
+  'streak_restore_coins': '500',
+  'starroad_stars': '{"easy":1,"medium":2,"hard":3,"first_run":2,"all_done":3}',
+  'starroad_tier_stars': '8',
+  'starroad_tiers': '25',
+  'starroad_season_days': '28',
+  'starroad_fallback_coins': '{"rare":250,"epic":500,"legendary":1000}',
+  'lb_results_min_games': '3',
+  'lb_results_wait_ms': '4000',
+  'lb_queue_cap': '30',
+  // endregion
 };
 
 void main() {

@@ -113,6 +113,51 @@ abstract final class Obf {
   static final String prefInstallAtMs = _d(const [246, 83, 20, 128, 211, 208, 52, 236, 1, 218, 128], 106);
   static final String prefBestHoops = _d(const [235, 28, 167, 210, 62, 233, 54, 23, 218], 107);
   static final String prefPendingFirstMeets = _d(const [91, 11, 204, 253, 117, 180, 27, 29, 39, 123, 112, 82, 228, 239, 80, 40, 255], 108);
+  static final String prefLvlIndex = _d(const [213, 136, 204, 29, 90, 152, 180, 186], 109);
+  static final String prefLvlPoints = _d(const [242, 177, 14, 15, 253, 18, 163, 91, 122], 110);
+  static final String prefLvlPending = _d(const [21, 36, 235, 150, 64, 211, 111, 199, 186, 118], 111);
+  static final String prefLvlPayout = _d(const [253, 167, 30, 38, 182, 146, 193, 15, 215], 112);
+  static final String prefBestRunHoops = _d(const [27, 210, 159, 253, 156, 127, 174, 111, 107, 44, 231, 75], 113);
+  static final String prefRecentScores = _d(const [176, 167, 217, 48, 28, 38, 245, 148, 221, 191, 127, 58], 114);
+  static final String prefDuelStep = _d(const [30, 8, 135, 153, 195, 156, 106, 234], 115);
+  static final String prefLifetimeCoinsEarned = _d(const [102, 237, 13, 174, 25, 219, 85, 157, 149, 86, 162, 182, 239, 30, 17, 177, 34, 105, 63], 116);
+  static final String prefLifetimeCoinsSpent = _d(const [214, 206, 181, 92, 32, 186, 145, 81, 196, 252, 245, 214, 38, 223, 202, 105, 214, 35], 117);
+  static final String prefLifetimeCoinsBought = _d(const [103, 222, 244, 149, 163, 171, 231, 55, 133, 65, 57, 124, 190, 97, 91, 197, 162, 221, 134], 118);
+  static final String prefVsWinStreak = _d(const [157, 7, 42, 96, 138, 242, 61, 166, 196, 95, 121], 119);
+  static final String prefVsWinStreakBest = _d(const [53, 160, 157, 72, 234, 38, 186, 12, 138, 160, 203, 116, 38, 165, 207], 120);
+  static final String prefVsBigWinsDay = _d(const [162, 73, 253, 232, 246, 76, 168, 12, 161, 188, 198, 37], 121);
+  static final String prefMissionDay = _d(const [233, 222, 131, 48, 241, 218, 231, 157, 18, 110], 122);
+  static final String prefMissions = _d(const [249, 26, 217, 75, 255, 91, 65, 217], 123);
+  static final String prefMissionTier = _d(const [97, 126, 75, 52, 162, 86, 108, 105, 109, 158, 166], 124);
+  static final String prefMissionRerollDay = _d(const [248, 253, 100, 110, 0, 143, 95, 180, 119, 23, 18, 155, 77, 164, 98, 245], 125);
+  static final String prefStreakDays = _d(const [238, 189, 84, 152, 249, 107, 18, 187, 2, 77], 126);
+  static final String prefStreakLastDay = _d(const [57, 107, 171, 171, 152, 88, 109, 163, 231, 182, 127, 186, 49], 127);
+  static final String prefStreakPaidDay = _d(const [199, 154, 57, 28, 73, 209, 203, 88, 219, 207, 98, 0, 197], 128);
+  static final String prefStreakLostDays = _d(const [70, 254, 211, 107, 234, 198, 146, 96, 231, 158, 118, 160, 28, 199], 129);
+  static final String prefStreakLostSeenDay = _d(const [180, 255, 235, 31, 131, 168, 239, 10, 243, 30, 15, 49, 83, 122, 63, 61, 33], 130);
+  static final String prefWorldsReached = _d(const [118, 140, 62, 211, 168, 228, 58, 152, 70, 83, 52, 215, 16], 131);
+  static final String prefWorldsSeen = _d(const [88, 128, 120, 247, 126, 108, 12, 148, 9, 140], 132);
+  static final String prefWeeklyBest = _d(const [35, 100, 99, 1, 248, 41, 67, 242, 192, 184], 133);
+  static final String prefWeeklyRewards = _d(const [89, 76, 194, 80, 209, 11, 187, 74, 181, 153, 242, 5, 52], 134);
+  static final String prefWeeklyHintDay = _d(const [127, 37, 30, 169, 39, 132, 55, 68, 209, 150, 140, 254, 211], 135);
+  static final String prefFirstWinDay = _d(const [224, 156, 204, 38, 194, 182, 143, 230, 67, 45, 177], 136);
+  static final String prefAlbumCounts = _d(const [210, 39, 139, 211, 116, 64, 220, 179, 54, 123, 93], 137);
+  static final String prefAlbumRewardClaimed = _d(const [184, 15, 89, 167, 219, 110, 102, 255, 179, 240, 211, 139, 137, 79, 234, 250, 195, 193], 138);
+  static final String prefAlbumRewardItem = _d(const [118, 225, 132, 128, 203, 180, 60, 23, 88, 128, 31, 105, 191, 231, 176], 139);
+  static final String prefGuideSeenCount = _d(const [198, 29, 68, 12, 3, 143, 93, 151, 247, 159, 126, 115, 59, 160], 140);
+  static final String prefStarRoadSeason = _d(const [161, 2, 110, 225, 233, 163, 167, 117, 116, 55, 141, 18, 37, 37], 141);
+  static final String prefStarRoadXp = _d(const [147, 177, 217, 1, 210, 120, 179, 189, 150, 233], 142);
+  static final String prefStarRoadClaimed = _d(const [124, 162, 87, 219, 151, 176, 22, 56, 128, 167, 55, 167, 93, 121, 222], 143);
+  static final String prefStarRoadPopupDay = _d(const [15, 43, 127, 172, 121, 228, 58, 214, 178, 252, 202, 72, 95, 52, 231, 1], 144);
+  static final String prefHomeLevelsTag = _d(const [248, 246, 66, 157, 106, 115, 41, 58, 194, 44, 129, 174, 132], 145);
+  static final String prefLbQueue = _d(const [244, 214, 80, 132, 111, 169, 72], 146);
+  static final String prefLbGroupId = _d(const [200, 34, 219, 100, 0, 200, 25, 46, 224], 147);
+  static final String prefLbGroupEnd = _d(const [113, 98, 159, 183, 47, 66, 194, 101, 114, 77], 148);
+  static final String prefLbLastRank = _d(const [189, 151, 177, 23, 246, 47, 115, 135, 184, 205], 149);
+  static final String prefLbGiftsClaimed = _d(const [221, 204, 115, 156, 209, 247, 159, 49, 99, 238, 108, 136, 162, 207], 150);
+  static final String prefLbGiftPending = _d(const [97, 43, 19, 28, 145, 203, 23, 8, 79, 196, 182, 109, 168], 151);
+  static final String prefLbInfoSeen = _d(const [6, 181, 81, 132, 154, 53, 52, 109, 43, 108], 152);
+  static final String prefAbArmV1 = _d(const [239, 19, 140, 174, 190, 186, 166, 3], 153);
 
   /// test/obf_strings_test.dart: every value in table order (never read by the app).
   static List<String> get debugValues => [
@@ -225,6 +270,51 @@ abstract final class Obf {
     prefInstallAtMs,
     prefBestHoops,
     prefPendingFirstMeets,
+    prefLvlIndex,
+    prefLvlPoints,
+    prefLvlPending,
+    prefLvlPayout,
+    prefBestRunHoops,
+    prefRecentScores,
+    prefDuelStep,
+    prefLifetimeCoinsEarned,
+    prefLifetimeCoinsSpent,
+    prefLifetimeCoinsBought,
+    prefVsWinStreak,
+    prefVsWinStreakBest,
+    prefVsBigWinsDay,
+    prefMissionDay,
+    prefMissions,
+    prefMissionTier,
+    prefMissionRerollDay,
+    prefStreakDays,
+    prefStreakLastDay,
+    prefStreakPaidDay,
+    prefStreakLostDays,
+    prefStreakLostSeenDay,
+    prefWorldsReached,
+    prefWorldsSeen,
+    prefWeeklyBest,
+    prefWeeklyRewards,
+    prefWeeklyHintDay,
+    prefFirstWinDay,
+    prefAlbumCounts,
+    prefAlbumRewardClaimed,
+    prefAlbumRewardItem,
+    prefGuideSeenCount,
+    prefStarRoadSeason,
+    prefStarRoadXp,
+    prefStarRoadClaimed,
+    prefStarRoadPopupDay,
+    prefHomeLevelsTag,
+    prefLbQueue,
+    prefLbGroupId,
+    prefLbGroupEnd,
+    prefLbLastRank,
+    prefLbGiftsClaimed,
+    prefLbGiftPending,
+    prefLbInfoSeen,
+    prefAbArmV1,
   ];
 
   static String _d(List<int> data, int index) {

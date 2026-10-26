@@ -480,4 +480,119 @@ const List<TuningDef> kTuningDefaults = [
   TuningDef('showcase_max_games', TuningType.integer, 6),
   // §B1 A showcase run passing this hoop finishes the safety net
   TuningDef('showcase_fast_hoops', TuningType.integer, 40),
+  // region P26-S0
+  // §J1 PRD-2.6 progression / meta defaults.
+  TuningDef('level_points', TuningType.intList, [
+    25,
+    50,
+    100,
+    150,
+    200,
+    300,
+    400,
+    500,
+    600,
+    700,
+    800,
+    900,
+    1000,
+    1200,
+    1400,
+    1600,
+    1800,
+    2000,
+    2200,
+    2400,
+    2600,
+    2800,
+    3000,
+    3500,
+    4000,
+    4500,
+    5000,
+    6000,
+    7000,
+    8000,
+    10000,
+  ]),
+  // §J1 PRD-2.6 progression / meta defaults.
+  TuningDef('level_coins', TuningType.intList, [
+    50,
+    50,
+    50,
+    50,
+    50,
+    75,
+    100,
+    125,
+    150,
+    175,
+    200,
+    225,
+    250,
+    300,
+    350,
+    400,
+    450,
+    500,
+    550,
+    600,
+    650,
+    700,
+    750,
+    875,
+    1000,
+    1125,
+    1250,
+    1500,
+    1750,
+    2000,
+    2500,
+  ]),
+  // §J2 PRD-2.6 progression / meta defaults.
+  TuningDef('level_eternal_points', TuningType.integer, 10000),
+  // §J2 PRD-2.6 progression / meta defaults.
+  TuningDef('level_eternal_coins', TuningType.integer, 2500),
+  // §F6 PRD-2.6 progression / meta defaults.
+  TuningDef('ui_unlock_games', TuningType.integer, 3),
+  // §G1 PRD-2.6 progression / meta defaults.
+  TuningDef('mission_rewards', TuningType.intList, [20, 35, 55]),
+  // §G1 PRD-2.6 progression / meta defaults.
+  TuningDef('mission_chest_coins', TuningType.integer, 40),
+  // §G5 PRD-2.6 progression / meta defaults.
+  TuningDef('weekly_rewards', TuningType.object, {
+    '15': 40,
+    '30': 80,
+    '60': 150,
+    '120': 300,
+  }),
+  // §G2 PRD-2.6 progression / meta defaults.
+  TuningDef('streak_restore_coins', TuningType.integer, 500),
+  // §G6 PRD-2.6 progression / meta defaults.
+  TuningDef('starroad_stars', TuningType.object, {
+    'easy': 1,
+    'medium': 2,
+    'hard': 3,
+    'first_run': 2,
+    'all_done': 3,
+  }),
+  // §G6 PRD-2.6 progression / meta defaults.
+  TuningDef('starroad_tier_stars', TuningType.integer, 8),
+  // §G6 PRD-2.6 progression / meta defaults.
+  TuningDef('starroad_tiers', TuningType.integer, 25),
+  // §G6 PRD-2.6 progression / meta defaults.
+  TuningDef('starroad_season_days', TuningType.integer, 28),
+  // §G6 PRD-2.6 progression / meta defaults.
+  TuningDef('starroad_fallback_coins', TuningType.object, {
+    'rare': 250,
+    'epic': 500,
+    'legendary': 1000,
+  }),
+  // §LB PRD-2.6 progression / meta defaults.
+  TuningDef('lb_results_min_games', TuningType.integer, 3),
+  // §LB PRD-2.6 progression / meta defaults.
+  TuningDef('lb_results_wait_ms', TuningType.integer, 4000),
+  // §LB PRD-2.6 progression / meta defaults.
+  TuningDef('lb_queue_cap', TuningType.integer, 30),
+  // endregion
 ];

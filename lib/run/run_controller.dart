@@ -141,6 +141,12 @@ class RunController extends Component {
   /// `AchievementTracker.countDebugRuns`.
   bool get countsForAchievements {
     if (game.achievements.countDebugRuns) return true;
+    return countsForUpload;
+  }
+
+  /// Upload eligibility is permanent for the run and has no test override.
+  /// Free Fly, showcase starters and revives are ordinary play (B2).
+  bool get countsForUpload {
     _latchGod();
     return _cleanStart && !_debugTouched;
   }
@@ -148,7 +154,8 @@ class RunController extends Component {
   /// P1E-02: god mode used at any moment of this run excludes it for good
   /// (switching it off again never restores eligibility).
   void _latchGod() {
-    if (FlappySpikesGame.debugAvailable && game.runDebug.god) {
+    if (FlappySpikesGame.debugAvailable &&
+        (game.runDebug.god || game.runDebug.bot)) {
       _touchDebug();
     }
   }

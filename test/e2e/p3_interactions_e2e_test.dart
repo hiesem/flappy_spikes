@@ -640,18 +640,11 @@ void main() {
         final pooled =
             p.kind == HoopKindId.bullseye &&
             d.earlyPicks[i] == EarlyPick.bullseye;
-        // PRD-2.6 D7 multi-slot formations intentionally place repeated
-        // saw / switch rings in consecutive hoops.
-        final formation = p.formation != null;
-        if (!formation) {
-          expect(i, greaterThanOrEqualTo(pooled ? 4 : rule.from));
-          expect(i, greaterThan(coolUntil));
-          final prev = last[p.kind];
-          if (prev != null) {
-            expect(i - prev, greaterThanOrEqualTo(rule.minSince));
-          }
-          last[p.kind] = i;
-        }
+        expect(i, greaterThanOrEqualTo(pooled ? 4 : rule.from));
+        expect(i, greaterThan(coolUntil));
+        final prev = last[p.kind];
+        if (prev != null) expect(i - prev, greaterThanOrEqualTo(rule.minSince));
+        last[p.kind] = i;
         coolUntil = i + rule.cooldown;
       }
       for (final ride in RideKind.values) {

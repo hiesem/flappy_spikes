@@ -2,6 +2,9 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/run/run_events.dart';
+import 'package:flappy_spikes/menu/home_mode.dart';
+import 'package:flappy_spikes/versus/run_entry.dart';
+import 'package:flappy_spikes/versus/upload_queue.dart';
 import 'package:flappy_spikes/run/showcase/showcase_plan.dart';
 import 'package:flappy_spikes/services/versus_service.dart';
 import 'package:flappy_spikes/versus/opponent.dart';
@@ -44,7 +47,9 @@ void main() {
           await preloadImages(game);
         },
         verify: (game, _) async {
+          if (!versus) await game.storage.saveHomeMode(HomeMode.freeFly);
           final run = await startRun(game);
+          expect(game.homeMode, versus ? HomeMode.versus : HomeMode.freeFly);
           expect(run.setup.opponent != null, versus);
           expect(run.setup.forced, isEmpty);
           expect(run.countsForAchievements, isTrue);
@@ -58,6 +63,21 @@ void main() {
           await flushAndMount(game);
           expect(service.submitted, contains(summary));
           expect(summary.revives, revived ? 1 : 0);
+          // The real 2.5 queue rules also admit the completed timeline.
+          final queue = UploadQueue(game.storage);
+          expect(
+            await queue.offer(
+              RunEntry.fromSummary(
+                summary,
+                runId: 'showcase',
+                name: 'Player',
+                ts: DateTime.utc(2026),
+              ),
+              newBest: summary.newBest,
+            ),
+            summary.newBest ? UploadDecision.queuedBest : UploadDecision.queued,
+          );
+          expect(queue.pending, hasLength(1));
         },
       );
     }
@@ -80,6 +100,7 @@ void main() {
       expect(run.countsForAchievements, isTrue);
       run.markDebugAssist();
       expect(run.countsForAchievements, isFalse);
+      expect(run.countsForUpload, isFalse);
     },
   );
 }

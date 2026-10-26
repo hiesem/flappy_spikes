@@ -62,6 +62,8 @@ abstract final class ForceMenu {
         },
       ),
       DebugAction(() => 'Bot: ${d.bot ? 'ON' : 'off'}', () async {
+        final run = game.run;
+        if (run != null && !run.ended) run.markDebugAssist();
         d.bot = !d.bot;
       }),
       DebugAction(() => 'God mode: ${d.god ? 'ON' : 'off'}', () async {

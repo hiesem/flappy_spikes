@@ -249,13 +249,10 @@ void main() {
 
     for (final plans in shortPlans) {
       for (var i = 1; i < plans.length; i++) {
-        // PRD-2.6 D7 formation shapes own their larger internal steps.
-        if (plans[i].formation == null && plans[i - 1].formation == null) {
-          expect(
-            (plans[i].centreY - plans[i - 1].centreY).abs(),
-            lessThanOrEqualTo(240 + 1e-9),
-          );
-        }
+        expect(
+          (plans[i].centreY - plans[i - 1].centreY).abs(),
+          lessThanOrEqualTo(240 + 1e-9),
+        );
       }
     }
     for (final plans in tallPlans) {

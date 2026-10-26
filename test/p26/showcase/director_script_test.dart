@@ -70,31 +70,85 @@ void main() {
     }
   }
 
+  test('B3 the next portal actually resumes at the re-seeded slot', () {
+    for (final step in [0, 2]) {
+      for (var attempt = 1; attempt <= 3; attempt++) {
+        final script = ShowcaseScript.planFor(step, attempt);
+        for (var seed = 0; seed < 200; seed++) {
+          final d = RunDirector(
+            seed: seed,
+            enabled: ElementId.values.toSet(),
+            met: ElementId.values.toSet(),
+            showcase: script,
+          );
+          final ctx = DirectorContext.open(711);
+          int? resumed;
+          final portals = <int>[];
+          for (var i = 0; i < 60; i++) {
+            final slot = d.nextSlot(ctx);
+            d.nextGap(ctx, slot);
+            if (slot.kind == HoopKindId.portal) portals.add(i);
+            if (script.portalHoops.contains(i)) resumed = d.portalAt;
+            if (resumed == i) break;
+          }
+          expect(resumed! - script.portalHoops.last, inInclusiveRange(25, 40));
+          expect(portals, [script.portalHoops.single, resumed]);
+        }
+      }
+    }
+  });
+
   test('B2 normal mix and lifetime gates over 200 seeds', () {
-    // A plan with no scripted indices isolates the planner integration:
-    // B2 disables first-meet pulls, so the baseline has all elements met.
-    const script = ShowcaseRunPlan(highlightId: 'portal', step: 0, attempt: 1);
     for (var games = 0; games <= 5; games++) {
       final enabled = GatesConfig.filter(ElementId.values.toSet(), games);
       if (games < 3) expect(enabled, isNot(contains(ElementId.saw)));
       if (games < 5) expect(enabled, isNot(contains(ElementId.squeeze)));
-      for (var seed = 0; seed < 200; seed++) {
-        final a = RunDirector(
-          seed: seed,
-          enabled: enabled,
-          met: ElementId.values.toSet(),
-        );
-        final b = RunDirector(
-          seed: seed,
-          enabled: enabled,
-          met: ElementId.values.toSet(),
-          showcase: script,
-        );
-        final ctx = DirectorContext.open(711);
-        for (var i = 0; i < 80; i++) {
-          final x = a.nextSlot(ctx), y = b.nextSlot(ctx);
-          expect(y, x, reason: 'games $games seed $seed index $i');
-          expect(b.nextGap(ctx, y), a.nextGap(ctx, x));
+      for (var step = 0; step < 3; step++) {
+        for (var attempt = 1; attempt <= 3; attempt++) {
+          final script = ShowcaseScript.planFor(step, attempt);
+          final highlights = [
+            ...script.portalHoops,
+            ...script.cometHoops,
+            ...script.feverHoops,
+          ];
+          for (var seed = 0; seed < 200; seed++) {
+            final a = RunDirector(
+              seed: seed,
+              enabled: enabled,
+              met: ElementId.values.toSet(),
+              fixedFirstHoop: true,
+            );
+            final b = RunDirector(
+              seed: seed,
+              enabled: enabled,
+              met: ElementId.values.toSet(),
+              fixedFirstHoop: true,
+              showcase: script,
+            );
+            final ctx = DirectorContext.open(711, bigHoopsMult: 1.5);
+            for (var i = 0; i < 80; i++) {
+              final x = a.nextSlot(ctx), y = b.nextSlot(ctx);
+              final gx = a.nextGap(ctx, x), gy = b.nextGap(ctx, y);
+              final headline = highlights.any((at) => (i - at).abs() < 8);
+              final scriptedSlot = [
+                ...highlights,
+                ...script.bullseyeHoops,
+              ].contains(i);
+              // The replacement portal schedule may change portal decisions,
+              // but never the normal geometry or later random draws.
+              final portal =
+                  x.kind == HoopKindId.portal || y.kind == HoopKindId.portal;
+              final reason =
+                  'step $step A=$attempt games $games seed $seed i=$i';
+              if (!headline && !scriptedSlot && !portal) {
+                expect(y, x, reason: reason);
+              }
+              final scriptedGap =
+                  script.hearts.contains(i) ||
+                  script.gapItems.any((item) => item.gap == i);
+              if (!headline && !scriptedGap) expect(gy, gx, reason: reason);
+            }
+          }
         }
       }
     }

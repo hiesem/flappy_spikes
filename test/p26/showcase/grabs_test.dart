@@ -74,6 +74,37 @@ Future<CometStar> _forceComet(FlappySpikesGame game, RunController run) async {
   return run.spawner.pickups.whereType<CometStar>().single;
 }
 
+// Use the real update/physics path across the plane, with enough clearance
+// to touch neither rim. The initial placement only sets up the approach.
+Future<void> _crossOutsidePortal(FlappySpikesGame game, Hoop portal) async {
+  final run = game.run!;
+  expect(
+    await flyUntil(game, (r) {
+      return portal.planeX - r.birdTrackPosition()!.x <= 12;
+    }),
+    isTrue,
+  );
+  final frame = portal.frame();
+  final offset = frame.opening / 2 + 60;
+  final y = frame.centre.y < game.viewHeight / 2
+      ? frame.centre.y + offset
+      : frame.centre.y - offset;
+  game.runBird!.setFlight(y: y, vy: 0);
+  expect(frame.toLocal(run.birdTrackPosition()!).x, lessThan(0));
+  expect((y - frame.centre.y).abs(), greaterThan(frame.opening / 2 + 7));
+  expect(
+    await flyUntil(
+      game,
+      (_) => portal.resolved,
+      maxSeconds: 1,
+      autopilot: false,
+    ),
+    isTrue,
+  );
+  // A grab is queued at the crossing and starts on the next update.
+  game.update(1 / 60);
+}
+
 Hoop _detachedFeverHoop(RunController run) {
   final source = run.spawner.hoops.first;
   final plan = source.plan.copyWith(
@@ -126,11 +157,13 @@ void main() {
       );
       final feature = run.features.whereType<PortalRideFeature>().single;
       final events = <HighlightStarted>[];
+      final passes = <HoopPassed>[];
       run.events.on<HighlightStarted>(events.add);
+      run.events.on<HoopPassed>(passes.add);
 
-      expect(feature.grab(portal), isTrue);
-      game.update(1 / 60);
+      await _crossOutsidePortal(game, portal);
 
+      expect(passes.where((e) => identical(e.hoop, portal)), isEmpty);
       expect(feature.ride, isNotNull);
       expect(run.state.ride?.kind, RideKind.portal);
       expect(events.single, isA<HighlightStarted>());
@@ -152,8 +185,14 @@ void main() {
         HoopKindId.portal,
       );
       final feature = run.features.whereType<PortalRideFeature>().single;
-      expect(feature.grab(portal), isFalse);
-      game.update(1 / 60);
+      final misses = <HoopMissed>[];
+      final highlights = <HighlightStarted>[];
+      run.events.on<HoopMissed>(misses.add);
+      run.events.on<HighlightStarted>(highlights.add);
+      await _crossOutsidePortal(game, portal);
+      expect(misses.single.hoop, same(portal));
+      expect(highlights, isEmpty);
+      expect(portal.takenRing, isNull);
       expect(feature.ride, isNull);
       expect(run.state.ride, isNull);
     },

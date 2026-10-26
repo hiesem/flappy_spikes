@@ -2,7 +2,7 @@ name: build
 
 on:
   push:
-    branches: [main, feat/ios]
+    branches: [main, feat/ios, feat/2.6]
   pull_request:
   workflow_dispatch:
 

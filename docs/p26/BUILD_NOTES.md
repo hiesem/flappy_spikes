@@ -46,8 +46,12 @@ second drawing of a listed element** (blocker), and any new shared-looking eleme
 `soundEnabled: false`). Add the tests the PRD names for your work package. `test/autopilot_test.dart` is the
 playability gate and must stay green.
 
-**Known-red tests (temporary, M1F):** M1 merged with 55 failing tests. They are listed in
-`scripts/known_red_tests.txt`; `scripts/verify.sh` runs the whole Flutter suite and stays green while every failure is
-on that list, red on any other failure. Never edit that list (protected). When your work makes listed tests pass,
-name them in your summary. A test's expectation may only change when PRD 2.6 changed the rule it checks (cite the
-PRD section in the test); otherwise fix the code.
+**Known-red tests:** `scripts/known_red_tests.txt` lists failing tests that `scripts/verify.sh` tolerates while a
+work package fixes them; it must be empty from the wave-1 gate on (docs/p26/ORCHESTRATION.md). Never edit that list:
+the orchestrator owns it. When your work makes listed tests pass, name them in your final message. A test's
+expectation may only change when PRD 2.6 (or its §8 decisions) changed the rule it checks (cite the section in the
+test); otherwise fix the code.
+
+**Work packages:** you build exactly one, from your brief (`.worktrees/briefs26/<wp>.md`) in your own worktree; the
+detailed paths and acceptance criteria come from `docs/p26/status/`. Your final message: what you changed (files),
+tests added, `verify.sh` result, known-red entries that now pass, anything you could not do and why.

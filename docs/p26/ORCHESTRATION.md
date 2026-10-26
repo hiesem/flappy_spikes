@@ -12,23 +12,35 @@ it is built.
 |---|---|---|---|
 | Orchestrator | Claude Opus 5.5 (medium), the main Claude Code session | plans each wave, writes the builder brief per work package (WP), creates worktrees, starts builders and testers, runs the verify gate, merges, prunes the known-red list, decides open questions (records them in §8 / SPEC.md), deploys, device-tests, releases, reports | writes product code itself (except trivial merge-conflict resolution and infra in `scripts/`), merges a WP without a tester PASS |
 | Builder | GPT-6.1 Sol (medium) via codex, one per WP, up to **4 in parallel** | implements exactly one WP in its own git worktree, adds the tests the WP names, runs `bash scripts/verify.sh` before stopping, commits on its branch | touches paths outside its WP, edits `scripts/known_red_tests.txt`, weakens assertions, deploys, uses devices |
-| Tester | Claude Opus 5.5 (medium), an Agent subagent, one per build round | reviews the diff against the WP acceptance criteria, the PRD lines and SHARED_ELEMENTS.md; runs the named tests; writes a verdict PASS / FAIL with findings (blocker / major / minor) | edits product code (read + run only) |
+| Tester | Claude Opus 5.5 (medium), a detached `claude -p` process, one per build round | reviews the diff against the WP acceptance criteria, the PRD lines and SHARED_ELEMENTS.md; runs the named tests; writes a verdict PASS / FAIL with findings (blocker / major / minor) | edits product code (read + run only) |
 
-Builder command (from the orchestrator, background):
+Every builder and tester runs as a **detached process** started with `scripts/orch/spawn.sh` (it survives the Claude
+session; its pid, log and exit code live in `.worktrees/briefs26/workers/<id>/`). Builder (worker id `<wp>-b<round>`,
+cap 90 min):
 
 ```bash
-codex exec -m gpt-6.1-sol -c model_reasoning_effort="medium" -s workspace-write \
-  -c sandbox_workspace_write.network_access=true \
-  --add-dir ~/flutter --add-dir ~/.pub-cache --add-dir ~/.npm --add-dir ~/.cache \
-  -C .worktrees/p26-<wp> --json -o .worktrees/briefs26/logs/<wp>-r<n>.last.txt - < .worktrees/briefs26/<wp>.md \
-  > .worktrees/briefs26/logs/<wp>-r<n>.jsonl 2>&1
+scripts/orch/spawn.sh <wp>-b<n> 90 /home/killerhis/Projects/flappyspikes/.worktrees/p26-<wp> -- \
+  codex exec -m gpt-6.1-sol -c model_reasoning_effort="medium" -s workspace-write \
+    -c sandbox_workspace_write.network_access=true \
+    --add-dir ~/flutter --add-dir ~/.pub-cache --add-dir ~/.npm --add-dir ~/.cache \
+    --json -o /home/killerhis/Projects/flappyspikes/.worktrees/briefs26/<wp>.b<n>.last.txt \
+    "$(cat /home/killerhis/Projects/flappyspikes/.worktrees/briefs26/<wp>.md)"
 ```
 
-(~/.codex/config.toml defaults to effort high and full access: the flags above override both. If the sandbox blocks
-the toolchain, fall back to `-s danger-full-access` for that builder and note it in the RUNLOG.)
+A fix round resumes the builder's codex session (`codex exec resume <session-id> "<findings>"`, same flags) so it keeps
+its context. ~/.codex/config.toml defaults to effort high and full access: the flags above override both. If the
+sandbox blocks the toolchain, fall back to `-s danger-full-access` for that builder and note it in the RUNLOG.
 
-Tester: `Agent(subagent_type general-purpose, model opus, effort medium)` with the WP brief, the diff
-(`git diff feat/2.6...p26/<wp>`), the builder summary and the verify tail; it answers in the verdict format of §4.
+Tester (worker id `<wp>-t<round>`, cap 45 min), in the WP's worktree:
+
+```bash
+scripts/orch/spawn.sh <wp>-t<n> 45 /home/killerhis/Projects/flappyspikes/.worktrees/p26-<wp> -- \
+  claude -p --model claude-opus-5-5 --effort medium --permission-mode bypassPermissions \
+    "$(cat /home/killerhis/Projects/flappyspikes/.worktrees/briefs26/<wp>.t<n>.md)"
+```
+
+The tester prompt holds the WP brief, the diff range (`feat/2.6...p26/<wp>`), the builder summary, the verify tail,
+the read-only rule and the verdict format of §4; the verdict is the end of the worker's log.
 
 ## 2. SDLC per work package
 
@@ -141,7 +153,7 @@ build on the Pixel 6 that is **not** signed into the owner's linked account (a `
   never tap a real ad, never buy with a real card, never reset. Kill Gradle/Kotlin daemons by PID after Android builds.
 - **Release:** upload the AAB to Play **Internal testing** and roll it out to internal testers only (owner-approved
   2026-10-26). Never closed/open/production, never "Send for review". Tools: `tools/browser_linux.js` (Chromium over
-  CDP) + the latest `tools/upload_aab*.js`; a login wall → open the login page and notify the owner, keep working on
+  CDP) + the latest `tools/upload_aab*.js`; a login wall → open the login page and tell the owner in the chat, keep working on
   anything else.
 - Final report `docs/reports/p26-FINAL.md`: what was built, every decision and DEVIATION for the owner to confirm,
   test and device results, costs, and the owner actions left (§6).
@@ -186,8 +198,62 @@ GA4 / BigQuery console settings (A4, O10, O43); Play Data safety / App Store pri
 page deploy (PV-10) unless the owner says otherwise; the release-blocking test-player cleanup before production (C9);
 any spending.
 
-Stops (notify the owner, keep working on anything else): a login wall; a deploy step that would delete prod indexes not
+Things the orchestrator cannot finish alone (say so in the chat, keep building everything else): a login wall; a deploy step that would delete prod indexes not
 in the file; a council split on a product question with no PRD rule.
 
-Logs: `.worktrees/briefs26/RUNLOG.md` (one line per event), builder logs in `.worktrees/briefs26/logs/`, wave reports
+Logs: `.worktrees/briefs26/RUNLOG.md` (one line per event), worker logs in `.worktrees/briefs26/workers/<id>/log`, state in `.worktrees/briefs26/STATE.md`, wave reports
 in `docs/reports/`.
+
+## 7. Heartbeat, stuck workers and recovery (the orchestrator never waits blind)
+
+All state lives on disk, so any orchestrator (this chat session or a headless pass) can pick up the build:
+`.worktrees/briefs26/STATE.md` (wave, every WP with status / round / worker id / next step — the orchestrator rewrites
+it after every action), `RUNLOG.md` (one line per event), `workers/<id>/` (pid, log, exit), `lease` (who orchestrates,
+since when). Scripts: `scripts/orch/` — `spawn.sh`, `status.sh`, `stop.sh`, `watch.sh`, `lease.sh`, `tick.sh`.
+
+### 7.1 In-session heartbeat (the normal case)
+- While workers run, the orchestrator always has `scripts/orch/watch.sh 10` running in the background. It refreshes
+  the lease every 30 s and exits — waking the orchestrator — when a worker finishes, dies, stalls or passes its cap,
+  or after 10 minutes.
+- On every wake the orchestrator: runs `status.sh`, acts on every DONE / STALLED / OVERCAP / DEAD worker, starts ready
+  WPs up to the parallel limit, updates STATE.md, posts the chat update (§7.4) and **starts the next `watch.sh` before
+  ending its turn**. A turn never ends with workers running and no watcher, or with idle lanes while WPs are ready.
+- If the lease shows `headless-…` and `.worktrees/briefs26/headless.lock` is held, a headless pass is working: the
+  session waits for it to finish (watch only), then takes the lease back.
+
+### 7.2 External heartbeat (the session died)
+- systemd user timer `orch-tick.timer` (every 30 min; units in `scripts/orch/`, installed at W0) runs `tick.sh`.
+- `tick.sh` does nothing unless `.worktrees/briefs26/ORCH_ACTIVE` exists and `ORCH_STOP` does not. If the lease is
+  older than 45 min and no headless pass runs, it starts ONE headless orchestrator pass:
+  `claude -p --model claude-opus-5-5 --effort medium --permission-mode bypassPermissions` with
+  `scripts/orch/headless_prompt.md` (max 75 min). The pass does the same as a wake in §7.1 (without waiting on
+  workers), logs every action with `[headless]`, and exits; the next tick continues.
+- When the owner next talks to the chat session, it reads STATE.md / RUNLOG.md and summarises what happened meanwhile.
+
+### 7.3 Stuck rules
+- **Builder:** no log output for 20 min (STALLED) or more than 90 min running (OVERCAP) → read the log tail, decide
+  (a slow full test run under the heavy lock is not a stall: check the verify process first), then `stop.sh` and resume
+  the same codex session with a nudge ("you stalled at …; continue from …, keep to the brief"). A second stall on the
+  same WP → restart it fresh from the brief (new worktree state kept). Each counts as a fix round.
+- **Tester:** STALLED 20 min or more than 45 min → `stop.sh` and start a new tester with the same prompt (once); a
+  second failure → the orchestrator splits the review into smaller parts.
+- **DEAD** (no exit file, process gone) → treat as a crash: read the log, restart once, then escalate as a stall.
+- **Verify / merge** steps the orchestrator runs itself also go through `spawn.sh` (worker id `<wp>-v<n>`, cap 30 min)
+  when they take longer than a turn should.
+- Memory: no new worker while MemAvailable < 4 GB; then the lowest-priority running builder may be paused (stop +
+  resume later).
+
+### 7.4 What the owner sees in the chat
+- One line per **merge** (WP, rounds, tests added).
+- One line per **real problem or steer** (a split after 3 failed rounds, a stall restart that failed, a deploy step,
+  a login wall, a red wave gate).
+- A **status update every 10 minutes** (the heartbeat): wave, WPs running / waiting / merged, anything stuck.
+- Wave done, release done, and the final report. Nothing is sent outside the chat.
+
+### 7.5 Start and stop
+- Start (W0): `touch .worktrees/briefs26/ORCH_ACTIVE`; install and enable the timer
+  (`cp scripts/orch/orch-tick.{service,timer} ~/.config/systemd/user/ && systemctl --user daemon-reload &&
+  systemctl --user enable --now orch-tick.timer`).
+- Owner says stop: `touch .worktrees/briefs26/ORCH_STOP`, `stop.sh` every running worker, disable the timer, write
+  STATE.md. Resume: remove `ORCH_STOP`, enable the timer, continue from STATE.md.
+- Done (after the final report): remove `ORCH_ACTIVE`, disable the timer.

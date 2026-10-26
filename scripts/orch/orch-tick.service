@@ -1,0 +1,7 @@
+[Unit]
+Description=Flappy Spikes 2.6 orchestrator heartbeat (starts a headless pass when the session is silent)
+
+[Service]
+Type=oneshot
+ExecStart=/home/killerhis/Projects/flappyspikes/.worktrees/p26/scripts/orch/tick.sh
+TimeoutStartSec=80min

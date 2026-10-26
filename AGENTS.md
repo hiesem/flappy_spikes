@@ -339,3 +339,37 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   upload input instead (2.0.0+7 is 56 MB). Internal testing: 2.0.0 (7) saved as DRAFT 2026-10-07 (user releases).
 - Linux: no Google Chrome — tools/browser_linux.js drives /usr/bin/chromium with profile
   tools/.pw-linux-profile (optional URL arg).
+
+<!-- orch:begin (2.6 build framework; keep identical in CLAUDE.md and AGENTS.md) -->
+## How 2.6 is built: Opus orchestrator, Sol builders, Opus testers
+
+The 2.6 build runs unattended under `docs/p26/ORCHESTRATION.md` (read it before any 2.6 build work). The spec is
+`docs/p26/PRD-2.6-fun-progression.md`; its §8 holds the build status and the decisions taken since approval; the
+work-package details are in `docs/p26/status/`; the rules for every builder and tester are in `docs/p26/BUILD_NOTES.md`.
+
+| Role | Model | Reads |
+|---|---|---|
+| Orchestrator | Claude Opus 5.5 (medium), the main Claude Code session (or a headless pass started by the heartbeat timer) | CLAUDE.md, ORCHESTRATION.md, `.worktrees/briefs26/STATE.md` + `RUNLOG.md` |
+| Builder | GPT-6.1 Sol (medium) via `codex exec`, one per work package, up to 4 at once, each in its own worktree `.worktrees/p26-<wp>` on branch `p26/<wp>` | AGENTS.md, its brief `.worktrees/briefs26/<wp>.md`, BUILD_NOTES.md |
+| Tester | Claude Opus 5.5 (medium) via `claude -p`, one per build round | CLAUDE.md, its tester prompt, BUILD_NOTES.md |
+
+**SDLC per work package:** plan (brief) → build → verify (`bash scripts/verify.sh`) → test (PASS / FAIL with
+blocker / major / minor findings) → at most 3 fix rounds → merge into `feat/2.6` only with a green verify AND a tester
+PASS → wave gate (full suite + iOS CI). The known-red list `scripts/known_red_tests.txt` must stay empty from wave 1 on.
+
+**If you are a builder:** do only your brief's work package; touch only its paths (edits in shared hot files stay
+inside a `// region P26-<WP>` block); add the tests it names; run `bash scripts/verify.sh` and get it green before you
+stop; commit on your branch with a clear message. Never edit `scripts/known_red_tests.txt`, never weaken or delete an
+assertion to get green, never deploy, never use adb / devices / store consoles, never read secrets (`.env*`, key
+files, `android/upload-keystore.jks`, `android/app/key.properties`, `~/.config/**`, credentials). A conflict with the
+PRD or another area: report it in your final message, don't work around it.
+
+**If you are a tester:** read and run only — never edit product code. Check the diff against the brief's acceptance
+criteria, the PRD lines, `docs/p26/SHARED_ELEMENTS.md` (fail any second drawing of a shared element) and `SPEC.md`;
+run the named tests; end with the verdict block from ORCHESTRATION.md §4.
+
+**If you are the orchestrator:** never write product code yourself; never end a turn while workers run without
+`scripts/orch/watch.sh 10` running in the background (the heartbeat, ORCHESTRATION.md §7); act on every finished,
+stalled or dead worker; keep the lanes full; keep STATE.md current; post a chat line per merge, per real problem and a
+status update every 10 minutes. The build never waits for the owner; owner-only actions are listed in ORCHESTRATION.md §6.
+<!-- orch:end -->

@@ -1018,6 +1018,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// A No-ads offer waits in [_popupQueue] (never more than one).
   bool _noAdsOfferQueued = false;
 
+  // region P26-C2L
   /// A session starts (launch, or back after >= [Config.sessionGap]): the
   /// home arrival may show the No-ads upsell, through the popup queue
   /// (after / before LEVEL UP, purchase results, celebrations). Only when
@@ -1031,10 +1032,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     await menu.noAdsPopup.startSession();
     _runsThisSession = 0;
     if (state != GameState.start || menuScene != MenuScene.home) return;
-    // A resumed session is a new Home visit. The initial launch keeps the
-    // pre-2.6 launch order (session upsell before the catch-up LEVEL UP);
-    // once a run has arrived Home, later sessions start with a clean budget.
-    if (_homeVisitBudgeted) _beginHomeVisit();
+    // Launch and a resumed Home session both get one C2 popup slot. Gather
+    // the owed LEVEL UP before the session offer can try to use that slot.
+    _beginHomeVisit();
     _queueNoAdsOffer(
       check: 'session',
       stale: () =>
@@ -1046,25 +1046,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     );
   }
 
-  /// C2: the Home arrival after a run starts a fresh popup budget. Live
-  /// candidates come from the same sources that can open a popup; a rejected
-  /// request stays pending with its source for a later visit. The launch /
-  /// resume upsell is the pre-2.6 session path, and returns from Shop / Skins
-  /// / Levels / Settings are not arrivals, so none of those reset the budget.
-  bool _homeVisitBudgeted = false;
-
+  /// C2: launch, a resumed Home session and the Home arrival after a run
+  /// each start a fresh popup budget. Rejected requests stay pending with
+  /// their sources for a later visit. Returns from Shop / Skins / Levels /
+  /// Settings are not arrivals. System sheets remain outside this budget.
   void _beginHomeVisit() {
     if (state != GameState.start || menuScene != MenuScene.home) return;
-    _homeVisitBudgeted = true;
-    final levels = _resultsLevels;
-    final newLevelThisRun = levels != null && levels.$2 > levels.$1;
     homeMoments.beginVisit(
       HomeVisit(
         day: storage.now(),
         gamesPlayed: storage.gamesPlayed,
         requests: HomeVisitRequests(
-          levelUpCatchUp:
-              newLevelThisRun && menu.levels.pendingLevelUp != null,
+          levelUpCatchUp: menu.levels.pendingLevelUp != null,
           noAds:
               !giftThisHomeVisit &&
               !_ratingRequestedThisRun &&
@@ -1074,6 +1067,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       ),
     );
   }
+
+  // endregion
 
   /// Queues the No-ads offer through the popup queue (at most one at a
   /// time, QA S1-70): the window is re-checked the moment it would show, and
@@ -2761,10 +2756,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     return true;
   }
 
+  // region P26-C2L
   /// Q-H1 interim trigger: once home has been up with nothing over it for
   /// [Config.levelUpSettleDelay] and a LEVEL UP is owed (a run reached a
   /// new level, or the catch-up after the update), the popup opens. The
-  /// no-ads launch popup goes first (it blocks home until closed).
+  /// C2 visit budget gives an owed LEVEL UP priority over No-Ads.
   void _checkLevelUp(double dt) {
     final home = _home;
     final ready =
@@ -2799,6 +2795,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       _showLevelUpPopup(pending);
     });
   }
+
+  // endregion
 
   void _showLevelUpPopup(PendingLevelUp pending) {
     final level = pending.toLevel;

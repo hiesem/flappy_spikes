@@ -4,6 +4,7 @@ import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/home_moments.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -210,7 +211,11 @@ void main() {
     expect(secondOpened, isTrue);
 
     first.beginVisit(visit);
-    expect(first.selectedMoment, isNull, reason: 'the first instance used today');
+    expect(
+      first.selectedMoment,
+      isNull,
+      reason: 'the first instance used today',
+    );
     second.beginVisit(
       HomeVisit(
         day: day,
@@ -280,6 +285,94 @@ void main() {
     },
   );
 
+  // PRD C2 / O3: launch and resumed sessions are Home visits too. A native
+  // sheet's inactive/resumed cycle neither consumes nor resets their slot.
+  for (final atLaunch in [true, false]) {
+    var now = DateTime(2026, 10, 24, 12);
+    final sessionTransitions = FlameTester<FlappySpikesGame>(
+      () => createRunTestGame(
+        prefs: {
+          'playerLevel': 1,
+          'claimedLevels': atLaunch ? <String>[] : ['1'],
+          'gamesPlayed': 12,
+          'firstSessionDone': true,
+          'lastScore': Config.noAdsPopupMinScore,
+          'noAdsPopupVideos': 3,
+          'installDay': 1,
+          // Keep the launch empty in the resume case, so the owed level is
+          // created later, without any run-end bookkeeping.
+          if (!atLaunch) 'noAdsPopupLastMs': now.millisecondsSinceEpoch,
+        },
+        worldHeight: Config.worldHeight,
+        clock: () => now,
+      ),
+      gameSize: Vector2(Config.worldWidth, Config.worldHeight),
+    );
+
+    sessionTransitions.testGameWidget(
+      '${atLaunch ? 'launch' : 'resume'}: owed LEVEL UP beats No-Ads; next visit offers No-Ads',
+      setUp: (game, _) async {
+        await game.ready();
+        await preloadImages(game);
+        await flushAndMount(game);
+      },
+      verify: (game, _) async {
+        final budget = game.homeMoments as HomeMomentBudget;
+        Future<void> nextSession() async {
+          game.lifecycleStateChange(AppLifecycleState.paused);
+          now = now.add(const Duration(days: 1));
+          game.lifecycleStateChange(AppLifecycleState.resumed);
+          await flushAndMount(game);
+        }
+
+        expect(budget.visitActive, isTrue);
+        if (!atLaunch) {
+          expect(budget.selectedMoment, isNull);
+          expect(game.noAdsPopup, isNull);
+          await game.menu.levels.debugForceLevelUp();
+          await nextSession();
+        }
+        expect(game.menu.levels.pendingLevelUp, isNotNull);
+        expect(game.menu.noAdsPopup.evaluate(), isNotNull);
+        expect(budget.selectedMoment, HomeMoment.levelUp);
+        expect(game.noAdsPopup, isNull);
+        stepGame(game, Config.levelUpSettleDelay + .1);
+        await flushAndMount(game);
+        expect(game.levelUpPopup, isNotNull);
+        expect(game.noAdsPopup, isNull);
+        expect(game.storage.noAdsPopupShowsToday, 0);
+        expect(
+          game.storage.noAdsPopupVideos,
+          3,
+          reason: 'a deferred offer keeps its live trigger',
+        );
+
+        // System sheets are outside C2. Their ordinary lifecycle round trip
+        // must leave the active visit and its chosen popup intact (O3).
+        game.lifecycleStateChange(AppLifecycleState.inactive);
+        game.lifecycleStateChange(AppLifecycleState.resumed);
+        await flushAndMount(game);
+        expect(game.levelUpPopup, isNotNull);
+        expect(budget.selectedMoment, HomeMoment.levelUp);
+
+        await game.claimLevelUp();
+        stepGame(game, Config.popupFadeDuration + .1);
+        await flushAndMount(game);
+        game.openNoAdsPopup(reason: 'videos');
+        await flushAndMount(game);
+        expect(game.levelUpPopup, isNull);
+        expect(game.noAdsPopup, isNull, reason: 'this visit used its one slot');
+
+        await nextSession();
+        await flushAndMount(game);
+        expect(budget.selectedMoment, HomeMoment.noAds);
+        expect(game.levelUpPopup, isNull);
+        expect(game.noAdsPopup, isNotNull);
+        expect(game.storage.noAdsPopupShowsToday, 1);
+      },
+    );
+  }
+
   final normalTransitions = FlameTester<FlappySpikesGame>(() {
     return createRunTestGame(
       prefs: {
@@ -302,7 +395,7 @@ void main() {
       await game.ready();
       await preloadImages(game);
       await flushAndMount(game);
-      // A launch session offer is outside the post-run popup budget.
+      // Finish the launch visit before testing the post-run arrivals.
       game.closeNoAdsPopup();
       await flushAndMount(game);
     },

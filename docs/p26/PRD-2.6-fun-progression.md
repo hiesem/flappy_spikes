@@ -1558,3 +1558,90 @@ Round 6: P1 → O21 (shop items only), P2 → O22 (no sticker), P3 → O23 (all 
 | 2.6 | `ftueSteps`, `showcaseSeen`, `showcaseAttempt`, `showcaseRuns`, `showcaseDoneAt`, `lvlIndex` (sealed), `lvlPoints`, `lvlPending` (sealed), `lvlPayout`, `bestRunHoops`, `bestHoops`, `recentScores`, `duelStep`, `lifetimeCoinsEarned`, `lifetimeCoinsSpent`, `lifetimeCoinsBought`, `missionDay`, `missions`, `missionTier`, `missionRerollDay`, `streakDays`, `streakLastDay`, `streakPaidDay`, `worldsReached`, `weeklyBest`, `weeklyRewards`, `weeklyHintDay`, `firstWinDay`, `starRoadSeason`, `starRoadXp`, `starRoadClaimed`, `abArm_v1`, + round 21: `worldsSeen`, `guideSeenCount`, `albumCounts`, `albumRewardClaimed`, `albumRewardItem`, `starRoadPopupDay`, `vsWinStreak`, `vsWinStreakBest` (BIRD OF PREY, approved O82), + round 22: `streakLostDays`, `streakLostSeenDay`, `lbQueue`, `lbGroupId`, `lbGroupEnd`, `lbLastRank`, `lbGiftsClaimed` (sealed), `lbGiftPending`, + round 22b: `lbInfoSeen` (O60), + round 23: `homeLevelsTag` (O70, Q26), `vsBigWinsDay` (THREE LITTLE BIRDS, approved O83). **`streakFreeze` is removed** (never shipped; also out of `kObfStrings` / `anchor_strings.txt`). |
 
 Existing keys keep their names and defaults: `homeMode` (VERSUS default), `playerLevel`, `claimedLevels`, `unclaimedLevelReward`, `levelRewardPayout` (no longer read after J5's one-time finish).
+
+---
+
+## §8 Build status and remaining work (status addendum, 2026-10-26)
+
+The sections above stay the binding spec. This addendum records, per work package, what is built on `feat/2.6`
+(a57a7fb), what is built but must be fixed, and what is left, plus the decisions taken since the spec was approved.
+It was produced by an audit of seven Opus 5.5 reviewers against the code and the tests (2026-10-26). The evidence for
+every requirement (file:line, test results) and the work packages with paths and acceptance criteria are in
+`docs/p26/status/`. How the rest is built (roles, SDLC, waves, parallelism, release) is in `docs/p26/ORCHESTRATION.md`.
+
+### 8.1 State of the tree
+
+- Waves 0 and 1 were built by an automated pipeline (DuoFoundry v4, issues #2–#127, removed 2026-10-26). Several of
+  its merges never had a passing tester review (M1F #85–#89, #91, #94–#96; M1 #60, #63, #123, #127); the audit
+  re-checked them in the code.
+- Tests: `flutter analyze` clean; `flutter test` 4912 pass, 3 fail (2 × human-noise median, `s3_23` spring room);
+  functions tests 433 pass. Nothing of 2.6 is deployed or released.
+- Requirement count over all seven reports: **218 DONE · 45 FIX · 205 TODO · 27 OWNER**.
+
+### 8.2 Status per work package
+
+| WP | State | What is left (details: status file) |
+|---|---|---|
+| Wave 0 server (WP-E E4–E6, WP-LB server, F9 / G4 server) | Built, tests green, **not deployed** | S1: `look.card` missing in pool entries, `space` refused by `firestore.rules`, an index the BEST rank query needs; S2: hidden-ghost check and tie rank read up to ~50 docs (breaks the LB3 cost model); S3: review of #87/#88/#89/#8/#11; S4: cleanup/settle outside transactions, runbook errors (`a5-server.md`) |
+| WP-A Analytics | Mostly built and wired | `run_extra.downgraded` always 0; `ftue_step showcase_done` / `level_1/5/10` never sent; `fs_best_hb` counts debug runs; #90 test minors; names/limits audit test (`a1`) |
+| WP-B Showcase | Logic built and tested, **inert in production** (never wired in `main.dart`) | wire it (B1); analytics (B2); remove the ±7 hoop flattening around highlights (R6/D6) and the portal theme repeat (B3); flown run-level tests (B4) (`a2`) |
+| WP-C Gates, popup budget, reminders | C1 and C3 done; C2 partly | launch/resume Home visit not budgeted; Star Road once-a-day not persisted; rating minimum ignores `rate_min_runs`; a vacuous squeeze-gate test; wave-3 sources still to add (`a1`) |
+| WP-D D1–D4 | Built and wired, tests green | spring regression from #127 (springs before hoop 50 gone); R2 / full-band centres not as decided (8.3-3); calm keys not read from tuning; revive gives 1 plain + 3 calm; ≤ 15° tilt sign; table hygiene (`a3`) |
+| WP-D D5–D7, human-noise bot | Built and wired (6 formations, mix chapters, headline window) | bot is not closed-loop (dies at hoops 4–7 with zero noise); calibration (8.3-1); sync rails not passable on one line; slalom step (8.3-4); small test gaps; shapes 4–6 tuning (`a4`) |
+| WP-E client (brackets, `plv`, duel staircase, T4) | TODO (`lib/versus/brackets.dart` exists, unused) | **debug runs are still uploaded** (`countsForUpload` never read); E1, E2 (`a6`) |
+| WP-F Economy (F5, F6, F7, F9, F10, F11) | TODO | F1, F2, F9a–f, F10a–c (`a6`) |
+| WP-G Retention (G1–G6) | TODO (only the Home popup order exists) | G1a–d, G2a–c, G3, G4a–b, G5a–b, G6a–f (`a7`) |
+| WP-H A/B arms | TODO | H (`a1`) |
+| WP-I Docs | TODO | DOC (`a7`) |
+| WP-J Levels | TODO (2.5 model of 10 ranks still live) | S0 keys, J1–J10 (`a6`) |
+| WP-K Beat your best | TODO | K (`a6`) |
+| WP-LB client + UI | TODO (trophy still opens the native leaderboards, medal box still on Home) | LB1–LB7 (`a7`) |
+| Wave 5 art | TODO | 32 emblem PNGs, 10 achievement icons, goldens (`a6`, `a7`) |
+
+### 8.3 Decisions taken after approval (orchestrator, under the owner's mandate; listed for the owner in the final report)
+
+1. **Human-noise bot gate (owner 2026-10-26, council D-01):** first make the bot closed-loop (σ 0 must reproduce the
+   autopilot). Then measure the 2.5 course (`d0a72c2`) out of tree with the same bot. Gate (a): the 2.6 median at
+   σ 90 ms / 10 % extra flaps is ≥ the 2.5 median (no harder early game). Gate (b): with the σ at which 2.5 reaches a
+   median ≈ 40 (measured ≈ 50 ms), 2.6 reaches ≥ 40. Recorded as a SPEC.md DEVIATION of §0.3 item 4 / D7.
+2. **Squeeze vs hazard budget (owner 2026-10-26):** the squeeze's +1 per slot counts in the rolling window like a
+   forced slot; every other cost in a window with squeezed slots is downgraded so that window cost − surcharge ≤ budget.
+3. **R2 (owner 2026-10-26):** R2 holds for the *drawn* Δy (identical at 711 and 730 pt for the same seed); centre
+   rows use the full band, and only the final band-edge clamp may differ. The current 623 pt "portable band" is
+   replaced (status a3).
+4. **Slalom (D7):** "4 upright hoops alternating ±110–130 pt" means consecutive hoops alternate up/down with a step of
+   110–130 pt (not 220–260 pt).
+5. **No stars (O17b wins):** the `star` field in J4's pending record and the "star rule" in J11 are dropped.
+6. **Showcase off in test-only builds:** the showcase runs in production; the test harness, FS_E2E, soak and the store
+   screenshot generators keep it inert. Delete my data on an install with ≥ 3 games after a restart counts as
+   showcase-done (current behaviour, accepted).
+7. **Showcase course (R6/D6):** around a highlight only D6 headline items are held back; the normal mix (tilt, motion,
+   switch, specials) stays.
+8. **D1 vs D2 slide speed:** the D2 motion table is followed (no separate speed step at hoop 80).
+9. **N1b is struck** (it mentions freezes, removed by O46); notifications use N1a.
+10. **F7 coin classification:** bought = IAP coin packs + the No-Ads bonus coins; earned = everything else (runs,
+    rewards, gifts, codes); spent = every `spend`.
+11. **LB claim response:** the client follows the built server contract `lbClaimGift → {ok, id, tier, prize: {kind,
+    coins, item?, rarity?, seed?}}` (LB3's `{tier, kind, coins, seed}` is superseded). TODAY rows may carry `best`;
+    the client never shows it (O62).
+12. **A/B arm:** Delete my data keeps `abArm_v1` (an arm is a device property, not player data).
+13. **Upgraders' `bestHoops` start at 0** (no 2.5 history exists): missions start at T0 and the weekly course unlocks
+    after 40 hoops in 2.6. Mentioned in the release notes.
+14. **Mission targets** come from `texts.html` §1 (M01–M15 × T0–T3); the "progression §3.3" reference in G1 means that
+    table.
+
+### 8.4 Corrections to the spec text
+
+- Wave 0 rules deploy is not "comment only": it adds `validCard` / `look.card`, routes run looks through `validLook`
+  and widens `players.level` to 0–9999 (plus the `space` field from S1). Backward compatible with 2.5 clients.
+- TTL for the `lb*` collections is switched on by the **indexes** deploy (field overrides); `set_ttl.sh` defaults to
+  `players` and is only a check afterwards.
+- `lb_import.ts` and `lb_cleanup_test.ts` only preview unless given `--apply`.
+- The iOS CI workflow must also run on `feat/2.6` pushes (O27 asks for an iOS compile per wave).
+
+### 8.5 Owner actions that remain (not done by the build)
+
+Closed / open / production release and "Send for review"; publishing the new Play Games / Game Center achievements
+(drafts are made by the build); GA4 / BigQuery settings (A4, O10, O43); Play Data safety and App Store privacy updates
+(C5); the privacy-policy page deploy (PV-10); the release-blocking test-player cleanup before production (C9); store
+text and release notes review (T13, T15); the emblem export check (D2); confirming the decisions in 8.3.

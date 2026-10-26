@@ -29,6 +29,9 @@ import {
   LB_GHOST_POOL_COLLECTION,
   LB_GIFTS_COLLECTION,
   LB_GROUPS_COLLECTION,
+  // region P26-S2
+  LB_META_COLLECTION,
+  // endregion
   LB_PLAYERS_COLLECTION,
   LB_TOMB_COLLECTION,
   MAX_BRACKET,
@@ -73,11 +76,49 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+// region P26-S2
+/**
+ * LB3 addendum: lbMeta/hidden is the transaction-consistent suppression registry.
+ * entries[uid] = {until, pending}; pending entries never age out after a failed
+ * sweep. Completed entries survive the 14-day ghost supply + 1-day group +
+ * 3-day group TTL, including stale group snapshots after cleanupPending clears.
+ * lbPlayers.cleanupPending remains the retry marker until the sweep completes.
+ */
+type HiddenEntries = Record<string, { until: Timestamp; pending: boolean }>;
+
+export function hiddenGhostUids(snap: DocumentSnapshot): string[] {
+  return Object.keys(snap.data()?.entries ?? {});
+}
+
+export function writeHiddenRegistry(
+  tx: Transaction,
+  db: Firestore,
+  snap: DocumentSnapshot,
+  uid: string,
+  nowMs: number,
+  pending: boolean,
+): void {
+  const entries = Object.fromEntries(
+    Object.entries((snap.data()?.entries ?? {}) as HiddenEntries)
+      .filter(([, entry]) => entry.pending || millis(entry.until) > nowMs),
+  );
+  tx.set(db.collection(LB_META_COLLECTION).doc('hidden'), {
+    entries: { ...entries, [uid]: { until: at(nowMs + 18 * DAY_MS), pending } },
+  });
+}
+// endregion
+
 /** A stable tombstone for a retry: an existing one is never refreshed. */
 async function ensureTombstone(db: Firestore, uid: string, nowMs: number): Promise<void> {
   const ref = db.collection(LB_TOMB_COLLECTION).doc(uid);
   await db.runTransaction(async (tx) => {
-    if ((await tx.get(ref)).exists) return;
+    // region P26-S2
+    const [tomb, hidden] = await Promise.all([
+      tx.get(ref), tx.get(db.collection(LB_META_COLLECTION).doc('hidden')),
+    ]);
+    writeHiddenRegistry(tx, db, hidden, uid, nowMs, true);
+    if (tomb.exists) return;
+    // endregion
     tx.set(ref, {
       uid,
       deletedAt: at(nowMs),
@@ -350,6 +391,12 @@ export async function deleteBoardData(db: Firestore, uid: string, nowMs = Date.n
   await pruneGhostPools(db, uid, nowMs);
   await stripGroups(db, uid, null);
   await deleteBoardCore(db, uid, nowMs);
+  // region P26-S2
+  await db.runTransaction(async (tx) => {
+    const hidden = await tx.get(db.collection(LB_META_COLLECTION).doc('hidden'));
+    writeHiddenRegistry(tx, db, hidden, uid, nowMs, false);
+  });
+  // endregion
 }
 
 /** Refresh the server-derived display name on [uid]'s leaderboard data. */

@@ -11,7 +11,9 @@
  * - a gift roll is written before it is returned, so a repeat claim is a read.
  */
 import { createHash, randomInt } from 'node:crypto';
-import { DocumentReference, DocumentSnapshot, Firestore, Timestamp, Transaction } from 'firebase-admin/firestore';
+// region P26-S2
+import { FieldPath, DocumentReference, DocumentSnapshot, Firestore, Timestamp, Transaction } from 'firebase-admin/firestore';
+// endregion
 import { logger } from 'firebase-functions/v2';
 import { HttpsError } from 'firebase-functions/v2/https';
 import {
@@ -39,7 +41,9 @@ import {
   type LbSettleResult,
   type LbSubmitRunResult,
 } from './board.js';
-import { pruneGhostPools, stripGroups } from './board_delete.js';
+// region P26-S2
+import { hiddenGhostUids, writeHiddenRegistry, pruneGhostPools, stripGroups } from './board_delete.js';
+// endregion
 import { poolCustomName } from './customname.js';
 import { versusName } from './nickname.js';
 import {
@@ -60,6 +64,9 @@ import {
   LB_PLAYER_TTL,
   LB_PLAYERS_COLLECTION,
   LB_MIN_LEFT_MS,
+  // region P26-S2
+  LB_META_COLLECTION,
+  // endregion
   LB_TOMB_COLLECTION,
   NAMES_COLLECTION,
   POOL_MAX_BYTES,
@@ -247,41 +254,19 @@ function groupGhostOwnerUids(group: LbGroupDoc): string[] {
   return [...owners];
 }
 
-/**
- * Hidden players whose embedded ghosts may still sit in other groups. A hidden
- * submit sets `cleanupPending` in the commit that hides the player and clears
- * it only after the cleanup sweep, so board reads and submit responses leave
- * these uids out until then. One equality filter on one field: no composite
- * index is needed.
- */
-async function pendingCleanupUids(db: Firestore): Promise<string[]> {
-  const snap = await db.collection(LB_PLAYERS_COLLECTION).where('cleanupPending', '==', true).get();
-  return snap.docs.map((doc) => doc.id);
-}
-
-/** Ends the suppression once the sweep has removed every embedded copy. */
-async function clearCleanupPending(db: Firestore, uid: string): Promise<void> {
+// region P26-S2
+/** Clear the retry marker; retain suppression through the stale-ghost horizon. */
+async function clearCleanupPending(db: Firestore, uid: string, nowMs: number): Promise<void> {
   const ref = db.collection(LB_PLAYERS_COLLECTION).doc(uid);
   await db.runTransaction(async (tx) => {
-    if ((await tx.get(ref)).exists) tx.update(ref, { cleanupPending: false });
+    const [player, hidden] = await Promise.all([
+      tx.get(ref), tx.get(db.collection(LB_META_COLLECTION).doc('hidden')),
+    ]);
+    if (player.exists) tx.update(ref, { cleanupPending: false });
+    writeHiddenRegistry(tx, db, hidden, uid, nowMs, false);
   });
 }
-
-/** Reads the persistent hidden state of every embedded ghost owner. */
-async function hiddenGhostOwnerUids(
-  tx: Transaction,
-  db: Firestore,
-  group: LbGroupDoc,
-): Promise<string[]> {
-  const owners = groupGhostOwnerUids(group);
-  const snaps = await Promise.all(
-    owners.map((uid) => tx.get(db.collection(LB_PLAYERS_COLLECTION).doc(uid))),
-  );
-  return owners.filter((uid, index) => {
-    const snap = snaps[index];
-    return !snap.exists || (snap.data() as LbPlayerDoc | undefined)?.hidden === true;
-  });
-}
+// endregion
 
 function storeGhostDay(entry: LbGhostDay): LbGhostDay {
   return { ...entry, runs: entry.runs.map(storePoint) } as unknown as LbGhostDay;
@@ -918,10 +903,12 @@ async function submit(
   const playerRef = db.collection(LB_PLAYERS_COLLECTION).doc(uid);
   const bestRef = db.collection(LB_BEST_COLLECTION).doc('global');
   const histRef = db.collection(LB_BEST_COLLECTION).doc('hist');
-  // Hidden players still being swept are kept out of this response's board and ranks.
-  const pending = await pendingCleanupUids(db);
   const result = await db.runTransaction(async (tx) => {
     if (await tombstoneIn(tx, db, uid)) deleted();
+    // region P26-S2
+    const hiddenSnap = await tx.get(db.collection(LB_META_COLLECTION).doc('hidden'));
+    const suppressedUids = hiddenGhostUids(hiddenSnap);
+    // endregion
     const playerSnap = await tx.get(playerRef);
     const bestSnap = await tx.get(bestRef);
     const histSnap = await tx.get(histRef);
@@ -1033,8 +1020,6 @@ async function submit(
         expireAt: at(millis(joinedGroup.end) + LB_GROUP_TTL_MS),
       };
     }
-    const hiddenGhostOwners = finalGroup === null ? [] : await hiddenGhostOwnerUids(tx, db, finalGroup);
-    const suppressedUids = [...new Set([...pending, ...hiddenGhostOwners])];
     const beforeRank = candidate.group === null ? null : rankOf(candidate.group, uid, nowMs, state.hidden, suppressedUids);
 
     let localBest = state.best;
@@ -1106,6 +1091,9 @@ async function submit(
       src: player?.src ?? 'play',
       expireAt: at(nowMs + LB_PLAYER_TTL),
     };
+    // region P26-S2
+    if (state.hidden) writeHiddenRegistry(tx, db, hiddenSnap, uid, nowMs, true);
+    // endregion
     if (playerSnap.exists || runs.length > 0 || localBest > state.best) tx.set(playerRef, nextPlayer);
 
     if (state.hidden && playerSnap.exists) {
@@ -1183,7 +1171,9 @@ async function submit(
     await stripGroups(db, uid, result.cleanupGid);
     await pruneGhostPools(db, uid, nowMs);
     await stripGroups(db, uid, null);
-    await clearCleanupPending(db, uid);
+    // region P26-S2
+    await clearCleanupPending(db, uid, nowMs);
+    // endregion
   }
   await writeFlags(db, result.flags);
   if (result.publicBestChanged) bestCache.delete(db);
@@ -1242,24 +1232,22 @@ async function readBest(db: Firestore, nowMs: number): Promise<LbBestDoc | null>
   return { ...doc, rows };
 }
 
-/**
- * Reads TODAY's group and its ghost owners' persistent hidden state from one
- * Firestore snapshot. A cleanup can clear the transient marker while a request
- * holds an older group snapshot; the owner document remains hidden.
- */
+// region P26-S2
+/** One suppression doc, read in the same snapshot as the embedded ghosts. */
 async function readTodayGroup(
   db: Firestore,
-  gid: string,
+  gid: string | null,
 ): Promise<{ group: LbGroupDoc | null; hiddenGhostOwners: string[] }> {
   return db.runTransaction(async (tx) => {
-    const snap = await tx.get(db.collection(LB_GROUPS_COLLECTION).doc(gid));
-    const group = snap.exists ? loadGroup(snap.data()) : null;
+    const snap = gid === null ? null : await tx.get(db.collection(LB_GROUPS_COLLECTION).doc(gid));
+    const hidden = await tx.get(db.collection(LB_META_COLLECTION).doc('hidden'));
     return {
-      group,
-      hiddenGhostOwners: group === null ? [] : await hiddenGhostOwnerUids(tx, db, group),
+      group: snap?.exists ? loadGroup(snap.data()) : null,
+      hiddenGhostOwners: hiddenGhostUids(hidden),
     };
   });
 }
+// endregion
 
 async function visibleCount(db: Firestore): Promise<number> {
   try {
@@ -1294,15 +1282,14 @@ async function exactRank(db: Firestore, uid: string, best: number, bestAt: numbe
   }
   const col = db.collection(LB_PLAYERS_COLLECTION).where('hidden', '==', false);
   const greater = await col.where('bestShadow', '>', best).count().get();
-  const equal = await col.where('bestShadow', '==', best).get();
-  let ties = 0;
-  for (const doc of equal.docs) {
-    if (doc.id === uid) continue;
-    const other = doc.data() as LbPlayerDoc;
-    const otherAt = millis(other.bestAt);
-    if (otherAt < bestAt || (otherAt === bestAt && doc.id.localeCompare(uid) < 0)) ties++;
-  }
-  return { rank: greater.data().count + 1 + ties, approximate: false };
+  // region P26-S2
+  // S1's (hidden, bestShadow, bestAt ASC) index also carries __name__ ASC.
+  const equal = col.where('bestShadow', '==', best);
+  const earlier = await equal.where('bestAt', '<', at(bestAt)).count().get();
+  const sameTime = await equal.where('bestAt', '==', at(bestAt))
+    .where(FieldPath.documentId(), '<', uid).count().get();
+  return { rank: greater.data().count + 1 + earlier.data().count + sameTime.data().count, approximate: false };
+  // endregion
 }
 
 /**
@@ -1365,27 +1352,21 @@ export async function lbGetBoard(
   }
   const playerSnap = await db.collection(LB_PLAYERS_COLLECTION).doc(uid).get();
   const player = playerSnap.exists ? (playerSnap.data() as LbPlayerDoc) : undefined;
-  let group: LbGroupDoc | null = null;
-  let gid: string | null = null;
-  let hiddenGhostOwners: string[] = [];
-  if (typeof player?.groupId === 'string' && player.groupId) {
-    gid = player.groupId;
-    let snapshot = await readTodayGroup(db, gid);
-    group = snapshot.group;
-    hiddenGhostOwners = snapshot.hiddenGhostOwners;
-    if (group !== null && group.settled !== true && millis(group.end) <= nowMs) {
-      await settleGroup(db, gid, nowMs);
-      snapshot = await readTodayGroup(db, gid);
-      group = snapshot.group;
-      hiddenGhostOwners = snapshot.hiddenGhostOwners;
-    }
+  // region P26-S2
+  const gid = typeof player?.groupId === 'string' && player.groupId ? player.groupId : null;
+  let snapshot = await readTodayGroup(db, gid);
+  let { group, hiddenGhostOwners } = snapshot;
+  if (gid !== null && group !== null && group.settled !== true && millis(group.end) <= nowMs) {
+    await settleGroup(db, gid, nowMs);
+    snapshot = await readTodayGroup(db, gid);
+    ({ group, hiddenGhostOwners } = snapshot);
   }
+  // endregion
   const giftsSnap = await db.collection(LB_GIFTS_COLLECTION).where('uid', '==', uid).limit(50).get();
   const gifts = giftsSnap.docs.map((doc) => doc.data() as LbGiftDoc);
-  // A hidden player's embedded ghosts can outlive the hide until the sweep
-  // reaches them; the pending set keeps those players off TODAY meanwhile.
-  const pending = await pendingCleanupUids(db);
-  const suppressedUids = [...new Set([...pending, ...hiddenGhostOwners])];
+  // region P26-S2
+  const suppressedUids = hiddenGhostOwners;
+  // endregion
   const hidden = player?.hidden === true ? [uid] : [];
   const today =
     group === null || gid === null

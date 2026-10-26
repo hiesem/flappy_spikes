@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { mock } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { logger } from 'firebase-functions/v2';
-import { Timestamp, type DocumentReference, type DocumentSnapshot, type Firestore, type Transaction } from 'firebase-admin/firestore';
+import { Query, Timestamp, type DocumentReference, type DocumentSnapshot, type Firestore, type Transaction } from 'firebase-admin/firestore';
 import {
   GIFT_SHOP_ITEMS,
   lbClaimGift,
@@ -21,6 +21,7 @@ import {
   LB_FLAGS_COLLECTION,
   LB_OPEN_COLLECTION,
   LB_MIN_LEFT_MS,
+  LB_META_COLLECTION,
   NAMES_COLLECTION,
   LB_PLAYERS_COLLECTION,
   LB_TOMB_COLLECTION,
@@ -30,6 +31,7 @@ import {
 } from '../src/schema.js';
 import { encodeDeltas, encodeEntries } from '../src/timeline.js';
 import { versusName } from '../src/nickname.js';
+import { deleteBoardData } from '../src/board_delete.js';
 import { db, fakeJwt, LOOK, PROJECT, uniq } from './helpers.js';
 
 const HOUR = 3600 * 1000;
@@ -44,6 +46,7 @@ const LB_COLLECTIONS_TO_CLEAR = [
   LB_FLAGS_COLLECTION,
   LB_OPEN_COLLECTION,
   NAMES_COLLECTION,
+  LB_META_COLLECTION,
 ];
 
 beforeEach(async function clearBoardStoreCollections() {
@@ -857,3 +860,122 @@ describe('PRD-2.6 LB3 regression fixes', () => {
     } finally { info.mock.restore(); }
   });
 });
+
+// region P26-S2
+describe('PRD-2.6 LB3 bounded leaderboard reads', () => {
+  it('ranks 300 tied players with counts and never fetches the player collection', async () => {
+    const uid = 'tie-150';
+    await lbSubmitRun(db, uid, request([submitRun({ score: 100 })]), T0 + 1000);
+    const template = (await player(uid))!;
+    const batch = db.batch();
+    for (let i = 0; i < 300; i++) {
+      // 100 earlier, 100 same-timestamp (uid order), 100 later ties.
+      batch.set(db.collection(LB_PLAYERS_COLLECTION).doc(`tie-${String(i).padStart(3, '0')}`), {
+        ...template, bestAt: Timestamp.fromMillis(T0 + (Math.floor(i / 100) - 1) * 1000),
+      });
+    }
+    batch.set(db.collection(LB_PLAYERS_COLLECTION).doc('greater'), { ...template, best: 101, bestShadow: 101 });
+    batch.set(db.collection(LB_PLAYERS_COLLECTION).doc('hidden-tie'), { ...template, hidden: true });
+    batch.set(db.collection(LB_PLAYERS_COLLECTION).doc('hidden-greater'), { ...template, bestShadow: 102, hidden: true });
+    await batch.commit();
+    const original = Query.prototype.get;
+    let queryGets = 0;
+    const spy = mock.method(Query.prototype, 'get', async function (this: Query) {
+      queryGets++;
+      return original.call(this);
+    });
+    try {
+      const board = await lbGetBoard(db, uid, { tab: 'best' }, T0 + 2000);
+      assert.equal(board.best.me!.rank, 152); // 1 greater + 100 earlier + 50 same-time predecessors + self.
+      assert.equal(board.best.approximate, false);
+      assert.equal(queryGets, 1, 'only gifts use Query.get; ranks must use aggregation counts');
+    } finally { spy.mock.restore(); }
+  });
+
+  it('reads one suppression doc with the group for both opens and submits with 49 ghosts', async () => {
+    const uid = uniq('bounded-viewer');
+    const first = await lbSubmitRun(db, uid, request([submitRun({ score: 100 })]), T0 + 1000);
+    const ghosts = Array.from({ length: 49 }, (_, i) => ({
+      uid: `ghost-${i}`, name: `Ghost${i}`, look: LOOK, platform: 'android',
+      runs: [{ t: 0, s: 200 }],
+    }));
+    await db.collection(LB_GROUPS_COLLECTION).doc(first.group!.id).update({ ghosts, ghostUids: ghosts.map((g) => g.uid) });
+    await db.collection(LB_META_COLLECTION).doc('hidden').set({
+      entries: { 'ghost-0': { until: Timestamp.fromMillis(T0 + 18 * 24 * HOUR), pending: true } },
+    });
+    const reads: string[] = [];
+    const instrumented = new Proxy(db, {
+      get(target, property) {
+        if (property === 'runTransaction') return (callback: (tx: Transaction) => Promise<unknown>) =>
+          target.runTransaction((tx) => callback(new Proxy(tx, {
+            get(transaction, key) {
+              if (key === 'get') return (ref: DocumentReference) => {
+                reads.push(ref.path);
+                return transaction.get(ref);
+              };
+              const value = Reflect.get(transaction, key, transaction);
+              return typeof value === 'function' ? value.bind(transaction) : value;
+            },
+          })));
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    }) as Firestore;
+    const original = Query.prototype.get;
+    let queryGets = 0;
+    const spy = mock.method(Query.prototype, 'get', async function (this: Query) {
+      queryGets++;
+      return original.call(this);
+    });
+    try {
+      const opened = await lbGetBoard(instrumented, uid, { tab: 'today' }, T0 + 2000);
+      assert.equal(opened.today.rows.length, 49);
+      assert.equal(opened.today.rows.some((row) => row.name === 'Ghost0'), false);
+      assert.deepEqual(reads, [`${LB_GROUPS_COLLECTION}/${first.group!.id}`, `${LB_META_COLLECTION}/hidden`]);
+      reads.length = 0;
+      const submitted = await lbSubmitRun(instrumented, uid,
+        request([submitRun({ score: 10, endTs: T0 + HOUR })]), T0 + HOUR + 1000);
+      assert.equal(submitted.board!.rows.some((row) => row.name === 'Ghost0'), false);
+      assert.equal(reads.filter((path) => path === `${LB_META_COLLECTION}/hidden`).length, 1);
+      assert.deepEqual(reads.filter((path) => path.startsWith(`${LB_PLAYERS_COLLECTION}/`)), [`${LB_PLAYERS_COLLECTION}/${uid}`]);
+      assert.equal(queryGets, 1, 'only the board gifts query: no cleanupPending collection scan');
+    } finally { spy.mock.restore(); }
+  });
+
+  it('suppresses a deleted ghost before its cleanup sweep and after a stale group read', async () => {
+    const owner = uniq('deleted-ghost');
+    const viewer = uniq('deleted-viewer');
+    const first = await lbSubmitRun(db, owner, request([submitRun({ score: 100 })]), T0 + 1000);
+    const end = (await group(first.group!.id))!.end.toMillis();
+    await lbSettleGroups(db, end + 1000, first.group!.id);
+    const next = await lbSubmitRun(db, viewer,
+      request([submitRun({ score: 90, endTs: end + HOUR })]), end + HOUR + 1000);
+    const gid = next.group!.id;
+    const stale = await db.collection(LB_GROUPS_COLLECTION).doc(gid).get();
+    assert.equal((await lbGetBoard(db, viewer, {}, end + HOUR + 2000)).today.rows.length, 2);
+    let raced = false;
+    await deleteBoardData(dbWithAfterTransaction(async () => {
+      raced = true;
+      assert.equal((await lbGetBoard(db, viewer, {}, end + HOUR + 2000)).today.rows.length, 1);
+    }), owner, end + HOUR + 2000);
+    assert.equal(raced, true);
+    assert.equal((await lbGetBoard(dbWithStaleGroupSnapshot(gid, stale), viewer, {}, end + HOUR + 3000)).today.rows.length, 1);
+    assert.equal((await db.collection(LB_META_COLLECTION).doc('hidden').get()).data()!.entries[owner].pending, false);
+  });
+
+  it('retains failed cleanup markers and prunes only completed entries past the ghost horizon', async () => {
+    const hidden = db.collection(LB_META_COLLECTION).doc('hidden');
+    const expired = Timestamp.fromMillis(T0 - 1);
+    await hidden.set({ entries: {
+      failed: { until: expired, pending: true }, completed: { until: expired, pending: false },
+      recent: { until: Timestamp.fromMillis(T0 + HOUR), pending: false },
+    } });
+    const uid = uniq('registry-prune');
+    await lbSubmitRun(db, uid, request([submitRun({ score: 10 })], { t: 1 }), T0 + 1000);
+    const entries = (await hidden.get()).data()!.entries;
+    assert.deepEqual(Object.keys(entries).sort(), ['failed', 'recent', uid].sort());
+    assert.equal(entries[uid].pending, false);
+    assert.equal(entries[uid].until.toMillis(), T0 + 1000 + 18 * 24 * HOUR);
+  });
+});
+// endregion

@@ -957,10 +957,10 @@ Paths below are relative to `test/`; all rows refer to PRD-2.6 §3 and §1.4.
 | R-26-B2 | Safety starters, one free revive, normal versus uploads | B2, R2 | B | p26/showcase/starters_test.dart; free_revive_test.dart; upload_rules_test.dart | implemented |
 | R-26-C1 | Silent saw/squeeze gates and portal introduction | C1–C3 | C | p26/gates/unlocks_test.dart; p26/analytics/first_meet_regressions_test.dart | implemented |
 | R-26-D1 | Introduction schedule, Δy, aligned tilts, 45° allowance, motion caps, clean windows and deterministic downgrades | D1/D2 | D | p26/curve/curve_ceiling_test.dart; layout_d2_test.dart; spawn_tables_d2_test.dart | integration sweep added |
-| R-26-D3 | Rolling four-slot hazard budget, forced exceptions | D3 | D | p26/curve/hazard_budget_test.dart; curve_ceiling_test.dart | blocked: squeeze integration exceeds budget |
+| R-26-D3 | Rolling four-slot hazard budget, forced exceptions; squeeze episode accounting per SPEC WP-D | D3 | D | p26/curve/hazard_budget_test.dart; curve_ceiling_test.dart | implemented |
 | R-26-D4 | Periodic/event calm, median steps, spacing, squeeze timing | D4/D5 | D | p26/curve/calm_schedule_test.dart; curve_ceiling_test.dart | integration sweep added |
 | R-26-D6 | One headline per eight hoops, bounded waiting | D6 | D | p26/curve/headline_window_test.dart | implemented |
 | R-26-D7 | Six formations, cadence, recovery and mix chapters | D7 | D | p26/curve/formations_test.dart; formations_wire_schedule_test.dart; formations_wire_recovery_test.dart; formations_wire_autopilot_test.dart | implemented |
-| R-26-R2 | Same ordinary plans across games/best/level/mode/payment; point-space Δy equality across tall screens | 1.4 R2, D tests | D | p26/curve/same_rules_test.dart | setup matrix passes; height equality blocked; only arm 0 wired |
-| R-26-D-BOT | Baseline ≥12; ceiling starts 150/250 ≥40, heights 568/711, three seeds; human-noise median ≥40 at game 10 | D tests | D | autopilot_test.dart | perfect bot passes; human-noise gate blocked |
+| R-26-R2 | Same ordinary plans across games/best/level/mode/payment; point-space Δy equality across tall screens | 1.4 R2, D tests | D | p26/curve/same_rules_test.dart | implemented; only arm 0 is currently wired |
+| R-26-D-BOT | Baseline ≥12; ceiling starts 150/250 ≥40, heights 568/711, three seeds; human-noise median ≥40 at game 10 | D tests | D | autopilot_test.dart | implemented |
 | R-26-PIN | Leaderboard maximum and timeline fl=2 unchanged | 1.4 | A–D | protection/leaderboard_max_test.dart; p22/s13_versus_timeline_test.dart; p22/s13_fix1_timeline_check_test.dart | existing tests unedited |

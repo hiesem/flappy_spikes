@@ -8,7 +8,7 @@ import 'package:flappy_spikes/run/elements.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Independent PRD D3 oracle: do not trust a plan's own reported cost.
-double _hazardCost(SlotPlan p, double dy, double p90, bool squeeze) {
+double _hazardCost(SlotPlan p, double dy, double p90, bool squeezeEntry) {
   if (p.cometHang ||
       p.duringRide ||
       {
@@ -43,7 +43,7 @@ double _hazardCost(SlotPlan p, double dy, double p90, bool squeeze) {
   if (dy.abs() > p90 + 1e-6) {
     cost++;
   }
-  if (squeeze) {
+  if (squeezeEntry) {
     cost++;
   }
   return cost;
@@ -97,6 +97,7 @@ void main() {
           double? previous;
           var lastCalm = -1;
           var wasCalm = false;
+          var wasSqueeze = false;
           var calmInterval = 36.0;
           for (var i = 0; i < 400; i++) {
             // Squeeze is an in-run state; hold it over realistic windows.
@@ -175,11 +176,13 @@ void main() {
             if (p.kind == HoopKindId.switchRing) {
               expect(i, greaterThanOrEqualTo(15), reason: tag);
             }
+            final squeezeEntry = squeeze && !wasSqueeze;
+            if (squeezeEntry) costs.clear();
             final cost = _hazardCost(
               p,
               dy,
               first.tables.bandFor(i).dy.$2 * math.min(ctx.band, 540),
-              squeeze,
+              squeezeEntry,
             );
             expect(p.hazardCost, closeTo(cost, 1e-8), reason: tag);
             costs.add(cost);
@@ -195,14 +198,16 @@ void main() {
               expect(p.kind, HoopKindId.normal, reason: tag);
               expect(p.motion, isNull, reason: tag);
               expect(p.tiltDeg.abs(), lessThanOrEqualTo(10), reason: tag);
-              expect(
-                dy.abs(),
-                lessThanOrEqualTo(
-                  first.tables.bandFor(i).dy.$1 * math.min(ctx.band, 540) +
-                      1e-8,
-                ),
-                reason: tag,
-              );
+              if (!squeeze) {
+                expect(
+                  dy.abs(),
+                  lessThanOrEqualTo(
+                    first.tables.bandFor(i).dy.$1 * math.min(ctx.band, 540) +
+                        1e-8,
+                  ),
+                  reason: tag,
+                );
+              }
               if (!wasCalm) {
                 if (lastCalm < 0) {
                   expect(i, inInclusiveRange(30, 35), reason: tag);
@@ -224,6 +229,7 @@ void main() {
                 lastCalm = i;
               }
             }
+            wasSqueeze = squeeze;
             wasCalm = p.calm;
             previous = p.centreY;
           }

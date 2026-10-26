@@ -1760,18 +1760,18 @@ watch, backdrop gap check at every seam), `test/p24/tab_screens_evidence_test.da
 | `lib/game/home_moments.dart` | WP-A Home moment arbitration and priority | `test/p26/home/home_moments_test.dart` |
 | `lib/run/showcase/`, `lib/run/config/showcase_config.dart` | WP-B frozen START script, progress/attempt persistence, safety net and pass-driven completion; director step 0 overlays after normal draws | `test/p26/showcase/plan_tables_test.dart`, `plan_state_test.dart`, `director_script_test.dart`, `director_spawn_test.dart`, `starters_test.dart`, `free_revive_test.dart`, `upload_rules_test.dart`, `bot_highlights_test.dart` |
 | `lib/run/config/gates_config.dart` | WP-C lifetime saw/squeeze filters; other introductions follow hoop index | `test/p26/gates/unlocks_test.dart` |
-| `lib/run/config/layout_config.dart`, `lib/run/director/layout_sampler.dart` | WP-D centre/Δy, tilt magnitude/sign, motion rows and rendered-angle caps; all layout draws seeded | `test/p26/curve/layout_d2_test.dart`, `spawn_tables_d2_test.dart`, `curve_ceiling_test.dart`, `same_rules_test.dart` |
-| `lib/run/director/hazard_budget.dart` | WP-D four-slot ledger, forced accounting, deterministic downgrade; director records the final plan and reserves spring landings | `test/p26/curve/hazard_budget_test.dart`, `curve_ceiling_test.dart` |
+| `lib/run/config/layout_config.dart`, `lib/run/director/layout_sampler.dart` | WP-D centre/Δy, portable 623-pt tall-screen course band, separate 540-pt Δy scale, tilt magnitude/sign, motion rows and rendered-angle caps; all layout draws seeded | `test/p26/curve/layout_d2_test.dart`, `spawn_tables_d2_test.dart`, `curve_ceiling_test.dart`, `same_rules_test.dart` |
+| `lib/run/director/hazard_budget.dart` | WP-D four-slot ledger, forced accounting, deterministic downgrade; the director resets the ledger and charges squeeze once per episode; spring landings are reserved from the final kind | `test/p26/curve/hazard_budget_test.dart`, `curve_ceiling_test.dart` |
 | `lib/run/director/calm_schedule.dart` | WP-D periodic/event recovery, spacing and warning exclusion; director produces calm geometry | `test/p26/curve/calm_schedule_test.dart`, `curve_ceiling_test.dart` |
 | `lib/run/director/headline_window.dart` | WP-D shared eight-hoop headline arbitration and bounded waits | `test/p26/curve/headline_window_test.dart` |
 | `lib/run/director/formations.dart` | WP-D six seeded formation templates; director wires cadence, interruptions, final budget and mix chapters | `test/p26/curve/formations_test.dart`, `formations_wire_schedule_test.dart`, `formations_wire_recovery_test.dart`, `formations_wire_autopilot_test.dart` |
-| `lib/run/debug/human_bot.dart`, `lib/run/debug/autopilot.dart` | Test/debug flight drivers; no release tuning dependency | `test/autopilot_test.dart` (12-hoop baseline, 150/250 ceiling, ordinary human-noise median) |
+| `lib/run/debug/human_bot.dart`, `lib/run/debug/autopilot.dart` | Test/debug flight drivers and the shared 90 ms / 10%-extra flap scheduler; no release tuning dependency | `test/autopilot_test.dart` (12-hoop baseline, 150/250 ceiling, ordinary human-noise median) |
 
 The integration sweep includes normal gap draws and final hazard downgrades,
 200 seeds × 568/711/730 × 400 slots, both open and squeeze contexts. Fairness
 uses ordinary `RunSetup` → `RunController` construction with gates enabled,
 equal met-elements and no showcase or debug assistance. Currently only baked
 arm 0 exists; an arm selector must extend the fairness matrix when introduced.
-The height equality, squeeze-budget and human-noise gates remain unresolved;
-see the WP-D validation note in SPEC.md. Timeline encoding and maximum-score
-protection retain their existing tests without edits.
+The height equality, squeeze-budget and human-noise gates pass; see the WP-D
+validation note in SPEC.md. Timeline encoding and maximum-score protection
+retain their existing tests without edits.

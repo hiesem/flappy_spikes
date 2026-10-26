@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../config/director_tables.dart';
+import '../config/layout_config.dart';
 import '../config/run_config.dart';
 import '../config/tuning_values.dart';
 import '../elements.dart';
@@ -203,7 +204,8 @@ class RunDirector {
   RideKind? _ride;
   final Map<String, int> _spawned = {};
   late final CalmSchedule _calm;
-  final HazardBudget _hazard = HazardBudget();
+  HazardBudget _hazard = HazardBudget();
+  bool _inSqueezeWindow = false;
 
   /// PRD-2 §3.23 the next slot is the fixed landing of a spring shipped at
   /// this index − 1. Its 240 pt separation is part of the spring's geometry,
@@ -285,6 +287,8 @@ class RunDirector {
   /// item 3 (owner, 2026-10-19): with Big Hoops armed hoop 0 grows too (big
   /// and gold already on the waiting screen); without it hoop 0 stays 118.
   double _bigMult(int i, DirectorContext ctx) => ctx.bigHoopsMult;
+  double _coreCentre(DirectorContext ctx) =>
+      ctx.topTooth + min(ctx.band, LayoutConfig.courseRefBand) / 2;
   bool get _portalOn => _on(ElementId.portal);
 
   // region WP-A — at most N portal rides per run (PRD-2.3.1 §17)
@@ -557,10 +561,8 @@ class RunDirector {
     if (end == null || _zigSide == 0 || (!station && trackX > end)) {
       return null;
     }
-    final (lo, hi) = _layout.limits(i, ctx, opening, useTable: false);
-    final y = (ctx.viewHeight / 2 + _zigSide * _zigAmp)
-        .clamp(lo, hi)
-        .toDouble();
+    final (lo, hi) = _layout.portableLimits(i, ctx, opening, useTable: false);
+    final y = (_coreCentre(ctx) + _zigSide * _zigAmp).clamp(lo, hi).toDouble();
     _layout
       ..lastSign = _zigSide.toDouble()
       ..lastY = y;
@@ -626,7 +628,7 @@ class RunDirector {
     // DEVIATION from §0 item 3 (owner, 2026-10-19): Big Hoops grows it too. Debug-forced slot elements wait for
     // hoop 1.
     if (fixedFirstHoop && i == 0 && _startIndex == 0) {
-      final y = ctx.viewHeight / 2 + RunConfig.hoop0DropY;
+      final y = _coreCentre(ctx) + RunConfig.hoop0DropY;
       _layout.lastY = y;
       _prevKind = HoopKindId.normal;
       _count(ElementId.normalHoop.storageId);
@@ -969,7 +971,7 @@ class RunDirector {
       (portal ? RunConfig.portalOpening : openingFor(i)) * ctx.bigHoopsMult,
       ctx.band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
     );
-    final (lo, hi) = _layout.limits(i, ctx, opening, useTable: false);
+    final (lo, hi) = _layout.portableLimits(i, ctx, opening, useTable: false);
     final y = normal.centreY.clamp(lo, hi).toDouble();
     return normal.copyWith(
       centreY: y,
@@ -1006,6 +1008,9 @@ class RunDirector {
     ElementId? firstMeetElement,
     bool springLanding = false,
   }) {
+    final squeezeEntry = ctx.squeezeWindow && !_inSqueezeWindow;
+    if (squeezeEntry) _hazard = HazardBudget();
+    final ledgerSqueeze = squeezeEntry;
     final hoop = planned.index;
     final dyRef = min(ctx.band, RunConfig.dyRefBand);
     final row = tables.bandFor(hoop).dy;
@@ -1019,7 +1024,7 @@ class RunDirector {
       return plan.copyWith(
         tiltDeg: _layout.alignedTilt(
           plan.tiltDeg,
-          plan.centreY - (hazardPrevious ?? ctx.viewHeight / 2),
+          plan.centreY - (hazardPrevious ?? _coreCentre(ctx)),
           plan.motion == null ? RunConfig.maxTiltDeg : 30,
         ),
       );
@@ -1044,7 +1049,7 @@ class RunDirector {
         nextIndex: hoop + 1,
         previousY: hazardPrevious,
         rowP90: row.$2 * dyRef,
-        squeeze: ctx.squeezeWindow,
+        squeeze: ledgerSqueeze,
       )) {
         finalPlan = planned.copyWith(
           kind: HoopKindId.normal,
@@ -1062,7 +1067,7 @@ class RunDirector {
           finalPlan,
           previousY: hazardPrevious,
           rowP90: row.$2 * dyRef,
-          squeeze: ctx.squeezeWindow,
+          squeeze: ledgerSqueeze,
         );
     final trainAfterMovingJump =
         planned.kind == HoopKindId.train &&
@@ -1082,7 +1087,7 @@ class RunDirector {
         finalPlan,
         previousY: hazardPrevious,
         rowP90: row.$2 * dyRef,
-        squeeze: ctx.squeezeWindow,
+        squeeze: ledgerSqueeze,
         preserveDy: springLanding,
       );
       // `downgrade` stops at a ≤15° tilt when that is still over budget;
@@ -1092,7 +1097,7 @@ class RunDirector {
         finalPlan,
         previousY: hazardPrevious,
         rowP90: row.$2 * dyRef,
-        squeeze: ctx.squeezeWindow,
+        squeeze: ledgerSqueeze,
       )) {
         final delta = hazardPrevious == null
             ? 0.0
@@ -1118,7 +1123,7 @@ class RunDirector {
               finalPlan,
               previousY: hazardPrevious,
               rowP90: row.$2 * dyRef,
-              squeeze: ctx.squeezeWindow,
+              squeeze: ledgerSqueeze,
             )) {
           final normal = finalPlan.copyWith(
             kind: HoopKindId.normal,
@@ -1131,7 +1136,7 @@ class RunDirector {
                 normal,
                 previousY: hazardPrevious,
                 rowP90: row.$2 * dyRef,
-                squeeze: ctx.squeezeWindow,
+                squeeze: ledgerSqueeze,
               )
               ? normal
               : normal.copyWith(centreY: planned.centreY);
@@ -1201,7 +1206,7 @@ class RunDirector {
       final dir = finalPlan.extra == SpringDir.up ? -1 : 1;
       final target = finalPlan.centreY + dir * RunConfig.springJump;
       final nextOpening = openingFor(hoop + 1) * _bigMult(hoop + 1, ctx);
-      final (lo, hi) = _layout.limits(
+      final (lo, hi) = _layout.portableLimits(
         hoop + 1,
         ctx,
         nextOpening,
@@ -1231,7 +1236,7 @@ class RunDirector {
         finalPlan,
         previousY: hazardPrevious,
         rowP90: row.$2 * dyRef,
-        squeeze: ctx.squeezeWindow,
+        squeeze: ledgerSqueeze,
       ),
     );
     // The spring reservation belongs to the kind that really ships. A calm
@@ -1244,8 +1249,9 @@ class RunDirector {
       finalPlan,
       previousY: hazardPrevious,
       rowP90: row.$2 * dyRef,
-      squeeze: ctx.squeezeWindow,
+      squeeze: ledgerSqueeze,
     );
+    _inSqueezeWindow = ctx.squeezeWindow;
 
     _markFinal(finalPlan);
     if (planned.kind == HoopKindId.portal || planned.cometHang) {
@@ -1289,7 +1295,7 @@ class RunDirector {
         finalPlan,
         previousY: hazardPrevious,
         rowP90: row.$2 * dyRef,
-        squeeze: ctx.squeezeWindow,
+        squeeze: ledgerSqueeze,
       ),
     );
     if (showcase == null) return normal;
@@ -1539,7 +1545,9 @@ class RunDirector {
     // push the entrance beyond the live Δy limit. Preserve the seeded
     // direction whenever its entrance is already reachable.
     if (templates.first.formation == FormationId.stairs) {
-      final previous = _lastFinalY ?? (ctx.topTooth + ctx.floorTooth) / 2;
+      final coreCentre = _coreCentre(ctx);
+      final coreBand = min(ctx.band, LayoutConfig.courseRefBand);
+      final previous = _lastFinalY ?? coreCentre;
       final reach =
           openingFor(templates.first.index) *
               _bigMult(templates.first.index, ctx) /
@@ -1547,8 +1555,8 @@ class RunDirector {
           RunConfig.rimRadius +
           RunConfig.bandMargin;
       final offsets = templates.map((p) => p.centreY);
-      final low = ctx.topTooth + reach - offsets.reduce(min);
-      final high = ctx.floorTooth - reach - offsets.reduce(max);
+      final low = coreCentre - coreBand / 2 + reach - offsets.reduce(min);
+      final high = coreCentre + coreBand / 2 - reach - offsets.reduce(max);
       final maxStep =
           tables.bandFor(templates.first.index).dy.$3 *
           min(ctx.band, RunConfig.dyRefBand) *
@@ -1595,6 +1603,10 @@ class RunDirector {
           templates[k].copyWith(centreY: offsets[k]),
       ];
     }
+    final coreCentre = _coreCentre(ctx);
+    final coreBand = min(ctx.band, LayoutConfig.courseRefBand);
+    final coreTop = coreCentre - coreBand / 2;
+    final coreFloor = coreCentre + coreBand / 2;
     var lo = double.negativeInfinity;
     var hi = double.infinity;
     final openings = <double>[];
@@ -1609,23 +1621,21 @@ class RunDirector {
       final reach =
           opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin + travel;
       final offset = tiltWave ? 0.0 : plan.centreY;
-      lo = max(lo, ctx.topTooth + reach - offset);
-      hi = min(hi, ctx.floorTooth - reach - offset);
+      lo = max(lo, coreTop + reach - offset);
+      hi = min(hi, coreFloor - reach - offset);
       for (final attached in plan.attached) {
         final y = attached.y;
         if (y == null) continue;
         final offset = y - plan.centreY;
-        lo = max(lo, ctx.topTooth + RunConfig.itemEdgeMargin - offset);
-        hi = min(hi, ctx.floorTooth - RunConfig.itemEdgeMargin - offset);
+        lo = max(lo, coreTop + RunConfig.itemEdgeMargin - offset);
+        hi = min(hi, coreFloor - RunConfig.itemEdgeMargin - offset);
       }
     }
     // Very short screens are still expected to fit every D7 shape; if a
     // degenerate band cannot, use its middle and let the hazard downgrade
     // (and the spawner's normal band clamps) protect the slot.
-    final preferred = _lastFinalY ?? (ctx.topTooth + ctx.floorTooth) / 2;
-    final base = lo <= hi
-        ? preferred.clamp(lo, hi).toDouble()
-        : (ctx.topTooth + ctx.floorTooth) / 2;
+    final preferred = _lastFinalY ?? coreCentre;
+    final base = lo <= hi ? preferred.clamp(lo, hi).toDouble() : coreCentre;
     return [
       for (var k = 0; k < templates.length; k++)
         _adaptFormationSlot(
@@ -1751,7 +1761,12 @@ class RunDirector {
         tables.bandFor(hoop).dy.$1 * min(ctx.band, RunConfig.dyRefBand);
     final previous = previousY ?? (ctx.topTooth + ctx.floorTooth) / 2;
     final delta = planned.centreY - previous;
-    final (lo, hi) = _layout.limits(hoop, ctx, opening, useTable: false);
+    final (lo, hi) = _layout.portableLimits(
+      hoop,
+      ctx,
+      opening,
+      useTable: false,
+    );
     final target = previous + delta.sign * min(delta.abs(), median);
     final calmLo = max(lo, previous - median);
     final calmHi = min(hi, previous + median);
@@ -1796,7 +1811,11 @@ class RunDirector {
     if (kind == HoopKindId.portal) opening = RunConfig.portalOpening;
     final pairO =
         RunConfig.pairOffsetAt711 * ctx.viewHeight / RunConfig.designHeight;
-    if (kind == HoopKindId.pair) extraMargin = pairO / 2;
+    final placementPairO =
+        RunConfig.pairOffsetAt711 *
+        min(ctx.viewHeight, RunConfig.designHeight) /
+        RunConfig.designHeight;
+    if (kind == HoopKindId.pair) extraMargin = placementPairO / 2;
     // PRD-2.3 §0 item 3 / §10.2: hoop 0 stays 118, also with Big Hoops.
     opening = cap(opening * _bigMult(i, ctx), extraMargin);
     final hardFollowUp = _layout.takeHardFollowUp();
@@ -1824,7 +1843,7 @@ class RunDirector {
       // smaller than this spring's (the portal / 45° / pair extras differ),
       // so check both openings and use the tighter bounds.
       (double, double) landingLimits(double landingOpening) =>
-          _layout.limits(i + 1, ctx, landingOpening, useTable: false);
+          _layout.portableLimits(i + 1, ctx, landingOpening, useTable: false);
       final nextOpening = min(
         openingFor(i + 1) * _bigMult(i + 1, ctx),
         ctx.band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
@@ -1841,7 +1860,7 @@ class RunDirector {
       if (!fits(dir) && forced) {
         // First-meet / debug: move the spring to the edge of its own range
         // that leaves room for the jump (still within the row's max jump).
-        final (lo0, hi0) = _layout.limits(i, ctx, opening);
+        final (lo0, hi0) = _layout.portableLimits(i, ctx, opening);
         final options = <(double, int)>[
           if (lo0 + RunConfig.springJump <= hi) (lo0, 1),
           if (hi0 - RunConfig.springJump >= lo) (hi0, -1),
@@ -1865,8 +1884,11 @@ class RunDirector {
       }
     } else if (kind == HoopKindId.pair) {
       final minY =
-          ctx.hudBottom + pairO / 2 + opening / 2 + RunConfig.rimRadius;
-      final (lo, hi) = _layout.limits(
+          ctx.hudBottom +
+          placementPairO / 2 +
+          opening / 2 +
+          RunConfig.rimRadius;
+      final (lo, hi) = _layout.portableLimits(
         i,
         ctx,
         opening,
@@ -1876,7 +1898,10 @@ class RunDirector {
       if (y < minY) y = min(minY, hi);
       final reach = prevY == null
           ? 0
-          : min((y - pairO / 2 - prevY).abs(), (y + pairO / 2 - prevY).abs());
+          : min(
+              (y - placementPairO / 2 - prevY).abs(),
+              (y + placementPairO / 2 - prevY).abs(),
+            );
       if (y < minY || y < lo || y > hi || reach > maxJump) {
         kind = HoopKindId.normal; // §3.21 does not fit → normal hoop
         forced = false;
@@ -1890,7 +1915,7 @@ class RunDirector {
 
     switch (kind) {
       case HoopKindId.train:
-        final (lo, hi) = _layout.limits(i, ctx, opening);
+        final (lo, hi) = _layout.portableLimits(i, ctx, opening);
         var d = r.nextDouble() < 0.5 ? -1 : 1;
         final end = y + d * 2 * RunConfig.trainDy;
         if (end < lo || end > hi) d = -d;
@@ -1916,7 +1941,12 @@ class RunDirector {
         _forcedSwitch = null;
         _lastSwitch = d;
         extra = d;
-        final (lo0, hi0) = _layout.limits(i, ctx, opening, useTable: false);
+        final (lo0, hi0) = _layout.portableLimits(
+          i,
+          ctx,
+          opening,
+          useTable: false,
+        );
         final fit = _switchItem(
           trackX,
           y,
@@ -2446,7 +2476,10 @@ class RunDirector {
       band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
     );
     final m = opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin;
-    final lo = ctx.topTooth + m, hi = ctx.floorTooth - m;
+    final coreCentre = _coreCentre(ctx);
+    final coreBand = min(ctx.band, LayoutConfig.courseRefBand);
+    final lo = coreCentre - coreBand / 2 + m,
+        hi = coreCentre + coreBand / 2 - m;
     final y = lo <= hi ? p.centreY.clamp(lo, hi).toDouble() : p.centreY;
     void uncount(String k) => _spawned[k] = max(0, (_spawned[k] ?? 1) - 1);
     uncount(p.element.storageId);

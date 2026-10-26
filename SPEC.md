@@ -1912,7 +1912,10 @@ Remote Config only serves `versus_pg_salt`. Key list: `docs/p23/TUNING.md`.
 - **DEVIATION (WP-D, D1/D2):** the shared opening curve reaches 70 pt at
   hoop 150, perfect band 10 pt; speed and 310 pt plane spacing remain pinned.
   Δy uses min(band, 540 pt), at most 270 pt, with a 0.85 maximum after a hard
-  hoop. Centre-row fractions still use the full band. Tilts start at 10,
+  hoop. Screens above the 711 reference reuse its portable 623 pt
+  centre-course band below the top tooth line, so centre rows and edge
+  recovery produce the same point-space Δy at 711 and 730 (the rendered pair
+  offset still scales with view height). Tilts start at 10,
   switch 15, rails 25, saw 30, strong aligned tilts 50, 45° at 60, slides 70,
   orbit/rock 90, saw-in-squeeze 100, moving + 30° at 150. Strong tilts follow
   the approach and require |Δy| ≥40; otherwise they clamp to 15°. A 45° ring
@@ -1925,6 +1928,9 @@ Remote Config only serves `versus_pg_salt`. Key list: `docs/p23/TUNING.md`.
   in the ledger but are exempt. Reward/ride slots cost zero. Calm slots also
   pass through hazard accounting. Spring reservations use the final kind,
   so a spring converted to calm cannot restore its discarded special.
+  A squeeze episode carries its +1 surcharge once and starts a fresh ledger;
+  continuing squeeze slots do not repeat that surcharge. This resolves the
+  PRD's otherwise-impossible 5–10-hold windows against budgets below 5.5.
 - **DEVIATION (D4/D5):** periodic calm lasts three slots, first at 30–34,
   growing intervals ×1.2 capped at 55. Revive gives three slots; squeeze/ride
   recovery two. Starts are at least 12 apart except mandatory revive calm.
@@ -1941,12 +1947,13 @@ Remote Config only serves `versus_pg_salt`. Key list: `docs/p23/TUNING.md`.
   Saw/switch/moving mix chapters rotate every 50 hoops at equal budget.
   Stairs face into the available band and short-screen slalom steps cap at
   the live Δy ceiling; sampler recovery re-enters centre rows gradually.
+  Formation placement uses the same portable course band, so tall-screen
+  edge clamps do not change Δy.
   No new point source or timeline flag is added: `fl` remains 2 and the
   leaderboard maximum remains 32,500,000.
 
-WP-D validation remains open: `curve_ceiling_test.dart` exposes over-budget
-squeeze windows (four unavoidable +1 costs exceed the budget before hoop 50),
-`same_rules_test.dart` exposes height-dependent edge clamps, and the ordinary
-human-noise median gate is below 40. These are unresolved requirements, not
-additional approved deviations or exceptions to R2. The owner Pixel 8 ceiling
-playtest remains required after the automated gates pass.
+WP-D automated validation is green: the 200-seed curve sweep (568 / 711 /
+730, with and without squeeze), the R2 setup/height matrix, the 150 / 250
+autopilot starts and the ordinary gamesPlayed-10 human-noise median use the
+shared 90 ms / 10%-extra flap schedule. The owner Pixel 8 ceiling playtest
+remains required.

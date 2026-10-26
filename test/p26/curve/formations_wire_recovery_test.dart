@@ -93,23 +93,40 @@ void main() {
             final reason =
                 'height $height start $start seed $seed '
                 'hoop ${plan.index}';
-            if (previous?.kind == HoopKindId.spring && !plan.calm) {
+            if (previous?.kind == HoopKindId.spring) {
               springLandings++;
               final direction = previous!.extra == SpringDir.up ? -1 : 1;
               expect(plan.formation, isNull, reason: reason);
-              // The exact landing before a due formation is checked above;
-              // here audit formation ownership throughout ordinary courses.
+              expect(plan.calm, isFalse, reason: reason);
+              expect(plan.kind, HoopKindId.normal, reason: reason);
+              expect(plan.motion, isNull, reason: reason);
+              expect(plan.tiltDeg, 0, reason: reason);
+              // PRD-2 §3.23 / PRD-2.6 D7: formations cannot steal or
+              // shorten the committed spring target.
               expect(
-                (plan.centreY - previous.centreY).sign,
-                direction.toDouble(),
+                plan.centreY - previous.centreY,
+                closeTo(direction * RunConfig.springJump, 1e-8),
                 reason: reason,
               );
             }
             if (plan.formation != null) {
               final dy = plan.centreY - (previous?.centreY ?? height / 2);
               if (plan.formation == FormationId.tiltWave &&
+                  previous?.formation == FormationId.tiltWave) {
+                // PRD-2.6 D7: live placement must preserve the template's
+                // valley, rather than flattening its four leading planes.
+                final expectedTilt = previous!.tiltDeg + 15;
+                expect(plan.tiltDeg, expectedTilt, reason: reason);
+                expect(
+                  dy,
+                  closeTo(expectedTilt <= 0 ? -40 : 40, 1e-8),
+                  reason: reason,
+                );
+              }
+              if (plan.formation == FormationId.tiltWave &&
                   previous?.formation != FormationId.tiltWave) {
                 waveEntries++;
+                expect(plan.tiltDeg, -30, reason: reason);
                 if (plan.tiltDeg.abs() >= 20) strongWaveEntries++;
               }
               if (plan.tiltDeg.abs() >= 20) {

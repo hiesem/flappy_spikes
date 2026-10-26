@@ -371,7 +371,8 @@ class Autopilot {
     final m = h.plan.motion;
     if (m == null) return 0;
     return switch (m.type) {
-      MotionType.swing => m.rope * math.sin(m.amplitudeDeg * math.pi / 180).abs(),
+      MotionType.swing =>
+        m.rope * math.sin(m.amplitudeDeg * math.pi / 180).abs(),
       MotionType.rail || MotionType.horizontal || MotionType.diagonal =>
         m.halfTravel * math.sin(m.axisDeg * math.pi / 180).abs(),
       MotionType.orbit => m.rx,
@@ -443,9 +444,22 @@ class Autopilot {
     return best;
   }
 
-  /// Rolls the physics forward under [c] until [h] resolves. Returns null
-  /// on a miss / spike contact / timeout.
+  /// Rolls the physics forward under [c] through [h] (and its remaining train
+  /// rings). Returns null on a miss / spike contact / timeout.
   _Outcome? _rollout(Hoop h, double ringOff, _SimState s0, _Controller c) {
+    final first = h;
+    final train = h.kind.id == HoopKindId.train
+        ? run.spawner.hoops
+              .where(
+                (other) =>
+                    other.kind.id == HoopKindId.train &&
+                    other.plan.index == h.plan.index &&
+                    other.planeX > h.planeX,
+              )
+              .toList()
+        : <Hoop>[];
+    train.sort((a, b) => a.planeX.compareTo(b.planeX));
+    var trainAt = 0;
     final s = s0.copy();
     final r = RunConfig.birdRadius * run.state.birdScale;
     final top = run.walls.top, floor = run.walls.floor;
@@ -502,6 +516,19 @@ class Autopilot {
         final now = BirdCircle(Vector2(s.x, s.y), r);
         if (s.y - r <= top || s.y + r >= floor) return null;
         if (testPlane(f, BirdCircle(prev, r), now, prevFrame: before) != null) {
+          // A train is one approach through three planes only 56 pt apart.
+          // Do not accept a head crossing that leaves the next ring
+          // unreachable before the bot can plan again.
+          if (trainAt < train.length) {
+            h = train[trainAt++];
+            c = _Controller(
+              offset: c.offset,
+              window: c.window,
+              flapOnce: c.flapOnce,
+            );
+            pf = _frameAt(h, s.clock);
+            continue;
+          }
           // A graze inside [safety] is as good as a touch: the real flight
           // differs from the rollout by a point or two.
           final risky = touched || clear < safety;
@@ -515,7 +542,10 @@ class Autopilot {
       }
       return null;
     } finally {
-      _restorePose(h);
+      _restorePose(first);
+      for (final hoop in train) {
+        _restorePose(hoop);
+      }
     }
   }
 

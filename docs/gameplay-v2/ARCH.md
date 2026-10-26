@@ -207,7 +207,7 @@ the HUD" ease). Details and owners in §3 and §21.
 | File | API |
 |---|---|
 | `force_menu.dart` | page of `DebugPanel`: every `ElementId` → `RunController.debugForce(e)` (next slot/gap, ignores unlock + cooldown, keeps exclusivity); "start at hoop N"; "reset met elements"; "force portal ride: cannon / space / volcano / sea / pinball / storm"; "bot on/off"; "god mode". From home: queued into the next `RunSetup.forced`; in a run: from the pause screen (debug builds only). |
-| `autopilot.dart` | `class Autopilot { Autopilot(RunController r, {double margin = 10}); bool shouldFlap(); }` — hoop-aware bang-bang bot: targets the next unresolved hoop through `HoopKind.autopilotTarget` (switch first, nearer pair ring, spring launch line, saw centre), pickups only when on the way. Used by the debug bot, `test/helpers.dart` and `integration_test/`. |
+| `autopilot.dart` | `class Autopilot { Autopilot(RunController r, {double margin = 10}); bool shouldFlap(); }` — hoop-aware bang-bang bot: targets the next unresolved hoop through `HoopKind.autopilotTarget` (switch first, nearer pair ring, spring launch line, saw centre), pickups only when on the way. Physics rollouts check all remaining Ring Train planes together before accepting an approach. Used by the debug bot, `test/helpers.dart` and `integration_test/`. |
 | `debug_overlay.dart` | rim circles, pass planes, hoop index / kind / angle (prototype debug view) |
 
 ### 1.13 Outside `lib/run/`

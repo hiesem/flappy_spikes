@@ -104,6 +104,24 @@ class HazardBudget {
     }
   }
 
+  /// Checks a complete reserved shape without changing the live ledger.
+  bool allowsSequence(
+    List<SlotPlan> plans, {
+    required double previousY,
+    required double rowP90,
+  }) {
+    final preview = HazardBudget(_values).._ledger.addAll(_ledger);
+    var previous = previousY;
+    for (final plan in plans) {
+      if (!preview.allows(plan, previousY: previous, rowP90: rowP90)) {
+        return false;
+      }
+      preview.add(plan, previousY: previous, rowP90: rowP90);
+      previous = plan.centreY;
+    }
+    return true;
+  }
+
   SlotPlan downgrade(
     SlotPlan plan, {
     double? previousY,

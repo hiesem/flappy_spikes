@@ -691,6 +691,30 @@ class RunDirector {
     }
 
     final prevY = ctx.prevCentreY ?? _lastFinalY ?? _layout.lastY;
+    if (springLanding) {
+      // §3.23 commits this plane when the spring ships. A later special's
+      // opening or placement constraints must not move its 240 pt target;
+      // debug/first-meet requests and formations wait for the following slot.
+      final opening = cap(openingFor(i) * _bigMult(i, ctx));
+      final y = _layout.nextCentre(i, ctx, opening);
+      _formationReservation = null;
+      _prevKind = HoopKindId.normal;
+      _count(ElementId.normalHoop.storageId);
+      return _recordSlot(
+        SlotPlan(
+          index: i,
+          kind: HoopKindId.normal,
+          element: ElementId.normalHoop,
+          trackX: trackX,
+          centreY: y,
+          opening: opening,
+          advance: spacing,
+        ),
+        ctx,
+        previousY: prevY,
+        springLanding: true,
+      );
+    }
     // PRD-2.6 D4 a calm slot has Δy ≤ the row median, while §3.23 fixes the
     // spring landing at 240 pt. The calm stretch waits for the slot after
     // the landing instead of erasing the spring's geometry.
@@ -1439,6 +1463,28 @@ class RunDirector {
     final id = _formations.nextAt(
       i,
       allowed: (id) {
+        if (id == FormationId.tiltWave) {
+          final wave = _placeFormation(
+            _formations.build(id, i),
+            trackX,
+            ctx,
+            cap: cap,
+          );
+          final previous = _lastFinalY ?? _coreCentre(ctx);
+          // D2/D7: the negative 30° entrance needs a rising approach.
+          if (wave.first.centreY >
+              previous - TuningValues.current.d('tilt_align_min_dy') + 1e-9) {
+            return false;
+          }
+          if (!_hazard.allowsSequence(
+            wave,
+            previousY: previous,
+            rowP90:
+                tables.bandFor(i).dy.$2 * min(ctx.band, RunConfig.dyRefBand),
+          )) {
+            return false;
+          }
+        }
         // A chain owns its interior, but the first special in a formation
         // must respect the preceding course's cooldowns. Choose a different
         // shape when a recent saw/switch would conflict with its entrance.
@@ -1548,9 +1594,8 @@ class RunDirector {
   }
 
   /// Places the normalized [templates] of one formation at [trackX] and in
-  /// the live band. Relative offsets stay intact except a tilt wave's valley
-  /// can flatten at the band edge; final alignment then reduces strong tilts
-  /// whose approaches are too short.
+  /// the live band. Translate the whole shape so its relative offsets survive
+  /// placement, including the tilt wave's rising and falling approaches.
   List<SlotPlan> _placeFormation(
     List<SlotPlan> templates,
     double trackX,
@@ -1607,18 +1652,7 @@ class RunDirector {
         ];
       }
     }
-    // The pure tilt template supplies angles; give the live wave a shallow
-    // valley so both 30° ends have at least a 40 pt approach (D2 / D7) where the
-    // band permits it. Keep its exit at the shared origin for a smooth handoff.
     final tiltWave = templates.first.formation == FormationId.tiltWave;
-    if (tiltWave) {
-      final step = 1.5 * TuningValues.current.d('tilt_align_min_dy');
-      final offsets = [-step, -step, -step, -step, 0.0];
-      templates = [
-        for (var k = 0; k < templates.length; k++)
-          templates[k].copyWith(centreY: offsets[k]),
-      ];
-    }
     final coreCentre = _coreCentre(ctx);
     final coreBand = min(ctx.band, LayoutConfig.courseRefBand);
     final coreTop = coreCentre - coreBand / 2;
@@ -1636,7 +1670,7 @@ class RunDirector {
       final travel = plan.motion?.halfTravel ?? 0;
       final reach =
           opening / 2 + RunConfig.rimRadius + RunConfig.bandMargin + travel;
-      final offset = tiltWave ? 0.0 : plan.centreY;
+      final offset = plan.centreY;
       lo = max(lo, coreTop + reach - offset);
       hi = min(hi, coreFloor - reach - offset);
       for (final attached in plan.attached) {
@@ -1650,7 +1684,9 @@ class RunDirector {
     // Very short screens are still expected to fit every D7 shape; if a
     // degenerate band cannot, use its middle and let the hazard downgrade
     // (and the spawner's normal band clamps) protect the slot.
-    final preferred = _lastFinalY ?? coreCentre;
+    final preferred =
+        (_lastFinalY ?? coreCentre) -
+        (tiltWave ? TuningValues.current.d('tilt_align_min_dy') : 0);
     final base = lo <= hi ? preferred.clamp(lo, hi).toDouble() : coreCentre;
     return [
       for (var k = 0; k < templates.length; k++)
@@ -1658,9 +1694,7 @@ class RunDirector {
           templates[k],
           index: templates[k].index,
           trackX: trackX + k * spacing,
-          centreY: tiltWave
-              ? (base + templates[k].centreY).clamp(lo, hi).toDouble()
-              : base + templates[k].centreY,
+          centreY: base + templates[k].centreY,
           opening: openings[k],
         ),
     ];

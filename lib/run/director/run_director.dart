@@ -1436,7 +1436,23 @@ class RunDirector {
 
     if (!roomAt(i)) return null;
     if (i < _formationAt && roomAt(i + 1)) return null;
-    final id = _formations.nextAt(i);
+    final id = _formations.nextAt(
+      i,
+      allowed: (id) {
+        // A chain owns its interior, but the first special in a formation
+        // must respect the preceding course's cooldowns. Choose a different
+        // shape when a recent saw/switch would conflict with its entrance.
+        final (kind, offset) = switch (id) {
+          FormationId.sawGate => (HoopKindId.saw, 1),
+          FormationId.switchChain => (HoopKindId.switchRing, 0),
+          _ => (HoopKindId.normal, 0),
+        };
+        if (kind == HoopKindId.normal) return true;
+        final index = i + offset;
+        return index - _lastSpecial > _cdLeft &&
+            index - (_lastOf[kind] ?? -99) >= tables.specials[kind]!.minSince;
+      },
+    );
     if (id == null) return null;
     _lastFormationAt = i;
     _formationAt = i + RunRandom.rangeInt(rng.layout, interval[0], interval[1]);

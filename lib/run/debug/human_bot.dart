@@ -47,6 +47,7 @@ class HumanNoiseFlapScheduler {
   bool get hasPendingBase => _scheduled.any((flap) => !flap.extra);
   int get pendingBases => _scheduled.where((flap) => !flap.extra).length;
   int get pendingFlaps => _scheduled.length;
+  bool get nextDueIsExtra => _scheduled.isNotEmpty && _scheduled.first.extra;
   double? get pendingBasePlannedTime {
     for (final flap in _scheduled) {
       if (!flap.extra) return flap.plannedTime;
@@ -68,7 +69,13 @@ class HumanNoiseFlapScheduler {
     final at = now == null ? jitteredTime : math.max(jitteredTime, now);
     final id = _nextBaseId++;
     _scheduled.add(
-      _ScheduledFlap(at, extra: false, plannedTime: plannedTime, baseId: id),
+      _ScheduledFlap(
+        at,
+        extra: false,
+        plannedTime: plannedTime,
+        jitter: jitter,
+        baseId: id,
+      ),
     );
     if (extra) {
       _scheduled.add(
@@ -103,6 +110,23 @@ class HumanNoiseFlapScheduler {
   void discardPendingBase() {
     final ids = _scheduled.where((f) => !f.extra).map((f) => f.baseId).toSet();
     _scheduled.removeWhere((f) => ids.contains(f.baseId));
+  }
+
+  void rebasePendingBase(double plannedTime, {double? now}) {
+    for (final flap in _scheduled.where((flap) => !flap.extra)) {
+      flap
+        ..plannedTime = plannedTime
+        ..time = math.max(plannedTime + flap.jitter, now ?? flap.time);
+    }
+    for (final flap in _scheduled.where((flap) => flap.extra)) {
+      final baseIndex = _scheduled.indexWhere(
+        (candidate) => !candidate.extra && candidate.baseId == flap.baseId,
+      );
+      if (baseIndex >= 0) {
+        flap.time = _scheduled[baseIndex].time + HumanNoiseBot.extraFlapGap;
+      }
+    }
+    _scheduled.sort((a, b) => a.time.compareTo(b.time));
   }
 
   double _gaussian() {
@@ -142,6 +166,7 @@ class HumanNoiseBot {
   final HumanNoiseFlapScheduler scheduler;
 
   bool _autopilotWanted = false;
+  bool _rebasePendingBase = false;
   final List<double> debugRequestTimes = [];
   final List<double> debugRequestForecast = [];
 
@@ -162,15 +187,17 @@ class HumanNoiseBot {
       debugRequestTimes.add(now);
       debugRequestForecast.add((scheduler.pendingBasePlannedTime ?? now) - now);
     }
+    final dueIsExtra = scheduler.nextDueIsExtra;
     if (scheduler.flapDue(now)) {
-      // Every execution (including an extra) ends the old plan. The next
-      // frame observes the actual post-tap position/velocity, not the ideal
-      // trajectory that was used to decide this flap.
-      scheduler.discardPendingBase();
       autopilot.replanAfterFlap();
       _autopilotWanted = false;
+      _rebasePendingBase = dueIsExtra;
       return true;
     }
+    if (_rebasePendingBase && scheduler.hasPendingBase && delay != null) {
+      scheduler.rebasePendingBase(now + delay, now: now);
+    }
+    _rebasePendingBase = false;
     if (!scheduler.hasPendingBase && delay != null) {
       scheduler.planBase(now + delay, now: now);
       if (scheduler.flapDue(now)) {
@@ -279,11 +306,13 @@ final class _ScheduledFlap {
     this.time, {
     required this.extra,
     this.plannedTime,
+    this.jitter = 0,
     this.baseId,
   });
 
   double time;
   final bool extra;
   double? plannedTime;
+  final double jitter;
   final int? baseId;
 }

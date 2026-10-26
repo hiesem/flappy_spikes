@@ -1935,12 +1935,14 @@ Remote Config only serves `versus_pg_salt`. Key list: `docs/p23/TUNING.md`.
   `window cost − squeeze surcharge ≤ hazard_budget`. Other costs are
   downgraded in D3 order; below budget 4 a squeezed slot must carry no cost
   beyond its surcharge. Reward/ride slots retain D3's zero cost.
-  **Remaining validation conflicts (#127):** a spring immediately before
-  squeeze entry has a committed ±240 pt landing (§3.23), whose Δy cost can
-  violate the zero-other-cost rule before hoop 50. A short-screen squeeze
-  entering during calm can also move the physical band edge farther than
-  the calm median permits. The strict oracle retains both assertions;
-  no exception to either rule has been introduced.
+  A non-forced spring whose fixed landing would enter a due calm stretch, or
+  whose landing could carry geometry before budget 4, is downgraded before it
+  commits. Below the 711 pt design height, the slot before a due calm is
+  pre-positioned against that short screen's deepest squeeze band; a strong
+  ring keeps its signed 40–270 pt approach when that intersects the safe
+  reach, and otherwise loses its modifier. The 711 / 730 portable course is
+  unchanged so R2's drawn Δy stays identical. This preserves O18 timing,
+  D4's median step and D3's zero-other-cost rule.
 - **DEVIATION (D4/D5):** periodic calm lasts three slots, first at 30–34,
   growing intervals ×1.2 capped at 55. Revive gives three slots; squeeze/ride
   recovery two. Starts are at least 12 apart except mandatory revive calm.
@@ -1974,13 +1976,10 @@ WP-D validation includes the 200-seed curve sweep (568 / 711 / 730,
 with and without squeeze), the R2 setup/height matrix, the 150 / 250
 autopilot starts and the ordinary gamesPlayed-10 human-noise median using
 the shared `HumanNoiseBot` (90 ms / 10% extra flaps). Issue #127 makes the
-bot closed-loop: forecasts use the selected autopilot controller, and every
-noisy or extra tap invalidates the old controller/forecast so the next frame
-plans from the actual bird state. Noise is neither capped nor reduced.
-The human-noise medians remain below 40 (4 at 568 pt, 5 at 711 pt over
-seeds 0–20); the orchestrator's stop rule leaves the thresholds and course
-unchanged. The strict squeeze conflicts above also remain unresolved.
-These gates must be resolved before wave 1 is accepted.
-The legacy cooldown audit also needs to account
-for D7's consecutive switch-chain rings. The owner Pixel 8 ceiling playtest
-remains required.
+bot closed-loop: every forecast starts from the bird's actual state, an
+emitted extra keeps its already-committed base reaction but that base is
+re-forecast once from the changed trajectory, and every emitted tap clears
+the selected controller plan. Noise is neither capped nor reduced.
+The curve, same-rules and D7 ceiling gates pass at their original thresholds.
+The legacy cooldown audit accounts for D7's consecutive switch-chain rings.
+The owner Pixel 8 ceiling playtest remains required.

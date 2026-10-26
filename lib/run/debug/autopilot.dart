@@ -168,6 +168,67 @@ class Autopilot {
     return bird.y > targetY() + margin && vy > risingVy;
   }
 
+  /// A noisy/extra tap invalidates controllers whose one-shot decisions assumed
+  /// an ideal flap. Replan from the actual bird state on the following frame.
+  void replanAfterFlap() {
+    _plan = null;
+    _switchPlan = null;
+    _sinceCheck = 0;
+  }
+
+  /// Forecast the next decision of the current controller, without executing
+  /// it. Unlike a centre-only hover forecast this includes glide/one-shot
+  /// approaches and switches. The human bot rebuilds this after every tap.
+  double? nextFlapDelay() {
+    if (shouldFlap()) return 0;
+    final pos = run.birdTrackPosition();
+    final vy = run.game.runBirdVelocityY;
+    if (!run.isScrolling ||
+        run.state.flapLock > 0 ||
+        run.state.ride != null ||
+        pos == null ||
+        vy == null) {
+      return null;
+    }
+    final state = run.state;
+    final s = _SimState(
+      x: pos.x,
+      y: pos.y,
+      vy: vy,
+      forward: state.forwardSpeed,
+      clock: state.runClock,
+      invulnerable: state.invulnerable,
+    );
+    final h = run.spawner.nextHoopAhead();
+    final chase = _chaseY() != null && _farFromPlane();
+    final switchTarget = h?.kind.autopilotTarget(h, state, pos.y).preTarget;
+    final controller =
+        (switchTarget != null ? _switchPlan?.controller : _plan?.controller)
+            ?.copy();
+    final ringOff = h == null
+        ? 0.0
+        : h.kind.autopilotTarget(h, state, pos.y).y - h.position.y;
+    final target = targetY() + margin;
+    for (var t = simDt; t <= 1.5; t += simDt) {
+      s.forward = BirdMotion.recover(
+        s.forward,
+        BirdMotion.cruise(state.hoopIndex) * state.cruiseMult,
+        simDt,
+      );
+      s.x += s.forward * simDt;
+      s.vy = math.min(Config.maxFallSpeed, s.vy + Config.gravity * simDt);
+      s.y += s.vy * simDt;
+      s.clock += simDt;
+      final wants = !chase && controller != null && h != null
+          ? (switchTarget != null
+                ? controller.decideAt(s, switchTarget, this)
+                : controller.decide(s, _timeToPlane(h, s), ringOff, this, h))
+          : s.y > target && s.vy > risingVy;
+      if (wants) return t;
+    }
+    return null;
+  }
+
   // region S6-44 — the switch approach (PRD-2 §3.20, §3.31)
   /// Margin (pt) kept inside the switch's catch reach (18 + bird r).
   static const double switchSafety = 3;

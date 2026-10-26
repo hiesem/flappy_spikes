@@ -3,6 +3,7 @@ import 'dart:math';
 import '../config/director_tables.dart';
 import '../config/layout_config.dart';
 import '../config/run_config.dart';
+import '../config/squeeze_config.dart';
 import '../config/tuning_values.dart';
 import '../elements.dart';
 import '../showcase/showcase_plan.dart';
@@ -204,8 +205,7 @@ class RunDirector {
   RideKind? _ride;
   final Map<String, int> _spawned = {};
   late final CalmSchedule _calm;
-  HazardBudget _hazard = HazardBudget();
-  bool _inSqueezeWindow = false;
+  final HazardBudget _hazard = HazardBudget();
 
   /// PRD-2 §3.23 the next slot is the fixed landing of a spring shipped at
   /// this index − 1. Its 240 pt separation is part of the spring's geometry,
@@ -934,7 +934,7 @@ class RunDirector {
         kind = HoopKindId.normal;
       }
     }
-    final planned = _buildSlot(
+    var planned = _buildSlot(
       i,
       trackX,
       ctx,
@@ -945,6 +945,12 @@ class RunDirector {
       prevY: prevY,
       cap: cap,
     );
+    if (ctx.viewHeight < RunConfig.designHeight &&
+        !ctx.squeezeWindow &&
+        !planned.forced &&
+        _calm.dueAt(i + 1)) {
+      planned = _prepareForNextCalm(planned, ctx, previousY: prevY);
+    }
     return _recordSlot(
       planned,
       ctx,
@@ -953,6 +959,62 @@ class RunDirector {
       firstMeetElement: due,
       springLanding: springLanding,
     );
+  }
+
+  SlotPlan _prepareForNextCalm(
+    SlotPlan planned,
+    DirectorContext ctx, {
+    required double? previousY,
+  }) {
+    final hoop = planned.index + 1;
+    final opening = min(
+      openingFor(hoop) * _bigMult(hoop, ctx),
+      ctx.band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
+    );
+    final inset = SqueezeConfig.insetFor(3, ctx.viewHeight);
+    final squeezeCtx = DirectorContext.open(
+      ctx.viewHeight,
+      squeezeWindow: true,
+      squeezeInset: inset,
+      bigHoopsMult: ctx.bigHoopsMult,
+    );
+    final (lo, hi) = _layout.portableLimits(
+      hoop,
+      squeezeCtx,
+      opening,
+      useTable: false,
+    );
+    final median =
+        tables.bandFor(hoop).dy.$1 * min(ctx.band, RunConfig.dyRefBand);
+    final safeLo = lo - median;
+    final safeHi = hi + median;
+    var centre = planned.centreY.clamp(safeLo, safeHi).toDouble();
+    if (previousY != null && planned.tiltDeg.abs() >= 20) {
+      final approach = centre - previousY;
+      final needsStrongerStep =
+          approach.abs() < 40 || approach.sign != planned.tiltDeg.sign;
+      if (needsStrongerStep) {
+        final sign = planned.tiltDeg.sign;
+        final near = previousY + sign * 40;
+        final far = previousY + sign * _layout.maxDy(planned.index, ctx);
+        final strongLo = min(near, far);
+        final strongHi = max(near, far);
+        final candidateLo = max(safeLo, strongLo);
+        final candidateHi = min(safeHi, strongHi);
+        if (candidateLo <= candidateHi) {
+          centre = centre.clamp(candidateLo, candidateHi).toDouble();
+        } else {
+          _layout.noteModifiers();
+          return planned.copyWith(
+            centreY: centre,
+            tiltDeg: 0,
+            motion: () => null,
+          );
+        }
+      }
+    }
+    _layout.lastY = centre;
+    return planned.copyWith(centreY: centre);
   }
 
   bool _scriptedGap(int gap) {
@@ -1032,9 +1094,7 @@ class RunDirector {
     ElementId? firstMeetElement,
     bool springLanding = false,
   }) {
-    final squeezeEntry = ctx.squeezeWindow && !_inSqueezeWindow;
-    if (squeezeEntry) _hazard = HazardBudget();
-    final ledgerSqueeze = squeezeEntry;
+    final ledgerSqueeze = ctx.squeezeWindow;
     final hoop = planned.index;
     final dyRef = min(ctx.band, RunConfig.dyRefBand);
     final row = tables.bandFor(hoop).dy;
@@ -1067,14 +1127,17 @@ class RunDirector {
       final landingCost = (landingY - planned.centreY).abs() > nextP90
           ? TuningValues.current.obj('hazard_costs')['dy_p90']!.toDouble()
           : 0.0;
-      if (!_hazard.allowsFollowing(
-        planned,
-        nextCost: landingCost,
-        nextIndex: hoop + 1,
-        previousY: hazardPrevious,
-        rowP90: row.$2 * dyRef,
-        squeeze: ledgerSqueeze,
-      )) {
+      final unsafeLanding =
+          _calm.dueAt(hoop + 1) || _hazard.budgetAt(hoop + 1) < 4;
+      if (unsafeLanding ||
+          !_hazard.allowsFollowing(
+            planned,
+            nextCost: landingCost,
+            nextIndex: hoop + 1,
+            previousY: hazardPrevious,
+            rowP90: row.$2 * dyRef,
+            squeeze: ledgerSqueeze,
+          )) {
         finalPlan = planned.copyWith(
           kind: HoopKindId.normal,
           element: ElementId.normalHoop,
@@ -1275,7 +1338,6 @@ class RunDirector {
       rowP90: row.$2 * dyRef,
       squeeze: ledgerSqueeze,
     );
-    _inSqueezeWindow = ctx.squeezeWindow;
 
     _markFinal(finalPlan);
     if (planned.kind == HoopKindId.portal || planned.cometHang) {

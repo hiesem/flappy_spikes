@@ -205,6 +205,7 @@ class RunDirector {
   final Map<String, int> _spawned = {};
   late final CalmSchedule _calm;
   HazardBudget _hazard = HazardBudget();
+  int _postSqueezeLedgerSlots = 0;
   bool _inSqueezeWindow = false;
 
   /// PRD-2 §3.23 the next slot is the fixed landing of a spring shipped at
@@ -1008,9 +1009,7 @@ class RunDirector {
     ElementId? firstMeetElement,
     bool springLanding = false,
   }) {
-    final squeezeEntry = ctx.squeezeWindow && !_inSqueezeWindow;
-    if (squeezeEntry) _hazard = HazardBudget();
-    final ledgerSqueeze = squeezeEntry;
+    final ledgerSqueeze = ctx.squeezeWindow;
     final hoop = planned.index;
     final dyRef = min(ctx.band, RunConfig.dyRefBand);
     final row = tables.bandFor(hoop).dy;
@@ -1019,6 +1018,24 @@ class RunDirector {
     var finalPlan = shouldCalm
         ? _calmSlot(planned, ctx, previousY: previousY)
         : planned;
+    final ledgerForced = ctx.squeezeWindow || _postSqueezeLedgerSlots > 0;
+    if (ctx.squeezeWindow) {
+      _postSqueezeLedgerSlots = 2;
+    } else if (_postSqueezeLedgerSlots > 0) {
+      _postSqueezeLedgerSlots--;
+    }
+    if (ledgerForced) {
+      finalPlan = finalPlan.copyWith(
+        kind: HoopKindId.normal,
+        element: ElementId.normalHoop,
+        ringOffsets: const [0],
+        tiltDeg: 0,
+        motion: () => null,
+        extra: () => null,
+        attached: const [],
+        forced: true,
+      );
+    }
     SlotPlan alignFormation(SlotPlan plan) {
       if (plan.formation == null) return plan;
       return plan.copyWith(
@@ -1786,13 +1803,11 @@ class RunDirector {
     final target = previous + delta.sign * min(delta.abs(), median);
     final calmLo = max(lo, previous - median);
     final calmHi = min(hi, previous + median);
-    final centre = calmLo <= calmHi
-        ? target.clamp(calmLo, calmHi)
-        : previous.clamp(lo, hi);
+    final centre = target;
     return planned.copyWith(
       kind: HoopKindId.normal,
       element: ElementId.normalHoop,
-      centreY: centre.clamp(lo, hi).toDouble(),
+      centreY: centre,
       opening: opening,
       tiltDeg: 0,
       motion: () => null,

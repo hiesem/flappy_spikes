@@ -168,6 +168,56 @@ class Autopilot {
     return bird.y > targetY() + margin && vy > risingVy;
   }
 
+  double? nextPlannedFlapIn() {
+    final hoop = run.spawner.nextHoopAhead();
+    final position = run.birdTrackPosition();
+    final velocity = run.game.runBirdVelocityY;
+    if (hoop == null || position == null || velocity == null || !hoop.open) {
+      return null;
+    }
+    final state = run.state;
+    final target = hoop.kind.autopilotTarget(hoop, state, position.y);
+    if (target.preTarget != null) return null;
+    final ringOffset = target.y - hoop.position.y;
+    final plan = identical(hoop, _planHoop) ? _plan : null;
+    if (plan == null) return null;
+    var simulation = _SimState(
+      x: position.x,
+      y: position.y,
+      vy: velocity,
+      forward: state.forwardSpeed,
+      clock: state.runClock,
+      invulnerable: state.invulnerable,
+    );
+    final controller = plan.controller.copy();
+    var elapsed = 0.0;
+    while (elapsed < horizon) {
+      if (controller.decide(
+        simulation,
+        _timeToPlane(hoop, simulation),
+        ringOffset,
+        this,
+        hoop,
+      )) {
+        return elapsed;
+      }
+      simulation.clock += simDt;
+      simulation.forward = BirdMotion.recover(
+        simulation.forward,
+        BirdMotion.cruise(state.hoopIndex),
+        simDt,
+      );
+      simulation.x += simulation.forward * simDt;
+      simulation.vy = math.min(
+        Config.maxFallSpeed,
+        simulation.vy + Config.gravity * simDt,
+      );
+      simulation.y += simulation.vy * simDt;
+      elapsed += simDt;
+    }
+    return null;
+  }
+
   // region S6-44 — the switch approach (PRD-2 §3.20, §3.31)
   /// Margin (pt) kept inside the switch's catch reach (18 + bird r).
   static const double switchSafety = 3;
@@ -371,7 +421,8 @@ class Autopilot {
     final m = h.plan.motion;
     if (m == null) return 0;
     return switch (m.type) {
-      MotionType.swing => m.rope * math.sin(m.amplitudeDeg * math.pi / 180).abs(),
+      MotionType.swing =>
+        m.rope * math.sin(m.amplitudeDeg * math.pi / 180).abs(),
       MotionType.rail || MotionType.horizontal || MotionType.diagonal =>
         m.halfTravel * math.sin(m.axisDeg * math.pi / 180).abs(),
       MotionType.orbit => m.rx,

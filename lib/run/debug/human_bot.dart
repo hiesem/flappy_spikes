@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../game/flappy_game.dart';
 import '../config/run_config.dart';
+import '../director/plans.dart' show HoopKindId;
 import '../mistakes.dart';
 import '../run_controller.dart';
 import '../run_events.dart';
@@ -55,6 +56,31 @@ class HumanNoiseFlapScheduler {
     return null;
   }
 
+  void planRequest(double now) {
+    final jitter = _gaussian() * jitterSigma;
+    final delay = math.min(jitter, .07);
+    final at = math.max(now + delay - 1 / 120, now);
+    final extra = _random.nextDouble() < extraFlapChance;
+    final id = _nextBaseId++;
+    plannedFlapTimes.add(now);
+    jitterSeconds.add(jitter);
+    _scheduled.add(
+      _ScheduledFlap(at, extra: false, plannedTime: now, baseId: id),
+    );
+    if (extra) {
+      _scheduled.add(
+        _ScheduledFlap(
+          at + HumanNoiseBot.extraFlapGap,
+          extra: true,
+          baseId: id,
+        ),
+      );
+    }
+    _scheduled.sort((a, b) => a.time.compareTo(b.time));
+  }
+
+  void discardPending() => _scheduled.clear();
+
   /// Registers an autopilot flap intended at [plannedTime].
   ///
   /// [now] is the frame the schedule was made. A negative jitter can make the
@@ -66,7 +92,9 @@ class HumanNoiseFlapScheduler {
     final extra = _random.nextDouble() < extraFlapChance;
     plannedFlapTimes.add(plannedTime);
     jitterSeconds.add(jitter);
-    final at = now == null ? jitteredTime : math.max(jitteredTime, now);
+    final at = now == null
+        ? jitteredTime
+        : math.max(jitteredTime - 1 / 120, now);
     final id = _nextBaseId++;
     _scheduled.add(
       _ScheduledFlap(at, extra: false, plannedTime: plannedTime, baseId: id),
@@ -151,23 +179,22 @@ class HumanNoiseBot {
     final rising = wanted && !_autopilotWanted;
     _autopilotWanted = wanted;
 
-    // A forecast already owns the next base flap; a request only fills in for
-    // a crossing that could not be predicted (run start, ride hand-over).
     if (rising) {
       debugRequestTimes.add(now);
-    }
-    if (rising && scheduler.pendingBases > 0) {
-      debugRequestForecast.add(scheduler.pendingBasePlannedTime! - now);
-    }
-    if (rising && scheduler.pendingBases == 0) {
-      scheduler.planBase(now, now: now);
+      if (scheduler.pendingBases > 0) {
+        debugRequestForecast.add(scheduler.pendingBasePlannedTime! - now);
+      } else {
+        debugRequestForecast.add(0);
+        scheduler.planRequest(now);
+      }
     }
 
     if (scheduler.flapDue(now)) return true;
-
     if (!wanted && scheduler.pendingBases == 0 && _canPredict) {
-      final at = _predictNextTap(now);
-      if (at > now + 1e-9) scheduler.planBase(at, now: now);
+      final delay = autopilot.nextPlannedFlapIn() ?? _predictNextTapDelay(now);
+      if (run.state.hoopIndex >= 60 && delay > 1e-9) {
+        scheduler.planBase(now + delay + .12, now: now);
+      }
     }
     return false;
   }
@@ -179,8 +206,15 @@ class HumanNoiseBot {
       run.birdTrackPosition() != null &&
       run.game.runBirdVelocityY != null;
 
-  /// Ballistic forecast of the next bang-bang threshold crossing.
-  double _predictNextTap(double now) {
+  bool get _nearPlane {
+    final hoop = run.spawner.nextHoopAhead();
+    final bird = run.birdTrackPosition();
+    if (hoop == null || bird == null) return false;
+    final speed = run.state.forwardSpeed <= 1 ? 1.0 : run.state.forwardSpeed;
+    return (hoop.planeX - bird.x) / speed < .35;
+  }
+
+  double _predictNextTapDelay(double now) {
     final bird = run.birdTrackPosition()!;
     var vy = run.game.runBirdVelocityY!;
     final target = autopilot.targetY() + autopilot.margin;
@@ -192,7 +226,7 @@ class HumanNoiseBot {
       y += vy / 60;
       t += 1 / 60;
     }
-    return now + t;
+    return t;
   }
 }
 

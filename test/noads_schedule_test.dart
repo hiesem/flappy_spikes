@@ -284,22 +284,34 @@ void main() async {
       'playerLevel': 1, // WP-L EGG owed at launch
     },
     (game, events, clock, ads) async {
-      // Launch: the upsell first, then LEVEL UP after it.
-      expect(game.noAdsPopup, isNotNull);
-      game.closeNoAdsPopup();
-      await _flush(game);
+      // PRD 2.6 C2 Popup budget: LEVEL UP precedes No-Ads, and only one
+      // big popup may show per Home visit. The upsell stays pending.
+      expect(game.noAdsPopup, isNull);
+      expect(events.params('noads_popup_shown'), isEmpty);
       stepGame(game, 1);
       await _flush(game);
       expect(game.levelUpPopup, isNotNull);
-      // A session start while LEVEL UP is up: the upsell waits its turn.
+      expect(game.noAdsPopup, isNull);
+      // A session start while LEVEL UP is up still gives it priority. The
+      // queued upsell cannot follow it in that same Home visit (C2).
       clock.now = clock.now.add(Config.noAdsPopupFallback);
       await background(game, clock, Config.sessionGap);
+      expect(game.levelUpPopup, isNotNull);
       expect(game.noAdsPopup, isNull);
       expect(game.queuedPopups, 1);
       await game.claimLevelUp();
       await _flush(game);
+      expect(game.levelUpPopup, isNull);
+      expect(game.queuedPopups, 0);
+      expect(game.noAdsPopup, isNull);
+      expect(events.params('noads_popup_shown'), isEmpty);
+      expect(game.menu.noAdsPopup.evaluate(), isNotNull);
+
+      // The next Home visit can spend its slot on the deferred offer.
+      await background(game, clock, Config.sessionGap);
+      expect(game.levelUpPopup, isNull);
       expect(game.noAdsPopup, isNotNull);
-      expect(events.params('noads_popup_shown').length, 2);
+      expect(events.params('noads_popup_shown').length, 1);
     },
   );
 
@@ -352,6 +364,9 @@ void main() async {
   ) async {
     game.closeNoAdsPopup();
     await _flush(game);
+    // PRD 2.6 C2: launch already used its popup slot. A new Home visit
+    // leaves a slot for the forced popup while the schedule gap stays shut.
+    await background(game, clock, Config.sessionGap);
     expect(game.menu.noAdsPopup.evaluate(), isNull, reason: 'gap');
     game.openDebugPanel();
     await _flush(game);

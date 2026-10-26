@@ -1,6 +1,7 @@
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/home_moments.dart';
 import 'package:flappy_spikes/game/storage.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/run/director/calm_schedule.dart';
 import 'package:flappy_spikes/run/director/formations.dart';
 import 'package:flappy_spikes/run/director/hazard_budget.dart';
@@ -85,13 +86,36 @@ void main() {
     },
   );
 
-  test('the rating minimum is five or two runs after showcase completion', () {
-    expect(Config.ratingMinRunsFor(null), 5);
+  // region P26-C3R
+  test('PRD-2.6 C3: rating waits for the showcase and two later runs', () {
+    // C3R editor call: PRD silent on unfinished showcase; follows C3 intent.
+    expect(Config.ratingMinRunsFor(null), 7);
     expect(Config.ratingMinRunsFor(0), 5);
     expect(Config.ratingMinRunsFor(3), 5);
     expect(Config.ratingMinRunsFor(4), 6);
     expect(Config.ratingMinRunsFor(10), 12);
   });
+
+  test('PRD-2.6 C3: rating minimum reads both tuning keys', () {
+    final previous = TuningValues.current;
+    addTearDown(() => TuningValues.current = previous);
+    TuningValues.current = TuningValues.resolve({
+      'rate_min_runs': '10',
+      'showcase_max_games': '12',
+    });
+    expect(Config.ratingMinRunsFor(null), 13);
+    expect(Config.ratingMinRunsFor(3), 10);
+    expect(Config.ratingMinRunsFor(8), 10);
+    expect(Config.ratingMinRunsFor(9), 11);
+
+    TuningValues.current = TuningValues.resolve({
+      'rate_min_runs': '15',
+      'showcase_max_games': '8',
+    });
+    expect(Config.ratingMinRunsFor(null), 15);
+    expect(Config.ratingMinRunsFor(6), 15);
+  });
+  // endregion
 
   test('Home moments use the C2 priority order and pass through', () {
     expect(HomeMoment.values, [

@@ -4,6 +4,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/playfield.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
 import 'package:flappy_spikes/services/monetization.dart';
 import 'package:flappy_spikes/services/rating_prompt.dart';
@@ -46,6 +47,9 @@ void main() {
   FlameTester<FlappySpikesGame> tester(
     Map<String, Object> prefs, {
     bool available = true,
+    // region P26-C3R
+    int? showcaseDoneAt = 3,
+    // endregion
   }) => FlameTester<FlappySpikesGame>(() {
     spy.events.clear();
     now = DateTime(2026, 10, 13, 12);
@@ -53,7 +57,12 @@ void main() {
     rating = RatingPrompt(backend: backend);
     interstitial = FakeInterstitialAds(mode: FakeAdMode.succeed);
     return createRunTestGame(
-      prefs: prefs,
+      // region P26-C3R
+      prefs: {
+        'showcaseDoneAt': ?showcaseDoneAt,
+        ...prefs,
+      },
+      // endregion
       services: spy,
       clock: () => now,
       rating: rating,
@@ -162,6 +171,69 @@ void main() {
       expect(requestsOf('new_best'), 1);
     },
   );
+
+  // region P26-C3R
+  tester({'gamesPlayed': 4}, showcaseDoneAt: null).testGameWidget(
+    'PRD-2.6 C3: unfinished showcase suppresses runs 5 and 6, allows run 7',
+    setUp: (g, _) => boot(g),
+    verify: (g, _) async {
+      // C3R editor call: PRD silent; this follows the C3 intent.
+      for (final score in [8, 12]) {
+        await play(g, score);
+        await untilSettled(g);
+        stepGame(g, 2);
+        expect(backend.requests, 0);
+        expect(g.storage.lastRatingRequestAt, 0);
+        await home(g);
+      }
+      expect(g.storage.showcaseDoneAt, isNull);
+      await play(g, 16);
+      expect(g.storage.gamesPlayed, 7);
+      await untilSettled(g);
+      stepGame(g, 2);
+      expect(backend.requests, 1);
+    },
+  );
+
+  tester({'gamesPlayed': 6}, showcaseDoneAt: 6).testGameWidget(
+    'PRD-2.6 C3: a late showcase finish waits two runs',
+    setUp: (g, _) => boot(g),
+    verify: (g, _) async {
+      await play(g, 8);
+      await untilSettled(g);
+      stepGame(g, 2);
+      expect(backend.requests, 0);
+      await home(g);
+      await play(g, 12);
+      expect(g.storage.gamesPlayed, 8);
+      await untilSettled(g);
+      stepGame(g, 2);
+      expect(backend.requests, 1);
+    },
+  );
+
+  tester({'gamesPlayed': 8, 'bestScore': 100}).testGameWidget(
+    'PRD-2.6 C3: tuned minimum triggers at run 10 without a new best',
+    setUp: (g, _) async {
+      final previous = TuningValues.current;
+      addTearDown(() => TuningValues.current = previous);
+      TuningValues.current = TuningValues.resolve({'rate_min_runs': '10'});
+      await boot(g);
+    },
+    verify: (g, _) async {
+      await play(g, 8);
+      await untilSettled(g);
+      stepGame(g, 2);
+      expect(backend.requests, 0);
+      await home(g);
+      await play(g, 8);
+      expect(g.storage.gamesPlayed, 10);
+      await untilSettled(g);
+      stepGame(g, 2);
+      expect(backend.requests, 1);
+    },
+  );
+  // endregion
 
   // --- cooldown -------------------------------------------------------------
 

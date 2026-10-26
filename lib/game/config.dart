@@ -1120,10 +1120,18 @@ class Config {
   /// runs requests the store's rating sheet (any later run only on a new best).
   static int get ratingMinRuns => TuningValues.current.i('rate_min_runs');
 
-  /// PRD-2.6 C3: a later showcase finish delays the rating sheet to at least
-  /// two runs after `showcaseDoneAt`, never below the 2.5 minimum.
-  static int ratingMinRunsFor(int? showcaseDoneAt) =>
-      math.max(5, (showcaseDoneAt ?? -3) + 2);
+  // region P26-C3R
+  /// PRD-2.6 C3: wait two runs after showcase completion, with the tuned
+  /// rating minimum as the floor.
+  /// C3R editor call (PRD silent; follows C3 intent): while unfinished,
+  /// wait until the run after the tuned showcase cap.
+  static int ratingMinRunsFor(int? showcaseDoneAt) => math.max(
+    ratingMinRuns,
+    showcaseDoneAt == null
+        ? TuningValues.current.i('showcase_max_games') + 1
+        : showcaseDoneAt + 2,
+  );
+  // endregion
 
   /// PRD-2.3 §23.2 (`rate_cooldown_days`): at most one request in this long.
   static Duration get ratingCooldown =>

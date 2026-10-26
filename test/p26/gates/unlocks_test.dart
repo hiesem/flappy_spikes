@@ -1,4 +1,4 @@
-import 'package:flame/components.dart';
+import 'package:flame/game.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
@@ -11,6 +11,7 @@ import 'package:flappy_spikes/run/hoops/kinds/registry.dart';
 import 'package:flappy_spikes/run/items/squeeze.dart';
 import 'package:flappy_spikes/run/pickups/registry.dart';
 import 'package:flappy_spikes/run/run_state.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers.dart';
@@ -163,6 +164,135 @@ void main() {
 
     expect(course(4), course(5));
   });
+
+  // region P26-C1T
+  testWidgets('C1T live squeeze gate preserves layout determinism', (
+    tester,
+  ) async {
+    final courses = <int, List<SlotPlan>>{};
+    final gaps = <int, List<GapPlan>>{};
+    final schedules = <int, double>{};
+    final squeezeSlots = <int>{};
+    int? warningHoop;
+    int? warningPlanned;
+    int? recoveryStart;
+    int? comparisonLength;
+
+    // Fly the open gate first to find the actual warning / recovery boundaries,
+    // then fly an independent, identically seeded closed-gate game to that slot.
+    for (final games in [5, 4]) {
+      final game = createRunTestGame(
+        prefs: {
+          'gamesPlayed': games,
+          'metElements': [
+            for (final element in ElementId.values) element.storageId,
+          ],
+        },
+        worldHeight: 711,
+        seed: 17,
+      );
+      await tester.runAsync(() async {
+        await tester.pumpWidget(
+          SizedBox(width: 320, height: 711, child: GameWidget(game: game)),
+        );
+        await tester.pump();
+        await game.ready();
+        await preloadImages(game);
+      });
+      game.runDebug
+        ..ignoreGates = false
+        ..god = true;
+      final run = await startRun(game);
+      expect(game.storage.gamesPlayed, games);
+      expect(run.setup.ignoreGates, isFalse);
+      expect(run.setup.forced, isEmpty);
+      schedules[games] = run.state.squeeze.nextAt;
+      expect(await flyUntil(game, (r) => r.state.hoopIndex >= 5), isTrue);
+      // Exercise the real lifetime gate, not debugForce(squeeze), which bypasses
+      // it. The same clock override is applied to both games.
+      run.state.squeeze.nextAt = run.state.runClock + .02;
+      var logged = run.spawner.slotLog.length;
+      var windowBeforeStep = run.directorContext().squeezeWindow;
+      final reached = await flyUntil(
+        game,
+        (r) {
+          if (games == 5) {
+            if (r.state.squeeze.phase == SqueezePhase.warning) {
+              warningHoop ??= r.state.hoopIndex;
+              warningPlanned ??= r.spawner.slotLog.length;
+            }
+            for (var i = logged; i < r.spawner.slotLog.length; i++) {
+              if (windowBeforeStep) squeezeSlots.add(i);
+            }
+            if (r.state.squeeze.index == 1 && recoveryStart == null) {
+              recoveryStart = r.director.hoopIndex;
+              // Include both real D4 recovery slots, beyond the whole squeeze.
+              comparisonLength = recoveryStart! + 2;
+            }
+          }
+          logged = r.spawner.slotLog.length;
+          return comparisonLength != null && logged >= comparisonLength!;
+        },
+        maxSeconds: 90,
+        // After the common lead-in, let god mode carry the bird past misses.
+        // No pickup-seeking autopilot: rewards / rides must not change context.
+        flap: (r) {
+          windowBeforeStep = r.directorContext().squeezeWindow;
+          return false;
+        },
+      );
+      expect(reached, isTrue, reason: 'gamesPlayed $games reached recovery');
+      expect(
+        run.features.whereType<SqueezeFeature>().single.started,
+        games == 5 ? 1 : 0,
+      );
+      expect(run.state.squeeze.index, games == 5 ? 1 : 0);
+      expect(run.state.squeeze.phase, SqueezePhase.idle);
+      courses[games] = List.of(run.spawner.slotLog);
+      gaps[games] = List.of(run.spawner.gapLog);
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+
+    expect(
+      schedules[4],
+      schedules[5],
+      reason: 'closed gate still rolls schedule',
+    );
+    expect(warningHoop, isNotNull);
+    expect(
+      warningHoop,
+      lessThan(25),
+      reason: 'forced early, before normal due',
+    );
+    expect(warningPlanned, greaterThan(warningHoop!));
+    expect(squeezeSlots, isNotEmpty);
+    expect(recoveryStart, greaterThan(warningPlanned!));
+    final closed = courses[4]!, open = courses[5]!;
+    expect(closed.length, comparisonLength);
+    expect(open.length, comparisonLength);
+    // SlotPlan equality includes all geometry, kind, motion, attached items,
+    // hazard/calm flags and formation; toString() rounds and omits fields.
+    expect(closed.take(warningPlanned!), open.take(warningPlanned!));
+    expect(gaps[4]!.take(warningPlanned!), gaps[5]!.take(warningPlanned!));
+    expect(open.skip(recoveryStart!).map((p) => p.calm), [true, true]);
+    var recoveryDifferences = 0;
+    for (var i = warningPlanned!; i < comparisonLength!; i++) {
+      final a = closed[i], b = open[i];
+      if (a == b) continue;
+      expect(
+        squeezeSlots.contains(i) || a.calm || b.calm,
+        isTrue,
+        reason: 'slot $i differs outside squeeze / calm: $a vs $b',
+      );
+      if (i >= recoveryStart!) recoveryDifferences++;
+    }
+    expect(recoveryDifferences, greaterThan(0));
+    // PRD C1 / audit a1 §5: compare layout plans through the first squeeze and
+    // its recovery. Later headline arbitration can move bonuses, and squeeze
+    // hold/gap rolls use rng.timing only when a squeeze actually runs; equality
+    // of that timing stream after the warning is deliberately not required.
+  });
+  // endregion
 
   for (final games in [4, 5]) {
     FlameTester<FlappySpikesGame>(

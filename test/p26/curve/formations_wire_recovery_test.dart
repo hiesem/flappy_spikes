@@ -75,6 +75,7 @@ void main() {
     var springLandings = 0;
     var strongTilts = 0;
     var waveEntries = 0;
+    var strongWaveEntries = 0;
     for (final height in [568.0, 711.0]) {
       for (final start in [0, 150, 250]) {
         for (var seed = 0; seed < 200; seed++) {
@@ -96,8 +97,8 @@ void main() {
               springLandings++;
               final direction = previous!.extra == SpringDir.up ? -1 : 1;
               expect(plan.formation, isNull, reason: reason);
-              // The existing hazard ledger may shorten a landing; formations
-              // must never consume or replace the pending target.
+              // The exact landing before a due formation is checked above;
+              // here audit formation ownership throughout ordinary courses.
               expect(
                 (plan.centreY - previous.centreY).sign,
                 direction.toDouble(),
@@ -109,6 +110,7 @@ void main() {
               if (plan.formation == FormationId.tiltWave &&
                   previous?.formation != FormationId.tiltWave) {
                 waveEntries++;
+                if (plan.tiltDeg.abs() >= 20) strongWaveEntries++;
               }
               if (plan.tiltDeg.abs() >= 20) {
                 strongTilts++;
@@ -128,6 +130,7 @@ void main() {
     expect(springLandings, greaterThan(0));
     expect(strongTilts, greaterThan(0));
     expect(waveEntries, greaterThan(0));
+    expect(strongWaveEntries, greaterThan(0));
   });
 
   test(

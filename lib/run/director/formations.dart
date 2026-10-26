@@ -57,13 +57,14 @@ class Formations {
   int _nextStart = 150;
   final List<FormationId> _recent = [];
 
-  FormationId? nextAt(int hoop) {
+  FormationId? nextAt(int hoop, {bool Function(FormationId)? allowed}) {
     final random = _random;
     if (random == null || hoop < _nextStart || hoop < fromHoop) return null;
 
     final options = FormationId.values
-        .where((id) => !_recent.contains(id))
+        .where((id) => !_recent.contains(id) && (allowed?.call(id) ?? true))
         .toList();
+    if (options.isEmpty) return null;
     final id = options[random.nextInt(options.length)];
     _recent
       ..add(id)

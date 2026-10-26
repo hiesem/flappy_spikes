@@ -9,6 +9,7 @@ import 'package:flappy_spikes/run/config/director_tables.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
+import 'package:flappy_spikes/run/director/formations.dart';
 import 'package:flappy_spikes/run/debug/force_menu.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/hoops/kinds/fever.dart';
@@ -617,6 +618,7 @@ void main() {
       final c = DirectorContext.open(711);
       final last = <HoopKindId, int>{};
       var coolUntil = -1;
+      SlotPlan? previousSpecial;
       for (var i = 0; i < 200; i++) {
         final p = d.nextSlot(c);
         final gap = d.nextGap(c, p);
@@ -641,9 +643,31 @@ void main() {
             p.kind == HoopKindId.bullseye &&
             d.earlyPicks[i] == EarlyPick.bullseye;
         expect(i, greaterThanOrEqualTo(pooled ? 4 : rule.from));
-        expect(i, greaterThan(coolUntil));
-        final prev = last[p.kind];
-        if (prev != null) expect(i - prev, greaterThanOrEqualTo(rule.minSince));
+        // SPEC.md PRD-2.6 D7 explicitly adds three consecutive switches.
+        // Only the interior of that formation supersedes the legacy cooldown;
+        // its entry and every other special still obey the ordinary rules.
+        final chainInterior =
+            p.formation == FormationId.switchChain &&
+            previousSpecial?.formation == FormationId.switchChain &&
+            previousSpecial!.index == i - 1;
+        if (!chainInterior) {
+          expect(
+            i,
+            greaterThan(coolUntil),
+            reason:
+                'seed $seed hoop $i kind ${p.kind} formation ${p.formation}',
+          );
+          final prev = last[p.kind];
+          if (prev != null) {
+            expect(
+              i - prev,
+              greaterThanOrEqualTo(rule.minSince),
+              reason:
+                  'seed $seed hoop $i kind ${p.kind} formation ${p.formation}',
+            );
+          }
+        }
+        previousSpecial = p;
         last[p.kind] = i;
         coolUntil = i + rule.cooldown;
       }

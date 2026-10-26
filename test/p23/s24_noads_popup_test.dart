@@ -340,7 +340,13 @@ void main() {
   // --- collisions ---------------------------------------------------------------
 
   tester(
-    window(lastShowMinutesAgo: 30, extra: {'gamesPlayed': 4}),
+    // region P26-C3R
+    // PRD-2.6 C3: complete showcase so run 5 requests the rating sheet.
+    window(
+      lastShowMinutesAgo: 30,
+      extra: {'gamesPlayed': 4, 'showcaseDoneAt': 3},
+    ),
+    // endregion
     rating: true,
   ).testGameWidget(
     '§24.5 collisions: never on the arrival of a run that requested the '

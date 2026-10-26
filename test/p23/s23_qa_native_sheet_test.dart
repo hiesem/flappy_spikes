@@ -32,7 +32,10 @@ void main() {
       sheet = _NativeSheet();
       interstitial = FakeInterstitialAds(mode: FakeAdMode.succeed);
       return createRunTestGame(
-        prefs: {'gamesPlayed': 4, 'noAds': noAds},
+        // region P26-C3R
+        // PRD-2.6 C3: run 5 is eligible once showcase finished at run 3.
+        prefs: {'gamesPlayed': 4, 'showcaseDoneAt': 3, 'noAds': noAds},
+        // endregion
         rating: RatingPrompt(backend: sheet),
         monetization: Monetization(interstitial: interstitial),
       );

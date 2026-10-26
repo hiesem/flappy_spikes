@@ -186,6 +186,9 @@ void main() {
         expect(g.storage.lastRatingRequestAt, 0);
         await home(g);
       }
+      // Null at run 7 is a harness/legacy state: the inert showcase here
+      // never finishes. Production completes at the run-6 cap, then waits
+      // until run 8, as covered by the late-finish test below (PRD-2.6 C3).
       expect(g.storage.showcaseDoneAt, isNull);
       await play(g, 16);
       expect(g.storage.gamesPlayed, 7);

@@ -158,6 +158,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     RatingPrompt? rating,
     ShowcasePlan? showcasePlan,
     ShowcaseProgress? showcaseProgress,
+    // region P26-B1
+    this.showcaseFactory,
+    // endregion
     FtueTracker? ftueTracker,
     HomeMoments? homeMoments,
   }) : services = services ?? GameServices(),
@@ -166,8 +169,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
        reminders = reminders ?? const NoopReminders(),
        rumble = Rumble(hardware: rumbleEnabled ?? soundEnabled),
        monetization = monetization ?? Monetization(),
-       showcasePlan = showcasePlan ?? const InertShowcasePlan(),
-       showcaseProgress = showcaseProgress ?? const InertShowcaseProgress(),
+       // region P26-B1
+       _showcasePlan = showcasePlan ?? const InertShowcasePlan(),
+       _showcaseProgress = showcaseProgress ?? const InertShowcaseProgress(),
+       // endregion
        homeMoments = homeMoments ?? HomeMomentBudget(),
        storage = GameStorage(clock: clock),
        // WP-TAB: a wide screen (tablet) is 568 pt high in game points.
@@ -225,8 +230,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   late final AchievementTracker achievements;
 
   /// PRD-2.6 M1 seams; their default implementations are inert.
-  final ShowcasePlan showcasePlan;
-  final ShowcaseProgress showcaseProgress;
+  // region P26-B1
+  /// Production opts in after storage loads; tests and capture tools stay inert.
+  final ShowcaseShow Function(GameStorage)? showcaseFactory;
+  ShowcasePlan _showcasePlan;
+  ShowcaseProgress _showcaseProgress;
+  ShowcasePlan get showcasePlan => _showcasePlan;
+  ShowcaseProgress get showcaseProgress => _showcaseProgress;
+  // endregion
   late final FtueTracker _ftueTracker;
 
   /// PRD-2.6 WP-A: production always uses the persisted tracker. Tests can
@@ -776,6 +787,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     add(drags);
 
     await storage.load();
+    // region P26-B1
+    final show = showcaseFactory?.call(storage);
+    if (show != null) {
+      _showcasePlan = show;
+      _showcaseProgress = show;
+      show.adoptLegacyDone();
+    }
+    // endregion
     await ftueTracker.flushPendingFirstMeets();
     // QA P2-03 (PRD-2.3.1 §12.3): commit (clean) or drop (excluded) the
     // journal of a run the app died in, before the sync below reports it.

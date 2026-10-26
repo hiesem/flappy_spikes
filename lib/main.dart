@@ -12,6 +12,9 @@ import 'components/banner_slot.dart';
 import 'game/flappy_game.dart';
 import 'game/save_seal.dart';
 import 'game/storage.dart';
+// region P26-B1
+import 'run/showcase/showcase_plan.dart';
+// endregion
 import 'services/app_info.dart';
 import 'services/game_services.dart';
 import 'services/e2e.dart';
@@ -32,6 +35,24 @@ import 'services/obf_strings.g.dart';
 /// PRD-2.3 §2: the share card painter and the share sheet (results share
 /// button and the Invite tile).
 final ShareFlow _shareFlow = ShareFlow();
+
+// region P26-B1
+/// Called by the game only after loading the install's saved showcase state.
+ShowcaseShow Function(GameStorage)? productionShowcaseFactory(
+  GameServices services,
+) => kE2E || kSoak
+    ? null
+    : (storage) => ShowcaseShow(
+        storage: storage,
+        tracker: services.track,
+        secondsSinceInstall: () => _installSeconds(storage),
+      );
+
+int _installSeconds(GameStorage storage) {
+  final elapsed = storage.now().millisecondsSinceEpoch - storage.installAtMs;
+  return elapsed <= 0 ? 0 : elapsed ~/ Duration.millisecondsPerSecond;
+}
+// endregion
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -164,6 +185,9 @@ Future<void> main() async {
     monetization: monetization,
     versus: versus,
     rating: rating,
+    // region P26-B1
+    showcaseFactory: productionShowcaseFactory(services),
+    // endregion
   );
   // PRD-2.2 §33.4 item 5: idle menus draw at Config.idleMenuFps. Not in
   // FS_E2E builds, whose tests pump the frames themselves.

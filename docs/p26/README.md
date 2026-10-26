@@ -1,4 +1,4 @@
-# Flappy Spikes 2.6 — build on df4
+# Flappy Spikes 2.6 — build notes
 
 The product spec is [`PRD-2.6-fun-progression.md`](PRD-2.6-fun-progression.md) (final, owner-approved 2026-10-23,
 decisions O1–O96). Every design, text and icon in it is approved (O92–O96). This branch, `feat/2.6`, starts at

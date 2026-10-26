@@ -12,10 +12,10 @@ if [[ -n "${FIRESTORE_EMULATOR_HOST:-}" ]]; then
   exec npx mocha "$@"
 fi
 cd "$here/.."
-# df4 runs several lanes at once and the emulators use fixed ports (firebase.json): take the shared lock in the
-# jail's npm cache so only one emulator suite runs at a time ("Could not start emulator hub, port taken").
+# parallel builders may run at once and the emulators use fixed ports (firebase.json): take the shared lock in the
+# npm cache so only one emulator suite runs at a time ("Could not start emulator hub, port taken").
 if [[ -n "${npm_config_cache:-}" && -d "$npm_config_cache" ]] && command -v flock >/dev/null; then
-  exec 9>"$npm_config_cache/.df4-emulators.lock"
+  exec 9>"$npm_config_cache/.fs-emulators.lock"
   flock -w 2700 9 || echo "test.sh: emulator lock not acquired after 45 min, trying anyway" >&2
 fi
 exec firebase emulators:exec --project demo-flappy-spikes --only auth,firestore,functions,storage \

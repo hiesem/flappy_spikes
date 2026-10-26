@@ -339,27 +339,3 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   upload input instead (2.0.0+7 is 56 MB). Internal testing: 2.0.0 (7) saved as DRAFT 2026-10-07 (user releases).
 - Linux: no Google Chrome — tools/browser_linux.js drives /usr/bin/chromium with profile
   tools/.pw-linux-profile (optional URL arg).
-
-<!-- df4:begin (managed by `df4 init`; keep identical in CLAUDE.md and AGENTS.md) -->
-## Built by DuoFoundry v4 (df4)
-
-This repo is built by df4: an Opus orchestrator plans milestones into GitHub issues; per issue a builder works in its
-own worktree, `bash scripts/verify.sh` is the gate, a tester of a different model checks, and the framework merges.
-
-Rules for every builder and tester (binding):
-- **Never read, open, print, copy or grep** `.env`, `.env.*` (except `.env.template`/`.env.example`), `secrets/`,
-  private keys (`*.pem`, `*.key`, `*.ppk`, `id_*`), `~/.ssh/`, `~/.codex/auth.json`, `~/.claude/.credentials.json` —
-  not even to check that they exist. Never repeat key material.
-- Do not commit: the framework commits after your turn (secret paths are never staged).
-- Touch only the paths under `## Paths` of your issue. Report failures outside them; do not fix them.
-- `bash scripts/verify.sh` must be green before you stop (the framework runs exactly that as the gate). Testers do not edit
-  product code: everything a tester changes is reverted.
-- The app stack (if any) is started by the framework outside the jail; never start docker/podman yourself.
-  Environment for verify: `DF4_VERIFY_BASE`, `DF4_E2E_BASE_URL`, `DF4_E2E_SERVICE` (see the
-  contract at the top of `scripts/verify.sh`).
-
-**CLAUDE.md and AGENTS.md carry the same content — change them together.** Claude roles (orchestrator, Opus builder
-and tester, Haiku fallback, council member) read `CLAUDE.md`; codex roles (Sol builder and tester, council member)
-read `AGENTS.md`. If an `AGENTS.override.md` exists, codex reads it **instead of** `AGENTS.md` (it replaces, it does
-not merge): keep these rules there too, or delete it.
-<!-- df4:end -->

@@ -1,26 +1,24 @@
 #!/usr/bin/env bash
-# The verify contract (DuoFoundry v4). df4 runs this script as the GATE after every build round, inside the same
-# bubblewrap jail as the builders (so "green for the builder" == "green for the gate"), and once per milestone
-# unscoped on the merged base (the milestone gate). Builders run it themselves before they stop.
+# The project's verify gate: run it before calling any change done (builders run it themselves before they stop).
 #
-#   exit 0      green; anything else is red (the tester is not called; the tail goes to the next builder)
-#   jail        $HOME is an empty tmpfs (only the toolchain is visible), no docker/podman socket, .git read-only
+#   exit 0      green; anything else is red
 #
-# Environment set by df4:
-#   DF4_VERIFY_BASE   set: scope to what the branch changed; unset: run everything (the milestone gate)
-#   DF4_E2E_FULL=1    (verify:full repair issues and the gate) everything
+# Environment (all optional):
+#   VERIFY_BASE       a git ref: scope the functions tests to what the branch changed since it; unset: run everything
+#   VERIFY_FULL=1     everything, even when VERIFY_BASE is set
+#   VERIFY_SCOPED=1   with VERIFY_BASE: only the changed/matching Flutter tests + the playability core (quick local check)
+#   FLUTTER_J         flutter test concurrency (default 4)
 #
 # Flappy Spikes checks:
-#   always      flutter analyze (whole project; must be clean)
-#   scoped      flutter test (all) as well (DF4_VERIFY_SCOPED=1: only the changed/matching tests + the playability
-#               core); the functions tests only when functions/ or firestore.rules changed
-#   unscoped    flutter test (all) + npm --prefix functions test (Firebase emulators, demo project; never the real one)
+#   always      flutter analyze (whole project; must be clean) + flutter test (all)
+#   scoped      the functions tests only when functions/ or firestore.rules changed
+#   unscoped    + npm --prefix functions test (Firebase emulators, demo project; never the real one)
 # No device, emulator or store work runs here: Pixel e2e and uploads stay with the orchestrator / owner.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-BASE="${DF4_VERIFY_BASE:-}"
-[ "${DF4_E2E_FULL:-}" = 1 ] && BASE=""
+BASE="${VERIFY_BASE:-}"
+[ "${VERIFY_FULL:-}" = 1 ] && BASE=""
 changed() {   # files the branch touches (scoped) — empty when unscoped
   [ -n "$BASE" ] || return 0
   { git diff --name-only "$BASE"...HEAD; git ls-files --others --exclude-standard; } 2>/dev/null | sort -u
@@ -28,18 +26,18 @@ changed() {   # files the branch touches (scoped) — empty when unscoped
 
 CORE_TESTS=(test/autopilot_test.dart test/layout_test.dart test/flap_physics_test.dart)
 
-# df4 heavy slots (project.heavy_slots, heavy_scope = "all"): the flutter suites run while holding one of
-# $DF4_HEAVY_LOCKS, so lanes and the agents' own verify runs never run more full suites at once than the slots allow.
-# Empty when df4 already holds a slot for this run: then `heavy` just runs the command.
+# Optional memory guard for parallel builders: VERIFY_HEAVY_LOCKS = space-separated lock files; the flutter suites
+# then run while holding one of them, so parallel verify runs never run more full suites at once than there are files.
+# Unset: `heavy` just runs the command.
 heavy() {
-  [ -n "${DF4_HEAVY_LOCKS:-}" ] && command -v flock >/dev/null || { "$@"; return; }
+  [ -n "${VERIFY_HEAVY_LOCKS:-}" ] && command -v flock >/dev/null || { "$@"; return; }
   local f got="" rc=0
-  for f in $DF4_HEAVY_LOCKS; do
+  for f in $VERIFY_HEAVY_LOCKS; do
     exec 9<"$f"
     if flock -n 9; then got=1; break; fi
     exec 9<&-
   done
-  [ -n "$got" ] || { exec 9<"${DF4_HEAVY_LOCKS%% *}"; flock 9; }
+  [ -n "$got" ] || { exec 9<"${VERIFY_HEAVY_LOCKS%% *}"; flock 9; }
   "$@" || rc=$?
   exec 9<&-
   return $rc
@@ -54,7 +52,7 @@ norm_failures() { grep ' \[E\]$' | sed -E 's#^([0-9:]+ )?\+[0-9]+( ~[0-9]+)? -[0
 flutter_all() {
   local out rc=0
   out="$(mktemp)"
-  flutter test --no-pub -j "${DF4_FLUTTER_J:-4}" 2>&1 | tee "$out" || rc=$?
+  flutter test --no-pub -j "${FLUTTER_J:-4}" 2>&1 | tee "$out" || rc=$?
   [ "$rc" = 0 ] && { rm -f "$out"; return 0; }
   if [ ! -s "$KNOWN_RED" ]; then rm -f "$out"; return "$rc"; fi
   local new
@@ -66,7 +64,7 @@ flutter_all() {
     local files again
     files="$(printf '%s\n' "$new" | cut -d: -f1 | sort -u | tr '\n' ' ')"
     echo "--- rerun once (flake check): $files"
-    again="$(flutter test --no-pub -j "${DF4_FLUTTER_J:-4}" $files 2>&1 | norm_failures)"
+    again="$(flutter test --no-pub -j "${FLUTTER_J:-4}" $files 2>&1 | norm_failures)"
     local flaky; flaky="$(comm -23 <(printf '%s\n' "$new") <(printf '%s\n' "$again") | grep -v '^$' || true)"
     [ -n "$flaky" ] && { echo "=== FLAKY (failed once, passed on the rerun):"; printf '%s\n' "$flaky"; }
     new="$(comm -12 <(printf '%s\n' "$new") <(printf '%s\n' "$again") | grep -v '^$' || true)"
@@ -88,8 +86,8 @@ flutter_checks() {
   echo "--- functions build (the Dart p45 tests load functions/lib)"
   npm --prefix functions run --silent build
   # Always the whole Flutter suite (~5 min): scoping by file name hid cross-suite breakage in M1 (55 red tests
-  # merged unseen). Set DF4_VERIFY_SCOPED=1 to get the old scoped run for a quick local check.
-  if [ -z "$BASE" ] || [ "${DF4_VERIFY_SCOPED:-}" != 1 ]; then
+  # merged unseen). Set VERIFY_SCOPED=1 to get the old scoped run for a quick local check.
+  if [ -z "$BASE" ] || [ "${VERIFY_SCOPED:-}" != 1 ]; then
     echo "--- flutter test (all)"
     heavy flutter_all
     return
@@ -116,7 +114,7 @@ functions_checks() {
     return
   fi
   echo "--- npm --prefix functions test (emulators, demo project)"
-  # functions/scripts/test.sh serializes the emulator suite across lanes (flock); an agent that starts the emulators
+  # functions/scripts/test.sh serializes the emulator suite across parallel builders (flock); an agent that starts the emulators
   # by hand bypasses it, so a "port taken" start is retried (up to 4 times, 90 s apart) instead of turning the gate red.
   local out rc attempt
   out="$(mktemp)"
@@ -124,7 +122,7 @@ functions_checks() {
     rc=0
     npm --prefix functions test 2>&1 | tee "$out" || rc=$?
     if [ "$rc" != 0 ] && [ "$attempt" -lt 5 ] && grep -q -E "port taken|Port [0-9]+ is not open" "$out"; then
-      echo "--- emulator ports taken by another lane; retrying in 90 s (attempt $((attempt + 1)) of 5)"
+      echo "--- emulator ports taken by another builder; retrying in 90 s (attempt $((attempt + 1)) of 5)"
       sleep 90
       continue
     fi
@@ -139,5 +137,5 @@ run_checks() {
   functions_checks
 }
 
-if [ "${DF4_VERIFY_ONLY_E2E:-}" != 1 ]; then run_checks; fi
+if [ "${VERIFY_ONLY_E2E:-}" != 1 ]; then run_checks; fi
 echo "=== verify.sh: green ==="

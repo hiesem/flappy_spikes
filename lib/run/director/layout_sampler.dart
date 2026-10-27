@@ -249,7 +249,7 @@ class LayoutSampler {
     final wasStrong = magnitude >= alignMin;
     if (wasStrong && dy.abs() + 1e-9 < minDy) magnitude = 15;
     magnitude = min(magnitude, maxTiltDeg);
-    if (wasStrong && dy != 0) return dy.sign * magnitude;
+    if (magnitude >= alignMin && dy != 0) return dy.sign * magnitude;
     return tiltDeg.sign * magnitude;
   }
 

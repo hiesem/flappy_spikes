@@ -1,24 +1,32 @@
 import 'dart:math' show Random, min;
 
+import '../config/tuning_values.dart';
+
 /// PRD-2.6 D4 periodic and event-driven calm stretches.
 class CalmSchedule {
   /// D4's reference schedule starts at hoop 32. A standalone schedule uses
   /// this fixed seed; the director always injects its seeded timing stream.
   static const int _defaultTimingSeed = 4;
-  static const _firstMin = 30;
-  static const _firstMax = 34;
-  static const _intervalMultiplier = 1.2;
-  static const _intervalCap = 55;
-  static const _periodicLength = 3;
-  static const _reviveLength = 3;
-  static const _eventLength = 2;
-  static const _minimumGap = 12;
+  late final int _firstMin, _firstMax, _intervalCap, _periodicLength;
+  late final int _reviveLength, _squeezeLength, _rideLength, _minimumGap;
+  late final double _intervalMultiplier;
 
   /// [timing] supplies only the first periodic calm draw. That draw happens
   /// now, before any run-event outcome, so event suppression can never change
   /// the number or order of stream draws.
   CalmSchedule([Random? timing])
     : _timing = timing ?? Random(_defaultTimingSeed) {
+    final every = tuning.obj('calm_every');
+    final after = tuning.obj('calm_after');
+    _firstMin = every['first_min']!.toInt();
+    _firstMax = every['first_max']!.toInt();
+    _intervalMultiplier = every['mult']!.toDouble();
+    _intervalCap = every['cap']!.toInt();
+    _periodicLength = every['len']!.toInt();
+    _minimumGap = every['min_gap']!.toInt();
+    _reviveLength = after['revive']!.toInt();
+    _squeezeLength = after['squeeze']!.toInt();
+    _rideLength = after['ride']!.toInt();
     final first = _rollFirst(_timing);
     _nextPeriodicAt = first.toDouble();
     _nextInterval = _firstMin * _intervalMultiplier;
@@ -31,7 +39,7 @@ class CalmSchedule {
   int? _activeStart;
   int _activeEnd = -1;
 
-  static int _rollFirst(Random timing) =>
+  int _rollFirst(Random timing) =>
       timing.nextInt(_firstMax - _firstMin + 1) + _firstMin;
 
   /// Whether the slot at [hoop] must be calm.
@@ -63,11 +71,21 @@ class CalmSchedule {
 
   void onRevive(int hoop) => _start(hoop, _reviveLength, force: true);
 
-  void onSqueezeEnded(int hoop) => _start(hoop, _eventLength, force: false);
+  /// The spawner already planned the first recovery hoop before the death.
+  /// Include it in this revive's stretch without growing the interval twice.
+  void includePlannedReviveSlot(int hoop) {
+    final shift = hoop - _activeStart!;
+    _activeStart = hoop;
+    _activeEnd += shift;
+    _lastCalmAt = hoop;
+    _nextPeriodicAt += shift;
+  }
+
+  void onSqueezeEnded(int hoop) => _start(hoop, _squeezeLength, force: false);
 
   void onRideStart(int hoop) => _resetPeriodicAfter(hoop);
 
-  void onRideEnded(int hoop) => _start(hoop, _eventLength, force: false);
+  void onRideEnded(int hoop) => _start(hoop, _rideLength, force: false);
 
   bool _periodicIsDue(int hoop) =>
       hoop >= _nextPeriodicAt &&

@@ -230,9 +230,14 @@ class RunDirector {
 
   // PRD §8.3 decision 15: first meets own switch/moving introductions.
   // Saw has no first-meet pull: its natural debut waits for an open window.
+  // region P26-D-POLISH
   bool _allowsSawIntroduction(int hoop) =>
+      (_headlineReservationId == null ||
+          (_headlineReservationId != 'squeeze' &&
+              hoop >= _headlineReservationDue)) &&
       _headline.allows('introduction', hoop) &&
       (_forcedHeadlineAt == null || hoop >= _forcedHeadlineAt! + 8);
+  // endregion
 
   void _introduceAfterSlot(SlotPlan slot) {
     if (!_sawIntroductionPending ||
@@ -436,7 +441,9 @@ class RunDirector {
   void onSqueezeWarning(int hoop) => _claimHeadline('squeeze', hoop);
 
   /// PRD-2.6 D4 two calm slots follow a finished squeeze.
-  void onSqueezeEnded(int hoop) => _calm.startAt(max(hoop + 1, _i), 2);
+  // region P26-D-POLISH
+  void onSqueezeEnded(int hoop) => _calm.onSqueezeEnded(max(hoop + 1, _i));
+  // endregion
 
   // region WP-G3 — comet zigzag (PRD-2.2 §16)
   /// PRD-2.2 §16.1 the comet ride's predicted end: hoops whose plane lies
@@ -756,7 +763,9 @@ class RunDirector {
     // spring landing at 240 pt. The calm stretch waits for the slot after
     // the landing instead of erasing the spring's geometry.
     final calm = !springLanding && _calm.isCalm(i);
-    if (calm) _calm.startAt(i, 3);
+    // region P26-D-POLISH
+    if (calm) _calm.startAt(i, _calm.remainingAt(i));
+    // endregion
     // PRD-2.6 D4 a calm slot is a normal hoop. Keep the sampler's
     // "previous modifier" state from claiming a motion / tilt that the
     // calm slot never gets: its Δy must not be capped as if a hard hoop
@@ -2710,6 +2719,27 @@ class RunDirector {
       advance: spacing,
     );
   }
+
+  // region P26-D-POLISH
+  /// D4: the already-planned hoop is recovery slot one, followed by two more.
+  SlotPlan reviveSlot(
+    SlotPlan planned,
+    DirectorContext ctx, {
+    double? previousY,
+  }) {
+    _calm.includePlannedReviveSlot(planned.index);
+    final plain = plainSlot(planned, ctx);
+    final calm = _calmSlot(
+      plain,
+      ctx,
+      previousY: previousY ?? ctx.prevCentreY,
+    ).copyWith(hazardCost: 0);
+    _layout.lastY = calm.centreY;
+    _layout.noteModifiers();
+    _lastFinalY = calm.centreY;
+    return calm;
+  }
+  // endregion
 
   /// §3.0.3 slot order 2: true once if a revive is still waiting for its
   /// plain slot (the spawner then turns its planned-ahead slot plain).

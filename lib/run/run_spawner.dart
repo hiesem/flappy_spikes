@@ -173,14 +173,25 @@ class RunSpawner {
     final revived = run.director.takeRevivePending();
     final rideNow = s.ride != null && !plan.duringRide;
     if (revived || rideNow) {
-      final plain = run.director.plainSlot(
-        plan,
-        run.directorContext(),
-        ride: s.ride != null,
-        keepGeometry: !revived && s.ride?.kind == RideKind.comet,
-      );
+      // region P26-D-POLISH
+      final plain = revived
+          ? run.director.reviveSlot(
+              plan,
+              run.directorContext(),
+              previousY: _hoops.isEmpty ? null : _hoops.last.plan.centreY,
+            )
+          : run.director.plainSlot(
+              plan,
+              run.directorContext(),
+              ride: s.ride != null,
+              keepGeometry: s.ride?.kind == RideKind.comet,
+            );
+      // endregion
       _dropAheadItems();
       plan = plain;
+      // region P26-D-POLISH
+      if (revived) _replaceLogged(plan);
+      // endregion
     }
     s
       ..hoopIndex = plan.index + 1

@@ -921,8 +921,8 @@ class FirebaseVersusService implements VersusService {
     if (_held != null || _pool.isEmpty) return;
     final uid = _safe(() => backend.uid) ?? '';
     final pool = _pool.map(PoolCandidate.new);
-    // WP-L matching stays on the best-score bracket ([bracketFor]): the
-    // server files every run by it, so like meets like.
+    // Best-score brackets set the pool search order. Inside the found
+    // pool, PRD-2.6 E5 selects the rival with the duel staircase.
     if (freshOnly &&
         !hasFreshOpponent(pool, myUid: uid, myPg: _pg, met: _met)) {
       return;

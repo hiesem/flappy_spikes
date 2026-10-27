@@ -1666,6 +1666,10 @@ every requirement (file:line, test results) and the work packages with paths and
 19. **Day streak unlock (G2b):** like missions (O28) and the showcase (O16a), day-streak counting and rewards start
     at game 4. Runs 1–3 neither count nor pay, and the chip stays hidden until game 4.
 
+20. **E2 duel analytics `first` (orchestrator, E2 round 2):** `versus_result.first` is 1 when the rival run has
+    not been met in the current session (band or closest pick), and 0 for a rematch. It does not mean the
+    player's first lifetime duel; the met-run list is session-only.
+
 ### 8.4 Corrections to the spec text
 
 - Wave 0 rules deploy is not "comment only": it adds `validCard` / `look.card`, routes run looks through `validLook`

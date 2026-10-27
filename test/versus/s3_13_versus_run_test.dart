@@ -325,7 +325,21 @@ void main() {
         expect(s.coins, runCoins + bonus);
         expect(g.menu.wallet.balance, wallet0 + runCoins + bonus);
         final r = analyticsLog(spy).where((e) => e.$1 == 'versus_result').single;
-        expect(r.$2, {'result': result.name, 'score': mine, 'opp_score': theirs});
+        // PRD-2.6 WP-E2 / E5 extends the exact versus_result payload.
+        // This scripted rival has no live matcher metadata.
+        expect(r.$2, {
+          'result': result.name,
+          'score': mine,
+          'opp_score': theirs,
+          'tier': 'unknown',
+          'duel_step': -2,
+          'ratio_x100': switch (result) {
+            DuelResult.win => 167,
+            DuelResult.lose => 67,
+            DuelResult.draw => 100,
+          },
+          'first': 1,
+        });
         if (bonus > 0) {
           expect(
             analyticsLog(spy).any(

@@ -142,7 +142,17 @@ void main() {
       expect(run.state.coinsThisRun - coins0, 10);
       expect(s.timeline.points, 7);
       final r = spy.events.where((e) => e.$1 == 'versus_result').single;
-      expect(r.$2, {'result': 'win', 'score': 7, 'opp_score': 6});
+      // PRD-2.6 WP-E2 / E5 extends the exact versus_result payload.
+      // This scripted rival has no live matcher metadata.
+      expect(r.$2, {
+        'result': 'win',
+        'score': 7,
+        'opp_score': 6,
+        'tier': 'unknown',
+        'duel_step': -2,
+        'ratio_x100': 117,
+        'first': 1,
+      });
     },
   );
 }

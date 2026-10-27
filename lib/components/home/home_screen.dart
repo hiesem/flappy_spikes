@@ -90,6 +90,42 @@ class HomeScreen extends PositionComponent
 
   /// The level emblem under the bird (§3.1 / §3.2).
   late final EmblemView emblem;
+  // region P26-G4a
+  /// Q26: a persisted, one-shot hint; tab dots have their own seen state.
+  MenuTag? levelsNewTag;
+  WiggleEffect? _levelsTagWobble;
+
+  void _syncLevelsNewTag() {
+    final storage = game.storage;
+    final pendingDot =
+        storage.worldsReached > storage.worldsSeen ||
+        storage.metElements.length > storage.guideSeenCount;
+    final shown =
+        storage.gamesPlayed > 3 &&
+        storage.homeLevelsTag &&
+        pendingDot &&
+        game.menu.levels.pendingLevelUp == null &&
+        _heldLevel == null;
+    if (shown == (levelsNewTag != null)) return;
+    levelsNewTag?.removeFromParent();
+    levelsNewTag = null;
+    _levelsTagWobble = null;
+    if (!shown) return;
+    final plate = Config.homePlateCentreFor(game.viewHeight);
+    final stageScale = Config.homeStageScaleFor(game.viewHeight);
+    final tag = MenuTag(
+      'NEW',
+      position: Vector2(plate.dx + 54 * stageScale, plate.dy - 92 * stageScale),
+      priority: 10,
+    );
+    final wobble = WiggleEffect(tag);
+    tag.decorator.addLast(wobble);
+    levelsNewTag = tag;
+    _levelsTagWobble = wobble;
+    add(tag);
+  }
+
+  // endregion
   late final HomeBird bird;
   late final HomeStat bestStat;
   late final HomeStat lastStat;
@@ -313,6 +349,13 @@ class HomeScreen extends PositionComponent
     // away; the popup is the automatic launch upsell only.
     noAdsTile = tile(3, 'noads', 'NO ADS', () => game.buyNoAds('home_tile'));
 
+    // region P26-G4a
+    clock.bind((t, still) {
+      _levelsTagWobble?.setPose(
+        still ? (scale: 1, degrees: 0) : LiveCurves.newTagWobble(t),
+      );
+    });
+    // endregion
     clock
       ..bind(slotButton.animate)
       ..bind(
@@ -476,6 +519,9 @@ class HomeScreen extends PositionComponent
       lastStat.value = last == null ? '—' : formatCoins(last);
     }
     emblem.level = _displayLevel;
+    // region P26-G4a
+    _syncLevelsNewTag();
+    // endregion
   }
 
   /// Re-reads all menu state now (instead of on the next frame).

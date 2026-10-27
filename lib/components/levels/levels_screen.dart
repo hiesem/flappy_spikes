@@ -1,3 +1,6 @@
+// region P26-G4a
+import 'dart:async';
+// endregion
 import 'dart:ui';
 
 import 'package:flame/components.dart';
@@ -5,6 +8,9 @@ import 'package:flame/extensions.dart';
 import 'package:flutter/animation.dart' show Curves;
 
 import '../../game/config.dart';
+// region P26-G4a
+import '../../game/sound.dart';
+// endregion
 import '../../levels/levels.dart';
 import '../../skins/look.dart';
 import '../home/menu_primitives.dart';
@@ -12,6 +18,9 @@ import '../look_component.dart';
 import '../menu_screen_chrome.dart';
 import '../ui/live_effects.dart';
 import 'emblem_view.dart';
+// region P26-G4a
+import 'tabs/levels_tabs.dart';
+// endregion
 
 /// The LEVELS screen (PRD-home-v3 §4.4, build74 `.lvscr`), opened from the
 /// home emblem: the shared menu chrome (back button top-left, title
@@ -36,13 +45,83 @@ class LevelsScreen extends MenuScreen {
   /// Vertical offset of the enter rise right now (tests).
   double get rise => position.y;
 
+  // region P26-G4a
+  late final LevelsTabs tabs;
+  LevelsTab get selectedTab => tabs.selected;
+
+  // The existing Levels content remains mounted until J6 replaces it.
+  // Later packages install their own header and scrolling body here.
+  final Map<LevelsTab, MenuScrollArea> _tabScrolls = {};
+  final Map<LevelsTab, void Function()> _onTabOpen = {};
+
   @override
-  Rect scrollViewportFor(double viewHeight) => Rect.fromLTRB(
-    0,
-    Config.levelsListTop,
-    Config.worldWidth,
-    Config.menuScreenContentBottomFor(viewHeight),
-  );
+  bool isActive() =>
+      super.isActive() && (!built || selectedTab == LevelsTab.levels);
+
+  bool tabIsActive(LevelsTab tab) => active && !locked && selectedTab == tab;
+
+  @override
+  Rect scrollViewportFor(double viewHeight) =>
+      LevelsTabsLayout.viewport(viewHeight);
+
+  /// Hosts a tab using the same fixed header and list band as LEVELS.
+  /// Interactive children should use `() => tabIsActive(tab)`.
+  MenuScrollArea installTabContent(
+    LevelsTab tab, {
+    required PositionComponent header,
+    required Iterable<Component> rows,
+    required double contentBottom,
+    void Function()? onOpen,
+  }) {
+    assert(tab != LevelsTab.levels && !_tabScrolls.containsKey(tab));
+    header
+      ..position = LevelsTabsLayout.header.topLeft.toVector2()
+      ..size = LevelsTabsLayout.header.size.toVector2()
+      ..decorator.addLast(LevelsTabVisibility(() => selectedTab == tab));
+    final area = MenuScrollArea(
+      viewport: scrollViewportFor(game.viewHeight),
+      isActive: () => tabIsActive(tab),
+    )..contentBottom = contentBottom;
+    area.decorator.addLast(LevelsTabVisibility(() => selectedTab == tab));
+    area.content.addAll(rows);
+    _tabScrolls[tab] = area;
+    if (onOpen != null) _onTabOpen[tab] = onOpen;
+    addAll([
+      header,
+      area,
+      MenuScrollTapGate(
+        scroll: area,
+        position: area.visibleRect.topLeft.toVector2(),
+        size: area.visibleRect.size.toVector2(),
+        priority: 1 << 20,
+      ),
+    ]);
+    return area;
+  }
+
+  void selectTab(LevelsTab tab) {
+    if (!active || locked || tab == selectedTab) return;
+    game.sound.play(Sfx.skTab);
+    tabs.selected = tab;
+    titleText
+      ..text = tab.title
+      ..fontSize = tab.title.length > 8 ? 26 : 31
+      ..position.y = tab.title.length > 8 ? 99 : 96;
+    // Content can animate an unseen entry before the shell marks it seen.
+    _onTabOpen[tab]?.call();
+    if (tab == LevelsTab.worlds) {
+      unawaited(game.storage.saveWorldsSeen(game.storage.worldsReached));
+    } else if (tab == LevelsTab.guide) {
+      unawaited(
+        game.storage.saveGuideSeenCount(game.storage.metElements.length),
+      );
+    }
+    tabs.sync(game.storage);
+  }
+
+  @override
+  void sync({bool force = false}) => tabs.sync(game.storage);
+  // endregion
 
   /// The row of the current level (null while unranked).
   LevelRow? get currentRow {
@@ -56,7 +135,14 @@ class LevelsScreen extends MenuScreen {
     final levels = game.menu.levels;
     final level = levels.level;
     final look = game.menu.items.look;
-    titleText.position.y = Config.levelsTitleTop;
+    // region P26-G4a
+    titleText.position.y = 96;
+    titleText.fontSize = 31;
+    tabs = LevelsTabs(onSelect: selectTab, isActive: () => active && !locked);
+    add(tabs);
+    // Q26: opening the shell clears only the Home hint, not tab dots.
+    unawaited(game.storage.saveHomeLevelsTag(false));
+    // endregion
     clock = LiveClock(
       paused: () => game.liveMotionPaused,
       still: () => game.reduceMotion,
@@ -82,9 +168,27 @@ class LevelsScreen extends MenuScreen {
         ),
       );
     }
+    // region P26-G4a
+    // The old list started at 242; move its content to the new 264 band.
+    final listShift = LevelsTabsLayout.listTop - Config.levelsListTop;
+    for (final row in rows) {
+      row.position.y += listShift;
+    }
+    header.position = LevelsTabsLayout.header.topLeft.toVector2();
+    header.decorator.addLast(
+      LevelsTabVisibility(() => selectedTab == LevelsTab.levels),
+    );
+    scroll.decorator.addLast(
+      LevelsTabVisibility(() => selectedTab == LevelsTab.levels),
+    );
+    // endregion
     scroll.content.addAll(rows);
+    // region P26-G4a
     scroll.contentBottom =
-        Config.levelsRowTop(kLevels.length) + Config.levelsListPadBottom;
+        Config.levelsRowTop(kLevels.length) +
+        listShift +
+        Config.levelsListPadBottom;
+    // endregion
     // The live emblems: the header's and the current row's.
     final current = currentRow;
     clock.bind((t, still) {
@@ -107,8 +211,12 @@ class LevelsScreen extends MenuScreen {
     final level = game.menu.levels.level;
     if (level < 1) return;
     final viewport = scroll.viewport;
+    // region P26-G4a
     final rowMid =
-        Config.levelsRowTop(level - 1) + Config.levelsRowHeight / 2;
+        Config.levelsRowTop(level - 1) +
+        (LevelsTabsLayout.listTop - Config.levelsListTop) +
+        Config.levelsRowHeight / 2;
+    // endregion
     scroll.scrollTo(rowMid - viewport.height / 2, animate: false);
   }
 

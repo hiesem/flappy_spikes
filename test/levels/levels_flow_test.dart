@@ -4,6 +4,7 @@ import 'package:flame/game.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/levels/level_up_popup.dart';
 import 'package:flappy_spikes/components/levels/levels_screen.dart';
+import 'package:flappy_spikes/components/levels/tabs/levels_tabs.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/home_moments.dart';
@@ -152,7 +153,8 @@ void main() async {
       expect(header.progress, 0);
       expect(
         header.position,
-        Config.levelsHeaderRect.topLeft.toVector2(),
+        // PRD 2.6 G4 / O69: the tabs move the header and list down.
+        LevelsTabsLayout.header.topLeft.toVector2(),
       );
 
       expect(screen.rows, hasLength(10));
@@ -187,8 +189,8 @@ void main() async {
       );
       expect(scroll.offset, greaterThan(0));
       // The list scrolls to the bottom spike tips.
-      expect(scroll.viewport.top, Config.levelsListTop);
-      expect(scroll.viewport.bottom, 711 - Config.menuSpikeHeight);
+      expect(scroll.viewport.top, LevelsTabsLayout.listTop);
+      expect(scroll.viewport.bottom, 711);
       expect(scroll.scrollable, isTrue);
     },
   );

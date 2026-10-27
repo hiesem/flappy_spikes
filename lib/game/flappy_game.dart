@@ -84,6 +84,9 @@ import '../run/mistakes.dart';
 import '../run/run_controller.dart';
 import '../run/run_scaled_world.dart';
 import '../run/run_setup.dart';
+// region P26-G5a
+import '../progression/weekly_course.dart';
+// endregion
 import '../run/run_state.dart' show BigHoopsState;
 import '../run/run_summary.dart';
 import '../run/showcase/showcase_plan.dart';
@@ -1403,6 +1406,25 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     await _runFromHome();
   }
 
+  // region P26-G5a
+  /// G5b calls this from the missions card (after closing its panel).
+  /// The Home mode and armed starter are preserved for the next normal run.
+  Future<void> startWeeklyCourse({DateTime? now}) async {
+    if (!_homeInteractive ||
+        !WeeklyCourse.unlocked(
+          gamesPlayed: storage.gamesPlayed,
+          bestHoops: storage.bestHoops,
+        )) {
+      return;
+    }
+    await _runFromHome(weekly: WeeklyWeek.at(now ?? storage.now()));
+  }
+
+  /// LB2 uses this for its submit request, including the weekly mode.
+  String get runSubmissionMode =>
+      _run?.setup.submissionMode(homeMode.analytics) ?? homeMode.analytics;
+  // endregion
+
   /// Gold home slot (2.0 DEVIATION from PRD-1 §3.6, see SPEC.md): "watch
   /// an ad -> play with the powerup". A completed rewarded ad arms the
   /// offered powerup and starts the run at once (START's path, which
@@ -1446,7 +1468,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// ([withPowerup], slot only), awaits [beforeRunStart], then consumes the
   /// armed powerup (the 1.0 run ignores its effect; part 2 reads it) and
   /// starts the run. Synchronous for a plain START without a hook.
-  Future<void> _runFromHome({bool withPowerup = false}) async {
+  // region P26-G5a
+  Future<void> _runFromHome({
+    bool withPowerup = false,
+    WeeklyWeek? weekly,
+  }) async {
+    // endregion
     // PRD-2.3 §24.3 (S8-13): a restore / redeem at launch applies before the
     // first run: the session's first START waits (at most
     // [Config.launchOwnershipStartWait]) for the launch sync still running.
@@ -1473,7 +1500,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // keeps the 2.2 solo START without an intro.
     // PRD-2.2 §2.2: FREE FLY never takes the opponent (no intro, no bar,
     // no versus result); the held one stays ready for a later VERSUS.
-    final versusStart = homeMode == HomeMode.versus;
+    // region P26-G5a
+    final versusStart = weekly == null && homeMode == HomeMode.versus;
+    // endregion
     final waitIntro = versusStart && !_hasHeldOpponent() && _versusLoadingIntro;
     final opponent = versusStart && !waitIntro ? _takeRunOpponent() : null;
     if (!versusStart || waitIntro) _runOpponent = null;
@@ -1491,12 +1520,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       }
       if (state != GameState.start) return;
     }
+    // region P26-G5a
     // region P26-G2b
-    if (streakFreeStart) {
+    if (weekly == null && streakFreeStart) {
       await storage.saveArmedPowerup(streakStarter.name);
     }
     // endregion
-    final starter = menu.slot.consume();
+    final starter = weekly == null ? menu.slot.consume() : Powerup.none;
+    // endregion
     switch (starter) {
       case Powerup.bigHoops:
         services.track('big_hoops_used');
@@ -1505,7 +1536,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       case Powerup.none:
         break;
     }
-    _startGame(starter);
+    // region P26-G5a
+    _startGame(starter, weekly: weekly);
+    // endregion
   }
 
   // region PRD-2.3 §24.3 (S8-13) — launch ownership before the first run
@@ -1534,7 +1567,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
   // endregion
 
-  void _startGame([Powerup starter = Powerup.none]) {
+  // region P26-G5a
+  void _startGame(Powerup starter, {WeeklyWeek? weekly}) {
+    // endregion
     state = GameState.playing;
     _runsThisSession++;
     _giftThisHomeVisit = false; // PRD-2.3 §0 item 2: a new Home visit next
@@ -1562,7 +1597,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // PRD-2.3 §10.1 the bird floats at its spawn point (gravity off).
     _bird!.startHover();
     fadeOpacity(_hud, from: 0, to: 1, duration: Config.gameplayFadeDuration);
-    _startRun(starter);
+    // region P26-G5a
+    _startRun(starter, weekly: weekly);
+    // endregion
     // PRD-2.3 §10.3b the bird is floating and tappable now: the reminder
     // count starts — solo at START, in versus once the VS intro (the §25.3
     // loading screen) has finished ([_versusIntroFinishedForWaiting], next
@@ -1620,8 +1657,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // Home visit searches again.
     final mode = homeMode;
     services.track('run_start', {
-      'mode': mode.analytics,
-      if (mode == HomeMode.versus) 'opponent': _runHadOpponent ? 1 : 0,
+      // region P26-G5a
+      'mode': runSubmissionMode,
+      if (!run.setup.weekly && mode == HomeMode.versus)
+        'opponent': _runHadOpponent ? 1 : 0,
+      // endregion
     });
     try {
       versus.onRunStart();
@@ -1660,7 +1700,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   // region WP-0b — run plumbing (ARCH §2.3)
   /// Builds the [RunSetup] (seed, starter, versus opponent, debug / e2e
   /// force queue) and starts the [RunController] with the first tap.
-  void _startRun(Powerup starter) {
+  // region P26-G5a
+  void _startRun(Powerup starter, {WeeklyWeek? weekly}) {
+    // endregion
     // region P26-G4b
     _guideMetAtRunStart = storage.metElements.length;
     // endregion
@@ -1679,10 +1721,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       gamesPlayed: storage.gamesPlayed,
       seen: storage.showcaseSeen,
       attempt: storage.showcaseAttempt,
-      forced: forced.isNotEmpty,
+      // region P26-G5a
+      forced: weekly != null || forced.isNotEmpty,
+      // endregion
     );
     final setup = RunSetup(
-      seed: runSeed ?? (kE2E ? kE2ESeed : _random.nextInt(1 << 31)),
+      // region P26-G5a
+      weekly: weekly != null,
+      seed:
+          weekly?.seed ??
+          runSeed ??
+          (kE2E ? kE2ESeed : _random.nextInt(1 << 31)),
+      // endregion
       starter: starter,
       // region WP-5b — the opponent taken at START (null = solo)
       opponent: _consumeRunOpponent(),
@@ -2209,6 +2259,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (!identical(run, _run)) return;
     final revive = PostRunScreens.revive;
     if (state == GameState.dying &&
+        // region P26-G5a
+        run.setup.allowsRevive &&
+        // endregion
         revive != null &&
         ReviveLadder.eligible(
           run.state,

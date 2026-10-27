@@ -6,11 +6,12 @@ import 'elements.dart';
 import 'showcase/showcase_plan.dart';
 
 /// Inputs to one run (ARCH §1.1).
+// region P26-G5a
 class RunSetup {
   const RunSetup({
     required this.seed,
-    this.starter = Powerup.none,
-    this.opponent,
+    Powerup starter = Powerup.none,
+    OpponentRun? opponent,
     this.startHoopIndex = 0,
     this.forced = const [],
     this.forcedRide,
@@ -19,9 +20,21 @@ class RunSetup {
     this.ignoreGates = false,
     this.oneBigBonus = RunConfig.oneBigBonus,
     this.debugStarter = false,
-    this.showcase,
-    this.extraStarters = const [],
-  });
+    ShowcaseRunPlan? showcase,
+    List<Powerup> extraStarters = const [],
+    this.weekly = false,
+  }) : starter = weekly ? Powerup.none : starter,
+       opponent = weekly ? null : opponent,
+       showcase = weekly ? null : showcase,
+       extraStarters = weekly ? const [] : extraStarters;
+
+  /// G5 opens every lifetime gate without marking the run as debug.
+  final bool weekly;
+  bool get gatesOpen => weekly || ignoreGates;
+  bool get allowsRevive => !weekly;
+
+  /// LB2 submit hook: weekly is an ordinary counting run.
+  String submissionMode(String homeMode) => weekly ? 'weekly' : homeMode;
 
   /// Per-run seed (§3.0.3; tests fix it, e2e uses `kE2ESeed`).
   final int seed;
@@ -64,3 +77,5 @@ class RunSetup {
   /// PRD-2.6 WP-B additional starters (Big Hoops / shield) to arm at START.
   final List<Powerup> extraStarters;
 }
+
+// endregion

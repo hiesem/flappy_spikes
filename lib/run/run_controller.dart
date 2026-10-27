@@ -77,7 +77,8 @@ class RunController extends Component {
         {...registeredElements(), ...registeredPickupElements()};
     // PRD-2.3 §14.6 lifetime unlock gates (a debug force ignores them).
     final games = storage.gamesPlayed;
-    enabled = setup.ignoreGates
+    // region P26-G5a
+    enabled = setup.gatesOpen
         ? all
         : GatesConfig.filter(
             all,
@@ -87,13 +88,21 @@ class RunController extends Component {
               if (setup.forcedRide != null) ElementId.portal,
             ],
           );
+    // endregion
     director = RunDirector(
       seed: setup.seed,
       showcase: setup.showcase,
       enabled: enabled,
-      met: state.metElements,
+      // region P26-G5a
+      // Weekly courses are independent of lifetime first-meet history.
+      met: setup.weekly ? enabled : state.metElements,
+      // endregion
       startHoopIndex: setup.startHoopIndex,
-      lastPortalRide: RideId.fromStorageId(storage.lastPortalRide),
+      // region P26-G5a
+      lastPortalRide: setup.weekly
+          ? null
+          : RideId.fromStorageId(storage.lastPortalRide),
+      // endregion
       forced: setup.forced,
       forcedRide: setup.forcedRide,
       // PRD-2.3 §10.2 hoop 0 stands at its fixed spot, already there while
@@ -103,12 +112,16 @@ class RunController extends Component {
           ? RunConfig.hoop0X
           : RunConfig.worldWidth + RunConfig.firstHoopOffscreen,
       // PRD-2.3 §14.2 never in two runs in a row.
+      // region P26-G5a
       featherAllowed:
+          setup.weekly ||
           setup.forced.contains(ElementId.feather) ||
           !GatesConfig.shownLastRun(storage.lastFeatherRun, games),
       pieceAllowed:
+          setup.weekly ||
           setup.forced.contains(ElementId.puzzlePiece) ||
           !GatesConfig.shownLastRun(storage.lastPieceRun, games),
+      // endregion
       oneBigBonus: setup.oneBigBonus,
     );
     state.hoopIndex = setup.startHoopIndex;

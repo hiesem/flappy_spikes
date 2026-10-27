@@ -172,7 +172,9 @@ class SqueezeFeature extends RunFeature {
   bool get _mayStart {
     final c = _c!;
     final gateOpen =
-        c.run.setup.ignoreGates ||
+        // region P26-G5a
+        c.run.setup.gatesOpen ||
+        // endregion
         c.run.setup.forced.contains(ElementId.squeeze) ||
         GatesConfig.isOpen(ElementId.squeeze, c.game.storage.gamesPlayed);
     return gateOpen &&

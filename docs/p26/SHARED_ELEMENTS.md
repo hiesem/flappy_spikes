@@ -142,6 +142,18 @@ geometry of its own and exists so the run cannot grow a second path.
 |---|---|---|
 | `lib/run/effects/gold_sticker.dart` — `GoldSticker` | as listed under **Tags**; use `.newBest` / `.collect` factories where they fit | `approvals_v26/weekly_course.html` — NEW WEEK BEST!; `approvals_v26/puzzle_album.html` — picture-complete; `approvals_v26/leaderboard.html` — results climb; `approvals_v26/missions.html` — collect stickers |
 
+### Versus-card cosmetics (F9, O82 / O86)
+
+Frame internals reuse `LookPainter` / `BirdArt` for the miniature birds,
+`HoopPainter` for Hoop Loop, `SpikeTeethPainter` for Spike Teeth and
+`CollectArt.star4` for twinkles. Those drawings remain owned by their masters.
+
+| Master file / class | Allowed parameters | 2.6 design elements that map here |
+|---|---|---|
+| `lib/skins/art/card_frame_art.dart` — `CardFrameArt`, `CardFramePainter` | frame id (all 20 incl. skill), avatar size / centre, back or front layer, caller-supplied game time; leave `CardFrameArt.outset(size)` around the avatar (at most 7 pt) | `approvals_v26/versus_cards.html` — FRAMES tiles / preview, VS intro and 38 pt HUD avatar (frame under score box, O82); `approvals_v26/leaderboard.html` — podium / row / pinned-row frames (PRD:1202) |
+| `lib/skins/art/card_name_art.dart` — shared name-style painter (F9c) | name-style id (all 20 incl. skill), text, font size / alignment, caller-supplied game time; gradient mask, per-glyph Flappy and O86 Thunderstruck belong to this master | `approvals_v26/versus_cards.html` — NAMES tiles / preview, VS intro, animated run name plate and results; `approvals_v26/leaderboard.html` — podium / row / pinned-row names (PRD:1202) |
+| `lib/skins/art/card_sticker_art.dart` — shared victory-sticker painter (F9d) | sticker id (all 20 incl. skill), size / centre, caller-supplied game time; host supplies the intro's ≈42% scale / tilt | `approvals_v26/versus_cards.html` — STICKERS tiles / preview, both VS intro cards and winner's results sticker; leaderboard contexts reuse this master if showing a card sticker |
+
 ### Sparkles
 
 | Master file / class | Allowed parameters | 2.6 design elements that map here |

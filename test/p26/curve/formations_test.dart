@@ -37,6 +37,22 @@ int _syncSeed(int start, int count) {
 // endregion
 
 void main() {
+  // region P26-D-TESTS
+  test('four-slot hazard cost includes short formations and later windows', () {
+    final formations = Formations(seed: 1);
+    final saw = formations.build(FormationId.sawGate, 150);
+    final switches = formations.build(FormationId.switchChain, 150);
+    final wave = formations.build(FormationId.tiltWave, 150);
+    expect(Formations.fourSlotHazardCost([]), 0);
+    expect(Formations.fourSlotHazardCost([saw[1]]), 2);
+    expect(Formations.fourSlotHazardCost([saw[1], switches[0]]), 3.5);
+    expect(Formations.fourSlotHazardCost(saw), 2);
+    expect(Formations.fourSlotHazardCost(switches), 4.5);
+    expect(Formations.fourSlotHazardCost(wave), 1.5);
+    expect(Formations.fourSlotHazardCost([saw[0], ...switches, saw[1]]), 6.5);
+  });
+  // endregion
+
   // region P26-D-SYNC
   test('D7.8 sync rail offsets agree at cruise arrivals across seeds', () {
     for (final start in [150, 250]) {

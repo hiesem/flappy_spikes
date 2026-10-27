@@ -162,6 +162,14 @@ void main() {
                 reason: tag,
               );
             }
+            // region P26-D-TESTS
+            if (squeeze) {
+              expect(p.motion, isNull, reason: tag);
+              if (i < 150) {
+                expect(p.tiltDeg.abs(), lessThanOrEqualTo(15), reason: tag);
+              }
+            }
+            // endregion
             if (p.motion != null) {
               expect(i, greaterThanOrEqualTo(25), reason: tag);
               final swing = LayoutSampler(

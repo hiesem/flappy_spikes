@@ -171,19 +171,21 @@ class Formations {
   /// D7 runs on the D3 budget at the ceiling.
   static const double hazardBudgetAt150 = 5.5;
 
-  /// Largest D3 cost in any four consecutive slots of [plans].
+  // region P26-D-TESTS
+  /// Largest D3 cost in up to four consecutive slots of [plans].
+  /// Short formations are treated as padded with zero-cost slots.
   static double fourSlotHazardCost(List<SlotPlan> plans) {
     var maximum = 0.0;
-    for (var start = 0; start <= plans.length - 4; start++) {
+    for (var start = 0; start < plans.length; start++) {
       final cost = plans
           .skip(start)
           .take(4)
-          .map((plan) => plan.hazardCost)
-          .reduce((value, element) => value + element);
+          .fold(0.0, (total, plan) => total + plan.hazardCost);
       maximum = math.max(maximum, cost);
     }
     return maximum;
   }
+  // endregion
 
   List<SlotPlan> _stairs(int start, double x, double y, math.Random random) {
     final direction = random.nextBool() ? -1 : 1;

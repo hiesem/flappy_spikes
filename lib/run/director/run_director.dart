@@ -116,13 +116,11 @@ class RunDirector {
         _pieceAt += 2;
       }
     }
+    // region P26-D-TESTS
+    // Introduction claims now follow D1 rows in nextSlot, without lifetime state.
     _calm = CalmSchedule(rng.timing);
     if (startHoopIndex > 34) _calm.onRideStart(startHoopIndex);
-    _introductions = {
-      for (final element in const [ElementId.saw, ElementId.squeeze])
-        if (!this.enabled.contains(element) || !firstMeet.met.contains(element))
-          element,
-    };
+    // endregion
   }
 
   /// Frozen START input; never added to the debug-force queue.
@@ -216,8 +214,10 @@ class RunDirector {
   final HeadlineWindow _headline = HeadlineWindow();
   String? _headlineReservationId;
   int _headlineReservationDue = -1;
+  // region P26-D-TESTS
   int? _forcedHeadlineAt;
-  late final Set<ElementId> _introductions;
+  // D1 row claims need no per-element introduction state.
+  // endregion
   int _downgrades = 0;
   SlotPlan? _showcaseNormalSlot;
   int? _showcasePortalAt;
@@ -613,6 +613,20 @@ class RunDirector {
   /// §3.0.3 "order of decisions for a hoop slot".
   SlotPlan nextSlot(DirectorContext ctx) {
     final i = _i++;
+    // region P26-D-TESTS
+    // D1/D6: these are in-run introduction steps even for returning players.
+    // Claim the scheduled row once, rather than every later saw appearance.
+    final introduction = switch (i) {
+      15 => ElementId.switchRing,
+      25 => ElementId.movingRing,
+      30 => ElementId.saw,
+      _ => null,
+    };
+    if (showcase == null && introduction != null && _on(introduction)) {
+      _claimHeadline('introduction', i);
+    }
+    // endregion
+
     final springLanding = _springLandingAt == i;
     if (springLanding) _springLandingAt = null;
     // PRD-2.3.1 §16.1 a comet's locked stations, then the safe first hoop
@@ -1370,10 +1384,9 @@ class RunDirector {
     } else if (rewardKinds.contains(finalPlan.kind)) {
       _claimHeadline('big-bonus', hoop);
     }
-    if (_introductions.contains(ElementId.saw) &&
-        finalPlan.kind == HoopKindId.saw) {
-      _claimHeadline('introduction', hoop);
-    }
+    // region P26-D-TESTS
+    // D1 introductions are claimed once at the row, before slot arbitration.
+    // endregion
 
     _layout.lastY = finalPlan.centreY;
     _lastFinalY = finalPlan.centreY;

@@ -1,9 +1,16 @@
+import 'package:flame/extensions.dart';
+import 'package:flame_test/flame_test.dart';
+import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/run/items/squeeze.dart';
+import 'package:flappy_spikes/run/run_state.dart';
 import 'package:flappy_spikes/run/config/layout_config.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/director/hazard_budget.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../helpers.dart';
 
 void main() {
   test('WP-D3 the rolling four-slot hazard ledger holds on every screen', () {
@@ -160,27 +167,89 @@ void main() {
     }
   });
 
-  test('WP-D5 a revive keeps the squeeze index', () {
-    RunDirector make(int index) => RunDirector(
-      seed: 54,
-      enabled: ElementId.values.toSet(),
-      met: ElementId.values.toSet(),
-    );
+  // region P26-D-TESTS
+  FlameTester<FlappySpikesGame>(
+    () => createRunTestGame(worldHeight: 711),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'WP-D5 the real squeeze feature preserves nonzero indices on revive',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+    },
+    verify: (game, _) async {
+      final run = await startRun(game);
+      final feature = run.features.whereType<SqueezeFeature>().single;
+      for (final index in [0, 1, 3]) {
+        for (final phase in SqueezePhase.values) {
+          run.state.squeeze
+            ..index = index
+            ..phase = phase;
+          feature.onRevive();
+          expect(run.state.squeeze.index, index, reason: '$phase index=$index');
+        }
+      }
+    },
+  );
 
-    final preserved = make(3);
-    for (var slot = 0; slot < 12; slot++) {
-      preserved.nextSlot(DirectorContext.open(711));
+  test('WP-D6 first-meet headlines reserve the next eight hoops', () {
+    for (var seed = 1; seed <= 40; seed++) {
+      final director = RunDirector(
+        seed: seed,
+        startHoopIndex: ElementId.bullseye.firstPossible!,
+        enabled: {ElementId.normalHoop, ElementId.bullseye},
+        met: {ElementId.normalHoop},
+      );
+      SlotPlan? firstMeet;
+      for (var slot = 0; slot < 20; slot++) {
+        final plan = director.nextSlot(DirectorContext.open(711));
+        if (plan.kind == HoopKindId.bullseye) {
+          firstMeet = plan;
+          break;
+        }
+      }
+      expect(
+        firstMeet,
+        isNotNull,
+        reason: 'seed=$seed must exercise first-meet',
+      );
+      expect(director.firstMeet.met, contains(ElementId.bullseye));
+      expect(director.allowsSqueezeWarning(firstMeet!.index + 7), isFalse);
+      expect(director.allowsSqueezeWarning(firstMeet.index + 8), isTrue);
     }
-    preserved.onRevive();
-    final afterRevive = preserved.rollSqueezeAt(
-      100,
-      hoop: preserved.hoopIndex,
-      index: 3,
-    );
-    final reference = make(3).rollSqueezeAt(100, hoop: 12, index: 3);
-
-    expect(afterRevive, reference);
   });
+
+  test('WP-D6 D1 switch, moving and saw rows claim introduction once', () {
+    // D1/D6: row introductions are in-run steps, including for players who
+    // already met the element. Lifetime-closed elements claim no headline.
+    for (final (row, element) in [
+      (15, ElementId.switchRing),
+      (25, ElementId.movingRing),
+      (30, ElementId.saw),
+    ]) {
+      for (final enabled in [false, true]) {
+        final director = RunDirector(
+          seed: 54,
+          startHoopIndex: row,
+          enabled: {ElementId.normalHoop, if (enabled) element},
+          met: ElementId.values.toSet(),
+        );
+        // Move periodic calm beyond this probe; its independent warning
+        // veto must not make a missing headline claim pass this assertion.
+        director.onSqueezeEnded(row - 3);
+        for (var slot = row; slot <= row + 7; slot++) {
+          director.nextSlot(DirectorContext.open(711));
+        }
+        expect(
+          director.allowsSqueezeWarning(row + 7),
+          !enabled,
+          reason: 'D1 row=$row enabled=$enabled',
+        );
+        expect(director.allowsSqueezeWarning(row + 8), isTrue);
+      }
+    }
+  });
+  // endregion
 
   test('WP-D6 ride, squeeze and bonus headlines stay eight hoops apart', () {
     const bonusKinds = {

@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flappy_spikes/levels/level_track.dart';
-import 'package:flappy_spikes/levels/levels.dart';
 import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -43,27 +42,30 @@ void main() {
       64725,
       74725,
     ];
-    expect(kLevels.length, 31);
+    expect(kTrackLevels.length, 31);
     var total = 0;
-    for (var i = 0; i < kLevels.length; i++) {
-      final def = kLevels[i];
+    for (var i = 0; i < kTrackLevels.length; i++) {
+      final def = kTrackLevels[i];
       expect(def.level, i + 1);
       total += def.points;
       expect(total, cumulative[i]);
       expect(needFor(i), def.points);
     }
-    expect(kLevels.fold(0, (sum, def) => sum + def.coins), 18800);
-    expect(kLevels.take(5).fold(0, (sum, def) => sum + def.coins), 250);
-    expect(kLevels.take(5).every((def) => def.rarity == Rarity.common), isTrue);
+    expect(kTrackLevels.fold(0, (sum, def) => sum + def.coins), 18800);
+    expect(kTrackLevels.take(5).fold(0, (sum, def) => sum + def.coins), 250);
+    expect(
+      kTrackLevels.take(5).every((def) => def.rarity == Rarity.common),
+      isTrue,
+    );
     expect(
       [
         for (final rarity in Rarity.values)
-          kLevels.where((def) => def.rarity == rarity).length,
+          kTrackLevels.where((def) => def.rarity == rarity).length,
       ],
       [13, 10, 6, 2],
     );
-    expect(levelDef(31)!.layer, isNull);
-    expect(levelDef(31)!.rarity, Rarity.legendary);
+    expect(trackLevelDef(31)!.layer, isNull);
+    expect(trackLevelDef(31)!.rarity, Rarity.legendary);
   });
 
   test('J3 accumulate, exact hit, at most one level and dropped surplus', () {
@@ -97,12 +99,12 @@ void main() {
       expect(result.index, index + 1);
       expect(result.points, 0);
       index = result.index;
-      expect(levelDef(index)!.level, index);
-      expect(levelDef(index)!.name, 'ETERNAL WING');
-      expect(levelDef(index)!.coins, 2500);
+      expect(trackLevelDef(index)!.level, index);
+      expect(trackLevelDef(index)!.name, 'ETERNAL WING');
+      expect(trackLevelDef(index)!.coins, 2500);
       expect(needFor(index), 10000);
     }
-    expect(levelDef(0), isNull);
+    expect(trackLevelDef(0), isNull);
   });
 
   test('J13 painted fallback covers ten emblems and stays at ten', () {
@@ -113,7 +115,7 @@ void main() {
     );
     expect(paintedEmblemFor(32), 10);
     expect(paintedEmblemFor(10000), 10);
-    expect(levelDef(32)!.plate, kEternalWing.plate);
+    expect(trackLevelDef(32)!.plate, kEternalWing.plate);
   });
 
   test('S0 tuning is read for points, coins, item rows and eternal levels', () {
@@ -129,10 +131,13 @@ void main() {
       'level_eternal_coins': '3456',
     });
     expect(needFor(0), 42);
-    expect(levelDef(1)!.coins, 99);
-    expect(levelDef(1)!.item, (layer: SkinLayer.gear, rarity: Rarity.epic));
+    expect(trackLevelDef(1)!.coins, 99);
+    expect(trackLevelDef(1)!.item, (
+      layer: SkinLayer.gear,
+      rarity: Rarity.epic,
+    ));
     expect(needFor(31), 12345);
-    expect(levelDef(32)!.coins, 3456);
+    expect(trackLevelDef(32)!.coins, 3456);
   });
 
   for (final invalid in [
@@ -150,8 +155,11 @@ void main() {
       TuningValues.current = TuningValues.resolve({
         'level_items': jsonEncode(items),
       });
-      expect(levelDef(1)!.item, (layer: SkinLayer.hat, rarity: Rarity.common));
-      expect(levelDef(31)!.item, (layer: null, rarity: Rarity.legendary));
+      expect(trackLevelDef(1)!.item, (
+        layer: SkinLayer.hat,
+        rarity: Rarity.common,
+      ));
+      expect(trackLevelDef(31)!.item, (layer: null, rarity: Rarity.legendary));
     });
   }
 }

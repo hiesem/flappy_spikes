@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flappy_spikes/levels/level_reward_roll.dart';
-import 'package:flappy_spikes/levels/levels.dart';
+import 'package:flappy_spikes/levels/level_track.dart';
 import 'package:flappy_spikes/skins/catalog.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -72,7 +72,7 @@ void main() {
 
   test('R9 exhausted rarity never goes lower and pays its shop price', () {
     for (final level in [1, 10, 20, 30, 31]) {
-      final rarity = levelDef(level)!.rarity;
+      final rarity = trackLevelDef(level)!.rarity;
       final owned = ownedExcept((i) => (i.rarity?.index ?? -1) < rarity.index);
       expect(rollLevelReward(level, owned, {}, Random(7)), (
         item: null,

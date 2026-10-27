@@ -1640,6 +1640,8 @@ every requirement (file:line, test results) and the work packages with paths and
     Exact BEST rank uses aggregate counts for greater scores, earlier tied `bestAt`, and preceding same-time document
     ids, using S1's `(hidden ASC, bestShadow ASC, bestAt ASC)` index and its implicit `__name__ ASC` suffix.
 
+16. J1 ships the 31-level track under new names next to the legacy ten-rank API; J2/E1 switch callers and remove the legacy table.
+
 ### 8.4 Corrections to the spec text
 
 - Wave 0 rules deploy is not "comment only": it adds `validCard` / `look.card`, routes run looks through `validLook`

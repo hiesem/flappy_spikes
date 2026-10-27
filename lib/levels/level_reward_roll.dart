@@ -2,7 +2,7 @@ import 'dart:math';
 
 import '../skins/catalog.dart';
 import '../skins/look.dart';
-import 'levels.dart';
+import 'level_track.dart';
 
 /// A persisted J4 outcome. [fallback] is the analytics tag from J10.
 typedef LevelRewardRoll = ({String? item, int extraCoins, String fallback});
@@ -21,7 +21,7 @@ LevelRewardRoll rollLevelReward(
   Set<String> pending,
   Random random,
 ) {
-  final def = levelDef(level);
+  final def = trackLevelDef(level);
   if (def == null) throw ArgumentError.value(level, 'level');
   const shopLayers = {
     SkinLayer.bird,

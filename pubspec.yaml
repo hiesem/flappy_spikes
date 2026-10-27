@@ -108,6 +108,9 @@ flutter:
     - assets/images/share/
     - assets/images/achievements/ # PRD-2.3.1 §12.5 toast icons
     - assets/audio/
+    # region P26-J8
+    - assets/levels/emblems/
+    # endregion
 
   fonts:
     - family: LVDC Common2

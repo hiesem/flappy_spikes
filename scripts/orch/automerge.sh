@@ -24,7 +24,7 @@ while [ ! -f "$ORCH/ORCH_STOP" ]; do
     id=$(basename "$v"); wp=${id%-v*}; n=${id##*-v}
     [[ "$n" =~ ^[0-9]+$ ]] || continue
     [ -e "$ORCH/merged/$wp" ] || [ -e "$ORCH/mergefail/$wp-$n" ] && continue
-    ls -d "$W/$wp"-v* 2>/dev/null | grep -qE -- "-v$((n+1))$" && continue      # a newer round exists
+    ls -d "$W/$wp"-[vb]* 2>/dev/null | grep -qE -- "-[vb]$((n+1))$" && continue      # a newer round exists
     [ "$(cat "$v/exit" 2>/dev/null)" = 0 ] || continue
     t="$W/$wp-t$n"; [ -e "$t/exit" ] || continue
     [ "$(verdict "$t/log")" = PASS ] || continue

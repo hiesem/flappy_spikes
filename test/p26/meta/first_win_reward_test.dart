@@ -4,12 +4,16 @@ import 'package:flappy_spikes/components/progression/first_win_reward.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/progression/missions.dart';
 import 'package:flappy_spikes/run/mistakes.dart';
+import 'package:flappy_spikes/run/config/results_config.dart';
 import 'package:flappy_spikes/run/run_summary.dart';
 import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/versus/opponent.dart';
 import 'package:flappy_spikes/versus/timeline.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// The platform interface is used to simulate a failed preferences write.
+// ignore: depend_on_referenced_packages
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import '../../helpers.dart';
 
@@ -36,6 +40,17 @@ RunSummary result({DuelResult? duel, bool opponent = true, int score = 12}) =>
             )
           : null,
     );
+
+class FailingPreferences extends InMemorySharedPreferencesStore {
+  FailingPreferences(this.failedKey) : super.empty();
+  final String failedKey;
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (key == 'flutter.$failedKey') throw StateError('write failed');
+    return super.setValue(valueType, key, value);
+  }
+}
 
 void main() {
   var now = DateTime(2026, 10, 27, 23, 59);
@@ -118,6 +133,75 @@ void main() {
     },
   );
 
+  for (final failedKey in ['firstWinDay', 'coins']) {
+    FlameTester<FlappySpikesGame>(
+      () => createRunTestGame(),
+      gameSize: Vector2(320, 711),
+    ).testGameWidget(
+      'storage failure on $failedKey leaves results page usable',
+      setUp: (g, _) async {
+        await g.ready();
+        await preloadImages(g);
+      },
+      verify: (g, _) async {
+        final previous = SharedPreferencesStorePlatform.instance;
+        SharedPreferencesStorePlatform.instance = FailingPreferences(failedKey);
+        try {
+          final summary = result();
+          final page = ResultsScreen(
+            summary: summary,
+            model: ResultsModel.of(summary),
+          );
+          g.world.add(page);
+          await flushAndMount(g);
+          stepGame(g, .4);
+          expect(page.canContinue, isTrue);
+          expect(page.header!.text, 'YOU WIN!');
+          expect(page.firstWinReward, isNull);
+        } finally {
+          SharedPreferencesStorePlatform.instance = previous;
+        }
+      },
+    );
+  }
+
+  FlameTester<FlappySpikesGame>(
+    () => createRunTestGame(),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'NEXT at CLAIM displays the first-win moment before leaving',
+    setUp: (g, _) async {
+      await g.ready();
+      await preloadImages(g);
+    },
+    verify: (g, _) async {
+      final summary = result();
+      const model = ResultsModel(
+        score: 12,
+        bestBefore: 20,
+        bestAfter: 20,
+        reward: 12,
+        levelBefore: 0,
+        levelAfter: 1,
+        levelReward: 25,
+      );
+      final page = ResultsScreen(summary: summary, model: model);
+      g.world.add(page);
+      await flushAndMount(g);
+      stepGame(g, 4.1);
+      await flushAndMount(g);
+      expect(page.claimShowing, isTrue);
+      expect(page.firstWinReward!.opacity, 0);
+      page.next();
+      expect(page.leaving, isTrue);
+      stepGame(g, 3.0);
+      await flushAndMount(g);
+      expect(page.firstWinReward!.opacity, 1);
+      expect(page.firstWinReward!.shownCoins, greaterThan(0));
+      expect(page.shownReward, greaterThan(37));
+    },
+  );
+
   for (final h in [568.0, 711.0]) {
     FlameTester<FlappySpikesGame>(
       () => createRunTestGame(worldHeight: h),
@@ -138,11 +222,33 @@ void main() {
         await flushAndMount(g);
         final bonus = page.firstWinReward!;
         final nextY = page.nextButton.position.y;
+        final originalScale = page.content.scale.y;
+        final nextScreenY = page.content.position.y + nextY * originalScale;
+        expect(
+          originalScale,
+          closeTo(
+            h == 711
+                ? 1
+                : (ResultsConfig.nextTopFor(h) - 2 - ResultsConfig.topFor(h)) /
+                      (581 - ResultsConfig.contentTop),
+            1e-5,
+          ),
+        );
         page.missionsStripVisible = true;
         stepGame(g, .01);
         expect(
-          page.nextButton.position.y,
-          closeTo(nextY + 10 / page.content.scale.y, 1e-4),
+          page.content.position.y +
+              page.nextButton.position.y * page.content.scale.y,
+          closeTo(nextScreenY + 10, 1e-4),
+        );
+        expect(page.content.scale.y, lessThanOrEqualTo(originalScale));
+        expect(
+          page.nextButton.width * page.content.scale.x,
+          closeTo(292, 1e-4),
+        );
+        expect(
+          page.nextButton.height * page.content.scale.y,
+          closeTo(50, 1e-4),
         );
         expect(bonus.position.y, 595);
         // The full 18 pt line clears NEXT even on the short layout.
@@ -158,6 +264,7 @@ void main() {
         page.missionsStripVisible = false;
         stepGame(g, .01);
         expect(page.nextButton.position.y, closeTo(nextY, 1e-4));
+        expect(page.content.scale.y, closeTo(originalScale, 1e-6));
         expect(bonus.position.y, 572);
         expect(bonus.position.y + 9, lessThan(page.nextButton.position.y));
         final duplicate = ResultsScreen(

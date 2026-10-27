@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../game/flappy_game.dart';
 import '../../menu/wallet.dart';
@@ -9,6 +10,7 @@ import '../../progression/missions.dart';
 import '../../run/config/results_config.dart';
 import '../../run/items/versus_recorder.dart' show duelOf;
 import '../../run/run_summary.dart';
+import '../../services/redact.dart';
 import '../../versus/opponent.dart';
 import '../home/menu_primitives.dart';
 import '../ui/coin_fly.dart';
@@ -46,9 +48,16 @@ class FirstWinReward extends PositionComponent
     }
     final day = Missions.localDay(game.storage.now().toLocal());
     if (game.storage.firstWinDay >= day) return 0;
-    await game.storage.saveFirstWinDay(day);
-    await game.menu.wallet.add(20, CoinSource.firstWinDay);
-    return 20;
+    try {
+      // Deliberately reserve the day first: an interrupted payout cannot pay
+      // twice. A process kill between the writes can lose this day's award.
+      await game.storage.saveFirstWinDay(day);
+      await game.menu.wallet.add(20, CoinSource.firstWinDay);
+      return 20;
+    } catch (error) {
+      debugPrint('first_win_day payout failed: ${errorKind(error)}');
+      return 0;
+    }
   }
 
   @override
@@ -75,6 +84,7 @@ class FirstWinReward extends PositionComponent
   }
 
   bool get running => _time != null && _time! < 1.5;
+  double get remaining => (1.5 - (_time ?? 0)).clamp(0.0, 1.5);
 
   void start() => _time ??= 0;
 

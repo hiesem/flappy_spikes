@@ -323,7 +323,14 @@ void main() {
         expect(s.duel, result);
         expect(run.state.duelBonus, bonus);
         expect(s.coins, runCoins + bonus);
-        expect(g.menu.wallet.balance, wallet0 + runCoins + bonus);
+        // PRD-2.6 §G6 (line 932): the first YOU WIN! adds 20 separately
+        // from the original in-run win bonus and summary.
+        final firstWin = result == DuelResult.win ? 20 : 0;
+        expect(g.menu.wallet.balance, wallet0 + runCoins + bonus + firstWin);
+        expect(analyticsLog(spy).where((e) =>
+            e.$1 == 'coins_earned' &&
+            e.$2?['source'] == CoinSource.firstWinDay.analyticsName).length,
+            result == DuelResult.win ? 1 : 0);
         final r = analyticsLog(spy).where((e) => e.$1 == 'versus_result').single;
         // PRD-2.6 WP-E2 / E5 extends the exact versus_result payload.
         // This scripted rival has no live matcher metadata.
@@ -376,6 +383,14 @@ void main() {
         expect(page.you.shownScore, mine);
         expect(them.shownScore, theirs);
         expect(page.shownReward, runCoins + bonus);
+        // PRD-2.6 §G6: the daily award joins the displayed total after
+        // the original reward count has settled.
+        if (result == DuelResult.win) {
+          for (var i = 0; i < 240; i++) {
+            g.update(1 / 60);
+          }
+          expect(page.shownReward, runCoins + bonus + 20);
+        }
       },
     );
   }

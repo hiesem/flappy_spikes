@@ -200,9 +200,49 @@ class ResultsScreen extends PositionComponent
     _missionsStripVisible = value;
     firstWinReward?.missionsStrip = value;
     firstWinReward?.position.y = value ? 595 : 572;
-    if (_built && firstWinReward != null) {
-      nextButton.position.y += (value ? 10 : -10) / content.scale.y;
+    if (_built && firstWinReward != null) _layoutFirstWinColumn();
+  }
+
+  double _firstWinScale(double h, bool withStrip) {
+    final top = ResultsConfig.topFor(h);
+    final lineBottom = withStrip ? 604.0 : 581.0;
+    final nextTop = ResultsConfig.nextTopFor(h) + (withStrip ? 10 : 0);
+    return math.min(ResultsConfig.scaleFor(h),
+        (nextTop - 2 - top) / (lineBottom - ResultsConfig.contentTop));
+  }
+
+  void _layoutFirstWinColumn() {
+    final h = game.viewHeight;
+    final k = _firstWinScale(h, _missionsStripVisible);
+    final top = ResultsConfig.topFor(h);
+    final x = 160 * (1 - k);
+    final y = top - ResultsConfig.contentTop * k;
+    content.position.setValues(x, y);
+    content.scale.setAll(k);
+    fx.position.setValues(x, y);
+    fx.scale.setAll(k);
+    nextButton.position.setValues(
+      (ResultsConfig.next.left - x) / k,
+      (ResultsConfig.nextTopFor(h) + (_missionsStripVisible ? 10 : 0) - y) / k,
+    );
+    nextButton.size.setValues(ResultsConfig.next.width / k, ResultsConfig.next.height / k);
+    for (final label in nextButton.children.whereType<MenuText>()) {
+      label.fontSize = ResultsConfig.nextFontSize / k;
+      label.position.setValues((nextButton.width - label.width) / 2,
+          (nextButton.height - label.height) / 2);
     }
+  }
+
+  // Keep the page up long enough to present an earned line, including when
+  // NEXT auto-claims a level reward. Payment was already made on entry.
+  void _leaveAfterFirstWin() {
+    final bonus = firstWinReward;
+    if (bonus == null || bonus.shownCoins == 20) {
+      game.goHome();
+      return;
+    }
+    bonus.start();
+    _at(_t + bonus.remaining + ResultsConfig.nextAfterClaim, game.goHome);
   }
   // endregion
 
@@ -376,11 +416,7 @@ class ResultsScreen extends PositionComponent
     // Reserve the approved line + missions height before the fixed-size NEXT
     // on short screens. At 711 the approved layout remains at scale 1.
     final k = firstWinPaid > 0
-        ? math.min(
-            ResultsConfig.scaleFor(h),
-            (ResultsConfig.nextTopFor(h) + 10 - 2 - top) /
-                (604 - ResultsConfig.contentTop),
-          )
+        ? _firstWinScale(h, _missionsStripVisible)
         : ResultsConfig.scaleFor(h);
     // endregion
     final transform = (
@@ -808,14 +844,18 @@ class ResultsScreen extends PositionComponent
     _stopTicks(); // PRD-2.2 §14.1 NEXT mid-count stops the ticks
     if (_claimShowing) {
       _claim(auto: true);
-      _at(_claimEnd! + ResultsConfig.nextAfterClaim, game.goHome);
+      // region P26-G6a
+      _at(_claimEnd! + ResultsConfig.nextAfterClaim, _leaveAfterFirstWin);
+      // endregion
       return;
     }
     if (model.hasClaim && !_claimed) {
       _claimed = true;
       unawaited(claimLevelRewards(game, 'auto_next'));
     }
-    game.goHome();
+    // region P26-G6a
+    _leaveAfterFirstWin();
+    // endregion
   }
 
   @override

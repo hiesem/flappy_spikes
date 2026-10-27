@@ -4197,6 +4197,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     endRun(null);
   }
 
+  // region P26-E1
+  /// Shared eligibility gate for versus and the WP-LB board submit.
+  bool get _countsForUpload => _run?.countsForUpload ?? false;
+  // endregion
+
   /// The end of a run (ARCH §2.3): persistence, `noAdsPopup.recordRun`,
   /// game-over / new-best analytics, the leaderboard submit, the versus
   /// upload, then the [PostRunFlow] (ending on the WP-2e results page).
@@ -4306,9 +4311,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // Games keeps each player's highest score server-side (one entry), and
     // this also backfills a best set before sign-in was available.
     services.submitBestScore(storage.bestScore);
-    if (summary != null) {
+    // region P26-E1
+    if (summary != null && _countsForUpload) {
       unawaited(versus.submitRun(summary, menu.items.look));
     }
+    // endregion
 
     final s =
         summary ??

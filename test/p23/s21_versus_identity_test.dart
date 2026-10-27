@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flappy_spikes/game/storage.dart';
-import 'package:flappy_spikes/levels/levels.dart';
+import 'package:flappy_spikes/versus/brackets.dart';
 import 'package:flappy_spikes/run/config/versus_config.dart';
 import 'package:flappy_spikes/services/identity.dart';
 import 'package:flappy_spikes/services/pg_salt.dart';
@@ -39,7 +39,11 @@ void main() {
   late FirebaseVersusService versus;
 
   Future<void> build({Map<String, Object> prefs = const {}}) async {
-    SharedPreferences.setMockInitialValues({'bestScore': 120, 'playerLevel': 3, ...prefs});
+    SharedPreferences.setMockInitialValues({
+      'bestScore': 120,
+      'playerLevel': 3,
+      ...prefs,
+    });
     storage = GameStorage();
     await storage.load();
     backend = fixture.FakeBackend(myUid: 'anon');
@@ -79,14 +83,17 @@ void main() {
   });
 
   group('§21.4 the hashed Play Games id (pg)', () {
-    test('§21.4 pg = SHA-256(id + salt) hex; "" without Play Games or salt', () {
-      final pg = hashPlayGamesId('g1', _salt);
-      expect(pg, matches(RegExp(r'^[0-9a-f]{64}$')));
-      expect(hashPlayGamesId('g1', _salt), pg, reason: 'stable');
-      expect(hashPlayGamesId('g2', _salt), isNot(pg));
-      expect(hashPlayGamesId('', _salt), '');
-      expect(hashPlayGamesId('g1', ''), '');
-    });
+    test(
+      '§21.4 pg = SHA-256(id + salt) hex; "" without Play Games or salt',
+      () {
+        final pg = hashPlayGamesId('g1', _salt);
+        expect(pg, matches(RegExp(r'^[0-9a-f]{64}$')));
+        expect(hashPlayGamesId('g1', _salt), pg, reason: 'stable');
+        expect(hashPlayGamesId('g2', _salt), isNot(pg));
+        expect(hashPlayGamesId('', _salt), '');
+        expect(hashPlayGamesId('g1', ''), '');
+      },
+    );
 
     test('§21.4 each new run stores pg; without Play Games it is ""', () async {
       await build();
@@ -143,7 +150,7 @@ void main() {
       // matcher level: only my-pg runs under other uids → solo.
       final (tier, _) = matchCandidates(
         [PoolCandidate(withPg('old-anon', 'g', mine))],
-        myLevel: 3,
+        myBracket: 3,
         myBest: 120,
         myUid: 'me',
         myPg: mine,
@@ -179,32 +186,35 @@ void main() {
   });
 
   group('§21.5 looks', () {
-    test('§21.5 a non-default look in all five layers survives upload → pool '
-        '→ matching → lookFromMap, id for id; the emblem is levelFor(best)',
-        () async {
-      await build();
-      await versus.initialize();
-      await versus.submitRun(fixture.summary(60, bestBefore: 50), _fancy);
-      await versus.flush();
-      final uploaded = backend.writes.single.$1.entry;
-      // The wire map (Firestore) → the server's verbatim pool copy.
-      final wire = jsonDecode(jsonEncode(uploaded.toMap(ts: 0))) as Map;
-      final pooled = PoolEntry.fromMap({
-        ...wire,
-        'ts': DateTime.utc(2026, 10, 13),
-        'uid': 'other',
-        'level': levelFor(uploaded.best),
-      })!;
-      expect(lookToMap(pooled.run.look), {
-        'bird': 'grape',
-        'gear': 'shades',
-        'hat': 'cap',
-        'hoop': 'neon',
-        'trail': 'bubbles',
-      });
-      final opp = pooled.toOpponent();
-      expect(opp.look, _fancy);
-      expect(opp.level, levelFor(uploaded.best));
-    });
+    test(
+      '§21.5 a non-default look in all five layers survives upload → pool '
+      '→ matching → lookFromMap, id for id; the emblem is plv (PRD-2.6 R4)',
+      () async {
+        await build();
+        await versus.initialize();
+        await versus.submitRun(fixture.summary(60, bestBefore: 50), _fancy);
+        await versus.flush();
+        final uploaded = backend.writes.single.$1.entry;
+        // The wire map (Firestore) → the server's verbatim pool copy.
+        final wire = jsonDecode(jsonEncode(uploaded.toMap(ts: 0))) as Map;
+        final pooled = PoolEntry.fromMap({
+          ...wire,
+          'ts': DateTime.utc(2026, 10, 13),
+          'uid': 'other',
+          'level': bracketFor(uploaded.best),
+          'plv': 25,
+        })!;
+        expect(lookToMap(pooled.run.look), {
+          'bird': 'grape',
+          'gear': 'shades',
+          'hat': 'cap',
+          'hoop': 'neon',
+          'trail': 'bubbles',
+        });
+        final opp = pooled.toOpponent();
+        expect(opp.look, _fancy);
+        expect(opp.level, 25);
+      },
+    );
   });
 }

@@ -89,28 +89,33 @@ void main() {
 
   group('§25.2 met longest ago', () {
     for (final sameShard in [true, false]) {
-      test('§25.4 a pool of 2 non-own runs (${sameShard ? 'one shard' : 'two '
-          'levels'}): 10 VERSUS starts in a row are all versus, alternating '
-          'A, B, A, B', () async {
-        await build();
-        backend.pools['3_1'] = [
-          fixture.pooled('me', 'm1', 50, 3),
-          fixture.pooled('a', 'A', 80, 3),
-          if (sameShard) fixture.pooled('b', 'B', 90, 3),
-        ];
-        if (!sameShard) backend.pools['5_2'] = [fixture.pooled('b', 'B', 450, 5)];
-        await versus.initialize();
-        final got = <String?>[];
-        for (var i = 0; i < 10; i++) {
-          got.add(await start());
-        }
-        expect(got, everyElement(isNotNull), reason: 'never a silent solo');
-        for (var i = 2; i < got.length; i++) {
-          expect(got[i], got[i - 2], reason: 'alternating: $got');
-        }
-        expect(got[0], isNot(got[1]));
-        expect({...got}, {'A', 'B'});
-      });
+      test(
+        '§25.4 a pool of 2 non-own runs (${sameShard ? 'one shard' : 'two '
+                  'levels'}): 10 VERSUS starts in a row are all versus, alternating '
+        'A, B, A, B',
+        () async {
+          await build();
+          backend.pools['3_1'] = [
+            fixture.pooled('me', 'm1', 50, 3),
+            fixture.pooled('a', 'A', 80, 3),
+            if (sameShard) fixture.pooled('b', 'B', 90, 3),
+          ];
+          if (!sameShard) {
+            backend.pools['5_2'] = [fixture.pooled('b', 'B', 450, 5)];
+          }
+          await versus.initialize();
+          final got = <String?>[];
+          for (var i = 0; i < 10; i++) {
+            got.add(await start());
+          }
+          expect(got, everyElement(isNotNull), reason: 'never a silent solo');
+          for (var i = 2; i < got.length; i++) {
+            expect(got[i], got[i - 2], reason: 'alternating: $got');
+          }
+          expect(got[0], isNot(got[1]));
+          expect({...got}, {'A', 'B'});
+        },
+      );
     }
 
     test('§25.4 only own runs: no_rival', () async {
@@ -152,7 +157,7 @@ void main() {
       ];
       final (tier, c) = matchCandidates(
         pool,
-        myLevel: 3,
+        myBracket: 3,
         myBest: 120,
         myUid: 'me',
         met: const ['b1', 'a1'],
@@ -171,8 +176,11 @@ void main() {
       versus.onRunStart();
       await Future<void>.delayed(Duration.zero);
       await Future<void>.delayed(Duration.zero);
-      expect(backend.poolReads.length, greaterThan(before),
-          reason: 'run start searches at once');
+      expect(
+        backend.poolReads.length,
+        greaterThan(before),
+        reason: 'run start searches at once',
+      );
       await versus.searchForStart();
       expect(versus.holdsOpponent, isTrue);
     });
@@ -223,19 +231,21 @@ void main() {
       expect(VersusConfig.readTimeout, const Duration(seconds: 4));
     });
 
-    test('§25.2 item 4: while the search runs the read count is live',
-        () async {
-      await build();
-      backend.holdReads = true;
-      unawaited(versus.initialize());
-      for (var i = 0; i < 10 && backend.inFlight < 4; i++) {
-        await Future<void>.delayed(Duration.zero);
-      }
-      expect(versus.lastSearch.state, VersusSearchState.running);
-      expect(versus.lastSearch.reads, 4);
-      backend.holdReads = false;
-      backend.release();
-      await versus.searchForStart();
-    });
+    test(
+      '§25.2 item 4: while the search runs the read count is live',
+      () async {
+        await build();
+        backend.holdReads = true;
+        unawaited(versus.initialize());
+        for (var i = 0; i < 10 && backend.inFlight < 4; i++) {
+          await Future<void>.delayed(Duration.zero);
+        }
+        expect(versus.lastSearch.state, VersusSearchState.running);
+        expect(versus.lastSearch.reads, 4);
+        backend.holdReads = false;
+        backend.release();
+        await versus.searchForStart();
+      },
+    );
   });
 }

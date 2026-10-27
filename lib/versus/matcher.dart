@@ -6,7 +6,7 @@ import 'run_entry.dart';
 /// Which rule of §3.13 "Matching" picked the candidates. PRD-2.3 §25.2
 /// adds [rematch]: every usable run was met before, so the one met longest
 /// ago is replayed.
-enum MatchTier { level, any, rematch, solo }
+enum MatchTier { bracket, any, rematch, solo }
 
 /// What the matcher needs of a pool entry (the fixture's shape).
 abstract interface class Matchable {
@@ -45,7 +45,7 @@ bool isOtherPlayer(Matchable e, {required String myUid, String myPg = ''}) =>
 /// The candidates the client picks from at random (PRD-2 §3.13, PRD-2.3
 /// §25.2; mirrors `functions/src/matching.ts` `matchCandidates`). Among the
 /// runs that are not mine ([isOtherPlayer]) and not met yet ([met]):
-/// 1. a run from a player at [myLevel] with a score below [myBest];
+/// 1. a run from a player in [myBracket] with a score below [myBest];
 /// 2. otherwise any of them;
 /// 3. PRD-2.3 §25.2 when every run that is not mine was met: the one met
 ///    longest ago ([met] is ordered oldest first), tier
@@ -53,7 +53,7 @@ bool isOtherPlayer(Matchable e, {required String myUid, String myPg = ''}) =>
 /// 4. otherwise solo (the pool holds only my own runs, or nothing).
 (MatchTier, List<T>) matchCandidates<T extends Matchable>(
   Iterable<T> pool, {
-  required int myLevel,
+  required int myBracket,
   required int myBest,
   required String myUid,
   String myPg = '',
@@ -68,11 +68,11 @@ bool isOtherPlayer(Matchable e, {required String myUid, String myPg = ''}) =>
     for (final e in open)
       if (!metSet.contains(e.runId)) e,
   ];
-  final atLevel = [
+  final atBracket = [
     for (final e in fresh)
-      if (e.level == myLevel && e.score < myBest) e,
+      if (e.level == myBracket && e.score < myBest) e,
   ];
-  if (atLevel.isNotEmpty) return (MatchTier.level, atLevel);
+  if (atBracket.isNotEmpty) return (MatchTier.bracket, atBracket);
   if (fresh.isNotEmpty) return (MatchTier.any, fresh);
   final oldest = metLongestAgo(open, met: met);
   if (oldest != null) {
@@ -94,7 +94,7 @@ String? metLongestAgo(Iterable<Matchable> pool, {required List<String> met}) {
 /// One random candidate of [matchCandidates], or null (solo).
 T? pickOpponent<T extends Matchable>(
   Iterable<T> pool, {
-  required int myLevel,
+  required int myBracket,
   required int myBest,
   required String myUid,
   String myPg = '',
@@ -103,7 +103,7 @@ T? pickOpponent<T extends Matchable>(
 }) {
   final (_, c) = matchCandidates(
     pool,
-    myLevel: myLevel,
+    myBracket: myBracket,
     myBest: myBest,
     myUid: myUid,
     myPg: myPg,
@@ -113,29 +113,29 @@ T? pickOpponent<T extends Matchable>(
   return c[r.nextInt(c.length)];
 }
 
-/// `pools/{level}_{shard}` document id (schema.ts `poolId`).
-String poolId(int level, int shard) => '${level}_$shard';
+/// `pools/{bracket}_{shard}` document id (schema.ts `poolId`).
+String poolId(int bracket, int shard) => '${bracket}_$shard';
 
-/// The pool documents of [level] (every shard), in random order.
-List<String> _shardsOf(int level, Random r) {
+/// The pool documents of [bracket] (every shard), in random order.
+List<String> _shardsOf(int bracket, Random r) {
   final shards = [for (var i = 0; i < VersusConfig.shards; i++) i]..shuffle(r);
-  return [for (final s in shards) poolId(level, s)];
+  return [for (final s in shards) poolId(bracket, s)];
 }
 
 /// PRD-2.2 §3 the opponent search order (replaces the 2.1 `poolReadPlan`):
-/// all shards of the player's own [level] in random order, then the other
-/// levels nearest first (distance 1, 2, … up to [VersusConfig.maxLevel];
-/// at each distance the lower level before the higher one), every shard of
-/// each level in random order. Every pool document exactly once, so at
+/// all shards of the player's own [bracket] in random order, then the other
+/// brackets nearest first (distance 1, 2, … up to [VersusConfig.maxBracket];
+/// at each distance the lower bracket before the higher one), every shard of
+/// each bracket in random order. Every pool document exactly once, so at
 /// most [VersusConfig.maxSearchReads] (44) ids. Mirrors
 /// `functions/src/matching.ts` `poolSearchOrder`.
-List<String> poolSearchOrder(int level, Random r) {
-  const maxLevel = VersusConfig.maxLevel;
-  final own = level.clamp(0, maxLevel);
+List<String> poolSearchOrder(int bracket, Random r) {
+  const maxBracket = VersusConfig.maxBracket;
+  final own = bracket.clamp(0, maxBracket);
   final order = _shardsOf(own, r);
-  for (var d = 1; d <= maxLevel; d++) {
+  for (var d = 1; d <= maxBracket; d++) {
     for (final l in [own - d, own + d]) {
-      if (l >= 0 && l <= maxLevel) order.addAll(_shardsOf(l, r));
+      if (l >= 0 && l <= maxBracket) order.addAll(_shardsOf(l, r));
     }
   }
   return order;

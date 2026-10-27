@@ -31,7 +31,9 @@ class _E implements Matchable {
 void main() {
   group('§3.13 matching — test/fixtures/versus_matching.json', () {
     final fixture =
-        jsonDecode(File('test/fixtures/versus_matching.json').readAsStringSync())
+        jsonDecode(
+              File('test/fixtures/versus_matching.json').readAsStringSync(),
+            )
             as Map<String, Object?>;
     final cases = (fixture['cases']! as List).cast<Map<String, Object?>>();
 
@@ -52,22 +54,21 @@ void main() {
         final expectMap = c['expect']! as Map<String, Object?>;
         final (tier, candidates) = matchCandidates(
           pool,
-          myLevel: (me['bracket']! as num).toInt(),
+          myBracket: (me['bracket']! as num).toInt(),
           myBest: (me['best']! as num).toInt(),
           myUid: me['uid']! as String,
           met: seen,
-            myPg: myPg,
+          myPg: myPg,
         );
-        expect(_fixtureTier(tier.name), expectMap['tier']);
-        expect(
-          candidates.map((e) => e.runId).toSet(),
-          {...(expectMap['runIds']! as List).cast<String>()},
-        );
+        expect(tier.name, expectMap['tier']);
+        expect(candidates.map((e) => e.runId).toSet(), {
+          ...(expectMap['runIds']! as List).cast<String>(),
+        });
         // The random pick is always one of the candidates (or solo).
         for (var s = 0; s < 20; s++) {
           final pick = pickOpponent(
             pool,
-            myLevel: (me['bracket']! as num).toInt(),
+            myBracket: (me['bracket']! as num).toInt(),
             myBest: (me['best']! as num).toInt(),
             myUid: me['uid']! as String,
             met: seen,
@@ -155,9 +156,7 @@ void main() {
           ts.indexOf('[', start),
           ts.indexOf('];', start),
         );
-        return [
-          for (final m in RegExp(r"'([^']+)'").allMatches(body)) m[1]!,
-        ];
+        return [for (final m in RegExp(r"'([^']+)'").allMatches(body)) m[1]!];
       }
 
       expect(tsList('NICKNAME_ADJECTIVES'), kNicknameAdjectives);
@@ -197,7 +196,3 @@ void main() {
     });
   });
 }
-
-/// PRD-2.6 E4: the fixture names the tier `bracket`; the Dart matcher's enum
-/// rename (`MatchTier.level` → `MatchTier.bracket`) is wave 2.
-String _fixtureTier(String dartTier) => dartTier == 'level' ? 'bracket' : dartTier;

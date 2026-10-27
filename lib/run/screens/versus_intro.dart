@@ -125,9 +125,10 @@ class VersusIntro extends PositionComponent
   /// opponent was held at START).
   int get waitedMs => !waited
       ? 0
-      : ((resolvedAt ?? time) * 1000)
-            .round()
-            .clamp(0, (VersusConfig.introWait * 1000).round());
+      : ((resolvedAt ?? time) * 1000).round().clamp(
+          0,
+          (VersusConfig.introWait * 1000).round(),
+        );
 
   /// PRD-2.3 §25.3 the reel landed on NO RIVAL FOUND (the run is solo).
   bool get noRival => _rival == false;
@@ -278,10 +279,7 @@ class VersusIntro extends PositionComponent
     );
     youBird = VersusIntroBird(
       look: myLook,
-      home: Offset(
-        VersusConfig.youBird.dx,
-        yFor(VersusConfig.youBird.dy),
-      ),
+      home: Offset(VersusConfig.youBird.dx, yFor(VersusConfig.youBird.dy)),
       mirror: false,
       bobPeriod: VersusConfig.youBobPeriod,
       bobDelay: 0,
@@ -328,10 +326,19 @@ class VersusIntro extends PositionComponent
       blinkDelay: -1.4,
     );
     found = VersusIntroFoundTag(
-      position: Vector2(VersusConfig.foundTag.dx, yFor(VersusConfig.foundTag.dy)),
-    )
-      ..opacity = 0;
-    _top.addAll([_FindingText(this), _QMark(this), oppPlate, oppBird, found]);
+      position: Vector2(
+        VersusConfig.foundTag.dx,
+        yFor(VersusConfig.foundTag.dy),
+      ),
+    )..opacity = 0;
+    _top.addAll([
+      _FindingText(this),
+      _QMark(this),
+      oppPlate,
+      oppBird,
+      found,
+      VersusIntroNoRivalHint(this),
+    ]);
 
     vs = VersusIntroVs(
       rect: Rect.fromLTWH(
@@ -421,7 +428,12 @@ class VersusIntro extends PositionComponent
     _reelNames.add(name);
     _reelLevels.add(level);
     final i = _fillerCount++;
-    oppPlate.spin(name, time, VersusConfig.reelBaseMs / 1000 * .85, last: false);
+    oppPlate.spin(
+      name,
+      time,
+      VersusConfig.reelBaseMs / 1000 * .85,
+      last: false,
+    );
     oppPlate.avatar = avatarColors[i % avatarColors.length];
     oppPlate.level = level;
     _sfx(Sfx.vsTick);
@@ -487,8 +499,7 @@ class VersusIntro extends PositionComponent
     } else {
       _planMatch();
     }
-    final tail = _cues.sublist(_nextCue)
-      ..sort((a, b) => a.$1.compareTo(b.$1));
+    final tail = _cues.sublist(_nextCue)..sort((a, b) => a.$1.compareTo(b.$1));
     _cues.replaceRange(_nextCue, _cues.length, tail);
   }
 
@@ -655,8 +666,7 @@ class VersusIntro extends PositionComponent
   }
 
   /// The panels have landed (the backing shows behind them).
-  bool get panelsIn =>
-      time >= VersusConfig.panelsAt + VersusConfig.panelsSlide;
+  bool get panelsIn => time >= VersusConfig.panelsAt + VersusConfig.panelsSlide;
 
   @override
   void update(double dt) {
@@ -848,7 +858,10 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
     emblem = EmblemView(
       level: level,
       artScale: VersusConfig.emblemScale,
-      position: Vector2(rect.width - VersusConfig.plateSlot / 2, rect.height / 2),
+      position: Vector2(
+        rect.width - VersusConfig.plateSlot / 2,
+        rect.height / 2,
+      ),
     );
   }
 
@@ -1070,6 +1083,41 @@ class _FindingText extends PositionComponent {
   }
 }
 
+// region P26-E1
+/// T4 stays in the central 320 pt column, beneath NO RIVAL FOUND.
+class VersusIntroNoRivalHint extends PositionComponent with GroupOpacity {
+  VersusIntroNoRivalHint(this.intro)
+    : super(position: Vector2(16, 0), size: Vector2(288, 32));
+
+  final VersusIntro intro;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    final words = VersusConfig.noRivalHint.split(' a rival');
+    final lines = [words.first, 'a rival${words.last}'];
+    for (var i = 0; i < lines.length; i++) {
+      final label = MenuText(
+        lines[i],
+        fontSize: 12,
+        color: intro.game.foregroundColor,
+        position: Vector2(width / 2, i * 16.0),
+        anchor: Anchor.topCenter,
+      )..fitWidth(lines[i], width);
+      add(label);
+    }
+    opacity = 0;
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    y = intro.oppPlate.y + intro.oppPlate.height + 10;
+    opacity = intro.noRival && intro.time >= intro.lockAt ? 1 : 0;
+  }
+}
+// endregion
+
 /// The pulsing grey "?" in the empty bird spot (64 pt, `fg` 45 %).
 class _QMark extends PositionComponent {
   _QMark(this.intro);
@@ -1243,7 +1291,12 @@ class VersusIntroBird extends PositionComponent {
   bool flying(double t) =>
       _flyAt != null && t >= _flyAt! && t < _flyAt! + _flyLen;
 
-  void fly(double at, double length, List<(double, double, double, double)> path, double flap) {
+  void fly(
+    double at,
+    double length,
+    List<(double, double, double, double)> path,
+    double flap,
+  ) {
     _flyAt = at;
     _flyLen = length;
     _path = path;

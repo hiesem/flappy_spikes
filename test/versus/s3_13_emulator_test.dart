@@ -1,9 +1,8 @@
-
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:flappy_spikes/levels/levels.dart';
+import 'package:flappy_spikes/versus/brackets.dart';
 import 'package:flappy_spikes/run/config/versus_config.dart';
 import 'package:flappy_spikes/run/mistakes.dart';
 import 'package:flappy_spikes/run/run_summary.dart';
@@ -59,7 +58,8 @@ Future<(int, Object?)> http(
 
 /// An unsigned JWT (the emulators accept them).
 String fakeJwt(Map<String, Object?> payload) {
-  String b(Object o) => base64Url.encode(utf8.encode(jsonEncode(o))).replaceAll('=', '');
+  String b(Object o) =>
+      base64Url.encode(utf8.encode(jsonEncode(o))).replaceAll('=', '');
   return '${b({'alg': 'none', 'typ': 'JWT'})}.${b(payload)}.';
 }
 
@@ -81,7 +81,9 @@ Map<String, Object?> toValue(Object? v) {
   if (v is DateTime) return {'timestampValue': v.toUtc().toIso8601String()};
   if (v is List) {
     return {
-      'arrayValue': {'values': [for (final e in v) toValue(e)]},
+      'arrayValue': {
+        'values': [for (final e in v) toValue(e)],
+      },
     };
   }
   if (v is Map) {
@@ -98,7 +100,9 @@ Object? fromValue(Map<String, Object?> v) {
   if (v.containsKey('nullValue')) return null;
   if (v.containsKey('booleanValue')) return v['booleanValue'];
   if (v.containsKey('integerValue')) return int.parse('${v['integerValue']}');
-  if (v.containsKey('doubleValue')) return (v['doubleValue']! as num).toDouble();
+  if (v.containsKey('doubleValue')) {
+    return (v['doubleValue']! as num).toDouble();
+  }
   if (v.containsKey('stringValue')) return v['stringValue'];
   if (v.containsKey('timestampValue')) return RestTs('${v['timestampValue']}');
   if (v.containsKey('arrayValue')) {
@@ -107,7 +111,9 @@ Object? fromValue(Map<String, Object?> v) {
   }
   if (v.containsKey('mapValue')) {
     final f = (v['mapValue']! as Map)['fields'] as Map? ?? const {};
-    return {for (final e in f.entries) e.key: fromValue((e.value as Map).cast())};
+    return {
+      for (final e in f.entries) e.key: fromValue((e.value as Map).cast()),
+    };
   }
   throw ArgumentError('unsupported $v');
 }
@@ -241,7 +247,12 @@ Future<List<PoolEntry>> poolOf(int level, String token) async {
   return out;
 }
 
-Future<PoolEntry?> waitForEntry(int level, String uid, String runId, String token) async {
+Future<PoolEntry?> waitForEntry(
+  int level,
+  String uid,
+  String runId,
+  String token,
+) async {
   for (var i = 0; i < 60; i++) {
     final pool = await poolOf(level, token);
     for (final e in pool) {
@@ -261,7 +272,7 @@ void main() {
       final (uid, token) = await signUp();
       final run = clientRun(64, 40, gift: true);
       expect(await writeRun(uid, token, run, newBest: true), 200);
-      final level = levelFor(64);
+      final level = bracketFor(64);
       final pooled = await waitForEntry(level, uid, run.runId, token);
       expect(pooled, isNotNull, reason: 'onPlayerRunWrite accepted the run');
       expect(pooled!.level, level);
@@ -273,20 +284,20 @@ void main() {
       final pool = await poolOf(level, otherToken);
       final pick = pickOpponent(
         pool.map(PoolCandidate.new),
-        myLevel: level,
+        myBracket: level,
         myBest: 99,
         myUid: other,
         r: Random(1),
       );
       expect(pick, isNotNull);
-      final opp = pool
-          .firstWhere((e) => e.runId == run.runId)
-          .toOpponent();
+      final opp = pool.firstWhere((e) => e.runId == run.runId).toOpponent();
       expect(opp.scoreAt(1.2 * 10 + .01), 10);
       expect(opp.scoreAt(60 * 1.2 + .01), 64, reason: 'the +5 lands at once');
       expect(opp.outAt(60 * 1.2 + 1), isTrue);
     },
-    skip: enabled ? false : 'opt-in: FS_EMULATOR_TESTS=1 (tool/versus_emulator_test.sh)',
+    skip: enabled
+        ? false
+        : 'opt-in: FS_EMULATOR_TESTS=1 (tool/versus_emulator_test.sh)',
   );
 
   test(
@@ -317,7 +328,7 @@ void main() {
       final (code, _) = await http(
         'POST',
         'http://$functionsHost/$project/${VersusConfig.functionsRegion}/'
-        '${VersusConfig.deleteFunction}',
+            '${VersusConfig.deleteFunction}',
         headers: {'Authorization': 'Bearer $token'},
         body: {'data': {}},
       );
@@ -329,7 +340,7 @@ void main() {
       final (ok, body) = await http(
         'POST',
         'http://$functionsHost/$project/${VersusConfig.functionsRegion}/'
-        '${VersusConfig.deleteFunction}',
+            '${VersusConfig.deleteFunction}',
         headers: {
           'Authorization': 'Bearer $token',
           'X-Firebase-AppCheck': appCheck,
@@ -339,6 +350,8 @@ void main() {
       expect(ok, 200, reason: '$body');
       expect(((body! as Map)['result'] as Map)['ok'], isTrue);
     },
-    skip: enabled ? false : 'opt-in: FS_EMULATOR_TESTS=1 (tool/versus_emulator_test.sh)',
+    skip: enabled
+        ? false
+        : 'opt-in: FS_EMULATOR_TESTS=1 (tool/versus_emulator_test.sh)',
   );
 }

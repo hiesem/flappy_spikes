@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import '../levels/levels.dart';
 import '../run/config/versus_config.dart';
 import '../run/run_summary.dart';
 import '../skins/catalog.dart';
@@ -204,11 +203,17 @@ class PoolEntry {
     required this.uid,
     required this.level,
     this.customName = '',
+    this.plv = 0,
   });
 
   final RunEntry run;
   final String uid;
+
+  /// Stored `level` is the best-score bracket, never the emblem.
   final int level;
+
+  /// PRD-2.6 R4: player progression level; legacy entries are UNRANKED.
+  final int plv;
 
   /// WP-NAME the owner's custom versus name ('' = none: the generated
   /// [RunEntry.name] shows). Only names that pass the format rule.
@@ -226,12 +231,16 @@ class PoolEntry {
       run: run,
       uid: uid,
       level: level.toInt(),
+      plv: switch (m['plv']) {
+        final num v when v.isFinite => v.clamp(0, 9999).toInt(),
+        _ => 0,
+      },
       customName: validCustomName(m['customName']),
     );
   }
 
-  /// The opponent replayed in a run. The emblem level comes from their best
-  /// score (§5.8 "never from the recorded run's own score").
+  /// The opponent replayed in a run. The emblem comes from the
+  /// stored player progression level (PRD-2.6 E4 / R4).
   OpponentRun toOpponent() => OpponentRun(
     uid: uid,
     // WP-NAME opponents see the custom name when the owner chose one.
@@ -239,7 +248,7 @@ class PoolEntry {
     look: run.look,
     score: run.score,
     best: run.best,
-    level: levelFor(run.best),
+    level: plv,
     timeline: run.timeline,
     platform: run.platform,
     runId: run.runId,
@@ -284,7 +293,7 @@ class QueuedRun {
 /// - a new best is the same object in `bestRun` and `recent[0]`; otherwise
 ///   `bestRun` stays what it was;
 /// - `best` never decreases (`max(old.best, run.best)`); `level` is the
-///   stored player [level] (WP-L), or from the best when null.
+///   stored player [level] (WP-J), or UNRANKED when absent.
 Map<String, Object?> nextPlayerDoc({
   required Map<String, Object?>? old,
   required Map<String, Object?> run,
@@ -313,7 +322,7 @@ Map<String, Object?> nextPlayerDoc({
     'platform': platform,
     'look': lookToMap(look),
     'best': best,
-    'level': level ?? levelFor(best),
+    'level': (level ?? 0).clamp(0, 9999),
     'bestRun': isBest ? run : oldBestRun,
     'recent': recent,
     'uploads': {'day': uploadsDay, 'count': uploadsCount},

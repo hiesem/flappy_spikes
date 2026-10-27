@@ -46,11 +46,11 @@ abstract final class VersusConfig {
   /// §3.13 / ARCH §6.1 `expireAt` = now + 60 days (TTL; rules accept ±1 d).
   static const Duration expireAfter = Duration(days: 60);
 
-  /// §3.13 Pool shards per level (schema.ts SHARDS).
+  /// §3.13 Pool shards per bracket (schema.ts SHARDS).
   static const int shards = 4;
 
-  /// §3.13 Highest level (schema.ts MAX_LEVEL; levels 0–10).
-  static const int maxLevel = 10;
+  /// §3.13 Highest best-score bracket (schema.ts MAX_BRACKET; 0–10).
+  static const int maxBracket = 10;
 
   /// §3.13 Kept runs per player: `recent` ≤ 5 (ARCH §6.1).
   static const int recentRuns = 5;
@@ -102,8 +102,8 @@ abstract final class VersusConfig {
   static const Duration pgWait = Duration(milliseconds: 500);
 
   /// PRD-2.2 §3 At most this many pool documents per search: every shard of
-  /// every level ((maxLevel + 1) × shards = 44).
-  static const int maxSearchReads = (maxLevel + 1) * shards;
+  /// every bracket ((maxBracket + 1) × shards = 44).
+  static const int maxSearchReads = (maxBracket + 1) * shards;
 
   /// §3.13 offline rules (S6-66) A failed start-up auth is retried in the
   /// background with doubling waits from [authRetryBase] up to
@@ -188,6 +188,10 @@ abstract final class VersusConfig {
   /// PRD-2.3 §25.3 / §0 item 11 the texts of the no-rival landing (written
   /// in the game's tone; listed in the report for the owner's review).
   static const String noRivalText = 'NO RIVAL FOUND';
+
+  /// PRD-2.6 E3 / texts.html T4, shown beneath the no-rival plate.
+  static const String noRivalHint =
+      'No rival yet – your run can become a rival for others';
   static const String flySoloText = 'FLY SOLO';
 
   /// §5.8 Level emblem on the plate: 0.32 × art scale, centred on the slot.

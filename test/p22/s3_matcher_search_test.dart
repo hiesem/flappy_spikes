@@ -38,7 +38,7 @@ void main() {
     test('§3 own level first (all 4 shards), then nearest levels (lower '
         'before higher at a distance); each of the 44 pools once', () {
       expect(VersusConfig.maxSearchReads, 44);
-      for (var level = 0; level <= VersusConfig.maxLevel; level++) {
+      for (var level = 0; level <= VersusConfig.maxBracket; level++) {
         for (var seed = 0; seed < 8; seed++) {
           final order = poolSearchOrder(level, Random(seed * 31 + level));
           expect(order, hasLength(44));
@@ -56,8 +56,11 @@ void main() {
           for (var i = 1; i < levels.length; i++) {
             final a = (levels[i - 1] - level).abs();
             final b = (levels[i] - level).abs();
-            expect(a < b || (a == b && levels[i - 1] < levels[i]), isTrue,
-                reason: 'level $level order $levels');
+            expect(
+              a < b || (a == b && levels[i - 1] < levels[i]),
+              isTrue,
+              reason: 'level $level order $levels',
+            );
           }
         }
       }
@@ -82,17 +85,21 @@ void main() {
     };
 
     final fixture =
-        jsonDecode(File('test/fixtures/versus_matching.json').readAsStringSync())
+        jsonDecode(
+              File('test/fixtures/versus_matching.json').readAsStringSync(),
+            )
             as Map<String, Object?>;
     final cases = (fixture['search']! as List).cast<Map<String, Object?>>();
 
-    test('§3 the fixture has the sparse / own-uid-only / other-bracket cases',
-        () {
-      final names = cases.map((c) => c['name']! as String).join('\n');
-      expect(names, contains('sparse pool'));
-      expect(names, contains('own uid only'));
-      expect(names, contains('other-bracket hit'));
-    });
+    test(
+      '§3 the fixture has the sparse / own-uid-only / other-bracket cases',
+      () {
+        final names = cases.map((c) => c['name']! as String).join('\n');
+        expect(names, contains('sparse pool'));
+        expect(names, contains('own uid only'));
+        expect(names, contains('other-bracket hit'));
+      },
+    );
 
     for (final c in cases) {
       test('§3 ${c['name']}', () async {
@@ -129,13 +136,13 @@ void main() {
           }
           final (tier, cands) = matchCandidates(
             r.pool,
-            myLevel: bracket,
+            myBracket: bracket,
             myBest: (me['best']! as num).toInt(),
             myUid: myUid,
             met: seen,
             myPg: myPg,
           );
-          expect(tier.name == 'level' ? 'bracket' : tier.name, ex['tier']);
+          expect(tier.name, ex['tier']);
           expect(cands.map((e) => e.runId).toSet(), {
             ...(ex['runIds']! as List).cast<String>(),
           });
@@ -167,23 +174,25 @@ void main() {
       expect(capped.found, isFalse);
     });
 
-    test('§3 the time limit: an expired search stops before the next round',
-        () async {
-      var reads = 0;
-      final r = await searchPools<_E>(
-        order: poolSearchOrder(3, Random(1)),
-        read: (_) async {
-          reads++;
-          return const [];
-        },
-        myUid: 'me',
-        expired: () => reads >= 7,
-      );
-      // PRD-2.3 §25.2 checked between rounds of 4: 8 reads were issued.
-      expect(r.timedOut, isTrue);
-      expect(r.found, isFalse);
-      expect(r.reads, 8);
-    });
+    test(
+      '§3 the time limit: an expired search stops before the next round',
+      () async {
+        var reads = 0;
+        final r = await searchPools<_E>(
+          order: poolSearchOrder(3, Random(1)),
+          read: (_) async {
+            reads++;
+            return const [];
+          },
+          myUid: 'me',
+          expired: () => reads >= 7,
+        );
+        // PRD-2.3 §25.2 checked between rounds of 4: 8 reads were issued.
+        expect(r.timedOut, isTrue);
+        expect(r.found, isFalse);
+        expect(r.reads, 8);
+      },
+    );
 
     test('§3 a failing read ends the search with its error', () async {
       expect(

@@ -250,7 +250,7 @@ void main() {
     expect(storage.versusNickname, nick);
   });
 
-  test('§3.13 matching from the prefetched pool: a beatable run at my level '
+  test('§3.13 matching from the prefetched pool: a beatable run in my bracket '
       'first, never mine, never the same run twice in a session; START '
       'takes it synchronously and the next is held at once', () async {
     await build(prefs: {'bestScore': 120, 'playerLevel': 3});
@@ -266,12 +266,12 @@ void main() {
     await versus.initialize();
     final first = versus.takeOpponent()!;
     expect(['a1', 'b1'], contains(first.runId));
-    expect(first.level, first.runId == 'a1' ? 4 : 2, // 300 → 4 (200..399)
-        reason: 'emblem level from their best');
+    expect(first.level, 0,
+        reason: 'PRD-2.6 E4 / R4: missing plv is UNRANKED, regardless of best');
     final second = versus.takeOpponent()!;
     expect(['a1', 'b1'], contains(second.runId));
     expect(second.runId, isNot(first.runId));
-    // Level candidates used up → any other run (not mine).
+    // Bracket candidates used up → any other run (not mine).
     final third = versus.takeOpponent()!;
     expect(third.runId, 'c1');
     expect(versus.takeOpponent(), isNull);

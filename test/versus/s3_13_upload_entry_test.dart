@@ -63,10 +63,13 @@ void main() {
       expect(e.best, 7);
       // PRD-2.3 §21.4 adds `pg` (12 keys).
       expect(e.toMap().keys, hasLength(12));
-      expect(e.toMap().keys, containsAll([
-        'runId', 'score', 'best', 'ts', 'name', 'avatar', 'look', //
-        'platform', 'tl', 'end', 'fl',
-      ]));
+      expect(
+        e.toMap().keys,
+        containsAll([
+          'runId', 'score', 'best', 'ts', 'name', 'avatar', 'look', //
+          'platform', 'tl', 'end', 'fl',
+        ]),
+      );
       expect(decodeDeltas(e.tl), hasLength(7));
       expect(decodeDeltas(e.tl).skip(1), everyElement(100));
       // PRD-2.2 §13.5 fl v2: version byte 2, then (flag, value u16) each.
@@ -81,7 +84,7 @@ void main() {
     });
 
     test('§3.13 JSON round trip (upload queue) and pool entry → opponent '
-        '(level from their best, not the run score)', () {
+        '(PRD-2.6 R4: emblem from plv)', () {
       final q = QueuedRun(entry(12, bestBefore: 100), newBest: false);
       final back = QueuedRun.fromJson(q.toJson())!;
       expect(back.newBest, isFalse);
@@ -91,12 +94,13 @@ void main() {
         ...entry(12, bestBefore: 220).toMap(),
         'uid': 'u9',
         'level': 4,
+        'plv': 25,
       })!;
       final o = pool.toOpponent();
       expect(o.uid, 'u9');
       expect(o.score, 12);
       expect(o.best, 220);
-      expect(o.level, 4, reason: 'levelFor(220): 200 → 4 (not the run score)');
+      expect(o.level, 25, reason: 'PRD-2.6 R4: plv, independent of best');
       expect(o.runId, 'r');
       expect(o.scoreAt(12.0), 12);
       expect(o.outAt(13.5), isTrue);
@@ -116,7 +120,13 @@ void main() {
       expect(look.gear, 'jetpack');
       expect(look.hat, Look.defaults.hat);
       expect(look.hoop, Look.defaults.hoop);
-      expect(lookToMap(const Look()).keys, ['bird', 'gear', 'hat', 'hoop', 'trail']);
+      expect(lookToMap(const Look()).keys, [
+        'bird',
+        'gear',
+        'hat',
+        'hoop',
+        'trail',
+      ]);
     });
 
     test('§3.13 names: 1–32 chars', () {
@@ -142,13 +152,13 @@ void main() {
     );
 
     test('§3.13 create: recent = [run], a new best is the same object in '
-        'bestRun, best / level from it', () {
+        'bestRun, best from it; PRD-2.6 missing level = UNRANKED', () {
       final e = entry(60);
       final d = doc(null, e, newBest: true);
       expect(d['recent'], hasLength(1));
       expect(identical(d['bestRun'], (d['recent']! as List).first), isTrue);
       expect(d['best'], 60);
-      expect(d['level'], 2);
+      expect(d['level'], 0); // PRD-2.6 E4 / R4: never infer from best.
       expect(d['uploads'], {'day': '2026-10-08', 'count': 1});
       expect(d.keys.toSet(), {
         'name', 'avatar', 'platform', 'look', 'best', 'level', 'bestRun', //
@@ -198,16 +208,25 @@ void main() {
     });
 
     test('§3.13 runs under score 3 are never uploaded', () async {
-      expect(await queue.offer(entry(2), newBest: true), UploadDecision.lowScore);
+      expect(
+        await queue.offer(entry(2), newBest: true),
+        UploadDecision.lowScore,
+      );
       expect(queue.isEmpty, isTrue);
-      expect(await queue.offer(entry(3), newBest: false), UploadDecision.queued);
+      expect(
+        await queue.offer(entry(3), newBest: false),
+        UploadDecision.queued,
+      );
     });
 
     test('§3.13 at most 3 non-best runs per UTC day; a new best always; the '
         'count resets on the next UTC day', () async {
       for (var i = 0; i < 3; i++) {
         expect(
-          await queue.offer(entry(5, bestBefore: 50, id: 'n$i'), newBest: false),
+          await queue.offer(
+            entry(5, bestBefore: 50, id: 'n$i'),
+            newBest: false,
+          ),
           UploadDecision.queued,
         );
       }
@@ -232,51 +251,59 @@ void main() {
       );
       expect(storage.uploadsDay, '2026-10-09');
       expect(storage.uploadsToday, 1);
-      expect(UploadQueue.utcDay(DateTime.parse('2026-10-08T23:59:00-05:00')),
-          '2026-10-09');
-    });
-
-    test('§3.13 flush writes ONE run per write, oldest first; a transient '
-        'failure keeps the rest for the retry; a refused run is dropped', () async {
-      for (var i = 0; i < 3; i++) {
-        await queue.offer(entry(5 + i, bestBefore: 50, id: 'q$i'), newBest: false);
-      }
-      final writes = <String>[];
-      var fail = 'q1';
-      Future<UploadWrite> write(QueuedRun r) async {
-        if (r.entry.runId == fail) return UploadWrite.retry;
-        writes.add(r.entry.runId);
-        return UploadWrite.done;
-      }
-
-      expect(await queue.flush(write), 1);
-      expect(writes, ['q0']);
-      expect(queue.pending.map((r) => r.entry.runId), ['q1', 'q2']);
-      // Persisted: survives an app restart.
-      final reloaded = GameStorage(clock: () => now);
-      await reloaded.load();
-      expect(reloaded.uploadQueue, hasLength(2));
-      // Back online.
-      fail = '';
-      expect(await queue.flush(write), 2);
-      expect(writes, ['q0', 'q1', 'q2']);
-      expect(queue.isEmpty, isTrue);
-      // A refused run never blocks the queue.
-      await queue.offer(entry(60, bestBefore: 50, id: 'bad'), newBest: true);
-      await queue.offer(entry(61, bestBefore: 60, id: 'ok'), newBest: true);
       expect(
-        await queue.flush(
-          (r) async =>
-              r.entry.runId == 'bad' ? UploadWrite.drop : UploadWrite.done,
-        ),
-        1,
+        UploadQueue.utcDay(DateTime.parse('2026-10-08T23:59:00-05:00')),
+        '2026-10-09',
       );
-      expect(queue.isEmpty, isTrue);
-      // A throwing writer counts as transient.
-      await queue.offer(entry(62, bestBefore: 61, id: 't'), newBest: true);
-      expect(await queue.flush((_) async => throw StateError('offline')), 0);
-      expect(queue.pending, hasLength(1));
     });
+
+    test(
+      '§3.13 flush writes ONE run per write, oldest first; a transient '
+      'failure keeps the rest for the retry; a refused run is dropped',
+      () async {
+        for (var i = 0; i < 3; i++) {
+          await queue.offer(
+            entry(5 + i, bestBefore: 50, id: 'q$i'),
+            newBest: false,
+          );
+        }
+        final writes = <String>[];
+        var fail = 'q1';
+        Future<UploadWrite> write(QueuedRun r) async {
+          if (r.entry.runId == fail) return UploadWrite.retry;
+          writes.add(r.entry.runId);
+          return UploadWrite.done;
+        }
+
+        expect(await queue.flush(write), 1);
+        expect(writes, ['q0']);
+        expect(queue.pending.map((r) => r.entry.runId), ['q1', 'q2']);
+        // Persisted: survives an app restart.
+        final reloaded = GameStorage(clock: () => now);
+        await reloaded.load();
+        expect(reloaded.uploadQueue, hasLength(2));
+        // Back online.
+        fail = '';
+        expect(await queue.flush(write), 2);
+        expect(writes, ['q0', 'q1', 'q2']);
+        expect(queue.isEmpty, isTrue);
+        // A refused run never blocks the queue.
+        await queue.offer(entry(60, bestBefore: 50, id: 'bad'), newBest: true);
+        await queue.offer(entry(61, bestBefore: 60, id: 'ok'), newBest: true);
+        expect(
+          await queue.flush(
+            (r) async =>
+                r.entry.runId == 'bad' ? UploadWrite.drop : UploadWrite.done,
+          ),
+          1,
+        );
+        expect(queue.isEmpty, isTrue);
+        // A throwing writer counts as transient.
+        await queue.offer(entry(62, bestBefore: 61, id: 't'), newBest: true);
+        expect(await queue.flush((_) async => throw StateError('offline')), 0);
+        expect(queue.pending, hasLength(1));
+      },
+    );
 
     test('§3.13 the queue is capped (oldest non-best dropped first); Delete '
         'my data clears it and the counter', () async {

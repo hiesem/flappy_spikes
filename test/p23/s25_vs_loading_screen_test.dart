@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/components/home/menu_primitives.dart';
+import 'package:flappy_spikes/run/screens/versus_intro.dart';
 import 'package:flappy_spikes/run/config/versus_config.dart';
 import 'package:flappy_spikes/services/e2e.dart';
 import 'package:flappy_spikes/services/versus_service.dart';
@@ -89,7 +91,10 @@ void main() {
       expect(v.searchForStartCalls, 0);
       await finishVersusIntro(g);
       expect(g.run!.setup.opponent!.name, 'Pond');
-      expect(analyticsLog(spy).where((e) => e.$1 == 'versus_intro_wait'), isEmpty);
+      expect(
+        analyticsLog(spy).where((e) => e.$1 == 'versus_intro_wait'),
+        isEmpty,
+      );
     },
   );
 
@@ -139,14 +144,21 @@ void main() {
         expect(intro.reelName, 'RapidParrot123');
         expect(intro.oppPlate.name, 'RapidParrot123');
         expect(intro.noRival, isFalse);
+        expect(
+          intro
+              .descendants()
+              .whereType<VersusIntroNoRivalHint>()
+              .single
+              .opacity,
+          0,
+        );
         await stepUntil(g, () => intro.time >= intro.lockAt + .5);
         await snap(g, tester, 's25_landed_$tag');
         await finishVersusIntro(g);
         expect(g.run!.setup.opponent!.name, 'RapidParrot123');
-        final wait = analyticsLog(spy)
-            .where((e) => e.$1 == 'versus_intro_wait')
-            .single
-            .$2!;
+        final wait = analyticsLog(
+          spy,
+        ).where((e) => e.$1 == 'versus_intro_wait').single.$2!;
         expect(wait['found'], 1);
         expect(wait['waited_ms'] as int, closeTo(1200, 50));
         expect(analyticsLog(spy).where((e) => e.$1 == 'versus_solo'), isEmpty);
@@ -176,6 +188,22 @@ void main() {
         expect(intro.reelName, VersusConfig.noRivalText);
         expect(intro.oppPlate.noRival, isTrue);
         expect(intro.found.opacity, 0, reason: 'no MATCH FOUND! tag');
+        // PRD-2.6 E3 / T4: honest copy beneath the plate, inside 320 pt.
+        final hint = intro
+            .descendants()
+            .whereType<VersusIntroNoRivalHint>()
+            .single;
+        expect(hint.opacity, 1);
+        expect(
+          hint.y,
+          greaterThanOrEqualTo(intro.oppPlate.y + intro.oppPlate.height),
+        );
+        final labels = hint.children.whereType<MenuText>().toList();
+        expect(labels.map((l) => l.text).join(' '), VersusConfig.noRivalHint);
+        for (final label in labels) {
+          expect(hint.x + label.x - label.width / 2, greaterThanOrEqualTo(0));
+          expect(hint.x + label.x + label.width / 2, lessThanOrEqualTo(320));
+        }
         await stepUntil(g, () => intro.soloBanner != null);
         expect(intro.soloBanner!.text, VersusConfig.flySoloText);
         g.update(.4);
@@ -189,10 +217,14 @@ void main() {
         expect(g.runHud!.versus, isNull);
         expect(fake.pool, hasLength(1), reason: 'kept for the next START');
         final log = analyticsLog(spy);
-        expect(log.where((e) => e.$1 == 'versus_solo').single.$2!['waited_ms'],
-            3000);
-        expect(log.where((e) => e.$1 == 'versus_intro_wait').single.$2,
-            {'waited_ms': 3000, 'found': 0});
+        expect(
+          log.where((e) => e.$1 == 'versus_solo').single.$2!['waited_ms'],
+          3000,
+        );
+        expect(log.where((e) => e.$1 == 'versus_intro_wait').single.$2, {
+          'waited_ms': 3000,
+          'found': 0,
+        });
       },
       h: h,
     );
@@ -210,8 +242,11 @@ void main() {
       expect(intro.waiting, isFalse);
       expect(intro.noRival, isTrue);
       expect(intro.resolvedAt!, lessThan(.1));
-      expect(intro.lockAt, lessThan(VersusConfig.introWait + 1),
-          reason: 'lands on the normal reel schedule from the reel start');
+      expect(
+        intro.lockAt,
+        lessThan(VersusConfig.introWait + 1),
+        reason: 'lands on the normal reel schedule from the reel start',
+      );
       await finishVersusIntro(g);
       expect(g.run!.setup.opponent, isNull);
       expect(
@@ -236,10 +271,9 @@ void main() {
 
 /// The reel's filler names are display names only (PRD-2.2 §5.8 honesty).
 abstract final class VersusIntroFillersOnly {
-  static bool check(String name) =>
-      const [
-        'Kiwi', 'Zap', 'Ace', 'Pip', 'Tofu', 'Rex', 'Luna', 'Fizz', 'Gizmo', //
-        'Bean', 'Echo', 'Juno', 'Spike', 'Dash', 'Bubbles', 'Taco', 'Ziggy',
-        'Nugget', 'Wren', 'Sky',
-      ].contains(name);
+  static bool check(String name) => const [
+    'Kiwi', 'Zap', 'Ace', 'Pip', 'Tofu', 'Rex', 'Luna', 'Fizz', 'Gizmo', //
+    'Bean', 'Echo', 'Juno', 'Spike', 'Dash', 'Bubbles', 'Taco', 'Ziggy',
+    'Nugget', 'Wren', 'Sky',
+  ].contains(name);
 }

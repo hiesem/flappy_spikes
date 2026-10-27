@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 
 import '../game/diag.dart';
 import '../game/storage.dart';
-import '../levels/levels.dart';
+import '../versus/brackets.dart';
 import '../run/config/versus_config.dart';
 import '../run/run_summary.dart';
 import '../skins/look.dart';
@@ -342,8 +342,7 @@ class PlayerFields {
     this.level,
   });
 
-  /// WP-L the stored player level for `players/{uid}.level` (null: the
-  /// pool level of the best, [levelFor]).
+  /// WP-J progression level for `players/{uid}.level` (null: UNRANKED).
   final int? level;
 
   final String name;
@@ -654,7 +653,7 @@ class FirebaseVersusService implements VersusService {
     final s = storage;
     return VersusProfile(
       name: s.versusNickname ?? '', // WP-AV the generated name only
-      level: s.playerLevel.clamp(0, kMaxLevel), // WP-L the stored level
+      level: s.playerLevel.clamp(0, 9999), // WP-J progression level, not bracket
     );
   }
 
@@ -905,7 +904,7 @@ class FirebaseVersusService implements VersusService {
     final uid = _safe(() => backend.uid) ?? '';
     final best = storage.bestScore;
     final pool = _pool.map(PoolCandidate.new);
-    // WP-L matching stays on the pool level of the best ([levelFor]): the
+    // WP-L matching stays on the best-score bracket ([bracketFor]): the
     // server files every run by it, so like meets like.
     if (freshOnly &&
         !hasFreshOpponent(pool, myUid: uid, myPg: _pg, met: _met)) {
@@ -913,7 +912,7 @@ class FirebaseVersusService implements VersusService {
     }
     final c = pickOpponent(
       pool,
-      myLevel: levelFor(best),
+      myBracket: bracketFor(best),
       myBest: best,
       myUid: uid,
       myPg: _pg,
@@ -942,9 +941,9 @@ class FirebaseVersusService implements VersusService {
     _searching = done.future;
     _loading = true;
     final gen = _searchGen;
-    // WP-L the pool level of the best (the server's shards), not the
+    // WP-L the best-score bracket (the server's shards), not the
     // stored player level.
-    final level = levelFor(storage.bestScore);
+    final level = bracketFor(storage.bestScore);
     _search = VersusSearchInfo(state: VersusSearchState.running, level: level);
     var startedAt = _clock();
     final watch = Stopwatch()..start();

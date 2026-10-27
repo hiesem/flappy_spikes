@@ -14,6 +14,9 @@ import '../skins/look.dart';
 import '../versus/custom_name.dart';
 import '../versus/diagnostics.dart';
 import '../versus/matcher.dart';
+// region P26-E2
+import '../versus/duel.dart';
+// endregion
 import '../versus/nickname.dart';
 import '../versus/opponent.dart';
 import '../versus/run_entry.dart';
@@ -813,6 +816,20 @@ class FirebaseVersusService implements VersusService {
   @override
   OpponentRun? takeOpponent() {
     _dropHeldIfMine();
+    // region P26-E2
+    // The next rival may have been prefetched before the last run finished.
+    // Refresh its pick using the staircase/history now persisted at run end.
+    final held = _held;
+    if (held != null) {
+      final info = duelMatchInfo(held);
+      if (info?.step != storage.duelStep ||
+          info?.target != duelTarget(storage.duelStep, storage.recentScores)) {
+        _held = null;
+        _heldEntry = null;
+        _pickFromPool();
+      }
+    }
+    // endregion
     final o = _held;
     _held = null;
     _heldEntry = null;
@@ -899,10 +916,10 @@ class FirebaseVersusService implements VersusService {
   /// Holds a random match from the loaded pool (§3.13 matching, PRD-2.3
   /// §25.2 met longest ago when only met runs are left). [freshOnly]: only
   /// a run not met yet (after a START the search looks further first).
+  // region P26-E2
   void _pickFromPool({bool freshOnly = false}) {
     if (_held != null || _pool.isEmpty) return;
     final uid = _safe(() => backend.uid) ?? '';
-    final best = storage.bestScore;
     final pool = _pool.map(PoolCandidate.new);
     // WP-L matching stays on the best-score bracket ([bracketFor]): the
     // server files every run by it, so like meets like.
@@ -910,19 +927,28 @@ class FirebaseVersusService implements VersusService {
         !hasFreshOpponent(pool, myUid: uid, myPg: _pg, met: _met)) {
       return;
     }
-    final c = pickOpponent(
+    final pick = pickDuelOpponent(
       pool,
-      myBracket: bracketFor(best),
-      myBest: best,
       myUid: uid,
       myPg: _pg,
+      step: storage.duelStep,
+      recentScores: storage.recentScores,
       met: _met,
       r: _random,
     );
+    final c = pick.entry;
     if (c == null) return;
     _heldEntry = c.entry;
-    _held = c.entry.toOpponent();
+    final opponent = c.entry.toOpponent();
+    setDuelMatchInfo(
+      opponent,
+      DuelMatchInfo(
+        tier: pick.tier, step: storage.duelStep, target: pick.target,
+      ),
+    );
+    _held = opponent;
   }
+  // endregion
 
   @override
   Future<void> prefetch() async {

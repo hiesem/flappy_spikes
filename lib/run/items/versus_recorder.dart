@@ -1,5 +1,8 @@
 import '../../menu/wallet.dart';
 import '../../versus/opponent.dart';
+// region P26-E2
+import '../../versus/duel.dart';
+// endregion
 import '../config/versus_config.dart';
 import '../run_context.dart';
 import '../run_events.dart';
@@ -68,10 +71,19 @@ class VersusRecorder extends RunFeature {
       c.earn(bonus, CoinSource.winBonus);
       c.s.duelBonus = c.s.coinsThisRun - before;
     }
+    // region P26-E2
+    final match = duelMatchInfo(opp);
+    // endregion
     c.track('versus_result', {
       'result': result.name,
       'score': c.s.score,
       'opp_score': opp.score,
+      // region P26-E2
+      'tier': match?.tier.name ?? 'unknown',
+      'duel_step': match?.step ?? c.game.storage.duelStep,
+      'ratio_x100': opp.score == 0 ? 0 : (100 * c.s.score / opp.score).round(),
+      'first': (match?.first ?? true) ? 1 : 0,
+      // endregion
     });
   }
 

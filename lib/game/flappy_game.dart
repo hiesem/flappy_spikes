@@ -98,6 +98,9 @@ import '../run/screens/results_screen.dart';
 import '../run/screens/versus_intro.dart'; // WP-5b
 import '../run/config/versus_config.dart'; // WP-5b
 import '../versus/opponent.dart'; // WP-5b
+// region P26-E2
+import '../versus/duel.dart';
+// endregion
 import '../versus/diagnostics.dart'; // P22-2
 import '../run/screens/bonus_screen.dart'; // WP-4a
 import '../services/e2e.dart';
@@ -4867,6 +4870,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           hoopIndex: 0,
           timeline: RunTimeline.empty(),
         );
+    // region P26-E2
+    unawaited(recordDuelRun(storage, s, counts: _countsForUpload));
+    // endregion
     unawaited(PostRunFlow(this).run(s));
     fadeOpacity(_hud, from: 1, to: 0, duration: Config.gameplayFadeDuration);
   }

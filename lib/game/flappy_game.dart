@@ -1,4 +1,7 @@
 import 'dart:async';
+// region P26-G2c
+import '../components/progression/streak_lost_popup.dart';
+// endregion
 // region P26-G2b
 import 'dart:math' as math;
 import '../components/progression/streak_strip.dart';
@@ -656,6 +659,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Whether one of the modal popups (launch No-ads upsell, LEVEL UP,
   /// purchase result, No-ads celebration) is up.
   bool get modalPopupOpen =>
+      // region P26-G2c
+      _streakLostPopup != null ||
+      // endregion
       // region P26-G2b
       _streakCard != null ||
       // endregion
@@ -762,6 +768,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// PRD-menu-v2 §8.4: the idle animations of the live home / Shop pause
   /// while a dialog, popup, ad, fake ad or the debug panel is on top.
   bool get liveMotionPaused =>
+      // region P26-G2c
+      _streakLostPopup != null ||
+      // endregion
       _noAdsPopup != null ||
       _levelUpPopup != null ||
       _purchasePopup != null ||
@@ -1080,11 +1089,17 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Settings are not arrivals. System sheets remain outside this budget.
   void _beginHomeVisit() {
     if (state != GameState.start || menuScene != MenuScene.home) return;
+    // region P26-G2c
+    _streakLostVisit++;
+    // endregion
     homeMoments.beginVisit(
       HomeVisit(
         day: storage.now(),
         gamesPlayed: storage.gamesPlayed,
         requests: HomeVisitRequests(
+          // region P26-G2c
+          streakLost: streakLostPending,
+          // endregion
           levelUpCatchUp: menu.levels.pendingLevelUp != null,
           // region P26-G2b
           streakReward: streakRewardPending,
@@ -2203,6 +2218,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// True while the home screen is up with nothing over it.
   bool get _homeInteractive =>
+      // region P26-G2c
+      _streakLostPopup == null &&
+      // endregion
       state == GameState.start &&
       menuScene == MenuScene.home &&
       _backHandlers.isEmpty &&
@@ -2751,6 +2769,248 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         ..celebrate(item);
     }
   }
+
+  // region P26-G2c
+  StreakLostPopup? _streakLostPopup;
+  StreakLostPopup? get streakLostPopup => _streakLostPopup;
+  double _streakLostSettle = 0;
+  int _streakLostVisit = 0;
+  int _streakRestoreTries = 0;
+  bool _streakLostBusy = false;
+
+  bool get streakLostPending => dayStreak.shouldOfferLost(
+    today: storage.today,
+    runNumber: storage.gamesPlayed + 1,
+  );
+
+  Future<void> _saveLostStreak(DayStreak next) async {
+    await storage.saveStreakDays(next.streakDays);
+    await storage.saveStreakLastDay(next.streakLastDay);
+    await storage.saveStreakLostDays(next.streakLostDays);
+    await storage.saveStreakLostSeenDay(next.streakLostSeenDay);
+  }
+
+  void _checkStreakLost(double dt) {
+    if (!_homeInteractive ||
+        _home?.built != true ||
+        _home!.opacity < 1 ||
+        modalPopupOpen ||
+        _popupQueue.isNotEmpty ||
+        !streakLostPending ||
+        _adsShowing > 0 ||
+        _fakeAd != null) {
+      _streakLostSettle = 0;
+      return;
+    }
+    _streakLostSettle += dt;
+    if (_streakLostSettle < Config.levelUpSettleDelay) return;
+    _streakLostSettle = 0;
+    homeMoments.tryShow(HomeMoment.streakLost, () {
+      unawaited(_openStreakLost());
+    });
+  }
+
+  Future<void> _openStreakLost() async {
+    if (_streakLostPopup != null || !streakLostPending) return;
+    final next = dayStreak.markLostShown(
+      today: storage.today,
+      runNumber: storage.gamesPlayed + 1,
+    );
+    final popup = StreakLostPopup(
+      state: next,
+      noAds: menu.noAds,
+      balance: () => menu.wallet.balance,
+      onRestore: () => unawaited(restoreLostStreak()),
+      onGiveUp: () => unawaited(giveUpLostStreak()),
+      onDismiss: () => unawaited(dismissLostStreak()),
+      onMomentDone: _closeStreakLost,
+    );
+    // Own the modal slot before persisting or mounting any content.
+    _streakLostPopup = popup;
+    _streakRestoreTries = 0;
+    await _saveLostStreak(next);
+    world.add(popup);
+    pushBack(_streakLostBack);
+    services.track('streak_lost_shown', {
+      'days': next.streakLostDays,
+      'visit': _streakLostVisit,
+    });
+  }
+
+  bool _streakLostBack() {
+    unawaited(dismissLostStreak());
+    return true;
+  }
+
+  void _closeStreakLost() {
+    final popup = _streakLostPopup;
+    if (popup == null) return;
+    final restored = popup.phase == StreakLostPhase.restoring;
+    popup.active = false;
+    popup.removeFromParent();
+    _streakLostPopup = null;
+    _streakLostBusy = false;
+    popBack(_streakLostBack);
+    if (restored && !reduceMotion) {
+      final chips = _home?.children.whereType<StreakStrip>();
+      if (chips != null && chips.isNotEmpty) {
+        chips.first.add(
+          ScaleEffect.by(
+            Vector2.all(1.14),
+            EffectController(duration: .16, reverseDuration: .16),
+          ),
+        );
+      }
+    }
+    _drainPopups();
+  }
+
+  Future<void> dismissLostStreak() async {
+    final popup = _streakLostPopup;
+    if (popup == null || !popup.active || popup.resolving) return;
+    // Cancels any pending load by dropping its popup identity. It cannot
+    // grant later, even if an SDK future eventually completes.
+    _closeStreakLost();
+    await _saveLostStreak(
+      dayStreak.dismissLost(
+        today: storage.today,
+        runNumber: storage.gamesPlayed + 1,
+      ),
+    );
+  }
+
+  Future<void> giveUpLostStreak() async {
+    final popup = _streakLostPopup;
+    if (popup == null || !popup.active || popup.resolving) return;
+    popup.giveUpMoment();
+    final next = dayStreak.giveUp(
+      today: storage.today,
+      runNumber: storage.gamesPlayed + 1,
+    );
+    await _saveLostStreak(next);
+    services.track('streak_give_up', {'days': popup.state.streakLostDays});
+  }
+
+  Future<void> restoreLostStreak() async {
+    final popup = _streakLostPopup;
+    if (popup == null ||
+        !popup.isLoaded ||
+        !popup.canRestore ||
+        _streakLostBusy) {
+      return;
+    }
+    _streakLostBusy = true;
+    final before = menu.wallet.balance;
+    final noAds = menu.noAds;
+    final payment = dayStreak.restorePayment(noAds: noAds, coins: before);
+    if (!payment.enabled) {
+      _streakLostBusy = false;
+      return;
+    }
+    popup.loading(coins: noAds);
+    if (noAds) popup.active = false;
+    bool current() => identical(_streakLostPopup, popup) && !popup.resolving;
+    var paid = false;
+    try {
+      if (noAds) {
+        paid = await menu.wallet.spend(
+          payment.coins,
+          CoinSource.streakRestore.analyticsName,
+        );
+        if (paid && !reduceMotion) {
+          _coinPill.countFrom(before, duration: .65, linear: true);
+          final done = Completer<void>();
+          world.add(
+            CoinFly(
+              coin: Sprite(images.fromCache('menu/coin.png')),
+              from: Rect.fromCenter(
+                center: _coinPill.coinFlyTarget,
+                width: 24,
+                height: 18,
+              ),
+              to: popup.buttonRect.center,
+              count: 6,
+              duration: .45,
+              delay: 0,
+              stagger: .035,
+              random: coinFlyRandom,
+              onDone: () {
+                if (!done.isCompleted) done.complete();
+              },
+            ),
+          );
+          // Payment is committed; don't permit dismissal during the flight.
+          popup.active = false;
+          await done.future;
+        }
+      } else {
+        _streakRestoreTries++;
+        // An unavailable/failed/incomplete video keeps LOADING visible for
+        // about eight seconds, while GIVE UP and × remain available.
+        final started = storage.now();
+        var result = AdResult.unavailable;
+        if (await monetization.ads.ensureLoaded(
+          timeout: const Duration(seconds: 8),
+        )) {
+          if (!current()) return;
+          result = await showRewardedAd(AdPlacement.streakRestore);
+        }
+        if (!current()) return;
+        paid = result == AdResult.completed;
+        if (!paid) {
+          final remaining =
+              const Duration(seconds: 8) - storage.now().difference(started);
+          if (remaining > Duration.zero) await Future<void>.delayed(remaining);
+          if (!current()) return;
+          await _saveLostStreak(
+            dayStreak.dismissLost(
+              today: storage.today,
+              runNumber: storage.gamesPlayed + 1,
+            ),
+          );
+          services.track('streak_restore_ad_fail', {'reason': result.name});
+          popup.retry();
+          return;
+        }
+      }
+      if (!current()) return;
+      if (!paid) {
+        popup.retry();
+        return;
+      }
+      popup.active = false;
+      final next = dayStreak.restore(
+        today: storage.today,
+        runNumber: storage.gamesPlayed + 1,
+        noAds: noAds,
+        coins: before,
+        paymentCompleted: paid,
+      );
+      await _saveLostStreak(next);
+      services.track('streak_restore', {
+        'days': next.streakDays,
+        'method': noAds ? 'coins' : 'ad',
+        'ad_tries': _streakRestoreTries,
+      });
+      popup.restoreMoment(
+        next.streakDays,
+        flewToday: next.flewToday(storage.today),
+      );
+    } catch (_) {
+      if (current()) {
+        if (!noAds) {
+          services.track('streak_restore_ad_fail', {'reason': 'error'});
+        }
+        popup.retry();
+      }
+    } finally {
+      if (identical(_streakLostPopup, popup)) {
+        _streakLostBusy = false;
+        popup.active = true;
+      }
+    }
+  }
+  // endregion
 
   // region P26-G2b
   StreakCard? _streakCard;
@@ -5459,6 +5719,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       _levelsOpenIn = levelsIn - dt;
       if (_levelsOpenIn! <= 0) openLevels();
     }
+    // region P26-G2c
+    if (state == GameState.start) _checkStreakLost(dt);
+    // endregion
     if (state == GameState.start) _checkLevelUp(dt);
     // region P26-G2b
     _streakSlotPop = math.max(0, _streakSlotPop - dt);

@@ -33,5 +33,6 @@ echo; echo "=== BUILDER'S FINAL MESSAGE (round $n) ==="
 cat "$ORCH/$wp.b$n.last.txt" 2>/dev/null || echo "(none)"
 } > "$p"
 # at most 3 testers at once (FIFO; each runs its own flutter tests); no MCP servers (each would cost ~340 MB)
-exec "$(dirname "$0")/spawn.sh" "$wp-t$n" 90 "$wt" -- "$(dirname "$0")/fifo_slot.sh" test 3 -- claude -p --model claude-opus-5-5 \
+D=$(cd "$(dirname "$0")" && pwd)
+exec "$D/spawn.sh" "$wp-t$n" 90 "$wt" -- "$D/fifo_slot.sh" test 3 -- claude -p --model claude-opus-5-5 \
   --effort medium --strict-mcp-config --permission-mode bypassPermissions --output-format json "$(cat "$p")"

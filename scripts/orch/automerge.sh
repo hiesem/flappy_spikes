@@ -31,6 +31,7 @@ while [ ! -f "$ORCH/ORCH_STOP" ]; do
     git -C "$REPO" branch --list "p26/$wp" | grep -q . || continue
     if out=$("$(dirname "$0")/merge.sh" "$wp" 2>&1); then
       touch "$ORCH/merged/$wp"; echo "$(date '+%F %T') [automerge] $(echo "$out" | tail -1)" >> "$ORCH/RUNLOG.md"
+      break    # one merge per pass, so finished builders get their verify + tester promptly
     else
       touch "$ORCH/mergefail/$wp-$n"; echo "$(date '+%F %T') [automerge] $wp r$n NOT merged: $(echo "$out" | tail -1)" >> "$ORCH/RUNLOG.md"
     fi

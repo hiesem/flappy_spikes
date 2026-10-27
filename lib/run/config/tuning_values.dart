@@ -1,12 +1,17 @@
+// region P26-H
 /// The resolved gameplay values the config getters read (pure Dart).
 ///
 /// Audit 17 (2026-10-19): the remote tuning of PRD-2.3 §15 is gone. The
 /// values are the baked constants of `tuning_defaults.dart` (= the live
-/// Remote Config values of 2026-10-19); nothing at runtime changes them.
-/// [TuningValues.current] stays assignable for tests only, which pin a
-/// value with [TuningValues.resolve] (e.g. a 2.3 calibration).
+/// Remote Config values of 2026-10-19), with a baked lifetime-only arm
+/// overlay at storage load. 2.6 has one arm with no overrides.
+/// Tests can pin values with [TuningValues.resolve] (e.g. a 2.3 calibration).
+// endregion
 library;
 
+// region P26-H
+import 'ab_arms.dart';
+// endregion
 import 'tuning_defaults.dart';
 import 'tuning_types.dart';
 
@@ -47,9 +52,27 @@ class TuningValues {
     return TuningValues._(values, defs);
   }
 
-  /// The set the game reads: always [TuningValues.defaults] in the app;
-  /// tests assign an override set (see the library doc).
+  // region P26-H
+  /// The set the game reads: baked defaults plus the stored arm at load.
+  /// Tests can assign a pinned baseline before applying the arm.
   static TuningValues current = TuningValues.defaults();
+
+  /// Overlay a baked arm on this baseline (including explicit test pins).
+  TuningValues withArm(String arm) =>
+      withArmOverrides(AbArms.overridesFor(arm));
+
+  /// The only arm overlay entry point: reject forbidden, unknown and malformed
+  /// keys before changing any values. Mission rewards are deliberately excluded.
+  TuningValues withArmOverrides(Map<String, String> overrides) {
+    AbArms.validate(overrides);
+    if (overrides.isEmpty) return this;
+    final parsed = TuningValues.resolve(overrides, defs: defs);
+    return TuningValues._({
+      ..._values,
+      for (final key in overrides.keys) key: parsed.raw(key),
+    }, defs);
+  }
+  // endregion
 
   final Map<String, Object> _values;
 

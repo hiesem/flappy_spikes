@@ -7,6 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../achievements/ach_state.dart';
 import '../menu/home_mode.dart';
+// region P26-H
+import '../run/config/ab_arms.dart';
+import '../run/config/tuning_values.dart';
+// endregion
 import '../services/integrity_guard.dart';
 import '../services/obf_strings.g.dart';
 // region P26-F9a
@@ -668,7 +672,14 @@ class GameStorage {
     lbLastRank = prefs.getInt(Obf.prefLbLastRank) ?? 0;
     lbGiftPending = _p26JsonMap(prefs.getString(Obf.prefLbGiftPending));
     lbInfoSeen = prefs.getBool(Obf.prefLbInfoSeen) ?? false;
+    // endregion
+    // region P26-H
     abArmV1 = prefs.getString(Obf.prefAbArmV1) ?? '';
+    if (abArmV1.isEmpty) {
+      await saveAbArmV1(AbArms.draw());
+    }
+    TuningValues.current = TuningValues.current.withArm(abArmV1);
+    // §8.3-12: resetVersusData deliberately keeps this device assignment.
     // endregion
     homeMode = HomeMode.parse(prefs.getString(_homeModeKey));
     // PRD-2.5 §3.4: the sealed fields last, in one synchronous block after

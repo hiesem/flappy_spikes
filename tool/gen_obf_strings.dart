@@ -195,6 +195,8 @@ const Map<String, String> kObfStrings = {
   'prefLbGiftsClaimed': 'lbGiftsClaimed',
   'prefLbGiftPending': 'lbGiftPending',
   'prefLbInfoSeen': 'lbInfoSeen',
+  // endregion
+  // region P26-H
   'prefAbArmV1': 'abArm_v1',
   // endregion
 };

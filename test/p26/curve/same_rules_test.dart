@@ -7,6 +7,8 @@ import 'package:flappy_spikes/menu/home_mode.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/director/layout_sampler.dart';
 import 'package:flappy_spikes/run/config/director_tables.dart';
+import 'package:flappy_spikes/run/config/ab_arms.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
@@ -42,9 +44,6 @@ void main() {
       game.storage.metElements = {
         for (final element in ElementId.values) element.storageId,
       };
-      // WP-H is not wired yet: the shipped arm is the baked arm 0.
-      // No arm input exists on RunSetup or RunDirector. Exercise every
-      // currently selectable arm here when that input is introduced.
       for (final seed in [7, 21, 1234]) {
         List<(SlotPlan, GapPlan)>? baseline;
         for (final games in [6, 500]) {
@@ -52,40 +51,44 @@ void main() {
             for (final level in [0, 31, 36]) {
               for (final mode in HomeMode.values) {
                 for (final noAds in [false, true]) {
-                  game.storage
-                    ..gamesPlayed = games
-                    ..bestScore = best
-                    ..playerLevel = level
-                    ..noAds = noAds;
-                  await game.storage.saveHomeMode(mode);
-                  final setup = RunSetup(
-                    seed: seed,
-                    viewHeight: 711,
-                    opponent: mode == HomeMode.versus
-                        ? OpponentRun(
-                            uid: 'rival',
-                            name: 'Rival',
-                            score: 50,
-                            best: 500,
-                            level: 31,
-                            timeline: RunTimeline()..end(100),
-                            runId: 'rival-run',
-                          )
-                        : null,
-                  );
-                  final run = RunController(setup: setup, game: game);
-                  expect(run.setup.showcase, isNull);
-                  expect(run.setup.ignoreGates, isFalse);
-                  expect(run.countsForUpload, isTrue);
-                  final plans = _plans(run.director, 711);
-                  baseline ??= plans;
-                  expect(
-                    plans,
-                    baseline,
-                    reason:
-                        'seed=$seed games=$games best=$best level=$level '
-                        'mode=$mode noAds=$noAds arm=0',
-                  );
+                  for (final arm in AbArms.profiles.keys) {
+                    await game.storage.saveAbArmV1(arm);
+                    TuningValues.current = TuningValues.defaults().withArm(arm);
+                    game.storage
+                      ..gamesPlayed = games
+                      ..bestScore = best
+                      ..playerLevel = level
+                      ..noAds = noAds;
+                    await game.storage.saveHomeMode(mode);
+                    final setup = RunSetup(
+                      seed: seed,
+                      viewHeight: 711,
+                      opponent: mode == HomeMode.versus
+                          ? OpponentRun(
+                              uid: 'rival',
+                              name: 'Rival',
+                              score: 50,
+                              best: 500,
+                              level: 31,
+                              timeline: RunTimeline()..end(100),
+                              runId: 'rival-run',
+                            )
+                          : null,
+                    );
+                    final run = RunController(setup: setup, game: game);
+                    expect(run.setup.showcase, isNull);
+                    expect(run.setup.ignoreGates, isFalse);
+                    expect(run.countsForUpload, isTrue);
+                    final plans = _plans(run.director, 711);
+                    baseline ??= plans;
+                    expect(
+                      plans,
+                      baseline,
+                      reason:
+                          'seed=$seed games=$games best=$best level=$level '
+                          'mode=$mode noAds=$noAds arm=$arm',
+                    );
+                  }
                 }
               }
             }

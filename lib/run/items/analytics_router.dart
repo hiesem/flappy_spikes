@@ -723,7 +723,9 @@ class AnalyticsRouter extends RunFeature {
       'fs_showcase',
       c.game.storage.showcaseDoneAt == null ? '0' : '1',
     );
-    services.setUserProperty('fs_arm', '0');
+    // region P26-H
+    services.setUserProperty('fs_arm', c.game.storage.abArmV1);
+    // endregion
   }
 
   /// Counts formation *starts* (a formation's slots share one id), not its

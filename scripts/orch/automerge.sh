@@ -17,6 +17,8 @@ while [ ! -f "$ORCH/ORCH_STOP" ]; do
     [[ "$n" =~ ^[0-9]+$ ]] || continue
     [ "$(cat "$b/exit" 2>/dev/null)" = 0 ] || continue
     [ -d "$WS/.worktrees/p26-$wp" ] || continue     # only real work packages (not integ/merge/chain workers)
+    if [ -n "$(git -C "$WS/.worktrees/p26-$wp" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
+      touch "$b/noauto"; echo "$(date '+%F %T') [automerge] $wp r$n ended with UNCOMMITTED changes -> orchestrator" >> "$ORCH/RUNLOG.md"; continue; fi
     [ -e "$W/$wp-v$n" ] || [ -e "$W/$wp-t$n" ] || [ -e "$b/noauto" ] && continue
     "$(dirname "$0")/vfy.sh" "$wp" "$n" > /dev/null 2>&1; "$(dirname "$0")/tester.sh" "$wp" "$n" > /dev/null 2>&1
     echo "$(date '+%F %T') [automerge] $wp r$n built -> verify + tester started" >> "$ORCH/RUNLOG.md"

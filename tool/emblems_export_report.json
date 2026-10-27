@@ -1,0 +1,16 @@
+{
+  "pngCount": 666,
+  "preOptimizationBytes": 14848102,
+  "rawBytes": 11353853,
+  "zipBytes": 10592247,
+  "compressedBudgetBytes": 16777216,
+  "allAssetsBytes": 28375114,
+  "maxCompositeError": 4,
+  "contactScales": [
+    0.29,
+    0.32
+  ],
+  "lossless": true,
+  "note": "ZIP is incremental asset payload, not a signed AAB measurement; all 3 density sets retained.",
+  "legibilityReview": "Both contact sheets visually inspected in J8 round 2: silhouettes and main motifs remain distinguishable; fine ribbon numerals are small in the approved source. Bird centres intentionally empty."
+}

@@ -2,38 +2,58 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:crypto/crypto.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-// PRD J6 / WP-J8: approved SVG exports, bird-free and plate-centred.
-// J7's in-flight asset path differs; the J8 brief owns this folder only.
-const _folder = 'assets/levels/emblems';
+// PRD J6; orchestrator J8 round 2: J7 loader paths, density folders and ordered
+// static/animated slice stacks. 320 units preserves the approved ALBATROSS wings.
+const _folder = 'assets/emblems';
 const _size = 320;
+
+String _path(String id, int scale, {bool layer = false}) =>
+    '$_folder/${layer ? 'layers/' : ''}${scale == 1 ? '' : '$scale.0x/'}$id.png';
+
+Future<ui.Image> _decode(String path) async {
+  final codec = await ui.instantiateImageCodec(File(path).readAsBytesSync());
+  final image = (await codec.getNextFrame()).image;
+  codec.dispose();
+  return image;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
   final manifest =
       jsonDecode(File('$_folder/manifest.json').readAsStringSync())
           as Map<String, dynamic>;
   final emblems = (manifest['emblems'] as List).cast<Map<String, dynamic>>();
 
-  test('32 approved slots, plate centre, density and layer manifest', () {
+  test('32 approved slots, plate centre, density and ordered slice manifest', () {
     expect(emblems, hasLength(32));
     expect(manifest['artSize'], _size);
     expect(manifest['plateCentre'], [160, 160]);
     expect(manifest['scales'], [1, 2, 3]);
     expect(manifest['birdIncluded'], isFalse);
     expect(manifest['source'], 'docs/p26/design/levels_v26/emblems.html');
+    expect(
+      manifest['sourceSha256'],
+      sha256
+          .convert(File(manifest['source'] as String).readAsBytesSync())
+          .toString(),
+      reason: 'Regenerate the exports when the approved SVG source changes',
+    );
+    expect(manifest['compositeTolerance'], 4);
     expect(emblems.first['name'], 'HATCHLING');
     expect(emblems.last['name'], 'ETERNAL WING');
     for (var i = 0; i < 32; i++) {
       final emblem = emblems[i];
       expect(emblem['id'], 'emblem_${(i + 1).toString().padLeft(2, '0')}');
-      final layers = (emblem['layers'] as List).cast<Map<String, dynamic>>();
-      // Every emblem has a separate plate sweep; higher tiers add idle art.
+      final slices = (emblem['slices'] as List).cast<Map<String, dynamic>>();
+      final animated = slices.where((s) => s['kind'] == 'animated');
+      // Preserve the original animation-count assertion; static slices are new.
       expect(
-        layers.length,
+        animated.length,
         greaterThanOrEqualTo(
           i >= 25
               ? 8
@@ -42,15 +62,19 @@ void main() {
               : 1,
         ),
       );
-      for (var j = 0; j < layers.length; j++) {
-        final layer = layers[j];
+      expect(slices.any((s) => s['kind'] == 'static'), isTrue);
+      for (var j = 0; j < slices.length; j++) {
+        final slice = slices[j];
         expect(
-          layer['id'],
-          '${emblem['id']}_layer_${(j + 1).toString().padLeft(2, '0')}',
+          slice['id'],
+          '${emblem['id']}_s${(j + 1).toString().padLeft(2, '0')}',
         );
-        expect(layer['insertionPath'], isNotEmpty);
-        expect(layer['animations'], isNotEmpty);
-        for (final animation in layer['animations'] as List) {
+        expect(slice['kind'], isIn(['static', 'animated']));
+        expect(
+          slice['animations'],
+          slice['kind'] == 'animated' ? isNotEmpty : isEmpty,
+        );
+        for (final animation in slice['animations'] as List) {
           expect(animation['dur'], isNotEmpty);
           expect(animation['repeatCount'], 'indefinite');
         }
@@ -58,34 +82,50 @@ void main() {
     }
   });
 
-  test('every expected PNG exists and is bundled; no stray exports', () async {
-    final expected = <String>{'manifest.json'};
-    for (final emblem in emblems) {
-      for (final part in [emblem, ...emblem['layers'] as List]) {
-        for (final scale in [1, 2, 3]) {
-          final name = '${part['id']}@${scale}x.png';
-          expected.add(name);
-          expect(File('$_folder/$name').existsSync(), isTrue, reason: name);
-          expect(await rootBundle.load('$_folder/$name'), isNotNull);
+  test(
+    'every expected PNG is bundled with Flutter density resolution; no stray exports',
+    () async {
+      final expected = <String>{'$_folder/manifest.json'};
+      for (final emblem in emblems) {
+        for (final part in [emblem, ...emblem['slices'] as List]) {
+          final layer = part != emblem;
+          for (final scale in [1, 2, 3]) {
+            final path = _path(part['id'] as String, scale, layer: layer);
+            expected.add(path);
+            expect(File(path).existsSync(), isTrue, reason: path);
+            expect(await rootBundle.load(path), isNotNull);
+            final key = await AssetImage(
+              _path(part['id'] as String, 1, layer: layer),
+            ).obtainKey(ImageConfiguration(devicePixelRatio: scale.toDouble()));
+            expect(key.name, path);
+            expect(key.scale, scale.toDouble());
+          }
         }
       }
-    }
-    expect(
-      Directory(_folder).listSync().map((f) => f.uri.pathSegments.last).toSet(),
-      expected,
-    );
-  });
+      expect(Directory('assets/levels/emblems').existsSync(), isFalse);
+      expect(
+        Directory(_folder)
+            .listSync(recursive: true)
+            .whereType<File>()
+            .map((f) => f.path)
+            .toSet(),
+        expected,
+      );
+    },
+  );
 
-  for (var slot = 0; slot < 32; slot++) {
+  for (final emblem in emblems) {
     test(
-      '${emblems[slot]['id']} dimensions and transparent padded canvas',
+      '${emblem['id']} dimensions, transparency and reconstruction from ordered slices',
       () async {
-        final emblem = emblems[slot];
-        for (final part in [emblem, ...emblem['layers'] as List]) {
-          for (final scale in [1, 2, 3]) {
-            final name = '${part['id']}@${scale}x.png';
-            final bytes = File('$_folder/$name').readAsBytesSync();
-            // PNG signature and IHDR colour type 6 (RGBA, not flattened RGB).
+        for (final scale in [1, 2, 3]) {
+          final full = await _decode(_path(emblem['id'] as String, scale));
+          final recorder = ui.PictureRecorder();
+          final canvas = ui.Canvas(recorder);
+          for (final part in [emblem, ...emblem['slices'] as List]) {
+            final layer = part != emblem;
+            final path = _path(part['id'] as String, scale, layer: layer);
+            final bytes = File(path).readAsBytesSync();
             expect(bytes.take(8), [
               137,
               80,
@@ -95,12 +135,13 @@ void main() {
               10,
               26,
               10,
-            ], reason: name);
-            expect(bytes[25], 6, reason: name);
-            final codec = await ui.instantiateImageCodec(bytes);
-            final image = (await codec.getNextFrame()).image;
-            expect(image.width, _size * scale, reason: name);
-            expect(image.height, _size * scale, reason: name);
+            ], reason: path);
+            // Round 2 lossless palette optimisation permits indexed RGBA too;
+            // decoded pixels below still enforce actual transparency and coverage.
+            expect(bytes[25], isIn([3, 6]), reason: path);
+            final image = layer ? await _decode(path) : full;
+            expect(image.width, _size * scale, reason: path);
+            expect(image.height, _size * scale, reason: path);
             final pixels = (await image.toByteData())!.buffer.asUint8List();
             var ink = 0;
             var edgeInk = 0;
@@ -116,27 +157,48 @@ void main() {
                 }
               }
             }
-            expect(ink, greaterThan(0), reason: '$name is blank');
-            expect(edgeInk, 0, reason: '$name clips at the canvas edge');
-            expect(ink, lessThan(image.width * image.height), reason: name);
-            if (part == emblem) {
-              // The plate covers the canvas origin; no baked player bird.
+            expect(ink, greaterThan(0), reason: '$path is blank');
+            expect(edgeInk, 0, reason: '$path clips at the canvas edge');
+            expect(ink, lessThan(image.width * image.height), reason: path);
+            if (layer) {
+              canvas.drawImage(image, ui.Offset.zero, ui.Paint());
+              image.dispose();
+            } else {
               final centre =
                   ((image.height ~/ 2) * image.width + image.width ~/ 2) * 4;
               expect(
                 pixels[centre + 3],
                 255,
-                reason: '$name plate is off centre',
+                reason: '$path plate is off centre',
               );
               expect(
                 pixels.sublist(centre, centre + 3),
                 isNot([236, 0, 140]),
-                reason: '$name includes the mock bird',
+                reason: '$path includes the mock bird',
               );
             }
-            image.dispose();
-            codec.dispose();
           }
+          final picture = recorder.endRecording();
+          final rebuilt = await picture.toImage(full.width, full.height);
+          final actual = (await rebuilt.toByteData())!.buffer.asUint8List();
+          final reference = (await full.toByteData())!.buffer.asUint8List();
+          var maxError = 0;
+          for (var i = 0; i < reference.length; i++) {
+            final error = (actual[i] - reference[i]).abs();
+            if (error > maxError) maxError = error;
+          }
+          // Compare every premultiplied RGBA channel. Allow at most 4/255 for
+          // separate antialias coverage/compositing round-off, never a pixel budget
+          // or a mean that could hide a missing/incorrectly stacked ornament.
+          expect(
+            maxError,
+            lessThanOrEqualTo(4),
+            reason:
+                '${emblem['id']} ${scale}x slice stack differs from independent full SVG render',
+          );
+          picture.dispose();
+          rebuilt.dispose();
+          full.dispose();
         }
       },
     );

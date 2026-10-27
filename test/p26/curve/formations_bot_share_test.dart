@@ -17,6 +17,19 @@ import '../../helpers.dart';
 // Use 100 seeds per start: at 30 seeds one extra switch death changes this
 // soft balance estimate by about 0.3x (the pilot measured 2.12x / 1.80x).
 // The threshold stays exactly 2x at each height; no sampling allowance.
+// Recorded 2026-10-27, seeds 0..99 at each start (150/200/250), 120 s cap:
+//                       568 pt                 711 pt
+// shape              slots deaths ratio     slots deaths ratio
+// stairs               260   23   1.402       256   21   1.346
+// slalom               288    4   0.220       302    5   0.272
+// tiltWave             411    6   0.231       421    8   0.312
+// syncRails            190   11   0.917       202   13   1.056
+// sawGate              161   17   1.673       144   13   1.482
+// switchChain          168   19   1.792       167   17   1.671
+// Denominators include ordinary slots: 4753 / 4874 slots, 300 / 297 deaths
+// (three 711 pt flights reached the cap). The test prints counts by start too.
+// Initial 30-seed pilot: switch-chain deaths 9 / 8; tuned pilot: 7 / 6.
+// Rails and saw gates needed no change. Only the switch-chain route was tuned.
 void main() {
   for (final height in [568.0, 711.0]) {
     FlameTester<FlappySpikesGame>(

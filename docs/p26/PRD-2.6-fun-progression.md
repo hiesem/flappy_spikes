@@ -1642,6 +1642,20 @@ every requirement (file:line, test results) and the work packages with paths and
 
 16. J1 ships the 31-level track under new names next to the legacy ten-rank API; J2/E1 switch callers and remove the legacy table.
 
+17. **F2 economy gates (2026-10-27, orchestrator after Opus + Sol council):** the showcase 90–200 play-coin
+    bound is the **mean of 20 fresh-install three-run sequences per height (568 and 711 independently)** with the
+    §0 item 4 newcomer bot: weak σ 90 ms and 10 % extra flaps. Count only runs whose `RunSetup.showcase` was set
+    at START; D4 fast-track may end the showcase early. Keep Big Hoops, shield and the offered FREE revive;
+    exclude level/meta income. Print individual totals; medium-profile showcase income is diagnostic, not a gate.
+    The flight-income and medium first-50-runs level-coin guards stay unchanged. The **typical day**, all listed
+    meta sources **without** a leaderboard gift box, must satisfy `meta / (play + meta) ≤ 25 %`. The **worst case**,
+    first-place gold every day with F12 contents unchanged, must satisfy **≤ 30 %**. The PRD arithmetic is about
+    **334 meta coins/day, about 28.7 %** of total income in this worst case (15-minute play day).
+    **OWNER item for the final report:** if 25 % must also hold for daily gold winners, the gold gift coin range
+    (100–300, a server constant; 50 % coin outcome) is the owner's lever; do not change missions, gift ranges or
+    other approved content in F2. Only if the weak mean exceeds 200 may F2 reduce the scripted Coin Frenzy
+    3/3/2 values as far as 1/1/1; if that still exceeds 200, stop and report the measurements.
+
 15. **D1/D6 introduction arbitration (orchestrator, D-TESTS round 2):** a first meet counts as that element's
     introduction, with no second claim (including an element already met on this install). Never-met switch 15 /
     moving 25 use their first-meet pull; saw 30 has no pull and queues an introduction while never met.

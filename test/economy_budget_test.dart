@@ -53,6 +53,69 @@ void main() {
       );
     }
 
+    // PRD §8.3-17: newcomer showcase budget is a mean over 20 fresh
+    // three-run sequences, excluding any run fast-tracked out at START.
+    group('F5 newcomer showcase at $height', () {
+      final totals = <int, int>{};
+      var extras = 0;
+      tearDownAll(() {
+        expect(totals, hasLength(20));
+        final ordered = [for (var seed = 0; seed < 20; seed++) totals[seed]!];
+        final mean = ordered.reduce((a, b) => a + b) / ordered.length;
+        // ignore: avoid_print
+        print(
+          'ECONOMY newcomer h=$height totals=$ordered mean=$mean '
+          'extraFlaps=$extras sigma=90ms extraChance=10%',
+        );
+        expect(
+          extras,
+          greaterThan(0),
+          reason: 'The newcomer actually emits extra flaps',
+        );
+        expect(
+          mean,
+          inInclusiveRange(90, 200),
+          reason: 'PRD §8.3-17: mean of showcase-at-START flight coins only',
+        );
+      });
+      for (var sequence = 0; sequence < 20; sequence++) {
+        FlameTester<FlappySpikesGame>(() {
+          ShowcaseShow.resetProcessMemoryForTests();
+          SharedPreferences.setMockInitialValues({});
+          return FlappySpikesGame(
+            worldHeight: height,
+            soundEnabled: false,
+            showcaseFactory: (storage) => ShowcaseShow(storage: storage),
+          );
+        }, gameSize: Vector2(320, height)).testGameWidget(
+          'fresh sequence $sequence',
+          setUp: (game, _) async {
+            await game.ready();
+            await preloadImages(game);
+            PostRunScreens.bonus = null;
+          },
+          verify: (game, tester) => tester.runAsync(() async {
+            var coins = 0;
+            for (var run = 0; run < 3; run++) {
+              final sample = await flyEconomyRun(
+                game,
+                seed: sequence * 3 + run,
+                sigma: economyProfiles['weak']!,
+                takeFreeRevive: true,
+              );
+              if (run == 0) expect(sample.showcaseAtStart, isTrue);
+              if (sample.showcaseAtStart) {
+                coins += sample.coins;
+                extras += sample.extraFlaps;
+              }
+            }
+            totals[sequence] = coins;
+          }),
+          timeout: const Timeout(Duration(minutes: 5)),
+        );
+      }
+    });
+
     FlameTester<FlappySpikesGame>(() {
       ShowcaseShow.resetProcessMemoryForTests();
       SharedPreferences.setMockInitialValues({});
@@ -62,7 +125,7 @@ void main() {
         showcaseFactory: (storage) => ShowcaseShow(storage: storage),
       );
     }, gameSize: Vector2(320, height)).testGameWidget(
-      'F5 medium first 50 runs, showcase and meta at $height',
+      'F5 medium first 50 runs, level guard and meta at $height',
       setUp: (game, _) async {
         await game.ready();
         await preloadImages(game);
@@ -72,6 +135,7 @@ void main() {
       verify: (game, tester) => tester.runAsync(() async {
         final total = EconomySample();
         var showcaseCoins = 0;
+        var mediumFirstThreeCoins = 0;
         var level = 0;
         var points = 0;
         var levelCoins = 0;
@@ -84,7 +148,8 @@ void main() {
           );
           total.add(sample);
           if (seed < 3) {
-            showcaseCoins += sample.coins;
+            mediumFirstThreeCoins += sample.coins;
+            if (sample.showcaseAtStart) showcaseCoins += sample.coins;
             // ignore: avoid_print
             print('ECONOMY showcase h=$height run=${seed + 1}: $sample');
           }
@@ -97,29 +162,34 @@ void main() {
         }
         final meta = metaCoinsPerDay.values.reduce((a, b) => a + b);
         final dailyPlay = total.coinsPerMinute * 15;
-        final share = meta / (dailyPlay + meta);
+        // PRD §8.3-17 separates a typical day from a daily gold winner.
+        final typicalMeta = meta - metaCoinsPerDay[CoinSource.leaderboardGift]!;
+        final typicalShare = typicalMeta / (dailyPlay + typicalMeta);
+        final worstShare = meta / (dailyPlay + meta);
         // ignore: avoid_print
         print(
           'ECONOMY first50 h=$height: $total; showcase=$showcaseCoins '
+          'mediumFirstThree=$mediumFirstThreeCoins '
           'level=$level levelCoins=$levelCoins playCoins=${total.coins} '
           'level/play=${levelCoins / total.coins}; '
-          'meta/day=$meta play/day=$dailyPlay metaShare=$share',
+          'typicalMeta/day=$typicalMeta worstMeta/day=$meta play/day=$dailyPlay '
+          'typicalShare=$typicalShare worstShare=$worstShare',
         );
-        // Match all three budgets together so an early showcase failure
-        // still reports the level and meta values from the same window.
+        // Medium showcase income stays diagnostic; only the newcomer mean
+        // above carries that assertion (PRD §8.3-17).
         expect(
           {
-            'showcase coins, runs 1–3': showcaseCoins,
             'level coins, runs 1–50': levelCoins,
-            'meta share of 15-minute day': share,
+            'typical meta share': typicalShare,
+            'worst-case meta share': worstShare,
           },
           {
-            'showcase coins, runs 1–3': inInclusiveRange(90, 200),
             'level coins, runs 1–50': lessThanOrEqualTo(total.coins),
-            'meta share of 15-minute day': lessThanOrEqualTo(.25),
+            'typical meta share': lessThanOrEqualTo(.25),
+            'worst-case meta share': lessThanOrEqualTo(.30),
           },
           reason:
-              'PRD F5/F12/G6: medium human-noise, FREE showcase revive, '
+              'PRD F5/F12/G6, §8.3-17: medium human-noise, FREE showcase revive, '
               'daily first-place gold gift; meta sources=$metaCoinsPerDay',
         );
       }),

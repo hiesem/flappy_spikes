@@ -18,6 +18,8 @@ const economyProfiles = <String, double>{
 /// else emitted by the run is non-hoop income (PRD F5).
 class EconomySample {
   final bySource = <CoinSource, int>{};
+  bool showcaseAtStart = false;
+  int extraFlaps = 0;
   int hoops = 0;
   int score = 0;
   double seconds = 0;
@@ -32,6 +34,7 @@ class EconomySample {
   double get nonHoopPerHoop => nonHoopCoins / hoops;
 
   void add(EconomySample other) {
+    extraFlaps += other.extraFlaps;
     hoops += other.hoops;
     score += other.score;
     seconds += other.seconds;
@@ -75,7 +78,7 @@ Future<EconomySample> flyEconomyRun(
     isTrue,
     reason: 'Economy probes must use an eligible, unforced run',
   );
-  final sample = EconomySample();
+  final sample = EconomySample()..showcaseAtStart = run.setup.showcase != null;
   void earned(CoinsEarned event) {
     sample.bySource.update(
       event.source,
@@ -91,9 +94,12 @@ Future<EconomySample> flyEconomyRun(
         game,
         seed: noiseSeed,
         jitterSigma: sigma,
+        // PRD §0 item 4 / §8.3-17: retain 10% extra flaps for all profiles.
+        extraFlapChance: .1,
         maxSeconds: 600,
       );
       sample.seconds += result.seconds;
+      sample.extraFlaps += result.extraFlaps;
       expect(
         result.cause,
         isNotNull,

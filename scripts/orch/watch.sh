@@ -8,7 +8,9 @@ before=$(snap)
 while :; do
   "$(dirname "$0")/lease.sh" take session
   now=$(snap)
-  if [ "$now" != "$before" ]; then echo "EVENT: worker state changed"; diff <(echo "$before") <(echo "$now") | grep '^>' ; break; fi
+  # wake only for workers that newly finished / died / stalled (new RUNNING workers are not events)
+  ch=$(comm -13 <(echo "$before" | sort) <(echo "$now" | sort) | grep -v ' RUNNING$')
+  if [ -n "$ch" ]; then echo "EVENT: worker state changed"; echo "$ch"; break; fi
   echo "$now" | grep -qE ' (STALLED|OVERCAP|DEAD)$' && { echo "EVENT: stalled/overcap/dead worker"; break; }
   [ $(date +%s) -ge $end ] && { echo "HEARTBEAT ${max}m"; break; }
   sleep 30

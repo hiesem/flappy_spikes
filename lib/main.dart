@@ -7,6 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// region P26-LB1
+import 'leaderboard/lb_service.dart';
+// endregion
 import 'game/audio_counter.dart';
 import 'components/banner_slot.dart';
 import 'game/flappy_game.dart';
@@ -139,8 +142,14 @@ Future<void> main() async {
   // desktop; everything else keeps the no-op. It reads the game's storage
   // lazily (the game is built right below).
   late final FlappySpikesGame game;
+  // region P26-LB1
+  final leaderboardCalls = LbCallSerializer();
+  // endregion
   final VersusService versus = _isMobile && !kSoak
       ? FirebaseVersusService(
+          // region P26-LB1
+          backend: LeaderboardVersusBackend(calls: leaderboardCalls),
+          // endregion
           storageOf: () => game.storage,
           identity: _isIOS ? GameCenterIdentity() : null,
           // S6-66: a failed start-up auth retries in the background.
@@ -157,6 +166,11 @@ Future<void> main() async {
         )
       : NoopVersusService();
   // endregion WP-5b
+  // region P26-LB1
+  final LeaderboardService leaderboard = _isMobile && !kSoak
+      ? FirebaseLeaderboardService(versus: versus, calls: leaderboardCalls)
+      : const NoopLeaderboardService();
+  // endregion
 
   // PRD-2.3 §23.4: the store's own rating sheet (Google Play's in-app review,
   // Apple's prompt) on the mobile products only; the Linux desktop target and
@@ -184,6 +198,9 @@ Future<void> main() async {
     services: services,
     monetization: monetization,
     versus: versus,
+    // region P26-LB1
+    leaderboard: leaderboard,
+    // endregion
     rating: rating,
     // region P26-B1
     showcaseFactory: productionShowcaseFactory(services),

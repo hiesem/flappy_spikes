@@ -95,6 +95,9 @@ import '../services/ftue_tracker.dart';
 import '../versus/timeline.dart';
 import '../components/sticker_avatar.dart'; // WP-AV
 import '../services/versus_service.dart';
+// region P26-LB1
+import '../leaderboard/lb_service.dart';
+// endregion
 import '../services/ads_service.dart';
 import '../services/audio_focus.dart';
 import '../services/game_services.dart';
@@ -155,6 +158,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     this.soundEnabled = true,
     bool? rumbleEnabled,
     VersusService? versus,
+    // region P26-LB1
+    this.leaderboard = const NoopLeaderboardService(),
+    // endregion
     RatingPrompt? rating,
     ShowcasePlan? showcasePlan,
     ShowcaseProgress? showcaseProgress,
@@ -345,6 +351,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// Versus backend (PRD-2 §3.13). No-op unless main() passes one (WP-5b).
   final VersusService versus;
+  // region P26-LB1
+  final LeaderboardService leaderboard;
+  // endregion
 
   /// PRD-2.3 §23.4 the store's rating sheet (no-op unless main() passes a
   /// backend: the default never requests).

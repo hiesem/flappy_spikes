@@ -190,7 +190,7 @@ void main() async {
       expect(scroll.offset, greaterThan(0));
       // The list scrolls to the bottom spike tips.
       expect(scroll.viewport.top, LevelsTabsLayout.listTop);
-      expect(scroll.viewport.bottom, 711);
+      expect(scroll.viewport.bottom, 711 - Config.menuSpikeHeight);
       expect(scroll.scrollable, isTrue);
     },
   );

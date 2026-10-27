@@ -21,11 +21,10 @@ enum LevelsTab {
 
 /// Fixed 320 pt layout from levels_tabs.html (including the 568 pt frame).
 abstract final class LevelsTabsLayout {
-  static const header = Rect.fromLTWH(14, 172, 292, 84);
-  static const listTop = 264.0;
-  static Rect viewport(double height) => Rect.fromLTRB(0, listTop, 320, height);
-  static Rect tab(LevelsTab tab) =>
-      Rect.fromLTWH(14 + tab.index * 74, 134, 70, 28);
+  static const header = Config.levelsTabsHeaderRect;
+  static const listTop = Config.levelsTabsListTop;
+  static Rect viewport(double height) => Config.levelsTabsViewportFor(height);
+  static Rect tab(LevelsTab tab) => Config.levelsTabsRectFor(tab.index);
 }
 
 /// Text-only tabs, using the shared menu button master.
@@ -54,13 +53,20 @@ class LevelsTabs extends PositionComponent {
       );
       final label = MenuText(
         tab.label,
-        fontSize: 11,
+        fontSize: Config.levelsTabsLabelFontSize,
         color: Config.menuPink,
         letterSpacingEm: .12,
         anchor: Anchor.center,
-        position: Vector2(35, 14.5),
+        position: Vector2(
+          rect.width / 2,
+          rect.height / 2 + Config.levelsTabsLabelNudgeY,
+        ),
       );
-      final dot = _TabDot()..position = Vector2(68, 2);
+      final dot = _TabDot()
+        ..position = Vector2(
+          rect.width - Config.levelsTabsDotRightInset,
+          Config.levelsTabsDotTop,
+        );
       buttons[tab] = button;
       labels[tab] = label;
       _dots[tab] = dot;
@@ -97,8 +103,8 @@ class _TabDot extends PositionComponent {
   @override
   void render(Canvas canvas) {
     if (!shown) return;
-    canvas.drawCircle(Offset.zero, 7, _outline);
-    canvas.drawCircle(Offset.zero, 5, _gold);
+    canvas.drawCircle(Offset.zero, Config.levelsTabsDotOutlineRadius, _outline);
+    canvas.drawCircle(Offset.zero, Config.levelsTabsDotRadius, _gold);
   }
 }
 

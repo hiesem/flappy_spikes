@@ -46,7 +46,12 @@ void main() async {
       expect(screen.selectedTab, LevelsTab.levels);
       expect(screen.header.position, Vector2(14, 172));
       expect(screen.header.size, Vector2(292, 84));
-      expect(screen.scroll.viewport, Rect.fromLTWH(0, 264, 320, height - 264));
+      // PRD 2.6 G4 / O69 moves the list top; the existing spike-tip
+      // bottom and touch bleed remain part of the LEVELS screen.
+      expect(
+        screen.scroll.viewport,
+        Rect.fromLTWH(0, 264, 320, height - Config.menuSpikeHeight - 264),
+      );
       expect(screen.rows, isNotEmpty);
       expect(screen.rows.first.y, greaterThanOrEqualTo(264));
       for (final tab in LevelsTab.values) {
@@ -60,6 +65,28 @@ void main() async {
           tab == LevelsTab.levels ? Config.menuPink : Config.menuSoft,
         );
       }
+      final area = screen.installTabContent(
+        LevelsTab.album,
+        header: PositionComponent(),
+        rows: const [],
+        contentBottom: 900,
+      );
+      await flushAndMount(game);
+      screen.selectTab(LevelsTab.album);
+      expect(area.viewport, screen.scroll.viewport);
+      expect(area.bleedBottom, Config.menuSpikeToothDepth);
+      expect(
+        area.visibleRect.bottom,
+        height - Config.menuSpikeHeight + Config.menuSpikeToothDepth,
+      );
+      expect(
+        area.containsPoint(Vector2(160, area.viewport.bottom + 10)),
+        isTrue,
+      );
+      expect(
+        area.containsPoint(Vector2(160, area.visibleRect.bottom + 2)),
+        isFalse,
+      );
     });
   }
 

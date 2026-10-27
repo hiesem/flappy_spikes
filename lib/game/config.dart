@@ -639,6 +639,42 @@ class Config {
   /// up, with nothing over it, for this long.
   static const double levelUpSettleDelay = 0.35;
 
+  // region P26-G4a
+  // PRD 2.6 G4 / O69: text tabs below the title; lists retain the
+  // existing spike-tip scroll limit and bleed into the teeth separately.
+  static const Rect levelsTabsHeaderRect = Rect.fromLTWH(14, 172, 292, 84);
+  static const double levelsTabsListTop = 264;
+  static const double levelsTabsLeft = 14;
+  static const double levelsTabsTop = 134;
+  static const double levelsTabsWidth = 70;
+  static const double levelsTabsHeight = 28;
+  static const double levelsTabsGap = 4;
+  static const double levelsTabsLabelFontSize = 11;
+  static const double levelsTabsLabelNudgeY = .5;
+  static const double levelsTabsDotRightInset = 2;
+  static const double levelsTabsDotTop = 2;
+  static const double levelsTabsDotRadius = 5;
+  static const double levelsTabsDotOutlineRadius = 7;
+  static const double levelsTabTitleTop = 96;
+  static const double levelsTabTitleCompactTop = 99;
+  static const double levelsTabTitleFontSize = 31;
+  static const double levelsTabTitleCompactFontSize = 26;
+
+  static Rect levelsTabsViewportFor(double viewHeight) => Rect.fromLTRB(
+    0,
+    levelsTabsListTop,
+    worldWidth,
+    menuScreenContentBottomFor(viewHeight),
+  );
+
+  static Rect levelsTabsRectFor(int index) => Rect.fromLTWH(
+    levelsTabsLeft + index * (levelsTabsWidth + levelsTabsGap),
+    levelsTabsTop,
+    levelsTabsWidth,
+    levelsTabsHeight,
+  );
+  // endregion
+
   // --- LEVELS screen (PRD-home-v3 §4.4, build74 `.lvh` / `.lvl`) -----------
   static const double levelsTitleTop = 106;
   static const Rect levelsHeaderRect = Rect.fromLTWH(14, 150, 292, 84);

@@ -80,6 +80,7 @@ class LevelsScreen extends MenuScreen {
       ..decorator.addLast(LevelsTabVisibility(() => selectedTab == tab));
     final area = MenuScrollArea(
       viewport: scrollViewportFor(game.viewHeight),
+      bleedBottom: Config.menuSpikeToothDepth,
       isActive: () => tabIsActive(tab),
     )..contentBottom = contentBottom;
     area.decorator.addLast(LevelsTabVisibility(() => selectedTab == tab));
@@ -105,8 +106,12 @@ class LevelsScreen extends MenuScreen {
     tabs.selected = tab;
     titleText
       ..text = tab.title
-      ..fontSize = tab.title.length > 8 ? 26 : 31
-      ..position.y = tab.title.length > 8 ? 99 : 96;
+      ..fontSize = tab.title.length > 8
+          ? Config.levelsTabTitleCompactFontSize
+          : Config.levelsTabTitleFontSize
+      ..position.y = tab.title.length > 8
+          ? Config.levelsTabTitleCompactTop
+          : Config.levelsTabTitleTop;
     // Content can animate an unseen entry before the shell marks it seen.
     _onTabOpen[tab]?.call();
     if (tab == LevelsTab.worlds) {
@@ -136,8 +141,8 @@ class LevelsScreen extends MenuScreen {
     final level = levels.level;
     final look = game.menu.items.look;
     // region P26-G4a
-    titleText.position.y = 96;
-    titleText.fontSize = 31;
+    titleText.position.y = Config.levelsTabTitleTop;
+    titleText.fontSize = Config.levelsTabTitleFontSize;
     tabs = LevelsTabs(onSelect: selectTab, isActive: () => active && !locked);
     add(tabs);
     // Q26: opening the shell clears only the Home hint, not tab dots.

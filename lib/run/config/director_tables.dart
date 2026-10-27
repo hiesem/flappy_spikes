@@ -17,9 +17,6 @@ class LayoutBand {
     required this.from,
     required this.centre,
     required this.dy,
-    required this.tilt,
-    required this.tiltWeights,
-    required this.moving,
   });
 
   /// §3.0.2 First hoop index of the row.
@@ -30,15 +27,6 @@ class LayoutBand {
 
   /// §3.0.2 |Δy| (median, p90, max) as fractions of the band.
   final (double, double, double) dy;
-
-  /// §3.0.2 Chance a normal hoop is tilted.
-  final double tilt;
-
-  /// §3.0.2 Tilt steps (degrees, positive = top leans right) → weight.
-  final Map<int, int> tiltWeights;
-
-  /// §3.0.2 Chance a normal hoop moves.
-  final double moving;
 }
 
 /// §3.0.3 Budget row: chance a slot is special / a gap gets an optional item.
@@ -172,8 +160,6 @@ class DirectorTables {
     this.itemCurve,
     required this.pairWeights,
     required this.capsuleWeights,
-    required this.movingTypes20,
-    required this.movingTypes45,
     required this.rail,
     required this.swing,
   });
@@ -226,11 +212,11 @@ class DirectorTables {
   final EarlyPool? earlyPool;
 
   /// PRD-2.3 §14.4 tilted-hoop chance by hoop index (`curve_tilt`); null =
-  /// the layout row's [LayoutBand.tilt].
+  /// the baked D2 curve.
   final Keyframes? tiltCurve;
 
   /// PRD-2.3 §14.4 moving-hoop chance by hoop index (`curve_moving`); null
-  /// = the layout row's [LayoutBand.moving].
+  /// = the baked D2 curve.
   final Keyframes? movingCurve;
 
   /// Owner 2026-10-14 (2.3.0 (18)): the special-hoop chance per slot by
@@ -244,23 +230,17 @@ class DirectorTables {
   /// §3.0.2 / PRD-2.3 §14.4 the chance a normal hoop at [hoopIndex] is
   /// tilted.
   double tiltChance(int hoopIndex) =>
-      tiltCurve?.at(hoopIndex) ?? bandFor(hoopIndex).tilt;
+      (tiltCurve ?? tuning.curve('curve_tilt')).at(hoopIndex);
 
   /// §3.0.2 / PRD-2.3 §14.4 the chance a normal hoop at [hoopIndex] moves.
   double movingChance(int hoopIndex) =>
-      movingCurve?.at(hoopIndex) ?? bandFor(hoopIndex).moving;
+      (movingCurve ?? tuning.curve('curve_moving')).at(hoopIndex);
 
   /// §3.21 Pair gift weights.
   final Map<PairReward, int> pairWeights;
 
   /// §3.30 Capsule type weights.
   final Map<CapsuleType, int> capsuleWeights;
-
-  /// §3.0.2 Moving types for hoops 20–44.
-  final Map<MotionType, int> movingTypes20;
-
-  /// §3.0.2 Moving types from hoop 45.
-  final Map<MotionType, int> movingTypes45;
 
   /// §3.11 Rail slide parameters.
   final RailTable rail;
@@ -381,8 +361,6 @@ class DirectorTables {
         CapsuleType.miniBird: caps['mini_bird']!.toInt(),
         CapsuleType.coinFrenzy: caps['coin_frenzy']!.toInt(),
       },
-      movingTypes20: LayoutConfig.movingTypes20,
-      movingTypes45: LayoutConfig.movingTypes45,
       rail: LayoutConfig.rail,
       swing: LayoutConfig.swing,
     );

@@ -8,6 +8,7 @@ library;
 
 import '../director/plans.dart';
 import 'director_tables.dart';
+import 'tuning_values.dart';
 
 abstract final class LayoutConfig {
   // --- §3.0.2 the ramp -------------------------------------------------------
@@ -16,69 +17,29 @@ abstract final class LayoutConfig {
   /// (ascending `from`): centre range as a fraction of the band and |Δy|
   /// (median, p90, max) as a fraction of `dyRefBand`.
   static const List<LayoutBand> bands = [
-    LayoutBand(
-      from: 0,
-      centre: (0.45, 0.55),
-      dy: (0.03, 0.06, 0.07),
-      tilt: 0,
-      tiltWeights: {},
-      moving: 0,
-    ),
-    LayoutBand(
-      from: 3,
-      centre: (0.33, 0.67),
-      dy: (0.11, 0.27, 0.35),
-      tilt: 0,
-      tiltWeights: {},
-      moving: 0,
-    ),
-    LayoutBand(
-      from: 20,
-      centre: (0.27, 0.70),
-      dy: (0.12, 0.31, 0.38),
-      tilt: 0.50,
-      tiltWeights: {10: 30, 15: 30, 20: 20, 30: 20},
-      moving: 0.15,
-    ),
-    LayoutBand(
-      from: 40,
-      centre: (0.24, 0.73),
-      dy: (0.14, 0.33, 0.42),
-      tilt: 0.50,
-      tiltWeights: {10: 30, 15: 30, 20: 20, 30: 20},
-      moving: 0.25,
-    ),
-    LayoutBand(
-      from: 65,
-      centre: (0.20, 0.76),
-      dy: (0.15, 0.35, 0.46),
-      tilt: 0.60,
-      tiltWeights: {10: 20, 15: 20, 20: 15, 30: 30, 45: 15},
-      moving: 0.42,
-    ),
-    LayoutBand(
-      from: 100,
-      centre: (0.16, 0.78),
-      dy: (0.15, 0.37, 0.50),
-      tilt: 0.65,
-      tiltWeights: {10: 15, 15: 15, 20: 15, 30: 30, 45: 25},
-      moving: 0.52,
-    ),
+    LayoutBand(from: 0, centre: (0.45, 0.55), dy: (0.03, 0.06, 0.07)),
+    LayoutBand(from: 3, centre: (0.33, 0.67), dy: (0.11, 0.27, 0.35)),
+    LayoutBand(from: 20, centre: (0.27, 0.70), dy: (0.12, 0.31, 0.38)),
+    LayoutBand(from: 40, centre: (0.24, 0.73), dy: (0.14, 0.33, 0.42)),
+    LayoutBand(from: 65, centre: (0.20, 0.76), dy: (0.15, 0.35, 0.46)),
+    LayoutBand(from: 100, centre: (0.16, 0.78), dy: (0.15, 0.37, 0.50)),
   ];
 
-  /// PRD-2.6 D2 tilt-magnitude rows, independent of the Δy row boundaries.
-  static const Map<int, Map<int, int>> tiltRows = {
-    10: {10: 6, 15: 4},
-    50: {10: 30, 15: 30, 20: 20, 30: 20},
-    60: {10: 20, 15: 20, 20: 15, 30: 30, 45: 15},
-    100: {10: 15, 15: 15, 20: 15, 30: 30, 45: 25},
-  };
+  // region P26-D-TABLES
+  /// Compatibility views for existing table consumers; tuning owns the values.
+  static Map<int, Map<int, int>> get tiltRows {
+    final rows = <int, Map<int, int>>{};
+    for (final entry in tuning.obj('tilt_rows').entries) {
+      final parts = entry.key.split('_');
+      (rows[int.parse(parts[0])] ??= {})[int.parse(parts[1])] = entry.value
+          .toInt();
+    }
+    return rows;
+  }
 
-  /// PRD-2.6 D2 Δy is measured in points, capped at this band height.
-  static const double dyRefBand = 540;
-
-  /// PRD-2.6 D2 the Δy ceiling after a moving or strongly tilted hoop.
-  static const double hardHoopDyFactor = 0.85;
+  static double get dyRefBand => tuning.d('dy_ref_band');
+  static double get hardHoopDyFactor => tuning.d('dy_hard_factor');
+  // endregion
 
   /// PRD-2.6 D2 the moving-ring rendered-angle cap before hoop 150.
   static const double movingTiltCapBefore150Deg = 15;
@@ -172,20 +133,6 @@ abstract final class LayoutConfig {
       speed: (34, 42),
     ),
   ];
-
-  /// PRD-2.6 D2 compatibility aliases consumed through `DirectorTables`.
-  static const Map<MotionType, int> movingTypes20 = {MotionType.rail: 100};
-  static const Map<MotionType, int> movingTypes45 = {
-    MotionType.rail: 45,
-    MotionType.swing: 15,
-    MotionType.horizontal: 10,
-    MotionType.diagonal: 10,
-    MotionType.orbit: 10,
-    MotionType.rock: 10,
-  };
-
-  /// PRD-2.6 D2 the full motion table starts at hoop 35.
-  static const int allMotionTypesFrom = 35;
 
   /// §3.11 Rail slide geometry; PRD-2.6 D2 supplies the row-specific travel
   /// and speed ranges (horizontal / diagonal slides share them).

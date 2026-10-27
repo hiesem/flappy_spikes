@@ -5,6 +5,7 @@ import 'package:flappy_spikes/run/config/director_tables.dart';
 import 'package:flappy_spikes/run/config/layout_config.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/config/tuning_defaults.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,39 +27,52 @@ void main() {
   // PRD-2.3 §15: the tables are built from the tuning defaults.
   final t = DirectorTables.prd2;
 
-  test('§D2 layout bands replace the spawn-table ramp', () {
+  test('§D2 layout bands and tilt rows mirror spawn_tables.json', () {
     expect(t.bands, same(LayoutConfig.bands));
-    // PRD-2.6 D2 replaces the interim hoop-10 row; hoops 10–19 use row 3.
-    expect(t.bands.map((b) => b.from), [0, 3, 20, 40, 65, 100]);
-    expect(t.bands.map((b) => [b.centre.$1, b.centre.$2]), [
-      [0.45, 0.55],
-      [0.33, 0.67],
-      [0.27, 0.70],
-      [0.24, 0.73],
-      [0.20, 0.76],
-      [0.16, 0.78],
-    ]);
-    expect(t.bands.map((b) => [b.dy.$1, b.dy.$2, b.dy.$3]), [
-      [0.03, 0.06, 0.07],
-      [0.11, 0.27, 0.35],
-      [0.12, 0.31, 0.38],
-      [0.14, 0.33, 0.42],
-      [0.15, 0.35, 0.46],
-      [0.15, 0.37, 0.50],
-    ]);
-    expect(LayoutConfig.tiltRows, {
-      10: {10: 6, 15: 4},
-      50: {10: 30, 15: 30, 20: 20, 30: 20},
-      60: {10: 20, 15: 20, 20: 15, 30: 30, 45: 15},
-      100: {10: 15, 15: 15, 20: 15, 30: 30, 45: 25},
+    expect([
+      for (final band in t.bands)
+        {
+          'from': band.from,
+          'centre_y': [band.centre.$1, band.centre.$2],
+          'abs_dy_median_p90_max': [band.dy.$1, band.dy.$2, band.dy.$3],
+        },
+    ], json['bands']);
+    final rows = json['tilt_rows'] as Map<String, dynamic>;
+    expect(tuning.obj('tilt_rows'), {
+      for (final row in rows.entries)
+        for (final weight in (row.value as Map).entries)
+          '${row.key}_${weight.key}': weight.value,
     });
+    expect(RunConfig.dyRefBand, json['dy_ref_band']);
+    expect(RunConfig.hardHoopDyFactor, json['dy_hard_factor']);
   });
 
-  test('§3.0.2 tilt steps capped at 45° (60° folded in)', () {
-    for (final b in t.bands) {
-      for (final step in b.tiltWeights.keys) {
-        expect(step.abs(), lessThanOrEqualTo(RunConfig.maxTiltDeg));
-      }
+  test('§D2 compatibility views use the canonical tuning values', () {
+    final weights = tuning.obj('tilt_rows')
+      ..['10_10'] = 3
+      ..['10_15'] = 7;
+    useTuning({
+      'tilt_rows': jsonEncode(weights),
+      'dy_ref_band': '500',
+      'dy_hard_factor': '0.8',
+    });
+    expect(LayoutConfig.tiltRows[10], {10: 3, 15: 7});
+    expect({
+      for (final row in LayoutConfig.tiltRows.entries)
+        for (final weight in row.value.entries)
+          '${row.key}_${weight.key}': weight.value,
+    }, weights);
+    expect(LayoutConfig.dyRefBand, RunConfig.dyRefBand);
+    expect(LayoutConfig.dyRefBand, 500);
+    expect(LayoutConfig.hardHoopDyFactor, RunConfig.hardHoopDyFactor);
+    expect(LayoutConfig.hardHoopDyFactor, .8);
+  });
+
+  test('§D2 tilt magnitudes capped at 45°', () {
+    for (final key in tuning.obj('tilt_rows').keys) {
+      final step = int.parse(key.split('_')[1]);
+      expect(step, greaterThan(0));
+      expect(step, lessThanOrEqualTo(RunConfig.maxTiltDeg));
     }
     expect(json['tilt_cap_deg'], RunConfig.maxTiltDeg);
   });
@@ -201,29 +215,17 @@ void main() {
     final pw = json['pair_weights'] as Map<String, dynamic>;
     final m = json['moving'] as Map<String, dynamic>;
     expect({for (final e in t.pairWeights.entries) e.key.name: e.value}, pw);
-    String name(MotionType x) =>
-        x == MotionType.horizontal ? 'horizontal' : x.name;
-    expect(
-      {for (final e in t.movingTypes20.entries) name(e.key): e.value},
-      {
-        for (final e in LayoutConfig.movingTypes20.entries)
-          name(e.key): e.value,
-      },
-    );
-    expect(
-      {for (final e in t.movingTypes45.entries) name(e.key): e.value},
-      {
-        for (final e in LayoutConfig.movingTypes45.entries)
-          name(e.key): e.value,
-      },
-    );
-    expect(LayoutConfig.motionRows.map((row) => row.from), [
-      25,
-      35,
-      70,
-      90,
-      120,
-    ]);
+    expect([
+      for (final row in LayoutConfig.motionRows)
+        {
+          'from': row.from,
+          'types': {for (final e in row.types.entries) e.key.name: e.value},
+          'half_travel_pt': [row.halfTravel.$1, row.halfTravel.$2],
+          'speed_pt_s': [row.speed.$1, row.speed.$2],
+        },
+    ], m['rows']);
+    expect(tuning.raw('curve_moving'), m['chance_curve']);
+    expect(tuning.raw('curve_tilt'), m['tilt_curve']);
     expect([t.rail.axisDeg.$1, t.rail.axisDeg.$2], m['rail']['axis_deg']);
     expect([
       t.rail.halfTravel.$1,

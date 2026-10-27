@@ -74,37 +74,35 @@ void main() {
         'from LayoutConfig', () {
       final t = DirectorTables.prd2;
       expect(identical(t.bands, LayoutConfig.bands), isTrue);
-      expect(identical(t.movingTypes20, LayoutConfig.movingTypes20), isTrue);
-      expect(identical(t.movingTypes45, LayoutConfig.movingTypes45), isTrue);
       expect(identical(t.rail, LayoutConfig.rail), isTrue);
       expect(identical(t.swing, LayoutConfig.swing), isTrue);
     });
 
     test('PRD-2.6 D2 rows at 0, 3, 20, 40, 65, 100', () {
-      expect(LayoutConfig.bands.map((b) => b.from), [
-        0,
-        3,
-        20,
-        40,
-        65,
-        100,
-      ]);
-      expect(LayoutConfig.bands.map((b) => b.tilt), [
-        0,
-        0,
-        .50,
-        .50,
-        .60,
-        .65,
-      ]);
-      expect(LayoutConfig.bands.map((b) => b.moving), [
-        0,
-        0,
-        .15,
-        .25,
-        .42,
-        .52,
-      ]);
+      expect(LayoutConfig.bands.map((b) => b.from), [0, 3, 20, 40, 65, 100]);
+      // PRD-2.6 D2 owns modifier chances in independent curves, not Δy rows.
+      final tables = DirectorTables.prd2;
+      for (final (hoop, chance) in [
+        (9, 0.0),
+        (10, .30),
+        (49, .35),
+        (50, .50),
+        (100, .60),
+        (150, .65),
+      ]) {
+        expect(tables.tiltChance(hoop), closeTo(chance, 1e-12));
+      }
+      for (final (hoop, chance) in [
+        (24, 0.0),
+        (25, .15),
+        (34, .15),
+        (35, .25),
+        (60, .42),
+        (100, .52),
+        (150, .58),
+      ]) {
+        expect(tables.movingChance(hoop), closeTo(chance, 1e-12));
+      }
       for (final (i, row) in [
         (0, 0),
         (2, 0),
@@ -322,12 +320,7 @@ void main() {
               DirectorTables.prd2,
               math.Random(seed * 1013 + hoop),
             );
-            final motion = sampler.motion(
-              hoop,
-              ctx,
-              (lo + hi) / 2,
-              opening,
-            );
+            final motion = sampler.motion(hoop, ctx, (lo + hi) / 2, opening);
             normal++;
             if (motion == null) continue;
             moving++;

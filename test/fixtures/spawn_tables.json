@@ -1,5 +1,5 @@
 {
- "_note": "Run tables for PRD-2-gameplay.md section 3.0 (build-ready 2026-10-07). Layout bands by hoop index; y and dy are fractions of the band between the spike tooth lines. Mirrors design/menu_v2/proto_gameplay.html (BANDS, BUDGET, SPECIAL, GAPITEM). PRD-2.3 section 14 (2026-10-13): schedules, comet, feather / piece windows, the speed / opening / moving / tilt curves are the 2.3 defaults (tuning_defaults.dart); the band rows keep the 2.2 tilt / moving chances for reference (superseded by moving.chance_curve / moving.tilt_curve).",
+ "_note": "Run tables: layout, tilt and motion rows follow PRD-2.6 D2 (including \u00a78.3-8: no separate speed step at hoop 80). Centre fractions use the full band; dy fractions use min(band, dy_ref_band). Other sections retain their documented PRD overrides.",
  "bands": [
   {
    "from": 0,
@@ -11,11 +11,7 @@
     0.03,
     0.06,
     0.07
-   ],
-   "tilt_chance": 0,
-   "tilt_weights": {},
-   "moving_chance": 0,
-   "first_hoop": "exact centre"
+   ]
   },
   {
    "from": 3,
@@ -27,90 +23,55 @@
     0.11,
     0.27,
     0.35
-   ],
-   "tilt_chance": 0,
-   "tilt_weights": {},
-   "moving_chance": 0
-  },
-  {
-   "from": 10,
-   "centre_y": [
-    0.3,
-    0.69
-   ],
-   "abs_dy_median_p90_max": [
-    0.09,
-    0.3,
-    0.38
-   ],
-   "tilt_chance": 0.3,
-   "tilt_weights": {
-    "-10": 6,
-    "15": 4
-   },
-   "moving_chance": 0
+   ]
   },
   {
    "from": 20,
    "centre_y": [
     0.27,
-    0.69
+    0.7
    ],
    "abs_dy_median_p90_max": [
     0.12,
     0.31,
     0.38
-   ],
-   "tilt_chance": 0.5,
-   "tilt_weights": {
-    "-10": 35,
-    "15": 30,
-    "30": 25,
-    "-20": 10
-   },
-   "moving_chance": 0.06
+   ]
   },
   {
-   "from": 35,
+   "from": 40,
    "centre_y": [
     0.24,
-    0.72
+    0.73
    ],
    "abs_dy_median_p90_max": [
     0.14,
     0.33,
     0.42
-   ],
-   "tilt_chance": 0.6,
-   "tilt_weights": {
-    "-10": 25,
-    "15": 20,
-    "30": 30,
-    "-20": 10,
-    "45": 15
-   },
-   "moving_chance": 0.15
+   ]
   },
   {
-   "from": 45,
+   "from": 65,
    "centre_y": [
-    0.16,
+    0.2,
     0.76
    ],
    "abs_dy_median_p90_max": [
     0.15,
-    0.38,
-    0.52
+    0.35,
+    0.46
+   ]
+  },
+  {
+   "from": 100,
+   "centre_y": [
+    0.16,
+    0.78
    ],
-   "tilt_chance": 0.78,
-   "tilt_weights": {
-    "-20": 20,
-    "-10": 10,
-    "15": 10,
-    "30": 30,
-    "45": 30
-   },
-   "moving_chance": 0.4
+   "abs_dy_median_p90_max": [
+    0.15,
+    0.37,
+    0.5
+   ]
   }
  ],
  "dy_sampling": "u<0.5: median*u/0.5; u<0.9: median..p90; else p90..max (linear pieces). Direction flips vs previous step with p=0.65 (zig-zag, same-sign runs 1-3); flip again if it leaves the band.",
@@ -175,11 +136,10 @@
    ]
   ],
   "saw_extra_pt": 28,
-  "rides": "the curve size (PRD-2.4 §2); the portal 118"
+  "rides": "the curve size (PRD-2.4 \u00a72); the portal 118"
  },
  "moving": {
   "rail": {
-   "share": 0.8,
    "axis_deg": [
     -25,
     25
@@ -195,43 +155,38 @@
    "motion": "constant speed ping-pong"
   },
   "swing": {
-   "share": 0.2,
    "amplitude_deg": 15,
    "period_s": 1.8,
    "rope": "from above the top spikes"
   },
-  "types_from_hoop_45": {
-   "rail": 50,
-   "swing": 15,
-   "horizontal": 10,
-   "diagonal": 10,
-   "orbit": 8,
-   "rock": 7
-  },
-  "types_hoop_20_44": {
-   "rail": 80,
-   "swing": 20
-  },
   "chance_curve": [
    [
-    19,
+    24,
     0
    ],
    [
-    20,
+    25,
+    0.15
+   ],
+   [
+    34,
     0.15
    ],
    [
     35,
-    0.4
+    0.25
    ],
    [
     60,
-    0.6
+    0.42
    ],
    [
-    80,
-    0.75
+    100,
+    0.52
+   ],
+   [
+    150,
+    0.58
    ]
   ],
   "tilt_curve": [
@@ -244,29 +199,107 @@
     0.3
    ],
    [
-    19,
-    0.3
+    49,
+    0.35
    ],
    [
-    20,
+    50,
     0.5
    ],
    [
-    34,
-    0.5
-   ],
-   [
-    35,
+    100,
     0.6
    ],
    [
-    44,
-    0.6
-   ],
-   [
-    45,
-    0.78
+    150,
+    0.65
    ]
+  ],
+  "rows": [
+   {
+    "types": {
+     "rail": 100
+    },
+    "half_travel_pt": [
+     30,
+     45
+    ],
+    "speed_pt_s": [
+     22,
+     28
+    ],
+    "from": 25
+   },
+   {
+    "types": {
+     "rail": 75,
+     "swing": 25
+    },
+    "half_travel_pt": [
+     40,
+     60
+    ],
+    "speed_pt_s": [
+     26,
+     34
+    ],
+    "from": 35
+   },
+   {
+    "types": {
+     "rail": 55,
+     "swing": 15,
+     "horizontal": 15,
+     "diagonal": 15
+    },
+    "half_travel_pt": [
+     40,
+     60
+    ],
+    "speed_pt_s": [
+     30,
+     39
+    ],
+    "from": 70
+   },
+   {
+    "types": {
+     "rail": 45,
+     "swing": 15,
+     "horizontal": 10,
+     "diagonal": 10,
+     "orbit": 10,
+     "rock": 10
+    },
+    "half_travel_pt": [
+     40,
+     60
+    ],
+    "speed_pt_s": [
+     30,
+     39
+    ],
+    "from": 90
+   },
+   {
+    "types": {
+     "rail": 45,
+     "swing": 15,
+     "horizontal": 10,
+     "diagonal": 10,
+     "orbit": 10,
+     "rock": 10
+    },
+    "half_travel_pt": [
+     40,
+     60
+    ],
+    "speed_pt_s": [
+     34,
+     42
+    ],
+    "from": 120
+   }
   ]
  },
  "tilt_cap_deg": 45,
@@ -479,5 +512,33 @@
   "duration_s": 10,
   "speed_mult": 1.7,
   "placement": "hangs in a normal hoop, 20 pt past its plane"
- }
+ },
+ "tilt_rows": {
+  "10": {
+   "10": 6,
+   "15": 4
+  },
+  "50": {
+   "10": 30,
+   "15": 30,
+   "20": 20,
+   "30": 20
+  },
+  "60": {
+   "10": 20,
+   "15": 20,
+   "20": 15,
+   "30": 30,
+   "45": 15
+  },
+  "100": {
+   "10": 15,
+   "15": 15,
+   "20": 15,
+   "30": 30,
+   "45": 25
+  }
+ },
+ "dy_ref_band": 540,
+ "dy_hard_factor": 0.85
 }

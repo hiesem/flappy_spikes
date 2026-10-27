@@ -12,6 +12,13 @@ import '../../components/ui/confetti.dart';
 import '../../game/flappy_game.dart';
 import '../../game/sound.dart';
 import '../../skins/art/bird_art.dart';
+// region P26-F9f
+import '../../skins/art/card_frame_art.dart';
+import '../../skins/art/card_name_art.dart';
+import '../../skins/art/card_sticker_art.dart';
+import '../effects/coin_icon.dart';
+import 'results_screen.dart' show ResultsScreen;
+// endregion
 import '../../skins/look.dart';
 import '../../versus/opponent.dart';
 import '../config/versus_config.dart';
@@ -865,6 +872,36 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
   /// square (null while the reel cycles filler names: the person glyph).
   Look? bird;
 
+  // region P26-F9f
+  Image? _cardCoin;
+  String get cardFrame => noRival ? '' : bird?.cardIdFor(CardKind.frame) ?? '';
+  String get cardName => noRival ? '' : bird?.cardIdFor(CardKind.name) ?? '';
+  String get cardSticker =>
+      noRival ? '' : bird?.cardIdFor(CardKind.sticker) ?? '';
+  double get cardTime => intro.game.reduceMotion ? 0 : intro.time;
+
+  void _frame(Canvas canvas, {required bool back}) {
+    canvas.save();
+    canvas.translate(VersusConfig.plateSlot / 2, VersusConfig.plateSlot / 2);
+    if (back) {
+      CardFrameArt.paintBack(
+        canvas,
+        cardFrame,
+        size: VersusConfig.plateSlot,
+        t: cardTime,
+      );
+    } else {
+      CardFrameArt.paintFront(
+        canvas,
+        cardFrame,
+        size: VersusConfig.plateSlot,
+        t: cardTime,
+      );
+    }
+    canvas.restore();
+  }
+  // endregion
+
   /// PRD-2.3 §25.3 the NO RIVAL FOUND plate: the grey person icon, no
   /// emblem, and the name window runs to the plate's right edge.
   bool noRival = false;
@@ -885,6 +922,9 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    // region P26-F9f
+    _cardCoin = await CoinIcon.load(intro.game.images);
+    // endregion
     if (!reel) _name = intro.myName;
     add(emblem);
   }
@@ -975,6 +1015,9 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
     const slot = VersusConfig.plateSlot;
     _p.color = intro.game.stageBackground;
     canvas.drawRect(Rect.fromLTWH(0, 0, w, hh), _p);
+    // region P26-F9f
+    _frame(canvas, back: true);
+    // endregion
     _p.color = avatar;
     canvas.drawRect(const Rect.fromLTWH(0, 0, slot, slot), _p);
     final look = noRival ? null : bird;
@@ -1001,6 +1044,9 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
       );
       canvas.restore();
     }
+    // region P26-F9f
+    _frame(canvas, back: false);
+    // endregion
     // Name window (clipped; the reel rolls names through it). PRD-2.3
     // §25.3 the NO RIVAL FOUND plate has no emblem slot.
     final win = Rect.fromLTWH(slot, 0, w - (noRival ? 1 : 2) * slot, hh);
@@ -1018,6 +1064,20 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
       _paintName(canvas, _name, travel * (1 - e), win);
     }
     canvas.restore();
+    // region P26-F9f
+    canvas.save();
+    canvas.translate(122, hh - 3);
+    canvas.rotate(-7 * math.pi / 180);
+    CardStickerArt.paint(
+      canvas,
+      cardSticker,
+      t: cardTime,
+      scale: .42,
+      coinImage: _cardCoin,
+      paintRays: ResultsScreen.paintCardStickerRays,
+    );
+    canvas.restore();
+    // endregion
     // Lock flash (white .9 → 0).
     final f = _prog(t, flashAt, VersusConfig.lockFlash);
     if (f != null && f < 1) {
@@ -1040,6 +1100,23 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
 
   void _paintName(Canvas canvas, String s, double dy, Rect win) {
     final text = _text(s);
+    // region P26-F9f
+    if (cardName.isNotEmpty) {
+      CardNameArt.paint(
+        canvas,
+        cardName,
+        text.text,
+        t: cardTime,
+        center: Offset(
+          win.left + VersusConfig.plateNameLeft + text.width / 2,
+          win.height / 2 + dy,
+        ),
+        fontSize: text.size,
+        maxWidth: nameRoom,
+      );
+      return;
+    }
+    // endregion
     text.paintCentred(
       canvas,
       Offset(

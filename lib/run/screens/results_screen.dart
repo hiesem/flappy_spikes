@@ -17,6 +17,10 @@ import '../../game/sound.dart';
 import '../../levels/level_progress.dart';
 import '../../levels/levels.dart';
 import '../../skins/look.dart';
+// region P26-F9f
+import '../../skins/art/card_sticker_art.dart';
+import '../effects/twinkle.dart';
+// endregion
 import '../config/results_config.dart';
 import '../effects/coin_icon.dart';
 import '../hud/fit_name.dart'; // PRD-2.3 §21.2
@@ -1020,6 +1024,26 @@ class ResultsScreen extends PositionComponent
     final k = content.scale.y;
     final plate = content.position.toOffset() + ResultsConfig.plateCentre * k;
     final radius = ResultsConfig.rayRadius * k;
+    // region P26-F9f
+    paintCardStickerRays(
+      canvas,
+      plate,
+      radius,
+      game.reduceMotion ? 0 : time,
+      strength: strength,
+    );
+    // endregion
+  }
+
+  // region P26-F9f
+  /// R1 ray master, also used behind the three ray-bearing card stickers.
+  static void paintCardStickerRays(
+    Canvas canvas,
+    Offset plate,
+    double radius,
+    double t, {
+    double strength = 1,
+  }) {
     final a = strength.clamp(0.0, 1.0) * ResultsConfig.rayAlpha;
     final mid = a * ResultsConfig.rayAlphaMid / ResultsConfig.rayAlpha;
     const stops = [0.0, ResultsConfig.rayFadeMid, 1.0];
@@ -1034,7 +1058,6 @@ class ResultsScreen extends PositionComponent
       ResultsConfig.goldLight.withValues(alpha: 0),
     ], stops);
     final box = Rect.fromCircle(center: Offset.zero, radius: radius);
-    final t = game.reduceMotion ? 0.0 : time;
     canvas.save();
     canvas.translate(plate.dx, plate.dy);
     canvas.rotate(t * ResultsConfig.raySpeed);
@@ -1051,6 +1074,8 @@ class ResultsScreen extends PositionComponent
     }
     canvas.restore();
   }
+  // endregion
+
   // endregion PRD-2.2 §31.3
 }
 
@@ -1204,7 +1229,15 @@ class ResultsPlayerColumn extends PositionComponent
       // region WP-5b — §5.10 WINNER: gold tag, plum 11 pt, 0.1 em, 2 × 8
       add(
         ResultsWinnerTag(
-          position: Vector2(centreX, ResultsConfig.winnerTagTop),
+          // region P26-F9f
+          sticker: look.cardIdFor(CardKind.sticker),
+          position: look.cardIdFor(CardKind.sticker).isEmpty
+              ? Vector2(centreX, ResultsConfig.winnerTagTop)
+              : Vector2(
+                  centreX + (mine ? 40 : -40),
+                  ResultsConfig.avatarTop + ResultsConfig.avatarSize / 2,
+                ),
+          // endregion
         ),
       );
       // endregion WP-5b
@@ -1666,13 +1699,43 @@ class ResultsHeader extends PositionComponent
 /// §5.10 the gold WINNER tag above the winner's avatar (plum 11 pt, 0.1 em,
 /// padding 2 × 8), centred on [position].
 class ResultsWinnerTag extends PositionComponent {
-  ResultsWinnerTag({super.position}) : super(anchor: Anchor.topCenter);
+  // region P26-F9f
+  ResultsWinnerTag({super.position, this.sticker = ''})
+    : super(anchor: Anchor.topCenter);
+
+  final String sticker;
+  Image? _coinImage;
+  final GoldSticker _slap = GoldSticker(
+    text: '',
+    backOut: true,
+    popLength: .32,
+    tilt: 9 * math.pi / 180,
+    popFromTilt: 27 * math.pi / 180,
+  );
+  double _time = 0;
+  bool get hasSticker => CardStickerArt.has(sticker);
+  double get stickerTime => _time;
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _time += dt;
+  }
+  // endregion
 
   final Paint _paint = Paint()..color = ResultsConfig.gold;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    // region P26-F9f
+    if (hasSticker) {
+      size = Vector2(96, 77);
+      anchor = Anchor.center;
+      _coinImage = await CoinIcon.load(findGame()!.images);
+      return;
+    }
+    // endregion
     final label = MenuText(
       'WINNER',
       fontSize: ResultsConfig.winnerTagFontSize,
@@ -1689,6 +1752,53 @@ class ResultsWinnerTag extends PositionComponent {
   }
 
   @override
-  void render(Canvas canvas) => canvas.drawRect(size.toRect(), _paint);
+  // region P26-F9f
+  void render(Canvas canvas) {
+    if (!hasSticker) {
+      canvas.drawRect(size.toRect(), _paint);
+      return;
+    }
+    // Approved slap: 0.7 s after arrival, one bounce; reuse sticker motion.
+    if (_time < .7) return;
+    final still = (findGame() as FlappySpikesGame).reduceMotion;
+    final pop = _slap.popAt(still ? 1 : _time - .7);
+    canvas.saveLayer(
+      null,
+      Paint()
+        ..color = Color.fromRGBO(
+          255,
+          255,
+          255,
+          ((_time - .7) / .1).clamp(0, 1),
+        ),
+    );
+    canvas.translate(width / 2, height / 2);
+    canvas.rotate(pop.$2);
+
+    CardStickerArt.paint(
+      canvas,
+      sticker,
+      t: still ? 0 : _time,
+      scale: 2.6 - 2 * (pop.$1 - .3) / .7,
+      coinImage: _coinImage,
+      paintRays: ResultsScreen.paintCardStickerRays,
+    );
+    canvas.restore();
+    final sparkle = Twinkle.curve(still ? 1 : (_time - 1.02) / .6);
+    for (var i = 0; i < 6; i++) {
+      final angle = i * math.pi / 3;
+      Twinkle.paint(
+        canvas,
+        Offset(
+          width / 2 + 40 * math.cos(angle),
+          height / 2 + 27 * math.sin(angle),
+        ),
+        7 * sparkle.$1,
+        ResultsConfig.gold.withValues(alpha: sparkle.$3),
+        rotation: sparkle.$2,
+      );
+    }
+  }
+  // endregion
 }
 // endregion WP-5b

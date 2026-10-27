@@ -5,6 +5,10 @@ import 'package:flame/components.dart';
 import '../config/hud_config.dart';
 import '../config/versus_config.dart';
 import 'name_chip.dart';
+// region P26-F9f
+import '../../skins/art/card_frame_art.dart';
+import '../../skins/look.dart';
+// endregion
 import 'run_hud.dart';
 
 /// §5.7 the versus bar (x 60 → 260): two 90 × 38 boxes at x 60 (you: pink,
@@ -25,10 +29,19 @@ class VersusBar extends PositionComponent {
   final RunHud hud;
 
   /// §5.7 / §3.13 the own name: the generated nickname (WP-AV).
-  late final NameChip you = NameChip(hud.game.myVersusName, HudConfig.youLeft);
+  // region P26-F9f
+  late final NameChip you = NameChip(
+    hud.game.myVersusName,
+    HudConfig.youLeft,
+    style: hud.game.menu.items.look.cardIdFor(CardKind.name),
+  );
+  // endregion
   late final NameChip them = NameChip(
     hud.run.setup.opponent?.name ?? '',
     HudConfig.themLeft,
+    // region P26-F9f
+    style: hud.run.setup.opponent?.look.cardIdFor(CardKind.name) ?? '',
+    // endregion
   );
   final HudText _vs = HudText(
     'VS',
@@ -39,6 +52,9 @@ class VersusBar extends PositionComponent {
 
   int _lastThem = 0;
   double _flash = 0;
+  // region P26-F9f
+  double _lastClock = 0;
+  // endregion
 
   /// The opponent's score now (their timeline at my runClock).
   int get theirScore =>
@@ -61,8 +77,67 @@ class VersusBar extends PositionComponent {
     final s = theirScore;
     if (s > _lastThem) _flash = HudConfig.flashLength;
     _lastThem = s;
-    if (_flash > 0) _flash = (_flash - dt).clamp(0.0, 1.0);
+    // region P26-F9f
+    final clock = hud.run.state.runClock;
+    final elapsed = (clock - _lastClock).clamp(0.0, double.infinity);
+    _lastClock = clock;
+    if (_flash > 0) _flash = (_flash - elapsed).clamp(0.0, 1.0);
+    // endregion
   }
+
+  // region P26-F9f
+  final Paint _frameAlpha = Paint();
+
+  double get cardTime => hud.game.reduceMotion ? 0 : hud.run.state.runClock;
+
+  void _frame(
+    Canvas canvas,
+    Rect avatar,
+    Look look,
+    double opacity, {
+    required bool back,
+  }) {
+    final id = look.cardIdFor(CardKind.frame);
+    if (id.isEmpty || opacity <= 0) return;
+    final layered = opacity < 1;
+    if (layered) {
+      canvas.saveLayer(
+        null,
+        _frameAlpha..color = Color.fromRGBO(255, 255, 255, opacity),
+      );
+    } else {
+      canvas.save();
+    }
+    // O82: the score box covers ornaments, also while the whole row fades.
+    final score = avatar.left == HudConfig.youLeft
+        ? Rect.fromLTRB(
+            avatar.right,
+            avatar.top,
+            HudConfig.youLeft + HudConfig.boxWidth,
+            avatar.bottom,
+          )
+        : Rect.fromLTRB(
+            HudConfig.themLeft,
+            avatar.top,
+            avatar.left,
+            avatar.bottom,
+          );
+    canvas.clipPath(
+      Path.combine(
+        PathOperation.difference,
+        Path()..addRect(avatar.inflate(CardFrameArt.outset(avatar.width))),
+        Path()..addRect(score),
+      ),
+    );
+    canvas.translate(avatar.center.dx, avatar.center.dy);
+    if (back) {
+      CardFrameArt.paintBack(canvas, id, size: avatar.width, t: cardTime);
+    } else {
+      CardFrameArt.paintFront(canvas, id, size: avatar.width, t: cardTime);
+    }
+    canvas.restore();
+  }
+  // endregion
 
   final Paint _p = Paint();
   final Paint _stroke = Paint()..style = PaintingStyle.stroke;
@@ -79,9 +154,15 @@ class VersusBar extends PositionComponent {
     final youBox = Rect.fromLTWH(HudConfig.youLeft, top, w, h);
     _box(canvas, youBox, HudConfig.youBox, a);
     final youAv = Rect.fromLTWH(HudConfig.youLeft, top, h, h);
+    // region P26-F9f
+    _frame(canvas, youAv, g.menu.items.look, a, back: true);
+    // endregion
     _box(canvas, youAv, HudConfig.youAvatar, a);
     // WP-AV your sticker avatar (your bird, gear and hat).
     g.avatars.paint(canvas, youAv, g.menu.items.look, opacity: a);
+    // region P26-F9f
+    _frame(canvas, youAv, g.menu.items.look, a, back: false);
+    // endregion
     _score(
       canvas,
       '$myScore',
@@ -94,6 +175,10 @@ class VersusBar extends PositionComponent {
     final themBox = Rect.fromLTWH(HudConfig.themLeft, top, w, h);
     _box(canvas, themBox, fg, ta);
     final themAv = Rect.fromLTWH(themBox.right - h, top, h, h);
+    // region P26-F9f
+    final oppLook = hud.run.setup.opponent?.look ?? Look.defaults;
+    _frame(canvas, themAv, oppLook, ta, back: true);
+    // endregion
     _box(
       canvas,
       themAv,
@@ -106,6 +191,9 @@ class VersusBar extends PositionComponent {
     if (opp != null) {
       g.avatars.paint(canvas, themAv, opp.look, mirror: true, opacity: ta);
     }
+    // region P26-F9f
+    _frame(canvas, themAv, oppLook, ta, back: false);
+    // endregion
     _score(
       canvas,
       '$theirScore',
@@ -126,8 +214,10 @@ class VersusBar extends PositionComponent {
       Offset(HudConfig.vsLeft + HudConfig.vsWidth / 2, top + h / 2),
       opacity: a,
     );
-    you.render(canvas, a);
-    them.render(canvas, ta);
+    // region P26-F9f
+    you.render(canvas, a, t: cardTime);
+    them.render(canvas, ta, t: cardTime);
+    // endregion
   }
 
   void _box(Canvas canvas, Rect r, Color c, double a) {

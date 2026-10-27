@@ -1,4 +1,7 @@
 import 'dart:ui';
+// region P26-F9f
+import '../../skins/art/card_name_art.dart';
+// endregion
 
 import '../config/hud_config.dart';
 import 'run_hud.dart';
@@ -10,7 +13,9 @@ import 'run_hud.dart';
 /// shrunk to fit the chip minus its padding down to 66 %, then "…").
 /// Drawn by the [VersusBar].
 class NameChip {
-  NameChip(this.name, this.left)
+  // region P26-F9f
+  NameChip(this.name, this.left, {this.style = ''})
+    // endregion
     : _text = HudText.name(
         name,
         maxWidth: HudConfig.boxWidth - 2 * HudConfig.chipPad,
@@ -20,6 +25,10 @@ class NameChip {
         font: HudConfig.nameFont,
       );
 
+  // region P26-F9f
+  final String style;
+  final Paint _nameAlpha = Paint();
+  // endregion
   final double left;
   final HudText _text;
 
@@ -43,9 +52,31 @@ class NameChip {
     HudConfig.chipHeight,
   );
 
-  void render(Canvas canvas, double opacity) {
+  // region P26-F9f
+  void render(Canvas canvas, double opacity, {double t = 0}) {
+    // endregion
     _white.color = Color.fromRGBO(255, 255, 255, opacity);
     canvas.drawRect(rect, _white);
+    // region P26-F9f
+    if (style.isNotEmpty) {
+      if (opacity <= 0) return;
+      canvas.saveLayer(
+        rect.inflate(10),
+        _nameAlpha..color = Color.fromRGBO(255, 255, 255, opacity),
+      );
+      CardNameArt.paint(
+        canvas,
+        style,
+        shown,
+        t: t,
+        center: rect.center,
+        fontSize: size,
+        maxWidth: HudConfig.boxWidth - 2 * HudConfig.chipPad,
+      );
+      canvas.restore();
+      return;
+    }
+    // endregion
     _text.paintCentred(canvas, rect.center, opacity: opacity);
   }
 }

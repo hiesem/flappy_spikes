@@ -432,6 +432,9 @@ class RunDirector {
 
   /// PRD-2.6 D4/D5 a squeeze warning may start at [hoop].
   bool allowsSqueezeWarning(int hoop) {
+    // region P26-B3
+    if (_showcaseHeadline(hoop)) return false;
+    // endregion
     if (!_calm.allowsSqueezeWarning(hoop)) return false;
     if (_headlineDue('squeeze', hoop)) return true;
     return false;
@@ -1086,6 +1089,7 @@ class RunDirector {
             plan.bullseyeHoops.contains(hoop));
   }
 
+  // region P26-B3
   SlotPlan? _showcaseSlot(SlotPlan normal, DirectorContext ctx) {
     final plan = showcase;
     final i = normal.index;
@@ -1104,6 +1108,8 @@ class RunDirector {
       theme = plan.portals.firstWhere((p) => p.hoop == i).theme;
       // The replacement schedule has its own stream. Never feed a script
       // decision back into the ordinary layout, cooldowns or hazard ledger.
+      _rideBefore = _lastRide;
+      _lastRide = theme;
       _showcasePortalAt = i + RunRandom.rangeInt(_showcaseRandom, 25, 40);
     }
     final opening = min(
@@ -1140,6 +1146,8 @@ class RunDirector {
           : const [],
     );
   }
+
+  // endregion
 
   SlotPlan _recordSlot(
     SlotPlan planned,
@@ -1462,10 +1470,18 @@ class RunDirector {
       return normal;
     }
     // endregion
+    // region P26-B3
     // Run the normal decision to completion first, then overlay step 0.
     // Its sampler, reservations and random streams remain exactly the same
     // as an ordinary course with first-meet pulls disabled.
     _showcaseNormalSlot = normal;
+    // A normal portal replaced by step 0 never becomes the last shipped ride.
+    if (normal.kind == HoopKindId.portal &&
+        (_scriptedSlot(hoop) ||
+            _showcaseHeadline(hoop) ||
+            _showcasePortalAt != null)) {
+      _lastRide = _rideBefore;
+    }
     var shipped = _showcaseSlot(normal, ctx) ?? normal;
     if (!_scriptedSlot(hoop)) {
       final portalDue = _showcasePortalAt;
@@ -1474,22 +1490,33 @@ class RunDirector {
           !ctx.rideActive &&
           _ride == null &&
           !ctx.activity) {
-        final theme =
-            RideId.values[_showcaseRandom.nextInt(RideId.values.length)];
+        // Same theme rule as the ordinary portal picker, on the overlay's
+        // independent stream so normal layout draws retain seed parity.
+        final options = RideId.values
+            .where((ride) => ride != _lastRide)
+            .toList();
+        final theme = options[_showcaseRandom.nextInt(options.length)];
+        _rideBefore = _lastRide;
+        _lastRide = theme;
         shipped = _showcasePortal(normal, ctx, theme);
         _showcasePortalAt = hoop + RunRandom.rangeInt(_showcaseRandom, 25, 40);
-      } else if (_showcaseHeadline(hoop) ||
+      } else if ((_showcaseHeadline(hoop) &&
+              (isBigSlot(normal) ||
+                  (_sawIntroductionPending &&
+                      normal.kind == HoopKindId.saw))) ||
           portalDue != null && normal.kind == HoopKindId.portal) {
         shipped = _showcasePlain(normal, ctx);
       }
     }
     _replaceSpawnedCount(normal, shipped);
+    // endregion
     // region P26-D-TESTS
     _introduceAfterSlot(shipped);
     // endregion
     return shipped;
   }
 
+  // region P26-B3
   bool _showcaseHeadline(int hoop) {
     final plan = showcase;
     return plan != null &&
@@ -1530,6 +1557,8 @@ class RunDirector {
       ctx.band - 2 * (RunConfig.rimRadius + RunConfig.bandMargin),
     ),
   );
+
+  // endregion
 
   void _markFinal(SlotPlan plan) {
     if (plan.cometHang) firstMeet.markMet(ElementId.comet);
@@ -2924,6 +2953,8 @@ class RunDirector {
     final normal = _normalGap(ctx, baseline ?? slot);
     final plan = showcase;
     if (plan == null) return normal;
+    // region P26-B3
+    // D6 holds back big bonuses only; ordinary pickups keep the normal mix.
     final ids = [
       for (final item in plan.gapItems)
         if (item.gap == slot.index) ElementId.fromStorageId(item.id)!,
@@ -2976,6 +3007,7 @@ class RunDirector {
       _count(kind.storageId);
     }
     return GapPlan(index: slot.index, items: items);
+    // endregion
   }
 
   GapPlan _normalGap(DirectorContext ctx, SlotPlan slot) {

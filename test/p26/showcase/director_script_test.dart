@@ -84,15 +84,71 @@ void main() {
           final ctx = DirectorContext.open(711);
           int? resumed;
           final portals = <int>[];
-          for (var i = 0; i < 60; i++) {
+          RideId? lastRide;
+          for (var i = 0; i < 181; i++) {
             final slot = d.nextSlot(ctx);
             d.nextGap(ctx, slot);
-            if (slot.kind == HoopKindId.portal) portals.add(i);
+            if (slot.kind == HoopKindId.portal) {
+              portals.add(i);
+              expect(
+                slot.extra,
+                isNot(lastRide),
+                reason: 'seed $seed step $step',
+              );
+              lastRide = slot.extra as RideId;
+              expect(d.lastRide, lastRide);
+            }
             if (script.portalHoops.contains(i)) resumed = d.portalAt;
-            if (resumed == i) break;
           }
           expect(resumed! - script.portalHoops.last, inInclusiveRange(25, 40));
-          expect(portals, [script.portalHoops.single, resumed]);
+          expect(portals.take(2), [script.portalHoops.single, resumed]);
+          expect(portals.length, greaterThanOrEqualTo(4));
+        }
+      }
+    }
+  });
+
+  test('B3 scripted portals update and restore the last shipped theme', () {
+    final script = ShowcaseScript.planFor(0, 1);
+    final d = RunDirector(
+      seed: 7,
+      enabled: ElementId.values.toSet(),
+      met: ElementId.values.toSet(),
+      showcase: script,
+      lastPortalRide: RideId.space,
+    );
+    final ctx = DirectorContext.open(711);
+    for (var i = 0; i <= script.portalHoops.single; i++) {
+      final slot = d.nextSlot(ctx);
+      d.nextGap(ctx, slot);
+    }
+    expect(d.lastRide, script.portals.single.theme);
+    d.portalDropped(script.portals.single.theme);
+    expect(d.lastRide, RideId.space);
+  });
+
+  test('B3 highlight windows suppress squeeze warnings only inside D6', () {
+    for (var step = 0; step < 3; step++) {
+      for (var attempt = 1; attempt <= 3; attempt++) {
+        final script = ShowcaseScript.planFor(step, attempt);
+        final highlights = [
+          ...script.portalHoops,
+          ...script.cometHoops,
+          ...script.feverHoops,
+        ];
+        for (var hoop = 0; hoop < 40; hoop++) {
+          RunDirector director({ShowcaseRunPlan? showcase}) => RunDirector(
+            seed: 7,
+            enabled: ElementId.values.toSet(),
+            met: ElementId.values.toSet(),
+            showcase: showcase,
+          );
+          final withinWindow = highlights.any((at) => (hoop - at).abs() < 8);
+          expect(
+            director(showcase: script).allowsSqueezeWarning(hoop),
+            withinWindow ? isFalse : director().allowsSqueezeWarning(hoop),
+            reason: 'step $step A=$attempt hoop $hoop',
+          );
         }
       }
     }
@@ -136,17 +192,38 @@ void main() {
               ].contains(i);
               // The replacement portal schedule may change portal decisions,
               // but never the normal geometry or later random draws.
-              final portal =
-                  x.kind == HoopKindId.portal || y.kind == HoopKindId.portal;
+              final reseededPortal =
+                  script.portalHoops.any((at) => i > at) &&
+                  (x.kind == HoopKindId.portal || y.kind == HoopKindId.portal);
               final reason =
                   'step $step A=$attempt games $games seed $seed i=$i';
-              if (!headline && !scriptedSlot && !portal) {
-                expect(y, x, reason: reason);
+              // PRD §8.3-7 / R6 / D6: only actual headline replacements
+              // differ inside the window; tilt, motion and specials stay.
+              final headlineReplacement = headline && RunDirector.isBigSlot(x);
+              if (!scriptedSlot && !reseededPortal) {
+                if (headlineReplacement) {
+                  expect(y.kind, HoopKindId.normal, reason: reason);
+                  expect(y.cometHang, isFalse, reason: reason);
+                  expect(y.attached, isEmpty, reason: reason);
+                  expect(y.centreY, x.centreY, reason: reason);
+                } else {
+                  expect(y, x, reason: reason);
+                }
               }
               final scriptedGap =
                   script.hearts.contains(i) ||
                   script.gapItems.any((item) => item.gap == i);
-              if (!headline && !scriptedGap) expect(gy, gx, reason: reason);
+              if (!scriptedGap) {
+                expect(
+                  gy.items,
+                  headline
+                      ? gx.items.where(
+                          (item) => !RunDirector.isBigItem(item.kind),
+                        )
+                      : gx.items,
+                  reason: reason,
+                );
+              }
             }
           }
         }

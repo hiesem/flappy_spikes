@@ -17,6 +17,16 @@ if ! python3 "$REPO/scripts/orch/bench.py" test --task "$wp" --scope targeted --
      env VERIFY_BASE="$old_base" VERIFY_SCOPED=1 bash scripts/verify.sh > "$ORCH/merge-$wp.log" 2>&1; then
   echo "FAST CHECK RED $wp (see $ORCH/merge-$wp.log)"; exit 4
 fi
+# feat/2.6 may have moved during the check: rebase again; recheck only if product code (not scripts/orch, docs, bench) moved
+for try in 1 2 3; do
+  checked=$(git merge-base HEAD feat/2.6)
+  [ "$checked" = "$(git rev-parse feat/2.6)" ] && break
+  git rebase -q feat/2.6 || { git rebase --abort; echo "MERGE CONFLICT $wp (late)"; exit 3; }
+  if git diff --name-only "$checked" feat/2.6 | grep -qvE '^(scripts/orch/|docs/|bench/)'; then
+    python3 "$REPO/scripts/orch/bench.py" test --task "$wp" --scope targeted --where task-worktree -- \
+      env VERIFY_BASE="$checked" VERIFY_SCOPED=1 bash scripts/verify.sh >> "$ORCH/merge-$wp.log" 2>&1 || { echo "FAST CHECK RED $wp (late)"; exit 4; }
+  fi
+done
 stat=$(git diff --shortstat feat/2.6...HEAD)
 cd "$REPO" && git merge -q --ff-only "p26/$wp" || { echo "FF FAILED $wp"; exit 5; }
 sha=$(git rev-parse --short HEAD)

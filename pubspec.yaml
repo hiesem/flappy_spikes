@@ -110,7 +110,6 @@ flutter:
     - assets/audio/
     # region P26-J8
     - assets/emblems/
-    - assets/emblems/layers/
     # endregion
 
   fonts:

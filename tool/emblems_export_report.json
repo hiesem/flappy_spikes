@@ -1,16 +1,11 @@
 {
-  "pngCount": 666,
-  "preOptimizationBytes": 14848102,
-  "rawBytes": 11353853,
-  "zipBytes": 10592247,
-  "compressedBudgetBytes": 16777216,
-  "allAssetsBytes": 28375114,
-  "maxCompositeError": 4,
-  "contactScales": [
-    0.29,
-    0.32
-  ],
+  "pngCount": 96,
+  "preOptimizationBytes": 2905286,
+  "rawBytes": 2194053,
+  "zipBytes": 2063432,
   "lossless": true,
-  "note": "ZIP is incremental asset payload, not a signed AAB measurement; all 3 density sets retained.",
-  "legibilityReview": "Both contact sheets visually inspected in J8 round 2: silhouettes and main motifs remain distinguishable; fine ribbon numerals are small in the approved source. Bird centres intentionally empty."
+  "pose": "static-only; all animated target subtrees removed",
+  "removedAnimatedGroups": 120,
+  "sweepProbe": "HATCHLING central 4x4 art-unit patch equals source plate #F6EBD2 at all densities",
+  "note": "Only static bases are bundled. J7 owns every animated effect. ZIP is incremental PNG payload, not signed AAB size."
 }

@@ -39,7 +39,8 @@ const List<String> kHomeImages = [
   'menu/noads.png',
   'menu/trophy.png',
   'menu/lock.png',
-  'menu/medal.png', // PRD-2.3.1 §12.5
+  // region P26-LB4 — O63 removes the Home medal asset.
+  // endregion P26-LB4
   'menu/logo.png', // owner 2026-10-17: the logo replaces the title text
 ];
 
@@ -74,15 +75,12 @@ class HomeScreen extends PositionComponent
   /// game's shared [MenuCornerBox] below this screen.
   late final MenuButton gearButton;
 
-  /// The trophy box next to the gear (PRD-home-v3 §3.1): opens the Play
-  /// Games leaderboard; its glyph wiggles every 10 s.
+  // region P26-LB4
+  /// The trophy opens our board and wiggles every 10 s.
   late final MenuButton trophyButton;
   late final WiggleEffect trophyWiggle;
 
-  /// PRD-2.3.1 §12.5 the medal box right of the trophy: opens the native
-  /// achievements list; wiggles like the trophy, 5 s after it.
-  late final MenuButton achievementsButton;
-  late final WiggleEffect medalWiggle;
+  // endregion P26-LB4
   /// The Flappy Spikes logo (owner 2026-10-17, size S: 150 pt wide), in its
   /// own colours (not stage-tinted); top-centre at [Config.homeTitlePositionFor].
   late final SpriteComponent title;
@@ -182,7 +180,9 @@ class HomeScreen extends PositionComponent
       onPressed: game.openSettings,
       isActive: _isActive,
     );
+    // region P26-LB4
     final trophyRect = Config.homeTrophyRectFor(h);
+    final trophyGlow = _TrophyGlow(position: trophyRect.topLeft.toVector2());
     final trophyIcon = MenuIcon(
       icon('trophy'),
       size: Vector2.all(Config.homeTrophyIconSize),
@@ -195,29 +195,11 @@ class HomeScreen extends PositionComponent
       color: Config.menuPink,
       position: trophyRect.topLeft.toVector2(),
       size: trophyRect.size.toVector2(),
-      onPressed: () => game.showLeaderboard(sfx: Sfx.skTap),
+      onPressed: game.openBoard,
       isActive: _isActive,
       children: [trophyIcon],
     );
-    // region P231-E — PRD-2.3.1 §12.5 the achievements (medal) button
-    final medalRect = Config.homeAchievementsRectFor(h);
-    final medalIcon = MenuIcon(
-      icon('medal'),
-      size: Vector2.all(Config.homeMedalIconSize),
-      position: medalRect.size.toVector2() / 2,
-      anchor: Anchor.center,
-    );
-    medalWiggle = WiggleEffect(medalIcon);
-    medalIcon.decorator.addLast(medalWiggle);
-    achievementsButton = MenuButton(
-      color: Config.menuPink,
-      position: medalRect.topLeft.toVector2(),
-      size: medalRect.size.toVector2(),
-      onPressed: () => game.showAchievements(sfx: Sfx.skTap),
-      isActive: _isActive,
-      children: [medalIcon],
-    );
-    // endregion P231-E
+    // endregion P26-LB4
     // §8.2: one idle clock for the screen's live effects.
     clock = LiveClock(
       paused: () => game.liveMotionPaused,
@@ -357,6 +339,9 @@ class HomeScreen extends PositionComponent
     });
     // endregion
     clock
+      // region P26-LB4
+      ..bind((t, still) => trophyGlow.ringWidth = still ? 2 : 3 + math.sin(t * 2))
+      // endregion P26-LB4
       ..bind(slotButton.animate)
       ..bind(
         (t, still) => skinsTile.tagWobble.setPose(
@@ -366,14 +351,6 @@ class HomeScreen extends PositionComponent
       ..bind(
         (t, still) => trophyWiggle.setPose(
           still ? (scale: 1, degrees: 0) : LiveCurves.trophyWiggle(t),
-        ),
-      )
-      // PRD-2.3.1 §12.5 the medal: the trophy's wiggle, 5 s later.
-      ..bind(
-        (t, still) => medalWiggle.setPose(
-          still
-              ? (scale: 1, degrees: 0)
-              : LiveCurves.trophyWiggle(t - Config.homeMedalWiggleDelay),
         ),
       )
       // §3.2: the emblem's sweep + per-level idle; reduce motion freezes
@@ -387,8 +364,10 @@ class HomeScreen extends PositionComponent
     addAll([
       clock,
       gearButton,
+      // region P26-LB4
+      trophyGlow,
       trophyButton,
-      achievementsButton, // PRD-2.3.1 §12.5
+      // endregion P26-LB4
       titleHotspot,
       title,
       subtitle,
@@ -1663,3 +1642,17 @@ class _LongPressArea extends PositionComponent with TapCallbacks {
   @override
   void onLongTapDown(TapDownEvent event) => onLongPress();
 }
+
+// region P26-LB4
+class _TrophyGlow extends PositionComponent {
+  _TrophyGlow({super.position}) : super(size: Vector2.all(38));
+  double ringWidth = 2;
+  @override
+  void render(Canvas canvas) {
+    canvas.drawRect(size.toRect().inflate(ringWidth / 2), Paint()
+      ..color = const Color(0xffffb529)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = ringWidth);
+  }
+}
+// endregion P26-LB4

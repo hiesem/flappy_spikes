@@ -9,6 +9,7 @@ import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/achievements/achievement_catalog.dart';
+import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/achievements/achievement_toast.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
@@ -211,33 +212,27 @@ void main() async {
     },
   );
 
+  // PRD 2.6 O63: Home has no medal; achievements open from the board.
   for (final h in [568.0, 730.0]) {
     tester(height: h, prefs: {'coins': 99999}).testGameWidget(
-      '§12.5 the Home medal button at ${h.toInt()}: right of the trophy, '
-      'same size and spacing, no overlap; a tap opens the list',
+      'O63 Home trophy opens board and achievements tab at ${h.toInt()}',
       setUp: boot,
       verify: (g, w) async {
         final home = g.homeScreen!;
-        Rect rectOf(PositionComponent c) => c.toAbsoluteRect();
+        expect(kHomeImages, isNot(contains('menu/medal.png')));
         final gear = Config.homeGearRectFor(h);
-        final trophy = rectOf(home.trophyButton);
-        final medal = rectOf(home.achievementsButton);
-        expect(medal, Config.homeAchievementsRectFor(h));
-        expect(medal.size, trophy.size);
-        expect(medal.top, trophy.top);
-        expect(medal.left - trophy.left, trophy.left - gear.left);
-        expect(medal.left, 106);
-        expect(medal.overlaps(trophy), isFalse);
-        expect(medal.overlaps(gear), isFalse);
-        // The coin pill grows leftwards with the balance (99,999 here):
-        // clear of the medal.
+        final trophy = home.trophyButton.toAbsoluteRect();
+        expect(trophy, Config.homeTrophyRectFor(h));
+        expect(trophy.overlaps(gear), isFalse);
         expect(g.coinPill.label.text, '99 999');
-        final pill = g.coinPill.toAbsoluteRect();
-        expect(medal.right, lessThan(pill.left), reason: 'pill $pill');
-        expect(medal.bottom, lessThanOrEqualTo(Config.homeTitleTop));
-        await shot(g, w, 's12_home_medal_${h.toInt()}');
-        home.achievementsButton.onPressed();
+        expect(trophy.right, lessThan(g.coinPill.toAbsoluteRect().left));
+        expect(trophy.bottom, lessThanOrEqualTo(Config.homeTitleTop));
+        home.trophyButton.onPressed();
         await flushAndMount(g);
+        await flushAndMount(g);
+        final board = g.boardScreen!;
+        expect(board.tabs, hasLength(3));
+        board.tabs[2].onPressed();
         await flushAndMount(g);
         expect(spy.opened, 1);
         expect(spy.events.where((e) => e.$1 == 'achievements_open').single.$2, {

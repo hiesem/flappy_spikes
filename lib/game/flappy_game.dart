@@ -4,6 +4,9 @@ import '../components/progression/streak_lost_popup.dart';
 // endregion
 // region P26-G2b
 import 'dart:math' as math;
+// region P26-LB4
+import '../components/leaderboard/board_screen.dart';
+// endregion P26-LB4
 import '../components/progression/streak_strip.dart';
 import '../components/home/menu_primitives.dart' show MenuTag;
 import '../progression/day_streak.dart';
@@ -164,7 +167,9 @@ enum GameState {
 
 /// Which menu screen is up while in [GameState.start] (meaningless in the
 /// other states).
-enum MenuScene { home, settings, shop, skins, levels }
+// region P26-LB4
+enum MenuScene { home, settings, shop, skins, levels, board }
+// endregion P26-LB4
 
 class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   FlappySpikesGame({
@@ -583,6 +588,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   ShopScreen? _shop;
   SkinShopScreen? _skinShop;
   LevelsScreen? _levels;
+  // region P26-LB4
+  BoardScreen? _board;
+  BoardScreen? get boardScreen => _board;
+  // endregion P26-LB4
   LevelUpPopup? _levelUpPopup;
 
   /// Seconds until a tapped home emblem opens LEVELS (null = none due).
@@ -3297,6 +3306,47 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
   }
   // endregion
+  // region P26-LB4
+  void openBoard() {
+    if (!_homeInteractive || _board != null) return;
+    sound.play(Sfx.skTap);
+    _menuTrail.clear();
+    _leaveHome();
+    menuScene = MenuScene.board;
+    final screen = BoardScreen(onBack: closeBoard);
+    _board = screen;
+    _chromeHosts.add(screen);
+    _chromeHold = true;
+    world.add(screen);
+    registerTintable(screen);
+    fadeOpacity(screen, from: 0, to: 1);
+    pushBack(_boardBack);
+  }
+
+  void closeBoard() {
+    final screen = _board;
+    if (screen == null) return;
+    _board = null;
+    popBack(_boardBack);
+    screen.active = false;
+    unregisterTintable(screen);
+    fadeOpacity(screen, from: screen.opacity, to: 0, removeOnDone: true);
+    _returnFromMenuScreen();
+  }
+
+  Future<void> playFromBoard() async {
+    closeBoard();
+    final home = _home;
+    if (home == null) return;
+    await home.loaded;
+    if (identical(_home, home) && home.built) await startRun();
+  }
+
+  bool _boardBack() {
+    closeBoard();
+    return true;
+  }
+  // endregion P26-LB4
 
   // --- LEVELS + LEVEL UP (PRD-home-v3 §3.3, §4.3, §4.4) ---------------------
 
@@ -5439,7 +5489,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// The Home medal button: opens the native achievements list (Play Games
   /// / Game Center), with the leaderboard's failure toasts.
   Future<void> showAchievements({Sfx sfx = Sfx.click}) async {
-    if (state == GameState.start && !_homeInteractive) return;
+    // region P26-LB4
+    if (state == GameState.start && !_homeInteractive &&
+        !(_board?.active ?? false)) {
+      return;
+    }
+    // endregion P26-LB4
     sound.play(sfx);
     final result = await services.showAchievements();
     services.track('achievements_open', {'result': result.name});
@@ -5677,12 +5732,17 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (home != null) return home.isLoaded ? home.gearButton : null;
     final settings = _settingsPanel;
     if (settings != null) return settings.isLoaded ? settings.backButton : null;
-    final MenuScreen? screen = _shop ?? _skinShop ?? _levels;
+    // region P26-LB4
+    final MenuScreen? screen = _shop ?? _skinShop ?? _levels ?? _board;
+    // endregion P26-LB4
     return screen != null && screen.built ? screen.backButton : null;
   }
 
   void _updateMenuChrome() {
-    final current = _home ?? _shop ?? _skinShop ?? _levels ?? _settingsPanel;
+    // region P26-LB4
+    final current =
+        _home ?? _shop ?? _skinShop ?? _levels ?? _board ?? _settingsPanel;
+    // endregion P26-LB4
     _chromeHosts.removeWhere(
       (host) =>
           !identical(host, current) &&
@@ -5708,7 +5768,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       if (host is HomeScreen) homeShare += opacity;
     }
     _coinPill
-      ..opacity = _chromeHold ? 1.0 : pillTotal.clamp(0.0, 1.0)
+      // region P26-LB4
+      ..opacity = _board != null ? 0 : (_chromeHold ? 1.0 : pillTotal.clamp(0.0, 1.0))
+      // endregion P26-LB4
       ..balance = menu.wallet.balance;
     _cornerBox
       ..opacity = _chromeHold || _cornerHold ? 1.0 : total.clamp(0.0, 1.0)

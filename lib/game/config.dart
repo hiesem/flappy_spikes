@@ -1562,30 +1562,10 @@ class Config {
   // endregion PRD-2.3 §10
 
   // region P231-E — achievements (PRD-2.3.1 §12.5)
-  /// PRD-2.3.1 §12.5 the Home medal box: right of the trophy with the same
-  /// size and spacing as gear → trophy (14 → 60, so 60 → 106), y 58, 38×38.
-  static const double homeMedalLeft =
-      homeTrophyLeft + (homeTrophyLeft - homeMargin);
-
-  /// PRD-2.3.1 §12.5 the medal glyph (the trophy's 24 pt).
-  static const double homeMedalIconSize = homeTrophyIconSize;
-
-  /// PRD-2.3.1 §12.5 the medal wiggles like the trophy, this many seconds
-  /// after it (same 10 s period).
-  static const double homeMedalWiggleDelay = 5;
-
-  static Rect homeAchievementsRectFor(double viewHeight) => Rect.fromLTWH(
-    homeMedalLeft,
-    homeTopRowY,
-    homeTopRowHeight,
-    homeTopRowHeight,
-  );
-
-  /// PRD-2.3.1 §12.5 the coin pill (right edge 306) never reaches the medal:
-  /// its widest is up to 8 pt (the top row's gap) right of the medal box;
-  /// a longer balance shrinks its number to fit.
+  // region P26-LB4
   static const double homeCoinPillMaxWidth =
-      homeRightEdge - (homeMedalLeft + homeTopRowHeight + 8);
+      homeRightEdge - (homeTrophyLeft + homeTopRowHeight + 8);
+  // endregion P26-LB4
 
   /// PRD-2.3.1 §12.5 the unlock toast pill: width, height, top (below the
   /// top spike strip), corner radius.

@@ -282,6 +282,10 @@ class FirebaseVersusBackend implements VersusBackend {
           uploadsDay: f.uploadsDay,
           uploadsCount: f.uploadsCount,
           level: f.level,
+          // region P26-G4b
+          space: f.space,
+
+          // endregion
         );
         doc['updatedAt'] = FieldValue.serverTimestamp();
         doc['expireAt'] = Timestamp.fromDate(

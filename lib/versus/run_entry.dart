@@ -204,6 +204,9 @@ class PoolEntry {
     required this.level,
     this.customName = '',
     this.plv = 0,
+    // region P26-G4b
+    this.space = false,
+    // endregion
   });
 
   final RunEntry run;
@@ -218,6 +221,9 @@ class PoolEntry {
   /// WP-NAME the owner's custom versus name ('' = none: the generated
   /// [RunEntry.name] shows). Only names that pass the format rule.
   final String customName;
+  // region P26-G4b
+  final bool space;
+  // endregion
 
   String get runId => run.runId;
   int get score => run.score;
@@ -236,6 +242,10 @@ class PoolEntry {
         _ => 0,
       },
       customName: validCustomName(m['customName']),
+      // region P26-G4b
+      space: m['space'] == true,
+
+      // endregion
     );
   }
 
@@ -243,6 +253,9 @@ class PoolEntry {
   /// stored player progression level (PRD-2.6 E4 / R4).
   OpponentRun toOpponent() => OpponentRun(
     uid: uid,
+    // region P26-G4b
+    space: space,
+    // endregion
     // WP-NAME opponents see the custom name when the owner chose one.
     name: customName.isNotEmpty ? customName : run.name,
     look: run.look,
@@ -304,6 +317,9 @@ Map<String, Object?> nextPlayerDoc({
   required String uploadsDay,
   required int uploadsCount,
   int? level,
+  // region P26-G4b
+  bool space = false,
+  // endregion
 }) {
   final oldBest = (old?['best'] as num?)?.toInt() ?? 0;
   final runBest = (run['best']! as num).toInt();
@@ -323,6 +339,9 @@ Map<String, Object?> nextPlayerDoc({
     'look': lookToMap(look),
     'best': best,
     'level': (level ?? 0).clamp(0, 9999),
+    // region P26-G4b
+    if (space || old?['space'] == true) 'space': true,
+    // endregion
     'bestRun': isBest ? run : oldBestRun,
     'recent': recent,
     'uploads': {'day': uploadsDay, 'count': uploadsCount},

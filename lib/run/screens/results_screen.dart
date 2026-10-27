@@ -456,12 +456,20 @@ class ResultsScreen extends PositionComponent
         score: model.score,
         centreX: ResultsConfig.youColumnX,
         mine: true,
+        // region P26-G4b
+        space: game.storage.worldsReached >= 10,
+        // endregion
+
         look: game.menu.items.look, // WP-AV your sticker avatar
         lower: duel == DuelResult.lose,
         winner: duel == DuelResult.win,
       );
       final column = ResultsPlayerColumn(
         name: opp.name,
+        // region P26-G4b
+        space: opp.space,
+        // endregion
+
         score: opp.score,
         centreX: ResultsConfig.opponentColumnX,
         mine: false,
@@ -1100,10 +1108,16 @@ class ResultsPlayerColumn extends PositionComponent
     this.lower = false,
     this.winner = false,
     this.look = Look.defaults,
+    // region P26-G4b
+    this.space = false,
+    // endregion
   });
 
   final String name;
   final int score;
+  // region P26-G4b
+  final bool space;
+  // endregion
 
   /// WP-AV the player's look: their sticker avatar (bird, gear, hat).
   final Look look;
@@ -1156,14 +1170,32 @@ class ResultsPlayerColumn extends PositionComponent
       anchor: Anchor.topCenter,
     );
     add(nameText);
+    // region P26-G4b
+    if (space) {
+      nameText.position.y -= 4;
+      add(
+        MenuText(
+          'SPACE FLYER',
+          fontSize: 8,
+          color: ResultsConfig.plum,
+          position: Vector2(centreX, ResultsConfig.nameTop + 11),
+          anchor: Anchor.topCenter,
+        ),
+      );
+    }
+    // endregion
     scoreText = MenuText(
       '0',
-      fontSize: '$score'.length >= 4
+      // region P26-G4b
+      fontSize: space || '$score'.length >= 4
           ? ResultsConfig.scoreFontSizeLong
           : ResultsConfig.scoreFontSize,
+      // endregion
       color: lower ? kPostRunPalette.foreground : ResultsConfig.plum,
       lineHeight: 1.05,
-      position: Vector2(centreX, ResultsConfig.scoreTop),
+      // region P26-G4b
+      position: Vector2(centreX, ResultsConfig.scoreTop + (space ? 4 : 0)),
+      // endregion
       anchor: Anchor.topCenter,
     );
     add(scoreText);

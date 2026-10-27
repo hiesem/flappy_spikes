@@ -1026,15 +1026,40 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
     }
   }
 
+  // region P26-G4b
+  bool get spaceFlyer => reel
+      ? bird != null && !noRival && intro.opponent?.space == true
+      : intro.game.storage.worldsReached >= 10;
+  final HudText _spaceTitle = HudText(
+    'SPACE FLYER',
+    size: 8,
+    color: _plum,
+    spacing: .08,
+  );
+  // endregion
+
   void _paintName(Canvas canvas, String s, double dy, Rect win) {
     final text = _text(s);
     text.paintCentred(
       canvas,
       Offset(
         win.left + VersusConfig.plateNameLeft + text.width / 2,
-        win.height / 2 + dy,
+        // region P26-G4b
+        win.height / 2 + dy - (spaceFlyer ? 6 : 0),
+        // endregion
       ),
     );
+    // region P26-G4b
+    if (spaceFlyer) {
+      _spaceTitle.paintCentred(
+        canvas,
+        Offset(
+          win.left + VersusConfig.plateNameLeft + _spaceTitle.width / 2,
+          win.height / 2 + dy + 11,
+        ),
+      );
+    }
+    // endregion
   }
 }
 

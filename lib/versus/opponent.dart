@@ -14,6 +14,10 @@ class OpponentRun implements OpponentFeed {
     required this.timeline,
     this.platform = 'android',
     this.runId = '',
+    // region P26-G4b
+    this.space = false,
+
+    // endregion
   });
 
   final String uid;
@@ -29,6 +33,9 @@ class OpponentRun implements OpponentFeed {
 
   /// The stored run's id (WP-5b: "not repeated within a session").
   final String runId;
+  // region P26-G4b
+  final bool space;
+  // endregion
 
   @override
   int scoreAt(double runClock) => timeline.scoreAt(runClock);

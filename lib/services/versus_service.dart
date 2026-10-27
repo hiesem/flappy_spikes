@@ -343,10 +343,16 @@ class PlayerFields {
     required this.uploadsDay,
     required this.uploadsCount,
     this.level,
+    // region P26-G4b
+    this.space = false,
+    // endregion
   });
 
   /// WP-J progression level for `players/{uid}.level` (null: UNRANKED).
   final int? level;
+  // region P26-G4b
+  final bool space;
+  // endregion
 
   final String name;
   final String platform;
@@ -1135,6 +1141,10 @@ class FirebaseVersusService implements VersusService {
               uploadsDay: queue.today,
               uploadsCount: queue.uploadsToday.clamp(0, 1000),
               level: p.level,
+              // region P26-G4b
+              space: storage.worldsReached >= 10,
+
+              // endregion
             ),
           ),
         );

@@ -18,6 +18,10 @@ import '../look_component.dart';
 import '../menu_screen_chrome.dart';
 import '../ui/live_effects.dart';
 import 'emblem_view.dart';
+// region P26-G4b
+import 'tabs/worlds_tab.dart';
+// endregion
+
 // region P26-G4a
 import 'tabs/levels_tabs.dart';
 // endregion
@@ -35,6 +39,11 @@ import 'tabs/levels_tabs.dart';
 /// rise over 0.22 s (§3.3).
 class LevelsScreen extends MenuScreen {
   LevelsScreen({required super.onBack}) : super(title: 'LEVELS');
+
+  // region P26-G4b
+  @override
+  List<String> get contentImages => const ['menu/check.png', 'menu/lock.png'];
+  // endregion
 
   late final LevelsHeader header;
   final List<LevelRow> rows = [];
@@ -208,6 +217,9 @@ class LevelsScreen extends MenuScreen {
     });
     addAll([clock, header]);
     _scrollToCurrent();
+    // region P26-G4b
+    WorldsTab.install(this);
+    // endregion
   }
 
   /// Scrolls so the current row sits mid-viewport (build74: `scrollTop =

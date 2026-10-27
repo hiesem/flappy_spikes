@@ -1630,10 +1630,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
   // endregion P23-10
 
+  // region P26-G4b
+  int _guideMetAtRunStart = 0;
+  // endregion
+
   // region WP-0b — run plumbing (ARCH §2.3)
   /// Builds the [RunSetup] (seed, starter, versus opponent, debug / e2e
   /// force queue) and starts the [RunController] with the first tap.
   void _startRun(Powerup starter) {
+    // region P26-G4b
+    _guideMetAtRunStart = storage.metElements.length;
+    // endregion
+
     _run?.disposeRun();
     // 2.4.0 (24): before the run's achievements, a late Play Games sign-in
     // is picked up (Android; no-op when signed in, on iOS and in tests).
@@ -4840,6 +4848,25 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       day: storage.today,
     );
     // endregion P231-E
+    // region P26-G4b
+    // G4 worlds count actual hoops, never bonus score or backdrop loops.
+    if (counts) {
+      final hoops = summary?.hoopsPassed ?? achRun.state.hoopsPassed;
+      final reached = (hoops ~/ 20 + 1).clamp(1, 10);
+      final previous = storage.worldsReached;
+      if (reached > previous) {
+        unawaited(storage.saveWorldsReached(reached));
+        for (var world = previous + 1; world <= reached; world++) {
+          services.track('world_reached', {'world': world});
+        }
+      }
+      if ((reached > previous && reached > storage.worldsSeen) ||
+          (storage.metElements.length > _guideMetAtRunStart &&
+              storage.metElements.length > storage.guideSeenCount)) {
+        unawaited(storage.saveHomeLevelsTag(true));
+      }
+    }
+    // endregion
     // PRD-2.3 §18.3 (S8-09): the run's playtime is saved at run end; §18.5
     // (S8-10): a grace that ended with this finished run loads now.
     unawaited(playtime.flush());

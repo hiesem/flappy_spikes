@@ -13,7 +13,7 @@ i = src.index(a); j = src.index(b, i + len(a)) if b != "EOF" else len(src)
 block = src[i:j].strip()
 head = f"""# Work package {wp} — {title}
 
-You are a GPT-6.1 Sol builder in the Flappy Spikes 2.6 build. Your worktree is
+You are a GPT-6.1 Terra builder in the Flappy Spikes 2.6 build. Your worktree is
 `/home/killerhis/Projects/flappyspikes/.worktrees/p26-{wp}` (branch `p26/{wp}`); stay in it.
 
 Read first: `AGENTS.md` (the "How 2.6 is built" block is binding for you), `docs/p26/BUILD_NOTES.md`, and the PRD

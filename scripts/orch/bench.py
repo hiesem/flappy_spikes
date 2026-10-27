@@ -81,7 +81,7 @@ def worker(a):
         if err and outcome == "ok":
             outcome = "error"
         append({"ev": "turn", "ts_start": iso(start), "ts_end": iso(end), "task_id": task, "role": role, "wave": wave,
-                "model": "gpt-6.1-sol", "effort": m.group(1) if m else None, "outcome": outcome,
+                "model": (re.search(r"-m\s+(\S+)", cmd).group(1).strip("'\"") if re.search(r"-m\s+(\S+)", cmd) else "gpt-6.1-sol"), "effort": m.group(1) if m else None, "outcome": outcome,
                 "error": err or (log[-300:] if outcome != "ok" else ""), "tokens": tok, "worker": wid})
     elif "claude" in cmd and " -p" in cmd:
         tok = {"in": 0, "cached": 0, "out": 0, "reasoning": 0}; err = ""; result = ""

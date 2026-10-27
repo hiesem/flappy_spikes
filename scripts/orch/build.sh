@@ -5,7 +5,7 @@ set -euo pipefail
 . "$(dirname "$0")/env.sh"
 wp=$1; n=$2; fix=${3:-}
 wt=$WS/.worktrees/p26-$wp
-flags=(-m gpt-6.1-sol -c model_reasoning_effort="medium" -c sandbox_mode="danger-full-access" --json -o "$ORCH/$wp.b$n.last.txt")
+flags=(-m "${BUILDER_MODEL:-gpt-6.1-terra}" -c model_reasoning_effort="medium" -c sandbox_mode="danger-full-access" --json -o "$ORCH/$wp.b$n.last.txt")
 [ "$n" -gt 1 ] && { [ -n "$fix" ] && [ -s "$fix" ] || { echo "build.sh: round $n needs a non-empty fix prompt file" >&2; exit 2; }; }
 if [ -z "$fix" ]; then
   exec "$(dirname "$0")/spawn.sh" "$wp-b$n" 90 "$wt" -- codex exec "${flags[@]}" "$(cat "$ORCH/$wp.md")"

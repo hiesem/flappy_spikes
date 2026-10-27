@@ -3,6 +3,7 @@
 # .worktrees/p26-integ; green → $ORCH/integ_green_sha. Run as a spawn.sh worker (one at a time).
 set -uo pipefail
 . "$(dirname "$0")/env.sh"
+exec 7>"$ORCH/integ.lock"; flock 7   # one integration verify at a time (shared p26-integ worktree)
 wt=$WS/.worktrees/p26-integ
 [ -d "$wt" ] || { git -C "$REPO" worktree add -q --detach "$wt" feat/2.6; ln -s "$REPO/functions/node_modules" "$wt/functions/node_modules"; }
 cd "$wt" && git checkout -q --detach "$(git -C "$REPO" rev-parse feat/2.6)"

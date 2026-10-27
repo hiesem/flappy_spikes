@@ -47,8 +47,12 @@ class WeeklyWeek {
       ? 'LAST DAY'
       : '${daysLeft(instant)} DAY${daysLeft(instant) == 1 ? '' : 'S'} LEFT';
 
-  RunSetup setup({required double viewHeight}) =>
-      RunSetup(seed: seed, viewHeight: viewHeight, weekly: true);
+  RunSetup setup({required double viewHeight}) => RunSetup(
+    seed: seed,
+    viewHeight: viewHeight,
+    weekly: true,
+    weeklyStartedAt: startsAt,
+  );
 }
 
 /// G5's immutable model. [weeklyBest] uses the S0 storage map as a single

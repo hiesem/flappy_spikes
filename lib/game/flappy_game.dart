@@ -1728,6 +1728,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final setup = RunSetup(
       // region P26-G5a
       weekly: weekly != null,
+      weeklyStartedAt: weekly?.startsAt,
       seed:
           weekly?.seed ??
           runSeed ??
@@ -3129,6 +3130,50 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         popup.active = true;
       }
     }
+  }
+  // endregion
+
+  // region P26-G5a
+  Future<void> _weeklyWrites = Future.value();
+
+  /// Completes after all queued weekly run-end bookkeeping and payouts.
+  Future<void> get weeklyWritesSettled => _weeklyWrites;
+
+  void _recordWeeklyRun(RunController run, int hoops) {
+    final startedAt = run.setup.weeklyStartedAt;
+    if (!run.setup.weekly || startedAt == null || !run.countsForUpload) return;
+    final now = storage.now();
+    final startedWeek = WeeklyWeek.at(startedAt);
+    _weeklyWrites = _weeklyWrites.then((_) async {
+      final course = WeeklyCourse(
+        weeklyBest: storage.weeklyBest,
+        weeklyRewards: storage.weeklyRewards,
+      ).refresh(now);
+      final result = course.finishRun(
+        now: now,
+        startedWeek: startedWeek,
+        hoops: hoops,
+      );
+      // Save both state keys before granting; queue all weekly transitions so
+      // a second run cannot read the state while the first is still saving.
+      await storage.saveWeeklyBest(result.course.weeklyBest);
+      await storage.saveWeeklyRewards(result.course.weeklyRewards);
+      services.track('weekly_run', {
+        'week': startedWeek.key,
+        'hoops': hoops,
+        'best': result.course.bestHoops,
+      });
+      if (result.coins > 0) {
+        await menu.wallet.add(result.coins, CoinSource.weekly);
+        for (final reward in result.rewards.entries) {
+          services.track('weekly_reward', {
+            'week': startedWeek.key,
+            'tier': reward.key,
+            'coins': reward.value,
+          });
+        }
+      }
+    });
   }
   // endregion
 
@@ -4921,6 +4966,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // §3.0.5 the dead bird stays lying on the floor spikes until the results
     // page covers it. Coins were credited per pass (§3.2).
 
+    // region P26-G5a
+    final weeklyRun = _run;
+    if (weeklyRun != null) {
+      _recordWeeklyRun(
+        weeklyRun,
+        summary?.hoopsPassed ?? weeklyRun.state.hoopsPassed,
+      );
+    }
+    // endregion
     final previousBest = storage.bestScore;
     final previousLevel = menu.levels.level;
     // region P23-14 — PRD-2.3 §14.2 the run that showed a feather / piece
@@ -5495,9 +5549,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
     // Best/games/mute reloaded from persistence.
     // (Home polls best / last / level from the storage.)
-    _homeReload = storage.load().then((_) {
+    // region P26-G5a
+    // A quick return Home must not reload stale weekly state over a payout.
+    _homeReload = weeklyWritesSettled.then((_) => storage.load()).then((_) {
       sound.muted = storage.muteSound;
     });
+    // endregion
 
     // PRD-2.2 §7.5.2: the playfield grows back inside the Home arrival,
     // before the menus are rebuilt at full height.

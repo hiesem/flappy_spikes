@@ -78,6 +78,16 @@ class RunController extends Component {
     // PRD-2.3 §14.6 lifetime unlock gates (a debug force ignores them).
     final games = storage.gamesPlayed;
     // region P26-G5a
+    _weeklySuppressFeather =
+        setup.weekly &&
+        !setup.forced.contains(ElementId.feather) &&
+        GatesConfig.shownLastRun(storage.lastFeatherRun, games);
+    _weeklySuppressPiece =
+        setup.weekly &&
+        !setup.forced.contains(ElementId.puzzlePiece) &&
+        GatesConfig.shownLastRun(storage.lastPieceRun, games);
+    // endregion
+    // region P26-G5a
     enabled = setup.gatesOpen
         ? all
         : GatesConfig.filter(
@@ -229,6 +239,16 @@ class RunController extends Component {
       unawaited(game.storage.saveBestRunHoops(state.hoopsPassed));
     }
   }
+  // endregion
+
+  // region P26-G5a
+  late final bool _weeklySuppressFeather;
+  late final bool _weeklySuppressPiece;
+
+  /// Leave the seeded director plans intact; suppress only the pickup itself.
+  bool allowsWeeklyPickup(ElementId id) =>
+      !(id == ElementId.feather && _weeklySuppressFeather) &&
+      !(id == ElementId.puzzlePiece && _weeklySuppressPiece);
   // endregion
 
   final RunSetup setup;

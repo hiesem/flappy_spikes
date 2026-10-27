@@ -1,6 +1,7 @@
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
 import 'package:flappy_spikes/progression/weekly_course.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
@@ -41,6 +42,7 @@ void main() {
       final run = game.run!;
       expect(run.setup.weekly, isTrue);
       expect(run.setup.seed, WeeklyWeek.at(monday).seed);
+      expect(run.setup.weeklyStartedAt, monday);
       expect(run.setup.opponent, isNull);
       expect(run.setup.showcase, isNull);
       expect(run.setup.starter, Powerup.none);
@@ -58,6 +60,110 @@ void main() {
       expect(game.reviveScreen, isNull);
       expect(run.state.revivesThisGame, 0);
       expect(game.storage.armedPowerup, 'shield');
+    },
+  );
+
+  final spy = AnalyticsSpy();
+  var now = monday;
+  FlameTester<FlappySpikesGame>(() {
+    spy.events.clear();
+    now = monday;
+    SharedPreferences.setMockInitialValues({
+      Obf.prefGamesPlayed: 6,
+      Obf.prefBestHoops: 40,
+    });
+    return FlappySpikesGame(
+      soundEnabled: false,
+      worldHeight: 711,
+      clock: () => now,
+      services: spy,
+    );
+  }, gameSize: Vector2(320, 711)).testGameWidget(
+    'weekly run end pays tiers once, persists, excludes debug and old weeks',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+    },
+    verify: (game, _) async {
+      Future<void> finish(
+        int hoops, {
+        bool debug = false,
+        bool immediateReplay = false,
+      }) async {
+        await game.startWeeklyCourse();
+        await flushAndMount(game);
+        final run = game.run!;
+        expect(run.setup.weeklyStartedAt, WeeklyWeek.at(now).startsAt);
+        if (debug) run.markDebugAssist();
+        run.state.hoopsPassed = hoops;
+        game.endRun(run.endRun());
+        if (immediateReplay) {
+          await flushAndMount(game);
+          game.replay();
+        }
+        await game.weeklyWritesSettled;
+      }
+
+      Future<void> next() async {
+        game.replay();
+        await flushAndMount(game);
+        stepGame(game, 0.5);
+        await flushAndMount(game);
+      }
+
+      final before = game.storage.coins;
+      await finish(30, immediateReplay: true);
+      await flushAndMount(game);
+      expect(game.storage.coins, before + 120);
+      expect(game.storage.weeklyBest, {WeeklyWeek.at(now).key: 30});
+      expect(game.storage.weeklyRewards, {15, 30});
+      final loaded = GameStorage(clock: () => now);
+      await loaded.load();
+      expect(loaded.coins, before + 120);
+      expect(loaded.weeklyBest, game.storage.weeklyBest);
+      expect(loaded.weeklyRewards, {15, 30});
+      expect(spy.events.where((e) => e.$1 == 'weekly_run'), hasLength(1));
+      expect(
+        spy.events
+            .where((e) => e.$1 == 'weekly_reward')
+            .map((e) => e.$2!['tier']),
+        [15, 30],
+      );
+      expect(
+        spy.events
+            .where((e) => e.$1 == 'coins_earned' && e.$2?['source'] == 'weekly')
+            .single
+            .$2!['amount'],
+        120,
+      );
+
+      stepGame(game, 0.5);
+      await flushAndMount(game);
+      await finish(30);
+      expect(game.storage.coins, before + 120);
+      expect(spy.events.where((e) => e.$1 == 'weekly_reward'), hasLength(2));
+      await next();
+      await finish(120, debug: true);
+      expect(game.storage.coins, before + 120);
+      expect(game.storage.weeklyBest, {WeeklyWeek.at(now).key: 30});
+      expect(spy.events.where((e) => e.$1 == 'weekly_run'), hasLength(2));
+
+      await next();
+      await game.startWeeklyCourse();
+      await flushAndMount(game);
+      final old = game.run!;
+      expect(old.setup.weeklyStartedAt, monday);
+      now = monday.add(const Duration(days: 7));
+      old.state.hoopsPassed = 120;
+      game.endRun(old.endRun());
+      await game.weeklyWritesSettled;
+      expect(game.storage.coins, before + 120);
+      expect(game.storage.weeklyBest, {WeeklyWeek.at(now).key: 0});
+      expect(game.storage.weeklyRewards, isEmpty);
+      final reloaded = GameStorage(clock: () => now);
+      await reloaded.load();
+      expect(reloaded.weeklyBest, game.storage.weeklyBest);
+      expect(reloaded.weeklyRewards, isEmpty);
     },
   );
 
@@ -106,6 +212,13 @@ void main() {
       game.storage.lastFeatherRun = 0;
       game.storage.lastPieceRun = 0;
       final second = RunController(setup: setup, game: game);
+      for (final id in [ElementId.feather, ElementId.puzzlePiece]) {
+        final item = GapItemPlan(kind: id, trackX: 800, y: 300, extra: 0);
+        expect(replay.spawner.spawnItem(item), isNotNull);
+        expect(second.spawner.spawnItem(item), isNull);
+      }
+      expect(second.state.featherSpawned, isFalse);
+      expect(second.state.pieceSpawned, isFalse);
       final context = DirectorContext.open(711);
       for (var i = 0; i < 220; i++) {
         final a = replay.director.nextSlot(context);

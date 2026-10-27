@@ -29,6 +29,9 @@ enum CoinSource {
   // PRD-2.3 §22.2: a gift-code product (gift_coins_10000 /
   // gift_noads_coins_10000).
   gift,
+  // region P26-G5a
+  weekly,
+  // endregion
   // region P26-S0
   mission,
   missionChest,
@@ -43,6 +46,9 @@ enum CoinSource {
 
 extension CoinSourceName on CoinSource {
   String get analyticsName => switch (this) {
+        // region P26-G5a
+        CoinSource.weekly => 'weekly',
+        // endregion
         // region P26-S0
         CoinSource.mission => 'mission',
         CoinSource.missionChest => 'mission_chest',

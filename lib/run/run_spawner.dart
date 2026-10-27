@@ -271,6 +271,10 @@ class RunSpawner {
   }
 
   Pickup? _spawnItem(GapItemPlan item) {
+    // region P26-G5a
+    // PRD-2.3 §14.2: preserve the seeded plan while enforcing the limit.
+    if (!run.allowsWeeklyPickup(item.kind)) return null;
+    // endregion
     final kind = pickupKindFor(item.kind);
     if (kind == null) return null;
     final p = kind.build(item, run.ctx);

@@ -1629,6 +1629,16 @@ every requirement (file:line, test results) and the work packages with paths and
     after 40 hoops in 2.6. Mentioned in the release notes.
 14. **Mission targets** come from `texts.html` §1 (M01–M15 × T0–T3); the "progression §3.3" reference in G1 means that
     table.
+15. **S2 (2026-10-27), LB3 read costs:** `lbPlayers.cleanupPending` is the hidden-player sweep retry marker,
+    cleared after both group sweeps and ghost-pool pruning. Server-only `lbMeta/hidden.entries` maps uid to
+    `{until: Timestamp, pending: boolean}`; hide submits update it with the player, deletion with the tombstone.
+    TODAY opens and submit responses read this one doc with the group, replacing owner reads and the pending scan.
+    Completed entries remain 18 days (14-day ghost supply + 1-day group + 3-day group TTL), protecting stale group
+    snapshots; **every registry write prunes expired completed entries**, while failed sweeps retain pending entries.
+    The shared doc receives **two writes per hidden submit or deletion** (mark pending, then complete), none from
+    ordinary submits or board opens; this is a shared write-contention point to monitor as hide/delete traffic grows.
+    Exact BEST rank uses aggregate counts for greater scores, earlier tied `bestAt`, and preceding same-time document
+    ids, using S1's `(hidden ASC, bestShadow ASC, bestAt ASC)` index and its implicit `__name__ ASC` suffix.
 
 ### 8.4 Corrections to the spec text
 

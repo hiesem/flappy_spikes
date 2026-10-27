@@ -31,7 +31,8 @@ import {
 } from '../src/schema.js';
 import { encodeDeltas, encodeEntries } from '../src/timeline.js';
 import { versusName } from '../src/nickname.js';
-import { deleteBoardData } from '../src/board_delete.js';
+import { deleteBoardData, writeHiddenRegistry } from '../src/board_delete.js';
+import { docSize } from '../src/size.js';
 import { db, fakeJwt, LOOK, PROJECT, uniq } from './helpers.js';
 
 const HOUR = 3600 * 1000;
@@ -977,5 +978,35 @@ describe('PRD-2.6 LB3 bounded leaderboard reads', () => {
     assert.equal(entries[uid].pending, false);
     assert.equal(entries[uid].until.toMillis(), T0 + 1000 + 18 * 24 * HOUR);
   });
+
+  it('keeps registry size bounded across writes containing hundreds of expired entries', async () => {
+    const ref = db.collection(LB_META_COLLECTION).doc('hidden');
+    let retainedBytes: number | undefined;
+    let entries: Record<string, unknown> = {
+      failed: { until: Timestamp.fromMillis(T0 - 1), pending: true },
+    };
+    for (let round = 0; round < 4; round++) {
+      const nowMs = T0 + round * 19 * 24 * HOUR;
+      const expired = Object.fromEntries(Array.from({ length: 500 }, (_, i) => [
+        `expired-${round}-${i}`, { until: Timestamp.fromMillis(nowMs - 1), pending: false },
+      ]));
+      await ref.set({ entries: { ...entries, ...expired } });
+      const before = (await ref.get()).data()!;
+      assert.equal(Object.keys(before.entries).length >= 501, true);
+      await db.runTransaction(async (tx) => {
+        const snapshot = await tx.get(ref);
+        writeHiddenRegistry(tx, db, snapshot, 'current', nowMs, round % 2 === 0);
+      });
+      const after = (await ref.get()).data()!;
+      entries = after.entries;
+      assert.deepEqual(Object.keys(entries).sort(), ['current', 'failed']);
+      assert.equal(after.entries.failed.pending, true, 'failed sweeps must remain suppressed');
+      assert.equal(after.entries.current.pending, round % 2 === 0);
+      retainedBytes ??= docSize(ref.path, after);
+      assert.equal(docSize(ref.path, after), retainedBytes, 'expired entries must not increase retained doc size');
+      assert.ok(docSize(ref.path, after) < docSize(ref.path, before), 'every write prunes the expired completed entries');
+    }
+  });
+
 });
 // endregion

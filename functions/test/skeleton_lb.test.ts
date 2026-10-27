@@ -118,9 +118,10 @@ describe('PRD-2.6 wave 0 deploy declarations', () => {
           aliases.get(alias);
         assert.ok(base, `${file}: unresolved query alias ${alias}`);
         const query: Query = { ...base, clauses: [...base.clauses] };
-        const clauses = /\.(where|orderBy)\(\s*'([^']+)'(?:\s*,\s*'([^']+)')?/g;
+        const clauses = /\.(where|orderBy)\(\s*(?:'([^']+)'|(FieldPath\.documentId\(\)))(?:\s*,\s*'([^']+)')?/g;
         for (const clause of tail.matchAll(clauses)) {
-          const [, method, field, operator] = clause;
+          const [, method, literalField, documentId, operator] = clause;
+          const field = documentId ? '__name__' : literalField;
           assert.ok(method === 'orderBy' || operator, `${file}: non-literal where operator`);
           query.clauses.push({ field, op: operator ?? 'asc' });
           scanned++;
@@ -145,9 +146,11 @@ describe('PRD-2.6 wave 0 deploy declarations', () => {
       'board_store.ts: lbGroups settled ==, end <=',
       'board_store.ts: lbGroups settled ==, end <=, end asc',
       'board_store.ts: lbPlayers bestShadow desc',
-      'board_store.ts: lbPlayers cleanupPending ==',
       'board_store.ts: lbPlayers hidden ==',
       'board_store.ts: lbPlayers hidden ==, bestShadow ==',
+      'board_store.ts: lbPlayers hidden ==, bestShadow ==, bestAt <',
+      'board_store.ts: lbPlayers hidden ==, bestShadow ==, bestAt ==',
+      'board_store.ts: lbPlayers hidden ==, bestShadow ==, bestAt ==, __name__ <',
       'board_store.ts: lbPlayers hidden ==, bestShadow >',
       'pools.ts: versusFlags uid ==',
       'pools.ts: versusNames guestSeen <',
@@ -169,7 +172,11 @@ describe('PRD-2.6 wave 0 deploy declarations', () => {
       // Single-field queries and equality-only queries use automatic indexes / index merging.
       if (fields.size <= 1 || ordered.size === 0) continue;
       const expected = [...equalities.map((field) => `${field}:ASCENDING`),
-        ...[...ordered].filter(([field]) => !equalities.includes(field)).map(([field, order]) => `${field}:${order}`)];
+        ...[...ordered].filter(([field]) => !equalities.includes(field) && field !== '__name__').map(([field, order]) => `${field}:${order}`)];
+      if (ordered.has('__name__')) {
+        assert.equal(ordered.get('__name__'), expected.at(-1)?.split(':').at(-1),
+          `${signature}: document-id range must match the index's implicit __name__ direction`);
+      }
       assert.ok(indexes.indexes.some((index) => index.collectionGroup === query.collection && index.queryScope === 'COLLECTION' &&
         index.fields.map((f) => `${f.fieldPath}:${f.order}`).join(',') === expected.join(',')),
       `${signature} needs (${expected.join(', ')})`);

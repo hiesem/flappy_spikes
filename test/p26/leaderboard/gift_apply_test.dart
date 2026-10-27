@@ -167,28 +167,41 @@ void main() {
     test('$rolled falls back to pre-rolled coins at both limits', () async {
       kind = rolled;
       await storage.saveFeathers(3);
-      await storage.savePuzzlePieces(15);
+      // PRD-2.6 LB2/O68, G1 and G6d: a meta gift stops at three held.
+      await storage.savePuzzlePieces(11);
       final gift = (await apply.claim('group'))!;
       expect(gift.kind, 'coins');
       expect(gift.fallback, isTrue);
       expect(storage.coins, 175);
       expect(storage.feathers, 3);
-      expect(storage.puzzlePieces, 15);
+      expect(storage.puzzlePieces, 11);
     });
   }
 
-  test(
-    'piece fills first missing slot, including fourth, without coins',
-    () async {
+  for (final mask in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]) {
+    test('piece capacity uses held count for mask $mask', () async {
       kind = 'piece';
-      await storage.savePuzzlePieces(11);
+      await storage.savePuzzlePieces(mask);
+      final round = storage.puzzleRound;
       final gift = (await apply.claim('group'))!;
-      expect(gift.kind, 'piece');
-      expect(gift.fallback, isFalse);
-      expect(storage.puzzlePieces, 15);
-      expect(storage.coins, 0);
-    },
-  );
+      final count = [1, 2, 4, 8].where((bit) => mask & bit != 0).length;
+      if (count >= 3) {
+        // PRD-2.6 LB2/O68: meta gifts never complete the run puzzle;
+        // the three-held limit matches G1's chest and G6d's Star Road.
+        expect(gift.kind, 'coins');
+        expect(gift.fallback, isTrue);
+        expect(storage.puzzlePieces, mask);
+        expect(storage.coins, 175);
+      } else {
+        final missing = [1, 2, 4, 8].firstWhere((bit) => mask & bit == 0);
+        expect(gift.kind, 'piece');
+        expect(gift.fallback, isFalse);
+        expect(storage.puzzlePieces, mask | missing);
+        expect(storage.coins, 0);
+      }
+      expect(storage.puzzleRound, round);
+    });
+  }
 
   for (final key in ['bird:sky', 'bird:robin']) {
     test('unowned eligible $key granted without auto equip', () async {

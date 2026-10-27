@@ -82,7 +82,15 @@ class GiftApply {
     var kind = roll.kind;
     SkinItem? item;
     if (kind == 'feather' && storage.feathers >= 3) kind = 'piece';
-    if (kind == 'piece' && storage.puzzlePieces == 15) kind = 'coins';
+    // PRD-2.6 LB2/O68: meta gifts cannot complete a run puzzle.
+    // As with G1's chest and G6d's Star Road, three held is the limit.
+    final piecesHeld = [
+      1,
+      2,
+      4,
+      8,
+    ].where((bit) => storage.puzzlePieces & bit != 0).length;
+    if (kind == 'piece' && piecesHeld >= 3) kind = 'coins';
     if (kind == 'item') {
       for (final candidate in allItems) {
         if (candidate.key == roll.item &&

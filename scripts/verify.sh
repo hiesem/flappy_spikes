@@ -8,6 +8,7 @@
 #   VERIFY_FULL=1     everything, even when VERIFY_BASE is set
 #   VERIFY_SCOPED=1   with VERIFY_BASE: only the changed/matching Flutter tests + the playability core (quick local check)
 #   FLUTTER_J         flutter test concurrency (default 4)
+#   VERIFY_SKIP_HEAVY=1  skip tests tagged `heavy` (dart_test.yaml); work-package verifies only, never the final check
 #
 # Flappy Spikes checks:
 #   always      flutter analyze (whole project; must be clean) + flutter test (all)
@@ -52,7 +53,7 @@ norm_failures() { grep ' \[E\]$' | sed -E 's#^([0-9:]+ )?\+[0-9]+( ~[0-9]+)? -[0
 flutter_all() {   # [test files...] (none = the whole suite); failures on the known-red list are tolerated
   local out rc=0
   out="$(mktemp)"
-  flutter test --no-pub -j "${FLUTTER_J:-4}" "$@" 2>&1 | tee "$out" || rc=$?
+  flutter test --no-pub -j "${FLUTTER_J:-4}" ${VERIFY_SKIP_HEAVY:+-x heavy} "$@" 2>&1 | tee "$out" || rc=$?
   [ "$rc" = 0 ] && { rm -f "$out"; return 0; }
   if [ ! -s "$KNOWN_RED" ]; then rm -f "$out"; return "$rc"; fi
   local new

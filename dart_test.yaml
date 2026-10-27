@@ -1,0 +1,4 @@
+tags:
+  heavy:
+    # long statistical suites (economy budget, bot calibration); WP verifies skip them with
+    # VERIFY_SKIP_HEAVY=1, the integration verify and the final unscoped verify run them

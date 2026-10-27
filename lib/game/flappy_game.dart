@@ -1,4 +1,11 @@
 import 'dart:async';
+// region P26-G2b
+import 'dart:math' as math;
+import '../components/progression/streak_strip.dart';
+import '../components/home/menu_primitives.dart' show MenuTag;
+import '../progression/day_streak.dart';
+import '../run/effects/fetch_flight.dart';
+// endregion
 import 'dart:io' show Platform;
 import 'dart:math';
 import 'dart:ui' show Color, Paint, PlatformDispatcher, Rect;
@@ -649,6 +656,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Whether one of the modal popups (launch No-ads upsell, LEVEL UP,
   /// purchase result, No-ads celebration) is up.
   bool get modalPopupOpen =>
+      // region P26-G2b
+      _streakCard != null ||
+      // endregion
       _noAdsPopup != null ||
       _levelUpPopup != null ||
       _purchasePopup != null ||
@@ -833,7 +843,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // consumes it: anything still armed here is stale (an app killed
     // mid-start, or a pre-WP10 arm-then-START build) and must not ride
     // along on a plain START.
-    if (menu.slot.armed != Powerup.none) menu.slot.consume();
+    // region P26-G2b
+    // Only a tagged streak start survives launch; legacy / debug arms keep
+    // their stale-start cleanup. The existing armedPowerup key holds the tag.
+    if (!streakFreeStart && menu.slot.armed != Powerup.none) {
+      menu.slot.consume();
+    }
+    // endregion
     // Audit A3-6: the banner service's own preloads (consent, retry) skip
     // NO ADS owners, like the game's ([bannerWanted]).
     monetization.banner.preloadWanted = () => !menu.noAds;
@@ -1070,6 +1086,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         gamesPlayed: storage.gamesPlayed,
         requests: HomeVisitRequests(
           levelUpCatchUp: menu.levels.pendingLevelUp != null,
+          // region P26-G2b
+          streakReward: streakRewardPending,
+          // endregion
           noAds:
               !giftThisHomeVisit &&
               !_ratingRequestedThisRun &&
@@ -1319,6 +1338,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   Future<void> tapPowerupSlot() async {
     if (!_homeInteractive) return;
     sound.play(Sfx.bnAdBtn);
+    // region P26-G2b
+    if (streakFreeStart) {
+      await _runFromHome();
+      return;
+    }
+    // endregion
     if (!menu.noAds) {
       final ads = monetization.ads;
       if (!ads.isAvailable) {
@@ -1392,6 +1417,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       }
       if (state != GameState.start) return;
     }
+    // region P26-G2b
+    if (streakFreeStart) {
+      await storage.saveArmedPowerup(streakStarter.name);
+    }
+    // endregion
     final starter = menu.slot.consume();
     switch (starter) {
       case Powerup.bigHoops:
@@ -2721,6 +2751,248 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         ..celebrate(item);
     }
   }
+
+  // region P26-G2b
+  StreakCard? _streakCard;
+  StreakCard? get streakCard => _streakCard;
+  double _streakSettle = 0;
+  bool _streakCollecting = false;
+  double _streakSlotPop = 0;
+  bool _streakStartInFlight = false;
+  MenuTag? _streakFreeTag;
+
+  DayStreak get dayStreak => DayStreak(
+    streakDays: storage.streakDays,
+    streakLastDay: storage.streakLastDay,
+    streakPaidDay: storage.streakPaidDay,
+    streakLostDays: storage.streakLostDays,
+    streakLostSeenDay: storage.streakLostSeenDay,
+  ).refresh(today: storage.today, runNumber: storage.gamesPlayed + 1);
+
+  bool get streakRewardPending => dayStreak.rewardPending(
+    today: storage.today,
+    runNumber: storage.gamesPlayed + 1,
+  );
+
+  StreakReward get previewStreakReward => DayStreak.rewardForDay(
+    dayStreak.streakDays,
+    canReceiveFeather: storage.feathers < 3,
+    canReceivePiece: storage.puzzlePieces != 15,
+  );
+
+  bool get streakFreeStart =>
+      storage.armedPowerup == 'streak:bigHoops' ||
+      storage.armedPowerup == 'streak:shield';
+  Powerup get streakStarter => storage.armedPowerup == 'streak:shield'
+      ? Powerup.shield
+      : Powerup.bigHoops;
+
+  /// Run-end integration seam. The run owner supplies its 1-based number and
+  /// eligibility; Home never infers a finished run from an arrival.
+  Future<void> recordStreakRun({
+    required int runNumber,
+    bool debug = false,
+  }) async {
+    final next = dayStreak.finishRun(
+      today: storage.today,
+      runNumber: runNumber,
+      debug: debug,
+    );
+    await storage.saveStreakDays(next.streakDays);
+    await storage.saveStreakLastDay(next.streakLastDay);
+    await storage.saveStreakLostDays(next.streakLostDays);
+    await storage.saveStreakLostSeenDay(next.streakLostSeenDay);
+  }
+
+  void _checkStreakReward(double dt) {
+    if (!_homeInteractive ||
+        _home?.built != true ||
+        _home!.opacity < 1 ||
+        modalPopupOpen ||
+        _popupQueue.isNotEmpty ||
+        !streakRewardPending ||
+        _adsShowing > 0 ||
+        _fakeAd != null) {
+      _streakSettle = 0;
+      return;
+    }
+    _streakSettle += dt;
+    if (_streakSettle < Config.levelUpSettleDelay) return;
+    _streakSettle = 0;
+    homeMoments.tryShow(
+      HomeMoment.streakReward,
+      () => _openStreak(reward: true),
+    );
+  }
+
+  void openStreakCard() {
+    if (!_homeInteractive ||
+        modalPopupOpen ||
+        !DayStreak.unlocked(storage.gamesPlayed + 1)) {
+      return;
+    }
+    _openStreak(reward: false);
+  }
+
+  void _openStreak({required bool reward}) {
+    if (_streakCard != null) return;
+    final popup = StreakCard(
+      state: dayStreak,
+      today: storage.today,
+      reward: reward,
+      onDismiss: closeStreakCard,
+      onCollect: (from) => unawaited(collectStreakReward(from)),
+    );
+    _streakCard = popup;
+    world.add(popup);
+    pushBack(_streakBack);
+    sound.play(Sfx.skTap);
+  }
+
+  bool _streakBack() {
+    closeStreakCard();
+    return true;
+  }
+
+  void closeStreakCard() {
+    if (_streakCollecting) return;
+    final card = _streakCard;
+    if (card == null) return;
+    _streakCard = null;
+    card.active = false;
+    card.removeFromParent();
+    popBack(_streakBack);
+    _drainPopups();
+  }
+
+  Future<void> collectStreakReward(Rect from) async {
+    if (_streakCard?.reward != true || _streakCollecting) return;
+    final result = dayStreak.collect(
+      today: storage.today,
+      runNumber: storage.gamesPlayed + 1,
+      canReceiveFeather: storage.feathers < 3,
+      canReceivePiece: storage.puzzlePieces != 15,
+    );
+    final reward = result.reward;
+    if (reward == null) {
+      closeStreakCard();
+      return;
+    }
+    _streakCollecting = true;
+    _streakCard!.active = false;
+    try {
+      // Mark before awaiting animations: duplicate taps cannot pay twice.
+      await storage.saveStreakPaidDay(result.state.streakPaidDay);
+      if (reward.coins > 0) {
+        playCoinReward(
+          CoinRewardAnimation(
+            amount: reward.coins,
+            from: from,
+            coins: 6,
+            countDuration: .6,
+            ticks: 8,
+            confetti: 18,
+          ),
+        );
+        await menu.wallet.add(reward.coins, CoinSource.streak);
+      }
+      switch (reward.item) {
+        case StreakRewardItem.bigHoops:
+        case StreakRewardItem.shield:
+          final item = reward.item!;
+          await storage.saveArmedPowerup(
+            item == StreakRewardItem.shield
+                ? 'streak:shield'
+                : 'streak:bigHoops',
+          );
+          _flyStreakStart(item, from.center);
+        case StreakRewardItem.feather:
+          await storage.saveFeathers(storage.feathers + 1);
+        case StreakRewardItem.piece:
+          final missing = (~storage.puzzlePieces) & 15;
+          await storage.savePuzzlePieces(
+            storage.puzzlePieces | (missing & -missing),
+          );
+        case null:
+          break;
+      }
+      services.track('day_streak', {'days': result.state.streakDays});
+    } finally {
+      _streakCollecting = false;
+      closeStreakCard();
+    }
+  }
+
+  void _flyStreakStart(StreakRewardItem item, Offset from) {
+    final slot = _home?.slotButton;
+    if (slot == null) return;
+    final target = Offset(slot.x + slot.width / 2, slot.y + slot.height / 2);
+    _streakStartInFlight = !reduceMotion;
+    void land() {
+      _streakStartInFlight = false;
+      sound.play(
+        item == StreakRewardItem.shield ? Sfx.puShieldGet : Sfx.skHoop,
+      );
+      if (!reduceMotion) {
+        _streakSlotPop = .32;
+        slot.add(StreakSlotLanding());
+        world.add(
+          ConfettiBurst.burst(
+            origin: target,
+            count: 22,
+            speed: 110,
+            driftX: 0,
+            priority: 1001,
+          ),
+        );
+      }
+    }
+
+    if (reduceMotion) {
+      land();
+      return;
+    }
+    sound.play(Sfx.vsWhoosh);
+    world.add(
+      FetchFlight(
+        from: from,
+        to: target,
+        spec: const FetchSpec(grow: 0, fly: .6, trail: false),
+        art: (canvas, scale, rotation) =>
+            paintStreakPowerup(canvas, item, 30 * scale),
+        onLand: land,
+        priority: 1001,
+      ),
+    );
+  }
+
+  void syncStreakSlot(PowerupSlotButton slot) {
+    if (streakFreeStart) {
+      slot.setState(offered: streakStarter, noAds: true, adAvailable: true);
+    }
+    if (_streakFreeTag?.parent != slot) {
+      _streakFreeTag?.removeFromParent();
+      _streakFreeTag = null;
+    }
+    if (streakFreeStart && !_streakStartInFlight && _streakFreeTag == null) {
+      slot.add(
+        _streakFreeTag = MenuTag(
+          'FREE',
+          position: Vector2(slot.width - 24, -9),
+          priority: 20,
+        ),
+      );
+    } else if (!streakFreeStart) {
+      _streakFreeTag?.removeFromParent();
+      _streakFreeTag = null;
+    }
+    if (_streakSlotPop > 0) {
+      slot.pulse.scale = reduceMotion
+          ? 1
+          : 1 + .14 * math.sin(math.pi * (1 - _streakSlotPop / .32));
+    }
+  }
+  // endregion
 
   // --- LEVELS + LEVEL UP (PRD-home-v3 §3.3, §4.3, §4.4) ---------------------
 
@@ -5185,6 +5457,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       if (_levelsOpenIn! <= 0) openLevels();
     }
     if (state == GameState.start) _checkLevelUp(dt);
+    // region P26-G2b
+    _streakSlotPop = math.max(0, _streakSlotPop - dt);
+    if (state == GameState.start) _checkStreakReward(dt);
+    // endregion
     _checkRatingPrompt(dt);
     _checkDeferredRating();
     _checkAchievementToasts(); // PRD-2.3.1 §12.5

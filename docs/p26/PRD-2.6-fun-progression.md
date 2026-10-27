@@ -1649,6 +1649,9 @@ every requirement (file:line, test results) and the work packages with paths and
     it never uses the forced-headline path or clears a squeeze reservation. Scheduled first portals retain
     their C3 window. Thus D1's five-hoop row spacing does not create two introduction headlines five hoops apart.
 
+19. **Day streak unlock (G2b):** like missions (O28) and the showcase (O16a), day-streak counting and rewards start
+    at game 4. Runs 1–3 neither count nor pay, and the chip stays hidden until game 4.
+
 ### 8.4 Corrections to the spec text
 
 - Wave 0 rules deploy is not "comment only": it adds `validCard` / `look.card`, routes run looks through `validLook`

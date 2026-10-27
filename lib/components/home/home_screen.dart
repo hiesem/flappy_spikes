@@ -22,6 +22,10 @@ import '../ui/flip.dart';
 import '../ui/live_effects.dart';
 import 'menu_primitives.dart';
 import 'mode_button.dart';
+// region P26-G2b
+import '../progression/streak_strip.dart';
+
+// endregion
 
 /// Images the home screen draws (all under `assets/images/`).
 const List<String> kHomeImages = [
@@ -183,6 +187,10 @@ class HomeScreen extends PositionComponent
       paused: () => game.liveMotionPaused,
       still: () => game.reduceMotion,
     );
+
+    // region P26-G2b
+    add(StreakStrip(isActive: () => active && !game.modalPopupOpen));
+    // endregion
 
     // --- title ------------------------------------------------------------
     title = SpriteComponent(

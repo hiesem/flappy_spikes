@@ -275,3 +275,9 @@ The files live under `docs/p26/design/` (path map: `docs/p26/README.md`).
   the pair plane / ring / reach geometry. `test/run/hoops/s3_21_pair_test.dart`
   remains the behavioural authority for pair hits, rewards and timings.
 
+
+### Day streak flame (G2b)
+
+| Master file / class | Allowed parameters | Design map |
+|---|---|---|
+| `lib/components/progression/streak_strip.dart` — `StreakFlame`, `StreakStrip`, `StreakCard` | lit / grey, still, size, count, pending gold dot; three flame layers use 1.2 / 0.9 / 0.6 s loops and two embers with ≤ 1 pt travel | `approvals_v26/day_streak.html` §1–§3; G2c reuses this flame |

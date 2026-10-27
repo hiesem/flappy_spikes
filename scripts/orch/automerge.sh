@@ -11,6 +11,15 @@ except Exception: r=''
 v=r[r.rfind('VERDICT'):].split('\n')[0] if 'VERDICT' in r else ''
 print('PASS' if 'PASS' in v else 'FAIL')" "$1"; }
 while [ ! -f "$ORCH/ORCH_STOP" ]; do
+  # a builder round that finished cleanly gets its full verify + tester at once (the orchestrator reads the verdicts)
+  for b in "$W"/*-b[0-9]*/; do
+    id=$(basename "$b"); wp=${id%-b*}; n=${id##*-b}
+    [[ "$n" =~ ^[0-9]+$ ]] || continue
+    [ "$(cat "$b/exit" 2>/dev/null)" = 0 ] || continue
+    [ -e "$W/$wp-v$n" ] || [ -e "$W/$wp-t$n" ] || [ -e "$b/noauto" ] && continue
+    "$(dirname "$0")/vfy.sh" "$wp" "$n" > /dev/null 2>&1; "$(dirname "$0")/tester.sh" "$wp" "$n" > /dev/null 2>&1
+    echo "$(date '+%F %T') [automerge] $wp r$n built -> verify + tester started" >> "$ORCH/RUNLOG.md"
+  done
   for v in "$W"/*-v[0-9]*/; do
     id=$(basename "$v"); wp=${id%-v*}; n=${id##*-v}
     [[ "$n" =~ ^[0-9]+$ ]] || continue

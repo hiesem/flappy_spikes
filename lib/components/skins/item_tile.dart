@@ -192,6 +192,9 @@ class ItemTile extends PositionComponent with TapCallbacks {
   @override
   void update(double dt) {
     super.update(dt);
+    // region P26-F9e
+    if (!_visible || reduceMotion()) cardArt?.releaseAnimation(this);
+    // endregion
     _state = state();
     _clock += dt;
     if (_age < Config.skinShopEnterDuration) _age += dt;
@@ -210,9 +213,20 @@ class ItemTile extends PositionComponent with TapCallbacks {
     }
   }
 
+  // region P26-F9e
+  @override
+  void onRemove() {
+    cardArt?.releaseAnimation(this);
+    super.onRemove();
+  }
+  // endregion
+
   @override
   void renderTree(Canvas canvas) {
-    if (!_visible) return;
+    if (!_visible) {
+      cardArt?.releaseAnimation(this);
+      return;
+    }
     final e = enterProgress;
     if (e >= 1) {
       super.renderTree(canvas);
@@ -279,7 +293,12 @@ class ItemTile extends PositionComponent with TapCallbacks {
         Config.skinShopArtWidth / 2,
         Config.skinShopArtHeight / 2,
       );
-      cardArt!.paint(canvas, item, reduceMotion() || !_visible ? 0 : _t);
+      cardArt!.paint(
+        canvas,
+        item,
+        reduceMotion() || !_visible ? 0 : _t,
+        owner: this,
+      );
       canvas.restore();
       if (dim) canvas.restore();
     } else if (animatesArt) {

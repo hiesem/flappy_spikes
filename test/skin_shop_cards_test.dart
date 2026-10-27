@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flappy_spikes/components/skins/shop_widgets.dart';
 import 'package:flappy_spikes/components/skins/item_tile.dart';
 import 'package:flappy_spikes/game/sound.dart';
+import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/components/skins/preview_stage.dart';
 import 'package:flappy_spikes/skins/catalog.dart';
 import 'package:flappy_spikes/skins/look.dart';
@@ -103,7 +104,7 @@ void main() {
           expect(
             shop.cardArt.pictureCount,
             count,
-            reason: 'live animation must never record another cache picture',
+            reason: 'animation sampling must not grow the static/t=0 cache',
           );
           shop.selectTab(SkinLayer.bird);
           await flushAndMount(game);
@@ -273,6 +274,136 @@ void main() {
       expect(art.pictureCount, 3);
       recorder.endRecording().dispose();
       art.dispose();
+    },
+  );
+  shopTest(
+    'F9e NAMES grid records at 30 Hz and releases off-screen samples',
+    verify: (game, spy, ads, iap, tester) async {
+      final shop = await openSkinShop(game, layer: SkinLayer.card);
+      shop.selectCardKind(CardKind.name);
+      await flushAndMount(game);
+      stepGame(game, .6);
+      shop.scroll.offset = shop.scroll.maxOffset;
+      game.update(0);
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      shop.renderTree(canvas);
+      final art = shop.cardArt;
+      expect(
+        art.animationPictureCount,
+        9,
+        reason: 'the last three rows expose all nine animated name styles',
+      );
+      final warm = art.animationRecordings;
+      for (var i = 0; i < 3; i++) {
+        game.update(1 / 120);
+        shop.renderTree(canvas);
+        expect(
+          art.animationRecordings,
+          warm,
+          reason: 'sub-frame renders must replay pictures without text layouts',
+        );
+      }
+      game.update(1 / 120);
+      shop.renderTree(canvas);
+      expect(art.animationRecordings - warm, 9);
+      final begin = art.animationRecordings;
+      for (var i = 0; i < 120; i++) {
+        game.update(1 / 120);
+        shop.renderTree(canvas);
+      }
+      expect(
+        art.animationRecordings - begin,
+        9 * 30,
+        reason: '120 frames must not rebuild each name layout 120 times',
+      );
+      expect(
+        art.animationPictureCount,
+        9,
+        reason: 'only the latest sample is retained, never an atlas',
+      );
+      // Frozen game time never incurs another layout.
+      final frozen = art.animationRecordings;
+      shop.renderTree(canvas);
+      shop.renderTree(canvas);
+      expect(art.animationRecordings, frozen);
+      shop.scroll.offset = 0;
+      game.update(0);
+      expect(art.animationPictureCount, 0);
+      shop.scroll.offset = shop.scroll.maxOffset;
+      game.update(0);
+      shop.renderTree(canvas);
+      expect(art.animationPictureCount, 9);
+      game.reduceMotionOverride = true;
+      game.update(0);
+      shop.renderTree(canvas);
+      expect(art.animationPictureCount, 0);
+      game.reduceMotionOverride = false;
+      game.update(.1);
+      shop.renderTree(canvas);
+      shop.selectCardKind(CardKind.frame);
+      await flushAndMount(game);
+      expect(
+        art.animationPictureCount,
+        0,
+        reason: 'removed tiles must release their current animation pictures',
+      );
+      recorder.endRecording().dispose();
+    },
+  );
+
+  shopTest(
+    'F9e preview and tile text samples do not evict each other',
+    verify: (game, spy, ads, iap, tester) async {
+      final shop = await openSkinShop(game, layer: SkinLayer.card);
+      final art = ShopCardArt(
+        coin: shop.cardArt.coin,
+        look: shop.cardArt.look,
+        paintRays: PreviewStage.paintRays,
+      );
+      final tile = Object(), preview = Object();
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      // Names and every animated sticker containing a label use this cache.
+      for (final id in ['n_fire', 's_kaching', 's_champ', 's_topflock']) {
+        final item = cardItemById(id)!;
+        art.prepare(item);
+        final before = art.animationRecordings;
+        art.paint(canvas, item, 1, owner: tile);
+        art.paint(canvas, item, 3, owner: preview);
+        art.paint(canvas, item, 1.01, owner: tile);
+        art.paint(canvas, item, 3.01, owner: preview);
+        expect(art.animationRecordings - before, 2);
+        expect(art.animationPictureCount, 2);
+        art.releaseAnimation(tile);
+        expect(art.animationPictureCount, 1);
+        art.releaseAnimation(preview);
+        expect(art.animationPictureCount, 0);
+      }
+      recorder.endRecording().dispose();
+      art.dispose();
+    },
+  );
+
+  shopTest(
+    'F9e CARDS rays stay centred on the card during a hop',
+    verify: (game, spy, ads, iap, tester) async {
+      final shop = await openSkinShop(game, layer: SkinLayer.card);
+      final centre = Config.skinShopCardPreviewRect.center;
+      expect(shop.stage.celebrationCentre, centre);
+      shop.stage.celebrate(Rarity.epic);
+      stepGame(game, .12);
+      expect(shop.stage.rays, greaterThan(0));
+      expect(shop.stage.celebrationCentre, centre);
+      stepGame(game, .12);
+      expect(shop.stage.celebrationCentre, centre);
+      shop.selectTab(SkinLayer.bird);
+      await flushAndMount(game);
+      expect(
+        shop.stage.celebrationCentre.dx,
+        shop.stage.birdX,
+        reason: 'wardrobe previews retain the original bird-centred R4 rays',
+      );
     },
   );
 }

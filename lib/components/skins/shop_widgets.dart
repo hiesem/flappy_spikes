@@ -328,8 +328,9 @@ class ShopActionButton extends PositionComponent with TapCallbacks {
 
 // region P26-F9e
 /// Shop adapter of the three shared card painters. One static / t=0 picture
-/// per item; visible animated art is painted live at unmodified game time.
-/// The host skips off-screen tiles and requests t=0 under reduced motion.
+/// per item; frames and text-free stickers paint live at game time.
+/// Animated text keeps one latest picture per host/item, refreshed at most
+/// every 1/30 s. Hosts release those pictures when hidden or removed.
 class ShopCardArt {
   ShopCardArt({
     required this.coin,
@@ -343,7 +344,40 @@ class ShopCardArt {
   final CardStickerRays? paintRays;
   final Map<String, Picture> _pictures = {};
   final StickerAvatars _avatars = StickerAvatars();
+  /// Prepared static/t=0 pictures; current animation samples are separate.
   int get pictureCount => _pictures.length;
+
+  static const textFrameInterval = 1 / 30;
+  final Map<(Object, String), ({double time, Picture picture})> _textFrames =
+      {};
+
+  /// Cumulative recordings, so tests can bound layout work across frames.
+  int animationRecordings = 0;
+  /// Only the latest sample of each visible host/item is retained.
+  int get animationPictureCount => _textFrames.length;
+
+  static bool _hasAnimatedText(SkinItem item) =>
+      item.cardKind == CardKind.name ||
+      (item.cardKind == CardKind.sticker &&
+          !const {
+            's_heart',
+            's_spiked',
+            's_hatch',
+            's_medal',
+            's_piggy',
+          }.contains(item.id));
+
+  /// A tile and the preview may show the same item at different phases.
+  /// Separate owner keys prevent them from invalidating each other's sample.
+  void releaseAnimation(Object owner) {
+    if (_textFrames.isEmpty) return;
+    final keys = _textFrames.keys
+        .where((key) => identical(key.$1, owner))
+        .toList();
+    for (final key in keys) {
+      _textFrames.remove(key)!.picture.dispose();
+    }
+  }
 
   static bool animated(SkinItem item) => switch (item.cardKind) {
     CardKind.frame => CardFrameArt.animatedIds.contains(item.id),
@@ -418,15 +452,32 @@ class ShopCardArt {
     }
   }
 
-  void paint(Canvas canvas, SkinItem item, double t) {
-    if (animated(item) && t != 0) {
-      _paint(canvas, item, t);
+  void paint(Canvas canvas, SkinItem item, double t, {Object? owner}) {
+    final key = (owner ?? this, '${item.cardKind}:${item.id}');
+    if (!animated(item) || t == 0) {
+      _textFrames.remove(key)?.picture.dispose();
+      canvas.drawPicture(_pictures[key.$2]!);
+    } else if (_hasAnimatedText(item)) {
+      var frame = _textFrames[key];
+      if (frame == null || (t - frame.time).abs() >= textFrameInterval - 1e-9) {
+        final recorder = PictureRecorder();
+        _paint(Canvas(recorder), item, t);
+        frame?.picture.dispose();
+        frame = (time: t, picture: recorder.endRecording());
+        _textFrames[key] = frame;
+        animationRecordings++;
+      }
+      canvas.drawPicture(frame.picture);
     } else {
-      canvas.drawPicture(_pictures['${item.cardKind}:${item.id}']!);
+      _paint(canvas, item, t);
     }
   }
 
   void dispose() {
+    for (final frame in _textFrames.values) {
+      frame.picture.dispose();
+    }
+    _textFrames.clear();
     for (final picture in _pictures.values) {
       picture.dispose();
     }

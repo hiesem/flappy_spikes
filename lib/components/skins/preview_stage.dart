@@ -469,6 +469,9 @@ class PreviewStage extends PositionComponent {
     canvas.restore();
   }
 
+  /// R4's origin. Hosts replacing the bird anchor it to their own content.
+  Offset get celebrationCentre => Offset(birdX, birdY + _bob);
+
   /// Draw the existing purchase effects around a host's preview content.
   /// The two passes preserve the wardrobe's back-rays / front-confetti order.
   void paintCelebration(
@@ -479,7 +482,7 @@ class PreviewStage extends PositionComponent {
     if (rays && _rays > 0) {
       paintRays(
         canvas,
-        Offset(birdX, birdY + _bob),
+        celebrationCentre,
         width,
         t,
         opacity: math.min(1.0, _rays) * .5,

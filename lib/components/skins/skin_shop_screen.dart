@@ -561,6 +561,11 @@ class _CardPreviewStage extends PreviewStage {
     required super.reduceMotion,
   });
   final SkinShopScreen screen;
+  String? _cachedCard;
+  @override
+  Offset get celebrationCentre => screen.onCards
+      ? Config.skinShopCardPreviewRect.center
+      : super.celebrationCentre;
   late final EmblemView _emblem = EmblemView(
     level: screen.game.menu.levels.level,
     artScale: .36,
@@ -575,6 +580,11 @@ class _CardPreviewStage extends PreviewStage {
   @override
   void update(double dt) {
     super.update(dt);
+    final card = screen.onCards ? screen.previewLook.card : null;
+    if (card == null || reduceMotion() || card != _cachedCard) {
+      screen.cardArt.releaseAnimation(this);
+    }
+    _cachedCard = card;
     _emblem.popScale = screen.onCards ? 1 : 0;
     _emblem.t = reduceMotion() ? 0 : t;
   }
@@ -587,7 +597,7 @@ class _CardPreviewStage extends PreviewStage {
     }
     canvas.drawRect(size.toRect(), Paint()..color = background());
     canvas.drawRect(
-      const Rect.fromLTWH(30, 42, 232, 52),
+      Config.skinShopCardPreviewRect,
       Paint()..color = const Color(0xFFF4F4F4),
     );
     paintCelebration(canvas, confetti: false);
@@ -611,7 +621,12 @@ class _CardPreviewStage extends PreviewStage {
           canvas.scale(.75);
       }
       if (kind != CardKind.sticker || item.id.isNotEmpty) {
-        screen.cardArt.paint(canvas, shown, reduceMotion() ? 0 : t);
+        screen.cardArt.paint(
+          canvas,
+          shown,
+          reduceMotion() ? 0 : t,
+          owner: this,
+        );
       }
       canvas.restore();
     }
@@ -620,6 +635,12 @@ class _CardPreviewStage extends PreviewStage {
       _nameStyle.paint(canvas, const Offset(116, 38));
     }
     paintCelebration(canvas, rays: false);
+  }
+
+  @override
+  void onRemove() {
+    screen.cardArt.releaseAnimation(this);
+    super.onRemove();
   }
 
   final ShopText _nameStyle = ShopText(

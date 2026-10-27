@@ -988,6 +988,7 @@ class Config {
       viewHeight - menuSpikeHeight;
 
   // region P26-F9e
+  static const Rect skinShopCardPreviewRect = Rect.fromLTWH(30, 42, 232, 52);
   static const double skinShopCardRowTop = 330;
   static const double skinShopCardRowHeight = 24;
   static const double skinShopCardGridTop = 360;

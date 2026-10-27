@@ -18,7 +18,7 @@ if os.path.exists(t):
     except ValueError:
         pass
 v = f"{W}/{wp}-v{n}/log"
-if os.path.exists(v) and open(f"{W}/{wp}-v{n}/exit").read().strip() != "0":
+if os.path.exists(f"{W}/{wp}-v{n}/exit") and open(f"{W}/{wp}-v{n}/exit").read().strip() != "0":
     s = open(v, errors="replace").read()
     i = s.rfind("=== flutter test: failures NOT in")
     tail = s[i:i + 3000] if i >= 0 else s[-3000:]

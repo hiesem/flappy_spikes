@@ -377,14 +377,20 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     storage: storage,
     service: leaderboard,
     analytics: services.track,
-    request: (runs) => LbSubmitRunRequest(
-      runs: runs,
-      name: versus.me.name.isEmpty ? null : versus.me.name,
-      look: menu.items.look,
-      card: menu.items.look.card,
-      platform: defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
-      t: LbSubmitHook.testerBuild ? 1 : 0,
-    ),
+    request: (runs) {
+      final look = menu.items.look;
+      final card = sanitiseCard(look.card);
+      return LbSubmitRunRequest(
+        runs: runs,
+        name: versus.me.name.isEmpty ? null : versus.me.name,
+        look: look,
+        card: card.isEmpty ? null : card,
+        platform: defaultTargetPlatform == TargetPlatform.iOS
+            ? 'ios'
+            : 'android',
+        t: LbSubmitHook.testerBuild ? 1 : 0,
+      );
+    },
   );
   late final leaderboardSubmit = LbSubmitHook(leaderboardQueue, storage);
   // endregion

@@ -92,6 +92,51 @@ void main() {
     },
   );
   test(
+    'capacity evicts oldest ordinary runs before older best candidates',
+    () async {
+      await queue.enqueue(run(0), bestCandidate: true);
+      for (var i = 1; i <= 34; i++) {
+        await queue.enqueue(run(i), bestCandidate: false);
+      }
+      expect(storage.lbQueue, hasLength(30));
+      await queue.flush();
+      final sent = (calls.single['runs'] as List).cast<Map>();
+      expect(sent.first['id'], 'r0');
+      expect(sent[1]['id'], 'r6');
+    },
+  );
+  test('all-best queue remains capped and evicts its oldest best', () async {
+    for (var i = 0; i < 31; i++) {
+      await queue.enqueue(run(i), bestCandidate: true);
+    }
+    expect(storage.lbQueue, hasLength(30));
+    await queue.flush();
+    expect(((calls.single['runs'] as List).first as Map)['id'], 'r1');
+  });
+  test(
+    'ten drop reasons produce a bounded first reason and exact count',
+    () async {
+      for (var i = 0; i < 10; i++) {
+        await queue.enqueue(run(i), bestCandidate: false);
+      }
+      reply = {
+        'accepted': [],
+        'dropped': [
+          for (var i = 0; i < 10; i++)
+            {'id': 'r$i', 'reason': i == 0 ? 'missing_timeline' : 'daily_cap'},
+        ],
+      };
+      await queue.flush();
+      expect(events.last['dropped_reason'], 'missing_timeline');
+      expect(
+        (events.last['dropped_reason'] as String).length,
+        lessThanOrEqualTo(100),
+      );
+      expect(events.last['dropped'], 10);
+      expect(events.last['queued'], 0);
+    },
+  );
+  test(
     'group-day expires ordinary runs; best candidates survive only seven days',
     () async {
       await storage.saveLbGroupEnd(

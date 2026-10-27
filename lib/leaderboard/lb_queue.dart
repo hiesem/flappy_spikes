@@ -67,12 +67,14 @@ class LbQueue {
     return entries;
   }
 
-  Future<void> _save(List<_Pending> entries) => storage.saveLbQueue(
-    entries
-        .skip((entries.length - LbConfig.queueCap).clamp(0, entries.length))
-        .map((p) => p.encode())
-        .toList(),
-  );
+  Future<void> _save(List<_Pending> entries) {
+    entries.sort((a, b) => a.run.endTs.compareTo(b.run.endTs));
+    while (entries.length > LbConfig.queueCap) {
+      final ordinary = entries.indexWhere((p) => !p.best);
+      entries.removeAt(ordinary < 0 ? 0 : ordinary);
+    }
+    return storage.saveLbQueue(entries.map((p) => p.encode()).toList());
+  }
 
   Future<void> enqueue(LbSubmittedRun run, {required bool bestCandidate}) {
     final generation = _generation;
@@ -128,11 +130,13 @@ class LbQueue {
         await storage.saveLbLastRank(result.rank!.after ?? 0);
       }
       await _save(entries);
+      // Keep the first reason plus a count within Firebase's 100 chars.
       _log(
         result.accepted.length,
-        result.dropped.map((d) => d.reason).join(','),
+        result.dropped.isEmpty ? '' : result.dropped.first.reason,
         entries.length,
         watch.elapsedMilliseconds,
+        dropped: result.dropped.length,
       );
       return result;
     });
@@ -146,11 +150,17 @@ class LbQueue {
     });
   }
 
-  void _log(int accepted, String reason, int queued, int ms) =>
-      analytics?.call('lb_submit', {
-        'accepted': accepted,
-        'dropped_reason': reason,
-        'queued': queued,
-        'ms': ms,
-      });
+  void _log(
+    int accepted,
+    String reason,
+    int queued,
+    int ms, {
+    int dropped = 0,
+  }) => analytics?.call('lb_submit', {
+    'accepted': accepted,
+    'dropped': dropped,
+    'dropped_reason': reason.length > 100 ? reason.substring(0, 100) : reason,
+    'queued': queued,
+    'ms': ms,
+  });
 }

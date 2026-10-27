@@ -28,7 +28,9 @@ class LbSubmitHook {
     int? verifiedBest,
     int? bestFloor,
   }) {
-    final best = verifiedBest ?? summary.bestBefore;
+    // Local bests may never have reached the server. Until a board read
+    // supplies a verified best, keep proof for every positive score (O55).
+    final best = verifiedBest ?? 0;
     final notable =
         summary.score > best ||
         summary.score > max(500, best * 2) ||

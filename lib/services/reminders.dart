@@ -229,6 +229,178 @@ class ReminderMessages {
   }
 }
 
+// region P26-G3
+/// Immutable facts at scheduling time. Dates are local calendar-day indexes
+/// (UTC encoding of the local year/month/day), as in GameStorage.today.
+/// A future slot must still satisfy its copy without assuming another run.
+class ReminderTruth {
+  ReminderTruth({
+    required this.lastRunDay,
+    this.streakDays = 0,
+    this.missionsUnlocked = false,
+    this.missionDay,
+    List<int> unfinishedMissionRewards = const [],
+    this.feathers = 0,
+    this.pieces = 0,
+    this.weeklyEndsAt,
+    this.weeklyUnlocked = false,
+    this.weeklyBest,
+    this.nextLevelName,
+    this.pointsNeeded,
+    this.averageRunScore,
+  }) : unfinishedMissionRewards = List.unmodifiable(unfinishedMissionRewards);
+
+  final int? lastRunDay;
+  final int streakDays;
+  final bool missionsUnlocked;
+  final int? missionDay;
+  final List<int> unfinishedMissionRewards;
+  final int feathers, pieces;
+
+  /// The current course's Monday 00:00 UTC boundary, supplied by its clock.
+  /// Null until the weekly-course model is available. Never extrapolate the
+  /// current best into the following week.
+  final DateTime? weeklyEndsAt;
+  final bool weeklyUnlocked;
+
+  /// Null means no run in this course; zero can be a played zero-hoop run.
+  final int? weeklyBest;
+  final String? nextLevelName;
+  final int? pointsNeeded;
+  final double? averageRunScore;
+
+  static int dayOf(DateTime local) =>
+      DateTime.utc(local.year, local.month, local.day).millisecondsSinceEpoch ~/
+      Duration.millisecondsPerDay;
+
+  /// Safe persisted facts available even before the other meta models are
+  /// wired. The injected LocalReminders.truthSnapshot supplies their richer
+  /// state; absent inputs never make an unsupported promise.
+  factory ReminderTruth.fromStorage(GameStorage store) => ReminderTruth(
+    lastRunDay: store.achLastPlayDay < 0 ? null : store.achLastPlayDay,
+    streakDays: store.gamesPlayed >= 4 ? store.streakDays : 0,
+    missionsUnlocked: store.gamesPlayed >= 4 && store.missionDay >= 0,
+    missionDay: store.missionDay < 0 ? null : store.missionDay,
+    feathers: store.feathers,
+    pieces: (store.puzzlePieces & 15).toRadixString(2).split('1').length - 1,
+  );
+
+  ({String type, ReminderText text})? textAt(
+    tz.TZDateTime time,
+    ReminderSlot slot,
+  ) {
+    final day = dayOf(time);
+    if (lastRunDay != null &&
+        day == lastRunDay! + 1 &&
+        streakDays >= 2 &&
+        slot == ReminderSlot.evening) {
+      return (
+        type: 'N1a',
+        text: ReminderText(
+          'Your $streakDays-day streak ends tonight 🔥',
+          'One quick run before midnight keeps it alive.',
+        ),
+      );
+    }
+    if (missionsUnlocked && missionDay != null) {
+      final count = unfinishedMissionRewards.length;
+      if (day == missionDay && count >= 1 && count <= 3) {
+        final coins = unfinishedMissionRewards.fold<int>(0, (a, b) => a + b);
+        return (
+          type: count == 1 ? 'N2s' : 'N2',
+          text: ReminderText(
+            count == 1
+                ? '1 mission left today 🎯'
+                : '$count missions left today 🎯',
+            'Finish ${count == 1 ? 'it' : 'them'} for $coins coins and the bonus chest.',
+          ),
+        );
+      }
+      if (day > missionDay!) {
+        return (
+          type: 'N3',
+          text: const ReminderText(
+            'New daily missions are in! 🎯',
+            'Three fresh missions and a chest are waiting for you.',
+          ),
+        );
+      }
+    }
+    if (feathers == 2) {
+      return (
+        type: 'N4',
+        text: const ReminderText(
+          'One feather to go 🪶',
+          'Catch one more golden feather to open the balloon bonus 🎈',
+        ),
+      );
+    }
+    if (pieces == 3) {
+      return (
+        type: 'N5',
+        text: const ReminderText(
+          'One piece to go 🧩',
+          'Find the last puzzle piece to finish your picture and win coins!',
+        ),
+      );
+    }
+    final end = weeklyEndsAt;
+    if (weeklyUnlocked &&
+        end != null &&
+        time.isBefore(end) &&
+        end.difference(time) < const Duration(hours: 24)) {
+      const title = "Last day for this week's course ⏳";
+      final best = weeklyBest;
+      if (best == null) {
+        return (
+          type: 'N6c',
+          text: const ReminderText(
+            title,
+            'Same course for everyone, coins at hoops 15, 30, 60 and 120. Give it a go!',
+          ),
+        );
+      }
+      for (final tier in [(15, 40), (30, 80), (60, 150), (120, 300)]) {
+        if (best < tier.$1) {
+          return (
+            type: 'N6a',
+            text: ReminderText(
+              title,
+              'Your best: hoop $best. Reach hoop ${tier.$1} for +${tier.$2} coins before it resets!',
+            ),
+          );
+        }
+      }
+      return (
+        type: 'N6b',
+        text: ReminderText(
+          title,
+          'Your best: hoop $best. Can you go even further?',
+        ),
+      );
+    }
+    final needed = pointsNeeded;
+    final average = averageRunScore;
+    if (nextLevelName != null &&
+        nextLevelName!.isNotEmpty &&
+        needed != null &&
+        needed > 0 &&
+        average != null &&
+        average.isFinite &&
+        needed <= average) {
+      return (
+        type: 'N7',
+        text: ReminderText(
+          'So close to $nextLevelName! ⭐',
+          'Just $needed more points to your next level and its reward.',
+        ),
+      );
+    }
+    return null;
+  }
+}
+// endregion
+
 /// The two daily windows of §3.34, in the phone's local time.
 enum ReminderSlot {
   /// A random moment between 11:30 and 13:30.
@@ -258,6 +430,9 @@ class ReminderPayload {
     required this.slot,
     required this.epochMs,
     this.previousLastSent,
+    // region P26-G3
+    this.type,
+    // endregion
   });
 
   final int messageNumber;
@@ -270,11 +445,17 @@ class ReminderPayload {
   /// been used). Carried so a still-pending reminder can be given back to the
   /// rotation without losing its earlier use.
   final String? previousLastSent;
+  // region P26-G3
+  final String? type;
+  // endregion
 
   String encode() => jsonEncode({
     'm': messageNumber,
     's': slot.key,
     't': epochMs,
+    // region P26-G3
+    if (type != null) 'type': type,
+    // endregion
     if (previousLastSent != null) 'p': previousLastSent,
   });
 
@@ -293,6 +474,9 @@ class ReminderPayload {
         slot: parsed,
         epochMs: epochMs,
         previousLastSent: json['p'] is String ? json['p'] as String : null,
+        // region P26-G3
+        type: json['type'] is String ? json['type'] as String : null,
+        // endregion
       );
     } catch (_) {
       return null;
@@ -310,6 +494,9 @@ class ScheduledReminder {
     required this.title,
     required this.body,
     this.previousLastSent,
+    // region P26-G3
+    this.type,
+    // endregion
   });
 
   /// Platform notification id (1..14 for the 7-day window).
@@ -324,6 +511,9 @@ class ScheduledReminder {
 
   /// See [ReminderPayload.previousLastSent].
   final String? previousLastSent;
+  // region P26-G3
+  final String? type;
+  // endregion
 
   ReminderPayload get payload =>
       ReminderPayload(
@@ -331,6 +521,9 @@ class ScheduledReminder {
         slot: slot,
         epochMs: time.millisecondsSinceEpoch,
         previousLastSent: previousLastSent,
+        // region P26-G3
+        type: type,
+        // endregion
       );
 }
 
@@ -398,6 +591,7 @@ class ReminderPlan {
 /// and what the plugin still has pending, it returns the next 7 days of
 /// reminders plus the state to persist. No plugin, no I/O — tests drive it
 /// with a fake clock and [PendingReminder]s.
+// region P26-G3
 class ReminderScheduler {
   ReminderScheduler({Random? random, tz.Location? location})
     : _random = random ?? Random(),
@@ -449,6 +643,9 @@ class ReminderScheduler {
     required int best,
     required int coins,
     Set<ElementId>? metElements,
+    // region P26-G3
+    ReminderTruth? truth,
+    // endregion
     DateTime? lastPlayedAt,
     List<PendingReminder> pending = const [],
   }) {
@@ -460,6 +657,11 @@ class ReminderScheduler {
       final at = tz.TZDateTime.from(p.time, location);
       // Still to fire: put its earlier use back (this plan's future date is
       // not a use yet) and carry the message itself into this plan below.
+      // region P26-G3
+      if (p.messageNumber < 1 || p.messageNumber > ReminderMessages.count) {
+        continue;
+      }
+      // endregion
       if (at.isAfter(tzNow)) {
         if (carriedNumbers.add(p.messageNumber)) carried.add(p);
         final previous = p.previousLastSent;
@@ -475,7 +677,19 @@ class ReminderScheduler {
     final slots = _slots(
       tzNow,
       lastPlayedAt == null ? null : tz.TZDateTime.from(lastPlayedAt, location),
+      // region P26-G3
+      truth: truth,
+      // endregion
     );
+    // region P26-G3
+    final contextual = {
+      for (final slot in slots)
+        slot.time.millisecondsSinceEpoch: truth?.textAt(slot.time, slot.slot),
+    };
+    final genericCount = slots
+        .where((s) => contextual[s.time.millisecondsSinceEpoch] == null)
+        .length;
+    // endregion
     final priorOrder = state.order.isEmpty ? _freshOrder() : state.order;
     final priorPosition = state.position.clamp(0, priorOrder.length);
     // Recover the actual pending sequence from the payloads: after a shuffle
@@ -490,9 +704,9 @@ class ReminderScheduler {
     final order = [
       ...consumed,
       for (final p in carried) p.messageNumber,
-      ...priorOrder.skip(priorPosition).where(
-        (number) => !carriedNumbers.contains(number),
-      ),
+      ...priorOrder
+          .skip(priorPosition)
+          .where((number) => !carriedNumbers.contains(number)),
     ];
     final unscheduled = ReminderState(
       order: order,
@@ -504,10 +718,10 @@ class ReminderScheduler {
     final rotation = _Rotation(
       random: _random,
       order: order,
-      position: consumed.length + min(carried.length, slots.length),
+      position: consumed.length + min(carried.length, genericCount),
       unavailableMessages: _unavailableMessages(metElements),
     );
-    final toCarry = carried.take(slots.length).toList();
+    final toCarry = carried.take(genericCount).toList();
     for (final p in toCarry) {
       // Carried messages are still in this plan, so a reshuffle while taking
       // a new message must not hand one of them out a second time.
@@ -515,12 +729,26 @@ class ReminderScheduler {
     }
 
     final reminders = <ScheduledReminder>[];
+    // region P26-G3
+    var genericIndex = 0;
+    // endregion
     for (var i = 0; i < slots.length; i++) {
       final slot = slots[i];
-      final number = i < toCarry.length
-          ? toCarry[i].messageNumber
-          : rotation.take(_dayOf(slot.time), lastSent);
-      final text = ReminderMessages.textFor(number, best: best, coins: coins);
+      // region P26-G3
+      final context = contextual[slot.time.millisecondsSinceEpoch];
+      final int number;
+      final ReminderText text;
+      if (context != null) {
+        number = 0; // Contextual copy never consumes the generic rotation.
+        text = context.text;
+      } else {
+        number = genericIndex < toCarry.length
+            ? toCarry[genericIndex].messageNumber
+            : rotation.take(_dayOf(slot.time), lastSent);
+        genericIndex++;
+        text = ReminderMessages.textFor(number, best: best, coins: coins);
+      }
+      // endregion
       final previous = lastSent[number];
       reminders.add(
         ScheduledReminder(
@@ -531,9 +759,14 @@ class ReminderScheduler {
           title: text.title,
           body: text.body,
           previousLastSent: previous,
+          // region P26-G3
+          type: context?.type ?? 'generic',
+          // endregion
         ),
       );
-      lastSent[number] = _dayKey(slot.time);
+      // region P26-G3
+      if (context == null) lastSent[number] = _dayKey(slot.time);
+      // endregion
     }
 
     return ReminderPlan(
@@ -566,26 +799,57 @@ class ReminderScheduler {
   /// anything inside 2 h after play and anything outside 09:00-22:00.
   List<({ReminderSlot slot, tz.TZDateTime time})> _slots(
     tz.TZDateTime now,
-    tz.TZDateTime? playedAt,
-  ) {
+    tz.TZDateTime? playedAt, {
+    // region P26-G3
+    ReminderTruth? truth,
+    // endregion
+  }) {
     final out = <({ReminderSlot slot, tz.TZDateTime time})>[];
     // §3.34 "schedule the next 7 days": a fixed horizon, so a player who
     // never returns gets seven days and then nothing.
-    final horizon = tz.TZDateTime(
-      location,
-      now.year,
-      now.month,
-      now.day + windowDays,
-      now.hour,
-      now.minute,
-      now.second,
-      now.millisecond,
-    );
-    for (var offset = 0; out.length < windowSlots && offset <= windowDays; offset++) {
+    // region P26-G3
+    final horizon = truth == null
+        ? tz.TZDateTime(
+            location,
+            now.year,
+            now.month,
+            now.day + windowDays,
+            now.hour,
+            now.minute,
+            now.second,
+            now.millisecond,
+          )
+        : tz.TZDateTime(
+            location,
+            now.year,
+            now.month,
+            now.day + windowDays + 1,
+          );
+    // endregion
+    for (
+      var offset = 0;
+      out.length < windowSlots && offset <= windowDays;
+      offset++
+    ) {
       // Calendar arithmetic on the plain (normalised) date, then the wall
       // clock time in the current zone: a DST change never shifts the window.
       final day = DateTime(now.year, now.month, now.day + offset);
+      // region P26-G3
+      final lastDay = truth?.lastRunDay;
+      final daysAway = lastDay == null
+          ? null
+          : ReminderTruth.dayOf(day) - lastDay;
+      if (truth != null && (daysAway == null || daysAway < 0 || daysAway > 7)) {
+        continue;
+      }
+      // endregion
       for (final slot in ReminderSlot.values) {
+        // region P26-G3
+        // Keep the evening slot on days 4–7; never refill a skipped slot.
+        if (daysAway != null && daysAway >= 4 && slot == ReminderSlot.midday) {
+          continue;
+        }
+        // endregion
         final time = tz.TZDateTime(
           location,
           day.year,
@@ -609,6 +873,8 @@ class ReminderScheduler {
     return out;
   }
 }
+
+// endregion
 
 /// The shuffled-order cursor of one plan: hands out the next message that is
 /// at least [ReminderScheduler.noRepeatDays] days away from its last use,
@@ -950,6 +1216,9 @@ class LocalReminders implements Reminders {
     GameServices? services,
     ReminderPlatform? platform,
     ReminderScheduler? scheduler,
+    // region P26-G3
+    this.truthSnapshot,
+    // endregion
   }) : _store = storage,
        _analytics = services,
        _platform = platform ?? LocalNotificationsPlatform(),
@@ -959,6 +1228,11 @@ class LocalReminders implements Reminders {
   final GameServices? _analytics;
   final ReminderPlatform _platform;
   final ReminderScheduler _scheduler;
+  // region P26-G3
+  /// Called on every replan, so runs, claims and midnight refreshes replace
+  /// all pending promises. Null uses the persisted facts available locally.
+  final ReminderTruth Function()? truthSnapshot;
+  // endregion
 
   bool _initializing = false;
   bool _ready = false;
@@ -1065,6 +1339,14 @@ class LocalReminders implements Reminders {
         best: _store.bestScore,
         coins: _store.coins,
         metElements: metElements,
+        // region P26-G3
+        // Legacy installs without any recorded run retain generic slots.
+        truth:
+            truthSnapshot?.call() ??
+            (_store.achLastPlayDay >= 0
+                ? ReminderTruth.fromStorage(_store)
+                : null),
+        // endregion
         // §3.34: a reminder within 2 h of now is skipped — the player just
         // played (this runs when the app is left and at app start).
         lastPlayedAt: now,
@@ -1111,6 +1393,9 @@ class LocalReminders implements Reminders {
     _analytics?.track('notif_opened', {
       'message': payload.messageNumber,
       'slot': payload.slot.key,
+      // region P26-G3
+      if (payload.type != null) 'type': payload.type!,
+      // endregion
     });
   }
 }

@@ -72,6 +72,7 @@ class NameChip {
         center: rect.center,
         fontSize: size,
         maxWidth: HudConfig.boxWidth - 2 * HudConfig.chipPad,
+        cacheLayout: true,
       );
       canvas.restore();
       return;

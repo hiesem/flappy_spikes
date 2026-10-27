@@ -52,9 +52,6 @@ class VersusBar extends PositionComponent {
 
   int _lastThem = 0;
   double _flash = 0;
-  // region P26-F9f
-  double _lastClock = 0;
-  // endregion
 
   /// The opponent's score now (their timeline at my runClock).
   int get theirScore =>
@@ -78,10 +75,7 @@ class VersusBar extends PositionComponent {
     if (s > _lastThem) _flash = HudConfig.flashLength;
     _lastThem = s;
     // region P26-F9f
-    final clock = hud.run.state.runClock;
-    final elapsed = (clock - _lastClock).clamp(0.0, double.infinity);
-    _lastClock = clock;
-    if (_flash > 0) _flash = (_flash - elapsed).clamp(0.0, 1.0);
+    if (_flash > 0) _flash = (_flash - dt).clamp(0.0, 1.0);
     // endregion
   }
 
@@ -160,9 +154,6 @@ class VersusBar extends PositionComponent {
     _box(canvas, youAv, HudConfig.youAvatar, a);
     // WP-AV your sticker avatar (your bird, gear and hat).
     g.avatars.paint(canvas, youAv, g.menu.items.look, opacity: a);
-    // region P26-F9f
-    _frame(canvas, youAv, g.menu.items.look, a, back: false);
-    // endregion
     _score(
       canvas,
       '$myScore',
@@ -191,9 +182,6 @@ class VersusBar extends PositionComponent {
     if (opp != null) {
       g.avatars.paint(canvas, themAv, opp.look, mirror: true, opacity: ta);
     }
-    // region P26-F9f
-    _frame(canvas, themAv, oppLook, ta, back: false);
-    // endregion
     _score(
       canvas,
       '$theirScore',
@@ -217,6 +205,8 @@ class VersusBar extends PositionComponent {
     // region P26-F9f
     you.render(canvas, a, t: cardTime);
     them.render(canvas, ta, t: cardTime);
+    _frame(canvas, youAv, g.menu.items.look, a, back: false);
+    _frame(canvas, themAv, oppLook, ta, back: false);
     // endregion
   }
 

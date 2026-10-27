@@ -8,6 +8,7 @@ import 'package:flappy_spikes/run/hud/name_chip.dart';
 import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/services/versus_service.dart';
 import 'package:flappy_spikes/skins/look.dart';
+import 'package:flappy_spikes/skins/art/card_name_art.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -123,12 +124,23 @@ void main() {
           expect(bar.them.style, noCards ? '' : 'n_flappy');
           expect(bar.you.style, noCards ? '' : 'n_fire');
           final running = await tester.runAsync(() => pixels(bar.render));
+          final layouts = CardNameArt.debugLayoutCount;
           stepGame(g, .2);
           final moved = await tester.runAsync(() => pixels(bar.render));
+          expect(
+            CardNameArt.debugLayoutCount,
+            layouts,
+            reason: 'both live HUD chips must use the cached glyph layouts',
+          );
           if (!noCards) expect(running, isNot(moved));
           g.pause();
           await flushAndMount(g);
           final clock = bar.cardTime;
+          final flash = bar.flash;
+          expect(flash, greaterThan(0), reason: 'opponent just scored');
+          stepGame(g, .5);
+          expect(bar.flash, 0, reason: 'legacy score flash uses dt on pause');
+          expect(bar.flash, lessThan(flash));
           final paused = await tester.runAsync(() => pixels(bar.render));
           stepGame(g, .4);
           expect(bar.cardTime, clock);
@@ -137,6 +149,14 @@ void main() {
           await flushAndMount(g);
           hud.rowOpacity = 1;
           final image = (await tester.runAsync(() => pixels(bar.render)))!;
+          if (!noCards) {
+            final index = (93 * 320 + 241) * 4;
+            expect(
+              image.sublist(index, index + 4),
+              isNot([255, 255, 255, 255]),
+              reason: 'the neon frame must be visible over the name chip',
+            );
+          }
           // Frame decorations may extend 7 pt, but the score box covers them.
           for (final x in [99, 220]) {
             final index = (60 * 320 + x) * 4;
@@ -173,6 +193,14 @@ void main() {
             expect(tags, hasLength(1));
             final tag = tags.single;
             expect(
+              tag.slapTilt,
+              closeTo(
+                (outcome == 'win' ? 9 : -9) * 3.141592653589793 / 180,
+                1e-9,
+              ),
+              reason: 'F9 mock tilts rival victory stickers to the left',
+            );
+            expect(
               tag.sticker,
               noCards
                   ? ''
@@ -191,7 +219,9 @@ void main() {
                 isTrue,
                 reason: 'sticker waits 0.7 s after arrival',
               );
+              expect(tag.slapBurst.alive, 16);
               stepGame(g, 1.2);
+              expect(tag.slapBurst.alive, 16);
               final late = await tester.runAsync(() => pixels(tag.render));
               expect(late!.any((v) => v != 0), isTrue);
             }

@@ -19,7 +19,8 @@ import '../../levels/levels.dart';
 import '../../skins/look.dart';
 // region P26-F9f
 import '../../skins/art/card_sticker_art.dart';
-import '../effects/twinkle.dart';
+import '../effects/shock_ring.dart';
+import '../effects/particle_pool.dart';
 // endregion
 import '../config/results_config.dart';
 import '../effects/coin_icon.dart';
@@ -1231,6 +1232,7 @@ class ResultsPlayerColumn extends PositionComponent
         ResultsWinnerTag(
           // region P26-F9f
           sticker: look.cardIdFor(CardKind.sticker),
+          mine: mine,
           position: look.cardIdFor(CardKind.sticker).isEmpty
               ? Vector2(centreX, ResultsConfig.winnerTagTop)
               : Vector2(
@@ -1700,19 +1702,32 @@ class ResultsHeader extends PositionComponent
 /// padding 2 × 8), centred on [position].
 class ResultsWinnerTag extends PositionComponent {
   // region P26-F9f
-  ResultsWinnerTag({super.position, this.sticker = ''})
+  ResultsWinnerTag({super.position, this.sticker = '', this.mine = true})
     : super(anchor: Anchor.topCenter);
 
   final String sticker;
+  final bool mine;
   Image? _coinImage;
-  final GoldSticker _slap = GoldSticker(
+  late final GoldSticker _slap = GoldSticker(
     text: '',
     backOut: true,
     popLength: .32,
-    tilt: 9 * math.pi / 180,
-    popFromTilt: 27 * math.pi / 180,
+    tilt: (mine ? 9 : -9) * math.pi / 180,
+    popFromTilt: (mine ? 27 : -27) * math.pi / 180,
   );
+  final ShockRing slapRing = ShockRing()
+    ..play(
+      Offset.zero,
+      rx: 10,
+      color: ResultsConfig.gold,
+      length: .4,
+      scaleTo: 4.6,
+      strokeFrom: 2,
+      strokeTo: 0,
+    );
+  final ParticlePool slapBurst = ParticlePool(capacity: 16);
   double _time = 0;
+  double get slapTilt => _slap.popAt(1).$2;
   bool get hasSticker => CardStickerArt.has(sticker);
   double get stickerTime => _time;
 
@@ -1720,6 +1735,7 @@ class ResultsWinnerTag extends PositionComponent {
   void update(double dt) {
     super.update(dt);
     _time += dt;
+    slapBurst.step(dt);
   }
   // endregion
 
@@ -1733,6 +1749,28 @@ class ResultsWinnerTag extends PositionComponent {
       size = Vector2(96, 77);
       anchor = Anchor.center;
       _coinImage = await CoinIcon.load(findGame()!.images);
+      final random = math.Random(77);
+      const colors = [
+        ResultsConfig.pink,
+        ResultsConfig.gold,
+        Color(0xFFFFFFFF),
+        Color(0xFF26C6DA),
+      ];
+      for (var i = 0; i < 16; i++) {
+        final angle = random.nextDouble() * math.pi * 2;
+        final speed = 150 * (.4 + random.nextDouble() * .8);
+        slapBurst.spawn(
+          shape: ParticleShape.twinkle,
+          x: width / 2,
+          y: height / 2,
+          vx: math.cos(angle) * speed,
+          vy: math.sin(angle) * speed,
+          w: 5.4,
+          color: colors[i % colors.length],
+          life: .6,
+          delay: 1.02,
+        );
+      }
       return;
     }
     // endregion
@@ -1784,19 +1822,15 @@ class ResultsWinnerTag extends PositionComponent {
       paintRays: ResultsScreen.paintCardStickerRays,
     );
     canvas.restore();
-    final sparkle = Twinkle.curve(still ? 1 : (_time - 1.02) / .6);
-    for (var i = 0; i < 6; i++) {
-      final angle = i * math.pi / 3;
-      Twinkle.paint(
-        canvas,
-        Offset(
-          width / 2 + 40 * math.cos(angle),
-          height / 2 + 27 * math.sin(angle),
-        ),
-        7 * sparkle.$1,
-        ResultsConfig.gold.withValues(alpha: sparkle.$3),
-        rotation: sparkle.$2,
-      );
+    if (!still) {
+      final age = _time - 1.02;
+      if (age >= 0 && age < slapRing.length) {
+        canvas.save();
+        canvas.translate(width / 2, height / 2);
+        slapRing.renderAt(canvas, age / slapRing.length);
+        canvas.restore();
+      }
+      slapBurst.paint(canvas);
     }
   }
   // endregion

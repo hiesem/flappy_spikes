@@ -1,4 +1,7 @@
 import 'dart:math' as math;
+// region P26-F9f
+import 'dart:typed_data';
+// endregion
 
 import 'package:flutter/widgets.dart';
 
@@ -10,6 +13,15 @@ import '../look.dart';
 /// [t] is elapsed game time in seconds: retaining it freezes every effect.
 /// No ticker, wall clock or random state is owned by this art.
 abstract final class CardNameArt {
+  // region P26-F9f
+  /// Counts actual TextPainter layouts, including fitting and glyph outlines.
+  @visibleForTesting
+  static int get debugLayoutCount => _NameLayout.layouts;
+
+  @visibleForTesting
+  static void debugClearLayoutCache() => _NameLayout.clear();
+  // endregion
+
   static const ids = <String>[
     'n_tangerine',
     'n_ocean',
@@ -44,8 +56,15 @@ abstract final class CardNameArt {
     Offset center = Offset.zero,
     double fontSize = 18,
     double maxWidth = double.infinity,
+    // region P26-F9f
+    /// Run hosts reuse glyph layouts; preview/reference hosts retain native
+    /// coloured text rasterization. Both use the same style/animation drawing.
+    bool cacheLayout = false,
+    // endregion
   }) {
-    final art = _Name(id, text, fontSize, maxWidth, t);
+    // region P26-F9f
+    final art = _Name(id, text, fontSize, maxWidth, t, cached: cacheLayout);
+    // endregion
     canvas.save();
     canvas.translate(center.dx, center.dy);
     art.back(canvas);
@@ -130,22 +149,228 @@ const _plum = Color(0xFF7A0044), _pink = Color(0xFFEC008C);
 const _white = Color(0xFFFFFFFF), _gold = Color(0xFFFFC233);
 Color _c(int rgb) => Color(0xFF000000 | rgb);
 
-class _Name {
-  _Name(this.id, this.text, double fontSize, double maxWidth, this.t) {
+// region P26-F9f
+TextPainter _layoutName(
+  String text,
+  double size,
+  Color color, {
+  Paint? foreground,
+}) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: text,
+      style: TextStyle(
+        fontFamily: 'Fredoka',
+        fontWeight: FontWeight.w600,
+        fontSize: size,
+        height: 1,
+        color: foreground == null ? color : null,
+        foreground: foreground,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  _NameLayout.layouts++;
+  return painter;
+}
+
+/// Bounded LRU of time-independent metrics and monochrome glyph layouts.
+/// Painters remain owned by their layout so a widget retaining an evicted
+/// layout can still paint it; native paragraphs are released with that layout.
+class _NameLayout {
+  _NameLayout(
+    this.id,
+    this.text,
+    double fontSize,
+    double maxWidth, {
+    bool prewarm = true,
+  }) {
     f = fontSize;
-    final natural = label(_white);
+    final natural = _layoutName(text, f, _white);
     if (natural.width > maxWidth && natural.width > 0) {
       f *= math.max(0, maxWidth) / natural.width;
     }
     natural.dispose();
-    final fitted = label(_white);
-    w = fitted.width;
-    fitted.dispose();
+    if (!prewarm) {
+      final fitted = _layoutName(text, f, _white);
+      w = fitted.width;
+      fitted.dispose();
+      return;
+    }
+    w = _label(text, 0).width;
+    final glyphs = ['n_flappy', 'n_candy', 'n_rainbow'].contains(id);
+    final widths = switch (id) {
+      'n_bubble' => [.24],
+      'n_gold' => [.1],
+      'n_rainbow' => [.06],
+      'n_flappy' => [.05],
+      'n_fire' => [.09],
+      'n_stardust' => [.07],
+      'n_sky' => [.15],
+      'n_thunder' => [.32, .12],
+      'n_marquee' => [.06],
+      _ => <double>[],
+    };
+    for (final value in [text, if (glyphs) ...text.characters]) {
+      _label(value, 0);
+      for (final width in widths) {
+        _label(value, f * width);
+      }
+    }
   }
+
+  static final cache = <(String, String, double, double), _NameLayout>{};
+  static int layouts = 0;
+  static int _cost = 0;
+  static void clear() {
+    cache.clear();
+    _cost = 0;
+  }
+
+  int get cost => _labels.values.fold(
+    0,
+    (total, label) => total + label.painters.length + label.direct.length,
+  );
+
+  static _NameLayout obtain(String id, String text, double size, double room) {
+    final key = (id, text, size, room);
+    final hit = cache.remove(key);
+    final layout = hit ?? _NameLayout(id, text, size, room);
+    cache[key] = layout;
+    if (hit == null) _cost += layout.cost;
+    while ((cache.length > 128 || _cost > 8192) && cache.length > 1) {
+      _cost -= cache.remove(cache.keys.first)!.cost;
+    }
+    return layout;
+  }
+
   final String id, text;
-  final double t;
   late final double w;
   late double f;
+  final _labels = <(String, double), _NameLabel>{};
+  static final _strokeWidth = Float32List(1);
+
+  _NameLabel _label(String value, double stroke) {
+    // Paint stores stroke widths as float32. Use the identical cache key for
+    // constructor-time outlines and the Paint values supplied during drawing.
+    _strokeWidth[0] = stroke;
+    final width = _strokeWidth[0];
+    return _labels.putIfAbsent((value, width), () {
+      TextPainter make(Color source) => _layoutName(
+        value,
+        f,
+        source,
+        foreground: stroke == 0
+            ? null
+            : (Paint()
+                ..color = source
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = stroke
+                ..strokeJoin = id == 'n_flappy'
+                    ? StrokeJoin.miter
+                    : StrokeJoin.round),
+      );
+
+      // Skia uses eight luminance buckets for glyph antialiasing. Keep the
+      // masks as well as exact static-colour paragraphs, so tinting animated
+      // ink does not turn every dark glyph into a heavier white glyph mask.
+      // Every variant retains the same fitted font and glyph advances.
+      final painters = [
+        for (var i = 0; i < 8; i++)
+          make(
+            Color.fromARGB(
+              255,
+              (i * 255 / 7).round(),
+              (i * 255 / 7).round(),
+              (i * 255 / 7).round(),
+            ),
+          ),
+      ];
+      final colors = switch (id) {
+        'n_tangerine' => [_c(0xF06A00)],
+        'n_ocean' => [_c(0x1565C0)],
+        'n_grass' => [_c(0x2E8B2E)],
+        'n_cherry' => [_c(0xD32F2F)],
+        'n_grape' => [_c(0x7B1FA2)],
+        'n_midnight' => [_c(0x1A237E)],
+        'n_bubble' => [_pink, _white],
+        'n_comic' => [_c(0xFFB529), _plum],
+        'n_gold' => [_c(0x8A5A00), _white],
+        'n_rainbow' => [const Color(0x2E000000)],
+        'n_flappy' => [_plum, _pink],
+        'n_candy' => [_pink, _c(0x0097A7)],
+        'n_glitch' => [_plum, _c(0x00E5FF), _c(0xFF4FB7)],
+        'n_fire' => [_c(0x6D1B00), _white],
+        'n_stardust' => [_c(0x170838), _white],
+        'n_sky' => [_c(0x9FD8F5).withValues(alpha: .6)],
+        'n_thunder' => [_c(0x2A0845), _white, _c(0xB388FF)],
+        'n_marquee' => [_c(0x2A0016), _white],
+        _ => [_plum],
+      };
+      return _NameLabel(
+        painters,
+        {for (final color in colors) color.toARGB32(): make(color)},
+        painters.first.width,
+        painters.first.height,
+        stroke,
+      );
+    });
+  }
+}
+
+class _NameLabel {
+  const _NameLabel(
+    this.painters,
+    this.direct,
+    this.width,
+    this.height,
+    this.stroke,
+  );
+  final List<TextPainter> painters;
+  final Map<int, TextPainter> direct;
+  final double width, height, stroke;
+
+  void paint(Canvas canvas, Offset at, Color color) {
+    final exact = direct[color.toARGB32()];
+    if (exact != null) {
+      exact.paint(canvas, at);
+      return;
+    }
+    canvas.saveLayer(
+      Rect.fromLTWH(at.dx, at.dy, width, height).inflate(stroke + 2),
+      Paint()..colorFilter = ColorFilter.mode(color, BlendMode.srcIn),
+    );
+    final r = (color.r * 255).round(),
+        g = (color.g * 255).round(),
+        b = (color.b * 255).round();
+    int canonical(int channel) => ((channel >> 5) * 255 / 7).round();
+    final luma =
+        (canonical(r) * 54 + canonical(g) * 183 + canonical(b) * 19) >> 8;
+    painters[luma >> 5].paint(canvas, at);
+    canvas.restore();
+  }
+}
+// endregion
+
+class _Name {
+  // region P26-F9f
+  _Name(
+    this.id,
+    this.text,
+    double fontSize,
+    double maxWidth,
+    this.t, {
+    this.cached = false,
+  }) : _layout = cached
+           ? _NameLayout.obtain(id, text, fontSize, maxWidth)
+           : _NameLayout(id, text, fontSize, maxWidth, prewarm: false);
+  final bool cached;
+  final _NameLayout _layout;
+  double get f => _layout.f;
+  double get w => _layout.w;
+  // endregion
+  final String id, text;
+  final double t;
   bool same(_Name other) =>
       id == other.id && text == other.text && t == other.t && f == other.f;
   Rect get rect => Rect.fromLTWH(-w / 2, -f / 2, w, f);
@@ -160,22 +385,7 @@ class _Name {
         : math.max(0, 1 - (c - .27) / .25) * .3;
   }
 
-  TextPainter label(Color color, {String? value, Paint? foreground}) =>
-      TextPainter(
-        text: TextSpan(
-          text: value ?? text,
-          style: TextStyle(
-            fontFamily: 'Fredoka',
-            fontWeight: FontWeight.w600,
-            fontSize: f,
-            height: 1,
-            color: foreground == null ? color : null,
-            foreground: foreground,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-
+  // region P26-F9f
   void draw(
     Canvas c,
     Color color, {
@@ -184,10 +394,28 @@ class _Name {
     String? value,
     double? x,
   }) {
-    final p = label(color, foreground: foreground, value: value);
-    p.paint(c, Offset(x ?? -w / 2, -p.height / 2) + offset);
-    p.dispose();
+    if (!cached) {
+      final painter = _layoutName(
+        value ?? text,
+        f,
+        color,
+        foreground: foreground,
+      );
+      painter.paint(c, Offset(x ?? -w / 2, -painter.height / 2) + offset);
+      painter.dispose();
+      return;
+    }
+    final stroke = foreground?.style == PaintingStyle.stroke
+        ? foreground!.strokeWidth
+        : 0.0;
+    final label = _layout._label(value ?? text, stroke);
+    label.paint(
+      c,
+      Offset(x ?? -w / 2, -label.height / 2) + offset,
+      foreground?.color ?? color,
+    );
   }
+  // endregion
 
   void edge(Canvas c, Color color, double width) => draw(
     c,
@@ -408,9 +636,15 @@ class _Name {
                 ..strokeWidth = f * .05)
             : null,
       );
-      final p = label(_white, value: glyph);
-      x += p.width;
-      p.dispose();
+      // region P26-F9f
+      if (cached) {
+        x += _layout._label(glyph, 0).width;
+      } else {
+        final painter = _layoutName(glyph, f, _white);
+        x += painter.width;
+        painter.dispose();
+      }
+      // endregion
       i++;
     }
   }

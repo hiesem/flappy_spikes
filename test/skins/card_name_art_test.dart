@@ -40,6 +40,98 @@ void main() {
     await loader.load();
   });
 
+  test('F9f all name layouts and glyphs are reused as only time changes', () {
+    CardNameArt.debugClearLayoutCache();
+    for (final id in CardNameArt.ids) {
+      void paint(double t, {double size = 24, double room = 86}) {
+        final recorder = ui.PictureRecorder();
+        CardNameArt.paint(
+          Canvas(recorder),
+          id,
+          'Wrené👩‍🚀888',
+          t: t,
+          fontSize: size,
+          maxWidth: room,
+          cacheLayout: true,
+        );
+        recorder.endRecording().dispose();
+      }
+
+      paint(.05);
+      final first = CardNameArt.debugLayoutCount;
+      for (final t in [.1, .4, 1.3, 2.75, 4.1]) {
+        paint(t);
+        expect(
+          CardNameArt.debugLayoutCount,
+          first,
+          reason: '$id must reuse fitting, fill, outline and grapheme layouts',
+        );
+      }
+      paint(.4, room: 60);
+      expect(
+        CardNameArt.debugLayoutCount,
+        greaterThan(first),
+        reason: 'a changed width must refit the name',
+      );
+      final resized = CardNameArt.debugLayoutCount;
+      paint(.8, room: 60);
+      expect(CardNameArt.debugLayoutCount, resized);
+      paint(.4, size: 30, room: 60);
+      expect(
+        CardNameArt.debugLayoutCount,
+        greaterThan(resized),
+        reason: 'a changed font size must use its own layout',
+      );
+    }
+  });
+
+  testWidgets('F9f cached versus names retain the native art at three phases', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      Future<List<int>> render(String id, double t, bool cached) async {
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
+        canvas.drawRect(
+          const Rect.fromLTWH(0, 0, 160, 60),
+          Paint()..color = const Color(0xFFFFFFFF),
+        );
+        CardNameArt.paint(
+          canvas,
+          id,
+          'SparklySparrow888',
+          t: t,
+          center: const Offset(80, 30),
+          fontSize: 14,
+          maxWidth: 86,
+          cacheLayout: cached,
+        );
+        final picture = recorder.endRecording();
+        final image = await picture.toImage(160, 60);
+        final data = (await image.toByteData())!.buffer.asUint8List().toList();
+        image.dispose();
+        picture.dispose();
+        return data;
+      }
+
+      for (final id in CardNameArt.ids) {
+        for (final t in [.05, 1.3, 2.75]) {
+          final native = await render(id, t, false);
+          final cached = await render(id, t, true);
+          var error = 0;
+          for (var i = 0; i < native.length; i++) {
+            error += (native[i] - cached[i]).abs();
+          }
+          expect(
+            error / native.length,
+            lessThan(.15),
+            reason: '$id at $t: cache must preserve the styled name art',
+          );
+        }
+      }
+    });
+  });
+
   test('all 20 catalogue names have exactly one painter', () {
     expect(CardNameArt.ids, kCardNames.map((item) => item.id).toList());
     expect(CardNameArt.ids.toSet(), hasLength(20));

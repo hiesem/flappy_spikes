@@ -1113,6 +1113,7 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
         ),
         fontSize: text.size,
         maxWidth: nameRoom,
+        cacheLayout: true,
       );
       return;
     }

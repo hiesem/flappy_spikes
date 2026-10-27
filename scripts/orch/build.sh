@@ -9,6 +9,6 @@ flags=(-m gpt-6.1-sol -c model_reasoning_effort="medium" -c sandbox_mode="danger
 if [ -z "$fix" ]; then
   exec "$(dirname "$0")/spawn.sh" "$wp-b$n" 90 "$wt" -- codex exec "${flags[@]}" "$(cat "$ORCH/$wp.md")"
 fi
-sid=$(grep -h -m1 -o '"thread_id":"[^"]*"' "$W/$wp-b1/log" | cut -d'"' -f4)
+sid=$(grep -h -m1 -o '"thread_id":"[^"]*"' "$W/$wp-b1/log" "$ORCH/killed/$wp-b1/log" 2>/dev/null | head -1 | cut -d'"' -f4 || true)
 [ -n "$sid" ] || { echo "no codex session id for $wp"; exit 2; }
 exec "$(dirname "$0")/spawn.sh" "$wp-b$n" 90 "$wt" -- codex exec resume "$sid" "${flags[@]}" "$(cat "$fix")"

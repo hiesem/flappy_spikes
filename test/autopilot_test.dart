@@ -85,49 +85,86 @@ void main() {
     }
   }
 
-  // PRD-2.6 WP-D: the shared 90 ms / 10% extra-flap bot is the
-  // "after 10 games ≈40" proxy. Keep all runs ordinary and unassisted.
+  // region P26-D-CAL
+  // PRD-2.6 §8.3-1 (council D-01) separates the σ90 baseline comparison
+  // from the calibrated "after 10 games ≈40" proxy. See SPEC's DEVIATION
+  // for d0a72c2 measurements and the out-of-tree re-measurement recipe.
+  // d0a72c2, D-BOT at a60d58f: seeds 0..40, 120 s, 10% extras.
+  // σ90 medians are 10 / 8; held-out seeds 100..140 give 9 / 7.
+  const baseline25Sigma90 = {568: 10, 711: 8};
+  // Sampling allowance: median minus the 15th of 41 ordered 2.5 scores
+  // (5 at both heights), a conservative one-sided 95% median lower bound.
+  // Derived solely from 2.5; do not tune this allowance to the 2.6 scores.
+  const baselineTolerance = {568: 5, 711: 3};
+  const calibratedSigma = .05;
+  const firstSeed = int.fromEnvironment('DCAL_FIRST_SEED', defaultValue: 0);
   for (final height in [568.0, 711.0]) {
-    FlameTester<FlappySpikesGame>(
-      () => createRunTestGame(worldHeight: height, prefs: {'gamesPlayed': 10}),
-      gameSize: Vector2(Config.worldWidth, height),
-    ).testGameWidget(
-      'D human-noise median >=40 from hoop 0 gamesPlayed 10 h=$height',
-      setUp: (game, _) async {
-        await game.ready();
-        await preloadImages(game);
-      },
-      verify: (game, _) async {
-        final scores = <int>[];
-        final outcomes = <String>[];
-        final deathsByHoop = <int, int>{};
-        game.runDebug.ignoreGates = false;
-        for (var seed = 0; seed < 21; seed++) {
-          game.runSeed = seed;
-          game.storage.gamesPlayed = 10;
-          final run = await startRun(game);
-          expect(run.setup.showcase, isNull);
-          expect(run.setup.ignoreGates, isFalse);
-          final flight = await flyHumanNoiseBotToDeath(game, seed: seed);
-          scores.add(flight.hoops);
-          deathsByHoop.update(flight.hoops, (n) => n + 1, ifAbsent: () => 1);
-          outcomes.add(
-            'seed=$seed hoops=${flight.hoops} cause=${flight.cause} '
-            'seconds=${flight.seconds.toStringAsFixed(1)}',
+    for (final baseline in [true, false]) {
+      final sigma = baseline ? .09 : calibratedSigma;
+      final minimum = baseline
+          ? baseline25Sigma90[height.round()]! -
+                baselineTolerance[height.round()]!
+          : 40;
+      FlameTester<FlappySpikesGame>(
+        () =>
+            createRunTestGame(worldHeight: height, prefs: {'gamesPlayed': 10}),
+        gameSize: Vector2(Config.worldWidth, height),
+      ).testGameWidget(
+        baseline
+            ? 'D human-noise sigma90 median >=2.5 baseline h=$height'
+            : 'D human-noise calibrated median >=40 from hoop 0 gamesPlayed 10 h=$height',
+        tags: const ['slow'],
+        timeout: const Timeout(Duration(minutes: 10)),
+        setUp: (game, _) async {
+          await game.ready();
+          await preloadImages(game);
+        },
+        verify: (game, _) async {
+          final scores = <int>[];
+          final outcomes = <String>[];
+          final deathsByHoop = <int, int>{};
+          game.runDebug.ignoreGates = false;
+          for (var seed = firstSeed; seed < firstSeed + 41; seed++) {
+            game.runSeed = seed;
+            game.storage.gamesPlayed = 10;
+            final run = await startRun(game);
+            expect(run.setup.showcase, isNull);
+            expect(run.setup.ignoreGates, isFalse);
+            final flight = await flyHumanNoiseBotToDeath(
+              game,
+              seed: seed,
+              jitterSigma: sigma,
+              extraFlapChance: .1,
+              maxSeconds: 120,
+            );
+            scores.add(flight.hoops);
+            deathsByHoop.update(flight.hoops, (n) => n + 1, ifAbsent: () => 1);
+            outcomes.add(
+              'seed=$seed hoops=${flight.hoops} cause=${flight.cause} '
+              'seconds=${flight.seconds.toStringAsFixed(1)}',
+            );
+            game.replay();
+            await flushAndMount(game);
+            stepGame(game, .4);
+            await flushAndMount(game);
+          }
+          scores.sort();
+          final median = scores[scores.length ~/ 2];
+          // ignore: avoid_print
+          print(
+            'HUMAN sigma=$sigma h=$height seeds=$firstSeed..${firstSeed + 40} '
+            'median=$median scores=$scores',
           );
-          game.replay();
-          await flushAndMount(game);
-          stepGame(game, .4);
-          await flushAndMount(game);
-        }
-        scores.sort();
-        expect(
-          scores[scores.length ~/ 2],
-          greaterThanOrEqualTo(40),
-          reason:
-              'h=$height scores=$scores\ndeathsByHoop=$deathsByHoop\n${outcomes.join('\n')}',
-        );
-      },
-    );
+          expect(
+            median,
+            greaterThanOrEqualTo(minimum),
+            reason:
+                'sigma=$sigma h=$height minimum=$minimum scores=$scores\n'
+                'deathsByHoop=$deathsByHoop\n${outcomes.join('\n')}',
+          );
+        },
+      );
+    }
   }
+  // endregion
 }

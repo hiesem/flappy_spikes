@@ -1997,8 +1997,118 @@ record actual emitted base offsets against the current nominal decision,
 including frame quantization; extra taps are excluded. Distribution checks
 pool multiple seeded flights (at least 500 base taps) at each height,
 retaining the mean 0 +/-10 ms and standard deviation 90 +/-10 ms limits.
-The sigma-90 baseline comparison and calibrated 40-hoop median gates are
-separate validation work under PRD-2.6 decision 8.3-1.
+<!-- // region P26-D-CAL -->
+**DEVIATION (D-CAL, PRD-2.6 §0.3 item 4 / D7 tests; §8.3 decision 1,
+council D-01):** the shared bot still defaults to σ 90 ms and 10% extra
+flaps. The ordinary `gamesPlayed = 10` proxy now has two separate gates at
+568 and 711 pt: (a) σ 90 ms must reach the measured 2.5 median minus the
+explicit sampling allowance below; (b) **σ 50 ms**, with the same 10% extra
+flaps, must reach **median ≥ 40**. Only this second test uses calibrated
+noise; no gameplay or showcase setting changes. **Owner confirmation is
+still required for this DEVIATION, including σ 50 ms and the sampling allowance.**
+
+Calibration on 2026-10-27 used `git archive d0a72c2` outside the repository,
+the merged D-BOT/autopilot from `a60d58f`, gates enabled, no starter, first
+death or 120 s maximum, fixed 1/60 s steps, and **41 seeds per height**.
+Only the nonexistent `HighlightStarted` listener case was removed from the
+2.5 copy. Table entries are median hoops (568 / 711):
+
+| σ (ms), 10% extras | 2.5 calibration, seeds 0–40 | 2.5 validation, seeds 100–140 | 2.6, seeds 0–40 | 2.6 validation, seeds 100–140 |
+|---|---|---|---|---|
+| 45 | 50 / 41 | — | — | — |
+| **50** | **39 / 39** | **44 / 48** | **54 / 44** | **49 / 52** |
+| 55 | 36 / 34 | — | — | — |
+| 60 | 34 / 27 | — | — | — |
+| 90 | **10 / 8** | **9 / 7** | **6 / 11** | **7 / 12** |
+
+σ 50 ms is the measured setting closest to 40 at both heights; it is
+selected using 2.5 alone, then checked on disjoint seeds. For gate (a), the
+baseline constants are **10 / 8**, with allowances **5 / 3 hoops**, hence
+minimum medians **5 / 5**. These allowances are each baseline median minus
+the **15th ordered observation (5 / 5)** in its 41-seed 2.5 calibration
+sample. That order statistic is a conservative one-sided 95% lower bound
+for the population median (binomial coverage ≥97.02%). The allowance is
+fixed from 2.5 sampling uncertainty, never fitted to 2.6 outcomes. In
+particular, the raw σ90 median at 568 is lower on 2.6, but within this
+allowance; this comparison cannot establish exact equality of difficulty.
+The calibrated ≥40 assertion has **no tolerance**. All four committed gates
+retain 41 seeds and carry the `slow` tag; `DCAL_FIRST_SEED=100` re-runs
+them on the held-out range with the same assertions.
+
+Re-measure outside the repository (run from the D-CAL worktree). This uses
+2.5's original test helpers and course, with only HEAD's additive autopilot
+and closed-loop bot copied across. `pubspec.lock` matches `d0a72c2`.
+The seed is shared by the course and bot; replay retains normal lifetime
+history, while `gamesPlayed` is reset to 10 before every run, just as in the
+committed gate. The 120 s cap counts survivors as their reached hoop count,
+not as a death. Heights use separate game instances.
+
+```bash
+export PATH="$HOME/flutter/bin:$HOME/.local/share/mise/installs/node/26.7.0/bin:$PATH"
+CAL_WT="$PWD"
+CAL_SCRATCH="$(mktemp -d /tmp/fs-dcal.XXXXXX)"
+mkdir "$CAL_SCRATCH/p25"
+git archive d0a72c2 | tar -x -C "$CAL_SCRATCH/p25"
+cp lib/run/debug/{autopilot,human_bot}.dart "$CAL_SCRATCH/p25/lib/run/debug/"
+python3 - "$CAL_SCRATCH/p25/lib/run/debug/human_bot.dart" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+s = p.read_text()
+s = s.replace('      case HighlightStarted(:final id):\n        highlights.add(id);\n', '')
+p.write_text(s)  # This event does not exist in 2.5; leave every bot rule intact.
+PY
+cat > "$CAL_SCRATCH/p25/test/dcal_measure_test.dart" <<'DART'
+import 'package:flame/extensions.dart';
+import 'package:flame_test/flame_test.dart';
+import 'package:flappy_spikes/game/config.dart';
+import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/run/debug/human_bot.dart';
+import 'helpers.dart';
+void main() {
+  const first = int.fromEnvironment('CAL_FIRST', defaultValue: 0);
+  const sigmas = String.fromEnvironment('CAL_SIGMAS',
+      defaultValue: '0.045,0.05,0.055,0.06,0.09');
+  for (final sigma in sigmas.split(',').map(double.parse)) {
+    for (final h in [568.0, 711.0]) {
+      FlameTester<FlappySpikesGame>(
+        () => createRunTestGame(worldHeight: h, prefs: {'gamesPlayed': 10}),
+        gameSize: Vector2(Config.worldWidth, h),
+      ).testGameWidget('CAL sigma=$sigma h=$h',
+        setUp: (g, _) async { await g.ready(); await preloadImages(g); },
+        verify: (g, _) async {
+          final scores = <int>[];
+          g.runDebug.ignoreGates = false;
+          for (var seed = first; seed < first + 41; seed++) {
+            g.runSeed = seed;
+            g.storage.gamesPlayed = 10;
+            await startRun(g);
+            final f = await flyHumanNoiseBotToDeath(g, seed: seed,
+                jitterSigma: sigma, extraFlapChance: .1, maxSeconds: 120);
+            scores.add(f.hoops);
+            g.replay();
+            await flushAndMount(g);
+            stepGame(g, .4);
+            await flushAndMount(g);
+          }
+          scores.sort();
+          print('CAL sigma=$sigma h=$h seeds=$first..${first + 40} '
+              'median=${scores[20]} scores=$scores');
+        });
+    }
+  }
+}
+DART
+cd "$CAL_SCRATCH/p25"
+flutter pub get --offline
+flutter test --no-pub -j 4 test/dcal_measure_test.dart --reporter expanded
+flutter test --no-pub -j 4 test/dcal_measure_test.dart --reporter expanded \
+  --dart-define=CAL_FIRST=100 --dart-define=CAL_SIGMAS=0.05,0.09
+cd "$CAL_WT"
+flutter test --no-pub -j 4 test/autopilot_test.dart --plain-name 'D human-noise'
+flutter test --no-pub -j 4 test/autopilot_test.dart --plain-name 'D human-noise' \
+  --dart-define=DCAL_FIRST_SEED=100
+```
+<!-- // endregion -->
 The curve, same-rules and D7 ceiling gates pass at their original thresholds.
 The legacy cooldown audit accounts for D7's consecutive switch-chain rings.
 The owner Pixel 8 ceiling playtest remains required.

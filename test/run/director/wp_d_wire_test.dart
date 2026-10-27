@@ -214,83 +214,182 @@ void main() {
         reason: 'seed=$seed must exercise first-meet',
       );
       expect(director.firstMeet.met, contains(ElementId.bullseye));
-      expect(director.allowsSqueezeWarning(firstMeet!.index + 7), isFalse);
+      director.onSqueezeEnded(firstMeet!.index - 3);
+      expect(director.allowsSqueezeWarning(firstMeet.index + 7), isFalse);
       expect(director.allowsSqueezeWarning(firstMeet.index + 8), isTrue);
     }
   });
 
-  test('WP-D6 D1 switch, moving and saw rows claim introduction once', () {
-    // D1/D6: row introductions are in-run steps, including for players who
-    // already met the element. Lifetime-closed elements claim no headline.
-    for (final (row, element) in [
-      (15, ElementId.switchRing),
-      (25, ElementId.movingRing),
-      (30, ElementId.saw),
-    ]) {
-      for (final enabled in [false, true]) {
-        final director = RunDirector(
-          seed: 54,
-          startHoopIndex: row,
-          enabled: {ElementId.normalHoop, if (enabled) element},
-          met: ElementId.values.toSet(),
-        );
-        // Move periodic calm beyond this probe; its independent warning
-        // veto must not make a missing headline claim pass this assertion.
-        director.onSqueezeEnded(row - 3);
-        for (var slot = row; slot <= row + 7; slot++) {
-          director.nextSlot(DirectorContext.open(711));
+  test(
+    'WP-D6 D1 rows count first meets as introductions, once per element',
+    () {
+      // PRD §8.3 decision 15: met elements were already introduced; switch
+      // and moving first meets own their row, while never-met saw queues it.
+      for (final (row, element) in [
+        (15, ElementId.switchRing),
+        (25, ElementId.movingRing),
+        (30, ElementId.saw),
+      ]) {
+        for (final enabled in [false, true]) {
+          for (final met in [false, true]) {
+            final director = RunDirector(
+              seed: 54,
+              enabled: {ElementId.normalHoop, if (enabled) element},
+              met: {ElementId.normalHoop, if (met) element},
+            );
+            final headlines = <(String, int)>[];
+            director.onHeadline = (id, hoop) => headlines.add((id, hoop));
+            for (var hoop = 0; hoop < 60; hoop++) {
+              final slot = director.nextSlot(DirectorContext.open(711));
+              director.nextGap(DirectorContext.open(711), slot);
+            }
+            if (met || !enabled) {
+              expect(headlines, isEmpty);
+            } else {
+              expect(headlines, hasLength(1));
+              expect(
+                headlines.single.$1,
+                element.firstMeet ? 'first-meet' : 'introduction',
+              );
+              expect(headlines.single.$2, inInclusiveRange(row, row + 5));
+            }
+          }
         }
-        expect(
-          director.allowsSqueezeWarning(row + 7),
-          !enabled,
-          reason: 'D1 row=$row enabled=$enabled',
-        );
-        expect(director.allowsSqueezeWarning(row + 8), isTrue);
+      }
+    },
+  );
+
+  test('WP-D6 moving and saw introductions wait eight hoops apart', () {
+    final director = RunDirector(
+      seed: 54,
+      startHoopIndex: 25,
+      enabled: {ElementId.normalHoop, ElementId.movingRing, ElementId.saw},
+      met: {ElementId.normalHoop},
+    );
+    final headlines = <(String, int)>[];
+    director.onHeadline = (id, hoop) => headlines.add((id, hoop));
+    for (var hoop = 25; hoop <= 40; hoop++) {
+      final slot = director.nextSlot(DirectorContext.open(711));
+      director.nextGap(DirectorContext.open(711), slot);
+    }
+    // PRD §8.3 decision 15: saw's row at 30 waits for the window at 33.
+    expect(headlines, [('first-meet', 25), ('introduction', 33)]);
+  });
+
+  test(
+    'WP-D6 moving first meet owns its introduction without a second claim',
+    () {
+      final director = RunDirector(
+        seed: 16,
+        enabled: {ElementId.normalHoop, ElementId.movingRing},
+        met: {ElementId.normalHoop},
+      );
+      final headlines = <(String, int)>[];
+      director.onHeadline = (id, hoop) => headlines.add((id, hoop));
+      for (var hoop = 0; hoop < 60; hoop++) {
+        final slot = director.nextSlot(DirectorContext.open(711));
+        director.nextGap(DirectorContext.open(711), slot);
+      }
+      expect(headlines, hasLength(1));
+      expect(headlines.single.$1, 'first-meet');
+      expect(headlines.single.$2, inInclusiveRange(25, 30));
+    },
+  );
+
+  test('WP-D6 pending introductions preserve a squeeze reservation', () {
+    final director = RunDirector(
+      seed: 54,
+      startHoopIndex: 25,
+      enabled: {ElementId.normalHoop, ElementId.movingRing, ElementId.saw},
+      met: ElementId.values.toSet()..remove(ElementId.saw),
+    );
+    final introductions = <int>[];
+    director.onHeadline = (id, hoop) {
+      if (id == 'introduction') introductions.add(hoop);
+    };
+    director.onSqueezeWarning(24);
+    expect(director.allowsSqueezeWarning(25), isFalse);
+    // Move calm beyond the reservation probe without changing headlines.
+    director.onSqueezeEnded(22);
+    for (var hoop = 25; hoop <= 48; hoop++) {
+      final slot = director.nextSlot(DirectorContext.open(711));
+      director.nextGap(DirectorContext.open(711), slot);
+      if (hoop == 32) {
+        expect(director.allowsSqueezeWarning(32), isTrue);
+        director.onSqueezeWarning(32);
       }
     }
+    expect(introductions, [40]);
   });
   // endregion
 
-  test('WP-D6 ride, squeeze and bonus headlines stay eight hoops apart', () {
+  test('WP-D6 all five headline families stay eight hoops apart', () {
     const bonusKinds = {
       HoopKindId.pair,
       HoopKindId.luckySpin,
       HoopKindId.fever,
     };
-    for (var seed = 1; seed <= 40; seed++) {
-      final director = RunDirector(
-        seed: seed,
-        enabled: ElementId.values.toSet(),
-        met: ElementId.values.toSet(),
-      );
-      final headlines = <(String, int)>[];
-      for (var slot = 0; slot < 240; slot++) {
-        final plan = director.nextSlot(DirectorContext.open(711));
-        final gap = director.nextGap(DirectorContext.open(711), plan);
-        if (plan.kind == HoopKindId.portal || plan.cometHang) {
-          headlines.add(('ride', plan.index));
-        } else if (bonusKinds.contains(plan.kind)) {
-          headlines.add(('big-bonus', plan.index));
-        } else if (gap.items.any((item) => RunDirector.isBigItem(item.kind))) {
-          headlines.add(('big-bonus', gap.index));
+    final families = <String>{};
+    // Keep the original every-slot warning stress and add realistic gaps so
+    // deferred introductions also get an opportunity to claim a window.
+    for (final warningEvery in [0, 40]) {
+      for (var seed = 1; seed <= 40; seed++) {
+        final director = RunDirector(
+          seed: seed,
+          enabled: ElementId.values.toSet(),
+          met: ElementId.values.toSet()
+            ..removeAll({ElementId.bullseye, ElementId.saw}),
+        );
+        var nextWarning = warningEvery == 0 ? 25 : 35;
+        final headlines = <(String, int)>[];
+        director.onHeadline = (id, hoop) {
+          if (id == 'first-meet' || id == 'introduction') {
+            headlines.add((id, hoop));
+          }
+        };
+        for (var slot = 0; slot < 240; slot++) {
+          final plan = director.nextSlot(DirectorContext.open(711));
+          final gap = director.nextGap(DirectorContext.open(711), plan);
+          if (plan.kind == HoopKindId.portal || plan.cometHang) {
+            headlines.add(('ride', plan.index));
+          } else if (bonusKinds.contains(plan.kind)) {
+            headlines.add(('big-bonus', plan.index));
+          } else if (gap.items.any(
+            (item) => RunDirector.isBigItem(item.kind),
+          )) {
+            headlines.add(('big-bonus', gap.index));
+          }
+
+          if (plan.index >= nextWarning &&
+              director.allowsSqueezeWarning(plan.index)) {
+            headlines.add(('squeeze', plan.index));
+            director.onSqueezeWarning(plan.index);
+            nextWarning = plan.index + warningEvery;
+          }
         }
 
-        if (plan.index >= 25 && director.allowsSqueezeWarning(plan.index)) {
-          headlines.add(('squeeze', plan.index));
-          director.onSqueezeWarning(plan.index);
-        }
-      }
-
-      for (var left = 0; left < headlines.length; left++) {
-        for (var right = left + 1; right < headlines.length; right++) {
-          expect(
-            headlines[right].$2 - headlines[left].$2,
-            greaterThanOrEqualTo(8),
-            reason: 'seed $seed: ${headlines[left]} then ${headlines[right]}',
-          );
+        families.addAll(headlines.map((headline) => headline.$1));
+        for (var left = 0; left < headlines.length; left++) {
+          for (var right = left + 1; right < headlines.length; right++) {
+            expect(
+              headlines[right].$2 - headlines[left].$2,
+              greaterThanOrEqualTo(8),
+              reason: 'seed $seed: ${headlines[left]} then ${headlines[right]}',
+            );
+          }
         }
       }
     }
+    expect(
+      families,
+      containsAll([
+        'ride',
+        'squeeze',
+        'big-bonus',
+        'first-meet',
+        'introduction',
+      ]),
+    );
   });
 
   test('WP-D filters keep timing rolls off the layout stream', () {

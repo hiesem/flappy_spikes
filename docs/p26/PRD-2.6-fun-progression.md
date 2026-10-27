@@ -1642,6 +1642,13 @@ every requirement (file:line, test results) and the work packages with paths and
 
 16. J1 ships the 31-level track under new names next to the legacy ten-rank API; J2/E1 switch callers and remove the legacy table.
 
+15. **D1/D6 introduction arbitration (orchestrator, D-TESTS round 2):** a first meet counts as that element's
+    introduction, with no second claim (including an element already met on this install). Never-met switch 15 /
+    moving 25 use their first-meet pull; saw 30 has no pull and queues an introduction while never met.
+    A queued row waits for the earliest open eight-hoop window after due first meets and existing reservations;
+    it never uses the forced-headline path or clears a squeeze reservation. Scheduled first portals retain
+    their C3 window. Thus D1's five-hoop row spacing does not create two introduction headlines five hoops apart.
+
 ### 8.4 Corrections to the spec text
 
 - Wave 0 rules deploy is not "comment only": it adds `validCard` / `look.card`, routes run looks through `validLook`

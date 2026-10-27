@@ -1,5 +1,9 @@
 import 'dart:math';
 
+// region P26-D-TESTS
+import 'package:flutter/foundation.dart';
+// endregion
+
 import '../config/director_tables.dart';
 // region P26-D-R2
 // Placement uses the live band; no portable-band configuration is needed.
@@ -117,7 +121,8 @@ class RunDirector {
       }
     }
     // region P26-D-TESTS
-    // Introduction claims now follow D1 rows in nextSlot, without lifetime state.
+    // A lifetime first meet already satisfies that element's introduction.
+    _unmetAtStart = ElementId.values.toSet()..removeAll(met);
     _calm = CalmSchedule(rng.timing);
     if (startHoopIndex > 34) _calm.onRideStart(startHoopIndex);
     // endregion
@@ -216,7 +221,47 @@ class RunDirector {
   int _headlineReservationDue = -1;
   // region P26-D-TESTS
   int? _forcedHeadlineAt;
-  // D1 row claims need no per-element introduction state.
+  final List<ElementId> _pendingIntroductions = [];
+  late final Set<ElementId> _unmetAtStart;
+
+  /// Observes actual arbitration for the combined D6 wire oracle.
+  @visibleForTesting
+  void Function(String id, int hoop)? onHeadline;
+
+  // PRD §8.3 decision 15: existing first meets own their introduction;
+  // otherwise queue the D1 row after normal slot headline arbitration.
+  void _introduceAfterSlot(SlotPlan slot) {
+    if (slot.forced) return;
+    final element = switch (slot.index) {
+      15 => ElementId.switchRing,
+      25 => ElementId.movingRing,
+      30 => ElementId.saw,
+      _ => null,
+    };
+    // A lifetime first meet already introduced a met element. Never-met
+    // switch/moving rows use their first-meet pull; saw has no such pull.
+    if (element != null &&
+        _on(element) &&
+        _unmetAtStart.contains(element) &&
+        !element.firstMeet) {
+      _pendingIntroductions.add(element);
+    }
+    if (_pendingIntroductions.isEmpty ||
+        firstMeet.due(slot.index) != null ||
+        _headlineReservationId != null ||
+        _reservesFirstPortal(slot.index) ||
+        (_portalOn && !portalCapped && slot.index >= _portalAt) ||
+        !_headline.allows('introduction', slot.index) ||
+        (_forcedHeadlineAt != null && slot.index < _forcedHeadlineAt! + 8)) {
+      return;
+    }
+    _pendingIntroductions.removeAt(0);
+    // Do not go through _claimHeadline: introductions neither force a window
+    // nor clear another headline's (in particular squeeze's) reservation.
+    _headline.add('introduction', slot.index);
+    onHeadline?.call('introduction', slot.index);
+  }
+
   // endregion
   int _downgrades = 0;
   SlotPlan? _showcaseNormalSlot;
@@ -613,19 +658,6 @@ class RunDirector {
   /// §3.0.3 "order of decisions for a hoop slot".
   SlotPlan nextSlot(DirectorContext ctx) {
     final i = _i++;
-    // region P26-D-TESTS
-    // D1/D6: these are in-run introduction steps even for returning players.
-    // Claim the scheduled row once, rather than every later saw appearance.
-    final introduction = switch (i) {
-      15 => ElementId.switchRing,
-      25 => ElementId.movingRing,
-      30 => ElementId.saw,
-      _ => null,
-    };
-    if (showcase == null && introduction != null && _on(introduction)) {
-      _claimHeadline('introduction', i);
-    }
-    // endregion
 
     final springLanding = _springLandingAt == i;
     if (springLanding) _springLandingAt = null;
@@ -1384,9 +1416,6 @@ class RunDirector {
     } else if (rewardKinds.contains(finalPlan.kind)) {
       _claimHeadline('big-bonus', hoop);
     }
-    // region P26-D-TESTS
-    // D1 introductions are claimed once at the row, before slot arbitration.
-    // endregion
 
     _layout.lastY = finalPlan.centreY;
     _lastFinalY = finalPlan.centreY;
@@ -1415,6 +1444,9 @@ class RunDirector {
         squeeze: ledgerSqueeze,
       ),
     );
+    // region P26-D-TESTS
+    _introduceAfterSlot(normal);
+    // endregion
     if (showcase == null) return normal;
     // Run the normal decision to completion first, then overlay step 0.
     // Its sampler, reservations and random streams remain exactly the same
@@ -2542,6 +2574,9 @@ class RunDirector {
   void _claimHeadline(String id, int hoop) {
     if (!_headline.allows(id, hoop)) _forcedHeadlineAt = hoop;
     _headline.add(id, hoop);
+    // region P26-D-TESTS
+    onHeadline?.call(id, hoop);
+    // endregion
     _headlineReservationId = null;
     _headlineReservationDue = -1;
   }

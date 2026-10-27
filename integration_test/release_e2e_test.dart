@@ -29,7 +29,7 @@
 // 7. PRD-2.2 §2 mode button: VERSUS by default, the switch (both ways,
 //    remembered across a relaunch), the VS tag.
 // 8. PRD-2.2 §2.2 FREE FLY run: no VS intro, no versus bar, no versus
-//    result, the run is still offered to the upload queue.
+//    result; the autopilot/god debug run never uploads (PRD-2.6 E1/B5).
 // 9. PRD-2.2 §2–§4 live VERSUS match (opt-in FS_LIVE_VERSUS, Android): the
 //    Home search finds a seeded test account's real run (seed it first),
 //    START plays the VS intro, the run shows the versus bar, the results
@@ -958,8 +958,8 @@ void main() {
     await _teardown(tester);
   });
 
-  testWidgets('P22 §2.2 FREE FLY run: no VS intro, no versus bar, no versus '
-      'result; the run is still queued for upload', (tester) async {
+  testWidgets('P26 E1/B5 FREE FLY debug run: no VS intro, no versus bar, '
+      'no versus result, no upload offer or queue entry', (tester) async {
     E2EHooks.reset();
     E2EHooks.autopilot = true;
     _freshPrefs({'homeMode': 'freeFly'});
@@ -973,7 +973,7 @@ void main() {
     expect(
       await _waitFor(tester, () => run.state.score >= 3, seconds: 60),
       isTrue,
-      reason: 'the bot scored 3 (an uploadable run)',
+      reason: 'the bot reached the score threshold despite being a debug run',
     );
     await _shot(tester, 'p22_free_fly_run');
     await _killToPostRun(tester, g);
@@ -983,14 +983,15 @@ void main() {
     expect(page.header, isNull);
     expect(run.summarize().duel, isNull);
     await _shot(tester, 'p22_free_fly_results');
+    // PRD-2.6 E1 / B5: FS_E2E, autopilot and god mode are debug play.
+    // Normal Free Fly runs still upload; this assisted run must never offer.
+    expect(run.countsForUpload, isFalse);
     final v = g.versus;
     if (v is FirebaseVersusService) {
-      expect(
-        v.lastOffer,
-        anyOf(UploadDecision.queued, UploadDecision.queuedBest),
-        reason: 'FREE FLY runs go into the upload queue',
-      );
+      expect(v.lastOffer, isNull, reason: 'debug runs never reach submitRun');
+      expect(v.queue.pending, isEmpty);
     }
+    expect(g.storage.uploadQueue, isEmpty);
     expect(_handlerErrors, isEmpty);
     await _teardown(tester);
   });

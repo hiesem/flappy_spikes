@@ -93,3 +93,52 @@ FittedName fitName(
   }
   return FittedName(cut(lo), min);
 }
+
+// region P26-J7
+/// Rank labels are never abbreviated. Reserve the badge before fitting the
+/// name, so a three-digit endless badge cannot collide with the last glyph.
+class FittedLevelName {
+  const FittedLevelName(this.name, this.size, this.badgeWidth, this.width);
+  final String name;
+  final double size;
+  final double badgeWidth;
+  final double width;
+}
+
+FittedLevelName fitLevelName(
+  String name,
+  int level,
+  double maxWidth,
+  double size,
+  NameMeasure measure, {
+  required NameMeasure measureBadge,
+  double badgeSize = 12,
+  double badgePadding = 10,
+  double gap = 6,
+}) {
+  final badge = level > 0
+      ? measureBadge('$level', badgeSize) + badgePadding
+      : 0.0;
+  final reserved = badge + (level > 0 ? gap : 0);
+  final room = (maxWidth - reserved).clamp(0.0, double.infinity);
+  final full = measure(name, size);
+  final fitted = full > room && full > 0 ? size * room / full : size;
+  return FittedLevelName(name, fitted, badge, measure(name, fitted) + reserved);
+}
+
+/// The results / compact-card rank line, retaining the complete rank name.
+FittedName fitRankName(
+  String name,
+  int level,
+  double room,
+  double size,
+  NameMeasure measure,
+) {
+  final text = level > 0 ? '$name · LV $level' : 'UNRANKED';
+  final width = measure(text, size);
+  return FittedName(
+    text,
+    width > room && width > 0 ? size * room / width : size,
+  );
+}
+// endregion

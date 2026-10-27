@@ -1,5 +1,8 @@
 import 'dart:ui';
 
+import 'package:flutter/painting.dart' show AssetImage, ImageConfiguration;
+import 'package:flutter/services.dart' show AssetManifest, rootBundle;
+
 import 'package:flame/components.dart';
 
 import '../../levels/emblem_painter.dart';
@@ -17,10 +20,20 @@ Picture recordEmblem(
   bool grey = false,
   Look? look,
   double birdScale = 1.4,
+  bool reduceMotion = false,
+  Image? image,
 }) {
   final recorder = PictureRecorder();
   final canvas = Canvas(recorder);
-  EmblemPainter.paint(canvas, level, t: t, shine: shine, grey: grey);
+  EmblemPainter.paintTrack(
+    canvas,
+    level,
+    t: t,
+    shine: shine,
+    grey: grey,
+    reduceMotion: reduceMotion,
+    image: image,
+  );
   if (look != null) {
     canvas.save();
     canvas.scale(birdScale);
@@ -34,17 +47,18 @@ Picture recordEmblem(
 /// position (size 0, so a parent places it by the plate centre) at
 /// [artScale] points per emblem art unit, times [popScale].
 ///
-/// [t] drives the idle animation (pennants, flames, stars, rays, the plate
-/// sweep when [shine]); the owner advances it (frozen = paused / reduce
-/// motion). Whenever the emblem is visually static — unranked always, levels
-/// 1-6 outside the sweep, or [t] not moving — it draws a cached [Picture] instead of
-/// re-running the painter (PRD-home-v3 §11 performance).
+/// [t] is advanced by the owner (frozen while paused). [reduceMotion] and
+/// the OS preference disable all idle motion. Static frames use cached
+/// pictures; PNGs load once per slot and share the painter's idle layers.
+/// The equipped bird remains a separate LookComponent on the plate centre.
 class EmblemView extends PositionComponent {
   EmblemView({
     required int level,
     required this.artScale,
     this.grey = false,
     this.shine = true,
+    this.reduceMotion = false,
+    this.imageLoader,
     super.position,
     super.priority,
   }) : _level = level; // ignore: prefer_initializing_formals
@@ -55,6 +69,81 @@ class EmblemView extends PositionComponent {
 
   /// Whether the plate light sweep runs (off under reduce motion).
   bool shine;
+
+  // region P26-J7
+  /// Explicit still state plus the OS reduced-motion preference.
+  bool reduceMotion;
+  bool get _still =>
+      reduceMotion ||
+      PlatformDispatcher.instance.accessibilityFeatures.disableAnimations;
+
+  /// Optional asset source for tests / hosts. Returned images belong to the
+  /// source, and must outlive the view; the default source caches for app life.
+  final Future<Image?> Function(int slot)? imageLoader;
+  Image? _image;
+  int _imageRequest = 0;
+  bool _removed = false;
+  bool _started = false;
+  static final Map<int, Future<Image?>> _images = {};
+  static Future<AssetManifest>? _manifest;
+
+  /// Shared by off-screen exports and Flame views. Images live for app life.
+  static Future<Image?> loadImageForLevel(int level) =>
+      _loadImage(EmblemPainter.slotFor(level));
+
+  static Future<Image?> _loadImage(
+    int slot,
+  ) => _images.putIfAbsent(slot, () async {
+    final path = EmblemPainter.assetFor(slot);
+    if (path == null) return null;
+    try {
+      final manifest = await (_manifest ??= AssetManifest.loadFromAssetBundle(
+        rootBundle,
+      ));
+      if (!manifest.listAssets().contains(path)) return null; // J13 fallback.
+      final key = await AssetImage(path).obtainKey(
+        ImageConfiguration(
+          devicePixelRatio:
+              PlatformDispatcher.instance.views.firstOrNull?.devicePixelRatio ??
+              1,
+        ),
+      );
+      final bytes = await key.bundle.load(key.name);
+      final codec = await instantiateImageCodec(
+        bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
+      );
+      try {
+        return (await codec.getNextFrame()).image;
+      } finally {
+        codec.dispose();
+      }
+    } catch (_) {
+      return null; // Missing / corrupt art never hides the player's emblem.
+    }
+  });
+
+  Future<void> _resolveImage() async {
+    final request = ++_imageRequest;
+    final slot = EmblemPainter.slotFor(_level);
+    Image? image;
+    try {
+      image = slot == 0 ? null : await (imageLoader ?? _loadImage)(slot);
+    } catch (_) {
+      image = null;
+    }
+    if (_removed || request != _imageRequest) return;
+    _image = image;
+    _dropFrozen();
+    _lastT = null;
+  }
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    _started = true;
+    await _resolveImage();
+  }
+  // endregion
 
   /// Animation clock (s).
   double t = 0;
@@ -67,7 +156,11 @@ class EmblemView extends PositionComponent {
   set level(int value) {
     if (value == _level) return;
     _level = value;
+    _image = null;
     _dropFrozen();
+    _lastT = null;
+    _imageRequest++;
+    if (_started) _resolveImage();
   }
 
   /// Static pictures (t = 0, no sweep) per (level, grey), shared by every
@@ -77,6 +170,8 @@ class EmblemView extends PositionComponent {
   Picture? _frozen;
   double? _frozenT;
   bool _frozenShine = false;
+  bool _frozenGrey = false;
+  Image? _frozenImage;
   double? _lastT;
 
   /// Whether the last frame was drawn from a cached picture (tests).
@@ -91,6 +186,8 @@ class EmblemView extends PositionComponent {
 
   @override
   void onRemove() {
+    _removed = true;
+    _imageRequest++;
     _dropFrozen();
     super.onRemove();
   }
@@ -101,32 +198,60 @@ class EmblemView extends PositionComponent {
     if (scale <= 0) return;
     canvas.save();
     canvas.scale(scale);
+    final clock = _still ? 0.0 : t;
     final sweep =
-        shine && EmblemPainter.sweeps(_level) && EmblemPainter.sweepActive(t);
-    if (!sweep && !EmblemPainter.animates(_level)) {
+        !_still &&
+        shine &&
+        EmblemPainter.sweeps(_level) &&
+        EmblemPainter.sweepActive(clock);
+    // Conservative legacy check preserves the cache contract of existing
+    // consumers; new high-sky / space slots always use their own idle layers.
+    final animated =
+        !_still &&
+        (EmblemPainter.trackAnimates(_level) || (_level >= 7 && _level <= 10));
+    if (!sweep && !animated && _image == null) {
       canvas.drawPicture(
         _static.putIfAbsent((
-          _level,
+          EmblemPainter.slotFor(_level),
           grey,
-        ), () => recordEmblem(_level, grey: grey)),
+        ), () => recordEmblem(_level, grey: grey, reduceMotion: true)),
       );
       _drewCached = true;
-    } else if (t == _lastT) {
-      // Frozen clock (popup / ad on top, reduce motion): one picture of
-      // this exact frame.
-      if (_frozen == null || _frozenT != t || _frozenShine != sweep) {
+    } else if (clock == _lastT) {
+      if (_frozen == null ||
+          _frozenT != clock ||
+          _frozenShine != sweep ||
+          _frozenGrey != grey ||
+          _frozenImage != _image) {
         _dropFrozen();
-        _frozen = recordEmblem(_level, t: t, shine: sweep, grey: grey);
-        _frozenT = t;
+        _frozen = recordEmblem(
+          _level,
+          t: clock,
+          shine: sweep,
+          grey: grey,
+          reduceMotion: _still,
+          image: _image,
+        );
+        _frozenT = clock;
         _frozenShine = sweep;
+        _frozenGrey = grey;
+        _frozenImage = _image;
       }
       canvas.drawPicture(_frozen!);
       _drewCached = true;
     } else {
-      EmblemPainter.paint(canvas, _level, t: t, shine: sweep, grey: grey);
+      EmblemPainter.paintTrack(
+        canvas,
+        _level,
+        t: clock,
+        shine: sweep,
+        grey: grey,
+        reduceMotion: _still,
+        image: _image,
+      );
       _drewCached = false;
     }
-    _lastT = t;
+    _lastT = clock;
     canvas.restore();
   }
 }

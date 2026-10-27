@@ -5,7 +5,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart' show AssetBundle, rootBundle;
 
+import '../components/levels/emblem_view.dart';
 import '../levels/emblem_painter.dart';
+import '../levels/level_track.dart';
 import '../levels/levels.dart';
 import '../run/hud/fit_name.dart';
 import '../skins/art/look_painter.dart';
@@ -39,6 +41,7 @@ class ShareCardData {
     required this.bannerId,
     required this.text,
     required this.textId,
+    this.progression = false,
   });
 
   final ShareCardKind kind;
@@ -52,6 +55,14 @@ class ShareCardData {
   /// The stored player level (WP-L): the emblem and the card colours
   /// (0 = unranked).
   final int level;
+
+  // region P26-J7
+  /// J2 opts migrated callers into the cumulative track, including slots
+  /// 1–10. Legacy score-rank callers keep their established artwork until
+  /// that migration; levels above ten unambiguously belong to the track.
+  final bool progression;
+  bool get usesProgression => progression || level > 10;
+  // endregion
 
   /// The equipped look (bird, gear, hat are drawn).
   final Look look;
@@ -192,10 +203,15 @@ abstract final class ShareCardPainter {
   static const String _body = 'Fredoka';
 
   /// Paints [data] on [canvas] (0,0 top left, 1080 x 1080).
-  static void paint(Canvas canvas, ShareCardData data, ShareCardAssets img) {
+  static void paint(
+    Canvas canvas,
+    ShareCardData data,
+    ShareCardAssets img, {
+    ui.Image? emblem,
+  }) {
     switch (data.kind) {
       case ShareCardKind.spotlight:
-        _spotlight(canvas, data, img);
+        _spotlight(canvas, data, img, emblem: emblem);
       case ShareCardKind.dodge:
         _newcomer(
           canvas,
@@ -219,13 +235,23 @@ abstract final class ShareCardPainter {
 
   // --- the cards ------------------------------------------------------------
 
-  static void _spotlight(Canvas c, ShareCardData d, ShareCardAssets img) {
+  static void _spotlight(
+    Canvas c,
+    ShareCardData d,
+    ShareCardAssets img, {
+    ui.Image? emblem,
+  }) {
+    // region P26-J7
     final def = levelDef(d.level);
+    final track = d.usesProgression ? trackLevelDef(d.level) : null;
+    // endregion
     // §4.3 unranked: the post-run grey palette.
-    final bg = def?.plate ?? greyBg;
-    final rayColor = def?.rim ?? grey;
-    final rayAlpha = def == null ? .15 : (d.level == 10 ? .22 : .28);
-    final ink = def?.accent ?? grey;
+    final bg = track?.plate ?? def?.plate ?? greyBg;
+    final rayColor = track?.rim ?? def?.rim ?? grey;
+    final rayAlpha = def == null && track == null
+        ? .15
+        : (d.level == 10 ? .22 : .28);
+    final ink = track?.accent ?? def?.accent ?? grey;
     final bestColor = d.level == 10 ? legendBest : ink;
     c.drawRect(const Rect.fromLTWH(0, 0, size, size), Paint()..color = bg);
     _rays(c, rayColor, rayAlpha);
@@ -233,7 +259,19 @@ abstract final class ShareCardPainter {
     c.save();
     c.translate(centre.dx, centre.dy);
     c.scale(2.55);
-    EmblemPainter.paint(c, d.level, t: 0, shine: false);
+    // region P26-J7
+    if (!d.usesProgression) {
+      EmblemPainter.paint(c, d.level, t: 0, shine: false);
+    } else {
+      EmblemPainter.paintTrack(
+        c,
+        d.level,
+        shine: false,
+        reduceMotion: true,
+        image: emblem,
+      );
+    }
+    // endregion
     c.translate(0, -2);
     c.scale(1.4);
     LookPainter.paint(c, d.look);
@@ -254,6 +292,18 @@ abstract final class ShareCardPainter {
       _text(c, 'POINTS', 0, r * .58, size: r * .2, color: white, spacing: 6);
     });
     _banner(c, d.banner);
+    // region P26-J7
+    if (d.usesProgression && track != null) {
+      final rank = fitRankName(
+        track.name,
+        d.level,
+        600,
+        30,
+        measureName(fontFamily: _display),
+      );
+      _text(c, rank.text, 430, 675, size: rank.size, color: d.level >= 26 ? white : ink);
+    }
+    // endregion
     _nameTag(c, d.name);
     _text(
       c,
@@ -623,7 +673,12 @@ Future<Uint8List> renderShareCardPng(
 ) async {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
-  ShareCardPainter.paint(canvas, data, assets);
+  // region P26-J7
+  final emblem = data.kind == ShareCardKind.spotlight && data.usesProgression
+      ? await EmblemView.loadImageForLevel(data.level)
+      : null;
+  ShareCardPainter.paint(canvas, data, assets, emblem: emblem);
+  // endregion
   final picture = recorder.endRecording();
   final ui.Image image;
   try {

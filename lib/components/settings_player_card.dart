@@ -9,11 +9,14 @@ import 'package:flutter/widgets.dart';
 import '../game/config.dart';
 import '../game/flappy_game.dart';
 import '../game/sound.dart' show Sfx;
+import '../levels/level_track.dart';
 import '../run/config/hud_config.dart';
 import '../run/hud/fit_name.dart';
 import '../versus/custom_name.dart';
 import 'home/menu_primitives.dart';
 import 'settings_panel.dart' show paintSettingsSpinner;
+import 'levels/emblem_view.dart';
+import 'look_component.dart';
 
 /// WP-NAME the PLAYER card at the top of Settings (design A "Player card
 /// at the top, edit in place", `design/username_settings/username.html`):
@@ -97,6 +100,11 @@ class SettingsPlayerCard extends PositionComponent
 
   late final MenuText _label;
   late final MenuText _name;
+  // region P26-J7
+  late final MenuText _rank;
+  late final EmblemView _emblem;
+  late final LookComponent _emblemBird;
+  // endregion
   late final MenuText _field;
   late final MenuText _counter;
   late final MenuText _hint1;
@@ -181,6 +189,16 @@ class SettingsPlayerCard extends PositionComponent
       fontWeight: FontWeight.w600,
       lineHeight: 1,
     );
+    // region P26-J7
+    _rank = MenuText('', fontSize: 9.5, color: plum, lineHeight: 1);
+    _emblem = EmblemView(level: game.storage.lvlIndex, artScale: .23);
+    _emblemBird = LookComponent(
+      look: game.menu.items.look,
+      artScale: .23 * 1.4,
+      anchor: Anchor.center,
+    )..paused = true;
+    addAll([_emblem, _emblemBird]);
+    // endregion
     _field = MenuText(
       '',
       fontSize: fieldSize,
@@ -214,6 +232,13 @@ class SettingsPlayerCard extends PositionComponent
     if (!_built) return;
     final h = _editing ? editHeight : cardHeight;
     size.y = h;
+    // region P26-J7
+    _emblem
+      ..level = game.storage.lvlIndex
+      ..position = Vector2(padX + sticker / 2, h / 2)
+      ..reduceMotion = game.reduceMotion;
+    _emblemBird.position = _emblem.position.clone();
+    // endregion
     // Children for the current state.
     void show(Component c, bool on) {
       if (on && c.parent == null) add(c);
@@ -226,6 +251,9 @@ class SettingsPlayerCard extends PositionComponent
     show(confirm, _editing && !_saving);
     show(cancel, _editing && !_saving);
     show(_name, !_editing);
+    // region P26-J7
+    show(_rank, !_editing);
+    // endregion
     show(_field, _editing);
     show(_counter, _editing);
     show(_label, true);
@@ -268,7 +296,22 @@ class SettingsPlayerCard extends PositionComponent
       _name
         ..text = f.text
         ..fontSize = f.size;
-      final top = (h - labelH - nameSize) / 2;
+      // region P26-J7
+      const rankH = 14.0;
+      final top = (h - labelH - nameSize - rankH) / 2;
+      final level = game.storage.lvlIndex;
+      final rank = fitRankName(
+        trackLevelDef(level)?.name ?? 'UNRANKED',
+        level,
+        room,
+        9.5,
+        measureName(fontFamily: 'Opificio Neue'),
+      );
+      _rank
+        ..text = rank.text
+        ..fontSize = rank.size
+        ..position = Vector2(_textLeft, top + labelH + nameSize + 3);
+      // endregion
       _label.position = Vector2(_textLeft, top);
       _name.position = Vector2(
         _textLeft,
@@ -414,6 +457,12 @@ class SettingsPlayerCard extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
+    // region P26-J7
+    if (_built) {
+      _emblem.reduceMotion = game.reduceMotion;
+      if (!game.reduceMotion) _emblem.t += dt;
+    }
+    // endregion
     if (_editing) _blink = (_blink + dt) % 1;
     if (_saving) _spin += dt;
   }
@@ -425,12 +474,10 @@ class SettingsPlayerCard extends PositionComponent
   @override
   void render(Canvas canvas) {
     canvas.drawRect(size.toRect(), _white);
-    final top = (height - sticker) / 2;
-    game.avatars.paint(
-      canvas,
-      Rect.fromLTWH(padX, top, sticker, sticker),
-      game.menu.items.look,
-    );
+    // region P26-J7
+    // EmblemView + LookComponent children keep the PNG/fallback route and
+    // the equipped bird's plate centre identical to the other rank cards.
+    // endregion
     if (_editing) {
       // The field's underline (2 pt pink) and the caret.
       final y = _field.y + _field.fontSize + (30 - _field.fontSize) / 2 + 2;

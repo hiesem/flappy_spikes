@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import '../skins/art/shapes.dart';
 import 'levels.dart';
+import 'level_track.dart';
 
 /// A cached static path with the single colour it is filled in.
 class _Shape {
@@ -44,6 +45,98 @@ class _Plate {
 abstract final class EmblemPainter {
   /// Number of ranked levels (1..10); 0 is the unranked frame.
   static const int maxLevel = 10;
+
+  // region P26-J7
+  /// PNG slot 32 is shared by every endless level. Slot 0 stays painted.
+  static int slotFor(int level) => level.clamp(0, 32);
+
+  /// J8 export contract: transparent 280-art-unit square, plate at its centre.
+  /// Flutter resolves the matching 2.0x / 3.0x asset automatically.
+  static String? assetFor(int level) => level <= 0
+      ? null
+      : 'assets/emblems/emblem_${slotFor(level).toString().padLeft(2, '0')}.png';
+
+  static bool trackAnimates(int level) => slotFor(level) >= 21;
+
+  /// Progression emblems reuse the ten approved painted masters until J8.
+  /// The legacy [paint] API remains for the score-rank art and its consumers.
+  /// Images and painted fallbacks share the same idle layers and plate centre.
+  static void paintTrack(
+    Canvas canvas,
+    int level, {
+    double t = 0,
+    bool shine = true,
+    bool grey = false,
+    bool reduceMotion = false,
+    Image? image,
+  }) {
+    final slot = slotFor(level);
+    final clock = reduceMotion ? 0.0 : t;
+    if (grey) canvas.saveLayer(layerBounds, _greyPaint);
+    if (slot >= 21) {
+      canvas.save();
+      canvas.rotate(clock * .15);
+      canvas.drawPath(_raysEven, fillPaint(_gold.withValues(alpha: .18)));
+      canvas.drawPath(_raysOdd, fillPaint(_goldLight.withValues(alpha: .18)));
+      canvas.restore();
+    }
+    if (slot >= 26) {
+      final alpha = .10 + .08 * (1 + math.sin(clock * 2)) / 2;
+      canvas.drawCircle(
+        Offset.zero,
+        62,
+        fillPaint(_gold.withValues(alpha: alpha)),
+      );
+    }
+    if (slot == 0 || image == null) {
+      // Freeze legacy flags / flames; the progression clock belongs solely
+      // to the layers below. No second drawing of an emblem or ray master.
+      _draw(canvas, paintedEmblemFor(slot), 0, false);
+    } else {
+      canvas.drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        layerBounds,
+        Paint()..filterQuality = FilterQuality.high,
+      );
+    }
+    if (slot > 0 && shine && !reduceMotion && sweepActive(clock)) {
+      canvas.save();
+      canvas.clipPath(_plateFor(paintedEmblemFor(slot)).inner);
+      final u = (clock % sweepPeriod) / (sweepPeriod * sweepShare);
+      canvas.translate(-110 + u * 220, 0);
+      canvas.drawPath(_sweepBand, fillPaint(_white.withValues(alpha: .38)));
+      canvas.restore();
+    }
+    if (slot >= 26) {
+      for (var i = 0; i < 8; i++) {
+        final angle = i * math.pi / 4;
+        final tw = .25 + .75 * math.sin(clock * 2 + i * 1.7).abs();
+        paintStar(
+          canvas,
+          math.cos(angle) * 58,
+          math.sin(angle) * 58,
+          1 + 2 * tw,
+          _white.withValues(alpha: tw),
+        );
+      }
+    }
+    if (slot == 29 || slot == 31) {
+      // Reuse the emblem's existing flame / lightning sparkle primitive.
+      _crownSparkle(canvas, clock);
+      for (final side in [-1, 1]) {
+        paintStar(
+          canvas,
+          side * 75.0,
+          -12,
+          3 + 2 * math.sin(clock * 9).abs(),
+          _goldLight.withValues(alpha: .35 + .6 * math.sin(clock * 7).abs()),
+        );
+      }
+    }
+    if (grey) canvas.restore();
+  }
+  // endregion
 
   static const Color _steel = Color(0xFF6E7B83);
   static const Color _steelDark = Color(0xFF4D575D);

@@ -4,6 +4,10 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flame/extensions.dart';
+// region P26-J3
+import 'package:flame/events.dart';
+import '../../game/config.dart';
+// endregion
 
 import '../../components/home/menu_primitives.dart';
 // region P26-LB6
@@ -47,30 +51,33 @@ const List<String> kResultsImages = [
   // endregion P26-LB4
 ];
 
-// region P26-J2
-/// PRD-2.6 J3: the run adds eligible score to the accumulated level points.
+// region P26-J3
+/// PRD-2.6 J7a: accumulated level progress on the results page.
 class LevelBar {
-  const LevelBar(this.level, this.fraction, this.label);
+  const LevelBar(this.level, this.fraction, this.label, this.points, this.need);
 
-  /// J3: the accumulated [points] before the run plus its eligible [score].
   factory LevelBar.at(int level, {int points = 0, int score = 0}) {
-    final next = trackLevelDef(level + 1);
-    if (next == null) return LevelBar(level, 1, 'MAX LEVEL');
-    final total = points + score;
-    final left = math.max(0, needFor(level) - total);
+    final next = trackLevelDef(level + 1)!;
+    final total = math.max(0, points + score);
+    final left = math.max(0, next.points - total);
+    final target = level >= 32 ? 'LEVEL ${level + 1}' : next.name;
     return LevelBar(
       level,
-      (total / needFor(level)).clamp(0.0, 1.0),
-      '${formatCoins(left)} TO ${next.name}',
+      (total / next.points).clamp(0.0, 1.0),
+      '${formatCoins(left)} TO $target',
+      math.min(total, next.points),
+      next.points,
     );
   }
 
   final int level;
   final double fraction;
   final String label;
+  final int points;
+  final int need;
+  String get counter => '${formatCoins(points)} / ${formatCoins(need)}';
 }
 
-/// "HAWK · LV 7", or "UNRANKED" below level 1 (§5.10 rank line).
 String rankText(int level) {
   final def = trackLevelDef(level);
   return def == null ? 'UNRANKED' : '${def.name} · LV $level';
@@ -186,8 +193,10 @@ class ResultsPage implements ResultsScreenFactory {
 ///
 /// Geometry is the 320 × 711 mock in [content]'s coordinates, scaled by
 /// [ResultsConfig.scaleFor] about the top centre on shorter screens.
+// region P26-J3
 class ResultsScreen extends PositionComponent
-    with HasGameReference<FlappySpikesGame>, GroupOpacity {
+    with HasGameReference<FlappySpikesGame>, GroupOpacity, TapCallbacks {
+  // endregion
   ResultsScreen({required this.summary, required this.model})
     : super(priority: priorityOnTop);
 
@@ -285,6 +294,24 @@ class ResultsScreen extends PositionComponent
   late final MenuText rank;
   late final ResultsBar bar;
   late final MenuText barLabel;
+  // region P26-J3
+  late final MenuText barCounter;
+  late final MenuText scoreGain;
+  late final MenuText surplusLabel;
+  late final MenuText levelCoinsLabel;
+  late final int pointsBefore;
+  bool _coinsPresented = false;
+  bool _revealReady = false;
+
+  /// J4 attaches the item reveal here; pending rewards stay persisted until choice.
+  void Function()? onReveal;
+  bool get revealReady => _revealReady;
+  int get surplus => math.max(
+    0,
+    pointsBefore + (model.countsForLevel ? model.score : 0) -
+        trackLevelDef(model.levelBefore + 1)!.points,
+  );
+  // endregion
   late final ResultsClaimButton claimButton;
   late final MenuText rewardText;
   late final PositionComponent rewardPill;
@@ -397,6 +424,9 @@ class ResultsScreen extends PositionComponent
   /// scheduled step ran, the count-ups and the bar with its fades have
   /// finished) and no CLAIM waits. The rating sheet's 1.5 s count starts here.
   bool get settled {
+    // region P26-J3
+    if (_t < ResultsConfig.noLevelSettleAt) return false;
+    // endregion
     if (!canContinue || _leaving || _claimShowing || _schedule.isNotEmpty) {
       return false;
     }
@@ -447,8 +477,9 @@ class ResultsScreen extends PositionComponent
       ..position = transform.$1.clone()
       ..scale = transform.$2.clone();
 
-    // region P26-J2
-    final before = LevelBar.at(model.levelBefore, points: model.pointsBefore);
+    // region P26-J3
+    pointsBefore = model.pointsBefore;
+    final before = LevelBar.at(model.levelBefore, points: pointsBefore);
     // endregion
 
     // --- card ------------------------------------------------------------
@@ -515,11 +546,12 @@ class ResultsScreen extends PositionComponent
     // endregion WP-5b
 
     // --- level stage -----------------------------------------------------
+    // region P26-J3
     stage = ResultsLevelStage(this, level: before.level);
     rank = MenuText(
       rankText(before.level),
       fontSize: ResultsConfig.rankFontSize,
-      color: ResultsConfig.plum,
+      color: Config.uiAccent,
       fontFamily: 'Fredoka',
       fontWeight: FontWeight.w600,
       lineHeight: 1.2,
@@ -537,6 +569,34 @@ class ResultsScreen extends PositionComponent
       position: Vector2(160, ResultsConfig.barLabelTop),
       anchor: Anchor.topCenter,
     );
+    barCounter = MenuText(
+      before.counter,
+      fontSize: 10,
+      color: ResultsConfig.plum,
+      position: ResultsConfig.bar.center.toVector2(),
+      anchor: Anchor.center,
+    );
+    scoreGain = MenuText(
+      '+${formatCoins(model.countsForLevel ? model.score : 0)}',
+      fontSize: 11,
+      color: Config.uiAccent,
+      position: Vector2(270, ResultsConfig.bar.top - 16),
+      anchor: Anchor.topRight,
+    )..color = Config.uiAccent.withValues(alpha: 0);
+    surplusLabel = MenuText(
+      '+${formatCoins(surplus)} OVER · DROPPED',
+      fontSize: 10,
+      color: Config.uiAccent,
+      position: Vector2(160, ResultsConfig.barLabelTop + 14),
+      anchor: Anchor.topCenter,
+    )..color = Config.uiAccent.withValues(alpha: 0);
+    levelCoinsLabel = MenuText(
+      '+${formatCoins(model.levelReward)}',
+      fontSize: 16,
+      color: ResultsConfig.goldDark,
+      position: Vector2(248, ResultsConfig.rewardPill.top - 10),
+      anchor: Anchor.center,
+    )..color = Config.uiAccent.withValues(alpha: 0);
     _labelBump = WiggleEffect(barLabel);
     barLabel.decorator.addLast(_labelBump);
     claimButton = ResultsClaimButton(
@@ -546,11 +606,15 @@ class ResultsScreen extends PositionComponent
       isActive: () => _active() && _claimShowing,
     );
 
+    // endregion
+
     // --- reward ------------------------------------------------------------
     final rewardLabel = MenuText(
       'YOUR REWARD',
       fontSize: ResultsConfig.rewardLabelFontSize,
-      color: kPostRunPalette.foreground,
+      // region P26-J3
+      color: Config.uiAccent,
+      // endregion
       letterSpacingEm: ResultsConfig.rewardLabelLetterSpacing,
       position: Vector2(160, ResultsConfig.rewardLabelTop),
       anchor: Anchor.topCenter,
@@ -633,6 +697,9 @@ class ResultsScreen extends PositionComponent
       rank,
       bar,
       barLabel,
+      // region P26-J3
+      barCounter, scoreGain, surplusLabel, levelCoinsLabel,
+      // endregion
       claimButton,
       rewardLabel,
       rewardPill,
@@ -717,38 +784,26 @@ class ResultsScreen extends PositionComponent
     });
   }
 
+  // region P26-J3
   void _planBar() {
-    // region P26-J2
-    final after = LevelBar.at(model.levelBefore, points: model.pointsBefore,
-      score: model.countsForLevel ? model.score : 0);
-    // endregion
-    const b = ResultsConfig.barAt;
-    if (!model.levelUp) {
-      _at(b, () {
-        game.sound.play(Sfx.lvBar);
-        _animateBar(after.fraction, ResultsConfig.barFill);
-      });
-      _at(b + ResultsConfig.barFill, () {
-        barLabel.text = after.label;
-        _labelBumpStart = _t;
-      });
-      return;
-    }
-    // --- LEVEL UP ------------------------------------------------------------
-    _at(b, () {
+    final after = LevelBar.at(
+      model.levelBefore,
+      points: pointsBefore,
+      score: model.countsForLevel ? model.score : 0,
+    );
+    _at(ResultsConfig.barAt, () {
       game.sound.play(Sfx.lvBar);
-      barLabel.text = '';
-      _animateBar(1, ResultsConfig.barToLevel);
+      _animateBar(after.fraction, ResultsConfig.barFill);
     });
-    const up = b + ResultsConfig.barToLevel;
-    _at(up, () {
-      bar.flashStart = _t;
-      stage.shakeStart = _t;
+    _at(ResultsConfig.barFullAt, () {
+      barLabel.text = after.label;
+      _labelBumpStart = _t;
+      if (model.levelUp) bar.flashStart = _t;
     });
-    const pop = up + ResultsConfig.shake;
-    _at(pop, () {
+    if (!model.levelUp) return;
+    _at(ResultsConfig.emblemFlashAt, () => stage.flashStart = _t);
+    _at(ResultsConfig.emblemSwapAt, () {
       final level = model.levelAfter;
-      fx.flashStart = _t;
       stage
         ..level = level
         ..popStart = _t
@@ -759,11 +814,10 @@ class ResultsScreen extends PositionComponent
       rank.text = rankText(level);
       _rankBounceStart = _t;
       if (!game.reduceMotion) {
-        final big = level >= 9;
         fx.confetti(
           ResultsConfig.plateCentre,
           ResultsConfig.confettiFor(level),
-          speed: big ? 275 : 220,
+          speed: level >= 9 ? 275 : 220,
         );
         for (final r in ResultsConfig.rockets) {
           fx.fireworks.launch(r.$1, r.$2, r.$3, delay: r.$4);
@@ -771,7 +825,7 @@ class ResultsScreen extends PositionComponent
       }
     });
     if (model.levelAfter >= 9) {
-      _at(pop + ResultsConfig.secondWave, () {
+      _at(ResultsConfig.emblemSwapAt + ResultsConfig.secondWave, () {
         if (game.reduceMotion) return;
         fx
           ..confetti(const Offset(60, 300), ResultsConfig.secondWaveConfetti)
@@ -781,18 +835,53 @@ class ResultsScreen extends PositionComponent
         }
       });
     }
-    _at(pop + ResultsConfig.claimAfter, () {
-      if (_claimed) return;
-      _fadeBar(1, 0, ResultsConfig.barFadeOut);
-      if (model.hasClaim) {
+    _at(ResultsConfig.barResetAt, () {
+      _animateBar(0, ResultsConfig.barResetDuration);
+      barLabel.text = LevelBar.at(model.levelAfter).label;
+    });
+    _at(ResultsConfig.levelCoinsAt, _presentLevelCoins);
+    _at(ResultsConfig.revealAt, () {
+      _revealReady = true;
+      // J4 replaces the temporary J2 CLAIM entry with its EQUIP/LATER sheet.
+      if (model.hasClaim && !_claimed) {
         claimButton.show(_t);
         _claimShowing = true;
-      } else {
-        // Nothing owed (claimed before): straight to the new progress.
-        _barBack();
       }
+      onReveal?.call();
     });
   }
+
+  void _presentLevelCoins() {
+    if (_coinsPresented || model.levelReward <= 0) return;
+    _coinsPresented = true;
+    game.sound.play(Sfx.lvClaim);
+    fx.flyCoins(_coin, onLand: () => game.sound.play(Sfx.bnCoin));
+    _countFrom = model.reward;
+    _countTo = model.reward + model.levelReward;
+    _countLength = ResultsConfig.levelCoinsCount;
+    _countStart = _t + ResultsConfig.coinFlight;
+    _at(_countStart!, () => _startTicks(model.levelReward, _countLength));
+    _at(ResultsConfig.levelCoinsEnd, () => _pillBumpStart = _t);
+  }
+
+  /// Skip the prelude to the reveal boundary. This never pays or rerolls a reward.
+  void skipToReveal() {
+    if (!canContinue || _leaving || _revealReady) return;
+    final target = model.levelUp
+        ? ResultsConfig.revealAt
+        : ResultsConfig.noLevelSettleAt;
+    // Walk the clock so each scheduled animation retains its absolute timing.
+    while (_t < target) {
+      update(math.min(1 / 120, target - _t));
+    }
+    stage.update(0);
+    levelUpBanner.update(0);
+    _stopTicks();
+  }
+
+  @override
+  void onTapUp(TapUpEvent event) => skipToReveal();
+  // endregion
 
   void _animateBar(double to, double length) {
     _barFrom = bar.fraction;
@@ -827,8 +916,14 @@ class ResultsScreen extends PositionComponent
     _claimShowing = false;
     _claimed = true;
     unawaited(claimLevelRewards(game, auto ? 'auto_next' : 'tap'));
-    game.sound.play(Sfx.lvClaim);
+    // region P26-J3
     claimButton.hide(_t);
+    if (_coinsPresented) {
+      _claimEnd = math.max(_t, ResultsConfig.levelCoinsEnd);
+      return;
+    }
+    game.sound.play(Sfx.lvClaim);
+    // endregion
     fx.flyCoins(_coin, onLand: () => game.sound.play(Sfx.bnCoin));
     final start = _t;
     _at(start + ResultsConfig.claimCountDelay, () {
@@ -873,6 +968,12 @@ class ResultsScreen extends PositionComponent
     }
     // endregion P26-LB6
     if (!canContinue || _leaving) return;
+    // region P26-J3
+    if (model.levelUp && !_revealReady) {
+      skipToReveal();
+      return;
+    }
+    // endregion
     _leaving = true;
     _stopTicks(); // PRD-2.2 §14.1 NEXT mid-count stops the ticks
     if (_claimShowing) {
@@ -910,7 +1011,9 @@ class ResultsScreen extends PositionComponent
   }
 
   void _animate() {
-    final fg = kPostRunPalette.foreground;
+    // region P26-J3
+    const fg = Config.uiAccent;
+    // endregion
     // Count-ups (ease-out cubic).
     final cs = _countStart;
     if (cs != null) {
@@ -948,6 +1051,48 @@ class ResultsScreen extends PositionComponent
       bar.opacity = o;
       _barLabelOpacity = o;
     }
+    // region P26-J3
+    final showingNew = model.levelUp && _t >= ResultsConfig.barResetAt;
+    final level = showingNew ? model.levelAfter : model.levelBefore;
+    final need = trackLevelDef(level + 1)!.points;
+    barCounter.text =
+        '${formatCoins((bar.fraction * need).round())} / ${formatCoins(need)}';
+    scoreGain
+      ..color = Config.uiAccent.withValues(
+        alpha:
+            _t >= ResultsConfig.barAt &&
+                _t <
+                    (model.levelUp
+                        ? ResultsConfig.barFullAt + .5
+                        : ResultsConfig.noLevelSettleAt)
+            ? 1
+            : 0,
+      )
+      ..position.x =
+          ResultsConfig.bar.left + ResultsConfig.bar.width * bar.fraction;
+    final drop =
+        ((_t - ResultsConfig.barFullAt) / ResultsConfig.surplusDuration).clamp(
+          0.0,
+          1.0,
+        );
+    surplusLabel
+      ..color = Config.uiAccent.withValues(
+        alpha: model.levelUp && _t >= ResultsConfig.barFullAt
+            ? (drop < .15
+                  ? drop / .15
+                  : drop > .7
+                  ? (1 - drop) / .3
+                  : 1)
+            : 0,
+      )
+      ..position.y =
+          ResultsConfig.barLabelTop +
+          14 +
+          (game.reduceMotion ? 0 : 8 * drop * drop);
+    levelCoinsLabel.color = ResultsConfig.goldDark.withValues(
+      alpha: _coinsPresented ? 1 : 0,
+    );
+    // endregion
     // Label bump 1.25 → 1.
     final lb = _labelBumpStart;
     _labelBump.scale = lb == null
@@ -960,7 +1105,9 @@ class ResultsScreen extends PositionComponent
       _rankBounce.scale = u < .6
           ? .6 + .7 * Ease.cssOut(u / .6)
           : 1.3 - .3 * Ease.cssOut((u - .6) / .4);
-      rank.color = Color.lerp(ResultsConfig.pink, ResultsConfig.plum, u)!;
+      // region P26-J3
+      rank.color = Config.uiAccent;
+      // endregion
     }
     // Pill bump 1 → 1.12 (30 %) → 1.
     final pb = _pillBumpStart;
@@ -1101,12 +1248,7 @@ class ResultsScreen extends PositionComponent
 
 /// A flat filled box with children.
 class _Box extends PositionComponent {
-  _Box({
-    required this.color,
-    super.position,
-    super.size,
-    super.children,
-  });
+  _Box({required this.color, super.position, super.size, super.children});
 
   final Color color;
   final Paint _paint = Paint();
@@ -1312,6 +1454,9 @@ class ResultsLevelStage extends PositionComponent {
 
   /// Rays opacity (0 = none; 1 during the celebration).
   double rays = 0;
+  // region P26-J3
+  double? flashStart;
+  // endregion
   double? shakeStart;
   double? popStart;
   final math.Random _rnd = math.Random();
@@ -1361,14 +1506,13 @@ class ResultsLevelStage extends PositionComponent {
         (t * ResultsConfig.birdFlapRate) % 1 < ResultsConfig.birdFlapShare;
     final ps = popStart;
     final s = ps == null ? 1.0 : popScale((t - ps) / ResultsConfig.emblemPop);
-    _holder.scale = Vector2.all(s);
+    // region P26-J3
+    _holder.scale = Vector2.all(still ? 1 : s);
+    // endregion
     var off = Vector2.zero();
     final sh = shakeStart;
     if (sh != null && t - sh < ResultsConfig.shake && !still) {
-      off = Vector2(
-        (_rnd.nextDouble() - .5) * 6,
-        (_rnd.nextDouble() - .5) * 4,
-      );
+      off = Vector2((_rnd.nextDouble() - .5) * 6, (_rnd.nextDouble() - .5) * 4);
     }
     _holder.position = _plate.toVector2() + off;
   }
@@ -1377,7 +1521,29 @@ class ResultsLevelStage extends PositionComponent {
   void renderTree(Canvas canvas) {
     canvas.save();
     canvas.clipRect(Rect.fromLTWH(x, y, width, height));
+    // region P26-J3
+    final start = flashStart;
+    final elapsed = start == null ? -1.0 : _page.time - start;
+    final flash =
+        elapsed >= 0 &&
+        elapsed < ResultsConfig.emblemFlashDuration &&
+        !_page.game.reduceMotion;
+    if (flash) {
+      final alpha =
+          (1 - (elapsed / ResultsConfig.emblemFlashDuration - .5).abs() * 2)
+              .clamp(0.0, 1.0);
+      canvas.saveLayer(
+        null,
+        Paint()
+          ..colorFilter = ColorFilter.mode(
+            const Color(0xFFFFFFFF).withValues(alpha: alpha),
+            BlendMode.srcATop,
+          ),
+      );
+    }
     super.renderTree(canvas);
+    if (flash) canvas.restore();
+    // endregion
     canvas.restore();
   }
 
@@ -1411,6 +1577,26 @@ class ResultsBar extends PositionComponent {
       Rect.fromLTWH(0, 0, width * fraction.clamp(0.0, 1.0), height),
       _paint,
     );
+    // region P26-J3
+    final drop = (_page.time - ResultsConfig.barFullAt) / .75;
+    if (_page.model.levelUp && _page.surplus > 0 && drop >= 0 && drop < 1) {
+      final w = math.min(
+        70.0,
+        width *
+            _page.surplus /
+            trackLevelDef(_page.model.levelBefore + 1)!.points,
+      );
+      canvas.save();
+      canvas.translate(
+        width + 2 + (_page.game.reduceMotion ? 0 : drop * 14),
+        _page.game.reduceMotion ? 0 : drop * drop * 46,
+      );
+      if (!_page.game.reduceMotion) canvas.rotate(drop * 28 * math.pi / 180);
+      _paint.color = Config.uiAccent.withValues(alpha: 1 - drop);
+      canvas.drawRect(Rect.fromLTWH(0, 0, w, height), _paint);
+      canvas.restore();
+    }
+    // endregion
     final fs = flashStart;
     if (fs != null) {
       final u = (_page.time - fs) / ResultsConfig.barFlash;
@@ -1637,7 +1823,13 @@ class ResultsFx extends PositionComponent {
 
   /// §5.10 12 coins from the CLAIM button into YOUR REWARD.
   void flyCoins(Sprite coin, {void Function()? onLand}) {
-    const from = ResultsConfig.claim;
+    // region P26-J3
+    final from = Rect.fromCenter(
+      center: ResultsConfig.plateCentre,
+      width: 48,
+      height: 20,
+    );
+    // endregion
     const pill = ResultsConfig.rewardPill;
     const size = 16.0;
     final fly = CoinFly.burst(
@@ -1806,7 +1998,10 @@ class ResultsWinnerTag extends PositionComponent {
       color: ResultsConfig.plum,
       letterSpacingEm: .1,
       lineHeight: 1.2,
-      position: Vector2(ResultsConfig.winnerTagPadX, ResultsConfig.winnerTagPadY),
+      position: Vector2(
+        ResultsConfig.winnerTagPadX,
+        ResultsConfig.winnerTagPadY,
+      ),
     );
     add(label);
     size = Vector2(

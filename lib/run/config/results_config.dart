@@ -1,4 +1,8 @@
 import 'dart:ui';
+// region P26-J3
+import '../../game/config.dart';
+
+// endregion
 
 /// Tuning and layout of the results page (PRD-2 §3.14 / §5.10, mock
 /// `design/menu_v2/screen_results_levels.html`). WP-2e. Every member's doc
@@ -37,7 +41,10 @@ abstract final class ResultsConfig {
 
   /// §5.10 (call) Uniform page scale at [h]: 1 from 711 up, ≈ 0.8 at 568.
   static double scaleFor(double h) =>
-      ((bottomFor(h) - topFor(h)) / (contentBottom - contentTop)).clamp(0.0, 1.0);
+      ((bottomFor(h) - topFor(h)) / (contentBottom - contentTop)).clamp(
+        0.0,
+        1.0,
+      );
 
   // ------------------------------------------------------------ layout
   /// §5.10 Header "YOU WIN!" / "YOU LOSE" / "DRAW" (versus only, WP-5b).
@@ -153,7 +160,9 @@ abstract final class ResultsConfig {
 
   // ------------------------------------------------------------ colours
   /// §5.10 Fixed colours of the page.
-  static const Color pink = Color(0xFFEC008C);
+  // region P26-J3
+  static const Color pink = Config.uiAccent;
+  // endregion
   static const Color soft = Color(0xFFFCD9EE);
   static const Color plum = Color(0xFF7A0044);
   static const Color gold = Color(0xFFFFB529);
@@ -171,14 +180,25 @@ abstract final class ResultsConfig {
   /// §5.10 NEW BEST pops in at 1.2 s (0.38 s).
   static const double newBestAt = 1.2;
 
-  /// §5.10 The bar fills from 1.65 s: 1.2 s within a level, 0.9 s to 100 %
-  /// when a level is reached.
-  static const double barAt = 1.65;
-  static const double barFill = 1.2;
-  static const double barToLevel = .9;
-
-  /// §5.10 The label bumps (1.25 → 1, 0.3 s) after a fill within a level.
-  static const double barLabelBump = .3;
+  // region P26-J3
+  /// PRD-2.6 J7a style A prelude (seconds since the results page opens).
+  static const double barAt = 1.25;
+  static const double barFill = .7;
+  static const double barToLevel = barFill;
+  static const double barFullAt = 1.95;
+  static const double noLevelSettleAt = 2.15;
+  static const double surplusDuration = 1.1;
+  static const double emblemFlashAt = 1.93;
+  static const double emblemSwapAt = 2.05;
+  static const double emblemFlashDuration = .24;
+  static const double barResetAt = 2.4;
+  static const double barResetDuration = .6;
+  static const double levelCoinsAt = 2.6;
+  static const double levelCoinsCount = .5;
+  static const double levelCoinsEnd = 3.65;
+  static const double revealAt = 3.55;
+  static const double barLabelBump = .2;
+  // endregion
 
   /// §5.10 LEVEL UP: bar flash 0.35 s, old emblem shake 0.26 s, then the
   /// white screen flash (0.85 → 0, 0.45 s) and the new emblem pop (0.5 s).

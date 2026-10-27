@@ -408,7 +408,7 @@ void main() {
     // A run at level FLEDGLING (hoops staged first, then the ranks, WP-L:
     // they follow the stored level) earns in order.
     a.onHoops(25);
-    a.onLevel(3);
+    a.onRunScore(100); // PRD-2.6 J9: three published score thresholds.
     expect(s.achPending, ['hoops_25', 'rank_chick', 'rank_fledgling']);
   });
 

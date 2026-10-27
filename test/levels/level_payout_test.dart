@@ -1,3 +1,5 @@
+// ignore: depend_on_referenced_packages
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:flappy_spikes/game/save_seal.dart';
 import 'package:flappy_spikes/run/screens/revive_ladder.dart';
 import 'package:flappy_spikes/menu/home_mode.dart';
@@ -22,6 +24,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers.dart';
+
+class _FailLevelWrite extends InMemorySharedPreferencesStore {
+  _FailLevelWrite(super.data) : super.withData();
+  bool failed = false;
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (key == 'flutter.lvlPending') {
+      failed = true;
+      throw StateError('simulated level write failure');
+    }
+    return super.setValue(valueType, key, value);
+  }
+}
 
 class _Killed implements Exception {}
 
@@ -107,6 +122,38 @@ void main() {
       expect(paid.coins, 50);
       expect(paid.lvlPending, isEmpty);
       expect(paid.ownedItems, hasLength(1));
+    },
+  );
+
+  FlameTester<FlappySpikesGame>(
+    () => createRunTestGame()..runDebug.ignoreGates = false,
+    gameSize: Vector2(320, 568),
+  ).testGameWidget(
+    'J2 failed level write still opens results',
+    setUp: (g, _) async {
+      await g.ready();
+      await preloadImages(g);
+    },
+    verify: (g, _) async {
+      final run = await startRun(g);
+      run.ctx.addScore(25);
+      final prefs = await SharedPreferences.getInstance();
+      final original = SharedPreferencesStorePlatform.instance;
+      final failing = _FailLevelWrite({
+        for (final key in prefs.getKeys()) 'flutter.$key': prefs.get(key)!,
+      });
+      SharedPreferencesStorePlatform.instance = failing;
+      try {
+        g.endRun(null);
+        for (var i = 0; i < 30 && g.resultsScreen == null; i++) {
+          await flushAndMount(g);
+        }
+        expect(g.state, GameState.results);
+        expect(g.resultsScreen, isNotNull);
+        expect(failing.failed, isTrue);
+      } finally {
+        SharedPreferencesStorePlatform.instance = original;
+      }
     },
   );
 

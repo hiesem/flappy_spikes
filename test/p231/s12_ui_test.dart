@@ -103,7 +103,7 @@ void main() async {
 
   tester(
     prefs: const {
-      'playerLevel': 1,
+      'lvlIndex': 1, // PRD-2.6 J5 explicit track state.
       'claimedLevels': ['1'],
     },
   ).testGameWidget(
@@ -111,7 +111,8 @@ void main() async {
     'one at a time',
     setUp: boot,
     verify: (g, w) async {
-      await play(g, 60); // EGG -> CHICK (WP-L): EGG + CHICK earned
+      g.runDebug.ignoreGates = false; // PRD-2.6 J3 counting level-up fixture.
+      await play(g, 60); // J9: EGG + CHICK score thresholds earned.
       // PRD-2.3.1 §19.2: the run unlocks one (EGG); CHICK waits in
       // achPending. A second pill (e.g. the jackpot's) queues behind it.
       expect(g.achievements.toastQueue.map((a) => a.key), ['rank_egg']);

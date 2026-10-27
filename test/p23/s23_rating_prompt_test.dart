@@ -293,6 +293,7 @@ void main() {
     'closes',
     setUp: (g, _) => boot(g),
     verify: (g, _) async {
+      g.runDebug.ignoreGates = false; // PRD-2.6 J3: only a counting run earns CLAIM.
       await play(g, 25); // run 5, reaches level 1: CLAIM shows
       for (var i = 0; i < 900 && !g.resultsScreen!.claimShowing; i++) {
         g.update(1 / 60);

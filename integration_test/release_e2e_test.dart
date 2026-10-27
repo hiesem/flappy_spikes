@@ -687,7 +687,7 @@ void main() {
     g.runDebug.god = true;
     await tester.pump(const Duration(seconds: 3));
 
-    // Force a best score that levels up twice (EGG 10, CHICK 50).
+    // Force a best score; this FS_E2E journey never earns progression.
     final forced = max(60, run.state.score);
     run.ctx.addScore(forced - run.state.score);
     // PRD-2.6 J3: a debug-touched journey gains no progression.
@@ -708,28 +708,18 @@ void main() {
     expect(g.storage.bestScore, greaterThanOrEqualTo(forced));
     expect(g.storage.gamesPlayed, 1);
     final page = g.resultsScreen!;
-    expect(page.model.levelReward, greaterThan(0));
-    expect(g.storage.unclaimedLevelReward, page.model.levelReward);
+    // PRD-2.6 J3: FS_E2E/debug runs never earn points, rewards or CLAIM.
+    expect(page.model.levelUp, isFalse);
+    expect(page.model.levelReward, 0);
+    expect(g.menu.levels.points, 0);
+    expect(g.menu.levels.pending, isEmpty);
     await _shot(tester, 'journey_08_results');
-
-    // The level-up celebration → CLAIM.
-    expect(
-      await _waitFor(tester, () => page.claimShowing, seconds: 20),
-      isTrue,
-      reason: 'CLAIM came up',
-    );
-    await _shot(tester, 'journey_09_claim');
-    final beforeClaim = g.menu.wallet.balance;
-    page.claimButton.onPressed();
-    await _waitFor(
-      tester,
-      () => g.storage.unclaimedLevelReward == 0,
-      seconds: 5,
-    );
-    expect(g.storage.unclaimedLevelReward, 0);
-    expect(g.menu.wallet.balance, beforeClaim + page.model.levelReward);
-    await tester.pump(const Duration(seconds: 3));
-    await _shot(tester, 'journey_10_claimed');
+    final beforeSettle = g.menu.wallet.balance;
+    await tester.pump(const Duration(seconds: 5));
+    expect(page.claimShowing, isFalse);
+    expect(g.menu.wallet.balance, beforeSettle);
+    expect(g.menu.levels.pending, isEmpty);
+    await _shot(tester, 'journey_09_results_settled');
 
     // NEXT → home.
     page.nextButton.onPressed();

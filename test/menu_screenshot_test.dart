@@ -158,6 +158,10 @@ void main() async {
         // DELETE: the "DATA DELETED" face.
         game.deleteDataPopup!.confirmButton.onPressed();
         await flushAndMount(game);
+        // PRD-2.6 J5: the reset persists four new progression keys asynchronously.
+        for (var i = 0; i < 30 && game.deleteDataPopup?.step == DeleteDataStep.confirm; i++) {
+          await flushAndMount(game);
+        }
         expect(game.deleteDataPopup!.step, DeleteDataStep.done);
         stepGame(game, 0.3);
         await flushAndMount(game);
@@ -172,6 +176,10 @@ void main() async {
         await flushAndMount(game);
         game.deleteDataPopup!.confirmButton.onPressed();
         await flushAndMount(game);
+        // PRD-2.6 J5: the reset persists four new progression keys asynchronously.
+        for (var i = 0; i < 30 && game.deleteDataPopup?.step == DeleteDataStep.confirm; i++) {
+          await flushAndMount(game);
+        }
         expect(game.deleteDataPopup!.step, DeleteDataStep.failed);
         stepGame(game, 0.3);
         await flushAndMount(game);

@@ -700,6 +700,9 @@ class GameStorage {
     }
     // region P26-J2
     // J5: settle an interrupted 2.5 credit once; legacy ranks never migrate.
+    // No Wallet exists during load. This repairs an already-earned 2.5 credit,
+    // so it intentionally bypasses onEarned and the new 2.6 lifetime ledger;
+    // ordinary 2.6 rewards always go through Wallet.add(levelReward).
     if (levelRewardPayout > 0) {
       if (levelRewardPayout > coins) await saveCoins(levelRewardPayout);
       await saveLevelRewardPayout(0);

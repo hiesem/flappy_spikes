@@ -101,6 +101,42 @@ void main() {
   });
 
   group('§5.10 results page', () {
+    rt('J3 debug score 815 at L7 leaves the accumulated level bar unchanged',
+      () => trackGame(prefs: {'lvlIndex': 7, 'lvlPoints': 100})
+        ..runDebug.ignoreGates = true,
+      (g) async {
+        await startRun(g);
+        g.run!.ctx.addScore(815);
+        killRun(g);
+        await flushAndMount(g);
+        final page = g.resultsScreen!;
+        expect(page.model.countsForLevel, isFalse);
+        expect(page.model.levelUp, isFalse);
+        stepGame(g, 3.5);
+        expect(g.menu.levels.points, 100);
+        expect(page.bar.fraction, closeTo(.2, 1e-6));
+        expect(page.barLabel.text, '400 TO FEATHERWEIGHT');
+      },
+    );
+
+    rt('J3 bar starts at accumulated points and adds only this eligible run',
+      () => trackGame(prefs: {'lvlIndex': 7, 'lvlPoints': 100}),
+      (g) async {
+        await startRun(g);
+        g.run!.ctx.addScore(100);
+        killRun(g);
+        await flushAndMount(g);
+        final page = g.resultsScreen!;
+        expect(page.model.pointsBefore, 100);
+        expect(page.model.levelUp, isFalse);
+        expect(page.bar.fraction, closeTo(.2, 1e-6));
+        stepGame(g, 3.5);
+        expect(g.menu.levels.points, 200);
+        expect(page.bar.fraction, closeTo(.4, 1e-6));
+        expect(page.barLabel.text, '300 TO FEATHERWEIGHT');
+      },
+    );
+
     /// Starts a run, sets the run [score] and [coins] (hoop coins through
     /// `ctx.earn`) and ends it; returns once the results page is mounted.
     Future<ResultsScreen> endWith(

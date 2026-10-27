@@ -158,6 +158,10 @@ void main() {
       expect(popup.busy, isFalse);
       popup.confirmButton.onPressed();
       await flushAndMount(game);
+      // PRD-2.6 J5: the reset persists four new progression keys asynchronously.
+      for (var i = 0; i < 30 && game.deleteDataPopup?.step == DeleteDataStep.confirm; i++) {
+        await flushAndMount(game);
+      }
 
       expect(versus.deleteCalls, 1, reason: 'the call reaches the service');
       final result = game.deleteDataPopup;

@@ -146,7 +146,8 @@ void main() {
         await play(g, 100);
         expect(g.storage.lvlIndex, 1);
         expect(g.menu.levels.pendingLevelUp!.reward, 50);
-        expect(ranks(g), {'rank_egg'});
+        // PRD-2.6 J9: 100 in one run earns the first three published ranks.
+        expect(ranks(g), {'rank_egg', 'rank_chick', 'rank_fledgling'});
         for (var i = 0; i < 100 && g.resultsScreen == null; i++) {
           stepGame(g, 0.1);
           await flushAndMount(g);
@@ -166,7 +167,7 @@ void main() {
         await play(g, 100);
         expect(g.storage.lvlIndex, 2);
         expect(g.menu.levels.pendingLevelUp!.reward, 50);
-        expect(ranks(g), {'rank_egg', 'rank_chick'});
+        expect(ranks(g), {'rank_egg', 'rank_chick', 'rank_fledgling'});
         expect(await claimLevelRewards(g, 'tap'), 50);
 
         g.replay();
@@ -176,7 +177,7 @@ void main() {
         expect(g.storage.lvlIndex, 2);
         expect(g.menu.levels.pendingLevelUp, isNull);
         expect(g.storage.unclaimedLevelReward, 0);
-        expect(ranks(g), {'rank_egg', 'rank_chick'});
+        expect(ranks(g), {'rank_egg', 'rank_chick', 'rank_fledgling'});
         expect(g.storage.bestScore, 100);
       },
     );

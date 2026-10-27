@@ -4892,6 +4892,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         ftueTracker.step(FtueStep.run20End, gamesPlayed: storage.gamesPlayed);
     }
     // region P26-J2
+    _resultsLevelPoints = menu.levels.points;
     final levelRecorded = RunEndBookkeeping.record(this, score);
     _resultsLevels = (previousLevel, menu.levels.level);
     // endregion
@@ -4989,7 +4990,19 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     unawaited(recordDuelRun(storage, s, counts: _countsForUpload));
     // endregion
     // region P26-J2 — the reward roll must be durable before the reveal.
-    unawaited(levelRecorded.then((_) => PostRunFlow(this).run(s)));
+    final progressSettled = levelRecorded.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stack) {
+        debugPrint('level save failed: ${redactSecrets(error)}');
+      },
+    );
+    if (menu.levels.level > previousLevel) {
+      unawaited(progressSettled.whenComplete(() => PostRunFlow(this).run(s)));
+    } else {
+      // No roll to reveal: preserve immediate run completion/replay ordering.
+      unawaited(progressSettled);
+      unawaited(PostRunFlow(this).run(s));
+    }
     // endregion
 
     fadeOpacity(_hud, from: 1, to: 0, duration: Config.gameplayFadeDuration);
@@ -5030,6 +5043,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// WP-L the stored level before / after the last ended run (the results
   /// page's level stage); null before the first run end.
   (int, int)? _resultsLevels;
+  // region P26-J2
+  int _resultsLevelPoints = 0;
+  // endregion
 
   /// The results page while it is up (tests, keyboard).
   ResultsScreen? get resultsScreen => _results;
@@ -5046,6 +5062,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         pending: menu.levels.pendingLevelUp,
         levelBefore: _resultsLevels?.$1,
         levelAfter: _resultsLevels?.$2,
+        // region P26-J2
+        pointsBefore: _resultsLevelPoints,
+        countsForLevel: _run?.countsForUpload ?? false,
+        // endregion
       ),
     );
     _results = page;

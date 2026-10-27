@@ -104,9 +104,17 @@ Future<void> _grey(FlappySpikesGame g) async {
   expect(g.stageKey, 30, reason: 'the underlying run is still cyan');
   expect(g.postRunPageUp, isTrue);
   final rays = g.resultsScreen?.stage.rays;
+  final fx = g.resultsScreen?.fx;
+  final fxScale = fx?.scale.clone();
   g.resultsScreen?.stage.rays = 0;
-  final bytes = await _frame(g);
-  if (rays != null) g.resultsScreen!.stage.rays = rays;
+  // Sample the underlying §31 strip palette, as with rays above: random
+  // celebration particles can cover these pixels while a level-up is visible.
+  // The separate paint assertions below still render the full celebration.
+  fx?.scale.setZero();
+  final bytes = await _frame(g).whenComplete(() {
+    if (rays != null) g.resultsScreen!.stage.rays = rays;
+    if (fxScale != null) fx!.scale.setFrom(fxScale);
+  });
   expect(_pixel(bytes, 2, 300), kPostRunPalette.background);
   expect(_pixel(bytes, 5, 5), kPostRunPalette.foreground);
   expect(

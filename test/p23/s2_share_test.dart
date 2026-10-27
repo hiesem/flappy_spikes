@@ -409,8 +409,8 @@ void main() {
         expect(d.score, isNot(100));
         expect(d.best, g.storage.bestScore);
         expect(d.best, greaterThanOrEqualTo(21));
-        // WP-L the stored level (EGG), not the level of the best (21: 0).
-        expect(d.level, 1);
+        // PRD-2.6 J3/J5: this debug-assisted run cannot earn a track level.
+        expect(d.level, 0);
         expect(d.level, g.menu.levels.level);
         expect(d.look, g.menu.items.look);
         expect(d.name, isNot('Rival'));

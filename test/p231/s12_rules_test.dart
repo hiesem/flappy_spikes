@@ -85,9 +85,8 @@ void main() {
         'claimedLevels': [for (var l = 1; l <= i; l++) '$l'],
       },
     ).testGameWidget(
-      '§12.2 rank ${lv.name}: at ${i == 0 ? 'UNRANKED' : ranks[i - 1].name} '
-      'a run scoring exactly ${lv.threshold} steps up to it and unlocks it '
-      'and every lower rank, no higher one',
+      'J9 a run scoring exactly ${lv.threshold} earns ${lv.name} and every '
+      'lower score rank, independent of track index $i',
       setUp: boot,
       verify: (g, _) async {
         g.runDebug.ignoreGates = false; // J3: this rank transition needs a counting run.
@@ -110,7 +109,7 @@ void main() {
   }
 
   t.testGameWidget(
-    'WP-L a 2,000-point first run steps up ONE level: EGG only',
+    'J3/J9 a 2,000-point first run earns one track level and nine score ranks',
     setUp: boot,
     verify: (g, _) async {
       g.runDebug.ignoreGates = false; // J3 counting rank transition.
@@ -118,7 +117,24 @@ void main() {
       run.ctx.addScore(2000);
       await finish(g);
       expect(g.menu.levels.level, 1);
-      expect(unlocked(g).where((k) => k.startsWith('rank_')), {'rank_egg'});
+      // PRD-2.6 J9: ranks follow one run's score, independently of J3's step.
+      expect(unlocked(g).where((k) => k.startsWith('rank_')).toSet(),
+        kRankAchievements.take(9).map((id) => id.key).toSet());
+    },
+  );
+
+  tester(prefs: {'lvlIndex': 9}).testGameWidget(
+    'J9 track level 9 plus 700 points never earns LEGEND',
+    setUp: boot,
+    verify: (g, _) async {
+      g.runDebug.ignoreGates = false;
+      final run = await startRun(g);
+      run.ctx.addScore(700);
+      await finish(g);
+      expect(g.menu.levels.level, 10);
+      expect(unlocked(g).contains('rank_legend'), isFalse);
+      expect(unlocked(g).where((key) => key.startsWith('rank_')).toSet(),
+        kRankAchievements.take(6).map((id) => id.key).toSet());
     },
   );
 

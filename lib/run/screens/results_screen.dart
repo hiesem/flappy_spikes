@@ -44,23 +44,20 @@ const List<String> kResultsImages = [
   // endregion P26-LB4
 ];
 
-/// The level bar of the results page (§5.10; owner 2026-10-17, WP-L: the
-/// level is stored and steps up one per run): the level, the fill of a
-/// single run's [score] toward the next threshold and the label under the
-/// bar ("70 TO FLEDGLING", "MAX LEVEL").
 // region P26-J2
+/// PRD-2.6 J3: the run adds eligible score to the accumulated level points.
 class LevelBar {
   const LevelBar(this.level, this.fraction, this.label);
 
-  /// The bar at [level] for a run of [score] (0 = no run counted yet: an
-  /// empty bar and the full threshold to reach).
-  factory LevelBar.at(int level, {int score = 0}) {
+  /// J3: the accumulated [points] before the run plus its eligible [score].
+  factory LevelBar.at(int level, {int points = 0, int score = 0}) {
     final next = trackLevelDef(level + 1);
     if (next == null) return LevelBar(level, 1, 'MAX LEVEL');
-    final left = math.max(0, next.points - score);
+    final total = points + score;
+    final left = math.max(0, needFor(level) - total);
     return LevelBar(
       level,
-      (score / next.points).clamp(0.0, 1.0),
+      (total / needFor(level)).clamp(0.0, 1.0),
       '${formatCoins(left)} TO ${next.name}',
     );
   }
@@ -88,6 +85,10 @@ class ResultsModel {
     this.levelReward = 0,
     this.levelBefore = 0,
     this.levelAfter = 0,
+    // region P26-J2
+    this.pointsBefore = 0,
+    this.countsForLevel = true,
+    // endregion
   });
 
   /// The page for [s]: YOUR REWARD is the run's coin total (`s.coins` =
@@ -102,6 +103,10 @@ class ResultsModel {
     PendingLevelUp? pending,
     int? levelBefore,
     int? levelAfter,
+    // region P26-J2
+    int pointsBefore = 0,
+    bool countsForLevel = true,
+    // endregion
   }) => ResultsModel(
     score: s.score,
     bestBefore: s.bestBefore,
@@ -110,6 +115,10 @@ class ResultsModel {
     levelReward: pending?.reward ?? 0,
     levelBefore: levelBefore ?? 0,
     levelAfter: levelAfter ?? levelBefore ?? 0,
+    // region P26-J2
+    pointsBefore: pointsBefore,
+    countsForLevel: countsForLevel,
+    // endregion
   );
 
   final int score;
@@ -127,6 +136,10 @@ class ResultsModel {
 
   /// The stored level after this run (at most one step up, WP-L).
   final int levelAfter;
+  // region P26-J2
+  final int pointsBefore;
+  final bool countsForLevel;
+  // endregion
 
   bool get newBest => bestAfter > bestBefore;
 
@@ -431,7 +444,9 @@ class ResultsScreen extends PositionComponent
       ..position = transform.$1.clone()
       ..scale = transform.$2.clone();
 
-    final before = LevelBar.at(model.levelBefore);
+    // region P26-J2
+    final before = LevelBar.at(model.levelBefore, points: model.pointsBefore);
+    // endregion
 
     // --- card ------------------------------------------------------------
     final card = ResultsCard();
@@ -700,7 +715,10 @@ class ResultsScreen extends PositionComponent
   }
 
   void _planBar() {
-    final after = LevelBar.at(model.levelAfter, score: model.score);
+    // region P26-J2
+    final after = LevelBar.at(model.levelBefore, points: model.pointsBefore,
+      score: model.countsForLevel ? model.score : 0);
+    // endregion
     const b = ResultsConfig.barAt;
     if (!model.levelUp) {
       _at(b, () {

@@ -212,13 +212,15 @@ class AchievementTracker {
     });
   }
 
+  // region P26-J2
   /// The run ended (`FlappySpikesGame.endRun`). One transition, one write:
   /// the journal is consumed; a counting run commits its staged rules in
-  /// earning order, then its run-end batch (the versus win, ranks up to the
-  /// stored [level] after the run (WP-L), the daily streak for [day]) sorted by catalog index behind
+  /// earning order, then its run-end batch (the versus win, the one-run
+  /// [score] thresholds of PRD-2.6 J9, and the daily streak for [day])
+  /// sorted by catalog index behind
   /// the older pending, then (PRD-2.3.1 §19.2) unlocks at most one: the
   /// oldest pending.
-  void finishRun({required bool counts, int? level, int? day}) => _tx(() {
+  void finishRun({required bool counts, int? score, int? day}) => _tx(() {
     final staged = _open ? [..._s.journal] : const <String>[];
     _open = false;
     _excluded = false;
@@ -235,7 +237,7 @@ class AchievementTracker {
       for (final op in staged) {
         if (op == AchOp.versusWin) _apply(op);
       }
-      if (level != null) onLevel(level);
+      if (score != null) onRunScore(score);
       if (day != null) onRunDay(day);
     } finally {
       final batch = _batch!..sort((a, b) => a.index.compareTo(b.index));
@@ -244,6 +246,7 @@ class AchievementTracker {
     }
     _releaseOne();
   });
+  // endregion
 
   /// Launch (QA P2-03): a journal left by a run the app died in. One
   /// write: a clean journal's earnings join `achPending` (PRD-2.3.1 §19.2:
@@ -286,14 +289,16 @@ class AchievementTracker {
     }
   }
 
-  /// Ranks follow the stored level (owner 2026-10-17, WP-L): every rank up
-  /// to [level] (1..10; a rank missed by a non-counting run is caught up by
-  /// the next counting one).
-  void onLevel(int level) => _tx(() {
-    for (var l = 0; l < kRankAchievements.length; l++) {
-      if (l + 1 <= level) _earn(kRankAchievements[l]);
+  // region P26-J2
+  /// PRD-2.6 J9 / round-2 decision: published rank achievements retain
+  /// their single-run score thresholds, independently of progression.
+  void onRunScore(int score) => _tx(() {
+    const thresholds = [25, 50, 100, 200, 400, 600, 800, 1000, 2000, 5000];
+    for (var i = 0; i < kRankAchievements.length; i++) {
+      if (score >= thresholds[i]) _earn(kRankAchievements[i]);
     }
   });
+  // endregion
 
   /// A finished portal ride.
   void onRideFinished(RideId ride) => _tx(() {

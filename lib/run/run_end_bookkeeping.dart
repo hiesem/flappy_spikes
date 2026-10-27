@@ -11,11 +11,10 @@ abstract final class RunEndBookkeeping {
       score,
       counts: game.run?.countsForUpload ?? false,
     );
-    // Commit staged achievement unlocks only for counting runs. J9 replaces
-    // the legacy rank input here with the finished run's score.
+    // Published ranks use this run's score, never the progression index (J9).
     game.achievements.finishRun(
       counts: game.run?.countsForAchievements ?? false,
-      level: levels.level,
+      score: score,
       day: game.storage.today,
     );
     return recorded;

@@ -275,7 +275,7 @@ void main() {
     });
     a.beginRun(counts: true);
     a.runOp(AchOp.versusWin);
-    a.finishRun(counts: true, level: 1, day: 100);
+    a.finishRun(counts: true, score: 25, day: 100);
     await a.flush();
     expect(s.achUnlocked, {'master_hatch'});
     expect(s.achPending, ['rank_egg', 'vs_1', 'daily_7']);
@@ -285,7 +285,7 @@ void main() {
     final (s, a) = await boot({});
     a.beginRun(counts: true);
     a.runOp(AchOp.versusWin);
-    a.finishRun(counts: true, level: 1, day: 100);
+    a.finishRun(counts: true, score: 25, day: 100);
     await a.flush();
     expect(s.achUnlocked, {'rank_egg'});
     expect(s.achPending, ['vs_1']);

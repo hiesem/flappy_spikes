@@ -178,8 +178,13 @@ class SkinTab extends PositionComponent with TapCallbacks {
     // region P26-F9e
     if (layer == SkinLayer.card) {
       canvas.translate(iw / 2, ih / 2);
+      canvas.saveLayer(
+        Rect.fromLTWH(-iw / 2, -ih / 2, iw, ih),
+        Paint()..colorFilter = ColorFilter.mode(color, BlendMode.srcIn),
+      );
       CardFrameArt.paintBack(canvas, 'f_bubblegum', size: 18);
       CardFrameArt.paintFront(canvas, 'f_bubblegum', size: 18);
+      canvas.restore();
     } else {
       ShopGlyphs.tabIcon(canvas, layer, iw, ih, color);
     }

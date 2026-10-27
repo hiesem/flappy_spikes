@@ -54,7 +54,16 @@ SkinItem? featuredItemFor(ItemStore items) {
   }
   SkinItem? best;
   for (final item in allItems) {
-    if (item.isNone || items.isOwned(item.layer, item.id)) continue;
+    // region P26-F9e
+    // PRD F9: CARDS uses its own preview painters. The featured wardrobe row
+    // keeps wardrobe items only; skill items are never sold (O81).
+    if (item.layer == SkinLayer.card ||
+        item.isSkillOnly ||
+        item.isNone ||
+        items.isOwned(item.layer, item.id)) {
+      continue;
+    }
+    // endregion
     if (best == null || item.price < best.price) best = item;
   }
   return best;

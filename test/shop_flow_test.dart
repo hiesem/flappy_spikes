@@ -387,6 +387,29 @@ void main() {
       },
     );
 
+    // PRD 2.6 F9 / O81: card and skill cosmetics use the CARDS preview,
+    // never the wardrobe-only featured row (even when their price is zero).
+    shopTest(
+      'featured row excludes cards and skill entries',
+      verify: (game, spy, ads, iap, tester) async {
+        await game.storage.saveOwnedItems({
+          for (final i in allItems)
+            if (i.layer != SkinLayer.card) i.key,
+        });
+        final shop = await openShop(game);
+        expect(game.menu.items.isOwned(SkinLayer.card, 'pecking'), isFalse);
+        expect(shop.featured.item, isNull);
+        await game.storage.saveOwnedItems({
+          for (final i in allItems)
+            if (i.layer != SkinLayer.card && i.key != 'hat:cap') i.key,
+        });
+        game.update(0);
+        await flushAndMount(game);
+        expect(shop.featured.item?.key, 'hat:cap');
+        expect(shop.featured.priceText, '250');
+      },
+    );
+
     shopTest(
       'featured row opens the skin shop on its tab with it tried on',
       verify: (game, spy, ads, iap, tester) async {

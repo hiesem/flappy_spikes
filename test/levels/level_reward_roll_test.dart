@@ -125,6 +125,9 @@ void main() {
       final candidates = allItems
           .where(
             (i) =>
+                // PRD 2.6 F9 / O21: cards never enter level reward draws.
+                i.layer != SkinLayer.card &&
+                !i.isSkillOnly &&
                 !i.isFree &&
                 i.rarity != null &&
                 !owned.contains(i.key) &&

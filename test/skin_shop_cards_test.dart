@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flappy_spikes/components/skins/shop_widgets.dart';
 import 'package:flappy_spikes/components/skins/item_tile.dart';
 import 'package:flappy_spikes/game/sound.dart';
+import 'package:flappy_spikes/components/skins/preview_stage.dart';
 import 'package:flappy_spikes/skins/catalog.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,11 +12,15 @@ import 'helpers.dart';
 import 'shop_flow_test.dart' show shopTest;
 import 'skin_shop_flow_test.dart' show openSkinShop;
 
-Future<List<int>> tilePixels(ItemTile tile) async {
+Future<List<int>> paintPixels(
+  void Function(Canvas) paint,
+  int width,
+  int height,
+) async {
   final recorder = PictureRecorder();
-  tile.render(Canvas(recorder));
+  paint(Canvas(recorder));
   final picture = recorder.endRecording();
-  final image = await picture.toImage(92, 92);
+  final image = await picture.toImage(width, height);
   final bytes = await image.toByteData();
   final result = bytes!.buffer.asUint8List().toList();
   image.dispose();
@@ -23,7 +28,27 @@ Future<List<int>> tilePixels(ItemTile tile) async {
   return result;
 }
 
+Future<List<int>> tilePixels(ItemTile tile) => paintPixels(tile.render, 92, 92);
+
 void main() {
+  test(
+    'F9e animated sticker classification includes common and rare motion',
+    () {
+      for (final id in [
+        's_heart',
+        's_kaching',
+        's_spiked',
+        's_nailed',
+        's_bye',
+      ]) {
+        expect(ShopCardArt.animated(cardItemById(id)!), isTrue, reason: id);
+      }
+      for (final id in ['s_gg', 's_thumbs', 's_wow', 's_pow']) {
+        expect(ShopCardArt.animated(cardItemById(id)!), isFalse, reason: id);
+      }
+    },
+  );
+
   for (final height in [568.0, 711.0]) {
     shopTest(
       'F9e six fixed tabs and three card kinds at $height',
@@ -33,14 +58,25 @@ void main() {
         expect(shop.tabBar.tabs, hasLength(6)); // PRD:834
         expect(shop.tabBar.tabFor(SkinLayer.card).countText, '0/60');
         expect(shop.bar.total, 208);
+        expect(
+          shop.cardArt.pictureCount,
+          lessThanOrEqualTo(23),
+          reason: 'one static picture per item, never an eager animation atlas',
+        );
         final fixed = [
           shop.bar.position.clone(),
           shop.stage.position.clone(),
           shop.tabBar.position.clone(),
         ];
         for (final kind in CardKind.values) {
+          final beforeSwitch = shop.cardArt.pictureCount;
           shop.selectCardKind(kind);
           await flushAndMount(game);
+          expect(
+            shop.cardArt.pictureCount - beforeSwitch,
+            lessThanOrEqualTo(20),
+          );
+          expect(shop.cardArt.pictureCount, lessThanOrEqualTo(63));
           stepGame(game, .5);
           expect(shop.cardCounter(kind), '0/20');
           expect(shop.tiles, hasLength(21)); // free none + 17 sold + 3 skill
@@ -67,7 +103,7 @@ void main() {
           expect(
             shop.cardArt.pictureCount,
             count,
-            reason: 'rendering must replay cached card animation pictures',
+            reason: 'live animation must never record another cache picture',
           );
           shop.selectTab(SkinLayer.bird);
           await flushAndMount(game);
@@ -113,6 +149,7 @@ void main() {
       await flushAndMount(game);
       game.update(0);
       expect(game.menu.items.look.card, 'f_bubblegum||s_gg');
+      expect(spy.last('item_equip'), {'layer': 'card', 'id': ''});
       expect(shop.actionButton.shownKind, ShopActionKind.nothingOn);
       game.tapItem(SkinLayer.card, 'n_tangerine');
       await flushAndMount(game);
@@ -159,6 +196,83 @@ void main() {
       stepGame(game, 1.3);
       expect(await tester.runAsync(() => tilePixels(tile)), first);
       expect(shop.cardArt.pictureCount, count);
+    },
+  );
+  for (final (id, rarity) in [
+    ('f_tape', Rarity.common),
+    ('f_neon', Rarity.epic),
+  ]) {
+    shopTest(
+      'F9e $rarity purchase visibly celebrates on CARDS',
+      prefs: const {'coins': 10000},
+      verify: (game, spy, ads, iap, tester) async {
+        final shop = await openSkinShop(game, layer: SkinLayer.card);
+        expect(shop.cardArt.paintRays, isNotNull);
+        final before = (await tester.runAsync(
+          () => paintPixels(shop.stage.render, 292, 138),
+        ))!;
+        game.tapItem(SkinLayer.card, id);
+        await game.buyTriedOnItem();
+        // Freeze card art so outside-card differences are purchase effects.
+        game.reduceMotionOverride = true;
+        stepGame(game, .3);
+        expect(shop.stage.rays, rarity == Rarity.epic ? greaterThan(0) : 0);
+        final after = (await tester.runAsync(
+          () => paintPixels(shop.stage.render, 292, 138),
+        ))!;
+        var changed = 0;
+        for (var y = 0; y < 138; y++) {
+          for (var x = 0; x < 292; x++) {
+            if (x >= 20 && x < 272 && y >= 30 && y < 105) continue;
+            final i = (y * 292 + x) * 4;
+            if (before[i] != after[i] ||
+                before[i + 1] != after[i + 1] ||
+                before[i + 2] != after[i + 2]) {
+              changed++;
+            }
+          }
+        }
+        expect(
+          changed,
+          greaterThan(20),
+          reason:
+              'purchase confetti / R4 rays must be visible outside the card',
+        );
+      },
+    );
+  }
+
+  shopTest(
+    'F9e sticker rays use the R4 adapter at unmodified game time',
+    verify: (game, spy, ads, iap, tester) async {
+      final shop = await openSkinShop(game, layer: SkinLayer.card);
+      final times = <double>[];
+      final art = ShopCardArt(
+        coin: shop.cardArt.coin,
+        look: shop.cardArt.look,
+        paintRays: (canvas, centre, radius, t) {
+          times.add(t);
+          PreviewStage.paintRays(canvas, centre, radius, t);
+        },
+      );
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      for (final id in ['s_champ', 's_flawless', 's_topflock']) {
+        final item = cardItemById(id)!;
+        art.prepare(item);
+        times.clear();
+        art.paint(canvas, item, .125);
+        art.paint(canvas, item, 6.125);
+        expect(
+          times,
+          [.125, 6.125],
+          reason:
+              'animation time must not wrap at six seconds or quantize to 12 fps',
+        );
+      }
+      expect(art.pictureCount, 3);
+      recorder.endRecording().dispose();
+      art.dispose();
     },
   );
 }

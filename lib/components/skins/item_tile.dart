@@ -279,7 +279,7 @@ class ItemTile extends PositionComponent with TapCallbacks {
         Config.skinShopArtWidth / 2,
         Config.skinShopArtHeight / 2,
       );
-      cardArt!.paint(canvas, item, reduceMotion() ? 0 : _t);
+      cardArt!.paint(canvas, item, reduceMotion() || !_visible ? 0 : _t);
       canvas.restore();
       if (dim) canvas.restore();
     } else if (animatesArt) {

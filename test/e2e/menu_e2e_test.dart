@@ -525,7 +525,8 @@ void main() {
   });
 
   // Skin shop grid at scroll 0 (PRD-menu-v2 §4.1): tile i centred at
-  // (60 + 100 * col, 378 + 100 * row); tab i at (43.2 + 58.4 * i, 296).
+  // (60 + 100 * col, 378 + 100 * row). PRD 2.6 F9 (834) adds a sixth
+  // tab, so category taps use their actual centres.
   e2e(
     'QA skin shop try-on/buy/equip/NEW and shop featured/back stack real taps',
     (g, r, t) async {
@@ -560,7 +561,11 @@ void main() {
         'layer': 'bird',
         'id': 'classic',
       });
-      await tap(g, t, const Offset(160, 296));
+      await tap(
+        g,
+        t,
+        shop.tabBar.tabFor(SkinLayer.hat).absoluteCenter.toOffset(),
+      );
       expect(shop.tab, SkinLayer.hat);
       expect(r.spy.params('skin_shop_tab').single, {'layer': 'hat'});
       await tap(g, t, const Offset(33, 77));

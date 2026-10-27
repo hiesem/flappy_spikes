@@ -134,14 +134,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('§19.6 catalogue', () {
-    test('every layer has 30 entries (hats and gear: 29 + None)', () {
-      // PRD 2.6 F9: these checks cover the five wardrobe tabs; CARDS is separate.
-      for (final layer in kShopLayers) {
+    test('wardrobe layers have 30 entries; CARDS has 60 (PRD F9)', () {
+      // PRD 2.6 F9 (834): five wardrobe layers plus 60 card cosmetics.
+      for (final layer in kShopLayers.where((l) => l != SkinLayer.card)) {
         expect(itemsFor(layer), hasLength(30), reason: layer.key);
       }
+      expect(itemsFor(SkinLayer.card), hasLength(60));
       expect(itemsFor(SkinLayer.hat).where((i) => !i.isNone), hasLength(29));
       expect(itemsFor(SkinLayer.gear).where((i) => !i.isNone), hasLength(29));
-      expect(kCollectibleTotal, 148);
+      // PRD 2.6 F9 (834 / 853): collection includes 60 card cosmetics.
+      expect(kCollectibleTotal, 208);
     });
 
     test('the 60 items of §19.2: names, rarities, prices, animated', () {
@@ -173,8 +175,8 @@ void main() {
     });
 
     test('ids unique within each layer; the hoop and trail sunset coexist', () {
-      // PRD 2.6 F9: these checks cover the five wardrobe tabs; CARDS is separate.
-      for (final layer in kShopLayers) {
+      // PRD 2.6 F9 (834): five wardrobe layers plus 60 card cosmetics.
+      for (final layer in kShopLayers.where((l) => l != SkinLayer.card)) {
         final ids = [for (final i in itemsFor(layer)) i.id];
         expect(ids.toSet(), hasLength(ids.length), reason: layer.key);
       }
@@ -272,7 +274,7 @@ void main() {
       expect(featuredItemFor(items)!.key, 'gear:disco');
     });
 
-    test('buying and equipping a new item of each layer; x / 148', () async {
+    test('buying and equipping a new wardrobe item of each layer; x / 208', () async {
       final (_, wallet, items) = await _store(coins: 20000);
       expect(items.ownedCount, 3);
       for (final (layer, id) in [
@@ -288,8 +290,9 @@ void main() {
         expect(items.look.idFor(layer), id);
       }
       expect(items.ownedCount, 7);
-      expect(kCollectibleTotal, 148);
-      expect('${items.ownedCount} / $kCollectibleTotal', '7 / 148');
+      // PRD 2.6 F9 (834 / 853): collection includes 60 card cosmetics.
+      expect(kCollectibleTotal, 208);
+      expect('${items.ownedCount} / $kCollectibleTotal', '7 / 208');
     });
   });
 

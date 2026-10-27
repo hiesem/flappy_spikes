@@ -327,9 +327,9 @@ class ShopActionButton extends PositionComponent with TapCallbacks {
 }
 
 // region P26-F9e
-/// Shop adapter of the three shared card painters. Animation pictures are
-/// prepared once at tab arrival, never recorded from a tile's render loop.
-/// All playback uses elapsed game time; reduced motion always picks frame 0.
+/// Shop adapter of the three shared card painters. One static / t=0 picture
+/// per item; visible animated art is painted live at unmodified game time.
+/// The host skips off-screen tiles and requests t=0 under reduced motion.
 class ShopCardArt {
   ShopCardArt({
     required this.coin,
@@ -341,10 +341,9 @@ class ShopCardArt {
   final Look look;
   final String name;
   final CardStickerRays? paintRays;
-  static const fps = 12, frames = 72;
-  final Map<String, List<Picture>> _pictures = {};
+  final Map<String, Picture> _pictures = {};
   final StickerAvatars _avatars = StickerAvatars();
-  int get pictureCount => _pictures.values.fold(0, (n, p) => n + p.length);
+  int get pictureCount => _pictures.length;
 
   static bool animated(SkinItem item) => switch (item.cardKind) {
     CardKind.frame => CardFrameArt.animatedIds.contains(item.id),
@@ -360,6 +359,11 @@ class ShopCardArt {
       'n_marquee',
     }.contains(item.id),
     CardKind.sticker => const {
+      's_heart',
+      's_kaching',
+      's_spiked',
+      's_nailed',
+      's_bye',
       's_hatch',
       's_zoom',
       's_hot',
@@ -377,18 +381,19 @@ class ShopCardArt {
 
   void prepare(SkinItem item) {
     if (_pictures.containsKey('${item.cardKind}:${item.id}')) return;
-    _pictures['${item.cardKind}:${item.id}'] = [
-      for (var i = 0; i < (animated(item) ? frames : 1); i++)
-        _record(item, i / fps),
-    ];
+    _pictures['${item.cardKind}:${item.id}'] = _record(item);
   }
 
-  Picture _record(SkinItem item, double t) {
+  Picture _record(SkinItem item) {
     final recorder = PictureRecorder();
-    final c = Canvas(recorder);
+    _paint(Canvas(recorder), item, 0);
+    return recorder.endRecording();
+  }
+
+  void _paint(Canvas c, SkinItem item, double t) {
     if (item.id.isEmpty && item.cardKind == CardKind.sticker) {
       LookPainter.paintNone(c, 16);
-      return recorder.endRecording();
+      return;
     }
     switch (item.cardKind) {
       case CardKind.frame:
@@ -411,19 +416,19 @@ class ShopCardArt {
           LookPainter.paintNone(c, 16);
         }
     }
-    return recorder.endRecording();
   }
 
   void paint(Canvas canvas, SkinItem item, double t) {
-    final pictures = _pictures['${item.cardKind}:${item.id}']!;
-    canvas.drawPicture(pictures[(t * fps).floor() % pictures.length]);
+    if (animated(item) && t != 0) {
+      _paint(canvas, item, t);
+    } else {
+      canvas.drawPicture(_pictures['${item.cardKind}:${item.id}']!);
+    }
   }
 
   void dispose() {
-    for (final list in _pictures.values) {
-      for (final picture in list) {
-        picture.dispose();
-      }
+    for (final picture in _pictures.values) {
+      picture.dispose();
     }
     _pictures.clear();
     _avatars.clear();

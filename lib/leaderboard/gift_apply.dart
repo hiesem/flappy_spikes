@@ -59,7 +59,14 @@ class GiftApply {
       response = await leaderboard.claimGift(
         id,
         owned: allItems
-            .where((i) => i.isFree || storage.ownedItems.contains(i.key))
+            // region P26-F9e
+            .where(
+              (i) =>
+                  i.layer != SkinLayer.card &&
+                  !i.isSkillOnly &&
+                  (i.isFree || storage.ownedItems.contains(i.key)),
+            )
+            // endregion
             .map((i) => i.key)
             .toList(),
       );
@@ -93,7 +100,9 @@ class GiftApply {
     if (kind == 'piece' && piecesHeld >= 3) kind = 'coins';
     if (kind == 'item') {
       for (final candidate in allItems) {
-        if (candidate.key == roll.item &&
+        if (candidate.layer != SkinLayer.card &&
+            !candidate.isSkillOnly &&
+            candidate.key == roll.item &&
             candidate.price > 0 &&
             candidate.price <= 750 &&
             {Rarity.common, Rarity.rare}.contains(candidate.rarity) &&
@@ -102,8 +111,8 @@ class GiftApply {
           break;
         }
       }
-      // Only sold wardrobe items in the catalogue qualify. Card/skill keys
-      // are absent from this catalogue and never become an ownership grant.
+      // PRD F9 / O21: card and skill entries are in the shop catalogue,
+      // but only sold wardrobe items qualify for a gift ownership grant.
       if (item == null) kind = 'coins';
     }
     final piece = kind == 'piece'

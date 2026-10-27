@@ -987,30 +987,53 @@ class Config {
   static double skinShopGridBottomFor(double viewHeight) =>
       viewHeight - menuSpikeHeight;
 
-  /// The scrolling grid viewport.
-  static Rect skinShopGridRectFor(double viewHeight) => Rect.fromLTRB(
-    skinShopGridLeft,
-    skinShopGridTop,
-    skinShopGridLeft + skinShopGridWidth,
-    skinShopGridBottomFor(viewHeight),
+  // region P26-F9e
+  static const double skinShopCardRowTop = 330;
+  static const double skinShopCardRowHeight = 24;
+  static const double skinShopCardGridTop = 360;
+  static const int skinShopCardSoldTiles = 18; // None + 17 sold.
+  static const double skinShopCardSkillGap = 28;
+  static const double skinShopCardSkillHeaderInset = 22;
+  static Rect skinShopCardKindRectFor(int index) => Rect.fromLTWH(
+    skinShopGridLeft + index * (skinShopTile + skinShopTileGap),
+    skinShopCardRowTop,
+    skinShopTile,
+    skinShopCardRowHeight,
   );
+  static const double skinShopScrollShadow = 5;
+  static const double skinShopScrollIndicator = 2;
+  static const double skinShopScrollIndicatorMin = 20;
+
+  /// The scrolling grid viewport.
+  static Rect skinShopGridRectFor(double viewHeight, {bool cards = false}) =>
+      Rect.fromLTRB(
+        skinShopGridLeft,
+        cards ? skinShopCardGridTop : skinShopGridTop,
+        skinShopGridLeft + skinShopGridWidth,
+        skinShopGridBottomFor(viewHeight),
+      );
 
   /// Tile [index] of a tab's grid (content coordinates at scroll 0).
-  static Rect skinShopTileRectFor(double viewHeight, int index) =>
-      Rect.fromLTWH(
-        skinShopGridLeft +
-            (index % skinShopColumns) * (skinShopTile + skinShopTileGap),
-        skinShopGridTop +
-            skinShopGridPadTop +
-            (index ~/ skinShopColumns) * (skinShopTile + skinShopTileGap),
-        skinShopTile,
-        skinShopTile,
-      );
+  static Rect skinShopTileRectFor(
+    double viewHeight,
+    int index, {
+    bool cards = false,
+  }) => Rect.fromLTWH(
+    skinShopGridLeft +
+        (index % skinShopColumns) * (skinShopTile + skinShopTileGap),
+    (cards ? skinShopCardGridTop : skinShopGridTop) +
+        (cards && index >= skinShopCardSoldTiles ? skinShopCardSkillGap : 0) +
+        skinShopGridPadTop +
+        (index ~/ skinShopColumns) * (skinShopTile + skinShopTileGap),
+    skinShopTile,
+    skinShopTile,
+  );
 
   /// Bottom of a grid of [count] tiles, including the bottom padding.
   static double skinShopContentBottomFor(double viewHeight, int count) =>
-      skinShopTileRectFor(viewHeight, count - 1).bottom +
-      skinShopGridPadBottom;
+      skinShopTileRectFor(viewHeight, count - 1).bottom + skinShopGridPadBottom;
+
+  // endregion
 
   // Inside a tile: art in an 84 x 68 box centred on the tile; card = fg at
   // [skinShopTileMix] over bg; locked art at 42 %; lock 13 pt at (6, 5);

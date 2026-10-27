@@ -228,6 +228,8 @@ void main() {
     'bird:robo',
     'bird:golden',
     'card:basic',
+    'card:f_bubblegum',
+    'card:pecking',
     'frame:pecking',
     'bird:magpie',
   ]) {
@@ -242,6 +244,25 @@ void main() {
       expect(storage.ownedItems, isNot(contains(key)));
     });
   }
+
+  test(
+    'F9 cards and skill entries are excluded from gift owned requests',
+    () async {
+      await storage.saveOwnedItems({
+        'bird:sky',
+        'card:f_bubblegum',
+        'card:pecking',
+      });
+      await apply.claim('group');
+      expect(requests.single['owned'], contains('bird:sky'));
+      expect(
+        (requests.single['owned'] as List).where(
+          (key) => (key as String).startsWith('card:'),
+        ),
+        isEmpty,
+      );
+    },
+  );
 
   test('owned item becomes coins and ownership sent to service', () async {
     kind = 'item';

@@ -366,30 +366,9 @@ class PreviewStage extends PositionComponent {
     final bob = _bob;
     final by = birdY + bob;
 
-    if (_rays > 0) {
-      canvas.save();
-      canvas.translate(bx, by);
-      canvas.rotate(t * .6);
-      final alpha = math.min(1.0, _rays) * .5;
-      for (var i = 0; i < 12; i++) {
-        _paint.color = (i.isOdd ? Config.menuGold : const Color(0xFFFFE082))
-            .withValues(alpha: alpha);
-        final a0 = i * math.pi * 2 / 12;
-        canvas.drawPath(
-          Path()
-            ..moveTo(0, 0)
-            ..arcTo(
-              Rect.fromCircle(center: Offset.zero, radius: width),
-              a0,
-              math.pi / 12,
-              false,
-            )
-            ..close(),
-          _paint,
-        );
-      }
-      canvas.restore();
-    }
+    // region P26-F9e
+    paintCelebration(canvas, confetti: false);
+    // endregion
 
     const ry = Config.skinShopHoopRy * k;
     const lw = ry * .17;
@@ -452,6 +431,61 @@ class PreviewStage extends PositionComponent {
       );
     }
 
+    // region P26-F9e
+    paintCelebration(canvas, rays: false);
+    // endregion
+  }
+
+  // region P26-F9e
+  /// R4 ray master: shared by the stage and the card-sticker host adapter.
+  static void paintRays(
+    Canvas canvas,
+    Offset centre,
+    double radius,
+    double time, {
+    double opacity = .5,
+  }) {
+    canvas.save();
+    canvas.translate(centre.dx, centre.dy);
+    canvas.rotate(time * .6);
+    final alpha = opacity;
+    for (var i = 0; i < 12; i++) {
+      _paint.color = (i.isOdd ? Config.menuGold : const Color(0xFFFFE082))
+          .withValues(alpha: alpha);
+      final a0 = i * math.pi * 2 / 12;
+      canvas.drawPath(
+        Path()
+          ..moveTo(0, 0)
+          ..arcTo(
+            Rect.fromCircle(center: Offset.zero, radius: radius),
+            a0,
+            math.pi / 12,
+            false,
+          )
+          ..close(),
+        _paint,
+      );
+    }
+    canvas.restore();
+  }
+
+  /// Draw the existing purchase effects around a host's preview content.
+  /// The two passes preserve the wardrobe's back-rays / front-confetti order.
+  void paintCelebration(
+    Canvas canvas, {
+    bool rays = true,
+    bool confetti = true,
+  }) {
+    if (rays && _rays > 0) {
+      paintRays(
+        canvas,
+        Offset(birdX, birdY + _bob),
+        width,
+        t,
+        opacity: math.min(1.0, _rays) * .5,
+      );
+    }
+    if (!confetti) return;
     for (final p in _confetti) {
       final u = p.life / p.max;
       canvas.save();
@@ -469,6 +503,7 @@ class PreviewStage extends PositionComponent {
       canvas.restore();
     }
   }
+  // endregion
 
   void _withAlpha(Canvas canvas, double? alpha, void Function() draw) {
     if (alpha == null) {

@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flame/extensions.dart';
 
 import '../../game/config.dart';
+import '../../game/flappy_game.dart';
 import '../../game/sound.dart';
 import '../../run/effects/coin_icon.dart';
 import '../../skins/catalog.dart';
@@ -130,12 +131,7 @@ class SkinShopScreen extends MenuScreen {
   @override
   Rect scrollViewportFor(double viewHeight) =>
       // region P26-F9e
-      Rect.fromLTRB(
-        14,
-        onCards ? 360 : 326,
-        306,
-        Config.skinShopGridBottomFor(viewHeight),
-      );
+      Config.skinShopGridRectFor(viewHeight, cards: onCards);
   // endregion
 
   /// The grid tile of [id] on the open tab.
@@ -174,6 +170,7 @@ class SkinShopScreen extends MenuScreen {
       name: game.storage.versusCustomName.isNotEmpty
           ? game.storage.versusCustomName
           : game.storage.versusNickname ?? 'Birdie',
+      paintRays: PreviewStage.paintRays,
     );
     stage = _CardPreviewStage(
       screen: this,
@@ -235,12 +232,17 @@ class SkinShopScreen extends MenuScreen {
         '',
         fontSize: 9,
         color: Config.menuPink,
-        position: Vector2(46, 12),
+        position: Vector2(
+          Config.skinShopTile / 2,
+          Config.skinShopCardRowHeight / 2,
+        ),
         anchor: Anchor.center,
       );
       final button = MenuButton(
-        position: Vector2(14 + kind.index * 100, 330),
-        size: Vector2(92, 24),
+        position: Config.skinShopCardKindRectFor(
+          kind.index,
+        ).topLeft.toVector2(),
+        size: Config.skinShopCardKindRectFor(kind.index).size.toVector2(),
         isActive: () => isActive() && onCards,
         onPressed: () => selectCardKind(kind),
       );
@@ -301,15 +303,11 @@ class SkinShopScreen extends MenuScreen {
         cardArt.prepare(item);
       }
     }
-    final topShift = onCards ? 34.0 : 0.0;
     tiles = [
       for (final (i, item) in list.indexed)
         _tile(
           item,
-          Config.skinShopTileRectFor(
-            h,
-            i,
-          ).shift(Offset(0, topShift + (onCards && i >= 18 ? 28 : 0))),
+          Config.skinShopTileRectFor(h, i, cards: onCards),
           i,
           animate,
         ),
@@ -319,7 +317,11 @@ class SkinShopScreen extends MenuScreen {
         'EARNED BY SKILL · NOT SOLD',
         fontSize: 10,
         color: Config.menuPlum,
-        position: Vector2(14, tiles[18].toRect().top - 22),
+        position: Vector2(
+          Config.skinShopGridLeft,
+          tiles[Config.skinShopCardSoldTiles].toRect().top -
+              Config.skinShopCardSkillHeaderInset,
+        ),
       );
       scroll.content.add(_skillHeader!);
     }
@@ -356,9 +358,7 @@ class SkinShopScreen extends MenuScreen {
       // region P26-F9e
       onPressed: () {
         if (onCards && item.id.isEmpty) {
-          clearTryOn();
-          unawaited(game.menu.items.clearCard(cardKind));
-          play(Sfx.skEquip);
+          unawaited(game.clearShopCard(cardKind));
         } else if (item.isSkillOnly &&
             !game.menu.items.isOwned(item.layer, item.id)) {
           setTryOn(item.id);
@@ -590,6 +590,7 @@ class _CardPreviewStage extends PreviewStage {
       const Rect.fromLTWH(30, 42, 232, 52),
       Paint()..color = const Color(0xFFF4F4F4),
     );
+    paintCelebration(canvas, confetti: false);
     final look = screen.previewLook;
     canvas.save();
     canvas.translate(width / 2, height / 2 + 2);
@@ -618,6 +619,7 @@ class _CardPreviewStage extends PreviewStage {
     if (screen.cardKind == CardKind.name) {
       _nameStyle.paint(canvas, const Offset(116, 38));
     }
+    paintCelebration(canvas, rays: false);
   }
 
   final ShopText _nameStyle = ShopText(
@@ -637,17 +639,18 @@ class _GridScrollDecoration extends PositionComponent {
     final r = scroll.viewport;
     if (scroll.offset > .1) {
       canvas.drawRect(
-        Rect.fromLTWH(r.left, r.top, r.width, 5),
+        Rect.fromLTWH(r.left, r.top, r.width, Config.skinShopScrollShadow),
         Paint()
-          ..shader = Gradient.linear(Offset(0, r.top), Offset(0, r.top + 5), [
-            const Color(0x22000000),
-            const Color(0x00000000),
-          ]),
+          ..shader = Gradient.linear(
+            Offset(0, r.top),
+            Offset(0, r.top + Config.skinShopScrollShadow),
+            [const Color(0x22000000), const Color(0x00000000)],
+          ),
       );
     }
     if (!scroll.scrollable) return;
     final h = (r.height * r.height / (r.height + scroll.maxOffset)).clamp(
-      20.0,
+      Config.skinShopScrollIndicatorMin,
       r.height,
     );
     final y =
@@ -655,11 +658,29 @@ class _GridScrollDecoration extends PositionComponent {
         (r.height - h) * (scroll.offset / scroll.maxOffset).clamp(0.0, 1.0);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(r.right - 2, y, 2, h),
+        Rect.fromLTWH(
+          r.right - Config.skinShopScrollIndicator,
+          y,
+          Config.skinShopScrollIndicator,
+          h,
+        ),
         const Radius.circular(1),
       ),
       Paint()..color = const Color(0x66828282),
     );
+  }
+}
+// endregion
+
+// region P26-F9e
+/// Game action shared by every CARDS None tile. Keep persistence, sound and
+/// equip analytics together, like the game's other explicit equip actions.
+extension CardShopActions on FlappySpikesGame {
+  Future<void> clearShopCard(CardKind kind) async {
+    skinShop?.clearTryOn();
+    sound.play(Sfx.skEquip);
+    services.logItemEquip(SkinLayer.card, '');
+    await menu.items.clearCard(kind);
   }
 }
 // endregion

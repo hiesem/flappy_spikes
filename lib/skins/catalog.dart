@@ -345,6 +345,8 @@ const Map<SkinLayer, List<SkinItem>> kCatalog = {
 /// count): 208 (PRD:834 adds 60 cards to the 148 wardrobe collectibles).
 // region P26-F9e
 // PRD:834: 148 wardrobe collectibles + 60 card cosmetics.
+// F10a follow-up (O81 / PRD:855): split PROUD PEACOCK's sold-only 199 goal
+// and owned count from this UI total, which includes the nine skill cards.
 const int kCollectibleTotal = 208;
 // endregion
 

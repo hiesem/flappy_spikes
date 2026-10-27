@@ -268,7 +268,11 @@ void main() {
       'the end; §3.7 a home-slot shield arms the run',
       setUp: (game, _) => boot(game),
       verify: (game, _) async {
+        // PRD-2.6 E1/B5: this upload test needs a normal, gated start;
+        // createRunTestGame enables ignoreGates for general gameplay tests.
+        game.runDebug.ignoreGates = false;
         final run = await startRun(game, starter: Powerup.shield);
+        expect(run.countsForUpload, isTrue);
         expect(run.setup.opponent, same(opponent));
         expect(run.setup.starter, Powerup.shield);
         expect(run.state.shield, isTrue);
@@ -277,6 +281,7 @@ void main() {
         run.state.shield = false;
         killRun(game);
         await flushAndMount(game);
+        expect(run.countsForUpload, isTrue);
         expect(versus.submitted, hasLength(1));
       },
     );

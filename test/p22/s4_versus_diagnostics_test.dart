@@ -96,7 +96,7 @@ void main() {
       final s = versus.lastSearch;
       expect(s.state, VersusSearchState.found);
       expect(s.reads, reads.length);
-      expect(s.level, 3);
+      expect(s.bracket, 3);
       expect(s.opponentUid, 'a');
       expect(s.debugLine, 'Versus: last search found / ${reads.length} '
           'reads / opponent a');

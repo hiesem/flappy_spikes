@@ -74,6 +74,7 @@ import 'package:flappy_spikes/services/firebase_versus_backend.dart';
 import 'package:flappy_spikes/services/reminders.dart';
 import 'package:flappy_spikes/services/versus_service.dart';
 import 'package:flappy_spikes/skins/look.dart';
+import 'package:flappy_spikes/versus/brackets.dart';
 import 'package:flappy_spikes/versus/diagnostics.dart';
 import 'package:flappy_spikes/versus/run_entry.dart';
 import 'package:flappy_spikes/versus/timeline.dart';
@@ -1151,18 +1152,18 @@ void main() {
       reason: 'players/$uid write (App Check token registered?)',
     );
 
-    // onPlayerRunWrite copies it into pools/{level}_{random shard}.
-    final level = levelFor(entry.best);
+    // PRD-2.6 E4: pool ids use the best-score bracket, not player level.
+    final bracket = bracketFor(entry.best);
     PoolEntry? mine;
     final sw = Stopwatch()..start();
     while (mine == null && sw.elapsed.inSeconds < 90) {
       for (var shard = 0; shard < VersusConfig.shards && mine == null; shard++) {
-        final pool = await backend.readPool('${level}_$shard');
+        final pool = await backend.readPool('${bracket}_$shard');
         mine = pool.where((p) => p.uid == uid).firstOrNull;
       }
       if (mine == null) await Future<void>.delayed(const Duration(seconds: 3));
     }
-    expect(mine, isNotNull, reason: 'the run reached a level-$level pool');
+    expect(mine, isNotNull, reason: 'the run reached a bracket-$bracket pool');
     expect(mine!.runId, entry.runId);
     expect(mine.score, 5);
     debugPrint('VERSUS pool hit after ${sw.elapsed.inSeconds} s');

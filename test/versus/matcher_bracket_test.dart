@@ -42,6 +42,7 @@ void main() {
       addTearDown(versus.dispose);
       await versus.initialize();
       expect(versus.me.level, 25);
+      expect(versus.lastSearch.bracket, 2);
       expect(backend.poolReads.toSet(), {'2_0', '2_1', '2_2', '2_3'});
       final opponent = versus.takeOpponent()!;
       expect(opponent.level, 32);

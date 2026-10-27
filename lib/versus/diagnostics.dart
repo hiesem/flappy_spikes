@@ -59,7 +59,7 @@ class VersusSearchInfo {
     this.state = VersusSearchState.idle,
     this.reason,
     this.reads = 0,
-    this.level = 0,
+    this.bracket = 0,
     this.opponentUid = '',
   });
 
@@ -71,8 +71,8 @@ class VersusSearchInfo {
   /// Pool documents read by it.
   final int reads;
 
-  /// The player's level it searched from.
-  final int level;
+  /// PRD-2.6 E4: the best-score bracket searched, independent of progression.
+  final int bracket;
 
   /// The held opponent's uid ('' = none).
   final String opponentUid;

@@ -94,7 +94,9 @@ void main() {
       );
     }
   }
-  for (final assist in ['forced start', 'forced mid-run', 'god', 'bot']) {
+  for (final assist in [
+    'forced start', 'forced mid-run', 'god', 'bot', 'ignore gates',
+  ]) {
     final service = QueueingVersus();
     FlameTester<FlappySpikesGame>(() {
       SharedPreferences.setMockInitialValues({});
@@ -112,6 +114,7 @@ void main() {
         service.queue = UploadQueue(game.storage);
       },
       verify: (game, _) async {
+        if (assist == 'ignore gates') game.runDebug.ignoreGates = true;
         final run = await startRun(
           game,
           force: assist == 'forced start' ? [ElementId.heart] : const [],

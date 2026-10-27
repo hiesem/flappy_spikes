@@ -31,9 +31,9 @@ Future<void> _boot(FlappySpikesGame g) async {
 
 /// Ends the run with [score] points and lets the results page mount.
 Future<void> _finishWith(FlappySpikesGame g, RunController run, int score) async {
-  for (var i = 0; i < score; i++) {
-    run.debugPass(perfect: false);
-  }
+  // PRD-2.6 E1/B5: debugPass permanently disqualifies an upload. Feed the
+  // score fixture through the ordinary scoring API for this normal-run test.
+  run.ctx.addScore(score);
   run.state.invulnerable = 0;
   killRun(g);
   await flushAndMount(g);
@@ -298,6 +298,8 @@ void main() {
       'or bonus, the solo results page; the run still queues an upload; '
       'run_start {mode: free_fly}; the prefetched opponent stays',
       (g, spy, versus, tester) async {
+        // PRD-2.6 E1/B5: the shared harness unlock override is debug play.
+        g.runDebug.ignoreGates = false;
         g.onScreenTap();
         expect(g.state, GameState.playing, reason: 'no intro');
         expect(g.versusIntro, isNull);
@@ -313,7 +315,9 @@ void main() {
           'mode': 'free_fly',
         });
         expect(events.where((e) => e.$1.startsWith('versus_')), isEmpty);
+        expect(run.countsForUpload, isTrue);
         await _finishWith(g, run, 4);
+        expect(run.countsForUpload, isTrue);
         final page = g.resultsScreen!;
         expect(page.header, isNull);
         expect(page.them, isNull);
@@ -356,7 +360,7 @@ void main() {
             state: VersusSearchState.solo,
             reason: VersusSoloReason.appCheck,
             reads: 3,
-            level: 4,
+            bracket: 4,
           );
         g.onScreenTap();
         expect(g.state, GameState.playing);

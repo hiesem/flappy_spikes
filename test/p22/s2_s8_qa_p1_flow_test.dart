@@ -109,7 +109,10 @@ void main() {
         (4, UploadDecision.dailyCap, 3),
         (901, UploadDecision.queuedBest, 4),
       ]) {
+        // PRD-2.6 E1/B5: ordinary Free Fly uploads; ignoreGates is debug play.
+        g.runDebug.ignoreGates = false;
         final run = await startRun(g);
+        expect(run.countsForUpload, isTrue);
         expect(run.setup.opponent, isNull);
         expect(g.runHud!.versus, isNull);
         run.ctx.addScore(points);
@@ -117,6 +120,7 @@ void main() {
         await declineRevive(g);
         await flushAndMount(g);
         expect(g.resultsScreen!.them, isNull);
+        expect(run.countsForUpload, isTrue);
         expect(versus.lastOffer, decision);
         expect(versus.queue.pending, hasLength(count));
         if (count > 0) {

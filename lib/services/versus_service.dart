@@ -943,8 +943,11 @@ class FirebaseVersusService implements VersusService {
     final gen = _searchGen;
     // WP-L the best-score bracket (the server's shards), not the
     // stored player level.
-    final level = bracketFor(storage.bestScore);
-    _search = VersusSearchInfo(state: VersusSearchState.running, level: level);
+    final bracket = bracketFor(storage.bestScore);
+    _search = VersusSearchInfo(
+      state: VersusSearchState.running,
+      bracket: bracket,
+    );
     var startedAt = _clock();
     final watch = Stopwatch()..start();
     Duration elapsed() {
@@ -966,7 +969,7 @@ class FirebaseVersusService implements VersusService {
             onTimeout: () => _pg,
           );
           final found = await searchPools<PoolCandidate>(
-            order: poolSearchOrder(level, _random),
+            order: poolSearchOrder(bracket, _random),
             myUid: uid,
             myPg: myPg,
             met: List.of(_met),
@@ -978,7 +981,7 @@ class FirebaseVersusService implements VersusService {
                 _search = VersusSearchInfo(
                   state: VersusSearchState.running,
                   reads: n,
-                  level: level,
+                  bracket: bracket,
                 );
               }
             },
@@ -998,7 +1001,7 @@ class FirebaseVersusService implements VersusService {
               ? VersusSearchInfo(
                   state: VersusSearchState.found,
                   reads: found.reads,
-                  level: level,
+                  bracket: bracket,
                   opponentUid: held.uid,
                 )
               : VersusSearchInfo(
@@ -1007,7 +1010,7 @@ class FirebaseVersusService implements VersusService {
                       ? VersusSoloReason.timeout
                       : VersusSoloReason.noRival,
                   reads: found.reads,
-                  level: level,
+                  bracket: bracket,
                 );
           break;
         } catch (e) {
@@ -1026,7 +1029,7 @@ class FirebaseVersusService implements VersusService {
             state: VersusSearchState.solo,
             reason: soloReasonOf(e),
             reads: reads,
-            level: level,
+            bracket: bracket,
           );
           break;
         }

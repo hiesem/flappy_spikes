@@ -983,14 +983,17 @@ class RunDirector {
       prevY: prevY,
       cap: cap,
     );
-    // Only prepare for the deepest short-screen squeeze band when a squeeze
-    // can affect this slot or its calm successor.
+    // region P26-D-SHAPES
+    // Retain this squeeze-only preparation: without it the 568 pt ceiling
+    // sweep fails seed 16, slot 110 (calm step 84.15 > median 72 pt).
+    // Ordinary slots outside the current/next squeeze window stay untouched.
     if (ctx.viewHeight < RunConfig.designHeight &&
         (ctx.squeezeWindow || ctx.squeezeNextSlot) &&
         !planned.forced &&
         _calm.dueAt(i + 1)) {
       planned = _prepareForNextCalm(planned, ctx, previousY: prevY);
     }
+    // endregion
     // endregion
     return _recordSlot(
       planned,

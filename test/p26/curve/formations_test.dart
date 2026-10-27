@@ -324,6 +324,29 @@ void main() {
     },
   );
 
+  // region P26-D-SHAPES
+  test('switch-chain buttons stay near the previous plane line', () {
+    for (var seed = 0; seed < 200; seed++) {
+      final chain = Formations(seed: seed).build(FormationId.switchChain, 250);
+      expect(chain.first.attached.single.y!.abs(), lessThanOrEqualTo(5));
+      for (var i = 0; i < chain.length; i++) {
+        final slot = chain[i];
+        final button = slot.attached.single;
+        // Keep the §3.20 pickup offset and minimum lead while softening D7.
+        expect((button.y! - slot.centreY).abs(), inInclusiveRange(70, 100));
+        expect(slot.trackX - button.trackX, greaterThanOrEqualTo(150));
+        if (i > 0) {
+          expect(
+            (button.y! - chain[i - 1].centreY).abs(),
+            lessThanOrEqualTo(5 + 1e-8),
+          );
+          expect((slot.centreY - chain[i - 1].centreY).abs(), 70);
+        }
+      }
+    }
+  });
+  // endregion
+
   test('mix chapters rotate at an equal total weight', () {
     expect(Formations.chapterAt(150), MixChapter.sawHeavy);
     expect(Formations.chapterAt(199), MixChapter.sawHeavy);

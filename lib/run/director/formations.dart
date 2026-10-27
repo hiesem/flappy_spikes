@@ -302,6 +302,13 @@ class Formations {
     ];
   }
 
+  // region P26-D-SHAPES
+  // The calibrated bot over-indexed on switch-chain deaths at 568 pt. Keep
+  // alternating sides, but use the forgiving end of the legal 70–100 pt
+  // button offset. Stagger the ring centres by that offset: the first button
+  // stays near the entry line, and each next button near the previous ring.
+  // This avoids a fresh out-and-back detour. Plane spacing, opening and
+  // D3 cost stay fixed.
   List<SlotPlan> _switchChain(
     int start,
     double x,
@@ -316,6 +323,7 @@ class Formations {
       RunConfig.switchLeadMin,
       RunConfig.switchLeadSeconds * RunConfig.cruise(start),
     );
+    const stagger = RunConfig.switchOffsetMin;
     return [
       for (var offset = 0; offset < 3; offset++)
         _slot(
@@ -323,7 +331,7 @@ class Formations {
           index: start + offset,
           kind: HoopKindId.switchRing,
           trackX: x + offset * RunConfig.spacing,
-          centreY: y,
+          centreY: y + (offset.isEven ? stagger : 0),
           extra: offset == 0 ? first : rest,
           attached: [
             GapItemPlan(
@@ -331,11 +339,12 @@ class Formations {
               trackX: x + offset * RunConfig.spacing - lead,
               y:
                   y +
+                  (offset.isEven ? stagger : 0) +
                   (offset.isEven ? -1 : 1) *
                       _range(
                         random,
                         RunConfig.switchOffsetMin,
-                        RunConfig.switchOffsetMax,
+                        RunConfig.switchOffsetMin + 1,
                       ),
               extra: offset == 0 ? first : rest,
             ),
@@ -344,6 +353,8 @@ class Formations {
         ),
     ];
   }
+
+  // endregion
 
   SlotPlan _slot({
     required FormationId id,

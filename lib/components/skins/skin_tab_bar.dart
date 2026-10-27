@@ -43,7 +43,9 @@ class SkinTabBar extends PositionComponent {
   double _ulT = 1;
   SkinLayer? _shown;
 
-  double get tabWidth => width / SkinLayer.values.length;
+  // region P26-F9a
+  double get tabWidth => width / kShopLayers.length;
+  // endregion
 
   /// Underline left edge right now (relative to the bar).
   double get underlineX =>
@@ -57,8 +59,9 @@ class SkinTabBar extends PositionComponent {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    // region P26-F9a
     tabs = [
-      for (final layer in SkinLayer.values)
+      for (final layer in kShopLayers)
         SkinTab(
           layer: layer,
           bar: this,
@@ -66,6 +69,7 @@ class SkinTabBar extends PositionComponent {
           size: Vector2(tabWidth, height),
         ),
     ];
+    // endregion
     addAll(tabs);
     _shown = active();
     _ulFrom = _ulTo = _shown!.index * tabWidth;

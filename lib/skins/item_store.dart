@@ -60,7 +60,10 @@ class ItemStore extends ChangeNotifier {
     // endregion
     final item = itemById(layer, id);
     if (item == null) return false;
-    if (item.isFree) return true;
+    // region P26-F9a
+    // Zero-priced skill cosmetics are not free gifts; F10a supplies unlocks.
+    if (item.isFree && !item.isSkillOnly) return true;
+    // endregion
     return _storage.ownedItems.contains(item.key);
   }
 
@@ -114,8 +117,10 @@ class ItemStore extends ChangeNotifier {
   }
 
   /// Owned collectible items across all layers, out of [kCollectibleTotal].
+  // region P26-F9a
   int get ownedCount =>
-      SkinLayer.values.fold(0, (count, layer) => count + ownedCountFor(layer));
+      kShopLayers.fold(0, (count, layer) => count + ownedCountFor(layer));
+  // endregion
 
   /// Owned collectibles on [layer] (the "none" entries never count).
   int ownedCountFor(SkinLayer layer) => itemsFor(
@@ -145,9 +150,12 @@ class ItemStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool get hasNewBadge => SkinLayer.values.any(
+  // region P26-F9a
+  bool get hasNewBadge => kShopLayers.any(
     (layer) => itemsFor(layer).any((item) => isNew(layer, item.id)),
   );
+
+  // endregion
 
   /// Clears every persisted menu field (the debug panel's "Reset menu
   /// state") and notifies, so live views — the home bird above all — render

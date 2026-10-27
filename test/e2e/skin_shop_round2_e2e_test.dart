@@ -344,7 +344,8 @@ void main() {
           ui.Rect.fromLTRB(14, 326, 306, height - 44),
         );
         final ids = ['sky', 'shades', 'cap', 'sky', 'blue'];
-        for (final layer in SkinLayer.values) {
+        // PRD 2.6 F9: these checks cover the five wardrobe tabs; CARDS is separate.
+        for (final layer in kShopLayers) {
           await _tab(game, tester, layer);
           await _tap(game, tester, screen.tileFor(ids[layer.index]));
           await _tap(game, tester, screen.actionButton);

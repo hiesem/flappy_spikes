@@ -30,6 +30,17 @@ enum SkinLayer {
   }
 }
 
+// region P26-F9a
+/// Wardrobe tabs only; F9e will introduce the CARDS shop separately (PRD F9).
+const List<SkinLayer> kShopLayers = [
+  SkinLayer.bird,
+  SkinLayer.gear,
+  SkinLayer.hat,
+  SkinLayer.hoop,
+  SkinLayer.trail,
+];
+// endregion
+
 /// Item rarity (PRD-menu-v2 §3.2). [price] is the standard coin price;
 /// common plain-colour birds 2–10 cost 150 (see the catalogue).
 enum Rarity {
@@ -154,8 +165,10 @@ class Look {
   int get hashCode => Object.hash(bird, gear, hat, hoop, trail, card);
   // endregion
 
+  // region P26-F9a
   @override
-  String toString() => 'Look($bird, $gear, $hat, $hoop, $trail)';
+  String toString() => 'Look($bird, $gear, $hat, $hoop, $trail, $card)';
+  // endregion
 }
 
 // region P26-F9a

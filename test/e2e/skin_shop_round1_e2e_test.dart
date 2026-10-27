@@ -470,7 +470,8 @@ void main() {
           const ui.Rect.fromLTWH(14, 270, 292, 52),
         );
         expect(screen.scroll.viewport.bottom, height - 44);
-        for (final layer in SkinLayer.values) {
+        // PRD 2.6 F9: these checks cover the five wardrobe tabs; CARDS is separate.
+        for (final layer in kShopLayers) {
           await _tab(game, tester, layer);
           expect(
             screen.tiles,

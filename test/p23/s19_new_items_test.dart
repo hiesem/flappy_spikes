@@ -135,7 +135,8 @@ void main() {
 
   group('§19.6 catalogue', () {
     test('every layer has 30 entries (hats and gear: 29 + None)', () {
-      for (final layer in SkinLayer.values) {
+      // PRD 2.6 F9: these checks cover the five wardrobe tabs; CARDS is separate.
+      for (final layer in kShopLayers) {
         expect(itemsFor(layer), hasLength(30), reason: layer.key);
       }
       expect(itemsFor(SkinLayer.hat).where((i) => !i.isNone), hasLength(29));
@@ -172,7 +173,8 @@ void main() {
     });
 
     test('ids unique within each layer; the hoop and trail sunset coexist', () {
-      for (final layer in SkinLayer.values) {
+      // PRD 2.6 F9: these checks cover the five wardrobe tabs; CARDS is separate.
+      for (final layer in kShopLayers) {
         final ids = [for (final i in itemsFor(layer)) i.id];
         expect(ids.toSet(), hasLength(ids.length), reason: layer.key);
       }

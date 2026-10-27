@@ -312,7 +312,8 @@ void main() {
         final screen = await _skins(game, tester);
         var balance = game.menu.wallet.balance;
         var purchases = 0;
-        for (final layer in SkinLayer.values) {
+        // PRD 2.6 F9: these checks cover the five wardrobe tabs; CARDS is separate.
+        for (final layer in kShopLayers) {
           await _tap(game, tester, screen.tabBar.tabFor(layer));
           stepGame(game, .8);
           await flushAndMount(game);
@@ -380,7 +381,8 @@ void main() {
     (game, events, tester) async {
       final screen = await _skins(game, tester);
       var rejected = 0;
-      for (final layer in SkinLayer.values) {
+      // PRD 2.6 F9: these checks cover the five wardrobe tabs; CARDS is separate.
+      for (final layer in kShopLayers) {
         await _tap(game, tester, screen.tabBar.tabFor(layer));
         stepGame(game, .8);
         await flushAndMount(game);

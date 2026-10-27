@@ -40,6 +40,9 @@ void main() {
       expect(items.length, 20);
       expect(sold.length, 17);
       expect(items.where((item) => item.isSkillOnly).length, 3);
+      for (final item in items.where((item) => item.isSkillOnly)) {
+        expect(item.price, 0);
+      }
       expect(sold.map((item) => item.rarity), [
         ...List.filled(6, Rarity.common),
         ...List.filled(5, Rarity.rare),
@@ -62,6 +65,23 @@ void main() {
     expect(kCollectibleTotal, 148);
     expect(kCollectibleTotal, allItems.where((i) => !i.isNone).length);
   });
+
+  test(
+    'F9 keeps five wardrobe tabs and includes card slots in diagnostics',
+    () {
+      expect(kShopLayers, [
+        SkinLayer.bird,
+        SkinLayer.gear,
+        SkinLayer.hat,
+        SkinLayer.hoop,
+        SkinLayer.trail,
+      ]);
+      expect(
+        const Look(card: 'f_orbit|n_fire|s_gg').toString(),
+        'Look(classic, none, none, pink, flame, f_orbit|n_fire|s_gg)',
+      );
+    },
+  );
 
   test('F9 names and sold prices match the approved catalogue', () {
     final design = File(

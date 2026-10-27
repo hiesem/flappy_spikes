@@ -83,7 +83,8 @@ void main() {
           expect(scroll.viewport.bottom, height - 44);
           expect(Config.skinShopGridBottomFor(height), height - 44);
           final tabBottom = screen.tabBar.toRect().bottom;
-          for (final layer in SkinLayer.values) {
+          // PRD 2.6 F9: these checks cover the five wardrobe tabs; CARDS is separate.
+          for (final layer in kShopLayers) {
             game.selectSkinTab(layer);
             stepGame(game, 0.5);
             await flushAndMount(game);

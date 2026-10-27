@@ -186,8 +186,9 @@ class RunSpawner {
               ride: s.ride != null,
               keepGeometry: s.ride?.kind == RideKind.comet,
             );
+      // A preserved showcase comet keeps its already-created attached star.
+      if (!revived || plain.attached.isEmpty) _dropAheadItems();
       // endregion
-      _dropAheadItems();
       plan = plain;
       // region P26-D-POLISH
       if (revived) _replaceLogged(plan);

@@ -1,7 +1,7 @@
 import 'dart:math';
 
-// region P26-D-TESTS
-import 'package:flutter/foundation.dart';
+// region P26-D-POLISH
+import 'package:meta/meta.dart';
 // endregion
 
 import '../config/director_tables.dart';
@@ -2729,6 +2729,9 @@ class RunDirector {
   }) {
     _calm.includePlannedReviveSlot(planned.index);
     final plain = plainSlot(planned, ctx);
+    // Showcase scripts retain the same priority over recovery as nextSlot.
+    // This hoop counts as recovery slot one; the next two are calm.
+    if (_scriptedSlot(planned.index)) return plain;
     final calm = _calmSlot(
       plain,
       ctx,

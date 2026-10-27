@@ -12,9 +12,25 @@ import 'package:flappy_spikes/run/director/layout_sampler.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flappy_spikes/run/run_events.dart';
+import 'package:flappy_spikes/run/showcase/showcase_plan.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers.dart';
+
+class _FixedShowcasePlan extends ShowcasePlan {
+  const _FixedShowcasePlan(this.plan);
+
+  final ShowcaseRunPlan plan;
+
+  @override
+  ShowcaseRunPlan atStart({
+    required int gamesPlayed,
+    required int seen,
+    required int attempt,
+    required bool forced,
+  }) => plan;
+}
 
 void main() {
   test('D4 every calm tuning key controls the schedule', () {
@@ -205,4 +221,96 @@ void main() {
       }
     },
   );
+
+  for (final script in const [
+    ShowcaseRunPlan(
+      highlightId: 'portal',
+      step: 0,
+      attempt: 1,
+      portalHoops: [1],
+      portals: [ShowcasePortal(hoop: 1, theme: RideId.cannon)],
+    ),
+    ShowcaseRunPlan(highlightId: 'comet', step: 1, attempt: 1, cometHoops: [1]),
+    ShowcaseRunPlan(highlightId: 'fever', step: 2, attempt: 1, feverHoops: [1]),
+    ShowcaseRunPlan(
+      highlightId: 'comet',
+      step: 1,
+      attempt: 1,
+      bullseyeHoops: [1],
+    ),
+  ]) {
+    FlameTester<FlappySpikesGame>(() {
+      SharedPreferences.setMockInitialValues({});
+      return FlappySpikesGame(
+        worldHeight: 711,
+        soundEnabled: false,
+        showcasePlan: _FixedShowcasePlan(script),
+      )..runSeed = 7;
+    }, gameSize: Vector2(320, 711)).testGameWidget(
+      'D4 revive preserves the planned showcase ${script.bullseyeHoops.isNotEmpty ? 'bullseye' : script.highlightId} and attachments',
+      setUp: (game, _) async {
+        await game.ready();
+        await preloadImages(game);
+      },
+      verify: (game, _) async {
+        final run = await startRun(game);
+        final spawner = run.spawner;
+        final ahead = spawner.plannedAhead!;
+        expect(ahead.index, 1);
+        expect(run.setup.showcase, script);
+        expect(
+          ahead.kind,
+          script.portalHoops.isNotEmpty
+              ? HoopKindId.portal
+              : script.feverHoops.isNotEmpty
+              ? HoopKindId.fever
+              : script.bullseyeHoops.isNotEmpty
+              ? HoopKindId.bullseye
+              : HoopKindId.normal,
+        );
+        expect(ahead.cometHang, script.cometHoops.isNotEmpty);
+        final attached = spawner.pickups
+            .where(
+              (pickup) =>
+                  ahead.attached.any((item) => identical(item, pickup.plan)),
+            )
+            .toList();
+        expect(attached.length, ahead.attached.length);
+
+        run.revive(ReviveKind.coins);
+        final spawned = <SlotPlan>[];
+        run.events.onAny((event) {
+          // Portal previews emit their ride-chain rings with the same index.
+          // The spawner's own course hoop is the one under test.
+          if (event is HoopSpawned && spawner.hoops.contains(event.hoop)) {
+            spawned.add(event.plan);
+          }
+        });
+        for (var offset = 0; offset < 4; offset++) {
+          final planned = spawner.plannedAhead!;
+          run.state.camX = planned.trackX - RunConfig.worldWidth;
+          spawner.update(0);
+          final actual = spawned.singleWhere(
+            (slot) => slot.index == ahead.index + offset,
+          );
+          if (offset == 0) {
+            // PRD WP-B + D4: a scripted hoop keeps priority over calm, and
+            // counts as recovery slot one, leaving two calm slots after it.
+            expect(actual, ahead.copyWith(duringRide: false));
+            expect(spawner.pickups, containsAll(attached));
+            for (final pickup in attached) {
+              expect(pickup.escaped, isFalse);
+              expect(pickup.isRemoving, isFalse);
+            }
+          } else {
+            expect(actual.calm, offset < 3);
+            if (offset < 3) {
+              expect(actual.kind, HoopKindId.normal);
+              expect(actual.motion, isNull);
+            }
+          }
+        }
+      },
+    );
+  }
 }

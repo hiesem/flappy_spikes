@@ -31,6 +31,9 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # region P26-D-POLISH
+  meta: ^1.19.0
+  # endregion
   flame: ^1.37.0
   flame_forge2d: ^0.19.2+6
   flame_audio: ^2.12.1

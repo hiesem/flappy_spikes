@@ -220,19 +220,25 @@ export const sweepPools = onSchedule({ schedule: 'every 24 hours', timeZone: 'Et
 
 // region PRD-2.6 §3 LB3 — daily leaderboard callables and settlement
 
-/** Submit up to ten finished runs; the stub returns an empty accepted set in wave 0. */
+// region P26-S4
+/** Validate and submit up to ten finished runs. */
+// endregion
 export const lbSubmitRun = onCall(LB_CALLABLE_OPTIONS, async (req) => {
   const uid = requireUid(req.auth);
   return submitRun(getFirestore(), uid, req.data, Date.now());
 });
 
-/** Read TODAY / BEST RUN; the stub returns empty boards in wave 0. */
+// region P26-S4
+/** Read TODAY / BEST RUN, lazily settling expired groups. */
+// endregion
 export const lbGetBoard = onCall(LB_CALLABLE_OPTIONS, async (req) => {
   const uid = requireUid(req.auth);
   return getBoard(getFirestore(), uid, req.data, Date.now());
 });
 
-/** Claim a podium gift idempotently; the stub answers `ok: false` in wave 0. */
+// region P26-S4
+/** Claim a podium gift idempotently, rolling its prize on first claim. */
+// endregion
 export const lbClaimGift = onCall(LB_CALLABLE_OPTIONS, async (req) => {
   const uid = requireUid(req.auth);
   return claimGift(getFirestore(), uid, req.data, Date.now());

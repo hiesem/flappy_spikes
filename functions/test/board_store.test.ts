@@ -1010,3 +1010,89 @@ describe('PRD-2.6 LB3 bounded leaderboard reads', () => {
 
 });
 // endregion
+
+// region P26-S4
+describe('PRD-2.6 LB3 S4 hardening', () => {
+  it('persists old BEST intervals and ids across separate submissions', async () => {
+    const uid = uniq('old-best-overlap');
+    const joined = await lbSubmitRun(db, uid, request([submitRun({ score: 40 })]), T0 + 1000);
+    const start = (await group(joined.group!.id))!.start.toMillis();
+    const old = submitRun({ score: 60, endTs: start - 1000 });
+    const first = await lbSubmitRun(db, uid, request([old]), T0 + 2000);
+    assert.deepEqual(first.dropped, [{ id: old.id, reason: 'old' }]);
+    const stored = (await player(uid))!;
+    assert.equal(stored.bestShadow, 60);
+    assert.ok((stored.rate as any).runIds.includes(old.id));
+    const next = submitRun({ score: 80, endTs: start + 1000 });
+    const second = await lbSubmitRun(db, uid, request([next]), T0 + 3000);
+    assert.deepEqual(second.dropped, [{ id: next.id, reason: 'overlap' }]);
+  });
+
+  it('keeps both ghost days when a newer group settles before an older group', async () => {
+    const uid = uniq('settle-days');
+    const older = await lbSubmitRun(db, uid, request([submitRun({ score: 40 })]), T0 + 1000);
+    const newerTime = T0 + 26 * HOUR;
+    const newer = await lbSubmitRun(db, uid, request([submitRun({ score: 40, endTs: newerTime })]), newerTime + 1000);
+    const olderRef = db.collection(LB_GROUPS_COLLECTION).doc(older.group!.id);
+    // The second submit lazily settles the first; reopen it to model a delayed scheduler.
+    await olderRef.update({ settled: false });
+    const now = newerTime + 26 * HOUR;
+    await lbSettleGroups(db, now, newer.group!.id);
+    await lbSettleGroups(db, now, older.group!.id);
+    const pools = await db.collection(LB_GHOST_POOL_COLLECTION).get();
+    const days = pools.docs.flatMap((doc) => doc.data().entries).filter((entry) => entry.uid === uid).map((entry) => entry.day);
+    assert.equal(new Set(days).size, 2);
+  });
+
+  it('claims the only unowned eligible shop item and stores the same roll for retries', async () => {
+    const uid = uniq('owned-claim');
+    const id = uniq('owned-gift');
+    const remaining = GIFT_SHOP_ITEMS.find((item) => item.rarity === 'common')!;
+    await db.collection(LB_GIFTS_COLLECTION).doc(id).set({ uid, gid: id, tier: 'gold', boardRank: 1, expireAt: Timestamp.fromMillis(T0 + 400 * 24 * HOUR) });
+    const rng = mock.method(crypto, 'randomInt', () => 1530780169);
+    try {
+      const claim = await lbClaimGift(db, uid, { id, owned: GIFT_SHOP_ITEMS.filter((item) => item.id !== remaining.id).map((item) => item.id) }, T0);
+      assert.equal(claim.prize?.kind, 'item');
+      assert.equal(claim.prize?.item, remaining.id);
+      assert.deepEqual(await lbClaimGift(db, uid, { id, owned: [] }, T0 + 1000), claim);
+    } finally { rng.mock.restore(); }
+  });
+
+  it('persists pass counts separately from scores for later soft jump checks', async () => {
+    const uid = uniq('pass-history');
+    for (let i = 0; i < 5; i++) {
+      const endTs = T0 + i * HOUR;
+      const deltas = Array.from({ length: 30 }, () => 140);
+      const run = { ...submitRun({ score: 60, endTs }), hoops: 30, cs: 30 * 140 + 80,
+        tl: encodeDeltas(deltas), fl: encodeEntries(deltas.map(() => 0), deltas.map(() => 2)) };
+      await lbSubmitRun(db, uid, request([run]), endTs + 1000);
+    }
+    const p = (await player(uid))! as any;
+    assert.deepEqual(p.hist, [60, 60, 60, 60, 60]);
+    assert.deepEqual(p.passHist, [30, 30, 30, 30, 30]);
+    const jump = submitRun({ score: 150, endTs: T0 + 6 * HOUR });
+    await lbSubmitRun(db, uid, request([jump]), T0 + 6 * HOUR + 1000);
+    const flag = (await db.collection(LB_FLAGS_COLLECTION).doc(`${uid}_${jump.id}`).get()).data();
+    assert.equal(flag?.signals.jump, 30);
+    assert.equal(flag?.soft, true);
+  });
+
+  it('uses read-only transactions when opening TODAY', async () => {
+    const uid = uniq('readonly');
+    await lbSubmitRun(db, uid, request([submitRun()]), T0 + 1000);
+    let readOnly = 0;
+    const wrapped = new Proxy(db, {
+      get(target, prop) {
+        if (prop === 'runTransaction') return (fn: any, opts: any) => {
+          if (opts?.readOnly) readOnly++;
+          return target.runTransaction(fn, opts);
+        };
+        const value = Reflect.get(target, prop, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    await lbGetBoard(wrapped, uid, { tab: 'today' }, T0 + 2000);
+    assert.equal(readOnly, 1);
+  });
+});
+// endregion

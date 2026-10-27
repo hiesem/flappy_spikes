@@ -13,6 +13,7 @@ import {
 } from '../scripts/lb_import.js';
 import {
   cleanupLeaderboard,
+  applyCleanup,
   planCleanup,
   printCleanupPlan,
   pruneGhostEntries,
@@ -1065,3 +1066,91 @@ describe('C8/C9 CLI contract', () => {
     assert.notEqual(explicitDb, db, 'the tools never reuse the default Admin app');
   });
 });
+
+
+// region P26-S4
+describe('C9 S4 cleanup concurrency', () => {
+  it('keeps live member points and ghost changes committed between plan and apply', async () => {
+    const keep = uniq('cleanup-live');
+    const remove = uniq('cleanup-generated');
+    const first = await lbSubmitRun(db, keep, {
+      runs: [liveRun(40, NOW - (60 * 60 * 1000))], name: 'BraveOwl123', look: LOOK, platform: 'android',
+    }, NOW - (60 * 60 * 1000) + 1000);
+    await db.collection('lbPlayers').doc(remove).set(imported(remove, 90));
+    const ref = db.collection('lbGroups').doc(first.group!.id);
+    const initial = (await ref.get()).data() as LbGroupDoc;
+    await ref.update({ memberUids: [...initial.memberUids, remove], members: { ...initial.members, [remove]: initial.members[keep] } });
+    const pool = db.collection('lbGhostPool').doc('0_0');
+    await pool.set({ entries: [{ uid: remove, day: '2026-11-18' }, { uid: keep, day: '2026-11-18' }], bracket: 0, shard: 0 });
+    const plan = await planCleanup(db, { keepUids: [keep], apply: true, nowMs: NOW, log: () => {} });
+    await lbSubmitRun(db, keep, {
+      runs: [liveRun(60, NOW)], name: 'BraveOwl123', look: LOOK, platform: 'android',
+    }, NOW + 1000);
+    await pool.update({ entries: [{ uid: remove, day: '2026-11-18' }, { uid: keep, day: '2026-11-19' }], extra: 'preserved' });
+    const committed = (await ref.get()).data() as LbGroupDoc;
+    const updates: string[] = [];
+    const transactionalDb = new Proxy(db, {
+      get(target, property) {
+        if (property === 'runTransaction') return (callback: any, ...opts: any[]) => target.runTransaction(async (tx) => {
+          const wrapped = new Proxy(tx, {
+            get(transaction, method) {
+              const value = Reflect.get(transaction, method, transaction);
+              if (method === 'update') return (doc: any, fields: any) => {
+                updates.push(doc.path);
+                assert.ok(!('bracket' in fields), 'only filtered fields may be updated');
+                return transaction.update(doc, fields);
+              };
+              return typeof value === 'function' ? value.bind(transaction) : value;
+            },
+          });
+          return callback(wrapped);
+        }, ...opts);
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    const best = await applyCleanup(transactionalDb, plan);
+    assert.ok(updates.includes(ref.path), 'group filtering must update inside its transaction');
+    assert.ok(updates.includes(pool.path), 'pool filtering must update inside its transaction');
+    const after = (await ref.get()).data() as LbGroupDoc;
+    assert.deepEqual(after.members[keep], committed.members[keep]);
+    assert.equal(after.members[remove], undefined);
+    assert.deepEqual((await pool.get()).data()?.entries, [{ uid: keep, day: '2026-11-19' }]);
+    assert.equal((await pool.get()).data()?.extra, 'preserved');
+    assert.equal(best.rows.find((row) => row.uid === keep)?.best, 60);
+    assert.deepEqual((await db.collection('lbBest').doc('hist').get()).data()?.bins, { '0': 1 });
+  });
+});
+// endregion
+
+// region P26-S4
+describe('C9 S4 cache rebuild and legacy suppression', () => {
+  it('rebuilds BEST transactionally while a live new best commits', async () => {
+    const keep = uniq('cleanup-cache-live');
+    const remove = uniq('cleanup-cache-remove');
+    await db.collection('lbPlayers').doc(keep).set(imported(keep, 40, 'play'));
+    await db.collection('lbPlayers').doc(remove).set(imported(remove, 90));
+    const plan = await planCleanup(db, { keepUids: [keep], apply: true, nowMs: NOW, log: () => {} });
+    const race = raceAfterCacheSnapshot(db, async () => {
+      await lbSubmitRun(db, keep, { runs: [liveRun(95)], name: 'BraveOwl123', look: LOOK, platform: 'android' }, NOW);
+    });
+    await applyCleanup(race.db, plan);
+    await race.finish();
+    const best = (await db.collection('lbBest').doc('global').get()).data();
+    assert.equal(best?.rows.find((row: any) => row.uid === keep)?.best, 95);
+    assert.equal(best?.rows.some((row: any) => row.uid === remove), false);
+    assert.deepEqual((await db.collection('lbBest').doc('hist').get()).data()?.bins, { '0': 1 });
+  });
+
+  it('seeds the hidden registry from pre-deploy tombstones only on apply', async () => {
+    const uid = uniq('legacy-tomb');
+    await db.collection('lbTomb').doc(uid).set({ expireAt: at(NOW + DAY) });
+    await cleanupLeaderboard(db, { keepUids: ['owner'], apply: false, nowMs: NOW, log: () => {} });
+    assert.equal((await db.collection('lbMeta').doc('hidden').get()).exists, false);
+    await cleanupLeaderboard(db, { keepUids: ['owner'], apply: true, nowMs: NOW, log: () => {} });
+    const entries = (await db.collection('lbMeta').doc('hidden').get()).data()?.entries;
+    assert.equal(entries[uid].pending, false);
+    assert.ok(entries[uid].until.toMillis() > NOW + 14 * DAY);
+  });
+});
+// endregion

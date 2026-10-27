@@ -513,7 +513,9 @@ function compareRanked(
   if (a.best !== b.best) return b.best - a.best;
   const at = (a.reachedAtMs ?? Number.MAX_SAFE_INTEGER) - (b.reachedAtMs ?? Number.MAX_SAFE_INTEGER);
   if (at !== 0) return at;
-  return a.uid.localeCompare(b.uid);
+  // region P26-S4
+  return a.uid < b.uid ? -1 : a.uid > b.uid ? 1 : 0;
+  // endregion
 }
 
 /**
@@ -653,7 +655,9 @@ export function rankBestRuns(rows: readonly LbBestRow[], hiddenUids: Iterable<st
       if (a.best !== b.best) return b.best - a.best;
       const at = millis(a.bestAt) - millis(b.bestAt);
       if (at !== 0) return at;
-      return a.uid.localeCompare(b.uid);
+      // region P26-S4
+      return a.uid < b.uid ? -1 : a.uid > b.uid ? 1 : 0;
+      // endregion
     })
     .map((row, i) => ({ ...row, rank: i + 1 }));
 }
@@ -1072,6 +1076,9 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
   // not against the value the batch started with. Shadow updates are private
   // and never become the public verified best.
   let verifiedBest = ctx.best;
+  // region P26-S4
+  const passHistory = [...(ctx.hist ?? [])];
+  // endregion
 
   // Malformed entries sort after valid runs. Giving every input a fixed
   // chronological key keeps the comparator consistent even across bad data.
@@ -1151,7 +1158,9 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
       ((ctx.floor ?? 0) > 0 && run.score >= (ctx.floor as number));
     const clampTo = Math.max(500, verifiedBest * 2);
     const old = ctx.groupStartMs !== undefined && ctx.groupStartMs !== null && end < ctx.groupStartMs;
-    const timeline = verifyTimeline(run, ctx);
+    // region P26-S4
+    const timeline = verifyTimeline(run, { ...ctx, hist: passHistory });
+    // endregion
     const overlaps = overlapsAny(intervals, start, end);
     const day = utcDay(end);
     const dailyCapped = (dailyCounts[day] ?? 0) >= LB_MAX_RUNS_DAY;
@@ -1234,6 +1243,9 @@ export function checkLbRuns(runs: readonly unknown[], ctx: LbRunCheckContext): L
           : { passes: timeline.facts.passes, passBound: timeline.facts.passBound }),
       };
       results.push(result);
+      // region P26-S4
+      if (timeline.facts) passHistory.push(timeline.facts.passes);
+      // endregion
       accepted.push(run.id);
       seen.add(run.id);
       intervals.push({ id: run.id, startMs: start, endMs: end });

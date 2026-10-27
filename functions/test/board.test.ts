@@ -728,6 +728,18 @@ describe('PRD-2.6 LB3 run checks', () => {
     return { nowMs: T12 + 1000, best: 100, ...over };
   }
 
+  // region P26-S4
+  it('grows pass history chronologically within one batch before checking a jump', () => {
+    const honest = Array.from({ length: 5 }, (_, i) => run({ score: 30, endTs: T0 + (i + 1) * 3600_000 }));
+    const jump = run({ score: 150, endTs: T12 });
+    const result = checkLbRuns([...honest, jump], ctx());
+    assert.equal(result.accepted.length, 6);
+    assert.equal(result.results.at(-1)?.anomaly?.signals.jump, 30);
+    assert.equal(result.results.at(-1)?.anomaly?.soft, true);
+  });
+
+  // endregion
+
   it('each drop reason: shape, low_score, max_score, duplicate, time, overlap, old, timeline, daily_cap', () => {
     const cases: Array<[string, unknown, Record<string, unknown>, string]> = [
       ['shape', { id: 'bad' }, {}, 'shape'],
@@ -1138,3 +1150,13 @@ describe('PRD-2.6 LB3 run checks', () => {
   });
 });
 
+
+
+// region P26-S4
+describe('PRD-2.6 LB3 BEST tie byte ordering', () => {
+  it('orders same-score same-millisecond ids like Firestore document ids', () => {
+    const rows = ['a', 'Z', '_'].map((uid) => ({ uid, best: 100, bestAt: Timestamp.fromMillis(T0), name: uid, look: LOOK, bracket: 0, platform: 'android' as const }));
+    assert.deepEqual(rankBestRuns(rows).map((row) => row.uid), ['Z', '_', 'a']);
+  });
+});
+// endregion

@@ -63,7 +63,15 @@ The own-leaderboard release adds nine server-only `lb*` collections and three ca
 1. Deploy `firestore.indexes.json` and wait until the new composite indexes (`lbGroups`, `lbPlayers`) are **built**.
 2. Deploy the rules (the LB3 note is comment-only; every `lb*` collection stays denied).
 3. Deploy the functions together with the E4 / F9 / G4 / E6 changes (`lbSubmitRun`, `lbGetBoard`, `lbClaimGift`, `lbSettleGroups`).
-4. Enable the TTL policies (`functions/scripts/set_ttl.sh enable`, or `firebase deploy --only firestore:indexes`).
+4. The indexes deployment in step 1 already enables TTL. To enable each leaderboard policy explicitly (the script defaults to `players`), run:
+
+   ```bash
+   functions/scripts/set_ttl.sh enable lbPlayers
+   functions/scripts/set_ttl.sh enable lbGroups
+   functions/scripts/set_ttl.sh enable lbGifts
+   functions/scripts/set_ttl.sh enable lbTomb
+   functions/scripts/set_ttl.sh enable lbFlags
+   ```
 5. With the owner's explicit OK on the day (C8), run the one-time import. Do it promptly: old `players` documents expire 60 days after their last write, while `lbPlayers` rows get a fresh 400-day TTL.
 
 ```bash
@@ -88,6 +96,10 @@ npx --prefix functions tsx functions/scripts/lb_cleanup_test.ts   --project flap
 ```
 
 The cleanup deletes every **imported** `lbPlayers` row not on the keep-list, plus its `lbGifts`, ghost-pool entries and member/ghost rows in `lbGroups`; it rebuilds `lbBest/global`, sets `lbMeta/import.cleanedAt`, and prints the remaining top 50. It touches only the new `lb*` collections and never the versus `pools` (O7), `players` or other versus data. Rows created by live play are never deleted. Both scripts **require an explicit `--project`** and never fall back to a default project; both preview by default and write only when `--apply` is passed. Cleanup removes dependent artifacts before target players, so an interrupted large run can be resumed with the same keep-list.
+
+The import and cleanup BEST-cache rebuild locks all `lbPlayers` rows while its transaction runs, so live submits may wait. It retries concurrent tombstones up to five times; rerun after an exhausted rebuild. Cleanup also rebuilds `lbBest/hist` and seeds `lbMeta/hidden` for legacy tombstones missing from that registry. Its dry run labels import-sourced accounts that have received live submissions so the owner can include them in `--keep`.
+
+`lbClaimGift` accepts optional `owned: string[]`, bounded to the eligible gift-shop catalog size and filtered to its ids, to roll an unowned item. Its response remains `{ok, id, tier, prize}`; older clients may omit `owned`.
 
 ## 4. TTL policy (60 days)
 

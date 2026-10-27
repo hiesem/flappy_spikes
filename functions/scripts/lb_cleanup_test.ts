@@ -21,6 +21,7 @@ import {
   LB_GROUPS_COLLECTION,
   LB_META_COLLECTION,
   LB_PLAYERS_COLLECTION,
+  LB_TOMB_COLLECTION,
   type LbGhostDay,
   type LbGhostPoolDoc,
   type LbGroupDoc,
@@ -37,9 +38,12 @@ import {
   parseUidList,
   printTop50,
   readLbPlayers,
+  rebuildBestFromCommitted,
   requiredProject,
   validCleanupArgs,
 } from './lb_import.js';
+
+import { writeHiddenRegistry } from '../src/board_delete.js';
 
 export const CLEANUP_USAGE =
   'usage: npx tsx scripts/lb_cleanup_test.ts --project <firebase-project> --keep uid1,uid2 [--apply] [--help]';
@@ -158,6 +162,9 @@ export async function planCleanup(db: Firestore, opts: CleanupOptions): Promise<
   let keptImported = 0;
   let keptPlay = 0;
   for (const row of imported) {
+    if (!keep.has(row.uid) && ['hist', 'rate', 'groupId', 'groupStart', 'groupEnd'].some((key) => key in row.data)) {
+      logLine(opts, `  LIVE IMPORT slated for deletion: ${row.uid}; add to --keep to preserve`);
+    }
     if (keep.has(row.uid)) keptImported++;
     else removed.add(row.uid);
   }
@@ -228,6 +235,14 @@ export function printCleanupPlan(project: string, apply: boolean, plan: CleanupP
       `and remove ${result.groupRows} group row(s) in ${result.groupsChanged} group(s)`,
   );
   for (const uid of result.removedPlayers) log(`  DELETE lbPlayers/${uid}`);
+  // Imported accounts remain import-sourced after real play. Make that risk
+  // explicit in the dry run so the owner can add them to --keep.
+  for (const row of plan.remaining) {
+    if ((row.data as Partial<LbPlayerDoc>).src === 'import' &&
+        ['hist', 'rate', 'groupId', 'groupStart', 'groupEnd'].some((key) => key in row.data)) {
+      log(`  LIVE IMPORT (kept) ${row.uid}`);
+    }
+  }
   for (const item of plan.orphans) log(`  DELETE ${item.collection}/${item.id} (uid ${item.uid})`);
   for (const item of plan.ghostChanges) log(`  REMOVE ghost ${item.uid} from ${LB_GHOST_POOL_COLLECTION}/${item.pool}`);
   for (const change of plan.groupChanges) {
@@ -242,7 +257,16 @@ export function printCleanupPlan(project: string, apply: boolean, plan: CleanupP
   printTop50(plan.best, log);
 }
 
-async function applyCleanup(db: Firestore, plan: CleanupPlan): Promise<ReturnType<typeof bestDocFromPlayers>> {
+export async function applyCleanup(db: Firestore, plan: CleanupPlan): Promise<ReturnType<typeof bestDocFromPlayers>> {
+  // Backfill suppression for tombstones created before the S2 registry existed.
+  for (const tomb of await readAll<Record<string, unknown>>(db, LB_TOMB_COLLECTION)) {
+    await db.runTransaction(async (tx) => {
+      const ref = db.collection(LB_META_COLLECTION).doc('hidden');
+      const snap = await tx.get(ref);
+      const currentTomb = await tx.get(db.collection(LB_TOMB_COLLECTION).doc(tomb.id));
+      if (currentTomb.exists && !(tomb.id in (snap.data()?.entries ?? {}))) writeHiddenRegistry(tx, db, snap, tomb.id, plan.nowMs, false);
+    });
+  }
   const writer = new BatchedWriter(db);
   for (const item of plan.orphans) {
     await writer.delete(db.collection(item.collection).doc(item.id));
@@ -251,28 +275,29 @@ async function applyCleanup(db: Firestore, plan: CleanupPlan): Promise<ReturnTyp
   const poolIds = [...new Set(plan.ghostChanges.map((change) => change.pool))];
   for (const id of poolIds) {
     const ref = db.collection(LB_GHOST_POOL_COLLECTION).doc(id);
-    const snap = await ref.get();
-    if (!snap.exists) continue;
-    const pool = snap.data() as LbGhostPoolDoc;
-    const entries = pruneGhostEntries(pool.entries, plan.removed);
-    // Remove the entries, not the pool document itself.
-    await writer.set(ref, { ...pool, entries, updatedAt: Timestamp.fromMillis(plan.nowMs) });
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      const pool = snap.data() as LbGhostPoolDoc;
+      tx.update(ref, {
+        entries: pruneGhostEntries(pool.entries, plan.removed),
+        updatedAt: Timestamp.fromMillis(plan.nowMs),
+      });
+    });
   }
 
   for (const change of plan.groupChanges) {
     const ref = db.collection(LB_GROUPS_COLLECTION).doc(change.gid);
-    const snap = await ref.get();
-    if (!snap.exists) continue;
-    const group = snap.data() as LbGroupDoc;
-    const members = Object.fromEntries(
-      Object.entries(group.members ?? {}).filter(([uid]) => !plan.removed.has(uid)),
-    );
-    await writer.set(ref, {
-      ...group,
-      memberUids: (group.memberUids ?? []).filter((uid) => !plan.removed.has(uid)),
-      members,
-      ghosts: (group.ghosts ?? []).filter((ghost) => !plan.removed.has(ghost.uid ?? '')),
-      ghostUids: (group.ghostUids ?? []).filter((uid) => !plan.removed.has(uid)),
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      const group = snap.data() as LbGroupDoc;
+      tx.update(ref, {
+        memberUids: (group.memberUids ?? []).filter((uid) => !plan.removed.has(uid)),
+        members: Object.fromEntries(Object.entries(group.members ?? {}).filter(([uid]) => !plan.removed.has(uid))),
+        ghosts: (group.ghosts ?? []).filter((ghost) => !plan.removed.has(ghost.uid ?? '')),
+        ghostUids: (group.ghostUids ?? []).filter((uid) => !plan.removed.has(uid)),
+      });
     });
   }
 
@@ -282,8 +307,23 @@ async function applyCleanup(db: Firestore, plan: CleanupPlan): Promise<ReturnTyp
   }
   await writer.flush();
   // Re-read after the deletes: the printed board is exactly what the live collection now holds.
-  const after = bestDocFromPlayers(await readLbPlayers(db), plan.nowMs);
-  await db.collection(LB_BEST_COLLECTION).doc('global').set(after);
+  const after = await rebuildBestFromCommitted(db, plan.nowMs);
+  // Histogram rebuild also uses committed players in a transaction, so a
+  // concurrent BEST raise either precedes this snapshot or retries the write.
+  await db.runTransaction(async (tx) => {
+    const histRef = db.collection(LB_BEST_COLLECTION).doc('hist');
+    await tx.get(histRef);
+    const players = await tx.get(db.collection(LB_PLAYERS_COLLECTION));
+    const bins: Record<string, number> = {};
+    for (const row of players.docs) {
+      const p = row.data() as LbPlayerDoc;
+      const score = p.bestShadow ?? p.best;
+      if (p.hidden || !Number.isFinite(score) || score <= 0) continue;
+      const key = String(Math.floor(score / 100) * 100);
+      bins[key] = (bins[key] ?? 0) + 1;
+    }
+    tx.set(histRef, { bins, updatedAt: Timestamp.fromMillis(plan.nowMs) });
+  });
 
   const metaRef = db.collection(LB_META_COLLECTION).doc('import');
   const metaSnap = await metaRef.get();
@@ -303,7 +343,10 @@ async function applyCleanup(db: Firestore, plan: CleanupPlan): Promise<ReturnTyp
 export async function cleanupLeaderboard(db: Firestore, opts: CleanupOptions): Promise<CleanupResult> {
   const plan = await planCleanup(db, opts);
   printCleanupPlan('cleanup', opts.apply, plan, (line) => logLine(opts, line));
-  if (opts.apply) plan.best = await applyCleanup(db, plan);
+  if (opts.apply) {
+    plan.best = await applyCleanup(db, plan);
+    printTop50(plan.best, (line) => logLine(opts, line));
+  }
   return plan.result;
 }
 
@@ -333,7 +376,10 @@ export async function runCleanupCli(argv: readonly string[]): Promise<number> {
   const db = databaseForProject(project);
   const plan = await planCleanup(db, { keepUids, apply });
   printCleanupPlan(project, apply, plan);
-  if (apply) plan.best = await applyCleanup(db, plan);
+  if (apply) {
+    plan.best = await applyCleanup(db, plan);
+    printTop50(plan.best, console.log);
+  }
   return 0;
 }
 

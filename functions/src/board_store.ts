@@ -128,7 +128,9 @@ interface StoredMember extends LbGroupMember {
 }
 
 /** `lbPlayers/{uid}`; `cleanupPending` is set by a hidden submit until its cleanup sweep has run. */
-type StoredPlayer = LbPlayerDoc & { cleanupPending?: boolean };
+// region P26-S4
+type StoredPlayer = LbPlayerDoc & { cleanupPending?: boolean; passHist?: number[] };
+// endregion
 
 interface HistogramDoc {
   bins: Record<string, number>;
@@ -662,7 +664,9 @@ function mergeBestRows(rows: readonly LbBestRow[], extra: LbBestRow | null): LbB
   return [...byUid.values()].sort((a, b) => {
     if (a.best !== b.best) return b.best - a.best;
     const when = millis(a.bestAt) - millis(b.bestAt);
-    return when !== 0 ? when : a.uid.localeCompare(b.uid);
+    // region P26-S4
+    return when !== 0 ? when : a.uid < b.uid ? -1 : a.uid > b.uid ? 1 : 0;
+    // endregion
   });
 }
 
@@ -714,25 +718,28 @@ async function writeFlags(db: Firestore, flags: LbFlagDoc[]): Promise<void> {
   }
 }
 
+// region P26-S4
 function nextRate(
   nowMs: number,
   checks: ReturnType<typeof checkLbRuns>,
-  accepted: AcceptedRun[],
+  reserved: AcceptedRun[],
   state: PlayerState,
 ): StoredRate {
   const allIntervals = [
     ...state.intervals,
-    ...accepted.map((run) => ({ id: run.id, startMs: run.startMs, endMs: run.endMs })),
+    ...reserved.map((run) => ({ id: run.id, startMs: run.startMs, endMs: run.endMs })),
   ].slice(-MAX_INTERVALS);
   const today = utcDay(nowMs);
   return {
     day: today,
     count: count(checks.dailyCounts[today]),
-    runIds: [...new Set([...state.seen, ...checks.accepted])].slice(-50),
+    runIds: [...new Set([...state.seen, ...reserved.map((run) => run.id)])].slice(-50),
     days: checks.dailyCounts,
     intervals: allIntervals,
   };
 }
+
+// endregion
 
 function addHistogram(previous: HistogramDoc | undefined, oldScore: number, newScore: number, nowMs: number): HistogramDoc {
   const bins: Record<string, number> = {};
@@ -862,12 +869,16 @@ async function settleGroup(db: Firestore, gid: string, nowMs: number): Promise<S
     }
 
     const cutoff = utcDay(nowMs - LB_GHOST_MAX_AGE);
-    const lastDay = utcDay(millis(group.end));
+    // region P26-S4
+    const lastDay = utcDay(nowMs);
+    // endregion
     [...poolEntries.entries()].forEach(([shard, entries]) => {
       const ref = poolRefsByShard.get(shard)!;
       const poolSnap = poolSnapsByShard.get(shard)!;
       let merged = (poolSnap.exists ? (poolSnap.data() as LbGhostPoolDoc).entries : []).filter(
-        (entry) => typeof entry?.day === 'string' && entry.day >= cutoff && entry.day < lastDay,
+        // region P26-S4
+        (entry) => typeof entry?.day === 'string' && entry.day >= cutoff && entry.day <= lastDay,
+        // endregion
       );
       for (const entry of entries) {
         merged = merged.filter((row) => !(row.uid === entry.uid && row.day === entry.day));
@@ -923,7 +934,9 @@ async function submit(
     const base = {
       nowMs,
       best: state.shadow,
-      hist: state.hist,
+      // region P26-S4
+      hist: numbers(player?.passHist).slice(-10),
+      // endregion
       floor,
       seenIds: state.seen,
       intervals: state.intervals,
@@ -1068,6 +1081,16 @@ async function submit(
         cursor = last;
       }
     }
+    // region P26-S4
+    // Old BEST candidates reserve their validated interval even though TODAY
+    // drops them as old. Keep both their slot and id across upload requests.
+    const reservedRuns = acceptedRuns(input.runs, checks.results.map((check) => ({
+      ...check, accepted: check.accepted || check.bestUpdate !== null,
+    })));
+    const passHist = checks.results
+      .filter((check) => check.accepted && check.passes !== undefined)
+      .map((check) => check.passes!);
+    // endregion
     const nextPlayer: StoredPlayer = {
       ...player,
       best: localBest,
@@ -1082,8 +1105,13 @@ async function submit(
       groupId: state.hidden ? null : shouldJoin ? finalGid : (player?.groupId ?? null),
       groupStart: state.hidden ? null : shouldJoin ? (finalGroup?.start ?? null) : (player?.groupStart ?? null),
       groupEnd: state.hidden ? null : shouldJoin ? (finalGroup?.end ?? null) : (player?.groupEnd ?? null),
-      rate: nextRate(nowMs, checks, runs, state) as unknown as LbPlayerDoc['rate'],
+      // region P26-S4
+      rate: nextRate(nowMs, checks, reservedRuns, state) as unknown as LbPlayerDoc['rate'],
+      // endregion
       hist: [...state.hist, ...runs.map((run) => run.score)].slice(-10),
+      // region P26-S4
+      passHist: [...numbers(player?.passHist), ...passHist].slice(-10),
+      // endregion
       lastRunAt: runs.length > 0 ? at(lastEnd) : (player?.lastRunAt ?? null),
       hidden: state.hidden,
       // Same commit as the hide: any read after it sees the marker until the sweep clears it.
@@ -1245,7 +1273,9 @@ async function readTodayGroup(
       group: snap?.exists ? loadGroup(snap.data()) : null,
       hiddenGhostOwners: hiddenGhostUids(hidden),
     };
-  });
+  // region P26-S4
+  }, { readOnly: true });
+  // endregion
 }
 // endregion
 
@@ -1331,7 +1361,9 @@ async function boardBest(
         best: privateBest,
         ...(lastAt > 0 ? { lastAt } : {}),
       };
-      payload.floor = payload.floor ?? publicBest;
+      // region P26-S4
+      // Without a global cache the top-50 floor remains unknown (null).
+      // endregion
       payload.approximate = exact.approximate || payload.approximate;
     }
   }
@@ -1396,6 +1428,12 @@ export async function lbClaimGift(
 ): Promise<LbClaimGiftResult> {
   if (!isObject(data) || typeof data.id !== 'string' || !GIFT_ID_RE.test(data.id)) return { ok: false };
   if (await tombstoneNow(db, uid)) deleted();
+  // region P26-S4
+  const allowed = new Set(GIFT_SHOP_ITEMS.map((item) => item.id));
+  const ownedItems = Array.isArray(data.owned)
+    ? data.owned.slice(0, GIFT_SHOP_ITEMS.length).filter((id): id is string => typeof id === 'string' && allowed.has(id))
+    : [];
+  // endregion
   const direct = db.collection(LB_GIFTS_COLLECTION).doc(data.id);
   const owned = db.collection(LB_GIFTS_COLLECTION).doc(giftId(uid, data.id));
   const byGid = await db.collection(LB_GIFTS_COLLECTION).where('gid', '==', data.id).limit(10).get();
@@ -1416,7 +1454,9 @@ export async function lbClaimGift(
     const gift = snap.data() as LbGiftDoc;
     if (gift.rolled !== undefined) return { ok: true, id: ref.id, tier: gift.tier, prize: gift.rolled };
     const seed = String(randomInt(1, 0x7fffffff));
-    const prize = rollGift(gift.tier, { random: seededRandom(Number(seed)), seed, shopItems: GIFT_SHOP_ITEMS });
+    // region P26-S4
+    const prize = rollGift(gift.tier, { random: seededRandom(Number(seed)), seed, shopItems: GIFT_SHOP_ITEMS, ownedItems });
+    // endregion
     tx.update(ref, { rolled: prize, claimedAt: at(nowMs) });
     return { ok: true, id: ref.id, tier: gift.tier, prize };
   });

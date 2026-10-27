@@ -27,6 +27,9 @@ import '../items/versus_recorder.dart' show duelOf; // WP-5b
 import '../../versus/opponent.dart'; // WP-5b
 import '../run_summary.dart';
 import 'post_run_screens.dart';
+// region P26-G6a
+import '../../components/progression/first_win_reward.dart';
+// endregion
 
 /// Images the results page draws (under `assets/images/`).
 const List<String> kResultsImages = [
@@ -186,6 +189,23 @@ class ResultsScreen extends PositionComponent
   final RunSummary summary;
   final ResultsModel model;
 
+  // region P26-G6a
+  FirstWinReward? firstWinReward;
+  bool _missionsStripVisible = false;
+
+  /// The missions host sets this when its strip is present; coordinates remain
+  /// in the results column while NEXT retains its bottom-button size.
+  set missionsStripVisible(bool value) {
+    if (_missionsStripVisible == value) return;
+    _missionsStripVisible = value;
+    firstWinReward?.missionsStrip = value;
+    firstWinReward?.position.y = value ? 595 : 572;
+    if (_built && firstWinReward != null) {
+      nextButton.position.y += (value ? 10 : -10) / content.scale.y;
+    }
+  }
+  // endregion
+
   /// The scaled 320 × 711 column.
   late final PositionComponent content;
 
@@ -302,7 +322,9 @@ class ResultsScreen extends PositionComponent
   double get time => _t;
 
   /// YOUR REWARD as shown now.
-  int get shownReward => _shownReward;
+  // region P26-G6a
+  int get shownReward => _shownReward + (firstWinReward?.shownCoins ?? 0);
+  // endregion
 
   /// CLAIM is up and takes taps.
   bool get claimShowing => _claimShowing;
@@ -324,6 +346,9 @@ class ResultsScreen extends PositionComponent
     if (!canContinue || _leaving || _claimShowing || _schedule.isNotEmpty) {
       return false;
     }
+    // region P26-G6a
+    if (firstWinReward?.running ?? false) return false;
+    // endregion
     bool done(double? start, double length) =>
         start == null || _t >= start + length;
     return done(_countStart, _countLength) &&
@@ -345,8 +370,19 @@ class ResultsScreen extends PositionComponent
     final trophy = Sprite(loaded[1]);
     final invite = Sprite(loaded[2]);
 
-    final k = ResultsConfig.scaleFor(h);
+    // region P26-G6a
+    final firstWinPaid = await FirstWinReward.pay(game, summary);
     final top = ResultsConfig.topFor(h);
+    // Reserve the approved line + missions height before the fixed-size NEXT
+    // on short screens. At 711 the approved layout remains at scale 1.
+    final k = firstWinPaid > 0
+        ? math.min(
+            ResultsConfig.scaleFor(h),
+            (ResultsConfig.nextTopFor(h) + 10 - 2 - top) /
+                (604 - ResultsConfig.contentTop),
+          )
+        : ResultsConfig.scaleFor(h);
+    // endregion
     final transform = (
       Vector2(160 * (1 - k), top - ResultsConfig.contentTop * k),
       Vector2.all(k),
@@ -550,6 +586,18 @@ class ResultsScreen extends PositionComponent
     // region WP-5b — header, opponent column, VS
     content.addAll(versusParts);
     // endregion WP-5b
+    // region P26-G6a
+    if (firstWinPaid > 0) {
+      final bonus = FirstWinReward(
+        coin: _coin,
+        onCount: _layoutReward,
+        missionsStrip: _missionsStripVisible,
+      );
+      firstWinReward = bonus;
+      content.add(bonus);
+      if (_missionsStripVisible) nextButton.position.y += 10 / content.scale.y;
+    }
+    // endregion
     add(content);
     _built = true;
     _layoutReward();
@@ -783,6 +831,9 @@ class ResultsScreen extends PositionComponent
     }
     _animate();
     _stepTicks();
+    // region P26-G6a
+    if (settled) firstWinReward?.start();
+    // endregion
   }
 
   void _animate() {
@@ -866,7 +917,9 @@ class ResultsScreen extends PositionComponent
   /// Centres "1 234 ●" in the white pill.
   void _layoutReward() {
     if (!_built) return;
-    rewardText.text = formatCoins(_shownReward);
+    // region P26-G6a
+    rewardText.text = formatCoins(shownReward);
+    // endregion
     const pill = ResultsConfig.rewardPill;
     final w =
         rewardText.width +

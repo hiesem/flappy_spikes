@@ -112,19 +112,8 @@ const List<TuningDef> kTuningDefaults = [
   ]),
   // §14.2 A revive is offered from this many hoops passed
   TuningDef('revive_min_hoops', TuningType.integer, 6),
-  // §14.2 One-time coin reward of levels 1-10
-  TuningDef('level_rewards', TuningType.intList, [
-    25,
-    50,
-    100,
-    200,
-    400,
-    600,
-    800,
-    1000,
-    2000,
-    5000,
-  ]),
+  // region P26-J2 — level_rewards retired (J5); level_coins replaces it.
+  // endregion
   // §14.2 Shop free-coins ad: coins per ad
   TuningDef('shop_ad_coins', TuningType.integer, 75),
   // §14.2 Shop free-coins ad: ads per day

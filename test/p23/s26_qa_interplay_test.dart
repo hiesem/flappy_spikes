@@ -125,7 +125,7 @@ void main() async {
           await flushAndMount(g);
           stepGame(g, 1);
           await g.storage.saveBestScore(25);
-          await g.storage.savePlayerLevel(1); // WP-L the stored level
+          await g.storage.saveLvlIndex(1); // PRD-2.6 J5 explicit new rank.
           g.openShop();
           await flushAndMount(g);
           stepGame(g, 1);
@@ -231,7 +231,7 @@ void main() async {
       // This puts both Home popups in contention without claiming the
       // level on results, where it would no longer be owed on arrival.
       await g.storage.saveBestScore(50);
-      await g.storage.savePlayerLevel(2); // WP-L the stored level
+      await g.menu.levels.debugForceLevelUp(); // J4 queues a durable roll.
       expect(g.menu.levels.pendingLevelUp, isNotNull);
       g.goHome();
       await drain(g, t);

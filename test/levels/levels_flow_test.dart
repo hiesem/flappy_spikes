@@ -1,3 +1,6 @@
+import 'progression_fixture.dart';
+import 'package:flappy_spikes/levels/level_track.dart';
+// PRD-2.6 J1–J5: new names, points, coins, pending-list catch-up.
 import 'package:flame/extensions.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -67,12 +70,13 @@ void main() async {
   }) {
     final events = _Events();
     FlameTester<FlappySpikesGame>(
-      () => createTestGame(prefs, height, events),
+      () => createTestGame(trackPrefs(prefs), height, events),
       gameSize: Vector2(320, height),
     ).testGameWidget(
       name,
       setUp: (game, tester) async {
         await game.ready();
+        game.runDebug.ignoreGates = false;
         await preloadImages(game);
         await flushAndMount(game);
       },
@@ -146,10 +150,10 @@ void main() async {
       stepGame(game, 0.3);
       final screen = game.levelsScreen!;
       final header = screen.header;
-      expect(header.nameText.text, 'FALCON');
+      expect(header.nameText.text, 'WING WOBBLER');
       expect(header.statsText.text, 'BEST 640 · GAMES 34');
       // WP-L HAWK needs 800 in a single run: an empty bar.
-      expect(header.barText.text, '800 TO HAWK');
+      expect(header.barText.text, '400 TO HOOP ROOKIE');
       expect(header.progress, 0);
       expect(
         header.position,
@@ -157,8 +161,8 @@ void main() async {
         LevelsTabsLayout.header.topLeft.toVector2(),
       );
 
-      expect(screen.rows, hasLength(10));
-      expect(screen.rows.first.def.name, 'EGG');
+      expect(screen.rows, hasLength(31));
+      expect(screen.rows.first.def.name, 'HATCHLING');
       for (final row in screen.rows) {
         final l = row.def.level;
         expect(
@@ -174,8 +178,8 @@ void main() async {
         expect(row.liveEmblem != null, l == 6);
         expect(row.bird != null, l == 6);
       }
-      expect(screen.rows[3].chipLabel, '+200');
-      expect(screen.rows[9].chipLabel, '+5 000');
+      expect(screen.rows[3].chipLabel, '+50');
+      expect(screen.rows[9].chipLabel, '+175');
       expect(screen.currentRow, screen.rows[5]);
 
       // Scrolled so the current row is in the viewport.
@@ -206,7 +210,7 @@ void main() async {
       final screen = game.levelsScreen!;
       expect(screen.currentRow, isNull);
       expect(screen.header.nameText.text, 'UNRANKED');
-      expect(screen.header.barText.text, '25 TO EGG');
+      expect(screen.header.barText.text, '25 TO HATCHLING');
       expect(screen.scroll.offset, 0);
       expect(
         screen.rows.every((r) => r.state == LevelRowState.locked),
@@ -216,7 +220,7 @@ void main() async {
   );
 
   levelsTest(
-    'LEVELS at LEGEND: MAX LEVEL, scrolled to the last row',
+    'LEVELS at ten: continues to KINGFISHER, scrolled to current row',
     prefs: {'bestScore': 6000, 'playerLevel': 10, 'claimedLevels': _claimed(10)},
     height: 568,
     (game, events, t) async {
@@ -224,9 +228,11 @@ void main() async {
       await flushAndMount(game);
       stepGame(game, 0.3);
       final screen = game.levelsScreen!;
-      expect(screen.header.barText.text, 'MAX LEVEL');
-      expect(screen.header.progress, 1);
-      expect(screen.scroll.offset, screen.scroll.maxOffset);
+      expect(screen.header.barText.text, '800 TO KINGFISHER');
+      expect(screen.header.progress, 0);
+      expect(screen.scroll.offset,
+        (Config.levelsRowTop(9) + Config.levelsRowHeight / 2 -
+          screen.scroll.viewport.height / 2 - screen.scroll.viewport.top).clamp(0, screen.scroll.maxOffset));
     },
   );
 
@@ -246,15 +252,13 @@ void main() async {
       await flushAndMount(game);
       final popup = game.levelUpPopup!;
       expect(popup.pending.toLevel, 6);
-      expect(popup.pending.reward, 25 + 50 + 100 + 200 + 400 + 600);
+      expect(popup.pending.reward, 50 + 50 + 50 + 50 + 50 + 75);
       expect(sounds, contains(Sfx.skBuyEpic));
-      expect(events.params('level_up'), [
-        {'level': 6, 'best': 640},
-      ]);
-      expect(popup.nameText.text, 'FALCON');
+      expect(events.params('level_up'), isEmpty, reason: 'J10 popup replay never repeats level_up');
+      expect(popup.nameText.text, 'WING WOBBLER');
       expect(popup.articleText.text, 'YOU ARE NOW A');
-      expect(popup.nextText.text, 'Next: HAWK at 800');
-      expect(popup.claimText.text, '+1 375');
+      expect(popup.nextText.text, 'Next: HOOP ROOKIE at 400');
+      expect(popup.claimText.text, '+325');
       // Popups pause the idle motion.
       expect(game.liveMotionPaused, isTrue);
       // Confetti 0.18 s in: 90 pieces for lv 5-8.
@@ -267,14 +271,15 @@ void main() async {
       popup.claimButton.onPressed();
       await _flush(game);
       expect(game.levelUpPopup, isNull);
-      expect(game.menu.wallet.balance, 1475);
-      expect(game.storage.claimedLevels, {1, 2, 3, 4, 5, 6});
+      expect(game.menu.wallet.balance, 425);
+      expect(game.storage.lvlPending, isEmpty);
       expect(game.menu.levels.pendingLevelUp, isNull);
       expect(events.params('level_reward_claimed'), [
-        {'level': 6, 'coins': 1375},
+        for (var l = 1; l <= 6; l++)
+          {'level': l, 'coins': trackLevelDef(l)!.coins, 'item_layer': 'none', 'rarity': 'none', 'fallback': 'none'},
       ]);
       final reward = game.coinReward!;
-      expect(reward.amount, 1375);
+      expect(reward.amount, 325);
       expect(reward.level, 6);
       expect(game.coinPill.held, isTrue);
       // The emblem upgrades with its pop after the count-up (§4.3).
@@ -284,7 +289,7 @@ void main() async {
         stepGame(game, 0.05);
         await flushAndMount(game);
       }
-      expect(game.coinPill.shownBalance, 1475);
+      expect(game.coinPill.shownBalance, 425);
       expect(home.emblem.level, 6);
       expect(home.popping, isTrue);
       expect(home.emblem.popScale, closeTo(0.6, 0.1));
@@ -305,15 +310,15 @@ void main() async {
       stepGame(game, 0.5);
       await flushAndMount(game);
       final popup = game.levelUpPopup!;
-      expect(popup.pending.reward, 75); // EGG + CHICK
+      expect(popup.pending.reward, 100); // EGG + CHICK
       final sounds = <Sfx>[];
       game.sound.onPlay = sounds.add;
       popup.closeButton.onPressed();
       await _flush(game);
       expect(sounds.first, Sfx.skClose);
       expect(game.levelUpPopup, isNull);
-      expect(game.menu.wallet.balance, 75);
-      expect(game.storage.claimedLevels, {1, 2});
+      expect(game.menu.wallet.balance, 100);
+      expect(game.storage.lvlPending, isEmpty);
 
       // PRD 2.6 C2: the close-button claim used this visit's slot. Declare
       // the next Home visit before testing the separate Esc claim.
@@ -332,7 +337,7 @@ void main() async {
       game.onKeyEvent(_esc(), {});
       await _flush(game);
       expect(game.levelUpPopup, isNull);
-      expect(game.menu.wallet.balance, 175);
+      expect(game.menu.wallet.balance, 150);
     },
   );
 
@@ -366,13 +371,13 @@ void main() async {
       expect(popup.pending.fromLevel, 1);
       expect(popup.pending.toLevel, 2);
       expect(popup.pending.reward, 50);
-      expect(popup.nameText.text, 'CHICK');
+      expect(popup.nameText.text, 'FLUFFBALL');
       popup.claimButton.onPressed();
       await _flush(game);
       // +50 reward (PRD-2 §3.2: run coins come per hoop passed, and this
       // run's score was set directly, so it passed none).
       expect(game.menu.wallet.balance, 50);
-      expect(game.storage.playerLevel, 2);
+      expect(game.storage.lvlIndex, 2);
       expect(game.homeScreen!.emblem.level, 1, reason: 'until the pop');
       stepGame(game, 4);
       await flushAndMount(game);
@@ -391,7 +396,7 @@ void main() async {
       stepGame(game, Config.levelUpSettleDelay);
       await flushAndMount(game);
       expect(game.levelUpPopup, isNotNull);
-      expect(game.levelUpPopup!.articleText.text, 'YOU ARE NOW AN');
+      expect(game.levelUpPopup!.articleText.text, 'YOU ARE NOW A');
       // While it is up nothing else opens over home.
       game.openNoAdsPopup();
       expect(game.noAdsPopup, isNull);
@@ -430,7 +435,7 @@ void main() async {
   );
 
   levelsTest(
-    'popup at LEGEND: highest-level line, 140 confetti',
+    'popup at ten: next track rank, interim 140 confetti',
     prefs: {'bestScore': 5000, 'playerLevel': 10, 'claimedLevels': _claimed(9)},
     (game, events, t) async {
       final sounds = <Sfx>[];
@@ -439,8 +444,8 @@ void main() async {
       await flushAndMount(game);
       final popup = game.levelUpPopup!;
       expect(sounds, contains(Sfx.skBuyLegendary));
-      expect(popup.nextText.text, 'The highest level. Legendary!');
-      expect(popup.claimText.text, '+5 000');
+      expect(popup.nextText.text, 'Next: KINGFISHER at 800');
+      expect(popup.claimText.text, '+175');
       stepGame(game, 0.2);
       expect(popup.confetti!.count, 140);
     },

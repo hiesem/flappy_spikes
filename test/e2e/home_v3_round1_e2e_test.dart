@@ -1,3 +1,4 @@
+import '../levels/progression_fixture.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -69,7 +70,7 @@ void _journey(
   final rig = _Rig();
   FlameTester<FlappySpikesGame>(
     () => createTestGame(
-      prefs,
+      trackPrefs(prefs),
       height,
       rig.events,
       Monetization(ads: rig.ads, iap: rig.iap),
@@ -87,6 +88,7 @@ void _journey(
     name,
     setUp: (game, tester) async {
       await game.ready();
+      game.runDebug.ignoreGates = false; // PRD-2.6 J3 counting journey.
       await preloadImages(game);
       await flushAndMount(game);
     },
@@ -194,28 +196,18 @@ void main() async {
   await loadFonts();
 
   test('QA home v3: rank thresholds and all 10 rewards match §4.1', () {
-    const thresholds = [25, 50, 100, 200, 400, 600, 800, 1000, 2000, 5000];
-    const rewards = [25, 50, 100, 200, 400, 600, 800, 1000, 2000, 5000];
-    const names = [
-      'EGG',
-      'CHICK',
-      'FLEDGLING',
-      'FLAPPER',
-      'GLIDER',
-      'FALCON',
-      'HAWK',
-      'SPIKE ACE',
-      'PHOENIX',
-      'LEGEND',
-    ];
-    expect(kLevels.map((level) => level.threshold), thresholds);
-    expect(kLevels.map((level) => level.reward), rewards);
-    expect(kLevels.map((level) => level.name), names);
-    expect(rewards.reduce((a, b) => a + b), 10175);
+    // PRD-2.6 J1/J3 replaces the ten-rank ladder.
+    const thresholds = [25, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000, 3500, 4000, 4500, 5000, 6000, 7000, 8000, 10000];
+    const rewards = [50, 50, 50, 50, 50, 75, 100, 125, 150, 175, 200, 225, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 875, 1000, 1125, 1250, 1500, 1750, 2000, 2500];
+    const names = ['HATCHLING', 'FLUFFBALL', 'NEST HOPPER', 'FIRST FLAP', 'FLEDGLING', 'WING WOBBLER', 'HOOP ROOKIE', 'FEATHERWEIGHT', 'SWALLOW', 'HUMMINGBIRD', 'KINGFISHER', 'RIM SKIMMER', 'STARLING', 'SHRIKE', 'SWIFT', 'TAILWIND', 'HAWKEYE', 'CANNONBALL', 'STORM PETREL', 'FEVER FINCH', 'SKYLARK', 'PEREGRINE', 'PORTAL PIGEON', 'COMET CONDOR', 'GOLDEN EAGLE', 'NIGHT OWL', 'MOONBIRD', 'ALBATROSS', 'PHOENIX', 'SPIKE LEGEND', 'THUNDERBIRD'];
+    expect(kTrackLevels.map((level) => level.points), thresholds);
+    expect(kTrackLevels.map((level) => level.coins), rewards);
+    expect(kTrackLevels.map((level) => level.name), names);
+    expect(rewards.reduce((a, b) => a + b), 18800);
     for (var i = 0; i < thresholds.length; i++) {
-      expect(levelFor(thresholds[i] - 1), i);
-      expect(levelFor(thresholds[i]), i + 1);
-      expect(levelFor(thresholds[i] + 1), i + 1);
+      expect(LevelTrack.step(i, 0, thresholds[i] - 1).index, i);
+      expect(LevelTrack.step(i, 0, thresholds[i]).index, i + 1);
+      expect(LevelTrack.step(i, 0, thresholds[i] + 1).index, i + 1);
     }
   });
 
@@ -251,11 +243,11 @@ void main() async {
       final panel = game.world.children.query<ResultsScreen>().single;
       await _advance(game, 4.2);
       expect(panel.claimShowing, isTrue);
-      expect(panel.rank.text, 'EGG · LV 1');
+      expect(panel.rank.text, 'HATCHLING · LV 1');
       await _tap(game, tester, panel.claimButton.button);
-      expect(game.menu.wallet.balance, earned + 25);
+      expect(game.menu.wallet.balance, earned + 50);
       await _advance(game, 3);
-      expect(panel.shownReward, earned + 25);
+      expect(panel.shownReward, earned + 50);
       await _tap(game, tester, panel.nextButton);
       await _advance(game, .9);
       expect(game.levelUpPopup, isNull, reason: 'claimed on the results page');
@@ -263,15 +255,15 @@ void main() async {
       expect(game.foregroundColor, paletteForStage(0).foreground);
       await _advance(game, 4);
       expect(game.levelUpPopup, isNull);
-      expect(game.coinPill.shownBalance, earned + 25);
+      expect(game.coinPill.shownBalance, earned + 50);
       expect(game.menu.levels.pendingLevelUp, isNull);
       expect(game.homeScreen!.emblem.level, 1);
       expect(rig.events.params('level_up'), [
-        {'from': 0, 'to': 1, 'reward': 25, 'claim': 'tap'},
+        {'level': 1, 'games': game.storage.gamesPlayed, 'run_score': score, 's_since_install': greaterThanOrEqualTo(0)},
       ]);
       final saved = await _reload();
-      expect(saved.claimedLevels, {1});
-      expect(saved.coins, earned + 25);
+      expect(saved.lvlPending, isEmpty);
+      expect(saved.coins, earned + 50);
       await _tap(game, tester, game.homeScreen!.bird);
       await _advance(game, .5);
       final levels = game.levelsScreen!;
@@ -299,31 +291,32 @@ void main() async {
       expect(game.noAdsPopup, isNull);
       final popup = game.levelUpPopup!;
       expect(popup.pending.toLevel, 6);
-      expect(popup.pending.reward, 1375);
+      expect(popup.pending.reward, 325);
       await _tap(game, tester, popup.closeButton);
       await _advance(game, 5);
       expect(game.noAdsPopup, isNull, reason: 'C2 keeps No-Ads for a later visit');
       expect(rig.events.params('noads_popup_shown'), isEmpty);
-      expect(game.menu.wallet.balance, 2625);
-      expect(game.coinPill.shownBalance, 2625);
+      expect(game.menu.wallet.balance, 1575);
+      expect(game.coinPill.shownBalance, 1575);
       expect(rig.events.params('level_reward_claimed'), [
-        {'level': 6, 'coins': 1375},
+        for (var l = 1; l <= 6; l++)
+          {'level': l, 'coins': trackLevelDef(l)!.coins, 'item_layer': 'none', 'rarity': 'none', 'fallback': 'none'},
       ]);
       expect(await game.menu.levels.claim(), 0);
       final saved = await _reload();
-      expect(saved.claimedLevels, {1, 2, 3, 4, 5, 6});
-      expect(saved.coins, 2625);
+      expect(saved.lvlPending, isEmpty);
+      expect(saved.coins, 1575);
       await _tap(game, tester, game.homeScreen!.bird);
       await _advance(game, .5);
       final levels = game.levelsScreen!;
       expect(levels.scroll.offset, greaterThan(0));
-      expect(levels.currentRow!.def.name, 'FALCON');
+      expect(levels.currentRow!.def.name, 'WING WOBBLER');
       expect(levels.header.statsText.text, 'BEST 640 · GAMES 34');
-      expect(levels.header.barText.text, '800 TO HAWK'); // WP-L one run
+      expect(levels.header.barText.text, '400 TO HOOP ROOKIE'); // WP-L one run
       await _tap(game, tester, levels.backButton);
       await _advance(game, 1);
       expect(game.levelUpPopup, isNull);
-      expect(rig.events.params('level_up'), hasLength(1));
+      expect(rig.events.params('level_up'), isEmpty);
     },
     prefs: {
       'bestScore': 640, 'playerLevel': 6,
@@ -753,7 +746,7 @@ void main() async {
       await _tap(game, tester, game.noAdsCelebration!.claimButton);
       await _advance(game, 5);
       expect(game.levelUpPopup, isNull, reason: 'EGG paid once');
-      expect(game.coinPill.shownBalance, 1025);
+      expect(game.coinPill.shownBalance, 1050);
     },
     prefs: const {'bestScore': 25, 'playerLevel': 1},
   );
@@ -802,7 +795,7 @@ void main() async {
       4,
       sample: () {
         t += .05;
-        if (countedAt < 0 && game.coinPill.shownBalance == 25) countedAt = t;
+        if (countedAt < 0 && game.coinPill.shownBalance == 50) countedAt = t;
         if (popAt < 0 && game.homeScreen!.popping) popAt = t;
       },
     );

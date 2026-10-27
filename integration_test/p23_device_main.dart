@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flame/game.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
-import 'package:flappy_spikes/levels/levels.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/purchases.dart';
 import 'package:flappy_spikes/main.dart' as app;
@@ -54,7 +53,7 @@ Future<void> main() async {
             case 'best':
               await game.storage.saveBestScore(c['value'] as int);
               // WP-L the stored level follows the forced best here.
-              await game.storage.savePlayerLevel(levelFor(c['value'] as int));
+              await game.menu.levels.recordRun(c['value'] as int);
               game.refreshHome();
             case 'score':
               final run = game.run;

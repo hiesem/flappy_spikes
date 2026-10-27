@@ -1,3 +1,5 @@
+import '../../levels/progression_fixture.dart';
+// PRD-2.6 J4: popup fixtures carry explicit persisted pending rolls.
 import 'package:flappy_spikes/achievements/achievement_catalog.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
@@ -260,7 +262,7 @@ void main() {
       'claimedLevels': <String>[],
     });
     return createRunTestGame(
-      prefs: {'playerLevel': 1, 'claimedLevels': <String>[]},
+      prefs: trackPrefs({'playerLevel': 1, 'claimedLevels': <String>[]}),
       worldHeight: Config.worldHeight,
     );
   }, gameSize: Vector2(Config.worldWidth, Config.worldHeight));
@@ -315,7 +317,7 @@ void main() {
     var now = DateTime(2026, 10, 24, 12);
     final sessionTransitions = FlameTester<FlappySpikesGame>(
       () => createRunTestGame(
-        prefs: {
+        prefs: trackPrefs({
           'playerLevel': 1,
           'claimedLevels': atLaunch ? <String>[] : ['1'],
           'gamesPlayed': 12,
@@ -326,7 +328,7 @@ void main() {
           // Keep the launch empty in the resume case, so the owed level is
           // created later, without any run-end bookkeeping.
           if (!atLaunch) 'noAdsPopupLastMs': now.millisecondsSinceEpoch,
-        },
+        }),
         worldHeight: Config.worldHeight,
         clock: () => now,
       ),
@@ -400,7 +402,7 @@ void main() {
   final normalTransitions = FlameTester<FlappySpikesGame>(() {
     return createRunTestGame(
       prefs: {
-        'playerLevel': 1,
+        'lvlIndex': 1,
         'claimedLevels': ['1'],
         'gamesPlayed': 12,
         'firstSessionDone': true,
@@ -436,6 +438,7 @@ void main() {
       }
 
       Future<void> finishRun(int score) async {
+        game.runDebug.ignoreGates = false; // PRD-2.6 J3 counting run.
         final run = await startRun(game);
         run.state.score = score;
         game.showRunScore(score);

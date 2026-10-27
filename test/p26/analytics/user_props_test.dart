@@ -30,7 +30,8 @@ void main() {
     setUp: (game, _) async {
       await game.ready();
       game.sound.enabled = false;
-      game.storage.playerLevel = 2;
+      // PRD-2.6 J10: the user property is the new progression index.
+      game.storage.lvlIndex = 2;
       game.storage.showcaseDoneAt = 4;
       await preloadImages(game);
     },

@@ -48,18 +48,19 @@ const List<String> kResultsImages = [
 /// level is stored and steps up one per run): the level, the fill of a
 /// single run's [score] toward the next threshold and the label under the
 /// bar ("70 TO FLEDGLING", "MAX LEVEL").
+// region P26-J2
 class LevelBar {
   const LevelBar(this.level, this.fraction, this.label);
 
   /// The bar at [level] for a run of [score] (0 = no run counted yet: an
   /// empty bar and the full threshold to reach).
   factory LevelBar.at(int level, {int score = 0}) {
-    final next = nextLevel(level);
+    final next = trackLevelDef(level + 1);
     if (next == null) return LevelBar(level, 1, 'MAX LEVEL');
-    final left = math.max(0, next.threshold - score);
+    final left = math.max(0, next.points - score);
     return LevelBar(
       level,
-      (score / next.threshold).clamp(0.0, 1.0),
+      (score / next.points).clamp(0.0, 1.0),
       '${formatCoins(left)} TO ${next.name}',
     );
   }
@@ -71,9 +72,11 @@ class LevelBar {
 
 /// "HAWK · LV 7", or "UNRANKED" below level 1 (§5.10 rank line).
 String rankText(int level) {
-  final def = levelDef(level);
+  final def = trackLevelDef(level);
   return def == null ? 'UNRANKED' : '${def.name} · LV $level';
 }
+
+// endregion
 
 /// What the results page shows (§3.14 / §5.10), pure data.
 class ResultsModel {
@@ -134,25 +137,13 @@ class ResultsModel {
   bool get hasClaim => levelUp && levelReward > 0;
 }
 
-/// Pays the owed level rewards (§3.14): `menu.levels.claim()` (wallet
-/// source `level_reward`, every reached level marked claimed), clears
-/// `unclaimedLevelReward` and sends `level_up {from, to, reward, claim}`
-/// with [how] = `tap` / `auto_next` / `app_start`. Returns what was paid; a
-/// second call pays nothing. `claim()` also resumes a claim that a kill
-/// interrupted between its claim writes and the credit (S6-22) and then
-/// clears its `levelRewardPayout` record, so the reward lands exactly once.
+/// Temporary results entry point until J4: pays the persisted reward list.
+/// The progression model emits J10 claim events, once per rewarded level.
 Future<int> claimLevelRewards(FlappySpikesGame game, String how) async {
-  final pending = game.menu.levels.pendingLevelUp;
-  final paid = await game.menu.levels.claim();
-  if (paid > 0 && pending != null) {
-    game.services.track('level_up', {
-      'from': pending.fromLevel,
-      'to': pending.toLevel,
-      'reward': paid,
-      'claim': how,
-    });
-  }
-  return paid;
+  // region P26-J2
+  game.menu.levels.services = game.services;
+  return game.menu.levels.payPending();
+  // endregion
 }
 
 /// The results page as the post-run flow's last screen (ARCH §1.11).

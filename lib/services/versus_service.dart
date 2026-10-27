@@ -662,7 +662,7 @@ class FirebaseVersusService implements VersusService {
     final s = storage;
     return VersusProfile(
       name: s.versusNickname ?? '', // WP-AV the generated name only
-      level: s.playerLevel.clamp(0, 9999), // WP-J progression level, not bracket
+      level: s.lvlIndex.clamp(0, 9999), // WP-J progression level, not bracket
     );
   }
 

@@ -78,12 +78,15 @@ void main() {
     expect(b.puzzlePieces, 0x5);
     expect(b.puzzleRound, 3);
     expect(b.lastPortalRide, 'storm');
-    expect(b.unclaimedLevelReward, 150);
-    expect(b.levelRewardPayout, 150);
+    // PRD-2.6 J5 retires the legacy flag; finishes the interrupted credit.
+    expect(b.unclaimedLevelReward, 0);
+    expect(b.coins, 150);
+    expect(b.levelRewardPayout, 0);
     expect(b.uploadsSent, 3);
     expect(b.uploadsSentDay, '2026-10-08');
     expect(b.metElements, {'saw', 'portal', 'egg'});
-    expect(b.levelRewardsClaimed, 4);
+    expect(b.levelRewardsClaimed, 0); // J5 no legacy claims are loaded.
+    expect((await SharedPreferences.getInstance()).getStringList('claimedLevels'), ['1', '2', '4']);
     expect(b.versusNickname, 'BrightOwl123');
     expect(b.uploadQueue, ['{"runId":"a"}', '{"runId":"b"}']);
     expect(b.uploadsToday, 2);
@@ -129,13 +132,16 @@ void main() {
     await a.beginLevelRewardClaim(payout: 190, claimed: {1, 2});
     // The record must already be on disk before the credit runs.
     final mid = await fresh();
-    expect(mid.levelRewardPayout, 190);
-    expect(mid.levelRewardsClaimed, 2);
+    expect(mid.levelRewardPayout, 0);
+    expect(mid.coins, 190);
+    expect(mid.levelRewardsClaimed, 0);
+    expect((await SharedPreferences.getInstance()).getStringList('claimedLevels'), ['1', '2']);
     await a.endLevelRewardClaim();
     final b = await fresh();
     expect(b.levelRewardPayout, 0);
     expect(b.unclaimedLevelReward, 0);
-    expect(b.levelRewardsClaimed, 2, reason: 'the claim itself stays');
+    expect(b.levelRewardsClaimed, 0);
+    expect((await SharedPreferences.getInstance()).getStringList('claimedLevels'), ['1', '2'], reason: 'J5 the legacy bytes stay');
   });
 
   test('§3.13 "Delete my data" (Q22) resets the versus keys only', () async {

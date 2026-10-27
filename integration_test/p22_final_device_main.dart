@@ -12,7 +12,6 @@ import 'package:flappy_spikes/game/purchases.dart';
 import 'package:flappy_spikes/game/audio_counter.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
-import 'package:flappy_spikes/levels/levels.dart';
 import 'package:flappy_spikes/game/sound.dart';
 import 'package:flappy_spikes/main.dart' show SystemBackObserver;
 import 'package:flappy_spikes/run/debug/force_menu.dart';
@@ -341,7 +340,7 @@ Future<void> main() async {
             case 'best':
               await game.storage.saveBestScore(c['score'] as int);
               // WP-L the stored level follows the forced best here.
-              await game.storage.savePlayerLevel(levelFor(c['score'] as int));
+              await game.menu.levels.recordRun(c['score'] as int);
             case 'score':
               if (run != null) {
                 run.ctx.addScore((c['score'] as int) - run.state.score);

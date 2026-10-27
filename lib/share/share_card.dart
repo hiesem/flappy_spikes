@@ -247,8 +247,8 @@ abstract final class ShareCardPainter {
     ui.Image? emblem,
   }) {
     // region P26-J7
-    final def = levelDef(d.level);
-    final track = d.usesProgression ? trackLevelDef(d.level) : null;
+    final def = trackLevelDef(d.level);
+    final track = d.usesProgression ? def : null;
     // endregion
     // §4.3 unranked: the post-run grey palette.
     final bg = track?.plate ?? def?.plate ?? greyBg;

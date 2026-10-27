@@ -178,7 +178,7 @@ void main() {
           prefs: const {
             'feathers': 3,
             'bestScore': 12,
-            'playerLevel': 1, // WP-L EGG (claimed): the 60 run steps to CHICK
+            'lvlIndex': 1, // WP-L EGG (claimed): the 60 run steps to CHICK
             'claimedLevels': ['1'],
           },
           versus: versus,
@@ -198,6 +198,7 @@ void main() {
         '→ grey LEVEL UP / CLAIM → Home',
         setUp: (g, _) async {
           await g.ready();
+          g.runDebug.ignoreGates = false; // PRD-2.6 J3: counting result fixture.
           await preloadImages(g);
           await loadFonts();
           await (FontLoader('Fredoka')
@@ -209,10 +210,11 @@ void main() {
           await tester.runAsync(() async {
             await versus.prefetch();
             final run = await startRun(g);
-            g.runDebug.god = true;
-            for (var i = 0; i < 60; i++) {
-              run.debugPass();
-            }
+            // PRD-2.6 J3: set fixture state without activating debug assistance.
+            run.state.hoopsPassed = 60;
+            run.ctx.addScore(60);
+            g.applyRunStage(6);
+            run.state.invulnerable = 2;
             await stepSeconds(g, .6);
             expect(run.state.score, 60);
             expect(g.visibleHeight, visible);
@@ -220,7 +222,6 @@ void main() {
             g.update(0);
             final strips = g.world.children.whereType<SpikeStrip>().toList();
             expect(strips.every((s) => s.squeezeInset == 80), isTrue);
-            g.runDebug.god = false;
             killRunThroughSaves(g);
             await flushAndMount(g);
             expect(g.state, GameState.reviving);

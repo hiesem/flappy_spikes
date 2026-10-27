@@ -225,9 +225,9 @@ class SoakDriver {
       _dying = true;
       if (forcesLevelUp(current) && !_forcedLevelUp) {
         _forcedLevelUp = true;
-        final next = nextLevel(game.menu.levels.level);
-        if (next != null && next.threshold > run.state.score) {
-          run.ctx.addScore(next.threshold - run.state.score);
+        final next = trackLevelDef(game.menu.levels.level + 1);
+        if (next != null && next.points > run.state.score) {
+          run.ctx.addScore(next.points - run.state.score);
         }
       }
       // Death: god mode ends and a spikes hit is forced (repeated while a

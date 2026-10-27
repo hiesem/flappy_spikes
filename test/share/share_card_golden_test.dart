@@ -7,7 +7,6 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:flappy_spikes/levels/levels.dart';
 import 'package:flappy_spikes/share/share_card.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter/services.dart';
@@ -28,6 +27,7 @@ ShareCardData card({
   ShareCardKind kind = ShareCardKind.spotlight,
   int score = 47,
   int best = 132,
+  int level = 3, // PRD-2.6 J5: progression is independent of best score.
   Look look = const Look(),
   String name = 'HiesemSurak',
   String banner = 'BEAT MY SCORE!',
@@ -35,7 +35,7 @@ ShareCardData card({
   kind: kind,
   score: score,
   best: best,
-  level: kind == ShareCardKind.spotlight ? levelFor(best) : 0,
+  level: kind == ShareCardKind.spotlight ? level : 0,
   look: look,
   name: name,
   banner: banner,
@@ -57,6 +57,7 @@ Future<ui.Image> draw(ShareCardData data) async {
 final Map<String, ShareCardData> goldens = {
   // §4.3 unranked (level 0), 1 digit.
   'spotlight_l0_1digit': card(
+    level: 0,
     score: 7,
     best: 8,
     look: const Look(bird: 'sky', gear: 'shades'),
@@ -71,6 +72,7 @@ final Map<String, ShareCardData> goldens = {
   ),
   // Level 6 Falcon (c2), 3 digits.
   'spotlight_l6_3digit': card(
+    level: 6,
     score: 118,
     best: 640,
     look: const Look(bird: 'classic', gear: 'shades', hat: 'cap'),
@@ -79,6 +81,7 @@ final Map<String, ShareCardData> goldens = {
   ),
   // Level 8 Spike Ace (c5) with the longest banner and a 16-character name.
   'spotlight_l8_longest': card(
+    level: 8,
     score: 87,
     best: 1240,
     look: const Look(bird: 'robo', hat: 'tophat'),
@@ -87,6 +90,7 @@ final Map<String, ShareCardData> goldens = {
   ),
   // Level 9 Phoenix (c3).
   'spotlight_l9': card(
+    level: 9,
     score: 263,
     best: 2150,
     look: const Look(bird: 'phoenix', gear: 'chain'),
@@ -95,6 +99,7 @@ final Map<String, ShareCardData> goldens = {
   ),
   // Level 10 Legend (c4), 4 digits.
   'spotlight_l10_4digit': card(
+    level: 10,
     score: 5320,
     best: 5320,
     look: const Look(bird: 'galaxy', hat: 'halo'),

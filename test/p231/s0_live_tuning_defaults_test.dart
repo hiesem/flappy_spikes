@@ -41,7 +41,7 @@ const Map<String, String> _liveV21 = {
   'revive_ladder': '[250,500,1000,2000,4000,8000]',
   'revive_min_hoops': '6',
   // owner 2026-10-17, RC v25
-  'level_rewards': '[25,50,100,200,400,600,800,1000,2000,5000]',
+  // PRD-2.6 J5 retires level_rewards; level_coins is covered by J1 tests.
   'shop_ad_per_day': '5',
   'shop_ad_cooldown_s': '300',
   'curve_speed': '[[0,150],[50,172.5],[150,187.5]]',

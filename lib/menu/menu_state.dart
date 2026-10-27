@@ -22,16 +22,20 @@ class MenuState {
     slot = PowerupSlot(storage, random: random);
     noAdsPopup = NoAdsPopupPolicy(storage);
     freeCoins = FreeCoinsPolicy(storage);
-    levels = LevelProgress(storage, wallet);
+    // region P26-J2
+    levels = LevelProgress(storage, wallet, items: items, random: random);
+    // endregion
   }
 
   final GameStorage storage;
   late final Wallet wallet;
+
   /// PRD-menu-v2 wardrobe.
   late final ItemStore items;
   late final PowerupSlot slot;
   late final NoAdsPopupPolicy noAdsPopup;
   late final FreeCoinsPolicy freeCoins;
+
   /// PRD-home-v3 §4: ranks on the best score + one-time rewards.
   late final LevelProgress levels;
 

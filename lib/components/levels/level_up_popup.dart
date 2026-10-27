@@ -84,10 +84,10 @@ class LevelUpPopup extends PositionComponent
 
   /// The line under the name.
   static String nextLineFor(int level) {
-    final next = nextLevel(level);
+    final next = trackLevelDef(level + 1);
     return next == null
         ? 'The highest level. Legendary!'
-        : 'Next: ${next.name} at ${formatCoins(next.threshold)}';
+        : 'Next: ${next.name} at ${formatCoins(next.points)}';
   }
 
   /// Emblem pop-in scale at [k] = t / 0.45 (build74 `pf`).

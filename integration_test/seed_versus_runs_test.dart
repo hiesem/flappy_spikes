@@ -20,7 +20,7 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/firebase_options.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
-import 'package:flappy_spikes/levels/levels.dart';
+import 'package:flappy_spikes/versus/brackets.dart';
 import 'package:flappy_spikes/run/run_summary.dart';
 import 'package:flappy_spikes/services/e2e.dart';
 import 'package:flappy_spikes/services/firebase_versus_backend.dart';
@@ -133,7 +133,7 @@ void main() {
         expect(write, UploadWrite.done);
         debugPrint(
           'SEED run ${i + 1}: ${s.score} points, ${s.hoopsPassed} hoops, '
-          '${s.timeline.entries} entries, level ${levelFor(s.score)}',
+          '${s.timeline.entries} entries, level ${bracketFor(s.score)}',
         );
       },
     );

@@ -1,3 +1,5 @@
+import '../levels/progression_fixture.dart';
+// PRD-2.6 J1/J3/J4: counting-run fixtures and new reward coins.
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
@@ -27,7 +29,7 @@ void main() {
     Future<void> Function(FlappySpikesGame g) body,
   ) {
     FlameTester<FlappySpikesGame>(
-      () => createRunTestGame(prefs: prefs),
+      () => createRunTestGame(prefs: trackPrefs(prefs))..runDebug.ignoreGates = false,
       gameSize: Vector2(320, 711),
     ).testGameWidget(
       name,
@@ -140,7 +142,7 @@ void main() {
     (g) async {
       final sfx = sfxLog(g);
       final page = await endWith(g, points: 815, coins: 65);
-      expect(page.model.levelReward, 800);
+      expect(page.model.levelReward, 100);
       stepGame(g, 3.9);
       await flushAndMount(g);
       expect(page.claimShowing, isTrue);
@@ -150,7 +152,7 @@ void main() {
       await flushAndMount(g);
       stepGame(g, 2);
       expect(sfx, contains('lvClaim'));
-      expect(ticks(sfx), ResultsScreen.ticksFor(800));
+      expect(ticks(sfx), ResultsScreen.ticksFor(100));
     },
   );
 }

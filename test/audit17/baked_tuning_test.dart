@@ -44,7 +44,7 @@ const Map<String, String> _liveRc20261019 = {
   'puzzle_reward': '[40,100,5]',
   'revive_ladder': '[250,500,1000,2000,4000,8000]',
   'revive_min_hoops': '6',
-  'level_rewards': '[25,50,100,200,400,600,800,1000,2000,5000]',
+  // PRD-2.6 J5 retires level_rewards; level_coins is covered by J1 tests.
   'shop_ad_coins': '75',
   'shop_ad_per_day': '5',
   'shop_ad_cooldown_s': '300',

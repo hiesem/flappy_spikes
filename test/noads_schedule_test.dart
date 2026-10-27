@@ -1,3 +1,5 @@
+import 'levels/progression_fixture.dart';
+// PRD-2.6 J4: explicit new-track pending popup fixture.
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/debug_panel.dart';
@@ -70,7 +72,7 @@ void main() async {
     FlameTester<FlappySpikesGame>(
       () {
         SharedPreferences.setMockInitialValues(
-          prefs ?? {'installDay': clock.day - 1, 'firstSessionDone': true},
+          trackPrefs(prefs ?? {'installDay': clock.day - 1, 'firstSessionDone': true}),
         );
         return FlappySpikesGame(
           worldHeight: 711,
@@ -157,7 +159,9 @@ void main() async {
 
   scheduleTest(
     'install day: 10 finished runs open the window on the next session',
-    prefs: {'installDay': _Clock().day, 'firstSessionDone': true},
+    prefs: {'installDay': _Clock().day, 'firstSessionDone': true,
+      'lvlIndex': 31, // PRD-2.6 J3: keep this schedule-only case below a level-up.
+    },
     (game, events, clock, ads) async {
       expect(game.noAdsPopup, isNull);
       for (var i = 0; i < Config.noAdsPopupMinRuns - 1; i++) {

@@ -99,7 +99,9 @@ void main() {
       );
       // Game 3 forced the balloon bonus, game 4 a level-up with CLAIM.
       expect(line('bonus-done game=3'), isNotNull, reason: lines.join('\n'));
-      expect(line('claim game=4'), isNotNull, reason: lines.join('\n'));
+      // PRD-2.6 J3: soak/debug assistance never grants progression.
+      expect(line('claim game=4'), isNull, reason: lines.join('\n'));
+      expect(g.menu.levels.pending, isEmpty);
       expect(g.storage.unclaimedLevelReward, 0);
       // Measured game 1 and the last game hold on Home.
       expect(line('hold game=1'), isNotNull);

@@ -140,7 +140,7 @@ class LevelsScreen extends MenuScreen {
   /// The row of the current level (null while unranked).
   LevelRow? get currentRow {
     final level = game.menu.levels.level;
-    return level >= 1 ? rows[level - 1] : null;
+    return level >= 1 ? rows[(level - 1).clamp(0, rows.length - 1)] : null;
   }
 
   @override
@@ -168,7 +168,7 @@ class LevelsScreen extends MenuScreen {
       look: look,
       coin: sprite('menu/coin.png'),
     );
-    for (final def in kLevels) {
+    for (final def in kTrackLevels) {
       rows.add(
         LevelRow(
           def: def,
@@ -199,7 +199,7 @@ class LevelsScreen extends MenuScreen {
     scroll.content.addAll(rows);
     // region P26-G4a
     scroll.contentBottom =
-        Config.levelsRowTop(kLevels.length) +
+        Config.levelsRowTop(kTrackLevels.length) +
         listShift +
         Config.levelsListPadBottom;
     // endregion
@@ -315,8 +315,8 @@ class LevelsHeader extends PositionComponent {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    final def = levelDef(level);
-    final next = nextLevel(level);
+    final def = trackLevelDef(level);
+    final next = trackLevelDef(level + 1);
     // Owner 2026-10-17 (WP-L): the level is stored and steps up one per
     // run; the next one needs its threshold in a single run, so the bar is
     // empty below LEGEND and the label names that score.
@@ -344,7 +344,7 @@ class LevelsHeader extends PositionComponent {
     barText = MenuText(
       next == null
           ? 'MAX LEVEL'
-          : '${formatCoins(next.threshold)} TO ${next.name}',
+          : '${formatCoins(next.points)} TO ${next.name}',
       fontSize: Config.levelsBarFontSize,
       color: Config.menuPlum,
       letterSpacingEm: 0.1,
@@ -427,7 +427,7 @@ class LevelRow extends PositionComponent {
          size: Vector2(Config.shopRowWidth, Config.levelsRowHeight),
        );
 
-  final LevelDef def;
+  final TrackLevelDef def;
   final LevelRowState state;
   final Look look;
   final Sprite coin;
@@ -498,14 +498,14 @@ class LevelRow extends PositionComponent {
       position: Vector2(Config.levelsRowEmblemWidth, top),
     );
     reachText = MenuText(
-      'REACH ${formatCoins(def.threshold)}',
+      'REACH ${formatCoins(def.points)}',
       fontSize: Config.levelsRowReachFontSize,
       color: _fg,
       letterSpacingEm: 0.14,
       position: Vector2(Config.levelsRowEmblemWidth, top + nameLine + 3),
     );
     chip = _RewardChip(
-      reward: def.reward,
+      reward: def.coins,
       claimed: reached,
       coin: coin,
       rowWidth: width,

@@ -249,14 +249,13 @@ class DebugPanel extends PositionComponent
           iap.mode = FakeIapMode
               .values[(iap.mode.index + 1) % FakeIapMode.values.length];
         }),
+      // region P26-J2
       DebugAction(
         () =>
-            'LEVEL UP (best ${menu.storage.bestScore}, '
-            'lv ${menu.levels.level})',
+            'LEVEL UP (lv ${menu.levels.level}, '
+            '${menu.levels.points}/${menu.levels.next!.points} pts)',
         () async {
-          // PRD-home-v3 Q-H1 interim: raise the best to the next level,
-          // then show the LEVEL UP popup right away over home (elsewhere
-          // it shows on the next home).
+          // J11: force exactly the next level, including ETERNAL WING.
           await menu.levels.debugForceLevelUp();
           final pending = menu.levels.pendingLevelUp;
           if (pending == null) {
@@ -267,6 +266,7 @@ class DebugPanel extends PositionComponent
           game.openLevelUpPopup();
         },
       ),
+      // endregion
       DebugAction(
         () => 'ALL ITEMS (${menu.items.ownedCount}/$kCollectibleTotal)',
         () async {

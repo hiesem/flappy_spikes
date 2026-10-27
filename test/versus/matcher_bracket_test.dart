@@ -23,7 +23,7 @@ void main() {
       final storage = GameStorage();
       await storage.load();
       await storage.saveBestScore(80);
-      await storage.savePlayerLevel(25);
+      await storage.saveLvlIndex(25);
       final backend = service.FakeBackend();
       backend.pools['2_0'] = [
         PoolEntry.fromMap({

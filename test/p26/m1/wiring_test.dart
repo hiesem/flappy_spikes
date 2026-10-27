@@ -1,3 +1,4 @@
+import '../../levels/progression_fixture.dart';
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
@@ -280,10 +281,10 @@ void main() {
 
   final homeMoments = _HomeMoments();
   final withHome = FlameTester<FlappySpikesGame>(() {
-    SharedPreferences.setMockInitialValues({
+    SharedPreferences.setMockInitialValues(trackPrefs({
       'playerLevel': 1,
       'claimedLevels': <String>[],
-    });
+    }));
     return FlappySpikesGame(
       worldHeight: Config.worldHeight,
       soundEnabled: false,

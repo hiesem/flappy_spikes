@@ -8,7 +8,6 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/achievements/achievement_catalog.dart';
 import 'package:flappy_spikes/achievements/achievements_feature.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
-import 'package:flappy_spikes/levels/levels.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
 import 'package:flappy_spikes/run/config/bonus_config.dart';
 import 'package:flappy_spikes/run/director/plans.dart';
@@ -71,18 +70,27 @@ void main() {
 
   // WP-L (owner 2026-10-17) ranks follow the stored level: a run that
   // steps it up to a rank unlocks that rank and every lower one.
-  for (final (i, lv) in kLevels.indexed) {
+  // PRD-2.6 J9: achievement thresholds remain independent of the new track.
+  const ranks = [
+    (level: 1, name: 'EGG', threshold: 25), (level: 2, name: 'CHICK', threshold: 50),
+    (level: 3, name: 'FLEDGLING', threshold: 100), (level: 4, name: 'FLAPPER', threshold: 200),
+    (level: 5, name: 'GLIDER', threshold: 400), (level: 6, name: 'FALCON', threshold: 600),
+    (level: 7, name: 'HAWK', threshold: 800), (level: 8, name: 'SPIKE ACE', threshold: 1000),
+    (level: 9, name: 'PHOENIX', threshold: 2000), (level: 10, name: 'LEGEND', threshold: 5000),
+  ];
+  for (final (i, lv) in ranks.indexed) {
     tester(
       prefs: {
-        'playerLevel': i,
+        'lvlIndex': i, // PRD-2.6 J5: explicit new-track state.
         'claimedLevels': [for (var l = 1; l <= i; l++) '$l'],
       },
     ).testGameWidget(
-      '§12.2 rank ${lv.name}: at ${i == 0 ? 'UNRANKED' : kLevels[i - 1].name} '
+      '§12.2 rank ${lv.name}: at ${i == 0 ? 'UNRANKED' : ranks[i - 1].name} '
       'a run scoring exactly ${lv.threshold} steps up to it and unlocks it '
       'and every lower rank, no higher one',
       setUp: boot,
       verify: (g, _) async {
+        g.runDebug.ignoreGates = false; // J3: this rank transition needs a counting run.
         final run = await startRun(g);
         run.ctx.addScore(lv.threshold);
         await finish(g);
@@ -105,6 +113,7 @@ void main() {
     'WP-L a 2,000-point first run steps up ONE level: EGG only',
     setUp: boot,
     verify: (g, _) async {
+      g.runDebug.ignoreGates = false; // J3 counting rank transition.
       final run = await startRun(g);
       run.ctx.addScore(2000);
       await finish(g);
@@ -115,7 +124,7 @@ void main() {
 
   tester(
     prefs: {
-      'playerLevel': 8,
+      'lvlIndex': 8, // PRD-2.6 J5 new-track test state.
       'claimedLevels': [for (var l = 1; l <= 8; l++) '$l'],
     },
   ).testGameWidget(
@@ -123,6 +132,7 @@ void main() {
     'unlocks and is toasted, 8 wait in achPending)',
     setUp: boot,
     verify: (g, _) async {
+      g.runDebug.ignoreGates = false; // J3 counting rank transition.
       final run = await startRun(g);
       run.ctx.addScore(2000);
       await finish(g);

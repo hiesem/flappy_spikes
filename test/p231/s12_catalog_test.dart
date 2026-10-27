@@ -4,7 +4,6 @@
 import 'dart:io';
 
 import 'package:flappy_spikes/achievements/achievement_catalog.dart';
-import 'package:flappy_spikes/levels/levels.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -71,7 +70,7 @@ void main() {
     // Groups are contiguous, in the §12.1 order.
     final order = all.map((a) => a.group.index).toList();
     expect(order, [...order]..sort());
-    expect(kRankAchievements, hasLength(kLevels.length));
+    expect(kRankAchievements, hasLength(10));
     expect(kItemAchievements, hasLength(11));
   });
 

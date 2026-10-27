@@ -145,8 +145,12 @@ abstract final class EmblemPainter {
   static const Color _goldLight = Color(0xFFFFE082);
   static const Color _white = Color(0xFFFFFFFF);
 
-  /// Level colours come from the shared [kLevels] table (PRD-home-v3 §4.2).
-  static const List<LevelDef> _styles = kLevels;
+  /// Level colours come from the shared [kTrackLevels] table (PRD-home-v3 §4.2).
+  static final List<TrackLevelDef> _styles = [
+    kTrackLevels[0], kTrackLevels[4], kTrackLevels[7], kTrackLevels[10],
+    kTrackLevels[14], kTrackLevels[17], kTrackLevels[20], kTrackLevels[24],
+    kTrackLevels[28], kTrackLevels[30],
+  ];
 
   /// Feather count per level (`N` in `wings()`); levels 1-2 have none.
   static const Map<int, int> _wingCount = {
@@ -591,7 +595,7 @@ abstract final class EmblemPainter {
 
   // --- pennants (7+) --------------------------------------------------------
 
-  static void _flags(Canvas canvas, double t, LevelDef lv, int level) {
+  static void _flags(Canvas canvas, double t, TrackLevelDef lv, int level) {
     for (final side in const <double>[-1, 1]) {
       canvas.save();
       canvas.translate(side * 52, -50);

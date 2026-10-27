@@ -105,6 +105,10 @@ class AnalyticsRouter extends RunFeature {
   /// `gamesPlayed` when the run started (PRD-2.3 §14.8 `games_played`
   /// counts this run too; WP-A's `run_no` is the 1-based game number).
   int _gamesAtStart = 0;
+  // region P26-J2
+  int _levelAtStart = 0;
+  int _levelPointsAtStart = 0;
+  // endregion
 
   /// The elements the player had already met when this run started. The run
   /// itself adds every spawned element to `RunState.metElements`, so asking
@@ -156,6 +160,10 @@ class AnalyticsRouter extends RunFeature {
   void attach(RunContext c) {
     _c = c;
     _gamesAtStart = c.game.storage.gamesPlayed;
+    // region P26-J2
+    _levelAtStart = c.game.menu.levels.level;
+    _levelPointsAtStart = c.game.menu.levels.points;
+    // endregion
     _metAtStart = Set.of(c.s.metElements);
     c.run.pipeline.onResolved = _onResolved;
     c.events
@@ -660,9 +668,10 @@ class AnalyticsRouter extends RunFeature {
       'max_hazard_x10': _maxHazardX10,
       'revives_ad': _revivesAd,
       'revives_coin': _revivesCoin,
-      // WP-J / WP-K fields are inert until M2.
-      'level': 0,
-      'lvl_pts_before': 0,
+      // region P26-J2
+      'level': _levelAtStart,
+      'lvl_pts_before': _levelPointsAtStart,
+      // endregion
       // region P26-K
       'beat_best_hoop': c.run.beatBestHoop,
       // endregion
@@ -712,7 +721,9 @@ class AnalyticsRouter extends RunFeature {
     if (c.run.countsForAchievements) {
       unawaited(c.game.storage.saveBestHoops(bestHoops));
     }
-    services.setUserProperty('fs_level', '${c.game.storage.playerLevel}');
+    // region P26-J2
+    services.setUserProperty('fs_level', '${c.game.storage.lvlIndex}');
+    // endregion
     services.setUserProperty(
       'fs_gb',
       AnalyticsBuckets.gamesBucket(_gamesAtStart + 1),

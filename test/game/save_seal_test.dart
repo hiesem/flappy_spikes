@@ -160,7 +160,7 @@ void main() {
     await s.saveNoAds(true);
     await s.saveOwnedItems({'hat:a'});
     await s.saveGrantedPurchase(['t']);
-    await s.savePlayerLevel(1);
+    await s.saveLvlIndex(1);
     await s.saveUploadQueue(['{}']);
     expect(s.sealWrites - before, 7);
     await s.saveFeathers(2);

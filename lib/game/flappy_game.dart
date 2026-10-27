@@ -66,6 +66,9 @@ import '../menu/home_mode.dart';
 import '../menu/menu_state.dart';
 import '../menu/powerup_slot.dart';
 import '../menu/wallet.dart';
+// region P26-J2
+import '../run/run_end_bookkeeping.dart';
+// endregion
 import '../run/backdrop/run_backdrop.dart';
 import '../run/debug/autopilot.dart';
 import '../run/debug/debug_overlay.dart';
@@ -1142,9 +1145,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           // region P26-G2c
           streakLost: streakLostPending,
           // endregion
-          levelUpCatchUp: menu.levels.pendingLevelUp != null,
+          // region P26-J2
+          levelUpCatchUp: menu.levels.pending.isNotEmpty,
+          // endregion
           // region P26-G2b
           streakReward: streakRewardPending,
+
           // endregion
           noAds:
               !giftThisHomeVisit &&
@@ -3412,7 +3418,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         _homeInteractive &&
         _fakeAd == null &&
         _adsShowing == 0 &&
-        menu.levels.pendingLevelUp != null;
+        // region P26-J2
+        menu.levels.pending.isNotEmpty;
+        // endregion
     if (!ready) {
       _levelUpSettle = 0;
       return;
@@ -3446,7 +3454,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           ? Sfx.skBuyEpic
           : Sfx.skBuyRare,
     );
-    services.logLevelUp(level, storage.bestScore);
+    // region P26-J2 — emitted at the durable run-end step, never on popup replay.
+    // endregion
     final popup = LevelUpPopup(
       pending: pending,
       look: menu.items.look,
@@ -3490,8 +3499,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     );
     playCoinReward(reward);
     _drainPopups();
-    final paid = await menu.levels.claim();
-    if (paid > 0) services.logLevelRewardClaimed(level, paid);
+    // region P26-J2
+    menu.levels.services = services;
+    await menu.levels.payPending();
+    // endregion
   }
 
   bool _levelUpBack() {
@@ -4880,26 +4891,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       case 20:
         ftueTracker.step(FtueStep.run20End, gamesPlayed: storage.gamesPlayed);
     }
-    // region WP-L — owner 2026-10-17: the stored level steps up by exactly
-    // one when this run's score reaches the next threshold (the cache is
-    // updated at once; the write follows).
-    unawaited(menu.levels.recordRun(score));
+    // region P26-J2
+    final levelRecorded = RunEndBookkeeping.record(this, score);
     _resultsLevels = (previousLevel, menu.levels.level);
-    // endregion WP-L
-    // region P231-E — PRD-2.3.1 §12.2 ranks (WP-L: they follow the stored
-    // level) and the daily streak, for a counting run only
+    // endregion
+    // region P26-G4b
     final achRun = _run;
     final counts = achRun != null && achRun.countsForAchievements;
-    // P1E-03: the run's staged unlocks commit only if it still counts;
-    // PRD-2.3.1 §19.2 a counting run then unlocks at most one (the oldest
-    // pending), after its ranks and daily streak are earned.
-    achievements.finishRun(
-      counts: counts,
-      level: menu.levels.level,
-      day: storage.today,
-    );
-    // endregion P231-E
-    // region P26-G4b
     // G4 worlds count actual hoops, never bonus score or backdrop loops.
     if (counts) {
       final hoops = summary?.hoopsPassed ?? achRun.state.hoopsPassed;
@@ -4917,6 +4915,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         unawaited(storage.saveHomeLevelsTag(true));
       }
     }
+
     // endregion
     // PRD-2.3 §18.3 (S8-09): the run's playtime is saved at run end; §18.5
     // (S8-10): a grace that ended with this finished run loads now.
@@ -4938,14 +4937,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     );
     _ratingSettle = 0;
     // endregion PRD-2.3 §23.2
-    // region WP-2e — results page (PRD-2 §3.14, §7)
-    // A new level's reward is owed from now on: kept until CLAIM / NEXT so
-    // an app kill never loses it (credited at the next app start).
-    final owed = menu.levels.pendingLevelUp;
-    if (owed != null && menu.levels.level > previousLevel) {
-      unawaited(storage.saveUnclaimedLevelReward(owed.reward));
-    }
-    // endregion WP-2e
+    // region P26-J2 — lvlPending is the durable reward record.
+    // endregion
     unawaited(
       menu.noAdsPopup.recordRun(
         newBest: score > previousBest,
@@ -4995,7 +4988,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // region P26-E2
     unawaited(recordDuelRun(storage, s, counts: _countsForUpload));
     // endregion
-    unawaited(PostRunFlow(this).run(s));
+    // region P26-J2 — the reward roll must be durable before the reveal.
+    unawaited(levelRecorded.then((_) => PostRunFlow(this).run(s)));
+    // endregion
+
     fadeOpacity(_hud, from: 1, to: 0, duration: Config.gameplayFadeDuration);
   }
 
@@ -5072,16 +5068,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _setPostRunPage(false);
   }
 
-  /// §3.14 / §7: a level reward still owed when the app was closed on the
-  /// results page is credited at the next start, without animation.
+  // region P26-J2
+  /// J4: resume only a payout already begun; unrevealed rewards wait for Home.
   Future<void> _creditUnclaimedLevelReward() async {
-    // Either a pending reward (the ran-end flag) or the record of a claim
-    // a kill interrupted mid-way (S6-22); both are settled here.
-    if (storage.unclaimedLevelReward <= 0 && storage.levelRewardPayout <= 0) {
-      return;
-    }
-    await claimLevelRewards(this, 'app_start');
+    // Finish an in-flight credit; an unrevealed reward waits for Home (J5).
+    menu.levels.services = services;
+    if (storage.lvlPayout > 0) await menu.levels.payPending();
   }
+  // endregion
   // endregion WP-2e
 
   // region WP-4a — balloon bonus (PRD-2 §3.15, §5.14)

@@ -128,28 +128,28 @@ void main() {
       expect(ReviveLadder.eligible(short), isFalse);
     });
 
-    test('the level ladder is the owner 2026-10-17 table (10,175 in all)', () {
+    // PRD-2.6 J1/J5 supersedes the ten-rank rewards.
+    test('the level ladder is the 2.6 table (18,800 in all)', () {
       expect(
-        [for (final l in kLevels) l.reward],
-        [
-          25, 50, 100, 200, 400, 600, 800, 1000, 2000, 5000, //
-        ],
+        [for (final l in kTrackLevels) l.coins],
+        [50, 50, 50, 50, 50, 75, 100, 125, 150, 175, 200, 225, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 875, 1000, 1125, 1250, 1500, 1750, 2000, 2500],
       );
-      expect(kLevels.fold<int>(0, (a, l) => a + l.reward), 10175);
+      expect(kTrackLevels.fold<int>(0, (a, l) => a + l.coins), 18800);
     });
 
     test('tuning: a remote value reaches the getter (coin_jar, '
-        'revive_ladder, level_rewards)', () {
+        'revive_ladder, level_coins)', () {
       TuningValues.current = TuningValues.resolve({
         'coin_jar': '11',
         'revive_ladder': '[100,200]',
-        'level_rewards': '[1,2,3,4,5,6,7,8,9,10]',
+        // PRD-2.6 J5: new tunable 31-level rewards.
+        'level_coins': '[${List.generate(31, (i) => i + 1).join(',')}]',
       });
       expect(JarConfig.reward, 11);
       expect(ReviveConfig.coinLadder, [100, 200]);
       expect(ReviveLadder.coinPrice(5), 200);
-      expect(kLevels.first.reward, 1);
-      expect(kLevels.last.reward, 10);
+      expect(kTrackLevels.first.coins, 1);
+      expect(kTrackLevels.last.coins, 31);
     });
   });
 

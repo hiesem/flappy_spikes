@@ -1,3 +1,5 @@
+import '../../levels/progression_fixture.dart';
+// PRD-2.6 J3: this finished run uses the counting-run setup.
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
@@ -14,7 +16,7 @@ import '../../helpers.dart';
 void main() {
   for (final h in [568.0, 711.0]) {
     FlameTester<FlappySpikesGame>(
-      () => createRunTestGame(prefs: {'bestScore': 40, 'playerLevel': 1}, worldHeight: h),
+      () => createRunTestGame(prefs: trackPrefs({'bestScore': 40, 'playerLevel': 1}), worldHeight: h)..runDebug.ignoreGates = false,
       gameSize: Vector2(320, h),
     ).testGameWidget(
       '§3.14 ($h) ≥ 6 hoops: revive offer → No thanks → results with level '
@@ -27,7 +29,7 @@ void main() {
         final run = await startRun(g);
         run.state.invulnerable = 0;
         for (var i = 0; i < 6; i++) {
-          run.debugPass(perfect: true);
+          run.state.hoopsPassed++;
         }
         run.ctx.addScore(60 - run.state.score); // past EGG (50)
         run.ctx.earn(9, CoinSource.hoop);
@@ -46,7 +48,7 @@ void main() {
         final page = g.resultsScreen!;
         expect(g.storage.bestScore, 60);
         expect(page.model.levelReward, greaterThan(0));
-        expect(g.storage.unclaimedLevelReward, page.model.levelReward);
+        expect(g.menu.levels.pendingLevelUp!.reward, page.model.levelReward);
         // The level-up celebration, then CLAIM.
         for (var i = 0; i < 300 && !page.claimShowing; i++) {
           g.update(1 / 60);
@@ -80,7 +82,7 @@ void main() {
         final run = await startRun(g);
         run.state.invulnerable = 0;
         for (var i = 0; i < 5; i++) {
-          run.debugPass(perfect: true);
+          run.state.hoopsPassed++;
         }
         killRun(g);
         await flushAndMount(g);

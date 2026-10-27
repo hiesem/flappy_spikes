@@ -40,8 +40,9 @@ void main() {
       expect(t.ints('revive_ladder'), [250, 500, 1000, 2000, 4000, 8000]);
       expect(t.i('revive_min_hoops'), 6);
       expect(
-        t.ints('level_rewards'),
-        [25, 50, 100, 200, 400, 600, 800, 1000, 2000, 5000], // 2026-10-17
+        // PRD-2.6 J5: the legacy tuning key is retired.
+        kTuningDefaults.any((def) => def.key == 'level_rewards'),
+        isFalse
       );
       expect(t.i('shop_ad_coins'), 75); // PRD-2.3.1 §5 (was 40)
       expect(t.i('shop_ad_per_day'), 5);

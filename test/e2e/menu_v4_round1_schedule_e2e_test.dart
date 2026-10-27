@@ -1,3 +1,4 @@
+import '../levels/progression_fixture.dart';
 import 'dart:async';
 
 import 'package:flappy_spikes/menu/free_coins_policy.dart';
@@ -68,7 +69,8 @@ void main() {
 
   v4Journey(
     'v4: day 1 needs 10 finished runs, then the 10th run\'s arrival checks; never before',
-    prefs: (rig) => {'installDay': rig.clock.day, 'firstSessionDone': true},
+    prefs: (rig) => {'installDay': rig.clock.day, 'firstSessionDone': true,
+      'lvlIndex': 31}, // PRD-2.6 J3: isolate the schedule from level-up catch-up.
     (game, rig, tester) async {
       for (var i = 0; i < 9; i++) {
         await v4FinishRun(game, tester, 6);
@@ -97,7 +99,9 @@ void main() {
     },
   );
 
-  v4Journey('v4: 10 runs in the first session still need a later session', (
+  v4Journey('v4: 10 runs in the first session still need a later session',
+    prefs: (rig) => {'lvlIndex': 31}, // J3: ten low-score runs cannot reach 10,000.
+    (
     game,
     rig,
     tester,
@@ -387,7 +391,7 @@ void main() {
 
   v4Journey(
     'v4: LEVEL UP -> queued upsell -> purchase failure is serialized',
-    prefs: (rig) => {..._recent(rig), 'bestScore': 25, 'playerLevel': 1, 'lastScore': 25},
+    prefs: (rig) => trackPrefs({..._recent(rig), 'bestScore': 25, 'playerLevel': 1, 'lastScore': 25}),
     (game, rig, tester) async {
       await run(game, .5);
       expect(game.levelUpPopup, isNotNull);

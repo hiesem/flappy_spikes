@@ -563,10 +563,9 @@ class GameStorage {
     freeCoinsDay = prefs.getInt(_freeCoinsDayKey) ?? -1;
     freeCoinsCount = prefs.getInt(_freeCoinsCountKey) ?? 0;
     freeCoinsLastMs = prefs.getInt(_freeCoinsLastMsKey) ?? 0;
-    claimedLevels = (prefs.getStringList(_claimedLevelsKey) ?? const [])
-        .map(int.tryParse)
-        .whereType<int>()
-        .toSet();
+    // region P26-J2 — J5 legacy claims are deliberately ignored.
+    claimedLevels = {};
+    // endregion
     rumble = prefs.getBool(_rumbleKey) ?? true;
     lastScore = prefs.getInt(_lastScoreKey);
     lastFeatherRun = prefs.getInt(_lastFeatherRunKey) ?? -1;
@@ -585,8 +584,13 @@ class GameStorage {
     puzzlePieces = (prefs.getInt(_puzzlePiecesKey) ?? 0) & 0xF;
     puzzleRound = prefs.getInt(_puzzleRoundKey) ?? 0;
     lastPortalRide = prefs.getString(_lastPortalRideKey);
-    unclaimedLevelReward = prefs.getInt(_unclaimedLevelRewardKey) ?? 0;
-    levelRewardPayout = prefs.getInt(_levelRewardPayoutKey) ?? 0;
+    // region P26-J2 — only the first 2.6 load may read the 2.5 payout.
+    unclaimedLevelReward = 0;
+    levelRewardPayout = !prefs.containsKey(Obf.prefLvlIndex) &&
+            prefs.containsKey(_levelRewardPayoutKey)
+        ? prefs.getInt(_levelRewardPayoutKey) ?? 0
+        : 0;
+    // endregion
     puzzlePayout = prefs.getInt(_puzzlePayoutKey) ?? 0;
     metElements = (prefs.getStringList(_metElementsKey) ?? const []).toSet();
     // region P231-E
@@ -694,6 +698,27 @@ class GameStorage {
       _sealBase = base;
       IntegrityGuard.instance.track(base);
     }
+    // region P26-J2
+    // J5: settle an interrupted 2.5 credit once; legacy ranks never migrate.
+    if (levelRewardPayout > 0) {
+      if (levelRewardPayout > coins) await saveCoins(levelRewardPayout);
+      await saveLevelRewardPayout(0);
+    }
+    if (!prefs.containsKey(Obf.prefLvlIndex) &&
+        prefs.containsKey(_levelRewardPayoutKey)) {
+      await saveLvlIndex(lvlIndex);
+    }
+    // A pending roll is durable before its index. Repair a kill in between.
+    final reached = lvlPending.fold<int>(
+      lvlIndex,
+      (index, row) =>
+          (row['lvl'] as int? ?? 0) > index ? row['lvl'] as int : index,
+    );
+    if (reached > lvlIndex) {
+      await saveLvlPoints(0);
+      await saveLvlIndex(reached);
+    }
+    // endregion
   }
 
   void _readSealedFields(SharedPreferences prefs) {
@@ -707,7 +732,9 @@ class GameStorage {
     coins = prefs.getInt(_coinsKey) ?? 0;
     ownedItems = (prefs.getStringList(_ownedItemsKey) ?? const []).toSet();
     noAds = prefs.getBool(_noAdsKey) ?? false;
-    playerLevel = prefs.getInt(_playerLevelKey) ?? 0;
+    // region P26-J2 — retired rank stays on disk, never read by 2.6.
+    playerLevel = 0;
+    // endregion
     grantedPurchases = _capGranted(
       prefs.getStringList(_grantedPurchasesKey) ?? const [],
     );
@@ -762,7 +789,9 @@ class GameStorage {
     Obf.prefGrantedPurchases: sealFieldHash(List.of(grantedPurchases)..sort()),
     Obf.prefNoAds: sealFieldHash(noAds),
     Obf.prefOwnedItems: sealFieldHash(ownedItems.toList()..sort()),
-    Obf.prefPlayerLevel: sealFieldHash(playerLevel),
+    // region P26-J2 — retired rank is no longer a covered value.
+    // Existing 2.5 snapshots still verify their MAC; this obsolete hash is ignored.
+    // endregion
     Obf.prefUploadQueue: sealFieldHash(uploadQueue),
   };
 
@@ -773,8 +802,9 @@ class GameStorage {
       grantedPurchases.isEmpty &&
       !noAds &&
       ownedItems.isEmpty &&
-      playerLevel == 0 &&
+      // region P26-J2 — legacy playerLevel is deliberately excluded.
       uploadQueue.isEmpty &&
+      // endregion
       lvlIndex == 0 &&
       lvlPending.isEmpty &&
       lbGiftsClaimed.isEmpty;
@@ -1803,6 +1833,23 @@ class GameStorage {
     for (final e in _p26JsonMap(raw).entries)
       if (e.value is int) e.key: e.value as int,
   };
+
+  // region P26-J2
+  /// One seal for a completed run's level step. The pending roll is written
+  /// before points/index; either snapshot still validates a kill between them.
+  Future<void> saveLevelStep({required int index, required int points,
+    required List<Map<String, Object?>> pending}) async {
+    lvlIndex = index;
+    lvlPoints = points;
+    lvlPending = [for (final row in pending) Map<String, Object?>.of(row)];
+    final encoded = jsonEncode(lvlPending);
+    await _sealedWrite((prefs) async {
+      await prefs.setString(Obf.prefLvlPending, encoded);
+      await prefs.setInt(Obf.prefLvlPoints, points);
+      return prefs.setInt(Obf.prefLvlIndex, index);
+    });
+  }
+  // endregion
 
   Future<void> saveLvlIndex(int value) async {
     lvlIndex = value;

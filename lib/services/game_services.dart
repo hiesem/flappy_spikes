@@ -610,13 +610,33 @@ class GameServices {
   void logLevelsOpen(String source) =>
       logEvent('levels_open', {'source': source});
 
-  /// LEVEL UP popup shown for [level] at best score [best].
-  void logLevelUp(int level, int best) =>
-      logEvent('level_up', {'level': level, 'best': best});
+  // region P26-J2
+  void logLevelUp(
+    int level, {
+    required int games,
+    required int runScore,
+    required int sinceInstall,
+  }) => logEvent('level_up', {
+    'level': level,
+    'games': games,
+    'run_score': runScore,
+    's_since_install': sinceInstall,
+  });
 
-  /// A LEVEL UP reward paid ([coins] = all rewards added together).
-  void logLevelRewardClaimed(int level, int coins) =>
-      logEvent('level_reward_claimed', {'level': level, 'coins': coins});
+  void logLevelRewardClaimed(
+    int level,
+    int coins, {
+    required String itemLayer,
+    required String rarity,
+    required String fallback,
+  }) => logEvent('level_reward_claimed', {
+    'level': level,
+    'coins': coins,
+    'item_layer': itemLayer,
+    'rarity': rarity,
+    'fallback': fallback,
+  });
+  // endregion
 
   /// Purchase cancelled / failed popup: [outcome] `cancelled` / `failed`,
   /// [code] the store error code (omitted when there is none).

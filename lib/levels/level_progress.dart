@@ -1,13 +1,16 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 
 import '../game/storage.dart';
 import '../menu/wallet.dart';
-import 'levels.dart';
+import '../services/game_services.dart';
+import '../skins/catalog.dart';
+import '../skins/item_store.dart';
+import 'level_reward_roll.dart';
+import 'level_track.dart';
 
-/// A LEVEL UP popup that is owed (PRD-home-v3 §4.3): the player is at
-/// [toLevel] and the rewards of every reached-but-unclaimed level (all of
-/// them <= [toLevel]) add up to [reward]. [fromLevel] is the highest level
-/// already claimed below it (0 = none).
+/// Temporary aggregate for the 2.5 popup, until J5 supplies the reveal.
 @immutable
 class PendingLevelUp {
   const PendingLevelUp({
@@ -15,174 +18,150 @@ class PendingLevelUp {
     required this.toLevel,
     required this.reward,
   });
-
   final int fromLevel;
   final int toLevel;
   final int reward;
-
-  LevelDef get def => levelDef(toLevel)!;
-
+  TrackLevelDef get def => trackLevelDef(toLevel)!;
   @override
   bool operator ==(Object other) =>
       other is PendingLevelUp &&
       other.fromLevel == fromLevel &&
       other.toLevel == toLevel &&
       other.reward == reward;
-
   @override
   int get hashCode => Object.hash(fromLevel, toLevel, reward);
-
-  @override
-  String toString() => 'PendingLevelUp($fromLevel -> $toLevel, +$reward)';
 }
 
-/// The stored player level (owner 2026-10-17, WP-L:
-/// [GameStorage.playerLevel], one step per run, see [recordRun]) plus the
-/// one-time rewards (`claimedLevels`), shaped like [ItemStore].
-///
-/// [pendingLevelUp] covers a fresh level-up (one step: one popup, its
-/// reward) and the catch-up of every reached-but-unclaimed level <= the
-/// stored one (an app kill before CLAIM, a debug reset of the claims).
+/// PRD-2.6 J3–J5. Only completed, eligible runs contribute points.
 class LevelProgress extends ChangeNotifier {
-  LevelProgress(this._storage, this._wallet);
-
+  LevelProgress(
+    this._storage,
+    this._wallet, {
+    ItemStore? items,
+    Random? random,
+    this.services,
+  }) : _items = items ?? ItemStore(_storage, _wallet),
+       _random = random ?? Random();
   final GameStorage _storage;
   final Wallet _wallet;
-
+  final ItemStore _items;
+  final Random _random;
+  GameServices? services;
   int get best => _storage.bestScore;
+  int get level => _storage.lvlIndex;
+  int get points => _storage.lvlPoints;
+  TrackLevelDef? get current => trackLevelDef(level);
+  TrackLevelDef? get next => trackLevelDef(level + 1);
+  List<Map<String, Object?>> get pending => List.unmodifiable([
+    for (final row in _storage.lvlPending)
+      Map<String, Object?>.unmodifiable(row),
+  ]);
+  PendingLevelUp? get pendingLevelUp => pending.isEmpty
+      ? null
+      : PendingLevelUp(
+          fromLevel: (pending.first['lvl'] as int) - 1,
+          toLevel: pending.last['lvl'] as int,
+          reward: pending.fold(
+            0,
+            (sum, row) =>
+                sum + (row['coins'] as int) + (row['extraCoins'] as int),
+          ),
+        );
 
-  /// Current level (0 = unranked), the stored one.
-  int get level => _storage.playerLevel.clamp(0, kMaxLevel);
-
-  /// Current rank, null while unranked.
-  LevelDef? get current => levelDef(level);
-
-  /// The next rank to reach, null at LEGEND.
-  LevelDef? get next => nextLevel(level);
-
-  /// A run of [score] ended: the level steps up by one when the score
-  /// reaches the next threshold ([levelAfterRun]); the new level is stored
-  /// (its cache at once, before the first await). Returns the level after
-  /// the run.
-  Future<int> recordRun(int score) async {
-    final before = level;
-    final after = levelAfterRun(before, score);
-    if (after == before) return before;
-    final saved = _storage.savePlayerLevel(after);
-    notifyListeners();
-    await saved;
-    return after;
-  }
-
-  /// "Delete my data" / debug resets: back to unranked.
-  Future<void> reset() async {
-    await _storage.savePlayerLevel(0);
-    notifyListeners();
-  }
-
-  bool isClaimed(int level) => _storage.claimedLevels.contains(level);
-
-  /// The owed popup, or null when every reached level is claimed.
-  PendingLevelUp? get pendingLevelUp {
-    final to = level;
-    var reward = 0;
-    var from = 0;
-    var owed = false;
-    for (var l = 1; l <= to; l++) {
-      if (isClaimed(l)) {
-        from = l;
-      } else {
-        owed = true;
-        reward += levelDef(l)!.reward;
-      }
+  Future<int> recordRun(int score, {bool counts = true}) async {
+    if (!counts) return level;
+    final step = LevelTrack.step(level, points, score);
+    if (step.levelledUp) {
+      final roll = rollLevelReward(step.index, _storage.ownedItems, {
+        for (final row in pending)
+          if (row['item'] is String) row['item'] as String,
+      }, _random);
+      // Persist the roll first. load() recovers the index if killed between writes.
+      final saved = _storage.saveLevelStep(
+        index: step.index,
+        points: 0,
+        pending: [
+          ...pending,
+          {
+            'lvl': step.index,
+            'coins': trackLevelDef(step.index)!.coins,
+            'item': roll.item,
+            'extraCoins': roll.extraCoins,
+            'fallback': roll.fallback,
+          },
+        ],
+      );
+      await saved;
+      notifyListeners();
+      services?.logLevelUp(
+        step.index,
+        games: _storage.gamesPlayed,
+        runScore: score,
+        sinceInstall:
+            ((DateTime.now().millisecondsSinceEpoch - _storage.installAtMs) ~/
+                    1000)
+                .clamp(0, 1 << 53),
+      );
+    } else {
+      await _storage.saveLvlPoints(step.points);
+      notifyListeners();
     }
-    if (!owed) return null;
-    return PendingLevelUp(fromLevel: from, toLevel: to, reward: reward);
+    services?.setUserProperty('fs_level', '$level');
+    return level;
   }
 
-  /// Pays the owed rewards (`wallet.add(reward, CoinSource.levelReward)`)
-  /// and marks every level <= the current one claimed. Returns what was
-  /// paid (0 when nothing was owed); a second call never pays again.
-  ///
-  /// §3.14 (call, S6-22) the claim is recoverable: it records the balance
-  /// its credit is to reach ([GameStorage.levelRewardPayout]) *before*
-  /// marking the levels and crediting, and clears that record right after
-  /// the credit (before [GameStorage.unclaimedLevelReward]). A kill
-  /// anywhere in between is resumed at the next start and pays the rest
-  /// exactly once — the reward is never lost and never paid twice.
-  Future<int> claim() async {
-    // A concurrent / re-entrant call pays nothing (the claim in flight
-    // pays everything owed).
-    if (_claimInFlight) return 0;
-    _claimInFlight = true;
+  bool _paying = false;
+
+  /// Target balance precedes grants and credit; pending clears before the target.
+  /// Replaying any interrupted stage is idempotent, including item grants.
+  Future<int> payPending() async {
+    if (_paying) return 0;
+    _paying = true;
     try {
-      return await _claim();
-    } finally {
-      _claimInFlight = false;
-    }
-  }
-
-  Future<int> _claim() async {
-    final pending = pendingLevelUp;
-    if (pending == null) {
-      // A killed claim that had already marked the levels: pay the rest
-      // of the recorded credit (0 when it landed or there is no record).
-      final rest = _owedPayout;
-      if (rest <= 0) {
-        // Nothing owed and nothing in flight: drop a stale record / flag.
-        if (_storage.levelRewardPayout != 0 ||
-            _storage.unclaimedLevelReward != 0) {
-          await _storage.endLevelRewardClaim();
-        }
+      final rows = pending;
+      if (rows.isEmpty) {
+        if (_storage.lvlPayout != 0) await _storage.saveLvlPayout(0);
         return 0;
       }
-      await _wallet.add(rest, CoinSource.levelReward);
-      await _storage.endLevelRewardClaim();
-      notifyListeners();
-      return rest;
-    }
-    final reward = pending.reward;
-    // The record + claim go first (memory is updated before the first
-    // await), then the credit, then the settle.
-    await _storage.beginLevelRewardClaim(
-      payout: _wallet.balance + reward,
-      claimed: {
-        ..._storage.claimedLevels,
-        for (var l = 1; l <= pending.toLevel; l++) l,
-      },
-    );
-    await _wallet.add(reward, CoinSource.levelReward);
-    await _storage.endLevelRewardClaim();
-    notifyListeners();
-    return reward;
-  }
-
-  /// A claim in flight: a re-entrant / concurrent call pays nothing.
-  bool _claimInFlight = false;
-
-  /// §3.14 the part of an interrupted credit the wallet has not received
-  /// yet ([GameStorage.levelRewardPayout] minus the balance).
-  int get _owedPayout {
-    final due = _storage.levelRewardPayout - _wallet.balance;
-    return due > 0 ? due : 0;
-  }
-
-  /// Debug panel "LEVEL UP": raises the stored level by one (a pending
-  /// level-up on the next home; the best rises to its threshold when below
-  /// it). At LEGEND it un-claims the top level instead so the popup can be
-  /// shown again.
-  Future<void> debugForceLevelUp() async {
-    final up = next;
-    if (up != null) {
-      await _storage.savePlayerLevel(up.level);
-      if (_storage.bestScore < up.threshold) {
-        await _storage.saveBestScore(up.threshold);
+      final total = pendingLevelUp!.reward;
+      if (_storage.lvlPayout == 0) {
+        await _storage.saveLvlPayout(_wallet.balance + total);
       }
-    } else {
-      await _storage.saveClaimedLevels(
-        _storage.claimedLevels.difference({kMaxLevel}),
-      );
+      for (final row in rows) {
+        final key = row['item'] as String?;
+        if (key != null) await _items.grant(key);
+      }
+      final due = max(0, _storage.lvlPayout - _wallet.balance);
+      await _wallet.add(due, CoinSource.levelReward);
+      await _storage.saveLvlPending(const []);
+      await _storage.saveLvlPayout(0);
+      for (final row in rows) {
+        final item = allItems
+            .where((item) => item.key == row['item'])
+            .firstOrNull;
+        services?.logLevelRewardClaimed(
+          row['lvl'] as int,
+          (row['coins'] as int) + (row['extraCoins'] as int),
+          itemLayer: item?.layer.key ?? 'none',
+          rarity: item?.rarity?.name ?? 'none',
+          fallback: row['fallback'] as String? ?? 'none',
+        );
+      }
+      notifyListeners();
+      return due;
+    } finally {
+      _paying = false;
     }
+  }
+
+  Future<int> claim() => payPending();
+  Future<void> reset() async {
+    await _storage.saveLvlPending(const []);
+    await _storage.saveLvlPayout(0);
+    await _storage.saveLvlIndex(0);
+    await _storage.saveLvlPoints(0);
     notifyListeners();
   }
+
+  Future<void> debugForceLevelUp() => recordRun(needFor(level)).then((_) {});
 }

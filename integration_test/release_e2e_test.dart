@@ -54,7 +54,6 @@ import 'package:flame_audio/flame_audio.dart';
 import 'package:flappy_spikes/firebase_options.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/storage.dart';
-import 'package:flappy_spikes/levels/levels.dart';
 import 'package:flappy_spikes/main.dart' as app;
 import 'package:flappy_spikes/menu/home_mode.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
@@ -691,8 +690,9 @@ void main() {
     // Force a best score that levels up twice (EGG 10, CHICK 50).
     final forced = max(60, run.state.score);
     run.ctx.addScore(forced - run.state.score);
-    final expectedLevel = levelFor(forced);
-    expect(expectedLevel, greaterThanOrEqualTo(2));
+    // PRD-2.6 J3: a debug-touched journey gains no progression.
+    final expectedLevel = g.menu.levels.level;
+    expect(expectedLevel, 0);
 
     // Death 3 → 500 offer → No thanks → results.
     await _killToPostRun(tester, g);

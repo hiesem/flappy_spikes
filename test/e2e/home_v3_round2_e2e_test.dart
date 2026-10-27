@@ -1,3 +1,5 @@
+import '../levels/progression_fixture.dart';
+// PRD-2.6 J1–J5 replaces the old rank/reward flow.
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -48,7 +50,7 @@ void _journey(
   final rig = _Rig();
   FlameTester<FlappySpikesGame>(
     () => createTestGame(
-      prefs,
+      trackPrefs(prefs),
       height,
       rig.events,
       Monetization(iap: service ?? rig.iap, ads: FakeRewardedAds()),
@@ -66,6 +68,7 @@ void _journey(
     name,
     setUp: (game, tester) async {
       await game.ready();
+      game.runDebug.ignoreGates = false;
       await preloadImages(game);
       await flushAndMount(game);
     },
@@ -195,14 +198,14 @@ void main() async {
         final panel = game.world.children.query<ResultsScreen>().single;
         await run(game, .4);
         await _tap(game, tester, panel.nextButton);
-        expect(game.menu.wallet.balance, earned + 25);
+        expect(game.menu.wallet.balance, earned + 50);
         await run(game, 2.5);
         expect(game.state, GameState.start);
         expect(game.stageBackground, paletteForStage(0).background);
         await run(game, 4);
         expect(game.levelUpPopup, isNull);
-        expect(game.coinPill.shownBalance, earned + 25);
-        expect(game.storage.claimedLevels, {1});
+        expect(game.coinPill.shownBalance, earned + 50);
+        expect(game.storage.lvlPending, isEmpty);
         await _tap(game, tester, game.homeScreen!.bird);
         await run(game, .6);
         expect(game.levelsScreen!.rows.first.state, LevelRowState.current);
@@ -212,10 +215,8 @@ void main() async {
         expect(game.levelUpPopup, isNull);
         expect(rig.events.count('level_up'), 1);
         expect(rig.events.last('level_up'), {
-          'from': 0,
-          'to': 1,
-          'reward': 25,
-          'claim': 'auto_next',
+          'level': 1, 'games': game.storage.gamesPlayed, 'run_score': game.storage.lastScore!,
+          's_since_install': greaterThanOrEqualTo(0),
         });
       },
       height: height,
@@ -227,28 +228,28 @@ void main() async {
     (game, rig, tester) async {
       await run(game, .8);
       final popup = game.levelUpPopup!;
-      expect(popup.pending.reward, 10175);
+      expect(popup.pending.reward, 875);
       await _tap(game, tester, popup.claimButton);
       // Re-enter the action before the fade removes the old component.
       popup.claimButton.onPressed();
       await _settle(game, tester);
       await run(game, 5);
-      expect(game.menu.wallet.balance, 11425);
-      expect(game.storage.claimedLevels, {for (var i = 1; i <= 10; i++) i});
+      expect(game.menu.wallet.balance, 2125);
+      expect(game.storage.lvlPending, isEmpty);
       expect(await game.menu.levels.claim(), 0);
       await _tap(game, tester, game.homeScreen!.bird);
       await run(game, .6);
       final levels = game.levelsScreen!;
-      expect(levels.header.barText.text, 'MAX LEVEL');
-      expect(levels.rows.every((row) => row.reached), isTrue);
+      expect(levels.header.barText.text, '800 TO KINGFISHER');
+      expect(levels.rows.every((row) => row.reached == (row.def.level <= 10)), isTrue);
       expect(levels.scroll.offset, greaterThan(0));
       await _tap(game, tester, levels.backButton);
       await run(game, 1);
       expect(game.levelUpPopup, isNull);
-      expect(rig.events.count('level_up'), 1);
-      expect(rig.events.count('level_reward_claimed'), 1);
+      expect(rig.events.count('level_up'), 0);
+      expect(rig.events.count('level_reward_claimed'), 10);
       final saved = await _saved();
-      expect(saved.coins, 11425);
+      expect(saved.coins, 2125);
     },
     prefs: const {'bestScore': 5000, 'playerLevel': 10, 'coins': 1250},
   );
@@ -436,17 +437,17 @@ void main() async {
       await _tap(game, tester, game.levelUpPopup!.claimButton);
       expect(game.noAdsCelebration, isNotNull);
       await run(game, 4);
-      expect(game.menu.wallet.balance, 2275);
+      expect(game.menu.wallet.balance, 2300);
       expect(
         game.coinPill.shownBalance,
-        1275,
+        1300,
         reason: 'only EGG +25 may count before the No ads CLAIM',
       );
       await _tap(game, tester, game.noAdsCelebration!.claimButton);
       await run(game, .9);
-      expect(game.coinPill.shownBalance, inExclusiveRange(1275, 2275));
+      expect(game.coinPill.shownBalance, inExclusiveRange(1300, 2300));
       await run(game, 5);
-      expect(game.coinPill.shownBalance, 2275);
+      expect(game.coinPill.shownBalance, 2300);
       expect(rig.events.count('noads_bonus_claimed'), 1);
     },
     prefs: const {'coins': 1250, 'bestScore': 25, 'playerLevel': 1},

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' as ui;
 
@@ -56,6 +57,7 @@ void main() {
   }
 
   Future<void> endWith(FlappySpikesGame g, int score) async {
+    g.runDebug.ignoreGates = false; // PRD-2.6 J3: counting endRun fixture.
     final r = await startRun(g);
     r.ctx.addScore(score);
     killRun(g);
@@ -172,14 +174,15 @@ void main() {
         // The run reached at least EGG (25 points, 25 coins); it may go
         // further, but the stored level moves one step per run, so the owed
         // reward is every level up to that stored level.
-        final owed = kLevels
+        final owed = kTrackLevels
             .where((l) => l.level <= g.menu.levels.level)
-            .fold<int>(0, (a, l) => a + l.reward);
-        expect(owed, greaterThanOrEqualTo(25));
-        expect(g.storage.unclaimedLevelReward, owed);
+            .fold<int>(0, (a, l) => a + l.coins);
+        // PRD-2.6 J3: this course used debug forces and debugPass.
+        expect(owed, 0);
+        expect(g.menu.levels.pending, isEmpty);
         stepGame(g, 4.2);
         await flushAndMount(g);
-        expect(page.claimShowing, isTrue);
+        expect(page.claimShowing, isFalse);
         page.claimButton.button.onPressed();
         await flushAndMount(g);
         expect(g.menu.wallet.balance, before - spent + owed);
@@ -211,10 +214,10 @@ void main() {
     tester,
   ) async {
     await endWith(g, 25);
-    expect(g.storage.unclaimedLevelReward, 25);
+    expect(g.menu.levels.pending.single['coins'], 50);
     final prefs = await SharedPreferences.getInstance();
     killedBeforeClaim = {for (final k in prefs.getKeys()) k: prefs.get(k)!};
-    expect(killedBeforeClaim!['unclaimedLevelReward'], 25);
+    expect((jsonDecode(killedBeforeClaim!['lvlPending'] as String) as List).single['coins'], 50);
     expect(g.storage.claimedLevels, isEmpty);
   });
   FlameTester<FlappySpikesGame>(
@@ -224,8 +227,11 @@ void main() {
     'P2 restart after kill before CLAIM: one credit, no popup',
     setUp: (g, _) => boot(g),
     verify: (g, _) async {
-      expect(g.storage.coins, (killedBeforeClaim!['coins'] as int? ?? 0) + 25);
-      expect(g.storage.claimedLevels, {1});
+      // J4: unrevealed rewards wait for the catch-up claim; no auto-credit.
+      expect(g.storage.coins, killedBeforeClaim!['coins'] as int? ?? 0);
+      expect(await claimLevelRewards(g, 'app_start'), 50);
+      expect(g.storage.coins, (killedBeforeClaim!['coins'] as int? ?? 0) + 50);
+      expect(g.storage.lvlPending, isEmpty);
       expect(g.storage.unclaimedLevelReward, 0);
       expect(await claimLevelRewards(g, 'app_start'), 0);
       stepGame(g, 1);
@@ -337,8 +343,9 @@ void main() {
       () async {
         SharedPreferences.setMockInitialValues({
           'bestScore': 25,
-          'playerLevel': 1,
-          'unclaimedLevelReward': 25,
+          // PRD-2.6 J4: the pending roll is the durable claim source.
+          'lvlIndex': 1,
+          'lvlPending': jsonEncode([{'lvl': 1, 'coins': 50, 'item': null, 'extraCoins': 0, 'fallback': 'none'}]),
           'coins': 100,
         });
         final storage = GameStorage();
@@ -355,9 +362,9 @@ void main() {
           for (final e in disk.entries)
             e.key.substring('flutter.'.length): e.value,
         };
-        expect(interruptedClaim!['claimedLevels'], ['1']);
+        expect(interruptedClaim!['lvlPayout'], 150);
         expect(interruptedClaim!['coins'], 100);
-        expect(interruptedClaim!['unclaimedLevelReward'], 25);
+        expect(jsonDecode(interruptedClaim!['lvlPending'] as String), hasLength(1));
       },
     );
     FlameTester<FlappySpikesGame>(
@@ -368,7 +375,7 @@ void main() {
       verify: (g, _) async {
         expect(
           g.storage.coins,
-          125,
+          150,
           reason: 'the persisted 25-coin reward was never credited',
         );
         expect(g.storage.unclaimedLevelReward, 0);

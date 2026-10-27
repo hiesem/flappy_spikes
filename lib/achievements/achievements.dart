@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import '../game/diag.dart';
 import '../game/storage.dart';
 import 'ach_state.dart';
-import '../levels/levels.dart';
 import '../run/director/plans.dart';
 import '../services/game_services.dart';
 import 'achievement_catalog.dart';
@@ -291,8 +290,8 @@ class AchievementTracker {
   /// to [level] (1..10; a rank missed by a non-counting run is caught up by
   /// the next counting one).
   void onLevel(int level) => _tx(() {
-    for (var l = 0; l < kRankAchievements.length && l < kLevels.length; l++) {
-      if (kLevels[l].level <= level) _earn(kRankAchievements[l]);
+    for (var l = 0; l < kRankAchievements.length; l++) {
+      if (l + 1 <= level) _earn(kRankAchievements[l]);
     }
   });
 

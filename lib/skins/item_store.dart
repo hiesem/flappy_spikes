@@ -90,6 +90,17 @@ class ItemStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // region P26-J2
+  /// Grants a persisted reward without equipping it. Replays are harmless.
+  Future<void> grant(String key) async {
+    if (!allItems.any((item) => item.key == key)) {
+      throw ArgumentError.value(key, 'key', 'Unknown reward item');
+    }
+    await _storage.saveOwnedItems({..._storage.ownedItems, key});
+    notifyListeners();
+  }
+  // endregion
+
   /// Buys [id] and auto-equips it on success (§3.6).
   Future<ItemPurchaseResult> purchase(SkinLayer layer, String id) async {
     final item = itemById(layer, id);

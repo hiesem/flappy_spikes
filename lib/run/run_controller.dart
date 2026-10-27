@@ -19,6 +19,10 @@ import 'config/squeeze_config.dart'; // WP-3g
 import 'config/run_config.dart';
 import 'config/streak_config.dart'; // owner 2026-10-13 perfect band
 import 'director/run_director.dart';
+// region P26-K
+import 'effects/best_line.dart';
+import 'hud/run_hud.dart';
+// endregion
 import 'effects/dust_puff.dart';
 import 'effects/miss_flash.dart';
 import 'effects/particle_pool.dart';
@@ -128,6 +132,10 @@ class RunController extends Component {
         !E2EHooks.autopilot &&
         !(debug && (d.god || d.bot));
     // endregion P231-E
+    // region P26-K
+    bestTargetHoops = storage.bestRunHoops;
+    events.on<ScoreChanged>(_watchBestScore);
+    // endregion
   }
 
   // region P231-E — PRD-2.3.1 §12.2
@@ -171,6 +179,44 @@ class RunController extends Component {
     _debugTouched = true;
   }
   // endregion P231-E
+
+  // region P26-K
+  late final int bestTargetHoops;
+  int get bestBefore => _bestBefore;
+  int beatBestHoop = -1;
+  BestLine? bestLine;
+
+  /// G5 weekly courses must opt out when they add their run context.
+  bool bestGoalSuppressed = false;
+  bool get bestGoalEligible =>
+      !bestGoalSuppressed &&
+      _bestBefore > 0 &&
+      setup.opponent == null &&
+      countsForUpload;
+
+  void _watchBestScore(ScoreChanged e) {
+    if (!bestGoalEligible || beatBestHoop >= 0 || e.newScore <= _bestBefore) {
+      return;
+    }
+    beatBestHoop = state.hoopsPassed;
+    bestLine?.collapse();
+    RunHud.ensureFor(this).showNewBest();
+    ctx.track('best_beaten', {
+      'mode': game.homeMode.analytics,
+      'hoop': beatBestHoop,
+      'best_before': _bestBefore,
+      'games': game.storage.gamesPlayed + 1,
+    });
+  }
+
+  /// Called before the game replaces bestScore; hoop count belongs to the
+  /// best-scoring run, even when a longer run later earns fewer points.
+  void saveBestRunHoops(int score, int previousBest) {
+    if (score > previousBest) {
+      unawaited(game.storage.saveBestRunHoops(state.hoopsPassed));
+    }
+  }
+  // endregion
 
   final RunSetup setup;
   final FlappySpikesGame game;
@@ -224,6 +270,9 @@ class RunController extends Component {
 
   @override
   void onRemove() {
+    // region P26-K
+    bestLine?.removeFromParent();
+    // endregion
     for (final l in layers.all) {
       l.removeFromParent();
     }
@@ -259,6 +308,12 @@ class RunController extends Component {
       f.attach(ctx);
     }
     spawner.update(0);
+    // region P26-K
+    if (bestGoalEligible && bestTargetHoops > 0) {
+      bestLine = BestLine(this);
+      game.world.addRun(bestLine!);
+    }
+    // endregion
   }
 
   /// PRD-2.3 §10.3b the bird is floating and tappable now: the tap-reminder

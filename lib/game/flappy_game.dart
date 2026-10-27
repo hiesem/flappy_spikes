@@ -4549,6 +4549,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     unawaited(playtime.flush());
     _preloadInterstitialAfterGrace();
     unawaited(storage.saveLastScore(score));
+    // region P26-K
+    _run?.saveBestRunHoops(score, previousBest);
+    // endregion
     if (score > storage.bestScore) {
       storage.saveBestScore(score);
     }

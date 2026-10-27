@@ -663,7 +663,9 @@ class AnalyticsRouter extends RunFeature {
       // WP-J / WP-K fields are inert until M2.
       'level': 0,
       'lvl_pts_before': 0,
-      'beat_best_hoop': -1,
+      // region P26-K
+      'beat_best_hoop': c.run.beatBestHoop,
+      // endregion
     });
     final perfects = _perfectCounts(s.perfectPasses);
     c.track('run_extra', {

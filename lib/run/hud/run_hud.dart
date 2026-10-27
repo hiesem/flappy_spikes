@@ -1,4 +1,10 @@
 import 'dart:ui';
+// region P26-K
+import 'dart:math' as math;
+import '../../game/sound.dart';
+import '../effects/gold_sticker.dart';
+import '../effects/perfect_burst.dart';
+// endregion
 
 import 'package:flame/components.dart';
 import 'package:flutter/painting.dart' show TextPainter, TextSpan, TextStyle;
@@ -72,6 +78,136 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
   /// The row's opacity (0..1), fading with the run.
   double rowOpacity = 0;
 
+  // region P26-K
+  HudText _bestLabel = HudText(
+    'BEST',
+    size: 10.5,
+    spacing: 1.5 / 10.5,
+    color: Config.uiAccent,
+  );
+  bool _paintedGold = false;
+  HudText? _bestNumber;
+  int _paintedBest = -1;
+  GoldSticker? bestSticker;
+  double? _bestAge;
+  double _pointAge = 1;
+  int _lastBestScore = -1;
+  bool get bestChipVisible => run.bestGoalEligible;
+  bool get bestChipGold => (_bestAge ?? -1) >= HudConfig.bestFlipDelay;
+  int get bestChipScore => bestChipGold ? run.state.score : run.bestBefore;
+
+  void showNewBest() {
+    if (_bestAge != null) return;
+    _bestAge = 0;
+    bestSticker = GoldSticker.newBest(
+      text: 'NEW BEST!',
+      position: Vector2(160, HudConfig.bestStickerY),
+    );
+    add(bestSticker!);
+    final at = run.geo.toTrack(Vector2(160, HudConfig.bestStickerY));
+    PerfectBurst.emit(
+      run.particles,
+      Offset(at.x, at.y),
+      1,
+      math.Random(run.setup.seed),
+    );
+    run.game.sound.play(Sfx.perfect1);
+  }
+
+  @override
+  void updateTree(double dt) {
+    super.updateTree(game.state == GameState.paused ? 0 : dt);
+  }
+
+  void _updateBest(double dt) {
+    if (game.state == GameState.paused || !rowWanted) return;
+    if (_lastBestScore != run.state.score) {
+      _lastBestScore = run.state.score;
+      _pointAge = 0;
+    }
+    _pointAge += dt;
+    if (_bestAge != null) {
+      _bestAge = _bestAge! + dt;
+      final sticker = bestSticker;
+      if (sticker != null) {
+        sticker.opacity = ((HudConfig.bestMomentLength - _bestAge!) / .24)
+            .clamp(0, 1);
+        if (_bestAge! >= HudConfig.bestMomentLength || !bestChipVisible) {
+          sticker.removeFromParent();
+          bestSticker = null;
+        }
+      }
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    if (!bestChipVisible || rowOpacity <= 0) return;
+    final gold = bestChipGold;
+    final color = gold ? HudConfig.plum : Config.uiAccent;
+    if (_paintedGold != gold) {
+      _paintedGold = gold;
+      _paintedBest = -1;
+      _bestLabel = HudText(
+        'BEST',
+        size: 10.5,
+        spacing: 1.5 / 10.5,
+        color: color,
+      );
+    }
+    final label = _bestLabel;
+    if (_paintedBest != bestChipScore) {
+      _paintedBest = bestChipScore;
+      _bestNumber = HudText(
+        '$bestChipScore',
+        size: 21,
+        font: Config.scoreFont,
+        color: color,
+      );
+    }
+    final number = _bestNumber!;
+    final width = math.max(84.0, label.width + 7 + number.width + 22);
+    final flip = (((_bestAge ?? -1) - HudConfig.bestFlipDelay) / .22).clamp(
+      0.0,
+      1.0,
+    );
+    final sy = flip > 0 && flip < 1 ? math.cos(flip * math.pi).abs() : 1.0;
+    final pop = gold && _pointAge < .22
+        ? 1 + .1 * math.sin(math.pi * _pointAge / .22)
+        : 1.0;
+    canvas.save();
+    canvas.translate(160, HudConfig.bestChipY);
+    canvas.scale(pop, sy * pop);
+    canvas.drawRect(
+      Rect.fromLTWH(
+        -width / 2,
+        -HudConfig.bestChipHeight / 2,
+        width,
+        HudConfig.bestChipHeight,
+      ),
+      Paint()
+        ..color = (gold ? HudConfig.gold : const Color(0xFFFFFFFF)).withValues(
+          alpha: rowOpacity,
+        ),
+    );
+    final left = -(label.width + 7 + number.width) / 2;
+    label.paintCentred(
+      canvas,
+      Offset(left + label.width / 2, 1),
+      opacity: rowOpacity,
+      colorOverride: color,
+    );
+    number.paintCentred(
+      canvas,
+      Offset(left + label.width + 7 + number.width / 2, 2.5),
+      opacity: rowOpacity,
+      colorOverride: color,
+    );
+    canvas.restore();
+  }
+  // endregion
+
   bool _cleared = false;
 
   /// Hidden entirely while a menu screen sits over the paused run (the
@@ -126,6 +262,9 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
     } else if (!run.dying) {
       _cleared = false;
     }
+    // region P26-K
+    _updateBest(dt);
+    // endregion
     final target = rowWanted ? 1.0 : 0.0;
     final step = dt / HudConfig.rowFade;
     rowOpacity = rowOpacity < target

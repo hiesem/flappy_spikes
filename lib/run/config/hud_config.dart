@@ -100,6 +100,15 @@ abstract final class HudConfig {
   /// §5.7 The row fades in / out with the run (s).
   static const double rowFade = .2;
 
+  // region P26-K
+  static const double bestChipY = 71;
+  static const double bestChipHeight = 28;
+  static const double bestStickerY = 114;
+  static const double bestMomentLength = 1.2;
+  static const double bestFlipDelay = .18;
+  static const double bestLineLead = 1.25;
+  // endregion
+
   // ----------------------------------------------------------- pause card
   /// §5.7 Pause overlay: rgba(20, 20, 30, .62).
   static const Color pauseDim = Color(0x9E14141E);

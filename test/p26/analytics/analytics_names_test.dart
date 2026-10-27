@@ -13,6 +13,20 @@ import 'package:flutter_test/flutter_test.dart';
 /// PRD-2.6 WP-A2: event names are snake_case and at most 40 characters;
 /// every event has at most 25 parameters. `run_fail` has the PRD's 22.
 void main() {
+  test('WP-K best_beaten is a literal event with its four PRD parameters', () {
+    final source = File('lib/run/run_controller.dart').readAsStringSync();
+    expect(source, contains("ctx.track('best_beaten', {"));
+    for (final key in ['mode', 'hoop', 'best_before', 'games']) {
+      expect(source, contains("'$key':"));
+    }
+    expect(
+      _fixture(
+        "track('best_beaten', {'mode': 'free_fly', 'hoop': 3, 'best_before': 42, 'games': 1})",
+      ),
+      isEmpty,
+    );
+  });
+
   test('run_fail has exactly the 22 PRD parameters in order', () {
     expect(AnalyticsRouter.failKeys, [
       'hoop',

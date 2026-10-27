@@ -122,7 +122,8 @@ class RunDirector {
     }
     // region P26-D-TESTS
     // A lifetime first meet already satisfies that element's introduction.
-    _unmetAtStart = ElementId.values.toSet()..removeAll(met);
+    _sawIntroductionPending =
+        _on(ElementId.saw) && !met.contains(ElementId.saw);
     _calm = CalmSchedule(rng.timing);
     if (startHoopIndex > 34) _calm.onRideStart(startHoopIndex);
     // endregion
@@ -221,43 +222,27 @@ class RunDirector {
   int _headlineReservationDue = -1;
   // region P26-D-TESTS
   int? _forcedHeadlineAt;
-  final List<ElementId> _pendingIntroductions = [];
-  late final Set<ElementId> _unmetAtStart;
+  late bool _sawIntroductionPending;
 
   /// Observes actual arbitration for the combined D6 wire oracle.
   @visibleForTesting
   void Function(String id, int hoop)? onHeadline;
 
-  // PRD §8.3 decision 15: existing first meets own their introduction;
-  // otherwise queue the D1 row after normal slot headline arbitration.
+  // PRD §8.3 decision 15: first meets own switch/moving introductions.
+  // Saw has no first-meet pull: its natural debut waits for an open window.
+  bool _allowsSawIntroduction(int hoop) =>
+      _headline.allows('introduction', hoop) &&
+      (_forcedHeadlineAt == null || hoop >= _forcedHeadlineAt! + 8);
+
   void _introduceAfterSlot(SlotPlan slot) {
-    if (slot.forced) return;
-    final element = switch (slot.index) {
-      15 => ElementId.switchRing,
-      25 => ElementId.movingRing,
-      30 => ElementId.saw,
-      _ => null,
-    };
-    // A lifetime first meet already introduced a met element. Never-met
-    // switch/moving rows use their first-meet pull; saw has no such pull.
-    if (element != null &&
-        _on(element) &&
-        _unmetAtStart.contains(element) &&
-        !element.firstMeet) {
-      _pendingIntroductions.add(element);
-    }
-    if (_pendingIntroductions.isEmpty ||
-        firstMeet.due(slot.index) != null ||
-        _headlineReservationId != null ||
-        _reservesFirstPortal(slot.index) ||
-        (_portalOn && !portalCapped && slot.index >= _portalAt) ||
-        !_headline.allows('introduction', slot.index) ||
-        (_forcedHeadlineAt != null && slot.index < _forcedHeadlineAt! + 8)) {
+    if (!_sawIntroductionPending ||
+        slot.forced ||
+        slot.kind != HoopKindId.saw) {
       return;
     }
-    _pendingIntroductions.removeAt(0);
-    // Do not go through _claimHeadline: introductions neither force a window
-    // nor clear another headline's (in particular squeeze's) reservation.
+    _sawIntroductionPending = false;
+    // The eligibility check admitted this actual saw into an open window.
+    // Never force a window or clear another headline's squeeze reservation.
     _headline.add('introduction', slot.index);
     onHeadline?.call('introduction', slot.index);
   }
@@ -1172,6 +1157,21 @@ class RunDirector {
       );
     }
 
+    // region P26-D-TESTS
+    // Formation templates bypass the normal special draw; protect that debut
+    // too, before hazard accounting and final-kind bookkeeping.
+    if (!finalPlan.forced &&
+        finalPlan.kind == HoopKindId.saw &&
+        _sawIntroductionPending &&
+        !_allowsSawIntroduction(hoop)) {
+      finalPlan = finalPlan.copyWith(
+        kind: HoopKindId.normal,
+        element: ElementId.normalHoop,
+        extra: () => null,
+      );
+    }
+    // endregion
+
     finalPlan = alignFormation(finalPlan);
 
     // §3.23 a spring landing is committed geometry. Reserve the landing's
@@ -1445,9 +1445,11 @@ class RunDirector {
       ),
     );
     // region P26-D-TESTS
-    _introduceAfterSlot(normal);
+    if (showcase == null) {
+      _introduceAfterSlot(normal);
+      return normal;
+    }
     // endregion
-    if (showcase == null) return normal;
     // Run the normal decision to completion first, then overlay step 0.
     // Its sampler, reservations and random streams remain exactly the same
     // as an ordinary course with first-meet pulls disabled.
@@ -1470,6 +1472,9 @@ class RunDirector {
       }
     }
     _replaceSpawnedCount(normal, shipped);
+    // region P26-D-TESTS
+    _introduceAfterSlot(shipped);
+    // endregion
     return shipped;
   }
 
@@ -2296,6 +2301,15 @@ class RunDirector {
   }) {
     final rule = tables.specials[k];
     if (rule == null || !_on(k.element)) return false;
+    // region P26-D-TESTS
+    if (!ignoreUnlock &&
+        k == HoopKindId.saw &&
+        _sawIntroductionPending &&
+        !_allowsSawIntroduction(i)) {
+      return false;
+    }
+    // endregion
+
     if (!ignoreUnlock &&
         rewardKinds.contains(k) &&
         k != HoopKindId.portal &&

@@ -239,9 +239,11 @@ void main() {
             );
             final headlines = <(String, int)>[];
             director.onHeadline = (id, hoop) => headlines.add((id, hoop));
-            for (var hoop = 0; hoop < 60; hoop++) {
+            int? firstSaw;
+            for (var hoop = 0; hoop < 120; hoop++) {
               final slot = director.nextSlot(DirectorContext.open(711));
               director.nextGap(DirectorContext.open(711), slot);
+              if (slot.kind == HoopKindId.saw) firstSaw ??= slot.index;
             }
             if (met || !enabled) {
               expect(headlines, isEmpty);
@@ -251,7 +253,15 @@ void main() {
                 headlines.single.$1,
                 element.firstMeet ? 'first-meet' : 'introduction',
               );
-              expect(headlines.single.$2, inInclusiveRange(row, row + 5));
+              if (element == ElementId.saw) {
+                // C1: saw has no forced first meet. Its actual natural debut,
+                // rather than the row's due hoop, owns the D6 headline.
+                expect(firstSaw, isNotNull);
+                expect(headlines.single.$2, firstSaw);
+                expect(firstSaw, greaterThanOrEqualTo(row));
+              } else {
+                expect(headlines.single.$2, inInclusiveRange(row, row + 5));
+              }
             }
           }
         }
@@ -268,12 +278,16 @@ void main() {
     );
     final headlines = <(String, int)>[];
     director.onHeadline = (id, hoop) => headlines.add((id, hoop));
-    for (var hoop = 25; hoop <= 40; hoop++) {
+    int? firstSaw;
+    for (var hoop = 25; hoop < 120; hoop++) {
       final slot = director.nextSlot(DirectorContext.open(711));
       director.nextGap(DirectorContext.open(711), slot);
+      if (slot.kind == HoopKindId.saw) firstSaw ??= slot.index;
     }
-    // PRD §8.3 decision 15: saw's row at 30 waits for the window at 33.
-    expect(headlines, [('first-meet', 25), ('introduction', 33)]);
+    // PRD §8.3 decision 15: saw's debut can claim only from 33 onward.
+    expect(firstSaw, isNotNull);
+    expect(firstSaw, greaterThanOrEqualTo(33));
+    expect(headlines, [('first-meet', 25), ('introduction', firstSaw!)]);
   });
 
   test(
@@ -311,17 +325,61 @@ void main() {
     expect(director.allowsSqueezeWarning(25), isFalse);
     // Move calm beyond the reservation probe without changing headlines.
     director.onSqueezeEnded(22);
-    for (var hoop = 25; hoop <= 48; hoop++) {
+    int? firstSaw;
+    for (var hoop = 25; hoop < 120; hoop++) {
       final slot = director.nextSlot(DirectorContext.open(711));
       director.nextGap(DirectorContext.open(711), slot);
+      if (slot.kind == HoopKindId.saw) firstSaw ??= slot.index;
       if (hoop == 32) {
         expect(director.allowsSqueezeWarning(32), isTrue);
         director.onSqueezeWarning(32);
       }
     }
-    expect(introductions, [40]);
+    expect(firstSaw, isNotNull);
+    expect(firstSaw, greaterThanOrEqualTo(40));
+    expect(introductions, [firstSaw]);
   });
   // endregion
+
+  test('WP-D6 saw debut owns its protected introduction across 200 seeds', () {
+    var debuts = 0;
+    for (var seed = 0; seed < 200; seed++) {
+      final director = RunDirector(
+        seed: seed,
+        enabled: ElementId.values.toSet(),
+        met: ElementId.values.toSet()..remove(ElementId.saw),
+      );
+      final headlines = <(String, int)>[];
+      director.onHeadline = (id, hoop) => headlines.add((id, hoop));
+      int? firstSaw;
+      for (var hoop = 0; hoop < 120; hoop++) {
+        final slot = director.nextSlot(DirectorContext.open(711));
+        director.nextGap(DirectorContext.open(711), slot);
+        if (slot.kind == HoopKindId.saw) firstSaw ??= slot.index;
+      }
+      final introductions = headlines.where(
+        (event) => event.$1 == 'introduction',
+      );
+      if (firstSaw == null) {
+        // C1 deliberately has no forced saw pull. No natural saw also means
+        // no introduction headline may have been claimed for an empty slot.
+        expect(introductions, isEmpty, reason: 'seed=$seed has no saw');
+        continue;
+      }
+      debuts++;
+      expect(introductions, [('introduction', firstSaw)], reason: 'seed=$seed');
+      for (final event in headlines.where(
+        (event) => event.$1 != 'introduction',
+      )) {
+        expect(
+          (event.$2 - firstSaw).abs(),
+          greaterThanOrEqualTo(8),
+          reason: 'seed=$seed saw=$firstSaw other=$event',
+        );
+      }
+    }
+    expect(debuts, greaterThan(0));
+  });
 
   test('WP-D6 all five headline families stay eight hoops apart', () {
     const bonusKinds = {
@@ -333,49 +391,54 @@ void main() {
     // Keep the original every-slot warning stress and add realistic gaps so
     // deferred introductions also get an opportunity to claim a window.
     for (final warningEvery in [0, 40]) {
-      for (var seed = 1; seed <= 40; seed++) {
-        final director = RunDirector(
-          seed: seed,
-          enabled: ElementId.values.toSet(),
-          met: ElementId.values.toSet()
-            ..removeAll({ElementId.bullseye, ElementId.saw}),
-        );
-        var nextWarning = warningEvery == 0 ? 25 : 35;
-        final headlines = <(String, int)>[];
-        director.onHeadline = (id, hoop) {
-          if (id == 'first-meet' || id == 'introduction') {
-            headlines.add((id, hoop));
-          }
-        };
-        for (var slot = 0; slot < 240; slot++) {
-          final plan = director.nextSlot(DirectorContext.open(711));
-          final gap = director.nextGap(DirectorContext.open(711), plan);
-          if (plan.kind == HoopKindId.portal || plan.cometHang) {
-            headlines.add(('ride', plan.index));
-          } else if (bonusKinds.contains(plan.kind)) {
-            headlines.add(('big-bonus', plan.index));
-          } else if (gap.items.any(
-            (item) => RunDirector.isBigItem(item.kind),
-          )) {
-            headlines.add(('big-bonus', gap.index));
+      for (final allMet in [true, false]) {
+        for (var seed = 1; seed <= 40; seed++) {
+          final director = RunDirector(
+            seed: seed,
+            enabled: ElementId.values.toSet(),
+            met: allMet
+                ? ElementId.values.toSet()
+                : (ElementId.values.toSet()
+                    ..removeAll({ElementId.bullseye, ElementId.saw})),
+          );
+          var nextWarning = warningEvery == 0 ? 25 : 35;
+          final headlines = <(String, int)>[];
+          director.onHeadline = (id, hoop) {
+            if (id == 'first-meet' || id == 'introduction') {
+              headlines.add((id, hoop));
+            }
+          };
+          for (var slot = 0; slot < 240; slot++) {
+            final plan = director.nextSlot(DirectorContext.open(711));
+            final gap = director.nextGap(DirectorContext.open(711), plan);
+            if (plan.kind == HoopKindId.portal || plan.cometHang) {
+              headlines.add(('ride', plan.index));
+            } else if (bonusKinds.contains(plan.kind)) {
+              headlines.add(('big-bonus', plan.index));
+            } else if (gap.items.any(
+              (item) => RunDirector.isBigItem(item.kind),
+            )) {
+              headlines.add(('big-bonus', gap.index));
+            }
+
+            if (plan.index >= nextWarning &&
+                director.allowsSqueezeWarning(plan.index)) {
+              headlines.add(('squeeze', plan.index));
+              director.onSqueezeWarning(plan.index);
+              nextWarning = plan.index + warningEvery;
+            }
           }
 
-          if (plan.index >= nextWarning &&
-              director.allowsSqueezeWarning(plan.index)) {
-            headlines.add(('squeeze', plan.index));
-            director.onSqueezeWarning(plan.index);
-            nextWarning = plan.index + warningEvery;
-          }
-        }
-
-        families.addAll(headlines.map((headline) => headline.$1));
-        for (var left = 0; left < headlines.length; left++) {
-          for (var right = left + 1; right < headlines.length; right++) {
-            expect(
-              headlines[right].$2 - headlines[left].$2,
-              greaterThanOrEqualTo(8),
-              reason: 'seed $seed: ${headlines[left]} then ${headlines[right]}',
-            );
+          families.addAll(headlines.map((headline) => headline.$1));
+          for (var left = 0; left < headlines.length; left++) {
+            for (var right = left + 1; right < headlines.length; right++) {
+              expect(
+                headlines[right].$2 - headlines[left].$2,
+                greaterThanOrEqualTo(8),
+                reason:
+                    'seed $seed: ${headlines[left]} then ${headlines[right]}',
+              );
+            }
           }
         }
       }

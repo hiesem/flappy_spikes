@@ -28,7 +28,16 @@ enum TuningType {
 
   /// A JSON object with exactly the keys of its default and number values
   /// (one spawn-table row, a weight table).
-  object;
+  // region P26-S0
+  object,
+
+  /// A JSON array of strings, such as J1's "layer:rarity" item table.
+  stringList,
+
+  /// A JSON array of integer coin amounts and string reward tokens (G2).
+  intStringList;
+
+  // endregion
 
   /// Parses an override string against [fallback] (the default, for the
   /// object's key set). Null = rejected (wrong type, broken JSON).
@@ -48,6 +57,11 @@ enum TuningType {
             'false' => false,
             _ => null,
           };
+        // region P26-S0
+        case TuningType.stringList:
+        case TuningType.intStringList:
+          return validate(jsonDecode(s), fallback);
+        // endregion
         case TuningType.intList:
           return validate(jsonDecode(s), fallback);
         case TuningType.curve:
@@ -70,6 +84,29 @@ enum TuningType {
         return v is num ? v.toDouble() : null;
       case TuningType.boolean:
         return v is bool ? v : null;
+      // region P26-S0
+      case TuningType.stringList:
+        if (v is! List) return null;
+        final out = <String>[];
+        for (final x in v) {
+          if (x is! String) return null;
+          out.add(x);
+        }
+        return out;
+      case TuningType.intStringList:
+        if (v is! List) return null;
+        final out = <Object>[];
+        for (final x in v) {
+          if (x is String) {
+            out.add(x);
+          } else if (x is num && x.isFinite && x == x.roundToDouble()) {
+            out.add(x.toInt());
+          } else {
+            return null;
+          }
+        }
+        return out;
+      // endregion
       case TuningType.intList:
         if (v is! List) return null;
         final out = <int>[];
@@ -115,8 +152,10 @@ class TuningDef {
   final String key;
   final TuningType type;
 
-  /// The in-app default (int, double, bool, `List<int>`,
+  // region P26-S0
+  /// The in-app default (int, double, bool, integer/string/mixed lists,
   /// `List<List<num>>` or `Map<String, num>`).
+  // endregion
   final Object value;
 }
 

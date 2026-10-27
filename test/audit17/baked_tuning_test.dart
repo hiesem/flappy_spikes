@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flappy_spikes/run/config/tuning_defaults.dart';
+// region P26-S0
+import 'package:flappy_spikes/run/config/tuning_types.dart';
+// endregion
 import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/services/tester.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -143,6 +146,9 @@ const Map<String, String> _liveRc20261019 = {
       '[25,50,100,150,200,300,400,500,600,700,800,900,1000,1200,1400,1600,1800,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,6000,7000,8000,10000]',
   'level_coins':
       '[50,50,50,50,50,75,100,125,150,175,200,225,250,300,350,400,450,500,550,600,650,700,750,875,1000,1125,1250,1500,1750,2000,2500]',
+  'level_items':
+      '["hat:common","trail:common","gear:common","hoop:common","bird:common","hat:common","trail:common","gear:common","hoop:common","bird:rare","hat:common","trail:common","gear:common","hoop:common","bird:rare","hat:rare","trail:rare","gear:rare","hoop:rare","bird:epic","hat:rare","trail:rare","gear:rare","hoop:rare","bird:epic","hat:epic","trail:epic","gear:epic","hoop:epic","bird:legendary","any:legendary"]',
+  'streak_rewards': '[20,30,"bighoops",40,"shield",50,"feather+60"]',
   'level_eternal_points': '10000',
   'level_eternal_coins': '2500',
   'ui_unlock_games': '3',
@@ -198,6 +204,82 @@ void main() {
       'cooldown': 1,
     });
   });
+
+  // region P26-S0
+  test('PRD-2.6 J1 string lists parse and reject every non-string kind', () {
+    const type = TuningType.stringList;
+    expect(type.parse('["hat:common","any:legendary"]', const []), [
+      'hat:common',
+      'any:legendary',
+    ]);
+    expect(type.parse('[]', const []), <String>[]);
+    for (final raw in [
+      '[20]',
+      '[1.5]',
+      '[true]',
+      '[null]',
+      '[[]]',
+      '[{}]',
+      '"hat:common"',
+      '{}',
+      'null',
+      '["hat:common",]',
+    ]) {
+      expect(type.parse(raw, const []), isNull, reason: raw);
+    }
+  });
+
+  test(
+    'PRD-2.6 G2 mixed reward lists keep coins as ints and tokens as strings',
+    () {
+      const type = TuningType.intStringList;
+      expect(
+        type.parse('[20,30,"bighoops",40,"shield",50,"feather+60"]', const []),
+        [20, 30, 'bighoops', 40, 'shield', 50, 'feather+60'],
+      );
+      final normalized = type.parse('[20.0,"shield"]', const []) as List;
+      expect(normalized, [20, 'shield']);
+      expect(normalized.first, isA<int>());
+      expect(type.parse('[]', const []), <Object>[]);
+      for (final raw in [
+        '[1.5]',
+        '[true]',
+        '[null]',
+        '[[]]',
+        '[{}]',
+        '20',
+        '{}',
+        'null',
+        '[20,',
+      ]) {
+        expect(type.parse(raw, const []), isNull, reason: raw);
+      }
+      expect(type.validate([double.infinity], const []), isNull);
+      expect(type.validate([double.nan], const []), isNull);
+      // Existing int-list parsing remains strict when the new types are added.
+      expect(TuningType.intList.parse('[20,"shield"]', const []), isNull);
+      expect(TuningType.intList.parse('[20.0,30]', const []), [20, 30]);
+    },
+  );
+
+  test('PRD-2.6 J1 / G2 list overrides flow through TuningValues', () {
+    final resolved = TuningValues.resolve({
+      'level_items': '["bird:epic","any:legendary"]',
+      'streak_rewards': '[20,"shield"]',
+    });
+    expect(resolved.raw('level_items'), ['bird:epic', 'any:legendary']);
+    expect(resolved.raw('streak_rewards'), [20, 'shield']);
+    for (final override in [
+      {'level_items': '[20]'},
+      {'streak_rewards': '[20,true]'},
+    ]) {
+      expect(() => TuningValues.resolve(override), throwsArgumentError);
+    }
+    final defaults = TuningValues.defaults();
+    expect(defaults.raw('level_items') as List, hasLength(31));
+    expect((defaults.raw('level_items') as List).last, 'any:legendary');
+  });
+  // endregion
 
   test('the tester flag is off by default (release builds have no define)', () {
     expect(kTester, isFalse);

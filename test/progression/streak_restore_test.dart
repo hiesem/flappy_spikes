@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/progression/streak_lost_popup.dart';
+import 'package:flappy_spikes/components/noads_celebration.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/home_moments.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
@@ -276,6 +277,63 @@ class _Events extends GameServices {
 }
 
 void uiTests() {
+  for (final reduced in [false, true]) {
+    final now = DateTime(2026, 10, 27, 12);
+    FlameTester<FlappySpikesGame>(
+      () => createRunTestGame(
+        clock: () => now,
+        prefs: {
+          'gamesPlayed': 4,
+          'streakLostDays': 13,
+          'streakDays': 2,
+          'streakLastDay': streakLocalDay(now),
+          'streakPaidDay': streakLocalDay(now),
+        },
+      )..reduceMotionOverride = reduced,
+    ).testGameWidget(
+      'restore mounts the R3 rays behind the flame, reduced motion=$reduced',
+      setUp: (game, _) async {
+        await game.ready();
+        await preloadImages(game);
+      },
+      verify: (game, _) async {
+        await flushAndMount(game);
+        stepGame(game, 2);
+        await flushAndMount(game);
+        final popup = game.streakLostPopup!;
+        expect(popup.card.children.whereType<NoAdsCelebrationRays>(), isEmpty);
+        await game.restoreLostStreak();
+        await flushAndMount(game);
+        final rays = popup.card.children
+            .whereType<NoAdsCelebrationRays>()
+            .single;
+        expect(popup.phase, StreakLostPhase.restoring);
+        expect(rays.isMounted, isTrue);
+        expect(rays, same(popup.restoreRays));
+        expect(popup.card.children.first, same(rays));
+        expect(rays.priority, lessThan(popup.newCount.priority));
+        expect(rays.position.y, 46); // Clip below the P1 header.
+        expect(
+          rays.rayCenter + ui.Offset(rays.x, rays.y),
+          const ui.Offset(200, 87.5),
+        );
+        stepGame(game, .2);
+        expect(rays.phase, reduced ? 0 : greaterThan(0));
+        final phase = rays.phase;
+        game.reduceMotionOverride = true;
+        stepGame(game, .2);
+        expect(rays.phase, phase); // Freeze the live rotation clock.
+        game.reduceMotionOverride = false;
+        stepGame(game, .2);
+        expect(rays.phase, greaterThan(phase));
+        // Round-2 review permits n + k: G2 RESTORE restores all 15 days.
+        expect(popup.newCount.text, '15');
+        expect(game.storage.streakDays, 15);
+        stepGame(game, .6);
+        expect(game.streakLostPopup, isNull);
+      },
+    );
+  }
   for (final complete in [true, false]) {
     var now = DateTime(2026, 10, 27, 12);
     final ads = FakeRewardedAds();

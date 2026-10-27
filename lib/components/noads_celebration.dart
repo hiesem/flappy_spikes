@@ -304,7 +304,11 @@ class _Header extends PositionComponent {
   static const _stampCurve = Cubic(.3, 0, .3, 1);
 
   final Paint _fill = Paint()..color = Config.menuPink;
-  final Paint _ray = Paint();
+  // region P26-G2c
+  late final _rays = NoAdsCelebrationRays(
+    rayCenter: _rayCentre,
+    motion: () => motion,
+  );
   final Paint _star = Paint()..color = const Color(0xFFFFFFFF);
   final Paint _ring = Paint()..color = Config.menuPink;
   final Paint _gold = Paint()..color = Config.menuGold;
@@ -313,7 +317,7 @@ class _Header extends PositionComponent {
     ..strokeWidth = 3.6
     ..strokeCap = StrokeCap.square
     ..color = Config.menuPlum;
-  final Path _wedge = Path();
+  // endregion
   final Path _starPath = Path();
 
   (double, double) get wobble => (_wobble.scale, _wobble.angle);
@@ -370,29 +374,10 @@ class _Header extends PositionComponent {
 
   void _renderBack(Canvas canvas) {
     canvas.drawRect(size.toRect(), _fill);
-    // 16 gold rays (half-wedges of 200 pt), turning at 0.5 rad/s.
     final t = _motionT;
-    canvas.save();
-    canvas.translate(_rayCentre.dx, _rayCentre.dy);
-    canvas.rotate(t * .5);
-    const step = 2 * math.pi / 16;
-    for (var i = 0; i < 16; i++) {
-      _ray.color = i.isOdd
-          ? const Color.fromRGBO(255, 229, 130, .34)
-          : const Color.fromRGBO(255, 181, 41, .3);
-      _wedge
-        ..reset()
-        ..moveTo(0, 0)
-        ..arcTo(
-          Rect.fromCircle(center: Offset.zero, radius: 200),
-          i * step,
-          step / 2,
-          false,
-        )
-        ..close();
-      canvas.drawPath(_wedge, _ray);
-    }
-    canvas.restore();
+    // region P26-G2c
+    _rays.paintRays(canvas, phase: t);
+    // endregion
     // 10 sparkles on an ellipse around the icon, twinkling.
     for (var i = 0; i < 10; i++) {
       final a = i / 10 * 2 * math.pi + t * .8;
@@ -454,3 +439,62 @@ class _Header extends PositionComponent {
     canvas.restore();
   }
 }
+
+// region P26-G2c
+/// R3's existing 16 gold half-wedges, shared by the No-Ads header and restore.
+/// The centre and rotation time vary; the colours, radius and speed do not.
+class NoAdsCelebrationRays extends PositionComponent {
+  NoAdsCelebrationRays({
+    required this.rayCenter,
+    required this.motion,
+    super.position,
+    super.size,
+    super.priority,
+  });
+
+  final Offset rayCenter;
+  final bool Function() motion;
+  double phase = 0;
+  final Paint _ray = Paint();
+  final Path _wedge = Path();
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (motion()) phase += dt;
+  }
+
+  @override
+  void render(Canvas canvas) {
+    canvas.save();
+    canvas.clipRect(size.toRect());
+    paintRays(canvas, phase: phase);
+    canvas.restore();
+  }
+
+  /// The original header calls this with its own frozen motion clock.
+  void paintRays(Canvas canvas, {required double phase}) {
+    canvas.save();
+    canvas.translate(rayCenter.dx, rayCenter.dy);
+    canvas.rotate(phase * .5);
+    const step = 2 * math.pi / 16;
+    for (var i = 0; i < 16; i++) {
+      _ray.color = i.isOdd
+          ? const Color.fromRGBO(255, 229, 130, .34)
+          : const Color.fromRGBO(255, 181, 41, .3);
+      _wedge
+        ..reset()
+        ..moveTo(0, 0)
+        ..arcTo(
+          Rect.fromCircle(center: Offset.zero, radius: 200),
+          i * step,
+          step / 2,
+          false,
+        )
+        ..close();
+      canvas.drawPath(_wedge, _ray);
+    }
+    canvas.restore();
+  }
+}
+// endregion

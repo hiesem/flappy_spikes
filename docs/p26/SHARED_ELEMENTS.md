@@ -28,7 +28,8 @@ already sit behind their item and turn slowly.
    `lib/run/config/results_config.dart`.
 2. **LEVEL UP pink rays** — `LevelUpPopup._Header` in
    `lib/components/levels/level_up_popup.dart`.
-3. **No-Ads celebration gold rays** — `NoAdsCelebration._Header` in
+3. **No-Ads celebration gold rays** — `NoAdsCelebrationRays` (also used by
+   `NoAdsCelebration._Header`) in
    `lib/components/noads_celebration.dart`.
 4. **Shop preview rarity rays** — `PreviewStage` in
    `lib/components/skins/preview_stage.dart`.
@@ -77,7 +78,7 @@ the only permitted differences; layout geometry stays in the owning screen.
 |---|---|---|---|
 | R1 | `lib/run/screens/results_screen.dart` — `ResultsScreen._paintRays` with `lib/run/config/results_config.dart` — `ResultsConfig` | strength / opacity envelope, scale, rotation phase, reduce-motion freeze; colours remain the results-page gold + light pair | `levels_v26/item_reveal.html` — LEVEL ITEM REVEAL, reward stage rays behind the emblem/reveal; `approvals_v26/missions.html` — §4 ALL DONE: THE BONUS CHEST ON HOME; `approvals_v26/leaderboard_gifts.html` — §2 OPENING THE BOX; `approvals_v26/star_road.html` — tier claim / reward moments; `approvals_v26/puzzle_album.html` — picture-complete / album reward |
 | R2 | `lib/components/levels/level_up_popup.dart` — `LevelUpPopup._Header` | header size and centre, rotation phase, reduce-motion freeze; the 16 soft-pink wedges stay this master | `levels_v26/item_reveal.html` — LEVEL ITEM REVEAL, LEVEL UP / result-stage moment; `approvals_v26/levels_tabs.html` — level-up reward presentation |
-| R3 | `lib/components/noads_celebration.dart` — `NoAdsCelebration._Header` | header size and centre, rotation phase, reduce-motion freeze; the 16 gold wedges stay this master | `approvals_v26/day_streak.html` — §2 THE DAILY REWARD MOMENT / §3 THE STREAK CARD; `approvals_v26/first_win_of_day.html` — first-win reward; `approvals_v26/weekly_course.html` — §3 WEEKLY RESULTS reward moment |
+| R3 | `lib/components/noads_celebration.dart` — `NoAdsCelebrationRays` (shared with `NoAdsCelebration._Header`) | clip bounds and centre, rotation phase, reduce-motion freeze; the 16 gold wedges stay this master | `approvals_v26/day_streak.html` — §2 THE DAILY REWARD MOMENT / §3 THE STREAK CARD / §4 STREAK LOST restore; `approvals_v26/first_win_of_day.html` — first-win reward; `approvals_v26/weekly_course.html` — §3 WEEKLY RESULTS reward moment |
 | R4 | `lib/components/skins/preview_stage.dart` — `PreviewStage` | stage rect, rarity colours selected by the existing rarity branch, ray lifetime (1.4 / 2.6 s) and reduce-motion freeze | `approvals_v26/versus_cards.html` — THE 51 ITEMS + 9 SKILL ITEMS, item reveal / celebration; `approvals_v26/skill_cosmetics.html` — THE 24 ITEMS, gold skill-item reveal |
 
 ### Mystery box (O99)

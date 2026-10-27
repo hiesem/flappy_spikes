@@ -7,6 +7,7 @@ import '../../game/config.dart';
 import '../../game/sound.dart';
 import '../../progression/day_streak.dart';
 import '../home/menu_primitives.dart';
+import '../noads_celebration.dart' show NoAdsCelebrationRays;
 import '../ui/confetti.dart';
 import '../ui/p1_popup.dart';
 import 'streak_strip.dart';
@@ -50,6 +51,7 @@ class StreakLostPopup extends P1Popup {
   double _time = 0;
   double _moment = 0;
   int _restoredDays = 0;
+  NoAdsCelebrationRays? restoreRays;
   bool _done = false;
 
   bool get resolving =>
@@ -192,7 +194,18 @@ class StreakLostPopup extends P1Popup {
   void restoreMoment(int days, {required bool flewToday}) {
     phase = StreakLostPhase.restoring;
     _moment = 0;
+    // Keep the displayed total consistent with the restored n + k state
+    // (PRD G2 RESTORE); review round 2 explicitly permits this presentation.
     _restoredDays = days;
+    card.add(
+      restoreRays = NoAdsCelebrationRays(
+        rayCenter: const Offset(200, 41.5),
+        motion: () => !game.reduceMotion,
+        position: Vector2(0, 46),
+        size: Vector2(Config.p1PopupWidth, cardHeight - 46),
+        priority: -1,
+      ),
+    );
     title.text = 'STREAK RESTORED!';
     title.fontSize = 17;
     lostLine.removeFromParent();

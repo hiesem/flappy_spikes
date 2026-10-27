@@ -216,7 +216,7 @@ void main() {
     const service = NoopLeaderboardService();
     expect(await service.getBoard(), isNull);
     expect(await service.getBoard(tab: LbBoardTab.best), isNull);
-    expect(await service.submitRun({}), isNull);
+    expect(await service.submitRun(const LbSubmitRunRequest(runs: [])), isNull);
     expect(await service.claimGift('g', owned: []), isNull);
   });
 
@@ -245,11 +245,20 @@ void main() {
         123,
       );
       expect(
-        (await service.submitRun({
-          'runs': [
-            {'id': 'r1'},
-          ],
-        }))!.accepted,
+        (await service.submitRun(
+          const LbSubmitRunRequest(
+            runs: [
+              LbSubmittedRun(
+                id: 'r1',
+                score: 1,
+                hoops: 1,
+                cs: 100,
+                endTs: 1000,
+                mode: 'free',
+              ),
+            ],
+          ),
+        ))!.accepted,
         ['r1'],
       );
       expect((await service.claimGift('g', owned: ['bird:blue']))!.ok, isFalse);
@@ -258,7 +267,14 @@ void main() {
       expect(requests[1].$1, 'lbSubmitRun');
       expect(requests[1].$2, {
         'runs': [
-          {'id': 'r1'},
+          {
+            'id': 'r1',
+            'score': 1,
+            'hoops': 1,
+            'cs': 100,
+            'endTs': 1000,
+            'mode': 'free',
+          },
         ],
       });
       expect(requests[2].$1, 'lbClaimGift');
@@ -280,7 +296,10 @@ void main() {
       ]) {
         final service = FakeLeaderboardService(onCall: script);
         expect(await service.getBoard(), isNull);
-        expect(await service.submitRun({}), isNull);
+        expect(
+          await service.submitRun(const LbSubmitRunRequest(runs: [])),
+          isNull,
+        );
         expect(await service.claimGift('g'), isNull);
       }
     },
@@ -307,7 +326,7 @@ void main() {
     );
     final results = <Object?>[];
     service.getBoard().then(results.add);
-    service.submitRun({}).then(results.add);
+    service.submitRun(const LbSubmitRunRequest(runs: [])).then(results.add);
     service.claimGift('g').then(results.add);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 5999));

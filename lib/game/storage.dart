@@ -1258,6 +1258,34 @@ class GameStorage {
   // endregion PRD-2 keys
 
   // region WP-4c — "Delete my data" local reset (PRD-2 §3.13 Q22, ARCH §5)
+  // region P26-LB2
+  /// Called only after the server deleted the gifts and board identity.
+  Future<void> resetLeaderboardData() async {
+    lbQueue = const [];
+    lbGroupId = '';
+    lbGroupEnd = 0;
+    lbLastRank = 0;
+    lbGiftsClaimed = const {};
+    lbGiftPending = const {};
+    lbInfoSeen = false;
+    await _sealedWrite((p) async {
+      final removed = await Future.wait([
+        for (final key in [
+          Obf.prefLbQueue,
+          Obf.prefLbGroupId,
+          Obf.prefLbGroupEnd,
+          Obf.prefLbLastRank,
+          Obf.prefLbGiftsClaimed,
+          Obf.prefLbGiftPending,
+          Obf.prefLbInfoSeen,
+        ])
+          p.remove(key),
+      ]);
+      return removed.every((ok) => ok);
+    }, cached: true);
+  }
+  // endregion
+
   // region P26-S0
   /// Clears versus, leaderboard and 2.6 meta/progression state, including
   /// both generations of level keys (PRD-2.6 J5 / Appendix). The streak and

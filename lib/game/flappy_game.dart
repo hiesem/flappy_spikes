@@ -111,6 +111,11 @@ import '../services/versus_service.dart';
 // region P26-LB1
 import '../leaderboard/lb_service.dart';
 // endregion
+// region P26-LB2
+import '../leaderboard/lb_models.dart';
+import '../leaderboard/lb_queue.dart';
+import '../leaderboard/lb_submit_hook.dart';
+// endregion
 import '../services/ads_service.dart';
 import '../services/audio_focus.dart';
 import '../services/game_services.dart';
@@ -366,6 +371,22 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   final VersusService versus;
   // region P26-LB1
   final LeaderboardService leaderboard;
+  // endregion
+  // region P26-LB2
+  late final leaderboardQueue = LbQueue(
+    storage: storage,
+    service: leaderboard,
+    analytics: services.track,
+    request: (runs) => LbSubmitRunRequest(
+      runs: runs,
+      name: versus.me.name.isEmpty ? null : versus.me.name,
+      look: menu.items.look,
+      card: menu.items.look.card,
+      platform: defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+      t: LbSubmitHook.testerBuild ? 1 : 0,
+    ),
+  );
+  late final leaderboardSubmit = LbSubmitHook(leaderboardQueue, storage);
   // endregion
 
   /// PRD-2.3 §23.4 the store's rating sheet (no-op unless main() passes a
@@ -1095,6 +1116,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // region P26-G2c
     _streakLostVisit++;
     // endregion
+    // region P26-LB2
+    unawaited(leaderboardQueue.flush());
+    // endregion
     homeMoments.beginVisit(
       HomeVisit(
         day: storage.now(),
@@ -1196,6 +1220,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // automatic sign-in landed late) is picked up on the return.
     if (state == AppLifecycleState.resumed) {
       unawaited(services.recheckSignIn('resume'));
+      // region P26-LB2
+      if (isLoaded) unawaited(leaderboardQueue.flush());
+      // endregion
     }
     // region PRD-2.2 §28 — the game owns the music lifecycle
     _audioLifecycle(state);
@@ -4849,6 +4876,17 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // Games keeps each player's highest score server-side (one entry), and
     // this also backfills a best set before sign-in was available.
     services.submitBestScore(storage.bestScore);
+    // region P26-LB2
+    unawaited(
+      leaderboardSubmit.onRunEnd(
+        summary,
+        countsForAchievements: counts,
+        countsForUpload: _countsForUpload,
+        mode: homeMode == HomeMode.freeFly ? 'free' : 'versus',
+        look: menu.items.look,
+      ),
+    );
+    // endregion
     // region P26-E1
     if (summary != null && _countsForUpload) {
       unawaited(versus.submitRun(summary, menu.items.look));
@@ -5132,6 +5170,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       ok = false;
     }
     if (ok) {
+      // region P26-LB2
+      await leaderboardQueue.resetLocal();
+      // endregion
       // PRD-2.2 §9.1: the stored music volume is cleared and the music goes
       // back to its default, live; the Settings slider follows.
       await storage.resetMusicVolume();

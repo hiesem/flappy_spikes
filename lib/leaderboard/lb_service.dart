@@ -11,19 +11,29 @@ import 'lb_models.dart';
 /// Failures (including malformed responses) are null, so callers can retry.
 /// Queueing, local resets and gift application are owned by LB2/LB3.
 abstract class LeaderboardService {
+  /// Invalidates responses for the deleted identity.
+  Future<void> resetLocal();
+  int? get verifiedBest;
+  int? get bestFloor;
   Future<LbGetBoardResult?> getBoard({LbBoardTab tab = LbBoardTab.today});
-  Future<LbSubmitRunResult?> submitRun(Map<String, Object?> request);
+  Future<LbSubmitRunResult?> submitRun(LbSubmitRunRequest request);
   Future<LbClaimGiftResult?> claimGift(String id, {List<String>? owned});
 }
 
 class NoopLeaderboardService implements LeaderboardService {
   const NoopLeaderboardService();
   @override
+  int? get verifiedBest => null;
+  @override
+  int? get bestFloor => null;
+  @override
+  Future<void> resetLocal() async {}
+  @override
   Future<LbGetBoardResult?> getBoard({
     LbBoardTab tab = LbBoardTab.today,
   }) async => null;
   @override
-  Future<LbSubmitRunResult?> submitRun(Map<String, Object?> request) async =>
+  Future<LbSubmitRunResult?> submitRun(LbSubmitRunRequest request) async =>
       null;
   @override
   Future<LbClaimGiftResult?> claimGift(
@@ -91,6 +101,17 @@ class FirebaseLeaderboardService implements LeaderboardService {
   final VersusService versus;
   final LbCallSerializer _calls;
   final LbCallable _callable;
+  int _generation = 0;
+  @override
+  int? verifiedBest;
+  @override
+  int? bestFloor;
+  @override
+  Future<void> resetLocal() async {
+    _generation++;
+    verifiedBest = null;
+    bestFloor = null;
+  }
 
   static Future<Object?> _firebaseCall(
     String name,
@@ -112,17 +133,20 @@ class FirebaseLeaderboardService implements LeaderboardService {
     T Function(Map<String, Object?>) parse,
   ) async {
     var expired = false;
+    final generation = _generation;
     try {
       return await (() async {
         // No separate anonymous sign-in or App Check activation. initialize
         // shares every startup/retry path and activation with versus.
         await versus.initialize();
-        if (expired || !versus.ready) return null;
+        if (expired || generation != _generation || !versus.ready) return null;
         return _calls.run<T?>(() async {
           // A request that expired waiting for auth must never execute late.
-          if (expired || !versus.ready) return null;
+          if (expired || generation != _generation || !versus.ready) {
+            return null;
+          }
           final data = await _callable(name, request);
-          if (expired) return null;
+          if (expired || generation != _generation) return null;
           return parse(Map<String, Object?>.from(data as Map));
         });
       })().timeout(LbConfig.callTimeout);
@@ -134,14 +158,25 @@ class FirebaseLeaderboardService implements LeaderboardService {
   }
 
   @override
-  Future<LbGetBoardResult?> getBoard({LbBoardTab tab = LbBoardTab.today}) =>
-      _request(LbConfig.boardFunction, {
-        'tab': tab.name,
-      }, LbGetBoardResult.fromJson);
+  Future<LbGetBoardResult?> getBoard({
+    LbBoardTab tab = LbBoardTab.today,
+  }) async {
+    final result = await _request(LbConfig.boardFunction, {
+      'tab': tab.name,
+    }, LbGetBoardResult.fromJson);
+    if (result != null) {
+      verifiedBest = result.best.me?.points;
+      bestFloor = result.best.floor;
+    }
+    return result;
+  }
 
   @override
-  Future<LbSubmitRunResult?> submitRun(Map<String, Object?> request) =>
-      _request(LbConfig.submitFunction, request, LbSubmitRunResult.fromJson);
+  Future<LbSubmitRunResult?> submitRun(LbSubmitRunRequest request) => _request(
+    LbConfig.submitFunction,
+    request.toJson(),
+    LbSubmitRunResult.fromJson,
+  );
 
   @override
   Future<LbClaimGiftResult?> claimGift(String id, {List<String>? owned}) =>

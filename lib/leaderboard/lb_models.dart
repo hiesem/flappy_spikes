@@ -1,4 +1,5 @@
 import '../skins/look.dart';
+import '../versus/run_entry.dart' show lookToMap;
 
 /// Callable payloads mirror functions/src/board.ts. Row ids are opaque;
 /// neither player ids nor ghost identities belong in the client contract.
@@ -109,7 +110,6 @@ class LbGift {
     required this.boardRank,
     this.claimedAt,
     this.rolled,
-    this.uid,
     this.expireAt,
   });
   factory LbGift.fromJson(Map<String, Object?> json) => LbGift(
@@ -120,7 +120,6 @@ class LbGift {
     rolled: json['rolled'] == null
         ? null
         : LbGiftRoll.fromJson(_map(json['rolled'])),
-    uid: json['uid'] as String?,
     expireAt: lbTimestamp(json['expireAt']),
   );
   final String gid;
@@ -128,7 +127,6 @@ class LbGift {
   final int boardRank;
   final DateTime? claimedAt;
   final LbGiftRoll? rolled;
-  final String? uid;
   final DateTime? expireAt;
 }
 
@@ -287,5 +285,66 @@ class LbClaimGiftRequest {
   Map<String, Object?> toJson() => {
     'id': id,
     if (owned != null) 'owned': owned,
+  };
+}
+
+/// Mirrors board.ts:58–80. cs is the full run duration, not the tail delta.
+class LbSubmittedRun {
+  const LbSubmittedRun({
+    required this.id,
+    required this.score,
+    required this.hoops,
+    required this.cs,
+    required this.endTs,
+    required this.mode,
+    this.tl,
+    this.fl,
+  });
+  final String id;
+  final int score, hoops, cs, endTs;
+  final String mode;
+  final String? tl, fl;
+  factory LbSubmittedRun.fromJson(Map<String, Object?> json) => LbSubmittedRun(
+    id: json['id'] as String,
+    score: _int(json['score']),
+    hoops: _int(json['hoops']),
+    cs: _int(json['cs']),
+    endTs: _int(json['endTs']),
+    mode: json['mode'] as String,
+    tl: json['tl'] as String?,
+    fl: json['fl'] as String?,
+  );
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'score': score,
+    'hoops': hoops,
+    'cs': cs,
+    'endTs': endTs,
+    'mode': mode,
+    if (tl != null) 'tl': tl,
+    if (fl != null) 'fl': fl,
+  };
+}
+
+class LbSubmitRunRequest {
+  const LbSubmitRunRequest({
+    required this.runs,
+    this.name,
+    this.look,
+    this.card,
+    this.platform,
+    this.t,
+  });
+  final List<LbSubmittedRun> runs;
+  final String? name, card, platform;
+  final Look? look;
+  final int? t;
+  Map<String, Object?> toJson() => {
+    'runs': runs.map((r) => r.toJson()).toList(),
+    if (name != null) 'name': name,
+    if (look != null) 'look': lookToMap(look!),
+    if (card != null) 'card': card,
+    if (platform != null) 'platform': platform,
+    if (t != null) 't': t,
   };
 }

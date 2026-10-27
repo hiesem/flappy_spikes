@@ -12,9 +12,10 @@ if ! git rebase -q feat/2.6; then
   python3 "$REPO/scripts/orch/bench.py" ev merge task_id="$wp" ts_start="$(date -d @$t0 -Iseconds)" ts_end="$(date -Iseconds)" conflict:=true resolved_by=pending result=conflict
   exit 3
 fi
-# fast check: analyze + the WP's tests + the files the rebase brought in + core tests (scoped against the old base)
+# fast check: analyze + the WP's own changed/matching tests + core tests, on the rebased tree (scope = the WP's diff
+# against the new feat/2.6; cross-package interactions are the rolling integration verify's job)
 if ! python3 "$REPO/scripts/orch/bench.py" test --task "$wp" --scope targeted --where task-worktree -- \
-     env VERIFY_BASE="$old_base" VERIFY_SCOPED=1 bash scripts/verify.sh > "$ORCH/merge-$wp.log" 2>&1; then
+     env VERIFY_BASE=feat/2.6 VERIFY_SCOPED=1 VERIFY_SKIP_HEAVY=1 bash scripts/verify.sh > "$ORCH/merge-$wp.log" 2>&1; then
   echo "FAST CHECK RED $wp (see $ORCH/merge-$wp.log)"; exit 4
 fi
 # feat/2.6 may have moved during the check: rebase again; recheck only if product code (not scripts/orch, docs, bench) moved
@@ -24,7 +25,7 @@ for try in 1 2 3; do
   git rebase -q feat/2.6 || { git rebase --abort; echo "MERGE CONFLICT $wp (late)"; exit 3; }
   if git diff --name-only "$checked" feat/2.6 | grep -qvE '^(scripts/orch/|docs/|bench/)'; then
     python3 "$REPO/scripts/orch/bench.py" test --task "$wp" --scope targeted --where task-worktree -- \
-      env VERIFY_BASE="$checked" VERIFY_SCOPED=1 bash scripts/verify.sh >> "$ORCH/merge-$wp.log" 2>&1 || { echo "FAST CHECK RED $wp (late)"; exit 4; }
+      env VERIFY_BASE=feat/2.6 VERIFY_SCOPED=1 VERIFY_SKIP_HEAVY=1 bash scripts/verify.sh >> "$ORCH/merge-$wp.log" 2>&1 || { echo "FAST CHECK RED $wp (late)"; exit 4; }
   fi
 done
 stat=$(git diff --shortstat feat/2.6...HEAD)

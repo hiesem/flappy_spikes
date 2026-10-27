@@ -83,6 +83,10 @@ abstract final class ItemArt {
           LookPainter.paintOnMannequin(canvas, item.layer, item.id, t: t);
         case SkinLayer.hoop:
           HoopPainter.paintHoopTile(canvas, item.id, Offset.zero, h * .34, t);
+        // region P26-F9a
+        case SkinLayer.card:
+          break;
+        // endregion
         case SkinLayer.trail:
           break;
       }

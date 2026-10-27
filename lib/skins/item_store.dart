@@ -32,18 +32,53 @@ class ItemStore extends ChangeNotifier {
       hat: resolve(SkinLayer.hat),
       hoop: resolve(SkinLayer.hoop),
       trail: resolve(SkinLayer.trail),
+      // region P26-F9a
+      card: _equippedCard,
+      // endregion
     );
   }
 
+  // region P26-F9a
+  String get _equippedCard {
+    var result = Look(
+      card: sanitiseCard(_storage.equippedItems[SkinLayer.card]),
+    );
+    for (final kind in CardKind.values) {
+      final id = result.cardIdFor(kind);
+      if (id.isNotEmpty && !isOwned(SkinLayer.card, id)) {
+        result = result.withCardItem(kind, '');
+      }
+    }
+    return result.card;
+  }
+  // endregion
+
   /// Free items (including both "none" entries) are always owned.
   bool isOwned(SkinLayer layer, String id) {
+    // region P26-F9a
+    if (layer == SkinLayer.card && id.isEmpty) return true;
+    // endregion
     final item = itemById(layer, id);
     if (item == null) return false;
     if (item.isFree) return true;
     return _storage.ownedItems.contains(item.key);
   }
 
-  bool isEquipped(SkinLayer layer, String id) => look.idFor(layer) == id;
+  // region P26-F9a
+  bool isEquipped(SkinLayer layer, String id) {
+    if (layer != SkinLayer.card) return look.idFor(layer) == id;
+    final kind = itemById(layer, id)?.cardKind;
+    return kind != null && look.cardIdFor(kind) == id;
+  }
+
+  Future<void> clearCard(CardKind kind) async {
+    await _storage.saveEquippedItem(
+      SkinLayer.card,
+      look.withCardItem(kind, '').card,
+    );
+    notifyListeners();
+  }
+  // endregion
 
   /// Equips [id] when it is owned; unowned ids are ignored. Persists at once.
   Future<void> equip(SkinLayer layer, String id) async {
@@ -55,7 +90,9 @@ class ItemStore extends ChangeNotifier {
   /// Buys [id] and auto-equips it on success (§3.6).
   Future<ItemPurchaseResult> purchase(SkinLayer layer, String id) async {
     final item = itemById(layer, id);
-    if (item == null) return ItemPurchaseResult.unknown;
+    // region P26-F9a
+    if (item == null || item.isSkillOnly) return ItemPurchaseResult.unknown;
+    // endregion
     if (isOwned(layer, id)) return ItemPurchaseResult.alreadyOwned;
     if (_wallet.balance < item.price) {
       return ItemPurchaseResult.insufficientCoins;
@@ -77,15 +114,13 @@ class ItemStore extends ChangeNotifier {
   }
 
   /// Owned collectible items across all layers, out of [kCollectibleTotal].
-  int get ownedCount => SkinLayer.values.fold(
-        0,
-        (count, layer) => count + ownedCountFor(layer),
-      );
+  int get ownedCount =>
+      SkinLayer.values.fold(0, (count, layer) => count + ownedCountFor(layer));
 
   /// Owned collectibles on [layer] (the "none" entries never count).
-  int ownedCountFor(SkinLayer layer) => itemsFor(layer)
-      .where((item) => !item.isNone && isOwned(layer, item.id))
-      .length;
+  int ownedCountFor(SkinLayer layer) => itemsFor(
+    layer,
+  ).where((item) => !item.isNone && isOwned(layer, item.id)).length;
 
   /// Collectible items on [layer] (the "none" entries never count).
   int totalFor(SkinLayer layer) =>
@@ -97,6 +132,9 @@ class ItemStore extends ChangeNotifier {
     final item = itemById(layer, id);
     if (item == null || isOwned(layer, id)) return false;
     if (_storage.seenItems.contains(item.key)) return false;
+    // region P26-F9a
+    if (item.isSkillOnly) return false;
+    // endregion
     return kNewInUpdate.contains(item.key) || item.price <= _wallet.balance;
   }
 
@@ -108,8 +146,8 @@ class ItemStore extends ChangeNotifier {
   }
 
   bool get hasNewBadge => SkinLayer.values.any(
-        (layer) => itemsFor(layer).any((item) => isNew(layer, item.id)),
-      );
+    (layer) => itemsFor(layer).any((item) => isNew(layer, item.id)),
+  );
 
   /// Clears every persisted menu field (the debug panel's "Reset menu
   /// state") and notifies, so live views — the home bird above all — render

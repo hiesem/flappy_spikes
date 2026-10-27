@@ -14,6 +14,10 @@ class SkinItem {
     required this.rarity,
     required this.price,
     this.animated = false,
+    // region P26-F9a
+    this.cardKind,
+    this.isSkillOnly = false,
+    // endregion
   });
 
   final SkinLayer layer;
@@ -24,6 +28,11 @@ class SkinItem {
   final Rarity? rarity;
   final int price;
   final bool animated;
+  // region P26-F9a
+  final CardKind? cardKind;
+  /// Skill ownership will be derived from achievements by F10a. Never sold.
+  final bool isSkillOnly;
+  // endregion
 
   bool get isNone => id == kNoneId;
   bool get isFree => price == 0;
@@ -203,6 +212,121 @@ const List<SkinItem> kTrails = [
   SkinItem(layer: SkinLayer.trail, id: 'paint', name: 'Paint stroke', rarity: Rarity.legendary, price: 5000, animated: true),
 ];
 
+// region P26-F9a
+// PRD F9: server allow-list order, 17 sold + 3 skill items per kind.
+const List<SkinItem> kCardFrames = [
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_bubblegum', name: 'Bubblegum', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_tape', name: 'Sky Tape', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_checker', name: 'Checkered', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_eggshell', name: 'Eggshell', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_stitch', name: 'Stitched', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_hazard', name: 'Caution', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_spikes', name: 'Spike Teeth', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_feathers', name: 'Feather Fan', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_hoops', name: 'Hoop Loop', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_pinball', name: 'Pinball', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_deepsea', name: 'Deep Sea', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_neon', name: 'Neon Sign', rarity: Rarity.epic, price: 2000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_laurel', name: 'Gold Laurel', rarity: Rarity.epic, price: 2000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_magma', name: 'Magma Crust', rarity: Rarity.epic, price: 2000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_storm', name: 'Thunderhead', rarity: Rarity.epic, price: 2000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_wings', name: 'Golden Wings', rarity: Rarity.legendary, price: 5000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_orbit', name: 'Cosmic Orbit', rarity: Rarity.legendary, price: 5000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'pecking', name: 'Pecking Order', rarity: Rarity.legendary, price: 5000, animated: true, isSkillOnly: true),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'roost', name: 'Roost Ruler', rarity: Rarity.legendary, price: 5000, animated: true, isSkillOnly: true),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'prey', name: 'Bird of Prey', rarity: Rarity.legendary, price: 5000, animated: true, isSkillOnly: true),
+];
+
+const List<SkinItem> kCardNames = [
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_tangerine', name: 'Tangerine', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_ocean', name: 'Ocean', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_grass', name: 'Grass', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_cherry', name: 'Cherry', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_grape', name: 'Grape', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_midnight', name: 'Midnight', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_bubble', name: 'Bubble Pop', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_candy', name: 'Candy Stripe', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_comic', name: 'Comic Ink', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_sunset', name: 'Sunset', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_spiky', name: 'Spike Line', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_rainbow', name: 'Rainbow', rarity: Rarity.epic, price: 2000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_gold', name: 'Liquid Gold', rarity: Rarity.epic, price: 2000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_flappy', name: 'Flappy', rarity: Rarity.epic, price: 2000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_glitch', name: 'Glitch', rarity: Rarity.epic, price: 2000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_fire', name: 'On Fire', rarity: Rarity.legendary, price: 5000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_stardust', name: 'Stardust', rarity: Rarity.legendary, price: 5000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_sky', name: 'Skywriter', rarity: Rarity.legendary, price: 5000, animated: true, isSkillOnly: true),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_thunder', name: 'Thunderstruck', rarity: Rarity.legendary, price: 5000, animated: true, isSkillOnly: true),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_marquee', name: 'Headliner', rarity: Rarity.legendary, price: 5000, animated: true, isSkillOnly: true),
+];
+
+const List<SkinItem> kCardStickers = [
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_gg', name: 'GG!', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_thumbs', name: 'Thumbs Up', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_heart', name: 'Big Heart', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_wow', name: 'WOW', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_kaching', name: 'Ka-ching', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_spiked', name: 'Spiked!', rarity: Rarity.common, price: 250),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_pow', name: 'Pow!', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_nailed', name: 'Nailed It', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_bye', name: 'Bye Bye', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_hatch', name: 'Hatched', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_zoom', name: 'Zoom', rarity: Rarity.rare, price: 750),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_hot', name: 'Hot Streak', rarity: Rarity.epic, price: 2000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_medal', name: 'Gold Medal', rarity: Rarity.epic, price: 2000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_piggy', name: 'Piggy Bank', rarity: Rarity.epic, price: 2000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_disco', name: 'Disco', rarity: Rarity.epic, price: 2000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_champ', name: 'Champion', rarity: Rarity.legendary, price: 5000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_fireworks', name: 'Fireworks', rarity: Rarity.legendary, price: 5000),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_unstop', name: 'Unstoppable', rarity: Rarity.legendary, price: 5000, animated: true, isSkillOnly: true),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_flawless', name: 'Flawless', rarity: Rarity.legendary, price: 5000, animated: true, isSkillOnly: true),
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_topflock', name: 'Top of the Flock', rarity: Rarity.legendary, price: 5000, animated: true, isSkillOnly: true),
+];
+
+/// Sold card cosmetics, separate from the wardrobe catalogue until F9e.
+final List<SkinItem> kCardItems = List.unmodifiable(
+  kCards.where((item) => !item.isSkillOnly),
+);
+
+final List<SkinItem> kSkillCardItems = List.unmodifiable(
+  kCards.where((item) => item.isSkillOnly),
+);
+
+const List<SkinItem> kCards = [...kCardFrames, ...kCardNames, ...kCardStickers];
+
+/// Empty slots are free defaults, not collectible catalogue entries.
+const SkinItem _emptyCardSlot = SkinItem(
+  layer: SkinLayer.card, id: '', name: 'None', rarity: null, price: 0,
+);
+
+SkinItem? cardItemById(String id) {
+  if (id.isEmpty) return _emptyCardSlot;
+  for (final item in kCards) {
+    if (item.id == id) return item;
+  }
+  return null;
+}
+
+List<SkinItem> cardItemsFor(CardKind kind) => switch (kind) {
+  CardKind.frame => kCardFrames,
+  CardKind.name => kCardNames,
+  CardKind.sticker => kCardStickers,
+};
+
+/// Reject malformed shapes; unknown or misplaced ids leave only that slot empty.
+String sanitiseCard(Object? value) {
+  if (value is! String || value.length > 48) return '';
+  final slots = value.split('|');
+  if (slots.length != 3) return '';
+  for (final kind in CardKind.values) {
+    if (!cardItemsFor(kind).any((item) => item.id == slots[kind.index])) {
+      slots[kind.index] = '';
+    }
+  }
+  return slots.every((s) => s.isEmpty) ? '' : slots.join('|');
+}
+// endregion
+
 /// Every layer's items in grid order (§5 has the same order as the mock).
 const Map<SkinLayer, List<SkinItem>> kCatalog = {
   SkinLayer.bird: kBirds,
@@ -210,6 +334,10 @@ const Map<SkinLayer, List<SkinItem>> kCatalog = {
   SkinLayer.hat: kHats,
   SkinLayer.hoop: kHoops,
   SkinLayer.trail: kTrails,
+  // region P26-F9a
+  // F9e will expose the separate card catalogue in the shop.
+  SkinLayer.card: [],
+  // endregion
 };
 
 /// Collectible items in the whole catalogue (the two "none" entries do not
@@ -242,6 +370,9 @@ List<SkinItem> itemsFor(SkinLayer layer) => kCatalog[layer]!;
 
 /// The item with [id] on [layer], or null when the id is unknown.
 SkinItem? itemById(SkinLayer layer, String id) {
+  // region P26-F9a
+  if (layer == SkinLayer.card) return cardItemById(id);
+  // endregion
   for (final item in itemsFor(layer)) {
     if (item.id == id) return item;
   }

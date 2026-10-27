@@ -9,6 +9,9 @@ import '../achievements/ach_state.dart';
 import '../menu/home_mode.dart';
 import '../services/integrity_guard.dart';
 import '../services/obf_strings.g.dart';
+// region P26-F9a
+import '../skins/catalog.dart';
+// endregion
 import '../skins/look.dart';
 import 'config.dart';
 import 'save_seal.dart';
@@ -1505,6 +1508,17 @@ class GameStorage {
 
   /// Sets the equipped item of one layer (saves immediately).
   Future<void> saveEquippedItem(SkinLayer layer, String id) async {
+    // region P26-F9a
+    // Card purchases/equips replace one slot, preserving the other two. Full
+    // strings (including empty for reset) are also accepted by this entry point.
+    if (layer == SkinLayer.card) {
+      final kind = itemById(layer, id)?.cardKind;
+      id = kind == null
+          ? sanitiseCard(id)
+          : Look(card: sanitiseCard(equippedItems[layer]))
+                .withCardItem(kind, id).card;
+    }
+    // endregion
     equippedItems = {...equippedItems, layer: id};
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_equippedItemKey(layer), id);

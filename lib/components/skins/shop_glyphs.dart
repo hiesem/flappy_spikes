@@ -144,6 +144,9 @@ abstract final class ShopGlyphs {
       );
     } else {
       final path = switch (layer) {
+        // region P26-F9a
+        SkinLayer.card => _birdIcon,
+        // endregion
         SkinLayer.bird => _birdIcon,
         SkinLayer.gear => _gearIcon,
         SkinLayer.hat => _hatIcon,

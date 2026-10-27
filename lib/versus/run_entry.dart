@@ -166,8 +166,11 @@ class RunEntry {
 
 /// The five look ids keyed bird / gear / hat / hoop / trail (ARCH §6.1).
 Map<String, String> lookToMap(Look look) => {
-  for (final layer in SkinLayer.values)
+  // region P26-F9a
+  for (final layer in SkinLayer.values.where((l) => l != SkinLayer.card))
     layer.key: _clip(look.idFor(layer), VersusConfig.lookIdMax),
+  if (sanitiseCard(look.card).isNotEmpty) 'card': sanitiseCard(look.card),
+  // endregion
 };
 
 /// §3.13 cross-platform looks: an id this build does not know falls back to
@@ -185,6 +188,9 @@ Look lookFromMap(Map<Object?, Object?> m) {
     hat: read(SkinLayer.hat),
     hoop: read(SkinLayer.hoop),
     trail: read(SkinLayer.trail),
+    // region P26-F9a
+    card: sanitiseCard(m['card']),
+    // endregion
   );
 }
 

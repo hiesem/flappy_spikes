@@ -1,6 +1,8 @@
 import 'dart:ui' show Color;
 
-/// The five customisation layers of the 2.0 skin shop (PRD-menu-v2 §1).
+// region P26-F9a
+/// The five wardrobe layers plus versus cards (PRD F9).
+// endregion
 ///
 /// [key] is the persisted / analytics name and the `<layer>` part of the
 /// `"layer:id"` owned-item keys and the `item:<layer>:<id>` wallet reason.
@@ -9,7 +11,11 @@ enum SkinLayer {
   gear('gear', 'GEAR'),
   hat('hat', 'HATS'),
   hoop('hoop', 'HOOPS'),
-  trail('trail', 'TRAILS');
+  trail('trail', 'TRAILS'),
+  // region P26-F9a
+  card('card', 'CARDS');
+
+  // endregion
 
   const SkinLayer(this.key, this.tabLabel);
 
@@ -52,6 +58,9 @@ class Look {
     this.hat = kNoneId,
     this.hoop = 'pink',
     this.trail = 'flame',
+    // region P26-F9a
+    this.card = '',
+    // endregion
   });
 
   /// The free default look.
@@ -62,6 +71,24 @@ class Look {
   final String hat;
   final String hoop;
   final String trail;
+  // region P26-F9a
+  /// Empty for legacy looks; otherwise frame|name|sticker, with empty slots.
+  final String card;
+
+  String cardIdFor(CardKind kind) {
+    final slots = card.split('|');
+    return slots.length == 3 ? slots[kind.index] : '';
+  }
+
+  Look withCardItem(CardKind kind, String id) {
+    final slots = [for (final slot in CardKind.values) cardIdFor(slot)];
+    slots[kind.index] = id;
+    return withItem(
+      SkinLayer.card,
+      slots.every((s) => s.isEmpty) ? '' : slots.join('|'),
+    );
+  }
+  // endregion
 
   String idFor(SkinLayer layer) => switch (layer) {
     SkinLayer.bird => bird,
@@ -69,6 +96,9 @@ class Look {
     SkinLayer.hat => hat,
     SkinLayer.hoop => hoop,
     SkinLayer.trail => trail,
+    // region P26-F9a
+    SkinLayer.card => card,
+    // endregion
   };
 
   Look withItem(SkinLayer layer, String id) => Look(
@@ -77,9 +107,14 @@ class Look {
     hat: layer == SkinLayer.hat ? id : hat,
     hoop: layer == SkinLayer.hoop ? id : hoop,
     trail: layer == SkinLayer.trail ? id : trail,
+    // region P26-F9a
+    card: layer == SkinLayer.card ? id : card,
+    // endregion
   );
 
-  /// Five ids, keyed by [SkinLayer.key] (recorded runs, analytics).
+  // region P26-F9a
+  /// Equipped ids and the card slots, keyed by layer (recorded runs, analytics).
+  // endregion
   Map<String, String> toJson() => {
     for (final layer in SkinLayer.values) layer.key: idFor(layer),
   };
@@ -96,6 +131,9 @@ class Look {
       hat: read(SkinLayer.hat),
       hoop: read(SkinLayer.hoop),
       trail: read(SkinLayer.trail),
+      // region P26-F9a
+      card: read(SkinLayer.card),
+      // endregion
     );
   }
 
@@ -106,11 +144,21 @@ class Look {
       other.gear == gear &&
       other.hat == hat &&
       other.hoop == hoop &&
-      other.trail == trail;
+      other.trail == trail &&
+      // region P26-F9a
+      other.card == card;
+  // endregion
 
+  // region P26-F9a
   @override
-  int get hashCode => Object.hash(bird, gear, hat, hoop, trail);
+  int get hashCode => Object.hash(bird, gear, hat, hoop, trail, card);
+  // endregion
 
   @override
   String toString() => 'Look($bird, $gear, $hat, $hoop, $trail)';
 }
+
+// region P26-F9a
+/// The ordered slots in the single persisted versus-card field.
+enum CardKind { frame, name, sticker }
+// endregion

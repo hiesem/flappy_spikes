@@ -71,6 +71,10 @@ void paintPortCell(Canvas c, SkinLayer layer, String id, double t) {
       c.scale(kk);
       LookPainter.paint(c, const Look(bird: 'classic'), t: t);
       c.restore();
+    // region P26-F9a
+    case SkinLayer.card:
+      break;
+    // endregion
     case SkinLayer.bird:
       break;
   }

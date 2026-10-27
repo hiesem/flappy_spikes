@@ -91,7 +91,7 @@ abstract final class EmblemPainter {
     if (slot == 0 || image == null) {
       // Freeze legacy flags / flames; the progression clock belongs solely
       // to the layers below. No second drawing of an emblem or ray master.
-      _draw(canvas, paintedEmblemFor(slot), 0, false);
+      _draw(canvas, paintedEmblemFor(slot), 0, false, showNumber: slot == 0);
     } else {
       canvas.drawImageRect(
         image,
@@ -241,7 +241,13 @@ abstract final class EmblemPainter {
 
   // --- the draw itself ------------------------------------------------------
 
-  static void _draw(Canvas canvas, int level, double t, bool shine) {
+  static void _draw(
+    Canvas canvas,
+    int level,
+    double t,
+    bool shine, {
+    bool showNumber = true,
+  }) {
     if (level == 0) {
       canvas.drawPath(_unrankedDash, strokePaint(const Color(0xFFCFCFCF), 4));
       canvas.drawPath(
@@ -346,7 +352,7 @@ abstract final class EmblemPainter {
       _paintShapes(canvas, _crown(level));
       if (level == 10) _crownSparkle(canvas, t);
     }
-    _ribbon(canvas, level);
+    _ribbon(canvas, level, showNumber: showNumber);
   }
 
   /// The plate light-sweep band with its leading edge at x = 0.
@@ -822,8 +828,10 @@ abstract final class EmblemPainter {
         ];
       });
 
-  static void _ribbon(Canvas canvas, int level) {
+  static void _ribbon(Canvas canvas, int level, {bool showNumber = true}) {
     _paintShapes(canvas, _ribbonShapes(level));
+    // J13 fallback: the legacy art index is not the progression level.
+    if (!showNumber) return;
     // The mock's `13px Opificio`, horizontal centre and `textBaseline:
     // middle` on (0, y + 5.5): centre the line box there.
     final y = _ribbonY(level);

@@ -1,6 +1,7 @@
 // J7: 320 pt evidence of the shared rank fitting seam, real Settings card,
-// HUD name renderer, badge layout and real share painter. J3 owns the results
-// screen and consumes fitRankName; this package cannot edit that hotspot.
+// HUD name renderer, badge layout and real share painter. The three fitting
+// specimens are not component integration goldens: J3/J8 own the real results
+// rank line and versus plate goldens (J7 review round 2 decision).
 import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
@@ -95,7 +96,11 @@ void main() {
           card.renderTree(c);
           c.restore();
           text(c, 'VERSUS NAME BOX', 14, 155, 10);
-          final picture = recordEmblem(level, look: const Look());
+          final picture = recordEmblem(
+            level,
+            look: const Look(),
+            progression: true,
+          );
           c.save();
           c.translate(45, 209);
           c.scale(.32);

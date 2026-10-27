@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/painting.dart' show AssetImage, ImageConfiguration;
@@ -13,6 +14,7 @@ import '../../skins/look.dart';
 /// into a [Picture], in emblem art units with the plate centre at the
 /// origin. The bird is drawn at [birdScale] art units per bird art unit
 /// with its art-box centre on the plate centre (build74 `paintEmb`).
+/// [progression] opts into track art; existing callers keep the legacy ranks.
 Picture recordEmblem(
   int level, {
   double t = 0,
@@ -21,19 +23,30 @@ Picture recordEmblem(
   Look? look,
   double birdScale = 1.4,
   bool reduceMotion = false,
+  bool progression = false,
   Image? image,
 }) {
   final recorder = PictureRecorder();
   final canvas = Canvas(recorder);
-  EmblemPainter.paintTrack(
-    canvas,
-    level,
-    t: t,
-    shine: shine,
-    grey: grey,
-    reduceMotion: reduceMotion,
-    image: image,
-  );
+  if (progression) {
+    EmblemPainter.paintTrack(
+      canvas,
+      level,
+      t: t,
+      shine: shine,
+      grey: grey,
+      reduceMotion: reduceMotion,
+      image: image,
+    );
+  } else {
+    EmblemPainter.paint(
+      canvas,
+      level,
+      t: reduceMotion ? 0 : t,
+      shine: shine && !reduceMotion,
+      grey: grey,
+    );
+  }
   if (look != null) {
     canvas.save();
     canvas.scale(birdScale);
@@ -50,6 +63,7 @@ Picture recordEmblem(
 /// [t] is advanced by the owner (frozen while paused). [reduceMotion] and
 /// the OS preference disable all idle motion. Static frames use cached
 /// pictures; PNGs load once per slot and share the painter's idle layers.
+/// [progression] opts into the track renderer; the default keeps legacy ranks.
 /// The equipped bird remains a separate LookComponent on the plate centre.
 class EmblemView extends PositionComponent {
   EmblemView({
@@ -58,6 +72,7 @@ class EmblemView extends PositionComponent {
     this.grey = false,
     this.shine = true,
     this.reduceMotion = false,
+    this.progression = false,
     this.imageLoader,
     super.position,
     super.priority,
@@ -73,6 +88,10 @@ class EmblemView extends PositionComponent {
   // region P26-J7
   /// Explicit still state plus the OS reduced-motion preference.
   bool reduceMotion;
+
+  /// Opt into the cumulative 32-slot track (PRD-2.6 §8.3-16). Existing
+  /// ten-rank callers retain their original art and animation until J2.
+  final bool progression;
   bool get _still =>
       reduceMotion ||
       PlatformDispatcher.instance.accessibilityFeatures.disableAnimations;
@@ -81,6 +100,11 @@ class EmblemView extends PositionComponent {
   /// source, and must outlive the view; the default source caches for app life.
   final Future<Image?> Function(int slot)? imageLoader;
   Image? _image;
+  Future<void>? _imageReady;
+
+  /// Completes after the current asset attempt. The fallback can mount and
+  /// render while this is pending; exports/tests may explicitly wait for it.
+  Future<void> get imageReady => _imageReady ?? Future<void>.value();
   int _imageRequest = 0;
   bool _removed = false;
   bool _started = false;
@@ -141,7 +165,9 @@ class EmblemView extends PositionComponent {
   Future<void> onLoad() async {
     await super.onLoad();
     _started = true;
-    await _resolveImage();
+    // Mount the fallback immediately. Asset I/O must never hold up later
+    // siblings (including tap targets) in Flame's lifecycle queue.
+    if (progression) unawaited(_imageReady = _resolveImage());
   }
   // endregion
 
@@ -160,12 +186,12 @@ class EmblemView extends PositionComponent {
     _dropFrozen();
     _lastT = null;
     _imageRequest++;
-    if (_started) _resolveImage();
+    if (_started && progression) unawaited(_imageReady = _resolveImage());
   }
 
-  /// Static pictures (t = 0, no sweep) per (level, grey), shared by every
-  /// view: the painter's shapes are deterministic.
-  static final Map<(int, bool), Picture> _static = {};
+  /// Static pictures (t = 0, no sweep) per (level, grey, progression), shared
+  /// by every view: the painter's shapes are deterministic.
+  static final Map<(int, bool, bool), Picture> _static = {};
 
   Picture? _frozen;
   double? _frozenT;
@@ -204,17 +230,28 @@ class EmblemView extends PositionComponent {
         shine &&
         EmblemPainter.sweeps(_level) &&
         EmblemPainter.sweepActive(clock);
-    // Conservative legacy check preserves the cache contract of existing
-    // consumers; new high-sky / space slots always use their own idle layers.
     final animated =
         !_still &&
-        (EmblemPainter.trackAnimates(_level) || (_level >= 7 && _level <= 10));
+        (progression
+            ? EmblemPainter.trackAnimates(_level)
+            : EmblemPainter.animates(_level));
     if (!sweep && !animated && _image == null) {
       canvas.drawPicture(
-        _static.putIfAbsent((
-          EmblemPainter.slotFor(_level),
-          grey,
-        ), () => recordEmblem(_level, grey: grey, reduceMotion: true)),
+        _static.putIfAbsent(
+          (
+            progression
+                ? EmblemPainter.slotFor(_level)
+                : _level.clamp(0, EmblemPainter.maxLevel),
+            grey,
+            progression,
+          ),
+          () => recordEmblem(
+            _level,
+            grey: grey,
+            reduceMotion: true,
+            progression: progression,
+          ),
+        ),
       );
       _drewCached = true;
     } else if (clock == _lastT) {
@@ -231,6 +268,7 @@ class EmblemView extends PositionComponent {
           grey: grey,
           reduceMotion: _still,
           image: _image,
+          progression: progression,
         );
         _frozenT = clock;
         _frozenShine = sweep;
@@ -240,15 +278,19 @@ class EmblemView extends PositionComponent {
       canvas.drawPicture(_frozen!);
       _drewCached = true;
     } else {
-      EmblemPainter.paintTrack(
-        canvas,
-        _level,
-        t: clock,
-        shine: sweep,
-        grey: grey,
-        reduceMotion: _still,
-        image: _image,
-      );
+      if (progression) {
+        EmblemPainter.paintTrack(
+          canvas,
+          _level,
+          t: clock,
+          shine: sweep,
+          grey: grey,
+          reduceMotion: _still,
+          image: _image,
+        );
+      } else {
+        EmblemPainter.paint(canvas, _level, t: clock, shine: sweep, grey: grey);
+      }
       _drewCached = false;
     }
     _lastT = clock;

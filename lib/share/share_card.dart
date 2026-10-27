@@ -198,6 +198,11 @@ abstract final class ShareCardPainter {
   /// Centre of the emblem / centre art and of the rays.
   static const Offset centre = Offset(430, 470);
 
+  // region P26-J7
+  /// Below the name tag (bottom 766), above the bottom spikes (top 806).
+  static const Rect rankLine = Rect.fromLTWH(130, 770, 600, 30);
+  // endregion
+
   static const String _score = 'LVDC Common2';
   static const String _display = 'Opificio Neue';
   static const String _body = 'Fredoka';
@@ -297,11 +302,18 @@ abstract final class ShareCardPainter {
       final rank = fitRankName(
         track.name,
         d.level,
-        600,
-        30,
+        rankLine.width,
+        rankLine.height,
         measureName(fontFamily: _display),
       );
-      _text(c, rank.text, 430, 675, size: rank.size, color: d.level >= 26 ? white : ink);
+      _text(
+        c,
+        rank.text,
+        rankLine.center.dx,
+        rankLine.center.dy,
+        size: rank.size,
+        color: d.level >= 26 ? white : ink,
+      );
     }
     // endregion
     _nameTag(c, d.name);

@@ -191,7 +191,11 @@ class SettingsPlayerCard extends PositionComponent
     );
     // region P26-J7
     _rank = MenuText('', fontSize: 9.5, color: plum, lineHeight: 1);
-    _emblem = EmblemView(level: game.storage.lvlIndex, artScale: .23);
+    _emblem = EmblemView(
+      level: game.storage.lvlIndex,
+      artScale: .23,
+      progression: true,
+    );
     _emblemBird = LookComponent(
       look: game.menu.items.look,
       artScale: .23 * 1.4,

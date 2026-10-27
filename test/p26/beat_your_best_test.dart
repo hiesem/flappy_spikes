@@ -21,6 +21,15 @@ class _Spy extends GameServices {
       events.add((name, parameters));
 }
 
+class _UpdateProbe extends Component {
+  double elapsed = 0;
+  @override
+  void update(double dt) {
+    super.update(dt);
+    elapsed += dt;
+  }
+}
+
 void main() {
   void check(
     String name,
@@ -71,12 +80,19 @@ void main() {
       hud.update(.17);
       expect(hud.bestChipGold, isFalse);
       hud.update(.02);
+      // WP-K approved bestChip design: flip begins at .18 s; gold and
+      // the live score appear halfway through its .22 s squash, at .29 s.
+      expect(hud.bestChipGold, isFalse);
+      expect(hud.bestChipScore, 42);
+      hud.update(.099);
+      expect(hud.bestChipGold, isFalse);
+      hud.update(.002);
       expect(hud.bestChipGold, isTrue);
       expect(hud.bestChipScore, 47);
       run.ctx.addScore(2);
       expect(identical(sticker, hud.bestSticker), isTrue);
       expect(hud.bestChipScore, 49);
-      expect(hud.children.whereType<GoldSticker>(), hasLength(1));
+      expect(hud.descendants().whereType<GoldSticker>(), hasLength(1));
       hud.update(1.02);
       await flushAndMount(g);
       expect(hud.bestSticker, isNull);
@@ -97,6 +113,38 @@ void main() {
       );
     }, mode: mode);
   }
+
+  check('pause freezes only the best sticker clock and chip timing', (
+    g,
+    _,
+  ) async {
+    final run = await startRun(g);
+    final hud = RunHud.ensureFor(run);
+    run.ctx.addScore(43);
+    await flushAndMount(g);
+    final sticker = hud.bestSticker!;
+    final stickerProbe = _UpdateProbe();
+    final otherHudProbe = _UpdateProbe();
+    sticker.add(stickerProbe);
+    hud.add(otherHudProbe);
+    await flushAndMount(g);
+    hud.updateTree(.19);
+    expect(hud.bestChipGold, isFalse);
+    final stickerTime = stickerProbe.elapsed;
+    final otherTime = otherHudProbe.elapsed;
+    g.state = GameState.paused;
+    hud.updateTree(.5);
+    expect(stickerProbe.elapsed, stickerTime);
+    expect(otherHudProbe.elapsed, closeTo(otherTime + .5, 1e-9));
+    expect(hud.bestChipGold, isFalse);
+    expect(hud.bestChipScore, 42);
+    expect(hud.bestSticker, same(sticker));
+    g.state = GameState.playing;
+    hud.updateTree(.11);
+    expect(stickerProbe.elapsed, closeTo(stickerTime + .11, 1e-9));
+    expect(hud.bestChipGold, isTrue);
+    expect(hud.bestChipScore, 43);
+  });
 
   check('best zero has no chip, marker or celebration', (g, spy) async {
     final run = await startRun(g);
@@ -153,7 +201,11 @@ void main() {
     expect(debugRun.bestGoalEligible, isFalse);
   });
 
-  for (final dimensions in [(320.0, 568.0), (320.0, 711.0), (600.0, 711.0)]) {
+  for (final dimensions in [
+    (320.0, 568.0),
+    (320.0, 711.0),
+    (320.0, 320 * 4 / 3),
+  ]) {
     check(
       'marker follows actual hoop plane at $dimensions',
       (g, _) async {
@@ -170,7 +222,21 @@ void main() {
         expect(line.screenX, closeTo(200, .001));
         expect(line.visible, isTrue);
         expect(RunScaledWorld.isRunColumn(line), isTrue);
-        expect((g.world as RunScaledWorld).columnShift, g.extraWidth);
+        final shift = (g.world as RunScaledWorld).columnShift;
+        if (dimensions.$2 < 568) {
+          // WP-K / PRD §WP-K: actually enter tablet layout, as WP-TAB does.
+          expect(g.extraWidth, greaterThan(0));
+          expect(g.viewHeight, 568);
+        } else {
+          expect(g.extraWidth, 0);
+        }
+        expect(shift, closeTo(g.extraWidth / 2, .001));
+        final shiftedLineX =
+            line.screenX + shift - g.camera.viewfinder.position.x;
+        expect(
+          shiftedLineX,
+          closeTo(hoop.planeX - run.state.camX + g.extraWidth, .001),
+        );
         run.ctx.addScore(43);
         final before = line.screenX;
         line.update(.16);

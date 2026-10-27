@@ -90,6 +90,13 @@ class BestLine extends PositionComponent {
       Rect.fromLTRB(-1, a, 1, b),
       Paint()..color = HudConfig.gold.withValues(alpha: 1 - u),
     );
+    if (_collapseAge == null) {
+      // Variant A's 2 × 6 pole above the flag (fy 106, flag height 17).
+      canvas.drawRect(
+        const Rect.fromLTWH(-1, 106 - 8.5 - 6, 2, 6),
+        Paint()..color = HudConfig.gold,
+      );
+    }
     final flagScale = (1 - ((_collapseAge ?? 0) / .3)).clamp(0.0, 1.0);
     final label = _flagLabel;
     final width = label.width + 16;

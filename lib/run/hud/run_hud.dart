@@ -93,7 +93,9 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
   double _pointAge = 1;
   int _lastBestScore = -1;
   bool get bestChipVisible => run.bestGoalEligible;
-  bool get bestChipGold => (_bestAge ?? -1) >= HudConfig.bestFlipDelay;
+  double get _bestFlipProgress =>
+      (((_bestAge ?? -1) - HudConfig.bestFlipDelay) / .22).clamp(0.0, 1.0);
+  bool get bestChipGold => _bestFlipProgress >= .5;
   int get bestChipScore => bestChipGold ? run.state.score : run.bestBefore;
 
   void showNewBest() {
@@ -103,7 +105,7 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
       text: 'NEW BEST!',
       position: Vector2(160, HudConfig.bestStickerY),
     );
-    add(bestSticker!);
+    add(_BestStickerClock(this, bestSticker!));
     final at = run.geo.toTrack(Vector2(160, HudConfig.bestStickerY));
     PerfectBurst.emit(
       run.particles,
@@ -112,11 +114,6 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
       math.Random(run.setup.seed),
     );
     run.game.sound.play(Sfx.perfect1);
-  }
-
-  @override
-  void updateTree(double dt) {
-    super.updateTree(game.state == GameState.paused ? 0 : dt);
   }
 
   void _updateBest(double dt) {
@@ -133,7 +130,7 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
         sticker.opacity = ((HudConfig.bestMomentLength - _bestAge!) / .24)
             .clamp(0, 1);
         if (_bestAge! >= HudConfig.bestMomentLength || !bestChipVisible) {
-          sticker.removeFromParent();
+          sticker.parent?.removeFromParent();
           bestSticker = null;
         }
       }
@@ -168,10 +165,7 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
     }
     final number = _bestNumber!;
     final width = math.max(84.0, label.width + 7 + number.width + 22);
-    final flip = (((_bestAge ?? -1) - HudConfig.bestFlipDelay) / .22).clamp(
-      0.0,
-      1.0,
-    );
+    final flip = _bestFlipProgress;
     final sy = flip > 0 && flip < 1 ? math.cos(flip * math.pi).abs() : 1.0;
     final pop = gold && _pointAge < .22
         ? 1 + .1 * math.sin(math.pi * _pointAge / .22)
@@ -272,6 +266,20 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
         : (rowOpacity - step).clamp(target, 1.0);
   }
 }
+
+// region P26-K
+/// Only K's sticker uses this clock; other HUD features keep their own timing.
+class _BestStickerClock extends Component {
+  _BestStickerClock(this.hud, GoldSticker sticker) : super(children: [sticker]);
+
+  final RunHud hud;
+
+  @override
+  void updateTree(double dt) {
+    super.updateTree(hud.game.state == GameState.paused ? 0 : dt);
+  }
+}
+// endregion
 
 /// One-line text for the HUD and run screens (Opificio unless [font]).
 class HudText {

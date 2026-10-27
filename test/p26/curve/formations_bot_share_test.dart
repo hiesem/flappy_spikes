@@ -14,6 +14,9 @@ import '../../helpers.dart';
 // previews. Each next unresolved plane counts once, including the fatal plane.
 // Non-formation slots and deaths stay in both denominators. Spikes without a
 // named hoop are attributed to the next plane being approached.
+// Use 100 seeds per start: at 30 seeds one extra switch death changes this
+// soft balance estimate by about 0.3x (the pilot measured 2.12x / 1.80x).
+// The threshold stays exactly 2x at each height; no sampling allowance.
 void main() {
   for (final height in [568.0, 711.0]) {
     FlameTester<FlappySpikesGame>(
@@ -34,7 +37,7 @@ void main() {
         for (final start in [150, 200, 250]) {
           final startSlots = <FormationId?, int>{};
           final startDeaths = <FormationId?, int>{};
-          for (var seed = 0; seed < 30; seed++) {
+          for (var seed = 0; seed < 100; seed++) {
             game.runSeed = seed;
             game.storage.gamesPlayed = 10;
             final run = await startRun(game, startHoopIndex: start);
@@ -140,7 +143,7 @@ void main() {
         }
         // ignore: avoid_print
         print(
-          'D-SHAPES h=$height sigma=.05 extra=.1 seeds=0..29\n${report.join('\n')}',
+          'D-SHAPES h=$height sigma=.05 extra=.1 seeds=0..99\n${report.join('\n')}',
         );
         for (final id in FormationId.values) {
           expect(

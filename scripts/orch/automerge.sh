@@ -16,6 +16,7 @@ while [ ! -f "$ORCH/ORCH_STOP" ]; do
     id=$(basename "$b"); wp=${id%-b*}; n=${id##*-b}
     [[ "$n" =~ ^[0-9]+$ ]] || continue
     [ "$(cat "$b/exit" 2>/dev/null)" = 0 ] || continue
+    [ -d "$WS/.worktrees/p26-$wp" ] || continue     # only real work packages (not integ/merge/chain workers)
     [ -e "$W/$wp-v$n" ] || [ -e "$W/$wp-t$n" ] || [ -e "$b/noauto" ] && continue
     "$(dirname "$0")/vfy.sh" "$wp" "$n" > /dev/null 2>&1; "$(dirname "$0")/tester.sh" "$wp" "$n" > /dev/null 2>&1
     echo "$(date '+%F %T') [automerge] $wp r$n built -> verify + tester started" >> "$ORCH/RUNLOG.md"
@@ -23,6 +24,7 @@ while [ ! -f "$ORCH/ORCH_STOP" ]; do
   for v in "$W"/*-v[0-9]*/; do
     id=$(basename "$v"); wp=${id%-v*}; n=${id##*-v}
     [[ "$n" =~ ^[0-9]+$ ]] || continue
+    [ -d "$WS/.worktrees/p26-$wp" ] || continue
     [ -e "$ORCH/merged/$wp" ] || [ -e "$ORCH/mergefail/$wp-$n" ] && continue
     ls -d "$W/$wp"-[vb]* 2>/dev/null | grep -qE -- "-[vb]$((n+1))$" && continue      # a newer round exists
     [ "$(cat "$v/exit" 2>/dev/null)" = 0 ] || continue

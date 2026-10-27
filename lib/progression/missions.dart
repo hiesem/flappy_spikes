@@ -163,15 +163,30 @@ class MissionProgress {
     'paid': paid,
   };
 
-  factory MissionProgress.fromRecord(Map<String, Object?> record) =>
-      MissionProgress(
-        template: MissionTemplate.values.firstWhere(
-          (t) => t.id == record['id'],
-        ),
-        target: record['target'] as int,
-        progress: record['progress'] as int? ?? 0,
-        paid: record['paid'] == true,
-      );
+  /// Unknown templates can come from a newer app; malformed rows are ignored.
+  static MissionProgress? fromRecord(Map<String, Object?> record) {
+    final template = MissionTemplate.values
+        .where((t) => t.id == record['id'])
+        .firstOrNull;
+    final target = record['target'];
+    final progress = record['progress'] ?? 0;
+    final paid = record['paid'] ?? false;
+    if (template == null ||
+        target is! int ||
+        target <= 0 ||
+        progress is! int ||
+        progress < 0 ||
+        paid is! bool ||
+        (paid && progress < target)) {
+      return null;
+    }
+    return MissionProgress(
+      template: template,
+      target: target,
+      progress: min(progress, target),
+      paid: paid,
+    );
+  }
 }
 
 enum MissionChestKind { feather, piece, coins }
@@ -191,6 +206,7 @@ class Missions {
     this.previousHard,
     Set<MissionTemplate> usedTemplates = const {},
     this.chestClaimed = false,
+    this.chestsOwed = 0,
   }) : missions = List.unmodifiable(missions),
        usedTemplates = Set.unmodifiable({
          ...usedTemplates,
@@ -202,8 +218,11 @@ class Missions {
   final MissionTemplate? previousHard;
   final Set<MissionTemplate> usedTemplates;
   final bool chestClaimed;
+
+  /// Chests earned by earlier boards, independent of the current day's rows.
+  final int chestsOwed;
   bool get allDone => missions.length == 3 && missions.every((m) => m.complete);
-  bool get chestPending => allDone && !chestClaimed;
+  bool get chestPending => chestsOwed > 0 || (allDone && !chestClaimed);
 
   static int tierFor(int bestHoops) => bestHoops < 15
       ? 0
@@ -224,9 +243,17 @@ class Missions {
     required int gamesPlayed,
     required MissionEligibility eligibility,
   }) {
-    if (gamesPlayed < 3 || today <= day) return this;
+    // An incomplete/corrupt stored board is unrolled, but the day watermark
+    // still prevents a clock rollback from creating an earlier day's board.
+    if (gamesPlayed < 3 ||
+        today < day ||
+        (today == day && missions.length == 3)) {
+      return this;
+    }
     final nextTier = tierFor(eligibility.bestHoops);
-    final yesterdayHard = today == day + 1
+    final yesterdayHard = today == day
+        ? previousHard
+        : today == day + 1
         ? missions
               .where((m) => m.template.difficulty == MissionDifficulty.hard)
               .firstOrNull
@@ -254,6 +281,7 @@ class Missions {
       rerollDay: rerollDay,
       missions: rolled,
       previousHard: yesterdayHard,
+      chestsOwed: chestsOwed + (allDone && !chestClaimed ? 1 : 0),
     );
   }
 
@@ -310,17 +338,26 @@ class Missions {
     int coins = 40,
   }) => chestPending
       ? (
-          state: _copy(chestClaimed: true),
+          state: chestsOwed > 0
+              ? _copy(chestsOwed: chestsOwed - 1)
+              : _copy(chestClaimed: true),
           reward: chestReward(feathers: feathers, pieces: pieces, coins: coins),
         )
       : (state: this, reward: null);
 
-  bool canReroll(int index, int today) =>
+  bool _rerollAllowed(int index, int today) =>
       today == day &&
       rerollDay < today &&
       index >= 0 &&
       index < missions.length &&
       !missions[index].complete;
+
+  /// PRD G1 / §8.3 item 18: show SWAP only with an eligible replacement.
+  bool canReroll(
+    int index,
+    int today, {
+    required MissionEligibility eligibility,
+  }) => rerollCandidates(index, today, eligibility).isNotEmpty;
 
   /// Call only after a completed rewarded ad. A failed/no-fill ad never calls
   /// this transition. Keeps difficulty, tier and all other rows unchanged.
@@ -329,7 +366,6 @@ class Missions {
     required int today,
     required MissionEligibility eligibility,
   }) {
-    if (!canReroll(index, today)) return this;
     final candidates = rerollCandidates(index, today, eligibility);
     if (candidates.isEmpty) return this;
     final chosen =
@@ -346,16 +382,14 @@ class Missions {
     );
   }
 
-  /// Inspect before requesting an ad. The approved M12/M13 same-day exclusion
-  /// can exhaust the hard pool when yesterday's hard was M11 (especially T0).
-  /// That PRD conflict must be resolved by the orchestrator; never silently
-  /// relax the pool rules or consume an ad allowance with no replacement.
+  /// Inspect before requesting an ad. Per the G1a round-2 decision, M12/M13
+  /// exclude each other only among the other current rows, not swapped history.
   List<MissionTemplate> rerollCandidates(
     int index,
     int today,
     MissionEligibility eligibility,
   ) {
-    if (!canReroll(index, today)) return const [];
+    if (!_rerollAllowed(index, today)) return const [];
     final old = missions[index];
     final others = [
       for (var i = 0; i < missions.length; i++)
@@ -370,9 +404,9 @@ class Missions {
               t.available(tier, eligibility) &&
               !(t.modeOnly && others.any((o) => o.modeOnly)) &&
               !(t == MissionTemplate.m12 &&
-                  usedTemplates.contains(MissionTemplate.m13)) &&
+                  others.contains(MissionTemplate.m13)) &&
               !(t == MissionTemplate.m13 &&
-                  usedTemplates.contains(MissionTemplate.m12)),
+                  others.contains(MissionTemplate.m12)),
         )
         .toList();
   }
@@ -382,6 +416,7 @@ class Missions {
     int? rerollDay,
     Set<MissionTemplate>? usedTemplates,
     bool? chestClaimed,
+    int? chestsOwed,
   }) => Missions(
     day: day,
     tier: tier,
@@ -390,24 +425,27 @@ class Missions {
     previousHard: previousHard,
     usedTemplates: usedTemplates ?? this.usedTemplates,
     chestClaimed: chestClaimed ?? this.chestClaimed,
+    chestsOwed: chestsOwed ?? this.chestsOwed,
   );
 
   /// Metadata lives inside the existing `missions` JSON; no extra storage key.
-  List<Map<String, Object?>> toRecords() => [
-    for (var i = 0; i < missions.length; i++)
-      {
-        ...missions[i].toRecord(),
-        if (i == 0)
-          'meta': {
-            'previousHard': previousHard?.id,
-            'used': [
-              for (final t in MissionTemplate.values)
-                if (usedTemplates.contains(t)) t.id,
-            ],
-            'chestClaimed': chestClaimed,
-          },
-      },
-  ];
+  List<Map<String, Object?>> toRecords() {
+    final meta = <String, Object?>{
+      'previousHard': previousHard?.id,
+      'used': [
+        for (final t in MissionTemplate.values)
+          if (usedTemplates.contains(t)) t.id,
+      ],
+      'chestClaimed': chestClaimed,
+      'chestsOwed': chestsOwed,
+    };
+    // Preserve owed chests even when every stored mission was invalid.
+    return [
+      if (missions.isEmpty) {'meta': meta},
+      for (var i = 0; i < missions.length; i++)
+        {...missions[i].toRecord(), if (i == 0) 'meta': meta},
+    ];
+  }
 
   factory Missions.fromRecords({
     required int day,
@@ -415,22 +453,37 @@ class Missions {
     required int rerollDay,
     required List<Map<String, Object?>> records,
   }) {
-    final meta = records.isEmpty
-        ? const <String, Object?>{}
-        : (records.first['meta'] as Map?) ?? const <String, Object?>{};
+    final rawMeta = records.isEmpty ? null : records.first['meta'];
+    final meta = rawMeta is Map ? rawMeta : const <String, Object?>{};
+    final safeTier = tier >= 0 && tier <= 3 ? tier : 0;
+    final parsed = <MissionProgress>[];
+    for (final record in records) {
+      final mission = MissionProgress.fromRecord(record);
+      if (mission == null ||
+          mission.target != mission.template.targets[safeTier] ||
+          parsed.any(
+            (m) => m.template.difficulty == mission.template.difficulty,
+          )) {
+        continue;
+      }
+      parsed.add(mission);
+    }
+    final used = meta['used'];
+    final owed = meta['chestsOwed'];
     return Missions(
       day: day,
-      tier: tier,
+      tier: safeTier,
       rerollDay: rerollDay,
-      missions: records.map(MissionProgress.fromRecord).toList(),
+      missions: parsed,
       previousHard: MissionTemplate.values
           .where((t) => t.id == meta['previousHard'])
           .firstOrNull,
       usedTemplates: {
         for (final t in MissionTemplate.values)
-          if ((meta['used'] as List? ?? const []).contains(t.id)) t,
+          if (used is List && used.contains(t.id)) t,
       },
       chestClaimed: meta['chestClaimed'] == true,
+      chestsOwed: owed is int && owed > 0 ? owed : 0,
     );
   }
 }

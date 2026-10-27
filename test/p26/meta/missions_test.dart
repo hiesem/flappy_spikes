@@ -273,21 +273,9 @@ void main() {
               today: day,
               eligibility: context,
             );
-            // texts.html M13 excludes M12 for the entire day. With yesterday
-            // M11, the sparse hard pool cannot satisfy "swap any unfinished".
-            // Keep every exclusion and explicitly verify the safe no-op.
-            final hard = state.missions[index].template;
-            if (index == 2 &&
-                (hard == MissionTemplate.m12 || hard == MissionTemplate.m13) &&
-                oldHard == MissionTemplate.m11 &&
-                (state.tier == 0 ||
-                    (met.isEmpty &&
-                        best < MissionTemplate.m15.targets[state.tier]))) {
-              expect(state.rerollCandidates(index, day, context), isEmpty);
-              expect(swapped, same(state));
-              expect(swapped.rerollDay, lessThan(day));
-              continue;
-            }
+            // PRD G1 / round-2 orchestrator decision: a swapped-away M12
+            // does not block M13; only the other current rows are checked.
+            expect(state.canReroll(index, day, eligibility: context), isTrue);
             expect(
               swapped.missions[index].template,
               isNot(state.missions[index].template),
@@ -298,8 +286,10 @@ void main() {
               state.missions[index].template.difficulty,
             );
             expect(
-              swapped.usedTemplates.contains(MissionTemplate.m12) &&
-                  swapped.usedTemplates.contains(MissionTemplate.m13),
+              swapped.missions.any((m) => m.template == MissionTemplate.m12) &&
+                  swapped.missions.any(
+                    (m) => m.template == MissionTemplate.m13,
+                  ),
               isFalse,
             );
           }
@@ -541,7 +531,7 @@ void main() {
         final tomorrow = restore(
           swapped,
         ).roll(today: 21, gamesPlayed: 5, eligibility: context);
-        expect(tomorrow.canReroll(index, 21), isTrue);
+        expect(tomorrow.canReroll(index, 21, eligibility: context), isTrue);
       }
     },
   );
@@ -567,5 +557,292 @@ void main() {
       same(state),
     );
     expect(state.rerollDay, -1);
+  });
+  test(
+    'earned chest survives midnight, app kills and repeated rolls exactly once',
+    () {
+      var state =
+          withTemplates([
+                MissionTemplate.m02,
+                MissionTemplate.m04,
+                MissionTemplate.m11,
+              ])
+              .advance(
+                const MissionRunCounts(
+                  gamesPlayedBefore: 3,
+                  hoops: 40,
+                  inRunCoins: 40,
+                ),
+              )
+              .claimCoins()
+              .state;
+      expect(state.chestPending, isTrue);
+      state = restore(
+        state,
+      ).roll(today: 21, gamesPlayed: 4, eligibility: eligibility());
+      expect(state.allDone, isFalse);
+      expect(state.chestsOwed, 1);
+      expect(state.chestPending, isTrue);
+      state = restore(
+        state,
+      ).roll(today: 21, gamesPlayed: 4, eligibility: eligibility());
+      expect(state.chestsOwed, 1);
+      state = restore(
+        state,
+      ).roll(today: 23, gamesPlayed: 4, eligibility: eligibility());
+      expect(state.chestsOwed, 1);
+      final claim = restore(state).claimChest(feathers: 2, pieces: 3);
+      expect(claim.reward?.kind, MissionChestKind.coins);
+      expect(claim.reward?.amount, 40);
+      final loaded = restore(claim.state);
+      expect(loaded.chestPending, isFalse);
+      expect(loaded.claimChest(feathers: 0, pieces: 0).reward, isNull);
+      expect(
+        restore(
+          loaded.roll(today: 24, gamesPlayed: 4, eligibility: eligibility()),
+        ).chestPending,
+        isFalse,
+      );
+    },
+  );
+
+  test('an older owed chest and the current board chest both pay once', () {
+    var state = Missions(
+      day: 20,
+      chestsOwed: 1,
+      missions: [
+        for (final t in [
+          MissionTemplate.m02,
+          MissionTemplate.m04,
+          MissionTemplate.m11,
+        ])
+          MissionProgress(
+            template: t,
+            target: t.targets[0],
+            progress: t.targets[0],
+          ),
+      ],
+    );
+    state = restore(state.claimChest(feathers: 0, pieces: 0).state);
+    expect(state.chestsOwed, 0);
+    expect(state.chestPending, isTrue);
+    state = restore(state.claimChest(feathers: 0, pieces: 0).state);
+    expect(state.chestPending, isFalse);
+    expect(state.claimChest(feathers: 0, pieces: 0).reward, isNull);
+    expect(
+      state
+          .roll(today: 21, gamesPlayed: 4, eligibility: eligibility())
+          .chestPending,
+      isFalse,
+    );
+  });
+
+  test('roll accumulates each earned chest without replacing an older one', () {
+    final state = Missions(
+      day: 20,
+      chestsOwed: 1,
+      missions: [
+        for (final t in [
+          MissionTemplate.m02,
+          MissionTemplate.m04,
+          MissionTemplate.m11,
+        ])
+          MissionProgress(
+            template: t,
+            target: t.targets[0],
+            progress: t.targets[0],
+          ),
+      ],
+    ).roll(today: 21, gamesPlayed: 4, eligibility: eligibility());
+    expect(state.chestsOwed, 2);
+    final first = restore(state).claimChest(feathers: 0, pieces: 0);
+    expect(first.reward, isNotNull);
+    final second = restore(first.state).claimChest(feathers: 0, pieces: 0);
+    expect(second.reward, isNotNull);
+    expect(
+      restore(second.state).claimChest(feathers: 0, pieces: 0).reward,
+      isNull,
+    );
+  });
+
+  test('unknown/corrupt rows load leniently and rebuild on the same day', () {
+    final valid = withTemplates([
+      MissionTemplate.m02,
+      MissionTemplate.m04,
+      MissionTemplate.m11,
+    ]).toRecords();
+    final invalidRows = <Map<String, Object?>>[
+      {'id': 'M16', 'target': 1},
+      {'id': 'M01'},
+      {'id': 'M01', 'target': '3'},
+      {'id': 'M01', 'target': 3.0},
+      {'id': 'M01', 'target': -1},
+      {'id': 'M01', 'target': 3, 'progress': '2'},
+      {'id': 'M01', 'target': 3, 'progress': -1},
+      {'id': 'M01', 'target': 3, 'paid': 'true'},
+      {'id': 'M01', 'target': 3, 'paid': true, 'progress': 1},
+      {'id': 'M01', 'target': 999},
+    ];
+    for (final bad in invalidRows) {
+      final loaded = Missions.fromRecords(
+        day: 20,
+        tier: 0,
+        rerollDay: 20,
+        records: [valid[0], valid[1], bad],
+      );
+      expect(loaded.missions, hasLength(2));
+      // Invalid rows make the day unrolled without removing the rollback
+      // watermark. The normal roll rebuilds a complete board on day 20.
+      expect(
+        loaded.roll(today: 19, gamesPlayed: 4, eligibility: eligibility()),
+        same(loaded),
+      );
+      final rebuilt = loaded.roll(
+        today: 20,
+        gamesPlayed: 4,
+        eligibility: eligibility(),
+      );
+      expect(rebuilt.missions, hasLength(3));
+      expect(
+        rebuilt.missions.map((m) => m.template.difficulty).toSet(),
+        MissionDifficulty.values.toSet(),
+      );
+      expect(rebuilt.rerollDay, 20);
+      expect(rebuilt.missions.every((m) => m.progress == 0), isTrue);
+    }
+  });
+
+  test(
+    'corrupt metadata and duplicate rows are safe; owed metadata survives empty rows',
+    () {
+      final valid = withTemplates([
+        MissionTemplate.m02,
+        MissionTemplate.m04,
+        MissionTemplate.m11,
+      ]).toRecords();
+      for (final meta in <Object?>[
+        null,
+        'invalid',
+        42,
+        {'used': 'bad', 'chestsOwed': 'bad'},
+        {
+          'used': [null, 'M16'],
+          'chestsOwed': -1,
+        },
+      ]) {
+        final state = Missions.fromRecords(
+          day: 20,
+          tier: 0,
+          rerollDay: -1,
+          records: [
+            {...valid[0], 'meta': meta},
+            ...valid.skip(1),
+          ],
+        );
+        expect(state.missions, hasLength(3));
+        expect(state.chestsOwed, 0);
+      }
+      final duplicate = Missions.fromRecords(
+        day: 20,
+        tier: 0,
+        rerollDay: -1,
+        records: [valid[0], valid[0], valid[1]],
+      );
+      expect(duplicate.missions, hasLength(2));
+      expect(
+        duplicate
+            .roll(today: 20, gamesPlayed: 4, eligibility: eligibility())
+            .missions,
+        hasLength(3),
+      );
+      final empty = Missions.fromRecords(
+        day: 20,
+        tier: 9,
+        rerollDay: -1,
+        records: [
+          {
+            'id': 'M16',
+            'meta': {'chestsOwed': 1},
+          },
+        ],
+      );
+      expect(empty.missions, isEmpty);
+      expect(empty.tier, 0);
+      final claim = restore(empty).claimChest(feathers: 0, pieces: 0);
+      expect(claim.reward?.kind, MissionChestKind.feather);
+      expect(restore(claim.state).chestPending, isFalse);
+    },
+  );
+
+  test('T0 M12 swaps to M13 with yesterday M11, once after reload', () {
+    // PRD G1 / round-2 orchestrator decision: M12/M13 exclusion applies
+    // only to OTHER current rows, allowing the old row to be replaced.
+    final state = Missions(
+      day: 20,
+      previousHard: MissionTemplate.m11,
+      missions: [
+        for (final t in [
+          MissionTemplate.m01,
+          MissionTemplate.m03,
+          MissionTemplate.m12,
+        ])
+          MissionProgress(template: t, target: t.targets[0]),
+      ],
+    );
+    final context = eligibility(best: 0, met: {});
+    expect(state.rerollCandidates(2, 20, context), [MissionTemplate.m13]);
+    expect(state.canReroll(2, 20, eligibility: context), isTrue);
+    final swapped = state.reroll(index: 2, today: 20, eligibility: context);
+    expect(swapped.missions.last.template, MissionTemplate.m13);
+    expect(
+      swapped.usedTemplates,
+      containsAll([MissionTemplate.m12, MissionTemplate.m13]),
+    );
+    expect(restore(swapped).canReroll(2, 20, eligibility: context), isFalse);
+  });
+
+  test(
+    'SWAP is hidden with no eligible replacement and allowance remains unused',
+    () {
+      // PRD G1:879 / §8.3 item 18: the predicate used by UI checks the pool,
+      // not just completion and the day's ad allowance.
+      final state = Missions(
+        day: 20,
+        usedTemplates: {MissionTemplate.m01, MissionTemplate.m02},
+        missions: [MissionProgress(template: MissionTemplate.m01, target: 3)],
+      );
+      final context = eligibility();
+      expect(state.canReroll(0, 20, eligibility: context), isFalse);
+      expect(state.rerollCandidates(0, 20, context), isEmpty);
+      expect(
+        state.reroll(index: 0, today: 20, eligibility: context),
+        same(state),
+      );
+      expect(state.rerollDay, -1);
+      expect(state.canReroll(-1, 20, eligibility: context), isFalse);
+      expect(state.canReroll(0, 19, eligibility: context), isFalse);
+    },
+  );
+  test('same-day corrupt-board recovery retains yesterday hard exclusion', () {
+    for (var day = 1; day <= 50; day++) {
+      final loaded = Missions.fromRecords(
+        day: day,
+        tier: 0,
+        rerollDay: -1,
+        records: [
+          {
+            'id': 'M16',
+            'meta': {'previousHard': 'M11'},
+          },
+        ],
+      );
+      final rebuilt = loaded.roll(
+        today: day,
+        gamesPlayed: 4,
+        eligibility: eligibility(best: 0, met: {}),
+      );
+      expect(rebuilt.previousHard, MissionTemplate.m11);
+      expect(rebuilt.missions.last.template, isNot(MissionTemplate.m11));
+    }
   });
 }

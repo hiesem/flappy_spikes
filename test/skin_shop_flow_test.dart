@@ -1,3 +1,4 @@
+// PRD:834: collection includes 60 card cosmetics (208 total).
 import 'package:flame/components.dart';
 import 'package:flappy_spikes/components/skins/celebration.dart';
 import 'package:flappy_spikes/components/skins/shop_widgets.dart';
@@ -83,8 +84,8 @@ void main() {
           expect(scroll.viewport.bottom, height - 44);
           expect(Config.skinShopGridBottomFor(height), height - 44);
           final tabBottom = screen.tabBar.toRect().bottom;
-          // PRD 2.6 F9: these checks cover the five wardrobe tabs; CARDS is separate.
-          for (final layer in kShopLayers) {
+          // PRD:834 adds CARDS; these journeys cover the five wardrobe tabs.
+          for (final layer in kShopLayers.where((l) => l != SkinLayer.card)) {
             game.selectSkinTab(layer);
             stepGame(game, 0.5);
             await flushAndMount(game);
@@ -129,7 +130,7 @@ void main() {
         // PRD-2.3 §19.3: the 2.0 update items follow the normal rule now.
         expect(screen.tileFor('ghost').current.isNew, isFalse);
         expect(screen.tileFor('robin').current.isNew, isFalse);
-        expect(screen.bar.labelText, '3 / 148'); // the free defaults
+        expect(screen.bar.labelText, '3 / 208'); // the free defaults
         expect(screen.tabBar.tabFor(SkinLayer.bird).countText, '1/30');
         // Static art is drawn once (cached pictures).
         expect(screen.tileFor('sky').animatesArt, isFalse);
@@ -166,7 +167,7 @@ void main() {
           expect(tile.enterProgress, 1);
         }
         expect(screen.tabBar.sliding, isFalse);
-        expect(screen.tabBar.underlineX, closeTo(292 / 5, 1e-9));
+        expect(screen.tabBar.underlineX, closeTo(292 / 6, 1e-9));
         // "none" equipped -> NOTHING ON.
         expect(screen.actionButton.label, 'NOTHING ON');
         expect(screen.nameRow.chipText, isNull);
@@ -334,7 +335,7 @@ void main() {
           stepGame(game, 0.35);
           expect(pill.shownBalance, after);
           // Counters went up; the bar popped after 0.5 s.
-          expect(screen.bar.labelText, '4 / 148');
+          expect(screen.bar.labelText, '4 / 208');
           expect(counter.countText, isNot(countBefore));
           expect(sounds.contains(Sfx.skProgress), !legendary);
           stepGame(game, 0.8);
@@ -372,7 +373,7 @@ void main() {
         }
         expect(peak, closeTo(1.12, 0.01));
         expect(screen.bar.popScale, 1);
-        expect(screen.bar.fill, closeTo(4 / 148, 1e-9));
+        expect(screen.bar.fill, closeTo(4 / 208, 1e-9));
       },
     );
 

@@ -1,23 +1,29 @@
 import 'dart:async';
+import 'dart:ui';
 
+import 'package:flame/components.dart';
 import 'package:flame/extensions.dart';
 
 import '../../game/config.dart';
 import '../../game/sound.dart';
+import '../../run/effects/coin_icon.dart';
 import '../../skins/catalog.dart';
 import '../../skins/look.dart';
+import '../home/menu_primitives.dart';
+import '../levels/emblem_view.dart';
 import '../menu_screen_chrome.dart';
 import 'celebration.dart';
 import 'item_art.dart';
 import 'item_tile.dart';
 import 'preview_stage.dart';
+import 'shop_glyphs.dart' show ShopText;
 import 'shop_widgets.dart';
 import 'skin_tab_bar.dart';
 
 /// The 2.0 skin shop (PRD-menu-v2 §3–4, approved layout A "Big preview +
 /// tabs") on the shared [MenuScreen] chrome (coin pill + back button, no
 /// title): the collection bar, the live [PreviewStage] with the name row
-/// and the action button, the five-tab [SkinTabBar] and a scrolling
+/// and the action button, the six-tab [SkinTabBar] and a scrolling
 /// 3-column grid of [ItemTile]s for the open tab.
 ///
 /// The screen owns the view state — open [tab], the one tried-on item
@@ -35,6 +41,39 @@ class SkinShopScreen extends MenuScreen {
        super(title: '');
 
   SkinLayer _tab;
+  // region P26-F9e
+  // The CARDS filter adds a fixed row, so its scroll viewport is replaced
+  // when crossing between CARDS and wardrobe tabs.
+  late MenuScrollArea _shopScroll;
+  @override
+  MenuScrollArea get scroll => _shopScroll;
+  @override
+  set scroll(MenuScrollArea value) => _shopScroll = value;
+  CardKind cardKind = CardKind.frame;
+  ShopCardArt? _cardArt;
+  ShopCardArt get cardArt => _cardArt!;
+  final List<MenuText> _kindLabels = [];
+  final List<MenuButton> _kindButtons = [];
+  PositionComponent? _skillHeader;
+  bool get onCards => _tab == SkinLayer.card;
+  String cardCounter(CardKind kind) =>
+      '${cardItemsFor(kind).where((i) => game.menu.items.isOwned(SkinLayer.card, i.id)).length}/20';
+  SkinItem cardNone(CardKind kind) => SkinItem(
+    layer: SkinLayer.card,
+    id: '',
+    name: 'None',
+    rarity: null,
+    price: 0,
+    cardKind: kind,
+  );
+  void selectCardKind(CardKind kind) {
+    if (!onCards || kind == cardKind) return;
+    cardKind = kind;
+    clearTryOn();
+    play(Sfx.skTab);
+    _fillGrid(animate: true);
+  }
+  // endregion
 
   /// Locked item of the initial tab to open tried on (Shop featured row).
   final String? initialTryOn;
@@ -64,13 +103,21 @@ class SkinShopScreen extends MenuScreen {
   Look get previewLook {
     final look = game.menu.items.look;
     final id = _tryOnId;
+    // region P26-F9e
+    if (onCards) return id == null ? look : look.withCardItem(cardKind, id);
+    // endregion
     return id == null ? look : look.withItem(_tab, id);
   }
 
   /// The item the name row / action button describe: the try-on, else the
   /// equipped item of the open tab.
+  // region P26-F9e
   SkinItem get activeItem =>
-      tryOnItem ?? itemById(_tab, game.menu.items.look.idFor(_tab))!;
+      tryOnItem ??
+      (onCards
+          ? cardItemById(game.menu.items.look.cardIdFor(cardKind))!
+          : itemById(_tab, game.menu.items.look.idFor(_tab))!);
+  // endregion
 
   /// Whether [item] shows its NEW tag (snapshot at open, cleared on tap).
   bool isNewTag(SkinItem item) => _newKeys.contains(item.key);
@@ -82,7 +129,14 @@ class SkinShopScreen extends MenuScreen {
 
   @override
   Rect scrollViewportFor(double viewHeight) =>
-      Config.skinShopGridRectFor(viewHeight);
+      // region P26-F9e
+      Rect.fromLTRB(
+        14,
+        onCards ? 360 : 326,
+        306,
+        Config.skinShopGridBottomFor(viewHeight),
+      );
+  // endregion
 
   /// The grid tile of [id] on the open tab.
   ItemTile tileFor(String id) => tiles.firstWhere((t) => t.item.id == id);
@@ -100,6 +154,9 @@ class SkinShopScreen extends MenuScreen {
   @override
   Future<void> buildContent() async {
     final items = game.menu.items;
+    if (onCards && initialTryOn != null) {
+      cardKind = cardItemById(initialTryOn!)?.cardKind ?? CardKind.frame;
+    }
     _newKeys = {
       for (final item in allItems)
         if (items.isNew(item.layer, item.id)) item.key,
@@ -110,7 +167,17 @@ class SkinShopScreen extends MenuScreen {
       total: kCollectibleTotal,
       popEnabled: () => !reduceMotion,
     );
-    stage = PreviewStage(
+    // region P26-F9e
+    _cardArt = ShopCardArt(
+      coin: game.images.fromCache(CoinIcon.asset),
+      look: items.look,
+      name: game.storage.versusCustomName.isNotEmpty
+          ? game.storage.versusCustomName
+          : game.storage.versusNickname ?? 'Birdie',
+    );
+    stage = _CardPreviewStage(
+      screen: this,
+      // endregion
       rect: Config.skinShopStageRect,
       look: () => previewLook,
       triedLayer: () => _tryOnId == null ? null : _tab,
@@ -134,6 +201,10 @@ class SkinShopScreen extends MenuScreen {
         stageRect.bottom - Config.skinShopActionInset,
       ),
       kind: () {
+        // region P26-F9e
+        if (tryOnItem?.isSkillOnly ?? false) return ShopActionKind.skillOnly;
+        if (onCards && activeItem.id.isEmpty) return ShopActionKind.nothingOn;
+        // endregion
         if (_tryOnId != null) return ShopActionKind.buy;
         return activeItem.isNone
             ? ShopActionKind.nothingOn
@@ -143,7 +214,9 @@ class SkinShopScreen extends MenuScreen {
       affordable: () => game.menu.wallet.balance >= (tryOnItem?.price ?? 0),
       tint: () => tint,
       reduceMotion: () => reduceMotion,
-      onPressed: () => game.buyTriedOnItem(),
+      onPressed: () {
+        if (!(tryOnItem?.isSkillOnly ?? false)) game.buyTriedOnItem();
+      },
       isActive: isActive,
     );
     tabBar = SkinTabBar(
@@ -156,6 +229,28 @@ class SkinShopScreen extends MenuScreen {
       isActive: isActive,
     );
     addAll([bar, stage, nameRow, actionButton, tabBar]);
+    // region P26-F9e
+    for (final kind in CardKind.values) {
+      final label = MenuText(
+        '',
+        fontSize: 9,
+        color: Config.menuPink,
+        position: Vector2(46, 12),
+        anchor: Anchor.center,
+      );
+      final button = MenuButton(
+        position: Vector2(14 + kind.index * 100, 330),
+        size: Vector2(92, 24),
+        isActive: () => isActive() && onCards,
+        onPressed: () => selectCardKind(kind),
+      );
+      button.add(label);
+      _kindLabels.add(label);
+      _kindButtons.add(button);
+      add(button);
+    }
+    add(_GridScrollDecoration(this));
+    // endregion
     _fillGrid(animate: false);
     final initial = initialTryOn;
     if (initial != null && !items.isOwned(_tab, initial)) {
@@ -174,16 +269,66 @@ class SkinShopScreen extends MenuScreen {
 
   void _fillGrid({required bool animate}) {
     final h = game.viewHeight;
-    scroll.content.removeAll(tiles);
-    final list = itemsFor(_tab);
+    for (final tile in tiles) {
+      tile.removeFromParent();
+    }
+    // region P26-F9e
+    _skillHeader?.removeFromParent();
+    final list = onCards
+        ? [cardNone(cardKind), ...cardItemsFor(cardKind)]
+        : itemsFor(_tab);
+    if (onCards) {
+      final currentLook = game.menu.items.look;
+      if (cardArt.look.bird != currentLook.bird ||
+          cardArt.look.gear != currentLook.gear ||
+          cardArt.look.hat != currentLook.hat) {
+        final old = cardArt;
+        _cardArt = ShopCardArt(
+          coin: old.coin,
+          look: currentLook,
+          name: old.name,
+          paintRays: old.paintRays,
+        );
+        old.dispose();
+      }
+      for (final item in [
+        for (final kind in CardKind.values) cardNone(kind),
+        ...list.where((i) => i.id.isNotEmpty),
+        for (final kind in CardKind.values)
+          if (game.menu.items.look.cardIdFor(kind).isNotEmpty)
+            cardItemById(game.menu.items.look.cardIdFor(kind))!,
+      ]) {
+        cardArt.prepare(item);
+      }
+    }
+    final topShift = onCards ? 34.0 : 0.0;
     tiles = [
       for (final (i, item) in list.indexed)
-        _tile(item, Config.skinShopTileRectFor(h, i), i, animate),
+        _tile(
+          item,
+          Config.skinShopTileRectFor(
+            h,
+            i,
+          ).shift(Offset(0, topShift + (onCards && i >= 18 ? 28 : 0))),
+          i,
+          animate,
+        ),
     ];
+    if (onCards) {
+      _skillHeader = MenuText(
+        'EARNED BY SKILL · NOT SOLD',
+        fontSize: 10,
+        color: Config.menuPlum,
+        position: Vector2(14, tiles[18].toRect().top - 22),
+      );
+      scroll.content.add(_skillHeader!);
+    }
     scroll
-      ..contentBottom = Config.skinShopContentBottomFor(h, list.length)
+      ..contentBottom =
+          tiles.last.toRect().bottom + Config.skinShopGridPadBottom
       ..offset = 0
       ..content.addAll(tiles);
+    // endregion
   }
 
   ItemTile _tile(SkinItem item, Rect rect, int index, bool animate) {
@@ -192,18 +337,37 @@ class SkinShopScreen extends MenuScreen {
       item: item,
       rect: rect,
       art: art,
+      cardArt: item.layer == SkinLayer.card ? cardArt : null,
       state: () {
         final items = game.menu.items;
         final tried = _tryOnId == item.id;
         return ItemTileState(
           owned: items.isOwned(item.layer, item.id),
-          equipped: _tryOnId == null && items.isEquipped(item.layer, item.id),
+          equipped:
+              _tryOnId == null &&
+              (onCards && item.id.isEmpty
+                  ? items.look.cardIdFor(cardKind).isEmpty
+                  : items.isEquipped(item.layer, item.id)),
           tryingOn: tried,
           isNew: _newKeys.contains(item.key),
           affordable: game.menu.wallet.balance >= item.price,
         );
       },
-      onPressed: () => game.tapItem(item.layer, item.id, fromTile: true),
+      // region P26-F9e
+      onPressed: () {
+        if (onCards && item.id.isEmpty) {
+          clearTryOn();
+          unawaited(game.menu.items.clearCard(cardKind));
+          play(Sfx.skEquip);
+        } else if (item.isSkillOnly &&
+            !game.menu.items.isOwned(item.layer, item.id)) {
+          setTryOn(item.id);
+          play(Sfx.skTap);
+        } else {
+          game.tapItem(item.layer, item.id, fromTile: true);
+        }
+      },
+      // endregion
       cardColor: () => tileColor,
       tint: () => tint,
       reduceMotion: () => reduceMotion,
@@ -243,7 +407,30 @@ class SkinShopScreen extends MenuScreen {
   void selectTab(SkinLayer layer) {
     if (layer == _tab) return;
     _tryOnId = null;
+    // region P26-F9e
+    final changeViewport = onCards != (layer == SkinLayer.card);
     _tab = layer;
+    if (changeViewport) {
+      scroll.removeFromParent();
+      for (final gate in children.query<MenuScrollTapGate>()) {
+        gate.removeFromParent();
+      }
+      scroll = MenuScrollArea(
+        viewport: scrollViewportFor(game.viewHeight),
+        bleedBottom: Config.menuSpikeToothDepth,
+        isActive: isActive,
+      );
+      add(scroll);
+      add(
+        MenuScrollTapGate(
+          scroll: scroll,
+          position: scroll.visibleRect.topLeft.toVector2(),
+          size: scroll.visibleRect.size.toVector2(),
+          priority: 1 << 20,
+        ),
+      );
+    }
+    // endregion
     _fillGrid(animate: true);
   }
 
@@ -317,6 +504,25 @@ class SkinShopScreen extends MenuScreen {
   @override
   void update(double dt) {
     super.update(dt);
+    // region P26-F9e
+    for (final kind
+        in _kindLabels.length == 3 ? CardKind.values : <CardKind>[]) {
+      final label = _kindLabels[kind.index];
+      label.text = onCards
+          ? '${switch (kind) {
+              CardKind.frame => 'FRAMES',
+              CardKind.name => 'NAMES',
+              CardKind.sticker => 'STICKERS',
+            }} ${cardCounter(kind)}'
+          : '';
+      _kindButtons[kind.index].color = !onCards
+          ? null
+          : cardKind == kind
+          ? Config.menuPink
+          : const Color(0xFFE2E2E2);
+      label.color = cardKind == kind ? const Color(0xFFFFFFFF) : tint;
+    }
+    // endregion
     if (_timers.isEmpty) return;
     final due = <void Function()>[];
     for (var i = _timers.length - 1; i >= 0; i--) {
@@ -336,6 +542,124 @@ class SkinShopScreen extends MenuScreen {
   @override
   void onRemove() {
     art.dispose();
+    _cardArt?.dispose();
     super.onRemove();
   }
 }
+
+// region P26-F9e
+/// Retains PreviewStage's update / celebration driver for all six tabs.
+class _CardPreviewStage extends PreviewStage {
+  _CardPreviewStage({
+    required this.screen,
+    required super.rect,
+    required super.look,
+    required super.triedLayer,
+    required super.tab,
+    required super.background,
+    required super.play,
+    required super.reduceMotion,
+  });
+  final SkinShopScreen screen;
+  late final EmblemView _emblem = EmblemView(
+    level: screen.game.menu.levels.level,
+    artScale: .36,
+    position: Vector2(222, 65),
+  );
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    add(_emblem);
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _emblem.popScale = screen.onCards ? 1 : 0;
+    _emblem.t = reduceMotion() ? 0 : t;
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (!screen.onCards) {
+      super.render(canvas);
+      return;
+    }
+    canvas.drawRect(size.toRect(), Paint()..color = background());
+    canvas.drawRect(
+      const Rect.fromLTWH(30, 42, 232, 52),
+      Paint()..color = const Color(0xFFF4F4F4),
+    );
+    final look = screen.previewLook;
+    canvas.save();
+    canvas.translate(width / 2, height / 2 + 2);
+    for (final kind in CardKind.values) {
+      final item = cardItemById(look.cardIdFor(kind))!;
+      final shown = item.id.isEmpty ? screen.cardNone(kind) : item;
+      canvas.save();
+      switch (kind) {
+        case CardKind.frame:
+          canvas.translate(-90, 0);
+          canvas.scale(1.25);
+        case CardKind.name:
+          canvas.translate(-12, 0);
+          canvas.scale(1.2);
+        case CardKind.sticker:
+          canvas.translate(106, 14);
+          canvas.rotate(.1);
+          canvas.scale(.75);
+      }
+      if (kind != CardKind.sticker || item.id.isNotEmpty) {
+        screen.cardArt.paint(canvas, shown, reduceMotion() ? 0 : t);
+      }
+      canvas.restore();
+    }
+    canvas.restore();
+    if (screen.cardKind == CardKind.name) {
+      _nameStyle.paint(canvas, const Offset(116, 38));
+    }
+  }
+
+  final ShopText _nameStyle = ShopText(
+    'NAME STYLE',
+    fontSize: 8,
+    color: Config.menuPlum,
+  );
+}
+
+/// Grid-only adornments. This component is fixed, above the clipped list.
+class _GridScrollDecoration extends PositionComponent {
+  _GridScrollDecoration(this.screen) : super(priority: 10);
+  final SkinShopScreen screen;
+  @override
+  void render(Canvas canvas) {
+    final scroll = screen.scroll;
+    final r = scroll.viewport;
+    if (scroll.offset > .1) {
+      canvas.drawRect(
+        Rect.fromLTWH(r.left, r.top, r.width, 5),
+        Paint()
+          ..shader = Gradient.linear(Offset(0, r.top), Offset(0, r.top + 5), [
+            const Color(0x22000000),
+            const Color(0x00000000),
+          ]),
+      );
+    }
+    if (!scroll.scrollable) return;
+    final h = (r.height * r.height / (r.height + scroll.maxOffset)).clamp(
+      20.0,
+      r.height,
+    );
+    final y =
+        r.top +
+        (r.height - h) * (scroll.offset / scroll.maxOffset).clamp(0.0, 1.0);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(r.right - 2, y, 2, h),
+        const Radius.circular(1),
+      ),
+      Paint()..color = const Color(0x66828282),
+    );
+  }
+}
+// endregion

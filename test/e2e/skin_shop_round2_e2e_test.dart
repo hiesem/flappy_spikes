@@ -1,3 +1,4 @@
+// PRD:834: collection includes 60 card cosmetics (208 total).
 import 'dart:async';
 import 'dart:ui' as ui;
 
@@ -155,13 +156,14 @@ void main() {
     await _tap(game, tester, game.homeScreen!.skinsTile);
     await _fade(game);
     final screen = game.skinShop!;
-    expect(screen.bar.labelText, '3 / 148');
+    expect(screen.bar.labelText, '3 / 208');
     expect(screen.tabBar.tabs.map((tab) => tab.countText), [
       '1/30',
       '0/29',
       '0/29',
       '1/30',
       '1/30',
+      '0/60',
     ]);
     // Real drag input reaches the legendary row at the end of Birds.
     for (var i = 0; i < 6; i++) {
@@ -207,7 +209,7 @@ void main() {
     expect(screen.children.query<UnlockBanner>().single.nameText, 'GALAXY');
     stepGame(game, .7);
     expect(game.coinPill.shownBalance, 1000);
-    expect(screen.bar.labelText, '4 / 148');
+    expect(screen.bar.labelText, '4 / 208');
     expect(rig.events.params('item_purchase').single, {
       'layer': 'bird',
       'id': 'galaxy',
@@ -228,13 +230,14 @@ void main() {
     const outfit = Look(bird: 'galaxy', gear: 'windup', hat: 'cap');
     expect(game.menu.items.look, outfit);
     expect(game.menu.wallet.balance, 0);
-    expect(screen.bar.labelText, '6 / 148');
+    expect(screen.bar.labelText, '6 / 208');
     expect(screen.tabBar.tabs.map((tab) => tab.countText), [
       '2/30',
       '1/29',
       '1/29',
       '1/30',
       '1/30',
+      '0/60',
     ]);
     final saved = GameStorage();
     await saved.load();
@@ -302,13 +305,14 @@ void main() {
       await _tab(game, tester, SkinLayer.hat);
       await _tap(game, tester, screen.tileFor(kNoneId));
       expect(screen.actionButton.label, 'NOTHING ON');
-      expect(screen.bar.labelText, '6 / 148');
+      expect(screen.bar.labelText, '6 / 208');
       expect(screen.tabBar.tabs.map((tab) => tab.countText), [
         '2/30',
         '1/29',
         '1/29',
         '1/30',
         '1/30',
+        '0/60',
       ]);
       await _tap(game, tester, screen.backButton);
       await _fade(game);
@@ -344,8 +348,8 @@ void main() {
           ui.Rect.fromLTRB(14, 326, 306, height - 44),
         );
         final ids = ['sky', 'shades', 'cap', 'sky', 'blue'];
-        // PRD 2.6 F9: these checks cover the five wardrobe tabs; CARDS is separate.
-        for (final layer in kShopLayers) {
+        // PRD:834 adds CARDS; these journeys cover the five wardrobe tabs.
+        for (final layer in kShopLayers.where((l) => l != SkinLayer.card)) {
           await _tab(game, tester, layer);
           await _tap(game, tester, screen.tileFor(ids[layer.index]));
           await _tap(game, tester, screen.actionButton);
@@ -361,13 +365,14 @@ void main() {
           await _shot(game, tester, '${height.toInt()}_${layer.key}_bottom');
         }
         expect(game.menu.wallet.balance, 250);
-        expect(screen.bar.labelText, '8 / 148');
+        expect(screen.bar.labelText, '8 / 208');
         expect(screen.tabBar.tabs.map((tab) => tab.countText), [
           '2/30',
           '1/29',
           '1/29',
           '2/30',
           '2/30',
+          '0/60',
         ]);
         expect(rig.events.params('item_purchase'), hasLength(5));
         expect(screen.stage.trail.particleCount, greaterThan(0));
@@ -506,7 +511,7 @@ void main() {
       expect(game.menu.items.isOwned(SkinLayer.bird, 'ghost'), isFalse);
       await _tap(game, tester, game.homeScreen!.skinsTile);
       await _fade(game);
-      expect(game.skinShop!.bar.labelText, '6 / 148');
+      expect(game.skinShop!.bar.labelText, '6 / 208');
     },
   );
 

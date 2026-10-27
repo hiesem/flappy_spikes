@@ -1,3 +1,4 @@
+// PRD:834: collection includes 60 card cosmetics (208 total).
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -192,13 +193,14 @@ void main() {
       await _tap(game, tester, game.homeScreen!.skinsTile);
       await _fade(game);
       final screen = game.skinShop!;
-      expect(screen.bar.labelText, '3 / 148');
+      expect(screen.bar.labelText, '3 / 208');
       expect(screen.tabBar.tabs.map((tab) => tab.countText), [
         '1/30',
         '0/29',
         '0/29',
         '1/30',
         '1/30',
+        '0/60',
       ]);
 
       // Reach the last grid rows using actual drag input, then try Galaxy.
@@ -251,7 +253,7 @@ void main() {
       expect(game.menu.items.look.bird, 'galaxy');
       stepGame(game, .7);
       expect(game.coinPill.shownBalance, 1000);
-      expect(screen.bar.labelText, '4 / 148');
+      expect(screen.bar.labelText, '4 / 208');
       expect(screen.tabBar.tabs.first.countText, '2/30');
       expect(rig.events.params('item_purchase').single, {
         'layer': 'bird',
@@ -271,7 +273,7 @@ void main() {
       const dressed = Look(bird: 'galaxy', gear: 'shades', hat: 'cap');
       expect(game.menu.items.look, dressed);
       expect(game.menu.wallet.balance, 500);
-      expect(screen.bar.labelText, '6 / 148');
+      expect(screen.bar.labelText, '6 / 208');
       expect(screen.tabBar.tabFor(SkinLayer.gear).countText, '1/29');
       expect(screen.tabBar.tabFor(SkinLayer.hat).countText, '1/29');
       final reloaded = GameStorage();
@@ -337,7 +339,7 @@ void main() {
       await _tap(game, tester, game.homeScreen!.skinsTile);
       await _fade(game);
       final screen = game.skinShop!;
-      expect(screen.bar.labelText, '6 / 148');
+      expect(screen.bar.labelText, '6 / 208');
       await _tab(game, tester, SkinLayer.gear);
       await _tap(game, tester, screen.tileFor(kNoneId));
       expect(game.menu.items.look.gear, kNoneId);
@@ -352,7 +354,7 @@ void main() {
       await _tab(game, tester, SkinLayer.hat);
       await _tap(game, tester, screen.tileFor(kNoneId));
       expect(screen.actionButton.label, 'NOTHING ON');
-      expect(screen.bar.labelText, '6 / 148');
+      expect(screen.bar.labelText, '6 / 208');
       await _tap(game, tester, screen.backButton);
       await _fade(game);
       expect(game.homeScreen!.bird.look, const Look(bird: 'robin'));
@@ -470,8 +472,8 @@ void main() {
           const ui.Rect.fromLTWH(14, 270, 292, 52),
         );
         expect(screen.scroll.viewport.bottom, height - 44);
-        // PRD 2.6 F9: these checks cover the five wardrobe tabs; CARDS is separate.
-        for (final layer in kShopLayers) {
+        // PRD:834 adds CARDS; these journeys cover the five wardrobe tabs.
+        for (final layer in kShopLayers.where((l) => l != SkinLayer.card)) {
           await _tab(game, tester, layer);
           expect(
             screen.tiles,

@@ -1,3 +1,4 @@
+// PRD:834 exposes CARDS and adds its 60 collectibles to the shop.
 import 'dart:io';
 
 import 'package:flappy_spikes/game/storage.dart';
@@ -60,28 +61,26 @@ void main() {
     expect(kSkillCardItems.length, 9);
     expect(kCardItems.every((item) => !item.isSkillOnly), isTrue);
     expect(kSkillCardItems.every((item) => item.isSkillOnly), isTrue);
-    expect(itemsFor(SkinLayer.card), isEmpty);
-    expect(allItems.length, 150);
-    expect(kCollectibleTotal, 148);
+    expect(itemsFor(SkinLayer.card), hasLength(60));
+    expect(allItems.length, 210);
+    expect(kCollectibleTotal, 208);
     expect(kCollectibleTotal, allItems.where((i) => !i.isNone).length);
   });
 
-  test(
-    'F9 keeps five wardrobe tabs and includes card slots in diagnostics',
-    () {
-      expect(kShopLayers, [
-        SkinLayer.bird,
-        SkinLayer.gear,
-        SkinLayer.hat,
-        SkinLayer.hoop,
-        SkinLayer.trail,
-      ]);
-      expect(
-        const Look(card: 'f_orbit|n_fire|s_gg').toString(),
-        'Look(classic, none, none, pink, flame, f_orbit|n_fire|s_gg)',
-      );
-    },
-  );
+  test('F9 exposes six shop tabs and includes card slots in diagnostics', () {
+    expect(kShopLayers, [
+      SkinLayer.bird,
+      SkinLayer.gear,
+      SkinLayer.hat,
+      SkinLayer.hoop,
+      SkinLayer.trail,
+      SkinLayer.card,
+    ]);
+    expect(
+      const Look(card: 'f_orbit|n_fire|s_gg').toString(),
+      'Look(classic, none, none, pink, flame, f_orbit|n_fire|s_gg)',
+    );
+  });
 
   test('F9 names and sold prices match the approved catalogue', () {
     final design = File(

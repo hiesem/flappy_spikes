@@ -6,6 +6,11 @@ import 'package:flame/extensions.dart';
 import 'package:flutter/animation.dart' show Curves;
 
 import '../../game/config.dart';
+import '../../skins/art/card_frame_art.dart';
+import '../../skins/art/card_name_art.dart';
+import '../../skins/art/card_sticker_art.dart';
+import '../../skins/art/look_painter.dart';
+import '../sticker_avatar.dart';
 import '../home/menu_primitives.dart' show withMenuKnock;
 import '../../skins/catalog.dart';
 import '../../skins/look.dart';
@@ -164,7 +169,7 @@ class SkinNameRow extends PositionComponent {
 }
 
 /// What the preview's action button says.
-enum ShopActionKind { equipped, nothingOn, buy }
+enum ShopActionKind { equipped, nothingOn, buy, skillOnly }
 
 /// The action button at the preview's bottom-right (PRD-menu-v2 §3.4–3.5,
 /// mock `.act`): "✓ EQUIPPED" / "✓ NOTHING ON" (flat, stage foreground,
@@ -249,6 +254,7 @@ class ShopActionButton extends PositionComponent with TapCallbacks {
         ShopActionKind.equipped => 'EQUIPPED',
         ShopActionKind.nothingOn => 'NOTHING ON',
         ShopActionKind.buy => 'BUY',
+        ShopActionKind.skillOnly => 'SKILL ONLY',
       };
       if (k == ShopActionKind.buy) {
         _chipPrice = p;
@@ -319,3 +325,108 @@ class ShopActionButton extends PositionComponent with TapCallbacks {
     );
   }
 }
+
+// region P26-F9e
+/// Shop adapter of the three shared card painters. Animation pictures are
+/// prepared once at tab arrival, never recorded from a tile's render loop.
+/// All playback uses elapsed game time; reduced motion always picks frame 0.
+class ShopCardArt {
+  ShopCardArt({
+    required this.coin,
+    required this.look,
+    this.name = 'Birdie',
+    this.paintRays,
+  });
+  final Image coin;
+  final Look look;
+  final String name;
+  final CardStickerRays? paintRays;
+  static const fps = 12, frames = 72;
+  final Map<String, List<Picture>> _pictures = {};
+  final StickerAvatars _avatars = StickerAvatars();
+  int get pictureCount => _pictures.values.fold(0, (n, p) => n + p.length);
+
+  static bool animated(SkinItem item) => switch (item.cardKind) {
+    CardKind.frame => CardFrameArt.animatedIds.contains(item.id),
+    CardKind.name => const {
+      'n_rainbow',
+      'n_gold',
+      'n_flappy',
+      'n_glitch',
+      'n_fire',
+      'n_stardust',
+      'n_sky',
+      'n_thunder',
+      'n_marquee',
+    }.contains(item.id),
+    CardKind.sticker => const {
+      's_hatch',
+      's_zoom',
+      's_hot',
+      's_medal',
+      's_piggy',
+      's_disco',
+      's_champ',
+      's_fireworks',
+      's_unstop',
+      's_flawless',
+      's_topflock',
+    }.contains(item.id),
+    null => false,
+  };
+
+  void prepare(SkinItem item) {
+    if (_pictures.containsKey('${item.cardKind}:${item.id}')) return;
+    _pictures['${item.cardKind}:${item.id}'] = [
+      for (var i = 0; i < (animated(item) ? frames : 1); i++)
+        _record(item, i / fps),
+    ];
+  }
+
+  Picture _record(SkinItem item, double t) {
+    final recorder = PictureRecorder();
+    final c = Canvas(recorder);
+    if (item.id.isEmpty && item.cardKind == CardKind.sticker) {
+      LookPainter.paintNone(c, 16);
+      return recorder.endRecording();
+    }
+    switch (item.cardKind) {
+      case CardKind.frame:
+        CardFrameArt.paintBack(c, item.id, size: 40, t: t);
+        _avatars.paint(c, const Rect.fromLTWH(-20, -20, 40, 40), look);
+        CardFrameArt.paintFront(c, item.id, size: 40, t: t);
+      case CardKind.name:
+        CardNameArt.paint(c, item.id, name, t: t, fontSize: 18, maxWidth: 72);
+      case CardKind.sticker:
+        CardStickerArt.paint(
+          c,
+          item.id,
+          t: t,
+          scale: .62,
+          coinImage: coin,
+          paintRays: paintRays,
+        );
+      case null:
+        if (item.cardKind == null) {
+          LookPainter.paintNone(c, 16);
+        }
+    }
+    return recorder.endRecording();
+  }
+
+  void paint(Canvas canvas, SkinItem item, double t) {
+    final pictures = _pictures['${item.cardKind}:${item.id}']!;
+    canvas.drawPicture(pictures[(t * fps).floor() % pictures.length]);
+  }
+
+  void dispose() {
+    for (final list in _pictures.values) {
+      for (final picture in list) {
+        picture.dispose();
+      }
+    }
+    _pictures.clear();
+    _avatars.clear();
+  }
+}
+// endregion

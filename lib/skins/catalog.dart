@@ -283,7 +283,7 @@ const List<SkinItem> kCardStickers = [
   SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_topflock', name: 'Top of the Flock', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
 ];
 
-/// Sold card cosmetics, separate from the wardrobe catalogue until F9e.
+/// The 51 sold card cosmetics (skill entries remain separate).
 final List<SkinItem> kCardItems = List.unmodifiable(
   kCards.where((item) => !item.isSkillOnly),
 );
@@ -335,14 +335,18 @@ const Map<SkinLayer, List<SkinItem>> kCatalog = {
   SkinLayer.hoop: kHoops,
   SkinLayer.trail: kTrails,
   // region P26-F9a
-  // F9e will expose the separate card catalogue in the shop.
-  SkinLayer.card: [],
+  // region P26-F9e
+  SkinLayer.card: kCards,
+  // endregion
   // endregion
 };
 
 /// Collectible items in the whole catalogue (the two "none" entries do not
-/// count): 148 (PRD-2.3 §19.3: 88 + the 60 new items).
-const int kCollectibleTotal = 148;
+/// count): 208 (PRD:834 adds 60 cards to the 148 wardrobe collectibles).
+// region P26-F9e
+// PRD:834: 148 wardrobe collectibles + 60 card cosmetics.
+const int kCollectibleTotal = 208;
+// endregion
 
 /// Items added in the 2.3 update (PRD-2.3 §19.3): their NEW badge shows
 /// until seen, regardless of the balance. Ordered: the four showpieces first

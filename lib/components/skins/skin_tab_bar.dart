@@ -8,12 +8,13 @@ import 'package:flutter/animation.dart' show Cubic;
 import '../../game/config.dart';
 import '../home/menu_primitives.dart' show withMenuKnock;
 import '../../skins/look.dart';
+import '../../skins/art/card_frame_art.dart';
 import 'shop_glyphs.dart';
 
 /// CSS `cubic-bezier(.3, 1.4, .5, 1)`: the underline's overshoot.
 const Cubic kSkinShopOvershoot = Cubic(.3, 1.4, .5, 1);
 
-/// The five-tab bar of the skin shop (PRD-menu-v2 §4.1, mock `.tabs`): per
+/// The six-tab bar of the skin shop (PRD-menu-v2 §4.1, mock `.tabs`): per
 /// tab a silhouette icon (30 x 24), the layer name (9 pt) and owned/total
 /// (9 pt, 70 %); the active tab is pink with its icon at 118 %, and a 3 pt
 /// pink underline slides between tabs (0.3 s, overshoot).
@@ -174,7 +175,15 @@ class SkinTab extends PositionComponent with TapCallbacks {
     canvas.translate(0, -k);
     canvas.scale(_iconScale);
     canvas.translate(-iw / 2, -ih / 2);
-    ShopGlyphs.tabIcon(canvas, layer, iw, ih, color);
+    // region P26-F9e
+    if (layer == SkinLayer.card) {
+      canvas.translate(iw / 2, ih / 2);
+      CardFrameArt.paintBack(canvas, 'f_bubblegum', size: 18);
+      CardFrameArt.paintFront(canvas, 'f_bubblegum', size: 18);
+    } else {
+      ShopGlyphs.tabIcon(canvas, layer, iw, ih, color);
+    }
+    // endregion
     canvas.restore();
     y += ih + gap;
     _name.paint(canvas, Offset((width - _name.width) / 2, y));

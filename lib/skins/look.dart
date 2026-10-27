@@ -31,13 +31,16 @@ enum SkinLayer {
 }
 
 // region P26-F9a
-/// Wardrobe tabs only; F9e will introduce the CARDS shop separately (PRD F9).
+/// All six shop tabs (PRD:834).
 const List<SkinLayer> kShopLayers = [
   SkinLayer.bird,
   SkinLayer.gear,
   SkinLayer.hat,
   SkinLayer.hoop,
   SkinLayer.trail,
+  // region P26-F9e
+  SkinLayer.card,
+  // endregion
 ];
 // endregion
 

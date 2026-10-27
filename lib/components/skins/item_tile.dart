@@ -11,6 +11,7 @@ import '../home/menu_primitives.dart' show formatCoins, withMenuKnock;
 import '../../skins/catalog.dart';
 import '../../skins/look.dart';
 import 'item_art.dart';
+import 'shop_widgets.dart' show ShopCardArt;
 import 'shop_glyphs.dart';
 import '../../game/paints.dart';
 
@@ -60,6 +61,7 @@ class ItemTile extends PositionComponent with TapCallbacks {
     required this.tint,
     required this.reduceMotion,
     this.isActive,
+    this.cardArt,
     this.isOnScreen,
     double? enterDelay,
   }) : _age = enterDelay == null ? double.infinity : -enterDelay,
@@ -78,6 +80,9 @@ class ItemTile extends PositionComponent with TapCallbacks {
     _t = (item.key.hashCode % 500) / 100;
   }
 
+  // region P26-F9e
+  final ShopCardArt? cardArt;
+  // endregion
   final SkinItem item;
   final ItemTileState Function() state;
   final void Function() onPressed;
@@ -100,6 +105,18 @@ class ItemTile extends PositionComponent with TapCallbacks {
     letterSpacingEm: 0.06,
   );
 
+  // region P26-F9e
+  final ShopText _nameStyleLabel = ShopText(
+    'NAME STYLE',
+    fontSize: 7,
+    color: Config.menuPlum,
+  );
+  final ShopText _skillLabel = ShopText(
+    '? ? ?',
+    fontSize: 10,
+    color: Config.menuPlum,
+  );
+  // endregion
   double _t = 0;
   double _clock = 0;
   double _age;
@@ -115,7 +132,8 @@ class ItemTile extends PositionComponent with TapCallbacks {
   ItemTileState get current => _state;
 
   /// Whether the BUY pill replaces the price pill (locked + tried on).
-  bool get showsBuyPill => !_state.owned && _state.tryingOn;
+  bool get showsBuyPill =>
+      !item.isSkillOnly && !_state.owned && _state.tryingOn;
 
   /// The BUY pill (tests).
   TileBuyPill get buyPill => _buyPill;
@@ -144,7 +162,9 @@ class ItemTile extends PositionComponent with TapCallbacks {
 
   /// Whether the art is redrawn every frame (vs. the cached picture).
   bool get animatesArt =>
-      ItemArt.isAnimated(item) ||
+      (item.layer == SkinLayer.card
+          ? ShopCardArt.animated(item)
+          : ItemArt.isAnimated(item)) ||
       (item.layer == SkinLayer.bird && (_state.equipped || _state.tryingOn));
 
   bool get _visible => isOnScreen?.call() ?? true;
@@ -182,7 +202,7 @@ class ItemTile extends PositionComponent with TapCallbacks {
         ? math.min(target, _scale + step)
         : math.max(target, _scale - step);
     scale.setAll(_scale);
-    if (_visible && animatesArt) {
+    if (_visible && animatesArt && !reduceMotion()) {
       _t += dt;
       if (item.layer == SkinLayer.trail) {
         ItemArt.advanceTrail(art.emitterFor(item), _t, dt);
@@ -216,7 +236,10 @@ class ItemTile extends PositionComponent with TapCallbacks {
   void render(Canvas canvas) {
     final s = _state;
     final rect = size.toRect();
-    canvas.drawRect(rect, _paint..color = cardColor());
+    canvas.drawRect(
+      rect,
+      _paint..color = item.isSkillOnly ? const Color(0xFFFFF2CF) : cardColor(),
+    );
 
     // Art (42 % while locked, solid while being tried on). Static art is a
     // cached picture with that alpha already baked in, so a settled locked
@@ -237,7 +260,30 @@ class ItemTile extends PositionComponent with TapCallbacks {
         Config.skinShopArtHeight,
       ),
     );
-    if (animatesArt) {
+    // region P26-F9e
+    if (item.layer == SkinLayer.card && cardArt != null) {
+      if (dim) {
+        canvas.saveLayer(
+          null,
+          _alpha
+            ..color = const Color.fromRGBO(
+              0,
+              0,
+              0,
+              Config.skinShopLockedOpacity,
+            ),
+        );
+      }
+      canvas.save();
+      canvas.translate(
+        Config.skinShopArtWidth / 2,
+        Config.skinShopArtHeight / 2,
+      );
+      cardArt!.paint(canvas, item, reduceMotion() ? 0 : _t);
+      canvas.restore();
+      if (dim) canvas.restore();
+    } else if (animatesArt) {
+      // endregion
       if (dim) {
         canvas.saveLayer(
           const Rect.fromLTWH(
@@ -271,6 +317,14 @@ class ItemTile extends PositionComponent with TapCallbacks {
     }
     canvas.restore();
 
+    // region P26-F9e
+    if (item.cardKind == CardKind.name) {
+      _nameStyleLabel.paint(
+        canvas,
+        Offset((width - _nameStyleLabel.width) / 2, 59),
+      );
+    }
+    // endregion
     // Inner outlines: equipped / trying on win over the rarity outline.
     final rarity = item.isNone ? null : item.rarity;
     const ow = Config.skinShopOutline;
@@ -310,7 +364,12 @@ class ItemTile extends PositionComponent with TapCallbacks {
         tint().withValues(alpha: .75),
       );
       canvas.restore();
-      if (s.tryingOn) {
+      if (item.isSkillOnly) {
+        _skillLabel.paint(
+          canvas,
+          Offset((width - _skillLabel.width) / 2, height - 20),
+        );
+      } else if (s.tryingOn) {
         final r = buyPillRect;
         final k = buyPillScale;
         canvas.save();

@@ -1,3 +1,4 @@
+// PRD:834 adds 60 card collectibles, including 51 sold for 69 750 coins.
 import 'package:flappy_spikes/skins/catalog.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,8 +15,8 @@ void main() {
       expect(itemsFor(SkinLayer.hat).length, 30);
       expect(itemsFor(SkinLayer.hoop).length, 30);
       expect(itemsFor(SkinLayer.trail).length, 30);
-      expect(allItems.length, 150);
-      expect(kCollectibleTotal, 148);
+      expect(allItems.length, 210);
+      expect(kCollectibleTotal, 208);
       expect(allItems.where((item) => !item.isNone).length, kCollectibleTotal);
       expect(kCatalog.keys.toSet(), SkinLayer.values.toSet());
     });
@@ -105,7 +106,7 @@ void main() {
     });
 
     test('the five free items are exactly the defaults', () {
-      expect(allItems.where((item) => item.isFree).map((item) => item.key),
+      expect(allItems.where((item) => item.isFree && !item.isSkillOnly).map((item) => item.key),
           {'bird:classic', 'gear:none', 'hat:none', 'hoop:pink', 'trail:flame'});
       for (final layer in SkinLayer.values) {
         expect(defaultItemId(layer), Look.defaults.idFor(layer));
@@ -161,7 +162,7 @@ void main() {
       expect(total(itemsFor(SkinLayer.hat)), 19000 + 21000);
       expect(total(itemsFor(SkinLayer.hoop)), 25000 + 16750);
       expect(total(itemsFor(SkinLayer.trail)), 20750 + 21000);
-      expect(total(allItems.toList()), 204350);
+      expect(total(allItems.toList()), 274100);
     });
   });
 
@@ -184,6 +185,10 @@ void main() {
       expect(
         allItems.where((item) => item.animated).map((item) => item.key).toSet(),
         {
+          // PRD:834 adds the nine animated skill card entries.
+          'card:pecking', 'card:roost', 'card:prey',
+          'card:n_sky', 'card:n_thunder', 'card:n_marquee',
+          'card:s_unstop', 'card:s_flawless', 'card:s_topflock',
           'bird:robo', 'bird:ghost', 'bird:frost', 'bird:magma', 'bird:galaxy',
           'bird:golden', 'bird:rainbow', 'bird:phoenix',
           'gear:scarf', 'gear:sneakers', 'gear:windup', 'gear:carpet',

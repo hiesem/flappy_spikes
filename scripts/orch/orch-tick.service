@@ -5,3 +5,5 @@ Description=Flappy Spikes 2.6 orchestrator heartbeat (starts a headless pass whe
 Type=oneshot
 ExecStart=/home/killerhis/Projects/flappyspikes/.worktrees/p26/scripts/orch/tick.sh
 TimeoutStartSec=80min
+# workers are spawned by the pass and must outlive it (spawn.sh also moves them into their own scope)
+KillMode=process

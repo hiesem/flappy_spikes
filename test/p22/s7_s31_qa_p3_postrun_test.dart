@@ -73,7 +73,34 @@ ui.Color _pixel(Uint8List bytes, int x, int y) {
   return ui.Color.fromARGB(bytes[i + 3], bytes[i], bytes[i + 1], bytes[i + 2]);
 }
 
+Future<void> _settlePostRunPaint(FlappySpikesGame g) async {
+  // ResultsFx paints above the strips. At the old 4.8 s checkpoint the
+  // randomly placed level-up confetti is still alive (2.9 s after its
+  // burst), so a sampled strip pixel can be confetti rather than #828282.
+  // Wait for mounting, page fade-in and particle fade-out in game time;
+  // never poll the sampled colours, which would hide a palette regression.
+  for (var frame = 0; frame < 600; frame++) {
+    await flushAndMount(g);
+    final page = g.resultsScreen;
+    if (page == null) {
+      if (g.bonusScreen?.isMounted ?? false) return;
+    } else {
+      final flash = page.fx.flashStart;
+      if (page.isMounted &&
+          page.opacity == 1 &&
+          page.fx.isMounted &&
+          (flash == null || page.time - flash >= ResultsConfig.screenFlash) &&
+          page.fx.bursts.every((burst) => burst.isRemoved)) {
+        return;
+      }
+    }
+    g.update(1 / 60);
+  }
+  fail('Post-run paint did not settle within 10 seconds of game time');
+}
+
 Future<void> _grey(FlappySpikesGame g) async {
+  await _settlePostRunPaint(g);
   expect(g.stageKey, 30, reason: 'the underlying run is still cyan');
   expect(g.postRunPageUp, isTrue);
   final rays = g.resultsScreen?.stage.rays;

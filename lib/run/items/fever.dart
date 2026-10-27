@@ -158,13 +158,17 @@ class FeverFeature extends RunFeature {
       // bird already burns; never the streak's on-fire state.
       c.emit(const FeverStarted());
       s.feverLit = true;
+      // region P26-B2
       c.emit(
         HighlightStarted(
           'fever',
-          scripted: c.run.setup.showcase != null,
+          scripted:
+              hoop != null &&
+              (c.run.setup.showcase?.feverHoops.contains(hoop) ?? false),
           hoop: hoop ?? c.s.hoopIndex - 1,
         ),
       );
+      // endregion
       RunHud.ensureFor(c.run).banners.showFever(FeverBanner());
     }
     if (s.onFire) {

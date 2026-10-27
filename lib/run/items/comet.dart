@@ -21,6 +21,14 @@ class CometFeature extends RunFeature {
 
   RunContext? _c;
 
+  // region P26-B2
+  int? _lastPassedHoop;
+
+  void _onPassed(HoopPassed event) {
+    if (event.hoop != null) _lastPassedHoop = event.hoop!.plan.index;
+  }
+  // endregion
+
   /// The running boost (null in normal play), and the one whose landing
   /// tail is still playing.
   CometRide? ride;
@@ -38,6 +46,9 @@ class CometFeature extends RunFeature {
     c.events
       ..on<PickupCollected>(_onCollected)
       ..on<RideStarted>(_onRideStarted);
+    // region P26-B2
+    c.events.on<HoopPassed>(_onPassed);
+    // endregion
   }
 
   /// PRD-2.2 §17.2 a portal ride starting during the landing ends it.
@@ -53,7 +64,16 @@ class CometFeature extends RunFeature {
     // (tracked first, as before, so the analytics order is unchanged).
     if (!canStart) return;
     c.track('comet_collected', {'source': source});
-    start(source: source, starY: e.pickup?.position.y);
+    // region P26-B2
+    final plan = e.pickup?.plan;
+    final sourceHoop = plan == null
+        ? _lastPassedHoop
+        : c.run.spawner.slotLog
+              .where((slot) => slot.attached.contains(plan))
+              .lastOrNull
+              ?.index;
+    start(source: source, starY: e.pickup?.position.y, sourceHoop: sourceHoop);
+    // endregion
   }
 
   /// Whether [start] would start a boost now: not while a boost, a ride or
@@ -68,7 +88,9 @@ class CometFeature extends RunFeature {
 
   /// Starts the boost now (no-op while a ride or another timed powerup
   /// runs — the director never offers one then, §3.0.3 exclusivity).
-  bool start({String source = 'hoop', double? starY}) {
+  // region P26-B2
+  bool start({String source = 'hoop', double? starY, int? sourceHoop}) {
+    // endregion
     final c = _c;
     if (c == null || !canStart) return false;
     final current = ride;
@@ -77,13 +99,18 @@ class CometFeature extends RunFeature {
     ride = r;
     started++;
     r.start(c);
+    // region P26-B2
     c.emit(
       HighlightStarted(
         'comet',
-        scripted: c.run.setup.showcase != null,
-        hoop: c.s.hoopIndex - 1,
+        scripted:
+            source == 'hoop' &&
+            sourceHoop != null &&
+            (c.run.setup.showcase?.cometHoops.contains(sourceHoop) ?? false),
+        hoop: sourceHoop ?? c.s.hoopIndex - 1,
       ),
     );
+    // endregion
     return true;
   }
 
@@ -122,6 +149,9 @@ class CometFeature extends RunFeature {
     _c?.events
       ?..off<PickupCollected>(_onCollected)
       ..off<RideStarted>(_onRideStarted);
+    // region P26-B2
+    _c?.events.off<HoopPassed>(_onPassed);
+    // endregion
     _c = null;
   }
 }

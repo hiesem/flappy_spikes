@@ -142,13 +142,16 @@ class PortalRideFeature extends RunFeature {
       ride = r;
       started.add(r.theme.id);
       r.start(c);
+      // region P26-B2
       c.emit(
         HighlightStarted(
           'portal',
-          scripted: c.run.setup.showcase != null,
+          scripted:
+              c.run.setup.showcase?.portalHoops.contains(p.plan.index) ?? false,
           hoop: p.plan.index,
         ),
       );
+      // endregion
     }
     final r = ride;
     if (r != null) {

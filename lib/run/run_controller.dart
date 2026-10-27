@@ -951,6 +951,9 @@ class RunController extends Component {
       bestBefore: _bestBefore,
       bestAfter: s.score > _bestBefore ? s.score : _bestBefore,
       saves: s.saves,
+      // region P26-B2
+      shieldUsed: s.shieldUsed,
+      // endregion
       revives: s.revivesThisGame,
       runSeconds: s.runClock,
       cause: _cause ?? MistakeCause.missedHoop,

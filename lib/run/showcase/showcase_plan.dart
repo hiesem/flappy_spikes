@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../game/storage.dart';
 import '../../menu/powerup_slot.dart';
+import '../../services/ftue_tracker.dart';
 import '../../services/obf_strings.g.dart';
 import '../config/showcase_config.dart';
 import '../director/plans.dart' show RideId;
@@ -235,7 +236,14 @@ abstract class ShowcaseProgress {
 
   void onHighlight(String id, {required bool scripted, required int hoop});
 
-  void onRunEnd({required int gamesPlayed, required int hoopsPassed});
+  void onRunEnd({
+    required int gamesPlayed,
+    required int hoopsPassed,
+    int score = 0,
+    String cause = 'missed_hoop',
+    bool shieldUsed = false,
+    bool reviveUsed = false,
+  });
 }
 
 /// Silent analytics sink for the showcase events. The game passes its
@@ -256,6 +264,7 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
   ShowcaseShow({
     required this.storage,
     this.tracker,
+    this.ftueTracker = const InertFtueTracker(),
     this.secondsSinceInstall,
     this.maxGames,
     this.fastHoops,
@@ -271,6 +280,8 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
 
   /// The silent analytics sink (null = no analytics).
   final ShowcaseTracker? tracker;
+
+  FtueTracker ftueTracker;
 
   /// Overrides the `s_since_install` passed to analytics; the default reads
   /// [GameStorage.playtimeSeconds].
@@ -473,12 +484,6 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
       if (_stepFor(storage.showcaseSeen) == null) {
         _pendingVia = ShowcaseDoneVia.all;
       }
-      _track('highlight_seen', {
-        'id': id,
-        'scripted': scripted ? 1 : 0,
-        'run_no': storage.gamesPlayed + 1,
-        'hoop': hoop,
-      });
     }
   }
 
@@ -532,6 +537,7 @@ class ShowcaseShow extends ShowcasePlan implements ShowcaseProgress {
       _saveSeen(next);
     }
     _sendDone(reason);
+    ftueTracker.step(FtueStep.showcaseDone, gamesPlayed: gamesPlayed);
   }
 
   void _sendDone(ShowcaseDoneVia via) {
@@ -600,5 +606,12 @@ class InertShowcaseProgress extends ShowcaseProgress {
   void onHighlight(String id, {required bool scripted, required int hoop}) {}
 
   @override
-  void onRunEnd({required int gamesPlayed, required int hoopsPassed}) {}
+  void onRunEnd({
+    required int gamesPlayed,
+    required int hoopsPassed,
+    int score = 0,
+    String cause = 'missed_hoop',
+    bool shieldUsed = false,
+    bool reviveUsed = false,
+  }) {}
 }

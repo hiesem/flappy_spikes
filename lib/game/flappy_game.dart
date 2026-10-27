@@ -792,6 +792,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (show != null) {
       _showcasePlan = show;
       _showcaseProgress = show;
+      // region P26-B2
+      show.ftueTracker = ftueTracker;
+      // endregion
       show.adoptLegacyDone();
     }
     // endregion
@@ -4216,10 +4219,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     // endregion P23-14
     storage.incrementGamesPlayed();
+    // region P26-B2
     showcaseProgress.onRunEnd(
       gamesPlayed: storage.gamesPlayed,
-      hoopsPassed: _run?.state.hoopsPassed ?? summary?.hoopsPassed ?? 0,
+      hoopsPassed: summary?.hoopsPassed ?? _run?.state.hoopsPassed ?? 0,
+      score: summary?.score ?? score,
+      cause: (summary?.cause ?? MistakeCause.missedHoop).analyticsName,
+      shieldUsed: summary?.shieldUsed ?? _run?.state.shieldUsed ?? false,
+      reviveUsed: (summary?.revives ?? _run?.state.revivesThisGame ?? 0) > 0,
     );
+    // endregion
     switch (storage.gamesPlayed) {
       case 1:
         ftueTracker.step(FtueStep.run1End, gamesPlayed: storage.gamesPlayed);

@@ -2,13 +2,16 @@ import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/run/config/showcase_config.dart';
 import 'package:flappy_spikes/run/showcase/showcase_plan.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flappy_spikes/services/ftue_tracker.dart';
+import 'package:flappy_spikes/services/game_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _Events {
+class _Events extends GameServices {
   final events = <({String name, Map<String, Object> params})>[];
 
-  void track(String name, Map<String, Object> params) {
-    events.add((name: name, params: params));
+  @override
+  void track(String name, [Map<String, Object>? params]) {
+    events.add((name: name, params: params ?? {}));
   }
 
   List<({String name, Map<String, Object> params})> named(String name) => [
@@ -24,7 +27,15 @@ Future<(GameStorage, ShowcaseShow, _Events)> _show([
   final storage = GameStorage();
   await storage.load();
   final events = _Events();
-  final show = ShowcaseShow(storage: storage, tracker: events.track);
+  final show = ShowcaseShow(
+    storage: storage,
+    tracker: events.track,
+    ftueTracker: PersistedFtueTracker(
+      services: events,
+      storage: storage,
+      secondsSinceInstall: () => 123,
+    ),
+  );
   return (storage, show, events);
 }
 
@@ -114,12 +125,8 @@ void main() {
     show.onHighlight('portal', scripted: false, hoop: 20);
     expect(storage.showcaseSeen, 1);
     expect(storage.showcaseAttempt, 0);
-    expect(events.named('highlight_seen').single.params, {
-      'id': 'portal',
-      'scripted': 0,
-      'run_no': 1,
-      'hoop': 20,
-    });
+    // PRD §A: the analytics router owns highlight_seen for every run.
+    expect(events.named('highlight_seen'), isEmpty);
     await show.writesSettled;
 
     final restarted = GameStorage();
@@ -182,6 +189,23 @@ void main() {
     expect(done['runs'], 1);
     expect(done['via'], 'all');
     expect(done.containsKey('s_since_install'), isTrue);
+    // Repeated completion checks must not emit another FTUE milestone.
+    show.onRunEnd(gamesPlayed: storage.showcaseDoneAt!, hoopsPassed: 40);
+    show.atStart(
+      gamesPlayed: storage.showcaseDoneAt!,
+      seen: storage.showcaseSeen,
+      attempt: storage.showcaseAttempt,
+      forced: false,
+    );
+    final ftue = events.named('ftue_step');
+    expect(ftue.single.params, {
+      'name': FtueStep.showcaseDone,
+      's_since_install': 123,
+    });
+    expect(
+      storage.ftueSteps & (1 << FtueStep.bits[FtueStep.showcaseDone]!),
+      isNonZero,
+    );
     await show.writesSettled;
   });
 
@@ -199,6 +223,23 @@ void main() {
     expect(show.done, isTrue);
     expect(storage.showcaseDoneAt, 6);
     expect(events.named('showcase_done').single.params['via'], 'cap');
+    // Repeated completion checks must not emit another FTUE milestone.
+    show.onRunEnd(gamesPlayed: storage.showcaseDoneAt!, hoopsPassed: 40);
+    show.atStart(
+      gamesPlayed: storage.showcaseDoneAt!,
+      seen: storage.showcaseSeen,
+      attempt: storage.showcaseAttempt,
+      forced: false,
+    );
+    final ftue = events.named('ftue_step');
+    expect(ftue.single.params, {
+      'name': FtueStep.showcaseDone,
+      's_since_install': 123,
+    });
+    expect(
+      storage.ftueSteps & (1 << FtueStep.bits[FtueStep.showcaseDone]!),
+      isNonZero,
+    );
     await show.writesSettled;
   });
 
@@ -214,6 +255,23 @@ void main() {
     expect(show.done, isTrue);
     expect(storage.showcaseDoneAt, 1);
     expect(events.named('showcase_done').single.params['via'], 'fast');
+    // Repeated completion checks must not emit another FTUE milestone.
+    show.onRunEnd(gamesPlayed: storage.showcaseDoneAt!, hoopsPassed: 40);
+    show.atStart(
+      gamesPlayed: storage.showcaseDoneAt!,
+      seen: storage.showcaseSeen,
+      attempt: storage.showcaseAttempt,
+      forced: false,
+    );
+    final ftue = events.named('ftue_step');
+    expect(ftue.single.params, {
+      'name': FtueStep.showcaseDone,
+      's_since_install': 123,
+    });
+    expect(
+      storage.ftueSteps & (1 << FtueStep.bits[FtueStep.showcaseDone]!),
+      isNonZero,
+    );
     await show.writesSettled;
   });
 

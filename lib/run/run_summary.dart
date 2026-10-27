@@ -13,6 +13,9 @@ class RunSummary {
     required this.bestBefore,
     required this.bestAfter,
     this.saves = 0,
+    // region P26-B2
+    this.shieldUsed = false,
+    // endregion
     this.revives = 0,
     required this.runSeconds,
     required this.cause,
@@ -37,6 +40,9 @@ class RunSummary {
   final int bestBefore;
   final int bestAfter;
   final int saves;
+  // region P26-B2
+  final bool shieldUsed;
+  // endregion
   final int revives;
   final double runSeconds;
   final MistakeCause cause;

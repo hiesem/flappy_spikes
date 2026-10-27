@@ -79,6 +79,10 @@ class RunState {
   /// Armed (pickup, pair gift or home slot).
   bool shield = false;
 
+  // region P26-B2
+  bool shieldUsed = false;
+  // endregion
+
   /// Shield pickups spawned this run (max 1, §3.0.3).
   int shieldPickups = 0;
 

@@ -379,13 +379,18 @@ class FeverStarted extends RunEvent {
 // endregion P231-E
 
 // region PRD-2.6 WP-B — invisible showcase
-/// A scripted showcase highlight started. Wave 1 defines the event only; no
-/// gameplay component emits it yet.
+// region P26-B2
+/// A portal, comet or FEVER started, organically or from a showcase slot.
 class HighlightStarted extends RunEvent {
   const HighlightStarted(this.id, {required this.scripted, required this.hoop});
 
   final String id;
+
+  /// True only when the source is one of the frozen showcase plan slots.
   final bool scripted;
+
+  /// The source hoop index (for a comet, the hoop carrying its star).
   final int hoop;
 }
+// endregion
 // endregion

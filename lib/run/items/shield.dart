@@ -74,6 +74,9 @@ class ShieldFeature extends RunFeature implements MistakeInterceptor {
     s
       ..shield = false
       ..invulnerable = LivesConfig.invulnerable;
+    // region P26-B2
+    s.shieldUsed = true;
+    // endregion
     ctx.sfx(Sfx.puShieldHit);
     _circle?.shatter();
     ctx.track('shield_used', {'cause': m.cause.analyticsName});

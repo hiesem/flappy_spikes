@@ -51,7 +51,14 @@ final class _ShowcaseProgress extends ShowcaseProgress {
   }
 
   @override
-  void onRunEnd({required int gamesPlayed, required int hoopsPassed}) {
+  void onRunEnd({
+    required int gamesPlayed,
+    required int hoopsPassed,
+    int score = 0,
+    String cause = 'missed_hoop',
+    bool shieldUsed = false,
+    bool reviveUsed = false,
+  }) {
     runEnds.add((gamesPlayed: gamesPlayed, hoopsPassed: hoopsPassed));
   }
 }

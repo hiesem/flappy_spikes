@@ -168,7 +168,8 @@ void main() {
       expect(run.state.ride?.kind, RideKind.portal);
       expect(events.single, isA<HighlightStarted>());
       expect(events.single.id, 'portal');
-      expect(events.single.scripted, isTrue);
+      // PRD §A / B2: no matching plan slot in this fixture.
+      expect(events.single.scripted, isFalse);
       expect(events.single.hoop, portal.plan.index);
     },
   );
@@ -226,7 +227,8 @@ void main() {
       expect(feature.start(), isTrue);
       expect(feature.started, 1);
       expect(events.single.id, 'comet');
-      expect(events.single.scripted, isTrue);
+      // PRD §A / B2: no matching plan slot in this fixture.
+      expect(events.single.scripted, isFalse);
     },
   );
 
@@ -271,7 +273,8 @@ void main() {
       expect(events.whereType<FeverStarted>(), hasLength(1));
       final highlight = events.whereType<HighlightStarted>().single;
       expect(highlight.id, 'fever');
-      expect(highlight.scripted, isTrue);
+      // PRD §A / B2: no matching plan slot in this fixture.
+      expect(highlight.scripted, isFalse);
       expect(highlight.hoop, fever.plan.index);
     },
   );

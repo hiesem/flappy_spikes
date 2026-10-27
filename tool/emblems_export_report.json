@@ -1,11 +1,13 @@
 {
   "pngCount": 96,
-  "preOptimizationBytes": 2905286,
-  "rawBytes": 2194053,
-  "zipBytes": 2063432,
+  "preOptimizationBytes": 2998559,
+  "rawBytes": 2271629,
+  "zipBytes": 2142023,
   "lossless": true,
-  "pose": "static-only; all animated target subtrees removed",
-  "removedAnimatedGroups": 120,
+  "pose": "static motifs: first flicker frame, rotation 0, dash offset 0; J7 overlays removed",
+  "removedAnimatedGroups": 109,
+  "staticMotifGroups": 9,
+  "discardedAlternateFrames": 2,
   "sweepProbe": "HATCHLING central 4x4 art-unit patch equals source plate #F6EBD2 at all densities",
-  "note": "Only static bases are bundled. J7 owns every animated effect. ZIP is incremental PNG payload, not signed AAB size."
+  "note": "Only static bases and motif frames are bundled. J7 owns overlay effects. ZIP is incremental PNG payload, not signed AAB size."
 }

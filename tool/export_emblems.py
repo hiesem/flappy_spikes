@@ -1,10 +1,11 @@
-"""Export only the approved STATIC emblem bases (PRD J6, J8 round 3).
+"""Export only the approved static emblem bases and motif frames (PRD J6, J8 round 4).
 
 uv run --with pillow --with pyoxipng --with playwright==1.58.0 python tool/export_emblems.py
 
-J7 paints ALL animation in code. Remove each outermost SMIL target subtree,
-including the sweep polygon, rays, glow, twinkles, and flickering motifs; never
-freeze these into the base. The bird is omitted for the equipped look overlay.
+Remove ONLY J7 overlay effects: sweep, rays, halo glow, twinkles and embers.
+Keep motif artwork at the orchestrator-approved static frames: first PHOENIX
+flicker frames, spin groups at rotation 0, dash strokes at offset 0, visible
+THUNDERBIRD side bolts. Never bake the overlay effects into the base. The bird is omitted for the equipped look overlay.
 No shapes are redrawn. The 320-unit canvas preserves the source ornaments and
 places the plate at (160,160); J7 must draw it into [-160,-160,160,160].
 
@@ -46,16 +47,44 @@ EXTRACT = r"""() => {
   const targets=[...new Set([...svg.querySelectorAll('animate,animateTransform')].map(a=>a.parentElement))];
   const roots=targets.filter(e=>!targets.some(p=>p!==e&&p.contains(e)));
   if(!roots.length)throw new Error(`emblem ${n}: no animation targets found`);
-  // Mark the entire animated paint target before removing it. Checking only for
-  // SMIL tags would miss the original bug: a frozen target left in the image.
-  roots.forEach(e=>e.setAttribute('data-export-animated','true'));
-  roots.forEach(e=>e.remove());
-  if(svg.querySelector('[data-export-animated],animate,animateTransform'))
-    throw new Error(`emblem ${n}: animated paint subtree survived`);
-  if(roots.some(e=>svg.contains(e)))
-    throw new Error(`emblem ${n}: animated target was not removed`);
+  let hidden=0, motifs=0, alternate=0;
+  for(const target of roots) {
+   const animations=[...target.querySelectorAll('animate,animateTransform')];
+   const transform=animations.find(a=>a.tagName==='animateTransform');
+   const type=transform?.getAttribute('type');
+   const circle=target.querySelector(':scope > circle');
+   const overlay = type==='translate' || type==='scale' ||
+     (type==='rotate' && target.querySelector(':scope > g[opacity]')) ||
+     (circle?.getAttribute('fill')||'').includes('halo') ||
+     animations.some(a=>a.getAttribute('attributeName')==='cy');
+   if(overlay) {
+    target.setAttribute('data-export-overlay','true');
+    target.remove();hidden++;continue;
+   }
+   // PRD J6 motifs are art, even when the source animates them. Round 4
+   // explicitly supersedes round 3's blanket removal. Unknown targets fail.
+   if(n===29 && animations.every(a=>a.getAttribute('attributeName')==='opacity')) {
+    const first=animations[0].getAttribute('values').split(';')[0];
+    if(first==='0') {target.remove();alternate++;continue;}
+    if(first!=='1')throw new Error('Unknown PHOENIX flicker frame');
+    target.setAttribute('opacity','1');
+   } else if(type==='rotate') {
+    target.setAttribute('transform','rotate(0)');
+   } else if(animations.every(a=>a.getAttribute('attributeName')==='stroke-dashoffset')) {
+    target.setAttribute('stroke-dashoffset','0');
+   } else if(n===31 && animations.every(a=>a.getAttribute('attributeName')==='opacity')) {
+    target.setAttribute('opacity','1'); // Keep the signature side bolts visible.
+   } else {
+    throw new Error(`emblem ${n}: unclassified animated motif ${target.outerHTML}`);
+   }
+   animations.forEach(a=>a.remove());motifs++;
+  }
+  if(svg.querySelector('[data-export-overlay],animate,animateTransform'))
+    throw new Error(`emblem ${n}: live animation or J7 overlay survived`);
+  if(hidden+motifs+alternate!==roots.length)throw new Error('Unaccounted target');
   return {id:`emblem_${String(n).padStart(2,'0')}`,name:LV[i].name,
-    hiddenAnimatedGroups:roots.length,svg:svg.outerHTML};
+    hiddenAnimatedGroups:hidden,staticMotifGroups:motifs,
+    discardedAlternateFrames:alternate,svg:svg.outerHTML};
  });
 }"""
 RASTER = r"""async ({svg,size}) => {
@@ -122,7 +151,7 @@ def main() -> None:
                     sourceSha256=hashlib.sha256(SOURCE.read_bytes()).hexdigest(),
                     artSize=ART_SIZE, plateCentre=[160,160],
                     drawBounds=[-160,-160,160,160], scales=[1,2,3],
-                    birdIncluded=False, pose='static-only; all animated target subtrees removed',
+                    birdIncluded=False, pose='static motifs: first flicker frame, rotation 0, dash offset 0; J7 overlays removed',
                     emblems=[])
     errors = []
     with sync_playwright() as pw:
@@ -167,8 +196,10 @@ def main() -> None:
                   rawBytes=sum(p.stat().st_size for p in files),zipBytes=len(packed.getvalue()),
                   lossless=True,pose=manifest['pose'],
                   removedAnimatedGroups=sum(e['hiddenAnimatedGroups'] for e in emblems),
+                  staticMotifGroups=sum(e['staticMotifGroups'] for e in emblems),
+                  discardedAlternateFrames=sum(e['discardedAlternateFrames'] for e in emblems),
                   sweepProbe='HATCHLING central 4x4 art-unit patch equals source plate #F6EBD2 at all densities',
-                  note='Only static bases are bundled. J7 owns every animated effect. ZIP is incremental PNG payload, not signed AAB size.')
+                  note='Only static bases and motif frames are bundled. J7 owns overlay effects. ZIP is incremental PNG payload, not signed AAB size.')
     (APP/'tool/emblems_export_report.json').write_text(json.dumps(report,indent=2)+'\n')
     if args.contact_dir:
         contacts(emblems,args.contact_dir)

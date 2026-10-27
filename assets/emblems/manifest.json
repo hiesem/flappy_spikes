@@ -18,167 +18,231 @@
     3
   ],
   "birdIncluded": false,
-  "pose": "static-only; all animated target subtrees removed",
+  "pose": "static motifs: first flicker frame, rotation 0, dash offset 0; J7 overlays removed",
   "emblems": [
     {
       "id": "emblem_01",
       "name": "HATCHLING",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_02",
       "name": "FLUFFBALL",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_03",
       "name": "NEST HOPPER",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_04",
       "name": "FIRST FLAP",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_05",
       "name": "FLEDGLING",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_06",
       "name": "WING WOBBLER",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_07",
       "name": "HOOP ROOKIE",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_08",
       "name": "FEATHERWEIGHT",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_09",
       "name": "SWALLOW",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_10",
       "name": "HUMMINGBIRD",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_11",
       "name": "KINGFISHER",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_12",
       "name": "RIM SKIMMER",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_13",
       "name": "STARLING",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_14",
       "name": "SHRIKE",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_15",
       "name": "SWIFT",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_16",
       "name": "TAILWIND",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_17",
       "name": "HAWKEYE",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_18",
       "name": "CANNONBALL",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_19",
       "name": "STORM PETREL",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_20",
       "name": "FEVER FINCH",
-      "hiddenAnimatedGroups": 1
+      "hiddenAnimatedGroups": 1,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_21",
       "name": "SKYLARK",
-      "hiddenAnimatedGroups": 2
+      "hiddenAnimatedGroups": 2,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_22",
       "name": "PEREGRINE",
-      "hiddenAnimatedGroups": 2
+      "hiddenAnimatedGroups": 2,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_23",
       "name": "PORTAL PIGEON",
-      "hiddenAnimatedGroups": 4
+      "hiddenAnimatedGroups": 2,
+      "staticMotifGroups": 2,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_24",
       "name": "COMET CONDOR",
-      "hiddenAnimatedGroups": 2
+      "hiddenAnimatedGroups": 2,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_25",
       "name": "GOLDEN EAGLE",
-      "hiddenAnimatedGroups": 2
+      "hiddenAnimatedGroups": 2,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_26",
       "name": "NIGHT OWL",
-      "hiddenAnimatedGroups": 9
+      "hiddenAnimatedGroups": 9,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_27",
       "name": "MOONBIRD",
-      "hiddenAnimatedGroups": 9
+      "hiddenAnimatedGroups": 9,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_28",
       "name": "ALBATROSS",
-      "hiddenAnimatedGroups": 9
+      "hiddenAnimatedGroups": 9,
+      "staticMotifGroups": 0,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_29",
       "name": "PHOENIX",
-      "hiddenAnimatedGroups": 20
+      "hiddenAnimatedGroups": 16,
+      "staticMotifGroups": 2,
+      "discardedAlternateFrames": 2
     },
     {
       "id": "emblem_30",
       "name": "SPIKE LEGEND",
-      "hiddenAnimatedGroups": 10
+      "hiddenAnimatedGroups": 9,
+      "staticMotifGroups": 1,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_31",
       "name": "THUNDERBIRD",
-      "hiddenAnimatedGroups": 14
+      "hiddenAnimatedGroups": 12,
+      "staticMotifGroups": 2,
+      "discardedAlternateFrames": 0
     },
     {
       "id": "emblem_32",
       "name": "ETERNAL WING",
-      "hiddenAnimatedGroups": 17
+      "hiddenAnimatedGroups": 15,
+      "staticMotifGroups": 2,
+      "discardedAlternateFrames": 0
     }
   ]
 }

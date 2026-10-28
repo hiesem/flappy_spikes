@@ -73,6 +73,8 @@ void main() {
 
   test('D4 planned revive slot resets the periodic timer only once', () {
     final schedule = CalmSchedule(Random(7));
+    schedule.includePlannedReviveSlot(10); // No active revive is a no-op.
+    expect(schedule.dueAt(10), isFalse);
     schedule.onRevive(11);
     schedule.includePlannedReviveSlot(10);
     expect(schedule.remainingAt(10), 3);

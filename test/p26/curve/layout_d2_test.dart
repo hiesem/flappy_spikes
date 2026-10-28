@@ -90,12 +90,22 @@ final class _DrawQueue implements math.Random {
   int nextInt(int max) => 0;
 }
 
+Map<int, Map<int, int>> _tiltRows() {
+  final rows = <int, Map<int, int>>{};
+  for (final entry in tuning.obj('tilt_rows').entries) {
+    final parts = entry.key.split('_');
+    (rows[int.parse(parts[0])] ??= {})[int.parse(parts[1])] = entry.value
+        .toInt();
+  }
+  return rows;
+}
+
 void main() {
   test('D2 data rows use point-based Δy and magnitude tilts', () {
     expect(LayoutConfig.bands.map((row) => row.from), [0, 3, 20, 40, 65, 100]);
-    expect(LayoutConfig.dyRefBand, 540);
-    expect(LayoutConfig.hardHoopDyFactor, 0.85);
-    expect(LayoutConfig.tiltRows, {
+    expect(RunConfig.dyRefBand, 540);
+    expect(RunConfig.hardHoopDyFactor, 0.85);
+    expect(_tiltRows(), {
       10: {10: 6, 15: 4},
       50: {10: 30, 15: 30, 20: 20, 30: 20},
       60: {10: 20, 15: 20, 20: 15, 30: 30, 45: 15},
@@ -268,10 +278,10 @@ void main() {
         counts[tilt] = (counts[tilt] ?? 0) + 1;
       }
       var rowFrom = 10;
-      for (final from in LayoutConfig.tiltRows.keys) {
+      for (final from in _tiltRows().keys) {
         if (hoop >= from && from >= rowFrom) rowFrom = from;
       }
-      final row = LayoutConfig.tiltRows[rowFrom]!;
+      final row = _tiltRows()[rowFrom]!;
       final total = row.values.reduce((a, b) => a + b);
       expect(counts.keys.toSet(), row.keys.toSet(), reason: 'hoop $hoop');
       for (final entry in row.entries) {

@@ -268,6 +268,31 @@ void main() {
   }, gameSize: Vector2(Config.worldWidth, Config.worldHeight));
 
   withLiveSources.testGameWidget(
+    'debug LEVEL UP bypasses the spent visit budget',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+    },
+    verify: (game, _) async {
+      final moments = game.homeMoments as HomeMomentBudget;
+      moments.beginVisit(
+        HomeVisit(
+          day: DateTime(2026, 10, 24),
+          gamesPlayed: 3,
+          requests: const HomeVisitRequests(noAds: true),
+        ),
+      );
+      expect(moments.tryShow(HomeMoment.noAds, () {}), isTrue);
+      game.openLevelUpPopup();
+      expect(game.levelUpPopup, isNull);
+      game.openLevelUpPopup(debugForce: true);
+      await flushAndMount(game);
+      expect(game.levelUpPopup, isNotNull);
+      expect(moments.tryShow(HomeMoment.noAds, () {}), isFalse);
+    },
+  );
+
+  withLiveSources.testGameWidget(
     'LEVEL UP wins over No-Ads; achievement toasts stay outside the budget',
     setUp: (game, _) async {
       await game.ready();

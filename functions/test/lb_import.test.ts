@@ -1125,6 +1125,16 @@ describe('C9 S4 cleanup concurrency', () => {
 
 // region P26-S4
 describe('C9 S4 cache rebuild and legacy suppression', () => {
+  it('repairs missing rank bins on an idempotent import', async () => {
+    const uid = uniq('hist-repair');
+    await db.collection('lbPlayers').doc(uid).set(imported(uid, 250, 'play'));
+    await importLeaderboard(db, { keepUids: [uid], apply: true, nowMs: NOW, log: () => {} });
+    assert.deepEqual((await db.collection('lbBest').doc('hist').get()).data()?.bins, { '200': 1 });
+    await db.collection('lbBest').doc('hist').delete();
+    await importLeaderboard(db, { keepUids: [uid], apply: true, nowMs: NOW, log: () => {} });
+    assert.deepEqual((await db.collection('lbBest').doc('hist').get()).data()?.bins, { '200': 1 });
+  });
+
   it('rebuilds BEST transactionally while a live new best commits', async () => {
     const keep = uniq('cleanup-cache-live');
     const remove = uniq('cleanup-cache-remove');

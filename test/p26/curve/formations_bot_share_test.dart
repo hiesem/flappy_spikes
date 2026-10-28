@@ -1,3 +1,6 @@
+@Tags(['slow'])
+library;
+
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';

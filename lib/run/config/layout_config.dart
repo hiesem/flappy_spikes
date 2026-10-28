@@ -8,14 +8,13 @@ library;
 
 import '../director/plans.dart';
 import 'director_tables.dart';
-import 'tuning_values.dart';
 
 abstract final class LayoutConfig {
   // --- §3.0.2 the ramp -------------------------------------------------------
 
   /// §3.0.2 / PRD-2.6 D2 hoop layout ramp, one row per hoop-index band
   /// (ascending `from`): centre range as a fraction of the band and |Δy|
-  /// (median, p90, max) as a fraction of `dyRefBand`.
+  /// (median, p90, max) as a fraction of `RunConfig.dyRefBand`.
   static const List<LayoutBand> bands = [
     LayoutBand(from: 0, centre: (0.45, 0.55), dy: (0.03, 0.06, 0.07)),
     LayoutBand(from: 3, centre: (0.33, 0.67), dy: (0.11, 0.27, 0.35)),
@@ -24,22 +23,6 @@ abstract final class LayoutConfig {
     LayoutBand(from: 65, centre: (0.20, 0.76), dy: (0.15, 0.35, 0.46)),
     LayoutBand(from: 100, centre: (0.16, 0.78), dy: (0.15, 0.37, 0.50)),
   ];
-
-  // region P26-D-TABLES
-  /// Compatibility views for existing table consumers; tuning owns the values.
-  static Map<int, Map<int, int>> get tiltRows {
-    final rows = <int, Map<int, int>>{};
-    for (final entry in tuning.obj('tilt_rows').entries) {
-      final parts = entry.key.split('_');
-      (rows[int.parse(parts[0])] ??= {})[int.parse(parts[1])] = entry.value
-          .toInt();
-    }
-    return rows;
-  }
-
-  static double get dyRefBand => tuning.d('dy_ref_band');
-  static double get hardHoopDyFactor => tuning.d('dy_hard_factor');
-  // endregion
 
   /// PRD-2.6 D2 the moving-ring rendered-angle cap before hoop 150.
   static const double movingTiltCapBefore150Deg = 15;

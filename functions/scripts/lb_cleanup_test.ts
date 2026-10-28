@@ -15,7 +15,6 @@
  */
 import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore';
 import {
-  LB_BEST_COLLECTION,
   LB_GIFTS_COLLECTION,
   LB_GHOST_POOL_COLLECTION,
   LB_GROUPS_COLLECTION,

@@ -116,10 +116,13 @@ void main() {
           double next(LayoutSampler sampler, double height) =>
               sampler.nextCentre(
                 i,
-                DirectorContext.open(
-                  height,
+                DirectorContext(
+                  viewHeight: height,
+                  topTooth: 44,
+                  floorTooth: height - 44,
                   squeezeWindow: squeezed,
-                  squeezeInset: squeezed ? 54 : 0,
+                  squeezeTopTooth: 44 + (squeezed ? 54 : 0),
+                  squeezeFloorTooth: height - 44 - (squeezed ? 54 : 0),
                 ),
                 RunConfig.openingFor(i),
                 hardFollowUp: hard,
@@ -146,5 +149,31 @@ void main() {
       }
     }
     expect(differentEdgeSteps, greaterThan(0));
+  });
+  test('R2 director retains the same draw for plain slots at both heights', () {
+    var compared = 0;
+    for (var seed = 0; seed < 100; seed++) {
+      RunDirector director() => RunDirector(seed: seed, enabled: {}, met: {});
+      final a = director();
+      final b = director();
+      for (var i = 0; i < 10; i++) {
+        final pa = a.nextSlot(DirectorContext.open(711));
+        final pb = b.nextSlot(DirectorContext.open(730));
+        if (pa.kind == HoopKindId.normal &&
+            pb.kind == HoopKindId.normal &&
+            a.debugLastDrawnDy != null &&
+            b.debugLastDrawnDy != null) {
+          expect(
+            a.debugLastDrawnDy,
+            b.debugLastDrawnDy,
+            reason: 'seed=$seed slot=$i',
+          );
+          compared++;
+        }
+        a.nextGap(DirectorContext.open(711), pa);
+        b.nextGap(DirectorContext.open(730), pb);
+      }
+    }
+    expect(compared, greaterThan(100));
   });
 }

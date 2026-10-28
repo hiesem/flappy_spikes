@@ -16,6 +16,15 @@ import '../../helpers.dart';
 void main() {
   setUp(ShowcaseShow.resetProcessMemoryForTests);
 
+  test('production factory selects inert or live mode when injected', () {
+    final services = GameServices();
+    expect(productionShowcaseFactory(services, inertForTesting: true), isNull);
+    expect(
+      productionShowcaseFactory(services, inertForTesting: false),
+      isNotNull,
+    );
+  });
+
   final now = DateTime.utc(2026, 10, 26, 12);
   for (final scenario in ['fresh', 'legacy', 'resumed']) {
     var factoryCalls = 0;

@@ -347,7 +347,7 @@ export async function rebuildHistogramFromCommitted(db: Firestore, nowMs: number
   // concurrent BEST raise either precedes this snapshot or retries the write.
   await db.runTransaction(async (tx) => {
     const histRef = db.collection(LB_BEST_COLLECTION).doc('hist');
-    await tx.get(histRef);
+    const hist = await tx.get(histRef);
     const players = await tx.get(db.collection(LB_PLAYERS_COLLECTION));
     const bins: Record<string, number> = {};
     for (const row of players.docs) {
@@ -357,7 +357,11 @@ export async function rebuildHistogramFromCommitted(db: Firestore, nowMs: number
       const key = String(Math.floor(score / 100) * 100);
       bins[key] = (bins[key] ?? 0) + 1;
     }
-    tx.set(histRef, { bins, updatedAt: Timestamp.fromMillis(nowMs) });
+    const current = hist.data()?.bins as Record<string, number> | undefined;
+    if (!current || Object.keys(current).length !== Object.keys(bins).length ||
+        Object.entries(bins).some(([key, value]) => current[key] !== value)) {
+      tx.set(histRef, { bins, updatedAt: Timestamp.fromMillis(nowMs) });
+    }
   });
 }
 

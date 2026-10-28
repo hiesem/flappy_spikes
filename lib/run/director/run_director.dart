@@ -150,6 +150,12 @@ class RunDirector {
   final Set<ElementId> enabled;
   late final FirstMeet firstMeet;
   late final LayoutSampler _layout;
+  // region P26-POL1
+  @visibleForTesting
+  double? get debugLastDrawnDy => _layout.lastDrawnDy;
+  @visibleForTesting
+  double hazardBudgetAt(int hoop) => _hazard.budgetAt(hoop);
+  // endregion
 
   int _i;
   double _nextX;

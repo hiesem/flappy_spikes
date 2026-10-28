@@ -1,6 +1,6 @@
 import 'dart:io';
 
-// Already supplied by flutter_test; this audit adds no package dependency.
+// analyzer is a transitive dependency of flutter_test.
 // ignore: depend_on_referenced_packages
 import 'package:analyzer/dart/analysis/utilities.dart';
 // ignore: depend_on_referenced_packages
@@ -84,6 +84,7 @@ void main() {
     for (final call in [
       "track('valid_event', {$params})",
       "_track('valid_event', <String, Object>{$params})",
+      "_analytics('valid_event', {$params})",
       "sdk.logEvent(name: 'valid_event', parameters: {$params})",
       "logEvent('valid_event', {$params})",
     ]) {
@@ -234,7 +235,13 @@ class _Audit {
 
   void _checkCall(String path, MethodInvocation call) {
     final method = call.methodName.name;
-    if (!{'track', '_track', 'logEvent', 'setUserProperty'}.contains(method)) {
+    if (!{
+      'track',
+      '_track',
+      '_analytics',
+      'logEvent',
+      'setUserProperty',
+    }.contains(method)) {
       return;
     }
     final member =

@@ -74,7 +74,9 @@ class CalmSchedule {
   /// The spawner already planned the first recovery hoop before the death.
   /// Include it in this revive's stretch without growing the interval twice.
   void includePlannedReviveSlot(int hoop) {
-    final shift = hoop - _activeStart!;
+    final start = _activeStart;
+    if (start == null) return;
+    final shift = hoop - start;
     _activeStart = hoop;
     _activeEnd += shift;
     _lastCalmAt = hoop;

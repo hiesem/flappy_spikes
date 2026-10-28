@@ -212,7 +212,7 @@ void main() {
       // it. The same clock override is applied to both games.
       run.state.squeeze.nextAt = run.state.runClock + .02;
       var logged = run.spawner.slotLog.length;
-      var windowBeforeStep = run.directorContext().squeezeWindow;
+      bool? windowBeforeStep;
       final reached = await flyUntil(
         game,
         (r) {
@@ -222,7 +222,12 @@ void main() {
               warningPlanned ??= r.spawner.slotLog.length;
             }
             for (var i = logged; i < r.spawner.slotLog.length; i++) {
-              if (windowBeforeStep) squeezeSlots.add(i);
+              expect(
+                windowBeforeStep,
+                isNotNull,
+                reason: 'slot needs a preceding frame',
+              );
+              if (windowBeforeStep == true) squeezeSlots.add(i);
             }
             if (r.state.squeeze.index == 1 && recoveryStart == null) {
               recoveryStart = r.director.hoopIndex;
@@ -289,8 +294,8 @@ void main() {
     expect(recoveryDifferences, greaterThan(0));
     // PRD C1 / audit a1 §5: compare layout plans through the first squeeze and
     // its recovery. Later headline arbitration can move bonuses, and squeeze
-    // hold/gap rolls use rng.timing only when a squeeze actually runs; equality
-    // of that timing stream after the warning is deliberately not required.
+    // hold/gap timing rolls occur only when a squeeze actually runs; equality
+    // after the warning is deliberately not required.
   });
   // endregion
 

@@ -65,7 +65,7 @@ class HumanNoiseFlapScheduler {
     final extra = _random.nextDouble() < extraFlapChance;
     plannedFlapTimes.add(plannedTime);
     jitterSeconds.add(jitter);
-    final at = now == null ? jitteredTime : math.max(jitteredTime, now);
+    final at = math.max(jitteredTime, math.max(0.0, now ?? 0.0));
     final id = _nextBaseId++;
     _scheduled.add(
       _ScheduledFlap(
@@ -172,7 +172,7 @@ class HumanNoiseBot {
 
   double? _jitter;
   double? _wantSince;
-  bool _autopilotWanted = false;
+  bool _forecastRecorded = false;
   final List<double> debugRequestTimes = [];
   final List<double> debugRequestForecast = [];
 
@@ -189,11 +189,11 @@ class HumanNoiseBot {
     final now = run.state.runClock;
     final delay = autopilot.nextFlapDelay();
     final wanted = delay == 0;
-    if (wanted && !_autopilotWanted) {
+    if (delay != null && !_forecastRecorded) {
       debugRequestTimes.add(now);
-      debugRequestForecast.add(delay!);
+      debugRequestForecast.add(delay);
+      _forecastRecorded = true;
     }
-    _autopilotWanted = wanted;
     if (scheduler.flapDue(now)) {
       _afterFlap();
       return true;
@@ -219,7 +219,7 @@ class HumanNoiseBot {
     autopilot.replanAfterFlap();
     _jitter = null;
     _wantSince = null;
-    _autopilotWanted = false;
+    _forecastRecorded = false;
   }
   // endregion
 }

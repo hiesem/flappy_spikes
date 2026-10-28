@@ -3,7 +3,6 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/run_state.dart';
-import 'package:flappy_spikes/run/director/hazard_budget.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -91,7 +90,7 @@ void main() {
             DirectorContext.open(711, squeezeNextSlot: hasSpring),
           );
           if (hasSpring) {
-            expect(HazardBudget().budgetAt(i + 1), lessThan(4));
+            expect(guarded.hazardBudgetAt(i + 1), lessThan(4));
             expect(next.kind, HoopKindId.normal, reason: 'seed=$seed slot=$i');
             expect(next.extra, isNull);
             expect(next.forced, isFalse);

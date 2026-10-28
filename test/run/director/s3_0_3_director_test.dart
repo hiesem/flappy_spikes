@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flappy_spikes/run/config/director_tables.dart';
-import 'package:flappy_spikes/run/config/layout_config.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/director/layout_sampler.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
@@ -171,7 +170,7 @@ void main() {
               expect(
                 (s.centreY - prev).abs(),
                 lessThanOrEqualTo(
-                  row.dy.$3 * math.min(band, LayoutConfig.dyRefBand) + 1e-6,
+                  row.dy.$3 * math.min(band, RunConfig.dyRefBand) + 1e-6,
                 ),
               );
             }

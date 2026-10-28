@@ -42,8 +42,9 @@ final ShareFlow _shareFlow = ShareFlow();
 // region P26-B1
 /// Called by the game only after loading the install's saved showcase state.
 ShowcaseShow Function(GameStorage)? productionShowcaseFactory(
-  GameServices services,
-) => kE2E || kSoak
+  GameServices services, {
+  bool? inertForTesting,
+}) => (inertForTesting ?? (kE2E || kSoak))
     ? null
     : (storage) => ShowcaseShow(
         storage: storage,

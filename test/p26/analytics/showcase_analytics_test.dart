@@ -3,6 +3,8 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/main.dart' show productionShowcaseFactory;
 import 'package:flappy_spikes/run/mistakes.dart';
+import 'package:flappy_spikes/run/director/plans.dart';
+import 'package:flappy_spikes/run/hoops/hoop.dart';
 import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/run/showcase/showcase_plan.dart';
 import 'package:flappy_spikes/services/ftue_tracker.dart';
@@ -118,4 +120,43 @@ void main() {
       }),
     );
   }
+  FlameTester<FlappySpikesGame>(() {
+    SharedPreferences.setMockInitialValues({});
+    return FlappySpikesGame(
+      worldHeight: 711,
+      soundEnabled: false,
+      services: spy,
+      showcaseFactory: productionShowcaseFactory(spy),
+    )..runSeed = 7;
+  }, gameSize: Vector2(320, 711)).testGameWidget(
+    'planned portal pass emits highlight analytics through the real ride',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+    },
+    verify: (game, _) async {
+      final run = await startRun(game);
+      spy.events.clear();
+      Hoop? portal;
+      run.events.on<HoopSpawned>((event) {
+        if (event.plan.index == 7 && event.plan.kind == HoopKindId.portal) {
+          portal = event.hoop;
+        }
+      });
+      await flyRun(
+        game,
+        maxSeconds: 30,
+        onFrame: (_) {
+          if (portal != null) run.clock.running = false;
+        },
+      );
+      expect(portal, isNotNull);
+      run.events.emit(HoopPassed(portal));
+      run.clock.running = true;
+      stepGame(game, .1);
+      expect(events('highlight_seen'), [
+        {'id': 'portal', 'scripted': true, 'run_no': 1, 'hoop': 7},
+      ]);
+    },
+  );
 }

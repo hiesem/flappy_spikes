@@ -73,6 +73,7 @@ void main() {
             bot.baseFlapOffsets.length + bot.extraFlaps,
           );
           expect(bot.debugRequestForecast.length, bot.debugRequestTimes.length);
+          expect(bot.debugRequestForecast.any((delay) => delay > 0), isTrue);
           game.replay();
           await flushAndMount(game);
           stepGame(game, .4);

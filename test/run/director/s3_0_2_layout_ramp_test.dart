@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flappy_spikes/run/config/director_tables.dart';
 import 'package:flappy_spikes/run/config/layout_config.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/run/config/run_config.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/director/layout_sampler.dart';
@@ -60,6 +61,16 @@ final rows = [
 double quantile(List<double> xs, double q) {
   final s = [...xs]..sort();
   return s[((s.length - 1) * q).round()];
+}
+
+Map<int, Map<int, int>> _tiltRows() {
+  final rows = <int, Map<int, int>>{};
+  for (final entry in tuning.obj('tilt_rows').entries) {
+    final parts = entry.key.split('_');
+    (rows[int.parse(parts[0])] ??= {})[int.parse(parts[1])] = entry.value
+        .toInt();
+  }
+  return rows;
 }
 
 void main() {
@@ -180,7 +191,7 @@ void main() {
         for (final vh in plans.keys) {
           final band = math.min(
             vh - 2 * RunConfig.stripHeight,
-            LayoutConfig.dyRefBand,
+            RunConfig.dyRefBand,
           );
           for (final run in plans[vh]!) {
             for (var k = 1; k < run.length; k++) {
@@ -232,12 +243,12 @@ void main() {
 
     test('§D2 tilt follows the curve and magnitude rows; none before 10; 45° '
         'only from 60', () {
-      for (final entry in LayoutConfig.tiltRows.entries) {
+      for (final entry in _tiltRows().entries) {
         final rowFrom = entry.key;
         final weights = entry.value;
         final rowTo = math.min(
           150,
-          LayoutConfig.tiltRows.keys
+          _tiltRows().keys
                   .where((from) => from > rowFrom)
                   .fold(1 << 30, math.min) -
               1,

@@ -14,6 +14,16 @@ import '../../p231/tuning_23.dart';
 /// `DirectorTables.prd2` / `RunConfig` mirror
 /// `design/reference/data/spawn_tables.json` (copied to test/fixtures; ARCH
 /// §4), with the PRD overrides asserted explicitly.
+Map<int, Map<int, int>> _tiltRows() {
+  final rows = <int, Map<int, int>>{};
+  for (final entry in tuning.obj('tilt_rows').entries) {
+    final parts = entry.key.split('_');
+    (rows[int.parse(parts[0])] ??= {})[int.parse(parts[1])] = entry.value
+        .toInt();
+  }
+  return rows;
+}
+
 void main() {
   // PRD-2.3.1 §0: the in-app tables mirrored spawn_tables.json until the live
   // RC v21 set became the default (test/p231/tuning_23.dart); the live set
@@ -47,7 +57,7 @@ void main() {
     expect(RunConfig.hardHoopDyFactor, json['dy_hard_factor']);
   });
 
-  test('§D2 compatibility views use the canonical tuning values', () {
+  test('§D2 canonical tuning values reflect overrides', () {
     final weights = tuning.obj('tilt_rows')
       ..['10_10'] = 3
       ..['10_15'] = 7;
@@ -56,16 +66,16 @@ void main() {
       'dy_ref_band': '500',
       'dy_hard_factor': '0.8',
     });
-    expect(LayoutConfig.tiltRows[10], {10: 3, 15: 7});
+    expect(_tiltRows()[10], {10: 3, 15: 7});
     expect({
-      for (final row in LayoutConfig.tiltRows.entries)
+      for (final row in _tiltRows().entries)
         for (final weight in row.value.entries)
           '${row.key}_${weight.key}': weight.value,
     }, weights);
-    expect(LayoutConfig.dyRefBand, RunConfig.dyRefBand);
-    expect(LayoutConfig.dyRefBand, 500);
-    expect(LayoutConfig.hardHoopDyFactor, RunConfig.hardHoopDyFactor);
-    expect(LayoutConfig.hardHoopDyFactor, .8);
+    expect(RunConfig.dyRefBand, tuning.d('dy_ref_band'));
+    expect(RunConfig.dyRefBand, 500);
+    expect(RunConfig.hardHoopDyFactor, tuning.d('dy_hard_factor'));
+    expect(RunConfig.hardHoopDyFactor, .8);
   });
 
   test('§D2 tilt magnitudes capped at 45°', () {

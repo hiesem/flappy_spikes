@@ -126,4 +126,17 @@ void main() {
     expect(storage.starRoadSeason, 3);
     expect(season.takeSummary()!['from'], 1);
   });
+  test('rollover waits for an in-flight manual claim', () async {
+    final storage = GameStorage(clock: () => DateTime.utc(2026, 11, 23));
+    await storage.load();
+    await storage.saveStarRoadSeason(1);
+    await storage.saveStarRoadXp(16);
+    final season = coordinator(storage);
+    final manual = season.claims.claim(1);
+    final rollover = season.settle();
+    await Future.wait([manual, rollover]);
+    expect(storage.coins, 50);
+    expect(storage.starRoadSeason, 2);
+    expect(storage.starRoadXp, 0);
+  });
 }

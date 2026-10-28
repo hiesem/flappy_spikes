@@ -1,3 +1,6 @@
+// region P26-G6eB
+import 'dart:async';
+// endregion
 import 'dart:convert';
 import 'dart:math';
 
@@ -21,6 +24,12 @@ class StarRoadClaims {
   final ItemStore items;
   final Random random;
   bool _busy = false;
+  // region P26-G6eB
+  Completer<void>? _idle;
+  Future<void> waitUntilIdle() => _idle?.future ?? Future<void>.value();
+  void _beginBusy() { _busy = true; _idle = Completer<void>(); }
+  void _endBusy() { _busy = false; final idle = _idle; _idle = null; idle?.complete(); }
+  // endregion
   int _itemsSeason = 0;
   final Map<int, String> awardedItems = {};
 
@@ -78,7 +87,9 @@ class StarRoadClaims {
 
   Future<StarRoadClaim?> claim(int tier) async {
     if (_busy) return null;
-    _busy = true;
+    // region P26-G6eB
+    _beginBusy();
+    // endregion
     try {
       await _recover();
       final outcome = road.claim(tier);
@@ -152,17 +163,23 @@ class StarRoadClaims {
       await _apply(journal, prefs);
       return StarRoadClaim(tier: tier, kind: kind, coins: coins, item: item);
     } finally {
-      _busy = false;
+      // region P26-G6eB
+      _endBusy();
+      // endregion
     }
   }
 
   Future<void> recover() async {
     if (_busy) return;
-    _busy = true;
+    // region P26-G6eB
+    _beginBusy();
+    // endregion
     try {
       await _recover();
     } finally {
-      _busy = false;
+      // region P26-G6eB
+      _endBusy();
+      // endregion
     }
   }
 

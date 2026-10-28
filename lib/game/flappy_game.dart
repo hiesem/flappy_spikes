@@ -3936,6 +3936,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   Future<bool> _claimStarRoad(int tier) async {
+    // region P26-G6eB
+    if (_starRoadSeason.settling) return false;
+    // endregion
     if (_starRoadClaiming) return false;
     _starRoadClaiming = true;
     _coinPill.hold();

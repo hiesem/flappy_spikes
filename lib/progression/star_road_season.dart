@@ -64,7 +64,11 @@ class StarRoadSeason {
     final from = journal['from'] as int;
     if (storage.starRoadSeason == from) {
       for (final tier in (journal['tiers'] as List).cast<int>()) {
-        await claims.claim(tier);
+        while (!storage.starRoadClaimed.contains(tier)) {
+          await claims.waitUntilIdle();
+          final result = await claims.claim(tier);
+          if (result == null && !claims.road.claimable.contains(tier)) break;
+        }
       }
       await storage.saveStarRoadXp(0);
       await storage.saveStarRoadClaimed({});

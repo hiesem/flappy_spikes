@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:flutter/painting.dart' show AssetImage, ImageConfiguration;
-import 'package:flutter/services.dart' show AssetManifest, rootBundle;
-
 import 'package:flame/components.dart';
 
 import '../../levels/emblem_painter.dart';
+import '../../levels/emblem_image.dart';
 import '../../skins/art/look_painter.dart';
 import '../../skins/look.dart';
 
@@ -108,50 +106,12 @@ class EmblemView extends PositionComponent {
   int _imageRequest = 0;
   bool _removed = false;
   bool _started = false;
-  static final Map<int, Future<Image?>> _images = {};
-  static Future<AssetManifest>? _manifest;
-
-  /// Shared by off-screen exports and Flame views. Images live for app life.
-  static Future<Image?> loadImageForLevel(int level) =>
-      _loadImage(EmblemPainter.slotFor(level));
-
-  static Future<Image?> _loadImage(
-    int slot,
-  ) => _images.putIfAbsent(slot, () async {
-    final path = EmblemPainter.assetFor(slot);
-    if (path == null) return null;
-    try {
-      final manifest = await (_manifest ??= AssetManifest.loadFromAssetBundle(
-        rootBundle,
-      ));
-      if (!manifest.listAssets().contains(path)) return null; // J13 fallback.
-      final key = await AssetImage(path).obtainKey(
-        ImageConfiguration(
-          devicePixelRatio:
-              PlatformDispatcher.instance.views.firstOrNull?.devicePixelRatio ??
-              1,
-        ),
-      );
-      final bytes = await key.bundle.load(key.name);
-      final codec = await instantiateImageCodec(
-        bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
-      );
-      try {
-        return (await codec.getNextFrame()).image;
-      } finally {
-        codec.dispose();
-      }
-    } catch (_) {
-      return null; // Missing / corrupt art never hides the player's emblem.
-    }
-  });
-
   Future<void> _resolveImage() async {
     final request = ++_imageRequest;
     final slot = EmblemPainter.slotFor(_level);
     Image? image;
     try {
-      image = slot == 0 ? null : await (imageLoader ?? _loadImage)(slot);
+      image = slot == 0 ? null : await (imageLoader ?? loadEmblemImage)(slot);
     } catch (_) {
       image = null;
     }

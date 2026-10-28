@@ -5,7 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart' show AssetBundle, rootBundle;
 
-import '../components/levels/emblem_view.dart';
+import '../levels/emblem_image.dart';
 import '../levels/emblem_painter.dart';
 import '../levels/level_track.dart';
 import '../levels/levels.dart';
@@ -394,7 +394,11 @@ abstract final class ShareCardPainter {
     c.translate(520, 430);
     c.rotate(-.25);
     c.scale(4.2);
-    LookPainter.paint(c, Look(bird: look.bird, gear: look.gear, hat: look.hat), flap: true);
+    LookPainter.paint(
+      c,
+      Look(bird: look.bird, gear: look.gear, hat: look.hat),
+      flap: true,
+    );
     c.restore();
     _coin(c, img, 214, 420, 56);
     _coin(c, img, 330, 470, 56);
@@ -445,11 +449,7 @@ abstract final class ShareCardPainter {
 
   /// The tilted round sticker (score or FREE TO PLAY): plum shadow, white
   /// ring, [fill] disc of radius 130; [content] draws in sticker space.
-  static void _sticker(
-    Canvas c,
-    Color fill,
-    void Function(double r) content,
-  ) {
+  static void _sticker(Canvas c, Color fill, void Function(double r) content) {
     const r = 130.0;
     c.save();
     c.translate(820, 360);
@@ -616,8 +616,13 @@ abstract final class ShareCardPainter {
     );
   }
 
-  static void _coin(Canvas c, ShareCardAssets img, double x, double y, double s) =>
-      _image(c, img.coin, Rect.fromLTWH(x - s / 2, y - s / 2, s, s));
+  static void _coin(
+    Canvas c,
+    ShareCardAssets img,
+    double x,
+    double y,
+    double s,
+  ) => _image(c, img.coin, Rect.fromLTWH(x - s / 2, y - s / 2, s, s));
 
   static void _image(Canvas c, ui.Image image, Rect dst) => c.drawImageRect(
     image,
@@ -687,7 +692,7 @@ Future<Uint8List> renderShareCardPng(
   final canvas = Canvas(recorder);
   // region P26-J7
   final emblem = data.kind == ShareCardKind.spotlight && data.usesProgression
-      ? await EmblemView.loadImageForLevel(data.level)
+      ? await loadEmblemImage(data.level)
       : null;
   ShareCardPainter.paint(canvas, data, assets, emblem: emblem);
   // endregion

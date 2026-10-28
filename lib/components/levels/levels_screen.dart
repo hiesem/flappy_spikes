@@ -1,3 +1,4 @@
+import '../../levels/emblem_image.dart';
 // region P26-G6c
 import 'tabs/album_tab.dart';
 // endregion
@@ -145,9 +146,11 @@ class LevelsScreen extends MenuScreen {
       unawaited(game.storage.saveWorldsSeen(game.storage.worldsReached));
     } else if (tab == LevelsTab.guide) {
       // region P26-G6b
-      unawaited(game.storage.saveGuideSeenCount(
-        flightGuideMetCount(game.storage.metElements),
-      ));
+      unawaited(
+        game.storage.saveGuideSeenCount(
+          flightGuideMetCount(game.storage.metElements),
+        ),
+      );
       // endregion
     }
     tabs.sync(game.storage);
@@ -672,7 +675,7 @@ class LevelRow extends PositionComponent {
   }
 
   Future<void> _loadStaticEmblem() async {
-    final image = await EmblemView.loadImageForLevel(def.level);
+    final image = await loadEmblemImage(def.level);
     if (image == null || isRemoving || isRemoved) return;
     final old = picture;
     picture = recordEmblem(

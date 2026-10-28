@@ -1,3 +1,4 @@
+import 'package:flappy_spikes/levels/emblem_image.dart';
 import 'dart:convert';
 import 'dart:ui' as ui;
 
@@ -5,7 +6,6 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/components/levels/levels_screen.dart';
-import 'package:flappy_spikes/components/levels/emblem_view.dart';
 import 'package:flappy_spikes/components/skins/item_tile.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,7 +38,7 @@ void main() {
   setUpAll(() async {
     await loadFonts();
     final images = await Future.wait([
-      for (var slot = 1; slot <= 32; slot++) EmblemView.loadImageForLevel(slot),
+      for (var slot = 1; slot <= 32; slot++) loadEmblemImage(slot),
     ]);
     expect(images.last, isNotNull, reason: 'J7 ETERNAL WING slot 32');
   });

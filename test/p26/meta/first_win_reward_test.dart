@@ -196,6 +196,8 @@ void main() {
       expect(page.firstWinReward!.opacity, 0);
       page.next();
       expect(page.leaving, isTrue);
+      expect(page.firstWinReward!.shownCoins, 20);
+      expect(page.firstWinReward!.opacity, 1);
       stepGame(g, 3.0);
       await flushAndMount(g);
       expect(page.firstWinReward!.opacity, 1);

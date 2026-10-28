@@ -273,14 +273,6 @@ class LevelRevealSheet extends P1Popup {
     details.scale.setAll(0);
   }
 
-  // region P26-G6eA
-  @override
-  void onRemove() {
-    onRemoved?.call();
-    super.onRemove();
-  }
-  // endregion
-
   Future<void> choose(bool equip) async {
     if (!revealed || choosing) return;
     choosing = true;
@@ -315,6 +307,9 @@ class LevelRevealSheet extends P1Popup {
   // region P26-F10b
   @override
   void onRemove() {
+    // region P26-G6eA
+    onRemoved?.call();
+    // endregion
     if (skill) onSkillRemoved?.call(choosing);
     skillCardArt?.dispose();
     art.dispose();

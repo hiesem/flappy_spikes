@@ -1,3 +1,10 @@
+// region P26-C2W
+import 'package:flappy_spikes/components/leaderboard/gift_popup.dart';
+import 'package:flappy_spikes/leaderboard/lb_models.dart';
+import 'package:flappy_spikes/leaderboard/lb_service.dart';
+import 'package:flappy_spikes/progression/missions.dart';
+import 'package:flappy_spikes/run/run_end_bookkeeping.dart';
+// endregion
 import '../../levels/progression_fixture.dart';
 // PRD-2.6 J4: popup fixtures carry explicit persisted pending rolls.
 import 'package:flappy_spikes/achievements/achievement_catalog.dart';
@@ -11,6 +18,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers.dart';
+
+// region P26-C2W
+class _HomeGiftBoard extends NoopLeaderboardService {
+  @override
+  Future<LbGetBoardResult?> getBoard({LbBoardTab tab = LbBoardTab.today}) async =>
+      LbGetBoardResult(
+        today: LbBoardPayload(tab: LbBoardTab.today, rows: const [], gifts: [
+          LbGift(gid: 'old', tier: 'gold', boardRank: 1, createdAt: DateTime.utc(2026, 10, 1)),
+        ]),
+        best: const LbBoardPayload(tab: LbBoardTab.best, rows: []),
+      );
+  @override
+  Future<LbClaimGiftResult?> claimGift(String id, {List<String>? owned}) async =>
+      const LbClaimGiftResult(ok: true, id: 'gift-prize', tier: 'gold',
+        prize: LbGiftRoll(kind: 'coins', coins: 175));
+}
+// endregion
 
 void main() {
   test('one Home moment wins per visit in the C2 priority order', () {
@@ -301,6 +325,109 @@ void main() {
       starNow = starNow.add(const Duration(days: 1));
       await resume();
       expect(shown, 2);
+    },
+  );
+  // endregion
+
+  // region P26-C2W
+  var orderedNow = DateTime(2026, 11, 1, 9);
+  final orderedSources = FlameTester<FlappySpikesGame>(() {
+    SharedPreferences.setMockInitialValues(trackPrefs({
+      'gamesPlayed': 4, 'firstSessionDone': true,
+      'playerLevel': 1, 'claimedLevels': ['1'],
+    }));
+    return FlappySpikesGame(worldHeight: Config.worldHeight, soundEnabled: false,
+      clock: () => orderedNow, leaderboard: _HomeGiftBoard());
+  }, gameSize: Vector2(Config.worldWidth, Config.worldHeight));
+  orderedSources.testGameWidget(
+    'live sources use one ordered budget across normal Home sessions',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, tester) async {
+      var starShown = 0;
+      game.registerStarRoadPopup(() => starShown++);
+      await game.storage.saveStarRoadXp(8);
+      await game.storage.saveStreakDays(2);
+      await game.storage.saveStreakLastDay(game.storage.today);
+      await game.storage.saveStreakLostDays(5);
+      await game.storage.saveStreakLostSeenDay(-1);
+      await game.storage.saveStreakPaidDay(-1);
+      final missions = Missions(day: game.storage.today, missions: const [
+        MissionProgress(template: MissionTemplate.m01, target: 3, progress: 3, paid: true),
+        MissionProgress(template: MissionTemplate.m03, target: 15, progress: 15, paid: true),
+        MissionProgress(template: MissionTemplate.m11, target: 10, progress: 10, paid: true),
+      ]);
+      await game.storage.saveMissionDay(missions.day);
+      await game.storage.saveMissions(missions.toRecords());
+      expect(game.missionsChestOpenerRegistered, isTrue);
+      expect(RunEndBookkeeping.currentMissions(game.storage).chestPending, isTrue);
+
+      Future<void> settle() async {
+        await tester.runAsync(() async {
+          for (var i = 0; i < 20; i++) { await Future<void>.delayed(Duration.zero); }
+        });
+        await flushAndMount(game);
+        stepGame(game, Config.levelUpSettleDelay + .2);
+        await flushAndMount(game);
+      }
+      Future<void> nextVisit() async {
+        game.lifecycleStateChange(AppLifecycleState.paused);
+        orderedNow = orderedNow.add(Config.sessionGap);
+        game.lifecycleStateChange(AppLifecycleState.resumed);
+        await settle();
+      }
+      final budget = game.homeMoments as HomeMomentBudget;
+      await nextVisit();
+      expect(budget.selectedMoment, HomeMoment.streakLost);
+      expect(game.streakLostPopup, isNotNull);
+      expect(game.streakCard, isNull);
+      expect(game.missionsChestPopup, isNull);
+      expect(starShown, 0);
+      await game.giveUpLostStreak();
+      stepGame(game, 3);
+      await flushAndMount(game);
+
+      await nextVisit();
+      expect(budget.selectedMoment, HomeMoment.streakReward);
+      expect(game.streakCard?.reward, isTrue);
+      expect(game.world.children.whereType<GiftPopup>(), isEmpty);
+      expect(game.missionsChestPopup, isNull);
+      expect(starShown, 0);
+      game.streakCard!.collectButton!.onPressed();
+      await settle();
+
+      await nextVisit();
+      expect(budget.selectedMoment, HomeMoment.leaderboardCollect);
+      final gift = game.world.children.whereType<GiftPopup>().single;
+      expect(gift.gift.gid, 'old');
+      expect(game.missionsChestPopup, isNull);
+      expect(starShown, 0);
+      gift.onCollect();
+      await flushAndMount(game);
+      final opening = game.world.children.whereType<GiftOpeningPopup>().single;
+      await opening.open();
+      stepGame(game, 2);
+      await flushAndMount(game);
+      opening.finish(opening.prize!, opening.claimRect);
+      await settle();
+
+      await nextVisit();
+      expect(budget.selectedMoment, HomeMoment.missionsChest);
+      expect(game.missionsChestPopup, isNotNull);
+      expect(starShown, 0);
+      stepGame(game, 2);
+      game.missionsChestPopup!.onDismiss();
+      await settle();
+      expect(RunEndBookkeeping.currentMissions(game.storage).chestPending, isFalse);
+      expect(starShown, 0, reason: 'the chest spent this visit');
+
+      await nextVisit();
+      expect(budget.selectedMoment, HomeMoment.starRoad);
+      expect(game.missionsChestPopup, isNull);
+      expect(starShown, 1);
     },
   );
   // endregion

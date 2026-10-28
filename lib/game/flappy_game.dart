@@ -31,10 +31,10 @@ import '../components/leaderboard/board_screen.dart';
 import '../components/progression/streak_strip.dart';
 import '../components/home/menu_primitives.dart' show MenuTag;
 import '../progression/day_streak.dart';
+import '../run/effects/fetch_flight.dart';
+// endregion
 // region P26-C2W
 import '../progression/star_road.dart';
-// endregion
-import '../run/effects/fetch_flight.dart';
 // endregion
 import 'dart:io' show Platform;
 import 'dart:math';
@@ -3180,7 +3180,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void Function()? _starRoadPopupOpener;
   double _starRoadSettle = 0;
 
-  /// G6f registers its popup before the next Home arrival.
+  /// G6f must register during onLoad, before the first _beginHomeVisit,
+  /// so a claimable tier can use the launch visit.
   void registerStarRoadPopup(void Function() open) {
     _starRoadPopupOpener = open;
   }
@@ -6730,9 +6731,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // endregion
     // region P26-LB7
     if (state == GameState.start) _checkLbGift(dt);
+    // endregion
     // region P26-C2W
     if (state == GameState.start) _checkStarRoadPopup(dt);
-    // endregion
     // endregion
     _checkRatingPrompt(dt);
     _checkDeferredRating();

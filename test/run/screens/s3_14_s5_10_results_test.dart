@@ -178,7 +178,13 @@ void main() {
       gameSize: Vector2(320, 711),
     ).testGameWidget(
       'J3 background tap skips to reveal',
-      setUp: (g, _) async { await g.ready(); await preloadImages(g); },
+      setUp: (g, tester) async {
+        tester.view.physicalSize = const Size(320, 711);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await g.ready(); await preloadImages(g);
+      },
       verify: (g, tester) async {
         final page = await endWith(g, score: 180);
         stepGame(g, .4);
@@ -231,11 +237,12 @@ void main() {
       });
 
     rt('J4 reveals all pending rewards before paying',
-      () => trackGame(),
+      () => trackGame(prefs: {'lvlIndex': 10, 'lvlPoints': 700, 'bestScore': 900}),
       (g) async {
-        await g.menu.levels.recordRun(25);
-        await g.menu.levels.recordRun(50);
-        final page = await endWith(g, score: 100);
+        final page = await endWith(g, score: 180);
+        expect(page.model.levelUp, isTrue);
+        final row = g.menu.levels.pending.single;
+        await g.storage.saveLvlPending([row, {...row, 'lvl': 12}]);
         final count = g.menu.levels.pending.length;
         expect(count, greaterThan(1));
         final balance = g.menu.wallet.balance;

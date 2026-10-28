@@ -35,6 +35,18 @@ class CrashStorage extends GameStorage {
   }
 
   @override
+  Future<void> saveFeathers(int value) async {
+    await super.saveFeathers(value);
+    stop('feather');
+  }
+
+  @override
+  Future<void> savePuzzlePieces(int value) async {
+    await super.savePuzzlePieces(value);
+    stop('piece');
+  }
+
+  @override
   Future<void> saveOwnedItems(Set<String> value) async {
     await super.saveOwnedItems(value);
     stop('item');
@@ -73,19 +85,31 @@ void main() {
     },
   );
 
-  for (final point in ['claim', 'coins', 'earned', 'item']) {
+  for (final point in [
+    'claim',
+    'coins',
+    'earned',
+    'item',
+    'feather',
+    'piece',
+  ]) {
     test('kill after $point recovers once on launch', () async {
       final sealer = MemorySaveSealer();
       final seed = GameStorage(sealer: sealer);
       await seed.load();
       await seed.sealVerified;
       await seed.saveStarRoadSeason(1);
-      await seed.saveStarRoadXp(80);
+      await seed.saveStarRoadXp(120);
       final crashing = CrashStorage(sealer: sealer);
       await crashing.load();
       await crashing.sealVerified;
       crashing.crash = point;
-      final tier = point == 'item' ? 10 : 1;
+      final tier = switch (point) {
+        'item' => 10,
+        'feather' => 5,
+        'piece' => 15,
+        _ => 1,
+      };
       await expectLater(claims(crashing).claim(tier), throwsStateError);
       final restarted = GameStorage(sealer: sealer);
       await restarted.load();
@@ -99,8 +123,12 @@ void main() {
       if (tier == 1) {
         expect(restarted.coins, 25);
         expect(restarted.lifetimeCoinsEarned, 25);
-      } else {
+      } else if (tier == 10) {
         expect(restarted.ownedItems, hasLength(1));
+      } else if (tier == 5) {
+        expect(restarted.feathers, 1);
+      } else {
+        expect(restarted.puzzlePieces, 1);
       }
     });
   }

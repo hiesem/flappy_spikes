@@ -1,3 +1,4 @@
+import '../versus/diagnostics.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -50,7 +51,7 @@ abstract final class RunEndBookkeeping {
   static MissionEligibility missionEligibility(FlappySpikesGame game) => MissionEligibility(
     bestHoops: game.storage.bestHoops,
     metElements: {for (final id in game.storage.metElements) ?ElementId.fromStorageId(id)},
-    online: MissionEligibility.onlineFromSearch(
+    online: onlineFromSearch(
       ready: game.versus.ready, holdsOpponent: game.versus.holdsOpponent,
       search: game.versus.lastSearch,
     ),

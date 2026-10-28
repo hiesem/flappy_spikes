@@ -53,6 +53,14 @@ VersusSoloReason soloReasonOf(Object e) => switch (e) {
 /// Where the opponent search stands (PRD-2.2 §4 debug-panel line).
 enum VersusSearchState { idle, running, found, solo }
 
+// region P26-POL3
+/// The best currently available connectivity evidence from versus search.
+bool onlineFromSearch({required bool ready, required bool holdsOpponent,
+    required VersusSearchInfo search}) => ready &&
+    (holdsOpponent || search.state == VersusSearchState.found ||
+        search.reason == VersusSoloReason.noRival);
+// endregion
+
 /// The latest opponent search (PRD-2.2 §3 / §4).
 class VersusSearchInfo {
   const VersusSearchInfo({

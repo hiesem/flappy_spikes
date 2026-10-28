@@ -1,3 +1,4 @@
+import '../../versus/diagnostics.dart';
 import '../../menu/wallet.dart';
 // region P26-G1b
 import '../../progression/missions.dart';
@@ -20,7 +21,7 @@ class RunStats {
     missionBestAtStart = run.game.storage.bestHoops;
     missionRivalAtStart = run.game.storage.lastVersusHadRival;
     final versus = run.game.versus;
-    missionOnlineAtStart = MissionEligibility.onlineFromSearch(
+    missionOnlineAtStart = onlineFromSearch(
       ready: versus.ready, holdsOpponent: versus.holdsOpponent,
       search: versus.lastSearch,
     );

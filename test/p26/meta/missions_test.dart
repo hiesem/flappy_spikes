@@ -46,7 +46,7 @@ Missions withTemplates(List<MissionTemplate> templates, {int tier = 0}) =>
 void main() {
   test('M10 online evidence is shared and rejects offline or unavailable search', () {
     bool online(VersusSearchInfo info, {bool ready = true, bool held = false}) =>
-        MissionEligibility.onlineFromSearch(ready: ready, holdsOpponent: held, search: info);
+        onlineFromSearch(ready: ready, holdsOpponent: held, search: info);
     expect(online(const VersusSearchInfo(state: VersusSearchState.found)), isTrue);
     expect(online(const VersusSearchInfo(reason: VersusSoloReason.noRival)), isTrue);
     expect(online(const VersusSearchInfo(reason: VersusSoloReason.offline)), isFalse);

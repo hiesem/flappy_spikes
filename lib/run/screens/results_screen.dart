@@ -1112,6 +1112,8 @@ class ResultsScreen extends PositionComponent
           }
         });
         add(revealSheet!);
+      } else if (_albumDue) {
+        unawaited(_showAlbumReveal());
       }
       // endregion
       onReveal?.call();
@@ -1126,6 +1128,7 @@ class ResultsScreen extends PositionComponent
   Future<void> _showAlbumReveal() async {
     if (!_albumDue || _albumOpening) return;
     _albumOpening = true;
+    try {
     final storage = game.storage;
     if (storage.albumRewardItem.isEmpty) {
       final item = PuzzleAlbum.roll(storage.ownedItems, {
@@ -1138,14 +1141,14 @@ class ResultsScreen extends PositionComponent
     revealSheet = LevelRevealSheet(
       album: true,
       item: item,
-      extraCoins: item == null ? 2000 : 0,
+      extraCoins: item == null ? Rarity.epic.price : 0,
       payReward: () async {
         if (item != null) {
           await game.menu.items.grant(item.key);
         } else {
           var target = int.tryParse(storage.albumRewardItem.replaceFirst('coins:', ''));
           if (target == null) {
-            target = game.menu.wallet.balance + 2000;
+            target = game.menu.wallet.balance + Rarity.epic.price;
             await storage.saveAlbumRewardItem('coins:$target');
           }
           final due = math.max(0, target - game.menu.wallet.balance);
@@ -1160,6 +1163,10 @@ class ResultsScreen extends PositionComponent
       },
     );
     add(revealSheet!);
+    } catch (_) {
+      _albumOpening = false;
+      rethrow;
+    }
   }
   // endregion
 
@@ -1428,7 +1435,7 @@ class ResultsScreen extends PositionComponent
         );
     surplusLabel
       ..color = Config.uiAccent.withValues(
-        alpha: model.levelUp && _t >= ResultsConfig.barFullAt
+        alpha: model.levelUp && surplus > 0 && _t >= ResultsConfig.barFullAt
             ? (drop < .15
                   ? drop / .15
                   : drop > .7

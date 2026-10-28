@@ -147,7 +147,11 @@ class _AlbumCard extends PositionComponent {
         anchor: Anchor.topCenter,
         position: Vector2(71, 119),
       ),
-      if (now) MenuTag('NOW', fontSize: 8, position: Vector2(5, 3)),
+      if (now) ...[
+        RectangleComponent(position: Vector2(38, 134), size: Vector2(66, 3), paint: Paint()..color = const Color(0xFFD0D0D0)),
+        RectangleComponent(position: Vector2(38, 134), size: Vector2(66 * (album.held / 4).clamp(0.0, 1.0), 3), paint: Paint()..color = Config.menuPink),
+        MenuTag('NOW', fontSize: 8, position: Vector2(5, 3)),
+      ],
       if (count > 1)
         MenuText(
           '×$count',

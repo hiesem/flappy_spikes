@@ -25,15 +25,17 @@ class TrackLevelDef {
 
   int get points => level >= 32
       ? tuning.i('level_eternal_points')
-      : tuning.ints('level_points')[level - 1];
+      : _levelInt('level_points', level - 1);
   int get coins => level >= 32
       ? tuning.i('level_eternal_coins')
-      : tuning.ints('level_coins')[level - 1];
+      : _levelInt('level_coins', level - 1);
 
   ({SkinLayer? layer, Rarity rarity}) get item {
     if (level >= 32) return (layer: null, rarity: Rarity.common);
     final rows = tuning.raw('level_items') as List;
-    final parsed = _parseItem(rows[level - 1] as String);
+    final parsed = level - 1 < rows.length
+        ? _parseItem(rows[level - 1] as String)
+        : null;
     if (parsed != null) return parsed;
     final defaults = kTuningDefaults.firstWhere((d) => d.key == 'level_items');
     return _parseItem((defaults.value as List)[level - 1] as String)!;
@@ -43,19 +45,21 @@ class TrackLevelDef {
   Rarity get rarity => item.rarity;
 }
 
-const _shopLayers = {
-  SkinLayer.bird,
-  SkinLayer.hat,
-  SkinLayer.gear,
-  SkinLayer.hoop,
-  SkinLayer.trail,
-};
+int _levelInt(String key, int index) {
+  final values = tuning.ints(key);
+  if (index < values.length) return values[index];
+  return (kTuningDefaults.firstWhere((d) => d.key == key).value as List)[index]
+      as int;
+}
 
 ({SkinLayer? layer, Rarity rarity})? _parseItem(String row) {
   final parts = row.split(':');
   if (parts.length != 2) return null;
   final layer = SkinLayer.fromKey(parts[0]);
-  if (parts[0] != 'any' && !_shopLayers.contains(layer)) return null;
+  if (parts[0] != 'any' &&
+      (!kShopLayers.contains(layer) || layer == SkinLayer.card)) {
+    return null;
+  }
   for (final rarity in Rarity.values) {
     if (rarity.name == parts[1]) return (layer: layer, rarity: rarity);
   }

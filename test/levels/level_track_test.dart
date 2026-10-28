@@ -8,6 +8,18 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   tearDown(() => TuningValues.current = TuningValues.defaults());
 
+  test('short level tuning uses defaults for missing rows', () {
+    final defaults = kTrackLevels[1];
+    final expected = (defaults.points, defaults.coins, defaults.item);
+    TuningValues.current = TuningValues.resolve({
+      'level_points': '[99]',
+      'level_coins': '[88]',
+      'level_items': '["hat:common"]',
+    });
+    expect((kTrackLevels[0].points, kTrackLevels[0].coins), (99, 88));
+    expect((defaults.points, defaults.coins, defaults.item), expected);
+  });
+
   test('J1 table cumulative points, F11 coins and rarity budget', () {
     const cumulative = [
       25,

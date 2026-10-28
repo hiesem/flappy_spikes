@@ -133,6 +133,8 @@ class GiftApply {
         'piece' => storage.puzzlePieces | piece,
         _ => 0,
       },
+      if (kind == 'coins') 'startingBalance': wallet.balance,
+      if (kind == 'piece') 'pieceBit': piece,
       'applied': false,
     });
     return _recover();
@@ -154,11 +156,18 @@ class GiftApply {
     final target = data['target'] as int;
     switch (gift.kind) {
       case 'coins':
-        await wallet.add(target - wallet.balance, CoinSource.leaderboardGift);
+        final startingBalance = data['startingBalance'] as int?;
+        if (startingBalance == null) {
+          await wallet.add(target - wallet.balance, CoinSource.leaderboardGift);
+        } else if (wallet.balance == startingBalance) {
+          await wallet.add(gift.coins, CoinSource.leaderboardGift);
+        }
       case 'feather':
         if (storage.feathers < target) await storage.saveFeathers(target);
       case 'piece':
-        await storage.savePuzzlePieces(storage.puzzlePieces | target);
+        await storage.savePuzzlePieces(
+          storage.puzzlePieces | (data['pieceBit'] as int? ?? target),
+        );
       case 'item':
         await storage.saveOwnedItems({...storage.ownedItems, gift.item!});
     }

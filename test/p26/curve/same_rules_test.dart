@@ -30,6 +30,8 @@ List<(SlotPlan, GapPlan)> _plans(RunDirector director, double height) {
 }
 
 void main() {
+  final originalTuning = TuningValues.current;
+  tearDown(() => TuningValues.current = originalTuning);
   FlameTester<FlappySpikesGame>(
     () => createRunTestGame(worldHeight: 711),
     gameSize: Vector2(320, 711),

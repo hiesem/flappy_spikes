@@ -13,6 +13,13 @@ Set<String> ownedExcept(bool Function(SkinItem) keep) => {
 };
 
 void main() {
+  test('achievement unlock items are excluded from rewards', () {
+    final unlocks = allItems.where((item) => item.unlock != null).toList();
+    expect(unlocks, isNotEmpty);
+    final owned = ownedExcept((item) => item.unlock != null);
+    expect(rollLevelReward(32, owned, {}, Random(7)).item, isNull);
+  });
+
   test(
     'J4 preferred category and rarity, excluding free, owned and pending',
     () {

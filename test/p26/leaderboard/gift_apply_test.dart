@@ -284,6 +284,39 @@ void main() {
     },
   );
 
+  test('recovery does not adjust a changed wallet balance', () async {
+    await storage.saveLbGiftPending({
+      'id': 'gift_canonical',
+      'request_id': 'group',
+      'tier': 'gold',
+      'kind': 'coins',
+      'coins': 175,
+      'fallback': false,
+      'target': 215,
+      'startingBalance': 40,
+      'applied': false,
+    });
+    await storage.saveCoins(30);
+    await apply.recover();
+    expect(storage.coins, 30);
+  });
+
+  test('piece recovery grants only its bit after puzzle reset', () async {
+    await storage.saveLbGiftPending({
+      'id': 'gift_canonical',
+      'request_id': 'group',
+      'tier': 'gold',
+      'kind': 'piece',
+      'coins': 0,
+      'fallback': false,
+      'target': 7,
+      'pieceBit': 4,
+      'applied': false,
+    });
+    await apply.recover();
+    expect(storage.puzzlePieces, 4);
+  });
+
   test('concurrent claims serialize to one credit', () async {
     await Future.wait([apply.claim('group'), apply.claim('group')]);
     expect(requests, hasLength(1));

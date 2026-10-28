@@ -1674,7 +1674,8 @@ class GameStorage {
     }
   }
 
-  /// Sets the equipped item of one layer (saves immediately).
+  /// Sets the equipped item of one layer (saves immediately). For cards, an
+  /// empty id resets all slots; use clearCard for a single slot.
   Future<void> saveEquippedItem(SkinLayer layer, String id) async {
     // region P26-F9a
     // Card purchases/equips replace one slot, preserving the other two. Full

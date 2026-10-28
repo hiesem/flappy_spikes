@@ -81,28 +81,14 @@ lbLastRank
 lbGiftsClaimed
 lbGiftPending
 lbInfoSeen
-// region P26-H
 abArm_v1
-// endregion
-// region P26-F1
 firstItemBought
 economyDailyDay
-// endregion
-// region P26-J6
 lvlRewardLog
-// endregion
-// region P26-G1b
 lastVersusHadRival
 missionJournal
-// endregion
-// region P26-G6c
 albumCompletionJournal
-// endregion
-// region P26-G6eA
 starRoadJournal
 starRoadItems
-// endregion
-// region P26-G6eB
 starRoadRunDay
 starRoadRollover
-// endregion

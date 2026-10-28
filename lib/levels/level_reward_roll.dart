@@ -64,8 +64,8 @@ LevelRewardRoll rollLevelReward(
 // region P26-G6eA
 /// R9 excludes free, skill-only and card items from free progress rewards.
 List<SkinItem> eligibleProgressionItems(Set<String> owned, Set<String> pending) {
-  const shopLayers = {SkinLayer.bird, SkinLayer.hat, SkinLayer.gear, SkinLayer.hoop, SkinLayer.trail};
-  return allItems.where((item) => shopLayers.contains(item.layer) &&
+  return allItems.where((item) =>
+    kShopLayers.contains(item.layer) && item.layer != SkinLayer.card &&
     !item.isFree && !item.isSkillOnly && item.rarity != null && item.unlock == null &&
     !owned.contains(item.key) && !pending.contains(item.key)).toList();
 }

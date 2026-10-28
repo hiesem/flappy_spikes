@@ -832,7 +832,7 @@ class FirebaseVersusService implements VersusService {
           info?.target != duelTarget(storage.duelStep, storage.recentScores)) {
         _held = null;
         _heldEntry = null;
-        _pickFromPool();
+        _pickFromPool(freshOnly: true);
       }
     }
     // endregion

@@ -198,6 +198,34 @@ void main() {
   }
 
   test('F12/G meta source inventory excludes levels, purchases and spends', () {
+    // Every source must be classified when the enum grows.
+    expect(CoinSource.values.toSet(), {
+      ...metaCoinsPerDay.keys,
+      CoinSource.play,
+      CoinSource.iap,
+      CoinSource.rewarded,
+      CoinSource.noadsBonus,
+      CoinSource.levelReward,
+      CoinSource.debug,
+      CoinSource.hoop,
+      CoinSource.perfect,
+      CoinSource.winBonus,
+      CoinSource.bonus,
+      CoinSource.puzzle,
+      CoinSource.switchRing,
+      CoinSource.pair,
+      CoinSource.train,
+      CoinSource.bullseye,
+      CoinSource.luckySpin,
+      CoinSource.starTrail,
+      CoinSource.piggy,
+      CoinSource.jar,
+      CoinSource.frenzy,
+      CoinSource.gift,
+      CoinSource.weekly,
+      CoinSource.streakRestore,
+      CoinSource.album,
+    });
     expect(
       metaCoinsPerDay.keys,
       unorderedEquals([

@@ -1,6 +1,6 @@
 """Export O96's approved recommended icons without rebuilding the approval page.
 
-Run: python3 design/achievements/build_v26.py
+Run: python3 design/achievements/export_v26.py
 Requires Pillow and Node with Playwright (in tools/node_modules in this checkout
 or an ancestor workspace, or supplied with --playwright-module).
 The approval page owns all artwork and variant selection via #export=<size>.

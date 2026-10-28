@@ -42,6 +42,9 @@ abstract final class LookPainter {
     'fishbowl': 21, 'cupcake': 24, 'raincloud': 24, 'antennae': 21.5,
     'sharkfin': 18.5, 'volcano': 24, 'ufo': 22.5, 'bdaycake': 28.5,
     'planet': 23, 'sunburst': 26,
+    // region P26-POL3
+    'skycrown': 26, 'nest': 26, 'jackpot': 25,
+    // endregion
   };
 
   /// How far each gear reaches below the body bottom (`shape.bot`), art
@@ -60,6 +63,9 @@ abstract final class LookPainter {
   static const Map<String, double> gearRise = {
     'snorkel': 10.5, 'balloon': 12.5, 'butterfly': 13.5, 'drone': 15.5, //
     'crystal': 22, 'atom': 9, 'disco': 19, 'cape': 2,
+    // region P26-POL3
+    'peacock': 25, 'goggles': 8,
+    // endregion
   };
 
   /// Body parts above the head anchor (robot antenna, phoenix crest, chick

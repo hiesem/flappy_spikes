@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/progression/streak_strip.dart';
+import 'package:flappy_spikes/components/home/menu_primitives.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/home_moments.dart';
 import 'package:flappy_spikes/game/storage.dart';
@@ -218,6 +219,28 @@ void main() {
       },
     );
   }
+
+  FlameTester<FlappySpikesGame>(() => createTestGame()).testGameWidget(
+    'day seven tile reflects full feather and piece inventories',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+    },
+    verify: (game, _) async {
+      await game.storage.saveGamesPlayed(4);
+      await game.storage.saveStreakDays(7);
+      await game.storage.saveStreakLastDay(game.storage.today);
+      await game.storage.saveFeathers(3);
+      await game.storage.savePuzzlePieces(15);
+      await flushAndMount(game);
+      game.openStreakCard();
+      await flushAndMount(game);
+      final labels = game.streakCard!.descendants().whereType<MenuText>().map(
+        (t) => t.text,
+      );
+      expect(labels, contains('110'));
+    },
+  );
 
   for (final lit in [true, false]) {
     FlameTester<FlappySpikesGame>(() => createTestGame()).testGameWidget(

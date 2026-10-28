@@ -91,6 +91,9 @@ class GameStorage {
   int lvlPoints = 0;
   List<Map<String, Object?>> lvlPending = const [];
   int lvlPayout = 0;
+  // region P26-J6
+  List<Map<String, Object?>> lvlRewardLog = const [];
+  // endregion
   int bestRunHoops = 0;
   List<int> recentScores = const [];
   int duelStep = -2;
@@ -623,6 +626,9 @@ class GameStorage {
     // region P26-S0
     lvlPoints = prefs.getInt(Obf.prefLvlPoints) ?? 0;
     lvlPayout = prefs.getInt(Obf.prefLvlPayout) ?? 0;
+    // region P26-J6
+    lvlRewardLog = _p26Records(prefs.getString(Obf.prefLvlRewardLog));
+    // endregion
     bestRunHoops = prefs.getInt(Obf.prefBestRunHoops) ?? 0;
     recentScores =
         prefs
@@ -1602,6 +1608,17 @@ class GameStorage {
     equippedItems = {...equippedItems, layer: id};
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_equippedItemKey(layer), id);
+    // region P26-J6
+    final key = '${layer.key}:$id';
+    if (lvlRewardLog.any(
+      (row) => row['item'] == key && row['equipped'] != true,
+    )) {
+      await saveLvlRewardLog([
+        for (final row in lvlRewardLog)
+          if (row['item'] == key) {...row, 'equipped': true} else row,
+      ]);
+    }
+    // endregion
   }
 
   Future<void> saveSeenItems(Set<String> value) async {
@@ -1879,6 +1896,15 @@ class GameStorage {
     final stored = jsonEncode(lvlPending);
     await _sealedWrite((p) => p.setString(Obf.prefLvlPending, stored));
   }
+
+  // region P26-J6
+  Future<void> saveLvlRewardLog(List<Map<String, Object?>> value) async {
+    final stored = [for (final row in value) Map<String, Object?>.of(row)];
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setString(Obf.prefLvlRewardLog, jsonEncode(stored));
+    lvlRewardLog = stored;
+  }
+  // endregion
 
   Future<void> saveLvlPayout(int value) async {
     lvlPayout = value;
@@ -2163,6 +2189,9 @@ class GameStorage {
     lvlPoints = 0;
     lvlPending = const [];
     lvlPayout = 0;
+    // region P26-J6
+    lvlRewardLog = const [];
+    // endregion
     bestRunHoops = 0;
     recentScores = const [];
     duelStep = -2;
@@ -2215,6 +2244,9 @@ class GameStorage {
           Obf.prefLvlPoints,
           Obf.prefLvlPending,
           Obf.prefLvlPayout,
+          // region P26-J6
+          Obf.prefLvlRewardLog,
+          // endregion
           Obf.prefBestRunHoops,
           Obf.prefRecentScores,
           Obf.prefDuelStep,

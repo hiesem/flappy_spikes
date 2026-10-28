@@ -20,6 +20,7 @@ import 'package:flappy_spikes/menu/menu_state.dart';
 import 'package:flappy_spikes/menu/wallet.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/skins/catalog.dart';
+import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -58,6 +59,12 @@ class _KillStorage extends GameStorage {
       return;
     }
     await super.saveLevelStep(index: index, points: points, pending: pending);
+  }
+
+  @override
+  Future<void> saveLvlRewardLog(List<Map<String, Object?>> value) async {
+    await super.saveLvlRewardLog(value);
+    after('log');
   }
 
   @override
@@ -162,6 +169,7 @@ void main() {
     'target',
     'item',
     'coins',
+    'log',
     'cleared',
     'settled',
   ]) {
@@ -194,8 +202,12 @@ void main() {
         expect(resumed.items.look, look);
         expect(resumed.levels.pending, isEmpty);
         expect(reader.lvlPayout, 0);
+        expect(reader.lvlRewardLog, hasLength(1));
+        expect(reader.lvlRewardLog.single['item'], item.key);
+        expect(reader.lvlRewardLog.single['rarity'], item.rarity!.name);
         expect(await resumed.levels.payPending(), 0);
         expect(resumed.wallet.balance, 10 + reward);
+        expect(reader.lvlRewardLog, hasLength(1));
       },
     );
   }
@@ -217,6 +229,37 @@ void main() {
     await MenuState(reader).levels.payPending();
     expect(reader.coins, 50);
     expect(reader.lvlPayout, 0);
+  });
+
+  test('J6 coin fallback and equipped history survive reload', () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = GameStorage();
+    await storage.load();
+    await storage.saveLvlPending([
+      {
+        'lvl': 1,
+        'coins': 50,
+        'extraCoins': 500,
+        'item': null,
+        'fallback': 'coins',
+      },
+      {
+        'lvl': 2,
+        'coins': 50,
+        'extraCoins': 0,
+        'item': 'bird:sky',
+        'fallback': 'none',
+      },
+    ]);
+    final menu = MenuState(storage);
+    await menu.levels.payPending();
+    expect(storage.lvlRewardLog.first['coins'], 550);
+    expect(storage.lvlRewardLog.first['fallback'], 'coins');
+    await menu.items.equip(SkinLayer.bird, 'sky');
+    await menu.items.equip(SkinLayer.bird, 'classic');
+    final reader = GameStorage();
+    await reader.load();
+    expect(reader.lvlRewardLog.last['equipped'], isTrue);
   });
 
   test('J12 kill after durable roll recovers index without reroll', () async {

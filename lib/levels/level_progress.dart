@@ -56,6 +56,12 @@ class LevelProgress extends ChangeNotifier {
     for (final row in _storage.lvlPending)
       Map<String, Object?>.unmodifiable(row),
   ]);
+  // region P26-J6
+  List<Map<String, Object?>> get rewardLog => List.unmodifiable([
+    for (final row in _storage.lvlRewardLog)
+      Map<String, Object?>.unmodifiable(row),
+  ]);
+  // endregion
   PendingLevelUp? get pendingLevelUp => pending.isEmpty
       ? null
       : PendingLevelUp(
@@ -133,6 +139,26 @@ class LevelProgress extends ChangeNotifier {
       }
       final due = max(0, _storage.lvlPayout - _wallet.balance);
       await _wallet.add(due, CoinSource.levelReward);
+      // region P26-J6
+      // The pending roll remains durable until the log is written. A retry
+      // replaces by level, so a kill after this write cannot duplicate it.
+      final log = {
+        for (final row in _storage.lvlRewardLog) row['lvl'] as int: row,
+      };
+      for (final row in rows) {
+        final item = allItems
+            .where((item) => item.key == row['item'])
+            .firstOrNull;
+        log[row['lvl'] as int] = {
+          'lvl': row['lvl'],
+          'coins': (row['coins'] as int) + (row['extraCoins'] as int),
+          'item': row['item'],
+          'rarity': item?.rarity?.name,
+          'fallback': row['fallback'],
+        };
+      }
+      await _storage.saveLvlRewardLog(log.values.toList());
+      // endregion
       // Emit before clearing pending so recovery cannot silently lose the event.
       // A crash before the clear can replay analytics; credit remains idempotent.
       for (final row in rows) {
@@ -159,6 +185,9 @@ class LevelProgress extends ChangeNotifier {
   Future<int> claim() => payPending();
   Future<void> reset() async {
     await _storage.saveLvlPending(const []);
+    // region P26-J6
+    await _storage.saveLvlRewardLog(const []);
+    // endregion
     await _storage.saveLvlPayout(0);
     await _storage.saveLvlIndex(0);
     await _storage.saveLvlPoints(0);

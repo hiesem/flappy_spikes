@@ -690,7 +690,9 @@ class Config {
   static const double levelsListTop = 242;
   static const double levelsListPadTop = 4;
   static const double levelsListPadBottom = 26;
-  static const double levelsRowHeight = 72;
+  // region P26-J6
+  static const double levelsRowHeight = 78;
+  // endregion
   static const double levelsRowGap = 6;
   static const double levelsRowMix = 0.09; // row: fg 9 % over bg
   static const double levelsRowEmblemWidth = 84;

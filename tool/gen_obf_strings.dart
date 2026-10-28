@@ -203,6 +203,9 @@ const Map<String, String> kObfStrings = {
   'prefFirstItemBought': 'firstItemBought',
   'prefEconomyDailyDay': 'economyDailyDay',
   // endregion
+  // region P26-J6
+  'prefLvlRewardLog': 'lvlRewardLog',
+  // endregion
 };
 
 /// The output path, relative to the package root.

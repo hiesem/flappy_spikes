@@ -67,6 +67,7 @@ void main() {
         // F1 adds persisted markers for the PRD-2.6 F7 economy events.
         'firstItemBought',
         'economyDailyDay',
+        'lvlRewardLog',
       ];
       expect(kObfStrings.values.skip(109), keys);
       final anchors = File('tool/anchor_strings.txt').readAsLinesSync();

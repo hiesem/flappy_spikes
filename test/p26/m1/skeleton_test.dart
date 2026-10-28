@@ -114,8 +114,13 @@ void main() {
       await storage.saveClaimedLevels({1, 2});
       await storage.saveUnclaimedLevelReward(42);
       await storage.saveLevelRewardPayout(99);
+      await storage.saveLvlRewardLog([
+        {"lvl": 1, "coins": 50},
+      ]);
       await storage.resetVersusData();
       final prefs = await SharedPreferences.getInstance();
+      expect(prefs.containsKey(Obf.prefLvlRewardLog), isFalse);
+      expect(storage.lvlRewardLog, isEmpty);
       expect(prefs.containsKey(Obf.prefLvlIndex), isFalse, reason: 'lvlIndex');
       expect(
         prefs.containsKey(Obf.prefLvlPoints),

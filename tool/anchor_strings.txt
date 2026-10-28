@@ -88,3 +88,6 @@ abArm_v1
 firstItemBought
 economyDailyDay
 // endregion
+// region P26-J6
+lvlRewardLog
+// endregion

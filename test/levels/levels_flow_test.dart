@@ -180,7 +180,8 @@ void main() async {
         LevelsTabsLayout.header.topLeft.toVector2(),
       );
 
-      expect(screen.rows, hasLength(31));
+      // PRD-2.6 J7: 31 named rows and one Eternal Wing row.
+      expect(screen.rows, hasLength(32));
       expect(screen.rows.first.def.name, 'HATCHLING');
       for (final row in screen.rows) {
         final l = row.def.level;
@@ -250,6 +251,8 @@ void main() async {
       expect(screen.header.barText.text, '800 TO KINGFISHER');
       expect(screen.header.progress, 0);
       // PRD-2.6 G4 tabs shift the actual row into the new list band.
+      // PRD-2.6 J7: allow the scroll-to-current animation to settle.
+      stepGame(game, 1);
       expect(screen.scroll.offset,
         (screen.rows[9].position.y + Config.levelsRowHeight / 2 -
           screen.scroll.viewport.height / 2 - screen.scroll.viewport.top).clamp(0, screen.scroll.maxOffset));

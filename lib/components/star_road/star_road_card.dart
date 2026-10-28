@@ -52,8 +52,8 @@ class StarRoadCard extends MenuButton {
     compact: compact,
     isActive: isActive,
     onPressed: () {
-      leavePanel();
       game.openStarRoad(daysLeft: daysLeft, onBack: returnToPanel);
+      leavePanel();
     },
   );
   // endregion

@@ -270,7 +270,9 @@ void main() {
             expect(page.model.levelUp, isTrue);
             expect(page.model.hasClaim, isTrue);
             await stepSeconds(g, 4.8);
-            expect(page.claimShowing, isTrue);
+            // PRD-2.6 J7a/J4: no CLAIM; the reveal choice pays later.
+            expect(page.claimShowing, isFalse);
+            expect(page.revealReady, isTrue);
             _fits(g, page);
             await _grey(g);
 
@@ -318,7 +320,8 @@ void main() {
             await _capture(g, 'p22/qa3/${result}_claim_${visible.round()}');
             page.claimButton.onPressed();
             await stepSeconds(g, 1.5);
-            expect(page.claimed, isTrue);
+            expect(page.claimed, isFalse);
+            expect(g.storage.lvlPending, isNotEmpty);
             await _grey(g);
             _fits(g, page);
             page.next();

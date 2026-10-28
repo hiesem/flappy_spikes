@@ -1,8 +1,4 @@
 import 'dart:ui';
-// region P26-J3
-import '../../game/config.dart';
-
-// endregion
 
 /// Tuning and layout of the results page (PRD-2 §3.14 / §5.10, mock
 /// `design/menu_v2/screen_results_levels.html`). WP-2e. Every member's doc
@@ -41,10 +37,7 @@ abstract final class ResultsConfig {
 
   /// §5.10 (call) Uniform page scale at [h]: 1 from 711 up, ≈ 0.8 at 568.
   static double scaleFor(double h) =>
-      ((bottomFor(h) - topFor(h)) / (contentBottom - contentTop)).clamp(
-        0.0,
-        1.0,
-      );
+      ((bottomFor(h) - topFor(h)) / (contentBottom - contentTop)).clamp(0.0, 1.0);
 
   // ------------------------------------------------------------ layout
   /// §5.10 Header "YOU WIN!" / "YOU LOSE" / "DRAW" (versus only, WP-5b).
@@ -160,9 +153,7 @@ abstract final class ResultsConfig {
 
   // ------------------------------------------------------------ colours
   /// §5.10 Fixed colours of the page.
-  // region P26-J3
-  static const Color pink = Config.uiAccent;
-  // endregion
+  static const Color pink = Color(0xFFEC008C);
   static const Color soft = Color(0xFFFCD9EE);
   static const Color plum = Color(0xFF7A0044);
   static const Color gold = Color(0xFFFFB529);

@@ -426,6 +426,8 @@ class ResultsScreen extends PositionComponent
   bool get settled {
     // region P26-J3
     if (_t < ResultsConfig.noLevelSettleAt) return false;
+    // J7a/J4: a pending reveal must finish before the rating timer starts.
+    if (model.hasClaim && game.menu.levels.pending.isNotEmpty) return false;
     // endregion
     if (!canContinue || _leaving || _claimShowing || _schedule.isNotEmpty) {
       return false;
@@ -842,11 +844,7 @@ class ResultsScreen extends PositionComponent
     _at(ResultsConfig.levelCoinsAt, _presentLevelCoins);
     _at(ResultsConfig.revealAt, () {
       _revealReady = true;
-      // J4 replaces the temporary J2 CLAIM entry with its EQUIP/LATER sheet.
-      if (model.hasClaim && !_claimed) {
-        claimButton.show(_t);
-        _claimShowing = true;
-      }
+      // J4 will show EQUIP/LATER and pay the pending reward at this boundary.
       onReveal?.call();
     });
   }
@@ -971,6 +969,14 @@ class ResultsScreen extends PositionComponent
     // region P26-J3
     if (model.levelUp && !_revealReady) {
       skipToReveal();
+      return;
+    }
+    // endregion
+    // region P26-J3
+    if (model.levelUp) {
+      _leaving = true;
+      _stopTicks();
+      _leaveAfterFirstWin();
       return;
     }
     // endregion
@@ -1248,7 +1254,12 @@ class ResultsScreen extends PositionComponent
 
 /// A flat filled box with children.
 class _Box extends PositionComponent {
-  _Box({required this.color, super.position, super.size, super.children});
+  _Box({
+    required this.color,
+    super.position,
+    super.size,
+    super.children,
+  });
 
   final Color color;
   final Paint _paint = Paint();
@@ -1512,7 +1523,10 @@ class ResultsLevelStage extends PositionComponent {
     var off = Vector2.zero();
     final sh = shakeStart;
     if (sh != null && t - sh < ResultsConfig.shake && !still) {
-      off = Vector2((_rnd.nextDouble() - .5) * 6, (_rnd.nextDouble() - .5) * 4);
+      off = Vector2(
+        (_rnd.nextDouble() - .5) * 6,
+        (_rnd.nextDouble() - .5) * 4,
+      );
     }
     _holder.position = _plate.toVector2() + off;
   }
@@ -1998,10 +2012,7 @@ class ResultsWinnerTag extends PositionComponent {
       color: ResultsConfig.plum,
       letterSpacingEm: .1,
       lineHeight: 1.2,
-      position: Vector2(
-        ResultsConfig.winnerTagPadX,
-        ResultsConfig.winnerTagPadY,
-      ),
+      position: Vector2(ResultsConfig.winnerTagPadX, ResultsConfig.winnerTagPadY),
     );
     add(label);
     size = Vector2(

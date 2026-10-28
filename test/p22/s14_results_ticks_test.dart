@@ -137,21 +137,30 @@ void main() {
   );
 
   rt(
-    '§14.3 the CLAIM count plays min(24, 8 + claimed) ticks under lv_claim',
+    'PRD-2.6 J7a automatic level coins tick before reveal, with no CLAIM payout',
     {'bestScore': 760, 'playerLevel': 6, 'claimedLevels': claimed1to6},
     (g) async {
       final sfx = sfxLog(g);
       final page = await endWith(g, points: 815, coins: 65);
       expect(page.model.levelReward, 100);
-      stepGame(g, 3.9);
-      await flushAndMount(g);
-      expect(page.claimShowing, isTrue);
-      expect(ticks(sfx), 24, reason: 'the first count');
+      final before = g.menu.wallet.balance;
+      // PRD-2.6 J7a: coins fly from 2.6 s and count before the reveal;
+      // J4 pays only on EQUIP/LATER.
+      stepGame(g, 2.55 - page.time);
+      expect(ticks(sfx), 24);
+      expect(sfx, isNot(contains('lvClaim')));
       sfx.clear();
+      stepGame(g, 3.9 - page.time);
+      await flushAndMount(g);
+      expect(sfx, contains('lvClaim'));
+      expect(ticks(sfx), ResultsScreen.ticksFor(100));
+      expect(page.shownReward, 165);
+      expect(page.revealReady, isTrue);
+      expect(page.claimShowing, isFalse);
       page.claimButton.button.onPressed();
       await flushAndMount(g);
-      stepGame(g, 2);
-      expect(sfx, contains('lvClaim'));
+      expect(g.menu.wallet.balance, before);
+      expect(g.storage.lvlPending, isNotEmpty);
       expect(ticks(sfx), ResultsScreen.ticksFor(100));
     },
   );

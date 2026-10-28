@@ -49,22 +49,24 @@ void main() {
         expect(g.storage.bestScore, 60);
         expect(page.model.levelReward, greaterThan(0));
         expect(g.menu.levels.pendingLevelUp!.reward, page.model.levelReward);
-        // The level-up celebration, then CLAIM.
-        for (var i = 0; i < 300 && !page.claimShowing; i++) {
+        // PRD-2.6 J7a/J4: the celebration opens a reveal with payout pending.
+        for (var i = 0; i < 300 && !page.revealReady; i++) {
           g.update(1 / 60);
         }
         await flushAndMount(g);
-        expect(page.claimShowing, isTrue);
+        expect(page.revealReady, isTrue);
+        expect(page.claimShowing, isFalse);
         final before = g.menu.wallet.balance;
         page.nextButton.onPressed();
         await flushAndMount(g);
-        expect(g.menu.wallet.balance, before + page.model.levelReward,
-            reason: 'NEXT while CLAIM shows claims first');
+        expect(g.menu.wallet.balance, before,
+            reason: 'reward remains pending until EQUIP/LATER');
+        expect(g.storage.lvlPending, isNotEmpty);
         stepGame(g, 2);
         await flushAndMount(g);
         expect(g.state, GameState.start);
         expect(g.resultsScreen, isNull);
-        expect(g.levelUpPopup, isNull);
+        expect(g.menu.levels.pendingLevelUp, isNotNull);
         expect(g.storage.unclaimedLevelReward, 0);
       },
     );

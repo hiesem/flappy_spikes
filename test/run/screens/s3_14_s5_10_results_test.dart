@@ -20,8 +20,9 @@ import '../../helpers.dart';
 FlappySpikesGame trackGame({
   Map<String, Object> prefs = const {},
   AnalyticsSpy? services,
+  double? worldHeight,
 }) =>
-    createRunTestGame(prefs: trackPrefs(prefs), services: services)
+    createRunTestGame(prefs: trackPrefs(prefs), services: services, worldHeight: worldHeight)
       ..runDebug.ignoreGates = false;
 
 /// One results test on a 320 × [h] game (FlameTester widget binding).
@@ -199,6 +200,34 @@ void main() {
       },
     );
 
+    rt('PRD-2.6 J7a preserves pre-run points on level-up',
+      () => trackGame(prefs: {'lvlIndex': 10, 'lvlPoints': 700, 'bestScore': 900}),
+      (g) async {
+        final page = await endWith(g, score: 180);
+        expect(page.model.pointsBefore, 700);
+        expect(page.bar.fraction, closeTo(700 / 800, 1e-6));
+        stepGame(g, 2.0);
+        expect(page.bar.fraction, closeTo(1, 1e-6));
+        expect(page.barCounter.text, '800 / 800');
+        expect(page.surplusLabel.text, '+80 OVER · DROPPED');
+        expect(page.surplusLabel.color.a, greaterThan(0));
+      });
+
+    rt('PRD-2.6 J3 ineligible runs do not advance the level bar',
+      () => trackGame(prefs: {'lvlIndex': 10, 'lvlPoints': 420, 'bestScore': 900}),
+      (g) async {
+        g.runDebug.ignoreGates = true;
+        final page = await endWith(g, score: 180);
+        expect(page.model.countsForLevel, isFalse);
+        expect(page.model.pointsBefore, 420);
+        stepGame(g, 2.2);
+        expect(page.bar.fraction, closeTo(420 / 800, 1e-6));
+        expect(page.barCounter.text, '420 / 800');
+        expect(page.barLabel.text, '380 TO KINGFISHER');
+        expect(page.scoreGain.text, '+0');
+        expect(g.menu.levels.points, 420);
+      });
+
     rt(
       'PRD-2.6 J7a surplus drop, automatic coins, reset and reveal boundary',
       () => trackGame(prefs: {'lvlIndex': 10, 'bestScore': 900}),
@@ -227,6 +256,7 @@ void main() {
         stepGame(g, .64);
         expect(page.shownReward, 222);
         expect(page.revealReady, isTrue);
+        expect(page.settled, isFalse, reason: 'rating waits for the J4 reveal');
         expect(g.menu.wallet.balance, before, reason: 'J4 pays on EQUIP/LATER');
         expect(g.storage.lvlPending, isNotEmpty);
       },
@@ -347,8 +377,7 @@ void main() {
     );
 
     rt(
-      '§3.14 level up (one level): celebration, CLAIM credits wallet.add '
-      '(level_reward) at the claim, the reward counts up',
+      'PRD-2.6 J7a level up: celebration and pending reward until reveal choice',
       () => trackGame(
         prefs: {
           'bestScore': 760,
@@ -389,17 +418,19 @@ void main() {
         expect(page.claimShowing, isFalse);
         stepGame(g, .35);
         expect(page.fx.fireworks.bursts, 3, reason: 'three fireworks');
-        expect(page.claimShowing, isTrue, reason: 'CLAIM 0.9 s after LEVEL UP');
+        // PRD-2.6 J7a/J4: the reveal choice, not CLAIM, pays the reward.
+        expect(page.claimShowing, isFalse);
+        expect(page.revealReady, isTrue);
         final before = g.menu.wallet.balance;
         stepGame(g, .4);
         page.claimButton.button.onPressed();
         await flushAndMount(g);
         expect(
           g.menu.wallet.balance,
-          before + 100,
-          reason: 'credited at the claim',
+          before,
+          reason: 'pending until EQUIP/LATER (PRD-2.6 J7a)',
         );
-        expect(g.storage.lvlPending, isEmpty);
+        expect(g.storage.lvlPending, isNotEmpty);
         expect(g.storage.unclaimedLevelReward, 0);
         expect(spy.events.where((e) => e.$1 == 'level_up').single.$2, {
           'level': 7,
@@ -407,10 +438,7 @@ void main() {
           'run_score': 815,
           's_since_install': greaterThanOrEqualTo(0),
         });
-        expect(spy.events.where((e) => e.$1 == 'coins_earned').last.$2, {
-          'amount': 100,
-          'source': 'level_reward',
-        });
+        expect(spy.events.where((e) => e.$1 == 'level_reward_claimed'), isEmpty);
         expect(sfx, contains('lvClaim'));
         stepGame(g, 1.5);
         await flushAndMount(g);
@@ -422,7 +450,9 @@ void main() {
         // WP-L the step used the run: SPIKE ACE needs 1 000 in one run.
         expect(page.barLabel.text, '500 TO FEATHERWEIGHT');
         expect(page.bar.fraction, closeTo(0, 1e-6));
-        // A second claim pays nothing.
+        // The J2 payout seam remains idempotent when J4 invokes it.
+        expect(await claimLevelRewards(g, 'tap'), 100);
+        expect(page.settled, isTrue, reason: 'rating may start after reveal payout');
         expect(await claimLevelRewards(g, 'tap'), 0);
         expect(g.menu.wallet.balance, before + 100);
       },
@@ -449,12 +479,13 @@ void main() {
         expect(page.fx.bursts, hasLength(1), reason: 'one celebration');
         expect(page.fx.bursts.single.count, 60);
         stepGame(g, 1.4);
-        expect(page.claimShowing, isTrue);
+        // PRD-2.6 J7a/J4: keep the reward pending for the reveal choice.
+        expect(page.claimShowing, isFalse);
         final before = g.menu.wallet.balance;
         page.claimButton.button.onPressed();
         await flushAndMount(g);
-        expect(g.menu.wallet.balance, before + 100);
-        expect(g.storage.lvlPending, isEmpty);
+        expect(g.menu.wallet.balance, before);
+        expect(g.storage.lvlPending, isNotEmpty);
       },
     );
 
@@ -482,7 +513,7 @@ void main() {
     );
 
     rt(
-      '§3.14 NEXT while CLAIM shows claims first (same animation), then home',
+      'PRD-2.6 J7a NEXT after reveal preserves the pending reward',
       () => trackGame(
         prefs: {
           'bestScore': 760,
@@ -496,31 +527,22 @@ void main() {
         final sfx = sfxLog(g);
         final page = await endWith(g, score: 815, coins: 65);
         stepGame(g, 4);
-        expect(page.claimShowing, isTrue);
+        expect(page.revealReady, isTrue);
+        expect(page.claimShowing, isFalse);
         final before = g.menu.wallet.balance;
         page.nextButton.onPressed();
         await flushAndMount(g);
-        expect(g.menu.wallet.balance, before + 100);
-        expect(
-          spy.events
-              .where((e) => e.$1 == 'level_reward_claimed')
-              .single
-              .$2!['coins'],
-          100,
-        );
-        // PRD-2.6 J7a: coins already flew automatically at 2.6 s.
+        expect(g.menu.wallet.balance, before);
+        expect(spy.events.where((e) => e.$1 == 'level_reward_claimed'), isEmpty);
         expect(sfx, contains('lvClaim'));
         expect(page.shownReward, 165);
-        stepGame(g, .3);
-        await flushAndMount(g);
         expect(g.state, GameState.start);
-        expect(g.levelUpPopup, isNull, reason: 'no home LEVEL UP popup');
-        expect(g.menu.levels.pendingLevelUp, isNull);
+        expect(g.menu.levels.pendingLevelUp!.reward, 100);
       },
     );
 
     rt(
-      '§3.14 NEXT before CLAIM came up still pays the reward (never lost)',
+      'PRD-2.6 J7a NEXT skips the prelude and preserves the reward',
       () => trackGame(
         prefs: {
           'bestScore': 760,
@@ -547,13 +569,14 @@ void main() {
         expect(g.state, GameState.results);
         expect(g.menu.wallet.balance, before);
         expect(g.storage.lvlPending, isNotEmpty);
-        // Temporary J2 entry; J4 supplies EQUIP/LATER at this boundary.
+        // J4 supplies EQUIP/LATER at this boundary.
         page.next();
         await flushAndMount(g);
         stepGame(g, .5);
         await flushAndMount(g);
         expect(g.state, GameState.start);
-        expect(g.menu.wallet.balance, before + 100);
+        expect(g.menu.wallet.balance, before);
+        expect(g.storage.lvlPending, isNotEmpty);
         expect(g.storage.unclaimedLevelReward, 0);
       },
     );
@@ -575,18 +598,19 @@ void main() {
     );
   });
 
-  for (final level in [0, 10, 34]) {
+  for (final (level, up) in [(0, false), (10, false), (34, false), (10, true)]) {
     FlameTester<FlappySpikesGame>(
       () => trackGame(
         prefs: {
           'lvlIndex': level,
-          'lvlPoints': level == 0 ? 0 : 100,
+          'lvlPoints': up ? 700 : level == 0 ? 0 : 100,
           'bestScore': 900,
         },
+        worldHeight: 711,
       ),
       gameSize: Vector2(320, 711),
     ).testGameWidget(
-      'PRD-2.6 J7a results golden L$level',
+      'PRD-2.6 J7a results golden L$level${up ? ' level-up' : ''}',
       setUp: (g, _) async {
         await g.ready();
         await preloadImages(g);
@@ -601,11 +625,11 @@ void main() {
       },
       verify: (g, tester) async {
         await startRun(g);
-        g.run!.ctx.addScore(7);
+        g.run!.ctx.addScore(up ? 180 : 7);
         g.run!.ctx.earn(12, CoinSource.hoop);
         killRun(g);
         await flushAndMount(g);
-        stepGame(g, 2.2);
+        stepGame(g, up ? 2.1 : 2.2);
         await flushAndMount(g);
         final image = await tester.runAsync(() async {
           final recorder = ui.PictureRecorder();
@@ -614,7 +638,7 @@ void main() {
         });
         await expectLater(
           image!,
-          matchesGoldenFile('goldens/j3_results_l$level.png'),
+          matchesGoldenFile('goldens/j3_results_l$level${up ? '_up' : ''}.png'),
         );
         image.dispose();
       },

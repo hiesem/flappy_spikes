@@ -193,12 +193,17 @@ void main() async {
         expect(game.state, GameState.results);
         expect(game.levelUpPopup, isNull);
         final earned = game.menu.wallet.balance;
-        // PRD-2 §3.14: NEXT on the results page claims the owed level
-        // reward first (never lost), then home — no home LEVEL UP popup.
+        // PRD-2.6 J7a/J4: NEXT skips to the reveal without paying.
+        // Exercise the J2 payout seam as the forthcoming EQUIP/LATER choice.
         final panel = game.world.children.query<ResultsScreen>().single;
         await run(game, .4);
         await _tap(game, tester, panel.nextButton);
+        expect(panel.revealReady, isTrue);
+        expect(game.menu.wallet.balance, earned);
+        expect(game.storage.lvlPending, isNotEmpty);
+        expect(await claimLevelRewards(game, 'tap'), 50);
         expect(game.menu.wallet.balance, earned + 50);
+        await _tap(game, tester, panel.nextButton);
         await run(game, 2.5);
         expect(game.state, GameState.start);
         expect(game.stageBackground, paletteForStage(0).background);

@@ -35,9 +35,9 @@ abstract final class RunEndBookkeeping {
     rerollDay: storage.missionRerollDay, records: storage.missions,
   );
 
-  static Future<void> prepareMissions(FlappySpikesGame game) async {
+  static Future<void> prepareMissions(FlappySpikesGame game) {
     final storage = game.storage;
-    if (storage.gamesPlayed < 3) return;
+    if (storage.gamesPlayed < 3) return Future.value();
     final previous = currentMissions(storage);
     final rolled = previous.roll(
       today: storage.today, gamesPlayed: storage.gamesPlayed,
@@ -51,29 +51,30 @@ abstract final class RunEndBookkeeping {
         lastVersusHadRival: storage.lastVersusHadRival,
       ),
     );
-    if (identical(previous, rolled)) return;
-    await storage.saveMissionJournal({
-      'day': rolled.day, 'tier': rolled.tier, 'rerollDay': rolled.rerollDay,
-      'missions': rolled.toRecords(), 'balance': storage.coins,
-      'earned': storage.lifetimeCoinsEarned,
-    });
-    await storage.recoverMissionJournal();
+    if (identical(previous, rolled)) return Future.value();
+    final writes = <Future<void>>[
+      storage.saveMissions(rolled.toRecords()),
+      storage.saveMissionTier(rolled.tier),
+      storage.saveMissionRerollDay(rolled.rerollDay),
+      storage.saveMissionDay(rolled.day),
+    ];
     for (final mission in rolled.missions) {
       game.services.track('mission_assigned', {'mission': mission.template.id, 'tier': rolled.tier});
     }
+    return Future.wait(writes);
   }
 
-  static Future<void> recordMissions(FlappySpikesGame game) async {
+  /// Capture and journal before returning to the game loop. All public state
+  /// is updated synchronously; only the durable writes continue in the future.
+  static Future<void> recordMissions(FlappySpikesGame game) {
     final storage = game.storage;
     final run = game.run;
     final stats = game.runStats;
-    if (run == null || stats == null || !run.countsForUpload) return;
+    if (run == null || stats == null || !run.countsForUpload) return Future.value();
     final before = storage.gamesPlayed - 1;
+    final rival = game.homeMode == HomeMode.versus;
     if (before < 3) {
-      if (game.homeMode == HomeMode.versus) {
-        await storage.saveLastVersusHadRival(run.setup.opponent != null);
-      }
-      return;
+      return rival ? storage.saveLastVersusHadRival(run.setup.opponent != null) : Future.value();
     }
     stats.captureOpenedSwitches();
     final board = currentMissions(storage);
@@ -88,22 +89,27 @@ abstract final class RunEndBookkeeping {
     );
     final advanced = rolled.advance(stats.missionCounts(before));
     final claim = advanced.claimCoins(rewards: TuningValues.current.ints('mission_rewards'));
-    final target = storage.coins + claim.coins;
-    final earned = storage.lifetimeCoinsEarned + claim.coins;
-    await storage.saveMissionJournal({
+    final journal = <String, Object?>{
       'day': claim.state.day, 'tier': claim.state.tier,
       'rerollDay': claim.state.rerollDay, 'missions': claim.state.toRecords(),
-      'balance': target, 'earned': earned,
-    });
-    if (game.homeMode == HomeMode.versus) {
-      await storage.saveLastVersusHadRival(run.setup.opponent != null);
-    }
-    await storage.saveMissions(claim.state.toRecords());
-    await storage.saveMissionTier(claim.state.tier);
-    await storage.saveMissionRerollDay(claim.state.rerollDay);
-    await storage.saveMissionDay(claim.state.day);
-    if (claim.coins > 0) await game.menu.wallet.add(claim.coins, CoinSource.mission);
-    await storage.saveMissionJournal(const {});
+      'balanceBefore': storage.coins, 'earnedBefore': storage.lifetimeCoinsEarned,
+      'amount': claim.coins, 'applied': false,
+    };
+    final firstWrite = storage.saveMissionJournal(journal);
+    // No asynchronous boundary separates the journal and memory credit.
+    // The applied record also carries a recovery target if the wallet write
+    // is interrupted, while a false record is recovered by adding the amount.
+    final applied = {...journal, 'applied': true};
+    final appliedWrite = storage.saveMissionJournal(applied);
+    final activeJournal = storage.missionJournal;
+    final writes = <Future<void>>[
+      if (rival) storage.saveLastVersusHadRival(run.setup.opponent != null),
+      storage.saveMissions(claim.state.toRecords()),
+      storage.saveMissionTier(claim.state.tier),
+      storage.saveMissionRerollDay(claim.state.rerollDay),
+      storage.saveMissionDay(claim.state.day),
+      if (claim.coins > 0) game.menu.wallet.add(claim.coins, CoinSource.mission),
+    ];
     if (!identical(rolled, board)) {
       for (final m in rolled.missions) {
         game.services.track('mission_assigned', {'mission': m.template.id, 'tier': rolled.tier});
@@ -113,6 +119,11 @@ abstract final class RunEndBookkeeping {
       game.services.track('mission_complete', {'mission': m.id});
     }
     if (!rolled.allDone && advanced.allDone) game.services.track('missions_all_done');
+    return Future.wait([firstWrite, appliedWrite, ...writes]).then((_) async {
+      if (identical(storage.missionJournal, activeJournal)) {
+        await storage.saveMissionJournal(const {});
+      }
+    });
   }
   // endregion
 
@@ -126,7 +137,7 @@ abstract final class RunEndBookkeeping {
       if (game.storage.gamesPlayed >= 4) {
         game.recordStreakRun(runNumber: game.storage.gamesPlayed);
       }
-      game.missionSettlement = game.missionSettlement.then((_) => recordMissions(game));
+      game.missionSettlement = recordMissions(game);
     }
     // endregion
     final levels = game.menu.levels;

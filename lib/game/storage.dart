@@ -2020,8 +2020,27 @@ class GameStorage {
     final day = j['day'];
     final tier = j['tier'];
     final reroll = j['rerollDay'];
-    final balance = j['balance'];
-    final earned = j['earned'];
+    final amount = j['amount'];
+    final applied = j['applied'];
+    final before = j['balanceBefore'];
+    final earnedBefore = j['earnedBefore'];
+    if (amount is int && applied == false && before is int && earnedBefore is int) {
+      // Commit the target before crediting so recovery itself can be killed.
+      await saveMissionJournal({
+        ...j,
+        'applied': true,
+        'balanceBefore': coins,
+        'earnedBefore': lifetimeCoinsEarned,
+      });
+    }
+    final legacyBalance = j['balance'];
+    final legacyEarned = j['earned'];
+    final balance = amount is int && before is int && applied is bool
+        ? (applied ? math.max(coins, before + amount) : coins + amount)
+        : legacyBalance;
+    final earned = amount is int && earnedBefore is int && applied is bool
+        ? (applied ? math.max(lifetimeCoinsEarned, earnedBefore + amount) : lifetimeCoinsEarned + amount)
+        : legacyEarned;
     if (rows is! List || day is! int || tier is! int || reroll is! int ||
         balance is! int || earned is! int) {
       return;

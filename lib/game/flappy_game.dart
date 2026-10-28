@@ -1154,7 +1154,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     unawaited(leaderboardQueue.flush());
     // endregion
     // region P26-G1b
-    missionSettlement = missionSettlement.then((_) => RunEndBookkeeping.prepareMissions(this));
+    missionSettlement = RunEndBookkeeping.prepareMissions(this);
     // endregion
     homeMoments.beginVisit(
       HomeVisit(
@@ -1162,7 +1162,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         gamesPlayed: storage.gamesPlayed,
         requests: HomeVisitRequests(
           // region P26-G1b
-          missionsChest: RunEndBookkeeping.currentMissions(storage).chestPending,
+          missionsChest: missionsChestOpenerRegistered &&
+              RunEndBookkeeping.currentMissions(storage).chestPending,
           // endregion
           // region P26-G2c
           streakLost: streakLostPending,
@@ -5006,6 +5007,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// upload, then the [PostRunFlow] (ending on the WP-2e results page).
   // region P26-G1b
   Future<void> missionSettlement = Future<void>.value();
+  /// G1d registers its opener before asking C2 to reserve the visit.
+  bool missionsChestOpenerRegistered = false;
   // endregion
 
   void endRun(RunSummary? summary) {
@@ -5614,10 +5617,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // Best/games/mute reloaded from persistence.
     // (Home polls best / last / level from the storage.)
     // region P26-G5a
-    // A quick return Home must not reload stale weekly state over a payout.
+    // A quick return Home must not reload stale weekly or mission state.
+    // region P26-G1b
     final reload = _weeklyPendingWrites == 0
-        ? storage.load()
-        : weeklyWritesSettled.then((_) => storage.load());
+        ? missionSettlement.then((_) => storage.load())
+        : Future.wait([weeklyWritesSettled, missionSettlement])
+              .then((_) => storage.load());
+    // endregion
     _homeReload = reload.then((_) {
       sound.muted = storage.muteSound;
     });

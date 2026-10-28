@@ -471,13 +471,23 @@ void main() {
       expect(game.levelUpPopup, isNull);
       expect(game.noAdsPopup, isNull, reason: 'one moment on this visit');
 
-      // A second, lower-scoring run reaches Home: the deferred No-Ads offer
-      // is now the one moment of that visit.
+      // PRD §8.3 item 19: the first counting run earned a day-streak
+      // reward. C2 selects it before the deferred No-Ads offer.
       await finishRun(8);
       stepGame(game, Config.levelUpSettleDelay + .1);
       await io();
       await flushAndMount(game);
       expect(game.levelUpPopup, isNull);
+      expect(game.noAdsPopup, isNull);
+      expect(game.streakCard, isNotNull);
+      expect(game.streakCard!.reward, isTrue);
+      game.streakCard!.collectButton!.onPressed();
+      await io();
+      await flushAndMount(game);
+      await finishRun(8);
+      stepGame(game, Config.levelUpSettleDelay + .1);
+      await io();
+      await flushAndMount(game);
       expect(game.noAdsPopup, isNotNull);
     },
   );

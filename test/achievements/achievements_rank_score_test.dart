@@ -64,19 +64,17 @@ void main() {
     },
   );
 
-  tester(
-    prefs: {
-      'achUnlocked': ['rank_legend'],
-    },
-  ).testGameWidget(
+  tester().testGameWidget(
     'a previously earned rank survives a low scoring run',
     setUp: boot,
     verify: (game, _) async {
       game.achievements.countDebugRuns = true;
+      game.storage.ach.pending.add('rank_legend');
+      expect(game.achievements.earned, contains('rank_legend'));
       final run = await startRun(game);
       run.ctx.addScore(1);
       await finish(game);
-      expect(game.storage.achUnlocked, contains('rank_legend'));
+      expect(game.achievements.earned, contains('rank_legend'));
     },
   );
 }

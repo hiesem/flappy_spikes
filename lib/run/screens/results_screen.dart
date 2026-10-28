@@ -2,6 +2,11 @@
 import '../../progression/puzzle_album.dart';
 import '../../menu/wallet.dart';
 // endregion
+// region P26-G5b
+import '../../components/progression/weekly_results.dart';
+import '../../progression/weekly_course.dart';
+import '../../progression/missions.dart';
+// endregion P26-G5b
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -282,6 +287,48 @@ class ResultsScreen extends PositionComponent
   }
   // endregion
 
+  // region P26-G5b
+  bool get isWeekly => game.run?.setup.weekly ?? false;
+  bool weeklyHintVisible = false;
+  MenuButton? weeklyBoardButton;
+  MenuButton? weeklyHomeButton;
+  int weeklyTierCoins = 0;
+  int _weeklyPreviousBest = 0;
+  bool _weeklyNewBest = false;
+  MenuText? _weeklyBestLabel;
+  final Set<int> _weeklyEarned = {};
+  int _weeklyShownTierCoins = 0;
+  bool _weeklyDeparting = false;
+
+  void _weeklyLeave({required bool flyAgain}) {
+    if (!canContinue || _weeklyDeparting || _albumOpening || _albumDue) return;
+    _weeklyDeparting = true;
+    _schedule.clear();
+    _stopTicks();
+    void leave() {
+      _leaving = true;
+      _stopTicks();
+      if (flyAgain) {
+        unawaited(game.weeklyFromResults());
+      } else {
+        game.goHome();
+      }
+    }
+    final rows = game.menu.levels.pending;
+    if (model.levelUp && rows.isNotEmpty) {
+      final key = rows.last['item'];
+      final item = allItems.where((item) => item.key == key).firstOrNull;
+      revealSheet = LevelRevealSheet(
+        item: item, extraCoins: rows.last['extraCoins'] as int? ?? 0,
+        onFinished: (_) { revealSheet = null; leave(); },
+      );
+      add(revealSheet!);
+    } else {
+      leave();
+    }
+  }
+  // endregion P26-G5b
+
   /// The scaled 320 × 711 column.
   late final PositionComponent content;
 
@@ -483,6 +530,27 @@ class ResultsScreen extends PositionComponent
 
     // region P26-G6a
     // region P26-G1c
+    // region P26-G5b
+    if (isWeekly) await game.weeklyWritesSettled;
+    if (game.missionRunSettlementPending) {
+      try { await game.missionSettlement; } catch (_) { /* Results still open on a failed write. */ }
+    }
+    final now = game.storage.now();
+    final weeklyCourse = WeeklyCourse(
+      weeklyBest: game.storage.weeklyBest,
+      weeklyRewards: game.storage.weeklyRewards,
+    ).refresh(now);
+    final run = game.run;
+    if (isWeekly && run != null && run.setup.weeklyStartedAt != null &&
+        WeeklyWeek.at(run.setup.weeklyStartedAt!).key == WeeklyWeek.at(now).key) {
+      _weeklyPreviousBest = run.weeklyBestBefore;
+      _weeklyNewBest = run.countsForUpload && summary.hoopsPassed > _weeklyPreviousBest;
+      for (final tier in weeklyCourse.weeklyRewards.difference(run.weeklyRewardsBefore)) {
+        _weeklyEarned.add(tier);
+        weeklyTierCoins += WeeklyResultsTiers.tiers[tier] ?? 0;
+      }
+    }
+    // endregion P26-G5b
     final missionBoard = RunEndBookkeeping.currentMissions(game.storage);
     final startBoard = game.missionsAtRunStart;
     final beforeMissions = <int>[];
@@ -496,18 +564,42 @@ class ResultsScreen extends PositionComponent
         missionBoard.missions.length == 3 &&
         List.generate(3, (i) => beforeMissions[i] < missionBoard.missions[i].progress).contains(true);
     // endregion
+    // region P26-G5b
+    weeklyHintVisible = showWeeklyHint(
+      weekly: isWeekly, counts: run?.countsForUpload ?? false,
+      games: game.storage.gamesPlayed, bestHoops: game.storage.bestHoops,
+      weeklyBest: weeklyCourse.bestHoops, shownDay: game.storage.weeklyHintDay,
+      today: Missions.localDay(now.toLocal()), height: h, missionMoved: _missionsStripVisible,
+    );
+    if (weeklyHintVisible) {
+      try {
+        await game.storage.saveWeeklyHintDay(Missions.localDay(now.toLocal()));
+      } catch (_) {
+        // The in-memory day is reserved even if persistence fails.
+      }
+    }
+    // endregion P26-G5b
     final firstWinPaid = await FirstWinReward.pay(game, summary);
     final top = ResultsConfig.topFor(h);
     // Reserve the approved line + missions height before the fixed-size NEXT
     // on short screens. At 711 the approved layout remains at scale 1.
     // region P26-G1c
-    final k = firstWinPaid > 0
-        ? _firstWinScale(h, _missionsStripVisible)
-        : _missionsStripVisible
-            ? math.min(ResultsConfig.scaleFor(h),
-                (ResultsConfig.nextTopFor(h) - 2 - top) /
-                    (587 - ResultsConfig.contentTop))
-            : ResultsConfig.scaleFor(h);
+    // region P26-G5b
+    final hintTop = weeklyHintTop(missionMoved: _missionsStripVisible, firstWin: firstWinPaid > 0);
+    final hintShift = weeklyHintVisible && (_missionsStripVisible || firstWinPaid > 0) ? 10.0 : 0.0;
+    final firstWinShift = firstWinPaid > 0 && _missionsStripVisible ? 10.0 : 0.0;
+    final k = weeklyHintVisible
+        ? math.min(ResultsConfig.scaleFor(h),
+            (ResultsConfig.nextTopFor(h) + hintShift + firstWinShift - 2 - top) /
+                (hintTop + 16 - ResultsConfig.contentTop))
+        : firstWinPaid > 0
+            ? _firstWinScale(h, _missionsStripVisible)
+            : _missionsStripVisible
+                ? math.min(ResultsConfig.scaleFor(h),
+                    (ResultsConfig.nextTopFor(h) - 2 - top) /
+                        (587 - ResultsConfig.contentTop))
+                : ResultsConfig.scaleFor(h);
+    // endregion P26-G5b
     // endregion P26-G1c
     // endregion
     final transform = (
@@ -539,7 +631,10 @@ class ResultsScreen extends PositionComponent
     if (opp == null || duel == null) {
       you = ResultsPlayerColumn(
         name: game.myVersusName,
-        score: model.score,
+        // region P26-G5b
+        score: isWeekly ? summary.hoopsPassed : model.score,
+        weekly: isWeekly,
+        // endregion P26-G5b
         centreX: ResultsConfig.soloColumnX,
         mine: true,
         look: game.menu.items.look, // WP-AV your sticker avatar
@@ -696,26 +791,42 @@ class ResultsScreen extends PositionComponent
     // reference size again on every screen height.
     final inv = 1 / content.scale.y;
     final nextBox = Rect.fromLTWH(
-      (ResultsConfig.next.left - content.position.x) * inv,
+      // region P26-G5b
+      ((isWeekly ? 112.0 : ResultsConfig.next.left) - content.position.x) * inv,
+      // endregion P26-G5b
       (ResultsConfig.nextTopFor(h) - content.position.y) * inv,
-      ResultsConfig.next.width * inv,
+      // region P26-G5b
+      (isWeekly ? 194.0 : ResultsConfig.next.width) * inv,
+      // endregion P26-G5b
       ResultsConfig.next.height * inv,
     );
     nextButton = MenuButton(
       color: ResultsConfig.pink,
       position: nextBox.topLeft.toVector2(),
       size: nextBox.size.toVector2(),
-      onPressed: next,
+      // region P26-G5b
+      onPressed: isWeekly ? () => _weeklyLeave(flyAgain: true) : next,
+      // endregion P26-G5b
       isActive: _active,
     );
     layoutRow(nextButton, [
+      // region P26-G5b
+      if (isWeekly) MenuIcon(Sprite(await game.images.load('menu/play.png')),
+          size: Vector2.all(18 * inv)),
+      // endregion P26-G5b
       MenuText(
-        'NEXT',
-        fontSize: ResultsConfig.nextFontSize * inv,
+        // region P26-G5b
+        isWeekly ? 'FLY AGAIN' : 'NEXT',
+        // endregion P26-G5b
+        // region P26-G5b
+        fontSize: (isWeekly ? 22 : ResultsConfig.nextFontSize) * inv,
+        // endregion P26-G5b
         color: ResultsConfig.soft,
         letterSpacingEm: ResultsConfig.nextLetterSpacing,
       ),
-    ], gap: 0);
+    // region P26-G5b
+    ], gap: isWeekly ? 9 * inv : 0);
+    // endregion P26-G5b
     MenuButton side(Rect r, Sprite icon, void Function() action) => MenuButton(
       color: ResultsConfig.pink,
       position: r.topLeft.toVector2(),
@@ -742,22 +853,72 @@ class ResultsScreen extends PositionComponent
     content.addAll([
       card,
       you,
-      stage,
-      rank,
-      bar,
-      barLabel,
+      // region P26-G5b
+      if (!isWeekly) ...[stage, rank, bar, barLabel],
+      // endregion P26-G5b
       // region P26-J3
-      barCounter, scoreGain, surplusLabel, levelCoinsLabel, rewardChip,
+      // region P26-G5b
+      if (!isWeekly) ...[barCounter, scoreGain, surplusLabel, levelCoinsLabel, rewardChip],
+      // endregion P26-G5b
       // endregion
-      claimButton,
+      // region P26-G5b
+      if (!isWeekly) claimButton,
+      // endregion P26-G5b
       rewardLabel,
       rewardPill,
       // region P26-LB4
       // endregion P26-LB4
       shareButton,
       nextButton,
-      levelUpBanner,
+      // region P26-G5b
+      if (!isWeekly) levelUpBanner,
+      // endregion P26-G5b
     ]);
+    // region P26-G5b
+    if (isWeekly) {
+      // The stage remains mounted off-screen for the existing reveal lifecycle.
+      stage.position.x = -1000;
+      content.add(stage);
+      content.add(WeeklyResultsTiers(
+        best: weeklyCourse.bestHoops, before: _weeklyPreviousBest,
+        paid: weeklyCourse.weeklyRewards, earned: _weeklyEarned, coin: _coin,
+        onTier: (tier, coins, x) {
+          _weeklyShownTierCoins += coins;
+          fx.add(CoinFly.burst(coin: _coin, origin: Offset(x, 332),
+              to: ResultsConfig.rewardPill.center, count: 5, coinSize: 12,
+              onLand: (_) => game.sound.play(Sfx.bnCoin)));
+          _countFrom = _shownReward;
+          _countTo = model.reward + _weeklyShownTierCoins;
+          _countLength = .4;
+          _countStart = _t + .45;
+        },
+      ));
+      content.add(ResultsHeader(DuelResult.win, weekly: true));
+      _weeklyBestLabel = MenuText('WEEK BEST $_weeklyPreviousBest', fontSize: 9.5,
+          color: Config.menuPlum, position: Vector2(24, 132));
+      content.add(_weeklyBestLabel!);
+      content.add(MenuText(WeeklyWeek.at(now).countdown(now), fontSize: 9.5,
+          color: Config.menuPlum, position: Vector2(296, 132), anchor: Anchor.topRight));
+      final top = nextButton.position.y;
+      weeklyHomeButton = MenuButton(position: Vector2((14 - content.position.x) / content.scale.x, top),
+          size: Vector2(92 / content.scale.x, 50 / content.scale.y),
+          color: Config.menuSoft, isActive: _active, onPressed: () => _weeklyLeave(flyAgain: false),
+          children: [MenuText('HOME', fontSize: 18 / content.scale.y, color: Config.menuPink,
+              position: Vector2(46 / content.scale.x, 25 / content.scale.y), anchor: Anchor.center)]);
+      content.add(weeklyHomeButton!);
+      weeklyBoardButton = side(ResultsConfig.leaderboardButton,
+          Sprite(await game.images.load('menu/trophy.png')), game.openResultsBoard);
+      content.add(weeklyBoardButton!);
+    }
+    if (weeklyHintVisible) {
+      content.add(MenuButton(position: Vector2(14, hintTop),
+          size: Vector2(292, 16), isActive: _active,
+          onPressed: () => _weeklyLeave(flyAgain: true),
+          children: [MenuText(weeklyHintText(weeklyCourse.bestHoops), fontSize: 10,
+              color: Config.menuPink, position: Vector2(146, 8), anchor: Anchor.center)]));
+      if (hintShift > 0) nextButton.position.y += hintShift / content.scale.y;
+    }
+    // endregion P26-G5b
     // region P26-G1c
     if (_missionsStripVisible) {
       content.add(MissionResultsStrip(missions: missionBoard.missions, before: beforeMissions));
@@ -818,10 +979,25 @@ class ResultsScreen extends PositionComponent
     });
     // WP-L the bar is this run's progress toward the next level: it fills
     // after every run (a level up no longer needs a new best).
-    if (model.newBest) _planNewBest();
-    _planBar();
+    // region P26-G5b
+    if (isWeekly) {
+      if (_weeklyNewBest) {
+        _at(ResultsConfig.newBestAt, () {
+          final sticker = GoldSticker.newBest(text: 'NEW WEEK BEST!', position: Vector2(160, 252));
+          newBestSticker = sticker;
+          _weeklyBestLabel?.text = 'WEEK BEST ${summary.hoopsPassed}';
+          _stickerOut = WiggleEffect(sticker);
+          sticker.decorator.addLast(_stickerOut);
+          content.add(sticker);
+        });
+      }
+    } else {
+      if (model.newBest) _planNewBest();
+      _planBar();
+    }
+    // endregion P26-G5b
     // region P26-G6c
-    if (!model.levelUp && _albumDue) {
+    if ((!model.levelUp || isWeekly) && _albumDue) {
       _at(ResultsConfig.revealAt, () => unawaited(_showAlbumReveal()));
     }
     // endregion
@@ -1025,7 +1201,11 @@ class ResultsScreen extends PositionComponent
   }
 
   @override
-  void onTapUp(TapUpEvent event) => skipToReveal();
+  // region P26-G5b
+  void onTapUp(TapUpEvent event) {
+    if (!isWeekly) skipToReveal();
+  }
+  // endregion P26-G5b
   // endregion
 
   void _animateBar(double to, double length) {
@@ -1105,6 +1285,12 @@ class ResultsScreen extends PositionComponent
   /// came up is paid at once (no reward is ever lost); otherwise straight
   /// home (`goHome()`, a new home arrival).
   void next() {
+    // region P26-G5b
+    if (isWeekly) {
+      _weeklyLeave(flyAgain: false);
+      return;
+    }
+    // endregion P26-G5b
     // region P26-LB6
     final climbs = children.whereType<ResultsClimb>();
     if (climbs.isNotEmpty) {
@@ -1190,7 +1376,9 @@ class ResultsScreen extends PositionComponent
     if (ss != null) {
       final u = ((_t - ss) / ResultsConfig.countDuration).clamp(0.0, 1.0);
       final e = 1 - math.pow(1 - u, 3).toDouble();
-      you.shownScore = (model.score * e).round();
+      // region P26-G5b
+      you.shownScore = ((isWeekly ? summary.hoopsPassed : model.score) * e).round();
+      // endregion P26-G5b
       // region WP-5b — both scores count up (§5.10)
       final opp = summary.opponent;
       final col = them;
@@ -1459,6 +1647,9 @@ class ResultsPlayerColumn extends PositionComponent
     required this.score,
     required this.centreX,
     required this.mine,
+    // region P26-G5b
+    this.weekly = false,
+    // endregion P26-G5b
     this.lower = false,
     this.winner = false,
     this.look = Look.defaults,
@@ -1469,6 +1660,9 @@ class ResultsPlayerColumn extends PositionComponent
 
   final String name;
   final int score;
+  // region P26-G5b
+  final bool weekly;
+  // endregion P26-G5b
   // region P26-G4b
   final bool space;
   // endregion
@@ -1501,6 +1695,16 @@ class ResultsPlayerColumn extends PositionComponent
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    // region P26-G5b
+    if (weekly) {
+      nameText = MenuText('HOOPS', fontSize: 11, color: ResultsConfig.plum,
+          position: Vector2(centreX, 157), anchor: Anchor.topCenter);
+      scoreText = MenuText('0', fontSize: 48, color: ResultsConfig.plum,
+          position: Vector2(centreX, 175), anchor: Anchor.topCenter);
+      addAll([nameText, scoreText]);
+      return;
+    }
+    // endregion P26-G5b
     // PRD-2.3 §21.2 the one name rule (shrink to 70 %, then "…").
     final fitted = fitName(
       name,
@@ -1577,6 +1781,9 @@ class ResultsPlayerColumn extends PositionComponent
 
   @override
   void render(Canvas canvas) {
+    // region P26-G5b
+    if (weekly) return;
+    // endregion P26-G5b
     const s = ResultsConfig.avatarSize;
     final left = centreX - s / 2;
     final top = ResultsConfig.avatarTop;
@@ -2044,30 +2251,37 @@ class ResultsFx extends PositionComponent {
 /// "DRAW" in the stage background colour.
 class ResultsHeader extends PositionComponent
     with HasGameReference<FlappySpikesGame> {
-  ResultsHeader(this.result)
+  // region P26-G5b
+  ResultsHeader(this.result, {this.weekly = false})
     : super(
         position: ResultsConfig.header.topLeft.toVector2(),
         size: ResultsConfig.header.size.toVector2(),
       );
 
   final DuelResult result;
+  final bool weekly;
+  // endregion P26-G5b
   late final MenuText label;
   final Paint _paint = Paint();
 
-  String get text => switch (result) {
+  // region P26-G5b
+  String get text => weekly ? 'WEEKLY COURSE' : switch (result) {
     DuelResult.win => 'YOU WIN!',
     DuelResult.lose => 'YOU LOSE',
     DuelResult.draw => 'DRAW',
   };
 
-  bool get pink => result == DuelResult.win;
+  bool get pink => weekly || result == DuelResult.win;
+  // endregion P26-G5b
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
     label = MenuText(
       text,
-      fontSize: ResultsConfig.headerFontSize,
+      // region P26-G5b
+      fontSize: weekly ? 26 : ResultsConfig.headerFontSize,
+      // endregion P26-G5b
       color: pink ? ResultsConfig.soft : kPostRunPalette.background,
       letterSpacingEm: ResultsConfig.headerLetterSpacing,
       lineHeight: 1,

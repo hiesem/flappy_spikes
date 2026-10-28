@@ -19,8 +19,13 @@ class BestLine extends PositionComponent {
   double? _collapseAge;
   double _collapseX = 0;
   double _collapseY = 0;
+  // region P26-G5b
+  String get flagText => run.setup.weekly ? 'WEEK ${run.weeklyBestBefore}' : 'BEST ${run.bestBefore}';
+  // endregion P26-G5b
   late final HudText _flagLabel = HudText(
-    'BEST ${run.bestBefore}',
+    // region P26-G5b
+    flagText,
+    // endregion P26-G5b
     size: 9.5,
     spacing: 1.1 / 9.5,
     color: HudConfig.plum,

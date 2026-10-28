@@ -1,3 +1,6 @@
+// region P26-G5b
+import '../progression/weekly_course.dart';
+// endregion P26-G5b
 import 'dart:async' show unawaited;
 import 'dart:math' as math;
 import 'dart:ui';
@@ -156,7 +159,19 @@ class RunController extends Component {
         !(debug && (d.god || d.bot));
     // endregion P231-E
     // region P26-K
-    bestTargetHoops = storage.bestRunHoops;
+    // region P26-G5b
+    weeklyBestBefore = setup.weekly
+        ? WeeklyCourse(weeklyBest: storage.weeklyBest,
+            weeklyRewards: storage.weeklyRewards).refresh(storage.now()).bestHoops
+        : 0;
+    weeklyRewardsBefore = WeeklyCourse(weeklyBest: storage.weeklyBest,
+        weeklyRewards: storage.weeklyRewards).refresh(storage.now()).weeklyRewards;
+    bestTargetHoops = setup.weekly ? weeklyBestBefore : storage.bestRunHoops;
+    if (setup.weekly) {
+      events.on<HoopPassed>((_) => _watchWeeklyBest());
+      events.on<SavedHoopPassed>((_) => _watchWeeklyBest());
+    }
+    // endregion P26-G5b
     events.on<ScoreChanged>(_watchBestScore);
     // endregion
   }
@@ -204,20 +219,40 @@ class RunController extends Component {
   // endregion P231-E
 
   // region P26-K
+  // region P26-G5b
+  late final int weeklyBestBefore;
+  late final Set<int> weeklyRewardsBefore;
+  void _watchWeeklyBest() {
+    if (!bestGoalEligible || beatBestHoop >= 0 ||
+        state.hoopsPassed <= weeklyBestBefore) {
+      return;
+    }
+    beatBestHoop = state.hoopsPassed;
+    bestLine?.collapse();
+    RunHud.ensureFor(this).showNewBest();
+  }
+  // endregion P26-G5b
   late final int bestTargetHoops;
   int get bestBefore => _bestBefore;
   int beatBestHoop = -1;
   BestLine? bestLine;
 
-  /// G5 weekly courses must opt out when they add their run context.
+  // region P26-G5b
+  /// Allows the caller to suppress either normal or weekly best feedback.
+  // endregion P26-G5b
   bool bestGoalSuppressed = false;
   bool get bestGoalEligible =>
       !bestGoalSuppressed &&
-      _bestBefore > 0 &&
+      // region P26-G5b
+      (setup.weekly ? weeklyBestBefore > 0 : _bestBefore > 0) &&
+      // endregion P26-G5b
       setup.opponent == null &&
       countsForUpload;
 
   void _watchBestScore(ScoreChanged e) {
+    // region P26-G5b
+    if (setup.weekly) return;
+    // endregion P26-G5b
     if (!bestGoalEligible || beatBestHoop >= 0 || e.newScore <= _bestBefore) {
       return;
     }

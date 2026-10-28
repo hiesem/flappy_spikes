@@ -20,6 +20,9 @@ import 'dart:math' as math;
 import '../components/leaderboard/board_screen.dart';
 // endregion P26-LB4
 import '../components/progression/streak_strip.dart';
+// region P26-G5b
+import '../components/home/menu_primitives.dart' show MenuText;
+// endregion P26-G5b
 import '../components/home/menu_primitives.dart' show MenuTag;
 import '../progression/day_streak.dart';
 import '../run/effects/fetch_flight.dart';
@@ -1495,6 +1498,48 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     await _runFromHome(weekly: WeeklyWeek.at(now ?? storage.now()));
   }
+
+  // region P26-G5b
+  /// Leave results directly for another weekly attempt without consuming the slot.
+  Future<void> weeklyFromResults() async {
+    if (state != GameState.results) return;
+    replay();
+    await _homeReload;
+    final home = _home;
+    if (home != null) await home.loaded;
+    if (state == GameState.start && menuScene == MenuScene.home) {
+      await _runFromHome(weekly: WeeklyWeek.at(storage.now()));
+    }
+  }
+
+  BoardScreen? _resultsBoard;
+  BoardScreen? get resultsBoard => _resultsBoard;
+  void openResultsBoard() {
+    if (state != GameState.results || _resultsBoard != null) return;
+    final board = BoardScreen(onBack: closeResultsBoard, source: 'results')
+      ..priority = 100;
+    _resultsBoard = board;
+    board.add(RectangleComponent(size: Vector2(320, viewHeight),
+      paint: Paint()..color = kPostRunPalette.background, priority: -100));
+    board.add(MenuButton(
+      position: Vector2(14, 58), size: Vector2.all(38),
+      color: Config.menuPink, onPressed: closeResultsBoard,
+      children: [MenuText('‹', fontSize: 28, color: Config.menuSoft,
+        position: Vector2(19, 19), anchor: Anchor.center)],
+    )..priority = 100);
+    world.add(board);
+    pushBack(_resultsBoardBack);
+  }
+
+  bool _resultsBoardBack() { closeResultsBoard(); return true; }
+  void closeResultsBoard() {
+    final board = _resultsBoard;
+    if (board == null) return;
+    _resultsBoard = null;
+    popBack(_resultsBoardBack);
+    board.removeFromParent();
+  }
+  // endregion P26-G5b
 
   /// The run_start analytics mode, including the weekly course.
   String get runSubmissionMode =>
@@ -3776,6 +3821,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   Future<void> playFromBoard() async {
+    // region P26-G5b
+    if (_resultsBoard != null) {
+      closeResultsBoard();
+      _results?.nextButton.onPressed();
+      return;
+    }
+    // endregion P26-G5b
     closeBoard(playSound: false);
     final home = _home;
     if (home == null) return;
@@ -5175,6 +5227,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       return KeyEventResult.handled;
     }
     // endregion
+    // region P26-G5b
+    if (_resultsBoard != null) {
+      if (key == LogicalKeyboardKey.escape) {
+        return handleBack() ? KeyEventResult.handled : KeyEventResult.ignored;
+      }
+      return KeyEventResult.ignored;
+    }
+    // endregion P26-G5b
     if (key == LogicalKeyboardKey.space ||
         key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.numpadEnter) {

@@ -1,3 +1,6 @@
+// region P26-G5b
+import '../../progression/weekly_course.dart';
+// endregion P26-G5b
 import 'dart:ui';
 // region P26-K
 import 'dart:math' as math;
@@ -79,12 +82,14 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
   double rowOpacity = 0;
 
   // region P26-K
-  HudText _bestLabel = HudText(
-    'BEST',
+  // region P26-G5b
+  late HudText _bestLabel = HudText(
+    run.setup.weekly ? 'WEEKLY' : 'BEST',
     size: 10.5,
     spacing: 1.5 / 10.5,
     color: Config.uiAccent,
   );
+  // endregion P26-G5b
   bool _paintedGold = false;
   HudText? _bestNumber;
   int _paintedBest = -1;
@@ -92,17 +97,25 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
   double? _bestAge;
   double _pointAge = 1;
   int _lastBestScore = -1;
-  bool get bestChipVisible => run.bestGoalEligible;
+  // region P26-G5b
+  String _weeklyCountdownValue = '';
+  HudText? _weeklyCountdown;
+  bool get bestChipVisible => run.setup.weekly ? run.countsForUpload : run.bestGoalEligible;
+  // endregion P26-G5b
   double get _bestFlipProgress =>
       (((_bestAge ?? -1) - HudConfig.bestFlipDelay) / .22).clamp(0.0, 1.0);
   bool get bestChipGold => _bestFlipProgress >= .5;
-  int get bestChipScore => bestChipGold ? run.state.score : run.bestBefore;
+  // region P26-G5b
+  int get bestChipScore => run.setup.weekly ? run.state.hoopsPassed : (bestChipGold ? run.state.score : run.bestBefore);
+  // endregion P26-G5b
 
   void showNewBest() {
     if (_bestAge != null) return;
     _bestAge = 0;
     bestSticker = GoldSticker.newBest(
-      text: 'NEW BEST!',
+      // region P26-G5b
+      text: run.setup.weekly ? 'NEW WEEK BEST!' : 'NEW BEST!',
+      // endregion P26-G5b
       position: Vector2(160, HudConfig.bestStickerY),
     );
     add(_BestStickerClock(this, bestSticker!));
@@ -147,7 +160,9 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
       _paintedGold = gold;
       _paintedBest = -1;
       _bestLabel = HudText(
-        'BEST',
+        // region P26-G5b
+        run.setup.weekly ? 'WEEKLY' : 'BEST',
+        // endregion P26-G5b
         size: 10.5,
         spacing: 1.5 / 10.5,
         color: color,
@@ -186,11 +201,20 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
         ),
     );
     final left = -(label.width + 7 + number.width) / 2;
+    // region P26-G5b
+    if (run.setup.weekly && !gold) {
+      canvas.drawRect(Rect.fromLTRB(-width / 2, -HudConfig.bestChipHeight / 2,
+          left + label.width + 3.5, HudConfig.bestChipHeight / 2),
+          Paint()..color = HudConfig.gold.withValues(alpha: rowOpacity));
+    }
+    // endregion P26-G5b
     label.paintCentred(
       canvas,
       Offset(left + label.width / 2, 1),
       opacity: rowOpacity,
-      colorOverride: color,
+      // region P26-G5b
+      colorOverride: run.setup.weekly ? HudConfig.plum : color,
+      // endregion P26-G5b
     );
     number.paintCentred(
       canvas,
@@ -199,6 +223,17 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
       colorOverride: color,
     );
     canvas.restore();
+    // region P26-G5b
+    if (run.setup.weekly) {
+      final now = game.storage.now();
+      final value = WeeklyWeek.at(now).countdown(now);
+      if (_weeklyCountdown == null || value != _weeklyCountdownValue) {
+        _weeklyCountdownValue = value;
+        _weeklyCountdown = HudText(value, size: 8, color: Config.uiAccent);
+      }
+      _weeklyCountdown!.paintCentred(canvas, Offset(160, HudConfig.bestChipY + HudConfig.bestChipHeight / 2 + 8), opacity: rowOpacity);
+    }
+    // endregion P26-G5b
   }
   // endregion
 

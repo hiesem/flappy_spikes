@@ -190,7 +190,7 @@ void main() {
         stepGame(g, .4);
         expect(page.revealReady, isFalse);
         await tester.tapAt(const Offset(10, 350));
-        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
         expect(page.revealReady, isTrue);
       },
     );
@@ -246,6 +246,7 @@ void main() {
         final count = g.menu.levels.pending.length;
         expect(count, greaterThan(1));
         final balance = g.menu.wallet.balance;
+        stepGame(g, .4);
         page.skipToReveal();
         await flushAndMount(g);
         await flushAndMount(g);

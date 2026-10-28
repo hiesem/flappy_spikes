@@ -12,6 +12,7 @@ import '../../components/ui/confetti.dart';
 import '../../game/flappy_game.dart';
 import '../../game/sound.dart';
 import '../../skins/art/bird_art.dart';
+import '../../skins/art/skill_art_v26_part2.dart';
 // region P26-F9f
 import '../../skins/art/card_frame_art.dart';
 import '../../skins/art/card_name_art.dart';
@@ -638,7 +639,10 @@ class VersusIntro extends PositionComponent
   void _trail(VersusIntroBird b, int dir) {
     if (!b.flying(time) || game.reduceMotion) return;
     if (_rnd.nextDouble() >= .7) return;
-    final spec = BirdArt.byId(b.look.bird);
+    final bird = b.look.bird;
+    final spec = const {'magpie', 'prism', 'daynight'}.contains(bird)
+        ? f10c2BirdFace(bird, BirdArt.byId('classic').shape, time)
+        : BirdArt.byId(bird);
     final colors = [spec.c, spec.d, _white];
     final p = b.absoluteCentre(this);
     particles.spawn(

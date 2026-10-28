@@ -16,6 +16,8 @@ import '../../run/hoops/ring_painter.dart';
 import '../../run/pickups/feather_pickup.dart';
 import '../../run/pickups/puzzle_piece_pickup.dart';
 import '../../skins/art/look_painter.dart';
+import '../../skins/art/card_frame_art.dart';
+import '../../skins/art/card_name_art.dart';
 import '../../skins/look.dart';
 import '../noads_celebration.dart';
 import '../ui/mystery_box.dart';
@@ -225,6 +227,15 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
           : i == 2
           ? 17 - rise * 30
           : -43.0;
+      c.save();
+      if (i == 2) {
+        c.translate(0, y + 13);
+        c.scale(1 + math.sin(rise * math.pi) * .08);
+        c.translate(0, -y - 13);
+        if (rise > 0 && rise < 1) {
+          _rect(c, Rect.fromLTWH(-62, y + 3, 128, 26), const Color(0x2E7A0044));
+        }
+      }
       _rect(
         c,
         Rect.fromLTWH(-64, y, 128, 26),
@@ -257,8 +268,13 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
         ..close();
       c.drawPath(marker, Paint()..color = colors[rank - 1]);
       _text(c, '$rank', -50, y + 13, 11, const Color(0xffffffff));
-      _bird(c, -37, y + 13, .4);
-      _text(c, ['LENA', 'SAM', 'YOU'][i], 5, y + 13, 11, pink);
+      c.save();
+      c.translate(-26, y + 13);
+      CardFrameArt.paintBack(c, ['f_bubblegum', 'f_hoops', 'f_laurel'][i], size: 19, t: _idle);
+      _bird(c, 0, 0, .4);
+      CardFrameArt.paintFront(c, ['f_bubblegum', 'f_hoops', 'f_laurel'][i], size: 19, t: _idle);
+      c.restore();
+      CardNameArt.paint(c, ['n_ocean', 'n_grape', 'n_cherry'][i], ['LENA', 'SAM', 'YOU'][i], t: _idle, center: Offset(17, y + 13), fontSize: 10.5, maxWidth: 52);
       if (i == 2 && rise >= 1) {
         final cy = y + 13 - math.sin(_idle * 3.2).abs() * 3;
         final arrow = Path()
@@ -272,6 +288,7 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
           ..close();
         c.drawPath(arrow, Paint()..color = gold);
       }
+      c.restore();
     }
   }
 
@@ -364,8 +381,18 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
     _trophy(c);
     _rect(c, const Rect.fromLTWH(-76, 17, 152, 30), const Color(0xffffffff));
     _rect(c, const Rect.fromLTWH(-76, 17, 152, 3), gold);
-    _bird(c, -47, 33, .4);
-    _text(c, 'BEST RUN', 18, 33, 12, pink);
+    final rank = Path()..moveTo(-67, 23)..lineTo(-57, 23)..lineTo(-52, 28)..lineTo(-52, 38)..lineTo(-57, 43)..lineTo(-67, 43)..lineTo(-72, 38)..lineTo(-72, 28)..close();
+    c.drawPath(rank, Paint()..color = const Color(0xFFC98A00));
+    _text(c, '1', -62, 33, 12, const Color(0xFFFFFFFF));
+    c.save();
+    c.translate(-37, 33);
+    CardFrameArt.paintBack(c, 'f_bubblegum', size: 21, t: _idle);
+    _bird(c, 0, 0, .4);
+    CardFrameArt.paintFront(c, 'f_bubblegum', size: 21, t: _idle);
+    c.restore();
+    CardNameArt.paint(c, 'n_ocean', 'LENA', t: _idle, center: const Offset(2, 33), fontSize: 10, maxWidth: 45);
+    _rect(c, const Rect.fromLTWH(40, 23, 31, 20), pink);
+    _text(c, '812', 55.5, 33, 11, const Color(0xFFFFFFFF));
   }
 
   void _arrow(Canvas c, int i, double u) {

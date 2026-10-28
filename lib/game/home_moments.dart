@@ -49,8 +49,16 @@ final class HomeVisit {
     required this.day,
     required this.gamesPlayed,
     required this.requests,
+    // region P26-C2W
+    this.starRoadPopupDay = -1,
+    this.dayKey,
+    // endregion
   });
 
+  // region P26-C2W
+  final int starRoadPopupDay;
+  final int? dayKey;
+  // endregion
   final DateTime day;
   final int gamesPlayed;
   final HomeVisitRequests requests;
@@ -165,6 +173,10 @@ class HomeMomentBudget extends HomeMoments {
     // It has no higher-priority peer there (those are gathered at the
     // arrival), so an otherwise empty visit may still offer it. Once any
     // moment has been selected, the C2 priority remains strict.
+    // region P26-C2W
+    // A gated Star Road request cannot bypass selection on an empty visit.
+    if (moment == HomeMoment.starRoad && _selected != moment) return false;
+    // endregion
     if (moment != _selected && _selected != null) return false;
     _shownThisVisit = true;
     _selected = moment;
@@ -186,7 +198,11 @@ class HomeMomentBudget extends HomeMoments {
     if (requests.missionsChest) return HomeMoment.missionsChest;
     if (requests.starRoad &&
         visit.gamesPlayed >= 3 &&
-        _starRoadShownDay != _calendarDay(visit.day)) {
+        _starRoadShownDay != _calendarDay(visit.day) &&
+        // region P26-C2W
+        (visit.dayKey == null || visit.dayKey! > visit.starRoadPopupDay)
+    // endregion
+    ) {
       return HomeMoment.starRoad;
     }
     if (requests.noAds) return HomeMoment.noAds;

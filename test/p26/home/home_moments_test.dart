@@ -256,6 +256,55 @@ void main() {
     );
   });
 
+  // region P26-C2W
+  test('persisted Star Road day gates a new policy and cannot bypass chest', () {
+    final day = DateTime(2026, 11, 1);
+    final policy = HomeMomentBudget();
+    policy.beginVisit(HomeVisit(day: day, dayKey: 42, starRoadPopupDay: 42,
+      gamesPlayed: 3, requests: const HomeVisitRequests(starRoad: true)));
+    expect(policy.selectedMoment, isNull);
+    expect(policy.tryShow(HomeMoment.starRoad, () => fail('daily cap')), isFalse);
+    policy.beginVisit(HomeVisit(day: day, dayKey: 43, starRoadPopupDay: 42,
+      gamesPlayed: 3, requests: const HomeVisitRequests(missionsChest: true, starRoad: true)));
+    expect(policy.selectedMoment, HomeMoment.missionsChest);
+    expect(policy.tryShow(HomeMoment.starRoad, () => fail('chest wins')), isFalse);
+  });
+
+  var starNow = DateTime(2026, 11, 1, 12);
+  final starTransitions = FlameTester<FlappySpikesGame>(() => createRunTestGame(
+    prefs: trackPrefs({'gamesPlayed': 3, 'firstSessionDone': true,
+      'playerLevel': 1, 'claimedLevels': ['1'], 'starRoadXp': 8}),
+    worldHeight: Config.worldHeight, clock: () => starNow,
+  ), gameSize: Vector2(Config.worldWidth, Config.worldHeight));
+  starTransitions.testGameWidget('Star Road uses live tiers and persists its day on Home arrivals',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, _) async {
+      var shown = 0;
+      game.registerStarRoadPopup(() => shown++);
+      Future<void> resume() async {
+        game.lifecycleStateChange(AppLifecycleState.paused);
+        starNow = starNow.add(Config.sessionGap);
+        game.lifecycleStateChange(AppLifecycleState.resumed);
+        await flushAndMount(game);
+        stepGame(game, Config.levelUpSettleDelay + .1);
+        await flushAndMount(game);
+      }
+      await resume();
+      expect(shown, 1);
+      expect(game.storage.starRoadPopupDay, game.storage.today);
+      await resume();
+      expect(shown, 1);
+      starNow = starNow.add(const Duration(days: 1));
+      await resume();
+      expect(shown, 2);
+    },
+  );
+  // endregion
+
   final withLiveSources = FlameTester<FlappySpikesGame>(() {
     SharedPreferences.setMockInitialValues({
       'playerLevel': 1,

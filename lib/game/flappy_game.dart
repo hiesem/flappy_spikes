@@ -31,6 +31,9 @@ import '../components/leaderboard/board_screen.dart';
 import '../components/progression/streak_strip.dart';
 import '../components/home/menu_primitives.dart' show MenuTag;
 import '../progression/day_streak.dart';
+// region P26-C2W
+import '../progression/star_road.dart';
+// endregion
 import '../run/effects/fetch_flight.dart';
 // endregion
 import 'dart:io' show Platform;
@@ -1248,7 +1251,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       HomeVisit(
         day: storage.now(),
         gamesPlayed: storage.gamesPlayed,
+        // region P26-C2W
+        dayKey: storage.today,
+        starRoadPopupDay: storage.starRoadPopupDay,
+        // endregion
         requests: HomeVisitRequests(
+          // region P26-C2W
+          starRoad: _starRoadPopupOpener != null && _starRoadPending,
+          // endregion
           // region P26-G1b
           missionsChest: missionsChestOpenerRegistered &&
               RunEndBookkeeping.currentMissions(storage).chestPending,
@@ -3163,6 +3173,40 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     popBack(_missionsChestBack);
     refreshHome();
     _drainPopups();
+  }
+  // endregion
+
+  // region P26-C2W
+  void Function()? _starRoadPopupOpener;
+  double _starRoadSettle = 0;
+
+  /// G6f registers its popup before the next Home arrival.
+  void registerStarRoadPopup(void Function() open) {
+    _starRoadPopupOpener = open;
+  }
+
+  bool get _starRoadPending => StarRoad(
+    season: storage.starRoadSeason,
+    xp: storage.starRoadXp,
+    claimed: storage.starRoadClaimed,
+    popupDay: storage.starRoadPopupDay,
+  ).shouldShowPopup(today: storage.today, runNumber: storage.gamesPlayed + 1);
+
+  void _checkStarRoadPopup(double dt) {
+    final open = _starRoadPopupOpener;
+    if (open == null || !_starRoadPending || !_homeInteractive ||
+        _home?.built != true || _home!.opacity < 1 || modalPopupOpen ||
+        _popupQueue.isNotEmpty || _adsShowing > 0 || _fakeAd != null) {
+      _starRoadSettle = 0;
+      return;
+    }
+    _starRoadSettle += dt;
+    if (_starRoadSettle < Config.levelUpSettleDelay) return;
+    _starRoadSettle = 0;
+    homeMoments.tryShow(HomeMoment.starRoad, () {
+      unawaited(storage.saveStarRoadPopupDay(storage.today));
+      open();
+    });
   }
   // endregion
 
@@ -6686,6 +6730,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // endregion
     // region P26-LB7
     if (state == GameState.start) _checkLbGift(dt);
+    // region P26-C2W
+    if (state == GameState.start) _checkStarRoadPopup(dt);
+    // endregion
     // endregion
     _checkRatingPrompt(dt);
     _checkDeferredRating();

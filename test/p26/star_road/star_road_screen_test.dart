@@ -48,7 +48,14 @@ void main() {
           road: StarRoad(season: 3, xp: 80),
           daysLeft: 5,
           compact: true,
-          leavePanel: () => left = true,
+          leavePanel: () {
+            expect(
+              game.modalPopupOpen,
+              isTrue,
+              reason: 'the popup queue stays blocked during panel close',
+            );
+            left = true;
+          },
           returnToPanel: () => returned = true,
         );
         card.onPressed();

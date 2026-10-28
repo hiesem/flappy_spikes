@@ -2,6 +2,9 @@
 import '../../progression/weekly_course.dart';
 import '../progression/weekly_card.dart';
 // endregion P26-G5b
+// region P26-G6eB
+import '../star_road/star_road_card.dart';
+// endregion
 // region P26-G6b
 import '../../progression/flight_guide.dart';
 // endregion
@@ -167,8 +170,10 @@ class HomeScreen extends PositionComponent
     return true;
   }
 
+  // region P26-G6eB
   void _openMissions() {
     if (!active || game.modalPopupOpen || _missionsPanel != null) return;
+    final summary = game.starRoadSeason.takeSummary();
     // region P26-G1d
     late final MissionsPanel panel;
     panel = MissionsPanel(
@@ -194,6 +199,11 @@ class HomeScreen extends PositionComponent
       // endregion P26-G5b
       missions: RunEndBookkeeping.currentMissions(game.storage),
       now: game.storage.now(),
+      seasonSummary: summary,
+      starRoadBuilder: (compact) => StarRoadCard.open(
+        game: game, road: game.starRoad, daysLeft: game.starRoadDaysRemaining,
+        compact: compact, leavePanel: _closeMissions, returnToPanel: _openMissions,
+      ),
       onDismiss: _closeMissions,
       // region P26-G1d
       onSwap: (index) async {
@@ -211,6 +221,7 @@ class HomeScreen extends PositionComponent
     game.pushBack(_closeMissions);
   }
 
+  // endregion
   bool _isActive() => active && _missionsPanel == null;
   // endregion
 

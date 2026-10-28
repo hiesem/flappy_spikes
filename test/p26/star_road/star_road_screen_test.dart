@@ -12,6 +12,7 @@ import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/game/sound.dart';
 import 'package:flappy_spikes/progression/star_road.dart';
 import 'package:flappy_spikes/skins/look.dart';
+import 'package:flappy_spikes/skins/catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../../helpers.dart';
 
@@ -106,15 +107,30 @@ void main() {
             .map((t) => t.text);
         // PRD 2.6 §G6: the season uses a separate days chip.
         expect(headerTexts, contains('SEASON 3'));
-        final header = screen.children.whereType<PositionComponent>()
+        final header = screen.children
+            .whereType<PositionComponent>()
             .firstWhere((c) => c.position == Vector2(14, 140));
-        expect(header.children.whereType<MenuTag>().single.children
-            .whereType<MenuText>().single.text, '5 DAYS LEFT');
+        expect(
+          header.children
+              .whereType<MenuTag>()
+              .single
+              .children
+              .whereType<MenuText>()
+              .single
+              .text,
+          '5 DAYS LEFT',
+        );
         for (final entry in {5: 'GOLDEN', 15: '1 OF 4'}.entries) {
           final tags = screen.rows[entry.key]!.children
-              .expand((c) => c.children).whereType<MenuTag>();
-          expect(tags.expand((tag) => tag.children).whereType<MenuText>()
-              .map((t) => t.text), contains(entry.value));
+              .expand((c) => c.children)
+              .whereType<MenuTag>();
+          expect(
+            tags
+                .expand((tag) => tag.children)
+                .whereType<MenuText>()
+                .map((t) => t.text),
+            contains(entry.value),
+          );
         }
         expect(headerTexts, contains('TIER 10 OF 25 ·'));
         expect(headerTexts, contains('8 STARS TO TIER 11'));
@@ -289,6 +305,68 @@ void main() {
       game.closeStarRoad();
       expect(game.starRoadScreen, isNull);
       expect(game.storage.starRoadClaimed, contains(10));
+    },
+  );
+  FlameTester<FlappySpikesGame>(
+    () => createTestGame({}, 711),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'last-day chip uses UTC countdown and fallback coins skip reveal',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, _) async {
+      await game.storage.saveStarRoadSeason(1);
+      await game.storage.saveStarRoadXp(80);
+      await game.storage.saveOwnedItems(
+        allItems.map((item) => item.key).toSet(),
+      );
+      final sounds = <Sfx>[];
+      game.sound.onPlay = sounds.add;
+      game.openStarRoad(daysLeft: 1, onBack: () {});
+      await flushAndMount(game);
+      final screen = game.starRoadScreen!;
+      final header = screen.children.whereType<PositionComponent>().firstWhere(
+        (c) => c.position == Vector2(14, 140),
+      );
+      final chip = header.children
+          .whereType<MenuTag>()
+          .single
+          .children
+          .whereType<MenuText>()
+          .single
+          .text;
+      final now = game.storage.now().toUtc();
+      final remaining = DateTime.utc(
+        now.year,
+        now.month,
+        now.day + 1,
+      ).difference(now);
+      expect(
+        chip,
+        'ENDS IN ${remaining.inHours} H ${remaining.inMinutes % 60} M',
+      );
+      expect(
+        screen.children.whereType<MenuText>().map((t) => t.text),
+        contains('STARS COME FROM DAILY MISSIONS · UP TO 11 A DAY'),
+      );
+      final locked = screen.rows[20]!.children
+          .expand((c) => c.children)
+          .whereType<MenuText>()
+          .where((t) => t.text == 'MYSTERY')
+          .last;
+      expect(locked.textRenderer.style.color, const Color(0xFF999999));
+      screen.rows[10]!.children.whereType<MenuButton>().single.onPressed();
+      for (var i = 0; i < 30 && game.storage.coins == 0; i++) {
+        await Future<void>.value();
+        await flushAndMount(game);
+      }
+      expect(game.storage.coins, 250);
+      expect(game.starRoadReveal, isNull);
+      expect(sounds, contains(Sfx.bnCoin));
+      expect(sounds, isNot(contains(Sfx.lvClaim)));
     },
   );
 }

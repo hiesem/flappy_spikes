@@ -216,6 +216,10 @@ const Map<String, String> kObfStrings = {
   // region P26-G6eA
   'prefStarRoadJournal': 'starRoadJournal',
   'prefStarRoadItems': 'starRoadItems',
+  // region P26-G6eB
+  'prefStarRoadRunDay': 'starRoadRunDay',
+  'prefStarRoadRollover': 'starRoadRollover',
+  // endregion
   // endregion
 };
 

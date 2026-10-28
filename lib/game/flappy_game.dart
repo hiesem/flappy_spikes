@@ -1,3 +1,6 @@
+// region P26-G6eB
+import '../progression/star_road_season.dart';
+// endregion
 // region P26-G6eA
 import '../components/star_road/star_road_screen.dart';
 import '../components/star_road/star_road_card.dart';
@@ -964,6 +967,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // region P26-G6eA
     _starRoadClaims = StarRoadClaims(storage, menu.wallet, menu.items);
     await _starRoadClaims.recover();
+    // region P26-G6eB
+    _starRoadSeason = StarRoadSeason(storage, _starRoadClaims);
+    await _starRoadSeason.settle();
+    // endregion
     // endregion
     // region P26-F1
     await RunEndBookkeeping.economyDaily(storage, services);
@@ -1233,7 +1240,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // endregion
     // region P26-G1b
     missionRunSettlementPending = false;
-    missionSettlement = RunEndBookkeeping.prepareMissions(this);
+    // region P26-G6eB
+    missionSettlement = missionSettlement.then((_) => _starRoadSeason.settle()).then((_) => RunEndBookkeeping.prepareMissions(this));
+    // endregion
     // endregion
     homeMoments.beginVisit(
       HomeVisit(
@@ -3863,6 +3872,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   // endregion P26-LB4
 
   // region P26-G6eA
+  // region P26-G6eB
+  late final StarRoadSeason _starRoadSeason;
+  StarRoad get starRoad => _starRoadClaims.road;
+  int get starRoadDaysRemaining => _starRoadSeason.daysLeft;
+  StarRoadSeason get starRoadSeason => _starRoadSeason;
+  // endregion
   late final StarRoadClaims _starRoadClaims;
   StarRoadScreen? _starRoadScreen;
   StarRoadScreen? get starRoadScreen => _starRoadScreen;

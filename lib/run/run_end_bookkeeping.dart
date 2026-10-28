@@ -1,4 +1,7 @@
 import '../game/flappy_game.dart';
+// region P26-G6eB
+import '../progression/star_road.dart';
+// endregion
 // region P26-G1b
 import '../progression/missions.dart';
 import '../run/elements.dart';
@@ -74,9 +77,8 @@ abstract final class RunEndBookkeeping {
     // A weekly course is not a versus search, even when VERSUS is the
     // selected Home mode (G5a); leave the last versus result intact.
     final rival = !run.setup.weekly && game.homeMode == HomeMode.versus;
-    if (before < 3) {
-      return rival ? storage.saveLastVersusHadRival(run.setup.opponent != null) : Future.value();
-    }
+    // region P26-G6eB — first-run stars also settle during runs 1–3.
+    // endregion
     stats.captureOpenedSwitches();
     final board = currentMissions(storage);
     final rolled = board.roll(
@@ -90,7 +92,16 @@ abstract final class RunEndBookkeeping {
     );
     final advanced = rolled.advance(stats.missionCounts(before));
     final claim = advanced.claimCoins(rewards: TuningValues.current.ints('mission_rewards'));
+    // region P26-G6eB
+    final utcDay = game.storage.now().toUtc().millisecondsSinceEpoch ~/ Duration.millisecondsPerDay;
+    final road = StarRoad(season: storage.starRoadSeason, xp: storage.starRoadXp, claimed: storage.starRoadClaimed, popupDay: storage.starRoadPopupDay);
+    final nextRoad = road.finishRun(before: rolled, after: advanced, firstFinishedRun: utcDay > storage.starRoadRunDay);
+    // endregion
     final journal = <String, Object?>{
+      // region P26-G6eB
+      'roadSeason': road.season, 'roadXp': nextRoad.xp,
+      'roadDay': utcDay > storage.starRoadRunDay ? utcDay : storage.starRoadRunDay,
+      // endregion
       'day': claim.state.day, 'tier': claim.state.tier,
       'rerollDay': claim.state.rerollDay, 'missions': claim.state.toRecords(),
       'balanceBefore': storage.coins, 'earnedBefore': storage.lifetimeCoinsEarned,
@@ -104,6 +115,10 @@ abstract final class RunEndBookkeeping {
     final appliedWrite = storage.saveMissionJournal(applied);
     final activeJournal = storage.missionJournal;
     final writes = <Future<void>>[
+      // region P26-G6eB
+      storage.saveStarRoadXp(nextRoad.xp),
+      storage.saveStarRoadRunDay(utcDay > storage.starRoadRunDay ? utcDay : storage.starRoadRunDay),
+      // endregion
       if (rival) storage.saveLastVersusHadRival(run.setup.opponent != null),
       storage.saveMissions(claim.state.toRecords()),
       storage.saveMissionTier(claim.state.tier),
@@ -136,7 +151,9 @@ abstract final class RunEndBookkeeping {
     final run = game.run;
     game.missionRunSettlementPending = false;
     if (run != null && run.countsForUpload) {
-      game.missionRunSettlementPending = game.storage.gamesPlayed >= 4;
+      // region P26-G6eB
+      game.missionRunSettlementPending = true;
+      // endregion
       if (game.storage.gamesPlayed >= 4) {
         game.recordStreakRun(runNumber: game.storage.gamesPlayed);
       }

@@ -19,6 +19,10 @@ import 'tuning_types.dart';
 /// Every gameplay value with its baked value (the §14 values, = live RC
 /// of 2026-10-19).
 const List<TuningDef> kTuningDefaults = [
+  // region P26-G6eB
+  // PRD 2.6 G6: UTC day of the first shared season.
+  TuningDef('star_road_epoch_day', TuningType.integer, 20752),
+  // endregion
   // §14.2 Coins for a hoop pass that is not perfect
   TuningDef('coin_hoop', TuningType.integer, 1),
   // §14.2 Coins for a perfect pass (and every ride hoop)

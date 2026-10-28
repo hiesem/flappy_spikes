@@ -178,6 +178,20 @@ class StarRoadClaims {
   Future<void> _apply(Map<String, Object?> j, SharedPreferences prefs) async {
     final tier = j['tier'] as int;
     final season = j['season'] as int;
+    // region P26-G6eB
+    // Save the actual outcome to the rollover summary before applying it; the
+    // claim journal replays this step if the process dies between the two.
+    final rollover = prefs.getString(Obf.prefStarRoadRollover);
+    if (rollover != null) {
+      final data = jsonDecode(rollover) as Map<String, dynamic>;
+      if (data['pending'] == true && data['from'] == season) {
+        final awards = Map<String, dynamic>.from(data['awards'] as Map? ?? {});
+        awards['$tier'] = {'kind': j['kind'], 'coins': j['coins'], 'item': j['item']};
+        data['awards'] = awards;
+        await prefs.setString(Obf.prefStarRoadRollover, jsonEncode(data));
+      }
+    }
+    // endregion
     if (storage.starRoadSeason == season && j['kind'] == 'item') {
       await _saveItem(prefs, season, tier, j['item'] as String);
     }

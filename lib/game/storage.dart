@@ -133,6 +133,9 @@ class GameStorage {
   bool albumRewardClaimed = false;
   String albumRewardItem = '';
   int guideSeenCount = 0;
+  // region P26-G6eB
+  int starRoadRunDay = -1;
+  // endregion
   int starRoadSeason = 0;
   int starRoadXp = 0;
   Set<int> starRoadClaimed = const {};
@@ -691,6 +694,9 @@ class GameStorage {
     albumRewardClaimed = prefs.getBool(Obf.prefAlbumRewardClaimed) ?? false;
     albumRewardItem = prefs.getString(Obf.prefAlbumRewardItem) ?? '';
     guideSeenCount = prefs.getInt(Obf.prefGuideSeenCount) ?? 0;
+    // region P26-G6eB
+    starRoadRunDay = prefs.getInt(Obf.prefStarRoadRunDay) ?? -1;
+    // endregion
     starRoadSeason = prefs.getInt(Obf.prefStarRoadSeason) ?? 0;
     starRoadXp = prefs.getInt(Obf.prefStarRoadXp) ?? 0;
     starRoadClaimed = (prefs.getStringList(Obf.prefStarRoadClaimed) ?? const [])
@@ -2109,6 +2115,15 @@ class GameStorage {
         balance is! int || earned is! int) {
       return;
     }
+    // region P26-G6eB
+    final roadSeason = j['roadSeason'];
+    final roadXp = j['roadXp'];
+    final roadDay = j['roadDay'];
+    if (roadSeason is int && roadXp is int && roadDay is int && starRoadSeason == roadSeason) {
+      await saveStarRoadXp(roadXp);
+      await saveStarRoadRunDay(roadDay);
+    }
+    // endregion
     await saveMissions([for (final row in rows) Map<String, Object?>.from(row as Map)]);
     await saveMissionTier(tier);
     await saveMissionRerollDay(reroll);
@@ -2239,6 +2254,14 @@ class GameStorage {
     await prefs.setInt(Obf.prefGuideSeenCount, guideSeenCount);
   }
 
+  // region P26-G6eB
+  Future<void> saveStarRoadRunDay(int value) async {
+    starRoadRunDay = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefStarRoadRunDay, value);
+  }
+  // endregion
+
   Future<void> saveStarRoadSeason(int value) async {
     starRoadSeason = value;
     final prefs = _prefs ?? await SharedPreferences.getInstance();
@@ -2359,6 +2382,9 @@ class GameStorage {
     albumRewardClaimed = false;
     albumRewardItem = '';
     guideSeenCount = 0;
+    // region P26-G6eB
+    starRoadRunDay = -1;
+    // endregion
     starRoadSeason = 0;
     starRoadXp = 0;
     starRoadClaimed = const {};
@@ -2421,6 +2447,12 @@ class GameStorage {
           Obf.prefAlbumCompletionJournal,
           // endregion
           Obf.prefGuideSeenCount,
+          // region P26-G6eB
+          Obf.prefStarRoadRunDay,
+          Obf.prefStarRoadRollover,
+          Obf.prefStarRoadJournal,
+          Obf.prefStarRoadItems,
+          // endregion
           Obf.prefStarRoadSeason,
           Obf.prefStarRoadXp,
           Obf.prefStarRoadClaimed,

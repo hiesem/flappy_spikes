@@ -54,6 +54,22 @@ class StarRoadScreen extends MenuScreen {
   final Set<int> _claimedNow = {};
   bool _claiming = false;
   final Map<int, PositionComponent> rows = {};
+  // region P26-G6eB
+  MenuTag? _daysChip;
+  String _daysText() {
+    if (daysLeft != 1) return '$daysLeft DAYS LEFT';
+    final now = game.storage.now().toUtc();
+    final remaining = DateTime.utc(now.year, now.month, now.day + 1).difference(now);
+    return 'ENDS IN ${remaining.inHours} H ${remaining.inMinutes % 60} M';
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    final labels = _daysChip?.children.whereType<MenuText>();
+    if (labels != null && labels.isNotEmpty) labels.first.text = _daysText();
+  }
+  // endregion
 
   @override
   Rect scrollViewportFor(double viewHeight) =>
@@ -90,22 +106,11 @@ class StarRoadScreen extends MenuScreen {
         position: Vector2(84, 6),
       ),
     );
-    final remaining = DateTime(
-      game.storage.now().year,
-      game.storage.now().month,
-      game.storage.now().day + 1,
-    ).difference(game.storage.now());
-    header.add(
-      MenuTag(
-        daysLeft == 1
-            ? 'ENDS IN ${remaining.inHours} H ${remaining.inMinutes % 60} M'
-            : '$daysLeft DAYS LEFT',
-        fontSize: 8,
-        fillColor: Config.menuPink,
-        textColor: Config.menuSoft,
-        position: Vector2(150, 5),
-      ),
+    _daysChip = MenuTag(
+      _daysText(), fontSize: 8, fillColor: Config.menuPink,
+      textColor: Config.menuSoft, position: Vector2(150, 5),
     );
+    header.add(_daysChip!);
     // endregion
     header.add(
       MenuText(

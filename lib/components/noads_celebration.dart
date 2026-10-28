@@ -309,6 +309,7 @@ class _Header extends PositionComponent {
     rayCenter: _rayCentre,
     motion: () => motion,
   );
+  // endregion
   final Paint _star = Paint()..color = const Color(0xFFFFFFFF);
   final Paint _ring = Paint()..color = Config.menuPink;
   final Paint _gold = Paint()..color = Config.menuGold;
@@ -317,7 +318,6 @@ class _Header extends PositionComponent {
     ..strokeWidth = 3.6
     ..strokeCap = StrokeCap.square
     ..color = Config.menuPlum;
-  // endregion
   final Path _starPath = Path();
 
   (double, double) get wobble => (_wobble.scale, _wobble.angle);

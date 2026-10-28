@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 
+import '../../game/config.dart';
 import '../config/hud_config.dart';
 import '../config/run_config.dart';
 import '../hoops/hoop.dart';
@@ -35,7 +36,7 @@ class BestLine extends PositionComponent {
   bool get visible =>
       run.bestGoalEligible &&
       _trackX != null &&
-      (_collapseAge != null || screenX <= 320);
+      (_collapseAge != null || screenX <= Config.worldWidth);
 
   void collapse() {
     if (_collapseAge != null) return;

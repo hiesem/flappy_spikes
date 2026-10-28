@@ -43,7 +43,10 @@ void main() {
       await storage.saveStarRoadXp(24);
       await storage.saveStarRoadClaimed({1});
       final season = coordinator(storage);
-      await season.settle();
+      final settling = season.settle();
+      expect(season.settling, isTrue);
+      await settling;
+      expect(season.settling, isFalse);
       expect(storage.coins, 55);
       expect(storage.starRoadSeason, 2);
       expect(storage.starRoadXp, 0);

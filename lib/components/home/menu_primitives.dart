@@ -405,7 +405,6 @@ class MenuIcon extends SpriteComponent {
 
 /// Gold corner tag ("NEW"): white 11 pt text, 2/5 pt padding (mock `.tag`;
 /// the Skins grid's `.tg` is 10 pt at 0.05 em).
-// region P26-J6
 class MenuTag extends PositionComponent {
   MenuTag(
     String text, {
@@ -444,8 +443,6 @@ class MenuTag extends PositionComponent {
   @override
   void render(Canvas canvas) => canvas.drawRect(size.toRect(), _paint);
 }
-
-// endregion
 
 /// Lays [items] out left-to-right as one centred group inside [parent]
 /// (the mocks' `display:flex; justify-content:center; align-items:center;

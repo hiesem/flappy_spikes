@@ -958,6 +958,7 @@ class ResultsScreen extends PositionComponent
     }
     final item = allItems.where((i) => i.key == storage.albumRewardItem).firstOrNull;
     revealSheet = LevelRevealSheet(
+      album: true,
       item: item,
       extraCoins: item == null ? 2000 : 0,
       payReward: () async {

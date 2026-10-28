@@ -14,13 +14,6 @@ class PuzzleAlbum {
   int get held =>
       (storage.puzzlePieces & 15).toRadixString(2).split('1').length - 1;
 
-  /// Record the colour being completed, before the puzzle round advances.
-  Future<void> recordPicture(int round) async {
-    final counts = List<int>.of(storage.albumCounts);
-    counts[round % 8]++;
-    await storage.saveAlbumCounts(counts);
-  }
-
   /// Same eligible categories and rarity fallback as the level reward (R9).
   static SkinItem? roll(Set<String> owned, Set<String> pending, Random random) {
     for (final rarity in [Rarity.epic, Rarity.legendary]) {
@@ -29,6 +22,7 @@ class PuzzleAlbum {
             (i) =>
                 i.layer != SkinLayer.card &&
                 !i.isFree &&
+                !i.isSkillOnly &&
                 i.unlock == null &&
                 i.rarity == rarity &&
                 !owned.contains(i.key) &&

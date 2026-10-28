@@ -6,6 +6,9 @@ import '../../../run/config/puzzle_config.dart';
 import '../../../run/pickups/puzzle_piece_pickup.dart';
 import '../../home/menu_primitives.dart';
 import '../../ui/mystery_box.dart';
+import '../../skins/item_art.dart';
+import '../../skins/item_tile.dart';
+import '../../../skins/catalog.dart';
 import '../levels_screen.dart';
 import 'levels_tabs.dart';
 
@@ -14,18 +17,51 @@ class AlbumTab {
     final album = PuzzleAlbum(screen.game.storage);
     screen.installTabContent(
       LevelsTab.album,
-      header: _AlbumHeader(album),
+      header: AlbumHeader(album, screen),
       rows: [for (var i = 0; i < 8; i++) _AlbumCard(album, i)],
       contentBottom: 264 + 4 * 150.0 + 12,
     );
   }
 }
 
-class _AlbumHeader extends PositionComponent {
-  _AlbumHeader(this.album);
+class AlbumHeader extends PositionComponent {
+  AlbumHeader(this.album, this.screen);
   final PuzzleAlbum album;
+  final LevelsScreen screen;
   @override
   Future<void> onLoad() async {
+    final won = allItems
+        .where((i) => i.key == album.storage.albumRewardItem)
+        .firstOrNull;
+    if (album.storage.albumRewardClaimed && won != null) {
+      add(
+        ItemTile(
+          item: won,
+          rect: const Rect.fromLTWH(5, 2, 74, 78),
+          state: () => const ItemTileState(
+            owned: true,
+            equipped: false,
+            tryingOn: false,
+            isNew: false,
+          ),
+          onPressed: () {},
+          art: ItemArtCache(),
+          cardColor: () => const Color(0xFFE8E8E8),
+          tint: () => Config.menuPink,
+          reduceMotion: () => true,
+          rewardTile: true,
+        ),
+      );
+    }
+    if (album.storage.albumRewardClaimed && won == null) {
+      add(
+        MenuIcon(
+          screen.sprite('menu/coin.png'),
+          size: Vector2.all(48),
+          position: Vector2(18, 18),
+        ),
+      );
+    }
     addAll([
       MenuText(
         album.completed == 8 ? 'ALBUM COMPLETE' : 'ALL 8 PICTURES',
@@ -34,13 +70,19 @@ class _AlbumHeader extends PositionComponent {
         position: Vector2(94, 10),
       ),
       MenuText(
-        'REWARD · 1 RANDOM EPIC ITEM',
+        album.storage.albumRewardClaimed
+            ? (won == null
+                  ? 'WON: COINS'
+                  : 'WON: ${won.name.toUpperCase()} · ${won.rarity!.label} ${won.layer.key.toUpperCase()}')
+            : 'REWARD · 1 RANDOM EPIC ITEM',
         fontSize: 8,
-        color: const Color(0xFF828282),
+        color: album.storage.albumRewardClaimed
+            ? (won?.rarity?.color ?? Config.menuGold)
+            : const Color(0xFF828282),
         position: Vector2(94, 36),
       ),
       MenuText(
-        '${album.completed} / 8 PICTURES',
+        '${album.completed} / 8 PICTURES${album.completed == 8 ? ' ✓' : ''}',
         fontSize: 8,
         color: Config.menuPlum,
         anchor: Anchor.center,
@@ -58,8 +100,11 @@ class _AlbumHeader extends PositionComponent {
     );
     canvas.drawRect(
       Rect.fromLTWH(94, 57, 188 * album.completed / 8, 16),
-      Paint()..color = Config.menuPink,
+      Paint()..color = album.completed == 8 ? Config.menuGold : Config.menuPink,
     );
+    if (album.storage.albumRewardClaimed) {
+      return;
+    }
     canvas.save();
     canvas.translate(42, 38);
     MysteryBox.paint(

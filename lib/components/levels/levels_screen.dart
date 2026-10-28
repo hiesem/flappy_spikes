@@ -87,6 +87,10 @@ class LevelsScreen extends MenuScreen {
   Rect scrollViewportFor(double viewHeight) =>
       LevelsTabsLayout.viewport(viewHeight);
 
+  // region P26-G6c
+  MenuScrollArea? tabScroll(LevelsTab tab) => _tabScrolls[tab];
+  // endregion
+
   /// Hosts a tab using the same fixed header and list band as LEVELS.
   /// Interactive children should use `() => tabIsActive(tab)`.
   MenuScrollArea installTabContent(

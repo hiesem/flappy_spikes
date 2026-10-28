@@ -150,6 +150,21 @@ class Wallet extends ChangeNotifier {
     onEarned?.call(amount, source);
   }
 
+  // region P26-G6c
+  /// Exposes the run bonus immediately while its durable journal is written
+  /// before the wallet itself. The ordinary wallet ledger is then updated.
+  Future<void> addAfter(int amount, CoinSource source, Future<void> journal) async {
+    if (amount <= 0) return;
+    _storage.coins += amount;
+    notifyListeners();
+    await journal;
+    final counter = _storage.saveLifetimeCoinsEarned(_storage.lifetimeCoinsEarned + amount);
+    await _storage.saveCoins(_storage.coins);
+    await counter;
+    onEarned?.call(amount, source);
+  }
+  // endregion
+
   /// Spends [amount] coins. Returns false without changing anything when the
   /// balance is too low or [amount] is negative; zero is a true no-op.
   Future<bool> spend(int amount, String reason) async {

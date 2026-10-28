@@ -95,3 +95,6 @@ lvlRewardLog
 lastVersusHadRival
 missionJournal
 // endregion
+// region P26-G6c
+albumCompletionJournal
+// endregion

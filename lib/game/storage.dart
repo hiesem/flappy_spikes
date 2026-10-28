@@ -39,6 +39,9 @@ class GameStorage {
   /// claim, §3.14) goes through this handle instead of awaiting a fresh
   /// `getInstance()`.
   SharedPreferences? _prefs;
+  // region P26-G6c
+  Future<void>? _albumJournalGate;
+  // endregion
 
   static final String _bestScoreKey = Obf.prefBestScore;
   static final String _gamesPlayedKey = Obf.prefGamesPlayed;
@@ -682,6 +685,9 @@ class GameStorage {
             .whereType<int>()
             .toList() ??
         const [0, 0, 0, 0, 0, 0, 0, 0];
+    // region P26-G6c
+    await _recoverAlbumCompletion(prefs);
+    // endregion
     albumRewardClaimed = prefs.getBool(Obf.prefAlbumRewardClaimed) ?? false;
     albumRewardItem = prefs.getString(Obf.prefAlbumRewardItem) ?? '';
     guideSeenCount = prefs.getInt(Obf.prefGuideSeenCount) ?? 0;
@@ -1043,19 +1049,57 @@ class GameStorage {
   /// reset + round advance. Every cache field is set before the first
   /// await and the platform writes go out record first, so the coin write
   /// that follows (`Wallet.add`) is always issued after the record.
+  // region P26-G6c
+  /// Journal absolute targets before any completion write. A reload replays
+  /// them idempotently before the existing puzzle payout recovery runs.
   Future<void> beginPuzzleCompletion({required int payout}) async {
+    final counts = List<int>.of(albumCounts);
+    counts[puzzleRound % 8]++;
+    final round = puzzleRound + 1;
     puzzlePayout = payout;
     puzzlePieces = 0;
-    puzzleRound++;
-    final round = puzzleRound;
+    puzzleRound = round;
+    albumCounts = counts;
     final prefs = _prefs ?? await SharedPreferences.getInstance();
-    final record = prefs.setInt(_puzzlePayoutKey, payout);
-    final mask = prefs.setInt(_puzzlePiecesKey, 0);
-    final next = prefs.setInt(_puzzleRoundKey, round);
-    await record;
-    await mask;
-    await next;
+    final journal = jsonEncode({'round': round, 'payout': payout, 'counts': counts});
+    final gate = prefs.setString(Obf.prefAlbumCompletionJournal, journal).then<void>((ok) {
+      if (!ok) throw StateError('album journal write failed');
+    });
+    _albumJournalGate = gate;
+    try {
+      await gate;
+    } finally {
+      if (identical(_albumJournalGate, gate)) _albumJournalGate = null;
+    }
+    await _applyAlbumCompletion(prefs, round, payout, counts);
   }
+
+  Future<void> _applyAlbumCompletion(SharedPreferences prefs, int round,
+      int payout, List<int> counts) async {
+    Future<void> checked(Future<bool> write) async {
+      if (!await write) throw StateError('album completion write failed');
+    }
+    await checked(prefs.setInt(_puzzlePayoutKey, payout));
+    await checked(prefs.setStringList(Obf.prefAlbumCounts, counts.map((n) => '$n').toList()));
+    await checked(prefs.setInt(_puzzlePiecesKey, 0));
+    await checked(prefs.setInt(_puzzleRoundKey, round));
+    await checked(prefs.remove(Obf.prefAlbumCompletionJournal));
+  }
+
+  Future<void> _recoverAlbumCompletion(SharedPreferences prefs) async {
+    final raw = prefs.getString(Obf.prefAlbumCompletionJournal);
+    if (raw == null) return;
+    final data = jsonDecode(raw) as Map<String, dynamic>;
+    final round = data['round'] as int;
+    final payout = data['payout'] as int;
+    final counts = (data['counts'] as List).cast<int>();
+    puzzleRound = round;
+    puzzlePieces = 0;
+    puzzlePayout = payout;
+    albumCounts = List<int>.of(counts);
+    await _applyAlbumCompletion(prefs, round, payout, counts);
+  }
+  // endregion
 
   /// §3.16 (call, S6-62) Settles a puzzle payout: clears the record.
   Future<void> endPuzzlePayout() async {
@@ -1596,6 +1640,11 @@ class GameStorage {
     coins = value;
     // region P26-G1b
     if (journalWrite != null) await journalWrite;
+    // endregion
+    // region P26-G6c
+    // Any concurrent coin write must also wait for the completion journal.
+    final journalGate = _albumJournalGate;
+    if (journalGate != null) await journalGate;
     // endregion
     await _sealedWrite((p) => p.setInt(_coinsKey, value));
   }
@@ -2368,6 +2417,9 @@ class GameStorage {
           Obf.prefAlbumCounts,
           Obf.prefAlbumRewardClaimed,
           Obf.prefAlbumRewardItem,
+          // region P26-G6c
+          Obf.prefAlbumCompletionJournal,
+          // endregion
           Obf.prefGuideSeenCount,
           Obf.prefStarRoadSeason,
           Obf.prefStarRoadXp,

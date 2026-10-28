@@ -2,9 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
-// region P26-G6c
-import '../../progression/puzzle_album.dart';
-// endregion
 import '../../game/sound.dart';
 import '../../game/storage.dart';
 import '../../menu/wallet.dart';
@@ -78,9 +75,6 @@ class PuzzleFeature extends RunFeature {
     });
     int? reward;
     if (count >= PuzzleConfig.pieces) {
-      // region P26-G6c
-      unawaited(PuzzleAlbum(storage).recordPicture(round));
-      // endregion
       final rolled = c.director.rollPuzzleBonus();
       reward = _complete(c, rolled);
       paid.add(rolled);
@@ -158,12 +152,11 @@ class PuzzleFeature extends RunFeature {
     final wallet = c.game.menu.wallet;
     final coins = rolled;
     c.s.coinsThisRun += coins;
-    unawaited(storage.beginPuzzleCompletion(payout: wallet.balance + coins));
-    unawaited(
-      wallet
-          .add(coins, CoinSource.puzzle)
-          .then((_) => storage.endPuzzlePayout()),
-    );
+    // region P26-G6c
+    final journal = storage.beginPuzzleCompletion(payout: wallet.balance + coins);
+    unawaited(wallet.addAfter(coins, CoinSource.puzzle, journal)
+        .then((_) => storage.endPuzzlePayout()));
+    // endregion
     c.emit(CoinsEarned(coins, CoinSource.puzzle));
     // PRD-2.2 §13.1 the same amount in points.
     c.addScore(coins, flags: PointFlags.bonus | PointFlags.puzzle);

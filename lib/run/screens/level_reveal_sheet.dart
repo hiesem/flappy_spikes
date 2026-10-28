@@ -5,6 +5,9 @@ import 'dart:ui';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 
+// region P26-G6c
+import '../../components/levels/tabs/album_reveal_art.dart';
+// endregion
 import '../../components/home/menu_primitives.dart';
 import '../../components/skins/item_art.dart';
 import '../../components/skins/item_tile.dart';
@@ -34,6 +37,7 @@ class LevelRevealSheet extends P1Popup {
     this.extraCoins = 0,
     // region P26-G6c
     this.payReward,
+    this.album = false,
     // endregion
   }) : super(onDismiss: () {}, priority: 100);
 
@@ -41,6 +45,7 @@ class LevelRevealSheet extends P1Popup {
   final int extraCoins;
   // region P26-G6c
   final Future<void> Function()? payReward;
+  final bool album;
   // endregion
   final void Function(bool equipped) onFinished;
   double elapsed = 0;
@@ -71,15 +76,31 @@ class LevelRevealSheet extends P1Popup {
 
   @override
   Future<void> buildCard(PositionComponent card) async {
-    cardHeight = 310;
-    final rarity = item?.rarity ?? Rarity.common;
+    // region P26-G6c
+    final albumOffset = album ? 75.0 : 0.0;
+    cardHeight = 310 + albumOffset;
+    if (album) {
+      card.add(AlbumRevealArt(reduceMotion: () => game.reduceMotion));
+      card.addAll([
+        MenuText('ALBUM COMPLETE!', fontSize: 19, color: Config.uiAccent,
+          anchor: Anchor.topCenter, position: Vector2(Config.p1PopupWidth / 2, 5)),
+        MenuText('ALL 8 PICTURES', fontSize: 10, color: Config.menuPlum,
+          anchor: Anchor.topCenter, position: Vector2(Config.p1PopupWidth / 2, 30)),
+      ]);
+    }
+    // endregion
+    // region P26-G6c
+    final rarity = item?.rarity ?? (album ? Rarity.epic : Rarity.common);
+    // endregion
     box = MysteryBoxComponent(
       look: MysteryBoxLook.colours(
         rarity.color,
         Color.lerp(rarity.color, const Color(0xFF000000), .3)!,
       ),
       boxSize: 80,
-      position: Vector2(Config.p1PopupWidth / 2, 85),
+      // region P26-G6c
+      position: Vector2(Config.p1PopupWidth / 2, 85 + albumOffset),
+      // endregion
       animation: const MysteryBoxAnimation(),
     );
     card.add(box);
@@ -89,7 +110,9 @@ class LevelRevealSheet extends P1Popup {
         if (!revealed) elapsed = 1.95;
       }, size: Vector2(Config.p1PopupWidth, cardHeight)),
     );
-    details = PositionComponent();
+    // region P26-G6c
+    details = PositionComponent(position: Vector2(0, albumOffset));
+    // endregion
     card.add(details);
     if (item != null) {
       details.add(
@@ -114,16 +137,22 @@ class LevelRevealSheet extends P1Popup {
           item!.name.toUpperCase(),
           fontSize: 18,
           color: Config.uiAccent,
-          position: Vector2(Config.p1PopupWidth / 2, 115),
+          // region P26-G6c
+          position: Vector2(Config.p1PopupWidth / 2, album ? 142 : 115),
+          // endregion
           anchor: Anchor.topCenter,
         ),
       );
       details.add(
         MenuText(
-          '${rarity.label} · ${item!.layer.key.toUpperCase()}',
+          // region P26-G6c
+          album ? rarity.label : '${rarity.label} · ${item!.layer.key.toUpperCase()}',
+          // endregion
           fontSize: 12,
           color: rarity.color,
-          position: Vector2(Config.p1PopupWidth / 2, 142),
+          // region P26-G6c
+          position: Vector2(Config.p1PopupWidth / 2, album ? 115 : 142),
+          // endregion
           anchor: Anchor.topCenter,
         ),
       );
@@ -225,7 +254,9 @@ class LevelRevealSheet extends P1Popup {
       particles.spawn(
         shape: ParticleShape.twinkle,
         x: Config.p1PopupWidth / 2,
-        y: 85,
+        // region P26-G6c
+        y: album ? 160 : 85,
+        // endregion
         vx: math.cos(angle) * 100,
         vy: math.sin(angle) * 100,
         w: 9,
@@ -257,15 +288,19 @@ class LevelRevealSheet extends P1Popup {
         );
         card.add(
           ConfettiBurst.burst(
-            origin: Offset(Config.p1PopupWidth / 2, 85),
+            // region P26-G6c
+            origin: Offset(Config.p1PopupWidth / 2, album ? 160 : 85),
+            // endregion
             count: 12 + (item?.rarity?.index ?? 0) * 5,
             stars: true,
           ),
         );
       }
+      // region P26-G6c
       game.sound.play(
-        item?.rarity == Rarity.legendary ? Sfx.lvUpBig : Sfx.lvClaim,
+        album ? Sfx.lvClaim : (item?.rarity == Rarity.legendary ? Sfx.lvUpBig : Sfx.lvClaim),
       );
+      // endregion
     }
     if (item?.rarity == Rarity.legendary && !_secondBurst && elapsed >= 1.5) {
       _secondBurst = true;
@@ -273,7 +308,9 @@ class LevelRevealSheet extends P1Popup {
         _sparkles(const Color(0xFFFFD85A), 24);
         card.add(
           ShockRing().play(
-            Offset(Config.p1PopupWidth / 2, 85),
+            // region P26-G6c
+            Offset(Config.p1PopupWidth / 2, album ? 160 : 85),
+            // endregion
             rx: 18,
             color: const Color(0xFFFFD85A),
             length: .6,
@@ -282,7 +319,9 @@ class LevelRevealSheet extends P1Popup {
         );
         card.add(
           ConfettiBurst.burst(
-            origin: Offset(Config.p1PopupWidth / 2, 85),
+            // region P26-G6c
+            origin: Offset(Config.p1PopupWidth / 2, album ? 160 : 85),
+            // endregion
             count: 16,
             stars: true,
           ),
@@ -296,7 +335,9 @@ class LevelRevealSheet extends P1Popup {
     }
     if (!_burst && !game.reduceMotion) {
       final drop = (elapsed / .3).clamp(0.0, 1.0);
-      box.position.y = 85 - 120 * (1 - drop) * (1 - drop);
+      // region P26-G6c
+      box.position.y = (album ? 160 : 85) - 120 * (1 - drop) * (1 - drop);
+      // endregion
     }
     final start = equipAt;
     if (start != null) {

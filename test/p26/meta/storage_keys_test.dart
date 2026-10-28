@@ -71,6 +71,8 @@ void main() {
         // G1b orchestrator ruling: the mission journal and rival bit are appended.
         'lastVersusHadRival',
         'missionJournal',
+        // PRD 933 / O78: G6c journals the picture completion before writes.
+        'albumCompletionJournal',
       ];
       expect(kObfStrings.values.skip(109), keys);
       final anchors = File('tool/anchor_strings.txt').readAsLinesSync();

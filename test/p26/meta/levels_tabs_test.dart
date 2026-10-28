@@ -4,6 +4,7 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/home/menu_primitives.dart';
 import 'package:flappy_spikes/components/levels/tabs/levels_tabs.dart';
+import 'package:flappy_spikes/components/levels/tabs/album_tab.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/sound.dart';
@@ -65,12 +66,8 @@ void main() async {
           tab == LevelsTab.levels ? Config.menuPink : Config.menuSoft,
         );
       }
-      final area = screen.installTabContent(
-        LevelsTab.album,
-        header: PositionComponent(),
-        rows: const [],
-        contentBottom: 900,
-      );
+      // PRD 933: G6c installs the real album in the G4 host.
+      final area = screen.tabScroll(LevelsTab.album)!;
       await flushAndMount(game);
       screen.selectTab(LevelsTab.album);
       expect(area.viewport, screen.scroll.viewport);
@@ -204,15 +201,8 @@ void main() async {
     await flushAndMount(game);
     stepGame(game, .3);
     final screen = game.levelsScreen!;
-    final header = PositionComponent();
-    screen.installTabContent(
-      LevelsTab.album,
-      header: header,
-      rows: [
-        PositionComponent(position: Vector2(14, 264), size: Vector2(292, 72)),
-      ],
-      contentBottom: 900,
-    );
+    // PRD 933: the real album occupies the fixed G4 header and list.
+    final header = screen.children.whereType<AlbumHeader>().single;
     await flushAndMount(game);
     expect(header.position, Vector2(14, 172));
     expect(header.size, Vector2(292, 84));

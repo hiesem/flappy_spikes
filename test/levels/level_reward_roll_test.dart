@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:flappy_spikes/achievements/achievement_catalog.dart';
+
 import 'package:flappy_spikes/levels/level_reward_roll.dart';
 import 'package:flappy_spikes/levels/level_track.dart';
 import 'package:flappy_spikes/skins/catalog.dart';
@@ -13,6 +15,26 @@ Set<String> ownedExcept(bool Function(SkinItem) keep) => {
 };
 
 void main() {
+  test('unlock excludes an otherwise eligible priced shop item', () {
+    const locked = SkinItem(
+      layer: SkinLayer.hat,
+      id: 'test',
+      name: 'Test',
+      rarity: Rarity.common,
+      price: 250,
+      unlock: AchievementId.rankEgg,
+    );
+    const sold = SkinItem(
+      layer: SkinLayer.hat,
+      id: 'test',
+      name: 'Test',
+      rarity: Rarity.common,
+      price: 250,
+    );
+    expect(isLevelRewardEligible(sold, {}, {}), isTrue);
+    expect(isLevelRewardEligible(locked, {}, {}), isFalse);
+  });
+
   test('achievement unlock items are excluded from rewards', () {
     final unlocks = allItems.where((item) => item.unlock != null).toList();
     expect(unlocks, isNotEmpty);

@@ -74,7 +74,7 @@ class LevelProgress extends ChangeNotifier {
           ),
         );
 
-  Future<int> recordRun(int score, {bool counts = true}) async {
+  Future<int> recordRun(int score, {bool counts = true, bool analytics = true}) async {
     if (!counts) return level;
     final step = LevelTrack.step(level, points, score);
     if (step.levelledUp) {
@@ -99,7 +99,7 @@ class LevelProgress extends ChangeNotifier {
       );
       await saved;
       notifyListeners();
-      services?.logLevelUp(
+      if (analytics) services?.logLevelUp(
         step.index,
         games: _storage.gamesPlayed,
         runScore: score,
@@ -112,7 +112,7 @@ class LevelProgress extends ChangeNotifier {
       await _storage.saveLvlPoints(step.points);
       notifyListeners();
     }
-    services?.setUserProperty('fs_level', '$level');
+    if (analytics) services?.setUserProperty('fs_level', '$level');
     return level;
   }
 
@@ -173,7 +173,10 @@ class LevelProgress extends ChangeNotifier {
           fallback: row['fallback'] as String? ?? 'none',
         );
       }
-      await _storage.saveLvlPending(const []);
+      final paidLevels = rows.map((row) => row['lvl']).toSet();
+      await _storage.saveLvlPending(
+        _storage.lvlPending.where((row) => !paidLevels.contains(row['lvl'])).toList(),
+      );
       await _storage.saveLvlPayout(0);
       notifyListeners();
       return due;
@@ -194,5 +197,5 @@ class LevelProgress extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> debugForceLevelUp() => recordRun(needFor(level)).then((_) {});
+  Future<void> debugForceLevelUp() => recordRun(needFor(level), analytics: false).then((_) {});
 }

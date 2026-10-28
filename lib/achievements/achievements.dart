@@ -289,13 +289,12 @@ class AchievementTracker {
     }
   }
 
-  // region P26-J2
+  // region P26-J9
   /// PRD-2.6 J9 / round-2 decision: published rank achievements retain
   /// their single-run score thresholds, independently of progression.
   void onRunScore(int score) => _tx(() {
-    const thresholds = [25, 50, 100, 200, 400, 600, 800, 1000, 2000, 5000];
     for (var i = 0; i < kRankAchievements.length; i++) {
-      if (score >= thresholds[i]) _earn(kRankAchievements[i]);
+      if (score >= kRankScoreThresholds[i]) _earn(kRankAchievements[i]);
     }
   });
   // endregion

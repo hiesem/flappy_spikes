@@ -11,7 +11,9 @@ library;
 enum AchievementGroup { rank, ride, item, mastery, hoops, versus, more }
 
 enum AchievementId {
-  // --- Ranks (10, 220 pts) --------------------------------------------------
+  // region P26-J9
+  // Single-run score achievements (10, 220 pts).
+  // endregion
   rankEgg(
     'rank_egg',
     'EGG',
@@ -526,8 +528,8 @@ enum AchievementId {
   }
 }
 
-/// §12.1 rank achievements by level (1 = EGG … 10 = LEGEND; the thresholds
-/// are `kLevels[L-1].threshold`).
+// region P26-J9
+/// PRD-2.6 R5: single-run score achievements in ascending threshold order.
 const List<AchievementId> kRankAchievements = [
   AchievementId.rankEgg,
   AchievementId.rankChick,
@@ -540,6 +542,21 @@ const List<AchievementId> kRankAchievements = [
   AchievementId.rankPhoenix,
   AchievementId.rankLegend,
 ];
+
+/// Single-run scores for [kRankAchievements], independent of player level.
+const List<int> kRankScoreThresholds = [
+  25,
+  50,
+  100,
+  200,
+  400,
+  600,
+  800,
+  1000,
+  2000,
+  5000,
+];
+// endregion
 
 /// §12.1 hoops in one run: threshold → achievement.
 const List<(int, AchievementId)> kHoopAchievements = [

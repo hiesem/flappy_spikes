@@ -1205,6 +1205,9 @@ class Config {
   /// PRD-2.3 §26.1 (`ui_unlock_best`): the Shop and Skins screens unlock at
   /// this best score (25). Shown in the lock text, so a tuned value reads true.
   static int get menuUnlockBest => TuningValues.current.i('ui_unlock_best');
+  // region P26-F1
+  static int get menuUnlockGames => TuningValues.current.i('ui_unlock_games');
+  // endregion
 
   /// A previous run below this score suppresses the popup ("frustrating
   /// death").

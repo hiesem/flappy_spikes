@@ -16,9 +16,14 @@ class MenuState {
     Random? random,
     void Function(int, CoinSource)? onEarned,
     void Function(int, String)? onSpent,
+    // region P26-F1
+    void Function(Map<String, Object>)? onItemBought,
+    // endregion
   }) {
     wallet = Wallet(storage, onEarned: onEarned, onSpent: onSpent);
-    items = ItemStore(storage, wallet);
+    // region P26-F1
+    items = ItemStore(storage, wallet, onItemBought: onItemBought);
+    // endregion
     slot = PowerupSlot(storage, random: random);
     noAdsPopup = NoAdsPopupPolicy(storage);
     freeCoins = FreeCoinsPolicy(storage);
@@ -41,10 +46,16 @@ class MenuState {
 
   bool get noAds => storage.noAds;
 
-  /// PRD-2.3 §26.1: the Shop and Skins are locked until the best score
-  /// reaches [Config.menuUnlockBest] (one check for both screens and the Home
-  /// tiles; the best is shared by every mode).
-  bool get locked => storage.bestScore < Config.menuUnlockBest;
+  // region P26-F1
+  /// PRD-2.6 R8: the shared Shop and Skins unlock has three paths.
+  static bool menuUnlocked(int best, int games, int level) =>
+      best >= Config.menuUnlockBest ||
+      games >= Config.menuUnlockGames ||
+      level >= 1;
+
+  bool get locked =>
+      !menuUnlocked(storage.bestScore, storage.gamesPlayed, storage.lvlIndex);
+  // endregion
 
   Future<void> setNoAds(bool value) => storage.saveNoAds(value);
 }

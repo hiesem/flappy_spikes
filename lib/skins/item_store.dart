@@ -10,7 +10,10 @@ enum ItemPurchaseResult { purchased, alreadyOwned, insufficientCoins, unknown }
 /// Owned/equipped wardrobe items plus purchases, persisted through
 /// [GameStorage] (PRD-menu-v2 §3.5–3.7). Shaped like the PRD-1 `SkinStore`.
 class ItemStore extends ChangeNotifier {
-  ItemStore(this._storage, this._wallet);
+  // region P26-F1
+  ItemStore(this._storage, this._wallet, {this.onItemBought});
+  final void Function(Map<String, Object>)? onItemBought;
+  // endregion
 
   final GameStorage _storage;
   final Wallet _wallet;
@@ -111,10 +114,23 @@ class ItemStore extends ChangeNotifier {
     if (_wallet.balance < item.price) {
       return ItemPurchaseResult.insufficientCoins;
     }
+    // region P26-F1
+    final balanceBefore = _wallet.balance;
+    // endregion
     final spent = await _wallet.spend(item.price, 'item:${item.key}');
     if (!spent) return ItemPurchaseResult.insufficientCoins;
     await _storage.saveOwnedItems({..._storage.ownedItems, item.key});
     await _storage.saveEquippedItem(layer, id);
+    // region P26-F1
+    onItemBought?.call({
+      'key': item.key,
+      'rarity': item.rarity?.name ?? 'none',
+      'price': item.price,
+      'balance_before': balanceBefore,
+      'games': _storage.gamesPlayed,
+      'minutes': _storage.playtimeSeconds ~/ 60,
+    });
+    // endregion
     notifyListeners();
     return ItemPurchaseResult.purchased;
   }

@@ -877,6 +877,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     unawaited(achievements.syncAll());
     menu = MenuState(
       storage,
+      // region P26-F1
+      onItemBought: (fields) => services.track('item_bought', fields),
+      // endregion
       onEarned: (amount, source) {
         // In-run sources are aggregated by the run's analytics router and
         // sent once at run end (ARCH §2.7).

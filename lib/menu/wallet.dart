@@ -118,10 +118,28 @@ class Wallet extends ChangeNotifier {
 
   int get balance => _storage.coins;
 
+  // region P26-F1
+  int get lifetimeCoinsEarned => _storage.lifetimeCoinsEarned;
+  int get lifetimeCoinsSpent => _storage.lifetimeCoinsSpent;
+  int get lifetimeCoinsBought => _storage.lifetimeCoinsBought;
+  // endregion
+
   /// Adds [amount] coins. Zero or negative amounts are ignored.
   Future<void> add(int amount, CoinSource source) async {
     if (amount <= 0) return;
+    // region P26-F1 — PRD 8.3-10: gifts earned, No-Ads bonus bought.
+    final counter = source == CoinSource.iap || source == CoinSource.noadsBonus
+        ? _storage.saveLifetimeCoinsBought(
+            _storage.lifetimeCoinsBought + amount,
+          )
+        : _storage.saveLifetimeCoinsEarned(
+            _storage.lifetimeCoinsEarned + amount,
+          );
+    // endregion
     await _storage.saveCoins(_storage.coins + amount);
+    // region P26-F1
+    await counter;
+    // endregion
     notifyListeners();
     onEarned?.call(amount, source);
   }
@@ -131,7 +149,15 @@ class Wallet extends ChangeNotifier {
   Future<bool> spend(int amount, String reason) async {
     if (amount < 0 || amount > _storage.coins) return false;
     if (amount == 0) return true;
+    // region P26-F1
+    final counter = _storage.saveLifetimeCoinsSpent(
+      _storage.lifetimeCoinsSpent + amount,
+    );
+    // endregion
     await _storage.saveCoins(_storage.coins - amount);
+    // region P26-F1
+    await counter;
+    // endregion
     notifyListeners();
     onSpent?.call(amount, spendReason(reason));
     return true;

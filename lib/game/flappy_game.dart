@@ -33,9 +33,6 @@ import '../components/home/menu_primitives.dart' show MenuTag;
 import '../progression/day_streak.dart';
 import '../run/effects/fetch_flight.dart';
 // endregion
-// region P26-C2W
-import '../progression/star_road.dart';
-// endregion
 import 'dart:io' show Platform;
 import 'dart:math';
 import 'dart:ui' show Color, Paint, PlatformDispatcher, Rect;

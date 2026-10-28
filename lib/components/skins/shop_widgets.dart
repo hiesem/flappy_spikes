@@ -254,7 +254,9 @@ class ShopActionButton extends PositionComponent with TapCallbacks {
         ShopActionKind.equipped => 'EQUIPPED',
         ShopActionKind.nothingOn => 'NOTHING ON',
         ShopActionKind.buy => 'BUY',
-        ShopActionKind.skillOnly => 'SKILL ONLY',
+        // region P26-F10b
+        ShopActionKind.skillOnly => 'SKILL ONLY · SECRET · HOW TO EARN ›',
+        // endregion
       };
       if (k == ShopActionKind.buy) {
         _chipPrice = p;
@@ -295,6 +297,14 @@ class ShopActionButton extends PositionComponent with TapCallbacks {
   @override
   void render(Canvas canvas) {
     final k = shownKind;
+    // region P26-F10b
+    if (k == ShopActionKind.skillOnly) {
+      canvas.drawRect(size.toRect(), _paint..color = Config.menuGold);
+      _text.color = Config.menuPlum;
+      _text.paint(canvas, Offset((width - _text.width) / 2, (height - _text.height) / 2));
+      return;
+    }
+    // endregion
     if (k != ShopActionKind.buy) {
       final color = tint();
       _text.color = color;

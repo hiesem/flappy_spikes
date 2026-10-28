@@ -148,6 +148,9 @@ import '../services/monetization.dart';
 import '../services/reminders.dart';
 import '../services/tester.dart';
 import '../skins/catalog.dart';
+// region P26-F10b
+import '../run/screens/level_reveal_sheet.dart';
+// endregion
 import '../skins/item_store.dart';
 import '../skins/look.dart';
 import 'config.dart';
@@ -274,6 +277,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       storage: storage,
       services: this.services,
     );
+    // region P26-F10b
+    achievements.onUnlocked = (id) {
+      _skillRevealQueue.addAll(allItems.where((item) => item.unlock == id));
+    };
+    // endregion
   }
 
   /// PRD-2.3.1 §12.3 the achievement tracker (local truth + platform sync).
@@ -6036,7 +6044,33 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// §12.5 the run's unlocks toast on the results page once its sequence
   /// has played out (after the LEVEL UP and its CLAIM, if any).
+  // region P26-F10b
+  final List<SkinItem> _skillRevealQueue = [];
+  LevelRevealSheet? _skillReveal;
+  @visibleForTesting
+  LevelRevealSheet? get skillReveal => _skillReveal;
+
+  void _checkSkillReveals() {
+    if (_skillReveal != null || _skillRevealQueue.isEmpty) return;
+    final page = _results;
+    final onResults = state == GameState.results && page != null &&
+        page.settled && !page.leaving;
+    final onHome = state == GameState.start && _homeInteractive &&
+        menu.levels.pending.isEmpty;
+    if (!onResults && !onHome) return;
+    final item = _skillRevealQueue.removeAt(0);
+    final sheet = LevelRevealSheet(item: item, skill: true, onFinished: (_) {
+      _skillReveal = null;
+    });
+    _skillReveal = sheet;
+    world.add(sheet);
+  }
+  // endregion
+
   void _checkAchievementToasts() {
+    // region P26-F10b
+    if (_skillReveal != null || _skillRevealQueue.isNotEmpty) return;
+    // endregion
     if (achievements.toastQueue.isEmpty || _achToast != null) return;
     // iOS round 2 §6: toasts carried over from a results page that was
     // left early show on Home once nothing is over it.
@@ -6370,6 +6404,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // endregion
     _checkRatingPrompt(dt);
     _checkDeferredRating();
+    // region P26-F10b
+    _checkSkillReveals();
+    // endregion
     _checkAchievementToasts(); // PRD-2.3.1 §12.5
     if (_bannerState.value != BannerState.off) _syncBannerStripColor();
 

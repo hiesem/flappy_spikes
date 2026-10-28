@@ -11,6 +11,11 @@ import '../../components/levels/tabs/album_reveal_art.dart';
 import '../../components/home/menu_primitives.dart';
 import '../../components/skins/item_art.dart';
 import '../../components/skins/item_tile.dart';
+// region P26-F10b
+import '../../components/skins/shop_widgets.dart' show ShopCardArt;
+import '../../components/skins/preview_stage.dart';
+import '../effects/coin_icon.dart';
+// endregion
 import '../../components/ui/mystery_box.dart';
 import '../../components/ui/confetti.dart';
 import '../../components/ui/p1_popup.dart';
@@ -39,8 +44,15 @@ class LevelRevealSheet extends P1Popup {
     this.payReward,
     this.album = false,
     // endregion
+    // region P26-F10b
+    this.skill = false,
+    // endregion
   }) : super(onDismiss: () {}, priority: 100);
 
+  // region P26-F10b
+  final bool skill;
+  ShopCardArt? skillCardArt;
+  // endregion
   final SkinItem? item;
   final int extraCoins;
   // region P26-G6c
@@ -92,10 +104,20 @@ class LevelRevealSheet extends P1Popup {
     // region P26-G6c
     final rarity = item?.rarity ?? (album ? Rarity.epic : Rarity.common);
     // endregion
+    // region P26-F10b
+    if (skill && item?.layer == SkinLayer.card) {
+      skillCardArt = ShopCardArt(coin: game.images.fromCache(CoinIcon.asset),
+        look: game.menu.items.look, paintRays: PreviewStage.paintRays);
+      skillCardArt!.prepare(item!);
+    }
+    // endregion
     box = MysteryBoxComponent(
       look: MysteryBoxLook.colours(
         rarity.color,
         Color.lerp(rarity.color, const Color(0xFF000000), .3)!,
+        // region P26-F10b
+        ribbon: skill ? Config.menuPlum : const Color(0xFFFFFFFF),
+        // endregion
       ),
       boxSize: 80,
       // region P26-G6c
@@ -103,6 +125,9 @@ class LevelRevealSheet extends P1Popup {
       // endregion
       animation: const MysteryBoxAnimation(),
     );
+    // region P26-F10b
+    if (skill) card.add(_SkillRevealRays(() => game.reduceMotion ? 0 : elapsed));
+    // endregion
     card.add(box);
     card.add(particles);
     card.add(
@@ -127,6 +152,10 @@ class LevelRevealSheet extends P1Popup {
           ),
           onPressed: () {},
           art: art,
+          // region P26-F10b
+          cardArt: skillCardArt,
+          trophyImage: skill ? game.images.fromCache('menu/trophy.png') : null,
+          // endregion
           cardColor: () => game.stageBackground,
           tint: () => Config.uiAccent,
           reduceMotion: () => game.reduceMotion,
@@ -158,7 +187,9 @@ class LevelRevealSheet extends P1Popup {
       );
       details.add(
         MenuText(
-          'NEW ITEM · ADDED TO YOUR ${item!.layer.tabLabel}',
+          // region P26-F10b
+          skill ? 'ACHIEVEMENT REWARD' : 'NEW ITEM · ADDED TO YOUR ${item!.layer.tabLabel}',
+          // endregion
           fontSize: 10,
           color: Config.menuPlum,
           position: Vector2(Config.p1PopupWidth / 2, 163),
@@ -228,11 +259,15 @@ class LevelRevealSheet extends P1Popup {
   Future<void> choose(bool equip) async {
     if (!revealed || choosing) return;
     choosing = true;
-    // region P26-G6c
-    if (payReward != null) {
-      await payReward!();
-    } else {
-      await game.menu.levels.payPending();
+    // region P26-F10b
+    if (!skill) {
+      // region P26-G6c
+      if (payReward != null) {
+        await payReward!();
+      } else {
+        await game.menu.levels.payPending();
+      }
+      // endregion
     }
     // endregion
     if (equip && item != null) {
@@ -247,6 +282,15 @@ class LevelRevealSheet extends P1Popup {
       removeFromParent();
     }
   }
+
+  // region P26-F10b
+  @override
+  void onRemove() {
+    skillCardArt?.dispose();
+    art.dispose();
+    super.onRemove();
+  }
+  // endregion
 
   void _sparkles(Color color, int count) {
     for (var i = 0; i < count; i++) {
@@ -570,6 +614,21 @@ class _CatchUpItemSheet extends LevelRevealSheet {
       return;
     }
     super.update(dt);
+  }
+}
+// endregion
+
+// region P26-F10b
+/// R4 is the shared gold stage ray master used behind the skill box.
+class _SkillRevealRays extends PositionComponent {
+  _SkillRevealRays(this.time) : super(priority: -1);
+  final double Function() time;
+  @override
+  void render(Canvas canvas) {
+    canvas.save();
+    canvas.clipRect(const Rect.fromLTWH(0, 0, Config.p1PopupWidth, 175));
+    PreviewStage.paintRays(canvas, const Offset(Config.p1PopupWidth / 2, 85), 120, time(), opacity: .28);
+    canvas.restore();
   }
 }
 // endregion

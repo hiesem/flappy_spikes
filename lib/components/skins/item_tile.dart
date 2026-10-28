@@ -62,6 +62,9 @@ class ItemTile extends PositionComponent with TapCallbacks {
     required this.reduceMotion,
     this.isActive,
     this.cardArt,
+    // region P26-F10b
+    this.trophyImage,
+    // endregion
     this.isOnScreen,
     double? enterDelay,
     // region P26-J6
@@ -85,6 +88,10 @@ class ItemTile extends PositionComponent with TapCallbacks {
 
   // region P26-F9e
   final ShopCardArt? cardArt;
+  // region P26-F10b
+  /// Shared Home trophy asset, used as the skill-only mark.
+  final Image? trophyImage;
+  // endregion
   // endregion
   // region P26-J6
   /// Static, non-interactive reward presentation at the supplied rect size.
@@ -444,8 +451,19 @@ class ItemTile extends PositionComponent with TapCallbacks {
       );
     }
 
+    // region P26-F10b
+    final trophy = trophyImage;
+    if (item.isSkillOnly && trophy != null) {
+      canvas.drawImageRect(trophy,
+        Rect.fromLTWH(0, 0, trophy.width.toDouble(), trophy.height.toDouble()),
+        const Rect.fromLTWH(5, 4, 15, 15), _paint..color = const Color(0xFFFFFFFF));
+    }
+    // endregion
     // Lock + price pill.
     if (!s.owned) {
+      // region P26-F10b
+      if (!item.isSkillOnly) {
+      // endregion
       canvas.save();
       canvas.translate(Config.skinShopLockLeft, Config.skinShopLockTop);
       ShopGlyphs.lock(
@@ -454,7 +472,17 @@ class ItemTile extends PositionComponent with TapCallbacks {
         tint().withValues(alpha: .75),
       );
       canvas.restore();
+      // region P26-F10b
+      }
+      // endregion
       if (item.isSkillOnly) {
+        // region P26-F10b
+        canvas.drawRect(
+          Rect.fromLTWH((width - _skillLabel.width - 16) / 2, height - 24,
+              _skillLabel.width + 16, 19),
+          _paint..color = Config.menuGold,
+        );
+        // endregion
         _skillLabel.paint(
           canvas,
           Offset((width - _skillLabel.width) / 2, height - 20),

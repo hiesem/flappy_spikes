@@ -13,6 +13,9 @@ import '../../skins/look.dart';
 import '../home/menu_primitives.dart';
 import '../levels/emblem_view.dart';
 import '../menu_screen_chrome.dart';
+// region P26-F10b
+import 'skill_earn_sheet.dart';
+// endregion
 import 'celebration.dart';
 import 'item_art.dart';
 import 'item_tile.dart';
@@ -212,7 +215,13 @@ class SkinShopScreen extends MenuScreen {
       tint: () => tint,
       reduceMotion: () => reduceMotion,
       onPressed: () {
-        if (!(tryOnItem?.isSkillOnly ?? false)) game.buyTriedOnItem();
+        // region P26-F10b
+        if (tryOnItem?.isSkillOnly ?? false) {
+          showSkillEarn();
+        } else {
+          game.buyTriedOnItem();
+        }
+        // endregion
       },
       isActive: isActive,
     );
@@ -226,6 +235,9 @@ class SkinShopScreen extends MenuScreen {
       isActive: isActive,
     );
     addAll([bar, stage, nameRow, actionButton, tabBar]);
+    // region P26-F10b
+    add(skillUnlockLine);
+    // endregion
     // region P26-F9e
     for (final kind in CardKind.values) {
       final label = MenuText(
@@ -303,23 +315,44 @@ class SkinShopScreen extends MenuScreen {
         cardArt.prepare(item);
       }
     }
+    // region P26-F10b
+    final firstSkill = list.indexWhere((item) => item.isSkillOnly);
+    // Start the skill section on a new row even when the sold grid ends
+    // partway through a row. The card grid already reserves its own gap.
+    Rect tileRect(int index) {
+      if (onCards || firstSkill < 0 || index < firstSkill) {
+        return Config.skinShopTileRectFor(h, index, cards: onCards);
+      }
+      final firstRow = (firstSkill + Config.skinShopColumns - 1) ~/ Config.skinShopColumns;
+      final slot = firstRow * Config.skinShopColumns + index - firstSkill;
+      return Config.skinShopTileRectFor(h, slot).shift(
+        const Offset(0, Config.skinShopCardSkillGap),
+      );
+    }
+    // endregion
     tiles = [
       for (final (i, item) in list.indexed)
         _tile(
           item,
-          Config.skinShopTileRectFor(h, i, cards: onCards),
+          // region P26-F10b
+          tileRect(i),
+          // endregion
           i,
           animate,
         ),
     ];
-    if (onCards) {
+    // region P26-F10b
+    if (firstSkill >= 0) {
+      // endregion
       _skillHeader = MenuText(
         'EARNED BY SKILL · NOT SOLD',
         fontSize: 10,
         color: Config.menuPlum,
         position: Vector2(
           Config.skinShopGridLeft,
-          tiles[Config.skinShopCardSoldTiles].toRect().top -
+          // region P26-F10b
+          tiles[firstSkill].toRect().top -
+          // endregion
               Config.skinShopCardSkillHeaderInset,
         ),
       );
@@ -339,6 +372,9 @@ class SkinShopScreen extends MenuScreen {
       item: item,
       rect: rect,
       art: art,
+      // region P26-F10b
+      trophyImage: game.images.fromCache('menu/trophy.png'),
+      // endregion
       cardArt: item.layer == SkinLayer.card ? cardArt : null,
       state: () {
         final items = game.menu.items;
@@ -363,6 +399,9 @@ class SkinShopScreen extends MenuScreen {
             !game.menu.items.isOwned(item.layer, item.id)) {
           setTryOn(item.id);
           play(Sfx.skTap);
+          // region P26-F10b
+          showSkillEarn();
+          // endregion
         } else {
           game.tapItem(item.layer, item.id, fromTile: true);
         }
@@ -401,6 +440,21 @@ class SkinShopScreen extends MenuScreen {
   }
 
   // --- view-state changes (called by the game's flows) -----------------------
+
+  // region P26-F10b
+  late final MenuText skillUnlockLine = MenuText('', fontSize: 8,
+      color: Config.menuPlum, position: Vector2(20, 145));
+
+  MenuText? get skillSectionHeader => _skillHeader as MenuText?;
+
+  void showSkillEarn() {
+    final item = tryOnItem;
+    if (item == null || !item.isSkillOnly) return;
+    add(
+      SkillEarnSheet(item: item, art: art, cardArt: onCards ? cardArt : null),
+    );
+  }
+  // endregion
 
   /// Opens [layer]'s tab: clears the try-on, refills the grid with the
   /// staggered fade / rise entrance, scrolls to the top.
@@ -504,6 +558,13 @@ class SkinShopScreen extends MenuScreen {
   @override
   void update(double dt) {
     super.update(dt);
+    // region P26-F10b
+    final skillItem = activeItem;
+    skillUnlockLine.text = !skillItem.isSkillOnly ? '' :
+      game.menu.items.isOwned(skillItem.layer, skillItem.id)
+        ? 'UNLOCKED BY: ${skillItem.unlock!.title.toUpperCase()}'
+        : 'UNLOCK: ? A SECRET ACHIEVEMENT ?';
+    // endregion
     // region P26-F9e
     for (final kind
         in _kindLabels.length == 3 ? CardKind.values : <CardKind>[]) {

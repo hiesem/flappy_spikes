@@ -283,3 +283,10 @@ The files live under `docs/p26/design/` (path map: `docs/p26/README.md`).
 | Master file / class | Allowed parameters | Design map |
 |---|---|---|
 | `lib/components/progression/streak_strip.dart` — `StreakFlame`, `StreakStrip`, `StreakCard` | lit / grey, still, size, count, pending gold dot; three flame layers use 1.2 / 0.9 / 0.6 s loops and two embers with ≤ 1 pt travel | `approvals_v26/day_streak.html` §1–§3; G2c reuses this flame |
+
+### Star Road star and tier plate (G6eA)
+
+| Master file / class | Allowed parameters | Design map |
+|---|---|---|
+| `lib/components/star_road/star_road_art.dart` — `StarRoadStar` | size, position | `approvals_v26/star_road.html` header, card, rows and G6f popup; five-point gold star with dark edge |
+| `lib/components/star_road/star_road_art.dart` — `StarRoadTierNode` | tier, size, position, claimed / claimable / next / locked state | `approvals_v26/star_road.html` track, mini road and G6f popup / summary |

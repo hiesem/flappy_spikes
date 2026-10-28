@@ -437,7 +437,7 @@ class MissionsPanel extends P1Popup {
       }
       // region P26-G1d
       if (onSwap != null && game.monetization.ads.isAvailable && missions.canReroll(index, game.storage.today, eligibility: game.missionEligibility)) {
-        row.add(MenuButton(position: Vector2(166, 5), size: Vector2(80, 20), color: const Color(0xFFFFF3D6), onPressed: () => onSwap!(index), isActive: isActive, children: [MenuText('▶ SWAP', fontSize: 10, color: Config.menuPlum, position: Vector2(40, 10), anchor: Anchor.center)]));
+        row.add(MenuButton(position: Vector2(188, 5), size: Vector2(58, 20), color: const Color(0xFFFFB529), onPressed: () => onSwap!(index), isActive: isActive, children: [RectangleComponent(position: Vector2(2, 2), size: Vector2(54, 16), paint: Paint()..color = const Color(0xFFFFF3D6)), MenuText('▶ SWAP', fontSize: 9, color: Config.menuPlum, position: Vector2(29, 10), anchor: Anchor.center)]));
       }
       // endregion
       card.add(row);

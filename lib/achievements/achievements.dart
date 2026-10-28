@@ -241,12 +241,12 @@ class AchievementTracker {
       ..journalExcluded = false;
     if (!counts) return;
     for (final op in staged) {
-      if (op != AchOp.versusWin) _apply(op);
+      if (op != AchOp.versusWin && AchOp.split(op).$1 != AchOp._versusResult) _apply(op);
     }
     _batch = [];
     try {
       for (final op in staged) {
-        if (op == AchOp.versusWin) _apply(op);
+        if (op == AchOp.versusWin || AchOp.split(op).$1 == AchOp._versusResult) _apply(op);
       }
       if (score != null) onRunScore(score);
       if (day != null) onRunDay(day);

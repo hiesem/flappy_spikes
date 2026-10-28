@@ -99,7 +99,8 @@ class LevelProgress extends ChangeNotifier {
       );
       await saved;
       notifyListeners();
-      if (analytics) services?.logLevelUp(
+      if (analytics) {
+        services?.logLevelUp(
         step.index,
         games: _storage.gamesPlayed,
         runScore: score,
@@ -107,7 +108,8 @@ class LevelProgress extends ChangeNotifier {
             ((DateTime.now().millisecondsSinceEpoch - _storage.installAtMs) ~/
                     1000)
                 .clamp(0, 1 << 53),
-      );
+        );
+      }
     } else {
       await _storage.saveLvlPoints(step.points);
       notifyListeners();

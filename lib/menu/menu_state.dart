@@ -4,6 +4,9 @@ import '../game/config.dart';
 import '../game/storage.dart';
 import '../levels/level_progress.dart';
 import '../skins/item_store.dart';
+// region P26-F1
+import '../skins/catalog.dart';
+// endregion
 import 'free_coins_policy.dart';
 import 'noads_popup_policy.dart';
 import 'powerup_slot.dart';
@@ -17,7 +20,7 @@ class MenuState {
     void Function(int, CoinSource)? onEarned,
     void Function(int, String)? onSpent,
     // region P26-F1
-    void Function(Map<String, Object>)? onItemBought,
+    void Function(SkinItem, int, int, int, bool)? onItemBought,
     // endregion
   }) {
     wallet = Wallet(storage, onEarned: onEarned, onSpent: onSpent);

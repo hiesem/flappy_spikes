@@ -64,6 +64,9 @@ void main() {
         'lbGiftPending',
         'lbInfoSeen',
         'abArm_v1',
+        // F1 adds persisted markers for the PRD-2.6 F7 economy events.
+        'firstItemBought',
+        'economyDailyDay',
       ];
       expect(kObfStrings.values.skip(109), keys);
       final anchors = File('tool/anchor_strings.txt').readAsLinesSync();

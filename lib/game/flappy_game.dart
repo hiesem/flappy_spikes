@@ -878,7 +878,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     menu = MenuState(
       storage,
       // region P26-F1
-      onItemBought: (fields) => services.track('item_bought', fields),
+      onItemBought: (item, balance, games, minutes, first) =>
+          services.trackItemBought(item.key, item.rarity?.name ?? 'none',
+              item.price, balance, games, minutes, first),
       // endregion
       onEarned: (amount, source) {
         // In-run sources are aggregated by the run's analytics router and
@@ -893,6 +895,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       onSpent: (amount, reason) =>
           services.track('coins_spent', {'amount': amount, 'reason': reason}),
     );
+    // region P26-F1
+    await RunEndBookkeeping.economyDaily(storage, services);
+    // endregion
     // The slot arms a powerup only right before it starts the run, which
     // consumes it: anything still armed here is stale (an app killed
     // mid-start, or a pre-WP10 arm-then-START build) and must not ride

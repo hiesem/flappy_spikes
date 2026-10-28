@@ -12,7 +12,7 @@ enum ItemPurchaseResult { purchased, alreadyOwned, insufficientCoins, unknown }
 class ItemStore extends ChangeNotifier {
   // region P26-F1
   ItemStore(this._storage, this._wallet, {this.onItemBought});
-  final void Function(Map<String, Object>)? onItemBought;
+  final void Function(SkinItem item, int balanceBefore, int games, int minutes, bool first)? onItemBought;
   // endregion
 
   final GameStorage _storage;
@@ -122,14 +122,10 @@ class ItemStore extends ChangeNotifier {
     await _storage.saveOwnedItems({..._storage.ownedItems, item.key});
     await _storage.saveEquippedItem(layer, id);
     // region P26-F1
-    onItemBought?.call({
-      'key': item.key,
-      'rarity': item.rarity?.name ?? 'none',
-      'price': item.price,
-      'balance_before': balanceBefore,
-      'games': _storage.gamesPlayed,
-      'minutes': _storage.playtimeSeconds ~/ 60,
-    });
+    final first = !_storage.firstItemBought;
+    if (first) await _storage.saveFirstItemBought(true);
+    onItemBought?.call(item, balanceBefore, _storage.gamesPlayed,
+        _storage.playtimeSeconds ~/ 60, first);
     // endregion
     notifyListeners();
     return ItemPurchaseResult.purchased;

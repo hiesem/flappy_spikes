@@ -681,6 +681,22 @@ class GameServices {
     'shortfall': ?shortfall,
   };
 
+  // region P26-F1
+  void trackItemBought(String key, String rarity, int price, int balance,
+      int games, int minutes, bool first) {
+    track('item_bought', {
+      'key': key, 'rarity': rarity, 'price': price, 'balance_before': balance,
+      'games': games, 'minutes': minutes,
+    });
+    if (first) {
+      track('first_item_bought', {
+        'key': key, 'rarity': rarity, 'price': price, 'balance_before': balance,
+        'games': games, 'minutes': minutes,
+      });
+    }
+  }
+  // endregion
+
   /// Menu / economy analytics (PRD-1 §6: coins_earned, shop_open,
   /// home_slot_shown, ...). Goes through [logEvent], so test spies that
   /// override it see these too.

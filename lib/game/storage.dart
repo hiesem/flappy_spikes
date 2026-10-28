@@ -97,6 +97,10 @@ class GameStorage {
   int lifetimeCoinsEarned = 0;
   int lifetimeCoinsSpent = 0;
   int lifetimeCoinsBought = 0;
+  // region P26-F1
+  bool firstItemBought = false;
+  int economyDailyDay = -1;
+  // endregion
   int vsWinStreak = 0;
   int vsWinStreakBest = 0;
   Map<String, int> vsBigWinsDay = const {};
@@ -631,6 +635,10 @@ class GameStorage {
     lifetimeCoinsEarned = prefs.getInt(Obf.prefLifetimeCoinsEarned) ?? 0;
     lifetimeCoinsSpent = prefs.getInt(Obf.prefLifetimeCoinsSpent) ?? 0;
     lifetimeCoinsBought = prefs.getInt(Obf.prefLifetimeCoinsBought) ?? 0;
+    // region P26-F1
+    firstItemBought = prefs.getBool(Obf.prefFirstItemBought) ?? false;
+    economyDailyDay = prefs.getInt(Obf.prefEconomyDailyDay) ?? -1;
+    // endregion
     vsWinStreak = prefs.getInt(Obf.prefVsWinStreak) ?? 0;
     vsWinStreakBest = prefs.getInt(Obf.prefVsWinStreakBest) ?? 0;
     vsBigWinsDay = _p26IntMap(prefs.getString(Obf.prefVsBigWinsDay));
@@ -1917,6 +1925,20 @@ class GameStorage {
     await prefs.setInt(Obf.prefLifetimeCoinsBought, lifetimeCoinsBought);
   }
 
+  // region P26-F1
+  Future<void> saveFirstItemBought(bool value) async {
+    firstItemBought = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setBool(Obf.prefFirstItemBought, value);
+  }
+
+  Future<void> saveEconomyDailyDay(int value) async {
+    economyDailyDay = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setInt(Obf.prefEconomyDailyDay, value);
+  }
+  // endregion
+
   Future<void> saveVsWinStreak(int value) async {
     vsWinStreak = value;
     final prefs = _prefs ?? await SharedPreferences.getInstance();
@@ -2147,6 +2169,10 @@ class GameStorage {
     lifetimeCoinsEarned = 0;
     lifetimeCoinsSpent = 0;
     lifetimeCoinsBought = 0;
+    // region P26-F1
+    firstItemBought = false;
+    economyDailyDay = -1;
+    // endregion
     vsWinStreak = 0;
     vsWinStreakBest = 0;
     vsBigWinsDay = const {};
@@ -2195,6 +2221,10 @@ class GameStorage {
           Obf.prefLifetimeCoinsEarned,
           Obf.prefLifetimeCoinsSpent,
           Obf.prefLifetimeCoinsBought,
+          // region P26-F1
+          Obf.prefFirstItemBought,
+          Obf.prefEconomyDailyDay,
+          // endregion
           Obf.prefVsWinStreak,
           Obf.prefVsWinStreakBest,
           Obf.prefVsBigWinsDay,

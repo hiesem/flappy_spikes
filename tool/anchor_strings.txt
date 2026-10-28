@@ -84,3 +84,7 @@ lbInfoSeen
 // region P26-H
 abArm_v1
 // endregion
+// region P26-F1
+firstItemBought
+economyDailyDay
+// endregion

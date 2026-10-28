@@ -77,6 +77,10 @@ void main() {
         'starRoadJournal',
         'starRoadItems',
         // endregion
+        // region P26-G6eB — first run watermark and rollover recovery.
+        'starRoadRunDay',
+        'starRoadRollover',
+        // endregion
       ];
       expect(kObfStrings.values.skip(109), keys);
       final anchors = File('tool/anchor_strings.txt').readAsLinesSync();

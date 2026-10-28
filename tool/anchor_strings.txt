@@ -102,3 +102,7 @@ albumCompletionJournal
 starRoadJournal
 starRoadItems
 // endregion
+// region P26-G6eB
+starRoadRunDay
+starRoadRollover
+// endregion

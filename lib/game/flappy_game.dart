@@ -746,6 +746,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       // region P26-G1d
       _missionsChestPopup != null ||
       // endregion
+      // region P26-G6eA
+      _starRoadScreen != null ||
+      // endregion
       // region P26-G1c
       _missionsPanelOpen ||
       // endregion
@@ -3863,13 +3866,21 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   // region P26-G6eA
   late final StarRoadClaims _starRoadClaims;
   StarRoadScreen? _starRoadScreen;
+  StarRoadScreen? get starRoadScreen => _starRoadScreen;
+  LevelRevealSheet? get starRoadReveal => _starRoadReveal;
   LevelRevealSheet? _starRoadReveal;
+  bool _starRoadClaiming = false;
   void Function()? _starRoadReturn;
 
   /// The card's host closes its panel before calling this; back restores it.
   void openStarRoad({required int daysLeft, required void Function() onBack}) {
     if (_starRoadScreen != null || state != GameState.start) return;
     _starRoadReturn = onBack;
+    final home = _home;
+    if (home != null) {
+      home.active = false;
+      home.opacity = 0;
+    }
     final screen = StarRoadScreen(
       road: _starRoadClaims.road, daysLeft: daysLeft,
       onBack: closeStarRoad, onClaim: _claimStarRoad,
@@ -3882,24 +3893,33 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   bool _starRoadBack() {
-    if (_starRoadReveal == null) closeStarRoad();
+    if (!_starRoadClaiming) closeStarRoad();
     return true;
   }
 
   void closeStarRoad() {
     final screen = _starRoadScreen;
-    if (screen == null || _starRoadReveal != null) return;
+    if (screen == null || _starRoadClaiming) return;
     _starRoadScreen = null;
     popBack(_starRoadBack);
     unregisterTintable(screen);
     _chromeHosts.remove(screen);
     screen.removeFromParent();
+    final home = _home;
+    if (home != null) {
+      home.active = true;
+      home.opacity = 1;
+      if (!_chromeHosts.contains(home)) _chromeHosts.add(home);
+    }
     final back = _starRoadReturn;
     _starRoadReturn = null;
     back?.call();
   }
 
   Future<bool> _claimStarRoad(int tier) async {
+    if (_starRoadClaiming) return false;
+    _starRoadClaiming = true;
+    try {
     final result = await _starRoadClaims.claim(tier);
     if (result == null) return false;
     final reward = starRoadReward(tier);
@@ -3912,6 +3932,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       final sheet = LevelRevealSheet(
         item: item, extraCoins: result.coins,
         onPay: () async {}, // The journal settled the reward before display.
+        revealSound: starRoadClaimSound(reward),
         onFinished: (_) {
           _starRoadReveal = null;
           if (!finished.isCompleted) finished.complete();
@@ -3922,8 +3943,20 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       await finished.future;
     } else {
       sound.play(starRoadClaimSound(reward));
+      final screen = _starRoadScreen;
+      if (screen != null && result.coins > 0 && !reduceMotion) {
+        final y = screen.scroll.screenY(StarRoadLayout.rowTop(tier) + 31);
+        screen.add(ConfettiBurst.burst(origin: Offset(230, y), count: 18, stars: true));
+        world.add(CoinFly.burst(
+          coin: Sprite(await images.load('menu/coin.png')),
+          origin: Offset(230, y), to: _coinPill.coinFlyTarget, count: 6,
+        ));
+      }
     }
     return true;
+    } finally {
+      _starRoadClaiming = false;
+    }
   }
   // endregion
 
@@ -6465,6 +6498,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// hosts' opacity-weighted gear / back mix.
   /// The transparent tap target over [_cornerBox] on the current screen.
   MenuButton? get _cornerButton {
+    // region P26-G6eA
+    final road = _starRoadScreen;
+    if (road != null) return road.built ? road.backButton : null;
+    // endregion
     final home = _home;
     if (home != null) return home.isLoaded ? home.gearButton : null;
     final settings = _settingsPanel;
@@ -6502,7 +6539,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       if (host is! SettingsPanel && host is! LevelsScreen) {
         pillTotal += opacity;
       }
-      if (host is HomeScreen) homeShare += opacity;
+      // region P26-G6eA
+      if (host is HomeScreen && _starRoadScreen == null) homeShare += opacity;
+      // endregion
     }
     _coinPill
       // region P26-LB4

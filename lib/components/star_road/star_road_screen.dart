@@ -5,6 +5,10 @@ import 'package:flame/components.dart';
 import '../../game/config.dart';
 import '../../progression/star_road.dart';
 import '../../skins/look.dart';
+import '../../run/effects/coin_icon.dart';
+import '../../run/pickups/feather_pickup.dart';
+import '../../run/pickups/puzzle_piece_pickup.dart';
+import '../../run/config/puzzle_config.dart';
 import '../home/menu_primitives.dart';
 import '../menu_screen_chrome.dart';
 import '../ui/mystery_box.dart';
@@ -40,6 +44,7 @@ class StarRoadScreen extends MenuScreen {
   final Future<bool> Function(int tier) onClaim;
   final Set<int> _claimedNow = {};
   bool _claiming = false;
+  final Map<int, PositionComponent> rows = {};
 
   @override
   Rect scrollViewportFor(double viewHeight) =>
@@ -106,6 +111,7 @@ class StarRoadScreen extends MenuScreen {
       ),
     );
     add(header);
+    final coin = await CoinIcon.load(game.images);
     for (var tier = 1; tier <= starRoadTierCount; tier++) {
       final reward = starRoadReward(tier);
       final item = reward.kind != StarRoadRewardKind.coins;
@@ -115,6 +121,15 @@ class StarRoadScreen extends MenuScreen {
       final row = PositionComponent(
         position: Vector2(14, y),
         size: Vector2(292, item ? 78 : 62),
+      );
+      rows[tier] = row;
+      row.add(
+        RectangleComponent(
+          position: Vector2(19, 0),
+          size: Vector2(8, row.height + 6),
+          paint: Paint()
+            ..color = reached ? Config.menuPink : const Color(0xFFD9D9D9),
+        ),
       );
       row.add(
         RectangleComponent(
@@ -141,6 +156,22 @@ class StarRoadScreen extends MenuScreen {
         StarRoadRewardKind.legendary => Rarity.legendary,
         _ => null,
       };
+      if (rarity == null) {
+        row.add(
+          RectangleComponent(
+            position: Vector2(56, 6),
+            size: Vector2.all(item ? 56 : 50),
+            paint: Paint()..color = const Color(0xFFFFF8E6),
+          ),
+        );
+        row.add(
+          _RoadRewardArt(
+            reward.kind,
+            coin,
+            position: Vector2(item ? 84 : 81, row.height / 2),
+          ),
+        );
+      }
       if (rarity != null) {
         row.add(
           MysteryBoxComponent(
@@ -221,6 +252,16 @@ class StarRoadScreen extends MenuScreen {
             ],
           ),
         );
+      } else if (!reached) {
+        row.add(
+          MenuText(
+            tier == road.tier + 1 ? '${road.starsIntoTier} / 8' : '🔒',
+            fontSize: 10,
+            color: Config.menuPlum,
+            position: Vector2(250, row.height / 2),
+            anchor: Anchor.center,
+          ),
+        );
       } else if (claimed) {
         row.add(
           MenuText(
@@ -234,10 +275,51 @@ class StarRoadScreen extends MenuScreen {
       }
       scroll.content.add(row);
     }
+    scroll.content.add(
+      MenuText(
+        'SEASON ${road.season + 1} STARTS WHEN THIS ONE ENDS',
+        fontSize: 9,
+        color: Config.menuPlum,
+        position: Vector2(160, StarRoadLayout.rowTop(25) + 96),
+        anchor: Anchor.topCenter,
+      ),
+    );
+    add(
+      MenuText(
+        'EARN STARS FROM DAILY MISSIONS',
+        fontSize: 9,
+        color: Config.menuPlum,
+        position: Vector2(160, 230),
+        anchor: Anchor.topCenter,
+      ),
+    );
     scroll.contentBottom = StarRoadLayout.rowTop(25) + 118;
     final first = road.claimable.isNotEmpty
         ? road.claimable.first
         : (road.tier + 1).clamp(1, 25);
     scroll.scrollTo(StarRoadLayout.rowTop(first) - 70, animate: false);
+  }
+}
+
+/// Uses the existing run pickup and coin masters for the track tiles.
+class _RoadRewardArt extends PositionComponent {
+  _RoadRewardArt(this.kind, this.coin, {super.position});
+  final StarRoadRewardKind kind;
+  final Image coin;
+  @override
+  void render(Canvas canvas) {
+    switch (kind) {
+      case StarRoadRewardKind.coins:
+        CoinIcon.paint(canvas, coin, Offset.zero, 32);
+      case StarRoadRewardKind.feather:
+        FeatherArt.paintAt(canvas, Offset.zero, .85, 0);
+      case StarRoadRewardKind.piece:
+        canvas.save();
+        canvas.scale(.85);
+        PuzzleArt.paintPieceCentred(canvas, 0, PuzzleConfig.themes.first);
+        canvas.restore();
+      default:
+        break;
+    }
   }
 }

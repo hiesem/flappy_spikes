@@ -51,6 +51,7 @@ class LevelRevealSheet extends P1Popup {
     // endregion
     // region P26-G6eA
     this.onPay,
+    this.revealSound,
     // endregion
   }) : super(onDismiss: () {}, priority: 100);
 
@@ -68,6 +69,7 @@ class LevelRevealSheet extends P1Popup {
   // endregion
   // region P26-G6eA
   final Future<void> Function()? onPay;
+  final Sfx? revealSound;
   // endregion
   final void Function(bool equipped) onFinished;
   double elapsed = 0;
@@ -375,10 +377,9 @@ class LevelRevealSheet extends P1Popup {
           ),
         );
       }
-      // region P26-G6c
-      game.sound.play(
-        album ? Sfx.lvClaim : (item?.rarity == Rarity.legendary ? Sfx.lvUpBig : Sfx.lvClaim),
-      );
+      // region P26-G6eA
+      game.sound.play(revealSound ?? (album ? Sfx.lvClaim :
+          (item?.rarity == Rarity.legendary ? Sfx.lvUpBig : Sfx.lvClaim)));
       // endregion
     }
     if (item?.rarity == Rarity.legendary && !_secondBurst && elapsed >= 1.5) {

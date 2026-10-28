@@ -14,6 +14,8 @@ void paintConstellationV26(
   double size,
   double t, {
   bool front = true,
+  double? rx,
+  double lineWidth = 7,
 }) {
   c.save();
   c.translate(center.dx, center.dy);

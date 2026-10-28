@@ -8,10 +8,13 @@ void paintPhoenixringV26(
   double size,
   double t, {
   bool front = true,
+  double? rx,
+  double lineWidth = 7,
 }) {
   c.save();
   c.translate(center.dx, center.dy);
-  final ry = size, rx = ry * .26, a0 = front ? math.pi / 2 : -math.pi / 2;
+  final ry = size, a0 = front ? math.pi / 2 : -math.pi / 2;
+  final radiusX = rx ?? ry * .26;
   for (var i = 0; i < 9; i++) {
     final a = a0 + (i + .5) * math.pi / 9,
         co = math.cos(a),
@@ -19,11 +22,11 @@ void paintPhoenixringV26(
         len = 9 + math.sin(t * 13 + i * 1.9) * 2.6;
     c.drawPath(
       polyPath([
-        math.cos(a - .16) * rx,
+        math.cos(a - .16) * radiusX,
         math.sin(a - .16) * ry,
-        co * (rx + len),
+        co * (radiusX + len),
         si * (ry + len),
-        math.cos(a + .16) * rx,
+        math.cos(a + .16) * radiusX,
         math.sin(a + .16) * ry,
       ]),
       fillPaint(
@@ -34,17 +37,20 @@ void paintPhoenixringV26(
     );
   }
   c.drawArc(
-    Rect.fromCenter(center: Offset.zero, width: rx * 2, height: ry * 2),
+    Rect.fromCenter(center: Offset.zero, width: radiusX * 2, height: ry * 2),
     a0,
     math.pi,
     false,
-    strokePaint(front ? const Color(0xffff5722) : const Color(0xffb23000), 7),
+    strokePaint(
+      front ? const Color(0xffff5722) : const Color(0xffb23000),
+      lineWidth,
+    ),
   );
   if (front) {
     c.drawArc(
       Rect.fromCenter(
         center: Offset.zero,
-        width: (rx - 1.4) * 2,
+        width: (radiusX - 1.4) * 2,
         height: (ry - 1.4) * 2,
       ),
       a0,
@@ -55,7 +61,7 @@ void paintPhoenixringV26(
     for (var i = 0; i < 6; i++) {
       final u = (t * .7 + i / 6) % 1,
           y = ry - u * (2 * ry + 18),
-          x = -rx - 3 + math.sin(t * 4 + i * 2) * 3;
+          x = -radiusX - 3 + math.sin(t * 4 + i * 2) * 3;
       fillRect(
         c,
         x - 1,

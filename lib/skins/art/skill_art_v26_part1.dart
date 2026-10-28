@@ -9,7 +9,7 @@ import 'skycrown_v26.dart';
 import 'nest_v26.dart';
 
 /// A hoop uses size as its vertical radius; trails and hats use it as scale.
-/// The front flag selects the hoop half and is ignored by other items.
+/// The front flag, horizontal radius and line width apply to hoops only.
 typedef F10c1Painter =
     void Function(
       Canvas canvas,
@@ -17,6 +17,8 @@ typedef F10c1Painter =
       double size,
       double time, {
       bool front,
+      double? rx,
+      double lineWidth,
     });
 
 const Map<String, F10c1Painter> f10c1Painters = {

@@ -8,6 +8,8 @@ void paintThreadV26(
   double size,
   double t, {
   bool front = true,
+  double? rx,
+  double lineWidth = 7,
 }) {
   c.save();
   c.translate(center.dx, center.dy);
@@ -33,14 +35,13 @@ void paintThreadV26(
           width: (2.8 - u * 1.2) * 2,
           height: (8 - u * 3.5) * 2,
         );
-    c.drawOval(
-      r,
-      strokePaint(const Color(0xffc98a00).withValues(alpha: 1 - u * .9), 2.4),
+    c.saveLayer(
+      r.inflate(2),
+      Paint()..color = Color.fromRGBO(255, 255, 255, 1 - u * .9),
     );
-    c.drawOval(
-      r,
-      strokePaint(const Color(0xffffe082).withValues(alpha: 1 - u * .9), 1.2),
-    );
+    c.drawOval(r, strokePaint(const Color(0xffc98a00), 2.4));
+    c.drawOval(r, strokePaint(const Color(0xffffe082), 1.2));
+    c.restore();
   }
   for (var i = 0; i < 6; i++) {
     final u = (t * .6 + i / 6) % 1;

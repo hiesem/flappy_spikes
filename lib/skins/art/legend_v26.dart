@@ -8,16 +8,19 @@ void paintLegendV26(
   double size,
   double t, {
   bool front = true,
+  double? rx,
+  double lineWidth = 7,
 }) {
   c.save();
   c.translate(center.dx, center.dy);
-  final ry = size, rx = ry * .26, a0 = front ? math.pi / 2 : -math.pi / 2;
+  final ry = size, a0 = front ? math.pi / 2 : -math.pi / 2;
+  final radiusX = rx ?? ry * .26;
   void comets() {
     for (var k = 0; k < 2; k++) {
       for (var j = 8; j >= 0; j--) {
         final a = t * 1.6 + k * math.pi - j * .1;
         if ((math.cos(a) < 0) != front) continue;
-        final x = math.cos(a) * (rx + 8), y = math.sin(a) * (ry + 6);
+        final x = math.cos(a) * (radiusX + 8), y = math.sin(a) * (ry + 6);
         if (j == 0) {
           paintStar(c, x, y, 3.6, const Color(0xffffffff), rot: t * 5);
         } else {
@@ -39,7 +42,7 @@ void paintLegendV26(
     c.drawOval(
       Rect.fromCenter(
         center: Offset.zero,
-        width: (rx + 2) * 2,
+        width: (radiusX + 2) * 2,
         height: (ry + 2) * 2,
       ),
       strokePaint(
@@ -51,7 +54,7 @@ void paintLegendV26(
   }
   final rect = Rect.fromCenter(
     center: Offset.zero,
-    width: rx * 2,
+    width: radiusX * 2,
     height: ry * 2,
   );
   c.drawArc(
@@ -59,14 +62,20 @@ void paintLegendV26(
     a0,
     math.pi,
     false,
-    strokePaint(front ? const Color(0xffe69500) : const Color(0xffa86f00), 8.4),
+    strokePaint(
+      front ? const Color(0xffe69500) : const Color(0xffa86f00),
+      lineWidth * 1.2,
+    ),
   );
   c.drawArc(
     rect,
     a0,
     math.pi,
     false,
-    strokePaint(front ? artGold : const Color(0xffc98a00), 6.4),
+    strokePaint(
+      front ? artGold : const Color(0xffc98a00),
+      lineWidth * (6.4 / 7),
+    ),
   );
   final arc = Path()..addArc(rect, a0, math.pi);
   // SVG's positive dash offset advances the pattern along the path.
@@ -85,17 +94,21 @@ void paintLegendV26(
   }
   c.drawPath(
     dashed,
-    strokePaint(front ? const Color(0xfffff3c4) : const Color(0xffe0a800), 2),
+    strokePaint(
+      front ? const Color(0xfffff3c4) : const Color(0xffe0a800),
+      lineWidth * (2 / 7),
+    ),
   );
   if (front) {
     for (var i = 0; i < 10; i++) {
       final a = math.pi / 2 + (i + .5) / 10 * math.pi,
-          x = math.cos(a) * (rx + 3.6),
+          x = math.cos(a) * (radiusX + 3.6),
           y = math.sin(a) * (ry + 3.6);
       c.save();
       c.translate(x, y);
       c.rotate(
-        math.atan2(math.cos(a) * ry, -math.sin(a) * rx) + (i.isOdd ? .7 : -.7),
+        math.atan2(math.cos(a) * ry, -math.sin(a) * radiusX) +
+            (i.isOdd ? .7 : -.7),
       );
       c.drawPath(
         polyPath([0, -3.4, 1.5, 0, 0, 2.2, -1.5, 0]),
@@ -110,7 +123,7 @@ void paintLegendV26(
     ];
     for (var i = 0; i < 3; i++) {
       final a = (135 + i * 45) * math.pi / 180,
-          x = math.cos(a) * rx,
+          x = math.cos(a) * radiusX,
           y = math.sin(a) * ry,
           L = math.pow(math.max(0, math.cos(t * 2.4 - i * 2.1)), 3).toDouble();
       circ(c, x, y, 4 + L * 4, colors[i].withValues(alpha: L * .35));
@@ -139,7 +152,7 @@ void paintLegendV26(
       if (u > .1) {
         paintStar(
           c,
-          [-rx - 12, rx + 9, -rx - 6][i],
+          [-radiusX - 12, radiusX + 9, -radiusX - 6][i],
           [-ry + 4, -ry - 6, ry + 2][i],
           1 + u * 2.6,
           const Color(0xfffff3c4),

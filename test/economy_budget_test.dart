@@ -210,5 +210,22 @@ void main() {
       ]),
     );
     expect(metaCoinsPerDay.values, everyElement(greaterThan(0)));
+    // PRD G6/F12 and §8.3-17: daily projections include every approved
+    // source, with gold expressed as its expected coin payout. These exact
+    // amounts prevent an omitted or understated source from hiding a breach.
+    expect(metaCoinsPerDay[CoinSource.mission], 110);
+    expect(metaCoinsPerDay[CoinSource.missionChest], 40);
+    expect(metaCoinsPerDay[CoinSource.streak], closeTo(200 / 7, 1e-9));
+    expect(metaCoinsPerDay[CoinSource.firstWinDay], 20);
+    expect(metaCoinsPerDay[CoinSource.starRoad], closeTo(960 / 28, 1e-9));
+    expect(metaCoinsPerDay[CoinSource.leaderboardGift], 100);
+    final typical = metaCoinsPerDay.entries
+        .where((entry) => entry.key != CoinSource.leaderboardGift)
+        .fold<double>(0, (sum, entry) => sum + entry.value);
+    expect(typical, closeTo(232.857142857, 1e-6));
+    expect(
+      typical + metaCoinsPerDay[CoinSource.leaderboardGift]!,
+      closeTo(332.857142857, 1e-6),
+    );
   });
 }

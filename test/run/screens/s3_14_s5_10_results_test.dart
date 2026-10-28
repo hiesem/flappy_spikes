@@ -230,6 +230,32 @@ void main() {
         expect(page.surplusLabel.color.a, greaterThan(0));
       });
 
+    rt('J4 reveals all pending rewards before paying',
+      () => trackGame(),
+      (g) async {
+        await g.menu.levels.recordRun(25);
+        await g.menu.levels.recordRun(50);
+        final page = await endWith(g, score: 100);
+        final count = g.menu.levels.pending.length;
+        expect(count, greaterThan(1));
+        final balance = g.menu.wallet.balance;
+        page.skipToReveal();
+        await flushAndMount(g);
+        await flushAndMount(g);
+        for (var i = 0; i < count; i++) {
+          final sheet = page.activeRevealSheet!;
+          stepGame(g, 2);
+          await sheet.choose(false);
+          await flushAndMount(g);
+          await flushAndMount(g);
+          if (i < count - 1) {
+            expect(g.menu.wallet.balance, balance);
+            expect(g.menu.levels.pending, hasLength(count));
+          }
+        }
+        expect(g.menu.levels.pending, isEmpty);
+      });
+
     rt('J3 exact level threshold hides zero surplus',
       () => trackGame(prefs: {'lvlIndex': 10, 'lvlPoints': 700, 'bestScore': 900}),
       (g) async {

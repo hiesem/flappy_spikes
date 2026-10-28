@@ -354,6 +354,58 @@ void main() {
       clock: () => monday,
     );
   }, gameSize: Vector2(320, 711)).testGameWidget(
+    'G5 weekly results retain album reward and then the level reveal',
+    setUp: (g, _) async {
+      await g.ready();
+      await preloadImages(g);
+      await g.storage.saveAlbumCounts(List.filled(8, 1));
+    },
+    verify: (g, _) async {
+      await g.startWeeklyCourse();
+      await flushAndMount(g);
+      final run = g.run!;
+      g.score = 25;
+      run.state.score = 25;
+      final summary = run.endRun();
+      g.endRun(summary);
+      await g.weeklyWritesSettled;
+      g.showResults(summary);
+      await flushAndMount(g);
+      final page = g.resultsScreen!;
+      expect(page.model.levelUp, isTrue);
+      stepGame(g, 1);
+      page.nextButton.onPressed();
+      expect(g.run, same(run));
+      stepGame(g, 9);
+      await flushAndMount(g);
+      final album = page.revealSheet!;
+      expect(album.album, isTrue);
+      stepGame(g, 3);
+      await album.choose(false);
+      await flushAndMount(g);
+      expect(g.storage.albumRewardClaimed, isTrue);
+      page.nextButton.onPressed();
+      await flushAndMount(g);
+      final level = page.revealSheet!;
+      expect(level.album, isFalse);
+      stepGame(g, 3);
+      await level.choose(false);
+      await flushAndMount(g);
+      expect(g.run?.setup.weekly, isTrue);
+      expect(g.run, isNot(same(run)));
+    },
+  );
+  FlameTester<FlappySpikesGame>(() {
+    SharedPreferences.setMockInitialValues({
+      Obf.prefGamesPlayed: 6,
+      Obf.prefBestHoops: 40,
+    });
+    return FlappySpikesGame(
+      soundEnabled: false,
+      worldHeight: 711,
+      clock: () => monday,
+    );
+  }, gameSize: Vector2(320, 711)).testGameWidget(
     'G5 weekly level reveal waits until leaving results',
     setUp: (g, _) async {
       await g.ready();

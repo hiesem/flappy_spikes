@@ -302,7 +302,9 @@ class ResultsScreen extends PositionComponent
 
   void _weeklyLeave({required bool flyAgain}) {
     if (!canContinue || _weeklyDeparting || revealSheet != null ||
-        _albumOpening || _albumDue) return;
+        _albumOpening || _albumDue) {
+      return;
+    }
     _weeklyDeparting = true;
     _schedule.clear();
     _stopTicks();

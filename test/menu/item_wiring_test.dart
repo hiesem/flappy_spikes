@@ -1,3 +1,4 @@
+// PRD 2.6 F10 (853, O81): collection includes 24 skill items; PROUD PEACOCK counts the 199 sold collectibles.
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/debug_panel.dart';
@@ -49,7 +50,7 @@ void main() {
       await action.run();
       await flushAndMount(game);
 
-      expect(game.menu.items.ownedCount, kCollectibleTotal);
+      expect(game.menu.items.ownedCount, kSoldCollectibleTotal);
       final storage = GameStorage();
       await storage.load();
       expect(storage.ownedItems.length, allItems.length);

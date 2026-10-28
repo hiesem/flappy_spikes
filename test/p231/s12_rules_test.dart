@@ -1,3 +1,4 @@
+// PRD 2.6 F10 (853, O81): collection includes 24 skill items; PROUD PEACOCK counts the 199 sold collectibles.
 // PRD-2.3.1 §12.2 / §12.9 one test per achievement rule (createRunTestGame;
 // the harness's runs are debug starts, so the rule tests opt in with
 // `AchievementTracker.countDebugRuns`), plus the exclusions (§12.2 "which
@@ -19,6 +20,7 @@ import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/run/run_summary.dart';
 import 'package:flappy_spikes/run/run_setup.dart';
 import 'package:flappy_spikes/skins/catalog.dart';
+import 'package:flappy_spikes/skins/look.dart';
 import 'package:flappy_spikes/versus/opponent.dart';
 import 'package:flappy_spikes/versus/timeline.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -572,16 +574,42 @@ void main() {
 
   t.testGameWidget(
     '§12.2 the shop: FRESH FEATHERS on the first purchase, PROUD PEACOCK at '
-    'kCollectibleTotal owned',
+    'kSoldCollectibleTotal owned',
     setUp: boot,
     verify: (g, _) async {
       final a = g.achievements;
-      a.onShopPurchase(owned: 1, total: kCollectibleTotal);
+      a.onShopPurchase(owned: 1, total: kSoldCollectibleTotal);
       expect(unlocked(g), {'skin_first'});
-      a.onShopPurchase(owned: kCollectibleTotal - 1, total: kCollectibleTotal);
+      a.onShopPurchase(owned: kSoldCollectibleTotal - 1, total: kSoldCollectibleTotal);
       expect(unlocked(g).contains('skin_all'), isFalse);
-      a.onShopPurchase(owned: kCollectibleTotal, total: kCollectibleTotal);
+      a.onShopPurchase(owned: kSoldCollectibleTotal, total: kSoldCollectibleTotal);
       expect(unlocked(g).contains('skin_all'), isTrue);
+    },
+  );
+
+  // PRD 2.6 F10 O81: the last sold item completes the goal without skill items.
+  tester(prefs: {
+    'coins': 1000,
+    'gamesPlayed': 10,
+    'ownedItems': [for (final item in allItems)
+      if (!item.isNone && !item.isSkillOnly && item.key != 'bird:sky') item.key],
+  }).testGameWidget(
+    'buying the last sold item unlocks PROUD PEACOCK',
+    setUp: boot,
+    verify: (g, _) async {
+      expect(g.menu.items.soldOwnedCount, kSoldCollectibleTotal - 1);
+      expect(g.menu.items.ownedCount, kSoldCollectibleTotal - 1);
+      expect(unlocked(g), isEmpty);
+      g.openSkins();
+      await flushAndMount(g);
+      stepGame(g, .6);
+      await flushAndMount(g);
+      g.tapItem(SkinLayer.bird, 'sky');
+      await g.buyTriedOnItem();
+      await g.achievements.flush();
+      expect(g.menu.items.soldOwnedCount, kSoldCollectibleTotal);
+      expect(unlocked(g), contains('skin_all'));
+      expect(g.menu.items.ownedCount, kSoldCollectibleTotal + 1);
     },
   );
 
@@ -591,7 +619,7 @@ void main() {
     verify: (g, _) async {
       await g.menu.items.grantAll();
       await flushAndMount(g);
-      expect(g.menu.items.ownedCount, kCollectibleTotal);
+      expect(g.menu.items.ownedCount, kSoldCollectibleTotal);
       expect(unlocked(g), isEmpty);
     },
   );

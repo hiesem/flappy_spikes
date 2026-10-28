@@ -1,3 +1,4 @@
+// PRD 2.6 F10 (853, O81): collection includes 24 skill items; PROUD PEACOCK counts the 199 sold collectibles.
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -134,16 +135,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('§19.6 catalogue', () {
-    test('wardrobe layers have 30 entries; CARDS has 60 (PRD F9)', () {
+    test('wardrobe layers have 33 entries; CARDS has 60 (PRD F10)', () {
       // PRD 2.6 F9 (834): five wardrobe layers plus 60 card cosmetics.
       for (final layer in kShopLayers.where((l) => l != SkinLayer.card)) {
-        expect(itemsFor(layer), hasLength(30), reason: layer.key);
+        expect(itemsFor(layer), hasLength(33), reason: layer.key);
       }
       expect(itemsFor(SkinLayer.card), hasLength(60));
-      expect(itemsFor(SkinLayer.hat).where((i) => !i.isNone), hasLength(29));
-      expect(itemsFor(SkinLayer.gear).where((i) => !i.isNone), hasLength(29));
-      // PRD 2.6 F9 (834 / 853): collection includes 60 card cosmetics.
-      expect(kCollectibleTotal, 208);
+      expect(itemsFor(SkinLayer.hat).where((i) => !i.isNone), hasLength(32));
+      expect(itemsFor(SkinLayer.gear).where((i) => !i.isNone), hasLength(32));
+      // PRD 2.6 F10 (853): collection includes all 24 skill items.
+      expect(kCollectibleTotal, 223);
     });
 
     test('the 60 items of §19.2: names, rarities, prices, animated', () {
@@ -168,7 +169,7 @@ void main() {
       for (final MapEntry(key: layer, value: want) in _totals.entries) {
         final got = [
           for (final r in Rarity.values)
-            itemsFor(layer).where((i) => i.rarity == r).length,
+            itemsFor(layer).where((i) => !i.isSkillOnly && i.rarity == r).length,
         ];
         expect(got, want, reason: layer.key);
       }
@@ -187,7 +188,10 @@ void main() {
     test('grid order §19.3: free first, rarity groups common → legendary, '
         'existing items then new ones in tag order', () {
       for (final layer in _table.keys) {
-        final items = itemsFor(layer);
+        final all = itemsFor(layer);
+        expect(all.skip(all.length - 3).every((i) => i.isSkillOnly), isTrue);
+        expect(all.take(all.length - 3).every((i) => !i.isSkillOnly), isTrue);
+        final items = all.where((i) => !i.isSkillOnly).toList();
         expect(items.first.isFree, isTrue, reason: layer.key);
         final rest = items.skip(1).toList();
         final newIds = [for (final r in _table[layer]!) r.$1];
@@ -274,7 +278,7 @@ void main() {
       expect(featuredItemFor(items)!.key, 'gear:disco');
     });
 
-    test('buying and equipping a new wardrobe item of each layer; x / 208', () async {
+    test('buying and equipping a new wardrobe item of each layer; x / 223', () async {
       final (_, wallet, items) = await _store(coins: 20000);
       expect(items.ownedCount, 3);
       for (final (layer, id) in [
@@ -290,9 +294,9 @@ void main() {
         expect(items.look.idFor(layer), id);
       }
       expect(items.ownedCount, 7);
-      // PRD 2.6 F9 (834 / 853): collection includes 60 card cosmetics.
-      expect(kCollectibleTotal, 208);
-      expect('${items.ownedCount} / $kCollectibleTotal', '7 / 208');
+      // PRD 2.6 F10 (853): collection includes all 24 skill items.
+      expect(kCollectibleTotal, 223);
+      expect('${items.ownedCount} / $kCollectibleTotal', '7 / 223');
     });
   });
 

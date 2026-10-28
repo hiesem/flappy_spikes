@@ -1,3 +1,4 @@
+// PRD 2.6 F10 (853, O81): collection includes 24 skill items; PROUD PEACOCK counts the 199 sold collectibles.
 import 'dart:ui';
 
 import 'package:flappy_spikes/components/levels/emblem_view.dart';
@@ -71,7 +72,7 @@ void main() {
         final shop = await openSkinShop(game, layer: SkinLayer.card);
         expect(shop.tabBar.tabs, hasLength(6)); // PRD:834
         expect(shop.tabBar.tabFor(SkinLayer.card).countText, '0/60');
-        expect(shop.bar.total, 208);
+        expect(shop.bar.total, 223);
         expect(
           shop.cardArt.pictureCount,
           lessThanOrEqualTo(23),
@@ -122,7 +123,7 @@ void main() {
           shop.selectTab(SkinLayer.bird);
           await flushAndMount(game);
           expect(shop.scroll.viewport.top, 326);
-          expect(shop.tiles, hasLength(30));
+          expect(shop.tiles, hasLength(33));
           shop.selectTab(SkinLayer.card);
           await flushAndMount(game);
         }

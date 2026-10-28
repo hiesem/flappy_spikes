@@ -1,4 +1,4 @@
-// PRD:834: collection includes 60 card cosmetics (208 total).
+// PRD 2.6 F10 (853, O81): collection includes 24 skill items; PROUD PEACOCK counts the 199 sold collectibles.
 import 'dart:async';
 import 'dart:ui' as ui;
 
@@ -156,13 +156,13 @@ void main() {
     await _tap(game, tester, game.homeScreen!.skinsTile);
     await _fade(game);
     final screen = game.skinShop!;
-    expect(screen.bar.labelText, '3 / 208');
+    expect(screen.bar.labelText, '3 / 223');
     expect(screen.tabBar.tabs.map((tab) => tab.countText), [
-      '1/30',
-      '0/29',
-      '0/29',
-      '1/30',
-      '1/30',
+      '1/33',
+      '0/32',
+      '0/32',
+      '1/33',
+      '1/33',
       '0/60',
     ]);
     // Real drag input reaches the legendary row at the end of Birds.
@@ -209,7 +209,7 @@ void main() {
     expect(screen.children.query<UnlockBanner>().single.nameText, 'GALAXY');
     stepGame(game, .7);
     expect(game.coinPill.shownBalance, 1000);
-    expect(screen.bar.labelText, '4 / 208');
+    expect(screen.bar.labelText, '4 / 223');
     expect(rig.events.params('item_purchase').single, {
       'layer': 'bird',
       'id': 'galaxy',
@@ -230,13 +230,13 @@ void main() {
     const outfit = Look(bird: 'galaxy', gear: 'windup', hat: 'cap');
     expect(game.menu.items.look, outfit);
     expect(game.menu.wallet.balance, 0);
-    expect(screen.bar.labelText, '6 / 208');
+    expect(screen.bar.labelText, '6 / 223');
     expect(screen.tabBar.tabs.map((tab) => tab.countText), [
-      '2/30',
-      '1/29',
-      '1/29',
-      '1/30',
-      '1/30',
+      '2/33',
+      '1/32',
+      '1/32',
+      '1/33',
+      '1/33',
       '0/60',
     ]);
     final saved = GameStorage();
@@ -305,13 +305,13 @@ void main() {
       await _tab(game, tester, SkinLayer.hat);
       await _tap(game, tester, screen.tileFor(kNoneId));
       expect(screen.actionButton.label, 'NOTHING ON');
-      expect(screen.bar.labelText, '6 / 208');
+      expect(screen.bar.labelText, '6 / 223');
       expect(screen.tabBar.tabs.map((tab) => tab.countText), [
-        '2/30',
-        '1/29',
-        '1/29',
-        '1/30',
-        '1/30',
+        '2/33',
+        '1/32',
+        '1/32',
+        '1/33',
+        '1/33',
         '0/60',
       ]);
       await _tap(game, tester, screen.backButton);
@@ -365,13 +365,13 @@ void main() {
           await _shot(game, tester, '${height.toInt()}_${layer.key}_bottom');
         }
         expect(game.menu.wallet.balance, 250);
-        expect(screen.bar.labelText, '8 / 208');
+        expect(screen.bar.labelText, '8 / 223');
         expect(screen.tabBar.tabs.map((tab) => tab.countText), [
-          '2/30',
-          '1/29',
-          '1/29',
-          '2/30',
-          '2/30',
+          '2/33',
+          '1/32',
+          '1/32',
+          '2/33',
+          '2/33',
           '0/60',
         ]);
         expect(rig.events.params('item_purchase'), hasLength(5));
@@ -511,7 +511,7 @@ void main() {
       expect(game.menu.items.isOwned(SkinLayer.bird, 'ghost'), isFalse);
       await _tap(game, tester, game.homeScreen!.skinsTile);
       await _fade(game);
-      expect(game.skinShop!.bar.labelText, '6 / 208');
+      expect(game.skinShop!.bar.labelText, '6 / 223');
     },
   );
 

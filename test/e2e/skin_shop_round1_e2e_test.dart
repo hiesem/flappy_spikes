@@ -1,4 +1,4 @@
-// PRD:834: collection includes 60 card cosmetics (208 total).
+// PRD 2.6 F10 (853, O81): collection includes 24 skill items; PROUD PEACOCK counts the 199 sold collectibles.
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -193,13 +193,13 @@ void main() {
       await _tap(game, tester, game.homeScreen!.skinsTile);
       await _fade(game);
       final screen = game.skinShop!;
-      expect(screen.bar.labelText, '3 / 208');
+      expect(screen.bar.labelText, '3 / 223');
       expect(screen.tabBar.tabs.map((tab) => tab.countText), [
-        '1/30',
-        '0/29',
-        '0/29',
-        '1/30',
-        '1/30',
+        '1/33',
+        '0/32',
+        '0/32',
+        '1/33',
+        '1/33',
         '0/60',
       ]);
 
@@ -253,8 +253,8 @@ void main() {
       expect(game.menu.items.look.bird, 'galaxy');
       stepGame(game, .7);
       expect(game.coinPill.shownBalance, 1000);
-      expect(screen.bar.labelText, '4 / 208');
-      expect(screen.tabBar.tabs.first.countText, '2/30');
+      expect(screen.bar.labelText, '4 / 223');
+      expect(screen.tabBar.tabs.first.countText, '2/33');
       expect(rig.events.params('item_purchase').single, {
         'layer': 'bird',
         'id': 'galaxy',
@@ -273,9 +273,9 @@ void main() {
       const dressed = Look(bird: 'galaxy', gear: 'shades', hat: 'cap');
       expect(game.menu.items.look, dressed);
       expect(game.menu.wallet.balance, 500);
-      expect(screen.bar.labelText, '6 / 208');
-      expect(screen.tabBar.tabFor(SkinLayer.gear).countText, '1/29');
-      expect(screen.tabBar.tabFor(SkinLayer.hat).countText, '1/29');
+      expect(screen.bar.labelText, '6 / 223');
+      expect(screen.tabBar.tabFor(SkinLayer.gear).countText, '1/32');
+      expect(screen.tabBar.tabFor(SkinLayer.hat).countText, '1/32');
       final reloaded = GameStorage();
       await reloaded.load();
       expect(
@@ -339,12 +339,12 @@ void main() {
       await _tap(game, tester, game.homeScreen!.skinsTile);
       await _fade(game);
       final screen = game.skinShop!;
-      expect(screen.bar.labelText, '6 / 208');
+      expect(screen.bar.labelText, '6 / 223');
       await _tab(game, tester, SkinLayer.gear);
       await _tap(game, tester, screen.tileFor(kNoneId));
       expect(game.menu.items.look.gear, kNoneId);
       expect(screen.actionButton.label, 'NOTHING ON');
-      expect(screen.tabBar.tabFor(SkinLayer.gear).countText, '1/29');
+      expect(screen.tabBar.tabFor(SkinLayer.gear).countText, '1/32');
       await _tab(game, tester, SkinLayer.hat);
       await _tap(game, tester, screen.tileFor('beanie'));
       expect(screen.previewLook.hat, 'beanie');
@@ -354,7 +354,7 @@ void main() {
       await _tab(game, tester, SkinLayer.hat);
       await _tap(game, tester, screen.tileFor(kNoneId));
       expect(screen.actionButton.label, 'NOTHING ON');
-      expect(screen.bar.labelText, '6 / 208');
+      expect(screen.bar.labelText, '6 / 223');
       await _tap(game, tester, screen.backButton);
       await _fade(game);
       expect(game.homeScreen!.bird.look, const Look(bird: 'robin'));
@@ -477,7 +477,7 @@ void main() {
           await _tab(game, tester, layer);
           expect(
             screen.tiles,
-            hasLength(30) /* PRD-2.3 §19: every layer has 30 */,
+            hasLength(33) /* PRD 2.6 F10 adds three skill items */,
           );
           expect(screen.tiles.first.toRect().top, 332);
           screen.scroll.offset = screen.scroll.maxOffset;

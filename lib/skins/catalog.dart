@@ -50,7 +50,7 @@ class SkinItem {
   String get key => '${layer.key}:$id';
 }
 
-/// The 30 bird skins (§5.1).
+/// The 30 bird skins (§5.1), plus three PRD 2.6 F10 skill items.
 const List<SkinItem> kBirds = [
   SkinItem(layer: SkinLayer.bird, id: 'classic', name: 'Classic', rarity: Rarity.common, price: 0),
   SkinItem(layer: SkinLayer.bird, id: 'sky', name: 'Sky', rarity: Rarity.common, price: 150),
@@ -89,7 +89,8 @@ const List<SkinItem> kBirds = [
   // endregion
 ];
 
-/// The 29 gear items plus the free "none" entry (§5.2; PRD-2.3 §19.3: the
+/// The 29 sold gear items, free "none", and three F10 skill items (§5.2;
+/// PRD-2.3 §19.3: the
 /// 15 new items mixed in by rarity, after the existing ones of each rarity).
 const List<SkinItem> kGear = [
   SkinItem(layer: SkinLayer.gear, id: 'none', name: 'None', rarity: null, price: 0),
@@ -129,7 +130,7 @@ const List<SkinItem> kGear = [
   // endregion
 ];
 
-/// The 29 hats plus the free "none" entry (§5.3; PRD-2.3 §19.3 grid order).
+/// The 29 sold hats, free "none", and three F10 skill items (§5.3).
 const List<SkinItem> kHats = [
   SkinItem(layer: SkinLayer.hat, id: 'none', name: 'None', rarity: null, price: 0),
   SkinItem(layer: SkinLayer.hat, id: 'cap', name: 'Cap', rarity: Rarity.common, price: 250),
@@ -168,7 +169,7 @@ const List<SkinItem> kHats = [
   // endregion
 ];
 
-/// The 30 hoop skins (§5.4; PRD-2.3 §19.3 grid order).
+/// The 30 hoop skins and three F10 skill items (§5.4).
 const List<SkinItem> kHoops = [
   SkinItem(layer: SkinLayer.hoop, id: 'pink', name: 'Classic', rarity: Rarity.common, price: 0),
   SkinItem(layer: SkinLayer.hoop, id: 'sky', name: 'Sky', rarity: Rarity.common, price: 250),
@@ -207,7 +208,7 @@ const List<SkinItem> kHoops = [
   // endregion
 ];
 
-/// The 30 trails (§5.5; PRD-2.3 §19.3 grid order).
+/// The 30 trails and three F10 skill items (§5.5).
 const List<SkinItem> kTrails = [
   SkinItem(layer: SkinLayer.trail, id: 'flame', name: 'Classic flame', rarity: Rarity.common, price: 0),
   SkinItem(layer: SkinLayer.trail, id: 'blue', name: 'Blue flame', rarity: Rarity.common, price: 250),
@@ -394,11 +395,10 @@ const Map<SkinLayer, List<SkinItem>> kCatalog = {
 };
 
 /// Collectible items in the whole catalogue (the two "none" entries do not
-/// count): 208 (PRD:834 adds 60 cards to the 148 wardrobe collectibles).
+/// count): 223 (163 wardrobe collectibles and 60 card cosmetics; PRD F10).
 // region P26-F9e
-// PRD:834: 148 wardrobe collectibles + 60 card cosmetics.
-// F10a follow-up (O81 / PRD:855): split PROUD PEACOCK's sold-only 199 goal
-// and owned count from this UI total, which includes the nine skill cards.
+// PRD F10: 163 wardrobe collectibles + 60 cards. O81 / PRD:855
+// separates PROUD PEACOCK's 199 sold collectibles from the UI total.
 // region P26-F10a
 const int kCollectibleTotal = 223;
 const int kSoldCollectibleTotal = 199;

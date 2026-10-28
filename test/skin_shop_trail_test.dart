@@ -149,6 +149,10 @@ void main() async {
       seen: allSeen,
     ),
     verify: (game, spy, ads, iap, tester) async {
+      // PRD 2.6 F10 O81: skill trails are owned through earned achievements.
+      game.storage.ach.unlocked.addAll(
+        kTrails.where((i) => i.unlock != null).map((i) => i.unlock!.key),
+      );
       final problems = <String>[];
       var shop = await _enterShop(game);
       expect(shop.tab, SkinLayer.bird);

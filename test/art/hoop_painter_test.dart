@@ -14,9 +14,9 @@ void main() {
   final centre = const ui.Offset(30, 30);
 
   test('ids match the PRD 5.4 catalogue in display order', () {
-    // PRD-2.3 §19.3: the catalogue's grid order (30 items).
+    // PRD 2.6 F10: three skill items follow the original grid.
     expect(HoopPainter.ids, [for (final i in itemsFor(SkinLayer.hoop)) i.id]);
-    expect(HoopPainter.ids, hasLength(30));
+    expect(HoopPainter.ids, hasLength(33));
     expect(HoopPainter.fallbackId, 'pink');
   });
 

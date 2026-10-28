@@ -3,6 +3,10 @@ import 'dart:ui';
 
 import 'art_paint.dart';
 import 'hoop_art_v23.dart';
+// region P26-F10a
+import 'skill_art_v26_part1.dart';
+
+// endregion
 
 /// Canvas port of `hoopHalf` from `design/menu_v2/skin_art.js` (PRD-menu-v2
 /// §5.4). A hoop is a vertical ring drawn as an ellipse: the **back** half is
@@ -23,6 +27,9 @@ class HoopPainter {
     'tire', 'melon', 'zipper', 'tape', 'pearls', 'vine',
     'neon', 'lava', 'ice', 'electric', 'water', 'cog',
     'rainbow', 'galaxy', 'blackhole', 'aurora',
+    // region P26-F10a
+    'spikes', 'phoenixring', 'legend',
+    // endregion
   ];
 
   /// The free default, used when an unknown id is requested.
@@ -57,6 +64,20 @@ class HoopPainter {
     double? rx,
   }) {
     if (ry <= 0 || lineWidth <= 0) return;
+    // region P26-F10a
+    if (const {'spikes', 'phoenixring', 'legend'}.contains(hoopId)) {
+      f10c1Painters[hoopId]!(
+        canvas,
+        center,
+        ry,
+        t,
+        front: front,
+        rx: rx,
+        lineWidth: lineWidth,
+      );
+      return;
+    }
+    // endregion
     if (paintHoopV23(
       canvas,
       hoopId,

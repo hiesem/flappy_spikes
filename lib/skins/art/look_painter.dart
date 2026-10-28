@@ -7,6 +7,10 @@ import '../look.dart';
 import 'bird_art.dart';
 import 'gear_art.dart';
 import 'hat_art.dart';
+// region P26-F10a
+import 'skill_art_v26_part1.dart';
+import 'skill_art_v26_part2.dart';
+// endregion
 
 export 'bird_art.dart' show BirdArt, BirdShape, BirdSpec;
 export 'gear_art.dart' show GearArt;
@@ -117,6 +121,20 @@ abstract final class LookPainter {
     final recolour = gold && look.bird == GoldBird.classicId;
     final b = recolour ? GoldBird.classic : BirdArt.byId(look.bird);
     final s = b.shape;
+    // region P26-F10a
+    final skillBird = const {'magpie', 'prism', 'daynight'}.contains(look.bird);
+    final face = skillBird ? f10c2BirdFace(look.bird, s, t) : b;
+    void body() {
+      if (skillBird) {
+        final painter = f10c2Painters[look.bird]!;
+        painter(canvas, s, t, true);
+        painter(canvas, s, t, false);
+      } else {
+        paintBirdBody(canvas, b, t);
+      }
+    }
+
+    // endregion
     final gear = look.gear, hat = look.hat;
     final wing = flap && !dead;
     canvas.save();
@@ -133,23 +151,40 @@ abstract final class LookPainter {
             sigmaX: GoldBird.glowSigma,
             sigmaY: GoldBird.glowSigma,
           )
-          ..colorFilter = const ColorFilter.mode(GoldBird.glow, BlendMode.srcIn),
+          ..colorFilter = const ColorFilter.mode(
+            GoldBird.glow,
+            BlendMode.srcIn,
+          ),
       );
-      paintBirdBody(canvas, b, t);
+      // region P26-F10a
+      body();
+      // endregion
       canvas.restore();
     }
     final gearDim = dim[SkinLayer.gear];
-    _layer(canvas, gearDim, () => paintGearBack(canvas, gear, s, t, wing));
+    // region P26-F10a
+    _layer(
+      canvas,
+      gearDim,
+      () => _paintSkillGear(canvas, gear, s, t, wing, back: true),
+    );
+    // endregion
     _layer(canvas, dim[SkinLayer.bird], () {
-      paintBirdBody(canvas, b, t);
-      paintBirdFace(canvas, b, t, wing, dead: dead, blink: blink);
+      // region P26-F10a
+      body();
+      paintBirdFace(canvas, face, t, wing, dead: dead, blink: blink);
+      // endregion
     });
     _layer(
       canvas,
       gearDim,
-      () => paintGearFront(canvas, gear, s, t, wing, dead: dead),
+      // region P26-F10a
+      () => _paintSkillGear(canvas, gear, s, t, wing, back: false, dead: dead),
+      // endregion
     );
-    _layer(canvas, dim[SkinLayer.hat], () => paintHat(canvas, hat, s, t));
+    // region P26-F10a
+    _layer(canvas, dim[SkinLayer.hat], () => _paintSkillHat(canvas, hat, s, t));
+    // endregion
     canvas.restore();
   }
 
@@ -166,16 +201,54 @@ abstract final class LookPainter {
     final s = m.shape;
     canvas.save();
     canvas.translate(-22, -18);
-    if (layer == SkinLayer.gear) paintGearBack(canvas, id, s, t, flap);
+    // region P26-F10a
+    if (layer == SkinLayer.gear) {
+      _paintSkillGear(canvas, id, s, t, flap, back: true);
+    }
+    // endregion
     paintBirdBody(canvas, m, t);
     paintBirdFace(canvas, m, t, flap);
     if (layer == SkinLayer.gear) {
-      paintGearFront(canvas, id, s, t, flap);
+      // region P26-F10a
+      _paintSkillGear(canvas, id, s, t, flap, back: false);
+      // endregion
     } else if (layer == SkinLayer.hat) {
-      paintHat(canvas, id, s, t);
+      // region P26-F10a
+      _paintSkillHat(canvas, id, s, t);
+      // endregion
     }
     canvas.restore();
   }
+
+  // region P26-F10a
+  static void _paintSkillGear(
+    Canvas c,
+    String id,
+    BirdShape s,
+    double t,
+    bool flap, {
+    required bool back,
+    bool dead = false,
+  }) {
+    if (const {'goggles', 'hoopchain', 'peacock'}.contains(id)) {
+      f10c2Painters[id]!(c, s, t, back);
+    } else if (back) {
+      paintGearBack(c, id, s, t, flap);
+    } else {
+      paintGearFront(c, id, s, t, flap, dead: dead);
+    }
+  }
+
+  static void _paintSkillHat(Canvas c, String id, BirdShape s, double t) {
+    if (id == 'skycrown' || id == 'nest') {
+      f10c1Painters[id]!(c, Offset(s.hx, s.top), 1, t);
+    } else if (id == 'jackpot') {
+      f10c2Painters[id]!(c, s, t, false);
+    } else {
+      paintHat(c, id, s, t);
+    }
+  }
+  // endregion
 
   static final Paint _none = Paint()
     ..style = PaintingStyle.stroke

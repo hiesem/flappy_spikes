@@ -413,7 +413,7 @@ class AchievementTracker {
   });
 
   /// A shop item bought: FRESH FEATHERS, and PROUD PEACOCK once [owned]
-  /// reaches [total] (`kCollectibleTotal`). Immediate (no run slot).
+  /// reaches [total] (`kSoldCollectibleTotal`, PRD F10 O81). Immediate (no run slot).
   void onShopPurchase({required int owned, required int total}) => _tx(() {
     _unlock(AchievementId.skinFirst);
     _progress(AchievementId.skinAll, owned, total);

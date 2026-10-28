@@ -5,6 +5,10 @@ import 'dart:ui';
 import '../look.dart';
 import 'art_paint.dart';
 import 'trail_v23.dart';
+// region P26-F10a
+import 'skill_art_v26_part1.dart';
+
+// endregion
 
 /// Paints a complete [Look] centred on the origin, one art unit per canvas
 /// unit, inside the 44 x 36 bird box — the `drawLook` contract of
@@ -90,6 +94,11 @@ class TrailEmitter {
     _v23 = TrailV23.has(_trailId) ? TrailV23(_trailId, _random) : null;
   }
 
+  // region P26-F10a
+  bool get _skillTrail =>
+      const {'thread', 'constellation', 'fireflies'}.contains(_trailId);
+  // endregion
+
   /// Maximum live particles. When the pool is full new emissions are dropped,
   /// so memory and per-frame cost stay bounded however long the trail runs.
   static const int capacity = 512;
@@ -103,6 +112,9 @@ class TrailEmitter {
     'planes', 'popcorn', 'fireworks', 'steps', 'fish',
     'bolt', 'blocks', 'notes', 'galaxy', 'prism', 'lavadrip',
     'rainbow', 'echo', 'supernova', 'paint',
+    // region P26-F10a
+    'thread', 'constellation', 'fireflies',
+    // endregion
   ];
 
   /// The free default, used when an unknown id is requested.
@@ -169,11 +181,18 @@ class TrailEmitter {
   int get particleCount => _v23?.particleCount ?? _alive;
 
   /// Points in the path history (ribbon / Afterimage / 2.3 path trails).
-  int get pathLength => _v23?.historyLength ?? _histCount;
+  // region P26-F10a
+  int get pathLength => _skillTrail
+      ? (_hasLastHead && _sinceEmit < .1 ? 1 : 0)
+      : (_v23?.historyLength ?? _histCount);
+  // endregion
 
   /// Path point [i] (0 = newest; tests).
-  Offset pathPoint(int i) =>
-      _v23?.historyPoint(i) ?? Offset(_histXAt(i), _histYAt(i));
+  // region P26-F10a
+  Offset pathPoint(int i) => _skillTrail
+      ? Offset(_lastHeadX, _lastHeadY)
+      : (_v23?.historyPoint(i) ?? Offset(_histXAt(i), _histYAt(i)));
+  // endregion
 
   /// Live particle positions (tests).
   Iterable<Offset> get particlePositions =>
@@ -218,6 +237,16 @@ class TrailEmitter {
     double angle = 0,
   }) {
     if (dt <= 0) return;
+    // region P26-F10a
+    if (_skillTrail) {
+      _lastHeadX = head.dx;
+      _lastHeadY = head.dy;
+      _hasLastHead = true;
+      _sinceEmit = 0;
+      _hd = worldLocked ? heading : 0;
+      return;
+    }
+    // endregion
     final world = worldLocked;
     _hd = world ? heading : 0;
     _hdC = _hd == 0 ? 1 : math.cos(_hd);
@@ -486,6 +515,12 @@ class TrailEmitter {
   void step(double dt) {
     if (dt <= 0) return;
     _time += dt;
+    // region P26-F10a
+    if (_skillTrail) {
+      _sinceEmit += dt;
+      return;
+    }
+    // endregion
     final v23 = _v23;
     if (v23 != null) {
       _sinceEmit += dt;
@@ -513,6 +548,23 @@ class TrailEmitter {
   /// [head] is the bird's trail point (the page's `head`); it defaults to
   /// the last emit point while the trail is emitting.
   void paint(Canvas canvas, {double k = 1, Offset? head}) {
+    // region P26-F10a
+    if (_skillTrail) {
+      final at =
+          head ??
+          (_hasLastHead && _sinceEmit < .1
+              ? Offset(_lastHeadX, _lastHeadY)
+              : null);
+      if (at != null) {
+        canvas.save();
+        canvas.translate(at.dx, at.dy);
+        if (worldLocked) canvas.rotate(_hd);
+        f10c1Painters[_trailId]!(canvas, Offset.zero, k, _time);
+        canvas.restore();
+      }
+      return;
+    }
+    // endregion
     final v23 = _v23;
     if (v23 != null) {
       v23.paint(
@@ -548,6 +600,10 @@ class TrailEmitter {
 
   /// Drops every particle and the path history. The clock keeps running.
   void clear() {
+    // region P26-F10a
+    _hasLastHead = false;
+    _sinceEmit = double.infinity;
+    // endregion
     _v23?.clear();
     _alive = 0;
     _acc = 0;

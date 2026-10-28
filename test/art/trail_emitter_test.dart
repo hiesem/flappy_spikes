@@ -30,9 +30,9 @@ void main() {
       capture(tester, canvasWidth, canvasHeight, (canvas) => e.paint(canvas));
 
   test('ids match the PRD 5.5 catalogue in display order', () {
-    // PRD-2.3 §19.3: the catalogue's grid order (30 items).
+    // PRD 2.6 F10: three skill items follow the original grid.
     expect(TrailEmitter.ids, [for (final i in itemsFor(SkinLayer.trail)) i.id]);
-    expect(TrailEmitter.ids, hasLength(30));
+    expect(TrailEmitter.ids, hasLength(33));
     expect(TrailEmitter.fallbackId, 'flame');
   });
 
@@ -51,7 +51,11 @@ void main() {
         lessThanOrEqualTo(TrailEmitter.capacity),
         reason: '$id stayed bounded',
       );
-      if (id != 'rainbow') {
+      // PRD F10 skill trails are procedural paths rather than particles.
+      if (const {'thread', 'constellation', 'fireflies'}.contains(id)) {
+        expect(e.pathLength, 1, reason: '$id emits a path');
+        expect(e.pathPoint(0), head, reason: '$id tracks the trail head');
+      } else if (id != 'rainbow') {
         expect(e.particleCount, greaterThan(0), reason: '$id emits particles');
       }
     }

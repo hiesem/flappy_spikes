@@ -402,7 +402,7 @@ const Map<SkinLayer, List<SkinItem>> kCatalog = {
 // region P26-F10a
 const int kCollectibleTotal = 223;
 const int kSoldCollectibleTotal = 199;
-// TODO(F10c): register the skill item painters when both art packages merge.
+
 // endregion
 // endregion
 

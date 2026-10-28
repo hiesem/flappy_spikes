@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+
 import '../game/flappy_game.dart';
 // region P26-G6eB
 import '../progression/star_road.dart';
@@ -153,7 +157,9 @@ abstract final class RunEndBookkeeping {
 
   static Future<int> record(FlappySpikesGame game, int score) {
     // region P26-F1
-    economyDaily(game.storage, game.services);
+    unawaited(economyDaily(game.storage, game.services).catchError((Object error) {
+      debugPrint('economy daily bookkeeping failed');
+    }));
     // endregion
     // region P26-G1b
     final run = game.run;

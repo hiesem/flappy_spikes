@@ -36,6 +36,10 @@ class AchievementTracker {
 
   /// Called after every new unlock (once it is durable).
   void Function(AchievementId id)? onUnlocked;
+  // region P26-F10b
+  /// Distinguishes the run FIFO slot from immediate unlocks after persistence.
+  void Function(AchievementId id, {required bool runSlot})? onUnlockedWithOrigin;
+  // endregion
 
   // --- the one-write state transitions (QA P19-01..03) --------------------------
 
@@ -89,7 +93,9 @@ class AchievementTracker {
   /// exceptions); the run rules [_earn] instead.
   bool unlock(AchievementId id) => _tx(() => _unlock(id));
 
-  bool _unlock(AchievementId id) {
+  // region P26-F10b
+  bool _unlock(AchievementId id, {bool runSlot = false}) {
+  // endregion
     if (isUnlocked(id)) return false;
     _s.unlocked.add(id.key);
     _s.pending.remove(id.key);
@@ -105,6 +111,9 @@ class AchievementTracker {
         '${signedIn ? 'platform banner' : 'game toast'}',
       );
       onUnlocked?.call(id);
+      // region P26-F10b
+      onUnlockedWithOrigin?.call(id, runSlot: runSlot);
+      // endregion
       unawaited(syncAll());
     });
     if (kItemAchievements.contains(id)) _checkMagpie();
@@ -141,7 +150,9 @@ class AchievementTracker {
         _s.pending.removeAt(0); // stale key
         continue;
       }
-      _unlock(id);
+      // region P26-F10b
+      _unlock(id, runSlot: true);
+      // endregion
       return id;
     }
     return null;

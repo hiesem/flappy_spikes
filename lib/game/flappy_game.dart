@@ -278,8 +278,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       services: this.services,
     );
     // region P26-F10b
-    achievements.onUnlocked = (id) {
-      _skillRevealQueue.addAll(allItems.where((item) => item.unlock == id));
+    achievements.onUnlockedWithOrigin = (id, {required runSlot}) {
+      _skillRevealQueue.addAll(allItems.where((item) => item.unlock == id)
+          .map((item) => (item: item, homeEligible: !runSlot && state == GameState.start)));
     };
     // endregion
   }
@@ -6056,7 +6057,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// §12.5 the run's unlocks toast on the results page once its sequence
   /// has played out (after the LEVEL UP and its CLAIM, if any).
   // region P26-F10b
-  final List<SkinItem> _skillRevealQueue = [];
+  final List<({SkinItem item, bool homeEligible})> _skillRevealQueue = [];
   LevelRevealSheet? _skillReveal;
   @visibleForTesting
   LevelRevealSheet? get skillReveal => _skillReveal;
@@ -6079,7 +6080,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         !page.leaving && !modalPopupOpen) {
       _openSkillReveal(page: page);
     } else if (state == GameState.start && _homeInteractive &&
-        menu.levels.pending.isEmpty && !_skillHomeQueued) {
+        menu.levels.pending.isEmpty && !_skillHomeQueued &&
+        _skillRevealQueue.any((entry) => entry.homeEligible)) {
       _skillHomeQueued = true;
       _queuePopup(
         () => state == GameState.start && _homeInteractive &&
@@ -6087,22 +6089,24 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
             achievements.toastQueue.isEmpty,
         () {
           _skillHomeQueued = false;
-          if (_skillRevealQueue.isNotEmpty) _openSkillReveal();
+          final index = _skillRevealQueue.indexWhere((entry) => entry.homeEligible);
+          if (index >= 0) _openSkillReveal(index: index);
         },
       );
     }
   }
 
-  void _openSkillReveal({ResultsScreen? page}) {
+  void _openSkillReveal({ResultsScreen? page, int index = 0}) {
     final home = page == null;
-    final item = _skillRevealQueue.removeAt(0);
+    final entry = _skillRevealQueue.removeAt(index);
+    final item = entry.item;
     late final LevelRevealSheet sheet;
     sheet = LevelRevealSheet(item: item, skill: true, skillHome: home,
       onFinished: (_) {}, onSkillRemoved: (completed) {
         if (!identical(_skillReveal, sheet)) return;
         _skillReveal = null;
         if (home) popBack(_skillRevealBack);
-        if (!completed) _skillRevealQueue.insert(0, item);
+        if (!completed) _skillRevealQueue.insert(0, entry);
         _drainPopups();
       });
     _skillReveal = sheet;

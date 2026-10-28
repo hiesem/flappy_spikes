@@ -3,6 +3,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/achievements/achievement_catalog.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/run/screens/level_reveal_sheet.dart';
+import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';
@@ -156,4 +157,43 @@ void main() {
       expect(game.noAdsPopup, isNotNull);
     },
   );
+  tester.testGameWidget(
+    'F10: a run-slot skill reward does not block starting the next run',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+      game.achievements.countDebugRuns = true;
+    },
+    verify: (game, _) async {
+      final run = await startRun(game);
+      run.events.emit(const EggHatched());
+      killRunThroughSaves(game);
+      await declineRevive(game);
+      await flushAndMount(game);
+      await game.achievements.flush();
+      expect(game.achievements.isUnlocked(AchievementId.masterHatch), isTrue);
+      game.goHome();
+      await flushAndMount(game);
+      for (var i = 0; i < 180; i++) {
+        game.update(1 / 60);
+        if (i % 10 == 0) await flushAndMount(game);
+        game.achievementToast?.dismiss();
+        expect(game.skillReveal, isNull);
+      }
+      final next = await startRun(game);
+      expect(next, isNotNull);
+      killRunThroughSaves(game);
+      await declineRevive(game);
+      await flushAndMount(game);
+      for (var i = 0; i < 3600 && game.skillReveal == null; i++) {
+        game.update(1 / 60);
+        if (i % 10 == 0) await flushAndMount(game);
+        game.achievementToast?.dismiss();
+      }
+      await flushAndMount(game);
+      expect(game.skillReveal?.item?.id, 'nest');
+      expect(game.skillReveal?.parent, same(game.resultsScreen));
+    },
+  );
+
 }

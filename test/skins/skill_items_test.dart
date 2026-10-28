@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flappy_spikes/achievements/achievement_catalog.dart';
+import 'package:flappy_spikes/components/sticker_avatar.dart';
 import 'package:flappy_spikes/skins/art/look_painter.dart';
 import 'package:flappy_spikes/skins/art/hoop_painter.dart';
 import 'package:flappy_spikes/skins/art/trail.dart';
@@ -15,6 +16,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('skill look extents and avatar colours reflect their art', () {
+    for (final id in ['skycrown', 'nest', 'jackpot']) {
+      final (top, _) = LookPainter.extentOf(Look(hat: id));
+      expect(top, lessThan(-30), reason: id);
+    }
+    expect(LookPainter.gearRise.keys, containsAll(['peacock', 'goggles']));
+    for (final id in ['magpie', 'prism', 'daynight']) {
+      expect(StickerAvatars.tintOf(id), isNot(StickerAvatars.tintOf('classic')), reason: id);
+    }
+  });
   test('PRD F10 skill item achievement mapping', () {
     const expected = <String, AchievementId>{
       'bird:magpie': AchievementId.itemAll, 'bird:prism': AchievementId.hoops100,

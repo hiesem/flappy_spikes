@@ -3119,6 +3119,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       if (identical(current, next)) return false;
       await storage.saveMissions(next.toRecords());
       await storage.saveMissionRerollDay(next.rerollDay);
+      // region P26-POL3
+      services.track('mission_reroll', {'mission': next.missions[index].template.id});
+      // endregion
       refreshHome();
       return true;
     } finally { _missionRerollBusy = false; }
@@ -6757,9 +6760,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // region P26-G2b
     _streakSlotPop = math.max(0, _streakSlotPop - dt);
     if (state == GameState.start) _checkStreakReward(dt);
-    // region P26-G1d
-    if (state == GameState.start) _checkMissionsChest(dt);
     // endregion
+    // region P26-POL3
+    if (state == GameState.start) _checkMissionsChest(dt);
     // endregion
     // region P26-LB7
     if (state == GameState.start) _checkLbGift(dt);

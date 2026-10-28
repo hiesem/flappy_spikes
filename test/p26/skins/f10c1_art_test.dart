@@ -44,8 +44,28 @@ void main() {
   test('hoop halves occupy opposite sides', () async {
     for (final id in ['spikes', 'phoenixring', 'legend']) {
       final front = await render(id, .05);
-      final back = await render(id, .3, front: false);
+      final back = await render(id, .05, front: false);
       expect(front, isNot(orderedEquals(back)), reason: id);
+      int pixels(Uint8List image, int fromX, int toX) {
+        var count = 0;
+        for (var y = 55; y < 145; y++) {
+          for (var x = fromX; x < toX; x++) {
+            if (image[(y * 200 + x) * 4 + 3] != 0) count++;
+          }
+        }
+        return count;
+      }
+
+      expect(
+        pixels(front, 60, 95),
+        greaterThan(pixels(front, 105, 140)),
+        reason: '$id front',
+      );
+      expect(
+        pixels(back, 105, 140),
+        greaterThan(pixels(back, 60, 95)),
+        reason: '$id back',
+      );
     }
   });
 }

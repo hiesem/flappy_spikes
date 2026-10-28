@@ -42,18 +42,21 @@ void paintNestV26(
       fillPaint(const Color(0xffffc107)),
     );
     fillRect(c, 1.2, y - 2.4, 1.6, 1.6, const Color(0xff3e2723));
-    c.drawPath(
-      polyPath([4.4, y - 1.2, 7.8, y - .2, 4.4, y + .8]),
-      fillPaint(const Color(0xffff7a1a)),
-    );
     if (peep) {
-      final hy = y - 6 - (t * 6 % 3);
-      final heart = Path()
-        ..moveTo(9, hy + 2)
-        ..cubicTo(4, hy - 1, 6, hy - 4, 9, hy - 2)
-        ..cubicTo(12, hy - 4, 14, hy - 1, 9, hy + 2)
-        ..close();
-      c.drawPath(heart, fillPaint(const Color(0xffff4fb7)));
+      c.drawPath(
+        polyPath([4.4, y - 1.4, 8.2, y - 2.8, 5, y]),
+        fillPaint(const Color(0xffff7a1a)),
+      );
+      c.drawPath(
+        polyPath([4.4, y + .2, 8.2, y + 1.6, 5, y - .4]),
+        fillPaint(const Color(0xffe65100)),
+      );
+      paintHeart(c, 9, y - 6 - (t * 6 % 3), 3.2, const Color(0xe6ff4fb7));
+    } else {
+      c.drawPath(
+        polyPath([4.4, y - 1.2, 7.8, y - .2, 4.4, y + .8]),
+        fillPaint(const Color(0xffff7a1a)),
+      );
     }
   }
   final p = Path()

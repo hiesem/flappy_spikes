@@ -68,16 +68,25 @@ void paintLegendV26(
     false,
     strokePaint(front ? artGold : const Color(0xffc98a00), 6.4),
   );
-  for (var i = 0; i < 40; i++) {
-    final a = a0 + (i / 40 + (t * 7 % 6) / 240) * math.pi;
-    c.drawArc(
-      rect,
-      a,
-      math.pi / 100,
-      false,
-      strokePaint(front ? const Color(0xfffff3c4) : const Color(0xffe0a800), 2),
-    );
+  final arc = Path()..addArc(rect, a0, math.pi);
+  // SVG's positive dash offset advances the pattern along the path.
+  final dashed = Path();
+  for (final metric in arc.computeMetrics()) {
+    final offset = (t * 7) % 6;
+    for (var start = -offset; start < metric.length; start += 6) {
+      final end = math.min(metric.length, start + 2.6);
+      if (end > 0) {
+        dashed.addPath(
+          metric.extractPath(math.max(0, start), end),
+          Offset.zero,
+        );
+      }
+    }
   }
+  c.drawPath(
+    dashed,
+    strokePaint(front ? const Color(0xfffff3c4) : const Color(0xffe0a800), 2),
+  );
   if (front) {
     for (var i = 0; i < 10; i++) {
       final a = math.pi / 2 + (i + .5) / 10 * math.pi,
@@ -125,6 +134,18 @@ void paintLegendV26(
       }
     }
     comets();
+    for (var i = 0; i < 3; i++) {
+      final u = math.max(0.0, math.sin(t * 3.1 + i * 2.2));
+      if (u > .1) {
+        paintStar(
+          c,
+          [-rx - 12, rx + 9, -rx - 6][i],
+          [-ry + 4, -ry - 6, ry + 2][i],
+          1 + u * 2.6,
+          const Color(0xfffff3c4),
+        );
+      }
+    }
   }
   c.restore();
 }

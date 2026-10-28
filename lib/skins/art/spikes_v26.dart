@@ -51,7 +51,9 @@ void paintSpikesV26(
           ty + si * d - (j == 1 ? 2 : -2) * co - .8,
           1.6,
           1.6,
-          const Color(0xffffe082).withValues(alpha: k * .9),
+          (j == 1 ? artGold : const Color(0xffffe082)).withValues(
+            alpha: k * .9,
+          ),
         );
       }
     }
@@ -64,6 +66,16 @@ void paintSpikesV26(
     strokePaint(front ? const Color(0xffb9c3c9) : const Color(0xff4d575d), 7),
   );
   if (front) {
+    final arc = Path()
+      ..addArc(
+        Rect.fromCenter(center: Offset.zero, width: rx * 2, height: ry * 2),
+        math.pi / 2,
+        math.pi,
+      );
+    c.drawPath(
+      dashPath(arc, [1.5, 8]),
+      strokePaint(const Color(0xff7d8a92), 7),
+    );
     for (var i = 0; i < 6; i++) {
       final a = math.pi / 2 + (i + .5) * math.pi / 6;
       circ(

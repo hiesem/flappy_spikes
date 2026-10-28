@@ -2,6 +2,12 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'shapes.dart';
 
+double _eBack(double u) => u <= 0
+    ? 0
+    : u >= 1
+    ? 1
+    : 1 + 2.9 * math.pow(u - 1, 3) + 1.9 * math.pow(u - 1, 2);
+
 void paintConstellationV26(
   Canvas c,
   Offset center,
@@ -49,7 +55,7 @@ void paintConstellationV26(
                 ? 2.6
                 : 3.2) *
             (.75 + .25 * math.sin(t * 7 + i * 1.3)) *
-            v,
+            _eBack(v),
         x = pts[i].dx - sh,
         y = pts[i].dy;
     circ(c, x, y, r * 1.9, const Color(0xffb39dff).withValues(alpha: v * .25));
@@ -58,9 +64,7 @@ void paintConstellationV26(
       x,
       y,
       r,
-      (i.isOdd ? const Color(0xffffffff) : const Color(0xffffe082)).withValues(
-        alpha: v,
-      ),
+      i.isOdd ? const Color(0xffffffff) : const Color(0xffffe082),
       rot: t * 1.5 + i,
     );
   }

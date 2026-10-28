@@ -1,6 +1,10 @@
 import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
+import 'package:flame/effects.dart';
+import 'package:flappy_spikes/components/progression/streak_strip.dart';
+import 'package:flappy_spikes/game/purchases.dart';
+import 'package:flappy_spikes/services/iap_service.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/progression/streak_lost_popup.dart';
 import 'package:flappy_spikes/components/noads_celebration.dart';
@@ -331,6 +335,12 @@ void uiTests() {
         expect(game.storage.streakDays, 15);
         stepGame(game, .6);
         expect(game.streakLostPopup, isNull);
+        await flushAndMount(game);
+        final chip = game.homeScreen!.children.whereType<StreakStrip>().single;
+        expect(
+          chip.children.whereType<ScaleEffect>(),
+          reduced ? isEmpty : isNotEmpty,
+        );
       },
     );
   }
@@ -405,6 +415,34 @@ void uiTests() {
       },
     );
   }
+
+  FlameTester<FlappySpikesGame>(
+    () => createRunTestGame(prefs: {'gamesPlayed': 4, 'streakLostDays': 3}),
+  ).testGameWidget(
+    'give up drains a queued purchase popup after the moment',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+    },
+    verify: (game, _) async {
+      await flushAndMount(game);
+      stepGame(game, 2);
+      await flushAndMount(game);
+      expect(game.streakLostPopup, isNotNull);
+      game.openPurchaseResultPopup(
+        IapProduct.coins1000,
+        PurchaseProblem.failed,
+        null,
+      );
+      expect(game.queuedPopups, 1);
+      await game.giveUpLostStreak();
+      stepGame(game, .7);
+      await flushAndMount(game);
+      expect(game.streakLostPopup, isNull);
+      expect(game.queuedPopups, 0);
+      expect(game.purchaseResultPopup, isNotNull);
+    },
+  );
 
   for (final giveUp in [false, true]) {
     final now = DateTime(2026, 10, 27, 12);

@@ -121,7 +121,10 @@ class LbQueue {
         await storage.saveLbGroupEnd(group.end);
         for (var i = 0; i < entries.length; i++) {
           final p = entries[i];
-          if (p.run.endTs < group.end) {
+          // A new group cannot extend the expiry of runs from an older
+          // 24-hour window (best candidates may remain queued for a week).
+          final start = group.end - const Duration(days: 1).inMilliseconds;
+          if (p.run.endTs >= start && p.run.endTs < group.end) {
             entries[i] = _Pending(p.run, group.end, p.best);
           }
         }

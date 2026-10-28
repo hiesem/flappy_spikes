@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -136,6 +137,29 @@ void main() {
       expect(events.last['queued'], 0);
     },
   );
+  test('a new group does not restamp an older queued best', () async {
+    final old = run(0);
+    await queue.enqueue(old, bestCandidate: true);
+    now = now.add(const Duration(days: 2));
+    await queue.enqueue(run(1), bestCandidate: false);
+    reply = {
+      'accepted': [],
+      'dropped': [],
+      'group': {
+        'id': 'new',
+        'end': now.add(const Duration(hours: 24)).millisecondsSinceEpoch,
+        'bracket': 0,
+      },
+    };
+    await queue.flush();
+    final records = storage.lbQueue
+        .map((row) => jsonDecode(row) as Map)
+        .toList();
+    expect(
+      records.first['groupEnd'],
+      old.endTs + const Duration(days: 1).inMilliseconds,
+    );
+  });
   test(
     'group-day expires ordinary runs; best candidates survive only seven days',
     () async {

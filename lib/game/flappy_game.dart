@@ -1,3 +1,10 @@
+// region P26-G6eA
+import '../components/star_road/star_road_screen.dart';
+import '../components/star_road/star_road_card.dart';
+import '../progression/star_road.dart';
+import '../progression/star_road_claims.dart';
+import '../run/screens/level_reveal_sheet.dart';
+// endregion
 // region P26-G6b
 import '../progression/flight_guide.dart';
 import '../run/run_events.dart'
@@ -951,6 +958,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // region P26-LB7
     // Recover absolute gift targets before any other launch-time payout.
     await _giftApply.recover();
+    // endregion
+    // region P26-G6eA
+    _starRoadClaims = StarRoadClaims(storage, menu.wallet, menu.items);
+    await _starRoadClaims.recover();
     // endregion
     // region P26-F1
     await RunEndBookkeeping.economyDaily(storage, services);
@@ -3848,6 +3859,73 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     return true;
   }
   // endregion P26-LB4
+
+  // region P26-G6eA
+  late final StarRoadClaims _starRoadClaims;
+  StarRoadScreen? _starRoadScreen;
+  LevelRevealSheet? _starRoadReveal;
+  void Function()? _starRoadReturn;
+
+  /// The card's host closes its panel before calling this; back restores it.
+  void openStarRoad({required int daysLeft, required void Function() onBack}) {
+    if (_starRoadScreen != null || state != GameState.start) return;
+    _starRoadReturn = onBack;
+    final screen = StarRoadScreen(
+      road: _starRoadClaims.road, daysLeft: daysLeft,
+      onBack: closeStarRoad, onClaim: _claimStarRoad,
+    );
+    _starRoadScreen = screen;
+    _chromeHosts.add(screen);
+    world.add(screen);
+    registerTintable(screen);
+    pushBack(_starRoadBack);
+  }
+
+  bool _starRoadBack() {
+    if (_starRoadReveal == null) closeStarRoad();
+    return true;
+  }
+
+  void closeStarRoad() {
+    final screen = _starRoadScreen;
+    if (screen == null || _starRoadReveal != null) return;
+    _starRoadScreen = null;
+    popBack(_starRoadBack);
+    unregisterTintable(screen);
+    _chromeHosts.remove(screen);
+    screen.removeFromParent();
+    final back = _starRoadReturn;
+    _starRoadReturn = null;
+    back?.call();
+  }
+
+  Future<bool> _claimStarRoad(int tier) async {
+    final result = await _starRoadClaims.claim(tier);
+    if (result == null) return false;
+    final reward = starRoadReward(tier);
+    final isItem = reward.kind == StarRoadRewardKind.rare ||
+        reward.kind == StarRoadRewardKind.epic ||
+        reward.kind == StarRoadRewardKind.legendary;
+    if (isItem) {
+      final item = allItems.where((i) => i.key == result.item).firstOrNull;
+      final finished = Completer<void>();
+      final sheet = LevelRevealSheet(
+        item: item, extraCoins: result.coins,
+        onPay: () async {}, // The journal settled the reward before display.
+        onFinished: (_) {
+          _starRoadReveal = null;
+          if (!finished.isCompleted) finished.complete();
+        },
+      );
+      _starRoadReveal = sheet;
+      world.add(sheet);
+      await finished.future;
+    } else {
+      sound.play(starRoadClaimSound(reward));
+    }
+    return true;
+  }
+  // endregion
 
   // --- LEVELS + LEVEL UP (PRD-home-v3 §3.3, §4.3, §4.4) ---------------------
 

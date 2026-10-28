@@ -165,6 +165,21 @@ class Wallet extends ChangeNotifier {
   }
   // endregion
 
+  // region P26-G6eA
+  /// Idempotent journal recovery for a previously recorded reward target.
+  Future<void> settleStarRoad({required int balance, required int earned}) async {
+    final due = balance - _storage.coins;
+    if (due > 0) await _storage.saveCoins(balance);
+    if (_storage.lifetimeCoinsEarned < earned) {
+      await _storage.saveLifetimeCoinsEarned(earned);
+    }
+    if (due > 0) {
+      notifyListeners();
+      onEarned?.call(due, CoinSource.starRoad);
+    }
+  }
+  // endregion
+
   /// Spends [amount] coins. Returns false without changing anything when the
   /// balance is too low or [amount] is negative; zero is a true no-op.
   Future<bool> spend(int amount, String reason) async {

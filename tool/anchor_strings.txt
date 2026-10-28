@@ -98,3 +98,6 @@ missionJournal
 // region P26-G6c
 albumCompletionJournal
 // endregion
+// region P26-G6eA
+starRoadJournal
+// endregion

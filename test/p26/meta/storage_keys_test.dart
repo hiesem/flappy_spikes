@@ -73,6 +73,9 @@ void main() {
         'missionJournal',
         // PRD 933 / O78: G6c journals the picture completion before writes.
         'albumCompletionJournal',
+        // region P26-G6eA — PRD G6 claim recovery journal.
+        'starRoadJournal',
+        // endregion
       ];
       expect(kObfStrings.values.skip(109), keys);
       final anchors = File('tool/anchor_strings.txt').readAsLinesSync();

@@ -1,6 +1,8 @@
-
 import 'package:flame/components.dart';
 
+// region P26-G6eA
+import '../../game/flappy_game.dart';
+// endregion
 import '../../game/config.dart';
 import '../../game/sound.dart';
 import '../../progression/star_road.dart';
@@ -32,6 +34,28 @@ class StarRoadCard extends MenuButton {
     required super.onPressed,
     super.isActive,
   }) : super(size: Vector2(256, compact ? 44 : 88), color: Config.menuSoft);
+
+  // region P26-G6eA
+  /// The panel host removes itself in [leavePanel] and restores on back.
+  factory StarRoadCard.open({
+    required FlappySpikesGame game,
+    required StarRoad road,
+    required int daysLeft,
+    required bool compact,
+    required void Function() leavePanel,
+    required void Function() returnToPanel,
+    bool Function()? isActive,
+  }) => StarRoadCard(
+    road: road,
+    daysLeft: daysLeft,
+    compact: compact,
+    isActive: isActive,
+    onPressed: () {
+      leavePanel();
+      game.openStarRoad(daysLeft: daysLeft, onBack: returnToPanel);
+    },
+  );
+  // endregion
 
   final StarRoad road;
   final int daysLeft;

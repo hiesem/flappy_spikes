@@ -213,6 +213,9 @@ const Map<String, String> kObfStrings = {
   // region P26-G6c
   'prefAlbumCompletionJournal': 'albumCompletionJournal',
   // endregion
+  // region P26-G6eA
+  'prefStarRoadJournal': 'starRoadJournal',
+  // endregion
 };
 
 /// The output path, relative to the package root.

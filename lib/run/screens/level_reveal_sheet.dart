@@ -49,6 +49,9 @@ class LevelRevealSheet extends P1Popup {
     this.onSkillRemoved,
     this.skillHome = false,
     // endregion
+    // region P26-G6eA
+    this.onPay,
+    // endregion
   }) : super(onDismiss: () {}, priority: 100);
 
   // region P26-F10b
@@ -62,6 +65,9 @@ class LevelRevealSheet extends P1Popup {
   // region P26-G6c
   final Future<void> Function()? payReward;
   final bool album;
+  // endregion
+  // region P26-G6eA
+  final Future<void> Function()? onPay;
   // endregion
   final void Function(bool equipped) onFinished;
   double elapsed = 0;
@@ -268,9 +274,10 @@ class LevelRevealSheet extends P1Popup {
     choosing = true;
     // region P26-F10b
     if (!skill) {
-      // region P26-G6c
-      if (payReward != null) {
-        await payReward!();
+      // region P26-G6eA
+      final payout = onPay ?? payReward;
+      if (payout != null) {
+        await payout();
       } else {
         await game.menu.levels.payPending();
       }

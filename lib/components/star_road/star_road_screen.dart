@@ -37,7 +37,9 @@ class StarRoadScreen extends MenuScreen {
 
   final StarRoad road;
   final int daysLeft;
-  final void Function(int tier) onClaim;
+  final Future<bool> Function(int tier) onClaim;
+  final Set<int> _claimedNow = {};
+  bool _claiming = false;
 
   @override
   Rect scrollViewportFor(double viewHeight) =>
@@ -109,7 +111,7 @@ class StarRoadScreen extends MenuScreen {
       final item = reward.kind != StarRoadRewardKind.coins;
       final y = StarRoadLayout.rowTop(tier);
       final reached = tier <= road.tier;
-      final claimed = road.claimed.contains(tier);
+      final claimed = road.claimed.contains(tier) || _claimedNow.contains(tier);
       final row = PositionComponent(
         position: Vector2(14, y),
         size: Vector2(292, item ? 78 : 62),
@@ -145,10 +147,19 @@ class StarRoadScreen extends MenuScreen {
             look: MysteryBoxLook.colours(
               rarity.color,
               Color.lerp(rarity.color, const Color(0xFF000000), .3)!,
-              label: 'MYSTERY',
+              label: null,
             ),
             boxSize: 56,
             position: Vector2(84, row.height / 2),
+          ),
+        );
+        row.add(
+          MenuText(
+            'MYSTERY',
+            fontSize: 6,
+            color: const Color(0xFFFFFFFF),
+            position: Vector2(84, row.height / 2 + 7),
+            anchor: Anchor.center,
           ),
         );
       }
@@ -174,8 +185,31 @@ class StarRoadScreen extends MenuScreen {
             position: Vector2(226, row.height / 2 - 14),
             size: Vector2(60, 28),
             color: Config.menuPink,
-            onPressed: () => onClaim(tier),
-            isActive: isActive,
+            onPressed: () async {
+              if (_claiming) return;
+              _claiming = true;
+              try {
+                if (await onClaim(tier)) {
+                  _claimedNow.add(tier);
+                  for (final button
+                      in row.children.whereType<MenuButton>().toList()) {
+                    button.removeFromParent();
+                  }
+                  row.add(
+                    MenuText(
+                      'CLAIMED',
+                      fontSize: 9,
+                      color: Config.menuPlum,
+                      position: Vector2(225, row.height / 2),
+                      anchor: Anchor.centerLeft,
+                    ),
+                  );
+                }
+              } finally {
+                _claiming = false;
+              }
+            },
+            isActive: () => isActive() && !_claiming,
             children: [
               MenuText(
                 'CLAIM',

@@ -4,6 +4,7 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/playfield.dart';
+import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
 import 'package:flappy_spikes/services/monetization.dart';
@@ -289,20 +290,23 @@ void main() {
   );
 
   tester({'gamesPlayed': 4}).testGameWidget(
-    '§23.5 overlay open: the request waits until the level-reward claim '
-    'closes',
+    'PRD-2.6 J7a/J4 rating waits for pending reveal payout',
     setUp: (g, _) => boot(g),
     verify: (g, _) async {
-      g.runDebug.ignoreGates = false; // PRD-2.6 J3: only a counting run earns CLAIM.
-      await play(g, 25); // run 5, reaches level 1: CLAIM shows
-      for (var i = 0; i < 900 && !g.resultsScreen!.claimShowing; i++) {
+      // PRD-2.6 J7a/J4: rating waits for the reveal reward to be paid.
+      g.runDebug.ignoreGates = false;
+      await play(g, 25); // run 5 reaches level 1
+      for (var i = 0; i < 900 && !g.resultsScreen!.revealReady; i++) {
         g.update(1 / 60);
       }
       await flushAndMount(g);
-      expect(g.resultsScreen!.claimShowing, isTrue);
+      expect(g.resultsScreen!.revealReady, isTrue);
+      expect(g.storage.lvlPending, isNotEmpty);
       stepGame(g, 4);
-      expect(backend.requests, 0, reason: 'the claim is open');
-      g.resultsScreen!.claimButton.onPressed();
+      expect(backend.requests, 0, reason: 'the reveal reward is pending');
+      expect(g.resultsScreen!.settled, isFalse);
+      expect(await claimLevelRewards(g, 'tap'), 50);
+      expect(g.storage.lvlPending, isEmpty);
       await untilSettled(g);
       stepGame(g, 1.4);
       expect(backend.requests, 0);

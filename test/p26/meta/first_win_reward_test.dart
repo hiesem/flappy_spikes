@@ -169,7 +169,7 @@ void main() {
     () => createRunTestGame(),
     gameSize: Vector2(320, 711),
   ).testGameWidget(
-    'NEXT at CLAIM displays the first-win moment before leaving',
+    'PRD-2.6 J7a NEXT after reveal displays first-win moment before leaving',
     setUp: (g, _) async {
       await g.ready();
       await preloadImages(g);
@@ -190,7 +190,9 @@ void main() {
       await flushAndMount(g);
       stepGame(g, 4.1);
       await flushAndMount(g);
-      expect(page.claimShowing, isTrue);
+      // PRD-2.6 J7a: the reveal replaces CLAIM.
+      expect(page.revealReady, isTrue);
+      expect(page.claimShowing, isFalse);
       expect(page.firstWinReward!.opacity, 0);
       page.next();
       expect(page.leaving, isTrue);

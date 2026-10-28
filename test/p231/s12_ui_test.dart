@@ -1,5 +1,5 @@
 // PRD-2.3.1 §12.5 / §12.9 UI: the unlock toasts queue on the results page
-// (after the LEVEL UP and its CLAIM), one pill at a time, "+N more" past 5;
+// (after the PRD-2.6 J7a/J4 reveal payout), one pill at a time, "+N more" past 5;
 // the shop toast shows at once; the Home medal button sits right of the
 // trophy without overlap at 568 and 730 and opens the native list. Plus the
 // §12.3 persistence (round trip, resetMenuState clears, Delete my data keeps).
@@ -14,6 +14,7 @@ import 'package:flappy_spikes/achievements/achievement_toast.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/storage.dart';
+import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/skins/catalog.dart';
 import 'package:flappy_spikes/skins/look.dart';
@@ -111,8 +112,7 @@ void main() async {
       'claimedLevels': ['1'],
     },
   ).testGameWidget(
-    '§12.5 the run\'s toasts wait for the LEVEL UP and its CLAIM, then show '
-    'one at a time',
+    'PRD-2.6 J7a/J4 toasts wait for reveal payout, then show one at a time',
     setUp: boot,
     verify: (g, w) async {
       g.runDebug.ignoreGates = false; // PRD-2.6 J3 counting level-up fixture.
@@ -123,24 +123,20 @@ void main() async {
       expect(g.storage.achPending, ['rank_chick']);
       g.achievements.toastQueue.add(AchievementId.rankChick);
       expect(g.resultsScreen!.model.levelUp, isTrue);
-      var claimSeen = false;
-      for (var i = 0; i < 900; i++) {
-        final page = g.resultsScreen!;
-        expect(
-          g.achievementToast == null || !page.claimShowing,
-          isTrue,
-          reason: 'no toast while CLAIM waits',
-        );
-        if (page.claimShowing) {
-          claimSeen = true;
-          stepGame(g, 1); // it keeps waiting
-          expect(g.achievementToast, isNull);
-          page.claimButton.onPressed();
-        }
-        if (g.achievementToast != null) break;
+      // PRD-2.6 J7a/J4: toasts wait for the reveal and pending payout.
+      for (var i = 0; i < 900 && !g.resultsScreen!.revealReady; i++) {
+        expect(g.achievementToast, isNull, reason: 'before reveal');
         g.update(1 / 60);
       }
-      expect(claimSeen, isTrue);
+      expect(g.resultsScreen!.revealReady, isTrue);
+      expect(g.storage.lvlPending, isNotEmpty);
+      stepGame(g, 1);
+      expect(g.achievementToast, isNull, reason: 'reward is pending');
+      expect(await claimLevelRewards(g, 'tap'), greaterThan(0));
+      expect(g.storage.lvlPending, isEmpty);
+      for (var i = 0; i < 900 && g.achievementToast == null; i++) {
+        g.update(1 / 60);
+      }
       await flushAndMount(g);
       final t = g.achievementToast!;
       expect(t.current, AchievementId.rankEgg);

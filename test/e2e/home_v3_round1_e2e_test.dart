@@ -238,13 +238,15 @@ void main() async {
       // PRD-2.3 §14.3: points (streak) now outgrow the coins.
       expect(earned, game.run!.state.coinsThisRun);
       expect(earned, greaterThanOrEqualTo(game.run!.state.hoopsPassed));
-      // PRD-2 §3.14: the level up is celebrated and claimed on the results
-      // page (it replaces the home LEVEL UP popup).
+      // PRD-2.6 J7a/J4: the reveal leaves payout pending until EQUIP/LATER.
+      // Exercise the J2 payout seam as the forthcoming reveal choice.
       final panel = game.world.children.query<ResultsScreen>().single;
       await _advance(game, 4.2);
-      expect(panel.claimShowing, isTrue);
+      expect(panel.revealReady, isTrue);
       expect(panel.rank.text, 'HATCHLING · LV 1');
-      await _tap(game, tester, panel.claimButton.button);
+      expect(game.menu.wallet.balance, earned);
+      expect(game.storage.lvlPending, isNotEmpty);
+      expect(await claimLevelRewards(game, 'tap'), 50);
       expect(game.menu.wallet.balance, earned + 50);
       await _advance(game, 3);
       expect(panel.shownReward, earned + 50);

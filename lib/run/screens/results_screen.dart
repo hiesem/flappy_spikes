@@ -302,6 +302,10 @@ class ResultsScreen extends PositionComponent
   late final int pointsBefore;
   bool _coinsPresented = false;
   bool _revealReady = false;
+  bool _skipping = false;
+
+  /// J4 owns the post-reveal reward chip (L-A18); empty until it is earned.
+  late final PositionComponent rewardChip;
 
   /// J4 attaches the item reveal here; pending rewards stay persisted until choice.
   void Function()? onReveal;
@@ -571,6 +575,9 @@ class ResultsScreen extends PositionComponent
       position: Vector2(160, ResultsConfig.barLabelTop),
       anchor: Anchor.topCenter,
     );
+    rewardChip = PositionComponent(
+      position: Vector2(160, ResultsConfig.rankTop + 24),
+    );
     barCounter = MenuText(
       before.counter,
       fontSize: 10,
@@ -700,7 +707,7 @@ class ResultsScreen extends PositionComponent
       bar,
       barLabel,
       // region P26-J3
-      barCounter, scoreGain, surplusLabel, levelCoinsLabel,
+      barCounter, scoreGain, surplusLabel, levelCoinsLabel, rewardChip,
       // endregion
       claimButton,
       rewardLabel,
@@ -782,7 +789,9 @@ class ResultsScreen extends PositionComponent
       content.add(sticker);
       // Its top on the card's bottom edge (§5.10 y ≈ 238).
       sticker.position.y = ResultsConfig.newBestTop + sticker.box.height / 2;
-      game.sound.play(Sfx.perfect1);
+      // region P26-J3
+      if (!_skipping) game.sound.play(Sfx.perfect1);
+      // endregion
     });
   }
 
@@ -794,11 +803,11 @@ class ResultsScreen extends PositionComponent
       score: model.countsForLevel ? model.score : 0,
     );
     _at(ResultsConfig.barAt, () {
-      game.sound.play(Sfx.lvBar);
+      if (!_skipping) game.sound.play(Sfx.lvBar);
       _animateBar(after.fraction, ResultsConfig.barFill);
     });
     _at(ResultsConfig.barFullAt, () {
-      barLabel.text = after.label;
+      barLabel.text = model.levelUp ? '' : after.label;
       _labelBumpStart = _t;
       if (model.levelUp) bar.flashStart = _t;
     });
@@ -810,12 +819,12 @@ class ResultsScreen extends PositionComponent
         ..level = level
         ..popStart = _t
         ..rays = 1;
-      game.sound.play(level >= 9 ? Sfx.lvUpBig : Sfx.lvUp);
+      if (!_skipping) game.sound.play(level >= 9 ? Sfx.lvUpBig : Sfx.lvUp);
       if (newBestSticker != null) _stickerOutStart = _t;
       levelUpBanner.start = _t;
       rank.text = rankText(level);
       _rankBounceStart = _t;
-      if (!game.reduceMotion) {
+      if (!game.reduceMotion && !_skipping) {
         fx.confetti(
           ResultsConfig.plateCentre,
           ResultsConfig.confettiFor(level),
@@ -828,7 +837,7 @@ class ResultsScreen extends PositionComponent
     });
     if (model.levelAfter >= 9) {
       _at(ResultsConfig.emblemSwapAt + ResultsConfig.secondWave, () {
-        if (game.reduceMotion) return;
+        if (game.reduceMotion || _skipping) return;
         fx
           ..confetti(const Offset(60, 300), ResultsConfig.secondWaveConfetti)
           ..confetti(const Offset(260, 300), ResultsConfig.secondWaveConfetti);
@@ -852,6 +861,12 @@ class ResultsScreen extends PositionComponent
   void _presentLevelCoins() {
     if (_coinsPresented || model.levelReward <= 0) return;
     _coinsPresented = true;
+    if (_skipping) {
+      _shownReward = model.reward + model.levelReward;
+      _countStart = null;
+      _layoutReward();
+      return;
+    }
     game.sound.play(Sfx.lvClaim);
     fx.flyCoins(_coin, onLand: () => game.sound.play(Sfx.bnCoin));
     _countFrom = model.reward;
@@ -869,12 +884,17 @@ class ResultsScreen extends PositionComponent
         ? ResultsConfig.revealAt
         : ResultsConfig.noLevelSettleAt;
     // Walk the clock so each scheduled animation retains its absolute timing.
-    while (_t < target) {
-      update(math.min(1 / 120, target - _t));
+    _skipping = true;
+    try {
+      while (_t < target) {
+        update(math.min(1 / 120, target - _t));
+      }
+      stage.update(0);
+      levelUpBanner.update(0);
+      _stopTicks();
+    } finally {
+      _skipping = false;
     }
-    stage.update(0);
-    levelUpBanner.update(0);
-    _stopTicks();
   }
 
   @override
@@ -1010,7 +1030,9 @@ class ResultsScreen extends PositionComponent
       _schedule.removeAt(0).$2();
     }
     _animate();
-    _stepTicks();
+    // region P26-J3
+    if (!_skipping) _stepTicks();
+    // endregion
     // region P26-G6a
     if (settled) firstWinReward?.start();
     // endregion

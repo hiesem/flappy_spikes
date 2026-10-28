@@ -209,6 +209,7 @@ void main() {
         stepGame(g, 2.0);
         expect(page.bar.fraction, closeTo(1, 1e-6));
         expect(page.barCounter.text, '800 / 800');
+        expect(page.barLabel.text, isEmpty, reason: 'PRD-2.6 J7a: new level label appears at reset');
         expect(page.surplusLabel.text, '+80 OVER · DROPPED');
         expect(page.surplusLabel.color.a, greaterThan(0));
       });
@@ -227,6 +228,29 @@ void main() {
         expect(page.scoreGain.text, '+0');
         expect(g.menu.levels.points, 420);
       });
+
+    for (final when in [.4, 1.5, 2.2]) {
+      rt('PRD-2.6 J7a skip at $when is silent and preserves reward',
+        () => trackGame(prefs: {'lvlIndex': 10, 'lvlPoints': 700, 'bestScore': 900}),
+        (g) async {
+          final sfx = sfxLog(g);
+          final page = await endWith(g, score: 180, coins: 22);
+          stepGame(g, when);
+          final bursts = page.fx.bursts.length;
+          final balance = g.menu.wallet.balance;
+          sfx.clear();
+          page.skipToReveal();
+          expect(page.revealReady, isTrue);
+          expect(page.stage.level, 11);
+          expect(page.bar.fraction, closeTo(0, 1e-6));
+          expect(page.shownReward, 222);
+          expect(page.fx.bursts, hasLength(bursts));
+          expect(sfx, isEmpty, reason: 'skipped cues must not burst together');
+          expect(g.menu.wallet.balance, balance);
+          expect(g.storage.lvlPending, isNotEmpty);
+          expect(page.rewardChip.children, isEmpty, reason: 'J4 fills L-A18 after reveal');
+        });
+    }
 
     rt(
       'PRD-2.6 J7a surplus drop, automatic coins, reset and reveal boundary',

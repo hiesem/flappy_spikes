@@ -22,7 +22,9 @@ BASE="${VERIFY_BASE:-}"
 [ "${VERIFY_FULL:-}" = 1 ] && BASE=""
 changed() {   # files the branch touches (scoped) — empty when unscoped
   [ -n "$BASE" ] || return 0
-  { git diff --name-only "$BASE"...HEAD; git ls-files --others --exclude-standard; } 2>/dev/null | sort -u
+  # functions/node_modules is an untracked symlink in every package worktree (newwt.sh); it is not a change
+  { git diff --name-only "$BASE"...HEAD; git ls-files --others --exclude-standard; } 2>/dev/null \
+    | grep -v -E '^functions/node_modules(/|$)' | sort -u
 }
 
 CORE_TESTS=(test/autopilot_test.dart test/layout_test.dart test/flap_physics_test.dart)

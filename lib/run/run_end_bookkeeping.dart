@@ -46,21 +46,25 @@ abstract final class RunEndBookkeeping {
     rerollDay: storage.missionRerollDay, records: storage.missions,
   );
 
+  // region P26-POL3
+  static MissionEligibility missionEligibility(FlappySpikesGame game) => MissionEligibility(
+    bestHoops: game.storage.bestHoops,
+    metElements: {for (final id in game.storage.metElements) ?ElementId.fromStorageId(id)},
+    online: MissionEligibility.onlineFromSearch(
+      ready: game.versus.ready, holdsOpponent: game.versus.holdsOpponent,
+      search: game.versus.lastSearch,
+    ),
+    lastVersusHadRival: game.storage.lastVersusHadRival,
+  );
+  // endregion
+
   static Future<void> prepareMissions(FlappySpikesGame game) {
     final storage = game.storage;
     if (storage.gamesPlayed < 3) return Future.value();
     final previous = currentMissions(storage);
     final rolled = previous.roll(
       today: storage.today, gamesPlayed: storage.gamesPlayed,
-      eligibility: MissionEligibility(
-        bestHoops: storage.bestHoops,
-        metElements: {for (final id in storage.metElements) ?ElementId.fromStorageId(id)},
-        online: MissionEligibility.onlineFromSearch(
-          ready: game.versus.ready, holdsOpponent: game.versus.holdsOpponent,
-          search: game.versus.lastSearch,
-        ),
-        lastVersusHadRival: storage.lastVersusHadRival,
-      ),
+      eligibility: missionEligibility(game),
     );
     if (identical(previous, rolled)) return Future.value();
     final writes = <Future<void>>[

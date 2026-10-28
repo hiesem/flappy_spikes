@@ -3095,12 +3095,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   double _missionsChestSettle = 0;
   bool _missionRerollBusy = false;
 
-  MissionEligibility get missionEligibility => MissionEligibility(
-    bestHoops: storage.bestHoops,
-    metElements: {for (final id in storage.metElements) ?ElementId.fromStorageId(id)},
-    online: MissionEligibility.onlineFromSearch(ready: versus.ready, holdsOpponent: versus.holdsOpponent, search: versus.lastSearch),
-    lastVersusHadRival: storage.lastVersusHadRival,
-  );
+  // region P26-POL3
+  MissionEligibility get missionEligibility => RunEndBookkeeping.missionEligibility(this);
+  // endregion
 
   Future<bool> rerollMission(int index) async {
     if (_missionRerollBusy || !monetization.ads.isAvailable) return false;

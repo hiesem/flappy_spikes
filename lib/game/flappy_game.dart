@@ -3732,7 +3732,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final popup = LevelUpPopup(
       pending: pending,
       look: menu.items.look,
-      onClaim: (from) => unawaited(claimLevelUp(from: from)),
+      // region P26-J5
+      onClaim: (from) => unawaited(claimLevelUp(from: from, alreadyPaid: true)),
+      // endregion
     );
     _levelUpPopup = popup;
     world.add(popup);
@@ -3744,7 +3746,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// popup closes, every owed reward is paid (`menu.levels.claim()`), the
   /// coins fly into the pill and count up, and the home emblem upgrades
   /// with a pop. ✕ claims too — the reward is never lost.
-  Future<void> claimLevelUp({Rect? from}) async {
+  // region P26-J5
+  Future<void> claimLevelUp({Rect? from, bool alreadyPaid = false}) async {
+    // endregion
     final popup = _levelUpPopup;
     if (popup == null) return;
     _levelUpPopup = null;
@@ -3774,14 +3778,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _drainPopups();
     // region P26-J2
     menu.levels.services = services;
-    await menu.levels.payPending();
+    // region P26-J5
+    if (!alreadyPaid) await menu.levels.payPending();
+    // endregion
     // endregion
   }
 
-  bool _levelUpBack() {
-    unawaited(claimLevelUp());
-    return true;
-  }
+  // region P26-J5
+  bool _levelUpBack() => true;
+  // endregion
 
   // region PRD-2.3 §23 — rating prompt
 

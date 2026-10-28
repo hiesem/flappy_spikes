@@ -99,6 +99,18 @@ void _defect(
   () => _journey(description, verify, prefs: prefs, service: service),
 );
 
+// PRD-2.6 J7: Home catch-up reveals each durable reward before payout.
+Future<void> _finishLevelCatchUp(FlappySpikesGame game, WidgetTester tester) async {
+  final reveal = game.levelUpPopup!.reveal;
+  final count = reveal.rewards.length;
+  for (var i = 0; i < count; i++) {
+    await flushAndMount(game);
+    stepGame(game, 2);
+    await reveal.current.choose(false);
+    await _settle(game, tester);
+  }
+}
+
 Future<void> _settle(FlappySpikesGame game, WidgetTester tester) async {
   for (var round = 0; round < 3; round++) {
     for (var n = 0; n < 20; n++) {
@@ -238,9 +250,9 @@ void main() async {
       await run(game, .8);
       final popup = game.levelUpPopup!;
       expect(popup.pending.reward, 875);
-      await _tap(game, tester, popup.claimButton);
-      // Re-enter the action before the fade removes the old component.
-      popup.claimButton.onPressed();
+      await _finishLevelCatchUp(game, tester);
+      // Re-enter the final choice: payout remains idempotent.
+      await popup.reveal.current.choose(false);
       await _settle(game, tester);
       await run(game, 5);
       expect(game.menu.wallet.balance, 2125);
@@ -443,7 +455,7 @@ void main() async {
       expect(game.levelUpPopup, isNotNull);
       expect(game.queuedPopups, 1);
       expect(game.coinPill.shownBalance, 1250);
-      await _tap(game, tester, game.levelUpPopup!.claimButton);
+      await _finishLevelCatchUp(game, tester);
       expect(game.noAdsCelebration, isNotNull);
       await run(game, 4);
       expect(game.menu.wallet.balance, 2300);

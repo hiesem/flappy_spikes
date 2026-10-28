@@ -121,6 +121,18 @@ void _defect(
   group(id, () => _journey(description, verify, prefs: prefs));
 }
 
+// PRD-2.6 J7: Home catch-up reveals each durable reward before payout.
+Future<void> _finishLevelCatchUp(FlappySpikesGame game, WidgetTester tester) async {
+  final reveal = game.levelUpPopup!.reveal;
+  final count = reveal.rewards.length;
+  for (var i = 0; i < count; i++) {
+    await flushAndMount(game);
+    stepGame(game, 2);
+    await reveal.current.choose(false);
+    await _settle(game, tester);
+  }
+}
+
 Future<void> _settle(FlappySpikesGame game, WidgetTester tester) async {
   for (var round = 0; round < 3; round++) {
     for (var i = 0; i < 20; i++) {
@@ -297,7 +309,7 @@ void main() async {
       final popup = game.levelUpPopup!;
       expect(popup.pending.toLevel, 6);
       expect(popup.pending.reward, 325);
-      await _tap(game, tester, popup.closeButton);
+      await _finishLevelCatchUp(game, tester);
       await _advance(game, 5);
       expect(game.noAdsPopup, isNull, reason: 'C2 keeps No-Ads for a later visit');
       expect(rig.events.params('noads_popup_shown'), isEmpty);
@@ -744,7 +756,7 @@ void main() async {
         reason: 'queue the celebration until LEVEL UP has been claimed',
       );
       expect(game.queuedPopups, 1);
-      await _tap(game, tester, game.levelUpPopup!.claimButton);
+      await _finishLevelCatchUp(game, tester);
       expect(game.levelUpPopup, isNull);
       expect(game.noAdsCelebration, isNotNull, reason: 'its turn now');
       expect(game.queuedPopups, 0);
@@ -783,7 +795,7 @@ void main() async {
     tester,
   ) async {
     await _advance(game, .8);
-    await _tap(game, tester, game.levelUpPopup!.claimButton);
+    await _finishLevelCatchUp(game, tester);
     await _advance(game, .1);
     expect(game.coinPill.shownBalance, 0, reason: 'first coin has not landed');
     expect(
@@ -889,7 +901,7 @@ void main() async {
       await _settle(game, tester);
       expect(rig.events.params('purchase_result_popup'), hasLength(1));
       expect(game.purchaseResultPopup, isNull, reason: 'never two popups');
-      await _tap(game, tester, game.levelUpPopup!.claimButton);
+      await _finishLevelCatchUp(game, tester);
       expect(game.purchaseResultPopup, isNotNull);
       await _tap(game, tester, game.purchaseResultPopup!.okButton);
       expect(game.purchaseResultPopup, isNull);

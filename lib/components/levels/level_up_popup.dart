@@ -10,6 +10,9 @@ import '../../game/config.dart';
 import '../../game/flappy_game.dart';
 import '../../levels/level_progress.dart';
 import '../../levels/levels.dart';
+// region P26-J5
+import '../../run/screens/level_reveal_sheet.dart';
+// endregion
 import '../../skins/look.dart';
 import '../home/menu_primitives.dart';
 import '../look_component.dart';
@@ -39,6 +42,9 @@ class LevelUpPopup extends PositionComponent
   LevelUpPopup({required this.pending, required this.look, required this.onClaim})
     : super(priority: 26);
 
+  // region P26-J5
+  late final LevelCatchUpSheet reveal;
+  // endregion
   final PendingLevelUp pending;
   final Look look;
   final void Function(Rect? from) onClaim;
@@ -256,6 +262,24 @@ class LevelUpPopup extends PositionComponent
     add(card);
     _built = true;
     _apply();
+    // region P26-J5
+    // The roll was persisted at run end. Never draw another item here.
+    final rows = game.menu.levels.pending;
+    card.scale.setZero();
+    // Reuse the existing pink ray header above the shared P1 reveal.
+    final revealScale = ((h - 250) / 360).clamp(.65, 1.0);
+    final revealTop = (h * .38).clamp(0.0, h - 310 * revealScale);
+    add(
+      _Header(this, size: Vector2(Config.p1PopupWidth, 60))
+        ..position = Vector2(
+          (Config.worldWidth - Config.p1PopupWidth * revealScale) / 2,
+          revealTop - 60 * revealScale,
+        )
+        ..scale.setAll(revealScale),
+    );
+    reveal = LevelCatchUpSheet(rewards: rows, onFinished: () => onClaim(null));
+    add(reveal);
+    // endregion
   }
 
   /// Seconds since the popup opened (the header clock).

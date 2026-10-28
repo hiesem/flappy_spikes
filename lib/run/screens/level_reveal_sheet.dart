@@ -12,6 +12,9 @@ import '../../components/ui/mystery_box.dart';
 import '../../components/ui/confetti.dart';
 import '../../components/ui/p1_popup.dart';
 import '../../game/config.dart';
+// region P26-J5
+import '../../game/flappy_game.dart';
+// endregion
 import '../../game/sound.dart';
 import '../effects/particle_pool.dart';
 import '../effects/shock_ring.dart';
@@ -390,3 +393,122 @@ class _SkipSurface extends PositionComponent with TapCallbacks {
     skip();
   }
 }
+
+// region P26-J5
+/// Sequential Home catch-up. Choices stay in memory until all boxes have been
+/// seen; a kill before the final choice leaves every durable roll pending.
+class LevelCatchUpSheet extends PositionComponent
+    with HasGameReference<FlappySpikesGame> {
+  LevelCatchUpSheet({required this.rewards, required this.onFinished});
+
+  final List<Map<String, Object?>> rewards;
+  final void Function() onFinished;
+  final List<SkinItem> _equips = [];
+  int index = 0;
+  late LevelRevealSheet current;
+  bool _finishing = false;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    _showCurrent();
+  }
+
+  void _showCurrent() {
+    final row = rewards[index];
+    final item = allItems.where((it) => it.key == row['item']).firstOrNull;
+    current = _CatchUpItemSheet(
+      item: item,
+      extraCoins: row['extraCoins'] as int,
+      title: rewards.length == 1
+          ? 'LEVEL REWARD'
+          : '${rewards.length} LEVEL REWARDS',
+      levels: rewards.map((row) => 'LV ${row['lvl']}').join(' · '),
+      onChoice: (equip) async {
+        if (equip && item != null) _equips.add(item);
+        if (index + 1 < rewards.length) {
+          index++;
+          _showCurrent();
+          return;
+        }
+        if (_finishing) return;
+        _finishing = true;
+        await game.menu.levels.payPending();
+        for (final item in _equips) {
+          await game.menu.items.equip(item.layer, item.id);
+        }
+        onFinished();
+      },
+    );
+    add(current);
+  }
+}
+
+class _CatchUpItemSheet extends LevelRevealSheet {
+  _CatchUpItemSheet({
+    required super.item,
+    required super.extraCoins,
+    required this.title,
+    required this.levels,
+    required this.onChoice,
+  }) : super(onFinished: (_) {});
+  final String title;
+  final String levels;
+  final Future<void> Function(bool) onChoice;
+
+  @override
+  Future<void> buildCard(PositionComponent card) async {
+    await super.buildCard(card);
+    for (final entry in [
+      (title, -54.0, 15.0, const Color(0xFFFFFFFF)),
+      (
+        'Here is the reward from your last run!',
+        -34.0,
+        10.0,
+        const Color(0xFFFFFFFF),
+      ),
+      (levels, -18.0, 10.0, const Color(0xFFFFFFFF)),
+    ]) {
+      card.add(
+        MenuText(
+          entry.$1,
+          fontSize: entry.$3,
+          color: entry.$4,
+          position: Vector2(Config.p1PopupWidth / 2, entry.$2),
+          anchor: Anchor.topCenter,
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<void> choose(bool equip) async {
+    if (!revealed || choosing) return;
+    choosing = true;
+    // A preview can use the prospective look without granting the item yet.
+    if (equip && item != null) {
+      for (final child in details.children.whereType<PositionComponent>()) {
+        if (child != _preview && child != equippedLabel) child.scale.setZero();
+      }
+      _preview.start(originalLook.withItem(item!.layer, item!.id));
+      equipAt = elapsed;
+    } else {
+      removeFromParent();
+      await onChoice(false);
+    }
+  }
+
+  @override
+  void update(double dt) {
+    final start = equipAt;
+    // Intercept the normal completion, which would pay this one sheet.
+    if (start != null && elapsed + dt - start >= 1.6) {
+      equipAt = null;
+      removeFromParent();
+      unawaited(onChoice(true));
+      return;
+    }
+    super.update(dt);
+  }
+}
+// endregion

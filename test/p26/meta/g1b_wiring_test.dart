@@ -12,6 +12,7 @@ import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/run/run_state.dart';
 import 'package:flappy_spikes/run/director/plans.dart';
 import 'package:flappy_spikes/run/elements.dart';
+import 'package:flappy_spikes/progression/weekly_course.dart';
 import '../../helpers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flappy_spikes/game/storage.dart';
@@ -264,6 +265,52 @@ void main() {
       });
       expect(RunEndBookkeeping.currentMissions(game.storage).chestPending, isTrue);
       expect((game.homeMoments as HomeMomentBudget).selectedMoment, isNot(HomeMoment.missionsChest));
+    },
+  );
+
+  FlameTester<FlappySpikesGame>(
+    () => createRunTestGame(
+      prefs: {'gamesPlayed': 6, 'bestHoops': 40},
+      clock: () => DateTime.utc(2026, 10, 26, 12),
+    ),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget('weekly and mission payouts survive an immediate Home reload',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, tester) async {
+      game.runDebug.ignoreGates = false;
+      await game.storage.saveLastVersusHadRival(true);
+      final board = Missions(day: game.storage.today, missions: const [
+        MissionProgress(template: MissionTemplate.m01, target: 3, progress: 2),
+        MissionProgress(template: MissionTemplate.m03, target: 15),
+        MissionProgress(template: MissionTemplate.m11, target: 10),
+      ]);
+      await game.storage.saveMissionTier(0);
+      await game.storage.saveMissionDay(board.day);
+      await game.storage.saveMissions(board.toRecords());
+      await game.startWeeklyCourse();
+      final run = game.run!;
+      expect(run.setup.weekly, isTrue);
+      expect(game.homeMode, HomeMode.versus);
+      run.state.hoopsPassed = 30;
+      final before = game.storage.coins;
+      game.endRun(run.endRun());
+      await flushAndMount(game);
+      game.replay();
+      await Future.wait([game.missionSettlement, game.weeklyWritesSettled]);
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      final loaded = GameStorage(clock: () => DateTime.utc(2026, 10, 26, 12));
+      await loaded.load();
+      expect(loaded.coins, before + 75 + 120);
+      expect(loaded.weeklyBest, {WeeklyWeek.at(loaded.now()).key: 30});
+      expect(loaded.weeklyRewards, {15, 30});
+      expect(RunEndBookkeeping.currentMissions(loaded).missions.first.paid, isTrue);
+      expect(RunEndBookkeeping.currentMissions(loaded).missions.last.paid, isTrue);
+      expect(loaded.lastVersusHadRival, isTrue);
+      expect(game.storage.coins, loaded.coins);
     },
   );
 

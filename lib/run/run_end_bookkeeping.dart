@@ -71,7 +71,9 @@ abstract final class RunEndBookkeeping {
     final stats = game.runStats;
     if (run == null || stats == null || !run.countsForUpload) return Future.value();
     final before = storage.gamesPlayed - 1;
-    final rival = game.homeMode == HomeMode.versus;
+    // A weekly course is not a versus search, even when VERSUS is the
+    // selected Home mode (G5a); leave the last versus result intact.
+    final rival = !run.setup.weekly && game.homeMode == HomeMode.versus;
     if (before < 3) {
       return rival ? storage.saveLastVersusHadRival(run.setup.opponent != null) : Future.value();
     }

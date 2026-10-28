@@ -146,6 +146,8 @@ void main() {
     SharedPreferences.setMockInitialValues({
       Obf.prefGamesPlayed: 6,
       Obf.prefBestHoops: 40,
+      // PRD §8.3 item 19: isolate weekly payouts from the day-streak popup.
+      Obf.prefStreakPaidDay: monday.millisecondsSinceEpoch ~/ Duration.millisecondsPerDay,
     });
     return FlappySpikesGame(
       soundEnabled: false,
@@ -247,6 +249,8 @@ void main() {
     SharedPreferences.setMockInitialValues({
       Obf.prefGamesPlayed: 6,
       Obf.prefBestHoops: 40,
+      // PRD §8.3 item 19: isolate weekly payouts from the day-streak popup.
+      Obf.prefStreakPaidDay: monday.millisecondsSinceEpoch ~/ Duration.millisecondsPerDay,
     });
     return FlappySpikesGame(
       soundEnabled: false,
@@ -286,7 +290,12 @@ void main() {
       game.endRun(second.endRun());
       await game.weeklyWritesSettled;
       expect(game.storage.weeklyRewards, {15, 30, 60});
-      expect(game.storage.coins, 270);
+      // PRD G1 / O28: this weekly run also completes the 40-hoop mission.
+      expect(game.storage.coins, 270 + 55);
+      expect(
+        fault.events.where((e) => e.$1 == 'coins_earned' && e.$2?['source'] == 'mission').single.$2!['amount'],
+        55,
+      );
       expect(
         fault.events.where((e) => e.$1 == 'weekly_reward').single.$2!['tier'],
         60,

@@ -70,6 +70,39 @@ class _Board implements LeaderboardService {
 }
 
 void main() {
+  test(
+    'late gifts preserve J5 level reveal and take priority over G1d chest',
+    () {
+      final budget = HomeMomentBudget();
+      final gift = HomeGiftBoxRequest(
+        id: 'old',
+        availableAt: DateTime.utc(2026),
+      );
+      HomeVisit visit({bool level = false, bool chest = true}) => HomeVisit(
+        day: DateTime.utc(2026),
+        gamesPlayed: 4,
+        requests: HomeVisitRequests(
+          levelUpCatchUp: level,
+          missionsChest: chest,
+        ),
+      );
+      budget.beginVisit(visit(level: true));
+      budget.offerLeaderboardGifts([gift]);
+      expect(budget.selectedMoment, HomeMoment.levelUp);
+      expect(budget.tryShow(HomeMoment.levelUp, () {}), isTrue);
+      budget.offerLeaderboardGifts([gift]);
+      expect(budget.tryShow(HomeMoment.leaderboardCollect, () {}), isFalse);
+      budget.beginVisit(visit());
+      expect(budget.selectedMoment, HomeMoment.missionsChest);
+      budget.offerLeaderboardGifts([gift]);
+      expect(budget.selectedMoment, HomeMoment.leaderboardCollect);
+      expect(budget.selectedGift?.id, 'old');
+      expect(budget.tryShow(HomeMoment.missionsChest, () {}), isFalse);
+      expect(budget.tryShow(HomeMoment.leaderboardCollect, () {}), isTrue);
+      expect(budget.tryShow(HomeMoment.missionsChest, () {}), isFalse);
+    },
+  );
+
   test('late gifts join only an unspent visit and keep higher priorities', () {
     final moments = HomeMomentBudget();
     final gift = HomeGiftBoxRequest(

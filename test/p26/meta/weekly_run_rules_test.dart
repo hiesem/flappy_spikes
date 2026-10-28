@@ -98,7 +98,15 @@ void main() {
         clock: () => monday,
         services: analytics,
         leaderboard: FakeLeaderboardService(
-          onCall: (_, request) async {
+          onCall: (name, request) async {
+            // P26-LB7 / PRD C2: Home also checks the board for owed gifts.
+            // Keep this fixture focused on the weekly run submission.
+            if (name == 'lbGetBoard') {
+              return {
+                'today': {'tab': 'today', 'rows': <Object>[]},
+                'best': {'tab': 'best', 'rows': <Object>[]},
+              };
+            }
             submitted.add(request);
             return {
               'accepted': [

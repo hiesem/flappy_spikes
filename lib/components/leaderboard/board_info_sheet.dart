@@ -348,9 +348,9 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
     // Five teeth from the run strip master, scaled to the cup's 52 pt rim.
     c.save();
     c.translate(-26, -63);
-    c.scale(52 / 200, -52 / 200);
-    c.clipRect(const Rect.fromLTWH(0, 0, 200, 44));
-    SpikeTeethPainter.paint(c, width: 200, color: pink);
+    c.scale(52 / 200, -11 / 18);
+    c.clipRect(const Rect.fromLTWH(0, 0, 200, 18));
+    SpikeTeethPainter.paint(c, width: 200, color: pink, reach: 18);
     c.restore();
     c.save();
     c.translate(0, -46);

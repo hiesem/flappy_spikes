@@ -8,6 +8,9 @@ import 'package:flame/extensions.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/animation.dart' show Curves;
 
+// region P26-G6b
+import '../../progression/flight_guide.dart';
+// endregion
 import '../../game/config.dart';
 // region P26-G4a
 import '../../game/sound.dart';
@@ -134,9 +137,11 @@ class LevelsScreen extends MenuScreen {
     if (tab == LevelsTab.worlds) {
       unawaited(game.storage.saveWorldsSeen(game.storage.worldsReached));
     } else if (tab == LevelsTab.guide) {
-      unawaited(
-        game.storage.saveGuideSeenCount(game.storage.metElements.length),
-      );
+      // region P26-G6b
+      unawaited(game.storage.saveGuideSeenCount(
+        flightGuideMetCount(game.storage.metElements),
+      ));
+      // endregion
     }
     tabs.sync(game.storage);
   }

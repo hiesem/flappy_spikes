@@ -1,8 +1,10 @@
-import 'dart:ui' show Image;
+import 'dart:async';
+import 'dart:ui' show Image, ImageFilter;
 import 'dart:math' as math;
 
 import 'package:flame/components.dart';
 import 'package:flutter/painting.dart';
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 
 import '../../../game/config.dart';
 import '../../../game/flappy_game.dart';
@@ -81,8 +83,19 @@ class _GuideHeader extends PositionComponent {
   Image? _badge;
 
   @override
-  Future<void> onLoad() async {
-    _badge = await screen.game.images.load('achievements/ach_birdwatcher.png');
+  void onLoad() {
+    // Image decoding must not hold the Levels screen's lifecycle open.
+    unawaited(_loadBadge());
+  }
+
+  Future<void> _loadBadge() async {
+    try {
+      _badge = await screen.game.images.load(
+        'achievements/ach_birdwatcher.png',
+      );
+    } catch (error) {
+      debugPrint('Flight guide badge failed to load: $error');
+    }
   }
 
   @override
@@ -262,12 +275,18 @@ void _text(
 }
 
 class FlightGuideArt {
-  FlightGuideArt(FlappySpikesGame game)
-    : preview = RunController(
-        game: game,
-        setup: RunSetup(seed: 7, viewHeight: game.viewHeight),
-      );
-  final RunController preview;
+  FlightGuideArt(this.game);
+  final FlappySpikesGame game;
+  // Only the switch and saw painters need a run context. Construct it on
+  // first use, after GUIDE is opened, and never mount it as a live run.
+  RunController? _preview;
+  RunController get preview => _preview ??= RunController(
+    game: game,
+    setup: RunSetup(seed: 7, viewHeight: game.viewHeight),
+  );
+
+  @visibleForTesting
+  bool get previewCreated => _preview != null;
   final Map<RideId, (RideTheme, RideView)> _rides = {};
   late final TrainGroup _train = () {
     final group = TrainGroup(spec: const TrainSpec(dir: -1, dx: 24, dy: 12));
@@ -374,8 +393,22 @@ class FlightGuideArt {
         canvas.scale(.33);
         theme.paintExitFront(canvas, v, 0, Offset.zero);
       case RideId.pinball:
-        canvas.translate(31, 31);
-        canvas.scale(.32);
+        // Frame one real bumper and one real flipper from the ride scene.
+        final station = 40 * 70 * math.pi / 180 + 520;
+        final point = v.path.at(station + 30);
+        final heading = v.path.headingAt(station + 30);
+        final bumper = Vector2(
+          point.x + math.cos(heading) * 36,
+          point.y + math.sin(heading) * 36,
+        );
+        canvas.save();
+        canvas.translate(41, 19);
+        canvas.scale(.48);
+        canvas.translate(-160, -300);
+        theme.paintWorld(canvas, v, bumper - Vector2(160, 300));
+        canvas.restore();
+        canvas.translate(18, 43);
+        canvas.scale(.28);
         canvas.translate(-100, -600);
         theme.paintExit(canvas, v, .6, Offset.zero);
       case RideId.volcano:
@@ -530,7 +563,19 @@ class FlightGuideArt {
       case 'shield':
         LifeIcons.paintShield(canvas, c, 32);
       case 'egg':
-        EggArt.paint(canvas, c);
+        // A thin dark edge keeps the cream run egg visible on the pale tile.
+        canvas.saveLayer(
+          const Rect.fromLTWH(4, 4, 54, 54),
+          Paint()
+            ..imageFilter = ImageFilter.dilate(radiusX: 1.2, radiusY: 1.2)
+            ..colorFilter = const ColorFilter.mode(
+              Color(0xFFB09A73),
+              BlendMode.srcIn,
+            ),
+        );
+        EggArt.paint(canvas, c, scale: 2.0, cracks: 1);
+        canvas.restore();
+        EggArt.paint(canvas, c, scale: 2.0, cracks: 1);
       case 'piggy':
         PiggyArt.paint(canvas, c, 1);
       case 'jar':
@@ -553,14 +598,14 @@ class FlightGuideArt {
           const GapItemPlan(
             kind: ElementId.starTrail,
             trackX: 0,
-            toTrackX: 300,
+            toTrackX: 80,
             y: 0,
             toY: 0,
           ),
         );
         canvas.save();
-        canvas.translate(c.dx, c.dy + 4);
-        canvas.scale(.18);
+        canvas.translate(c.dx, c.dy + 10);
+        canvas.scale(.6);
         trail.render(canvas);
         canvas.restore();
       case 'comet':

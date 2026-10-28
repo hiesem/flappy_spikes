@@ -54,7 +54,6 @@ void main() async {
       setUp: (game, tester) async {
         await game.ready();
         await preloadImages(game);
-        await game.images.load('achievements/ach_birdwatcher.png');
         await flushAndMount(game);
       },
       verify: (game, tester) => tester.runAsync(() async {
@@ -65,8 +64,10 @@ void main() async {
         final screen = game.levelsScreen!;
         expect(screen.tabs.hasDot(LevelsTab.guide), isTrue);
         screen.selectTab(LevelsTab.guide);
-        await flushAndMount(game);
+        // PRD 2.6 §934: ignore the generic portal and capsule storage IDs.
         expect(game.storage.guideSeenCount, 1);
+        await game.images.ready();
+        await flushAndMount(game);
         game.onGameResize(Vector2(320, height));
         final recorder = ui.PictureRecorder();
         final canvas = ui.Canvas(recorder);
@@ -101,6 +102,7 @@ void main() async {
     },
     verify: (game, tester) => tester.runAsync(() async {
       final art = FlightGuideArt(game);
+      expect(art.previewCreated, isFalse);
       final recorder = ui.PictureRecorder();
       final canvas = ui.Canvas(recorder);
       canvas.drawRect(
@@ -112,6 +114,10 @@ void main() async {
         canvas.translate((i % 4) * 80.0 + 9, (i ~/ 4) * 80.0 + 9);
         canvas.clipRect(const ui.Rect.fromLTWH(4, 4, 54, 54));
         art.paint(canvas, flightGuideEntries[i]);
+        if (i == 0) expect(art.previewCreated, isFalse);
+        if (flightGuideEntries[i].id == 'switch_ring') {
+          expect(art.previewCreated, isTrue);
+        }
         canvas.restore();
       }
       final picture = recorder.endRecording();

@@ -1,5 +1,4 @@
 // region P26-G6b
-import 'dart:async';
 import '../../../progression/flight_guide.dart';
 import '../levels_screen.dart';
 import 'flight_guide_tab.dart';
@@ -87,14 +86,6 @@ class LevelsTabs extends PositionComponent {
 
   void sync(GameStorage storage) {
     if (buttons.isEmpty) return;
-    // region P26-G6b
-    if (selected == LevelsTab.guide &&
-        storage.guideSeenCount != flightGuideMetCount(storage.metElements)) {
-      unawaited(
-        storage.saveGuideSeenCount(flightGuideMetCount(storage.metElements)),
-      );
-    }
-    // endregion
     for (final tab in LevelsTab.values) {
       final open = tab == selected;
       buttons[tab]!.color = open ? Config.menuPink : Config.menuSoft;

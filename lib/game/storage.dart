@@ -1693,6 +1693,14 @@ class GameStorage {
     await prefs.setString(_equippedItemKey(layer), id);
     // region P26-J6
     final key = '${layer.key}:$id';
+    // region P26-POL3
+    if (lvlPending.any((row) => row['item'] == key && row['equipped'] != true)) {
+      await saveLvlPending([
+        for (final row in lvlPending)
+          if (row['item'] == key) {...row, 'equipped': true} else row,
+      ]);
+    }
+    // endregion
     if (lvlRewardLog.any(
       (row) => row['item'] == key && row['equipped'] != true,
     )) {

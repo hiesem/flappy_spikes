@@ -157,6 +157,7 @@ class LevelProgress extends ChangeNotifier {
           'item': row['item'],
           'rarity': item?.rarity?.name,
           'fallback': row['fallback'],
+          if (row['equipped'] == true) 'equipped': true,
         };
       }
       await _storage.saveLvlRewardLog(log.values.toList());

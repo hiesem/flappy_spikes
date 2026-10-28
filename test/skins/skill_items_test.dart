@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flappy_spikes/achievements/achievement_catalog.dart';
 import 'package:flappy_spikes/skins/art/look_painter.dart';
 import 'package:flappy_spikes/skins/art/hoop_painter.dart';
 import 'package:flappy_spikes/skins/art/trail.dart';
@@ -14,6 +15,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('PRD F10 skill item achievement mapping', () {
+    const expected = <String, AchievementId>{
+      'bird:magpie': AchievementId.itemAll, 'bird:prism': AchievementId.hoops100,
+      'bird:daynight': AchievementId.daily30, 'gear:goggles': AchievementId.rideAll,
+      'gear:hoopchain': AchievementId.hoops50, 'gear:peacock': AchievementId.skinAll,
+      'hat:skycrown': AchievementId.skyHigh, 'hat:nest': AchievementId.masterHatch,
+      'hat:jackpot': AchievementId.masterJackpot, 'hoop:spikes': AchievementId.rankSpikeAce,
+      'hoop:phoenixring': AchievementId.rankPhoenix, 'hoop:legend': AchievementId.rankLegend,
+      'trail:thread': AchievementId.bullseye, 'trail:constellation': AchievementId.masterStars,
+      'trail:fireflies': AchievementId.masterJar, 'card:pecking': AchievementId.vs10,
+      'card:roost': AchievementId.vs50, 'card:prey': AchievementId.birdOfPrey,
+      'card:n_sky': AchievementId.secondWind, 'card:n_thunder': AchievementId.albatross,
+      'card:n_marquee': AchievementId.threeLittleBirds, 'card:s_unstop': AchievementId.ironBeak,
+      'card:s_flawless': AchievementId.flawless, 'card:s_topflock': AchievementId.topBird,
+    };
+    expect({for (final item in allItems.where((i) => i.isSkillOnly)) item.key: item.unlock}, expected);
+  });
+
   test(
     'PRD F10: every skill item uses its painter through the normal dispatch',
     () async {

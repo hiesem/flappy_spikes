@@ -112,6 +112,7 @@ class StarRoadScreen extends MenuScreen {
     );
     add(header);
     final coin = await CoinIcon.load(game.images);
+    final lock = Sprite(await game.images.load('menu/lock.png'));
     for (var tier = 1; tier <= starRoadTierCount; tier++) {
       final reward = starRoadReward(tier);
       final item = reward.kind != StarRoadRewardKind.coins;
@@ -253,15 +254,26 @@ class StarRoadScreen extends MenuScreen {
           ),
         );
       } else if (!reached) {
-        row.add(
-          MenuText(
-            tier == road.tier + 1 ? '${road.starsIntoTier} / 8' : '🔒',
-            fontSize: 10,
-            color: Config.menuPlum,
-            position: Vector2(250, row.height / 2),
-            anchor: Anchor.center,
-          ),
-        );
+        if (tier == road.tier + 1) {
+          row.add(
+            MenuText(
+              '${road.starsIntoTier} / 8',
+              fontSize: 10,
+              color: Config.menuPlum,
+              position: Vector2(250, row.height / 2),
+              anchor: Anchor.center,
+            ),
+          );
+        } else {
+          row.add(
+            MenuIcon(
+              lock,
+              size: Vector2.all(14),
+              position: Vector2(250, row.height / 2),
+              anchor: Anchor.center,
+            ),
+          );
+        }
       } else if (claimed) {
         row.add(
           MenuText(

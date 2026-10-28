@@ -259,6 +259,7 @@ void main() {
         stepGame(g, 2);
         expect(bonus.shownCoins, 20);
         expect(bonus.flight, isNotNull);
+        expect(bonus.flight!.to.dx, 180);
         expect(page.shownReward, 32);
         expect(page.rewardText.text, '32');
         page.missionsStripVisible = false;

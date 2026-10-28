@@ -314,6 +314,16 @@ void main() {
             _fits(g, page);
             page.next();
             await stepSeconds(g, 1);
+            // PRD-2.6 §G6 (line 932): a first versus win presents its
+            // daily reward before NEXT finishes leaving the results page.
+            if (result == 'win') {
+              final bonus = page.firstWinReward!;
+              await stepSeconds(
+                g,
+                bonus.remaining + ResultsConfig.nextAfterClaim + .1,
+              );
+              expect(bonus.shownCoins, 20);
+            }
             expect(g.state, GameState.start);
             expect(g.postRunPageUp, isFalse);
             expect(g.stageKey, 0);

@@ -110,7 +110,7 @@ class FirstWinReward extends PositionComponent
         flight = CoinFly.burst(
           coin: coin,
           origin: Offset(152, position.y - 8),
-          to: Offset(172, ResultsConfig.rewardPill.center.dy - 8),
+          to: Offset(180, ResultsConfig.rewardPill.center.dy - 8),
           count: 5,
           duration: .42,
           stagger: .05,

@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/achievements/achievement_catalog.dart';
 import 'package:flappy_spikes/components/levels/tabs/levels_tabs.dart';
+import 'package:flappy_spikes/components/levels/tabs/flight_guide_tab.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/progression/flight_guide.dart';
 import 'package:flappy_spikes/run/director/plans.dart';
@@ -54,11 +54,7 @@ void main() async {
       setUp: (game, tester) async {
         await game.ready();
         await preloadImages(game);
-        await game.images.loadAll([
-          'achievements/ach_birdwatcher.png',
-          for (final ride in RideId.values)
-            'achievements/ach_ride_${ride.storageId}.png',
-        ]);
+        await game.images.load('achievements/ach_birdwatcher.png');
         await flushAndMount(game);
       },
       verify: (game, tester) => tester.runAsync(() async {
@@ -78,10 +74,10 @@ void main() async {
         final picture = recorder.endRecording();
         final image = await picture.toImage(320, height.toInt());
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-        final dir = Directory('build/p26')..createSync(recursive: true);
-        File(
-          '${dir.path}/flight_guide_${height.toInt()}.png',
-        ).writeAsBytesSync(bytes!.buffer.asUint8List());
+        await expectLater(
+          bytes!.buffer.asUint8List(),
+          matchesGoldenFile('goldens/flight_guide_${height.toInt()}.png'),
+        );
         image.dispose();
         picture.dispose();
         screen.selectTab(LevelsTab.levels);
@@ -92,6 +88,43 @@ void main() async {
       }),
     );
   }
+
+  FlameTester<FlappySpikesGame>(
+    () => createRunTestGame(prefs: {'gamesPlayed': 4}),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'all 32 guide illustrations use their run painters',
+    setUp: (game, tester) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, tester) => tester.runAsync(() async {
+      final art = FlightGuideArt(game);
+      final recorder = ui.PictureRecorder();
+      final canvas = ui.Canvas(recorder);
+      canvas.drawRect(
+        const ui.Rect.fromLTWH(0, 0, 320, 640),
+        ui.Paint()..color = const ui.Color(0xFFF4F4F4),
+      );
+      for (var i = 0; i < flightGuideEntries.length; i++) {
+        canvas.save();
+        canvas.translate((i % 4) * 80.0 + 9, (i ~/ 4) * 80.0 + 9);
+        canvas.clipRect(const ui.Rect.fromLTWH(4, 4, 54, 54));
+        art.paint(canvas, flightGuideEntries[i]);
+        canvas.restore();
+      }
+      final picture = recorder.endRecording();
+      final image = await picture.toImage(320, 640);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      await expectLater(
+        bytes!.buffer.asUint8List(),
+        matchesGoldenFile('goldens/flight_guide_art.png'),
+      );
+      image.dispose();
+      picture.dispose();
+    }),
+  );
 
   FlameTester<FlappySpikesGame>(
     () => createRunTestGame(prefs: {'gamesPlayed': 4}),

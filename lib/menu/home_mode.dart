@@ -9,7 +9,10 @@ enum HomeMode {
   /// The `homeMode` storage value.
   final String key;
 
-  /// The analytics value (`mode_changed.mode`, `run_start.mode`).
+  // region P26-G5a
+  /// Home-mode analytics (`mode_changed.mode`, `run_start.mode`). Weekly
+  /// course starts report `weekly` independently of the selected Home mode.
+  // endregion
   final String analytics;
 
   /// The other mode (a tap on the button).

@@ -3,6 +3,8 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/menu/powerup_slot.dart';
+import 'package:flappy_spikes/menu/home_mode.dart';
+import 'package:flappy_spikes/leaderboard/lb_service.dart';
 import 'package:flappy_spikes/progression/weekly_course.dart';
 import 'package:flappy_spikes/run/director/run_director.dart';
 import 'package:flappy_spikes/run/elements.dart';
@@ -79,6 +81,62 @@ void main() {
       expect(game.storage.armedPowerup, 'shield');
     },
   );
+
+  for (final mode in [HomeMode.freeFly, HomeMode.versus]) {
+    final submitted = <Map<String, Object?>>[];
+    final analytics = AnalyticsSpy();
+    FlameTester<FlappySpikesGame>(() {
+      submitted.clear();
+      analytics.events.clear();
+      SharedPreferences.setMockInitialValues({
+        Obf.prefGamesPlayed: 6,
+        Obf.prefBestHoops: 40,
+      });
+      return FlappySpikesGame(
+        soundEnabled: false,
+        worldHeight: 711,
+        clock: () => monday,
+        services: analytics,
+        leaderboard: FakeLeaderboardService(
+          onCall: (_, request) async {
+            submitted.add(request);
+            return {
+              'accepted': [
+                for (final run in request['runs'] as List) (run as Map)['id'],
+              ],
+              'dropped': [],
+            };
+          },
+        ),
+      );
+    }, gameSize: Vector2(320, 711)).testGameWidget(
+      'weekly run submits weekly and reports weekly analytics with ${mode.name} selected',
+      setUp: (game, _) async {
+        await game.ready();
+        await preloadImages(game);
+        await game.storage.saveHomeMode(mode);
+      },
+      verify: (game, _) async {
+        await game.startWeeklyCourse();
+        await flushAndMount(game);
+        final run = game.run!;
+        expect(run.countsForUpload, isTrue);
+        game.onPlayfieldTap();
+        expect(
+          analytics.events.where((e) => e.$1 == 'run_start').single.$2!['mode'],
+          'weekly',
+        );
+        await flyRun(game, untilHoops: 1, maxSeconds: 10);
+        final summary = run.endRun();
+        game.endRun(summary);
+        await game.leaderboardQueue.flush();
+        expect(submitted, hasLength(1));
+        final sent = (submitted.single['runs'] as List).single as Map;
+        expect(sent['mode'], 'weekly');
+        expect(sent['hoops'], summary.hoopsPassed);
+      },
+    );
+  }
 
   final spy = AnalyticsSpy();
   var now = monday;

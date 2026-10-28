@@ -1674,6 +1674,13 @@ every requirement (file:line, test results) and the work packages with paths and
     supplies an aggregate count. Rows deliberately do not identify ghosts (O51), so the client cannot derive it;
     do not substitute row count or an invented value. Add the field when the aggregate contract is available.
 
+22. **Weekly first meets (G5a, round 4):** weekly courses use the same seeded
+    director plan regardless of a player's lifetime first-meet history. Weekly
+    runs therefore do not force first-meet introductions; a player can first see
+    an element in a weekly run without its introduction. Such encounters still
+    update the normal lifetime met state and can satisfy its first-meet record.
+    The consecutive-run feather / puzzle-piece rate limit still applies at spawn.
+
 ### 8.4 Corrections to the spec text
 
 - Wave 0 rules deploy is not "comment only": it adds `validCard` / `look.card`, routes run looks through `validLook`

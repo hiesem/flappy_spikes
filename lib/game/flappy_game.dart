@@ -1420,7 +1420,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     await _runFromHome(weekly: WeeklyWeek.at(now ?? storage.now()));
   }
 
-  /// LB2 uses this for its submit request, including the weekly mode.
+  /// The run_start analytics mode, including the weekly course.
   String get runSubmissionMode =>
       _run?.setup.submissionMode(homeMode.analytics) ?? homeMode.analytics;
   // endregion
@@ -5085,7 +5085,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       summary,
       countsForAchievements: counts,
       countsForUpload: _countsForUpload,
-      mode: homeMode == HomeMode.freeFly ? 'free' : 'versus',
+      // region P26-G5a
+      mode: _run?.setup.weekly == true
+          ? 'weekly'
+          : (homeMode == HomeMode.freeFly ? 'free' : 'versus'),
+      // endregion
       look: menu.items.look,
     );
     // endregion P26-LB6

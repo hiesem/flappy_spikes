@@ -3776,11 +3776,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           _flyStreakStart(item, from.center);
         case StreakRewardItem.feather:
           await storage.saveFeathers(storage.feathers + 1);
+          _flyStreakInventory(reward.item!, from.center);
         case StreakRewardItem.piece:
           final missing = (~storage.puzzlePieces) & 15;
           await storage.savePuzzlePieces(
             storage.puzzlePieces | (missing & -missing),
           );
+          _flyStreakInventory(reward.item!, from.center);
         case null:
           break;
       }
@@ -3789,6 +3791,23 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       _streakCollecting = false;
       closeStreakCard();
     }
+  }
+
+  void _flyStreakInventory(StreakRewardItem item, Offset from) {
+    final target = Config.homePlateCentreFor(viewHeight);
+    void land() {
+      sound.play(Sfx.skTap);
+      if (!reduceMotion) world.add(ConfettiBurst.burst(
+        origin: target, count: 18, speed: 110, driftX: 0, priority: 1001,
+      ));
+    }
+    if (reduceMotion) { land(); return; }
+    world.add(FetchFlight(
+      from: from, to: target,
+      spec: const FetchSpec(grow: 0, fly: .6, trail: false),
+      art: (canvas, scale, rotation) => paintStreakItem(canvas, item, 30 * scale),
+      onLand: land, priority: 1001,
+    ));
   }
 
   void _flyStreakStart(StreakRewardItem item, Offset from) {

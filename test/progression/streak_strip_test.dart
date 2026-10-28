@@ -192,6 +192,33 @@ void main() {
     );
   }
 
+  for (final feathers in [0, 3]) {
+    FlameTester<FlappySpikesGame>(() => createTestGame()).testGameWidget(
+      'day seven inventory reward flies for feathers $feathers',
+      setUp: (game, _) async {
+        await game.ready();
+        await preloadImages(game);
+      },
+      verify: (game, _) async {
+        await flushAndMount(game);
+        await game.storage.saveGamesPlayed(4);
+        await game.storage.saveStreakDays(7);
+        await game.storage.saveStreakLastDay(game.storage.today);
+        await game.storage.saveFeathers(feathers);
+        stepGame(game, 2);
+        await flushAndMount(game);
+        expect(game.streakCard, isNotNull);
+        await game.collectStreakReward(
+          const ui.Rect.fromLTWH(20, 300, 200, 50),
+        );
+        await flushAndMount(game);
+        expect(game.world.children.whereType<FetchFlight>(), hasLength(1));
+        expect(game.storage.feathers, feathers == 0 ? 1 : 3);
+        expect(game.storage.puzzlePieces, feathers == 0 ? 0 : 1);
+      },
+    );
+  }
+
   for (final lit in [true, false]) {
     FlameTester<FlappySpikesGame>(() => createTestGame()).testGameWidget(
       'chip golden ${lit ? "lit" : "grey"}',
@@ -210,6 +237,7 @@ void main() {
         game.world.add(chip);
         await flushAndMount(game);
         expect(chip.visible, isTrue);
+        expect(chip.y, 102);
         expect(chip.flame.lit, lit);
         expect(chip.pending, lit);
         final recorder = ui.PictureRecorder();

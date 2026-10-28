@@ -144,7 +144,7 @@ class StreakStrip extends MenuButton with HasGameReference<FlappySpikesGame> {
     size.x = math.max(52, count.width + 35);
     position = Vector2(
       Config.worldWidth - 14 - width,
-      Config.homeGearRectFor(game.viewHeight).bottom + 8,
+      Config.homeStreakTopFor(game.viewHeight),
     );
     pending = state.rewardPending(
       today: game.storage.today,
@@ -279,15 +279,16 @@ class StreakCard extends P1Popup {
       );
       final r = DayStreak.rewardForDay(
         i,
-        canReceiveFeather: true,
-        canReceivePiece: true,
+        canReceiveFeather: game.storage.feathers < 3,
+        canReceivePiece: game.storage.puzzlePieces != 15,
       );
       tile.add(_RewardIcon(r, image, side: 19, position: Vector2(16, 28)));
       final value =
           r.item == StreakRewardItem.bigHoops ||
               r.item == StreakRewardItem.shield
           ? 'FREE'
-          : r.item == StreakRewardItem.feather
+          : r.item == StreakRewardItem.feather ||
+                r.item == StreakRewardItem.piece
           ? '+60'
           : '${r.coins}';
       tile.add(
@@ -395,6 +396,20 @@ class StreakCard extends P1Popup {
   }
 }
 
+/// Shared reward art for inventory and free-start fetch flights.
+void paintStreakItem(Canvas canvas, StreakRewardItem item, double side) {
+  if (item == StreakRewardItem.piece) {
+    canvas.save();
+    canvas.scale(side / 40);
+    PuzzleArt.paintPieceCentred(canvas, 0, PuzzleConfig.themeFor(0));
+    canvas.restore();
+  } else if (item == StreakRewardItem.feather) {
+    FeatherArt.paintAt(canvas, Offset.zero, side / 40, 0);
+  } else {
+    paintStreakPowerup(canvas, item, side);
+  }
+}
+
 /// Shared reward art is also used for the free-start fetch flight.
 void paintStreakPowerup(Canvas canvas, StreakRewardItem item, double side) {
   if (item == StreakRewardItem.shield) {
@@ -422,15 +437,8 @@ class _RewardIcon extends PositionComponent {
     final item = reward.item;
     if (item == null) {
       CoinIcon.paint(canvas, coin, Offset.zero, side);
-    } else if (item == StreakRewardItem.piece) {
-      canvas.save();
-      canvas.scale(side / 40);
-      PuzzleArt.paintPieceCentred(canvas, 0, PuzzleConfig.themeFor(0));
-      canvas.restore();
-    } else if (item == StreakRewardItem.feather) {
-      FeatherArt.paintAt(canvas, Offset.zero, side / 40, 0);
     } else {
-      paintStreakPowerup(canvas, item, side);
+      paintStreakItem(canvas, item, side);
     }
   }
 }

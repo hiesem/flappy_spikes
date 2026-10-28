@@ -547,6 +547,9 @@ class Config {
   /// balance, its right edge pinned to [homeRightEdge].
   static Vector2 homeCoinPillPositionFor(double viewHeight) =>
       Vector2(homeRightEdge, homeTopRowY);
+  // region P26-POL2
+  static double homeStreakTopFor(double viewHeight) => homeTopRowY + homeTopRowHeight + 6;
+  // endregion
   static Rect homeGearRectFor(double viewHeight) => Rect.fromLTWH(
     homeMargin,
     homeTopRowY,

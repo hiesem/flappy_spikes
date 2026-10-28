@@ -324,6 +324,11 @@ void main() {
             expect(g.storage.lvlPending, isNotEmpty);
             await _grey(g);
             _fits(g, page);
+            // PRD-2.6 J4 (PRD:1084-1099): NEXT waits for the reveal choice.
+            page.next();
+            expect(g.state, GameState.results);
+            await page.revealSheet!.choose(false);
+            expect(g.storage.lvlPending, isEmpty);
             page.next();
             await stepSeconds(g, 1);
             // PRD-2.6 §G6 (line 932): a first versus win presents its

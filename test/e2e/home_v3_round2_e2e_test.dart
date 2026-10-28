@@ -201,7 +201,11 @@ void main() async {
         expect(panel.revealReady, isTrue);
         expect(game.menu.wallet.balance, earned);
         expect(game.storage.lvlPending, isNotEmpty);
-        expect(await claimLevelRewards(game, 'tap'), 50);
+        // PRD-2.6 J4 (PRD:1084-1099): LATER pays and closes the reveal.
+        await run(game, 2);
+        await panel.revealSheet!.choose(false);
+        await run(game, .1);
+        expect(await game.menu.levels.payPending(), 0);
         expect(game.menu.wallet.balance, earned + 50);
         await _tap(game, tester, panel.nextButton);
         await run(game, 2.5);

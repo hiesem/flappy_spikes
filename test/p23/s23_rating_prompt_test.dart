@@ -4,7 +4,6 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/playfield.dart';
-import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/services/ads_service.dart';
 import 'package:flappy_spikes/services/monetization.dart';
@@ -98,8 +97,13 @@ void main() {
   Future<void> untilSettled(FlappySpikesGame g) async {
     for (var i = 0; i < 900 && !g.resultsScreen!.settled; i++) {
       final page = g.resultsScreen!;
-      if (page.claimShowing) page.claimButton.onPressed();
+      // PRD-2.6 J4 (PRD:1084-1099): LATER finishes the reveal.
+      final sheet = page.revealSheet;
+      if (sheet != null && sheet.isMounted && sheet.revealed && !sheet.choosing) {
+        await sheet.choose(false);
+      }
       g.update(1 / 60);
+      await flushAndMount(g);
     }
     await flushAndMount(g);
     expect(g.resultsScreen!.settled, isTrue);
@@ -305,8 +309,15 @@ void main() {
       stepGame(g, 4);
       expect(backend.requests, 0, reason: 'the reveal reward is pending');
       expect(g.resultsScreen!.settled, isFalse);
-      expect(await claimLevelRewards(g, 'tap'), 50);
+      // PRD-2.6 J4 (PRD:1084-1099): rating waits through EQUIP.
+      final beforeReward = g.menu.wallet.balance;
+      await g.resultsScreen!.revealSheet!.choose(true);
+      expect(g.menu.wallet.balance, beforeReward + 50);
       expect(g.storage.lvlPending, isEmpty);
+      expect(g.resultsScreen!.settled, isFalse);
+      stepGame(g, 1.7);
+      await flushAndMount(g);
+      expect(await g.menu.levels.payPending(), 0);
       await untilSettled(g);
       stepGame(g, 1.4);
       expect(backend.requests, 0);

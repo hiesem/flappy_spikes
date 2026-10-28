@@ -64,9 +64,16 @@ void main() {
         expect(g.storage.lvlPending, isNotEmpty);
         stepGame(g, 2);
         await flushAndMount(g);
+        // PRD-2.6 J4 (PRD:1084-1099): the page waits for LATER.
+        expect(g.state, GameState.results);
+        await page.revealSheet!.choose(false);
+        expect(g.menu.wallet.balance, before + page.model.levelReward);
+        page.next();
+        stepGame(g, 2);
+        await flushAndMount(g);
         expect(g.state, GameState.start);
         expect(g.resultsScreen, isNull);
-        expect(g.menu.levels.pendingLevelUp, isNotNull);
+        expect(g.menu.levels.pendingLevelUp, isNull);
         expect(g.storage.unclaimedLevelReward, 0);
       },
     );

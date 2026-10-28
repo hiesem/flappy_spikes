@@ -246,7 +246,10 @@ void main() async {
       expect(panel.rank.text, 'HATCHLING · LV 1');
       expect(game.menu.wallet.balance, earned);
       expect(game.storage.lvlPending, isNotEmpty);
-      expect(await claimLevelRewards(game, 'tap'), 50);
+      // PRD-2.6 J4 (PRD:1084-1099): LATER pays and closes the reveal.
+      await _advance(game, 2);
+      await panel.revealSheet!.choose(false);
+      expect(await game.menu.levels.payPending(), 0);
       expect(game.menu.wallet.balance, earned + 50);
       await _advance(game, 3);
       expect(panel.shownReward, earned + 50);

@@ -474,8 +474,8 @@ void main() {
         // WP-L the step used the run: SPIKE ACE needs 1 000 in one run.
         expect(page.barLabel.text, '500 TO FEATHERWEIGHT');
         expect(page.bar.fraction, closeTo(0, 1e-6));
-        // The J2 payout seam remains idempotent when J4 invokes it.
-        expect(await claimLevelRewards(g, 'tap'), 100);
+        // PRD-2.6 J4 (PRD:1084-1099): LATER pays once and closes the sheet.
+        await page.revealSheet!.choose(false);
         expect(page.settled, isTrue, reason: 'rating may start after reveal payout');
         expect(await claimLevelRewards(g, 'tap'), 0);
         expect(g.menu.wallet.balance, before + 100);
@@ -560,8 +560,17 @@ void main() {
         expect(spy.events.where((e) => e.$1 == 'level_reward_claimed'), isEmpty);
         expect(sfx, contains('lvClaim'));
         expect(page.shownReward, 165);
+        // PRD-2.6 J4 (PRD:1084-1099): NEXT waits for LATER and payout.
+        expect(g.state, GameState.results);
+        stepGame(g, 2);
+        await flushAndMount(g);
+        await page.revealSheet!.choose(false);
+        expect(g.menu.wallet.balance, before + 100);
+        expect(await g.menu.levels.payPending(), 0);
+        page.next();
+        await flushAndMount(g);
         expect(g.state, GameState.start);
-        expect(g.menu.levels.pendingLevelUp!.reward, 100);
+        expect(g.menu.levels.pendingLevelUp, isNull);
       },
     );
 
@@ -593,14 +602,20 @@ void main() {
         expect(g.state, GameState.results);
         expect(g.menu.wallet.balance, before);
         expect(g.storage.lvlPending, isNotEmpty);
-        // J4 supplies EQUIP/LATER at this boundary.
+        // PRD-2.6 J4 (PRD:1084-1099): NEXT waits for LATER.
         page.next();
         await flushAndMount(g);
-        stepGame(g, .5);
+        stepGame(g, 2);
         await flushAndMount(g);
-        expect(g.state, GameState.start);
+        expect(g.state, GameState.results);
         expect(g.menu.wallet.balance, before);
         expect(g.storage.lvlPending, isNotEmpty);
+        await page.revealSheet!.choose(false);
+        expect(g.menu.wallet.balance, before + page.model.levelReward);
+        page.next();
+        await flushAndMount(g);
+        expect(g.state, GameState.start);
+        expect(g.storage.lvlPending, isEmpty);
         expect(g.storage.unclaimedLevelReward, 0);
       },
     );

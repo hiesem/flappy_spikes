@@ -39,6 +39,12 @@ import '../items/versus_recorder.dart' show duelOf; // WP-5b
 import '../../versus/opponent.dart'; // WP-5b
 import '../run_summary.dart';
 import 'post_run_screens.dart';
+// region P26-J4
+import 'level_reveal_sheet.dart';
+import '../../skins/catalog.dart';
+import '../../components/skins/item_tile.dart';
+import '../../components/skins/item_art.dart';
+// endregion
 // region P26-G6a
 import '../../components/progression/first_win_reward.dart';
 // endregion
@@ -308,6 +314,9 @@ class ResultsScreen extends PositionComponent
   late final PositionComponent rewardChip;
 
   /// J4 attaches the item reveal here; pending rewards stay persisted until choice.
+  // region P26-J4
+  LevelRevealSheet? revealSheet;
+  // endregion
   void Function()? onReveal;
   bool get revealReady => _revealReady;
   int get surplus => math.max(
@@ -431,6 +440,9 @@ class ResultsScreen extends PositionComponent
     // region P26-J3
     if (_t < ResultsConfig.noLevelSettleAt) return false;
     // J7a/J4: a pending reveal must finish before the rating timer starts.
+    // region P26-J4
+    if (revealSheet != null) return false;
+    // endregion
     if (model.hasClaim && game.menu.levels.pending.isNotEmpty) return false;
     // endregion
     if (!canContinue || _leaving || _claimShowing || _schedule.isNotEmpty) {
@@ -853,7 +865,36 @@ class ResultsScreen extends PositionComponent
     _at(ResultsConfig.levelCoinsAt, _presentLevelCoins);
     _at(ResultsConfig.revealAt, () {
       _revealReady = true;
-      // J4 will show EQUIP/LATER and pay the pending reward at this boundary.
+      // region P26-J4
+      final rows = game.menu.levels.pending;
+      if (rows.isNotEmpty) {
+        final key = rows.last['item'];
+        final item = allItems.where((item) => item.key == key).firstOrNull;
+        revealSheet = LevelRevealSheet(item: item, extraCoins: rows.last['extraCoins'] as int? ?? 0, onFinished: (equipped) {
+          _claimed = true;
+          if (equipped) stage.bird.look = game.menu.items.look;
+          revealSheet = null;
+          if (item != null) {
+            final tileArt = ItemArtCache();
+            final tileHolder = PositionComponent(
+              position: Vector2(218, 280), scale: Vector2.all(48 / 92),
+            );
+            tileHolder.add(ItemTile(
+              item: item, rect: const Rect.fromLTWH(0, 0, 92, 92),
+              state: () => ItemTileState(owned: true, equipped: equipped, tryingOn: false, isNew: !equipped),
+              onPressed: () {}, art: tileArt, cardColor: () => game.stageBackground,
+              tint: () => Config.uiAccent, reduceMotion: () => game.reduceMotion,
+            ));
+            content.add(tileHolder);
+            rewardChip.add(MenuText(
+              '+${formatCoins(model.levelReward)} · ${item.rarity?.label ?? ""} ${item.layer.key.toUpperCase()}',
+              fontSize: 10, color: Config.uiAccent, anchor: Anchor.topCenter,
+            ));
+          }
+        });
+        add(revealSheet!);
+      }
+      // endregion
       onReveal?.call();
     });
   }
@@ -993,6 +1034,9 @@ class ResultsScreen extends PositionComponent
     }
     // endregion
     // region P26-J3
+    // region P26-J4
+    if (model.levelUp && (revealSheet != null || game.menu.levels.pending.isNotEmpty)) return;
+    // endregion
     if (model.levelUp) {
       _leaving = true;
       _stopTicks();

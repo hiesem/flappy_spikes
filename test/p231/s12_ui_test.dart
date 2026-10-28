@@ -14,7 +14,6 @@ import 'package:flappy_spikes/achievements/achievement_toast.dart';
 import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/storage.dart';
-import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/skins/catalog.dart';
 import 'package:flappy_spikes/skins/look.dart';
@@ -132,8 +131,18 @@ void main() async {
       expect(g.storage.lvlPending, isNotEmpty);
       stepGame(g, 1);
       expect(g.achievementToast, isNull, reason: 'reward is pending');
-      expect(await claimLevelRewards(g, 'tap'), greaterThan(0));
+      // PRD-2.6 J4 (PRD:1084-1099): toasts wait through EQUIP.
+      await flushAndMount(g);
+      stepGame(g, 2);
+      expect(g.resultsScreen!.revealSheet!.revealed, isTrue);
+      final beforeReward = g.menu.wallet.balance;
+      final reward = g.menu.levels.pendingLevelUp!.reward;
+      await g.resultsScreen!.revealSheet!.choose(true);
+      expect(g.menu.wallet.balance, beforeReward + reward);
       expect(g.storage.lvlPending, isEmpty);
+      expect(g.achievementToast, isNull);
+      stepGame(g, 1.7);
+      await flushAndMount(g);
       for (var i = 0; i < 900 && g.achievementToast == null; i++) {
         g.update(1 / 60);
       }

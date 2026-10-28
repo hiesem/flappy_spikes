@@ -1726,6 +1726,7 @@ class ResultsWinnerTag extends PositionComponent {
       strokeTo: 0,
     );
   final ParticlePool slapBurst = ParticlePool(capacity: 16);
+  final Paint _slapAlpha = Paint();
   double _time = 0;
   double get slapTilt => _slap.popAt(1).$2;
   bool get hasSticker => CardStickerArt.has(sticker);
@@ -1802,7 +1803,7 @@ class ResultsWinnerTag extends PositionComponent {
     final pop = _slap.popAt(still ? 1 : _time - .7);
     canvas.saveLayer(
       null,
-      Paint()
+      _slapAlpha
         ..color = Color.fromRGBO(
           255,
           255,

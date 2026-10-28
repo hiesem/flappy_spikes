@@ -24,7 +24,13 @@ import 'run_hud.dart';
 /// timeline has ended ([out], WP-5b) their score stays final and their box
 /// (and name chip) is drawn dimmed ([VersusConfig.outOpacity]).
 class VersusBar extends PositionComponent {
-  VersusBar(this.hud) : super(position: Vector2.zero());
+  // region P26-F9f
+  VersusBar(this.hud) : super(position: Vector2.zero()) {
+    // Resolve the lazy chips during setup, before the first HUD render.
+    you;
+    them;
+  }
+  // endregion
 
   final RunHud hud;
 
@@ -82,6 +88,31 @@ class VersusBar extends PositionComponent {
   // region P26-F9f
   final Paint _frameAlpha = Paint();
 
+  static Path _clip(bool mine) {
+    const top = HudConfig.rowTop, h = HudConfig.rowHeight;
+    final avatar = Rect.fromLTWH(
+      mine ? HudConfig.youLeft : HudConfig.themLeft + HudConfig.boxWidth - h,
+      top,
+      h,
+      h,
+    );
+    final score = mine
+        ? Rect.fromLTRB(
+            avatar.right,
+            top,
+            HudConfig.youLeft + HudConfig.boxWidth,
+            top + h,
+          )
+        : Rect.fromLTRB(HudConfig.themLeft, top, avatar.left, top + h);
+    return Path.combine(
+      PathOperation.difference,
+      Path()..addRect(avatar.inflate(CardFrameArt.outset(avatar.width))),
+      Path()..addRect(score),
+    );
+  }
+
+  static final Path _youClip = _clip(true), _themClip = _clip(false);
+
   double get cardTime => hud.game.reduceMotion ? 0 : hud.run.state.runClock;
 
   void _frame(
@@ -103,26 +134,7 @@ class VersusBar extends PositionComponent {
       canvas.save();
     }
     // O82: the score box covers ornaments, also while the whole row fades.
-    final score = avatar.left == HudConfig.youLeft
-        ? Rect.fromLTRB(
-            avatar.right,
-            avatar.top,
-            HudConfig.youLeft + HudConfig.boxWidth,
-            avatar.bottom,
-          )
-        : Rect.fromLTRB(
-            HudConfig.themLeft,
-            avatar.top,
-            avatar.left,
-            avatar.bottom,
-          );
-    canvas.clipPath(
-      Path.combine(
-        PathOperation.difference,
-        Path()..addRect(avatar.inflate(CardFrameArt.outset(avatar.width))),
-        Path()..addRect(score),
-      ),
-    );
+    canvas.clipPath(avatar.left == HudConfig.youLeft ? _youClip : _themClip);
     canvas.translate(avatar.center.dx, avatar.center.dy);
     if (back) {
       CardFrameArt.paintBack(canvas, id, size: avatar.width, t: cardTime);

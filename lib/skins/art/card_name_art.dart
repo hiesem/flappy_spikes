@@ -14,6 +14,16 @@ import '../look.dart';
 /// No ticker, wall clock or random state is owned by this art.
 abstract final class CardNameArt {
   // region P26-F9f
+  /// Prepare the run's fitted glyphs before its first rendered frame.
+  static void prepare(
+    String id,
+    String text, {
+    required double fontSize,
+    required double maxWidth,
+  }) {
+    _NameLayout.obtain(id, text, fontSize, maxWidth);
+  }
+
   /// Counts actual TextPainter layouts, including fitting and glyph outlines.
   @visibleForTesting
   static int get debugLayoutCount => _NameLayout.layouts;

@@ -15,7 +15,6 @@ import 'run_hud.dart';
 class NameChip {
   // region P26-F9f
   NameChip(this.name, this.left, {this.style = ''})
-    // endregion
     : _text = HudText.name(
         name,
         maxWidth: HudConfig.boxWidth - 2 * HudConfig.chipPad,
@@ -23,7 +22,17 @@ class NameChip {
         color: HudConfig.plum,
         spacing: HudConfig.chipNameSpacing,
         font: HudConfig.nameFont,
+      ) {
+    if (style.isNotEmpty) {
+      CardNameArt.prepare(
+        style,
+        shown,
+        fontSize: size,
+        maxWidth: HudConfig.boxWidth - 2 * HudConfig.chipPad,
       );
+    }
+  }
+  // endregion
 
   // region P26-F9f
   final String style;
@@ -60,10 +69,13 @@ class NameChip {
     // region P26-F9f
     if (style.isNotEmpty) {
       if (opacity <= 0) return;
-      canvas.saveLayer(
-        rect.inflate(10),
-        _nameAlpha..color = Color.fromRGBO(255, 255, 255, opacity),
-      );
+      final layered = opacity < 1;
+      if (layered) {
+        canvas.saveLayer(
+          rect.inflate(10),
+          _nameAlpha..color = Color.fromRGBO(255, 255, 255, opacity),
+        );
+      }
       CardNameArt.paint(
         canvas,
         style,
@@ -74,7 +86,7 @@ class NameChip {
         maxWidth: HudConfig.boxWidth - 2 * HudConfig.chipPad,
         cacheLayout: true,
       );
-      canvas.restore();
+      if (layered) canvas.restore();
       return;
     }
     // endregion

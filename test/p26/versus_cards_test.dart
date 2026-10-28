@@ -40,12 +40,25 @@ void main() {
   test(
     'F9f name styles animate, preserve fitting, and freeze with their clock',
     () async {
+      CardNameArt.debugClearLayoutCache();
+      final before = CardNameArt.debugLayoutCount;
       final chip = NameChip('SparklySparrow888', 60, style: 'n_flappy');
+      final prepared = CardNameArt.debugLayoutCount;
+      expect(
+        prepared,
+        greaterThan(before),
+        reason: 'construction prepares glyph layouts',
+      );
       final plain = NameChip('SparklySparrow888', 60);
       expect(chip.shown, plain.shown);
       expect(chip.size, plain.size);
       expect(chip.width, lessThanOrEqualTo(86));
       final a = await pixels((c) => chip.render(c, 1, t: .2));
+      expect(
+        CardNameArt.debugLayoutCount,
+        prepared,
+        reason: 'the first rendered frame must not lay out styled glyphs',
+      );
       final b = await pixels((c) => chip.render(c, 1, t: .6));
       expect(a, isNot(b), reason: 'Flappy must move on the HUD name plate');
       expect(

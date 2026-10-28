@@ -479,7 +479,7 @@ class Purchases {
       if (noAds) await menu.setNoAds(true);
       await menu.wallet.add(
         coins,
-        product == IapProduct.noAds ? CoinSource.noadsBonus : CoinSource.gift,
+        CoinSource.gift,
       );
       // Coins first, then the id (as the packs).
       if (ids.isNotEmpty) await storage.saveGrantedPurchase(ids);

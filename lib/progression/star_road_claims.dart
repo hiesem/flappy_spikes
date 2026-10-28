@@ -27,6 +27,12 @@ class StarRoadClaims {
   Future<void> _loadItems(SharedPreferences prefs) async {
     final raw = prefs.getString(Obf.prefStarRoadItems);
     if (raw == null) return;
+    if (storage.starRoadSeason == 0) {
+      awardedItems.clear();
+      _itemsSeason = 0;
+      await prefs.remove(Obf.prefStarRoadItems);
+      return;
+    }
     final data = jsonDecode(raw) as Map<String, dynamic>;
     _itemsSeason = data['season'] as int;
     awardedItems.clear();

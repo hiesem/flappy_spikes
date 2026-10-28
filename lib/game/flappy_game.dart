@@ -3945,18 +3945,17 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (isItem) {
       final item = allItems.where((i) => i.key == result.item).firstOrNull;
       final finished = Completer<void>();
-      final sheet = LevelRevealSheet(
+      late final LevelRevealSheet sheet;
+      void finishReveal() {
+        if (identical(_starRoadReveal, sheet)) _starRoadReveal = null;
+        if (!finished.isCompleted) finished.complete();
+      }
+      sheet = LevelRevealSheet(
         item: item, extraCoins: result.coins,
         onPay: () async {}, // The journal settled the reward before display.
         revealSound: starRoadClaimSound(reward),
-        onFinished: (_) {
-          _starRoadReveal = null;
-          if (!finished.isCompleted) finished.complete();
-        },
-        onRemoved: () {
-          _starRoadReveal = null;
-          if (!finished.isCompleted) finished.complete();
-        },
+        onFinished: (_) => finishReveal(),
+        onRemoved: finishReveal,
       );
       _starRoadReveal = sheet;
       world.add(sheet);

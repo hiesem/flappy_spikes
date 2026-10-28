@@ -78,6 +78,11 @@ void main() {
               .toList();
           final box = descendants.whereType<MysteryBoxComponent>().single;
           expect(box.look.main, entry.value.color);
+          expect(box.look.dark, switch (entry.value) {
+            Rarity.rare => const Color(0xFF0E6FA6),
+            Rarity.epic => const Color(0xFF6A1A9C),
+            _ => const Color(0xFFC98A00),
+          });
           expect(box.look.label, isNull);
           final texts = descendants
               .whereType<MenuText>()
@@ -95,6 +100,12 @@ void main() {
         expect(states[1], StarRoadNodeState.claimable);
         expect(states[11], StarRoadNodeState.next);
         expect(states[12], StarRoadNodeState.locked);
+        final headerTexts = screen.children
+            .expand((c) => c.children)
+            .whereType<MenuText>()
+            .map((t) => t.text);
+        expect(headerTexts, contains('TIER 10 OF 25 ·'));
+        expect(headerTexts, contains('8 STARS TO TIER 11'));
         expect(
           screen.rows[1]!.children.whereType<MenuButton>().single.size,
           Vector2(70, 32),
@@ -128,7 +139,7 @@ void main() {
     verify: (game, _) async {
       await game.storage.saveStarRoadSeason(1);
       await game.storage.saveStarRoadXp(8);
-      game.reduceMotionOverride = true;
+      game.reduceMotionOverride = false;
       final sounds = <Sfx>[];
       game.sound.onPlay = sounds.add;
       game.openStarRoad(daysLeft: 10, onBack: () {});
@@ -142,6 +153,14 @@ void main() {
       }
       await flushAndMount(game);
       expect(game.storage.coins, 25);
+      expect(
+        game.coinPill.held,
+        isTrue,
+        reason: 'hold until the coin flight ends',
+      );
+      stepGame(game, 2);
+      await flushAndMount(game);
+      expect(game.coinPill.held, isFalse);
       expect(sounds, contains(Sfx.bnCoin));
       expect(game.storage.starRoadClaimed, contains(1));
       expect(
@@ -207,6 +226,57 @@ void main() {
         game.storage.ownedItems.where((key) => key == sheet.item!.key),
         hasLength(1),
       );
+      game.closeStarRoad();
+      await flushAndMount(game);
+      game.openStarRoad(daysLeft: 10, onBack: () {});
+      await flushAndMount(game);
+      final restoredRow = game.starRoadScreen!.rows[10]!;
+      expect(
+        restoredRow.children.whereType<StarRoadTierNode>().single.state,
+        StarRoadNodeState.claimed,
+      );
+      expect(
+        restoredRow.children
+            .expand((c) => c.children)
+            .whereType<ItemTile>()
+            .single
+            .item
+            .key,
+        sheet.item!.key,
+      );
+    },
+  );
+  FlameTester<FlappySpikesGame>(
+    () => createTestGame({}, 711),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'removing an item reveal unblocks back',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, _) async {
+      await game.storage.saveStarRoadSeason(1);
+      await game.storage.saveStarRoadXp(80);
+      game.openStarRoad(daysLeft: 10, onBack: () {});
+      await flushAndMount(game);
+      game.starRoadScreen!.rows[10]!.children
+          .whereType<MenuButton>()
+          .single
+          .onPressed();
+      for (var i = 0; i < 30 && game.starRoadReveal == null; i++) {
+        await Future<void>.value();
+        await flushAndMount(game);
+      }
+      final sheet = game.starRoadReveal!;
+      await flushAndMount(game);
+      sheet.removeFromParent();
+      await flushAndMount(game);
+      expect(game.starRoadReveal, isNull);
+      game.closeStarRoad();
+      expect(game.starRoadScreen, isNull);
+      expect(game.storage.starRoadClaimed, contains(10));
     },
   );
 }

@@ -171,19 +171,18 @@ class StarRoadScreen extends MenuScreen {
                 : Config.menuSoft,
         ),
       );
-      row.add(
-        StarRoadTierNode(
-          tier: tier,
-          state: claimed
-              ? StarRoadNodeState.claimed
-              : reached
-              ? StarRoadNodeState.claimable
-              : tier == road.tier + 1
-              ? StarRoadNodeState.next
-              : StarRoadNodeState.locked,
-          position: Vector2(5, row.height / 2 - 18),
-        ),
+      final node = StarRoadTierNode(
+        tier: tier,
+        state: claimed
+            ? StarRoadNodeState.claimed
+            : reached
+            ? StarRoadNodeState.claimable
+            : tier == road.tier + 1
+            ? StarRoadNodeState.next
+            : StarRoadNodeState.locked,
+        position: Vector2(5, row.height / 2 - 18),
       );
+      row.add(node);
       if (tier == road.tier + 1) {
         row.add(
           MenuTag(
@@ -201,6 +200,12 @@ class StarRoadScreen extends MenuScreen {
         StarRoadRewardKind.epic => Rarity.epic,
         StarRoadRewardKind.legendary => Rarity.legendary,
         _ => null,
+      };
+      final dark = switch (rarity) {
+        Rarity.rare => const Color(0xFF0E6FA6),
+        Rarity.epic => const Color(0xFF6A1A9C),
+        Rarity.legendary => const Color(0xFFC98A00),
+        _ => Config.menuPlum,
       };
       if (rarity == null) {
         row.add(
@@ -229,11 +234,7 @@ class StarRoadScreen extends MenuScreen {
         if (rarity != null && won == null) {
           rewardVisual.add(
             MysteryBoxComponent(
-              look: MysteryBoxLook.colours(
-                rarity.color,
-                Color.lerp(rarity.color, const Color(0xFF000000), .3)!,
-                label: null,
-              ),
+              look: MysteryBoxLook.colours(rarity.color, dark, label: null),
               boxSize: 56,
               position: Vector2(84, row.height / 2),
             ),
@@ -271,9 +272,7 @@ class StarRoadScreen extends MenuScreen {
           MenuText(
             won?.name.toUpperCase() ?? starRoadRewardLabel(reward),
             fontSize: 11,
-            color: rarity == null
-                ? Config.menuPlum
-                : Color.lerp(rarity.color, const Color(0xFF000000), .3)!,
+            color: dark,
             position: Vector2(item ? 122 : 114, 14),
           ),
         );
@@ -304,6 +303,14 @@ class StarRoadScreen extends MenuScreen {
               try {
                 if (await onClaim(tier)) {
                   _claimedNow.add(tier);
+                  node.removeFromParent();
+                  row.add(
+                    StarRoadTierNode(
+                      tier: tier,
+                      state: StarRoadNodeState.claimed,
+                      position: Vector2(5, row.height / 2 - 18),
+                    ),
+                  );
                   showReward();
                   for (final button
                       in row.children.whereType<MenuButton>().toList()) {

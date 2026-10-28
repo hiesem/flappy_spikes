@@ -88,6 +88,15 @@ class FirstWinReward extends PositionComponent
 
   void start() => _time ??= 0;
 
+  void showImmediately() {
+    _time = 1.5;
+    _flew = true;
+    shownCoins = 20;
+    opacity = 1;
+    scale.setAll(1);
+    onCount();
+  }
+
   @override
   void update(double dt) {
     super.update(dt);

@@ -282,8 +282,8 @@ class ResultsScreen extends PositionComponent
       game.goHome();
       return;
     }
-    bonus.start();
-    _at(_t + bonus.remaining + ResultsConfig.nextAfterClaim, game.goHome);
+    bonus.showImmediately();
+    _at(_t + ResultsConfig.nextAfterClaim, game.goHome);
   }
   // endregion
 

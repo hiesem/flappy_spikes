@@ -25,6 +25,12 @@ abstract final class RunEndBookkeeping {
     // region P26-F1
     economyDaily(game.storage, game.services);
     // endregion
+    // region P26-G1b
+    final run = game.run;
+    if (run != null && run.countsForUpload && game.storage.gamesPlayed >= 4) {
+      game.recordStreakRun(runNumber: game.storage.gamesPlayed);
+    }
+    // endregion
     final levels = game.menu.levels;
     levels.services = game.services;
     final recorded = levels.recordRun(

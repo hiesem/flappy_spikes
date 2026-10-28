@@ -8,6 +8,10 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../game/storage.dart';
+// region P26-G1b
+import '../progression/missions.dart';
+import '../run/config/tuning_values.dart';
+// endregion
 import '../run/elements.dart';
 import 'game_services.dart';
 
@@ -276,14 +280,33 @@ class ReminderTruth {
   /// Safe persisted facts available even before the other meta models are
   /// wired. The injected LocalReminders.truthSnapshot supplies their richer
   /// state; absent inputs never make an unsupported promise.
-  factory ReminderTruth.fromStorage(GameStorage store) => ReminderTruth(
-    lastRunDay: store.achLastPlayDay < 0 ? null : store.achLastPlayDay,
-    streakDays: store.gamesPlayed >= 4 ? store.streakDays : 0,
-    missionsUnlocked: store.gamesPlayed >= 4 && store.missionDay >= 0,
-    missionDay: store.missionDay < 0 ? null : store.missionDay,
-    feathers: store.feathers,
-    pieces: (store.puzzlePieces & 15).toRadixString(2).split('1').length - 1,
-  );
+  // region P26-G1b
+  factory ReminderTruth.fromStorage(GameStorage store) {
+    final board = Missions.fromRecords(
+      day: store.missionDay,
+      tier: store.missionTier,
+      rerollDay: store.missionRerollDay,
+      records: store.missions,
+    );
+    final rewards = TuningValues.current.ints('mission_rewards');
+    final lastDay = store.streakLastDay >= 0
+        ? store.streakLastDay
+        : store.achLastPlayDay;
+    return ReminderTruth(
+      lastRunDay: lastDay < 0 ? null : lastDay,
+      unfinishedMissionRewards: [
+        for (final mission in board.missions)
+          if (!mission.complete)
+            rewards[mission.template.difficulty.index],
+      ],
+      streakDays: store.gamesPlayed >= 4 ? store.streakDays : 0,
+      missionsUnlocked: store.gamesPlayed >= 4 && store.missionDay >= 0,
+      missionDay: store.missionDay < 0 ? null : store.missionDay,
+      feathers: store.feathers,
+      pieces: (store.puzzlePieces & 15).toRadixString(2).split('1').length - 1,
+    );
+  }
+  // endregion
 
   ({String type, ReminderText text})? textAt(
     tz.TZDateTime time,

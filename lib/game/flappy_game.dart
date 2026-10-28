@@ -3797,9 +3797,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final target = Config.homePlateCentreFor(viewHeight);
     void land() {
       sound.play(Sfx.skTap);
-      if (!reduceMotion) world.add(ConfettiBurst.burst(
-        origin: target, count: 18, speed: 110, driftX: 0, priority: 1001,
-      ));
+      if (!reduceMotion) {
+        world.add(ConfettiBurst.burst(
+          origin: target, count: 18, speed: 110, driftX: 0, priority: 1001,
+        ));
+      }
     }
     if (reduceMotion) { land(); return; }
     world.add(FetchFlight(

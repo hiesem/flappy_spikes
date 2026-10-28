@@ -65,8 +65,15 @@ Future<EconomySample> flyEconomyRun(
   game.runSeed = seed;
   // Completing runs can queue the legacy level / No-Ads Home popups.
   // Close them through the same Back action a player uses before START.
-  for (var popup = 0; popup < 10 && game.modalPopupOpen; popup++) {
-    expect(game.handleBack(), isTrue);
+  for (var popup = 0; popup < 100 && game.modalPopupOpen; popup++) {
+    final levelPopup = game.levelUpPopup;
+    if (levelPopup != null) {
+      await flushAndMount(game);
+      levelPopup.skipReveal();
+      await levelPopup.reveal.current.choose(false);
+    } else {
+      expect(game.handleBack(), isTrue);
+    }
     await flushAndMount(game);
     stepGame(game, .5);
     await flushAndMount(game);
@@ -148,7 +155,7 @@ Future<EconomySample> flyEconomyRun(
   } finally {
     run.events.off<CoinsEarned>(earned);
   }
-  game.replay();
+  game.goHome();
   await flushAndMount(game);
   stepGame(game, .4);
   await flushAndMount(game);

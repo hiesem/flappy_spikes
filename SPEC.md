@@ -2112,3 +2112,21 @@ flutter test --no-pub -j 4 test/autopilot_test.dart --plain-name 'D human-noise'
 The curve, same-rules and D7 ceiling gates pass at their original thresholds.
 The legacy cooldown audit accounts for D7's consecutive switch-chain rings.
 The owner Pixel 8 ceiling playtest remains required.
+
+
+## 2.6 progression and personal best — DEVIATIONS (PRD-2.6 WP-J, WP-E, WP-K)
+
+- **Levels (J1–J7):** the old ten best-score ranks are replaced by 31 named levels and endless ETERNAL WING from
+  level 32. Counting runs add score points toward the next level; at most one level is earned per run and surplus
+  points are dropped. Each level awards coins and a random unowned shop item, with the J4 rarity/category and coin
+  fallbacks. Existing installs start the new track at UNRANKED; prior coins, items and achievements remain. Pending
+  rewards are persisted and paid once. `lvlRewardLog` records paid rewards for the Levels screen; levels reached
+  before that log show no item (PRD §8.3 decision 23).
+- **Versus brackets (E4 / R3–R4):** matching uses best-score brackets with thresholds 25, 50, 100, 200, 400, 600,
+  800, 1000, 2000 and 5000, independently of the points-based level. Pool ids and the pool entry `level` field retain
+  their names and mean bracket. The player document `level` is the progression level (0–9999); pool `plv` carries
+  that level for the opponent emblem, with missing `plv` displayed as unranked. Existing pool entries remain valid.
+- **Beat your best (WP-K):** Free Fly and solo versus show a BEST score chip when the stored best is positive;
+  debug runs and versus with a rival do not. A gold line and flag mark the hoop count of the best-scoring run when
+  known. Crossing the score, not the line, triggers NEW BEST once and changes the chip to live score; a new best
+  saves its hoop count. Weekly runs use the weekly best marker and NEW WEEK BEST (G5).

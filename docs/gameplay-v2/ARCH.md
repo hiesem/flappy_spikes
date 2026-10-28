@@ -1775,3 +1775,24 @@ arm 0 exists; an arm selector must extend the fairness matrix when introduced.
 The unchanged height equality gate, baseline 12-hoop gate, all 150/250 ceiling
 starts and strict squeeze sweeps pass. Timeline encoding and maximum-score
 protection retain their existing tests without edits.
+
+
+## 2.6 progression and leaderboard module map
+
+The PRD is the contract for work still in flight; this map describes the modules present in this tree, not a claim
+that all 2.6 UI and wiring has shipped. The 2.6 progression and matching rules supersede the older level-based pool
+mapping described in §2.6 of the versus backend notes above.
+
+| Module | Responsibility |
+|---|---|
+| `lib/levels/levels.dart`, `level_track.dart` | Exports and definitions for the points-based 31-level / endless track. |
+| `lib/levels/level_progress.dart`, `level_reward_roll.dart` | Level progress and payout; unowned item selection and fallback rules. |
+| `lib/levels/emblem_painter.dart` | Existing emblem painting; level UI uses the approved 2.6 emblem contract. |
+| `lib/progression/missions.dart`, `day_streak.dart`, `weekly_course.dart` | Daily mission, day-streak / restore, and weekly course models. Additional progression models are specified in PRD WP-G. |
+| `lib/leaderboard/lb_models.dart`, `lb_config.dart` | Own-board transport models and configuration. |
+| `lib/leaderboard/lb_queue.dart`, `lb_submit_hook.dart` | Durable run queue and submission eligibility / wiring. |
+| `lib/leaderboard/lb_service.dart`, `gift_apply.dart` | No-op, fake and Firebase service boundary; crash-safe gift application. |
+| `lib/versus/brackets.dart` | Best-score brackets for pool matching; progression level is carried separately as `plv`. |
+
+See SPEC's 2.6 DEVIATIONS and PRD §8 for settled decisions and build status. In particular, the full-band R2 decision
+in §8.3 replaces the portable-band description in the wave 1 table above.

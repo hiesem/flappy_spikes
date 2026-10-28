@@ -1656,7 +1656,7 @@ every requirement (file:line, test results) and the work packages with paths and
     other approved content in F2. Only if the weak mean exceeds 200 may F2 reduce the scripted Coin Frenzy
     3/3/2 values as far as 1/1/1; if that still exceeds 200, stop and report the measurements.
 
-15. **D1/D6 introduction arbitration (orchestrator, D-TESTS round 2):** a first meet counts as that element's
+18. **D1/D6 introduction arbitration (orchestrator, D-TESTS round 2):** a first meet counts as that element's
     introduction, with no second claim (including an element already met on this install). Never-met switch 15 /
     moving 25 use their first-meet pull; saw 30 has no pull and queues an introduction while never met.
     A queued row waits for the earliest open eight-hoop window after due first meets and existing reservations;
@@ -1674,12 +1674,17 @@ every requirement (file:line, test results) and the work packages with paths and
     supplies an aggregate count. Rows deliberately do not identify ghosts (O51), so the client cannot derive it;
     do not substitute row count or an invented value. Add the field when the aggregate contract is available.
 
-22. **Weekly first meets (G5a, round 4):** weekly courses use the same seeded
-    director plan regardless of a player's lifetime first-meet history. Weekly
+22. **Weekly first meets (G5a, round 4; confirmed by orchestrator):** weekly courses use the same seeded
+    director plan regardless of a player's lifetime first-meet history, with `met: enabled`. Weekly
     runs therefore do not force first-meet introductions; a player can first see
     an element in a weekly run without its introduction. Such encounters still
     update the normal lifetime met state and can satisfy its first-meet record.
     The consecutive-run feather / puzzle-piece rate limit still applies at spawn.
+
+23. **Level reward history (orchestrator, J6):** `lvlRewardLog` keeps the paid reward per level for the Levels screen;
+    levels reached before this change show no item.
+
+Earlier D-TESTS code and test comments referring to decision 15 mean the introduction-arbitration decision, now 18.
 
 ### 8.4 Corrections to the spec text
 

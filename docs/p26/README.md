@@ -31,3 +31,13 @@ from `texts.html` (approved, O93), not from mockup placeholder lines (O83 / Q16)
 
 Not buildable here (they are user actions in the plans and the reports): Firebase deploys and the leaderboard import,
 console / store work (PRD §7.3), Play uploads, device (Pixel) e2e, the privacy-page deploy, release clicks.
+
+
+## 2.6 operational decisions
+
+- O10 / O43: GA4 retention 14 months, Google signals off, BigQuery daily export in the EU multi-region with
+  approximately 425-day table expiry, and a $5 budget alert. Console setup is an owner action (§8.5).
+- Wave 0 deploys functions, Firestore rules and indexes before the 2.6 internal build; the R3/R4 changes are backward
+  compatible. Index field overrides enable leaderboard TTL. Import verified best runs only as directed in PRD §7.
+- O7 keeps test runs in versus pools; there is no pool purge. The separate leaderboard test-player cleanup C9 is
+  release-blocking before production and does not purge versus pools (O52).

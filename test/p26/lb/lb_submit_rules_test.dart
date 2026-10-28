@@ -8,6 +8,7 @@ import '../../helpers.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flappy_spikes/game/storage.dart';
+import 'package:flappy_spikes/leaderboard/lb_config.dart';
 import 'package:flappy_spikes/leaderboard/lb_models.dart';
 import 'package:flappy_spikes/leaderboard/lb_queue.dart';
 import 'package:flappy_spikes/leaderboard/lb_service.dart';
@@ -144,12 +145,18 @@ void main() {
   }
   for (final mode in [HomeMode.freeFly, HomeMode.versus]) {
     final submitted = <Map<String, Object?>>[];
+    final boardFetches = <Map<String, Object?>>[];
     FlameTester<FlappySpikesGame>(() {
       SharedPreferences.setMockInitialValues({});
       return FlappySpikesGame(
         soundEnabled: false,
         leaderboard: FakeLeaderboardService(
-          onCall: (_, request) async {
+          onCall: (kind, request) async {
+            if (kind == LbConfig.boardFunction) {
+              boardFetches.add(request);
+              return null;
+            }
+            if (kind != LbConfig.submitFunction) return null;
             submitted.add(request);
             return {
               'accepted': [
@@ -169,6 +176,11 @@ void main() {
         await game.storage.saveHomeMode(mode);
       },
       verify: (game, _) async {
+        // PRD §7 WP-LB: Home fetches gifts without submitting a run.
+        expect(boardFetches, [
+          {'tab': 'today'},
+        ]);
+        expect(submitted, isEmpty);
         final run = await startRun(game);
         expect(run.countsForAchievements, true);
         expect(run.countsForUpload, true);
@@ -219,8 +231,8 @@ void main() {
       return FlappySpikesGame(
         soundEnabled: false,
         leaderboard: FakeLeaderboardService(
-          onCall: (_, request) async {
-            boardCalls.add(request);
+          onCall: (kind, request) async {
+            if (kind == LbConfig.submitFunction) boardCalls.add(request);
             return null;
           },
         ),

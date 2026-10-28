@@ -4963,15 +4963,15 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // this also backfills a best set before sign-in was available.
     services.submitBestScore(storage.bestScore);
     // region P26-LB2
-    unawaited(
-      leaderboardSubmit.onRunEnd(
-        summary,
-        countsForAchievements: counts,
-        countsForUpload: _countsForUpload,
-        mode: homeMode == HomeMode.freeFly ? 'free' : 'versus',
-        look: menu.items.look,
-      ),
+    // region P26-LB6
+    final lbSubmit = leaderboardSubmit.onRunEnd(
+      summary,
+      countsForAchievements: counts,
+      countsForUpload: _countsForUpload,
+      mode: homeMode == HomeMode.freeFly ? 'free' : 'versus',
+      look: menu.items.look,
     );
+    // endregion P26-LB6
     // endregion
     // region P26-E1
     if (summary != null && _countsForUpload) {
@@ -4997,6 +4997,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // region P26-E2
     unawaited(recordDuelRun(storage, s, counts: _countsForUpload));
     // endregion
+    // region P26-LB6
+    // Construct the flow now so its submit deadline starts at run end,
+    // even when J2 waits for a durable level reward before showing results.
+    final postRun = PostRunFlow(
+      this,
+      submit: summary != null && counts && _countsForUpload ? lbSubmit : null,
+    );
+    // endregion P26-LB6
     // region P26-J2 — the reward roll must be durable before the reveal.
     final progressSettled = levelRecorded.then<void>(
       (_) {},
@@ -5005,11 +5013,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       },
     );
     if (menu.levels.level > previousLevel) {
-      unawaited(progressSettled.whenComplete(() => PostRunFlow(this).run(s)));
+      unawaited(progressSettled.whenComplete(() => postRun.run(s)));
     } else {
       // No roll to reveal: preserve immediate run completion/replay ordering.
       unawaited(progressSettled);
-      unawaited(PostRunFlow(this).run(s));
+      unawaited(postRun.run(s));
     }
     // endregion
 

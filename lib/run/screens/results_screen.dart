@@ -6,6 +6,9 @@ import 'package:flame/components.dart';
 import 'package:flame/extensions.dart';
 
 import '../../components/home/menu_primitives.dart';
+// region P26-LB6
+import '../../components/leaderboard/results_climb.dart';
+// endregion P26-LB6
 import '../../components/levels/emblem_view.dart';
 import '../../components/look_component.dart';
 import '../../components/ui/coin_fly.dart';
@@ -862,6 +865,13 @@ class ResultsScreen extends PositionComponent
   /// came up is paid at once (no reward is ever lost); otherwise straight
   /// home (`goHome()`, a new home arrival).
   void next() {
+    // region P26-LB6
+    final climbs = children.whereType<ResultsClimb>();
+    if (climbs.isNotEmpty) {
+      climbs.first.dismiss();
+      return;
+    }
+    // endregion P26-LB6
     if (!canContinue || _leaving) return;
     _leaving = true;
     _stopTicks(); // PRD-2.2 §14.1 NEXT mid-count stops the ticks

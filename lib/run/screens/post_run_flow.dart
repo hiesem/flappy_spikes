@@ -1,4 +1,9 @@
+import 'dart:async';
+
 import '../../game/flappy_game.dart';
+import '../../leaderboard/lb_models.dart';
+import '../../leaderboard/lb_config.dart';
+import '../../components/leaderboard/results_climb.dart';
 import '../run_summary.dart';
 import '../config/revive_config.dart';
 import 'post_run_screens.dart';
@@ -12,7 +17,10 @@ import 'post_run_screens.dart';
 /// Every slot is optional; with none registered (WP-0b) the results come
 /// up synchronously, exactly like the 1.0 game over.
 class PostRunFlow {
-  PostRunFlow(this.game);
+  PostRunFlow(this.game, {Future<LbSubmitRunResult?>? submit})
+    : _submit = submit == null ? null : timelyClimbSubmit(submit);
+
+  final Future<LbSubmitRunResult?>? _submit;
 
   final FlappySpikesGame game;
 
@@ -29,6 +37,38 @@ class PostRunFlow {
       await bonus.show(game, s);
     }
     await PostRunScreens.results.show(game, s);
+    final page = game.resultsScreen;
+    final submit = _submit;
+    if (page != null && submit != null) {
+      unawaited(
+        submit.then((result) {
+          final climb = ResultsClimb.fromSubmit(
+            result,
+            gamesPlayed: game.storage.gamesPlayed,
+          );
+          if (climb != null &&
+              identical(game.resultsScreen, page) &&
+              !page.leaving) {
+            page.add(climb);
+          }
+        }),
+      );
+    }
     return false;
+  }
+}
+
+/// Starts the deadline at run end, independently of the bonus/results pages.
+Future<LbSubmitRunResult?> timelyClimbSubmit(
+  Future<LbSubmitRunResult?> submit, {
+  Duration? wait,
+}) async {
+  try {
+    return await submit.timeout(
+      wait ?? LbConfig.resultsWait,
+      onTimeout: () => null,
+    );
+  } catch (_) {
+    return null;
   }
 }

@@ -1,3 +1,9 @@
+// region P26-G6b
+import 'dart:async';
+import '../../../progression/flight_guide.dart';
+import '../levels_screen.dart';
+import 'flight_guide_tab.dart';
+// endregion
 import 'dart:ui';
 
 import 'package:flame/components.dart';
@@ -43,6 +49,10 @@ class LevelsTabs extends PositionComponent {
 
   @override
   Future<void> onLoad() async {
+    // region P26-G6b
+    final host = parent;
+    if (host is LevelsScreen) FlightGuideTab.install(host);
+    // endregion
     for (final tab in LevelsTab.values) {
       final rect = LevelsTabsLayout.tab(tab);
       final button = MenuButton(
@@ -77,6 +87,14 @@ class LevelsTabs extends PositionComponent {
 
   void sync(GameStorage storage) {
     if (buttons.isEmpty) return;
+    // region P26-G6b
+    if (selected == LevelsTab.guide &&
+        storage.guideSeenCount != flightGuideMetCount(storage.metElements)) {
+      unawaited(
+        storage.saveGuideSeenCount(flightGuideMetCount(storage.metElements)),
+      );
+    }
+    // endregion
     for (final tab in LevelsTab.values) {
       final open = tab == selected;
       buttons[tab]!.color = open ? Config.menuPink : Config.menuSoft;
@@ -86,7 +104,9 @@ class LevelsTabs extends PositionComponent {
           switch (tab) {
             LevelsTab.worlds => storage.worldsReached > storage.worldsSeen,
             LevelsTab.guide =>
-              storage.metElements.length > storage.guideSeenCount,
+              // region P26-G6b
+              flightGuideHasDot(storage.metElements, storage.guideSeenCount),
+            // endregion
             _ => false,
           };
     }

@@ -1,3 +1,6 @@
+// region P26-G6b
+import '../../progression/flight_guide.dart';
+// endregion
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -97,7 +100,9 @@ class HomeScreen extends PositionComponent
     final storage = game.storage;
     final pendingDot =
         storage.worldsReached > storage.worldsSeen ||
-        storage.metElements.length > storage.guideSeenCount;
+        // region P26-G6b
+        flightGuideHasDot(storage.metElements, storage.guideSeenCount);
+        // endregion
     final shown =
         storage.gamesPlayed > 3 &&
         storage.homeLevelsTag &&

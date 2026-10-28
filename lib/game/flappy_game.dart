@@ -1,3 +1,8 @@
+// region P26-G6b
+import '../progression/flight_guide.dart';
+import '../run/run_events.dart'
+    show RunStarted, ElementSpawned, RideStarted;
+// endregion
 import 'dart:async';
 // region P26-G2c
 import '../components/progression/streak_lost_popup.dart';
@@ -1704,7 +1709,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _startRun(Powerup starter, {WeeklyWeek? weekly}) {
     // endregion
     // region P26-G4b
-    _guideMetAtRunStart = storage.metElements.length;
+    // region P26-G6b
+    _guideMetAtRunStart = flightGuideMetCount(storage.metElements);
+    // endregion
     // endregion
 
     _run?.disposeRun();
@@ -1763,6 +1770,36 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     achievements.beginRun(counts: run.countsForAchievements);
     runStats = RunStats(run); // 2.3.0 (18) debug panel run rows
     _run = run;
+    // region P26-G6b
+    void guideMet(String id) {
+      unawaited(storage.markElementMet(id));
+      if (run.countsForAchievements &&
+          flightGuideMetCount(storage.metElements) ==
+              flightGuideEntries.length) {
+        achievements.onFlightGuideComplete();
+      }
+    }
+
+    run.events.on<RunStarted>((event) {
+      guideMet('spikes');
+      if (event.setup.starter == Powerup.bigHoops ||
+          event.setup.extraStarters.contains(Powerup.bigHoops)) {
+        guideMet('big_hoops');
+      }
+      if (event.setup.starter == Powerup.shield ||
+          event.setup.extraStarters.contains(Powerup.shield)) {
+        guideMet('shield');
+      }
+    });
+    run.events.on<ElementSpawned>((event) {
+      if (event.onScreen) guideMet(event.element.storageId);
+    });
+    run.events.on<RideStarted>((event) {
+      if (event.kind == RideKind.portal && event.rideId != null) {
+        guideMet('portal_${event.rideId!.storageId}');
+      }
+    });
+    // endregion
     run.events.on<HighlightStarted>(
       (event) => showcaseProgress.onHighlight(
         event.id,
@@ -5038,8 +5075,11 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         }
       }
       if ((reached > previous && reached > storage.worldsSeen) ||
-          (storage.metElements.length > _guideMetAtRunStart &&
-              storage.metElements.length > storage.guideSeenCount)) {
+          (// region P26-G6b
+          flightGuideMetCount(storage.metElements) > _guideMetAtRunStart &&
+              flightGuideHasDot(storage.metElements, storage.guideSeenCount)
+          // endregion
+          )) {
         unawaited(storage.saveHomeLevelsTag(true));
       }
     }

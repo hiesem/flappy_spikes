@@ -25,7 +25,13 @@ abstract final class PerfectBurst {
 
   /// Spawns the burst into [pool] centred at [at]; returns the number of
   /// squares actually spawned (fewer when the pool is full).
-  static int emit(ParticlePool pool, Offset at, int tier, math.Random r) {
+  static int emit(
+    ParticlePool pool,
+    Offset at,
+    int tier,
+    math.Random r, {
+    List<Color> palette = colors,
+  }) {
     final n = countFor(tier);
     var spawned = 0;
     for (var i = 0; i < n; i++) {
@@ -48,7 +54,7 @@ abstract final class PerfectBurst {
         vy: math.sin(a) * d / life,
         w: size,
         h: _range(r, PartsConfig.burstSizeMin, PartsConfig.burstSizeMax),
-        color: colors[i % 3],
+        color: palette[i % palette.length],
         life: life,
       );
       if (p != null) spawned++;

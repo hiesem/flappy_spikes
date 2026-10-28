@@ -119,13 +119,19 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
       position: Vector2(160, HudConfig.bestStickerY),
     );
     add(_BestStickerClock(this, bestSticker!));
-    final at = run.geo.toTrack(Vector2(160, HudConfig.bestStickerY));
-    PerfectBurst.emit(
-      run.particles,
-      Offset(at.x, at.y),
-      1,
-      math.Random(run.setup.seed),
-    );
+    const gold = [HudConfig.gold, Color(0xFFFFD54A), Color(0xFFFFFFFF)];
+    final bird = run.game.runBirdPosition ?? run.geo.normalBirdPosition();
+    final random = math.Random(run.setup.seed);
+    for (final screen in [bird, Vector2(bird.x, 106)]) {
+      final at = run.geo.toTrack(screen);
+      PerfectBurst.emit(
+        run.particles,
+        Offset(at.x, at.y),
+        1,
+        random,
+        palette: gold,
+      );
+    }
     run.game.sound.play(Sfx.perfect1);
   }
 
@@ -140,8 +146,10 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
       _bestAge = _bestAge! + dt;
       final sticker = bestSticker;
       if (sticker != null) {
-        sticker.opacity = ((HudConfig.bestMomentLength - _bestAge!) / .24)
-            .clamp(0, 1);
+        final exit = ((_bestAge! - .95) / .25).clamp(0.0, 1.0);
+        sticker.opacity = 1 - exit;
+        sticker.scale.setAll(1 - .12 * exit);
+        sticker.position.y = HudConfig.bestStickerY - 6 * exit;
         if (_bestAge! >= HudConfig.bestMomentLength || !bestChipVisible) {
           sticker.parent?.removeFromParent();
           bestSticker = null;

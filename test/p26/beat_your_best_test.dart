@@ -1,7 +1,10 @@
+import 'dart:ui' show Color;
+
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/run/effects/gold_sticker.dart';
+import 'package:flappy_spikes/run/config/hud_config.dart';
 import 'package:flappy_spikes/run/hud/run_hud.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
 import 'package:flappy_spikes/run/run_scaled_world.dart';
@@ -72,7 +75,28 @@ void main() {
       run.state.hoopsPassed = 3;
       run.ctx.addScore(42);
       expect(hud.bestSticker, isNull);
+      final bird = g.runBirdPosition!;
+      final startCount = run.particles.particles.length;
       run.ctx.addScore(5); // streak/bonus can beat the score before the line
+      final bursts = run.particles.particles.skip(startCount).toList();
+      expect(bursts, hasLength(22));
+      expect(
+        bursts.every(
+          (p) => {
+            HudConfig.gold,
+            const Color(0xFFFFD54A),
+            const Color(0xFFFFFFFF),
+          }.contains(p.color),
+        ),
+        isTrue,
+      );
+      final at = run.geo.toTrack(bird);
+      expect(bursts.first.x, closeTo(at.x, .001));
+      expect(bursts.first.y, closeTo(at.y, .001));
+      expect(
+        bursts.last.y,
+        closeTo(run.geo.toTrack(Vector2(bird.x, 106)).y, .001),
+      );
       await flushAndMount(g);
       final sticker = hud.bestSticker!;
       expect(sticker.text, 'NEW BEST!');
@@ -93,7 +117,12 @@ void main() {
       expect(identical(sticker, hud.bestSticker), isTrue);
       expect(hud.bestChipScore, 49);
       expect(hud.descendants().whereType<GoldSticker>(), hasLength(1));
-      hud.update(1.02);
+      hud.update(.659);
+      expect(sticker.position.y, closeTo(114, .01));
+      hud.update(.125);
+      expect(sticker.position.y, closeTo(111, .05));
+      expect(sticker.scale.x, closeTo(.94, .002));
+      hud.update(.236);
       await flushAndMount(g);
       expect(hud.bestSticker, isNull);
       run.ctx.addScore(1);
@@ -216,7 +245,13 @@ void main() {
         final line = run.bestLine!;
         line.update(0);
         expect(line.screenX, closeTo(hoop.planeX - 320, .001));
-        expect(line.visible, isFalse); // more than 1.25 s ahead
+        // POL2: the marker enters from the right edge instead of popping in.
+        run.state.camX = hoop.planeX - 321;
+        line.update(0);
+        expect(line.visible, isFalse);
+        run.state.camX = hoop.planeX - 319;
+        line.update(0);
+        expect(line.visible, isTrue);
         run.state.camX = hoop.planeX - 200;
         line.update(0);
         expect(line.screenX, closeTo(200, .001));

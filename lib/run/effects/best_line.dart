@@ -35,10 +35,7 @@ class BestLine extends PositionComponent {
   bool get visible =>
       run.bestGoalEligible &&
       _trackX != null &&
-      (_collapseAge != null ||
-          screenX <=
-              RunConfig.birdX +
-                  run.state.forwardSpeed * HudConfig.bestLineLead);
+      (_collapseAge != null || screenX <= 320);
 
   void collapse() {
     if (_collapseAge != null) return;

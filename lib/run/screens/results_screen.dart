@@ -374,6 +374,9 @@ class ResultsScreen extends PositionComponent
   /// J4 attaches the item reveal here; pending rewards stay persisted until choice.
   // region P26-J4
   LevelRevealSheet? revealSheet;
+  LevelCatchUpSheet? _catchUpReveal;
+  LevelRevealSheet? get activeRevealSheet =>
+      _catchUpReveal?.isLoaded == true ? _catchUpReveal!.current : revealSheet;
   // endregion
   void Function()? onReveal;
   bool get revealReady => _revealReady;
@@ -499,7 +502,7 @@ class ResultsScreen extends PositionComponent
     if (_t < ResultsConfig.noLevelSettleAt) return false;
     // J7a/J4: a pending reveal must finish before the rating timer starts.
     // region P26-J4
-    if (revealSheet != null) return false;
+    if (revealSheet != null || _catchUpReveal != null) return false;
     // endregion
     if (model.hasClaim && game.menu.levels.pending.isNotEmpty) return false;
     // endregion
@@ -1083,7 +1086,17 @@ class ResultsScreen extends PositionComponent
       _revealReady = true;
       // region P26-J4
       final rows = game.menu.levels.pending;
-      if (rows.isNotEmpty) {
+      if (rows.length > 1) {
+        final sequence = LevelCatchUpSheet(rewards: rows, onFinished: () {
+          _claimed = true;
+          stage.bird.look = game.menu.items.look;
+          _catchUpReveal?.removeFromParent();
+          _catchUpReveal = null;
+          if (_albumDue) unawaited(_showAlbumReveal());
+        });
+        _catchUpReveal = sequence;
+        add(sequence);
+      } else if (rows.isNotEmpty) {
         final key = rows.last['item'];
         final item = allItems.where((item) => item.key == key).firstOrNull;
         revealSheet = LevelRevealSheet(item: item, extraCoins: rows.last['extraCoins'] as int? ?? 0, onFinished: (equipped) {
@@ -1319,7 +1332,7 @@ class ResultsScreen extends PositionComponent
     // endregion
     // region P26-J3
     // region P26-J4
-    if (model.levelUp && (revealSheet != null || game.menu.levels.pending.isNotEmpty)) return;
+    if (model.levelUp && (revealSheet != null || _catchUpReveal != null || game.menu.levels.pending.isNotEmpty)) return;
     // endregion
     if (model.levelUp) {
       _leaving = true;

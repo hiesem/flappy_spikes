@@ -5471,7 +5471,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.numpadEnter) {
       // region P26-POL3
-      final sheet = state == GameState.results ? _results?.revealSheet : null;
+      final sheet = state == GameState.results ? _results?.activeRevealSheet : null;
       if (sheet != null && sheet.revealed) {
         unawaited(sheet.choose(sheet.item != null));
         return KeyEventResult.handled;
@@ -5487,7 +5487,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     if (key == LogicalKeyboardKey.escape) {
       // region P26-POL3
-      final sheet = state == GameState.results ? _results?.revealSheet : null;
+      final sheet = state == GameState.results ? _results?.activeRevealSheet : null;
       if (sheet != null && sheet.revealed) {
         unawaited(sheet.choose(false));
         return KeyEventResult.handled;

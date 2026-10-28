@@ -3135,6 +3135,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   // region P26-G5a
   Future<void> _weeklyWrites = Future.value();
+  int _weeklyPendingWrites = 0;
 
   /// Completes after all queued weekly run-end bookkeeping and payouts.
   Future<void> get weeklyWritesSettled => _weeklyWrites;
@@ -3144,34 +3145,41 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (!run.setup.weekly || startedAt == null || !run.countsForUpload) return;
     final now = storage.now();
     final startedWeek = WeeklyWeek.at(startedAt);
+    _weeklyPendingWrites++;
     _weeklyWrites = _weeklyWrites.then((_) async {
-      final course = WeeklyCourse(
-        weeklyBest: storage.weeklyBest,
-        weeklyRewards: storage.weeklyRewards,
-      ).refresh(now);
-      final result = course.finishRun(
-        now: now,
-        startedWeek: startedWeek,
-        hoops: hoops,
-      );
-      // Save both state keys before granting; queue all weekly transitions so
-      // a second run cannot read the state while the first is still saving.
-      await storage.saveWeeklyBest(result.course.weeklyBest);
-      await storage.saveWeeklyRewards(result.course.weeklyRewards);
-      services.track('weekly_run', {
-        'week': startedWeek.key,
-        'hoops': hoops,
-        'best': result.course.bestHoops,
-      });
-      if (result.coins > 0) {
-        await menu.wallet.add(result.coins, CoinSource.weekly);
-        for (final reward in result.rewards.entries) {
-          services.track('weekly_reward', {
-            'week': startedWeek.key,
-            'tier': reward.key,
-            'coins': reward.value,
-          });
+      try {
+        final course = WeeklyCourse(
+          weeklyBest: storage.weeklyBest,
+          weeklyRewards: storage.weeklyRewards,
+        ).refresh(now);
+        final result = course.finishRun(
+          now: now,
+          startedWeek: startedWeek,
+          hoops: hoops,
+        );
+        // Save both state keys before granting; queue all weekly transitions so
+        // a second run cannot read the state while the first is still saving.
+        await storage.saveWeeklyBest(result.course.weeklyBest);
+        await storage.saveWeeklyRewards(result.course.weeklyRewards);
+        services.track('weekly_run', {
+          'week': startedWeek.key,
+          'hoops': hoops,
+          'best': result.course.bestHoops,
+        });
+        if (result.coins > 0) {
+          await menu.wallet.add(result.coins, CoinSource.weekly);
+          for (final reward in result.rewards.entries) {
+            services.track('weekly_reward', {
+              'week': startedWeek.key,
+              'tier': reward.key,
+              'coins': reward.value,
+            });
+          }
         }
+      } catch (error) {
+        debugPrint('weekly run bookkeeping failed: ${redactSecrets(error)}');
+      } finally {
+        _weeklyPendingWrites--;
       }
     });
   }
@@ -5551,7 +5559,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // (Home polls best / last / level from the storage.)
     // region P26-G5a
     // A quick return Home must not reload stale weekly state over a payout.
-    _homeReload = weeklyWritesSettled.then((_) => storage.load()).then((_) {
+    final reload = _weeklyPendingWrites == 0
+        ? storage.load()
+        : weeklyWritesSettled.then((_) => storage.load());
+    _homeReload = reload.then((_) {
       sound.muted = storage.muteSound;
     });
     // endregion

@@ -16,6 +16,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers.dart';
 
+class _FailWeeklyCoinOnce extends AnalyticsSpy {
+  bool failNext = true;
+  bool failed = false;
+
+  @override
+  void logEvent(String name, [Map<String, Object>? parameters]) {
+    if (failNext &&
+        name == 'coins_earned' &&
+        parameters?['source'] == 'weekly') {
+      failNext = false;
+      failed = true;
+      throw StateError('simulated weekly wallet failure');
+    }
+    super.logEvent(name, parameters);
+  }
+}
+
 void main() {
   final monday = DateTime.utc(2026, 10, 26);
   FlameTester<FlappySpikesGame>(() {
@@ -164,6 +181,58 @@ void main() {
       await reloaded.load();
       expect(reloaded.weeklyBest, game.storage.weeklyBest);
       expect(reloaded.weeklyRewards, isEmpty);
+    },
+  );
+
+  final fault = _FailWeeklyCoinOnce();
+  FlameTester<FlappySpikesGame>(() {
+    SharedPreferences.setMockInitialValues({
+      Obf.prefGamesPlayed: 6,
+      Obf.prefBestHoops: 40,
+    });
+    return FlappySpikesGame(
+      soundEnabled: false,
+      worldHeight: 711,
+      clock: () => monday,
+      services: fault,
+    );
+  }, gameSize: Vector2(320, 711)).testGameWidget(
+    'a weekly wallet failure is logged and does not block Home or later runs',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+    },
+    verify: (game, _) async {
+      await game.startWeeklyCourse();
+      await flushAndMount(game);
+      final first = game.run!;
+      first.state.hoopsPassed = 30;
+      game.endRun(first.endRun());
+      await game.weeklyWritesSettled;
+      expect(fault.failed, isTrue);
+      expect(game.storage.weeklyRewards, {15, 30});
+      expect(game.storage.coins, 120);
+      await game.storage.saveMuteSound(true);
+      game.sound.muted = false;
+      await flushAndMount(game);
+      game.replay();
+      await flushAndMount(game);
+      stepGame(game, 0.5);
+      await flushAndMount(game);
+      expect(game.sound.muted, isTrue);
+      expect(game.storage.weeklyRewards, {15, 30});
+      await game.startWeeklyCourse();
+      await flushAndMount(game);
+      final second = game.run!;
+      second.state.hoopsPassed = 60;
+      game.endRun(second.endRun());
+      await game.weeklyWritesSettled;
+      expect(game.storage.weeklyRewards, {15, 30, 60});
+      expect(game.storage.coins, 270);
+      expect(
+        fault.events.where((e) => e.$1 == 'weekly_reward').single.$2!['tier'],
+        60,
+      );
     },
   );
 

@@ -230,8 +230,9 @@ void main() async {
       final screen = game.levelsScreen!;
       expect(screen.header.barText.text, '800 TO KINGFISHER');
       expect(screen.header.progress, 0);
+      // PRD-2.6 G4 tabs shift the actual row into the new list band.
       expect(screen.scroll.offset,
-        (Config.levelsRowTop(9) + Config.levelsRowHeight / 2 -
+        (screen.rows[9].position.y + Config.levelsRowHeight / 2 -
           screen.scroll.viewport.height / 2 - screen.scroll.viewport.top).clamp(0, screen.scroll.maxOffset));
     },
   );

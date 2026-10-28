@@ -2875,10 +2875,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // equip's analytics so both paths log the same events.
     services.logItemEquip(item.layer, item.id);
     // PRD-2.3.1 §12.2 / §12.5 the shop always counts; its toast shows at once.
+    // region P26-F10a
     achievements.onShopPurchase(
-      owned: items.ownedCount,
-      total: kCollectibleTotal,
+      owned: items.soldOwnedCount,
+      total: kSoldCollectibleTotal,
     );
+    // endregion
     // QA P19: the toast is queued once the unlock is durable.
     unawaited(achievements.flush().then((_) => showAchievementToasts()));
     _coinPill

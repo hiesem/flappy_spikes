@@ -63,6 +63,11 @@ class ItemStore extends ChangeNotifier {
     // endregion
     final item = itemById(layer, id);
     if (item == null) return false;
+    // region P26-F10a
+    if (item.unlock case final unlock?) {
+      return _storage.ach.unlocked.contains(unlock.key);
+    }
+    // endregion
     // region P26-F9a
     // Zero-priced skill cosmetics are not free gifts; F10a supplies unlocks.
     if (item.isFree && !item.isSkillOnly) return true;
@@ -96,9 +101,11 @@ class ItemStore extends ChangeNotifier {
   // region P26-J2
   /// Grants a persisted reward without equipping it. Replays are harmless.
   Future<void> grant(String key) async {
-    if (!allItems.any((item) => item.key == key)) {
+    // region P26-F10a
+    if (!allItems.any((item) => item.key == key && !item.isSkillOnly)) {
       throw ArgumentError.value(key, 'key', 'Unknown reward item');
     }
+    // endregion
     await _storage.saveOwnedItems({..._storage.ownedItems, key});
     notifyListeners();
   }
@@ -143,6 +150,15 @@ class ItemStore extends ChangeNotifier {
   // region P26-F9a
   int get ownedCount =>
       kShopLayers.fold(0, (count, layer) => count + ownedCountFor(layer));
+  // endregion
+
+  // region P26-F10a
+  int get soldOwnedCount => allItems
+      .where(
+        (item) =>
+            !item.isNone && !item.isSkillOnly && isOwned(item.layer, item.id),
+      )
+      .length;
   // endregion
 
   /// Owned collectibles on [layer] (the "none" entries never count).

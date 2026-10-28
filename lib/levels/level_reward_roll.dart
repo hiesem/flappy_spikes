@@ -7,12 +7,6 @@ import 'level_track.dart';
 /// A persisted J4 outcome. [fallback] is the analytics tag from J10.
 typedef LevelRewardRoll = ({String? item, int extraCoins, String fallback});
 
-// F10 adds SkinItem.unlock. An instance getter takes precedence over this
-// compatibility extension when that package merges; no reflection is needed.
-extension _PreSkillCatalogue on SkinItem {
-  Object? get unlock => null;
-}
-
 /// PRD-2.6 J4 / R9 / O21. Selection order is catalogue order and the supplied
 /// random stream is the only randomness. Pending entries are item keys.
 LevelRewardRoll rollLevelReward(

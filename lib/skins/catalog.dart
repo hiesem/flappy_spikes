@@ -1,3 +1,6 @@
+// region P26-F10a
+import '../achievements/achievement_catalog.dart';
+// endregion
 import 'look.dart';
 
 /// One purchasable/equippable wardrobe item (PRD-menu-v2 §5).
@@ -14,6 +17,9 @@ class SkinItem {
     required this.rarity,
     required this.price,
     this.animated = false,
+    // region P26-F10a
+    this.unlock,
+    // endregion
     // region P26-F9a
     this.cardKind,
     this.isSkillOnly = false,
@@ -28,6 +34,9 @@ class SkinItem {
   final Rarity? rarity;
   final int price;
   final bool animated;
+  // region P26-F10a
+  final AchievementId? unlock;
+  // endregion
   // region P26-F9a
   final CardKind? cardKind;
   /// Skill ownership will be derived from achievements by F10a. Never sold.
@@ -73,6 +82,11 @@ const List<SkinItem> kBirds = [
   SkinItem(layer: SkinLayer.bird, id: 'golden', name: 'Golden', rarity: Rarity.legendary, price: 5000, animated: true),
   SkinItem(layer: SkinLayer.bird, id: 'rainbow', name: 'Rainbow', rarity: Rarity.legendary, price: 5000, animated: true),
   SkinItem(layer: SkinLayer.bird, id: 'phoenix', name: 'Phoenix', rarity: Rarity.legendary, price: 5000, animated: true),
+  // region P26-F10a
+  SkinItem(layer: SkinLayer.bird, id: 'magpie', name: 'Magpie', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.itemAll),
+  SkinItem(layer: SkinLayer.bird, id: 'prism', name: 'Prism', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.hoops100),
+  SkinItem(layer: SkinLayer.bird, id: 'daynight', name: 'Day & Night', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.daily30),
+  // endregion
 ];
 
 /// The 29 gear items plus the free "none" entry (§5.2; PRD-2.3 §19.3: the
@@ -108,6 +122,11 @@ const List<SkinItem> kGear = [
   SkinItem(layer: SkinLayer.gear, id: 'crystal', name: 'Crystal wings', rarity: Rarity.legendary, price: 5000, animated: true),
   SkinItem(layer: SkinLayer.gear, id: 'atom', name: 'Atom', rarity: Rarity.legendary, price: 5000, animated: true),
   SkinItem(layer: SkinLayer.gear, id: 'disco', name: 'Disco ball', rarity: Rarity.legendary, price: 5000, animated: true),
+  // region P26-F10a
+  SkinItem(layer: SkinLayer.gear, id: 'goggles', name: 'Flight Goggles', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.rideAll),
+  SkinItem(layer: SkinLayer.gear, id: 'hoopchain', name: 'Hoop Necklace', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.hoops50),
+  SkinItem(layer: SkinLayer.gear, id: 'peacock', name: 'Peacock Fan', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.skinAll),
+  // endregion
 ];
 
 /// The 29 hats plus the free "none" entry (§5.3; PRD-2.3 §19.3 grid order).
@@ -142,6 +161,11 @@ const List<SkinItem> kHats = [
   SkinItem(layer: SkinLayer.hat, id: 'halo', name: 'Halo', rarity: Rarity.legendary, price: 5000, animated: true),
   SkinItem(layer: SkinLayer.hat, id: 'planet', name: 'Ringed planet', rarity: Rarity.legendary, price: 5000, animated: true),
   SkinItem(layer: SkinLayer.hat, id: 'sunburst', name: 'Sunburst', rarity: Rarity.legendary, price: 5000, animated: true),
+  // region P26-F10a
+  SkinItem(layer: SkinLayer.hat, id: 'skycrown', name: 'Sky Crown', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.skyHigh),
+  SkinItem(layer: SkinLayer.hat, id: 'nest', name: 'Nest Hat', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.masterHatch),
+  SkinItem(layer: SkinLayer.hat, id: 'jackpot', name: 'Jackpot', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.masterJackpot),
+  // endregion
 ];
 
 /// The 30 hoop skins (§5.4; PRD-2.3 §19.3 grid order).
@@ -176,6 +200,11 @@ const List<SkinItem> kHoops = [
   SkinItem(layer: SkinLayer.hoop, id: 'galaxy', name: 'Galaxy', rarity: Rarity.legendary, price: 5000, animated: true),
   SkinItem(layer: SkinLayer.hoop, id: 'blackhole', name: 'Black hole', rarity: Rarity.legendary, price: 5000, animated: true),
   SkinItem(layer: SkinLayer.hoop, id: 'aurora', name: 'Aurora', rarity: Rarity.legendary, price: 5000, animated: true),
+  // region P26-F10a
+  SkinItem(layer: SkinLayer.hoop, id: 'spikes', name: 'Steel Spikes', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.rankSpikeAce),
+  SkinItem(layer: SkinLayer.hoop, id: 'phoenixring', name: 'Phoenix Ring', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.rankPhoenix),
+  SkinItem(layer: SkinLayer.hoop, id: 'legend', name: 'Legend Ring', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.rankLegend),
+  // endregion
 ];
 
 /// The 30 trails (§5.5; PRD-2.3 §19.3 grid order).
@@ -210,6 +239,11 @@ const List<SkinItem> kTrails = [
   SkinItem(layer: SkinLayer.trail, id: 'echo', name: 'Afterimage', rarity: Rarity.legendary, price: 5000),
   SkinItem(layer: SkinLayer.trail, id: 'supernova', name: 'Supernova', rarity: Rarity.legendary, price: 5000, animated: true),
   SkinItem(layer: SkinLayer.trail, id: 'paint', name: 'Paint stroke', rarity: Rarity.legendary, price: 5000, animated: true),
+  // region P26-F10a
+  SkinItem(layer: SkinLayer.trail, id: 'thread', name: 'Golden Thread', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.bullseye),
+  SkinItem(layer: SkinLayer.trail, id: 'constellation', name: 'Constellation', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.masterStars),
+  SkinItem(layer: SkinLayer.trail, id: 'fireflies', name: 'Firefly Swarm', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true, unlock: AchievementId.masterJar),
+  // endregion
 ];
 
 // region P26-F9a
@@ -232,9 +266,15 @@ const List<SkinItem> kCardFrames = [
   SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_storm', name: 'Thunderhead', rarity: Rarity.epic, price: 2000),
   SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_wings', name: 'Golden Wings', rarity: Rarity.legendary, price: 5000),
   SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'f_orbit', name: 'Cosmic Orbit', rarity: Rarity.legendary, price: 5000),
-  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'pecking', name: 'Pecking Order', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
-  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'roost', name: 'Roost Ruler', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
-  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'prey', name: 'Bird of Prey', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
+  // region P26-F10a
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'pecking', unlock: AchievementId.vs10, name: 'Pecking Order', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
+  // endregion
+  // region P26-F10a
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'roost', unlock: AchievementId.vs50, name: 'Roost Ruler', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
+  // endregion
+  // region P26-F10a
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.frame, id: 'prey', unlock: AchievementId.birdOfPrey, name: 'Bird of Prey', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
+  // endregion
 ];
 
 const List<SkinItem> kCardNames = [
@@ -255,9 +295,15 @@ const List<SkinItem> kCardNames = [
   SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_glitch', name: 'Glitch', rarity: Rarity.epic, price: 2000),
   SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_fire', name: 'On Fire', rarity: Rarity.legendary, price: 5000),
   SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_stardust', name: 'Stardust', rarity: Rarity.legendary, price: 5000),
-  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_sky', name: 'Skywriter', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
-  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_thunder', name: 'Thunderstruck', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
-  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_marquee', name: 'Headliner', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
+  // region P26-F10a
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_sky', unlock: AchievementId.secondWind, name: 'Skywriter', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
+  // endregion
+  // region P26-F10a
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_thunder', unlock: AchievementId.albatross, name: 'Thunderstruck', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
+  // endregion
+  // region P26-F10a
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.name, id: 'n_marquee', unlock: AchievementId.threeLittleBirds, name: 'Headliner', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
+  // endregion
 ];
 
 const List<SkinItem> kCardStickers = [
@@ -278,9 +324,15 @@ const List<SkinItem> kCardStickers = [
   SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_disco', name: 'Disco', rarity: Rarity.epic, price: 2000),
   SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_champ', name: 'Champion', rarity: Rarity.legendary, price: 5000),
   SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_fireworks', name: 'Fireworks', rarity: Rarity.legendary, price: 5000),
-  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_unstop', name: 'Unstoppable', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
-  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_flawless', name: 'Flawless', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
-  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_topflock', name: 'Top of the Flock', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
+  // region P26-F10a
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_unstop', unlock: AchievementId.ironBeak, name: 'Unstoppable', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
+  // endregion
+  // region P26-F10a
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_flawless', unlock: AchievementId.flawless, name: 'Flawless', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
+  // endregion
+  // region P26-F10a
+  SkinItem(layer: SkinLayer.card, cardKind: CardKind.sticker, id: 's_topflock', unlock: AchievementId.topBird, name: 'Top of the Flock', rarity: Rarity.legendary, price: 0, animated: true, isSkillOnly: true),
+  // endregion
 ];
 
 /// The 51 sold card cosmetics (skill entries remain separate).
@@ -347,7 +399,11 @@ const Map<SkinLayer, List<SkinItem>> kCatalog = {
 // PRD:834: 148 wardrobe collectibles + 60 card cosmetics.
 // F10a follow-up (O81 / PRD:855): split PROUD PEACOCK's sold-only 199 goal
 // and owned count from this UI total, which includes the nine skill cards.
-const int kCollectibleTotal = 208;
+// region P26-F10a
+const int kCollectibleTotal = 223;
+const int kSoldCollectibleTotal = 199;
+// TODO(F10c): register the skill item painters when both art packages merge.
+// endregion
 // endregion
 
 /// Items added in the 2.3 update (PRD-2.3 §19.3): their NEW badge shows

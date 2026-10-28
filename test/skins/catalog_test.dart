@@ -9,14 +9,14 @@ int total(List<SkinItem> items) =>
 void main() {
   group('kCatalog shape', () {
     // PRD-2.3 §19.6: every layer has 30 entries (hats and gear: 29 + None).
-    test('layer sizes: 30 per layer and 148 collectible', () {
-      expect(itemsFor(SkinLayer.bird).length, 30);
-      expect(itemsFor(SkinLayer.gear).length, 30);
-      expect(itemsFor(SkinLayer.hat).length, 30);
-      expect(itemsFor(SkinLayer.hoop).length, 30);
-      expect(itemsFor(SkinLayer.trail).length, 30);
-      expect(allItems.length, 210);
-      expect(kCollectibleTotal, 208);
+    test('PRD F10: 33 per shop layer and 223 collectibles', () {
+      expect(itemsFor(SkinLayer.bird).length, 33);
+      expect(itemsFor(SkinLayer.gear).length, 33);
+      expect(itemsFor(SkinLayer.hat).length, 33);
+      expect(itemsFor(SkinLayer.hoop).length, 33);
+      expect(itemsFor(SkinLayer.trail).length, 33);
+      expect(allItems.length, 225);
+      expect(kCollectibleTotal, 223);
       expect(allItems.where((item) => !item.isNone).length, kCollectibleTotal);
       expect(kCatalog.keys.toSet(), SkinLayer.values.toSet());
     });
@@ -27,7 +27,7 @@ void main() {
         'slate', 'coral', 'snow', 'robin', 'toucan', 'chick', 'penguin',
         'owl', 'duck', 'flamingo', 'puffer', 'zebra', 'buzz', 'robo',
         'zombie', 'ghost', 'pixel', 'frost', 'magma', 'galaxy', 'golden',
-        'rainbow', 'phoenix',
+        'rainbow', 'phoenix', 'magpie', 'prism', 'daynight',
       ]);
       // PRD-2.3 §19.3: new items mixed in by rarity (existing first).
       expect(itemsFor(SkinLayer.gear).map((i) => i.id).toList(), [
@@ -35,28 +35,28 @@ void main() {
         'necktie', 'bandaid', 'gum', 'lei', 'hearts', 'monocle', 'sneakers',
         'windup', 'carpet', 'balloon', 'backpack', 'skates', 'swimring',
         'cape', 'chain', 'mask', 'patch', 'butterfly', 'drone', 'jetpack',
-        'crystal', 'atom', 'disco',
+        'crystal', 'atom', 'disco', 'goggles', 'hoopchain', 'peacock',
       ]);
       expect(itemsFor(SkinLayer.hat).map((i) => i.id).toList(), [
         'none', 'cap', 'beanie', 'party', 'band', 'bucket', 'sprout', 'cone',
         'egg', 'paperboat', 'phones', 'tophat', 'cowboy', 'prop', 'chef',
         'viking', 'fishbowl', 'cupcake', 'raincloud', 'antennae', 'sharkfin',
         'pirate', 'wizard', 'volcano', 'ufo', 'bdaycake', 'crown', 'halo',
-        'planet', 'sunburst',
+        'planet', 'sunburst', 'skycrown', 'nest', 'jackpot',
       ]);
       expect(itemsFor(SkinLayer.hoop).map((i) => i.id).toList(), [
         'pink', 'sky', 'lime', 'violet', 'night', 'sunset', 'lemon',
         'bamboo', 'rope', 'cloud', 'candy', 'polka', 'checker', 'donut',
         'tire', 'melon', 'zipper', 'tape', 'pearls', 'vine', 'neon', 'lava',
         'ice', 'electric', 'water', 'cog', 'rainbow', 'galaxy', 'blackhole',
-        'aurora',
+        'aurora', 'spikes', 'phoenixring', 'legend',
       ]);
       expect(itemsFor(SkinLayer.trail).map((i) => i.id).toList(), [
         'flame', 'blue', 'toxic', 'hot', 'shadow', 'sunset', 'leaves', 'snow',
         'petals', 'ink', 'sparkle', 'bubbles', 'hearts', 'laser', 'confetti',
         'planes', 'popcorn', 'fireworks', 'steps', 'fish', 'bolt', 'blocks',
         'notes', 'galaxy', 'prism', 'lavadrip', 'rainbow', 'echo',
-        'supernova', 'paint',
+        'supernova', 'paint', 'thread', 'constellation', 'fireflies',
       ]);
     });
 
@@ -117,7 +117,7 @@ void main() {
 
   group('kCatalog prices', () {
     test('birds: Classic free, plain commons 150, rarity prices above', () {
-      expect(itemsFor(SkinLayer.bird).map((i) => i.price).toList(), [
+      expect(itemsFor(SkinLayer.bird).where((i) => !i.isSkillOnly).map((i) => i.price).toList(), [
         0,
         150, 150, 150, 150, 150, 150, 150, 150, 150,
         750, 750, 750, 750, 750, 750, 750, 750, 750, 750,
@@ -135,13 +135,13 @@ void main() {
         for (var i = 0; i < l; i++) 5000,
       ];
       // PRD-2.3 §19.1 layer totals (C / R / E / L).
-      expect(itemsFor(SkinLayer.gear).map((i) => i.price).toList(),
+      expect(itemsFor(SkinLayer.gear).where((i) => !i.isSkillOnly).map((i) => i.price).toList(),
           run(1, 10, 10, 5, 4));
-      expect(itemsFor(SkinLayer.hat).map((i) => i.price).toList(),
+      expect(itemsFor(SkinLayer.hat).where((i) => !i.isSkillOnly).map((i) => i.price).toList(),
           run(1, 10, 10, 5, 4));
-      expect(itemsFor(SkinLayer.hoop).map((i) => i.price).toList(),
+      expect(itemsFor(SkinLayer.hoop).where((i) => !i.isSkillOnly).map((i) => i.price).toList(),
           run(1, 9, 10, 6, 4));
-      expect(itemsFor(SkinLayer.trail).map((i) => i.price).toList(),
+      expect(itemsFor(SkinLayer.trail).where((i) => !i.isSkillOnly).map((i) => i.price).toList(),
           run(1, 9, 10, 6, 4));
     });
 
@@ -173,7 +173,7 @@ void main() {
             .where((i) => i.rarity == Rarity.legendary)
             .map((i) => i.id)
             .toSet(),
-        {'galaxy', 'golden', 'rainbow', 'phoenix'},
+        {'galaxy', 'golden', 'rainbow', 'phoenix', 'magpie', 'prism', 'daynight'},
       );
       expect(itemById(SkinLayer.gear, 'windup')!.rarity, Rarity.rare);
       expect(itemById(SkinLayer.hat, 'crown')!.rarity, Rarity.legendary);
@@ -185,6 +185,12 @@ void main() {
       expect(
         allItems.where((item) => item.animated).map((item) => item.key).toSet(),
         {
+          // PRD F10: all 24 skill items are animated.
+          'bird:magpie', 'bird:prism', 'bird:daynight',
+          'gear:goggles', 'gear:hoopchain', 'gear:peacock',
+          'hat:skycrown', 'hat:nest', 'hat:jackpot',
+          'hoop:spikes', 'hoop:phoenixring', 'hoop:legend',
+          'trail:thread', 'trail:constellation', 'trail:fireflies',
           // PRD:834 adds the nine animated skill card entries.
           'card:pecking', 'card:roost', 'card:prey',
           'card:n_sky', 'card:n_thunder', 'card:n_marquee',

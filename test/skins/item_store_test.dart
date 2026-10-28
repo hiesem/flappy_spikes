@@ -179,18 +179,18 @@ void main() {
   });
 
   group('ItemStore counters', () {
-    test('fresh install: 1/30, 0/29, 0/29, 1/30, 1/30 and 3/148 (PRD-2.3 §19)', () async {
+    test('PRD F10: fresh collection totals include skill items', () async {
       final (_, _, items) = await build();
       expect(items.ownedCountFor(SkinLayer.bird), 1);
       expect(items.ownedCountFor(SkinLayer.gear), 0);
       expect(items.ownedCountFor(SkinLayer.hat), 0);
       expect(items.ownedCountFor(SkinLayer.hoop), 1);
       expect(items.ownedCountFor(SkinLayer.trail), 1);
-      expect(items.totalFor(SkinLayer.bird), 30);
-      expect(items.totalFor(SkinLayer.gear), 29);
-      expect(items.totalFor(SkinLayer.hat), 29);
-      expect(items.totalFor(SkinLayer.hoop), 30);
-      expect(items.totalFor(SkinLayer.trail), 30);
+      expect(items.totalFor(SkinLayer.bird), 33);
+      expect(items.totalFor(SkinLayer.gear), 32);
+      expect(items.totalFor(SkinLayer.hat), 32);
+      expect(items.totalFor(SkinLayer.hoop), 33);
+      expect(items.totalFor(SkinLayer.trail), 33);
       expect(items.ownedCount, 3);
     });
 
@@ -203,13 +203,13 @@ void main() {
       expect(items.ownedCount, 4);
     });
 
-    test('grantAll owns all 148 collectibles', () async {
+    test('PRD F10 O81: grantAll owns sold collectibles only', () async {
       final (_, _, items) = await build();
       await items.grantAll();
-      expect(items.ownedCount, kCollectibleTotal);
+      expect(items.ownedCount, kSoldCollectibleTotal);
       expect(
         SkinLayer.values.map(items.ownedCountFor).reduce((a, b) => a + b),
-        kCollectibleTotal,
+        kSoldCollectibleTotal,
       );
     });
   });

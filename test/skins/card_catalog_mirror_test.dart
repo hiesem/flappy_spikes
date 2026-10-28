@@ -62,8 +62,8 @@ void main() {
     expect(kCardItems.every((item) => !item.isSkillOnly), isTrue);
     expect(kSkillCardItems.every((item) => item.isSkillOnly), isTrue);
     expect(itemsFor(SkinLayer.card), hasLength(60));
-    expect(allItems.length, 210);
-    expect(kCollectibleTotal, 208);
+    expect(allItems.length, 225);
+    expect(kCollectibleTotal, 223);
     expect(kCollectibleTotal, allItems.where((i) => !i.isNone).length);
   });
 

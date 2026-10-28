@@ -497,3 +497,10 @@
 {"ev":"test","ts_start":"2026-10-28T02:59:36+01:00","ts_end":"2026-10-28T03:12:48+01:00","task_id":"J2","wave":"W1","cmd":"bash scripts/verify.sh","scope":"full","where":"task-worktree","exit":1,"failures":1,"seconds":791}
 {"ev":"test","ts_start":"2026-10-28T09:14:37+01:00","ts_end":"2026-10-28T09:22:17+01:00","task_id":"G4b","wave":null,"cmd":"env VERIFY_BASE=feat/2.6 VERIFY_SCOPED=1 VERIFY_SKIP_HEAVY=1 bash scripts/verify.sh","scope":"targeted","where":"task-worktree","exit":0,"failures":0,"seconds":460}
 {"ev":"merge","task_id":"G4b","sha":"0906b4d","ts_start":"2026-10-28T09:14:37+01:00","ts_end":"2026-10-28T09:22:17+01:00","conflict":false,"resolved_by":"none","files_changed":11,"lines_added":909,"lines_removed":3}
+{"ev":"test","ts_start":"2026-10-28T09:15:06+01:00","ts_end":"2026-10-28T09:39:20+01:00","task_id":"LB4","wave":"W1","cmd":"bash scripts/verify.sh","scope":"full","where":"task-worktree","exit":0,"failures":0,"seconds":1453}
+{"ev":"merge","task_id":"LB4","ts_start":"2026-10-28T09:39:33+01:00","ts_end":"2026-10-28T09:39:33+01:00","conflict":true,"resolved_by":"pending","result":"conflict"}
+{"ev":"test","ts_start":"2026-10-28T09:19:09+01:00","ts_end":"2026-10-28T09:43:33+01:00","task_id":"J2","wave":"W1","cmd":"bash scripts/verify.sh","scope":"full","where":"task-worktree","exit":0,"failures":0,"seconds":1463}
+{"ev":"test","ts_start":"2026-10-28T09:30:57+01:00","ts_end":"2026-10-28T09:56:14+01:00","task_id":"F9f","wave":"W1","cmd":"bash scripts/verify.sh","scope":"full","where":"task-worktree","exit":0,"failures":0,"seconds":1517}
+{"ev":"incident","ts":"2026-10-28T09:56:20+01:00"}
+{"ev":"test","ts_start":"2026-10-28T09:53:24+01:00","ts_end":"2026-10-28T10:01:48+01:00","task_id":"LB4","wave":null,"cmd":"env VERIFY_BASE=feat/2.6 VERIFY_SCOPED=1 VERIFY_SKIP_HEAVY=1 bash scripts/verify.sh","scope":"targeted","where":"task-worktree","exit":0,"failures":0,"seconds":503}
+{"ev":"merge","task_id":"LB4","sha":"3c2ee68","ts_start":"2026-10-28T09:53:24+01:00","ts_end":"2026-10-28T10:01:48+01:00","conflict":false,"resolved_by":"none","files_changed":13,"lines_added":1076,"lines_removed":148}

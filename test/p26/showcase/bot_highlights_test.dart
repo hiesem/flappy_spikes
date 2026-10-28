@@ -9,18 +9,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers.dart';
 
-class FixedShowcase extends ShowcasePlan {
-  const FixedShowcase(this.plan);
-  final ShowcaseRunPlan plan;
-  @override
-  ShowcaseRunPlan atStart({
-    required int gamesPlayed,
-    required int seen,
-    required int attempt,
-    required bool forced,
-  }) => plan;
-}
-
 void main() {
   for (final (step, attempt, noisy, seeds) in [
     (0, 1, true, 100),

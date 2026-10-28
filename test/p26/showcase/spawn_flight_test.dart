@@ -10,19 +10,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers.dart';
 
-class _FixedShowcase extends ShowcasePlan {
-  const _FixedShowcase(this.plan);
-  final ShowcaseRunPlan plan;
-
-  @override
-  ShowcaseRunPlan atStart({
-    required int gamesPlayed,
-    required int seen,
-    required int attempt,
-    required bool forced,
-  }) => plan;
-}
-
 // Independent PRD B3 A=1 expectations: do not derive these from the script
 // under test. Gap numbers refer to the gap after that numbered hoop.
 const _gaps = <List<(int, ElementId)>>[
@@ -56,7 +43,7 @@ void main() {
         return FlappySpikesGame(
           worldHeight: height,
           soundEnabled: false,
-          showcasePlan: _FixedShowcase(script),
+          showcasePlan: FixedShowcase(script),
         )..runSeed = 7;
       }, gameSize: Vector2(320, height)).testGameWidget(
         'B3 flown step ${step + 1} A1 spawns every script item at $height',

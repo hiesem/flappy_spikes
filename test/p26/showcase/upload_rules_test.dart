@@ -16,7 +16,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers.dart';
-import 'bot_highlights_test.dart' show FixedShowcase;
 
 // Records the production run-end call and offers it to the real persisted queue.
 class QueueingVersus extends FakeVersusService {
@@ -95,7 +94,11 @@ void main() {
     }
   }
   for (final assist in [
-    'forced start', 'forced mid-run', 'god', 'bot', 'ignore gates',
+    'forced start',
+    'forced mid-run',
+    'god',
+    'bot',
+    'ignore gates',
   ]) {
     final service = QueueingVersus();
     FlameTester<FlappySpikesGame>(() {

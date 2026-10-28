@@ -5,9 +5,6 @@ import 'package:meta/meta.dart';
 // endregion
 
 import '../config/director_tables.dart';
-// region P26-D-R2
-// Placement uses the live band; no portable-band configuration is needed.
-// endregion
 import '../config/run_config.dart';
 import '../config/squeeze_config.dart';
 import '../config/tuning_values.dart';
@@ -983,7 +980,6 @@ class RunDirector {
         kind = HoopKindId.normal;
       }
     }
-    // region P26-D-SPRING
     var planned = _buildSlot(
       i,
       trackX,
@@ -995,7 +991,7 @@ class RunDirector {
       prevY: prevY,
       cap: cap,
     );
-    // region P26-D-SHAPES
+    // region P26-POL1
     // Retain this squeeze-only preparation: without it the 568 pt ceiling
     // sweep fails seed 16, slot 110 (calm step 84.15 > median 72 pt).
     // Ordinary slots outside the current/next squeeze window stay untouched.
@@ -1005,7 +1001,6 @@ class RunDirector {
         _calm.dueAt(i + 1)) {
       planned = _prepareForNextCalm(planned, ctx, previousY: prevY);
     }
-    // endregion
     // endregion
     return _recordSlot(
       planned,

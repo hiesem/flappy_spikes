@@ -266,7 +266,7 @@ export function sameImportedPlayer(
 
 type ImportCommitOutcome = 'written' | 'unchanged' | 'preservedPlay' | 'tombstoned';
 
-function receivedLiveSubmission(existing: LbPlayerDoc | Record<string, unknown> | undefined): boolean {
+export function receivedLiveSubmission(existing: LbPlayerDoc | Record<string, unknown> | undefined): boolean {
   const player = existing as Partial<LbPlayerDoc> | undefined;
   return (
     player !== undefined &&
@@ -339,6 +339,26 @@ export async function rebuildBestFromCommitted(db: Firestore, nowMs: number): Pr
     if (clean) return best;
   }
   throw new Error('lbBest rebuild raced Delete My Data; rerun the import');
+}
+
+/** Rebuild rank bins from committed players, retrying concurrent changes. */
+export async function rebuildHistogramFromCommitted(db: Firestore, nowMs: number): Promise<void> {
+  // Histogram rebuild also uses committed players in a transaction, so a
+  // concurrent BEST raise either precedes this snapshot or retries the write.
+  await db.runTransaction(async (tx) => {
+    const histRef = db.collection(LB_BEST_COLLECTION).doc('hist');
+    await tx.get(histRef);
+    const players = await tx.get(db.collection(LB_PLAYERS_COLLECTION));
+    const bins: Record<string, number> = {};
+    for (const row of players.docs) {
+      const p = row.data() as LbPlayerDoc;
+      const score = p.bestShadow ?? p.best;
+      if (p.hidden || !Number.isFinite(score) || score <= 0) continue;
+      const key = String(Math.floor(score / 100) * 100);
+      bins[key] = (bins[key] ?? 0) + 1;
+    }
+    tx.set(histRef, { bins, updatedAt: Timestamp.fromMillis(nowMs) });
+  });
 }
 
 function bestRow(uid: string, data: LbPlayerDoc | Record<string, unknown>): LbBestRow | null {
@@ -606,6 +626,7 @@ export async function importLeaderboard(db: Firestore, opts: ImportOptions): Pro
     const bestNeedsWrite = written > 0 || !sameBestDoc(existingBest, committedBest);
     if (bestNeedsWrite) resultBest = await rebuildBestFromCommitted(db, nowMs);
     else resultBest = existingBest ?? committedBest;
+    await rebuildHistogramFromCommitted(db, nowMs);
 
     await db.runTransaction(async (tx) => {
       const metaSnap = await tx.get(metaRef);

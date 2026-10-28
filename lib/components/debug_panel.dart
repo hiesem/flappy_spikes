@@ -263,7 +263,7 @@ class DebugPanel extends PositionComponent
             return;
           }
           onClose();
-          game.openLevelUpPopup();
+          game.openLevelUpPopup(debugForce: true);
         },
       ),
       // endregion

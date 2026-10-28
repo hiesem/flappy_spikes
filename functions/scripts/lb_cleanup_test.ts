@@ -39,6 +39,8 @@ import {
   printTop50,
   readLbPlayers,
   rebuildBestFromCommitted,
+  rebuildHistogramFromCommitted,
+  receivedLiveSubmission,
   requiredProject,
   validCleanupArgs,
 } from './lb_import.js';
@@ -162,7 +164,7 @@ export async function planCleanup(db: Firestore, opts: CleanupOptions): Promise<
   let keptImported = 0;
   let keptPlay = 0;
   for (const row of imported) {
-    if (!keep.has(row.uid) && ['hist', 'rate', 'groupId', 'groupStart', 'groupEnd'].some((key) => key in row.data)) {
+    if (!keep.has(row.uid) && receivedLiveSubmission(row.data)) {
       logLine(opts, `  LIVE IMPORT slated for deletion: ${row.uid}; add to --keep to preserve`);
     }
     if (keep.has(row.uid)) keptImported++;
@@ -239,7 +241,7 @@ export function printCleanupPlan(project: string, apply: boolean, plan: CleanupP
   // explicit in the dry run so the owner can add them to --keep.
   for (const row of plan.remaining) {
     if ((row.data as Partial<LbPlayerDoc>).src === 'import' &&
-        ['hist', 'rate', 'groupId', 'groupStart', 'groupEnd'].some((key) => key in row.data)) {
+        receivedLiveSubmission(row.data)) {
       log(`  LIVE IMPORT (kept) ${row.uid}`);
     }
   }
@@ -254,7 +256,7 @@ export function printCleanupPlan(project: string, apply: boolean, plan: CleanupP
   }
   if (apply) log('  REBUILD lbBest/global, SET lbMeta/import.cleanedAt');
   else log('DRY RUN — nothing written. Pass --apply to perform these exact deletions.');
-  printTop50(plan.best, log);
+  if (!apply) printTop50(plan.best, log);
 }
 
 export async function applyCleanup(db: Firestore, plan: CleanupPlan): Promise<ReturnType<typeof bestDocFromPlayers>> {
@@ -308,22 +310,7 @@ export async function applyCleanup(db: Firestore, plan: CleanupPlan): Promise<Re
   await writer.flush();
   // Re-read after the deletes: the printed board is exactly what the live collection now holds.
   const after = await rebuildBestFromCommitted(db, plan.nowMs);
-  // Histogram rebuild also uses committed players in a transaction, so a
-  // concurrent BEST raise either precedes this snapshot or retries the write.
-  await db.runTransaction(async (tx) => {
-    const histRef = db.collection(LB_BEST_COLLECTION).doc('hist');
-    await tx.get(histRef);
-    const players = await tx.get(db.collection(LB_PLAYERS_COLLECTION));
-    const bins: Record<string, number> = {};
-    for (const row of players.docs) {
-      const p = row.data() as LbPlayerDoc;
-      const score = p.bestShadow ?? p.best;
-      if (p.hidden || !Number.isFinite(score) || score <= 0) continue;
-      const key = String(Math.floor(score / 100) * 100);
-      bins[key] = (bins[key] ?? 0) + 1;
-    }
-    tx.set(histRef, { bins, updatedAt: Timestamp.fromMillis(plan.nowMs) });
-  });
+  await rebuildHistogramFromCommitted(db, plan.nowMs);
 
   const metaRef = db.collection(LB_META_COLLECTION).doc('import');
   const metaSnap = await metaRef.get();

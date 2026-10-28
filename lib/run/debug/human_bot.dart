@@ -103,31 +103,6 @@ class HumanNoiseFlapScheduler {
     return true;
   }
 
-  /// An extra tap changes the actual trajectory before the pending base.
-  /// Discard that obsolete forecast; its replacement is drawn from the new
-  /// state next frame. Emitted offsets remain the actual execution trace.
-  void discardPendingBase() {
-    final ids = _scheduled.where((f) => !f.extra).map((f) => f.baseId).toSet();
-    _scheduled.removeWhere((f) => ids.contains(f.baseId));
-  }
-
-  void rebasePendingBase(double plannedTime, {double? now}) {
-    for (final flap in _scheduled.where((flap) => !flap.extra)) {
-      flap
-        ..plannedTime = plannedTime
-        ..time = math.max(plannedTime + flap.jitter, now ?? flap.time);
-    }
-    for (final flap in _scheduled.where((flap) => flap.extra)) {
-      final baseIndex = _scheduled.indexWhere(
-        (candidate) => !candidate.extra && candidate.baseId == flap.baseId,
-      );
-      if (baseIndex >= 0) {
-        flap.time = _scheduled[baseIndex].time + HumanNoiseBot.extraFlapGap;
-      }
-    }
-    _scheduled.sort((a, b) => a.time.compareTo(b.time));
-  }
-
   // region P26-D-BOT
   double _drawJitter() {
     final jitter = _gaussian() * jitterSigma;

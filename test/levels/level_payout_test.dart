@@ -8,7 +8,6 @@ import 'package:flappy_spikes/run/showcase/showcase_plan.dart';
 import 'package:flappy_spikes/services/versus_service.dart';
 import 'package:flappy_spikes/versus/opponent.dart';
 import 'package:flappy_spikes/versus/timeline.dart';
-import '../p26/showcase/bot_highlights_test.dart' show FixedShowcase;
 import 'dart:math';
 
 import 'package:flame/components.dart';

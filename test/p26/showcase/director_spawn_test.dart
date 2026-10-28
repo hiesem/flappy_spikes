@@ -8,7 +8,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers.dart';
-import 'bot_highlights_test.dart' show FixedShowcase;
 
 void main() {
   for (final height in [568.0, 711.0, 730.0]) {

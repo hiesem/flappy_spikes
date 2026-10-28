@@ -3857,13 +3857,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// Shows the owed LEVEL UP popup over home (§4.3): `sk_buy_rare` /
   /// `epic` / `legendary` for lv 1-4 / 5-8 / 9-10 and `level_up`. No-op
   /// when nothing is owed or home is not up with nothing over it.
-  void openLevelUpPopup() {
+  // region P26-POL1
+  void openLevelUpPopup({bool debugForce = false}) {
     final pending = menu.levels.pendingLevelUp;
     if (pending == null || _levelUpPopup != null || !_homeInteractive) return;
-    homeMoments.show(HomeMoment.levelUp, () {
+    final show = debugForce ? homeMoments.showDebug : homeMoments.show;
+    show(HomeMoment.levelUp, () {
       _showLevelUpPopup(pending);
     });
   }
+  // endregion
 
   // endregion
 

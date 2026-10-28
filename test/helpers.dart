@@ -18,6 +18,7 @@ import 'package:flappy_spikes/run/pickups/pickup.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
 import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/run/screens/results_screen.dart';
+import 'package:flappy_spikes/run/showcase/showcase_plan.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 import 'package:flappy_spikes/services/monetization.dart';
 import 'package:flappy_spikes/services/rating_prompt.dart';
@@ -25,6 +26,19 @@ import 'package:flappy_spikes/services/reminders.dart';
 import 'package:flappy_spikes/services/versus_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class FixedShowcase extends ShowcasePlan {
+  const FixedShowcase(this.plan);
+  final ShowcaseRunPlan plan;
+
+  @override
+  ShowcaseRunPlan atStart({
+    required int gamesPlayed,
+    required int seen,
+    required int attempt,
+    required bool forced,
+  }) => plan;
+}
 
 /// All sprite assets the game may load, so that component onLoads complete
 /// on cache hits (microtasks) instead of real async decodes.
@@ -52,8 +66,8 @@ final kAllImages = [
 /// createGame callback) so the mock is installed before the game's onLoad
 /// reads persistence. [worldHeight] overrides the playfield height (default:
 /// the 568 pt design height).
-FlappySpikesGame createTestGame(
-  [Map<String, Object> initialPrefs = const {},
+FlappySpikesGame createTestGame([
+  Map<String, Object> initialPrefs = const {},
   double? worldHeight,
   GameServices? services,
   Monetization? monetization,
@@ -320,8 +334,7 @@ class AnalyticsSpy extends GameServices {
       events.add((name, parameters));
 }
 
-List<(String, Map<String, Object>?)> analyticsLog(AnalyticsSpy s) =>
-    s.events;
+List<(String, Map<String, Object>?)> analyticsLog(AnalyticsSpy s) => s.events;
 // endregion WP-0b
 
 // region WP-1a — hoops replace pipes (PRD-2 §3.0.5)
@@ -515,6 +528,7 @@ Future<void> finishVersusIntro(FlappySpikesGame g, {double dt = 1 / 30}) async {
   }
   await flushAndMount(g);
 }
+
 // endregion WP-5b
 // region WP-4a — golden feathers / puzzle pieces (PRD-2 §3.15, §3.16)
 /// Flies with the autopilot (re-forcing [e] on every gap while

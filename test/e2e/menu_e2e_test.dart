@@ -224,7 +224,12 @@ void main() {
     expect(g.menu.wallet.balance, 0);
     expect(r.spy.params('invite_tap').length, 1);
     await tap(g, t, const Offset(79, 77));
-    expect(r.spy.leaderboardCalls, 1);
+    // PRD 2.6 O63/O64: the Home trophy opens our board, not the native one.
+    expect(g.menuScene, MenuScene.board);
+    expect(g.boardScreen, isNotNull);
+    expect(r.spy.leaderboardCalls, 0);
+    await tap(g, t, const Offset(33, 77));
+    expect(g.menuScene, MenuScene.home);
     await tap(g, t, const Offset(189, 423.5), fade: false);
     expect(g.state, GameState.playing);
     g.onPlayfieldTap(); // PRD-2.3 §10.1 the first tap flaps

@@ -1670,6 +1670,10 @@ every requirement (file:line, test results) and the work packages with paths and
     not been met in the current session (band or closest pick), and 0 for a rematch. It does not mean the
     player's first lifetime duel; the met-run list is session-only.
 
+21. **LB4 board-open analytics (round 4):** omit `real_count` from `lb_board_open` until the server response
+    supplies an aggregate count. Rows deliberately do not identify ghosts (O51), so the client cannot derive it;
+    do not substitute row count or an invented value. Add the field when the aggregate contract is available.
+
 ### 8.4 Corrections to the spec text
 
 - Wave 0 rules deploy is not "comment only": it adds `validCard` / `look.card`, routes run looks through `validLook`

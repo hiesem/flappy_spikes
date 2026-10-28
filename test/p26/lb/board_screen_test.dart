@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'dart:ui' show Color;
+import 'dart:ui' show Color, ImageByteFormat, PictureRecorder, Canvas;
 import 'package:flame/components.dart';
 import 'package:flappy_spikes/components/leaderboard/podium.dart';
 import 'package:flappy_spikes/components/leaderboard/board_screen.dart';
@@ -7,6 +7,7 @@ import 'package:flappy_spikes/components/home/menu_primitives.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/leaderboard/board_row.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/game/sound.dart';
 import 'package:flappy_spikes/leaderboard/lb_models.dart';
 import 'package:flappy_spikes/leaderboard/lb_service.dart';
 import 'package:flappy_spikes/services/game_services.dart';
@@ -139,7 +140,15 @@ void main() {
       expect(opened.single.$2!['source'], 'home');
       expect(opened.single.$2!.containsKey('real_count'), isFalse);
       expect(board.tab, LbBoardTab.best);
+      final sounds = <Sfx>[];
+      game.sound.onPlay = sounds.add;
+      game.state = GameState.playing;
       game.closeBoard();
+      expect(game.boardScreen, same(board));
+      expect(sounds, isEmpty);
+      game.state = GameState.start;
+      game.closeBoard();
+      expect(sounds, [Sfx.click]);
       await flushAndMount(game);
       expect(game.boardScreen, isNull);
     },
@@ -170,6 +179,18 @@ void main() {
       final board = game.boardScreen!;
       expect(board.podium!.rows, isEmpty);
       expect(board.playButton, isNotNull);
+      final panel = board.content.whereType<RectangleComponent>().single;
+      expect(panel.position, Vector2(14, 352));
+      expect(panel.size, Vector2(292, 196));
+      expect(panel.paint.color, const Color(0xffffffff));
+      expect(board.playButton!.position, Vector2(88, 484));
+      expect(board.playButton!.children.query<MenuIcon>(), hasLength(1));
+      final body = board.content.whereType<MenuText>().singleWhere(
+        (t) => t.text.startsWith('Fly one run'),
+      );
+      expect(body.fontSize, 12.5);
+      final sounds = <Sfx>[];
+      game.sound.onPlay = sounds.add;
       expect(
         board.content.whereType<MenuText>().map((e) => e.text),
         contains(
@@ -181,8 +202,55 @@ void main() {
       await flushAndMount(game);
       expect(game.boardScreen, isNull);
       expect(game.state, GameState.playing);
+      expect(sounds, isNot(contains(Sfx.click)));
     },
   );
+  final offline = FlameTester<FlappySpikesGame>(() {
+    SharedPreferences.setMockInitialValues({});
+    return FlappySpikesGame(soundEnabled: false);
+  }, gameSize: Vector2(320, 568));
+  offline.testGameWidget(
+    'offline state hides the timer chip',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, _) async {
+      game.homeScreen!.trophyButton.onPressed();
+      await flushAndMount(game);
+      await flushAndMount(game);
+      game.update(.01);
+      final board = game.boardScreen!;
+      expect(board.timerChip.visible, isFalse);
+      expect(board.timer.text, isEmpty);
+      expect(
+        board.content.whereType<MenuText>().map((t) => t.text),
+        contains('Check your connection and try again.'),
+      );
+    },
+  );
+  test('empty podium paints the three metal top strips', () async {
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+    BoardPodium(const [], today: false).render(canvas);
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(320, 179);
+    final bytes = (await image.toByteData(
+      format: ImageByteFormat.rawRgba,
+    ))!.buffer.asUint8List();
+    List<int> pixel(int x, int y) {
+      final i = (y * 320 + x) * 4;
+      return bytes.sublist(i, i + 4);
+    }
+
+    // Each strip has its tier's lighter top, above the darker plinth body.
+    expect(pixel(15, 82), isNot(pixel(15, 86)));
+    expect(pixel(115, 64), isNot(pixel(115, 68)));
+    expect(pixel(215, 90), isNot(pixel(215, 94)));
+    image.dispose();
+    picture.dispose();
+  });
   test('approved time tags, timer and approximate rank', () {
     final now = DateTime.now().millisecondsSinceEpoch;
     expect(lastRunTag(now), 'JUST NOW');

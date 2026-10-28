@@ -74,6 +74,15 @@ class BoardPodium extends PositionComponent {
         Rect.fromLTWH(x - 46, top, 92, 179 - top),
         Paint()..color = tier.main.withValues(alpha: row == null ? .35 : 1),
       );
+      final highlight = [
+        const Color(0xffffe08a),
+        const Color(0xffeef2f4),
+        const Color(0xfff7c9a4),
+      ][rank - 1];
+      canvas.drawRect(
+        Rect.fromLTWH(x - 46, top, 92, 4),
+        Paint()..color = highlight.withValues(alpha: row == null ? .35 : 1),
+      );
       if (row?.rid == ownId && row != null) {
         canvas.drawRect(
           Rect.fromLTWH(x - 44.5, top + 1.5, 89, 176 - top),

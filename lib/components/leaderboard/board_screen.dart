@@ -28,6 +28,8 @@ class BoardScreen extends MenuScreen {
   bool _loggedOpen = false;
   late final BoardTimerChip timerChip;
   @override
+  List<String> get contentImages => const ['menu/play.png'];
+  @override
   Rect scrollViewportFor(double viewHeight) =>
       Rect.fromLTRB(0, 330, 320, viewHeight - 70);
   @override
@@ -125,6 +127,15 @@ class BoardScreen extends MenuScreen {
         add(podium!);
         content.add(podium!);
       }
+      if (result != null) {
+        final panel = RectangleComponent(
+          position: Vector2(14, 352),
+          size: Vector2(292, 196),
+          paint: Paint()..color = const Color(0xffffffff),
+        );
+        add(panel);
+        content.add(panel);
+      }
       final label = MenuText(
         result == null
             ? 'Check your connection and try again.'
@@ -139,15 +150,15 @@ class BoardScreen extends MenuScreen {
       if (result != null) {
         final explanation = MenuText(
           'Fly one run and you join up to 49 players\nwith a best score close to yours. Your group\nthen runs for 24 hours.',
-          fontSize: 11,
+          fontSize: 12.5,
           color: const Color(0xff7a0044),
-          position: Vector2(160, 410),
+          position: Vector2(160, 415),
           anchor: Anchor.topCenter,
         );
         add(explanation);
         content.add(explanation);
         final play = MenuButton(
-          position: Vector2(88, 450),
+          position: Vector2(88, 484),
           size: Vector2(144, 44),
           color: Config.menuPink,
           isActive: isActive,
@@ -155,11 +166,16 @@ class BoardScreen extends MenuScreen {
             unawaited(game.playFromBoard());
           },
           children: [
+            MenuIcon(
+              sprite('menu/play.png'),
+              size: Vector2.all(24),
+              position: Vector2(24, 10),
+            ),
             MenuText(
               'PLAY',
               fontSize: 22,
               color: const Color(0xffffffff),
-              position: Vector2(72, 22),
+              position: Vector2(88, 22),
               anchor: Anchor.center,
             ),
           ],
@@ -231,7 +247,10 @@ class BoardScreen extends MenuScreen {
     }
     final end = tab == LbBoardTab.today ? data?.today.group?.end : null;
     final seconds = end?.difference(DateTime.now()).inSeconds.clamp(0, 86400);
-    timer.text = tab == LbBoardTab.best
+    timerChip.visible = data != null;
+    timer.text = data == null
+        ? ''
+        : tab == LbBoardTab.best
         ? 'ALL PLAYERS · ALL TIME'
         : seconds == null
         ? 'STARTS WITH YOUR NEXT RUN'
@@ -262,10 +281,12 @@ class BoardTimerChip extends PositionComponent {
         size: Vector2(180, 20),
         anchor: Anchor.center,
       );
+  bool visible = false;
   bool stopwatch = false;
   double chipWidth = 180;
   @override
   void render(Canvas canvas) {
+    if (!visible) return;
     canvas.drawRect(
       Rect.fromCenter(
         center: Offset(size.x / 2, size.y / 2),

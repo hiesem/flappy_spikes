@@ -3323,9 +3323,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     pushBack(_boardBack);
   }
 
-  void closeBoard() {
+  void closeBoard({bool playSound = true}) {
     final screen = _board;
-    if (screen == null) return;
+    if (state != GameState.start || screen == null) return;
+    if (playSound) sound.play(Sfx.click);
     _board = null;
     popBack(_boardBack);
     screen.active = false;
@@ -3335,7 +3336,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   Future<void> playFromBoard() async {
-    closeBoard();
+    closeBoard(playSound: false);
     final home = _home;
     if (home == null) return;
     await home.loaded;

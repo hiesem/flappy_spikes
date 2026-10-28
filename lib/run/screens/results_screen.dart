@@ -34,8 +34,9 @@ import '../../components/progression/first_win_reward.dart';
 /// Images the results page draws (under `assets/images/`).
 const List<String> kResultsImages = [
   CoinIcon.asset,
-  'menu/trophy.png',
+  // region P26-LB4 — the results trophy is no longer shown (O64).
   'menu/invite.png',
+  // endregion P26-LB4
 ];
 
 /// The level bar of the results page (§5.10; owner 2026-10-17, WP-L: the
@@ -409,8 +410,8 @@ class ResultsScreen extends PositionComponent
     final loaded = await Future.wait(kResultsImages.map(game.images.load));
     _coin = Sprite(loaded[0]);
     // region P26-LB4
+    final invite = Sprite(loaded[1]);
     // endregion P26-LB4
-    final invite = Sprite(loaded[2]);
 
     // region P26-G6a
     final firstWinPaid = await FirstWinReward.pay(game, summary);

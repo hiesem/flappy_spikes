@@ -1,6 +1,8 @@
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/game/sound.dart';
+import 'package:flappy_spikes/skins/look.dart';
 import 'package:flappy_spikes/run/screens/level_reveal_sheet.dart';
 import 'package:flappy_spikes/skins/catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +10,27 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../helpers.dart';
 
 void main() {
+  FlameTester<FlappySpikesGame>(
+    () => createRunTestGame(), gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'legendary reveal plays its large cue and second burst',
+    setUp: (game, _) async { await game.ready(); await preloadImages(game); },
+    verify: (game, _) async {
+      final sounds = <Sfx>[];
+      game.sound.onPlay = sounds.add;
+      final item = allItems.firstWhere((i) => i.rarity == Rarity.legendary && !i.isSkillOnly);
+      final sheet = LevelRevealSheet(item: item, onFinished: (_) {});
+      game.world.add(sheet);
+      await flushAndMount(game);
+      stepGame(game, 1.3);
+      expect(sounds.where((s) => s == Sfx.lvUpBig), hasLength(1));
+      await flushAndMount(game);
+      final before = sheet.card.children.length;
+      stepGame(game, .25);
+      await flushAndMount(game);
+      expect(sheet.card.children.length, greaterThan(before));
+    },
+  );
   FlameTester<FlappySpikesGame>(
     () => createRunTestGame(),
     gameSize: Vector2(320, 711),
@@ -43,6 +66,9 @@ void main() {
       );
       game.world.add(sheet);
       await flushAndMount(game);
+      await sheet.choose(false);
+      expect(sheet.choosing, isFalse);
+      expect(game.menu.levels.pending, hasLength(1));
       stepGame(game, 2);
       expect(sheet.revealed, isTrue);
       await sheet.choose(false);
@@ -90,7 +116,8 @@ void main() {
       expect(await game.menu.levels.payPending(), 0);
       expect(result, isNull);
       stepGame(game, .7);
-      expect(sheet.equippedLabel.text, 'EQUIPPED ✓');
+      expect(sheet.equippedLabel.text, 'EQUIPPED');
+      expect(sheet.equippedCheckVisible, isTrue);
       expect(result, isNull);
       stepGame(game, 1);
       expect(result, isTrue);

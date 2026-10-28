@@ -86,6 +86,7 @@ class LevelRevealSheet extends P1Popup {
   late final _EquipPreview _preview;
   late final Look originalLook;
   late final MenuText equippedLabel;
+  bool get equippedCheckVisible => equippedLabel.text.isNotEmpty;
   final ItemArtCache art = ItemArtCache();
   final ParticlePool particles = ParticlePool();
 

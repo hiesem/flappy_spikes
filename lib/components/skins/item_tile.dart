@@ -294,8 +294,15 @@ class ItemTile extends PositionComponent with TapCallbacks {
       canvas.drawRect(size.toRect(), _paint..color = const Color(0xFFF4F4F4));
       canvas.save();
       canvas.clipRect(Rect.fromLTWH(2, 2, width - 4, height - 6));
-      canvas.translate(2, 2);
-      canvas.scale((width - 4) / ItemArt.w, (height - 6) / ItemArt.h);
+      final artScale = math.min(
+        (width - 4) / ItemArt.w,
+        (height - 6) / ItemArt.h,
+      );
+      canvas.translate(
+        (width - ItemArt.w * artScale) / 2,
+        2 + (height - 6 - ItemArt.h * artScale) / 2,
+      );
+      canvas.scale(artScale);
       final picture = _rewardPicture;
       if (picture != null) canvas.drawPicture(picture);
       canvas.restore();

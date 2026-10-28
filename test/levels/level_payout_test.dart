@@ -212,24 +212,30 @@ void main() {
     );
   }
 
-  test('J10 claim event precedes clearing the durable pending reward', () async {
-    SharedPreferences.setMockInitialValues({});
-    final storage = _KillStorage();
-    await storage.load();
-    final events = _Events();
-    final menu = MenuState(storage, random: Random(7));
-    menu.levels.services = events;
-    await menu.levels.recordRun(25);
-    storage.kill = 'cleared';
-    await expectLater(menu.levels.payPending(), throwsA(isA<_Killed>()));
-    expect(events.events.where((e) => e.$1 == 'level_reward_claimed'), hasLength(1));
-    expect(storage.lvlPending, isEmpty);
-    final reader = GameStorage();
-    await reader.load();
-    await MenuState(reader).levels.payPending();
-    expect(reader.coins, 50);
-    expect(reader.lvlPayout, 0);
-  });
+  test(
+    'J10 claim event precedes clearing the durable pending reward',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = _KillStorage();
+      await storage.load();
+      final events = _Events();
+      final menu = MenuState(storage, random: Random(7));
+      menu.levels.services = events;
+      await menu.levels.recordRun(25);
+      storage.kill = 'cleared';
+      await expectLater(menu.levels.payPending(), throwsA(isA<_Killed>()));
+      expect(
+        events.events.where((e) => e.$1 == 'level_reward_claimed'),
+        hasLength(1),
+      );
+      expect(storage.lvlPending, isEmpty);
+      final reader = GameStorage();
+      await reader.load();
+      await MenuState(reader).levels.payPending();
+      expect(reader.coins, 50);
+      expect(reader.lvlPayout, 0);
+    },
+  );
 
   test('J6 coin fallback and equipped history survive reload', () async {
     SharedPreferences.setMockInitialValues({});

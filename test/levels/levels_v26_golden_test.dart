@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/components/levels/levels_screen.dart';
+import 'package:flappy_spikes/components/levels/emblem_view.dart';
 import 'package:flappy_spikes/components/skins/item_tile.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,7 +35,13 @@ Future<ui.Image> frame(FlappySpikesGame game) async {
 }
 
 void main() {
-  setUpAll(loadFonts);
+  setUpAll(() async {
+    await loadFonts();
+    final images = await Future.wait([
+      for (var slot = 1; slot <= 32; slot++) EmblemView.loadImageForLevel(slot),
+    ]);
+    expect(images.last, isNotNull, reason: 'J7 ETERNAL WING slot 32');
+  });
   for (final level in [0, 10, 40]) {
     FlameTester<FlappySpikesGame>(() {
       final log = [
@@ -68,10 +75,17 @@ void main() {
       verify: (game, tester) async {
         game.openLevels();
         await flushAndMount(game);
+        await flushAndMount(game);
         for (var i = 0; i < 120; i++) {
           game.update(1 / 60);
         }
         final screen = game.levelsScreen!;
+        await tester.pump();
+        await tester.runAsync(() async {
+          await screen.header.emblem.imageReady;
+          final current = screen.currentRow?.liveEmblem;
+          if (current != null) await current.imageReady;
+        });
         expect(screen.rows, hasLength(32));
         expect(
           screen.rows.where((r) => r.liveEmblem != null).length,

@@ -30,6 +30,7 @@ import 'tabs/worlds_tab.dart';
 
 // region P26-G4a
 import 'tabs/levels_tabs.dart';
+
 // endregion
 
 // region P26-J6
@@ -215,8 +216,11 @@ class LevelsScreen extends MenuScreen {
     );
     // endregion
     scroll.content.add(LevelsListContent(rows));
-    scroll.contentBottom = Config.levelsRowTop(kTrackLevels.length + 1) +
-        listShift + Config.levelsListPadBottom + (level >= 32 ? 100 : 0);
+    scroll.contentBottom =
+        Config.levelsRowTop(kTrackLevels.length + 1) +
+        listShift +
+        Config.levelsListPadBottom +
+        (level >= 32 ? 100 : 0);
     // The live emblems: the header's and the current row's.
     final current = currentRow;
     clock.bind((t, still) {
@@ -301,7 +305,6 @@ class LevelsHeader extends PositionComponent {
     this.points = 0,
     // endregion
     required this.best,
-    this.points = 0,
     required this.games,
     required Look look,
     required Sprite coin,
@@ -335,7 +338,6 @@ class LevelsHeader extends PositionComponent {
   final int points;
   // endregion
   final int best;
-  final int points;
   final int games;
 
   late final EmblemView emblem;
@@ -578,6 +580,7 @@ class LevelRow extends PositionComponent {
         look: reached ? look : null,
         birdScale: Config.levelsBirdOnEmblem,
       );
+      unawaited(_loadStaticEmblem());
     }
 
     const top = 9.0;
@@ -651,6 +654,21 @@ class LevelRow extends PositionComponent {
     }
     _built = true;
     _applyColors();
+  }
+
+  Future<void> _loadStaticEmblem() async {
+    final image = await EmblemView.loadImageForLevel(def.level);
+    if (image == null || isRemoving || isRemoved) return;
+    final old = picture;
+    picture = recordEmblem(
+      def.level,
+      progression: true,
+      image: image,
+      grey: !reached,
+      look: reached ? look : null,
+      birdScale: Config.levelsBirdOnEmblem,
+    );
+    old?.dispose();
   }
 
   @override
@@ -797,7 +815,7 @@ class _RewardChip extends PositionComponent {
     }
     // A thin check where the mock's "✓ " sits.
     final y = height / 2;
-    const x = Config.levelsChipPad;
+    final x = listPosition ? 5.0 : Config.levelsChipPad;
     canvas.drawPath(
       Path()
         ..moveTo(x, y)

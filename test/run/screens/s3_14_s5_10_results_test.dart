@@ -230,6 +230,15 @@ void main() {
         expect(page.surplusLabel.color.a, greaterThan(0));
       });
 
+    rt('J3 exact level threshold hides zero surplus',
+      () => trackGame(prefs: {'lvlIndex': 10, 'lvlPoints': 700, 'bestScore': 900}),
+      (g) async {
+        final page = await endWith(g, score: 100);
+        stepGame(g, 2.0);
+        expect(page.surplus, 0);
+        expect(page.surplusLabel.color.a, 0);
+      });
+
     rt('PRD-2.6 J3 ineligible runs do not advance the level bar',
       () => trackGame(prefs: {'lvlIndex': 10, 'lvlPoints': 420, 'bestScore': 900}),
       (g) async {

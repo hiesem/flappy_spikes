@@ -66,7 +66,16 @@ void main() {
         await flushAndMount(g);
         // PRD-2.6 J4 (PRD:1084-1099): the page waits for LATER.
         expect(g.state, GameState.results);
-        await page.revealSheet!.choose(false);
+        final pendingCount = g.menu.levels.pending.length;
+        for (var i = 0; i < pendingCount; i++) {
+          await page.activeRevealSheet!.choose(false);
+          await flushAndMount(g);
+          if (i + 1 < pendingCount) {
+            expect(g.menu.wallet.balance, before);
+            stepGame(g, 2);
+            await flushAndMount(g);
+          }
+        }
         expect(g.menu.wallet.balance, before + page.model.levelReward);
         page.next();
         stepGame(g, 2);

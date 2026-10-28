@@ -926,7 +926,7 @@ class _RowProgress extends PositionComponent {
 class _RewardItemName extends MenuText {
   _RewardItemName(SkinItem item, this.chip)
     : super(
-        item.name.toUpperCase(),
+        item.name,
         fontSize: 12,
         fontFamily: 'Fredoka',
         color: item.rarity?.color ?? const Color(0xFF999999),

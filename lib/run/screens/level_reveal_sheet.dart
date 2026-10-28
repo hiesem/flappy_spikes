@@ -241,6 +241,7 @@ class LevelRevealSheet extends P1Popup {
       anchor: Anchor.topCenter,
     );
     details.add(equippedLabel);
+    details.add(_EquippedCheck(this, position: Vector2(Config.p1PopupWidth / 2 + 38, 229)));
     void button(String text, double x, void Function() action) {
       details.add(
         MenuButton(
@@ -450,7 +451,7 @@ class LevelRevealSheet extends P1Popup {
           }
         }
       }
-      if (elapsed - start >= .6) equippedLabel.text = 'EQUIPPED ✓';
+      if (elapsed - start >= .6) equippedLabel.text = 'EQUIPPED';
       if (elapsed - start >= 1.6) {
         equipAt = null;
         onFinished(true);
@@ -535,6 +536,22 @@ class _SkipSurface extends PositionComponent with TapCallbacks {
     skip();
   }
 }
+
+// region P26-POL3
+class _EquippedCheck extends PositionComponent {
+  _EquippedCheck(this.sheet, {super.position});
+  final LevelRevealSheet sheet;
+  @override
+  void render(Canvas canvas) {
+    if (sheet.equippedLabel.text.isEmpty) return;
+    canvas.drawPath(
+      Path()..moveTo(0, 4)..lineTo(3, 7)..lineTo(9, 0),
+      Paint()..color = Config.uiAccent..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6..strokeJoin = StrokeJoin.miter,
+    );
+  }
+}
+// endregion
 
 // region P26-J5
 /// Sequential Home catch-up. Choices stay in memory until all boxes have been

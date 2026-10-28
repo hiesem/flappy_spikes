@@ -143,11 +143,32 @@ class StarRoadScreen extends MenuScreen {
         ),
       );
       row.add(
+        _TierNode(
+          reached: reached,
+          claimed: claimed,
+          position: Vector2(5, row.height / 2 - 18),
+        ),
+      );
+      if (tier == road.tier + 1) {
+        row.add(
+          MenuTag(
+            'NEXT',
+            fontSize: 9,
+            fillColor: Config.menuSoft,
+            textColor: Config.menuPlum,
+            position: Vector2(56, -7),
+            priority: 2,
+          ),
+        );
+      }
+      row.add(
         MenuText(
           '$tier',
           fontSize: 15,
-          color: reached ? Config.menuPink : Config.menuPlum,
-          position: Vector2(20, row.height / 2),
+          color: reached && !claimed
+              ? const Color(0xFFFFFFFF)
+              : Config.menuPlum,
+          position: Vector2(23, row.height / 2),
           anchor: Anchor.center,
         ),
       );
@@ -333,5 +354,31 @@ class _RoadRewardArt extends PositionComponent {
       default:
         break;
     }
+  }
+}
+
+class _TierNode extends PositionComponent {
+  _TierNode({required this.reached, required this.claimed, super.position})
+    : super(size: Vector2.all(36));
+  final bool reached, claimed;
+  @override
+  void render(Canvas canvas) {
+    final path = Path()
+      ..moveTo(8, 0)
+      ..lineTo(28, 0)
+      ..lineTo(36, 8)
+      ..lineTo(36, 28)
+      ..lineTo(28, 36)
+      ..lineTo(8, 36)
+      ..lineTo(0, 28)
+      ..lineTo(0, 8)
+      ..close();
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = reached && !claimed
+            ? Config.menuPink
+            : const Color(0xFFE1E1E1),
+    );
   }
 }

@@ -1153,11 +1153,17 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // region P26-LB2
     unawaited(leaderboardQueue.flush());
     // endregion
+    // region P26-G1b
+    missionSettlement = missionSettlement.then((_) => RunEndBookkeeping.prepareMissions(this));
+    // endregion
     homeMoments.beginVisit(
       HomeVisit(
         day: storage.now(),
         gamesPlayed: storage.gamesPlayed,
         requests: HomeVisitRequests(
+          // region P26-G1b
+          missionsChest: RunEndBookkeeping.currentMissions(storage).chestPending,
+          // endregion
           // region P26-G2c
           streakLost: streakLostPending,
           // endregion
@@ -4998,6 +5004,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// The end of a run (ARCH §2.3): persistence, `noAdsPopup.recordRun`,
   /// game-over / new-best analytics, the leaderboard submit, the versus
   /// upload, then the [PostRunFlow] (ending on the WP-2e results page).
+  // region P26-G1b
+  Future<void> missionSettlement = Future<void>.value();
+  // endregion
+
   void endRun(RunSummary? summary) {
     if (state != GameState.playing &&
         state != GameState.dying &&

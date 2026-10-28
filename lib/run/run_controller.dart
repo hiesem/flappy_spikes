@@ -488,8 +488,14 @@ class RunController extends Component {
       }
     }
     layers.follow(state.camX, state.camY);
+    // region P26-G1b
+    game.runStats?.captureOpenedSwitches();
+    // endregion
     spawner.update(gameDt);
     if (isScrolling && !rideHold) _stepPhysics(gameDt);
+    // region P26-G1b
+    game.runStats?.captureOpenedSwitches();
+    // endregion
     layers.follow(state.camX, state.camY);
     final scale = state.timeScale <= 0 ? 1 : state.timeScale;
     for (final f in features) {

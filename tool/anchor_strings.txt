@@ -91,3 +91,7 @@ economyDailyDay
 // region P26-J6
 lvlRewardLog
 // endregion
+// region P26-G1b
+lastVersusHadRival
+missionJournal
+// endregion

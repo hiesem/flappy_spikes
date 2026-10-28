@@ -107,6 +107,10 @@ class GameStorage {
   int vsWinStreak = 0;
   int vsWinStreakBest = 0;
   Map<String, int> vsBigWinsDay = const {};
+  // region P26-G1b
+  bool lastVersusHadRival = false;
+  Map<String, Object?> missionJournal = const {};
+  // endregion
   int missionDay = -1;
   List<Map<String, Object?>> missions = const [];
   int missionTier = 0;
@@ -648,6 +652,11 @@ class GameStorage {
     vsWinStreak = prefs.getInt(Obf.prefVsWinStreak) ?? 0;
     vsWinStreakBest = prefs.getInt(Obf.prefVsWinStreakBest) ?? 0;
     vsBigWinsDay = _p26IntMap(prefs.getString(Obf.prefVsBigWinsDay));
+    // region P26-G1b
+    lastVersusHadRival = prefs.getBool(Obf.prefLastVersusHadRival) ?? false;
+    final journalRows = _p26Records(prefs.getString(Obf.prefMissionJournal));
+    missionJournal = journalRows.isEmpty ? const {} : journalRows.first;
+    // endregion
     missionDay = prefs.getInt(Obf.prefMissionDay) ?? -1;
     missions = _p26Records(prefs.getString(Obf.prefMissions));
     missionTier = prefs.getInt(Obf.prefMissionTier) ?? 0;
@@ -712,6 +721,9 @@ class GameStorage {
       _sealBase = base;
       IntegrityGuard.instance.track(base);
     }
+    // region P26-G1b
+    await recoverMissionJournal();
+    // endregion
     // region P26-J2
     // J5: settle an interrupted 2.5 credit once; legacy ranks never migrate.
     // No Wallet exists during load. This repairs an already-earned 2.5 credit,
@@ -1983,6 +1995,47 @@ class GameStorage {
     await prefs.setString(Obf.prefVsBigWinsDay, jsonEncode(vsBigWinsDay));
   }
 
+  // region P26-G1b
+  Future<void> saveLastVersusHadRival(bool value) async {
+    lastVersusHadRival = value;
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setBool(Obf.prefLastVersusHadRival, value);
+  }
+
+  Future<void> saveMissionJournal(Map<String, Object?> value) async {
+    missionJournal = Map.of(value);
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    if (value.isEmpty) {
+      await prefs.remove(Obf.prefMissionJournal);
+    } else {
+      await prefs.setString(Obf.prefMissionJournal, jsonEncode([value]));
+    }
+  }
+
+  /// Replays a journal written before either the board or wallet changed.
+  Future<void> recoverMissionJournal() async {
+    final j = missionJournal;
+    if (j.isEmpty) return;
+    final rows = j['missions'];
+    final day = j['day'];
+    final tier = j['tier'];
+    final reroll = j['rerollDay'];
+    final balance = j['balance'];
+    final earned = j['earned'];
+    if (rows is! List || day is! int || tier is! int || reroll is! int ||
+        balance is! int || earned is! int) {
+      return;
+    }
+    await saveMissions([for (final row in rows) Map<String, Object?>.from(row as Map)]);
+    await saveMissionTier(tier);
+    await saveMissionRerollDay(reroll);
+    await saveMissionDay(day);
+    if (coins < balance) await saveCoins(balance);
+    if (lifetimeCoinsEarned < earned) await saveLifetimeCoinsEarned(earned);
+    await saveMissionJournal(const {});
+  }
+  // endregion
+
   Future<void> saveMissionDay(int value) async {
     missionDay = value;
     final prefs = _prefs ?? await SharedPreferences.getInstance();
@@ -2205,6 +2258,10 @@ class GameStorage {
     vsWinStreak = 0;
     vsWinStreakBest = 0;
     vsBigWinsDay = const {};
+    // region P26-G1b
+    lastVersusHadRival = false;
+    missionJournal = const {};
+    // endregion
     missionDay = -1;
     missions = const [];
     missionTier = 0;
@@ -2260,6 +2317,10 @@ class GameStorage {
           Obf.prefVsWinStreak,
           Obf.prefVsWinStreakBest,
           Obf.prefVsBigWinsDay,
+          // region P26-G1b
+          Obf.prefLastVersusHadRival,
+          Obf.prefMissionJournal,
+          // endregion
           Obf.prefMissionDay,
           Obf.prefMissions,
           Obf.prefMissionTier,

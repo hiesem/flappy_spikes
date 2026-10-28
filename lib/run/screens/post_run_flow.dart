@@ -32,6 +32,9 @@ class PostRunFlow {
   /// versus upload happen once per game). Returns true when the player
   /// revived (never, here; kept for the flow's contract).
   Future<bool> run(RunSummary s) async {
+    // region P26-G1b
+    await game.missionSettlement;
+    // endregion
     final bonus = PostRunScreens.bonus;
     if (bonus != null && game.storage.feathers >= 3) {
       await bonus.show(game, s);

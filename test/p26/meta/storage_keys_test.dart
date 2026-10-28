@@ -68,6 +68,9 @@ void main() {
         'firstItemBought',
         'economyDailyDay',
         'lvlRewardLog',
+        // G1b orchestrator ruling: the mission journal and rival bit are appended.
+        'lastVersusHadRival',
+        'missionJournal',
       ];
       expect(kObfStrings.values.skip(109), keys);
       final anchors = File('tool/anchor_strings.txt').readAsLinesSync();

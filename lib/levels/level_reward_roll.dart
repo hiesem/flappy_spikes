@@ -66,7 +66,7 @@ LevelRewardRoll rollLevelReward(
 List<SkinItem> eligibleProgressionItems(Set<String> owned, Set<String> pending) {
   const shopLayers = {SkinLayer.bird, SkinLayer.hat, SkinLayer.gear, SkinLayer.hoop, SkinLayer.trail};
   return allItems.where((item) => shopLayers.contains(item.layer) &&
-    !item.isFree && item.rarity != null && item.unlock == null &&
+    !item.isFree && !item.isSkillOnly && item.rarity != null && item.unlock == null &&
     !owned.contains(item.key) && !pending.contains(item.key)).toList();
 }
 // endregion

@@ -133,6 +133,28 @@ void main() {
     });
   }
 
+  test('item roll survives a kill after its claim marker', () async {
+    final sealer = MemorySaveSealer();
+    final seed = GameStorage(sealer: sealer);
+    await seed.load();
+    await seed.sealVerified;
+    await seed.saveStarRoadSeason(1);
+    await seed.saveStarRoadXp(80);
+    final crash = CrashStorage(sealer: sealer);
+    await crash.load();
+    await crash.sealVerified;
+    crash.crash = 'claim';
+    await expectLater(claims(crash).claim(10), throwsStateError);
+    final after = GameStorage(sealer: sealer);
+    await after.load();
+    await after.sealVerified;
+    final recovered = claims(after);
+    await recovered.recover();
+    expect(recovered.awardedItems[10], isNotNull);
+    expect(after.ownedItems, contains(recovered.awardedItems[10]));
+    expect(await recovered.claim(10), isNull);
+  });
+
   test(
     'reveal interrupted after item settlement remains granted once',
     () async {

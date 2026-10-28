@@ -1,0 +1,12 @@
+[Unit]
+Description=Flappy Spikes 2.6 memory guard (stops one orchestration worker session when memory runs low, so the watcher is never reaped)
+
+[Service]
+ExecStart=/home/killerhis/Projects/flappyspikes/.worktrees/p26/scripts/orch/memguard.sh
+Restart=always
+RestartSec=5
+# stop.sh kills worker process groups that live in their own scopes; never kill them with this unit
+KillMode=process
+
+[Install]
+WantedBy=default.target

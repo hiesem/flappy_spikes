@@ -241,18 +241,25 @@ since when). Scripts: `scripts/orch/` — `spawn.sh`, `status.sh`, `stop.sh`, `w
   or after 10 minutes.
 - On every wake the orchestrator: runs `status.sh`, acts on every DONE / STALLED / OVERCAP / DEAD worker, starts ready
   WPs up to the parallel limit, updates STATE.md, posts the chat update (§7.4) and **starts the next `watch.sh` before
-  ending its turn**. A turn never ends with workers running and no watcher, or with idle lanes while WPs are ready.
+  ending its turn**. The watcher is restarted on EVERY exit, also when it was killed (owner 2026-10-28; no need to ask). A turn never ends with workers running and no watcher, or with idle lanes while WPs are ready.
 - If the lease shows `headless-…` and `.worktrees/briefs26/headless.lock` is held, a headless pass is working: the
   session waits for it to finish (watch only), then takes the lease back.
 
 ### 7.2 External heartbeat (the session died)
-- systemd user timer `orch-tick.timer` (every 30 min; units in `scripts/orch/`, installed at W0) runs `tick.sh`.
+- systemd user timer `orch-tick.timer` (`OnCalendar=*:0/10`, every 10 min; a monotonic `OnUnitActiveSec` timer went
+  "elapsed" after a restart and never fired, 2026-10-28; units in `scripts/orch/`) runs `tick.sh`.
 - `tick.sh` does nothing unless `.worktrees/briefs26/ORCH_ACTIVE` exists and `ORCH_STOP` does not. If the lease is
-  older than 45 min and no headless pass runs, it starts ONE headless orchestrator pass:
+  older than 20 min (`LEASE_STALE_MIN`) and no headless pass runs, it starts ONE headless orchestrator pass:
   `claude -p --model claude-opus-5-5 --effort medium --permission-mode bypassPermissions` with
   `scripts/orch/headless_prompt.md` (max 75 min). The pass does the same as a wake in §7.1 (without waiting on
   workers), logs every action with `[headless]`, and exits; the next tick continues.
 - When the owner next talks to the chat session, it reads STATE.md / RUNLOG.md and summarises what happened meanwhile.
+- **Memory guard** (`orch-memguard.service`, `memguard.sh`, Restart=always): Claude Code reaps background shells (the
+  watcher) under memory pressure. Below `MEMGUARD_MIN_MB` (3072 MB available) the guard stops ONE orchestration worker
+  session and all its tools (`stop.sh`: tester `claude -p` first, then a codex builder, newest first), marks it
+  `memkilled`, logs `[memguard]` in RUNLOG and waits 90 s. It never touches interactive sessions, verifies, merges or
+  automerge. The orchestrator re-runs `memkilled` workers when memory recovers. The session also runs with
+  `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP=1` (`~/.claude/settings.json` env; applies after a Claude Code restart).
 
 ### 7.3 Stuck rules
 - **Builder:** no log output for 20 min (STALLED) or more than 90 min running (OVERCAP) → read the log tail, decide

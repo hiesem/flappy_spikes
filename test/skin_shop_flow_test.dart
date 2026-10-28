@@ -60,14 +60,19 @@ void main() {
         expect(action.bottomRight, const Offset(298, 256));
         expect(action.height, 30);
         expect(screen.tiles, hasLength(33));
+        // PRD-2.6 F10, lines 845–853 / O88: the three skill items
+        // occupy a separate final row below the section header.
         for (final (i, tile) in screen.tiles.indexed) {
           expect(
             tile.toRect(),
-            Rect.fromLTWH(14.0 + (i % 3) * 100, 332.0 + (i ~/ 3) * 100, 92, 92),
+            Rect.fromLTWH(14.0 + (i % 3) * 100,
+                332.0 + (i ~/ 3) * 100 + (i >= 30 ? 28 : 0), 92, 92),
           );
         }
-        // 6 pt top / 30 pt bottom padding.
-        expect(screen.scroll.contentBottom, 332 + 10 * 100 + 92 + 30);
+        expect(screen.skillSectionHeader!.text, 'EARNED BY SKILL · NOT SOLD');
+        expect(screen.skillSectionHeader!.position.y, 332 + 10 * 100 + 28 - 22);
+        // 6 pt top / 30 pt bottom padding, including the skill gap.
+        expect(screen.scroll.contentBottom, 332 + 10 * 100 + 28 + 92 + 30);
         expect(screen.scroll.scrollable, isTrue);
       },
     );

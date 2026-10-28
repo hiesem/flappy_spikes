@@ -73,6 +73,7 @@ void main() {
       final skill = game.skillReveal!;
       expect(skill.skill, isTrue);
       expect(skill.item!.id, 'spikes');
+      expect(skill.parent, same(game.resultsScreen));
       expect(game.achievementToast, isNull);
       expect(game.modalPopupOpen, isTrue);
       for (final key in [LogicalKeyboardKey.space, LogicalKeyboardKey.enter, LogicalKeyboardKey.escape]) {
@@ -112,26 +113,26 @@ void main() {
       await game.menu.items.equip(SkinLayer.card, 'f_orbit');
     },
     verify: (game, _) async {
+      // PRD-2.6 F10: an achievement earned in the shop is revealed
+      // on Home after the achievement toast, without requiring another run.
+      game.openSkins();
+      await flushAndMount(game);
+      stepGame(game, .7);
+      expect(game.skinShop, isNotNull);
       expect(game.achievements.unlock(AchievementId.secondWind), isTrue);
       await game.achievements.flush();
-      // F10: Home keeps this reveal queued; no bare sheet or modal opens.
-      for (var i = 0; i < 180; i++) {
-        game.update(1 / 60);
-        if (i % 10 == 0) await flushAndMount(game);
-        game.achievementToast?.dismiss();
-        expect(game.skillReveal, isNull);
-      }
-      final run = await startRun(game);
-      run.ctx.addScore(3);
-      killRunThroughSaves(game);
-      await declineRevive(game);
-      await flushAndMount(game);
+      stepGame(game, .3);
+      expect(game.skillReveal, isNull);
+      game.closeSkins();
       for (var i = 0; i < 3600 && game.skillReveal == null; i++) {
         game.update(1 / 60);
         if (i % 10 == 0) await flushAndMount(game);
         game.achievementToast?.dismiss();
       }
       await flushAndMount(game);
+      expect(game.skillReveal!.skillHome, isTrue);
+      expect(game.modalPopupOpen, isTrue);
+      expect(game.systemBackWanted, isTrue);
       final interrupted = game.skillReveal!;
       expect(interrupted.item!.id, 'n_sky');
       interrupted.removeFromParent();
@@ -139,10 +140,20 @@ void main() {
       final skill = game.skillReveal!;
       expect(identical(skill, interrupted), isFalse);
       expect(skill.item!.id, 'n_sky');
+      game.openNoAdsPopup();
+      expect(game.queuedPopups, greaterThan(0));
+      expect(game.noAdsPopup, isNull);
+      expect(game.handleSystemBack(), isTrue);
+      expect(game.state, GameState.start);
       stepGame(game, 2);
+      expect(game.noAdsPopup, isNull);
       await skill.choose(true);
       expect(game.menu.items.look.cardIdFor(CardKind.name), 'n_sky');
       expect(game.menu.items.look.cardIdFor(CardKind.frame), 'f_orbit');
+      stepGame(game, 1.7);
+      await flushAndMount(game);
+      expect(game.skillReveal, isNull);
+      expect(game.noAdsPopup, isNotNull);
     },
   );
 }

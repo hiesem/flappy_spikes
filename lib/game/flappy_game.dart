@@ -6061,27 +6061,57 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   @visibleForTesting
   LevelRevealSheet? get skillReveal => _skillReveal;
 
+  bool _skillHomeQueued = false;
+  bool _skillRevealBack() {
+    final sheet = _skillReveal;
+    if (sheet == null) return false;
+    sheet.advanceSkill();
+    return true;
+  }
+
   void _checkSkillReveals() {
     if (_skillReveal != null || _skillRevealQueue.isEmpty ||
-        achievementToast != null || achievements.toastQueue.isNotEmpty ||
-        modalPopupOpen) {
+        achievementToast != null || achievements.toastQueue.isNotEmpty) {
       return;
     }
     final page = _results;
-    if (state != GameState.results || page == null || !page.settled || page.leaving) {
-      return;
+    if (state == GameState.results && page != null && page.settled &&
+        !page.leaving && !modalPopupOpen) {
+      _openSkillReveal(page: page);
+    } else if (state == GameState.start && _homeInteractive &&
+        menu.levels.pending.isEmpty && !_skillHomeQueued) {
+      _skillHomeQueued = true;
+      _queuePopup(
+        () => state == GameState.start && _homeInteractive &&
+            menu.levels.pending.isEmpty && achievementToast == null &&
+            achievements.toastQueue.isEmpty,
+        () {
+          _skillHomeQueued = false;
+          if (_skillRevealQueue.isNotEmpty) _openSkillReveal();
+        },
+      );
     }
+  }
+
+  void _openSkillReveal({ResultsScreen? page}) {
+    final home = page == null;
     final item = _skillRevealQueue.removeAt(0);
     late final LevelRevealSheet sheet;
-    sheet = LevelRevealSheet(item: item, skill: true, onFinished: (_) {},
-      onSkillRemoved: (completed) {
+    sheet = LevelRevealSheet(item: item, skill: true, skillHome: home,
+      onFinished: (_) {}, onSkillRemoved: (completed) {
         if (!identical(_skillReveal, sheet)) return;
         _skillReveal = null;
+        if (home) popBack(_skillRevealBack);
         if (!completed) _skillRevealQueue.insert(0, item);
         _drainPopups();
       });
     _skillReveal = sheet;
-    world.add(sheet);
+    if (home) {
+      world.add(sheet);
+      pushBack(_skillRevealBack);
+    } else {
+      page.add(sheet);
+    }
   }
   // endregion
 

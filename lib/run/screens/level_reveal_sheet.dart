@@ -47,11 +47,13 @@ class LevelRevealSheet extends P1Popup {
     // region P26-F10b
     this.skill = false,
     this.onSkillRemoved,
+    this.skillHome = false,
     // endregion
   }) : super(onDismiss: () {}, priority: 100);
 
   // region P26-F10b
   final bool skill;
+  final bool skillHome;
   final void Function(bool completed)? onSkillRemoved;
   ShopCardArt? skillCardArt;
   // endregion
@@ -84,6 +86,9 @@ class LevelRevealSheet extends P1Popup {
     card.scale.setAll(scale);
     card.position.setValues(
       (320 - card.width * scale) / 2,
+      // region P26-F10b
+      skillHome ? (game.viewHeight - cardHeight * scale) / 2 :
+      // endregion
       (game.viewHeight * .38).clamp(0.0, game.viewHeight - cardHeight * scale),
     );
   }
@@ -329,7 +334,12 @@ class LevelRevealSheet extends P1Popup {
   }
 
   @override
-  void render(Canvas canvas) {} // The results sheet leaves the score card visible.
+  // region P26-F10b
+  void render(Canvas canvas) {
+    // Results keeps its score card visible; Home needs the shared modal dim.
+    if (skillHome) super.render(canvas);
+  }
+  // endregion
 
   @override
   void onTapUp(TapUpEvent event) {

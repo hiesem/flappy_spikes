@@ -1067,7 +1067,7 @@ class LevelRewardCarousel extends PositionComponent with DragCallbacks {
   void onDragEnd(DragEndEvent event) {
     super.onDragEnd(event);
     if (_horizontal == true) {
-      offset = ((offset / 62).round() * 62.0).clamp(
+      offset = (((offset - event.velocity.x * .15) / 62).round() * 62.0).clamp(
         0.0,
         ((rewards.length * 62) - width).clamp(0.0, double.infinity),
       );
@@ -1118,7 +1118,7 @@ class _CarouselEntry extends PositionComponent {
 }
 
 class _CarouselAmount extends PositionComponent {
-  _CarouselAmount(this.coin, this.coins) : super(position: Vector2(-5, 57));
+  _CarouselAmount(this.coin, this.coins) : super(position: Vector2(20, 57), anchor: Anchor.topCenter);
   final Sprite coin;
   final int coins;
   @override
@@ -1126,12 +1126,12 @@ class _CarouselAmount extends PositionComponent {
     await super.onLoad();
     final label = MenuText(
       '+${formatCoins(coins)}',
-      fontSize: 9,
+      fontSize: 8,
       color: const Color(0xFF828282),
-      position: Vector2(22, 0),
+      position: Vector2(19, 0),
     );
     add(label);
-    size = Vector2(22 + label.width, 12);
+    size = Vector2(19 + label.width, 12);
   }
 
   @override
@@ -1147,7 +1147,7 @@ class _CarouselAmount extends PositionComponent {
         ..strokeWidth = 1.6
         ..strokeJoin = StrokeJoin.miter,
     );
-    CoinIcon.paint(canvas, coin.image, const Offset(16, 6), 9);
+    CoinIcon.paint(canvas, coin.image, const Offset(14, 6), 8);
   }
 }
 // endregion

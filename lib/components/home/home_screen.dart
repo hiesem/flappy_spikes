@@ -1,3 +1,7 @@
+// region P26-G5b
+import '../../progression/weekly_course.dart';
+import '../progression/weekly_card.dart';
+// endregion P26-G5b
 // region P26-G6b
 import '../../progression/flight_guide.dart';
 // endregion
@@ -169,6 +173,25 @@ class HomeScreen extends PositionComponent
     late final MissionsPanel panel;
     panel = MissionsPanel(
     // endregion
+      // region P26-G5b
+      weeklyCard:
+          WeeklyCourse.unlocked(
+            gamesPlayed: game.storage.gamesPlayed,
+            bestHoops: game.storage.bestHoops,
+          )
+          ? WeeklyCard(
+              course: WeeklyCourse(
+                weeklyBest: game.storage.weeklyBest,
+                weeklyRewards: game.storage.weeklyRewards,
+              ).refresh(game.storage.now()),
+              now: game.storage.now(),
+              onPressed: () {
+                _closeMissions();
+                game.startWeeklyCourse();
+              },
+            )
+          : null,
+      // endregion P26-G5b
       missions: RunEndBookkeeping.currentMissions(game.storage),
       now: game.storage.now(),
       onDismiss: _closeMissions,

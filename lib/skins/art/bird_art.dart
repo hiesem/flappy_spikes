@@ -539,14 +539,7 @@ abstract final class BirdArt {
   /// All bird ids in grid order.
   static final List<String> ids = [for (final b in all) b.id];
 
-  // region P26-POL3
-  static final Map<String, BirdSpec> _byId = {
-    for (final b in all) b.id: b,
-    'magpie': BirdSpec('magpie', 'sq', c: const Color(0xFF1C1C1C), d: const Color(0xFF2673B8)),
-    'prism': BirdSpec('prism', 'sq', c: const Color(0xFFEAF8FF), d: const Color(0xFF6EB9E4)),
-    'daynight': BirdSpec('daynight', 'sq', c: const Color(0xFF4FC3F7), d: const Color(0xFF364675)),
-  };
-  // endregion
+  static final Map<String, BirdSpec> _byId = {for (final b in all) b.id: b};
 
   /// Bird by id; unknown ids fall back to `classic` (JS `byId`).
   static BirdSpec byId(String id) => _byId[id] ?? all.first;

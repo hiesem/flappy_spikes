@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../skins/art/look_painter.dart';
+import '../skins/art/skill_art_v26_part2.dart';
 import '../skins/catalog.dart';
 import '../skins/look.dart';
 
@@ -94,6 +95,7 @@ class StickerAvatars {
     final c = switch (bird) {
       'rainbow' => const ui.Color(0xFFFF5252),
       'snow' || 'ghost' => const ui.Color(0xFF90A4AE),
+      'magpie' || 'prism' || 'daynight' => f10c2BirdFace(bird, BirdArt.byId('classic').shape, frozenT).c,
       _ => BirdArt.byId(bird).c,
     };
     return ui.Color.lerp(

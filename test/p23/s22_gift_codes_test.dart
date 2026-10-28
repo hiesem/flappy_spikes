@@ -261,6 +261,8 @@ void main() async {
       await launched(g);
       expect(g.menu.noAds, isTrue);
       expect(g.menu.wallet.balance, kNoAdsBonusCoins);
+      expect(g.storage.lifetimeCoinsEarned, kNoAdsBonusCoins);
+      expect(g.storage.lifetimeCoinsBought, 0);
       final popup = g.noAdsCelebration!;
       expect(popup.gift!.product, IapProduct.noAds);
       expect(popup.message, 'No Ads');

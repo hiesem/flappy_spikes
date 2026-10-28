@@ -1,7 +1,9 @@
 import 'package:flame/components.dart';
+import 'package:flappy_spikes/achievements/achievement_catalog.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/skins/skill_earn_sheet.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,6 +21,13 @@ void main() {
       await flushAndMount(game);
     },
     verify: (game, _) async {
+      // F10: an earned, unseen skill item remains NEW until viewed.
+      expect(game.menu.items.isNew(SkinLayer.hoop, 'spikes'), isFalse);
+      expect(game.achievements.unlock(AchievementId.rankSpikeAce), isTrue);
+      await game.achievements.flush();
+      expect(game.menu.items.isNew(SkinLayer.hoop, 'spikes'), isTrue);
+      await game.menu.items.markSeen(SkinLayer.hoop, 'spikes');
+      expect(game.menu.items.isNew(SkinLayer.hoop, 'spikes'), isFalse);
       game.openSkins();
       await flushAndMount(game);
       stepGame(game, .7);
@@ -63,7 +72,16 @@ void main() {
       expect(shop.children.query<SkillEarnSheet>(), hasLength(1));
       shop.children.query<SkillEarnSheet>().single.close();
       await flushAndMount(game);
-      shop.actionButton.onPressed();
+      // PRD-2.6 F10: the prompt and unlock text stay within the stage and
+      // the unlock line sits below the name and rarity chip.
+      stepGame(game, .1);
+      expect(Config.skinShopStageRect.contains(Config.skinSkillStripRect.topLeft), isTrue);
+      expect(Config.skinShopStageRect.contains(Config.skinSkillStripRect.bottomRight), isTrue);
+      expect(shop.skillUnlockLine.position.y,
+          greaterThanOrEqualTo(shop.nameRow.position.y + shop.nameRow.nameLineHeight));
+      expect(shop.skillUnlockLine.position.y + shop.skillUnlockLine.height,
+          lessThan(Config.skinSkillStripRect.top));
+      shop.skillStrip.onPressed();
       await flushAndMount(game);
       expect(shop.children.query<SkillEarnSheet>(), hasLength(1));
     },

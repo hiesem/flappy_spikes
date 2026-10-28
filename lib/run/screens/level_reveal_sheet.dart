@@ -46,11 +46,13 @@ class LevelRevealSheet extends P1Popup {
     // endregion
     // region P26-F10b
     this.skill = false,
+    this.onSkillRemoved,
     // endregion
   }) : super(onDismiss: () {}, priority: 100);
 
   // region P26-F10b
   final bool skill;
+  final void Function(bool completed)? onSkillRemoved;
   ShopCardArt? skillCardArt;
   // endregion
   final SkinItem? item;
@@ -272,6 +274,9 @@ class LevelRevealSheet extends P1Popup {
     // endregion
     if (equip && item != null) {
       await game.menu.items.equip(item!.layer, item!.id);
+      // region P26-F10b
+      if (skill) await game.menu.items.markSeen(item!.layer, item!.id);
+      // endregion
       for (final child in details.children.whereType<PositionComponent>()) {
         if (child != _preview && child != equippedLabel) child.scale.setZero();
       }
@@ -286,9 +291,22 @@ class LevelRevealSheet extends P1Popup {
   // region P26-F10b
   @override
   void onRemove() {
+    if (skill) onSkillRemoved?.call(choosing);
     skillCardArt?.dispose();
     art.dispose();
     super.onRemove();
+  }
+  // endregion
+
+  // region P26-F10b
+  /// Keyboard/back advances the opening, then chooses LATER.
+  void advanceSkill() {
+    if (choosing) return;
+    if (!revealed) {
+      elapsed = 1.95;
+    } else {
+      unawaited(choose(false));
+    }
   }
   // endregion
 

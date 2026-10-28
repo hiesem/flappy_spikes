@@ -18,6 +18,7 @@ void main() {
       affordable: () => true, tint: () => const Color(0xff000000),
       reduceMotion: () => true, onPressed: () {});
     action.update(0);
-    expect(action.label, 'SKILL ONLY · SECRET · HOW TO EARN ›');
+    // PRD-2.6 F10: the full secret prompt is in the separate stage strip.
+    expect(action.label, 'SKILL ONLY');
   });
 }

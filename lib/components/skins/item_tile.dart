@@ -456,8 +456,11 @@ class ItemTile extends PositionComponent with TapCallbacks {
     if (item.isSkillOnly && trophy != null) {
       canvas.drawImageRect(trophy,
         Rect.fromLTWH(0, 0, trophy.width.toDouble(), trophy.height.toDouble()),
-        const Rect.fromLTWH(5, 4, 15, 15), _paint..color = const Color(0xFFFFFFFF));
+        const Rect.fromLTWH(5, 4, 19, 19), _paint
+          ..color = const Color(0xFFFFFFFF)
+          ..colorFilter = const ColorFilter.mode(Config.menuPlum, BlendMode.srcIn));
     }
+    _paint.colorFilter = null;
     // endregion
     // Lock + price pill.
     if (!s.owned) {

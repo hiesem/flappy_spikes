@@ -989,6 +989,17 @@ class Config {
   static const double skinShopGridLeft = homeMargin;
   static const double skinShopGridTop = 326;
   static const double skinShopGridWidth = 292;
+  // region P26-F10b
+  static const double skinSkillUnlockOffsetY = 25;
+  static const double skinSkillStripInset = 6;
+  static const double skinSkillStripHeight = 22;
+  static Rect get skinSkillStripRect => Rect.fromLTWH(
+    skinShopStageRect.left + skinSkillStripInset,
+    skinShopStageRect.bottom - skinSkillStripHeight - skinSkillStripInset,
+    skinShopStageRect.width - 2 * skinSkillStripInset,
+    skinSkillStripHeight,
+  );
+  // endregion
   static const double skinShopTile = 92;
   static const double skinShopTileGap = 8;
   static const double skinShopGridPadTop = 6;

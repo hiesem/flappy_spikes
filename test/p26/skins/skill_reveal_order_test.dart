@@ -2,8 +2,11 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/achievements/achievement_catalog.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/run/screens/level_reveal_sheet.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show KeyEventResult;
 
 import '../../helpers.dart';
 
@@ -53,21 +56,51 @@ void main() {
       await level.choose(false);
       await flushAndMount(game);
       expect(game.menu.levels.pending, isEmpty);
-      for (var i = 0; i < 1200 && game.skillReveal == null; i++) {
+      // PRD-2.6 F10 / approved skill_cosmetics.html:1118: achievement
+      // pills play after the level reveal and before the skill reveal.
+      var sawToast = false;
+      for (var i = 0; i < 3600 && game.skillReveal == null; i++) {
         game.update(1 / 60);
-        if (i % 60 == 0) await flushAndMount(game);
+        if (i % 10 == 0) await flushAndMount(game);
+        if (game.achievementToast != null) {
+          sawToast = true;
+          expect(game.skillReveal, isNull);
+          game.achievementToast!.dismiss();
+        }
       }
+      expect(sawToast, isTrue);
       await flushAndMount(game);
       final skill = game.skillReveal!;
       expect(skill.skill, isTrue);
       expect(skill.item!.id, 'spikes');
       expect(game.achievementToast, isNull);
+      expect(game.modalPopupOpen, isTrue);
+      for (final key in [LogicalKeyboardKey.space, LogicalKeyboardKey.enter, LogicalKeyboardKey.escape]) {
+        final event = KeyDownEvent(physicalKey: PhysicalKeyboardKey.space,
+          logicalKey: key, timeStamp: Duration.zero);
+        expect(game.onKeyEvent(event, {key}), KeyEventResult.handled);
+        expect(game.state, GameState.results);
+      }
+      game.openNoAdsPopup();
+      expect(game.queuedPopups, greaterThan(0));
+      expect(game.noAdsPopup, isNull);
       stepGame(game, 2);
-      expect(game.achievementToast, isNull);
-      await skill.choose(true);
+      expect(game.noAdsPopup, isNull);
+      await skill.choose(false);
+      expect(game.menu.items.isOwned(SkinLayer.hoop, 'spikes'), isTrue);
+      expect(game.menu.items.isNew(SkinLayer.hoop, 'spikes'), isTrue);
+      await game.menu.items.markSeen(SkinLayer.hoop, 'spikes');
+      expect(game.menu.items.isNew(SkinLayer.hoop, 'spikes'), isFalse);
+      stepGame(game, 1.7);
+      await flushAndMount(game);
+      expect(game.skillReveal, isNull);
+      final equipSheet = LevelRevealSheet(item: skill.item, skill: true, onFinished: (_) {});
+      game.world.add(equipSheet);
+      await flushAndMount(game);
+      stepGame(game, 2);
+      await equipSheet.choose(true);
       expect(game.menu.items.look.idFor(SkinLayer.hoop), 'spikes');
       stepGame(game, 1.7);
-      expect(game.skillReveal, isNull);
     },
   );
   tester.testGameWidget(
@@ -81,12 +114,30 @@ void main() {
     verify: (game, _) async {
       expect(game.achievements.unlock(AchievementId.secondWind), isTrue);
       await game.achievements.flush();
-      for (var i = 0; i < 600 && game.skillReveal == null; i++) {
+      // F10: Home keeps this reveal queued; no bare sheet or modal opens.
+      for (var i = 0; i < 180; i++) {
         game.update(1 / 60);
-        if (i % 60 == 0) await flushAndMount(game);
+        if (i % 10 == 0) await flushAndMount(game);
+        game.achievementToast?.dismiss();
+        expect(game.skillReveal, isNull);
+      }
+      final run = await startRun(game);
+      run.ctx.addScore(3);
+      killRunThroughSaves(game);
+      await declineRevive(game);
+      await flushAndMount(game);
+      for (var i = 0; i < 3600 && game.skillReveal == null; i++) {
+        game.update(1 / 60);
+        if (i % 10 == 0) await flushAndMount(game);
+        game.achievementToast?.dismiss();
       }
       await flushAndMount(game);
+      final interrupted = game.skillReveal!;
+      expect(interrupted.item!.id, 'n_sky');
+      interrupted.removeFromParent();
+      await flushAndMount(game);
       final skill = game.skillReveal!;
+      expect(identical(skill, interrupted), isFalse);
       expect(skill.item!.id, 'n_sky');
       stepGame(game, 2);
       await skill.choose(true);

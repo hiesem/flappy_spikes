@@ -1,3 +1,6 @@
+// region P26-F10b
+import 'dart:math' as math;
+// endregion
 import 'dart:ui';
 
 import 'package:flame/components.dart';
@@ -137,6 +140,9 @@ class SkinNameRow extends PositionComponent {
   /// Visible texts (tests).
   String get nameText => _name.text;
   String? get chipText => _rarity == null ? null : _chip.text;
+  // region P26-F10b
+  double get nameLineHeight => math.max(_name.height, _rarity == null ? 0 : _chip.height + 3);
+  // endregion
 
   @override
   void update(double dt) {
@@ -255,7 +261,7 @@ class ShopActionButton extends PositionComponent with TapCallbacks {
         ShopActionKind.nothingOn => 'NOTHING ON',
         ShopActionKind.buy => 'BUY',
         // region P26-F10b
-        ShopActionKind.skillOnly => 'SKILL ONLY · SECRET · HOW TO EARN ›',
+        ShopActionKind.skillOnly => 'SKILL ONLY',
         // endregion
       };
       if (k == ShopActionKind.buy) {
@@ -274,7 +280,9 @@ class ShopActionButton extends PositionComponent with TapCallbacks {
       }
     }
     // Scale about the centre while the anchor stays bottom-right.
-    final s = pulseScale;
+    // region P26-F10b
+    final s = shownKind == ShopActionKind.skillOnly ? 0.0 : pulseScale;
+    // endregion
     scale.setAll(s);
   }
 

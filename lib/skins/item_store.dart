@@ -174,10 +174,12 @@ class ItemStore extends ChangeNotifier {
   /// or affordable right now.
   bool isNew(SkinLayer layer, String id) {
     final item = itemById(layer, id);
-    if (item == null || isOwned(layer, id)) return false;
-    if (_storage.seenItems.contains(item.key)) return false;
+    // region P26-F10b
+    if (item == null || _storage.seenItems.contains(item.key)) return false;
+    if (item.isSkillOnly) return isOwned(layer, id);
+    if (isOwned(layer, id)) return false;
+    // endregion
     // region P26-F9a
-    if (item.isSkillOnly) return false;
     // endregion
     return kNewInUpdate.contains(item.key) || item.price <= _wallet.balance;
   }

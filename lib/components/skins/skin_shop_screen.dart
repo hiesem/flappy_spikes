@@ -223,7 +223,7 @@ class SkinShopScreen extends MenuScreen {
         }
         // endregion
       },
-      isActive: isActive,
+      isActive: () => isActive() && !(tryOnItem?.isSkillOnly ?? false),
     );
     tabBar = SkinTabBar(
       rect: Config.skinShopTabBarRect,
@@ -237,6 +237,7 @@ class SkinShopScreen extends MenuScreen {
     addAll([bar, stage, nameRow, actionButton, tabBar]);
     // region P26-F10b
     add(skillUnlockLine);
+    add(skillStrip);
     // endregion
     // region P26-F9e
     for (final kind in CardKind.values) {
@@ -443,7 +444,19 @@ class SkinShopScreen extends MenuScreen {
 
   // region P26-F10b
   late final MenuText skillUnlockLine = MenuText('', fontSize: 8,
-      color: Config.menuPlum, position: Vector2(20, 145));
+      color: Config.menuPlum, position: Vector2(
+        Config.skinShopStageRect.left + Config.skinShopNameLeft,
+        Config.skinShopStageRect.top + Config.skinShopNameTop + Config.skinSkillUnlockOffsetY));
+  late final MenuButton skillStrip = MenuButton(
+    position: Config.skinSkillStripRect.topLeft.toVector2(),
+    size: Config.skinSkillStripRect.size.toVector2(),
+    color: Config.menuGold,
+    isActive: () => isActive() && (tryOnItem?.isSkillOnly ?? false),
+    onPressed: showSkillEarn,
+    children: [MenuText('SKILL ONLY · SECRET · HOW TO EARN ›', fontSize: 9,
+      color: Config.menuPlum, position: Vector2(Config.skinSkillStripRect.width / 2,
+        Config.skinSkillStripRect.height / 2), anchor: Anchor.center)],
+  );
 
   MenuText? get skillSectionHeader => _skillHeader as MenuText?;
 
@@ -560,6 +573,9 @@ class SkinShopScreen extends MenuScreen {
     super.update(dt);
     // region P26-F10b
     final skillItem = activeItem;
+    final tryingSkill = tryOnItem?.isSkillOnly ?? false;
+    skillStrip.scale.setAll(tryingSkill ? 1 : 0);
+    actionButton.scale.setAll(tryingSkill ? 0 : 1);
     skillUnlockLine.text = !skillItem.isSkillOnly ? '' :
       game.menu.items.isOwned(skillItem.layer, skillItem.id)
         ? 'UNLOCKED BY: ${skillItem.unlock!.title.toUpperCase()}'

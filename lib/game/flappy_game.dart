@@ -741,6 +741,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       // region P26-G1c
       _missionsPanelOpen ||
       // endregion
+      // region P26-F10b
+      _skillReveal != null ||
+      // endregion
       // region P26-G2c
       _streakLostPopup != null ||
       // endregion
@@ -5163,6 +5166,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     }
     wakeFrames();
     final key = event.logicalKey;
+    // region P26-F10b
+    if (_skillReveal != null && (key == LogicalKeyboardKey.space ||
+        key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.escape)) {
+      _skillReveal!.advanceSkill();
+      return KeyEventResult.handled;
+    }
+    // endregion
     if (key == LogicalKeyboardKey.space ||
         key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.numpadEnter) {
@@ -6051,17 +6062,24 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   LevelRevealSheet? get skillReveal => _skillReveal;
 
   void _checkSkillReveals() {
-    if (_skillReveal != null || _skillRevealQueue.isEmpty) return;
+    if (_skillReveal != null || _skillRevealQueue.isEmpty ||
+        achievementToast != null || achievements.toastQueue.isNotEmpty ||
+        modalPopupOpen) {
+      return;
+    }
     final page = _results;
-    final onResults = state == GameState.results && page != null &&
-        page.settled && !page.leaving;
-    final onHome = state == GameState.start && _homeInteractive &&
-        menu.levels.pending.isEmpty;
-    if (!onResults && !onHome) return;
+    if (state != GameState.results || page == null || !page.settled || page.leaving) {
+      return;
+    }
     final item = _skillRevealQueue.removeAt(0);
-    final sheet = LevelRevealSheet(item: item, skill: true, onFinished: (_) {
-      _skillReveal = null;
-    });
+    late final LevelRevealSheet sheet;
+    sheet = LevelRevealSheet(item: item, skill: true, onFinished: (_) {},
+      onSkillRemoved: (completed) {
+        if (!identical(_skillReveal, sheet)) return;
+        _skillReveal = null;
+        if (!completed) _skillRevealQueue.insert(0, item);
+        _drainPopups();
+      });
     _skillReveal = sheet;
     world.add(sheet);
   }
@@ -6069,7 +6087,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   void _checkAchievementToasts() {
     // region P26-F10b
-    if (_skillReveal != null || _skillRevealQueue.isNotEmpty) return;
+    if (_skillReveal != null) return;
     // endregion
     if (achievements.toastQueue.isEmpty || _achToast != null) return;
     // iOS round 2 §6: toasts carried over from a results page that was

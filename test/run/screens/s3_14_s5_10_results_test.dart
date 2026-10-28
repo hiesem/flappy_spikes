@@ -173,6 +173,22 @@ void main() {
       return g.resultsScreen!;
     }
 
+    FlameTester<FlappySpikesGame>(
+      () => trackGame(prefs: {'lvlIndex': 10, 'lvlPoints': 700, 'bestScore': 900}),
+      gameSize: Vector2(320, 711),
+    ).testGameWidget(
+      'J3 background tap skips to reveal',
+      setUp: (g, _) async { await g.ready(); await preloadImages(g); },
+      verify: (g, tester) async {
+        final page = await endWith(g, score: 180);
+        stepGame(g, .4);
+        expect(page.revealReady, isFalse);
+        await tester.tapAt(const Offset(10, 350));
+        await tester.pump();
+        expect(page.revealReady, isTrue);
+      },
+    );
+
     rt(
       'PRD-2.6 J7a accumulated run fills and settles at 2.15 s',
       () => trackGame(

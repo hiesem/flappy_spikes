@@ -10,6 +10,21 @@ import '../../helpers.dart';
 
 void main() {
   FlameTester<FlappySpikesGame>(
+    () => createRunTestGame(), gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'equipping before payout marks the later reward log',
+    setUp: (g, _) async { await g.ready(); await preloadImages(g); },
+    verify: (g, _) async {
+      await g.menu.levels.recordRun(25);
+      final row = g.menu.levels.pending.single;
+      final item = allItems.singleWhere((i) => i.key == row['item']);
+      await g.menu.items.grant(item.key);
+      await g.menu.items.equip(item.layer, item.id);
+      await g.menu.levels.payPending();
+      expect(g.menu.levels.rewardLog.single['equipped'], isTrue);
+    },
+  );
+  FlameTester<FlappySpikesGame>(
     () => createRunTestGame(),
     gameSize: Vector2(320, 711),
   ).testGameWidget(

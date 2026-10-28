@@ -64,6 +64,9 @@ class ItemTile extends PositionComponent with TapCallbacks {
     this.cardArt,
     this.isOnScreen,
     double? enterDelay,
+    // region P26-J6
+    this.rewardTile = false,
+    // endregion
   }) : _age = enterDelay == null ? double.infinity : -enterDelay,
        _price = PriceChip(
          item.price,
@@ -83,6 +86,31 @@ class ItemTile extends PositionComponent with TapCallbacks {
   // region P26-F9e
   final ShopCardArt? cardArt;
   // endregion
+  // region P26-J6
+  /// Static, non-interactive reward presentation at the supplied rect size.
+  final bool rewardTile;
+  Picture? _rewardPicture;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    if (!rewardTile) return;
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+    if (item.layer == SkinLayer.trail) {
+      final emitter = art.emitterFor(item);
+      for (var i = 0; i < 30; i++) {
+        ItemArt.advanceTrail(emitter, i / 30, 1 / 30);
+      }
+      ItemArt.paint(canvas, item, emitter: emitter);
+    } else {
+      ItemArt.paint(canvas, item);
+    }
+    _rewardPicture = recorder.endRecording();
+  }
+
+  // endregion
+
   final SkinItem item;
   final ItemTileState Function() state;
   final void Function() onPressed;
@@ -169,9 +197,14 @@ class ItemTile extends PositionComponent with TapCallbacks {
 
   bool get _visible => isOnScreen?.call() ?? true;
 
+  // region P26-J6
   @override
   bool containsLocalPoint(Vector2 point) =>
-      (isActive?.call() ?? true) && super.containsLocalPoint(point);
+      !rewardTile &&
+      (isActive?.call() ?? true) &&
+      super.containsLocalPoint(point);
+
+  // endregion
 
   @override
   void onTapDown(TapDownEvent event) {
@@ -192,6 +225,9 @@ class ItemTile extends PositionComponent with TapCallbacks {
   @override
   void update(double dt) {
     super.update(dt);
+    // region P26-J6
+    if (rewardTile) return;
+    // endregion
     // region P26-F9e
     if (!_visible || reduceMotion()) cardArt?.releaseAnimation(this);
     // endregion
@@ -216,6 +252,10 @@ class ItemTile extends PositionComponent with TapCallbacks {
   // region P26-F9e
   @override
   void onRemove() {
+    // region P26-J6
+    _rewardPicture?.dispose();
+    _rewardPicture = null;
+    // endregion
     cardArt?.releaseAnimation(this);
     super.onRemove();
   }
@@ -248,6 +288,30 @@ class ItemTile extends PositionComponent with TapCallbacks {
 
   @override
   void render(Canvas canvas) {
+    // region P26-J6
+    if (rewardTile) {
+      final rarity = item.rarity?.color ?? const Color(0xFF999999);
+      canvas.drawRect(size.toRect(), _paint..color = const Color(0xFFF4F4F4));
+      canvas.save();
+      canvas.clipRect(Rect.fromLTWH(2, 2, width - 4, height - 6));
+      canvas.translate(2, 2);
+      canvas.scale((width - 4) / ItemArt.w, (height - 6) / ItemArt.h);
+      final picture = _rewardPicture;
+      if (picture != null) canvas.drawPicture(picture);
+      canvas.restore();
+      canvas.drawRect(
+        size.toRect().deflate(1),
+        _stroke
+          ..color = rarity
+          ..strokeWidth = 2,
+      );
+      canvas.drawRect(
+        Rect.fromLTWH(0, height - 4, width, 4),
+        _paint..color = rarity,
+      );
+      return;
+    }
+    // endregion
     final s = _state;
     final rect = size.toRect();
     canvas.drawRect(

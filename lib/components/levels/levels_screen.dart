@@ -16,6 +16,8 @@ import '../../levels/levels.dart';
 import '../../skins/look.dart';
 import '../../skins/catalog.dart';
 import '../skins/item_art.dart';
+import '../skins/item_tile.dart';
+import '../../run/effects/coin_icon.dart';
 import '../home/menu_primitives.dart';
 import '../look_component.dart';
 import '../menu_screen_chrome.dart';
@@ -413,7 +415,13 @@ class LevelsHeader extends PositionComponent {
     addAll([emblem, bird, nameText, statsText, _BarFill(this), barText]);
     if (level > 0) {
       add(
-        _LevelBadge(level, position: Vector2(_textX + nameText.width + 6, top)),
+        MenuTag(
+          '$level',
+          fontSize: 12,
+          fontFamily: 'Fredoka',
+          fillColor: Config.menuPink,
+          position: Vector2(_textX + nameText.width + 6, top),
+        ),
       );
     }
     _built = true;
@@ -605,17 +613,30 @@ class LevelRow extends PositionComponent {
       add(_RowProgress(points: points, need: def.points));
     }
     if (isCurrent) addAll([_CurrentOutline(this), _YouTag()]);
-    if (isNext) add(_NextTag());
+    if (isNext) {
+      add(
+        MenuTag(
+          'NEXT',
+          fontSize: 9,
+          letterSpacingEm: .14,
+          fillColor: Config.menuSoft,
+          textColor: Config.menuPlum,
+          position: Vector2(6, -7),
+          priority: 5,
+        ),
+      );
+    }
     if (!reached && !isNext) add(_LockIcon(this));
     final item = rewardItem;
     if (reached && def.level < 32 && item != null) {
-      add(
+      addAll([
+        _RewardItemName(item, chip),
         _EarnedItem(
           item: item,
           isNew:
               reward?['equipped'] != true && look.idFor(item.layer) != item.id,
         ),
-      );
+      ]);
     }
     if (def.level == 32 && isCurrent) {
       add(
@@ -842,28 +863,6 @@ class _LockIcon extends PositionComponent {
   }
 }
 
-class _LevelBadge extends PositionComponent {
-  _LevelBadge(int level, {super.position})
-    : label = MenuText(
-        '$level',
-        fontSize: 12,
-        fontFamily: 'Fredoka',
-        color: const Color(0xFFFFFFFF),
-        position: Vector2(5, 2),
-      );
-  final MenuText label;
-  @override
-  Future<void> onLoad() async {
-    await super.onLoad();
-    size = Vector2(label.width + 10, label.height + 4);
-    add(label);
-  }
-
-  @override
-  void render(Canvas canvas) =>
-      canvas.drawRect(size.toRect(), Paint()..color = Config.menuPink);
-}
-
 class _RowProgress extends PositionComponent {
   _RowProgress({required this.points, required this.need})
     : super(position: Vector2(78, 29), size: Vector2(130, 12));
@@ -890,24 +889,25 @@ class _RowProgress extends PositionComponent {
   }
 }
 
-class _NextTag extends PositionComponent {
-  _NextTag() : super(position: Vector2(6, -7), priority: 5);
+class _RewardItemName extends MenuText {
+  _RewardItemName(SkinItem item, this.chip)
+    : super(
+        item.name.toUpperCase(),
+        fontSize: 12,
+        fontFamily: 'Fredoka',
+        color: item.rarity?.color ?? const Color(0xFF999999),
+        position: Vector2(78, 47),
+      );
+  final PositionComponent chip;
+  bool _positioned = false;
   @override
-  Future<void> onLoad() async {
-    await super.onLoad();
-    final label = MenuText(
-      'NEXT',
-      fontSize: 9,
-      color: Config.menuPlum,
-      position: Vector2(5, 2),
-    );
-    size = Vector2(label.width + 10, label.height + 3);
-    add(label);
+  void update(double dt) {
+    super.update(dt);
+    if (!_positioned && chip.width > 0) {
+      position.x = chip.position.x + chip.width + 5;
+      _positioned = true;
+    }
   }
-
-  @override
-  void render(Canvas canvas) =>
-      canvas.drawRect(size.toRect(), Paint()..color = Config.menuSoft);
 }
 
 class _EarnedItem extends PositionComponent {
@@ -915,10 +915,12 @@ class _EarnedItem extends PositionComponent {
     : super(position: Vector2(234, 9), size: Vector2.all(50));
   final SkinItem item;
   final bool isNew;
+  final ItemArtCache art = ItemArtCache();
   @override
   Future<void> onLoad() async {
     await super.onLoad();
     final color = item.rarity?.color ?? const Color(0xFF999999);
+    add(_rewardTile(item, 50, art));
     add(
       MenuText(
         item.rarity?.label ?? '',
@@ -928,46 +930,32 @@ class _EarnedItem extends PositionComponent {
         position: Vector2(25, 55),
       ),
     );
-    add(
-      MenuText(
-        item.name.toUpperCase(),
-        fontSize: 10,
-        fontFamily: 'Fredoka',
-        color: color,
-        position: Vector2(-62, 39),
-      ),
-    );
     if (isNew) add(MenuTag('NEW', fontSize: 9, position: Vector2(30, -6)));
   }
 
   @override
-  void render(Canvas canvas) => _paintRewardArt(canvas, item, 50);
+  void onRemove() {
+    art.dispose();
+    super.onRemove();
+  }
 }
 
-void _paintRewardArt(Canvas canvas, SkinItem item, double size) {
-  canvas.drawRect(
-    Rect.fromLTWH(0, 0, size, size),
-    Paint()..color = const Color(0xFFF4F4F4),
-  );
-  canvas.drawRect(
-    Rect.fromLTWH(1, 1, size - 2, size - 2),
-    Paint()
-      ..color = item.rarity?.color ?? const Color(0xFF999999)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2,
-  );
-  canvas.save();
-  canvas.clipRect(Rect.fromLTWH(2, 2, size - 4, size - 4));
-  canvas.scale((size - 4) / ItemArt.w, (size - 4) / ItemArt.h);
-  if (item.layer == SkinLayer.trail) {
-    final cache = ItemArtCache();
-    ItemArt.paint(canvas, item, emitter: cache.emitterFor(item));
-    cache.dispose();
-  } else {
-    ItemArt.paint(canvas, item);
-  }
-  canvas.restore();
-}
+ItemTile _rewardTile(SkinItem item, double size, ItemArtCache art) => ItemTile(
+  item: item,
+  rect: Rect.fromLTWH(0, 0, size, size),
+  state: () => const ItemTileState(
+    owned: true,
+    equipped: false,
+    tryingOn: false,
+    isNew: false,
+  ),
+  onPressed: () {},
+  art: art,
+  cardColor: () => const Color(0xFFF4F4F4),
+  tint: () => const Color(0xFF828282),
+  reduceMotion: () => true,
+  rewardTile: true,
+);
 
 /// Horizontal reward strip. Vertical drags are passed to the enclosing list.
 class LevelRewardCarousel extends PositionComponent with DragCallbacks {
@@ -976,8 +964,42 @@ class LevelRewardCarousel extends PositionComponent with DragCallbacks {
   final List<Map<String, Object?>> rewards;
   final Sprite coin;
   final MenuScrollArea? scroll;
-  double offset = 0;
+  final ItemArtCache art = ItemArtCache();
+  late final PositionComponent _content;
+  double _offset = 0;
+  double get offset => _offset;
+  set offset(double value) {
+    _offset = value;
+    _content.position.x = -value;
+  }
+
   bool? _horizontal;
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    _content = PositionComponent();
+    for (var i = 0; i < rewards.length; i++) {
+      _content.add(
+        _CarouselEntry(rewards[i], coin: coin, art: art, x: i * 62.0 + 7),
+      );
+    }
+    add(_content);
+  }
+
+  @override
+  void onRemove() {
+    art.dispose();
+    super.onRemove();
+  }
+
+  @override
+  void renderTree(Canvas canvas) {
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(position.x, position.y, width, height));
+    super.renderTree(canvas);
+    canvas.restore();
+  }
+
   @override
   void onDragStart(DragStartEvent event) {
     super.onDragStart(event);
@@ -1020,62 +1042,78 @@ class LevelRewardCarousel extends PositionComponent with DragCallbacks {
     }
     _verticalStarted = false;
   }
+}
 
+class _CarouselEntry extends PositionComponent {
+  _CarouselEntry(
+    this.row, {
+    required this.coin,
+    required this.art,
+    required double x,
+  }) : super(position: Vector2(x, 8), size: Vector2(40, 76));
+  final Map<String, Object?> row;
+  final Sprite coin;
+  final ItemArtCache art;
   @override
-  void render(Canvas canvas) {
-    canvas.save();
-    canvas.clipRect(size.toRect());
-    final first = (offset / 62).floor().clamp(0, rewards.length);
-    final end = (first + (width / 62).ceil() + 2).clamp(0, rewards.length);
-    for (var i = first; i < end; i++) {
-      final row = rewards[i];
-      final item = allItems
-          .where((item) => item.key == row['item'])
-          .firstOrNull;
-      canvas.save();
-      canvas.translate(i * 62.0 - offset + 7, 8);
-      if (item != null) _paintRewardArt(canvas, item, 40);
-      final tag = MenuText(
+  Future<void> onLoad() async {
+    await super.onLoad();
+    final item = allItems.where((item) => item.key == row['item']).firstOrNull;
+    if (item != null) add(_rewardTile(item, 40, art));
+    add(
+      MenuTag(
         'LV ${row['lvl']}',
         fontSize: 9,
         fontFamily: 'Fredoka',
-        color: const Color(0xFFFFFFFF),
-      );
-      canvas.drawRect(
-        Rect.fromLTWH((40 - tag.width) / 2 - 3, -7, tag.width + 6, 12),
-        Paint()..color = Config.menuPink,
-      );
-      canvas.translate((40 - tag.width) / 2, -7);
-      tag.render(canvas);
-      canvas.translate(-(40 - tag.width) / 2, 7);
-      final name = MenuText(
-        item?.name.toUpperCase() ?? '',
-        fontSize: 10.5,
-        fontFamily: 'Fredoka',
-        color: item?.rarity?.color ?? const Color(0xFF999999),
-      );
-      name.fitWidth(name.text, 54);
-      canvas.save();
-      canvas.translate((40 - name.width) / 2, 42);
-      name.render(canvas);
-      canvas.restore();
-      canvas.save();
-      canvas.translate(-5, 59);
-      coin.render(canvas, size: Vector2.all(9));
-      canvas.restore();
-      final amount = MenuText(
-        '✓ +${formatCoins(row['coins'] as int? ?? 2500)}',
-        fontSize: 9,
-        color: const Color(0xFF828282),
-      );
-      amount.fitWidth(amount.text, 44);
-      canvas.save();
-      canvas.translate((40 - amount.width) / 2, 57);
-      amount.render(canvas);
-      canvas.restore();
-      canvas.restore();
-    }
-    canvas.restore();
+        fillColor: Config.menuPink,
+        position: Vector2(20, -7),
+        anchor: Anchor.topCenter,
+      ),
+    );
+    final name = MenuText(
+      item?.name.toUpperCase() ?? '',
+      fontSize: 10.5,
+      fontFamily: 'Fredoka',
+      color: item?.rarity?.color ?? const Color(0xFF999999),
+      anchor: Anchor.topCenter,
+      position: Vector2(20, 42),
+    );
+    name.fitWidth(name.text, 54);
+    add(name);
+    add(_CarouselAmount(coin, row['coins'] as int? ?? 2500));
+  }
+}
+
+class _CarouselAmount extends PositionComponent {
+  _CarouselAmount(this.coin, this.coins) : super(position: Vector2(-5, 57));
+  final Sprite coin;
+  final int coins;
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    final label = MenuText(
+      '+${formatCoins(coins)}',
+      fontSize: 9,
+      color: const Color(0xFF828282),
+      position: Vector2(22, 0),
+    );
+    add(label);
+    size = Vector2(22 + label.width, 12);
+  }
+
+  @override
+  void render(Canvas canvas) {
+    canvas.drawPath(
+      Path()
+        ..moveTo(0, 5)
+        ..lineTo(3.5, 8.5)
+        ..lineTo(10, 1),
+      Paint()
+        ..color = const Color(0xFF828282)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6
+        ..strokeJoin = StrokeJoin.miter,
+    );
+    CoinIcon.paint(canvas, coin.image, const Offset(16, 6), 9);
   }
 }
 // endregion

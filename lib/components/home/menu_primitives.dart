@@ -405,18 +405,26 @@ class MenuIcon extends SpriteComponent {
 
 /// Gold corner tag ("NEW"): white 11 pt text, 2/5 pt padding (mock `.tag`;
 /// the Skins grid's `.tg` is 10 pt at 0.05 em).
+// region P26-J6
 class MenuTag extends PositionComponent {
   MenuTag(
     String text, {
     double fontSize = 11,
     double letterSpacingEm = 0.04,
+    // region P26-J6
+    Color fillColor = Config.menuGold,
+    Color textColor = const Color(0xFFFFFFFF),
+    String fontFamily = Config.uiFont,
+    // endregion
     super.position,
     super.anchor,
     super.priority,
-  }) : _label = MenuText(
+  }) : _paint = Paint()..color = fillColor,
+       _label = MenuText(
          text,
          fontSize: fontSize,
-         color: const Color(0xFFFFFFFF),
+         color: textColor,
+         fontFamily: fontFamily,
          letterSpacingEm: letterSpacingEm,
          position: Vector2(padX, padY),
        );
@@ -424,7 +432,7 @@ class MenuTag extends PositionComponent {
   final MenuText _label;
   static const double padX = 5;
   static const double padY = 2;
-  final Paint _paint = Paint()..color = Config.menuGold;
+  final Paint _paint;
 
   @override
   Future<void> onLoad() async {
@@ -436,6 +444,8 @@ class MenuTag extends PositionComponent {
   @override
   void render(Canvas canvas) => canvas.drawRect(size.toRect(), _paint);
 }
+
+// endregion
 
 /// Lays [items] out left-to-right as one centred group inside [parent]
 /// (the mocks' `display:flex; justify-content:center; align-items:center;

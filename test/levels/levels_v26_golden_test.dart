@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/components/levels/levels_screen.dart';
+import 'package:flappy_spikes/components/skins/item_tile.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -98,6 +99,16 @@ void main() {
           final carousel = screen.currentRow!.children
               .whereType<LevelRewardCarousel>()
               .single;
+          final tiles = carousel.descendants().whereType<ItemTile>().toList();
+          expect(tiles, hasLength(9));
+          expect(
+            tiles.every((tile) => tile.rewardTile && tile.width == 40),
+            isTrue,
+          );
+          final rowTiles = screen.rows.first
+              .descendants()
+              .whereType<ItemTile>();
+          expect(rowTiles.single.width, 50);
           final point = game.convertLocalToGlobalCoordinate(
             Vector2(190, screen.scroll.screenY(screen.currentRow!.y) + 125),
           );

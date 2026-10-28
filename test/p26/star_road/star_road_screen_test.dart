@@ -104,6 +104,18 @@ void main() {
             .expand((c) => c.children)
             .whereType<MenuText>()
             .map((t) => t.text);
+        // PRD 2.6 §G6: the season uses a separate days chip.
+        expect(headerTexts, contains('SEASON 3'));
+        final header = screen.children.whereType<PositionComponent>()
+            .firstWhere((c) => c.position == Vector2(14, 140));
+        expect(header.children.whereType<MenuTag>().single.children
+            .whereType<MenuText>().single.text, '5 DAYS LEFT');
+        for (final entry in {5: 'GOLDEN', 15: '1 OF 4'}.entries) {
+          final tags = screen.rows[entry.key]!.children
+              .expand((c) => c.children).whereType<MenuTag>();
+          expect(tags.expand((tag) => tag.children).whereType<MenuText>()
+              .map((t) => t.text), contains(entry.value));
+        }
         expect(headerTexts, contains('TIER 10 OF 25 ·'));
         expect(headerTexts, contains('8 STARS TO TIER 11'));
         expect(

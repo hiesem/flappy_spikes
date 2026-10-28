@@ -81,14 +81,32 @@ class StarRoadScreen extends MenuScreen {
         anchor: Anchor.center,
       ),
     );
+    // region P26-G6eB
     header.add(
       MenuText(
-        'SEASON ${road.season} · $daysLeft DAYS LEFT',
+        'SEASON ${road.season}',
         fontSize: 10,
         color: Config.menuPink,
         position: Vector2(84, 6),
       ),
     );
+    final remaining = DateTime(
+      game.storage.now().year,
+      game.storage.now().month,
+      game.storage.now().day + 1,
+    ).difference(game.storage.now());
+    header.add(
+      MenuTag(
+        daysLeft == 1
+            ? 'ENDS IN ${remaining.inHours} H ${remaining.inMinutes % 60} M'
+            : '$daysLeft DAYS LEFT',
+        fontSize: 8,
+        fillColor: Config.menuPink,
+        textColor: Config.menuSoft,
+        position: Vector2(150, 5),
+      ),
+    );
+    // endregion
     header.add(
       MenuText(
         starRoadSeasonName(road.season < 1 ? 1 : road.season),
@@ -272,10 +290,26 @@ class StarRoadScreen extends MenuScreen {
           MenuText(
             won?.name.toUpperCase() ?? starRoadRewardLabel(reward),
             fontSize: 11,
-            color: dark,
+            // region P26-G6eB
+            color: reached ? dark : const Color(0xFF999999),
+            // endregion
             position: Vector2(item ? 122 : 114, 14),
           ),
         );
+        // region P26-G6eB
+        if (reward.kind == StarRoadRewardKind.feather ||
+            reward.kind == StarRoadRewardKind.piece) {
+          rewardVisual.add(
+            MenuTag(
+              reward.kind == StarRoadRewardKind.feather ? 'GOLDEN' : '1 OF 4',
+              fontSize: 8,
+              fillColor: Config.menuGold,
+              textColor: Config.menuPlum,
+              position: Vector2(122, 52),
+            ),
+          );
+        }
+        // endregion
         rewardVisual.add(
           StarRoadStar(side: 10, position: Vector2(item ? 122 : 114, 34)),
         );
@@ -404,7 +438,9 @@ class StarRoadScreen extends MenuScreen {
     );
     add(
       MenuText(
-        'EARN STARS FROM DAILY MISSIONS',
+        // region P26-G6eB
+        'STARS COME FROM DAILY MISSIONS · UP TO 11 A DAY',
+        // endregion
         fontSize: 9,
         color: Config.menuPlum,
         position: Vector2(160, 230),

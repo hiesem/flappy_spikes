@@ -3938,9 +3938,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           _coinPill.releaseHold();
         }));
     }
-    final isItem = reward.kind == StarRoadRewardKind.rare ||
-        reward.kind == StarRoadRewardKind.epic ||
-        reward.kind == StarRoadRewardKind.legendary;
+    // region P26-G6eB
+    final isItem = result.kind == 'item';
+    // endregion
     if (isItem) {
       final item = allItems.where((i) => i.key == result.item).firstOrNull;
       final finished = Completer<void>();
@@ -3960,7 +3960,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       world.add(sheet);
       await finished.future;
     } else {
-      sound.play(starRoadClaimSound(reward));
+      // region P26-G6eB
+      sound.play(result.kind == 'coins' ? Sfx.bnCoin : starRoadClaimSound(reward));
+      // endregion
     }
     return true;
     } finally {

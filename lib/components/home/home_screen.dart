@@ -10,6 +10,10 @@ import 'package:flame/events.dart';
 import 'package:flutter/animation.dart' show Curves;
 
 import '../../game/sound.dart';
+// region P26-G1c
+import '../../run/run_end_bookkeeping.dart';
+import '../progression/missions_panel.dart';
+// endregion
 
 import '../../game/config.dart';
 import '../../game/flappy_game.dart';
@@ -149,7 +153,29 @@ class HomeScreen extends PositionComponent
 
   List<MenuTile> get tiles => [shopTile, skinsTile, inviteTile, noAdsTile];
 
-  bool _isActive() => active;
+  // region P26-G1c
+  MissionsPanel? _missionsPanel;
+  bool _closeMissions() {
+    _missionsPanel?.removeFromParent();
+    _missionsPanel = null;
+    game.popBack(_closeMissions);
+    return true;
+  }
+
+  void _openMissions() {
+    if (!active || game.modalPopupOpen || _missionsPanel != null) return;
+    final panel = MissionsPanel(
+      missions: RunEndBookkeeping.currentMissions(game.storage),
+      now: game.storage.now(),
+      onDismiss: _closeMissions,
+    );
+    _missionsPanel = panel;
+    game.world.add(panel);
+    game.pushBack(_closeMissions);
+  }
+
+  bool _isActive() => active && _missionsPanel == null;
+  // endregion
 
   /// True once the screen was taken off the tree (e.g. a replay right
   /// after it was added) — see [MenuScreen.built].
@@ -250,37 +276,39 @@ class HomeScreen extends PositionComponent
     );
 
     // --- emblem + bird stage, BEST / LAST ------------------------------------
-    final stage = Config.homeStageRectFor(h);
-    final plate = Config.homePlateCentreFor(h);
+    // region P26-G1c
+    final missionLayoutHeight = game.storage.gamesPlayed >= 3 ? h - 26 : h;
+    final stage = Config.homeStageRectFor(missionLayoutHeight);
+    final plate = Config.homePlateCentreFor(missionLayoutHeight);
     emblem = EmblemView(
       // region P26-J2
       progression: true,
       // endregion
       level: _displayLevel,
-      artScale: Config.homeEmblemScaleFor(h),
+      artScale: Config.homeEmblemScaleFor(missionLayoutHeight),
       position: plate.toVector2(),
     );
     bird = HomeBird(
       rect: stage,
       centre: (plate - stage.topLeft).toVector2(),
-      artScale: Config.homeBirdScaleFor(h),
+      artScale: Config.homeBirdScaleFor(missionLayoutHeight),
       look: game.menu.items.look,
       isActive: _isActive,
       onTap: game.tapHomeEmblem,
     );
     bestStat = HomeStat(
-      rect: Config.homeFlankRectFor(h, right: false),
+      rect: Config.homeFlankRectFor(missionLayoutHeight, right: false),
       label: 'BEST',
       gold: true,
     );
     lastStat = HomeStat(
-      rect: Config.homeFlankRectFor(h, right: true),
+      rect: Config.homeFlankRectFor(missionLayoutHeight, right: true),
       label: 'LAST',
       alignRight: true,
     );
 
     // --- START + powerup slot -------------------------------------------------
-    final startRect = Config.homeStartRectFor(h);
+    final startRect = Config.homeStartRectFor(missionLayoutHeight);
     startButton = MenuButton(
       color: Config.menuPink,
       position: startRect.topLeft.toVector2(),
@@ -298,7 +326,7 @@ class HomeScreen extends PositionComponent
       ),
     ], gap: 10);
     slotButton = PowerupSlotButton(
-      rect: Config.homeSlotRectFor(h),
+      rect: Config.homeSlotRectFor(missionLayoutHeight),
       video: icon('video'),
       shield: icon('shield_slot'),
       onPressed: game.tapPowerupSlot,
@@ -310,16 +338,45 @@ class HomeScreen extends PositionComponent
     final mode = game.homeMode;
     _mode = mode;
     modeButton = ModeButton(
-      rect: Config.homeModeRectFor(h),
+      rect: Config.homeModeRectFor(missionLayoutHeight),
       mode: mode,
       onPressed: game.toggleHomeMode,
       isActive: _isActive,
     );
     vsTag = VsTag(
-      rect: Config.homeVsTagRectFor(h),
+      rect: Config.homeVsTagRectFor(missionLayoutHeight),
       visible: mode == HomeMode.versus,
     );
 
+    final missions = RunEndBookkeeping.currentMissions(game.storage);
+    if (game.storage.gamesPlayed >= 3) {
+      final rect = Config.homeMissionsRectFor(missionLayoutHeight);
+      final strip = MenuButton(
+        position: rect.topLeft.toVector2(),
+        size: rect.size.toVector2(),
+        color: missions.allDone ? Config.menuGold : Config.menuSoft,
+        onPressed: _openMissions,
+        isActive: _isActive,
+        children: [
+          MenuText(
+            missions.allDone ? 'ALL DONE' : 'MISSIONS',
+            fontSize: 10,
+            color: Config.menuPlum,
+            position: Vector2(10, 5),
+          ),
+          MissionPips(missions.missions, side: missions.allDone ? 10 : 12,
+            position: Vector2(missions.allDone ? 85 : 144, 5)),
+          if (missions.allDone)
+            MenuText(missionStripCountdown(game.storage.now()),
+              fontSize: 8, color: Config.menuPlum, position: Vector2(209, 6),
+              anchor: Anchor.topRight)
+          else
+            MenuText('›', fontSize: 14, color: Config.menuPink, position: Vector2(201, 3)),
+        ],
+      );
+      add(strip);
+    }
+    // endregion
     // --- tiles ------------------------------------------------------------
     MenuTile tile(int index, String name, String label, void Function() tap) =>
         MenuTile(

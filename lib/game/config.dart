@@ -600,6 +600,11 @@ class Config {
     homeStartWidth,
     homeStartHeight,
   );
+  // region P26-G1c
+  static Rect homeMissionsRectFor(double layoutHeight) => Rect.fromLTWH(
+    homeStartLeft, homeSlotRectFor(layoutHeight).bottom + 4, homeStartWidth, 22,
+  );
+  // endregion
   static Rect homeSlotRectFor(double viewHeight) => Rect.fromLTWH(
     homeStartLeft,
     homeStartTopFor(viewHeight) + homeStartHeight + homeSlotGap,

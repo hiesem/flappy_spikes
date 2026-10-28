@@ -9,6 +9,10 @@ import 'package:flame/events.dart';
 import '../../game/config.dart';
 // endregion
 
+// region P26-G1c
+import '../../components/progression/missions_panel.dart';
+import '../run_end_bookkeeping.dart';
+// endregion
 import '../../components/home/menu_primitives.dart';
 // region P26-LB6
 import '../../components/leaderboard/results_climb.dart';
@@ -474,13 +478,24 @@ class ResultsScreen extends PositionComponent
     // endregion P26-LB4
 
     // region P26-G6a
+    // region P26-G1c
+    await game.missionSettlement;
+    final missionBoard = RunEndBookkeeping.currentMissions(game.storage);
+    _missionsStripVisible = missionBoard.missions.length == 3 && game.storage.gamesPlayed >= 4;
+    // endregion
     final firstWinPaid = await FirstWinReward.pay(game, summary);
     final top = ResultsConfig.topFor(h);
     // Reserve the approved line + missions height before the fixed-size NEXT
     // on short screens. At 711 the approved layout remains at scale 1.
+    // region P26-G1c
     final k = firstWinPaid > 0
         ? _firstWinScale(h, _missionsStripVisible)
-        : ResultsConfig.scaleFor(h);
+        : _missionsStripVisible
+            ? math.min(ResultsConfig.scaleFor(h),
+                (ResultsConfig.nextTopFor(h) - 2 - top) /
+                    (587 - ResultsConfig.contentTop))
+            : ResultsConfig.scaleFor(h);
+    // endregion P26-G1c
     // endregion
     final transform = (
       Vector2(160 * (1 - k), top - ResultsConfig.contentTop * k),
@@ -730,6 +745,15 @@ class ResultsScreen extends PositionComponent
       nextButton,
       levelUpBanner,
     ]);
+    // region P26-G1c
+    if (_missionsStripVisible) {
+      final row = PositionComponent(position: Vector2(14, 565), size: Vector2(292, 22));
+      row.add(RectangleComponent(size: row.size.clone(), paint: Paint()..color = const Color(0xFFFFFFFF)));
+      row.add(MenuText('MISSIONS ${missionBoard.missions.where((m) => m.complete).length}/3', fontSize: 10, color: const Color(0xFF7A0044), position: Vector2(10, 5)));
+      row.add(MissionPips(missionBoard.missions, side: 16, position: Vector2(231, 3)));
+      content.add(row);
+    }
+    // endregion
     // region WP-5b — header, opponent column, VS
     content.addAll(versusParts);
     // endregion WP-5b

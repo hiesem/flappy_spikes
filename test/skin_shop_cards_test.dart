@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flappy_spikes/components/levels/emblem_view.dart';
 import 'package:flappy_spikes/components/skins/shop_widgets.dart';
 import 'package:flappy_spikes/components/skins/item_tile.dart';
 import 'package:flappy_spikes/game/sound.dart';
@@ -47,6 +48,18 @@ void main() {
       for (final id in ['s_gg', 's_thumbs', 's_wow', 's_pow']) {
         expect(ShopCardArt.animated(cardItemById(id)!), isFalse, reason: id);
       }
+    },
+  );
+
+  // PRD-2.6 J3/J8: a track level uses the corresponding progression emblem.
+  shopTest(
+    'CARDS preview uses the progression emblem above level ten',
+    prefs: const {'lvlIndex': 19},
+    verify: (game, spy, ads, iap, tester) async {
+      final shop = await openSkinShop(game, layer: SkinLayer.card);
+      final emblem = shop.stage.children.query<EmblemView>().single;
+      expect(emblem.level, 19);
+      expect(emblem.progression, isTrue);
     },
   );
 

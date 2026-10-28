@@ -567,6 +567,9 @@ class _CardPreviewStage extends PreviewStage {
       ? Config.skinShopCardPreviewRect.center
       : super.celebrationCentre;
   late final EmblemView _emblem = EmblemView(
+    // region P26-J2
+    progression: true,
+    // endregion
     level: screen.game.menu.levels.level,
     artScale: .36,
     position: Vector2(222, 65),

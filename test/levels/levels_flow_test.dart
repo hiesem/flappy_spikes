@@ -57,6 +57,17 @@ Future<void> _flush(FlappySpikesGame game) async {
   await flushAndMount(game);
 }
 
+// PRD-2.6 J7: each saved reward is revealed before the combined payout.
+Future<void> _finishCatchUp(FlappySpikesGame game) async {
+  final reveal = game.levelUpPopup!.reveal;
+  for (var i = 0; i < reveal.rewards.length; i++) {
+    await flushAndMount(game);
+    stepGame(game, 2);
+    await reveal.current.choose(false);
+    await _flush(game);
+  }
+}
+
 void main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
   await loadFonts();
@@ -278,10 +289,9 @@ void main() async {
       expect(popup.pending.reward, 50 + 50 + 50 + 50 + 50 + 75);
       expect(sounds, contains(Sfx.skBuyEpic));
       expect(events.params('level_up'), isEmpty, reason: 'J10 popup replay never repeats level_up');
-      expect(popup.nameText.text, 'WING WOBBLER');
-      expect(popup.articleText.text, 'YOU ARE NOW A');
-      expect(popup.nextText.text, 'Next: HOOP ROOKIE at 400');
-      expect(popup.claimText.text, '+325');
+      expect(popup.reveal.title, '6 LEVEL REWARDS');
+      expect(popup.reveal.levels, 'LV 1 · LV 2 · LV 3 · LV 4 · LV 5 · LV 6');
+      expect(popup.reveal.rewards, hasLength(6));
       // Popups pause the idle motion.
       expect(game.liveMotionPaused, isTrue);
       // Confetti 0.18 s in: 90 pieces for lv 5-8.
@@ -291,8 +301,7 @@ void main() async {
       expect(popup.confetti!.count, 90);
 
       // CLAIM: paid, all claimed, coins fly and count up, emblem pops.
-      popup.claimButton.onPressed();
-      await _flush(game);
+      await _finishCatchUp(game);
       expect(game.levelUpPopup, isNull);
       expect(game.menu.wallet.balance, 425);
       expect(game.storage.lvlPending, isEmpty);
@@ -327,7 +336,7 @@ void main() async {
   );
 
   levelsTest(
-    '✕ also claims (the reward is never lost); Esc too',
+    'Back skips each reveal; LATER pays without losing rewards',
     prefs: {'bestScore': 55, 'playerLevel': 2, 'coins': 0},
     (game, events, t) async {
       stepGame(game, 0.5);
@@ -336,9 +345,13 @@ void main() async {
       expect(popup.pending.reward, 100); // EGG + CHICK
       final sounds = <Sfx>[];
       game.sound.onPlay = sounds.add;
-      popup.closeButton.onPressed();
+      // PRD-2.6 J7: Back skips the box; LATER completes the reward.
+      game.onKeyEvent(_esc(), {});
       await _flush(game);
-      expect(sounds.first, Sfx.skClose);
+      expect(popup.reveal.current.revealed, isTrue);
+      expect(game.menu.wallet.balance, 0);
+      await _finishCatchUp(game);
+      expect(sounds, contains(Sfx.skClose));
       expect(game.levelUpPopup, isNull);
       expect(game.menu.wallet.balance, 100);
       expect(game.storage.lvlPending, isEmpty);
@@ -356,9 +369,11 @@ void main() async {
       game.openLevelUpPopup();
       await flushAndMount(game);
       expect(game.levelUpPopup!.pending.toLevel, 3);
-      expect(game.levelUpPopup!.articleText.text, 'YOU ARE NOW A');
+      expect(game.levelUpPopup!.reveal.title, 'LEVEL REWARD');
       game.onKeyEvent(_esc(), {});
       await _flush(game);
+      expect(game.levelUpPopup!.reveal.current.revealed, isTrue);
+      await _finishCatchUp(game);
       expect(game.levelUpPopup, isNull);
       expect(game.menu.wallet.balance, 150);
     },
@@ -394,9 +409,8 @@ void main() async {
       expect(popup.pending.fromLevel, 1);
       expect(popup.pending.toLevel, 2);
       expect(popup.pending.reward, 50);
-      expect(popup.nameText.text, 'FLUFFBALL');
-      popup.claimButton.onPressed();
-      await _flush(game);
+      expect(popup.reveal.levels, 'LV 2');
+      await _finishCatchUp(game);
       // +50 reward (PRD-2 §3.2: run coins come per hoop passed, and this
       // run's score was set directly, so it passed none).
       expect(game.menu.wallet.balance, 50);
@@ -419,7 +433,7 @@ void main() async {
       stepGame(game, Config.levelUpSettleDelay);
       await flushAndMount(game);
       expect(game.levelUpPopup, isNotNull);
-      expect(game.levelUpPopup!.articleText.text, 'YOU ARE NOW A');
+      expect(game.levelUpPopup!.reveal.title, 'LEVEL REWARD');
       // While it is up nothing else opens over home.
       game.openNoAdsPopup();
       expect(game.noAdsPopup, isNull);
@@ -467,8 +481,8 @@ void main() async {
       await flushAndMount(game);
       final popup = game.levelUpPopup!;
       expect(sounds, contains(Sfx.skBuyLegendary));
-      expect(popup.nextText.text, 'Next: KINGFISHER at 800');
-      expect(popup.claimText.text, '+175');
+      expect(popup.reveal.levels, 'LV 10');
+      expect(popup.pending.reward, 175);
       stepGame(game, 0.2);
       expect(popup.confetti!.count, 140);
     },
@@ -492,8 +506,7 @@ void main() async {
       final popup = game.levelUpPopup!;
       stepGame(game, 0.5);
       expect(popup.confetti, isNull);
-      popup.claimButton.onPressed();
-      await _flush(game);
+      await _finishCatchUp(game);
 
       // Motion on: the emblem's clock runs and its sweep shines.
       game.reduceMotionOverride = false;

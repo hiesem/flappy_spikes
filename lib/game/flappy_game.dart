@@ -3785,7 +3785,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   // region P26-J5
-  bool _levelUpBack() => true;
+  bool _levelUpBack() {
+    _levelUpPopup?.skipReveal();
+    return true;
+  }
   // endregion
 
   // region PRD-2.3 §23 — rating prompt

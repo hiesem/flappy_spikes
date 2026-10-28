@@ -107,8 +107,15 @@ void main() {
         await flushAndMount(game);
         expect(game.levelUpPopup, isNotNull);
         expect(game.handleSystemBack(), isTrue);
-        expect(game.levelUpPopup, isNull);
+        // PRD-2.6 J7: Back reveals the box; LATER pays the pending reward.
         await flushAndMount(game);
+        final reveal = game.levelUpPopup!.reveal;
+        expect(reveal.current.revealed, isTrue);
+        expect(game.menu.levels.pending, isNotEmpty);
+        await reveal.current.choose(false);
+        await flushAndMount(game);
+        expect(game.levelUpPopup, isNull);
+        expect(game.menu.levels.pending, isEmpty);
         expect(_backScreens(spy), ['popup', 'popup']);
       },
     );

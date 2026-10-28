@@ -407,6 +407,16 @@ class LevelCatchUpSheet extends PositionComponent
   int index = 0;
   late LevelRevealSheet current;
   bool _finishing = false;
+  String get title =>
+      rewards.length == 1 ? 'LEVEL REWARD' : '${rewards.length} LEVEL REWARDS';
+  String get levels => rewards.map((row) => 'LV ${row['lvl']}').join(' · ');
+
+  /// Back skips the current box without closing or paying the sequence.
+  void skipReveal() {
+    if (!current.isMounted || current.revealed || current.choosing) return;
+    current.elapsed = 1.95;
+    current.update(0);
+  }
 
   @override
   Future<void> onLoad() async {
@@ -420,10 +430,8 @@ class LevelCatchUpSheet extends PositionComponent
     current = _CatchUpItemSheet(
       item: item,
       extraCoins: row['extraCoins'] as int,
-      title: rewards.length == 1
-          ? 'LEVEL REWARD'
-          : '${rewards.length} LEVEL REWARDS',
-      levels: rewards.map((row) => 'LV ${row['lvl']}').join(' · '),
+      title: title,
+      levels: levels,
       onChoice: (equip) async {
         if (equip && item != null) _equips.add(item);
         if (index + 1 < rewards.length) {

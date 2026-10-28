@@ -121,7 +121,7 @@ void _defect(
   group(id, () => _journey(description, verify, prefs: prefs));
 }
 
-// PRD-2.6 J7: Home catch-up reveals each durable reward before payout.
+// PRD-2.6 WP-J5: Home catch-up reveals each durable reward before payout.
 Future<void> _finishLevelCatchUp(FlappySpikesGame game, WidgetTester tester) async {
   final reveal = game.levelUpPopup!.reveal;
   final count = reveal.rewards.length;
@@ -779,13 +779,13 @@ void main() async {
     final popup = game.levelUpPopup!;
     expect(popup.pending.toLevel, 10);
     expect(popup.confetti, isNull);
-    final phase = popup.emblem.t;
+    final phase = popup.rayAngle;
     await _advance(game, 1);
-    expect(popup.emblem.shine, isFalse);
+    expect(popup.rayAngle, 0);
     expect(
-      popup.emblem.t,
+      popup.rayAngle,
       phase,
-      reason: 'flags, stars, rays and ring must be static',
+      reason: 'PRD-2.6 J7: the catch-up rays stay static under reduce motion',
     );
   }, prefs: {'bestScore': 5000, 'playerLevel': 10, 'claimedLevels': _claimed(9)});
 

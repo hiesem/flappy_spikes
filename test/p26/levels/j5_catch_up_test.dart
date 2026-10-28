@@ -66,6 +66,33 @@ void main() {
     () => createRunTestGame(),
     gameSize: Vector2(320, 711),
   ).testGameWidget(
+    'J5 re-entering Home claim pays exactly once',
+    setUp: (g, _) async {
+      await g.ready();
+      await preloadImages(g);
+    },
+    verify: (g, _) async {
+      await g.menu.levels.recordRun(25);
+      final row = g.menu.levels.pending.single;
+      final before = g.menu.wallet.balance;
+      g.openLevelUpPopup();
+      await flushAndMount(g);
+      final first = g.claimLevelUp();
+      final second = g.claimLevelUp();
+      await Future.wait([first, second]);
+      expect(g.levelUpPopup, isNull);
+      expect(g.menu.levels.pending, isEmpty);
+      expect(
+        g.menu.wallet.balance,
+        before + (row['coins'] as int) + (row['extraCoins'] as int),
+      );
+      expect(await g.menu.levels.payPending(), 0);
+    },
+  );
+  FlameTester<FlappySpikesGame>(
+    () => createRunTestGame(),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget(
     'J5 equip waits for the final choice and survives the payout',
     setUp: (g, _) async {
       await g.ready();

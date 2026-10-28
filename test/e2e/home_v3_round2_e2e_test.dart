@@ -99,7 +99,7 @@ void _defect(
   () => _journey(description, verify, prefs: prefs, service: service),
 );
 
-// PRD-2.6 J7: Home catch-up reveals each durable reward before payout.
+// PRD-2.6 WP-J5: Home catch-up reveals each durable reward before payout.
 Future<void> _finishLevelCatchUp(FlappySpikesGame game, WidgetTester tester) async {
   final reveal = game.levelUpPopup!.reveal;
   final count = reveal.rewards.length;

@@ -465,7 +465,11 @@ void main() {
       await flushAndMount(game);
       expect(game.achievementToast, isNotNull);
 
-      game.levelUpPopup!.claimButton.onPressed();
+      // PRD-2.6 J7: choose LATER after the box reveal.
+      final reveal = game.levelUpPopup!.reveal;
+      await flushAndMount(game);
+      stepGame(game, 2);
+      await reveal.current.choose(false);
       await io();
       await flushAndMount(game);
       expect(game.levelUpPopup, isNull);

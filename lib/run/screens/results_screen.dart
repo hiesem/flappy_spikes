@@ -479,9 +479,18 @@ class ResultsScreen extends PositionComponent
 
     // region P26-G6a
     // region P26-G1c
-    await game.missionSettlement;
     final missionBoard = RunEndBookkeeping.currentMissions(game.storage);
-    _missionsStripVisible = missionBoard.missions.length == 3 && game.storage.gamesPlayed >= 4;
+    final startBoard = game.missionsAtRunStart;
+    final beforeMissions = <int>[];
+    for (final mission in missionBoard.missions) {
+      final sameBoard = startBoard?.day == missionBoard.day;
+      final old = sameBoard ? startBoard!.missions.where((m) => m.template == mission.template).firstOrNull : null;
+      beforeMissions.add(old?.progress ?? 0);
+    }
+    _missionsStripVisible = startBoard != null && game.storage.gamesPlayed >= 4 &&
+        (game.run?.countsForUpload ?? false) && game.runStats != null &&
+        missionBoard.missions.length == 3 &&
+        List.generate(3, (i) => beforeMissions[i] < missionBoard.missions[i].progress).contains(true);
     // endregion
     final firstWinPaid = await FirstWinReward.pay(game, summary);
     final top = ResultsConfig.topFor(h);
@@ -747,11 +756,7 @@ class ResultsScreen extends PositionComponent
     ]);
     // region P26-G1c
     if (_missionsStripVisible) {
-      final row = PositionComponent(position: Vector2(14, 565), size: Vector2(292, 22));
-      row.add(RectangleComponent(size: row.size.clone(), paint: Paint()..color = const Color(0xFFFFFFFF)));
-      row.add(MenuText('MISSIONS ${missionBoard.missions.where((m) => m.complete).length}/3', fontSize: 10, color: const Color(0xFF7A0044), position: Vector2(10, 5)));
-      row.add(MissionPips(missionBoard.missions, side: 16, position: Vector2(231, 3)));
-      content.add(row);
+      content.add(MissionResultsStrip(missions: missionBoard.missions, before: beforeMissions));
     }
     // endregion
     // region WP-5b — header, opponent column, VS

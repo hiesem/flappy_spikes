@@ -73,6 +73,9 @@ import '../menu/powerup_slot.dart';
 import '../menu/wallet.dart';
 // region P26-J2
 import '../run/run_end_bookkeeping.dart';
+// region P26-G1c
+import '../progression/missions.dart';
+// endregion
 // endregion
 import '../run/backdrop/run_backdrop.dart';
 import '../run/debug/autopilot.dart';
@@ -708,7 +711,18 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// Whether one of the modal popups (launch No-ads upsell, LEVEL UP,
   /// purchase result, No-ads celebration) is up.
+  // region P26-G1c
+  bool _missionsPanelOpen = false;
+  Missions? missionsAtRunStart;
+  void setMissionsPanelOpen(bool value) {
+    _missionsPanelOpen = value;
+    if (!value) _drainPopups();
+  }
+  // endregion
   bool get modalPopupOpen =>
+      // region P26-G1c
+      _missionsPanelOpen ||
+      // endregion
       // region P26-G2c
       _streakLostPopup != null ||
       // endregion
@@ -1715,6 +1729,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// force queue) and starts the [RunController] with the first tap.
   // region P26-G5a
   void _startRun(Powerup starter, {WeeklyWeek? weekly}) {
+    // endregion
+    // region P26-G1c
+    missionsAtRunStart = RunEndBookkeeping.currentMissions(storage);
     // endregion
     // region P26-G4b
     // region P26-G6b

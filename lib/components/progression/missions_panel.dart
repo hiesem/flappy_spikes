@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flame/components.dart';
 import '../../game/config.dart';
 import '../../game/flappy_game.dart';
@@ -56,49 +57,232 @@ String missionTask(MissionProgress m) {
   };
 }
 
+/// Three inset pips, optionally animating each changed mission in order.
 class MissionPips extends PositionComponent
     with HasGameReference<FlappySpikesGame> {
-  MissionPips(this.missions, {this.side = 12, super.position});
+  MissionPips(
+    this.missions, {
+    this.before,
+    this.side = 12,
+    this.color = Config.menuPink,
+    super.position,
+  });
   final List<MissionProgress> missions;
+  final List<int>? before;
   final double side;
+  Color color;
+  double elapsed = 0;
+  late Sprite check;
+  List<int> get moved => [
+    for (var i = 0; i < missions.length && i < 3; i++)
+      if (before != null && before![i] < missions[i].progress) i,
+  ];
+  double get duration => moved.isEmpty ? 0 : .5 + (moved.length - 1) * 1.6 + .9;
+  double fractionAt(int i) {
+    final m = missions[i];
+    final from = before == null ? m.progress : before![i];
+    final order = moved.indexOf(i);
+    if (order < 0) return from / m.target;
+    final u = ((elapsed - .5 - order * 1.6) / .65).clamp(0.0, 1.0);
+    final eased = 1 - math.pow(1 - u, 3).toDouble();
+    return (from + (m.progress - from) * eased) / m.target;
+  }
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    final check = Sprite(await game.images.load('menu/check.png'));
-    for (var i = 0; i < missions.length && i < 3; i++) {
-      if (missions[i].complete) {
-        add(
-          MenuIcon(
-            check,
-            size: Vector2.all(side * .75),
-            position: Vector2(i * (side + 5) + side / 2, side / 2),
-            anchor: Anchor.center,
-          ),
-        );
-      }
-    }
+    check = Sprite(await game.images.load('menu/check.png'));
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    elapsed += dt;
   }
 
   @override
   void render(Canvas canvas) {
     for (var i = 0; i < 3; i++) {
       final rect = Rect.fromLTWH(i * (side + 5), 0, side, side);
-      final p = i < missions.length
-          ? (missions[i].progress / missions[i].target).clamp(0.0, 1.0)
-          : 0.0;
+      final p = i < missions.length ? fractionAt(i).clamp(0.0, 1.0) : 0.0;
       canvas.drawRect(rect, Paint()..color = const Color(0xFFFFFFFF));
       canvas.drawRect(
         Rect.fromLTWH(rect.left, rect.bottom - side * p, side, side * p),
-        Paint()..color = Config.menuPink,
+        Paint()..color = color,
       );
       canvas.drawRect(
-        rect,
+        rect.deflate(1),
         Paint()
-          ..color = Config.menuPink
+          ..color = color
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2,
       );
+      if (p >= 1 && i < missions.length) {
+        final order = moved.indexOf(i);
+        final popTime = order < 0 ? 1.0 : elapsed - (.5 + order * 1.6 + .65);
+        final pop = popTime >= 0 && popTime < .25
+            ? 1 + .35 * math.sin(math.pi * popTime / .25)
+            : 1.0;
+        final size = side * .75 * pop;
+        check.render(
+          canvas,
+          position: Vector2(
+            rect.center.dx - size / 2,
+            rect.center.dy - size / 2,
+          ),
+          size: Vector2.all(size),
+        );
+      }
     }
+  }
+}
+
+/// Home entry; countdown follows local midnight while the screen remains open.
+class MissionsHomeStrip extends MenuButton
+    with HasGameReference<FlappySpikesGame> {
+  MissionsHomeStrip({
+    required this.missions,
+    required Rect rect,
+    required super.onPressed,
+    required super.isActive,
+  }) : super(
+         position: Vector2(rect.left, rect.top),
+         size: Vector2(rect.width, rect.height),
+         color: missions.allDone ? Config.menuGold : Config.menuSoft,
+       );
+  final Missions missions;
+  MenuText? countdown;
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    add(
+      MenuText(
+        missions.allDone ? 'ALL DONE' : 'MISSIONS',
+        fontSize: 10,
+        color: Config.menuPlum,
+        position: Vector2(10, 5),
+      ),
+    );
+    add(
+      MissionPips(
+        missions.missions,
+        side: missions.allDone ? 10 : 12,
+        color: missions.allDone ? Config.menuPlum : Config.menuPink,
+        position: Vector2(missions.allDone ? 85 : 144, 5),
+      ),
+    );
+    if (missions.allDone) {
+      countdown = MenuText(
+        missionStripCountdown(game.storage.now()),
+        fontSize: 8,
+        color: Config.menuPlum,
+        position: Vector2(209, 6),
+        anchor: Anchor.topRight,
+      );
+      add(countdown!);
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    countdown?.text = missionStripCountdown(game.storage.now());
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    if (!missions.allDone) {
+      final path = Path()
+        ..moveTo(201, 6)
+        ..lineTo(207, 11)
+        ..lineTo(201, 16);
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = Config.menuPink
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.6,
+      );
+    }
+  }
+}
+
+/// Results pips fill in order; the chest message appears after the last fill.
+class MissionResultsStrip extends PositionComponent {
+  MissionResultsStrip({required this.missions, required this.before})
+    : super(position: Vector2(14, 565), size: Vector2(292, 22));
+  final List<MissionProgress> missions;
+  final List<int> before;
+  late MissionPips pips;
+  late MenuText label;
+  bool get newlyAllDone =>
+      missions.every((m) => m.complete) &&
+      List.generate(
+        missions.length,
+        (i) => before[i] >= missions[i].target,
+      ).contains(false);
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    label = MenuText(
+      'MISSIONS',
+      fontSize: 10,
+      color: Config.menuPlum,
+      position: Vector2(10, 5),
+    );
+    pips = MissionPips(
+      missions,
+      before: before,
+      side: 16,
+      position: Vector2(231, 3),
+    );
+    addAll([label, pips]);
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (newlyAllDone && pips.elapsed >= pips.duration) {
+      label.text = 'ALL DONE · CHEST ON HOME';
+      pips.color = Config.menuPlum;
+    }
+  }
+
+  @override
+  void render(Canvas canvas) => canvas.drawRect(
+    size.toRect(),
+    Paint()
+      ..color = newlyAllDone && pips.elapsed >= pips.duration
+          ? Config.menuGold
+          : Config.menuSoft,
+  );
+}
+
+class _ChestRow extends PositionComponent {
+  _ChestRow(double y) : super(position: Vector2(12, y), size: Vector2(256, 56));
+  @override
+  void render(Canvas canvas) {
+    canvas.drawRect(size.toRect(), Paint()..color = const Color(0xFFFFF8E8));
+    canvas.save();
+    canvas.clipRect(size.toRect());
+    for (var x = -56.0; x < width + 56; x += 32) {
+      final path = Path()
+        ..moveTo(x, 0)
+        ..lineTo(x + 16, 0)
+        ..lineTo(x - 40, 56)
+        ..lineTo(x - 56, 56)
+        ..close();
+      canvas.drawPath(path, Paint()..color = const Color(0xFFFFF3D6));
+    }
+    canvas.restore();
+    canvas.drawRect(
+      size.toRect().deflate(1),
+      Paint()
+        ..color = Config.menuGold
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
   }
 }
 
@@ -180,9 +364,9 @@ class MissionsPanel extends P1Popup {
           size: Vector2(4, 54),
           paint: Paint()
             ..color = switch (m.template.difficulty) {
-              MissionDifficulty.easy => const Color(0xFF64CBA2),
+              MissionDifficulty.easy => Config.menuSoft,
               MissionDifficulty.medium => Config.menuPink,
-              MissionDifficulty.hard => Config.menuGold,
+              MissionDifficulty.hard => Config.menuPlum,
             },
         ),
       );
@@ -236,13 +420,7 @@ class MissionsPanel extends P1Popup {
       card.add(row);
       y += 60;
     }
-    card.add(
-      RectangleComponent(
-        position: Vector2(12, y),
-        size: Vector2(256, 56),
-        paint: Paint()..color = Config.menuGold,
-      ),
-    );
+    card.add(_ChestRow(y));
     card.add(
       MysteryBoxComponent(
         look: MysteryBoxLook.tier(MysteryBoxTier.gold),
@@ -259,7 +437,27 @@ class MissionsPanel extends P1Popup {
         anchor: Anchor.center,
       ),
     );
-    y += 70;
+    y += 66;
+    if (missions.allDone) {
+      card.add(
+        RectangleComponent(
+          position: Vector2(12, y),
+          size: Vector2(256, 26),
+          paint: Paint()..color = Config.menuPlum,
+        ),
+      );
+      card.add(
+        MenuText(
+          'ALL DONE · NEW MISSIONS TOMORROW',
+          fontSize: 9,
+          color: Config.menuSoft,
+          position: Vector2(140, y + 13),
+          anchor: Anchor.center,
+        ),
+      );
+      y += 36;
+    }
+    y += 4;
     if (starRoadCard != null) {
       card.add(starRoadCard!..position = Vector2(12, y));
       y += starRoadCard!.height + 14;

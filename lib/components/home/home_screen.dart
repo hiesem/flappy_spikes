@@ -159,6 +159,7 @@ class HomeScreen extends PositionComponent
     _missionsPanel?.removeFromParent();
     _missionsPanel = null;
     game.popBack(_closeMissions);
+    game.setMissionsPanelOpen(false);
     return true;
   }
 
@@ -170,6 +171,7 @@ class HomeScreen extends PositionComponent
       onDismiss: _closeMissions,
     );
     _missionsPanel = panel;
+    game.setMissionsPanelOpen(true);
     game.world.add(panel);
     game.pushBack(_closeMissions);
   }
@@ -277,7 +279,7 @@ class HomeScreen extends PositionComponent
 
     // --- emblem + bird stage, BEST / LAST ------------------------------------
     // region P26-G1c
-    final missionLayoutHeight = game.storage.gamesPlayed >= 3 ? h - 26 : h;
+    final missionLayoutHeight = Config.homeLayoutHeightFor(h, missions: game.storage.gamesPlayed >= 3);
     final stage = Config.homeStageRectFor(missionLayoutHeight);
     final plate = Config.homePlateCentreFor(missionLayoutHeight);
     emblem = EmblemView(
@@ -351,28 +353,9 @@ class HomeScreen extends PositionComponent
     final missions = RunEndBookkeeping.currentMissions(game.storage);
     if (game.storage.gamesPlayed >= 3) {
       final rect = Config.homeMissionsRectFor(missionLayoutHeight);
-      final strip = MenuButton(
-        position: rect.topLeft.toVector2(),
-        size: rect.size.toVector2(),
-        color: missions.allDone ? Config.menuGold : Config.menuSoft,
-        onPressed: _openMissions,
+      final strip = MissionsHomeStrip(
+        missions: missions, rect: rect, onPressed: _openMissions,
         isActive: _isActive,
-        children: [
-          MenuText(
-            missions.allDone ? 'ALL DONE' : 'MISSIONS',
-            fontSize: 10,
-            color: Config.menuPlum,
-            position: Vector2(10, 5),
-          ),
-          MissionPips(missions.missions, side: missions.allDone ? 10 : 12,
-            position: Vector2(missions.allDone ? 85 : 144, 5)),
-          if (missions.allDone)
-            MenuText(missionStripCountdown(game.storage.now()),
-              fontSize: 8, color: Config.menuPlum, position: Vector2(209, 6),
-              anchor: Anchor.topRight)
-          else
-            MenuText('›', fontSize: 14, color: Config.menuPink, position: Vector2(201, 3)),
-        ],
       );
       add(strip);
     }

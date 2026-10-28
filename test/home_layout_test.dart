@@ -96,11 +96,15 @@ void main() async {
       expect(k, inInclusiveRange(0.75, 1));
       final slot = Config.homeSlotRectFor(h);
       // PRD-2.2 §2.1: the block starts at the mode button.
-      final above = Config.homeModeRectFor(h).top - Config.homeEmblemBottomFor(h);
+      final above =
+          Config.homeModeRectFor(h).top - Config.homeEmblemBottomFor(h);
       final below = Config.homeTileRowTopFor(h) - slot.bottom;
       expect((above - below).abs(), lessThanOrEqualTo(1.01), reason: '$h');
-      expect(above, greaterThanOrEqualTo(Config.homeStartTightGap - 0.51),
-          reason: '$h');
+      expect(
+        above,
+        greaterThanOrEqualTo(Config.homeStartTightGap - 0.51),
+        reason: '$h',
+      );
     }
     // 711..568 is monotonic.
     var lastStart = double.infinity;
@@ -113,16 +117,14 @@ void main() async {
 
   for (final height in [568.0, 640.0, 711.0, 730.0]) {
     FlameTester<FlappySpikesGame>(
-      () => createTestGame(
-        const {
-          'coins': 1250,
-          'bestScore': 640, 'lvlIndex': 6,
-          'lastScore': 12,
-          'gamesPlayed': 34,
-          'claimedLevels': ['1', '2', '3', '4', '5', '6'],
-        },
-        height,
-      ),
+      () => createTestGame(const {
+        'coins': 1250,
+        'bestScore': 640,
+        'lvlIndex': 6,
+        'lastScore': 12,
+        'gamesPlayed': 34,
+        'claimedLevels': ['1', '2', '3', '4', '5', '6'],
+      }, height),
       gameSize: Vector2(320, height),
     ).testGameWidget(
       'home v3 layout at ${height.toInt()}',
@@ -135,6 +137,8 @@ void main() async {
         final h = game.viewHeight;
         expect(h, height);
         final home = game.homeScreen!;
+        // PRD 2.6 G1 / 877 and missions.html §1 reserve 30 pt for the strip.
+        final layout = Config.homeLayoutHeightFor(h, missions: true);
 
         // Every element sits at its Config rect.
         final pill = rectOf(home.coinPill);
@@ -150,18 +154,21 @@ void main() async {
         expect(pill.height, 38);
         expect(gear, rectNear(Config.homeGearRectFor(h)));
         expect(trophy, rectNear(Config.homeTrophyRectFor(h)));
-        expect(stage, rectNear(Config.homeStageRectFor(h)));
-        expect(best, rectNear(Config.homeFlankRectFor(h, right: false)));
-        expect(last, rectNear(Config.homeFlankRectFor(h, right: true)));
-        expect(start, rectNear(Config.homeStartRectFor(h)));
-        expect(slot, rectNear(Config.homeSlotRectFor(h)));
+        expect(stage, rectNear(Config.homeStageRectFor(layout)));
+        expect(best, rectNear(Config.homeFlankRectFor(layout, right: false)));
+        expect(last, rectNear(Config.homeFlankRectFor(layout, right: true)));
+        expect(start, rectNear(Config.homeStartRectFor(layout)));
+        expect(slot, rectNear(Config.homeSlotRectFor(layout)));
         for (var i = 0; i < 4; i++) {
           expect(tiles[i], rectNear(Config.homeTileRectFor(h, i)));
         }
-        final plate = Config.homePlateCentreFor(h);
+        final plate = Config.homePlateCentreFor(layout);
         expect(home.emblem.position.x, closeTo(plate.dx, 1e-3));
         expect(home.emblem.position.y, closeTo(plate.dy, 1e-3));
-        expect(home.emblem.artScale, closeTo(Config.homeEmblemScaleFor(h), 1e-9));
+        expect(
+          home.emblem.artScale,
+          closeTo(Config.homeEmblemScaleFor(layout), 1e-9),
+        );
         expect(home.emblem.level, 6);
 
         // Coin pill: 145 x 38 for "1 250", grows with the digits.
@@ -222,20 +229,20 @@ void main() async {
         // emblem bottom and the tiles.
         final mode = rectOf(home.modeButton);
         final vsTag = rectOf(home.vsTag);
-        expect(mode, rectNear(Config.homeModeRectFor(h)));
-        expect(vsTag, rectNear(Config.homeVsTagRectFor(h)));
-        final above = mode.top - Config.homeEmblemBottomFor(h);
-        final below = tiles.first.top - slot.bottom;
+        expect(mode, rectNear(Config.homeModeRectFor(layout)));
+        expect(vsTag, rectNear(Config.homeVsTagRectFor(layout)));
+        final above = mode.top - Config.homeEmblemBottomFor(layout);
+        final below = Config.homeTileRowTopFor(layout) - slot.bottom;
         expect((above - below).abs(), lessThanOrEqualTo(1.01));
 
         // --- no overlaps, everything between the (menu) spike strips -------
         // The emblem's ink: wings ±100, LEGEND's gem / flags up to ≈ -85 art
         // units (its faint rays reach further).
         final emblemInk = Rect.fromLTRB(
-          plate.dx - 100 * Config.homeEmblemScaleFor(h),
-          plate.dy - 90 * Config.homeEmblemScaleFor(h),
-          plate.dx + 100 * Config.homeEmblemScaleFor(h),
-          Config.homeEmblemBottomFor(h),
+          plate.dx - 100 * Config.homeEmblemScaleFor(layout),
+          plate.dy - 90 * Config.homeEmblemScaleFor(layout),
+          plate.dx + 100 * Config.homeEmblemScaleFor(layout),
+          Config.homeEmblemBottomFor(layout),
         );
         final named = <String, Rect>{
           'pill': pill,
@@ -287,26 +294,59 @@ void main() async {
 
         const stripTip = Config.spikeHeight - Config.menuSpikeInset; // 44
         for (final entry in named.entries) {
-          expect(entry.value.top, greaterThanOrEqualTo(stripTip),
-              reason: '${entry.key} under the ceiling strip at $h');
-          expect(entry.value.bottom, lessThanOrEqualTo(h - stripTip),
-              reason: '${entry.key} under the ground strip at $h');
+          expect(
+            entry.value.top,
+            greaterThanOrEqualTo(stripTip),
+            reason: '${entry.key} under the ceiling strip at $h',
+          );
+          expect(
+            entry.value.bottom,
+            lessThanOrEqualTo(h - stripTip),
+            reason: '${entry.key} under the ground strip at $h',
+          );
           expect(entry.value.left, greaterThanOrEqualTo(0));
           expect(entry.value.right, lessThanOrEqualTo(320));
         }
 
         // The 711 reference reproduces the PRD table.
         if (h == 711) {
-          // PRD-2.2 §2.1: 13 pt lower than the home-v3 table (390 / 461).
-          expect(start, rectNear(const Rect.fromLTWH(52, 403, 216, 67)));
-          expect(slot, rectNear(const Rect.fromLTWH(52, 474, 216, 31)));
-          expect(mode, rectNear(const Rect.fromLTWH(121, 377, 147, 21)));
+          // PRD 2.6 G1: the missions reservation shifts the START group.
+          expect(start, rectNear(const Rect.fromLTWH(52, 388, 216, 67)));
+          expect(slot, rectNear(const Rect.fromLTWH(52, 459, 216, 31)));
+          expect(mode, rectNear(const Rect.fromLTWH(121, 362, 147, 21)));
           expect(stage, rectNear(const Rect.fromLTWH(28, 148, 264, 204)));
           expect(tiles.first.top, 562);
         }
       },
     );
   }
+
+  FlameTester<FlappySpikesGame>(
+    () => createTestGame(const {'gamesPlayed': 2}, 711),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'pre-unlock Home retains the 2.5 layout',
+    setUp: (game, tester) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, tester) async {
+      final home = game.homeScreen!;
+      expect(
+        rectOf(home.startButton),
+        rectNear(const Rect.fromLTWH(52, 403, 216, 67)),
+      );
+      expect(
+        rectOf(home.slotButton),
+        rectNear(const Rect.fromLTWH(52, 474, 216, 31)),
+      );
+      expect(
+        rectOf(home.bird),
+        rectNear(const Rect.fromLTWH(28, 148, 264, 204)),
+      );
+    },
+  );
 
   // §3.1 unranked: grey dashed frame, LAST "—" before the first run.
   FlameTester<FlappySpikesGame>(
@@ -335,14 +375,12 @@ void main() async {
   // §3.1: 4+ digit numbers shrink to fit the column (clear of LEGEND's
   // wings); 3 digits keep 30 pt.
   FlameTester<FlappySpikesGame>(
-    () => createTestGame(
-      {
-        'bestScore': 6000, 'lvlIndex': 10,
-        'lastScore': 12345,
-        'claimedLevels': [for (var l = 1; l <= 10; l++) '$l'],
-      },
-      711,
-    ),
+    () => createTestGame({
+      'bestScore': 6000,
+      'lvlIndex': 10,
+      'lastScore': 12345,
+      'claimedLevels': [for (var l = 1; l <= 10; l++) '$l'],
+    }, 711),
     gameSize: Vector2(320, 711),
   ).testGameWidget(
     'BEST / LAST numbers shrink for 4+ digits',

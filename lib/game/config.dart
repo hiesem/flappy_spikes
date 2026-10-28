@@ -601,8 +601,10 @@ class Config {
     homeStartHeight,
   );
   // region P26-G1c
+  static double homeLayoutHeightFor(double viewHeight, {required bool missions}) =>
+      viewHeight - (missions ? 30 : 0);
   static Rect homeMissionsRectFor(double layoutHeight) => Rect.fromLTWH(
-    homeStartLeft, homeSlotRectFor(layoutHeight).bottom + 4, homeStartWidth, 22,
+    homeStartLeft, homeSlotRectFor(layoutHeight).bottom + 8, homeStartWidth, 22,
   );
   // endregion
   static Rect homeSlotRectFor(double viewHeight) => Rect.fromLTWH(

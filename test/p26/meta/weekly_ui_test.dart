@@ -1,16 +1,23 @@
+import 'dart:async';
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/home/menu_primitives.dart';
+import 'package:flappy_spikes/components/home/home_screen.dart'
+    show MenuCornerBox;
+import 'package:flappy_spikes/services/ads_service.dart';
+import 'package:flappy_spikes/services/monetization.dart';
 import 'package:flappy_spikes/components/progression/weekly_results.dart';
 import 'package:flappy_spikes/components/progression/weekly_card.dart';
 import 'package:flappy_spikes/components/progression/missions_panel.dart';
 import 'package:flappy_spikes/progression/missions.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
+import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/progression/weekly_course.dart';
 import 'package:flappy_spikes/run/effects/best_line.dart';
 import 'package:flappy_spikes/run/hud/run_hud.dart';
 import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/run/screens/results_screen.dart';
+import 'package:flappy_spikes/run/screens/level_reveal_sheet.dart';
 import 'package:flappy_spikes/services/obf_strings.g.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';
@@ -56,6 +63,129 @@ void main() {
   });
 
   final monday = DateTime.utc(2026, 10, 26);
+  for (final weekly in [false, true]) {
+    late FakeInterstitialAds ads;
+    late AnalyticsSpy spy;
+    late Completer<void> adClosed;
+    FlameTester<FlappySpikesGame>(() {
+      SharedPreferences.setMockInitialValues({
+        Obf.prefGamesPlayed: 6,
+        Obf.prefBestHoops: 40,
+      });
+      ads = FakeInterstitialAds(mode: FakeAdMode.succeed);
+      spy = AnalyticsSpy();
+      adClosed = Completer<void>();
+      ads.hold = adClosed.future;
+      return FlappySpikesGame(
+        soundEnabled: false,
+        worldHeight: 711,
+        clock: () => monday,
+        services: spy,
+        monetization: Monetization(interstitial: ads),
+      );
+    }, gameSize: Vector2(320, 711)).testGameWidget(
+      'G5 ${weekly ? 'FLY AGAIN' : 'hint'} observes interstitial and Home arrival',
+      setUp: (g, _) async {
+        await g.ready();
+        await preloadImages(g);
+      },
+      verify: (g, _) async {
+        await g.storage.saveArmedPowerup('shield');
+        if (weekly) {
+          await g.startWeeklyCourse();
+        } else {
+          await g.startRun();
+        }
+        await flushAndMount(g);
+        final run = g.run!;
+        final summary = run.endRun();
+        g.endRun(summary);
+        await g.weeklyWritesSettled;
+        g.showResults(summary);
+        await flushAndMount(g);
+        stepGame(g, 1);
+        final page = g.resultsScreen!;
+        final priorSlotEvents = spy.events
+            .where((e) => e.$1 == 'home_slot_shown')
+            .length;
+        if (weekly) {
+          page.nextButton.onPressed();
+        } else {
+          expect(page.weeklyHintVisible, isTrue);
+          page.content.children
+              .whereType<MenuButton>()
+              .singleWhere(
+                (button) => button.children.whereType<MenuText>().any(
+                  (text) => text.text == weeklyHintText(0),
+                ),
+              )
+              .onPressed();
+        }
+        await flushAndMount(g);
+        expect(g.interstitialShowing, isTrue);
+        expect(ads.shown, 1);
+        expect(g.run, same(run));
+        expect(
+          spy.events.where((e) => e.$1 == 'ad_interstitial_shown'),
+          hasLength(1),
+        );
+        adClosed.complete();
+        await flushAndMount(g);
+        expect(g.interstitialShowing, isFalse);
+        expect(g.run?.setup.weekly, isTrue);
+        expect(g.run, isNot(same(run)));
+        expect(
+          spy.events.where((e) => e.$1 == 'home_slot_shown').length,
+          priorSlotEvents + 1,
+        );
+        if (weekly) expect(g.storage.armedPowerup, 'shield');
+      },
+    );
+  }
+  FlameTester<FlappySpikesGame>(() {
+    SharedPreferences.setMockInitialValues({
+      Obf.prefGamesPlayed: 12,
+      Obf.prefBestHoops: 40,
+      'firstSessionDone': true,
+      'noAdsPopupLastMs': monday.millisecondsSinceEpoch,
+      Obf.prefStreakPaidDay: Missions.localDay(monday.toLocal()),
+    });
+    return FlappySpikesGame(
+      soundEnabled: false,
+      worldHeight: 711,
+      clock: () => monday,
+    );
+  }, gameSize: Vector2(320, 711)).testGameWidget(
+    'G5 weekly replay waits for a Home no-ads popup',
+    setUp: (g, _) async {
+      await g.ready();
+      await preloadImages(g);
+      await flushAndMount(g);
+    },
+    verify: (g, _) async {
+      await g.startWeeklyCourse();
+      await flushAndMount(g);
+      final oldRun = g.run!;
+      final summary = oldRun.endRun();
+      g.endRun(summary);
+      await g.weeklyWritesSettled;
+      g.showResults(summary);
+      await flushAndMount(g);
+      await g.storage.saveNoAdsPopupLastMs(0);
+      await g.storage.saveNoAdsPopupVideos(3);
+      await g.storage.saveLastScore(Config.noAdsPopupMinScore);
+      stepGame(g, 1);
+      g.resultsScreen!.nextButton.onPressed();
+      await flushAndMount(g);
+      expect(g.noAdsPopup, isNotNull);
+      expect(g.state, GameState.start);
+      expect(g.run, isNull);
+      g.closeNoAdsPopup();
+      await flushAndMount(g);
+      expect(g.run?.setup.weekly, isTrue);
+      expect(g.run, isNot(same(oldRun)));
+    },
+  );
   for (final height in [568.0, 711.0]) {
     FlameTester<FlappySpikesGame>(() {
       SharedPreferences.setMockInitialValues({
@@ -182,6 +312,48 @@ void main() {
       clock: () => monday,
     );
   }, gameSize: Vector2(320, 711)).testGameWidget(
+    'G5 hint cannot open a second level reveal',
+    setUp: (g, _) async {
+      await g.ready();
+      await preloadImages(g);
+    },
+    verify: (g, _) async {
+      await g.startRun();
+      await flushAndMount(g);
+      g.score = 25;
+      g.run!.state.score = 25;
+      final summary = g.run!.endRun();
+      g.endRun(summary);
+      g.showResults(summary);
+      await flushAndMount(g);
+      final page = g.resultsScreen!;
+      expect(page.weeklyHintVisible, isTrue);
+      stepGame(g, 8);
+      await flushAndMount(g);
+      final reveal = page.revealSheet!;
+      final hint = page.content.children.whereType<MenuButton>().singleWhere(
+        (button) => button.children.whereType<MenuText>().any(
+          (text) => text.text == weeklyHintText(0),
+        ),
+      );
+      hint.onPressed();
+      await flushAndMount(g);
+      expect(page.revealSheet, same(reveal));
+      expect(page.children.whereType<LevelRevealSheet>(), hasLength(1));
+      expect(g.state, GameState.results);
+    },
+  );
+  FlameTester<FlappySpikesGame>(() {
+    SharedPreferences.setMockInitialValues({
+      Obf.prefGamesPlayed: 6,
+      Obf.prefBestHoops: 40,
+    });
+    return FlappySpikesGame(
+      soundEnabled: false,
+      worldHeight: 711,
+      clock: () => monday,
+    );
+  }, gameSize: Vector2(320, 711)).testGameWidget(
     'G5 weekly level reveal waits until leaving results',
     setUp: (g, _) async {
       await g.ready();
@@ -259,6 +431,16 @@ void main() {
         page.content.children.whereType<ResultsHeader>().single.text,
         'WEEKLY COURSE',
       );
+      expect(
+        page.content.children.whereType<WeeklyResultsDaysTag>(),
+        hasLength(1),
+      );
+      final tiers = page.content.children
+          .whereType<WeeklyResultsTiers>()
+          .single;
+      final next = tiers.children.whereType<WeeklyNextTierBox>().single;
+      expect(next.size, Vector2(240, 22));
+      expect(next.complete, isFalse);
       expect(page.rank.parent, isNull);
       expect(page.bar.parent, isNull);
       expect(page.weeklyTierCoins, 40);
@@ -278,6 +460,10 @@ void main() {
       page.weeklyBoardButton!.onPressed();
       await flushAndMount(g);
       expect(g.resultsBoard, isNotNull);
+      final board = g.resultsBoard!;
+      expect(board.children.whereType<MenuCornerBox>(), hasLength(1));
+      expect(board.children.whereType<MenuCornerBox>().single.gearMix, 0);
+      expect(board.backButton.onPressed, isNotNull);
       g.onKeyEvent(
         KeyDownEvent(
           physicalKey: PhysicalKeyboardKey.escape,
@@ -292,6 +478,20 @@ void main() {
       expect(g.run?.setup.weekly, isTrue);
       expect(g.run, isNot(same(run)));
       expect(g.storage.armedPowerup, isNot('consumed'));
+      final second = g.run!;
+      second.state.hoopsPassed = 120;
+      final finalSummary = second.endRun();
+      g.endRun(finalSummary);
+      await g.weeklyWritesSettled;
+      g.showResults(finalSummary);
+      await flushAndMount(g);
+      final finalTiers = g.resultsScreen!.content.children
+          .whereType<WeeklyResultsTiers>()
+          .single;
+      final allDone = finalTiers.children.whereType<WeeklyNextTierBox>().single;
+      expect(allDone.size, Vector2(240, 22));
+      expect(allDone.complete, isTrue);
+      expect(allDone.text, 'ALL TIERS DONE THIS WEEK!');
     },
   );
 }

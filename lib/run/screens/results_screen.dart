@@ -301,7 +301,8 @@ class ResultsScreen extends PositionComponent
   bool _weeklyDeparting = false;
 
   void _weeklyLeave({required bool flyAgain}) {
-    if (!canContinue || _weeklyDeparting || _albumOpening || _albumDue) return;
+    if (!canContinue || _weeklyDeparting || revealSheet != null ||
+        _albumOpening || _albumDue) return;
     _weeklyDeparting = true;
     _schedule.clear();
     _stopTicks();
@@ -897,8 +898,7 @@ class ResultsScreen extends PositionComponent
       _weeklyBestLabel = MenuText('WEEK BEST $_weeklyPreviousBest', fontSize: 9.5,
           color: Config.menuPlum, position: Vector2(24, 132));
       content.add(_weeklyBestLabel!);
-      content.add(MenuText(WeeklyWeek.at(now).countdown(now), fontSize: 9.5,
-          color: Config.menuPlum, position: Vector2(296, 132), anchor: Anchor.topRight));
+      content.add(WeeklyResultsDaysTag(WeeklyWeek.at(now).countdown(now)));
       final top = nextButton.position.y;
       weeklyHomeButton = MenuButton(position: Vector2((14 - content.position.x) / content.scale.x, top),
           size: Vector2(92 / content.scale.x, 50 / content.scale.y),

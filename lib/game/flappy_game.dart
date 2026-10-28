@@ -20,9 +20,6 @@ import 'dart:math' as math;
 import '../components/leaderboard/board_screen.dart';
 // endregion P26-LB4
 import '../components/progression/streak_strip.dart';
-// region P26-G5b
-import '../components/home/menu_primitives.dart' show MenuText;
-// endregion P26-G5b
 import '../components/home/menu_primitives.dart' show MenuTag;
 import '../progression/day_streak.dart';
 import '../run/effects/fetch_flight.dart';
@@ -785,6 +782,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       _popupQueue.removeAt(0);
       next.open();
     }
+    // region P26-G5b
+    if (_weeklyStartWaiting && _homeInteractive && !modalPopupOpen) {
+      _weeklyStartWaiting = false;
+      unawaited(_startWeeklyAfterArrival());
+    }
+    // endregion P26-G5b
   }
 
   /// Menus up and no run starting: where queued results / celebrations
@@ -1500,16 +1503,24 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
 
   // region P26-G5b
-  /// Leave results directly for another weekly attempt without consuming the slot.
+  // The normal Home arrival owns interstitial cadence and visit bookkeeping.
+  bool _weeklyAfterArrival = false;
+  bool _weeklyStartWaiting = false;
   Future<void> weeklyFromResults() async {
-    if (state != GameState.results) return;
-    replay();
-    await _homeReload;
+    if (state != GameState.results || _interstitialBusy || _weeklyAfterArrival) return;
+    _weeklyAfterArrival = true;
+    goHome();
+  }
+
+  Future<void> _startWeeklyAfterArrival() async {
     final home = _home;
     if (home != null) await home.loaded;
-    if (state == GameState.start && menuScene == MenuScene.home) {
-      await _runFromHome(weekly: WeeklyWeek.at(storage.now()));
+    if (state != GameState.start || menuScene != MenuScene.home) return;
+    if (!_homeInteractive || modalPopupOpen) {
+      _weeklyStartWaiting = true;
+      return;
     }
+    await _runFromHome(weekly: WeeklyWeek.at(storage.now()));
   }
 
   BoardScreen? _resultsBoard;
@@ -1521,12 +1532,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _resultsBoard = board;
     board.add(RectangleComponent(size: Vector2(320, viewHeight),
       paint: Paint()..color = kPostRunPalette.background, priority: -100));
-    board.add(MenuButton(
-      position: Vector2(14, 58), size: Vector2.all(38),
-      color: Config.menuPink, onPressed: closeResultsBoard,
-      children: [MenuText('‹', fontSize: 28, color: Config.menuSoft,
-        position: Vector2(19, 19), anchor: Anchor.center)],
-    )..priority = 100);
+    board.add(MenuCornerBox(rect: Config.menuScreenBackRectFor(viewHeight), priority: -1)
+      ..gearMix = 0);
+
     world.add(board);
     pushBack(_resultsBoardBack);
   }
@@ -5896,6 +5904,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// The Home arrival after a run (after the interstitial, or at once).
   void _arriveHome() {
     if (state != GameState.results) return;
+    // region P26-G5b
+    final startWeekly = _weeklyAfterArrival;
+    _weeklyAfterArrival = false;
+    // endregion P26-G5b
     menu.slot.rollForArrival();
     replay();
     _logSlotShown();
@@ -5910,7 +5922,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final reload = _homeReload;
     if (reload == null) {
       // region P26-LB7
-      unawaited(_beginHomeVisit().then((_) => _offerNoAdsAfterRun()));
+      // region P26-G5b
+      unawaited(_beginHomeVisit().then((_) {
+        _offerNoAdsAfterRun();
+        if (startWeekly) unawaited(_startWeeklyAfterArrival());
+      }));
+      // endregion P26-G5b
       // endregion
     } else {
       unawaited(
@@ -5918,7 +5935,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           // region P26-LB7
           await _beginHomeVisit();
           _offerNoAdsAfterRun();
-          // endregion
+          // endregion P26-LB7
+          // region P26-G5b
+          if (startWeekly) unawaited(_startWeeklyAfterArrival());
+          // endregion P26-G5b
         }),
       );
     }

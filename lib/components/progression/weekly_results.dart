@@ -34,6 +34,52 @@ String weeklyHintText(int best) => best == 0
     ? "Try this week's course →"
     : "Try this week's course → beat hoop $best";
 
+/// Days-left tag in the results card (weekly_course.html §3).
+class WeeklyResultsDaysTag extends PositionComponent {
+  WeeklyResultsDaysTag(this.text)
+    : super(position: Vector2(296, 131), anchor: Anchor.topRight);
+  final String text;
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    final label = MenuText(text, fontSize: 9.5, color: Config.menuPlum);
+    size = Vector2(label.width + 14, label.height + 3);
+    label.position = Vector2(7, 1);
+    add(label);
+  }
+
+  @override
+  void render(Canvas canvas) =>
+      canvas.drawRect(size.toRect(), Paint()..color = Config.menuSoft);
+}
+
+/// The next-tier notice keeps the approved soft or gold box.
+class WeeklyNextTierBox extends PositionComponent {
+  WeeklyNextTierBox({required this.text, required this.complete})
+    : super(position: Vector2(40, 102), size: Vector2(240, 22));
+  final String text;
+  final bool complete;
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    add(
+      MenuText(
+        text,
+        fontSize: 10.5,
+        color: Config.menuPlum,
+        position: size / 2,
+        anchor: Anchor.center,
+      ),
+    );
+  }
+
+  @override
+  void render(Canvas canvas) => canvas.drawRect(
+    size.toRect(),
+    Paint()..color = complete ? Config.menuGold : Config.menuSoft,
+  );
+}
+
 /// The weekly tier bar animates from the previous best and reports each new tier.
 class WeeklyResultsTiers extends PositionComponent {
   WeeklyResultsTiers({
@@ -103,14 +149,11 @@ class WeeklyResultsTiers extends PositionComponent {
     }
     final next = tiers.entries.where((e) => best < e.key).firstOrNull;
     add(
-      MenuText(
-        next == null
+      WeeklyNextTierBox(
+        text: next == null
             ? 'ALL TIERS DONE THIS WEEK!'
             : 'NEXT: HOOP ${next.key} → +${next.value}',
-        fontSize: 10.5,
-        color: Config.menuPlum,
-        position: Vector2(160, 108),
-        anchor: Anchor.center,
+        complete: next == null,
       ),
     );
   }

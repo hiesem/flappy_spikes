@@ -78,6 +78,8 @@ void main() {
           measureBadge: measureName(fontFamily: 'Fredoka'),
         );
         await tester.runAsync(() async {
+          // J8 assets load asynchronously; capture the resolved emblem.
+          await card.children.query<EmblemView>().single.imageReady;
           final assets = await ShareCardAssets.load();
           final recorder = ui.PictureRecorder();
           final c = ui.Canvas(recorder);

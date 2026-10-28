@@ -163,6 +163,9 @@ class LevelsScreen extends MenuScreen {
     );
     header = LevelsHeader(
       level: level,
+      // region P26-J2
+      points: levels.points,
+      // endregion
       best: levels.best,
       games: game.storage.gamesPlayed,
       look: look,
@@ -270,6 +273,9 @@ void _fillRect(Canvas canvas, Rect rect, Paint paint) =>
 class LevelsHeader extends PositionComponent {
   LevelsHeader({
     required this.level,
+    // region P26-J2
+    this.points = 0,
+    // endregion
     required this.best,
     required this.games,
     required Look look,
@@ -281,6 +287,9 @@ class LevelsHeader extends PositionComponent {
     const box = Config.levelsHeaderEmblemBox;
     final centre = Vector2(box / 2, Config.levelsHeaderEmblemY);
     emblem = EmblemView(
+      // region P26-J2
+      progression: true,
+      // endregion
       level: level,
       artScale: Config.levelsHeaderEmblemScale,
       position: centre,
@@ -294,6 +303,9 @@ class LevelsHeader extends PositionComponent {
   }
 
   final int level;
+  // region P26-J2
+  final int points;
+  // endregion
   final int best;
   final int games;
 
@@ -317,10 +329,11 @@ class LevelsHeader extends PositionComponent {
     await super.onLoad();
     final def = trackLevelDef(level);
     final next = trackLevelDef(level + 1);
-    // Owner 2026-10-17 (WP-L): the level is stored and steps up one per
-    // run; the next one needs its threshold in a single run, so the bar is
-    // empty below LEGEND and the label names that score.
-    progress = next == null ? 1 : 0;
+    // region P26-J2
+    // PRD-2.6 J3: points accumulate across counting runs.
+    final need = needFor(level);
+    progress = (points / need).clamp(0.0, 1.0);
+    // endregion
 
     const nameLine = Config.levelsHeaderNameFontSize * kNormalLineHeight;
     const statsLine = Config.levelsHeaderStatsFontSize * kNormalLineHeight;
@@ -344,7 +357,9 @@ class LevelsHeader extends PositionComponent {
     barText = MenuText(
       next == null
           ? 'MAX LEVEL'
-          : '${formatCoins(next.points)} TO ${next.name}',
+          // region P26-J2
+          : '${formatCoins((need - points).clamp(0, need))} TO ${next.name}',
+      // endregion
       fontSize: Config.levelsBarFontSize,
       color: Config.menuPlum,
       letterSpacingEm: 0.1,
@@ -467,6 +482,9 @@ class LevelRow extends PositionComponent {
     await super.onLoad();
     if (isCurrent) {
       liveEmblem = EmblemView(
+        // region P26-J2
+        progression: true,
+        // endregion
         level: def.level,
         artScale: Config.levelsRowEmblemScale,
         position: _emblemCentre.toVector2(),
@@ -481,6 +499,9 @@ class LevelRow extends PositionComponent {
     } else {
       picture = recordEmblem(
         def.level,
+        // region P26-J2
+        progression: true,
+        // endregion
         grey: !reached,
         look: reached ? look : null,
         birdScale: Config.levelsBirdOnEmblem,

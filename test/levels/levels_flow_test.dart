@@ -141,6 +141,25 @@ void main() async {
 
   // --- §4.4 list -------------------------------------------------------------
 
+  // PRD-2.6 J3 and J7: accumulated points and track emblems.
+  levelsTest(
+    'track header and current row use progression above level ten',
+    prefs: {'lvlIndex': 19, 'lvlPoints': 100},
+    (game, events, t) async {
+      expect(game.homeScreen!.emblem.progression, isTrue);
+      game.openLevels();
+      await flushAndMount(game);
+      stepGame(game, 0.3);
+      final screen = game.levelsScreen!;
+      final need = needFor(19);
+      expect(screen.header.emblem.progression, isTrue);
+      expect(screen.currentRow!.liveEmblem!.progression, isTrue);
+      expect(screen.currentRow!.def.level, 19);
+      expect(screen.header.progress, closeTo(100 / need, 0.00001));
+      expect(screen.header.barText.text, '2 300 TO FEVER FINCH');
+    },
+  );
+
   levelsTest(
     'LEVELS: header, row states, opens scrolled to the current row',
     prefs: {'bestScore': 640, 'playerLevel': 6, 'gamesPlayed': 34, 'claimedLevels': _claimed(6)},

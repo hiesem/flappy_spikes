@@ -1320,7 +1320,13 @@ class ResultsLevelStage extends PositionComponent {
   Future<void> onLoad() async {
     await super.onLoad();
     final g = _page.game;
-    emblem = EmblemView(level: _level, artScale: ResultsConfig.emblemScale);
+    // region P26-J2
+    emblem = EmblemView(
+      level: _level,
+      artScale: ResultsConfig.emblemScale,
+      progression: true,
+    );
+    // endregion
     bird = LookComponent(
       look: g.menu.items.look,
       artScale: ResultsConfig.emblemScale * ResultsConfig.birdOnEmblem,

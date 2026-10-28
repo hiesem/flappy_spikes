@@ -736,6 +736,21 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await _shot(tester, 'journey_11_home');
     expect(g.menu.levels.level, expectedLevel);
+
+    // PRD-2.6 J4/J5: seed a durable counting reward separately from the
+    // debug-touched journey, then exercise the Home catch-up CLAIM.
+    await g.menu.levels.recordRun(25, counts: true);
+    final reward = g.menu.levels.pending.single;
+    final item = reward['item'] as String?;
+    final coins = (reward['coins'] as int) + (reward['extraCoins'] as int);
+    final beforeClaim = g.menu.wallet.balance;
+    g.openLevelUpPopup();
+    expect(await _waitFor(tester, () => g.levelUpPopup?.isLoaded == true), isTrue);
+    g.levelUpPopup!.claimButton.onPressed();
+    expect(await _waitFor(tester, () => g.menu.levels.pending.isEmpty), isTrue);
+    expect(g.menu.wallet.balance, beforeClaim + coins);
+    if (item != null) expect(g.storage.ownedItems, contains(item));
+    expect(g.menu.levels.level, 1);
     expect(_handlerErrors, isEmpty);
     await _teardown(tester);
   });

@@ -33,6 +33,7 @@ ShareCardData card({
   String banner = 'BEAT MY SCORE!',
 }) => ShareCardData(
   kind: kind,
+  progression: kind == ShareCardKind.spotlight,
   score: score,
   best: best,
   level: kind == ShareCardKind.spotlight ? level : 0,

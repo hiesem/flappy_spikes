@@ -27,6 +27,7 @@ class ShareContent {
     final bannerIndex = random.nextInt(Config.shareBanners.length);
     return ShareCardData(
       kind: ShareCardKind.spotlight,
+      progression: true,
       score: score,
       best: best,
       level: level,

@@ -131,6 +131,9 @@ class LevelUpPopup extends PositionComponent
       Config.levelUpEmblemY,
     );
     emblem = EmblemView(
+      // region P26-J2
+      progression: true,
+      // endregion
       level: pending.toLevel,
       artScale: Config.levelUpEmblemScale,
       position: emblemCentre.toVector2(),

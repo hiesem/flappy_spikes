@@ -133,8 +133,8 @@ class LevelProgress extends ChangeNotifier {
       }
       final due = max(0, _storage.lvlPayout - _wallet.balance);
       await _wallet.add(due, CoinSource.levelReward);
-      await _storage.saveLvlPending(const []);
-      await _storage.saveLvlPayout(0);
+      // Emit before clearing pending so recovery cannot silently lose the event.
+      // A crash before the clear can replay analytics; credit remains idempotent.
       for (final row in rows) {
         final item = allItems
             .where((item) => item.key == row['item'])
@@ -147,6 +147,8 @@ class LevelProgress extends ChangeNotifier {
           fallback: row['fallback'] as String? ?? 'none',
         );
       }
+      await _storage.saveLvlPending(const []);
+      await _storage.saveLvlPayout(0);
       notifyListeners();
       return due;
     } finally {

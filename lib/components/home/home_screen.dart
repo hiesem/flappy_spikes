@@ -248,6 +248,9 @@ class HomeScreen extends PositionComponent
     final stage = Config.homeStageRectFor(h);
     final plate = Config.homePlateCentreFor(h);
     emblem = EmblemView(
+      // region P26-J2
+      progression: true,
+      // endregion
       level: _displayLevel,
       artScale: Config.homeEmblemScaleFor(h),
       position: plate.toVector2(),

@@ -856,6 +856,9 @@ class VersusIntroPlate extends PositionComponent with GroupOpacity {
     this.reel = false,
   }) : super(position: rect.topLeft.toVector2(), size: rect.size.toVector2()) {
     emblem = EmblemView(
+      // region P26-J2
+      progression: true,
+      // endregion
       level: level,
       artScale: VersusConfig.emblemScale,
       position: Vector2(rect.width - VersusConfig.plateSlot / 2, rect.height / 2),

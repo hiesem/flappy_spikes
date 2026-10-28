@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 
 import '../../game/config.dart';
 import '../../game/sound.dart';
@@ -152,7 +153,8 @@ class GiftOpeningPopup extends P1Popup {
     required this.gift,
     required this.claim,
     required this.finish,
-  }) : super(onDismiss: () {});
+    required super.onDismiss,
+  });
   final LbGift gift;
   final Future<AppliedLbGift?> Function() claim;
   final void Function(AppliedLbGift, Rect) finish;
@@ -160,6 +162,8 @@ class GiftOpeningPopup extends P1Popup {
   late final PositionComponent content;
   bool busy = false, revealed = false, lidStarted = false;
   AppliedLbGift? prize;
+  bool get canDismiss => prize == null;
+  MenuText? coinCount;
   double elapsed = 0, tickAt = 0, arrival = 0, rise = 0;
   Rect get claimRect => Rect.fromLTWH(
     card.absolutePosition.x + 40,
@@ -171,6 +175,12 @@ class GiftOpeningPopup extends P1Popup {
   @override
   Future<void> buildCard(PositionComponent card) async {
     cardHeight = 340;
+    final close = Sprite(await game.images.load('menu/close.png'));
+    final closeButton = closeBox(close, () {
+      if (canDismiss) onDismiss();
+    });
+    closeButton.isActive = () => active && canDismiss;
+    card.add(closeButton);
     final tier = MysteryBoxTier.values.firstWhere(
       (v) => v.name == gift.tier,
       orElse: () => MysteryBoxTier.gold,
@@ -201,6 +211,12 @@ class GiftOpeningPopup extends P1Popup {
     );
   }
 
+  @override
+  void onTapUp(TapUpEvent event) {
+    event.handled = true;
+    if (canDismiss) onDismiss();
+  }
+
   Future<void> open() async {
     if (busy) return;
     busy = true;
@@ -222,6 +238,9 @@ class GiftOpeningPopup extends P1Popup {
     if (revealed) {
       rise = (rise + dt / .35).clamp(0.0, 1.0);
       content.y = 24 * (1 - rise);
+      if (coinCount != null) {
+        coinCount!.text = '+${(prize!.coins * rise).round()}';
+      }
       return;
     }
     if (prize == null) return;
@@ -268,7 +287,7 @@ class GiftOpeningPopup extends P1Popup {
     final title = switch (result.kind) {
       'feather' => 'Golden feather',
       'piece' => 'Puzzle piece',
-      _ => '+${result.coins} / COINS',
+      _ => '+0',
     };
     final sub = switch (result.kind) {
       'feather' => 'ADDED TO YOUR FEATHERS',
@@ -279,8 +298,15 @@ class GiftOpeningPopup extends P1Popup {
         _ => 'GOLD BOX · 100–300 COINS',
       },
     };
-    content.add(_text(title, 205, font: 18));
-    content.add(_text(sub, 232, font: 10, color: Config.menuPlum));
+    if (result.kind == 'coins') {
+      coinCount = _text(title, 195, font: 22);
+      content.add(coinCount!);
+      content.add(_text('COINS', 220, font: 12));
+      content.add(_text(sub, 240, font: 10, color: Config.menuPlum));
+    } else {
+      content.add(_text(title, 205, font: 18));
+      content.add(_text(sub, 232, font: 10, color: Config.menuPlum));
+    }
     content.add(
       _button('COLLECT', 275, () {
         game.sound.play(Sfx.col4Coins);

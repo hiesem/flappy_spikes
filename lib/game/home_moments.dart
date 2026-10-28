@@ -64,6 +64,11 @@ abstract class HomeMoments {
 
   void beginVisit(HomeVisit visit) {}
 
+  // region P26-LB7
+  /// A background board read may supply gifts before this visit is spent.
+  void offerLeaderboardGifts(List<HomeGiftBoxRequest> gifts) {}
+  // endregion
+
   void show(HomeMoment moment, void Function() open);
 
   /// An explicit debug-panel force. Custom routing seams still observe it;
@@ -125,6 +130,21 @@ class HomeMomentBudget extends HomeMoments {
     _selectedGift = null;
     _selected = _select(visit);
   }
+
+  // region P26-LB7
+  @override
+  void offerLeaderboardGifts(List<HomeGiftBoxRequest> gifts) {
+    if (!_visitActive || _shownThisVisit) return;
+    final gift = oldestGift(gifts);
+    if (gift == null) return;
+    if (_selected != null &&
+        _selected!.index < HomeMoment.leaderboardCollect.index) {
+      return;
+    }
+    _selectedGift = gift;
+    _selected = HomeMoment.leaderboardCollect;
+  }
+  // endregion
 
   @override
   void showDebug(HomeMoment moment, void Function() open) => open();

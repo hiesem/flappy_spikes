@@ -1182,22 +1182,16 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   // region P26-LB7
   Future<void> _beginHomeVisit() async {
     final visit = ++_lbVisit;
-    _lbLoading = true;
-    final recovered = await _giftApply.recover();
-    LbGetBoardResult? board;
-    try { board = await leaderboard.getBoard(); } catch (_) {}
-    if (visit != _lbVisit) return;
-    _lbLoading = false;
-    if (state != GameState.start || menuScene != MenuScene.home) return;
-    _lbGifts = (board?.today.gifts ?? []).where((g) =>
-      g.claimedAt == null && !storage.lbGiftsClaimed.contains(g.gid)).toList();
-    if (recovered != null) {
-      final request = storage.lbGiftPending['request_id'] as String;
+    final pending = storage.lbGiftPending;
+    if (pending.isNotEmpty) {
+      final request = pending['request_id'] as String;
+      final tier = pending['tier'] as String;
       _lbGifts.removeWhere((gift) => gift.gid == request);
-      _lbGifts.insert(0, LbGift(gid: request, tier: recovered.tier,
-        boardRank: switch (recovered.tier) { 'gold' => 1, 'silver' => 2, _ => 3 },
+      _lbGifts.insert(0, LbGift(gid: request, tier: tier,
+        boardRank: switch (tier) { 'gold' => 1, 'silver' => 2, _ => 3 },
         createdAt: DateTime.fromMillisecondsSinceEpoch(0)));
     }
+    unawaited(_fetchLbGifts(visit));
   // endregion
     if (state != GameState.start || menuScene != MenuScene.home) return;
     // region P26-G2c
@@ -1642,7 +1636,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // endregion
     // region P26-LB7
     _lbVisit++;
-    _lbLoading = false;
     // endregion
     state = GameState.playing;
     _runsThisSession++;
@@ -3092,11 +3085,32 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   List<LbGift> _lbGifts = [];
   PositionComponent? _lbGiftPopup;
   int _lbVisit = 0;
-  bool _lbLoading = false;
+  DateTime? _lbNextFetch;
+  bool _lbFetching = false;
+
+  Future<void> _fetchLbGifts(int visit) async {
+    final now = storage.now();
+    if (_lbFetching || (_lbNextFetch != null && now.isBefore(_lbNextFetch!))) return;
+    _lbFetching = true;
+    LbGetBoardResult? board;
+    try { board = await leaderboard.getBoard(); } catch (_) {}
+    _lbFetching = false;
+    if (board == null) { _lbNextFetch = now.add(const Duration(minutes: 1)); return; }
+    final end = board.today.group?.end;
+    _lbNextFetch = end != null && end.isAfter(now) ? end : now.add(const Duration(minutes: 1));
+    final pendingId = storage.lbGiftPending['request_id'];
+    final pending = _lbGifts.where((gift) => gift.gid == pendingId).toList();
+    _lbGifts = [...pending, ...board.today.gifts.where((gift) =>
+      gift.claimedAt == null && gift.gid != pendingId && !storage.lbGiftsClaimed.contains(gift.gid))];
+    if (visit == _lbVisit && state == GameState.start && menuScene == MenuScene.home) {
+      homeMoments.offerLeaderboardGifts([for (final gift in _lbGifts) HomeGiftBoxRequest(
+        id: gift.gid, availableAt: gift.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0))]);
+    }
+  }
   double _lbGiftSettle = 0;
 
   void _checkLbGift(double dt) {
-    if (_lbLoading || !_homeInteractive || _home?.built != true || _home!.opacity < 1 ||
+    if (!_homeInteractive || _home?.built != true || _home!.opacity < 1 ||
         modalPopupOpen || _popupQueue.isNotEmpty || _adsShowing > 0 || _fakeAd != null || _lbGifts.isEmpty) {
       _lbGiftSettle = 0;
       return;
@@ -3125,11 +3139,19 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final previous = _lbGiftPopup;
     previous?.removeFromParent();
     if (previous == null) pushBack(_lbGiftBack);
-    final popup = GiftOpeningPopup(gift: gift, claim: () async {
+    late final GiftOpeningPopup popup;
+    popup = GiftOpeningPopup(gift: gift, onDismiss: _closeLbGift, claim: () async {
       _coinPill.hold();
-      final prize = await _giftApply.claim(gift.gid);
-      if (prize == null || prize.kind != 'coins') { _coinPill.releaseHold(); }
-      return prize;
+      try {
+        final prize = await _giftApply.claim(gift.gid);
+        if (prize == null || prize.kind != 'coins' || !identical(_lbGiftPopup, popup)) {
+          _coinPill.releaseHold();
+        }
+        return prize;
+      } catch (_) {
+        _coinPill.releaseHold();
+        return null;
+      }
     }, finish: _finishLbGift);
     _lbGiftPopup = popup;
     world.add(popup);
@@ -3141,6 +3163,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       if (found.isNotEmpty) {
         _lbGiftPopup?.removeFromParent();
         final sheet = GiftItemReveal(item: found.first, onFinished: (_) {
+          _lbGifts.removeWhere((g) => g.gid == storage.lbGiftPending['request_id']);
           unawaited(_giftApply.markShown(gift.id));
           _closeLbGift();
         });
@@ -3152,16 +3175,20 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (gift.kind == 'coins') {
       playCoinReward(CoinRewardAnimation.levelReward(gift.coins, 0, from: from));
     }
+    _lbGifts.removeWhere((g) => g.gid == storage.lbGiftPending['request_id']);
     unawaited(_giftApply.markShown(gift.id));
     _closeLbGift();
   }
 
   bool _lbGiftBack() {
-    if (_lbGiftPopup is GiftPopup) _closeLbGift();
+    final popup = _lbGiftPopup;
+    if (popup is GiftPopup || (popup is GiftOpeningPopup && popup.canDismiss)) _closeLbGift();
     return true;
   }
   void _closeLbGift() {
-    _lbGiftPopup?.removeFromParent();
+    final popup = _lbGiftPopup;
+    if (popup is GiftOpeningPopup) popup.active = false;
+    popup?.removeFromParent();
     _lbGiftPopup = null;
     popBack(_lbGiftBack);
     _drainPopups();
@@ -3190,9 +3217,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   void _checkStreakLost(double dt) {
     if (
-        // region P26-LB7
-        _lbLoading ||
-        // endregion
         !_homeInteractive ||
         _home?.built != true ||
         _home!.opacity < 1 ||
@@ -3520,9 +3544,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   void _checkStreakReward(double dt) {
     if (
-        // region P26-LB7
-        _lbLoading ||
-        // endregion
         !_homeInteractive ||
         _home?.built != true ||
         _home!.opacity < 1 ||
@@ -3810,9 +3831,6 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void _checkLevelUp(double dt) {
     final home = _home;
     final ready =
-        // region P26-LB7
-        !_lbLoading &&
-        // endregion
         _levelUpPopup == null &&
         _popupQueue.isEmpty &&
         _levelsOpenIn == null &&

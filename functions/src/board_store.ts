@@ -1400,8 +1400,12 @@ export async function lbGetBoard(
     ({ group, hiddenGhostOwners } = snapshot);
   }
   // endregion
-  const giftsSnap = await db.collection(LB_GIFTS_COLLECTION).where('uid', '==', uid).limit(50).get();
-  const gifts = giftsSnap.docs.map((doc) => doc.data() as LbGiftDoc);
+  // region P26-LB7
+  // Legacy gifts omit claimedAt, so filter after reading all owned gifts;
+  // limiting before that filter could hide a newer unclaimed box.
+  const giftsSnap = await db.collection(LB_GIFTS_COLLECTION).where('uid', '==', uid).get();
+  const gifts = giftsSnap.docs.map((doc) => doc.data() as LbGiftDoc).filter((gift) => gift.claimedAt == null);
+  // endregion
   // region P26-S2
   const suppressedUids = hiddenGhostOwners;
   // endregion

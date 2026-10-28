@@ -311,6 +311,26 @@ describe('PRD-2.6 LB3 settlement and gifts', () => {
     for (const g of [...ga, ...gb, ...gc]) assert.equal(g.claimedAt, undefined);
   });
 
+  // region P26-LB7
+  it('returns every unclaimed gift even after more than fifty claimed gifts', async () => {
+    const uid = uniq('lb-many-gifts');
+    const batch = db.batch();
+    for (let i = 0; i < 55; i++) {
+      batch.set(db.collection(LB_GIFTS_COLLECTION).doc(`${uid}_claimed_${i}`), {
+        uid, gid: `claimed_${i}`, tier: 'bronze', boardRank: 3,
+        claimedAt: Timestamp.fromMillis(T0), expireAt: Timestamp.fromMillis(T0 + 400 * 86400000),
+      });
+    }
+    batch.set(db.collection(LB_GIFTS_COLLECTION).doc(`${uid}_waiting`), {
+      uid, gid: 'waiting', tier: 'gold', boardRank: 1,
+      expireAt: Timestamp.fromMillis(T0 + 400 * 86400000),
+    });
+    await batch.commit();
+    const board = await lbGetBoard(db, uid, { tab: 'today' }, T0);
+    assert.deepEqual(board.today.gifts?.map((gift) => gift.gid), ['waiting']);
+  });
+  // endregion
+
   it('lazy lbGetBoard settlement equals the scheduled settlement and records TOP BIRD', async () => {
     const lazy = uniq('lb-lazy');
     const sched = uniq('lb-sched');

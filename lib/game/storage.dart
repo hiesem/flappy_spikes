@@ -2112,18 +2112,12 @@ class GameStorage {
         'earnedBefore': lifetimeCoinsEarned,
       });
     }
-    final legacyBalance = j['balance'];
-    final legacyEarned = j['earned'];
-    final balance = amount is int && before is int && applied is bool
-        ? (applied ? math.max(coins, before + amount) : coins + amount)
-        : legacyBalance;
-    final earned = amount is int && earnedBefore is int && applied is bool
-        ? (applied ? math.max(lifetimeCoinsEarned, earnedBefore + amount) : lifetimeCoinsEarned + amount)
-        : legacyEarned;
     if (rows is! List || day is! int || tier is! int || reroll is! int ||
-        balance is! int || earned is! int) {
+        amount is! int || before is! int || earnedBefore is! int || applied is! bool) {
       return;
     }
+    final balance = applied ? math.max(coins, before + amount) : coins + amount;
+    final earned = applied ? math.max(lifetimeCoinsEarned, earnedBefore + amount) : lifetimeCoinsEarned + amount;
     // region P26-G6eB
     final roadSeason = j['roadSeason'];
     final roadXp = j['roadXp'];

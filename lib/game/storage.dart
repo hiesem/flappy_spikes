@@ -123,8 +123,10 @@ class GameStorage {
   int streakPaidDay = -1;
   int streakLostDays = 0;
   int streakLostSeenDay = -1;
-  int worldsReached = 0;
-  int worldsSeen = 0;
+  // region P26-POL3
+  int worldsReached = 1;
+  int worldsSeen = 1;
+  // endregion
   Map<String, int> weeklyBest = const {};
   Set<int> weeklyRewards = const {};
   int weeklyHintDay = -1;
@@ -672,8 +674,10 @@ class GameStorage {
     streakPaidDay = prefs.getInt(Obf.prefStreakPaidDay) ?? -1;
     streakLostDays = prefs.getInt(Obf.prefStreakLostDays) ?? 0;
     streakLostSeenDay = prefs.getInt(Obf.prefStreakLostSeenDay) ?? -1;
-    worldsReached = prefs.getInt(Obf.prefWorldsReached) ?? 0;
-    worldsSeen = prefs.getInt(Obf.prefWorldsSeen) ?? 0;
+    // region P26-POL3
+    worldsReached = (prefs.getInt(Obf.prefWorldsReached) ?? 1).clamp(1, 10);
+    worldsSeen = (prefs.getInt(Obf.prefWorldsSeen) ?? 1).clamp(1, 10);
+    // endregion
     weeklyBest = _p26IntMap(prefs.getString(Obf.prefWeeklyBest));
     weeklyRewards = (prefs.getStringList(Obf.prefWeeklyRewards) ?? const [])
         .map(int.tryParse)
@@ -2373,8 +2377,10 @@ class GameStorage {
     missions = const [];
     missionTier = 0;
     missionRerollDay = -1;
-    worldsReached = 0;
-    worldsSeen = 0;
+    // region P26-POL3
+    worldsReached = 1;
+    worldsSeen = 1;
+    // endregion
     weeklyBest = const {};
     weeklyRewards = const {};
     weeklyHintDay = -1;

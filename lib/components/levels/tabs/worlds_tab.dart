@@ -298,6 +298,8 @@ class WorldCard extends PositionComponent {
         MenuTag(
           current ? 'YOU' : 'NEXT',
           fontSize: 9,
+          fillColor: current ? Config.menuPink : Config.menuSoft,
+          textColor: current ? Config.menuSoft : Config.menuPlum,
           position: Vector2(30, -8),
         ),
       );

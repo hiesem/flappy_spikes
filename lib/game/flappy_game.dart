@@ -5470,6 +5470,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     if (key == LogicalKeyboardKey.space ||
         key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.numpadEnter) {
+      // region P26-POL3
+      final sheet = state == GameState.results ? _results?.revealSheet : null;
+      if (sheet != null && sheet.revealed) {
+        unawaited(sheet.choose(sheet.item != null));
+        return KeyEventResult.handled;
+      }
+      // endregion
       if (state == GameState.results) {
         // The results page's NEXT, once it has faded in (WP-2e).
         _results?.next();
@@ -5479,6 +5486,13 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.escape) {
+      // region P26-POL3
+      final sheet = state == GameState.results ? _results?.revealSheet : null;
+      if (sheet != null && sheet.revealed) {
+        unawaited(sheet.choose(false));
+        return KeyEventResult.handled;
+      }
+      // endregion
       // WP-2d: Esc while playing pauses (ARCH §2.3).
       if (state == GameState.playing) {
         pause();

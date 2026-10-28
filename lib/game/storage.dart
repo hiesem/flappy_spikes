@@ -1581,7 +1581,22 @@ class GameStorage {
   }
 
   Future<void> saveCoins(int value) async {
+    // region P26-G1b
+    // A spend while a mission payout is still settling must lower its
+    // recovery target; otherwise recovery would refund the spend.
+    Future<void>? journalWrite;
+    final j = missionJournal;
+    final before = j['balanceBefore'];
+    if (j['applied'] == true && before is int && value < coins) {
+      j['balanceBefore'] = before + value - coins;
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      journalWrite = prefs.setString(Obf.prefMissionJournal, jsonEncode([j])).then((_) {});
+    }
+    // endregion
     coins = value;
+    // region P26-G1b
+    if (journalWrite != null) await journalWrite;
+    // endregion
     await _sealedWrite((p) => p.setInt(_coinsKey, value));
   }
 

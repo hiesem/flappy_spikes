@@ -5,7 +5,6 @@ import '../run/elements.dart';
 import '../run/config/tuning_values.dart';
 import '../menu/wallet.dart';
 import '../menu/home_mode.dart';
-import '../versus/diagnostics.dart';
 // endregion
 // region P26-F1
 import '../game/storage.dart';
@@ -44,10 +43,10 @@ abstract final class RunEndBookkeeping {
       eligibility: MissionEligibility(
         bestHoops: storage.bestHoops,
         metElements: {for (final id in storage.metElements) ?ElementId.fromStorageId(id)},
-        online: game.versus.ready &&
-          (game.versus.holdsOpponent ||
-           game.versus.lastSearch.state == VersusSearchState.found ||
-           game.versus.lastSearch.reason == VersusSoloReason.noRival),
+        online: MissionEligibility.onlineFromSearch(
+          ready: game.versus.ready, holdsOpponent: game.versus.holdsOpponent,
+          search: game.versus.lastSearch,
+        ),
         lastVersusHadRival: storage.lastVersusHadRival,
       ),
     );
@@ -133,7 +132,9 @@ abstract final class RunEndBookkeeping {
     // endregion
     // region P26-G1b
     final run = game.run;
+    game.missionRunSettlementPending = false;
     if (run != null && run.countsForUpload) {
+      game.missionRunSettlementPending = game.storage.gamesPlayed >= 4;
       if (game.storage.gamesPlayed >= 4) {
         game.recordStreakRun(runNumber: game.storage.gamesPlayed);
       }

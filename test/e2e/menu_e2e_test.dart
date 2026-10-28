@@ -280,6 +280,9 @@ void main() {
     expect(g.menuScene, MenuScene.home);
     expect(r.spy.params('home_slot_shown').length, 2);
     expect(g.foregroundColor, kPalettes[0]!.foreground);
+    // PRD-2.6 §8.3 item 19: isolate slot-roll assertions from the
+    // day-streak reward that would otherwise occupy a Home visit.
+    await g.storage.saveStreakPaidDay(g.storage.today);
     final rolls = <Powerup>[];
     for (var i = 0; i < 30; i++) {
       rolls.add(g.menu.slot.offered);

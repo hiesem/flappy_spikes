@@ -101,6 +101,9 @@ void main() {
     },
     verify: (g, _) async {
       addTearDown(versus.dispose);
+      // PRD-2.6 §8.3 item 19: isolate upload queue assertions from the
+      // higher-priority day-streak reward on Home.
+      await g.storage.saveStreakPaidDay(g.storage.today);
       for (final (points, decision, count) in [
         (2, UploadDecision.lowScore, 0),
         (4, UploadDecision.queued, 1),

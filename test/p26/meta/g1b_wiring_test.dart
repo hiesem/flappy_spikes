@@ -94,6 +94,23 @@ void main() {
     }
   });
 
+  test('spending while a payout journal is pending survives recovery', () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = GameStorage();
+    await storage.load();
+    await storage.saveCoins(120);
+    await storage.saveLifetimeCoinsEarned(20);
+    await storage.saveMissionJournal({
+      'day': 20, 'tier': 0, 'rerollDay': -1, 'missions': <Object>[],
+      'balanceBefore': 100, 'earnedBefore': 0, 'amount': 20, 'applied': true,
+    });
+    await storage.saveCoins(110);
+    final recovered = GameStorage();
+    await recovered.load();
+    expect(recovered.coins, 110);
+    expect(recovered.lifetimeCoinsEarned, 20);
+  });
+
   test('rival flag persists and delete resets it', () async {
     SharedPreferences.setMockInitialValues({});
     final storage = GameStorage();

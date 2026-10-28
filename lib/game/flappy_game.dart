@@ -1154,6 +1154,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     unawaited(leaderboardQueue.flush());
     // endregion
     // region P26-G1b
+    missionRunSettlementPending = false;
     missionSettlement = RunEndBookkeeping.prepareMissions(this);
     // endregion
     homeMoments.beginVisit(
@@ -5007,6 +5008,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// upload, then the [PostRunFlow] (ending on the WP-2e results page).
   // region P26-G1b
   Future<void> missionSettlement = Future<void>.value();
+  bool missionRunSettlementPending = false;
   /// G1d registers its opener before asking C2 to reserve the visit.
   bool missionsChestOpenerRegistered = false;
   // endregion
@@ -5619,10 +5621,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // region P26-G5a
     // A quick return Home must not reload stale weekly or mission state.
     // region P26-G1b
-    final reload = _weeklyPendingWrites == 0
-        ? missionSettlement.then((_) => storage.load())
-        : Future.wait([weeklyWritesSettled, missionSettlement])
-              .then((_) => storage.load());
+    final reload = _weeklyPendingWrites == 0 && !missionRunSettlementPending
+        ? storage.load()
+        : Future.wait([
+            if (_weeklyPendingWrites != 0) weeklyWritesSettled,
+            if (missionRunSettlementPending) missionSettlement,
+          ]).then((_) => storage.load());
     // endregion
     _homeReload = reload.then((_) {
       sound.muted = storage.muteSound;

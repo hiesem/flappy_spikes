@@ -185,7 +185,7 @@ void main() {
   v4Journey(
     'v4 R2: first session stays suppressed through ten runs; cold launch qualifies',
     // PRD-2.6 J3: isolate the schedule; ten low-score runs cannot level here.
-    prefs: (rig) => {'lvlIndex': 31},
+    prefs: (rig) => {'lvlIndex': 31, 'streakPaidDay': rig.clock.day}, // PRD-2.6 §8.3-19: isolate the schedule from streak rewards.
     (game, rig, tester) async {
       for (var i = 0; i < 10; i++) {
         await v4FinishRun(game, tester, 6);

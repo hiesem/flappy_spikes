@@ -161,6 +161,7 @@ void main() async {
     'install day: 10 finished runs open the window on the next session',
     prefs: {'installDay': _Clock().day, 'firstSessionDone': true,
       'lvlIndex': 31, // PRD-2.6 J3: keep this schedule-only case below a level-up.
+      'streakPaidDay': _Clock().day, // PRD-2.6 §8.3-19: isolate the streak reward.
     },
     (game, events, clock, ads) async {
       expect(game.noAdsPopup, isNull);

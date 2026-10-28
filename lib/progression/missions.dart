@@ -1,6 +1,9 @@
 import 'dart:math';
 
 import '../run/elements.dart';
+// region P26-G1b
+import '../versus/diagnostics.dart';
+// endregion
 
 /// Daily missions, PRD G1 / O28 / O32 and texts.html §1.
 /// No clock, storage, wallet, ad or UI side effects: callers persist the returned
@@ -60,6 +63,13 @@ enum MissionTemplate {
 }
 
 class MissionEligibility {
+  // region P26-G1b
+  /// The best currently available connectivity evidence from versus search.
+  static bool onlineFromSearch({required bool ready, required bool holdsOpponent,
+      required VersusSearchInfo search}) => ready &&
+      (holdsOpponent || search.state == VersusSearchState.found ||
+          search.reason == VersusSoloReason.noRival);
+  // endregion
   MissionEligibility({
     required this.bestHoops,
     Set<ElementId> metElements = const {},

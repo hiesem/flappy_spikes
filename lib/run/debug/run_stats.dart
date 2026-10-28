@@ -4,7 +4,6 @@ import '../../progression/missions.dart';
 import '../director/plans.dart';
 import '../run_state.dart';
 import '../../versus/opponent.dart';
-import '../../versus/diagnostics.dart';
 // endregion
 import '../elements.dart';
 import '../run_controller.dart';
@@ -21,10 +20,10 @@ class RunStats {
     missionBestAtStart = run.game.storage.bestHoops;
     missionRivalAtStart = run.game.storage.lastVersusHadRival;
     final versus = run.game.versus;
-    missionOnlineAtStart = versus.ready &&
-        (versus.holdsOpponent ||
-         versus.lastSearch.state == VersusSearchState.found ||
-         versus.lastSearch.reason == VersusSoloReason.noRival);
+    missionOnlineAtStart = MissionEligibility.onlineFromSearch(
+      ready: versus.ready, holdsOpponent: versus.holdsOpponent,
+      search: versus.lastSearch,
+    );
     // endregion
     run.events.onAny(_on);
   }

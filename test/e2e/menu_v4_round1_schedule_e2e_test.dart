@@ -70,7 +70,7 @@ void main() {
   v4Journey(
     'v4: day 1 needs 10 finished runs, then the 10th run\'s arrival checks; never before',
     prefs: (rig) => {'installDay': rig.clock.day, 'firstSessionDone': true,
-      'lvlIndex': 31}, // PRD-2.6 J3: isolate the schedule from level-up catch-up.
+      'lvlIndex': 31, 'streakPaidDay': rig.clock.day}, // PRD-2.6 J3 and §8.3-19: isolate schedule from level and streak rewards.
     (game, rig, tester) async {
       for (var i = 0; i < 9; i++) {
         await v4FinishRun(game, tester, 6);
@@ -100,7 +100,7 @@ void main() {
   );
 
   v4Journey('v4: 10 runs in the first session still need a later session',
-    prefs: (rig) => {'lvlIndex': 31}, // J3: ten low-score runs cannot reach 10,000.
+    prefs: (rig) => {'lvlIndex': 31, 'streakPaidDay': rig.clock.day}, // PRD-2.6 J3 and §8.3-19: isolate schedule from level and streak rewards.
     (
     game,
     rig,

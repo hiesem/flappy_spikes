@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flappy_spikes/progression/missions.dart';
 import 'package:flappy_spikes/run/elements.dart';
+import 'package:flappy_spikes/versus/diagnostics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 MissionEligibility eligibility({
@@ -43,6 +44,15 @@ Missions withTemplates(List<MissionTemplate> templates, {int tier = 0}) =>
     );
 
 void main() {
+  test('M10 online evidence is shared and rejects offline or unavailable search', () {
+    bool online(VersusSearchInfo info, {bool ready = true, bool held = false}) =>
+        MissionEligibility.onlineFromSearch(ready: ready, holdsOpponent: held, search: info);
+    expect(online(const VersusSearchInfo(state: VersusSearchState.found)), isTrue);
+    expect(online(const VersusSearchInfo(reason: VersusSoloReason.noRival)), isTrue);
+    expect(online(const VersusSearchInfo(reason: VersusSoloReason.offline)), isFalse);
+    expect(online(const VersusSearchInfo(), held: true), isTrue);
+    expect(online(const VersusSearchInfo(), held: true, ready: false), isFalse);
+  });
   test('approved M01–M15 target table and text IDs, PRD §8.3-14', () {
     const expected = [
       [3, 3, 4, 5],

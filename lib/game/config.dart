@@ -1564,7 +1564,7 @@ class Config {
   // region P231-E — achievements (PRD-2.3.1 §12.5)
   // region P26-LB4
   static const double homeCoinPillMaxWidth =
-      homeRightEdge - (homeTrophyLeft + homeTopRowHeight + 8);
+      homeRightEdge - (106 + homeTopRowHeight + 8);
   // endregion P26-LB4
 
   /// PRD-2.3.1 §12.5 the unlock toast pill: width, height, top (below the

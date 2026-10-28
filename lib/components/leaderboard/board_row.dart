@@ -19,6 +19,15 @@ class BoardRow extends PositionComponent {
   bool visible = true;
   double time = 0;
   final StickerAvatars avatars = StickerAvatars();
+  String get statusText =>
+      row.playingNow == true ? 'PLAYING NOW' : lastRunTag(row.lastAt);
+  List<String> get displayedText => [
+    formatBoardRank(row.rank, approximate: approximate),
+    row.name,
+    statusText,
+    if (own) 'YOU',
+    '${row.points}',
+  ];
   void text(
     Canvas c,
     String value,
@@ -62,9 +71,9 @@ class BoardRow extends PositionComponent {
     }
     text(
       canvas,
-      row.rank == 0 ? '–' : '${approximate ? '#~' : ''}${row.rank}',
+      formatBoardRank(row.rank, approximate: approximate),
       const Offset(5, 12),
-      15,
+      approximate ? 9 : 15,
       own ? pink : plum,
       maxWidth: 36,
     );
@@ -84,13 +93,8 @@ class BoardRow extends PositionComponent {
       fontSize: 13,
       maxWidth: 124,
     );
-    text(
-      canvas,
-      row.playingNow == true ? 'PLAYING NOW' : lastRunTag(row.lastAt),
-      const Offset(84, 25),
-      8.5,
-      plum,
-    );
+    text(canvas, statusText, const Offset(84, 25), 8.5, plum);
+    if (own) text(canvas, 'YOU', const Offset(202, 26), 8, pink);
     final score = TextPainter(
       text: TextSpan(
         text: '${row.points}',
@@ -139,4 +143,18 @@ void paintBoardAvatar(
   canvas.translate(rect.center.dx, rect.center.dy);
   CardFrameArt.paintFront(canvas, id, size: rect.width, t: time);
   canvas.restore();
+}
+
+String formatBoardRank(int rank, {bool approximate = false}) {
+  if (rank <= 0) return '–';
+  if (!approximate) return '$rank';
+  final masked = rank >= 100 ? '${rank ~/ 100}xx' : '$rank';
+  final parts = <String>[];
+  var end = masked.length;
+  while (end > 3) {
+    parts.insert(0, masked.substring(end - 3, end));
+    end -= 3;
+  }
+  parts.insert(0, masked.substring(0, end));
+  return '#~${parts.join('\u2009')}';
 }

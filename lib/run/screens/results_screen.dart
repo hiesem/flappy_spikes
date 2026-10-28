@@ -276,7 +276,8 @@ class ResultsScreen extends PositionComponent
   late final MenuText rewardText;
   late final PositionComponent rewardPill;
   late final MenuButton nextButton;
-  late final MenuButton leaderboardButton;
+  // region P26-LB4
+  // endregion P26-LB4
   late final MenuButton shareButton;
   late final ResultsLevelStage stage;
   late final ResultsLevelUpBanner levelUpBanner;
@@ -407,7 +408,8 @@ class ResultsScreen extends PositionComponent
     size = Vector2(320, h);
     final loaded = await Future.wait(kResultsImages.map(game.images.load));
     _coin = Sprite(loaded[0]);
-    final trophy = Sprite(loaded[1]);
+    // region P26-LB4
+    // endregion P26-LB4
     final invite = Sprite(loaded[2]);
 
     // region P26-G6a
@@ -601,11 +603,8 @@ class ResultsScreen extends PositionComponent
         ),
       ],
     );
-    // Gated on the fade-in also when pressed directly (1.0 Fix E: a flap
-    // tap at the moment of death must never open Play Games).
-    leaderboardButton = side(ResultsConfig.leaderboardButton, trophy, () {
-      if (_active()) unawaited(game.showLeaderboard(sfx: Sfx.skTap));
-    });
+    // region P26-LB4 — O64 removes the native leaderboard entry.
+    // endregion P26-LB4
     shareButton = side(ResultsConfig.shareButton, invite, () {
       if (_active()) game.shareScore();
     });
@@ -622,7 +621,8 @@ class ResultsScreen extends PositionComponent
       claimButton,
       rewardLabel,
       rewardPill,
-      leaderboardButton,
+      // region P26-LB4
+      // endregion P26-LB4
       shareButton,
       nextButton,
       levelUpBanner,

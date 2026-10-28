@@ -10,7 +10,9 @@ import 'podium.dart';
 
 /// Our daily and all-time boards; achievements hands off without changing tab.
 class BoardScreen extends MenuScreen {
-  BoardScreen({required super.onBack}) : super(title: 'LEADERBOARD');
+  BoardScreen({required super.onBack, this.source = 'home'})
+    : super(title: 'LEADERBOARD');
+  final String source;
   LbBoardTab tab = LbBoardTab.today;
   LbGetBoardResult? data;
   final List<PositionComponent> content = [];
@@ -22,6 +24,9 @@ class BoardScreen extends MenuScreen {
   MenuButton? playButton;
   int _generation = 0;
   double _time = 0;
+  double _achievementFlash = 0;
+  bool _loggedOpen = false;
+  late final BoardTimerChip timerChip;
   @override
   Rect scrollViewportFor(double viewHeight) =>
       Rect.fromLTRB(0, 330, 320, viewHeight - 70);
@@ -45,6 +50,8 @@ class BoardScreen extends MenuScreen {
         isActive: isActive,
         onPressed: () {
           if (i == 2) {
+            _achievementFlash = .4;
+            _styleTabs();
             game.services.track('lb_achievements_tab', {
               'signed_in': game.services.achievementsReady,
             });
@@ -71,13 +78,17 @@ class BoardScreen extends MenuScreen {
       position: Vector2(160, 94),
       anchor: Anchor.center,
     );
+    timerChip = BoardTimerChip();
+    add(timerChip);
     add(timer);
     unawaited(refresh());
   }
 
   void _styleTabs() {
     for (var i = 0; i < tabs.length; i++) {
-      final selected = i == (tab == LbBoardTab.today ? 0 : 1);
+      final selected =
+          i == (tab == LbBoardTab.today ? 0 : 1) ||
+          (i == 2 && _achievementFlash > 0);
       tabs[i].color = selected ? Config.menuPink : const Color(0xffffd9ee);
       tabLabels[i].color = selected ? const Color(0xffffffff) : Config.menuPink;
     }
@@ -89,12 +100,14 @@ class BoardScreen extends MenuScreen {
     if (!active || generation != _generation) return;
     data = result;
     final opened = selected == LbBoardTab.today ? result?.today : result?.best;
-    game.services.track('lb_board_open', {
-      'source': 'home',
-      'tab': selected.name,
-      'rank': opened?.me?.rank ?? 0,
-      'real_count': -1,
-    });
+    if (!_loggedOpen) {
+      _loggedOpen = true;
+      game.services.track('lb_board_open', {
+        'source': source,
+        'tab': selected.name,
+        'rank': opened?.me?.rank ?? 0,
+      });
+    }
     for (final c in content) {
       c.removeFromParent();
     }
@@ -114,7 +127,7 @@ class BoardScreen extends MenuScreen {
       }
       final label = MenuText(
         result == null
-            ? 'LEADERBOARD UNAVAILABLE'
+            ? 'Check your connection and try again.'
             : 'YOUR GROUP STARTS\nWITH YOUR NEXT RUN',
         fontSize: 15,
         color: Config.menuPink,
@@ -125,7 +138,7 @@ class BoardScreen extends MenuScreen {
       content.add(label);
       if (result != null) {
         final explanation = MenuText(
-          'Fly one run to join players with a best score\nclose to yours. Your group runs for 24 hours.',
+          'Fly one run and you join up to 49 players\nwith a best score close to yours. Your group\nthen runs for 24 hours.',
           fontSize: 11,
           color: const Color(0xff7a0044),
           position: Vector2(160, 410),
@@ -207,6 +220,10 @@ class BoardScreen extends MenuScreen {
   void update(double dt) {
     super.update(dt);
     if (!built) return;
+    if (_achievementFlash > 0) {
+      _achievementFlash = (_achievementFlash - dt).clamp(0, .4);
+      if (_achievementFlash == 0) _styleTabs();
+    }
     if (!game.liveMotionPaused && !game.reduceMotion) _time += dt;
     podium?.time = _time;
     for (final view in content.whereType<BoardRow>()) {
@@ -218,7 +235,57 @@ class BoardScreen extends MenuScreen {
         ? 'ALL PLAYERS · ALL TIME'
         : seconds == null
         ? 'STARTS WITH YOUR NEXT RUN'
-        : '${seconds ~/ 3600}h ${(seconds % 3600) ~/ 60}m ${seconds % 60}s';
+        : formatBoardTime(seconds);
+    timer.color = seconds != null && tab == LbBoardTab.today
+        ? const Color(0xff7a0044)
+        : const Color(0xff888888);
+    timerChip.stopwatch = seconds != null && tab == LbBoardTab.today;
+    timer.fontSize = timerChip.stopwatch ? 13 : 9;
+    timer.position.x = timerChip.stopwatch ? 166 : 160;
+    timerChip.chipWidth = timerChip.stopwatch
+        ? 112
+        : (tab == LbBoardTab.best ? 150 : 180);
     pinnedRow?.visible = showPinned;
+  }
+}
+
+String formatBoardTime(int seconds) {
+  final value = seconds.clamp(0, 86400);
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${two(value ~/ 3600)}:${two(value % 3600 ~/ 60)}:${two(value % 60)}';
+}
+
+class BoardTimerChip extends PositionComponent {
+  BoardTimerChip()
+    : super(
+        position: Vector2(160, 94),
+        size: Vector2(180, 20),
+        anchor: Anchor.center,
+      );
+  bool stopwatch = false;
+  double chipWidth = 180;
+  @override
+  void render(Canvas canvas) {
+    canvas.drawRect(
+      Rect.fromCenter(
+        center: Offset(size.x / 2, size.y / 2),
+        width: chipWidth,
+        height: 20,
+      ),
+      Paint()..color = const Color(0xffffffff),
+    );
+    if (stopwatch) {
+      final x = size.x / 2 - chipWidth / 2 + 11;
+      final ink = Paint()
+        ..color = Config.menuPink
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.8;
+      canvas.drawCircle(Offset(x, 11), 5.3, ink);
+      canvas.drawLine(Offset(x, 11), Offset(x, 7.5), ink);
+      canvas.drawRect(
+        Rect.fromLTWH(x - 2, 2, 4, 2),
+        Paint()..color = Config.menuPink,
+      );
+    }
   }
 }

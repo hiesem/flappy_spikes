@@ -374,7 +374,7 @@ void main() {
     );
 
     rt(
-      '§5.10 the kept share and leaderboard buttons',
+      'PRD 2.6 O64 retains share and removes native leaderboard entry',
       () => createRunTestGame(prefs: {'bestScore': 900, 'playerLevel': 7, 'claimedLevels': claimed1to6 + ['7', '8']}),
       (g) async {
         ShareCardData? shared;
@@ -385,7 +385,6 @@ void main() {
         await flushAndMount(g); // PRD-2.3 §2.2 the nickname is made first
         expect(shared?.score, 21);
         expect(shared?.best, 900);
-        page.leaderboardButton.onPressed(); // no-op services: must not throw
       },
     );
   });

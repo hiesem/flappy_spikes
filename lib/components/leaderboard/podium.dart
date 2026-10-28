@@ -14,6 +14,16 @@ class BoardPodium extends PositionComponent {
   final bool today;
   final String? ownId;
   double time = 0;
+  List<int> get markerRanks => today ? const [1, 2, 3] : const [];
+  List<String> get displayedText => [
+    for (final row in rows.where((r) => r.rank >= 1 && r.rank <= 3)) ...[
+      '${row.rank}',
+      row.name,
+      '${row.points}',
+      row.playingNow == true ? 'PLAYING NOW' : lastRunTag(row.lastAt),
+      if (row.rid == ownId) 'YOU',
+    ],
+  ];
   final StickerAvatars avatars = StickerAvatars();
   static const _plum = Color(0xff7a0044), _pink = Color(0xffec008c);
   void label(
@@ -104,6 +114,7 @@ class BoardPodium extends PositionComponent {
           Paint()..color = _pink,
         );
         label(canvas, '${row.points}', x, 135, 15, const Color(0xffffffff));
+        if (row.rid == ownId) label(canvas, 'YOU', x, 147, 8, _pink);
         label(
           canvas,
           row.playingNow == true ? 'PLAYING NOW' : lastRunTag(row.lastAt),
@@ -120,7 +131,7 @@ class BoardPodium extends PositionComponent {
         Paint()..color = tier.dark,
       );
       label(canvas, '$rank', x, top + 5, 14, const Color(0xffffffff));
-      if (today) {
+      if (markerRanks.contains(rank)) {
         canvas.save();
         canvas.translate(x + 33, top - 11);
         MysteryBox.paint(
@@ -149,7 +160,8 @@ String lastRunTag(int? lastAt) {
   if (lastAt == null) return '';
   final mins = ((DateTime.now().millisecondsSinceEpoch - lastAt) ~/ 60000)
       .clamp(0, 99999999);
-  if (mins < 60) return '${mins}m ago';
-  if (mins < 1440) return '${mins ~/ 60}h ago';
-  return '${mins ~/ 1440}d ago';
+  if (mins == 0) return 'JUST NOW';
+  if (mins < 60) return '$mins M AGO';
+  if (mins < 1440) return '${mins ~/ 60} H AGO';
+  return '${mins ~/ 1440} D AGO';
 }

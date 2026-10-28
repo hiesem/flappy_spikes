@@ -1,7 +1,5 @@
 import 'package:flame/extensions.dart';
 import 'package:flame_test/flame_test.dart';
-import 'package:flappy_spikes/run/config/results_config.dart';
-import 'package:flappy_spikes/run/screens/results_screen.dart';
 import 'package:flappy_spikes/components/home/home_screen.dart';
 import 'package:flappy_spikes/components/ui/service_message.dart';
 import 'package:flappy_spikes/game/config.dart';
@@ -97,30 +95,16 @@ void main() {
     },
   );
 
-  withGame.testGameWidget(
-    'results page (PRD-2 §5.10): the kept leaderboard button flanks the '
-    'reward pill',
-    setUp: (game, tester) async {
-      await game.ready();
-      game.sound.enabled = false;
-      await preloadImages(game);
-      game.onScreenTap(); // start -> playing
-      game.update(1 / 60);
-      await game.ready();
-    },
-    verify: (game, tester) async {
+  // PRD 2.6 O64 removes the native leaderboard entry from results.
+  testGameWidgetWithSpy(
+    'results contain no native leaderboard action',
+    prefs: const {},
+    verify: (game, spy, tester) async {
       killRun(game);
-      await flushAndMount(game); // mount the results page
-
-      final panel = game.world.children.query<ResultsScreen>().single;
-      final button = panel.leaderboardButton;
-      expect(button.position, ResultsConfig.leaderboardButton.topLeft.toVector2());
-      expect(
-        button.toRect().right,
-        lessThan(ResultsConfig.rewardPill.left),
-      );
-      stepGame(game, 0.4);
-      button.onPressed(); // guarded no-op: must not throw
+      await flushAndMount(game);
+      stepGame(game, .4);
+      await flushAndMount(game);
+      expect(spy.showCalls, 0);
     },
   );
 
@@ -150,32 +134,6 @@ void main() {
         killRun(game);
         expect(spy.submitCalls, 1);
         expect(spy.lastSubmitted, 30);
-      },
-    );
-  });
-
-  group('game-over leaderboard button fade gate (Fix E)', () {
-    testGameWidgetWithSpy(
-      'is untappable while invisible, tappable after the fade-in',
-      prefs: const {},
-      verify: (game, spy, tester) async {
-        killRun(game);
-        await flushAndMount(game); // mount the game-over panel (opacity 0)
-
-        final panel = game.world.children.query<ResultsScreen>().single;
-        final gameCenter = panel.leaderboardButton;
-
-        gameCenter.onPressed();
-        expect(
-          spy.showCalls,
-          0,
-          reason: 'Flame hit-testing ignores opacity: the tap must be gated '
-              'on the fade-in completing',
-        );
-
-        stepGame(game, 0.35); // the page has faded in
-        gameCenter.onPressed();
-        expect(spy.showCalls, 1);
       },
     );
   });

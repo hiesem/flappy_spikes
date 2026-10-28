@@ -250,6 +250,20 @@ void main() async {
     expect(racePage.them!.space, isTrue);
   });
 
+  gt('POL3 first world is already seen', (g) async {
+    await g.storage.saveWorldsReached(1);
+    expect(g.storage.worldsSeen, 0);
+    g.openLevels();
+    await flushAndMount(g);
+    expect(g.levelsScreen!.tabs.hasDot(LevelsTab.worlds), isFalse);
+    g.levelsScreen!.selectTab(LevelsTab.worlds);
+    await flushAndMount(g);
+    final area = g.levelsScreen!.children.whereType<MenuScrollArea>().firstWhere(
+      (a) => a.content.children.whereType<WorldCard>().isNotEmpty,
+    );
+    expect(area.content.children.whereType<WorldCard>().first.unseen, isFalse);
+  });
+
   gt('G4b bonus score never advances a world', (g) async {
     g.achievements.countDebugRuns = true;
     await startRun(g);

@@ -333,6 +333,7 @@ void uiTests() {
         // Round-2 review permits n + k: G2 RESTORE restores all 15 days.
         expect(popup.newCount.text, '15');
         expect(game.storage.streakDays, 15);
+        game.reduceMotionOverride = reduced;
         stepGame(game, .6);
         expect(game.streakLostPopup, isNull);
         await flushAndMount(game);

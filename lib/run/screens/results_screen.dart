@@ -1228,6 +1228,11 @@ class ResultsScreen extends PositionComponent
     if (!isWeekly) skipToReveal();
   }
   // endregion P26-G5b
+
+  // region P26-POL3
+  @override
+  void onTapDown(TapDownEvent event) { event.handled = true; }
+  // endregion P26-POL3
   // endregion
 
   void _animateBar(double to, double length) {

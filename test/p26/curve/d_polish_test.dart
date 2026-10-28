@@ -18,20 +18,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers.dart';
 
-class _FixedShowcasePlan extends ShowcasePlan {
-  const _FixedShowcasePlan(this.plan);
-
-  final ShowcaseRunPlan plan;
-
-  @override
-  ShowcaseRunPlan atStart({
-    required int gamesPlayed,
-    required int seen,
-    required int attempt,
-    required bool forced,
-  }) => plan;
-}
-
 void main() {
   test('D4 every calm tuning key controls the schedule', () {
     final original = TuningValues.current;
@@ -246,7 +232,7 @@ void main() {
       return FlappySpikesGame(
         worldHeight: 711,
         soundEnabled: false,
-        showcasePlan: _FixedShowcasePlan(script),
+        showcasePlan: FixedShowcase(script),
       )..runSeed = 7;
     }, gameSize: Vector2(320, 711)).testGameWidget(
       'D4 revive preserves the planned showcase ${script.bullseyeHoops.isNotEmpty ? 'bullseye' : script.highlightId} and attachments',

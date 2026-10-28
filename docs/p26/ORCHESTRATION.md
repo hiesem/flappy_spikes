@@ -11,7 +11,7 @@ it is built.
 | Role | Who | Does | Never |
 |---|---|---|---|
 | Orchestrator | Claude Opus 5.5 (medium), the main Claude Code session | plans each wave, writes the builder brief per work package (WP), creates worktrees, starts builders and testers, runs the verify gate, merges, prunes the known-red list, decides open questions (records them in §8 / SPEC.md), deploys, device-tests, releases, reports | writes product code itself (except trivial merge-conflict resolution and infra in `scripts/`), merges a WP without a tester PASS |
-| Builder | GPT-6.1 Terra (medium) via codex (`gpt-6.1-terra`; owner 2026-10-27, was GPT-6.1 Sol), one per WP, up to **4 in parallel** (memory) | implements exactly one WP in its own git worktree, adds the tests the WP names, runs the scoped verify before stopping, commits on its branch | touches paths outside its WP, edits `scripts/known_red_tests.txt`, weakens assertions, deploys, uses devices |
+| Builder | DeepSeek V4.1 Flash (`deepseek-flash`, effort **max**) via codex with **DeepSeek's own API** as provider (owner 2026-10-28; was GPT-6.1 Terra medium, before that Sol), one per WP, up to **4 in parallel** (memory) | implements exactly one WP in its own git worktree, adds the tests the WP names, runs the scoped verify before stopping, commits on its branch | touches paths outside its WP, edits `scripts/known_red_tests.txt`, weakens assertions, deploys, uses devices |
 | Tester | Claude Opus 5.5 (medium), a detached `claude -p` process, one per build round | reviews the diff against the WP acceptance criteria, the PRD lines and SHARED_ELEMENTS.md; runs the named tests; writes a verdict PASS / FAIL with findings (blocker / major / minor) | edits product code (read + run only) |
 
 Every builder and tester runs as a **detached process** started with `scripts/orch/spawn.sh` (it survives the Claude
@@ -19,14 +19,17 @@ session; its pid, log and exit code live in `.worktrees/briefs26/workers/<id>/`)
 cap 90 min):
 
 ```bash
-scripts/orch/spawn.sh <wp>-b<n> 90 /home/killerhis/Projects/flappyspikes/.worktrees/p26-<wp> -- \
-  codex exec -m gpt-6.1-terra -c model_reasoning_effort="medium" -s danger-full-access \
-    --json -o /home/killerhis/Projects/flappyspikes/.worktrees/briefs26/<wp>.b<n>.last.txt \
-    "$(cat /home/killerhis/Projects/flappyspikes/.worktrees/briefs26/<wp>.md)"
+scripts/orch/build.sh <wp> <n> [fix-prompt]   # what it runs:
+codex exec -m deepseek-flash -c model_provider=deepseek \
+  -c 'model_providers.deepseek={name="DeepSeek",base_url="https://api.deepseek.com/v1",env_key="DEEPSEEK_API_KEY",wire_api="responses"}' \
+  -c model_context_window=1048576 -c model_reasoning_effort="max" -c sandbox_mode="danger-full-access" \
+  --json -o .worktrees/briefs26/<wp>.b<n>.last.txt "$(cat .worktrees/briefs26/<wp>.md)"
 ```
 
 A fix round resumes the builder's codex session (`codex exec resume <session-id> "<findings>"`, same flags) so it keeps
-its context. Full access is required: the smoke test of 2026-10-26 showed `workspace-write` blocks `git commit`
+its context. The key is exported from `~/.config/duofoundry/deepseek.env` into the builder's environment only (never
+printed, never in the repo). A session started on another model (the earlier Terra threads) is not resumed: build.sh then
+starts a fresh DeepSeek session with the brief + the fix prompt. `BUILDER_MODEL=gpt-6.1-terra` switches back to OpenAI. Full access is required: the smoke test of 2026-10-26 showed `workspace-write` blocks `git commit`
 (index.lock) and Flutter's cache even with `--add-dir`; the brief's rules (paths, no secrets, no devices, no deploys)
 bound the builder instead. ~/.codex/config.toml defaults to effort high: `-c model_reasoning_effort="medium"` overrides it.
 
@@ -48,7 +51,7 @@ the read-only rule and the verdict format of §4; the verdict is the `result` fi
    text ids, shared masters to reuse, the decisions from PRD §8.3 that apply, **paths** (narrow), acceptance criteria
    (testable), tests to add, hotspot regions it may touch, and the standing rules (BUILD_NOTES.md). Briefs for the next
    WPs are written while builders run, so a free lane is filled at once.
-2. **Build** — worktree `.worktrees/p26-<wp>` on branch `p26/<wp>` from the latest green `feat/2.6`; the Terra builder
+2. **Build** — worktree `.worktrees/p26-<wp>` on branch `p26/<wp>` from the latest green `feat/2.6`; the DeepSeek builder
    works and commits. While working it runs single test files; before it stops it runs the **scoped** verify
    (`VERIFY_BASE=feat/2.6 VERIFY_SCOPED=1 bash scripts/verify.sh`: analyze + the changed/matching tests + the playability
    core, ~1–3 min), not the whole suite.
@@ -177,7 +180,7 @@ Blocker/major → FAIL. Minors are collected into a "polish" WP per wave, never 
 ## 5. Maximum parallelism (22 GB RAM, 20 cores)
 
 ### 5.1 Lanes
-- **Up to 4 Terra builders at once** (owner: as much parallel as possible; 6 ran the 22 GB machine out of memory), filled from a ready queue: every WP whose
+- **Up to 4 builders at once** (owner: as much parallel as possible; 6 ran the 22 GB machine out of memory), filled from a ready queue: every WP whose
   dependencies are merged, across waves, highest priority first (W1 fixes and the deploy path, then the longest
   dependency chains: WP-J → results/levels UI, F9 → cards/board rows, G1 → missions UI/Star Road).
 - **Testers are not limited by lanes:** one Opus tester per finished build round, running next to the builders.

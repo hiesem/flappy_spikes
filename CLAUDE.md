@@ -341,7 +341,7 @@ export PATH="$HOME/flutter/bin:$HOME/Android/Sdk/platform-tools:$PATH" \
   tools/.pw-linux-profile (optional URL arg).
 
 <!-- orch:begin (2.6 build framework; keep identical in CLAUDE.md and AGENTS.md) -->
-## How 2.6 is built: Opus orchestrator, Terra builders, Opus testers
+## How 2.6 is built: Opus orchestrator, DeepSeek builders, Opus testers
 
 The 2.6 build runs unattended under `docs/p26/ORCHESTRATION.md` (read it before any 2.6 build work). The spec is
 `docs/p26/PRD-2.6-fun-progression.md`; its §8 holds the build status and the decisions taken since approval; the
@@ -350,7 +350,7 @@ work-package details are in `docs/p26/status/`; the rules for every builder and 
 | Role | Model | Reads |
 |---|---|---|
 | Orchestrator | Claude Opus 5.5 (medium), the main Claude Code session (or a headless pass started by the heartbeat timer) | CLAUDE.md, ORCHESTRATION.md, `.worktrees/briefs26/STATE.md` + `RUNLOG.md` |
-| Builder | GPT-6.1 Terra (medium) via `codex exec` (`gpt-6.1-terra`; owner 2026-10-27, was Sol), one per work package, up to 4 at once, each in its own worktree `.worktrees/p26-<wp>` on branch `p26/<wp>` | AGENTS.md, its brief `.worktrees/briefs26/<wp>.md`, BUILD_NOTES.md |
+| Builder | DeepSeek V4.1 Flash (`deepseek-flash`, effort max) via `codex exec` with DeepSeek's own API as provider (`scripts/orch/build.sh`; owner 2026-10-28, was GPT-6.1 Terra medium), one per work package, up to 4 at once, each in its own worktree `.worktrees/p26-<wp>` on branch `p26/<wp>` | AGENTS.md, its brief `.worktrees/briefs26/<wp>.md`, BUILD_NOTES.md |
 | Tester | Claude Opus 5.5 (medium) via `claude -p`, one per build round | CLAUDE.md, its tester prompt, BUILD_NOTES.md |
 
 **SDLC per work package (pipelined):** plan (brief) → build (builder's own scoped verify) → full verify AND Opus

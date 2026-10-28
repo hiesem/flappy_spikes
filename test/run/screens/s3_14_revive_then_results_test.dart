@@ -74,6 +74,7 @@ void main() {
         expect(g.state, GameState.start);
         expect(g.resultsScreen, isNull);
         expect(g.menu.levels.pendingLevelUp, isNull);
+        expect(g.levelUpPopup, isNull, reason: 'J4 normal reveal prevents Home catch-up');
         expect(g.storage.unclaimedLevelReward, 0);
       },
     );

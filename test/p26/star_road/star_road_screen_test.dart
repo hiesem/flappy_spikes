@@ -7,6 +7,7 @@ import 'package:flappy_spikes/components/star_road/star_road_screen.dart';
 import 'package:flappy_spikes/components/ui/mystery_box.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/storage.dart';
+import 'package:flappy_spikes/game/sound.dart';
 import 'package:flappy_spikes/progression/star_road.dart';
 import 'package:flappy_spikes/skins/look.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -86,6 +87,44 @@ void main() {
       },
     );
   }
+  FlameTester<FlappySpikesGame>(
+    () => createTestGame({}, 711),
+    gameSize: Vector2(320, 711),
+  ).testGameWidget(
+    'coin claim pays and plays its cue from the track',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, _) async {
+      await game.storage.saveStarRoadSeason(1);
+      await game.storage.saveStarRoadXp(8);
+      game.reduceMotionOverride = true;
+      final sounds = <Sfx>[];
+      game.sound.onPlay = sounds.add;
+      game.openStarRoad(daysLeft: 10, onBack: () {});
+      await flushAndMount(game);
+      final row = game.starRoadScreen!.rows[1]!;
+      final button = row.children.whereType<MenuButton>().single;
+      button.onPressed();
+      for (var i = 0; i < 30 && game.storage.coins == 0; i++) {
+        await Future<void>.value();
+        await flushAndMount(game);
+      }
+      await flushAndMount(game);
+      expect(game.storage.coins, 25);
+      expect(sounds, contains(Sfx.bnCoin));
+      expect(game.storage.starRoadClaimed, contains(1));
+      expect(
+        row.children.whereType<MenuText>().map((t) => t.text),
+        contains('CLAIMED'),
+      );
+      button.onPressed();
+      await flushAndMount(game);
+      expect(game.storage.coins, 25);
+    },
+  );
   FlameTester<FlappySpikesGame>(
     () => createTestGame({}, 711),
     gameSize: Vector2(320, 711),

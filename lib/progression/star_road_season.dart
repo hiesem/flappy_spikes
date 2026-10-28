@@ -51,6 +51,7 @@ class StarRoadSeason {
       'to': current,
       'tiers': old.claimable,
       'awards': <String, Object?>{},
+      if (_summary != null) 'previous': _summary,
     };
     await prefs.setString(Obf.prefStarRoadRollover, jsonEncode(journal));
     await _finish(prefs, journal);
@@ -72,7 +73,13 @@ class StarRoadSeason {
     final latest = prefs.getString(Obf.prefStarRoadRollover);
     if (latest != null) journal = jsonDecode(latest) as Map<String, dynamic>;
     if (from == 0 || (journal['tiers'] as List).isEmpty) {
-      await prefs.remove(Obf.prefStarRoadRollover);
+      final prior = journal['previous'];
+      _summary = prior is Map ? Map<String, dynamic>.from(prior) : null;
+      if (_summary == null) {
+        await prefs.remove(Obf.prefStarRoadRollover);
+      } else {
+        await prefs.setString(Obf.prefStarRoadRollover, jsonEncode(_summary));
+      }
     } else {
       journal['pending'] = false;
       _summary = Map.of(journal);
@@ -82,11 +89,15 @@ class StarRoadSeason {
 
   Map<String, dynamic>? takeSummary() {
     final summary = _summary;
-    if (summary == null) return null;
-    _summary = null;
+    if (summary == null || settling) return null;
+    final prior = summary['previous'];
+    _summary = prior is Map ? Map<String, dynamic>.from(prior) : null;
+    final remaining = _summary;
     unawaited(
       SharedPreferences.getInstance().then(
-        (prefs) => prefs.remove(Obf.prefStarRoadRollover),
+        (prefs) => remaining == null
+            ? prefs.remove(Obf.prefStarRoadRollover)
+            : prefs.setString(Obf.prefStarRoadRollover, jsonEncode(remaining)),
       ),
     );
     return summary;

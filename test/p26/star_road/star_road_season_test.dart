@@ -55,9 +55,9 @@ void main() {
       expect(storage.coins, 55);
       final summary = season.takeSummary();
       expect(summary!['tiers'], [2, 3]);
-    final awards = summary['awards'] as Map;
-    expect(awards['2']['coins'], 25);
-    expect(awards['3']['coins'], 30);
+      final awards = summary['awards'] as Map;
+      expect(awards['2']['coins'], 25);
+      expect(awards['3']['coins'], 30);
       expect(season.takeSummary(), isNull);
     },
   );
@@ -113,4 +113,17 @@ void main() {
       expect(recovered.missionJournal, isEmpty);
     },
   );
+  test('an unread summary survives another season rollover', () async {
+    var now = DateTime.utc(2026, 11, 23);
+    final storage = GameStorage(clock: () => now);
+    await storage.load();
+    await storage.saveStarRoadSeason(1);
+    await storage.saveStarRoadXp(8);
+    final season = coordinator(storage);
+    await season.settle();
+    now = DateTime.utc(2026, 12, 21);
+    await season.settle();
+    expect(storage.starRoadSeason, 3);
+    expect(season.takeSummary()!['from'], 1);
+  });
 }

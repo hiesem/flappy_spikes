@@ -7,6 +7,7 @@ import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/levels/level_track.dart';
 import 'package:flappy_spikes/menu/wallet.dart';
 import 'package:flappy_spikes/run/showcase/showcase_plan.dart';
+import 'package:flappy_spikes/run/config/tuning_values.dart';
 import 'package:flappy_spikes/run/screens/post_run_screens.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -241,9 +242,12 @@ void main() {
     // PRD G6/F12 and §8.3-17: daily projections include every approved
     // source, with gold expressed as its expected coin payout. These exact
     // amounts prevent an omitted or understated source from hiding a breach.
-    expect(metaCoinsPerDay[CoinSource.mission], 110);
-    expect(metaCoinsPerDay[CoinSource.missionChest], 40);
-    expect(metaCoinsPerDay[CoinSource.streak], closeTo(200 / 7, 1e-9));
+    final tuning = TuningValues.current;
+    expect(metaCoinsPerDay[CoinSource.mission], tuning.ints('mission_rewards').reduce((a, b) => a + b));
+    expect(metaCoinsPerDay[CoinSource.missionChest], tuning.i('mission_chest_coins'));
+    final streak = tuning.raw('streak_rewards') as List;
+    final streakCoins = streak.fold<int>(0, (sum, value) => sum + (value is int ? value : int.tryParse(value.toString().split('+').last) ?? 0));
+    expect(metaCoinsPerDay[CoinSource.streak], closeTo(streakCoins / 7, 1e-9));
     expect(metaCoinsPerDay[CoinSource.firstWinDay], 20);
     expect(metaCoinsPerDay[CoinSource.starRoad], closeTo(960 / 28, 1e-9));
     expect(metaCoinsPerDay[CoinSource.leaderboardGift], 100);

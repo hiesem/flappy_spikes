@@ -264,7 +264,10 @@ void main() {
         for (var i = 0; i < 50; i++) { await Future<void>.delayed(const Duration(milliseconds: 2)); }
       });
       expect(RunEndBookkeeping.currentMissions(game.storage).chestPending, isTrue);
-      expect((game.homeMoments as HomeMomentBudget).selectedMoment, isNot(HomeMoment.missionsChest));
+      // region P26-G1d
+      // PRD G1: the production chest opener is now registered at launch.
+      expect((game.homeMoments as HomeMomentBudget).selectedMoment, HomeMoment.missionsChest);
+      // endregion
     },
   );
 

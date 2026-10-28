@@ -4,6 +4,9 @@ import '../run/run_events.dart'
     show RunStarted, ElementSpawned, RideStarted;
 // endregion
 import 'dart:async';
+// region P26-G1d
+import '../components/progression/missions_chest_popup.dart';
+// endregion
 // region P26-G2c
 import '../components/progression/streak_lost_popup.dart';
 // endregion
@@ -720,6 +723,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   }
   // endregion
   bool get modalPopupOpen =>
+      // region P26-G1d
+      _missionsChestPopup != null ||
+      // endregion
       // region P26-G1c
       _missionsPanelOpen ||
       // endregion
@@ -1067,6 +1073,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
     // App launch = a session start: the No-ads upsell may show on this
     // home arrival (PRD-menu-v4 §8, NoAdsPopupPolicy).
+    // region P26-G1d
+    missionsChestOpenerRegistered = true;
+    // endregion
     await _startSession();
 
     // region WP-2d — revive v2 (PRD-2 §3.14): the revive slot of the flow
@@ -2954,6 +2963,90 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
         ..celebrate(item);
     }
   }
+
+  // region P26-G1d
+  MissionsChestPopup? _missionsChestPopup;
+  MissionsChestPopup? get missionsChestPopup => _missionsChestPopup;
+  double _missionsChestSettle = 0;
+  bool _missionRerollBusy = false;
+
+  MissionEligibility get missionEligibility => MissionEligibility(
+    bestHoops: storage.bestHoops,
+    metElements: {for (final id in storage.metElements) ?ElementId.fromStorageId(id)},
+    online: MissionEligibility.onlineFromSearch(ready: versus.ready, holdsOpponent: versus.holdsOpponent, search: versus.lastSearch),
+    lastVersusHadRival: storage.lastVersusHadRival,
+  );
+
+  Future<bool> rerollMission(int index) async {
+    if (_missionRerollBusy || !monetization.ads.isAvailable) return false;
+    final board = RunEndBookkeeping.currentMissions(storage);
+    if (!board.canReroll(index, storage.today, eligibility: missionEligibility)) return false;
+    _missionRerollBusy = true;
+    try {
+      if (await showRewardedAd(AdPlacement.missionReroll) != AdResult.completed) return false;
+      final current = RunEndBookkeeping.currentMissions(storage);
+      if (current.day != board.day || storage.today != board.day ||
+          index >= current.missions.length ||
+          current.missions[index].template != board.missions[index].template) {
+        return false;
+      }
+      final next = current.reroll(index: index, today: storage.today, eligibility: missionEligibility);
+      if (identical(current, next)) return false;
+      await storage.saveMissions(next.toRecords());
+      await storage.saveMissionRerollDay(next.rerollDay);
+      refreshHome();
+      return true;
+    } finally { _missionRerollBusy = false; }
+  }
+
+  void _checkMissionsChest(double dt) {
+    if (!_homeInteractive || _home?.built != true || _home!.opacity < 1 || modalPopupOpen || _popupQueue.isNotEmpty || _adsShowing > 0 || _fakeAd != null || !RunEndBookkeeping.currentMissions(storage).chestPending) {
+      _missionsChestSettle = 0;
+      return;
+    }
+    _missionsChestSettle += dt;
+    if (_missionsChestSettle < Config.levelUpSettleDelay) return;
+    _missionsChestSettle = 0;
+    homeMoments.show(HomeMoment.missionsChest, _openMissionsChest);
+  }
+
+  void _openMissionsChest() {
+    if (_missionsChestPopup != null || state != GameState.start || menuScene != MenuScene.home) return;
+    final board = RunEndBookkeeping.currentMissions(storage);
+    final pieces = (storage.puzzlePieces & 15).toRadixString(2).replaceAll('0', '').length;
+    final reward = board.claimChest(feathers: storage.feathers, pieces: pieces).reward;
+    if (reward == null) return;
+    final missing = (~storage.puzzlePieces) & 15;
+    final piece = missing == 0 ? 0 : (missing & -missing).bitLength - 1;
+    final popup = MissionsChestPopup(reward: reward, piece: piece, onDismiss: () => unawaited(_collectMissionsChest()));
+    _missionsChestPopup = popup;
+    world.add(popup);
+    pushBack(_missionsChestBack);
+  }
+
+  bool _missionsChestBack() { unawaited(_collectMissionsChest()); return true; }
+  Future<void> _collectMissionsChest() async {
+    final popup = _missionsChestPopup;
+    if (popup == null || !popup.active || popup.elapsed < 1.5) return;
+    popup.active = false;
+    final board = RunEndBookkeeping.currentMissions(storage);
+    final pieces = (storage.puzzlePieces & 15).toRadixString(2).replaceAll('0', '').length;
+    final claim = board.claimChest(feathers: storage.feathers, pieces: pieces);
+    await storage.saveMissions(claim.state.toRecords());
+    switch (popup.reward.kind) {
+      case MissionChestKind.feather: await storage.saveFeathers(storage.feathers + 1);
+      case MissionChestKind.piece: await storage.savePuzzlePieces(storage.puzzlePieces | (1 << popup.piece));
+      case MissionChestKind.coins:
+        playCoinReward(CoinRewardAnimation(amount: popup.reward.amount, from: Rect.fromLTWH(popup.card.x + 110, popup.card.y + 50, 60, 60), coins: 6, countDuration: .6, ticks: 8));
+        await menu.wallet.add(popup.reward.amount, CoinSource.missionChest);
+    }
+    popup.removeFromParent();
+    _missionsChestPopup = null;
+    popBack(_missionsChestBack);
+    refreshHome();
+    _drainPopups();
+  }
+  // endregion
 
   // region P26-G2c
   StreakLostPopup? _streakLostPopup;
@@ -6105,6 +6198,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // region P26-G2b
     _streakSlotPop = math.max(0, _streakSlotPop - dt);
     if (state == GameState.start) _checkStreakReward(dt);
+    // region P26-G1d
+    if (state == GameState.start) _checkMissionsChest(dt);
+    // endregion
     // endregion
     _checkRatingPrompt(dt);
     _checkDeferredRating();

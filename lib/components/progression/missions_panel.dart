@@ -293,7 +293,13 @@ class MissionsPanel extends P1Popup {
     required super.onDismiss,
     this.weeklyCard,
     this.starRoadCard,
+    // region P26-G1d
+    this.onSwap,
+    // endregion
   });
+  // region P26-G1d
+  final void Function(int)? onSwap;
+  // endregion
   final Missions missions;
   final DateTime now;
   final PositionComponent? weeklyCard, starRoadCard;
@@ -348,7 +354,10 @@ class MissionsPanel extends P1Popup {
     final check = Sprite(await game.images.load('menu/check.png'));
     final rewards = TuningValues.current.ints('mission_rewards');
     y += 18;
-    for (final m in missions.missions) {
+    // region P26-G1d
+    for (var index = 0; index < missions.missions.length; index++) {
+      final m = missions.missions[index];
+      // endregion
       final row = PositionComponent(
         position: Vector2(12, y),
         size: Vector2(256, 54),
@@ -417,6 +426,11 @@ class MissionsPanel extends P1Popup {
           MenuIcon(check, size: Vector2.all(14), position: Vector2(229, 6)),
         );
       }
+      // region P26-G1d
+      if (onSwap != null && game.monetization.ads.isAvailable && missions.canReroll(index, game.storage.today, eligibility: game.missionEligibility)) {
+        row.add(MenuButton(position: Vector2(166, 5), size: Vector2(80, 20), color: const Color(0xFFFFF3D6), onPressed: () => onSwap!(index), isActive: isActive, children: [MenuText('▶ SWAP', fontSize: 10, color: Config.menuPlum, position: Vector2(40, 10), anchor: Anchor.center)]));
+      }
+      // endregion
       card.add(row);
       y += 60;
     }

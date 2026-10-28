@@ -165,10 +165,22 @@ class HomeScreen extends PositionComponent
 
   void _openMissions() {
     if (!active || game.modalPopupOpen || _missionsPanel != null) return;
-    final panel = MissionsPanel(
+    // region P26-G1d
+    late final MissionsPanel panel;
+    panel = MissionsPanel(
+    // endregion
       missions: RunEndBookkeeping.currentMissions(game.storage),
       now: game.storage.now(),
       onDismiss: _closeMissions,
+      // region P26-G1d
+      onSwap: (index) async {
+        final changed = await game.rerollMission(index);
+        if (changed && identical(_missionsPanel, panel)) {
+          _closeMissions();
+          _openMissions();
+        }
+      },
+      // endregion
     );
     _missionsPanel = panel;
     game.setMissionsPanelOpen(true);

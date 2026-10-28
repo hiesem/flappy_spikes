@@ -122,14 +122,11 @@ abstract final class RunEndBookkeeping {
       'day': claim.state.day, 'tier': claim.state.tier,
       'rerollDay': claim.state.rerollDay, 'missions': claim.state.toRecords(),
       'balanceBefore': storage.coins, 'earnedBefore': storage.lifetimeCoinsEarned,
-      'amount': claim.coins, 'applied': false,
+      'amount': claim.coins, 'applied': true,
     };
-    final firstWrite = storage.saveMissionJournal(journal);
-    // No asynchronous boundary separates the journal and memory credit.
-    // The applied record also carries a recovery target if the wallet write
-    // is interrupted, while a false record is recovered by adding the amount.
-    final applied = {...journal, 'applied': true};
-    final appliedWrite = storage.saveMissionJournal(applied);
+    // Persist the recovery target before starting any payout writes. The
+    // in-memory journal is installed synchronously, including for spends.
+    final appliedWrite = storage.saveMissionJournal(journal);
     final activeJournal = storage.missionJournal;
     final writes = <Future<void>>[
       // region P26-G6eB
@@ -152,7 +149,7 @@ abstract final class RunEndBookkeeping {
       game.services.track('mission_complete', {'mission': m.id});
     }
     if (!rolled.allDone && advanced.allDone) game.services.track('missions_all_done');
-    return Future.wait([firstWrite, appliedWrite, ...writes]).then((_) async {
+    return Future.wait([appliedWrite, ...writes]).then((_) async {
       if (identical(storage.missionJournal, activeJournal)) {
         await storage.saveMissionJournal(const {});
       }

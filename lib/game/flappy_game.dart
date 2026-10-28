@@ -3327,7 +3327,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _menuTrail.clear();
     _leaveHome();
     menuScene = MenuScene.board;
-    final screen = BoardScreen(onBack: closeBoard);
+    // region P26-LB5
+    final screen = BoardScreen(onBack: closeBoard, source: 'home');
+    // endregion P26-LB5
     _board = screen;
     _chromeHosts.add(screen);
     _chromeHold = true;

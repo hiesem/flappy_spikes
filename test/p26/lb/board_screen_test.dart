@@ -179,6 +179,7 @@ void main() {
       final board = game.boardScreen!;
       // PRD 2.6 §1204: dismiss the first-open guide before using the board.
       board.infoSheet!.close();
+      stepGame(game, .23);
       await flushAndMount(game);
       expect(board.podium!.rows, isEmpty);
       expect(board.playButton, isNotNull);

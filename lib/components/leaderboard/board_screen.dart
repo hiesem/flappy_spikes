@@ -14,7 +14,7 @@ import 'board_info_sheet.dart';
 
 /// Our daily and all-time boards; achievements hands off without changing tab.
 class BoardScreen extends MenuScreen {
-  BoardScreen({required super.onBack, this.source = 'home'})
+  BoardScreen({required super.onBack, required this.source})
     : super(title: 'LEADERBOARD');
   final String source;
   LbBoardTab tab = LbBoardTab.today;

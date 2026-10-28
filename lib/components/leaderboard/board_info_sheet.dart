@@ -6,6 +6,7 @@ import 'package:flame/events.dart';
 import 'package:flutter/painting.dart';
 
 import '../../game/config.dart';
+import '../../game/flappy_game.dart' show bleedRectFor;
 import '../../game/sound.dart';
 import '../../run/config/puzzle_config.dart';
 import '../../run/effects/coin_icon.dart';
@@ -35,6 +36,8 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
   double _idle = 0;
   int _pops = 0;
   bool _closed = false;
+  bool _finished = false;
+  double _closing = 0;
   Image? coin;
   final CoinPopup _coinPopup = CoinPopup();
   final NoAdsCelebrationRays _rays = NoAdsCelebrationRays(
@@ -52,8 +55,17 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
       plum = Color(0xff2a0f22);
 
   /// The run picture uses the same geometry at every screen height.
-  Rect get runPictureRect =>
-      Rect.fromLTWH(18, 142 * size.y / 711, 136, 96 * size.y / 711);
+  double get guideScale => math.min(1, size.y / 711);
+  Rect get runPictureRect => Rect.fromLTWH(
+    160 + (18 - 160) * guideScale,
+    142 * guideScale,
+    136 * guideScale,
+    96 * guideScale,
+  );
+
+  @override
+  bool containsLocalPoint(Vector2 point) =>
+      bleedRectFor(this, size.y).contains(Offset(point.x, point.y));
 
   @override
   Future<void> onLoad() async {
@@ -66,6 +78,14 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
   @override
   void update(double dt) {
     super.update(dt);
+    if (_closed) {
+      _closing += dt;
+      if (_closing >= .22 && !_finished) {
+        _finished = true;
+        onClose();
+      }
+      return;
+    }
     elapsed += dt;
     if (motion()) _idle += dt;
     while (_pops < 4 && elapsed >= .5 + .6 * _pops) {
@@ -78,7 +98,6 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
     if (_closed) return;
     _closed = true;
     playSound(Sfx.skClose);
-    onClose();
   }
 
   @override
@@ -89,6 +108,12 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
 
   static double _progress(double time, double start, double duration) =>
       ((time - start) / duration).clamp(0.0, 1.0);
+  static double _back(double u) {
+    const s = 1.70158;
+    final t = u - 1;
+    return 1 + (s + 1) * t * t * t + s * t * t;
+  }
+
   void _text(
     Canvas c,
     String text,
@@ -97,7 +122,28 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
     double font,
     Color color, {
     double maxWidth = 290,
+    Color? outline,
   }) {
+    TextPainter painter(TextStyle style) => TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout(maxWidth: maxWidth);
+    if (outline != null) {
+      final border = painter(
+        TextStyle(
+          fontFamily: Config.uiFont,
+          fontSize: font,
+          fontWeight: FontWeight.bold,
+          foreground: Paint()
+            ..color = outline
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 9
+            ..strokeJoin = StrokeJoin.round,
+        ),
+      );
+      border.paint(c, Offset(x - border.width / 2, y - border.height / 2));
+    }
     final p = TextPainter(
       text: TextSpan(
         text: text,
@@ -184,8 +230,48 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
         Rect.fromLTWH(-64, y, 128, 26),
         i == 2 ? const Color(0xffffd9ee) : const Color(0xfff1f1f1),
       );
+      if (i == 2) {
+        c.drawRect(
+          Rect.fromLTWH(-63, y + 1, 126, 24),
+          Paint()
+            ..color = pink
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        );
+      }
+      final rank = i == 0
+          ? 1
+          : i == 1
+          ? (rise > .5 ? 3 : 2)
+          : (rise > .5 ? 2 : 3);
+      const colors = [Color(0xffc98a00), Color(0xff8e9aa2), Color(0xffa85a24)];
+      final marker = Path()
+        ..moveTo(-55, y + 4)
+        ..lineTo(-45, y + 4)
+        ..lineTo(-41, y + 8)
+        ..lineTo(-41, y + 18)
+        ..lineTo(-45, y + 22)
+        ..lineTo(-55, y + 22)
+        ..lineTo(-59, y + 18)
+        ..lineTo(-59, y + 8)
+        ..close();
+      c.drawPath(marker, Paint()..color = colors[rank - 1]);
+      _text(c, '$rank', -50, y + 13, 11, const Color(0xffffffff));
       _bird(c, -37, y + 13, .4);
-      _text(c, i == 2 ? 'YOU' : 'BIRD', 5, y + 13, 11, pink);
+      _text(c, ['LENA', 'SAM', 'YOU'][i], 5, y + 13, 11, pink);
+      if (i == 2 && rise >= 1) {
+        final cy = y + 13 - math.sin(_idle * 3.2).abs() * 3;
+        final arrow = Path()
+          ..moveTo(50, cy - 9)
+          ..lineTo(59, cy + 1)
+          ..lineTo(53.5, cy + 1)
+          ..lineTo(53.5, cy + 7)
+          ..lineTo(46.5, cy + 7)
+          ..lineTo(46.5, cy + 1)
+          ..lineTo(41, cy + 1)
+          ..close();
+        c.drawPath(arrow, Paint()..color = gold);
+      }
     }
   }
 
@@ -259,17 +345,13 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
     c.clipPath(cup);
     _rect(c, const Rect.fromLTWH(8, -63, 18, 38), dark);
     c.restore();
-    for (var i = 0; i < 5; i++) {
-      final x = -26.0 + i * 10.4;
-      c.drawPath(
-        Path()
-          ..moveTo(x, -63)
-          ..lineTo(x + 5.2, i == 2 ? -76 : -73)
-          ..lineTo(x + 10.4, -63)
-          ..close(),
-        Paint()..color = i.isOdd ? const Color(0xffc40073) : pink,
-      );
-    }
+    // Five teeth from the run strip master, scaled to the cup's 52 pt rim.
+    c.save();
+    c.translate(-26, -63);
+    c.scale(52 / 200, -52 / 200);
+    c.clipRect(const Rect.fromLTWH(0, 0, 200, 44));
+    SpikeTeethPainter.paint(c, width: 200, color: pink);
+    c.restore();
     c.save();
     c.translate(0, -46);
     c.rotate(math.pi / 4);
@@ -339,19 +421,34 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
 
   @override
   void render(Canvas canvas) {
+    final opacity = _closed ? (1 - _closing / .22).clamp(0.0, 1.0) : 1.0;
+    canvas.saveLayer(
+      bleedRectFor(this, size.y),
+      Paint()..color = Color.fromRGBO(255, 255, 255, opacity),
+    );
     _rect(
       canvas,
-      size.toRect(),
+      bleedRectFor(this, size.y),
       Color.fromRGBO(30, 16, 26, .9 * _progress(elapsed, 0, .25)),
     );
     canvas.save();
-    canvas.scale(1, size.y / 711);
+    canvas.translate(160, 0);
+    canvas.scale(guideScale);
+    canvas.translate(-160, 0);
     final title = _progress(elapsed, .08, .4);
     if (title > 0) {
       canvas.save();
       canvas.translate(160, 106);
-      canvas.scale(title);
-      _text(canvas, 'LEADERBOARD', 0, 0, 32, const Color(0xffffffff));
+      canvas.scale(_back(title));
+      _text(
+        canvas,
+        'LEADERBOARD',
+        0,
+        0,
+        32,
+        const Color(0xffffffff),
+        outline: pink,
+      );
       canvas.restore();
     }
     for (var i = 0; i < 3; i++) {
@@ -369,7 +466,11 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
       final pos = positions[i];
       canvas.save();
       canvas.translate(pos.dx, pos.dy);
-      canvas.scale(.35 + .65 * u);
+      canvas.scale(.35 + .65 * _back(u));
+      canvas.saveLayer(
+        null,
+        Paint()..color = Color.fromRGBO(255, 255, 255, math.min(1, u * 2.5)),
+      );
       switch (i) {
         case 0:
           _fly(canvas);
@@ -380,6 +481,7 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
         case 3:
           _record(canvas);
       }
+      canvas.restore();
       canvas.restore();
       final cap = _progress(elapsed, start + .2, .3);
       if (cap > 0) {
@@ -417,6 +519,7 @@ class BoardInfoSheet extends PositionComponent with TapCallbacks {
         ),
       );
     }
+    canvas.restore();
     canvas.restore();
   }
 }

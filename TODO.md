@@ -3,6 +3,10 @@
 Contract: see SPEC.md. Loop rule: a box is checked only when code exists AND
 `flutter analyze` + relevant tests are green.
 
+## 2.6 follow-up
+- [ ] Leaderboard picture guide (PRD 2.6 §1204): make the four `Sfx.vsPop`
+  cues rise in pitch when the shared low-latency sound API supports per-play rate.
+
 ## Phase 1 — scaffold & assets
 - [x] Flutter project created (com.flappyspikes.flappy_spikes)
 - [x] Packages: flame, flame_forge2d, flame_audio, shared_preferences, share_plus (+dev: flame_test, flutter_launcher_icons, flutter_native_splash)

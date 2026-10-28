@@ -37,7 +37,7 @@ class WorldsTab {
           current: i == tab.reached - 1,
           next: i == tab.reached,
           best: tab.best,
-          unseen: i >= storage.worldsSeen && i < storage.worldsReached,
+          unseen: i >= storage.worldsSeen.clamp(1, 10) && i < storage.worldsReached,
           screen: screen,
         ),
       );

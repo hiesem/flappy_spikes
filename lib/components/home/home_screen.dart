@@ -110,7 +110,7 @@ class HomeScreen extends PositionComponent
   void _syncLevelsNewTag() {
     final storage = game.storage;
     final pendingDot =
-        storage.worldsReached > storage.worldsSeen ||
+        storage.worldsReached > storage.worldsSeen.clamp(1, 10) ||
         // region P26-G6b
         flightGuideHasDot(storage.metElements, storage.guideSeenCount);
         // endregion

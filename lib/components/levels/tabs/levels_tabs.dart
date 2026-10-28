@@ -93,7 +93,7 @@ class LevelsTabs extends PositionComponent {
       _dots[tab]!.shown =
           !open &&
           switch (tab) {
-            LevelsTab.worlds => storage.worldsReached > storage.worldsSeen,
+            LevelsTab.worlds => storage.worldsReached > storage.worldsSeen.clamp(1, 10),
             LevelsTab.guide =>
               // region P26-G6b
               flightGuideHasDot(storage.metElements, storage.guideSeenCount),

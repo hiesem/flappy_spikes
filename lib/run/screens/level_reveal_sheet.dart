@@ -416,10 +416,14 @@ class LevelRevealSheet extends P1Popup {
     if (!revealed && elapsed >= 1.95) {
       revealed = true;
       box.removeFromParent();
-      details.scale.setAll(1);
+      details.scale.setAll(game.reduceMotion ? 1 : 0);
+    }
+    if (revealed && !game.reduceMotion) {
+      final pop = ((elapsed - 1.95) / .2).clamp(0.0, 1.0);
+      details.scale.setAll(1 + 2.70158 * math.pow(pop - 1, 3) + 1.70158 * math.pow(pop - 1, 2));
     }
     if (!_burst && !game.reduceMotion) {
-      final drop = (elapsed / .3).clamp(0.0, 1.0);
+      final drop = ((elapsed - .2) / .3).clamp(0.0, 1.0);
       // region P26-G6c
       box.position.y = (album ? 160 : 85) - 120 * (1 - drop) * (1 - drop);
       // endregion

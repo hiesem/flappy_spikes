@@ -408,6 +408,18 @@
     "Image": "ach_master_jackpot.png"
   },
   {
+    "Reference Name": "BULLSEYE",
+    "Achievement ID": "fs_ach_bullseye",
+    "Points": 40,
+    "Hidden": "no",
+    "Achievable More Than Once": "no",
+    "Localization": "English (U.S.)",
+    "Title": "BULLSEYE",
+    "Pre-earned Description": "Score a ×25 perfect streak.",
+    "Earned Description": "Achievement earned!",
+    "Image": "ach_bullseye.png"
+  },
+  {
     "Reference Name": "FIRST FLIGHT",
     "Achievement ID": "fs_ach_hoops_10",
     "Points": 5,
@@ -456,6 +468,18 @@
     "Image": "ach_hoops_100.png"
   },
   {
+    "Reference Name": "SKY HIGH",
+    "Achievement ID": "fs_ach_sky_high",
+    "Points": 50,
+    "Hidden": "no",
+    "Achievable More Than Once": "no",
+    "Localization": "English (U.S.)",
+    "Title": "SKY HIGH",
+    "Pre-earned Description": "Pass 150 hoops in one run.",
+    "Earned Description": "Achievement earned!",
+    "Image": "ach_sky_high.png"
+  },
+  {
     "Reference Name": "BEAK TO BEAK",
     "Achievement ID": "fs_ach_vs_1",
     "Points": 10,
@@ -490,6 +514,90 @@
     "Pre-earned Description": "Win 50 versus matches.",
     "Earned Description": "The roost is yours.",
     "Image": "ach_vs_50.png"
+  },
+  {
+    "Reference Name": "BIRD OF PREY",
+    "Achievement ID": "fs_ach_bird_of_prey",
+    "Points": 25,
+    "Hidden": "yes",
+    "Achievable More Than Once": "no",
+    "Localization": "English (U.S.)",
+    "Title": "BIRD OF PREY",
+    "Pre-earned Description": "Win 5 versus races in a row.",
+    "Earned Description": "Achievement earned!",
+    "Image": "ach_bird_of_prey.png"
+  },
+  {
+    "Reference Name": "SECOND WIND",
+    "Achievement ID": "fs_ach_second_wind",
+    "Points": 10,
+    "Hidden": "no",
+    "Achievable More Than Once": "no",
+    "Localization": "English (U.S.)",
+    "Title": "SECOND WIND",
+    "Pre-earned Description": "Win a versus race after trailing your rival by 100 points.",
+    "Earned Description": "Achievement earned!",
+    "Image": "ach_second_wind.png"
+  },
+  {
+    "Reference Name": "ALBATROSS",
+    "Achievement ID": "fs_ach_albatross",
+    "Points": 15,
+    "Hidden": "no",
+    "Achievable More Than Once": "no",
+    "Localization": "English (U.S.)",
+    "Title": "ALBATROSS",
+    "Pre-earned Description": "Win a versus race with double your rival's score (rival 100+).",
+    "Earned Description": "Achievement earned!",
+    "Image": "ach_albatross.png"
+  },
+  {
+    "Reference Name": "THREE LITTLE BIRDS",
+    "Achievement ID": "fs_ach_three_little_birds",
+    "Points": 10,
+    "Hidden": "no",
+    "Achievable More Than Once": "no",
+    "Localization": "English (U.S.)",
+    "Title": "THREE LITTLE BIRDS",
+    "Pre-earned Description": "Win 3 versus races in one day, each with 500+ points.",
+    "Earned Description": "Achievement earned!",
+    "Image": "ach_three_little_birds.png"
+  },
+  {
+    "Reference Name": "IRON BEAK",
+    "Achievement ID": "fs_ach_iron_beak",
+    "Points": 10,
+    "Hidden": "no",
+    "Achievable More Than Once": "no",
+    "Localization": "English (U.S.)",
+    "Title": "IRON BEAK",
+    "Pre-earned Description": "Win a versus race with 1,000 points or more.",
+    "Earned Description": "Achievement earned!",
+    "Image": "ach_iron_beak.png"
+  },
+  {
+    "Reference Name": "FLAWLESS",
+    "Achievement ID": "fs_ach_flawless",
+    "Points": 10,
+    "Hidden": "no",
+    "Achievable More Than Once": "no",
+    "Localization": "English (U.S.)",
+    "Title": "FLAWLESS",
+    "Pre-earned Description": "Win a versus race with a ×20 perfect streak and no revive.",
+    "Earned Description": "Achievement earned!",
+    "Image": "ach_flawless.png"
+  },
+  {
+    "Reference Name": "TOP BIRD",
+    "Achievement ID": "fs_ach_top_bird",
+    "Points": 15,
+    "Hidden": "no",
+    "Achievable More Than Once": "no",
+    "Localization": "English (U.S.)",
+    "Title": "TOP BIRD",
+    "Pre-earned Description": "Finish a day #1 in your leaderboard group.",
+    "Earned Description": "Achievement earned!",
+    "Image": "ach_top_bird.png"
   },
   {
     "Reference Name": "STILL TWEETING",
@@ -574,5 +682,17 @@
     "Pre-earned Description": "Play on 30 days in a row.",
     "Earned Description": "Always finds its way home.",
     "Image": "ach_daily_30.png"
+  },
+  {
+    "Reference Name": "BIRDWATCHER",
+    "Achievement ID": "fs_ach_birdwatcher",
+    "Points": 25,
+    "Hidden": "no",
+    "Achievable More Than Once": "no",
+    "Localization": "English (U.S.)",
+    "Title": "BIRDWATCHER",
+    "Pre-earned Description": "Meet all 32 things in the Flight Guide.",
+    "Earned Description": "Achievement earned!",
+    "Image": "ach_birdwatcher.png"
   }
 ]

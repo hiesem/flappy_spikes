@@ -429,6 +429,7 @@ void main() {
       'vs_50',
       'skin_all',
       'daily_30',
+      'bird_of_prey', // PRD-2.6 §3 J10 / O82.
     };
     expect({
       for (final a in AchievementId.values)

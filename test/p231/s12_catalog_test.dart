@@ -10,6 +10,20 @@ import 'package:flappy_spikes/achievements/achievements.dart';
 import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/services/game_services.dart';
 
+// PRD-2.6 §4 wave 5: these ten approved icons await the M5 export.
+const kIconsPendingM5 = <String>{
+  'bullseye',
+  'sky_high',
+  'bird_of_prey',
+  'birdwatcher',
+  'second_wind',
+  'albatross',
+  'three_little_birds',
+  'iron_beak',
+  'flawless',
+  'top_bird',
+};
+
 void main() {
   const all = AchievementId.values;
 
@@ -122,6 +136,49 @@ void main() {
     expect(storage.vsWinStreakBest, 5);
   });
 
+  test('PRD 2.6 versus boundaries and draws break consecutive wins', () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = GameStorage();
+    await storage.load();
+    final tracker = AchievementTracker(
+      storage: storage,
+      services: GameServices(),
+    );
+    tracker.onVersusResult(
+      win: true,
+      score: 999,
+      rivalScore: 99,
+      deficit: 99,
+      streak: 19,
+      revives: 1,
+    );
+    expect(tracker.earned, isNot(contains('second_wind')));
+    expect(tracker.earned, isNot(contains('albatross')));
+    expect(tracker.earned, isNot(contains('iron_beak')));
+    expect(tracker.earned, isNot(contains('flawless')));
+    tracker.onVersusResult(
+      win: true,
+      score: 1000,
+      rivalScore: 500,
+      deficit: 0,
+      streak: 20,
+      revives: 1,
+    );
+    expect(tracker.earned, isNot(contains('flawless')));
+    // A drawn race is not a consecutive win; a solo race makes no call.
+    tracker.onVersusResult(
+      win: false,
+      score: 100,
+      rivalScore: 100,
+      deficit: 0,
+      streak: 0,
+      revives: 0,
+    );
+    expect(storage.vsWinStreak, 0);
+    expect(storage.vsWinStreakBest, 2);
+    await tracker.flush();
+  });
+
   test('§12.9 store texts: Play limits (name ≤ 100, description ≤ 500)', () {
     for (final a in all) {
       expect(a.title.length, lessThanOrEqualTo(100));
@@ -133,7 +190,9 @@ void main() {
 
   test('§12.9 a matching 160 px icon asset exists for every key', () {
     // PRD 2.6 J10: new icons are exported in wave 5.
-    for (final a in all.where((a) => a.androidId.isNotEmpty)) {
+    expect(kIconsPendingM5, hasLength(10));
+    expect(all.map((a) => a.key).toSet().containsAll(kIconsPendingM5), isTrue);
+    for (final a in all.where((a) => !kIconsPendingM5.contains(a.key))) {
       final f = File('assets/images/${a.asset}');
       expect(f.existsSync(), isTrue, reason: f.path);
       expect(a.asset, 'achievements/ach_${a.key}.png');

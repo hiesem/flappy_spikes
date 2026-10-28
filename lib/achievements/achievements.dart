@@ -367,6 +367,7 @@ class AchievementTracker {
   void onLeaderboardDayWon() => unlock(AchievementId.topBird);
 
   /// A counting race with a rival; solo runs never call this method.
+  /// A draw breaks consecutive wins: it is a race that was not won (O82).
   void onVersusResult({
     required bool win,
     required int score,

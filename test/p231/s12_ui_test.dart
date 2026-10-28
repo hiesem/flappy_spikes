@@ -22,6 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers.dart';
+import 's12_catalog_test.dart' show kIconsPendingM5;
 import '../menu_screenshot_test.dart' show loadFonts;
 import '../skin_shop_flow_test.dart' show allSeen, openSkinShop;
 
@@ -86,7 +87,10 @@ void main() async {
     g.sound.enabled = false;
     await preloadImages(g);
     try {
-      await g.images.loadAll([for (final a in AchievementId.values) a.asset]);
+      await g.images.loadAll([
+        for (final a in AchievementId.values)
+          if (!kIconsPendingM5.contains(a.key)) a.asset,
+      ]);
     } catch (_) {} // before the §12.6 export (the toast draws without)
     g.achievements.countDebugRuns = true;
   }

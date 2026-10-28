@@ -17,6 +17,7 @@ import 'package:flappy_spikes/run/pickups/capsule.dart';
 import 'package:flappy_spikes/run/run_controller.dart';
 import 'package:flappy_spikes/run/run_events.dart';
 import 'package:flappy_spikes/run/run_summary.dart';
+import 'package:flappy_spikes/run/run_setup.dart';
 import 'package:flappy_spikes/skins/catalog.dart';
 import 'package:flappy_spikes/versus/opponent.dart';
 import 'package:flappy_spikes/versus/timeline.dart';
@@ -72,11 +73,16 @@ void main() {
   // steps it up to a rank unlocks that rank and every lower one.
   // PRD-2.6 J9: achievement thresholds remain independent of the new track.
   const ranks = [
-    (level: 1, name: 'EGG', threshold: 25), (level: 2, name: 'CHICK', threshold: 50),
-    (level: 3, name: 'FLEDGLING', threshold: 100), (level: 4, name: 'FLAPPER', threshold: 200),
-    (level: 5, name: 'GLIDER', threshold: 400), (level: 6, name: 'FALCON', threshold: 600),
-    (level: 7, name: 'HAWK', threshold: 800), (level: 8, name: 'SPIKE ACE', threshold: 1000),
-    (level: 9, name: 'PHOENIX', threshold: 2000), (level: 10, name: 'LEGEND', threshold: 5000),
+    (level: 1, name: 'EGG', threshold: 25),
+    (level: 2, name: 'CHICK', threshold: 50),
+    (level: 3, name: 'FLEDGLING', threshold: 100),
+    (level: 4, name: 'FLAPPER', threshold: 200),
+    (level: 5, name: 'GLIDER', threshold: 400),
+    (level: 6, name: 'FALCON', threshold: 600),
+    (level: 7, name: 'HAWK', threshold: 800),
+    (level: 8, name: 'SPIKE ACE', threshold: 1000),
+    (level: 9, name: 'PHOENIX', threshold: 2000),
+    (level: 10, name: 'LEGEND', threshold: 5000),
   ];
   for (final (i, lv) in ranks.indexed) {
     tester(
@@ -89,7 +95,8 @@ void main() {
       'lower score rank, independent of track index $i',
       setUp: boot,
       verify: (g, _) async {
-        g.runDebug.ignoreGates = false; // J3: this rank transition needs a counting run.
+        g.runDebug.ignoreGates =
+            false; // J3: this rank transition needs a counting run.
         final run = await startRun(g);
         run.ctx.addScore(lv.threshold);
         await finish(g);
@@ -118,8 +125,10 @@ void main() {
       await finish(g);
       expect(g.menu.levels.level, 1);
       // PRD-2.6 J9: ranks follow one run's score, independently of J3's step.
-      expect(unlocked(g).where((k) => k.startsWith('rank_')).toSet(),
-        kRankAchievements.take(9).map((id) => id.key).toSet());
+      expect(
+        unlocked(g).where((k) => k.startsWith('rank_')).toSet(),
+        kRankAchievements.take(9).map((id) => id.key).toSet(),
+      );
     },
   );
 
@@ -133,8 +142,10 @@ void main() {
       await finish(g);
       expect(g.menu.levels.level, 10);
       expect(unlocked(g).contains('rank_legend'), isFalse);
-      expect(unlocked(g).where((key) => key.startsWith('rank_')).toSet(),
-        kRankAchievements.take(6).map((id) => id.key).toSet());
+      expect(
+        unlocked(g).where((key) => key.startsWith('rank_')).toSet(),
+        kRankAchievements.take(6).map((id) => id.key).toSet(),
+      );
     },
   );
 
@@ -157,8 +168,7 @@ void main() {
       expect(g.storage.achUnlocked, {'rank_egg'});
       expect(g.storage.achPending, hasLength(8));
       expect(
-        g.achievements.toastQueue.length +
-            (g.achievementToast == null ? 0 : 1),
+        g.achievements.toastQueue.length + (g.achievementToast == null ? 0 : 1),
         1,
       );
     },
@@ -421,6 +431,63 @@ void main() {
       run.state.hoopsPassed = 99;
       run.debugPass();
       expect(unlocked(g), {'hoops_10', 'hoops_25', 'hoops_50', 'hoops_100'});
+    },
+  );
+
+  // PRD-2.6 J10: exercise the feature with the rival's live replay.
+  t.testGameWidget(
+    'J10 live deficit, solo exclusion, BULLSEYE and SKY HIGH',
+    setUp: boot,
+    verify: (g, _) async {
+      final timeline = RunTimeline.empty()..addEntry(1, 100);
+      final rival = OpponentRun(
+        uid: 'r',
+        name: 'Rival',
+        score: 100,
+        best: 100,
+        level: 1,
+        timeline: timeline,
+      );
+      final run = RunController(
+        game: g,
+        setup: RunSetup(seed: 7, viewHeight: 568, opponent: rival),
+      );
+      final feature = AchievementsFeature()..attach(run.ctx);
+      run.state.runClock = 0.5;
+      feature.update(0, 0); // the future replay entry has not happened
+      run.state.runClock = 1;
+      feature.update(0, 0); // down by 100
+      run.state.score = 201;
+      run.state.streak = 24;
+      run.state.hoopsPassed = 149;
+      run.events.emit(const HoopPassed(null));
+      expect(unlocked(g), isNot(contains('bullseye')));
+      expect(unlocked(g), isNot(contains('sky_high')));
+      run.state.streak = 25;
+      run.state.hoopsPassed = 150;
+      run.events.emit(const HoopPassed(null));
+      expect(unlocked(g), containsAll(['bullseye', 'sky_high']));
+      run.events.emit(RunEnded(summary(duel: DuelResult.win)));
+      expect(unlocked(g), contains('second_wind'));
+      expect(g.storage.vsWinStreak, 1);
+      feature.detach();
+
+      final solo = RunController(
+        game: g,
+        setup: const RunSetup(seed: 8, viewHeight: 568),
+      );
+      final soloFeature = AchievementsFeature()..attach(solo.ctx);
+      solo.events.emit(RunEnded(summary(duel: DuelResult.draw)));
+      expect(g.storage.vsWinStreak, 1);
+      soloFeature.detach();
+      final draw = RunController(
+        game: g,
+        setup: RunSetup(seed: 9, viewHeight: 568, opponent: rival),
+      );
+      final drawFeature = AchievementsFeature()..attach(draw.ctx);
+      draw.events.emit(RunEnded(summary(duel: DuelResult.draw)));
+      expect(g.storage.vsWinStreak, 0);
+      drawFeature.detach();
     },
   );
 

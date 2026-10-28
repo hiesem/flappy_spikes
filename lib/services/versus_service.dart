@@ -67,7 +67,7 @@ abstract class VersusService {
   Future<bool> searchForStart();
 
   /// PRD-2.2 §3 the opponent search (Home prefetch): every shard of the own
-  /// level, then the other levels nearest first, stopping at the first
+  /// bracket, then the other brackets nearest first, stopping at the first
   /// usable opponent; 6 s limit; cached for the Home visit (a new search
   /// only after [onRunStart]).
   Future<void> prefetch();
@@ -370,7 +370,7 @@ class PlayerFields {
 ///   install), the Play Games link when a player is signed in, the queue
 ///   flush and the first [prefetch];
 /// - matching is local: the Home prefetch searches the pools (PRD-2.2 §3:
-///   every shard of the own level, then the other levels nearest first,
+///   every shard of the own bracket, then the other brackets nearest first,
 ///   stopping at the first usable opponent, ≤ 44 reads, 6 s limit) once
 ///   per Home visit; the found shard's other candidates are used first;
 ///   a held opponent is ready for START; a solo START has a §4 reason

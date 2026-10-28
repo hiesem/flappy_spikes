@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
+// region P26-G6c
+import '../../progression/puzzle_album.dart';
+// endregion
 import '../../game/sound.dart';
 import '../../game/storage.dart';
 import '../../menu/wallet.dart';
@@ -75,6 +78,9 @@ class PuzzleFeature extends RunFeature {
     });
     int? reward;
     if (count >= PuzzleConfig.pieces) {
+      // region P26-G6c
+      unawaited(PuzzleAlbum(storage).recordPicture(round));
+      // endregion
       final rolled = c.director.rollPuzzleBonus();
       reward = _complete(c, rolled);
       paid.add(rolled);

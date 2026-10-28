@@ -1,3 +1,7 @@
+// region P26-G6c
+import '../../progression/puzzle_album.dart';
+import '../../menu/wallet.dart';
+// endregion
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -816,6 +820,11 @@ class ResultsScreen extends PositionComponent
     // after every run (a level up no longer needs a new best).
     if (model.newBest) _planNewBest();
     _planBar();
+    // region P26-G6c
+    if (!model.levelUp && _albumDue) {
+      _at(ResultsConfig.revealAt, () => unawaited(_showAlbumReveal()));
+    }
+    // endregion
   }
 
   void _planNewBest() {
@@ -903,6 +912,9 @@ class ResultsScreen extends PositionComponent
           _claimed = true;
           if (equipped) stage.bird.look = game.menu.items.look;
           revealSheet = null;
+          // region P26-G6c
+          if (_albumDue) unawaited(_showAlbumReveal());
+          // endregion
           if (item != null) {
             final tileArt = ItemArtCache();
             final tileHolder = PositionComponent(
@@ -927,6 +939,50 @@ class ResultsScreen extends PositionComponent
       onReveal?.call();
     });
   }
+
+  // region P26-G6c
+  bool _albumOpening = false;
+  bool get _albumDue => !game.storage.albumRewardClaimed &&
+      game.storage.albumCounts.every((n) => n > 0);
+
+  Future<void> _showAlbumReveal() async {
+    if (!_albumDue || _albumOpening) return;
+    _albumOpening = true;
+    final storage = game.storage;
+    if (storage.albumRewardItem.isEmpty) {
+      final item = PuzzleAlbum.roll(storage.ownedItems, {
+        for (final row in game.menu.levels.pending)
+          if (row['item'] is String) row['item'] as String,
+      }, math.Random());
+      await storage.saveAlbumRewardItem(item?.key ?? 'coins');
+    }
+    final item = allItems.where((i) => i.key == storage.albumRewardItem).firstOrNull;
+    revealSheet = LevelRevealSheet(
+      item: item,
+      extraCoins: item == null ? 2000 : 0,
+      payReward: () async {
+        if (item != null) {
+          await game.menu.items.grant(item.key);
+        } else {
+          var target = int.tryParse(storage.albumRewardItem.replaceFirst('coins:', ''));
+          if (target == null) {
+            target = game.menu.wallet.balance + 2000;
+            await storage.saveAlbumRewardItem('coins:$target');
+          }
+          final due = math.max(0, target - game.menu.wallet.balance);
+          if (due > 0) await game.menu.wallet.add(due, CoinSource.album);
+        }
+        await storage.saveAlbumRewardClaimed(true);
+      },
+      onFinished: (equipped) {
+        revealSheet = null;
+        _albumOpening = false;
+        if (equipped) stage.bird.look = game.menu.items.look;
+      },
+    );
+    add(revealSheet!);
+  }
+  // endregion
 
   void _presentLevelCoins() {
     if (_coinsPresented || model.levelReward <= 0) return;
@@ -1056,6 +1112,9 @@ class ResultsScreen extends PositionComponent
     }
     // endregion P26-LB6
     if (!canContinue || _leaving) return;
+    // region P26-G6c
+    if (_albumOpening || (_albumDue && !model.levelUp)) return;
+    // endregion
     // region P26-J3
     if (model.levelUp && !_revealReady) {
       skipToReveal();

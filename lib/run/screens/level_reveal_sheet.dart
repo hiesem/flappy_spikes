@@ -32,10 +32,16 @@ class LevelRevealSheet extends P1Popup {
     required this.item,
     required this.onFinished,
     this.extraCoins = 0,
+    // region P26-G6c
+    this.payReward,
+    // endregion
   }) : super(onDismiss: () {}, priority: 100);
 
   final SkinItem? item;
   final int extraCoins;
+  // region P26-G6c
+  final Future<void> Function()? payReward;
+  // endregion
   final void Function(bool equipped) onFinished;
   double elapsed = 0;
   double? equipAt;
@@ -193,7 +199,13 @@ class LevelRevealSheet extends P1Popup {
   Future<void> choose(bool equip) async {
     if (!revealed || choosing) return;
     choosing = true;
-    await game.menu.levels.payPending();
+    // region P26-G6c
+    if (payReward != null) {
+      await payReward!();
+    } else {
+      await game.menu.levels.payPending();
+    }
+    // endregion
     if (equip && item != null) {
       await game.menu.items.equip(item!.layer, item!.id);
       for (final child in details.children.whereType<PositionComponent>()) {

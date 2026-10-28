@@ -1,3 +1,6 @@
+// region P26-G6c
+import 'tabs/album_tab.dart';
+// endregion
 // region P26-G4a
 import 'dart:async';
 // endregion
@@ -243,6 +246,9 @@ class LevelsScreen extends MenuScreen {
     _scrollToCurrent();
     // region P26-G4b
     WorldsTab.install(this);
+    // region P26-G6c
+    AlbumTab.install(this);
+    // endregion
     // endregion
   }
 

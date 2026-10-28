@@ -95,12 +95,17 @@ void main() {
   });
 
   test('early jitter cannot schedule before time zero', () {
+    var early = 0;
     for (var seed = 0; seed < 50; seed++) {
       final scheduler = HumanNoiseFlapScheduler(seed: seed, extraFlapChance: 0);
       scheduler.planBase(0);
-      scheduler.flapDue(0);
-      expect(scheduler.flapTimes.every((time) => time >= 0), isTrue);
+      if (scheduler.jitterSeconds.single < 0) {
+        early++;
+        expect(scheduler.flapDue(-.001), isFalse);
+        expect(scheduler.flapDue(0), isTrue);
+      }
     }
+    expect(early, greaterThan(0));
   });
 
   test('offsets record the polling frame even when a flap is overdue', () {

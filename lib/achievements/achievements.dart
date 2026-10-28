@@ -286,6 +286,20 @@ class AchievementTracker {
         if (n != null) onHoops(n);
       case AchOp._versusWin:
         onVersusWin();
+      // region P26-J10
+      case AchOp._versusResult:
+        final values = arg.split(',').map(int.tryParse).toList();
+        if (values.length == 6 && values.every((v) => v != null)) {
+          onVersusResult(
+            win: values[0] == 1,
+            score: values[1]!,
+            rivalScore: values[2]!,
+            deficit: values[3]!,
+            streak: values[4]!,
+            revives: values[5]!,
+          );
+        }
+      // endregion
     }
   }
 
@@ -346,6 +360,42 @@ class AchievementTracker {
       if (wins >= n) _earn(id);
     }
   });
+
+  // region P26-J10
+  /// Called by the guide and leaderboard after their respective completion events.
+  void onFlightGuideComplete() => unlock(AchievementId.birdwatcher);
+  void onLeaderboardDayWon() => unlock(AchievementId.topBird);
+
+  /// A counting race with a rival; solo runs never call this method.
+  void onVersusResult({
+    required bool win,
+    required int score,
+    required int rivalScore,
+    required int deficit,
+    required int streak,
+    required int revives,
+  }) => _tx(() {
+    final next = win ? storage.vsWinStreak + 1 : 0;
+    unawaited(storage.saveVsWinStreak(next));
+    if (next > storage.vsWinStreakBest) {
+      unawaited(storage.saveVsWinStreakBest(next));
+    }
+    if (!win) return;
+    if (next >= 5) _earn(AchievementId.birdOfPrey);
+    if (deficit >= 100) _earn(AchievementId.secondWind);
+    if (rivalScore >= 100 && score >= 2 * rivalScore) {
+      _earn(AchievementId.albatross);
+    }
+    if (score >= 1000) _earn(AchievementId.ironBeak);
+    if (streak >= 20 && revives == 0) _earn(AchievementId.flawless);
+    if (score >= 500) {
+      final day = storage.today.toString();
+      final count = (storage.vsBigWinsDay[day] ?? 0) + 1;
+      unawaited(storage.saveVsBigWinsDay({day: count}));
+      if (count >= 3) _earn(AchievementId.threeLittleBirds);
+    }
+  });
+  // endregion
 
   /// A counted run finished on [day] (`storage.today`): the daily streak.
   void onRunDay(int day) => _tx(() {
@@ -452,6 +502,17 @@ abstract final class AchOp {
   static const _item = 'item';
   static const _hoops = 'hoops';
   static const _versusWin = 'vwin';
+  // region P26-J10
+  static const _versusResult = 'vresult';
+  static String versusResult(
+    bool win,
+    int score,
+    int rival,
+    int deficit,
+    int streak,
+    int revives,
+  ) => '$_versusResult:${win ? 1 : 0},$score,$rival,$deficit,$streak,$revives';
+  // endregion
 
   static String unlock(AchievementId id) => '$_unlock:${id.key}';
   static String ride(RideId ride) => '$_ride:${ride.storageId}';

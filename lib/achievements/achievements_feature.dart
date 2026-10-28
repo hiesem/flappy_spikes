@@ -18,6 +18,22 @@ import 'achievements.dart';
 /// `BonusScreen.tapTile`; the shop in `buyTriedOnItem`.
 class AchievementsFeature extends RunFeature {
   RunContext? _c;
+  // region P26-J10
+  int _maxDeficit = 0;
+  int _maxStreak = 0;
+
+  @override
+  void update(double gameDt, double realDt) {
+    final c = _c;
+    final rival = c?.run.setup.opponent;
+    if (c == null) return;
+    if (c.s.streak > _maxStreak) _maxStreak = c.s.streak;
+    if (rival != null) {
+      final deficit = rival.scoreAt(c.s.runClock) - c.s.score;
+      if (deficit > _maxDeficit) _maxDeficit = deficit;
+    }
+  }
+  // endregion
 
   @override
   void attach(RunContext c) {
@@ -46,6 +62,10 @@ class AchievementsFeature extends RunFeature {
   }
 
   void _onStarted(RunStarted e) {
+    // region P26-J10
+    _maxDeficit = 0;
+    _maxStreak = 0;
+    // endregion
     if (e.setup.starter == Powerup.bigHoops) {
       _rule(AchOp.unlock(AchievementId.firstBigHoops));
     }
@@ -105,6 +125,10 @@ class AchievementsFeature extends RunFeature {
     // QA P19-04: a hoop goal is staged the moment its threshold is crossed
     // (its earned position in the run); later passes add nothing.
     final n = c.s.hoopsPassed;
+    // region P26-J10
+    if (c.s.streak > _maxStreak) _maxStreak = c.s.streak;
+    if (_maxStreak >= 25) _rule(AchOp.unlock(AchievementId.bullseye));
+    // endregion
     for (final (goal, id) in kHoopAchievements) {
       if (n >= goal) _rule(AchOp.unlock(id));
     }
@@ -112,6 +136,23 @@ class AchievementsFeature extends RunFeature {
 
   void _onEnded(RunEnded e) {
     if (e.summary.duel == DuelResult.win) _rule(AchOp.versusWin);
+    // region P26-J10
+    final c = _c;
+    final rival = c?.run.setup.opponent;
+    if (c != null && rival != null && e.summary.duel != null) {
+      update(0, 0);
+      _rule(
+        AchOp.versusResult(
+          e.summary.duel == DuelResult.win,
+          c.s.score,
+          rival.score,
+          _maxDeficit,
+          _maxStreak,
+          c.s.revivesThisGame,
+        ),
+      );
+    }
+    // endregion
   }
 
   void _onRevived(Revived e) => _rule(AchOp.unlock(AchievementId.firstRevive));

@@ -340,6 +340,17 @@ enum AchievementId {
     androidId: 'CgkIsZz8pvUOEAIQJQ',
   ),
 
+  // region P26-J10
+  bullseye(
+    'bullseye',
+    'BULLSEYE',
+    "Score a ×25 perfect streak.",
+    'Achievement earned!',
+    40,
+    AchievementGroup.mastery,
+  ),
+  // endregion
+
   // --- Hoops in one run (4, 75 pts) ------------------------------------------
   hoops10(
     'hoops_10',
@@ -378,6 +389,17 @@ enum AchievementId {
     androidId: 'CgkIsZz8pvUOEAIQKQ',
   ),
 
+  // region P26-J10
+  skyHigh(
+    'sky_high',
+    'SKY HIGH',
+    "Pass 150 hoops in one run.",
+    'Achievement earned!',
+    50,
+    AchievementGroup.hoops,
+  ),
+  // endregion
+
   // --- Versus (3, 75 pts) ----------------------------------------------------
   vs1(
     'vs_1',
@@ -408,6 +430,66 @@ enum AchievementId {
     hidden: true, // PRD-2.3.1 §19.3
     androidId: 'CgkIsZz8pvUOEAIQLA',
   ),
+
+  // region P26-J10
+  birdOfPrey(
+    'bird_of_prey',
+    'BIRD OF PREY',
+    "Win 5 versus races in a row.",
+    'Achievement earned!',
+    25,
+    AchievementGroup.versus,
+    hidden: true,
+  ),
+  secondWind(
+    'second_wind',
+    'SECOND WIND',
+    "Win a versus race after trailing your rival by 100 points.",
+    'Achievement earned!',
+    10,
+    AchievementGroup.versus,
+  ),
+  albatross(
+    'albatross',
+    'ALBATROSS',
+    "Win a versus race with double your rival's score (rival 100+).",
+    'Achievement earned!',
+    15,
+    AchievementGroup.versus,
+  ),
+  threeLittleBirds(
+    'three_little_birds',
+    'THREE LITTLE BIRDS',
+    "Win 3 versus races in one day, each with 500+ points.",
+    'Achievement earned!',
+    10,
+    AchievementGroup.versus,
+  ),
+  ironBeak(
+    'iron_beak',
+    'IRON BEAK',
+    "Win a versus race with 1,000 points or more.",
+    'Achievement earned!',
+    10,
+    AchievementGroup.versus,
+  ),
+  flawless(
+    'flawless',
+    'FLAWLESS',
+    "Win a versus race with a ×20 perfect streak and no revive.",
+    'Achievement earned!',
+    10,
+    AchievementGroup.versus,
+  ),
+  topBird(
+    'top_bird',
+    'TOP BIRD',
+    "Finish a day #1 in your leaderboard group.",
+    'Achievement earned!',
+    15,
+    AchievementGroup.versus,
+  ),
+  // endregion
 
   // --- Firsts, skins and daily play (7, 155 pts) -----------------------------
   firstRevive(
@@ -474,7 +556,19 @@ enum AchievementId {
     AchievementGroup.more,
     hidden: true, // PRD-2.3.1 §19.3
     androidId: 'CgkIsZz8pvUOEAIQMw',
-  );
+  ),
+
+  // region P26-J10
+  birdwatcher(
+    'birdwatcher',
+    'BIRDWATCHER',
+    "Meet all 32 things in the Flight Guide.",
+    'Achievement earned!',
+    25,
+    AchievementGroup.more,
+  )
+  // endregion
+  ;
 
   const AchievementId(
     this.key,
@@ -564,6 +658,9 @@ const List<(int, AchievementId)> kHoopAchievements = [
   (25, AchievementId.hoops25),
   (50, AchievementId.hoops50),
   (100, AchievementId.hoops100),
+  // region P26-J10
+  (150, AchievementId.skyHigh),
+  // endregion
 ];
 
 /// §12.1 versus wins: threshold → achievement.

@@ -1241,7 +1241,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // region P26-G1b
     missionRunSettlementPending = false;
     // region P26-G6eB
-    missionSettlement = missionSettlement.then((_) => _starRoadSeason.settle()).then((_) => RunEndBookkeeping.prepareMissions(this));
+    missionSettlement = RunEndBookkeeping.prepareHome(this, missionSettlement);
     // endregion
     // endregion
     homeMoments.beginVisit(

@@ -173,7 +173,6 @@ class HomeScreen extends PositionComponent
   // region P26-G6eB
   void _openMissions() {
     if (!active || game.modalPopupOpen || _missionsPanel != null) return;
-    final summary = game.starRoadSeason.takeSummary();
     // region P26-G1d
     late final MissionsPanel panel;
     panel = MissionsPanel(
@@ -199,7 +198,6 @@ class HomeScreen extends PositionComponent
       // endregion P26-G5b
       missions: RunEndBookkeeping.currentMissions(game.storage),
       now: game.storage.now(),
-      seasonSummary: summary,
       starRoadBuilder: (compact) => StarRoadCard.open(
         game: game, road: game.starRoad, daysLeft: game.starRoadDaysRemaining,
         compact: compact, leavePanel: _closeMissions, returnToPanel: _openMissions,

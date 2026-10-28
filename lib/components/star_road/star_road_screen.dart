@@ -107,8 +107,8 @@ class StarRoadScreen extends MenuScreen {
       ),
     );
     _daysChip = MenuTag(
-      _daysText(), fontSize: 8, fillColor: Config.menuPink,
-      textColor: Config.menuSoft, position: Vector2(150, 5),
+      _daysText(), fontSize: 8, fillColor: starRoadDaysChipColor(daysLeft),
+      textColor: daysLeft == 1 ? Config.menuPlum : Config.menuSoft, position: Vector2(150, 5),
     );
     header.add(_daysChip!);
     // endregion

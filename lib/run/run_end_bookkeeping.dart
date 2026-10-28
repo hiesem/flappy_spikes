@@ -18,6 +18,11 @@ import '../services/game_services.dart';
 /// Persistent end-of-run progression seam. F1, J9 and LB2 extend this helper
 /// rather than the game's state transition.
 abstract final class RunEndBookkeeping {
+  // region P26-G6eB
+  static Future<void> prepareHome(FlappySpikesGame game, Future<void> previous) =>
+      previous.catchError((_) {}).then((_) => game.starRoadSeason.settle())
+          .then((_) => prepareMissions(game));
+  // endregion
   // region P26-F1
   static Future<void> economyDaily(GameStorage storage, GameServices services) async {
     final day = storage.today;
@@ -77,7 +82,10 @@ abstract final class RunEndBookkeeping {
     // A weekly course is not a versus search, even when VERSUS is the
     // selected Home mode (G5a); leave the last versus result intact.
     final rival = !run.setup.weekly && game.homeMode == HomeMode.versus;
-    // region P26-G6eB — first-run stars also settle during runs 1–3.
+    // region P26-G6eB — PRD 2.6 O28: missions and stars start at game 4.
+    if (before < 3) {
+      return rival ? storage.saveLastVersusHadRival(run.setup.opponent != null) : Future.value();
+    }
     // endregion
     stats.captureOpenedSwitches();
     final board = currentMissions(storage);
@@ -152,7 +160,7 @@ abstract final class RunEndBookkeeping {
     game.missionRunSettlementPending = false;
     if (run != null && run.countsForUpload) {
       // region P26-G6eB
-      game.missionRunSettlementPending = true;
+      game.missionRunSettlementPending = game.storage.gamesPlayed >= 4;
       // endregion
       if (game.storage.gamesPlayed >= 4) {
         game.recordStreakRun(runNumber: game.storage.gamesPlayed);

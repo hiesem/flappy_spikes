@@ -1,3 +1,6 @@
+// region P26-G6eB
+import 'dart:ui' show Color;
+// endregion
 
 import 'package:flame/components.dart';
 
@@ -26,6 +29,16 @@ Sfx starRoadClaimSound(StarRoadReward reward) => switch (reward.kind) {
   _ => Sfx.bnCoin,
 };
 
+// region P26-G6eB
+Color starRoadDaysChipColor(int daysLeft) => daysLeft == 1 ? Config.menuGold : Config.menuPink;
+String starRoadDaysText(int daysLeft, DateTime instant) {
+  if (daysLeft != 1) return '$daysLeft DAYS LEFT';
+  final now = instant.toUtc();
+  final remaining = DateTime.utc(now.year, now.month, now.day + 1).difference(now);
+  return 'ENDS IN ${remaining.inHours} H ${remaining.inMinutes % 60} M';
+}
+// endregion
+
 /// The missions-panel entry. The caller measures the entire panel and selects
 /// [compact] when its expanded content would overflow the available height.
 class StarRoadCard extends MenuButton {
@@ -33,6 +46,9 @@ class StarRoadCard extends MenuButton {
     required this.road,
     required this.daysLeft,
     required this.compact,
+    // region P26-G6eB
+    this.clock,
+    // endregion
     required super.onPressed,
     super.isActive,
   }) : super(size: Vector2(256, compact ? 44 : 88), color: Config.menuSoft);
@@ -51,6 +67,9 @@ class StarRoadCard extends MenuButton {
     road: road,
     daysLeft: daysLeft,
     compact: compact,
+    // region P26-G6eB
+    clock: game.storage.now,
+    // endregion
     isActive: isActive,
     onPressed: () {
       if (game.openStarRoad(daysLeft: daysLeft, onBack: returnToPanel)) {
@@ -63,6 +82,15 @@ class StarRoadCard extends MenuButton {
   final StarRoad road;
   final int daysLeft;
   final bool compact;
+  // region P26-G6eB
+  final DateTime Function()? clock;
+  MenuText? _daysLabel;
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _daysLabel?.text = starRoadDaysText(daysLeft, (clock ?? DateTime.now)());
+  }
+  // endregion
 
   String get progressLabel => road.tier == starRoadTierCount
       ? 'ALL TIERS REACHED'
@@ -76,17 +104,24 @@ class StarRoadCard extends MenuButton {
     await super.onLoad();
     // region P26-G6eA
     add(StarRoadStar(side: 12, position: Vector2(10, compact ? 15 : 8)));
-    add(MenuText('STAR ROAD', fontSize: 11, color: Config.menuPlum,
+    add(MenuText(compact ? 'STAR ROAD ·' : 'STAR ROAD', fontSize: 11, color: Config.menuPlum,
       position: Vector2(25, compact ? 15 : 8)));
     // endregion
-    add(
-      MenuText(
-        compact ? compactLabel : '$daysLeft DAYS LEFT',
-        fontSize: compact ? 9 : 10,
-        color: Config.menuPlum,
-        position: Vector2(compact ? 110 : 10, compact ? 16 : 31),
-      ),
-    );
+    // region P26-G6eB
+    if (compact) {
+      add(MenuText(compactLabel, fontSize: 9, color: Config.menuPlum,
+          position: Vector2(110, 16)));
+    } else {
+      final chip = MenuTag(starRoadDaysText(daysLeft, (clock ?? DateTime.now)()),
+        fontSize: 9, fillColor: starRoadDaysChipColor(daysLeft),
+        textColor: daysLeft == 1 ? Config.menuPlum : Config.menuSoft,
+        position: Vector2(10, 29));
+      add(chip);
+      chip.loaded.then((_) {
+        _daysLabel = chip.children.whereType<MenuText>().first;
+      });
+    }
+    // endregion
     if (!compact) {
       add(
         MenuText(

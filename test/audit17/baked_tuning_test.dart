@@ -15,6 +15,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// value wins" made them the baked values; compared with the app's own
 /// parser none differed from the in-app defaults, so no value changed.
 const Map<String, String> _liveRc20261019 = {
+  // region P26-G6eB — PRD 2.6 G6, orchestrator epoch decision 2026-10-28.
+  'star_road_epoch_day': '20752',
+  // endregion
   'coin_hoop': '1',
   'coin_perfect': '2',
   'coin_piggy_per': '3',

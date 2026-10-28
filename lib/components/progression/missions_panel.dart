@@ -1,6 +1,5 @@
 // region P26-G6eB
 import '../star_road/star_road_card.dart';
-import '../../skins/catalog.dart';
 // endregion
 import 'dart:ui';
 import 'dart:math' as math;
@@ -302,7 +301,6 @@ class MissionsPanel extends P1Popup {
     // endregion
     // region P26-G6eB
     this.starRoadBuilder,
-    this.seasonSummary,
     // endregion
   });
   // region P26-G1d
@@ -313,7 +311,6 @@ class MissionsPanel extends P1Popup {
   final PositionComponent? weeklyCard, starRoadCard;
   // region P26-G6eB
   final StarRoadCard Function(bool compact)? starRoadBuilder;
-  final Map<String, dynamic>? seasonSummary;
   // endregion
   late MenuText countdown;
   @override
@@ -485,27 +482,6 @@ class MissionsPanel extends P1Popup {
     }
     y += 4;
     // region P26-G6eB
-    if (seasonSummary != null) {
-      final awards = (seasonSummary!['awards'] as Map? ?? {}).values
-          .map((value) => Map<String, dynamic>.from(value as Map)).toList();
-      final coins = awards.fold<int>(0, (sum, award) => sum + (award['coins'] as int? ?? 0));
-      final labels = <String>[
-        if (coins > 0) '$coins COINS',
-        for (final award in awards)
-          if (award['kind'] == 'feather') 'GOLDEN FEATHER'
-          else if (award['kind'] == 'piece') 'PUZZLE PIECE'
-          else if (award['kind'] == 'item')
-            allItems.where((item) => item.key == award['item']).firstOrNull?.name.toUpperCase() ?? 'MYSTERY ITEM',
-      ];
-      card.add(MenuText('SEASON ${seasonSummary!['from']} REWARDS ADDED',
-          fontSize: 9, color: Config.menuPlum, position: Vector2(12, y)));
-      y += 16;
-      for (final label in labels) {
-        card.add(MenuText(label, fontSize: 8, color: Config.menuPlum, position: Vector2(12, y)));
-        y += 12;
-      }
-      y += 6;
-    }
     if (starRoadBuilder != null) {
       final compact = starRoadCardShouldFold(otherContentHeight: y + 14, availableHeight: game.viewHeight - 88);
       final roadCard = starRoadBuilder!(compact);

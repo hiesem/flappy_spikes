@@ -1,5 +1,6 @@
 import 'package:flappy_spikes/components/star_road/star_road_card.dart';
 import 'package:flappy_spikes/game/sound.dart';
+import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/progression/star_road.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -32,5 +33,14 @@ void main() {
     expect(starRoadClaimSound(starRoadReward(10)), Sfx.lvClaim);
     expect(starRoadClaimSound(starRoadReward(20)), Sfx.lvClaim);
     expect(starRoadClaimSound(starRoadReward(25)), Sfx.lvUpBig);
+  });
+  test('last-day chip uses the gold countdown on road and panel', () {
+    expect(starRoadDaysChipColor(1), Config.menuGold);
+    expect(starRoadDaysChipColor(2), Config.menuPink);
+    expect(
+      starRoadDaysText(1, DateTime.utc(2026, 11, 22, 18, 48)),
+      'ENDS IN 5 H 12 M',
+    );
+    expect(starRoadDaysText(2, DateTime.utc(2026, 11, 22)), '2 DAYS LEFT');
   });
 }

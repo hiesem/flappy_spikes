@@ -504,3 +504,7 @@
 {"ev":"incident","ts":"2026-10-28T09:56:20+01:00"}
 {"ev":"test","ts_start":"2026-10-28T09:53:24+01:00","ts_end":"2026-10-28T10:01:48+01:00","task_id":"LB4","wave":null,"cmd":"env VERIFY_BASE=feat/2.6 VERIFY_SCOPED=1 VERIFY_SKIP_HEAVY=1 bash scripts/verify.sh","scope":"targeted","where":"task-worktree","exit":0,"failures":0,"seconds":503}
 {"ev":"merge","task_id":"LB4","sha":"3c2ee68","ts_start":"2026-10-28T09:53:24+01:00","ts_end":"2026-10-28T10:01:48+01:00","conflict":false,"resolved_by":"none","files_changed":13,"lines_added":1076,"lines_removed":148}
+{"ev":"test","ts_start":"2026-10-28T09:39:23+01:00","ts_end":"2026-10-28T10:07:46+01:00","task_id":"F1","wave":"W1","cmd":"bash scripts/verify.sh","scope":"full","where":"task-worktree","exit":0,"failures":0,"seconds":1703}
+{"ev":"test","ts_start":"2026-10-28T09:43:40+01:00","ts_end":"2026-10-28T10:09:44+01:00","task_id":"J10","wave":"W1","cmd":"bash scripts/verify.sh","scope":"full","where":"task-worktree","exit":0,"failures":0,"seconds":1564}
+{"ev":"test","ts_start":"2026-10-28T10:01:51+01:00","ts_end":"2026-10-28T10:11:28+01:00","task_id":"F9f","wave":null,"cmd":"env VERIFY_BASE=feat/2.6 VERIFY_SCOPED=1 VERIFY_SKIP_HEAVY=1 bash scripts/verify.sh","scope":"targeted","where":"task-worktree","exit":0,"failures":0,"seconds":577}
+{"ev":"merge","task_id":"F9f","sha":"579b39b","ts_start":"2026-10-28T09:56:51+01:00","ts_end":"2026-10-28T10:11:28+01:00","conflict":false,"resolved_by":"none","files_changed":7,"lines_added":981,"lines_removed":40}

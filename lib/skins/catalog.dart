@@ -50,7 +50,7 @@ class SkinItem {
   String get key => '${layer.key}:$id';
 }
 
-/// The 30 bird skins (§5.1), plus three PRD 2.6 F10 skill items.
+/// The 30 bird skins and three F10 skill items (§5.1).
 const List<SkinItem> kBirds = [
   SkinItem(layer: SkinLayer.bird, id: 'classic', name: 'Classic', rarity: Rarity.common, price: 0),
   SkinItem(layer: SkinLayer.bird, id: 'sky', name: 'Sky', rarity: Rarity.common, price: 150),

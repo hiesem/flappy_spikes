@@ -16,6 +16,7 @@ class StarRoadSeason {
   final GameStorage storage;
   final StarRoadClaims claims;
   Future<void>? _inFlight;
+  bool get settling => _inFlight != null;
   Map<String, dynamic>? _summary;
 
   int get utcDay =>

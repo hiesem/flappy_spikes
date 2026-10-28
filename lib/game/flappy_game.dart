@@ -3888,6 +3888,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   /// The card's host closes its panel before calling this; back restores it.
   bool openStarRoad({required int daysLeft, required void Function() onBack}) {
+    // region P26-G6eB
+    if (_starRoadSeason.settling) return false;
+    // endregion
     if (_starRoadScreen != null || state != GameState.start) return false;
     _starRoadReturn = onBack;
     final home = _home;

@@ -160,7 +160,8 @@ void main() async {
     'G4 Home tag never in runs 1-3; waits behind a claim and uses existing master',
     (game) async {
       await game.storage.saveHomeLevelsTag(true);
-      await game.storage.saveWorldsReached(1);
+      // POL3: world 1 starts seen; world 2 supplies the pending hint.
+      await game.storage.saveWorldsReached(2);
       final home = game.homeScreen!;
       for (var run = 1; run <= 3; run++) {
         game.storage.gamesPlayed = run;

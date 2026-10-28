@@ -295,7 +295,7 @@ class LevelRevealSheet extends P1Popup {
       if (skill) await game.menu.items.markSeen(item!.layer, item!.id);
       // endregion
       for (final child in details.children.whereType<PositionComponent>()) {
-        if (child != _preview && child != equippedLabel) child.scale.setZero();
+        if (child != _preview && child != equippedLabel && child is! _EquippedCheck) child.scale.setZero();
       }
       _preview.start(game.menu.items.look);
       equipAt = elapsed;
@@ -655,7 +655,7 @@ class _CatchUpItemSheet extends LevelRevealSheet {
     // A preview can use the prospective look without granting the item yet.
     if (equip && item != null) {
       for (final child in details.children.whereType<PositionComponent>()) {
-        if (child != _preview && child != equippedLabel) child.scale.setZero();
+        if (child != _preview && child != equippedLabel && child is! _EquippedCheck) child.scale.setZero();
       }
       _preview.start(originalLook.withItem(item!.layer, item!.id));
       equipAt = elapsed;

@@ -8,7 +8,8 @@ for d in "$W"/*/; do
   pid=$(cat "$d/pid" 2>/dev/null || echo 0); st=$(cat "$d/started" 2>/dev/null || echo $now); cap=$(cat "$d/cap" 2>/dev/null || echo 90)
   run=$(( (now-st)/60 )); lm=$(stat -c %Y "$d/log" 2>/dev/null || echo $st); idle=$(( (now-lm)/60 ))
   if [ -f "$d/exit" ]; then s="DONE(exit $(cat "$d/exit"))"
-  elif kill -0 "$pid" 2>/dev/null; then
+  # alive AND the same process: a pid reused by a process that started well after the worker counts as DEAD
+  elif kill -0 "$pid" 2>/dev/null && [ $(( $(date -d "$(ps -o lstart= -p "$pid" 2>/dev/null)" +%s 2>/dev/null || echo 0) - st )) -le 120 ]; then
     if [ $run -ge $cap ]; then s=OVERCAP; elif [ $idle -ge $IDLE_MIN ] && grep -q "codex" "$d/cmd" 2>/dev/null; then s=STALLED; else s=RUNNING; fi
   else s=DEAD; fi
   printf '%-34s %-14s run %4sm idle %3sm cap %3sm pid %s\n' "$id" "$s" "$run" "$idle" "$cap" "$pid"

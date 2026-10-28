@@ -285,6 +285,22 @@ describe('PRD-2.6 LB3 settlement and gifts', () => {
     assert.deepEqual(ga.map((g) => g.tier), ['gold']);
     assert.deepEqual(gb.map((g) => g.tier), ['silver']);
     assert.deepEqual(gc.map((g) => g.tier), ['bronze']);
+    // region P26-LB7
+    const snapshot = ga[0] as LbGiftDoc & { createdAt: Timestamp; finalBoard: Array<Record<string, unknown>> };
+    assert.equal(snapshot.createdAt.toMillis(), end);
+    assert.deepEqual(snapshot.finalBoard.map((row) => Object.keys(row).sort()),
+      [['points', 'rank', 'rid'], ['points', 'rank', 'rid'], ['points', 'rank', 'rid']]);
+    const resolved = await lbGetBoard(db, a, { tab: 'today' }, end + 1500);
+    const gift = resolved.today.gifts![0] as unknown as { finalBoard: Array<{ name: string }> };
+    assert.equal(gift.finalBoard[0].name, 'BraveOwl123');
+    const savedGroup = (await db.collection(LB_GROUPS_COLLECTION).doc(gid).get()).data()!;
+    await db.collection(LB_GROUPS_COLLECTION).doc(gid).delete();
+    const expired = await lbGetBoard(db, a, { tab: 'today' }, end + 2000);
+    const placeholders = (expired.today.gifts![0] as unknown as { finalBoard: Array<{ name: string }> }).finalBoard;
+    assert.equal(placeholders[0].name, 'BraveOwl123');
+    assert.equal(placeholders[1].name, 'PLAYER');
+    await db.collection(LB_GROUPS_COLLECTION).doc(gid).set(savedGroup);
+    // endregion
     const before = await db.collection(LB_GIFTS_COLLECTION).get();
     const second = await lbSettleGroups(db, end + 2000, gid);
     assert.equal(second.groups, 0);

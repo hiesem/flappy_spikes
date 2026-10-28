@@ -855,6 +855,12 @@ async function settleGroup(db: Firestore, gid: string, nowMs: number): Promise<S
         tier: awards[i].tier,
         boardRank: awards[i].boardRank,
         expireAt: at(nowMs + LB_GIFT_TTL),
+        // region P26-LB7
+        ...{ createdAt: group.end, day: utcDay(millis(group.start)),
+          finalBoard: ranked.slice(0, 5).map((entry) => ({
+            rid: createHash('sha256').update(`${gid}\u0000${entry.uid}`).digest('hex').slice(0, 16),
+            rank: entry.rank, points: entry.points })) },
+        // endregion
       } satisfies LbGiftDoc);
       gifts++;
     }
@@ -1404,12 +1410,37 @@ export async function lbGetBoard(
     group === null || gid === null
       ? emptyBoard(LB_TAB_TODAY)
       : todayBoard(group, uid, nowMs, { gid, hiddenUids: [...hidden, ...suppressedUids] });
-  today.gifts = gifts.map((gift) => ({
-    gid: gift.gid,
-    tier: gift.tier,
-    boardRank: gift.boardRank,
-    claimedAt: gift.claimedAt ?? null,
+  // region P26-LB7
+  // The durable snapshot has no names or looks. Resolve only from the live,
+  // privacy-filtered group; an expired or removed entry is a neutral player.
+  today.gifts = await Promise.all(gifts.map(async (gift) => {
+    const stored = gift as LbGiftDoc & { createdAt?: Timestamp; day?: string;
+      finalBoard?: Array<{ rid: string; rank: number; points: number }> };
+    const historical = await readTodayGroup(db, gift.gid);
+    const liveGroup = historical.group;
+    const usable = liveGroup !== null && millis(liveGroup.end) + LB_GROUP_TTL_MS > nowMs;
+    const live = usable ? todayBoard(liveGroup, uid, millis(liveGroup.end),
+      { gid: gift.gid, hiddenUids: historical.hiddenGhostOwners }).rows : [];
+    const fallback = usable ? live.slice(0, 5).map(({ rid, rank, points }) => ({ rid, rank, points })) : [];
+    const snapshotRows = stored.finalBoard ?? fallback;
+    if (!snapshotRows.some((row) => row.rank === gift.boardRank)) {
+      snapshotRows.push({ rid: createHash('sha256').update(`${gift.gid}\u0000${uid}`).digest('hex').slice(0, 16),
+        rank: gift.boardRank, points: 0 });
+    }
+    const rows = snapshotRows.map((row) => {
+      const match = live.find((entry) => entry.rid === row.rid);
+      const own = row.rank === gift.boardRank;
+      return { ...row,
+        name: own ? (player?.name ?? 'PLAYER') : (match?.name ?? 'PLAYER'),
+        look: own ? (player?.look ?? DEFAULT_LOOK) : (match?.look ?? DEFAULT_LOOK),
+        ...(match?.card === undefined || own ? {} : { card: match.card }),
+        ...(match?.lastAt === undefined ? {} : { lastAt: match.lastAt }) };
+    });
+    return { gid: gift.gid, tier: gift.tier, boardRank: gift.boardRank,
+      claimedAt: gift.claimedAt ?? null, createdAt: stored.createdAt ?? at(millis(gift.expireAt) - LB_GIFT_TTL),
+      finalBoard: rows, playerCount: usable ? live.length : 0 };
   }));
+  // endregion
   if (player?.hidden === true) today.me = null;
   const best = await boardBest(db, uid, player, nowMs, suppressedUids);
   return {

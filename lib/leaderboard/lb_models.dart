@@ -111,6 +111,11 @@ class LbGift {
     this.claimedAt,
     this.rolled,
     this.expireAt,
+    // region P26-LB7
+    this.createdAt,
+    this.finalBoard = const [],
+    this.playerCount = 0,
+    // endregion
   });
   factory LbGift.fromJson(Map<String, Object?> json) => LbGift(
     gid: json['gid'] as String,
@@ -121,6 +126,25 @@ class LbGift {
         ? null
         : LbGiftRoll.fromJson(_map(json['rolled'])),
     expireAt: lbTimestamp(json['expireAt']),
+    // region P26-LB7
+    createdAt: lbTimestamp(json['createdAt']),
+    finalBoard: List.unmodifiable(
+      (json['finalBoard'] as List? ?? []).map((row) {
+        final data = _map(row);
+        if (data['name'] == null || data['look'] == null) {
+          return LbBoardRow(
+            rid: data['rid'] as String,
+            rank: _int(data['rank']),
+            name: 'PLAYER',
+            look: Look.defaults,
+            points: _int(data['points']),
+          );
+        }
+        return LbBoardRow.fromJson(data);
+      }),
+    ),
+    playerCount: _optionalInt(json['playerCount']) ?? 0,
+    // endregion
   );
   final String gid;
   final String tier;
@@ -128,6 +152,11 @@ class LbGift {
   final DateTime? claimedAt;
   final LbGiftRoll? rolled;
   final DateTime? expireAt;
+  // region P26-LB7
+  final DateTime? createdAt;
+  final List<LbBoardRow> finalBoard;
+  final int playerCount;
+  // endregion
 }
 
 class LbBoardPayload {

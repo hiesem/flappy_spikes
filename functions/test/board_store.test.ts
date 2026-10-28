@@ -318,16 +318,42 @@ describe('PRD-2.6 LB3 settlement and gifts', () => {
     for (let i = 0; i < 55; i++) {
       batch.set(db.collection(LB_GIFTS_COLLECTION).doc(`${uid}_claimed_${i}`), {
         uid, gid: `claimed_${i}`, tier: 'bronze', boardRank: 3,
-        claimedAt: Timestamp.fromMillis(T0), expireAt: Timestamp.fromMillis(T0 + 400 * 86400000),
+        claimedAt: Timestamp.fromMillis(T0 - 29 * 86400000),
+        giftLookup: `${uid}|${new Date(T0 - 29 * 86400000).toISOString().slice(0, 10)}`,
+        expireAt: Timestamp.fromMillis(T0 + 400 * 86400000),
       });
     }
     batch.set(db.collection(LB_GIFTS_COLLECTION).doc(`${uid}_waiting`), {
-      uid, gid: 'waiting', tier: 'gold', boardRank: 1,
+      uid, gid: 'waiting', tier: 'gold', boardRank: 1, giftLookup: `${uid}|open`,
       expireAt: Timestamp.fromMillis(T0 + 400 * 86400000),
     });
     await batch.commit();
     const board = await lbGetBoard(db, uid, { tab: 'today' }, T0);
     assert.deepEqual(board.today.gifts?.map((gift) => gift.gid), ['waiting']);
+  });
+  it('caps historical group transactions when many gifts are pending', async () => {
+    const uid = uniq('lb-gift-read-cap');
+    const batch = db.batch();
+    for (let i = 0; i < 12; i++) {
+      batch.set(db.collection(LB_GIFTS_COLLECTION).doc(`${uid}_pending_${i}`), {
+        uid, gid: `pending_${i}`, tier: 'bronze', boardRank: 3,
+        giftLookup: `${uid}|open`, createdAt: Timestamp.fromMillis(T0),
+        expireAt: Timestamp.fromMillis(T0 + 400 * 86400000),
+      });
+    }
+    await batch.commit();
+    let transactions = 0;
+    const counted = new Proxy(db, { get(target, property) {
+      const value = Reflect.get(target, property, target);
+      if (property === 'runTransaction') return (...args: any[]) => {
+        transactions++;
+        return value.apply(target, args);
+      };
+      return typeof value === 'function' ? value.bind(target) : value;
+    } }) as Firestore;
+    const result = await lbGetBoard(counted, uid, { tab: 'today' }, T0 + 1000);
+    assert.equal(result.today.gifts?.length, 12);
+    assert.equal(transactions, 6); // one current-board read + at most five gifts
   });
   // endregion
 
@@ -410,6 +436,14 @@ describe('PRD-2.6 LB3 claim, tombstone and response shapes', () => {
     assert.equal(first.ok, true);
     assert.equal(second.ok, true);
     assert.deepEqual(first.prize, second.prize);
+    // region P26-LB7: a lost response must leave the rolled gift discoverable.
+    const board = await lbGetBoard(db, uid, { tab: 'today' }, end + 3500);
+    const returned = board.today.gifts?.find((entry) => entry.gid === gid) as
+      (LbGiftDoc & { rolled?: unknown }) | undefined;
+    assert.ok(returned);
+    assert.deepEqual(returned.rolled, first.prize);
+    assert.equal((await lbGetBoard(db, uid, { tab: 'today' }, end + 29 * 86400000)).today.gifts?.length, 0);
+    // endregion
     assert.equal(first.tier, 'gold');
     const other = uniq('lb-claim-other');
     const refused = await lbClaimGift(db, other, { id: gift!.gid }, end + 4000);

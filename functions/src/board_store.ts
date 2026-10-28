@@ -334,6 +334,17 @@ function freshGroupId(bracket: number, startMs: number, uid: string, nowMs: numb
   return `${bracket}_${clampedStart.toString(36)}_${hash32(`group:${uid}`).toString(36)}`;
 }
 
+// region P26-LB7
+// One single-field index serves open gifts and 28 UTC claim-day buckets.
+// Wave 0 has not deployed LB gifts yet; every new settlement writes this key.
+const GIFT_RECOVERY_DAYS = 28;
+const GIFT_LOOKUP_LIMIT = 430;
+const GIFT_GROUP_READ_LIMIT = 5;
+const GIFT_DAY_MS = 24 * 60 * 60 * 1000;
+function giftOpenKey(uid: string): string { return `${uid}|open`; }
+function giftClaimKey(uid: string, ms: number): string { return `${uid}|${utcDay(ms)}`; }
+// endregion
+
 function giftId(uid: string, gid: string): string {
   return `${uid}_${gid}`;
 }
@@ -856,7 +867,7 @@ async function settleGroup(db: Firestore, gid: string, nowMs: number): Promise<S
         boardRank: awards[i].boardRank,
         expireAt: at(nowMs + LB_GIFT_TTL),
         // region P26-LB7
-        ...{ createdAt: group.end, day: utcDay(millis(group.start)),
+        ...{ giftLookup: giftOpenKey(awards[i].uid), createdAt: group.end, day: utcDay(millis(group.start)),
           finalBoard: ranked.slice(0, 5).map((entry) => ({
             rid: createHash('sha256').update(`${gid}\u0000${entry.uid}`).digest('hex').slice(0, 16),
             rank: entry.rank, points: entry.points })) },
@@ -1401,10 +1412,15 @@ export async function lbGetBoard(
   }
   // endregion
   // region P26-LB7
-  // Legacy gifts omit claimedAt, so filter after reading all owned gifts;
-  // limiting before that filter could hide a newer unclaimed box.
-  const giftsSnap = await db.collection(LB_GIFTS_COLLECTION).where('uid', '==', uid).get();
-  const gifts = giftsSnap.docs.map((doc) => doc.data() as LbGiftDoc).filter((gift) => gift.claimedAt == null);
+  // Keep rolls visible for a bounded recovery window when the claim response
+  // was lost before the client could write its journal. Only one indexed
+  // field is queried, so no composite index or scan of old claims is needed.
+  const keys = [giftOpenKey(uid), ...Array.from({ length: GIFT_RECOVERY_DAYS },
+    (_, day) => giftClaimKey(uid, nowMs - day * GIFT_DAY_MS))];
+  const giftsSnap = await db.collection(LB_GIFTS_COLLECTION)
+    .where('giftLookup', 'in', keys).limit(GIFT_LOOKUP_LIMIT).get();
+  const gifts = giftsSnap.docs.map((doc) => doc.data() as LbGiftDoc)
+    .filter((gift) => gift.uid === uid);
   // endregion
   // region P26-S2
   const suppressedUids = hiddenGhostOwners;
@@ -1417,14 +1433,20 @@ export async function lbGetBoard(
   // region P26-LB7
   // The durable snapshot has no names or looks. Resolve only from the live,
   // privacy-filtered group; an expired or removed entry is a neutral player.
+  const recentGroups = new Set(gifts.filter((gift) => {
+    const created = (gift as LbGiftDoc & { createdAt?: Timestamp }).createdAt;
+    return created !== undefined && millis(created) + LB_GROUP_TTL_MS > nowMs;
+  }).sort((a, b) => millis((a as LbGiftDoc & { createdAt?: Timestamp }).createdAt) -
+      millis((b as LbGiftDoc & { createdAt?: Timestamp }).createdAt))
+    .slice(0, GIFT_GROUP_READ_LIMIT).map((gift) => gift.gid));
   today.gifts = await Promise.all(gifts.map(async (gift) => {
     const stored = gift as LbGiftDoc & { createdAt?: Timestamp; day?: string;
       finalBoard?: Array<{ rid: string; rank: number; points: number }> };
-    const historical = await readTodayGroup(db, gift.gid);
-    const liveGroup = historical.group;
+    const historical = recentGroups.has(gift.gid) ? await readTodayGroup(db, gift.gid) : null;
+    const liveGroup = historical?.group ?? null;
     const usable = liveGroup !== null && millis(liveGroup.end) + LB_GROUP_TTL_MS > nowMs;
     const live = usable ? todayBoard(liveGroup, uid, millis(liveGroup.end),
-      { gid: gift.gid, hiddenUids: historical.hiddenGhostOwners }).rows : [];
+      { gid: gift.gid, hiddenUids: historical!.hiddenGhostOwners }).rows : [];
     const fallback = usable ? live.slice(0, 5).map(({ rid, rank, points }) => ({ rid, rank, points })) : [];
     const snapshotRows = stored.finalBoard ?? fallback;
     if (!snapshotRows.some((row) => row.rank === gift.boardRank)) {
@@ -1441,7 +1463,8 @@ export async function lbGetBoard(
         ...(match?.lastAt === undefined ? {} : { lastAt: match.lastAt }) };
     });
     return { gid: gift.gid, tier: gift.tier, boardRank: gift.boardRank,
-      claimedAt: gift.claimedAt ?? null, createdAt: stored.createdAt ?? at(millis(gift.expireAt) - LB_GIFT_TTL),
+      claimedAt: gift.claimedAt ?? null, ...(gift.rolled === undefined ? {} : { rolled: gift.rolled }),
+      createdAt: stored.createdAt ?? at(millis(gift.expireAt) - LB_GIFT_TTL),
       finalBoard: rows, playerCount: usable ? live.length : 0 };
   }));
   // endregion
@@ -1492,7 +1515,9 @@ export async function lbClaimGift(
     // region P26-S4
     const prize = rollGift(gift.tier, { random: seededRandom(Number(seed)), seed, shopItems: GIFT_SHOP_ITEMS, ownedItems });
     // endregion
-    tx.update(ref, { rolled: prize, claimedAt: at(nowMs) });
+    // region P26-LB7
+    tx.update(ref, { rolled: prize, claimedAt: at(nowMs), giftLookup: giftClaimKey(uid, nowMs) });
+    // endregion
     return { ok: true, id: ref.id, tier: gift.tier, prize };
   });
 }

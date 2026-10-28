@@ -141,7 +141,8 @@ describe('PRD-2.6 wave 0 deploy declarations', () => {
       'board_delete.ts: lbGroups memberUids array-contains',
       'board_delete.ts: lbPlayers bestShadow desc',
       'board_store.ts: lbGifts gid ==',
-      'board_store.ts: lbGifts uid ==',
+      // P26-LB7 round 5: the bounded open/recovery bucket lookup uses its single-field index.
+      'board_store.ts: lbGifts giftLookup in',
       'board_store.ts: lbGroups settled ==',
       'board_store.ts: lbGroups settled ==, end <=',
       'board_store.ts: lbGroups settled ==, end <=, end asc',

@@ -3101,7 +3101,7 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final pendingId = storage.lbGiftPending['request_id'];
     final pending = _lbGifts.where((gift) => gift.gid == pendingId).toList();
     _lbGifts = [...pending, ...board.today.gifts.where((gift) =>
-      gift.claimedAt == null && gift.gid != pendingId && !storage.lbGiftsClaimed.contains(gift.gid))];
+      gift.gid != pendingId && !storage.lbGiftsClaimed.contains(gift.gid))];
     if (visit == _lbVisit && state == GameState.start && menuScene == MenuScene.home) {
       homeMoments.offerLeaderboardGifts([for (final gift in _lbGifts) HomeGiftBoxRequest(
         id: gift.gid, availableAt: gift.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0))]);

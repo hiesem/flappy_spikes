@@ -51,6 +51,7 @@ class LevelRevealSheet extends P1Popup {
     // endregion
     // region P26-G6eA
     this.onPay,
+    this.onRemoved,
     this.revealSound,
     // endregion
   }) : super(onDismiss: () {}, priority: 100);
@@ -69,6 +70,7 @@ class LevelRevealSheet extends P1Popup {
   // endregion
   // region P26-G6eA
   final Future<void> Function()? onPay;
+  final void Function()? onRemoved;
   final Sfx? revealSound;
   // endregion
   final void Function(bool equipped) onFinished;
@@ -270,6 +272,14 @@ class LevelRevealSheet extends P1Popup {
     );
     details.scale.setAll(0);
   }
+
+  // region P26-G6eA
+  @override
+  void onRemove() {
+    onRemoved?.call();
+    super.onRemove();
+  }
+  // endregion
 
   Future<void> choose(bool equip) async {
     if (!revealed || choosing) return;

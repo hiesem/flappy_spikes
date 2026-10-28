@@ -100,4 +100,5 @@ albumCompletionJournal
 // endregion
 // region P26-G6eA
 starRoadJournal
+starRoadItems
 // endregion

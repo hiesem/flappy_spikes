@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../game/storage.dart';
 import '../menu/wallet.dart';
 import '../services/obf_strings.g.dart';
-import '../skins/catalog.dart';
+import '../levels/level_reward_roll.dart';
 import '../skins/item_store.dart';
 import '../skins/look.dart';
 import 'star_road.dart';
@@ -21,6 +21,47 @@ class StarRoadClaims {
   final ItemStore items;
   final Random random;
   bool _busy = false;
+  int _itemsSeason = 0;
+  final Map<int, String> awardedItems = {};
+
+  Future<void> _loadItems(SharedPreferences prefs) async {
+    final raw = prefs.getString(Obf.prefStarRoadItems);
+    if (raw == null) return;
+    final data = jsonDecode(raw) as Map<String, dynamic>;
+    _itemsSeason = data['season'] as int;
+    awardedItems.clear();
+    if (_itemsSeason == storage.starRoadSeason) {
+      final rows = data['items'] as Map<String, dynamic>;
+      for (final entry in rows.entries) {
+        final tier = int.tryParse(entry.key);
+        if (tier != null && entry.value is String) {
+          awardedItems[tier] = entry.value as String;
+        }
+      }
+    }
+  }
+
+  Future<void> _saveItem(
+    SharedPreferences prefs,
+    int season,
+    int tier,
+    String item,
+  ) async {
+    if (_itemsSeason != season) {
+      awardedItems.clear();
+      _itemsSeason = season;
+    }
+    awardedItems[tier] = item;
+    await prefs.setString(
+      Obf.prefStarRoadItems,
+      jsonEncode({
+        'season': season,
+        'items': {
+          for (final entry in awardedItems.entries) '${entry.key}': entry.value,
+        },
+      }),
+    );
+  }
 
   StarRoad get road => StarRoad(
     season: storage.starRoadSeason,
@@ -70,18 +111,10 @@ class StarRoadClaims {
         };
         // R9: exhaust the requested rarity first, then higher rarities.
         for (var r = rarity.index; r < Rarity.values.length; r++) {
-          final candidates = allItems
-              .where(
-                (i) =>
-                    i.layer != SkinLayer.card &&
-                    !i.isFree &&
-                    !i.isSkillOnly &&
-                    i.unlock == null &&
-                    i.rarity == Rarity.values[r] &&
-                    !storage.ownedItems.contains(i.key) &&
-                    !pending.contains(i.key),
-              )
-              .toList();
+          final candidates = eligibleProgressionItems(
+            storage.ownedItems,
+            pending,
+          ).where((item) => item.rarity == Rarity.values[r]).toList();
           if (candidates.isNotEmpty) {
             item = candidates[random.nextInt(candidates.length)].key;
             break;
@@ -129,6 +162,7 @@ class StarRoadClaims {
 
   Future<void> _recover() async {
     final prefs = await SharedPreferences.getInstance();
+    await _loadItems(prefs);
     final encoded = prefs.getString(Obf.prefStarRoadJournal);
     if (encoded == null) return;
     final data = Map<String, Object?>.from(jsonDecode(encoded) as Map);
@@ -138,6 +172,9 @@ class StarRoadClaims {
   Future<void> _apply(Map<String, Object?> j, SharedPreferences prefs) async {
     final tier = j['tier'] as int;
     final season = j['season'] as int;
+    if (storage.starRoadSeason == season && j['kind'] == 'item') {
+      await _saveItem(prefs, season, tier, j['item'] as String);
+    }
     if (storage.starRoadSeason == season) {
       await storage.saveStarRoadClaimed({...storage.starRoadClaimed, tier});
     }

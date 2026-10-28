@@ -4,6 +4,8 @@ import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/home/menu_primitives.dart';
 import 'package:flappy_spikes/components/star_road/star_road_card.dart';
 import 'package:flappy_spikes/components/star_road/star_road_screen.dart';
+import 'package:flappy_spikes/components/star_road/star_road_art.dart';
+import 'package:flappy_spikes/components/skins/item_tile.dart';
 import 'package:flappy_spikes/components/ui/mystery_box.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/storage.dart';
@@ -71,16 +73,42 @@ void main() {
           25: Rarity.legendary,
         }.entries) {
           final row = screen.rows[entry.key]!;
-          final box = row.children.whereType<MysteryBoxComponent>().single;
+          final descendants = row.children
+              .expand((child) => child.children)
+              .toList();
+          final box = descendants.whereType<MysteryBoxComponent>().single;
           expect(box.look.main, entry.value.color);
           expect(box.look.label, isNull);
-          final texts = row.children
+          final texts = descendants
               .whereType<MenuText>()
               .map((t) => t.text)
               .toList();
           expect(texts.where((text) => text == 'MYSTERY'), hasLength(2));
           expect(texts, isNot(contains(entry.value.label)));
         }
+        final states = screen.rows.map(
+          (tier, row) => MapEntry(
+            tier,
+            row.children.whereType<StarRoadTierNode>().single.state,
+          ),
+        );
+        expect(states[1], StarRoadNodeState.claimable);
+        expect(states[11], StarRoadNodeState.next);
+        expect(states[12], StarRoadNodeState.locked);
+        expect(
+          screen.rows[1]!.children.whereType<MenuButton>().single.size,
+          Vector2(70, 32),
+        );
+        var incorrectlyLeft = false;
+        StarRoadCard.open(
+          game: game,
+          road: StarRoad(season: 3),
+          daysLeft: 5,
+          compact: true,
+          leavePanel: () => incorrectlyLeft = true,
+          returnToPanel: () {},
+        ).onPressed();
+        expect(incorrectlyLeft, isFalse);
         screen.backButton.onPressed();
         expect(returned, isTrue);
         expect(game.starRoadScreen, isNull);
@@ -165,6 +193,16 @@ void main() {
       );
       await flushAndMount(game);
       expect(game.starRoadReveal, isNull);
+      await flushAndMount(game);
+      expect(
+        row.children
+            .expand((child) => child.children)
+            .whereType<ItemTile>()
+            .single
+            .item
+            .key,
+        sheet.item!.key,
+      );
       expect(
         game.storage.ownedItems.where((key) => key == sheet.item!.key),
         hasLength(1),

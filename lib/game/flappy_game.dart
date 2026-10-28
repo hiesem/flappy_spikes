@@ -3873,8 +3873,8 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void Function()? _starRoadReturn;
 
   /// The card's host closes its panel before calling this; back restores it.
-  void openStarRoad({required int daysLeft, required void Function() onBack}) {
-    if (_starRoadScreen != null || state != GameState.start) return;
+  bool openStarRoad({required int daysLeft, required void Function() onBack}) {
+    if (_starRoadScreen != null || state != GameState.start) return false;
     _starRoadReturn = onBack;
     final home = _home;
     if (home != null) {
@@ -3884,12 +3884,14 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     final screen = StarRoadScreen(
       road: _starRoadClaims.road, daysLeft: daysLeft,
       onBack: closeStarRoad, onClaim: _claimStarRoad,
+      itemKeys: () => _starRoadClaims.awardedItems,
     );
     _starRoadScreen = screen;
     _chromeHosts.add(screen);
     world.add(screen);
     registerTintable(screen);
     pushBack(_starRoadBack);
+    return true;
   }
 
   bool _starRoadBack() {
@@ -3919,10 +3921,24 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   Future<bool> _claimStarRoad(int tier) async {
     if (_starRoadClaiming) return false;
     _starRoadClaiming = true;
+    _coinPill.hold();
+    var flightOwnsHold = false;
     try {
     final result = await _starRoadClaims.claim(tier);
     if (result == null) return false;
     final reward = starRoadReward(tier);
+    final screen = _starRoadScreen;
+    if (result.coins > 0 && screen != null && !reduceMotion) {
+      final y = screen.scroll.screenY(StarRoadLayout.rowTop(tier) + 31);
+      screen.add(ConfettiBurst.burst(origin: Offset(230, y), count: 18, stars: true));
+      final coin = Sprite(await images.load('menu/coin.png'));
+      flightOwnsHold = true;
+      world.add(CoinFly.burst(coin: coin, origin: Offset(230, y),
+        to: _coinPill.coinFlyTarget, count: 6, onDone: () {
+          _coinPill.balance = menu.wallet.balance;
+          _coinPill.releaseHold();
+        }));
+    }
     final isItem = reward.kind == StarRoadRewardKind.rare ||
         reward.kind == StarRoadRewardKind.epic ||
         reward.kind == StarRoadRewardKind.legendary;
@@ -3937,24 +3953,23 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
           _starRoadReveal = null;
           if (!finished.isCompleted) finished.complete();
         },
+        onRemoved: () {
+          _starRoadReveal = null;
+          if (!finished.isCompleted) finished.complete();
+        },
       );
       _starRoadReveal = sheet;
       world.add(sheet);
       await finished.future;
     } else {
       sound.play(starRoadClaimSound(reward));
-      final screen = _starRoadScreen;
-      if (screen != null && result.coins > 0 && !reduceMotion) {
-        final y = screen.scroll.screenY(StarRoadLayout.rowTop(tier) + 31);
-        screen.add(ConfettiBurst.burst(origin: Offset(230, y), count: 18, stars: true));
-        world.add(CoinFly.burst(
-          coin: Sprite(await images.load('menu/coin.png')),
-          origin: Offset(230, y), to: _coinPill.coinFlyTarget, count: 6,
-        ));
-      }
     }
     return true;
     } finally {
+      if (!flightOwnsHold) {
+        _coinPill.balance = menu.wallet.balance;
+        _coinPill.releaseHold();
+      }
       _starRoadClaiming = false;
     }
   }

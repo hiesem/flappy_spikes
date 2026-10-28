@@ -149,7 +149,9 @@ void main() {
       final after = GameStorage(sealer: sealer);
       await after.load();
       await after.sealVerified;
-      await claims(after).recover();
+      final restoredClaims = claims(after);
+      await restoredClaims.recover();
+      expect(restoredClaims.awardedItems[10], result.item);
       expect(after.ownedItems, {result.item});
       expect(await claims(after).claim(10), isNull);
     },

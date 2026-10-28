@@ -17,24 +17,9 @@ LevelRewardRoll rollLevelReward(
 ) {
   final def = trackLevelDef(level);
   if (def == null) throw ArgumentError.value(level, 'level');
-  const shopLayers = {
-    SkinLayer.bird,
-    SkinLayer.hat,
-    SkinLayer.gear,
-    SkinLayer.hoop,
-    SkinLayer.trail,
-  };
-  final available = allItems
-      .where(
-        (item) =>
-            shopLayers.contains(item.layer) &&
-            !item.isFree &&
-            item.rarity != null &&
-            item.unlock == null &&
-            !owned.contains(item.key) &&
-            !pending.contains(item.key),
-      )
-      .toList();
+  // region P26-G6eA
+  final available = eligibleProgressionItems(owned, pending);
+  // endregion
 
   LevelRewardRoll pick(List<SkinItem> candidates, String fallback) => (
     item: candidates[random.nextInt(candidates.length)].key,
@@ -75,3 +60,13 @@ LevelRewardRoll rollLevelReward(
   }
   return (item: null, extraCoins: reward.rarity.price, fallback: 'coins');
 }
+
+// region P26-G6eA
+/// R9 excludes free, skill-only and card items from free progress rewards.
+List<SkinItem> eligibleProgressionItems(Set<String> owned, Set<String> pending) {
+  const shopLayers = {SkinLayer.bird, SkinLayer.hat, SkinLayer.gear, SkinLayer.hoop, SkinLayer.trail};
+  return allItems.where((item) => shopLayers.contains(item.layer) &&
+    !item.isFree && item.rarity != null && item.unlock == null &&
+    !owned.contains(item.key) && !pending.contains(item.key)).toList();
+}
+// endregion

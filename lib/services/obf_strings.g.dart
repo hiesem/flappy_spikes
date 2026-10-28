@@ -165,6 +165,7 @@ abstract final class Obf {
   static final String prefMissionJournal = _d(const [202, 47, 207, 147, 79, 62, 222, 36, 79, 237, 7, 53, 26, 191], 158);
   static final String prefAlbumCompletionJournal = _d(const [161, 241, 124, 222, 175, 232, 42, 196, 116, 100, 10, 116, 98, 99, 112, 250, 191, 64, 9, 240, 151, 70], 159);
   static final String prefStarRoadJournal = _d(const [42, 111, 207, 158, 249, 81, 176, 238, 214, 34, 238, 88, 131, 44, 1], 160);
+  static final String prefStarRoadItems = _d(const [96, 50, 241, 90, 240, 110, 175, 115, 190, 133, 138, 241, 112], 161);
 
   /// test/obf_strings_test.dart: every value in table order (never read by the app).
   static List<String> get debugValues => [
@@ -329,6 +330,7 @@ abstract final class Obf {
     prefMissionJournal,
     prefAlbumCompletionJournal,
     prefStarRoadJournal,
+    prefStarRoadItems,
   ];
 
   static String _d(List<int> data, int index) {

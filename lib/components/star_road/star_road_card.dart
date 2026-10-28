@@ -3,6 +3,7 @@ import 'package:flame/components.dart';
 
 // region P26-G6eA
 import '../../game/flappy_game.dart';
+import 'star_road_art.dart';
 // endregion
 import '../../game/config.dart';
 import '../../game/sound.dart';
@@ -52,8 +53,9 @@ class StarRoadCard extends MenuButton {
     compact: compact,
     isActive: isActive,
     onPressed: () {
-      game.openStarRoad(daysLeft: daysLeft, onBack: returnToPanel);
-      leavePanel();
+      if (game.openStarRoad(daysLeft: daysLeft, onBack: returnToPanel)) {
+        leavePanel();
+      }
     },
   );
   // endregion
@@ -72,14 +74,11 @@ class StarRoadCard extends MenuButton {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    add(
-      MenuText(
-        '★ STAR ROAD',
-        fontSize: 11,
-        color: Config.menuPlum,
-        position: Vector2(10, compact ? 15 : 8),
-      ),
-    );
+    // region P26-G6eA
+    add(StarRoadStar(side: 12, position: Vector2(10, compact ? 15 : 8)));
+    add(MenuText('STAR ROAD', fontSize: 11, color: Config.menuPlum,
+      position: Vector2(25, compact ? 15 : 8)));
+    // endregion
     add(
       MenuText(
         compact ? compactLabel : '$daysLeft DAYS LEFT',

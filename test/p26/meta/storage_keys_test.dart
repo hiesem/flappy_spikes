@@ -75,6 +75,7 @@ void main() {
         'albumCompletionJournal',
         // region P26-G6eA — PRD G6 claim recovery journal.
         'starRoadJournal',
+        'starRoadItems',
         // endregion
       ];
       expect(kObfStrings.values.skip(109), keys);

@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:flame/components.dart';
 
@@ -12,6 +13,11 @@ import '../../run/config/puzzle_config.dart';
 import '../home/menu_primitives.dart';
 import '../menu_screen_chrome.dart';
 import '../ui/mystery_box.dart';
+import '../ui/live_effects.dart';
+import '../skins/item_tile.dart';
+import '../skins/item_art.dart';
+import '../../skins/catalog.dart';
+import 'star_road_art.dart';
 import 'star_road_card.dart';
 
 /// Track geometry uses the same coordinates at both supported phone heights.
@@ -36,12 +42,15 @@ class StarRoadScreen extends MenuScreen {
     required this.road,
     required this.daysLeft,
     required this.onClaim,
+    this.itemKeys,
     required super.onBack,
   }) : super(title: 'STAR ROAD');
 
   final StarRoad road;
   final int daysLeft;
   final Future<bool> Function(int tier) onClaim;
+  final Map<int, String> Function()? itemKeys;
+  final ItemArtCache _art = ItemArtCache();
   final Set<int> _claimedNow = {};
   bool _claiming = false;
   final Map<int, PositionComponent> rows = {};
@@ -62,12 +71,14 @@ class StarRoadScreen extends MenuScreen {
         paint: Paint()..color = Config.menuSoft,
       ),
     );
+    header.add(StarRoadStar(side: 56, position: Vector2(14, 14)));
     header.add(
       MenuText(
-        '★ ${road.tier}',
-        fontSize: 23,
-        color: Config.menuPink,
-        position: Vector2(12, 27),
+        '${road.tier}',
+        fontSize: 17,
+        color: Config.menuPlum,
+        position: Vector2(42, 42),
+        anchor: Anchor.center,
       ),
     );
     header.add(
@@ -88,12 +99,19 @@ class StarRoadScreen extends MenuScreen {
     );
     header.add(
       MenuText(
-        road.tier == 25
-            ? 'ALL TIERS REACHED'
-            : '${road.starsIntoTier} / 8 STARS TO TIER ${road.tier + 1}',
+        'TIER ${road.tier} OF 25 ·',
         fontSize: 10,
         color: Config.menuPlum,
-        position: Vector2(84, 49),
+        position: Vector2(84, 45),
+      ),
+    );
+    header.add(StarRoadStar(side: 10, position: Vector2(166, 45)));
+    header.add(
+      MenuText(
+        '${road.xp}',
+        fontSize: 10,
+        color: Config.menuPlum,
+        position: Vector2(179, 45),
       ),
     );
     header.add(
@@ -108,6 +126,17 @@ class StarRoadScreen extends MenuScreen {
         position: Vector2(84, 66),
         size: Vector2(196 * (road.tier == 25 ? 1 : road.starsIntoTier / 8), 10),
         paint: Paint()..color = Config.menuPink,
+      ),
+    );
+    header.add(
+      MenuText(
+        road.tier == 25
+            ? 'ROAD COMPLETE'
+            : '${8 - road.starsIntoTier} STARS TO TIER ${road.tier + 1}',
+        fontSize: 9,
+        color: Config.menuPlum,
+        position: Vector2(182, 71),
+        anchor: Anchor.center,
       ),
     );
     add(header);
@@ -143,9 +172,15 @@ class StarRoadScreen extends MenuScreen {
         ),
       );
       row.add(
-        _TierNode(
-          reached: reached,
-          claimed: claimed,
+        StarRoadTierNode(
+          tier: tier,
+          state: claimed
+              ? StarRoadNodeState.claimed
+              : reached
+              ? StarRoadNodeState.claimable
+              : tier == road.tier + 1
+              ? StarRoadNodeState.next
+              : StarRoadNodeState.locked,
           position: Vector2(5, row.height / 2 - 18),
         ),
       );
@@ -161,17 +196,6 @@ class StarRoadScreen extends MenuScreen {
           ),
         );
       }
-      row.add(
-        MenuText(
-          '$tier',
-          fontSize: 15,
-          color: reached && !claimed
-              ? const Color(0xFFFFFFFF)
-              : Config.menuPlum,
-          position: Vector2(23, row.height / 2),
-          anchor: Anchor.center,
-        ),
-      );
       final rarity = switch (reward.kind) {
         StarRoadRewardKind.rare => Rarity.rare,
         StarRoadRewardKind.epic => Rarity.epic,
@@ -194,49 +218,85 @@ class StarRoadScreen extends MenuScreen {
           ),
         );
       }
-      if (rarity != null) {
-        row.add(
-          MysteryBoxComponent(
-            look: MysteryBoxLook.colours(
-              rarity.color,
-              Color.lerp(rarity.color, const Color(0xFF000000), .3)!,
-              label: null,
+      final rewardVisual = PositionComponent();
+      row.add(rewardVisual);
+      void showReward() {
+        rewardVisual.removeAll(rewardVisual.children);
+        final key = claimed || _claimedNow.contains(tier)
+            ? itemKeys?.call()[tier]
+            : null;
+        final won = allItems.where((i) => i.key == key).firstOrNull;
+        if (rarity != null && won == null) {
+          rewardVisual.add(
+            MysteryBoxComponent(
+              look: MysteryBoxLook.colours(
+                rarity.color,
+                Color.lerp(rarity.color, const Color(0xFF000000), .3)!,
+                label: null,
+              ),
+              boxSize: 56,
+              position: Vector2(84, row.height / 2),
             ),
-            boxSize: 56,
-            position: Vector2(84, row.height / 2),
+          );
+          rewardVisual.add(
+            MenuText(
+              'MYSTERY',
+              fontSize: 8,
+              color: const Color(0xFFFFFFFF),
+              position: Vector2(84, row.height / 2 + 7),
+              anchor: Anchor.center,
+            ),
+          );
+        } else if (won != null) {
+          rewardVisual.add(
+            ItemTile(
+              item: won,
+              rect: Rect.fromLTWH(56, 9, 56, 56),
+              state: () => const ItemTileState(
+                owned: true,
+                equipped: false,
+                tryingOn: false,
+                isNew: false,
+              ),
+              onPressed: () {},
+              art: _art,
+              cardColor: () => game.stageBackground,
+              tint: () => Config.uiAccent,
+              reduceMotion: () => game.reduceMotion,
+              rewardTile: true,
+            ),
+          );
+        }
+        rewardVisual.add(
+          MenuText(
+            won?.name.toUpperCase() ?? starRoadRewardLabel(reward),
+            fontSize: 11,
+            color: rarity == null
+                ? Config.menuPlum
+                : Color.lerp(rarity.color, const Color(0xFF000000), .3)!,
+            position: Vector2(item ? 122 : 114, 14),
           ),
         );
-        row.add(
+        rewardVisual.add(
+          StarRoadStar(side: 10, position: Vector2(item ? 122 : 114, 34)),
+        );
+        rewardVisual.add(
           MenuText(
-            'MYSTERY',
-            fontSize: 6,
-            color: const Color(0xFFFFFFFF),
-            position: Vector2(84, row.height / 2 + 7),
-            anchor: Anchor.center,
+            '${tier * 8}${won == null ? '' : ' · ${won.layer.key.toUpperCase()}'}',
+            fontSize: 10,
+            color: Config.menuPlum,
+            position: Vector2(item ? 135 : 127, 34),
           ),
         );
       }
-      row.add(
-        MenuText(
-          starRoadRewardLabel(reward),
-          fontSize: 11,
-          color: Config.menuPlum,
-          position: Vector2(item ? 122 : 114, 14),
-        ),
-      );
-      row.add(
-        MenuText(
-          '★ ${tier * 8}',
-          fontSize: 10,
-          color: Config.menuPlum,
-          position: Vector2(item ? 122 : 114, 34),
-        ),
-      );
+
+      showReward();
       if (reached && !claimed) {
         row.add(
-          MenuButton(
-            position: Vector2(226, row.height / 2 - 14),
-            size: Vector2(60, 28),
+          _ClaimButton(
+            reduceMotion: () => game.reduceMotion,
+            position: Vector2(216, row.height / 2 - 16),
+            size: Vector2(70, 32),
             color: Config.menuPink,
             onPressed: () async {
               if (_claiming) return;
@@ -244,6 +304,7 @@ class StarRoadScreen extends MenuScreen {
               try {
                 if (await onClaim(tier)) {
                   _claimedNow.add(tier);
+                  showReward();
                   for (final button
                       in row.children.whereType<MenuButton>().toList()) {
                     button.removeFromParent();
@@ -268,7 +329,7 @@ class StarRoadScreen extends MenuScreen {
                 'CLAIM',
                 fontSize: 10,
                 color: const Color(0xFFFFFFFF),
-                position: Vector2(30, 14),
+                position: Vector2(35, 16),
                 anchor: Anchor.center,
               ),
             ],
@@ -276,15 +337,32 @@ class StarRoadScreen extends MenuScreen {
         );
       } else if (!reached) {
         if (tier == road.tier + 1) {
-          row.add(
+          final bar = PositionComponent(
+            position: Vector2(202, row.height / 2 - 7),
+            size: Vector2(84, 14),
+          );
+          bar.add(
+            RectangleComponent(
+              size: bar.size.clone(),
+              paint: Paint()..color = const Color(0xFFFCD9EE),
+            ),
+          );
+          bar.add(
+            RectangleComponent(
+              size: Vector2(84 * road.starsIntoTier / 8, 14),
+              paint: Paint()..color = Config.menuPink,
+            ),
+          );
+          bar.add(
             MenuText(
               '${road.starsIntoTier} / 8',
-              fontSize: 10,
+              fontSize: 9,
               color: Config.menuPlum,
-              position: Vector2(250, row.height / 2),
+              position: Vector2(42, 7),
               anchor: Anchor.center,
             ),
           );
+          row.add(bar);
         } else {
           row.add(
             MenuIcon(
@@ -357,28 +435,59 @@ class _RoadRewardArt extends PositionComponent {
   }
 }
 
-class _TierNode extends PositionComponent {
-  _TierNode({required this.reached, required this.claimed, super.position})
-    : super(size: Vector2.all(36));
-  final bool reached, claimed;
+/// The shared pulse and shine decorate the claim button; the gold outline
+/// follows the design's 1.4-second claim ring.
+class _ClaimButton extends MenuButton {
+  _ClaimButton({
+    required this.reduceMotion,
+    required super.position,
+    required super.size,
+    required super.color,
+    required super.onPressed,
+    required super.isActive,
+    required super.children,
+  }) {
+    pulse = PulseEffect(
+      this,
+      amount: .02,
+      glowColor: const Color(0x99FFB529),
+      glowBlur: 4,
+    );
+    streak = LightStreak(this);
+    decorator
+      ..addLast(pulse)
+      ..addLast(streak);
+  }
+  final bool Function() reduceMotion;
+  late final PulseEffect pulse;
+  late final LightStreak streak;
+  double _time = 0;
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _time += dt;
+    pulse.k = reduceMotion()
+        ? 0
+        : (1 - math.cos(_time * math.pi * 2 / 1.4)) / 2;
+    if (reduceMotion()) {
+      streak.progress = null;
+    } else {
+      streak.at(_time);
+    }
+  }
+
   @override
   void render(Canvas canvas) {
-    final path = Path()
-      ..moveTo(8, 0)
-      ..lineTo(28, 0)
-      ..lineTo(36, 8)
-      ..lineTo(36, 28)
-      ..lineTo(28, 36)
-      ..lineTo(8, 36)
-      ..lineTo(0, 28)
-      ..lineTo(0, 8)
-      ..close();
-    canvas.drawPath(
-      path,
+    super.render(canvas);
+    final alpha = reduceMotion()
+        ? 1.0
+        : (1 - math.cos(_time * math.pi * 2 / 1.4)) / 2;
+    canvas.drawRect(
+      size.toRect().inflate(4),
       Paint()
-        ..color = reached && !claimed
-            ? Config.menuPink
-            : const Color(0xFFE1E1E1),
+        ..color = const Color(0xFFFFB529).withValues(alpha: alpha)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
     );
   }
 }

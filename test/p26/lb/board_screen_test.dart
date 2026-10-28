@@ -177,6 +177,9 @@ void main() {
       await flushAndMount(game);
       await flushAndMount(game);
       final board = game.boardScreen!;
+      // PRD 2.6 §1204: dismiss the first-open guide before using the board.
+      board.infoSheet!.close();
+      await flushAndMount(game);
       expect(board.podium!.rows, isEmpty);
       expect(board.playButton, isNotNull);
       final panel = board.content.whereType<RectangleComponent>().single;

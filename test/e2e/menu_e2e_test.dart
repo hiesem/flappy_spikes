@@ -228,6 +228,10 @@ void main() {
     expect(g.menuScene, MenuScene.board);
     expect(g.boardScreen, isNotNull);
     expect(r.spy.leaderboardCalls, 0);
+    // PRD 2.6 §1204 / O60: the first trophy open displays the guide.
+    expect(g.boardScreen!.infoSheet, isNotNull);
+    await tap(g, t, const Offset(160, 300));
+    expect(g.boardScreen!.infoSheet, isNull);
     await tap(g, t, const Offset(33, 77));
     expect(g.menuScene, MenuScene.home);
     await tap(g, t, const Offset(189, 423.5), fade: false);

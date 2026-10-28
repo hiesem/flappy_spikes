@@ -7,6 +7,10 @@ import '../home/menu_primitives.dart';
 import '../menu_screen_chrome.dart';
 import 'board_row.dart';
 import 'podium.dart';
+// region P26-LB5
+import 'board_info_sheet.dart';
+
+// endregion
 
 /// Our daily and all-time boards; achievements hands off without changing tab.
 class BoardScreen extends MenuScreen {
@@ -27,6 +31,49 @@ class BoardScreen extends MenuScreen {
   double _achievementFlash = 0;
   bool _loggedOpen = false;
   late final BoardTimerChip timerChip;
+  // region P26-LB5
+  BoardInfoSheet? infoSheet;
+  late MenuButton infoButton;
+
+  @override
+  bool isActive() => super.isActive() && infoSheet == null;
+
+  @override
+  bool isBackActive() => super.isBackActive() && infoSheet == null;
+
+  void openInfo() {
+    if (!active || infoSheet != null) return;
+    final sheet = BoardInfoSheet(
+      height: game.viewHeight,
+      playSound: game.sound.play,
+      motion: () => !game.reduceMotion && !game.liveMotionPaused,
+      onClose: closeInfo,
+    );
+    infoSheet = sheet;
+    add(sheet);
+    game.pushBack(_infoBack);
+  }
+
+  bool _infoBack() {
+    infoSheet?.close();
+    return true;
+  }
+
+  void closeInfo() {
+    final sheet = infoSheet;
+    if (sheet == null) return;
+    infoSheet = null;
+    game.popBack(_infoBack);
+    sheet.removeFromParent();
+  }
+
+  @override
+  void onRemove() {
+    closeInfo();
+    super.onRemove();
+  }
+
+  // endregion
   @override
   List<String> get contentImages => const ['menu/play.png'];
   @override
@@ -35,6 +82,29 @@ class BoardScreen extends MenuScreen {
   @override
   Future<void> buildContent() async {
     titleText.position = Vector2(160, 58);
+    // region P26-LB5
+    infoButton = MenuButton(
+      position: Vector2(268, 58),
+      size: Vector2.all(38),
+      color: Config.menuPink,
+      isActive: isActive,
+      onPressed: openInfo,
+      children: [
+        MenuText(
+          'i',
+          fontSize: 25,
+          color: const Color(0xffffffff),
+          position: Vector2(19, 19),
+          anchor: Anchor.center,
+        ),
+      ],
+    );
+    add(infoButton);
+    if (source == 'home' && !game.storage.lbInfoSeen && active) {
+      unawaited(game.storage.saveLbInfoSeen(true));
+      openInfo();
+    }
+    // endregion
     for (var i = 0; i < 3; i++) {
       final x = [14.0, 98.0, 192.0][i], width = [82.0, 92.0, 114.0][i];
       final label = ['TODAY', 'BEST RUN', 'ACHIEVEMENTS'][i];

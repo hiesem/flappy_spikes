@@ -5,6 +5,7 @@ import 'package:flappy_spikes/game/storage.dart';
 import 'package:flappy_spikes/menu/wallet.dart';
 import 'package:flappy_spikes/progression/star_road_claims.dart';
 import 'package:flappy_spikes/skins/item_store.dart';
+import 'package:flappy_spikes/skins/catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -125,4 +126,32 @@ void main() {
       expect(await claims(after).claim(10), isNull);
     },
   );
+  test('capped feather and puzzle rewards pay 50 coins each', () async {
+    final storage = GameStorage();
+    await storage.load();
+    await storage.saveStarRoadSeason(1);
+    await storage.saveStarRoadXp(120);
+    await storage.saveFeathers(3);
+    await storage.savePuzzlePieces(7);
+    final c = claims(storage);
+    expect((await c.claim(5))!.coins, 50);
+    expect((await c.claim(15))!.coins, 50);
+    expect(storage.feathers, 3);
+    expect(storage.puzzlePieces, 7);
+    expect(storage.coins, 100);
+  });
+
+  test('exhausted item catalogue falls back to tier coins once', () async {
+    final storage = GameStorage();
+    await storage.load();
+    await storage.saveStarRoadSeason(1);
+    await storage.saveStarRoadXp(200);
+    await storage.saveOwnedItems(allItems.map((i) => i.key).toSet());
+    final c = claims(storage);
+    expect((await c.claim(10))!.coins, 250);
+    expect((await c.claim(20))!.coins, 500);
+    expect((await c.claim(25))!.coins, 1000);
+    expect(await c.claim(25), isNull);
+    expect(storage.coins, 1750);
+  });
 }

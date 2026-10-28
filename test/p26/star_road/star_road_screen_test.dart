@@ -92,6 +92,8 @@ void main() {
     verify: (game, _) async {
       await game.storage.saveStarRoadSeason(1);
       await game.storage.saveStarRoadXp(80);
+      await game.menu.levels.recordRun(25);
+      expect(game.menu.levels.pending, hasLength(1));
       game.openStarRoad(daysLeft: 10, onBack: () {});
       await flushAndMount(game);
       final row = game.starRoadScreen!.rows[10]!;
@@ -110,6 +112,11 @@ void main() {
       expect(restarted.starRoadClaimed, contains(10));
       stepGame(game, 2);
       await sheet.choose(false);
+      expect(
+        game.menu.levels.pending,
+        hasLength(1),
+        reason: 'Star Road reveal must not pay the unrelated J4 level reward',
+      );
       await flushAndMount(game);
       expect(game.starRoadReveal, isNull);
       expect(

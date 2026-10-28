@@ -1,12 +1,12 @@
 import 'dart:math' as math;
-import 'dart:ui';
+import 'package:flutter/painting.dart';
 import 'art_paint.dart';
 import 'bird_art.dart';
 
 /// Jackpot hat; [back] is reserved for the back pass.
 void paintJackpotV26(Canvas canvas, BirdShape s, double t, bool back) {
   if (back) return;
-  final x = s.hx, y = s.top + 1, cycle = (t * .36) % 1;
+  final x = s.hx, y = s.top, cycle = (t * .36) % 1;
   final p = Paint();
   void rect(double x, double y, double w, double h, Color c) =>
       canvas.drawRect(Rect.fromLTWH(x, y, w, h), p..color = c);
@@ -15,6 +15,16 @@ void paintJackpotV26(Canvas canvas, BirdShape s, double t, bool back) {
     ..quadraticBezierTo(x, y - 24.5, x + 11, y - 15)
     ..close();
   canvas.drawPath(dome, p..color = const Color(0xffffb529));
+  final domeOutline = Path()
+    ..moveTo(x - 11, y - 15)
+    ..quadraticBezierTo(x, y - 24.5, x + 11, y - 15);
+  canvas.drawPath(
+    domeOutline,
+    Paint()
+      ..color = const Color(0xffc98a00)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = .8,
+  );
   for (var i = 0; i < 5; i++) {
     final a = math.pi * (1 - (i + .5) / 5);
     canvas.drawCircle(
@@ -33,7 +43,7 @@ void paintJackpotV26(Canvas canvas, BirdShape s, double t, bool back) {
   canvas.drawRect(
     window,
     p
-      ..color = cycle > .66 && (t * 10).floor().isOdd
+      ..color = cycle > .66 && cycle < .97 && (t * 10).floor().isOdd
           ? const Color(0xfffff3c4)
           : const Color(0xffffffff),
   );
@@ -44,19 +54,31 @@ void paintJackpotV26(Canvas canvas, BirdShape s, double t, bool back) {
     final spinning = cycle < stop && cycle > .04;
     final off = spinning ? (t * 70 + k * 5) % 9 : 0.0;
     for (final dy in spinning ? [-9.0, 0.0] : [0.0]) {
-      final yy = y - 11 + off + dy;
-      final path = Path()
-        ..moveTo(cx - 2, yy)
-        ..lineTo(cx + 2, yy)
-        ..lineTo(cx - .8, yy + 6)
-        ..lineTo(cx - 2, yy + 6)
-        ..lineTo(cx + .2, yy + 1.4)
-        ..lineTo(cx - 2, yy + 1.4)
-        ..close();
-      canvas.drawPath(
-        path,
-        p..color = spinning ? const Color(0xffb0b0b0) : const Color(0xffe53935),
+      final color = spinning
+          ? const Color(0xffb0b0b0)
+          : cycle >= stop
+          ? const Color(0xffe53935)
+          : const Color(0xffc62828);
+      final text = TextPainter(
+        text: TextSpan(
+          text: '7',
+          style: TextStyle(
+            fontFamily: 'Fredoka',
+            fontWeight: FontWeight.w600,
+            fontSize: 8,
+            color: color,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final baseline = text.computeDistanceToActualBaseline(
+        TextBaseline.alphabetic,
       );
+      text.paint(
+        canvas,
+        Offset(cx - text.width / 2, y - 5.3 + off + dy - baseline),
+      );
+      text.dispose();
     }
   }
   canvas.restore();
@@ -93,6 +115,11 @@ void paintJackpotV26(Canvas canvas, BirdShape s, double t, bool back) {
         2.3,
         p..color = const Color(0xffffb529).withValues(alpha: 1 - u * u),
       );
+      canvas.drawCircle(
+        pos,
+        1.2,
+        p..color = const Color(0xffffe7a6).withValues(alpha: 1 - u * u),
+      );
     }
     ArtPaint.star(
       canvas,
@@ -100,6 +127,13 @@ void paintJackpotV26(Canvas canvas, BirdShape s, double t, bool back) {
       y - 18,
       1.5 + math.sin(t * 9).abs() * 2,
       const Color(0xffffffff),
+    );
+    ArtPaint.star(
+      canvas,
+      x + 12,
+      y - 21,
+      1.2 + math.cos(t * 8).abs() * 1.8,
+      const Color(0xffffe082),
     );
   }
 }

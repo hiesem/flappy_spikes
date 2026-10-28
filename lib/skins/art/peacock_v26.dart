@@ -7,8 +7,9 @@ import 'bird_art.dart';
 void paintPeacockV26(Canvas canvas, BirdShape s, double t, bool back) {
   final p = Paint();
   canvas.save();
-  canvas.translate(s.l + 15, s.top + 15);
   if (back) {
+    final edge = s.hasBl ? s.bl : s.l;
+    canvas.translate(edge + 15, s.neck - 9);
     final openness = .62 + .38 * math.sin(t * 1.4);
     for (var i = 0; i < 9; i++) {
       final u = i / 8 - .5,
@@ -64,6 +65,7 @@ void paintPeacockV26(Canvas canvas, BirdShape s, double t, bool back) {
       }
     }
   } else {
+    canvas.translate(s.eye.dx - 7, s.top + 15);
     for (var i = 0; i < 3; i++) {
       final x = 4 + i * 2.5,
           y = (i == 1 ? -22.5 : -21) + math.sin(t * 4 + i) * .6;

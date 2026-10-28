@@ -109,16 +109,6 @@ void paintPrismV26(Canvas canvas, BirdShape s, double t, bool back) {
       ..color = HSLColor.fromAHSL(1, (t * 90 + 120) % 360, .9, .72).toColor()
       ..strokeWidth = .8,
   );
-  facet([
-    const Offset(6, 7),
-    const Offset(22, 18),
-    const Offset(6, 18),
-  ], const Color(0x6b6eb9e4));
-  facet([
-    const Offset(6, 18),
-    const Offset(22, 18),
-    const Offset(6, 25),
-  ], const Color(0x61a0d7f5));
   canvas.restore();
   canvas.restore();
 }

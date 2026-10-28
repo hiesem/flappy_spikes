@@ -8,9 +8,14 @@ void paintHoopchainV26(Canvas canvas, BirdShape s, double t, bool back) {
   if (back) return;
   final p = Paint()..style = PaintingStyle.stroke;
   canvas.save();
-  canvas.translate(s.l + 15, s.top + 15);
+  final backEdge = s.hasBl ? s.bl : s.l;
+  final startX = backEdge + (s.r - backEdge) * 13 / 30;
+  final width = s.r - startX;
+  final top = s.neck - 6.4;
   for (var i = 0; i <= 9; i++) {
-    final u = i / 9, x = -2 + 17 * u, y = 2.6 + math.sin(u * math.pi) * 6.4;
+    final u = i / 9,
+        x = startX + width * u,
+        y = top + math.sin(u * math.pi) * 6.4;
     canvas.drawOval(
       Rect.fromCenter(center: Offset(x, y), width: 2.3, height: 3.8),
       p
@@ -19,7 +24,7 @@ void paintHoopchainV26(Canvas canvas, BirdShape s, double t, bool back) {
     );
   }
   final u = 5 / 9;
-  canvas.translate(-2 + 17 * u, 2.6 + math.sin(u * math.pi) * 6.4 + 1.4);
+  canvas.translate(startX + width * u, top + math.sin(u * math.pi) * 6.4 + 1.4);
   canvas.rotate(math.sin(t * 3.2) * math.pi / 10);
   canvas.drawLine(
     Offset.zero,

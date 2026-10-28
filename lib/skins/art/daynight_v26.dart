@@ -57,6 +57,10 @@ void paintDaynightV26(Canvas canvas, BirdShape s, double t, bool back) {
     canvas.drawCircle(Offset(x, y), 7, p..color = const Color(0x73ffe082));
     canvas.drawCircle(Offset(x, y), 4.4, p..color = const Color(0xffffb529));
     final cx = 5 - (t * 4) % 30;
+    canvas.saveLayer(
+      null,
+      Paint()..color = const Color(0xffffffff).withValues(alpha: 1 - night),
+    );
     for (final (dx, dy, r) in [
       (0.0, 0.0, 2.6),
       (3.0, -1.4, 3.2),
@@ -65,24 +69,17 @@ void paintDaynightV26(Canvas canvas, BirdShape s, double t, bool back) {
       canvas.drawCircle(
         Offset(cx + dx, 9 + dy),
         r,
-        p..color = const Color(0xffffffff).withValues(alpha: 1 - night),
+        p..color = const Color(0xffffffff),
       );
     }
+    canvas.drawRect(
+      Rect.fromLTWH(cx, 9, 6.2, 2.6),
+      p..color = const Color(0xffffffff),
+    );
+    canvas.restore();
   } else {
     canvas.drawCircle(Offset(x, y), 4.2, p..color = const Color(0xfffff8e1));
     canvas.drawCircle(Offset(x + 1.8, y - 1.2), 3.6, p..color = sky);
   }
-  final upper = Path()
-    ..moveTo(-9, -8)
-    ..lineTo(7, 3)
-    ..lineTo(-9, 3)
-    ..close();
-  final lower = Path()
-    ..moveTo(-9, 3)
-    ..lineTo(7, 3)
-    ..lineTo(-9, 10)
-    ..close();
-  canvas.drawPath(upper, p..color = const Color(0x29000000));
-  canvas.drawPath(lower, p..color = const Color(0x12000000));
   canvas.restore();
 }

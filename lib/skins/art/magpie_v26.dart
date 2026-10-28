@@ -21,7 +21,5 @@ void paintMagpieV26(Canvas canvas, BirdShape s, double t, bool back) {
     ..lineTo(s.l + 15, s.bot)
     ..close();
   canvas.drawPath(chest, p..color = const Color(0xfffafafa));
-  canvas.drawPath(s.wingUp, p..color = hue(h, .72, .42));
-  canvas.drawPath(s.wingDown, p..color = hue(h + 25, .7, .5));
   canvas.restore();
 }

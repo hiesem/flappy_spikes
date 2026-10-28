@@ -252,7 +252,7 @@ void main() async {
       expect(popup.pending.reward, 875);
       await _finishLevelCatchUp(game, tester);
       // Re-enter the final choice: payout remains idempotent.
-      await popup.reveal.current.choose(false);
+      await game.claimLevelUp(alreadyPaid: true);
       await _settle(game, tester);
       await run(game, 5);
       expect(game.menu.wallet.balance, 2125);

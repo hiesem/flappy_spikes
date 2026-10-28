@@ -104,8 +104,10 @@ class StarRoadCard extends MenuButton {
     await super.onLoad();
     // region P26-G6eA
     add(StarRoadStar(side: 12, position: Vector2(10, compact ? 15 : 8)));
+    // region P26-G6eB
     add(MenuText(compact ? 'STAR ROAD ·' : 'STAR ROAD', fontSize: 11, color: Config.menuPlum,
       position: Vector2(25, compact ? 15 : 8)));
+    // endregion
     // endregion
     // region P26-G6eB
     if (compact) {

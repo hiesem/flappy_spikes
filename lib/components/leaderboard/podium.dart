@@ -1,5 +1,6 @@
 import 'package:flame/components.dart';
 import 'package:flutter/painting.dart';
+import '../../game/config.dart';
 import '../../leaderboard/lb_models.dart';
 import '../../skins/art/card_name_art.dart';
 import 'board_row.dart' show cardSlot, paintBoardAvatar;
@@ -34,11 +35,17 @@ class BoardPodium extends PositionComponent {
     double fontSize,
     Color color, {
     double maxWidth = 84,
+    // region P26-FIX3
+    String fontFamily = Config.uiFont,
+    // endregion P26-FIX3
   }) {
     final painter = TextPainter(
       text: TextSpan(
         text: value,
         style: TextStyle(
+          // region P26-FIX3
+          fontFamily: fontFamily,
+          // endregion P26-FIX3
           fontSize: fontSize,
           color: color,
           fontWeight: FontWeight.bold,
@@ -122,7 +129,17 @@ class BoardPodium extends PositionComponent {
           Rect.fromLTWH(x - 23, 125, 46, 20),
           Paint()..color = _pink,
         );
-        label(canvas, '${row.points}', x, 135, 15, const Color(0xffffffff));
+        // region P26-FIX3
+        label(
+          canvas,
+          '${row.points}',
+          x,
+          135,
+          15,
+          const Color(0xffffffff),
+          fontFamily: Config.scoreFont,
+        );
+        // endregion P26-FIX3
         if (row.rid == ownId) label(canvas, 'YOU', x, 147, 8, _pink);
         label(
           canvas,
@@ -139,7 +156,17 @@ class BoardPodium extends PositionComponent {
         Rect.fromCenter(center: Offset(x, top + 5), width: 22, height: 22),
         Paint()..color = tier.dark,
       );
-      label(canvas, '$rank', x, top + 5, 14, const Color(0xffffffff));
+      // region P26-FIX3
+      label(
+        canvas,
+        '$rank',
+        x,
+        top + 5,
+        14,
+        const Color(0xffffffff),
+        fontFamily: Config.scoreFont,
+      );
+      // endregion P26-FIX3
       if (markerRanks.contains(rank)) {
         canvas.save();
         canvas.translate(x + 33, top - 11);

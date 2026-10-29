@@ -11,7 +11,15 @@ final DateTime kGoldenNow = DateTime(2026, 11, 1, 12);
 
 DateTime goldenClock() => kGoldenNow;
 
-Future<void> loadGoldenFonts() async {
+Future<void>? _loadingFonts;
+var _fontsLoaded = false;
+
+/// Loads the app's three families before any game boots: TextPainter caches
+/// its paragraph, so a label first laid out before registration would keep
+/// the test font for the rest of the session.
+Future<void> loadGoldenFonts() => _loadingFonts ??= _loadGoldenFonts();
+
+Future<void> _loadGoldenFonts() async {
   final lvdc = FontLoader('LVDC Common2')
     ..addFont(rootBundle.load('assets/fonts/LVDCC.TTF'));
   final opificio = FontLoader('Opificio Neue')
@@ -19,10 +27,12 @@ Future<void> loadGoldenFonts() async {
   final fredoka = FontLoader('Fredoka')
     ..addFont(rootBundle.load('assets/fonts/Fredoka-SemiBold.ttf'));
   await Future.wait([lvdc.load(), opificio.load(), fredoka.load()]);
+  _fontsLoaded = true;
 }
 
 /// Renders the game exactly as the phone does at a 320 pt design width.
 Future<ui.Image> goldenFrame(FlappySpikesGame game) async {
+  assert(_fontsLoaded, 'loadGoldenFonts() must run before any golden capture');
   final size = Vector2(320, game.viewHeight.roundToDouble());
   game.onGameResize(size);
   final recorder = ui.PictureRecorder();

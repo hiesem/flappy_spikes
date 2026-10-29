@@ -106,7 +106,6 @@ abstract final class HudConfig {
   static const double bestStickerY = 114;
   static const double bestMomentLength = 1.2;
   static const double bestFlipDelay = .18;
-  static const double bestLineLead = 1.25;
   // endregion
 
   // ----------------------------------------------------------- pause card

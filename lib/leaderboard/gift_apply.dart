@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show debugPrint;
+
 import '../game/storage.dart';
 import '../menu/wallet.dart';
 import '../services/game_services.dart';
@@ -154,6 +156,7 @@ class GiftApply {
       data['request_id'] as String,
     });
     final target = data['target'] as int;
+    var coinRecoverySkipped = false;
     switch (gift.kind) {
       case 'coins':
         final startingBalance = data['startingBalance'] as int?;
@@ -161,6 +164,17 @@ class GiftApply {
           await wallet.add(target - wallet.balance, CoinSource.leaderboardGift);
         } else if (wallet.balance == startingBalance) {
           await wallet.add(gift.coins, CoinSource.leaderboardGift);
+        } else {
+          coinRecoverySkipped = true;
+          debugPrint(
+            'LB gift ${gift.id}: coin recovery skipped '
+            '(balance ${wallet.balance}, expected $startingBalance)',
+          );
+          services.track('gift_recovery_skipped', {
+            'tier': gift.tier,
+            'kind': gift.kind,
+            'coins': gift.coins,
+          });
         }
       case 'feather':
         if (storage.feathers < target) await storage.saveFeathers(target);
@@ -172,13 +186,15 @@ class GiftApply {
         await storage.saveOwnedItems({...storage.ownedItems, gift.item!});
     }
     await storage.saveLbGiftPending({...data, 'applied': true});
-    services.track('lb_gift_collect', {
-      'tier': gift.tier,
-      'kind': gift.kind,
-      'coins': gift.coins,
-      'rarity': gift.rarity ?? 'none',
-      'fallback': gift.fallback ? 1 : 0,
-    });
+    if (!coinRecoverySkipped) {
+      services.track('lb_gift_collect', {
+        'tier': gift.tier,
+        'kind': gift.kind,
+        'coins': gift.coins,
+        'rarity': gift.rarity ?? 'none',
+        'fallback': gift.fallback ? 1 : 0,
+      });
+    }
     return gift;
   }
 

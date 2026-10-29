@@ -146,11 +146,9 @@ class LevelsScreen extends MenuScreen {
       unawaited(game.storage.saveWorldsSeen(game.storage.worldsReached));
     } else if (tab == LevelsTab.guide) {
       // region P26-G6b
-      unawaited(
-        game.storage.saveGuideSeenCount(
-          flightGuideMetCount(game.storage.metElements),
-        ),
-      );
+      unawaited(game.storage.saveGuideSeenCount(
+        flightGuideMetCount(game.storage.metElements),
+      ));
       // endregion
     }
     tabs.sync(game.storage);

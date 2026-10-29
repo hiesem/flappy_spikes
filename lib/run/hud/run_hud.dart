@@ -5,8 +5,8 @@ import 'dart:ui';
 // region P26-K
 import 'dart:math' as math;
 import '../../game/sound.dart';
+import '../effects/collect_fx.dart';
 import '../effects/gold_sticker.dart';
-import '../effects/perfect_burst.dart';
 // endregion
 
 import 'package:flame/components.dart';
@@ -97,6 +97,7 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
   double? _bestAge;
   double _pointAge = 1;
   int _lastBestScore = -1;
+  CollectBursts? bestBursts;
   // region P26-G5b
   String _weeklyCountdownValue = '';
   HudText? _weeklyCountdown;
@@ -119,19 +120,19 @@ class RunHud extends PositionComponent with HasGameReference<FlappySpikesGame> {
       position: Vector2(160, HudConfig.bestStickerY),
     );
     add(_BestStickerClock(this, bestSticker!));
-    const gold = [HudConfig.gold, Color(0xFFFFD54A), Color(0xFFFFFFFF)];
+    const gold = [
+      HudConfig.gold,
+      Color(0xFFFFD54A),
+      HudConfig.gold,
+      Color(0xFFFFFFFF),
+    ];
     final bird = run.game.runBirdPosition ?? run.geo.normalBirdPosition();
-    final random = math.Random(run.setup.seed);
-    for (final screen in [bird, Vector2(bird.x, 106)]) {
-      final at = run.geo.toTrack(screen);
-      PerfectBurst.emit(
-        run.particles,
-        Offset(at.x, at.y),
-        1,
-        random,
-        palette: gold,
-      );
-    }
+    final at = Offset(bird.x, bird.y);
+    final bursts = CollectBursts()
+      ..burst(at: at, colors: gold, pieces: 11, speed: 110)
+      ..burst(at: Offset(bird.x, 106), colors: gold, pieces: 11, speed: 110);
+    bestBursts = bursts;
+    run.game.world.addRun(bursts);
     run.game.sound.play(Sfx.perfect1);
   }
 

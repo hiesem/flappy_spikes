@@ -84,7 +84,7 @@ class LbQueue {
       if (entries.any((p) => p.run.id == run.id)) return;
       final groupEnd = storage.lbGroupEnd > run.endTs
           ? storage.lbGroupEnd
-          : run.endTs + const Duration(days: 1).inMilliseconds;
+          : run.endTs + LbConfig.groupLength.inMilliseconds;
       entries.add(_Pending(run, groupEnd, bestCandidate));
       if (entries.length > LbConfig.queueCap) {
         _log(0, 'capacity', entries.length, 0);
@@ -123,7 +123,7 @@ class LbQueue {
           final p = entries[i];
           // A new group cannot extend the expiry of runs from an older
           // 24-hour window (best candidates may remain queued for a week).
-          final start = group.end - const Duration(days: 1).inMilliseconds;
+          final start = group.end - LbConfig.groupLength.inMilliseconds;
           if (p.run.endTs >= start && p.run.endTs < group.end) {
             entries[i] = _Pending(p.run, group.end, p.best);
           }

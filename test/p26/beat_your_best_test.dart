@@ -76,9 +76,8 @@ void main() {
       run.ctx.addScore(42);
       expect(hud.bestSticker, isNull);
       final bird = g.runBirdPosition!;
-      final startCount = run.particles.particles.length;
       run.ctx.addScore(5); // streak/bonus can beat the score before the line
-      final bursts = run.particles.particles.skip(startCount).toList();
+      final bursts = hud.bestBursts!.pool.particles.toList();
       expect(bursts, hasLength(22));
       expect(
         bursts.every(
@@ -90,13 +89,9 @@ void main() {
         ),
         isTrue,
       );
-      final at = run.geo.toTrack(bird);
-      expect(bursts.first.x, closeTo(at.x, .001));
-      expect(bursts.first.y, closeTo(at.y, .001));
-      expect(
-        bursts.last.y,
-        closeTo(run.geo.toTrack(Vector2(bird.x, 106)).y, .001),
-      );
+      expect(bursts.first.x, closeTo(bird.x, .001));
+      expect(bursts.first.y, closeTo(bird.y, .001));
+      expect(bursts.last.y, closeTo(106, .001));
       await flushAndMount(g);
       final sticker = hud.bestSticker!;
       expect(sticker.text, 'NEW BEST!');

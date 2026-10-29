@@ -218,11 +218,7 @@ class ReminderMessages {
 
   /// Title + body for [number] with the current values, including the
   /// new-player fallback for #1 and #2 (best score 0).
-  static ReminderText textFor(
-    int number, {
-    required int best,
-    required int coins,
-  }) {
+  static ReminderText textFor(int number, {required int best, required int coins}) {
     if (best <= 0) {
       if (number == 1) {
         return const ReminderText(newPlayerTitle1, newPlayerBody1);
@@ -315,7 +311,8 @@ class ReminderTruth {
       lastRunDay: lastDay < 0 ? null : lastDay,
       unfinishedMissionRewards: [
         for (final mission in board.missions)
-          if (!mission.complete) rewards[mission.template.difficulty.index],
+          if (!mission.complete)
+            rewards[mission.template.difficulty.index],
       ],
       streakDays: store.gamesPlayed >= 4 ? store.streakDays : 0,
       missionsUnlocked: store.gamesPlayed >= 4 && store.missionDay >= 0,
@@ -556,15 +553,16 @@ class ScheduledReminder {
   final String? type;
   // endregion
 
-  ReminderPayload get payload => ReminderPayload(
-    messageNumber: messageNumber,
-    slot: slot,
-    epochMs: time.millisecondsSinceEpoch,
-    previousLastSent: previousLastSent,
-    // region P26-G3
-    type: type,
-    // endregion
-  );
+  ReminderPayload get payload =>
+      ReminderPayload(
+        messageNumber: messageNumber,
+        slot: slot,
+        epochMs: time.millisecondsSinceEpoch,
+        previousLastSent: previousLastSent,
+        // region P26-G3
+        type: type,
+        // endregion
+      );
 }
 
 /// What the scheduler needs to keep between calls (the §3.34 persistence
@@ -925,8 +923,9 @@ class _Rotation {
     required List<int> order,
     required int position,
     required this.unavailableMessages,
-  }) : order = List<int>.of(order),
-       position = position.clamp(0, order.length);
+  })
+    : order = List<int>.of(order),
+      position = position.clamp(0, order.length);
 
   final Random random;
   List<int> order;
@@ -983,10 +982,7 @@ class _Rotation {
         .where((m) => !_used.contains(m) && !unavailableMessages.contains(m))
         .toList();
     if (candidates.isEmpty) {
-      return order.firstWhere(
-        (m) => !_used.contains(m),
-        orElse: () => order.first,
-      );
+      return order.firstWhere((m) => !_used.contains(m), orElse: () => order.first);
     }
     candidates.sort((a, b) {
       final byAge = (lastSent[a] ?? '').compareTo(lastSent[b] ?? '');
@@ -999,8 +995,7 @@ class _Rotation {
   bool _blocked(int number, DateTime slotDay, Map<int, String> lastSent) {
     final last = lastSent[number];
     if (last == null) return false;
-    return _daysBetween(DateTime.parse(last), slotDay) <
-        ReminderScheduler.noRepeatDays;
+    return _daysBetween(DateTime.parse(last), slotDay) < ReminderScheduler.noRepeatDays;
   }
 }
 
@@ -1064,16 +1059,17 @@ class LocalNotificationsPlatform implements ReminderPlatform {
   /// only icon on the reminder: there is no large icon beside the text.
   static const String icon = 'ic_notif_bird';
 
-  static const AndroidNotificationDetails _details = AndroidNotificationDetails(
-    channelId,
-    channelName,
-    icon: icon,
-    importance: Importance.defaultImportance,
-    priority: Priority.defaultPriority,
-    sound: RawResourceAndroidNotificationSound(sound),
-    playSound: true,
-    channelDescription: channelDescription,
-  );
+  static const AndroidNotificationDetails _details =
+      AndroidNotificationDetails(
+        channelId,
+        channelName,
+        icon: icon,
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
+        sound: RawResourceAndroidNotificationSound(sound),
+        playSound: true,
+        channelDescription: channelDescription,
+      );
 
   final FlutterLocalNotificationsPlugin _plugin;
 
@@ -1186,10 +1182,8 @@ class LocalNotificationsPlatform implements ReminderPlatform {
 /// Records what a [LocalReminders] would hand to the plugin, so the service
 /// and permission logic can be tested without touching a channel.
 class FakeReminderPlatform implements ReminderPlatform {
-  final List<
-    ({int id, String title, String body, DateTime time, String payload})
-  >
-  scheduled = [];
+  final List<({int id, String title, String body, DateTime time, String payload})>
+      scheduled = [];
   final List<String> pending = [];
   int initializeCalls = 0;
   int permissionCalls = 0;
@@ -1248,10 +1242,8 @@ class FakeReminderPlatform implements ReminderPlatform {
   }
 
   /// Simulates the OS firing every reminder that is due at [now].
-  void deliverDue(DateTime now) => pending.removeWhere(
-    (p) =>
-        (ReminderPayload.decode(p)?.epochMs ?? 0) <= now.millisecondsSinceEpoch,
-  );
+  void deliverDue(DateTime now) =>
+      pending.removeWhere((p) => (ReminderPayload.decode(p)?.epochMs ?? 0) <= now.millisecondsSinceEpoch);
 }
 
 /// The real service (§3.34): [ReminderScheduler] + [ReminderPlatform] + the

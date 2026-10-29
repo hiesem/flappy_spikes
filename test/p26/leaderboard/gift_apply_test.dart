@@ -299,6 +299,13 @@ void main() {
     await storage.saveCoins(30);
     await apply.recover();
     expect(storage.coins, 30);
+    expect(services.events, hasLength(1));
+    expect(services.events.single.$1, 'gift_recovery_skipped');
+    expect(services.events.single.$2, {
+      'tier': 'gold',
+      'kind': 'coins',
+      'coins': 175,
+    });
   });
 
   test('piece recovery grants only its bit after puzzle reset', () async {

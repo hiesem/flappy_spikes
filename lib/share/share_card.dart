@@ -394,11 +394,7 @@ abstract final class ShareCardPainter {
     c.translate(520, 430);
     c.rotate(-.25);
     c.scale(4.2);
-    LookPainter.paint(
-      c,
-      Look(bird: look.bird, gear: look.gear, hat: look.hat),
-      flap: true,
-    );
+    LookPainter.paint(c, Look(bird: look.bird, gear: look.gear, hat: look.hat), flap: true);
     c.restore();
     _coin(c, img, 214, 420, 56);
     _coin(c, img, 330, 470, 56);
@@ -449,7 +445,11 @@ abstract final class ShareCardPainter {
 
   /// The tilted round sticker (score or FREE TO PLAY): plum shadow, white
   /// ring, [fill] disc of radius 130; [content] draws in sticker space.
-  static void _sticker(Canvas c, Color fill, void Function(double r) content) {
+  static void _sticker(
+    Canvas c,
+    Color fill,
+    void Function(double r) content,
+  ) {
     const r = 130.0;
     c.save();
     c.translate(820, 360);
@@ -616,13 +616,8 @@ abstract final class ShareCardPainter {
     );
   }
 
-  static void _coin(
-    Canvas c,
-    ShareCardAssets img,
-    double x,
-    double y,
-    double s,
-  ) => _image(c, img.coin, Rect.fromLTWH(x - s / 2, y - s / 2, s, s));
+  static void _coin(Canvas c, ShareCardAssets img, double x, double y, double s) =>
+      _image(c, img.coin, Rect.fromLTWH(x - s / 2, y - s / 2, s, s));
 
   static void _image(Canvas c, ui.Image image, Rect dst) => c.drawImageRect(
     image,

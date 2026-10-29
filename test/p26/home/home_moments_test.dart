@@ -296,8 +296,11 @@ void main() {
 
   var starNow = DateTime(2026, 11, 1, 12);
   final starTransitions = FlameTester<FlappySpikesGame>(() => createRunTestGame(
+    // PRD 2.6 G6 / G6eB: stars belong to the live season; a season-0 board is
+    // the pre-season board and is rolled over (paying out) before Home.
     prefs: trackPrefs({'gamesPlayed': 3, 'firstSessionDone': true,
-      'playerLevel': 1, 'claimedLevels': ['1'], 'starRoadXp': 8}),
+      'playerLevel': 1, 'claimedLevels': ['1'], 'starRoadSeason': 1,
+      'starRoadXp': 8}),
     worldHeight: Config.worldHeight, clock: () => starNow,
   ), gameSize: Vector2(Config.worldWidth, Config.worldHeight));
   starTransitions.testGameWidget('Star Road uses live tiers and persists its day on Home arrivals',

@@ -1,11 +1,10 @@
-import 'dart:math' as math;
-
 import 'package:flame/components.dart';
 import 'package:flutter/painting.dart';
 import '../../game/config.dart';
 import '../../leaderboard/lb_models.dart';
 import '../../skins/art/card_name_art.dart';
 import 'board_row.dart' show cardSlot, paintBoardAvatar;
+import '../home/menu_primitives.dart' show MenuTag, MenuTagAnchor;
 import '../sticker_avatar.dart';
 import '../ui/mystery_box.dart';
 
@@ -64,57 +63,6 @@ class BoardPodium extends PositionComponent {
       Offset(x - painter.width / 2, y - painter.height / 2),
     );
   }
-
-  // region P26-FIX3
-  /// The mock's `tagG(c.cx,303,p,t,'middle')`: a 14 pt tag centred below the
-  /// score pill (local y 158), turning the own player into a gold YOU tag.
-  void tag(
-    Canvas canvas,
-    String value,
-    double x,
-    double y, {
-    required Color background,
-    required Color foreground,
-    bool dot = false,
-  }) {
-    if (value.isEmpty) return;
-    const fontSize = 8.5;
-    final painter = TextPainter(
-      text: TextSpan(
-        text: value,
-        style: TextStyle(
-          color: foreground,
-          fontFamily: Config.uiFont,
-          fontSize: fontSize,
-          fontWeight: FontWeight.bold,
-          letterSpacing: .85,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-      maxLines: 1,
-    )..layout();
-    final width = painter.width + (dot ? 19 : 10);
-    final left = x - width / 2;
-    canvas.drawRect(
-      Rect.fromLTWH(left, y - 7, width, 14),
-      Paint()..color = background,
-    );
-    if (dot) {
-      canvas.drawRect(
-        Rect.fromLTWH(left + 4.6, y - 2.6, 5.2, 5.2),
-        Paint()
-          ..color = foreground.withValues(
-            alpha: .35 + .65 * math.sin(time * 2.6).abs(),
-          ),
-      );
-    }
-    painter.paint(
-      canvas,
-      Offset(left + (dot ? 14 : 5), y + .6 - painter.height / 2),
-    );
-    painter.dispose();
-  }
-  // endregion P26-FIX3
 
   @override
   void render(Canvas canvas) {
@@ -192,32 +140,38 @@ class BoardPodium extends PositionComponent {
           135,
           15,
           const Color(0xffffffff),
-          // region P26-FIX3
           fontFamily: Config.uiFont,
-          // endregion P26-FIX3
         );
         // endregion P26-FIX3
         // region P26-FIX3
         if (row.rid == ownId) {
-          tag(canvas, 'YOU', x, 158, background: _gold, foreground: _plum);
+          MenuTag.paintTag(
+            canvas,
+            'YOU',
+            Offset(x, 158),
+            fillColor: _gold,
+            textColor: _plum,
+            anchor: MenuTagAnchor.middle,
+          );
         } else if (row.playingNow == true) {
-          tag(
+          MenuTag.paintTag(
             canvas,
             'PLAYING NOW',
-            x,
-            158,
-            background: _pink,
-            foreground: const Color(0xffffffff),
+            Offset(x, 158),
+            fillColor: _pink,
+            textColor: const Color(0xffffffff),
             dot: true,
+            anchor: MenuTagAnchor.middle,
+            time: time,
           );
         } else {
-          tag(
+          MenuTag.paintTag(
             canvas,
             lastRunTag(row.lastAt),
-            x,
-            158,
-            background: const Color(0xffe4e4e4),
-            foreground: const Color(0xff7e7e7e),
+            Offset(x, 158),
+            fillColor: const Color(0xffe4e4e4),
+            textColor: const Color(0xff7e7e7e),
+            anchor: MenuTagAnchor.middle,
           );
         }
         // endregion P26-FIX3
@@ -236,9 +190,7 @@ class BoardPodium extends PositionComponent {
         top + 5,
         14,
         const Color(0xffffffff),
-        // region P26-FIX3
         fontFamily: Config.uiFont,
-        // endregion P26-FIX3
       );
       // endregion P26-FIX3
       if (markerRanks.contains(rank)) {

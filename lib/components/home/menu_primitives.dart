@@ -1,10 +1,11 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/painting.dart'
-    show FontWeight, TextLeadingDistribution, TextStyle;
+    show FontWeight, TextLeadingDistribution, TextPainter, TextSpan, TextStyle;
 
 import '../../game/config.dart';
 import '../../game/flappy_game.dart';
@@ -405,6 +406,8 @@ class MenuIcon extends SpriteComponent {
 
 /// Gold corner tag ("NEW"): white 11 pt text, 2/5 pt padding (mock `.tag`;
 /// the Skins grid's `.tg` is 10 pt at 0.05 em).
+enum MenuTagAnchor { start, middle }
+
 class MenuTag extends PositionComponent {
   MenuTag(
     String text, {
@@ -442,6 +445,56 @@ class MenuTag extends PositionComponent {
 
   @override
   void render(Canvas canvas) => canvas.drawRect(size.toRect(), _paint);
+
+  /// Canvas form of the tag master for hosts that draw their rows in one pass.
+  /// The leaderboard's 14 pt status tag uses 5 pt horizontal padding; a status
+  /// [dot] reserves 14 pt for its 5.2 pt blinking square.
+  static void paintTag(
+    Canvas canvas,
+    String text,
+    Offset at, {
+    required Color fillColor,
+    required Color textColor,
+    bool dot = false,
+    MenuTagAnchor anchor = MenuTagAnchor.start,
+    double time = 0,
+  }) {
+    if (text.isEmpty) return;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: textColor,
+          fontFamily: Config.uiFont,
+          fontSize: 8.5,
+          fontWeight: FontWeight.bold,
+          letterSpacing: .85,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    final width = painter.width + (dot ? 19 : 10);
+    final left = anchor == MenuTagAnchor.middle ? at.dx - width / 2 : at.dx;
+    canvas.drawRect(
+      Rect.fromLTWH(left, at.dy - 7, width, 14),
+      Paint()..color = fillColor,
+    );
+    if (dot) {
+      canvas.drawRect(
+        Rect.fromLTWH(left + 4.6, at.dy - 2.6, 5.2, 5.2),
+        Paint()
+          ..color = textColor.withValues(
+            alpha: .35 + .65 * math.sin(time * 2.6).abs(),
+          ),
+      );
+    }
+    painter.paint(
+      canvas,
+      Offset(left + (dot ? 14 : 5), at.dy + .6 - painter.height / 2),
+    );
+    painter.dispose();
+  }
 }
 
 /// Lays [items] out left-to-right as one centred group inside [parent]

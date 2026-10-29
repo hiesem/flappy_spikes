@@ -55,8 +55,9 @@ abstract final class CardNameArt {
     'n_marquee',
   ];
 
-  /// Draw centred at [center]. [maxWidth] fits the text, excluding ornamental
-  /// overflow (reserve .6 × fontSize horizontally and 1.3 × above the centre).
+  /// Draw centred at [center], or with its fitted left edge at [center] when
+  /// [start] is true. [maxWidth] fits the text, excluding ornamental overflow
+  /// (reserve .6 × fontSize horizontally and 1.3 × above the centre).
   /// Unknown/empty ids draw the ordinary plum name. Nothing is clipped here.
   static void paint(
     Canvas canvas,
@@ -66,6 +67,7 @@ abstract final class CardNameArt {
     Offset center = Offset.zero,
     double fontSize = 18,
     double maxWidth = double.infinity,
+    bool start = false,
     // region P26-F9f
     /// Run hosts reuse glyph layouts; preview/reference hosts retain native
     /// coloured text rasterization. Both use the same style/animation drawing.
@@ -76,7 +78,7 @@ abstract final class CardNameArt {
     final art = _Name(id, text, fontSize, maxWidth, t, cached: cacheLayout);
     // endregion
     canvas.save();
-    canvas.translate(center.dx, center.dy);
+    canvas.translate(start ? center.dx + art.w / 2 : center.dx, center.dy);
     art.back(canvas);
     art.ink(canvas);
     art.front(canvas);

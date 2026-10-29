@@ -73,7 +73,10 @@ class LevelUpPopup extends PositionComponent
     add(reveal);
   }
 
-  /// Back skips the current animation; a choice is still required to pay.
+  // region P26-FIX2
+  /// Back reveals the current box; the next Back chooses LATER, so the popup
+  /// closes and its persisted reward is paid.
+  // endregion
   void skipReveal() {
     _skipRequested = true;
     _applySkip();
@@ -82,7 +85,9 @@ class LevelUpPopup extends PositionComponent
   void _applySkip() {
     if (!isLoaded || !reveal.isLoaded || !reveal.current.isMounted) return;
     _skipRequested = false;
-    reveal.skipReveal();
+    // region P26-FIX2
+    reveal.current.advanceSkill();
+    // endregion
   }
 
   @override

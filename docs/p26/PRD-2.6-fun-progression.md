@@ -1695,6 +1695,8 @@ every requirement (file:line, test results) and the work packages with paths and
     PRD 935 set back-to-back 28-day seasons but no start day.
 28. **Back on the LEVEL UP popup (orchestrator, FIX2, 2026-10-29):** a second Back on the Home LEVEL UP reward popup acts
     like LATER, so every Home popup can be closed with Back (it kept the economy probes, and players, stuck before).
+29. **Flat pitch for rising-pitch sounds (orchestrator, G6f, 2026-10-29):** the Star Road tile pops (O91) and the LB5 rise
+    play at one pitch; the shared `Sfx` master has no per-play rate. Revisit with an `Sfx` rate parameter after 2.6.0.
 
 Earlier D-TESTS code and test comments referring to decision 15 mean the introduction-arbitration decision, now 18.
 

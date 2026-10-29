@@ -289,4 +289,4 @@ The files live under `docs/p26/design/` (path map: `docs/p26/README.md`).
 | Master file / class | Allowed parameters | Design map |
 |---|---|---|
 | `lib/components/star_road/star_road_art.dart` — `StarRoadStar` | size, position | `approvals_v26/star_road.html` header, card, rows and G6f popup; five-point gold star with dark edge |
-| `lib/components/star_road/star_road_art.dart` — `StarRoadTierNode` | tier, size, position, claimed / claimable / next / locked state | `approvals_v26/star_road.html` track, mini road and G6f popup / summary |
+| `lib/components/star_road/star_road_art.dart` — `StarRoadTierNode` | tier, size, position, claimed / claimable / next / locked state, optional label size / colour (G6f popup badge) | `approvals_v26/star_road.html` track, mini road and G6f popup / summary |

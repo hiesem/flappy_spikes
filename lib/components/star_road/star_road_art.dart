@@ -41,10 +41,19 @@ class StarRoadTierNode extends PositionComponent {
     required this.tier,
     required this.state,
     double side = 36,
+    // region P26-G6f
+    this.labelSize,
+    this.labelColor,
+    // endregion
     super.position,
   }) : super(size: Vector2.all(side));
   final int tier;
   final StarRoadNodeState state;
+  // region P26-G6f
+  /// Optional overrides for the shared popup badge (same plate, larger side).
+  final double? labelSize;
+  final Color? labelColor;
+  // endregion
   Color get ink => switch (state) {
     StarRoadNodeState.claimed => const Color(0xFFFFFFFF),
     StarRoadNodeState.claimable => const Color(0xFF7A0044),
@@ -54,15 +63,17 @@ class StarRoadTierNode extends PositionComponent {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    // region P26-G6f
     add(
       MenuText(
         '$tier',
-        fontSize: size.x * (tier > 9 ? 15 : 16) / 36,
-        color: ink,
+        fontSize: labelSize ?? size.x * (tier > 9 ? 15 : 16) / 36,
+        color: labelColor ?? ink,
         position: size / 2,
         anchor: Anchor.center,
       ),
     );
+    // endregion
   }
 
   @override

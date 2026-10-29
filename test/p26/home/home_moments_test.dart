@@ -294,13 +294,57 @@ void main() {
     expect(policy.tryShow(HomeMoment.starRoad, () => fail('chest wins')), isFalse);
   });
 
+  // region P26-G6f
+  test('a gift arriving after a Star Road selection wins that visit', () {
+    final policy = HomeMomentBudget();
+    final day = DateTime(2026, 11, 1);
+    policy.beginVisit(
+      HomeVisit(
+        day: day,
+        gamesPlayed: 3,
+        requests: const HomeVisitRequests(starRoad: true),
+      ),
+    );
+    expect(policy.selectedMoment, HomeMoment.starRoad);
+
+    // PRD-2.6 O68 / G6f: the board read may answer after the visit began;
+    // its GO TO COLLECT then outranks Star Road for this visit.
+    policy.offerLeaderboardGifts([
+      HomeGiftBoxRequest(id: 'late', availableAt: day),
+    ]);
+    expect(policy.selectedMoment, HomeMoment.leaderboardCollect);
+    expect(policy.selectedGift!.id, 'late');
+    expect(
+      policy.tryShow(HomeMoment.starRoad, () => fail('GO TO COLLECT wins')),
+      isFalse,
+    );
+
+    // The gift spent the visit; Star Road never set its day and is selected
+    // again on the next visit (O75: first visit after the tier, once a day).
+    policy.beginVisit(
+      HomeVisit(
+        day: day,
+        gamesPlayed: 3,
+        requests: const HomeVisitRequests(starRoad: true),
+      ),
+    );
+    expect(policy.selectedMoment, HomeMoment.starRoad);
+    var opened = false;
+    expect(
+      policy.tryShow(HomeMoment.starRoad, () => opened = true),
+      isTrue,
+    );
+    expect(opened, isTrue);
+  });
+  // endregion
+
   var starNow = DateTime(2026, 11, 1, 12);
   final starTransitions = FlameTester<FlappySpikesGame>(() => createRunTestGame(
     // PRD 2.6 G6 / G6eB: stars belong to the live season; a season-0 board is
     // the pre-season board and is rolled over (paying out) before Home.
     prefs: trackPrefs({'gamesPlayed': 3, 'firstSessionDone': true,
       'playerLevel': 1, 'claimedLevels': ['1'], 'starRoadSeason': 1,
-      'starRoadXp': 8}),
+      'starRoadXp': 0}),
     worldHeight: Config.worldHeight, clock: () => starNow,
   ), gameSize: Vector2(Config.worldWidth, Config.worldHeight));
   starTransitions.testGameWidget('Star Road uses live tiers and persists its day on Home arrivals',
@@ -310,6 +354,10 @@ void main() {
       await flushAndMount(game);
     },
     verify: (game, _) async {
+      // PRD-2.6 G6f: the real Star Road opener now runs at Home, so start
+      // with no claimable tier; granting XP after ready() keeps the fake
+      // opener's first visit the one that spends the day.
+      await game.storage.saveStarRoadXp(8);
       var shown = 0;
       game.registerStarRoadPopup(() => shown++);
       Future<void> resume() async {

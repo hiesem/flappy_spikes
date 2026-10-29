@@ -7,6 +7,9 @@ import '../components/star_road/star_road_card.dart';
 import '../progression/star_road.dart';
 import '../progression/star_road_claims.dart';
 // endregion
+// region P26-G6f
+import '../components/progression/star_road_popup.dart';
+// endregion
 // region P26-G6b
 import '../progression/flight_guide.dart';
 import '../run/run_events.dart'
@@ -751,6 +754,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       // region P26-G6eA
       _starRoadScreen != null ||
       // endregion
+      // region P26-G6f
+      _starRoadPopup != null ||
+      // endregion
       // region P26-G1c
       _missionsPanelOpen ||
       // endregion
@@ -877,6 +883,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   bool get liveMotionPaused =>
       // region P26-G2c
       _streakLostPopup != null ||
+      // endregion
+      // region P26-G6f
+      _starRoadPopup != null ||
       // endregion
       _noAdsPopup != null ||
       _levelUpPopup != null ||
@@ -1124,6 +1133,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // home arrival (PRD-menu-v4 §8, NoAdsPopupPolicy).
     // region P26-G1d
     missionsChestOpenerRegistered = true;
+    // endregion
+    // region P26-G6f
+    registerStarRoadPopup(_openStarRoadPopup);
     // endregion
     await _startSession();
 
@@ -3183,12 +3195,31 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     _starRoadPopupOpener = open;
   }
 
-  bool get _starRoadPending => StarRoad(
-    season: storage.starRoadSeason,
-    xp: storage.starRoadXp,
-    claimed: storage.starRoadClaimed,
-    popupDay: storage.starRoadPopupDay,
-  ).shouldShowPopup(today: storage.today, runNumber: storage.gamesPlayed + 1);
+  // region P26-G6f
+  StarRoad? _starRoadPendingRoad;
+  String? _starRoadPendingKey;
+
+  bool get _starRoadPending {
+    final claimed = storage.starRoadClaimed.toList()..sort();
+    final key =
+        '${storage.starRoadSeason}:${storage.starRoadXp}:'
+        '${claimed.join(',')}:${storage.starRoadPopupDay}:'
+        '${storage.today}:${storage.gamesPlayed}';
+    if (key != _starRoadPendingKey) {
+      _starRoadPendingKey = key;
+      _starRoadPendingRoad = StarRoad(
+        season: storage.starRoadSeason,
+        xp: storage.starRoadXp,
+        claimed: storage.starRoadClaimed,
+        popupDay: storage.starRoadPopupDay,
+      );
+    }
+    return _starRoadPendingRoad!.shouldShowPopup(
+      today: storage.today,
+      runNumber: storage.gamesPlayed + 1,
+    );
+  }
+  // endregion
 
   void _checkStarRoadPopup(double dt) {
     final open = _starRoadPopupOpener;
@@ -3205,6 +3236,74 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       unawaited(storage.saveStarRoadPopupDay(storage.today));
       open();
     });
+  }
+  // endregion
+
+  // region P26-G6f
+  StarRoadPopup? _starRoadPopup;
+
+  /// The Star Road Home popup while it is up (null otherwise).
+  StarRoadPopup? get starRoadPopup => _starRoadPopup;
+
+  /// C2W's registered opener (PRD-2.6 O91): the policy already decided that
+  /// this Home visit belongs to Star Road and persisted its day.
+  void _openStarRoadPopup() {
+    if (_starRoadPopup != null ||
+        state != GameState.start ||
+        menuScene != MenuScene.home) {
+      return;
+    }
+    final road = _starRoadPendingRoad ?? starRoad;
+    if (road.claimable.isEmpty) return;
+    final popup = StarRoadPopup(
+      road: road,
+      onGo: _goStarRoadFromPopup,
+      onDismiss: _closeStarRoadPopup,
+    );
+    _starRoadPopup = popup;
+    world.add(popup);
+    fadeOpacity(
+      popup,
+      from: 0,
+      to: 1,
+      duration: Config.popupFadeDuration,
+    );
+    pushBack(_starRoadPopupBack);
+  }
+
+  /// GO TO STAR ROAD: remove the card (its star puff stays in the world) and
+  /// open the road at the first waiting reward.
+  void _goStarRoadFromPopup() {
+    final popup = _starRoadPopup;
+    if (popup == null) return;
+    _starRoadPopup = null;
+    popBack(_starRoadPopupBack);
+    popup.active = false;
+    popup.removeFromParent();
+    openStarRoad(daysLeft: starRoadDaysRemaining, onBack: _drainPopups);
+  }
+
+  /// ✕ / dim / Esc: `sk_close`, then the next queued Home popup may come.
+  void _closeStarRoadPopup() {
+    final popup = _starRoadPopup;
+    if (popup == null) return;
+    _starRoadPopup = null;
+    popBack(_starRoadPopupBack);
+    popup.active = false;
+    sound.play(Sfx.skClose);
+    fadeOpacity(
+      popup,
+      from: popup.opacity,
+      to: 0,
+      duration: Config.popupFadeDuration,
+      removeOnDone: true,
+    );
+    _drainPopups();
+  }
+
+  bool _starRoadPopupBack() {
+    _closeStarRoadPopup();
+    return true;
   }
   // endregion
 

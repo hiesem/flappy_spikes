@@ -1683,6 +1683,18 @@ every requirement (file:line, test results) and the work packages with paths and
 
 23. **Level reward history (orchestrator, J6):** `lvlRewardLog` keeps the paid reward per level for the Levels screen;
     levels reached before this change show no item.
+24. **G1b storage keys (orchestrator, 2026-10-28):** G1b may add `lastVersusHadRival` and the missions journal keys to
+    `storage.dart` (via the obfuscation generator); S0 had not reserved them.
+25. **Gift podium privacy (orchestrator, LB7, 2026-10-28):** a gift stores only the group/day, `createdAt` and the top-5
+    rank, score and opaque entry id. Names and looks are read live from the settled group doc, so Delete My Data and the
+    TTL remove them everywhere; a missing player shows as `PLAYER` with the default bird. No copy survives a deletion.
+26. **Gift-opening rays (orchestrator, LB7, 2026-10-28):** O98 (reuse the four ray versions as they are; colour is not a
+    parameter) wins over PRD 1207 ("rays master in the box colour"): the rays stay R1 gold for every box.
+27. **Star Road season epoch (orchestrator, 2026-10-28):** all 28-day seasons count from one UTC epoch; season 1 starts on
+    Monday 2026-10-26 (UTC day). The epoch is the tuning key `star_road_epoch_day` (compiled-in default, overridable).
+    PRD 935 set back-to-back 28-day seasons but no start day.
+28. **Back on the LEVEL UP popup (orchestrator, FIX2, 2026-10-29):** a second Back on the Home LEVEL UP reward popup acts
+    like LATER, so every Home popup can be closed with Back (it kept the economy probes, and players, stuck before).
 
 Earlier D-TESTS code and test comments referring to decision 15 mean the introduction-arbitration decision, now 18.
 

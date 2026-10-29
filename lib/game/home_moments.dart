@@ -90,6 +90,17 @@ abstract class HomeMoments {
     show(moment, open);
     return true;
   }
+
+  // region P26-POL4
+  /// Like [tryShow], but the opener reports whether it actually opened. A
+  /// refused moment still spends this visit for budgeted policies, yet its
+  /// own day memory is left untouched so a later arrival may offer it again.
+  bool tryShowResult(HomeMoment moment, bool Function() open) {
+    var opened = false;
+    tryShow(moment, () => opened = open());
+    return opened;
+  }
+  // endregion
 }
 
 /// The original no-state seam: it deliberately opens every request. Kept
@@ -105,6 +116,11 @@ class PassthroughHomeMoments extends HomeMoments {
     open();
     return true;
   }
+
+  // region P26-POL4
+  @override
+  bool tryShowResult(HomeMoment moment, bool Function() open) => open();
+  // endregion
 }
 
 /// The C2 budget used by production: at most one big game popup per Home
@@ -162,11 +178,20 @@ class HomeMomentBudget extends HomeMoments {
     tryShow(moment, open);
   }
 
+  // region P26-POL4
   @override
-  bool tryShow(HomeMoment moment, void Function() open) {
+  bool tryShow(HomeMoment moment, void Function() open) => _tryShow(moment, () {
+    open();
+    return true;
+  });
+
+  @override
+  bool tryShowResult(HomeMoment moment, bool Function() open) =>
+      _tryShow(moment, open);
+
+  bool _tryShow(HomeMoment moment, bool Function() open) {
     if (!_visitActive) {
-      open();
-      return true;
+      return open();
     }
     if (_shownThisVisit) return false;
     // Rating becomes due on the results page, after the Home visit started.
@@ -178,12 +203,16 @@ class HomeMomentBudget extends HomeMoments {
     if (moment == HomeMoment.starRoad && _selected != moment) return false;
     // endregion
     if (moment != _selected && _selected != null) return false;
+    // A refused opener spends this visit (no lower-priority popup takes its
+    // place), but not the source's day: the next arrival may select it again.
     _shownThisVisit = true;
     _selected = moment;
+    final opened = open();
+    if (!opened) return false;
     if (moment == HomeMoment.starRoad) _starRoadShownDay = _selectedDay;
-    open();
     return true;
   }
+  // endregion P26-POL4
 
   HomeMoment? _select(HomeVisit visit) {
     final requests = visit.requests;

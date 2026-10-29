@@ -10,6 +10,9 @@ import '../../game/sound.dart';
 import '../../progression/star_road.dart';
 import '../../run/config/puzzle_config.dart';
 import '../../run/effects/coin_icon.dart';
+// region P26-POL4
+import '../../run/effects/shock_ring.dart';
+// endregion P26-POL4
 import '../../run/effects/twinkle.dart';
 import '../../run/pickups/feather_pickup.dart';
 import '../../run/pickups/puzzle_piece_pickup.dart';
@@ -63,6 +66,9 @@ class StarRoadPopup extends P1Popup {
   late final _FadeGroup _goGroup;
   late final _FadeGroup _rayGroup;
   late final NoAdsCelebrationRays rays;
+  // region P26-POL4
+  late final _BadgeGlow _badgeGlow;
+  // endregion P26-POL4
   late final PulseEffect goPulse;
   late final LightStreak goStreak;
   late final List<StarRoadPopupTile> tiles = [];
@@ -75,6 +81,11 @@ class StarRoadPopup extends P1Popup {
 
   List<int> get shownTiers => claimable.take(3).toList(growable: false);
   int get hiddenTiers => math.max(0, claimable.length - 3);
+
+  // region P26-POL4
+  /// The badge glow's current opacity (tests / O91). Zero before landing.
+  double get badgeGlowOpacity => _badgeGlow.glowOpacity;
+  // endregion P26-POL4
 
   String get titleText => claimable.length > 1
       ? 'TIERS ${claimable.first}\u2013${claimable.last} REACHED'
@@ -98,6 +109,11 @@ class StarRoadPopup extends P1Popup {
     _rayGroup.priority = -20;
     _rayGroup.add(rays);
     card.add(_rayGroup);
+
+    // region P26-POL4
+    _badgeGlow = _BadgeGlow(this);
+    card.add(_badgeGlow);
+    // endregion P26-POL4
 
     badge = PositionComponent(
       position: Vector2(140, 53),
@@ -357,6 +373,34 @@ class StarRoadPopup extends P1Popup {
   }
 
   void _burst() {
+    // region P26-POL4
+    card.add(
+      ShockRing(priority: 2).play(
+        const Offset(140, 53),
+        rx: 22,
+        color: const Color(0xFFFFFFFF),
+        length: .45,
+        scaleFrom: 1,
+        scaleTo: 1,
+        strokeFrom: 6,
+        strokeTo: 1,
+        grow: 62,
+      ),
+    );
+    card.add(
+      ShockRing(priority: 2).play(
+        const Offset(140, 53),
+        rx: 18,
+        color: const Color(0xFFFFE082),
+        length: .4,
+        scaleFrom: 1,
+        scaleTo: 1,
+        strokeFrom: 6,
+        strokeTo: 1,
+        grow: 46,
+      ),
+    );
+    // endregion P26-POL4
     card.add(
       ConfettiBurst.burst(
         origin: const Offset(140, 59),
@@ -410,6 +454,56 @@ class _FadeGroup extends PositionComponent with GroupOpacity {
   _FadeGroup({super.position, super.size});
 }
 
+// region P26-POL4
+/// The white/gold radial glow behind the tier badge (mock `#pglow`). It is a
+/// parameter of the popup's badge, drawn through one cached gradient shader.
+class _BadgeGlow extends PositionComponent {
+  _BadgeGlow(this.popup)
+    : super(size: Vector2(280, 128), priority: -10);
+
+  final StarRoadPopup popup;
+
+  late final Shader _shader = Gradient.radial(
+    const Offset(140, 53),
+    80,
+    const [
+      Color(0xBFFFFFFF),
+      Color(0x59FFE7A6),
+      Color(0x00FFE7A6),
+    ],
+    const [0, .38, .7],
+  );
+
+  final Paint _paint = Paint();
+  final Paint _layer = Paint();
+
+  double get glowOpacity {
+    if (popup.game.reduceMotion) return .35;
+    final t = popup.elapsed;
+    if (t < .62) return 0;
+    final fade = (1 - _seg(t, .62, .5)).clamp(0.0, 1.0);
+    return math.max(fade, .35 + .15 * math.sin(t * 2.6));
+  }
+
+  @override
+  void render(Canvas canvas) {
+    final opacity = glowOpacity;
+    if (opacity <= 0) return;
+    final rect = size.toRect();
+    _paint.shader = _shader;
+    _layer.color = Color.fromRGBO(
+      255,
+      255,
+      255,
+      opacity.clamp(0.0, 1.0).toDouble(),
+    );
+    canvas.saveLayer(rect, _layer);
+    canvas.drawRect(rect, _paint);
+    canvas.restore();
+  }
+}
+// endregion P26-POL4
+
 class _BadgeFx extends PositionComponent {
   _BadgeFx(this.popup) : super(size: Vector2(280, 128), priority: 2);
 
@@ -426,21 +520,9 @@ class _BadgeFx extends PositionComponent {
   void render(Canvas canvas) {
     if (popup.game.reduceMotion) return;
     final t = popup.elapsed;
-    final ring = _seg(t, .62, .45);
-    if (ring > 0 && ring < 1) {
-      final radius = 22 + 62 * _easeOut(ring);
-      final alpha = (1 - ring).clamp(0.0, 1.0);
-      for (var i = 0; i < 8; i++) {
-        final a = i * math.pi / 4;
-        Twinkle.paint(
-          canvas,
-          Offset(140 + math.cos(a) * radius, 53 + math.sin(a) * radius),
-          14,
-          const Color(0xFFFFFFFF).withValues(alpha: alpha),
-          rotation: ring * math.pi / 2,
-        );
-      }
-    }
+    // region P26-POL4
+    // The landing ring moved to the shared ShockRings in [_burst].
+    // endregion P26-POL4
     if (t < .92) return;
     for (var i = 0; i < _twinkles.length; i++) {
       final (dx, dy, r, phase) = _twinkles[i];

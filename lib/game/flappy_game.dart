@@ -1232,6 +1232,12 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   // region P26-LB7
   Future<void> _beginHomeVisit() async {
     final visit = ++_lbVisit;
+    // region P26-POL4
+    // A Home arrival is the natural cache boundary for Star Road's pending
+    // popup (runs settle stars, a season can roll over, and the day can
+    // change while the app was away).
+    _invalidateStarRoadPending();
+    // endregion P26-POL4
     final pending = storage.lbGiftPending;
     if (pending.isNotEmpty) {
       final request = pending['request_id'] as String;
@@ -3186,57 +3192,72 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   // endregion
 
   // region P26-C2W
-  void Function()? _starRoadPopupOpener;
+  // region P26-POL4
+  bool Function()? _starRoadPopupOpener;
+  // endregion P26-POL4
   double _starRoadSettle = 0;
 
+  // region P26-POL4
   /// G6f must register during onLoad, before the first _beginHomeVisit,
-  /// so a claimable tier can use the launch visit.
-  void registerStarRoadPopup(void Function() open) {
+  /// so a claimable tier can use the launch visit. [open] reports whether the
+  /// card actually opened; a refused opener must not spend the day.
+  void registerStarRoadPopup(bool Function() open) {
     _starRoadPopupOpener = open;
   }
+  // endregion P26-POL4
 
   // region P26-G6f
   StarRoad? _starRoadPendingRoad;
-  String? _starRoadPendingKey;
+
+  // region P26-POL4
+  bool? _starRoadPendingCache;
+
+  void _invalidateStarRoadPending() {
+    _starRoadPendingCache = null;
+    _starRoadPendingRoad = null;
+  }
 
   bool get _starRoadPending {
-    final claimed = storage.starRoadClaimed.toList()..sort();
-    final key =
-        '${storage.starRoadSeason}:${storage.starRoadXp}:'
-        '${claimed.join(',')}:${storage.starRoadPopupDay}:'
-        '${storage.today}:${storage.gamesPlayed}';
-    if (key != _starRoadPendingKey) {
-      _starRoadPendingKey = key;
-      _starRoadPendingRoad = StarRoad(
-        season: storage.starRoadSeason,
-        xp: storage.starRoadXp,
-        claimed: storage.starRoadClaimed,
-        popupDay: storage.starRoadPopupDay,
-      );
-    }
-    return _starRoadPendingRoad!.shouldShowPopup(
+    final cached = _starRoadPendingCache;
+    if (cached != null) return cached;
+    final road = _starRoadPendingRoad ??= StarRoad(
+      season: storage.starRoadSeason,
+      xp: storage.starRoadXp,
+      claimed: storage.starRoadClaimed,
+      popupDay: storage.starRoadPopupDay,
+    );
+    return _starRoadPendingCache = road.shouldShowPopup(
       today: storage.today,
       runNumber: storage.gamesPlayed + 1,
     );
   }
+  // endregion P26-POL4
   // endregion
 
+  // region P26-POL4
   void _checkStarRoadPopup(double dt) {
     final open = _starRoadPopupOpener;
-    if (open == null || !_starRoadPending || !_homeInteractive ||
-        _home?.built != true || _home!.opacity < 1 || modalPopupOpen ||
+    if (open == null || !_homeInteractive || _home?.built != true ||
+        _home!.opacity < 1 || modalPopupOpen ||
         _popupQueue.isNotEmpty || _adsShowing > 0 || _fakeAd != null) {
+      _starRoadSettle = 0;
+      return;
+    }
+    if (!_starRoadPending) {
       _starRoadSettle = 0;
       return;
     }
     _starRoadSettle += dt;
     if (_starRoadSettle < Config.levelUpSettleDelay) return;
     _starRoadSettle = 0;
-    homeMoments.tryShow(HomeMoment.starRoad, () {
+    homeMoments.tryShowResult(HomeMoment.starRoad, () {
+      if (!open()) return false;
       unawaited(storage.saveStarRoadPopupDay(storage.today));
-      open();
+      _invalidateStarRoadPending();
+      return true;
     });
   }
+  // endregion P26-POL4
   // endregion
 
   // region P26-G6f
@@ -3245,16 +3266,21 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   /// The Star Road Home popup while it is up (null otherwise).
   StarRoadPopup? get starRoadPopup => _starRoadPopup;
 
+  // region P26-POL4
   /// C2W's registered opener (PRD-2.6 O91): the policy already decided that
-  /// this Home visit belongs to Star Road and persisted its day.
-  void _openStarRoadPopup() {
+  /// this Home visit belongs to Star Road; the caller saves its day only after
+  /// this opener reports that the card really opened.
+  bool _openStarRoadPopup() {
     if (_starRoadPopup != null ||
         state != GameState.start ||
         menuScene != MenuScene.home) {
-      return;
+      return false;
     }
     final road = _starRoadPendingRoad ?? starRoad;
-    if (road.claimable.isEmpty) return;
+    if (road.claimable.isEmpty) {
+      _invalidateStarRoadPending();
+      return false;
+    }
     final popup = StarRoadPopup(
       road: road,
       onGo: _goStarRoadFromPopup,
@@ -3269,19 +3295,26 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
       duration: Config.popupFadeDuration,
     );
     pushBack(_starRoadPopupBack);
+    return true;
   }
+  // endregion P26-POL4
 
-  /// GO TO STAR ROAD: remove the card (its star puff stays in the world) and
-  /// open the road at the first waiting reward.
+  // region P26-POL4
+  /// GO TO STAR ROAD: open the road at the first waiting reward and remove the
+  /// card only once the road is really up (a settling season can refuse it).
   void _goStarRoadFromPopup() {
     final popup = _starRoadPopup;
     if (popup == null) return;
+    if (!openStarRoad(daysLeft: starRoadDaysRemaining, onBack: _drainPopups)) {
+      return;
+    }
+    _invalidateStarRoadPending();
     _starRoadPopup = null;
     popBack(_starRoadPopupBack);
     popup.active = false;
     popup.removeFromParent();
-    openStarRoad(daysLeft: starRoadDaysRemaining, onBack: _drainPopups);
   }
+  // endregion P26-POL4
 
   /// ✕ / dim / Esc: `sk_close`, then the next queued Home popup may come.
   void _closeStarRoadPopup() {
@@ -4095,6 +4128,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
   void closeStarRoad() {
     final screen = _starRoadScreen;
     if (screen == null || _starRoadClaiming) return;
+    // region P26-POL4
+    _invalidateStarRoadPending();
+    // endregion P26-POL4
     _starRoadScreen = null;
     popBack(_starRoadBack);
     unregisterTintable(screen);
@@ -4122,6 +4158,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     try {
     final result = await _starRoadClaims.claim(tier);
     if (result == null) return false;
+    // region P26-POL4
+    _invalidateStarRoadPending();
+    // endregion P26-POL4
     final reward = starRoadReward(tier);
     final screen = _starRoadScreen;
     if (result.coins > 0 && screen != null && !reduceMotion) {

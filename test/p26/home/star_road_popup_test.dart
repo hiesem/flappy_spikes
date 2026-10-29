@@ -8,10 +8,16 @@ import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/sound.dart';
 import 'package:flappy_spikes/progression/star_road.dart';
+// region P26-POL4
+import 'package:flappy_spikes/run/effects/shock_ring.dart';
+// endregion P26-POL4
 import 'package:flappy_spikes/skins/look.dart' show Rarity;
 import 'package:flame/components.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flutter_test/flutter_test.dart';
+// region P26-POL4
+import 'package:flutter/widgets.dart' show AppLifecycleState;
+// endregion P26-POL4
 
 import '../../helpers.dart';
 import '../../levels/progression_fixture.dart';
@@ -229,6 +235,37 @@ void _suite(double height) {
       );
     },
   );
+
+  // region P26-POL4
+  tester.testGameWidget(
+    'landing uses the shared shock rings and the badge glow',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, _) async {
+      final popup = await _mount(game, road: _road(72));
+      stepGame(game, .3);
+      await flushAndMount(game);
+      expect(popup.badgeGlowOpacity, 0);
+      expect(popup.card.children.whereType<ShockRing>(), isEmpty);
+
+      stepGame(game, .4);
+      await flushAndMount(game);
+      expect(popup.badgeGlowOpacity, greaterThan(0));
+      expect(
+        popup.card.children.whereType<ShockRing>(),
+        hasLength(2),
+        reason: 'O91: the landing draws the white + gold expanding rings',
+      );
+
+      stepGame(game, .6);
+      await flushAndMount(game);
+      expect(popup.card.children.whereType<ShockRing>(), isEmpty);
+    },
+  );
+  // endregion P26-POL4
 }
 
 void main() {
@@ -306,6 +343,90 @@ void main() {
       expect(game.homeScreen!.opacity, 1);
     },
   );
+
+  // region P26-POL4
+  var cacheNow = DateTime(2026, 11, 1, 12);
+  final starCache = FlameTester<FlappySpikesGame>(
+    () => createRunTestGame(
+      prefs: trackPrefs({
+        'gamesPlayed': 3,
+        'firstSessionDone': true,
+        'playerLevel': 1,
+        'claimedLevels': ['1'],
+        'starRoadSeason': 1,
+        'starRoadXp': 0,
+      }),
+      worldHeight: Config.worldHeight,
+      clock: () => cacheNow,
+    ),
+    gameSize: Vector2(Config.worldWidth, Config.worldHeight),
+  );
+
+  starCache.testGameWidget(
+    'the pending popup stays cached until the next Home arrival',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, _) async {
+      expect(game.starRoadPopup, isNull);
+      await game.storage.saveStarRoadXp(8);
+      stepGame(game, Config.levelUpSettleDelay + .2);
+      await flushAndMount(game);
+      expect(
+        game.starRoadPopup,
+        isNull,
+        reason: 'a mid-visit star change keeps the cached pending bit',
+      );
+
+      game.lifecycleStateChange(AppLifecycleState.paused);
+      cacheNow = cacheNow.add(Config.sessionGap);
+      game.lifecycleStateChange(AppLifecycleState.resumed);
+      await flushAndMount(game);
+      stepGame(game, Config.levelUpSettleDelay + .2);
+      await flushAndMount(game);
+      expect(game.starRoadPopup, isNotNull);
+    },
+  );
+  // endregion P26-POL4
+
+  // region P26-POL4
+  starHome.testGameWidget(
+    'a settling season keeps the popup up after GO',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, _) async {
+      game.reduceMotionOverride = true;
+      stepGame(game, Config.levelUpSettleDelay + .2);
+      await flushAndMount(game);
+
+      final popup = game.starRoadPopup;
+      expect(popup, isNotNull);
+      final settling = game.starRoadSeason.settle();
+      expect(game.starRoadSeason.settling, isTrue);
+
+      popup!.goButton.onPressed();
+      await flushAndMount(game);
+      expect(game.starRoadPopup, same(popup));
+      expect(popup.active, isTrue);
+      expect(game.starRoadScreen, isNull);
+      expect(game.menuScene, MenuScene.home);
+      expect(game.homeScreen!.active, isTrue);
+
+      await settling;
+      await flushAndMount(game);
+      popup.goButton.onPressed();
+      await flushAndMount(game);
+      expect(game.starRoadPopup, isNull);
+      expect(popup.active, isFalse);
+      expect(game.starRoadScreen, isNotNull);
+    },
+  );
+  // endregion P26-POL4
 
   starHome.testGameWidget(
     'the real Home flow Back closes the popup and spends the day',

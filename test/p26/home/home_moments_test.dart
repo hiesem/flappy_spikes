@@ -295,6 +295,34 @@ void main() {
   });
 
   // region P26-G6f
+  // region P26-POL4
+  test('a refused Star Road opener spends the visit, not its day', () {
+    final policy = HomeMomentBudget();
+    final day = DateTime(2026, 11, 1);
+    HomeVisit visit() => HomeVisit(
+      day: day,
+      dayKey: 43,
+      starRoadPopupDay: 42,
+      gamesPlayed: 3,
+      requests: const HomeVisitRequests(starRoad: true),
+    );
+
+    policy.beginVisit(visit());
+    expect(policy.selectedMoment, HomeMoment.starRoad);
+    expect(policy.tryShowResult(HomeMoment.starRoad, () => false), isFalse);
+    expect(
+      policy.tryShow(HomeMoment.noAds, () => fail('refused visit is spent')),
+      isFalse,
+    );
+
+    // The refused opener did not mark the day, so the next arrival may show
+    // it again even on the same calendar day.
+    policy.beginVisit(visit());
+    expect(policy.selectedMoment, HomeMoment.starRoad);
+    expect(policy.tryShowResult(HomeMoment.starRoad, () => true), isTrue);
+  });
+  // endregion P26-POL4
+
   test('a gift arriving after a Star Road selection wins that visit', () {
     final policy = HomeMomentBudget();
     final day = DateTime(2026, 11, 1);
@@ -359,7 +387,12 @@ void main() {
       // opener's first visit the one that spends the day.
       await game.storage.saveStarRoadXp(8);
       var shown = 0;
-      game.registerStarRoadPopup(() => shown++);
+      // region P26-POL4
+      game.registerStarRoadPopup(() {
+        shown++;
+        return true;
+      });
+      // endregion P26-POL4
       Future<void> resume() async {
         game.lifecycleStateChange(AppLifecycleState.paused);
         starNow = starNow.add(Config.sessionGap);
@@ -378,6 +411,41 @@ void main() {
       expect(shown, 2);
     },
   );
+
+  // region P26-POL4
+  starTransitions.testGameWidget(
+    'a refused Star Road opener does not spend the day',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, _) async {
+      await game.storage.saveStarRoadXp(8);
+      var calls = 0;
+      game.registerStarRoadPopup(() {
+        calls++;
+        return calls > 1;
+      });
+      Future<void> resume() async {
+        game.lifecycleStateChange(AppLifecycleState.paused);
+        starNow = starNow.add(Config.sessionGap);
+        game.lifecycleStateChange(AppLifecycleState.resumed);
+        await flushAndMount(game);
+        stepGame(game, Config.levelUpSettleDelay + .1);
+        await flushAndMount(game);
+      }
+
+      await resume();
+      expect(calls, 1);
+      expect(game.storage.starRoadPopupDay, isNot(game.storage.today));
+
+      await resume();
+      expect(calls, 2);
+      expect(game.storage.starRoadPopupDay, game.storage.today);
+    },
+  );
+  // endregion P26-POL4
   // endregion
 
   // region P26-C2W
@@ -399,7 +467,12 @@ void main() {
     },
     verify: (game, tester) async {
       var starShown = 0;
-      game.registerStarRoadPopup(() => starShown++);
+      // region P26-POL4
+      game.registerStarRoadPopup(() {
+        starShown++;
+        return true;
+      });
+      // endregion P26-POL4
       await game.storage.saveStarRoadXp(8);
       await game.storage.saveStreakDays(2);
       await game.storage.saveStreakLastDay(game.storage.today);

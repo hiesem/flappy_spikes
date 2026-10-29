@@ -34,7 +34,8 @@ void main() {
         MissionProgress(template: MissionTemplate.m11, target: 10, progress: 10, paid: true),
       ]);
       await first.saveMissionJournal({
-        'day': 20, 'tier': 0, 'rerollDay': -1, 'missions': board.toRecords(),
+        'day': 20, 'tier': 0, 'rerollDay': -1,
+        GameStorage.missionJournalRowsKey: board.toRecords(),
         'balance': 210, 'earned': 110,
       });
       if (afterCredit) await first.saveCoins(210);
@@ -58,7 +59,8 @@ void main() {
     await storage.load();
     await storage.saveCoins(100);
     await storage.saveMissionJournal({
-      'day': 20, 'tier': 0, 'rerollDay': -1, 'missions': <Object>[],
+      'day': 20, 'tier': 0, 'rerollDay': -1,
+      GameStorage.missionJournalRowsKey: <Object>[],
       'balanceBefore': 100, 'earnedBefore': 0, 'amount': 20, 'applied': false,
     });
     await storage.saveCoins(110); // A separate win bonus landed first.
@@ -81,7 +83,8 @@ void main() {
       await storage.saveCoins(savedCoins);
       await storage.saveLifetimeCoinsEarned(savedCoins == 130 ? 30 : 0);
       await storage.saveMissionJournal({
-        'day': 20, 'tier': 0, 'rerollDay': -1, 'missions': <Object>[],
+        'day': 20, 'tier': 0, 'rerollDay': -1,
+        GameStorage.missionJournalRowsKey: <Object>[],
         'balanceBefore': 100, 'earnedBefore': 0, 'amount': 20, 'applied': true,
       });
       final recovered = GameStorage();
@@ -102,7 +105,8 @@ void main() {
     await storage.saveCoins(120);
     await storage.saveLifetimeCoinsEarned(20);
     await storage.saveMissionJournal({
-      'day': 20, 'tier': 0, 'rerollDay': -1, 'missions': <Object>[],
+      'day': 20, 'tier': 0, 'rerollDay': -1,
+      GameStorage.missionJournalRowsKey: <Object>[],
       'balanceBefore': 100, 'earnedBefore': 0, 'amount': 20, 'applied': true,
     });
     await storage.saveCoins(110);

@@ -123,7 +123,10 @@ abstract final class RunEndBookkeeping {
       'roadDay': utcDay > storage.starRoadRunDay ? utcDay : storage.starRoadRunDay,
       // endregion
       'day': claim.state.day, 'tier': claim.state.tier,
-      'rerollDay': claim.state.rerollDay, 'missions': claim.state.toRecords(),
+      'rerollDay': claim.state.rerollDay,
+      // region P26-FIX4 — keep the journal rows key out of the anchor list.
+      GameStorage.missionJournalRowsKey: claim.state.toRecords(),
+      // endregion
       'balanceBefore': storage.coins, 'earnedBefore': storage.lifetimeCoinsEarned,
       'amount': claim.coins, 'applied': true,
     };

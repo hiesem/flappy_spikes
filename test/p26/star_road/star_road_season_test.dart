@@ -97,7 +97,7 @@ void main() {
         'day': 1,
         'tier': 0,
         'rerollDay': -1,
-        'missions': <Object>[],
+        GameStorage.missionJournalRowsKey: <Object>[],
         'balanceBefore': 0,
         'earnedBefore': 0,
         'amount': 0,

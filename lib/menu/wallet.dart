@@ -37,7 +37,9 @@ enum CoinSource {
   missionChest,
   streak,
   streakRestore,
-  firstWinDay,
+  // region P26-FIX4 — a non-anchor enum name (AOT keeps enum value names).
+  firstWinBonus,
+  // endregion
   leaderboardGift,
   starRoad,
   album,
@@ -54,7 +56,9 @@ extension CoinSourceName on CoinSource {
         CoinSource.missionChest => 'mission_chest',
         CoinSource.streak => 'streak',
         CoinSource.streakRestore => 'streak_restore',
-        CoinSource.firstWinDay => 'first_win_day',
+        // region P26-FIX4
+        CoinSource.firstWinBonus => 'first_win_day',
+        // endregion
         CoinSource.leaderboardGift => 'leaderboard_gift',
         CoinSource.starRoad => 'star_road',
         CoinSource.album => 'album',

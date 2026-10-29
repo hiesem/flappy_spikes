@@ -112,6 +112,10 @@ class GameStorage {
   Map<String, int> vsBigWinsDay = const {};
   // region P26-G1b
   bool lastVersusHadRival = false;
+  // region P26-FIX4 — journal rows use a non-anchor JSON key; 2.6 never
+  // shipped the previous shape, so no migration is needed.
+  static const String missionJournalRowsKey = 'records';
+  // endregion
   Map<String, Object?> missionJournal = const {};
   // endregion
   int missionDay = -1;
@@ -2095,7 +2099,9 @@ class GameStorage {
   Future<void> recoverMissionJournal() async {
     final j = missionJournal;
     if (j.isEmpty) return;
-    final rows = j['missions'];
+    // region P26-FIX4
+    final rows = j[missionJournalRowsKey];
+    // endregion
     final day = j['day'];
     final tier = j['tier'];
     final reroll = j['rerollDay'];

@@ -567,7 +567,7 @@ void main() {
         CoinSource.missionChest,
         CoinSource.streak,
         CoinSource.streakRestore,
-        CoinSource.firstWinDay,
+        CoinSource.firstWinBonus,
         CoinSource.leaderboardGift,
         CoinSource.starRoad,
         CoinSource.album,

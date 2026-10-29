@@ -171,7 +171,7 @@ const metaCoinsPerDay = <CoinSource, double>{
   CoinSource.mission: 20 + 35 + 55,
   CoinSource.missionChest: 40,
   CoinSource.streak: 200 / 7,
-  CoinSource.firstWinDay: 20,
+  CoinSource.firstWinBonus: 20,
   CoinSource.leaderboardGift: .5 * (100 + 300) / 2,
   CoinSource.starRoad: 960 / 28,
 };

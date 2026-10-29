@@ -52,7 +52,9 @@ class FirstWinReward extends PositionComponent
       // Deliberately reserve the day first: an interrupted payout cannot pay
       // twice. A process kill between the writes can lose this day's award.
       await game.storage.saveFirstWinDay(day);
-      await game.menu.wallet.add(20, CoinSource.firstWinDay);
+      // region P26-FIX4 — the source name is not an AOT anchor.
+      await game.menu.wallet.add(20, CoinSource.firstWinBonus);
+      // endregion
       return 20;
     } catch (error) {
       debugPrint('first_win_day payout failed: ${errorKind(error)}');

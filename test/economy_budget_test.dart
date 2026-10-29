@@ -233,7 +233,7 @@ void main() {
         CoinSource.mission,
         CoinSource.missionChest,
         CoinSource.streak,
-        CoinSource.firstWinDay,
+        CoinSource.firstWinBonus,
         CoinSource.leaderboardGift,
         CoinSource.starRoad,
       ]),
@@ -248,7 +248,7 @@ void main() {
     final streak = tuning.raw('streak_rewards') as List;
     final streakCoins = streak.fold<int>(0, (sum, value) => sum + (value is int ? value : int.tryParse(value.toString().split('+').last) ?? 0));
     expect(metaCoinsPerDay[CoinSource.streak], closeTo(streakCoins / 7, 1e-9));
-    expect(metaCoinsPerDay[CoinSource.firstWinDay], 20);
+    expect(metaCoinsPerDay[CoinSource.firstWinBonus], 20);
     expect(metaCoinsPerDay[CoinSource.starRoad], closeTo(960 / 28, 1e-9));
     expect(metaCoinsPerDay[CoinSource.leaderboardGift], 100);
     final typical = metaCoinsPerDay.entries

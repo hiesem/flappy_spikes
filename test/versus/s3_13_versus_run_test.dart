@@ -329,7 +329,7 @@ void main() {
         expect(g.menu.wallet.balance, wallet0 + runCoins + bonus + firstWin);
         expect(analyticsLog(spy).where((e) =>
             e.$1 == 'coins_earned' &&
-            e.$2?['source'] == CoinSource.firstWinDay.analyticsName).length,
+            e.$2?['source'] == CoinSource.firstWinBonus.analyticsName).length,
             result == DuelResult.win ? 1 : 0);
         final r = analyticsLog(spy).where((e) => e.$1 == 'versus_result').single;
         // PRD-2.6 WP-E2 / E5 extends the exact versus_result payload.

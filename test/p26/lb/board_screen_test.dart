@@ -6,6 +6,7 @@ import 'package:flappy_spikes/components/leaderboard/board_screen.dart';
 import 'package:flappy_spikes/components/home/menu_primitives.dart';
 import 'package:flame_test/flame_test.dart';
 import 'package:flappy_spikes/components/leaderboard/board_row.dart';
+import 'package:flappy_spikes/game/config.dart';
 import 'package:flappy_spikes/game/flappy_game.dart';
 import 'package:flappy_spikes/game/sound.dart';
 import 'package:flappy_spikes/leaderboard/lb_models.dart';
@@ -117,9 +118,28 @@ void main() {
       expect(board.pinnedRow!.displayedText, contains('YOU'));
       expect(board.showPinned, isTrue);
       expect(board.pinnedRow!.own, isTrue);
+      // Mock listGeom: bot=PIN_Y-6; the divider occupies that 2 pt gap.
+      expect(board.scroll.clipRect.bottom, 447);
+      expect(
+        board.scroll.clipRect.bottom,
+        lessThan(board.pinnedRow!.position.y),
+      );
+      expect(board.pinnedDivider.visible, isTrue);
+      expect(
+        board.pinnedDivider.position,
+        Vector2(0, Config.boardPinnedDividerYFor(game.viewHeight)),
+      );
+      expect(board.pinnedDivider.size, Vector2(320, 2));
       board.scroll.offset = board.scroll.maxOffset;
+      game.update(0);
       expect(board.showPinned, isFalse);
+      expect(board.scroll.clipRect, board.scroll.visibleRect);
+      expect(board.pinnedDivider.visible, isFalse);
       board.scroll.offset = 0;
+      game.update(0);
+      expect(board.showPinned, isTrue);
+      expect(board.scroll.clipRect.bottom, 447);
+      expect(board.pinnedDivider.visible, isTrue);
       expect(board.scroll.content.children.query<BoardRow>().length, 9);
       board.tabs[1].onPressed();
       await flushAndMount(game);

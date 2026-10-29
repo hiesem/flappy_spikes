@@ -31,6 +31,7 @@ class BoardScreen extends MenuScreen {
   double _achievementFlash = 0;
   bool _loggedOpen = false;
   late final BoardTimerChip timerChip;
+  late final BoardPinnedDivider pinnedDivider;
   // region P26-LB5
   BoardInfoSheet? infoSheet;
   late MenuButton infoButton;
@@ -160,13 +161,20 @@ class BoardScreen extends MenuScreen {
     timerChip = BoardTimerChip();
     add(timerChip);
     add(timer);
+    pinnedDivider = BoardPinnedDivider(
+      position: Vector2(0, Config.boardPinnedDividerYFor(game.viewHeight)),
+      priority: 9,
+    );
+    add(pinnedDivider);
     unawaited(refresh());
   }
 
+  // region P26-FIX3
   @override
   void onTint(Color color) {
     titleText.color = Config.menuPink;
   }
+  // endregion P26-FIX3
 
   void _styleTabs() {
     for (var i = 0; i < tabs.length; i++) {
@@ -267,6 +275,7 @@ class BoardScreen extends MenuScreen {
         content.add(play);
       }
       scroll.contentBottom = 330;
+      _syncPinned();
       return;
     }
     podium = BoardPodium(
@@ -293,12 +302,13 @@ class BoardScreen extends MenuScreen {
         board.me!,
         own: true,
         approximate: board.approximate,
-        position: Vector2(14, game.viewHeight - 115),
+        position: Vector2(14, Config.boardPinnedRowTopFor(game.viewHeight)),
         priority: 10,
       );
       add(pinnedRow!);
       content.add(pinnedRow!);
     }
+    _syncPinned();
   }
 
   bool get showPinned {
@@ -312,6 +322,15 @@ class BoardScreen extends MenuScreen {
     if (index < 0) return true;
     final y = 336 + index * 48 - scroll.offset;
     return y < scroll.viewport.top || y + 44 > scroll.viewport.bottom;
+  }
+
+  void _syncPinned() {
+    final pinned = showPinned;
+    pinnedRow?.visible = pinned;
+    pinnedDivider.visible = pinned;
+    scroll.clipBottom = pinned
+        ? Config.boardPinnedDividerYFor(game.viewHeight)
+        : null;
   }
 
   @override
@@ -346,7 +365,7 @@ class BoardScreen extends MenuScreen {
     timerChip.chipWidth = timerChip.stopwatch
         ? 112
         : (tab == LbBoardTab.best ? 150 : 180);
-    pinnedRow?.visible = showPinned;
+    _syncPinned();
   }
 }
 
@@ -354,6 +373,21 @@ String formatBoardTime(int seconds) {
   final value = seconds.clamp(0, 86400);
   String two(int n) => n.toString().padLeft(2, '0');
   return '${two(value ~/ 3600)}:${two(value % 3600 ~/ 60)}:${two(value % 60)}';
+}
+
+/// The 2 pt rule between the clipped list and the pinned own row
+/// (approvals_v26/leaderboard.html: `PIN_Y-6`, #E2E2E2).
+class BoardPinnedDivider extends PositionComponent {
+  BoardPinnedDivider({super.position, super.priority})
+    : super(size: Vector2(Config.worldWidth, Config.boardPinnedDividerHeight));
+  bool visible = false;
+  final Paint _paint = Paint()..color = const Color(0xffe2e2e2);
+
+  @override
+  void render(Canvas canvas) {
+    if (!visible) return;
+    canvas.drawRect(size.toRect(), _paint);
+  }
 }
 
 class BoardTimerChip extends PositionComponent {

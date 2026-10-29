@@ -807,6 +807,17 @@ class Config {
   static const double boardTitleCenterY = 70;
   static const double boardTimerChipCenterY = 95;
   static const double boardTimerTextCenterY = 95.8;
+
+  /// approvals_v26/leaderboard.html: `PIN_Y=596` at 711 pt, i.e. 115 pt above
+  /// the bottom. The list is clipped six points above it and a 2 pt divider
+  /// occupies that gap (`PIN_Y-6`, height 2).
+  static const double boardPinnedRowTopInset = 115;
+  static const double boardPinnedDividerGap = 6;
+  static const double boardPinnedDividerHeight = 2;
+  static double boardPinnedRowTopFor(double viewHeight) =>
+      viewHeight - boardPinnedRowTopInset;
+  static double boardPinnedDividerYFor(double viewHeight) =>
+      boardPinnedRowTopFor(viewHeight) - boardPinnedDividerGap;
   // endregion P26-FIX3
 
   /// Scrolling content viewport: from just below the title's line box

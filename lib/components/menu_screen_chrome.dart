@@ -283,6 +283,26 @@ class MenuScrollArea extends PositionComponent with DragCallbacks {
     viewport.bottom + bleedBottom,
   );
 
+  // region P26-FIX3
+  /// Optional world-y bottom for the drawn content. A screen with a pinned
+  /// row sets this to hide the list rows the row would otherwise cover; null
+  /// keeps the normal [visibleRect] band.
+  double? clipBottom;
+
+  /// The world-space rectangle the content is clipped to while drawing.
+  Rect get clipRect {
+    final bottom = clipBottom;
+    return Rect.fromLTRB(
+      position.x,
+      position.y,
+      position.x + width,
+      bottom == null
+          ? position.y + height
+          : math.min(bottom, position.y + height),
+    );
+  }
+  // endregion P26-FIX3
+
   /// Holds the scrolled children (world coordinates at offset 0).
   late final PositionComponent content;
 
@@ -547,7 +567,9 @@ class MenuScrollArea extends PositionComponent with DragCallbacks {
   @override
   void renderTree(Canvas canvas) {
     canvas.save();
-    canvas.clipRect(Rect.fromLTWH(position.x, position.y, width, height));
+    // region P26-FIX3
+    canvas.clipRect(clipRect);
+    // endregion P26-FIX3
     super.renderTree(canvas);
     canvas.restore();
   }

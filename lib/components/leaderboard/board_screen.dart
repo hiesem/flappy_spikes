@@ -81,7 +81,14 @@ class BoardScreen extends MenuScreen {
       Rect.fromLTRB(0, 330, 320, viewHeight - 70);
   @override
   Future<void> buildContent() async {
-    titleText.position = Vector2(160, 58);
+    // region P26-FIX3
+    // approvals_v26/leaderboard.html: the back / info boxes flank a 22 pt
+    // title centred at y 70, so its line box clears the timer chip at 85.
+    titleText
+      ..fontSize = Config.boardTitleFontSize
+      ..position = Vector2(160, Config.boardTitleCenterY)
+      ..anchor = Anchor.center;
+    // endregion P26-FIX3
     // region P26-LB5
     infoButton = MenuButton(
       position: Vector2(268, 58),
@@ -147,13 +154,18 @@ class BoardScreen extends MenuScreen {
       '',
       fontSize: 10,
       color: Config.menuPink,
-      position: Vector2(160, 94),
+      position: Vector2(160, Config.boardTimerTextCenterY),
       anchor: Anchor.center,
     );
     timerChip = BoardTimerChip();
     add(timerChip);
     add(timer);
     unawaited(refresh());
+  }
+
+  @override
+  void onTint(Color color) {
+    titleText.color = Config.menuPink;
   }
 
   void _styleTabs() {
@@ -347,7 +359,7 @@ String formatBoardTime(int seconds) {
 class BoardTimerChip extends PositionComponent {
   BoardTimerChip()
     : super(
-        position: Vector2(160, 94),
+        position: Vector2(160, Config.boardTimerChipCenterY),
         size: Vector2(180, 20),
         anchor: Anchor.center,
       );

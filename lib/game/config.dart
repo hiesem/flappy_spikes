@@ -799,6 +799,16 @@ class Config {
   static Vector2 menuScreenTitlePositionFor(double viewHeight) =>
       Vector2(worldWidth / 2, menuScreenTitleTop);
 
+  // region P26-FIX3
+  /// The leaderboard's own header (approvals_v26/leaderboard.html: `tx(160,
+  /// 70, 22, 'LEADERBOARD', ...)`): a 22 pt pink title centred between the
+  /// back / info boxes, with the timer chip clear below it at y 85..105.
+  static const double boardTitleFontSize = 22;
+  static const double boardTitleCenterY = 70;
+  static const double boardTimerChipCenterY = 95;
+  static const double boardTimerTextCenterY = 95.8;
+  // endregion P26-FIX3
+
   /// Scrolling content viewport: from just below the title's line box
   /// (104 + 30 x 1.284) to the bottom spike tips.
   static double menuScreenContentTopFor(double viewHeight) => 143;

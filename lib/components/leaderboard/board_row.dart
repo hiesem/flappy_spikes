@@ -1,5 +1,6 @@
 import 'package:flame/components.dart';
 import 'package:flutter/painting.dart';
+import '../../game/config.dart';
 import '../../leaderboard/lb_models.dart';
 import '../../skins/art/card_frame_art.dart';
 import '../../skins/art/card_name_art.dart';
@@ -35,6 +36,7 @@ class BoardRow extends PositionComponent {
     double fontSize,
     Color color, {
     double maxWidth = 124,
+    String fontFamily = Config.uiFont,
   }) {
     final p = TextPainter(
       text: TextSpan(
@@ -43,6 +45,7 @@ class BoardRow extends PositionComponent {
           color: color,
           fontSize: fontSize,
           fontWeight: FontWeight.bold,
+          fontFamily: fontFamily,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -76,6 +79,7 @@ class BoardRow extends PositionComponent {
       approximate ? 9 : 15,
       own ? pink : plum,
       maxWidth: 36,
+      fontFamily: Config.scoreFont,
     );
     paintBoardAvatar(
       canvas,
@@ -102,6 +106,7 @@ class BoardRow extends PositionComponent {
           color: Color(0xffffffff),
           fontSize: 14,
           fontWeight: FontWeight.bold,
+          fontFamily: Config.scoreFont,
         ),
       ),
       textDirection: TextDirection.ltr,

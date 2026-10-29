@@ -100,6 +100,16 @@ class StarRoadPopup extends P1Popup {
     final coin = await CoinIcon.load(game.images);
     final close = Sprite(await game.images.load('menu/close.png'));
 
+    // approvals_v26/star_road_popup.html: the 128 pt header is pink (the P1
+    // card's shared header band), so the pale STAR ROAD label and the gold
+    // rays read against it instead of the cream card.
+    card.add(
+      RectangleComponent(
+        size: Vector2(Config.p1PopupWidth, 128),
+        paint: Paint()..color = Config.menuPink,
+        priority: -30,
+      ),
+    );
     _rayGroup = _FadeGroup(size: Vector2(280, 128))..opacity = 0;
     rays = NoAdsCelebrationRays(
       rayCenter: const Offset(140, 53),

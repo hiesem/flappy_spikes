@@ -979,6 +979,9 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // region P26-G6eB
     _starRoadSeason = StarRoadSeason(storage, _starRoadClaims);
     await _starRoadSeason.settle();
+    // region P26-POL4
+    _invalidateStarRoadPending();
+    // endregion P26-POL4
     // endregion
     // endregion
     // region P26-F1
@@ -1259,7 +1262,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     // region P26-G1b
     missionRunSettlementPending = false;
     // region P26-G6eB
-    missionSettlement = RunEndBookkeeping.prepareHome(this, missionSettlement);
+    // region P26-POL4
+    missionSettlement = RunEndBookkeeping.prepareHome(this, missionSettlement)
+        .whenComplete(_invalidateStarRoadPending);
+    // endregion P26-POL4
     // endregion
     // endregion
     homeMoments.beginVisit(
@@ -3211,33 +3217,74 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
 
   // region P26-POL4
   bool? _starRoadPendingCache;
+  int? _starRoadPendingSeason;
+  int? _starRoadPendingXp;
+  Set<int>? _starRoadPendingClaimed;
+  int? _starRoadPendingPopupDay;
+  int? _starRoadPendingToday;
+  int? _starRoadPendingGamesPlayed;
 
   void _invalidateStarRoadPending() {
     _starRoadPendingCache = null;
     _starRoadPendingRoad = null;
+    _starRoadPendingSeason = null;
+    _starRoadPendingXp = null;
+    _starRoadPendingClaimed = null;
+    _starRoadPendingPopupDay = null;
+    _starRoadPendingToday = null;
+    _starRoadPendingGamesPlayed = null;
   }
 
   bool get _starRoadPending {
     final cached = _starRoadPendingCache;
-    if (cached != null) return cached;
-    final road = _starRoadPendingRoad ??= StarRoad(
-      season: storage.starRoadSeason,
-      xp: storage.starRoadXp,
-      claimed: storage.starRoadClaimed,
-      popupDay: storage.starRoadPopupDay,
+    if (cached != null &&
+        _starRoadPendingSeason == storage.starRoadSeason &&
+        _starRoadPendingXp == storage.starRoadXp &&
+        identical(_starRoadPendingClaimed, storage.starRoadClaimed) &&
+        _starRoadPendingPopupDay == storage.starRoadPopupDay &&
+        _starRoadPendingToday == storage.today &&
+        _starRoadPendingGamesPlayed == storage.gamesPlayed) {
+      return cached;
+    }
+    // Every state write (a run award, a claim, a rollover, midnight or a new
+    // game) misses this O(1) snapshot; only a real cache miss builds the road.
+    _invalidateStarRoadPending();
+    _starRoadPendingSeason = storage.starRoadSeason;
+    _starRoadPendingXp = storage.starRoadXp;
+    _starRoadPendingClaimed = storage.starRoadClaimed;
+    _starRoadPendingPopupDay = storage.starRoadPopupDay;
+    _starRoadPendingToday = storage.today;
+    _starRoadPendingGamesPlayed = storage.gamesPlayed;
+    final road = _starRoadPendingRoad = StarRoad(
+      season: _starRoadPendingSeason!,
+      xp: _starRoadPendingXp!,
+      claimed: _starRoadPendingClaimed!,
+      popupDay: _starRoadPendingPopupDay!,
     );
     return _starRoadPendingCache = road.shouldShowPopup(
-      today: storage.today,
-      runNumber: storage.gamesPlayed + 1,
+      today: _starRoadPendingToday!,
+      runNumber: _starRoadPendingGamesPlayed! + 1,
     );
   }
+
+  /// Diagnostic/test seam for the cached Star Road Home request.
+  @visibleForTesting
+  bool get starRoadPopupPending => _starRoadPending;
+  // endregion P26-POL4
+
+  // region P26-POL4
+  /// Run awards write XP outside this class; the bookkeeping seam calls this
+  /// so the popup's cached pending bit is dropped at the change, not a frame
+  /// later. Other external writes are caught by [_starRoadPending]'s snapshot.
+  void onStarRoadProgressChanged() => _invalidateStarRoadPending();
   // endregion P26-POL4
   // endregion
 
   // region P26-POL4
   void _checkStarRoadPopup(double dt) {
     final open = _starRoadPopupOpener;
-    if (open == null || !_homeInteractive || _home?.built != true ||
+    if (open == null || _starRoadSeason.settling || !_homeInteractive ||
+        _home?.built != true ||
         _home!.opacity < 1 || modalPopupOpen ||
         _popupQueue.isNotEmpty || _adsShowing > 0 || _fakeAd != null) {
       _starRoadSettle = 0;
@@ -4157,10 +4204,10 @@ class FlappySpikesGame extends Forge2DGame with KeyboardEvents {
     var flightOwnsHold = false;
     try {
     final result = await _starRoadClaims.claim(tier);
-    if (result == null) return false;
     // region P26-POL4
     _invalidateStarRoadPending();
     // endregion P26-POL4
+    if (result == null) return false;
     final reward = starRoadReward(tier);
     final screen = _starRoadScreen;
     if (result.coins > 0 && screen != null && !reduceMotion) {

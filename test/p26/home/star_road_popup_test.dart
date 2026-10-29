@@ -363,7 +363,7 @@ void main() {
   );
 
   starCache.testGameWidget(
-    'the pending popup stays cached until the next Home arrival',
+    'a Star Road star change invalidates the pending popup cache',
     setUp: (game, _) async {
       await game.ready();
       await preloadImages(game);
@@ -371,18 +371,117 @@ void main() {
     },
     verify: (game, _) async {
       expect(game.starRoadPopup, isNull);
+      expect(game.starRoadPopupPending, isFalse);
       await game.storage.saveStarRoadXp(8);
+      expect(
+        game.starRoadPopupPending,
+        isTrue,
+        reason: 'a mid-visit star change invalidates the cached pending bit',
+      );
       stepGame(game, Config.levelUpSettleDelay + .2);
       await flushAndMount(game);
       expect(
         game.starRoadPopup,
         isNull,
-        reason: 'a mid-visit star change keeps the cached pending bit',
+        reason: 'C2 already spent this visit before the star change',
       );
 
       game.lifecycleStateChange(AppLifecycleState.paused);
       cacheNow = cacheNow.add(Config.sessionGap);
       game.lifecycleStateChange(AppLifecycleState.resumed);
+      await flushAndMount(game);
+      stepGame(game, Config.levelUpSettleDelay + .2);
+      await flushAndMount(game);
+
+      final popup = game.starRoadPopup;
+      expect(popup, isNotNull);
+      expect(popup!.claimable, [1]);
+      expect(game.storage.starRoadPopupDay, game.storage.today);
+    },
+  );
+
+  var rolloverNow = DateTime(2026, 11, 1, 12);
+  final starRollover = FlameTester<FlappySpikesGame>(
+    () => createRunTestGame(
+      prefs: trackPrefs({
+        'gamesPlayed': 3,
+        'firstSessionDone': true,
+        'playerLevel': 1,
+        'claimedLevels': ['1'],
+        'starRoadSeason': 1,
+        'starRoadXp': 8,
+        'starRoadPopupDay': 20758,
+      }),
+      worldHeight: Config.worldHeight,
+      clock: () => rolloverNow,
+    ),
+    gameSize: Vector2(Config.worldWidth, Config.worldHeight),
+  );
+
+  starRollover.testGameWidget(
+    'a Home-arrival season rollover drops the old claimable tiers',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, tester) async {
+      expect(game.storage.starRoadSeason, 1);
+      expect(game.storage.starRoadXp, 8);
+      expect(game.starRoad.claimable, [1]);
+      stepGame(game, Config.levelUpSettleDelay + .2);
+      await flushAndMount(game);
+      expect(
+        game.starRoadPopup,
+        isNull,
+        reason: 'the old season already spent today before the rollover',
+      );
+
+      game.lifecycleStateChange(AppLifecycleState.paused);
+      rolloverNow = DateTime(2026, 12, 1, 12);
+      await tester.runAsync(() async {
+        // Let the resumed Home arrival fill its pending bit from the old
+        // season before the Home preparation settles the rollover.
+        game.lifecycleStateChange(AppLifecycleState.resumed);
+        for (var i = 0; i < 5; i++) {
+          await Future<void>.delayed(Duration.zero);
+        }
+        await game.starRoadSeason.settle();
+      });
+      await flushAndMount(game);
+      stepGame(game, Config.levelUpSettleDelay + .2);
+      await flushAndMount(game);
+
+      expect(game.storage.starRoadSeason, 2);
+      expect(game.storage.starRoadXp, 0);
+      expect(game.starRoad.claimable, isEmpty);
+      expect(
+        game.starRoadPopupPending,
+        isFalse,
+        reason: 'the rollover invalidates the cached pending bit',
+      );
+      expect(
+        game.starRoadPopup,
+        isNull,
+        reason: 'the rollover auto-claimed the old tier; nothing is waiting',
+      );
+    },
+  );
+
+  starHome.testGameWidget(
+    'the popup waits while the season is settling',
+    setUp: (game, _) async {
+      await game.ready();
+      await preloadImages(game);
+      await flushAndMount(game);
+    },
+    verify: (game, _) async {
+      final settling = game.starRoadSeason.settle();
+      expect(game.starRoadSeason.settling, isTrue);
+      stepGame(game, Config.levelUpSettleDelay + .2);
+      expect(game.starRoadPopup, isNull);
+
+      await settling;
       await flushAndMount(game);
       stepGame(game, Config.levelUpSettleDelay + .2);
       await flushAndMount(game);

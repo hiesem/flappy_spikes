@@ -113,6 +113,9 @@ abstract final class RunEndBookkeeping {
     final utcDay = game.storage.now().toUtc().millisecondsSinceEpoch ~/ Duration.millisecondsPerDay;
     final road = StarRoad(season: storage.starRoadSeason, xp: storage.starRoadXp, claimed: storage.starRoadClaimed, popupDay: storage.starRoadPopupDay);
     final nextRoad = road.finishRun(before: rolled, after: advanced, firstFinishedRun: utcDay > storage.starRoadRunDay);
+    // region P26-POL4
+    if (nextRoad.xp != road.xp) game.onStarRoadProgressChanged();
+    // endregion P26-POL4
     // endregion
     final journal = <String, Object?>{
       // region P26-G6eB
